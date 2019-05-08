@@ -1,0 +1,83 @@
+name: vere
+version: 0.1.0
+license: AGPL-3.0-only
+
+library:
+  source-dirs: lib
+
+executables:
+  uterm:
+    main: Main.hs
+    source-dirs: app/uterm
+    dependencies: ["vere"]
+
+  vere:
+    main: Main.hs
+    source-dirs: app/vere
+    dependencies: ["vere"]
+
+ghc-options:
+  - -threaded
+  - -rtsopts
+  - -with-rtsopts=-N
+  - -fwarn-incomplete-patterns
+  - -O2
+
+dependencies:
+  - async
+  - base
+  - classy-prelude
+  - containers
+  - data-fix
+  - ghc-prim
+  - integer-gmp
+  - largeword
+  - lens
+  - megaparsec
+  - mtl
+  - multimap
+  - para
+  - pretty-show
+  - QuickCheck
+  - semigroups
+  - smallcheck
+  - stm
+  - stm-chans
+  - tasty
+  - tasty-quickcheck
+  - tasty-th
+  - text
+  - these
+  - time
+  - unordered-containers
+  - vector
+
+default-extensions:
+  - ApplicativeDo
+  - BangPatterns
+  - BlockArguments
+  - DeriveFoldable
+  - DeriveGeneric
+  - DeriveTraversable
+  - EmptyDataDecls
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - QuasiQuotes
+  - Rank2Types
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - UnicodeSyntax
+  - ViewPatterns
