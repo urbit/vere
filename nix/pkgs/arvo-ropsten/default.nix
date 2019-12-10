@@ -1,10 +1,8 @@
 { pkgs }:
 
 pkgs.stdenv.mkDerivation {
-  name = "arvo";
+  name = "arvo-ropsten";
+  buildInputs = [ pkgs.bc ];
   builder = ./builder.sh;
   src = pkgs.buildRustCrateHelpers.exclude [ ".git" ] ../../../pkg/arvo;
-  meta = {
-    priority = 0;
-  };
 }
