@@ -268,13 +268,13 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
     case u3_writ_meld: {
       //  XX wire into cb
       //
-      u3l_log("pier: meld complete\n");
+      u3l_log("pier: meld complete");
     } break;
 
     case u3_writ_pack: {
       //  XX wire into cb
       //
-      u3l_log("pier: pack complete\n");
+      u3l_log("pier: pack complete");
     } break;
   }
 
@@ -1099,10 +1099,10 @@ _lord_on_serf_bail(void*       ptr_v,
   u3_lord* god_u = ptr_v;
 
   if ( UV_EOF == err_i ) {
-    u3l_log("pier: serf unexpectedly shut down\r\n");
+    u3l_log("pier: serf unexpectedly shut down");
   }
   else {
-    u3l_log("pier: serf error: %s\r\n", err_c);
+    u3l_log("pier: serf error: %s", err_c);
   }
 
   _lord_bail(god_u);
@@ -1129,7 +1129,7 @@ u3_lord_info(u3_lord* god_u)
 void
 u3_lord_slog(u3_lord* god_u)
 {
-  u3l_log("  lord: live=%s, event=%" PRIu64 ", mug=%x, queue=%u\n",
+  u3l_log("  lord: live=%s, event=%" PRIu64 ", mug=%x, queue=%u",
           ( c3y == god_u->liv_o ) ? "&" : "|",
           god_u->eve_d,
           god_u->mug_l,
@@ -1166,7 +1166,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  lom_c[11];
     c3_i  err_i;
 
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
+    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
                    god_u->key_d[0],
                    god_u->key_d[1],
                    god_u->key_d[2],
