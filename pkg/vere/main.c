@@ -718,6 +718,7 @@ _cw_usage(c3_c* bin_c)
     "  %s grab %.*s              measure memory usage:\n",
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
+    "  %s melt %.*s              deduplicate and minimize snapshot:\n",
     "  %s pack %.*s              defragment snapshot:\n",
     "  %s play %.*s              recompute events:\n",
     "  %s prep %.*s              prepare for upgrade:\n",
@@ -1976,6 +1977,44 @@ _cw_meld(c3_i argc, c3_c* argv[])
   u3m_stop();
 }
 
+/* _cw_melt(): deduplicate persistent nouns and compress them to minimal size
+*/
+static void
+_cw_melt(c3_i argc, c3_c* argv[])
+{
+  switch ( argc ) {
+    case 2: {
+      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+        fprintf(stderr, "unable to find pier\r\n");
+        exit (1);
+      }
+    } break;
+
+    case 3: {
+      u3_Host.dir_c = argv[2];
+    } break;
+
+    default: {
+      fprintf(stderr, "invalid command\r\n");
+      exit(1);
+    } break;
+  }
+
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  c3_w     pre_w;
+
+  u3C.wag_w |= u3o_hashless;
+  u3m_boot(u3_Host.dir_c);
+
+  pre_w = u3a_open(u3R);
+  u3u_melt();
+  u3a_print_memory(stderr, "urbit: melt: gained", (u3a_open(u3R) - pre_w));
+
+  u3e_save();
+  u3_disk_exit(log_u);
+  u3m_stop();
+}
+
 /* _cw_next(): request upgrade
 */
 static void
@@ -2856,6 +2895,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
 
     case c3__info: _cw_info(argc, argv); return 1;
     case c3__meld: _cw_meld(argc, argv); return 1;
+    case c3__melt: _cw_melt(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
     case c3__play: _cw_play(argc, argv); return 1;
