@@ -1888,7 +1888,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
   }
 }
 
-/* _cw_uniq(): deduplicate persistent nouns
+/* _cw_meld(): deduplicate persistent nouns
 */
 static void
 _cw_meld(c3_i argc, c3_c* argv[])
