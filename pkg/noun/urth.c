@@ -460,6 +460,9 @@ u3u_meld(void)
 }
 #endif
 
+/* BEGIN helper functions for u3u_meld
+   -------------------------------------------------------------------
+*/
 /* _cj_warm_tap(): tap war_p to rel
 */
 static void
@@ -469,14 +472,78 @@ _cj_warm_tap(u3_noun kev, void* wit)
   *rel = u3nc(u3k(kev), *rel);
 }
 
-/* u3u_melt(): globally deduplicate memory.
+static inline u3_weak
+_get(u3_noun som, u3p(u3h_root) set_p)
+{
+  u3_post hav_p = u3h_git(set_p, som);
+
+  if (u3_none == hav_p)
+  {
+    return u3_none;
+  }
+
+  //  restore tag bits from [som]
+  //
+  return hav_p | ((som >> 30) << 30);
+}
+
+static inline void
+_put(u3_noun som, u3p(u3h_root) set_p)
+{
+  //  strip tag bits from [som] to skip refcounts
+  //
+  u3_post hav_p = u3a_to_off(som);
+  u3h_put(set_p, u3k(som), hav_p);
+}
+
+static u3_noun
+_traverse(u3_noun som, u3p(u3h_root) set_p)
+{
+  u3_weak hav;
+
+  //  skip direct atoms
+  //
+  if (c3y == u3a_is_cat(som))
+  {
+    return som;
+  }
+
+  //  [som] equals [hav], and [hav] is canonical
+  //
+  if (u3_none != (hav = _get(som, set_p)))
+  {
+    u3z(som);
+    return u3k(hav);
+  }
+
+  //  traverse subtrees
+  //
+  if (c3y == u3a_is_cell(som))
+  {
+    u3a_cell *cel_u = u3a_to_ptr(som);
+
+    cel_u->hed = _traverse(cel_u->hed, set_p);
+    cel_u->tel = _traverse(cel_u->tel, set_p);
+  }
+
+  //  [som] is canonical
+  //
+  _put(som, set_p);
+  return som;
+}
+
+/* u3u_melt(): globally deduplicate memory and pack in-place.
 */
 void
 u3u_melt(void)
 {
-  c3_assert( &(u3H->rod_u) == u3R ); // Make sure we're on the main road.
+  // Verify that we're on the main road.
+  //
+  c3_assert( &(u3H->rod_u) == u3R );
 
-  u3_noun cod = u3_nul; // cons list of cold jet registrations
+  // Get a cons list of the cold jet registrations.
+  //
+  u3_noun cod = u3_nul;
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
 
   u3m_reclaim(); // Throw away what we don't need
@@ -484,16 +551,17 @@ u3u_melt(void)
 
   // NOTE: We are now in an invalid state.
   // TODO: Free everything else we can. Joe to provide? Look at garbage collector - u3a->roc, u3a->jed, u3m_mark (mark all roots).
-
+  //
   u3p(u3h_root) set_p = u3h_new();
 
-  cod = our_traversal(cod, set_p);
-  u3A->roc = our_traversal(u3A->roc, set_p);
+  cod = _traverse(cod, set_p);
+  u3A->roc = _traverse(u3A->roc, set_p);
 
   u3h_free(set_p);
 
   // Put the jet registrations back. Loop over cod putting them back into the cold jet
   // dashboard. Then re-run the garbage collector.
+  //
   u3j_boot(c3y);
   u3_noun codc;
   codc = cod;
