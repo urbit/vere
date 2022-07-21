@@ -460,6 +460,66 @@ u3u_meld(void)
 }
 #endif
 
+/* _cj_warm_tap(): tap war_p to rel
+*/
+static void
+_cj_warm_tap(u3_noun kev, void* wit)
+{
+  u3_noun* rel = wit;
+  *rel = u3nc(u3k(kev), *rel);
+}
+
+/* u3u_melt(): globally deduplicate memory.
+*/
+void
+u3u_melt(void)
+{
+  c3_assert( &(u3H->rod_u) == u3R ); // Make sure we're on the main road.
+
+  u3_noun cod = u3_nul; // cons list of cold jet registrations
+  u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
+
+  u3m_reclaim(); // Throw away what we don't need
+  u3j_free(); // free cold & warm jet state
+
+  // NOTE: We are now in an invalid state.
+  // TODO: Free everything else we can. Joe to provide? Look at garbage collector - u3a->roc, u3a->jed, u3m_mark (mark all roots).
+
+  u3p(u3h_root) set_p = u3h_new();
+
+  cod = our_traversal(cod, set_p);
+  u3A->roc = our_traversal(u3A->roc, set_p);
+
+  u3h_free(set_p);
+
+  // Put the jet registrations back. Loop over cod putting them back into the cold jet
+  // dashboard. Then re-run the garbage collector.
+  u3j_boot(c3y);
+  u3_noun codc;
+  codc = cod;
+
+  u3R->jed.cod_p = u3h_new();
+  while(u3_nul != cod) {
+    u3_noun kev = u3h(cod);
+    u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
+    cod = u3t(cod);
+  }
+  u3z(codc);
+
+  u3j_ream();  // re-init all the jets
+  u3m_pack();  // remove free space
+}
+
+/* our_traversal
+(a_noun, known_nouns)
+iterate known_nouns looking at the value of each one and seeing if the value of a_noun matches.
+if we find it, return the pointer to the value and decrement the ref count of a_noun if it's pointer is not.
+
+let foo = (get known_nouns a_noun)
+if ( foo != a_noun ) { lose(a_noun); return foo; }
+
+*/
+
 /* _cu_rock_path(): format rock path.
 */
 static c3_o
