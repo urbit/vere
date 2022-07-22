@@ -563,6 +563,7 @@ u3u_melt(void)
   // dashboard. Then re-run the garbage collector.
   //
   u3j_boot(c3y);
+
   u3_noun codc;
   codc = cod;
 
@@ -573,6 +574,12 @@ u3u_melt(void)
     cod = u3t(cod);
   }
   u3z(codc);
+
+  // We threw these away so we need to re-pave them before re-initialization.
+  //
+  u3R->jed.bas_p = u3h_new();
+  u3R->jed.han_p = u3h_new();
+  u3R->jed.war_p = u3h_new();
 
   u3j_ream();  // re-init all the jets
   u3m_pack();  // remove free space
