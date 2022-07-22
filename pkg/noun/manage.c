@@ -470,6 +470,17 @@ u3m_mark(FILE* fil_u)
   return tot_w;
 }
 
+/* _pave_jets(): build jet tables.
+*/
+static void
+_pave_jets(void)
+{
+  u3R->jed.bas_p = u3h_new();
+  u3R->jed.cod_p = u3h_new();
+  u3R->jed.han_p = u3h_new();
+  u3R->jed.war_p = u3h_new();
+}
+
 /* _pave_parts(): build internal tables.
 */
 static void
@@ -477,11 +488,8 @@ _pave_parts(void)
 {
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
-  u3R->jed.war_p = u3h_new();
-  u3R->jed.cod_p = u3h_new();
-  u3R->jed.han_p = u3h_new();
-  u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
+  _pave_jets();
 }
 
 /* _pave_road(): writes road boundaries to loom mem (stored at mat_w)
@@ -673,6 +681,14 @@ u3m_pave(c3_o nuu_o)
   else {
     _find_home();
   }
+}
+
+/* u3m_pave_jets(): re-initialize jet dashboard hashtables.
+*/
+void
+u3m_pave_jets(void)
+{
+  _pave_jets();
 }
 
 #if 0

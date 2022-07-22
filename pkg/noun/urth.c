@@ -575,14 +575,11 @@ u3u_melt(void)
   }
   u3z(codc);
 
-  // We threw these away so we need to re-pave them before re-initialization.
+  // re-init all the jets and remove free space
   //
-  u3R->jed.bas_p = u3h_new();
-  u3R->jed.han_p = u3h_new();
-  u3R->jed.war_p = u3h_new();
-
-  u3j_ream();  // re-init all the jets
-  u3m_pack();  // remove free space
+  u3m_pave_jets();
+  u3j_ream();
+  u3m_pack();
 }
 
 /* our_traversal
