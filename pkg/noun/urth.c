@@ -493,7 +493,7 @@ _put(u3_noun som, u3p(u3h_root) set_p)
   //  strip tag bits from [som] to skip refcounts
   //
   u3_post hav_p = u3a_to_off(som);
-  u3h_put(set_p, u3k(som), hav_p);
+  u3h_put(set_p, som, hav_p);
 }
 
 static u3_noun
@@ -546,12 +546,17 @@ u3u_melt(void)
   u3_noun cod = u3_nul;
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
 
-  u3m_reclaim(); // Throw away what we don't need
+  u3m_reclaim(); // refresh the byte-code interpreter.
   u3j_free(); // free cold & warm jet state
 
-  // NOTE: We are now in an invalid state.
-  // TODO: Free everything else we can. Joe to provide? Look at garbage collector - u3a->roc, u3a->jed, u3m_mark (mark all roots).
-  //
+  u3z(u3A->yot);  // Clear the hoon run-time cache
+  u3z(u3R->bug.mer); // Clear the "emergency" buffer.
+  u3z(u3R->bug.tax); // Clear the stack traces.
+
+  u3A->yot = 0;
+  u3R->bug.mer = 0;
+  u3R->bug.tax = 0;
+
   u3p(u3h_root) set_p = u3h_new();
 
   cod = _traverse(cod, set_p);
@@ -564,10 +569,15 @@ u3u_melt(void)
   //
   u3j_boot(c3y);
 
+  // re-init all the jets
+  //
+  u3m_pave_jets();
+
+  // restore the jet state
+  //
   u3_noun codc;
   codc = cod;
 
-  u3R->jed.cod_p = u3h_new();
   while(u3_nul != cod) {
     u3_noun kev = u3h(cod);
     u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
@@ -575,22 +585,11 @@ u3u_melt(void)
   }
   u3z(codc);
 
-  // re-init all the jets and remove free space
+  // remove free space
   //
-  u3m_pave_jets();
   u3j_ream();
   u3m_pack();
 }
-
-/* our_traversal
-(a_noun, known_nouns)
-iterate known_nouns looking at the value of each one and seeing if the value of a_noun matches.
-if we find it, return the pointer to the value and decrement the ref count of a_noun if it's pointer is not.
-
-let foo = (get known_nouns a_noun)
-if ( foo != a_noun ) { lose(a_noun); return foo; }
-
-*/
 
 /* _cu_rock_path(): format rock path.
 */
