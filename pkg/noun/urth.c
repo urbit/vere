@@ -460,7 +460,7 @@ u3u_meld(void)
 }
 #endif
 
-/* BEGIN helper functions for u3u_meld
+/* BEGIN helper functions for u3u_melt
    -------------------------------------------------------------------
 */
 /* _cj_warm_tap(): tap war_p to rel
@@ -541,39 +541,37 @@ u3u_melt(void)
   //
   c3_assert( &(u3H->rod_u) == u3R );
 
-  // Get a cons list of the cold jet registrations.
+  // Store a cons list of the cold jet registrations in `cod`
   //
   u3_noun cod = u3_nul;
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
 
-  u3m_reclaim(); // refresh the byte-code interpreter.
-  u3j_free(); // free cold & warm jet state
+  u3m_reclaim();     // refresh the byte-code interpreter.
+  u3j_free();        // free cold & warm jet state
 
-  u3z(u3A->yot);  // Clear the hoon run-time cache
-  u3z(u3R->bug.mer); // Clear the "emergency" buffer.
-  u3z(u3R->bug.tax); // Clear the stack traces.
-
+  u3z(u3A->yot);     // Clear the hoon run-time cache
   u3A->yot = 0;
+
+  u3z(u3R->bug.mer); // Clear the "emergency" buffer.
   u3R->bug.mer = 0;
+
+  u3z(u3R->bug.tax); // Clear the stack traces.
   u3R->bug.tax = 0;
 
-  u3p(u3h_root) set_p = u3h_new();
+  u3p(u3h_root) set_p = u3h_new(); // temp hashtable
 
-  cod = _traverse(cod, set_p);
-  u3A->roc = _traverse(u3A->roc, set_p);
+  cod = _traverse(cod, set_p);            // melt the jets
+  u3A->roc = _traverse(u3A->roc, set_p);  // melt the kernel
 
-  u3h_free(set_p);
+  u3h_free(set_p);  // release the temp hashtable
+
+  // re-initialize the jets
+  //
+  u3j_boot(c3y);
+  u3m_pave_jets();
 
   // Put the jet registrations back. Loop over cod putting them back into the cold jet
   // dashboard. Then re-run the garbage collector.
-  //
-  u3j_boot(c3y);
-
-  // re-init all the jets
-  //
-  u3m_pave_jets();
-
-  // restore the jet state
   //
   u3_noun codc;
   codc = cod;
