@@ -1,10 +1,13 @@
+/// @file
+
 #ifndef UR_SERIAL_H
 #define UR_SERIAL_H
 
 #include <inttypes.h>
-#include <ur/defs.h>
-#include <ur/bitstream.h>
-#include <ur/hashcons.h>
+
+#include "bitstream.h"
+#include "defs.h"
+#include "hashcons.h"
 
 /*
 **  bit-wise serialization of a noun into a byte-buffer.

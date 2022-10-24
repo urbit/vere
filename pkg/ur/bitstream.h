@@ -1,7 +1,11 @@
+/// @file
+
 #ifndef UR_BITSTREAM_H
 #define UR_BITSTREAM_H
 
 #include <inttypes.h>
+
+#include "defs.h"
 
 /*
 **  stateful bitstream reader, backed by a byte-buffer,
