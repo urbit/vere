@@ -100,6 +100,7 @@ cc_library(
     hdrs = ["deps/picotls/include/picotls.h"] + glob(
         ["deps/picotls/include/picotls/*.h"],
     ),
+    ),
     copts = [
         "-std=c99",
         "-Wall",
@@ -132,9 +133,7 @@ cc_library(
 # See `deps/yoml` in the `h2o` repo.
 cc_library(
     name = "yoml",
-    hdrs = glob(
-        ["deps/yoml/*.h"],
-    ),
+    hdrs = glob(["deps/yoml/*.h"]),
     includes = ["deps/yoml"],
     linkstatic = True,
     visibility = ["//visibility:private"],
@@ -305,9 +304,8 @@ cc_library(
     hdrs = ["include/h2o.h"] + glob(
         [
             "include/h2o/*.h",
+            "include/h2o/socket/*.h",
         ],
-    ) + glob(
-        ["include/h2o/socket/*.h"],
     ),
     copts = [
         "-std=c99",
