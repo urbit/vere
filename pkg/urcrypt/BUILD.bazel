@@ -1,0 +1,35 @@
+#
+# LIBRARIES
+#
+
+cc_library(
+    name = "urcrypt",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+        ],
+        allow_empty = False,
+        exclude = ["urcrypt.h"],
+    ),
+    hdrs = ["urcrypt.h"],
+    copts = [
+        "-Wall",
+        "-g",
+        "-O3",
+    ],
+    include_prefix = "urcrypt",
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/urcrypt/ge-additions",
+        "@aes_siv",
+        "@argon2",
+        "@ed25519",
+        "@keccak_tiny",
+        "@openssl",
+        "@scrypt",
+        "@secp256k1",
+    ],
+)

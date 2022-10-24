@@ -215,7 +215,7 @@ urcrypt_secp_schnorr_sign(urcrypt_secp_context* context,
   if ( 1 != secp256k1_keypair_create(context->secp, &keypair, key) ) {
     return -1;
   }
-  if ( 1 != secp256k1_schnorrsig_sign(context->secp, out_sig, msg, &keypair, aux) ) {
+  if ( 1 != secp256k1_schnorrsig_sign32(context->secp, out_sig, msg, &keypair, aux) ) {
     return -1;
   }
 
