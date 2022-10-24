@@ -9,6 +9,10 @@ cc_library(
             "*.c",
             "*.h",
         ],
+<<<<<<< HEAD
+=======
+        allow_empty = False,
+>>>>>>> 8145d5ad6 (Build c3)
         exclude = [
             "c3.h",
             "*_tests.c",
@@ -54,7 +58,10 @@ cc_library(
 
 cc_test(
     name = "list_tests",
+<<<<<<< HEAD
     timeout = "short",
+=======
+>>>>>>> 8145d5ad6 (Build c3)
     srcs = ["list_tests.c"],
     linkstatic = True,
     visibility = ["//visibility:private"],
