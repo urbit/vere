@@ -1,0 +1,168 @@
+diff --git a/define-macros.h b/define-macros.h
+new file mode 100644
+index 0000000..79b534c
+--- /dev/null
++++ b/define-macros.h
+@@ -0,0 +1,44 @@
++#ifndef DEFINEMACROS_H
++#define DEFINEMACROS_H
++
++/*** Helper macros to define SHA3 and SHAKE instances. ***/
++#define defshake(bits)                                            \
++  int shake##bits(uint8_t* out, size_t outlen,                    \
++                  const uint8_t* in, size_t inlen) {              \
++    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x1f);  \
++  }
++#define defsha3(bits)                                             \
++  int sha3_##bits(uint8_t* out, size_t outlen,                    \
++                  const uint8_t* in, size_t inlen) {              \
++    if (outlen > (bits/8)) {                                      \
++      return -1;                                                  \
++    }                                                             \
++    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x06);  \
++  }
++
++#define defkeccak(bits)                                           \
++  int keccak_##bits(uint8_t* out, size_t outlen,                  \
++                  const uint8_t* in, size_t inlen) {              \
++    if (outlen > (bits/8)) {                                      \
++      return -1;                                                  \
++    }                                                             \
++    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x01);  \
++  }
++
++/*** FIPS202 SHAKE VOFs ***/
++defshake(128)
++defshake(256)
++
++/*** FIPS202 SHA3 FOFs ***/
++defsha3(224)
++defsha3(256)
++defsha3(384)
++defsha3(512)
++
++/*** Non FIP202 SHA3 (KECCAK) FOFs ***/
++defkeccak(224)
++defkeccak(256)
++defkeccak(384)
++defkeccak(512)
++
++#endif // DEFINEMACROS_H
+diff --git a/keccak-tiny-unrolled.c b/keccak-tiny-unrolled.c
+index c238af4..c1eb2a6 100644
+--- a/keccak-tiny-unrolled.c
++++ b/keccak-tiny-unrolled.c
+@@ -133,31 +133,11 @@ static inline int hash(uint8_t* out, size_t outlen,
+   // Squeeze output.
+   foldP(out, outlen, setout);
+   setout(a, out, outlen);
+-  memset_s(a, 200, 0, 200);
++  //TODO: c11 problem: replaced
++  //memset_s(a, 200, 0, 200);
++  //Reference: http://en.cppreference.com/w/c/string/byte/memset
++  memset(a, 0, 200);
+   return 0;
+ }
+
+-/*** Helper macros to define SHA3 and SHAKE instances. ***/
+-#define defshake(bits)                                            \
+-  int shake##bits(uint8_t* out, size_t outlen,                    \
+-                  const uint8_t* in, size_t inlen) {              \
+-    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x1f);  \
+-  }
+-#define defsha3(bits)                                             \
+-  int sha3_##bits(uint8_t* out, size_t outlen,                    \
+-                  const uint8_t* in, size_t inlen) {              \
+-    if (outlen > (bits/8)) {                                      \
+-      return -1;                                                  \
+-    }                                                             \
+-    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x06);  \
+-  }
+-
+-/*** FIPS202 SHAKE VOFs ***/
+-defshake(128)
+-defshake(256)
+-
+-/*** FIPS202 SHA3 FOFs ***/
+-defsha3(224)
+-defsha3(256)
+-defsha3(384)
+-defsha3(512)
++#include "define-macros.h"
+diff --git a/keccak-tiny.c b/keccak-tiny.c
+index 76d89fa..fcb3556 100644
+--- a/keccak-tiny.c
++++ b/keccak-tiny.c
+@@ -133,31 +133,11 @@ static inline int hash(uint8_t* out, size_t outlen,
+   // Squeeze output.
+   foldP(out, outlen, setout);
+   setout(a, out, outlen);
+-  memset_s(a, 200, 0, 200);
++  //TODO: c11 problem: replaced
++  //memset_s(a, 200, 0, 200);
++  //Reference: http://en.cppreference.com/w/c/string/byte/memset
++  memset(a, 0, 200);
+   return 0;
+ }
+
+-/*** Helper macros to define SHA3 and SHAKE instances. ***/
+-#define defshake(bits)                                            \
+-  int shake##bits(uint8_t* out, size_t outlen,                    \
+-                  const uint8_t* in, size_t inlen) {              \
+-    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x1f);  \
+-  }
+-#define defsha3(bits)                                             \
+-  int sha3_##bits(uint8_t* out, size_t outlen,                    \
+-                  const uint8_t* in, size_t inlen) {              \
+-    if (outlen > (bits/8)) {                                      \
+-      return -1;                                                  \
+-    }                                                             \
+-    return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x06);  \
+-  }
+-
+-/*** FIPS202 SHAKE VOFs ***/
+-defshake(128)
+-defshake(256)
+-
+-/*** FIPS202 SHA3 FOFs ***/
+-defsha3(224)
+-defsha3(256)
+-defsha3(384)
+-defsha3(512)
++#include "define-macros.h"
+diff --git a/keccak-tiny.h b/keccak-tiny.h
+index c4c678e..5d643be 100644
+--- a/keccak-tiny.h
++++ b/keccak-tiny.h
+@@ -4,16 +4,31 @@
+ #include <stdint.h>
+ #include <stdlib.h>
+
++#define HASH224_SIZE 28
++#define HASH256_SIZE 32
++#define HASH384_SIZE 48
++#define HASH512_SIZE 64
++
+ #define decshake(bits) \
+   int shake##bits(uint8_t*, size_t, const uint8_t*, size_t);
+
+ #define decsha3(bits) \
+   int sha3_##bits(uint8_t*, size_t, const uint8_t*, size_t);
+
++#define deckeccak(bits) \
++  int keccak_##bits(uint8_t*, size_t, const uint8_t*, size_t);
++
+ decshake(128)
+ decshake(256)
++
+ decsha3(224)
+ decsha3(256)
+ decsha3(384)
+ decsha3(512)
++
++deckeccak(224)
++deckeccak(256)
++deckeccak(384)
++deckeccak(512)
++
+ #endif

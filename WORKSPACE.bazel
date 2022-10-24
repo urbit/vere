@@ -1,0 +1,266 @@
+# BUMPING A DEPENDENCY VERSION
+#
+# The general process for bumping the version of a dependency is as follows:
+#
+# (1) Update the `version` attribute in the dependency's repository rule (likely
+#     `versioned_http_archive()` or `versioned_http_file()`.
+# (2) Download the source code of the new version of the dependency using
+#     the specified `url` attribute (substituting `{version}` with the actual
+#     version you're updating to in the URL).
+# (3) Compute the SHA-256 hash of the new version's tarball (or zip archive)
+#     using `openssl`:
+#     ```
+#     $ openssl dgst -sha256 <path_to_compressed_depedency>
+#     ```
+# (4) Update the `sha256` attribute in the dependency's repository rule with the
+#     SHA-256 hash from (3).
+# (5) Run `bazel clean` to ensure that Bazel removes the old version of the
+#     dependency.
+#
+# If a dependency has documention specific to that dependency that conflicts
+# with the process described above, adhere to the dependency-specific
+# documentation.
+#
+# UPDATING A DEPENDENCY'S BUILD FILE
+#
+# It's unlikely that you'll need to update a dependency's build file, but if you
+# do, you presumably know what you're doing. Nonetheless, here are a few useful
+# bits of non-obvious information:
+#
+# - Build logic for a dependency resides within its `<dependency>.BUILD` file.
+#   `BUILD.bazel` is also present in the dependency's directory in
+#   `third_party/` to mark the directory as a package. Ideally, the logic in
+#   `<dependency>.BUILD` would live in `BUILD.bazel`, but Bazel 5.3.1 cannot
+#   find the source files of the dependency when `BUILD.bazel` holds the build
+#   logic (at least on my machine - ThinkPad X1 Carbon Gen 9, Arch Linux).
+# - Whenever possible, avoid delegating to foreign build systems. Delegating is
+#   inevitable when a third party dependency has a particularly complicated
+#   build system that would be too difficult to replicate in Bazel (i.e.
+#   OpenSSL). However, delegate only as a last resort.
+
+load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
+
+#
+# RULES REPOSITORIES
+#
+
+versioned_http_archive(
+    name = "bazel_skylib",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    url = "https://github.com/bazelbuild/bazel-skylib/releases/download/{version}/bazel-skylib-{version}.tar.gz",
+    version = "1.3.0",
+)
+
+versioned_http_archive(
+    name = "rules_cc",
+    sha256 = "af6cc82d87db94585bceeda2561cb8a9d55ad435318ccb4ddfee18a43580fb5d",
+    strip_prefix = "rules_cc-{version}",
+    url = "https://github.com/bazelbuild/rules_cc/releases/download/{version}/rules_cc-{version}.tar.gz",
+    version = "0.0.4",
+)
+
+versioned_http_archive(
+    name = "rules_foreign_cc",
+    sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
+    strip_prefix = "rules_foreign_cc-{version}",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/{version}.tar.gz",
+    version = "0.9.0",
+)
+
+#
+# TOOLCHAINS SETUP
+#
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+#
+# THIRD PARTY DEPENDENCIES
+#
+
+versioned_http_archive(
+    name = "aes_siv",
+    build_file = "//bazel/third_party/aes_siv:aes_siv.BUILD",
+    sha256 = "1916a428dff480e06b09dc0fb1c9d849c048f838dc9b8d141452233b508f6bb1",
+    strip_prefix = "libaes_siv-{version}",
+    url = "https://github.com/dfoxfranke/libaes_siv/archive/{version}.tar.gz",
+    version = "9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b",
+)
+
+versioned_http_archive(
+    name = "argon2",
+    build_file = "//bazel/third_party/argon2:argon2.BUILD",
+    sha256 = "40850e6e6324be10f14228d17b617ad2074bb926eeddd6fe40ad5df833833949",
+    strip_prefix = "argon2-{version}",
+    url = "https://github.com/urbit/argon2/archive/{version}.tar.gz",
+    version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
+)
+
+# See https://curl.se/docs/caextract.html.
+versioned_http_file(
+    name = "ca_bundle",
+    sha256 = "2cff03f9efdaf52626bd1b451d700605dc1ea000c5da56bd0fc59f8f43071040",
+    url = "https://curl.se/ca/cacert-{version}.pem",
+    version = "2022-10-11",
+)
+
+versioned_http_archive(
+    name = "curl",
+    build_file = "//bazel/third_party/curl:curl.BUILD",
+    sha256 = "78a06f918bd5fde3c4573ef4f9806f56372b32ec1829c9ec474799eeee641c27",
+    strip_prefix = "curl-{version}",
+    url = "https://curl.se/download/curl-{version}.tar.gz",
+    version = "7.85.0",
+)
+
+versioned_http_archive(
+    name = "ed25519",
+    build_file = "//bazel/third_party/ed25519:ed25519.BUILD",
+    sha256 = "373923c85f61276e3cad2c0ae7a5d5cd4809ffe46c5abc1dc8276683a55782a0",
+    strip_prefix = "ed25519-{version}",
+    url = "https://github.com/orlp/ed25519/archive/{version}.tar.gz",
+    version = "7fa6712ef5d581a6981ec2b08ee623314cd1d1c4",
+)
+
+versioned_http_archive(
+    name = "gmp",
+    build_file = "//bazel/third_party/gmp:gmp.BUILD",
+    sha256 = "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
+    strip_prefix = "gmp-{version}",
+    url = "https://gmplib.org/download/gmp/gmp-{version}.tar.xz",
+    version = "6.2.1",
+)
+
+versioned_http_archive(
+    name = "h2o",
+    build_file = "//bazel/third_party/h2o:h2o.BUILD",
+    sha256 = "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201",
+    strip_prefix = "h2o-{version}",
+    url = "https://github.com/h2o/h2o/archive/refs/tags/v{version}.tar.gz",
+    # When bumping the version, compare `CMakeLists.txt` in the `h2o` repo to
+    # {build_file} and confirm that {build_file} remains an accurate description
+    # of the h2o build process.
+    version = "2.2.6",
+)
+
+versioned_http_file(
+    name = "ivory_pill",
+    sha256 = "5123a1ac30b83ec026587574df1ce13a73e72d06588ff68b5c41c09e1bebb5b7",
+    url = "https://github.com/urbit/urbit/raw/urbit-v{version}/bin/ivory.pill",
+    version = "1.10",
+)
+
+versioned_http_archive(
+    name = "keccak_tiny",
+    build_file = "//bazel/third_party/keccak_tiny:keccak_tiny.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/keccak_tiny:{version}.patch"],
+    sha256 = "6d4717f96b84805886c74bad89e911076664d992f197634fd7cdfca2ac0f62ef",
+    strip_prefix = "keccak-tiny-{version}",
+    url = "https://github.com/coruus/keccak-tiny/archive/{version}.tar.gz",
+    version = "64b6647514212b76ae7bca0dea9b7b197d1d8186",
+)
+
+versioned_http_archive(
+    name = "lmdb",
+    build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
+    sha256 = "22054926b426c66d8f2bc22071365df6e35f3aacf19ad943bc6167d4cae3bebb",
+    strip_prefix = "lmdb-LMDB_{version}/libraries/liblmdb",
+    url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_{version}.tar.gz",
+    # When bumping the version, compare `libraries/liblmdb/Makefile` in the
+    # `lmdb` repo to {build_file} and confirm that {build_file} remains an
+    # accurate description of the lmdb build process.
+    version = "0.9.29",
+)
+
+versioned_http_archive(
+    name = "murmur3",
+    build_file = "//bazel/third_party/murmur3:murmur3.BUILD",
+    sha256 = "d81836605204df2db9e0c095423b2856073d1b2ef900463151d0663b7ca3164f",
+    strip_prefix = "murmur3-{version}",
+    url = "https://github.com/PeterScott/murmur3/archive/{version}.tar.gz",
+    # When bumping the version, compare `makefile` in the `murmur3` repo to
+    # {build_file} and confirm that {build_file} remains an accurate description
+    # of the murmur3 build process.
+    version = "dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4",
+)
+
+versioned_http_archive(
+    name = "openssl",
+    build_file = "//bazel/third_party/openssl:openssl.BUILD",
+    sha256 = "d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca",
+    strip_prefix = "openssl-{version}",
+    url = "https://www.openssl.org/source/openssl-{version}.tar.gz",
+    version = "1.1.1q",
+)
+
+versioned_http_archive(
+    name = "scrypt",
+    build_file = "//bazel/third_party/scrypt:scrypt.BUILD",
+    sha256 = "df681fb19b653b1a12970ebb6091bb2b58411b9e7baf01143870f6be3f099541",
+    strip_prefix = "libscrypt-{version}",
+    url = "https://github.com/technion/libscrypt/archive/{version}.tar.gz",
+    # When bumping the version, compare `Makefile` in the `scrypt` repo to
+    # {build_file} and confirm that {build_file} remains an accurate description
+    # of the scrypt build process.
+    version = "60e585cdd752262b22ed4113eca41c0461a61608",
+)
+
+versioned_http_archive(
+    name = "secp256k1",
+    build_file = "//bazel/third_party/secp256k1:secp256k1.BUILD",
+    sha256 = "5f6e4a66bf8f3c318d91eacbf3262d1cd81a3fda6bb9af267b54cf38ffd44b1c",
+    strip_prefix = "secp256k1-{version}",
+    url = "https://github.com/bitcoin-core/secp256k1/archive/{version}.tar.gz",
+    version = "694ce8fb2d1fd8a3d641d7c33705691d41a2a860",
+)
+
+versioned_http_archive(
+    name = "sigsegv",
+    build_file = "//bazel/third_party/sigsegv:sigsegv.BUILD",
+    sha256 = "cdac3941803364cf81a908499beb79c200ead60b6b5b40cad124fd1e06caa295",
+    strip_prefix = "libsigsegv-{version}",
+    url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-{version}.tar.gz",
+    version = "2.14",
+)
+
+versioned_http_archive(
+    name = "softfloat",
+    build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
+    sha256 = "15ad5841e88fe09422a8e31a0ef3fe126ecf678f52c9a3882f3373d47752aebe",
+    strip_prefix = "berkeley-softfloat-3-{version}",
+    url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/{version}.tar.gz",
+    # When bumping the version, compare `build/<target>/Makefile` in the
+    # `softfloat` repo to {build_file} and compare that {build_file} remains an
+    # accurate description of the softfloat process for *all* supported
+    # `<target>`s.
+    version = "5c06db33fc1e2130f67c045327b0ec949032df1d",
+)
+
+versioned_http_archive(
+    name = "uv",
+    build_file = "//bazel/third_party/uv:uv.BUILD",
+    sha256 = "ccfcdc968c55673c6526d8270a9c8655a806ea92468afcbcabc2b16040f03cb4",
+    strip_prefix = "libuv-v{version}",
+    url = "https://dist.libuv.org/dist/v{version}/libuv-v{version}.tar.gz",
+    version = "1.44.2",
+)
+
+versioned_http_archive(
+    name = "whereami",
+    build_file = "//bazel/third_party/whereami:whereami.BUILD",
+    sha256 = "1d8744177f37e8386ec2f6c5992592399040cb93535ed4fd253e1976f889a744",
+    strip_prefix = "whereami-{version}",
+    url = "https://github.com/gpakosz/whereami/archive/{version}.tar.gz",
+    version = "ba364cd54fd431c76c045393b6522b4bff547f50",
+)
+
+versioned_http_archive(
+    name = "zlib",
+    build_file = "//bazel/third_party/zlib:zlib.BUILD",
+    sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
+    strip_prefix = "zlib-{version}",
+    url = "https://www.zlib.net/zlib-{version}.tar.gz",
+    version = "1.2.13",
+)
