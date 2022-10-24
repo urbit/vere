@@ -1,5 +1,9 @@
+/// @file
+
 #ifndef C3_DEFS_H
 #define C3_DEFS_H
+
+#include "types.h"
 
   /** Loobeans - inverse booleans to match nock.
   **/
@@ -21,7 +25,6 @@
 #       define c3_assert(x)                       \
           do {                                    \
             if (!(x)) {                           \
-              c3_cooked();                        \
               assert(x);                          \
             }                                     \
           } while(0)
@@ -33,7 +36,6 @@
               fprintf(stderr, "\rAssertion '%s' " \
                       "failed in %s:%d\r\n",      \
                       #x, __FILE__, __LINE__);    \
-              c3_cooked();                        \
               assert(x);                          \
             }                                     \
           } while(0)
@@ -69,11 +71,6 @@
     /* Rotate.
     */
 #     define c3_rotw(r, x)  ( ((x) << (r)) | ((x) >> (32 - (r))) )
-
-    /* Emergency stdio fix.
-    */
-      int
-      c3_cooked();
 
     /* Fill 16 words (64 bytes) with high-quality entropy.
     */

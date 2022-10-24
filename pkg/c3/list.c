@@ -1,6 +1,6 @@
-//! @file list.c
+/// @file
 
-#include "c/list.h"
+#include "list.h"
 
 //==============================================================================
 // Static functions

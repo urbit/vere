@@ -1,14 +1,14 @@
-//! @file list.h
-//! Generic list abstraction backed by a doubly linked list.
+/// @file
+///
+/// Generic list abstraction backed by a doubly linked list.
 
 #ifndef C3_LIST_H
 #define C3_LIST_H
 
 #include <stddef.h>
 
-#include "c/portable.h"
-#include "c/types.h"
-#include "c/defs.h"
+#include "defs.h"
+#include "types.h"
 
 //==============================================================================
 // Types

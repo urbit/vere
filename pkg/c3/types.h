@@ -1,5 +1,9 @@
+/// @file
+
 #ifndef C3_TYPES_H
 #define C3_TYPES_H
+
+#include "portable.h"
 
   /** Integer typedefs.
   **/
