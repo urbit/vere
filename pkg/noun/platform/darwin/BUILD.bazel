@@ -1,0 +1,7 @@
+cc_library(
+    name = "darwin",
+    hdrs = ["rsignal.h"],
+    include_prefix = "platform",
+    includes = ["."],
+    visibility = ["//pkg:__subpackages__"],
+)

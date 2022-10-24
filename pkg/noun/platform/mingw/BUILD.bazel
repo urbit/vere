@@ -1,0 +1,8 @@
+cc_library(
+    name = "mingw",
+    srcs = ["rsignal.c"],
+    hdrs = ["rsignal.h"],
+    include_prefix = "platform",
+    includes = ["."],
+    visibility = ["//pkg:__subpackages__"],
+)
