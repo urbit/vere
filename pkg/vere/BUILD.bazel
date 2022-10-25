@@ -1,0 +1,235 @@
+#
+# GENERATED FILES
+#
+
+# An approximation of `xxd -i` that runs on all platforms where Bash is
+# present. Generates a `.h` file that declares the array and array length as
+# `extern` global variables and a `.c` file containing the array and array
+# length definitions that includes the `.h` file.
+#
+# Referencing a shell variable requires `$$`, not `$`. See
+# https://bazel.build/reference/be/general#general-advice.
+XXD_I = """
+function xxd_i() {
+    var=$$1
+    src_file=$$2
+    dst_h_file=$$3
+    dst_c_file=$$4
+
+    # Generate `.h` file.
+    echo "#ifndef $${var}_H" > $$dst_h_file
+    echo "#define $${var}_H" >> $$dst_h_file
+    echo "extern unsigned char $$var[];" >> $$dst_h_file
+    echo "extern unsigned int $${var}_len;" >> $$dst_h_file
+    echo '#endif' >> $$dst_h_file
+
+    # Generate `.c` file.
+    printf '#include "%s"\n' $$dst_h_file > $$dst_c_file
+    echo "unsigned char $$var[] = {" >> $$dst_c_file
+    cnt=0
+    while IFS='' read line
+    do
+        for byte in $$line
+        do
+            echo -n " 0x$$byte," >> $$dst_c_file
+            cnt=$$((cnt+1))
+        done
+    # <() is syntax for Bash process substitution.
+    done < <(od -An -v -tx1 $$src_file)
+    echo "};" >> $$dst_c_file
+    echo "unsigned int $${var}_len = $$cnt;" >> $$dst_c_file
+}
+"""
+
+# Produce a certificate authority bundle as a byte array.
+genrule(
+    name = "ca_bundle",
+    srcs = ["@ca_bundle//file"],
+    outs = [
+        "ca_bundle.h",
+        "ca_bundle.c",
+    ],
+    cmd_bash = """
+    # Defines the function `xxd_i()`.
+    {}
+
+    src_file=$(execpath @ca_bundle//file)
+    dst_h_file=$(execpath ca_bundle.h)
+    dst_c_file=$(execpath ca_bundle.c)
+    xxd_i include_ca_bundle_crt $$src_file $$dst_h_file $$dst_c_file
+    """.format(XXD_I),
+    visibility = ["//visibility:private"],
+)
+
+# Produce an `ivory.pill` as a byte array.
+genrule(
+    name = "ivory",
+    srcs = ["@ivory_pill//file"],
+    outs = [
+        "ivory.h",
+        "ivory.c",
+    ],
+    cmd_bash = """
+    # Defines the function `xxd_i()`.
+    {}
+
+    # Create ivory.h.
+    src_file=$(execpath @ivory_pill//file)
+    dst_h_file=$(execpath ivory.h)
+    dst_c_file=$(execpath ivory.c)
+    xxd_i u3_Ivory_pill $$src_file $$dst_h_file $$dst_c_file
+    """.format(XXD_I),
+    visibility = ["//visibility:private"],
+)
+
+# Produce the `URBIT_VERSION` macro.
+genrule(
+    name = "version",
+    srcs = ["VERSION"],
+    outs = ["version.h"],
+    cmd = """
+    echo '#ifndef URBIT_VERSION_H' > $@
+    echo '#define URBIT_VERSION_H' >> $@
+    printf '#define URBIT_VERSION "%s"\n' $$(cat $<) >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//visibility:private"],
+)
+
+# Produce the `U3_VERE_PACE` macro.
+genrule(
+    name = "pace",
+    srcs = ["PACE"],
+    outs = ["pace.h"],
+    cmd = """
+    echo '#ifndef URBIT_PACE_H' > $@
+    echo '#define URBIT_PACE_H' >> $@
+    printf '#define U3_VERE_PACE "%s"\n' $$(cat $<) >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//visibility:private"],
+)
+
+#
+# LIBRARIES
+#
+
+cc_library(
+    name = "vere",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+            "db/*.c",
+            "io/*.c",
+        ],
+        allow_empty = False,
+        exclude = [
+            "main.c",
+            "vere.h",
+            "*_tests.c",
+        ],
+    ) + [
+        ":ivory",
+        ":pace",
+        ":version",
+    ] + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [
+            "platform/linux/daemon.c",
+            "platform/linux/ptty.c",
+        ],
+        "@platforms//os:openbsd": [],
+        "@platforms//os:windows": [],
+    }),
+    hdrs = [
+        "db/lmdb.h",
+        "vere.h",
+    ],
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/ent",
+        "//pkg/noun",
+        "//pkg/ur",
+        "@curl",
+        "@h2o",
+        "@lmdb",
+        "@openssl",
+        "@uv",
+    ],
+)
+
+#
+# BINARIES
+#
+
+cc_binary(
+    name = "urbit",
+    srcs = [
+        "main.c",
+        ":ca_bundle",
+        ":ivory",
+        ":pace",
+        ":version",
+    ],
+    linkstatic = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/noun",
+        "//pkg/ur",
+        ":vere",
+        # TODO: remove dependency (only used to report version).
+        "@h2o",
+        "@openssl",
+        # TODO: remove dependency (only used to report version).
+        "@sigsegv",
+        "@whereami",
+    ],
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "ames_tests",
+    srcs = ["ames_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "newt_tests",
+    srcs = ["newt_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "noun_tests",
+    srcs = ["noun_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "unix_tests",
+    srcs = ["unix_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "benchmarks",
+    srcs = ["benchmarks.c"],
+    visibility = ["//visibility:private"],
+    deps = [
+        ":vere",
+        "//pkg/noun",
+        "//pkg/ur",
+    ],
+)
