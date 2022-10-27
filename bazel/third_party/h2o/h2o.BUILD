@@ -100,7 +100,6 @@ cc_library(
     hdrs = ["deps/picotls/include/picotls.h"] + glob(
         ["deps/picotls/include/picotls/*.h"],
     ),
-    ),
     copts = [
         "-std=c99",
         "-Wall",
