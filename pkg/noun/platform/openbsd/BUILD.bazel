@@ -3,5 +3,9 @@ cc_library(
     hdrs = ["rsignal.h"],
     include_prefix = "platform",
     includes = ["."],
+    target_compatible_with = select({
+        "@platforms//os:openbsd": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//pkg:__subpackages__"],
 )
