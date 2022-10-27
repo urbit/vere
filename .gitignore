@@ -1,4 +1,5 @@
 # Bazel.
+/.user.bazelrc
 /bazel-*
 /urbit
 

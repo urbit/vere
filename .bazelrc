@@ -1,2 +1,5 @@
 # Disallow empty `glob()`s.
 build --incompatible_disallow_empty_glob
+
+# Any personal configuration should go in .user.bazelrc.
+try-import %workspace%/.user.bazelrc
