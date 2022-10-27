@@ -123,7 +123,6 @@ cc_library(
             "db/*.c",
             "io/*.c",
         ],
-        allow_empty = False,
         exclude = [
             "main.c",
             "vere.h",

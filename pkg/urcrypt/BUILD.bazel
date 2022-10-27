@@ -9,7 +9,6 @@ cc_library(
             "*.c",
             "*.h",
         ],
-        allow_empty = False,
         exclude = ["urcrypt.h"],
     ),
     hdrs = ["urcrypt.h"],

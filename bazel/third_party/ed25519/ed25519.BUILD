@@ -5,7 +5,6 @@ cc_library(
             "src/*.c",
             "src/*.h",
         ],
-        allow_empty = False,
         exclude = ["src/ed25519.h"],
     ),
     hdrs = ["src/ed25519.h"],

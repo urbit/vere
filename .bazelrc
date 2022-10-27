@@ -1,0 +1,2 @@
+# Disallow empty `glob()`s.
+build --incompatible_disallow_empty_glob

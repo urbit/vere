@@ -38,14 +38,8 @@ cc_library(
 # See `deps/klib` in the `h2o` repo.
 cc_library(
     name = "klib",
-    srcs = glob(
-        ["deps/klib/*.c"],
-        allow_empty = False,
-    ),
-    hdrs = glob(
-        ["deps/klib/*.h"],
-        allow_empty = False,
-    ),
+    srcs = glob(["deps/klib/*.c"]),
+    hdrs = glob(["deps/klib/*.h"]),
     includes = ["deps/klib"],
     linkstatic = True,
     visibility = ["//visibility:private"],
@@ -67,7 +61,6 @@ cc_library(
     name = "libyrmcds",
     srcs = glob(
         ["deps/libyrmcds/*.c"],
-        allow_empty = False,
         exclude = [
             "deps/libyrmcds/yc.c",
             "deps/libyrmcds/yc-cnt.c",
@@ -103,11 +96,9 @@ cc_library(
     name = "picotls",
     srcs = glob(
         ["deps/picotls/lib/*.c"],
-        allow_empty = False,
     ),
     hdrs = ["deps/picotls/include/picotls.h"] + glob(
         ["deps/picotls/include/picotls/*.h"],
-        allow_empty = False,
     ),
     copts = [
         "-std=c99",
@@ -143,7 +134,6 @@ cc_library(
     name = "yoml",
     hdrs = glob(
         ["deps/yoml/*.h"],
-        allow_empty = False,
     ),
     includes = ["deps/yoml"],
     linkstatic = True,
@@ -187,7 +177,6 @@ cc_library(
             "deps/picotls/deps/cifra/src/*.h",
             "deps/picotls/deps/cifra/src/ext/*.h",
         ],
-        allow_empty = False,
         exclude = ["deps/picotls/deps/cifra/src/ext/handy.h"],
     ),
     hdrs = glob(
@@ -195,7 +184,6 @@ cc_library(
             "deps/picotls/deps/cifra/src/*.h",
             "deps/picotls/deps/cifra/src/ext/*.h",
         ],
-        allow_empty = False,
     ),
     includes = [
         "deps/picotls/deps/cifra/src",
@@ -313,15 +301,13 @@ cc_library(
             "lib/http2/*.h",
             "lib/common/socket/*.h",
         ],
-        allow_empty = False,
     ),
-    hdrs = ["include/h2o.h"] +
-           glob(
-               ["include/h2o/*.h"],
-               allow_empty = False,
-           ) + glob(
+    hdrs = ["include/h2o.h"] + glob(
+        [
+            "include/h2o/*.h",
+        ],
+    ) + glob(
         ["include/h2o/socket/*.h"],
-        allow_empty = False,
     ),
     copts = [
         "-std=c99",

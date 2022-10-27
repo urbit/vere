@@ -12,7 +12,6 @@ cc_library(
             "jets/*.h",
             "jets/**/*.c",
         ],
-        allow_empty = False,
         exclude = [
             "noun.h",
             "*_tests.c",

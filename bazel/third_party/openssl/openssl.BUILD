@@ -2,10 +2,7 @@ load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
 
 filegroup(
     name = "all",
-    srcs = glob(
-        ["**"],
-        allow_empty = False,
-    ),
+    srcs = glob(["**"]),
 )
 
 # TODO: use configure_make_variant() to select nmake toolchain on windows?
