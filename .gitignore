@@ -3,6 +3,9 @@
 /bazel-*
 /urbit
 
+# Pills.
+*.pill
+
 # Fake ships.
 /zod
 /nec
