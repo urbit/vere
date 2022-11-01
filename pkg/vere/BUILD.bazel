@@ -156,6 +156,7 @@ cc_library(
         "//pkg/ur",
         "@curl",
         "@h2o",
+        "@io_drivers",
         "@lmdb",
         "@openssl",
         "@uv",

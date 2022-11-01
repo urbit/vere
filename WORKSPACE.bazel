@@ -67,6 +67,13 @@ versioned_http_archive(
     version = "0.9.0",
 )
 
+versioned_http_archive(
+    name = "rules_rust",
+    sha256 = "696b01deea96a5e549f1b5ae18589e1bbd5a1d71a36a243b5cf76a9433487cf2",
+    url = "https://github.com/bazelbuild/rules_rust/releases/download/{version}/rules_rust-v{version}.tar.gz",
+    version = "0.11.0",
+)
+
 #
 # TOOLCHAINS SETUP
 #
@@ -74,6 +81,27 @@ versioned_http_archive(
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()
+
+load(
+    "@rules_rust//rust:repositories.bzl",
+    "rules_rust_dependencies",
+    "rust_register_toolchains",
+)
+
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition = "2021",
+    # Disable WASM support to avoid downloading WASM toolchains.
+    extra_target_triples = [],
+)
+
+load(
+    "@rules_rust//crate_universe:repositories.bzl",
+    "crate_universe_dependencies",
+)
+
+crate_universe_dependencies()
 
 #
 # THIRD PARTY DEPENDENCIES
@@ -142,6 +170,15 @@ versioned_http_archive(
     # {build_file} and confirm that {build_file} remains an accurate description
     # of the h2o build process.
     version = "2.2.6",
+)
+
+versioned_http_archive(
+    name = "io_drivers",
+    build_file = "//bazel/third_party/io_drivers:io_drivers.BUILD",
+    sha256 = "3c495acf37d55b1df0b2920ba994c5c04842b1cb036f6baa3942fd9dfe72d630",
+    strip_prefix = "io_drivers-{version}",
+    url = "https://github.com/urbit/io_drivers/archive/{version}.tar.gz",
+    version = "e5c757f1a717d667adea5dc27f4198995d2d552d",
 )
 
 versioned_http_file(
@@ -264,3 +301,51 @@ versioned_http_archive(
     url = "https://www.zlib.net/zlib-{version}.tar.gz",
     version = "1.2.13",
 )
+
+#
+# RUST
+#
+
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+
+# The list of our supported platforms in a notation that Rust understands.
+PLATFORM_TRIPLES = [
+    # Linux.
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-linux-gnu",
+    # macOS.
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    # It's unclear whether there's OpenBSD is a supported target. At least
+    # `rustup target list` doesn't show an OpenBSD option.
+    # Windows.
+    "x86_64-pc-windows-msvc",
+]
+
+# For each Rust crate that we depend on, we have to specify a
+# crates_repository() rule, which uses the crate's manifest and lock files (i.e.
+# Cargo.toml and Cargo.lock) to fetch the crate's dependencies upon an
+# invocation to crate_repositories(). The crates_repository() rule also
+# generates helper macros, most notably all_crate_deps(), which can be used in a
+# crate's build rule(s) to declare that the build rule(s) depend on all
+# dependencies specified in the crate's Cargo.toml.
+#
+# For more context, see
+# https://github.com/bazelbuild/rules_rust/blob/main/docs/crate_universe.md#cargo-workspaces.
+
+crates_repository(
+    name = "crate_index_io_drivers",
+    cargo_lockfile = "@io_drivers//:Cargo.lock",
+    # See https://github.com/bazelbuild/rules_rust/issues/1608.
+    isolated = False,
+    lockfile = "//bazel/third_party/io_drivers:Cargo.Bazel.lock",
+    manifests = ["@io_drivers//:Cargo.toml"],
+    supported_platform_triples = PLATFORM_TRIPLES,
+)
+
+load(
+    "@crate_index_io_drivers//:defs.bzl",
+    io_drivers_crate_repositories = "crate_repositories",
+)
+
+io_drivers_crate_repositories()
