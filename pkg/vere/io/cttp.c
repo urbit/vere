@@ -285,9 +285,12 @@ u3_cttp_io_init(u3_pier* const pir_u)
   }
 
   {
-    // TODO: integrate the Rust binary.
     c3_c* args_c[] = {
-      "/home/tlon/code/io_drivers/target/release/io_drivers",
+      // Path to Urbit binary.
+      pir_u->god_u->bin_c,
+      "http-client",
+      // Path to pier.
+      pir_u->pax_c,
       NULL,
     };
 

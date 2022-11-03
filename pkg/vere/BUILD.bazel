@@ -122,7 +122,6 @@ cc_library(
             "*.h",
             "db/*.c",
             "io/*.c",
-            "io/*.h",
         ],
         exclude = [
             "main.c",
@@ -143,6 +142,7 @@ cc_library(
         "@platforms//os:windows": [],
     }),
     hdrs = [
+        "io/io.h",
         "db/lmdb.h",
         "vere.h",
     ],
@@ -156,7 +156,6 @@ cc_library(
         "//pkg/ur",
         "@curl",
         "@h2o",
-        "@io_drivers",
         "@lmdb",
         "@openssl",
         "@uv",
@@ -185,6 +184,7 @@ cc_binary(
         ":vere",
         # TODO: remove dependency (only used to report version).
         "@h2o",
+        "@io_drivers",
         "@openssl",
         # TODO: remove dependency (only used to report version).
         "@sigsegv",

@@ -7,6 +7,7 @@
 #include "ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
+#include "io/io.h"
 #if !defined(U3_OS_mingw)
 #include "sigsegv.h"
 #endif
@@ -1765,6 +1766,9 @@ _cw_utils(c3_i argc, c3_c* argv[])
       c3_c* s = argv[1];
       mot_m = c3_s4(s[0], s[1], s[2], s[3]);
     }
+    else if ( 0 == strcmp(argv[1], "http-client") ) {
+      mot_m = c3__cttp;
+    }
     else if ( 0 == strcmp(argv[1], "upgrade") ) {
       mot_m = c3__next;
     }
@@ -1792,6 +1796,11 @@ _cw_utils(c3_i argc, c3_c* argv[])
 
     case c3__boot: _cw_boot(argc - 2, argv + 2); return 1;
     case c3__work: _cw_work(argc - 2, argv + 2); return 1;
+
+    case c3__cttp: {
+      c3_y status_y = http_client_run();
+      return 1;
+    }
   }
 
   return 0;
