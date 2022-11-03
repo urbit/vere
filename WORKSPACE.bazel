@@ -38,7 +38,7 @@
 #   build system that would be too difficult to replicate in Bazel (i.e.
 #   OpenSSL). However, delegate only as a last resort.
 
-load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
+load("//bazel:repo.bzl", "add_http_archives", "versioned_http_archive", "versioned_http_file")
 
 #
 # RULES REPOSITORIES
@@ -189,9 +189,13 @@ versioned_http_archive(
     version = "0.9.29",
 )
 
-versioned_http_archive(
-    name = "murmur3",
+add_http_archives(
+    base_name = "murmur3",
     build_file = "//bazel/third_party/murmur3:murmur3.BUILD",
+    patch_args = ["-p1"],
+    patches = {
+        "macos-arm64": ["//bazel/third_party/murmur3/patches:macos-arm64_{version}.patch"],
+    },
     sha256 = "d81836605204df2db9e0c095423b2856073d1b2ef900463151d0663b7ca3164f",
     strip_prefix = "murmur3-{version}",
     url = "https://github.com/PeterScott/murmur3/archive/{version}.tar.gz",
@@ -240,9 +244,13 @@ versioned_http_archive(
     version = "2.14",
 )
 
-versioned_http_archive(
-    name = "softfloat",
+add_http_archives(
+    base_name = "softfloat",
     build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
+    patch_args = ["-p1"],
+    patches = {
+        "macos-arm64": ["//bazel/third_party/softfloat/patches/macos-arm64_{version}.patch"],
+    },
     sha256 = "15ad5841e88fe09422a8e31a0ef3fe126ecf678f52c9a3882f3373d47752aebe",
     strip_prefix = "berkeley-softfloat-3-{version}",
     url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/{version}.tar.gz",

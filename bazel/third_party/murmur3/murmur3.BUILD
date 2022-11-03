@@ -12,3 +12,15 @@ cc_library(
     includes = ["."],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "murmur3_macos-arm64",
+    srcs = ["murmur3.c"],
+    hdrs = ["murmur3.h"],
+    copts = [
+        "-O3",
+        "-Wall",
+    ],
+    includes = ["."],
+    visibility = ["//visibility:public"],
+)

@@ -2,6 +2,13 @@
 # LIBRARIES
 #
 
+alias(
+    name = "murmur3",
+    actual = select({
+        "@//:macos-arm64": "@murmur3_macos-arm64",
+    }),
+)
+
 cc_library(
     name = "ur",
     srcs = [
@@ -17,7 +24,7 @@ cc_library(
     includes = ["."],
     linkstatic = True,
     visibility = ["//pkg:__subpackages__"],
-    deps = ["@murmur3"],
+    deps = ["murmur3"],
 )
 
 #

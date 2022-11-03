@@ -2,6 +2,20 @@
 # LIBRARIES
 #
 
+alias(
+    name = "softfloat",
+    actual = select({
+        "@//:macos-arm64": "@softfloat_macos-arm64",
+    }),
+)
+
+alias(
+    name = "murmur3",
+    actual = select({
+        "@//:macos-arm64": "@murmur3_macos-arm64",
+    }),
+)
+
 cc_library(
     name = "noun",
     srcs = glob(
@@ -27,9 +41,9 @@ cc_library(
         "//pkg/ur",
         "//pkg/urcrypt",
         "@gmp",
-        "@murmur3",
+        "murmur3",  # TODO: replace aliases with select statement
         "@openssl",
-        "@softfloat",
+        "softfloat",  # TODO: replace aliases with select statement
     ] + select({
         # We don't use `libsigsegv` on Windows because of performance reasons.
         "@platforms//os:windows": [],
