@@ -249,7 +249,7 @@ add_http_archives(
     build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
     patch_args = ["-p1"],
     patches = {
-        "macos-arm64": ["//bazel/third_party/softfloat/patches/macos-arm64_{version}.patch"],
+        "macos-arm64": ["//bazel/third_party/softfloat/patches:macos-arm64_{version}.patch"],
     },
     sha256 = "15ad5841e88fe09422a8e31a0ef3fe126ecf678f52c9a3882f3373d47752aebe",
     strip_prefix = "berkeley-softfloat-3-{version}",
