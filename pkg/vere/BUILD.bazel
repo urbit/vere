@@ -196,6 +196,7 @@ cc_binary(
 
 cc_test(
     name = "ames_tests",
+    timeout = "short",
     srcs = ["ames_tests.c"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
@@ -203,6 +204,7 @@ cc_test(
 
 cc_test(
     name = "newt_tests",
+    timeout = "short",
     srcs = ["newt_tests.c"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
@@ -210,6 +212,7 @@ cc_test(
 
 cc_test(
     name = "noun_tests",
+    timeout = "short",
     srcs = ["noun_tests.c"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
@@ -217,6 +220,7 @@ cc_test(
 
 cc_test(
     name = "unix_tests",
+    timeout = "short",
     srcs = ["unix_tests.c"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
@@ -224,6 +228,7 @@ cc_test(
 
 cc_test(
     name = "benchmarks",
+    timeout = "short",
     srcs = ["benchmarks.c"],
     visibility = ["//visibility:private"],
     deps = [

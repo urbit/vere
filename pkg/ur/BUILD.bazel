@@ -26,6 +26,7 @@ cc_library(
 
 cc_test(
     name = "tests",
+    timeout = "short",
     srcs = ["tests.c"],
     linkstatic = True,
     visibility = ["//visibility:private"],
