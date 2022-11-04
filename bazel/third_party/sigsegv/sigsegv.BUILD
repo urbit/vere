@@ -14,11 +14,7 @@ configure_make(
     ] + select({
         # Disable stack vma check, which reads from procfs, producing drastic
         # slowdowns.
-        "@platforms//os:linux": ["CFLAGS=-DHAVE_STACKVMA=0"],
-        "//conditions:default": [],
-    }),
-    defines = select({
-        "@platforms//os:linux": ["HAVE_STACKVMA=0"],
+        "@platforms//os:linux": ["--disable-stackvma"],
         "//conditions:default": [],
     }),
     lib_source = ":all",
