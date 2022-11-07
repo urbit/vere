@@ -968,7 +968,10 @@ cc_library(
         "source/8086-SSE",
         "source/include",
     ],
-    local_defines = [
+    local_defines = select({
+        "@platforms//os:macos": ["URBIT_RUNTIME_OS_DARWIN"],
+        "//conditions:default": [],
+    }) + [
         "SOFTFLOAT_ROUND_ODD",
         "INLINE_LEVEL=5",
         "SOFTFLOAT_FAST_DIV32TO16",
