@@ -245,6 +245,15 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "sse2neon",
+    build_file = "//bazel/third_party/sse2neon:sse2neon.BUILD",
+    sha256 = "4001e2dfb14fcf3831211581ed83bcc83cf6a3a69f638dcbaa899044a351bb2a",
+    strip_prefix = "sse2neon-{version}",
+    url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v{version}.tar.gz",
+    version = "1.5.1",
+)
+
+versioned_http_archive(
     name = "uv",
     build_file = "//bazel/third_party/uv:uv.BUILD",
     sha256 = "ccfcdc968c55673c6526d8270a9c8655a806ea92468afcbcabc2b16040f03cb4",
