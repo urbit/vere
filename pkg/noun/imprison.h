@@ -5,6 +5,7 @@
 
 #include "allocate.h"
 #include "c3.h"
+#include "gmp.h"
 #include "types.h"
 
   /**  Structures.
