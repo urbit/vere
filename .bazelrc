@@ -1,5 +1,16 @@
 # Disallow empty `glob()`s.
 build --incompatible_disallow_empty_glob
 
+# Always use the toolchains we've configured.
+build --crosstool_top=//bazel/toolchain:toolchain
+
+# Build on Linux x86_64 using gcc.
+build:linux-x86_64-gcc --cpu=k8
+build:linux-x86_64-gcc --compiler=gcc
+
+# Build on Linux x86_64 using clang.
+build:linux-x86_64-clang --cpu=k8
+build:linux-x86_64-clang --compiler=clang
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc

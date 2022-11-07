@@ -1,0 +1,90 @@
+# For more information on configuring toolchains, see
+# https://bazel.build/tutorials/ccp-toolchain-config.
+
+load(":cfg.bzl", "cc_toolchain_config")
+
+filegroup(name = "empty")
+
+#
+# Clang x86_64
+#
+
+# Toolchain identifier.
+CLANG_X86_64 = "clang_x86_64-toolchain"
+
+cc_toolchain_config(
+    name = "clang_x86_64_toolchain_config",
+    ar = "/usr/bin/ar",
+    cc = "/usr/bin/clang",
+    compiler = "clang",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        # TODO: remove hard-coded version.
+        "/usr/lib/clang/14.0.6/include",
+        "/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = CLANG_X86_64,
+)
+
+cc_toolchain(
+    name = "clang_x86_64_toolchain",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":clang_x86_64_toolchain_config",
+    toolchain_identifier = CLANG_X86_64,
+)
+
+#
+# Gcc x86_64
+#
+
+# Toolchain identifier.
+GCC_X86_64 = "gcc_x86_64-toolchain"
+
+cc_toolchain_config(
+    name = "gcc_x86_64_toolchain_config",
+    ar = "/usr/bin/ar",
+    cc = "/usr/bin/gcc",
+    compiler = "gcc",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        # TODO: remove hard-coded version number.
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include",
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include-fixed",
+        "/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = GCC_X86_64,
+)
+
+cc_toolchain(
+    name = "gcc_x86_64_toolchain",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":gcc_x86_64_toolchain_config",
+    toolchain_identifier = GCC_X86_64,
+)
+
+#
+# TOOLCHAIN SUITE
+#
+
+cc_toolchain_suite(
+    name = "toolchain",
+    toolchains = {
+        # `k8` and `x86_64` are synonyms, but Bazel doesn't accept `x86_64` here.
+        "k8|clang": ":clang_x86_64_toolchain",
+        "k8|gcc": ":gcc_x86_64_toolchain",
+    },
+)
