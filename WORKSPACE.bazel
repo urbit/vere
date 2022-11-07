@@ -38,7 +38,7 @@
 #   build system that would be too difficult to replicate in Bazel (i.e.
 #   OpenSSL). However, delegate only as a last resort.
 
-load("//bazel:repo.bzl", "add_http_archives", "versioned_http_archive", "versioned_http_file")
+load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
 
 #
 # RULES REPOSITORIES
@@ -180,6 +180,8 @@ versioned_http_archive(
 versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/lmdb:{version}.patch"],
     sha256 = "22054926b426c66d8f2bc22071365df6e35f3aacf19ad943bc6167d4cae3bebb",
     strip_prefix = "lmdb-LMDB_{version}/libraries/liblmdb",
     url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_{version}.tar.gz",
@@ -189,13 +191,9 @@ versioned_http_archive(
     version = "0.9.29",
 )
 
-add_http_archives(
-    base_name = "murmur3",
+versioned_http_archive(
+    name = "murmur3",
     build_file = "//bazel/third_party/murmur3:murmur3.BUILD",
-    patch_args = ["-p1"],
-    patches = {
-        "macos-arm64": ["//bazel/third_party/murmur3/patches:macos-arm64_{version}.patch"],
-    },
     sha256 = "d81836605204df2db9e0c095423b2856073d1b2ef900463151d0663b7ca3164f",
     strip_prefix = "murmur3-{version}",
     url = "https://github.com/PeterScott/murmur3/archive/{version}.tar.gz",
@@ -244,13 +242,11 @@ versioned_http_archive(
     version = "2.14",
 )
 
-add_http_archives(
-    base_name = "softfloat",
+versioned_http_archive(
+    name = "softfloat",
     build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
     patch_args = ["-p1"],
-    patches = {
-        "macos-arm64": ["//bazel/third_party/softfloat/patches:macos-arm64_{version}.patch"],
-    },
+    patches = ["//bazel/third_party/softfloat:{version}.patch"],
     sha256 = "15ad5841e88fe09422a8e31a0ef3fe126ecf678f52c9a3882f3373d47752aebe",
     strip_prefix = "berkeley-softfloat-3-{version}",
     url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/{version}.tar.gz",
