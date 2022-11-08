@@ -1,118 +1,102 @@
-# Urbit
+# Urbit Runtime
 
-[Urbit](https://urbit.org) is a personal server stack built from scratch. It
-has an identity layer (Azimuth), virtual machine (Vere), and operating system
-(Arvo).
+[Urbit][urbit] is a personal server stack built from scratch. This repository
+contains [Urbit's runtime environment][vere], the lowest layer of the Urbit
+stack, which includes the Nock virtual machine, I/O drivers, event log, and
+snapshotting system.
 
-A running Urbit "ship" is designed to operate with other ships peer-to-peer.
-Urbit is a general-purpose, peer-to-peer computer and network.
 
-This repository contains:
+## Getting Started
 
-- The [Arvo OS][arvo]
-- [herb][herb], a tool for Unix control of an Urbit ship
-- Source code for [Landscape's web interface][land]
-- Source code for the [vere][vere] virtual machine.
+For basic Urbit usage instructions, head over to [urbit.org][getting-started].
+For a high-level overview of the salient aspects of Urbit's architecture, visit
+[developers.urbit.org][technical-reference]. You might also be interested in
+joining the [urbit-dev][mailing-list] mailing list.
 
-For more on the identity layer, see [Azimuth][azim]. To manage your Urbit
-identity, use [Bridge][brid].
 
-[arvo]: https://github.com/urbit/urbit/tree/master/pkg/arvo
-[azim]: https://github.com/urbit/azimuth
-[brid]: https://github.com/urbit/bridge
-[herb]: https://github.com/urbit/urbit/tree/master/pkg/herb
-[land]: https://github.com/urbit/urbit/tree/master/pkg/interface
-[vere]: https://github.com/urbit/urbit/tree/master/pkg/urbit
+## Packages
 
-## Install
+Urbit's runtime is broken down into a few separate layers, each of which is
+defined in its own package:
 
-To install and run Urbit, please follow the instructions at
-[urbit.org/install][start].  You'll be on the live network in a
-few minutes.
+- [`pkg/c3`](pkg/c3): A set of basic utilities for writing Urbit's style of C.
+- [`pkg/ent`](pkg/ent): A cross-platform wrapper for `getentropy(2)`.
+- [`pkg/urcrypt`](pkg/urcrypt): A standardized interface for calling various
+  cryptographic functions used in the Urbit runtime.
+- [`pkg/ur`](pkg/ur): An implementation of [jam][jam] and [cue][cue], Urbit's
+  bitwise noun serialization and deserialization algorithms, respectively.
+- [`pkg/noun`](pkg/noun): The Nock virtual machine and snapshotting system.
+- [`pkg/vere`](pkg/vere): The I/O drivers, event log, and main event loop.
 
-If you're interested in Urbit development, keep reading.
 
-[start]: https://urbit.org/install/
+## Build
 
-## Development
+We use [`bazel`][bazel] to build Urbit's runtime. We support the following
+platforms:
 
-[![License][license-badge]][license]
-[![Build][build-badge]][build]
-[![Nix][nix-badge]][nix]
-[![Cachix][cachix-badge]][cachix]
+- `darwin-arm64` (macOS running Apple Silicon)
+- `darwin-x86_64` (macOS running Intel silicon)
+- `linux-arm64`
+- `linux-x86_64`
+- `openbsd-x86_64`
+- `mingw-x86_64`
 
-Urbit uses [Nix][nix] to manage builds.  On Linux and macOS you can install Nix
-via:
+To build the `urbit` binary, the primary artifact of this repository, ensure
+that you're on a supported platform and that you have an up-to-date version of
+[`bazel`][bazel], and then run:
 
-```
-curl -L https://nixos.org/nix/install | sh
-```
-
-You can optionally setup Nix to pull build artefacts from the binary cache 
-that continuous integration uses. This will improve build times and avoid 
-unnecessary recompilations of common dependencies.  Once Nix has been installed 
-you can setup Cachix via:
-
-```
-nix-env -iA cachix -f https://cachix.org/api/v1/install
-cachix use ares
+```console
+$ bazel build :urbit
 ```
 
-The Makefile in the project's root directory contains useful phony targets for
-building, installing, testing, and so on.  You can use it to avoid dealing with
-Nix explicitly.
+The build will take a while since `bazel` has to download and build from source
+all of `urbit`'s third-party dependencies.
 
-To build the Urbit virtual machine binary, for example, use:
+To run the just-built `urbit` binary, run:
 
-```
-make build
-```
-
-The test suite can similarly be run via a simple:
-
-```
-make test
+```console
+$ bazel-bin/pkg/vere/urbit ...
 ```
 
-To build the source-level documentation, use:
+Or, to save yourself a few keystrokes, create a symlink to the `urbit` binary in
+the root of the repository:
 
-```
-make doc
-```
-
-Source-level documentation is a work-in-progress and (partial) coverage is only
-available for the following subdirectories:
-
-- [pkg/urbit/](https://github.com/urbit/urbit/tree/master/pkg/urbit)
-
-Note that some of the Makefile targets need access to pills tracked via [git
-LFS][git-lfs], so you'll also need to have those available locally:
-
-```
-git lfs install
-git lfs pull
+```console
+$ ln -s bazel-bin/pkg/vere/urbit urbit
+$ ./urbit ...
 ```
 
-[license]: https://raw.githubusercontent.com/urbit/urbit/master/LICENSE.txt
-[license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[build]: https://github.com/urbit/urbit/actions
-[build-badge]: https://github.com/urbit/urbit/workflows/build/badge.svg
-[cachix]: https://ares.cachix.org
-[cachix-badge]: https://img.shields.io/badge/cachix-ares-purple.svg
-[nix]: https://nixos.org
-[nix-badge]: https://img.shields.io/badge/builtwith-nix-purple.svg
-[git-lfs]: https://git-lfs.github.com
+To run all runtime tests, run:
+
+```console
+$ bazel test //...
+```
+
+or, to run a specific test, say
+[`pkg/noun/hashtable_tests.c`](pkg/noun/hashtable_tests.c), run:
+
+```console
+$ bazel test //pkg/noun:hashtable_tests
+```
+
+If you're interested in digging into the details of the build system, check out
+[`WORKSPACE.bazel`](WORKSPACE.bazel), [`BUILD.bazel`](BUILD.bazel),
+[`bazel/`](bazel), and the multiple `BUILD.bazel` files in [`pkg/`](pkg).
+
 
 ## Contributing
 
-Contributions of any form are more than welcome!  Please take a look at our
-[contributing guidelines][cont] for details on our git practices, coding
+Contributions of any form are more than welcome. Please take a look at our
+[contributing guidelines][contributing] for details on our git practices, coding
 styles, how we manage issues, and so on.
 
-For instructions on contributing to Landscape, see [its][lcont] guidelines.
 
-You might also be interested in joining the [urbit-dev][list] mailing list.
-
-[list]: https://groups.google.com/a/urbit.org/forum/#!forum/dev
-[cont]: https://github.com/urbit/urbit/blob/master/CONTRIBUTING.md
-[lcont]: https://github.com/urbit/urbit/blob/master/pkg/interface/CONTRIBUTING.md
+[bazel]: https://bazel.build
+[contributing]: https://github.com/urbit/urbit/blob/master/CONTRIBUTING.md
+[cue]: https://developers.urbit.org/reference/hoon/stdlib/2p#cue
+[getting-started]: https://urbit.org/getting-started
+[jam]: https://developers.urbit.org/reference/hoon/stdlib/2p#jam
+[mailing-list]: https://groups.google.com/a/urbit.org/forum/#!forum/dev
+[urbit]: https://urbit.org
+[vere]: https://developers.urbit.org/reference/glossary/vere
+[technical-reference]: https://developers.urbit.org/reference

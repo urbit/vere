@@ -29,8 +29,5 @@ urcrypt:
 
 A word on OpenSSL
 -----------------
-Urcrypt depends on OpenSSL's libcrypto, which has global state. In order
-to avoid dealing with this state, urcrypt refuses to build with an internal
-libcrypto. Either build statically (pass `--disable-shared` to `./configure`)
-or provide a shared libcrypto for urcrypt to link against. It is the library
-user's responsibility to initialize openssl, set custom memory functions, etc.
+It is the library user's responsibility to initialize openssl, set custom memory
+functions, etc.
