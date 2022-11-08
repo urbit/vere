@@ -148,6 +148,8 @@ versioned_http_archive(
 versioned_http_archive(
     name = "h2o",
     build_file = "//bazel/third_party/h2o:h2o.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/h2o:{version}.patch"],
     sha256 = "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201",
     strip_prefix = "h2o-{version}",
     url = "https://github.com/h2o/h2o/archive/refs/tags/v{version}.tar.gz",

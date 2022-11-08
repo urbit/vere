@@ -50,7 +50,11 @@ configure_make(
         "--without-ssl",
         "--without-zlib",
         "--without-zstd",
-    ],
+    ] + select({
+        # Native compilation on linux-arm64 isn't supported.
+        "@//:linux_arm64": ["--host=aarch64-linux-gnu"],
+        "//conditions:default": [],
+    }),
     env = {
         "URBIT_RUNTIME_OPENSSL": "$(GENDIR)/external/openssl/openssl",
     },

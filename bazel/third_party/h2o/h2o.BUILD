@@ -42,8 +42,16 @@ cc_library(
     hdrs = glob(["deps/klib/*.h"]),
     includes = ["deps/klib"],
     linkstatic = True,
+    local_defines = select({
+        "@platforms//cpu:arm64": ["URBIT_RUNTIME_ARCH_ARM64"],
+    }),
     visibility = ["//visibility:private"],
-    deps = ["@curl"],
+    deps = [
+        "@curl",
+        "@zlib",
+    ] + select({
+        "@platforms//cpu:arm64": ["@sse2neon"],
+    }),
 )
 
 # See `deps/libgkc` in the `h2o` repo.

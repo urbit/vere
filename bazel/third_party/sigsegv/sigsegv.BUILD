@@ -16,6 +16,10 @@ configure_make(
         # slowdowns.
         "@platforms//os:linux": ["--disable-stackvma"],
         "//conditions:default": [],
+    }) + select({
+        # Native compilation on linux-arm64 isn't supported.
+        "@//:linux_arm64": ["--host=aarch64-linux-gnu"],
+        "//conditions:default": [],
     }),
     lib_source = ":all",
     out_static_libs = ["libsigsegv.a"],

@@ -24,7 +24,11 @@ cc_toolchain_config(
     cc = "/usr/bin/aarch64-linux-gnu-gcc",
     compiler = "aarch64-linux-gnu-gcc",
     ld = "/usr/bin/aarch64-linux-gnu-ld",
-    sys_includes = [],
+    sys_includes = [
+        "/usr/aarch64-linux-gnu/include",
+        "/usr/lib/gcc/aarch64-linux-gnu/12.2.0/include",
+        "/usr/lib/gcc/aarch64-linux-gnu/12.2.0/include-fixed",
+    ],
     target_cpu = "arm64",
     toolchain_identifier = _arm64_gcc,
 )
