@@ -1,0 +1,34 @@
+#
+# LIBRARIES
+#
+
+cc_library(
+    name = "ur",
+    srcs = [
+        "bitstream.c",
+        "bitstream.h",
+        "defs.h",
+        "hashcons.c",
+        "hashcons.h",
+        "serial.c",
+        "serial.h",
+    ],
+    hdrs = ["ur.h"],
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = ["@murmur3"],
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "tests",
+    timeout = "short",
+    srcs = ["tests.c"],
+    linkstatic = True,
+    visibility = ["//visibility:private"],
+    deps = [":ur"],
+)

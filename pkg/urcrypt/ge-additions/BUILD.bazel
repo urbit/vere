@@ -1,0 +1,9 @@
+cc_library(
+    name = "ge-additions",
+    srcs = ["ge-additions.c"],
+    hdrs = ["ge-additions.h"],
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg/urcrypt:__pkg__"],
+    deps = ["@ed25519"],
+)

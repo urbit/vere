@@ -1,0 +1,87 @@
+#
+# LIBRARIES
+#
+
+cc_library(
+    name = "noun",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+            "jets/tree.c",
+            "jets/*.h",
+            "jets/**/*.c",
+        ],
+        exclude = [
+            "noun.h",
+            "*_tests.c",
+        ],
+    ),
+    hdrs = ["noun.h"],
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/ent",
+        "//pkg/ur",
+        "//pkg/urcrypt",
+        "@gmp",
+        "@murmur3",
+        "@openssl",
+        "@softfloat",
+    ] + select({
+        # We don't use `libsigsegv` on Windows because of performance reasons.
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@sigsegv"],
+    }) + select({
+        "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
+        "@platforms//os:linux": ["//pkg/noun/platform/linux"],
+        "@platforms//os:openbsd": ["//pkg/noun/platform/openbsd"],
+        "@platforms//os:windows": ["//pkg/noun/platform/mingw"],
+    }),
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "hashtable_tests",
+    timeout = "short",
+    srcs = ["hashtable_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "jets_tests",
+    timeout = "short",
+    srcs = ["jets_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "nock_tests",
+    timeout = "short",
+    srcs = ["nock_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "retrieve_tests",
+    timeout = "short",
+    srcs = ["retrieve_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "serial_tests",
+    timeout = "short",
+    srcs = ["serial_tests.c"],
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)

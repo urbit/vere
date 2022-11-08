@@ -1,0 +1,62 @@
+#
+# LIBRARIES
+#
+
+cc_library(
+    name = "c3",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+        ],
+        exclude = [
+            "c3.h",
+            "*_tests.c",
+        ],
+    ),
+    hdrs = ["c3.h"],
+    # We define platform-specific macros here to avoid the need for a
+    # configuration header file.
+    defines = [
+        # We don't build on any big endian CPUs.
+        "U3_OS_ENDIAN_little=1",
+    ] + select({
+        "@platforms//cpu:aarch64": ["U3_CPU_aarch64=1"],
+        "//conditions:default": [],
+    }) + select({
+        "@platforms//os:freebsd": [
+            "U3_OS_bsd=1",
+        ],
+        "@platforms//os:linux": [
+            "U3_OS_linux=1",
+            "U3_OS_PROF=1",
+        ],
+        "@platforms//os:macos": [
+            "U3_OS_osx=1",
+            # TODO: check if this works on M1 Macs.
+            "U3_OS_PROF=1",
+        ],
+        "@platforms//os:openbsd": [
+            "U3_OS_bsd=1",
+            "U3_OS_no_ubc=1",
+        ],
+        "@platforms//os:windows": ["U3_OS_mingw=1"],
+    }),
+    include_prefix = "c3",
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "list_tests",
+    timeout = "short",
+    srcs = ["list_tests.c"],
+    linkstatic = True,
+    visibility = ["//visibility:private"],
+    deps = [":c3"],
+)

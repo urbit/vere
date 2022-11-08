@@ -1,0 +1,12 @@
+cc_library(
+    name = "mingw",
+    srcs = ["rsignal.c"],
+    hdrs = ["rsignal.h"],
+    include_prefix = "platform",
+    includes = ["."],
+    target_compatible_with = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//pkg:__subpackages__"],
+)

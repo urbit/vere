@@ -9,10 +9,8 @@ kernel 3.17) on Linux, or `/dev/urandom` on other \*nix.
 ### Building and Testing
 
 ```bash
-./configure
-make
-make test
-PREFIX=/usr/local make install
+bazel build ...
+bazel test ...
 ```
 
 ### Why?
