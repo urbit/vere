@@ -20,12 +20,6 @@ _x86_64_clang = "toolchain-clang-linux-x86_64"
 
 cc_toolchain_config(
     name = "clang-linux-x86_64-config",
-
-# Toolchain identifier.
-CLANG_X86_64 = "clang_x86_64-toolchain"
-
-cc_toolchain_config(
-    name = "clang_x86_64_toolchain_config",
     ar = "/usr/bin/ar",
     cc = "/usr/bin/clang",
     compiler = "clang",
