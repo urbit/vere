@@ -56,12 +56,21 @@ config_setting(
 
 constraint_setting(name = "compiler")
 
+# Cross compiler from x86_64 to arm64.
+constraint_value(
+    name = "arm64_gcc",
+    constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+# Compiler for x86_64.
 constraint_value(
     name = "clang",
     constraint_setting = ":compiler",
     visibility = ["//visibility:public"],
 )
 
+# Compiler for x86_64.
 constraint_value(
     name = "gcc",
     constraint_setting = ":compiler",
@@ -72,6 +81,27 @@ constraint_value(
 # PLATFORMS
 #
 
+# Linux arm64 platform.
+platform(
+    name = "peter",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+# Linux x86_64 platform with gcc that supports for cross compilation to arm64.
+platform(
+    name = "arm64_gcc-linux-x86_64",
+    constraint_values = [
+        ":arm64_gcc",
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Linux x86_64 platform with clang.
 platform(
     name = "clang-linux-x86_64",
     constraint_values = [
@@ -82,6 +112,7 @@ platform(
     visibility = ["//visibility:public"],
 )
 
+# Linux x86_64 platform with gcc.
 platform(
     name = "gcc-linux-x86_64",
     constraint_values = [

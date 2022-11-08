@@ -73,13 +73,20 @@ versioned_http_archive(
 
 # Use the toolchains we've configured.
 register_toolchains(
+    "//bazel/toolchain:arm64_gcc-linux-x86_64-toolchain",
     "//bazel/toolchain:clang-linux-x86_64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
-rules_foreign_cc_dependencies()
+# See
+# https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies.
+rules_foreign_cc_dependencies(
+    register_built_tools = False,
+    register_default_tools = False,
+    register_preinstalled_tools = True,
+)
 
 #
 # THIRD PARTY DEPENDENCIES
