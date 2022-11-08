@@ -44,6 +44,7 @@ cc_library(
     linkstatic = True,
     local_defines = select({
         "@platforms//cpu:arm64": ["URBIT_RUNTIME_ARCH_ARM64"],
+        "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
     deps = [
@@ -51,6 +52,7 @@ cc_library(
         "@zlib",
     ] + select({
         "@platforms//cpu:arm64": ["@sse2neon"],
+        "//conditions:default": [],
     }),
 )
 
