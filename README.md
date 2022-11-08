@@ -37,14 +37,14 @@ platform is where [`bazel`][bazel] runs and the target platform is where `urbit`
 will run:
 
 --------------------------------------------------------------------------------
- Host Platform                        | Target Platform
+ Host Platform                        | Target Platform | Required Toolchain
 --------------------------------------------------------------------------------
- `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`
- `gcc-linux-x86_64`                   | `linux-x86_64`
- `clang-linux-x86_64`                 | `linux-x86_64`
+ `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc` v12.2.0
+ `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc` v12.2.0
+ `clang-linux-x86_64`                 | `linux-x86_64`  | `clang` v14.0.6
 
-Once you've identified your `(host, target)` pair and ensured you hae an
-up-to-date version of [`bazel`][bazel], run:
+Once you've identified your `(host, target)` pair and ensured you have
+up-to-date versions of [`bazel`][bazel] and the required toolchain, run:
 
 ```console
 $ bazel build --host_platform=//:<host_platform> --platforms=//:<target_platform> :urbit
