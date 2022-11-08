@@ -133,7 +133,10 @@ cc_library(
         ":pace",
         ":version",
     ] + select({
-        "@platforms//os:macos": [],
+        "@platforms//os:macos": [
+            "platform/darwin/daemon.c",
+            "platform/darwin/ptty.c",
+        ],
         "@platforms//os:linux": [
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",
