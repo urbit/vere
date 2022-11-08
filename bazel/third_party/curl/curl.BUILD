@@ -47,7 +47,6 @@ configure_make(
         "--without-librtmp",
         "--without-nghttp2",
         "--without-ngtcp2",
-        "--without-ssl",
         "--without-zlib",
         "--without-zstd",
     ] + select({
