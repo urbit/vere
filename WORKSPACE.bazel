@@ -71,6 +71,12 @@ versioned_http_archive(
 # TOOLCHAINS SETUP
 #
 
+# Use the toolchains we've configured.
+register_toolchains(
+    "//bazel/toolchain:clang-linux-x86_64-toolchain",
+    "//bazel/toolchain:gcc-linux-x86_64-toolchain",
+)
+
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()

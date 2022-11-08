@@ -1,3 +1,7 @@
+#
+# OS-CPU CONFIG SETTINGS
+#
+
 config_setting(
     name = "linux-arm64",
     constraint_values = [
@@ -42,6 +46,47 @@ config_setting(
     name = "windows-x86_64",
     constraint_values = [
         "@platforms//os:windows",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+#
+# COMPILER CONSTRAINT SETTINGS
+#
+
+constraint_setting(name = "compiler")
+
+constraint_value(
+    name = "clang",
+    constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+constraint_value(
+    name = "gcc",
+    constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+#
+# PLATFORMS
+#
+
+platform(
+    name = "clang-linux-x86_64",
+    constraint_values = [
+        ":clang",
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+platform(
+    name = "gcc-linux-x86_64",
+    constraint_values = [
+        ":gcc",
+        "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
 )
