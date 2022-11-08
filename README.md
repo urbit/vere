@@ -31,31 +31,52 @@ defined in its own package:
 
 ## Build
 
-We use [`bazel`][bazel] to build Urbit's runtime. We support the following
-platforms:
+We use [`bazel`][bazel] to build Urbit's runtime, which is packaged as a single
+binary, `urbit`. We support the following `(host, target)` pairs, where the host
+platform is where [`bazel`][bazel] runs and the target platform is where `urbit`
+will run:
 
-- `darwin-arm64` (macOS running Apple Silicon)
-- `darwin-x86_64` (macOS running Intel silicon)
-- `linux-arm64`
-- `linux-x86_64`
-- `openbsd-x86_64`
-- `mingw-x86_64`
+--------------------------------------------------------------------------------
+ Host Platform                        | Target Platform
+--------------------------------------------------------------------------------
+ `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`
+ `gcc-linux-x86_64`                   | `linux-x86_64`
+ `clang-linux-x86_64`                 | `linux-x86_64`
 
-To build the `urbit` binary, the primary artifact of this repository, ensure
-that you're on a supported platform and that you have an up-to-date version of
-[`bazel`][bazel], and then run:
+Once you've identified your `(host, target)` pair and ensured you hae an
+up-to-date version of [`bazel`][bazel], run:
 
 ```console
-$ bazel build :urbit
+$ bazel build --host_platform=//:<host_platform> --platforms=//:<target_platform> :urbit
 ```
 
-The build will take a while since `bazel` has to download and build from source
-all of `urbit`'s third-party dependencies.
+For example, to build a `linux-x86_64` `urbit` binary on a `linux-x86_64`
+machine using the `gcc` toolchain, you'd run:
+
+```console
+$ bazel build --host_platform=//:gcc-linux-x86_64 --platforms=//:linux-x86_64
+```
+
+And to build a `linux-arm64` `urbit` binary on a `linux-x86_64` machine using
+the `aarch64-linux-gnu-gcc` toolchain (which you'll have to install), run:
+
+```console
+$ bazel build --host_platform=//:aarch64_linux_gnu_gcc-linux-x86_64 --platforms=//:linux-arm64
+```
+
+Specifying `--host_platform` and `--platforms` for each build is tedious and can
+be avoided by writing both options to `.user.bazelrc`:
+
+```console
+$ echo 'build --host_platform=//:<host_platform>' >> .user.bazelrc
+$ echo 'build --platforms=//:<target_platform>'   >> .user.bazelrc
+$ bazel build :urbit
+```
 
 To run the just-built `urbit` binary, run:
 
 ```console
-$ bazel-bin/pkg/vere/urbit ...
+$ bazel-bin/pkg/vere/urbit <snip>
 ```
 
 Or, to save yourself a few keystrokes, create a symlink to the `urbit` binary in
@@ -63,8 +84,12 @@ the root of the repository:
 
 ```console
 $ ln -s bazel-bin/pkg/vere/urbit urbit
-$ ./urbit ...
+$ ./urbit <snip>
 ```
+
+The remaining commands in this section assume that `.user.bazlerc` specifies
+`--host_platform` and `--platforms`. If not, `--host_platform` and `--platforms`
+must be provided at the command line as in the build commands above.
 
 To run all runtime tests, run:
 
