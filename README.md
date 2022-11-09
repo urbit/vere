@@ -39,37 +39,48 @@ will run:
 --------------------------------------------------------------------------------
  Host Platform                        | Target Platform | Required Toolchain
 --------------------------------------------------------------------------------
- `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc` v12.2.0
- `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc` v12.2.0
- `clang-linux-x86_64`                 | `linux-x86_64`  | `clang` v14.0.6
+ `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc`
+ `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc`
+ `clang-linux-x86_64`                 | `linux-x86_64`  | `clang`
 
-Once you've identified your `(host, target)` pair and ensured you have
-up-to-date versions of [`bazel`][bazel] and the required toolchain, run:
+Once you've identified your `(host, target)` pair, determine the version of the
+pair's required toolchain and ensure you have an up-to-date version of
+[`bazel`][bazel]. Then, run:
 
 ```console
-$ bazel build --host_platform=//:<host_platform> --platforms=//:<target_platform> :urbit
+$ bazel build --<toolchain>_version="<toolchain_version>" \
+              --host_platform=//:<host_platform>          \
+              --platforms=//:<target_platform> :urbit
 ```
 
 For example, to build a `linux-x86_64` `urbit` binary on a `linux-x86_64`
-machine using the `gcc` toolchain, you'd run:
+machine using version `14.0.6` of the `clang` toolchain, run:
 
 ```console
-$ bazel build --host_platform=//:gcc-linux-x86_64 --platforms=//:linux-x86_64
+$ bazel build --clang_version="14.0.6"            \
+              --host_platform=//:gcc-linux-x86_64 \
+              --platforms=//:linux-x86_64
 ```
 
 And to build a `linux-arm64` `urbit` binary on a `linux-x86_64` machine using
-the `aarch64-linux-gnu-gcc` toolchain (which you'll have to install), run:
+version `12.2.0` of the `aarch64-linux-gnu-gcc` toolchain (which you'll have to
+install), run:
 
 ```console
-$ bazel build --host_platform=//:aarch64_linux_gnu_gcc-linux-x86_64 --platforms=//:linux-arm64
+$ bazel build --aarch64_linux_gnu_gcc_version="12.2.0"              \
+              --host_platform=//:aarch64_linux_gnu_gcc-linux-x86_64 \
+              --platforms=//:linux-arm64
 ```
 
-Specifying `--host_platform` and `--platforms` for each build is tedious and can
-be avoided by writing both options to `.user.bazelrc`:
+Specifying `--<toolchain>_version`, `--host_platform`, and `--platforms` for
+each build is tedious and can be avoided by writing to `.user.bazelrc`:
 
 ```console
-$ echo 'build --host_platform=//:<host_platform>' >> .user.bazelrc
-$ echo 'build --platforms=//:<target_platform>'   >> .user.bazelrc
+$ echo 'build --aarch64_linux_gnu_gcc_version="12.2.0"' >> .user.bazelrc
+$ echo 'build --clang_version="14.0.6"'                 >> .user.bazelrc
+$ echo 'build --gcc_version="12.2.0"'                   >> .user.bazelrc
+$ echo 'build --host_platform=//:<host_platform>'       >> .user.bazelrc
+$ echo 'build --platforms=//:<target_platform>'         >> .user.bazelrc
 $ bazel build :urbit
 ```
 

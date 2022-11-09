@@ -1,3 +1,5 @@
+load("//bazel:common_settings.bzl", "string_flag")
+
 #
 # OS-CPU CONFIG SETTINGS
 #
@@ -51,7 +53,7 @@ config_setting(
 )
 
 #
-# COMPILER CONSTRAINT SETTINGS
+# COMPILERS
 #
 
 constraint_setting(name = "compiler")
@@ -74,6 +76,27 @@ constraint_value(
 constraint_value(
     name = "gcc",
     constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for aarch64-linux-gnu-gcc.
+string_flag(
+    name = "aarch64_linux_gnu_gcc_version",
+    build_setting_default = "12.2.0",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for clang.
+string_flag(
+    name = "clang_version",
+    build_setting_default = "14.0.6",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for gcc.
+string_flag(
+    name = "gcc_version",
+    build_setting_default = "12.2.0",
     visibility = ["//visibility:public"],
 )
 
