@@ -55,7 +55,7 @@ configure_make(
         "//conditions:default": [],
     }),
     env = {
-        "URBIT_RUNTIME_OPENSSL": "$(GENDIR)/external/openssl/openssl",
+        "URBIT_RUNTIME_OPENSSL": "$$PWD/$(GENDIR)/external/openssl/openssl",
     },
     lib_source = ":all",
     out_static_libs = ["libcurl.a"],
