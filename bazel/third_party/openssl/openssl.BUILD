@@ -11,12 +11,22 @@ configure_make(
     args = ["--jobs=`nproc`"],
     configure_command = select({
         "@platforms//os:windows": "Configure",
+        "@//:linux_arm64": "Configure",
         "//conditions:default": "config",
     }),
     configure_options = [
         "no-shared",
     ] + select({
         "@platforms//os:windows": ["mingw64"],
+        "@//:linux_arm64": [
+            "linux-aarch64",
+            # Native compilation on linux-arm64 isn't supported. The prefix is
+            # empty because the configure script detects an absolute path to the
+            # aarch64-linux-gnu-gcc instead of just the binary name. This is
+            # presumably because of the Bazel toolchain configuration but is not
+            # an issue.
+            "--cross-compile-prefix=",
+        ],
         "//conditions:default": [],
     }),
     configure_prefix = select({
