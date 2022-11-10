@@ -15,7 +15,11 @@ configure_make(
         "--enable-module-recovery",
         "--enable-module-schnorrsig",
         "--enable-static",
-    ],
+    ] + select({
+        # Native compilation on linux-arm64 isn't supported.
+        "@//:linux_arm64": ["--host=aarch64-linux-gnu"],
+        "//conditions:default": [],
+    }),
     lib_source = ":all",
     out_static_libs = ["libsecp256k1.a"],
     visibility = ["//visibility:public"],

@@ -4,6 +4,7 @@
 #define U3_RETRIEVE_H
 
 #include "c3.h"
+#include "gmp.h"
 #include "types.h"
 
     /** u3r_*: read without ever crashing.

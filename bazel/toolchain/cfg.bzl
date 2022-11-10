@@ -1,3 +1,4 @@
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl", "tool_path")
 
 def _cc_toolchain_config_impl(ctx):
@@ -7,7 +8,12 @@ def _cc_toolchain_config_impl(ctx):
         ctx = ctx,
         # See https://bazel.build/docs/cc-toolchain-config-reference#features.
         features = [],
-        cxx_builtin_include_directories = ctx.attr.sys_includes,
+        # Replace `{compiler_version}` in all include paths with the value of
+        # the `compiler_version` label.
+        cxx_builtin_include_directories = [
+            path.format(compiler_version = ctx.attr.compiler_version[BuildSettingInfo].value)
+            for path in ctx.attr.sys_includes
+        ],
         toolchain_identifier = ctx.attr.toolchain_identifier,
         target_system_name = ctx.attr.target_system_name,
         target_cpu = ctx.attr.target_cpu,
@@ -58,6 +64,7 @@ cc_toolchain_config = rule(
         "ar": attr.string(mandatory = True),
         "cc": attr.string(mandatory = True),
         "compiler": attr.string(mandatory = True),
+        "compiler_version": attr.label(mandatory = True),
         "ld": attr.string(mandatory = True),
         "target_cpu": attr.string(mandatory = True),
         "toolchain_identifier": attr.string(mandatory = True),

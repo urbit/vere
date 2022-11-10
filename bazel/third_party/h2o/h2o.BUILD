@@ -42,8 +42,18 @@ cc_library(
     hdrs = glob(["deps/klib/*.h"]),
     includes = ["deps/klib"],
     linkstatic = True,
+    local_defines = select({
+        "@platforms//cpu:arm64": ["URBIT_RUNTIME_ARCH_ARM64"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
-    deps = ["@curl"],
+    deps = [
+        "@curl",
+        "@zlib",
+    ] + select({
+        "@platforms//cpu:arm64": ["@sse2neon"],
+        "//conditions:default": [],
+    }),
 )
 
 # See `deps/libgkc` in the `h2o` repo.
@@ -132,9 +142,7 @@ cc_library(
 # See `deps/yoml` in the `h2o` repo.
 cc_library(
     name = "yoml",
-    hdrs = glob(
-        ["deps/yoml/*.h"],
-    ),
+    hdrs = glob(["deps/yoml/*.h"]),
     includes = ["deps/yoml"],
     linkstatic = True,
     visibility = ["//visibility:private"],
@@ -305,9 +313,8 @@ cc_library(
     hdrs = ["include/h2o.h"] + glob(
         [
             "include/h2o/*.h",
+            "include/h2o/socket/*.h",
         ],
-    ) + glob(
-        ["include/h2o/socket/*.h"],
     ),
     copts = [
         "-std=c99",
