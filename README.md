@@ -5,14 +5,12 @@ contains [Urbit's runtime environment][vere], the lowest layer of the Urbit
 stack, which includes the Nock virtual machine, I/O drivers, event log, and
 snapshotting system.
 
-
 ## Getting Started
 
 For basic Urbit usage instructions, head over to [urbit.org][getting-started].
 For a high-level overview of the salient aspects of Urbit's architecture, visit
 [developers.urbit.org][technical-reference]. You might also be interested in
 joining the [urbit-dev][mailing-list] mailing list.
-
 
 ## Packages
 
@@ -27,7 +25,6 @@ defined in its own package:
   bitwise noun serialization and deserialization algorithms, respectively.
 - [`pkg/noun`](pkg/noun): The Nock virtual machine and snapshotting system.
 - [`pkg/vere`](pkg/vere): The I/O drivers, event log, and main event loop.
-
 
 ## Build
 
@@ -119,13 +116,48 @@ If you're interested in digging into the details of the build system, check out
 [`WORKSPACE.bazel`](WORKSPACE.bazel), [`BUILD.bazel`](BUILD.bazel),
 [`bazel/`](bazel), and the multiple `BUILD.bazel` files in [`pkg/`](pkg).
 
+## Patching Strategy
+
+Many of the runtime's third-party dependencies require the application of
+platform-specific patches to work with the various target platforms we support.
+When performed naively, a single logical third-party dependency repository can
+quickly become 2 or more (i.e., `softfloat_macos-arm64`,
+`softfloat_linux-arm64`, and so on...). With this naive strategy, packages which
+had formerly simply depended on `"@softfloat"` now need to select the correct,
+platform-specific repository based on the target platform.
+
+In order to prevent package maintainers from needing to even think about the
+concept of platforms, we implement the following strategy for patching
+third-party dependencies:
+
+1. Determine which dependency needs patching, and for which operating systems or
+   CPU architectures.
+2. Implement the patch, gating the platform-specific code behind
+   platform-specific environment variables.  
+   a. For example, you might use an `#if defined(URBIT_RUNTIME_ARCH_ARM64)`
+   statement for code that must only be included for ARM builds.  
+   b. Note that some third-party codebases may require many of these "gates",
+   and some may include long `#if` `#elif` `#else` chains to handle all the
+   required platform-specific patches.
+3. Generate a single patch file using `git diff` and place it in the
+   corresponding third-party dependency's directory (see
+   [`bazel/third_party/lmdb/0.9.29.patch`](bazel/third_party/lmdb/0.9.29.patch),
+   for example).
+4. Add the `patch_args` and `patches` attributes to the dependency's
+   `http_archive` repository in our [`WORKSPACE.bazel`](WORKSPACE.bazel).
+5. Finally, set the correct environment variable in the third-party dependency's
+   `BUILD` file to "trigger" the correct lines of code for your platform in the
+   new patch.
+
+The following environment variables are used for gating:
+`URBIT_RUNTIME_ARCH_{X86_64,ARM64}` and
+`URBIT_RUNTIME_OS_{LINUX,BSD,DARWIN,MINGW}`.
 
 ## Contributing
 
 Contributions of any form are more than welcome. Please take a look at our
 [contributing guidelines][contributing] for details on our git practices, coding
 styles, how we manage issues, and so on.
-
 
 [bazel]: https://bazel.build
 [contributing]: https://github.com/urbit/urbit/blob/master/CONTRIBUTING.md
