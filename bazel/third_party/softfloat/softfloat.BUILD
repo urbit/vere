@@ -6,6 +6,17 @@
 #   http://www.jhauser.us/arithmetic/SoftFloat-3/doc/SoftFloat-source.html
 
 cc_library(
+    name = "softfloat",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@//:macos_arm64": ["softfloat_macos_arm64"],
+        "@//:linux_x86_64": [":softfloat_linux_x86_64"],
+        "@//:linux_arm64": [":softfloat_linux_arm64"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
     name = "softfloat_linux_arm64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/Linux-ARM-VFPv2-GCC/Makefile` in the
@@ -627,7 +638,7 @@ cc_library(
 )
 
 cc_library(
-    name = "softfloat_macos-arm64",
+    name = "softfloat_macos_arm64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/template-FAST_INT64/Makefile` in the
         # `softfloat` repo.
@@ -968,17 +979,12 @@ cc_library(
         "source/8086-SSE",
         "source/include",
     ],
-    local_defines = select({
-        "@platforms//os:macos": ["URBIT_RUNTIME_OS_DARWIN"],
-        "//conditions:default": [],
-    }) + [
+    local_defines = [
+        "URBIT_RUNTIME_OS_DARWIN",
         "SOFTFLOAT_ROUND_ODD",
         "INLINE_LEVEL=5",
         "SOFTFLOAT_FAST_DIV32TO16",
         "SOFTFLOAT_FAST_DIV64TO32",
     ],
     visibility = ["//visibility:public"],
-    deps = select({
-        "@//:linux-x86_64": [":softfloat_linux_x86_64"],
-    }),
 )

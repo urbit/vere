@@ -157,6 +157,23 @@ platform(
     ],
 )
 
+platform(
+    name = "clang-macos-arm64",
+    constraint_values = [
+        ":clang",
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+platform(
+    name = "macos-arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)
+
 alias(
     name = "urbit",
     actual = "//pkg/vere:urbit",
