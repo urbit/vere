@@ -75,6 +75,7 @@ versioned_http_archive(
 register_toolchains(
     "//bazel/toolchain:aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
     "//bazel/toolchain:clang-linux-x86_64-toolchain",
+    "//bazel/toolchain:clang-macos-arm64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
 )
 
