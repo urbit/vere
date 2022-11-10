@@ -1,19 +1,71 @@
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl", "tool_path")
+load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
+load(
+    "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
+    "feature",
+    "flag_group",
+    "flag_set",
+    "tool_path",
+    "variable_with_value",
+)
 
 def _cc_toolchain_config_impl(ctx):
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this feature.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    archiver_flags_feature = feature(
+        name = "archiver_flags",
+        flag_sets = [
+            flag_set(
+                actions = [ACTION_NAMES.cpp_link_static_library],
+                flag_groups = [
+                    flag_group(flags = ["rcs"]),
+                    flag_group(
+                        flags = ["%{output_execpath}"],
+                        expand_if_available = "output_execpath",
+                    ),
+                ],
+            ),
+            flag_set(
+                actions = [ACTION_NAMES.cpp_link_static_library],
+                flag_groups = [
+                    flag_group(
+                        iterate_over = "libraries_to_link",
+                        flag_groups = [
+                            flag_group(
+                                flags = ["%{libraries_to_link.name}"],
+                                expand_if_equal = variable_with_value(
+                                    name = "libraries_to_link.type",
+                                    value = "object_file",
+                                ),
+                            ),
+                            flag_group(
+                                flags = ["%{libraries_to_link.object_files}"],
+                                iterate_over = "libraries_to_link.object_files",
+                                expand_if_equal = variable_with_value(
+                                    name = "libraries_to_link.type",
+                                    value = "object_file_group",
+                                ),
+                            ),
+                        ],
+                        expand_if_available = "libraries_to_link",
+                    ),
+                ],
+            ),
+        ],
+    )
+
     # See
     # https://bazel.build/rules/lib/cc_common#create_cc_toolchain_config_info.
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
-        # See https://bazel.build/docs/cc-toolchain-config-reference#features.
-        features = [],
         # Replace `{compiler_version}` in all include paths with the value of
         # the `compiler_version` label.
         cxx_builtin_include_directories = [
             path.format(compiler_version = ctx.attr.compiler_version[BuildSettingInfo].value)
             for path in ctx.attr.sys_includes
         ],
+        features = [archiver_flags_feature],
         toolchain_identifier = ctx.attr.toolchain_identifier,
         target_system_name = ctx.attr.target_system_name,
         target_cpu = ctx.attr.target_cpu,
