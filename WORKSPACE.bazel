@@ -37,6 +37,25 @@
 #   inevitable when a third party dependency has a particularly complicated
 #   build system that would be too difficult to replicate in Bazel (i.e.
 #   OpenSSL). However, delegate only as a last resort.
+#
+# PATCHING A DEPENDENCY
+#
+# If a dependency has a bug that prevents it from being used in the project,
+# you can patch the dependency to fix it. We recommend the process below:
+#
+# (1) Make a change to the source of the dependency. If the change is
+#     platform-specific, wrap it in the appropriate URBIT_RUNTIME_* macro.
+#     We "gate" source patches with these macros so that we only ever need
+#     at most one patch per dependency.
+#     (a) Architecture-specific macros: `URBIT_RUNTIME_ARCH_{X86_64,ARM64}`.
+#     (b) Architecture-specific macros: `URBIT_RUNTIME_OS_{LINUX,DARWIN,BSD,MINGW}`.
+# (2) Generate a patch file named <version>.patch and save it in
+#     `bazel/third_party/<dependency>`.
+# (3) Update the dependency's targets to locally define the platform-specific
+#     patch macros.
+# (4) Update the dependency's repository rule in WORKSPACE.bazel to include
+#     `patch_args = ["-p1"]` (assuming the patch was generated with `git diff`)
+#     and `patches = ["<patch>"]`.
 
 load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
 
