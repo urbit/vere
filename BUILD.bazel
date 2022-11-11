@@ -86,6 +86,13 @@ string_flag(
     visibility = ["//visibility:public"],
 )
 
+# Version flag for arm64-macos-clang.
+string_flag(
+    name = "arm64_macos_clang_version",
+    build_setting_default = "14.0.0",
+    visibility = ["//visibility:public"],
+)
+
 # Version flag for clang.
 string_flag(
     name = "clang_version",
