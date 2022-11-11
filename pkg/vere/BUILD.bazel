@@ -149,6 +149,11 @@ cc_library(
         "vere.h",
     ],
     includes = ["."],
+    linkopts = select({
+        # NOTE: macOS builds fail to link the `u3o_Config` symbol without this.
+        "@platforms//os:macos": ["-force_load $(GENDIR)/pkg/noun/libnoun.a"],
+        "//conditions:default": [],
+    }),
     linkstatic = True,
     visibility = ["//pkg:__subpackages__"],
     deps = [
