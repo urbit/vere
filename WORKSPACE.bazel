@@ -47,8 +47,8 @@
 #     platform-specific, wrap it in the appropriate URBIT_RUNTIME_* macro.
 #     We "gate" source patches with these macros so that we only ever need
 #     at most one patch per dependency.
-#     (a) Architecture-specific macros: `URBIT_RUNTIME_ARCH_{X86_64,ARM64}`.
-#     (b) Architecture-specific macros: `URBIT_RUNTIME_OS_{LINUX,DARWIN,BSD,MINGW}`.
+#     (a) CPU architecture macros: `URBIT_RUNTIME_ARCH_{X86_64,ARM64}`.
+#     (b) OS macros: `URBIT_RUNTIME_OS_{LINUX,DARWIN,BSD,MINGW}`.
 # (2) Generate a patch file named <version>.patch and save it in
 #     `bazel/third_party/<dependency>`.
 # (3) Update the dependency's targets to locally define the platform-specific
