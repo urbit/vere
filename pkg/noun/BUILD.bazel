@@ -40,10 +40,6 @@ cc_library(
         "@platforms//os:openbsd": ["//pkg/noun/platform/openbsd"],
         "@platforms//os:windows": ["//pkg/noun/platform/mingw"],
     }),
-    alwayslink = select({
-        "@//:macos_arm64": True,
-        "//conditions:default": False,
-    }),
 )
 
 #
