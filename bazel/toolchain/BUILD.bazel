@@ -203,6 +203,10 @@ cc_toolchain_config(
     # support in the `configure_make` rule provided by `rules_foreign_cc`.
     # Therefore, we require setting `ar` as the archiver tool on macOS.
     ar = "/usr/bin/ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
     ar_flags = "rcs",
     cc = "/usr/bin/cc",
     compiler = "clang",
