@@ -9,9 +9,9 @@ cc_library(
     name = "softfloat",
     visibility = ["//visibility:public"],
     deps = select({
-        "@//:macos_arm64": ["softfloat_macos_arm64"],
-        "@//:linux_x86_64": [":softfloat_linux_x86_64"],
         "@//:linux_arm64": [":softfloat_linux_arm64"],
+        "@//:linux_x86_64": [":softfloat_linux_x86_64"],
+        "@//:macos_arm64": ["softfloat_macos_arm64"],
         "//conditions:default": [],
     }),
 )
