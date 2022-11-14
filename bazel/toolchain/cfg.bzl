@@ -10,9 +10,6 @@ load(
 )
 
 def _cc_toolchain_config_impl(ctx):
-    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
-    # implementation doesn't support `D`. We remove it with this feature.
-    # See https://github.com/bazelbuild/bazel/issues/15875.
     ar_flags_feature = feature(
         name = "archiver_flags",
         flag_sets = [
