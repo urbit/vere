@@ -52,10 +52,11 @@
 # (2) Generate a patch file named <dependency_version>.patch and save it in
 #     `bazel/third_party/<dependency>`.
 # (3) Update the dependency's targets to locally define the platform-specific
-#     patch macros.
+#     patch macro(s). `select()` statements should be used to define the
+#     correct macro for the current platform.
 # (4) Update the dependency's repository rule in WORKSPACE.bazel to include
 #     `patch_args = ["-p1"]` (assuming the patch was generated with `git diff`)
-#     and `patches = ["<patch>"]`.
+#     and `patches = ["//bazel/third_party/<dependency>:<version>.patch"]`.
 
 load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
 
