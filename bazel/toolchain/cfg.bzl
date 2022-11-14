@@ -13,13 +13,13 @@ def _cc_toolchain_config_impl(ctx):
     # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
     # implementation doesn't support `D`. We remove it with this feature.
     # See https://github.com/bazelbuild/bazel/issues/15875.
-    archiver_flags_feature = feature(
+    ar_flags_feature = feature(
         name = "archiver_flags",
         flag_sets = [
             flag_set(
                 actions = [ACTION_NAMES.cpp_link_static_library],
                 flag_groups = [
-                    flag_group(flags = ["rcs"]),
+                    flag_group(flags = [ctx.attr.ar_flags]),
                     flag_group(
                         flags = ["%{output_execpath}"],
                         expand_if_available = "output_execpath",
@@ -65,7 +65,7 @@ def _cc_toolchain_config_impl(ctx):
             path.format(compiler_version = ctx.attr.compiler_version[BuildSettingInfo].value)
             for path in ctx.attr.sys_includes
         ],
-        features = [archiver_flags_feature],
+        features = [ar_flags_feature],
         toolchain_identifier = ctx.attr.toolchain_identifier,
         target_system_name = ctx.attr.target_system_name,
         target_cpu = ctx.attr.target_cpu,
@@ -123,6 +123,7 @@ cc_toolchain_config = rule(
         # Optional.
         "abi_libc_version": attr.string(default = "unknown"),
         "abi_version": attr.string(default = "unknown"),
+        "ar_flags": attr.string(default = "rcsD"),
         "cpp": attr.string(default = "/bin/false"),
         "gcov": attr.string(default = "/bin/false"),
         "nm": attr.string(default = "/bin/false"),

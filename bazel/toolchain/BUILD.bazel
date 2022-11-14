@@ -203,6 +203,7 @@ cc_toolchain_config(
     # support in the `configure_make` rule provided by `rules_foreign_cc`.
     # Therefore, we require setting `ar` as the archiver tool on macOS.
     ar = "/usr/bin/ar",
+    ar_flags = "rcs",
     cc = "/usr/bin/cc",
     compiler = "clang",
     compiler_version = "//:clang_version",
