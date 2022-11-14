@@ -634,7 +634,7 @@ cc_library(
         "SOFTFLOAT_FAST_DIV32TO16",
         "SOFTFLOAT_FAST_DIV64TO32",
     ],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
 
 cc_library(
@@ -986,5 +986,5 @@ cc_library(
         "SOFTFLOAT_FAST_DIV32TO16",
         "SOFTFLOAT_FAST_DIV64TO32",
     ],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
