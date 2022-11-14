@@ -205,7 +205,7 @@ cc_toolchain_config(
     ar = "/usr/bin/ar",
     cc = "/usr/bin/cc",
     compiler = "clang",
-    compiler_version = "//:arm64_macos_clang_version",
+    compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
     sys_includes = [
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
