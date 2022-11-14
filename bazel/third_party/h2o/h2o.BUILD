@@ -361,7 +361,6 @@ cc_library(
         ":ssl_conservatory",
         ":yoml",
         "@openssl",
-        "@sse2neon",
         "@uv",
         "@zlib",
     ],
