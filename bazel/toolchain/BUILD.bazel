@@ -208,7 +208,7 @@ cc_toolchain_config(
     # and corresponding `ar_flags_feature` in `cfg.bzl`.
     # See https://github.com/bazelbuild/bazel/issues/15875.
     ar_flags = "rcs",
-    cc = "/usr/bin/cc",
+    cc = "/usr/bin/clang",
     compiler = "clang",
     compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
