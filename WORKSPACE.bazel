@@ -97,6 +97,7 @@ register_toolchains(
     "//bazel/toolchain:clang-linux-x86_64-toolchain",
     "//bazel/toolchain:clang-macos-arm64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
+    "//bazel/toolchain:gcc-windows-x86_64-toolchain",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
