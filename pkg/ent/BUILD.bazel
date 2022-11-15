@@ -18,6 +18,7 @@ cc_library(
     linkstatic = True,
     local_defines = select({
         "@platforms//os:windows": ["ENT_GETENTROPY_BCRYPTGENRANDOM"],
+        "@platforms//os:macos": ["ENT_GETENTROPY_SYSRANDOM"],
         # TODO: support fallback to other options if `getrandom()` isn't
         # available in `unistd.h`. Preferred order (from most preferred to least
         # preferred) is:

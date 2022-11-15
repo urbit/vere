@@ -189,3 +189,61 @@ toolchain(
     toolchain = ":gcc-linux-x86_64",
     toolchain_type = ":toolchain_type",
 )
+
+#
+# clang-macos-arm64
+#
+
+# Toolchain identifier.
+_macos_arm64_clang = "toolchain-clang-macos-arm64"
+
+cc_toolchain_config(
+    name = "clang-macos-arm64-config",
+    # NOTE: building with `libtool` does not work on macOS due to lack of
+    # support in the `configure_make` rule provided by `rules_foreign_cc`.
+    # Therefore, we require setting `ar` as the archiver tool on macOS.
+    ar = "/usr/bin/ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    ar_flags = "rcs",
+    cc = "/usr/bin/clang",
+    compiler = "clang",
+    compiler_version = "//:clang_version",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
+    ],
+    target_cpu = "arm64",
+    toolchain_identifier = _macos_arm64_clang,
+)
+
+cc_toolchain(
+    name = "clang-macos-arm64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":clang-macos-arm64-config",
+    toolchain_identifier = _macos_arm64_clang,
+)
+
+toolchain(
+    name = "clang-macos-arm64-toolchain",
+    exec_compatible_with = [
+        "//:clang",
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    toolchain = ":clang-macos-arm64",
+    toolchain_type = ":toolchain_type",
+)

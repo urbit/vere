@@ -40,7 +40,7 @@ configure_make(
         "--disable-versioned-symbols",
         "--enable-static",
         # Use our openssl, not the system's openssl.
-        "--with-openssl=$(URBIT_RUNTIME_OPENSSL)",
+        "--with-openssl=$URBIT_RUNTIME_OPENSSL",
         "--without-brotli",
         "--without-libidn2",
         "--without-libpsl",

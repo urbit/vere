@@ -1,0 +1,16 @@
+diff --git a/mdb.c b/mdb.c
+index 8cecdb2..b8d0648 100644
+--- a/mdb.c
++++ b/mdb.c
+@@ -2529,7 +2529,11 @@ mdb_env_sync(MDB_env *env, int force)
+ 					rc = ErrCode();
+ 			} else
+ #endif
++#if defined(URBIT_RUNTIME_OS_DARWIN)
++			if (fcntl(env->me_fd, F_FULLFSYNC, 0))
++#else
+ 			if (MDB_FDATASYNC(env->me_fd))
++#endif
+ 				rc = ErrCode();
+ 		}
+ 	}
