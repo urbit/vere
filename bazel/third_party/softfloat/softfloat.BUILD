@@ -11,7 +11,7 @@ cc_library(
     deps = select({
         "@//:linux_arm64": [":softfloat_linux_arm64"],
         "@//:linux_x86_64": [":softfloat_linux_x86_64"],
-        "@platforms//os:macos": ["softfloat_macos"],
+        "@platforms//os:macos": [":softfloat_macos"],
         "//conditions:default": [],
     }),
 )
