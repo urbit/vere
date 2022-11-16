@@ -28,6 +28,8 @@ defined in its own package:
 
 ## Build
 
+TODO: Add pre-requisites (i.e., macOS requires `brew install autoconf automake libtool`).
+
 We use [`bazel`][bazel] to build Urbit's runtime, which is packaged as a single
 binary, `urbit`. We support the following `(host, target)` pairs, where the host
 platform is where [`bazel`][bazel] runs and the target platform is where `urbit`
@@ -39,6 +41,8 @@ will run:
  `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc`
  `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc`
  `clang-linux-x86_64`                 | `linux-x86_64`  | `clang`
+ `clang-macos-x86_64`                 | `macos-x86_64`  | `clang`
+ `clang-macos-arm64`                  | `macos-arm64`   | `clang`
 
 Once you've identified your `(host, target)` pair, determine the version of the
 pair's required toolchain and ensure you have an up-to-date version of
