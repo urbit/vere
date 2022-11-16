@@ -8,7 +8,10 @@ filegroup(
 # TODO: check windows build.
 configure_make(
     name = "uv",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     autogen = True,
     configure_in_place = True,
     configure_options = [

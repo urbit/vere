@@ -8,7 +8,10 @@ filegroup(
 # TODO: check windows build.
 configure_make(
     name = "curl",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     # We disable unneeded features.
     # TODO: double check that all disabled features below are in fact unneeded.
     configure_options = [

@@ -8,7 +8,10 @@ filegroup(
 # TODO: check windows build.
 configure_make(
     name = "gmp",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     configure_options = [
         "--disable-shared",
     ] + select({
