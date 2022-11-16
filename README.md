@@ -26,9 +26,15 @@ defined in its own package:
 - [`pkg/noun`](pkg/noun): The Nock virtual machine and snapshotting system.
 - [`pkg/vere`](pkg/vere): The I/O drivers, event log, and main event loop.
 
-## Build
+## Pre-requisites
 
-TODO: Add pre-requisites (i.e., macOS requires `brew install autoconf automake libtool`).
+### macOS
+
+```console
+$ brew install bazelisk automake libtool
+```
+
+## Build
 
 We use [`bazel`][bazel] to build Urbit's runtime, which is packaged as a single
 binary, `urbit`. We support the following `(host, target)` pairs, where the host
