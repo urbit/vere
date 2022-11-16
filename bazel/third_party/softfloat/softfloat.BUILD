@@ -11,7 +11,7 @@ cc_library(
     deps = select({
         "@//:linux_arm64": [":softfloat_linux_arm64"],
         "@//:linux_x86_64": [":softfloat_linux_x86_64"],
-        "@//:macos_arm64": ["softfloat_macos_arm64"],
+        "@platforms//os:macos": ["softfloat_macos"],
         "//conditions:default": [],
     }),
 )
@@ -638,7 +638,7 @@ cc_library(
 )
 
 cc_library(
-    name = "softfloat_macos_arm64",
+    name = "softfloat_macos",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/template-FAST_INT64/Makefile` in the
         # `softfloat` repo.
