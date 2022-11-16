@@ -47,8 +47,8 @@ will run:
  `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc`
  `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc`
  `clang-linux-x86_64`                 | `linux-x86_64`  | `clang`
- `clang-macos-x86_64`                 | `macos-x86_64`  | `clang`
  `clang-macos-arm64`                  | `macos-arm64`   | `clang`
+ `clang-macos-x86_64`                 | `macos-x86_64`  | `clang`
 
 Once you've identified your `(host, target)` pair, determine the version of the
 pair's required toolchain and ensure you have an up-to-date version of
