@@ -9,15 +9,16 @@ cc_library(
     name = "softfloat",
     visibility = ["//visibility:public"],
     deps = select({
-        "@//:linux_arm64": [":softfloat_linux_arm64"],
-        "@//:linux_x86_64": [":softfloat_linux_x86_64"],
-        "@platforms//os:macos": [":softfloat_macos"],
+        # TODO: Test that :softfloat_arm64 is the fastest correct choice for
+        # macos_arm64 builds.
+        "@platforms//cpu:arm64": [":softfloat_arm64"],
+        "@platforms//cpu:x86_64": [":softfloat_x86_64"],
         "//conditions:default": [],
     }),
 )
 
 cc_library(
-    name = "softfloat_linux_arm64",
+    name = "softfloat_arm64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/Linux-ARM-VFPv2-GCC/Makefile` in the
         # `softfloat` repo.
@@ -291,7 +292,7 @@ cc_library(
 )
 
 cc_library(
-    name = "softfloat_linux_x86_64",
+    name = "softfloat_x86_64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/Linux-x86_64-GCC/Makefile` in the
         # `softfloat` repo.
@@ -638,7 +639,7 @@ cc_library(
 )
 
 cc_library(
-    name = "softfloat_macos",
+    name = "softfloat_macos_arm64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/template-FAST_INT64/Makefile` in the
         # `softfloat` repo.
@@ -974,11 +975,7 @@ cc_library(
     # `SOFTFLOAT_FAST_INT64` is used in `softfloat.h` and therefore needs to be
     # passed to dependencies.
     defines = ["SOFTFLOAT_FAST_INT64"],
-    includes = [
-        "build/template-FAST_INT64",
-        "source/8086-SSE",
-        "source/include",
-    ],
+    includes = ["source/include"],
     local_defines = [
         "URBIT_RUNTIME_OS_DARWIN",
         "SOFTFLOAT_ROUND_ODD",
