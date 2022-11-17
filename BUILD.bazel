@@ -186,7 +186,6 @@ platform(
 platform(
     name = "macos-x86_64",
     constraint_values = [
-        ":clang",
         "@platforms//os:macos",
         "@platforms//cpu:x86_64",
     ],
