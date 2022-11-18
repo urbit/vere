@@ -9,8 +9,6 @@ cc_library(
     name = "softfloat",
     visibility = ["//visibility:public"],
     deps = select({
-        # TODO: Test that :softfloat_arm64 is the fastest correct choice for
-        # macos_arm64 builds.
         "@platforms//cpu:arm64": [":softfloat_arm64"],
         "@platforms//cpu:x86_64": [":softfloat_x86_64"],
         "//conditions:default": [],
