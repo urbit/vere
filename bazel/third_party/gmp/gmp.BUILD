@@ -14,6 +14,8 @@ configure_make(
     }),
     configure_options = [
         "--disable-shared",
+        # NOTE: --with-pic is required to build PIE binaries on macos_x86_64,
+        # but we leave it in for all builds as a precaution.
         "--with-pic",
     ] + select({
         # Native compilation on linux-arm64 isn't supported.
