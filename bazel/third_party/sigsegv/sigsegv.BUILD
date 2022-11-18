@@ -7,7 +7,10 @@ filegroup(
 
 configure_make(
     name = "sigsegv",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     configure_options = [
         "--disable-shared",
         "--enable-static",
