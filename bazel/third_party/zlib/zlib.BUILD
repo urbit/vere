@@ -7,7 +7,10 @@ filegroup(
 
 configure_make(
     name = "zlib",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     configure_options = ["--static"],
     lib_source = ":all",
     out_static_libs = ["libz.a"],

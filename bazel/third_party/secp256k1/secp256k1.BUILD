@@ -7,7 +7,10 @@ filegroup(
 
 configure_make(
     name = "secp256k1",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     autogen = True,
     configure_in_place = True,
     configure_options = [

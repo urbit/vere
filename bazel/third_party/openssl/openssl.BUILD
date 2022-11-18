@@ -8,7 +8,10 @@ filegroup(
 # TODO: use configure_make_variant() to select nmake toolchain on windows?
 configure_make(
     name = "openssl",
-    args = ["--jobs=`nproc`"],
+    args = select({
+        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
+        "//conditions:default": ["--jobs=`nproc`"],
+    }),
     configure_command = select({
         "@platforms//os:windows": "Configure",
         "@//:linux_arm64": "Configure",
