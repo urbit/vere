@@ -1,0 +1,72 @@
+name: vere
+
+on:
+  workflow_call:
+    inputs:
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
+        required: false
+      pace:
+        description: 'release pace'
+        type: string
+        default: 'edge'
+        required: false
+    secrets:
+      GCP_CREDENTIALS:
+        required: false
+      GCS_SERVICE_ACCOUNT_KEY:
+        required: false
+      GCS_PROJECT:
+        required: false
+
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
+        required: false
+      pace:
+        description: 'release pace'
+        type: choice
+        options:
+        - edge
+        - soon
+        - live
+
+env:
+  UPLOAD_BASE: bootstrap.urbit.org/vere
+  VERE_PACE: ${{ inputs.pace }}
+  VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
+
+jobs:
+  urbit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # TODO: add all supported platforms
+          - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: build static binary
+        # TODO: configure vere pace
+        run: |
+          bazel build ...                                                 \
+            --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }} \
+            --platforms=//:${{ matrix.target }}                           \
+            --${{ matrix.toolchain }}_version=${{ matrix.toolchain_version }}
+          echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
+          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
+      - name: run tests
+        run: |
+          bazel test ...                                                  \
+            --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }} \
+            --platforms=//:${{ matrix.target }}                           \
+            --${{ matrix.toolchain }}_version=${{ matrix.toolchain_version }}
