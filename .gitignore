@@ -3,6 +3,10 @@
 /bazel-*
 /urbit
 
+# Swap files.
+*.swo
+*.swp
+
 # Fake ships.
 /zod
 /nec
