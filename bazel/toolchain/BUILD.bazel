@@ -171,6 +171,8 @@ cc_toolchain_config(
     sys_includes = [
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
         "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
     ],
     target_cpu = "arm64",
     toolchain_identifier = _macos_arm64_clang,
@@ -228,6 +230,8 @@ cc_toolchain_config(
     sys_includes = [
         "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _macos_x86_64_clang,
@@ -261,10 +265,67 @@ toolchain(
 )
 
 #
+# brew-clang-macos-x86_64
+#
+
+# Toolchain identifier.
+_macos_x86_64_brew_clang = "toolchain-brew-clang-macos-x86_64"
+
+cc_toolchain_config(
+    name = "brew-clang-macos-x86_64-config",
+    # NOTE: building with `libtool` does not work on macOS due to lack of
+    # support in the `configure_make` rule provided by `rules_foreign_cc`.
+    # Therefore, we require setting `ar` as the archiver tool on macOS.
+    ar = "/usr/bin/ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    ar_flags = "rcs",
+    cc = "/usr/local/opt/llvm@14/bin/clang",
+    compiler = "clang",
+    compiler_version = "//:clang_version",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        "/usr/local/Cellar/llvm@14/{compiler_version}/lib/clang/{compiler_version}/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _macos_x86_64_brew_clang,
+)
+
+cc_toolchain(
+    name = "brew-clang-macos-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":brew-clang-macos-x86_64-config",
+    toolchain_identifier = _macos_x86_64_brew_clang,
+)
+
+toolchain(
+    name = "brew-clang-macos-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":brew-clang-macos-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
 # BOOTSTRAPPING
 #
 
-# We can't build some artifcacts, like musl libc and its toolchain, in Bazel
+# We can't build some artifacts, like musl libc and its toolchain, in Bazel
 # itself (i.e. by adding a remote repository to `WORKSPACE.bazel` and a
 # corresponding `BUILD` file in `bazel/third_party/<dependency>`) because doing
 # so introduces a circular dependency during Bazel C/C++ toolchain resolution.
@@ -281,15 +342,15 @@ genrule(
     name = "install-aarch64-linux-musl-gcc",
     outs = ["install-aarch64-linux-musl-gcc.sh"],
     cmd = """
-    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                      >  $@
-    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                        >> $@
-    echo '    wget -c {}'                                                        >> $@
-    echo '    tar -xf {}.tar.gz'                                                 >> $@
-    echo '    archive=musl-cross-make-{}'                                        >> $@
-    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'   >> $@
-    echo '    TARGET=aarch64-linux-musl make -C$$archive -j`nproc`'              >> $@
-    echo '    sudo TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install' >> $@
-    echo 'fi'                                                                    >> $@
+    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                         >  $@
+    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -q -c {}'                                                        >> $@
+    echo '    tar -xf {}.tar.gz'                                                    >> $@
+    echo '    archive=musl-cross-make-{}'                                           >> $@
+    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                       >> $@
     """.format(
         _install_prefix,
         _musl_cross_make_archive,
@@ -297,13 +358,14 @@ genrule(
         _musl_cross_make_version,
     ),
     exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "aarch64-linux-musl-gcc",
     srcs = ["install-aarch64-linux-musl-gcc"],
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -311,15 +373,15 @@ genrule(
     name = "install-x86_64-linux-musl-gcc",
     outs = ["install-x86_64-linux-musl-gcc.sh"],
     cmd = """
-    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                       >  $@
-    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                        >> $@
-    echo '    wget -c {}'                                                       >> $@
-    echo '    tar -xf {}.tar.gz'                                                >> $@
-    echo '    archive=musl-cross-make-{}'                                       >> $@
-    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'   >> $@
-    echo '    TARGET=x86_64-linux-musl make -C$$archive -j`nproc`'              >> $@
-    echo '    sudo TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install' >> $@
-    echo 'fi'                                                                   >> $@
+    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                          >  $@
+    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -q -c {}'                                                       >> $@
+    echo '    tar -xf {}.tar.gz'                                                   >> $@
+    echo '    archive=musl-cross-make-{}'                                          >> $@
+    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                      >> $@
     """.format(
         _install_prefix,
         _musl_cross_make_archive,
@@ -327,12 +389,13 @@ genrule(
         _musl_cross_make_version,
     ),
     exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "x86_64-linux-musl-gcc",
     srcs = ["install-x86_64-linux-musl-gcc"],
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )

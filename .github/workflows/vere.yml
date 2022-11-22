@@ -1,0 +1,185 @@
+name: vere
+
+on:
+  workflow_call:
+    inputs:
+      docker:
+        description: 'build and upload image to docker hub'
+        type: boolean
+        default: false
+        required: false
+      pace:
+        description: 'release pace'
+        type: string
+        default: 'edge'
+        required: false
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
+        required: false
+    secrets:
+      GCP_CREDENTIALS:
+        required: false
+      GCS_PROJECT:
+        required: false
+
+  workflow_dispatch:
+    inputs:
+      docker:
+        descripton: 'build and upload image to docker hub'
+        type: boolean
+        default: false
+        required: false
+      pace:
+        description: 'release pace'
+        type: choice
+        options:
+        - edge
+        - soon
+        - live
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
+        required: false
+
+env:
+  UPLOAD_BASE: bootstrap.urbit.org/vere-test
+  VERE_PACE: ${{ inputs.pace }}
+  VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
+
+jobs:
+  urbit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, runner: ubuntu-22.04 }
+          - { target: linux-arm64, runner: ubuntu-22.04 }
+          - { target: macos-x86_64, runner: macos-12 }
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/bazel/_bazel_runner
+            /private/var/tmp/_bazel_runner
+            /usr/local/*-musl
+          key: ${{ matrix.target }}-bazel-cache
+      
+      - name: build static binary
+        run: |
+          echo "${{ inputs.pace }}" > ./pkg/vere/PACE
+          params=()
+          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
+            sudo xcode-select --switch /Library/Developer/CommandLineTools
+            brew install automake libtool
+            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
+            params+=(
+              --clang_version=14.0.6
+              --extra_toolchains=$brew_clang
+            )
+          fi
+          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
+            bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+            params+=(
+              --platforms=//:linux-arm64
+            )
+          fi
+          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
+            bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+          fi
+          bazel build :urbit "${params[@]}"
+          echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
+          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
+      
+      - name: run tests
+        # See https://github.com/urbit/vere/issues/15.
+        if: matrix.target != 'linux-arm64'
+        run: |
+          params=()
+          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
+            sudo xcode-select --switch /Library/Developer/CommandLineTools
+            brew install automake libtool
+            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
+            params+=(
+              --clang_version=14.0.6
+              --extra_toolchains=$brew_clang
+            )
+          fi
+          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
+            bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+          fi
+          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
+            bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+          fi
+          bazel test //pkg/... "${params[@]}"
+
+      - uses: google-github-actions/auth@v1
+        if: inputs.upload
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - uses: google-github-actions/setup-gcloud@v1
+        if: inputs.upload
+        with:
+          project_id: ${{ secrets.GCS_PROJECT }}
+
+      - name: upload binary to bootstrap.urbit.org
+        if: inputs.upload
+        run: |
+          if [ "real" == "$VERSION_TYPE" ]; then
+            version="$(cat ./pkg/vere/VERSION)"
+          else
+            version="${GITHUB_SHA:0:9}"
+          fi
+          os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
+          arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
+          system=${arch}-${os}
+          target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
+
+          gsutil cp -n "${{ env.urbit_static }}" "$target"
+          exitcode=$?
+
+          test $exitcode -eq 0 &&
+            echo "upload to $target complete." ||
+            echo "upload to $target failed.";
+          exit $exitcode
+
+      - if: ${{ matrix.target == 'linux-x86_64 '}}
+        run: |
+          bazel run //pkg/vere:test-fake-ship
+
+      - uses: docker/docker-login-action@v1.8.0
+        if: inputs.docker
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: christian-korneck/update-container-description-action@v1
+        if: inputs.docker
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/urbit
+          provider: dockerhub
+          short_description: 'Urbit: a clean-slate OS and network for the 21st century'
+          readme_file: 'DOCKER.md'
+
+      - name: build and push docker image
+        if: inputs.docker && matrix.target == 'linux-x86_64'
+        run: |
+          if [ "real" == "$VERSION_TYPE" ]; then
+            version="$(cat ./pkg/vere/VERSION)"
+          else
+            version="${GITHUB_SHA:0:9}"
+          fi
+          bazel run :upload_docker --image_tag=v$version
+          bazel run :upload_docker --image_tag=latest
