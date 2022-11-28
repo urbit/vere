@@ -59,6 +59,9 @@ jobs:
       - name: build static binary
         # TODO: configure vere pace
         run: |
+          if ${{ matrix.host }} == "macos"* ; then
+            brew install automake libtool
+          fi
           bazel build ...                                                 \
             --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }} \
             --platforms=//:${{ matrix.target }}                           \
