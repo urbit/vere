@@ -14,5 +14,11 @@ build --flag_alias=aarch64_linux_gnu_gcc_version=//:aarch64_linux_gnu_gcc_versio
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
 
+# Prevent bazel from detecting Xcode installations, which forces it to use the
+# command line tools at `/Library/Developers/CommandLineTools` instead. This
+# assumes that Xcode installations are located in `/Applications`. See
+# https://github.com/bazelbuild/bazel/issues/10472#issuecomment-678528743.
+build --sandbox_block_path=/Applications
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
