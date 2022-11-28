@@ -49,6 +49,7 @@ jobs:
         include:
           # TODO: add all supported platforms
           - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
+          - { host: macos-x86_64, target: macos-x86_64, toolchain: clang, toolchain_version: 14.0.0, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
 
