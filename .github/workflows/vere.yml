@@ -59,8 +59,11 @@ jobs:
       - name: build static binary
         # TODO: configure vere pace
         run: |
-          if ${{ matrix.host }} == "macos"* ; then
+          if [[ "${{ matrix.host }}" == "macos"* ]]; then
+            export XCODE_VERSION=14.0.1
             brew install automake libtool
+            ln -s /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include /Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
+            ln -s /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/${{ matrix.toolchain_version }}/include /Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/${{ matrix.toolchain_version }}/include,
           fi
           bazel build ...                                                 \
             --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }} \
