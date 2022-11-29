@@ -66,10 +66,7 @@ jobs:
           )
           if [[ "${{ matrix.host }}" == "macos"* ]]; then
             sudo xcode-select --switch /Library/Developer/CommandLineTools
-            brew install automake
-            XCODE_VERSION=14.0.1
-            XCODE_INSTALL_PATH=/Applications/Xcode_${XCODE_VERSION}.app
-            params+=(--sandbox_block_path=$XCODE_INSTALL_PATH)
+            brew install automake libtool
           fi
           bazel build ... "${params[@]}"
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
