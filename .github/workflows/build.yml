@@ -9,8 +9,9 @@ on:
       - 'pkg/**'
   pull_request:
     paths:
-      - '.github/workflows/build.yml'
-      - '.github/workflows/vere.yml'
+      # TODO: re-enable after testing
+      # - '.github/workflows/build.yml'
+      # - '.github/workflows/vere.yml'
       - 'bazel/**'
       - 'pkg/**'
 

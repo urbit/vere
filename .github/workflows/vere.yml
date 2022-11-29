@@ -62,6 +62,7 @@ jobs:
             --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }}
             --platforms=//:${{ matrix.target }}
             --${{ matrix.toolchain }}_version=${{ matrix.toolchain_version }}
+            --sandbox_debug
           )
           if [[ "${{ matrix.host }}" == "macos"* ]]; then
             sudo xcode-select --switch /Library/Developer/CommandLineTools
