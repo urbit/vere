@@ -48,7 +48,7 @@ jobs:
       matrix:
         include:
           # - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
-          - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc-linux-x86_64, toolchain_version: 11.3.0, runner: ubuntu-22.04 }
+          - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc, toolchain_version: 11.3.0, runner: ubuntu-22.04 }
           - { host: macos-x86_64, target: macos-x86_64, toolchain: clang, toolchain_version: 14.0.0, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
