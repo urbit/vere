@@ -336,6 +336,7 @@ cc_library(
         "-g3",
         "-O2",
         "-pthread",
+        "-I$(GENDIR)/external/uv/uv/include",
     ] + CC_WARNING_FLAGS,
     includes = [
         "include",

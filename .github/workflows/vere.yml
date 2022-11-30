@@ -47,49 +47,103 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # TODO: re-enable these after development
           # - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
-          - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc, toolchain_version: 11, runner: ubuntu-22.04 }
+          # - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc, toolchain_version: 11, runner: ubuntu-22.04 }
           - { host: macos-x86_64, target: macos-x86_64, toolchain: clang, toolchain_version: 14.0.0, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
+    # runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v3
 
       - name: build static binary
-        # TODO: configure vere pace
+        # NOTE: On GitHub's macOS hosted runners, our build fails with the error:
+        # 
         run: |
+          echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=(
             --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }}
             --platforms=//:${{ matrix.target }}
             --${{ matrix.toolchain }}_version=${{ matrix.toolchain_version }}
-            --sandbox_debug
           )
           if [[ "${{ matrix.host }}" == "macos"* ]]; then
             sudo xcode-select --switch /Library/Developer/CommandLineTools
             brew install automake libtool
+            params+=(
+              --sandbox_block_path=/usr/local/include
+              --spawn_strategy=sandboxed
+            )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu
           fi
-          # NOTE: We use `:urbit` here to avoid building tests, which do not
-          # build correctly for the `linux-arm64` platform when using the
-          # `linux-x86_64` host.
           bazel build :urbit "${params[@]}"
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
 
       - name: run tests
+        # TODO: Remove this condition once https://github.com/urbit/vere/issues/15 is resolved.
+        if: matrix.target != 'linux-arm64'
         run: |
           params=(
-            --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }},
-            --platforms=//:${{ matrix.target }},
+            --host_platform=//:${{ matrix.toolchain }}-${{ matrix.host }}
+            --platforms=//:${{ matrix.target }}
             --${{ matrix.toolchain }}_version=${{ matrix.toolchain_version }}
           )
           if [[ "${{ matrix.host }}" == "macos"* ]]; then
-            brew install automake
-            XCODE_VERSION=14.0.1
-            XCODE_INSTALL_PATH=/Applications/Xcode_${XCODE_VERSION}.app
-            params+=(--sandbox_block_path=$XCODE_INSTALL_PATH)
+            sudo xcode-select --switch /Library/Developer/CommandLineTools
+            brew install automake libtool
+            params+=(
+              --sandbox_block_path=/usr/local/include
+              --spawn_strategy=sandboxed
+            )
+          fi
+          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
           fi
           bazel test ... "${params[@]}"
+        
+      # - name: get version string
+      #   run: |
+      #     if [ "real" == "$VERSION_TYPE" ]; then
+      #       version="$(cat ./pkg/vere/VERSION)"
+      #     else
+      #       version="${GITHUB_SHA:0:9}"
+      #     fi
+
+      #     echo -n "$version" > ./version-string
+
+      # - name: upload version string artifact
+      #   if: matrix.host == 'linux-x86_64' # XX specifies target so version-string is only uploaded once?
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: version-string
+      #     path: version-string
+
+      # - uses: google-github-actions/auth@v1
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      # - uses: google-github-actions/setup-gcloud@v1
+      #   if: inputs.upload
+      #   with:
+      #     project_id: ${{ secrets.GCS_PROJECT }}
+
+      # - name: upload binary to bootstrap.urbit.org
+      #   if: inputs.upload
+      #   run: |
+      #     version="$(cat ./version-string)"
+      #     os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
+      #     arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
+      #     system=${arch}-${os}
+      #     target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
+
+      #     gsutil cp -n "${{ env.urbit_static }}/bin/urbit" "$target"
+      #     exitcode=$?
+
+      #     test $exitcode -eq 0 &&
+      #       echo "upload to $target complete." ||
+      #       echo "upload to $target failed.";
+      #     exit $exitcode

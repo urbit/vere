@@ -38,5 +38,9 @@ cc_library(
         "include",
         "src/blake2",
     ],
+    linkopts = select({
+        "@platforms//os:macos": ["-force_load $(GENDIR)/external/argon2/libargon2.a"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )

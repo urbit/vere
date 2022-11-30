@@ -7,13 +7,12 @@ on:
       - '.github/workflows/vere.yml'
       - 'bazel/**'
       - 'pkg/**'
-  pull_request:
-    paths:
-      # TODO: re-enable after testing
-      # - '.github/workflows/build.yml'
-      # - '.github/workflows/vere.yml'
-      - 'bazel/**'
-      - 'pkg/**'
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/build.yml'
+  #     - '.github/workflows/vere.yml'
+  #     - 'bazel/**'
+  #     - 'pkg/**'
 
 jobs:
   call-vere:
