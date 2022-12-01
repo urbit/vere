@@ -148,19 +148,19 @@ _x86_64_gcc = "toolchain-gcc-linux-x86_64"
 
 cc_toolchain_config(
     name = "gcc-linux-x86_64-config",
-    ar = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-ar",
-    cc = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-gcc",
+    ar = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-ar",
+    cc = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-gcc",
     cc_flags = [
         "-static",
-        "--sysroot=bazel-out/k8-fastbuild/bin/bazel/toolchain",
+        "--sysroot=/usr/local/x86_64-linux-musl",
     ],
     compiler = "x86_64-linux-musl-gcc",
     compiler_version = "//:gcc_version",
-    ld = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-ld",
-    ld_flags = ["--sysroot=bazel-out/k8-fastbuild/bin/bazel/toolchain"],
+    ld = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-ld",
+    ld_flags = ["--sysroot=/usr/local/x86_64-linux-musl"],
     sys_includes = [
-        "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/x86_64-linux-musl/include",
-        "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/lib/gcc/x86_64-linux-musl/{compiler_version}/include",
+        "/usr/local/x86_64-linux-musl/x86_64-linux-musl/include",
+        "/usr/local/x86_64-linux-musl/lib/gcc/x86_64-linux-musl/{compiler_version}/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _x86_64_gcc,
@@ -331,14 +331,23 @@ genrule(
     name = "install.sh",
     outs = ["install-toolchains.sh"],
     cmd = """
-    echo 'version=fe915821b652a7fa37b34a596f47d8e20bc72338'                                                            >  $@
-    echo 'archive=musl-cross-make-$$version'                                                                           >> $@
-    echo 'wget -c https://github.com/richfelker/musl-cross-make/archive/$$version.tar.gz'                              >> $@
-    echo 'tar -xf $$version.tar.gz'                                                                                    >> $@
-    echo 'echo OUTPUT=$$BUILD_WORKSPACE_DIRECTORY/$(GENDIR)/bazel/toolchain/aarch64-linux-musl > $$archive/config.mak' >> $@
-    echo 'TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install'                                                >> $@
-    echo 'echo OUTPUT=$$BUILD_WORKSPACE_DIRECTORY/$(GENDIR)/bazel/toolchain/x86_64-linux-musl > $$archive/config.mak'  >> $@
-    echo 'TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install'                                                 >> $@
+    echo 'prefix=/usr/local'                                                                       > $@
+    echo 'aarch64_linux_musl_install=$$prefix/aarch64-linux-musl'                                 >> $@
+    echo 'x86_64_linux_musl_install=$$prefix/x86_64-linux-musl'                                   >> $@
+    echo 'if [ ! -d $$aarch64_linux_musl_install ] || [ ! -d $$x86_64_linux_musl_install ]; then' >> $@
+    echo '    version=fe915821b652a7fa37b34a596f47d8e20bc72338'                                   >> $@
+    echo '    wget -c https://github.com/richfelker/musl-cross-make/archive/$$version.tar.gz'     >> $@
+    echo '    tar -xf $$version.tar.gz'                                                           >> $@
+    echo '    archive=musl-cross-make-$$version'                                                  >> $@
+    echo '    if [ ! -d $$aarch64_linux_musl_install ]; then'                                     >> $@
+    echo '        echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'                >> $@
+    echo '        sudo TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install'              >> $@
+    echo '    fi'                                                                                 >> $@
+    echo '    if [ ! -d $$x86_64_linux_musl_install ]; then'                                      >> $@
+    echo '        echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'                 >> $@
+    echo '        sudo TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install'               >> $@
+    echo '    fi'                                                                                 >> $@
+    echo 'fi'                                                                                     >> $@
     """,
 )
 
