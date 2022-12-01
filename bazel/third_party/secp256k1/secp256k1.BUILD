@@ -19,8 +19,8 @@ configure_make(
         "--enable-module-schnorrsig",
         "--enable-static",
     ] + select({
-        # Native compilation on linux-arm64 isn't supported.
-        "@//:linux_arm64": ["--host=aarch64-linux-gnu"],
+        "@//:linux_arm64": ["--host=aarch64-linux-musl"],
+        "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
     }),
     lib_source = ":all",

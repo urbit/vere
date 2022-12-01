@@ -148,15 +148,19 @@ _x86_64_gcc = "toolchain-gcc-linux-x86_64"
 
 cc_toolchain_config(
     name = "gcc-linux-x86_64-config",
-    ar = "/usr/bin/ar",
-    cc = "/usr/bin/gcc",
-    compiler = "gcc",
+    ar = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-ar",
+    cc = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-gcc",
+    cc_flags = [
+        "-static",
+        "--sysroot=bazel-out/k8-fastbuild/bin/bazel/toolchain",
+    ],
+    compiler = "x86_64-linux-musl-gcc",
     compiler_version = "//:gcc_version",
-    ld = "/usr/bin/ld",
+    ld = "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/bin/x86_64-linux-musl-ld",
+    ld_flags = ["--sysroot=bazel-out/k8-fastbuild/bin/bazel/toolchain"],
     sys_includes = [
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include",
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include-fixed",
-        "/usr/include",
+        "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/x86_64-linux-musl/include",
+        "/home/tlon/.cache/bazel/_bazel_tlon/a2b9f1d99a14b44b4ba3ec0708ffa816/execroot/__main__/bazel-out/k8-fastbuild/bin/bazel/toolchain/x86_64-linux-musl/lib/gcc/x86_64-linux-musl/{compiler_version}/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _x86_64_gcc,
