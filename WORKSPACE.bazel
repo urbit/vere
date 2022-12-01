@@ -93,7 +93,7 @@ versioned_http_archive(
 
 # Use the toolchains we've configured.
 register_toolchains(
-    "//bazel/toolchain:aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
+    "//bazel/toolchain:gcc-linux-arm64-toolchain",
     "//bazel/toolchain:clang-macos-arm64-toolchain",
     "//bazel/toolchain:clang-macos-x86_64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",

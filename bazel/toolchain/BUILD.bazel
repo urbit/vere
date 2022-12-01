@@ -39,30 +39,34 @@ alias(
 )
 
 #
-# aarch64_linux_gnu_gcc-linux-x86_64
+# gcc-linux-aarch64
 #
 
 # Toolchain identifier.
-_aarch64_linux_gnu_gcc = "toolchain-aarch64_linux_gnu_gcc-linux-x86_64"
+_arm64_gcc = "toolchain-gcc-linux-arm64"
 
 cc_toolchain_config(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64-config",
-    ar = "/usr/bin/aarch64-linux-gnu-ar",
-    cc = "/usr/bin/aarch64-linux-gnu-gcc",
-    compiler = "aarch64-linux-gnu-gcc",
-    compiler_version = "//:aarch64_linux_gnu_gcc_version",
-    ld = "/usr/bin/aarch64-linux-gnu-ld",
+    name = "gcc-linux-arm64-config",
+    ar = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-ar",
+    cc = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-gcc",
+    cc_flags = [
+        "-static",
+        "--sysroot=/usr/local/aarch64-linux-musl",
+    ],
+    compiler = "aarch64-linux-musl-gcc",
+    compiler_version = "//:gcc_version",
+    ld = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-ld",
+    ld_flags = ["--sysroot=/usr/local/aarch64-linux-musl"],
     sys_includes = [
-        "/usr/aarch64-linux-gnu/include",
-        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include",
-        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include-fixed",
+        "/usr/local/aarch64-linux-musl/aarch64-linux-musl/include",
+        "/usr/local/aarch64-linux-musl/lib/gcc/aarch64-linux-musl/{compiler_version}/include",
     ],
     target_cpu = "arm64",
-    toolchain_identifier = _aarch64_linux_gnu_gcc,
+    toolchain_identifier = _arm64_gcc,
 )
 
 cc_toolchain(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64",
+    name = "gcc-linux-arm64",
     all_files = ":empty",
     compiler_files = ":empty",
     dwp_files = ":empty",
@@ -70,14 +74,14 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
-    toolchain_config = ":aarch64_linux_gnu_gcc-linux-x86_64-config",
-    toolchain_identifier = _aarch64_linux_gnu_gcc,
+    toolchain_config = ":gcc-linux-arm64-config",
+    toolchain_identifier = _arm64_gcc,
 )
 
 toolchain(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
+    name = "gcc-linux-arm64-toolchain",
     exec_compatible_with = [
-        "//:aarch64_linux_gnu_gcc",
+        "//:gcc",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -85,7 +89,7 @@ toolchain(
         "@platforms//os:linux",
         "@platforms//cpu:arm64",
     ],
-    toolchain = ":aarch64_linux_gnu_gcc-linux-x86_64",
+    toolchain = ":gcc-linux-arm64",
     toolchain_type = ":toolchain_type",
 )
 
