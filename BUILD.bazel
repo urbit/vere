@@ -56,22 +56,6 @@ config_setting(
 # COMPILERS
 #
 
-constraint_setting(name = "compiler")
-
-# Compiler for x86_64.
-constraint_value(
-    name = "clang",
-    constraint_setting = ":compiler",
-    visibility = ["//visibility:public"],
-)
-
-# Compiler for x86_64.
-constraint_value(
-    name = "gcc",
-    constraint_setting = ":compiler",
-    visibility = ["//visibility:public"],
-)
-
 # Version flag for clang.
 string_flag(
     name = "clang_version",

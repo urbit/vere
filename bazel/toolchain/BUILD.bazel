@@ -81,7 +81,6 @@ cc_toolchain(
 toolchain(
     name = "gcc-linux-arm64-toolchain",
     exec_compatible_with = [
-        "//:gcc",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -136,7 +135,6 @@ cc_toolchain(
 toolchain(
     name = "gcc-linux-x86_64-toolchain",
     exec_compatible_with = [
-        "//:gcc",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -194,7 +192,6 @@ cc_toolchain(
 toolchain(
     name = "clang-macos-arm64-toolchain",
     exec_compatible_with = [
-        "//:clang",
         "@platforms//os:macos",
         "@platforms//cpu:arm64",
     ],
@@ -252,7 +249,6 @@ cc_toolchain(
 toolchain(
     name = "clang-macos-x86_64-toolchain",
     exec_compatible_with = [
-        "//:clang",
         "@platforms//os:macos",
         "@platforms//cpu:x86_64",
     ],
