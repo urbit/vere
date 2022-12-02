@@ -201,6 +201,7 @@ cc_test(
     name = "ames_tests",
     timeout = "short",
     srcs = ["ames_tests.c"],
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
 )
@@ -209,6 +210,7 @@ cc_test(
     name = "newt_tests",
     timeout = "short",
     srcs = ["newt_tests.c"],
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
 )
@@ -217,6 +219,7 @@ cc_test(
     name = "noun_tests",
     timeout = "short",
     srcs = ["noun_tests.c"],
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
 )
@@ -225,6 +228,7 @@ cc_test(
     name = "unix_tests",
     timeout = "short",
     srcs = ["unix_tests.c"],
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [":vere"],
 )
@@ -233,6 +237,7 @@ cc_test(
     name = "benchmarks",
     timeout = "short",
     srcs = ["benchmarks.c"],
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [
         ":vere",

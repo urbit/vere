@@ -39,7 +39,7 @@ cc_test(
     name = "tests",
     timeout = "short",
     srcs = ["tests.c"],
-    linkstatic = True,
+    features = ["fully_static_link"],
     visibility = ["//visibility:private"],
     deps = [":ent"],
 )
