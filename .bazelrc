@@ -16,5 +16,3 @@ build --flag_alias=gcc_version=//:gcc_version
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
-
-build:bootstrap --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0
