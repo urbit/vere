@@ -287,6 +287,7 @@ genrule(
     echo '    tar -xf {}.tar.gz'                                                 >> $@
     echo '    archive=musl-cross-make-{}'                                        >> $@
     echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'   >> $@
+    echo '    TARGET=aarch64-linux-musl make -C$$archive -j`nproc`'              >> $@
     echo '    sudo TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install' >> $@
     echo 'fi'                                                                    >> $@
     """.format(
@@ -316,6 +317,7 @@ genrule(
     echo '    tar -xf {}.tar.gz'                                                >> $@
     echo '    archive=musl-cross-make-{}'                                       >> $@
     echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'   >> $@
+    echo '    TARGET=x86_64-linux-musl make -C$$archive -j`nproc`'              >> $@
     echo '    sudo TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install' >> $@
     echo 'fi'                                                                   >> $@
     """.format(
