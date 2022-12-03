@@ -39,30 +39,34 @@ alias(
 )
 
 #
-# aarch64_linux_gnu_gcc-linux-x86_64
+# gcc-linux-aarch64
 #
 
 # Toolchain identifier.
-_aarch64_linux_gnu_gcc = "toolchain-aarch64_linux_gnu_gcc-linux-x86_64"
+_arm64_gcc = "toolchain-gcc-linux-arm64"
 
 cc_toolchain_config(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64-config",
-    ar = "/usr/bin/aarch64-linux-gnu-ar",
-    cc = "/usr/bin/aarch64-linux-gnu-gcc",
-    compiler = "aarch64-linux-gnu-gcc",
-    compiler_version = "//:aarch64_linux_gnu_gcc_version",
-    ld = "/usr/bin/aarch64-linux-gnu-ld",
+    name = "gcc-linux-arm64-config",
+    ar = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-ar",
+    cc = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-gcc",
+    cc_flags = [
+        "-static",
+        "--sysroot=/usr/local/aarch64-linux-musl",
+    ],
+    compiler = "aarch64-linux-musl-gcc",
+    compiler_version = "//:gcc_version",
+    ld = "/usr/local/aarch64-linux-musl/bin/aarch64-linux-musl-ld",
+    ld_flags = ["--sysroot=/usr/local/aarch64-linux-musl"],
     sys_includes = [
-        "/usr/aarch64-linux-gnu/include",
-        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include",
-        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include-fixed",
+        "/usr/local/aarch64-linux-musl/aarch64-linux-musl/include",
+        "/usr/local/aarch64-linux-musl/lib/gcc/aarch64-linux-musl/{compiler_version}/include",
     ],
     target_cpu = "arm64",
-    toolchain_identifier = _aarch64_linux_gnu_gcc,
+    toolchain_identifier = _arm64_gcc,
 )
 
 cc_toolchain(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64",
+    name = "gcc-linux-arm64",
     all_files = ":empty",
     compiler_files = ":empty",
     dwp_files = ":empty",
@@ -70,14 +74,13 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
-    toolchain_config = ":aarch64_linux_gnu_gcc-linux-x86_64-config",
-    toolchain_identifier = _aarch64_linux_gnu_gcc,
+    toolchain_config = ":gcc-linux-arm64-config",
+    toolchain_identifier = _arm64_gcc,
 )
 
 toolchain(
-    name = "aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
+    name = "gcc-linux-arm64-toolchain",
     exec_compatible_with = [
-        "//:aarch64_linux_gnu_gcc",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -85,57 +88,7 @@ toolchain(
         "@platforms//os:linux",
         "@platforms//cpu:arm64",
     ],
-    toolchain = ":aarch64_linux_gnu_gcc-linux-x86_64",
-    toolchain_type = ":toolchain_type",
-)
-
-#
-# clang-linux-x86_64
-#
-
-# Toolchain identifier.
-_x86_64_clang = "toolchain-clang-linux-x86_64"
-
-cc_toolchain_config(
-    name = "clang-linux-x86_64-config",
-    ar = "/usr/bin/ar",
-    cc = "/usr/bin/clang",
-    compiler = "clang",
-    compiler_version = "//:clang_version",
-    ld = "/usr/bin/ld",
-    sys_includes = [
-        "/usr/lib/clang/{compiler_version}",
-        "/usr/include",
-    ],
-    target_cpu = "x86_64",
-    toolchain_identifier = _x86_64_clang,
-)
-
-cc_toolchain(
-    name = "clang-linux-x86_64",
-    all_files = ":empty",
-    compiler_files = ":empty",
-    dwp_files = ":empty",
-    linker_files = ":empty",
-    objcopy_files = ":empty",
-    strip_files = ":empty",
-    supports_param_files = 0,
-    toolchain_config = ":clang-linux-x86_64-config",
-    toolchain_identifier = _x86_64_clang,
-)
-
-toolchain(
-    name = "clang-linux-x86_64-toolchain",
-    exec_compatible_with = [
-        "//:clang",
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    target_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    toolchain = ":clang-linux-x86_64",
+    toolchain = ":gcc-linux-arm64",
     toolchain_type = ":toolchain_type",
 )
 
@@ -148,15 +101,19 @@ _x86_64_gcc = "toolchain-gcc-linux-x86_64"
 
 cc_toolchain_config(
     name = "gcc-linux-x86_64-config",
-    ar = "/usr/bin/ar",
-    cc = "/usr/bin/gcc",
-    compiler = "gcc",
+    ar = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-ar",
+    cc = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-gcc",
+    cc_flags = [
+        "-static",
+        "--sysroot=/usr/local/x86_64-linux-musl",
+    ],
+    compiler = "x86_64-linux-musl-gcc",
     compiler_version = "//:gcc_version",
-    ld = "/usr/bin/ld",
+    ld = "/usr/local/x86_64-linux-musl/bin/x86_64-linux-musl-ld",
+    ld_flags = ["--sysroot=/usr/local/x86_64-linux-musl"],
     sys_includes = [
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include",
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include-fixed",
-        "/usr/include",
+        "/usr/local/x86_64-linux-musl/x86_64-linux-musl/include",
+        "/usr/local/x86_64-linux-musl/lib/gcc/x86_64-linux-musl/{compiler_version}/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _x86_64_gcc,
@@ -178,7 +135,6 @@ cc_toolchain(
 toolchain(
     name = "gcc-linux-x86_64-toolchain",
     exec_compatible_with = [
-        "//:gcc",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -236,7 +192,6 @@ cc_toolchain(
 toolchain(
     name = "clang-macos-arm64-toolchain",
     exec_compatible_with = [
-        "//:clang",
         "@platforms//os:macos",
         "@platforms//cpu:arm64",
     ],
@@ -294,7 +249,6 @@ cc_toolchain(
 toolchain(
     name = "clang-macos-x86_64-toolchain",
     exec_compatible_with = [
-        "//:clang",
         "@platforms//os:macos",
         "@platforms//cpu:x86_64",
     ],
@@ -304,4 +258,81 @@ toolchain(
     ],
     toolchain = ":clang-macos-x86_64",
     toolchain_type = ":toolchain_type",
+)
+
+#
+# BOOTSTRAPPING
+#
+
+# We can't build some artifcacts, like musl libc and its toolchain, in Bazel
+# itself (i.e. by adding a remote repository to `WORKSPACE.bazel` and a
+# corresponding `BUILD` file in `bazel/third_party/<dependency>`) because doing
+# so introduces a circular dependency during Bazel C/C++ toolchain resolution.
+
+# The prefix for installed external toolchains.
+_install_prefix = "/usr/local"
+
+# musl-cross-make builds musl-libc-compatible gcc toolchains from source.
+_musl_cross_make_version = "fe915821b652a7fa37b34a596f47d8e20bc72338"
+
+_musl_cross_make_archive = "https://github.com/richfelker/musl-cross-make/archive/{}.tar.gz".format(_musl_cross_make_version)
+
+genrule(
+    name = "install-aarch64-linux-musl-gcc",
+    outs = ["install-aarch64-linux-musl-gcc.sh"],
+    cmd = """
+    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                      >  $@
+    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                        >> $@
+    echo '    wget -c {}'                                                        >> $@
+    echo '    tar -xf {}.tar.gz'                                                 >> $@
+    echo '    archive=musl-cross-make-{}'                                        >> $@
+    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'   >> $@
+    echo '    TARGET=aarch64-linux-musl make -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                    >> $@
+    """.format(
+        _install_prefix,
+        _musl_cross_make_archive,
+        _musl_cross_make_version,
+        _musl_cross_make_version,
+    ),
+    exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "aarch64-linux-musl-gcc",
+    srcs = ["install-aarch64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "install-x86_64-linux-musl-gcc",
+    outs = ["install-x86_64-linux-musl-gcc.sh"],
+    cmd = """
+    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                       >  $@
+    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                        >> $@
+    echo '    wget -c {}'                                                       >> $@
+    echo '    tar -xf {}.tar.gz'                                                >> $@
+    echo '    archive=musl-cross-make-{}'                                       >> $@
+    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'   >> $@
+    echo '    TARGET=x86_64-linux-musl make -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                   >> $@
+    """.format(
+        _install_prefix,
+        _musl_cross_make_archive,
+        _musl_cross_make_version,
+        _musl_cross_make_version,
+    ),
+    exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "x86_64-linux-musl-gcc",
+    srcs = ["install-x86_64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
 )

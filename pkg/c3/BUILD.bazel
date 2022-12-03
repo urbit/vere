@@ -56,7 +56,10 @@ cc_test(
     name = "list_tests",
     timeout = "short",
     srcs = ["list_tests.c"],
-    linkstatic = True,
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":c3"],
 )
