@@ -296,12 +296,14 @@ genrule(
         _musl_cross_make_version,
     ),
     exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "aarch64-linux-musl-gcc",
     srcs = ["install-aarch64-linux-musl-gcc"],
     exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
 )
 
 genrule(
@@ -323,10 +325,12 @@ genrule(
         _musl_cross_make_version,
     ),
     exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "x86_64-linux-musl-gcc",
     srcs = ["install-x86_64-linux-musl-gcc"],
     exec_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
 )
