@@ -10,7 +10,7 @@ load(
 )
 
 def _cc_toolchain_config_impl(ctx):
-    ar_flags_feature = feature(
+    ar_flags = feature(
         name = "archiver_flags",
         flag_sets = [
             flag_set(
@@ -51,6 +51,38 @@ def _cc_toolchain_config_impl(ctx):
             ),
         ],
     )
+    features = [ar_flags]
+
+    if len(ctx.attr.cc_flags) > 0:
+        cc_flags = feature(
+            name = "cc_flags",
+            enabled = True,
+            flag_sets = [
+                flag_set(
+                    actions = [ACTION_NAMES.c_compile],
+                    flag_groups = [flag_group(flags = ctx.attr.cc_flags)],
+                ),
+            ],
+        )
+        features.append(cc_flags)
+
+
+    if len(ctx.attr.ld_flags) > 0:
+        ld_flags = feature(
+            name = "ld_flags",
+            enabled = True,
+            flag_sets = [
+                flag_set(
+                    actions = [
+                        ACTION_NAMES.cpp_link_dynamic_library,
+                        ACTION_NAMES.cpp_link_executable,
+                        ACTION_NAMES.cpp_link_nodeps_dynamic_library,
+                    ],
+                    flag_groups = [flag_group(flags = ctx.attr.ld_flags)],
+                ),
+            ],
+        )
+        features.append(ld_flags)
 
     # See
     # https://bazel.build/rules/lib/cc_common#create_cc_toolchain_config_info.
@@ -62,7 +94,7 @@ def _cc_toolchain_config_impl(ctx):
             path.format(compiler_version = ctx.attr.compiler_version[BuildSettingInfo].value)
             for path in ctx.attr.sys_includes
         ],
-        features = [ar_flags_feature],
+        features = features,
         toolchain_identifier = ctx.attr.toolchain_identifier,
         target_system_name = ctx.attr.target_system_name,
         target_cpu = ctx.attr.target_cpu,
@@ -121,8 +153,10 @@ cc_toolchain_config = rule(
         "abi_libc_version": attr.string(default = "unknown"),
         "abi_version": attr.string(default = "unknown"),
         "ar_flags": attr.string(default = "rcsD"),
+        "cc_flags": attr.string_list(default = []),
         "cpp": attr.string(default = "/bin/false"),
         "gcov": attr.string(default = "/bin/false"),
+        "ld_flags": attr.string_list(default = []),
         "nm": attr.string(default = "/bin/false"),
         "objdump": attr.string(default = "/bin/false"),
         "strip": attr.string(default = "/bin/false"),

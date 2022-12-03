@@ -56,6 +56,10 @@ cc_test(
     name = "hashtable_tests",
     timeout = "short",
     srcs = ["hashtable_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":noun"],
 )
@@ -64,6 +68,10 @@ cc_test(
     name = "jets_tests",
     timeout = "short",
     srcs = ["jets_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":noun"],
 )
@@ -72,6 +80,10 @@ cc_test(
     name = "nock_tests",
     timeout = "short",
     srcs = ["nock_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":noun"],
 )
@@ -80,6 +92,10 @@ cc_test(
     name = "retrieve_tests",
     timeout = "short",
     srcs = ["retrieve_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":noun"],
 )
@@ -88,6 +104,10 @@ cc_test(
     name = "serial_tests",
     timeout = "short",
     srcs = ["serial_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":noun"],
 )

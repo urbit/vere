@@ -39,7 +39,10 @@ cc_test(
     name = "tests",
     timeout = "short",
     srcs = ["tests.c"],
-    linkstatic = True,
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [":ent"],
 )
