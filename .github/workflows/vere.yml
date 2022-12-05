@@ -48,19 +48,25 @@ jobs:
       matrix:
         include:
           # TODO: re-enable these after development
-          # - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
-          # - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc, toolchain_version: 11, runner: ubuntu-22.04 }
+          - { host: linux-x86_64, target: linux-x86_64, toolchain: gcc, toolchain_version: 11, runner: ubuntu-22.04 }
+          - { host: linux-x86_64, target: linux-arm64, toolchain: aarch64_linux_gnu_gcc, toolchain_version: 11, runner: ubuntu-22.04 }
           - { host: macos-x86_64, target: macos-x86_64, toolchain: clang, toolchain_version: 14.0.0, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
-    # runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v3
 
       - name: build static binary
-        # NOTE: On GitHub's macOS hosted runners, our build fails with the error:
-        # 
+        # NOTE: On GitHub's macOS hosted runners, Bazel fails to find our GMP
+        # header file because it tries to find a system-installed GMP at
+        # `/usr/local/include/gmp.h` instead of our project-local copy specified
+        # in `bazel/third_party/gmp/gmp.BUILD`. To ameliorate this, we enable
+        # sandboxing and block access to `/usr/local/include` in the sandbox.
+        # The downside of this solution is that it "effectively disables any
+        # cache the tool may have." When/if we want to use caching in our
+        # automated macOS build, we must find a better solution.
+        # See: https://bazel.build/docs/sandboxing
         run: |
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=(
@@ -104,46 +110,20 @@ jobs:
             sudo apt-get install -y gcc-aarch64-linux-gnu
           fi
           bazel test ... "${params[@]}"
-        
-      # - name: get version string
-      #   run: |
-      #     if [ "real" == "$VERSION_TYPE" ]; then
-      #       version="$(cat ./pkg/vere/VERSION)"
-      #     else
-      #       version="${GITHUB_SHA:0:9}"
-      #     fi
 
-      #     echo -n "$version" > ./version-string
+      - name: upload binary to bootstrap.urbit.org
+        if: inputs.upload
+        run: |
+          version="$(cat ./pkg/vere/VERSION)"
+          os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
+          arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
+          system=${arch}-${os}
+          target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
 
-      # - name: upload version string artifact
-      #   if: matrix.host == 'linux-x86_64' # XX specifies target so version-string is only uploaded once?
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: version-string
-      #     path: version-string
+          gsutil cp -n "${{ env.urbit_static }}/bin/urbit" "$target"
+          exitcode=$?
 
-      # - uses: google-github-actions/auth@v1
-      #   with:
-      #     credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-
-      # - uses: google-github-actions/setup-gcloud@v1
-      #   if: inputs.upload
-      #   with:
-      #     project_id: ${{ secrets.GCS_PROJECT }}
-
-      # - name: upload binary to bootstrap.urbit.org
-      #   if: inputs.upload
-      #   run: |
-      #     version="$(cat ./version-string)"
-      #     os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
-      #     arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
-      #     system=${arch}-${os}
-      #     target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
-
-      #     gsutil cp -n "${{ env.urbit_static }}/bin/urbit" "$target"
-      #     exitcode=$?
-
-      #     test $exitcode -eq 0 &&
-      #       echo "upload to $target complete." ||
-      #       echo "upload to $target failed.";
-      #     exit $exitcode
+          test $exitcode -eq 0 &&
+            echo "upload to $target complete." ||
+            echo "upload to $target failed.";
+          exit $exitcode
