@@ -56,6 +56,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: setup cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/bazel
+          key: ${{ matrix.target }}-bazel-cache
+
+
       - name: build static binary
         # NOTE: On GitHub's macOS hosted runners, Bazel fails to find our GMP
         # header file because it tries to find a system-installed GMP at
