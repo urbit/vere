@@ -158,7 +158,6 @@ cc_library(
         "//pkg/noun",
         "//pkg/ur",
         "@curl",
-        "@gmp",
         "@h2o",
         "@lmdb",
         "@openssl",
