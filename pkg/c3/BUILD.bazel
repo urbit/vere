@@ -36,11 +36,6 @@ cc_library(
             # TODO: check if this works on M1 Macs.
             "U3_OS_PROF=1",
         ],
-        "@platforms//os:openbsd": [
-            "U3_OS_bsd=1",
-            "U3_OS_no_ubc=1",
-        ],
-        "@platforms//os:windows": ["U3_OS_mingw=1"],
     }),
     include_prefix = "c3",
     includes = ["."],
