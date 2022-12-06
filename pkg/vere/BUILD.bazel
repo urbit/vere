@@ -158,6 +158,8 @@ cc_library(
         "//pkg/noun",
         "//pkg/ur",
         "@curl",
+        # TODO: remove after CI testing.
+        "@gmp",
         "@h2o",
         "@lmdb",
         "@openssl",
