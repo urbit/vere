@@ -268,7 +268,7 @@ toolchain(
 # BOOTSTRAPPING
 #
 
-# We can't build some artifcacts, like musl libc and its toolchain, in Bazel
+# We can't build some artifacts, like musl libc and its toolchain, in Bazel
 # itself (i.e. by adding a remote repository to `WORKSPACE.bazel` and a
 # corresponding `BUILD` file in `bazel/third_party/<dependency>`) because doing
 # so introduces a circular dependency during Bazel C/C++ toolchain resolution.
@@ -300,14 +300,14 @@ genrule(
         _musl_cross_make_version,
         _musl_cross_make_version,
     ),
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "aarch64-linux-musl-gcc",
     srcs = ["install-aarch64-linux-musl-gcc"],
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -330,13 +330,13 @@ genrule(
         _musl_cross_make_version,
         _musl_cross_make_version,
     ),
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "x86_64-linux-musl-gcc",
     srcs = ["install-x86_64-linux-musl-gcc"],
-    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
