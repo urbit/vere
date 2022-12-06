@@ -96,9 +96,8 @@ jobs:
             sudo xcode-select --switch /Library/Developer/CommandLineTools
             brew install automake libtool
             params+=(
-              --clang_version=14.0.0
-              --sandbox_block_path=/usr/local/include
-              --spawn_strategy=sandboxed
+              --clang_version=14.0.6
+              --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain
             )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
