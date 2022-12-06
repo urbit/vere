@@ -68,7 +68,7 @@ jobs:
         if: matrix.target == 'linux-arm64'
         with:
           path: |
-            /usr/local/aarch64-linux-musl-gcc
+            /usr/local/aarch64-linux-musl
           key: aarch64-linux-musl-gcc
 
       - name: setup x86_64-linux-musl-gcc cache
@@ -76,7 +76,7 @@ jobs:
         if: matrix.target == 'linux-x86_64'
         with:
           path: |
-            /usr/local/x86_64-linux-musl-gcc
+            /usr/local/x86_64-linux-musl
           key: x86_64-linux-musl-gcc
 
       - name: build static binary
@@ -98,7 +98,7 @@ jobs:
             params+=(
               --clang_version=14.0.0
               --sandbox_block_path=/usr/local/include
-              --spawn_strategy=local
+              --spawn_strategy=sandboxed
             )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
