@@ -63,6 +63,21 @@ jobs:
             ~/.cache/bazel
           key: ${{ matrix.target }}-bazel-cache
 
+      - name: setup aarch64-linux-musl-gcc cache
+        uses: actions/cache@v3
+        if: matrix.target == 'linux-arm64'
+        with:
+          path: |
+            /usr/local/aarch64-linux-musl-gcc
+          key: aarch64-linux-musl-gcc
+
+      - name: setup x86_64-linux-musl-gcc cache
+        uses: actions/cache@v3
+        if: matrix.target == 'linux-x86_64'
+        with:
+          path: |
+            /usr/local/x86_64-linux-musl-gcc
+          key: x86_64-linux-musl-gcc
 
       - name: build static binary
         # NOTE: On GitHub's macOS hosted runners, Bazel fails to find our GMP
@@ -83,7 +98,7 @@ jobs:
             params+=(
               --clang_version=14.0.0
               --sandbox_block_path=/usr/local/include
-              --spawn_strategy=sandboxed
+              --spawn_strategy=local
             )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
