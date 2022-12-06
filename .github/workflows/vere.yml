@@ -56,11 +56,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: setup cache
+      - name: setup bazel cache
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/bazel
+            ~/.cache/bazel/_bazel_${{ github.actor }}
+            /private/var/tmp/_bazel_${{ github.actor }}
           key: ${{ matrix.target }}-bazel-cache
 
       - name: setup aarch64-linux-musl-gcc cache
