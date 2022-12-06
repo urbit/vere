@@ -80,6 +80,9 @@ jobs:
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
             bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+            params+=(
+              --platforms=//:linux-arm64
+            )
           fi
           if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
             bazel run //bazel/toolchain:x86_64-linux-musl-gcc
