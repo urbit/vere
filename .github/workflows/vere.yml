@@ -131,11 +131,13 @@ jobs:
           exit $exitcode
 
       - uses: docker/docker-login-action@v1.8.0
+        if: inputs.upload
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: christian-korneck/update-container-description-action@v1
+        if: inputs.upload
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
