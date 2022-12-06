@@ -56,12 +56,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: setup bazel cache
+      - name: setup linux bazel cache
+        if: matrix.target == 'linux-x86_64' || matrix.target == 'linux-arm64'
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/bazel/_bazel_${{ github.actor }}
-            /private/var/tmp/_bazel_${{ github.actor }}
+            ~/.cache/bazel/_bazel_runner
+          key: ${{ matrix.target }}-bazel-cache
+
+      - name: setup macos bazel cache
+        if: matrix.target == 'macos-x86_64'
+        uses: actions/cache@v3
+        with:
+          path: |
+            /private/var/tmp/_bazel_runner
           key: ${{ matrix.target }}-bazel-cache
 
       - name: setup aarch64-linux-musl-gcc cache
