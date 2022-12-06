@@ -1,3 +1,5 @@
+load("@io_bazel_rules_docker//cc:image.bzl", "cc_image")
+
 #
 # GENERATED FILES
 #
@@ -193,6 +195,19 @@ cc_binary(
         # TODO: remove dependency (only used to report version).
         "@sigsegv",
         "@whereami",
+    ],
+)
+
+#
+# DOCKER IMAGE
+#
+
+cc_image(
+    name = "urbit-docker",
+    binary = ":urbit",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
     ],
 )
 
