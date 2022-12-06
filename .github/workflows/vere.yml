@@ -108,7 +108,7 @@ jobs:
           if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
             bazel run //bazel/toolchain:x86_64-linux-musl-gcc
           fi
-          bazel test ... "${params[@]}"
+          bazel test //pkg/... "${params[@]}"
 
       - name: upload binary to bootstrap.urbit.org
         if: inputs.upload
