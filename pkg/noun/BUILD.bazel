@@ -35,16 +35,12 @@ cc_library(
         "@gmp",
         "@murmur3",
         "@openssl",
+        "@sigsegv",
         "@softfloat",
     ] + select({
-        # We don't use `libsigsegv` on Windows because of performance reasons.
-        "@platforms//os:windows": [],
-        "//conditions:default": ["@sigsegv"],
-    }) + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
-        "@platforms//os:openbsd": ["//pkg/noun/platform/openbsd"],
-        "@platforms//os:windows": ["//pkg/noun/platform/mingw"],
+        "//conditions:default": [],
     }),
 )
 

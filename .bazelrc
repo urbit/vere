@@ -9,10 +9,15 @@ build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 # https://github.com/bazelbuild/bazel/issues/7260.
 build --incompatible_enable_cc_toolchain_resolution
 
+# Disable transitions.
+# See https://github.com/bazelbuild/rules_docker/issues/2052.
+build --@io_bazel_rules_docker//transitions:enable=false
+
 # Add aliases for compiler version build settings.
 build --flag_alias=aarch64_linux_gnu_gcc_version=//:aarch64_linux_gnu_gcc_version
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
+build --flag_alias=image_tag=//:image_tag
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc

@@ -36,22 +36,6 @@ config_setting(
     ],
 )
 
-config_setting(
-    name = "openbsd_x86_64",
-    constraint_values = [
-        "@platforms//os:openbsd",
-        "@platforms//cpu:x86_64",
-    ],
-)
-
-config_setting(
-    name = "windows_x86_64",
-    constraint_values = [
-        "@platforms//os:windows",
-        "@platforms//cpu:x86_64",
-    ],
-)
-
 #
 # COMPILERS
 #
@@ -69,6 +53,13 @@ string_flag(
     name = "gcc_version",
     # musl-cross-make uses `gcc-9.4.0` by default.
     build_setting_default = "9.4.0",
+    visibility = ["//visibility:public"],
+)
+
+# Docker image tag.
+string_flag(
+    name = "image_tag",
+    build_setting_default = "",
     visibility = ["//visibility:public"],
 )
 
