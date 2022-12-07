@@ -65,28 +65,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: setup bazel cache
+      - name: setup caches
         uses: actions/cache@v3
         with:
           path: |
-            if [ "${{ matrix.target }}" == "linux"* ]; then
-              echo ~/.cache/bazel/_bazel_runner
-            elif [ "${{ matrix.target }}" == "macos"* ]; then
-              echo /private/var/tmp/_bazel_runner
-            fi
+            ~/.cache/bazel/_bazel_runner
+            /private/var/tmp/_bazel_runner
+            /usr/local/*-musl
           key: ${{ matrix.target }}-bazel-cache
       
-      - name: setup musl cache
-        uses: actions/cache@v3
-        if: ${{ startsWith(matrix.target, 'linux') }}
-        with:
-          path: |
-            os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
-            arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2 | sed 's/arm64/aarch64/g')
-            system=${arch}-${os}
-            echo /usr/local/${system}-musl
-          key: ${{ matrix.target }}-musl
-
       - name: build static binary
         run: |
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
