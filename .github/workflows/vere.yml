@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       docker:
-        descripton: 'build and upload image to docker hub'
+        description: 'build and upload image to docker hub'
         type: boolean
         default: false
         required: false
