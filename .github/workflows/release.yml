@@ -9,6 +9,7 @@ jobs:
   call-vere:
     uses: ./.github/workflows/vere.yml
     with:
+      docker: true
       pace: 'live'
       upload: true
     secrets: inherit

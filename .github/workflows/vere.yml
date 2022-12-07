@@ -3,8 +3,8 @@ name: vere
 on:
   workflow_call:
     inputs:
-      upload:
-        description: 'upload binaries to gcp'
+      docker:
+        descripton: 'build and upload image to docker hub'
         type: boolean
         default: false
         required: false
@@ -12,6 +12,11 @@ on:
         description: 'release pace'
         type: string
         default: 'edge'
+        required: false
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
         required: false
     secrets:
       GCP_CREDENTIALS:
@@ -23,8 +28,8 @@ on:
 
   workflow_dispatch:
     inputs:
-      upload:
-        description: 'upload binaries to gcp'
+      docker:
+        descripton: 'build and upload image to docker hub'
         type: boolean
         default: false
         required: false
@@ -35,9 +40,13 @@ on:
         - edge
         - soon
         - live
+      upload:
+        description: 'upload binaries to gcp'
+        type: boolean
+        default: false
+        required: false
 
 env:
-  UPLOAD_BASE: bootstrap.urbit.org/vere
   VERE_PACE: ${{ inputs.pace }}
   VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
 
@@ -56,57 +65,39 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: setup linux bazel cache
-        if: matrix.target == 'linux-x86_64' || matrix.target == 'linux-arm64'
+      - name: setup bazel cache
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/bazel/_bazel_runner
+            if [ "${{ matrix.target }}" == "linux"* ]; then
+              echo ~/.cache/bazel/_bazel_runner
+            elif [ "${{ matrix.target }}" == "macos"* ]; then
+              echo /private/var/tmp/_bazel_runner
+            fi
           key: ${{ matrix.target }}-bazel-cache
-
-      - name: setup macos bazel cache
-        if: matrix.target == 'macos-x86_64'
+      
+      - name: setup musl cache
         uses: actions/cache@v3
+        if: ${{ startsWith(matrix.target, 'linux') }}
         with:
           path: |
-            /private/var/tmp/_bazel_runner
-          key: ${{ matrix.target }}-bazel-cache
-
-      - name: setup aarch64-linux-musl-gcc cache
-        uses: actions/cache@v3
-        if: matrix.target == 'linux-arm64'
-        with:
-          path: |
-            /usr/local/aarch64-linux-musl
-          key: aarch64-linux-musl-gcc
-
-      - name: setup x86_64-linux-musl-gcc cache
-        uses: actions/cache@v3
-        if: matrix.target == 'linux-x86_64'
-        with:
-          path: |
-            /usr/local/x86_64-linux-musl
-          key: x86_64-linux-musl-gcc
+            os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
+            arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2 | sed 's/arm64/aarch64/g')
+            system=${arch}-${os}
+            echo /usr/local/${system}-musl
+          key: ${{ matrix.target }}-musl
 
       - name: build static binary
-        # NOTE: On GitHub's macOS hosted runners, Bazel fails to find our GMP
-        # header file because it tries to find a system-installed GMP at
-        # `/usr/local/include/gmp.h` instead of our project-local copy specified
-        # in `bazel/third_party/gmp/gmp.BUILD`. To ameliorate this, we enable
-        # sandboxing and block access to `/usr/local/include` in the sandbox.
-        # The downside of this solution is that it "effectively disables any
-        # cache the tool may have." When/if we want to use caching in our
-        # automated macOS build, we must find a better solution.
-        # See: https://bazel.build/docs/sandboxing
         run: |
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=()
-          if [[ "${{ matrix.target }}" == "macos"* ]]; then
+          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
             sudo xcode-select --switch /Library/Developer/CommandLineTools
             brew install automake libtool
+            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
             params+=(
               --clang_version=14.0.6
-              --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain
+              --extra_toolchains=$brew_clang
             )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
@@ -121,19 +112,19 @@ jobs:
           bazel build :urbit "${params[@]}"
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
-
+      
       - name: run tests
-        # TODO: Remove this condition once https://github.com/urbit/vere/issues/15 is resolved.
+        # See https://github.com/urbit/vere/issues/15.
         if: matrix.target != 'linux-arm64'
         run: |
           params=()
-          if [[ "${{ matrix.target }}" == "macos"* ]]; then
+          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
             sudo xcode-select --switch /Library/Developer/CommandLineTools
             brew install automake libtool
+            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
             params+=(
-              --clang_version=14.0.0
-              --sandbox_block_path=/usr/local/include
-              --spawn_strategy=sandboxed
+              --clang_version=14.0.6
+              --extra_toolchains=$brew_clang
             )
           fi
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
@@ -162,13 +153,13 @@ jobs:
           exit $exitcode
 
       - uses: docker/docker-login-action@v1.8.0
-        if: inputs.upload
+        if: inputs.docker
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: christian-korneck/update-container-description-action@v1
-        if: inputs.upload
+        if: inputs.docker
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -179,7 +170,7 @@ jobs:
           readme_file: 'DOCKER.md'
 
       - name: build and push docker image
-        if: inputs.upload
+        if: inputs.docker
         run: |
           version="$(cat ./pkg/vere/VERSION)"
           bazel run //pkg/vere:push_urbit_image --image_tag=v$version
