@@ -14,6 +14,14 @@ cc_library(
             "-fPIC",
             "-c",
         ],
+        "@platforms//os:openbsd": [
+            "-fPIC",
+            "-c",
+        ],
+        "@platforms//os:windows": [
+            "-fPIC",
+            "-c",
+        ],
         "//conditions:default": [],
     }),
     includes = ["."],

@@ -13,12 +13,14 @@ configure_make(
         "//conditions:default": ["--jobs=`nproc`"],
     }),
     configure_command = select({
+        "@platforms//os:windows": "Configure",
         "@//:linux_arm64": "Configure",
         "//conditions:default": "config",
     }),
     configure_options = [
         "no-shared",
     ] + select({
+        "@platforms//os:windows": ["mingw64"],
         "@//:linux_arm64": [
             "linux-aarch64",
             # Native compilation on linux-arm64 isn't supported. The prefix is
@@ -29,6 +31,10 @@ configure_make(
             "--cross-compile-prefix=",
         ],
         "//conditions:default": [],
+    }),
+    configure_prefix = select({
+        "@platforms//os:windows": "perl",
+        "//conditions:default": "",
     }),
     lib_source = ":all",
     out_static_libs = [
