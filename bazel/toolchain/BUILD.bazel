@@ -357,6 +357,7 @@ genrule(
         _musl_cross_make_version,
         _musl_cross_make_version,
     ),
+    exec_compatible_with = ["@platforms//os:linux"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
@@ -387,6 +388,7 @@ genrule(
         _musl_cross_make_version,
         _musl_cross_make_version,
     ),
+    exec_compatible_with = ["@platforms//os:linux"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],
 )
