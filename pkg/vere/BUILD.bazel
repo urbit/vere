@@ -141,8 +141,6 @@ cc_library(
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",
         ],
-        "@platforms//os:openbsd": [],
-        "@platforms//os:windows": [],
     }),
     hdrs = [
         "db/lmdb.h",
