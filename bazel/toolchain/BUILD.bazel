@@ -171,8 +171,6 @@ cc_toolchain_config(
     sys_includes = [
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
         "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
-        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
     ],
     target_cpu = "arm64",
     toolchain_identifier = _macos_arm64_clang,
@@ -230,8 +228,6 @@ cc_toolchain_config(
     sys_includes = [
         "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
-        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _macos_x86_64_clang,
