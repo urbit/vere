@@ -139,6 +139,10 @@ jobs:
             echo "upload to $target failed.";
           exit $exitcode
 
+      - if: ${{ matrix.target == 'linux-x86_64 '}}
+        run: |
+          bazel run //pkg/vere:test-fake-ship
+
       - uses: docker/docker-login-action@v1.8.0
         if: inputs.docker
         with:
