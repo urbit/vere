@@ -25,14 +25,6 @@ cc_library(
         "@platforms//cpu:aarch64": ["U3_CPU_aarch64=1"],
         "//conditions:default": [],
     }) + select({
-        "@platforms//os:freebsd": [
-            "U3_OS_bsd=1",
-        ],
-        "@platforms//os:openbsd": [
-            "U3_OS_bsd=1",
-            "U3_OS_no_ubc=1",
-        ],
-        "@platforms//os:windows": ["U3_OS_mingw=1"],
         "@platforms//os:linux": ["U3_OS_linux=1"],
         "@platforms//os:macos": ["U3_OS_osx=1"],
         "//conditions:default": [],
