@@ -174,7 +174,7 @@ jobs:
           readme_file: 'DOCKER.md'
 
       - name: build and push docker image
-        if: inputs.docker
+        if: inputs.docker && matrix.target == 'linux-x86_64'
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
             version="$(cat ./pkg/vere/VERSION)"
