@@ -26,6 +26,7 @@ cc_library(
         "//conditions:default": [],
     }),
     linkstatic = True,
+    local_defines = ["U3_GUARD_PAGE"],
     visibility = ["//pkg:__subpackages__"],
     deps = [
         "//pkg/c3",
@@ -68,6 +69,18 @@ cc_test(
     name = "jets_tests",
     timeout = "short",
     srcs = ["jets_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "meme_tests",
+    timeout = "short",
+    srcs = ["meme_tests.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],
