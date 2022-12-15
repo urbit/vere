@@ -134,7 +134,7 @@ jobs:
         if: inputs.upload
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
-            version="$(cat ./pkg/urbit/version)"
+            version="$(cat ./pkg/vere/VERSION)"
           else
             version="${GITHUB_SHA:0:9}"
           fi
