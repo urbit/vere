@@ -47,7 +47,7 @@ on:
         required: false
 
 env:
-  UPLOAD_BASE: bootstrap.urbit.org/vere
+  UPLOAD_BASE: bootstrap.urbit.org/vere-test
   VERE_PACE: ${{ inputs.pace }}
 
 jobs:
