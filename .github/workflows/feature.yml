@@ -2,16 +2,6 @@ name: feature
 
 on:
   push:
-    paths:
-      - '.bazelrc'
-      - '.github/workflows/*.yml'
-      - 'BUILD.bazel'
-      - 'WORKSPACE.bazel'
-      - 'bazel/**'
-      - 'pkg/**'
-    branches-ignore:
-      - 'next/vere'
-      - 'master'
   pull_request:
     paths:
       - '.bazelrc'
