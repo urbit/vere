@@ -272,7 +272,7 @@ genrule(
     outs = ["solid.pill"],
     cmd = """
     VERSION=$$(cat $(location //pkg/vere:VERSION))
-    wget -O $@ https://bootstrap.urbit.org/urbit-v$$VERSION.pill
+    wget -q -O $@ https://bootstrap.urbit.org/urbit-v$$VERSION.pill
     """,
     visibility = ["//visibility:public"],
 )
@@ -287,7 +287,7 @@ genrule(
     outs = ["arvo.zip"],
     cmd = """
     VERSION=$$(cat $(location //pkg/vere:VERSION))
-    wget -O $@ https://github.com/urbit/urbit/archive/refs/tags/urbit-v$$VERSION.zip
+    wget -q -O $@ https://github.com/urbit/urbit/archive/refs/tags/urbit-v$$VERSION.zip
     """,
     visibility = ["//visibility:public"],
 )
@@ -306,7 +306,7 @@ genrule(
     cmd = """
     set -xeuo pipefail
     
-    unzip -q $(location :arvo)
+    unzip -qq $(location :arvo)
     $(location :urbit) -l -d -F bus \
       -B $(location :solid-pill)    \
       -A urbit-master/pkg/arvo ./pier
@@ -369,7 +369,7 @@ genrule(
     outs = ["test-fake-ship-output.zip"],
     cmd = """
     cp $(location :boot-fake-ship) pier.zip
-    unzip pier.zip
+    unzip -qq pier.zip
     chmod -R u+rw pier
 
     set -x
