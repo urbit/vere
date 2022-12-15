@@ -122,6 +122,15 @@ jobs:
           fi
           bazel test //pkg/... "${params[@]}"
 
+      - uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - uses: google-github-actions/setup-gcloud@v1
+        if: inputs.upload
+        with:
+          project_id: ${{ secrets.GCS_PROJECT }}
+
       - name: upload binary to bootstrap.urbit.org
         if: inputs.upload
         run: |
