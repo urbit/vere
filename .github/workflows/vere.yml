@@ -144,7 +144,7 @@ jobs:
           system=${arch}-${os}
           target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
 
-          gsutil cp -n "${{ env.urbit_static }}/bin/urbit" "$target"
+          gsutil cp -n "${{ env.urbit_static }}" "$target"
           exitcode=$?
 
           test $exitcode -eq 0 &&
