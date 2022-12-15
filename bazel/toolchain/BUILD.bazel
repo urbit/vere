@@ -342,15 +342,15 @@ genrule(
     name = "install-aarch64-linux-musl-gcc",
     outs = ["install-aarch64-linux-musl-gcc.sh"],
     cmd = """
-    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                      >  $@
-    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                        >> $@
-    echo '    wget -c {}'                                                        >> $@
-    echo '    tar -xf {}.tar.gz'                                                 >> $@
-    echo '    archive=musl-cross-make-{}'                                        >> $@
-    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'   >> $@
-    echo '    TARGET=aarch64-linux-musl make -C$$archive -j`nproc`'              >> $@
-    echo '    sudo TARGET=aarch64-linux-musl make -C$$archive -j`nproc` install' >> $@
-    echo 'fi'                                                                    >> $@
+    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                         >  $@
+    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -q -c {}'                                                        >> $@
+    echo '    tar -xf {}.tar.gz'                                                    >> $@
+    echo '    archive=musl-cross-make-{}'                                           >> $@
+    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                       >> $@
     """.format(
         _install_prefix,
         _musl_cross_make_archive,
@@ -373,15 +373,15 @@ genrule(
     name = "install-x86_64-linux-musl-gcc",
     outs = ["install-x86_64-linux-musl-gcc.sh"],
     cmd = """
-    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                       >  $@
-    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                        >> $@
-    echo '    wget -c {}'                                                       >> $@
-    echo '    tar -xf {}.tar.gz'                                                >> $@
-    echo '    archive=musl-cross-make-{}'                                       >> $@
-    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'   >> $@
-    echo '    TARGET=x86_64-linux-musl make -C$$archive -j`nproc`'              >> $@
-    echo '    sudo TARGET=x86_64-linux-musl make -C$$archive -j`nproc` install' >> $@
-    echo 'fi'                                                                   >> $@
+    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                          >  $@
+    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -q -c {}'                                                       >> $@
+    echo '    tar -xf {}.tar.gz'                                                   >> $@
+    echo '    archive=musl-cross-make-{}'                                          >> $@
+    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo 'fi'                                                                      >> $@
     """.format(
         _install_prefix,
         _musl_cross_make_archive,
