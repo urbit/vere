@@ -122,6 +122,7 @@ jobs:
           bazel test //pkg/... "${params[@]}"
 
       - uses: google-github-actions/auth@v1
+        if: inputs.upload
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
