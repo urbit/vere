@@ -1,7 +1,7 @@
-#include "all.h"
-#include "ur/ur.h"
-#include "vere/ivory.h"
-#include "vere/vere.h"
+#include "ivory.h"
+#include "noun.h"
+#include "ur.h"
+#include "vere.h"
 
 /* _setup(): prepare for tests.
 */

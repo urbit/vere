@@ -213,6 +213,18 @@ cc_test(
 )
 
 cc_test(
+    name = "boot_tests",
+    timeout = "short",
+    srcs = ["boot_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
     name = "newt_tests",
     timeout = "short",
     srcs = ["newt_tests.c"],

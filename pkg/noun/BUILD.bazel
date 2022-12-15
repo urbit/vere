@@ -77,6 +77,18 @@ cc_test(
 )
 
 cc_test(
+    name = "meme_tests",
+    timeout = "short",
+    srcs = ["meme_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
     name = "nock_tests",
     timeout = "short",
     srcs = ["nock_tests.c"],
