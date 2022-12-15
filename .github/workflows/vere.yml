@@ -47,8 +47,8 @@ on:
         required: false
 
 env:
+  UPLOAD_BASE: bootstrap.urbit.org/vere
   VERE_PACE: ${{ inputs.pace }}
-  VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
 
 jobs:
   urbit:
