@@ -152,6 +152,6 @@ container_push(
     format = "Docker",
     image = ":docker",
     registry = "docker.io",
-    repository = "tloncorp/urbit",
+    repository = "tloncorp/vere-test",
     tag = "//:image_tag",
 )

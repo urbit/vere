@@ -175,6 +175,10 @@ jobs:
       - name: build and push docker image
         if: inputs.docker
         run: |
-          version="$(cat ./pkg/vere/VERSION)"
-          bazel run //pkg/vere:push_urbit_image --image_tag=v$version
-          bazel run //pkg/vere:push_urbit_image --image_tag=latest
+          if [ "real" == "$VERSION_TYPE" ]; then
+            version="$(cat ./pkg/vere/VERSION)"
+          else
+            version="${GITHUB_SHA:0:9}"
+          fi
+          bazel run :upload_docker --image_tag=v$version
+          bazel run :upload_docker --image_tag=latest
