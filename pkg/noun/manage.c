@@ -491,7 +491,7 @@ _pave_parts(void)
 {
   // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
   // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(0);
+  u3R->cax.har_p = u3h_new_cache(50000);
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
