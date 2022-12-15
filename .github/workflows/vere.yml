@@ -47,6 +47,7 @@ on:
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere-test
   VERE_PACE: ${{ inputs.pace }}
+  VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
 
 jobs:
   urbit:
@@ -132,7 +133,11 @@ jobs:
       - name: upload binary to bootstrap.urbit.org
         if: inputs.upload
         run: |
-          version="$(cat ./pkg/vere/VERSION)"
+          if [ "real" == "$VERSION_TYPE" ]; then
+            version="$(cat ./pkg/urbit/version)"
+          else
+            version="${GITHUB_SHA:0:9}"
+          fi
           os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
           arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
           system=${arch}-${os}

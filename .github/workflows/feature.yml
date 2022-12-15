@@ -24,3 +24,5 @@ on:
 jobs:
   call-vere:
     uses: ./.github/workflows/vere.yml
+    with:
+      upload: true
