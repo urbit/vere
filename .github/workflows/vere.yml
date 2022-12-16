@@ -102,7 +102,7 @@ jobs:
       - name: run tests
         # See https://github.com/urbit/vere/issues/15.
         # See https://github.com/urbit/vere/issues/40.
-        if: matrix.target != 'linux-arm64' && matrix.target != 'macos-x86_64'
+        if: matrix.target == 'linux-x86_64'
         run: |
           params=()
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
@@ -153,7 +153,8 @@ jobs:
             echo "upload to $target failed.";
           exit $exitcode
 
-      - if: ${{ matrix.target == 'linux-x86_64 '}}
+      - name: run fake ship tests
+        if: ${{ matrix.target == 'linux-x86_64 '}}
         run: |
           bazel run //pkg/vere:test-fake-ship
 
