@@ -101,7 +101,8 @@ jobs:
       
       - name: run tests
         # See https://github.com/urbit/vere/issues/15.
-        if: matrix.target != 'linux-arm64'
+        # See https://github.com/urbit/vere/issues/40.
+        if: matrix.target != 'linux-arm64' && matrix.target != 'macos-x86_64'
         run: |
           params=()
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then

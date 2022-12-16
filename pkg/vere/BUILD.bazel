@@ -300,7 +300,7 @@ genrule(
     cmd = """
     # TODO: pull the correct arvo, not just `next/vere`'s.
     git clone https://github.com/urbit/urbit.git --single-branch --branch next/vere
-    zip -r $@ urbit
+    zip -q -r $@ urbit
     """,
     visibility = ["//visibility:public"],
 )
