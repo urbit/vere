@@ -283,8 +283,8 @@ genrule(
     srcs = ["//pkg/vere:VERSION"],
     outs = ["solid.pill"],
     cmd = """
-    VERSION=$$(cat $(location //pkg/vere:VERSION))
-    wget -q -O $@ https://bootstrap.urbit.org/urbit-v$$VERSION.pill
+    # TODO: pull the correct pill, not just `next/vere`'s.
+    wget -q -O $@ https://github.com/urbit/urbit/raw/next/vere/bin/solid.pill
     """,
     visibility = ["//visibility:public"],
 )
@@ -295,11 +295,12 @@ genrule(
 
 genrule(
     name = "arvo",
-    srcs = ["//pkg/vere:VERSION"],
+    srcs = [],
     outs = ["arvo.zip"],
     cmd = """
-    VERSION=$$(cat $(location //pkg/vere:VERSION))
-    wget -q -O $@ https://github.com/urbit/urbit/archive/refs/tags/urbit-v$$VERSION.zip
+    # TODO: pull the correct arvo, not just `next/vere`'s.
+    git clone https://github.com/urbit/urbit.git --single-branch --branch next/vere
+    zip -r $@ urbit
     """,
     visibility = ["//visibility:public"],
 )
@@ -311,17 +312,17 @@ genrule(
 genrule(
     name = "boot-fake-ship",
     srcs = [
-        ":solid-pill",
         ":arvo",
+        ":solid-pill",
     ],
     outs = ["fakebus.zip"],
     cmd = """
     set -xeuo pipefail
-    
+
     unzip -qq $(location :arvo)
     $(location :urbit) -l -d -F bus \
       -B $(location :solid-pill)    \
-      -A urbit-master/pkg/arvo ./pier
+      -A urbit/pkg/arvo ./pier
     
     cleanup() { 
       if [ -f ./pier/.vere.lock ]; then 
@@ -502,7 +503,7 @@ genrule(
     sed -i '/test-marks-end/,$$d'        test-output-marks
 
     OUTDIR="$$(pwd)/test-fake-ship-output"
-    mkdir $$OUTDIR
+    mkdir -p $$OUTDIR
     cp test-output-* $$OUTDIR
 
     set +x
