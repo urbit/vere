@@ -1,4 +1,4 @@
-name: vere
+name: shared
 
 on:
   workflow_call:
@@ -24,26 +24,6 @@ on:
       GCS_PROJECT:
         required: false
 
-  workflow_dispatch:
-    inputs:
-      docker:
-        descripton: 'build and upload image to docker hub'
-        type: boolean
-        default: false
-        required: false
-      pace:
-        description: 'release pace'
-        type: choice
-        options:
-        - edge
-        - soon
-        - live
-      upload:
-        description: 'upload binaries to gcp'
-        type: boolean
-        default: false
-        required: false
-
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere-test
   VERE_PACE: ${{ inputs.pace }}
@@ -55,29 +35,37 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-x86_64, runner: ubuntu-22.04 }
           - { target: linux-arm64, runner: ubuntu-22.04 }
+          - { target: linux-x86_64, runner: ubuntu-22.04 }
           - { target: macos-x86_64, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
 
     steps:
+      #
+      # BUILD AND TEST
+      #
       - uses: actions/checkout@v3
 
       - name: setup caches
         uses: actions/cache@v3
         with:
           path: |
+            # Cache bazel path on Linux.
             ~/.cache/bazel/_bazel_runner
+            # Cache bazel path on macOS.
             /private/var/tmp/_bazel_runner
+            # Cache musl libc toolchains.
             /usr/local/*-musl
           key: ${{ matrix.target }}-bazel-cache
       
-      - name: build static binary
+      - name: build and test
         run: |
+          # Build the binary.
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=()
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
+            # Switch Xcode path to match the path specified in our bazel toolchain.
             sudo xcode-select --switch /Library/Developer/CommandLineTools
             brew install automake libtool
             brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
@@ -96,32 +84,24 @@ jobs:
             bazel run //bazel/toolchain:x86_64-linux-musl-gcc
           fi
           bazel build :urbit "${params[@]}"
+
+          # Prepare binary for upload to GCP in future step.
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
-      
-      - name: run tests
-        # See https://github.com/urbit/vere/issues/15.
-        # See https://github.com/urbit/vere/issues/40.
-        if: matrix.target != 'linux-arm64' && matrix.target != 'macos-x86_64'
-        run: |
-          params=()
-          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-            sudo xcode-select --switch /Library/Developer/CommandLineTools
-            brew install automake libtool
-            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
-            params+=(
-              --clang_version=14.0.6
-              --extra_toolchains=$brew_clang
-            )
-          fi
-          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
-            bazel run //bazel/toolchain:aarch64-linux-musl-gcc
-          fi
+
+          # Test the binary and run fakeship tests.
+          # See https://github.com/urbit/vere/issues/15.
+          # See https://github.com/urbit/vere/issues/40.
+          # TODO: Re-enable tests on `macos-x86_64` and `linux-arm64`.
           if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
             bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+            bazel test //pkg/...
+            bazel build //pkg/vere:test-fake-ship
           fi
-          bazel test //pkg/... "${params[@]}"
-
+      
+      #
+      # UPLOAD BINARY TO GCP
+      #
       - uses: google-github-actions/auth@v1
         if: inputs.upload
         with:
@@ -148,15 +128,14 @@ jobs:
           gsutil cp -n "${{ env.urbit_static }}" "$target"
           exitcode=$?
 
-          test $exitcode -eq 0 &&
+          [ $exitcode -eq 0 ] &&
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
 
-      - if: ${{ matrix.target == 'linux-x86_64 '}}
-        run: |
-          bazel run //pkg/vere:test-fake-ship
-
+      #
+      # DOCKER
+      #
       - uses: docker/docker-login-action@v1.8.0
         if: inputs.docker
         with:

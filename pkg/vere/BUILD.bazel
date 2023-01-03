@@ -284,7 +284,7 @@ genrule(
     outs = ["solid.pill"],
     cmd = """
     # TODO: pull the correct pill, not just `next/vere`'s.
-    wget -q -O $@ https://github.com/urbit/urbit/raw/next/vere/bin/solid.pill
+    curl -L -s -o $@ https://github.com/urbit/urbit/raw/next/vere/bin/solid.pill
     """,
     visibility = ["//visibility:public"],
 )

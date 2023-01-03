@@ -34,7 +34,7 @@ For best performance, you must map the Ames UDP port to the *same* port on the h
 For this purpose you can force Ames to use a custom port. `/bin/start-urbit --port=$AMES_PORT` can be passed as an argument to the `docker start` command. Passing `/bin/start-urbit --port=13436` for example, would use port 13436. You must pass the name of the start script `/bin/start-urbit` in order to also pass arguments, if this is omitted your container will not start.
 
 ### Examples
-Creating a volume for ~sampel=palnet:
+Creating a volume for ~sampel-palnet:
 ```
 docker volume create sampel-palnet
 ```
