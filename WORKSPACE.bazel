@@ -186,6 +186,13 @@ versioned_http_file(
     version = "1.13",
 )
 
+versioned_http_file(
+    name = "solid_pill",
+    sha256 = "d737f88463f683173b5f6cbf41fc38705d4d3d67263c675d7e99841cd8485d81",
+    url = "https://github.com/urbit/urbit/raw/{version}/bin/solid.pill",
+    version = "next/vere",
+)
+
 versioned_http_archive(
     name = "keccak_tiny",
     build_file = "//bazel/third_party/keccak_tiny:keccak_tiny.BUILD",

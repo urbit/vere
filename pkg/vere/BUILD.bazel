@@ -275,54 +275,19 @@ cc_test(
 )
 
 #
-# SOLID PILL
-#
-
-genrule(
-    name = "solid-pill",
-    srcs = ["//pkg/vere:VERSION"],
-    outs = ["solid.pill"],
-    cmd = """
-    # TODO: pull the correct pill, not just `next/vere`'s.
-    wget -q -O $@ https://github.com/urbit/urbit/raw/next/vere/bin/solid.pill
-    """,
-    visibility = ["//visibility:public"],
-)
-
-#
-# ARVO
-#
-
-genrule(
-    name = "arvo",
-    srcs = [],
-    outs = ["arvo.zip"],
-    cmd = """
-    # TODO: pull the correct arvo, not just `next/vere`'s.
-    git clone https://github.com/urbit/urbit.git --single-branch --branch next/vere
-    zip -q -r $@ urbit
-    """,
-    visibility = ["//visibility:public"],
-)
-
-#
 # FAKE SHIP TESTS
 #
 
 genrule(
     name = "boot-fake-ship",
-    srcs = [
-        ":arvo",
-        ":solid-pill",
-    ],
+    srcs = ["@solid_pill//file"],
     outs = ["fakebus.zip"],
     cmd = """
     set -xeuo pipefail
 
-    unzip -qq $(location :arvo)
-    $(location :urbit) -l -d -F bus \
-      -B $(location :solid-pill)    \
-      -A urbit/pkg/arvo ./pier
+    $(location :urbit) -l -d -F bus    \
+      -B $(execpath @solid_pill//file) \
+      ./pier
     
     cleanup() { 
       if [ -f ./pier/.vere.lock ]; then 
