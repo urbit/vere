@@ -344,7 +344,7 @@ genrule(
     cmd = """
     echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                         >  $@
     echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                           >> $@
-    echo '    wget -q -c {}'                                                        >> $@
+    echo '    wget -c {}'                                                        >> $@
     echo '    tar -xf {}.tar.gz'                                                    >> $@
     echo '    archive=musl-cross-make-{}'                                           >> $@
     echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'      >> $@
@@ -365,6 +365,7 @@ genrule(
 sh_binary(
     name = "aarch64-linux-musl-gcc",
     srcs = ["install-aarch64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
@@ -375,7 +376,7 @@ genrule(
     cmd = """
     echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                          >  $@
     echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                           >> $@
-    echo '    wget -q -c {}'                                                       >> $@
+    echo '    wget -c {}'                                                       >> $@
     echo '    tar -xf {}.tar.gz'                                                   >> $@
     echo '    archive=musl-cross-make-{}'                                          >> $@
     echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'      >> $@
@@ -396,6 +397,7 @@ genrule(
 sh_binary(
     name = "x86_64-linux-musl-gcc",
     srcs = ["install-x86_64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )

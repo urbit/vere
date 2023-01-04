@@ -1,4 +1,4 @@
-name: feature
+name: build
 
 on:
   pull_request:
