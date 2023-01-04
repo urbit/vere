@@ -1,7 +1,7 @@
 # Building Vere
 
-We use [`bazel`][bazel][^1] to built Vere, which is packaged as a single binary,
-`urbit`. We spport the following `(host, target)` pairs, where the host platform
+We use [`bazel`][bazel][^1] to build Vere, which is packaged as a single binary,
+`urbit`. We support the following `(host, target)` pairs, where the host platform
 is where [`bazel`][bazel] runs and the target platform is where `urbit` will
 run:
 
