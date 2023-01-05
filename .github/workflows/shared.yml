@@ -89,12 +89,16 @@ jobs:
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
 
+          # We have no way of running the linux-arm64 tests on a linux-x86_64
+          # machine.
+          if [[ "${{ matrix.target }}" != "linux-arm64" ]]; then
+            bazel test --build_tests_only ...
+          fi
+
           # Test the binary and run fakeship tests.
           # See https://github.com/urbit/vere/issues/15.
           # See https://github.com/urbit/vere/issues/40.
-          # TODO: Re-enable tests on `macos-x86_64` and `linux-arm64`.
           if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
-            bazel test //pkg/...
             bazel build //pkg/vere:test-fake-ship
           fi
       
