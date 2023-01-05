@@ -304,7 +304,7 @@ genrule(
     } 
     
     trap cleanup EXIT 
-    port=$$(cat ./pier/.http.ports | grep loopback | tr -s ' ' '\n' | head -n 1) 
+    port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
     
     lensd() {
       curl -s                                                                         \
@@ -361,7 +361,7 @@ genrule(
 
     $(execpath :urbit) --lite-boot --daemon ./pier 2> urbit-output
 
-    port=$$(cat ./pier/.http.ports | grep loopback | tr -s ' ' '\\n' | head -n 1)
+    port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
 
     lensd() {
       curl -s                                                                         \
