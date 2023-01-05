@@ -131,10 +131,12 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    # We can't use a branch name for the `version` because each new commit
+    # will change the SHA256 hash.
     name = "arvo",
-    sha256 = "",  # TODO
+    sha256 = "138e3da28c1807d458432631606f7e57b5694a8b6476beb7c7676a61e44d5402",
     url = "https://github.com/urbit/urbit/archive/{version}.tar.gz",
-    version = "next/vere",
+    version = "39a104f872736c3b0b879d592302b86a67ad078b",
 )
 
 # See https://curl.se/docs/caextract.html.
