@@ -280,7 +280,10 @@ cc_test(
 
 genrule(
     name = "boot-fake-ship",
-    srcs = ["@solid_pill//file"],
+    srcs = [
+        "@solid_pill//file",
+        "@arvo//file",
+    ],
     outs = ["fakebus.zip"],
     cmd = """
     set -xeuo pipefail

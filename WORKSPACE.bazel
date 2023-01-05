@@ -130,7 +130,7 @@ versioned_http_archive(
     version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
 )
 
-versioned_http_archive(
+versioned_http_file(
     # We can't use a branch name for the `version` because each new commit
     # will change the SHA256 hash.
     name = "arvo",
