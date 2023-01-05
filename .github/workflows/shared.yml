@@ -37,6 +37,9 @@ jobs:
         include:
           - { target: linux-arm64, runner: ubuntu-22.04 }
           - { target: linux-x86_64, runner: ubuntu-22.04 }
+          # GitHub doesn't provide M1 macOS machines, so we run on
+          # @mcevoypeter's M1 Mac Mini instead.
+          - { target: macos-arm64, runner: [self-hosted, macos, ARM64] }
           - { target: macos-x86_64, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
@@ -77,6 +80,8 @@ jobs:
               ;;
             "linux-x86_64")
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+              ;;
+            "macos-arm64")
               ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
