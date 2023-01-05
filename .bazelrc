@@ -23,3 +23,4 @@ build --flag_alias=image_tag=//:image_tag
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
+
