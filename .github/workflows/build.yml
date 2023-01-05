@@ -13,6 +13,3 @@ on:
 jobs:
   call-vere:
     uses: ./.github/workflows/shared.yml
-    with:
-      upload: true
-    secrets: inherit
