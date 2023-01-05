@@ -81,6 +81,10 @@ jobs:
             "linux-x86_64")
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
               ;;
+            "macos-arm64")
+              # Switch Xcode path to match the path specified in our bazel toolchain.
+              sudo xcode-select --switch /Library/Developer/CommandLineTools
+              ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
