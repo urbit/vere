@@ -291,9 +291,9 @@ genrule(
     mkdir ./urbit
     tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
 
-    $(execpath :urbit) -l -d -F bus    \
-      -B $(execpath @solid_pill//file) \
-      -A ./urbit/pkg/arvo              \
+    $(execpath :urbit) --lite-boot --daemon --fake bus \
+      --bootstrap $(execpath @solid_pill//file)        \
+      --arvo ./urbit/pkg/arvo                          \
       ./pier
     
     cleanup() { 
@@ -359,7 +359,7 @@ genrule(
 
     set -x
 
-    $(execpath :urbit) -l -d ./pier 2> urbit-output
+    $(execpath :urbit) --lite-boot --daemon ./pier 2> urbit-output
 
     port=$$(cat ./pier/.http.ports | grep loopback | tr -s ' ' '\\n' | head -n 1)
 
