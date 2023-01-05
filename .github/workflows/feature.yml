@@ -1,0 +1,15 @@
+name: feature
+
+on:
+  release: null
+  push:
+    branches-ignore:
+      - master
+      - release
+
+jobs:
+  call-vere:
+    with:
+      pace: 'edge'
+      upload: false
+    uses: ./.github/workflows/shared.yml
