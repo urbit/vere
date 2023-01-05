@@ -68,26 +68,33 @@ jobs:
           # Build the binary.
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=()
-          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-            # Switch Xcode path to match the path specified in our bazel toolchain.
-            sudo xcode-select --switch /Library/Developer/CommandLineTools
-            brew install automake libtool
-            brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
-            params+=(
-              --clang_version=14.0.6
-              --extra_toolchains=$brew_clang
-            )
-          fi
-          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
-            bazel run //bazel/toolchain:aarch64-linux-musl-gcc
-            params+=(
-              --platforms=//:linux-arm64
-            )
-          fi
-          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
-            bazel run //bazel/toolchain:x86_64-linux-musl-gcc
-          fi
-          bazel build :urbit "${params[@]}"
+          case "${{ matrix.target }}" in
+            "linux-arm64")
+              bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+              params+=(
+                --platforms=//:linux-arm64
+              )
+              ;;
+            "linux-x86_64")
+              bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+              ;;
+            "macos-x86_64")
+              # Switch Xcode path to match the path specified in our bazel toolchain.
+              sudo xcode-select --switch /Library/Developer/CommandLineTools
+              brew install automake libtool
+              brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
+              params+=(
+                --clang_version=14.0.6
+                --extra_toolchains=$brew_clang
+              )
+              ;;
+            *)
+              echo "Unsupported target: ${{ matrix.target }}"
+              exit 1
+              ;;
+          esac
+
+          bazel build "${params[@]}" :urbit
 
           # Prepare binary for upload to GCP in future step.
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
