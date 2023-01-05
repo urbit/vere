@@ -51,10 +51,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            # Cache bazel path on Linux.
-            ~/.cache/bazel/_bazel_runner
-            # Cache bazel path on macOS.
-            /private/var/tmp/_bazel_runner
+            # It would be nice to use bazel caches, but because the total 
+            # GitHub cache size is 10GB per repository, we elect to cache 
+            # the musl cache instead.
+            # # Cache bazel path on Linux.
+            # ~/.cache/bazel/_bazel_runner
+            # # Cache bazel path on macOS.
+            # /private/var/tmp/_bazel_runner
             # Cache musl libc toolchains.
             /usr/local/*-musl
           key: ${{ matrix.target }}-bazel-cache
