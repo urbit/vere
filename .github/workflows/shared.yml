@@ -21,7 +21,7 @@ on:
     secrets:
       GCP_CREDENTIALS:
         required: false
-      GCS_PROJECT:
+      GCP_PROJECT:
         required: false
 
 env:
@@ -120,7 +120,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v1
         if: inputs.upload
         with:
-          project_id: ${{ secrets.GCS_PROJECT }}
+          project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Upload binaries to bootstrap.urbit.org
         if: inputs.upload
