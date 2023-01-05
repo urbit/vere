@@ -285,8 +285,12 @@ genrule(
     cmd = """
     set -xeuo pipefail
 
+    mkdir ./arvo
+    tar xfz $(execpath @arvo//file) -C ./arvo --strip-components=1
+
     $(location :urbit) -l -d -F bus    \
       -B $(execpath @solid_pill//file) \
+      -A ./arvo/pkg/arvo               \
       ./pier
     
     cleanup() { 
@@ -455,6 +459,8 @@ genrule(
     cp urbit-output test-output-generators
     cp urbit-output test-output-marks
 
+    # TODO: when re-enabling fake ship tests on macOS, use `sed -i ''` 
+    # instead of `sed -i`.
     sed -i '0,/test-unit-start/d'        test-output-unit
     sed -i '/test-unit-end/,$$d'         test-output-unit
 

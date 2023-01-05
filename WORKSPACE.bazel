@@ -130,6 +130,13 @@ versioned_http_archive(
     version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
 )
 
+versioned_http_archive(
+    name = "arvo",
+    sha256 = "",  # TODO
+    url = "https://github.com/urbit/urbit/archive/{version}.tar.gz",
+    version = "next/vere",
+)
+
 # See https://curl.se/docs/caextract.html.
 versioned_http_file(
     name = "ca_bundle",

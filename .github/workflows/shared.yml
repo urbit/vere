@@ -94,7 +94,6 @@ jobs:
           # See https://github.com/urbit/vere/issues/40.
           # TODO: Re-enable tests on `macos-x86_64` and `linux-arm64`.
           if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
-            bazel run //bazel/toolchain:x86_64-linux-musl-gcc
             bazel test //pkg/...
             bazel build //pkg/vere:test-fake-ship
           fi
