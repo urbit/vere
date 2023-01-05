@@ -1,0 +1,15 @@
+name: build
+
+on:
+  pull_request:
+    paths:
+      - '.bazelrc'
+      - '.github/workflows/*.yml'
+      - 'BUILD.bazel'
+      - 'WORKSPACE.bazel'
+      - 'bazel/**'
+      - 'pkg/**'
+
+jobs:
+  call-vere:
+    uses: ./.github/workflows/shared.yml

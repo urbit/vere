@@ -1,4 +1,6 @@
 load("//bazel:common_settings.bzl", "string_flag")
+load("@io_bazel_rules_docker//cc:image.bzl", "cc_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 #
 # OS-CPU CONFIG SETTINGS
@@ -36,22 +38,6 @@ config_setting(
     ],
 )
 
-config_setting(
-    name = "openbsd_x86_64",
-    constraint_values = [
-        "@platforms//os:openbsd",
-        "@platforms//cpu:x86_64",
-    ],
-)
-
-config_setting(
-    name = "windows_x86_64",
-    constraint_values = [
-        "@platforms//os:windows",
-        "@platforms//cpu:x86_64",
-    ],
-)
-
 #
 # COMPILERS
 #
@@ -69,6 +55,13 @@ string_flag(
     name = "gcc_version",
     # musl-cross-make uses `gcc-9.4.0` by default.
     build_setting_default = "9.4.0",
+    visibility = ["//visibility:public"],
+)
+
+# Docker image tag.
+string_flag(
+    name = "image_tag",
+    build_setting_default = "",
     visibility = ["//visibility:public"],
 )
 
@@ -143,4 +136,22 @@ platform(
 alias(
     name = "urbit",
     actual = "//pkg/vere:urbit",
+)
+
+#
+# DOCKER IMAGE
+#
+
+cc_image(
+    name = "docker",
+    binary = "//pkg/vere:urbit",
+)
+
+container_push(
+    name = "upload_docker",
+    format = "Docker",
+    image = ":docker",
+    registry = "docker.io",
+    repository = "tloncorp/vere-test",
+    tag = "//:image_tag",
 )

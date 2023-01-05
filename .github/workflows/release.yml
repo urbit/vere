@@ -1,0 +1,15 @@
+name: release
+
+on:
+  release: null
+  push:
+    tags: 'urbit-v[0-9]+.[0-9]+'
+
+jobs:
+  call-vere:
+    uses: ./.github/workflows/shared.yml
+    with:
+      docker: true
+      pace: 'live'
+      upload: true
+    secrets: inherit
