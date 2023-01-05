@@ -130,15 +130,6 @@ versioned_http_archive(
     version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
 )
 
-versioned_http_file(
-    # We can't use a branch name for the `version` because each new commit
-    # will change the SHA256 hash.
-    name = "arvo",
-    sha256 = "138e3da28c1807d458432631606f7e57b5694a8b6476beb7c7676a61e44d5402",
-    url = "https://github.com/urbit/urbit/archive/{version}.tar.gz",
-    version = "39a104f872736c3b0b879d592302b86a67ad078b",
-)
-
 # See https://curl.se/docs/caextract.html.
 versioned_http_file(
     name = "ca_bundle",
@@ -300,6 +291,15 @@ versioned_http_archive(
     strip_prefix = "sse2neon-{version}",
     url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v{version}.tar.gz",
     version = "1.5.1",
+)
+
+versioned_http_file(
+    name = "urbit",
+    sha256 = "403a2691dcc0cbff60157e3f91ffe15f4c8bc9dd5e1acab1d438b84cc8ef7711",
+    url = "https://github.com/urbit/urbit/archive/{version}.tar.gz",
+    # We can't use a branch name for the `version` because each new commit
+    # will change the SHA256 hash.
+    version = "39a104f872736c3b0b879d592302b86a67ad078b",
 )
 
 versioned_http_archive(

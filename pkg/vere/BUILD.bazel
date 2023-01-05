@@ -282,18 +282,18 @@ genrule(
     name = "boot-fake-ship",
     srcs = [
         "@solid_pill//file",
-        "@arvo//file",
+        "@urbit//file",
     ],
     outs = ["fakebus.zip"],
     cmd = """
     set -xeuo pipefail
 
-    mkdir ./arvo
-    tar xfz $(execpath @arvo//file) -C ./arvo --strip-components=1
+    mkdir ./urbit
+    tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
 
     $(location :urbit) -l -d -F bus    \
       -B $(execpath @solid_pill//file) \
-      -A ./arvo/pkg/arvo               \
+      -A ./urbit/pkg/arvo              \
       ./pier
     
     cleanup() { 
