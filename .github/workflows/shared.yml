@@ -95,7 +95,10 @@ jobs:
           # We have no way of running the linux-arm64 tests on a linux-x86_64
           # machine.
           if [[ "${{ matrix.target }}" != "linux-arm64" ]]; then
-            bazel test --build_tests_only ...
+            params+=(
+              --build_tests_only
+            )
+            bazel test ... "${params[@]}"
           fi
 
           # Test the binary and run fakeship tests.
