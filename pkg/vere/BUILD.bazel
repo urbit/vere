@@ -291,7 +291,7 @@ genrule(
     mkdir ./urbit
     tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
 
-    $(location :urbit) -l -d -F bus    \
+    $(execpath :urbit) -l -d -F bus    \
       -B $(execpath @solid_pill//file) \
       -A ./urbit/pkg/arvo              \
       ./pier
@@ -353,13 +353,13 @@ genrule(
     ],
     outs = ["test-fake-ship-output.zip"],
     cmd = """
-    cp $(location :boot-fake-ship) pier.zip
+    cp $(execpath :boot-fake-ship) pier.zip
     unzip -qq pier.zip
     chmod -R u+rw pier
 
     set -x
 
-    $(location :urbit) -l -d ./pier 2> urbit-output
+    $(execpath :urbit) -l -d ./pier 2> urbit-output
 
     port=$$(cat ./pier/.http.ports | grep loopback | tr -s ' ' '\\n' | head -n 1)
 
