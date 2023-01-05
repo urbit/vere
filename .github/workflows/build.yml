@@ -12,7 +12,7 @@ on:
 
 jobs:
   call-vere:
-    uses: ./.github/workflows/vere.yml
+    uses: ./.github/workflows/shared.yml
     with:
       upload: true
     secrets: inherit
