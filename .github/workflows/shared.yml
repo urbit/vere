@@ -37,6 +37,9 @@ jobs:
         include:
           - { target: linux-arm64, runner: ubuntu-22.04 }
           - { target: linux-x86_64, runner: ubuntu-22.04 }
+          # GitHub doesn't provide M1 macOS machines, so we run on
+          # @mcevoypeter's M1 Mac Mini instead.
+          - { target: macos-arm64: runner: self-hosted }
           - { target: macos-x86_64, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
