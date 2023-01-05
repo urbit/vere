@@ -50,6 +50,7 @@ jobs:
       - name: Set up build cache
         uses: actions/cache@v3
         with:
+          key: ${{ matrix.target }}-cache
           path: |
             # It would be nice to cache the Bazel cache, but the total GitHub
             # cache size is 10GB per repository, and the musl libc toolchains
@@ -61,7 +62,6 @@ jobs:
             # /private/var/tmp/_bazel_runner
             # Cache musl libc toolchains.
             /usr/local/*-musl
-          key: ${{ matrix.target }}-bazel-cache
       
       - name: Build and test
         run: |
