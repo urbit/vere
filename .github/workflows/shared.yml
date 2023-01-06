@@ -143,14 +143,11 @@ jobs:
         if: inputs.upload
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
-            version="$(cat ./pkg/vere/VERSION)"
+            version="v$(cat ./pkg/vere/VERSION)"
           else
             version="${GITHUB_SHA:0:9}"
           fi
-          os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
-          arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
-          system=${arch}-${os}
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-v${version}-${system}"
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-${version}-${{ matrix.target }}"
 
           gsutil cp -n "${{ env.urbit_static }}" "$target"
           exitcode=$?
@@ -185,9 +182,9 @@ jobs:
         if: inputs.docker && ${{ matrix.target }} == 'linux-x86_64'
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
-            version="$(cat ./pkg/vere/VERSION)"
+            version="v$(cat ./pkg/vere/VERSION)"
           else
             version="${GITHUB_SHA:0:9}"
           fi
-          bazel run --image_tag=v$version :upload_docker
+          bazel run --image_tag=$version :upload_docker
           bazel run --image_tag=latest :upload_docker
