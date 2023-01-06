@@ -1,0 +1,15 @@
+name: develop
+
+on:
+  release: null
+  push:
+    branches:
+      - develop
+
+jobs:
+  call-vere:
+    uses: ./.github/workflows/shared.yml
+    with:
+      pace: 'edge'
+      upload: true
+    secrets: inherit
