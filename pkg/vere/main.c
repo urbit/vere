@@ -560,19 +560,7 @@ _main_getopt(c3_i argc, c3_c** argv)
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.git == c3n ) {
     u3_Host.ops_u.url_c =
-      "https://bootstrap.urbit.org/props/" URBIT_VERSION "/brass.pill";
-
-    //  if we're not in lite mode, and we didn't specify a pill
-    //  include the default props
-    //
-    if (  !u3_Host.ops_u.pil_c
-       && (c3n == u3_Host.ops_u.lit) )
-    {
-      _main_add_prop(3, "garden");
-      _main_add_prop(3, "landscape");
-      _main_add_prop(3, "webterm");
-      _main_add_prop(3, "bitcoin");
-    }
+      "https://bootstrap.urbit.org/urbit-v" URBIT_VERSION ".pill";
   }
   else if ( u3_Host.ops_u.nuu == c3y
            && u3_Host.ops_u.url_c == 0
