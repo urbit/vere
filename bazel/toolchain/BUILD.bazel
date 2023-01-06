@@ -46,10 +46,10 @@ alias(
 #
 
 # Toolchain identifier.
-_arm64_gcc = "toolchain-gcc-linux-arm64"
+_aarch64_gcc = "toolchain-gcc-linux-aarch64"
 
 cc_toolchain_config(
-    name = "gcc-linux-arm64-config",
+    name = "gcc-linux-aarch64-config",
     ar = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-ar".format(_install_prefix),
     cc = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-gcc".format(_install_prefix),
     cc_flags = [
@@ -64,12 +64,12 @@ cc_toolchain_config(
         "{}/aarch64-linux-musl/aarch64-linux-musl/include".format(_install_prefix),
         "{}/aarch64-linux-musl/lib/gcc/aarch64-linux-musl/{{compiler_version}}/include".format(_install_prefix),
     ],
-    target_cpu = "arm64",
-    toolchain_identifier = _arm64_gcc,
+    target_cpu = "aarch64",
+    toolchain_identifier = _aarch64_gcc,
 )
 
 cc_toolchain(
-    name = "gcc-linux-arm64",
+    name = "gcc-linux-aarch64",
     all_files = ":empty",
     compiler_files = ":empty",
     dwp_files = ":empty",
@@ -77,21 +77,21 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
-    toolchain_config = ":gcc-linux-arm64-config",
-    toolchain_identifier = _arm64_gcc,
+    toolchain_config = ":gcc-linux-aarch64-config",
+    toolchain_identifier = _aarch64_gcc,
 )
 
 toolchain(
-    name = "gcc-linux-arm64-toolchain",
+    name = "gcc-linux-aarch64-toolchain",
     exec_compatible_with = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
     target_compatible_with = [
         "@platforms//os:linux",
-        "@platforms//cpu:arm64",
+        "@platforms//cpu:aarch64",
     ],
-    toolchain = ":gcc-linux-arm64",
+    toolchain = ":gcc-linux-aarch64",
     toolchain_type = ":toolchain_type",
 )
 
@@ -150,14 +150,14 @@ toolchain(
 )
 
 #
-# clang-macos-arm64
+# clang-macos-aarch64
 #
 
 # Toolchain identifier.
-_macos_arm64_clang = "toolchain-clang-macos-arm64"
+_macos_aarch64_clang = "toolchain-clang-macos-aarch64"
 
 cc_toolchain_config(
-    name = "clang-macos-arm64-config",
+    name = "clang-macos-aarch64-config",
     # NOTE: building with `libtool` does not work on macOS due to lack of
     # support in the `configure_make` rule provided by `rules_foreign_cc`.
     # Therefore, we require setting `ar` as the archiver tool on macOS.
@@ -177,12 +177,12 @@ cc_toolchain_config(
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
     ],
-    target_cpu = "arm64",
-    toolchain_identifier = _macos_arm64_clang,
+    target_cpu = "aarch64",
+    toolchain_identifier = _macos_aarch64_clang,
 )
 
 cc_toolchain(
-    name = "clang-macos-arm64",
+    name = "clang-macos-aarch64",
     all_files = ":empty",
     compiler_files = ":empty",
     dwp_files = ":empty",
@@ -190,21 +190,21 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
-    toolchain_config = ":clang-macos-arm64-config",
-    toolchain_identifier = _macos_arm64_clang,
+    toolchain_config = ":clang-macos-aarch64-config",
+    toolchain_identifier = _macos_aarch64_clang,
 )
 
 toolchain(
-    name = "clang-macos-arm64-toolchain",
+    name = "clang-macos-aarch64-toolchain",
     exec_compatible_with = [
         "@platforms//os:macos",
-        "@platforms//cpu:arm64",
+        "@platforms//cpu:aarch64",
     ],
     target_compatible_with = [
         "@platforms//os:macos",
-        "@platforms//cpu:arm64",
+        "@platforms//cpu:aarch64",
     ],
-    toolchain = ":clang-macos-arm64",
+    toolchain = ":clang-macos-aarch64",
     toolchain_type = ":toolchain_type",
 )
 

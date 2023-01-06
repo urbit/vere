@@ -53,7 +53,7 @@ configure_make(
         "--without-zlib",
         "--without-zstd",
     ] + select({
-        "@//:linux_arm64": ["--host=aarch64-linux-musl"],
+        "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
     }),

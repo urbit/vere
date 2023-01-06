@@ -43,7 +43,7 @@ cc_library(
     includes = ["deps/klib"],
     linkstatic = True,
     local_defines = select({
-        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
+        "@platforms//cpu:aarch64": ["URBIT_RUNTIME_CPU_AARCH64"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
@@ -51,7 +51,7 @@ cc_library(
         "@curl",
         "@zlib",
     ] + select({
-        "@platforms//cpu:arm64": ["@sse2neon"],
+        "@platforms//cpu:aarch64": ["@sse2neon"],
         "//conditions:default": [],
     }),
 )
@@ -99,12 +99,12 @@ cc_library(
     includes = ["deps/picohttpparser"],
     linkstatic = True,
     local_defines = select({
-        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
+        "@platforms//cpu:aarch64": ["URBIT_RUNTIME_CPU_AARCH64"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
     deps = select({
-        "@platforms//cpu:arm64": ["@sse2neon"],
+        "@platforms//cpu:aarch64": ["@sse2neon"],
         "//conditions:default": [],
     }),
 )
@@ -130,7 +130,7 @@ cc_library(
     ],
     linkstatic = True,
     local_defines = select({
-        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
+        "@platforms//cpu:aarch64": ["URBIT_RUNTIME_CPU_AARCH64"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
@@ -139,7 +139,7 @@ cc_library(
         ":micro_ecc",
         "@openssl",
     ] + select({
-        "@platforms//cpu:arm64": ["@sse2neon"],
+        "@platforms//cpu:aarch64": ["@sse2neon"],
         "//conditions:default": [],
     }),
 )

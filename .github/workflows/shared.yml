@@ -34,11 +34,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-arm64, runner: ubuntu-22.04 }
+          - { target: linux-aarch64, runner: ubuntu-22.04 }
           - { target: linux-x86_64, runner: ubuntu-22.04 }
           # GitHub doesn't provide M1 macOS machines, so we run on
           # @mcevoypeter's M1 Mac Mini instead.
-          - { target: macos-arm64, runner: [self-hosted, macos, ARM64] }
+          - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
           - { target: macos-x86_64, runner: macos-12 }
 
     runs-on: ${{ matrix.runner }}
@@ -51,7 +51,7 @@ jobs:
 
       - name: chown /usr/local
         run: |
-          if [[ "${{ matrix.target }}" == "linux-arm64" || "${{ matrix.target }}" == "linux-x86_64" ]]; then
+          if [[ "${{ matrix.target }}" == "linux-aarch64" || "${{ matrix.target }}" == "linux-x86_64" ]]; then
             # See https://github.com/actions/cache/issues/845.
             sudo chown -R $(whoami) /usr/local
           fi
@@ -78,16 +78,16 @@ jobs:
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           params=()
           case "${{ matrix.target }}" in
-            "linux-arm64")
+            "linux-aarch64")
               bazel run //bazel/toolchain:aarch64-linux-musl-gcc
               params+=(
-                --platforms=//:linux-arm64
+                --platforms=//:linux-aarch64
               )
               ;;
             "linux-x86_64")
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
               ;;
-            "macos-arm64")
+            "macos-aarch64")
               ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
@@ -111,9 +111,9 @@ jobs:
           echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
 
-          # We have no way of running the linux-arm64 tests on a linux-x86_64
+          # We have no way of running the linux-aarch64 tests on a linux-x86_64
           # machine.
-          if [[ "${{ matrix.target }}" != "linux-arm64" ]]; then
+          if [[ "${{ matrix.target }}" != "linux-aarch64" ]]; then
             params+=(
               --build_tests_only
             )
