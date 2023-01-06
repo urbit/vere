@@ -1,4 +1,4 @@
-name: pre-release
+name: Push to release
 
 on:
   release: null
@@ -7,7 +7,7 @@ on:
       - release
 
 jobs:
-  call-vere:
+  urbit:
     uses: ./.github/workflows/shared.yml
     with:
       pace: 'soon'

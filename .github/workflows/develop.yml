@@ -1,4 +1,4 @@
-name: develop
+name: Push to develop
 
 on:
   release: null
@@ -7,7 +7,7 @@ on:
       - develop
 
 jobs:
-  call-vere:
+  urbit:
     uses: ./.github/workflows/shared.yml
     with:
       pace: 'edge'

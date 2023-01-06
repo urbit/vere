@@ -1,4 +1,4 @@
-name: release
+name: Push to master
 
 on:
   release: null
@@ -7,7 +7,7 @@ on:
       - master
 
 jobs:
-  call-vere:
+  urbit:
     uses: ./.github/workflows/shared.yml
     with:
       docker: true
