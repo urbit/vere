@@ -115,10 +115,11 @@ jobs:
           esac
 
       - name: Run fake ship tests
-        if: ${{ matrix.target }} == "linux-x86_64"
         run: |
           # See https://github.com/urbit/vere/issues/40.
-          bazel build //pkg/vere:test-fake-ship
+          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
+            bazel build //pkg/vere:test-fake-ship
+          fi
 
       
       #
