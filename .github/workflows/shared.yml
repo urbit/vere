@@ -72,32 +72,27 @@ jobs:
             # Cache musl libc toolchains.
             /usr/local/*-musl
       
-      - name: Build and test
+      - name: Build binary
         run: |
-          # Build the binary.
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
-          params=()
           case "${{ matrix.target }}" in
             "linux-aarch64")
               bazel run //bazel/toolchain:aarch64-linux-musl-gcc
-              params+=(
-                --platforms=//:linux-aarch64
-              )
+              bazel build --platforms=//:linux-aarch64 :urbit
               ;;
             "linux-x86_64")
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+              bazel build :urbit
               ;;
             "macos-aarch64")
+              bazel build :urbit
               ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
               brew install automake libtool
               brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
-              params+=(
-                --clang_version=14.0.6
-                --extra_toolchains=$brew_clang
-              )
+              bazel build --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
               ;;
             *)
               echo "Unsupported target: ${{ matrix.target }}"
@@ -105,31 +100,39 @@ jobs:
               ;;
           esac
 
-          bazel build "${params[@]}" :urbit
+      - name: Run unit tests
+        run: |
+          case "${{ matrix.target }}" in
+            "linux-aarch64")
+              # We have no way of running the linux-aarch64 tests on a linux-x86_64
+              # machine.
+              ;;
+            "linux-x86_64")
+              bazel test --build_tests_only ...
+              ;;
+            "macos-aarch64")
+              bazel test --build_tests_only ...
+              ;;
+            "macos-x86_64")
+              bazel test --build_tests_only ...
+              ;;
+          esac
 
-          # Prepare binary for upload to GCP in future step.
-          echo "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit"
-          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" >> $GITHUB_ENV
-
-          # We have no way of running the linux-aarch64 tests on a linux-x86_64
-          # machine.
-          if [[ "${{ matrix.target }}" != "linux-aarch64" ]]; then
-            params+=(
-              --build_tests_only
-            )
-            bazel test ... "${params[@]}"
-          fi
-
-          # Test the binary and run fakeship tests.
-          # See https://github.com/urbit/vere/issues/15.
+      - name: Run fake ship tests
+        if: ${{ matrix.target }} == "linux-x86_64"
+        run: |
           # See https://github.com/urbit/vere/issues/40.
-          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
-            bazel build //pkg/vere:test-fake-ship
-          fi
+          bazel build //pkg/vere:test-fake-ship
+
       
       #
       # UPLOAD TO GCP
       #
+      - name: Prepare binary for upload to GCP
+        if: inputs.upload
+        run: |
+          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
+
       - uses: google-github-actions/auth@v1
         if: inputs.upload
         with:
@@ -140,7 +143,7 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Upload binaries to bootstrap.urbit.org
+      - name: Upload binary to bootstrap.urbit.org
         if: inputs.upload
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
@@ -160,6 +163,7 @@ jobs:
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
+
 
       #
       # DOCKER
@@ -182,12 +186,12 @@ jobs:
           readme_file: 'DOCKER.md'
 
       - name: Build and push Docker image
-        if: inputs.docker && matrix.target == 'linux-x86_64'
+        if: inputs.docker && ${{ matrix.target }} == 'linux-x86_64'
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
             version="$(cat ./pkg/vere/VERSION)"
           else
             version="${GITHUB_SHA:0:9}"
           fi
-          bazel run :upload_docker --image_tag=v$version
-          bazel run :upload_docker --image_tag=latest
+          bazel run --image_tag=v$version :upload_docker
+          bazel run --image_tag=latest :upload_docker
