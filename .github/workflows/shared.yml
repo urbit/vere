@@ -51,7 +51,7 @@ jobs:
 
       - name: chown /usr/local
         run: |
-          if [[ "${{ matrix.target }}" == "linux-x86_64" ]]; then
+          if [[ "${{ matrix.target }}" == "linux-arm64" || "${{ matrix.target }}" == "linux-x86_64" ]]; then
             # See https://github.com/actions/cache/issues/845.
             sudo chown -R $(whoami) /usr/local
           fi
