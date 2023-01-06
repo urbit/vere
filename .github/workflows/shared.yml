@@ -82,6 +82,7 @@ jobs:
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
               brew install automake libtool
+              ;;
             *)
               echo "Unsupported target: ${{ matrix.target }}"
               exit 1
