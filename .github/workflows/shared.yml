@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: chown /usr/local
-        if: matrix.target == "linux-aarch64" || matrix.target == "linux-x86_64"
+        if: ${{ matrix.target == "linux-aarch64" || matrix.target == "linux-x86_64" }}
         run: |
           # See https://github.com/actions/cache/issues/845.
           sudo chown -R $(whoami) /usr/local
@@ -98,12 +98,12 @@ jobs:
       - name: Run unit tests
         # We have no way of running the linux-aarch64 tests on a linux-x86_64
         # machine.
-        if: matrix.target != "linux-aarch64"
+        if: ${{ matrix.target != "linux-aarch64" }}
         run: |
           bazel test --build_tests_only ...
 
       - name: Run fake ship tests
-        if: matrix.target == "linux-x86_64"
+        if: ${{ matrix.target == "linux-x86_64" }}
         run: |
           # See https://github.com/urbit/vere/issues/40.
           bazel build //pkg/vere:test-fake-ship
@@ -113,22 +113,22 @@ jobs:
       # UPLOAD TO GCP
       #
       - name: Prepare binary for upload to GCP
-        if: inputs.upload
+        if: ${{ inputs.upload }}
         run: |
           echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
 
       - uses: google-github-actions/auth@v1
-        if: inputs.upload
+        if: ${{ inputs.upload }}
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
       - uses: google-github-actions/setup-gcloud@v1
-        if: inputs.upload
+        if: ${{ inputs.upload }}
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Upload binary to bootstrap.urbit.org
-        if: inputs.upload
+        if: ${{ inputs.upload }}
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
             version="v$(cat ./pkg/vere/VERSION)"
@@ -150,13 +150,13 @@ jobs:
       # DOCKER
       #
       - uses: docker/docker-login-action@v1.8.0
-        if: inputs.docker && matrix.target == "linux-x86_64"
+        if: ${{ inputs.docker && matrix.target == "linux-x86_64" }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: christian-korneck/update-container-description-action@v1
-        if: inputs.docker && matrix.target == "linux-x86_64"
+        if: ${{ inputs.docker && matrix.target == "linux-x86_64" }}
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -167,7 +167,7 @@ jobs:
           readme_file: 'DOCKER.md'
 
       - name: Build and push Docker image
-        if: inputs.docker && matrix.target == "linux-x86_64"
+        if: ${{ inputs.docker && matrix.target == "linux-x86_64" }}
         run: |
           if [ "real" == "$VERSION_TYPE" ]; then
             version="v$(cat ./pkg/vere/VERSION)"
