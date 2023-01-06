@@ -1,15 +1,16 @@
-name: Push to release
+name: Push to master
 
 on:
   release: null
   push:
     branches:
-      - release
+      - master
 
 jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
-      pace: 'soon'
+      docker: true
+      pace: 'live'
       upload: true
     secrets: inherit

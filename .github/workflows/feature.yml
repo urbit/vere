@@ -1,4 +1,4 @@
-name: feature
+name: Feature pull request
 
 on:
   release: null
@@ -12,8 +12,8 @@ on:
       - 'pkg/**'
 
 jobs:
-  call-vere:
+  urbit:
+    uses: ./.github/workflows/shared.yml
     with:
       pace: 'edge'
       upload: false
-    uses: ./.github/workflows/shared.yml
