@@ -47,7 +47,7 @@
 #     platform-specific, wrap it in the appropriate URBIT_RUNTIME_* macro.
 #     We "gate" source patches with these macros so that we only ever need
 #     at most one patch per dependency.
-#     (a) CPU architecture macros: `URBIT_RUNTIME_CPU_{X86_64,ARM64}`.
+#     (a) CPU architecture macros: `URBIT_RUNTIME_CPU_{X86_64,AARCH64}`.
 #     (b) OS macros: `URBIT_RUNTIME_OS_{LINUX,DARWIN,BSD,MINGW}`.
 # (2) Generate a patch file named <dependency_version>.patch and save it in
 #     `bazel/third_party/<dependency>`.
@@ -93,8 +93,8 @@ versioned_http_archive(
 
 # Use the toolchains we've configured.
 register_toolchains(
-    "//bazel/toolchain:gcc-linux-arm64-toolchain",
-    "//bazel/toolchain:clang-macos-arm64-toolchain",
+    "//bazel/toolchain:gcc-linux-aarch64-toolchain",
+    "//bazel/toolchain:clang-macos-aarch64-toolchain",
     "//bazel/toolchain:clang-macos-x86_64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
 )

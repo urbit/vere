@@ -6,7 +6,7 @@ index 742fec90b..9a11a21bd 100644
  
  #include <stdlib.h>
  #include <stdint.h>
-+#if defined(URBIT_RUNTIME_CPU_ARM64)
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
 +#include "sse2neon.h"
 +#else
  #include <emmintrin.h>
@@ -22,7 +22,7 @@ index 3ae3bd309..7db05a186 100644
  #include <stdlib.h>
  #include <stdio.h>
  #include <time.h>
-+#if defined(URBIT_RUNTIME_CPU_ARM64)
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
 +#include "sse2neon.h"
 +#else
  #include <emmintrin.h>
@@ -39,7 +39,7 @@ index a707070d1..714850f64 100644
  #include <string.h>
  #ifdef __SSE4_2__
 -#ifdef _MSC_VER
-+#if defined(URBIT_RUNTIME_CPU_ARM64)
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
 +#include "sse2neon.h"
 +#elif defined(_MSC_VER)
  #include <nmmintrin.h>

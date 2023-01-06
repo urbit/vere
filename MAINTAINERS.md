@@ -80,14 +80,14 @@ va.b.c pill.
 
 Release binaries:
 
-(linux-arm64)
-https://bootstrap.urbit.org/urbit-vx.y-linux-arm64.tgz
+(linux-aarch64)
+https://bootstrap.urbit.org/urbit-vx.y-linux-aarch64.tgz
 
 (linux-x86_64)
 https://bootstrap.urbit.org/urbit-vx.y-linux-x86_64.tgz
 
-(macos-arm64)
-https://bootstrap.urbit.org/urbit-vx.y-macos-arm64.tgz
+(macos-aarch64)
+https://bootstrap.urbit.org/urbit-vx.y-macos-aarch64.tgz
 
 (macos-x86_64)
 https://bootstrap.urbit.org/urbit-vx.y-macos-x86_64.tgz

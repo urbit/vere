@@ -9,14 +9,14 @@ cc_library(
     name = "softfloat",
     visibility = ["//visibility:public"],
     deps = select({
-        "@platforms//cpu:arm64": [":softfloat_arm64"],
+        "@platforms//cpu:aarch64": [":softfloat_aarch64"],
         "@platforms//cpu:x86_64": [":softfloat_x86_64"],
         "//conditions:default": [],
     }),
 )
 
 cc_library(
-    name = "softfloat_arm64",
+    name = "softfloat_aarch64",
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/Linux-ARM-VFPv2-GCC/Makefile` in the
         # `softfloat` repo.
