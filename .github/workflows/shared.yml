@@ -66,32 +66,44 @@ jobs:
             /private/var/tmp/_bazel_$(whoami)
             # Cache musl libc toolchains.
             /usr/local/*-musl
-      
+
+      - name: Install toolchains
+        run: |
+          case "${{ matrix.target }}" in
+            "linux-aarch64")
+              bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+              ;;
+            "linux-x86_64")
+              bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+              ;;
+            "macos-aarch64")
+              ;;
+            "macos-x86_64")
+              # Switch Xcode path to match the path specified in our bazel toolchain.
+              sudo xcode-select --switch /Library/Developer/CommandLineTools
+              brew install automake libtool
+            *)
+              echo "Unsupported target: ${{ matrix.target }}"
+              exit 1
+              ;;
+          esac
+
+
       - name: Build binary
         run: |
           echo "${{ inputs.pace }}" > ./pkg/vere/PACE
           case "${{ matrix.target }}" in
             "linux-aarch64")
-              bazel run //bazel/toolchain:aarch64-linux-musl-gcc
               bazel build --platforms=//:linux-aarch64 :urbit
               ;;
             "linux-x86_64")
-              bazel run //bazel/toolchain:x86_64-linux-musl-gcc
               bazel build :urbit
               ;;
             "macos-aarch64")
               bazel build :urbit
               ;;
             "macos-x86_64")
-              # Switch Xcode path to match the path specified in our bazel toolchain.
-              sudo xcode-select --switch /Library/Developer/CommandLineTools
-              brew install automake libtool
-              brew_clang="//bazel/toolchain:brew-clang-macos-x86_64-toolchain"
               bazel build --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
-              ;;
-            *)
-              echo "Unsupported target: ${{ matrix.target }}"
-              exit 1
               ;;
           esac
 
