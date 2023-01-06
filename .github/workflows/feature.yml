@@ -10,14 +10,6 @@ on:
       - 'WORKSPACE.bazel'
       - 'bazel/**'
       - 'pkg/**'
-  push:
-    paths:
-      - '.bazelrc'
-      - '.github/workflows/*.yml'
-      - 'BUILD.bazel'
-      - 'WORKSPACE.bazel'
-      - 'bazel/**'
-      - 'pkg/**'
 
 jobs:
   call-vere:
