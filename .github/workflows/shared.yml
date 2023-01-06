@@ -61,14 +61,10 @@ jobs:
         with:
           key: ${{ matrix.target }}-cache
           path: |
-            # It would be nice to cache the Bazel cache, but the total GitHub
-            # cache size is 10GB per repository, and the musl libc toolchains
-            # take much longer to build than anything in the Bazel cache, so we
-            # only cache the musl libc toolchains.
             # # Cache bazel path on Linux.
-            # ~/.cache/bazel/_bazel_runner
+            ~/.cache/bazel/_bazel_$(whoami)
             # # Cache bazel path on macOS.
-            # /private/var/tmp/_bazel_runner
+            /private/var/tmp/_bazel_$(whoami)
             # Cache musl libc toolchains.
             /usr/local/*-musl
       
