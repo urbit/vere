@@ -180,14 +180,6 @@
 #   endif
 
 
-  /** External, OS-independent library dependencies.
-  **/
-    /* The GMP (GNU arbitrary-precision arithmetic) library.
-    ** (Tested with version 4.0.1.)
-    */
-#     include <gmp.h>
-
-
   /** Private C "extensions."
   ***
   *** Except for these and main(), any function, macro, or structure

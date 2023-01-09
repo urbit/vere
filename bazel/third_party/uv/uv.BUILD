@@ -13,7 +13,11 @@ configure_make(
     configure_in_place = True,
     configure_options = [
         "--disable-shared",
-    ],
+    ] + select({
+        # Native compilation on linux-arm64 isn't supported.
+        "@//:linux_arm64": ["--host=aarch64-linux-gnu"],
+        "//conditions:default": [],
+    }),
     lib_source = ":all",
     out_static_libs = ["libuv.a"],
     targets = ["install"],

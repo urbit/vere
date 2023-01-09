@@ -73,13 +73,20 @@ versioned_http_archive(
 
 # Use the toolchains we've configured.
 register_toolchains(
+    "//bazel/toolchain:aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
     "//bazel/toolchain:clang-linux-x86_64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
-rules_foreign_cc_dependencies()
+# See
+# https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies.
+rules_foreign_cc_dependencies(
+    register_built_tools = False,
+    register_default_tools = False,
+    register_preinstalled_tools = True,
+)
 
 #
 # THIRD PARTY DEPENDENCIES
@@ -141,6 +148,8 @@ versioned_http_archive(
 versioned_http_archive(
     name = "h2o",
     build_file = "//bazel/third_party/h2o:h2o.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/h2o:{version}.patch"],
     sha256 = "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201",
     strip_prefix = "h2o-{version}",
     url = "https://github.com/h2o/h2o/archive/refs/tags/v{version}.tar.gz",
@@ -242,6 +251,15 @@ versioned_http_archive(
     # accurate description of the softfloat process for *all* supported
     # `<target>`s.
     version = "5c06db33fc1e2130f67c045327b0ec949032df1d",
+)
+
+versioned_http_archive(
+    name = "sse2neon",
+    build_file = "//bazel/third_party/sse2neon:sse2neon.BUILD",
+    sha256 = "4001e2dfb14fcf3831211581ed83bcc83cf6a3a69f638dcbaa899044a351bb2a",
+    strip_prefix = "sse2neon-{version}",
+    url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v{version}.tar.gz",
+    version = "1.5.1",
 )
 
 versioned_http_archive(

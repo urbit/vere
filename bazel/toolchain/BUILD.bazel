@@ -1,3 +1,30 @@
+# ADDING A NEW TOOLCHAIN
+#
+# The general process for adding a new toolchain is as follows:
+#
+# (1) Define a `cc_toolchaing_config()` rule target with a `name` attribute of
+#     the form `<compiler>-<os>-<cpu>-config` and a `toolchain_identifier` of
+#     the form `toolchain-<compiler>-<os>-<cpu>`. The `cc_toolchain_config()`
+#     definition in `//bazel/toolchain:cfg.bzl` lists the mandatory attributes
+#     for the `cc_toolchain_config()` rule. If any of the toolchain's include
+#     paths require a compiler version number, simply replace the version number
+#     with `{compiler_version}`, which is replaced with the value of the label
+#     indicated by the `compiler_version` attribute when the rule is resolved.
+# (2) Define a `cc_toolchain()` rule target with a `name` attribute of the form
+#     `<compiler>-<os>-<cpu>` and a `toolchain_config` attribute that references
+#     the `cc_toolchain_config()` target from (1).
+# (3) Define a `toolchain()` rule target with a `name` attribute of the form
+#     `<compiler>-<os>-<cpu>-toolchain` and specify the platform the toolchain
+#     runs on via the `exec_compatible_with` attribute and the platform the
+#     toolchain targets (i.e. compiles for) via the `target_compatible_with`
+#     attribute. Use the `cc_toolchain()` target from (2) as the value of the
+#     `toolchain` attribute and `:toolchain_type` for the `toolchain_type`
+#     attribute.
+# (4) Register the new toolchain in `//:WORKSPACE.bazel` by adding the
+#     toolchain's label (i.e.
+#     `//bazel/toolchain:<compiler>-<os>-<cpu>-toolchain`) to the
+#     `register_toolchains()` function.
+#
 # For more information on configuring toolchains, see
 # https://bazel.build/tutorials/ccp-toolchain-config
 # and https://bazel.build/extending/toolchains.
@@ -12,6 +39,56 @@ alias(
 )
 
 #
+# aarch64_linux_gnu_gcc-linux-x86_64
+#
+
+# Toolchain identifier.
+_aarch64_linux_gnu_gcc = "toolchain-aarch64_linux_gnu_gcc-linux-x86_64"
+
+cc_toolchain_config(
+    name = "aarch64_linux_gnu_gcc-linux-x86_64-config",
+    ar = "/usr/bin/aarch64-linux-gnu-ar",
+    cc = "/usr/bin/aarch64-linux-gnu-gcc",
+    compiler = "aarch64-linux-gnu-gcc",
+    compiler_version = "//:aarch64_linux_gnu_gcc_version",
+    ld = "/usr/bin/aarch64-linux-gnu-ld",
+    sys_includes = [
+        "/usr/aarch64-linux-gnu/include",
+        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include",
+        "/usr/lib/gcc/aarch64-linux-gnu/{compiler_version}/include-fixed",
+    ],
+    target_cpu = "arm64",
+    toolchain_identifier = _aarch64_linux_gnu_gcc,
+)
+
+cc_toolchain(
+    name = "aarch64_linux_gnu_gcc-linux-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":aarch64_linux_gnu_gcc-linux-x86_64-config",
+    toolchain_identifier = _aarch64_linux_gnu_gcc,
+)
+
+toolchain(
+    name = "aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+    toolchain = ":aarch64_linux_gnu_gcc-linux-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
 # clang-linux-x86_64
 #
 
@@ -23,9 +100,10 @@ cc_toolchain_config(
     ar = "/usr/bin/ar",
     cc = "/usr/bin/clang",
     compiler = "clang",
+    compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
     sys_includes = [
-        "/usr/lib/clang/14.0.6",
+        "/usr/lib/clang/{compiler_version}",
         "/usr/include",
     ],
     target_cpu = "x86_64",
@@ -48,7 +126,6 @@ cc_toolchain(
 toolchain(
     name = "clang-linux-x86_64-toolchain",
     exec_compatible_with = [
-        "//:clang",
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
@@ -72,11 +149,11 @@ cc_toolchain_config(
     ar = "/usr/bin/ar",
     cc = "/usr/bin/gcc",
     compiler = "gcc",
+    compiler_version = "//:gcc_version",
     ld = "/usr/bin/ld",
     sys_includes = [
-        # TODO: remove hard-coded version number.
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include",
-        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include-fixed",
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include",
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/{compiler_version}/include-fixed",
         "/usr/include",
     ],
     target_cpu = "x86_64",

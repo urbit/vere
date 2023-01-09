@@ -1,9 +1,11 @@
+load("//bazel:common_settings.bzl", "string_flag")
+
 #
 # OS-CPU CONFIG SETTINGS
 #
 
 config_setting(
-    name = "linux-arm64",
+    name = "linux_arm64",
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:arm64",
@@ -11,7 +13,7 @@ config_setting(
 )
 
 config_setting(
-    name = "linux-x86_64",
+    name = "linux_x86_64",
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
@@ -19,7 +21,7 @@ config_setting(
 )
 
 config_setting(
-    name = "macos-arm64",
+    name = "macos_arm64",
     constraint_values = [
         "@platforms//os:macos",
         "@platforms//cpu:arm64",
@@ -27,7 +29,7 @@ config_setting(
 )
 
 config_setting(
-    name = "macos-x86_64",
+    name = "macos_x86_64",
     constraint_values = [
         "@platforms//os:macos",
         "@platforms//cpu:x86_64",
@@ -35,7 +37,7 @@ config_setting(
 )
 
 config_setting(
-    name = "openbsd-x86_64",
+    name = "openbsd_x86_64",
     constraint_values = [
         "@platforms//os:openbsd",
         "@platforms//cpu:x86_64",
@@ -43,7 +45,7 @@ config_setting(
 )
 
 config_setting(
-    name = "windows-x86_64",
+    name = "windows_x86_64",
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
@@ -51,20 +53,50 @@ config_setting(
 )
 
 #
-# COMPILER CONSTRAINT SETTINGS
+# COMPILERS
 #
 
 constraint_setting(name = "compiler")
 
+# Cross compiler from x86_64 to arm64.
+constraint_value(
+    name = "aarch64_linux_gnu_gcc",
+    constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+# Compiler for x86_64.
 constraint_value(
     name = "clang",
     constraint_setting = ":compiler",
     visibility = ["//visibility:public"],
 )
 
+# Compiler for x86_64.
 constraint_value(
     name = "gcc",
     constraint_setting = ":compiler",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for aarch64-linux-gnu-gcc.
+string_flag(
+    name = "aarch64_linux_gnu_gcc_version",
+    build_setting_default = "12.2.0",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for clang.
+string_flag(
+    name = "clang_version",
+    build_setting_default = "14.0.6",
+    visibility = ["//visibility:public"],
+)
+
+# Version flag for gcc.
+string_flag(
+    name = "gcc_version",
+    build_setting_default = "12.2.0",
     visibility = ["//visibility:public"],
 )
 
@@ -72,6 +104,39 @@ constraint_value(
 # PLATFORMS
 #
 
+# A platform takes one of two formats: `<compiler>-<os>-<cpu>` or `<os>-<cpu>`
+# if the compiler is unspecified.
+
+# Linux arm64 platform with unspecified compiler.
+platform(
+    name = "linux-arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+# Linux x86_64 platform with unspecified compiler.
+platform(
+    name = "linux-x86_64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+# Linux x86_64 platform with aarch64-linux-gnu-gcc.
+platform(
+    name = "aarch64_linux_gnu_gcc-linux-x86_64",
+    constraint_values = [
+        ":aarch64_linux_gnu_gcc",
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Linux x86_64 platform with clang.
 platform(
     name = "clang-linux-x86_64",
     constraint_values = [
@@ -82,6 +147,7 @@ platform(
     visibility = ["//visibility:public"],
 )
 
+# Linux x86_64 platform with gcc.
 platform(
     name = "gcc-linux-x86_64",
     constraint_values = [
