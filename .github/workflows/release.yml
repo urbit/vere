@@ -7,8 +7,9 @@ on:
 
 jobs:
   call-vere:
-    uses: ./.github/workflows/vere.yml
+    uses: ./.github/workflows/shared.yml
     with:
+      docker: true
       pace: 'live'
       upload: true
     secrets: inherit

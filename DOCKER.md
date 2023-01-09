@@ -1,6 +1,6 @@
 # Official Urbit Docker Image
 
-This is the official Docker image for [Urbit](https://urbit.org). 
+This is the official Docker image for [Urbit](https://urbit.org).
 
 Urbit is a clean-slate OS and network for the 21st century.
 
@@ -12,7 +12,7 @@ as described below.
 ### Volume Mount
 This image expects a volume mounted at `/urbit`. This volume should initially contain one of
 
-- A keyfile `<shipname>.key` for a galaxy, star, planet, or moon. See the setup instructions for Urbit for information on [obtaining a keyfile](https://urbit.org/using/install/). 
+- A keyfile `<shipname>.key` for a galaxy, star, planet, or moon. See the setup instructions for Urbit for information on [obtaining a keyfile](https://urbit.org/using/install/).
   * e.g. `sampel-palnet.key` for the planet `sampel-palnet`.
 - An empty file with the extension `.comet`. This will cause Urbit to boot a [comet](https://urbit.org/docs/glossary/comet/) in a pier named for the `.comet` file (less the extension).
   * e.g. starting with an empty file `my-urbit-bot.comet` will result in Urbit booting a comet into the pier
@@ -27,7 +27,7 @@ In consequence, it is safe to remove the container and start a new container whi
 ### Ports
 The image includes `EXPOSE` directives for TCP port 80 and UDP port 34343. Port `80` is used for Urbit's HTTP interface for both [Landscape](https://urbit.org/docs/glossary/landscape/) and for [API calls](https://urbit.org/using/integrating-api/) to the ship. Port `34343` is set by default to be used by [Ames](https://urbit.org/docs/glossary/ames/) for ship-to-ship communication.
 
-You can either pass the `-P` flag to docker to map ports directly to the corresponding ports on the host, or map them individually with `-p` flags. For local testing the latter is often convenient, for instance to remap port 80 to an unprivileged port. 
+You can either pass the `-P` flag to docker to map ports directly to the corresponding ports on the host, or map them individually with `-p` flags. For local testing the latter is often convenient, for instance to remap port 80 to an unprivileged port.
 
 For best performance, you must map the Ames UDP port to the *same* port on the host. If you map to a different port Ames will not be able to make direct connections and your network performance may suffer somewhat. Note that using the same port is required for direct connections but is not by itself sufficient for them. If you are behind a NAT router or the host is not on a public IP address or you are firewalled, you may not achive direct connections regardless.
 

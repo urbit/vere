@@ -3,9 +3,6 @@ cc_library(
     hdrs = ["rsignal.h"],
     include_prefix = "platform",
     includes = ["."],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     visibility = ["//pkg:__subpackages__"],
 )
