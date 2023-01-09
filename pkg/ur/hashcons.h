@@ -1,12 +1,14 @@
+/// @file
+
 #ifndef UR_HASHCONS_H
 #define UR_HASHCONS_H
 
-#include <inttypes.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 
-#include "ur/defs.h"
+#include "defs.h"
 
 /*
 **  64-bit noun references, with the top 2 bits reserved for type tags.

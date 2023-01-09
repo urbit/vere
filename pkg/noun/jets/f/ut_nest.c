@@ -1,7 +1,9 @@
-/* j/6/ut_nest.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3wfu_nest_dext(u3_noun dext_core)

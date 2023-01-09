@@ -1,7 +1,9 @@
-/* j/4/by_all.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 static u3_noun
 _by_all(u3_noun a, u3j_site* sit_u)

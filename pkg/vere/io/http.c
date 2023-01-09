@@ -1,11 +1,12 @@
-/* vere/http.c
-**
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <h2o.h>
+/// @file
+
+#include "vere.h"
+
+#include "h2o.h"
+#include "noun.h"
+#include "openssl/err.h"
+#include "openssl/ssl.h"
+#include "version.h"
 
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config

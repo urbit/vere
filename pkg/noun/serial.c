@@ -1,11 +1,19 @@
-/* noun/serial.c
-**
-*/
+/// @file
 
-#include "all.h"
-#include "ur/ur.h"
+#include "serial.h"
+
 #include <errno.h>
 #include <fcntl.h>
+
+#include "allocate.h"
+#include "hashtable.h"
+#include "jets/k.h"
+#include "jets/q.h"
+#include "retrieve.h"
+#include "serial.h"
+#include "ur.h"
+#include "vortex.h"
+#include "xtract.h"
 
 /* _cs_jam_buf: struct for tracking the fibonacci-allocated jam of a noun
 */
@@ -31,7 +39,6 @@ _cs_jam_fib_grow(struct _cs_jam_fib* fib_u, c3_w mor_w)
   }
 
   if ( wan_w > fib_u->a_w ) {
-    c3_w old_w = fib_u->sab_u->len_w;
     c3_w   c_w = 0;
 
     //  fibonacci growth
@@ -370,7 +377,7 @@ u3s_cue(u3_atom a)
   //  pil_u: stack control structure
   //
   u3_noun         pro;
-  u3_atom    wid, cur = 0;
+  u3_atom         wid;
   _cs_cue*      fam_u;
   u3p(u3h_root) har_p = u3h_new();
   u3a_pile      pil_u;

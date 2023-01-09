@@ -1,11 +1,11 @@
-/* j/c/muk.c
-**
-*/
-#include "all.h"
-#include <murmur3.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "murmur3.h"
+
 u3_noun
 u3qc_muk(u3_atom sed,
          u3_atom len,

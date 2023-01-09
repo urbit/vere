@@ -1,13 +1,21 @@
-/* vere/daemon.c
-**
-** the main loop of the daemon process
-*/
-#include "all.h"
-#include "ur/ur.h"
-#include "vere/ivory.h"
-#include "vere/vere.h"
-#include <curl/curl.h>
-#include <uv.h>
+/// @file
+///
+/// The main loop of the daemon process.
+
+#include "vere.h"
+
+#include "curl/curl.h"
+#include "ivory.h"
+#include "noun.h"
+#include "pace.h"
+#include "ur.h"
+#include "uv.h"
+#include "version.h"
+
+// It's unclear which file owns this variable, so put it here for now.
+u3_host u3_Host;
+
+u3_king u3_King;
 
 static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 

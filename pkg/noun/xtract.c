@@ -1,7 +1,9 @@
-/* g/x.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "xtract.h"
+
+#include "manage.h"
+#include "retrieve.h"
 
 /* u3x_good(): test for u3_none.
 */

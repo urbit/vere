@@ -1,7 +1,9 @@
-/* j/2/murn.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qb_murn(u3_noun a, u3_noun b)

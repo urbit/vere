@@ -1,11 +1,12 @@
-/* j/5/loss.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   typedef struct _u3_loss {                 //  loss problem
     u3_noun hel;                            //  a as a list
     c3_w lel_w;                             //  length of a

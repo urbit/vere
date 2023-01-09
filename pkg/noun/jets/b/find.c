@@ -1,7 +1,9 @@
-/* j/2/find.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "list index precision" );

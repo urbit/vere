@@ -1,11 +1,11 @@
-/* j/2/clap.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qb_clap(u3_noun a,
             u3_noun b,

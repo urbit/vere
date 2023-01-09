@@ -1,10 +1,10 @@
-/* vere/cttp.c
-**
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include <openssl/ssl.h>
-#include <h2o.h>
+/// @file
+
+#include "vere.h"
+
+#include "h2o.h"
+#include "noun.h"
+#include "openssl/ssl.h"
 
 /* u3_csat: client connection state.
 */
@@ -556,7 +556,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
   //
   u3_noun unit_pul = u3do("de-purl:html", u3k(url));
 
-  if ( c3n == u3r_du(unit_pul) ) {
+  if ( c3n == u3du(unit_pul) ) {
     c3_c* url_c = u3r_string(url);
     u3l_log("cttp: unable to parse url:\n    %s\n", url_c);
     c3_free(url_c);

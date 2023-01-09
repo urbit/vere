@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_VORTEX_H
 #define U3_VORTEX_H
+
+#include "c3.h"
+#include "imprison.h"
 
   /**  Data structures.
   **/
@@ -25,9 +30,8 @@
 
   /**  Globals.
   **/
-    /* u3_Home / u3H: root of thread.
-    */
-      c3_global u3v_home* u3v_Home;
+      /// Arvo internal state.
+      extern u3v_home* u3v_Home;
 #       define u3H  u3v_Home
 #       define u3A  (&(u3v_Home->arv_u))
 
@@ -56,6 +60,10 @@
     */
       u3_noun
       u3v_do(const c3_c* txt_c, u3_noun arg);
+#     define u3do(txt_c, a)          u3v_do(txt_c, a)
+#     define u3dc(txt_c, a, b)       u3v_do(txt_c, u3nc(a, b))
+#     define u3dt(txt_c, a, b, c)    u3v_do(txt_c, u3nt(a, b, c))
+#     define u3dq(txt_c, a, b, c, d) u3v_do(txt_c, u3nq(a, b, c, d))
 
     /* u3v_wish(): text expression with cache.
     */

@@ -1,15 +1,15 @@
-/* j/5/aes_ecb.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
 
 typedef int (*urcrypt_siv)(c3_y*, size_t,
                            urcrypt_aes_siv_data*, size_t,
                            c3_y*, c3_y[16], c3_y*);
 
-/* functions
-*/
 
 // soc_w = number of items
 // mat_w = size in bytes of assoc array
@@ -18,7 +18,7 @@ static void
 _cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
 {
   u3_noun i, t;
-  c3_w a_w, b_w, tmp_w, met_w;
+  c3_w a_w, b_w, tmp_w;
 
   for ( a_w = b_w = 0, t = ads; u3_nul != t; ++a_w ) {
     u3x_cell(t, &i, &t);

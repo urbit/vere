@@ -1,11 +1,12 @@
-/* vere/dawn.c
-**
-** ethereum-integrated pre-boot validation
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include <curl/curl.h>
-#include <uv.h>
+/// @file
+///
+/// Ethereum-integrated pre-boot validation.
+
+#include "vere.h"
+
+#include "curl/curl.h"
+#include "noun.h"
+#include "uv.h"
 
 /* _dawn_oct_to_buf(): +octs to uv_buf_t
 */

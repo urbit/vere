@@ -1,11 +1,11 @@
-/* j/6/face.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_face(u3_noun sag,
             u3_noun tip)

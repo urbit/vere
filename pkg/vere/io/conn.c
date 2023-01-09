@@ -1,5 +1,6 @@
-/* vere/conn.c
-**
+/// @file
+
+/*
 **  implements the control plane: a socket that can be used to
 **  query and interact with an urbit ship from earth.
 **
@@ -92,15 +93,17 @@
 **  reserved for future use.
 **
 */
-#include <inttypes.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <uv.h>
-#include <errno.h>
+#include "vere.h"
 
-#include "all.h"
-#include "vere/vere.h"
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <sys/stat.h>
+
+#include "noun.h"
+#include "uv.h"
+#include "version.h"
 
 /* u3_cran: control plane request.
 */

@@ -1,5 +1,13 @@
+/// @file
+
 #ifndef U3_NOCK_H
 #define U3_NOCK_H
+
+#include <stdio.h>
+
+#include "c3.h"
+#include "jets.h"
+#include "types.h"
 
   /** Data structures.
   ***

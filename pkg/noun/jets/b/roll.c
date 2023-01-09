@@ -1,10 +1,10 @@
-/* j/2/roll.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
   u3_noun
   u3qb_roll(u3_noun a,
             u3_noun b)

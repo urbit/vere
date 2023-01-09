@@ -1,7 +1,12 @@
+/// @file
+
 #ifndef U3_VERE_H
 #define U3_VERE_H
 
-#include <uv.h>
+#include "c3.h"
+#include "noun.h"
+#include "serf.h"
+#include "uv.h"
 
   /** Quasi-tunable parameters.
   **/
@@ -691,9 +696,8 @@
 
   /** Global variables.
   **/
-    c3_global  u3_host   u3_Host;
-    c3_global  c3_c*     u3_Local;
-    c3_global  u3_king   u3_King;
+    extern u3_host   u3_Host;
+    extern u3_king   u3_King;
 
   /** Functions.
   **/

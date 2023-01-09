@@ -1,10 +1,10 @@
-/* j/4/in_del.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 static u3_noun
 _rebalance(u3_noun a)
 {

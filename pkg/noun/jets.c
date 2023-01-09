@@ -1,8 +1,22 @@
-/* g/j.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets.h"
+
+#include "allocate.h"
+#include "hashtable.h"
+#include "imprison.h"
+#include "jets/k.h"
+#include "jets/q.h"
+#include "log.h"
+#include "manage.h"
+#include "nock.h"
+#include "options.h"
+#include "retrieve.h"
+#include "serial.h"
+#include "trace.h"
+#include "urcrypt/urcrypt.h"
+#include "vortex.h"
+#include "xtract.h"
 
 /**  Data structures.
 **/

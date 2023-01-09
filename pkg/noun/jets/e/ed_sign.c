@@ -1,11 +1,11 @@
-/* gen164/5/ed_sign.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
   static u3_atom
   _cqee_sign(u3_noun a,
              u3_noun b)

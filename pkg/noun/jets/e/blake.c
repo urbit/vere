@@ -1,11 +1,11 @@
-/* j/5/blake.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
 
   static u3_atom
   _cqe_blake(u3_atom wid, u3_atom dat,
@@ -20,7 +20,6 @@
     else {
       // the hoon adjusts these widths to its liking
       int err;
-      u3_atom ret;
       c3_y  out_y[64], dak_y[64];
       c3_w  wik_w = c3_min(wik, 64),
             out_w = c3_max(1, c3_min(out, 64));

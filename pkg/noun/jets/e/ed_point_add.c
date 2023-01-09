@@ -1,11 +1,11 @@
-/* gen164/5/ed_point_add.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
 
   static u3_atom
   _cqee_point_add(u3_atom a,

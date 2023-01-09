@@ -1,8 +1,8 @@
-/* vere/disk.c
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include <vere/db/lmdb.h>
+/// @file
+
+#include "noun.h"
+#include "vere.h"
+#include "db/lmdb.h"
 
 struct _cd_read {
   uv_timer_t       tim_u;

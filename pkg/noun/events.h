@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_EVENTS_H
 #define U3_EVENTS_H
+
+#include "c3.h"
+#include "allocate.h"
 
   /** Data structures.
   **/
@@ -49,9 +54,8 @@
 
   /** Globals.
   **/
-    /* u3_Pool / u3P: global memory control.
-    */
-      c3_global u3e_pool u3e_Pool;
+      /// Snapshotting system.
+      extern u3e_pool u3e_Pool;
 #     define u3P u3e_Pool
 
   /** Constants.

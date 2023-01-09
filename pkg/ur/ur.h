@@ -1,9 +1,11 @@
+/// @file
+
 #ifndef UR_H
 #define UR_H
 
-#include "ur/defs.h"
-#include "ur/bitstream.h"
-#include "ur/hashcons.h"
-#include "ur/serial.h"
+#include "bitstream.h"
+#include "defs.h"
+#include "hashcons.h"
+#include "serial.h"
 
 #endif /* ifndef UR_H */

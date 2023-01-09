@@ -1,7 +1,10 @@
-/* j/2/lent.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "length precision" );

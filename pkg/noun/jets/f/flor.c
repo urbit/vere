@@ -1,11 +1,11 @@
-/* j/6/flor.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_flor(u3_noun bos,
             u3_noun nif)

@@ -1,10 +1,7 @@
-/* vere/foil.c
-**
-**  This file is in the public domain.
-*/
+/// @file
 
-#include "all.h"
-#include "vere/vere.h"
+#include "noun.h"
+#include "vere.h"
 
     /*  assumptions:
     **    all measurements are in chubs (double-words, c3_d, uint64_t).

@@ -1,10 +1,11 @@
-/* j/3/rev.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 
   u3_noun
   u3qc_rev(u3_atom boz,

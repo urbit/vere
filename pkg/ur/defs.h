@@ -1,8 +1,10 @@
+/// @file
+
 #ifndef UR_DEFS_H
 #define UR_DEFS_H
 
-#include <inttypes.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <limits.h>
 
 typedef uint8_t  ur_bool_t;

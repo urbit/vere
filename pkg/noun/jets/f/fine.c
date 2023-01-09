@@ -1,11 +1,11 @@
-/* j/6/fine.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_fine(u3_noun fuv,
             u3_noun lup,

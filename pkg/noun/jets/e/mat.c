@@ -1,11 +1,10 @@
-/* j/3/mat.c
-**
-*/
-#include "all.h"
+ /// @file
 
+#include "jets/q.h"
+#include "jets/w.h"
 
-/* functions
-*/
+#include "noun.h"
+
   u3_noun
   u3qe_mat(u3_atom a)
   {

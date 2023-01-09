@@ -1,7 +1,9 @@
-/* j/6/hike.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
 /* internal tools
@@ -83,8 +85,6 @@
     }
   }
 
-/* functions
-*/
   u3_noun
   u3qf_hike(u3_noun axe,
             u3_noun pac)

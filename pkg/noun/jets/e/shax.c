@@ -1,11 +1,12 @@
-/* j/5/shax.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
 
   static u3_atom
   _cqe_shay(u3_atom wid,

@@ -1,14 +1,36 @@
-/* g/t.c  -
-**
-** This file is in the public domain.
-*/
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "trace.h"
+
+#include <errno.h>
 #include <pthread.h>
-#include <time.h>
 #include <sys/stat.h>
+#include <time.h>
+
+#include "allocate.h"
+#include "imprison.h"
+#include "jets/k.h"
+#include "log.h"
+#include "manage.h"
+#include "options.h"
+#include "retrieve.h"
+#include "vortex.h"
+
+u3t_trace u3t_Trace;
 
 static c3_o _ct_lop_o;
+
+/// Nock PID.
+static pid_t _nock_pid_i = 0;
+
+/// JSON trace file.
+static FILE* _file_u = NULL;
+
+/// Trace counter. Tracks the number of entries written to the JSON trace file.
+static c3_w _trace_cnt_w = 0;
+
+/// File counter. Tracks the number of times u3t_trace_close() has been called.
+static c3_w _file_cnt_w = 0;
 
 /* u3t_push(): push on trace stack.
 */
@@ -132,7 +154,9 @@ _t_samp_process(u3_road* rod_u)
           len_w += 1;
         }
         else {
-          u3_assure(u3a_is_cat(old));
+          if ( !_(u3a_is_cat(old)) ) {
+            u3m_bail(c3__fail);
+          }
 
           u3z(muf);
           while ( len_w > (old + 1) ) {
@@ -278,45 +302,58 @@ void
 u3t_trace_open(c3_c* dir_c)
 {
   c3_c fil_c[2048];
+
+  if ( !dir_c ) {
+    return;
+  }
+
   snprintf(fil_c, 2048, "%s/.urb/put/trace", dir_c);
 
   struct stat st;
-  if ( -1 == stat(fil_c, &st) ) {
-    c3_mkdir(fil_c, 0700);
+  if (  (-1 == stat(fil_c, &st))
+     && (-1 == c3_mkdir(fil_c, 0700)) )
+  {
+    fprintf(stderr, "mkdir: %s failed: %s\r\n", fil_c, strerror(errno));
+    return;
   }
 
   c3_c lif_c[2056];
-  snprintf(lif_c, 2056, "%s/%d.json", fil_c, u3_Host.tra_u.fun_w);
+  snprintf(lif_c, 2056, "%s/%d.json", fil_c, _file_cnt_w);
 
-  u3_Host.tra_u.fil_u = c3_fopen(lif_c, "w");
-  u3_Host.tra_u.nid_w = (int)getpid();
+  _file_u = c3_fopen(lif_c, "w");
+  _nock_pid_i = (int)getpid();
 
-  fprintf(u3_Host.tra_u.fil_u, "[ ");
+  if ( !_file_u ) {
+    fprintf(stderr, "trace open: %s\r\n", strerror(errno));
+    return;
+  }
+
+  fprintf(_file_u, "[ ");
 
   // We have two "threads", the event processing and the nock stuff.
   //   tid 1 = event processing
   //   tid 2 = nock processing
-  fprintf(u3_Host.tra_u.fil_u,
+  fprintf(_file_u,
       "{\"name\": \"process_name\", \"ph\": \"M\", \"pid\": %d, \"args\": "
       "{\"name\": \"urbit\"}},\n",
-      u3_Host.tra_u.nid_w);
-  fprintf(u3_Host.tra_u.fil_u,
+      _nock_pid_i);
+  fprintf(_file_u,
           "{\"name\": \"thread_name\", \"ph\": \"M\", \"pid\": %d, \"tid\": 1, "
           "\"args\": {\"name\": \"Event Processing\"}},\n",
-          u3_Host.tra_u.nid_w);
-  fprintf(u3_Host.tra_u.fil_u,
+          _nock_pid_i);
+  fprintf(_file_u,
           "{\"name\": \"thread_sort_index\", \"ph\": \"M\", \"pid\": %d, "
           "\"tid\": 1, \"args\": {\"sort_index\": 1}},\n",
-          u3_Host.tra_u.nid_w);
-  fprintf(u3_Host.tra_u.fil_u,
+          _nock_pid_i);
+  fprintf(_file_u,
           "{\"name\": \"thread_name\", \"ph\": \"M\", \"pid\": %d, \"tid\": 2, "
           "\"args\": {\"name\": \"Nock\"}},\n",
-          u3_Host.tra_u.nid_w);
-  fprintf(u3_Host.tra_u.fil_u,
+          _nock_pid_i);
+  fprintf(_file_u,
           "{\"name\": \"thread_sort_index\", \"ph\": \"M\", \"pid\": %d, "
           "\"tid\": 2, \"args\": {\"sort_index\": 2}},\n",
-          u3_Host.tra_u.nid_w);
-  u3_Host.tra_u.con_w = 5;
+          _nock_pid_i);
+  _trace_cnt_w = 5;
 }
 
 /*  u3t_trace_close(): closes a trace file. optional.
@@ -324,13 +361,13 @@ u3t_trace_open(c3_c* dir_c)
 void
 u3t_trace_close()
 {
-  if (!u3_Host.tra_u.fil_u)
+  if ( !_file_u )
     return;
 
   // We don't terminate the JSON because of the file format.
-  fclose(u3_Host.tra_u.fil_u);
-  u3_Host.tra_u.con_w = 0;
-  u3_Host.tra_u.fun_w++;
+  fclose(_file_u);
+  _trace_cnt_w = 0;
+  _file_cnt_w++;
 }
 
 /*  u3t_trace_time(): microsecond clock
@@ -349,7 +386,7 @@ c3_d u3t_trace_time()
 c3_o
 u3t_nock_trace_push(u3_noun lab)
 {
-  if (!u3_Host.tra_u.fil_u)
+  if ( !_file_u )
     return c3n;
 
   if ( (u3_nul == u3R->pro.trace) ||
@@ -373,7 +410,7 @@ u3t_nock_trace_push(u3_noun lab)
 void
 u3t_nock_trace_pop()
 {
-  if (!u3_Host.tra_u.fil_u)
+  if ( !_file_u )
     return;
 
   u3_noun trace  = u3R->pro.trace;
@@ -388,17 +425,17 @@ u3t_nock_trace_pop()
   if (duration > 33) {
     c3_c* name = u3m_pretty_path(lab);
 
-    fprintf(u3_Host.tra_u.fil_u,
+    fprintf(_file_u,
             "{\"cat\": \"nock\", \"name\": \"%s\", \"ph\":\"%c\", \"pid\": %d, "
             "\"tid\": 2, \"ts\": %" PRIu64 ", \"dur\": %" PRIu64 "}, \n",
             name,
             'X',
-            u3_Host.tra_u.nid_w,
+            _nock_pid_i,
             start_time,
             duration);
 
     c3_free(name);
-    u3_Host.tra_u.con_w++;
+    _trace_cnt_w++;
   }
 
   u3z(trace);
@@ -409,17 +446,17 @@ u3t_nock_trace_pop()
 void
 u3t_event_trace(const c3_c* name, c3_c type)
 {
-  if (!u3_Host.tra_u.fil_u)
+  if ( !_file_u )
     return;
 
-  fprintf(u3_Host.tra_u.fil_u,
+  fprintf(_file_u,
           "{\"cat\": \"event\", \"name\": \"%s\", \"ph\":\"%c\", \"pid\": %d, "
           "\"tid\": 1, \"ts\": %" PRIu64 ", \"id\": \"0x100\"}, \n",
           name,
           type,
-          u3_Host.tra_u.nid_w,
+          _nock_pid_i,
           u3t_trace_time());
-  u3_Host.tra_u.con_w++;
+  _trace_cnt_w++;
 }
 
 /* u3t_print_steps: print step counter.

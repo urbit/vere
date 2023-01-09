@@ -1,7 +1,9 @@
-/* j/6/loot.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
 /* internals
@@ -112,8 +114,6 @@
     }
   }
 
-/* functions
-*/
   u3_noun
   u3qf_loot(u3_noun cog,
             u3_noun dom)

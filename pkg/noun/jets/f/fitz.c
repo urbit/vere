@@ -1,11 +1,11 @@
-/* j/6/fitz.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   static u3_noun
   _fitz_fiz(u3_noun yaz,
             u3_noun wix)

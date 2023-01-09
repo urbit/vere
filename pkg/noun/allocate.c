@@ -1,7 +1,16 @@
-/* g/a.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "allocate.h"
+
+#include "hashtable.h"
+#include "log.h"
+#include "manage.h"
+#include "options.h"
+#include "retrieve.h"
+#include "trace.h"
+#include "vortex.h"
+
+u3_road* u3a_Road;
 
 //  declarations of inline functions
 //
@@ -2092,7 +2101,6 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ws use_ws)
 c3_w
 u3a_idle(u3a_road* rod_u)
 {
-  u3a_fbox* fox_u;
   c3_w i_w, fre_w = 0;
 
   for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {

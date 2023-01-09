@@ -1,5 +1,5 @@
-#include "all.h"
-#include "vere/vere.h"
+#include "noun.h"
+vere.h"/vere.h"
 
 /* _dup_std_handle(): creates an inheritable duplicate of a standard handle.
 */

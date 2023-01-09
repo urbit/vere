@@ -1,7 +1,9 @@
-/* jets/d/in_wyt.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "width precision" );

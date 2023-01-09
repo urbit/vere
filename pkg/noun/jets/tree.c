@@ -1,3 +1,5 @@
+/// @file
+
 /*
   To generate the hashes, take the sha256 of the jammed battery. For example:
 
@@ -13,7 +15,9 @@
   ```
 */
 
-#include "all.h"
+#include "c3.h"
+#include "jets.h"
+#include "jets/w.h"
 
 static c3_c* no_hashes[] = { 0 };
 

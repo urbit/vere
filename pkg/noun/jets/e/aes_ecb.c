@@ -1,13 +1,13 @@
-/* j/5/aes_ecb.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
 
 typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
 
-/* functions
-*/
 
   /* All of the ECB hoon truncates its key and blk inputs with +fe, in these
    * jets we unpack with an unconditional u3r_bytes */

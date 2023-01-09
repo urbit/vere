@@ -1,10 +1,13 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+/// @file
 
-#include "ur/defs.h"
-#include "ur/bitstream.h"
+#include "bitstream.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "defs.h"
 
 ur_cue_res_e
 ur_bsr_init(ur_bsr_t *bsr, uint64_t len, const uint8_t *bytes)

@@ -1,7 +1,9 @@
-/* j/6/ap.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
 /** forward declares
@@ -705,8 +707,6 @@
   }
 #endif
 
-/* functions
-*/
   /** open
   **/
     static u3_noun

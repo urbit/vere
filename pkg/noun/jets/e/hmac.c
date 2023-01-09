@@ -1,10 +1,11 @@
-/* j/5/hmac.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 
   u3_noun
   u3qe_hmac(u3_noun haj,

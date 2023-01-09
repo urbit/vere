@@ -1,7 +1,9 @@
-/* j/5/parse.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
   static u3_noun

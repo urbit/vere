@@ -1,7 +1,10 @@
-/* j/3/scow.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 #include <ctype.h>
 

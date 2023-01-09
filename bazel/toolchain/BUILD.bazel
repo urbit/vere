@@ -1,0 +1,111 @@
+# For more information on configuring toolchains, see
+# https://bazel.build/tutorials/ccp-toolchain-config
+# and https://bazel.build/extending/toolchains.
+
+load(":cfg.bzl", "cc_toolchain_config")
+
+filegroup(name = "empty")
+
+alias(
+    name = "toolchain_type",
+    actual = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+#
+# clang-linux-x86_64
+#
+
+# Toolchain identifier.
+_x86_64_clang = "toolchain-clang-linux-x86_64"
+
+cc_toolchain_config(
+    name = "clang-linux-x86_64-config",
+    ar = "/usr/bin/ar",
+    cc = "/usr/bin/clang",
+    compiler = "clang",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        "/usr/lib/clang/14.0.6",
+        "/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _x86_64_clang,
+)
+
+cc_toolchain(
+    name = "clang-linux-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":clang-linux-x86_64-config",
+    toolchain_identifier = _x86_64_clang,
+)
+
+toolchain(
+    name = "clang-linux-x86_64-toolchain",
+    exec_compatible_with = [
+        "//:clang",
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":clang-linux-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# gcc-linux-x86_64
+#
+
+# Toolchain identifier.
+_x86_64_gcc = "toolchain-gcc-linux-x86_64"
+
+cc_toolchain_config(
+    name = "gcc-linux-x86_64-config",
+    ar = "/usr/bin/ar",
+    cc = "/usr/bin/gcc",
+    compiler = "gcc",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        # TODO: remove hard-coded version number.
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include",
+        "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include-fixed",
+        "/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _x86_64_gcc,
+)
+
+cc_toolchain(
+    name = "gcc-linux-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":gcc-linux-x86_64-config",
+    toolchain_identifier = _x86_64_gcc,
+)
+
+toolchain(
+    name = "gcc-linux-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":gcc-linux-x86_64",
+    toolchain_type = ":toolchain_type",
+)

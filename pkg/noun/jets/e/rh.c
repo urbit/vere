@@ -1,8 +1,10 @@
-/* j/e/rh.c
-**
-*/
-#include "all.h"
-#include <softfloat.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "softfloat.h"
 
 #define HALFNAN 0x7e00
 
@@ -11,8 +13,6 @@
     c3_s c;
   };
 
-/* functions
-*/
   static inline c3_t
   _nan_test(float16_t a)
   {

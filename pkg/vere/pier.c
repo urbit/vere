@@ -1,9 +1,10 @@
-/* vere/pier.c
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include "vere/db/lmdb.h"
-#include <ent.h>
+/// @file
+
+#include "db/lmdb.h"
+#include "ent.h"
+#include "noun.h"
+#include "vere.h"
+#include "version.h"
 
 #define PIER_READ_BATCH 1000ULL
 #define PIER_PLAY_BATCH 500ULL
@@ -2392,7 +2393,7 @@ u3_pier_punt(c3_l tab_l, u3_noun tac)
 {
   u3_noun cat = tac;
 
-  while ( c3y == u3r_du(cat) ) {
+  while ( c3y == u3du(cat) ) {
     u3_pier_tank(tab_l, 0, u3k(u3h(cat)));
     cat = u3t(cat);
   }

@@ -1,7 +1,9 @@
-/* j/6/look.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
 /* internals
@@ -113,8 +115,6 @@
 
 
 
-/* functions
-*/
   u3_noun
   u3qf_look(u3_noun cog,
             u3_noun dab)

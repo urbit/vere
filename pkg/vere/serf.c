@@ -1,8 +1,8 @@
-/* worker/serf.c
-*/
-#include "all.h"
-#include <vere/vere.h>
-#include <vere/serf.h>
+/// @file
+
+#include "noun.h"
+
+#include "vere.h"
 
 /*
 |%

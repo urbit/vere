@@ -1,7 +1,10 @@
-/* j/5/leer.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 static u3_atom
 _leer_cut(c3_w pos_w, c3_w len_w, u3_atom src)

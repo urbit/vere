@@ -1,7 +1,9 @@
-/* jets/d/in_bif.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 /* internal functions
 */
@@ -47,8 +49,6 @@ _i_bif_putroot(u3_noun a,
   }
 }
 
-/* functions
-*/
 u3_noun
 u3wdi_bif(u3_noun cor)
 {

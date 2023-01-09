@@ -1,10 +1,11 @@
-/* j/4/in_tap.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 static u3_noun
 _tap_in(u3_noun a,
         u3_noun b)

@@ -1,7 +1,9 @@
-/* j/3/po.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3_po_find_prefix(c3_y one, c3_y two, c3_y three) {

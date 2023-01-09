@@ -1,8 +1,8 @@
-/* vere/term.c
-**
-*/
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "vere.h"
+
+#include "noun.h"
 
 //  macros for string literal args/buffers
 //

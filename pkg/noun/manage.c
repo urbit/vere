@@ -1,15 +1,28 @@
-/* n/m.c
-**
-*/
-#include "all.h"
-#include "rsignal.h"
-#include "vere/vere.h"
+/// @file
+
+#include "manage.h"
+
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <ctype.h>
-#include <openssl/crypto.h>
-#include <urcrypt.h>
+
+#include "allocate.h"
+#include "events.h"
+#include "hashtable.h"
+#include "imprison.h"
+#include "jets.h"
+#include "jets/k.h"
+#include "log.h"
+#include "nock.h"
+#include "openssl/crypto.h"
+#include "options.h"
+#include "platform/rsignal.h"
+#include "retrieve.h"
+#include "trace.h"
+#include "urcrypt/urcrypt.h"
+#include "vortex.h"
+#include "xtract.h"
 
 //  XX stack-overflow recovery should be gated by -a
 //
@@ -113,17 +126,15 @@ _cm_punt(u3_noun tax)
 static void
 _cm_emergency(c3_c* cap_c, c3_l sig_l)
 {
-  c3_i ret_i;
-
-  ret_i = write(2, "\r\n", 2);
-  ret_i = write(2, cap_c, strlen(cap_c));
+  write(2, "\r\n", 2);
+  write(2, cap_c, strlen(cap_c));
 
   if ( sig_l ) {
-    ret_i = write(2, ": ", 2);
-    ret_i = write(2, &sig_l, 4);
+    write(2, ": ", 2);
+    write(2, &sig_l, 4);
   }
 
-  ret_i = write(2, "\r\n", 2);
+  write(2, "\r\n", 2);
 }
 
 static void _cm_overflow(void *arg1, void *arg2, void *arg3)
@@ -478,7 +489,9 @@ u3m_mark(FILE* fil_u)
 static void
 _pave_parts(void)
 {
-  u3R->cax.har_p = u3h_new_cache(u3_Host.ops_u.hap_w);
+  // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
+  // as size of memo cache.
+  u3R->cax.har_p = u3h_new_cache(0);
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();

@@ -1,5 +1,6 @@
-/* vere/unix.c
-**
+/// @file
+
+/*
 **  this file is responsible for maintaining a bidirectional
 **  mapping between the contents of a clay desk and a directory
 **  in a unix filesystem.
@@ -32,9 +33,12 @@
 **  are sprinkled throughout the file updating code.
 **
 */
-#include "all.h"
+
+#include "vere.h"
+
 #include <ftw.h>
-#include "vere/vere.h"
+
+#include "noun.h"
 
 struct _u3_umon;
 struct _u3_udir;

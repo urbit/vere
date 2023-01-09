@@ -1,11 +1,11 @@
-/* j/2/sort.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   // like skid, except its callback is $-([* *] ?) and it takes the second
   // argument so that it calls its callback with [i.list, second]
   //

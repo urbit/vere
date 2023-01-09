@@ -1,5 +1,6 @@
-#include "all.h"
-#include "ur/ur.h"
+/// @file
+
+#include "noun.h"
 
 /* _setup(): prepare for tests.
 */

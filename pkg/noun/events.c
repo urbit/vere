@@ -71,10 +71,20 @@
 //!   - parallelism
 //!
 
-#include "all.h"
+#include "events.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+
+#include "log.h"
+#include "manage.h"
+#include "options.h"
+#include "retrieve.h"
+#include "types.h"
+
+/// Snapshotting system.
+u3e_pool u3e_Pool;
 
 // Base loom offset of the guard page.
 static u3p(c3_w) gar_pag_p;

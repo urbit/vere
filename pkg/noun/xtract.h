@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_XTRACT_H
 #define U3_XTRACT_H
+
+#include "c3.h"
+#include "types.h"
 
   /**  Constants.
   **/
@@ -65,20 +70,6 @@
   **/
     /** u3x_*: read, but bail with c3__exit on a crash.
     **/
-#if 1
-#     define u3x_h(som)  u3a_h(som)
-#     define u3x_t(som)  u3a_t(som)
-#else
-      /* u3x_h (u3h): head.
-      */
-        u3_noun
-        u3x_h(u3_noun som);
-
-      /* u3x_t (u3t): tail.
-      */
-        u3_noun
-        u3x_t(u3_noun som);
-#endif
       /* u3x_good(): test for u3_none.
       */
         u3_noun
@@ -88,6 +79,7 @@
       */
         u3_noun
         u3x_at(u3_noun axe, u3_noun som);
+#       define u3at(axe, som) u3x_at(axe, som)
 
       /* u3x_mean():
       **

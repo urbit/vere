@@ -1,5 +1,9 @@
+/// @file
+
 #ifndef U3_LOG_H
 #define U3_LOG_H
+
+#include "types.h"
 
 /* u3l_log(): logs to stderr or redirects to configured function.
 */

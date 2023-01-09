@@ -1,11 +1,11 @@
-/* j/3/mas.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qc_mas(u3_atom a)
   {

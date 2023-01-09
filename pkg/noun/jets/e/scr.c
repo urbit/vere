@@ -1,11 +1,12 @@
-/* j/5/scr.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
   static u3_weak
   _cqes_hs(u3_atom p, c3_w pwd_w,
            u3_atom s, c3_w sal_w,
@@ -152,7 +153,6 @@
     }
     else {
       u3_noun pro;
-      c3_w    out_w;
       c3_y   *pwd_y = u3a_malloc(pwd_w),
              *sal_y = u3a_malloc(sal_w),
              *out_y = u3a_malloc(d);

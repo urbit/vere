@@ -1,7 +1,10 @@
-/* jets/e/keccak.c
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
 
 #define defw(bits,byts) \
   u3_atom \

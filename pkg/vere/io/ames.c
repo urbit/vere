@@ -1,9 +1,9 @@
-/* vere/ames.c
-**
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include "ur/serial.h"
+/// @file
+
+#include "vere.h"
+
+#include "noun.h"
+#include "ur.h"
 
 /* u3_pact: outbound ames packet.
 */

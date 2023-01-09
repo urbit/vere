@@ -1,8 +1,10 @@
-/* j/3/fein.c
-**
-*/
-#include "all.h"
-#include <murmur3.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "murmur3.h"
 
 //  +feis:ob constant parameters to +fe:ob
 //

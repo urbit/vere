@@ -1,11 +1,11 @@
-/* j/6/cons.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_cons(u3_noun vur,
             u3_noun sed)

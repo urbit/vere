@@ -1,7 +1,10 @@
-/* j/2/flop.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qb_flop(u3_noun a)

@@ -1,11 +1,12 @@
-/* j/6/fork.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_forq(u3_noun hoz,
             u3_noun bur)

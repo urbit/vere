@@ -1,11 +1,11 @@
-/* j/3/tape.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   static u3_noun
   _norm(u3_noun a)
   {

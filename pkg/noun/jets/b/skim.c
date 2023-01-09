@@ -1,7 +1,9 @@
-/* j/2/skim.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qb_skim(u3_noun a, u3_noun b)

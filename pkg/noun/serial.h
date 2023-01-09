@@ -1,5 +1,11 @@
+/// @file
+
 #ifndef U3_SERIAL_H
 #define U3_SERIAL_H
+
+#include "c3.h"
+#include "imprison.h"
+#include "types.h"
 
     /*  opaque handles
     */

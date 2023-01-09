@@ -1,6 +1,8 @@
-#include "all.h"
-#include "vere/vere.h"
-#include "ur/ur.h"
+/// @file
+
+#include "noun.h"
+#include "ur.h"
+#include "vere.h"
 
 /* _setup(): prepare for tests.
 */

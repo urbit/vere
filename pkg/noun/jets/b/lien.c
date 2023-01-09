@@ -1,7 +1,9 @@
-/* j/2/lien.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
   static u3_noun
   _lien_in(u3j_site* sit_u, u3_noun a)
@@ -23,8 +25,6 @@
     }
   }
 
-/* functions
-*/
   u3_noun
   u3qb_lien(u3_noun a,
             u3_noun b)

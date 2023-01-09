@@ -1,7 +1,9 @@
-/* j/4/in_rep.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 //  [a] is RETAINED, [out] is TRANSFERRED
 //

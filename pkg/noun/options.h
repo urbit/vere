@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_OPTIONS_H
 #define U3_OPTIONS_H
+
+#include "c3.h"
+#include "types.h"
 
   /** Data structures.
   **/
@@ -37,7 +42,7 @@
   **/
     /* u3_Config / u3C: global memory control.
     */
-      c3_global u3o_config u3o_Config;
+      extern u3o_config u3o_Config;
 #     define u3C u3o_Config
 
 

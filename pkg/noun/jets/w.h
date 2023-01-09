@@ -1,5 +1,9 @@
+/// @file
+
 #ifndef U3_JETS_W_H
 #define U3_JETS_W_H
+
+#include "types.h"
 
   /** Tier 1.
   **/

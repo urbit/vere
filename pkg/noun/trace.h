@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
+
+#include "c3.h"
+#include "types.h"
 
   /** Data structures.
   **/
@@ -156,9 +161,8 @@
 
   /** Globals.
   **/
-    /* u3_Trace / u3C: global memory control.
-    */
-      c3_global u3t_trace u3t_Trace;
+      /// Tracing profiler.
+      extern u3t_trace u3t_Trace;
 #     define u3T u3t_Trace
 
 

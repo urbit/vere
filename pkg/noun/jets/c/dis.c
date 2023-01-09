@@ -1,11 +1,11 @@
-/* j/3/dis.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qc_dis(u3_atom a,
            u3_atom b)

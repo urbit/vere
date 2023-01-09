@@ -1,8 +1,10 @@
-/* j/e/rs.c
-**
-*/
-#include "all.h"
-#include <softfloat.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "softfloat.h"
 
 #define SINGNAN 0x7fc00000
 
@@ -11,8 +13,6 @@
     c3_w c;
   };
 
-/* functions
-*/
   static inline c3_t
   _nan_test(float32_t a)
   {

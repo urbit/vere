@@ -1,7 +1,9 @@
-/* jets/d/by_dif.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 /* internal functions
 */
@@ -43,8 +45,6 @@ _b_dif_join(u3_noun d,
   }
 }
 
-/* functions
-*/
 u3_noun
 u3wdb_dif(u3_noun cor)
 {

@@ -1,5 +1,10 @@
+/// @file
+
 #ifndef U3_MANAGE_H
 #define U3_MANAGE_H
+
+#include "c3.h"
+#include "types.h"
 
     /** System management.
     **/

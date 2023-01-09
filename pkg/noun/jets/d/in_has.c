@@ -1,10 +1,11 @@
-/* j/4/in_has.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 u3_noun
 u3qdi_has(u3_noun a,
           u3_noun b)

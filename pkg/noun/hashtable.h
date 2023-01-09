@@ -1,6 +1,9 @@
 #ifndef U3_HASHTABLE_H
 #define U3_HASHTABLE_H
 
+#include "c3.h"
+#include "types.h"
+
   /**  Data structures.
   **/
     /**  Straightforward implementation of the classic Bagwell

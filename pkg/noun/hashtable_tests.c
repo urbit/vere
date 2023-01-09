@@ -1,5 +1,6 @@
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "noun.h"
 
 // defined in noun/hashtable.c
 c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);

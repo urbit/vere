@@ -1,7 +1,7 @@
+/// @file
+
 #ifndef C3_PORTABLE_H
 #define C3_PORTABLE_H
-
-#include "config.h"
 
 #   ifndef __GNUC__
 #     error "port me"
@@ -177,14 +177,6 @@
 #       define U3_OS_LoomBits 30
 #   else
 #     error "port: LoomBase"
-#   endif
-
-  /** Global variable control.
-  ***
-  *** To instantiate globals, #define c3_global as extern.
-  **/
-#   ifndef c3_global
-#     define c3_global
 #   endif
 
 

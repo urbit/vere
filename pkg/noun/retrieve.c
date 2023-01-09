@@ -1,8 +1,13 @@
-/* g/r.c
-**
-*/
-#include "all.h"
-#include <murmur3.h>
+/// @file
+
+#include "retrieve.h"
+
+#include "allocate.h"
+#include "hashtable.h"
+#include "imprison.h"
+#include "murmur3.h"
+#include "trace.h"
+#include "xtract.h"
 
 /* _frag_word(): fast fragment/branch prediction for top word.
 */
@@ -361,8 +366,7 @@ static c3_o
 _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
 {
   eqframe* fam_u = u3a_peek(pil_u);
-  u3_noun   a, b, key;
-  u3_weak   got;
+  u3_noun   a, b;
   u3a_cell* a_u;
   u3a_cell* b_u;
 

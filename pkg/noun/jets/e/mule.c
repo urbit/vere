@@ -1,7 +1,9 @@
-/* j/5/mule.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3we_mule(u3_noun cor)

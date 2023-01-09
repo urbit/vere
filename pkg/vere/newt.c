@@ -1,5 +1,6 @@
-/* vere/newt.c
-**
+/// @file
+
+/*
 **  implements noun blob messages with trivial framing.
 **
 **  framing is 5 bytes long. first byte is a version tag; a
@@ -11,8 +12,10 @@
 **  the implementation is relatively inefficient and could
 **  lose a few copies, mallocs, etc.
 */
-#include "all.h"
-#include "vere/vere.h"
+
+#include "vere.h"
+
+#include "noun.h"
 
 /* _newt_mess_head(): await next msg header.
 */

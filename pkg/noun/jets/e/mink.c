@@ -1,7 +1,9 @@
-/* j/5/mink.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
   u3_noun
   u3we_mink(u3_noun cor)

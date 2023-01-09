@@ -1,10 +1,11 @@
-/* j/4/by_get.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 u3_noun
 u3qdb_get(u3_noun a,
           u3_noun b)
@@ -43,7 +44,7 @@ u3kdb_get(u3_noun a,
   u3_noun c = u3qdb_get(a, b);
   u3z(a); u3z(b);
 
-  if ( c3n == u3r_du(c) ) {
+  if ( c3n == u3du(c) ) {
     u3z(c);
     return u3_none;
   }

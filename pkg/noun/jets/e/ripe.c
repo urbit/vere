@@ -1,11 +1,11 @@
-/* j/5/ripe.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
   static u3_atom
   _cqe_ripe(u3_atom wid, u3_atom dat)
   {

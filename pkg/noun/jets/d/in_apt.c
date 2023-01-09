@@ -1,7 +1,9 @@
-/* j/4/in_apt.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 static c3_o
 _in_apt(u3_noun a, u3_weak l, u3_weak r)

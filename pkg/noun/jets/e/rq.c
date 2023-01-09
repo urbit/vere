@@ -1,8 +1,10 @@
-/* j/e/rq.c
-**
-*/
-#include "all.h"
-#include <softfloat.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "softfloat.h"
 
 #define QUADNAN 0x7fff800000000000
 
@@ -11,8 +13,6 @@
     c3_w* c;
   };
 
-/* functions
-*/
   static inline c3_t
   _nan_test(float128_t* a)
   {

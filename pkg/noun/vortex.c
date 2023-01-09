@@ -1,13 +1,24 @@
-/* g/v.c
-**
-*/
-#include "all.h"
-#include <stdio.h>
+/// @file
+
+#include "vortex.h"
+
+#include "allocate.h"
+#include "imprison.h"
+#include "jets/k.h"
+#include "jets/q.h"
+#include "log.h"
+#include "manage.h"
+#include "nock.h"
+#include "retrieve.h"
+#include "trace.h"
+#include "xtract.h"
 
 #define _CVX_LOAD  4
 #define _CVX_PEEK 22
 #define _CVX_POKE 23
 #define _CVX_WISH 10
+
+u3v_home* u3v_Home;
 
 /* u3v_life(): execute initial lifecycle, producing Arvo core.
 */
@@ -56,7 +67,9 @@ _cv_lite(u3_noun pil)
   {
     u3_noun hed, tal;
     u3x_cell(pil, &hed, &tal);
-    u3_assent( u3r_sing_c("ivory", hed) );
+    if ( !_(u3r_sing_c("ivory", hed)) ) {
+      u3m_bail(c3__exit);
+    }
     eve = tal;
   }
 
@@ -281,7 +294,7 @@ u3v_punt(u3_noun blu, c3_l tab_l, u3_noun tac)
 
   //  We are calling nock here, but hopefully need no protection.
   //
-  while ( c3y == u3r_du(cat) ) {
+  while ( c3y == u3du(cat) ) {
     u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(u3h(cat)));
 
     u3m_wall(wol);

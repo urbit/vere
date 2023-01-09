@@ -1,7 +1,9 @@
-        /* j/5/secp.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 #include "urcrypt.h"
 #include <ent.h>
 
@@ -141,7 +143,6 @@ _cqes_reco(u3_atom has,
   }
   else {
     c3_y sir_y[32], sis_y[32], x_y[32], y_y[32];
-    c3_y siv_y = (c3_y) siv;
     _cqes_unpack_fe(sir, sir_y);
     _cqes_unpack_fe(sis, sis_y);
     return

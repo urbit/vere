@@ -1,7 +1,13 @@
-/* noun/imprison.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "imprison.h"
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "manage.h"
+#include "retrieve.h"
+#include "trace.h"
+#include "xtract.h"
 
 /* _ci_slab_size(): calculate slab bloq-size, checking for overflow.
 */
@@ -253,7 +259,6 @@ u3_atom
 u3i_slab_moot(u3i_slab* sab_u)
 {
   c3_w      len_w = sab_u->len_w;
-  u3a_atom* vat_u = sab_u->_._vat_u;
   u3_atom     pro;
 
   u3t_on(mal_o);

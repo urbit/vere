@@ -1,5 +1,9 @@
+/// @file
+
 #ifndef C3_MOTES_H
 #define C3_MOTES_H
+
+#include "defs.h"
 
   /** Definitions.
   **/

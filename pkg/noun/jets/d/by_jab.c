@@ -1,10 +1,10 @@
-/* j/4/by_jab.c
-**
-*/
-#include "all.h"
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+
 u3_noun
 u3qdb_jab(u3_noun a,
           u3_noun key,

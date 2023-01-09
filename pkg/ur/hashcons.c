@@ -1,16 +1,17 @@
-#include <inttypes.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
+/// @file
+
+#include "hashcons.h"
+
 #include <assert.h>
-#include <stdio.h>
-
+#include <inttypes.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <murmur3.h>
-
-#include "ur/defs.h"
-#include "ur/hashcons.h"
+#include "defs.h"
+#include "murmur3.h"
 
 //  declarations of inline functions
 //

@@ -1,11 +1,12 @@
-/* j/1/add.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qa_add(u3_atom a,
            u3_atom b)

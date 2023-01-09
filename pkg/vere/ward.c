@@ -1,7 +1,8 @@
-/* vere/ward.c
-*/
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "vere.h"
+
+#include "noun.h"
 
 //  ward: lifecycle management for common structures
 //

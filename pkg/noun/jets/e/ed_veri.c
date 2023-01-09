@@ -1,11 +1,11 @@
-/* gen164/5/ed_veri.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
 
-/* functions
-*/
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
+
   static u3_atom
   _cqee_veri(u3_noun s,
              u3_noun m,

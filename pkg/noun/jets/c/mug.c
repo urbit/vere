@@ -1,11 +1,11 @@
-/* j/3/mug.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3wc_mug(u3_noun cor)
   {

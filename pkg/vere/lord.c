@@ -1,8 +1,9 @@
-/* vere/lord.c
-*/
-#include "all.h"
-#include "vere/vere.h"
-#include "ur/hashcons.h"
+/// @file
+
+#include "vere.h"
+
+#include "noun.h"
+#include "ur.h"
 
 #undef LORD_TRACE_JAM
 #undef LORD_TRACE_CUE

@@ -1,7 +1,10 @@
-/* j/3/rsh.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qc_rsh(u3_atom a,

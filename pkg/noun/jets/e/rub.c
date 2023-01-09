@@ -1,11 +1,11 @@
-/* j/3/rub.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qe_rub(u3_atom a,
            u3_atom b)

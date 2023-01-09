@@ -1,11 +1,11 @@
-/* gen164/5/ed_scalarmult.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 #include "urcrypt.h"
 
-/* functions
-*/
   static u3_atom
   _cqee_scalarmult(u3_atom a,
                   u3_atom b)

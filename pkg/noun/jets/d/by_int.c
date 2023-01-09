@@ -1,7 +1,10 @@
-/* j/4/by_int.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qdb_int(u3_noun a, u3_noun b)

@@ -1,8 +1,10 @@
-/* j/e/rd.c
-**
-*/
-#include "all.h"
-#include <softfloat.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "softfloat.h"
 
 #define DOUBNAN 0x7ff8000000000000
 
@@ -11,8 +13,6 @@
     c3_d c;
   };
 
-/* functions
-*/
   static inline c3_t
   _nan_test(float64_t a)
   {

@@ -1,5 +1,7 @@
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "noun.h"
+#include "vere.h"
 
 /* _setup(): prepare for tests.
 */

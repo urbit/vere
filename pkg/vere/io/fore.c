@@ -1,8 +1,8 @@
-/* vere/root.c
-**
-*/
-#include "all.h"
-#include "vere/vere.h"
+/// @file
+
+#include "vere.h"
+
+#include "noun.h"
 
 /* _fore_inject_bail(): handle failure on arbitrary injection.
 */

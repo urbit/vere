@@ -1,8 +1,10 @@
-/* j/5/argon2.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
 
 /* helpers
 */
@@ -41,8 +43,6 @@
     }
   }
 
-/* functions
-*/
 
   static u3_atom
   _cqe_argon2( // configuration params,

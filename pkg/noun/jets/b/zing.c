@@ -1,7 +1,9 @@
-/* j/2/zing.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3qb_zing(u3_noun a)

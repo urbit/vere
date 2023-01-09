@@ -1,7 +1,9 @@
-/* j/e/fl.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 /* structures
 */
@@ -18,8 +20,6 @@
     mpz_t a;
   } ea;
 
-/* functions
-*/
   static void
   _satom_to_mp(mpz_t a_mp,
                u3_atom b)

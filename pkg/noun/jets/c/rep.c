@@ -1,7 +1,10 @@
-/* j/3/rep.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 /*
   Get the lowest `n` bits of a word `w` using a bitmask.

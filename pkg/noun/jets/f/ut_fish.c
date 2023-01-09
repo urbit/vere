@@ -1,7 +1,9 @@
-/* j/6/fish.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 u3_noun
 u3wfu_fish(u3_noun cor)

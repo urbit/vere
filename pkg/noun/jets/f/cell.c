@@ -1,11 +1,11 @@
-/* j/6/cell.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_cell(u3_noun hed,
             u3_noun tal)

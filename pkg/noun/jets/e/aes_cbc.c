@@ -1,8 +1,10 @@
-/* j/5/aes_cbc.c
-**
-*/
-#include "all.h"
-#include <urcrypt.h>
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
+#include "urcrypt.h"
 
 /* All of the CBC hoon truncates its key and prv inputs by passing them to
  * the ECB functions, which truncate them, hence the raw u3r_bytes unpacking.
@@ -14,8 +16,6 @@ typedef int (*urcrypt_cbc)(c3_y**,
                            c3_y*,
                            urcrypt_realloc_t);
 
-/* functions
-*/
   static u3_atom
   _cqea_cbc_help(c3_y* key_y, u3_atom iv, u3_atom msg, urcrypt_cbc low_f)
   {

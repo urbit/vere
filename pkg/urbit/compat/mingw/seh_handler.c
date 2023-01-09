@@ -1,6 +1,6 @@
-#include "all.h"
+#include "noun.h"
 #include "rsignal.h"
-#include "vere/vere.h"
+vere.h"/vere.h"
 
 /* _mingw_exception_filter: replaces libsigsegv on MingW
 */

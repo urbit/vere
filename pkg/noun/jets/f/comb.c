@@ -1,11 +1,11 @@
-/* j/6/comb.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_comb(u3_noun mal,
             u3_noun buz)

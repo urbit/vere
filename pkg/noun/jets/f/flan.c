@@ -1,11 +1,11 @@
-/* j/6/flan.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qf_flan(u3_noun bos,
             u3_noun nif)

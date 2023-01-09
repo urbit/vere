@@ -1,7 +1,10 @@
-/* j/4/in_uni.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/k.h"
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 /* internal functions
 */
@@ -64,8 +67,6 @@ _in_uni(u3_noun a, u3_noun b)
   }
 }
 
-/* functions
-*/
 u3_noun
 u3kdi_uni(u3_noun a,
           u3_noun b)

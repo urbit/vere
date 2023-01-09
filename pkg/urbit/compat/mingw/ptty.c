@@ -1,8 +1,8 @@
 /* compat/mingw/ptty.c
 **
 */
-#include "all.h"
-#include "vere/vere.h"
+#include "noun.h"
+vere.h"/vere.h"
 #include <winternl.h>
 
 /*  _ptty_get_type(): detects tty type.

@@ -1,11 +1,11 @@
-/* j/3/dvr.c
-**
-*/
-#include "all.h"
+/// @file
+
+#include "jets/q.h"
+#include "jets/w.h"
+
+#include "noun.h"
 
 
-/* functions
-*/
   u3_noun
   u3qc_dvr(u3_atom a,
            u3_atom b)
