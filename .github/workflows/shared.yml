@@ -22,6 +22,10 @@ on:
         description: 'Run fake ship tests'
         type: boolean
         default: true
+      release:
+        description: 'Create a GitHub release'
+        type: boolean
+        default: false
         required: false
     secrets:
       GCP_CREDENTIALS:
@@ -214,7 +218,26 @@ jobs:
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
-
+      
+      - name: Create a GitHub release
+        if: ${{ inputs.release }}
+        run: |
+          # Only create the GitHub release on `linux-x86_64`.
+          # Upload the other assets from the other platforms' jobs.
+          version="v$(cat ./pkg/vere/VERSION)"
+          if ${{ matrix.target == 'linux-x86_64' }}; then
+            # Create a new tag.
+            git tag urbit-v$version
+            git push origin --tags
+            # Create a draft release with automatically-generated notes and
+            # source code archives.
+            gh release create urbit-v$version \
+              --draft \
+              --generate-notes
+          fi
+          # Upload the binary to the release.
+          tar -czf ${{ matrix.target }}.tgz ${{ env.urbit_static }}
+          gh release upload urbit-v$version ${{ matrix.target }}.tgz
 
       #
       # DOCKER
