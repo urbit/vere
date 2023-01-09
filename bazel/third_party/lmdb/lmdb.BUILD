@@ -21,5 +21,9 @@ cc_library(
     ],
     include_prefix = "lmdb",
     includes = ["."],
+    local_defines = select({
+        "@platforms//os:macos": ["URBIT_RUNTIME_OS_DARWIN"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )

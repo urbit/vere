@@ -43,7 +43,7 @@ cc_library(
     includes = ["deps/klib"],
     linkstatic = True,
     local_defines = select({
-        "@platforms//cpu:arm64": ["URBIT_RUNTIME_ARCH_ARM64"],
+        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
@@ -98,7 +98,15 @@ cc_library(
     hdrs = ["deps/picohttpparser/picohttpparser.h"],
     includes = ["deps/picohttpparser"],
     linkstatic = True,
+    local_defines = select({
+        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
+    deps = select({
+        "@platforms//cpu:arm64": ["@sse2neon"],
+        "//conditions:default": [],
+    }),
 )
 
 # See `deps/picotls` in the `h2o` repo.
@@ -121,12 +129,19 @@ cc_library(
         "deps/picotls/include/picotls",
     ],
     linkstatic = True,
+    local_defines = select({
+        "@platforms//cpu:arm64": ["URBIT_RUNTIME_CPU_ARM64"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:private"],
     deps = [
         ":cifra",
         ":micro_ecc",
         "@openssl",
-    ],
+    ] + select({
+        "@platforms//cpu:arm64": ["@sse2neon"],
+        "//conditions:default": [],
+    }),
 )
 
 # See `deps/ssl-conservatory` in the `h2o` repo.

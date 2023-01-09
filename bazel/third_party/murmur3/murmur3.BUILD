@@ -8,7 +8,22 @@ cc_library(
     copts = [
         "-O3",
         "-Wall",
-    ],
+    ] + select({
+        # TODO: use selects.with_or() from skylib once it's available.
+        "@platforms//os:macos": [
+            "-fPIC",
+            "-c",
+        ],
+        "@platforms//os:openbsd": [
+            "-fPIC",
+            "-c",
+        ],
+        "@platforms//os:windows": [
+            "-fPIC",
+            "-c",
+        ],
+        "//conditions:default": [],
+    }),
     includes = ["."],
     visibility = ["//visibility:public"],
 )

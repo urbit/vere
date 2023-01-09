@@ -37,6 +37,26 @@
 #   inevitable when a third party dependency has a particularly complicated
 #   build system that would be too difficult to replicate in Bazel (i.e.
 #   OpenSSL). However, delegate only as a last resort.
+#
+# PATCHING A DEPENDENCY
+#
+# If a dependency has a bug that prevents it from being used in the project,
+# you can patch the dependency to fix it. We recommend the process below:
+#
+# (1) Make a change to the source of the dependency. If the change is
+#     platform-specific, wrap it in the appropriate URBIT_RUNTIME_* macro.
+#     We "gate" source patches with these macros so that we only ever need
+#     at most one patch per dependency.
+#     (a) CPU architecture macros: `URBIT_RUNTIME_CPU_{X86_64,ARM64}`.
+#     (b) OS macros: `URBIT_RUNTIME_OS_{LINUX,DARWIN,BSD,MINGW}`.
+# (2) Generate a patch file named <dependency_version>.patch and save it in
+#     `bazel/third_party/<dependency>`.
+# (3) Update the dependency's targets to locally define the platform-specific
+#     patch macro(s). `select()` statements should be used to define the
+#     correct macro for the current platform.
+# (4) Update the dependency's repository rule in WORKSPACE.bazel to include
+#     `patch_args = ["-p1"]` (assuming the patch was generated with `git diff`)
+#     and `patches = ["//bazel/third_party/<dependency>:<version>.patch"]`.
 
 load("//bazel:repo.bzl", "versioned_http_archive", "versioned_http_file")
 
@@ -75,6 +95,7 @@ versioned_http_archive(
 register_toolchains(
     "//bazel/toolchain:aarch64_linux_gnu_gcc-linux-x86_64-toolchain",
     "//bazel/toolchain:clang-linux-x86_64-toolchain",
+    "//bazel/toolchain:clang-macos-arm64-toolchain",
     "//bazel/toolchain:gcc-linux-x86_64-toolchain",
 )
 
@@ -180,6 +201,8 @@ versioned_http_archive(
 versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/lmdb:{version}.patch"],
     sha256 = "22054926b426c66d8f2bc22071365df6e35f3aacf19ad943bc6167d4cae3bebb",
     strip_prefix = "lmdb-LMDB_{version}/libraries/liblmdb",
     url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_{version}.tar.gz",
@@ -243,6 +266,8 @@ versioned_http_archive(
 versioned_http_archive(
     name = "softfloat",
     build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/softfloat:{version}.patch"],
     sha256 = "15ad5841e88fe09422a8e31a0ef3fe126ecf678f52c9a3882f3373d47752aebe",
     strip_prefix = "berkeley-softfloat-3-{version}",
     url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/{version}.tar.gz",
