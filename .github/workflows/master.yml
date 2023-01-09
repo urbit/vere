@@ -13,4 +13,5 @@ jobs:
       docker: true
       pace: 'live'
       upload: true
+      release: true
     secrets: inherit
