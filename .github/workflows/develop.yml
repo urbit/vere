@@ -1,15 +1,15 @@
-name: pre-release
+name: Push to develop
 
 on:
   release: null
   push:
     branches:
-      - release
+      - develop
 
 jobs:
-  call-vere:
+  urbit:
     uses: ./.github/workflows/shared.yml
     with:
-      pace: 'soon'
+      pace: 'edge'
       upload: true
     secrets: inherit
