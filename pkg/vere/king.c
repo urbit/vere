@@ -1138,8 +1138,7 @@ u3_king_vere(c3_c* pac_c,  // pace
   FILE* fil_u;
   c3_i  fid_i, ret_i;
 
-  ret_i = asprintf(&bin_c, "%s/vere-v%s-%s" U3_BIN_SUFFIX,
-                           dir_c, ver_c, arc_c);
+  ret_i = asprintf(&bin_c, "%s/vere-v%s-%s", dir_c, ver_c, arc_c);
   c3_assert( ret_i > 0 );
 
   if (   (-1 == (fid_i = open(bin_c, O_WRONLY | O_CREAT | O_EXCL, 0755)))
@@ -1438,7 +1437,7 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
     return -1; // XX
   }
 
-  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s" U3_BIN_SUFFIX,
+  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s",
                            u3_Host.dir_c, pac_c, ver_c, arc_c);
   c3_assert( ret_i > 0 );
 

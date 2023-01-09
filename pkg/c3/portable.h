@@ -131,17 +131,9 @@
 #     endif
 #   endif
 
-  /** Binary alias.
-  **/
-#   ifdef U3_OS_mingw
-#     define U3_BIN_SUFFIX ".exe"
-#   else
-#     define U3_BIN_SUFFIX ""
-#   endif
 
 
-
-#   define U3_BIN_ALIAS ".run" U3_BIN_SUFFIX
+#   define U3_BIN_ALIAS ".run"
 
   /** Address space layout.
   ***
