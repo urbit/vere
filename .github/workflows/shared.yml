@@ -26,7 +26,6 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere-test
-  VERE_PACE: ${{ inputs.pace }}
   VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
 
 jobs:
@@ -145,7 +144,7 @@ jobs:
           os=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
           arch=$(echo "${{ matrix.target }}" | cut -d'-' -f2)
           system=${arch}-${os}
-          target="gs://${UPLOAD_BASE}/${VERE_PACE}/${version}/vere-v${version}-${system}"
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-v${version}-${system}"
 
           gsutil cp -n "${{ env.urbit_static }}" "$target"
           exitcode=$?

@@ -1,6 +1,7 @@
-name: build
+name: feature
 
 on:
+  release: null
   pull_request:
     paths:
       - '.bazelrc'
@@ -12,4 +13,7 @@ on:
 
 jobs:
   call-vere:
+    with:
+      pace: 'edge'
+      upload: false
     uses: ./.github/workflows/shared.yml
