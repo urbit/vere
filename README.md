@@ -26,6 +26,14 @@ defined in its own package:
 - [`pkg/noun`](pkg/noun): The Nock virtual machine and snapshotting system.
 - [`pkg/vere`](pkg/vere): The I/O drivers, event log, and main event loop.
 
+## Pre-requisites
+
+### macOS
+
+```console
+$ brew install bazelisk automake libtool
+```
+
 ## Build
 
 We use [`bazel`][bazel] to build Urbit's runtime, which is packaged as a single
@@ -39,6 +47,8 @@ will run:
  `aarch64_linux_gnu_gcc-linux-x86_64` | `linux-arm64`   | `aarch64-linux_gnu_gcc`
  `gcc-linux-x86_64`                   | `linux-x86_64`  | `gcc`
  `clang-linux-x86_64`                 | `linux-x86_64`  | `clang`
+ `clang-macos-arm64`                  | `macos-arm64`   | `clang`
+ `clang-macos-x86_64`                 | `macos-x86_64`  | `clang`
 
 Once you've identified your `(host, target)` pair, determine the version of the
 pair's required toolchain and ensure you have an up-to-date version of
