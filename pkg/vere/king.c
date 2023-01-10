@@ -1156,7 +1156,7 @@ u3_king_vere(c3_c* pac_c,  // pace
     }
   }
 
-  ret_i = asprintf(&url_c, "%s/%s/%s/vere-v%s-%s",
+  ret_i = asprintf(&url_c, "%s/%s/v%s/vere-v%s-%s",
                    ver_hos_c, pac_c, ver_c, ver_c, arc_c);
   c3_assert( ret_i > 0 );
 
