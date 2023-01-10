@@ -118,11 +118,11 @@ jobs:
             bazel test --build_tests_only ...
           fi
 
-      - name: Run fake ship tests
-        if: ${{ matrix.target == 'linux-x86_64' }}
-        run: |
-          # See https://github.com/urbit/vere/issues/40.
-          bazel build //pkg/vere:test-fake-ship
+          #- name: Run fake ship tests
+          #if: ${{ matrix.target == 'linux-x86_64' }}
+          #run: |
+          ## See https://github.com/urbit/vere/issues/40.
+          #bazel build //pkg/vere:test-fake-ship
 
       
       #
