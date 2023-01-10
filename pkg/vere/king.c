@@ -391,7 +391,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   hun_y = c3_realloc(hun_y, 1 + len_w);
   hun_y[len_w] = 0;
   c3_c* newline_c;
-  while ( (newline_c = strrchr(hun_y, '\n')) ) {
+  while ( (newline_c = strrchr((c3_c*)hun_y, '\n')) ) {
     *newline_c = 0;
   }
 
