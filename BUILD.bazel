@@ -58,13 +58,6 @@ string_flag(
     visibility = ["//visibility:public"],
 )
 
-# Docker image tag.
-string_flag(
-    name = "image_tag",
-    build_setting_default = "",
-    visibility = ["//visibility:public"],
-)
-
 #
 # PLATFORMS
 #

@@ -191,7 +191,7 @@ jobs:
         run: |
           version="v$(cat ./pkg/vere/VERSION)"
           tag="$version-${{ inputs.pace }}"
-          bazel run --image_tag="$tag" :upload_docker
+          bazel run :upload_docker
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
