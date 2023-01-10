@@ -147,11 +147,27 @@ cc_image(
     binary = "//pkg/vere:urbit",
 )
 
+genrule(
+    name = "docker_tag",
+    visibility = ["//visibility:private"],
+    srcs = [
+        "//pkg/vere:PACE",
+        "//pkg/vere:VERSION",
+    ],
+    outs = ["DOCKER_TAG"],
+    cmd = """
+    pace=`tr -d '\n' < $(execpath //pkg/vere:PACE)`
+    version=v`tr -d '\n' < $(execpath //pkg/vere:VERSION)`
+    echo "$$version-$$pace" > $@
+    """,
+)
+
+
 container_push(
     name = "upload_docker",
     format = "Docker",
     image = ":docker",
     registry = "docker.io",
     repository = "tloncorp/vere-test",
-    tag = "//:image_tag",
+    tag_file = ":docker_tag",
 )
