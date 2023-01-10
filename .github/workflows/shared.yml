@@ -149,7 +149,15 @@ jobs:
           version="v$(cat ./pkg/vere/VERSION)"
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-${version}-${{ matrix.target }}"
 
-          gsutil cp -n "${{ env.urbit_static }}" "$target"
+          args=""
+          # We never overwrite a binary deployed to the "live" train, but we do
+          # overwrite same-versioned binaries deployed to the "soon" and "edge"
+          # trains.
+          if [[ "${{ inputs.pace }}" == "live" ]]; then
+            gsutil cp -n "${{ env.urbit_static }}" "$target"
+          else
+            gsutil cp "${{ env.urbit_static }}" "$target"
+          fi
           exitcode=$?
 
           [ $exitcode -eq 0 ] &&
