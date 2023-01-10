@@ -128,11 +128,6 @@ jobs:
       #
       # UPLOAD TO GCP
       #
-      - name: Prepare binary for upload to GCP
-        if: ${{ inputs.upload }}
-        run: |
-          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
-
       - uses: google-github-actions/auth@v1
         if: ${{ inputs.upload }}
         with:
