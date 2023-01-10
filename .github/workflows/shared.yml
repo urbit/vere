@@ -185,3 +185,35 @@ jobs:
           tag="$version-${{ inputs.pace }}"
           bazel run --image_tag="$tag" :upload_docker
           bazel run --image_tag=latest :upload_docker
+
+  upload-version-string:
+    name: Upload latest deployed version string to GCP
+    runs-on: ubuntu-latest
+    needs: [urbit]
+    if: inputs.upload
+    steps:
+      - uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      - name: Download now out-of-date version string
+        uses: actions/download-artifact@v3
+        with:
+          name: version_string
+
+      - name: Upload latest deployed version string to GCP
+        run: |
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
+
+          # We don't use -n here because we want to overwrite the version
+          # string.
+          gsutil cp ./version_string "$target"
+
+          [ $exitcode -eq 0 ] &&
+            echo "Upload to $target completed successfully." ||
+            echo "Upload to $target failed.";
+          exit $exitcode
