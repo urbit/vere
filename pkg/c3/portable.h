@@ -123,8 +123,7 @@
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
 #       ifdef U3_CPU_aarch64
-//  XX not yet
-//#         define U3_OS_ARCH "macos-aarch64"
+#         define U3_OS_ARCH "macos-aarch64"
 #       else
 #         define U3_OS_ARCH "macos-x86_64"
 #       endif
