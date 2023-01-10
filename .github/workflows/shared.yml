@@ -26,7 +26,6 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere-test
-  VERSION_TYPE: ${{ (inputs.pace == 'soon' || inputs.pace == 'live') && 'real' || 'hash' }}
 
 jobs:
   urbit:
@@ -147,11 +146,7 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          if [ "real" == "$VERSION_TYPE" ]; then
-            version="v$(cat ./pkg/vere/VERSION)"
-          else
-            version="${GITHUB_SHA:0:9}"
-          fi
+          version="v$(cat ./pkg/vere/VERSION)"
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-${version}-${{ matrix.target }}"
 
           gsutil cp -n "${{ env.urbit_static }}" "$target"
@@ -186,10 +181,7 @@ jobs:
       - name: Build and push Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
-          if [ "real" == "$VERSION_TYPE" ]; then
-            version="v$(cat ./pkg/vere/VERSION)"
-          else
-            version="${GITHUB_SHA:0:9}"
-          fi
-          bazel run --image_tag=$version :upload_docker
+          version="v$(cat ./pkg/vere/VERSION)"
+          tag="$version-${{ inputs.pace }}"
+          bazel run --image_tag="$tag" :upload_docker
           bazel run --image_tag=latest :upload_docker
