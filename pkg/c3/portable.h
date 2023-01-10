@@ -113,35 +113,27 @@
 #   if defined(U3_OS_linux)
 #     ifdef __LP64__
 #       ifdef U3_CPU_aarch64
-#         define U3_OS_ARCH "aarch64-linux"
+#         define U3_OS_ARCH "linux-aarch64"
 #       else
-#         define U3_OS_ARCH "x86_64-linux"
+#         define U3_OS_ARCH "linux-x86_64"
 #       endif
 #     endif
 #   elif defined(U3_OS_mingw)
-#     define U3_OS_ARCH "x86_64-windows"
+#     define U3_OS_ARCH "windows-x86_64"
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
 #       ifdef U3_CPU_aarch64
 //  XX not yet
-//#         define U3_OS_ARCH "aarch64-darwin"
+//#         define U3_OS_ARCH "macos-aarch64"
 #       else
-#         define U3_OS_ARCH "x86_64-darwin"
+#         define U3_OS_ARCH "macos-x86_64"
 #       endif
 #     endif
 #   endif
 
-  /** Binary alias.
-  **/
-#   ifdef U3_OS_mingw
-#     define U3_BIN_SUFFIX ".exe"
-#   else
-#     define U3_BIN_SUFFIX ""
-#   endif
 
 
-
-#   define U3_BIN_ALIAS ".run" U3_BIN_SUFFIX
+#   define U3_BIN_ALIAS ".run"
 
   /** Address space layout.
   ***
