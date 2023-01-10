@@ -181,9 +181,9 @@ versioned_http_archive(
 
 versioned_http_file(
     name = "ivory_pill",
-    sha256 = "5123a1ac30b83ec026587574df1ce13a73e72d06588ff68b5c41c09e1bebb5b7",
-    url = "https://github.com/urbit/urbit/raw/urbit-v{version}/bin/ivory.pill",
-    version = "1.15",
+    sha256 = "26ff86808886beb831e4a135f478e42ce83ef4a09ad24808b3fe97248ce7a6b7",
+    url = "https://github.com/urbit/urbit/blob/{version}/bin/ivory.pill?raw=true",
+    version = "721fa05",
 )
 
 versioned_http_file(
