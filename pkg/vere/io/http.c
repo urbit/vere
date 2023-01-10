@@ -1537,11 +1537,11 @@ _http_serv_start(u3_http* htp_u)
          0 != (sas_i = uv_listen((uv_stream_t*)&htp_u->wax_u,
                                  TCP_BACKLOG, _http_serv_listen_cb)) ) {
       if ( UV_EADDRNOTAVAIL == sas_i ) {
-        u3l_log("http: ip address not available\n");
+        u3l_log("http: ip address not available");
         u3_king_bail();
       }
       if ( c3y == htp_u->dis ) {
-        u3l_log("http: listen (%" PRIu16 "): %s\n", htp_u->por_s,
+        u3l_log("http: listen (%" PRIu16 "): %s", htp_u->por_s,
                 uv_strerror(sas_i));
         u3_king_bail();
       }
