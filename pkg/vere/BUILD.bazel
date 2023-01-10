@@ -2,6 +2,8 @@
 # GENERATED FILES
 #
 
+exports_files(["PACE", "VERSION"])
+
 # An approximation of `xxd -i` that runs on all platforms where Bash is
 # present. Generates a `.h` file that declares the array and array length as
 # `extern` global variables and a `.c` file containing the array and array
