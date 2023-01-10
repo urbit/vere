@@ -17,7 +17,7 @@ u3_host u3_Host;
 
 u3_king u3_King;
 
-static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
+static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere-test";
 
 //  stash config flags for worker
 //
