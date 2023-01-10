@@ -25,7 +25,7 @@ on:
         required: false
 
 env:
-  UPLOAD_BASE: bootstrap.urbit.org/vere-test
+  UPLOAD_BASE: bootstrap.urbit.org/vere
 
 jobs:
   urbit:
