@@ -15,6 +15,14 @@ run:
 
 ## Prerequisites
 
+All platforms require the `automake` and `libtool` suite of tools installed in
+order to build Vere. Before going any further, install them using your package
+manager. For example, on macOS:
+
+```console
+$ brew install automake libtool
+```
+
 ### Linux
 
 We use [musl libc][musl libc] instead [glibc][glibc] on Linux, which enables us
@@ -40,13 +48,6 @@ $ bazel run //bazel/toolchain:aarch64-linux-musl-gcc
 ```
 
 This will take a few minutes.
-
-### macOS
-
-Ensure you have up-to-date versions of `bazelisk`, `automake`, and `libtool`:
-```console
-$ brew install bazelisk automake libtool
-```
 
 ## Build Commands
 
