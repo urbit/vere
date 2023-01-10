@@ -128,11 +128,6 @@ jobs:
       #
       # UPLOAD TO GCP
       #
-      - name: Prepare binary for upload to GCP
-        if: ${{ inputs.upload }}
-        run: |
-          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
-
       - uses: google-github-actions/auth@v1
         if: ${{ inputs.upload }}
         with:
@@ -149,7 +144,14 @@ jobs:
           version="v$(cat ./pkg/vere/VERSION)"
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-${version}-${{ matrix.target }}"
 
-          gsutil cp -n "${{ env.urbit_static }}" "$target"
+          args=""
+          # We never overwrite a binary deployed to the "live" train, but we do
+          # overwrite same-versioned binaries deployed to the "soon" and "edge"
+          # trains.
+          if [[ "${{ inputs.pace }}" == "live" ]]; then
+            args="-n"
+          fi
+          gsutil cp "$args" "$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" "$target"
           exitcode=$?
 
           [ $exitcode -eq 0 ] &&
