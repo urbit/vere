@@ -650,7 +650,7 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 {
   //  XX version negotiation failed, print upgrade message
   //
-  u3l_log("pier: version negotation failed");
+  u3l_log("pier: version negotation failed\n");
 
   //  XX only print trace with -v ?
   //
@@ -2433,7 +2433,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
   u3_noun riw = u3do("spat", wir);
   c3_c* wir_c = u3r_string(riw);
 
-  u3l_log("%s: %%%s event on %s failed", cap_c, tag_c, wir_c);
+  u3l_log("%s: %%%s event on %s failed\n", cap_c, tag_c, wir_c);
 
   c3_free(tag_c);
   c3_free(wir_c);
