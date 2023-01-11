@@ -92,7 +92,7 @@ genrule(
     cmd = """
     echo '#ifndef URBIT_VERSION_H' > $@
     echo '#define URBIT_VERSION_H' >> $@
-    printf '#define URBIT_VERSION "%s"\n' $$(cat $<) >> $@
+    printf '#define URBIT_VERSION "%s"\n' $$(cat $< | tr -d '\n') >> $@
     echo '#endif' >> $@
     """,
     visibility = ["//visibility:private"],
@@ -106,7 +106,7 @@ genrule(
     cmd = """
     echo '#ifndef URBIT_PACE_H' > $@
     echo '#define URBIT_PACE_H' >> $@
-    printf '#define U3_VERE_PACE "%s"\n' $$(cat $<) >> $@
+    printf '#define U3_VERE_PACE "%s"\n' $$(cat $< | tr -d '\n') >> $@
     echo '#endif' >> $@
     """,
     visibility = ["//visibility:private"],
