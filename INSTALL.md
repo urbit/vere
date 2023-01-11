@@ -10,7 +10,7 @@ run:
 ----------------------------------
  `linux-aarch64 | `linux-aarch64`
  `linux-x86_64` | `linux-x86_64`
- `macos-aarch64`  | `macos-aarch64`
+ `macos-aarch64`| `macos-aarch64`
  `macos-x86_64` | `macos-x86_64`
 
 ## Prerequisites
