@@ -126,6 +126,26 @@ platform(
     ],
 )
 
+# Produce the `URBIT_VERSION` macro.
+genrule(
+    name = "version",
+    srcs = [
+        ".git",
+        "VERSION",
+    ],
+    outs = ["version.h"],
+    cmd = """
+    version_num=`cat $(execpath VERSION)`
+    commit_sha=`git rev-parse --short HEAD`
+    version="$$version_num-$$commit_sha"
+    echo '#ifndef URBIT_VERSION_H' > $@
+    echo '#define URBIT_VERSION_H' >> $@
+    printf '#define URBIT_VERSION "%s"\n' $$version >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//:__subpackages__"],
+)
+
 alias(
     name = "urbit",
     actual = "//pkg/vere:urbit",
