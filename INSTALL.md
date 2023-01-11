@@ -25,7 +25,7 @@ $ brew install automake libtool
 
 ### Linux
 
-We use [musl libc][musl libc] instead [glibc][glibc] on Linux, which enables us
+We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us
 to generate statically linked binaries. As a prerequisite, you need to install
 the [musl libc][musl libc] toolchain appropriate for your target platform.
 
