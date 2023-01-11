@@ -134,7 +134,7 @@ genrule(
     cmd = """
     echo '#ifndef URBIT_PACE_H' > $@
     echo '#define URBIT_PACE_H' >> $@
-    printf '#define U3_VERE_PACE "%s"\n' $$(cat $<) >> $@
+    printf '#define U3_VERE_PACE "%s"\n' $$(cat $< | tr -d '\n') >> $@
     echo '#endif' >> $@
     """,
     visibility = ["//:__subpackages__"],
@@ -149,7 +149,7 @@ genrule(
     ],
     outs = ["version.h"],
     cmd = """
-    version_num=`cat $(execpath VERSION)`
+    version_num=`cat $(execpath VERSION) | tr -d '\n'`
     commit_sha=`git rev-parse --short HEAD`
     version="$$version_num-$$commit_sha"
     echo '#ifndef URBIT_VERSION_H' > $@
