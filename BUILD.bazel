@@ -144,6 +144,8 @@ genrule(
 genrule(
     name = "version",
     srcs = [
+        # Bazel warns dependency checking directories is unsound, but there's no
+        # apparent way around depending on .git if we want to run git commands.
         ".git",
         "VERSION",
     ],
