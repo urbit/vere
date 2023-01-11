@@ -48,12 +48,6 @@ jobs:
       #
       - uses: actions/checkout@v3
 
-      - name: chown /usr/local
-        if: ${{ matrix.target == 'linux-aarch64' || matrix.target == 'linux-x86_64' }}
-        run: |
-          # See https://github.com/actions/cache/issues/845.
-          sudo chown -R $(whoami) /usr/local
-
       - name: Set up build cache
         uses: actions/cache@v3
         with:
