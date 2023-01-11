@@ -176,6 +176,16 @@ jobs:
             else
               gsutil cp "${{ env.urbit_static }}" "$old_target"
             fi
+
+            # See https://github.com/urbit/vere/issues/90.
+            if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
+              aarch64_bin=vere-v1.16-aarch64-darwin
+              wget https://bootstrap.urbit.org/vere/${{ inputs.pace }}/1.16/$aarch64_bin
+              universal_bin=vere-v1.16-universal-darwin
+              x86_64_bin="${{ env.urbit_static }}"
+              xcrun lipo -create $aarch64_bin $x86_64_bin -output $universal_bin
+              gsutil cp $universal_bin "$old_target"
+            fi
           fi
 
           args=""
