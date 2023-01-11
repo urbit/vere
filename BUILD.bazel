@@ -126,6 +126,20 @@ platform(
     ],
 )
 
+# Produce the `U3_VERE_PACE` macro.
+genrule(
+    name = "pace",
+    srcs = ["PACE"],
+    outs = ["pace.h"],
+    cmd = """
+    echo '#ifndef URBIT_PACE_H' > $@
+    echo '#define URBIT_PACE_H' >> $@
+    printf '#define U3_VERE_PACE "%s"\n' $$(cat $<) >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//:__subpackages__"],
+)
+
 # Produce the `URBIT_VERSION` macro.
 genrule(
     name = "version",
