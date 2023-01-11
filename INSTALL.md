@@ -99,7 +99,8 @@ For more information on Bazel configuration files, consult the
 If `bazel build` or `bazel test` generates an `undeclared inclusion(s) in rule`
 error on macOS, the version of `clang` expected by the build system likely
 doesn't match the version of `clang` installed on your system. To address this,
-pass `--clang_version="<version_string>"` to the failing command.
+run `clang --version` and pass the version number via
+`--clang_version="<version_string>"` to the failing command.
 
 [^1]: If you're interested in digging into the details of the build system,
       check out [`WORKSPACE.bazel`](WORKSPACE.bazel),
