@@ -147,7 +147,10 @@ jobs:
         if: ${{ inputs.upload }}
         run: |
           version="$(cat ./VERSION)"
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${version}/vere-v${version}-${{ matrix.target }}"
+          bazel build :version
+          sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
+            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
 
           # See https://github.com/urbit/vere/issues/86.
           if [[ "$version" == "1.16" ]]; then
