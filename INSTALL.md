@@ -70,7 +70,7 @@ optimization levels.
 You can build and run unit tests only on native builds. If you have a native
 build and want to run all unit tests, run:
 ```console
-$ bazel test //pkg/...
+$ bazel test --build_tests_only ...
 ```
 
 If you want to run a specific test, say
