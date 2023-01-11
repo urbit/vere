@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-aarch64, runner: ubuntu-22.04 }
-          - { target: linux-x86_64, runner: ubuntu-22.04 }
+          - { target: linux-aarch64, runner: [self-hosted, Linux, X64, linux-aarch64] }
+          - { target: linux-x86_64, runner: [self-hosted, Linux, X64, linux-x86_64] }
           # GitHub doesn't provide M1 macOS machines, so we self-host a runner
           # instead.
           - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
@@ -224,7 +224,7 @@ jobs:
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: [urbit]
     if: inputs.upload
     steps:
