@@ -1046,7 +1046,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   _cw_init_io(lup_u);
 
   memset(&u3V, 0, sizeof(u3V));
-  memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
 
   //  load passkey
   //
@@ -2209,10 +2208,6 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
-        u3_Host.tra_u.nid_w = 0;
-        u3_Host.tra_u.fil_u = NULL;
-        u3_Host.tra_u.con_w = 0;
-        u3_Host.tra_u.fun_w = 0;
       }
     }
 
