@@ -91,7 +91,7 @@ jobs:
 
       - name: Build binary
         run: |
-          echo "${{ inputs.pace }}" > ./pkg/vere/PACE
+          echo "${{ inputs.pace }}" > ./PACE
           case "${{ matrix.target }}" in
             "linux-aarch64")
               bazel build --platforms=//:linux-aarch64 :urbit
@@ -146,8 +146,11 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          version="$(cat ./pkg/vere/VERSION)"
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${version}/vere-v${version}-${{ matrix.target }}"
+          version="$(cat ./VERSION)"
+          bazel build :version
+          sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
+            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
 
           # See https://github.com/urbit/vere/issues/86.
           if [[ "$version" == "1.16" ]]; then
@@ -228,7 +231,7 @@ jobs:
       - name: Build and push Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
-          version="v$(cat ./pkg/vere/VERSION)"
+          version="v$(cat ./VERSION)"
           tag="$version-${{ inputs.pace }}"
           bazel run :upload_docker
 
@@ -253,13 +256,18 @@ jobs:
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
 
           # See https://github.com/urbit/vere/issues/86.
-          if [[ $(cat ./pkg/vere/VERSION) == "1.16" ]]; then
-            gsutil cp ./pkg/vere/VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
+          if [[ $(cat ./VERSION) == "1.16" ]]; then
+            gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
           fi
 
+          bazel build :version
+          last_version=LAST_VERSION
+          grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h     \
+            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/' \
+            > $last_version
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp ./pkg/vere/VERSION "$target"
+          gsutil cp $last_version "$target"
 
           [ $exitcode -eq 0 ] &&
             echo "Upload to $target completed successfully." ||
