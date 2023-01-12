@@ -17,5 +17,9 @@ build --@io_bazel_rules_docker//transitions:enable=false
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
 
+# Always include source-level debug info.
+build --copt='-g'
+build --strip=never
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
