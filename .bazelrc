@@ -21,5 +21,8 @@ build --flag_alias=gcc_version=//:gcc_version
 build --copt='-g'
 build --strip=never
 
+# Use -O3 as the default optimization level.
+build --copt='-O3'
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
