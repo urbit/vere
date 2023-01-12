@@ -64,6 +64,15 @@ platform in the build command:
 $ bazel build --platforms=//:<target-platform> //pkg/...
 ```
 
+The default optimization level is `-O3`, but if you want to specify a different
+optimization level, use [`--copt`][copt]:
+```console
+$ bazel build --copt='-O0' :urbit
+```
+
+Note [`--copt`][copt] can be used to specify any C compiler options, not just
+optimization levels.
+
 ## Test Commands
 
 You can build and run unit tests only on native builds. If you have a native
@@ -91,5 +100,6 @@ pass `--clang_version="<version_string>"` to the failing command.
       `BUILD.bazel` files in [`pkg/`](pkg).
 
 [bazel]: https://bazel.build
+[copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
 [musl libc]: https://musl.libc.org
