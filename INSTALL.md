@@ -87,6 +87,21 @@ If you want to run a specific test, say
 $ bazel test //pkg/noun:hashtable_tests
 ```
 
+## Build Configuration File
+
+Any options you specify at the command line can instead be specified in
+`.user.bazelrc` if you find yourself using the same options over and over. This
+file is not tracked by `git`, so whatever you add to it will not affect anyone
+else. As an example, if you want to change the optimization level but don't want
+type `--copt='-O0'` each time, you can do the following:
+```console
+$ echo "build --copt='-O0'" >> .user.bazelrc
+$ bazel build :urbit
+```
+
+For more information on Bazel configuration files, consult the
+[Bazel docs][bazel-config].
+
 ## Common Issues
 
 If `bazel build` or `bazel test` generates an `undeclared inclusion(s) in rule`
@@ -100,6 +115,7 @@ pass `--clang_version="<version_string>"` to the failing command.
       `BUILD.bazel` files in [`pkg/`](pkg).
 
 [bazel]: https://bazel.build
+[bazel-config]: https://bazel.build/run/bazelrc
 [copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
 [musl libc]: https://musl.libc.org
