@@ -14,12 +14,8 @@ build --incompatible_enable_cc_toolchain_resolution
 build --@io_bazel_rules_docker//transitions:enable=false
 
 # Add aliases for compiler version build settings.
-build --flag_alias=aarch64_linux_gnu_gcc_version=//:aarch64_linux_gnu_gcc_version
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
-
-# Add alias for Docker image tag.
-build --flag_alias=image_tag=//:image_tag
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
