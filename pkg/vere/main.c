@@ -852,10 +852,11 @@ static void
 _cw_serf_step_trace(void)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    if ( u3_Host.tra_u.con_w == 0  && u3_Host.tra_u.fun_w == 0 ) {
+    c3_w trace_cnt_w = u3t_trace_cnt();
+    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(u3V.dir_c);
     }
-    else if ( u3_Host.tra_u.con_w >= 100000 ) {
+    else if ( trace_cnt_w >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(u3V.dir_c);
     }

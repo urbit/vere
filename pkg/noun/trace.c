@@ -549,6 +549,18 @@ u3t_init(void)
   u3T.euq_o = c3n;
 }
 
+c3_w
+u3t_trace_cnt(void)
+{
+  return _trace_cnt_w;
+}
+
+c3_w
+u3t_file_cnt(void)
+{
+  return _file_cnt_w;
+}
+
 /* u3t_boot(): turn sampling on.
 */
 void
