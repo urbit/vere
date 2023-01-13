@@ -5,13 +5,12 @@ We use [`bazel`][bazel][^1] to build Vere, which is packaged as a single binary,
 is where [`bazel`][bazel] runs and the target platform is where `urbit` will
 run:
 
-----------------------------------
- Host Platform  | Target Platform
-----------------------------------
- `linux-aarch64 | `linux-aarch64`
- `linux-x86_64` | `linux-x86_64`
- `macos-aarch64`| `macos-aarch64`
- `macos-x86_64` | `macos-x86_64`
+| Host Platform  | Target Platform |
+|----------------|-----------------|
+| `linux-aarch64`| `linux-aarch64` |
+| `linux-x86_64` | `linux-x86_64`  |
+| `macos-aarch64`| `macos-aarch64` |
+| `macos-x86_64` | `macos-x86_64`  |
 
 ## Prerequisites
 
