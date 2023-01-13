@@ -1,7 +1,6 @@
 name: Push to master
 
 on:
-  release: null
   push:
     branches:
       - master

@@ -1,7 +1,6 @@
 name: Push to develop
 
 on:
-  release: null
   push:
     branches:
       - develop

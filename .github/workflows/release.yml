@@ -1,7 +1,6 @@
 name: Push to release
 
 on:
-  release: null
   push:
     branches:
       - release
