@@ -674,8 +674,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  416
-#define VERE_LULL  327
+#define VERE_ZUSE  415
+#define VERE_LULL  326
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -812,8 +812,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 240),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 140),        //  god_u->hon_y
+                     u3nc(c3__arvo, 239),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 139),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
