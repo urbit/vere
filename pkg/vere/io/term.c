@@ -117,9 +117,6 @@ u3_term_log_init(void)
     //    and simply use constant sequences.
     //
     {
-      uty_u->ufo_u.mon_u = TERM_LIT_BUF("\033[?9h");
-      uty_u->ufo_u.mof_u = TERM_LIT_BUF("\033[?9l");
-
       uty_u->ufo_u.reg_u = TERM_LIT_BUF("\033[r");
 
       uty_u->ufo_u.suc_u = TERM_LIT_BUF("\033[s");
@@ -678,6 +675,7 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
           case 'C': _term_io_spit(uty_u, u3nc(c3__aro, 'r')); break;
           case 'D': _term_io_spit(uty_u, u3nc(c3__aro, 'l')); break;
         //
+          //NOTE  mouse reporting not presently enabled, see #109
           case 'M': tat_u->esc.mou = c3y; break;
         }
         tat_u->esc.ape = tat_u->esc.bra = c3n;
@@ -1596,10 +1594,6 @@ _term_io_talk(u3_auto* car_u)
   if ( c3n == u3_Host.ops_u.tem ) {
     u3_utty* uty_u = _term_main();
 
-    //  start mouse handling
-    //
-    _term_it_dump_buf(uty_u, &uty_u->ufo_u.mon_u);
-
     uv_read_start((uv_stream_t*)&(uty_u->pin_u),
                   _term_alloc,
                   _term_read_cb);
@@ -1757,10 +1751,6 @@ _term_io_exit(u3_auto* car_u)
   u3_utty* uty_u = _term_main();
 
   if ( c3n == u3_Host.ops_u.tem ) {
-    //  stop mouse handling
-    //
-    _term_it_dump_buf(uty_u, &uty_u->ufo_u.mof_u);
-
     //  move cursor to the end
     //
     _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_l - 1);
