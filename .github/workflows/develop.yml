@@ -1,10 +1,17 @@
 name: Push to develop
 
 on:
-  release: null
   push:
     branches:
       - develop
+    paths:
+      - '*.bazel'
+      - '.bazelrc'
+      - '.github/workflows/**.yml'
+      - 'PACE'
+      - 'VERSION'
+      - 'bazel/**'
+      - 'pkg/**'
 
 jobs:
   urbit:
