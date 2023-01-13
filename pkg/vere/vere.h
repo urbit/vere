@@ -191,9 +191,6 @@
     /* u2_utfo: terminal escape sequences
     */
       typedef struct {
-        uv_buf_t mon_u;                //  mouse reporting on
-        uv_buf_t mof_u;                //  mouse reporting off
-        //
         uv_buf_t reg_u;                //  restore scroll region
         //
         uv_buf_t suc_u;                //  save cursor position
