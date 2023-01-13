@@ -5,6 +5,14 @@ on:
   push:
     branches:
       - release
+    paths:
+      - '*.bazel'
+      - '.bazelrc'
+      - '.github/workflows/**.yml'
+      - 'PACE'
+      - 'VERSION'
+      - 'bazel/**'
+      - 'pkg/**'
 
 jobs:
   urbit:
