@@ -83,6 +83,9 @@ cc_toolchain(
 
 toolchain(
     name = "gcc-linux-aarch64-toolchain",
+    # To building for `linux-aarch64` on `linux-aarch64`, remove the x86_64 CPU
+    # constraint below, which will allow this toolchain to run on
+    # `linux-aarch64` platforms.
     exec_compatible_with = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
