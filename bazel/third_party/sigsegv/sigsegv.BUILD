@@ -20,7 +20,13 @@ configure_make(
         "@platforms//os:linux": ["--disable-stackvma"],
         "//conditions:default": [],
     }) + select({
-        "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
+        # To build for `linux-aarch64` on `linux-aarch64`, replace
+        # `--host=x86_64-linux --target=aarch64-linux-musl` below with
+        # `--host=aarch64-linux-musl`.
+        "@//:linux_aarch64": [
+            "--host=x86_64-linux",
+            "--target=aarch64-linux-musl",
+        ],
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
     }),
