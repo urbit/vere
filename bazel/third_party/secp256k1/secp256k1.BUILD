@@ -19,6 +19,17 @@ configure_make(
         "--enable-module-schnorrsig",
         "--enable-static",
     ] + select({
+        # The `--host` flag is not well-documented by the docs in the secp256k1
+        # repo, but the following commands produce an AArch64 library:
+        # ```
+        # $ CC=path/to/aarch64-linux-musl-gcc ./configure --prefix=/tmp --host=aarch64-linux-musl
+        # $ make install
+        # ```
+        #
+        # This can be verified with:
+        # ```
+        # $ path/to/aarch64-linux-musl-objdump -d /tmp/lib/libsecp256k1.a
+        # ```
         "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
