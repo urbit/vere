@@ -1,115 +1,129 @@
-# Maintainers' Guide
+# Maintaining
 
-## Branch organization
+## Overview
 
-The essence of this branching scheme is that you create "release branches" of
-independently releasable units of work.  These can then be released by their
-maintainers when ready.
+We use a three-stage release pipeline. Each stage of the release pipeline has
+its own dedicated branch and a corresponding "train" (also called a pace).
+Features and bug fixes progress through each stage--and are subject to testing
+along the way--until they're eventually released to the live network. This
+pipeline automates our release process, making it much easier to quickly and
+reliably ship code. It's also simple to reason about.
 
-### Master branch
+## Branches and Trains
 
-Master is what's released on the network.  Deployment instructions are in the
-next section, but tagged releases should always come from this branch.
+The branches and their corresponding trains that comprise the stages of the
+release pipeline are:
 
-### Release branches
+| Branch    | Train  | Target audience    |
+|-----------|--------|--------------------|
+| `develop` | `edge` | Runtime developers |
+| `release` | `soon` | Early adopters     |
+| `master`  | `live` | Everyone else      |
 
-`next/vere` is the release branch.
+`develop` is the default branch in the repo, which means that all new pull
+requests target it by default. The general flow of a new feature or bug fix
+through the pipeline is:
 
-All code must be reviewed before being pushed to the release branch.  Thus,
-issue branches should be PR'd against a release branch, not master.
-
-### Other cases
-
-Outside contributors can generally target their PRs against master unless
-specifically instructed.  Maintainers should retarget those branches as
-appropriate.
-
-If a commit is not something that goes into a release (eg changes to README or
-CI), it may be committed straight to master.
-
-If a hotfix is urgent, it may be PR'd straight to master.  This should only be
-done if you reasonably expect that it will be released soon and before anything
-else is released.
-
-If a series of commits that you want to release is on a release branch, but you
-really don't want to release the whole branch, you must cherry-pick them onto
-another release branch.  Cherry-picking isn't ideal because those commits will
-be duplicated in the history, but it won't have any serious side effects.
-
-
-## Hotfixes
-
-Here lies an informal guide for making hotfix releases and deploying them to
-the network.
-
-Ideally, hotfixes should consist of a single commit, targeting a problem that 
-existed in the latest runtime at the time. 
-
-### If the thing is acceptable to merge, merge it to master
-
-Unless it's very trivial, it should probably have a single "credible looking"
-review from somebody else on it.
-
-### Tag the resulting commit
-
-You can get the "contributions" section by the shortlog between the
-last release and this release:
-
-```
-git shortlog LAST_RELEASE..
+```console
+feature branch ----> develop ----> release ----> master
+                        |             |             |
+                    deployed to    deployed to   deployed to
+                    edge train     soon train    live train
 ```
 
-I originally tried to curate this list somewhat, but now just paste it
-verbatim.  If it's too noisy, yell at your colleagues to improve their commit
-messages.
+If an issue arises in the course of testing the `release` branch (because more
+people are using `soon` than `edge`), a PR can be opened to target `release`.
+If that's the case, the `master` needs to be merged back into `develop` after
+`release` merges into `master` to ensure that `develop` gets the fix.
 
-Try to include a high-level summary of the changes in the "release notes"
-section.  You should be able to do this by simply looking at the git log and
-skimming the commit descriptions (or perhaps copying some of them in verbatim).
-If the commit descriptions are too poor to easily do this, then again, yell at
-your fellow contributors to make them better in the future.
+## Version Numbers
 
-Tag the release as `urbit-vx.y`.  The tag format should look something like
-this:
+Each time a commit is pushed to `develop`, `release`, or `master`--say, when a
+PR merges--we build and deploy a new version of the binary available for
+consumption by anyone subscribed to that train (via `<pier>/.bin/pace`).
 
+For `edge` and `soon`, each binary is given a version of the form
+`{version number}-{shortened commit SHA}`, where `{version number}` is the
+version number listed in the [version file in the root of this repo][version]
+and `{shortened commit SHA}` is the shortened commit SHA of the commit the
+binary was built from. This allows subscribers to `edge` and `soon` to
+continually pull down new binaries via the `next` subcommand even when the
+version number in the [version file][version] remains the same.
+
+For `master`, each binary is given a version of the form `{version number}`,
+where `{version number}` is simply the version number listed in the
+[version file in the root of this repo][version].
+
+Each time a release is cut (i.e. `develop` is merged into `release` to kick off
+a release), the version number should be bumped on `develop` in anticipation of
+the next release.
+
+## Deploy Endpoints
+
+Binaries are deployed to the following endpoints, where `{VN}` is the version
+number in VERSION, `{CS}` is the shortened commit SHA of the commit the binary
+is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
+`macos-aarch64`, and `macos-x86_64`:
+
+- https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{P}
+- https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{P}
+- https://bootstrap.urbit.org/vere/live/v{VN}/vere-v{VN}-{P}
+
+The most recently deployed version of a given train (pace) is uploaded to
+https://bootstrap.urbit.org/vere/{T}/last, where `{T}` is one of `edge`, `soon`,
+and `live`:
+
+## Releases
+
+In anticipation of a new release to `live`, create a new pull request
+targeting `master` from `release`.
+
+When you're ready to release to `live`, tag the tip of `release` with a tag of
+the form `vere-v{version}`, where `{version}` is the contents of
+[VERSION][version]:
+```console
+$ cd path/to/vere/repo
+$ git checkout release
+$ git fetch origin && git merge origin/release
+$ git tag vere-v$(cat VERSION)
+$ git push origin vere-v$(cat VERSION)
 ```
-urbit-vx.y
 
-Note that this release will by default boot fresh ships using an Urbit OS
-va.b.c pill.
+Then merge the pull request, which triggers the deployment of the `live`
+binaries. **Once the binaries have been deployed**, which usually takes about
+thirty minutes, create a GitHub release using the following checklist:
 
-Release binaries:
+- [ ] Select the just-created tag as the tag for the release.
+- [ ] Select `master` as the target for the release.
+- [ ] Use the tag name (i.e. `vere-v1.17`) as the title of the release.
+- [ ] Select the prevoius release's tag (i.e. `vere-v1.16`) as the previous tag.
+- [ ] Click "Generate release notes".
+- [ ] Add the following information above the autogenerated `## What's Changed`
+      section:
+```text
+Arvo {Kelvin version}K
+Vere {Vere version}
 
-(linux-aarch64)
-https://bootstrap.urbit.org/urbit-vx.y-linux-aarch64.tgz
-
-(linux-x86_64)
-https://bootstrap.urbit.org/urbit-vx.y-linux-x86_64.tgz
-
-(macos-aarch64)
-https://bootstrap.urbit.org/urbit-vx.y-macos-aarch64.tgz
-
-(macos-x86_64)
-https://bootstrap.urbit.org/urbit-vx.y-macos-x86_64.tgz
-
-Release notes:
-
-  [..]
-
-Contributions:
-
-  [..]
+## Description
+{Notes describing the release}
 ```
+- [ ] Upload a tarball of the binary to the release for each platform we
+      support. Generate a platform's tarball using the following commands, where
+      `{platform}` is one of `linux-aarch64`, `linux-x86_64`, `macos-aarch64`,
+      and `macos-x86_64`:
+```console
+$ wget https://bootstrap.urbit.org/vere/live/v{version}/vere-v{version}-{platform}
+$ chmod +x vere-v{version}-{platform}
+$ tar zcf {platform}.tgz vere-v{version}-{platform}
+```
+- [ ] Check the box marked "Set as the latest release".
+- [ ] Click "Publish release".
 
-Ensure the release is marked as the 'latest' release and upload the four 
-`.tgz` files to the release as `darwin.tgz` and `linux64.tgz`;
-this allows us to programmatically retrieve the latest releases at
-the corresponding platform's URL: `https://urbit.org/install/{platform}/latest`.
+Post an announcement to the [urbit-dev mailing
+list][urbit-dev] containing a copy of the release notes. When in doubt, follow
+the format of the previous release's announcement. Also post an announcement to
+the "General" channel of the [Urbit Community group][urbit-community].
 
-### Announce the update
-
-Post an announcement to urbit-dev.  The tag annotation, basically, is fine here
--- I usually add the release binary URLs.  Check the urbit-dev archives for examples 
-of these announcements.
-
-Post the same announcement to the group feed of Urbit Community.
+[urbit-community]: https://urbit.org/groups/~bitbet-bolbel/urbit-community
+[urbit-dev]: https://groups.google.com/a/urbit.org/g/dev
+[version]: https://github.com/urbit/vere/tree/develop/VERSION
