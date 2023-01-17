@@ -44,15 +44,15 @@ consumption by anyone subscribed to that train (via `<pier>/.bin/pace`).
 
 For `edge` and `soon`, each binary is given a version of the form
 `{version number}-{shortened commit SHA}`, where `{version number}` is the
-version number listed in the [version file in the root of this repo](./VERSION)
+version number listed in the [version file in the root of this repo][version]
 and `{shortened commit SHA}` is the shortened commit SHA of the commit the
 binary was built from. This allows subscribers to `edge` and `soon` to
 continually pull down new binaries via the `next` subcommand even when the
-version number in the [version file](./VERSION) remains the same.
+version number in the [version file][version] remains the same.
 
 For `master`, each binary is given a version of the form `{version number}`,
 where `{version number}` is simply the version number listed in the
-[version file in the root of this repo](./VERSION).
+[version file in the root of this repo][version].
 
 Each time a release is cut (i.e. `develop` is merged into `release` to kick off
 a release), the version number should be bumped on `develop` in anticipation of
@@ -80,7 +80,7 @@ targeting `master` from `release`.
 
 When you're ready to release to `live`, tag the tip of `release` with a tag of
 the form `vere-v{version}`, where `{version}` is the contents of
-[VERSION](./VERSION):
+[VERSION][version]:
 ```console
 $ cd path/to/vere/repo
 $ git checkout release
@@ -126,3 +126,4 @@ the "General" channel of the [Urbit Community group][urbit-community].
 
 [urbit-community]: https://urbit.org/groups/~bitbet-bolbel/urbit-community
 [urbit-dev]: https://groups.google.com/a/urbit.org/g/dev
+[version]: https://github.com/urbit/vere/tree/develop/VERSION
