@@ -191,9 +191,6 @@
     /* u2_utfo: terminal escape sequences
     */
       typedef struct {
-        uv_buf_t mon_u;                //  mouse reporting on
-        uv_buf_t mof_u;                //  mouse reporting off
-        //
         uv_buf_t reg_u;                //  restore scroll region
         //
         uv_buf_t suc_u;                //  save cursor position
@@ -257,15 +254,6 @@
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
-
-    /* u3_trac: tracing information.
-    */
-      typedef struct _u3_trac {
-        c3_w   nid_w;                       //  nock pid
-        FILE*  fil_u;                       //  trace file (json)
-        c3_w   con_w;                       //  trace counter
-        c3_w   fun_w;                       //  file counter
-      } u3_trac;
 
     /* u3_opts: command line configuration.
     */
@@ -334,7 +322,6 @@
         u3_opts    ops_u;                   //  commandline options
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
-        u3_trac    tra_u;                   //  tracing information
         void     (*bot_f)();                //  call when chis is up
       } u3_host;                            //  host == computer == process
 
