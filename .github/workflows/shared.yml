@@ -33,7 +33,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-aarch64, runner: ubuntu-22.04 }
+          # GitHub doesn't provide AArch64 Linux machines, so we self-host a
+          # runner instead.
+          - { target: linux-aarch64, runner: [self-hosted, Linux, ARM64] }
           - { target: linux-x86_64, runner: ubuntu-22.04 }
           # GitHub doesn't provide M1 macOS machines, so we self-host a runner
           # instead.
@@ -49,9 +51,12 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: chown /usr/local
-        if: ${{ matrix.target == 'linux-aarch64' || matrix.target == 'linux-x86_64' }}
+        if: ${{ matrix.target == 'linux-x86_64' }}
         run: |
-          # See https://github.com/actions/cache/issues/845.
+          # See https://github.com/actions/cache/issues/845. Note we don't run
+          # this on linux-aarch64 because we run on a self-hosted GitHub Actions
+          # runner for which `/usr/local` has already been `chown`d to the user
+          # running the GitHub Actions runner.
           sudo chown -R $(whoami) /usr/local
 
       - name: Set up build cache
@@ -94,7 +99,7 @@ jobs:
           echo "${{ inputs.pace }}" > ./PACE
           case "${{ matrix.target }}" in
             "linux-aarch64")
-              bazel build --platforms=//:linux-aarch64 :urbit
+              bazel build :urbit
               ;;
             "linux-x86_64")
               bazel build :urbit
@@ -108,9 +113,6 @@ jobs:
           esac
 
       - name: Run unit tests
-        # We have no way of running the linux-aarch64 tests on a linux-x86_64
-        # machine.
-        if: ${{ matrix.target != 'linux-aarch64' }}
         run: |
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
             bazel test --build_tests_only --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
