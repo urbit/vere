@@ -5,7 +5,6 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# TODO: check windows build.
 configure_make(
     name = "curl",
     args = select({
@@ -53,8 +52,18 @@ configure_make(
         "--without-zlib",
         "--without-zstd",
     ] + select({
-        "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
-        "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
+        # The "Cross compile" section of docs/INSTALL.md in the curl repo makes
+        # it clear that `--host` specifies the system on which the compilation
+        # occurs and `--build` specifies the system on which the resulting code
+        # will run.
+        "@//:linux_aarch64": [
+            "--host=x86_64-linux",
+            "--build=aarch64-linux-musl",
+        ],
+        "@//:linux_x86_64": [
+            "--host=x86_64-linux",
+            "--build=x86_64-linux-musl",
+        ],
         "//conditions:default": [],
     }),
     env = {
