@@ -376,3 +376,14 @@ _container_deps(
     go_repository_default_config = "@//:WORKSPACE.bazel",
 )
 _cc_image_repos()
+
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+
+container_pull(
+    name = "alpine_linux_x86_64",
+    architecture = "amd64",
+    digest = "sha256:93d5a28ff72d288d69b5997b8ba47396d2cbb62a72b5d87cd3351094b5d578a0",
+    registry = "docker.io",
+    repository = "alpine",
+    timeout = 300, # [seconds]
+)
