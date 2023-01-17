@@ -83,9 +83,12 @@ cc_toolchain(
 
 toolchain(
     name = "gcc-linux-aarch64-toolchain",
-    # To building for `linux-aarch64` on `linux-aarch64`, remove the x86_64 CPU
-    # constraint below, which will allow this toolchain to run on
-    # `linux-aarch64` platforms.
+    # To build for `linux-aarch64` on `linux-aarch64` (i.e. a `linux-aarch64`
+    # native build), remove the x86_64 CPU constraint below, which will allow
+    # this toolchain to run on `linux-aarch64` platforms. Note that at least
+    # some of the third party dependency build rules assume cross-compilation
+    # when the target platform is `linux-aarch64`, which means those build rules
+    # will need to be updated to enable a `linux-aarch64` native build.
     exec_compatible_with = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
