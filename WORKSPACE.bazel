@@ -130,6 +130,13 @@ versioned_http_archive(
     version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
 )
 
+versioned_http_archive(
+    name = "bazel_gazelle",
+    sha256 = "efbbba6ac1a4fd342d5122cbdfdb82aeb2cf2862e35022c752eaddffada7c3f3",
+    url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/v{version}/bazel-gazelle-v{version}.tar.gz",
+    version = "0.27.0",
+)
+
 # See https://curl.se/docs/caextract.html.
 versioned_http_file(
     name = "ca_bundle",
@@ -177,6 +184,20 @@ versioned_http_archive(
     # {build_file} and confirm that {build_file} remains an accurate description
     # of the h2o build process.
     version = "2.2.6",
+)
+
+versioned_http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    url = "https://github.com/bazelbuild/rules_docker/releases/download/v{version}/rules_docker-v{version}.tar.gz",
+    version = "0.25.0",
+)
+
+versioned_http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/v{version}/rules_go-v{version}.zip",
+    version = "0.31.0",
 )
 
 versioned_http_file(
@@ -330,59 +351,28 @@ versioned_http_archive(
 )
 
 #
-# GOLANG (DOCKER DEPENDENCY)
+# DOCKER SETUP
 #
 
 # These must be loaded before the Docker rules.
 # See https://github.com/bazelbuild/rules_docker/issues/2075#issuecomment-1115954091.
-versioned_http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/v{version}/rules_go-v{version}.zip",
-    version = "0.31.0",
-)
-
-versioned_http_archive(
-    name = "bazel_gazelle",
-    sha256 = "efbbba6ac1a4fd342d5122cbdfdb82aeb2cf2862e35022c752eaddffada7c3f3",
-    url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/v{version}/bazel-gazelle-v{version}.tar.gz",
-    version = "0.27.0",
-)
-
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 go_rules_dependencies()
-
 go_register_toolchains(version = "1.18")
-
 gazelle_dependencies(go_repository_default_config = "//:WORKSPACE.bazel")
-
-#
-# DOCKER
-#
-
-versioned_http_archive(
-    name = "io_bazel_rules_docker",
-    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
-    url = "https://github.com/bazelbuild/rules_docker/releases/download/v{version}/rules_docker-v{version}.tar.gz",
-    version = "0.25.0",
-)
 
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
+    _container_repositories = "repositories",
 )
+load("@io_bazel_rules_docker//repositories:deps.bzl", _container_deps = "deps")
+load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
 
-container_repositories()
-
-load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
-
-container_deps(
+_container_repositories()
+_container_deps(
     # See https://github.com/bazelbuild/rules_docker/issues/1902.
     go_repository_default_config = "@//:WORKSPACE.bazel",
 )
-
-load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
-
 _cc_image_repos()
