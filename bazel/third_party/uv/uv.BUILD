@@ -5,7 +5,6 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# TODO: check windows build.
 configure_make(
     name = "uv",
     args = select({
@@ -17,6 +16,17 @@ configure_make(
     configure_options = [
         "--disable-shared",
     ] + select({
+        # The `--host` flag is not well-documented by the docs in the libuv
+        # repo, but the following commands produce an AArch64 library:
+        # ```
+        # $ CC=path/to/aarch64-linux-musl-gcc ./configure --prefix=/tmp --host=aarch64-linux-musl
+        # $ make install
+        # ```
+        #
+        # This can be verified with:
+        # ```
+        # $ path/to/aarch64-linux-musl-objdump -d /tmp/lib/libuv.a
+        # ```
         "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
