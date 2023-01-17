@@ -112,9 +112,8 @@ Vere {Vere version}
       `{platform}` is one of `linux-aarch64`, `linux-x86_64`, `macos-aarch64`,
       and `macos-x86_64`:
 ```console
-$ mkdir vere-v{version}-{platform}
-$ wget -O vere-v{version}-{platform}/urbit https://bootstrap.urbit.org/vere/live/v{version}/vere-v{version}-{platform}
-$ chmod +x vere-v{version}-{platform}/urbit
+$ wget https://bootstrap.urbit.org/vere/live/v{version}/vere-v{version}-{platform}
+$ chmod +x vere-v{version}-{platform}
 $ tar zcf {platform}.tgz vere-v{version}-{platform}
 ```
 - [ ] Check the box marked "Set as the latest release".
