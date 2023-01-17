@@ -62,7 +62,7 @@ the next release.
 
 Binaries are deployed to the following endpoints, where `{VN}` is the version
 number in VERSION, `{CS}` is the shortened commit SHA of the commit the binary
-is built off, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
+is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 `macos-aarch64`, and `macos-x86_64`:
 
 - https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{P}
