@@ -8,7 +8,7 @@ run:
 ----------------------------------
  Host Platform  | Target Platform
 ----------------------------------
- `linux-x86_64` | `linux-aarch64`
+ `linux-aarch64 | `linux-aarch64`
  `linux-x86_64` | `linux-x86_64`
  `macos-aarch64`  | `macos-aarch64`
  `macos-x86_64` | `macos-x86_64`
@@ -51,17 +51,9 @@ This will take a few minutes.
 
 ## Build Commands
 
-Once you install the prerequisites, you're ready to build. If you're performing
-a native build (i.e. one in which the host platform and target platform are the
-same), run:
+Once you install the prerequisites, you're ready to build:
 ```console
-$ bazel build //pkg/...
-```
-
-If you're performing a cross-platform build, you need to specify the target
-platform in the build command:
-```console
-$ bazel build --platforms=//:<target-platform> //pkg/...
+$ bazel build :urbit
 ```
 
 The default optimization level is `-O3`, but if you want to specify a different
