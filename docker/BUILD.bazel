@@ -1,7 +1,9 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
 
-_docker_repository = "tloncorp/vere-test"
+#
+# IMAGE CREATION
+#
 
 sh_binary(
     name = "start-urbit",
@@ -54,6 +56,23 @@ container_image(
     ],
     volumes = ["/urbit"],
     workdir = "/urbit",
+    visibility = ["//visibility:public"],
+)
+
+#
+# IMAGE UPLOAD
+#
+
+_docker_repository = "tloncorp/vere-test"
+
+genrule(
+    name = "version_tag",
+    srcs = ["//:version"],
+    outs = ["docker_version_tag"],
+    cmd = """
+    echo -n v$$(cat $<) > $@
+    """,
+    visibility = ["//visibility:private"],
 )
 
 container_push(
@@ -63,15 +82,7 @@ container_push(
     registry = "docker.io",
     repository = _docker_repository,
     tag = "latest",
-)
-
-genrule(
-    name = "version_tag",
-    srcs = ["//:version"],
-    outs = ["docker_version_tag"],
-    cmd = """
-    echo -n v$$(cat $<) > $@
-    """,
+    visibility = ["//visibility:public"],
 )
 
 container_push(
@@ -81,4 +92,5 @@ container_push(
     registry = "docker.io",
     repository = _docker_repository,
     tag_file = ":version_tag",
+    visibility = ["//visibility:public"],
 )
