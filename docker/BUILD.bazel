@@ -17,10 +17,10 @@ sh_binary(
 )
 
 container_run_and_commit_layer(
-    name = "libcap",
+    name = "install_pkgs",
     commands = [
         "apk update",
-        "apk add libcap",
+        "apk add bash curl libcap sudo",
     ],
     docker_run_flags = ["--network=host"],
     image = "@alpine_linux_x86_64//image",
@@ -40,7 +40,7 @@ container_image(
         ":get_urbit_code",
         ":reset_urbit_code",
     ],
-    layers = [":libcap"],
+    layers = [":install_pkgs"],
     ports = [
         "80/tcp",
         "34343/udp",
