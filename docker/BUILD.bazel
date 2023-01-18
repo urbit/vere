@@ -1,36 +1,55 @@
-load("@io_bazel_rules_docker//cc:image.bzl", "cc_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
 
-#
-# DOCKER IMAGE
-#
-
-cc_image(
-    name = "docker",
-    binary = "//pkg/vere:urbit",
+sh_binary(
+    name = "start_urbit",
+    srcs = ["start_urbit.sh"],
 )
 
-genrule(
-    name = "docker_tag",
-    visibility = ["//visibility:private"],
-    srcs = [
-        "//pkg/vere:PACE",
-        "//pkg/vere:VERSION",
+sh_binary(
+    name = "get_urbit_code",
+    srcs = ["get_urbit_code.sh"],
+)
+
+sh_binary(
+    name = "reset_urbit_code",
+    srcs = ["reset_urbit_code.sh"],
+)
+
+container_run_and_commit_layer(
+    name = "libcap",
+    commands = [
+        "apk update",
+        "apk add libcap",
     ],
-    outs = ["DOCKER_TAG"],
-    cmd = """
-    pace=`tr -d '\n' < $(execpath //pkg/vere:PACE)`
-    version=v`tr -d '\n' < $(execpath //pkg/vere:VERSION)`
-    echo "$$version-$$pace" > $@
-    """,
+    docker_run_flags = ["--network=host"],
+    image = "@alpine_linux_x86_64//image",
 )
 
-
-container_push(
-    name = "upload_docker",
-    format = "Docker",
-    image = ":docker",
-    registry = "docker.io",
-    repository = "tloncorp/vere",
-    tag_file = ":docker_tag",
+container_image(
+    name = "image_x86_64",
+    base = "@alpine_linux_x86_64//image",
+    cmd = ["/bin/urbit", "-F", "zod", "-t", "-u", "https://bootstrap.urbit.org/urbit-v1.16.pill"],
+    # `/bin` is probably on the default path, but append it just to be safe.
+    env = {
+        "PATH": "$$PATH:/bin",
+    },
+    files = [
+        "//pkg/vere:urbit",
+        ":start_urbit",
+        ":get_urbit_code",
+        ":reset_urbit_code",
+    ],
+    layers = [":libcap"],
+    ports = [
+        "80/tcp",
+        "34343/udp",
+    ],
+    symlinks = {
+        "/bin/urbit": "/urbit",
+        "/bin/start-urbit": "/start_urbit.sh",
+        "/bin/get-urbit-code": "/get_urbit_code.sh",
+        "/bin/reset-urbit-code": "/reset_urbit_code.sh",
+    },
+    #volumes = ["/urbit"],
 )
