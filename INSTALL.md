@@ -114,9 +114,38 @@ bazel build :urbit
 For more information on Bazel configuration files, consult the
 [Bazel docs][bazel-config].
 
+## Run Commands
+
+Once the binary is built, you can run it with:
+
+```console
+$ bazel run :urbit -- <options>
+```
+
+Or, if that's too many characters to type, create a symlink to the `urbit`
+binary in the root of the repo:
+
+```console
+$ ln -s bazel-bin/pkg/vere/urbit urbit
+$ ./urbit <options>
+```
+
 ## Common Issues
 
-If `bazel build` or `bazel test` generates an `undeclared inclusion(s) in rule`
+- When attempting to boot a ship using an `urbit` binary compiled from source
+  with a specified pace (release channel) of `once`, `edge`, or `soon` (i.e. not
+  `live`), the default pill URL of
+  https://bootstrap.urbit.org/urbit-v{version}.pill--where `{version}` is
+  something like `1.17`--will not work because the version string for non-`live`
+  release channels is `v{version}-{shortened commit SHA}`. To get around this,
+  either supply your own pill via `-B`/`--bootstrap` or specify the pill URL via
+  `-u`/`--bootstrap-url`:
+```console
+$ ./urbit -F zod -B path/to/pill
+$ ./urbit -F bus -u https://bootstrap.urbit.org/urbit-v{version}.pill
+```
+
+- If `bazel build` or `bazel test` generates an `undeclared inclusion(s) in rule`
 error on macOS, the version of `clang` expected by the build system likely
 doesn't match the version of `clang` installed on your system. To address this,
 run `clang --version` and pass the version number via
