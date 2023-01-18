@@ -30,16 +30,16 @@ container_image(
     name = "image_x86_64",
     base = "@alpine_linux_x86_64//image",
     cmd = ["start-urbit"],
+    directory = "/bin",
     # `/bin` is probably on the default path, but append it just to be safe.
     env = {
         "PATH": "$$PATH:/bin",
     },
-    directory = "/bin",
     files = [
-        "//pkg/vere:urbit",
-        ":start-urbit",
         ":get-urbit-code",
         ":reset-urbit-code",
+        ":start-urbit",
+        "//pkg/vere:urbit",
     ],
     layers = [":install_pkgs"],
     ports = [
