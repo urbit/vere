@@ -29,7 +29,7 @@ container_run_and_commit_layer(
 container_image(
     name = "image_x86_64",
     base = "@alpine_linux_x86_64//image",
-    cmd = ["/bin/urbit", "-F", "zod", "-t", "-u", "https://bootstrap.urbit.org/urbit-v1.16.pill"],
+    cmd = ["start-urbit"],
     # `/bin` is probably on the default path, but append it just to be safe.
     env = {
         "PATH": "$$PATH:/bin",
