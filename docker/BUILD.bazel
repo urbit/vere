@@ -1,4 +1,4 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
 
 sh_binary(
@@ -48,4 +48,12 @@ container_image(
     ],
     volumes = ["/urbit"],
     workdir = "/urbit",
+)
+
+container_push(
+    name = "push_x86_64",
+    format = "Docker",
+    image = ":image_x86_64",
+    registry = "docker.io",
+    repository = "tloncorp/vere-test",
 )
