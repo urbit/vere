@@ -46,6 +46,6 @@ container_image(
         "80/tcp",
         "34343/udp",
     ],
-    #volumes = ["/urbit"],
+    volumes = ["/urbit"],
     workdir = "/urbit",
 )
