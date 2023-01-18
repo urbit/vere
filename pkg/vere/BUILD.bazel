@@ -102,8 +102,8 @@ cc_library(
         ],
     ) + [
         ":ivory",
-        "//:pace",
-        "//:version",
+        "//:pace_hdr",
+        "//:version_hdr",
     ] + select({
         "@platforms//os:macos": [
             "platform/darwin/daemon.c",
@@ -144,8 +144,8 @@ cc_binary(
         "main.c",
         ":ca_bundle",
         ":ivory",
-        "//:pace",
-        "//:version",
+        "//:pace_hdr",
+        "//:version_hdr",
     ],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
