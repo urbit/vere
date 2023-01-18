@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl=$(curl -s -X POST -H "Content-Type: application/json" \
+resp=$(curl -s -X POST -H "Content-Type: application/json" \
   -d '{ "source": { "dojo": "+hood/code %reset" }, "sink": { "app": "hood" } }' \
   http://127.0.0.1:12321)
 
