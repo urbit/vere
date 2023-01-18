@@ -63,7 +63,7 @@ container_image(
 # IMAGE UPLOAD
 #
 
-_docker_repository = "tloncorp/vere-test"
+_docker_repository = "tloncorp/vere"
 
 genrule(
     name = "version_tag",
