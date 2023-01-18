@@ -17,7 +17,7 @@ esac
 done
 
 # Set network capabilities for the Urbit binary.
-setcap 'cap_net_bind_service=+ep' $(which urbit)
+sudo setcap 'cap_net_bind_service=+ep' $(readlink $(which urbit))
 
 # If the container is not started with the `-i` flag
 # then STDIN will be closed and we need to start
