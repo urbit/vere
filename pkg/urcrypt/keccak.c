@@ -1,6 +1,6 @@
+#include "keccak-tiny.h"
 #include "urcrypt.h"
 #include "util.h"
-#include <keccak-tiny.h>
 
 #define defkec(bits,byts) \
   int urcrypt_keccak_##bits(const uint8_t *message, size_t length, \

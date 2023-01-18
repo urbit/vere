@@ -1,6 +1,6 @@
+#include "aes_siv.h"
 #include "urcrypt.h"
 #include "util.h"
-#include "aes_siv.h"
 
 static AES_SIV_CTX*
 urcrypt__aes_siv_init(uint8_t *key,

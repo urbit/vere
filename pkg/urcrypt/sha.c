@@ -1,6 +1,6 @@
+#include "openssl/sha.h"
 #include "urcrypt.h"
 #include "util.h"
-#include <openssl/sha.h>
 
 void
 urcrypt_sha1(uint8_t *message, size_t length, uint8_t out[20])

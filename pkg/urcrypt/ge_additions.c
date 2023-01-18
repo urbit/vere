@@ -1,5 +1,5 @@
 #include "urcrypt.h"
-#include <ge-additions.h>
+#include "ge-additions.h"
 
 int
 urcrypt_ed_point_add(const uint8_t a[32],

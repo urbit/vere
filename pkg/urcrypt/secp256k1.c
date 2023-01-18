@@ -1,11 +1,12 @@
+#include <string.h>
+
+#include "secp256k1.h"
+#include "secp256k1_extrakeys.h"
+#include "secp256k1_recovery.h"
+#include "secp256k1_preallocated.h"
+#include "secp256k1_schnorrsig.h"
 #include "urcrypt.h"
 #include "util.h"
-#include <string.h>
-#include <secp256k1.h>
-#include <secp256k1_extrakeys.h>
-#include <secp256k1_recovery.h>
-#include <secp256k1_preallocated.h>
-#include <secp256k1_schnorrsig.h>
 
 #define SECP_FLAGS SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN
 

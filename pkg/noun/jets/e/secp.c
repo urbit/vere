@@ -3,9 +3,9 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "ent.h"
 #include "noun.h"
 #include "urcrypt.h"
-#include <ent.h>
 
 static urcrypt_secp_context* sec_u;
 

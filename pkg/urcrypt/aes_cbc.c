@@ -1,7 +1,8 @@
+#include <string.h>
+
+#include "openssl/aes.h"
 #include "urcrypt.h"
 #include "util.h"
-#include <string.h>
-#include <openssl/aes.h>
 
 static int
 urcrypt__cbc_pad(uint8_t **message_ptr,

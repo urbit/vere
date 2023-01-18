@@ -1,6 +1,6 @@
+#include "openssl/aes.h"
 #include "urcrypt.h"
 #include "util.h"
-#include <openssl/aes.h>
 
 int
 urcrypt_aes_ecba_en(uint8_t key[16], uint8_t block[16], uint8_t out[16])

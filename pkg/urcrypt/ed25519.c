@@ -1,6 +1,7 @@
-#include "urcrypt.h"
 #include <string.h>
-#include <ed25519.h>
+
+#include "ed25519.h"
+#include "urcrypt.h"
 
 void
 urcrypt_ed_puck(const uint8_t seed[32],
