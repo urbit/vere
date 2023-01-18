@@ -6,16 +6,19 @@ _docker_repository = "tloncorp/vere-test"
 sh_binary(
     name = "start-urbit",
     srcs = ["start_urbit.sh"],
+    visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "get-urbit-code",
     srcs = ["get_urbit_code.sh"],
+    visibility = ["//visibility:private"],
 )
 
 sh_binary(
     name = "reset-urbit-code",
     srcs = ["reset_urbit_code.sh"],
+    visibility = ["//visibility:private"],
 )
 
 container_run_and_commit_layer(
@@ -26,6 +29,7 @@ container_run_and_commit_layer(
     ],
     docker_run_flags = ["--network=host"],
     image = "@alpine_linux_x86_64//image",
+    visibility = ["//visibility:private"],
 )
 
 container_image(
