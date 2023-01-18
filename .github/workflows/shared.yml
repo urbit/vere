@@ -230,10 +230,14 @@ jobs:
           short_description: 'Urbit: a clean-slate OS and network for the 21st century'
           readme_file: 'DOCKER.md'
 
-      - name: Build and push Docker image
+      - name: Build and push version-tagged Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
           bazel run //docker:push_version_x86_64
+
+      - name: Build and push latest-tagged Docker image
+        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
+        run: |
           bazel run //docker:push_latest_x86_64
 
   upload-version-string:
