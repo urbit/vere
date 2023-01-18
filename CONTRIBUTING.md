@@ -14,10 +14,10 @@ completion.
 ### Branch Names
 
 Every branch that you intend to put up for review must adhere to the form
-`issue/N/<...>`, where `N` is the number of the issue that the branch corresponds
+`i/<N>/<...>`, where `<N>` is the number of the issue that the branch corresponds
 to and `<...>` is an optional short description of the branch to aid in
 readability. If `<...>` is omitted, the `/` should be omitted as well, which
-makes `issue/N` a well-formed branch name.
+makes `i/<N>` a well-formed branch name.
 
 ### Commits
 
@@ -34,12 +34,12 @@ Optionally add a long description.
 
 When your work is ready for review, open a pull request, making sure to link
 to the tracking issue in the description, which should be formatted as follows
-(where `N` is the number of this work's tracking issue):
+(where `<N>` is the number of this work's tracking issue):
 
 ```
 ### Description
 
-Resolves #N.
+Resolves #<N>.
 
 Thoroughly describe the changes made.
 

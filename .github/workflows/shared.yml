@@ -228,14 +228,17 @@ jobs:
           destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/urbit
           provider: dockerhub
           short_description: 'Urbit: a clean-slate OS and network for the 21st century'
-          readme_file: 'DOCKER.md'
+          readme_file: 'docker/README.md'
 
-      - name: Build and push Docker image
+      - name: Build and push version-tagged Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
-          version="v$(cat ./VERSION)"
-          tag="$version-${{ inputs.pace }}"
-          bazel run :upload_docker
+          bazel run //docker:push_version_x86_64
+
+      - name: Build and push latest-tagged Docker image
+        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
+        run: |
+          bazel run //docker:push_latest_x86_64
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
@@ -262,14 +265,10 @@ jobs:
             gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
           fi
 
-          bazel build :version
-          last_version=LAST_VERSION
-          grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h     \
-            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/' \
-            > $last_version
+          bazel build :version_str
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp $last_version "$target"
+          gsutil cp ./bazel-bin/version "$target"
 
           [ $exitcode -eq 0 ] &&
             echo "Upload to $target completed successfully." ||
