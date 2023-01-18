@@ -572,7 +572,7 @@ _setup_cert_store()
 {
   BIO* cbio = BIO_new_mem_buf(include_ca_bundle_crt, include_ca_bundle_crt_len);
   if ( !cbio || !(_cert_store = PEM_X509_INFO_read_bio(cbio, NULL, NULL, NULL)) ) {
-    u3l_log("boot: failed to decode embedded CA certificates\r\n");
+    u3l_log("boot: failed to decode embedded CA certificates");
     exit(1);
   }
 
@@ -852,10 +852,11 @@ static void
 _cw_serf_step_trace(void)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    if ( u3_Host.tra_u.con_w == 0  && u3_Host.tra_u.fun_w == 0 ) {
+    c3_w trace_cnt_w = u3t_trace_cnt();
+    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(u3V.dir_c);
     }
-    else if ( u3_Host.tra_u.con_w >= 100000 ) {
+    else if ( trace_cnt_w >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(u3V.dir_c);
     }
@@ -1045,7 +1046,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   _cw_init_io(lup_u);
 
   memset(&u3V, 0, sizeof(u3V));
-  memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
 
   //  load passkey
   //
@@ -1259,7 +1259,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     }
     u3s_cue_xeno_done(sil_u);
     if ( c3n == u3v_boot_lite(pil) ) {
-      u3l_log("lite: boot failed\r\n");
+      u3l_log("lite: boot failed");
       exit(1);
     }
   }
@@ -1850,7 +1850,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   //  initialize curl
   //
   if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
-    u3l_log("boot: curl initialization failed\r\n");
+    u3l_log("boot: curl initialization failed");
     exit(1);
   }
 
@@ -1880,11 +1880,11 @@ _cw_vere(c3_i argc, c3_c* argv[])
 
 
   if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 0) ) {
-    u3l_log("vere: download failed\r\n");
+    u3l_log("vere: download failed");
     exit(1);
   }
 
-  u3l_log("vere: download succeeded\r\n");
+  u3l_log("vere: download succeeded");
 }
 
 /* _cw_vile(): generatoe/print keyfile
@@ -2129,7 +2129,7 @@ main(c3_i   argc,
     sigemptyset(&set);
     sigaddset(&set, SIGPROF);
     if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-      u3l_log("boot: thread mask SIGPROF: %s\r\n", strerror(errno));
+      u3l_log("boot: thread mask SIGPROF: %s", strerror(errno));
       exit(1);
     }
   }
@@ -2208,10 +2208,6 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
-        u3_Host.tra_u.nid_w = 0;
-        u3_Host.tra_u.fil_u = NULL;
-        u3_Host.tra_u.con_w = 0;
-        u3_Host.tra_u.fun_w = 0;
       }
     }
 
@@ -2221,7 +2217,7 @@ main(c3_i   argc,
     {
       SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
       if ( NULL == (u3_Host.cev_u = CreateEvent(&sa, FALSE, FALSE, NULL)) ) {
-        u3l_log("boot: failed to create Ctrl-C event: %d\r\n", GetLastError());
+        u3l_log("boot: failed to create Ctrl-C event: %d", GetLastError());
         exit(1);
       }
     }
@@ -2242,7 +2238,7 @@ main(c3_i   argc,
     //  initialize curl
     //
     if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
-      u3l_log("boot: curl initialization failed\r\n");
+      u3l_log("boot: curl initialization failed");
       exit(1);
     }
 

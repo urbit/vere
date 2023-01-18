@@ -33,7 +33,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-aarch64, runner: ubuntu-22.04 }
+          # GitHub doesn't provide AArch64 Linux machines, so we self-host a
+          # runner instead.
+          - { target: linux-aarch64, runner: [self-hosted, Linux, ARM64] }
           - { target: linux-x86_64, runner: ubuntu-22.04 }
           # GitHub doesn't provide M1 macOS machines, so we self-host a runner
           # instead.
@@ -49,9 +51,12 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: chown /usr/local
-        if: ${{ matrix.target == 'linux-aarch64' || matrix.target == 'linux-x86_64' }}
+        if: ${{ matrix.target == 'linux-x86_64' }}
         run: |
-          # See https://github.com/actions/cache/issues/845.
+          # See https://github.com/actions/cache/issues/845. Note we don't run
+          # this on linux-aarch64 because we run on a self-hosted GitHub Actions
+          # runner for which `/usr/local` has already been `chown`d to the user
+          # running the GitHub Actions runner.
           sudo chown -R $(whoami) /usr/local
 
       - name: Set up build cache
@@ -91,10 +96,10 @@ jobs:
 
       - name: Build binary
         run: |
-          echo "${{ inputs.pace }}" > ./pkg/vere/PACE
+          echo "${{ inputs.pace }}" > ./PACE
           case "${{ matrix.target }}" in
             "linux-aarch64")
-              bazel build --platforms=//:linux-aarch64 :urbit
+              bazel build :urbit
               ;;
             "linux-x86_64")
               bazel build :urbit
@@ -108,9 +113,6 @@ jobs:
           esac
 
       - name: Run unit tests
-        # We have no way of running the linux-aarch64 tests on a linux-x86_64
-        # machine.
-        if: ${{ matrix.target != 'linux-aarch64' }}
         run: |
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
             bazel test --build_tests_only --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
@@ -146,8 +148,11 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          version="$(cat ./pkg/vere/VERSION)"
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${version}/vere-v${version}-${{ matrix.target }}"
+          version="$(cat ./VERSION)"
+          bazel build :version
+          sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
+            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
+          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
 
           # See https://github.com/urbit/vere/issues/86.
           if [[ "$version" == "1.16" ]]; then
@@ -223,14 +228,17 @@ jobs:
           destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/urbit
           provider: dockerhub
           short_description: 'Urbit: a clean-slate OS and network for the 21st century'
-          readme_file: 'DOCKER.md'
+          readme_file: 'docker/README.md'
 
-      - name: Build and push Docker image
+      - name: Build and push version-tagged Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
-          version="v$(cat ./pkg/vere/VERSION)"
-          tag="$version-${{ inputs.pace }}"
-          bazel run :upload_docker
+          bazel run //docker:push_version_x86_64
+
+      - name: Build and push latest-tagged Docker image
+        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
+        run: |
+          bazel run //docker:push_latest_x86_64
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
@@ -253,13 +261,14 @@ jobs:
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
 
           # See https://github.com/urbit/vere/issues/86.
-          if [[ $(cat ./pkg/vere/VERSION) == "1.16" ]]; then
-            gsutil cp ./pkg/vere/VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
+          if [[ $(cat ./VERSION) == "1.16" ]]; then
+            gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
           fi
 
+          bazel build :version_str
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp ./pkg/vere/VERSION "$target"
+          gsutil cp ./bazel-bin/version "$target"
 
           [ $exitcode -eq 0 ] &&
             echo "Upload to $target completed successfully." ||

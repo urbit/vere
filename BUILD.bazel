@@ -1,6 +1,4 @@
 load("//bazel:common_settings.bzl", "string_flag")
-load("@io_bazel_rules_docker//cc:image.bzl", "cc_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 #
 # OS-CPU CONFIG SETTINGS
@@ -126,41 +124,58 @@ platform(
     ],
 )
 
-alias(
-    name = "urbit",
-    actual = "//pkg/vere:urbit",
-)
-
-#
-# DOCKER IMAGE
-#
-
-cc_image(
-    name = "docker",
-    binary = "//pkg/vere:urbit",
+# Produce the `U3_VERE_PACE` macro.
+genrule(
+    name = "pace_hdr",
+    srcs = ["PACE"],
+    outs = ["pace.h"],
+    cmd = """
+    echo '#ifndef URBIT_PACE_H' > $@
+    echo '#define URBIT_PACE_H' >> $@
+    printf '#define U3_VERE_PACE "%s"\n' $$(cat $< | tr -d '\n') >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//:__subpackages__"],
 )
 
 genrule(
-    name = "docker_tag",
-    visibility = ["//visibility:private"],
+    name = "version_str",
     srcs = [
-        "//pkg/vere:PACE",
-        "//pkg/vere:VERSION",
+        # Bazel warns dependency checking directories is unsound, but there's no
+        # apparent way around depending on .git if we want to run git commands.
+        ".git",
+        "PACE",
+        "VERSION",
     ],
-    outs = ["DOCKER_TAG"],
+    outs = ["version"],
     cmd = """
-    pace=`tr -d '\n' < $(execpath //pkg/vere:PACE)`
-    version=v`tr -d '\n' < $(execpath //pkg/vere:VERSION)`
-    echo "$$version-$$pace" > $@
+    version_num=$$(cat $(execpath VERSION) | tr -d '\n')
+    commit_sha=$$(git rev-parse --short HEAD)
+    if [ $$(tr -d '\n' < $(execpath PACE)) == "live" ]; then
+        version="$$version_num"
+    else
+        version="$$version_num-$$commit_sha"
+    fi
+    echo -n $$version > $@
     """,
+    visibility = ["//:__subpackages__"],
 )
 
+# Produce the `URBIT_VERSION` macro.
+genrule(
+    name = "version_hdr",
+    srcs = [":version_str"],
+    outs = ["version.h"],
+    cmd = """
+    echo '#ifndef URBIT_VERSION_H' > $@
+    echo '#define URBIT_VERSION_H' >> $@
+    printf '#define URBIT_VERSION "%s"\n' $$(cat $< | tr -d '\n') >> $@
+    echo '#endif' >> $@
+    """,
+    visibility = ["//:__subpackages__"],
+)
 
-container_push(
-    name = "upload_docker",
-    format = "Docker",
-    image = ":docker",
-    registry = "docker.io",
-    repository = "tloncorp/vere",
-    tag_file = ":docker_tag",
+alias(
+    name = "urbit",
+    actual = "//pkg/vere:urbit",
 )

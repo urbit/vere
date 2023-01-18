@@ -1,15 +1,23 @@
 name: Push to develop
 
 on:
-  release: null
   push:
     branches:
       - develop
+    paths:
+      - '*.bazel'
+      - '.bazelrc'
+      - '.github/workflows/**.yml'
+      - 'PACE'
+      - 'VERSION'
+      - 'bazel/**'
+      - 'pkg/**'
 
 jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
+      docker: true
       pace: 'edge'
       upload: true
     secrets: inherit

@@ -2,8 +2,6 @@
 # GENERATED FILES
 #
 
-exports_files(["PACE", "VERSION"])
-
 # An approximation of `xxd -i` that runs on all platforms where Bash is
 # present. Generates a `.h` file that declares the array and array length as
 # `extern` global variables and a `.c` file containing the array and array
@@ -84,34 +82,6 @@ genrule(
     visibility = ["//visibility:private"],
 )
 
-# Produce the `URBIT_VERSION` macro.
-genrule(
-    name = "version",
-    srcs = ["VERSION"],
-    outs = ["version.h"],
-    cmd = """
-    echo '#ifndef URBIT_VERSION_H' > $@
-    echo '#define URBIT_VERSION_H' >> $@
-    printf '#define URBIT_VERSION "%s"\n' $$(cat $<) >> $@
-    echo '#endif' >> $@
-    """,
-    visibility = ["//visibility:private"],
-)
-
-# Produce the `U3_VERE_PACE` macro.
-genrule(
-    name = "pace",
-    srcs = ["PACE"],
-    outs = ["pace.h"],
-    cmd = """
-    echo '#ifndef URBIT_PACE_H' > $@
-    echo '#define URBIT_PACE_H' >> $@
-    printf '#define U3_VERE_PACE "%s"\n' $$(cat $<) >> $@
-    echo '#endif' >> $@
-    """,
-    visibility = ["//visibility:private"],
-)
-
 #
 # LIBRARIES
 #
@@ -132,8 +102,8 @@ cc_library(
         ],
     ) + [
         ":ivory",
-        ":pace",
-        ":version",
+        "//:pace_hdr",
+        "//:version_hdr",
     ] + select({
         "@platforms//os:macos": [
             "platform/darwin/daemon.c",
@@ -174,8 +144,8 @@ cc_binary(
         "main.c",
         ":ca_bundle",
         ":ivory",
-        ":pace",
-        ":version",
+        "//:pace_hdr",
+        "//:version_hdr",
     ],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
