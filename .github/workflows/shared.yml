@@ -262,14 +262,10 @@ jobs:
             gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
           fi
 
-          bazel build :version
-          last_version=LAST_VERSION
-          grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h     \
-            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/' \
-            > $last_version
+          bazel build :version_str
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp $last_version "$target"
+          gsutil cp ./bazel-bin/version "$target"
 
           [ $exitcode -eq 0 ] &&
             echo "Upload to $target completed successfully." ||
