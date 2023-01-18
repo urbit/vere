@@ -138,9 +138,8 @@ genrule(
     visibility = ["//:__subpackages__"],
 )
 
-# Produce the `URBIT_VERSION` macro.
 genrule(
-    name = "version_hdr",
+    name = "version_str",
     srcs = [
         # Bazel warns dependency checking directories is unsound, but there's no
         # apparent way around depending on .git if we want to run git commands.
@@ -148,18 +147,29 @@ genrule(
         "PACE",
         "VERSION",
     ],
-    outs = ["version.h"],
+    outs = ["version"],
     cmd = """
-    version_num=`cat $(execpath VERSION) | tr -d '\n'`
-    commit_sha=`git rev-parse --short HEAD`
-    if [ `tr -d '\n' < $(execpath PACE)` == "live" ]; then
+    version_num=$$(cat $(execpath VERSION) | tr -d '\n')
+    commit_sha=$$(git rev-parse --short HEAD)
+    if [ $$(tr -d '\n' < $(execpath PACE)) == "live" ]; then
         version="$$version_num"
     else
         version="$$version_num-$$commit_sha"
     fi
+    echo -n $$version > $@
+    """,
+    visibility = ["//:__subpackages__"],
+)
+
+# Produce the `URBIT_VERSION` macro.
+genrule(
+    name = "version_hdr",
+    srcs = [":version_str"],
+    outs = ["version.h"],
+    cmd = """
     echo '#ifndef URBIT_VERSION_H' > $@
     echo '#define URBIT_VERSION_H' >> $@
-    printf '#define URBIT_VERSION "%s"\n' $$version >> $@
+    printf '#define URBIT_VERSION "%s"\n' $$(cat $< | tr -d '\n') >> $@
     echo '#endif' >> $@
     """,
     visibility = ["//:__subpackages__"],
