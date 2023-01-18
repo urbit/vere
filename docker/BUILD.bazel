@@ -2,17 +2,17 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
 
 sh_binary(
-    name = "start_urbit",
+    name = "start-urbit",
     srcs = ["start_urbit.sh"],
 )
 
 sh_binary(
-    name = "get_urbit_code",
+    name = "get-urbit-code",
     srcs = ["get_urbit_code.sh"],
 )
 
 sh_binary(
-    name = "reset_urbit_code",
+    name = "reset-urbit-code",
     srcs = ["reset_urbit_code.sh"],
 )
 
@@ -34,22 +34,17 @@ container_image(
     env = {
         "PATH": "$$PATH:/bin",
     },
+    directory = "/bin",
     files = [
         "//pkg/vere:urbit",
-        ":start_urbit",
-        ":get_urbit_code",
-        ":reset_urbit_code",
+        ":start-urbit",
+        ":get-urbit-code",
+        ":reset-urbit-code",
     ],
     layers = [":install_pkgs"],
     ports = [
         "80/tcp",
         "34343/udp",
     ],
-    symlinks = {
-        "/bin/urbit": "/urbit",
-        "/bin/start-urbit": "/start_urbit.sh",
-        "/bin/get-urbit-code": "/get_urbit_code.sh",
-        "/bin/reset-urbit-code": "/reset_urbit_code.sh",
-    },
     #volumes = ["/urbit"],
 )
