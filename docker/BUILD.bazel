@@ -47,4 +47,5 @@ container_image(
         "34343/udp",
     ],
     #volumes = ["/urbit"],
+    workdir = "/urbit",
 )
