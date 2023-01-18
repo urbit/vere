@@ -1,6 +1,8 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
 
+_docker_repository = "tloncorp/vere-test"
+
 sh_binary(
     name = "start-urbit",
     srcs = ["start_urbit.sh"],
@@ -51,9 +53,28 @@ container_image(
 )
 
 container_push(
-    name = "push_x86_64",
+    name = "push_latest_x86_64",
     format = "Docker",
     image = ":image_x86_64",
     registry = "docker.io",
-    repository = "tloncorp/vere-test",
+    repository = _docker_repository,
+    tag = "latest",
+)
+
+genrule(
+    name = "version_tag",
+    srcs = ["//:version"],
+    outs = ["docker_version_tag"],
+    cmd = """
+    echo -n v$$(cat $<) > $@
+    """,
+)
+
+container_push(
+    name = "push_version_x86_64",
+    format = "Docker",
+    image = ":image_x86_64",
+    registry = "docker.io",
+    repository = _docker_repository,
+    tag_file = ":version_tag",
 )
