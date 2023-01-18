@@ -126,7 +126,7 @@ platform(
 
 # Produce the `U3_VERE_PACE` macro.
 genrule(
-    name = "pace",
+    name = "pace_hdr",
     srcs = ["PACE"],
     outs = ["pace.h"],
     cmd = """
@@ -140,7 +140,7 @@ genrule(
 
 # Produce the `URBIT_VERSION` macro.
 genrule(
-    name = "version",
+    name = "version_hdr",
     srcs = [
         # Bazel warns dependency checking directories is unsound, but there's no
         # apparent way around depending on .git if we want to run git commands.
