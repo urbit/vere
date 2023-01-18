@@ -16,9 +16,6 @@ case $i in
 esac
 done
 
-# Set network capabilities for the Urbit binary.
-sudo setcap 'cap_net_bind_service=+ep' $(which urbit)
-
 # If the container is not started with the `-i` flag
 # then STDIN will be closed and we need to start
 # Urbit/vere with the `-t` flag.

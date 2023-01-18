@@ -20,7 +20,7 @@ container_run_and_commit_layer(
     name = "install_pkgs",
     commands = [
         "apk update",
-        "apk add bash curl libcap sudo",
+        "apk add bash curl",
     ],
     docker_run_flags = ["--network=host"],
     image = "@alpine_linux_x86_64//image",
