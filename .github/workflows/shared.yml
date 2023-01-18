@@ -233,9 +233,8 @@ jobs:
       - name: Build and push Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
         run: |
-          version="v$(cat ./VERSION)"
-          tag="$version-${{ inputs.pace }}"
-          bazel run :upload_docker
+          bazel run //docker:push_version_x86_64
+          bazel run //docker:push_latest_x86_64
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
