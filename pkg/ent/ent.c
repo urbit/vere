@@ -12,6 +12,9 @@ int ent_getentropy(void* buf, size_t len) {
 
 #elif defined(ENT_GETENTROPY_SYSRANDOM)
 #include <stddef.h>
+// See https://www.mail-archive.com/bug-gnulib@gnu.org/msg38583.html.
+#include <stdlib.h>
+#include <sys/types.h>
 #include <sys/random.h>
 int ent_getentropy(void* buf, size_t len) {
   return getentropy(buf, len);
