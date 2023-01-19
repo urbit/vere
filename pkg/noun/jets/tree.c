@@ -2258,8 +2258,8 @@ static u3j_core _a50_two__by_d[] =
   };
 
 static u3j_core _a50_two__in_d[] =
-  { { "apt", 7, _140_two__in_apt_a, 0, _140_two__in_apt_ha },
-    { "del", 7, _140_two__in_del_a, 0, _140_two__in_del_ha },  // NB: 140 jet
+  { { "apt", 7, _140_two__in_apt_a, 0, _140_two__in_apt_ha },  // NB: 140 jet
+    { "del", 7, _140_two__in_del_a, 0, _140_two__in_del_ha },
     { "put", 7, _140_two__in_put_a, 0, _140_two__in_put_ha },
     {}
   };
