@@ -19,10 +19,12 @@ build --flag_alias=gcc_version=//:gcc_version
 
 # Always include source-level debug info.
 build --copt='-g'
+build --host_copt='-g'
 build --strip=never
 
 # Use -O3 as the default optimization level.
 build --copt='-O3'
+build --host_copt='-O3'
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
