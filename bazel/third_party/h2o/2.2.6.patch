@@ -1,5 +1,5 @@
 diff --git a/deps/klib/ksw.c b/deps/klib/ksw.c
-index 742fec90b..9a11a21bd 100644
+index 742fec90b..05af32f9f 100644
 --- a/deps/klib/ksw.c
 +++ b/deps/klib/ksw.c
 @@ -25,7 +25,11 @@
@@ -12,10 +12,23 @@ index 742fec90b..9a11a21bd 100644
  #include <emmintrin.h>
 +#endif
  #include "ksw.h"
-
+ 
  #ifdef __GNUC__
+diff --git a/deps/klib/kurl.c b/deps/klib/kurl.c
+index 3bf92901c..6ff9dd45c 100644
+--- a/deps/klib/kurl.c
++++ b/deps/klib/kurl.c
+@@ -6,7 +6,7 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <string.h>
+-#include <curl/curl.h>
++#include "curl/curl.h"
+ #include "kurl.h"
+ 
+ /**********************
 diff --git a/deps/klib/test/kbit_test.c b/deps/klib/test/kbit_test.c
-index 3ae3bd309..7db05a186 100644
+index 3ae3bd309..ece2a45cb 100644
 --- a/deps/klib/test/kbit_test.c
 +++ b/deps/klib/test/kbit_test.c
 @@ -1,7 +1,11 @@
@@ -28,10 +41,74 @@ index 3ae3bd309..7db05a186 100644
  #include <emmintrin.h>
 +#endif
  #include "kbit.h"
-
+ 
  // from bowtie-0.9.8.1
+diff --git a/deps/mruby-digest/src/digest.c b/deps/mruby-digest/src/digest.c
+index 634376d96..d4302dbd1 100644
+--- a/deps/mruby-digest/src/digest.c
++++ b/deps/mruby-digest/src/digest.c
+@@ -18,9 +18,9 @@
+ #if defined(USE_DIGEST_PICOHASH)
+ #include "picohash.h"
+ #elif defined(USE_DIGEST_OPENSSL)
+-#include <openssl/evp.h>
+-#include <openssl/hmac.h>
+-#include <openssl/sha.h>
++#include "openssl/evp.h"
++#include "openssl/hmac.h"
++#include "openssl/sha.h"
+ #elif defined(USE_DIGEST_OSX_COMMONCRYPTO)
+ #include <CommonCrypto/CommonDigest.h>
+ #include <CommonCrypto/CommonHMAC.h>
+diff --git a/deps/neverbleed/neverbleed.c b/deps/neverbleed/neverbleed.c
+index 7b36d6cb6..e3c64e13c 100644
+--- a/deps/neverbleed/neverbleed.c
++++ b/deps/neverbleed/neverbleed.c
+@@ -36,10 +36,10 @@
+ #include <sys/types.h>
+ #include <sys/uio.h>
+ #include <unistd.h>
+-#include <openssl/rand.h>
+-#include <openssl/ssl.h>
+-#include <openssl/rsa.h>
+-#include <openssl/bn.h>
++#include "openssl/rand.h"
++#include "openssl/ssl.h"
++#include "openssl/rsa.h"
++#include "openssl/bn.h"
+ #ifdef __linux__
+ #include <sys/prctl.h>
+ #endif
+diff --git a/deps/neverbleed/neverbleed.h b/deps/neverbleed/neverbleed.h
+index 4abfad479..b012f26a6 100644
+--- a/deps/neverbleed/neverbleed.h
++++ b/deps/neverbleed/neverbleed.h
+@@ -24,7 +24,7 @@
+ 
+ #include <pthread.h>
+ #include <sys/un.h>
+-#include <openssl/engine.h>
++#include "openssl/engine.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/deps/neverbleed/test.c b/deps/neverbleed/test.c
+index 494fc65f0..7d34f6cf5 100644
+--- a/deps/neverbleed/test.c
++++ b/deps/neverbleed/test.c
+@@ -25,8 +25,8 @@
+ #include <sys/socket.h>
+ #include <sys/types.h>
+ #include <unistd.h>
+-#include <openssl/crypto.h>
+-#include <openssl/ssl.h>
++#include "openssl/crypto.h"
++#include "openssl/ssl.h"
+ #include "neverbleed.h"
+ 
+ static void setup_ecc_key(SSL_CTX *ssl_ctx)
 diff --git a/deps/picohttpparser/picohttpparser.c b/deps/picohttpparser/picohttpparser.c
-index a707070d1..714850f64 100644
+index a707070d1..376b40144 100644
 --- a/deps/picohttpparser/picohttpparser.c
 +++ b/deps/picohttpparser/picohttpparser.c
 @@ -28,7 +28,9 @@
@@ -45,3 +122,349 @@ index a707070d1..714850f64 100644
  #include <nmmintrin.h>
  #else
  #include <x86intrin.h>
+diff --git a/deps/picotls/deps/cifra/extra_vecs/openssl-hash.c b/deps/picotls/deps/cifra/extra_vecs/openssl-hash.c
+index 9df685669..c36608152 100644
+--- a/deps/picotls/deps/cifra/extra_vecs/openssl-hash.c
++++ b/deps/picotls/deps/cifra/extra_vecs/openssl-hash.c
+@@ -1,7 +1,7 @@
+ #include <stdint.h>
+ #include <stdio.h>
+ 
+-#include <openssl/evp.h>
++#include "openssl/evp.h"
+ 
+ #define MAX_LENGTH 1024
+ 
+diff --git a/deps/picotls/include/picotls/openssl.h b/deps/picotls/include/picotls/openssl.h
+index 459474ad0..dae5b3954 100644
+--- a/deps/picotls/include/picotls/openssl.h
++++ b/deps/picotls/include/picotls/openssl.h
+@@ -22,10 +22,10 @@
+ #ifndef picotls_openssl_h
+ #define picotls_openssl_h
+ 
+-#include <openssl/opensslv.h>
+-#include <openssl/evp.h>
+-#include <openssl/hmac.h>
+-#include <openssl/x509.h>
++#include "openssl/opensslv.h"
++#include "openssl/evp.h"
++#include "openssl/hmac.h"
++#include "openssl/x509.h"
+ #include "../picotls.h"
+ 
+ #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+diff --git a/deps/picotls/lib/openssl.c b/deps/picotls/lib/openssl.c
+index 2c9ee7002..75a7d3fd8 100644
+--- a/deps/picotls/lib/openssl.c
++++ b/deps/picotls/lib/openssl.c
+@@ -28,17 +28,17 @@
+ #include <assert.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <openssl/bn.h>
+-#include <openssl/crypto.h>
+-#include <openssl/ec.h>
+-#include <openssl/ecdh.h>
+-#include <openssl/err.h>
+-#include <openssl/evp.h>
+-#include <openssl/objects.h>
+-#include <openssl/rand.h>
+-#include <openssl/x509.h>
+-#include <openssl/x509v3.h>
+-#include <openssl/x509_vfy.h>
++#include "openssl/bn.h"
++#include "openssl/crypto.h"
++#include "openssl/ec.h"
++#include "openssl/ecdh.h"
++#include "openssl/err.h"
++#include "openssl/evp.h"
++#include "openssl/objects.h"
++#include "openssl/rand.h"
++#include "openssl/x509.h"
++#include "openssl/x509v3.h"
++#include "openssl/x509_vfy.h"
+ #include "picotls.h"
+ #include "picotls/openssl.h"
+ 
+diff --git a/deps/picotls/picotlsvs/picotlsvs/picotlsvs.c b/deps/picotls/picotlsvs/picotlsvs/picotlsvs.c
+index 251b29095..130f843b6 100644
+--- a/deps/picotls/picotlsvs/picotlsvs/picotlsvs.c
++++ b/deps/picotls/picotlsvs/picotlsvs/picotlsvs.c
+@@ -1,7 +1,7 @@
+ /* picotlsvs: test program for the TLS 1.3 library. */
+ #include <stdio.h>
+ #include <stdarg.h>
+-#include <openssl/pem.h>
++#include "openssl/pem.h"
+ #include "../picotls/wincompat.h"
+ #include "../../include/picotls.h"
+ #include "../../include/picotls/openssl.h"
+diff --git a/deps/picotls/t/cli.c b/deps/picotls/t/cli.c
+index fc7349996..657cb9b1b 100644
+--- a/deps/picotls/t/cli.c
++++ b/deps/picotls/t/cli.c
+@@ -37,10 +37,10 @@
+ #include <sys/time.h>
+ #include <sys/types.h>
+ #include <unistd.h>
+-#include <openssl/err.h>
+-#include <openssl/evp.h>
+-#include <openssl/engine.h>
+-#include <openssl/pem.h>
++#include "openssl/err.h"
++#include "openssl/evp.h"
++#include "openssl/engine.h"
++#include "openssl/pem.h"
+ #include "picotls.h"
+ #include "picotls/openssl.h"
+ #include "util.h"
+diff --git a/deps/picotls/t/openssl.c b/deps/picotls/t/openssl.c
+index 9a7fc539c..55f5b0f6f 100644
+--- a/deps/picotls/t/openssl.c
++++ b/deps/picotls/t/openssl.c
+@@ -25,9 +25,9 @@
+ #include <assert.h>
+ #include <stdio.h>
+ #include <string.h>
+-#include <openssl/bio.h>
+-#include <openssl/pem.h>
+-#include <openssl/engine.h>
++#include "openssl/bio.h"
++#include "openssl/pem.h"
++#include "openssl/engine.h"
+ #include "picotls.h"
+ #include "picotls/minicrypto.h"
+ #include "../deps/picotest/picotest.h"
+diff --git a/deps/picotls/t/util.h b/deps/picotls/t/util.h
+index 78ce87c3c..ca055e46a 100644
+--- a/deps/picotls/t/util.h
++++ b/deps/picotls/t/util.h
+@@ -34,7 +34,7 @@
+ #include <sys/param.h>
+ #include <sys/socket.h>
+ #include <sys/types.h>
+-#include <openssl/pem.h>
++#include "openssl/pem.h"
+ #include "picotls/openssl.h"
+ 
+ static inline void load_certificate_chain(ptls_context_t *ctx, const char *fn)
+diff --git a/deps/ssl-conservatory/openssl/openssl_hostname_validation.c b/deps/ssl-conservatory/openssl/openssl_hostname_validation.c
+index 066fd6dd6..cf523cd8f 100644
+--- a/deps/ssl-conservatory/openssl/openssl_hostname_validation.c
++++ b/deps/ssl-conservatory/openssl/openssl_hostname_validation.c
+@@ -12,8 +12,8 @@
+  
+ 
+ #include <strings.h>
+-#include <openssl/x509v3.h>
+-#include <openssl/ssl.h>
++#include "openssl/x509v3.h"
++#include "openssl/ssl.h"
+ 
+ #include "openssl_hostname_validation.h"
+ 
+diff --git a/deps/ssl-conservatory/openssl/test_client.c b/deps/ssl-conservatory/openssl/test_client.c
+index 916a22ed8..baca3f817 100644
+--- a/deps/ssl-conservatory/openssl/test_client.c
++++ b/deps/ssl-conservatory/openssl/test_client.c
+@@ -14,9 +14,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include <openssl/ssl.h>
+-#include <openssl/err.h>
+-#include <openssl/rand.h>
++#include "openssl/ssl.h"
++#include "openssl/err.h"
++#include "openssl/rand.h"
+ 
+ #include "openssl_hostname_validation.h"
+ 
+diff --git a/examples/libh2o/latency-optimization.c b/examples/libh2o/latency-optimization.c
+index de34bc9c6..c6209d588 100644
+--- a/examples/libh2o/latency-optimization.c
++++ b/examples/libh2o/latency-optimization.c
+@@ -27,8 +27,8 @@
+ #include <stdio.h>
+ #include <sys/socket.h>
+ #include <sys/types.h>
+-#include <openssl/err.h>
+-#include <openssl/ssl.h>
++#include "openssl/err.h"
++#include "openssl/ssl.h"
+ #include "h2o/socket.h"
+ #include "h2o/string_.h"
+ 
+diff --git a/examples/libh2o/websocket.c b/examples/libh2o/websocket.c
+index c977bbd63..79998f2d2 100644
+--- a/examples/libh2o/websocket.c
++++ b/examples/libh2o/websocket.c
+@@ -24,7 +24,7 @@
+ #include <string.h>
+ #include <sys/stat.h>
+ #include <unistd.h>
+-#include <uv.h>
++#include "uv.h"
+ #include "h2o.h"
+ #include "h2o/websocket.h"
+ 
+diff --git a/include/h2o.h b/include/h2o.h
+index 57877bd12..1f10374fc 100644
+--- a/include/h2o.h
++++ b/include/h2o.h
+@@ -35,7 +35,7 @@ extern "C" {
+ #include <sys/socket.h>
+ #include <time.h>
+ #include <unistd.h>
+-#include <openssl/ssl.h>
++#include "openssl/ssl.h"
+ #include "h2o/filecache.h"
+ #include "h2o/hostinfo.h"
+ #include "h2o/memcached.h"
+diff --git a/include/h2o/socket.h b/include/h2o/socket.h
+index 58ada8509..45df5e2b1 100644
+--- a/include/h2o/socket.h
++++ b/include/h2o/socket.h
+@@ -28,7 +28,7 @@ extern "C" {
+ 
+ #include <stdint.h>
+ #include <sys/socket.h>
+-#include <openssl/ssl.h>
++#include "openssl/ssl.h"
+ #include "h2o/cache.h"
+ #include "h2o/memory.h"
+ #include "h2o/openssl_backport.h"
+diff --git a/include/h2o/socket/uv-binding.h b/include/h2o/socket/uv-binding.h
+index ad2812293..efca14117 100644
+--- a/include/h2o/socket/uv-binding.h
++++ b/include/h2o/socket/uv-binding.h
+@@ -22,7 +22,7 @@
+ #ifndef h2o__uv_binding_h
+ #define h2o__uv_binding_h
+ 
+-#include <uv.h>
++#include "uv.h"
+ 
+ #if !(defined(UV_VERSION_MAJOR) && UV_VERSION_MAJOR == 1)
+ #error "libh2o (libuv binding) requires libuv version 1.x.y"
+diff --git a/lib/common/socket.c b/lib/common/socket.c
+index 5b1c37e04..16093b51e 100644
+--- a/lib/common/socket.c
++++ b/lib/common/socket.c
+@@ -29,7 +29,7 @@
+ #include <string.h>
+ #include <sys/un.h>
+ #include <unistd.h>
+-#include <openssl/err.h>
++#include "openssl/err.h"
+ #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+ #include <sys/ioctl.h>
+ #endif
+diff --git a/lib/handler/configurator/proxy.c b/lib/handler/configurator/proxy.c
+index cfc9cbf40..f34a0e859 100644
+--- a/lib/handler/configurator/proxy.c
++++ b/lib/handler/configurator/proxy.c
+@@ -22,9 +22,9 @@
+ #include <inttypes.h>
+ #include <errno.h>
+ #include <stdio.h>
+-#include <openssl/crypto.h>
+-#include <openssl/err.h>
+-#include <openssl/ssl.h>
++#include "openssl/crypto.h"
++#include "openssl/err.h"
++#include "openssl/ssl.h"
+ #include "h2o.h"
+ #include "h2o/configurator.h"
+ 
+diff --git a/lib/http2/cache_digests.c b/lib/http2/cache_digests.c
+index fa28bd238..1f1250821 100644
+--- a/lib/http2/cache_digests.c
++++ b/lib/http2/cache_digests.c
+@@ -20,7 +20,7 @@
+  * IN THE SOFTWARE.
+  */
+ #include <limits.h>
+-#include <openssl/sha.h>
++#include "openssl/sha.h"
+ #include <stdlib.h>
+ #include "golombset.h"
+ #include "h2o/string_.h"
+diff --git a/lib/http2/casper.c b/lib/http2/casper.c
+index 56e00d71f..915ecd163 100644
+--- a/lib/http2/casper.c
++++ b/lib/http2/casper.c
+@@ -19,7 +19,7 @@
+  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  * IN THE SOFTWARE.
+  */
+-#include <openssl/sha.h>
++#include "openssl/sha.h"
+ #include "golombset.h"
+ #include "h2o/string_.h"
+ #include "h2o/http2_casper.h"
+diff --git a/lib/websocket.c b/lib/websocket.c
+index 2886acda6..09737bf27 100644
+--- a/lib/websocket.c
++++ b/lib/websocket.c
+@@ -22,7 +22,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <string.h>
+-#include <openssl/sha.h>
++#include "openssl/sha.h"
+ #include "h2o/websocket.h"
+ 
+ #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+diff --git a/src/main.c b/src/main.c
+index af0867f29..f0829289b 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -45,9 +45,9 @@
+ #include <sys/types.h>
+ #include <sys/un.h>
+ #include <sys/wait.h>
+-#include <openssl/crypto.h>
+-#include <openssl/err.h>
+-#include <openssl/ssl.h>
++#include "openssl/crypto.h"
++#include "openssl/err.h"
++#include "openssl/ssl.h"
+ #ifdef __GLIBC__
+ #include <execinfo.h>
+ #endif
+diff --git a/src/ssl.c b/src/ssl.c
+index 7ac6c4c96..8a72d4999 100644
+--- a/src/ssl.c
++++ b/src/ssl.c
+@@ -23,11 +23,11 @@
+ #include <inttypes.h>
+ #include <pthread.h>
+ #include <sys/stat.h>
+-#include <openssl/crypto.h>
+-#include <openssl/err.h>
+-#include <openssl/evp.h>
+-#include <openssl/rand.h>
+-#include <openssl/ssl.h>
++#include "openssl/crypto.h"
++#include "openssl/err.h"
++#include "openssl/evp.h"
++#include "openssl/rand.h"
++#include "openssl/ssl.h"
+ #include "yoml-parser.h"
+ #include "yrmcds.h"
+ #if H2O_USE_PICOTLS
+diff --git a/src/standalone.h b/src/standalone.h
+index 567031f4d..a36fbcae1 100644
+--- a/src/standalone.h
++++ b/src/standalone.h
+@@ -22,7 +22,7 @@
+ #ifndef h2o__standalone_h
+ #define h2o__standalone_h
+ 
+-#include <openssl/ssl.h>
++#include "openssl/ssl.h"
+ 
+ #if defined(SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB) && !defined(OPENSSL_NO_TLSEXT)
+ #define H2O_USE_SESSION_TICKETS 1
