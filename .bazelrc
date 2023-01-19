@@ -26,5 +26,10 @@ build --strip=never
 build --copt='-O3'
 build --host_copt='-O3'
 
+# Turn on CPU and memory debug for exec config, which we only use to run the
+# fake ship tests.
+build --host_copt='-DU3_CPU_DEBUG'
+build --host_copt='-DU3_MEMORY_DEBUG'
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
