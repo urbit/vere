@@ -59,8 +59,15 @@ Once you install the prerequisites, you're ready to build:
 bazel build :urbit
 ```
 
-The default optimization level is `-O3`, but if you want to specify a different
-optimization level, use [`--copt`][copt]:
+If you want a debug build, which changes the optimization level from `-O3` to
+`-O0` and turns on CPU and memory debugging via the `U3_CPU_DEBUG` and
+`U3_MEMORY_DEBUG` macros, respectively, specify the `dbg` configuration:
+```console
+$ bazel build --config=dbg :urbit
+```
+
+If you need to specify arbitrary C compiler or linker options, use
+[`--copt`][copt] or [`--linkopt`][linkopt], respectively:
 ```console
 bazel build --copt='-O0' :urbit
 ```
@@ -115,4 +122,5 @@ run `clang --version` and pass the version number via
 [bazel-install]: https://bazel.build/install
 [copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
+[linkopt]: https://bazel.build/docs/user-manual#linkopt
 [musl libc]: https://musl.libc.org
