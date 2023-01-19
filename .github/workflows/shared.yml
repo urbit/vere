@@ -224,7 +224,7 @@ jobs:
         run: |
           # Create or update the GitHub release.
           # Upload the other assets from the other platforms' jobs.
-          version="vere-v$(cat ./pkg/vere/VERSION)"
+          version="vere-v$(cat ./VERSION)"
           exists=$(gh release list | cut -f 1 | grep -c "$version")
           if [[ $exists -eq 0 ]]; then
             # Create a new tag.
