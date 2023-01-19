@@ -31,5 +31,15 @@ build --host_copt='-O3'
 build --host_copt='-DU3_CPU_DEBUG'
 build --host_copt='-DU3_MEMORY_DEBUG'
 
+# Enable maximum debug info and disable optimizations for debug config. It's
+# important that these lines come after setting the default debug and
+# optimization level flags above.
+build:dbg --copt='-O0'
+build:dbg --copt='-g3'
+
+# Turn on CPU and memory debug for debug config.
+build:dbg --copt='-DU3_CPU_DEBUG'
+build:dbg --copt='-DU3_MEMORY_DEBUG'
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
