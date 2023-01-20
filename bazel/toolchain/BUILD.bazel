@@ -287,10 +287,10 @@ cc_toolchain_config(
     ar_flags = "rcs",
     cc = "/usr/local/opt/llvm@15/bin/clang",
     compiler = "clang",
-    compiler_version = "//:clang_version",
+    compiler_version = "15.0.7",
     ld = "/usr/bin/ld",
     sys_includes = [
-        "/usr/local/Cellar/llvm@15/{compiler_version}/lib/clang/{compiler_version}/include",
+        "/usr/local/Cellar/llvm/15.0.7_1/lib/clang/15.0.7/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
     ],
     target_cpu = "x86_64",
