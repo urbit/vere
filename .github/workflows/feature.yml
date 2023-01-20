@@ -1,7 +1,6 @@
 name: Feature pull request
 
 on:
-  release: null
   pull_request:
     paths:
       - '.bazelrc'
@@ -10,6 +9,8 @@ on:
       - 'WORKSPACE.bazel'
       - 'bazel/**'
       - 'pkg/**'
+  release:
+    types: []
 
 jobs:
   urbit:

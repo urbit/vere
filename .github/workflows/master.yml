@@ -12,6 +12,8 @@ on:
       - 'VERSION'
       - 'bazel/**'
       - 'pkg/**'
+  release:
+    types: []
 
 
 jobs:
