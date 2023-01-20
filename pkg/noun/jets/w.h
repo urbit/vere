@@ -103,6 +103,7 @@
     u3_noun u3wdb_run(u3_noun);
 #   define u3wdb_wyt u3wdi_wyt
 
+    u3_noun u3wdi_apt_140(u3_noun);
     u3_noun u3wdi_apt(u3_noun);
     u3_noun u3wdi_bif(u3_noun);
     u3_noun u3wdi_del(u3_noun);
