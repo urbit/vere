@@ -9,8 +9,6 @@ on:
       - 'WORKSPACE.bazel'
       - 'bazel/**'
       - 'pkg/**'
-  release:
-    types: []
 
 jobs:
   urbit:
