@@ -108,7 +108,7 @@ jobs:
               bazel build :urbit
               ;;
             "macos-x86_64")
-              bazel build --clang_version=15.0.7_1 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
+              bazel build --clang_version=15.0.7 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
               ;;
           esac
 
