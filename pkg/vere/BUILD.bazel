@@ -262,6 +262,7 @@ genrule(
 
     mkdir ./urbit
     tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
+    cp -RL ./urbit/tests ./urbit/pkg/arvo/tests
 
     $(execpath :urbit) --lite-boot --daemon --fake bus \
       --bootstrap $(execpath @solid_pill//file)        \
