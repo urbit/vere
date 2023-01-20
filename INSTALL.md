@@ -14,6 +14,8 @@ run:
 
 ## Prerequisites
 
+The first step is to install `bazel` using the instructions found on the [`bazel`][bazel][^1] site.
+
 All platforms require the `automake` and `libtool` suite of tools installed in
 order to build Vere. Before going any further, install them using your package
 manager. For example, on macOS:
