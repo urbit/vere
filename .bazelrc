@@ -1,3 +1,6 @@
+# Enable configurations specific to the host platform.
+common --enable_platform_specific_config
+
 # Disallow empty `glob()`s.
 build --incompatible_disallow_empty_glob
 
@@ -17,8 +20,10 @@ build --@io_bazel_rules_docker//transitions:enable=false
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
 
-# Always include source-level debug info.
-build --copt='-g'
+# Don't include source level debug info on macOS. See
+# https://github.com/urbit/urbit/issues/5561 and
+# https://github.com/urbit/vere/issues/131.
+build:linux --copt='-g'
 build --strip=never
 
 # Use -O3 as the default optimization level.
