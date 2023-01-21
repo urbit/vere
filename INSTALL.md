@@ -14,7 +14,7 @@ run:
 
 ## Prerequisites
 
-The first step is to install `bazel` using the instructions found on the [`bazel`][bazel][^1] site.
+The first step is to install `bazel` using the instructions found on the [`bazel`][bazel-install][^1] site.
 
 All platforms require the `automake` and `libtool` suite of tools installed in
 order to build Vere. Before going any further, install them using your package
@@ -110,6 +110,7 @@ run `clang --version` and pass the version number via
 
 [bazel]: https://bazel.build
 [bazel-config]: https://bazel.build/run/bazelrc
+[bazel-install]: https://bazel.build/install
 [copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
 [musl libc]: https://musl.libc.org
