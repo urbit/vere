@@ -24,9 +24,7 @@ $ brew install automake libtool
 
 ### Linux
 
-We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us
-to generate statically linked binaries. As a prerequisite, you need to install
-the [musl libc][musl libc] toolchain appropriate for your target platform.
+After installing `automake` and `libtool`, you need to install the [musl libc] toolchain.  We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us to generate statically linked binaries. As a prerequisite, you need to install the [musl libc][musl libc] toolchain appropriate for your target platform.
 
 #### x86_64
 
@@ -47,6 +45,10 @@ $ bazel run //bazel/toolchain:aarch64-linux-musl-gcc
 ```
 
 This will take a few minutes.
+
+### macOS
+
+After installing `automake` and `libtool`, you're ready to build Vere.
 
 ## Build Commands
 
