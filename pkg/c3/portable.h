@@ -76,26 +76,6 @@
 #     include <sys/resource.h>
 #     include <sys/mman.h>
 
-#   elif defined(U3_OS_mingw)
-#     define signal mingw_has_no_usable_signal
-#     define raise  mingw_has_no_usable_raise
-#     define _POSIX
-#     include <ctype.h>
-#     include <inttypes.h>
-#     include <stdlib.h>
-#     include <string.h>
-#     include <stdarg.h>
-#     include <unistd.h>
-#     include <stdint.h>
-#     include <assert.h>
-#     include <setjmp.h>
-#     include <stdio.h>
-#     include <dirent.h>
-#     include <signal.h>
-#     include <sys/time.h>
-#     include "mman.h"
-#     include "compat.h"
-
 #   else
       #error "port: headers"
 #   endif
@@ -118,8 +98,6 @@
 #         define U3_OS_ARCH "linux-x86_64"
 #       endif
 #     endif
-#   elif defined(U3_OS_mingw)
-#     define U3_OS_ARCH "windows-x86_64"
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
 #       ifdef U3_CPU_aarch64
@@ -148,9 +126,6 @@
 #     else
 #       define U3_OS_LoomBase 0x36000000
 #     endif
-#       define U3_OS_LoomBits 30
-#   elif defined(U3_OS_mingw)
-#       define U3_OS_LoomBase 0x28000000000
 #       define U3_OS_LoomBits 30
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
@@ -192,7 +167,7 @@
 
     /* Byte swapping.
     */
-#     if defined(U3_OS_linux) || defined(U3_OS_bsd) || defined(U3_OS_mingw)
+#     if defined(U3_OS_linux) || defined(U3_OS_bsd)
 #       define c3_bswap_16(x)  bswap_16(x)
 #       define c3_bswap_32(x)  bswap_32(x)
 #       define c3_bswap_64(x)  bswap_64(x)
@@ -206,7 +181,7 @@
 
     /* Sync.
     */
-#     if defined(U3_OS_linux) || defined(U3_OS_mingw)
+#     if defined(U3_OS_linux)
 #       define c3_sync(fd) (fdatasync(fd))
 #     elif defined(U3_OS_osx)
 #       define c3_sync(fd) (fcntl(fd, F_FULLFSYNC, 0))
@@ -221,7 +196,7 @@
 #     if defined(U3_OS_linux)
 #       include <stdio_ext.h>
 #       define c3_fpurge __fpurge
-#     elif defined(U3_OS_bsd) || defined(U3_OS_osx) || defined(U3_OS_mingw)
+#     elif defined(U3_OS_bsd) || defined(U3_OS_osx)
 #       define c3_fpurge fpurge
 #     else
 #       error "port: fpurge"
@@ -229,7 +204,7 @@
 
     /* Stat.
     */
-#     if defined(U3_OS_linux) || defined(U3_OS_mingw)
+#     if defined(U3_OS_linux)
 #       define c3_stat_mtime(dp) (u3_time_t_in_ts((dp)->st_mtime))
 #     elif defined(U3_OS_osx)
 #       define c3_stat_mtime(dp) (u3_time_in_ts(&((dp)->st_mtimespec)))
@@ -245,8 +220,6 @@
     */
 #     if defined(U3_OS_linux) || defined(U3_OS_bsd) || defined(U3_OS_osx)
 #       define c3_dev_null "/dev/null"
-#     elif defined(U3_OS_mingw)
-#       define c3_dev_null "nul"
 #     else
 #       error "port: /dev/null"
 #     endif
