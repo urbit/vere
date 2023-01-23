@@ -239,7 +239,6 @@ cc_library(
     visibility = ["//visibility:private"],
 )
 
-# TODO: check windows build.
 cc_library(
     name = "h2o",
     # The `*.c` files below correspond to the files in `lib/` in

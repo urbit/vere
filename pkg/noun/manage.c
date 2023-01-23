@@ -96,15 +96,13 @@
 //
 static rsignal_jmpbuf u3_Signal;
 
-#if !defined(U3_OS_mingw)
-#include <sigsegv.h>
+#include "sigsegv.h"
 
 #ifndef SIGSTKSZ
 # define SIGSTKSZ 16384
 #endif
 #ifndef NO_OVERFLOW
 static uint8_t Sigstk[SIGSTKSZ];
-#endif
 #endif
 
 #if 0
@@ -150,25 +148,19 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_l sig_l)
 {
-#ifndef U3_OS_mingw
   if ( c3__over == sig_l ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  } else
-#endif
-  {
+  }
+  else {
     u3m_signal(sig_l);
   }
 }
 
 #ifndef NO_OVERFLOW
 static void
-#ifndef U3_OS_mingw
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
-#else
-_cm_signal_handle_over(int x)
-#endif
 {
   _cm_signal_handle(c3__over);
 }
@@ -359,11 +351,7 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
-#ifndef U3_OS_mingw
   stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ);
-#else
-  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
-#endif
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -405,11 +393,7 @@ _cm_signal_done()
   rsignal_deinstall_handler(SIGVTALRM);
 
 #ifndef NO_OVERFLOW
-#ifndef U3_OS_mingw
   stackoverflow_deinstall_handler();
-#else
-  rsignal_deinstall_handler(SIGSTK);
-#endif
 #endif
   {
     struct itimerval itm_u;
@@ -1645,10 +1629,6 @@ u3m_wall(u3_noun wol)
 static void
 _cm_limits(void)
 {
-# ifdef U3_OS_mingw
-  //  Windows doesn't have rlimits. Default maximum thread
-  //  stack size is set in the executable file header.
-# else
   struct rlimit rlm;
 
   //  Moar stack.
@@ -1696,7 +1676,6 @@ _cm_limits(void)
     }
   }
 # endif
-# endif
 }
 
 /* _cm_signals(): set up interrupts, etc.
@@ -1704,21 +1683,10 @@ _cm_limits(void)
 static void
 _cm_signals(void)
 {
-# if defined(U3_OS_mingw)
-  //  vere using libsigsegv on MingW is very slow, because libsigsegv
-  //  works by installing a top-level SEH unhandled exception filter.
-  //  The top-level filter runs only after Windows walks the whole stack,
-  //  looking up registered exception filters for every stack frame, and
-  //  finds no filter to handle the exception.
-  //  Instead of libsigsegv, all vere functions register a SEH exception
-  //  filter (see compat/mingw/seh_handler.c) that handles both memory
-  //  access and stack overflow exceptions. It calls u3e_fault directly.
-# else
   if ( 0 != sigsegv_install_handler(u3e_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
   }
-# endif
 
 # if defined(U3_OS_PROF)
   //  Block SIGPROF, so that if/when we reactivate it on the

@@ -5,7 +5,6 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# TODO: check windows build.
 configure_make(
     name = "uv",
     args = select({
