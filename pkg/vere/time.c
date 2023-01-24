@@ -1,5 +1,6 @@
 /// @file
 
+#include "gmp.h"
 #include "noun.h"
 #include "vere.h"
 

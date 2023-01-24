@@ -2,6 +2,7 @@
 
 #include "imprison.h"
 
+#include "gmp.h"
 #include "jets/k.h"
 #include "jets/q.h"
 #include "manage.h"

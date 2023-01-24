@@ -3,6 +3,7 @@
 #include "retrieve.h"
 
 #include "allocate.h"
+#include "gmp.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"

@@ -3,6 +3,7 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "gmp.h"
 #include "noun.h"
 
 /* structures

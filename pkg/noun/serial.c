@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include "allocate.h"
+#include "gmp.h"
 #include "hashtable.h"
 #include "jets/k.h"
 #include "jets/q.h"
