@@ -631,6 +631,7 @@ _cw_usage(c3_c* bin_c)
     "  %s eval                      evaluate hoon from stdin:\n",
     "  %s cram %.*s              jam state:\n",
     "  %s dock %.*s              copy binary:\n",
+    "  %s eval                      evaluate hoon from stdin:\n",
     "  %s grab %.*s              measure memory usage:\n",
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
