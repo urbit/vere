@@ -1185,13 +1185,11 @@ _cw_eval(c3_i argc, c3_c* argv[])
       case 'j': {
         jam_l = c3y;
         khan_l = c3n;
-        fprintf(stderr, "j flag\r\n");
       } break;
 
       case 'k': {
         jam_l = c3y;
         khan_l = c3y;
-        fprintf(stderr, "jk flag\r\n");
       } break;
 
       case '?': {
