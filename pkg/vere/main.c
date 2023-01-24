@@ -1400,7 +1400,6 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
-    { "no-demand",   no_argument,       NULL, 6 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1547,7 +1546,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   pre_w = u3a_open(u3R);
   u3u_meld();
-  u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
+  u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
 
   u3e_save();
   u3_disk_exit(log_u);
@@ -1715,7 +1714,6 @@ _cw_play(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "auto-meld", no_argument,       NULL, 4 },
-    { "no-demand", no_argument,       NULL, 6 },
     { "full",      required_argument, NULL, 'f' },
     { "replay-to", no_argument,       NULL, 'n' },
     { NULL, 0, NULL, 0 }
@@ -1727,11 +1725,6 @@ _cw_play(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case 4: {  //  auto-meld
         mel_o = c3y;
-      } break;
-
-      case 6: {  //  no-demand
-        u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case c3__loom: {
