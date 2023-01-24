@@ -13,11 +13,6 @@
         c3_d
         u3m_boot(c3_c* dir_c, size_t len_i);
 
-      /* u3m_pier(): make a pier.
-      */
-        c3_c*
-        u3m_pier(c3_c* dir_c);
-
       /* u3m_boot_lite(): start without checkpointing.
       */
         c3_d
@@ -127,7 +122,7 @@
       /* u3m_water(): produce high and low watermarks.  Asserts u3R == u3H.
       */
         void
-        u3m_water(u3_post* low_p, u3_post* hig_p);
+        u3m_water(c3_w *low_w, c3_w *hig_w);
 
       /* u3m_pretty(): dumb prettyprint to string.  RETAIN.
       */
