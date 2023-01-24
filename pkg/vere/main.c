@@ -1159,9 +1159,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o jam_l, khan_l;
 
   static struct option lop_u[] = {
     { "loom", required_argument, NULL, c3__loom },
+    { "j", no_argument, NULL, 'j' },
+    { "jk", no_argument, NULL, 'k' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1175,6 +1178,18 @@ _cw_eval(c3_i argc, c3_c* argv[])
           exit(1);
         }
         u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case 'j': {
+        jam_l = c3y;
+        khan_l = c3n;
+        fprintf(stderr, "j flag\r\n");
+      } break;
+
+      case 'k': {
+        jam_l = c3y;
+        khan_l = c3y;
+        fprintf(stderr, "jk flag\r\n");
       } break;
 
       case '?': {
@@ -1206,7 +1221,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      printf("lite: unable to cue ivory pill\r\n");
+      fprintf(stderr, "lite: unable to cue ivory pill\r\n");
       exit(1);
     }
     u3s_cue_xeno_done(sil_u);
@@ -1216,28 +1231,75 @@ _cw_eval(c3_i argc, c3_c* argv[])
     }
   }
 
-  printf("eval:\n");
+  fprintf(stderr, "eval:\n");
 
-  //  +wish for an eval gate (virtualized twice for pretty-printing)
-  //
-  u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
-  u3_noun res;
-  {
+  if ( c3n == jam_l ) {
+
+    //  +wish for an eval gate (virtualized twice for pretty-printing)
+    //
+    u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
+    u3_noun res;
+    {
+      u3_noun sam = u3i_string(evl_c);
+      u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+      res = u3m_soft(0, u3n_kick_on, cor);
+    }
+  
+  
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      u3_pier_tank(0, 0, u3k(u3t(res)));
+    }
+    else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
+    }
+
+    u3z(res);
+    u3z(gat);
+  } else {
     u3_noun sam = u3i_string(evl_c);
-    u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
-    res = u3m_soft(0, u3n_kick_on, cor);
-  }
+    u3_noun res = u3v_wish_n(sam);
 
+    c3_d bits = 0;
+    c3_d len_d = 0;
+    c3_y* byt_y;
 
-  if ( 0 == u3h(res) ) {  //  successful execution, print output
-     u3_pier_tank(0, 0, u3k(u3t(res)));
-  }
-  else {                  //  error, print stack trace
-     u3_pier_punt_goof("eval", u3k(res));
-  }
+    bits = u3s_jam_xeno(res, &len_d, &byt_y);
 
-  u3z(res);
-  u3z(gat);
+    if ( c3n == khan_l ) {
+      fprintf(stderr,"jammed noun: ");
+       
+      int p=0;
+      while (p < len_d ){
+        fprintf(stdout,"\\x%2x", byt_y[p++]);
+      }
+        fprintf(stderr,"\n");
+      } else {
+        fprintf(stderr,"khan jammed noun: ");
+         
+        c3_y out_y[5];
+        out_y[0] = 0x0;
+        out_y[1] = ( len_d        & 0xff);
+        out_y[2] = ((len_d >>  8) & 0xff);
+        out_y[3] = ((len_d >> 16) & 0xff);
+        out_y[4] = ((len_d >> 24) & 0xff);
+         
+        fwrite(out_y, 1, 5, stdout);
+        if( ferror(stdout))
+        {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+        }
+        fwrite(byt_y, 1, len_d, stdout);
+        if( ferror(stdout))
+        {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+        }  
+        fprintf(stderr, "\n");
+      }
+    u3z(res);
+    u3z(sam);
+  }
   free(evl_c);
 }
 
