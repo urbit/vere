@@ -628,6 +628,7 @@ _cw_usage(c3_c* bin_c)
     "utilities:\n",
     "  %s cram %.*s              jam state:\n",
     "  %s dock %.*s              copy binary:\n",
+    "  %s eval                      evaluate hoon from stdin:\n",
     "  %s grab %.*s              measure memory usage:\n",
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
@@ -1159,7 +1160,8 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
-  c3_o jam_l, khan_l;
+  c3_o jam_l = c3n;
+  c3_o khan_l = c3n;
 
   static struct option lop_u[] = {
     { "loom", required_argument, NULL, c3__loom },
