@@ -1394,17 +1394,20 @@ _cw_cram(c3_i argc, c3_c* argv[])
 static void
 _cw_queu(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_i  ch_i, lid_i;
+  c3_w  arg_w;
+  c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",        required_argument, NULL, c3__loom },
+    { "no-demand",   no_argument,       NULL, 6 },
+    { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "r:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
         c3_w lom_w;
@@ -1416,6 +1419,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.lom_y = lom_w;
       } break;
 
+      case 'r': {
+        roc_c = strdup(optarg);
+      } break;
+
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
@@ -1423,9 +1430,13 @@ _cw_queu(c3_i argc, c3_c* argv[])
     }
   }
 
+  if ( !roc_c ) {
+    fprintf(stderr, "invalid command, -r $EVENT required\r\n");
+    exit(1);
+  }
+
   //  argv[optind] is always "queu"
   //
-
   if ( !u3_Host.dir_c ) {
     if ( optind + 1 < argc ) {
       u3_Host.dir_c = argv[optind + 1];
@@ -1446,8 +1457,8 @@ _cw_queu(c3_i argc, c3_c* argv[])
   c3_c* eve_c;
   c3_d  eve_d;
 
-  if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
-    fprintf(stderr, "urbit: queu: invalid number '%s'\r\n", eve_c);
+  if ( 1 != sscanf(roc_c, "%" PRIu64 "", &eve_d) ) {
+    fprintf(stderr, "urbit: queu: invalid number '%s'\r\n", roc_c);
     exit(1);
   }
   else {
@@ -1680,6 +1691,17 @@ _cw_play_slog(u3_noun hod)
   u3z(hod);
 }
 
+/* _cw_play_exit(): exit immediately.
+*/
+static void
+_cw_play_exit(c3_i int_i)
+{
+  //  explicit fprintf to avoid allocation in u3l_log
+  //
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
+  raise(SIGINT);
+}
+
 /* _cw_play(): replay events, but better.
 */
 static void
@@ -1763,21 +1785,34 @@ _cw_play(c3_i argc, c3_c* argv[])
   //
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
+#if !defined(U3_OS_mingw)
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+  signal(SIGTSTP, _cw_play_exit);
+#endif
+
   if ( c3y == mel_o ) {
     u3C.wag_w |= u3o_auto_meld;
   }
 
   u3C.wag_w |= u3o_hashless;
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3C.slog_f = _cw_play_slog;
 
   if ( c3y == ful_o ) {
     u3l_log("mars: preparing for full replay\r\n");
+    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    u3e_live(c3n, u3_Host.dir_c);
     u3e_yolo();
     u3m_pave(c3y);
     u3j_boot(c3y);
     u3A->eve_d = 0;
   }
+  else {
+    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  }
+
+  u3C.slog_f = _cw_play_slog;
 
   {
     u3_mars mar_u = {

@@ -994,12 +994,31 @@ u3m_flog(c3_w gof_w)
 /* u3m_water(): produce watermarks.
 */
 void
-u3m_water(c3_w* low_w, c3_w* hig_w)
+u3m_water(u3_post* low_p, u3_post* hig_p)
 {
-  c3_assert(u3R == &u3H->rod_u);
-
-  *low_w = u3a_heap(u3R);
-  *hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+  //  allow the segfault handler to fire before the road is set
+  //
+  //    while not explicitly possible in the codebase,
+  //    compiler optimizations can reorder stores
+  //
+  if ( !u3R ) {
+    *low_p = 0;
+    *hig_p = u3C.wor_i - 1;
+  }
+  //  in a north road, hat points to the end of the heap + 1 word,
+  //  while cap points to the top of the stack
+  //
+  else if ( c3y == u3a_is_north(u3R) ) {
+    *low_p = u3R->hat_p - 1;
+    *hig_p = u3R->cap_p;
+  }
+  //  in a south road, hat points to the end of the heap,
+  //  while cap points to the top of the stack + 1 word
+  //
+  else {
+    *low_p = u3R->cap_p - 1;
+    *hig_p = u3R->hat_p;
+  }
 }
 
 /* u3m_soft_top(): top-level safety wrapper.
@@ -1844,6 +1863,42 @@ u3m_stop()
   //  XX move to jets.c
   //
   c3_free(u3D.ray_u);
+}
+
+/* u3m_pier(): make a pier.
+*/
+c3_c*
+u3m_pier(c3_c* dir_c)
+{
+  c3_c ful_c[8193];
+
+  u3C.dir_c = dir_c;
+
+  snprintf(ful_c, 8192, "%s", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: pier create: %s\r\n", strerror(errno));
+      c3_assert(0);
+    }
+  }
+
+  snprintf(ful_c, 8192, "%s/.urb", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: .urb create: %s\r\n", strerror(errno));
+      c3_assert(0);
+    }
+  }
+
+  snprintf(ful_c, 8192, "%s/.urb/chk", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: .urb/chk create: %s\r\n", strerror(errno));
+      c3_assert(0);
+    }
+  }
+
+  return strdup(ful_c);
 }
 
 /* u3m_boot(): start the u3 system. return next event, starting from 1.

@@ -173,7 +173,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
       fprintf(stderr, "mars: boot fail\r\n");
       //  XX exit code, cb
       //
-      exit(1);;
+      exit(1);
     }
 
     mar_u->sen_d = mar_u->dun_d = lif_w;
@@ -202,7 +202,6 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
   }
 
   {
-    c3_d fir_d = mar_u->dun_d;  // started at
     c3_d mem_d = 0;             // last event to meme
     c3_w try_w = 0;             // [mem_d] retry count
 
@@ -221,16 +220,19 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
         } break;
 
         case _play_mem_e: {
-          if ( (mem_d == mar_u->dun_d) && (3 == ++try_w) ) {
+          if ( mem_d != mar_u->dun_d ) {
+            mem_d = mar_u->dun_d;
+            try_w = 0;
+          }
+          else if ( 3 == ++try_w ) {
             fprintf(stderr, "play (%" PRIu64 "): failed\r\n", mar_u->dun_d + 1);
             u3e_save();
             //  XX check loom size, suggest --loom X
             //  XX exit code, cb
             //
+            u3_disk_exit(log_u);
             exit(1);
           }
-
-          mem_d = mar_u->dun_d;
 
           //  XX pack before meld?
           //
@@ -252,6 +254,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
           u3e_save();
           //  XX exit code, cb
           //
+          u3_disk_exit(log_u);
           exit(1);
         }
       }
