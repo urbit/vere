@@ -1175,8 +1175,8 @@ _cw_eval(c3_i argc, c3_c* argv[])
       case c3__loom: {
         c3_w lom_w;
         c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if ( (c3n == res_o) || (lom_w < 24) ) {
+          fprintf(stderr, "error: --loom must be >= 24 and <= %u\r\n", u3a_bits + 2);
           exit(1);
         }
         u3_Host.ops_u.lom_y = lom_w;
