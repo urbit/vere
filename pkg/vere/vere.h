@@ -255,6 +255,15 @@
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
 
+    /* u3_trac: tracing information.
+    */
+      typedef struct _u3_trac {
+        c3_w   nid_w;                       //  nock pid
+        FILE*  fil_u;                       //  trace file (json)
+        c3_w   con_w;                       //  trace counter
+        c3_w   fun_w;                       //  file counter
+      } u3_trac;
+
     /* u3_opts: command line configuration.
     */
       typedef struct _u3_opts {
@@ -301,6 +310,7 @@
         c3_c*   puf_c;                      //  -Z, scry result format
         c3_o    con;                        //      run conn
         c3_o    doc;                        //      dock binary in pier
+        c3_o    map;                        //  --no-demand (reversed)
       } u3_opts;
 
     /* u3_host: entire host.
@@ -319,6 +329,7 @@
         u3_opts    ops_u;                   //  commandline options
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
+        u3_trac    tra_u;                   //  tracing information
         void     (*bot_f)();                //  call when chis is up
       } u3_host;                            //  host == computer == process
 
@@ -545,6 +556,10 @@
           c3_o             ted_o;               //  c3y == active
           u3_info          put_u;               //  write queue
         } u3_disk;
+
+      /* u3_disk_walk: opaque event log iterator.
+      */
+        typedef struct _u3_disk_walk u3_disk_walk;
 
       /* u3_psat: pier state.
       */
@@ -925,6 +940,23 @@
         u3_disk*
         u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u);
 
+      /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+      */
+        size_t
+        u3_disk_etch(u3_disk* log_u,
+                     u3_noun    eve,
+                     c3_l     mug_l,
+                     c3_y**   out_y);
+
+      /* u3_disk_sift(): parse a persisted event buffer.
+      */
+        c3_o
+        u3_disk_sift(u3_disk* log_u,
+                     size_t   len_i,
+                     c3_y*    dat_y,
+                     c3_l*    mug_l,
+                     u3_noun*   job);
+
       /* u3_disk_info(): status info as $mass.
       */
         u3_noun
@@ -975,6 +1007,33 @@
       */
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
+
+      /* u3_disk_read_list(): synchronously read a cons list of events.
+      */
+        u3_weak
+        u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l);
+
+      /* u3_disk_walk_init(): init iterator.
+      */
+        u3_disk_walk*
+        u3_disk_walk_init(u3_disk* log_u,
+                          c3_d     eve_d,
+                          c3_d     len_d);
+
+      /* u3_disk_walk_live(): check if live.
+      */
+        c3_o
+        u3_disk_walk_live(u3_disk_walk* wok_u);
+
+      /* u3_disk_walk_live(): get next fact.
+      */
+        c3_o
+        u3_disk_walk_step(u3_disk_walk* wok_u, u3_fact* tac_u);
+
+      /* u3_disk_walk_done(): close iterator.
+      */
+        void
+        u3_disk_walk_done(u3_disk_walk* wok_u);
 
       /* u3_lord_init(): start serf.
       */

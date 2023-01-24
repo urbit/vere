@@ -721,4 +721,3 @@ u3t_slog_hela(c3_l pri_l)
 
   u3t_slog_trace(pri_l, tax);
 }
-

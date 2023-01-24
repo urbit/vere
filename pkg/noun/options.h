@@ -35,7 +35,9 @@
         u3o_dryrun =        0x20,             //  don't touch checkpoint
         u3o_quiet =         0x40,             //  disable ~&
         u3o_hashless =      0x80,             //  disable hashboard
-        u3o_trace =         0x100             //  enables trace dumping
+        u3o_trace =         0x100,            //  enables trace dumping
+        u3o_auto_meld =     0x200,            //  enables meld under pressure
+        u3o_no_demand =     0x400            //  disables demand paging
       };
 
   /** Globals.
