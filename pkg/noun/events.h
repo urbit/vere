@@ -5,6 +5,7 @@
 
 #include "c3.h"
 #include "allocate.h"
+#include "version2.h"
 
   /** Data structures.
   **/
@@ -18,11 +19,11 @@
     /* u3e_control: memory change, control file.
     */
       typedef struct _u3e_control {
-        c3_w     ver_w;                     //  version number
-        c3_w     nor_w;                     //  new page count north
-        c3_w     sou_w;                     //  new page count south
-        c3_w     pgs_w;                     //  number of changed pages
-        u3e_line mem_u[0];                  //  per page
+        u3e_version ver_w;                  //  version number
+        c3_w        nor_w;                  //  new page count north
+        c3_w        sou_w;                  //  new page count south
+        c3_w        pgs_w;                  //  number of changed pages
+        u3e_line    mem_u[0];               //  per page
       } u3e_control;
 
     /* u3_cs_patch: memory change, top level.
@@ -60,7 +61,6 @@
 
   /** Constants.
   **/
-#     define u3e_version 1
 
   /** Functions.
   **/
