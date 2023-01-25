@@ -14,6 +14,12 @@ u3_road* u3a_Road;
 
 //  declarations of inline functions
 //
+void *u3a_into(c3_w x);
+c3_w u3a_outa(void *p);
+c3_w u3a_to_off(c3_w som);
+void *u3a_to_ptr(c3_w som);
+c3_w *u3a_to_wtr(c3_w som);
+
 void
 u3a_drop(const u3a_pile* pil_u);
 void*
