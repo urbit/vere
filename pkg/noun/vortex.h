@@ -37,7 +37,17 @@
 
   /** Constants.
   **/
-#     define u3v_version 1
+  /*
+    version change log:
+    1 -> 2:
+      - 1 bit pointer compression to enable 8G loom
+  */
+
+/* ;;: TODO: refactor so that this is possible -- dependency loop if used in options.h */
+/* #     define U3V_VER1    1 */
+/* #     define U3V_VER2    2 */
+/* #     define u3v_version U3V_VER2 */
+#     define u3v_version 2
 
   /**  Functions.
   **/
