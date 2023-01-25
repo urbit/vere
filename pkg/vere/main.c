@@ -1738,6 +1738,68 @@ _cw_prep(c3_i argc, c3_c* argv[])
   u3_Host.ops_u.tem = c3y;
 }
 
+/* _cw_chop_read_one_cb(): chop callback
+*/
+static c3_o 
+_cw_chop_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p) 
+{
+  // backup the snapshot (overwrites .urb/bhk)
+  u3e_backup();
+
+  // prepare the struct
+  u3_chop* chp_u = ptr_v;
+
+  // get the metadata from the database
+  // TODO: is it ok that it's deserialized?
+  u3_disk* log_u = chp_u->log_u;
+  c3_d* who_d = c3_malloc(sizeof(c3_d) * 2);
+  c3_o  fak_o;
+  c3_w  lif_w;
+  if ( c3n == u3_disk_read_meta(log_u,  who_d,
+                               &fak_o, &lif_w) )
+  {
+    fprintf(stderr, "king: disk read meta fail\r\n");
+    u3_king_bail();
+  }
+
+  // read the event payload
+  c3_y* eve_y = val_p;
+
+  // backup the existing db
+  c3_c bak_c[8193];
+  snprintf(bak_c, 8192, "%s/.urb/log/bak", u3_Host.dir_c);
+  c3_mkdir(bak_c, 0700);
+  if ( c3n == u3_lmdb_backup(chp_u->log_u->mdb_u, bak_c) ) {
+    fprintf(stderr, "king: lmdb backup fail\r\n");
+    u3_king_bail();
+  }
+
+  // delete the existing db
+  if ( c3n == u3_lmdb_delete(chp_u->log_u->mdb_u) ) {
+    fprintf(stderr, "king: lmdb delete fail\r\n");
+    u3_king_bail();
+  }
+
+  // initialize a new db via u3_disk_init
+  // this *should* load the rest of the pier, 
+  u3_disk_cb cb_u = {0};
+  log_u = u3_disk_init(u3_Host.dir_c, cb_u);
+
+  // write the latest event to the new db (u3_lmdb_save - sync)
+
+  // save the metadata to the new db (u3_lmdb_save_meta - sync)
+  // close the old db (u3_lmdb_exit)
+  // rename the old db file to a backup file "data.mdb.bak"
+  // close the new db
+  u3_lmdb_exit(log_u->mdb_u);
+
+  // close the event log
+  u3_disk_exit(log_u);
+
+  // stop u3
+  u3m_stop();
+}
+
 /* _cw_chop(): truncate event log
 */
 static void
@@ -1788,66 +1850,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 }
 
-static c3_o 
-_cw_chop_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p) 
-{
-  // backup the snapshot (overwrites .urb/bhk)
-  u3e_backup();
-
-  // prepare the struct
-  u3_chop* chp_u = ptr_v;
-
-  // get the metadata from the database
-  // TODO: is it ok that it's deserialized?
-  u3_disk* log_u = chp_u->log_u;
-  c3_d* who_d = c3_malloc(sizeof(c3_d) * 2);
-  c3_o  fak_o;
-  c3_w  lif_w;
-  if ( c3n == u3_disk_read_meta(log_u,  who_d,
-                               &fak_o, &lif_w) )
-  {
-    fprintf(stderr, "king: disk read meta fail\r\n");
-    u3_king_bail();
-  }
-
-  // read the event payload
-  c3_d  eve_d = chp_u->eve_d;
-  c3_y* eve_y = val_p;
-
-  // backup the existing db
-  c3_c bak_c[8193];
-  snprintf(bak_c, 8192, "%s/.urb/log/bak", u3_Host.dir_c);
-  c3_mkdir(bak_c, 0700);
-  if ( c3n == u3_lmdb_backup(chp_u->log_u->mdb_u, bak_c) ) {
-    fprintf(stderr, "king: lmdb backup fail\r\n");
-    u3_king_bail();
-  }
-
-  // delete the existing db
-  if ( c3n == u3_lmdb_delete(chp_u->log_u->mdb_u) ) {
-    fprintf(stderr, "king: lmdb delete fail\r\n");
-    u3_king_bail();
-  }
-
-  // initialize a new db via u3_disk_init
-  // this *should* load the rest of the pier, 
-  u3_disk_cb cb_u = {0};
-  log_u = u3_disk_init(u3_Host.dir_c, cb_u);
-
-  // write the latest event to the new db (u3_lmdb_save - sync)
-
-  // save the metadata to the new db (u3_lmdb_save_meta - sync)
-  // close the old db (u3_lmdb_exit)
-  // rename the old db file to a backup file "data.mdb.bak"
-  // close the new db
-  u3_lmdb_exit(log_u->mdb_u);
-
-  // close the event log
-  u3_disk_exit(log_u);
-
-  // stop u3
-  u3m_stop();
-}
 
 /* _cw_vere(): download vere
 */

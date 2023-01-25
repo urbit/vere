@@ -98,8 +98,8 @@ u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
 */
 c3_o u3_lmdb_delete(MDB_env* env_u)
 {
-  c3_c pax_c[8193];
-  if ( 0 != mdb_env_get_path(env_u, pax_c) ) {
+  const char *pax_c;
+  if ( 0 != mdb_env_get_path(env_u, &pax_c) ) {
     fprintf(stderr, "lmdb: failed to get path");
     return c3n;
   }

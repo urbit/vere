@@ -1103,7 +1103,7 @@ u3e_save(void)
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
-  _ce_backup();
+  u3e_backup();
 }
 
 /* u3e_live(): start the checkpointing system.

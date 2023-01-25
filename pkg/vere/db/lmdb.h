@@ -9,10 +9,20 @@
   /* lmdb api wrapper
   */
 
+    /* u3_lmdb_backup(): backup the lmdb environment.
+    */
+      c3_o
+      u3_lmdb_backup(MDB_env* env_u, const c3_c* pax_c);
+
     /* u3_lmdb_init(): open lmdb at [pax_c], mmap up to [siz_i].
     */
       MDB_env*
       u3_lmdb_init(const c3_c* pax_c, size_t siz_i);
+
+    /* u3_lmdb_delete(): delete lmdb environment at [pax_c].
+    */
+      c3_o
+      u3_lmdb_delete(MDB_env* env_u);
 
     /* u3_lmdb_exit(): close lmdb.
     */
