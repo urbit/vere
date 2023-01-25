@@ -156,5 +156,7 @@
         unlink(a);})
 #     define c3_fopen(a, b) ({                                  \
         fopen(a, b);})
+#     define c3_remove(a) ({                                    \
+        remove(a);})
 
 #endif /* ifndef C3_DEFS_H */

@@ -29,10 +29,23 @@ intmax_t mdb_get_filesize(mdb_filehandle_t han_u);
 //    supported operations are as follows
 //
 //      - open/close an environment
+//      - backup an environment
+//      - delete an environment
 //      - read/save metadata
 //      - read the first and last event numbers
 //      - read/save ranges of events
 //
+
+/* u3_lmdb_backup(): backup the lmdb environment.
+*/
+c3_o u3_lmdb_backup(MDB_env* env_u, const c3_c* pax_c)
+{
+  if ( 0 != mdb_env_copy(env_u, pax_c) ) {
+    return c3n;
+  }
+
+  return c3y;
+}
 
 /* u3_lmdb_init(): open lmdb at [pax_c], mmap up to [siz_i].
 */
@@ -79,6 +92,26 @@ u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
   }
 
   return env_u;
+}
+
+/* u3_lmdb_delete(): delete lmdb environment at [pax_c].
+*/
+c3_o u3_lmdb_delete(MDB_env* env_u)
+{
+  c3_c pax_c[8193];
+  if ( 0 != mdb_env_get_path(env_u, pax_c) ) {
+    fprintf(stderr, "lmdb: failed to get path");
+    return c3n;
+  }
+
+  u3_lmdb_exit(env_u);
+
+  if ( 0 != c3_remove(pax_c) ) {
+    fprintf(stderr, "lmdb: failed to remove file");
+    return c3n;
+  }
+
+  return c3y;
 }
 
 /* u3_lmdb_exit(): close lmdb.

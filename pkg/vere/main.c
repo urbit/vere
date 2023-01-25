@@ -30,6 +30,17 @@ static u3_moat      inn_u;             //  input stream
 static u3_mojo      out_u;             //  output stream
 static u3_cue_xeno* sil_u;             //  cue handle
 
+/* u3_chop: event log and the latest event
+*/
+typedef struct _u3_chop
+{
+  u3_disk          *log_u;             //  event log
+  c3_d              eve_d;             //  event number
+  u3_noun          *val_n;             //  event value
+  size_t            val_i;             //  event size 
+} u3_chop;
+
+
 #undef SERF_TRACE_JAM
 #undef SERF_TRACE_CUE
 
@@ -635,6 +646,7 @@ _cw_usage(c3_c* bin_c)
     "  %s prep %.*s              prepare for upgrade:\n",
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
+    "  %s chop %.*s              truncate event log:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
@@ -1726,6 +1738,117 @@ _cw_prep(c3_i argc, c3_c* argv[])
   u3_Host.ops_u.tem = c3y;
 }
 
+/* _cw_chop(): truncate event log
+*/
+static void
+_cw_chop(c3_i argc, c3_c* argv[])
+{
+  switch ( argc ) {
+    case 2: {
+      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+        fprintf(stderr, "unable to find pier\r\n");
+        exit (1);
+      }
+    } break;
+
+    case 3: {
+      u3_Host.dir_c = argv[2];
+    } break;
+
+    default: {
+      fprintf(stderr, "invalid command\r\n");
+      exit(1);
+    } break;
+  }
+
+  //  XX ensure snapshot is current (not stale)?
+  //
+
+  // open the event log
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  // get the latest event number from the event log
+  c3_d eve_d = u3m_boot(u3_Host.dir_c, u3a_bytes);
+
+  // prepare a u3_chop struct
+  u3_chop* chp_p = c3_malloc(sizeof(u3_chop));
+  chp_p->eve_d = eve_d;
+  chp_p->log_u = log_u;
+
+  // get the latest event from the db and 
+  // finish the chop in the callback function
+  if ( c3n == u3_lmdb_read(log_u->mdb_u,
+                           chp_p,
+                           eve_d,
+                           1,
+                           _cw_chop_read_one_cb) )
+  {
+    fprintf(stderr, "king: event read fail\r\n");
+    u3_king_bail();
+  }
+}
+
+static c3_o 
+_cw_chop_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p) 
+{
+  // backup the snapshot (overwrites .urb/bhk)
+  u3e_backup();
+
+  // prepare the struct
+  u3_chop* chp_u = ptr_v;
+
+  // get the metadata from the database
+  // TODO: is it ok that it's deserialized?
+  u3_disk* log_u = chp_u->log_u;
+  c3_d* who_d = c3_malloc(sizeof(c3_d) * 2);
+  c3_o  fak_o;
+  c3_w  lif_w;
+  if ( c3n == u3_disk_read_meta(log_u,  who_d,
+                               &fak_o, &lif_w) )
+  {
+    fprintf(stderr, "king: disk read meta fail\r\n");
+    u3_king_bail();
+  }
+
+  // read the event payload
+  c3_d  eve_d = chp_u->eve_d;
+  c3_y* eve_y = val_p;
+
+  // backup the existing db
+  c3_c bak_c[8193];
+  snprintf(bak_c, 8192, "%s/.urb/log/bak", u3_Host.dir_c);
+  c3_mkdir(bak_c, 0700);
+  if ( c3n == u3_lmdb_backup(chp_u->log_u->mdb_u, bak_c) ) {
+    fprintf(stderr, "king: lmdb backup fail\r\n");
+    u3_king_bail();
+  }
+
+  // delete the existing db
+  if ( c3n == u3_lmdb_delete(chp_u->log_u->mdb_u) ) {
+    fprintf(stderr, "king: lmdb delete fail\r\n");
+    u3_king_bail();
+  }
+
+  // initialize a new db via u3_disk_init
+  // this *should* load the rest of the pier, 
+  u3_disk_cb cb_u = {0};
+  log_u = u3_disk_init(u3_Host.dir_c, cb_u);
+
+  // write the latest event to the new db (u3_lmdb_save - sync)
+
+  // save the metadata to the new db (u3_lmdb_save_meta - sync)
+  // close the old db (u3_lmdb_exit)
+  // rename the old db file to a backup file "data.mdb.bak"
+  // close the new db
+  u3_lmdb_exit(log_u->mdb_u);
+
+  // close the event log
+  u3_disk_exit(log_u);
+
+  // stop u3
+  u3m_stop();
+}
+
 /* _cw_vere(): download vere
 */
 static void
@@ -1839,7 +1962,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   u3l_log("vere: download succeeded");
 }
 
-/* _cw_vile(): generatoe/print keyfile
+/* _cw_vile(): generate/print keyfile
 */
 static void
 _cw_vile(c3_i argc, c3_c* argv[])
@@ -1990,6 +2113,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__pack: _cw_pack(argc, argv); return 1;
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
+    case c3__chop: _cw_chop(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
 
