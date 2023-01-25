@@ -5,6 +5,7 @@
 
 #include "c3.h"
 #include "types.h"
+#include "version2.h"
 
     /** System management.
     **/
@@ -163,6 +164,6 @@
          ver_w - target version
       */
         void
-        u3m_migrate(c3_w ver_w);
+        u3m_migrate(u3v_version ver_w);
 
 #endif /* ifndef U3_MANAGE_H */

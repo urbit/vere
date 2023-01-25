@@ -3,8 +3,10 @@
 #ifndef U3_VORTEX_H
 #define U3_VORTEX_H
 
+#include "allocate.h"
 #include "c3.h"
 #include "imprison.h"
+#include "version2.h"
 
   /**  Data structures.
   **/
@@ -22,9 +24,9 @@
     **       NB: version must be last for discriminability in north road
     */
       typedef struct _u3v_home {
-        u3a_road rod_u;                   //  storage state
-        u3v_arvo arv_u;                   //  arvo state
-        c3_w     ver_w;                   //  version number
+        u3a_road    rod_u;                //  storage state
+        u3v_arvo    arv_u;                //  arvo state
+        u3v_version ver_w;                //  version number
       } u3v_home;
 
 
@@ -37,17 +39,6 @@
 
   /** Constants.
   **/
-  /*
-    version change log:
-    1 -> 2:
-      - 1 bit pointer compression to enable 8G loom
-  */
-
-/* ;;: TODO: refactor so that this is possible -- dependency loop if used in options.h */
-/* #     define U3V_VER1    1 */
-/* #     define U3V_VER2    2 */
-/* #     define u3v_version U3V_VER2 */
-#     define u3v_version 2
 
   /**  Functions.
   **/
