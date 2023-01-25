@@ -2,6 +2,7 @@
 #define U3_ALLOCATE_H
 
 #include "manage.h"
+#include "options.h"
 
   /**  Constants.
   **/
@@ -9,17 +10,10 @@
     */
 #     define u3a_bits    U3_OS_LoomBits /* 30 */
 
-    /* u3a_vits: number of virtual bits in a noun reference gained via shifting
+    /* u3a_vits_max: number of virtual bits in a reference gained via pointer
+       compression
     */
-#     define u3a_vits    1
-
-    /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
-    */
-#     define u3a_walign  (1 << u3a_vits)
-
-    /* u3a_balign: u3a_walign in bytes
-    */
-#     define u3a_balign  (sizeof(c3_w)*u3a_walign)
+#     define u3a_vits_max 1
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
@@ -27,11 +21,11 @@
 
     /* u3a_pages: maximum number of pages in memory.
     */
-#     define u3a_pages   (1ULL << (u3a_bits + u3a_vits - u3a_page) )
+#     define u3a_pages   (1ULL << (u3a_bits + u3a_vits_max - u3a_page) )
 
     /* u3a_words: maximum number of words in memory.
     */
-#     define u3a_words   ( 1ULL << (u3a_bits + u3a_vits))
+#     define u3a_words   ( 1ULL << (u3a_bits + u3a_vits_max ))
 
     /* u3a_bytes: maximum number of bytes in memory.
     */
@@ -356,9 +350,9 @@
 #define _rod_vaal(rod_u)                                                \
   do {                                                                  \
     c3_dessert(((uintptr_t)((u3a_road*)(rod_u))->hat_p                  \
-                & u3a_walign-1) == 0);                                  \
+                & u3C.walign_w-1) == 0);                                \
     c3_dessert(((uintptr_t)((u3a_road*)(rod_u))->cap_p                  \
-                & u3a_walign-1) == 0);                                  \
+                & u3C.walign_w-1) == 0);                                \
   } while(0)
 
 
@@ -378,6 +372,24 @@
 
   /**  inline functions.
   **/
+/* u3a_config_loom(): configure loom information by u3v version
+ */
+inline void u3a_config_loom(c3_w ver_w) {
+  switch (ver_w) {
+  case /* U3V_VER1 */ 1:
+    u3C.vits_w = 0;
+    break;
+  case /* U3V_VER2 */ 2:
+    u3C.vits_w = 1;
+    break;
+  default:
+    c3_assert(0);
+  }
+
+  u3C.walign_w = 1 << u3C.vits_w;
+  u3C.balign_d = sizeof(c3_w) * u3C.walign_w;
+}
+
 /* ;;: func-like-macros doing pointer conversion -> inline
 
    I really prefer this as these are useful functions to set a breakpoint on when
@@ -408,7 +420,7 @@ inline c3_w u3a_outa(void *p) {
 /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
  */
 inline c3_w u3a_to_off(c3_w som) {
-  return (som & 0x3fffffff) << u3a_vits;
+  return (som & 0x3fffffff) << u3C.vits_w;
 }
 
 /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
@@ -426,16 +438,16 @@ inline c3_w *u3a_to_wtr(c3_w som) {
 /* u3a_to_pug(): set bit 31 of [off].
  */
 inline c3_w u3a_to_pug(c3_w off) {
-  c3_dessert((off & u3a_walign-1) == 0);
-  return (off >> u3a_vits) | 0x80000000;
+  c3_dessert((off & u3C.walign_w-1) == 0);
+  return (off >> u3C.vits_w) | 0x80000000;
 }
 
 /* u3a_to_pom(): set bits 30 and 31 of [off].
  */
 /* #     define u3a_to_pom(off)    (off | 0xc0000000) */
 inline c3_w u3a_to_pom(c3_w off) {
-  c3_dessert((off & u3a_walign-1) == 0);
-  return (off >> u3a_vits) | 0xc0000000;
+  c3_dessert((off & u3C.walign_w-1) == 0);
+  return (off >> u3C.vits_w) | 0xc0000000;
 }
 
     /**  road stack.
