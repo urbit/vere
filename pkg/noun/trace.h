@@ -167,6 +167,12 @@
       void
       u3t_slog_hela(c3_l pri_l);
 
+    /* u3t_etch_meme(): report memory stats at call time
+    */
+      u3_noun
+      u3t_etch_meme(c3_l mod_l);
+
+
   /** Globals.
   **/
       /// Tracing profiler.
