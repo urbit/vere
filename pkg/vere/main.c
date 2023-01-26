@@ -30,17 +30,6 @@ static u3_moat      inn_u;             //  input stream
 static u3_mojo      out_u;             //  output stream
 static u3_cue_xeno* sil_u;             //  cue handle
 
-/* u3_chop: event log and the latest event
-*/
-typedef struct _u3_chop
-{
-  u3_disk          *log_u;             //  event log
-  c3_d              eve_d;             //  event number
-  u3_noun          *val_n;             //  event value
-  size_t            val_i;             //  event size 
-} u3_chop;
-
-
 #undef SERF_TRACE_JAM
 #undef SERF_TRACE_CUE
 
@@ -1738,116 +1727,103 @@ _cw_prep(c3_i argc, c3_c* argv[])
   u3_Host.ops_u.tem = c3y;
 }
 
-/* _cw_chop_read_one_cb(): chop callback
-*/
-static c3_o 
-_cw_chop_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p) 
-{
-  // backup the snapshot (overwrites .urb/bhk)
-  u3e_backup();
-
-  // prepare the struct
-  u3_chop* chp_u = ptr_v;
-
-  // get the metadata from the database
-  // TODO: is it ok that it's deserialized?
-  u3_disk* log_u = chp_u->log_u;
-  c3_d* who_d = c3_malloc(sizeof(c3_d) * 2);
-  c3_o  fak_o;
-  c3_w  lif_w;
-  if ( c3n == u3_disk_read_meta(log_u,  who_d,
-                               &fak_o, &lif_w) )
-  {
-    fprintf(stderr, "king: disk read meta fail\r\n");
-    u3_king_bail();
-  }
-
-  // read the event payload
-  c3_y* eve_y = val_p;
-
-  // backup the existing db
-  c3_c bak_c[8193];
-  snprintf(bak_c, 8192, "%s/.urb/log/bak", u3_Host.dir_c);
-  c3_mkdir(bak_c, 0700);
-  if ( c3n == u3_lmdb_backup(chp_u->log_u->mdb_u, bak_c) ) {
-    fprintf(stderr, "king: lmdb backup fail\r\n");
-    u3_king_bail();
-  }
-
-  // delete the existing db
-  if ( c3n == u3_lmdb_delete(chp_u->log_u->mdb_u) ) {
-    fprintf(stderr, "king: lmdb delete fail\r\n");
-    u3_king_bail();
-  }
-
-  // initialize a new db via u3_disk_init
-  // this *should* load the rest of the pier, 
-  u3_disk_cb cb_u = {0};
-  log_u = u3_disk_init(u3_Host.dir_c, cb_u);
-
-  // write the latest event to the new db (u3_lmdb_save - sync)
-
-  // save the metadata to the new db (u3_lmdb_save_meta - sync)
-  // close the old db (u3_lmdb_exit)
-  // rename the old db file to a backup file "data.mdb.bak"
-  // close the new db
-  u3_lmdb_exit(log_u->mdb_u);
-
-  // close the event log
-  u3_disk_exit(log_u);
-
-  // stop u3
-  u3m_stop();
-}
-
 /* _cw_chop(): truncate event log
 */
 static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
-      }
-    } break;
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        c3_w lom_w;
+        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
+        if ( (c3n == res_o) || (lom_w < 20) ) {
+          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+          exit(1);
+        }
+        u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "chop"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
       exit(1);
-    } break;
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
   }
 
   //  XX ensure snapshot is current (not stale)?
   //
 
-  // open the event log
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  // boot and get the last event number
+  c3_d hig_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  fprintf(stderr, "booted: last event is %llu\r\n", hig_d);
 
-  // get the latest event number from the event log
-  c3_d eve_d = u3m_boot(u3_Host.dir_c, u3a_bytes);
+  // backup the current snapshot
+  u3e_backup();
 
-  // prepare a u3_chop struct
-  u3_chop* chp_p = c3_malloc(sizeof(u3_chop));
-  chp_p->eve_d = eve_d;
-  chp_p->log_u = log_u;
+  // instantiate an lmdb environment
+  // see disk.c L885
+  const size_t siz_i =
+  // 500 GiB is as large as musl on aarch64 wants to allow
+  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+    0x7d00000000;
+  #else
+    0x10000000000;
+  #endif
+  c3_c log_c[8193];
+  snprintf(log_c, 8192, "%s/.urb/log", u3_Host.dir_c);
+  MDB_env* env_u = u3_lmdb_init(log_c, siz_i);
 
-  // get the latest event from the db and 
-  // finish the chop in the callback function
-  if ( c3n == u3_lmdb_read(log_u->mdb_u,
-                           chp_p,
-                           eve_d,
-                           1,
-                           _cw_chop_read_one_cb) )
-  {
-    fprintf(stderr, "king: event read fail\r\n");
+  // // get the first and last event numbers
+  // c3_d low_d, hig_d;
+  // if ( c3y != u3_lmdb_gulf(env_u, &low_d, &hig_d) ) {
+  //   fprintf(stderr, "king: no events in log\r\n");
+  //   u3_king_bail();
+  // }
+
+  // get the last event
+  MDB_val val_u;
+  if ( c3y != u3_lmdb_read_one(env_u, &val_u, hig_d) ) {
+    fprintf(stderr, "king: failed to read last event\r\n");
     u3_king_bail();
   }
+
+  // get the metadata from the database
+
+  // cleanup
+  fprintf(stderr, "cleaning\r\n");
+  u3_lmdb_exit(env_u);
+  u3m_stop();
 }
 
 

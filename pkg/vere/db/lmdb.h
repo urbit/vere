@@ -9,20 +9,10 @@
   /* lmdb api wrapper
   */
 
-    /* u3_lmdb_backup(): backup the lmdb environment.
-    */
-      c3_o
-      u3_lmdb_backup(MDB_env* env_u, const c3_c* pax_c);
-
     /* u3_lmdb_init(): open lmdb at [pax_c], mmap up to [siz_i].
     */
       MDB_env*
       u3_lmdb_init(const c3_c* pax_c, size_t siz_i);
-
-    /* u3_lmdb_delete(): delete lmdb environment at [pax_c].
-    */
-      c3_o
-      u3_lmdb_delete(MDB_env* env_u);
 
     /* u3_lmdb_exit(): close lmdb.
     */
@@ -49,6 +39,13 @@
                    c3_d     len_d,
                    c3_o  (*read_f)(void*, c3_d, size_t  , void*));
 
+    /* u3_lmdb_read_one(): read one by string from the META db.
+    */
+      c3_o
+      u3_lmdb_read_one(MDB_env* env_u,
+                       MDB_val* val_u,
+                       c3_d     eve_d);
+
     /* u3_lmdb_save(): save [len_d] events starting at [eve_d].
     */
       c3_o
@@ -65,6 +62,13 @@
                         void*       ptr_v,
                         const c3_c* key_c,
                         void     (*read_f)(void*, size_t, void*));
+
+    /* u3_lmdb_read_meta_one(): read one by string from the META db.
+    */
+      c3_o
+      u3_lmdb_read_meta_one(MDB_env*    env_u,
+                            MDB_val*    val_u,
+                            const c3_c* key_c);
 
     /* u3_lmdb_save_meta(): save by string into the META db.
     */
