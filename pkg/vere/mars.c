@@ -4,6 +4,7 @@
 */
 #include <vere.h>
 #include <mars.h>
+#include <stdio.h>
 
 /* _mars_step_trace(): initialize or rotate trace file.
 */
@@ -26,6 +27,7 @@ _mars_step_trace(const c3_c* dir_c)
 static u3_weak
 _mars_poke_play(u3_mars* mar_u, c3_d eve_d, u3_noun job)
 {
+  fprintf(stderr, "play (%" PRIu64 ")\r\n", eve_d);
   u3_noun vir;
 
   if ( c3n == u3v_poke_sure(0, job, &vir) ) {

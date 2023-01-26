@@ -1791,6 +1791,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   }
 
   u3C.wag_w |= u3o_hashless;
+  fprintf(stderr, "play (%" PRIu64 ")\r\n", u3C.wag_w);
 
   if ( c3y == ful_o ) {
     u3l_log("mars: preparing for full replay\r\n");
