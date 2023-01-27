@@ -1803,6 +1803,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // get the metadata
   MDB_val ver, who, fak, lif;
+  u3_noun ver_n, who_n, fak_n, lif_n;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &ver, "version") ) {
     fprintf(stderr, "king: failed to read ver\r\n");
     u3_king_bail();
@@ -1819,13 +1820,24 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "king: failed to read lif\r\n");
     u3_king_bail();
   }
+  ver_n = u3i_bytes(ver.mv_size, ver.mv_data);
+  ver.mv_data = &ver_n;
+  who_n = u3i_bytes(who.mv_size, who.mv_data);
+  who.mv_data = &who_n;
+  fak_n = u3i_bytes(fak.mv_size, fak.mv_data);
+  fak.mv_data = &fak_n;
+  lif_n = u3i_bytes(lif.mv_size, lif.mv_data);
+  lif.mv_data = &lif_n;
 
   // get the last event
   MDB_val val_u;
+  u3_noun val_n;
   if ( c3y != u3_lmdb_read_one(env_u, &val_u, hig_d) ) {
     fprintf(stderr, "king: failed to read last event\r\n");
     u3_king_bail();
   }
+  val_n = u3i_bytes(val_u.mv_size, val_u.mv_data);
+  val_u.mv_data = &val_n;
 
   // close the lmdb environment
   u3_lmdb_exit(env_u);
@@ -1834,7 +1846,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_c dat_c[8193], bak_c[8193];
   snprintf(dat_c, 8192, "%s/.urb/log/data.mdb", u3_Host.dir_c);
   snprintf(bak_c, 8192, "%s.bak", dat_c);
-  rename(dat_c, bak_c);
+  c3_rename(dat_c, bak_c);
 
   // initialize a fresh lmdb environment
   env_u = u3_lmdb_init(log_c, siz_i);
