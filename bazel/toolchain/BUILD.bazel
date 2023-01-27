@@ -176,10 +176,10 @@ cc_toolchain_config(
     compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
     sys_includes = [
+        "/Library/Developer/CommandLineTools/usr/lib/clang/14.0.0/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
-        "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
-        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
+        "/Library/Developer/CommandLineTools/usr/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks",
     ],
     target_cpu = "aarch64",
     toolchain_identifier = _macos_aarch64_clang,
