@@ -67,7 +67,7 @@
     /* u3e_backup(): copy the snapshot from chk to bhk. 
     */
       void
-      u3e_backup(void);
+      u3e_backup(c3_o ovw_o);
 
     /* u3e_fault(): handle a memory event with libsigsegv protocol.
     */

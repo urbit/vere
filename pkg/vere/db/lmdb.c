@@ -386,50 +386,6 @@ u3_lmdb_read_one(MDB_env* env_u,
   }
 }
 
-/* u3_lmdb_read_meta_one(): load [key_c] into [val_u].
-*/
-c3_o
-u3_lmdb_read_meta_one(MDB_env*    env_u,
-                      MDB_val*    val_u,
-                      const c3_c* key_c)
-{
-  MDB_txn* txn_u;
-  MDB_dbi  mdb_u;
-  c3_w     ret_w;
-
-  //  create a read transaction
-  //
-  if ( (ret_w = mdb_txn_begin(env_u, 0, MDB_RDONLY, &txn_u)) ) {
-    mdb_logerror(stderr, ret_w, "lmdb: meta read one: txn_begin fail");
-    return c3n;
-  }
-
-  //  open the database in the transaction
-  //
-  if ( (ret_w =  mdb_dbi_open(txn_u, "META", 0, &mdb_u)) ) {
-    mdb_logerror(stderr, ret_w, "lmdb: meta read one: dbi_open fail");
-    mdb_txn_abort(txn_u);
-    return c3n;
-  }
-
-  //  read by string key
-  {
-    MDB_val key_u = { .mv_size = strlen(key_c), .mv_data = (void*)key_c };
-
-    if ( (ret_w = mdb_get(txn_u, mdb_u, &key_u, val_u)) ) {
-      mdb_logerror(stderr, ret_w, "lmdb: meta read one failed");
-      mdb_txn_abort(txn_u);
-      return c3n;
-    }
-    else {
-      //  read-only transactions are aborted when complete
-      //
-      mdb_txn_abort(txn_u);
-      return c3y;
-    }
-  }
-}
-
 /* u3_lmdb_save(): save [len_d] events starting at [eve_d].
 */
 c3_o
@@ -538,6 +494,50 @@ u3_lmdb_read_meta(MDB_env*    env_u,
       //  read-only transactions are aborted when complete
       //
       mdb_txn_abort(txn_u);
+    }
+  }
+}
+
+/* u3_lmdb_read_meta_one(): load [key_c] into [val_u].
+*/
+c3_o
+u3_lmdb_read_meta_one(MDB_env*    env_u,
+                      MDB_val*    val_u,
+                      const c3_c* key_c)
+{
+  MDB_txn* txn_u;
+  MDB_dbi  mdb_u;
+  c3_w     ret_w;
+
+  //  create a read transaction
+  //
+  if ( (ret_w = mdb_txn_begin(env_u, 0, MDB_RDONLY, &txn_u)) ) {
+    mdb_logerror(stderr, ret_w, "lmdb: meta read one: txn_begin fail");
+    return c3n;
+  }
+
+  //  open the database in the transaction
+  //
+  if ( (ret_w =  mdb_dbi_open(txn_u, "META", 0, &mdb_u)) ) {
+    mdb_logerror(stderr, ret_w, "lmdb: meta read one: dbi_open fail");
+    mdb_txn_abort(txn_u);
+    return c3n;
+  }
+
+  //  read by string key
+  {
+    MDB_val key_u = { .mv_size = strlen(key_c), .mv_data = (void*)key_c };
+
+    if ( (ret_w = mdb_get(txn_u, mdb_u, &key_u, val_u)) ) {
+      mdb_logerror(stderr, ret_w, "lmdb: meta read one failed");
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+    else {
+      //  read-only transactions are aborted when complete
+      //
+      mdb_txn_abort(txn_u);
+      return c3y;
     }
   }
 }

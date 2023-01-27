@@ -992,10 +992,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* u3e_backup();
+/* _ce_backup();
 */
 void
-u3e_backup(void)
+u3e_backup(c3_o ovw_o)
 {
   u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
   u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
@@ -1004,7 +1004,7 @@ u3e_backup(void)
 
   snprintf(ful_c, 8192, "%s/.urb/bhk", u3P.dir_c);
 
-  if ( c3_mkdir(ful_c, 0700) ) {
+  if ( (c3n == ovw_o) && c3_mkdir(ful_c, 0700) ) {
     if ( EEXIST != errno ) {
       fprintf(stderr, "loom: image backup: %s\r\n", strerror(errno));
     }
@@ -1038,6 +1038,7 @@ u3e_backup(void)
 
   close(nop_u.fid_i);
   close(sop_u.fid_i);
+  fprintf(stderr, "loom: image backup complete\r\n");
 }
 
 /*
@@ -1103,7 +1104,7 @@ u3e_save(void)
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
-  u3e_backup();
+  u3e_backup(c3n);
 }
 
 /* u3e_live(): start the checkpointing system.
