@@ -85,7 +85,7 @@ jobs:
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
-              brew install automake libtool llvm@15
+              brew install automake libtool
               ;;
             *)
               echo "Unsupported target: ${{ matrix.target }}"
@@ -97,28 +97,11 @@ jobs:
       - name: Build binary
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          case "${{ matrix.target }}" in
-            "linux-aarch64")
-              bazel build :urbit
-              ;;
-            "linux-x86_64")
-              bazel build :urbit
-              ;;
-            "macos-aarch64")
-              bazel build :urbit
-              ;;
-            "macos-x86_64")
-              bazel build --clang_version=15.0.7 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
-              ;;
-          esac
+          bazel build :urbit
 
       - name: Run unit tests
         run: |
-          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-            bazel test --build_tests_only --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
-          else
-            bazel test --build_tests_only ...
-          fi
+          bazel test --build_tests_only ...
 
       - name: Run fake ship tests
         if: ${{ matrix.target == 'linux-x86_64' }}
