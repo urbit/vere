@@ -10,6 +10,10 @@
 #     paths require a compiler version number, simply replace the version number
 #     with `{compiler_version}`, which is replaced with the value of the label
 #     indicated by the `compiler_version` attribute when the rule is resolved.
+#     To determine the compiler's include paths, run (courtesy of
+#     https://groups.google.com/g/bazel-discuss/c/NC_7g1bQHjw/m/f_dpNgPSAwAJ):
+#     `$ <compiler> -v -x c - -v /dev/null`
+#     The resulting paths should be included in the `sys_includes` attribute.
 # (2) Define a `cc_toolchain()` rule target with a `name` attribute of the form
 #     `<compiler>-<os>-<cpu>` and a `toolchain_config` attribute that references
 #     the `cc_toolchain_config()` target from (1).
