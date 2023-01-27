@@ -32,11 +32,11 @@ cc_library(
         "-Wall",
         "-g",
         "-Iexternal/argon2/src",
-        "-DARGON2_NO_THREADS",
     ],
     includes = [
         "include",
         "src/blake2",
     ],
+    local_defines = ["ARGON2_NO_THREADS"],
     visibility = ["//visibility:public"],
 )
