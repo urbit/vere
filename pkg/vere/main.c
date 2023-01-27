@@ -1784,7 +1784,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   //  XX ensure snapshot is current (not stale)?
   //
 
-  c3_d hig_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3e_backup(c3y);  //  backup snapshot
   u3m_stop();
 
@@ -1800,6 +1800,14 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_c log_c[8193];
   snprintf(log_c, 8192, "%s/.urb/log", u3_Host.dir_c);
   MDB_env* env_u = u3_lmdb_init(log_c, siz_i);
+
+  // get the first/last event numbers
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(env_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "disk: failed to load latest event from database\r\n");
+    u3_king_bail();
+  }
+
 
   // get the metadata
   MDB_val ver, who, fak, lif;
@@ -1820,19 +1828,19 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "king: failed to read lif\r\n");
     u3_king_bail();
   }
-  ver_n = u3i_bytes(ver.mv_size, ver.mv_data);
-  ver.mv_data = &ver_n;
-  who_n = u3i_bytes(who.mv_size, who.mv_data);
-  who.mv_data = &who_n;
-  fak_n = u3i_bytes(fak.mv_size, fak.mv_data);
-  fak.mv_data = &fak_n;
-  lif_n = u3i_bytes(lif.mv_size, lif.mv_data);
-  lif.mv_data = &lif_n;
+  c3_d* ver_d = c3_malloc(ver.mv_size);
+  c3_d* who_d = c3_malloc(who.mv_size);
+  c3_o* fak_o = c3_malloc(fak.mv_size);
+  c3_w* lif_w = c3_malloc(lif.mv_size);
+  memcpy(ver_d, ver.mv_data, ver.mv_size);
+  memcpy(who_d, who.mv_data, who.mv_size);
+  memcpy(fak_o, fak.mv_data, fak.mv_size);
+  memcpy(lif_w, lif.mv_data, lif.mv_size);
 
   // get the last event
   MDB_val val_u;
-  u3_noun val_n;
-  if ( c3y != u3_lmdb_read_one(env_u, &val_u, hig_d) ) {
+  u3_atom val_n;
+  if ( c3y != u3_lmdb_read_one(env_u, &val_u, las_d) ) {
     fprintf(stderr, "king: failed to read last event\r\n");
     u3_king_bail();
   }
@@ -1845,28 +1853,28 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // rename the database file
   c3_c dat_c[8193], bak_c[8193];
   snprintf(dat_c, 8192, "%s/.urb/log/data.mdb", u3_Host.dir_c);
-  snprintf(bak_c, 8192, "%s.bak", dat_c);
+  // data.mdb.bak.<first>_<last>
+  snprintf(bak_c, 8192, "%s.bak.%llu_%llu", dat_c, fir_d, las_d);
   c3_rename(dat_c, bak_c);
 
   // initialize a fresh lmdb environment
   env_u = u3_lmdb_init(log_c, siz_i);
 
   // write the metadata to the database
-  // FIXME by copying values from MDB_vals to our own variables
   fprintf(stderr, "meta attempt\r\n");
-  if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, ver.mv_data) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, ver_d) ) {
     fprintf(stderr, "king: failed to write version\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "who", who.mv_size, who.mv_data) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "who", who.mv_size, who_d) ) {
     fprintf(stderr, "king: failed to write who\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "fake", fak.mv_size, fak.mv_data) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "fake", fak.mv_size, fak_o) ) {
     fprintf(stderr, "king: failed to write fake\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "life", lif.mv_size, lif.mv_data) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "life", lif.mv_size, lif_w) ) {
     fprintf(stderr, "king: failed to write life\r\n");
     u3_king_bail();
   }
@@ -1876,12 +1884,17 @@ _cw_chop(c3_i argc, c3_c* argv[])
   fprintf(stderr, "attempt\r\n");
   size_t syz_i = val_u.mv_size; 
   void* byt_p = val_u.mv_data;
-  if ( c3y != u3_lmdb_save(env_u, hig_d, 1, &byt_p, &syz_i) ) { 
+  if ( c3y != u3_lmdb_save(env_u, las_d, 1, &byt_p, &syz_i) ) { 
     fprintf(stderr, "king: failed to write last event\r\n");
     u3_king_bail();
   }
 
   // cleanup
+  c3_free(ver_d);
+  c3_free(who_d);
+  c3_free(fak_o);
+  c3_free(lif_w);
+  u3z(val_n);
   u3_lmdb_exit(env_u);
 }
 
