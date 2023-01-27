@@ -31,7 +31,7 @@ cc_library(
         "-O3",
         "-Wall",
         "-g",
-        "-Isrc",
+        "-Iexternal/argon2/src",
         "-DARGON2_NO_THREADS",
     ],
     includes = [
