@@ -636,6 +636,7 @@ _cw_usage(c3_c* bin_c)
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
     "  %s chop %.*s              truncate event log:\n",
+    "  %s knit %.*s              merge chopped event logs:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
@@ -1811,7 +1812,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // get the metadata
   MDB_val ver, who, fak, lif;
-  u3_noun ver_n, who_n, fak_n, lif_n;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &ver, "version") ) {
     fprintf(stderr, "king: failed to read ver\r\n");
     u3_king_bail();
@@ -1828,14 +1828,10 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "king: failed to read lif\r\n");
     u3_king_bail();
   }
-  c3_d* ver_d = c3_malloc(ver.mv_size);
-  c3_d* who_d = c3_malloc(who.mv_size);
-  c3_o* fak_o = c3_malloc(fak.mv_size);
-  c3_w* lif_w = c3_malloc(lif.mv_size);
-  memcpy(ver_d, ver.mv_data, ver.mv_size);
-  memcpy(who_d, who.mv_data, who.mv_size);
-  memcpy(fak_o, fak.mv_data, fak.mv_size);
-  memcpy(lif_w, lif.mv_data, lif.mv_size);
+  c3_d ver_d = *(c3_d*)ver.mv_data;
+  c3_d who_d = *(c3_d*)who.mv_data;
+  c3_o fak_o = *(c3_o*)fak.mv_data;
+  c3_w lif_w = *(c3_w*)lif.mv_data;
 
   // get the last event
   MDB_val val_u;
@@ -1862,19 +1858,19 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // write the metadata to the database
   fprintf(stderr, "meta attempt\r\n");
-  if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, ver_d) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, &ver_d) ) {
     fprintf(stderr, "king: failed to write version\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "who", who.mv_size, who_d) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "who", who.mv_size, &who_d) ) {
     fprintf(stderr, "king: failed to write who\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "fake", fak.mv_size, fak_o) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "fake", fak.mv_size, &fak_o) ) {
     fprintf(stderr, "king: failed to write fake\r\n");
     u3_king_bail();
   }
-  if ( c3y != u3_lmdb_save_meta(env_u, "life", lif.mv_size, lif_w) ) {
+  if ( c3y != u3_lmdb_save_meta(env_u, "life", lif.mv_size, &lif_w) ) {
     fprintf(stderr, "king: failed to write life\r\n");
     u3_king_bail();
   }
@@ -1890,15 +1886,85 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // cleanup
-  c3_free(ver_d);
-  c3_free(who_d);
-  c3_free(fak_o);
-  c3_free(lif_w);
   u3z(val_n);
   u3_lmdb_exit(env_u);
 }
 
+/* _cw_knit(): unify chopped event log
+*/
+static void
+_cw_knit(c3_i argc, c3_c* argv[])
+{
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
 
+  static struct option lop_u[] = {
+    { "ins", required_argument, NULL, c3__ins },
+    { "outs", required_argument, NULL, c3__out },
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__ins: {
+        // TODO: parse to an array of filename strings
+      } break;
+      case c3__out: {
+        // TODO: accept output filename
+      } break;
+      case c3__loom: {
+        c3_w lom_w;
+        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
+        if ( (c3n == res_o) || (lom_w < 20) ) {
+          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+          exit(1);
+        }
+        u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "knit"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  // validate all in files are readable
+
+  // validate out file is writable
+  // and doesn't already exist (?)
+
+  // read events from in files into a single array (mdb_get)
+
+  // make sure the array represents a valid event log
+  // with monitonically increasing integer keys (and no gaps)
+
+  // write the events from the array to the out file 
+  // (via mdb_copy or mdb_put)
+}
 /* _cw_vere(): download vere
 */
 static void
