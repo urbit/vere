@@ -166,10 +166,10 @@ versioned_http_archive(
 versioned_http_archive(
     name = "gmp",
     build_file = "//bazel/third_party/gmp:gmp.BUILD",
-    sha256 = "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
+    sha256 = "c2b1a2c027cec3c8d92c3925c81fcd7c213e1f5741271de03a731e42aaf90a61",
     strip_prefix = "gmp-{version}",
-    url = "https://gmplib.org/download/gmp/gmp-{version}.tar.xz",
-    version = "6.2.1",
+    url = "https://gmplib.org/download/snapshot/gmp-next/gmp-{version}.tar.zst",
+    version = "6.2.99-20221117121717",
 )
 
 versioned_http_archive(
@@ -360,7 +360,9 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 go_rules_dependencies()
+
 go_register_toolchains(version = "1.18")
+
 gazelle_dependencies(go_repository_default_config = "//:WORKSPACE.bazel")
 
 load(
@@ -371,19 +373,21 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", _container_deps = "deps")
 load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
 
 _container_repositories()
+
 _container_deps(
     # See https://github.com/bazelbuild/rules_docker/issues/1902.
     go_repository_default_config = "@//:WORKSPACE.bazel",
 )
+
 _cc_image_repos()
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 
 container_pull(
     name = "alpine_linux_x86_64",
+    timeout = 300,  # [seconds]
     architecture = "amd64",
     digest = "sha256:93d5a28ff72d288d69b5997b8ba47396d2cbb62a72b5d87cd3351094b5d578a0",
     registry = "docker.io",
     repository = "alpine",
-    timeout = 300, # [seconds]
 )
