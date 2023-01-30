@@ -1811,36 +1811,41 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
 
   // get the metadata
-  MDB_val ver, who, fak, lif;
+  MDB_val ver;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &ver, "version") ) {
     fprintf(stderr, "king: failed to read ver\r\n");
     u3_king_bail();
   }
+  c3_d ver_d = *(c3_d*)ver.mv_data;
+
+  MDB_val who;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &who, "who") ) {
     fprintf(stderr, "king: failed to read who\r\n");
     u3_king_bail();
   }
+  c3_d who_d = *(c3_d*)who.mv_data;
+
+  MDB_val fak;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &fak, "fake") ) {
     fprintf(stderr, "king: failed to read fak\r\n");
     u3_king_bail();
   }
+  c3_d fak_o = *(c3_d*)fak.mv_data;
+
+  MDB_val lif;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &lif, "life") ) {
     fprintf(stderr, "king: failed to read lif\r\n");
     u3_king_bail();
   }
-  c3_d ver_d = *(c3_d*)ver.mv_data;
-  c3_d who_d = *(c3_d*)who.mv_data;
-  c3_o fak_o = *(c3_o*)fak.mv_data;
-  c3_w lif_w = *(c3_w*)lif.mv_data;
+  c3_d lif_w = *(c3_d*)lif.mv_data;
 
   // get the last event
   MDB_val val_u;
-  u3_atom val_n;
   if ( c3y != u3_lmdb_read_one(env_u, &val_u, las_d) ) {
     fprintf(stderr, "king: failed to read last event\r\n");
     u3_king_bail();
   }
-  val_n = u3i_bytes(val_u.mv_size, val_u.mv_data);
+  u3_atom val_n = u3i_bytes(val_u.mv_size, val_u.mv_data);
   val_u.mv_data = &val_n;
 
   // close the lmdb environment
@@ -1857,7 +1862,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   env_u = u3_lmdb_init(log_c, siz_i);
 
   // write the metadata to the database
-  fprintf(stderr, "meta attempt\r\n");
   if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, &ver_d) ) {
     fprintf(stderr, "king: failed to write version\r\n");
     u3_king_bail();
@@ -1876,8 +1880,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // write the last event to the database
-  // FIXME by copying values from MDB_vals to our own variables
-  fprintf(stderr, "attempt\r\n");
   size_t syz_i = val_u.mv_size; 
   void* byt_p = val_u.mv_data;
   if ( c3y != u3_lmdb_save(env_u, las_d, 1, &byt_p, &syz_i) ) { 
