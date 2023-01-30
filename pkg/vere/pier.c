@@ -1042,7 +1042,7 @@ _pier_play(u3_play* pay_u)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o ) {
+      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
         u3_pier_exit(pir_u);
       }
       else {
@@ -1068,6 +1068,7 @@ _pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l mug_l)
 
   c3_assert( u3_psat_play == pir_u->sat_e );
 
+  u3_lord_save(pir_u->god_u);
   u3l_log("pier: (%" PRIu64 "): play: done", tac_u->eve_d);
 
   //  XX optional
@@ -1433,7 +1434,7 @@ _pier_on_lord_live(void* ptr_v)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o ) {
+      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
         u3_pier_exit(pir_u);
       }
       else {

@@ -318,6 +318,7 @@
         c3_c*      arc_c;                   //  upgrade to arch
         u3_opts    ops_u;                   //  commandline options
         c3_o       pep_o;                   //  prep for upgrade
+        c3_o       play_o;                  //  replay event log and exit
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
       } u3_host;                            //  host == computer == process
