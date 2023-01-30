@@ -1021,6 +1021,9 @@ _pier_play(u3_play* pay_u)
     //
     u3l_log("---------------- playback complete ----------------");
     u3_term_stop_spinner();
+    fprintf(stderr, "== bye!\r\n");
+    exit(0);
+
 
     if ( pay_u->eve_d < log_u->dun_d ) {
       // u3l_log("pier: replay barrier reached, shutting down");
