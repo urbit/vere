@@ -966,6 +966,8 @@ _pier_play_send(u3_play* pay_u)
 #endif
 
     u3_lord_play(pir_u->god_u, fon_u);
+    // Save a snaphot when replaying the batch completes.
+    u3_lord_save(pir_u->god_u);
   }
 }
 
@@ -1042,7 +1044,7 @@ _pier_play(u3_play* pay_u)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o ) {
+      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
         u3_pier_exit(pir_u);
       }
       else {
@@ -1433,7 +1435,7 @@ _pier_on_lord_live(void* ptr_v)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o ) {
+      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
         u3_pier_exit(pir_u);
       }
       else {

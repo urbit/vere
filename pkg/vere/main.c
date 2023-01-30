@@ -139,6 +139,7 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
+  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
@@ -1668,6 +1669,18 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_stop();
 }
 
+static void
+_cw_play(c3_i argc, c3_c* argv[])
+{
+  if ( argc != 3 ) {
+    fprintf(stderr, "error: invalid usage, expected `urbit play <pier>`");
+    exit(1);
+  }
+  assert(strcmp(argv[1], "play") == 0);
+  u3_Host.dir_c = argv[2];
+  u3_Host.play_o = c3y;
+}
+
 /* _cw_prep(): prepare for upgrade
 */
 static void
@@ -1988,6 +2001,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
+    case c3__play: _cw_play(argc, argv); return 2; // continue on
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
