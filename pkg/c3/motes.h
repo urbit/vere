@@ -626,6 +626,7 @@
 #   define c3__king   c3_s4('k','i','n','g')
 #   define c3__kit    c3_s3('k','i','t')
 #   define c3__klr    c3_s3('k','l','r')
+#   define c3__knit   c3_s4('k','n','i','t')
 #   define c3__kno    c3_s3('k','n','o')
 #   define c3__ktbc   c3_s4('k','t','b','c')
 #   define c3__ktbn   c3_s4('k','t','b','n')
