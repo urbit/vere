@@ -1672,12 +1672,49 @@ _cw_pack(c3_i argc, c3_c* argv[])
 static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
-  if ( argc != 3 ) {
-    fprintf(stderr, "error: invalid usage, expected `urbit play <pier>`");
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  static const c3_c usage_c[] = "error: invalid usage, expected "
+                                "`urbit play [--replay-to <event_num> "
+                                "| --batch-size <event_cnt>] <pier>`";
+  static struct option opts_u[] = {
+    { "batch-size", required_argument, NULL, 'b' },
+    { "replay-to",  required_argument, NULL, 'n' },
+  };
+
+  c3_i ch_i;
+  c3_i idx_i;
+  while ( -1 != (ch_i = getopt_long(argc, argv, "b:n:", opts_u, &idx_i)) ) {
+    switch ( ch_i ) {
+      case 'b':
+        u3_Host.ops_u.batch_sz_c = strdup(optarg);
+        break;
+      case 'n':
+        u3_Host.ops_u.til_c = strdup(optarg);
+        break;
+      case '?':
+        fprintf(stderr, "%s\r\n", usage_c);
+        exit(1);
+    }
+  }
+
+  if ( !u3_Host.dir_c ) {
+    assert(strcmp(argv[optind], "play") == 0);
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "%s\r\n", usage_c);
+      exit(1);
+    }
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "%s\r\n", usage_c);
     exit(1);
   }
-  assert(strcmp(argv[1], "play") == 0);
-  u3_Host.dir_c = argv[2];
+
   u3_Host.play_o = c3y;
 }
 
