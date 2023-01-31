@@ -65,6 +65,9 @@ If you want a debug build, which changes the optimization level from `-O3` to
 ```console
 $ bazel build --config=dbg :urbit
 ```
+Note that you cannot change the optimization level for third party
+dependencies--those targets specified in `bazel/third_party`--from the command
+line.
 
 If you need to specify arbitrary C compiler or linker options, use
 [`--copt`][copt] or [`--linkopt`][linkopt], respectively:

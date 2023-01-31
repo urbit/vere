@@ -8,6 +8,7 @@ cc_library(
         exclude = ["src/ed25519.h"],
     ),
     hdrs = ["src/ed25519.h"],
+    copts = ["-O3"],
     includes = ["src"],
     visibility = ["//visibility:public"],
 )
