@@ -1740,8 +1740,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
     { NULL, 0, NULL, 0 }
   };
 
-  // TODO: make sure chop shuts down the ship if running
-
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
@@ -1783,8 +1781,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  XX ensure snapshot is current (not stale)?
-  //
+  // gracefully shutdown the pier if it's running
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk_exit(log_u);
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3e_backup(c3y);  //  backup snapshot
@@ -1810,40 +1809,39 @@ _cw_chop(c3_i argc, c3_c* argv[])
     u3_king_bail();
   }
 
-
   // get the metadata
   MDB_val ver;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &ver, "version") ) {
-    fprintf(stderr, "king: failed to read ver\r\n");
+    fprintf(stderr, "chop: failed to read version\r\n");
     u3_king_bail();
   }
   c3_d ver_d = *(c3_d*)ver.mv_data;
 
   MDB_val who;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &who, "who") ) {
-    fprintf(stderr, "king: failed to read who\r\n");
+    fprintf(stderr, "chop: failed to read who\r\n");
     u3_king_bail();
   }
   c3_d who_d = *(c3_d*)who.mv_data;
 
   MDB_val fak;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &fak, "fake") ) {
-    fprintf(stderr, "king: failed to read fak\r\n");
+    fprintf(stderr, "chop: failed to read fake\r\n");
     u3_king_bail();
   }
-  c3_d fak_o = *(c3_d*)fak.mv_data;
+  c3_o fak_o = *(c3_o*)fak.mv_data;
 
   MDB_val lif;
   if ( c3y != u3_lmdb_read_meta_one(env_u, &lif, "life") ) {
-    fprintf(stderr, "king: failed to read lif\r\n");
+    fprintf(stderr, "chop: failed to read life\r\n");
     u3_king_bail();
   }
-  c3_d lif_w = *(c3_d*)lif.mv_data;
+  c3_w lif_w = *(c3_w*)lif.mv_data;
 
   // get the last event
   MDB_val val_u;
   if ( c3y != u3_lmdb_read_one(env_u, &val_u, las_d) ) {
-    fprintf(stderr, "king: failed to read last event\r\n");
+    fprintf(stderr, "chop: failed to read last event\r\n");
     u3_king_bail();
   }
   u3_atom val_n = u3i_bytes(val_u.mv_size, val_u.mv_data);
@@ -1854,9 +1852,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // rename the database file
   c3_c dat_c[8193], bak_c[8193];
-  snprintf(dat_c, 8192, "%s/.urb/log/data.mdb", u3_Host.dir_c);
-  // data.mdb.bak.<first>_<last>
-  snprintf(bak_c, 8192, "%s.bak.%llu_%llu", dat_c, fir_d, las_d);
+  snprintf(dat_c, 8192, "%s/data.mdb", log_c);
+  // "data_<first>-<last>.mdb.bak"
+  snprintf(bak_c, 8192, "%s/data_%llu-%llu.mdb.bak", log_c, fir_d, las_d);
   c3_rename(dat_c, bak_c);
 
   // initialize a fresh lmdb environment
@@ -1864,19 +1862,19 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // write the metadata to the database
   if ( c3y != u3_lmdb_save_meta(env_u, "version", ver.mv_size, &ver_d) ) {
-    fprintf(stderr, "king: failed to write version\r\n");
+    fprintf(stderr, "chop: failed to write version\r\n");
     u3_king_bail();
   }
   if ( c3y != u3_lmdb_save_meta(env_u, "who", who.mv_size, &who_d) ) {
-    fprintf(stderr, "king: failed to write who\r\n");
+    fprintf(stderr, "chop: failed to write who\r\n");
     u3_king_bail();
   }
   if ( c3y != u3_lmdb_save_meta(env_u, "fake", fak.mv_size, &fak_o) ) {
-    fprintf(stderr, "king: failed to write fake\r\n");
+    fprintf(stderr, "chop: failed to write fake\r\n");
     u3_king_bail();
   }
   if ( c3y != u3_lmdb_save_meta(env_u, "life", lif.mv_size, &lif_w) ) {
-    fprintf(stderr, "king: failed to write life\r\n");
+    fprintf(stderr, "chop: failed to write life\r\n");
     u3_king_bail();
   }
 
@@ -1891,6 +1889,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // cleanup
   u3z(val_n);
   u3_lmdb_exit(env_u);
+
+  // success
+  fprintf(stderr, "chop: chopped data.mdb to data_%llu-%llu.mdb.bak\r\n", fir_d, las_d);
 }
 
 /* _cw_vere(): download vere
