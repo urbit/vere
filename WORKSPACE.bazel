@@ -209,9 +209,9 @@ versioned_http_file(
 
 versioned_http_file(
     name = "solid_pill",
-    sha256 = "d737f88463f683173b5f6cbf41fc38705d4d3d67263c675d7e99841cd8485d81",
+    sha256 = "8b658fcee6978e2b19004a54233cab953e77ea0bb6c3a04d1bfda4ddc6be63c5",
     url = "https://github.com/urbit/urbit/raw/{version}/bin/solid.pill",
-    version = "next/vere",
+    version = "255fb1ca8206072f1d09425f0db61ecfe7ff5b17",
 )
 
 versioned_http_archive(
@@ -316,11 +316,11 @@ versioned_http_archive(
 
 versioned_http_file(
     name = "urbit",
-    sha256 = "403a2691dcc0cbff60157e3f91ffe15f4c8bc9dd5e1acab1d438b84cc8ef7711",
+    sha256 = "a729d8b3c438fef33f5ae8c4da8d84ebdb5af5ad028d41696a92cddc8bf362a8",
     url = "https://github.com/urbit/urbit/archive/{version}.tar.gz",
     # We can't use a branch name for the `version` because each new commit
     # will change the SHA256 hash.
-    version = "39a104f872736c3b0b879d592302b86a67ad078b",
+    version = "ea8fee3aa0434d4bdf1bf785e5ec346c7ecba7fd",
 )
 
 versioned_http_archive(

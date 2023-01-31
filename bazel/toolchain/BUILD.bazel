@@ -285,12 +285,12 @@ cc_toolchain_config(
     # and corresponding `ar_flags_feature` in `cfg.bzl`.
     # See https://github.com/bazelbuild/bazel/issues/15875.
     ar_flags = "rcs",
-    cc = "/usr/local/opt/llvm@14/bin/clang",
+    cc = "/usr/local/opt/llvm@15/bin/clang",
     compiler = "clang",
     compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
     sys_includes = [
-        "/usr/local/Cellar/llvm@14/{compiler_version}/lib/clang/{compiler_version}/include",
+        "/usr/local/Cellar/llvm/15.0.7_1/lib/clang/15.0.7/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
     ],
     target_cpu = "x86_64",
