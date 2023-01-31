@@ -949,11 +949,11 @@ _pier_play_send(u3_play* pay_u)
   //  the first batch must be >= the lifecycle barrier
   //
   if ( !pay_u->sen_d ) {
-    len_w = c3_max(pir_u->lif_w, replay_batch_sz_d);
+    len_w = c3_max(pir_u->lif_w, replay_batch_sz_d - 1);
   }
   else {
     c3_d lef_d = (pay_u->eve_d - pay_u->sen_d);
-    len_w = c3_min(lef_d, replay_batch_sz_d);
+    len_w = c3_min(lef_d, replay_batch_sz_d - 1);
   }
 
   {
@@ -986,7 +986,7 @@ _pier_play_read(u3_play* pay_u)
 
     //  cap the pir_u->pay_u queue depth
     //
-    if ( (las_d - pay_u->ext_u->eve_d) >= replay_batch_sz_d ) {
+    if ( (las_d - pay_u->ext_u->eve_d) >= replay_batch_sz_d - 1 ) {
       return;
     }
   }
