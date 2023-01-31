@@ -1791,7 +1791,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3m_stop();
 
   // initialize the lmdb environment
-  // see disk.c L885
+  // see disk.c:885
   const size_t siz_i =
   // 500 GiB is as large as musl on aarch64 wants to allow
   #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
@@ -1907,14 +1907,14 @@ _cw_knit(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_d   log_d = argc - 3;
-  c3_c** inp_c = malloc(sizeof(c3_c*) * log_d);
+  c3_d   inp_d = argc - 3;
+  c3_c** inp_c = malloc(sizeof(c3_c*) * inp_d);
   c3_w   i_w;
-  for ( i_w = 0; i_w < log_d; i_w++ ) {
+  for ( i_w = 0; i_w < inp_d; i_w++ ) {
     // read filenames from command line into an array
-    *(inp_c + (8193 * (i_w - 3))) = argv[i_w];
-    fprintf(stderr, "knit: argv[%d] = %s\r\n", i_w, argv[i_w]);
-    fprintf(stderr, "knit: inp_c[%d] = %s\r\n", i_w - 3, *(inp_c + (8193 * (i_w - 3))));
+    *(inp_c + (8193 * i_w)) = argv[i_w + 3];
+    fprintf(stderr, "knit: argv[%d] = %s\r\n", i_w + 3, argv[i_w + 3]);
+    fprintf(stderr, "knit: inp_c[%d] = %s\r\n", i_w, *(inp_c + (8193 * i_w)));
   }
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
@@ -1935,22 +1935,103 @@ _cw_knit(c3_i argc, c3_c* argv[])
   }
 
   // validate all input files exist and are readable
-  for ( i_w = 0; i_w < log_d; i_w++ ) {
-    c3_c* fil_c = *(inp_c + (8193 * (i_w - 3))); // TODO: check
+  for ( i_w = 0; i_w < inp_d; i_w++ ) {
+    c3_c fil_c[8193];
+    snprintf(fil_c, 8192, "%s", *(inp_c + (8193 * i_w)));
     if ( 0 == access(fil_c, F_OK) ) {
       if ( 0 != access(fil_c, R_OK) ) {
-        fprintf("knit: file %s is not readable\r\n", fil_c);
+        fprintf(stderr, "knit: file %s is not readable\r\n", fil_c);
         exit(1);
+      } else {
+        MDB_env* env_u;
+        if ( 0 != mdb_env_create(&env_u) ) {
+          fprintf(stderr, "knit: failed to create lmdb environment\r\n");
+          mdb_env_close(env_u);
+          exit(1);
+        }
+        if ( 0 != mdb_env_open(env_u, fil_c, MDB_RDONLY, 0664) ) {
+          fprintf(stderr, "knit: file %s is not a valid lmdb database\r\n", fil_c);
+          mdb_env_close(env_u);
+          exit(1);
+        }
       }
     } else {
-      fprintf("knit: file %s does not exist\r\n", fil_c);
+      fprintf(stderr, "knit: file %s does not exist\r\n", fil_c);
+      exit(1);
+    }
+  }
+
+  // stream events from in files into a temp lmdb database file
+
+  // prepare the correct size for the input lmdb environments
+  // see disk.c:885
+  const size_t siz_i =
+  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+    0x7d00000000;
+  #else
+    0x10000000000;
+  #endif
+  // initialize a new tmp lmdb environment
+  MDB_env* tmp_u;
+  if ( 0 != mdb_env_create(&tmp_u) ) {
+    fprintf(stderr, "knit: failed to create lmdb environment\r\n");
+    mdb_env_close(tmp_u);
+    exit(1);
+  }
+  // open the temp file
+  c3_c tmp_c[8193];
+  snprintf(tmp_c, 8192, "%s/.urb/log/tmp.mdb", u3_Host.dir_c);
+  if ( 0 != mdb_env_open(tmp_u, tmp_c, MDB_NOSUBDIR, 0664) ) {
+    fprintf(stderr, "knit: failed to open tmp lmdb environment\r\n");
+    mdb_env_close(tmp_u);
+    exit(1);
+  }
+  // iterate through the input files
+  for ( i_w = 0; i_w < inp_d; i_w++ ) {
+    // prepare the filename
+    c3_c fil_c[8193];
+    snprintf(fil_c, 8192, "%s", *(inp_c + (8193 * i_w)));
+
+    // open the lmdb environment from the input file
+    MDB_env* inp_u;
+    if ( 0 != mdb_env_create(&inp_u) ) {
+      fprintf(stderr, "knit: failed to create lmdb environment\r\n");
+      u3_lmdb_exit(inp_u);
+      exit(1);
+    }
+
+    // get the first and last event numbers
+    c3_d fir_d, las_d;
+    if ( c3y != u3_lmdb_gulf(inp_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "knit: failed to get first and last event numbers\r\n");
+      u3_lmdb_exit(inp_u);
+      exit(1);
+    }
+
+    // iterate through the events in the input file
+    c3_d j_w;
+    for ( j_w = fir_d; j_w <= las_d; j_w++ ) {
+      // get the event from the input file
+      MDB_val val_u;
+      if ( c3y != u3_noun evn = u3_lmdb_read_one(inp_u, &val_u, j_w) ) {
+        fprintf(stderr, "knit: failed to get event %d from %s\r\n", i_d, fil_c);
+        u3_lmdb_exit(inp_u);
+        exit(1);
+      }
+
+      // write the event to the temp file
+      void* dat_u = (void*)val_u.mv_data;
+      size_t siz_t = val_u.mv_size;
+      if ( c3y != u3_lmdb_save(tmp_u, j_w, 1, &dat_u, siz_t) ) {
+        fprintf(stderr, "knit: failed to write event %d to tmp.mdb\r\n", j_w);
+        u3_lmdb_exit(inp_u);
+        exit(1);
+      }
     }
   }
 
   // check that the operation will result in a valid event log
-  // (i.e. monotically increasing integer keys starting from 1)
-
-  // stream events from in files into a temp lmdb database file
+  // with monotically increasing integer keys starting from 1
   //   on success...
   //     copy metadata from the pier's database file
   //     backup the pier's existing database file
