@@ -636,7 +636,6 @@ _cw_usage(c3_c* bin_c)
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
     "  %s chop %.*s              truncate event log:\n",
-    "  %s knit %.*s<in files>    merge chopped event logs:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
@@ -1894,73 +1893,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_lmdb_exit(env_u);
 }
 
-/* _cw_knit(): unify chopped event log
-*/
-static void
-_cw_knit(c3_i argc, c3_c* argv[])
-{
-  // TODO: enable compatibility with .run usage
-
-  if ( 3 > argc ) {
-    fprintf(stderr, "knit: missing args\n");
-    exit(1);
-  }
-
-  c3_d   log_d = argc - 3;
-  c3_c** inp_c = malloc(sizeof(c3_c*) * log_d);
-  c3_w   i_w;
-  for ( i_w = 0; i_w < log_d; i_w++ ) {
-    // read filenames from command line into an array
-    *(inp_c + (8193 * (i_w - 3))) = argv[i_w];
-    fprintf(stderr, "knit: argv[%d] = %s\r\n", i_w, argv[i_w]);
-    fprintf(stderr, "knit: inp_c[%d] = %s\r\n", i_w - 3, *(inp_c + (8193 * (i_w - 3))));
-  }
-
-  u3_Host.dir_c = _main_pier_run(argv[0]);
-
-  //  argv[optind] is always "knit"
-  //
-
-  if ( !u3_Host.dir_c ) {
-    if ( optind + 1 < argc ) {
-      u3_Host.dir_c = argv[optind + 1];
-    }
-    else {
-      fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
-    }
-
-    optind++;
-  }
-
-  // validate all input files exist and are readable
-  for ( i_w = 0; i_w < log_d; i_w++ ) {
-    c3_c* fil_c = *(inp_c + (8193 * (i_w - 3))); // TODO: check
-    if ( 0 == access(fil_c, F_OK) ) {
-      if ( 0 != access(fil_c, R_OK) ) {
-        fprintf("knit: file %s is not readable\r\n", fil_c);
-        exit(1);
-      }
-    } else {
-      fprintf("knit: file %s does not exist\r\n", fil_c);
-    }
-  }
-
-  // check that the operation will result in a valid event log
-  // (i.e. monotically increasing integer keys starting from 1)
-
-  // stream events from in files into a temp lmdb database file
-  //   on success...
-  //     copy metadata from the pier's database file
-  //     backup the pier's existing database file
-  //     move/rename the temp db file to <pier>/.urb/log/data.mdb
-  //   on failure, abort and cleanup
-
-  // print some helpful stats (like how many events were written)
-
-  // cleanup
-}
-
 /* _cw_vere(): download vere
 */
 static void
@@ -2226,7 +2158,6 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__chop: _cw_chop(argc, argv); return 1;
-    case c3__knit: _cw_knit(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
 
