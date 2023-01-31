@@ -7,9 +7,7 @@
 #include "ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
-#if !defined(U3_OS_mingw)
 #include "sigsegv.h"
-#endif
 #include "openssl/conf.h"
 #include "openssl/engine.h"
 #include "openssl/err.h"
@@ -640,9 +638,6 @@ _cw_usage(c3_c* bin_c)
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
-#ifdef U3_OS_mingw
-    " <ctrlc-handle>"
-#endif
     "\n",
     0
   };
@@ -752,11 +747,9 @@ report(void)
 {
   printf("urbit %s\n", URBIT_VERSION);
   printf("gmp: %s\n", gmp_version);
-#if !defined(U3_OS_mingw)
   printf("sigsegv: %d.%d\n",
          (libsigsegv_version >> 8) & 0xff,
          libsigsegv_version & 0xff);
-#endif
   printf("openssl: %s\n", SSLeay_version(SSLEAY_VERSION));
   printf("libuv: %s\n", uv_version_string());
   printf("libh2o: %d.%d.%d\n",
@@ -958,14 +951,12 @@ _cw_init_io(uv_loop_t* lup_u)
 
   //  Ignore SIGPIPE signals.
   //
-#ifndef U3_OS_mingw
   {
     struct sigaction sig_s = {{0}};
     sigemptyset(&(sig_s.sa_mask));
     sig_s.sa_handler = SIG_IGN;
     sigaction(SIGPIPE, &sig_s, 0);
   }
-#endif
 
   //  configure pipe to daemon process
   //
@@ -984,47 +975,12 @@ _cw_init_io(uv_loop_t* lup_u)
   }
 }
 
-#ifdef U3_OS_mingw
-/* _cw_intr_win_cb(): invoked when urth signals ctrl-c.
-*/
-static void
-_cw_intr_win_cb(PVOID param, BOOLEAN timedOut)
-{
-  rsignal_raise(SIGINT);
-}
-
-/* _cw_intr_win(): initialize ctrl-c handling.
-*/
-static void
-_cw_intr_win(c3_c* han_c)
-{
-  HANDLE h;
-  if ( 1 != sscanf(han_c, "%" PRIu64, &h) ) {
-    fprintf(stderr, "mars: ctrl-c event: bad handle %s: %s\r\n",
-            han_c, strerror(errno));
-  }
-  else {
-    if ( !RegisterWaitForSingleObject(&h, h, _cw_intr_win_cb,
-                                      NULL, INFINITE, 0) )
-    {
-      fprintf(stderr,
-        "mars: ctrl-c event: RegisterWaitForSingleObject(%u) failed (%d)\r\n",
-        h, GetLastError());
-    }
-  }
-}
-#endif
-
 /* _cw_serf_commence(): initialize and run serf
 */
 static void
 _cw_serf_commence(c3_i argc, c3_c* argv[])
 {
-#ifdef U3_OS_mingw
-  if ( 9 > argc ) {
-#else
   if ( 8 > argc ) {
-#endif
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
@@ -1038,10 +994,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      lom_c = argv[6];
   c3_w       lom_w;
   c3_c*      eve_c = argv[7];
-#ifdef U3_OS_mingw
-  c3_c*      han_c = argv[8];
-  _cw_intr_win(han_c);
-#endif
 
   _cw_init_io(lup_u);
 
@@ -2135,13 +2087,11 @@ main(c3_i   argc,
   }
 #endif
 
-  #if !defined(U3_OS_mingw)
   //  Handle SIGTSTP as if it was SIGTERM.
   //
   //    Configured here using signal() so as to be immediately available.
   //
   signal(SIGTSTP, _stop_exit);
-  #endif
 
   printf("~\n");
   //  printf("welcome.\n");
@@ -2210,18 +2160,6 @@ main(c3_i   argc,
         u3C.wag_w |= u3o_trace;
       }
     }
-
-#ifdef U3_OS_mingw
-    //  Initialize event used to transmit Ctrl-C to worker process
-    //
-    {
-      SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
-      if ( NULL == (u3_Host.cev_u = CreateEvent(&sa, FALSE, FALSE, NULL)) ) {
-        u3l_log("boot: failed to create Ctrl-C event: %d", GetLastError());
-        exit(1);
-      }
-    }
-#endif
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations

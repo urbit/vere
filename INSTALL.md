@@ -14,26 +14,26 @@ run:
 
 ## Prerequisites
 
+The first step is to install `bazel` using the instructions found on the [`bazel`][bazel-install][^1] site.
+
 All platforms require the `automake` and `libtool` suite of tools installed in
 order to build Vere. Before going any further, install them using your package
 manager. For example, on macOS:
 
 ```console
-$ brew install automake libtool
+brew install automake libtool
 ```
 
 ### Linux
 
-We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us
-to generate statically linked binaries. As a prerequisite, you need to install
-the [musl libc][musl libc] toolchain appropriate for your target platform.
+After installing `automake` and `libtool`, you need to install the [musl libc] toolchain.  We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us to generate statically linked binaries. As a prerequisite, you need to install the [musl libc][musl libc] toolchain appropriate for your target platform.
 
 #### x86_64
 
 To install the `x86_64-linux-musl-gcc` toolchain at
 `/usr/local/x86_64-linux-musl-gcc`, run:
 ```console
-$ bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+bazel run //bazel/toolchain:x86_64-linux-musl-gcc
 ```
 
 This will take a few minutes.
@@ -43,22 +43,26 @@ This will take a few minutes.
 To install the `aarch64-linux-musl-gcc` toolchain at
 `/usr/local/aarch64-linux-musl-gcc`, run:
 ```console
-$ bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+bazel run //bazel/toolchain:aarch64-linux-musl-gcc
 ```
 
 This will take a few minutes.
+
+### macOS
+
+After installing `automake` and `libtool`, you're ready to build Vere.
 
 ## Build Commands
 
 Once you install the prerequisites, you're ready to build:
 ```console
-$ bazel build :urbit
+bazel build :urbit
 ```
 
 The default optimization level is `-O3`, but if you want to specify a different
 optimization level, use [`--copt`][copt]:
 ```console
-$ bazel build --copt='-O0' :urbit
+bazel build --copt='-O0' :urbit
 ```
 
 Note [`--copt`][copt] can be used to specify any C compiler options, not just
@@ -69,13 +73,13 @@ optimization levels.
 You can build and run unit tests only on native builds. If you have a native
 build and want to run all unit tests, run:
 ```console
-$ bazel test --build_tests_only ...
+bazel test --build_tests_only ...
 ```
 
 If you want to run a specific test, say
 [`pkg/noun/hashtable_tests.c`](pkg/noun/hashtable_tests.c), run:
 ```console
-$ bazel test //pkg/noun:hashtable_tests
+bazel test //pkg/noun:hashtable_tests
 ```
 
 ## Build Configuration File
@@ -86,8 +90,8 @@ file is not tracked by `git`, so whatever you add to it will not affect anyone
 else. As an example, if you want to change the optimization level but don't want
 type `--copt='-O0'` each time, you can do the following:
 ```console
-$ echo "build --copt='-O0'" >> .user.bazelrc
-$ bazel build :urbit
+echo "build --copt='-O0'" >> .user.bazelrc
+bazel build :urbit
 ```
 
 For more information on Bazel configuration files, consult the
@@ -108,6 +112,7 @@ run `clang --version` and pass the version number via
 
 [bazel]: https://bazel.build
 [bazel-config]: https://bazel.build/run/bazelrc
+[bazel-install]: https://bazel.build/install
 [copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
 [musl libc]: https://musl.libc.org
