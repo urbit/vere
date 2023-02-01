@@ -42,9 +42,5 @@ build --host_copt='-DU3_MEMORY_DEBUG'
 build:dbg --copt='-O0'
 build:dbg --copt='-g3'
 
-# Turn on CPU and memory debug for debug config.
-build:dbg --copt='-DU3_CPU_DEBUG'
-build:dbg --copt='-DU3_MEMORY_DEBUG'
-
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc

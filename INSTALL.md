@@ -60,14 +60,21 @@ bazel build :urbit
 ```
 
 If you want a debug build, which changes the optimization level from `-O3` to
-`-O0` and turns on CPU and memory debugging via the `U3_CPU_DEBUG` and
-`U3_MEMORY_DEBUG` macros, respectively, specify the `dbg` configuration:
+`-O0` and includes more debugging information, specify the `dbg` configuration:
 ```console
-$ bazel build --config=dbg :urbit
+bazel build --config=dbg :urbit
 ```
 Note that you cannot change the optimization level for third party
 dependencies--those targets specified in `bazel/third_party`--from the command
 line.
+
+You can turn on CPU and memory debugging by defining `U3_CPU_DEBUG` and
+`U3_MEMORY_DEBUG`, respectively:
+```console
+bazel build --copt='-DU3_CPU_DEBUG' --copt='-DU3_MEMORY_DEBUG' :urbit
+```
+Note that defining these two debug symbols will produce ships that are
+incompatible with binaries without these two debug symbols defined.
 
 If you need to specify arbitrary C compiler or linker options, use
 [`--copt`][copt] or [`--linkopt`][linkopt], respectively:
