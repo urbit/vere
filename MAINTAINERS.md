@@ -127,3 +127,9 @@ the "General" channel of the [Urbit Community group][urbit-community].
 [urbit-community]: https://urbit.org/groups/~bitbet-bolbel/urbit-community
 [urbit-dev]: https://groups.google.com/a/urbit.org/g/dev
 [version]: https://github.com/urbit/vere/tree/develop/VERSION
+
+## Updating Infrastructure Ships
+
+- [ ] `~zod` and other live galaxies (TODO which?) should all be updated to the new binary, to make sure they will be ready to install and deploy Arvo releases on the latest Kelvin.
+- [ ] `~marzod` and other live stars (TODO which?) should also be updated to the new binary.
+- [ ] Ships that host official UF groups should be updated: `~bitdeg`, `~halbex-palheb`, TODO: more.
