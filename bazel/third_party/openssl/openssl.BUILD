@@ -29,6 +29,7 @@ configure_make(
         ],
         "//conditions:default": [],
     }),
+    copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = [
         "libssl.a",
