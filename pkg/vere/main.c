@@ -1832,7 +1832,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
   u3_lmdb_walk_done(&itr_u);
 
-  // initialize a fresh lmdb environment in the "chop" subfolder
+  // initialize a fresh lmdb environment in the "chop" subdir
   c3_c cho_c[8193];
   snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
   c3_mkdir(cho_c, 0700);
@@ -1855,7 +1855,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_c dat_c[8193], bak_c[8193];
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_c);
   // "data_<first>-<last>.mdb.bak"
-  snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", log_c, fir_d, las_d);
+  snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
   c3_rename(dat_c, bak_c);
 
   // rename new database file to be official
@@ -1868,7 +1868,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_lmdb_exit(new_u);
 
   // success
-  fprintf(stderr, "chop: chopped data.mdb to data_%" PRIu64 "-%" PRIu64 ".mdb.bak\r\n", fir_d, las_d);
+  fprintf(stderr, "chop: event log truncation complete\r\n");
+  fprintf(stderr, "chop: event log backup written to %s\r\n", bak_c);
 }
 
 /* _cw_vere(): download vere
