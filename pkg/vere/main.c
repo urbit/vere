@@ -1799,7 +1799,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   #endif
   c3_c log_c[8193];
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", u3_Host.dir_c);
-  // MDB_env* env_u = u3_lmdb_init(log_c, siz_i);
 
   // get the first/last event numbers
   c3_d fir_d, las_d;
@@ -1816,18 +1815,23 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "chop: failed to read metadata\r\n");
     exit(1);
   }
-  
+
   // get the last event
-  MDB_val val_u;
-  if ( c3y != u3_lmdb_read_one(log_u->mdb_u, &val_u, las_d) ) {
-    fprintf(stderr, "chop: failed to read last event\r\n");
+  u3_lmdb_walk itr_u;
+  itr_u.mdb_u = *((MDB_dbi*)log_u->mdb_u);
+  size_t len_i;
+  void* buf_v;
+  if ( c3n == u3_lmdb_walk_init(log_u->mdb_u, &itr_u, las_d, las_d) ) {
+    fprintf(stderr, "chop: failed to initialize iterator\r\n");
     exit(1);
   }
-  u3_atom val = u3i_bytes(val_u.mv_size, val_u.mv_data);
-  val_u.mv_data = &val;
+  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, &buf_v) ) {
+    fprintf(stderr, "chop: failed to read event\r\n");
+    exit(1);
+  }
+  u3_lmdb_walk_done(&itr_u);
 
   // close the lmdb environment
-  // u3_lmdb_exit(env_u);
   u3_disk_exit(log_u);
 
   // rename the database file
@@ -1848,15 +1852,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // write the last event to the database
-  if ( c3y != u3_lmdb_save(log_u->mdb_u, las_d, 1, &val_u.mv_data, &val_u.mv_size) ) {
+  if ( c3y != u3_lmdb_save(log_u->mdb_u, las_d, 1, &buf_v, &len_i) ) {
     fprintf(stderr, "king: failed to write last event\r\n");
     exit(1);
   }
 
   // cleanup
-  u3z(val);
   u3_disk_exit(log_u);
-  // u3_lmdb_exit(env_u);
 
   // success
   fprintf(stderr, "chop: chopped data.mdb to data_%" PRIu64 "-%" PRIu64 ".mdb.bak\r\n", fir_d, las_d);

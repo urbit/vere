@@ -29,7 +29,6 @@
       void
       u3_lmdb_exit(MDB_env* env_u);
 
-
     /* u3_lmdb_stat(): print env stats.
     */
       void
@@ -48,13 +47,6 @@
                    c3_d     eve_d,
                    c3_d     len_d,
                    c3_o  (*read_f)(void*, c3_d, size_t  , void*));
-
-    /* u3_lmdb_read_one(): read one by string from the META db.
-    */
-      c3_o
-      u3_lmdb_read_one(MDB_env* env_u,
-                       MDB_val* val_u,
-                       c3_d     eve_d);
 
     /* u3_lmdb_save(): save [len_d] events starting at [eve_d].
     */
