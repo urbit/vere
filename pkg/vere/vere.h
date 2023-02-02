@@ -4,6 +4,7 @@
 #define U3_VERE_H
 
 #include "c3.h"
+#include "db/lmdb.h"
 #include "noun.h"
 #include "serf.h"
 #include "uv.h"
@@ -943,7 +944,7 @@
       /* u3_disk_read_meta(): read metadata.
       */
         c3_o
-        u3_disk_read_meta(u3_disk* log_u,
+        u3_disk_read_meta(MDB_env* mdb_u,
                           c3_d*    who_d,
                           c3_o*    fak_o,
                           c3_w*    lif_w);
@@ -951,7 +952,7 @@
       /* u3_disk_save_meta(): save metadata.
       */
         c3_o
-        u3_disk_save_meta(u3_disk* log_u,
+        u3_disk_save_meta(MDB_env* mdb_u,
                           c3_d     who_d[2],
                           c3_o     fak_o,
                           c3_w     lif_w);

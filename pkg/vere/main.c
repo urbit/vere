@@ -1781,15 +1781,17 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  // TODO: make sure current snapshot exists
+
   // gracefully shutdown the pier if it's running
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3e_backup(c3y);  //  backup snapshot
   u3m_stop();
 
   // initialize the lmdb environment
-  // see disk.c L885
+  // see disk.c:885
   const size_t siz_i =
   // 500 GiB is as large as musl on aarch64 wants to allow
   #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
@@ -1802,7 +1804,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // get the first/last event numbers
   c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+  if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "chop: failed to load latest event from database\r\n");
     exit(1);
   }
@@ -1811,54 +1813,59 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_d     who_d[2];
   c3_o     fak_o;
   c3_w     lif_w;
-  if ( c3y != u3_disk_read_meta(log_u, who_d, &fak_o, &lif_w) ) {
+  if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "chop: failed to read metadata\r\n");
     exit(1);
   }
 
   // get the last event
   u3_lmdb_walk itr_u;
-  itr_u.mdb_u = *((MDB_dbi*)log_u->mdb_u);
-  size_t len_i;
-  void* buf_v;
-  if ( c3n == u3_lmdb_walk_init(log_u->mdb_u, &itr_u, las_d, las_d) ) {
+  size_t       len_i;
+  void*        buf_v[1];
+  if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
     fprintf(stderr, "chop: failed to initialize iterator\r\n");
     exit(1);
   }
-  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, &buf_v) ) {
+  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
     fprintf(stderr, "chop: failed to read event\r\n");
     exit(1);
   }
   u3_lmdb_walk_done(&itr_u);
 
-  // close the lmdb environment
-  u3_disk_exit(log_u);
+  // initialize a fresh lmdb environment in the "chop" subfolder
+  c3_c cho_c[8193];
+  snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
+  c3_mkdir(cho_c, 0700);
+  MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
 
-  // rename the database file
+  // write the metadata to the database
+  if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
+    fprintf(stderr, "chop: failed to save metadata\r\n");
+    exit(1);
+  }
+
+  // write the last event to the database
+  // warning: this relies on the old database still being open
+  if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
+    fprintf(stderr, "king: failed to write last event\r\n");
+    exit(1);
+  }
+
+  // backup the original database file
   c3_c dat_c[8193], bak_c[8193];
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_c);
   // "data_<first>-<last>.mdb.bak"
   snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", log_c, fir_d, las_d);
   c3_rename(dat_c, bak_c);
 
-  // initialize a fresh lmdb environment
-  // env_u = u3_lmdb_init(log_c, siz_i);
-  log_u = _cw_disk_init(u3_Host.dir_c);
-
-  // write the metadata to the database
-  if ( c3y != u3_disk_save_meta(log_u, who_d, fak_o, lif_w) ) {
-    fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
-  }
-
-  // write the last event to the database
-  if ( c3y != u3_lmdb_save(log_u->mdb_u, las_d, 1, &buf_v, &len_i) ) {
-    fprintf(stderr, "king: failed to write last event\r\n");
-    exit(1);
-  }
+  // rename new database file to be official
+  c3_c new_c[8193];
+  snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
+  c3_rename(new_c, dat_c);
 
   // cleanup
-  u3_disk_exit(log_u);
+  u3_disk_exit(old_u);
+  u3_lmdb_exit(new_u);
 
   // success
   fprintf(stderr, "chop: chopped data.mdb to data_%" PRIu64 "-%" PRIu64 ".mdb.bak\r\n", fir_d, las_d);
