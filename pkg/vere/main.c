@@ -1781,14 +1781,19 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // TODO: make sure current snapshot exists
-
   // gracefully shutdown the pier if it's running
   u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3e_backup(c3y);  //  backup snapshot
   u3m_stop();
+
+  // make sure snapshot in chk/*.bin is completely written
+  // (no patch files)
+  if ( c3n == u3e_curr() ) {
+    fprintf(stderr, "chop: incomplete snapshot\r\n");
+    exit(1);
+  }
 
   // initialize the lmdb environment
   // see disk.c:885
