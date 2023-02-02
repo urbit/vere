@@ -722,7 +722,6 @@ u3t_slog_hela(c3_l pri_l)
   u3t_slog_trace(pri_l, tax);
 }
 
-
 /* _ct_roundf(): truncate a float to precision equivalent to %.2f */
 static float
 _ct_roundf(float per_f)
@@ -739,7 +738,6 @@ _ct_roundf(float per_f)
   return tuc_f;
 }
 
-
 /* _ct_meme_percent(): convert two ints into a percentage */
 static float
 _ct_meme_percent(c3_w lit_w, c3_w big_w)
@@ -748,7 +746,6 @@ _ct_meme_percent(c3_w lit_w, c3_w big_w)
   float raw_f = (float) lit_w/big_w;
   return _ct_roundf(raw_f);
 }
-
 
 /* _ct_all_heap_size(): return the size in bytes of ALL space on the Loom
 **                      over all roads, currently in use as heap.
@@ -762,7 +759,6 @@ _ct_all_heap_size(u3_road* r) {
     return (u3a_heap(r)*4) + _ct_all_heap_size(u3tn(u3_road, r->par_p));
   }
 }
-
 
 /* These two structs, bar_item and bar_info, store the mutable data
 ** to normalize measured Loom usage values into ints that will fit
@@ -780,12 +776,10 @@ bar_item {
   float dif_f;
 };
 
-
 struct
 bar_info {
   struct bar_item s[6];
 };
-
 
 /* _ct_boost_small(): we want zero to be zero,
 **                    anything between zero and one to be one,
@@ -799,7 +793,6 @@ _ct_boost_small(float num_f)
     1.0 > num_f ? 1.0:
     num_f;
 }
-
 
 /* _ct_global_difference(): each low_w represents the normalized integer value
  *                          of its loom item, and ideally the sum of all loom low_w
@@ -816,7 +809,6 @@ _ct_global_difference(struct bar_info bar_u)
   return 100 - low_w;
 }
 
-
 /* _ct_compute_roundoff_error(): for each loom item in bar_u
 **                               compute the current difference between the int
 **                               size and the original float size.
@@ -829,7 +821,6 @@ _ct_compute_roundoff_error(struct bar_info bar_u)
   }
   return bar_u;
 }
-
 
 /* _ct_sort_by_roundoff_error(): sort loom items from most mis-sized to least */
 static struct bar_info
@@ -848,7 +839,6 @@ _ct_sort_by_roundoff_error(struct bar_info bar_u)
   return bar_u;
 }
 
-
 /* _ct_sort_by_index(): sort loom items into loom order */
 static struct bar_info
 _ct_sort_by_index(struct bar_info bar_u)
@@ -865,7 +855,6 @@ _ct_sort_by_index(struct bar_info bar_u)
   }
   return bar_u;
 }
-
 
 /* _ct_reduce_error(): reduce error by one int step
  *                     making oversized things a bit smaller
@@ -943,7 +932,6 @@ _ct_report_bargraph(
   bar_c[102] = 0;
 }
 
-
 /* _ct_size_prefix(): return the correct metric scalar prifix for a given int */
 static c3_c
 _ct_size_prefix(c3_d num_d)
@@ -955,7 +943,6 @@ _ct_size_prefix(c3_d num_d)
     (num_d % 1000) ? ' ':
     'X';
 }
-
 
 /* _ct_report_string(): convert a int into a string, adding a metric scale prefix letter*/
 static void
@@ -999,7 +986,6 @@ static void
   }
 }
 
-
 /* _ct_etch_memory(): create a single line report of a given captioned item
  *                    with a percentage of space used and the bytes used
  *                    scaled by a metric scaling postfix (ie MB, GB, etc)
@@ -1027,7 +1013,6 @@ _ct_etch_memory(c3_c rep_c[32], float per_f, c3_w num_w)
   rep_c[6] = '%';
 }
 
-
 /* _ct_etch_steps(): create a single line report of a given captioned item
 **                   scaled by a metric scaling postfix, but unitless.
 */
@@ -1036,8 +1021,6 @@ _ct_etch_steps(c3_c rep_c[32], c3_d sep_d)
 {
   _ct_report_string(rep_c, sep_d);
 }
-
-
 
 /* u3t_etch_meme(): report memory stats at call time */
 u3_noun
