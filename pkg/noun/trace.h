@@ -173,7 +173,6 @@
       u3_noun
       u3t_etch_meme(c3_l mod_l);
 
-
   /** Globals.
   **/
       /// Tracing profiler.
