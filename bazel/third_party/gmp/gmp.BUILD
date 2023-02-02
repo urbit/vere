@@ -19,6 +19,8 @@ configure_make(
     ] + select({
         "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
+        # See https://gmplib.org/list-archives/gmp-bugs/2023-January/005228.html.
+        "@//:macos_aarch64": ["--disable-assembly"],
         "//conditions:default": [],
     }),
     copts = ["-O3"],
