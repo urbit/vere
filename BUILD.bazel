@@ -190,7 +190,6 @@ refresh_compile_commands(
     # Specify the targets of interest.
     # For example, specify a dict of targets and any flags required to build.
     targets = [
-        "//pkg/c3",
         "//pkg/ent",
         "//pkg/noun",
         "//pkg/ur",
