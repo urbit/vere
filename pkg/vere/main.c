@@ -1789,7 +1789,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3m_stop();
 
   // make sure snapshot in chk/*.bin is completely written
-  // (no patch files)
+  // (i.e., no patch files)
   if ( c3n == u3e_curr() ) {
     fprintf(stderr, "chop: incomplete snapshot\r\n");
     exit(1);

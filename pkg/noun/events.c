@@ -1044,7 +1044,12 @@ u3e_backup(c3_o ovw_o)
 c3_o
 u3e_curr(void)
 {
-  return __(0 == _ce_patch_open());
+  u3_ce_patch* pat_u = _ce_patch_open();
+  if ( 0 != pat_u ) {
+    _ce_patch_free(pat_u);
+    return c3n;
+  }
+  return c3y;
 }
 
 /*
