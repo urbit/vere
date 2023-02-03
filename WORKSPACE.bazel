@@ -351,6 +351,23 @@ versioned_http_archive(
 )
 
 #
+# HEDRON COMPILE COMMANDS SETUP
+#
+
+# Hedron's Compile Commands Extractor for Bazel
+# https://github.com/hedronvision/bazel-compile-commands-extractor
+versioned_http_archive(
+    name = "hedron_compile_commands",
+    strip_prefix = "bazel-compile-commands-extractor-{version}",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/{version}.tar.gz",
+    version = "d3afb5dfadd4beca48bb027112d029f2d34ff0a0",
+)
+
+load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+
+hedron_compile_commands_setup()
+
+#
 # DOCKER SETUP
 #
 
@@ -360,7 +377,9 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 go_rules_dependencies()
+
 go_register_toolchains(version = "1.18")
+
 gazelle_dependencies(go_repository_default_config = "//:WORKSPACE.bazel")
 
 load(
@@ -371,19 +390,21 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", _container_deps = "deps")
 load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
 
 _container_repositories()
+
 _container_deps(
     # See https://github.com/bazelbuild/rules_docker/issues/1902.
     go_repository_default_config = "@//:WORKSPACE.bazel",
 )
+
 _cc_image_repos()
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 
 container_pull(
     name = "alpine_linux_x86_64",
+    timeout = 300,  # [seconds]
     architecture = "amd64",
     digest = "sha256:93d5a28ff72d288d69b5997b8ba47396d2cbb62a72b5d87cd3351094b5d578a0",
     registry = "docker.io",
     repository = "alpine",
-    timeout = 300, # [seconds]
 )
