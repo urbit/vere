@@ -631,7 +631,6 @@ _cw_usage(c3_c* bin_c)
     "  %s eval                      evaluate hoon from stdin:\n",
     "  %s cram %.*s              jam state:\n",
     "  %s dock %.*s              copy binary:\n",
-    "  %s eval                      evaluate hoon from stdin:\n",
     "  %s grab %.*s              measure memory usage:\n",
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
@@ -1261,12 +1260,11 @@ _cw_eval(c3_i argc, c3_c* argv[])
     if ( c3n == khan_l ) {
       fprintf(stderr,"jammed noun: ");
        
-      int p=0;
-      while (p < len_d ){
+      for ( size_t p=0; p < len_d; p++ ){
         fprintf(stdout,"\\x%2x", byt_y[p++]);
       }
-        fprintf(stderr,"\n");
-      } else {
+      fprintf(stderr,"\n");
+    } else {
         fprintf(stderr,"khan jammed noun: ");
          
         c3_y out_y[5];
