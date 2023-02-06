@@ -69,11 +69,6 @@
       void
       u3e_backup(c3_o ovw_o);
 
-    /* u3e_curr(): check if snapshot is current.
-    */
-      c3_o
-      u3e_curr(void);
-
     /* u3e_fault(): handle a memory event with libsigsegv protocol.
     */
       c3_i

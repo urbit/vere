@@ -1041,17 +1041,6 @@ u3e_backup(c3_o ovw_o)
   fprintf(stderr, "loom: image backup complete\r\n");
 }
 
-c3_o
-u3e_curr(void)
-{
-  u3_ce_patch* pat_u = _ce_patch_open();
-  if ( 0 != pat_u ) {
-    _ce_patch_free(pat_u);
-    return c3n;
-  }
-  return c3y;
-}
-
 /*
   u3e_save(): save current changes.
 
