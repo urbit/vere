@@ -120,7 +120,7 @@ _cv_nock_wish(u3_noun txt)
   return pro;
 }
 
-/* u3v_wish_n(): text expression with cache.
+/* u3v_wish_n(): text expression with cache. with the input as a u3_noun.
 */
 u3_noun
 u3v_wish_n(u3_noun txt)
