@@ -1784,16 +1784,18 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // gracefully shutdown the pier if it's running
   u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
 
+  // note: this include patch applications (if any)
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3e_backup(c3y);  //  backup snapshot
-  u3m_stop();
 
-  // make sure snapshot in chk/*.bin is completely written
-  // (i.e., no patch files)
-  if ( c3n == u3e_curr() ) {
-    fprintf(stderr, "chop: incomplete snapshot\r\n");
+  // check if there's a *current* snapshot
+  if ( old_u->dun_d != u3A->eve_d ) {
+    fprintf(stderr, "chop: error: snapshot is out of date, please "
+                    "start/shutdown your pier gracefully first\r\n");
+    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
     exit(1);
   }
+
+  u3e_backup(c3y);  //  backup current snapshot
 
   // initialize the lmdb environment
   // see disk.c:885
@@ -1807,7 +1809,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_c log_c[8193];
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", u3_Host.dir_c);
 
-  // get the first/last event numbers
+  // get the first/last event numbers from the event log
   c3_d fir_d, las_d;
   if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "chop: failed to load latest event from database\r\n");
@@ -1871,12 +1873,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // cleanup
   u3_disk_exit(old_u);
   u3_lmdb_exit(new_u);
+  u3m_stop();
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
   fprintf(stderr, "chop: event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "chop: warning: ensure you can restart your ship "
-                  "before deleting your event log backup file\r\n");
+  fprintf(stderr, "CHOP: WARNING: ENSURE YOU CAN RESTART YOUR SHIP "
+                  "BEFORE DELETING YOUR EVENT LOG BACKUP FILE\r\n");
 }
 
 /* _cw_vere(): download vere
