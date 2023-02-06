@@ -1878,8 +1878,12 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
   fprintf(stderr, "chop: event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "CHOP: WARNING: ENSURE YOU CAN RESTART YOUR SHIP "
-                  "BEFORE DELETING YOUR EVENT LOG BACKUP FILE\r\n");
+  fprintf(stderr, "chop: WARNING: ENSURE YOU CAN RESTART YOUR SHIP "
+                  "BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
+  fprintf(stderr, "chop: if you can't restart your ship, restore your "
+                  "event log backup file with the following command:\r\n"); 
+  fprintf(stderr, "chop: mv %s %s\r\n", bak_c, dat_c);
+  fprintf(stderr, "chop: then restart your ship\r\n");
 }
 
 /* _cw_vere(): download vere
