@@ -118,6 +118,8 @@ $ tar zcf {platform}.tgz vere-v{version}-{platform}
 ```
 - [ ] Check the box marked "Set as the latest release".
 - [ ] Click "Publish release".
+- [ ] Create a placeholder pill for the new binary exists by running `gsutil cp gs://bootstrap.urbit.org/urbit-vOLD.pill gs://bootstrap.urbit.org/urbit-vNEW.pill`
+- [ ] Ensure that a new urbit can be booted by using the [Getting Started guide](https://urbit.org/getting-started/cli)
 
 Post an announcement to the [urbit-dev mailing
 list][urbit-dev] containing a copy of the release notes. When in doubt, follow
