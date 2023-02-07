@@ -120,6 +120,7 @@ $ tar zcf {platform}.tgz vere-v{version}-{platform}
 - [ ] Click "Publish release".
 - [ ] Create a placeholder pill for the new binary exists by running `gsutil cp gs://bootstrap.urbit.org/urbit-vOLD.pill gs://bootstrap.urbit.org/urbit-vNEW.pill`
 - [ ] Ensure that a new urbit can be booted by using the [Getting Started guide](https://urbit.org/getting-started/cli)
+- [ ] Post the contents of the GH Release notes to the [urbit-dev mailing list](https://groups.google.com/a/urbit.org/g/dev)
 
 Post an announcement to the [urbit-dev mailing
 list][urbit-dev] containing a copy of the release notes. When in doubt, follow
@@ -135,3 +136,12 @@ the "General" channel of the [Urbit Community group][urbit-community].
 - [ ] `~zod` and other live galaxies (TODO which?) should all be updated to the new binary, to make sure they will be ready to install and deploy Arvo releases on the latest Kelvin.
 - [ ] `~marzod` and other live stars (TODO which?) should also be updated to the new binary.
 - [ ] Ships that host official UF groups should be updated: `~bitdeg`, `~halbex-palheb`, TODO: more.
+
+## Preparing for the Next Release
+
+This instructions are performed **on release day** to prepare the next release candidate.
+
+- [ ] Merge `master` into `develop` and `git push origin develop`
+  - `master` now has the contents of `release`, which may have deviated from `develop` were any patches or reversions made
+- [ ] Merge `develop` into `release` and `git push origin release`
+- [ ] Update the `VERSION` file to the next version on the `develop` branch and `git push origin develop`
