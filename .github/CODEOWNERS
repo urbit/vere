@@ -6,9 +6,9 @@
 * @urbit/runtime
 
 # Build system
-/.github/ @mcevoypeter
-/bazel/   @mcevoypeter
-*.bazel   @mcevoypeter
-*.bzl     @mcevoypeter
-/PACE     @mcevoypeter
-/VERSION  @mcevoypeter
+/.github/ @mcevoypeter @matthew-levan @jalehman @belisarius222
+/bazel/   @mcevoypeter @matthew-levan @jalehman @belisarius222
+*.bazel   @mcevoypeter @matthew-levan @jalehman @belisarius222
+*.bzl     @mcevoypeter @matthew-levan @jalehman @belisarius222
+/PACE     @mcevoypeter @matthew-levan @jalehman @belisarius222
+/VERSION  @mcevoypeter @matthew-levan @jalehman @belisarius222
