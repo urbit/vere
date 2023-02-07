@@ -1181,34 +1181,27 @@ _cw_eval(c3_i argc, c3_c* argv[])
         }
         u3_Host.ops_u.lom_y = lom_w;
       } break;
-
       case 'j': {
         jam_l = c3y;
         khan_l = c3n;
       } break;
-
       case 'k': {
         jam_l = c3y;
         khan_l = c3y;
       } break;
-
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
       } break;
     }
   }
-
   //  argv[optind] is always "eval"
   //
-
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
-
   c3_c* evl_c = _cw_eval_get_input(stdin, 10);
-
   //  initialize the Loom and load the Ivory Pill
   //
   {
@@ -1230,11 +1223,8 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
   }
-
   fprintf(stderr, "eval:\n");
-
   if ( c3n == jam_l ) {
-
     //  +wish for an eval gate (virtualized twice for pretty-printing)
     //
     u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
@@ -1244,44 +1234,35 @@ _cw_eval(c3_i argc, c3_c* argv[])
       u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
       res = u3m_soft(0, u3n_kick_on, cor);
     }
-  
-  
     if ( 0 == u3h(res) ) {  //  successful execution, print output
       u3_pier_tank(0, 0, u3k(u3t(res)));
     }
     else {                  //  error, print stack trace
        u3_pier_punt_goof("eval", u3k(res));
     }
-
     u3z(res);
     u3z(gat);
   } else {
     u3_noun sam = u3i_string(evl_c);
     u3_noun res = u3v_wish_n(sam);
-
     c3_d bits = 0;
     c3_d len_d = 0;
     c3_y* byt_y;
-
     bits = u3s_jam_xeno(res, &len_d, &byt_y);
-
     if ( c3n == khan_l ) {
       fprintf(stderr,"jammed noun: ");
-       
       for ( size_t p=0; p < len_d; p++ ){
         fprintf(stdout,"\\x%2x", byt_y[p++]);
       }
       fprintf(stderr,"\n");
     } else {
         fprintf(stderr,"khan jammed noun: ");
-         
         c3_y out_y[5];
         out_y[0] = 0x0;
         out_y[1] = ( len_d        & 0xff);
         out_y[2] = ((len_d >>  8) & 0xff);
         out_y[3] = ((len_d >> 16) & 0xff);
         out_y[4] = ((len_d >> 24) & 0xff);
-         
         fwrite(out_y, 1, 5, stdout);
         if( ferror(stdout))
         {
