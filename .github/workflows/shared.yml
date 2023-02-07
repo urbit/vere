@@ -126,7 +126,7 @@ jobs:
           fi
 
       - name: Run fake ship tests
-        if: ${{ matrix.target == 'linux-x86_64' && fake_tests }}
+        if: ${{ matrix.target == 'linux-x86_64' && inputs.fake_tests }}
         run: |
           # See https://github.com/urbit/vere/issues/40.
           bazel build //pkg/vere:test-fake-ship
