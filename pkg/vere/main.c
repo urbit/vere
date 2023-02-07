@@ -1160,8 +1160,8 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
-  c3_o jam_l = c3n;
-  c3_o khan_l = c3n;
+  c3_o jam_o = c3n;
+  c3_o kan_o = c3n;
 
   static struct option lop_u[] = {
     { "loom", required_argument, NULL, c3__loom },
@@ -1182,12 +1182,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.lom_y = lom_w;
       } break;
       case 'j': {
-        jam_l = c3y;
-        khan_l = c3n;
+        jam_o = c3y;
+        kan_o = c3n;
       } break;
       case 'k': {
-        jam_l = c3y;
-        khan_l = c3y;
+        jam_o = c3y;
+        kan_o = c3y;
       } break;
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1224,7 +1224,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     }
   }
   fprintf(stderr, "eval:\n");
-  if ( c3n == jam_l ) {
+  if ( c3n == jam_o ) {
     //  +wish for an eval gate (virtualized twice for pretty-printing)
     //
     u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
@@ -1249,34 +1249,34 @@ _cw_eval(c3_i argc, c3_c* argv[])
     c3_d len_d = 0;
     c3_y* byt_y;
     bits = u3s_jam_xeno(res, &len_d, &byt_y);
-    if ( c3n == khan_l ) {
+    if ( c3n == kan_o ) {
       fprintf(stderr,"jammed noun: ");
       for ( size_t p=0; p < len_d; p++ ){
         fprintf(stdout,"\\x%2x", byt_y[p++]);
       }
       fprintf(stderr,"\n");
     } else {
-        fprintf(stderr,"khan jammed noun: ");
-        c3_y out_y[5];
-        out_y[0] = 0x0;
-        out_y[1] = ( len_d        & 0xff);
-        out_y[2] = ((len_d >>  8) & 0xff);
-        out_y[3] = ((len_d >> 16) & 0xff);
-        out_y[4] = ((len_d >> 24) & 0xff);
-        fwrite(out_y, 1, 5, stdout);
-        if( ferror(stdout))
-        {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-        }
-        fwrite(byt_y, 1, len_d, stdout);
-        if( ferror(stdout))
-        {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-        }
-        fprintf(stderr, "\n");
-      }
+       fprintf(stderr,"khan jammed noun: ");
+       c3_y out_y[5];
+       out_y[0] = 0x0;
+       out_y[1] = ( len_d        & 0xff);
+       out_y[2] = ((len_d >>  8) & 0xff);
+       out_y[3] = ((len_d >> 16) & 0xff);
+       out_y[4] = ((len_d >> 24) & 0xff);
+       fwrite(out_y, 1, 5, stdout);
+       if( ferror(stdout))
+       {
+         fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+         exit(1);
+       }
+       fwrite(byt_y, 1, len_d, stdout);
+       if( ferror(stdout))
+       {
+         fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+         exit(1);
+       }
+       fprintf(stderr, "\n");
+    }
     u3z(res);
     u3z(sam);
   }
