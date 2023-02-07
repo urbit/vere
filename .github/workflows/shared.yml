@@ -153,6 +153,7 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
+          echo "${{ inputs.pace }}" > ./PACE
           version="$(cat ./VERSION)"
           bazel build :version
           sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
