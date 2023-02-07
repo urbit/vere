@@ -1181,14 +1181,17 @@ _cw_eval(c3_i argc, c3_c* argv[])
         }
         u3_Host.ops_u.lom_y = lom_w;
       } break;
+
       case 'j': {
         jam_o = c3y;
         kan_o = c3n;
       } break;
+
       case 'k': {
         jam_o = c3y;
         kan_o = c3y;
       } break;
+
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
@@ -1236,8 +1239,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     }
     if ( 0 == u3h(res) ) {  //  successful execution, print output
       u3_pier_tank(0, 0, u3k(u3t(res)));
-    }
-    else {                  //  error, print stack trace
+    } else {                  //  error, print stack trace
        u3_pier_punt_goof("eval", u3k(res));
     }
     u3z(res);
@@ -1264,14 +1266,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
        out_y[3] = ((len_d >> 16) & 0xff);
        out_y[4] = ((len_d >> 24) & 0xff);
        fwrite(out_y, 1, 5, stdout);
-       if( ferror(stdout))
-       {
+       if( ferror(stdout) ) {
          fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
          exit(1);
        }
        fwrite(byt_y, 1, len_d, stdout);
-       if( ferror(stdout))
-       {
+       if( ferror(stdout) ) {
          fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
          exit(1);
        }
