@@ -1274,7 +1274,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
         {
            fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
            exit(1);
-        }  
+        }
         fprintf(stderr, "\n");
       }
     u3z(res);
