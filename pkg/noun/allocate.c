@@ -12,6 +12,10 @@
 
 u3_road* u3a_Road;
 
+#ifdef U3_MEMORY_DEBUG
+c3_w u3_Code;
+#endif
+
 //  declarations of inline functions
 //
 void

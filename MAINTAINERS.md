@@ -65,8 +65,8 @@ number in VERSION, `{CS}` is the shortened commit SHA of the commit the binary
 is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 `macos-aarch64`, and `macos-x86_64`:
 
-- https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{P}
-- https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{P}
+- https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
+- https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
 - https://bootstrap.urbit.org/vere/live/v{VN}/vere-v{VN}-{P}
 
 The most recently deployed version of a given train (pace) is uploaded to

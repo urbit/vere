@@ -6,6 +6,10 @@
 #include "c3.h"
 #include "types.h"
 
+#ifdef U3_CPU_DEBUG
+# include "options.h"
+#endif
+
   /** Data structures.
   **/
     /* u3t_trace: fast execution flags.

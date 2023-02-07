@@ -362,7 +362,7 @@
     /* u3_Code: memory code.
     */
 #ifdef U3_MEMORY_DEBUG
-      c3_global c3_w u3_Code;
+      extern c3_w u3_Code;
 #endif
 
 #   define u3_Loom      ((c3_w *)(void *)U3_OS_LoomBase)
