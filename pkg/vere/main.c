@@ -1246,39 +1246,42 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3z(gat);
   } else {
     u3_noun sam = u3i_string(evl_c);
-    u3_noun res = u3v_wish_n(sam);
+    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
     c3_d bits = 0;
     c3_d len_d = 0;
     c3_y* byt_y;
-    bits = u3s_jam_xeno(res, &len_d, &byt_y);
-    if ( c3n == kan_o ) {
-      fprintf(stderr,"jammed noun: ");
-      for ( size_t p=0; p < len_d; p++ ){
-        fprintf(stdout,"\\x%2x", byt_y[p++]);
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      if ( c3n == kan_o ) {
+        fprintf(stderr,"jammed noun: ");
+        for ( size_t p=0; p < len_d; p++ ){
+          fprintf(stdout,"\\x%2x", byt_y[p++]);
+        }
+        fprintf(stderr,"\n");
+      } else {
+         fprintf(stderr,"khan jammed noun: ");
+         c3_y out_y[5];
+         out_y[0] = 0x0;
+         out_y[1] = ( len_d        & 0xff);
+         out_y[2] = ((len_d >>  8) & 0xff);
+         out_y[3] = ((len_d >> 16) & 0xff);
+         out_y[4] = ((len_d >> 24) & 0xff);
+         fwrite(out_y, 1, 5, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fwrite(byt_y, 1, len_d, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fprintf(stderr, "\n");
       }
-      fprintf(stderr,"\n");
-    } else {
-       fprintf(stderr,"khan jammed noun: ");
-       c3_y out_y[5];
-       out_y[0] = 0x0;
-       out_y[1] = ( len_d        & 0xff);
-       out_y[2] = ((len_d >>  8) & 0xff);
-       out_y[3] = ((len_d >> 16) & 0xff);
-       out_y[4] = ((len_d >> 24) & 0xff);
-       fwrite(out_y, 1, 5, stdout);
-       if( ferror(stdout) ) {
-         fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-         exit(1);
-       }
-       fwrite(byt_y, 1, len_d, stdout);
-       if( ferror(stdout) ) {
-         fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-         exit(1);
-       }
-       fprintf(stderr, "\n");
+    } else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
     }
     u3z(res);
-    u3z(sam);
   }
   free(evl_c);
 }
