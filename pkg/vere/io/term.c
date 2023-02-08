@@ -484,7 +484,8 @@ _term_it_save_stub(u3_utty* uty_u, u3_noun tub)
   u3_utat* tat_u = &uty_u->tat_u;
   u3_noun  lin   = tat_u->mir.lin;
 
-  //  keep track of changes to bottom-most line, to aid spinner drawing logic.
+  //  keep track of changes to bottom-most line, to aid screen in restoration
+  //  after printfs or spinners.
   //  -t mode doesn't need this logic, because it doesn't render the spinner.
   //
   if ( ( tat_u->siz.row_l - 1 == tat_u->mir.rus_w ) &&
@@ -1472,13 +1473,11 @@ u3_term_io_hija(void)
           c3_assert(!"hija-tcsetattr");
         }
 
-        //  set scroll region to exclude the prompt,
-        //  scroll up one line to make space,
-        //  and move the cursor onto that space.
+        //  move the cursor to the bottom left corner,
+        //  and wipe that bottom line.
         //
-        _term_it_send_csi(uty_u, 'r', 2, 1, uty_u->tat_u.siz.row_l - 1);
-        _term_it_send_csi(uty_u, 'S', 1, 1);
-        _term_it_send_csi(uty_u, 'H', 2, uty_u->tat_u.siz.row_l - 1, 1);
+        _term_it_send_csi(uty_u, 'H', 2, uty_u->tat_u.siz.row_l, 1);
+        _term_it_dump_buf(uty_u, &uty_u->ufo_u.cel_u);
       }
     }
   }
@@ -1509,11 +1508,11 @@ u3_term_io_loja(int x, FILE* f)
           c3_assert(!"loja-tcsetattr");
         }
 
-        //  clear the scrolling region we set previously,
-        //  and restore cursor to its original position.
+        //  push the printfs up one more line,
+        //  and re-render the bottom-most line, which we clobbered.
         //
-        _term_it_dump_buf(uty_u, &uty_u->ufo_u.reg_u);
-        _term_it_dump_buf(uty_u, &uty_u->ufo_u.ruc_u);
+        _term_it_dump(uty_u, TERM_LIT("\n"));
+        _term_it_restore_line(uty_u);
       }
     }
   }

@@ -21,7 +21,7 @@ order to build Vere. Before going any further, install them using your package
 manager. For example, on macOS:
 
 ```console
-$ brew install automake libtool
+brew install automake libtool
 ```
 
 ### Linux
@@ -33,7 +33,7 @@ After installing `automake` and `libtool`, you need to install the [musl libc] t
 To install the `x86_64-linux-musl-gcc` toolchain at
 `/usr/local/x86_64-linux-musl-gcc`, run:
 ```console
-$ bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+bazel run //bazel/toolchain:x86_64-linux-musl-gcc
 ```
 
 This will take a few minutes.
@@ -43,7 +43,7 @@ This will take a few minutes.
 To install the `aarch64-linux-musl-gcc` toolchain at
 `/usr/local/aarch64-linux-musl-gcc`, run:
 ```console
-$ bazel run //bazel/toolchain:aarch64-linux-musl-gcc
+bazel run //bazel/toolchain:aarch64-linux-musl-gcc
 ```
 
 This will take a few minutes.
@@ -56,13 +56,30 @@ After installing `automake` and `libtool`, you're ready to build Vere.
 
 Once you install the prerequisites, you're ready to build:
 ```console
-$ bazel build :urbit
+bazel build :urbit
 ```
 
-The default optimization level is `-O3`, but if you want to specify a different
-optimization level, use [`--copt`][copt]:
+If you want a debug build, which changes the optimization level from `-O3` to
+`-O0` and includes more debugging information, specify the `dbg` configuration:
 ```console
-$ bazel build --copt='-O0' :urbit
+bazel build --config=dbg :urbit
+```
+Note that you cannot change the optimization level for third party
+dependencies--those targets specified in `bazel/third_party`--from the command
+line.
+
+You can turn on CPU and memory debugging by defining `U3_CPU_DEBUG` and
+`U3_MEMORY_DEBUG`, respectively:
+```console
+bazel build --copt='-DU3_CPU_DEBUG' --copt='-DU3_MEMORY_DEBUG' :urbit
+```
+Note that defining these two debug symbols will produce ships that are
+incompatible with binaries without these two debug symbols defined.
+
+If you need to specify arbitrary C compiler or linker options, use
+[`--copt`][copt] or [`--linkopt`][linkopt], respectively:
+```console
+bazel build --copt='-O0' :urbit
 ```
 
 Note [`--copt`][copt] can be used to specify any C compiler options, not just
@@ -73,13 +90,13 @@ optimization levels.
 You can build and run unit tests only on native builds. If you have a native
 build and want to run all unit tests, run:
 ```console
-$ bazel test --build_tests_only ...
+bazel test --build_tests_only ...
 ```
 
 If you want to run a specific test, say
 [`pkg/noun/hashtable_tests.c`](pkg/noun/hashtable_tests.c), run:
 ```console
-$ bazel test //pkg/noun:hashtable_tests
+bazel test //pkg/noun:hashtable_tests
 ```
 
 ## Build Configuration File
@@ -90,8 +107,8 @@ file is not tracked by `git`, so whatever you add to it will not affect anyone
 else. As an example, if you want to change the optimization level but don't want
 type `--copt='-O0'` each time, you can do the following:
 ```console
-$ echo "build --copt='-O0'" >> .user.bazelrc
-$ bazel build :urbit
+echo "build --copt='-O0'" >> .user.bazelrc
+bazel build :urbit
 ```
 
 For more information on Bazel configuration files, consult the
@@ -115,4 +132,5 @@ run `clang --version` and pass the version number via
 [bazel-install]: https://bazel.build/install
 [copt]: https://bazel.build/docs/user-manual#copt
 [glibc]: https://www.gnu.org/software/libc
+[linkopt]: https://bazel.build/docs/user-manual#linkopt
 [musl libc]: https://musl.libc.org

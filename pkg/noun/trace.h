@@ -3,8 +3,13 @@
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
 
-#include "c3.h"
+#include "c3/c3.h"
+#include "options.h"
 #include "types.h"
+
+#ifdef U3_CPU_DEBUG
+# include "options.h"
+#endif
 
   /** Data structures.
   **/
@@ -166,6 +171,11 @@
     */
       void
       u3t_slog_hela(c3_l pri_l);
+
+    /* u3t_etch_meme(): report memory stats at call time
+    */
+      u3_noun
+      u3t_etch_meme(c3_l mod_l);
 
   /** Globals.
   **/

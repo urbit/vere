@@ -18,6 +18,11 @@ on:
         type: boolean
         default: false
         required: false
+      fake_tests:
+        description: 'Run fake ship tests'
+        type: boolean
+        default: true
+        required: false
     secrets:
       GCP_CREDENTIALS:
         required: false
@@ -121,7 +126,7 @@ jobs:
           fi
 
       - name: Run fake ship tests
-        if: ${{ matrix.target == 'linux-x86_64' }}
+        if: ${{ matrix.target == 'linux-x86_64' && inputs.fake_tests }}
         run: |
           # See https://github.com/urbit/vere/issues/40.
           bazel build //pkg/vere:test-fake-ship
@@ -148,6 +153,7 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
+          echo "${{ inputs.pace }}" > ./PACE
           version="$(cat ./VERSION)"
           bazel build :version
           sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \

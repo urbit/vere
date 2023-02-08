@@ -139,6 +139,7 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
+  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
@@ -1713,6 +1714,57 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_stop();
 }
 
+/* _cw_play(): replay events.
+*/
+static void
+_cw_play(c3_i argc, c3_c* argv[])
+{
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
+
+  static const c3_c usage_c[] = "error: invalid usage, expected "
+                                "`urbit play [--replay-to <event_num> "
+                                "| --batch-size <event_cnt>] <pier>`";
+  static struct option lop_u[] = {
+    { "batch-size", required_argument, NULL, 'b' },
+    { "replay-to",  required_argument, NULL, 'n' },
+    { NULL,         0,                 NULL, 0   }
+  };
+
+  while ( -1 != (ch_i = getopt_long(argc, argv, "b:n:", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case 'b':
+        u3_Host.ops_u.batch_sz_c = strdup(optarg);
+        break;
+      case 'n':
+        u3_Host.ops_u.til_c = strdup(optarg);
+        break;
+      case '?':
+        fprintf(stderr, "%s\r\n", usage_c);
+        exit(1);
+    }
+  }
+
+  if ( !u3_Host.dir_c ) {
+    assert(strcmp(argv[optind], "play") == 0);
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "%s\r\n", usage_c);
+      exit(1);
+    }
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "%s\r\n", usage_c);
+    exit(1);
+  }
+
+  u3_Host.play_o = c3y;
+}
+
 /* _cw_prep(): prepare for upgrade
 */
 static void
@@ -2033,6 +2085,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
+    case c3__play: _cw_play(argc, argv); return 2; // continue on
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;

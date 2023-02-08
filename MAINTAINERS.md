@@ -65,8 +65,8 @@ number in VERSION, `{CS}` is the shortened commit SHA of the commit the binary
 is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 `macos-aarch64`, and `macos-x86_64`:
 
-- https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{P}
-- https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{P}
+- https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
+- https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
 - https://bootstrap.urbit.org/vere/live/v{VN}/vere-v{VN}-{P}
 
 The most recently deployed version of a given train (pace) is uploaded to
@@ -118,6 +118,8 @@ $ tar zcf {platform}.tgz vere-v{version}-{platform}
 ```
 - [ ] Check the box marked "Set as the latest release".
 - [ ] Click "Publish release".
+- [ ] Create a placeholder pill for the new binary exists by running `gsutil cp gs://bootstrap.urbit.org/urbit-vOLD.pill gs://bootstrap.urbit.org/urbit-vNEW.pill`
+- [ ] Ensure that a new urbit can be booted by using the [Getting Started guide](https://urbit.org/getting-started/cli)
 
 Post an announcement to the [urbit-dev mailing
 list][urbit-dev] containing a copy of the release notes. When in doubt, follow
@@ -127,3 +129,9 @@ the "General" channel of the [Urbit Community group][urbit-community].
 [urbit-community]: https://urbit.org/groups/~bitbet-bolbel/urbit-community
 [urbit-dev]: https://groups.google.com/a/urbit.org/g/dev
 [version]: https://github.com/urbit/vere/tree/develop/VERSION
+
+## Updating Infrastructure Ships
+
+- [ ] `~zod` and other live galaxies (TODO which?) should all be updated to the new binary, to make sure they will be ready to install and deploy Arvo releases on the latest Kelvin.
+- [ ] `~marzod` and other live stars (TODO which?) should also be updated to the new binary.
+- [ ] Ships that host official UF groups should be updated: `~bitdeg`, `~halbex-palheb`, TODO: more.

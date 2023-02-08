@@ -21,4 +21,5 @@ jobs:
       docker: true
       pace: 'live'
       upload: true
+      fake_tests: false
     secrets: inherit
