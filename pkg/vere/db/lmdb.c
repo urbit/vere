@@ -610,7 +610,6 @@ u3_lmdb_save_meta(MDB_env*    env_u,
   return c3y;
 }
 
-#if !defined(U3_OS_mingw)
 /* mdb_logerror(): writes an error message and lmdb error code to f.
 */
 void mdb_logerror(FILE* f, int err, const char* fmt, ...)
@@ -630,4 +629,3 @@ intmax_t mdb_get_filesize(mdb_filehandle_t han_u)
   fstat(han_u, &sat_u);
   return (intmax_t)sat_u.st_size;
 }
-#endif

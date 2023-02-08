@@ -1,0 +1,12 @@
+name: Deploy once
+
+on:
+  workflow_dispatch
+
+jobs:
+  urbit:
+    uses: ./.github/workflows/shared.yml
+    with:
+      pace: 'once'
+      upload: true
+    secrets: inherit

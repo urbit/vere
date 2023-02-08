@@ -83,9 +83,9 @@ _cv_lite(u3_noun pil)
     eve = tal;
   }
 
-  u3l_log("lite: arvo formula %x\r\n", u3r_mug(pil));
+  u3l_log("lite: arvo formula %x", u3r_mug(pil));
   pro = u3v_life(u3k(eve));
-  u3l_log("lite: core %x\r\n", u3r_mug(pro));
+  u3l_log("lite: core %x", u3r_mug(pro));
 
   u3z(pil);
   return pro;
@@ -112,7 +112,7 @@ u3v_boot_lite(u3_noun pil)
     u3z(pro);
   }
 
-  u3l_log("lite: final state %x\r\n", u3r_mug(u3A->roc));
+  u3l_log("lite: final state %x", u3r_mug(u3A->roc));
 
   return c3y;
 }
@@ -128,6 +128,31 @@ _cv_nock_wish(u3_noun txt)
   pro = u3n_slam_on(fun, txt);
 
   return pro;
+}
+
+/* u3v_wish_n(): text expression with cache. with the input as a u3_noun.
+*/
+u3_noun
+u3v_wish_n(u3_noun txt)
+{
+  u3t_event_trace("u3v_wish", 'b');
+  u3_weak exp = u3kdb_get(u3k(u3A->yot), u3k(txt));
+
+  if ( u3_none == exp ) {
+    exp = _cv_nock_wish(u3k(txt));
+
+    //  It's probably not a good idea to use u3v_wish()
+    //  outside the top level... (as the result is uncached)
+    //
+    if ( u3R == &u3H->rod_u ) {
+      u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+    }
+  }
+
+  u3t_event_trace("u3v_wish", 'e');
+
+  u3z(txt);
+  return exp;
 }
 
 /* u3v_wish(): text expression with cache.
@@ -221,7 +246,7 @@ u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
        (c3n == u3r_safe_word(q_uco, &wad_w)) ||
        (wad_w & 0x80000000) )
   {
-    u3l_log("strange lily %s\n", u3r_string(txt));
+    u3l_log("strange lily %s", u3r_string(txt));
     u3z(txt); u3z(uco); return c3n;
   }
   else {

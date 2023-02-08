@@ -7,9 +7,7 @@
 #include "ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
-#if !defined(U3_OS_mingw)
 #include "sigsegv.h"
-#endif
 #include "openssl/conf.h"
 #include "openssl/engine.h"
 #include "openssl/err.h"
@@ -142,6 +140,7 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
+  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
@@ -573,7 +572,7 @@ _setup_cert_store()
 {
   BIO* cbio = BIO_new_mem_buf(include_ca_bundle_crt, include_ca_bundle_crt_len);
   if ( !cbio || !(_cert_store = PEM_X509_INFO_read_bio(cbio, NULL, NULL, NULL)) ) {
-    u3l_log("boot: failed to decode embedded CA certificates\r\n");
+    u3l_log("boot: failed to decode embedded CA certificates");
     exit(1);
   }
 
@@ -629,6 +628,7 @@ _cw_usage(c3_c* bin_c)
 {
   c3_c *use_c[] = {
     "utilities:\n",
+    "  %s eval                      evaluate hoon from stdin:\n",
     "  %s cram %.*s              jam state:\n",
     "  %s dock %.*s              copy binary:\n",
     "  %s grab %.*s              measure memory usage:\n",
@@ -642,9 +642,6 @@ _cw_usage(c3_c* bin_c)
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
-#ifdef U3_OS_mingw
-    " <ctrlc-handle>"
-#endif
     "\n",
     0
   };
@@ -754,11 +751,9 @@ report(void)
 {
   printf("urbit %s\n", URBIT_VERSION);
   printf("gmp: %s\n", gmp_version);
-#if !defined(U3_OS_mingw)
   printf("sigsegv: %d.%d\n",
          (libsigsegv_version >> 8) & 0xff,
          libsigsegv_version & 0xff);
-#endif
   printf("openssl: %s\n", SSLeay_version(SSLEAY_VERSION));
   printf("libuv: %s\n", uv_version_string());
   printf("libh2o: %d.%d.%d\n",
@@ -854,10 +849,11 @@ static void
 _cw_serf_step_trace(void)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    if ( u3_Host.tra_u.con_w == 0  && u3_Host.tra_u.fun_w == 0 ) {
+    c3_w trace_cnt_w = u3t_trace_cnt();
+    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(u3V.dir_c);
     }
-    else if ( u3_Host.tra_u.con_w >= 100000 ) {
+    else if ( trace_cnt_w >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(u3V.dir_c);
     }
@@ -959,14 +955,12 @@ _cw_init_io(uv_loop_t* lup_u)
 
   //  Ignore SIGPIPE signals.
   //
-#ifndef U3_OS_mingw
   {
     struct sigaction sig_s = {{0}};
     sigemptyset(&(sig_s.sa_mask));
     sig_s.sa_handler = SIG_IGN;
     sigaction(SIGPIPE, &sig_s, 0);
   }
-#endif
 
   //  configure pipe to daemon process
   //
@@ -985,47 +979,12 @@ _cw_init_io(uv_loop_t* lup_u)
   }
 }
 
-#ifdef U3_OS_mingw
-/* _cw_intr_win_cb(): invoked when urth signals ctrl-c.
-*/
-static void
-_cw_intr_win_cb(PVOID param, BOOLEAN timedOut)
-{
-  rsignal_raise(SIGINT);
-}
-
-/* _cw_intr_win(): initialize ctrl-c handling.
-*/
-static void
-_cw_intr_win(c3_c* han_c)
-{
-  HANDLE h;
-  if ( 1 != sscanf(han_c, "%" PRIu64, &h) ) {
-    fprintf(stderr, "mars: ctrl-c event: bad handle %s: %s\r\n",
-            han_c, strerror(errno));
-  }
-  else {
-    if ( !RegisterWaitForSingleObject(&h, h, _cw_intr_win_cb,
-                                      NULL, INFINITE, 0) )
-    {
-      fprintf(stderr,
-        "mars: ctrl-c event: RegisterWaitForSingleObject(%u) failed (%d)\r\n",
-        h, GetLastError());
-    }
-  }
-}
-#endif
-
 /* _cw_serf_commence(): initialize and run serf
 */
 static void
 _cw_serf_commence(c3_i argc, c3_c* argv[])
 {
-#ifdef U3_OS_mingw
-  if ( 9 > argc ) {
-#else
   if ( 8 > argc ) {
-#endif
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
@@ -1039,15 +998,10 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      lom_c = argv[6];
   c3_w       lom_w;
   c3_c*      eve_c = argv[7];
-#ifdef U3_OS_mingw
-  c3_c*      han_c = argv[8];
-  _cw_intr_win(han_c);
-#endif
 
   _cw_init_io(lup_u);
 
   memset(&u3V, 0, sizeof(u3V));
-  memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
 
   //  load passkey
   //
@@ -1209,9 +1163,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o jam_o = c3n;
+  c3_o kan_o = c3n;
 
   static struct option lop_u[] = {
     { "loom", required_argument, NULL, c3__loom },
+    { "jam", no_argument, NULL, 'j' },
+    { "jamkhan", no_argument, NULL, 'k' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1220,11 +1178,21 @@ _cw_eval(c3_i argc, c3_c* argv[])
       case c3__loom: {
         c3_w lom_w;
         c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if ( (c3n == res_o) || (lom_w < 24) ) {
+          fprintf(stderr, "error: --loom must be >= 24 and <= %u\r\n", u3a_bits + 2);
           exit(1);
         }
         u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case 'j': {
+        jam_o = c3y;
+        kan_o = c3n;
+      } break;
+
+      case 'k': {
+        jam_o = c3y;
+        kan_o = c3y;
       } break;
 
       case '?': {
@@ -1233,17 +1201,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
       } break;
     }
   }
-
   //  argv[optind] is always "eval"
   //
-
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
-
   c3_c* evl_c = _cw_eval_get_input(stdin, 10);
-
   //  initialize the Loom and load the Ivory Pill
   //
   {
@@ -1256,38 +1220,72 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      printf("lite: unable to cue ivory pill\r\n");
+      fprintf(stderr, "lite: unable to cue ivory pill\r\n");
       exit(1);
     }
     u3s_cue_xeno_done(sil_u);
     if ( c3n == u3v_boot_lite(pil) ) {
-      u3l_log("lite: boot failed\r\n");
+      u3l_log("lite: boot failed");
       exit(1);
     }
   }
-
-  printf("eval:\n");
-
-  //  +wish for an eval gate (virtualized twice for pretty-printing)
-  //
-  u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
-  u3_noun res;
-  {
+  fprintf(stderr, "eval:\n");
+  if ( c3n == jam_o ) {
+    //  +wish for an eval gate (virtualized twice for pretty-printing)
+    //
+    u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
+    u3_noun res;
+    {
+      u3_noun sam = u3i_string(evl_c);
+      u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+      res = u3m_soft(0, u3n_kick_on, cor);
+    }
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      u3_pier_tank(0, 0, u3k(u3t(res)));
+    } else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
+    }
+    u3z(res);
+    u3z(gat);
+  } else {
     u3_noun sam = u3i_string(evl_c);
-    u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
-    res = u3m_soft(0, u3n_kick_on, cor);
+    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
+    c3_d bits = 0;
+    c3_d len_d = 0;
+    c3_y* byt_y;
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      if ( c3n == kan_o ) {
+        fprintf(stderr,"jammed noun: ");
+        for ( size_t p=0; p < len_d; p++ ){
+          fprintf(stdout,"\\x%2x", byt_y[p++]);
+        }
+        fprintf(stderr,"\n");
+      } else {
+         fprintf(stderr,"khan jammed noun: ");
+         c3_y out_y[5];
+         out_y[0] = 0x0;
+         out_y[1] = ( len_d        & 0xff);
+         out_y[2] = ((len_d >>  8) & 0xff);
+         out_y[3] = ((len_d >> 16) & 0xff);
+         out_y[4] = ((len_d >> 24) & 0xff);
+         fwrite(out_y, 1, 5, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fwrite(byt_y, 1, len_d, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fprintf(stderr, "\n");
+      }
+    } else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
+    }
+    u3z(res);
   }
-
-
-  if ( 0 == u3h(res) ) {  //  successful execution, print output
-     u3_pier_tank(0, 0, u3k(u3t(res)));
-  }
-  else {                  //  error, print stack trace
-     u3_pier_punt_goof("eval", u3k(res));
-  }
-
-  u3z(res);
-  u3z(gat);
   free(evl_c);
 }
 
@@ -2014,7 +2012,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   //  initialize curl
   //
   if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
-    u3l_log("boot: curl initialization failed\r\n");
+    u3l_log("boot: curl initialization failed");
     exit(1);
   }
 
@@ -2044,11 +2042,11 @@ _cw_vere(c3_i argc, c3_c* argv[])
 
 
   if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 0) ) {
-    u3l_log("vere: download failed\r\n");
+    u3l_log("vere: download failed");
     exit(1);
   }
 
-  u3l_log("vere: download succeeded\r\n");
+  u3l_log("vere: download succeeded");
 }
 
 /* _cw_vile(): generatoe/print keyfile
@@ -2201,7 +2199,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
-    case c3__play: _cw_play(argc, argv); return 1;
+    case c3__play: _cw_play(argc, argv); return 2; // continue on
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
@@ -2295,19 +2293,17 @@ main(c3_i   argc,
     sigemptyset(&set);
     sigaddset(&set, SIGPROF);
     if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-      u3l_log("boot: thread mask SIGPROF: %s\r\n", strerror(errno));
+      u3l_log("boot: thread mask SIGPROF: %s", strerror(errno));
       exit(1);
     }
   }
 #endif
 
-  #if !defined(U3_OS_mingw)
   //  Handle SIGTSTP as if it was SIGTERM.
   //
   //    Configured here using signal() so as to be immediately available.
   //
   signal(SIGTSTP, _stop_exit);
-  #endif
 
   printf("~\n");
   //  printf("welcome.\n");
@@ -2374,24 +2370,8 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
-        u3_Host.tra_u.nid_w = 0;
-        u3_Host.tra_u.fil_u = NULL;
-        u3_Host.tra_u.con_w = 0;
-        u3_Host.tra_u.fun_w = 0;
       }
     }
-
-#ifdef U3_OS_mingw
-    //  Initialize event used to transmit Ctrl-C to worker process
-    //
-    {
-      SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
-      if ( NULL == (u3_Host.cev_u = CreateEvent(&sa, FALSE, FALSE, NULL)) ) {
-        u3l_log("boot: failed to create Ctrl-C event: %d\r\n", GetLastError());
-        exit(1);
-      }
-    }
-#endif
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
@@ -2408,7 +2388,7 @@ main(c3_i   argc,
     //  initialize curl
     //
     if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
-      u3l_log("boot: curl initialization failed\r\n");
+      u3l_log("boot: curl initialization failed");
       exit(1);
     }
 

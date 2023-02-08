@@ -268,13 +268,13 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
     case u3_writ_meld: {
       //  XX wire into cb
       //
-      u3l_log("pier: meld complete\n");
+      u3l_log("pier: meld complete");
     } break;
 
     case u3_writ_pack: {
       //  XX wire into cb
       //
-      u3l_log("pier: pack complete\n");
+      u3l_log("pier: pack complete");
     } break;
   }
 
@@ -1057,7 +1057,7 @@ _lord_on_serf_err_cb(uv_stream_t* pyp_u,
     uv_read_stop(pyp_u);
 
     if ( siz_i != UV_EOF ) {
-      u3l_log("lord: serf stderr: %s\r\n", uv_strerror(siz_i));
+      u3l_log("lord: serf stderr: %s", uv_strerror(siz_i));
     }
   }
 
@@ -1099,10 +1099,10 @@ _lord_on_serf_bail(void*       ptr_v,
   u3_lord* god_u = ptr_v;
 
   if ( UV_EOF == err_i ) {
-    u3l_log("pier: serf unexpectedly shut down\r\n");
+    u3l_log("pier: serf unexpectedly shut down");
   }
   else {
-    u3l_log("pier: serf error: %s\r\n", err_c);
+    u3l_log("pier: serf error: %s", err_c);
   }
 
   _lord_bail(god_u);
@@ -1129,7 +1129,7 @@ u3_lord_info(u3_lord* god_u)
 void
 u3_lord_slog(u3_lord* god_u)
 {
-  u3l_log("  lord: live=%s, event=%" PRIu64 ", mug=%x, queue=%u\n",
+  u3l_log("  lord: live=%s, event=%" PRIu64 ", mug=%x, queue=%u",
           ( c3y == god_u->liv_o ) ? "&" : "|",
           god_u->eve_d,
           god_u->mug_l,
@@ -1158,7 +1158,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[10];
+    c3_c* arg_c[9];
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
@@ -1166,7 +1166,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  lom_c[11];
     c3_i  err_i;
 
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
+    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
                    god_u->key_d[0],
                    god_u->key_d[1],
                    god_u->key_d[2],
@@ -1195,14 +1195,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
       arg_c[7] = "0";
     }
 
-#ifdef U3_OS_mingw
-    sprintf(cev_c, "%" PRIu64, u3_Host.cev_u);
-    arg_c[8] = cev_c;
-#else
-    arg_c[8] = 0;
-#endif
-
-    arg_c[9] = 0;
+    arg_c[8] = NULL;
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);

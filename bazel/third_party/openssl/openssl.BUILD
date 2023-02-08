@@ -5,7 +5,6 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# TODO: use configure_make_variant() to select nmake toolchain on windows?
 configure_make(
     name = "openssl",
     args = select({
@@ -30,6 +29,7 @@ configure_make(
         ],
         "//conditions:default": [],
     }),
+    copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = [
         "libssl.a",

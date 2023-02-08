@@ -1,6 +1,8 @@
 /// @file
 
 /*
+  These hashes are deprecated, you should instead use no_hashes.
+
   To generate the hashes, take the sha256 of the jammed battery. For example:
 
   ```
@@ -1734,7 +1736,7 @@ static c3_c* _140_two_xeb_ha[] = {
   0
 };
 
-  static u3j_harm _140_two__in_apt_a[] = {{".2", u3wdi_apt}, {}};
+  static u3j_harm _140_two__in_apt_a[] = {{".2", u3wdi_apt_140}, {}};
   static c3_c* _140_two__in_apt_ha[] = {
     "a40812fa255f13afdaf196bff38d2d9bfcb38f09c48ace9139a2701a555a0c9a",
     0
@@ -2139,6 +2141,110 @@ static c3_c* _k140_ha[] = {
   0
 };
 
+static u3j_harm _139_two__in_apt_a[] = {{".2", u3wdi_apt}, {}};
+
+static u3j_core _139_two__in_d[] =
+  { { "apt", 7, _139_two__in_apt_a, 0, no_hashes },
+    { "bif", 7, _140_two__in_bif_a, 0, no_hashes },
+    { "del", 7, _140_two__in_del_a, 0, no_hashes },
+    { "dif", 7, _140_two__in_dif_a, 0, no_hashes },
+    { "gas", 7, _140_two__in_gas_a, 0, no_hashes },
+    { "has", 7, _140_two__in_has_a, 0, no_hashes },
+    { "int", 7, _140_two__in_int_a, 0, no_hashes },
+    { "put", 7, _140_two__in_put_a, 0, no_hashes },
+    { "rep", 7, _140_two__in_rep_a, 0, no_hashes },
+    { "run", 7, _140_two__in_run_a, 0, no_hashes },
+    { "tap", 7, _140_two__in_tap_a, 0, no_hashes },
+    { "uni", 7, _140_two__in_uni_a, 0, no_hashes },
+    { "wyt", 3, _140_two__in_wyt_a, 0, no_hashes },
+    {}
+  };
+
+static u3j_core _139_two_d[] =
+{ { "tri",  3, 0, _140_tri_d, no_hashes, _140_tri_ho },
+
+  { "find", 7, _140_two_find_a, 0, no_hashes },
+  { "flop", 7, _140_two_flop_a, 0, no_hashes },
+  { "lent", 7, _140_two_lent_a, 0, no_hashes },
+  { "levy", 7, _140_two_levy_a, 0, no_hashes },
+  { "lien", 7, _140_two_lien_a, 0, no_hashes },
+  { "murn", 7, _140_two_murn_a, 0, no_hashes },
+  { "need", 7, _140_two_need_a, 0, no_hashes },
+  { "reap", 7, _140_two_reap_a, 0, no_hashes },
+  { "reel", 7, _140_two_reel_a, 0, no_hashes },
+  { "roll", 7, _140_two_roll_a, 0, no_hashes },
+  { "skid", 7, _140_two_skid_a, 0, no_hashes },
+  { "skim", 7, _140_two_skim_a, 0, no_hashes },
+  { "skip", 7, _140_two_skip_a, 0, no_hashes },
+  { "scag", 7, _140_two_scag_a, 0, no_hashes },
+  { "slag", 7, _140_two_slag_a, 0, no_hashes },
+  { "snag", 7, _140_two_snag_a, 0, no_hashes },
+  { "sort", 7, _140_two_sort_a, 0, no_hashes },
+  { "turn", 7, _140_two_turn_a, 0, no_hashes },
+  { "weld", 7, _140_two_weld_a, 0, no_hashes },
+  { "welp", 7, _140_two_welp_a, 0, no_hashes },
+  { "zing", 7, _140_two_zing_a, 0, no_hashes },
+
+  { "bex", 7, _140_two_bex_a, 0, no_hashes },
+  { "cat", 7, _140_two_cat_a, 0, no_hashes },
+  { "can", 7, _140_two_can_a, 0, no_hashes },
+  { "con", 7, _140_two_con_a, 0, no_hashes },
+  { "cue", 7, _140_two_cue_a, 0, no_hashes },
+  { "cut", 7, _140_two_cut_a, 0, no_hashes },
+  { "dis", 7, _140_two_dis_a, 0, no_hashes },
+  { "dor", 7, _140_two_dor_a, 0, no_hashes },
+  { "end", 7, _140_two_end_a, 0, no_hashes },
+  { "gor", 7, _140_two_gor_a, 0, no_hashes },
+  { "jam", 7, _140_two_jam_a, 0, no_hashes },
+  { "lsh", 7, _140_two_lsh_a, 0, no_hashes },
+  { "mat", 7, _140_two_mat_a, 0, no_hashes },
+  { "met", 7, _140_two_met_a, 0, no_hashes },
+  { "mix", 7, _140_two_mix_a, 0, no_hashes },
+  { "mor", 7, _140_two_mor_a, 0, no_hashes },
+  { "mug", 7, _140_two_mug_a, 0, no_hashes },
+  { "muk", 59, _140_two_muk_a, 0, no_hashes },
+  { "rap", 7, _140_two_rap_a, 0, no_hashes },
+  { "rep", 7, _140_two_rep_a, 0, no_hashes },
+  { "rev", 7, _140_two_rev_a, 0, no_hashes },
+  { "rip", 7, _140_two_rip_a, 0, no_hashes },
+  { "rsh", 7, _140_two_rsh_a, 0, no_hashes },
+  { "swp", 7, _140_two_swp_a, 0, no_hashes },
+  { "rub", 7, _140_two_rub_a, 0, no_hashes },
+  { "pow", 7, _140_two_pow_a, 0, no_hashes },
+  { "sqt", 7, _140_two_sqt_a, 0, no_hashes },
+  { "xeb", 7, _140_two_xeb_a, 0, no_hashes },
+
+  { "by",  7, 0, _140_two__by_d, no_hashes },
+  { "in",  7, 0, _139_two__in_d, no_hashes },
+  {}
+};
+
+static u3j_core _139_one_d[] =
+{ { "two", 3, 0, _139_two_d, no_hashes },
+
+  { "add", 7, _140_one_add_a, 0, no_hashes },
+  { "dec", 7, _140_one_dec_a, 0, no_hashes },
+  { "div", 7, _140_one_div_a, 0, no_hashes },
+  { "dvr", 7, _140_one_dvr_a, 0, no_hashes },
+  { "gte", 7, _140_one_gte_a, 0, no_hashes },
+  { "gth", 7, _140_one_gth_a, 0, no_hashes },
+  { "lte", 7, _140_one_lte_a, 0, no_hashes },
+  { "lth", 7, _140_one_lth_a, 0, no_hashes },
+  { "mod", 7, _140_one_mod_a, 0, no_hashes },
+  { "mul", 7, _140_one_mul_a, 0, no_hashes },
+  { "sub", 7, _140_one_sub_a, 0, no_hashes },
+
+  { "cap", 7, _140_one_cap_a, 0, no_hashes },
+  { "mas", 7, _140_one_mas_a, 0, no_hashes },
+  { "peg", 7, _140_one_peg_a, 0, no_hashes },
+  {}
+};
+
+u3j_core _k139_d[] =
+{ { "one", 3, 0, _139_one_d, no_hashes },
+  {}
+};
+
 
 //  TODO: probably need different ha hashes
 
@@ -2152,7 +2258,7 @@ static u3j_core _a50_two__by_d[] =
   };
 
 static u3j_core _a50_two__in_d[] =
-  { { "apt", 7, _140_two__in_apt_a, 0, _140_two__in_apt_ha },
+  { { "apt", 7, _140_two__in_apt_a, 0, _140_two__in_apt_ha },  // NB: 140 jet
     { "del", 7, _140_two__in_del_a, 0, _140_two__in_del_ha },
     { "put", 7, _140_two__in_put_a, 0, _140_two__in_put_ha },
     {}
@@ -2207,6 +2313,7 @@ u3j_core _a50_d[] =
 
 static u3j_core _d[] = {
   { "k140", 0, 0, _k140_d, _k140_ha, 0, (u3j_core*) 140, 0 },
+  { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139, 0 },
   { "a50", 0, 0, _a50_d, _k140_ha, 0, (u3j_core*) c3__a50, 0 },
   {}
 };

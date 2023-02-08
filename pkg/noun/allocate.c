@@ -12,6 +12,10 @@
 
 u3_road* u3a_Road;
 
+#ifdef U3_MEMORY_DEBUG
+c3_w u3_Code;
+#endif
+
 //  declarations of inline functions
 //
 void
@@ -450,7 +454,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
     sel_w += 1;
   }
 
-  // u3l_log("walloc %d: *pfr_p %x\n", len_w, u3R->all.fre_p[sel_w]);
+  // u3l_log("walloc %d: *pfr_p %x", len_w, u3R->all.fre_p[sel_w]);
   while ( 1 ) {
     u3p(u3a_fbox) *pfr_p = &u3R->all.fre_p[sel_w];
 
@@ -585,7 +589,7 @@ u3a_walloc(c3_w len_w)
       u3a_botox(ptr_v) == (u3a_box*)(void *)0x200dfe3e4 ) {
     static int xuc_i;
 
-    u3l_log("xuc_i %d\r\n", xuc_i);
+    u3l_log("xuc_i %d", xuc_i);
     if ( 1 == xuc_i ) {
       u3a_box* box_u = u3a_botox(ptr_v);
 
@@ -701,7 +705,7 @@ u3a_malloc(size_t len_i)
   if ( u3a_botox(out_w) == (u3a_box*)(void *)0x3bdd1c80) {
     static int xuc_i = 0;
 
-    u3l_log("xuc_i %d\r\n", xuc_i);
+    u3l_log("xuc_i %d", xuc_i);
     // if ( 1 == xuc_i ) { abort(); }
     xuc_i++;
   }
@@ -904,7 +908,7 @@ u3a_free(void* tox_v)
   c3_w  pad_w = tox_w[-1];
   c3_w* org_w = tox_w - (pad_w + 1);
 
-  // u3l_log("free %p %p\r\n", org_w, tox_w);
+  // u3l_log("free %p %p", org_w, tox_w);
   u3a_wfree(org_w);
 }
 
@@ -1032,7 +1036,7 @@ _ca_take_atom(u3a_atom* old_u)
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
 #ifdef VERBOSE_TAKE
-  u3l_log("%s: atom %p to %p\r\n", ( c3y == u3a_is_north(u3R) )
+  u3l_log("%s: atom %p to %p", ( c3y == u3a_is_north(u3R) )
                                    ? "north"
                                    : "south",
                                    old_u,
@@ -1070,7 +1074,7 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
   u3_cell     new = u3a_to_pom(u3a_outa(new_u));
 
 #ifdef VERBOSE_TAKE
-  u3l_log("%s: cell %p to %p\r\n", ( c3y == u3a_is_north(u3R) )
+  u3l_log("%s: cell %p to %p", ( c3y == u3a_is_north(u3R) )
                                    ? "north"
                                    : "south",
                                    old_u,
@@ -1129,7 +1133,7 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
         c3_assert( c3y == u3a_north_is_normal(u3R, nov) );
 
 #ifdef VERBOSE_TAKE
-        u3l_log("north: %p is already %p\r\n", veb_u, u3a_to_ptr(nov));
+        u3l_log("north: %p is already %p", veb_u, u3a_to_ptr(nov));
 #endif
 
         _me_gain_use(nov); // bypass branches in u3k()
@@ -1184,7 +1188,7 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
         c3_assert( c3y == u3a_south_is_normal(u3R, nov) );
 
 #ifdef VERBOSE_TAKE
-        u3l_log("south: %p is already %p\r\n", veb_u, u3a_to_ptr(nov));
+        u3l_log("south: %p is already %p", veb_u, u3a_to_ptr(nov));
 #endif
 
         _me_gain_use(nov); // bypass branches in u3k()

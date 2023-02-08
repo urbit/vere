@@ -150,22 +150,25 @@
         } siz;
 
         struct {
-          c3_y* lin_y;                      //  current line (utf8)
-          c3_w  byt_w;                      //  utf8 line-length
-          c3_w  wor_w;                      //  utf32 line-length
-          c3_w  sap_w;                      //  escape chars in line
-          c3_w  cus_w;                      //  cursor position
+          u3_noun lin;                      //  bottom line (stub)
+          c3_w    rus_w;                    //  cursor position (row)
+          c3_w    cus_w;                    //  cursor position (column)
         } mir;
 
         struct {                            //  escape code control
           c3_o    ape;                      //  escape received
           c3_o    bra;                      //  bracket or O received
+          c3_o    mou;                      //  M (for mouse event) received
+          c3_y    ton_y;                    //  mouse button
+          c3_y    col_y;                    //  column coordinate
+          c3_y    seq_y;                    //  vt sequence
         } esc;
 
-        struct {
-          c3_y syb_y[5];                    //  utf8 code buffer
-          c3_w len_w;                       //  present length
-          c3_w wid_w;                       //  total width
+        struct {                            //  input buffering
+          c3_y    syb_y[5];                 //  utf8 code buffer
+          c3_w    len_w;                    //  present length
+          c3_w    wid_w;                    //  total width
+          u3_noun imp;                      //  %txt input buffer
         } fut;
 
         struct {
@@ -185,30 +188,19 @@
         struct _u3_usig* nex_u;
       } u3_usig;
 
-    /* u2_utfo: unix terminfo strings.
+    /* u2_utfo: terminal escape sequences
     */
       typedef struct {
-        //    disabled, currently unused
+        uv_buf_t reg_u;                //  restore scroll region
         //
-        // struct {
-        //   uv_buf_t kcuu1_u;              //  key_up
-        //   uv_buf_t kcud1_u;              //  key_down
-        //   uv_buf_t kcub1_u;              //  key_back
-        //   uv_buf_t kcuf1_u;              //  key_forward
-        // } inn;
-        struct {
-          uv_buf_t clear_u;              //  clear_screen
-          uv_buf_t el_u;                 //  clr_bol clear to beginning
-          // uv_buf_t el1_u;             //  clr_eol clear to end
-          uv_buf_t ed_u;                 //  clear to end of screen
-          uv_buf_t bel_u;                //  bel sound bell
-          uv_buf_t cub1_u;               //  parm_left
-          uv_buf_t cuf1_u;               //  parm_right
-          uv_buf_t cuu1_u;               //  parm_up
-          uv_buf_t cud1_u;               //  parm_down
-          // uv_buf_t cub_u;             //  parm_left_cursor #num
-          // uv_buf_t cuf_u;             //  parm_right_cursor #num
-        } out;
+        uv_buf_t suc_u;                //  save cursor position
+        uv_buf_t ruc_u;                //  restore cursor position
+        uv_buf_t cub_u;                //  move cursor left one column
+        //
+        uv_buf_t clr_u;                //  clear screen
+        uv_buf_t cel_u;                //  clear to end of line
+        //
+        uv_buf_t bel_u;                //  bel sound bell
       } u3_utfo;
 
 #if 0
@@ -258,7 +250,7 @@
                         c3_l* row_l);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
         c3_w             tid_l;             //  terminal identity number
-        u3_utfo          ufo_u;             //  terminfo strings
+        u3_utfo          ufo_u;             //  escape sequences
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
@@ -299,6 +291,7 @@
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
         c3_c*   til_c;                      //  -n, play till eve_d
+        c3_c*   batch_sz_c;                 //  -b, replay batch size
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port
         c3_s    pes_s;                      //      https port
@@ -330,14 +323,12 @@
         c3_d       now_d;                   //  event tick
         uv_loop_t* lup_u;                   //  libuv event loop
         u3_usig*   sig_u;                   //  signal list
-#if defined(U3_OS_mingw)
-        HANDLE     cev_u;                   //  Ctrl-C event handle
-#endif
         u3_utty*   uty_u;                   //  linked terminal list
         c3_o       nex_o;                   //  upgrade requested
         c3_c*      arc_c;                   //  upgrade to arch
         u3_opts    ops_u;                   //  commandline options
         c3_o       pep_o;                   //  prep for upgrade
+        c3_o       play_o;                  //  replay event log and exit
         c3_i       xit_i;                   //  exit code for shutdown
         u3_trac    tra_u;                   //  tracing information
         void     (*bot_f)();                //  call when chis is up
@@ -758,7 +749,7 @@
       */
         u3_atom
         u3_time_in_ts(struct timespec* tim_ts);
-#if defined(U3_OS_linux) || defined(U3_OS_mingw)
+#if defined(U3_OS_linux)
       /* u3_time_t_in_ts(): urbit time from time_t.
        */
          u3_atom
@@ -1165,7 +1156,7 @@
       /* u3_term_io_loja(): release console from cooked print.
       */
         void
-        u3_term_io_loja(int x);
+        u3_term_io_loja(int x, FILE* f);
 
       /* u3_term_log_init(): initialize terminal for logging
       */

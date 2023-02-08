@@ -23,6 +23,7 @@ configure_make(
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
     }),
+    copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = ["libsecp256k1.a"],
     visibility = ["//visibility:public"],

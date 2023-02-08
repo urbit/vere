@@ -3,8 +3,13 @@
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
 
-#include "c3.h"
+#include "c3/c3.h"
+#include "options.h"
 #include "types.h"
+
+#ifdef U3_CPU_DEBUG
+# include "options.h"
+#endif
 
   /** Data structures.
   **/
@@ -46,6 +51,14 @@
     */
       void
       u3t_init(void);
+
+      /// @return  Number of entries written to the JSON trace file.
+      c3_w
+      u3t_trace_cnt(void);
+
+      /// @return  Number of times u3t_trace_close() has been called.
+      c3_w
+      u3t_file_cnt(void);
 
     /* u3t_push(): push on trace stack.
     */
@@ -158,6 +171,11 @@
     */
       void
       u3t_slog_hela(c3_l pri_l);
+
+    /* u3t_etch_meme(): report memory stats at call time
+    */
+      u3_noun
+      u3t_etch_meme(c3_l mod_l);
 
   /** Globals.
   **/

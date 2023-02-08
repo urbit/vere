@@ -1,10 +1,18 @@
 name: Push to master
 
 on:
-  release: null
   push:
     branches:
       - master
+    paths:
+      - '*.bazel'
+      - '.bazelrc'
+      - '.github/workflows/**.yml'
+      - 'PACE'
+      - 'VERSION'
+      - 'bazel/**'
+      - 'pkg/**'
+
 
 jobs:
   urbit:
@@ -13,4 +21,5 @@ jobs:
       docker: true
       pace: 'live'
       upload: true
+      fake_tests: false
     secrets: inherit

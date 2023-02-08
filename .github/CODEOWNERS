@@ -1,0 +1,14 @@
+# For more information on how CODEOWNERS work, see
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners.
+
+# Default owner for everything in the repo. Matches farther down in the file
+# will override this default.
+* @urbit/runtime
+
+# Build system
+/.github/ @mcevoypeter @matthew-levan @jalehman @belisarius222
+/bazel/   @mcevoypeter @matthew-levan @jalehman @belisarius222
+*.bazel   @mcevoypeter @matthew-levan @jalehman @belisarius222
+*.bzl     @mcevoypeter @matthew-levan @jalehman @belisarius222
+/PACE     @mcevoypeter @matthew-levan @jalehman @belisarius222
+/VERSION  @mcevoypeter @matthew-levan @jalehman @belisarius222

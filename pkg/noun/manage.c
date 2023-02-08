@@ -96,15 +96,13 @@
 //
 static rsignal_jmpbuf u3_Signal;
 
-#if !defined(U3_OS_mingw)
-#include <sigsegv.h>
+#include "sigsegv.h"
 
 #ifndef SIGSTKSZ
 # define SIGSTKSZ 16384
 #endif
 #ifndef NO_OVERFLOW
 static uint8_t Sigstk[SIGSTKSZ];
-#endif
 #endif
 
 #if 0
@@ -150,25 +148,19 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_l sig_l)
 {
-#ifndef U3_OS_mingw
   if ( c3__over == sig_l ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  } else
-#endif
-  {
+  }
+  else {
     u3m_signal(sig_l);
   }
 }
 
 #ifndef NO_OVERFLOW
 static void
-#ifndef U3_OS_mingw
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
-#else
-_cm_signal_handle_over(int x)
-#endif
 {
   _cm_signal_handle(c3__over);
 }
@@ -329,7 +321,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 
       while ( rod_u->kid_p ) {
 #if 0
-        u3l_log("collecting %d frames\r\n",
+        u3l_log("collecting %d frames",
               u3kb_lent((u3to(u3_road, rod_u->kid_p)->bug.tax));
 #endif
         tax = u3kb_weld(_cm_stack_recover(u3to(u3_road, rod_u->kid_p)), tax);
@@ -359,11 +351,7 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
-#ifndef U3_OS_mingw
   stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ);
-#else
-  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
-#endif
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -385,7 +373,7 @@ _cm_signal_deep(c3_w mil_w)
     itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
 
     if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
-      u3l_log("loom: set timer failed %s\r\n", strerror(errno));
+      u3l_log("loom: set timer failed %s", strerror(errno));
     }
     else {
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
@@ -405,11 +393,7 @@ _cm_signal_done()
   rsignal_deinstall_handler(SIGVTALRM);
 
 #ifndef NO_OVERFLOW
-#ifndef U3_OS_mingw
   stackoverflow_deinstall_handler();
-#else
-  rsignal_deinstall_handler(SIGSTK);
-#endif
 #endif
   {
     struct itimerval itm_u;
@@ -418,7 +402,7 @@ _cm_signal_done()
     timerclear(&itm_u.it_value);
 
     if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
-      u3l_log("loom: clear timer failed %s\r\n", strerror(errno));
+      u3l_log("loom: clear timer failed %s", strerror(errno));
     }
   }
 
@@ -450,7 +434,7 @@ u3m_file(c3_c* pas_c)
   c3_y*       pad_y;
 
   if ( (fid_i < 0) || (fstat(fid_i, &buf_b) < 0) ) {
-    u3l_log("%s: %s\r\n", pas_c, strerror(errno));
+    u3l_log("%s: %s", pas_c, strerror(errno));
     return u3m_bail(c3__fail);
   }
   fln_w = buf_b.st_size;
@@ -652,7 +636,7 @@ u3m_dump(void)
       fre_u = fre_u->nex_u;
     }
   }
-  u3l_log("dump: hat_w %x, fre_w %x, allocated %x\n",
+  u3l_log("dump: hat_w %x, fre_w %x, allocated %x",
           hat_w, fre_w, (hat_w - fre_w));
 
   if ( 0 != (hat_w - fre_w) ) {
@@ -664,14 +648,14 @@ u3m_dump(void)
 
       if ( 0 != box_u->use_w ) {
 #ifdef U3_MEMORY_DEBUG
-        // u3l_log("live %d words, code %x\n", box_u->siz_w, box_u->cod_w);
+        // u3l_log("live %d words, code %x", box_u->siz_w, box_u->cod_w);
 #endif
         mem_w += box_u->siz_w;
       }
       box_w += box_u->siz_w;
     }
 
-    u3l_log("second count: %x\n", mem_w);
+    u3l_log("second count: %x", mem_w);
   }
 }
 #endif
@@ -1598,7 +1582,7 @@ u3m_p(const c3_c* cap_c, u3_noun som)
 {
   c3_c* pre_c = u3m_pretty(som);
 
-  u3l_log("%s: %s\r\n", cap_c, pre_c);
+  u3l_log("%s: %s", cap_c, pre_c);
   c3_free(pre_c);
 }
 
@@ -1645,10 +1629,6 @@ u3m_wall(u3_noun wol)
 static void
 _cm_limits(void)
 {
-# ifdef U3_OS_mingw
-  //  Windows doesn't have rlimits. Default maximum thread
-  //  stack size is set in the executable file header.
-# else
   struct rlimit rlm;
 
   //  Moar stack.
@@ -1659,7 +1639,7 @@ _cm_limits(void)
     rlm.rlim_cur = c3_min(rlm.rlim_max, (65536 << 10));
 
     if ( 0 != setrlimit(RLIMIT_STACK, &rlm) ) {
-      u3l_log("boot: stack size: %s\r\n", strerror(errno));
+      u3l_log("boot: stack size: %s", strerror(errno));
       exit(1);
     }
   }
@@ -1678,7 +1658,7 @@ _cm_limits(void)
     //  no exit, not a critical limit
     //
     if ( 0 != setrlimit(RLIMIT_NOFILE, &rlm) ) {
-      u3l_log("boot: open file limit: %s\r\n", strerror(errno));
+      u3l_log("boot: open file limit: %s", strerror(errno));
     }
   }
 
@@ -1692,10 +1672,9 @@ _cm_limits(void)
     //  no exit, not a critical limit
     //
     if ( 0 != setrlimit(RLIMIT_CORE, &rlm) ) {
-      u3l_log("boot: core limit: %s\r\n", strerror(errno));
+      u3l_log("boot: core limit: %s", strerror(errno));
     }
   }
-# endif
 # endif
 }
 
@@ -1704,21 +1683,10 @@ _cm_limits(void)
 static void
 _cm_signals(void)
 {
-# if defined(U3_OS_mingw)
-  //  vere using libsigsegv on MingW is very slow, because libsigsegv
-  //  works by installing a top-level SEH unhandled exception filter.
-  //  The top-level filter runs only after Windows walks the whole stack,
-  //  looking up registered exception filters for every stack frame, and
-  //  finds no filter to handle the exception.
-  //  Instead of libsigsegv, all vere functions register a SEH exception
-  //  filter (see compat/mingw/seh_handler.c) that handles both memory
-  //  access and stack overflow exceptions. It calls u3e_fault directly.
-# else
   if ( 0 != sigsegv_install_handler(u3e_fault) ) {
-    u3l_log("boot: sigsegv install failed\n");
+    u3l_log("boot: sigsegv install failed");
     exit(1);
   }
-# endif
 
 # if defined(U3_OS_PROF)
   //  Block SIGPROF, so that if/when we reactivate it on the
@@ -1731,7 +1699,7 @@ _cm_signals(void)
     sigaddset(&set, SIGPROF);
 
     if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-      u3l_log("boot: thread mask SIGPROF: %s\r\n", strerror(errno));
+      u3l_log("boot: thread mask SIGPROF: %s", strerror(errno));
       exit(1);
     }
   }
@@ -1785,7 +1753,7 @@ _cm_crypto()
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
                                      &_cm_realloc_ssl,
                                      &_cm_free_ssl) ) {
-    u3l_log("%s\r\n", "openssl initialization failed");
+    u3l_log("%s", "openssl initialization failed");
     abort();
   }
 
@@ -1828,7 +1796,7 @@ u3m_init(size_t len_i)
      || (len_i < (1 << (u3a_page + 2)))
      || (len_i > u3a_bytes) )
   {
-    u3l_log("loom: bad size: %zu\r\n", len_i);
+    u3l_log("loom: bad size: %zu", len_i);
     exit(1);
   }
 
@@ -1848,18 +1816,18 @@ u3m_init(size_t len_i)
                    (MAP_ANON | MAP_PRIVATE),
                    -1, 0);
 
-      u3l_log("boot: mapping %zuMB failed\r\n", len_i >> 20);
+      u3l_log("boot: mapping %zuMB failed", len_i >> 20);
       u3l_log("see urbit.org/using/install/#about-swap-space"
-              " for adding swap space\r\n");
+              " for adding swap space");
       if ( -1 != (c3_ps)map_v ) {
-        u3l_log("if porting to a new platform, try U3_OS_LoomBase %p\r\n",
+        u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);
       }
       exit(1);
     }
 
     u3C.wor_i = len_i >> 2;
-    u3l_log("loom: mapped %zuMB\r\n", len_i >> 20);
+    u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }
 
@@ -1907,7 +1875,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   {
     c3_w len_w = u3j_boot(nuu_o);
-    u3l_log("boot: installed %d jets\r\n", len_w);
+    u3l_log("boot: installed %d jets", len_w);
   }
 
   /* Reactivate jets on old kernel.
