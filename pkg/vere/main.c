@@ -1749,14 +1749,14 @@ _cw_chop(c3_i argc, c3_c* argv[])
         c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
         if ( (c3n == res_o) || (lom_w < 20) ) {
           fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
-          exit(1);
+          u3_king_bail();
         }
         u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        u3_king_bail();
       } break;
     }
   }
@@ -1770,7 +1770,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      u3_king_bail();
     }
 
     optind++;
@@ -1778,7 +1778,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    u3_king_bail();
   }
 
   // gracefully shutdown the pier if it's running
@@ -1792,10 +1792,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "chop: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
     fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
-    exit(1);
+    u3_king_bail();
   }
 
-  u3e_backup(c3y);  //  backup current snapshot
+  if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
+    fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
+    u3_king_bail();
+  }
 
   // initialize the lmdb environment
   // see disk.c:885
@@ -1813,7 +1816,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_d fir_d, las_d;
   if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "chop: failed to load latest event from database\r\n");
-    exit(1);
+    u3_king_bail();
   }
 
   // get the metadata
@@ -1822,7 +1825,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w     lif_w;
   if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "chop: failed to read metadata\r\n");
-    exit(1);
+    u3_king_bail();
   }
 
   // get the last event
@@ -1831,11 +1834,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
   void*        buf_v[1];
   if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
     fprintf(stderr, "chop: failed to initialize iterator\r\n");
-    exit(1);
+    u3_king_bail();
   }
   if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
     fprintf(stderr, "chop: failed to read event\r\n");
-    exit(1);
+    u3_king_bail();
   }
   u3_lmdb_walk_done(&itr_u);
 
@@ -1845,17 +1848,23 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_mkdir(cho_c, 0700);
   MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
 
+  // check if the new database was initialized
+  if ( !new_u ) {
+    fprintf(stderr, "chop: failed to initialize new database\r\n");
+    u3_king_bail();
+  }
+
   // write the metadata to the database
   if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
     fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
+    u3_king_bail();
   }
 
   // write the last event to the database
   // warning: this relies on the old database still being open
   if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
-    fprintf(stderr, "king: failed to write last event\r\n");
-    exit(1);
+    fprintf(stderr, "chop: failed to write last event\r\n");
+    u3_king_bail();
   }
 
   // backup the original database file
@@ -1864,11 +1873,19 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // "data_<first>-<last>.mdb.bak"
   snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
   c3_rename(dat_c, bak_c);
+  if ( 0 != errno ) {
+    fprintf(stderr, "chop: failed to backup original database file\r\n");
+    u3_king_bail();
+  }
 
   // rename new database file to be official
   c3_c new_c[8193];
   snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
   c3_rename(new_c, dat_c);
+  if ( 0 != errno ) {
+    fprintf(stderr, "chop: failed to rename new database file\r\n");
+    u3_king_bail();
+  }
 
   // cleanup
   u3_disk_exit(old_u);
