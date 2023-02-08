@@ -223,7 +223,7 @@ jobs:
         if: ${{ inputs.release }}
         run: |
           # Create or update the GitHub release.
-          # Upload the other assets from the other platforms' jobs.
+          # Compress and upload binary assets to release.
           version="vere-v$(cat ./VERSION)"
           exists=$(gh release list | cut -f 1 | grep -c "$version")
           if [[ $exists -eq 0 ]]; then
