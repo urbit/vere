@@ -992,7 +992,7 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* _ce_backup();
+/* u3e_backup();
 */
 c3_o
 u3e_backup(c3_o ovw_o)
@@ -1007,16 +1007,14 @@ u3e_backup(c3_o ovw_o)
   if ( (c3n == ovw_o) && c3_mkdir(ful_c, 0700) ) {
     if ( EEXIST != errno ) {
       fprintf(stderr, "loom: image backup: %s\r\n", strerror(errno));
-      fprintf(stderr, "loom: image backup failed\r\n");
-      return c3n;
     }
+    return c3n;
   }
 
   snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, nop_u.nam_c);
 
   if ( -1 == (nop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
-    fprintf(stderr, "loom: image backup failed\r\n");
     return c3n;
   }
 
@@ -1024,7 +1022,6 @@ u3e_backup(c3_o ovw_o)
 
   if ( -1 == (sop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
-    fprintf(stderr, "loom: image backup failed\r\n");
     return c3n;
   }
 
