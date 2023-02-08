@@ -1845,9 +1845,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // initialize a fresh lmdb environment in the "chop" subdir
   c3_c cho_c[8193];
   snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
-  if ( 0 != c3_mkdir(cho_c, 0700) ) {
-    fprintf(stderr, "chop: failed to create chop directory\r\n");
-    exit(1);
+  if ( 0 != access(cho_c, F_OK) ) {
+    if ( 0 != c3_mkdir(cho_c, 0700) ) {
+      fprintf(stderr, "chop: failed to create chop directory\r\n");
+      exit(1);
+    }
   }
   MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
   if ( !new_u ) {
@@ -1893,13 +1895,12 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
-  fprintf(stderr, "chop: event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "chop: WARNING: ENSURE YOU CAN RESTART YOUR SHIP "
-                  "BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
-  fprintf(stderr, "chop: if you can't restart your ship, restore your "
-                  "event log backup file with the following command:\r\n"); 
-  fprintf(stderr, "chop: mv %s %s\r\n", bak_c, dat_c);
-  fprintf(stderr, "chop: then restart your ship\r\n");
+  fprintf(stderr, "      event log backup written to %s\r\n", bak_c);
+  fprintf(stderr, "      WARNING: ENSURE YOU CAN RESTART YOUR SHIP\r\n"
+                  "      BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
+  fprintf(stderr, "      if you can't, restore your log by running:\r\n");
+  fprintf(stderr, "      mv %s %s\r\n", bak_c, dat_c);
+  fprintf(stderr, "      then try again\r\n");
 }
 
 /* _cw_vere(): download vere
