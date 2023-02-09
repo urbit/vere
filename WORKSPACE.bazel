@@ -359,6 +359,7 @@ versioned_http_archive(
 versioned_http_archive(
     name = "hedron_compile_commands",
     strip_prefix = "bazel-compile-commands-extractor-{version}",
+    sha256 = "d7ba7708816132f86f02864b9dba0c5abf249cc0fb035a34c430e4e538c87867",
     url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/{version}.tar.gz",
     version = "d3afb5dfadd4beca48bb027112d029f2d34ff0a0",
 )
