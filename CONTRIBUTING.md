@@ -123,7 +123,7 @@ via one of the official editor plugins.
 
 After installing `clangd`, configure it to use the following arguments 
 (location of these arguments may vary depending on your editor plugin or 
-if you've installed `clangd` directly on your system):
+if you've installed `clangd` directly on your system).
 
 For example, if you use Visual Studio Code, you can add the following to your
 user settings:
