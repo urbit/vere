@@ -132,6 +132,9 @@ cc_library(
         "@openssl",
         "@uv",
     ],
+    copts = [
+        "-Ipkg",
+    ],
 )
 
 #
@@ -163,6 +166,9 @@ cc_binary(
         # TODO: remove dependency (only used to report version).
         "@sigsegv",
         "@whereami",
+    ],
+    copts = [
+        "-Ipkg",
     ],
 )
 

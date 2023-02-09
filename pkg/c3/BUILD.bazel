@@ -30,6 +30,9 @@ cc_library(
     includes = ["."],
     linkstatic = True,
     visibility = ["//pkg:__subpackages__"],
+    copts = [
+        "-Ipkg",
+    ],
 )
 
 #

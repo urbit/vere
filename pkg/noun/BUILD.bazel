@@ -43,6 +43,9 @@ cc_library(
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
         "//conditions:default": [],
     }),
+    copts = [
+        "-Ipkg",
+    ],
 )
 
 #
