@@ -114,3 +114,29 @@ $ ./urbit <ship>
 
 
 [^1]: Unless you specify the pier using the `-c` flag.
+
+### Enable Language Server Processing
+
+We support the [`clangd`](https://clangd.llvm.org/installation) 
+language server, which can be installed directly on your system or 
+via one of the official editor plugins.
+
+After installing `clangd`, configure it to use the following arguments:
+
+```json
+{
+  "clangd.arguments": [
+    "--header-insertion=never",
+    "--compile-commands-dir=${workspaceFolder}/",
+    "--query-driver=**",
+  ],
+}
+```
+
+Finally, run the following command to generate a `compile_commands.json` file, 
+which is used by `clangd` to enable all of its features (e.g. code completion, 
+jump to definition, cross-references, hovering, symbol renaming, etc.):
+
+```console
+bazel run //bazel:refresh_compile_commands
+```
