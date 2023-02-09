@@ -138,6 +138,9 @@ user settings:
 }
 ```
 
+For other editors, please refer to the 
+[editor plugin documentation](https://clangd.llvm.org/installation.html#editor-plugins).
+
 Finally, run the following command to generate a `compile_commands.json` file, 
 which is used by `clangd` to enable all of its features (e.g. code completion, 
 jump to definition, cross-references, hovering, symbol renaming, etc.):
