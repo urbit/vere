@@ -121,7 +121,9 @@ We support the [`clangd`](https://clangd.llvm.org/installation)
 language server, which can be installed directly on your system or 
 via one of the official editor plugins.
 
-After installing `clangd`, configure it to use the following arguments:
+After installing `clangd`, configure it to use the following arguments 
+(location of these arguments may vary depending on your editor plugin or 
+if you've installed `clangd` directly on your system):
 
 ```json
 {
