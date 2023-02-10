@@ -297,8 +297,8 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w use_w)
 
   if ( c3y == u3a_is_north(u3R) ) {
     all_p = u3R->hat_p;
-    pad_w = c3_align(all_p, ald_w, ALHI) - all_p;
-    siz_w = c3_align(len_w + pad_w , u3C.walign_w, ALHI);
+    pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
+    siz_w = c3_align(len_w + pad_w , u3C.walign_w, C3_ALGHI);
 
     //  hand-inlined: siz_w >= u3a_open(u3R)
     //
@@ -309,8 +309,8 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w use_w)
   }
   else {
     all_p = u3R->hat_p - len_w;
-    pad_w = all_p - c3_align(all_p, ald_w, ALLO);
-    siz_w = c3_align(len_w + pad_w, u3C.walign_w, ALHI);
+    pad_w = all_p - c3_align(all_p, ald_w, C3_ALGLO);
+    siz_w = c3_align(len_w + pad_w, u3C.walign_w, C3_ALGHI);
 
     //  hand-inlined: siz_w >= u3a_open(u3R)
     //
@@ -494,9 +494,9 @@ _ca_willoc(c3_w len_w, c3_w ald_w)
         }
       }
       else {                    /* we got a non-null freelist */
-        c3_w trg_w = c3_align(*pfr_p, sizeof(*pfr_p) * ald_w, ALHI);
-        c3_w pad_w = c3_align(*pfr_p, ald_w, ALHI) - *pfr_p;
-        c3_w des_w = c3_align(siz_w + pad_w, u3C.walign_w, ALHI);
+        c3_w trg_w = c3_align(*pfr_p, sizeof(*pfr_p) * ald_w, C3_ALGHI);
+        c3_w pad_w = c3_align(*pfr_p, ald_w, C3_ALGHI) - *pfr_p;
+        c3_w des_w = c3_align(siz_w + pad_w, u3C.walign_w, C3_ALGHI);
         c3_dessert((ald_w != 1) || (0 == pad_w));
 
         if ( (des_w) > u3to(u3a_fbox, *pfr_p)->box_u.siz_w ) {
@@ -713,7 +713,7 @@ u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w)
 
     c3_w* end_w = c3_align(nov_w + len_w + 1, /* +1 for trailing allocation size */
                            u3C.balign_d,
-                           ALHI);
+                           C3_ALGHI);
 
     c3_w  asz_w = (end_w - box_w);      /* total size in words of new allocation */
     if (box_u->siz_w <= asz_w) return;
@@ -753,7 +753,7 @@ u3a_malloc(size_t len_i)
 {
   c3_w    len_w = (c3_w)((len_i + 3) >> 2);
   c3_w*   ptr_w = _ca_walloc(len_w + 1, 4); /* +1 for storing pad */
-  c3_w*   out_w = c3_align(ptr_w, 16, ALHI);
+  c3_w*   out_w = c3_align(ptr_w, 16, C3_ALGHI);
   c3_w    pad_w = out_w - ptr_w;
 
   out_w[-1] = pad_w - 1;        /* -1 for historical reasons */
