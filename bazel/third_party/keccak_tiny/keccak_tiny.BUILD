@@ -5,6 +5,7 @@ cc_library(
         "keccak-tiny.c",
     ],
     hdrs = ["keccak-tiny.h"],
+    copts = ["-O3"],
     includes = ["."],
     local_defines = select({
         # TODO: confirm which platforms have memset_s().

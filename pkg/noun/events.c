@@ -488,7 +488,6 @@ _ce_patch_verify(u3_ce_patch* pat_u)
       }
       return c3n;
     }
-    
     {
       c3_w nug_w = u3r_mug_words(mem_w, pag_wiz_i);
 

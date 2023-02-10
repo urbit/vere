@@ -56,6 +56,11 @@
       c3_o
       u3v_boot_lite(u3_noun lit);
 
+    /* u3v_wish_n(): text expression with cache.
+    */
+      u3_noun
+      u3v_wish_n(const u3_noun txt);
+
     /* u3v_do(): use a kernel function.
     */
       u3_noun

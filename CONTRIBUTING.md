@@ -51,11 +51,11 @@ Reference any related issues, links, papers, etc. here.
 Tests will run automatically via GitHub Actions when you open a pull request or
 push new commits to an existing pull request.
 
-Once you've collected and addressed feedback and are ready to merge, squash and
-merge the pull request. Use the default squash commit message. Assuming that you
-properly included the "Resolves #N." directive in the pull request description,
-merging will automatically close the tracking issue associated with the pull
-request.
+Once you've collected and addressed feedback and are ready to merge, merge the
+pull request. Use the default commit message which should default to your PR
+title and description. Assuming that you properly included the "Resolves #N."
+directive in the pull request description, merging will automatically close the
+tracking issue associated with the pull request.
 
 
 ## Development Environment

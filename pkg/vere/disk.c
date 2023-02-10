@@ -420,10 +420,29 @@ _disk_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
   u3_disk* log_u = red_u->log_u;
   u3_fact* tac_u;
 
+  if ( 4 >= val_i ) {
+    return c3n;
+  }
+
   {
     u3_noun job;
-    c3_l  mug_l;
+    c3_y* dat_y = val_p;
+    c3_l  mug_l = dat_y[0]
+                ^ (dat_y[1] <<  8)
+                ^ (dat_y[2] << 16)
+                ^ (dat_y[3] << 24);
 
+#ifdef DISK_TRACE_CUE
+    u3t_event_trace("king disk cue", 'B');
+#endif
+
+    //  XX u3m_soft?
+    //
+    job = u3ke_cue(u3i_bytes(val_i - 4, dat_y + 4));
+
+#ifdef DISK_TRACE_CUE
+    u3t_event_trace("king disk cue", 'E');
+#endif
     if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
       return c3n;
     }

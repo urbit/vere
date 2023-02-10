@@ -140,6 +140,7 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
+  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
@@ -627,6 +628,7 @@ _cw_usage(c3_c* bin_c)
 {
   c3_c *use_c[] = {
     "utilities:\n",
+    "  %s eval                      evaluate hoon from stdin:\n",
     "  %s cram %.*s              jam state:\n",
     "  %s dock %.*s              copy binary:\n",
     "  %s grab %.*s              measure memory usage:\n",
@@ -1161,9 +1163,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o jam_o = c3n;
+  c3_o kan_o = c3n;
 
   static struct option lop_u[] = {
     { "loom", required_argument, NULL, c3__loom },
+    { "jam", no_argument, NULL, 'j' },
+    { "jamkhan", no_argument, NULL, 'k' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1172,11 +1178,21 @@ _cw_eval(c3_i argc, c3_c* argv[])
       case c3__loom: {
         c3_w lom_w;
         c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if ( (c3n == res_o) || (lom_w < 24) ) {
+          fprintf(stderr, "error: --loom must be >= 24 and <= %u\r\n", u3a_bits + 2);
           exit(1);
         }
         u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case 'j': {
+        jam_o = c3y;
+        kan_o = c3n;
+      } break;
+
+      case 'k': {
+        jam_o = c3y;
+        kan_o = c3y;
       } break;
 
       case '?': {
@@ -1185,17 +1201,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
       } break;
     }
   }
-
   //  argv[optind] is always "eval"
   //
-
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
-
   c3_c* evl_c = _cw_eval_get_input(stdin, 10);
-
   //  initialize the Loom and load the Ivory Pill
   //
   {
@@ -1208,7 +1220,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      printf("lite: unable to cue ivory pill\r\n");
+      fprintf(stderr, "lite: unable to cue ivory pill\r\n");
       exit(1);
     }
     u3s_cue_xeno_done(sil_u);
@@ -1217,29 +1229,63 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
   }
-
-  printf("eval:\n");
-
-  //  +wish for an eval gate (virtualized twice for pretty-printing)
-  //
-  u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
-  u3_noun res;
-  {
+  fprintf(stderr, "eval:\n");
+  if ( c3n == jam_o ) {
+    //  +wish for an eval gate (virtualized twice for pretty-printing)
+    //
+    u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
+    u3_noun res;
+    {
+      u3_noun sam = u3i_string(evl_c);
+      u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+      res = u3m_soft(0, u3n_kick_on, cor);
+    }
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      u3_pier_tank(0, 0, u3k(u3t(res)));
+    } else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
+    }
+    u3z(res);
+    u3z(gat);
+  } else {
     u3_noun sam = u3i_string(evl_c);
-    u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
-    res = u3m_soft(0, u3n_kick_on, cor);
+    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
+    c3_d bits = 0;
+    c3_d len_d = 0;
+    c3_y* byt_y;
+    if ( 0 == u3h(res) ) {  //  successful execution, print output
+      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      if ( c3n == kan_o ) {
+        fprintf(stderr,"jammed noun: ");
+        for ( size_t p=0; p < len_d; p++ ){
+          fprintf(stdout,"\\x%2x", byt_y[p++]);
+        }
+        fprintf(stderr,"\n");
+      } else {
+         fprintf(stderr,"khan jammed noun: ");
+         c3_y out_y[5];
+         out_y[0] = 0x0;
+         out_y[1] = ( len_d        & 0xff);
+         out_y[2] = ((len_d >>  8) & 0xff);
+         out_y[3] = ((len_d >> 16) & 0xff);
+         out_y[4] = ((len_d >> 24) & 0xff);
+         fwrite(out_y, 1, 5, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fwrite(byt_y, 1, len_d, stdout);
+         if( ferror(stdout) ) {
+           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
+           exit(1);
+         }
+         fprintf(stderr, "\n");
+      }
+    } else {                  //  error, print stack trace
+       u3_pier_punt_goof("eval", u3k(res));
+    }
+    u3z(res);
   }
-
-
-  if ( 0 == u3h(res) ) {  //  successful execution, print output
-     u3_pier_tank(0, 0, u3k(u3t(res)));
-  }
-  else {                  //  error, print stack trace
-     u3_pier_punt_goof("eval", u3k(res));
-  }
-
-  u3z(res);
-  u3z(gat);
   free(evl_c);
 }
 
@@ -1711,6 +1757,9 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
 
+  static const c3_c usage_c[] = "error: invalid usage, expected "
+                                "`urbit play [--replay-to <event_num> "
+                                "| --batch-size <event_cnt>] <pier>`";
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "auto-meld", no_argument,       NULL, 4 },
@@ -1723,6 +1772,8 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'b':
+        u3_Host.ops_u.batch_sz_c = strdup(optarg);
       case 4: {  //  auto-meld
         mel_o = c3y;
       } break;
@@ -1748,7 +1799,7 @@ _cw_play(c3_i argc, c3_c* argv[])
       }
 
       case '?': {
-        fprintf(stderr, "invalid argument\r\n");
+        fprintf(stderr, "%s\r\n", usage_c);
         exit(1);
       } break;
     }
@@ -1777,14 +1828,6 @@ _cw_play(c3_i argc, c3_c* argv[])
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-
-#if !defined(U3_OS_mingw)
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-#endif
 
   if ( c3y == mel_o ) {
     u3C.wag_w |= u3o_auto_meld;
