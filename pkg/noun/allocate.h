@@ -227,14 +227,6 @@
     */
 #     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
 
-    /* u3a_to_pug(): set bit 31 of [off].
-    */
-#     define u3a_to_pug(off)    (off | 0x80000000)
-
-    /* u3a_to_pom(): set bits 30 and 31 of [off].
-    */
-#     define u3a_to_pom(off)    (off | 0xc0000000)
-
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
 #     define u3a_is_atom(som)    c3o(u3a_is_cat(som), \
@@ -406,7 +398,7 @@
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
   inline c3_w u3a_to_off(c3_w som) {
-    return som & 0x3fffffff;      /* 1 << 30 - 1 */
+    return (som & 0x3fffffff) << u3a_vits;
   }
 
   /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
@@ -419,6 +411,20 @@
    */
   inline c3_w *u3a_to_wtr(c3_w som) {
     return (c3_w *)u3a_to_ptr(som);
+  }
+
+  /* u3a_to_pug(): set bit 31 of [off].
+   */
+  inline c3_w u3a_to_pug(c3_w off) {
+    c3_dessert((off & u3a_walign-1) == 0);
+    return (off >> u3a_vits) | 0x80000000;
+  }
+
+  /* u3a_to_pom(): set bits 30 and 31 of [off].
+   */
+  inline c3_w u3a_to_pom(c3_w off) {
+    c3_dessert((off & u3a_walign-1) == 0);
+    return (off >> u3a_vits) | 0xc0000000;
   }
 
     /**  road stack.
