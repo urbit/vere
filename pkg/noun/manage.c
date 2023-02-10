@@ -568,14 +568,14 @@ static void
 _pave_home(void)
 {
   /* a pristine home road will always have compressed references */
-  u3a_config_loom(/* U3V_LATEST */ 2);
+  u3a_config_loom(U3V_VERLAT);
 
   c3_w* mem_w = u3_Loom + u3C.walign_w;
   c3_w  siz_w = c3_wiseof(u3v_home);
   c3_w  len_w = u3C.wor_i - u3C.walign_w;
 
   u3H = (void *)_pave_north(mem_w, siz_w, len_w);
-  u3H->ver_w = u3v_version;
+  u3H->ver_w = U3V_VERLAT;
   u3R = &u3H->rod_u;
 
   _pave_parts();
@@ -605,15 +605,15 @@ _find_home(void)
   //  this looks risky, but there are no legitimate scenarios where it's wrong
   u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
 
-  if (u3v_version > ver_w) {
-    u3m_migrate(u3v_version);
-    u3a_config_loom(u3v_version);
+  if (U3V_VERLAT > ver_w) {
+    u3m_migrate(U3V_VERLAT);
+    u3a_config_loom(U3V_VERLAT);
   }
-  else if ( u3v_version < ver_w ) {
+  else if ( U3V_VERLAT < ver_w ) {
     fprintf(stderr, "loom: checkpoint version mismatch: "
             "have %u, need %u\r\n",
             ver_w,
-            u3v_version);
+            U3V_VERLAT);
     abort();
   }
 
@@ -2136,19 +2136,20 @@ _migrate_move(u3a_road *rod_u)
    ver_w - target version
 */
 void
-u3m_migrate(c3_w ver_w)
+u3m_migrate(u3v_version ver_w)
 {
   if (u3H->ver_w == ver_w)
     return;
 
   /* 1 -> 2 is all that is currently supported */
-  c3_dessert(u3H->ver_w == 1 &&
-             ver_w == 2);
+  c3_dessert(u3H->ver_w == U3V_VER1 &&
+             ver_w == U3V_VER2);
+
   /* only home road migration is supported */
   c3_dessert((uintptr_t)u3H == (uintptr_t)u3R);
 
-  fprintf(stderr, "loom: migration running. This may take several minutes to perform\r\n");
-  fprintf(stderr, "loom: have version: %" PRIc3_w " migrating to version: %" PRIc3_w "\r\n",
+  fprintf(stderr, "loom: migration running. This may take several minutes to perform.\r\n");
+  fprintf(stderr, "loom: have version: %"PRIc3_w" migrating to version: %"PRIc3_w"\r\n",
           u3H->ver_w, ver_w);
 
   /* packing first simplifies migration logic and minimizes required buffer space */

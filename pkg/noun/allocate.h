@@ -379,10 +379,10 @@
    */
   inline void u3a_config_loom(c3_w ver_w) {
     switch (ver_w) {
-    case /* U3V_VER1 */ 1:
+    case U3V_VER1:
       u3C.vits_w = 0;
       break;
-    case /* U3V_VER2 */ 2:
+    case U3V_VER2:
       u3C.vits_w = 1;
       break;
     default:
