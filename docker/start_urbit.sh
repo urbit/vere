@@ -63,4 +63,4 @@ dirnames="*/"
 dirs=( $dirnames )
 dirname=''${dirnames[0]}
 
-exec urbit $ttyflag -p $amesPort --http-port $httpPort  --loom $loom $dirnamev
+exec urbit $ttyflag -p $amesPort --http-port $httpPort  --loom $loom $dirname
