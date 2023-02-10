@@ -164,45 +164,6 @@ jobs:
             | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
 
-          # See https://github.com/urbit/vere/issues/86.
-          if [[ "$version" == "1.16" ]]; then
-            platform=""
-            case "${{ matrix.target }}" in
-              "linux-aarch64")
-                platform="aarch64-linux"
-                ;;
-              "linux-x86_64")
-                platform="x86_64-linux"
-                ;;
-              "macos-aarch64")
-                platform="aarch64-darwin"
-                ;;
-              "macos-x86_64")
-                platform="x86_64-darwin"
-                ;;
-            esac
-            old_target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-v${version}-${platform}"
-
-            # We never overwrite a binary deployed to the "live" train, but we do
-            # overwrite same-versioned binaries deployed to the "soon" and "edge"
-            # trains.
-            if [[ "${{ inputs.pace }}" == "live" ]]; then
-              gsutil cp -n "${{ env.urbit_static }}" "$old_target"
-            else
-              gsutil cp "${{ env.urbit_static }}" "$old_target"
-            fi
-
-            # See https://github.com/urbit/vere/issues/90.
-            if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-              aarch64_bin=vere-v1.16-aarch64-darwin
-              wget https://bootstrap.urbit.org/vere/${{ inputs.pace }}/1.16/$aarch64_bin
-              universal_bin=vere-v1.16-universal-darwin
-              x86_64_bin="${{ env.urbit_static }}"
-              xcrun lipo -create $aarch64_bin $x86_64_bin -output $universal_bin
-              gsutil cp $universal_bin "$old_target"
-            fi
-          fi
-
           args=""
           # We never overwrite a binary deployed to the "live" train, but we do
           # overwrite same-versioned binaries deployed to the "soon" and "edge"
@@ -289,11 +250,6 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
-
-          # See https://github.com/urbit/vere/issues/86.
-          if [[ $(cat ./VERSION) == "1.16" ]]; then
-            gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
-          fi
 
           bazel build :version_str
           # We don't use -n here because we want to overwrite the version
