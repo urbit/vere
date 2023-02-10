@@ -90,24 +90,10 @@ _loch_born_news(u3_ovum* egg_u, u3_ovum_news new_e)
 static void
 _loch_born_bail(u3_ovum* egg_u, u3_noun lud)
 {
-  u3_auto* car_u = egg_u->car_u;
 
-  if (  (2 > egg_u->try_w)
-     && (c3n == _behn_bail_dire(lud)) )
-  {
-    u3z(lud);
-    u3_auto_redo(car_u, egg_u);
-  }
-  else {
-    u3_auto_bail_slog(egg_u, lud);
-    u3_ovum_free(egg_u);
-
-    u3l_log("loch: initialization failed");
-
-    //  XX review, add flag to continue?
-    //
-    u3_pier_bail(car_u->pir_u);
-  }
+  u3l_log("loch: %%born failure;");
+  u3z(lud);
+  u3_ovum_free(egg_u);
 }
 /* _loch_io_talk(): notify %loch that we're live
  *                  pass it a list of device names
@@ -122,7 +108,7 @@ _loch_io_talk(u3_auto* car_u)
   u3_noun wir = u3nt(c3__loch,
                      u3_nul,
                      u3_nul);
-  u3_noun cad = u3nc(c3__born, u3_nul);
+  u3_noun cad = u3nc(c3__born, teh_u->dev_u[0].nam_w);
 
   u3_auto_peer(
     u3_auto_plan(car_u, u3_ovum_init(0, c3__l, wir, cad)),
@@ -131,7 +117,7 @@ _loch_io_talk(u3_auto* car_u)
     _loch_born_bail);
 }
 
-/* _behn_io_kick(): apply effects.
+/* _loch_io_kick(): apply effects.
 */
 static c3_o
 _loch_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
