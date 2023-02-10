@@ -166,8 +166,8 @@ _main_init(void)
   u3_Host.ops_u.hap_w = 50000;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
-  u3_Host.ops_u.lut_y = u3a_bits + 1;
-  u3_Host.ops_u.lom_y = u3a_bits + 1;
+  u3_Host.ops_u.lut_y = 31;     /* aka 2G */
+  u3_Host.ops_u.lom_y = 31;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -256,9 +256,9 @@ _main_getopt(c3_i argc, c3_c** argv)
     switch ( ch_i ) {
       case 5: {  //  urth-loom
         c3_w lut_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lut_w);
+        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lut_w);
         if ( (c3n == res_o) || (lut_w < 20) ) {
-          fprintf(stderr, "error: --urth-loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+          fprintf(stderr, "error: --urth-loom must be >= 20 and <= %u\r\n", u3a_bits_max);
           return c3n;
         }
 
@@ -367,9 +367,9 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case c3__loom: {
         c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
+        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
         if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits_max);
           return c3n;
         }
         u3_Host.ops_u.lom_y = lom_w;
