@@ -1757,6 +1757,9 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
 
+  static const c3_c usage_c[] = "error: invalid usage, expected "
+                                "`urbit play [--replay-to <event_num> "
+                                "| --batch-size <event_cnt>] <pier>`";
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "auto-meld", no_argument,       NULL, 4 },
@@ -1769,6 +1772,8 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'b':
+        u3_Host.ops_u.batch_sz_c = strdup(optarg);
       case 4: {  //  auto-meld
         mel_o = c3y;
       } break;
@@ -1794,7 +1799,7 @@ _cw_play(c3_i argc, c3_c* argv[])
       }
 
       case '?': {
-        fprintf(stderr, "invalid argument\r\n");
+        fprintf(stderr, "%s\r\n", usage_c);
         exit(1);
       } break;
     }
@@ -1823,14 +1828,6 @@ _cw_play(c3_i argc, c3_c* argv[])
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-
-#if !defined(U3_OS_mingw)
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-#endif
 
   if ( c3y == mel_o ) {
     u3C.wag_w |= u3o_auto_meld;
@@ -2199,7 +2196,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
-    case c3__play: _cw_play(argc, argv); return 2; // continue on
+    case c3__play: _cw_play(argc, argv); return 1;
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;

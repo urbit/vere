@@ -255,15 +255,6 @@
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
 
-    /* u3_trac: tracing information.
-    */
-      typedef struct _u3_trac {
-        c3_w   nid_w;                       //  nock pid
-        FILE*  fil_u;                       //  trace file (json)
-        c3_w   con_w;                       //  trace counter
-        c3_w   fun_w;                       //  file counter
-      } u3_trac;
-
     /* u3_opts: command line configuration.
     */
       typedef struct _u3_opts {
@@ -330,7 +321,6 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_o       play_o;                  //  replay event log and exit
         c3_i       xit_i;                   //  exit code for shutdown
-        u3_trac    tra_u;                   //  tracing information
         void     (*bot_f)();                //  call when chis is up
       } u3_host;                            //  host == computer == process
 

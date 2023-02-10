@@ -38,7 +38,7 @@ u3v_life(u3_noun eve)
 c3_o
 u3v_boot(u3_noun eve)
 {
- c3_d len_d;
+  c3_d len_d;
 
   {
     u3_noun len = u3qb_lent(eve);
