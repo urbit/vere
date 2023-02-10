@@ -9,6 +9,19 @@
     */
 #     define u3a_bits  U3_OS_LoomBits
 
+    /* u3a_vits: number of virtual bits in a noun reference
+       gained via alignment + shifting
+    */
+#     define u3a_vits    ((c3_y)1)
+
+    /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
+    */
+#     define u3a_walign   ((c3_y)1 << u3a_vits)
+
+    /* u3a_balign: u3a_walign in bytes
+    */
+#     define u3a_balign   (sizeof(c3_w)*u3a_walign)
+
     /* u3a_page: number of bits in word-addressed page.  12 == 16Kbyte page.
     */
 #     define u3a_page   12
@@ -40,7 +53,7 @@
 
     /* u3a_fbox_no: number of free lists per size.
     */
-#     define u3a_fbox_no   27
+#     define u3a_fbox_no   27   /* why 27? Perhaps because 16 = 1 << 4 and 31 - 4 = 27 */
 
 
   /**  Structures.
@@ -334,6 +347,30 @@
                   ? c3n \
                   : (u3a_botox(u3a_to_ptr(som))->use_w == 1) \
                   ? c3y : c3n )
+
+/* ;;: like _box_vaal but for rods. Again, probably want to prefix validation
+   functions at the very least. Maybe they can be defined in their own header.
+
+   ps. while arguably cooler to have this compile to
+
+   do {(void(0));(void(0));} while(0)
+
+   It may be nicer to just wrap an inline function in #ifdef C3DBG guards. You
+   could even return the then validated road like
+
+   u3a_road f() {
+   u3a_road rod_u;
+   ...
+   return _rod_vaal(rod_u);
+   }
+*/
+#     define _rod_vaal(rod_u)                                           \
+             do {                                                       \
+               c3_dessert(((uintptr_t)((u3a_road*)(rod_u))->hat_p       \
+                           & u3a_walign-1) == 0);                       \
+             } while(0)
+
+
 
   /**  Globals.
   **/
