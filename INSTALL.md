@@ -65,6 +65,12 @@ optimization level, use [`--copt`][copt]:
 bazel build --copt='-O0' :urbit
 ```
 
+The default optimization level is `-O3`, but if you want to specify a different
+optimization level, use [`--copt`][copt]:
+```console
+$ bazel build --copt='-O0' :urbit
+```
+
 Note [`--copt`][copt] can be used to specify any C compiler options, not just
 optimization levels.
 
