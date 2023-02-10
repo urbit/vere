@@ -287,38 +287,10 @@ _box_free(u3a_box* box_u)
   } /* end south */
 }
 
-/* _me_align_pad(): pad to first point after pos_p aligned at (ald_w, alp_w).
-*/
-static __inline__ c3_w
-_me_align_pad(u3_post pos_p, c3_w ald_w, c3_w alp_w)
-{
-  c3_w adj_w = (ald_w - (alp_w + 1));
-  c3_p off_p = (pos_p + adj_w);
-  c3_p orp_p = off_p &~ (ald_w - 1);
-  c3_p fin_p = orp_p + alp_w;
-  c3_w pad_w = (fin_p - pos_p);
-
-  return pad_w;
-}
-
-/* _me_align_dap(): pad to last point before pos_p aligned at (ald_w, alp_w).
-*/
-static __inline__ c3_w
-_me_align_dap(u3_post pos_p, c3_w ald_w, c3_w alp_w)
-{
-  c3_w adj_w = alp_w;
-  c3_p off_p = (pos_p - adj_w);
-  c3_p orp_p = (off_p &~ (ald_w - 1));
-  c3_p fin_p = orp_p + alp_w;
-  c3_w pad_w = (pos_p - fin_p);
-
-  return pad_w;
-}
-
 /* _ca_box_make_hat(): in u3R, allocate directly on the hat.
 */
 static u3a_box*
-_ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w alp_w, c3_w use_w)
+_ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w use_w)
 {
   c3_w    pad_w, siz_w;
   u3_post all_p;
@@ -326,7 +298,7 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w alp_w, c3_w use_w)
   if ( c3y == u3a_is_north(u3R) ) {
     all_p = u3R->hat_p;
     pad_w = c3_align(all_p, ald_w, ALHI) - all_p;
-    siz_w = c3_align(len_w + pad_w, u3C.walign_w, ALHI);
+    siz_w = c3_align(len_w + pad_w , u3C.walign_w, ALHI);
 
     //  hand-inlined: siz_w >= u3a_open(u3R)
     //
@@ -462,15 +434,21 @@ _ca_reclaim_half(void)
 #endif
 }
 
-/* _ca_willoc(): u3a_walloc() internals.
+/* _ca_willoc(): u3a_walloc() internals. void* guaranteed to be DWORD aligned.
+
+   - len_w: requested size of allocation
+
+   - ald_w: desired alignment. Note, _ca_willoc does NOT guarantee the void*
+     returned is aligned on ald_w, only that the allocated size is sufficient to
+     internally align on ald_w. Although this can be arbitrarily defined, when
+     not 1, it is typically 4, i.e. 16 bytes, so that u3a_malloc is POSIX malloc
+     compatible
 */
 static void*
-_ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
+_ca_willoc(c3_w len_w, c3_w ald_w)
 {
   c3_w siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
   c3_w sel_w = _box_slot(siz_w);
-
-  alp_w = (alp_w + c3_wiseof(u3a_box)) % ald_w;
 
   //  XX: this logic is totally bizarre, but preserve it.
   //
@@ -497,7 +475,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
           //  memory nearly empty; reclaim; should not be needed
           //
           // if ( (u3a_open(u3R) + u3R->all.fre_w) < 65536 ) { _ca_reclaim_half(); }
-          box_u = _ca_box_make_hat(siz_w, ald_w, alp_w, 1);
+          box_u = _ca_box_make_hat(siz_w, ald_w, 1);
 
           /* Flush a bunch of cell cache, then try again.
           */
@@ -505,21 +483,21 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
             if ( u3R->all.cel_p ) {
               u3a_reflux();
 
-              return _ca_willoc(len_w, ald_w, alp_w);
+              return _ca_willoc(len_w, ald_w);
             }
             else {
               _ca_reclaim_half();
-              return _ca_willoc(len_w, ald_w, alp_w);
+              return _ca_willoc(len_w, ald_w);
             }
           }
           else return u3a_boxto(box_u);
         }
       }
       else {                    /* we got a non-null freelist */
-        c3_w pad_w = _me_align_pad(*pfr_p, ald_w, alp_w);
+        c3_w trg_w = c3_align(*pfr_p, sizeof(*pfr_p) * ald_w, ALHI);
+        c3_w pad_w = c3_align(*pfr_p, ald_w, ALHI) - *pfr_p;
         c3_w des_w = c3_align(siz_w + pad_w, u3C.walign_w, ALHI);
-
-        if ( 1 == ald_w ) c3_assert(0 == pad_w);
+        c3_dessert((ald_w != 1) || (0 == pad_w));
 
         if ( (des_w) > u3to(u3a_fbox, *pfr_p)->box_u.siz_w ) {
           /* This free block is too small.  Continue searching.
@@ -527,7 +505,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
           pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
           continue;
         }
-        else {                  /* free block fits desired alloc size */
+        else {                  /* free block fits desired alloc size */ /* ;;: TODO remove else block */
           u3a_box* box_u = &(u3to(u3a_fbox, *pfr_p)->box_u);
 
           /* We have found a free block of adequate size.  Remove it
@@ -598,7 +576,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
 /* _ca_walloc(): u3a_walloc() internals.
 */
 static void*
-_ca_walloc(c3_w len_w, c3_w ald_w, c3_w alp_w)
+_ca_walloc(c3_w len_w, c3_w ald_w)
 {
   void* ptr_v;
   c3_w  req_w;                  /* allocation request length */
@@ -619,7 +597,7 @@ _ca_walloc(c3_w len_w, c3_w ald_w, c3_w alp_w)
     & ~(u3C.walign_w - 1)
     - (c3_wiseof(u3a_box) + 1);
   for (;;) {
-    ptr_v = _ca_willoc(req_w, ald_w, alp_w);
+    ptr_v = _ca_willoc(req_w, ald_w);
     if ( 0 != ptr_v ) {
       break;
     }
@@ -636,7 +614,7 @@ u3a_walloc(c3_w len_w)
 {
   void* ptr_v;
 
-  ptr_v = _ca_walloc(len_w, 1, 0);
+  ptr_v = _ca_walloc(len_w, 1);
 
 #if 0
   if ( (703 == u3_Code) &&
@@ -774,22 +752,11 @@ void*
 u3a_malloc(size_t len_i)
 {
   c3_w    len_w = (c3_w)((len_i + 3) >> 2);
-  c3_w*   ptr_w = _ca_walloc(len_w + 1, 4, 3);
-  u3_post ptr_p = u3a_outa(ptr_w);
-  c3_w    pad_w = _me_align_pad(ptr_p, 4, 3);
-  c3_w*   out_w = u3a_into(ptr_p + pad_w + 1);
+  c3_w*   ptr_w = _ca_walloc(len_w + 1, 4); /* +1 for storing pad */
+  c3_w*   out_w = c3_align(ptr_w, 16, ALHI);
+  c3_w    pad_w = out_w - ptr_w;
 
-#if 0
-  if ( u3a_botox(out_w) == (u3a_box*)(void *)0x3bdd1c80) {
-    static int xuc_i = 0;
-
-    u3l_log("xuc_i %d", xuc_i);
-    // if ( 1 == xuc_i ) { abort(); }
-    xuc_i++;
-  }
-#endif
-  out_w[-1] = pad_w;
-
+  out_w[-1] = pad_w - 1;        /* -1 for historical reasons */
   return out_w;
 }
 
