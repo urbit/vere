@@ -256,56 +256,56 @@
 
     /* u3a_is_north(): yes if road [r] is north road.
     */
-#     define  u3a_is_north(r)  __(r->cap_p > r->hat_p)
+#     define  u3a_is_north(r)  __((r)->cap_p > (r)->hat_p)
 
     /* u3a_is_south(): yes if road [r] is south road.
     */
-#     define  u3a_is_south(r)  !u3a_is_north(r)
+#     define  u3a_is_south(r)  !u3a_is_north((r))
 
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->cap_p - r->hat_p) \
-                             : (c3_w)(r->hat_p - r->cap_p) )
+                             ? (c3_w)((r)->cap_p - (r)->hat_p) \
+                             : (c3_w)((r)->hat_p - (r)->cap_p) )
 
     /* u3a_full(): total words in road [r];
     ** u3a_full(r) == u3a_heap(r) + u3a_temp(r) + u3a_open(r)
     */
 #     define  u3a_full(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->mat_p - r->rut_p) \
-                             : (c3_w)(r->rut_p - r->mat_p) )
+                             ? (c3_w)((r)->mat_p - (r)->rut_p) \
+                             : (c3_w)((r)->rut_p - (r)->mat_p) )
 
     /* u3a_heap(): words of heap in road [r]
     */
 #     define  u3a_heap(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->hat_p - r->rut_p) \
-                             : (c3_w)(r->rut_p - r->hat_p) )
+                             ? (c3_w)((r)->hat_p - (r)->rut_p) \
+                             : (c3_w)((r)->rut_p - (r)->hat_p) )
 
     /* u3a_temp(): words of stack in road [r]
     */
 #     define  u3a_temp(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->mat_p - r->cap_p) \
-                             : (c3_w)(r->cap_p - r->mat_p) )
+                             ? (c3_w)((r)->mat_p - (r)->cap_p) \
+                             : (c3_w)((r)->cap_p - (r)->mat_p) )
 
 #     define  u3a_north_is_senior(r, dog) \
-                __((u3a_to_off(dog) < r->rut_p) ||  \
-                       (u3a_to_off(dog) >= r->mat_p))
+                __((u3a_to_off(dog) < (r)->rut_p) ||  \
+                       (u3a_to_off(dog) >= (r)->mat_p))
 
 #     define  u3a_north_is_junior(r, dog) \
-                __((u3a_to_off(dog) >= r->cap_p) && \
-                       (u3a_to_off(dog) < r->mat_p))
+                __((u3a_to_off(dog) >= (r)->cap_p) && \
+                       (u3a_to_off(dog) < (r)->mat_p))
 
 #     define  u3a_north_is_normal(r, dog) \
                 c3a(!(u3a_north_is_senior(r, dog)),  \
                        !(u3a_north_is_junior(r, dog)))
 
 #     define  u3a_south_is_senior(r, dog) \
-                __((u3a_to_off(dog) < r->mat_p) || \
-                       (u3a_to_off(dog) >= r->rut_p))
+                __((u3a_to_off(dog) < (r)->mat_p) || \
+                       (u3a_to_off(dog) >= (r)->rut_p))
 
 #     define  u3a_south_is_junior(r, dog) \
-                __((u3a_to_off(dog) < r->cap_p) && \
-                       (u3a_to_off(dog) >= r->mat_p))
+                __((u3a_to_off(dog) < (r)->cap_p) && \
+                       (u3a_to_off(dog) >= (r)->mat_p))
 
 #     define  u3a_south_is_normal(r, dog) \
                 c3a(!(u3a_south_is_senior(r, dog)),  \
