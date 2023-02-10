@@ -3,16 +3,26 @@
 set -eu
 
 # set defaults
-amesPort=34343
+amesPort="34343"
+httpPort="80"
+loom="31"
 
 # check args
 for i in "$@"
 do
 case $i in
-    -p=*|--port=*)
-        amesPort="''${i#*=}"
-        shift
-        ;;
+  -p=*|--port=*)
+      amesPort="${i#*=}"
+      shift
+      ;;
+  --http-port=*)
+      httpPort="${i#*=}"
+      shift
+      ;;
+  --loom=*)
+      loom="${i#*=}"
+      shift
+      ;;
 esac
 done
 
@@ -34,7 +44,7 @@ if [ -e *.key ]; then
   mv $keyname /tmp
 
   # Boot urbit with the key, exit when done booting
-  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x
+  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x --http-port $httpPort --loom $loom
 
   # Remove the keyfile for security
   rm /tmp/$keyname
@@ -53,4 +63,4 @@ dirnames="*/"
 dirs=( $dirnames )
 dirname=''${dirnames[0]}
 
-exec urbit $ttyflag -p $amesPort $dirname
+exec urbit $ttyflag -p $amesPort --http-port $httpPort  --loom $loom $dirnamev
