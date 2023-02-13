@@ -1,0 +1,13 @@
+cc_library(
+    name = "pma",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+        ],
+        exclude = ["pma.h"],
+    ),
+    hdrs = ["pma.h"],
+    includes = ["."],
+    linkstatic = True,
+)
