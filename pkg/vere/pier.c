@@ -487,7 +487,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
       pac_c = u3_Host.ops_u.puk_c;
     }
     else {
-      pac_c = u3_Host.ops_u.pek_c;
+      pac_c = u3_Host.ops_u.pek_c + 1;
     }
 
     //  try to serialize as requested
@@ -517,7 +517,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
     //
     if ( u3_none != out ) {
       c3_c fil_c[256];
-      snprintf(fil_c, 256, "%s.%s", pac_c + 1, ext_c);
+      snprintf(fil_c, 256, "%s.%s", pac_c, ext_c);
 
       u3_unix_save(fil_c, out);
       u3l_log("pier: scry result in %s/.urb/put/%s", u3_Host.dir_c, fil_c);
