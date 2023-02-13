@@ -13,12 +13,6 @@
 #include <unistd.h>
 
 //==============================================================================
-// CONSTANTS
-//==============================================================================
-
-static const size_t kPageSz = 16 << 10;
-
-//==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
 
@@ -172,6 +166,8 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     *pma       = (pma_t){
               .heap_start  = heap_start,
               .stack_start = stack_start,
+              .heap_len    = heap_len,
+              .stack_len   = stack_len,
               .heap_fd     = heap_fd,
               .stack_fd    = stack_fd,
               .max_sz      = 0,

@@ -7,6 +7,8 @@
 // CONSTANTS
 //==============================================================================
 
+static const size_t kPageSz = 16 << 10;
+
 static const size_t kDefaultSz = 0xffffffff;
 
 //==============================================================================
@@ -14,9 +16,17 @@ static const size_t kDefaultSz = 0xffffffff;
 //==============================================================================
 
 struct pma {
-    void  *heap_start;
+    void *heap_start;
 
-    void  *stack_start;
+    void *stack_start;
+
+    /// Number of bytes of the heap are mapped into memory. Guaranteed to be a
+    /// multiple of kPageSz.
+    size_t heap_len;
+
+    /// Number of bytes of the stack mapped into memory. Guaranteed to be a
+    /// multiple of kPageSz.
+    size_t stack_len;
 
     int    heap_fd;
 
