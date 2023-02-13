@@ -80,7 +80,7 @@ SpaceInEmptyBlock: false
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInCStyleCastParentheses: false
-SpacesInConditionalStatement: true
+SpacesInConditionalStatement: false
 SpacesInLineCommentPrefix: # >= 13.0
   Maximum: 1
   Minimum: 1
