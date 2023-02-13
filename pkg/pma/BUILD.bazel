@@ -1,3 +1,7 @@
+#
+# LIBRARIES
+#
+
 cc_library(
     name = "pma",
     srcs = glob(
@@ -10,4 +14,20 @@ cc_library(
     hdrs = ["pma.h"],
     includes = ["."],
     linkstatic = True,
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "pma_tests",
+    timeout = "short",
+    srcs = ["pma_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":pma"],
 )
