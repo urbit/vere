@@ -1,0 +1,93 @@
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+---
+Language: Cpp
+AlignAfterOpenBracket: Align
+#AlignArrayOfStructures: Left # >= 13.0
+AlignConsecutiveAssignments: Consecutive
+#AlignConsecutiveBitFields: Consecutive
+AlignConsecutiveDeclarations: AcrossEmptyLines
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignEscapedNewlines: Right
+AlignOperands: Align
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: All
+#AlwaysBreakBeforeMultilineStrings: true
+#AttributeMacros:
+  #- __capability
+BinPackArguments: false
+BinPackParameters: false
+#BitFieldColonSpacing: None
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: MultiLine
+  AfterEnum: false
+  AfterFunction: true
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+BreakBeforeBinaryOperators: All
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: true
+BreakStringLiterals: true
+ColumnLimit: 80
+ContinuationIndentWidth: 4
+DeriveLineEnding: false
+DerivePointerAlignment: false
+DisableFormat: false
+IndentCaseBlocks: false
+IndentCaseLabels: true
+IndentGotoLabels: false
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+#MacroBlockBegin: ''
+#MacroBlockEnd: ''
+MaxEmptyLinesToKeep: 1
+PPIndentWidth: -1 # >= 13.0
+#PenaltyBreakAssignment: 2
+#PenaltyBreakBeforeFirstCallParameter: 19
+#PenaltyBreakComment: 300
+#PenaltyBreakFirstLessLess: 120
+#PenaltyBreakString: 1000
+#PenaltyBreakTemplateDeclaration: 10
+#PenaltyExcessCharacter: 1000000
+#PenaltyReturnTypeOnItsOwnLine: 60
+#PenaltyIndentedWhitespace: 0
+PointerAlignment: Right
+#ReflowComments: true # CaseInsensitive >= 13.0
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: true
+SpacesInLineCommentPrefix: # >= 13.0
+  Maximum: 1
+  Minimum: 1
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 4
+TypenameMacros:
+  - u3p
+UseCRLF: false
+UseTab: Never
