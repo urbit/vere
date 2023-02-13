@@ -48,7 +48,22 @@ static int
 handle_page_fault_(void *fault_addr, int serious)
 {
     assert((uintptr_t)fault_addr % kPageSz == 0);
-    return 0;
+    if (MAP_FAILED
+        == mmap(fault_addr,
+                kPageSz,
+                PROT_READ | PROT_WRITE,
+                MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+                -1,
+                0))
+    {
+        fprintf(stderr,
+                "pma: failed to create %zu-byte anonymous mapping at %p: %s\n",
+                kPageSz,
+                fault_addr,
+                strerror(errno));
+        return 0;
+    }
+    return 1;
 }
 
 static int
