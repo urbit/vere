@@ -6,18 +6,10 @@
 * @urbit/runtime
 
 # Build system
-<<<<<<< HEAD
-/.github/ @mcevoypeter
-/bazel/   @mcevoypeter
-*.bazel   @mcevoypeter
-*.bzl     @mcevoypeter
-/PACE     @mcevoypeter
-/VERSION  @mcevoypeter
-=======
 /.github/ @mcevoypeter @matthew-levan @jalehman @belisarius222
 /bazel/   @mcevoypeter @matthew-levan @jalehman @belisarius222
 *.bazel   @mcevoypeter @matthew-levan @jalehman @belisarius222
 *.bzl     @mcevoypeter @matthew-levan @jalehman @belisarius222
 /PACE     @mcevoypeter @matthew-levan @jalehman @belisarius222
 /VERSION  @mcevoypeter @matthew-levan @jalehman @belisarius222
->>>>>>> c48cf9807e8673b05e520a97d7f443b446598a83
+=======
