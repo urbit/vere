@@ -1838,7 +1838,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   u3C.wag_w |= u3o_hashless;
 
   if ( c3y == ful_o ) {
-    u3l_log("mars: preparing for full replay\r\n");
+    u3l_log("mars: preparing for full replay");
     u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
     u3e_live(c3n, u3_Host.dir_c);
     u3e_yolo();
