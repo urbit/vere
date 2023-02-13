@@ -184,4 +184,18 @@ pma_sync(pma_t *pma, size_t heap_sz, size_t stack_sz)
 
 void
 pma_deinit(pma_t *pma)
-{}
+{
+    if (!pma) {
+        return;
+    }
+
+    munmap(pma->heap_start, pma->heap_len);
+    if (pma->heap_fd != -1) {
+        close(pma->heap_fd);
+    }
+
+    munmap(pma->stack_start, pma->stack_len);
+    if (pma->stack_fd != -1) {
+        close(pma->stack_fd);
+    }
+}
