@@ -25,7 +25,7 @@ typedef struct pma pma_t;
 //==============================================================================
 
 pma_t *
-pma_init(const char *heap_file, const char *stack_file);
+pma_init(void *base, const char *heap_file, const char *stack_file);
 
 int
 pma_sync(pma_t *pma, size_t heap_sz, size_t stack_sz);

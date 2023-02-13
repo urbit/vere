@@ -5,7 +5,7 @@
 //==============================================================================
 
 pma_t *
-pma_init(const char *heap_file, const char *stack_file)
+pma_init(void *base, const char *heap_file, const char *stack_file)
 {
     return NULL;
 }
