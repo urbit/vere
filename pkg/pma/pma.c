@@ -12,9 +12,19 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "sigsegv.h"
+
 //==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
+
+/// Handle a page fault according to the libsigsegv protocol. See
+/// sigsegv_handler_t in sigsegv.h for more info.
+///
+/// @param[in] fault_addr
+/// @param[in] serious
+static int
+handle_page_fault_(void *fault_addr, int serious);
 
 /// @param[in]  path
 /// @param[in]  base
@@ -32,6 +42,13 @@ static inline size_t
 round_up_(size_t x, size_t n)
 {
     return (x + (n - 1)) & (~(n - 1));
+}
+
+static int
+handle_page_fault_(void *fault_addr, int serious)
+{
+    assert((uintptr_t)fault_addr % kPageSz == 0);
+    return 0;
 }
 
 static int
@@ -144,6 +161,15 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
     assert((uintptr_t)base % kPageSz == 0);
     assert(len % kPageSz == 0);
+
+    // If we can't install a handler for SIGSEGV, it's likely because the
+    // platform we're running on doesn't support catching SIGSEGV. See sigsegv.h
+    // for more info.
+    if (sigsegv_install_handler(handle_page_fault_) == -1) {
+        fprintf(stderr, "pma: failed to install the page fault handler\n");
+        return NULL;
+    }
+
     void  *heap_start = base;
     size_t heap_len;
     int    heap_fd;
