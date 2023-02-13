@@ -157,11 +157,8 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          echo "${{ inputs.pace }}" > ./PACE
-          version="$(cat ./VERSION)"
-          bazel build :version
-          sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
-            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
+          bazel build :version_str
+          sha_version=$(cat ./bazel-bin/version)
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
 
           args=""
