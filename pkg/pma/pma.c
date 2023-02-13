@@ -1,18 +1,143 @@
 #include "pma.h"
 
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
+
+//==============================================================================
+// CONSTANTS
+//==============================================================================
+
+static const size_t kPageSz = 16 << 10;
 
 //==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
 
-int
+/// @param[in]  path
+/// @param[in]  base
+/// @param[in]  grows_down
+/// @param[out] len
+/// @param[out] fd
+static int
+map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
+
+/// Round `x` up to the nearest multiple of `n`, which must be a power of 2.
+///
+/// @param[in] x
+/// @param[in] n
+static inline size_t
+round_up_(size_t x, size_t n)
+{
+    return (x + (n - 1)) & (~(n - 1));
+}
+
+static int
 map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
 {
+    if (!path) {
+        static const size_t kDefaultSz = kPageSz;
+        if (grows_down) {
+            base = (char *)base - kDefaultSz;
+        }
+        if (mmap(base,
+                 kDefaultSz,
+                 PROT_READ | PROT_WRITE,
+                 MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+                 -1,
+                 0)
+            == MAP_FAILED)
+        {
+            fprintf(
+                stderr,
+                "pma: failed to create %zu-byte anonymous mapping at %p: %s\n",
+                kDefaultSz,
+                base,
+                strerror(errno));
+            goto fail;
+        }
+        *fd  = -1;
+        *len = kDefaultSz;
+        return 0;
+    }
+
+    int fd_ = open(path, O_CREAT | O_RDWR, 0644);
+    // A parent directory doesn't exist.
+    if (fd_ == -1) {
+        fprintf(stderr, "pma: failed to open %s: %s\n", path, strerror(errno));
+        goto fail;
+    }
+
+    struct stat buf_;
+    if (fstat(fd_, &buf_) == -1) {
+        fprintf(stderr,
+                "pma: failed to determine length of %s: %s\n",
+                strerror(errno));
+        goto close_fd;
+    }
+
+    size_t len_ = round_up_(buf_.st_size, kPageSz);
+
+    // We have to map stacks a page at a time because a stack's backing file has
+    // its first page at offset zero, which belongs at the highest address.
+    if (grows_down) {
+        char *ptr = base;
+        for (size_t i_ = 0; i_ < len_ / kPageSz; i_++) {
+            size_t offset_ = i_ * kPageSz;
+            if (mmap(ptr,
+                     kPageSz,
+                     PROT_READ | PROT_WRITE,
+                     MAP_FIXED | MAP_SHARED,
+                     fd_,
+                     offset_)
+                == MAP_FAILED)
+            {
+                fprintf(
+                    stderr,
+                    "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
+                    kPageSz,
+                    path,
+                    ptr,
+                    strerror(errno));
+                // Unmap already-mapped mappings.
+                munmap(ptr + kPageSz, offset_);
+                goto close_fd;
+            }
+            ptr -= kPageSz;
+        }
+    } else if (mmap(base,
+                    len_,
+                    PROT_READ | PROT_WRITE,
+                    MAP_FIXED | MAP_SHARED,
+                    fd_,
+                    0)
+               == MAP_FAILED)
+    {
+        fprintf(stderr,
+                "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
+                len_,
+                path,
+                base,
+                strerror(errno));
+        goto close_fd;
+    }
+
+    *len = len_;
+    *fd  = fd_;
     return 0;
+
+close_fd:
+    close(fd_);
+fail:
+    return -1;
 }
 
 //==============================================================================
@@ -22,6 +147,9 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
 pma_t *
 pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
 {
+    assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
+    assert((uintptr_t)base % kPageSz == 0);
+    assert(len % kPageSz == 0);
     void  *heap_start = base;
     size_t heap_len;
     int    heap_fd;
