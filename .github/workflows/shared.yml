@@ -126,7 +126,7 @@ jobs:
           fi
 
       - name: Run fake ship tests
-        if: ${{ matrix.target == 'linux-x86_64' && inputs.fake_tests }}
+        if: ${{ matrix.target == 'linux-x86_64' && fake_tests }}
         run: |
           # See https://github.com/urbit/vere/issues/40.
           bazel build //pkg/vere:test-fake-ship
@@ -153,10 +153,7 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-<<<<<<< HEAD
-=======
           echo "${{ inputs.pace }}" > ./PACE
->>>>>>> c48cf9807e8673b05e520a97d7f443b446598a83
           version="$(cat ./VERSION)"
           bazel build :version
           sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
