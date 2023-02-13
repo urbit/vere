@@ -1580,7 +1580,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   pre_w = u3a_open(u3R);
   u3u_meld();
-  u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
+  u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
 
   u3e_save();
   u3_disk_exit(log_u);
