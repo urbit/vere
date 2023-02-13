@@ -6,12 +6,6 @@
 #include <unistd.h>
 
 //==============================================================================
-// CONSTANTS
-//==============================================================================
-
-static const size_t kDefaultSz = 0xffffffff;
-
-//==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
 
@@ -26,7 +20,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
 //==============================================================================
 
 pma_t *
-pma_init(void *base, const char *heap_file, const char *stack_file)
+pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
 {
     void  *heap_start = base;
     size_t heap_len;
@@ -36,9 +30,7 @@ pma_init(void *base, const char *heap_file, const char *stack_file)
         return NULL;
     }
 
-    size_t max_sz = kDefaultSz;
-
-    void  *stack_start = (char *)heap_start + max_sz;
+    void  *stack_start = (char *)heap_start + len;
     size_t stack_len;
     int    stack_fd;
     // Failed to map non-NULL stack file.
@@ -54,7 +46,7 @@ pma_init(void *base, const char *heap_file, const char *stack_file)
               .stack_start = stack_start,
               .heap_fd     = heap_fd,
               .stack_fd    = stack_fd,
-              .max_sz      = max_sz,
+              .max_sz      = 0,
     };
 
     return pma;
