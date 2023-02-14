@@ -56,6 +56,7 @@ configure_make(
         "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
         "//conditions:default": [],
     }),
+    copts = ["-O3"],
     env = {
         "URBIT_RUNTIME_OPENSSL": "$$PWD/$(GENDIR)/external/openssl/openssl",
     },

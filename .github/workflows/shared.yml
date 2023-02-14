@@ -258,6 +258,7 @@ jobs:
 
       - name: Upload latest deployed version string to GCP
         run: |
+          echo "${{ inputs.pace }}" > ./PACE
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
 
           # See https://github.com/urbit/vere/issues/86.

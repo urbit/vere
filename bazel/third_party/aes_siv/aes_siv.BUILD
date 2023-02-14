@@ -14,6 +14,7 @@ cc_library(
         "config.h",
     ],
     hdrs = ["aes_siv.h"],
+    copts = ["-O3"],
     includes = ["."],
     visibility = ["//visibility:public"],
     deps = ["@openssl"],

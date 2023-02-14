@@ -1540,6 +1540,9 @@ u3_king_done(void)
     else if ( c3y == u3_Host.pep_o ) {
       u3l_log("vere: ready for upgrade");
     }
+    else if ( c3y == u3_Host.play_o ) {
+      u3l_log("vere: replay succeeded");
+    }
 
     //  copy binary into pier on boot
     //

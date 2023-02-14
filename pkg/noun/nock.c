@@ -1017,6 +1017,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         return _n_comp(ops, nef, los_o, tel_o);
       }
       case c3__xray:
+      case c3__meme:
       case c3__nara:
       case c3__hela:
       case c3__bout: {
@@ -1054,6 +1055,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
             tot_w += _n_comp(ops, nef, los_o, tel_o);
           } break;
           case c3__xray:
+          case c3__meme:
           case c3__nara:
           case c3__hela:
           case c3__bout: {
@@ -1858,6 +1860,11 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3_nul;
     } break;
 
+    case c3__meme : {
+      u3t_slog(u3nc(0, u3t_etch_meme(0)));
+      *out = u3_nul;
+    } break;
+
     default: {
       *out = u3_nul;
     } break;
@@ -1937,6 +1944,17 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
         c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3k(tan), _cn_etch_bytecode(fol));
+      }
+      u3z(*clu);
+      *clu = u3_nul;
+    } break;
+
+    case c3__meme : {
+      u3_noun pri, tan;
+      if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
+        c3_l mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        // replace with better str fmt
+        u3t_slog_cap(1, u3k(tan), u3t_etch_meme(mod_l));
       }
       u3z(*clu);
       *clu = u3_nul;
