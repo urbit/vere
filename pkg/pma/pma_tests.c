@@ -5,6 +5,12 @@
 int64_t
 addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
 
+size_t
+round_up_(size_t x, size_t n);
+
+//==============================================================================
+// STATIC FUNCTION TESTS
+
 static void
 test_addr_to_page_idx_(void)
 {
@@ -32,6 +38,23 @@ test_addr_to_page_idx_(void)
 }
 
 static void
+test_round_up_(void)
+{
+    assert(round_up_(3, 0) == 0);
+    assert(round_up_(6, 1) == 6);
+    assert(round_up_(7, 2) == 8);
+    assert(round_up_(11, 4) == 12);
+    assert(round_up_(17, 8) == 24);
+    assert(round_up_(42, 16) == 48);
+    assert(round_up_(670384, kPageSz) == (41 * kPageSz));
+    assert(round_up_(0, kPageSz) == 0);
+    assert(round_up_(kPageSz, kPageSz) == kPageSz);
+}
+
+//==============================================================================
+// FUNCTION TESTS
+
+static void
 test_pma_init_()
 {
     {
@@ -57,6 +80,7 @@ test_pma_init_()
 int
 main(int argc, char *argv[])
 {
+    test_round_up_();
     test_pma_init_();
     test_addr_to_page_idx_();
     return 0;

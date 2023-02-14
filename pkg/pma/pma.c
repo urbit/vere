@@ -14,8 +14,10 @@
 #include "sigsegv.h"
 
 #ifdef PMA_TEST
+#    define inline_
 #    define static_
 #else
+#    define inline_ inline
 #    define static_ static
 #endif
 
@@ -55,7 +57,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
 ///
 /// @param[in] x
 /// @param[in] n
-static_ inline size_t
+static_ inline_ size_t
 round_up_(size_t x, size_t n)
 {
     return (x + (n - 1)) & (~(n - 1));
