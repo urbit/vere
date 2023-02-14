@@ -195,6 +195,7 @@ jobs:
               --generate-notes
           fi
           # Upload the binary to the release.
+          chmod +x ${{ env.urbit_static }}
           tar -czf ${{ matrix.target }}.tgz ${{ env.urbit_static }}
           gh release upload $version ${{ matrix.target }}.tgz
 
