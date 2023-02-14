@@ -2,6 +2,7 @@
 #define PMA_PMA_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 //==============================================================================
 // CONSTANTS
@@ -32,7 +33,11 @@ struct pma {
 
     int    stack_fd;
 
-    size_t max_sz;
+    /// Bit map for tracking dirty pages. Guaranteed to have at least
+    /// (stack_start - heap_start) / kPageSz bits.
+    uint8_t *dirty_pgs;
+
+    size_t   max_sz;
 };
 typedef struct pma pma_t;
 

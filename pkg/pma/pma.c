@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -203,15 +202,21 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
         return NULL;
     }
 
-    pma_t *pma = malloc(sizeof(*pma));
-    *pma       = (pma_t){
-              .heap_start  = heap_start,
-              .stack_start = stack_start,
-              .heap_len    = heap_len,
-              .stack_len   = stack_len,
-              .heap_fd     = heap_fd,
-              .stack_fd    = stack_fd,
-              .max_sz      = 0,
+    size_t num_pgs = round_up_(len, kPageSz) / kPageSz;
+    // 8 bits in each byte used for tracking dirty pages.
+    size_t   bytes_needed = round_up_(num_pgs / 8, 8);
+    uint8_t *dirty_pgs    = calloc(bytes_needed, sizeof(*dirty_pgs));
+
+    pma_t   *pma = malloc(sizeof(*pma));
+    *pma         = (pma_t){
+                .heap_start  = heap_start,
+                .stack_start = stack_start,
+                .heap_len    = heap_len,
+                .stack_len   = stack_len,
+                .heap_fd     = heap_fd,
+                .stack_fd    = stack_fd,
+                .dirty_pgs   = dirty_pgs,
+                .max_sz      = 0,
     };
 
     return pma;
@@ -239,4 +244,6 @@ pma_deinit(pma_t *pma)
     if (pma->stack_fd != -1) {
         close(pma->stack_fd);
     }
+
+    free(pma->dirty_pgs);
 }
