@@ -30,6 +30,10 @@ static u3_moat      inn_u;             //  input stream
 static u3_mojo      out_u;             //  output stream
 static u3_cue_xeno* sil_u;             //  cue handle
 
+// global memory control.
+//
+u3o_config u3o_Config;
+
 #undef SERF_TRACE_JAM
 #undef SERF_TRACE_CUE
 

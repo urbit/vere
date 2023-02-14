@@ -19,12 +19,12 @@ cc_library(
     ),
     hdrs = ["noun.h"],
     includes = ["."],
-    linkopts = select({
-        # NOTE: macOS builds fail to link the `u3o_Config` symbol (and maybe
-        # others) without this. We should figure out why, and remove this.
-        "@platforms//os:macos": ["-force_load $(GENDIR)/pkg/noun/libnoun.a"],
-        "//conditions:default": [],
-    }),
+    # linkopts = select({
+    #     # NOTE: macOS builds fail to link the `u3o_Config` symbol (and maybe
+    #     # others) without this. We should figure out why, and remove this.
+    #     "@platforms//os:macos": ["-force_load $(GENDIR)/pkg/noun/libnoun.a"],
+    #     "//conditions:default": [],
+    # }),
     linkstatic = True,
     local_defines = ["U3_GUARD_PAGE"],
     visibility = ["//pkg:__subpackages__"],
