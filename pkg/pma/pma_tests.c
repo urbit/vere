@@ -2,6 +2,35 @@
 
 #include <assert.h>
 
+int64_t
+addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
+
+static void
+test_addr_to_page_idx_(void)
+{
+    void               *base_ = (void *)0x200000000;
+    static const size_t kLen  = 1 << 20;
+    pma_t              *pma_  = pma_init(base_, kLen, NULL, NULL);
+    assert(pma_);
+
+    {
+        uintptr_t addr_ = (uintptr_t)base_;
+        int64_t   idx_  = addr_to_page_idx_(addr_, pma_);
+        assert(idx_ == 1);
+    }
+
+    {
+        static const int64_t kOffset = 2;
+        uintptr_t            addr_   = (uintptr_t)base_ + kOffset * kPageSz;
+        int64_t              idx_    = addr_to_page_idx_(addr_, pma_);
+        assert(idx_ == kOffset + 1);
+    }
+
+    // TODO: test negative indexes.
+
+    pma_deinit(pma_);
+}
+
 static void
 test_pma_init_()
 {
@@ -29,5 +58,6 @@ int
 main(int argc, char *argv[])
 {
     test_pma_init_();
+    test_addr_to_page_idx_();
     return 0;
 }
