@@ -121,7 +121,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
             if (mmap(ptr,
                      kPageSz,
                      PROT_READ | PROT_WRITE,
-                     MAP_FIXED | MAP_SHARED,
+                     MAP_FIXED | MAP_PRIVATE,
                      fd_,
                      offset_)
                 == MAP_FAILED)
@@ -142,7 +142,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
     } else if (mmap(base,
                     len_,
                     PROT_READ | PROT_WRITE,
-                    MAP_FIXED | MAP_SHARED,
+                    MAP_FIXED | MAP_PRIVATE,
                     fd_,
                     0)
                == MAP_FAILED)
