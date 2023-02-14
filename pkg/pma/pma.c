@@ -13,6 +13,12 @@
 
 #include "sigsegv.h"
 
+#ifdef PMA_TEST
+#    define static_
+#else
+#    define static_ static
+#endif
+
 //==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
@@ -26,7 +32,7 @@
 ///
 /// @param[in] addr  Address to determine page index for.
 /// @param[in] pma
-static int64_t
+static_ int64_t
 addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
 
 /// Handle a page fault according to the libsigsegv protocol. See
@@ -34,7 +40,7 @@ addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
 ///
 /// @param[in] fault_addr
 /// @param[in] serious
-static int
+static_ int
 handle_page_fault_(void *fault_addr, int serious);
 
 /// @param[in]  path
@@ -42,20 +48,20 @@ handle_page_fault_(void *fault_addr, int serious);
 /// @param[in]  grows_down
 /// @param[out] len
 /// @param[out] fd
-static int
+static_ int
 map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
 
 /// Round `x` up to the nearest multiple of `n`, which must be a power of 2.
 ///
 /// @param[in] x
 /// @param[in] n
-static inline size_t
+static_ inline size_t
 round_up_(size_t x, size_t n)
 {
     return (x + (n - 1)) & (~(n - 1));
 }
 
-static int64_t
+static_ int64_t
 addr_to_page_idx_(uintptr_t addr, const pma_t *pma)
 {
     assert(pma);
@@ -69,7 +75,7 @@ addr_to_page_idx_(uintptr_t addr, const pma_t *pma)
     return addr >= stack_end ? pg_idx - pma->num_pgs : pg_idx + 1;
 }
 
-static int
+static_ int
 handle_page_fault_(void *fault_addr, int serious)
 {
     assert((uintptr_t)fault_addr % kPageSz == 0);
@@ -91,7 +97,7 @@ handle_page_fault_(void *fault_addr, int serious)
     return 1;
 }
 
-static int
+static_ int
 map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
 {
     if (!path) {
@@ -274,3 +280,5 @@ pma_deinit(pma_t *pma)
 
     free(pma->dirty_pgs);
 }
+
+#undef static_
