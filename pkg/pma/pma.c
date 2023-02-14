@@ -17,6 +17,18 @@
 // STATIC FUNCTIONS
 //==============================================================================
 
+/// Determine the 1-based page index of an address. If the address lies within
+/// the bounds of the stack, the index is negative, and its absolute value
+/// indicates the position of the containing page relative to the start of the
+/// stack. For example, a page index of -1 refers to the first page in the stack
+/// (the last page in the PMA), and a page index of 3 refers to the third page
+/// in the heap.
+///
+/// @param[in] addr  Address to determine page index for.
+/// @param[in] pma
+static int64_t
+addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
+
 /// Handle a page fault according to the libsigsegv protocol. See
 /// sigsegv_handler_t in sigsegv.h for more info.
 ///
@@ -41,6 +53,20 @@ static inline size_t
 round_up_(size_t x, size_t n)
 {
     return (x + (n - 1)) & (~(n - 1));
+}
+
+static int64_t
+addr_to_page_idx_(uintptr_t addr, const pma_t *pma)
+{
+    assert(pma);
+    assert(pma->heap_start <= (void *)addr);
+    assert((void *)addr < pma->stack_start);
+
+    addr -= (uintptr_t)pma->heap_start;
+    int64_t   pg_idx = addr / kPageSz;
+
+    uintptr_t stack_end = (uintptr_t)pma->stack_start - pma->stack_len;
+    return addr >= stack_end ? pg_idx - pma->num_pgs : pg_idx + 1;
 }
 
 static int
@@ -215,6 +241,7 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
                 .stack_len   = stack_len,
                 .heap_fd     = heap_fd,
                 .stack_fd    = stack_fd,
+                .num_pgs     = num_pgs,
                 .dirty_pgs   = dirty_pgs,
                 .max_sz      = 0,
     };

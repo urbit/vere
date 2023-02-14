@@ -33,8 +33,11 @@ struct pma {
 
     int    stack_fd;
 
+    /// Total number of pages.
+    size_t num_pgs;
+
     /// Bit map for tracking dirty pages. Guaranteed to have at least
-    /// (stack_start - heap_start) / kPageSz bits.
+    /// total_pgs bits.
     uint8_t *dirty_pgs;
 
     size_t   max_sz;
