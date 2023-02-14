@@ -66,7 +66,7 @@ jobs:
           # this on linux-aarch64 because we run on a self-hosted GitHub Actions
           # runner for which `/usr/local` has already been `chown`d to the user
           # running the GitHub Actions runner.
-          sudo chown -R $(whoami) /usr/local
+          sudo chown -v -R $(whoami) /usr/local/*-musl
 
       - name: Set up build cache
         uses: actions/cache@v3
