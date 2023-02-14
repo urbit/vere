@@ -55,7 +55,7 @@ elif [ -e *.comet ]; then
   cometname=''${comets[0]}
   rm *.comet
 
-  urbit $ttyflag -c $(basename $cometname .comet) -p $amesPort -x
+  urbit $ttyflag -c $(basename $cometname .comet) -p $amesPort -x --http-port $httpPort --loom $loom
 fi
 
 # Find the first directory and start urbit with the ship therein
@@ -63,4 +63,4 @@ dirnames="*/"
 dirs=( $dirnames )
 dirname=''${dirnames[0]}
 
-exec urbit $ttyflag -p $amesPort --http-port $httpPort  --loom $loom $dirname
+exec urbit $ttyflag -p $amesPort --http-port $httpPort --loom $loom $dirname
