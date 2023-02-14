@@ -246,6 +246,7 @@ jobs:
 
       - name: Upload latest deployed version string to GCP
         run: |
+          echo "${{ inputs.pace }}" > ./PACE
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
 
           bazel build :version_str
