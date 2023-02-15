@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "sigsegv.h"
+#include "util.h"
 
 #ifdef PMA_TEST
 #    define inline_
@@ -111,26 +112,6 @@ page_status_(void *addr, const pma_t *pma)
     return status;
 }
 
-/// Round `x` down to the nearest multiple of `n`, which must be a power of 2.
-///
-/// @param[in] x
-/// @param[in] n
-static_ inline_ size_t
-round_down_(size_t x, size_t n)
-{
-    return x & ~(n - 1);
-}
-
-/// Round `x` up to the nearest multiple of `n`, which must be a power of 2.
-///
-/// @param[in] x
-/// @param[in] n
-static_ inline_ size_t
-round_up_(size_t x, size_t n)
-{
-    return (x + (n - 1)) & (~(n - 1));
-}
-
 /// Set the status of the page surrounding an address. To get rather than set,
 /// see page_status_().
 ///
@@ -151,7 +132,7 @@ set_page_status_(void *addr, page_status_t status, const pma_t *pma)
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
-    fault_addr = (void *)round_down_((uintptr_t)fault_addr, kPageSz);
+    fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
     pma_t *pma = user_arg;
     switch (page_status_(fault_addr, pma)) {
         case PS_UNMAPPED:
@@ -248,7 +229,7 @@ map_file_(const char *path,
         goto close_fd;
     }
 
-    size_t len_ = round_up_(buf_.st_size, kPageSz);
+    size_t len_ = round_up(buf_.st_size, kPageSz);
 
     // We have to map stacks a page at a time because a stack's backing file has
     // its first page at offset zero, which belongs at the highest address.
@@ -330,8 +311,8 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     pma->heap_start    = heap_start;
     pma->stack_start   = stack_start;
 
-    size_t num_pgs      = round_up_(len, kPageSz) / kPageSz;
-    size_t bits_needed  = round_up_(kBitsPerPage * num_pgs, kBitsPerByte);
+    size_t num_pgs      = round_up(len, kPageSz) / kPageSz;
+    size_t bits_needed  = round_up(kBitsPerPage * num_pgs, kBitsPerByte);
     size_t bytes_needed = bits_needed / kBitsPerByte;
     pma->num_pgs        = num_pgs;
     pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));

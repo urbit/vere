@@ -32,3 +32,15 @@ cc_test(
     visibility = ["//visibility:private"],
     deps = [":pma"],
 )
+
+cc_test(
+    name = "util_tests",
+    timeout = "short",
+    srcs = ["util_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":pma"],
+)
