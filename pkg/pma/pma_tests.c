@@ -3,7 +3,7 @@
 #include <assert.h>
 
 int64_t
-addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
+addr_to_page_idx_(void *addr, const pma_t *pma);
 
 size_t
 round_up_(size_t x, size_t n);
@@ -20,19 +20,16 @@ test_addr_to_page_idx_(void)
     assert(pma_);
 
     {
-        uintptr_t addr_ = (uintptr_t)base_;
-        int64_t   idx_  = addr_to_page_idx_(addr_, pma_);
-        assert(idx_ == 1);
+        size_t idx_ = addr_to_page_idx_(base_, pma_);
+        assert(idx_ == 0);
     }
 
     {
         static const int64_t kOffset = 2;
-        uintptr_t            addr_   = (uintptr_t)base_ + kOffset * kPageSz;
-        int64_t              idx_    = addr_to_page_idx_(addr_, pma_);
-        assert(idx_ == kOffset + 1);
+        void                *addr_   = (char *)base_ + kOffset * kPageSz;
+        size_t               idx_    = addr_to_page_idx_(addr_, pma_);
+        assert(idx_ == kOffset);
     }
-
-    // TODO: test negative indexes.
 
     pma_deinit(pma_);
 }
