@@ -88,19 +88,21 @@ test_pma_()
         assert(pma_->stack_fd == -1);
         assert(pma_->max_sz == 0);
 
+        assert(page_status_((char *)base_ + 2 * kPageSz, pma_) == PS_UNMAPPED);
+
         void *addr_;
         char  ch;
 
         // Write to the heap.
         addr_ = base_;
-        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
         ch             = *(char *)addr_;
         *(char *)addr_ = 'h';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
         addr_ = (char *)base_ + len_ - 1;
-        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
         ch             = *(char *)addr_;
         *(char *)addr_ = 'i';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);

@@ -84,10 +84,16 @@ handle_sigsegv_(void *fault_addr, int serious);
 /// @param[in]  path
 /// @param[in]  base
 /// @param[in]  grows_down
+/// @param[in]  pma
 /// @param[out] len
 /// @param[out] fd
 static_ int
-map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
+map_file_(const char *path,
+          void       *base,
+          bool        grows_down,
+          pma_t      *pma,
+          size_t     *len,
+          int        *fd);
 
 /// Get the status of the page surrounding an address. To set rather than get,
 /// see set_page_status_().
@@ -190,7 +196,12 @@ handle_sigsegv_(void *fault_addr, int serious)
 }
 
 static_ int
-map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
+map_file_(const char *path,
+          void       *base,
+          bool        grows_down,
+          pma_t      *pma,
+          size_t     *len,
+          int        *fd)
 {
     if (!path) {
         static const size_t kDefaultSz = kPageSz;
@@ -212,6 +223,10 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
                 base,
                 strerror(errno));
             goto fail;
+        }
+        // Mark each page as mapped.
+        for (size_t i = 0; i < kDefaultSz; i += kPageSz) {
+            set_page_status_((char *)base + i, PS_MAPPED_CLEAN, pma);
         }
         *fd  = -1;
         *len = kDefaultSz;
@@ -240,6 +255,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
     if (grows_down) {
         char *ptr = base;
         for (size_t i_ = 0; i_ < len_ / kPageSz; i_++) {
+            ptr -= kPageSz;
             size_t offset_ = i_ * kPageSz;
             if (mmap(ptr,
                      kPageSz,
@@ -260,23 +276,25 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
                 munmap(ptr + kPageSz, offset_);
                 goto close_fd;
             }
-            ptr -= kPageSz;
+            // Mark each page in the file as mapped.
+            set_page_status_(ptr, PS_MAPPED_CLEAN, pma);
         }
-    } else if (mmap(base,
+    } else {
+        if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd_, 0)
+            == MAP_FAILED)
+        {
+            fprintf(stderr,
+                    "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
                     len_,
-                    PROT_READ | PROT_WRITE,
-                    MAP_FIXED | MAP_PRIVATE,
-                    fd_,
-                    0)
-               == MAP_FAILED)
-    {
-        fprintf(stderr,
-                "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
-                len_,
-                path,
-                base,
-                strerror(errno));
-        goto close_fd;
+                    path,
+                    base,
+                    strerror(errno));
+            goto close_fd;
+        }
+        // Mark each page in the file as mapped.
+        for (size_t i = 0; i < len_; i += kPageSz) {
+            set_page_status_((char *)base + i, PS_MAPPED_CLEAN, pma);
+        }
     }
 
     *len = len_;
@@ -286,6 +304,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
 close_fd:
     close(fd_);
 fail:
+    // TODO: mark all pages as unmapped.
     return -1;
 }
 
@@ -304,53 +323,59 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     assert((uintptr_t)base % kPageSz == 0);
     assert(len % kPageSz == 0);
 
-    void  *heap_start = base;
-    size_t heap_len;
-    int    heap_fd;
-    // Failed to map non-NULL heap file.
-    if (map_file_(heap_file, heap_start, false, &heap_len, &heap_fd) == -1) {
-        return NULL;
-    }
+    pma_t *pma = malloc(sizeof(*pma));
 
+    void  *heap_start  = base;
     void  *stack_start = (char *)heap_start + len;
-    size_t stack_len;
-    int    stack_fd;
-    // Failed to map non-NULL stack file.
-    if (map_file_(stack_file, stack_start, true, &stack_len, &stack_fd) == -1) {
-        munmap(heap_start, heap_len);
-        close(heap_fd);
-        return NULL;
+    pma->heap_start    = heap_start;
+    pma->stack_start   = stack_start;
+
+    size_t num_pgs      = round_up_(len, kPageSz) / kPageSz;
+    size_t bits_needed  = round_up_(kBitsPerPage * num_pgs, kBitsPerByte);
+    size_t bytes_needed = bits_needed / kBitsPerByte;
+    pma->num_pgs        = num_pgs;
+    pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));
+
+    // Failed to map non-NULL heap file.
+    if (map_file_(heap_file,
+                  heap_start,
+                  false,
+                  pma,
+                  &pma->heap_len,
+                  &pma->heap_fd)
+        == -1)
+    {
+        goto free_pma;
     }
 
-    size_t   num_pgs      = round_up_(len, kPageSz) / kPageSz;
-    size_t   bits_needed  = round_up_(kBitsPerPage * num_pgs, kBitsPerByte);
-    size_t   bytes_needed = bits_needed / kBitsPerByte;
-    uint8_t *pg_status    = calloc(bytes_needed, sizeof(*pg_status));
-
-    pma_t   *pma = malloc(sizeof(*pma));
+    // Failed to map non-NULL stack file.
+    if (map_file_(stack_file,
+                  stack_start,
+                  true,
+                  pma,
+                  &pma->stack_len,
+                  &pma->stack_fd)
+        == -1)
+    {
+        munmap(pma->heap_start, pma->heap_len);
+        close(pma->heap_fd);
+        goto free_pma;
+    }
 
     sigsegv_init(&dispatcher);
     // This should never fail when HAVE_SIGSEGV_RECOVERY is defined.
     assert(sigsegv_install_handler(handle_sigsegv_) == 0);
-    void *ticket = sigsegv_register(&dispatcher,
-                                    base,
-                                    len,
-                                    handle_page_fault_,
-                                    (void *)pma);
-    *pma         = (pma_t){
-                .heap_start     = heap_start,
-                .stack_start    = stack_start,
-                .heap_len       = heap_len,
-                .stack_len      = stack_len,
-                .heap_fd        = heap_fd,
-                .stack_fd       = stack_fd,
-                .num_pgs        = num_pgs,
-                .pg_status      = pg_status,
-                .max_sz         = 0,
-                .sigsegv_ticket = ticket,
-    };
+    pma->sigsegv_ticket = sigsegv_register(&dispatcher,
+                                           base,
+                                           len,
+                                           handle_page_fault_,
+                                           (void *)pma);
+    pma->max_sz         = 0;
 
     return pma;
+free_pma:
+    free(pma);
+    return NULL;
 }
 
 int
