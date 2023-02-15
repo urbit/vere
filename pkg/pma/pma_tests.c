@@ -40,6 +40,7 @@ test_addr_to_page_idx_(void)
 static void
 test_pma_()
 {
+    // Anonymous arena.
     {
         void  *base_ = (void *)0x200000000;
         size_t len_  = 1 << 20;
@@ -71,6 +72,40 @@ test_pma_()
         ch             = *(char *)addr_;
         *(char *)addr_ = 'i';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+
+        pma_deinit(pma_);
+    }
+
+    // File-backed arena with empty files.
+    {
+        void  *base_ = (void *)0x200000000;
+        size_t len_  = 1 << 20;
+        pma_t *pma_  = pma_init(base_, len_, "/tmp/nonexistent-heap.bin", "/tmp/nonexistent-stack.bin");
+        assert(pma_);
+        assert(pma_->heap_start == base_);
+        assert(pma_->stack_start == (char *)base_ + len_);
+        assert(pma_->heap_len == 0);
+        assert(pma_->stack_len == 0);
+        assert(pma_->heap_fd != -1);
+        assert(pma_->stack_fd != -1);
+        assert(pma_->max_sz == 0);
+
+        void *addr_;
+        char  ch;
+
+        // Write to the heap.
+        addr_ = base_;
+        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        ch             = *(char *)addr_;
+        *(char *)addr_ = 'h';
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+
+        // Write to the stack.
+        addr_ = (char *)base_ + len_ - 1;
+        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        ch             = *(char *)addr_;
+        *(char *)addr_ = 'i';
+        //assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
         pma_deinit(pma_);
     }

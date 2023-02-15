@@ -229,6 +229,11 @@ map_file_(const char *path,
         goto close_fd;
     }
 
+    if (buf_.st_size == 0) {
+        *len = 0;
+        *fd = fd_;
+        return 0;
+    }
     size_t len_ = round_up(buf_.st_size, kPageSz);
 
     // We have to map stacks a page at a time because a stack's backing file has
