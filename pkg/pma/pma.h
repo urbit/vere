@@ -36,9 +36,10 @@ struct pma {
     /// Total number of pages.
     size_t num_pgs;
 
-    /// Bit map for tracking dirty pages. Guaranteed to have at least
-    /// total_pgs bits.
-    uint8_t *dirty_pgs;
+    /// Bit map for tracking pages, which can be in one of three states:
+    /// unmapped, mapped and clean, or mapped and dirty. Guaranteed to have at
+    /// least (2 * num_pgs) bits.
+    uint8_t *pg_status;
 
     size_t   max_sz;
 

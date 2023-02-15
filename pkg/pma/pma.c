@@ -22,6 +22,38 @@
 #endif
 
 //==============================================================================
+// CONSTANTS
+//==============================================================================
+
+/// Number of bits in a byte.
+static const size_t kBitsPerByte = 8;
+
+/// Number of bits required to track the status of a page.
+static const size_t kBitsPerPage = 2;
+
+/// Number of pages whose status can be tracked in a single byte.
+static const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
+
+/// Number of bytes in a single entry of the pg_status array of pma_t.
+static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
+
+/// Number of pages whose status can be tracked by a single entry in the
+/// pg_status array of pma_t.
+static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
+
+//==============================================================================
+// TYPES
+//==============================================================================
+
+enum page_status {
+    PS_UNMAPPED     = 0x0,
+    PS_MAPPED_CLEAN = 0x1,
+    PS_MAPPED_DIRTY = 0x2,
+    PS_MASK         = 0x3,
+};
+typedef enum page_status page_status_t;
+
+//==============================================================================
 // GLOBAL VARIABLES
 //==============================================================================
 
@@ -68,6 +100,21 @@ handle_sigsegv_(void *fault_addr, int serious);
 /// @param[out] fd
 static_ int
 map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
+
+/// Get the status of the page surrounding an address.
+///
+/// @param[in] addr
+/// @param[in] pma
+static_ inline_ uint8_t
+page_status_(void *addr, const pma_t *pma)
+{
+    size_t  pg_idx    = addr_to_page_idx_(addr, pma);
+    size_t  entry_idx = pg_idx / kPagesPerEntry;
+    size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
+    uint8_t status    = (pma->pg_status[entry_idx] >> bit_idx) & PS_MASK;
+    assert(status != PS_MASK);
+    return status;
+}
 
 /// Round `x` up to the nearest multiple of `n`, which must be a power of 2.
 ///
@@ -240,10 +287,10 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
         return NULL;
     }
 
-    size_t num_pgs = round_up_(len, kPageSz) / kPageSz;
-    // 8 bits in each byte used for tracking dirty pages.
-    size_t   bytes_needed = round_up_(num_pgs / 8, 8);
-    uint8_t *dirty_pgs    = calloc(bytes_needed, sizeof(*dirty_pgs));
+    size_t   num_pgs      = round_up_(len, kPageSz) / kPageSz;
+    size_t   bits_needed  = round_up_(kBitsPerPage * num_pgs, kBitsPerByte);
+    size_t   bytes_needed = bits_needed / kBitsPerByte;
+    uint8_t *pg_status    = calloc(bytes_needed, sizeof(*pg_status));
 
     pma_t   *pma = malloc(sizeof(*pma));
 
@@ -263,7 +310,7 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
                 .heap_fd        = heap_fd,
                 .stack_fd       = stack_fd,
                 .num_pgs        = num_pgs,
-                .dirty_pgs      = dirty_pgs,
+                .pg_status      = pg_status,
                 .max_sz         = 0,
                 .sigsegv_ticket = ticket,
     };
@@ -294,7 +341,7 @@ pma_deinit(pma_t *pma)
         close(pma->stack_fd);
     }
 
-    free(pma->dirty_pgs);
+    free(pma->pg_status);
 
     sigsegv_unregister(&dispatcher, pma->sigsegv_ticket);
 
