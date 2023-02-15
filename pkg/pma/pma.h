@@ -41,6 +41,9 @@ struct pma {
     uint8_t *dirty_pgs;
 
     size_t   max_sz;
+
+    /// libsigsegv ticket.
+    void *sigsegv_ticket;
 };
 typedef struct pma pma_t;
 

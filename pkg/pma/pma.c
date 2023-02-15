@@ -22,6 +22,13 @@
 #endif
 
 //==============================================================================
+// GLOBAL VARIABLES
+//==============================================================================
+
+/// Global libsigsegv dispatcher.
+static_ sigsegv_dispatcher dispatcher;
+
+//==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
 
@@ -38,12 +45,20 @@ static_ int64_t
 addr_to_page_idx_(uintptr_t addr, const pma_t *pma);
 
 /// Handle a page fault according to the libsigsegv protocol. See
-/// sigsegv_handler_t in sigsegv.h for more info.
+/// sigsegv_area_handler_t in sigsegv.h for more info.
+///
+/// @param[in] fault_addr
+/// @param[in] user_arg
+static_ int
+handle_page_fault_(void *fault_addr, void *user_arg);
+
+/// Handle SIGSEGV according to the libsigsegv protocol. See sigsegv_handler_t
+/// in sigsegv.h for more info.
 ///
 /// @param[in] fault_addr
 /// @param[in] serious
 static_ int
-handle_page_fault_(void *fault_addr, int serious);
+handle_sigsegv_(void *fault_addr, int serious);
 
 /// @param[in]  path
 /// @param[in]  base
@@ -78,7 +93,7 @@ addr_to_page_idx_(uintptr_t addr, const pma_t *pma)
 }
 
 static_ int
-handle_page_fault_(void *fault_addr, int serious)
+handle_page_fault_(void *fault_addr, void *user_arg)
 {
     assert((uintptr_t)fault_addr % kPageSz == 0);
     if (MAP_FAILED
@@ -97,6 +112,12 @@ handle_page_fault_(void *fault_addr, int serious)
         return 0;
     }
     return 1;
+}
+
+static_ int
+handle_sigsegv_(void *fault_addr, int serious)
+{
+    return sigsegv_dispatch(&dispatcher, fault_addr);
 }
 
 static_ int
@@ -214,14 +235,6 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     assert((uintptr_t)base % kPageSz == 0);
     assert(len % kPageSz == 0);
 
-    // If we can't install a handler for SIGSEGV, it's likely because the
-    // platform we're running on doesn't support catching SIGSEGV. See sigsegv.h
-    // for more info.
-    if (sigsegv_install_handler(handle_page_fault_) == -1) {
-        fprintf(stderr, "pma: failed to install the page fault handler\n");
-        return NULL;
-    }
-
     void  *heap_start = base;
     size_t heap_len;
     int    heap_fd;
@@ -246,16 +259,26 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     uint8_t *dirty_pgs    = calloc(bytes_needed, sizeof(*dirty_pgs));
 
     pma_t   *pma = malloc(sizeof(*pma));
+
+    sigsegv_init(&dispatcher);
+    // This should never fail when HAVE_SIGSEGV_RECOVERY is defined.
+    assert(sigsegv_install_handler(handle_sigsegv_) == 0);
+    void *ticket = sigsegv_register(&dispatcher,
+                                    base,
+                                    len,
+                                    handle_page_fault_,
+                                    (void *)pma);
     *pma         = (pma_t){
-                .heap_start  = heap_start,
-                .stack_start = stack_start,
-                .heap_len    = heap_len,
-                .stack_len   = stack_len,
-                .heap_fd     = heap_fd,
-                .stack_fd    = stack_fd,
-                .num_pgs     = num_pgs,
-                .dirty_pgs   = dirty_pgs,
-                .max_sz      = 0,
+                .heap_start     = heap_start,
+                .stack_start    = stack_start,
+                .heap_len       = heap_len,
+                .stack_len      = stack_len,
+                .heap_fd        = heap_fd,
+                .stack_fd       = stack_fd,
+                .num_pgs        = num_pgs,
+                .dirty_pgs      = dirty_pgs,
+                .max_sz         = 0,
+                .sigsegv_ticket = ticket,
     };
 
     return pma;
@@ -285,6 +308,10 @@ pma_deinit(pma_t *pma)
     }
 
     free(pma->dirty_pgs);
+
+    sigsegv_unregister(&dispatcher, pma->sigsegv_ticket);
+
+    // TODO: free pma.
 }
 
 #undef static_
