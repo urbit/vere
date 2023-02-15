@@ -130,20 +130,26 @@ static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
     assert((uintptr_t)fault_addr % kPageSz == 0);
-    if (MAP_FAILED
-        == mmap(fault_addr,
-                kPageSz,
-                PROT_READ | PROT_WRITE,
-                MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-                -1,
-                0))
-    {
-        fprintf(stderr,
-                "pma: failed to create %zu-byte anonymous mapping at %p: %s\n",
-                kPageSz,
-                fault_addr,
-                strerror(errno));
-        return 0;
+    pma_t *pma = user_arg;
+    switch (page_status_(fault_addr, pma)) {
+        case PS_UNMAPPED:
+            if (MAP_FAILED
+                == mmap(fault_addr,
+                        kPageSz,
+                        PROT_READ | PROT_WRITE,
+                        MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+                        -1,
+                        0))
+            {
+                fprintf(stderr,
+                        "pma: failed to create %zu-byte anonymous mapping at "
+                        "%p: %s\n",
+                        kPageSz,
+                        fault_addr,
+                        strerror(errno));
+                return 0;
+            }
+            break;
     }
     return 1;
 }
