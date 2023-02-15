@@ -16,6 +16,14 @@ static const size_t kDefaultSz = 0xffffffff;
 // TYPES
 //==============================================================================
 
+enum page_status {
+    PS_UNMAPPED     = 0x0,
+    PS_MAPPED_CLEAN = 0x1,
+    PS_MAPPED_DIRTY = 0x2,
+    PS_MASK         = 0x3,
+};
+typedef enum page_status page_status_t;
+
 struct pma {
     void *heap_start;
 
@@ -37,8 +45,8 @@ struct pma {
     size_t num_pgs;
 
     /// Bit map for tracking pages, which can be in one of three states:
-    /// unmapped, mapped and clean, or mapped and dirty. Guaranteed to have at
-    /// least (2 * num_pgs) bits.
+    /// unmapped, mapped and clean, or mapped and dirty (see page_status_t).
+    /// Guaranteed to have at least (2 * num_pgs) bits.
     uint8_t *pg_status;
 
     size_t   max_sz;

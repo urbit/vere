@@ -42,18 +42,6 @@ static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
 //==============================================================================
-// TYPES
-//==============================================================================
-
-enum page_status {
-    PS_UNMAPPED     = 0x0,
-    PS_MAPPED_CLEAN = 0x1,
-    PS_MAPPED_DIRTY = 0x2,
-    PS_MASK         = 0x3,
-};
-typedef enum page_status page_status_t;
-
-//==============================================================================
 // GLOBAL VARIABLES
 //==============================================================================
 
@@ -101,7 +89,8 @@ handle_sigsegv_(void *fault_addr, int serious);
 static_ int
 map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd);
 
-/// Get the status of the page surrounding an address.
+/// Get the status of the page surrounding an address. To set rather than get,
+/// see set_page_status_().
 ///
 /// @param[in] addr
 /// @param[in] pma
@@ -116,6 +105,16 @@ page_status_(void *addr, const pma_t *pma)
     return status;
 }
 
+/// Round `x` down to the nearest multiple of `n`, which must be a power of 2.
+///
+/// @param[in] x
+/// @param[in] n
+static_ inline_ size_t
+round_down_(size_t x, size_t n)
+{
+    return x & ~(n - 1);
+}
+
 /// Round `x` up to the nearest multiple of `n`, which must be a power of 2.
 ///
 /// @param[in] x
@@ -126,17 +125,34 @@ round_up_(size_t x, size_t n)
     return (x + (n - 1)) & (~(n - 1));
 }
 
+/// Set the status of the page surrounding an address. To get rather than set,
+/// see page_status_().
+///
+/// @param[in] addr
+/// @param[in] status
+/// @param[in] pma
+static_ inline_ void
+set_page_status_(void *addr, page_status_t status, const pma_t *pma)
+{
+    size_t  pg_idx    = addr_to_page_idx_(addr, pma);
+    size_t  entry_idx = pg_idx / kPagesPerEntry;
+    size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
+    uint8_t entry     = pma->pg_status[entry_idx];
+    pma->pg_status[entry_idx]
+        = (entry & ~(PS_MASK << bit_idx)) | (status << bit_idx);
+}
+
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
-    assert((uintptr_t)fault_addr % kPageSz == 0);
+    fault_addr = (void *)round_down_((uintptr_t)fault_addr, kPageSz);
     pma_t *pma = user_arg;
     switch (page_status_(fault_addr, pma)) {
         case PS_UNMAPPED:
             if (MAP_FAILED
                 == mmap(fault_addr,
                         kPageSz,
-                        PROT_READ | PROT_WRITE,
+                        PROT_READ,
                         MAP_ANON | MAP_FIXED | MAP_PRIVATE,
                         -1,
                         0))
@@ -149,6 +165,19 @@ handle_page_fault_(void *fault_addr, void *user_arg)
                         strerror(errno));
                 return 0;
             }
+            set_page_status_(fault_addr, PS_MAPPED_CLEAN, pma);
+            break;
+        case PS_MAPPED_CLEAN:
+            if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {
+                fprintf(stderr,
+                        "pma: failed to remove write protections from %zu-byte "
+                        "page at %p: %s\n",
+                        kPageSz,
+                        fault_addr,
+                        strerror(errno));
+                return 0;
+            }
+            set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
     }
     return 1;
@@ -170,7 +199,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
         }
         if (mmap(base,
                  kDefaultSz,
-                 PROT_READ | PROT_WRITE,
+                 PROT_READ,
                  MAP_ANON | MAP_FIXED | MAP_PRIVATE,
                  -1,
                  0)
@@ -214,7 +243,7 @@ map_file_(const char *path, void *base, bool grows_down, size_t *len, int *fd)
             size_t offset_ = i_ * kPageSz;
             if (mmap(ptr,
                      kPageSz,
-                     PROT_READ | PROT_WRITE,
+                     PROT_READ,
                      MAP_FIXED | MAP_PRIVATE,
                      fd_,
                      offset_)

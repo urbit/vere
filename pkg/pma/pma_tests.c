@@ -5,6 +5,12 @@
 int64_t
 addr_to_page_idx_(void *addr, const pma_t *pma);
 
+uint8_t
+page_status_(void *addr, const pma_t *pma);
+
+size_t
+round_down_(size_t x, size_t n);
+
 size_t
 round_up_(size_t x, size_t n);
 
@@ -35,6 +41,21 @@ test_addr_to_page_idx_(void)
 }
 
 static void
+test_round_down_(void)
+{
+    assert(round_down_(4, 0) == 0);
+    assert(round_down_(1, 1) == 1);
+    assert(round_down_(2, 1) == 2);
+    assert(round_down_(2, 2) == 2);
+    assert(round_down_(3, 2) == 2);
+    assert(round_down_(7, 4) == 4);
+    assert(round_down_(43, 8) == 40);
+    assert(round_down_(63, 16) == 48);
+    assert(round_down_(kPageSz - 1, kPageSz) == 0);
+    assert(round_down_(kPageSz, kPageSz) == kPageSz);
+}
+
+static void
 test_round_up_(void)
 {
     assert(round_up_(3, 0) == 0);
@@ -52,7 +73,7 @@ test_round_up_(void)
 // FUNCTION TESTS
 
 static void
-test_pma_init_()
+test_pma_()
 {
     {
         void  *base_ = (void *)0x200000000;
@@ -66,10 +87,24 @@ test_pma_init_()
         assert(pma_->heap_fd == -1);
         assert(pma_->stack_fd == -1);
         assert(pma_->max_sz == 0);
-        // Ensure we can write to the heap.
-        *(char *)base_ = 'h';
-        // Ensure we can write to the stack.
-        *((char *)base_ + len_ - 1) = 'i';
+
+        void *addr_;
+        char  ch;
+
+        // Write to the heap.
+        addr_ = base_;
+        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        ch             = *(char *)addr_;
+        *(char *)addr_ = 'h';
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+
+        // Write to the stack.
+        addr_ = (char *)base_ + len_ - 1;
+        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
+        ch             = *(char *)addr_;
+        *(char *)addr_ = 'i';
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+
         pma_deinit(pma_);
     }
 }
@@ -77,8 +112,9 @@ test_pma_init_()
 int
 main(int argc, char *argv[])
 {
+    test_round_down_();
     test_round_up_();
-    test_pma_init_();
+    test_pma_();
     test_addr_to_page_idx_();
     return 0;
 }
