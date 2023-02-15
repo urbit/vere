@@ -101,7 +101,7 @@ map_file_(const char *path,
 ///
 /// @param[in] addr
 /// @param[in] pma
-static_ inline_ uint8_t
+static_ inline_ page_status_t
 page_status_(void *addr, const pma_t *pma)
 {
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
