@@ -14,6 +14,7 @@ cc_library(
     hdrs = ["pma.h"],
     includes = ["."],
     linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
     deps = ["@sigsegv"],
 )
 

@@ -31,6 +31,7 @@ cc_library(
     deps = [
         "//pkg/c3",
         "//pkg/ent",
+        "//pkg/pma",
         "//pkg/ur",
         "//pkg/urcrypt",
         "@gmp",

@@ -24,6 +24,8 @@
 #include "vortex.h"
 #include "xtract.h"
 
+pma_t* u3_pma = NULL;
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -1716,11 +1718,6 @@ _cm_limits(void)
 static void
 _cm_signals(void)
 {
-  if ( 0 != sigsegv_install_handler(u3e_fault) ) {
-    u3l_log("boot: sigsegv install failed");
-    exit(1);
-  }
-
 # if defined(U3_OS_PROF)
   //  Block SIGPROF, so that if/when we reactivate it on the
   //  main thread for profiling, we won't get hits in parallel
@@ -1812,7 +1809,7 @@ _cm_free2(void* tox_v, size_t siz_i)
 /* u3m_init(): start the environment.
 */
 void
-u3m_init(size_t len_i)
+u3m_init(size_t len_i, c3_c *heap_c, c3_c *stack_c)
 {
   _cm_limits();
   _cm_signals();
@@ -1833,35 +1830,10 @@ u3m_init(size_t len_i)
     exit(1);
   }
 
-  // map at fixed address.
-  //
-  {
-    void* map_v = mmap((void *)u3_Loom,
-                       len_i,
-                       (PROT_READ | PROT_WRITE),
-                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                       -1, 0);
-
-    if ( -1 == (c3_ps)map_v ) {
-      map_v = mmap((void *)0,
-                   len_i,
-                   (PROT_READ | PROT_WRITE),
-                   (MAP_ANON | MAP_PRIVATE),
-                   -1, 0);
-
-      u3l_log("boot: mapping %zuMB failed", len_i >> 20);
-      u3l_log("see urbit.org/using/install/#about-swap-space"
-              " for adding swap space");
-      if ( -1 != (c3_ps)map_v ) {
-        u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
-                map_v);
-      }
-      exit(1);
-    }
-
-    u3C.wor_i = len_i >> 2;
-    u3l_log("loom: mapped %zuMB", len_i >> 20);
-  }
+  u3_pma = pma_init(u3_Loom, len_i, heap_c, stack_c);
+  assert(u3_pma);
+  u3C.wor_i = len_i >> 2;
+  u3l_log("loom: maximum size is %zuMB", len_i >> 20);
 }
 
 extern void u3je_secp_stop(void);
@@ -1879,15 +1851,27 @@ u3m_stop()
 c3_d
 u3m_boot(c3_c* dir_c, size_t len_i)
 {
-  c3_o nuu_o;
-
   /* Activate the loom.
   */
-  u3m_init(len_i);
+  {
+    c3_mkdir(dir_c, 0700);
 
-  /* Activate the storage system.
-  */
-  nuu_o = u3e_live(c3n, dir_c);
+    c3_c nor_c[8192];
+    snprintf(nor_c, sizeof(nor_c), "%s/.urb", dir_c);
+    c3_mkdir(nor_c, 0700);
+
+    snprintf(nor_c, sizeof(nor_c), "%s/.urb/chk", dir_c);
+    c3_mkdir(nor_c, 0700);
+
+    snprintf(nor_c, sizeof(nor_c), "%s/.urb/chk/north.bin", dir_c);
+
+    c3_c sou_c[8192];
+    snprintf(sou_c, sizeof(sou_c), "%s/.urb/chk/south.bin", dir_c);
+
+    u3m_init(len_i, nor_c, sou_c);
+  }
+
+  c3_o nuu_o = ( u3_pma->heap_len == 0 && u3_pma->stack_len == 0 ? c3y : c3n );
 
   /* Activate tracing.
   */
@@ -1933,7 +1917,7 @@ u3m_boot_lite(size_t len_i)
 {
   /* Activate the loom.
   */
-  u3m_init(len_i);
+  u3m_init(len_i, NULL, NULL);
 
   /* Activate tracing.
   */

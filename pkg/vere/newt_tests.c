@@ -8,7 +8,7 @@
 static void
 _setup(void)
 {
-  u3m_init(1 << 20);
+  u3m_init(1 << 20, NULL, NULL);
   u3m_pave(c3y);
 }
 

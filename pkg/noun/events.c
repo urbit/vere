@@ -1068,6 +1068,7 @@ u3e_backup(c3_o ovw_o)
 void
 u3e_save(void)
 {
+  return;
   u3_ce_patch* pat_u;
 
   if ( u3C.wag_w & u3o_dryrun ) {
@@ -1245,6 +1246,7 @@ u3e_foul(void)
 void
 u3e_init(void)
 {
+  return;
   u3P.pag_w = u3C.wor_i >> u3a_page;
 
 #ifdef U3_GUARD_PAGE
@@ -1257,6 +1259,7 @@ u3e_init(void)
 void
 u3e_ward(u3_post low_p, u3_post hig_p)
 {
+  return;
 #ifdef U3_GUARD_PAGE
   const u3p(c3_w) gar_p = gar_pag_p;
 
