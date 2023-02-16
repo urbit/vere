@@ -44,6 +44,9 @@ static_ const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 /// pg_status array of pma_t.
 static_ const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
+/// Extension appended to a backing file to create that file's journal name.
+static_ const char kJournalExtension[] = ".journal";
+
 //==============================================================================
 // GLOBAL VARIABLES
 //==============================================================================
@@ -348,7 +351,12 @@ sync_file_(const char *path,
     assert(base);
     assert(pma);
 
-    char     *journal_file = NULL; // TODO
+    char journal_file[strlen(path) + sizeof(kJournalExtension)];
+    snprintf(journal_file,
+             sizeof(journal_file),
+             "%s%s",
+             path,
+             kJournalExtension);
     journal_t journal;
     if (journal_open(journal_file, &journal) == -1) {
         fprintf(stderr,
