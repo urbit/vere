@@ -25,4 +25,3 @@ round_up(size_t x, size_t n)
 {
     return (x + (n - 1)) & (~(n - 1));
 }
-
