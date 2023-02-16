@@ -500,18 +500,6 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
 
     char *heap_file = NULL; // TODO
     if (pma->heap_fd != -1) {
-        if (heap_len > pma->heap_len) {
-            // TODO: will ftruncate() interfere with the memory mappings?
-            if (ftruncate(pma->heap_fd, heap_len) == -1) {
-                fprintf(
-                    stderr,
-                    "pma: failed to extend %s from %zu bytes to %zu bytes\n",
-                    heap_file,
-                    pma->heap_len,
-                    heap_len);
-                return -1;
-            }
-        }
         if (sync_file_(heap_file,
                        pma->heap_start,
                        false,
@@ -526,6 +514,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             return -1;
         }
 
+        // The heap shrunk, so shrink the backing file.
         if (heap_len < pma->heap_len) {
             if (ftruncate(pma->heap_fd, heap_len) == -1) {
                 fprintf(
@@ -542,16 +531,6 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
 
     char *stack_file = NULL; // TODO
     if (pma->stack_fd != -1) {
-        if (stack_len > pma->stack_len) {
-            if (ftruncate(pma->stack_fd, stack_len) == -1) {
-                fprintf(
-                    stderr,
-                    "pma: failed to extend %s from %zu bytes to %zu bytes\n",
-                    stack_file,
-                    pma->stack_len,
-                    stack_len);
-            }
-        }
         if (sync_file_(stack_file,
                        pma->stack_start,
                        true,
@@ -566,6 +545,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             return -1;
         }
 
+        // The stack shrunk, so shrink the backing file.
         if (stack_len < pma->stack_len) {
             if (ftruncate(pma->stack_fd, stack_len) == -1) {
                 fprintf(
