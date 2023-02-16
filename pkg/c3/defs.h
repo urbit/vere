@@ -182,4 +182,38 @@
 #     define c3_fopen(a, b) ({                                  \
         fopen(a, b);})
 
+/* c3_align: hi or lo align x to al
+
+   unless effective type of x is c3_w or c3_d, assumes x is a pointer.
+   */
+#define c3_align(x, al, hilo)                   \
+  _Generic((x),                                 \
+           c3_w     : c3_align_w,               \
+           c3_d     : c3_align_d,               \
+           default  : c3_align_p)               \
+       (x, al, hilo)
+typedef enum { ALHI=1, ALLO=0 } align_dir;
+inline c3_w
+c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return x;
+}
+inline c3_d
+c3_align_d(c3_d x, c3_d al, align_dir hilo) {
+  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return x;
+}
+inline void*
+c3_align_p(void const * p, size_t al, align_dir hilo) {
+  uintptr_t x = (uintptr_t)p;
+  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return (void*)x;
+}
+
 #endif /* ifndef C3_DEFS_H */
