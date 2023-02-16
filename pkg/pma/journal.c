@@ -2,6 +2,7 @@
 
 #include "journal.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -80,8 +81,14 @@ journal_apply(journal_t *journal, char *base)
     return 0;
 }
 
-int
+void
 journal_destroy(journal_t *journal)
 {
-    return 0;
+    if (!journal) {
+        return;
+    }
+    assert(close(journal->fd) == 0);
+    assert(unlink(journal->path) == 0);
+    free((void *)journal->path);
+    free(journal);
 }

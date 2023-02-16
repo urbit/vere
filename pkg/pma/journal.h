@@ -36,7 +36,7 @@ journal_append(journal_t *journal, const journal_entry_t *entry);
 int
 journal_apply(journal_t *journal, char *base);
 
-int
+void
 journal_destroy(journal_t *journal);
 
 #endif /* ifndef PMA_JOURNAL_H */
