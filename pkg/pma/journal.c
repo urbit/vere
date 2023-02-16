@@ -42,8 +42,7 @@ journal_open(const char *path)
         goto close_fd;
     }
 
-    size_t len = buf.st_size;
-    if (len % sizeof(journal_entry_t) != 0) {
+    if (buf.st_size % sizeof(journal_entry_t) != 0) {
         fprintf(stderr, "journal: %s is corrupt\n", path);
         goto close_fd;
     }
@@ -51,8 +50,7 @@ journal_open(const char *path)
     journal_t *journal = malloc(sizeof(*journal));
     journal->path      = strdup(path);
     journal->fd        = fd;
-    journal->offset    = 0;
-    journal->len       = len;
+    journal->entry_cnt = buf.st_size / sizeof(journal_entry_t);
     return journal;
 
 close_fd:
@@ -71,13 +69,40 @@ journal_append(journal_t *journal, const journal_entry_t *entry)
     if (write_all(journal->fd, entry, sizeof(*entry)) == -1) {
         return -1;
     }
-    journal->offset += sizeof(*entry);
+    journal->entry_cnt++;
     return 0;
 }
 
 int
-journal_apply(journal_t *journal, char *base)
+journal_apply(journal_t *journal, char *base, bool grows_down)
 {
+    if (!journal || !base) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (lseek(journal->fd, 0, SEEK_SET) == (off_t)-1) {
+        fprintf(stderr,
+                "journal: failed to seek to beginning of %s: %s\n",
+                journal->path,
+                strerror(errno));
+        return -1;
+    }
+
+    if (grows_down) {
+        base -= kPageSz;
+    }
+    int             direction = grows_down ? -1 : 1;
+
+    journal_entry_t entry;
+    for (size_t i = 0; i < journal->entry_cnt; i++) {
+        if (read_all(journal->fd, &entry, sizeof(entry)) == -1) {
+            return -1;
+        }
+        char *dst = base + direction * entry.pg_idx;
+        memcpy(dst, entry.pg, sizeof(entry.pg));
+    }
+
     return 0;
 }
 

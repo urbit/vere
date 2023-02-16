@@ -3,6 +3,7 @@
 #ifndef PMA_JOURNAL_H
 #define PMA_JOURNAL_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "page.h"
@@ -13,8 +14,7 @@
 struct journal {
     const char *path;
     int         fd;
-    size_t      offset;
-    size_t      len;
+    size_t      entry_cnt;
 };
 typedef struct journal journal_t;
 
@@ -34,7 +34,7 @@ int
 journal_append(journal_t *journal, const journal_entry_t *entry);
 
 int
-journal_apply(journal_t *journal, char *base);
+journal_apply(journal_t *journal, char *base, bool grows_down);
 
 void
 journal_destroy(journal_t *journal);
