@@ -194,6 +194,7 @@
 #     define u3a_boxto(box_v)  ( (void *) \
                                    ( (u3a_box *)(void *)(box_v) + 1 ) )
 #     define u3a_botox(tox_v)  ( (u3a_box *)(void *)(tox_v) - 1 )
+
     /* Inside a noun.
     */
 
@@ -212,18 +213,6 @@
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
 #     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
-
-    /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
-    */
-#     define u3a_to_off(som)    ((som) & 0x3fffffff)
-
-    /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
-    */
-#     define u3a_to_ptr(som)    (u3a_into(u3a_to_off(som)))
-
-    /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
-    */
-#     define u3a_to_wtr(som)    ((c3_w *)u3a_to_ptr(som))
 
     /* u3a_to_pug(): set bit 31 of [off].
     */
@@ -260,15 +249,9 @@
            : u3m_bail(c3__exit) )
 #     define u3t(som) u3a_t(som)
 
-    /* u3a_into(): convert loom offset [x] into generic pointer.
-    */
-#     define  u3a_into(x) ((void *)(u3_Loom + (x)))
 #     define  u3to(type, x) ((type *)u3a_into(x))
 #     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
 
-    /* u3a_outa(): convert pointer [p] into word offset into loom.
-    */
-#     define  u3a_outa(p) (((c3_w*)(void*)(p)) - u3_Loom)
 #     define  u3of(type, x) (u3a_outa((type*)x))
 
     /* u3a_is_north(): yes if road [r] is north road.
@@ -368,6 +351,39 @@
 
   /**  inline functions.
   **/
+
+  /* u3a_into(): convert loom offset [x] into generic pointer.
+   */
+  inline void *u3a_into(c3_w x) {
+    /* return ((uintptr_t)u3_Loom) + x; */
+    return u3_Loom + x;
+    /* return (void *)(c3_d)x; */
+  }
+
+  /* u3a_outa(): convert pointer [p] into word offset into loom.
+   */
+  inline c3_w u3a_outa(void *p) {
+    return ((c3_w *)p) - u3_Loom;
+  }
+
+  /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
+   */
+  inline c3_w u3a_to_off(c3_w som) {
+    return som & 0x3fffffff;      /* 1 << 30 - 1 */
+  }
+
+  /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
+   */
+  inline void *u3a_to_ptr(c3_w som) {
+    return u3a_into(u3a_to_off(som));
+  }
+
+  /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
+   */
+  inline c3_w *u3a_to_wtr(c3_w som) {
+    return (c3_w *)u3a_to_ptr(som);
+  }
+
     /**  road stack.
     **/
         /* u3a_drop(): drop a road stack frame per [pil_u].
