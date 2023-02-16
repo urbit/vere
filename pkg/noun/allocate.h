@@ -21,6 +21,10 @@
     */
 #     define u3a_balign  (sizeof(c3_w)*u3a_walign)
 
+     /* u3a_bits_max: max loom bex
+     */
+#    define u3a_bits_max (8 * sizeof(c3_w) + u3a_vits_max)
+
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
 #     define u3a_page    12ULL
