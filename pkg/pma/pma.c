@@ -156,13 +156,15 @@ set_page_status_range_(const void   *addr,
 /// @param[in] base
 /// @param[in] grows_down
 /// @param[in] pma
-/// @param[in] len
+/// @param[in] len         Must be a multiple of kPageSz.
+/// @param[in] fd
 static_ int
 sync_file_(const char *path,
            void       *base,
            bool        grows_down,
            pma_t      *pma,
-           size_t      len);
+           size_t      len,
+           int         fd);
 
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
@@ -329,7 +331,8 @@ sync_file_(const char *path,
            void       *base,
            bool        grows_down,
            pma_t      *pma,
-           size_t      len)
+           size_t      len,
+           int         fd)
 {
     assert(path);
     assert(base);
@@ -380,6 +383,22 @@ sync_file_(const char *path,
                 path);
         return -1;
     }
+
+    if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
+        fprintf(stderr,
+                "pma: failed to move file cursor to beginning of %s: %s\n",
+                path,
+                strerror(errno));
+        return -1;
+    }
+
+    if (write_all(fd, base, len) == -1) {
+        fprintf(stderr,
+                "pma: failed to write changes to %s after applying journal\n",
+                path);
+        return -1;
+    }
+
     journal_destroy(&journal);
 
     return 0;
@@ -476,20 +495,69 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         return -1;
     }
 
+    heap_len  = round_up(heap_len, kPageSz);
+    stack_len = round_up(stack_len, kPageSz);
+
+    char *heap_file = NULL; // TODO
     if (pma->heap_fd != -1) {
-        char *heap_file = NULL; // TODO
-        if (sync_file_(heap_file, pma->heap_start, false, pma, heap_len) == -1)
+        if (heap_len > pma->heap_len) {
+            // TODO: will ftruncate() interfere with the memory mappings?
+            if (ftruncate(pma->heap_fd, heap_len) == -1) {
+                fprintf(
+                    stderr,
+                    "pma: failed to extend %s from %zu bytes to %zu bytes\n",
+                    heap_file,
+                    pma->heap_len,
+                    heap_len);
+                return -1;
+            }
+        }
+        if (sync_file_(heap_file,
+                       pma->heap_start,
+                       false,
+                       pma,
+                       heap_len,
+                       pma->heap_fd)
+            == -1)
         {
             fprintf(stderr,
                     "pma: failed to sync heap changes to %s\n",
                     heap_file);
             return -1;
         }
+
+        if (heap_len < pma->heap_len) {
+            if (ftruncate(pma->heap_fd, heap_len) == -1) {
+                fprintf(
+                    stderr,
+                    "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
+                    heap_file,
+                    pma->heap_len,
+                    heap_len);
+                return -1;
+            }
+        }
+        close(pma->heap_fd);
     }
 
+    char *stack_file = NULL; // TODO
     if (pma->stack_fd != -1) {
-        char *stack_file = NULL; // TODO
-        if (sync_file_(stack_file, pma->stack_start, true, pma, stack_len)
+        if (stack_len > pma->stack_len) {
+            if (ftruncate(pma->stack_fd, stack_len) == -1) {
+                fprintf(
+                    stderr,
+                    "pma: failed to extend %s from %zu bytes to %zu bytes\n",
+                    stack_file,
+                    pma->stack_len,
+                    stack_len);
+            }
+        }
+        if (sync_file_(stack_file,
+                       pma->stack_start,
+                       true,
+                       pma,
+                       stack_len,
+                       pma->stack_fd)
             == -1)
         {
             fprintf(stderr,
@@ -497,9 +565,56 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                     stack_file);
             return -1;
         }
+
+        if (stack_len < pma->stack_len) {
+            if (ftruncate(pma->stack_fd, stack_len) == -1) {
+                fprintf(
+                    stderr,
+                    "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
+                    stack_file,
+                    pma->stack_len,
+                    stack_len);
+                return -1;
+            }
+        }
+        close(pma->stack_fd);
     }
 
-    // TODO: resize backing files + adjust mappings
+    // Unmap all mappings.
+    size_t total = (size_t)(pma->stack_start - pma->heap_start);
+    assert(total % kPageSz == 0);
+    munmap(pma->heap_start, total);
+    for (size_t i = 0; i < total; i += kPageSz) {
+        set_page_status_(pma->heap_start + i, PS_UNMAPPED, pma);
+    }
+
+    // Remap heap.
+    if (map_file_(heap_file,
+                  pma->heap_start,
+                  false,
+                  pma,
+                  &pma->heap_len,
+                  &pma->heap_fd)
+        == -1)
+    {
+        fprintf(stderr, "pma: failed to remap %s\n", heap_file);
+        return -1;
+    }
+
+    // Remap stack.
+    if (map_file_(stack_file,
+                  pma->stack_start,
+                  true,
+                  pma,
+                  &pma->stack_len,
+                  &pma->stack_fd)
+        == -1)
+    {
+        fprintf(stderr, "pma: failed to remap %s\n", stack_file);
+        munmap(pma->heap_start, pma->heap_len);
+        close(pma->heap_fd);
+        return -1;
+    }
 
     return 0;
 }
