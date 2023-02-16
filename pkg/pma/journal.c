@@ -46,9 +46,9 @@ journal_open(const char *path)
     }
 
     journal_t *journal = malloc(sizeof(*journal));
-    journal->fd = fd;
-    journal->offset = 0;
-    journal->len = len;
+    journal->fd        = fd;
+    journal->offset    = 0;
+    journal->len       = len;
     return journal;
 
 close_fd:
