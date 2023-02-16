@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util.h"
+
 //==============================================================================
 // FUNCTIONS
 
@@ -60,6 +62,14 @@ fail:
 int
 journal_append(journal_t *journal, const journal_entry_t *entry)
 {
+    if (!journal || !entry) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (write_all(journal->fd, entry, sizeof(*entry)) == -1) {
+        return -1;
+    }
+    journal->offset += sizeof(*entry);
     return 0;
 }
 
