@@ -34,6 +34,9 @@ int
 journal_append(journal_t *journal, const journal_entry_t *entry);
 
 int
+journal_sync(const journal_t *journal);
+
+int
 journal_apply(journal_t *journal, char *base, bool grows_down);
 
 void

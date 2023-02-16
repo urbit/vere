@@ -386,6 +386,11 @@ sync_file_(const char *path,
         ptr += step;
     }
 
+    if (journal_sync(&journal) == -1) {
+        fprintf(stderr, "pma: failed to sync journal for %s\n", path);
+        return -1;
+    }
+
     if (journal_apply(&journal, base, grows_down) == -1) {
         fprintf(stderr,
                 "pma: failed to apply journal at %s to %s\n",

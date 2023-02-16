@@ -73,6 +73,23 @@ journal_append(journal_t *journal, const journal_entry_t *entry)
 }
 
 int
+journal_sync(const journal_t *journal)
+{
+    if (!journal) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (fsync(journal->fd) == -1) {
+        fprintf(stderr,
+                "journal: failed to flush changes to %s: %s\n",
+                journal->path,
+                strerror(errno));
+        return -1;
+    }
+}
+
+int
 journal_apply(journal_t *journal, char *base, bool grows_down)
 {
     if (!journal || !base) {
