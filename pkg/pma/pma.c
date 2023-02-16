@@ -574,9 +574,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
     munmap(pma->heap_start, total);
-    for (size_t i = 0; i < total; i += kPageSz) {
-        set_page_status_(pma->heap_start + i, PS_UNMAPPED, pma);
-    }
+    set_page_status_range_(pma->heap_start, total / kPageSz, PS_UNMAPPED, pma);
 
     // Remap heap.
     if (map_file_(heap_file,
