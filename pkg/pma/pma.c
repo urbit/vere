@@ -242,6 +242,7 @@ map_file_(const char *path,
     if (fstat(fd_, &buf_) == -1) {
         fprintf(stderr,
                 "pma: failed to determine length of %s: %s\n",
+                path,
                 strerror(errno));
         goto close_fd;
     }
