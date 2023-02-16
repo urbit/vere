@@ -11,8 +11,9 @@
 // TYPES
 
 struct journal {
-    int   fd;
-    void *start;
+    int    fd;
+    size_t offset;
+    size_t len;
 };
 typedef struct journal journal_t;
 
