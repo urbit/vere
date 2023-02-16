@@ -5,12 +5,6 @@
 #include <stdint.h>
 
 //==============================================================================
-// CONSTANTS
-//==============================================================================
-
-static const size_t kPageSz = 16 << 10;
-
-//==============================================================================
 // TYPES
 //==============================================================================
 
@@ -66,7 +60,7 @@ pma_t *
 pma_init(void *base, size_t len, const char *heap_file, const char *stack_file);
 
 int
-pma_sync(pma_t *pma, size_t heap_sz, size_t stack_sz);
+pma_sync(pma_t *pma, size_t heap_len, size_t stack_len);
 
 void
 pma_deinit(pma_t *pma);

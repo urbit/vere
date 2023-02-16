@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "page.h"
 #include "sigsegv.h"
 #include "util.h"
 
@@ -377,7 +378,7 @@ free_pma:
 }
 
 int
-pma_sync(pma_t *pma, size_t heap_sz, size_t stack_sz)
+pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
 {
     return 0;
 }

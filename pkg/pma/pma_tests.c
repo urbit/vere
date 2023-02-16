@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "page.h"
+
 int64_t
 addr_to_page_idx_(void *addr, const pma_t *pma);
 
