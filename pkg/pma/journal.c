@@ -16,11 +16,11 @@
 //==============================================================================
 // FUNCTIONS
 
-journal_t *
-journal_open(const char *path)
+int
+journal_open(const char *path, journal_t *journal)
 {
-    if (!path) {
-        fprintf(stderr, "journal: NULL is an invalid path\n");
+    if (!path || !journal) {
+        errno = EINVAL;
         goto fail;
     }
 
@@ -47,16 +47,15 @@ journal_open(const char *path)
         goto close_fd;
     }
 
-    journal_t *journal = malloc(sizeof(*journal));
     journal->path      = strdup(path);
     journal->fd        = fd;
     journal->entry_cnt = buf.st_size / sizeof(journal_entry_t);
-    return journal;
+    return 0;
 
 close_fd:
     close(fd);
 fail:
-    return NULL;
+    return -1;
 }
 
 int

@@ -27,8 +27,8 @@ typedef struct journal_entry journal_entry_t;
 //==============================================================================
 // FUNCTIONS
 
-journal_t *
-journal_open(const char *path);
+int
+journal_open(const char *path, journal_t *journal);
 
 int
 journal_append(journal_t *journal, const journal_entry_t *entry);
