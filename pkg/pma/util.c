@@ -68,5 +68,5 @@ write_all(int fd, const void *buf, size_t len)
         len -= bytes_written;
         ptr += bytes_written;
     } while (len > 0);
-    return -1;
+    return 0;
 }
