@@ -59,7 +59,7 @@ static_ sigsegv_dispatcher dispatcher;
 /// @param[in] addr  Address to determine page index for.
 /// @param[in] pma
 static_ inline_ size_t
-addr_to_page_idx_(void *addr, const pma_t *pma)
+addr_to_page_idx_(const void *addr, const pma_t *pma)
 {
     assert(pma);
     assert(pma->heap_start <= addr && addr < pma->stack_start);
@@ -102,7 +102,7 @@ map_file_(const char *path,
 /// @param[in] addr
 /// @param[in] pma
 static_ inline_ page_status_t
-page_status_(void *addr, const pma_t *pma)
+page_status_(const void *addr, const pma_t *pma)
 {
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
@@ -119,7 +119,7 @@ page_status_(void *addr, const pma_t *pma)
 /// @param[in] status
 /// @param[in] pma
 static_ inline_ void
-set_page_status_(void *addr, page_status_t status, const pma_t *pma)
+set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 {
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
@@ -137,7 +137,7 @@ set_page_status_(void *addr, page_status_t status, const pma_t *pma)
 /// @param[in] status
 /// @param[in] pma
 static_ inline_ void
-set_page_status_range_(void         *addr,
+set_page_status_range_(const void   *addr,
                        size_t        pg_cnt,
                        page_status_t status,
                        const pma_t  *pma)
