@@ -80,7 +80,10 @@ test_pma_()
     {
         void  *base_ = (void *)0x200000000;
         size_t len_  = 1 << 20;
-        pma_t *pma_  = pma_init(base_, len_, "/tmp/nonexistent-heap.bin", "/tmp/nonexistent-stack.bin");
+        pma_t *pma_  = pma_init(base_,
+                               len_,
+                               "/tmp/nonexistent-heap.bin",
+                               "/tmp/nonexistent-stack.bin");
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -105,7 +108,7 @@ test_pma_()
         assert(page_status_(addr_, pma_) == PS_UNMAPPED);
         ch             = *(char *)addr_;
         *(char *)addr_ = 'i';
-        //assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        // assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
         pma_deinit(pma_);
     }

@@ -129,6 +129,24 @@ set_page_status_(void *addr, page_status_t status, const pma_t *pma)
         = (entry & ~(PS_MASK << bit_idx)) | (status << bit_idx);
 }
 
+/// Set the status of the page range starting at an address. To set the page
+/// status of a single page, see set_page_status_().
+///
+/// @param[in] addr
+/// @param[in] pg_cnt  Number of pages in the range.
+/// @param[in] status
+/// @param[in] pma
+static_ inline_ void
+set_page_status_range_(void         *addr,
+                       size_t        pg_cnt,
+                       page_status_t status,
+                       const pma_t  *pma)
+{
+    for (size_t i = 0; i < pg_cnt * kPageSz; i += kPageSz) {
+        set_page_status_((char *)addr + i, status, pma);
+    }
+}
+
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
@@ -205,10 +223,8 @@ map_file_(const char *path,
                 strerror(errno));
             goto fail;
         }
-        // Mark each page as mapped.
-        for (size_t i = 0; i < kDefaultSz; i += kPageSz) {
-            set_page_status_((char *)base + i, PS_MAPPED_CLEAN, pma);
-        }
+        size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
+        set_page_status_range_(base, pg_cnt, PS_MAPPED_CLEAN, pma);
         *fd  = -1;
         *len = kDefaultSz;
         return 0;
@@ -231,7 +247,7 @@ map_file_(const char *path,
 
     if (buf_.st_size == 0) {
         *len = 0;
-        *fd = fd_;
+        *fd  = fd_;
         return 0;
     }
     size_t len_ = round_up(buf_.st_size, kPageSz);
@@ -262,7 +278,6 @@ map_file_(const char *path,
                 munmap(ptr + kPageSz, offset_);
                 goto close_fd;
             }
-            // Mark each page in the file as mapped.
             set_page_status_(ptr, PS_MAPPED_CLEAN, pma);
         }
     } else {
@@ -277,10 +292,7 @@ map_file_(const char *path,
                     strerror(errno));
             goto close_fd;
         }
-        // Mark each page in the file as mapped.
-        for (size_t i = 0; i < len_; i += kPageSz) {
-            set_page_status_((char *)base + i, PS_MAPPED_CLEAN, pma);
-        }
+        set_page_status_range_(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
     }
 
     *len = len_;
