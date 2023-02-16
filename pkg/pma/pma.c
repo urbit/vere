@@ -166,6 +166,16 @@ sync_file_(const char *path,
            size_t      len,
            int         fd);
 
+/// Get the total length in bytes of a PMA.
+///
+/// @param[in] pma
+static_ inline_ size_t
+total_len_(const pma_t *pma)
+{
+    assert(pma);
+    return (size_t)(pma->stack_start - pma->heap_start);
+}
+
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
@@ -348,7 +358,7 @@ sync_file_(const char *path,
     }
 
     // Determine largest possible page index.
-    size_t total = (size_t)(pma->stack_start - pma->heap_start);
+    size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
     size_t          max_idx = (total / kPageSz) - 1;
 
@@ -561,7 +571,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     }
 
     // Unmap all mappings.
-    size_t total = (size_t)(pma->stack_start - pma->heap_start);
+    size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
     munmap(pma->heap_start, total);
     for (size_t i = 0; i < total; i += kPageSz) {
