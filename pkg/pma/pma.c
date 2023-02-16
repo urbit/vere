@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "journal.h"
 #include "page.h"
 #include "sigsegv.h"
 #include "util.h"
@@ -147,6 +148,21 @@ set_page_status_range_(const void   *addr,
         set_page_status_((char *)addr + i, status, pma);
     }
 }
+
+/// Sync changes made to either the heap or stack since the last call to
+/// pma_sync().
+///
+/// @param[in] path
+/// @param[in] base
+/// @param[in] grows_down
+/// @param[in] pma
+/// @param[in] len
+static_ int
+sync_file_(const char *path,
+           void       *base,
+           bool        grows_down,
+           pma_t      *pma,
+           size_t      len);
 
 static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
@@ -308,6 +324,67 @@ fail:
     return -1;
 }
 
+static_ int
+sync_file_(const char *path,
+           void       *base,
+           bool        grows_down,
+           pma_t      *pma,
+           size_t      len)
+{
+    assert(path);
+    assert(base);
+    assert(pma);
+
+    char     *journal_file = NULL; // TODO
+    journal_t journal;
+    if (journal_open(journal_file, &journal) == -1) {
+        fprintf(stderr,
+                "pma: failed to open journal file at %s\n",
+                journal_file);
+        return -1;
+    }
+
+    // Determine largest possible page index.
+    size_t total = (size_t)(pma->stack_start - pma->heap_start);
+    assert(total % kPageSz == 0);
+    size_t          max_idx = (total / kPageSz) - 1;
+
+    char           *ptr  = grows_down ? base - kPageSz : base;
+    ssize_t         step = grows_down ? -kPageSz : kPageSz;
+    journal_entry_t entry;
+    for (size_t i = 0; i < len; i += kPageSz) {
+        page_status_t status = page_status_(ptr, pma);
+        assert(status != PS_UNMAPPED);
+        if (status == PS_MAPPED_DIRTY) {
+            size_t pg_idx = addr_to_page_idx_(ptr, pma);
+            entry.pg_idx  = grows_down ? max_idx - pg_idx : pg_idx;
+            memcpy(entry.pg, ptr, sizeof(entry.pg));
+            if (journal_append(&journal, &entry) == -1) {
+                fprintf(stderr,
+                        "pma: failed to append %zu-byte page with index %llu "
+                        "and address %p to journal at %s\n",
+                        sizeof(entry.pg),
+                        pg_idx,
+                        ptr,
+                        journal_file);
+                return -1;
+            }
+        }
+        ptr += step;
+    }
+
+    if (journal_apply(&journal, base, grows_down) == -1) {
+        fprintf(stderr,
+                "pma: failed to apply journal at %s to %s\n",
+                journal_file,
+                path);
+        return -1;
+    }
+    journal_destroy(&journal);
+
+    return 0;
+}
+
 //==============================================================================
 // FUNCTIONS
 //==============================================================================
@@ -394,6 +471,36 @@ free_pma:
 int
 pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
 {
+    if (!pma) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (pma->heap_fd != -1) {
+        char *heap_file = NULL; // TODO
+        if (sync_file_(heap_file, pma->heap_start, false, pma, heap_len) == -1)
+        {
+            fprintf(stderr,
+                    "pma: failed to sync heap changes to %s\n",
+                    heap_file);
+            return -1;
+        }
+    }
+
+    if (pma->stack_fd != -1) {
+        char *stack_file = NULL; // TODO
+        if (sync_file_(stack_file, pma->stack_start, true, pma, stack_len)
+            == -1)
+        {
+            fprintf(stderr,
+                    "pma: failed to sync stack changes to %s\n",
+                    stack_file);
+            return -1;
+        }
+    }
+
+    // TODO: resize backing files + adjust mappings
+
     return 0;
 }
 

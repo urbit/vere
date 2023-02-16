@@ -80,6 +80,10 @@ journal_apply(journal_t *journal, char *base, bool grows_down)
         return -1;
     }
 
+    if (journal->entry_cnt == 0) {
+        return 0;
+    }
+
     if (lseek(journal->fd, 0, SEEK_SET) == (off_t)-1) {
         fprintf(stderr,
                 "journal: failed to seek to beginning of %s: %s\n",
@@ -114,5 +118,4 @@ journal_destroy(journal_t *journal)
     assert(close(journal->fd) == 0);
     assert(unlink(journal->path) == 0);
     free((void *)journal->path);
-    free(journal);
 }
