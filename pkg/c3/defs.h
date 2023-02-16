@@ -192,17 +192,17 @@
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
-typedef enum { ALHI=1, ALLO=0 } align_dir;
+typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
 inline c3_w
 c3_align_w(c3_w x, c3_w al, align_dir hilo) {
-  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
   return x;
 }
 inline c3_d
 c3_align_d(c3_d x, c3_d al, align_dir hilo) {
-  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
   return x;
@@ -210,7 +210,7 @@ c3_align_d(c3_d x, c3_d al, align_dir hilo) {
 inline void*
 c3_align_p(void const * p, size_t al, align_dir hilo) {
   uintptr_t x = (uintptr_t)p;
-  c3_dessert(hilo <= ALHI && hilo >= ALLO);
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
   return (void*)x;
