@@ -414,6 +414,14 @@ sync_file_(const char *path,
         return -1;
     }
 
+    if (fsync(fd) == -1) {
+        fprintf(stderr,
+                "pma: failed to flush changes to %s: %s\n",
+                path,
+                strerror(errno));
+        return -1;
+    }
+
     journal_destroy(&journal);
 
     return 0;
