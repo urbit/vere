@@ -27,20 +27,20 @@
 //==============================================================================
 
 /// Number of bits in a byte.
-static const size_t kBitsPerByte = 8;
+static_ const size_t kBitsPerByte = 8;
 
 /// Number of bits required to track the status of a page.
-static const size_t kBitsPerPage = 2;
+static_ const size_t kBitsPerPage = 2;
 
 /// Number of pages whose status can be tracked in a single byte.
-static const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
+static_ const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
 
 /// Number of bytes in a single entry of the pg_status array of pma_t.
-static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
+static_ const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 
 /// Number of pages whose status can be tracked by a single entry in the
 /// pg_status array of pma_t.
-static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
+static_ const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
 //==============================================================================
 // GLOBAL VARIABLES
