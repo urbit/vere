@@ -357,8 +357,6 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
                   &pma->stack_fd)
         == -1)
     {
-        munmap(pma->heap_start, pma->heap_len);
-        close(pma->heap_fd);
         goto free_pma;
     }
 
@@ -372,7 +370,22 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
                                            (void *)pma);
     pma->max_sz         = 0;
 
+    // The heap and stack are mapped and clean at this point, which means
+    // pma_sync() simply applies the journals to the heap and stack. The
+    // journals will only exist if a crash occurred during the most recent call
+    // to pma_sync().
+    if (pma_sync(pma, pma->heap_len, pma->stack_len) == -1) {
+        fprintf(stderr, "pma: failed to sync\n");
+        goto unmap_stack;
+    }
+
     return pma;
+unmap_stack:
+    munmap((char *)pma->stack_start - pma->stack_len, pma->stack_len);
+    close(pma->stack_fd);
+unmap_heap:
+    munmap(pma->heap_start, pma->heap_len);
+    close(pma->heap_fd);
 free_pma:
     free(pma);
     return NULL;
