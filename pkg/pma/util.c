@@ -2,6 +2,9 @@
 
 #include "util.h"
 
+#include <sys/types.h>
+#include <unistd.h>
+
 //==============================================================================
 // ARITHMETIC
 
@@ -35,11 +38,35 @@ round_up(size_t x, size_t n)
 int
 read_all(int fd, void *buf, size_t len)
 {
-    return -1;
+    if (!buf) {
+        return -1;
+    }
+    char *ptr = buf;
+    do {
+        ssize_t bytes_read = read(fd, ptr, len);
+        if (bytes_read == -1) {
+            return -1;
+        }
+        len -= bytes_read;
+        ptr += bytes_read;
+    } while (len > 0);
+    return 0;
 }
 
 int
 write_all(int fd, const void *buf, size_t len)
 {
+    if (!buf) {
+        return -1;
+    }
+    const char *ptr = buf;
+    do {
+        ssize_t bytes_written = write(fd, buf, len);
+        if (bytes_written == -1) {
+            return -1;
+        }
+        len -= bytes_written;
+        ptr += bytes_written;
+    } while (len > 0);
     return -1;
 }
