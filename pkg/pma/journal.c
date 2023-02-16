@@ -48,6 +48,7 @@ journal_open(const char *path)
     }
 
     journal_t *journal = malloc(sizeof(*journal));
+    journal->path      = strdup(path);
     journal->fd        = fd;
     journal->offset    = 0;
     journal->len       = len;

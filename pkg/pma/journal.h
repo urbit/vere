@@ -11,9 +11,10 @@
 // TYPES
 
 struct journal {
-    int    fd;
-    size_t offset;
-    size_t len;
+    const char *path;
+    int         fd;
+    size_t      offset;
+    size_t      len;
 };
 typedef struct journal journal_t;
 
