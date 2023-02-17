@@ -2,6 +2,9 @@
 
 #include "util.h"
 
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -45,6 +48,19 @@ read_all(int fd, void *buf, size_t len)
     do {
         ssize_t bytes_read = read(fd, ptr, len);
         if (bytes_read == -1) {
+            fprintf(stderr,
+                    "util: failed to read %zu bytes into %p: %s\n",
+                    len,
+                    ptr,
+                    strerror(errno));
+            return -1;
+        }
+        if (bytes_read == 0) {
+            fprintf(stderr,
+                    "util: encountered unexpected EOF when reading %zu bytes "
+                    "into %p\n",
+                    len,
+                    ptr);
             return -1;
         }
         len -= bytes_read;
@@ -61,8 +77,13 @@ write_all(int fd, const void *buf, size_t len)
     }
     const char *ptr = buf;
     do {
-        ssize_t bytes_written = write(fd, buf, len);
+        ssize_t bytes_written = write(fd, ptr, len);
         if (bytes_written == -1) {
+            fprintf(stderr,
+                    "util: failed to write %zu bytes from %p: %s\n",
+                    len,
+                    ptr,
+                    strerror(errno));
             return -1;
         }
         len -= bytes_written;
