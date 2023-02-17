@@ -806,7 +806,7 @@ u3m_error(c3_c* str_c)
 void
 u3m_leap(c3_w pad_w)
 {
-  c3_w     len_w; /* the length of the new road (avail - (pad [4M] + wiseof(u3a_road))) */
+  c3_w     len_w; /* the length of the new road (avail - (pad + wiseof(u3a_road))) */
   u3_road* rod_u;
 
   _rod_vaal(u3R);
