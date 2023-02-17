@@ -108,7 +108,7 @@ static c3_w
 _ce_check_page(c3_w pag_w)
 {
   c3_w* mem_w = u3_Loom + (pag_w << u3a_page);
-  c3_w  mug_w = u3r_mug_words(mem_w, (1 << u3a_page));
+  c3_w  mug_w = u3r_mug_words(mem_w, pag_wiz_i);
 
   return mug_w;
 }
@@ -126,8 +126,8 @@ u3e_check(c3_c* cap_c)
 
     u3m_water(&nwr_w, &swu_w);
 
-    nor_w = (nwr_w + ((1 << u3a_page) - 1)) >> u3a_page;
-    sou_w = (swu_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    nor_w = (nwr_w + (pag_wiz_i - 1)) >> u3a_page;
+    sou_w = (swu_w + (pag_wiz_i - 1)) >> u3a_page;
   }
 
   /* Count dirty pages.
@@ -226,6 +226,8 @@ _ce_ward_clip(c3_w nop_w, c3_w sop_w)
 }
 #endif /* ifdef U3_GUARD_PAGE */
 
+/* u3e_fault(): handle a memory fault.
+*/
 u3e_flaw
 u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 {
@@ -344,8 +346,8 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
   }
 
   pat_u->con_u = c3_malloc(len_w);
-  if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
-        (len_w != sizeof(u3e_control) +
+	if (  (len_w != c3_pread(pat_u->ctl_i, pat_u->con_u, len_w, 0))
+     || (len_w != sizeof(u3e_control) +
                   (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
   {
     c3_free(pat_u->con_u);

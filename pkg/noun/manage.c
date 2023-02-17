@@ -430,7 +430,7 @@ u3m_file(c3_c* pas_c)
 {
   struct stat buf_b;
   c3_i        fid_i = c3_open(pas_c, O_RDONLY, 0644);
-  c3_w        fln_w, red_w;
+  c3_w        fln_w;
   c3_y*       pad_y;
 
   if ( (fid_i < 0) || (fstat(fid_i, &buf_b) < 0) ) {
@@ -440,10 +440,10 @@ u3m_file(c3_c* pas_c)
   fln_w = buf_b.st_size;
   pad_y = c3_malloc(buf_b.st_size);
 
-  red_w = read(fid_i, pad_y, fln_w);
+  ssize_t red_i = c3_pread(fid_i, pad_y, fln_w, 0);
   close(fid_i);
 
-  if ( fln_w != red_w ) {
+  if ( red_i != fln_w ) {
     c3_free(pad_y);
     return u3m_bail(c3__fail);
   }
@@ -473,9 +473,7 @@ u3m_mark(FILE* fil_u)
 static void
 _pave_parts(void)
 {
-  // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
-  // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(50000);
+  u3R->cax.har_p = u3h_new_cache(0);  //  XX use u3_Host.ops_c.hap_w
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
@@ -595,7 +593,7 @@ _find_home(void)
   //  this looks risky, but there are no legitimate scenarios
   //  where it's wrong
   //
-  u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
+  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -814,7 +812,6 @@ u3m_leap(c3_w pad_w)
       u3R->cap_p -= len_w;
 
       rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->cap_p, rod_u->hat_p);
 #if 0
       fprintf(stderr, "leap: from north %p (cap 0x%x), to south %p\r\n",
               u3R,
@@ -827,7 +824,6 @@ u3m_leap(c3_w pad_w)
       u3R->cap_p += len_w;
 
       rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->hat_p, rod_u->cap_p);
 #if 0
       fprintf(stderr, "leap: from south %p (cap 0x%x), to north %p\r\n",
               u3R,
@@ -849,6 +845,7 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
+    u3m_ward();
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
@@ -998,12 +995,22 @@ u3m_flog(c3_w gof_w)
 /* u3m_water(): produce watermarks.
 */
 void
-u3m_water(c3_w* low_w, c3_w* hig_w)
+u3m_water(u3_post* low_p, u3_post* hig_p)
 {
-  c3_assert(u3R == &u3H->rod_u);
-
-  *low_w = u3a_heap(u3R);
-  *hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+  //  in a north road, hat points to the end of the heap + 1 word,
+  //  while cap points to the top of the stack
+  //
+  if ( c3y == u3a_is_north(u3R) ) {
+    *low_p = u3R->hat_p - 1;
+    *hig_p = u3R->cap_p;
+  }
+  //  in a south road, hat points to the end of the heap,
+  //  while cap points to the top of the stack + 1 word
+  //
+  else {
+    *low_p = u3R->cap_p - 1;
+    *hig_p = u3R->hat_p;
+  }
 }
 
 /* u3m_soft_top(): top-level safety wrapper.
@@ -1927,13 +1934,39 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 {
   c3_o nuu_o;
 
-  /* Activate the loom.
-  */
-  u3m_init(len_i);
+  u3C.dir_c = dir_c;
 
   /* Activate the storage system.
   */
-  nuu_o = u3e_live(dir_c);
+  {
+    c3_c ful_c[8193];
+
+    snprintf(ful_c, 8192, "%s", dir_c);
+    if ( c3_mkdir(ful_c, 0700) ) {
+      if ( EEXIST != errno ) {
+        fprintf(stderr, "loom: pier create: %s\r\n", strerror(errno));
+        c3_assert(0);
+      }
+    }
+
+    snprintf(ful_c, 8192, "%s/.urb", dir_c);
+    if ( c3_mkdir(ful_c, 0700) ) {
+      if ( EEXIST != errno ) {
+        fprintf(stderr, "loom: .urb create: %s\r\n", strerror(errno));
+        c3_assert(0);
+      }
+    }
+
+    snprintf(ful_c, 8192, "%s/.urb/chk", dir_c);
+    if ( c3_mkdir(ful_c, 0700) ) {
+      if ( EEXIST != errno ) {
+        fprintf(stderr, "loom: .urb/chk create: %s\r\n", strerror(errno));
+        c3_assert(0);
+      }
+    }
+
+    nuu_o = u3e_live(strdup(ful_c));
+  }
 
   /* Activate tracing.
   */
@@ -1946,15 +1979,10 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   u3m_pave(nuu_o);
 
-  /* Place the guard page.
-  */
-  u3e_init();
-
   /* Initialize the jet system.
   */
   {
     c3_w len_w = u3j_boot(nuu_o);
-    u3l_log("boot: installed %d jets", len_w);
   }
 
   /* Reactivate jets on old kernel.
@@ -1991,10 +2019,6 @@ u3m_boot_lite(size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(c3y);
-
-  /* Place the guard page.
-  */
-  u3e_init();
 
   /* Initialize the jet system.
   */
