@@ -442,7 +442,7 @@ _ce_patch_delete(void)
 {
   c3_c ful_c[8193];
 
-   snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
+  snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
   if ( unlink(ful_c) ) {
     fprintf(stderr, "loom: failed to delete control.bin: %s\r\n",
                     strerror(errno));
@@ -460,8 +460,9 @@ _ce_patch_delete(void)
 static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
+  c3_w    pag_w, mug_w;
+  c3_w    mem_w[pag_wiz_i];
   ssize_t ret_i;
-  c3_w      i_w;
 
   if ( u3e_version != pat_u->con_u->ver_y ) {
     fprintf(stderr, "loom: patch version mismatch: have %u, need %u\r\n",
@@ -470,10 +471,9 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     return c3n;
   }
 
-  for ( i_w = 0; i_w < pat_u->con_u->pgs_w; i_w++ ) {
-    c3_w pag_w = pat_u->con_u->mem_u[i_w].pag_w;
-    c3_w mug_w = pat_u->con_u->mem_u[i_w].mug_w;
-    c3_w mem_w[1 << u3a_page];
+  for ( c3_z i_w = 0; i_w < pat_u->con_u->pgs_w; i_w++ ) {
+    pag_w = pat_u->con_u->mem_u[i_w].pag_w;
+    mug_w = pat_u->con_u->mem_u[i_w].mug_w;
 
     if ( -1 == lseek(pat_u->mem_i, (i_w << (u3a_page + 2)), SEEK_SET) ) {
       fprintf(stderr, "loom: patch seek: %s\r\n", strerror(errno));
@@ -492,13 +492,13 @@ _ce_patch_verify(u3_ce_patch* pat_u)
       c3_w nug_w = u3r_mug_words(mem_w, pag_wiz_i);
 
       if ( mug_w != nug_w ) {
-        fprintf(stderr, "loom: patch mug mismatch %d/%d; (%x, %x)\r\n",
+        fprintf(stderr, "loom: patch mug mismatch %d/%zu; (%x, %x)\r\n",
                         pag_w, i_w, mug_w, nug_w);
         return c3n;
       }
 #if 0
       else {
-        u3l_log("verify: patch %d/%d, %x", pag_w, i_w, mug_w);
+        u3l_log("verify: patch %d/%zu, %x", pag_w, i_w, mug_w);
       }
 #endif
     }
@@ -787,7 +787,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
     c3_w pag_w = pat_u->con_u->mem_u[i_w].pag_w;
     c3_w mem_w[pag_wiz_i];
     c3_i fid_i;
-    c3_w off_w;
+    c3_z off_w;
 
     if ( pag_w < pat_u->con_u->nor_w ) {
       fid_i = u3P.nor_u.fid_i;
