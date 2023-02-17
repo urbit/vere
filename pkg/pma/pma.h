@@ -17,9 +17,13 @@ enum page_status {
 typedef enum page_status page_status_t;
 
 struct pma {
-    void *heap_start;
+    const char *heap_file;
 
-    void *stack_start;
+    const char *stack_file;
+
+    void       *heap_start;
+
+    void       *stack_start;
 
     /// Number of bytes of the heap are mapped into memory. Guaranteed to be a
     /// multiple of kPageSz.

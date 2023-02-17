@@ -454,10 +454,17 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
 
     pma_t *pma = malloc(sizeof(*pma));
 
-    void  *heap_start  = base;
-    void  *stack_start = (char *)heap_start + len;
-    pma->heap_start    = heap_start;
-    pma->stack_start   = stack_start;
+    if (heap_file) {
+        pma->heap_file = strdup(heap_file);
+    }
+    if (stack_file) {
+        pma->stack_file = strdup(stack_file);
+    }
+
+    void *heap_start  = base;
+    void *stack_start = (char *)heap_start + len;
+    pma->heap_start   = heap_start;
+    pma->stack_start  = stack_start;
 
     size_t num_pgs      = round_up(len, kPageSz) / kPageSz;
     size_t bits_needed  = round_up(kBitsPerPage * num_pgs, kBitsPerByte);
@@ -516,6 +523,12 @@ unmap_heap:
     munmap(pma->heap_start, pma->heap_len);
     close(pma->heap_fd);
 free_pma:
+    if (heap_file) {
+        free((void *)pma->heap_file);
+    }
+    if (stack_file) {
+        free((void *)pma->stack_file);
+    }
     free(pma);
     return NULL;
 }
@@ -531,9 +544,8 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     heap_len  = round_up(heap_len, kPageSz);
     stack_len = round_up(stack_len, kPageSz);
 
-    char *heap_file = NULL; // TODO
     if (pma->heap_fd != -1) {
-        if (sync_file_(heap_file,
+        if (sync_file_(pma->heap_file,
                        pma->heap_start,
                        false,
                        pma,
@@ -543,7 +555,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         {
             fprintf(stderr,
                     "pma: failed to sync heap changes to %s\n",
-                    heap_file);
+                    pma->heap_file);
             return -1;
         }
 
@@ -553,7 +565,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                 fprintf(
                     stderr,
                     "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
-                    heap_file,
+                    pma->heap_file,
                     pma->heap_len,
                     heap_len);
                 return -1;
@@ -562,9 +574,8 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         close(pma->heap_fd);
     }
 
-    char *stack_file = NULL; // TODO
     if (pma->stack_fd != -1) {
-        if (sync_file_(stack_file,
+        if (sync_file_(pma->stack_file,
                        pma->stack_start,
                        true,
                        pma,
@@ -574,7 +585,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         {
             fprintf(stderr,
                     "pma: failed to sync stack changes to %s\n",
-                    stack_file);
+                    pma->stack_file);
             return -1;
         }
 
@@ -584,7 +595,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                 fprintf(
                     stderr,
                     "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
-                    stack_file,
+                    pma->stack_file,
                     pma->stack_len,
                     stack_len);
                 return -1;
@@ -600,7 +611,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     set_page_status_range_(pma->heap_start, total / kPageSz, PS_UNMAPPED, pma);
 
     // Remap heap.
-    if (map_file_(heap_file,
+    if (map_file_(pma->heap_file,
                   pma->heap_start,
                   false,
                   pma,
@@ -608,12 +619,12 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                   &pma->heap_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\n", heap_file);
+        fprintf(stderr, "pma: failed to remap %s\n", pma->heap_file);
         return -1;
     }
 
     // Remap stack.
-    if (map_file_(stack_file,
+    if (map_file_(pma->stack_file,
                   pma->stack_start,
                   true,
                   pma,
@@ -621,7 +632,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                   &pma->stack_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\n", stack_file);
+        fprintf(stderr, "pma: failed to remap %s\n", pma->stack_file);
         munmap(pma->heap_start, pma->heap_len);
         close(pma->heap_fd);
         return -1;
