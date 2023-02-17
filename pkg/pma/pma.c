@@ -417,7 +417,7 @@ sync_file_(const char *path,
         return -1;
     }
 
-    if (write_all(fd, base, len) == -1) {
+    if (write_all(fd, grows_down ? ptr + kPageSz : base, len) == -1) {
         fprintf(stderr,
                 "pma: failed to write changes to %s after applying journal\n",
                 path);
