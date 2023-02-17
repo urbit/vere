@@ -123,21 +123,25 @@ test_pma_()
         assert(pma_->max_sz == 0);
 
         void *addr_;
-        char  ch;
+        // Mark as volatile so the compiler doesn't optimize out the assignments
+        // to ch below.
+        volatile char ch;
 
         // Write to the heap.
         addr_ = base_;
         assert(page_status_(addr_, pma_) == PS_UNMAPPED);
-        ch             = *(char *)addr_;
+        ch = *(char *)addr_;
+        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
         *(char *)addr_ = 'h';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
         addr_ = (char *)base_ + len_ - 1;
         assert(page_status_(addr_, pma_) == PS_UNMAPPED);
-        ch             = *(char *)addr_;
+        ch = *(char *)addr_;
+        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
         *(char *)addr_ = 'i';
-        // assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
         assert(pma_sync(pma_, kPageSz, kPageSz) == 0);
 
