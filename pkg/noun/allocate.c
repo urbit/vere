@@ -636,24 +636,15 @@ u3a_walloc(c3_w len_w)
 void*
 u3a_wealloc(void* lag_v, c3_w len_w)
 {
-  c3_w req_w;                   /* allocation request length */
-
-  /* N.B: see related note in _ca_walloc */
-  req_w = len_w
-    + (c3_wiseof(u3a_box) + 1)
-    + u3C.walign_w
-    & ~(u3C.walign_w - 1)
-    - (c3_wiseof(u3a_box) + 1);
-
   if ( !lag_v ) {
-    return u3a_malloc(req_w);
+    return u3a_walloc(len_w);
   }
   else {
     u3a_box* box_u = u3a_botox(lag_v);
     c3_w*    old_w = lag_v;
-    c3_w     tiz_w = c3_min(box_u->siz_w, req_w);
+    c3_w     tiz_w = c3_min(box_u->siz_w, len_w);
     {
-      c3_w* new_w = u3a_walloc(req_w);
+      c3_w* new_w = u3a_walloc(len_w);
       c3_w  i_w;
 
       for ( i_w = 0; i_w < tiz_w; i_w++ ) {
@@ -947,9 +938,6 @@ u3a_realloc(void* lag_v, size_t len_i)
       return new_w;
     }
   }
-  c3_w len_w = (c3_w)len_i;
-
-  return u3a_wealloc(lag_v, (len_w + 3) >> 2);
 }
 
 /* u3a_free(): free for aligned malloc.
