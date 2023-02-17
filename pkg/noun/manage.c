@@ -518,6 +518,8 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    the stack starts at the end of the memory segment,
   //    minus space for the road structure [siz_w]
   //
+  //    NB: the returned road is "above" the stack
+  //
   c3_w* rut_w = mem_w;
   c3_w* mat_w = ((mem_w + len_w) - siz_w);
   c3_w* cap_w = mat_w;
@@ -535,6 +537,8 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    the heap starts at the end of the memory segment;
   //    the stack starts at the base memory pointer [mem_w],
   //    and ends after the space for the road structure [siz_w]
+  //
+  //    NB: the returned road is *on* the stack
   //
   c3_w* rut_w = (mem_w + len_w);
   c3_w* mat_w = mem_w;
