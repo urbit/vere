@@ -17,25 +17,29 @@ page_status_(void *addr, const pma_t *pma);
 //==============================================================================
 // STATIC FUNCTIONS
 
-static int
+static void
 new_file_(const char *path, char ch, size_t pg_cnt)
 {
     int fd = open(path, O_CREAT | O_RDWR | O_TRUNC, 0644);
     assert(fd != -1);
 
-    char buf[pg_cnt * kPageSz];
+    char buf[kPageSz];
     memset(buf, ch, sizeof(buf));
-    assert(write_all(fd, buf, sizeof(buf)) == 0);
+    for (size_t i = 0; i < pg_cnt; i++) {
+        assert(write_all(fd, buf, sizeof(buf)) == 0);
+    }
 
     memset(buf, 0, sizeof(buf));
 
     assert(lseek(fd, 0, SEEK_SET) == 0);
-    assert(read_all(fd, buf, sizeof(buf)) == 0);
-    for (size_t i = 0; i < sizeof(buf); i++) {
-        assert(buf[i] == ch);
+    for (size_t i = 0; i < pg_cnt; i++) {
+        assert(read_all(fd, buf, sizeof(buf)) == 0);
+        for (size_t j = 0; j < sizeof(buf); j++) {
+            assert(buf[j] == ch);
+        }
     }
 
-    return fd;
+    assert(close(fd) == 0);
 }
 
 //==============================================================================
