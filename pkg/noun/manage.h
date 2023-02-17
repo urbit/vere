@@ -159,4 +159,10 @@
         c3_w
         u3m_pack(void);
 
+      /* u3m_migrate: perform loom migration if necessary.
+         ver_w - target version
+      */
+        void
+        u3m_migrate(c3_w ver_w);
+
 #endif /* ifndef U3_MANAGE_H */
