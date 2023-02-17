@@ -139,6 +139,8 @@ test_pma_()
         *(char *)addr_ = 'i';
         // assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
+        assert(pma_sync(pma_, kPageSz, kPageSz) == 0);
+
         pma_deinit(pma_);
         assert(unlink(kHeapFile) == 0);
         assert(unlink(kStackFile) == 0);
