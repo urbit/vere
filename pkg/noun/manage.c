@@ -529,8 +529,8 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    00~~~|R|---|H|######|C|+++|M|~~~FF
   //                                ^--u3R which _pave_road returns (u3H for home road)
   //
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, ALLO);
-  c3_w* rut_w = c3_align(mem_w, u3C.balign_d, ALHI);
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
+  c3_w* rut_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
   c3_w* cap_w = mat_w;
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
@@ -555,8 +555,8 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //
   //    00~~~|M|+++|C|######|H|---|R|~~~FFF
   //         ^---u3R which _pave_road returns
-  c3_w* mat_w = c3_align(mem_w, u3C.balign_d, ALHI);
-  c3_w* rut_w = c3_align(mem_w + len_w, u3C.balign_d, ALLO);
+  c3_w* mat_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
+  c3_w* rut_w = c3_align(mem_w + len_w, u3C.balign_d, C3_ALGLO);
   c3_w* cap_w = mat_w + siz_w;
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
@@ -597,7 +597,7 @@ _find_home(void)
   c3_w* mem_w = u3_Loom + u3C.walign_w;
   c3_w  siz_w = c3_wiseof(u3v_home);
   c3_w  len_w = u3C.wor_i - u3C.walign_w;
-  c3_w*  mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, ALLO);
+  c3_w*  mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
@@ -828,7 +828,7 @@ u3m_leap(c3_w pad_w)
     }
     pad_w += c3_wiseof(u3a_road);
     len_w = u3a_open(u3R) - pad_w;
-    c3_align(len_w, u3C.walign_w, ALHI);
+    c3_align(len_w, u3C.walign_w, C3_ALGHI);
   }
 
   /* Allocate a region on the cap.
@@ -2045,7 +2045,7 @@ _migrate_seek(const u3a_road *rod_u)
       c3_assert(box_u->siz_w);
       c3_assert(box_u->use_w);
       box_w[box_u->siz_w - 1] = new_p;
-      new_p = c3_align(new_p + box_u->siz_w, 2, ALHI);
+      new_p = c3_align(new_p + box_u->siz_w, 2, C3_ALGHI);
     }
 }
 
