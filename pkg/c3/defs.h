@@ -161,4 +161,28 @@
 #     define c3_rename(a, b) ({                                 \
         rename(a, b);})
 
+  /** i/o wrappers
+  ***
+  ***  these handle partial success and retry ephemeral errors
+  ***  up to hardcoded max try count, either reading/writing fully
+  ***  (up to EOF on read) or returning on error.
+  ***
+  ***  a wrapper for read() is not provided, as file cursor position
+  ***  is undefined on error. use pread() or loop yourself.
+  **/
+    /* c3_pread(): full positioned read(), up to eof, retrying errors.
+    */
+      ssize_t
+      c3_pread(c3_i fid_i, void* buf_v, size_t len_i, off_t off_i);
+
+    /* c3_pwrite(): full positioned write(), retrying errors.
+    */
+      ssize_t
+      c3_pwrite(c3_i fid_i, const void* buf_v, size_t len_i, off_t off_i);
+
+    /* c3_write(): full write(), retrying errors.
+    */
+      ssize_t
+      c3_write(c3_i fid_i, const void* buf_v, size_t len_i);
+
 #endif /* ifndef C3_DEFS_H */

@@ -5,7 +5,10 @@
 cc_library(
     name = "c3",
     srcs = glob(
-        ["*.h"],
+        [
+            "*.c",
+            "*.h",
+        ],
         exclude = [
             "c3.h",
             "*_tests.c",
