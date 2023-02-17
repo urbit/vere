@@ -347,7 +347,9 @@ sync_file_(const char *path,
            size_t      len,
            int         fd)
 {
-    assert(path);
+    if (!path) {
+        return 0;
+    }
     assert(base);
     assert(pma);
 
