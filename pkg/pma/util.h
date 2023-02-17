@@ -8,6 +8,15 @@
 //==============================================================================
 // ARITHMETIC
 
+/// Convert `x` gibibytes to bytes.
+#define GiB(x) ((size_t)(x) << 30)
+
+/// Convert `x` mebibytes to bytes.
+#define MiB(x) ((size_t)(x) << 20)
+
+/// Convert `x` kibibytes to bytes.
+#define KiB(x) ((size_t)(x) << 10)
+
 /// Determine the max of `a` and `b`.
 ///
 /// @param[in] a

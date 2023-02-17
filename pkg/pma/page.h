@@ -5,6 +5,8 @@
 
 #include <stddef.h>
 
-#define kPageSz ((size_t)16 << 10)
+#include "util.h"
+
+#define kPageSz ((size_t)KiB(16))
 
 #endif /* ifndef PMA_PAGE_H */
