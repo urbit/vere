@@ -24,6 +24,8 @@
 #    define static_ static
 #endif
 
+#define PMA_DEBUG
+
 //==============================================================================
 // CONSTANTS
 //==============================================================================
@@ -223,7 +225,13 @@ handle_page_fault_(void *fault_addr, void *user_arg)
 static_ int
 handle_sigsegv_(void *fault_addr, int serious)
 {
-    return sigsegv_dispatch(&dispatcher, fault_addr);
+    int rc = sigsegv_dispatch(&dispatcher, fault_addr);
+#ifdef PMA_DEBUG
+    if (rc == 0) {
+        volatile int unused = rc;
+    }
+#endif
+    return rc;
 }
 
 static_ int
