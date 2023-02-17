@@ -648,12 +648,12 @@ pma_deinit(pma_t *pma)
         return;
     }
 
-    munmap(pma->heap_start, pma->heap_len);
+    munmap(pma->heap_start, total_len_(pma));
+
     if (pma->heap_fd != -1) {
         close(pma->heap_fd);
     }
 
-    munmap(pma->stack_start, pma->stack_len);
     if (pma->stack_fd != -1) {
         close(pma->stack_fd);
     }
