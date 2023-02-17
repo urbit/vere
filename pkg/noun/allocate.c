@@ -52,6 +52,15 @@ _box_count(c3_ws siz_ws) { }
 #endif
 
 /* _box_slot(): select the right free list to search for a block.
+   TODO: do we really need a loop to do this?
+
+   so our free list logic looks like this:
+   siz_w < 6 words then [0]
+   siz_w < 16      then [1]
+   siz_w < 32      then [2]
+   siz_w < 64      then [3]
+   ...
+   siz_w > 4G      then [26]
 */
 static c3_w
 _box_slot(c3_w siz_w)
@@ -59,23 +68,18 @@ _box_slot(c3_w siz_w)
   if ( siz_w < u3a_minimum ) {
     return 0;
   }
-  else {
-    c3_w i_w = 1;
 
-    while ( 1 ) {
-      if ( i_w == u3a_fbox_no ) {
-        return (i_w - 1);
-      }
-      if ( siz_w < 16 ) {
-        return i_w;
-      }
-      siz_w = (siz_w + 1) >> 1;
-      i_w += 1;
-    }
+  for (c3_w i_w = 1; i_w < u3a_fbox_no; i_w++) {
+    if ( siz_w < 16 ) return i_w;
+    siz_w = siz_w + 1 >> 1;
   }
+  return u3a_fbox_no - 1;
 }
 
 /* _box_make(): construct a box.
+   box_v - start addr of box
+   siz_w - size of allocated space adjacent to block
+   use_w - box's refcount
 */
 static u3a_box*
 _box_make(void* box_v, c3_w siz_w, c3_w use_w)
@@ -438,8 +442,18 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
 
   alp_w = (alp_w + c3_wiseof(u3a_box)) % ald_w;
 
-  //  XX: this logic is totally bizarre, but preserve it.
-  //
+  /*  XX: this logic is totally bizarre, but preserve it.
+  **
+  **  This means we use the next size bigger instead of the "correct"
+  **  size.  For example, a 20 word allocation will be freed into free
+  **  list 2 but will be allocated from free list 3.
+  **
+  **  This is important to preserve because the sequential search may be
+  **  very slow.  On a real-world task involving many compilations,
+  **  removing this line made this function appear in ~80% of samples.
+  **
+  **  For reference, this was added in cgyarvin/urbit ffed9e748d8f6c.
+  */
   if ( (sel_w != 0) && (sel_w != u3a_fbox_no - 1) ) {
     sel_w += 1;
   }
@@ -449,6 +463,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
     u3p(u3a_fbox) *pfr_p = &u3R->all.fre_p[sel_w];
 
     while ( 1 ) {
+      /* increment until we get a non-null freelist */
       if ( 0 == *pfr_p ) {
         if ( sel_w < (u3a_fbox_no - 1) ) {
           sel_w += 1;
@@ -480,7 +495,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
           else return u3a_boxto(box_u);
         }
       }
-      else {
+      else {                    /* we got a non-null freelist */
         c3_w pad_w = _me_align_pad(*pfr_p, ald_w, alp_w);
 
         if ( 1 == ald_w ) c3_assert(0 == pad_w);
@@ -491,7 +506,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
           pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
           continue;
         }
-        else {
+        else {                  /* free block fits desired alloc size */
           u3a_box* box_u = &(u3to(u3a_fbox, *pfr_p)->box_u);
 
           /* We have found a free block of adequate size.  Remove it
@@ -499,25 +514,30 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w alp_w)
           */
           siz_w += pad_w;
           _box_count(-(box_u->siz_w));
+          /* misc free list consistency checks.
+            TODO: in the future should probably only run for C3DBG builds */
           {
             if ( (0 != u3to(u3a_fbox, *pfr_p)->pre_p) &&
                  (u3to(u3a_fbox, u3to(u3a_fbox, *pfr_p)->pre_p)->nex_p
                     != (*pfr_p)) )
-            {
+            {                   /* this->pre->nex isn't this */
               c3_assert(!"loom: corrupt");
             }
 
             if( (0 != u3to(u3a_fbox, *pfr_p)->nex_p) &&
                 (u3to(u3a_fbox, u3to(u3a_fbox, *pfr_p)->nex_p)->pre_p
                    != (*pfr_p)) )
-            {
+            {                   /* this->nex->pre isn't this */
               c3_assert(!"loom: corrupt");
             }
 
+            /* pop the block */
+            /* this->nex->pre = this->pre  */
             if ( 0 != u3to(u3a_fbox, *pfr_p)->nex_p ) {
               u3to(u3a_fbox, u3to(u3a_fbox, *pfr_p)->nex_p)->pre_p =
                 u3to(u3a_fbox, *pfr_p)->pre_p;
             }
+            /* this = this->nex */
             *pfr_p = u3to(u3a_fbox, *pfr_p)->nex_p;
           }
 
