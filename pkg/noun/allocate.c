@@ -20,9 +20,6 @@ c3_w u3_Code;
 //
 
 void u3a_config_loom(c3_w ver_w);
-c3_w c3_align_w(c3_w x, c3_w al, align_dir hilo); /* ;;: after rebasing on /vere, these should be declared somewhere else (the align functions) */
-c3_d c3_align_d(c3_d x, c3_d al, align_dir hilo);
-void *c3_align_p(void const * p, size_t al, align_dir hilo);
 void *u3a_into(c3_w x);
 c3_w u3a_outa(void *p);
 c3_w u3a_to_off(c3_w som);

@@ -186,10 +186,16 @@
 #     define c3_rename(a, b) ({                                 \
         rename(a, b);})
 
-/* c3_align: hi or lo align x to al
+/* c3_align(
+       x    - the address/quantity to align,
+       al   - the alignment,
+       hilo - [C3_ALGHI, C3_ALGLO] high or low align
+   )
+
+   hi or lo align x to al
 
    unless effective type of x is c3_w or c3_d, assumes x is a pointer.
-   */
+*/
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
            c3_w     : c3_align_w,               \
