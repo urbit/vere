@@ -346,6 +346,7 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
   }
 
   pat_u->con_u = c3_malloc(len_w);
+
 	if (  (len_w != c3_pread(pat_u->ctl_i, pat_u->con_u, len_w, 0))
      || (len_w != sizeof(u3e_control) +
                   (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
