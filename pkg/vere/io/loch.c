@@ -11,6 +11,7 @@
     c3_c*      fil_c;                   //  file of device
     c3_w       fid_w;                   //  file descriptor
     c3_o       opn_o;                   //  is the file open
+    c3_w       tus_w;                   //  device status
   } u3_device;
 
 /* u3_loch: a list of devices
@@ -78,6 +79,7 @@ _loch_ef_read(u3_loch* teh_u, u3_noun cmd)
 static void
 _loch_born_news(u3_ovum* egg_u, u3_ovum_news new_e)
 {
+  u3l_log("loch: %%born win;");
   u3_auto* car_u = egg_u->car_u;
 
   if ( u3_ovum_done == new_e ) {
@@ -101,20 +103,33 @@ _loch_born_bail(u3_ovum* egg_u, u3_noun lud)
 static void
 _loch_io_talk(u3_auto* car_u)
 {
-  u3_loch* teh_u = (u3_loch*)car_u;
-
-  //  the card should have a list of all devices
-  //  one way is to ensure all devices are motes
-  u3_noun wir = u3nt(c3__loch,
-                     u3_nul,
-                     u3_nul);
-  u3_noun cad = u3nc(c3__born, teh_u->dev_u[0].nam_w);
+  u3_loch* loc_u = (u3_loch*)car_u;
+  u3_noun  wir = u3nt(c3__loch,
+                      u3dc("scot", c3__uv, 1),
+                      u3_nul);
+  u3_noun  cad = u3nc(c3__born, u3_nul);
 
   u3_auto_peer(
     u3_auto_plan(car_u, u3_ovum_init(0, c3__l, wir, cad)),
     0,
     _loch_born_news,
     _loch_born_bail);
+  // [1 %ovum [%l /test %devs [%i2c %.y]]]" 
+  for( c3_w i = 0; i< loc_u->cnt_w; i++ ) {
+    u3_noun  wir = u3nt(c3__loch,
+                        u3dc("scot", c3__uv, i+1),
+                        u3_nul);
+    u3_noun  cad = u3nc(c3__devs, 
+                        u3nc(loc_u->dev_u[i].nam_w, loc_u->dev_u[i].tus_w));
+    u3_auto_peer(
+      u3_auto_plan(car_u, u3_ovum_init(0, c3__l, wir, cad)),
+      0,
+      _loch_born_news,
+      _loch_born_bail);
+                        
+  }
+  
+  car_u->liv_o = c3y;
 }
 
 /* _loch_io_kick(): apply effects.
@@ -135,6 +150,7 @@ _loch_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     ret_o = c3n;
   }
   else {
+    u3l_log("loch: %%kick win;~tiller-tolbus ");
     ret_o = c3y;
     _loch_ef_read(teh_u, u3k(dat)); // apply writ command
   }
@@ -185,6 +201,7 @@ u3_loch_io_init(u3_pier* pir_u)
       fprintf(stderr, "Unable to open device file %s \n", teh_u->dev_u[i].fil_c);
     } else {
       teh_u->dev_u[i].opn_o = c3y;
+      teh_u->dev_u[i].tus_w = 0;
     }
   }
 
