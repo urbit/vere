@@ -64,7 +64,7 @@
   /** Globals.
   **/
       /// Snapshotting system.
-      extern u3e_pool u3e_Pool;
+      c3_global u3e_pool u3e_Pool;
 #     define u3P u3e_Pool
 
   /** Constants.

@@ -145,6 +145,14 @@
 #     error "port: LoomBase"
 #   endif
 
+  /** Global variable control.
+  ***
+  *** To instantiate globals, #define c3_global as extern.
+  **/
+#   ifndef c3_global
+#     define c3_global
+#   endif
+
 
   /** Private C "extensions."
   ***

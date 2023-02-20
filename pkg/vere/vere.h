@@ -678,8 +678,8 @@
 
   /** Global variables.
   **/
-    extern u3_host   u3_Host;
-    extern u3_king   u3_King;
+    c3_global u3_host   u3_Host;
+    c3_global u3_king   u3_King;
 
   /** Functions.
   **/

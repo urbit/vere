@@ -782,6 +782,7 @@ u3m_error(c3_c* str_c)
 void
 u3m_leap(c3_w pad_w)
 {
+  fprintf(stderr, "leap: %d\r\n", pad_w);
   c3_w     len_w;
   u3_road* rod_u;
 

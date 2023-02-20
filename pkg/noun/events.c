@@ -84,9 +84,6 @@
 #include "retrieve.h"
 #include "types.h"
 
-/// Snapshotting system.
-u3e_pool u3e_Pool;
-
 //! Urbit page size in 4-byte words.
 #define pag_wiz_i  ((size_t)1 << u3a_page)
 
@@ -178,6 +175,7 @@ _ce_flaw_protect(c3_w pag_w)
 static inline c3_i
 _ce_ward_protect(void)
 {
+  fprintf(stderr, "loom: ward protect (%d)\r\n", u3P.gar_w);
   if ( 0 != mprotect((void *)(u3_Loom + (u3P.gar_w << u3a_page)),
                       pag_siz_i,
                       PROT_NONE) )
@@ -196,6 +194,8 @@ static inline c3_i
 _ce_ward_post(c3_w nop_w, c3_w sop_w)
 {
   u3P.gar_w = nop_w + ((sop_w - nop_w) / 2);
+  fprintf(stderr, "loom: ward post (>%u %u %u<)\r\n",
+                  nop_w, u3P.gar_w, sop_w);
   return _ce_ward_protect();
 }
 
@@ -312,17 +312,11 @@ _ce_image_open(u3e_image* img_u)
 static void
 _ce_patch_write_control(u3_ce_patch* pat_u)
 {
-  ssize_t ret_i;
-  c3_w    len_w = sizeof(u3e_control) +
-                  (pat_u->con_u->pgs_w * sizeof(u3e_line));
+  c3_w len_w = sizeof(u3e_control) +
+               (pat_u->con_u->pgs_w * sizeof(u3e_line));
 
-  if ( len_w != (ret_i = write(pat_u->ctl_i, pat_u->con_u, len_w)) ) {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: patch ctl partial write: %zu\r\n", (size_t)ret_i);
-    }
-    else {
-      fprintf(stderr, "loom: patch ctl write: %s\r\n", strerror(errno));
-    }
+  if ( 0 > c3_pwrite(pat_u->ctl_i, pat_u->con_u, len_w, 0) ) {
+    fprintf(stderr, "loom: patch write: %s\r\n", strerror(errno));
     c3_assert(0);
   }
 }
@@ -347,7 +341,7 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
 
   pat_u->con_u = c3_malloc(len_w);
 
-	if (  (len_w != c3_pread(pat_u->ctl_i, pat_u->con_u, len_w, 0))
+  if (  (len_w != c3_pread(pat_u->ctl_i, pat_u->con_u, len_w, 0))
      || (len_w != sizeof(u3e_control) +
                   (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
   {
@@ -1378,6 +1372,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     c3_assert( !_ce_ward_post(nop_w, sop_w) );
     c3_assert( !_ce_flaw_protect(pag_w) );
+    fprintf(stderr, "loom: ward %d %d %d\r\n", nop_w, pag_w, sop_w);
     c3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
