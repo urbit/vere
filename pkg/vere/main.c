@@ -829,6 +829,15 @@ _cw_serf_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   exit(1);
 }
 
+/* _cw_king_fail(): local failure stub.
+*/
+static void
+_cw_king_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
+{
+  fprintf(stderr, "king: eval error: %s\r\n", err_c);
+  exit(1);
+}
+
 /* _cw_serf_send(): send plea back to daemon.
 */
 static void
@@ -925,7 +934,7 @@ static void
 _cw_serf_stdio(c3_i* inn_i, c3_i* out_i)
 {
   //  the serf is spawned with [FD 0] = events and [FD 1] = effects
-  //  we dup [FD 0 & 1] so we don't accidently use them for something else
+  //  we dup [FD 0 & 1] so we don't accidentally use them for something else
   //  we replace [FD 0] (stdin) with a fd pointing to /dev/null
   //  we replace [FD 1] (stdout) with a dup of [FD 2] (stderr)
   //
@@ -960,7 +969,7 @@ static void
 _cw_init_io(uv_loop_t* lup_u)
 {
   //  mars is spawned with [FD 0] = events and [FD 1] = effects
-  //  we dup [FD 0 & 1] so we don't accidently use them for something else
+  //  we dup [FD 0 & 1] so we don't accidentally use them for something else
   //  we replace [FD 0] (stdin) with a fd pointing to /dev/null
   //  we replace [FD 1] (stdout) with a dup of [FD 2] (stderr)
   //
@@ -1186,19 +1195,21 @@ _cw_eval_get_input(FILE* fil_u, size_t siz_i)
 static void
 _cw_eval(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
-  c3_w arg_w;
-  c3_o jam_o = c3n;
-  c3_o kan_o = c3n;
+  u3_mojo std_u;
+  c3_i    ch_i, lid_i;
+  c3_w    arg_w;
+  c3_o    jam_o = c3n;
+  c3_o    new_o = c3n;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
-    { "jam", no_argument, NULL, 'j' },
-    { "jamkhan", no_argument, NULL, 'k' },
+    { "loom", required_argument,  NULL, c3__loom },
+    { "jam",  no_argument,        NULL, 'j' },
+    { "newt", no_argument,        NULL, 'n' },
+    //
     { NULL, 0, NULL, 0 }
   };
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "jn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
         c3_w lom_w;
@@ -1212,12 +1223,10 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
       case 'j': {
         jam_o = c3y;
-        kan_o = c3n;
       } break;
 
-      case 'k': {
-        jam_o = c3y;
-        kan_o = c3y;
+      case 'n': {
+        new_o = c3y;
       } break;
 
       case '?': {
@@ -1226,6 +1235,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
       } break;
     }
   }
+
+  //  newt meaningless without jam
+  //
+  if ( ( c3y == new_o ) && ( c3n == jam_o) ) {
+    fprintf(stderr, "--newt meaningless w/o --jam; ignoring\r\n");
+  }
   //  argv[optind] is always "eval"
   //
   if ( optind + 1 != argc ) {
@@ -1233,6 +1248,19 @@ _cw_eval(c3_i argc, c3_c* argv[])
     exit(1);
   }
   c3_c* evl_c = _cw_eval_get_input(stdin, 10);
+
+  //  configure stdout as u3_mojo
+  //
+  {
+    c3_i err_i;
+    err_i = uv_pipe_init(uv_default_loop(), &std_u.pyp_u, 0);
+    c3_assert(!err_i);
+    uv_pipe_open(&std_u.pyp_u, 1);
+
+    std_u.ptr_v = NULL;
+    std_u.bal_f = _cw_king_fail;
+  }
+
   //  initialize the Loom and load the Ivory Pill
   //
   {
@@ -1254,6 +1282,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
   }
+
   fprintf(stderr, "eval:\n");
   if ( c3n == jam_o ) {
     //  +wish for an eval gate (virtualized twice for pretty-printing)
@@ -1275,36 +1304,19 @@ _cw_eval(c3_i argc, c3_c* argv[])
   } else {
     u3_noun sam = u3i_string(evl_c);
     u3_noun res = u3m_soft(0, u3v_wish_n, sam);
-    c3_d bits = 0;
-    c3_d len_d = 0;
-    c3_y* byt_y;
+    c3_d    bits = 0;
+    c3_d    len_d = 0;
+    c3_y*   byt_y;
     if ( 0 == u3h(res) ) {  //  successful execution, print output
       bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
-      if ( c3n == kan_o ) {
-        fprintf(stderr,"jammed noun: ");
+      if ( c3n == new_o ) {
+        fprintf(stderr,"jammed noun:\n");
         for ( size_t p=0; p < len_d; p++ ){
           fprintf(stdout,"\\x%2x", byt_y[p++]);
         }
-        fprintf(stderr,"\n");
       } else {
-         fprintf(stderr,"khan jammed noun: ");
-         c3_y out_y[5];
-         out_y[0] = 0x0;
-         out_y[1] = ( len_d        & 0xff);
-         out_y[2] = ((len_d >>  8) & 0xff);
-         out_y[3] = ((len_d >> 16) & 0xff);
-         out_y[4] = ((len_d >> 24) & 0xff);
-         fwrite(out_y, 1, 5, stdout);
-         if( ferror(stdout) ) {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-         }
-         fwrite(byt_y, 1, len_d, stdout);
-         if( ferror(stdout) ) {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-         }
-         fprintf(stderr, "\n");
+         fprintf(stderr,"khan jammed noun:\n");
+         u3_newt_send(&std_u, len_d, byt_y);
       }
     } else {                  //  error, print stack trace
        u3_pier_punt_goof("eval", u3k(res));
