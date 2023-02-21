@@ -22,10 +22,6 @@ on:
         description: 'Run fake ship tests'
         type: boolean
         default: true
-      release:
-        description: 'Create a GitHub release'
-        type: boolean
-        default: false
         required: false
     secrets:
       GCP_CREDENTIALS:
@@ -35,6 +31,7 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   urbit:
@@ -176,28 +173,7 @@ jobs:
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
-      
-      - name: Create a GitHub release
-        if: ${{ inputs.release }}
-        run: |
-          # Create or update the GitHub release.
-          # Compress and upload binary assets to release.
-          version="vere-v$(cat ./VERSION)"
-          exists=$(gh release list | cut -f 1 | grep -c "$version")
-          if [[ $exists -eq 0 ]]; then
-            # Create a new tag.
-            git tag $version
-            git push origin --tags
-            # Create a draft release with automatically-generated notes and
-            # source code archives.
-            gh release create $version \
-              --draft \
-              --generate-notes
-          fi
-          # Upload the binary to the release.
-          chmod +x ${{ env.urbit_static }}
-          tar -czf ${{ matrix.target }}.tgz ${{ env.urbit_static }}
-          gh release upload $version ${{ matrix.target }}.tgz
+
 
       #
       # DOCKER

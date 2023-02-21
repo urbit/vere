@@ -530,8 +530,23 @@ _main_getopt(c3_i argc, c3_c** argv)
   else if ( u3_Host.ops_u.nuu == c3y
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.git == c3n ) {
-    u3_Host.ops_u.url_c =
-      "https://bootstrap.urbit.org/urbit-v" URBIT_VERSION ".pill";
+
+    c3_c version_c[strlen(URBIT_VERSION) + 1];
+    strcpy(version_c, URBIT_VERSION);
+    c3_c* hyphen_c = strchr(version_c, '-');
+    // URBIT_VERSION has the form {version}-{commit_sha} when built on
+    // non-"live" channels, which means we need to strip off the trailing commit
+    // SHA in those cases.
+    if ( hyphen_c ) {
+      *hyphen_c = '\0';
+    }
+    c3_i res_i = asprintf(&u3_Host.ops_u.url_c,
+                          "https://bootstrap.urbit.org/urbit-v%s.pill",
+                          version_c);
+    if ( res_i < 0 ) {
+      fprintf(stderr, "failed to construct pill URL\n");
+      return c3n;
+    }
   }
   else if ( u3_Host.ops_u.nuu == c3y
            && u3_Host.ops_u.url_c == 0
