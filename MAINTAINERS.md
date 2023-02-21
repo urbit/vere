@@ -148,5 +148,11 @@ This instructions are performed **on release day** to prepare the next release c
   - [ ] `git checkout -b merge-master-v{version}-into-develop`
   - [ ] `git push origin merge-master-v{version}-into-develop`
   - [ ] Create, approve, and merge a pull request from `merge-master-v{version}-into-develop` into `master`
-- [ ] Merge `develop` into `release` and `git push origin release`
+- [ ] Merge `develop` into `release` (to ensure any changes made to `develop` are reflected back into `release`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout develop`
+  - [ ] `git reset --hard origin/develop`
+  - [ ] `git checkout -b merge-develop-v{version}-into-release`
+  - [ ] `git push origin merge-develop-v{version}-into-release`
+  - [ ] Create, approve, and merge a pull request from `merge-develop-v{version}-into-release` into `release`
 - [ ] Update the `VERSION` file to the next version on the `develop` branch and `git push origin develop`
