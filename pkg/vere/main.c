@@ -1232,6 +1232,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   c3_w    arg_w;
   c3_o    cue_o = c3n;
   c3_o    jam_o = c3n;
+  c3_o    kan_o = c3n;
   c3_o    new_o = c3n;
 
   static struct option lop_u[] = {
@@ -1243,7 +1244,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     { NULL, 0, NULL, 0 }
   };
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "cjn", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
         c3_w lom_w;
@@ -1261,6 +1262,10 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
       case 'j': {
         jam_o = c3y;
+      } break;
+
+      case 'k': {
+        kan_o = c3y;
       } break;
 
       case 'n': {
@@ -1356,7 +1361,24 @@ _cw_eval(c3_i argc, c3_c* argv[])
       fprintf(stderr, "cue failed\n");
       exit(1);
     }
-    c3_c* pre_c = u3m_pretty(u3k(som));
+    c3_c* pre_c;
+    u3k(som);
+    //  if input is jammed khan output
+    if ( c3y == kan_o ) {
+      u3_noun cop, uid, mar, res, tan;
+      u3x_qual(som, &uid, &mar, &res, &tan);
+      //  and if result is a goof
+      if ( c3n == res ) {
+        //  pretty-print tang to stderr and output only header
+        u3_Host.ops_u.dem = c3y;
+        u3_pier_punt_goof("eval", tan);
+        cop = som;
+        som = u3i_trel(uid, mar, res);
+        u3k(som);
+        u3z(cop);
+      }
+    }
+    pre_c = u3m_pretty(som);
     fprintf(stdout, "%s\n", pre_c);
     c3_free(pre_c);
     u3z(som);
