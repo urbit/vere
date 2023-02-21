@@ -152,6 +152,8 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+  u3_Host.ops_u.map = c3y;
+
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -2409,6 +2411,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_w |= u3o_debug_ram;
+      }
+
+      /*  Set no-demand flag.
+      */
+      if ( !_(u3_Host.ops_u.map) ) {
+        u3C.wag_w |= u3o_no_demand;
       }
 
       /*  Set profile flag.

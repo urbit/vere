@@ -124,15 +124,14 @@ _cm_punt(u3_noun tax)
 static void
 _cm_emergency(c3_c* cap_c, c3_l sig_l)
 {
-  write(2, "\r\n", 2);
-  write(2, cap_c, strlen(cap_c));
-
+  c3_i ret_i;
+  ret_i = write(2, "\r\n", 2);
+  ret_i = write(2, cap_c, strlen(cap_c));
   if ( sig_l ) {
-    write(2, ": ", 2);
-    write(2, &sig_l, 4);
+    ret_i = write(2, ": ", 2);
+    ret_i = write(2, &sig_l, 4);
   }
-
-  write(2, "\r\n", 2);
+  ret_i = write(2, "\r\n", 2);
 }
 
 static void _cm_overflow(void *arg1, void *arg2, void *arg3)
@@ -473,7 +472,7 @@ u3m_mark(FILE* fil_u)
 static void
 _pave_parts(void)
 {
-  u3R->cax.har_p = u3h_new_cache(0);  //  XX use u3_Host.ops_c.hap_w
+  u3R->cax.har_p = u3h_new_cache(50000);  //  XX use u3_Host.ops_c.hap_w
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
@@ -782,7 +781,6 @@ u3m_error(c3_c* str_c)
 void
 u3m_leap(c3_w pad_w)
 {
-  fprintf(stderr, "leap: %d\r\n", pad_w);
   c3_w     len_w;
   u3_road* rod_u;
 
@@ -1937,6 +1935,10 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 
   u3C.dir_c = dir_c;
 
+  /* Activate the loom.
+  */
+  u3m_init(len_i);
+
   /* Activate the storage system.
   */
   {
@@ -2020,6 +2022,10 @@ u3m_boot_lite(size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(c3y);
+
+  /* Place the guard page.
+  */
+  u3e_init();
 
   /* Initialize the jet system.
   */

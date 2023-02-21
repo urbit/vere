@@ -175,7 +175,6 @@ _ce_flaw_protect(c3_w pag_w)
 static inline c3_i
 _ce_ward_protect(void)
 {
-  fprintf(stderr, "loom: ward protect (%d)\r\n", u3P.gar_w);
   if ( 0 != mprotect((void *)(u3_Loom + (u3P.gar_w << u3a_page)),
                       pag_siz_i,
                       PROT_NONE) )
@@ -194,8 +193,6 @@ static inline c3_i
 _ce_ward_post(c3_w nop_w, c3_w sop_w)
 {
   u3P.gar_w = nop_w + ((sop_w - nop_w) / 2);
-  fprintf(stderr, "loom: ward post (>%u %u %u<)\r\n",
-                  nop_w, u3P.gar_w, sop_w);
   return _ce_ward_protect();
 }
 
@@ -1194,7 +1191,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   }
 #endif
 
-  if ( u3C.wag_w ) {
+  if ( u3C.wag_w & u3o_no_demand ) {
     _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
   }
   else {
@@ -1282,7 +1279,7 @@ u3e_live(c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
-        if ( u3C.wag_w ) {
+        if ( u3C.wag_w & u3o_no_demand ) {
           _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
         }
         else {
@@ -1300,7 +1297,7 @@ u3e_live(c3_c* dir_c)
         u3l_log("live: logical boot\r\n");
         nuu_o = c3y;
       }
-      else  if ( u3C.wag_w ) {
+      else  if ( u3C.wag_w & u3o_no_demand ) {
         u3a_print_memory(stderr, "live: loaded", (nor_w + sou_w) << u3a_page);
       }
       else {
@@ -1372,7 +1369,6 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     c3_assert( !_ce_ward_post(nop_w, sop_w) );
     c3_assert( !_ce_flaw_protect(pag_w) );
-    fprintf(stderr, "loom: ward %d %d %d\r\n", nop_w, pag_w, sop_w);
     c3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
