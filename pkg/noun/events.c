@@ -271,6 +271,7 @@ _ce_image_open(u3e_image* img_u)
 
   snprintf(ful_c, 8192, "%s/%s.bin", u3P.dir_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(ful_c, mod_i, 0666)) ) {
+    fprintf(stderr, "_ce_image_open\r\n");
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
     return c3n;
   }
@@ -1080,8 +1081,8 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
 c3_o
 u3e_backup(c3_o ovw_o)
 {
-  u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
-  u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
+  u3e_image nop_u = u3P.nor_u;
+  u3e_image sop_u = u3P.sou_u;
   c3_i mod_i = O_RDWR | O_CREAT;
   c3_c ful_c[8193];
 
@@ -1094,14 +1095,15 @@ u3e_backup(c3_o ovw_o)
     return c3n;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, nop_u.nam_c);
+  snprintf(ful_c, 8192, "%s/%s.bin", u3P.dir_c, nop_u.nam_c);
 
   if ( -1 == (nop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
+    fprintf(stderr, "u3e_backup\r\n");
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
     return c3n;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, sop_u.nam_c);
+  snprintf(ful_c, 8192, "%s/%s.bin", u3P.dir_c, sop_u.nam_c);
 
   if ( -1 == (sop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
@@ -1113,7 +1115,7 @@ u3e_backup(c3_o ovw_o)
   {
 
     c3_unlink(ful_c);
-    snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, nop_u.nam_c);
+    snprintf(ful_c, 8192, "%s/%s.bin", u3P.dir_c, nop_u.nam_c);
     c3_unlink(ful_c);
     snprintf(ful_c, 8192, "%s/.urb/bhk", u3P.dir_c);
     c3_rmdir(ful_c);
@@ -1121,6 +1123,8 @@ u3e_backup(c3_o ovw_o)
 
   close(nop_u.fid_i);
   close(sop_u.fid_i);
+
+  return c3y;
 }
 
 /*
@@ -1205,7 +1209,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
-  u3e_backup(c3n);
+  u3e_backup(c3y);
 }
 
 /* u3e_live(): start the checkpointing system.
