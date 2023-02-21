@@ -65,7 +65,7 @@ _main_self_path(void)
 
 /* _main_readw(): parse a word from a string.
 */
-static u3_noun
+static c3_o
 _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
 {
   c3_c* end_c;
@@ -76,6 +76,21 @@ _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
     return c3y;
   }
   else return c3n;
+}
+
+/* _main_readw_loom(): parse loom pointer bit size from a string.
+*/
+static c3_i
+_main_readw_loom(const c3_c* arg_c, c3_y* out_y)
+{
+  c3_w lom_w;
+  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
+  if ( res_o == c3n || (lom_w < 20) ) {
+    fprintf(stderr, "error: --%s must be >= 20 and <= %u\r\n", arg_c, u3a_bits_max);
+    return -1;
+  }
+  *out_y = lom_w;
+  return 0;
 }
 
 /* _main_presig(): prefix optional sig.
@@ -258,26 +273,17 @@ _main_getopt(c3_i argc, c3_c** argv)
       //  urth-loom
       //
       case 5: {
-        c3_w lut_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lut_w);
-        if ( (c3n == res_o) || (lut_w < 20) ) {
-          fprintf(stderr, "error: --urth-loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
-
-        u3_Host.ops_u.lut_y = lut_w;
         break;
       }
       //  special args
       //
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           return c3n;
         }
-        u3_Host.ops_u.lom_y = lom_w;
         break;
       }
       case c3__http: {
@@ -1247,13 +1253,9 @@ _cw_eval(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 24) ) {
-          fprintf(stderr, "error: --loom must be >= 24 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case 'c': {
@@ -1515,13 +1517,9 @@ _cw_cram(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1594,13 +1592,9 @@ _cw_queu(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1679,13 +1673,9 @@ _cw_meld(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1753,13 +1743,9 @@ _cw_next(c3_i argc, c3_c* argv[])
       } break;
 
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1812,13 +1798,9 @@ _cw_pack(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1927,13 +1909,9 @@ _cw_prep(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1985,13 +1963,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -2272,13 +2246,9 @@ _cw_vile(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
