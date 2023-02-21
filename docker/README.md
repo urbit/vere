@@ -33,6 +33,11 @@ For best performance, you must map the Ames UDP port to the *same* port on the h
 
 For this purpose you can force Ames to use a custom port. `/bin/start-urbit --port=$AMES_PORT` can be passed as an argument to the `docker start` command. Passing `/bin/start-urbit --port=13436` for example, would use port 13436. You must pass the name of the start script `/bin/start-urbit` in order to also pass arguments, if this is omitted your container will not start.
 
+You can also set the http port using `--http-port=$HTTP_PORT`. Passing `/bin/start-urbit --http-port=8085` for example, would use port 8085. The default http port is 8080.
+
+### Variable Loom Size
+You can also set a variable loom size using `--loom=$LOOM_SIZE`. Passing `/bin/start-urbit --loom=32` for example, would setup a 4GB loom. The default loom size is 31 (2GB).
+
 ### Examples
 Creating a volume for ~sampel=palnet:
 ```

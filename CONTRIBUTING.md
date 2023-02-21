@@ -51,11 +51,11 @@ Reference any related issues, links, papers, etc. here.
 Tests will run automatically via GitHub Actions when you open a pull request or
 push new commits to an existing pull request.
 
-Once you've collected and addressed feedback and are ready to merge, squash and
-merge the pull request. Use the default squash commit message. Assuming that you
-properly included the "Resolves #N." directive in the pull request description,
-merging will automatically close the tracking issue associated with the pull
-request.
+Once you've collected and addressed feedback and are ready to merge, merge the
+pull request. Use the default commit message which should default to your PR
+title and description. Assuming that you properly included the "Resolves #N."
+directive in the pull request description, merging will automatically close the
+tracking issue associated with the pull request.
 
 
 ## Development Environment
@@ -114,3 +114,37 @@ $ ./urbit <ship>
 
 
 [^1]: Unless you specify the pier using the `-c` flag.
+
+### Enable Language Server Processing
+
+We support the [`clangd`](https://clangd.llvm.org/installation) 
+language server, which can be installed directly on your system or 
+via one of the official editor plugins.
+
+After installing `clangd`, configure it to use the following arguments 
+(location of these arguments may vary depending on your editor plugin or 
+if you've installed `clangd` directly on your system).
+
+For example, if you use Visual Studio Code, you can add the following to your
+user settings:
+
+```json
+{
+  "clangd.arguments": [
+    "--header-insertion=never",
+    "--compile-commands-dir=${workspaceFolder}/",
+    "--query-driver=**",
+  ],
+}
+```
+
+For other editors, please refer to the 
+[editor plugin documentation](https://clangd.llvm.org/installation.html#editor-plugins).
+
+Finally, run the following command to generate a `compile_commands.json` file, 
+which is used by `clangd` to enable all of its features (e.g. code completion, 
+jump to definition, cross-references, hovering, symbol renaming, etc.):
+
+```console
+bazel run //bazel:refresh_compile_commands
+```
