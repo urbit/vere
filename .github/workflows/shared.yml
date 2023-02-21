@@ -35,6 +35,7 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   urbit:
