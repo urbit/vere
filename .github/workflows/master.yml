@@ -22,5 +22,4 @@ jobs:
       pace: 'live'
       upload: true
       fake_tests: false
-      release: true
     secrets: inherit
