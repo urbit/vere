@@ -360,9 +360,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
       i_w++;
     }
 
-    u3_noun aut = u3kdi_has(
-      u3k(fig_u->ses),
-      u3i_bytes(val_y, (c3_y*)val_c));
+    u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
     c3_assert(c3y == aut || c3n == aut);
 
     return aut;
