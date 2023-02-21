@@ -141,7 +141,12 @@ the "General" channel of the [Urbit Community group][urbit-community].
 
 This instructions are performed **on release day** to prepare the next release candidate.
 
-- [ ] Merge `master` into `develop` and `git push origin develop`
-  - `master` now has the contents of `release`, which may have deviated from `develop` were any patches or reversions made
+- [ ] Merge `master` into `develop` (to ensure any changes made to `master` are reflected back into `develop`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout master`
+  - [ ] `git reset --hard origin/master`
+  - [ ] `git checkout -b merge-master-v{version}-into-develop`
+  - [ ] `git push origin merge-master-v{version}-into-develop`
+  - [ ] Create, approve, and merge a pull request from `merge-master-v{version}-into-develop` into `master`
 - [ ] Merge `develop` into `release` and `git push origin release`
 - [ ] Update the `VERSION` file to the next version on the `develop` branch and `git push origin develop`
