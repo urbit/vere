@@ -141,7 +141,27 @@ the "General" channel of the [Urbit Community group][urbit-community].
 
 This instructions are performed **on release day** to prepare the next release candidate.
 
-- [ ] Merge `master` into `develop` and `git push origin develop`
-  - `master` now has the contents of `release`, which may have deviated from `develop` were any patches or reversions made
-- [ ] Merge `develop` into `release` and `git push origin release`
-- [ ] Update the `VERSION` file to the next version on the `develop` branch and `git push origin develop`
+- [ ] Merge `master` into `develop` (to ensure any changes made to `master` are reflected back into `develop`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout master`
+  - [ ] `git reset --hard origin/master`
+  - [ ] `git checkout -b merge-master-v{version}-into-develop`
+  - [ ] `git push origin merge-master-v{version}-into-develop`
+  - [ ] Create, approve, and merge a pull request from `merge-master-v{version}-into-develop` into `master`
+- [ ] Merge `develop` into `release` (to ensure any changes made to `develop` are reflected back into `release`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout develop`
+  - [ ] `git reset --hard origin/develop`
+  - [ ] `git checkout -b merge-develop-v{version}-into-release`
+  - [ ] `git push origin merge-develop-v{version}-into-release`
+  - [ ] Create, approve, and merge a pull request from `merge-develop-v{version}-into-release` into `release`
+- [ ] Bump the version number on `develop`
+  - [ ] `git fetch --all`
+  - [ ] `git checkout develop`
+  - [ ] `git reset --hard origin/develop`
+  - [ ] `git checkout -b bump-version-v{version}-to-v{next-version}`
+  - [ ] `echo {next-version} > VERSION`
+  - [ ] `git add VERSION`
+  - [ ] `git commit -m "Bump version to v{next-version}"`
+  - [ ] `git push origin bump-version-v{version}-to-v{next-version}`
+  - [ ] Create, approve, and merge a pull request from `bump-version-v{version}-to-v{next-version}` into `develop`
