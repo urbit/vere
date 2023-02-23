@@ -73,8 +73,8 @@ _loch_ef_read(u3_loch* teh_u, u3_noun wir_i, u3_device dev_d, u3_noun wut, u3_no
 
   {
     u3_noun wir = u3nc(c3__loch, u3_nul);
-    u3_noun dat = u3nt(dev_d.nam_w, c3__read, red);
-    u3_noun cad = u3nc(c3__turn, dat);
+    u3_noun dat = u3nc(dev_d.nam_w, red);
+    u3_noun cad = u3nc(c3__seen, dat);
 
     u3_auto_peer(
       u3_auto_plan(&teh_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
@@ -224,7 +224,7 @@ u3_loch_io_init(u3_pier* pir_u)
 
   //  TODO: Open all devices specified in pier.
   //  Right now this only opens /dev/random and will provide a random number
-  u3_device* random = c3_calloc(sizeof(teh_u));
+  u3_device* random = c3_calloc(sizeof(random));
 
   random->nam_w = c3_s4('r','a','n','d');
   random->fil_c = "/dev/urandom";
