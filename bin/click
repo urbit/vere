@@ -26,6 +26,7 @@ SCRIPT_NAME=$(basename "$0")
 # ==========================================================
 
 FILTER_GOOF=0
+JAM_ONLY=0
 KHAN_TED=0
 STATUS=0
 
@@ -42,20 +43,17 @@ Usage:
 
     opitons:
         -h  Show usage info
+        -j  Jam only
         -k  Execute command using "khan-eval" thread
         -p  Filter failure stack traces from result and pretty-print them to stderr
 EOF
 }
 
 main() {
-    CLIC_CMD="$SCRIPT_DIR/click-format"
-    EVAL_CMD="$PIER/.run"
-    CUE_OPTS="-n"
-
-    if [[ $KHAN_TED -eq 1 ]]; then
+    if [[ $KHAN_TED -ne 0 ]]; then
         CLIC_CMD="$CLIC_CMD -k"
     fi
-    if [[ $FILTER_GOOF -eq 1 ]]; then
+    if [[ $FILTER_GOOF -ne 0 ]]; then
         CUE_OPTS="$CUE_OPTS -k"
     fi
 
@@ -63,6 +61,14 @@ main() {
         $EVAL_CMD eval --jam -n |
         nc -U -W 1 "$PIER/.urb/conn.sock" |
         $EVAL_CMD eval --cue $CUE_OPTS
+}
+
+jam() {
+    if [[ $KHAN_TED -ne 0 ]]; then
+        CLIC_CMD="$CLIC_CMD -k"
+    fi
+
+    $CLIC_CMD "$HOON" $DEPS | $EVAL_CMD eval --jam -n
 }
 
 # ==========================================================
@@ -73,8 +79,11 @@ main() {
 OPTIND=1
 
 # parse options
-while getopts ":hkp" OPT; do
+while getopts ":hjkp" OPT; do
     case "$OPT" in
+        j)
+            JAM_ONLY=1
+            ;;
         k)
             KHAN_TED=1
             ;;
@@ -102,9 +111,21 @@ if [[ $# -lt 2 ]]; then
     exit 1
 fi
 
+# read args
 PIER=$1
 HOON=$2
 shift 2
 DEPS=$*
 
-main
+# setup shared variables
+CLIC_CMD="$SCRIPT_DIR/click-format"
+EVAL_CMD="$PIER/.run"
+CUE_OPTS="-n"
+
+if [[ $JAM_ONLY -ne 0 ]]; then
+    jam
+else
+    main
+fi
+
+exit 0
