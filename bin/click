@@ -31,6 +31,8 @@ JAM_ONLY=0
 KHAN_TED=0
 STATUS=0
 
+OUTPUT=''
+
 # ==========================================================
 # FUNCTIONS
 # ==========================================================
@@ -43,11 +45,12 @@ Usage:
     Thin client for interacting with running Urbit ship via conn.c
 
     opitons:
-        -h  Show usage info
-        -j  Jam only
-        -k  Execute command using "khan-eval" thread
-        -p  Filter failure stack traces from result and pretty-print them to stderr
-        -x  Jam to hex
+        -h                  Show usage info
+        -j                  Jam only
+        -k                  Execute command using "khan-eval" thread
+        -o <path-to-file>   Output to file
+        -p                  Filter failure stack traces from result and pretty-print them to stderr
+        -x                  Jam to hex
 EOF
 }
 
@@ -84,13 +87,16 @@ jam() {
 OPTIND=1
 
 # parse options
-while getopts ":hjkpx" OPT; do
+while getopts ":hjko:px" OPT; do
     case "$OPT" in
         j)
             JAM_ONLY=1
             ;;
         k)
             KHAN_TED=1
+            ;;
+        o)
+            OUTPUT=$OPTARG
             ;;
         p)
             FILTER_GOOF=1
@@ -130,11 +136,20 @@ CLIC_CMD="$SCRIPT_DIR/click-format"
 EVAL_CMD="$PIER/.run"
 JAM_OPTS="-n"
 CUE_OPTS="-n"
+TMP_OUT=`mktemp -q --tmpdir`
 
-if [[ $JAM_ONLY -ne 0 ]]; then
-    jam
+{
+    if [[ $JAM_ONLY -ne 0 ]]; then
+        jam
+    else
+        main
+    fi
+} > $TMP_OUT
+
+if [[ -n $OUTPUT ]]; then
+    mv $TMP_OUT $OUTPUT
 else
-    main
+    cat $TMP_OUT
 fi
 
 exit 0
