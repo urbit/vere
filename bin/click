@@ -26,6 +26,7 @@ SCRIPT_NAME=$(basename "$0")
 # ==========================================================
 
 FILTER_GOOF=0
+JAM_HEX=0
 JAM_ONLY=0
 KHAN_TED=0
 STATUS=0
@@ -46,29 +47,33 @@ Usage:
         -j  Jam only
         -k  Execute command using "khan-eval" thread
         -p  Filter failure stack traces from result and pretty-print them to stderr
+        -x  Jam to hex
 EOF
 }
 
 main() {
-    if [[ $KHAN_TED -ne 0 ]]; then
-        CLIC_CMD="$CLIC_CMD -k"
-    fi
     if [[ $FILTER_GOOF -ne 0 ]]; then
         CUE_OPTS="$CUE_OPTS -k"
     fi
+    if [[ $KHAN_TED -ne 0 ]]; then
+        CLIC_CMD="$CLIC_CMD -k"
+    fi
 
     $CLIC_CMD "$HOON" $DEPS |
-        $EVAL_CMD eval --jam -n |
+        $EVAL_CMD eval --jam $JAM_OPTS |
         nc -U -W 1 "$PIER/.urb/conn.sock" |
         $EVAL_CMD eval --cue $CUE_OPTS
 }
 
 jam() {
+    if [[ $JAM_HEX -ne 0 ]]; then
+        JAM_OPTS=""
+    fi
     if [[ $KHAN_TED -ne 0 ]]; then
         CLIC_CMD="$CLIC_CMD -k"
     fi
 
-    $CLIC_CMD "$HOON" $DEPS | $EVAL_CMD eval --jam -n
+    $CLIC_CMD "$HOON" $DEPS | $EVAL_CMD eval --jam $JAM_OPTS
 }
 
 # ==========================================================
@@ -79,7 +84,7 @@ jam() {
 OPTIND=1
 
 # parse options
-while getopts ":hjkp" OPT; do
+while getopts ":hjkpx" OPT; do
     case "$OPT" in
         j)
             JAM_ONLY=1
@@ -89,6 +94,9 @@ while getopts ":hjkp" OPT; do
             ;;
         p)
             FILTER_GOOF=1
+            ;;
+        x)
+            JAM_HEX=1
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -120,6 +128,7 @@ DEPS=$*
 # setup shared variables
 CLIC_CMD="$SCRIPT_DIR/click-format"
 EVAL_CMD="$PIER/.run"
+JAM_OPTS="-n"
 CUE_OPTS="-n"
 
 if [[ $JAM_ONLY -ne 0 ]]; then
