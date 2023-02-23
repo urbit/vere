@@ -1,0 +1,110 @@
+#!/bin/bash
+# ==============================================================================
+# click
+#
+#   Thin client for interacting with running Urbit ship via conn.c.
+#
+#   Compiles a Hoon command given as text against an optional list of
+#   dependencies and then executes it on a running ship.
+#
+#   The click-format helper script handles command formatting, whereas this
+#   script handles operational control flow. See the documentation in
+#   click-format for the details of command structure, dependency management,
+#   etc.
+#
+# ==============================================================================
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_NAME=$(basename "$0")
+
+# ==========================================================
+# VARIABLES
+# ==========================================================
+
+FILTER_GOOF=0
+KHAN_TED=0
+STATUS=0
+
+# ==========================================================
+# FUNCTIONS
+# ==========================================================
+
+show_help() {
+    cat <<EOF
+Usage:
+    $SCRIPT_NAME [options] <path-to-pier> <hoon> [<dependencies> ...]
+
+    Thin client for interacting with running Urbit ship via conn.c
+
+    opitons:
+        -h  Show usage info
+        -k  Execute command using "khan-eval" thread
+        -p  Filter failure stack traces from result and pretty-print them to stderr
+EOF
+}
+
+main() {
+    CLIC_CMD="$SCRIPT_DIR/click-format"
+    EVAL_CMD="$PIER/.run"
+    CUE_OPTS="-n"
+
+    if [[ $KHAN_TED -eq 1 ]]; then
+        CLIC_CMD="$CLIC_CMD -k"
+    fi
+    if [[ $FILTER_GOOF -eq 1 ]]; then
+        CUE_OPTS="$CUE_OPTS -k"
+    fi
+
+    $CLIC_CMD "$HOON" $DEPS |
+        $EVAL_CMD eval --jam -n |
+        nc -U -W 1 "$PIER/.urb/conn.sock" |
+        $EVAL_CMD eval --cue $CUE_OPTS
+}
+
+# ==========================================================
+# MAIN
+# ==========================================================
+
+# reset getopts
+OPTIND=1
+
+# parse options
+while getopts ":hkp" OPT; do
+    case "$OPT" in
+        k)
+            KHAN_TED=1
+            ;;
+        p)
+            FILTER_GOOF=1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            STATUS=1
+            ;&
+        h)
+            show_help
+            exit "$STATUS"
+            ;;
+  esac
+done
+
+# skip over opts after parsing
+shift $((OPTIND-1))
+
+# check for mandatory input
+if [[ $# -lt 2 ]]; then
+    echo "ERROR: missing input" >&2
+    show_help
+    exit 1
+fi
+
+PIER=$1
+HOON=$2
+shift 2
+DEPS=$*
+
+main
