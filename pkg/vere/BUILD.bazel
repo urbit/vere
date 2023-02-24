@@ -163,6 +163,7 @@ cc_binary(
         # TODO: remove dependency (only used to report version).
         "@sigsegv",
         "@whereami",
+        "@execinfo",            # ;;: relocate?
     ],
 )
 

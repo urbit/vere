@@ -164,6 +164,20 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "execinfo",
+    build_file = "//bazel/third_party/execinfo:execinfo.BUILD",
+    patch_args = ["-p1"],
+    patches = [
+        "//bazel/third_party/execinfo:10-execinfo.patch",
+        # "//bazel/third_party/execinfo:20-define-gnu-source.patch",
+    ],
+    sha256 = "c9a21913e7fdac8ef6b33250b167aa1fc0a7b8a175145e26913a4c19d8a59b1f",
+    strip_prefix = "libexecinfo-{version}",
+    url = "http://distcache.freebsd.org/local-distfiles/itetcu/libexecinfo-{version}.tar.bz2",
+    version = "1.1",
+)
+
+versioned_http_archive(
     name = "gmp",
     build_file = "//bazel/third_party/gmp:gmp.BUILD",
     sha256 = "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
