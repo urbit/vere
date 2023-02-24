@@ -256,6 +256,12 @@ fail:
 c3_i
 u3e_fault(void* adr_v, c3_i ser_i)
 {
+#if 1
+  /* __builtin_return_address(11) in _find_home causes infinite loop with this
+     change. Otherwise, we fault in. WHY? */
+  if (adr_v < u3_Loom)
+    return 1;
+#endif
   //  Let the stack overflow handler run.
   if ( 0 == ser_i ) {
     return 0;

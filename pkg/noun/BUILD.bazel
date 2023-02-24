@@ -38,6 +38,7 @@ cc_library(
         "@openssl",
         "@sigsegv",
         "@softfloat",
+        "@execinfo",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
