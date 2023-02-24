@@ -199,6 +199,7 @@ _main_getopt(c3_i argc, c3_c** argv)
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o want_creat_o = c3n;
 
   static struct option lop_u[] = {
     { "arvo",                required_argument, NULL, 'A' },
@@ -399,7 +400,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 'l': { u3_Host.ops_u.lit = c3y; break; }
       case 'j': { u3_Host.ops_u.tra = c3y; break; }
       case 'a': { u3_Host.ops_u.abo = c3y; break; }
-      case 'c': { u3_Host.ops_u.nuu = c3y; break; }
+      case 'c': { want_creat_o = u3_Host.ops_u.nuu = c3y; break; }
       case 'd': { u3_Host.ops_u.dem = c3y; break; }
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
       case 'P': { u3_Host.ops_u.pro = c3y; break; }
@@ -424,7 +425,7 @@ _main_getopt(c3_i argc, c3_c** argv)
 
   if ( 0 != u3_Host.ops_u.fak_c ) {
     if ( 28 < strlen(u3_Host.ops_u.fak_c) ) {
-      fprintf(stderr, "fake comets are disallowed\r\n");
+      fprintf(stderr, "fake comets are forbidden\r\n");
       return c3n;
     }
 
@@ -480,6 +481,16 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
       exit(1);
     }
+  }
+
+  /* when creating a pier, explicit -c must be specified with the exception of
+     -w or -F which implicitly create the pier */
+  if (_(u3_Host.ops_u.nuu)
+      && !(_(want_creat_o)
+           || 0 != u3_Host.ops_u.fak_c
+           || 0 != u3_Host.ops_u.who_c)) {
+    fprintf(stderr, "-c is required to create a new pier. Did you type an existing pier incorrectly?\n");
+    return c3n;
   }
 
   if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.nuu == c3n ) {
