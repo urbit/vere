@@ -2700,3 +2700,33 @@ u3a_string(u3_atom a)
   str_c[met_w] = 0;
   return str_c;
 }
+
+/* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
+ */
+void
+u3a_loom_sane()
+{
+  /*
+    Only checking validity of freelists for now. Other checks could be added,
+    e.g. noun HAMT traversal, boxwise traversal of loom validating `siz_w`s,
+    `use_w`s, no empty space, etc. If added, some of that may need to be guarded
+    behind C3DBG flags. Freelist traversal is probably fine to always do though.
+  */
+  for (c3_w i_w = 0; i_w < u3a_fbox_no; i_w++) {
+
+    u3p(u3a_fbox) this_p = u3R->all.fre_p[i_w];
+    u3a_fbox     *this_u = u3to(u3a_fbox, this_p);
+    for (; this_p
+           ; this_p = this_u->nex_p
+           , this_u = u3to(u3a_fbox, this_p)) {
+      u3p(u3a_fbox) pre_p = this_u->pre_p
+        ,           nex_p = this_u->nex_p;
+      u3a_fbox *pre_u = u3to(u3a_fbox, this_u->pre_p)
+        ,      *nex_u = u3to(u3a_fbox, this_u->nex_p);
+
+      if      (nex_p && nex_u->pre_p != this_p) c3_assert(!"loom: corrupt");
+      if      (pre_p && pre_u->nex_p != this_p) c3_assert(!"loom: corrupt");
+      else if (_box_slot(this_u->box_u.siz_w) != i_w) c3_assert(!"loom: corrupt");
+    }
+  }
+}

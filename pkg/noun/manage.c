@@ -605,6 +605,9 @@ _find_home(void)
   //  this looks risky, but there are no legitimate scenarios where it's wrong
   u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
 
+  /* As a further guard against any sneaky loom corruption */
+  u3a_loom_sane();
+
   if (U3V_VERLAT > ver_w) {
     u3m_migrate(U3V_VERLAT);
     u3a_config_loom(U3V_VERLAT);
@@ -2162,5 +2165,7 @@ u3m_migrate(u3v_version ver_w)
 
   /* finally update the version and commit to disk */
   u3H->ver_w = ver_w;
+  /* extra assurance we haven't corrupted the loom before writing to disk */
+  u3a_loom_sane();
   u3e_save();
 }
