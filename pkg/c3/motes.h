@@ -983,6 +983,7 @@
 #   define c3__rond   c3_s4('r','o','n','d')
 #   define c3__root   c3_s4('r','o','o','t')
 #   define c3__rose   c3_s4('r','o','s','e')
+#   define c3__rote   c3_s4('r','o','t','e')
 #   define c3__rsh    c3_s3('r','s','h')
 #   define c3__rulf   c3_s4('r','u','l','f')
 #   define c3__run    c3_s3('r','u','n')
