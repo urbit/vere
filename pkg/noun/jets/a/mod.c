@@ -12,7 +12,7 @@
            u3_atom b)
   {
     if ( 0 == b ) {
-      return u3m_bail(c3__exit);
+      return u3m_error("divide-by-zero");
     } else if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
       return a % b;
     } else {
