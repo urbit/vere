@@ -76,6 +76,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "log.h"
 #include "manage.h"
@@ -1067,6 +1068,8 @@ u3e_backup(c3_o ovw_o)
 void
 u3e_save(void)
 {
+  struct timespec t0, t1;
+  timespec_get(&t0, TIME_UTC);
   u3_ce_patch* pat_u;
 
   if ( u3C.wag_w & u3o_dryrun ) {
@@ -1111,6 +1114,11 @@ u3e_save(void)
   _ce_patch_delete();
 
   u3e_backup(c3n);
+  timespec_get(&t1, TIME_UTC);
+
+  /* ;;: print time summaries */
+  /* fprintf(stderr, "sane: u3e_save: %lld\r\n", t1.tv_nsec - t0.tv_nsec); */
+  fprintf(stderr, "sane: u3e_save: %f\r\n", timespec_diff(&t0, &t1));
 }
 
 /* u3e_live(): start the checkpointing system.
