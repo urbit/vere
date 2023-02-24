@@ -1077,6 +1077,9 @@ u3e_save(void)
     return;
   }
 
+  /* attempt to avoid propagating anything insane to disk */
+  u3a_loom_sane();
+
   // u3a_print_memory(stderr, "sync: save", 4096 * pat_u->con_u->pgs_w);
 
   _ce_patch_sync(pat_u);

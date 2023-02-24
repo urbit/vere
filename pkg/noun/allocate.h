@@ -680,4 +680,9 @@
           c3_c*
           u3a_string(u3_atom a);
 
+        /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
+        */
+          void
+          u3a_loom_sane();
+
 #endif /* ifndef U3_ALLOCATE_H */

@@ -592,6 +592,10 @@ _find_home(void)
   //  where it's wrong
   //
   u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
+
+  /* As a further guard against any sneaky loom corruption */
+  u3a_loom_sane();
+
 }
 
 /* u3m_pave(): instantiate or activate image.
