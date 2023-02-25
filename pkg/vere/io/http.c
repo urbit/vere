@@ -97,11 +97,18 @@ typedef struct _u3_httd {
   u3_hfig            fig_u;             //  http configuration
   u3_http*           htp_u;             //  http servers
   SSL_CTX*           tls_u;             //  server SSL_CTX*
+  u3p(u3h_root)      sax_p;             //  url->scry cache
+  u3p(u3h_root)      nax_p;             //  scry->noun cache
 } u3_httd;
 
 static void _http_serv_free(u3_http* htp_u);
 static void _http_serv_start_all(u3_httd* htd_u);
 static void _http_form_free(u3_httd* htd_u);
+static void _http_start_respond(u3_hreq* req_u,
+                    u3_noun status,
+                    u3_noun headers,
+                    u3_noun data,
+                    u3_noun complete);
 
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
@@ -613,6 +620,68 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   }
 }
 
+/* _http_cache_respond(): respond with a simple-payload:http
+*/
+static void
+_http_cache_respond(u3_hreq* req_u, u3_noun nun) {
+  // XX check auth
+  u3_noun auth, response_header, data;
+  u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+  u3_noun status, headers;
+  u3x_cell(response_header, &status, &headers);
+
+  req_u->sat_e = u3_rsat_plan;
+  _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+  u3z(nun);
+}
+
+typedef struct _cache_scry_cb_t {
+  u3_hreq* req_u;
+  u3_noun  pax;
+} cache_scry_cb_t;
+
+/* _http_cache_scry_cb(): insert scry result into noun cache
+*/
+static void
+_http_cache_scry_cb(void* vod_p, u3_noun nun)
+{
+  cache_scry_cb_t* cbt = vod_p;
+  u3_httd* htd_u = cbt->req_u->hon_u->htp_u->htd_u;
+  u3h_put(htd_u->nax_p, cbt->pax, nun);
+  u3z(cbt->pax);
+  _http_cache_respond(cbt->req_u, nun);
+  c3_free(cbt);
+}
+
+/* _http_req_cache(): attempt to serve http request from cache
+*/
+static c3_o
+_http_req_cache(u3_hreq* req_u)
+{
+  c3_assert(u3_rsat_init == req_u->sat_e);
+
+  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
+
+  u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
+  u3_weak sac = u3h_get(htd_u->sax_p, url);
+  if ( u3_none == sac ) {
+    return c3n;
+  }
+
+  u3_weak nac = u3h_get(htd_u->nax_p, sac);
+  if ( u3_none == nac ) {
+    // noun not in cache; scry it
+    cache_scry_cb_t* cbt = c3_malloc(sizeof(cache_scry_cb_t));
+    cbt->req_u = req_u;
+    cbt->pax = sac;
+    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
+                      u3_nul, sac, cbt, _http_cache_scry_cb);
+    return c3y;
+  }
+  _http_cache_respond(req_u, nac);
+  return c3y;
+}
+
 /* _http_hgen_dispose(): dispose response generator and buffers
 */
 static void
@@ -985,7 +1054,9 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   }
   else {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    _http_req_dispatch(req_u, req);
+    if ( c3n == _http_req_cache(req_u) ) {
+      _http_req_dispatch(req_u, req);
+    }
   }
 
   return 0;
@@ -2013,6 +2084,14 @@ _http_ef_http_server(u3_httd* htd_u,
   else if ( c3y == u3r_sing_c("sessions", tag) ) {
     u3_http_ef_auth(htd_u, u3k(dat));
   }
+  //  handles a cache notification
+  //
+  else if ( c3y == u3r_sing_c("grow", tag) ) {
+    // cache paths are /cache/(scot %ud aeon)/(scot %t url)
+    u3_noun pax = u3k(dat);
+    u3_noun url = u3h(u3t(u3t(pax)));
+    u3h_put(htd_u->sax_p, url, pax);
+  }
   //  responds to an open request
   //
   else if ( 0 != (req_u = _http_search_req(htd_u, sev_l, coq_l, seq_l)) ) {
@@ -2216,6 +2295,9 @@ _http_io_exit(u3_auto* car_u)
 {
   u3_httd* htd_u = (u3_httd*)car_u;
 
+  u3h_free(htd_u->sax_p);
+  u3h_free(htd_u->nax_p);
+
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
@@ -2303,6 +2385,8 @@ u3_auto*
 u3_http_io_init(u3_pier* pir_u)
 {
   u3_httd* htd_u = c3_calloc(sizeof(*htd_u));
+  htd_u->sax_p = u3h_new();
+  htd_u->nax_p = u3h_new_cache(512);
 
   {
     u3_noun key = u3dt("cat", 3,
