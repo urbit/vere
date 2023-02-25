@@ -487,7 +487,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
       pac_c = u3_Host.ops_u.puk_c;
     }
     else {
-      pac_c = u3_Host.ops_u.pek_c;
+      pac_c = u3_Host.ops_u.pek_c + 1;
     }
 
     //  try to serialize as requested
@@ -517,7 +517,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
     //
     if ( u3_none != out ) {
       c3_c fil_c[256];
-      snprintf(fil_c, 256, "%s.%s", pac_c + 1, ext_c);
+      snprintf(fil_c, 256, "%s.%s", pac_c, ext_c);
 
       u3_unix_save(fil_c, out);
       u3l_log("pier: scry result in %s/.urb/put/%s", u3_Host.dir_c, fil_c);
@@ -1708,8 +1708,8 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
     return 0;
   }
 
-  if ( c3n == u3_disk_read_meta(pir_u->log_u,  pir_u->who_d,
-                               &pir_u->fak_o, &pir_u->lif_w) )
+  if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,  pir_u->who_d,
+                               &pir_u->fak_o,        &pir_u->lif_w) )
   {
     fprintf(stderr, "pier: disk read meta fail\r\n");
     //  XX dispose
@@ -1905,8 +1905,8 @@ _pier_boot_plan(u3_pier* pir_u,
     pir_u->lif_w = u3qb_lent(bot_u.bot);
   }
 
-  if ( c3n == u3_disk_save_meta(pir_u->log_u, pir_u->who_d,
-                                pir_u->fak_o, pir_u->lif_w) )
+  if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u, pir_u->who_d,
+                                pir_u->fak_o,        pir_u->lif_w) )
   {
     //  XX dispose bot_u
     //

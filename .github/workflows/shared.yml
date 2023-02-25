@@ -31,6 +31,7 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   urbit:
@@ -62,7 +63,7 @@ jobs:
           # this on linux-aarch64 because we run on a self-hosted GitHub Actions
           # runner for which `/usr/local` has already been `chown`d to the user
           # running the GitHub Actions runner.
-          sudo chown -R $(whoami) /usr/local
+          sudo chown $(whoami) /usr/local && (chown -R $USER /usr/local/*-musl || true)
 
       - name: Set up build cache
         uses: actions/cache@v3
@@ -153,51 +154,9 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          echo "${{ inputs.pace }}" > ./PACE
-          version="$(cat ./VERSION)"
-          bazel build :version
-          sha_version=$(grep 'URBIT_VERSION *".*"' ./bazel-bin/version.h \
-            | sed 's/^#define *URBIT_VERSION *"\([^"]*\)"/\1/')
+          bazel build :version_str
+          sha_version=$(cat ./bazel-bin/version)
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
-
-          # See https://github.com/urbit/vere/issues/86.
-          if [[ "$version" == "1.16" ]]; then
-            platform=""
-            case "${{ matrix.target }}" in
-              "linux-aarch64")
-                platform="aarch64-linux"
-                ;;
-              "linux-x86_64")
-                platform="x86_64-linux"
-                ;;
-              "macos-aarch64")
-                platform="aarch64-darwin"
-                ;;
-              "macos-x86_64")
-                platform="x86_64-darwin"
-                ;;
-            esac
-            old_target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/${version}/vere-v${version}-${platform}"
-
-            # We never overwrite a binary deployed to the "live" train, but we do
-            # overwrite same-versioned binaries deployed to the "soon" and "edge"
-            # trains.
-            if [[ "${{ inputs.pace }}" == "live" ]]; then
-              gsutil cp -n "${{ env.urbit_static }}" "$old_target"
-            else
-              gsutil cp "${{ env.urbit_static }}" "$old_target"
-            fi
-
-            # See https://github.com/urbit/vere/issues/90.
-            if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-              aarch64_bin=vere-v1.16-aarch64-darwin
-              wget https://bootstrap.urbit.org/vere/${{ inputs.pace }}/1.16/$aarch64_bin
-              universal_bin=vere-v1.16-universal-darwin
-              x86_64_bin="${{ env.urbit_static }}"
-              xcrun lipo -create $aarch64_bin $x86_64_bin -output $universal_bin
-              gsutil cp $universal_bin "$old_target"
-            fi
-          fi
 
           args=""
           # We never overwrite a binary deployed to the "live" train, but we do
@@ -264,12 +223,8 @@ jobs:
 
       - name: Upload latest deployed version string to GCP
         run: |
+          echo "${{ inputs.pace }}" > ./PACE
           target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
-
-          # See https://github.com/urbit/vere/issues/86.
-          if [[ $(cat ./VERSION) == "1.16" ]]; then
-            gsutil cp ./VERSION "gs://${UPLOAD_BASE}/${{ inputs.pace }}/1.15/next"
-          fi
 
           bazel build :version_str
           # We don't use -n here because we want to overwrite the version

@@ -120,6 +120,7 @@ $ tar zcf {platform}.tgz vere-v{version}-{platform}
 - [ ] Click "Publish release".
 - [ ] Create a placeholder pill for the new binary exists by running `gsutil cp gs://bootstrap.urbit.org/urbit-vOLD.pill gs://bootstrap.urbit.org/urbit-vNEW.pill`
 - [ ] Ensure that a new urbit can be booted by using the [Getting Started guide](https://urbit.org/getting-started/cli)
+- [ ] Post the contents of the GH Release notes to the [urbit-dev mailing list](https://groups.google.com/a/urbit.org/g/dev)
 
 Post an announcement to the [urbit-dev mailing
 list][urbit-dev] containing a copy of the release notes. When in doubt, follow
@@ -135,3 +136,32 @@ the "General" channel of the [Urbit Community group][urbit-community].
 - [ ] `~zod` and other live galaxies (TODO which?) should all be updated to the new binary, to make sure they will be ready to install and deploy Arvo releases on the latest Kelvin.
 - [ ] `~marzod` and other live stars (TODO which?) should also be updated to the new binary.
 - [ ] Ships that host official UF groups should be updated: `~bitdeg`, `~halbex-palheb`, TODO: more.
+
+## Preparing for the Next Release
+
+This instructions are performed **on release day** to prepare the next release candidate.
+
+- [ ] Merge `master` into `develop` (to ensure any changes made to `master` are reflected back into `develop`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout master`
+  - [ ] `git reset --hard origin/master`
+  - [ ] `git checkout -b merge-master-v{version}-into-develop`
+  - [ ] `git push origin merge-master-v{version}-into-develop`
+  - [ ] Create, approve, and merge a pull request from `merge-master-v{version}-into-develop` into `master`
+- [ ] Merge `develop` into `release` (to ensure any changes made to `develop` are reflected back into `release`)
+  - [ ] `git fetch --all`
+  - [ ] `git checkout develop`
+  - [ ] `git reset --hard origin/develop`
+  - [ ] `git checkout -b merge-develop-v{version}-into-release`
+  - [ ] `git push origin merge-develop-v{version}-into-release`
+  - [ ] Create, approve, and merge a pull request from `merge-develop-v{version}-into-release` into `release`
+- [ ] Bump the version number on `develop`
+  - [ ] `git fetch --all`
+  - [ ] `git checkout develop`
+  - [ ] `git reset --hard origin/develop`
+  - [ ] `git checkout -b bump-version-v{version}-to-v{next-version}`
+  - [ ] `echo {next-version} > VERSION`
+  - [ ] `git add VERSION`
+  - [ ] `git commit -m "Bump version to v{next-version}"`
+  - [ ] `git push origin bump-version-v{version}-to-v{next-version}`
+  - [ ] Create, approve, and merge a pull request from `bump-version-v{version}-to-v{next-version}` into `develop`
