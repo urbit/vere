@@ -342,7 +342,9 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
       //
       if (key_c[j_w] == '\0' && coo_u.base[i_w] == '=') {
         i_w++;
-        while (i_w < coo_u.len && coo_u.base[i_w] != ';' && val_y < 128) {
+        while ( i_w < coo_u.len
+             && coo_u.base[i_w] != ';'
+             && val_y < sizeof(val_c) ) {
           val_c[val_y] = coo_u.base[i_w];
           val_y++;
           i_w++;
