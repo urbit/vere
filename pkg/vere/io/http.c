@@ -332,34 +332,34 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
     c3_c* key_c = fig_u->key_c;
     c3_c  val_c[128];
     c3_y  val_y = 0;
-    c3_w    i_w = 0;
-    c3_w    j_w = 0;
+    size_t  i_i = 0;
+    size_t  j_i = 0;
 
     //  step through the cookie string
     //
-    while (i_w < coo_u.len) {
+    while (i_i < coo_u.len) {
       //  if we found our key, read the value
       //
-      if (key_c[j_w] == '\0' && coo_u.base[i_w] == '=') {
-        i_w++;
-        while ( i_w < coo_u.len
-             && coo_u.base[i_w] != ';'
+      if (key_c[j_i] == '\0' && coo_u.base[i_i] == '=') {
+        i_i++;
+        while ( i_i < coo_u.len
+             && coo_u.base[i_i] != ';'
              && val_y < sizeof(val_c) ) {
-          val_c[val_y] = coo_u.base[i_w];
+          val_c[val_y] = coo_u.base[i_i];
           val_y++;
-          i_w++;
+          i_i++;
         }
         break;
       }
       //  keep reading the key as long as it matches
       //
-      else if (coo_u.base[i_w] == key_c[j_w]) {
-        j_w++;
+      else if (coo_u.base[i_i] == key_c[j_i]) {
+        j_i++;
       }
       else {
-        j_w = 0;
+        j_i = 0;
       }
-      i_w++;
+      i_i++;
     }
 
     u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
