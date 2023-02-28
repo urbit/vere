@@ -493,44 +493,28 @@ _main_getopt(c3_i argc, c3_c** argv)
     return c3n;
   }
 
-  if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.nuu == c3n ) {
-    fprintf(stderr, "-G only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.who_c != 0) {
-    fprintf(stderr, "-w only makes sense when creating a new ship\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0 ) {
     fprintf(stderr, "-B only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  struct sockaddr_in t;
-  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
-    fprintf(stderr, "-b invalid IP address\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.gen_c != 0 ) {
+    fprintf(stderr, "-G only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0) {
-    fprintf(stderr, "-H only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
+    fprintf(stderr, "-H only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
-    fprintf(stderr, "-B only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0) {
-    fprintf(stderr, "-k only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-k only makes sense when creating a new ship\n");
     return c3n;
   }
 
   if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.url_c != 0 ) {
-    fprintf(stderr, "-u only makes sense when bootstrapping a new instance\n");
+    fprintf(stderr, "-u only makes sense when creating a new ship\n");
     return c3n;
   }
 
@@ -563,6 +547,7 @@ _main_getopt(c3_i argc, c3_c** argv)
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.arv_c == 0 ) {
 
+    // implicitly: u3_Host.ops_u.git == c3y
     fprintf(stderr, "-s only makes sense with -A\n");
     return c3n;
   }
@@ -573,6 +558,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "pill %s not found\n", u3_Host.ops_u.pil_c);
       return c3n;
     }
+  }
+
+  struct sockaddr_in t;
+  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
+    fprintf(stderr, "-b invalid IP address\n");
+    return c3n;
   }
 
   if ( u3_Host.ops_u.key_c != 0 ) {
