@@ -251,7 +251,7 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:cde:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
@@ -320,6 +320,11 @@ _main_getopt(c3_i argc, c3_c** argv)
         }
         break;
       }
+      case 'c': {
+        u3_Host.dir_c     = _main_repath(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
       case 'e': {
         u3_Host.ops_u.eth_c = strdup(optarg);
         break;
@@ -327,6 +332,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 'F': {
         u3_Host.ops_u.fak_c = _main_presig(optarg);
         u3_Host.ops_u.net   = c3n;
+        u3_Host.ops_u.nuu   = c3y;
         break;
       }
       case 'G': {
@@ -405,7 +411,6 @@ _main_getopt(c3_i argc, c3_c** argv)
       //  opts without args
       //
       case 'a': { u3_Host.ops_u.abo = c3y; break; }
-      case 'c': { want_creat_o = u3_Host.ops_u.nuu = c3y; break; }
       case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'd': { u3_Host.ops_u.dem = c3y; break; }
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
@@ -438,33 +443,34 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "fake comets are forbidden\r\n");
       return c3n;
     }
+    if ( 0 != u3_Host.ops_u.who_c ) {
+      fprintf(stderr, "-F and -w cannot be used together\r\n");
+      return c3n;
+    }
 
     u3_Host.ops_u.who_c = strdup(u3_Host.ops_u.fak_c);
     u3_Host.ops_u.has = c3y;  /* no battery hashing on fake ships. */
     u3_Host.ops_u.net = c3n;  /* no networking on fake ships. */
-    u3_Host.ops_u.nuu = c3y;
   }
 
-  if ( argc != (optind + 1) ) {
-    if ( u3_Host.ops_u.who_c != 0 ) {
-      u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
-    }
-    //  no trailing positional arg, argv[0] != $pier/.run, invalid command
-    //
-    else  if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+  if ( argc == optind && u3_Host.ops_u.nuu != c3y ) {
+    if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+      //  no trailing arg, argv[0] != $pier/.run, not making new pier: invalid command
+      fprintf(stderr, "no pier provided\n");
       return c3n;
     }
   }
-  else {
-    {
-      c3_c* ash_c;
-
-      if ( (ash_c = strrchr(argv[optind], '/')) && (ash_c[1] == 0) ) {
-        *ash_c = 0;
-      }
+  else if ( argc != optind ) {
+    if ( u3_Host.ops_u.nuu == c3y || argc > (optind + 1) ) {
+      //  path with new pier or multiple paths: invalid command
+      fprintf(stderr, "too many arguments\n");
+      return c3n;
     }
-
     u3_Host.dir_c = _main_repath(argv[optind]);
+  }
+
+  if ( 0 == u3_Host.dir_c ) {
+    u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
   }
 
   //  daemon mode (-d) implies disabling terminal assumptions (-t)
@@ -473,34 +479,27 @@ _main_getopt(c3_i argc, c3_c** argv)
     u3_Host.ops_u.tem = c3y;
   }
 
-  //  make -c optional, catch invalid boot of existing pier
-  //
   {
     struct stat s;
+    //  catch invalid boot
     if ( 0 != stat(u3_Host.dir_c, &s) ) {
-      if ( c3n == u3_Host.ops_u.nuu ) {
-        u3_Host.ops_u.nuu = c3y;
+      if ( u3_Host.ops_u.nuu != c3y ) {
+        fprintf(stderr, "couldn't find pier %s\n", u3_Host.dir_c);
+        exit(1);
       }
     }
-    else if ( c3y == u3_Host.ops_u.nuu ) {
-      fprintf(stderr, "tried to create, but %s already exists\n", u3_Host.dir_c);
-      fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
-      exit(1);
+    //  catch invalid boot of existing pier
+    else {
+      if ( u3_Host.ops_u.nuu == c3y ) {
+        fprintf(stderr, "tried to create pier %s but it already exists\n", u3_Host.dir_c);
+        fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
+        exit(1);
+      }
+      else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
+        fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
+        exit(1);
+      }
     }
-    else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
-      fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
-      exit(1);
-    }
-  }
-
-  /* when creating a pier, explicit -c must be specified with the exception of
-     -w or -F which implicitly create the pier */
-  if (_(u3_Host.ops_u.nuu)
-      && !(_(want_creat_o)
-           || 0 != u3_Host.ops_u.fak_c
-           || 0 != u3_Host.ops_u.who_c)) {
-    fprintf(stderr, "-c is required to create a new pier. Did you type an existing pier incorrectly?\n");
-    return c3n;
   }
 
   if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0 ) {
