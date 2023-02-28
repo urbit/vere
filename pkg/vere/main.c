@@ -255,7 +255,9 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      case 5: {  //  urth-loom
+      //  urth-loom
+      //
+      case 5: {
         c3_w lut_w;
         c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lut_w);
         if ( (c3n == res_o) || (lut_w < 20) ) {
@@ -266,20 +268,42 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.lut_y = lut_w;
         break;
       }
-      case 'X': {
-        u3_Host.ops_u.pek_c = strdup(optarg);
+      //  special args
+      //
+      case c3__loom: {
+        c3_w lom_w;
+        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
+        if ( (c3n == res_o) || (lom_w < 20) ) {
+          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+          return c3n;
+        }
+        u3_Host.ops_u.lom_y = lom_w;
         break;
       }
-      case 'Y': {
-        u3_Host.ops_u.puk_c = strdup(optarg);
+      case c3__http: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.per_s = arg_w;
         break;
       }
-      case 'Z': {
-        u3_Host.ops_u.puf_c = strdup(optarg);
+      case c3__htls: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.pes_s = arg_w;
         break;
       }
-      case 'J': {
-        u3_Host.ops_u.lit_c = _main_repath(optarg);
+      case c3__noco: {
+        u3_Host.ops_u.con = c3n;
+        break;
+      }
+      case c3__nodo: {
+        u3_Host.ops_u.doc = c3n;
+        break;
+      }
+      //  opts with args
+      //
+      case 'A': {
+        u3_Host.ops_u.arv_c = _main_repath(optarg);
         break;
       }
       case 'B': {
@@ -288,22 +312,6 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 'b': {
         u3_Host.ops_u.bin_c = strdup(optarg);
-        break;
-      }
-      case 'G': {
-        u3_Host.ops_u.gen_c = strdup(optarg);
-        break;
-      }
-      case 'A': {
-        u3_Host.ops_u.arv_c = _main_repath(optarg);
-        break;
-      }
-      case 'H': {
-        u3_Host.ops_u.dns_c = strdup(optarg);
-        break;
-      }
-      case 'I': {
-        u3_Host.ops_u.jin_c = _main_repath(optarg);
         break;
       }
       case 'C': {
@@ -321,17 +329,24 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.net   = c3n;
         break;
       }
-      case 'w': {
-        u3_Host.ops_u.who_c = _main_presig(optarg);
-        u3_Host.ops_u.nuu = c3y;
+      case 'G': {
+        u3_Host.ops_u.gen_c = strdup(optarg);
         break;
       }
-      case 'u': {
-        u3_Host.ops_u.url_c = strdup(optarg);
+      case 'H': {
+        u3_Host.ops_u.dns_c = strdup(optarg);
         break;
       }
-      case 'x': {
-        u3_Host.ops_u.tex = c3y;
+      case 'I': {
+        u3_Host.ops_u.jin_c = _main_repath(optarg);
+        break;
+      }
+      case 'i': {
+        u3_Host.ops_u.imp_c = _main_repath(optarg);
+        break;
+      }
+      case 'J': {
+        u3_Host.ops_u.lit_c = _main_repath(optarg);
         break;
       }
       case 'K': {
@@ -354,36 +369,6 @@ _main_getopt(c3_i argc, c3_c** argv)
         } else u3_Host.ops_u.por_s = arg_w;
         break;
       }
-      case c3__http: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.per_s = arg_w;
-        break;
-      }
-      case c3__htls: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.pes_s = arg_w;
-        break;
-      }
-      case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
-          return c3n;
-        }
-        u3_Host.ops_u.lom_y = lom_w;
-        break;
-      }
-      case c3__noco: {
-        u3_Host.ops_u.con = c3n;
-        break;
-      }
-      case c3__nodo: {
-        u3_Host.ops_u.doc = c3n;
-        break;
-      }
       case 'R': {
         u3_Host.ops_u.rep = c3y;
         return c3y;
@@ -392,24 +377,49 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.roc_c = strdup(optarg);
         break;
       }
-      case 'i': {
-        u3_Host.ops_u.imp_c = _main_repath(optarg);
+      case 'u': {
+        u3_Host.ops_u.url_c = strdup(optarg);
         break;
       }
-      case 'L': { u3_Host.ops_u.net = c3n; break; }
-      case 'l': { u3_Host.ops_u.lit = c3y; break; }
-      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'w': {
+        u3_Host.ops_u.who_c = _main_presig(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'X': {
+        u3_Host.ops_u.pek_c = strdup(optarg);
+        break;
+      }
+      case 'x': {
+        u3_Host.ops_u.tex = c3y;
+        break;
+      }
+      case 'Y': {
+        u3_Host.ops_u.puk_c = strdup(optarg);
+        break;
+      }
+      case 'Z': {
+        u3_Host.ops_u.puf_c = strdup(optarg);
+        break;
+      }
+      //  opts without args
+      //
       case 'a': { u3_Host.ops_u.abo = c3y; break; }
       case 'c': { want_creat_o = u3_Host.ops_u.nuu = c3y; break; }
+      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'd': { u3_Host.ops_u.dem = c3y; break; }
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
+      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'L': { u3_Host.ops_u.net = c3n; break; }
+      case 'l': { u3_Host.ops_u.lit = c3y; break; }
       case 'P': { u3_Host.ops_u.pro = c3y; break; }
-      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'q': { u3_Host.ops_u.qui = c3y; break; }
-      case 'v': { u3_Host.ops_u.veb = c3y; break; }
       case 's': { u3_Host.ops_u.git = c3y; break; }
       case 'S': { u3_Host.ops_u.has = c3y; break; }
       case 't': { u3_Host.ops_u.tem = c3y; break; }
+      case 'v': { u3_Host.ops_u.veb = c3y; break; }
+      //  unknown opt
+      //
       case '?': default: {
         return c3n;
       }
