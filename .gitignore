@@ -7,6 +7,15 @@
 *.swo
 *.swp
 
+# Tags
+.tags
+.etags
+TAGS
+TAGS*
+GPATH
+GRTAGS
+GTAGS
+
 # Fake ships.
 /zod
 /nec

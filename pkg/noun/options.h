@@ -14,6 +14,14 @@
         u3_noun who;                          //  single identity
         c3_c*   dir_c;                        //  execution directory (pier)
         c3_w    wag_w;                        //  flags (both ways)
+        c3_w    vits_w;                       //  number of virtual bits in reference
+        c3_w    walign_w;                     //  word alignment
+        c3_d    balign_d;                     //  byte alignment
+        enum {
+          MIG_NONE,
+          MIG_REWRITE_COMPRESSED,
+        } migration_state;
+
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
         void (*stderr_log_f)(c3_c*);          //  errors from c code
         void (*slog_f)(u3_noun);              //  function pointer for slog
@@ -44,6 +52,5 @@
     */
       extern u3o_config u3o_Config;
 #     define u3C u3o_Config
-
 
 #endif /* ifndef U3_OPTIONS_H */
