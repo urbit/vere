@@ -198,7 +198,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             {
                 fprintf(stderr,
                         "pma: failed to create %zu-byte anonymous mapping at "
-                        "%p: %s\n",
+                        "%p: %s\r\n",
                         kPageSz,
                         fault_addr,
                         strerror(errno));
@@ -210,7 +210,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {
                 fprintf(stderr,
                         "pma: failed to remove write protections from %zu-byte "
-                        "page at %p: %s\n",
+                        "page at %p: %s\r\n",
                         kPageSz,
                         fault_addr,
                         strerror(errno));
@@ -257,7 +257,7 @@ map_file_(const char *path,
         {
             fprintf(
                 stderr,
-                "pma: failed to create %zu-byte anonymous mapping at %p: %s\n",
+                "pma: failed to create %zu-byte anonymous mapping at %p: %s\r\n",
                 kDefaultSz,
                 base,
                 strerror(errno));
@@ -273,14 +273,14 @@ map_file_(const char *path,
     int fd_ = open(path, O_CREAT | O_RDWR, 0644);
     // A parent directory doesn't exist.
     if (fd_ == -1) {
-        fprintf(stderr, "pma: failed to open %s: %s\n", path, strerror(errno));
+        fprintf(stderr, "pma: failed to open %s: %s\r\n", path, strerror(errno));
         goto fail;
     }
 
     struct stat buf_;
     if (fstat(fd_, &buf_) == -1) {
         fprintf(stderr,
-                "pma: failed to determine length of %s: %s\n",
+                "pma: failed to determine length of %s: %s\r\n",
                 path,
                 strerror(errno));
         goto close_fd;
@@ -310,7 +310,7 @@ map_file_(const char *path,
             {
                 fprintf(
                     stderr,
-                    "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
+                    "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
                     kPageSz,
                     path,
                     ptr,
@@ -326,7 +326,7 @@ map_file_(const char *path,
             == MAP_FAILED)
         {
             fprintf(stderr,
-                    "pma: failed to create %zu-byte mapping for %s at %p: %s\n",
+                    "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
                     len_,
                     path,
                     base,
@@ -370,7 +370,7 @@ sync_file_(const char *path,
     journal_t journal;
     if (journal_open(journal_file, &journal) == -1) {
         fprintf(stderr,
-                "pma: failed to open journal file at %s\n",
+                "pma: failed to open journal file at %s\r\n",
                 journal_file);
         return -1;
     }
@@ -393,7 +393,7 @@ sync_file_(const char *path,
             if (journal_append(&journal, &entry) == -1) {
                 fprintf(stderr,
                         "pma: failed to append %zu-byte page with index %llu "
-                        "and address %p to journal at %s\n",
+                        "and address %p to journal at %s\r\n",
                         sizeof(entry.pg),
                         pg_idx,
                         ptr,
@@ -405,13 +405,13 @@ sync_file_(const char *path,
     }
 
     if (journal_sync(&journal) == -1) {
-        fprintf(stderr, "pma: failed to sync journal for %s\n", path);
+        fprintf(stderr, "pma: failed to sync journal for %s\r\n", path);
         return -1;
     }
 
     if (journal_apply(&journal, base, grows_down) == -1) {
         fprintf(stderr,
-                "pma: failed to apply journal at %s to %s\n",
+                "pma: failed to apply journal at %s to %s\r\n",
                 journal_file,
                 path);
         return -1;
@@ -419,7 +419,7 @@ sync_file_(const char *path,
 
     if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
         fprintf(stderr,
-                "pma: failed to move file cursor to beginning of %s: %s\n",
+                "pma: failed to move file cursor to beginning of %s: %s\r\n",
                 path,
                 strerror(errno));
         return -1;
@@ -427,14 +427,14 @@ sync_file_(const char *path,
 
     if (write_all(fd, grows_down ? ptr + kPageSz : base, len) == -1) {
         fprintf(stderr,
-                "pma: failed to write changes to %s after applying journal\n",
+                "pma: failed to write changes to %s after applying journal\r\n",
                 path);
         return -1;
     }
 
     if (fsync(fd) == -1) {
         fprintf(stderr,
-                "pma: failed to flush changes to %s: %s\n",
+                "pma: failed to flush changes to %s: %s\r\n",
                 path,
                 strerror(errno));
         return -1;
@@ -453,7 +453,7 @@ pma_t *
 pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
 {
 #ifndef HAVE_SIGSEGV_RECOVERY
-    fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\n");
+    fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
     return NULL;
 #endif
     assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
@@ -519,7 +519,7 @@ pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
     // journals will only exist if a crash occurred during the most recent call
     // to pma_sync().
     if (pma_sync(pma, pma->heap_len, pma->stack_len) == -1) {
-        fprintf(stderr, "pma: failed to sync\n");
+        fprintf(stderr, "pma: failed to sync\r\n");
         goto unmap_stack;
     }
 
@@ -563,7 +563,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             == -1)
         {
             fprintf(stderr,
-                    "pma: failed to sync heap changes to %s\n",
+                    "pma: failed to sync heap changes to %s\r\n",
                     pma->heap_file);
             return -1;
         }
@@ -573,7 +573,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             if (ftruncate(pma->heap_fd, heap_len) == -1) {
                 fprintf(
                     stderr,
-                    "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
+                    "pma: failed to truncate %s from %zu bytes to %zu bytes\r\n",
                     pma->heap_file,
                     pma->heap_len,
                     heap_len);
@@ -596,7 +596,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             == -1)
         {
             fprintf(stderr,
-                    "pma: failed to sync stack changes to %s\n",
+                    "pma: failed to sync stack changes to %s\r\n",
                     pma->stack_file);
             return -1;
         }
@@ -606,7 +606,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             if (ftruncate(pma->stack_fd, stack_len) == -1) {
                 fprintf(
                     stderr,
-                    "pma: failed to truncate %s from %zu bytes to %zu bytes\n",
+                    "pma: failed to truncate %s from %zu bytes to %zu bytes\r\n",
                     pma->stack_file,
                     pma->stack_len,
                     stack_len);
@@ -632,7 +632,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                   &pma->heap_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\n", pma->heap_file);
+        fprintf(stderr, "pma: failed to remap %s\r\n", pma->heap_file);
         return -1;
     }
 #endif
@@ -646,7 +646,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                   &pma->stack_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\n", pma->stack_file);
+        fprintf(stderr, "pma: failed to remap %s\r\n", pma->stack_file);
         munmap(pma->heap_start, pma->heap_len);
         close(pma->heap_fd);
         return -1;

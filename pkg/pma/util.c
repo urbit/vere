@@ -49,7 +49,7 @@ read_all(int fd, void *buf, size_t len)
         ssize_t bytes_read = read(fd, ptr, len);
         if (bytes_read == -1) {
             fprintf(stderr,
-                    "util: failed to read %zu bytes into %p: %s\n",
+                    "util: failed to read %zu bytes into %p: %s\r\n",
                     len,
                     ptr,
                     strerror(errno));
@@ -58,7 +58,7 @@ read_all(int fd, void *buf, size_t len)
         if (bytes_read == 0) {
             fprintf(stderr,
                     "util: encountered unexpected EOF when reading %zu bytes "
-                    "into %p\n",
+                    "into %p\r\n",
                     len,
                     ptr);
             return -1;
@@ -80,7 +80,7 @@ write_all(int fd, const void *buf, size_t len)
         ssize_t bytes_written = write(fd, ptr, len);
         if (bytes_written == -1) {
             fprintf(stderr,
-                    "util: failed to write %zu bytes from %p: %s\n",
+                    "util: failed to write %zu bytes from %p: %s\r\n",
                     len,
                     ptr,
                     strerror(errno));

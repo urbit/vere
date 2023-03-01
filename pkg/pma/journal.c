@@ -27,7 +27,7 @@ journal_open(const char *path, journal_t *journal)
     int fd = open(path, O_CREAT | O_RDWR, 0644);
     if (fd == -1) {
         fprintf(stderr,
-                "journal: failed to open %s: %s\n",
+                "journal: failed to open %s: %s\r\n",
                 path,
                 strerror(errno));
         goto fail;
@@ -36,14 +36,14 @@ journal_open(const char *path, journal_t *journal)
     struct stat buf;
     if (fstat(fd, &buf) == -1) {
         fprintf(stderr,
-                "journal: failed to determine length of %s: %s\n",
+                "journal: failed to determine length of %s: %s\r\n",
                 path,
                 strerror(errno));
         goto close_fd;
     }
 
     if (buf.st_size % sizeof(journal_entry_t) != 0) {
-        fprintf(stderr, "journal: %s is corrupt\n", path);
+        fprintf(stderr, "journal: %s is corrupt\r\n", path);
         goto close_fd;
     }
 
@@ -82,7 +82,7 @@ journal_sync(const journal_t *journal)
 
     if (fsync(journal->fd) == -1) {
         fprintf(stderr,
-                "journal: failed to flush changes to %s: %s\n",
+                "journal: failed to flush changes to %s: %s\r\n",
                 journal->path,
                 strerror(errno));
         return -1;
@@ -105,7 +105,7 @@ journal_apply(journal_t *journal, char *base, bool grows_down)
 
     if (lseek(journal->fd, 0, SEEK_SET) == (off_t)-1) {
         fprintf(stderr,
-                "journal: failed to seek to beginning of %s: %s\n",
+                "journal: failed to seek to beginning of %s: %s\r\n",
                 journal->path,
                 strerror(errno));
         return -1;
