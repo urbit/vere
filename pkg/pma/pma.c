@@ -580,7 +580,9 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
                 return -1;
             }
         }
+        pma->heap_len = heap_len;
         close(pma->heap_fd);
+        pma->heap_fd = -1;
 #endif
     }
 
