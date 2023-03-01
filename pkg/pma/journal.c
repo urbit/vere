@@ -87,6 +87,8 @@ journal_sync(const journal_t *journal)
                 strerror(errno));
         return -1;
     }
+
+    return 0;
 }
 
 int
