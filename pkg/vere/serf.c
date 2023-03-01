@@ -49,6 +49,16 @@
 --
 */
 
+static inline void
+_serf_take_snapshot(void)
+{
+  c3_w nwa_w, swa_w;
+  u3m_water(&nwa_w, &swa_w);
+  if (pma_sync(u3_pma, nwa_w * sizeof(c3_w), swa_w * sizeof(c3_w)) == -1) {
+    fprintf(stderr, "serf: failed to take snapshot\r\n");
+  }
+}
+
 /* _serf_space(): print n spaces.
 */
 static void
@@ -883,7 +893,7 @@ _serf_writ_live_save(u3_serf* sef_u, c3_d eve_d)
     exit(1);
   }
 
-  u3e_save();
+  _serf_take_snapshot();
 }
 
 /* u3_serf_live(): apply %live command [com], producing *ret on c3y.
@@ -954,7 +964,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
         return c3n;
       }
 
-      u3e_save();
+      _serf_take_snapshot();
       u3_serf_grab();
 
       *ret = u3nc(c3__live, u3_nul);
