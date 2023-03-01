@@ -111,6 +111,6 @@ container_push(
     image = ":image_x86_64",
     registry = "docker.io",
     repository = _docker_repository,
-    tag = ":pace_tag",
+    tag_file = ":pace_tag",
     visibility = ["//visibility:public"],
 )
