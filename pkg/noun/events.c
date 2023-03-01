@@ -205,21 +205,25 @@ _ce_center_guard_page(void)
 {
   u3p(c3_w) bot_p, top_p;
   if ( !u3R ) {
+    fprintf(stderr, "loom: road is undefined\r\n");
     top_p = u3a_outa(u3_Loom + u3C.wor_i);
     bot_p = u3a_outa(u3_Loom);
   }
   else if ( c3y == u3a_is_north(u3R) ) {
+    fprintf(stderr, "loom: centering guard page in north road\r\n");
     top_p = c3_rod(u3R->cap_p, pag_wiz_i);
     bot_p = c3_rop(u3R->hat_p, pag_wiz_i);
   }
   else {
+    fprintf(stderr, "loom: centering guard page in south road\r\n");
     top_p = c3_rod(u3R->hat_p, pag_wiz_i);
     bot_p = c3_rop(u3R->cap_p, pag_wiz_i);
   }
 
   if ( top_p < bot_p + pag_wiz_i ) {
     fprintf(stderr,
-            "loom: not enough memory to recenter the guard page\r\n");
+            "loom: not enough memory to recenter the guard page\r\n"
+            "top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n", top_p, bot_p);
     goto bail;
   }
   const u3p(c3_w) old_gar_p = gar_pag_p;
@@ -228,8 +232,9 @@ _ce_center_guard_page(void)
   if ( old_gar_p == gar_pag_p ) {
     fprintf(stderr,
             "loom: can't move the guard page to the same location"
-            " (base address %p)\r\n",
-            u3a_into(gar_pag_p));
+            " (base address %p)\r\n"
+            "top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n",
+            u3a_into(gar_pag_p), top_p, bot_p);
     goto bail;
   }
 
