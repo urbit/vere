@@ -553,6 +553,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     stack_len = round_up(stack_len, kPageSz);
 
     if (pma->heap_fd != -1) {
+#if 0
         if (sync_file_(pma->heap_file,
                        pma->heap_start,
                        false,
@@ -580,6 +581,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
             }
         }
         close(pma->heap_fd);
+#endif
     }
 
     if (pma->stack_fd != -1) {
@@ -612,6 +614,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         close(pma->stack_fd);
     }
 
+#if 0
     // Unmap all mappings.
     size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
@@ -630,6 +633,7 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         fprintf(stderr, "pma: failed to remap %s\n", pma->heap_file);
         return -1;
     }
+#endif
 
     // Remap stack.
     if (map_file_(pma->stack_file,
