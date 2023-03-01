@@ -251,11 +251,13 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:cde:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      case 5: {  //  urth-loom
+      //  urth-loom
+      //
+      case 5: {
         c3_w lut_w;
         c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lut_w);
         if ( (c3n == res_o) || (lut_w < 20) ) {
@@ -266,20 +268,42 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.lut_y = lut_w;
         break;
       }
-      case 'X': {
-        u3_Host.ops_u.pek_c = strdup(optarg);
+      //  special args
+      //
+      case c3__loom: {
+        c3_w lom_w;
+        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
+        if ( (c3n == res_o) || (lom_w < 20) ) {
+          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
+          return c3n;
+        }
+        u3_Host.ops_u.lom_y = lom_w;
         break;
       }
-      case 'Y': {
-        u3_Host.ops_u.puk_c = strdup(optarg);
+      case c3__http: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.per_s = arg_w;
         break;
       }
-      case 'Z': {
-        u3_Host.ops_u.puf_c = strdup(optarg);
+      case c3__htls: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.pes_s = arg_w;
         break;
       }
-      case 'J': {
-        u3_Host.ops_u.lit_c = _main_repath(optarg);
+      case c3__noco: {
+        u3_Host.ops_u.con = c3n;
+        break;
+      }
+      case c3__nodo: {
+        u3_Host.ops_u.doc = c3n;
+        break;
+      }
+      //  opts with args
+      //
+      case 'A': {
+        u3_Host.ops_u.arv_c = _main_repath(optarg);
         break;
       }
       case 'B': {
@@ -290,12 +314,29 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.bin_c = strdup(optarg);
         break;
       }
-      case 'G': {
-        u3_Host.ops_u.gen_c = strdup(optarg);
+      case 'C': {
+        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
+          return c3n;
+        }
         break;
       }
-      case 'A': {
-        u3_Host.ops_u.arv_c = _main_repath(optarg);
+      case 'c': {
+        u3_Host.dir_c     = _main_repath(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'e': {
+        u3_Host.ops_u.eth_c = strdup(optarg);
+        break;
+      }
+      case 'F': {
+        u3_Host.ops_u.fak_c = _main_presig(optarg);
+        u3_Host.ops_u.net   = c3n;
+        u3_Host.ops_u.nuu   = c3y;
+        break;
+      }
+      case 'G': {
+        u3_Host.ops_u.gen_c = strdup(optarg);
         break;
       }
       case 'H': {
@@ -306,32 +347,12 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.jin_c = _main_repath(optarg);
         break;
       }
-      case 'C': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
-          return c3n;
-        }
+      case 'i': {
+        u3_Host.ops_u.imp_c = _main_repath(optarg);
         break;
       }
-      case 'e': {
-        u3_Host.ops_u.eth_c = strdup(optarg);
-        break;
-      }
-      case 'F': {
-        u3_Host.ops_u.fak_c = _main_presig(optarg);
-        u3_Host.ops_u.net   = c3n;
-        break;
-      }
-      case 'w': {
-        u3_Host.ops_u.who_c = _main_presig(optarg);
-        u3_Host.ops_u.nuu = c3y;
-        break;
-      }
-      case 'u': {
-        u3_Host.ops_u.url_c = strdup(optarg);
-        break;
-      }
-      case 'x': {
-        u3_Host.ops_u.tex = c3y;
+      case 'J': {
+        u3_Host.ops_u.lit_c = _main_repath(optarg);
         break;
       }
       case 'K': {
@@ -354,36 +375,6 @@ _main_getopt(c3_i argc, c3_c** argv)
         } else u3_Host.ops_u.por_s = arg_w;
         break;
       }
-      case c3__http: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.per_s = arg_w;
-        break;
-      }
-      case c3__htls: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.pes_s = arg_w;
-        break;
-      }
-      case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits_max+1, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %zu\r\n", u3a_bits_max);
-          return c3n;
-        }
-        u3_Host.ops_u.lom_y = lom_w;
-        break;
-      }
-      case c3__noco: {
-        u3_Host.ops_u.con = c3n;
-        break;
-      }
-      case c3__nodo: {
-        u3_Host.ops_u.doc = c3n;
-        break;
-      }
       case 'R': {
         u3_Host.ops_u.rep = c3y;
         return c3y;
@@ -392,24 +383,48 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.roc_c = strdup(optarg);
         break;
       }
-      case 'i': {
-        u3_Host.ops_u.imp_c = _main_repath(optarg);
+      case 'u': {
+        u3_Host.ops_u.url_c = strdup(optarg);
         break;
       }
-      case 'L': { u3_Host.ops_u.net = c3n; break; }
-      case 'l': { u3_Host.ops_u.lit = c3y; break; }
-      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'w': {
+        u3_Host.ops_u.who_c = _main_presig(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'X': {
+        u3_Host.ops_u.pek_c = strdup(optarg);
+        break;
+      }
+      case 'x': {
+        u3_Host.ops_u.tex = c3y;
+        break;
+      }
+      case 'Y': {
+        u3_Host.ops_u.puk_c = strdup(optarg);
+        break;
+      }
+      case 'Z': {
+        u3_Host.ops_u.puf_c = strdup(optarg);
+        break;
+      }
+      //  opts without args
+      //
       case 'a': { u3_Host.ops_u.abo = c3y; break; }
-      case 'c': { want_creat_o = u3_Host.ops_u.nuu = c3y; break; }
+      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'd': { u3_Host.ops_u.dem = c3y; break; }
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
+      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'L': { u3_Host.ops_u.net = c3n; break; }
+      case 'l': { u3_Host.ops_u.lit = c3y; break; }
       case 'P': { u3_Host.ops_u.pro = c3y; break; }
-      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'q': { u3_Host.ops_u.qui = c3y; break; }
-      case 'v': { u3_Host.ops_u.veb = c3y; break; }
       case 's': { u3_Host.ops_u.git = c3y; break; }
       case 'S': { u3_Host.ops_u.has = c3y; break; }
       case 't': { u3_Host.ops_u.tem = c3y; break; }
+      case 'v': { u3_Host.ops_u.veb = c3y; break; }
+      //  unknown opt
+      //
       case '?': default: {
         return c3n;
       }
@@ -428,33 +443,34 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "fake comets are forbidden\r\n");
       return c3n;
     }
+    if ( 0 != u3_Host.ops_u.who_c ) {
+      fprintf(stderr, "-F and -w cannot be used together\r\n");
+      return c3n;
+    }
 
     u3_Host.ops_u.who_c = strdup(u3_Host.ops_u.fak_c);
     u3_Host.ops_u.has = c3y;  /* no battery hashing on fake ships. */
     u3_Host.ops_u.net = c3n;  /* no networking on fake ships. */
-    u3_Host.ops_u.nuu = c3y;
   }
 
-  if ( argc != (optind + 1) ) {
-    if ( u3_Host.ops_u.who_c != 0 ) {
-      u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
-    }
-    //  no trailing positional arg, argv[0] != $pier/.run, invalid command
-    //
-    else  if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+  if ( argc == optind && u3_Host.ops_u.nuu != c3y ) {
+    if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+      //  no trailing arg, argv[0] != $pier/.run, not making new pier: invalid command
+      fprintf(stderr, "no pier provided\n");
       return c3n;
     }
   }
-  else {
-    {
-      c3_c* ash_c;
-
-      if ( (ash_c = strrchr(argv[optind], '/')) && (ash_c[1] == 0) ) {
-        *ash_c = 0;
-      }
+  else if ( argc != optind ) {
+    if ( u3_Host.ops_u.nuu == c3y || argc > (optind + 1) ) {
+      //  path with new pier or multiple paths: invalid command
+      fprintf(stderr, "too many arguments\n");
+      return c3n;
     }
-
     u3_Host.dir_c = _main_repath(argv[optind]);
+  }
+
+  if ( 0 == u3_Host.dir_c ) {
+    u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
   }
 
   //  daemon mode (-d) implies disabling terminal assumptions (-t)
@@ -463,74 +479,51 @@ _main_getopt(c3_i argc, c3_c** argv)
     u3_Host.ops_u.tem = c3y;
   }
 
-  //  make -c optional, catch invalid boot of existing pier
-  //
   {
     struct stat s;
+    //  catch invalid boot
     if ( 0 != stat(u3_Host.dir_c, &s) ) {
-      if ( c3n == u3_Host.ops_u.nuu ) {
-        u3_Host.ops_u.nuu = c3y;
+      if ( u3_Host.ops_u.nuu != c3y ) {
+        fprintf(stderr, "couldn't find pier %s\n", u3_Host.dir_c);
+        exit(1);
       }
     }
-    else if ( c3y == u3_Host.ops_u.nuu ) {
-      fprintf(stderr, "tried to create, but %s already exists\n", u3_Host.dir_c);
-      fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
-      exit(1);
+    //  catch invalid boot of existing pier
+    else {
+      if ( u3_Host.ops_u.nuu == c3y ) {
+        fprintf(stderr, "tried to create pier %s but it already exists\n", u3_Host.dir_c);
+        fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
+        exit(1);
+      }
+      else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
+        fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
+        exit(1);
+      }
     }
-    else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
-      fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
-      exit(1);
-    }
   }
 
-  /* when creating a pier, explicit -c must be specified with the exception of
-     -w or -F which implicitly create the pier */
-  if (_(u3_Host.ops_u.nuu)
-      && !(_(want_creat_o)
-           || 0 != u3_Host.ops_u.fak_c
-           || 0 != u3_Host.ops_u.who_c)) {
-    fprintf(stderr, "-c is required to create a new pier. Did you type an existing pier incorrectly?\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.nuu == c3n ) {
-    fprintf(stderr, "-G only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.who_c != 0) {
-    fprintf(stderr, "-w only makes sense when creating a new ship\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0 ) {
     fprintf(stderr, "-B only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  struct sockaddr_in t;
-  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
-    fprintf(stderr, "-b invalid IP address\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.gen_c != 0 ) {
+    fprintf(stderr, "-G only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0) {
-    fprintf(stderr, "-H only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
+    fprintf(stderr, "-H only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
-    fprintf(stderr, "-B only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0) {
-    fprintf(stderr, "-k only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-k only makes sense when creating a new ship\n");
     return c3n;
   }
 
   if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.url_c != 0 ) {
-    fprintf(stderr, "-u only makes sense when bootstrapping a new instance\n");
+    fprintf(stderr, "-u only makes sense when creating a new ship\n");
     return c3n;
   }
 
@@ -563,6 +556,7 @@ _main_getopt(c3_i argc, c3_c** argv)
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.arv_c == 0 ) {
 
+    // implicitly: u3_Host.ops_u.git == c3y
     fprintf(stderr, "-s only makes sense with -A\n");
     return c3n;
   }
@@ -573,6 +567,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "pill %s not found\n", u3_Host.ops_u.pil_c);
       return c3n;
     }
+  }
+
+  struct sockaddr_in t;
+  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
+    fprintf(stderr, "-b invalid IP address\n");
+    return c3n;
   }
 
   if ( u3_Host.ops_u.key_c != 0 ) {
@@ -700,11 +700,11 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-B, --bootstrap PILL          Bootstrap from this pill\n",
     "-b, --http-ip IP              Bind HTTP server to this IP address\n",
     "-C, --memo-cache-limit LIMIT  Set memo cache max size; 0 means uncapped\n",
-    "-c, --pier PIER               Create a new urbit in pier/\n",
+    "-c, --pier PIER               Create a new urbit in <pier>/\n",
     "-D, --replay                  Recompute from events\n",
     "-d, --daemon                  Daemon mode; implies -t\n",
     "-e, --ethereum URL            Ethereum gateway\n",
-    "-F, --fake SHIP               Fake keys; also disables networking\n",
+    "-F, --fake SHIP               Boot fake urbit; also disables networking\n",
     "-G, --key-string STRING       Private key string (@uw, see also -k)\n"
     "-g, --gc                      Set GC flag\n",
     "-I, --inject FILE             Inject event from jamfile\n",
@@ -730,7 +730,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-t, --no-tty                  Disable terminal/tty assumptions\n",
     "-u, --bootstrap-url URL       URL from which to download pill\n",
     "-v, --verbose                 Verbose\n",
-    "-w, --name NAME               Boot as ~name\n",
+    "-w, --name NAME               Initial boot as ~name (with ticket)\n",
     "-X, --scry PATH               Scry, write to file, then exit\n",
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",

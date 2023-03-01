@@ -267,7 +267,7 @@ genrule(
     $(execpath :urbit) --lite-boot --daemon --fake bus \
       --bootstrap $(execpath @solid_pill//file)        \
       --arvo ./urbit/pkg/arvo                          \
-      ./pier
+      --pier ./pier
 
     cleanup() {
       if [ -f ./pier/.vere.lock ]; then
