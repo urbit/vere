@@ -223,7 +223,7 @@ _ce_center_guard_page(void)
   if ( top_p < bot_p + pag_wiz_i ) {
     fprintf(stderr,
             "loom: not enough memory to recenter the guard page\r\n"
-            "top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n", top_p, bot_p);
+            " top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n", top_p, bot_p);
     goto bail;
   }
   const u3p(c3_w) old_gar_p = gar_pag_p;
@@ -233,7 +233,7 @@ _ce_center_guard_page(void)
     fprintf(stderr,
             "loom: can't move the guard page to the same location"
             " (base address %p)\r\n"
-            "top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n",
+            " top_p: %" PRIu32 "bot_p: %" PRIu32 "\r\n",
             u3a_into(gar_pag_p), top_p, bot_p);
     goto bail;
   }
@@ -241,7 +241,7 @@ _ce_center_guard_page(void)
   if ( -1 == mprotect(u3a_into(gar_pag_p), pag_siz_i, PROT_NONE) ) {
     fprintf(stderr,
             "loom: failed to protect the guard page "
-            "(base address %p): %s\r\n",
+            " (base address %p): %s\r\n",
             u3a_into(gar_pag_p),
             strerror(errno));
     goto fail;
@@ -1259,8 +1259,26 @@ void
 u3e_ward(u3_post low_p, u3_post hig_p)
 {
 #ifdef U3_GUARD_PAGE
-  if ( (low_p > gar_pag_p) || (hig_p < gar_pag_p) ) {
+  const u3p(c3_w) gar_p = gar_pag_p;
+
+  if ( (low_p > gar_p) || (hig_p < gar_p) ) {
     _ce_center_guard_page();
+    if ( 0 != mprotect(u3a_into(gar_p),
+                       pag_siz_i,
+                       (PROT_READ | PROT_WRITE)) )
+    {
+      fprintf(stderr, "loom: failed to unprotect old guard page: %s\r\n",
+                      strerror(errno));
+      c3_assert(0);
+    }
+
+    {
+      c3_w pag_w = gar_p >> u3a_page;
+      c3_w blk_w = (pag_w >> 5);
+      c3_w bit_w = (pag_w & 31);
+
+      u3P.dit_w[blk_w] |= (1 << bit_w);
+    }
   }
 #endif
 }
