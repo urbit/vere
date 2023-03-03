@@ -11,29 +11,17 @@
 //==============================================================================
 // ARITHMETIC
 
-inline size_t
-max(size_t a, size_t b)
-{
-    return a < b ? b : a;
-}
+size_t
+max(size_t a, size_t b);
 
-inline size_t
-min(size_t a, size_t b)
-{
-    return a < b ? a : b;
-}
+size_t
+min(size_t a, size_t b);
 
-inline size_t
-round_down(size_t x, size_t n)
-{
-    return x & ~(n - 1);
-}
+size_t
+round_down(size_t x, size_t n);
 
-inline size_t
-round_up(size_t x, size_t n)
-{
-    return (x + (n - 1)) & (~(n - 1));
-}
+size_t
+round_up(size_t x, size_t n);
 
 //==============================================================================
 // I/O
