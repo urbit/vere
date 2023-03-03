@@ -92,9 +92,9 @@ journal_sync(const journal_t *journal)
 }
 
 int
-journal_apply(journal_t *journal, char *base, bool grows_down)
+journal_apply(journal_t *journal, int fd)
 {
-    if (!journal || !base) {
+    if (!journal || journal->fd < 0 || fd < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -111,18 +111,25 @@ journal_apply(journal_t *journal, char *base, bool grows_down)
         return -1;
     }
 
-    if (grows_down) {
-        base -= kPageSz;
-    }
-    int             direction = grows_down ? -1 : 1;
-
     journal_entry_t entry;
+    off_t           offset;
     for (size_t i = 0; i < journal->entry_cnt; i++) {
         if (read_all(journal->fd, &entry, sizeof(entry)) == -1) {
             return -1;
         }
-        char *dst = base + direction * entry.pg_idx;
-        memcpy(dst, entry.pg, sizeof(entry.pg));
+        offset = entry.pg_idx * kPageSz;
+        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            fprintf(stderr,
+                    "journal: failed to seek to offset %u of file descriptor "
+                    "%d: %s\r\n",
+                    offset,
+                    fd,
+                    strerror(errno));
+            return -1;
+        }
+        if (write_all(fd, entry.pg, sizeof(entry.pg)) == -1) {
+            return -1;
+        }
     }
 
     return 0;

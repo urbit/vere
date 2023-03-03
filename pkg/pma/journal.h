@@ -37,7 +37,7 @@ int
 journal_sync(const journal_t *journal);
 
 int
-journal_apply(journal_t *journal, char *base, bool grows_down);
+journal_apply(journal_t *journal, int fd);
 
 void
 journal_destroy(journal_t *journal);

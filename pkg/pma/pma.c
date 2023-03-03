@@ -409,34 +409,11 @@ sync_file_(const char *path,
         return -1;
     }
 
-    if (journal_apply(&journal, base, grows_down) == -1) {
+    if (journal_apply(&journal, fd) == -1) {
         fprintf(stderr,
                 "pma: failed to apply journal at %s to %s\r\n",
                 journal_file,
                 path);
-        return -1;
-    }
-
-    if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-        fprintf(stderr,
-                "pma: failed to move file cursor to beginning of %s: %s\r\n",
-                path,
-                strerror(errno));
-        return -1;
-    }
-
-    if (write_all(fd, grows_down ? ptr + kPageSz : base, len) == -1) {
-        fprintf(stderr,
-                "pma: failed to write changes to %s after applying journal\r\n",
-                path);
-        return -1;
-    }
-
-    if (fsync(fd) == -1) {
-        fprintf(stderr,
-                "pma: failed to flush changes to %s: %s\r\n",
-                path,
-                strerror(errno));
         return -1;
     }
 
