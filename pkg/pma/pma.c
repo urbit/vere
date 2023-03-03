@@ -28,7 +28,6 @@
 
 //==============================================================================
 // CONSTANTS
-//==============================================================================
 
 /// Number of bits in a byte.
 static_ const size_t kBitsPerByte = 8;
@@ -51,14 +50,12 @@ static_ const char kJournalExtension[] = ".journal";
 
 //==============================================================================
 // GLOBAL VARIABLES
-//==============================================================================
 
 /// Global libsigsegv dispatcher.
 static_ sigsegv_dispatcher dispatcher;
 
 //==============================================================================
 // STATIC FUNCTIONS
-//==============================================================================
 
 /// Determine the 0-based page index of an address relative to the start of the
 /// heap.
@@ -428,7 +425,6 @@ sync_file_(const char *path,
 
 //==============================================================================
 // FUNCTIONS
-//==============================================================================
 
 pma_t *
 pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
