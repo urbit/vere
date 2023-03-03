@@ -255,12 +255,12 @@ map_file_(const char *path,
                  0)
             == MAP_FAILED)
         {
-            fprintf(
-                stderr,
-                "pma: failed to create %zu-byte anonymous mapping at %p: %s\r\n",
-                kDefaultSz,
-                base,
-                strerror(errno));
+            fprintf(stderr,
+                    "pma: failed to create %zu-byte anonymous mapping at %p: "
+                    "%s\r\n",
+                    kDefaultSz,
+                    base,
+                    strerror(errno));
             goto fail;
         }
         size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
@@ -273,7 +273,10 @@ map_file_(const char *path,
     int fd_ = open(path, O_CREAT | O_RDWR, 0644);
     // A parent directory doesn't exist.
     if (fd_ == -1) {
-        fprintf(stderr, "pma: failed to open %s: %s\r\n", path, strerror(errno));
+        fprintf(stderr,
+                "pma: failed to open %s: %s\r\n",
+                path,
+                strerror(errno));
         goto fail;
     }
 
@@ -308,13 +311,13 @@ map_file_(const char *path,
                      offset_)
                 == MAP_FAILED)
             {
-                fprintf(
-                    stderr,
-                    "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
-                    kPageSz,
-                    path,
-                    ptr,
-                    strerror(errno));
+                fprintf(stderr,
+                        "pma: failed to create %zu-byte mapping for %s at %p: "
+                        "%s\r\n",
+                        kPageSz,
+                        path,
+                        ptr,
+                        strerror(errno));
                 // Unmap already-mapped mappings.
                 munmap(ptr + kPageSz, offset_);
                 goto close_fd;
@@ -325,12 +328,13 @@ map_file_(const char *path,
         if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd_, 0)
             == MAP_FAILED)
         {
-            fprintf(stderr,
-                    "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
-                    len_,
-                    path,
-                    base,
-                    strerror(errno));
+            fprintf(
+                stderr,
+                "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
+                len_,
+                path,
+                base,
+                strerror(errno));
             goto close_fd;
         }
         set_page_status_range_(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
@@ -548,12 +552,12 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         // The heap shrunk, so shrink the backing file.
         if (heap_len < pma->heap_len) {
             if (ftruncate(pma->heap_fd, heap_len) == -1) {
-                fprintf(
-                    stderr,
-                    "pma: failed to truncate %s from %zu bytes to %zu bytes\r\n",
-                    pma->heap_file,
-                    pma->heap_len,
-                    heap_len);
+                fprintf(stderr,
+                        "pma: failed to truncate %s from %zu bytes to %zu "
+                        "bytes\r\n",
+                        pma->heap_file,
+                        pma->heap_len,
+                        heap_len);
                 return -1;
             }
         }
@@ -581,12 +585,12 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         // The stack shrunk, so shrink the backing file.
         if (stack_len < pma->stack_len) {
             if (ftruncate(pma->stack_fd, stack_len) == -1) {
-                fprintf(
-                    stderr,
-                    "pma: failed to truncate %s from %zu bytes to %zu bytes\r\n",
-                    pma->stack_file,
-                    pma->stack_len,
-                    stack_len);
+                fprintf(stderr,
+                        "pma: failed to truncate %s from %zu bytes to %zu "
+                        "bytes\r\n",
+                        pma->stack_file,
+                        pma->stack_len,
+                        stack_len);
                 return -1;
             }
         }
