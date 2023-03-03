@@ -714,13 +714,6 @@ u3m_dump(void)
 c3_i
 u3m_bail(u3_noun how)
 {
-  if ( &(u3H->rod_u) == u3R ) {
-    //  XX set exit code
-    //
-    fprintf(stderr, "home: bailing out\r\n");
-    abort();
-  }
-
   //  printf some metadata
   //
   switch ( how ) {
@@ -755,6 +748,14 @@ u3m_bail(u3_noun how)
       fprintf(stderr, "bailing out\r\n");
       abort();
     }
+  }
+
+  //  XX JB: revisit this
+  if ( &(u3H->rod_u) == u3R ) {
+    //  XX set exit code
+    //
+    fprintf(stderr, "home: bailing out\r\n");
+    abort();
   }
 
   if ( &(u3H->rod_u) == u3R ) {
