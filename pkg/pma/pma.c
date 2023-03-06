@@ -241,6 +241,7 @@ map_file_(const char *path,
 {
     if (!path) {
         static const size_t kDefaultSz = kPageSz;
+        *len = *len == 0 ? kDefaultSz : round_up(*len, kPageSz);
         if (grows_down) {
             base = (char *)base - kDefaultSz;
         }
@@ -262,8 +263,7 @@ map_file_(const char *path,
         }
         size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
         set_page_status_range_(base, pg_cnt, PS_MAPPED_CLEAN, pma);
-        *fd  = -1;
-        *len = kDefaultSz;
+        *fd = -1;
         return 0;
     }
 
@@ -457,6 +457,7 @@ pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
     pma->num_pgs        = num_pgs;
     pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));
 
+    pma->heap_len = 0;
     // Failed to map non-NULL heap file.
     if (map_file_(heap_file,
                   heap_start,
@@ -469,6 +470,7 @@ pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
         goto free_pma;
     }
 
+    pma->stack_len = 0;
     // Failed to map non-NULL stack file.
     if (map_file_(stack_file,
                   stack_start,
@@ -593,12 +595,6 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         pma->stack_fd = -1;
     }
 
-    // Unmap all mappings.
-    size_t total = total_len_(pma);
-    assert(total % kPageSz == 0);
-    munmap(pma->heap_start, total);
-    set_page_status_range_(pma->heap_start, total / kPageSz, PS_UNMAPPED, pma);
-
     // Remap heap.
     if (map_file_(pma->heap_file,
                   pma->heap_start,
@@ -627,6 +623,13 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
         pma->heap_fd = -1;
         return -1;
     }
+
+    // Remove unused mappings between new heap and stack boundaries.
+    void  *unmap_start = (char *)pma->heap_start + pma->heap_len;
+    size_t unmap_len   = total_len_(pma) - (pma->heap_len + pma->stack_len);
+    assert(unmap_len % kPageSz == 0);
+    assert(munmap(unmap_start, unmap_len) == 0);
+    set_page_status_range_(unmap_start, unmap_len / kPageSz, PS_UNMAPPED, pma);
 
     return 0;
 }
