@@ -67,16 +67,47 @@ typedef struct pma pma_t;
 //==============================================================================
 // FUNCTIONS
 
+/// Load a new or existing PMA into memory.
+///
 /// @param[in] base        Base address to create the PMA at.
-/// @param[in] len         Length in bytes of the PMA.
-/// @param[in] heap_file   Optional backing file for heap.
-/// @param[in] stack_file  Optional backing file for stack.
+/// @param[in] len         Length in bytes of the PMA. Must be greater than the
+///                        sum of the lengths of the backing heap and stack
+///                        files.
+/// @param[in] heap_file   Optional backing file for heap. If NULL, changes to
+///                        the heap will not be persistent.
+/// @param[in] stack_file  Optional backing file for stack. If NULL, changes to
+///                        the stack will not be persistent.
+///
+/// @return PMA handle  Success. When finished, call pma_unload() to dispose of
+///                     the PMA's resources.
+/// @return NULL        Failed to set up heap.
+/// @return NULL        Failed to set up stack.
 pma_t *
 pma_load(void *base, size_t len, const char *heap_file, const char *stack_file);
 
+/// Sync changes to a PMA to disk.
+///
+/// @param[in] pma        PMA handle. Must not be NULL.
+/// @param[in] heap_len   Length in bytes of the heap to synchronize. The range
+///                       [heap_start, heap_start + heap_len) is synchronized to
+///                       disk. If there is no backing heap file, no heap
+///                       changes are synced to disk.
+/// @param[in] stack_len  Length in bytes of the stack to synchronize. The
+///                       range [stack_start - stack_len, stack_start) is
+///                       synchronized to disk. If there is no backing stack
+///                       file, no stack changes are synced to disk.
+///
+/// @return 0   Success.
+/// @return -1  pma was NULL.
+/// @return -1  Failed to sync changes to heap.
+/// @return -1  Failed to sync changes to stack.
 int
 pma_sync(pma_t *pma, size_t heap_len, size_t stack_len);
 
+/// Unload a PMA from memory and dispose of its resources, including freeing the
+/// PMA handle itself.
+///
+/// @param[in] pma  PMA handle. If NULL, this function is a no-op.
 void
 pma_unload(pma_t *pma);
 
