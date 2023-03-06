@@ -70,8 +70,8 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
     return (addr - pma->heap_start) / kPageSz;
 }
 
-/// Handle a page fault according to the libsigsegv protocol. See
-/// sigsegv_area_handler_t in sigsegv.h for more info.
+/// Handle a page fault within the bounds of a PMA according to the libsigsegv
+/// protocol. See sigsegv_area_handler_t in sigsegv.h for more info.
 ///
 /// @param[in] fault_addr
 /// @param[in] user_arg
