@@ -499,7 +499,12 @@ pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
                   &pma->stack_fd)
         == -1)
     {
-        goto free_pma;
+        goto unmap_heap;
+    }
+
+    if ((pma->heap_len + pma->stack_len) > len) {
+        fprintf(stderr, "pma: heap and stack overlap\r\n");
+        goto unmap_stack;
     }
 
     sigsegv_init(&dispatcher);
