@@ -11,16 +11,23 @@
 //==============================================================================
 // TYPES
 
+/// Write-ahead log for updating a PMA.
 struct wal {
+    /// Path to the write-ahead log.
     const char *path;
-    int         fd;
-    size_t      entry_cnt;
+    /// File descriptor for the open write-ahead log.
+    int fd;
+    /// Number of entries in the write-ahead log.
+    size_t entry_cnt;
 };
 typedef struct wal wal_t;
 
+/// Write-ahead log entry representing a single PMA page.
 struct wal_entry {
+    /// Page index.
     uint64_t pg_idx;
-    char     pg[kPageSz];
+    /// Page contents.
+    char pg[kPageSz];
 };
 typedef struct wal_entry wal_entry_t;
 
