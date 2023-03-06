@@ -86,12 +86,25 @@ handle_page_fault_(void *fault_addr, void *user_arg);
 static_ int
 handle_sigsegv_(void *fault_addr, int serious);
 
-/// @param[in]  path
-/// @param[in]  base
-/// @param[in]  grows_down
-/// @param[in]  pma
-/// @param[out] len
-/// @param[out] fd
+/// Map a file into memory at a specific address. Can also be used to create an
+/// anonymous, rather than file-backed, mapping by passing in a NULL path.
+///
+/// @param[in]     path        Path to the backing file. If NULL, an anonymous
+///                            mapping is created.
+/// @param[in]     base        Base address of the new mapping.
+/// @param[in]     grows_down  true if the mapping should grow downward in
+///                            memory.
+/// @param[in]     pma         PMA this mapping will belong to.
+/// @param[in,out] len         Populated with the length of the new mapping. If
+///                            path is NULL, this parameter can also be used to
+///                            supply a non-default length for an anonymous
+///                            mapping.
+/// @param[out]    fd          Populated with the file descriptor of the opened
+///                            backing file. -1 if path is NULL.
+///
+///
+/// @return 0   Successfully created a new mapping.
+/// @return -1  Failed to create a new mapping.
 static_ int
 map_file_(const char *path,
           void       *base,
