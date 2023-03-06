@@ -11,35 +11,35 @@
 //==============================================================================
 // TYPES
 
-struct journal {
+struct wal {
     const char *path;
     int         fd;
     size_t      entry_cnt;
 };
-typedef struct journal journal_t;
+typedef struct wal wal_t;
 
-struct journal_entry {
+struct wal_entry {
     uint64_t pg_idx;
     char     pg[kPageSz];
 };
-typedef struct journal_entry journal_entry_t;
+typedef struct wal_entry wal_entry_t;
 
 //==============================================================================
 // FUNCTIONS
 
 int
-journal_open(const char *path, journal_t *journal);
+wal_open(const char *path, wal_t *wal);
 
 int
-journal_append(journal_t *journal, const journal_entry_t *entry);
+wal_append(wal_t *wal, const wal_entry_t *entry);
 
 int
-journal_sync(const journal_t *journal);
+wal_sync(const wal_t *wal);
 
 int
-journal_apply(journal_t *journal, int fd);
+wal_apply(wal_t *wal, int fd);
 
 void
-journal_destroy(journal_t *journal);
+wal_destroy(wal_t *wal);
 
 #endif /* ifndef PMA_JOURNAL_H */

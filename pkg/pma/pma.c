@@ -11,10 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "journal.h"
 #include "page.h"
 #include "sigsegv.h"
 #include "util.h"
+#include "wal.h"
 
 #ifdef PMA_TEST
 #    define inline_
@@ -45,8 +45,8 @@ static_ const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 /// pg_status array of pma_t.
 static_ const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
-/// Extension appended to a backing file to create that file's journal name.
-static_ const char kJournalExtension[] = ".journal";
+/// Extension appended to a backing file to create that file's wal name.
+static_ const char kWriteAheadLogExtension[] = ".wal";
 
 //==============================================================================
 // GLOBAL VARIABLES
@@ -387,28 +387,22 @@ sync_file_(const char *path,
     assert(base);
     assert(pma);
 
-    char journal_file[strlen(path) + sizeof(kJournalExtension)];
-    snprintf(journal_file,
-             sizeof(journal_file),
-             "%s%s",
-             path,
-             kJournalExtension);
-    journal_t journal;
-    if (journal_open(journal_file, &journal) == -1) {
-        fprintf(stderr,
-                "pma: failed to open journal file at %s\r\n",
-                journal_file);
+    char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
+    snprintf(wal_file, sizeof(wal_file), "%s%s", path, kWriteAheadLogExtension);
+    wal_t wal;
+    if (wal_open(wal_file, &wal) == -1) {
+        fprintf(stderr, "pma: failed to open wal file at %s\r\n", wal_file);
         return -1;
     }
 
     // Determine largest possible page index.
     size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
-    size_t          max_idx = (total / kPageSz) - 1;
+    size_t      max_idx = (total / kPageSz) - 1;
 
-    char           *ptr  = grows_down ? base - kPageSz : base;
-    ssize_t         step = grows_down ? -kPageSz : kPageSz;
-    journal_entry_t entry;
+    char       *ptr  = grows_down ? base - kPageSz : base;
+    ssize_t     step = grows_down ? -kPageSz : kPageSz;
+    wal_entry_t entry;
     for (size_t i = 0; i < len; i += kPageSz) {
         page_status_t status = page_status_(ptr, pma);
         assert(status != PS_UNMAPPED);
@@ -416,34 +410,34 @@ sync_file_(const char *path,
             size_t pg_idx = addr_to_page_idx_(ptr, pma);
             entry.pg_idx  = grows_down ? max_idx - pg_idx : pg_idx;
             memcpy(entry.pg, ptr, sizeof(entry.pg));
-            if (journal_append(&journal, &entry) == -1) {
+            if (wal_append(&wal, &entry) == -1) {
                 fprintf(stderr,
                         "pma: failed to append %zu-byte page with index %llu "
-                        "and address %p to journal at %s\r\n",
+                        "and address %p to wal at %s\r\n",
                         sizeof(entry.pg),
                         pg_idx,
                         ptr,
-                        journal_file);
+                        wal_file);
                 return -1;
             }
         }
         ptr += step;
     }
 
-    if (journal_sync(&journal) == -1) {
-        fprintf(stderr, "pma: failed to sync journal for %s\r\n", path);
+    if (wal_sync(&wal) == -1) {
+        fprintf(stderr, "pma: failed to sync wal for %s\r\n", path);
         return -1;
     }
 
-    if (journal_apply(&journal, fd) == -1) {
+    if (wal_apply(&wal, fd) == -1) {
         fprintf(stderr,
-                "pma: failed to apply journal at %s to %s\r\n",
-                journal_file,
+                "pma: failed to apply wal at %s to %s\r\n",
+                wal_file,
                 path);
         return -1;
     }
 
-    journal_destroy(&journal);
+    wal_destroy(&wal);
 
     return 0;
 }
@@ -519,9 +513,9 @@ pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
     pma->max_sz         = 0;
 
     // The heap and stack are mapped and clean at this point, which means
-    // pma_sync() simply applies the journals to the heap and stack. The
-    // journals will only exist if a crash occurred during the most recent call
-    // to pma_sync().
+    // pma_sync() simply applies the write-ahead logs to the heap and stack. The
+    // write-ahead logs will only exist if a crash occurred during the most
+    // recent call to pma_sync().
     if (pma_sync(pma, pma->heap_len, pma->stack_len) == -1) {
         fprintf(stderr, "pma: failed to sync\r\n");
         goto unmap_stack;

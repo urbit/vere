@@ -1,6 +1,6 @@
 /// @file
 
-#include "journal.h"
+#include "wal.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -17,9 +17,9 @@
 // FUNCTIONS
 
 int
-journal_open(const char *path, journal_t *journal)
+wal_open(const char *path, wal_t *wal)
 {
-    if (!path || !journal) {
+    if (!path || !wal) {
         errno = EINVAL;
         goto fail;
     }
@@ -27,7 +27,7 @@ journal_open(const char *path, journal_t *journal)
     int fd = open(path, O_CREAT | O_RDWR, 0644);
     if (fd == -1) {
         fprintf(stderr,
-                "journal: failed to open %s: %s\r\n",
+                "wal: failed to open %s: %s\r\n",
                 path,
                 strerror(errno));
         goto fail;
@@ -36,20 +36,20 @@ journal_open(const char *path, journal_t *journal)
     struct stat buf;
     if (fstat(fd, &buf) == -1) {
         fprintf(stderr,
-                "journal: failed to determine length of %s: %s\r\n",
+                "wal: failed to determine length of %s: %s\r\n",
                 path,
                 strerror(errno));
         goto close_fd;
     }
 
-    if (buf.st_size % sizeof(journal_entry_t) != 0) {
-        fprintf(stderr, "journal: %s is corrupt\r\n", path);
+    if (buf.st_size % sizeof(wal_entry_t) != 0) {
+        fprintf(stderr, "wal: %s is corrupt\r\n", path);
         goto close_fd;
     }
 
-    journal->path      = strdup(path);
-    journal->fd        = fd;
-    journal->entry_cnt = buf.st_size / sizeof(journal_entry_t);
+    wal->path      = strdup(path);
+    wal->fd        = fd;
+    wal->entry_cnt = buf.st_size / sizeof(wal_entry_t);
     return 0;
 
 close_fd:
@@ -59,31 +59,31 @@ fail:
 }
 
 int
-journal_append(journal_t *journal, const journal_entry_t *entry)
+wal_append(wal_t *wal, const wal_entry_t *entry)
 {
-    if (!journal || !entry) {
+    if (!wal || !entry) {
         errno = EINVAL;
         return -1;
     }
-    if (write_all(journal->fd, entry, sizeof(*entry)) == -1) {
+    if (write_all(wal->fd, entry, sizeof(*entry)) == -1) {
         return -1;
     }
-    journal->entry_cnt++;
+    wal->entry_cnt++;
     return 0;
 }
 
 int
-journal_sync(const journal_t *journal)
+wal_sync(const wal_t *wal)
 {
-    if (!journal) {
+    if (!wal) {
         errno = EINVAL;
         return -1;
     }
 
-    if (fsync(journal->fd) == -1) {
+    if (fsync(wal->fd) == -1) {
         fprintf(stderr,
-                "journal: failed to flush changes to %s: %s\r\n",
-                journal->path,
+                "wal: failed to flush changes to %s: %s\r\n",
+                wal->path,
                 strerror(errno));
         return -1;
     }
@@ -92,35 +92,35 @@ journal_sync(const journal_t *journal)
 }
 
 int
-journal_apply(journal_t *journal, int fd)
+wal_apply(wal_t *wal, int fd)
 {
-    if (!journal || journal->fd < 0 || fd < 0) {
+    if (!wal || wal->fd < 0 || fd < 0) {
         errno = EINVAL;
         return -1;
     }
 
-    if (journal->entry_cnt == 0) {
+    if (wal->entry_cnt == 0) {
         return 0;
     }
 
-    if (lseek(journal->fd, 0, SEEK_SET) == (off_t)-1) {
+    if (lseek(wal->fd, 0, SEEK_SET) == (off_t)-1) {
         fprintf(stderr,
-                "journal: failed to seek to beginning of %s: %s\r\n",
-                journal->path,
+                "wal: failed to seek to beginning of %s: %s\r\n",
+                wal->path,
                 strerror(errno));
         return -1;
     }
 
-    journal_entry_t entry;
-    off_t           offset;
-    for (size_t i = 0; i < journal->entry_cnt; i++) {
-        if (read_all(journal->fd, &entry, sizeof(entry)) == -1) {
+    wal_entry_t entry;
+    off_t       offset;
+    for (size_t i = 0; i < wal->entry_cnt; i++) {
+        if (read_all(wal->fd, &entry, sizeof(entry)) == -1) {
             return -1;
         }
         offset = entry.pg_idx * kPageSz;
         if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
             fprintf(stderr,
-                    "journal: failed to seek to offset %u of file descriptor "
+                    "wal: failed to seek to offset %u of file descriptor "
                     "%d: %s\r\n",
                     offset,
                     fd,
@@ -136,12 +136,12 @@ journal_apply(journal_t *journal, int fd)
 }
 
 void
-journal_destroy(journal_t *journal)
+wal_destroy(wal_t *wal)
 {
-    if (!journal) {
+    if (!wal) {
         return;
     }
-    assert(close(journal->fd) == 0);
-    assert(unlink(journal->path) == 0);
-    free((void *)journal->path);
+    assert(close(wal->fd) == 0);
+    assert(unlink(wal->path) == 0);
+    free((void *)wal->path);
 }
