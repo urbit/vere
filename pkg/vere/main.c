@@ -820,16 +820,6 @@ _stop_on_boot_completed_cb()
   u3_king_exit();
 }
 
-static inline void
-_cw_take_snapshot(void)
-{
-  c3_w nwa_w, swa_w;
-  u3m_water(&nwa_w, &swa_w);
-  if (pma_sync(u3_pma, nwa_w * sizeof(c3_w), swa_w * sizeof(c3_w)) == -1) {
-    fprintf(stderr, "serf: failed to take snapshot\r\n");
-  }
-}
-
 /* _cw_serf_fail(): failure stub.
 */
 static void
@@ -1574,7 +1564,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   //  save even on failure, as we just did all the work of deduplication
   //
-  _cw_take_snapshot();
+  assert(u3m_take_snapshot() == 0);
   u3_disk_exit(log_u);
 
   if ( c3n == ret_o ) {
@@ -1657,7 +1647,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
       exit(1);
     }
 
-    _cw_take_snapshot();
+    assert(u3m_take_snapshot() == 0);
     u3_disk_exit(log_u);
 
     fprintf(stderr, "urbit: queu: rock loaded at event %" PRIu64 "\r\n", eve_d);
@@ -1725,7 +1715,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   u3u_meld();
   u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
 
-  _cw_take_snapshot();
+  assert(u3m_take_snapshot() == 0);
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -1845,7 +1835,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
-  _cw_take_snapshot();
+  assert(u3m_take_snapshot() == 0);
   u3_disk_exit(log_u);
   u3m_stop();
 }

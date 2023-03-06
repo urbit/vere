@@ -2149,7 +2149,24 @@ u3m_migrate(u3v_version ver_w)
 
   /* finally update the version and commit to disk */
   u3H->ver_w = ver_w;
-  /* extra assurance we haven't corrupted the loom before writing to disk */
+  assert(u3m_take_snapshot() == 0);
+}
+
+int
+u3m_take_snapshot(void)
+{
+  assert(u3_pma);
   u3a_loom_sane();
-  u3e_save();
+
+  c3_w heap_len_w;
+  c3_w stack_len_w;
+  u3m_water(&heap_len_w, &stack_len_w);
+
+  if (pma_sync(u3_pma, heap_len_w * sizeof(c3_w), stack_len_w * sizeof(c3_w))
+      == -1)
+  {
+    fprintf(stderr, "snapshot: failed to save: %s\r\n", strerror(errno));
+    return -1;
+  }
+  return 0;
 }

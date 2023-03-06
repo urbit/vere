@@ -171,4 +171,9 @@
         void
         u3m_migrate(u3v_version ver_w);
 
+      /* u3m_take_snapshot: save a snapshot.
+      */
+        int
+        u3m_take_snapshot(void);
+
 #endif /* ifndef U3_MANAGE_H */
