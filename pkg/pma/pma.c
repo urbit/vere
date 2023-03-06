@@ -173,12 +173,18 @@ set_page_status_range_(const void   *addr,
 /// Sync changes made to either the heap or stack since the last call to
 /// pma_sync().
 ///
-/// @param[in] path
-/// @param[in] base
-/// @param[in] grows_down
-/// @param[in] pma
-/// @param[in] len         Must be a multiple of kPageSz.
-/// @param[in] fd
+/// @param[in] path        Path to backing file. If NULL, this function is a
+///                        no-op.
+/// @param[in] base        Base address of the file-backed mapping.
+/// @param[in] grows_down  true if the mapping grows downward in memory.
+/// @param[in] pma         PMA this mapping belongs to.
+/// @param[in] len         Number of bytes at the beginning of the mapping to be
+///                        synced to the backing file. Must be a multiple of
+///                        kPageSz.
+/// @param[in] fd          Open file descriptor of the backing file.
+///
+/// @return 0   Synced changes successfully.
+/// @return -1  Failed to sync changes.
 static_ int
 sync_file_(const char *path,
            void       *base,
