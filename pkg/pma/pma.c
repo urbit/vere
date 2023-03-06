@@ -655,4 +655,5 @@ pma_unload(pma_t *pma)
     // TODO: free pma.
 }
 
+#undef inline_
 #undef static_
