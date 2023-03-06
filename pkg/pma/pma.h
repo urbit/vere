@@ -59,7 +59,7 @@ typedef struct pma pma_t;
 /// @param[in] heap_file   Optional backing file for heap.
 /// @param[in] stack_file  Optional backing file for stack.
 pma_t *
-pma_init(void *base, size_t len, const char *heap_file, const char *stack_file);
+pma_load(void *base, size_t len, const char *heap_file, const char *stack_file);
 
 int
 pma_sync(pma_t *pma, size_t heap_len, size_t stack_len);

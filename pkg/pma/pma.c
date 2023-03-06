@@ -427,7 +427,7 @@ sync_file_(const char *path,
 // FUNCTIONS
 
 pma_t *
-pma_init(void *base, size_t len, const char *heap_file, const char *stack_file)
+pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
 {
 #ifndef HAVE_SIGSEGV_RECOVERY
     fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
