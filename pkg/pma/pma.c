@@ -116,8 +116,9 @@ map_file_(const char *path,
 /// Get the status of the page surrounding an address. To set rather than get,
 /// see set_page_status_().
 ///
-/// @param[in] addr
-/// @param[in] pma
+/// @param[in] addr  Address within the page in question. Must be within the
+///                  bounds of the PMA.
+/// @param[in] pma   PMA the page in question belongs to.
 static_ inline_ page_status_t
 page_status_(const void *addr, const pma_t *pma)
 {
@@ -132,12 +133,14 @@ page_status_(const void *addr, const pma_t *pma)
 /// Set the status of the page surrounding an address. To get rather than set,
 /// see page_status_().
 ///
-/// @param[in] addr
-/// @param[in] status
-/// @param[in] pma
+/// @param[in] addr    Address within the page in question. Must be within the
+///                    bounds of the PMA.
+/// @param[in] status  New status of the page in question. Must not be PS_MASK.
+/// @param[in] pma     PMA the page in question belongs to.
 static_ inline_ void
 set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 {
+    assert(status != PS_MASK);
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
     size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
@@ -149,10 +152,13 @@ set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 /// Set the status of the page range starting at an address. To set the page
 /// status of a single page, see set_page_status_().
 ///
-/// @param[in] addr
-/// @param[in] pg_cnt  Number of pages in the range.
-/// @param[in] status
-/// @param[in] pma
+/// @param[in] addr    Address within the first page in question. Must be within
+///                    the bounds of the PMA.
+/// @param[in] pg_cnt  Number of pages in the range. The entirety of the page
+///                    range must be within the bounds of the PMA.
+/// @param[in] status  New status of the page range in question. Must not be
+///                    PS_MASK.
+/// @param[in] pma     PMA the page range in question belongs to.
 static_ inline_ void
 set_page_status_range_(const void   *addr,
                        size_t        pg_cnt,
