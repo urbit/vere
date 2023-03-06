@@ -7,24 +7,33 @@
 //==============================================================================
 // TYPES
 
+/// Status of a page in a PMA.
 enum page_status {
-    PS_UNMAPPED     = 0x0,
+    /// Page hasn't been read or written.
+    PS_UNMAPPED = 0x0,
+    /// Page has been read but not written.
     PS_MAPPED_CLEAN = 0x1,
+    /// Page has been written.
     PS_MAPPED_DIRTY = 0x2,
     PS_MASK         = 0x3,
 };
 typedef enum page_status page_status_t;
 
+/// Persistent memory arena handle.
 struct pma {
+    /// Path to file backing the heap. NULL if there is no backing file.
     const char *heap_file;
 
+    /// Path to file backing the stack. NULL if there is no backing file.
     const char *stack_file;
 
-    void       *heap_start;
+    /// Base address of the heap.
+    void *heap_start;
 
-    void       *stack_start;
+    /// Base address of the stack. Points to one byte past the end of the PMA.
+    void *stack_start;
 
-    /// Number of bytes of the heap are mapped into memory. Guaranteed to be a
+    /// Number of bytes of the heap mapped into memory. Guaranteed to be a
     /// multiple of kPageSz.
     size_t heap_len;
 
@@ -32,11 +41,15 @@ struct pma {
     /// multiple of kPageSz.
     size_t stack_len;
 
-    int    heap_fd;
+    /// File descriptor for the open backing heap file. -1 is there is no
+    /// backing heap file or if the backing heap file isn't open.
+    int heap_fd;
 
-    int    stack_fd;
+    /// File descriptor for the open backing stack file. -1 is there is no
+    /// backing stack file or if the backing stack file isn't open.
+    int stack_fd;
 
-    /// Total number of pages.
+    /// Total number of pages in the PMA. Each page is `kPageSz` bytes.
     size_t num_pgs;
 
     /// Bit map for tracking pages, which can be in one of three states:
