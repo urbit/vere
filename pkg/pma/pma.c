@@ -57,8 +57,8 @@ static_ sigsegv_dispatcher dispatcher;
 //==============================================================================
 // STATIC FUNCTIONS
 
-/// Determine the 0-based page index of an address relative to the start of the
-/// heap.
+/// Determine the 0-based page index of an address within the bounds of a PMA
+/// relative to the start of the heap.
 ///
 /// @param[in] addr  Address to determine page index for.
 /// @param[in] pma
