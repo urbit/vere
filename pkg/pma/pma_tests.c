@@ -66,7 +66,7 @@ test_addr_to_page_idx_(void)
         assert(idx_ == kOffset);
     }
 
-    pma_deinit(pma_);
+    pma_unload(pma_);
 }
 
 //==============================================================================
@@ -108,7 +108,7 @@ test_pma_()
         *(char *)addr_ = 'i';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
-        pma_deinit(pma_);
+        pma_unload(pma_);
     }
 
     // File-backed arena with empty files.
@@ -150,7 +150,7 @@ test_pma_()
 
         assert(pma_sync(pma_, kPageSz, kPageSz) == 0);
 
-        pma_deinit(pma_);
+        pma_unload(pma_);
         assert(unlink(kHeapFile) == 0);
         assert(unlink(kStackFile) == 0);
     }
@@ -236,7 +236,7 @@ test_pma_()
         assert(pma_sync(pma_, kNewHeapSz, kPageSz) == 0);
 
         // Removes all mappings.
-        pma_deinit(pma_);
+        pma_unload(pma_);
         free(pma_);
 
         // Re-establishes all mappings.

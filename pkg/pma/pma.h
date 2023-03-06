@@ -65,6 +65,6 @@ int
 pma_sync(pma_t *pma, size_t heap_len, size_t stack_len);
 
 void
-pma_deinit(pma_t *pma);
+pma_unload(pma_t *pma);
 
 #endif /* ifndef PMA_PMA_H */
