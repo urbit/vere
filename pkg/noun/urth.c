@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 
 #include "allocate.h"
-#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
@@ -372,17 +371,6 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
   c3_assert(0);
 #endif
 
-  //  bypassing page tracking as an optimization
-  //
-  //    NB: u3e_yolo() will mark all as dirty, and
-  //    u3e_save() will reinstate protection flags
-  //
-  if ( c3n == u3e_yolo() ) {
-    if ( fil_u ) {
-      fprintf(fil_u, "uniq: unable to bypass page tracking, continuing\r\n");
-    }
-  }
-
   //  stash event number
   //
   c3_d eve_d = u3A->eve_d;
@@ -425,10 +413,6 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
   //  restore event number
   //
   u3A->eve_d = eve_d;
-
-  //  mark all pages dirty
-  //
-  u3e_foul();
 
   *tor_u = rot_u;
   *doc_u = cod_u;
@@ -839,15 +823,6 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
     return c3n;
   }
 
-  //  bypassing page tracking as an optimization
-  //
-  //    NB: u3e_yolo() will mark all as dirty, and
-  //    u3e_save() will reinstate protection flags
-  //
-  if ( c3n == u3e_yolo() ) {
-    fprintf(stderr, "uncram: unable to bypass page tracking, continuing\r\n");
-  }
-
   //  reinitialize loom
   //
   //    NB: hot jet state is not yet re-established
@@ -898,10 +873,6 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
   //  restore event number
   //
   u3A->eve_d = eve_d;
-
-  //  mark all pages dirty
-  //
-  u3e_foul();
 
   //  leave rocks on disk
   //

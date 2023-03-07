@@ -9,7 +9,6 @@ _setup(void)
 {
   u3m_init(1 << 24, NULL, NULL);
   u3m_pave(c3y);
-  u3e_init();
 }
 
 static u3_noun

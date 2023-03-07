@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 
 #include "allocate.h"
-#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
@@ -845,7 +844,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->hat_p + pad_w;
 
       rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->cap_p, rod_u->hat_p);
 #if 0
       fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -856,7 +854,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->cap_p;
 
       rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->hat_p, rod_u->cap_p);
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -1884,10 +1881,6 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   u3m_pave(nuu_o);
 
-  /* Place the guard page.
-  */
-  u3e_init();
-
   /* Initialize the jet system.
   */
   {
@@ -1929,10 +1922,6 @@ u3m_boot_lite(size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(c3y);
-
-  /* Place the guard page.
-  */
-  u3e_init();
 
   /* Initialize the jet system.
   */
@@ -2168,5 +2157,38 @@ u3m_take_snapshot(void)
     fprintf(stderr, "snapshot: failed to save: %s\r\n", strerror(errno));
     return -1;
   }
+  return 0;
+}
+
+int
+u3m_backup_snapshot(const c3_c *dir_c)
+{
+  if (!dir_c) {
+    fprintf(stderr, "snapshot: pier directory cannot be NULL\r\n");
+    return -1;
+  }
+
+  c3_c cmd_c[1024];
+  if (snprintf(cmd_c,
+               sizeof(cmd_c),
+               "mkdir -p %s/.urb/bhk && cp %s/.urb/chk/*.bin %s/.urb/bhk",
+               dir_c,
+               dir_c,
+               dir_c)
+      < 0)
+  {
+    fprintf(stderr,
+            "snapshot: failed to create path needed to backup: %s\r\n",
+            strerror(errno));
+    return -1;
+  }
+
+  if (system(cmd_c) != 0) {
+    fprintf(stderr,
+            "snapshot: failed to create backup using command '%s'\r\n",
+            cmd_c);
+    return -1;
+  }
+
   return 0;
 }

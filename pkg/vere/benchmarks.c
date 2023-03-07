@@ -11,7 +11,6 @@ _setup(void)
 {
   u3m_init(1 << 24, NULL, NULL);
   u3m_pave(c3y);
-  u3e_init();
 }
 
 /* _ames_writ_ex(): |hi packet from fake ~zod to fake ~nec

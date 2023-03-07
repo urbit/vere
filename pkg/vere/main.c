@@ -2009,7 +2009,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
+  if ( u3m_backup_snapshot(u3_Host.dir_c) != 0 ) {
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }
