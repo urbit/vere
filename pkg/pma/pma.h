@@ -15,7 +15,9 @@ enum page_status {
     PS_MAPPED_CLEAN = 0x1,
     /// Page has been written.
     PS_MAPPED_DIRTY = 0x2,
-    PS_MASK         = 0x3,
+    /// Page is mapped but can't be read or written.
+    PS_MAPPED_INACCESSIBLE = 0x3,
+    PS_MASK                = 0x3,
 };
 typedef enum page_status page_status_t;
 

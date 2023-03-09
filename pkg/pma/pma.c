@@ -54,6 +54,8 @@ static_ const char kWriteAheadLogExtension[] = ".wal";
 /// Global libsigsegv dispatcher.
 static_ sigsegv_dispatcher dispatcher;
 
+static_ void              *guard_pg;
+
 //==============================================================================
 // STATIC FUNCTIONS
 
@@ -126,7 +128,6 @@ page_status_(const void *addr, const pma_t *pma)
     size_t  entry_idx = pg_idx / kPagesPerEntry;
     size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
     uint8_t status    = (pma->pg_status[entry_idx] >> bit_idx) & PS_MASK;
-    assert(status != PS_MASK);
     return status;
 }
 
@@ -140,7 +141,6 @@ page_status_(const void *addr, const pma_t *pma)
 static_ inline_ void
 set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 {
-    assert(status != PS_MASK);
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
     size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
@@ -240,6 +240,11 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             }
             set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
+        case PS_MAPPED_INACCESSIBLE:
+            fprintf(stderr,
+                    "pma: hit guard page at %p: out of memory\r\n",
+                    fault_addr);
+            return 0;
     }
     return 1;
 }
@@ -654,6 +659,26 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     assert(unmap_len % kPageSz == 0);
     assert(munmap(unmap_start, unmap_len) == 0);
     set_page_status_range_(unmap_start, unmap_len / kPageSz, PS_UNMAPPED, pma);
+
+    // Place guard page in center of unmapped area, biased slightly toward
+    // stack.
+    guard_pg = (char *)unmap_start + round_up(unmap_len / 2, kPageSz);
+    if (mmap(guard_pg,
+             kPageSz,
+             PROT_NONE,
+             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+             -1,
+             0)
+        == MAP_FAILED)
+    {
+        fprintf(stderr,
+                "pma: failed to place %zu-byte guard page at %p: %s\r\n",
+                kPageSz,
+                guard_pg,
+                strerror(errno));
+        return -1;
+    }
+    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
 
     return 0;
 }
