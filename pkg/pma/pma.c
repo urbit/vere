@@ -72,9 +72,6 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
     return (addr - pma->heap_start) / kPageSz;
 }
 
-static_ int
-center_guard_page_(const pma_t *pma);
-
 /// Handle a page fault within the bounds of a PMA according to the libsigsegv
 /// protocol. See sigsegv_area_handler_t in sigsegv.h for more info.
 ///
@@ -207,69 +204,6 @@ total_len_(const pma_t *pma)
 }
 
 static_ int
-center_guard_page_(const pma_t *pma)
-{
-#define find_freespace_edge(edge_addr, plus_minus)                             \
-    do {                                                                       \
-        /* Ensure we start our search at the tracking byte adjacent to the     \
-         * byte containing the guard page's status in pma->pg_status.          \
-         */                                                                    \
-        size_t block_idx = kGuardPageBlockIdx;                                 \
-        /* A tracking byte will be 0 (i.e. PS_UNMAPPED) if all kPagesPerByte   \
-         * pages tracked by the byte are unmapped.                             \
-         */                                                                    \
-        while (pma->pg_status[block_idx plus_minus 1] == PS_UNMAPPED) {        \
-            block_idx = block_idx plus_minus 1;                                \
-        }                                                                      \
-        /* We're not technically out of memory here since it's possible the    \
-         * most of the block adjacent to the guard page's block is unmapped    \
-         * and therefore could be used to relocate the guard page. We are,     \
-         * however, *effectively* out of memory, so we return an error here    \
-         * indicating out of memory to keep the implementation simpler.        \
-         */                                                                    \
-        if (block_idx == kGuardPageBlockIdx) {                                 \
-            errno = ENOMEM;                                                    \
-            return -1;                                                         \
-        }                                                                      \
-        edge_addr                                                              \
-            = (char *)pma->heap_start + block_idx * kPagesPerByte * kPageSz;   \
-    } while (0)
-
-    // Index of byte in pma->pg_status containing guard page status.
-    const size_t kGuardPageBlockIdx
-        = addr_to_page_idx_(guard_pg, pma) / kPagesPerByte;
-
-    char *free_start;
-    find_freespace_edge(free_start, -);
-
-    char *free_end;
-    find_freespace_edge(free_end, +);
-
-    size_t free_len = (size_t)(free_end - free_start);
-
-    assert(free_len % kPageSz == 0);
-    guard_pg = free_start + round_up(free_len / 2, kPageSz);
-
-    if (mmap(guard_pg,
-             kPageSz,
-             PROT_NONE,
-             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-             -1,
-             0)
-        == MAP_FAILED)
-    {
-        fprintf(stderr,
-                "pma: failed to place guard page at %p: %s\r\n",
-                guard_pg,
-                strerror(errno));
-        return -1;
-    }
-
-    return 0;
-#undef find_freespace_edge
-}
-
-static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
@@ -307,24 +241,10 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
         case PS_MAPPED_INACCESSIBLE:
-            assert(fault_addr == guard_pg);
-            fprintf(stderr, "pma: hit guard page at %p\r\n", fault_addr);
-            if (center_guard_page_(pma) == -1) {
-                fprintf(stderr,
-                        "pma: failed to recenter guard page: %s\r\n",
-                        strerror(errno));
-                return 0;
-            }
-            if (mprotect(fault_addr, kPageSz, PROT_READ) == -1) {
-                fprintf(stderr,
-                        "pma: failed to add read permissions to %zu-byte page "
-                        "at %p: %s\r\n",
-                        kPageSz,
-                        fault_addr,
-                        strerror(errno));
-                return 0;
-            }
-            set_page_status_(fault_addr, PS_MAPPED_CLEAN, pma);
+            fprintf(stderr,
+                    "pma: hit guard page at %p: out of memory\r\n",
+                    fault_addr);
+            return 0;
     }
     return 1;
 }
