@@ -375,6 +375,37 @@ map_file_(const char *path,
     }
     size_t len_ = round_up(buf_.st_size, kPageSz);
 
+    {
+        // If there's a write-ahead log for this file, which can happen if a
+        // crash occurs during pma_sync() after the write-ahead log has been
+        // created but before it can be applied, we need to apply it to the file
+        // before mapping the file.
+        char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
+        snprintf(wal_file,
+                 sizeof(wal_file),
+                 "%s%s",
+                 path,
+                 kWriteAheadLogExtension);
+        wal_t wal;
+        if (wal_open(wal_file, &wal) == -1 && errno != EEXIST
+            && wal_apply(&wal, fd_) == -1)
+        {
+            fprintf(stderr, "pma: failed to open wal file at %s\r\n", wal_file);
+            goto close_fd;
+        }
+
+        if (wal_apply(&wal, fd_) == -1) {
+            fprintf(stderr,
+                    "pma: failed to apply wal at %s to %s\r\n",
+                    wal_file,
+                    path);
+            // We're leaking the fd in wal here.
+            goto close_fd;
+        }
+
+        wal_destroy(&wal);
+    }
+
     // We have to map stacks a page at a time because a stack's backing file has
     // its first page at offset zero, which belongs at the highest address.
     if (grows_down) {
@@ -586,16 +617,6 @@ pma_load(void         *base,
 
     if (center_guard_page_(pma) == -1) {
         fprintf(stderr, "pma: failed to initialize the guard page\r\n");
-        goto unmap_stack;
-    }
-
-    // TODO: do this first
-    // The heap and stack are mapped and clean at this point, which means
-    // pma_sync() simply applies the write-ahead logs to the heap and stack. The
-    // write-ahead logs will only exist if a crash occurred during the most
-    // recent call to pma_sync().
-    if (pma_sync(pma) == -1) {
-        fprintf(stderr, "pma: failed to sync\r\n");
         goto unmap_stack;
     }
 
