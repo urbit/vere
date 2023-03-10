@@ -1803,6 +1803,12 @@ _cm_free2(void* tox_v, size_t siz_i)
   return u3a_free(tox_v);
 }
 
+static void
+_cm_pma_oom_handler(void *fault_addr)
+{
+  u3m_signal(c3__meme);
+}
+
 /* u3m_init(): start the environment.
 */
 void
@@ -1827,7 +1833,7 @@ u3m_init(size_t len_i, c3_c *heap_c, c3_c *stack_c)
     exit(1);
   }
 
-  u3_pma = pma_load(u3_Loom, len_i, heap_c, stack_c, NULL);
+  u3_pma = pma_load(u3_Loom, len_i, heap_c, stack_c, _cm_pma_oom_handler);
   assert(u3_pma);
   u3C.wor_i = len_i >> 2;
   u3l_log("loom: maximum size is %zuMB", len_i >> 20);

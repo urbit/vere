@@ -22,7 +22,7 @@ enum page_status {
 typedef enum page_status page_status_t;
 
 /// Out-of-memory handler.
-typedef void (*oom_handler_t)(void *fault_addr, void *ctx);
+typedef void (*oom_handler_t)(void *fault_addr);
 
 /// Persistent memory arena handle.
 struct pma {

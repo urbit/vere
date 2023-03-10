@@ -244,6 +244,9 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             fprintf(stderr,
                     "pma: hit guard page at %p: out of memory\r\n",
                     fault_addr);
+            if (pma->oom_handler) {
+                pma->oom_handler(fault_addr);
+            }
             return 0;
     }
     return 1;
