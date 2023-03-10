@@ -21,6 +21,15 @@ enum page_status {
 };
 typedef enum page_status page_status_t;
 
+/// Get the active length of the heap and stack.
+///
+/// @param[out] heap_len   Populated with the current heap length.
+/// @param[out] stack_len  Populated with the current stack length.
+///
+/// @return 0   Success.
+/// @return -1  Failure.
+typedef int (*len_getter_t)(size_t *heap_len, size_t *stack_len);
+
 /// Out-of-memory handler.
 typedef void (*oom_handler_t)(void *fault_addr);
 
@@ -62,7 +71,13 @@ struct pma {
     /// Guaranteed to have at least (2 * num_pgs) bits.
     uint8_t *pg_status;
 
-    /// Hanlder to run when out of memory.
+    /// Function used to get active heap and stack lengths.
+    len_getter_t len_getter;
+
+    /// Base address of the guard page.
+    void *guard_pg;
+
+    /// Out-of-memory handler.
     oom_handler_t oom_handler;
 
     size_t        max_sz;
@@ -77,15 +92,17 @@ typedef struct pma pma_t;
 
 /// Load a new or existing PMA into memory.
 ///
-/// @param[in] base         Base address to create the PMA at.
-/// @param[in] len          Length in bytes of the PMA. Must be greater than the
-///                         sum of the lengths of the backing heap and stack
-///                         files.
-/// @param[in] heap_file    Optional backing file for heap. If NULL, changes to
-///                         the heap will not be persistent.
-/// @param[in] stack_file   Optional backing file for stack. If NULL, changes to
-///                         the stack will not be persistent.
-/// @param[in] oom_handler  Function to run if the PMA runs out of memory.
+/// @param[in] base        Base address to create the PMA at.
+/// @param[in] len         Length in bytes of the PMA. Must be greater than the
+///                        sum of the lengths of the backing heap and stack
+///                        files.
+/// @param[in] heap_file   Optional backing file for heap. If NULL, changes to
+///                        the heap will not be persistent.
+/// @param[in] stack_file  Optional backing file for stack. If NULL, changes to
+///                        the stack will not be persistent.
+/// @param[in] len_getter  Function used to determine active length of heap
+///                        and stack.
+/// @param[in] oom_handler Function to run if the PMA runs out of memory.
 ///
 /// @return PMA handle  Success. When finished, call pma_unload() to dispose of
 ///                     the PMA's resources.
@@ -96,6 +113,7 @@ pma_load(void         *base,
          size_t        len,
          const char   *heap_file,
          const char   *stack_file,
+         len_getter_t  len_getter,
          oom_handler_t oom_handler);
 
 /// Sync changes to a PMA to disk.
@@ -103,19 +121,22 @@ pma_load(void         *base,
 /// @param[in] pma        PMA handle. Must not be NULL.
 /// @param[in] heap_len   Length in bytes of the heap to synchronize. The range
 ///                       [heap_start, heap_start + heap_len) is synchronized to
-///                       disk. If there is no backing heap file, no heap
-///                       changes are synced to disk.
+///                       disk where heap_len is the heap length returned by
+///                       pma->len_getter. If there is no backing heap file, no
+///                       heap changes are synced to disk.
 /// @param[in] stack_len  Length in bytes of the stack to synchronize. The
 ///                       range [stack_start - stack_len, stack_start) is
-///                       synchronized to disk. If there is no backing stack
-///                       file, no stack changes are synced to disk.
+///                       synchronized to disk where stack_len is the stack
+///                       length returned by pma->len_getter. If there is no
+///                       backing stack file, no stack changes are synced to
+///                       disk.
 ///
 /// @return 0   Success.
 /// @return -1  pma was NULL.
 /// @return -1  Failed to sync changes to heap.
 /// @return -1  Failed to sync changes to stack.
 int
-pma_sync(pma_t *pma, size_t heap_len, size_t stack_len);
+pma_sync(pma_t *pma);
 
 /// Unload a PMA from memory and dispose of its resources, including freeing the
 /// PMA handle itself.

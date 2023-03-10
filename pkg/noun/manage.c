@@ -1803,11 +1803,33 @@ _cm_free2(void* tox_v, size_t siz_i)
   return u3a_free(tox_v);
 }
 
+static int
+_cm_pma_len_getter(size_t *heap_len_i, size_t *stack_len_i)
+{
+  assert(heap_len_i && stack_len_i);
+  if ( !u3R ) {
+    *heap_len_i = 0;
+    *stack_len_i = 0;
+  }
+  //  The hat is the end of the current road's heap, and the cap is the end of
+  //  the current road's stack.
+  else if ( c3y == u3a_is_north(u3R) ) {
+    *heap_len_i = u3R->hat_p * sizeof(c3_w);
+    *stack_len_i = (u3C.wor_i - u3R->cap_p) * sizeof(c3_w);
+  }
+  else {
+    *heap_len_i = (u3C.wor_i - u3R->hat_p) * sizeof(c3_w);
+    *stack_len_i = u3R->cap_p * sizeof(c3_w);
+  }
+  return 0;
+}
+
 static void
 _cm_pma_oom_handler(void *fault_addr)
 {
   u3m_signal(c3__meme);
 }
+
 
 /* u3m_init(): start the environment.
 */
@@ -1833,7 +1855,12 @@ u3m_init(size_t len_i, c3_c *heap_c, c3_c *stack_c)
     exit(1);
   }
 
-  u3_pma = pma_load(u3_Loom, len_i, heap_c, stack_c, _cm_pma_oom_handler);
+  u3_pma = pma_load(u3_Loom,
+                    len_i,
+                    heap_c,
+                    stack_c,
+                    _cm_pma_len_getter,
+                    _cm_pma_oom_handler);
   assert(u3_pma);
   u3C.wor_i = len_i >> 2;
   u3l_log("loom: maximum size is %zuMB", len_i >> 20);
@@ -2153,13 +2180,7 @@ u3m_take_snapshot(void)
   assert(u3_pma);
   u3a_loom_sane();
 
-  c3_w heap_len_w;
-  c3_w stack_len_w;
-  u3m_water(&heap_len_w, &stack_len_w);
-
-  if (pma_sync(u3_pma, heap_len_w * sizeof(c3_w), stack_len_w * sizeof(c3_w))
-      == -1)
-  {
+  if (pma_sync(u3_pma) == -1) {
     fprintf(stderr, "snapshot: failed to save: %s\r\n", strerror(errno));
     return -1;
   }

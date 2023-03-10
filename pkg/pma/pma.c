@@ -54,8 +54,6 @@ static_ const char kWriteAheadLogExtension[] = ".wal";
 /// Global libsigsegv dispatcher.
 static_ sigsegv_dispatcher dispatcher;
 
-static_ void              *guard_pg;
-
 //==============================================================================
 // STATIC FUNCTIONS
 
@@ -71,6 +69,9 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
     assert(pma->heap_start <= addr && addr < pma->stack_start);
     return (addr - pma->heap_start) / kPageSz;
 }
+
+static_ int
+center_guard_page_(pma_t *pma);
 
 /// Handle a page fault within the bounds of a PMA according to the libsigsegv
 /// protocol. See sigsegv_area_handler_t in sigsegv.h for more info.
@@ -204,6 +205,41 @@ total_len_(const pma_t *pma)
 }
 
 static_ int
+center_guard_page_(pma_t *pma)
+{
+    size_t heap_len  = 0;
+    size_t stack_len = 0;
+    if (pma->len_getter(&heap_len, &stack_len) == -1) {
+        fprintf(stderr,
+                "pma: failed to determine length of heap and stack\r\n");
+        return -1;
+    }
+
+    size_t free_len   = total_len_(pma) - (heap_len + stack_len);
+    char  *free_start = (char *)pma->heap_start + pma->heap_len;
+    void  *guard_pg   = free_start + round_up(free_len / 2, kPageSz);
+
+    if (mmap(guard_pg,
+             kPageSz,
+             PROT_NONE,
+             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+             -1,
+             0)
+        == MAP_FAILED)
+    {
+        fprintf(stderr,
+                "pma: failed to place %zu-byte guard page at %p: %s\r\n",
+                kPageSz,
+                guard_pg,
+                strerror(errno));
+        return -1;
+    }
+    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
+    pma->guard_pg = guard_pg;
+    return 0;
+}
+
+static_ int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
@@ -241,13 +277,26 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
         case PS_MAPPED_INACCESSIBLE:
-            fprintf(stderr,
-                    "pma: hit guard page at %p: out of memory\r\n",
-                    fault_addr);
-            if (pma->oom_handler) {
-                pma->oom_handler(fault_addr);
+            if (center_guard_page_(pma) == -1) {
+                fprintf(stderr,
+                        "pma: hit guard page at %p: out of memory\r\n",
+                        fault_addr);
+                if (pma->oom_handler) {
+                    pma->oom_handler(fault_addr);
+                }
+                return 0;
             }
-            return 0;
+            if (mprotect(fault_addr, kPageSz, PROT_READ) == -1) {
+                fprintf(stderr,
+                        "pma: failed to grant read protections to %zu-byte "
+                        "page at %p: %s\r\n",
+                        kPageSz,
+                        fault_addr,
+                        strerror(errno));
+                return 0;
+            }
+            set_page_status_(fault_addr, PS_MAPPED_CLEAN, pma);
+            break;
     }
     return 1;
 }
@@ -458,12 +507,16 @@ pma_load(void         *base,
          size_t        len,
          const char   *heap_file,
          const char   *stack_file,
+         len_getter_t  len_getter,
          oom_handler_t oom_handler)
 {
 #ifndef HAVE_SIGSEGV_RECOVERY
     fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
     return NULL;
 #endif
+    if (!len_getter) {
+        return NULL;
+    }
     assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
     assert((uintptr_t)base % kPageSz == 0);
     assert(len % kPageSz == 0);
@@ -527,14 +580,21 @@ pma_load(void         *base,
                                            len,
                                            handle_page_fault_,
                                            (void *)pma);
-    pma->oom_handler    = oom_handler;
+    pma->len_getter     = len_getter;
+    pma->guard_pg       = NULL;
     pma->max_sz         = 0;
 
+    if (center_guard_page_(pma) == -1) {
+        fprintf(stderr, "pma: failed to initialize the guard page\r\n");
+        goto unmap_stack;
+    }
+
+    // TODO: do this first
     // The heap and stack are mapped and clean at this point, which means
     // pma_sync() simply applies the write-ahead logs to the heap and stack. The
     // write-ahead logs will only exist if a crash occurred during the most
     // recent call to pma_sync().
-    if (pma_sync(pma, pma->heap_len, pma->stack_len) == -1) {
+    if (pma_sync(pma) == -1) {
         fprintf(stderr, "pma: failed to sync\r\n");
         goto unmap_stack;
     }
@@ -558,10 +618,18 @@ free_pma:
 }
 
 int
-pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
+pma_sync(pma_t *pma)
 {
     if (!pma) {
         errno = EINVAL;
+        return -1;
+    }
+
+    size_t heap_len  = 0;
+    size_t stack_len = 0;
+    if (pma->len_getter(&heap_len, &stack_len) == -1) {
+        fprintf(stderr,
+                "pma: failed to determine length of heap and stack\r\n");
         return -1;
     }
 
@@ -667,26 +735,6 @@ pma_sync(pma_t *pma, size_t heap_len, size_t stack_len)
     assert(unmap_len % kPageSz == 0);
     assert(munmap(unmap_start, unmap_len) == 0);
     set_page_status_range_(unmap_start, unmap_len / kPageSz, PS_UNMAPPED, pma);
-
-    // Place guard page in center of unmapped area, biased slightly toward
-    // stack.
-    guard_pg = (char *)unmap_start + round_up(unmap_len / 2, kPageSz);
-    if (mmap(guard_pg,
-             kPageSz,
-             PROT_NONE,
-             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-             -1,
-             0)
-        == MAP_FAILED)
-    {
-        fprintf(stderr,
-                "pma: failed to place %zu-byte guard page at %p: %s\r\n",
-                kPageSz,
-                guard_pg,
-                strerror(errno));
-        return -1;
-    }
-    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
 
     return 0;
 }

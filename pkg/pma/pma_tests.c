@@ -16,7 +16,21 @@ uint8_t
 page_status_(void *addr, const pma_t *pma);
 
 //==============================================================================
+// GLOBAL VARIABLES
+
+static size_t heap_len_;
+static size_t stack_len_;
+
+//==============================================================================
 // STATIC FUNCTIONS
+
+static int
+len_getter_(size_t *heap_len, size_t *stack_len)
+{
+    *heap_len  = heap_len_;
+    *stack_len = stack_len_;
+    return 0;
+}
 
 static void
 new_file_(const char *path, char ch, size_t pg_cnt)
@@ -43,6 +57,10 @@ new_file_(const char *path, char ch, size_t pg_cnt)
     assert(close(fd) == 0);
 }
 
+static void
+oom_handler_(void *fault_addr)
+{}
+
 //==============================================================================
 // STATIC FUNCTION TESTS
 
@@ -51,7 +69,9 @@ test_addr_to_page_idx_(void)
 {
     void               *base_ = (void *)0x200000000;
     static const size_t kLen  = 1 << 20;
-    pma_t              *pma_  = pma_load(base_, kLen, NULL, NULL, NULL);
+    heap_len_                 = kPageSz;
+    stack_len_                = kPageSz;
+    pma_t *pma_ = pma_load(base_, kLen, NULL, NULL, len_getter_, oom_handler_);
     assert(pma_);
 
     {
@@ -79,7 +99,8 @@ test_pma_()
     {
         void  *base_ = (void *)0x200000000;
         size_t len_  = 1 << 20;
-        pma_t *pma_  = pma_load(base_, len_, NULL, NULL, NULL);
+        pma_t *pma_
+            = pma_load(base_, len_, NULL, NULL, len_getter_, oom_handler_);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -117,7 +138,12 @@ test_pma_()
         size_t            len_         = 1 << 20;
         static const char kHeapFile[]  = "/tmp/nonexistent-heap.bin";
         static const char kStackFile[] = "/tmp/nonexistent-stack.bin";
-        pma_t *pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
+        pma_t            *pma_         = pma_load(base_,
+                                                  len_,
+                                                  kHeapFile,
+                                                  kStackFile,
+                                                  len_getter_,
+                                                  oom_handler_);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -148,7 +174,9 @@ test_pma_()
         *(char *)addr_ = 'i';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
-        assert(pma_sync(pma_, kPageSz, kPageSz) == 0);
+        heap_len_  = kPageSz;
+        stack_len_ = kPageSz;
+        assert(pma_sync(pma_) == 0);
 
         pma_unload(pma_);
         assert(unlink(kHeapFile) == 0);
@@ -165,7 +193,14 @@ test_pma_()
         static const size_t kStackFileSz = MiB(1);
         new_file_(kHeapFile, 'p', kHeapFileSz / kPageSz);
         new_file_(kStackFile, 'm', kStackFileSz / kPageSz);
-        pma_t *pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
+        heap_len_   = kHeapFileSz;
+        stack_len_  = kStackFileSz;
+        pma_t *pma_ = pma_load(base_,
+                               len_,
+                               kHeapFile,
+                               kStackFile,
+                               len_getter_,
+                               oom_handler_);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -233,14 +268,21 @@ test_pma_()
         }
 
         // Sync.
-        assert(pma_sync(pma_, kNewHeapSz, kPageSz) == 0);
+        heap_len_  = kNewHeapSz;
+        stack_len_ = kPageSz;
+        assert(pma_sync(pma_) == 0);
 
         // Removes all mappings.
         pma_unload(pma_);
         free(pma_);
 
         // Re-establishes all mappings.
-        pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
+        pma_ = pma_load(base_,
+                        len_,
+                        kHeapFile,
+                        kStackFile,
+                        len_getter_,
+                        oom_handler_);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
