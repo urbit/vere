@@ -51,7 +51,7 @@ test_addr_to_page_idx_(void)
 {
     void               *base_ = (void *)0x200000000;
     static const size_t kLen  = 1 << 20;
-    pma_t              *pma_  = pma_load(base_, kLen, NULL, NULL);
+    pma_t              *pma_  = pma_load(base_, kLen, NULL, NULL, NULL);
     assert(pma_);
 
     {
@@ -79,7 +79,7 @@ test_pma_()
     {
         void  *base_ = (void *)0x200000000;
         size_t len_  = 1 << 20;
-        pma_t *pma_  = pma_load(base_, len_, NULL, NULL);
+        pma_t *pma_  = pma_load(base_, len_, NULL, NULL, NULL);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -117,7 +117,7 @@ test_pma_()
         size_t            len_         = 1 << 20;
         static const char kHeapFile[]  = "/tmp/nonexistent-heap.bin";
         static const char kStackFile[] = "/tmp/nonexistent-stack.bin";
-        pma_t            *pma_ = pma_load(base_, len_, kHeapFile, kStackFile);
+        pma_t *pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -165,7 +165,7 @@ test_pma_()
         static const size_t kStackFileSz = MiB(1);
         new_file_(kHeapFile, 'p', kHeapFileSz / kPageSz);
         new_file_(kStackFile, 'm', kStackFileSz / kPageSz);
-        pma_t *pma_ = pma_load(base_, len_, kHeapFile, kStackFile);
+        pma_t *pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);
@@ -240,7 +240,7 @@ test_pma_()
         free(pma_);
 
         // Re-establishes all mappings.
-        pma_ = pma_load(base_, len_, kHeapFile, kStackFile);
+        pma_ = pma_load(base_, len_, kHeapFile, kStackFile, NULL);
         assert(pma_);
         assert(pma_->heap_start == base_);
         assert(pma_->stack_start == (char *)base_ + len_);

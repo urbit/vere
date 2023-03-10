@@ -451,7 +451,11 @@ sync_file_(const char *path,
 // FUNCTIONS
 
 pma_t *
-pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
+pma_load(void         *base,
+         size_t        len,
+         const char   *heap_file,
+         const char   *stack_file,
+         oom_handler_t oom_handler)
 {
 #ifndef HAVE_SIGSEGV_RECOVERY
     fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
@@ -520,6 +524,7 @@ pma_load(void *base, size_t len, const char *heap_file, const char *stack_file)
                                            len,
                                            handle_page_fault_,
                                            (void *)pma);
+    pma->oom_handler    = oom_handler;
     pma->max_sz         = 0;
 
     // The heap and stack are mapped and clean at this point, which means

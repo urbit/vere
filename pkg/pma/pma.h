@@ -21,6 +21,9 @@ enum page_status {
 };
 typedef enum page_status page_status_t;
 
+/// Out-of-memory handler.
+typedef void (*oom_handler_t)(void *fault_addr, void *ctx);
+
 /// Persistent memory arena handle.
 struct pma {
     /// Path to file backing the heap. NULL if there is no backing file.
@@ -59,7 +62,10 @@ struct pma {
     /// Guaranteed to have at least (2 * num_pgs) bits.
     uint8_t *pg_status;
 
-    size_t   max_sz;
+    /// Hanlder to run when out of memory.
+    oom_handler_t oom_handler;
+
+    size_t        max_sz;
 
     /// libsigsegv ticket.
     void *sigsegv_ticket;
@@ -71,21 +77,26 @@ typedef struct pma pma_t;
 
 /// Load a new or existing PMA into memory.
 ///
-/// @param[in] base        Base address to create the PMA at.
-/// @param[in] len         Length in bytes of the PMA. Must be greater than the
-///                        sum of the lengths of the backing heap and stack
-///                        files.
-/// @param[in] heap_file   Optional backing file for heap. If NULL, changes to
-///                        the heap will not be persistent.
-/// @param[in] stack_file  Optional backing file for stack. If NULL, changes to
-///                        the stack will not be persistent.
+/// @param[in] base         Base address to create the PMA at.
+/// @param[in] len          Length in bytes of the PMA. Must be greater than the
+///                         sum of the lengths of the backing heap and stack
+///                         files.
+/// @param[in] heap_file    Optional backing file for heap. If NULL, changes to
+///                         the heap will not be persistent.
+/// @param[in] stack_file   Optional backing file for stack. If NULL, changes to
+///                         the stack will not be persistent.
+/// @param[in] oom_handler  Function to run if the PMA runs out of memory.
 ///
 /// @return PMA handle  Success. When finished, call pma_unload() to dispose of
 ///                     the PMA's resources.
 /// @return NULL        Failed to set up heap.
 /// @return NULL        Failed to set up stack.
 pma_t *
-pma_load(void *base, size_t len, const char *heap_file, const char *stack_file);
+pma_load(void         *base,
+         size_t        len,
+         const char   *heap_file,
+         const char   *stack_file,
+         oom_handler_t oom_handler);
 
 /// Sync changes to a PMA to disk.
 ///
