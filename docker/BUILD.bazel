@@ -77,7 +77,7 @@ genrule(
 
 genrule(
     name = "pace_tag",
-    srcs = ["PACE"],
+    srcs = ["//:PACE"],
     outs = ["docker_pace_tag"],
     cmd = """
     tr -d '\n' < $< > $@
