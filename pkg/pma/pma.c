@@ -496,7 +496,7 @@ sync_file_(const char *path,
             pg_idx        = grows_down ? max_idx - pg_idx : pg_idx;
             if (wal_append(&wal, pg_idx, ptr) == -1) {
                 fprintf(stderr,
-                        "pma: failed to append %zu-byte page with index %llu "
+                        "pma: failed to append %zu-byte page with index %zu "
                         "and address %p to wal at %s\r\n",
                         kPageSz,
                         pg_idx,
