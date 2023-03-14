@@ -249,7 +249,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             if (MAP_FAILED
                 == mmap(fault_addr,
                         kPageSz,
-                        PROT_READ,
+                        PROT_READ | PROT_WRITE,
                         MAP_ANON | MAP_FIXED | MAP_PRIVATE,
                         -1,
                         0))
@@ -262,7 +262,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
                         strerror(errno));
                 return 0;
             }
-            set_page_status_(fault_addr, PS_MAPPED_CLEAN, pma);
+            set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
         case PS_MAPPED_CLEAN:
             if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {

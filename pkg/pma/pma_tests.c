@@ -162,7 +162,7 @@ test_pma_()
         addr_ = base_;
         assert(page_status_(addr_, pma_) == PS_UNMAPPED);
         ch = *(char *)addr_;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
         *(char *)addr_ = 'h';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
@@ -170,7 +170,7 @@ test_pma_()
         addr_ = (char *)base_ + len_ - 1;
         assert(page_status_(addr_, pma_) == PS_UNMAPPED);
         ch = *(char *)addr_;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
         *(char *)addr_ = 'i';
         assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
 
