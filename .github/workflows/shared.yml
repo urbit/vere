@@ -200,6 +200,11 @@ jobs:
         run: |
           bazel run //docker:push_version_x86_64
 
+      - name: Build and push pace-tagged Docker image
+        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
+        run: |
+          bazel run //docker:push_pace_x86_64
+
       - name: Build and push latest-tagged Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
         run: |

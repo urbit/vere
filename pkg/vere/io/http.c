@@ -83,6 +83,8 @@ typedef struct _u3_h2o_serv {
 */
   typedef struct _u3_hfig {
     u3_form*         for_u;             //  config from %eyre
+    c3_c*            key_c;             //  auth token key
+    u3_noun          ses;               //  valid session tokens
     struct _u3_hreq* seq_u;             //  open slog requests
     uv_timer_t*      sit_u;             //  slog stream heartbeat
   } u3_hfig;
@@ -300,6 +302,71 @@ _http_heds_from_noun(u3_noun hed)
 
   u3z(deh);
   return hed_u;
+}
+
+/* _http_req_is_auth(): returns c3y if rec_u contains a valid auth cookie
+*/
+static c3_o
+_http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+{
+  //  try to find a cookie header
+  //
+  h2o_iovec_t coo_u = {NULL, 0};
+  {
+    //TODO  http2 allows the client to put multiple 'cookie' headers,
+    //      runtime should support that once eyre does too.
+    ssize_t hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, -1);
+    if ( hin_i != -1 ) {
+      coo_u = rec_u->headers.entries[hin_i].value;
+    }
+  }
+
+  //  if there is no cookie header, it can't possibly be authenticated
+  //
+  if ( NULL == coo_u.base ) {
+    return c3n;
+  }
+  //  if there is a cookie, see if it contains a valid auth token
+  //
+  else {
+    c3_c* key_c = fig_u->key_c;
+    c3_c  val_c[128];
+    c3_y  val_y = 0;
+    size_t  i_i = 0;
+    size_t  j_i = 0;
+
+    //  step through the cookie string
+    //
+    while (i_i < coo_u.len) {
+      //  if we found our key, read the value
+      //
+      if (key_c[j_i] == '\0' && coo_u.base[i_i] == '=') {
+        i_i++;
+        while ( i_i < coo_u.len
+             && coo_u.base[i_i] != ';'
+             && val_y < sizeof(val_c) ) {
+          val_c[val_y] = coo_u.base[i_i];
+          val_y++;
+          i_i++;
+        }
+        break;
+      }
+      //  keep reading the key as long as it matches
+      //
+      else if (coo_u.base[i_i] == key_c[j_i]) {
+        j_i++;
+      }
+      else {
+        j_i = 0;
+      }
+      i_i++;
+    }
+
+    u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
+    c3_assert(c3y == aut || c3n == aut);
+
+    return aut;
+  }
 }
 
 /* _http_req_find(): find http request in connection by sequence.
@@ -836,20 +903,24 @@ _http_req_prepare(h2o_req_t* rec_u,
   return seq_u;
 }
 
-/* _http_seq_continue(): respond to slogstream request based on auth scry result
+/* _http_seq_accept(): handle incoming http request on slogstream endpoint
 */
-static void
-_http_seq_continue(void* vod_p, u3_noun nun)
+static c3_i
+_http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
-  h2o_req_t* rec_u = vod_p;
-  u3_weak    aut   = u3r_at(7, nun);
+  u3_hcon* hon_u = _http_rec_sock(rec_u);
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
 
-  //  if the request is authenticated properly, send slogstream/sse headers
+  //  if the request is not authenticated, reject it
   //
-  //TODO  authentication might expire after the connection has been opened!
-  //      eyre could notify us about this, or we could re-check periodically.
+  if ( c3n == aut_o ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
+  }
+  //  if it is authenticated, send slogstream/sse headers
   //
-  if ( c3y == aut ) {
+  else {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_seq_new);
     u3_noun  hed   = u3nl(u3nc(u3i_string("Content-Type"),
                                u3i_string("text/event-stream")),
@@ -860,67 +931,10 @@ _http_seq_continue(void* vod_p, u3_noun nun)
                           u3_none);
 
     _http_start_respond(req_u, 200, hed, u3_nul, c3n);
-  }
-  //  if the scry failed, the result is unexpected, or there is no auth,
-  //  respond with the appropriate status code
-  //
-  else {
-    //NOTE  we use req_new because we don't want to consider this a slog stream
-    //      request, but this means we need to manually skip past the "in event
-    //      queue" state on the hreq.
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    req_u->sat_e = u3_rsat_plan;
 
-    if ( c3n == aut ) {
-      _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
-    }
-    else if ( u3_none == aut ) {
-      u3l_log("http: authentication scry failed");
-      _http_start_respond(req_u, 500, u3_nul, u3_nul, c3y);
-    }
-    else {
-      u3m_p("http: weird authentication scry result", aut);
-      _http_start_respond(req_u, 500, u3_nul, u3_nul, c3y);
-    }
-  }
-
-  u3z(nun);
-}
-
-/* _http_seq_accept(): handle incoming http request on slogstream endpoint
-*/
-static c3_i
-_http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
-{
-  //  try to find a cookie header
-  //
-  u3_weak coo = u3_none;
-  {
-    //TODO  http2 allows the client to put multiple 'cookie' headers
-    ssize_t hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, -1);
-    if ( hin_i != -1 ) {
-      coo = _http_vec_to_atom(rec_u->headers.entries[hin_i].value);
-    }
-  }
-
-  //  if there is no cookie header, it can't possibly be authenticated
-  //
-  if ( u3_none == coo ) {
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    req_u->sat_e = u3_rsat_plan;
-    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
-  }
-  //  if there is a cookie, scry to see if it constitutes authentication
-  //
-  else {
-    u3_hcon* hon_u = _http_rec_sock(rec_u);
-
-    u3_noun pax = u3nq(u3i_string("authenticated"),
-                       u3i_string("cookie"),
-                       u3dc("scot", 't', coo),
-                       u3_nul);
-    u3_pier_peek_last(hon_u->htp_u->htd_u->car_u.pir_u, u3_nul, c3__ex,
-                      u3_nul, pax, rec_u, _http_seq_continue);
+    //TODO  auth token may expire at some point. if we want to close the
+    //      slogstream when that happens, we need to store the token that
+    //      was used alongside it...
   }
 
   return 0;
@@ -1892,6 +1906,16 @@ _http_form_free(u3_httd* htd_u)
   htd_u->fig_u.for_u = 0;
 }
 
+/* _http_auth_free(): free stored auth token state
+*/
+static void
+_http_auth_free(u3_httd* htd_u)
+{
+  u3z(htd_u->fig_u.ses);
+  htd_u->fig_u.ses = u3_nul;
+  c3_free(htd_u->fig_u.key_c);
+}
+
 /* u3_http_ef_form(): apply configuration, restart servers.
 */
 void
@@ -1940,6 +1964,15 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   htd_u->car_u.liv_o = c3y;
 }
 
+/* u3_http_ef_form(): store set of auth tokens
+*/
+void
+u3_http_ef_auth(u3_httd* htd_u, u3_noun fig)
+{
+  u3z(htd_u->fig_u.ses);
+  htd_u->fig_u.ses = fig;
+}
+
 /* _http_io_talk(): start http I/O.
 */
 static void
@@ -1976,6 +2009,9 @@ _http_ef_http_server(u3_httd* htd_u,
   //
   if ( c3y == u3r_sing_c("set-config", tag) ) {
     u3_http_ef_form(htd_u, u3k(dat));
+  }
+  else if ( c3y == u3r_sing_c("sessions", tag) ) {
+    u3_http_ef_auth(htd_u, u3k(dat));
   }
   //  responds to an open request
   //
@@ -2183,6 +2219,7 @@ _http_io_exit(u3_auto* car_u)
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
+  _http_auth_free(htd_u);
 
   //  close all servers
   //
@@ -2266,6 +2303,15 @@ u3_auto*
 u3_http_io_init(u3_pier* pir_u)
 {
   u3_httd* htd_u = c3_calloc(sizeof(*htd_u));
+
+  {
+    u3_noun key = u3dt("cat", 3,
+      u3i_string("urbauth-"),
+      u3dc("scot", 'p', u3i_chubs(2, pir_u->who_d)));
+    htd_u->fig_u.ses = u3_nul;
+    htd_u->fig_u.key_c = u3r_string(key);
+    u3z(key);
+  }
 
   u3_auto* car_u = &htd_u->car_u;
   car_u->nam_m = c3__http;

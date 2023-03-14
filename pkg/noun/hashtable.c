@@ -1017,7 +1017,14 @@ _ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
     else {
       void* hav_v = u3h_slot_to_node(sot_w);
       u3h_node* nod_u = u3to(u3h_node,u3a_rewritten(u3of(u3h_node,hav_v)));
+
+      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+        u3C.vits_w = 1;
+
       han_u->sot_w[i_w] = u3h_node_to_slot(nod_u);
+
+      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+        u3C.vits_w = 0;
 
       if ( 0 == lef_w ) {
         _ch_rewrite_buck(hav_v);
@@ -1050,7 +1057,14 @@ u3h_rewrite(u3p(u3h_root) har_p)
     else if ( _(u3h_slot_is_node(sot_w)) ) {
       u3h_node* han_u = u3h_slot_to_node(sot_w);
       u3h_node* nod_u = u3to(u3h_node,u3a_rewritten(u3of(u3h_node,han_u)));
+
+      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+        u3C.vits_w = 1;
+
       har_u->sot_w[i_w] = u3h_node_to_slot(nod_u);
+
+      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+        u3C.vits_w = 0;
 
       _ch_rewrite_node(han_u, 25);
     }

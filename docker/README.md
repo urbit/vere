@@ -53,14 +53,14 @@ Using that volume and launching ~sampel-palnet on host port 8080 with Ames talki
 ```
 docker run -d -p 8080:80 -p 34343:34343/udp --name sampel-palnet \
     --mount type=volume,source=sampel-palnet,destination=/urbit \
-    tloncorp/urbit
+    tloncorp/vere
 ```
 
 Using host port 8088 with Ames talking on host port 23232:
 ```
 docker run -d -p 8088:80 -p 23232:23232/udp --name sampel-palnet \
     --mount type=volume,source=sampel-palnet,destination=/urbit \
-    tloncorp/urbit /bin/start-urbit --port=23232
+    tloncorp/vere /bin/start-urbit --port=23232
 ```
 
 ### Getting and resetting the Landscape +code
