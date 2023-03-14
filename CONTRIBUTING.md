@@ -62,6 +62,59 @@ title and description. Assuming that you properly included the "Resolves #N."
 directive in the pull request description, merging will automatically close the
 tracking issue associated with the pull request.
 
+## C Style
+
+### Error Handling
+
+Our error handling is currently suspect, and one of our priorities moving
+forward is to bring it in line with standard [POSIX error handling]. If you're
+writing new code, please adhere to the [guidelines laid out by POSIX][POSIX
+error handling].
+
+Use `assert()` to programmatically document invariants that are known at compile
+time. The following is an acceptable use of `assert()`:
+```c
+static void
+local_(const char *ptr)
+{
+    assert(ptr);
+    // <snip>
+}
+
+int
+global(const char *path)
+{
+    if (!path) {
+        fprintf(stderr, "path cannot be NULL");
+        return -1;
+    }
+    local_(path);
+}
+```
+
+The following is an *unacceptable* use of `assert()`:
+```c
+int
+global(const char *path)
+{
+    int fd = open(path, O_RDONLY);
+    assert(fd != -1);
+}
+```
+
+Instead, if `fd == -1` is a non-fatal error, `return -1`; if `fd == -1` is
+fatal, use `exit()`:
+```c
+int
+global(const char *path)
+{
+    int fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        exit(errno); // replace with `return -1` if non-fatal
+    }
+}
+```
+
 
 ## Development Environment
 
@@ -153,3 +206,5 @@ jump to definition, cross-references, hovering, symbol renaming, etc.):
 ```console
 bazel run //bazel:refresh_compile_commands
 ```
+
+[POSIX error handling]: https://csresources.github.io/SystemProgrammingWiki/SystemProgramming/POSIX,-Part-1:-Error-handling/
