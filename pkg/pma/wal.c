@@ -331,10 +331,20 @@ wal_destroy(wal_t *wal)
     if (!wal) {
         return;
     }
-    assert(close(wal->data_fd) == 0);
-    assert(close(wal->meta_fd) == 0);
-    assert(unlink(wal->data_path) == 0);
-    assert(unlink(wal->meta_path) == 0);
+    close(wal->data_fd);
+    close(wal->meta_fd);
+    if (unlink(wal->data_path) == -1) {
+        fprintf(stderr,
+                "wal: failed to remove data file (%s): %s\r\n",
+                wal->data_path,
+                strerror(errno));
+    }
+    if (unlink(wal->meta_path) == -1) {
+        fprintf(stderr,
+                "wal: failed to remove metadata file (%s): %s\r\n",
+                wal->meta_path,
+                strerror(errno));
+    }
     free((void *)wal->data_path);
     free((void *)wal->meta_path);
 }
