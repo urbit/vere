@@ -92,7 +92,8 @@ typedef struct pma pma_t;
 
 /// Load a new or existing PMA into memory.
 ///
-/// @param[in] base        Base address to create the PMA at.
+/// @param[in] base        Base address to create the PMA at. Must be a multiple
+///                        of kPageSz.
 /// @param[in] len         Length in bytes of the PMA. Must be greater than the
 ///                        sum of the lengths of the backing heap and stack
 ///                        files.
@@ -106,6 +107,7 @@ typedef struct pma pma_t;
 ///
 /// @return PMA handle  Success. When finished, call pma_unload() to dispose of
 ///                     the PMA's resources.
+/// @return NULL        base is not kPageSz-aligned.
 /// @return NULL        Failed to set up heap.
 /// @return NULL        Failed to set up stack.
 pma_t *

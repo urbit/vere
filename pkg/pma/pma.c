@@ -541,12 +541,18 @@ pma_load(void         *base,
     fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
     return NULL;
 #endif
+    assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
     if (!len_getter) {
         return NULL;
     }
-    assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
-    assert((uintptr_t)base % kPageSz == 0);
-    assert(len % kPageSz == 0);
+    if ((uintptr_t)base % kPageSz != 0) {
+        fprintf(stderr,
+                "pma: base address %p is not a multiple of %zu\r\n",
+                base,
+                kPageSz);
+        return NULL;
+    }
+    len = round_up(len, kPageSz);
 
     pma_t *pma = malloc(sizeof(*pma));
 
