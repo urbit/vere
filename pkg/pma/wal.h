@@ -9,14 +9,36 @@
 #include "page.h"
 
 //==============================================================================
+// CONSTANTS
+
+/// File extension for a WAL's data file.
+static const char kWalDataExt[] = ".data";
+
+/// File extension for a WAL's metadata file.
+static const char kWalMetaExt[] = ".meta";
+
+//==============================================================================
 // TYPES
 
-/// Write-ahead log for updating a PMA.
+/// Write-ahead log (WAL) for updating a PMA.
+///
+/// A WAL is comprised of two separate files: a metadata file and a data file.
+/// The data file contains the raw contents of the pages in the WAL, and the
+/// metadata file contains the page index and page checksum for each page in the
+/// data file.
 struct wal {
-    /// Path to the write-ahead log.
-    const char *path;
-    /// File descriptor for the open write-ahead log.
-    int fd;
+    /// Path to the write-ahead log's data file.
+    const char *data_path;
+
+    /// Path to the write-ahead log's metadata file.
+    const char *meta_path;
+
+    /// File descriptor for the open data file of the write-ahead log.
+    int data_fd;
+
+    /// File descriptor for the open metadata file of the write-ahead log.
+    int meta_fd;
+
     /// Number of entries in the write-ahead log.
     size_t entry_cnt;
 };
@@ -36,7 +58,10 @@ typedef struct wal_entry wal_entry_t;
 
 /// Open a WAL.
 ///
-/// @param[in]  path  Path to the WAL. Must not be NULL.
+/// @param[in]  path  Path to the WAL. kWalDataExt and kWalMetaExt will be
+///                   appended to the end of this path to generate the data and
+///                   metadata file paths, respectively, for the WAL. Must not
+///                   be NULL.
 /// @param[out] wal   Populated with the resulting WAL handle. Must not be NULL.
 ///
 /// @return 0   Success.
@@ -48,14 +73,15 @@ wal_open(const char *path, wal_t *wal);
 
 /// Append a new entry to a WAL.
 ///
-/// @param[in] wal    WAL handle. Must not be NULL.
-/// @param[in] entry  Entry to append. Must not be NULL.
+/// @param[in] wal     WAL handle. Must not be NULL.
+/// @param[in] pg_idx  Zero-based page index of page.
+/// @param[in] pg      Page to append. Must not be NULL.
 ///
 /// @return 0   Success.
 /// @return -1  wal or entry were NULL.
 /// @return -1  Failed to write entry to WAL file.
 int
-wal_append(wal_t *wal, const wal_entry_t *entry);
+wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz]);
 
 /// Sync a WAL to disk.
 ///

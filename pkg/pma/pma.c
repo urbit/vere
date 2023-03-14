@@ -484,23 +484,21 @@ sync_file_(const char *path,
     // Determine largest possible page index.
     size_t total = total_len_(pma);
     assert(total % kPageSz == 0);
-    size_t      max_idx = (total / kPageSz) - 1;
+    size_t  max_idx = (total / kPageSz) - 1;
 
-    char       *ptr  = grows_down ? base - kPageSz : base;
-    ssize_t     step = grows_down ? -kPageSz : kPageSz;
-    wal_entry_t entry;
+    char   *ptr  = grows_down ? base - kPageSz : base;
+    ssize_t step = grows_down ? -kPageSz : kPageSz;
     for (size_t i = 0; i < len; i += kPageSz) {
         page_status_t status = page_status_(ptr, pma);
         assert(status != PS_UNMAPPED);
         if (status == PS_MAPPED_DIRTY) {
             size_t pg_idx = addr_to_page_idx_(ptr, pma);
-            entry.pg_idx  = grows_down ? max_idx - pg_idx : pg_idx;
-            memcpy(entry.pg, ptr, sizeof(entry.pg));
-            if (wal_append(&wal, &entry) == -1) {
+            pg_idx        = grows_down ? max_idx - pg_idx : pg_idx;
+            if (wal_append(&wal, pg_idx, ptr) == -1) {
                 fprintf(stderr,
                         "pma: failed to append %zu-byte page with index %llu "
                         "and address %p to wal at %s\r\n",
-                        sizeof(entry.pg),
+                        kPageSz,
                         pg_idx,
                         ptr,
                         wal_file);
