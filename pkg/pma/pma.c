@@ -387,9 +387,7 @@ map_file_(const char *path,
                  path,
                  kWriteAheadLogExtension);
         wal_t wal;
-        if (wal_open(wal_file, &wal) == -1 && errno != EEXIST
-            && wal_apply(&wal, fd_) == -1)
-        {
+        if (wal_open(wal_file, &wal) == -1 && errno != EEXIST) {
             fprintf(stderr, "pma: failed to open wal file at %s\r\n", wal_file);
             goto close_fd;
         }
