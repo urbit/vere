@@ -4,6 +4,7 @@
 #define U3_NOUN_H
 
 #include "allocate.h"
+#include "error.h"
 #include "hashtable.h"
 #include "jets.h"
 #include "jets/k.h"
