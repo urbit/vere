@@ -8,7 +8,7 @@
 #define u3_assert(condition)                                                   \
   do {                                                                         \
     if ( !(condition) ) {                                                      \
-      u3m_bail(c3_oops);                                                       \
+      u3m_bail(c3__oops);                                                      \
     }                                                                          \
   } while ( 0 )
 
