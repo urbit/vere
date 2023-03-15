@@ -702,8 +702,10 @@ u3u_mmap_read(c3_c* cap_c, c3_c* pat_c, c3_d* out_d, c3_y** out_y)
   //  open file
   //
   if ( -1 == (fid_i = c3_open(pat_c, O_RDONLY, 0644)) ) {
+    c3_i err_i = errno;
     fprintf(stderr, "%s: c3_open failed (%s): %s\r\n",
-                    cap_c, pat_c, strerror(errno));
+                    cap_c, pat_c, strerror(err_i));
+    errno = err_i;
     return c3n;
   }
 
@@ -713,9 +715,11 @@ u3u_mmap_read(c3_c* cap_c, c3_c* pat_c, c3_d* out_d, c3_y** out_y)
     struct stat buf_b;
 
     if ( -1 == fstat(fid_i, &buf_b) ) {
+      c3_i err_i = errno;
       fprintf(stderr, "%s: stat failed (%s): %s\r\n",
-                      cap_c, pat_c, strerror(errno));
+                      cap_c, pat_c, strerror(err_i));
       close(fid_i);
+      errno = err_i;
       return c3n;
     }
 
@@ -728,9 +732,11 @@ u3u_mmap_read(c3_c* cap_c, c3_c* pat_c, c3_d* out_d, c3_y** out_y)
     void* ptr_v;
 
     if ( MAP_FAILED == (ptr_v = mmap(0, len_d, PROT_READ, MAP_SHARED, fid_i, 0)) ) {
+      int err_i = errno;
       fprintf(stderr, "%s: mmap failed (%s): %s\r\n",
-                      cap_c, pat_c, strerror(errno));
+                      cap_c, pat_c, strerror(err_i));
       close(fid_i);
+      errno = err_i;
       return c3n;
     }
 

@@ -14,7 +14,7 @@ static uv_buf_t
 _dawn_oct_to_buf(u3_noun oct)
 {
   if ( c3n == u3a_is_cat(u3h(oct)) ) {
-    exit(1);
+    exit(EINVAL);
   }
 
   c3_w len_w  = u3h(oct);
@@ -35,7 +35,7 @@ _dawn_buf_to_oct(uv_buf_t buf_u)
   u3_noun len = u3i_words(1, (c3_w*)&buf_u.len);
 
   if ( c3n == u3a_is_cat(len) ) {
-    exit(1);
+    exit(EINVAL);
   }
 
   return u3nc(len, u3i_bytes(buf_u.len, (const c3_y*)buf_u.base));

@@ -880,7 +880,7 @@ _serf_writ_live_save(u3_serf* sef_u, c3_d eve_d)
     fprintf(stderr, "serf (%" PRIu64 "): save failed: %" PRIu64 "\r\n",
                     sef_u->dun_d,
                     eve_d);
-    exit(1);
+    exit(EINVAL);
   }
 
   u3e_save();

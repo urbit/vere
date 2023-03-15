@@ -20,12 +20,12 @@ _setup(void)
   sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
     printf("*** fail _setup 1\n");
-    exit(1);
+    exit(EPROTO);
   }
   u3s_cue_xeno_done(sil_u);
   if ( c3n == u3v_boot_lite(pil) ) {
     printf("*** fail _setup 2\n");
-    exit(1);
+    exit(ECANCELED);
   }
 }
 
@@ -41,18 +41,18 @@ _test_lily()
 
   if ( c3y == u3v_lily(c3__uv, cod, &lit_l) ) {
     printf("*** fail _test_lily-1\n");
-    exit(1);
+    exit(ECANCELED);
   }
   cod = u3dc("scot", c3__ud, 0x7fffffff);
   if ( (c3n == u3v_lily(c3__ud, cod, &lit_l)) ||
        (0x7fffffff != lit_l) ) {
     printf("*** fail _test_lily-2a\n");
-    exit(1);
+    exit(ECANCELED);
   }
   cod = u3dc("scot", c3__ux, u3i_word(0x80000000));
   if ( c3y == u3v_lily(c3__ux, cod, &lit_l) ) {
     printf("*** fail _test_lily-2b\n");
-    exit(1);
+    exit(ECANCELED);
   }
 }
 

@@ -233,7 +233,7 @@ main(int argc, char* argv[])
 
   if ( !_test_hashtable() ) {
     fprintf(stderr, "test_hashtable: failed\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   //  GC

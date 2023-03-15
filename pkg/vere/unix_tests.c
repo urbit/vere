@@ -59,7 +59,7 @@ main(int argc, char* argv[])
 
   if ( !_test_safe() ) {
     fprintf(stderr, "test unix: failed\r\n");
-    exit(1);
+    return ECANCELED;
   }
 
   fprintf(stderr, "test unix: ok\r\n");

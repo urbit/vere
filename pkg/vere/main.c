@@ -55,7 +55,7 @@ _main_self_path(void)
   }
   else {
     fprintf(stderr, "unable to get binary self path\r\n");
-    exit(1);
+    exit(ECANCELED);
 
     //  XX continue?
     //
@@ -501,9 +501,10 @@ _main_getopt(c3_i argc, c3_c** argv)
     struct stat s;
     //  catch invalid boot
     if ( 0 != stat(u3_Host.dir_c, &s) ) {
+      c3_i err_i = errno;
       if ( u3_Host.ops_u.nuu != c3y ) {
-        fprintf(stderr, "couldn't find pier %s\n", u3_Host.dir_c);
-        exit(1);
+        fprintf(stderr, "couldn't find pier %s: %s\n", u3_Host.dir_c, strerror(err_i));
+        exit(err_i);
       }
     }
     //  catch invalid boot of existing pier
@@ -511,11 +512,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       if ( u3_Host.ops_u.nuu == c3y ) {
         fprintf(stderr, "tried to create pier %s but it already exists\n", u3_Host.dir_c);
         fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
-        exit(1);
+        exit(EEXIST);
       }
       else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
+        c3_i err_i = errno;
         fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
-        exit(1);
+        exit(err_i);
       }
     }
   }
@@ -616,7 +618,7 @@ _setup_cert_store()
   BIO* cbio = BIO_new_mem_buf(include_ca_bundle_crt, include_ca_bundle_crt_len);
   if ( !cbio || !(_cert_store = PEM_X509_INFO_read_bio(cbio, NULL, NULL, NULL)) ) {
     u3l_log("boot: failed to decode embedded CA certificates");
-    exit(1);
+    exit(ECANCELED);
   }
 
   BIO_free(cbio);
@@ -776,7 +778,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     fprintf(stderr, use_c[i], argv[0]);
   }
   _cw_usage(argv[0]);
-  exit(1);
+  exit(0);
 }
 
 #if 0
@@ -786,7 +788,7 @@ static void
 u3_ve_panic(c3_i argc, c3_c** argv)
 {
   fprintf(stderr, "%s: gross system failure\n", argv[0]);
-  exit(1);
+  exit(ECANCELED);
 }
 #endif
 
@@ -845,7 +847,7 @@ _cw_serf_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
     fprintf(stderr, "serf: pier error: %s\r\n", err_c);
   }
 
-  exit(1);
+  exit(ECANCELED);
 }
 
 /* _cw_king_fail(): local failure stub.
@@ -854,7 +856,7 @@ static void
 _cw_king_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
 {
   fprintf(stderr, "king: eval error: %s\r\n", err_c);
-  exit(1);
+  exit(ECANCELED);
 }
 
 /* _cw_serf_send(): send plea back to daemon.
@@ -1038,7 +1040,7 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
 {
   if ( 8 > argc ) {
     fprintf(stderr, "serf: missing args\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   c3_d       eve_d = 0;
@@ -1106,7 +1108,7 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
       //
       if ( c3n == u3u_uncram(u3V.dir_c, eve_d) ) {
         fprintf(stderr, "serf (%" PRIu64 "): rock load failed\r\n", eve_d);
-        exit(1);
+        exit(ECANCELED);
       }
     }
   }
@@ -1152,7 +1154,7 @@ _cw_disk_init(c3_c* dir_c)
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   return log_u;
@@ -1177,7 +1179,7 @@ _cw_dock(c3_i argc, c3_c* argv[])
 
     default: {
       fprintf(stderr, "invalid command\r\n");
-      exit(1);
+      exit(EINVAL);
     } break;
   }
 
@@ -1225,7 +1227,7 @@ _cw_eval_get_newt(FILE* fil_u, c3_d* len_d)
 
   if ( 0x0 != byt_y[0] ) {
     fprintf(stderr, "corrupted newt passed to cue\n");
-    exit(1);
+    exit(EPROTO);
   }
 
   *len_d = (((c3_d)byt_y[1]) <<  0)
@@ -1267,7 +1269,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
@@ -1289,7 +1291,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1298,7 +1300,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   //
   if ( ( c3y == cue_o ) && ( c3y == jam_o ) ) {
     fprintf(stderr, "cannot enable both jam and cue\r\n");
-    exit(1);
+    exit(EINVAL);
   }
   //  newt meaningless without jam or cue set
   //
@@ -1310,7 +1312,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   //
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   //  configure stdout as u3_mojo
@@ -1338,12 +1340,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
       fprintf(stderr, "lite: unable to cue ivory pill\r\n");
-      exit(1);
+      exit(EPROTO);
     }
     u3s_cue_xeno_done(sil_u);
     if ( c3n == u3v_boot_lite(pil) ) {
       u3l_log("lite: boot failed");
-      exit(1);
+      exit(ECANCELED);
     }
   }
 
@@ -1368,13 +1370,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3_weak som;
     if ( c3n == new_o ) {
       fprintf(stderr, "cue only supports newt encoding (for now)\n");
-      exit(1);
+      exit(ENOTSUP);
     }
     byt_y = _cw_eval_get_newt(stdin, &len_d);
     som = u3s_cue_xeno(len_d, byt_y);
     if ( u3_none == som ) {
       fprintf(stderr, "cue failed\n");
-      exit(1);
+      exit(EPROTO);
     }
     c3_c* pre_c;
     u3k(som);
@@ -1465,7 +1467,7 @@ _cw_info(c3_i argc, c3_c* argv[])
 
     default: {
       fprintf(stderr, "invalid command\r\n");
-      exit(1);
+      exit(EINVAL);
     } break;
   }
 
@@ -1502,7 +1504,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
     default: {
       fprintf(stderr, "invalid command\r\n");
-      exit(1);
+      exit(EINVAL);
     } break;
   }
 
@@ -1531,13 +1533,13 @@ _cw_cram(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1551,7 +1553,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1559,7 +1561,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
@@ -1581,7 +1583,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
   u3_disk_exit(log_u);
 
   if ( c3n == ret_o ) {
-    exit(1);
+    exit(ECANCELED);
   }
 
   u3m_stop();
@@ -1606,13 +1608,13 @@ _cw_queu(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1626,7 +1628,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1634,7 +1636,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   c3_c* eve_c;
@@ -1642,7 +1644,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
     fprintf(stderr, "urbit: queu: invalid number '%s'\r\n", eve_c);
-    exit(1);
+    exit(EINVAL);
   }
   else {
     u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
@@ -1657,7 +1659,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //
     if ( c3n == u3u_uncram(u3_Host.dir_c, eve_d) ) {
       fprintf(stderr, "urbit: queu: failed\r\n");
-      exit(1);
+      exit(ECANCELED);
     }
 
     u3e_save();
@@ -1687,13 +1689,13 @@ _cw_meld(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1707,7 +1709,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1715,7 +1717,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
@@ -1757,13 +1759,13 @@ _cw_next(c3_i argc, c3_c* argv[])
 
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1777,7 +1779,7 @@ _cw_next(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1785,7 +1787,7 @@ _cw_next(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   u3_Host.pep_o = c3y;
@@ -1812,13 +1814,13 @@ _cw_pack(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1832,7 +1834,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1840,7 +1842,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
@@ -1880,7 +1882,7 @@ _cw_play(c3_i argc, c3_c* argv[])
         break;
       case '?':
         fprintf(stderr, "%s\r\n", usage_c);
-        exit(1);
+        exit(EINVAL);
     }
   }
 
@@ -1891,14 +1893,14 @@ _cw_play(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "%s\r\n", usage_c);
-      exit(1);
+      exit(EINVAL);
     }
     optind++;
   }
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "%s\r\n", usage_c);
-    exit(1);
+    exit(EINVAL);
   }
 
   u3_Host.play_o = c3y;
@@ -1923,13 +1925,13 @@ _cw_prep(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1943,7 +1945,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -1951,7 +1953,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   u3_Host.pep_o = c3y;
@@ -1977,13 +1979,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -1997,7 +1999,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -2005,7 +2007,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   // gracefully shutdown the pier if it's running
@@ -2019,12 +2021,12 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "chop: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
     fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
-    exit(1);
+    exit(ECANCELED);
   }
 
   if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // initialize the lmdb environment
@@ -2043,7 +2045,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_d fir_d, las_d;
   if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "chop: failed to load latest event from database\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // get the metadata
@@ -2052,7 +2054,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w     lif_w;
   if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "chop: failed to read metadata\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // get the last event
@@ -2061,11 +2063,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
   void*        buf_v[1];
   if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
     fprintf(stderr, "chop: failed to initialize iterator\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
   if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
     fprintf(stderr, "chop: failed to read event\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
   u3_lmdb_walk_done(&itr_u);
 
@@ -2074,27 +2076,30 @@ _cw_chop(c3_i argc, c3_c* argv[])
   snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
   if ( 0 != access(cho_c, F_OK) ) {
     if ( 0 != c3_mkdir(cho_c, 0700) ) {
-      fprintf(stderr, "chop: failed to create chop directory\r\n");
-      exit(1);
+      c3_i err_i = errno;
+      fprintf(stderr,
+              "chop: failed to create chop directory: %s\r\n",
+              strerror(err_i));
+      exit(err_i);
     }
   }
   MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
   if ( !new_u ) {
     fprintf(stderr, "chop: failed to initialize new database\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // write the metadata to the database
   if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
     fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // write the last event to the database
   // warning: this relies on the old database still being open
   if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
     fprintf(stderr, "chop: failed to write last event\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   // backup the original database file
@@ -2103,16 +2108,22 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // "data_<first>-<last>.mdb.bak"
   snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
   if ( 0 != c3_rename(dat_c, bak_c) ) {
-    fprintf(stderr, "chop: failed to backup original database file\r\n");
-    exit(1);
+    c3_i err_i = errno;
+    fprintf(stderr,
+            "chop: failed to backup original database file: %s\r\n",
+            strerror(err_i));
+    exit(err_i);
   }
 
   // rename new database file to be official
   c3_c new_c[8193];
   snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
   if ( 0 != c3_rename(new_c, dat_c) ) {
-    fprintf(stderr, "chop: failed to rename new database file\r\n");
-    exit(1);
+    c3_i err_i = errno;
+    fprintf(stderr,
+            "chop: failed to rename new database file: %s\r\n",
+            strerror(err_i));
+    exit(err_i);
   }
 
   // cleanup
@@ -2163,7 +2174,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
       } break;
 
       case '?': {
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -2177,12 +2188,12 @@ _cw_vere(c3_i argc, c3_c* argv[])
   }
   else {
     fprintf(stderr, "invalid command, output directory required\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   if ( !arc_c ) {
@@ -2190,7 +2201,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
     arc_c = U3_OS_ARCH;
 #else
     fprintf(stderr, "unknown architecture, --arch required\r\n");
-    exit(1);
+    exit(EINVAL);
 #endif
   }
 
@@ -2205,7 +2216,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   //
   if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
     u3l_log("boot: curl initialization failed");
-    exit(1);
+    exit(ECANCELED);
   }
 
   _setup_cert_store();
@@ -2216,7 +2227,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
     switch ( u3_king_next(pac_c, &ver_c) ) {
       case -2: {
         fprintf(stderr, "vere: unable to check for next version\n");
-        exit(1);
+        exit(ECANCELED);
       } break;
 
       case -1: {
@@ -2235,7 +2246,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
 
   if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 0) ) {
     u3l_log("vere: download failed");
-    exit(1);
+    exit(ECANCELED);
   }
 
   u3l_log("vere: download succeeded");
@@ -2260,13 +2271,13 @@ _cw_vile(c3_i argc, c3_c* argv[])
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
+          exit(EINVAL);
         }
       } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
-        exit(1);
+        exit(EINVAL);
       } break;
     }
   }
@@ -2280,7 +2291,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
     }
     else {
       fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
+      exit(EINVAL);
     }
 
     optind++;
@@ -2288,7 +2299,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
 
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   //  XX check if snapshot is stale?
@@ -2405,7 +2416,7 @@ main(c3_i   argc,
 {
   if ( argc <= 0 ) {
     fprintf(stderr, "nice try, fbi\r\n");
-    exit(1);
+    exit(EINVAL);
   }
 
   _main_init();
@@ -2481,8 +2492,9 @@ main(c3_i   argc,
     sigemptyset(&set);
     sigaddset(&set, SIGPROF);
     if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-      u3l_log("boot: thread mask SIGPROF: %s", strerror(errno));
-      exit(1);
+      c3_i err_i = errno;
+      u3l_log("boot: thread mask SIGPROF: %s", strerror(err_i));
+      exit(err_i);
     }
   }
 #endif
@@ -2577,7 +2589,7 @@ main(c3_i   argc,
     //
     if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
       u3l_log("boot: curl initialization failed");
-      exit(1);
+      exit(ECANCELED);
     }
 
     _setup_cert_store();

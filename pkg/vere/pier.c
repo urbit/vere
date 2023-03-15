@@ -1715,7 +1715,7 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
     //  XX dispose
     //
     u3_pier_bail(pir_u);
-    exit(1);
+    exit(ECANCELED);
   }
 
   if ( c3y == u3_Host.ops_u.veb ) {
@@ -1752,13 +1752,13 @@ _pier_pill_parse(u3_noun pil)
       u3m_p("mot", u3h(pro));
       fprintf(stderr, "boot: failed: unable to parse pill\r\n");
       u3_king_bail();
-      exit(1);
+      exit(ECANCELED);
     }
 
     if ( c3y == u3r_sing_c("ivory", tag) ) {
       fprintf(stderr, "boot: failed: unable to boot from ivory pill\r\n");
       u3_king_bail();
-      exit(1);
+      exit(ECANCELED);
     }
     else if ( c3__pill != tag ) {
       if ( c3y == u3a_is_atom(tag) ) {
@@ -1766,7 +1766,7 @@ _pier_pill_parse(u3_noun pil)
       }
       fprintf(stderr, "boot: failed: unrecognized pill\r\n");
       u3_king_bail();
-      exit(1);
+      exit(ECANCELED);
     }
 
     {
@@ -1776,7 +1776,7 @@ _pier_pill_parse(u3_noun pil)
       if ( c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
         u3_king_bail();
-        exit(1);
+        exit(ECANCELED);
       }
 
       if ( c3y == u3a_is_atom(typ) ) {
@@ -1994,7 +1994,7 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
     //  XX dispose
     //
     u3_pier_bail(pir_u);
-    exit(1);
+    exit(ECANCELED);
   }
 
   u3z(pax);

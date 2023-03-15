@@ -234,7 +234,7 @@ main(int argc, char* argv[])
 
   if ( !_test_mug() ) {
     fprintf(stderr, "test_mug: failed\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   //  GC

@@ -95,7 +95,7 @@ void _king_doom(u3_noun doom);
 void
 _king_defy_fate()
 {
-  exit(1);
+  exit(ECANCELED);
 }
 
 /* _king_doom(): doom parser
@@ -216,7 +216,7 @@ _king_pier(u3_noun pier)
   if ( (c3n == u3du(pier)) ||
        (c3n == u3ud(u3t(pier))) ) {
     u3m_p("daemon: invalid pier", pier);
-    exit(1);
+    exit(EINVAL);
   }
 
   u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)));
@@ -255,7 +255,7 @@ _king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
 
   if ( !(cul_u = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
-    exit(1);
+    exit(ECANCELED);
   }
 
   u3K.ssl_curl_f(cul_u);
@@ -300,7 +300,7 @@ _king_get_atom(c3_c* url_c)
 
   if ( _king_curl_bytes(url_c, &len_w, &hun_y, 1) ) {
     u3_king_bail();
-    exit(1);
+    exit(ECANCELED);
   }
 
   pro = u3i_bytes(len_w, hun_y);
@@ -418,13 +418,14 @@ _get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_c)
 {
   FILE *fp = popen(cmd_c, "r");
   if ( NULL == fp ) {
-    u3l_log("'%s' failed", cmd_c);
-    exit(1);
+    c3_i err_i = errno;
+    u3l_log("'%s' failed: %s", cmd_c, strerror(err_i));
+    exit(err_i);
   }
 
   if ( NULL == fgets(out_c, len_c, fp) ) {
     u3l_log("'%s' produced no output", cmd_c);
-    exit(1);
+    exit(ECANCELED);
   }
 
   pclose(fp);
@@ -456,8 +457,9 @@ _git_pill_url(c3_c *out_c, c3_c *arv_c)
   assert(NULL != arv_c);
 
   if ( 0 != system("which git >> /dev/null") ) {
-    u3l_log("boot: could not find git executable");
-    exit(1);
+    c3_i err_i = errno;
+    u3l_log("boot: could not find git executable: %s", strerror(err_i));
+    exit(err_i);
   }
 
   _arvo_hash(hax_c, arv_c);
@@ -517,7 +519,7 @@ _boothack_key(u3_noun kef)
       c3_c* kef_c = u3r_string(kef);
       u3l_log("dawn: invalid private keys: %s", kef_c);
       c3_free(kef_c);
-      exit(1);
+      exit(ECANCELED);
     }
 
     //  +feed:able:jael: keyfile
@@ -525,7 +527,7 @@ _boothack_key(u3_noun kef)
     u3_noun pro = u3m_soft(0, u3ke_cue, u3k(u3t(des)));
     if ( u3_blip != u3h(pro) ) {
       u3l_log("dawn: unable to cue keyfile");
-      exit(1);
+      exit(EPROTO);
     }
     seed = u3k(u3t(pro));
     u3z(pro);
@@ -549,7 +551,7 @@ _boothack_key(u3_noun kef)
     if ( u3_nul == whu ) {
       u3l_log("dawn: invalid ship specified with -w %s",
               u3_Host.ops_u.who_c);
-      exit(1);
+      exit(EINVAL);
     }
 
     if ( (u3_none != ship) &&
@@ -562,7 +564,7 @@ _boothack_key(u3_noun kef)
 
       u3z(how);
       c3_free(how_c);
-      exit(1);
+      exit(ECANCELED);
     }
 
     u3z(woh);
@@ -623,7 +625,7 @@ _boothack_doom(void)
     }
     else {
       u3l_log("boot: must specify a key with -k or -G");
-      exit(1);
+      exit(EINVAL);
     }
 
     bot = u3nc(c3__dawn, _boothack_key(kef));
@@ -835,9 +837,10 @@ _king_boot_ivory(void)
 
   if ( u3_Host.ops_u.lit_c ) {
     if ( c3n == u3u_mmap_read("lite", u3_Host.ops_u.lit_c, &len_d, &byt_y) ) {
+      c3_i err_i = errno;
       u3l_log("lite: unable to load ivory pill at %s",
               u3_Host.ops_u.lit_c);
-      exit(1);
+      exit(err_i);
     }
   }
   else {
@@ -851,22 +854,23 @@ _king_boot_ivory(void)
 
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
       u3l_log("lite: unable to cue ivory pill");
-      exit(1);
+      exit(EPROTO);
     }
 
     u3s_cue_xeno_done(sil_u);
 
     if ( c3n == u3v_boot_lite(pil)) {
       u3l_log("lite: boot failed");
-      exit(1);
+      exit(ECANCELED);
     }
   }
 
   if ( u3_Host.ops_u.lit_c ) {
     if ( c3n == u3u_munmap(len_d, byt_y) ) {
+      c3_i err_i = errno;
       u3l_log("lite: unable to unmap ivory pill at %s",
               u3_Host.ops_u.lit_c);
-      exit(1);
+      exit(err_i);
     }
   }
 }
@@ -915,8 +919,9 @@ u3_king_commence()
     rlm.rlim_cur = 0;
 
     if ( 0 != setrlimit(RLIMIT_CORE, &rlm) ) {
-      u3l_log("king: unable to disable core dumps: %s", strerror(errno));
-      exit(1);
+      c3_i err_i = errno;
+      u3l_log("king: unable to disable core dumps: %s", strerror(err_i));
+      exit(err_i);
     }
   }
 
@@ -988,7 +993,7 @@ _king_save_file(c3_c* url_c, FILE* fil_u)
 
   if ( !(cul_u = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
-    exit(1);
+    exit(ECANCELED);
   }
 
   u3K.ssl_curl_f(cul_u);
@@ -1027,8 +1032,10 @@ _king_make_pace(c3_c* pac_c)
   ret_i = c3_mkdir(bin_c, 0700);
 
   if ( ret_i && (EEXIST != errno) ) {
-    fprintf(stderr, "vere: mkdir %s failed: %s\n", bin_c, strerror(errno));
+    c3_i err_i = errno;
+    fprintf(stderr, "vere: mkdir %s failed: %s\n", bin_c, strerror(err_i));
     c3_free(bin_c);
+    errno = err_i;
     return -1;
   }
 
@@ -1042,8 +1049,10 @@ _king_make_pace(c3_c* pac_c)
   ret_i = mkdir(bin_c, 0700);
 
   if ( ret_i && (EEXIST != errno) ) {
-    fprintf(stderr, "vere: mkdir %s failed: %s\n", bin_c, strerror(errno));
+    c3_i err_i = errno;
+    fprintf(stderr, "vere: mkdir %s failed: %s\n", bin_c, strerror(err_i));
     c3_free(bin_c);
+    errno = err_i;
     return -1;
   }
 
@@ -1228,9 +1237,10 @@ _king_do_upgrade(c3_c* pac_c, c3_c* ver_c)
 #endif
 
   if ( _king_make_pace(pac_c) ) {
+    c3_i err_i = errno;
     u3l_log("vere: unable to make pace (%s) directory in pier", pac_c);
     u3_king_bail();
-    exit(1);
+    exit(err_i);
   }
 
   {
@@ -1243,7 +1253,7 @@ _king_do_upgrade(c3_c* pac_c, c3_c* ver_c)
   if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 1) ) {
     u3l_log("vere: upgrade failed");
     u3_king_bail();
-    exit(1);
+    exit(ECANCELED);
   }
 
   c3_free(dir_c);
@@ -1470,7 +1480,7 @@ u3_king_dock(c3_c* pac_c)
   if ( _king_copy_vere(pac_c, URBIT_VERSION, arc_c, 1) ) {
     u3l_log("vere: binary copy failed");
     u3_king_bail();
-    exit(1);
+    exit(ECANCELED);
   }
   else {
     //  NB: failure ignored

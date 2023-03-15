@@ -1672,8 +1672,9 @@ _cm_limits(void)
     rlm.rlim_cur = c3_min(rlm.rlim_max, (65536 << 10));
 
     if ( 0 != setrlimit(RLIMIT_STACK, &rlm) ) {
-      u3l_log("boot: stack size: %s", strerror(errno));
-      exit(1);
+      c3_i err_i = errno;
+      u3l_log("boot: stack size: %s", strerror(err_i));
+      exit(err_i);
     }
   }
 
@@ -1718,7 +1719,7 @@ _cm_signals(void)
 {
   if ( 0 != sigsegv_install_handler(u3e_fault) ) {
     u3l_log("boot: sigsegv install failed");
-    exit(1);
+    exit(ENOTSUP);
   }
 
 # if defined(U3_OS_PROF)
@@ -1732,8 +1733,9 @@ _cm_signals(void)
     sigaddset(&set, SIGPROF);
 
     if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-      u3l_log("boot: thread mask SIGPROF: %s", strerror(errno));
-      exit(1);
+      c3_i err_i = errno;
+      u3l_log("boot: thread mask SIGPROF: %s", strerror(err_i));
+      exit(err_i);
     }
   }
 # endif
@@ -1830,7 +1832,7 @@ u3m_init(size_t len_i)
      || (len_i > u3a_bytes) )
   {
     u3l_log("loom: bad size: %zu", len_i);
-    exit(1);
+    exit(EINVAL);
   }
 
   // map at fixed address.
@@ -1848,6 +1850,7 @@ u3m_init(size_t len_i)
                    (PROT_READ | PROT_WRITE),
                    (MAP_ANON | MAP_PRIVATE),
                    -1, 0);
+      c3_i err_i = errno;
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
       u3l_log("see urbit.org/using/install/#about-swap-space"
@@ -1856,7 +1859,7 @@ u3m_init(size_t len_i)
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);
       }
-      exit(1);
+      exit(err_i);
     }
 
     u3C.wor_i = len_i >> 2;

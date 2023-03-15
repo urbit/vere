@@ -24,7 +24,7 @@ u3_time_sec_out(c3_d urs_d)
 
   if ( adj_d > 0xffffffffULL ) {
     fprintf(stderr, "Agh! It's 2106! And no one's fixed this shite!\n");
-    exit(1);
+    exit(EINVAL);
   }
   return (c3_w)adj_d;
 }

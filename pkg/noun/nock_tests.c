@@ -73,7 +73,7 @@ main(int argc, char* argv[])
 
   if ( !_test_meme() ) {
     fprintf(stderr, "test meme: failed\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   //  GC

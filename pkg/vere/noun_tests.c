@@ -1761,7 +1761,7 @@ main(int argc, char* argv[])
 
   if ( !_test_noun() ) {
     fprintf(stderr, "test noun: failed\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   //  GC

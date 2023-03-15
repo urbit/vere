@@ -254,7 +254,7 @@ main(int argc, char* argv[])
 
   if ( !_test_jam_roundtrip() ) {
     fprintf(stderr, "test jam: failed\r\n");
-    exit(1);
+    exit(ECANCELED);
   }
 
   //  GC
