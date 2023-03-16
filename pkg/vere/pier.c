@@ -2386,12 +2386,25 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
     }
   }
-  //  We are calling nock here, but hopefully need no protection.
+  //  We are calling nock here, so we virtualize for safety.
   //
   else {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(tac));
-
-    _pier_dump_wall(fil_u, wol);
+    u3_noun gat = u3v_wish("wash");
+    u3_noun res;
+    
+    {
+      u3_noun sam = u3nc(tab_l, col_l);
+      u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+      res = u3m_soft(0, u3n_kick_on, cor);
+    }
+    if (0 == u3h(res) ) {
+      u3_noun wol = u3k(u3t(res)); 
+      _pier_dump_wall(fil_u, wol);
+    } else if ( 0 == strcmp(u3r_string(u3k(u3h(res))), "exit") ) {
+      //  ???
+    }
+    u3z(res);
+    u3z(gat);
   }
 
   if ( c3n == u3_Host.ops_u.tem ) {
