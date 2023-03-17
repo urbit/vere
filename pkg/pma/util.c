@@ -9,21 +9,6 @@
 #include <unistd.h>
 
 //==============================================================================
-// ARITHMETIC
-
-size_t
-max(size_t a, size_t b);
-
-size_t
-min(size_t a, size_t b);
-
-size_t
-round_down(size_t x, size_t n);
-
-size_t
-round_up(size_t x, size_t n);
-
-//==============================================================================
 // I/O
 
 int
