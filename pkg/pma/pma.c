@@ -39,7 +39,7 @@ static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
 /// Extension appended to a backing file to create that file's wal name.
-static const char kWriteAheadLogExtension[] = ".wal";
+static const char kWriteAheadLogExtension[] = "wal";
 
 //==============================================================================
 // GLOBAL VARIABLES
@@ -387,10 +387,10 @@ map_file_(const char *path,
         // crash occurs during pma_sync() after the write-ahead log has been
         // created but before it can be applied, we need to apply it to the file
         // before mapping the file.
-        char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
+        char wal_file[strlen(path) + 1 + sizeof(kWriteAheadLogExtension)];
         snprintf(wal_file,
                  sizeof(wal_file),
-                 "%s%s",
+                 "%s.%s",
                  path,
                  kWriteAheadLogExtension);
         wal_t wal;

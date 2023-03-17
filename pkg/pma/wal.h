@@ -12,10 +12,10 @@
 // CONSTANTS
 
 /// File extension for a WAL's data file.
-static const char kWalDataExt[] = ".data";
+static const char kWalDataExt[] = "data";
 
 /// File extension for a WAL's metadata file.
-static const char kWalMetaExt[] = ".meta";
+static const char kWalMetaExt[] = "meta";
 
 //==============================================================================
 // TYPES
