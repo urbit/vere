@@ -66,7 +66,10 @@ open_file_(const char *base_path,
     assert(fd);
     assert(len);
 
+    int err;
+
     if (asprintf(path, "%s.%s", base_path, suffix) == -1) {
+        err = ECANCELED;
         fprintf(stderr,
                 "wal: failed to append %s to %s\r\n",
                 suffix,
@@ -76,19 +79,18 @@ open_file_(const char *base_path,
 
     int fd_ = open(*path, O_CREAT | O_RDWR, 0644);
     if (fd_ == -1) {
-        fprintf(stderr,
-                "wal: failed to open %s: %s\r\n",
-                *path,
-                strerror(errno));
+        err = errno;
+        fprintf(stderr, "wal: failed to open %s: %s\r\n", *path, strerror(err));
         goto free_path;
     }
 
     struct stat buf;
     if (fstat(fd_, &buf) == -1) {
+        err = errno;
         fprintf(stderr,
                 "wal: failed to determine length of %s: %s\r\n",
                 *path,
-                strerror(errno));
+                strerror(err));
         goto close_fd;
     }
 
@@ -102,6 +104,7 @@ close_fd:
 free_path:
     free((void *)*path);
 fail:
+    errno = err;
     return -1;
 }
 
@@ -111,8 +114,10 @@ fail:
 int
 wal_open(const char *path, wal_t *wal)
 {
+    int err;
+
     if (!path || !wal) {
-        errno = EINVAL;
+        err = EINVAL;
         goto fail;
     }
 
@@ -124,11 +129,13 @@ wal_open(const char *path, wal_t *wal)
                    &meta_len)
         == -1)
     {
+        err = errno;
         fprintf(stderr, "wal: failed to open metadata file\r\n");
         goto fail;
     }
 
     if (meta_len % sizeof(metadata_entry_t_) != 0) {
+        err = ENOTRECOVERABLE;
         fprintf(stderr,
                 "wal: metadata file at %s is corrupt: expected length to be a "
                 "multiple of %zu but is %zu\r\n",
@@ -146,11 +153,13 @@ wal_open(const char *path, wal_t *wal)
                    &data_len)
         == -1)
     {
+        err = errno;
         fprintf(stderr, "wal: failed to open data file\r\n");
         goto close_metadata_file;
     }
 
     if (data_len % kPageSz != 0) {
+        err = ENOTRECOVERABLE;
         fprintf(stderr,
                 "wal: data file at %s is corrupt: expected length to be a "
                 "multiple of %zu but is %zu\r\n",
@@ -164,6 +173,7 @@ wal_open(const char *path, wal_t *wal)
     size_t entry_cnt  = data_len / kPageSz;
     size_t entry_cnt2 = meta_len / sizeof(metadata_entry_t_);
     if (entry_cnt != entry_cnt2) {
+        err = ENOTRECOVERABLE;
         fprintf(stderr,
                 "wal: metadata file (%s) has %zu entries but data file (%s) "
                 "has %zu entries\r\n",
@@ -180,22 +190,27 @@ wal_open(const char *path, wal_t *wal)
     uint64_t          checksum;
     for (size_t i = 0; i < entry_cnt; i++) {
         if (read_all(wal->data_fd, page, sizeof(page)) == -1) {
+            err = errno;
             fprintf(stderr,
-                    "wal: failed to read page #%zu from data file (%s)\r\n",
+                    "wal: failed to read page #%zu from data file (%s): %s\r\n",
                     i,
-                    wal->data_path);
+                    wal->data_path,
+                    strerror(err));
             goto close_data_file;
         }
         if (read_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
-            fprintf(
-                stderr,
-                "wal: failed to read entry #%zu from metadata file (%s)\r\n",
-                i,
-                wal->meta_path);
+            err = errno;
+            fprintf(stderr,
+                    "wal: failed to read entry #%zu from metadata file (%s): "
+                    "%s\r\n",
+                    i,
+                    wal->meta_path,
+                    strerror(err));
             goto close_data_file;
         }
         MurmurHash3_x86_32(page, sizeof(page), kSeed, &checksum);
         if (checksum != entry.checksum) {
+            err = ENOTRECOVERABLE;
             fprintf(stderr,
                     "wal: checksum computed from page #%zu of data file (%s) "
                     "doesn't match checksum from entry #%zu of metadata file "
@@ -218,6 +233,7 @@ close_metadata_file:
     close(wal->meta_fd);
     free((void *)wal->meta_path);
 fail:
+    errno = err;
     return -1;
 }
 
@@ -245,36 +261,46 @@ wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz])
 int
 wal_sync(const wal_t *wal)
 {
+    int err;
+
     if (!wal) {
-        errno = EINVAL;
-        return -1;
+        err = EINVAL;
+        goto fail;
     }
 
     if (fsync(wal->data_fd) == -1) {
+        err = errno;
         fprintf(stderr,
                 "wal: failed to flush changes to %s: %s\r\n",
                 wal->data_path,
-                strerror(errno));
-        return -1;
+                strerror(err));
+        goto fail;
     }
 
     if (fsync(wal->meta_fd) == -1) {
+        err = errno;
         fprintf(stderr,
                 "wal: failed to flush changes to %s: %s\r\n",
                 wal->meta_path,
-                strerror(errno));
-        return -1;
+                strerror(err));
+        goto fail;
     }
 
     return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
 
 int
 wal_apply(wal_t *wal, int fd)
 {
+    int err;
+
     if (!wal || fd < 0) {
-        errno = EINVAL;
-        return -1;
+        err = EINVAL;
+        goto fail;
     }
 
     if (wal->entry_cnt == 0) {
@@ -282,19 +308,21 @@ wal_apply(wal_t *wal, int fd)
     }
 
     if (lseek(wal->data_fd, 0, SEEK_SET) == (off_t)-1) {
+        err = errno;
         fprintf(stderr,
                 "wal: failed to seek to beginning of %s: %s\r\n",
                 wal->data_path,
-                strerror(errno));
-        return -1;
+                strerror(err));
+        goto fail;
     }
 
     if (lseek(wal->meta_fd, 0, SEEK_SET) == (off_t)-1) {
+        err = errno;
         fprintf(stderr,
                 "wal: failed to seek to beginning of %s: %s\r\n",
                 wal->meta_path,
-                strerror(errno));
-        return -1;
+                strerror(err));
+        goto fail;
     }
 
     char              pg[kPageSz];
@@ -302,27 +330,34 @@ wal_apply(wal_t *wal, int fd)
     off_t             offset;
     for (size_t i = 0; i < wal->entry_cnt; i++) {
         if (read_all(wal->data_fd, pg, sizeof(pg)) == -1) {
-            return -1;
+            err = errno;
+            goto fail;
         }
         if (read_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
-            return -1;
+            err = errno;
+            goto fail;
         }
         offset = entry.pg_idx * kPageSz;
         if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            err = errno;
             fprintf(stderr,
                     "wal: failed to seek to offset %u of file descriptor "
                     "%d: %s\r\n",
                     offset,
                     fd,
-                    strerror(errno));
-            return -1;
+                    strerror(err));
+            goto fail;
         }
         if (write_all(fd, pg, sizeof(pg)) == -1) {
-            return -1;
+            err = errno;
+            goto fail;
         }
     }
 
     return 0;
+
+fail:
+    errno = err;
 }
 
 void

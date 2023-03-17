@@ -206,12 +206,15 @@ total_len_(const pma_t *pma)
 static_ int
 center_guard_page_(pma_t *pma)
 {
+    int    err;
+
     size_t heap_len  = 0;
     size_t stack_len = 0;
     if (pma->len_getter(&heap_len, &stack_len) == -1) {
+        err = ECANCELED;
         fprintf(stderr,
                 "pma: failed to determine length of heap and stack\r\n");
-        return -1;
+        goto fail;
     }
 
     size_t free_len   = total_len_(pma) - (heap_len + stack_len);
@@ -226,16 +229,21 @@ center_guard_page_(pma_t *pma)
              0)
         == MAP_FAILED)
     {
+        err = errno;
         fprintf(stderr,
                 "pma: failed to place %zu-byte guard page at %p: %s\r\n",
                 kPageSz,
                 guard_pg,
-                strerror(errno));
-        return -1;
+                strerror(err));
+        goto fail;
     }
     set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
     pma->guard_pg = guard_pg;
     return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
 
 static_ int
@@ -320,6 +328,8 @@ map_file_(const char *path,
           size_t     *len,
           int        *fd)
 {
+    int err;
+
     if (!path) {
         static const size_t kDefaultSz = kPageSz;
         *len = *len == 0 ? kDefaultSz : round_up(*len, kPageSz);
@@ -334,12 +344,13 @@ map_file_(const char *path,
                  0)
             == MAP_FAILED)
         {
+            err = errno;
             fprintf(stderr,
                     "pma: failed to create %zu-byte anonymous mapping at %p: "
                     "%s\r\n",
                     kDefaultSz,
                     base,
-                    strerror(errno));
+                    strerror(err));
             goto fail;
         }
         size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
@@ -351,19 +362,18 @@ map_file_(const char *path,
     int fd_ = open(path, O_CREAT | O_RDWR, 0644);
     // A parent directory doesn't exist.
     if (fd_ == -1) {
-        fprintf(stderr,
-                "pma: failed to open %s: %s\r\n",
-                path,
-                strerror(errno));
+        err = errno;
+        fprintf(stderr, "pma: failed to open %s: %s\r\n", path, strerror(err));
         goto fail;
     }
 
     struct stat buf_;
     if (fstat(fd_, &buf_) == -1) {
+        err = errno;
         fprintf(stderr,
                 "pma: failed to determine length of %s: %s\r\n",
                 path,
-                strerror(errno));
+                strerror(err));
         goto close_fd;
     }
 
@@ -387,15 +397,21 @@ map_file_(const char *path,
                  kWriteAheadLogExtension);
         wal_t wal;
         if (wal_open(wal_file, &wal) == -1 && errno != EEXIST) {
-            fprintf(stderr, "pma: failed to open wal file at %s\r\n", wal_file);
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to open wal file at %s: %s\r\n",
+                    wal_file,
+                    strerror(err));
             goto close_fd;
         }
 
         if (wal_apply(&wal, fd_) == -1) {
+            err = errno;
             fprintf(stderr,
-                    "pma: failed to apply wal at %s to %s\r\n",
+                    "pma: failed to apply wal at %s to %s: %s\r\n",
                     wal_file,
-                    path);
+                    path,
+                    strerror(err));
             // We're leaking the fd in wal here.
             goto close_fd;
         }
@@ -418,13 +434,14 @@ map_file_(const char *path,
                      offset_)
                 == MAP_FAILED)
             {
+                err = errno;
                 fprintf(stderr,
                         "pma: failed to create %zu-byte mapping for %s at %p: "
                         "%s\r\n",
                         kPageSz,
                         path,
                         ptr,
-                        strerror(errno));
+                        strerror(err));
                 // Unmap already-mapped mappings.
                 munmap(ptr + kPageSz, offset_);
                 goto close_fd;
@@ -435,13 +452,14 @@ map_file_(const char *path,
         if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd_, 0)
             == MAP_FAILED)
         {
+            err = errno;
             fprintf(
                 stderr,
                 "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
                 len_,
                 path,
                 base,
-                strerror(errno));
+                strerror(err));
             goto close_fd;
         }
         set_page_status_range_(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
@@ -455,6 +473,7 @@ close_fd:
     close(fd_);
 fail:
     // TODO: mark all pages as unmapped.
+    errno = err;
     return -1;
 }
 
@@ -466,6 +485,8 @@ sync_file_(const char *path,
            size_t      len,
            int         fd)
 {
+    int err;
+
     if (!path) {
         return 0;
     }
@@ -476,8 +497,12 @@ sync_file_(const char *path,
     snprintf(wal_file, sizeof(wal_file), "%s%s", path, kWriteAheadLogExtension);
     wal_t wal;
     if (wal_open(wal_file, &wal) == -1) {
-        fprintf(stderr, "pma: failed to open wal file at %s\r\n", wal_file);
-        return -1;
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to open wal file at %s: %s\r\n",
+                wal_file,
+                strerror(err));
+        goto fail;
     }
 
     // Determine largest possible page index.
@@ -494,35 +519,47 @@ sync_file_(const char *path,
             size_t pg_idx = addr_to_page_idx_(ptr, pma);
             pg_idx        = grows_down ? max_idx - pg_idx : pg_idx;
             if (wal_append(&wal, pg_idx, ptr) == -1) {
+                err = errno;
                 fprintf(stderr,
                         "pma: failed to append %zu-byte page with index %zu "
-                        "and address %p to wal at %s\r\n",
+                        "and address %p to wal at %s: %s\r\n",
                         kPageSz,
                         pg_idx,
                         ptr,
-                        wal_file);
-                return -1;
+                        wal_file,
+                        strerror(err));
+                goto fail;
             }
         }
         ptr += step;
     }
 
     if (wal_sync(&wal) == -1) {
-        fprintf(stderr, "pma: failed to sync wal for %s\r\n", path);
-        return -1;
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to sync wal for %s: %s\r\n",
+                path,
+                strerror(err));
+        goto fail;
     }
 
     if (wal_apply(&wal, fd) == -1) {
+        err = errno;
         fprintf(stderr,
-                "pma: failed to apply wal at %s to %s\r\n",
+                "pma: failed to apply wal at %s to %s: %s\r\n",
                 wal_file,
-                path);
-        return -1;
+                path,
+                strerror(err));
+        goto fail;
     }
 
     wal_destroy(&wal);
 
     return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
 
 //==============================================================================
@@ -538,18 +575,23 @@ pma_load(void         *base,
 {
 #ifndef HAVE_SIGSEGV_RECOVERY
     fprintf(stderr, "pma: this platform doesn't support handling SIGSEGV\r\n");
+    errno = ENOTSUP;
     return NULL;
 #endif
+    int err;
+
     assert(kPageSz % sysconf(_SC_PAGESIZE) == 0);
     if (!len_getter) {
-        return NULL;
+        err = EINVAL;
+        goto fail;
     }
     if ((uintptr_t)base % kPageSz != 0) {
+        err = EINVAL;
         fprintf(stderr,
                 "pma: base address %p is not a multiple of %zu\r\n",
                 base,
                 kPageSz);
-        return NULL;
+        goto fail;
     }
     len = round_up(len, kPageSz);
 
@@ -583,6 +625,7 @@ pma_load(void         *base,
                   &pma->heap_fd)
         == -1)
     {
+        err = errno;
         goto free_pma;
     }
 
@@ -596,10 +639,12 @@ pma_load(void         *base,
                   &pma->stack_fd)
         == -1)
     {
+        err = errno;
         goto unmap_heap;
     }
 
     if ((pma->heap_len + pma->stack_len) > len) {
+        err = ENOMEM;
         fprintf(stderr, "pma: heap and stack overlap\r\n");
         goto unmap_stack;
     }
@@ -617,7 +662,10 @@ pma_load(void         *base,
     pma->max_sz         = 0;
 
     if (center_guard_page_(pma) == -1) {
-        fprintf(stderr, "pma: failed to initialize the guard page\r\n");
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to initialize the guard page: %s\r\n",
+                strerror(err));
         goto unmap_stack;
     }
 
@@ -636,23 +684,28 @@ free_pma:
         free((void *)pma->stack_file);
     }
     free(pma);
+fail:
+    errno = err;
     return NULL;
 }
 
 int
 pma_sync(pma_t *pma)
 {
+    int err;
+
     if (!pma) {
-        errno = EINVAL;
-        return -1;
+        err = EINVAL;
+        goto fail;
     }
 
     size_t heap_len  = 0;
     size_t stack_len = 0;
     if (pma->len_getter(&heap_len, &stack_len) == -1) {
+        err = ECANCELED;
         fprintf(stderr,
                 "pma: failed to determine length of heap and stack\r\n");
-        return -1;
+        goto fail;
     }
 
     heap_len  = round_up(heap_len, kPageSz);
@@ -667,22 +720,25 @@ pma_sync(pma_t *pma)
                        pma->heap_fd)
             == -1)
         {
+            err = ECANCELED;
             fprintf(stderr,
                     "pma: failed to sync heap changes to %s\r\n",
                     pma->heap_file);
-            return -1;
+            goto fail;
         }
 
         // The heap shrunk, so shrink the backing file.
         if (heap_len < pma->heap_len) {
             if (ftruncate(pma->heap_fd, heap_len) == -1) {
+                err = errno;
                 fprintf(stderr,
                         "pma: failed to truncate %s from %zu bytes to %zu "
-                        "bytes\r\n",
+                        "bytes: %s\r\n",
                         pma->heap_file,
                         pma->heap_len,
-                        heap_len);
-                return -1;
+                        heap_len,
+                        strerror(err));
+                goto fail;
             }
         }
         pma->heap_len = heap_len;
@@ -699,22 +755,26 @@ pma_sync(pma_t *pma)
                        pma->stack_fd)
             == -1)
         {
+            err = errno;
             fprintf(stderr,
-                    "pma: failed to sync stack changes to %s\r\n",
-                    pma->stack_file);
-            return -1;
+                    "pma: failed to sync stack changes to %s: %s\r\n",
+                    pma->stack_file,
+                    strerror(err));
+            goto fail;
         }
 
         // The stack shrunk, so shrink the backing file.
         if (stack_len < pma->stack_len) {
             if (ftruncate(pma->stack_fd, stack_len) == -1) {
+                err = errno;
                 fprintf(stderr,
                         "pma: failed to truncate %s from %zu bytes to %zu "
-                        "bytes\r\n",
+                        "bytes: %s\r\n",
                         pma->stack_file,
                         pma->stack_len,
-                        stack_len);
-                return -1;
+                        stack_len,
+                        strerror(err));
+                goto fail;
             }
         }
         pma->stack_len = stack_len;
@@ -731,8 +791,12 @@ pma_sync(pma_t *pma)
                   &pma->heap_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\r\n", pma->heap_file);
-        return -1;
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to remap %s: %s\r\n",
+                pma->heap_file,
+                strerror(err));
+        goto fail;
     }
 
     // Remap stack.
@@ -744,14 +808,22 @@ pma_sync(pma_t *pma)
                   &pma->stack_fd)
         == -1)
     {
-        fprintf(stderr, "pma: failed to remap %s\r\n", pma->stack_file);
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to remap %s: %s\r\n",
+                pma->stack_file,
+                strerror(err));
         munmap(pma->heap_start, pma->heap_len);
         close(pma->heap_fd);
         pma->heap_fd = -1;
-        return -1;
+        goto fail;
     }
 
     return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
 
 void
