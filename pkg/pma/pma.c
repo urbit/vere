@@ -16,44 +16,36 @@
 #include "util.h"
 #include "wal.h"
 
-#ifdef PMA_TEST
-#    define inline_
-#    define static_
-#else
-#    define inline_ inline
-#    define static_ static
-#endif
-
 #define PMA_DEBUG
 
 //==============================================================================
 // CONSTANTS
 
 /// Number of bits in a byte.
-static_ const size_t kBitsPerByte = 8;
+static const size_t kBitsPerByte = 8;
 
 /// Number of bits required to track the status of a page. Must be a power of 2
 /// in order to support rounding operations via round_up() and round_down().
-static_ const size_t kBitsPerPage = 2;
+static const size_t kBitsPerPage = 2;
 
 /// Number of pages whose status can be tracked in a single byte.
-static_ const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
+static const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
 
 /// Number of bytes in a single entry of the pg_status array of pma_t.
-static_ const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
+static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 
 /// Number of pages whose status can be tracked by a single entry in the
 /// pg_status array of pma_t.
-static_ const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
+static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
 
 /// Extension appended to a backing file to create that file's wal name.
-static_ const char kWriteAheadLogExtension[] = ".wal";
+static const char kWriteAheadLogExtension[] = ".wal";
 
 //==============================================================================
 // GLOBAL VARIABLES
 
 /// Global libsigsegv dispatcher.
-static_ sigsegv_dispatcher dispatcher;
+static sigsegv_dispatcher dispatcher;
 
 //==============================================================================
 // STATIC FUNCTIONS
@@ -63,7 +55,7 @@ static_ sigsegv_dispatcher dispatcher;
 ///
 /// @param[in] addr  Address to determine page index for.
 /// @param[in] pma
-static_ inline_ size_t
+static inline size_t
 addr_to_page_idx_(const void *addr, const pma_t *pma)
 {
     assert(pma);
@@ -71,7 +63,7 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
     return (addr - pma->heap_start) / kPageSz;
 }
 
-static_ int
+static int
 center_guard_page_(pma_t *pma);
 
 /// Handle a page fault within the bounds of a PMA according to the libsigsegv
@@ -79,7 +71,7 @@ center_guard_page_(pma_t *pma);
 ///
 /// @param[in] fault_addr
 /// @param[in] user_arg
-static_ int
+static int
 handle_page_fault_(void *fault_addr, void *user_arg);
 
 /// Handle SIGSEGV according to the libsigsegv protocol. See sigsegv_handler_t
@@ -87,7 +79,7 @@ handle_page_fault_(void *fault_addr, void *user_arg);
 ///
 /// @param[in] fault_addr
 /// @param[in] serious
-static_ int
+static int
 handle_sigsegv_(void *fault_addr, int serious);
 
 /// Map a file into memory at a specific address. Can also be used to create an
@@ -108,7 +100,7 @@ handle_sigsegv_(void *fault_addr, int serious);
 ///
 /// @return 0   Successfully created a new mapping.
 /// @return -1  Failed to create a new mapping.
-static_ int
+static int
 map_file_(const char *path,
           void       *base,
           bool        grows_down,
@@ -122,7 +114,7 @@ map_file_(const char *path,
 /// @param[in] addr  Address within the page in question. Must be within the
 ///                  bounds of the PMA.
 /// @param[in] pma   PMA the page in question belongs to.
-static_ inline_ page_status_t
+static inline page_status_t
 page_status_(const void *addr, const pma_t *pma)
 {
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
@@ -139,7 +131,7 @@ page_status_(const void *addr, const pma_t *pma)
 ///                    bounds of the PMA.
 /// @param[in] status  New status of the page in question.
 /// @param[in] pma     PMA the page in question belongs to.
-static_ inline_ void
+static inline void
 set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 {
     size_t  pg_idx    = addr_to_page_idx_(addr, pma);
@@ -159,7 +151,7 @@ set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 ///                    range must be within the bounds of the PMA.
 /// @param[in] status  New status of the page range in question.
 /// @param[in] pma     PMA the page range in question belongs to.
-static_ inline_ void
+static inline void
 set_page_status_range_(const void   *addr,
                        size_t        pg_cnt,
                        page_status_t status,
@@ -185,7 +177,7 @@ set_page_status_range_(const void   *addr,
 ///
 /// @return 0   Synced changes successfully.
 /// @return -1  Failed to sync changes.
-static_ int
+static int
 sync_file_(const char *path,
            void       *base,
            bool        grows_down,
@@ -196,14 +188,14 @@ sync_file_(const char *path,
 /// Get the total length in bytes of a PMA.
 ///
 /// @param[in] pma
-static_ inline_ size_t
+static inline size_t
 total_len_(const pma_t *pma)
 {
     assert(pma);
     return (size_t)(pma->stack_start - pma->heap_start);
 }
 
-static_ int
+static int
 center_guard_page_(pma_t *pma)
 {
     int    err;
@@ -246,7 +238,7 @@ fail:
     return -1;
 }
 
-static_ int
+static int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
@@ -314,7 +306,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
     return 1;
 }
 
-static_ int
+static int
 handle_sigsegv_(void *fault_addr, int serious)
 {
     int rc = sigsegv_dispatch(&dispatcher, fault_addr);
@@ -326,7 +318,7 @@ handle_sigsegv_(void *fault_addr, int serious)
     return rc;
 }
 
-static_ int
+static int
 map_file_(const char *path,
           void       *base,
           bool        grows_down,
@@ -483,7 +475,7 @@ fail:
     return -1;
 }
 
-static_ int
+static int
 sync_file_(const char *path,
            void       *base,
            bool        grows_down,
@@ -855,6 +847,3 @@ pma_unload(pma_t *pma)
 
     // TODO: free pma.
 }
-
-#undef inline_
-#undef static_

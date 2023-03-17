@@ -14,6 +14,7 @@ cc_library(
     hdrs = ["pma.h"],
     includes = ["."],
     linkstatic = True,
+    textual_hdrs = ["pma.c"],
     visibility = ["//pkg:__subpackages__"],
     deps = [
         "@murmur3",

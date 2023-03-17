@@ -1,4 +1,4 @@
-#include "pma.h"
+#include "pma.c"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -8,12 +8,6 @@
 
 #include "page.h"
 #include "util.h"
-
-int64_t
-addr_to_page_idx_(void *addr, const pma_t *pma);
-
-uint8_t
-page_status_(void *addr, const pma_t *pma);
 
 //==============================================================================
 // GLOBAL VARIABLES
