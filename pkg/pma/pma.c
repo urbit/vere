@@ -283,6 +283,12 @@ handle_page_fault_(void *fault_addr, void *user_arg)
             }
             set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
+        case PS_MAPPED_DIRTY:
+            fprintf(stderr,
+                    "pma: unexpectedly received a page fault on a dirty page "
+                    "at %p\r\n",
+                    fault_addr);
+            exit(EFAULT);
         case PS_MAPPED_INACCESSIBLE:
             if (center_guard_page_(pma) == -1) {
                 fprintf(stderr,
