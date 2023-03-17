@@ -30,6 +30,7 @@ int
 read_all(int fd, void *buf, size_t len)
 {
     if (!buf) {
+        errno = EINVAL;
         return -1;
     }
     char *ptr = buf;
@@ -61,6 +62,7 @@ int
 write_all(int fd, const void *buf, size_t len)
 {
     if (!buf) {
+        errno = EINVAL;
         return -1;
     }
     const char *ptr = buf;
