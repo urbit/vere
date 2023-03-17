@@ -2400,7 +2400,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     if (0 == u3h(res) ) {
       u3_noun wol = u3k(u3t(res)); 
       _pier_dump_wall(fil_u, wol);
-    } else if ( 0 == strcmp(u3r_string(u3k(u3h(res))), "exit") ) {
+    } else if ( c3__exit == u3h(res) ) {
       //  ???
     }
     u3z(res);
