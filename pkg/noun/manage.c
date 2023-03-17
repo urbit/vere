@@ -24,6 +24,11 @@
 #include "vortex.h"
 #include "xtract.h"
 
+/// Size in words of the pad between roads. Must be less than the size of an
+/// Urbit page, which is (1 << u3a_page) words, to avoid "hopping" the guard
+/// page.
+static const size_t pad_siz_i = (8 << 10) / sizeof(c3_w);
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -1116,7 +1121,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 u3_noun
 u3m_soft_sure(u3_funk fun_f, u3_noun arg)
 {
-  u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg);
+  u3_noun pro, pru = u3m_soft_top(0, pad_siz_i, fun_f, arg);
 
   c3_assert(_(u3du(pru)));
   pro = u3k(u3t(pru));
@@ -1155,7 +1160,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Record the cap, and leap.
   */
-  u3m_hate(1 << 18);
+  u3m_hate(pad_siz_i);
 
   /* Configure the new road.
   */
@@ -1259,7 +1264,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Record the cap, and leap.
   */
-  u3m_hate(1 << 18);
+  u3m_hate(pad_siz_i);
 
   /* Configure the new road.
   */
@@ -1337,7 +1342,7 @@ u3m_soft(c3_w    mil_w,
 {
   u3_noun why;
 
-  why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg);   // 4M pad
+  why = u3m_soft_top(mil_w, pad_siz_i, fun_f, arg);
 
   if ( 0 == u3h(why) ) {
     return why;
