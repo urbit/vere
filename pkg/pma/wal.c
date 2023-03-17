@@ -125,7 +125,7 @@ wal_open(const char *path, wal_t *wal)
         == -1)
     {
         fprintf(stderr, "wal: failed to open metadata file\r\n");
-        goto close_data_file;
+        goto fail;
     }
 
     if (meta_len % sizeof(metadata_entry_t_) != 0) {
@@ -135,6 +135,7 @@ wal_open(const char *path, wal_t *wal)
                 wal->data_path,
                 sizeof(metadata_entry_t_),
                 meta_len);
+        goto close_metadata_file;
     }
 
     size_t data_len;
@@ -146,7 +147,7 @@ wal_open(const char *path, wal_t *wal)
         == -1)
     {
         fprintf(stderr, "wal: failed to open data file\r\n");
-        goto fail;
+        goto close_metadata_file;
     }
 
     if (data_len % kPageSz != 0) {
@@ -210,12 +211,12 @@ wal_open(const char *path, wal_t *wal)
 
     return 0;
 
-close_metadata_file:
-    close(wal->meta_fd);
-    free((void *)wal->meta_path);
 close_data_file:
     close(wal->data_fd);
     free((void *)wal->data_path);
+close_metadata_file:
+    close(wal->meta_fd);
+    free((void *)wal->meta_path);
 fail:
     return -1;
 }
