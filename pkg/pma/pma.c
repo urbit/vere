@@ -137,7 +137,7 @@ page_status_(const void *addr, const pma_t *pma)
 ///
 /// @param[in] addr    Address within the page in question. Must be within the
 ///                    bounds of the PMA.
-/// @param[in] status  New status of the page in question. Must not be PS_MASK.
+/// @param[in] status  New status of the page in question.
 /// @param[in] pma     PMA the page in question belongs to.
 static_ inline_ void
 set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
@@ -157,8 +157,7 @@ set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 ///                    the bounds of the PMA.
 /// @param[in] pg_cnt  Number of pages in the range. The entirety of the page
 ///                    range must be within the bounds of the PMA.
-/// @param[in] status  New status of the page range in question. Must not be
-///                    PS_MASK.
+/// @param[in] status  New status of the page range in question.
 /// @param[in] pma     PMA the page range in question belongs to.
 static_ inline_ void
 set_page_status_range_(const void   *addr,
