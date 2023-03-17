@@ -20,6 +20,10 @@
 /// Seed value for hashing function used to compute page checksum.
 static const size_t kSeed = 0;
 
+/// Size in bytes of metadata_entry_t_'s pg_idx field. Must be a macro to
+/// ensure kPageIdxSz + kPageSz can be resolved at compile time.
+#define kPageIdxSz sizeof(((metadata_entry_t_ *)NULL)->pg_idx)
+
 //==============================================================================
 // TYPES
 
@@ -27,7 +31,7 @@ static const size_t kSeed = 0;
 typedef struct metadata_entry_ {
     /// Page index.
     uint64_t pg_idx;
-    /// Checksum of page contents.
+    /// Checksum of page index and page contents.
     uint64_t checksum;
 } metadata_entry_t_;
 
@@ -185,11 +189,11 @@ wal_open(const char *path, wal_t *wal)
     }
 
     // Verify checksums.
-    char              page[kPageSz];
+    char              page[kPageIdxSz + kPageSz];
     metadata_entry_t_ entry;
     uint64_t          checksum;
     for (size_t i = 0; i < entry_cnt; i++) {
-        if (read_all(wal->data_fd, page, sizeof(page)) == -1) {
+        if (read_all(wal->data_fd, page + kPageIdxSz, kPageSz) == -1) {
             err = errno;
             fprintf(stderr,
                     "wal: failed to read page #%zu from data file (%s): %s\r\n",
@@ -208,6 +212,7 @@ wal_open(const char *path, wal_t *wal)
                     strerror(err));
             goto close_data_file;
         }
+        memcpy(page, &entry.pg_idx, kPageIdxSz);
         MurmurHash3_x86_32(page, sizeof(page), kSeed, &checksum);
         if (checksum != entry.checksum) {
             err = ENOTRECOVERABLE;
