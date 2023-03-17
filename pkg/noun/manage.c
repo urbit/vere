@@ -2171,11 +2171,11 @@ u3m_migrate(u3v_version ver_w)
 
   /* finally update the version and commit to disk */
   u3H->ver_w = ver_w;
-  assert(u3m_take_snapshot() == 0);
+  assert(u3m_save_snapshot() == 0);
 }
 
 int
-u3m_take_snapshot(void)
+u3m_save_snapshot(void)
 {
   assert(u3_pma);
   u3a_loom_sane();

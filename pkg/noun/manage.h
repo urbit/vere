@@ -171,10 +171,10 @@
         void
         u3m_migrate(u3v_version ver_w);
 
-      /* u3m_take_snapshot: save a snapshot in <pier>/.urb/chk.
+      /* u3m_save_snapshot: save a snapshot in <pier>/.urb/chk.
       */
         int
-        u3m_take_snapshot(void);
+        u3m_save_snapshot(void);
 
       /* u3m_backup_snapshot: copy snapshot in <pier>/.urb/chk/ to
       ** <pier>/.urb/bhk, where dir_c is the path to the pier (i.e. <pier>).
