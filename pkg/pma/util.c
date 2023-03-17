@@ -33,6 +33,9 @@ read_all(int fd, void *buf, size_t len)
         errno = EINVAL;
         return -1;
     }
+    if (len == 0) {
+        return 0;
+    }
     char *ptr = buf;
     do {
         ssize_t bytes_read = read(fd, ptr, len);
@@ -64,6 +67,9 @@ write_all(int fd, const void *buf, size_t len)
     if (!buf) {
         errno = EINVAL;
         return -1;
+    }
+    if (len == 0) {
+        return 0;
     }
     const char *ptr = buf;
     do {
