@@ -32,7 +32,8 @@
 /// Number of bits in a byte.
 static_ const size_t kBitsPerByte = 8;
 
-/// Number of bits required to track the status of a page.
+/// Number of bits required to track the status of a page. Must be a power of 2
+/// in order to support rounding operations via round_up() and round_down().
 static_ const size_t kBitsPerPage = 2;
 
 /// Number of pages whose status can be tracked in a single byte.
