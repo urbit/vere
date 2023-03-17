@@ -14,7 +14,10 @@ cc_library(
     hdrs = ["pma.h"],
     includes = ["."],
     linkstatic = True,
-    textual_hdrs = ["pma.c"],
+    textual_hdrs = [
+        "pma.c",
+        "wal.c",
+    ],
     visibility = ["//pkg:__subpackages__"],
     deps = [
         "@murmur3",
@@ -42,6 +45,18 @@ cc_test(
     name = "util_tests",
     timeout = "short",
     srcs = ["util_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":pma"],
+)
+
+cc_test(
+    name = "wal_tests",
+    timeout = "short",
+    srcs = ["wal_tests.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],

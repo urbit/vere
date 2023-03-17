@@ -1,3 +1,5 @@
+/// @file
+
 #include "pma.c"
 
 #include <assert.h>
@@ -87,7 +89,7 @@ test_addr_to_page_idx_(void)
 // FUNCTION TESTS
 
 static void
-test_pma_()
+test_pma_(void)
 {
     // Anonymous arena.
     {
@@ -318,7 +320,7 @@ test_pma_()
 int
 main(int argc, char *argv[])
 {
-    test_pma_();
     test_addr_to_page_idx_();
+    test_pma_();
     return 0;
 }
