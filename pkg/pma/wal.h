@@ -43,14 +43,6 @@ typedef struct wal {
     size_t entry_cnt;
 } wal_t;
 
-/// Write-ahead log entry representing a single PMA page.
-typedef struct wal_entry {
-    /// Page index.
-    uint64_t pg_idx;
-    /// Page contents.
-    char pg[kPageSz];
-} wal_entry_t;
-
 //==============================================================================
 // FUNCTIONS
 
