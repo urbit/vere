@@ -26,7 +26,7 @@ static const char kWalMetaExt[] = ".meta";
 /// The data file contains the raw contents of the pages in the WAL, and the
 /// metadata file contains the page index and page checksum for each page in the
 /// data file.
-struct wal {
+typedef struct wal {
     /// Path to the write-ahead log's data file.
     const char *data_path;
 
@@ -41,17 +41,15 @@ struct wal {
 
     /// Number of entries in the write-ahead log.
     size_t entry_cnt;
-};
-typedef struct wal wal_t;
+} wal_t;
 
 /// Write-ahead log entry representing a single PMA page.
-struct wal_entry {
+typedef struct wal_entry {
     /// Page index.
     uint64_t pg_idx;
     /// Page contents.
     char pg[kPageSz];
-};
-typedef struct wal_entry wal_entry_t;
+} wal_entry_t;
 
 //==============================================================================
 // FUNCTIONS

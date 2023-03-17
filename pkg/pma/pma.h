@@ -8,7 +8,7 @@
 // TYPES
 
 /// Status of a page in a PMA.
-enum page_status {
+typedef enum page_status {
     /// Page hasn't been read or written.
     PS_UNMAPPED = 0x0,
     /// Page has been read but not written.
@@ -18,8 +18,7 @@ enum page_status {
     /// Page is mapped but can't be read or written.
     PS_MAPPED_INACCESSIBLE = 0x3,
     PS_MASK                = 0x3,
-};
-typedef enum page_status page_status_t;
+} page_status_t;
 
 /// Get the active length of the heap and stack.
 ///
@@ -34,7 +33,7 @@ typedef int (*len_getter_t)(size_t *heap_len, size_t *stack_len);
 typedef void (*oom_handler_t)(void *fault_addr);
 
 /// Persistent memory arena handle.
-struct pma {
+typedef struct pma {
     /// Path to file backing the heap. NULL if there is no backing file.
     const char *heap_file;
 
@@ -84,8 +83,7 @@ struct pma {
 
     /// libsigsegv ticket.
     void *sigsegv_ticket;
-};
-typedef struct pma pma_t;
+} pma_t;
 
 //==============================================================================
 // FUNCTIONS

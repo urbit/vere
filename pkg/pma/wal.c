@@ -24,13 +24,12 @@ static const size_t kSeed = 0;
 // TYPES
 
 /// An entry in a WAL's metadata file.
-struct metadata_entry_ {
+typedef struct metadata_entry_ {
     /// Page index.
     uint64_t pg_idx;
     /// Checksum of page contents.
     uint64_t checksum;
-};
-typedef struct metadata_entry_ metadata_entry_t_;
+} metadata_entry_t_;
 
 //==============================================================================
 // STATIC FUNCTIONS
