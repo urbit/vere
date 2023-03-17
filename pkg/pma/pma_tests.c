@@ -104,7 +104,7 @@ test_pma_()
         assert(pma_->stack_fd == -1);
         assert(pma_->max_sz == 0);
 
-        assert(page_status_((char *)base_ + 2 * kPageSz, pma_) == PS_UNMAPPED);
+        assert(page_status_((char *)base_ + kPageSz, pma_) == PS_UNMAPPED);
 
         void *addr_;
         char  ch;
