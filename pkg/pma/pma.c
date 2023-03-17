@@ -105,7 +105,6 @@ handle_sigsegv_(void *fault_addr, int serious);
 /// @param[out]    fd          Populated with the file descriptor of the opened
 ///                            backing file. -1 if path is NULL.
 ///
-///
 /// @return 0   Successfully created a new mapping.
 /// @return -1  Failed to create a new mapping.
 static_ int
