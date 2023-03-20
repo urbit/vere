@@ -2397,11 +2397,11 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
       res = u3m_soft(0, u3n_kick_on, cor);
     }
-    if (0 == u3h(res) ) {
+    if ( c3y == u3h(res) ) {
       u3_noun wol = u3k(u3t(res)); 
       _pier_dump_wall(fil_u, wol);
     } else if ( c3__exit == u3h(res) ) {
-      //  ???
+      fprintf(fil_u, "####\r\n");  //  stack trace printing failed
     }
     u3z(res);
     u3z(gat);
