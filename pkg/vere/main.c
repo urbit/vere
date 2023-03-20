@@ -2548,6 +2548,27 @@ main(c3_i   argc,
       }
     }
 
+    /*  Back up snapshot
+    */
+    if ( u3_Host.ops_u.nuu == c3n ) {
+      c3_c* cmd_c;
+      asprintf(&cmd_c,
+               "if [ ! -d %s/.urb/bak ]; then cp -r %s/.urb/chk %s/.urb/bak; fi",
+               u3_Host.dir_c,
+               u3_Host.dir_c,
+               u3_Host.dir_c);
+      c3_assert(cmd_c);
+
+      c3_i ret_i = system(cmd_c);
+      if ( ret_i != 0 ) {
+        fprintf(stderr,
+                "boot: failed to backup snapshot using: '%s' failed\r\n",
+                cmd_c);
+        exit(ECANCELED);
+      }
+      c3_free(cmd_c);
+    }
+
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
     //
