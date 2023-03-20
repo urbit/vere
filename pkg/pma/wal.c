@@ -363,6 +363,7 @@ wal_apply(wal_t *wal, int fd)
 
 fail:
     errno = err;
+    return -1;
 }
 
 void
