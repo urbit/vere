@@ -156,7 +156,11 @@ jobs:
         run: |
           bazel build :version_str
           sha_version=$(cat ./bazel-bin/version)
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          if ${{ inputs.next != null }}; then
+            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          else
+            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          fi
 
           args=""
           # We never overwrite a binary deployed to the "live" train, but we do
@@ -229,7 +233,11 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
+          if ${{ inputs.next != null }}; then
+            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/last"
+          else
+            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
+          fi
 
           bazel build :version_str
           # We don't use -n here because we want to overwrite the version
