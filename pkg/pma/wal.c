@@ -346,7 +346,7 @@ wal_apply(wal_t *wal, int fd)
         if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
             err = errno;
             fprintf(stderr,
-                    "wal: failed to seek to offset %u of file descriptor "
+                    "wal: failed to seek to offset %lld of file descriptor "
                     "%d: %s\r\n",
                     offset,
                     fd,
