@@ -23,6 +23,11 @@ on:
         type: boolean
         default: true
         required: false
+      next:
+        description: 'Next Kelvin version'
+        type: string
+        default: null
+        required: false
     secrets:
       GCP_CREDENTIALS:
         required: false
