@@ -62,12 +62,13 @@ _loch_ef_rite(u3_loch* loc_u, u3_noun wir_i,
   
   c3_w wit;
   u3l_log("loch cnt: %d", cnt);
-  u3l_log("loch dat: %d", dat);
+  u3l_log("loch dat: %llu", dat);
   u3l_log("loch fid from dev_d: %d", dev_d->fid_w);
 
   if( c3__mem == wut ) 
   {
     wit = write(dev_d->fid_w, buf_y, cnt);
+    u3l_log("loch wit: %d", wit);
   } else {
     wit = ioctl(dev_d->fid_w, cmd, buf_y);
   }
@@ -112,7 +113,7 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
   if ( c3n == loc_u->car_u.liv_o ) {
     loc_u->car_u.liv_o = c3y;
   }
-  c3_y* buf_y = malloc(cmd*sizeof(c3_y));
+  c3_y* buf_y = c3_malloc(cmd*sizeof(c3_y));
   u3l_log("loch fid from dev_d: %d", dev_d->fid_w);
 
   c3_w wit;
@@ -130,6 +131,7 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
    
   u3_noun tus = u3i_word(wit);
   u3_noun red = u3i_bytes(cnt, buf_y);
+  u3l_log("loch from bytes");
   // extract read count and device from cmd noun
   // preform read on device and store in c3_y*
   // turn that c3_y* into some u3_noun
@@ -146,6 +148,7 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
       0, 0, _loch_read_bail);
   }
 
+  //u3z(tus); u3z(red);
   //u3z(cmd); u3z(wut); u3z(cnt); u3z(wir_i);
 }
 
@@ -284,10 +287,7 @@ _loch_io_exit(u3_auto* car_u)
     if( c3y == loc_u->dev_u[i].opn_o ) {
       close(loc_u->dev_u[i].fid_w);
     }
-    //c3_free(&loc_u->dev_u[i]);
   }
-  //c3_free(&loc_u->dev_u);
-  c3_free(loc_u);
 }
 
 /* u3_loch(): initialize hardware control vane.
@@ -300,17 +300,22 @@ u3_loch_io_init(u3_pier* pir_u)
   //  TODO: Open all devices specified in pier.
   //  Right now this only opens /dev/random and will provide a random number
   u3_device* random = c3_calloc(sizeof(*random));
+  u3_device* serial = c3_calloc(sizeof(*serial));
 
   random->nam_w = c3_s4('r','a','n','d');
   random->fil_c = "/dev/urandom";
 
-  loc_u->cnt_w = 1;
+  serial->nam_w = c3_s4('u','a','r','t');
+  serial->fil_c = "/dev/ttyUSB0";
+
+  loc_u->cnt_w = 2;
   loc_u->dev_u = c3_calloc(loc_u->cnt_w*sizeof(loc_u));
   loc_u->dev_u[0] = *random;
+  loc_u->dev_u[1] = *serial;
 
   //  Open all devices
   for( c3_w i = 0; i< loc_u->cnt_w; i++ ) {
-    loc_u->dev_u[i].fid_w = open(loc_u->dev_u[i].fil_c, O_RDWR);
+    loc_u->dev_u[i].fid_w = open(loc_u->dev_u[i].fil_c, O_RDWR|O_NOCTTY|O_NDELAY);
     if ( loc_u->dev_u[i].fid_w  < 0 ) { //If any error report it and keep device marked as close
       u3l_log("loch: unable to open %s", loc_u->dev_u[i].fil_c);
       perror("open");
