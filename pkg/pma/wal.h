@@ -41,6 +41,9 @@ typedef struct wal {
 
     /// Number of entries in the write-ahead log.
     size_t entry_cnt;
+
+    /// In-progress global checksum.
+    uint64_t checksum;
 } wal_t;
 
 //==============================================================================

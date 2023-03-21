@@ -188,43 +188,71 @@ wal_open(const char *path, wal_t *wal)
         goto close_data_file;
     }
 
-    // Verify checksums.
-    char              page[kPageIdxSz + kPageSz];
-    metadata_entry_t_ entry;
-    uint64_t          checksum;
-    for (size_t i = 0; i < entry_cnt; i++) {
-        if (read_all(wal->data_fd, page + kPageIdxSz, kPageSz) == -1) {
-            err = errno;
+    if (entry_cnt == 0) {
+        wal->checksum = 0;
+        if (write_all(wal->meta_fd, &wal->checksum, sizeof(wal->checksum))
+            == -1)
+        {
+            int err = errno;
             fprintf(stderr,
+                    "wal: failed to write global checksum %llx to %s: %s\r\n",
+                    wal->checksum,
+                    wal->meta_path,
+                    strerror(err));
+            goto close_data_file;
+        }
+    } else {
+        // Verify checksums.
+        char              page[kPageIdxSz + kPageSz];
+        metadata_entry_t_ entry;
+        uint64_t          checksums[]     = {0, 0};
+        uint64_t         *global_checksum = checksums;
+        uint64_t         *checksum        = checksums + 1;
+        for (size_t i = 0; i < entry_cnt; i++) {
+            if (read_all(wal->data_fd, page + kPageIdxSz, kPageSz) == -1) {
+                err = errno;
+                fprintf(
+                    stderr,
                     "wal: failed to read page #%zu from data file (%s): %s\r\n",
                     i,
                     wal->data_path,
                     strerror(err));
-            goto close_data_file;
-        }
-        if (read_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
-            err = errno;
-            fprintf(stderr,
+                goto close_data_file;
+            }
+            if (read_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
+                err = errno;
+                fprintf(
+                    stderr,
                     "wal: failed to read entry #%zu from metadata file (%s): "
                     "%s\r\n",
                     i,
                     wal->meta_path,
                     strerror(err));
-            goto close_data_file;
-        }
-        memcpy(page, &entry.pg_idx, kPageIdxSz);
-        MurmurHash3_x86_32(page, sizeof(page), kSeed, &checksum);
-        if (checksum != entry.checksum) {
-            err = ENOTRECOVERABLE;
-            fprintf(stderr,
-                    "wal: checksum computed from page #%zu of data file (%s) "
-                    "doesn't match checksum from entry #%zu of metadata file "
-                    "(%s)\r\n",
-                    i,
-                    wal->data_path,
-                    i,
-                    wal->meta_path);
-            goto close_data_file;
+                goto close_data_file;
+            }
+            memcpy(page, &entry.pg_idx, kPageIdxSz);
+            MurmurHash3_x86_32(page, sizeof(page), kSeed, checksum);
+            if (*checksum != entry.checksum) {
+                err = ENOTRECOVERABLE;
+                fprintf(stderr,
+                        "wal: checksum %llx computed from page #%zu of data "
+                        "file (%s) "
+                        "doesn't match checksum %llx from entry #%zu of "
+                        "metadata file "
+                        "(%s)\r\n",
+                        *checksum,
+                        i,
+                        wal->data_path,
+                        entry.checksum,
+                        i,
+                        wal->meta_path);
+                goto close_data_file;
+            }
+            // Compute the new global checksum using the existing global
+            // checksum and this entry's checksum.
+            uint64_t tmp;
+            MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &tmp);
+            *global_checksum = tmp;
         }
     }
     wal->entry_cnt = entry_cnt;
@@ -259,6 +287,15 @@ wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz])
     if (write_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
         return -1;
     }
+
+    // Compute new global checksum using the previous global checksum and this
+    // entry's checksum.
+    uint64_t checksums[] = {
+        wal->checksum,
+        entry.checksum,
+    };
+    MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &wal->checksum);
+
     wal->entry_cnt++;
     return 0;
 }
@@ -270,6 +307,25 @@ wal_sync(const wal_t *wal)
 
     if (!wal) {
         err = EINVAL;
+        goto fail;
+    }
+
+    if (lseek(wal->meta_fd, 0, SEEK_SET) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "wal: failed to seek to beginning of %s: %s\r\n",
+                wal->meta_path,
+                strerror(err));
+        goto fail;
+    }
+
+    if (write_all(wal->meta_fd, &wal->checksum, sizeof(wal->checksum)) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "wal: failed to write global checksum %llx to %s: %s\r\n",
+                wal->checksum,
+                wal->meta_path,
+                strerror(err));
         goto fail;
     }
 
@@ -321,7 +377,8 @@ wal_apply(wal_t *wal, int fd)
         goto fail;
     }
 
-    if (lseek(wal->meta_fd, 0, SEEK_SET) == (off_t)-1) {
+    // Seek past the global checksum to the first metdata entry.
+    if (lseek(wal->meta_fd, sizeof(wal->checksum), SEEK_SET) == (off_t)-1) {
         err = errno;
         fprintf(stderr,
                 "wal: failed to seek to beginning of %s: %s\r\n",
