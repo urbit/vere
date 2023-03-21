@@ -63,9 +63,6 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
     return (addr - pma->heap_start) / kPageSz;
 }
 
-static int
-center_guard_page_(pma_t *pma);
-
 /// Handle a page fault within the bounds of a PMA according to the libsigsegv
 /// protocol. See sigsegv_area_handler_t in sigsegv.h for more info.
 ///
@@ -196,49 +193,6 @@ total_len_(const pma_t *pma)
 }
 
 static int
-center_guard_page_(pma_t *pma)
-{
-    int    err;
-
-    size_t heap_len  = 0;
-    size_t stack_len = 0;
-    if (pma->len_getter(&heap_len, &stack_len) == -1) {
-        err = ECANCELED;
-        fprintf(stderr,
-                "pma: failed to determine length of heap and stack\r\n");
-        goto fail;
-    }
-
-    size_t free_len   = total_len_(pma) - (heap_len + stack_len);
-    char  *free_start = (char *)pma->heap_start + pma->heap_len;
-    void  *guard_pg   = free_start + round_up(free_len / 2, kPageSz);
-
-    if (mmap(guard_pg,
-             kPageSz,
-             PROT_NONE,
-             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-             -1,
-             0)
-        == MAP_FAILED)
-    {
-        err = errno;
-        fprintf(stderr,
-                "pma: failed to place %zu-byte guard page at %p: %s\r\n",
-                kPageSz,
-                guard_pg,
-                strerror(err));
-        goto fail;
-    }
-    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
-    pma->guard_pg = guard_pg;
-    return 0;
-
-fail:
-    errno = err;
-    return -1;
-}
-
-static int
 handle_page_fault_(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
@@ -282,25 +236,9 @@ handle_page_fault_(void *fault_addr, void *user_arg)
                     fault_addr);
             exit(EFAULT);
         case PS_MAPPED_INACCESSIBLE:
-            if (center_guard_page_(pma) == -1) {
-                fprintf(stderr,
-                        "pma: hit guard page at %p: out of memory\r\n",
-                        fault_addr);
-                if (pma->oom_handler) {
-                    pma->oom_handler(fault_addr);
-                }
+            if (pma_center_guard_page(pma) == -1) {
                 return 0;
             }
-            if (mprotect(fault_addr, kPageSz, PROT_READ) == -1) {
-                fprintf(stderr,
-                        "pma: failed to grant read protections to %zu-byte "
-                        "page at %p: %s\r\n",
-                        kPageSz,
-                        fault_addr,
-                        strerror(errno));
-                return 0;
-            }
-            set_page_status_(fault_addr, PS_MAPPED_CLEAN, pma);
             break;
     }
     return 1;
@@ -659,7 +597,7 @@ pma_load(void         *base,
     pma->guard_pg       = NULL;
     pma->max_sz         = 0;
 
-    if (center_guard_page_(pma) == -1) {
+    if (pma_center_guard_page(pma) == -1) {
         err = errno;
         fprintf(stderr,
                 "pma: failed to initialize the guard page: %s\r\n",
@@ -685,6 +623,79 @@ free_pma:
 fail:
     errno = err;
     return NULL;
+}
+
+int
+pma_center_guard_page(pma_t *pma)
+{
+    int err;
+
+    if (!pma) {
+        err = EINVAL;
+        goto fail;
+    }
+
+    size_t heap_len  = 0;
+    size_t stack_len = 0;
+    if (pma->len_getter(&heap_len, &stack_len) == -1) {
+        err = ECANCELED;
+        fprintf(stderr,
+                "pma: failed to determine length of heap and stack\r\n");
+        goto fail;
+    }
+
+    // Switch access on existing guard page from none to read-only.
+    if (pma->guard_pg) {
+        if (mprotect(pma->guard_pg, kPageSz, PROT_READ) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to grant read protections ot %zu-byte "
+                    "page at %p: %s\r\n",
+                    kPageSz,
+                    pma->guard_pg,
+                    strerror(errno));
+            goto fail;
+        }
+        set_page_status_(pma->guard_pg, PS_MAPPED_CLEAN, pma);
+    }
+
+    size_t free_len = total_len_(pma) - (heap_len + stack_len);
+    if (free_len <= kPageSz) {
+        err = ENOMEM;
+        fprintf(stderr,
+                "pma: hit guard page at %p: out of memory\r\n",
+                pma->guard_pg);
+        if (pma->oom_handler) {
+            pma->oom_handler(pma->guard_pg);
+        }
+        goto fail;
+    }
+    char *free_start = (char *)pma->heap_start + pma->heap_len;
+    void *guard_pg   = free_start + round_up(free_len / 2, kPageSz);
+
+    if (mmap(guard_pg,
+             kPageSz,
+             PROT_NONE,
+             MAP_ANON | MAP_FIXED | MAP_PRIVATE,
+             -1,
+             0)
+        == MAP_FAILED)
+    {
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to place %zu-byte guard page at %p: %s\r\n",
+                kPageSz,
+                guard_pg,
+                strerror(err));
+        goto fail;
+    }
+    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
+    pma->guard_pg = guard_pg;
+    return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
 
 int

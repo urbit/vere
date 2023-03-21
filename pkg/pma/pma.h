@@ -1,3 +1,7 @@
+/// @file
+///
+///
+
 #ifndef PMA_PMA_H
 #define PMA_PMA_H
 
@@ -115,6 +119,23 @@ pma_load(void         *base,
          const char   *stack_file,
          len_getter_t  len_getter,
          oom_handler_t oom_handler);
+
+/// Center the guard page in the middle of the PMA.
+///
+/// The bounds of the heap and stack are determined by a call to
+/// pma->len_getter. Use this function if the memory access pattern for the heap
+/// or stack are non-contiguous. For example, if you were to bump the end of the
+/// stack by 4 pages and write from the lowest address in that 4-page range to
+/// the highest address in that 4-page range, you'd update the length of the
+/// stack to include the 4-page range, call this function, and *then* write to
+/// the 4-page region in the order described.
+///
+/// @param[in] pma  PMA handle.
+///
+/// @return 0   Success.
+/// @return -1  Failure.
+int
+pma_center_guard_page(pma_t *pma);
 
 /// Sync changes to a PMA to disk.
 ///
