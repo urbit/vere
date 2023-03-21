@@ -676,8 +676,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  415
-#define VERE_LULL  326
+#define VERE_ZUSE  414
+#define VERE_LULL  325
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -2355,6 +2355,8 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
+  //  XX eval --cue also using this;
+  //     would be nice to have official way to dump goof to stderr
   //
   if ( c3y == u3_Host.ops_u.dem ) {
     fil_u = stderr;

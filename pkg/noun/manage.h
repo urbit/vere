@@ -5,6 +5,7 @@
 
 #include "c3.h"
 #include "types.h"
+#include "version.h"
 
     /** System management.
     **/
@@ -158,5 +159,11 @@
       */
         c3_w
         u3m_pack(void);
+
+      /* u3m_migrate: perform loom migration if necessary.
+         ver_w - target version
+      */
+        void
+        u3m_migrate(u3v_version ver_w);
 
 #endif /* ifndef U3_MANAGE_H */
