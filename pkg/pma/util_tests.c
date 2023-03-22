@@ -1,10 +1,9 @@
 /// @file
 
 #include "util.h"
+#include "page.h"
 
 #include <assert.h>
-
-static const size_t kPageSz = 16 << 10;
 
 static void
 test_round_down_(void)
