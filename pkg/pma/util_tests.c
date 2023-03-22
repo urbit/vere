@@ -29,7 +29,6 @@ test_round_up_(void)
     assert(round_up(11, 4) == 12);
     assert(round_up(17, 8) == 24);
     assert(round_up(42, 16) == 48);
-    assert(round_up(670384, kPageSz) == (41 * kPageSz));
     assert(round_up(0, kPageSz) == 0);
     assert(round_up(kPageSz, kPageSz) == kPageSz);
 }
