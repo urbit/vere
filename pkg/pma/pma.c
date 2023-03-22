@@ -749,6 +749,17 @@ pma_sync(pma_t *pma)
                         strerror(err));
                 goto fail;
             }
+
+            // Advise the kernel that the truncated part of the heap is no
+            // longer needed.
+            char  *free_start = pma->heap_start + heap_len;
+            size_t free_len   = pma->heap_len - heap_len;
+            assert(free_len % kPageSz == 0);
+            if (madvise(free_start, free_len, MADV_DONTNEED) == -1) {
+                err = errno;
+                fprintf(stderr, "pma: madvise() failed: %s\r\n", strerror(err));
+                goto fail;
+            }
         }
         pma->heap_len = heap_len;
         close(pma->heap_fd);
@@ -783,6 +794,17 @@ pma_sync(pma_t *pma)
                         pma->stack_len,
                         stack_len,
                         strerror(err));
+                goto fail;
+            }
+
+            // Advise the kernel that the truncated part of the stack is no
+            // longer needed.
+            char  *free_start = pma->stack_start - pma->stack_len;
+            size_t free_len   = pma->stack_len - stack_len;
+            assert(free_len % kPageSz == 0);
+            if (madvise(free_start, free_len, MADV_DONTNEED) == -1) {
+                err = errno;
+                fprintf(stderr, "pma: madvise() failed: %s\r\n", strerror(err));
                 goto fail;
             }
         }
