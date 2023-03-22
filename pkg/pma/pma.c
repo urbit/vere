@@ -24,8 +24,8 @@
 /// Number of bits in a byte.
 static const size_t kBitsPerByte = 8;
 
-/// Number of bits required to track the status of a page. Must be a power of 2
-/// in order to support rounding operations via round_up() and round_down().
+/// Number of bits required to track the status of a page, which is equivalent
+/// to the base-2 log of PS_MASK (see page_status_t).
 static const size_t kBitsPerPage = 2;
 
 /// Number of pages whose status can be tracked in a single byte.
