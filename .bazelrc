@@ -31,6 +31,9 @@ build --strip=never
 build --copt='-O3'
 build --host_copt='-O3'
 
+# Disable assertions on release builds.
+build --copt='-DNDEBUG'
+
 # Turn on CPU and memory debug for exec config, which we only use to run the
 # fake ship tests.
 build --host_copt='-DU3_CPU_DEBUG'
