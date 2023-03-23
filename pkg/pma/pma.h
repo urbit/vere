@@ -135,7 +135,7 @@ pma_load(void         *base,
 /// @return 0   Success.
 /// @return -1  Failure.
 int
-pma_center_guard_page(pma_t *pma);
+pma_adjust(pma_t *pma);
 
 /// Sync changes to a PMA to disk.
 ///

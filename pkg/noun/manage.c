@@ -864,11 +864,11 @@ u3m_leap(c3_w pad_w)
   }
 
   // See https://github.com/urbit/urbit/pull/6072.
-  if (pma_center_guard_page(u3_pma) == -1) {
+  if (pma_adjust(u3_pma) == -1) {
     c3_i err_i = errno;
     fprintf(stderr,
-            "pma: failed to reposition the guard page while leaping to "
-            "inner road: %s\r\n",
+            "pma: failed to account for future unusual memory access pattern "
+            "while leaping to  inner road: %s\r\n",
             strerror(err_i));
     exit(err_i);
   }

@@ -236,7 +236,8 @@ _handle_page_fault(void *fault_addr, void *user_arg)
                     fault_addr);
             exit(EFAULT);
         case PS_MAPPED_INACCESSIBLE:
-            if (pma_center_guard_page(pma) == -1) {
+            // Center guard page.
+            if (pma_adjust(pma) == -1) {
                 return 0;
             }
             break;
@@ -597,7 +598,8 @@ pma_load(void         *base,
     pma->guard_pg       = NULL;
     pma->max_sz         = 0;
 
-    if (pma_center_guard_page(pma) == -1) {
+    // Center guard page.
+    if (pma_adjust(pma) == -1) {
         err = errno;
         fprintf(stderr,
                 "pma: failed to initialize the guard page: %s\r\n",
@@ -626,7 +628,7 @@ fail:
 }
 
 int
-pma_center_guard_page(pma_t *pma)
+pma_adjust(pma_t *pma)
 {
     int err;
 
