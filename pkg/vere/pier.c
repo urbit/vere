@@ -2401,7 +2401,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       u3_noun wol = u3k(u3t(res)); 
       _pier_dump_wall(fil_u, wol);
     } else if ( c3__exit == u3h(res) ) {
-      fprintf(fil_u, "####\r\n");  //  stack trace printing failed
+      fprintf(fil_u, "%%%%r\n");  //  stack trace printing failed
     } else {
       fprintf(fil_u, "pier: tank rendering failed\r\n");
     }
