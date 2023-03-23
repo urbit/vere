@@ -57,7 +57,7 @@ _loch_ef_rite(u3_loch* loc_u, u3_noun wir_i,
   if ( c3n == loc_u->car_u.liv_o ) {
     loc_u->car_u.liv_o = c3y;
   }
-  c3_y* buf_y = malloc(cmd*sizeof(c3_y));
+  c3_y* buf_y = c3_malloc(cnt*sizeof(c3_y));
   u3r_bytes(0, cnt, buf_y, dat);
   
   c3_w wit;
@@ -113,7 +113,7 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
   if ( c3n == loc_u->car_u.liv_o ) {
     loc_u->car_u.liv_o = c3y;
   }
-  c3_y* buf_y = c3_malloc(cmd*sizeof(c3_y));
+  c3_y* buf_y = c3_malloc(cnt*sizeof(c3_y));
   u3l_log("loch fid from dev_d: %d", dev_d->fid_w);
 
   c3_w wit;
