@@ -613,7 +613,6 @@ pma_load(void         *base,
                                            (void *)pma);
     pma->len_getter     = len_getter;
     pma->guard_pg       = NULL;
-    pma->max_sz         = 0;
 
     // Center guard page.
     if (pma_adjust(pma) == -1) {

@@ -118,8 +118,6 @@ typedef struct pma {
     /// Out-of-memory handler.
     oom_handler_t oom_handler;
 
-    size_t        max_sz;
-
     /// libsigsegv ticket.
     void *sigsegv_ticket;
 } pma_t;

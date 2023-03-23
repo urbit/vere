@@ -103,7 +103,6 @@ _test_pma(void)
         assert(pma->stack_len == kPageSz);
         assert(pma->heap_fd == -1);
         assert(pma->stack_fd == -1);
-        assert(pma->max_sz == 0);
 
         assert(_page_status((char *)base + kPageSz, pma) == PS_UNMAPPED);
 
@@ -146,7 +145,6 @@ _test_pma(void)
         assert(pma->stack_len == 0);
         assert(pma->heap_fd != -1);
         assert(pma->stack_fd != -1);
-        assert(pma->max_sz == 0);
 
         void *addr;
         // Mark as volatile so the compiler doesn't optimize out the assignments
@@ -203,7 +201,6 @@ _test_pma(void)
         assert(pma->stack_len == kStackFileSz);
         assert(pma->heap_fd != -1);
         assert(pma->stack_fd != -1);
-        assert(pma->max_sz == 0);
 
         char *addr;
 
@@ -285,7 +282,6 @@ _test_pma(void)
         assert(pma->stack_len == kPageSz);
         assert(pma->heap_fd != -1);
         assert(pma->stack_fd != -1);
-        assert(pma->max_sz == 0);
 
         // Check heap change #0.
         assert(_page_status(hpage0, pma) == PS_MAPPED_CLEAN);
