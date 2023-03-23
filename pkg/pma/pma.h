@@ -1,6 +1,41 @@
 /// @file
 ///
+/// This file defines the interface for a persistent memory arena (PMA)
+/// consisting of a heap and a stack within a contiguous memory block. The
+/// heap starts at the lowest address of the memory block and grows upward, and
+/// the stack starts at the highest address of the memory block and grows
+/// downward.
 ///
+/// +=======================+ <- stack_start
+/// |                       |
+/// |         STACK         |
+/// |                       |
+/// +-----------------------+ <- stack_start + stack_len
+/// |                       |
+/// |                       |
+/// |         FREE          |
+/// |                       |
+/// |                       |
+/// +-----------------------+ <- heap_start + heap_len
+/// |                       |
+/// |                       |
+/// |         HEAP          |
+/// |                       |
+/// |                       |
+/// +=======================+ <- heap_start
+///
+/// At any point, the user may call pma_sync() to persist the contents of the
+/// heap and stack to disk, thereby guaranteeing that the PMA can be later
+/// restored from disk using pma_load().
+///
+/// The PMA assumes that the user will not grow the heap or stack in a nonlinear
+/// fashion. For example, allocating an array of `4 * kPageSz` (see page.h)
+/// bytes on the stack and writing to the first element of that array (the
+/// element at the lowest address) violates this assumption, but allocating an
+/// array of `kPageSz / 2` bytes on the stack and writing to the first element
+/// of the array does not. If the user needs to grow the heap or stack
+/// nonlinearly, they must explictly inform the PMA of the non-standard growth
+/// pattern using pma_adjust().
 
 #ifndef PMA_PMA_H
 #define PMA_PMA_H
@@ -120,7 +155,7 @@ pma_load(void         *base,
          len_getter_t  len_getter,
          oom_handler_t oom_handler);
 
-/// Center the guard page in the middle of the PMA.
+/// Account for nonlinear growth in the heap or stack.
 ///
 /// The bounds of the heap and stack are determined by a call to
 /// pma->len_getter. Use this function if the memory access pattern for the heap
