@@ -1,7 +1,7 @@
 /// @file
 
-#ifndef PMA_JOURNAL_H
-#define PMA_JOURNAL_H
+#ifndef PMA_WAL_H
+#define PMA_WAL_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -102,4 +102,4 @@ wal_apply(wal_t *wal, int fd);
 void
 wal_destroy(wal_t *wal);
 
-#endif /* ifndef PMA_JOURNAL_H */
+#endif /* ifndef PMA_WAL_H */
