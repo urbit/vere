@@ -1,6 +1,7 @@
 /// @file
 
 #include "vere.h"
+
 #include "noun.h"
 #include "ur.h"
 
@@ -1258,7 +1259,49 @@ _ames_cap_queue(u3_ames* sam_u)
   }
 }
 
+/* _ames_hear_bail(): handle packet failure.
+*/
+static void
+_ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3_ames* sam_u = (u3_ames*)egg_u->car_u;
+  c3_w     len_w = u3qb_lent(lud);
 
+  if ( (1 == len_w) && c3__evil == u3h(u3h(lud)) ) {
+    sam_u->sat_u.bad_d++;
+
+    if (  (u3C.wag_w & u3o_verbose)
+       || (0 == (sam_u->sat_u.bad_d % 100)) )
+    {
+      u3l_log("ames: heard bad crypto (%" PRIu64 " total), "
+              "check azimuth state\r\n",
+              sam_u->sat_u.bad_d);
+    }
+  }
+  else {
+    sam_u->sat_u.fal_d++;
+
+    if (  (u3C.wag_w & u3o_verbose)
+       || (0 == (sam_u->sat_u.fal_d % 100)) )
+    {
+      if ( 2 == len_w ) {
+        u3_pier_punt_goof("hear", u3k(u3h(lud)));
+        u3_pier_punt_goof("crud", u3k(u3h(u3t(lud))));
+      }
+      //  !2 traces is unusual, just print the first if present
+      //
+      else if ( len_w ) {
+        u3_pier_punt_goof("hear", u3k(u3h(lud)));
+      }
+
+      u3l_log("ames: packet failed (%" PRIu64 " total)\r\n",
+              sam_u->sat_u.fal_d);
+    }
+  }
+
+  u3z(lud);
+  u3_ovum_free(egg_u);
+}
 
 /* _ames_put_packet(): add packet to queue, drop old packets on pressure
 */
