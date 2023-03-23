@@ -1,3 +1,20 @@
+/// @file
+///
+/// This file implements the PMA interface by creating file-backed memory
+/// mappings for the backing heap and stack files and lazily mapping new
+/// pages in response to heap or stack growth. On pma_sync(), all dirty files
+/// (those that incurred a write since the last pma_sync()) within the bounds of
+/// the heap and stack (as defined by the user-provided len_getter_t function)
+/// are written to disk via a write-ahead log and the just-updated files are
+/// re-mapped into memory.
+///
+/// The free space within the PMA may be unmapped, which leaves this
+/// implementation vulnerable to other mmap() calls originating from within the
+/// same process "stealing" the address space in the free space. However, this
+/// implementation will clobber those existing mappings, leaving the PMA
+/// unaffected at the expense of the functionality from which the other mmap()
+/// calls originated.
+
 #include "pma.h"
 
 #include <assert.h>
