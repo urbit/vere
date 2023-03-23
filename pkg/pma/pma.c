@@ -359,9 +359,9 @@ map_file_(const char *path,
     // its first page at offset zero, which belongs at the highest address.
     if (grows_down) {
         char *ptr = base;
-        for (size_t i_ = 0; i_ < len_ / kPageSz; i_++) {
+        for (size_t i = 0; i < len_ / kPageSz; i++) {
             ptr -= kPageSz;
-            size_t offset_ = i_ * kPageSz;
+            size_t offset_ = i * kPageSz;
             if (mmap(ptr,
                      kPageSz,
                      PROT_READ,

@@ -63,26 +63,26 @@ oom_handler_(void *fault_addr)
 static void
 test_addr_to_page_idx_(void)
 {
-    void               *base_ = (void *)0x200000000;
-    static const size_t kLen  = 1 << 20;
-    heap_len_                 = kPageSz;
-    stack_len_                = kPageSz;
-    pma_t *pma_ = pma_load(base_, kLen, NULL, NULL, len_getter_, oom_handler_);
-    assert(pma_);
+    void               *base = (void *)0x200000000;
+    static const size_t kLen = 1 << 20;
+    heap_len_                = kPageSz;
+    stack_len_               = kPageSz;
+    pma_t *pma = pma_load(base, kLen, NULL, NULL, len_getter_, oom_handler_);
+    assert(pma);
 
     {
-        size_t idx_ = addr_to_page_idx_(base_, pma_);
+        size_t idx_ = addr_to_page_idx_(base, pma);
         assert(idx_ == 0);
     }
 
     {
         static const int64_t kOffset = 2;
-        void                *addr_   = (char *)base_ + kOffset * kPageSz;
-        size_t               idx_    = addr_to_page_idx_(addr_, pma_);
+        void                *addr    = (char *)base + kOffset * kPageSz;
+        size_t               idx_    = addr_to_page_idx_(addr, pma);
         assert(idx_ == kOffset);
     }
 
-    pma_unload(pma_);
+    pma_unload(pma);
 }
 
 //==============================================================================
@@ -93,172 +93,171 @@ test_pma_(void)
 {
     // Anonymous arena.
     {
-        void  *base_ = (void *)0x200000000;
-        size_t len_  = 1 << 20;
-        pma_t *pma_
-            = pma_load(base_, len_, NULL, NULL, len_getter_, oom_handler_);
-        assert(pma_);
-        assert(pma_->heap_start == base_);
-        assert(pma_->stack_start == (char *)base_ + len_);
-        assert(pma_->heap_len == kPageSz);
-        assert(pma_->stack_len == kPageSz);
-        assert(pma_->heap_fd == -1);
-        assert(pma_->stack_fd == -1);
-        assert(pma_->max_sz == 0);
+        void  *base = (void *)0x200000000;
+        size_t len  = 1 << 20;
+        pma_t *pma = pma_load(base, len, NULL, NULL, len_getter_, oom_handler_);
+        assert(pma);
+        assert(pma->heap_start == base);
+        assert(pma->stack_start == (char *)base + len);
+        assert(pma->heap_len == kPageSz);
+        assert(pma->stack_len == kPageSz);
+        assert(pma->heap_fd == -1);
+        assert(pma->stack_fd == -1);
+        assert(pma->max_sz == 0);
 
-        assert(page_status_((char *)base_ + kPageSz, pma_) == PS_UNMAPPED);
+        assert(page_status_((char *)base + kPageSz, pma) == PS_UNMAPPED);
 
-        void *addr_;
+        void *addr;
         char  ch;
 
         // Write to the heap.
-        addr_ = base_;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
-        ch             = *(char *)addr_;
-        *(char *)addr_ = 'h';
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        addr = base;
+        assert(page_status_(addr, pma) == PS_MAPPED_CLEAN);
+        ch            = *(char *)addr;
+        *(char *)addr = 'h';
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
-        addr_ = (char *)base_ + len_ - 1;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_CLEAN);
-        ch             = *(char *)addr_;
-        *(char *)addr_ = 'i';
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        addr = (char *)base + len - 1;
+        assert(page_status_(addr, pma) == PS_MAPPED_CLEAN);
+        ch            = *(char *)addr;
+        *(char *)addr = 'i';
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
 
-        pma_unload(pma_);
+        pma_unload(pma);
     }
 
     // File-backed arena with empty files.
     {
-        void             *base_        = (void *)0x200000000;
-        size_t            len_         = 1 << 20;
+        void             *base         = (void *)0x200000000;
+        size_t            len          = 1 << 20;
         static const char kHeapFile[]  = "/tmp/nonexistent-heap.bin";
         static const char kStackFile[] = "/tmp/nonexistent-stack.bin";
-        pma_t            *pma_         = pma_load(base_,
-                                                  len_,
-                                                  kHeapFile,
-                                                  kStackFile,
-                                                  len_getter_,
-                                                  oom_handler_);
-        assert(pma_);
-        assert(pma_->heap_start == base_);
-        assert(pma_->stack_start == (char *)base_ + len_);
-        assert(pma_->heap_len == 0);
-        assert(pma_->stack_len == 0);
-        assert(pma_->heap_fd != -1);
-        assert(pma_->stack_fd != -1);
-        assert(pma_->max_sz == 0);
+        pma_t            *pma          = pma_load(base,
+                              len,
+                              kHeapFile,
+                              kStackFile,
+                              len_getter_,
+                              oom_handler_);
+        assert(pma);
+        assert(pma->heap_start == base);
+        assert(pma->stack_start == (char *)base + len);
+        assert(pma->heap_len == 0);
+        assert(pma->stack_len == 0);
+        assert(pma->heap_fd != -1);
+        assert(pma->stack_fd != -1);
+        assert(pma->max_sz == 0);
 
-        void *addr_;
+        void *addr;
         // Mark as volatile so the compiler doesn't optimize out the assignments
         // to ch below.
         volatile char ch;
 
         // Write to the heap.
-        addr_ = base_;
-        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
-        ch = *(char *)addr_;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
-        *(char *)addr_ = 'h';
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        addr = base;
+        assert(page_status_(addr, pma) == PS_UNMAPPED);
+        ch = *(char *)addr;
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
+        *(char *)addr = 'h';
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
-        addr_ = (char *)base_ + len_ - 1;
-        assert(page_status_(addr_, pma_) == PS_UNMAPPED);
-        ch = *(char *)addr_;
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
-        *(char *)addr_ = 'i';
-        assert(page_status_(addr_, pma_) == PS_MAPPED_DIRTY);
+        addr = (char *)base + len - 1;
+        assert(page_status_(addr, pma) == PS_UNMAPPED);
+        ch = *(char *)addr;
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
+        *(char *)addr = 'i';
+        assert(page_status_(addr, pma) == PS_MAPPED_DIRTY);
 
         heap_len_  = kPageSz;
         stack_len_ = kPageSz;
-        assert(pma_sync(pma_) == 0);
+        assert(pma_sync(pma) == 0);
 
-        pma_unload(pma_);
+        pma_unload(pma);
         assert(unlink(kHeapFile) == 0);
         assert(unlink(kStackFile) == 0);
     }
 
     // File-backed arena with non-empty files.
     {
-        void               *base_        = (void *)0x200000000;
-        size_t              len_         = GiB(2);
+        void               *base         = (void *)0x200000000;
+        size_t              len          = GiB(2);
         static const char   kHeapFile[]  = "/tmp/definitely-exists-heap.bin";
         static const char   kStackFile[] = "/tmp/definitely-exists-stack.bin";
         static const size_t kHeapFileSz  = GiB(1);
         static const size_t kStackFileSz = MiB(1);
         new_file_(kHeapFile, 'p', kHeapFileSz / kPageSz);
         new_file_(kStackFile, 'm', kStackFileSz / kPageSz);
-        heap_len_   = kHeapFileSz;
-        stack_len_  = kStackFileSz;
-        pma_t *pma_ = pma_load(base_,
-                               len_,
-                               kHeapFile,
-                               kStackFile,
-                               len_getter_,
-                               oom_handler_);
-        assert(pma_);
-        assert(pma_->heap_start == base_);
-        assert(pma_->stack_start == (char *)base_ + len_);
-        assert(pma_->heap_len == kHeapFileSz);
-        assert(pma_->stack_len == kStackFileSz);
-        assert(pma_->heap_fd != -1);
-        assert(pma_->stack_fd != -1);
-        assert(pma_->max_sz == 0);
+        heap_len_  = kHeapFileSz;
+        stack_len_ = kStackFileSz;
+        pma_t *pma = pma_load(base,
+                              len,
+                              kHeapFile,
+                              kStackFile,
+                              len_getter_,
+                              oom_handler_);
+        assert(pma);
+        assert(pma->heap_start == base);
+        assert(pma->stack_start == (char *)base + len);
+        assert(pma->heap_len == kHeapFileSz);
+        assert(pma->stack_len == kStackFileSz);
+        assert(pma->heap_fd != -1);
+        assert(pma->stack_fd != -1);
+        assert(pma->max_sz == 0);
 
-        char *addr_;
+        char *addr;
 
         // Description of heap change #0.
-        char  *hpage0           = base_;
+        char  *hpage0           = base;
         size_t hpage0_change_sz = 1;
         char   hpage0_ch        = 'h';
 
         // Description of heap change #1.
         static const size_t kNewHeapSz       = 107 * kPageSz;
-        char               *hpage1           = base_ + kNewHeapSz - kPageSz;
+        char               *hpage1           = base + kNewHeapSz - kPageSz;
         size_t              hpage1_change_sz = kPageSz;
         char                hpage1_ch        = 'i';
 
         // Description of stack change #0.
-        char  *spage0           = (char *)base_ + len_ - 1;
+        char  *spage0           = (char *)base + len - 1;
         size_t spage0_change_sz = 1;
         char   spage0_ch        = 'a';
 
         // Description of stack change #1.
-        char  *spage1           = (char *)base_ + len_ - 3 * kPageSz;
+        char  *spage1           = (char *)base + len - 3 * kPageSz;
         size_t spage1_change_sz = 2 * kPageSz;
         char   spage1_ch        = 'y';
 
         // Make heap change #0.
-        assert(page_status_(hpage0, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage0, pma) == PS_MAPPED_CLEAN);
         memset(hpage0, hpage0_ch, hpage0_change_sz);
-        assert(page_status_(hpage0, pma_) == PS_MAPPED_DIRTY);
+        assert(page_status_(hpage0, pma) == PS_MAPPED_DIRTY);
         for (size_t i = 0; i < hpage0_change_sz; i++) {
             assert(hpage0[i] == hpage0_ch);
         }
 
         // Make heap change #1.
-        assert(page_status_(hpage1, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage1, pma) == PS_MAPPED_CLEAN);
         memset(hpage1, hpage1_ch, hpage1_change_sz);
-        assert(page_status_(hpage1, pma_) == PS_MAPPED_DIRTY);
+        assert(page_status_(hpage1, pma) == PS_MAPPED_DIRTY);
         for (size_t i = 0; i < hpage1_change_sz; i++) {
             assert(hpage1[i] == hpage1_ch);
         }
 
         // Make stack change #0.
-        assert(page_status_(spage0, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(spage0, pma) == PS_MAPPED_CLEAN);
         memset(spage0, spage0_ch, spage0_change_sz);
-        assert(page_status_(spage0, pma_) == PS_MAPPED_DIRTY);
+        assert(page_status_(spage0, pma) == PS_MAPPED_DIRTY);
         for (size_t i = 0; i < spage0_change_sz; i++) {
             assert(spage0[i] == spage0_ch);
         }
 
         // Make stack change #1.
-        assert(page_status_(spage1, pma_) == PS_MAPPED_CLEAN);
-        assert(page_status_(spage1 + kPageSz, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(spage1, pma) == PS_MAPPED_CLEAN);
+        assert(page_status_(spage1 + kPageSz, pma) == PS_MAPPED_CLEAN);
         memset(spage1, spage1_ch, spage1_change_sz);
-        assert(page_status_(spage1, pma_) == PS_MAPPED_DIRTY);
-        assert(page_status_(spage1 + kPageSz, pma_) == PS_MAPPED_DIRTY);
+        assert(page_status_(spage1, pma) == PS_MAPPED_DIRTY);
+        assert(page_status_(spage1 + kPageSz, pma) == PS_MAPPED_DIRTY);
         for (size_t i = 0; i < spage1_change_sz; i++) {
             assert(spage1[i] == spage1_ch);
         }
@@ -266,51 +265,51 @@ test_pma_(void)
         // Sync.
         heap_len_  = kNewHeapSz;
         stack_len_ = kPageSz;
-        assert(pma_sync(pma_) == 0);
+        assert(pma_sync(pma) == 0);
 
         // Removes all mappings.
-        pma_unload(pma_);
-        free(pma_);
+        pma_unload(pma);
+        free(pma);
 
         // Re-establishes all mappings.
-        pma_ = pma_load(base_,
-                        len_,
-                        kHeapFile,
-                        kStackFile,
-                        len_getter_,
-                        oom_handler_);
-        assert(pma_);
-        assert(pma_->heap_start == base_);
-        assert(pma_->stack_start == (char *)base_ + len_);
-        assert(pma_->heap_len == kNewHeapSz);
-        assert(pma_->stack_len == kPageSz);
-        assert(pma_->heap_fd != -1);
-        assert(pma_->stack_fd != -1);
-        assert(pma_->max_sz == 0);
+        pma = pma_load(base,
+                       len,
+                       kHeapFile,
+                       kStackFile,
+                       len_getter_,
+                       oom_handler_);
+        assert(pma);
+        assert(pma->heap_start == base);
+        assert(pma->stack_start == (char *)base + len);
+        assert(pma->heap_len == kNewHeapSz);
+        assert(pma->stack_len == kPageSz);
+        assert(pma->heap_fd != -1);
+        assert(pma->stack_fd != -1);
+        assert(pma->max_sz == 0);
 
         // Check heap change #0.
-        assert(page_status_(hpage0, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage0, pma) == PS_MAPPED_CLEAN);
         for (size_t i = 0; i < hpage0_change_sz; i++) {
             assert(hpage0[i] == hpage0_ch);
         }
-        assert(page_status_(hpage0, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage0, pma) == PS_MAPPED_CLEAN);
 
         // Check heap change #1.
-        assert(page_status_(hpage1, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage1, pma) == PS_MAPPED_CLEAN);
         for (size_t i = 0; i < hpage1_change_sz; i++) {
             assert(hpage1[i] == hpage1_ch);
         }
-        assert(page_status_(hpage1, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(hpage1, pma) == PS_MAPPED_CLEAN);
 
         // Check stack change #0.
-        assert(page_status_(spage0, pma_) == PS_MAPPED_CLEAN);
+        assert(page_status_(spage0, pma) == PS_MAPPED_CLEAN);
         for (size_t i = 0; i < spage0_change_sz; i++) {
             assert(spage0[i] == spage0_ch);
         }
 
         // Check stack change #1.
-        assert(page_status_(spage1, pma_) == PS_UNMAPPED);
-        assert(page_status_(spage1 + kPageSz, pma_) == PS_UNMAPPED);
+        assert(page_status_(spage1, pma) == PS_UNMAPPED);
+        assert(page_status_(spage1 + kPageSz, pma) == PS_UNMAPPED);
 
         assert(unlink(kHeapFile) == 0);
         assert(unlink(kStackFile) == 0);

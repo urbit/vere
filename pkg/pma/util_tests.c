@@ -1,7 +1,7 @@
 /// @file
 
-#include "util.h"
 #include "page.h"
+#include "util.h"
 
 #include <assert.h>
 
