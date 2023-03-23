@@ -20,20 +20,20 @@
 /// Seed value for hashing function used to compute page checksum.
 static const size_t kSeed = 0;
 
-/// Size in bytes of metadata_entry_t_'s pg_idx field. Must be a macro to
+/// Size in bytes of _metadata_entry_t's pg_idx field. Must be a macro to
 /// ensure kPageIdxSz + kPageSz can be resolved at compile time.
-#define kPageIdxSz sizeof(((metadata_entry_t_ *)NULL)->pg_idx)
+#define kPageIdxSz sizeof(((_metadata_entry_t *)NULL)->pg_idx)
 
 //==============================================================================
 // TYPES
 
 /// An entry in a WAL's metadata file.
-typedef struct metadata_entry_ {
+typedef struct _metadata_entry {
     /// Page index.
     uint64_t pg_idx;
     /// Checksum of page index and page contents.
     uint64_t checksum;
-} metadata_entry_t_;
+} _metadata_entry_t;
 
 //==============================================================================
 // STATIC FUNCTIONS
@@ -51,14 +51,14 @@ typedef struct metadata_entry_ {
 /// @return 0   Success.
 /// @return -1  Failure.
 static int
-open_file_(const char *base_path,
+_open_file(const char *base_path,
            const char *suffix,
            char      **path,
            int        *fd,
            size_t     *len);
 
 static int
-open_file_(const char *base_path,
+_open_file(const char *base_path,
            const char *suffix,
            char      **path,
            int        *fd,
@@ -126,7 +126,7 @@ wal_open(const char *path, wal_t *wal)
     }
 
     size_t meta_len;
-    if (open_file_(path,
+    if (_open_file(path,
                    kWalMetaExt,
                    (char **)&wal->meta_path,
                    &wal->meta_fd,
@@ -138,19 +138,19 @@ wal_open(const char *path, wal_t *wal)
         goto fail;
     }
 
-    if (meta_len % sizeof(metadata_entry_t_) != 0) {
+    if (meta_len % sizeof(_metadata_entry_t) != 0) {
         err = ENOTRECOVERABLE;
         fprintf(stderr,
                 "wal: metadata file at %s is corrupt: expected length to be a "
                 "multiple of %zu but is %zu\r\n",
                 wal->data_path,
-                sizeof(metadata_entry_t_),
+                sizeof(_metadata_entry_t),
                 meta_len);
         goto close_metadata_file;
     }
 
     size_t data_len;
-    if (open_file_(path,
+    if (_open_file(path,
                    kWalDataExt,
                    (char **)&wal->data_path,
                    &wal->data_fd,
@@ -175,7 +175,7 @@ wal_open(const char *path, wal_t *wal)
 
     // Ensure length of data and metadata files make sense.
     size_t entry_cnt  = data_len / kPageSz;
-    size_t entry_cnt2 = meta_len / sizeof(metadata_entry_t_);
+    size_t entry_cnt2 = meta_len / sizeof(_metadata_entry_t);
     if (entry_cnt != entry_cnt2) {
         err = ENOTRECOVERABLE;
         fprintf(stderr,
@@ -204,7 +204,7 @@ wal_open(const char *path, wal_t *wal)
     } else {
         // Verify checksums.
         char              page[kPageIdxSz + kPageSz];
-        metadata_entry_t_ entry;
+        _metadata_entry_t entry;
         uint64_t          checksums[]     = {0, 0};
         uint64_t         *global_checksum = checksums;
         uint64_t         *checksum        = checksums + 1;
@@ -281,7 +281,7 @@ wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz])
         return -1;
     }
 
-    metadata_entry_t_ entry;
+    _metadata_entry_t entry;
     entry.pg_idx = pg_idx;
     MurmurHash3_x86_32(pg, kPageSz, kSeed, &entry.checksum);
     if (write_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
@@ -388,7 +388,7 @@ wal_apply(wal_t *wal, int fd)
     }
 
     char              pg[kPageSz];
-    metadata_entry_t_ entry;
+    _metadata_entry_t entry;
     off_t             offset;
     for (size_t i = 0; i < wal->entry_cnt; i++) {
         if (read_all(wal->data_fd, pg, sizeof(pg)) == -1) {

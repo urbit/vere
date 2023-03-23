@@ -56,7 +56,7 @@ static sigsegv_dispatcher dispatcher;
 /// @param[in] addr  Address to determine page index for.
 /// @param[in] pma
 static inline size_t
-addr_to_page_idx_(const void *addr, const pma_t *pma)
+_addr_to_page_idx(const void *addr, const pma_t *pma)
 {
     assert(pma);
     assert(pma->heap_start <= addr && addr < pma->stack_start);
@@ -69,7 +69,7 @@ addr_to_page_idx_(const void *addr, const pma_t *pma)
 /// @param[in] fault_addr
 /// @param[in] user_arg
 static int
-handle_page_fault_(void *fault_addr, void *user_arg);
+_handle_page_fault(void *fault_addr, void *user_arg);
 
 /// Handle SIGSEGV according to the libsigsegv protocol. See sigsegv_handler_t
 /// in sigsegv.h for more info.
@@ -77,7 +77,7 @@ handle_page_fault_(void *fault_addr, void *user_arg);
 /// @param[in] fault_addr
 /// @param[in] serious
 static int
-handle_sigsegv_(void *fault_addr, int serious);
+_handle_sigsegv(void *fault_addr, int serious);
 
 /// Map a file into memory at a specific address. Can also be used to create an
 /// anonymous, rather than file-backed, mapping by passing in a NULL path.
@@ -98,7 +98,7 @@ handle_sigsegv_(void *fault_addr, int serious);
 /// @return 0   Successfully created a new mapping.
 /// @return -1  Failed to create a new mapping.
 static int
-map_file_(const char *path,
+_map_file(const char *path,
           void       *base,
           bool        grows_down,
           pma_t      *pma,
@@ -106,15 +106,15 @@ map_file_(const char *path,
           int        *fd);
 
 /// Get the status of the page surrounding an address. To set rather than get,
-/// see set_page_status_().
+/// see _set_page_status().
 ///
 /// @param[in] addr  Address within the page in question. Must be within the
 ///                  bounds of the PMA.
 /// @param[in] pma   PMA the page in question belongs to.
 static inline page_status_t
-page_status_(const void *addr, const pma_t *pma)
+_page_status(const void *addr, const pma_t *pma)
 {
-    size_t  pg_idx    = addr_to_page_idx_(addr, pma);
+    size_t  pg_idx    = _addr_to_page_idx(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
     size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
     uint8_t status    = (pma->pg_status[entry_idx] >> bit_idx) & PS_MASK;
@@ -122,16 +122,16 @@ page_status_(const void *addr, const pma_t *pma)
 }
 
 /// Set the status of the page surrounding an address. To get rather than set,
-/// see page_status_().
+/// see _page_status().
 ///
 /// @param[in] addr    Address within the page in question. Must be within the
 ///                    bounds of the PMA.
 /// @param[in] status  New status of the page in question.
 /// @param[in] pma     PMA the page in question belongs to.
 static inline void
-set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
+_set_page_status(const void *addr, page_status_t status, const pma_t *pma)
 {
-    size_t  pg_idx    = addr_to_page_idx_(addr, pma);
+    size_t  pg_idx    = _addr_to_page_idx(addr, pma);
     size_t  entry_idx = pg_idx / kPagesPerEntry;
     size_t  bit_idx   = (pg_idx % kPagesPerEntry) * kBitsPerPage;
     uint8_t entry     = pma->pg_status[entry_idx];
@@ -140,7 +140,7 @@ set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 }
 
 /// Set the status of the page range starting at an address. To set the page
-/// status of a single page, see set_page_status_().
+/// status of a single page, see _set_page_status().
 ///
 /// @param[in] addr    Address within the first page in question. Must be within
 ///                    the bounds of the PMA.
@@ -149,13 +149,13 @@ set_page_status_(const void *addr, page_status_t status, const pma_t *pma)
 /// @param[in] status  New status of the page range in question.
 /// @param[in] pma     PMA the page range in question belongs to.
 static inline void
-set_page_status_range_(const void   *addr,
+_set_page_status_range(const void   *addr,
                        size_t        pg_cnt,
                        page_status_t status,
                        const pma_t  *pma)
 {
     for (size_t i = 0; i < pg_cnt * kPageSz; i += kPageSz) {
-        set_page_status_((char *)addr + i, status, pma);
+        _set_page_status((char *)addr + i, status, pma);
     }
 }
 
@@ -175,7 +175,7 @@ set_page_status_range_(const void   *addr,
 /// @return 0   Synced changes successfully.
 /// @return -1  Failed to sync changes.
 static int
-sync_file_(const char *path,
+_sync_file(const char *path,
            void       *base,
            bool        grows_down,
            pma_t      *pma,
@@ -186,18 +186,18 @@ sync_file_(const char *path,
 ///
 /// @param[in] pma
 static inline size_t
-total_len_(const pma_t *pma)
+_total_len(const pma_t *pma)
 {
     assert(pma);
     return (size_t)(pma->stack_start - pma->heap_start);
 }
 
 static int
-handle_page_fault_(void *fault_addr, void *user_arg)
+_handle_page_fault(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
     pma_t *pma = user_arg;
-    switch (page_status_(fault_addr, pma)) {
+    switch (_page_status(fault_addr, pma)) {
         case PS_UNMAPPED:
             if (MAP_FAILED
                 == mmap(fault_addr,
@@ -215,7 +215,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
                         strerror(errno));
                 return 0;
             }
-            set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
+            _set_page_status(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
         case PS_MAPPED_CLEAN:
             if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {
@@ -227,7 +227,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
                         strerror(errno));
                 return 0;
             }
-            set_page_status_(fault_addr, PS_MAPPED_DIRTY, pma);
+            _set_page_status(fault_addr, PS_MAPPED_DIRTY, pma);
             break;
         case PS_MAPPED_DIRTY:
             fprintf(stderr,
@@ -245,7 +245,7 @@ handle_page_fault_(void *fault_addr, void *user_arg)
 }
 
 static int
-handle_sigsegv_(void *fault_addr, int serious)
+_handle_sigsegv(void *fault_addr, int serious)
 {
     int rc = sigsegv_dispatch(&dispatcher, fault_addr);
 #ifdef PMA_DEBUG
@@ -257,7 +257,7 @@ handle_sigsegv_(void *fault_addr, int serious)
 }
 
 static int
-map_file_(const char *path,
+_map_file(const char *path,
           void       *base,
           bool        grows_down,
           pma_t      *pma,
@@ -290,7 +290,7 @@ map_file_(const char *path,
             goto fail;
         }
         size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
-        set_page_status_range_(base, pg_cnt, PS_MAPPED_CLEAN, pma);
+        _set_page_status_range(base, pg_cnt, PS_MAPPED_CLEAN, pma);
         *fd = -1;
         return 0;
     }
@@ -382,7 +382,7 @@ map_file_(const char *path,
                 munmap(ptr + kPageSz, offset_);
                 goto close_fd;
             }
-            set_page_status_(ptr, PS_MAPPED_CLEAN, pma);
+            _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
         }
     } else {
         if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd_, 0)
@@ -398,7 +398,7 @@ map_file_(const char *path,
                 strerror(err));
             goto close_fd;
         }
-        set_page_status_range_(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
+        _set_page_status_range(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
     }
 
     *len = len_;
@@ -414,7 +414,7 @@ fail:
 }
 
 static int
-sync_file_(const char *path,
+_sync_file(const char *path,
            void       *base,
            bool        grows_down,
            pma_t      *pma,
@@ -442,17 +442,17 @@ sync_file_(const char *path,
     }
 
     // Determine largest possible page index.
-    size_t total = total_len_(pma);
+    size_t total = _total_len(pma);
     assert(total % kPageSz == 0);
     size_t  max_idx = (total / kPageSz) - 1;
 
     char   *ptr  = grows_down ? base - kPageSz : base;
     ssize_t step = grows_down ? -kPageSz : kPageSz;
     for (size_t i = 0; i < len; i += kPageSz) {
-        page_status_t status = page_status_(ptr, pma);
+        page_status_t status = _page_status(ptr, pma);
         assert(status != PS_UNMAPPED);
         if (status == PS_MAPPED_DIRTY) {
-            size_t pg_idx = addr_to_page_idx_(ptr, pma);
+            size_t pg_idx = _addr_to_page_idx(ptr, pma);
             pg_idx        = grows_down ? max_idx - pg_idx : pg_idx;
             if (wal_append(&wal, pg_idx, ptr) == -1) {
                 err = errno;
@@ -553,7 +553,7 @@ pma_load(void         *base,
 
     pma->heap_len = 0;
     // Failed to map non-NULL heap file.
-    if (map_file_(heap_file,
+    if (_map_file(heap_file,
                   heap_start,
                   false,
                   pma,
@@ -567,7 +567,7 @@ pma_load(void         *base,
 
     pma->stack_len = 0;
     // Failed to map non-NULL stack file.
-    if (map_file_(stack_file,
+    if (_map_file(stack_file,
                   stack_start,
                   true,
                   pma,
@@ -587,11 +587,11 @@ pma_load(void         *base,
 
     sigsegv_init(&dispatcher);
     // This should never fail when HAVE_SIGSEGV_RECOVERY is defined.
-    assert(sigsegv_install_handler(handle_sigsegv_) == 0);
+    assert(sigsegv_install_handler(_handle_sigsegv) == 0);
     pma->sigsegv_ticket = sigsegv_register(&dispatcher,
                                            base,
                                            len,
-                                           handle_page_fault_,
+                                           _handle_page_fault,
                                            (void *)pma);
     pma->len_getter     = len_getter;
     pma->guard_pg       = NULL;
@@ -656,10 +656,10 @@ pma_center_guard_page(pma_t *pma)
                     strerror(errno));
             goto fail;
         }
-        set_page_status_(pma->guard_pg, PS_MAPPED_CLEAN, pma);
+        _set_page_status(pma->guard_pg, PS_MAPPED_CLEAN, pma);
     }
 
-    size_t free_len = total_len_(pma) - (heap_len + stack_len);
+    size_t free_len = _total_len(pma) - (heap_len + stack_len);
     if (free_len <= kPageSz) {
         err = ENOMEM;
         fprintf(stderr,
@@ -689,7 +689,7 @@ pma_center_guard_page(pma_t *pma)
                 strerror(err));
         goto fail;
     }
-    set_page_status_(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
+    _set_page_status(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
     pma->guard_pg = guard_pg;
     return 0;
 
@@ -721,7 +721,7 @@ pma_sync(pma_t *pma)
     stack_len = round_up(stack_len, kPageSz);
 
     if (pma->heap_fd != -1) {
-        if (sync_file_(pma->heap_file,
+        if (_sync_file(pma->heap_file,
                        pma->heap_start,
                        false,
                        pma,
@@ -767,7 +767,7 @@ pma_sync(pma_t *pma)
     }
 
     if (pma->stack_fd != -1) {
-        if (sync_file_(pma->stack_file,
+        if (_sync_file(pma->stack_file,
                        pma->stack_start,
                        true,
                        pma,
@@ -814,7 +814,7 @@ pma_sync(pma_t *pma)
     }
 
     // Remap heap.
-    if (map_file_(pma->heap_file,
+    if (_map_file(pma->heap_file,
                   pma->heap_start,
                   false,
                   pma,
@@ -831,7 +831,7 @@ pma_sync(pma_t *pma)
     }
 
     // Remap stack.
-    if (map_file_(pma->stack_file,
+    if (_map_file(pma->stack_file,
                   pma->stack_start,
                   true,
                   pma,
@@ -864,7 +864,7 @@ pma_unload(pma_t *pma)
         return;
     }
 
-    munmap(pma->heap_start, total_len_(pma));
+    munmap(pma->heap_start, _total_len(pma));
 
     if (pma->heap_fd != -1) {
         close(pma->heap_fd);
