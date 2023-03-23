@@ -1,4 +1,14 @@
 /// @file
+///
+/// This file defines the interface for a write-ahead log (WAL). The expected
+/// pattern of usage is:
+/// - Open a WAL (either new or existing) with wal_open(). If opening an
+///   existing WAL, wal_open() will fail if the WAL is corrupt.
+/// - Append page-sized entries to the WAL using wal_append().
+/// - Flush all changes to the WAL to disk using wal_sync().
+/// - Apply the changes in the WAL to another file using wal_apply().
+/// - Destroy the WAL using wal_destroy(), which removes it from the file
+///   system.
 
 #ifndef PMA_WAL_H
 #define PMA_WAL_H

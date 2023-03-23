@@ -1,4 +1,9 @@
 /// @file
+///
+/// This file implements the WAL interface. It checks for corruption using a per
+/// page entry checksum, which is a checksum of the entry's page index and page
+/// contents, and a global checksum, which is the checksum composed of all per
+/// page entry checksums.
 
 #include "wal.h"
 
