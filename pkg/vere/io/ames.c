@@ -60,6 +60,7 @@
       c3_d           foq_d;             //  forward queue size
       c3_d           fow_d;             //  forwarded count
       c3_d           fod_d;             //  forwards dropped count
+      c3_d           vil_d;             //  encryption failures
     } sat_u;                            //
   } u3_ames;
 
@@ -1268,14 +1269,14 @@ _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
   c3_w     len_w = u3qb_lent(lud);
 
   if ( (1 == len_w) && c3__evil == u3h(u3h(lud)) ) {
-    sam_u->sat_u.bad_d++;
+    sam_u->sat_u.vil_d++;
 
     if (  (u3C.wag_w & u3o_verbose)
-       || (0 == (sam_u->sat_u.bad_d % 100)) )
+       || (0 == (sam_u->sat_u.vil_d % 100)) )
     {
       u3l_log("ames: heard bad crypto (%" PRIu64 " total), "
               "check azimuth state\r\n",
-              sam_u->sat_u.bad_d);
+              sam_u->sat_u.vil_d);
     }
   }
   else {
