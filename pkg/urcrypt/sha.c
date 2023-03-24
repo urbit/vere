@@ -28,13 +28,17 @@ urcrypt_shas(uint8_t *salt, size_t salt_length,
              uint8_t out[32])
 {
   size_t i;
-  uint8_t mid[32];
+  uint8_t mid[32], len = 32;
 
   // docs don't say what happens if msg overlaps with out
   urcrypt_shay(message, message_length, mid);
 
-  if ( salt_length > 32 ) {
-    for ( i = 0; i < 32; i++ ) {
+  while ( len && !mid[len - 1] ) {
+    len--;
+  }
+
+  if ( salt_length > len ) {
+    for ( i = 0; i < len; i++ ) {
       salt[i] ^= mid[i];
     }
     urcrypt_shay(salt, salt_length, out);
@@ -43,7 +47,7 @@ urcrypt_shas(uint8_t *salt, size_t salt_length,
     for ( i = 0; i < salt_length; i++ ) {
       mid[i] ^= salt[i];
     }
-    urcrypt_shay(mid, 32, out);
+    urcrypt_shay(mid, len, out);
   }
 }
 
