@@ -20,7 +20,7 @@ u3qe_jam(u3_atom a)
         u3l_log("item: B/0");
       }
       else {
-        u3a_print_memory(stderr, "item", siz_w);
+        c3_print_mem_w(stderr, siz_w, "item");
       }
     }
     if ( u3_blip != som ) {
@@ -31,11 +31,11 @@ u3qe_jam(u3_atom a)
     for ( som = u3t(a); c3y == u3du(som); som = u3t(som) ) u3a_discount_noun(u3h(som));
     u3h_discount(u3R->cax.har_p);
 
-    u3a_print_memory(stderr, "total", tot_w);
-    u3a_print_memory(stderr, "memoization cache", mem_w);
+    c3_print_mem_w(stderr, tot_w, "total");
+    c3_print_mem_w(stderr, mem_w, "memoization cache");
     u3h_root* har_u = u3to(u3h_root, u3R->cax.har_p);
     u3l_log("memoization entries: %d", har_u->use_w);
-		u3a_print_memory(stderr, "unused free", u3a_open(u3R));
+    c3_print_mem_w(stderr, u3a_open(u3R), "unused free");
     return tot_w;
   }
 #endif

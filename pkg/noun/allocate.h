@@ -717,16 +717,6 @@
           void
           u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d);
 
-        /* u3a_print_memory(): print memory amount.
-        */
-          void
-          u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
-
-        /* u3a_maid(): maybe print memory.
-        */
-          c3_w
-          u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
-
         /* u3a_deadbeef(): write 0xdeadbeef from hat to cap.
         */
           void

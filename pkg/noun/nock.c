@@ -12,6 +12,7 @@
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
+#include "util.h"
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
@@ -3040,9 +3041,9 @@ u3n_mark(FILE* fil_u)
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk_with(har_p, _n_bam, &bam_w);
 
-  bam_w = u3a_maid(fil_u, "  bytecode programs", bam_w);
-  har_w = u3a_maid(fil_u, "  bytecode cache", u3h_mark(har_p));
-  return  u3a_maid(fil_u, "total nock stuff", bam_w + har_w);
+  bam_w = c3_maid_w(fil_u, bam_w, "  bytecode programs");
+  har_w = c3_maid_w(fil_u, u3h_mark(har_p), "  bytecode cache");
+  return  c3_maid_w(fil_u, bam_w + har_w, "total nock stuff");
 }
 
 /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.

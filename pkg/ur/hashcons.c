@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "defs.h"
+#include "util.h"
 #include "murmur3.h"
 
 //  declarations of inline functions
@@ -754,38 +755,11 @@ ur_cons(ur_root_t *r, ur_nref hed, ur_nref tal)
   }
 }
 
-static void
-_print_memory(FILE *f, const char *c, uint64_t bytes)
-{
-  if ( !bytes ) {
-    fprintf(f, "%s: B/0\r\n", c);
-  }
-  else {
-    uint64_t g = (bytes / (1 << 30));
-    uint64_t m = (bytes % (1 << 30)) / (1 << 20);
-    uint64_t k = (bytes % (1 << 20)) / (1 << 10);
-    uint64_t b = (bytes % (1 << 10));
-
-    if ( g ) {
-      fprintf(f, "%s: GiB/%z.%03z.%03z.%03z\r\n", c, g, m, k, b);
-    }
-    else if ( m ) {
-      fprintf(f, "%s: MiB/%z.%03z.%03z\r\n", c, m, k, b);
-    }
-    else if ( k ) {
-      fprintf(f, "%s: KiB/%z.%03z\r\n", c, k, b);
-    }
-    else if ( b ) {
-      fprintf(f, "%s: B/%z\r\n", c, b);
-    }
-  }
-}
-
 static uint64_t
 _dict_info(FILE *f, ur_dict_t *dict)
 {
   uint64_t data = dict->size * sizeof(*dict->buckets);
-  _print_memory(f, "    dict", data);
+  c3_print_mem_z(f, data, "    dict");
   return data;
 }
 
@@ -802,17 +776,17 @@ _atoms_info(FILE *f, ur_atoms_t *atoms)
 
   fprintf(f, "  atoms (%" PRIu64 "):\r\n", fill);
 
-  _print_memory(f, "    refs", refs);
+  c3_print_mem_z(f, refs, "    refs");
   total += refs;
 
   for ( i = 0; i < fill; i++ ) {
     data += atoms->lens[i];
   }
-  _print_memory(f, "    data", data);
+  c3_print_mem_z(f, data, "    data");
   total += data;
 
   total += _dict_info(f, &(atoms->dict));
-  _print_memory(f, "  total", total);
+  c3_print_mem_z(f, total, "  total");
   return total;
 }
 
@@ -828,11 +802,11 @@ _cells_info(FILE *f, ur_cells_t *cells)
 
   fprintf(f, "  cells (%" PRIu64 "):\r\n", fill);
 
-  _print_memory(f, "    refs", refs);
+  c3_print_mem_z(f, refs, "    refs");
   total += refs;
 
   total += _dict_info(f, &(cells->dict));
-  _print_memory(f, "  total", total);
+  c3_print_mem_z(f, total, "  total");
   return total;
 }
 
@@ -845,14 +819,14 @@ ur_root_info(FILE *f, ur_root_t *r)
 
   {
     uint64_t root = sizeof(*r);
-    _print_memory(f, "  root", root);
+    c3_print_mem_z(f, root, "  root");
     total += root;
   }
 
   total += _atoms_info(f, &(r->atoms));
   total += _cells_info(f, &(r->cells));
 
-  _print_memory(f, "total", total);
+  c3_print_mem_z(f, total, "total");
 }
 
 static void

@@ -11,6 +11,7 @@
 #include "nock.h"
 #include "retrieve.h"
 #include "trace.h"
+#include "util.h"
 #include "xtract.h"
 
 #define _CVX_LOAD  4
@@ -348,10 +349,10 @@ u3v_mark(FILE* fil_u)
   u3v_arvo* arv_u = &(u3H->arv_u);
   c3_w tot_w = 0;
 
-  tot_w += u3a_maid(fil_u, "  kernel", u3a_mark_noun(arv_u->roc));
-  tot_w += u3a_maid(fil_u, "  date", u3a_mark_noun(arv_u->now));
-  tot_w += u3a_maid(fil_u, "  wish cache", u3a_mark_noun(arv_u->yot));
-  return   u3a_maid(fil_u, "total arvo stuff", tot_w);
+  tot_w += c3_maid_w(fil_u, u3a_mark_noun(arv_u->roc), "  kernel");
+  tot_w += c3_maid_w(fil_u, u3a_mark_noun(arv_u->now), "  date");
+  tot_w += c3_maid_w(fil_u, u3a_mark_noun(arv_u->yot), "  wish cache");
+  return   c3_maid_w(fil_u, tot_w, "total arvo stuff");
 }
 
 /* u3v_reclaim(): clear ad-hoc persistent caches to reclaim memory.

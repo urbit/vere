@@ -9,6 +9,7 @@
 #include "noun.h"
 #include "pace.h"
 #include "ur.h"
+#include "util.h"
 #include "uv.h"
 #include "version.h"
 
@@ -1635,8 +1636,8 @@ u3_king_grab(void* vod_p)
   tot_w += u3m_mark(fil_u);
   tot_w += u3_pier_mark(fil_u);
 
-  u3a_print_memory(fil_u, "total marked", tot_w);
-  u3a_print_memory(fil_u, "sweep", u3a_sweep());
+  c3_print_mem_w(fil_u, tot_w, "total marked");
+  c3_print_mem_w(fil_u, u3a_sweep(), "sweep");
 
 #ifdef U3_MEMORY_LOG
   {
