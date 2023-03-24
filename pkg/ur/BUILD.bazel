@@ -17,7 +17,10 @@ cc_library(
     includes = ["."],
     linkstatic = True,
     visibility = ["//pkg:__subpackages__"],
-    deps = ["@murmur3"],
+    deps = [
+        "//pkg/c3",
+        "@murmur3",
+    ],
 )
 
 #
