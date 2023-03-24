@@ -22,24 +22,6 @@
     struct _u3_device* dev_u;                   //  list of devices
   } u3_loch;
 
-//  XX review, move
-//
-/* _behn_bail_dire(): c3y if fatal error. RETAIN
-*/
-static c3_o
-_behn_bail_dire(u3_noun lud)
-{
-  u3_noun mot = u3r_at(4, lud);
-
-  if (  (c3__meme == mot)
-     || (c3__intr == mot) )
-  {
-    return c3n;
-  }
-
-  return c3y;
-}
-
 /* _lock_rite_bail(): figure out why loch failed to read and return error code
 */
 static void
@@ -79,12 +61,6 @@ _loch_ef_rite(u3_loch* loc_u, u3_noun wir_i,
 
   u3_noun tus = u3i_word(wit);
   u3l_log("tus: %d", wit);
-  // extract read count and device from cmd noun
-  // preform read on device and store in c3_y*
-  // turn that c3_y* into some u3_noun
-  // send read event with u3_noun to arvo
-  //[%turn =dev =act dat=@ud]
-  //[%rite =param dat=@]
   {
     u3_noun wir = u3nc(c3__loch, u3_nul);
     u3_noun dat = u3nc(dev_d->nam_w, tus);
@@ -132,11 +108,6 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
   u3_noun tus = u3i_word(wit);
   u3_noun red = u3i_bytes(cnt, buf_y);
   u3l_log("loch from bytes");
-  // extract read count and device from cmd noun
-  // preform read on device and store in c3_y*
-  // turn that c3_y* into some u3_noun
-  // send read event with u3_noun to arvo
-  //[%turn =dev dat=@ud tus]
 
   {
     u3_noun wir = u3nc(c3__loch, u3_nul);
@@ -147,9 +118,6 @@ _loch_ef_read(u3_loch* loc_u, u3_noun wir_i,
       u3_auto_plan(&loc_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
       0, 0, _loch_read_bail);
   }
-
-  //u3z(tus); u3z(red);
-  //u3z(cmd); u3z(wut); u3z(cnt); u3z(wir_i);
 }
 
 /* _loch_io_kick(): apply effects.
@@ -257,7 +225,8 @@ _loch_io_talk(u3_auto* car_u)
     0,
     _loch_born_news,
     _loch_born_bail);
-  // [1 %ovum [%l /test %devs [%i2c %.y]]]" 
+
+  //For every device send a %devs card
   for( c3_w i = 0; i< loc_u->cnt_w; i++ ) {
     u3l_log("loch: found %s as fid %d", loc_u->dev_u[i].fil_c, loc_u->dev_u[i].fid_w);
     u3_noun  wir = u3nt(c3__loch,
