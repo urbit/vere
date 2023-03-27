@@ -309,7 +309,9 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case c3__snap: {
-        u3_Host.ops_u.sap_w = _main_readw(optarg, 65536, &arg_w) *60.0;
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.sap_w = arg_w*60;
         break;
       }
       //  opts with args
