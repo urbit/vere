@@ -6,6 +6,7 @@ set -eu
 amesPort="34343"
 httpPort="80"
 loom="31"
+snap="2"
 
 # check args
 for i in "$@"
@@ -21,6 +22,10 @@ case $i in
       ;;
   --loom=*)
       loom="${i#*=}"
+      shift
+      ;;
+  --snap-time=*)
+      snap="${i#*=}"
       shift
       ;;
 esac
