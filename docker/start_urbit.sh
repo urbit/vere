@@ -49,7 +49,7 @@ if [ -e *.key ]; then
   mv $keyname /tmp
 
   # Boot urbit with the key, exit when done booting
-  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x --http-port $httpPort --loom $loom
+  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x --http-port $httpPort --loom $loom --snap-time $snap
 
   # Remove the keyfile for security
   rm /tmp/$keyname
@@ -61,11 +61,11 @@ elif [ -e *.comet ]; then
   rm *.comet
 
   urbit $ttyflag -c $(basename $cometname .comet) -p $amesPort -x --http-port $httpPort --loom $loom
-fi
+fi --snap-time $snap
 
 # Find the first directory and start urbit with the ship therein
 dirnames="*/"
 dirs=( $dirnames )
 dirname=''${dirnames[0]}
 
-exec urbit $ttyflag -p $amesPort --http-port $httpPort --loom $loom $dirname
+exec urbit $ttyflag -p $amesPort --http-port $httpPort --loom $loom $dirname --snap-time $snap
