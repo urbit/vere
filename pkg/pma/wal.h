@@ -1,6 +1,6 @@
 /// @file
 ///
-/// This file defines the interface for a write-ahead log (WAL). The expected
+/// This file defines the interface for a write-ahead log (WAL). The required
 /// pattern of usage is:
 /// - Open a WAL (either new or existing) with wal_open(). If opening an
 ///   existing WAL, wal_open() will fail if the WAL is corrupt.
@@ -96,7 +96,11 @@ wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz]);
 int
 wal_sync(const wal_t *wal);
 
-/// Apply a WAL to a (PMA) file.
+/// Apply a WAL to a file.
+///
+/// Only call this function if all necessary entries have been appended to the
+/// WAL via wal_append(). Once a WAL is applied, wal_append() must not be
+/// called.
 ///
 /// @param[in] wal  WAL handle. Must not be NULL.
 /// @param[in] fd   File descriptor to file to apply WAL to.
