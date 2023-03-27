@@ -446,6 +446,7 @@ _sync_file(const char *path,
     }
     assert(base);
     assert(pma);
+    assert(len % kPageSz == 0);
 
     char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
     snprintf(wal_file, sizeof(wal_file), "%s%s", path, kWriteAheadLogExtension);
