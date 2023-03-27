@@ -266,7 +266,6 @@ _test_pma(void)
 
         // Removes all mappings.
         pma_unload(pma);
-        free(pma);
 
         // Re-establishes all mappings.
         pma = pma_load(base,

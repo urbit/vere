@@ -896,5 +896,5 @@ pma_unload(pma_t *pma)
 
     sigsegv_unregister(&dispatcher, pma->sigsegv_ticket);
 
-    // TODO: free pma.
+    free(pma);
 }
