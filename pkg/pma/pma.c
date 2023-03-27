@@ -398,6 +398,7 @@ _map_file(const char *path,
                         strerror(err));
                 // Unmap already-mapped mappings.
                 munmap(ptr + kPageSz, offset_);
+                _set_page_status_range(base, i, PS_UNMAPPED, pma);
                 goto close_fd;
             }
             _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
@@ -426,7 +427,6 @@ _map_file(const char *path,
 close_fd:
     close(fd_);
 fail:
-    // TODO: mark all pages as unmapped.
     errno = err;
     return -1;
 }
