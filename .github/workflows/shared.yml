@@ -24,7 +24,7 @@ on:
         default: true
         required: false
       next:
-        description: 'Next Kelvin version'
+        description: 'Next Kelvin version branch name'
         type: string
         default: null
         required: false
@@ -239,7 +239,8 @@ jobs:
         run: |
           echo "${{ inputs.pace }}" > ./PACE
           if ${{ inputs.next != null }}; then
-            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/last"
+            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/last"
           else
             target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
           fi
