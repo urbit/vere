@@ -271,31 +271,8 @@ _map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len)
 {
     int err;
 
+    // Don't bother creating any anonymous mappings if there's no backing file.
     if (fd == -1) {
-        static const size_t kDefaultSz = kPageSz;
-        *len = *len == 0 ? kDefaultSz : round_up(*len, kPageSz);
-        if (grows_down) {
-            base = (char *)base - kDefaultSz;
-        }
-        if (mmap(base,
-                 kDefaultSz,
-                 PROT_READ,
-                 MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-                 -1,
-                 0)
-            == MAP_FAILED)
-        {
-            err = errno;
-            fprintf(stderr,
-                    "pma: failed to create %zu-byte anonymous mapping at %p: "
-                    "%s\r\n",
-                    kDefaultSz,
-                    base,
-                    strerror(err));
-            goto fail;
-        }
-        size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
-        _set_page_status_range(base, pg_cnt, PS_MAPPED_CLEAN, pma);
         return 0;
     }
 

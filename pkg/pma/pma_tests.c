@@ -99,8 +99,8 @@ _test_pma(void)
         assert(pma);
         assert(pma->heap_start == base);
         assert(pma->stack_start == (char *)base + len);
-        assert(pma->heap_len == kPageSz);
-        assert(pma->stack_len == kPageSz);
+        assert(pma->heap_len == 0);
+        assert(pma->stack_len == 0);
         assert(pma->heap_fd == -1);
         assert(pma->stack_fd == -1);
 
@@ -111,14 +111,14 @@ _test_pma(void)
 
         // Write to the heap.
         addr = base;
-        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
+        assert(_page_status(addr, pma) == PS_UNMAPPED);
         ch            = *(char *)addr;
         *(char *)addr = 'h';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
         addr = (char *)base + len - 1;
-        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
+        assert(_page_status(addr, pma) == PS_UNMAPPED);
         ch            = *(char *)addr;
         *(char *)addr = 'i';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
