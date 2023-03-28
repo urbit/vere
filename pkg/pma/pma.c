@@ -317,43 +317,6 @@ _map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len)
     }
     size_t len_ = round_up(buf_.st_size, kPageSz);
 
-#if 0
-    {
-        // If there's a write-ahead log for this file, which can happen if a
-        // crash occurs during pma_sync() after the write-ahead log has been
-        // created but before it can be applied, we need to apply it to the file
-        // before mapping the file.
-        char wal_file[strlen(path) + 1 + sizeof(kWriteAheadLogExtension)];
-        snprintf(wal_file,
-                 sizeof(wal_file),
-                 "%s.%s",
-                 path,
-                 kWriteAheadLogExtension);
-        wal_t wal;
-        if (wal_open(wal_file, &wal) == -1 && errno != EEXIST) {
-            err = errno;
-            fprintf(stderr,
-                    "pma: failed to open wal file at %s: %s\r\n",
-                    wal_file,
-                    strerror(err));
-            goto fail;
-        }
-
-        if (wal_apply(&wal, fd) == -1) {
-            err = errno;
-            fprintf(stderr,
-                    "pma: failed to apply wal at %s to %s: %s\r\n",
-                    wal_file,
-                    path,
-                    strerror(err));
-            // We're leaking the fd in wal here.
-            goto fail;
-        }
-
-        wal_destroy(&wal);
-    }
-#endif
-
     // We have to map stacks a page at a time because a stack's backing file has
     // its first page at offset zero, which belongs at the highest address.
     if (grows_down) {
@@ -542,6 +505,7 @@ pma_load(void         *base,
     pma->num_pgs        = num_pgs;
     pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));
 
+    // Open heap file.
     if (heap_file) {
         pma->heap_file = strdup(heap_file);
         pma->heap_fd   = open(pma->heap_file, O_CREAT | O_RDWR, 0644);
@@ -556,15 +520,8 @@ pma_load(void         *base,
     } else {
         pma->heap_fd = -1;
     }
-    pma->heap_len = 0;
-    // Failed to map non-NULL heap file.
-    if (_map_file(pma->heap_fd, pma->heap_start, false, pma, &pma->heap_len)
-        == -1)
-    {
-        err = errno;
-        goto close_heap_fd;
-    }
 
+    // Open stack file.
     if (stack_file) {
         pma->stack_file = strdup(stack_file);
         pma->stack_fd   = open(pma->stack_file, O_CREAT | O_RDWR, 0644);
@@ -578,6 +535,54 @@ pma_load(void         *base,
         }
     } else {
         pma->stack_fd = -1;
+    }
+
+    // If there's a write-ahead log for this file, which can happen if a
+    // crash occurs during pma_sync() after the write-ahead log has been
+    // created but before it can be applied, we need to apply it to the file
+    // before mapping the file.
+    if (heap_file || stack_file) {
+        // TODO: don't use heap path.
+        const char *path = heap_file;
+        char wal_file[strlen(path) + 1 + sizeof(kWriteAheadLogExtension)];
+        snprintf(wal_file,
+                 sizeof(wal_file),
+                 "%s.%s",
+                 path,
+                 kWriteAheadLogExtension);
+        wal_t wal;
+        if (wal_open(wal_file, &wal) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to open wal file at %s: %s\r\n",
+                    wal_file,
+                    strerror(err));
+            goto fail;
+        }
+
+        // TODO: change wal_apply() to take both fds.
+        int fd = pma->heap_fd;
+        if (wal_apply(&wal, fd) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to apply wal at %s to %s: %s\r\n",
+                    wal_file,
+                    path,
+                    strerror(err));
+            // We're leaking the fd in wal here.
+            goto fail;
+        }
+
+        wal_destroy(&wal);
+    }
+
+    pma->heap_len = 0;
+    // Failed to map non-NULL heap file.
+    if (_map_file(pma->heap_fd, pma->heap_start, false, pma, &pma->heap_len)
+        == -1)
+    {
+        err = errno;
+        goto close_heap_fd;
     }
 
     pma->stack_len = 0;
