@@ -35,7 +35,7 @@ static const size_t kSeed = 0;
 /// An entry in a WAL's metadata file.
 typedef struct _metadata_entry {
     /// Page index.
-    uint64_t pg_idx;
+    int64_t pg_idx;
     /// Checksum of page index and page contents.
     uint64_t checksum;
 } _metadata_entry_t;
@@ -276,7 +276,7 @@ fail:
 }
 
 int
-wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz])
+wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz])
 {
     if (!wal || !pg) {
         errno = EINVAL;
@@ -360,11 +360,11 @@ fail:
 }
 
 int
-wal_apply(wal_t *wal, int fd)
+wal_apply(wal_t *wal, int heap_fd, int stack_fd)
 {
     int err;
 
-    if (!wal || fd < 0) {
+    if (!wal || heap_fd < 0 || stack_fd < 0) {
         err = EINVAL;
         goto fail;
     }
@@ -394,6 +394,8 @@ wal_apply(wal_t *wal, int fd)
 
     char              pg[kPageSz];
     _metadata_entry_t entry;
+    size_t            pg_idx;
+    int               fd;
     off_t             offset;
     for (size_t i = 0; i < wal->entry_cnt; i++) {
         if (read_all(wal->data_fd, pg, sizeof(pg)) == -1) {
@@ -404,7 +406,15 @@ wal_apply(wal_t *wal, int fd)
             err = errno;
             goto fail;
         }
-        offset = entry.pg_idx * kPageSz;
+        // Convert a 1-based negative page index to a 0-based positive one.
+        if (entry.pg_idx < 0) {
+            pg_idx = -(entry.pg_idx + 1);
+            fd     = stack_fd;
+        } else {
+            pg_idx = entry.pg_idx;
+            fd     = heap_fd;
+        }
+        offset = pg_idx * kPageSz;
         if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
             err = errno;
             fprintf(stderr,
@@ -419,6 +429,24 @@ wal_apply(wal_t *wal, int fd)
             err = errno;
             goto fail;
         }
+    }
+
+    if (fsync(heap_fd) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "wal: failed to flush changes to heap file with fd %d: %s\r\n",
+                heap_fd,
+                strerror(err));
+        goto fail;
+    }
+
+    if (fsync(stack_fd) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "wal: failed to flush changes to stack file with fd %d: %s\r\n",
+                stack_fd,
+                strerror(err));
+        goto fail;
     }
 
     return 0;

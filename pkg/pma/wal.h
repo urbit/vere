@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include "page.h"
 
@@ -77,14 +78,17 @@ wal_open(const char *path, wal_t *wal);
 /// Append a new entry to a WAL.
 ///
 /// @param[in] wal     WAL handle. Must not be NULL.
-/// @param[in] pg_idx  Zero-based page index of page.
+/// @param[in] pg_idx  Page index of heap or stack page. Index 0 is the first
+///                    page of the heap, index 1 is the second page of the heap,
+///                    index -1 is the first page of the stack, index -2 is the
+///                    second page of the stack, etc.
 /// @param[in] pg      Page to append. Must not be NULL.
 ///
 /// @return 0   Success.
 /// @return -1  wal or entry were NULL.
 /// @return -1  Failed to write entry to WAL file.
 int
-wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz]);
+wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz]);
 
 /// Sync a WAL to disk.
 ///
@@ -96,19 +100,20 @@ wal_append(wal_t *wal, size_t pg_idx, const char pg[kPageSz]);
 int
 wal_sync(const wal_t *wal);
 
-/// Apply a WAL to a file.
+/// Apply a WAL to a heap and stack.
 ///
 /// Only call this function if all necessary entries have been appended to the
 /// WAL via wal_append(). Once a WAL is applied, wal_append() must not be
 /// called.
 ///
-/// @param[in] wal  WAL handle. Must not be NULL.
-/// @param[in] fd   File descriptor to file to apply WAL to.
+/// @param[in] wal       WAL handle. Must not be NULL.
+/// @param[in] heap_fd   File descriptor to heap to apply WAL to.
+/// @param[in] stack_fd  File descriptor to stack to apply WAL to.
 ///
 /// @return 0   Success.
 /// @return -1  Failure.
 int
-wal_apply(wal_t *wal, int fd);
+wal_apply(wal_t *wal, int heap_fd, int stack_fd);
 
 /// Dispose of a WAL's resources and remove the WAL from the file system.
 ///

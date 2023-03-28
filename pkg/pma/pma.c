@@ -171,9 +171,10 @@ _set_page_status_range(const void   *addr,
 
 /// Sync changes made to either the heap or stack since the last call to
 /// pma_sync().
+/// Append dirty pages (pages modified since the last call to pma_sync()) to a
+/// write-ahead log.
 ///
-/// @param[in] path        Path to backing file. If NULL, this function is a
-///                        no-op.
+/// @param[in] wal         Write-ahead log. Must not be NULL.
 /// @param[in] base        Base address of the file-backed mapping.
 /// @param[in] grows_down  true if the mapping grows downward in memory.
 /// @param[in] pma         PMA this mapping belongs to.
@@ -185,12 +186,12 @@ _set_page_status_range(const void   *addr,
 /// @return 0   Synced changes successfully.
 /// @return -1  Failed to sync changes.
 static int
-_sync_file(const char *path,
-           void       *base,
-           bool        grows_down,
-           pma_t      *pma,
-           size_t      len,
-           int         fd);
+_append_dirty_pages(wal_t *wal,
+                    void  *base,
+                    bool   grows_down,
+                    pma_t *pma,
+                    size_t len,
+                    int    fd);
 
 /// Get the total length in bytes of a PMA.
 ///
@@ -374,38 +375,24 @@ fail:
 }
 
 static int
-_sync_file(const char *path,
-           void       *base,
-           bool        grows_down,
-           pma_t      *pma,
-           size_t      len,
-           int         fd)
+_append_dirty_pages(wal_t *wal,
+                    void  *base,
+                    bool   grows_down,
+                    pma_t *pma,
+                    size_t len,
+                    int    fd)
 {
     int err;
 
-    if (!path) {
-        return 0;
-    }
+    assert(wal);
     assert(base);
     assert(pma);
     assert(len % kPageSz == 0);
 
-    char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
-    snprintf(wal_file, sizeof(wal_file), "%s%s", path, kWriteAheadLogExtension);
-    wal_t wal;
-    if (wal_open(wal_file, &wal) == -1) {
-        err = errno;
-        fprintf(stderr,
-                "pma: failed to open wal file at %s: %s\r\n",
-                wal_file,
-                strerror(err));
-        goto fail;
-    }
-
     // Determine largest possible page index.
     size_t total = _total_len(pma);
     assert(total % kPageSz == 0);
-    size_t  max_idx = (total / kPageSz) - 1;
+    size_t  max_idx = total / kPageSz;
 
     char   *ptr  = grows_down ? base - kPageSz : base;
     ssize_t step = grows_down ? -kPageSz : kPageSz;
@@ -413,44 +400,22 @@ _sync_file(const char *path,
         page_status_t status = _page_status(ptr, pma);
         assert(status != PS_UNMAPPED);
         if (status == PS_MAPPED_DIRTY) {
-            size_t pg_idx = _addr_to_page_idx(ptr, pma);
-            pg_idx        = grows_down ? max_idx - pg_idx : pg_idx;
-            if (wal_append(&wal, pg_idx, ptr) == -1) {
+            ssize_t pg_idx = _addr_to_page_idx(ptr, pma);
+            pg_idx         = grows_down ? pg_idx - max_idx : pg_idx;
+            if (wal_append(wal, pg_idx, ptr) == -1) {
                 err = errno;
                 fprintf(stderr,
                         "pma: failed to append %zu-byte page with index %zu "
-                        "and address %p to wal at %s: %s\r\n",
+                        "and address %p to wal: %s\r\n",
                         kPageSz,
                         pg_idx,
                         ptr,
-                        wal_file,
                         strerror(err));
                 goto fail;
             }
         }
         ptr += step;
     }
-
-    if (wal_sync(&wal) == -1) {
-        err = errno;
-        fprintf(stderr,
-                "pma: failed to sync wal for %s: %s\r\n",
-                path,
-                strerror(err));
-        goto fail;
-    }
-
-    if (wal_apply(&wal, fd) == -1) {
-        err = errno;
-        fprintf(stderr,
-                "pma: failed to apply wal at %s to %s: %s\r\n",
-                wal_file,
-                path,
-                strerror(err));
-        goto fail;
-    }
-
-    wal_destroy(&wal);
 
     return 0;
 
@@ -560,9 +525,7 @@ pma_load(void         *base,
             goto fail;
         }
 
-        // TODO: change wal_apply() to take both fds.
-        int fd = pma->heap_fd;
-        if (wal_apply(&wal, fd) == -1) {
+        if (wal_apply(&wal, pma->heap_fd, pma->stack_fd) == -1) {
             err = errno;
             fprintf(stderr,
                     "pma: failed to apply wal at %s to %s: %s\r\n",
@@ -739,13 +702,36 @@ pma_sync(pma_t *pma)
     heap_len  = round_up(heap_len, kPageSz);
     stack_len = round_up(stack_len, kPageSz);
 
+    // TODO: don't use heap path.
+    const char *path = pma->heap_file;
+    wal_t      *wal  = pma->heap_fd != -1 || pma->stack_fd != -1
+                           ? malloc(sizeof(*wal))
+                           : NULL;
+    if (wal) {
+        char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
+        snprintf(wal_file,
+                 sizeof(wal_file),
+                 "%s%s",
+                 path,
+                 kWriteAheadLogExtension);
+        if (wal_open(wal_file, wal) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to open wal file at %s: %s\r\n",
+                    wal_file,
+                    strerror(err));
+            goto fail;
+        }
+    }
+
     if (pma->heap_fd != -1) {
-        if (_sync_file(pma->heap_file,
-                       pma->heap_start,
-                       false,
-                       pma,
-                       heap_len,
-                       pma->heap_fd)
+        assert(wal);
+        if (_append_dirty_pages(wal,
+                                pma->heap_start,
+                                false,
+                                pma,
+                                heap_len,
+                                pma->heap_fd)
             == -1)
         {
             err = ECANCELED;
@@ -781,16 +767,16 @@ pma_sync(pma_t *pma)
             }
         }
         pma->heap_len = heap_len;
-        pma->heap_fd  = -1;
     }
 
     if (pma->stack_fd != -1) {
-        if (_sync_file(pma->stack_file,
-                       pma->stack_start,
-                       true,
-                       pma,
-                       stack_len,
-                       pma->stack_fd)
+        assert(wal);
+        if (_append_dirty_pages(wal,
+                                pma->stack_start,
+                                true,
+                                pma,
+                                stack_len,
+                                pma->stack_fd)
             == -1)
         {
             err = errno;
@@ -827,7 +813,29 @@ pma_sync(pma_t *pma)
             }
         }
         pma->stack_len = stack_len;
-        pma->stack_fd  = -1;
+    }
+
+    // Sync and apply the WAL if the backing files are non-NULL.
+    if (wal) {
+        if (wal_sync(wal) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to sync wal for %s: %s\r\n",
+                    path,
+                    strerror(err));
+            goto fail;
+        }
+
+        if (wal_apply(wal, pma->heap_fd, pma->stack_fd) == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to apply wal to %s: %s\r\n",
+                    path,
+                    strerror(err));
+            goto fail;
+        }
+
+        wal_destroy(wal);
     }
 
     // Remap heap.

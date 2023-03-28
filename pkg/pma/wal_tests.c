@@ -24,28 +24,44 @@ test_wal_(void)
         char start = 'a';
         char end   = 'z';
         assert(start <= end);
+        ssize_t heap_idx  = 0;
+        ssize_t stack_idx = -1;
         for (char ch = start; ch <= end; ch++) {
             memset(pg, ch, sizeof(pg));
-            assert(wal_append(&wal, ch - start, pg) == 0);
+            size_t i = ch - start;
+            assert(wal_append(&wal, i % 2 == 0 ? heap_idx : stack_idx, pg)
+                   == 0);
+            if (i % 2 == 0) {
+                heap_idx++;
+            } else {
+                stack_idx--;
+            }
         }
         assert(wal_sync(&wal) == 0);
 
-        static const char kTargetPath[] = "/tmp/wal-empty-test-target";
-        int fd = open(kTargetPath, O_CREAT | O_RDWR | O_TRUNC, 0644);
-        assert(wal_apply(&wal, fd) == 0);
+        static const char kHeapPath[]  = "/tmp/wal-empty-test-target-heap";
+        static const char kStackPath[] = "/tmp/wal-empty-test-target-stack";
+        int heap_fd  = open(kHeapPath, O_CREAT | O_RDWR | O_TRUNC, 0644);
+        int stack_fd = open(kStackPath, O_CREAT | O_RDWR | O_TRUNC, 0644);
+        assert(wal_apply(&wal, heap_fd, stack_fd) == 0);
 
-        assert(lseek(fd, 0, SEEK_SET) == 0);
+        assert(lseek(heap_fd, 0, SEEK_SET) == 0);
+        assert(lseek(stack_fd, 0, SEEK_SET) == 0);
 
         for (char ch = start; ch <= end; ch++) {
-            assert(read_all(fd, pg, sizeof(pg)) == 0);
-            for (size_t i = 0; i < sizeof(pg); i++) {
-                assert(pg[i] == ch);
+            size_t i = ch - start;
+            assert(read_all(i % 2 == 0 ? heap_fd : stack_fd, pg, sizeof(pg))
+                   == 0);
+            for (size_t j = 0; j < sizeof(pg); j++) {
+                assert(pg[j] == ch);
             }
         }
 
         wal_destroy(&wal);
-        close(fd);
-        unlink(kTargetPath);
+        close(heap_fd);
+        close(stack_fd);
+        unlink(kHeapPath);
+        unlink(kStackPath);
     }
 
     // Corrupt data file of write-ahead log.
