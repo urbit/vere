@@ -25,6 +25,15 @@
 /// Seed value for hashing function used to compute page checksum.
 static const size_t kSeed = 0;
 
+/// File stem for a WAL's data file.
+static const char kDataStem[] = "data";
+
+/// File stem for a WAL's metadata file.
+static const char kMetaStem[] = "meta";
+
+/// File extension for a WAL file.
+static const char kWalExt[] = "wal";
+
 /// Size in bytes of _metadata_entry_t's pg_idx field. Must be a macro to
 /// ensure kPageIdxSz + kPageSz can be resolved at compile time.
 #define kPageIdxSz sizeof(((_metadata_entry_t *)NULL)->pg_idx)
@@ -43,10 +52,11 @@ typedef struct _metadata_entry {
 //==============================================================================
 // STATIC FUNCTIONS
 
-/// Open a file.
+/// Open a file of the form <path>/<stem>.<suffix>.
 ///
-/// @param[in]  base_path  Path to base file.
-/// @param[in]  suffix     Suffix to append to base file path.
+/// @param[in]  dir        Path to containing directory.
+/// @param[in]  stem       File stem.
+/// @param[in]  suffix     File suffix.
 /// @param[out] path       Populated with the concatenation of base_path and
 ///                        suffix.
 /// @param[out] fd         Populated with an open file descriptor for file at
@@ -56,20 +66,22 @@ typedef struct _metadata_entry {
 /// @return 0   Success.
 /// @return -1  Failure.
 static int
-_open_file(const char *base_path,
+_open_file(const char *dir,
+           const char *stem,
            const char *suffix,
            char      **path,
            int        *fd,
            size_t     *len);
 
 static int
-_open_file(const char *base_path,
+_open_file(const char *dir,
+           const char *stem,
            const char *suffix,
            char      **path,
            int        *fd,
            size_t     *len)
 {
-    assert(base_path);
+    assert(dir);
     assert(suffix);
     assert(path);
     assert(fd);
@@ -77,12 +89,9 @@ _open_file(const char *base_path,
 
     int err;
 
-    if (asprintf(path, "%s.%s", base_path, suffix) == -1) {
+    if (asprintf(path, "%s/%s.%s", dir, stem, suffix) == -1) {
         err = ECANCELED;
-        fprintf(stderr,
-                "wal: failed to append %s to %s\r\n",
-                suffix,
-                base_path);
+        fprintf(stderr, "wal: failed to construct path\r\n");
         goto fail;
     }
 
@@ -132,7 +141,8 @@ wal_open(const char *path, wal_t *wal)
 
     size_t meta_len;
     if (_open_file(path,
-                   kWalMetaExt,
+                   kMetaStem,
+                   kWalExt,
                    (char **)&wal->meta_path,
                    &wal->meta_fd,
                    &meta_len)
@@ -156,7 +166,8 @@ wal_open(const char *path, wal_t *wal)
 
     size_t data_len;
     if (_open_file(path,
-                   kWalDataExt,
+                   kDataStem,
+                   kWalExt,
                    (char **)&wal->data_path,
                    &wal->data_fd,
                    &data_len)

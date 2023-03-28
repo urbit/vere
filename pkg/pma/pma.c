@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,9 +55,6 @@ static const size_t kBytesPerEntry = sizeof(*((pma_t *)NULL)->pg_status);
 /// Number of pages whose status can be tracked by a single entry in the
 /// pg_status array of pma_t.
 static const size_t kPagesPerEntry = kBytesPerEntry * kPagesPerByte;
-
-/// Extension appended to a backing file to create that file's wal name.
-static const char kWriteAheadLogExtension[] = "wal";
 
 //==============================================================================
 // GLOBAL VARIABLES
@@ -507,30 +505,29 @@ pma_load(void         *base,
     // created but before it can be applied, we need to apply it to the file
     // before mapping the file.
     if (heap_file || stack_file) {
-        // TODO: don't use heap path.
-        const char *path = heap_file;
-        char wal_file[strlen(path) + 1 + sizeof(kWriteAheadLogExtension)];
-        snprintf(wal_file,
-                 sizeof(wal_file),
-                 "%s.%s",
-                 path,
-                 kWriteAheadLogExtension);
-        wal_t wal;
-        if (wal_open(wal_file, &wal) == -1) {
+        // We arbitrarily use the heap file's base directory to house the WAL;
+        // the stack's directory could be used instead. dirname() may modify its
+        // argument, so we give it a copy.
+        char       *heap_file_copy = strdup(pma->heap_file);
+        const char *wal_dir        = dirname(heap_file_copy);
+        wal_t       wal;
+        if (wal_open(wal_dir, &wal) == -1) {
             err = errno;
+            free(heap_file_copy);
             fprintf(stderr,
                     "pma: failed to open wal file at %s: %s\r\n",
-                    wal_file,
+                    wal_dir,
                     strerror(err));
             goto fail;
         }
+        free(heap_file_copy);
 
         if (wal_apply(&wal, pma->heap_fd, pma->stack_fd) == -1) {
             err = errno;
             fprintf(stderr,
                     "pma: failed to apply wal at %s to %s: %s\r\n",
-                    wal_file,
-                    path,
+                    wal_dir,
+                    wal_dir,
                     strerror(err));
             // We're leaking the fd in wal here.
             goto fail;
@@ -702,26 +699,26 @@ pma_sync(pma_t *pma)
     heap_len  = round_up(heap_len, kPageSz);
     stack_len = round_up(stack_len, kPageSz);
 
-    // TODO: don't use heap path.
-    const char *path = pma->heap_file;
-    wal_t      *wal  = pma->heap_fd != -1 || pma->stack_fd != -1
-                           ? malloc(sizeof(*wal))
-                           : NULL;
+    wal_t      *wal     = pma->heap_fd != -1 || pma->stack_fd != -1
+                              ? malloc(sizeof(*wal))
+                              : NULL;
+    const char *wal_dir = NULL;
     if (wal) {
-        char wal_file[strlen(path) + sizeof(kWriteAheadLogExtension)];
-        snprintf(wal_file,
-                 sizeof(wal_file),
-                 "%s%s",
-                 path,
-                 kWriteAheadLogExtension);
-        if (wal_open(wal_file, wal) == -1) {
+        // We arbitrarily use the heap file's base directory to house the WAL;
+        // the stack's directory could be used instead. dirname() may modify its
+        // argument, so we give it a copy.
+        char *heap_file_copy = strdup(pma->heap_file);
+        wal_dir              = dirname(heap_file_copy);
+        if (wal_open(wal_dir, wal) == -1) {
             err = errno;
+            free(heap_file_copy);
             fprintf(stderr,
                     "pma: failed to open wal file at %s: %s\r\n",
-                    wal_file,
+                    wal_dir,
                     strerror(err));
             goto fail;
         }
+        free(heap_file_copy);
     }
 
     if (pma->heap_fd != -1) {
@@ -821,7 +818,7 @@ pma_sync(pma_t *pma)
             err = errno;
             fprintf(stderr,
                     "pma: failed to sync wal for %s: %s\r\n",
-                    path,
+                    wal_dir,
                     strerror(err));
             goto fail;
         }
@@ -830,7 +827,7 @@ pma_sync(pma_t *pma)
             err = errno;
             fprintf(stderr,
                     "pma: failed to apply wal to %s: %s\r\n",
-                    path,
+                    wal_dir,
                     strerror(err));
             goto fail;
         }

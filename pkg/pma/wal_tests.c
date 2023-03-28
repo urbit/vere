@@ -17,7 +17,7 @@ test_wal_(void)
     // Empty write-ahead log.
     {
         wal_t wal;
-        assert(wal_open("/tmp/wal-empty-test", &wal) == 0);
+        assert(wal_open("/tmp", &wal) == 0);
 
         char pg[kPageSz];
 
@@ -67,7 +67,7 @@ test_wal_(void)
     // Corrupt data file of write-ahead log.
     {
         wal_t      wal;
-        const char kPath[] = "/tmp/wal-corrupt-data-test";
+        const char kPath[] = "/tmp";
         assert(wal_open(kPath, &wal) == 0);
 
         char pg[kPageSz];
@@ -90,6 +90,8 @@ test_wal_(void)
         // Can't use wal_destroy() here because it'll remove the WAL files.
         close(wal.data_fd);
         close(wal.meta_fd);
+        const char *data_path = strdup(wal.data_path);
+        const char *meta_path = strdup(wal.meta_path);
         free((void *)wal.data_path);
         free((void *)wal.meta_path);
 
@@ -98,17 +100,14 @@ test_wal_(void)
 
         char buf[512];
 
-        snprintf(buf, sizeof(buf), "%s.%s", kPath, kWalDataExt);
-        assert(unlink(buf) == 0);
-
-        snprintf(buf, sizeof(buf), "%s.%s", kPath, kWalMetaExt);
-        assert(unlink(buf) == 0);
+        assert(unlink(data_path) == 0);
+        assert(unlink(meta_path) == 0);
     }
 
     // Corrupt metadata file of write-ahead log.
     {
         wal_t      wal;
-        const char kPath[] = "/tmp/wal-corrupt-metadata-test";
+        const char kPath[] = "/tmp";
         assert(wal_open(kPath, &wal) == 0);
 
         char pg[kPageSz];
@@ -131,6 +130,8 @@ test_wal_(void)
         // Can't use wal_destroy() here because it'll remove the WAL files.
         close(wal.data_fd);
         close(wal.meta_fd);
+        const char *data_path = strdup(wal.data_path);
+        const char *meta_path = strdup(wal.meta_path);
         free((void *)wal.data_path);
         free((void *)wal.meta_path);
 
@@ -139,11 +140,8 @@ test_wal_(void)
 
         char buf[512];
 
-        snprintf(buf, sizeof(buf), "%s.%s", kPath, kWalDataExt);
-        assert(unlink(buf) == 0);
-
-        snprintf(buf, sizeof(buf), "%s.%s", kPath, kWalMetaExt);
-        assert(unlink(buf) == 0);
+        assert(unlink(data_path) == 0);
+        assert(unlink(meta_path) == 0);
     }
 }
 

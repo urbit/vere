@@ -22,12 +22,6 @@
 //==============================================================================
 // CONSTANTS
 
-/// File extension for a WAL's data file.
-static const char kWalDataExt[] = "data";
-
-/// File extension for a WAL's metadata file.
-static const char kWalMetaExt[] = "meta";
-
 //==============================================================================
 // TYPES
 
@@ -62,10 +56,8 @@ typedef struct wal {
 
 /// Open a WAL.
 ///
-/// @param[in]  path  Path to the WAL. kWalDataExt and kWalMetaExt will be
-///                   appended to the end of this path to generate the data and
-///                   metadata file paths, respectively, for the WAL. Must not
-///                   be NULL.
+/// @param[in]  path  Path to the directory containing the WAL. Must not be
+///                   NULL.
 /// @param[out] wal   Populated with the resulting WAL handle. Must not be NULL.
 ///
 /// @return 0   Success.
