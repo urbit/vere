@@ -737,33 +737,6 @@ pma_sync(pma_t *pma)
                     pma->heap_file);
             goto fail;
         }
-
-        // The heap shrunk, so shrink the backing file.
-        if (heap_len < pma->heap_len) {
-            if (ftruncate(pma->heap_fd, heap_len) == -1) {
-                err = errno;
-                fprintf(stderr,
-                        "pma: failed to truncate %s from %zu bytes to %zu "
-                        "bytes: %s\r\n",
-                        pma->heap_file,
-                        pma->heap_len,
-                        heap_len,
-                        strerror(err));
-                goto fail;
-            }
-
-            // Advise the kernel that the truncated part of the heap is no
-            // longer needed.
-            char  *free_start = pma->heap_start + heap_len;
-            size_t free_len   = pma->heap_len - heap_len;
-            assert(free_len % kPageSz == 0);
-            if (madvise(free_start, free_len, MADV_DONTNEED) == -1) {
-                err = errno;
-                fprintf(stderr, "pma: madvise() failed: %s\r\n", strerror(err));
-                goto fail;
-            }
-        }
-        pma->heap_len = heap_len;
     }
 
     if (pma->stack_fd != -1) {
@@ -783,33 +756,6 @@ pma_sync(pma_t *pma)
                     strerror(err));
             goto fail;
         }
-
-        // The stack shrunk, so shrink the backing file.
-        if (stack_len < pma->stack_len) {
-            if (ftruncate(pma->stack_fd, stack_len) == -1) {
-                err = errno;
-                fprintf(stderr,
-                        "pma: failed to truncate %s from %zu bytes to %zu "
-                        "bytes: %s\r\n",
-                        pma->stack_file,
-                        pma->stack_len,
-                        stack_len,
-                        strerror(err));
-                goto fail;
-            }
-
-            // Advise the kernel that the truncated part of the stack is no
-            // longer needed.
-            char  *free_start = pma->stack_start - pma->stack_len;
-            size_t free_len   = pma->stack_len - stack_len;
-            assert(free_len % kPageSz == 0);
-            if (madvise(free_start, free_len, MADV_DONTNEED) == -1) {
-                err = errno;
-                fprintf(stderr, "pma: madvise() failed: %s\r\n", strerror(err));
-                goto fail;
-            }
-        }
-        pma->stack_len = stack_len;
     }
 
     // Sync and apply the WAL if the backing files are non-NULL.

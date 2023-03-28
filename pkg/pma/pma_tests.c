@@ -277,8 +277,8 @@ _test_pma(void)
         assert(pma);
         assert(pma->heap_start == base);
         assert(pma->stack_start == (char *)base + len);
-        assert(pma->heap_len == kNewHeapSz);
-        assert(pma->stack_len == kPageSz);
+        assert(pma->heap_len == kHeapFileSz);
+        assert(pma->stack_len == kStackFileSz);
         assert(pma->heap_fd != -1);
         assert(pma->stack_fd != -1);
 
@@ -303,8 +303,8 @@ _test_pma(void)
         }
 
         // Check stack change #1.
-        assert(_page_status(spage1, pma) == PS_UNMAPPED);
-        assert(_page_status(spage1 + kPageSz, pma) == PS_UNMAPPED);
+        assert(_page_status(spage1, pma) == PS_MAPPED_CLEAN);
+        assert(_page_status(spage1 + kPageSz, pma) == PS_MAPPED_CLEAN);
 
         assert(unlink(kHeapFile) == 0);
         assert(unlink(kStackFile) == 0);
