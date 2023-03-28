@@ -791,6 +791,14 @@ void
 _boothack_cb(uv_timer_t* tim_u)
 {
   _king_doom(_boothack_doom());
+
+  //  copy binary into pier on boot
+  //
+  if ( (c3y == u3_Host.ops_u.nuu)
+     && (c3y == u3_Host.ops_u.doc) )
+  {
+    u3_king_dock(U3_VERE_PACE);
+  }
 }
 
 /* _king_loop_init(): stuff that comes before the event loop
@@ -1542,17 +1550,6 @@ u3_king_done(void)
     }
     else if ( c3y == u3_Host.play_o ) {
       u3l_log("vere: replay succeeded");
-    }
-
-    //  copy binary into pier on boot
-    //
-    if (  (c3y == u3_Host.ops_u.nuu)
-       && (c3y == u3_Host.ops_u.doc) )
-    {
-      //  hack to ensure we only try once
-      //
-      u3_Host.ops_u.nuu = c3n;
-      u3_king_dock(U3_VERE_PACE);
     }
   }
 
