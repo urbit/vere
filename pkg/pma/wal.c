@@ -19,6 +19,10 @@
 #include "murmur3.h"
 #include "util.h"
 
+#ifdef FCNTL_FSYNC
+#    define fsync(fd) fcntl(fd, F_FULLFSYNC)
+#endif
+
 //==============================================================================
 // CONSTANTS
 

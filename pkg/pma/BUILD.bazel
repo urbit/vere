@@ -14,6 +14,11 @@ cc_library(
     hdrs = ["pma.h"],
     includes = ["."],
     linkstatic = True,
+    local_defines = select({
+        # fsync() doesn't flush the disk buffers on macOS. See man fsync(2) on macOS.
+        "@platforms//os:macos": ["FCNTL_FSYNC"],
+        "//conditions:default": [],
+    }),
     textual_hdrs = [
         "pma.c",
         "wal.c",
