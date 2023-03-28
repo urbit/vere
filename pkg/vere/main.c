@@ -311,7 +311,11 @@ _main_getopt(c3_i argc, c3_c** argv)
       case c3__snap: {
         if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
           return c3n;
-        } else u3_Host.ops_u.sap_w = arg_w*60;
+        } else {
+          u3_Host.ops_u.sap_w = arg_w*60;
+          if ( 0 == u3_Host.ops_u.sap_w) 
+            return c3n;
+        }
         break;
       }
       //  opts with args
@@ -735,7 +739,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-p, --ames-port PORT          Set the ames port to bind to\n",
     "    --http-port PORT          Set the http port to bind to\n",
     "    --https-port PORT         Set the https port to bind to\n",
-    "    --snap-time TIME          Set the snapshotting rate in minutes\n",
+    "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-r, --replay-from NUMBER      Load snapshot from event\n",
