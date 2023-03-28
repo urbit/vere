@@ -676,8 +676,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  415
-#define VERE_LULL  326
+#define VERE_ZUSE  414
+#define VERE_LULL  325
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
