@@ -99,8 +99,8 @@ _handle_sigsegv(void *fault_addr, int serious);
 /// Map a file into memory at a specific address. Can also be used to create an
 /// anonymous, rather than file-backed, mapping by passing in a NULL path.
 ///
-/// @param[in]     path        Path to the backing file. If NULL, an anonymous
-///                            mapping is created.
+/// @param[in]     fd          File descriptor to the backing file. If NULL, an
+///                            anonymous mapping is created.
 /// @param[in]     base        Base address of the new mapping.
 /// @param[in]     grows_down  true if the mapping should grow downward in
 ///                            memory.
@@ -109,18 +109,11 @@ _handle_sigsegv(void *fault_addr, int serious);
 ///                            path is NULL, this parameter can also be used to
 ///                            supply a non-default length for an anonymous
 ///                            mapping.
-/// @param[out]    fd          Populated with the file descriptor of the opened
-///                            backing file. -1 if path is NULL.
 ///
 /// @return 0   Successfully created a new mapping.
 /// @return -1  Failed to create a new mapping.
 static int
-_map_file(const char *path,
-          void       *base,
-          bool        grows_down,
-          pma_t      *pma,
-          size_t     *len,
-          int        *fd);
+_map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len);
 
 /// Get the status of the page surrounding an address. To set rather than get,
 /// see _set_page_status().
@@ -275,16 +268,11 @@ _handle_sigsegv(void *fault_addr, int serious)
 }
 
 static int
-_map_file(const char *path,
-          void       *base,
-          bool        grows_down,
-          pma_t      *pma,
-          size_t     *len,
-          int        *fd)
+_map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len)
 {
     int err;
 
-    if (!path) {
+    if (fd == -1) {
         static const size_t kDefaultSz = kPageSz;
         *len = *len == 0 ? kDefaultSz : round_up(*len, kPageSz);
         if (grows_down) {
@@ -309,35 +297,27 @@ _map_file(const char *path,
         }
         size_t pg_cnt = round_up(kDefaultSz, kPageSz) / kPageSz;
         _set_page_status_range(base, pg_cnt, PS_MAPPED_CLEAN, pma);
-        *fd = -1;
         return 0;
     }
 
-    int fd_ = open(path, O_CREAT | O_RDWR, 0644);
-    // A parent directory doesn't exist.
-    if (fd_ == -1) {
-        err = errno;
-        fprintf(stderr, "pma: failed to open %s: %s\r\n", path, strerror(err));
-        goto fail;
-    }
-
     struct stat buf_;
-    if (fstat(fd_, &buf_) == -1) {
+    if (fstat(fd, &buf_) == -1) {
         err = errno;
         fprintf(stderr,
-                "pma: failed to determine length of %s: %s\r\n",
-                path,
+                "pma: failed to determine length of backing file with fd %d: "
+                "%s\r\n",
+                fd,
                 strerror(err));
-        goto close_fd;
+        goto fail;
     }
 
     if (buf_.st_size == 0) {
         *len = 0;
-        *fd  = fd_;
         return 0;
     }
     size_t len_ = round_up(buf_.st_size, kPageSz);
 
+#if 0
     {
         // If there's a write-ahead log for this file, which can happen if a
         // crash occurs during pma_sync() after the write-ahead log has been
@@ -356,10 +336,10 @@ _map_file(const char *path,
                     "pma: failed to open wal file at %s: %s\r\n",
                     wal_file,
                     strerror(err));
-            goto close_fd;
+            goto fail;
         }
 
-        if (wal_apply(&wal, fd_) == -1) {
+        if (wal_apply(&wal, fd) == -1) {
             err = errno;
             fprintf(stderr,
                     "pma: failed to apply wal at %s to %s: %s\r\n",
@@ -367,11 +347,12 @@ _map_file(const char *path,
                     path,
                     strerror(err));
             // We're leaking the fd in wal here.
-            goto close_fd;
+            goto fail;
         }
 
         wal_destroy(&wal);
     }
+#endif
 
     // We have to map stacks a page at a time because a stack's backing file has
     // its first page at offset zero, which belongs at the highest address.
@@ -384,48 +365,46 @@ _map_file(const char *path,
                      kPageSz,
                      PROT_READ,
                      MAP_FIXED | MAP_PRIVATE,
-                     fd_,
+                     fd,
                      offset_)
                 == MAP_FAILED)
             {
                 err = errno;
                 fprintf(stderr,
-                        "pma: failed to create %zu-byte mapping for %s at %p: "
+                        "pma: failed to create %zu-byte mapping for backing "
+                        "file with fd %d at %p: "
                         "%s\r\n",
                         kPageSz,
-                        path,
+                        fd,
                         ptr,
                         strerror(err));
                 // Unmap already-mapped mappings.
                 munmap(ptr + kPageSz, offset_);
                 _set_page_status_range(base, i, PS_UNMAPPED, pma);
-                goto close_fd;
+                goto fail;
             }
             _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
         }
     } else {
-        if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd_, 0)
+        if (mmap(base, len_, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd, 0)
             == MAP_FAILED)
         {
             err = errno;
-            fprintf(
-                stderr,
-                "pma: failed to create %zu-byte mapping for %s at %p: %s\r\n",
-                len_,
-                path,
-                base,
-                strerror(err));
-            goto close_fd;
+            fprintf(stderr,
+                    "pma: failed to create %zu-byte mapping for backing file "
+                    "with fd %d at %p: %s\r\n",
+                    len_,
+                    fd,
+                    base,
+                    strerror(err));
+            goto fail;
         }
         _set_page_status_range(base, len_ / kPageSz, PS_MAPPED_CLEAN, pma);
     }
 
     *len = len_;
-    *fd  = fd_;
     return 0;
 
-close_fd:
-    close(fd_);
 fail:
     errno = err;
     return -1;
@@ -552,17 +531,10 @@ pma_load(void         *base,
 
     pma_t *pma = malloc(sizeof(*pma));
 
-    if (heap_file) {
-        pma->heap_file = strdup(heap_file);
-    }
-    if (stack_file) {
-        pma->stack_file = strdup(stack_file);
-    }
-
-    void *heap_start  = base;
-    void *stack_start = (char *)heap_start + len;
-    pma->heap_start   = heap_start;
-    pma->stack_start  = stack_start;
+    void  *heap_start  = base;
+    void  *stack_start = (char *)heap_start + len;
+    pma->heap_start    = heap_start;
+    pma->stack_start   = stack_start;
 
     size_t num_pgs      = round_up(len, kPageSz) / kPageSz;
     size_t bits_needed  = round_up(kBitsPerPage * num_pgs, kBitsPerByte);
@@ -570,32 +542,51 @@ pma_load(void         *base,
     pma->num_pgs        = num_pgs;
     pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));
 
+    if (heap_file) {
+        pma->heap_file = strdup(heap_file);
+        pma->heap_fd   = open(pma->heap_file, O_CREAT | O_RDWR, 0644);
+        if (pma->heap_fd == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to open %s: %s\r\n",
+                    pma->heap_file,
+                    strerror(err));
+            goto free_heap_file;
+        }
+    } else {
+        pma->heap_fd = -1;
+    }
     pma->heap_len = 0;
     // Failed to map non-NULL heap file.
-    if (_map_file(heap_file,
-                  heap_start,
-                  false,
-                  pma,
-                  &pma->heap_len,
-                  &pma->heap_fd)
+    if (_map_file(pma->heap_fd, pma->heap_start, false, pma, &pma->heap_len)
         == -1)
     {
         err = errno;
-        goto free_pma;
+        goto close_heap_fd;
+    }
+
+    if (stack_file) {
+        pma->stack_file = strdup(stack_file);
+        pma->stack_fd   = open(pma->stack_file, O_CREAT | O_RDWR, 0644);
+        if (pma->stack_fd == -1) {
+            err = errno;
+            fprintf(stderr,
+                    "pma: failed to open %s: %s\r\n",
+                    pma->stack_file,
+                    strerror(err));
+            goto free_stack_file;
+        }
+    } else {
+        pma->stack_fd = -1;
     }
 
     pma->stack_len = 0;
     // Failed to map non-NULL stack file.
-    if (_map_file(stack_file,
-                  stack_start,
-                  true,
-                  pma,
-                  &pma->stack_len,
-                  &pma->stack_fd)
+    if (_map_file(pma->stack_fd, pma->stack_start, true, pma, &pma->stack_len)
         == -1)
     {
         err = errno;
-        goto unmap_heap;
+        goto close_stack_fd;
     }
 
     if ((pma->heap_len + pma->stack_len) > len) {
@@ -627,17 +618,21 @@ pma_load(void         *base,
     return pma;
 unmap_stack:
     munmap((char *)pma->stack_start - pma->stack_len, pma->stack_len);
+close_stack_fd:
     close(pma->stack_fd);
-unmap_heap:
-    munmap(pma->heap_start, pma->heap_len);
-    close(pma->heap_fd);
-free_pma:
-    if (heap_file) {
-        free((void *)pma->heap_file);
-    }
+free_stack_file:
     if (stack_file) {
         free((void *)pma->stack_file);
     }
+unmap_heap:
+    munmap(pma->heap_start, pma->heap_len);
+close_heap_fd:
+    close(pma->heap_fd);
+free_heap_file:
+    if (heap_file) {
+        free((void *)pma->heap_file);
+    }
+free_pma:
     free(pma);
 fail:
     errno = err;
@@ -781,8 +776,7 @@ pma_sync(pma_t *pma)
             }
         }
         pma->heap_len = heap_len;
-        close(pma->heap_fd);
-        pma->heap_fd = -1;
+        pma->heap_fd  = -1;
     }
 
     if (pma->stack_fd != -1) {
@@ -828,17 +822,11 @@ pma_sync(pma_t *pma)
             }
         }
         pma->stack_len = stack_len;
-        close(pma->stack_fd);
-        pma->stack_fd = -1;
+        pma->stack_fd  = -1;
     }
 
     // Remap heap.
-    if (_map_file(pma->heap_file,
-                  pma->heap_start,
-                  false,
-                  pma,
-                  &pma->heap_len,
-                  &pma->heap_fd)
+    if (_map_file(pma->heap_fd, pma->heap_start, false, pma, &pma->heap_len)
         == -1)
     {
         err = errno;
@@ -850,12 +838,7 @@ pma_sync(pma_t *pma)
     }
 
     // Remap stack.
-    if (_map_file(pma->stack_file,
-                  pma->stack_start,
-                  true,
-                  pma,
-                  &pma->stack_len,
-                  &pma->stack_fd)
+    if (_map_file(pma->stack_fd, pma->stack_start, true, pma, &pma->stack_len)
         == -1)
     {
         err = errno;
