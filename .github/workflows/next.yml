@@ -19,5 +19,5 @@ jobs:
     with:
       docker: true
       upload: true
-      next: ${{ github.ref | replace('refs/heads/next/kelvin/', '') }}
+      next: ${{ github.ref_name }}
     secrets: inherit
