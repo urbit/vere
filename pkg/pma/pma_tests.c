@@ -133,11 +133,11 @@ _test_pma(void)
         static const char kHeapFile[]  = "/tmp/nonexistent-heap.bin";
         static const char kStackFile[] = "/tmp/nonexistent-stack.bin";
         pma_t            *pma          = pma_load(base,
-                              len,
-                              kHeapFile,
-                              kStackFile,
-                              _len_getter,
-                              _oom_handler);
+                                                  len,
+                                                  kHeapFile,
+                                                  kStackFile,
+                                                  _len_getter,
+                                                  _oom_handler);
         assert(pma);
         assert(pma->heap_start == base);
         assert(pma->stack_start == (char *)base + len);
