@@ -173,13 +173,13 @@
 
       /* u3m_save_snapshot: save a snapshot in <pier>/.urb/chk.
       */
-        int
+        c3_o
         u3m_save_snapshot(void);
 
       /* u3m_backup_snapshot: copy snapshot in <pier>/.urb/chk/ to
       ** <pier>/.urb/bhk, where dir_c is the path to the pier (i.e. <pier>).
       */
-        int
+        c3_o
         u3m_backup_snapshot(const c3_c* dir_c);
 
 #endif /* ifndef U3_MANAGE_H */

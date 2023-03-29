@@ -1564,7 +1564,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   //  save even on failure, as we just did all the work of deduplication
   //
-  assert(u3m_save_snapshot() == 0);
+  assert(u3m_save_snapshot() == c3y);
   u3_disk_exit(log_u);
 
   if ( c3n == ret_o ) {
@@ -1647,7 +1647,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
       exit(1);
     }
 
-    assert(u3m_save_snapshot() == 0);
+    assert(u3m_save_snapshot() == c3y);
     u3_disk_exit(log_u);
 
     fprintf(stderr, "urbit: queu: rock loaded at event %" PRIu64 "\r\n", eve_d);
@@ -1715,7 +1715,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   u3u_meld();
   u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
 
-  assert(u3m_save_snapshot() == 0);
+  assert(u3m_save_snapshot() == c3y);
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -1835,7 +1835,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
-  assert(u3m_save_snapshot() == 0);
+  assert(u3m_save_snapshot() == c3y);
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -2009,7 +2009,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( u3m_backup_snapshot(u3_Host.dir_c) != 0 ) {
+  if ( u3m_backup_snapshot(u3_Host.dir_c) == c3n ) {
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }
@@ -2551,7 +2551,7 @@ main(c3_i   argc,
     /*  Back up snapshot
     */
     if ( u3_Host.ops_u.nuu == c3n ) {
-      if ( u3m_backup_snapshot(u3_Host.dir_c) == -1 ) {
+      if ( u3m_backup_snapshot(u3_Host.dir_c) == c3n ) {
         fprintf(stderr,
                 "boot: failed to backup snapshot: %s\r\n",
                 strerror(errno));

@@ -2181,10 +2181,10 @@ u3m_migrate(u3v_version ver_w)
 
   /* finally update the version and commit to disk */
   u3H->ver_w = ver_w;
-  assert(u3m_save_snapshot() == 0);
+  assert(u3m_save_snapshot() == c3y);
 }
 
-int
+c3_o
 u3m_save_snapshot(void)
 {
   assert(u3_pma);
@@ -2192,17 +2192,17 @@ u3m_save_snapshot(void)
 
   if (pma_sync(u3_pma) == -1) {
     fprintf(stderr, "snapshot: failed to save: %s\r\n", strerror(errno));
-    return -1;
+    return c3n;
   }
-  return 0;
+  return c3y;
 }
 
-int
+c3_o
 u3m_backup_snapshot(const c3_c *dir_c)
 {
   if (!dir_c) {
     fprintf(stderr, "snapshot: pier directory cannot be NULL\r\n");
-    return -1;
+    return c3n;
   }
 
   c3_c cmd_c[1024];
@@ -2217,15 +2217,15 @@ u3m_backup_snapshot(const c3_c *dir_c)
     fprintf(stderr,
             "snapshot: failed to create path needed to backup: %s\r\n",
             strerror(errno));
-    return -1;
+    return c3n;
   }
 
   if (system(cmd_c) != 0) {
     fprintf(stderr,
             "snapshot: failed to create backup using command '%s'\r\n",
             cmd_c);
-    return -1;
+    return c3n;
   }
 
-  return 0;
+  return c3y;
 }
