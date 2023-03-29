@@ -202,8 +202,6 @@ _test_pma(void)
         assert(pma->heap_fd != -1);
         assert(pma->stack_fd != -1);
 
-        char *addr;
-
         // Description of heap change #0.
         char  *hpage0           = base;
         size_t hpage0_change_sz = 1;
