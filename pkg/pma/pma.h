@@ -93,11 +93,11 @@ typedef struct pma {
     /// multiple of kPageSz.
     size_t stack_len;
 
-    /// File descriptor for the open backing heap file. -1 is there is no
+    /// File descriptor for the open backing heap file. -1 if there is no
     /// backing heap file or if the backing heap file isn't open.
     int heap_fd;
 
-    /// File descriptor for the open backing stack file. -1 is there is no
+    /// File descriptor for the open backing stack file. -1 if there is no
     /// backing stack file or if the backing stack file isn't open.
     int stack_fd;
 
