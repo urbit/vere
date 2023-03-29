@@ -179,7 +179,6 @@ _set_page_status_range(const void   *addr,
 /// @param[in] len         Number of bytes at the beginning of the mapping to be
 ///                        synced to the backing file. Must be a multiple of
 ///                        kPageSz.
-/// @param[in] fd          Open file descriptor of the backing file.
 ///
 /// @return 0   Synced changes successfully.
 /// @return -1  Failed to sync changes.
@@ -188,8 +187,7 @@ _append_dirty_pages(wal_t *wal,
                     void  *base,
                     bool   grows_down,
                     pma_t *pma,
-                    size_t len,
-                    int    fd);
+                    size_t len);
 
 /// Get the total length in bytes of a PMA.
 ///
@@ -354,8 +352,7 @@ _append_dirty_pages(wal_t *wal,
                     void  *base,
                     bool   grows_down,
                     pma_t *pma,
-                    size_t len,
-                    int    fd)
+                    size_t len)
 {
     int err;
 
@@ -704,8 +701,7 @@ pma_sync(pma_t *pma)
                                 pma->heap_start,
                                 false,
                                 pma,
-                                heap_len,
-                                pma->heap_fd)
+                                heap_len)
             == -1)
         {
             err = ECANCELED;
@@ -722,8 +718,7 @@ pma_sync(pma_t *pma)
                                 pma->stack_start,
                                 true,
                                 pma,
-                                stack_len,
-                                pma->stack_fd)
+                                stack_len)
             == -1)
         {
             err = errno;
