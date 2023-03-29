@@ -511,7 +511,7 @@ pma_load(void         *base,
     }
 
     pma->heap_len = 0;
-    // Failed to map non-NULL heap file.
+    // Failed to map heap file.
     if (_map_file(pma->heap_fd, pma->heap_start, false, pma, &pma->heap_len)
         == -1)
     {
