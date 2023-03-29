@@ -868,7 +868,7 @@ u3m_leap(c3_w pad_w)
     c3_i err_i = errno;
     fprintf(stderr,
             "pma: failed to account for future unusual memory access pattern "
-            "while leaping to  inner road: %s\r\n",
+            "while leaping to inner road: %s\r\n",
             strerror(err_i));
     exit(err_i);
   }
