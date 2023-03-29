@@ -228,6 +228,8 @@ wal_open(const char *path, wal_t *wal)
         uint64_t          checksums[]     = {0, 0};
         uint64_t         *global_checksum = checksums;
         uint64_t         *checksum        = checksums + 1;
+        // i is unused since read_all() implicitly updates the underlying file
+        // offset for the given file descriptor.
         for (size_t i = 0; i < entry_cnt; i++) {
             if (read_all(wal->data_fd, page + kPageIdxSz, kPageSz) == -1) {
                 err = errno;
