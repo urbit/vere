@@ -176,17 +176,6 @@ pma_adjust(pma_t *pma);
 /// Sync changes to a PMA to disk.
 ///
 /// @param[in] pma        PMA handle. Must not be NULL.
-/// @param[in] heap_len   Length in bytes of the heap to synchronize. The range
-///                       [heap_start, heap_start + heap_len) is synchronized to
-///                       disk where heap_len is the heap length returned by
-///                       pma->len_getter. If there is no backing heap file, no
-///                       heap changes are synced to disk.
-/// @param[in] stack_len  Length in bytes of the stack to synchronize. The
-///                       range [stack_start - stack_len, stack_start) is
-///                       synchronized to disk where stack_len is the stack
-///                       length returned by pma->len_getter. If there is no
-///                       backing stack file, no stack changes are synced to
-///                       disk.
 ///
 /// @return 0   Success.
 /// @return -1  pma was NULL.
