@@ -269,7 +269,8 @@ _map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len)
 {
     int err;
 
-    // Don't bother creating any anonymous mappings if there's no backing file.
+    // Don't bother creating any anonymous mappings up front if there's no
+    // backing file since they'll be created lazily as needed.
     if (fd == -1) {
         return 0;
     }
