@@ -69,6 +69,9 @@ typedef enum page_status {
 typedef int (*len_getter_t)(size_t *heap_len, size_t *stack_len);
 
 /// Out-of-memory handler.
+///
+/// @param[in] fault_addr  Base address of the kPageSz-size page, access of
+///                        which triggered the out-of-memory error.
 typedef void (*oom_handler_t)(void *fault_addr);
 
 /// Persistent memory arena handle.
