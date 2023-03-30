@@ -338,10 +338,13 @@ wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz])
         return -1;
     }
 
+    char              page[kPageIdxSz + kPageSz];
     _metadata_entry_t entry;
-    entry.pg_idx = pg_idx;
+    entry.pg_idx   = pg_idx;
     entry.checksum = 0;
-    MurmurHash3_x86_32(pg, kPageSz, kSeed, &entry.checksum);
+    memcpy(page, &entry.pg_idx, kPageIdxSz);
+    memcpy(page + kPageIdxSz, pg, kPageSz);
+    MurmurHash3_x86_32(page, kPageIdxSz + kPageSz, kSeed, &entry.checksum);
     if (write_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
         return -1;
     }
