@@ -778,6 +778,13 @@ pma_sync(pma_t *pma)
         goto fail;
     }
 
+    // Remove unused mappings between new heap and stack boundaries.
+    void  *unmap_start = (char *)pma->heap_start + pma->heap_len;
+    size_t unmap_len   = total_len_(pma) - (pma->heap_len + pma->stack_len);
+    assert(unmap_len % kPageSz == 0);
+    assert(munmap(unmap_start, unmap_len) == 0);
+    set_page_status_range_(unmap_start, unmap_len / kPageSz, PS_UNMAPPED, pma);
+
     return 0;
 
 fail:
