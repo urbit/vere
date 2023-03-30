@@ -136,9 +136,11 @@ typedef struct pma {
 ///                        sum of the lengths of the backing heap and stack
 ///                        files.
 /// @param[in] heap_file   Optional backing file for heap. If NULL, changes to
-///                        the heap will not be persistent.
+///                        the heap will not be persistent. If NULL, stack_file
+///                        must also be NULL.
 /// @param[in] stack_file  Optional backing file for stack. If NULL, changes to
-///                        the stack will not be persistent.
+///                        the stack will not be persistent. If NULL, heap_file
+///                        must also be NULL.
 /// @param[in] len_getter  Function used to determine active length of heap
 ///                        and stack.
 /// @param[in] oom_handler Function to run if the PMA runs out of memory.

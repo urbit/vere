@@ -420,6 +420,10 @@ pma_load(void         *base,
         err = EINVAL;
         goto fail;
     }
+    if ((heap_file && !stack_file) || (!heap_file && stack_file)) {
+        err = EINVAL;
+        goto fail;
+    }
     if ((uintptr_t)base % kPageSz != 0) {
         err = EINVAL;
         fprintf(stderr,
@@ -479,7 +483,8 @@ pma_load(void         *base,
     // crash occurs during pma_sync() after the write-ahead log has been
     // created but before it can be applied, we need to apply it to the file
     // before mapping the file.
-    if (heap_file || stack_file) {
+    if (heap_file) {
+        assert(stack_file);
         // We arbitrarily use the heap file's base directory to house the WAL;
         // the stack's directory could be used instead. dirname() may modify its
         // argument, so we give it a copy.
