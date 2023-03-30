@@ -199,7 +199,7 @@ wal_open(const char *path, wal_t *wal)
         fprintf(stderr,
                 "wal: metadata file at %s is corrupt: expected length to be a "
                 "multiple of %zu but is %zu\r\n",
-                wal->data_path,
+                wal->meta_path,
                 sizeof(_metadata_entry_t),
                 meta_len);
         goto close_metadata_file;
