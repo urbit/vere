@@ -64,26 +64,41 @@ read_all(int fd, void *buf, size_t len)
 int
 write_all(int fd, const void *buf, size_t len)
 {
+    int err;
     if (!buf) {
-        errno = EINVAL;
-        return -1;
+        err = EINVAL;
+        goto fail;
     }
     if (len == 0) {
         return 0;
     }
-    const char *ptr = buf;
+    static const size_t kMaxAttempts = 100;
+    size_t              attempts     = 0;
+    const char         *ptr          = buf;
     do {
+        attempts++;
         ssize_t bytes_written = write(fd, ptr, len);
         if (bytes_written == -1) {
+            err = errno;
+            // Attempt to write again if we were interrupted by a signal.
+            if ((err == EINTR || err == EAGAIN || err == EWOULDBLOCK)
+                && attempts <= kMaxAttempts)
+            {
+                continue;
+            }
             fprintf(stderr,
                     "util: failed to write %zu bytes from %p: %s\r\n",
                     len,
                     ptr,
-                    strerror(errno));
-            return -1;
+                    strerror(err));
+            goto fail;
         }
         len -= bytes_written;
         ptr += bytes_written;
     } while (len > 0);
     return 0;
+
+fail:
+    errno = err;
+    return -1;
 }
