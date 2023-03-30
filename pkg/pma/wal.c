@@ -276,6 +276,18 @@ wal_open(const char *path, wal_t *wal)
             MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &tmp);
             *global_checksum = tmp;
         }
+        if (*global_checksum != wal->checksum) {
+            err = ENOTRECOVERABLE;
+            fprintf(stderr,
+                    "wal: global checksum %llx computed from data file (%s) "
+                    "doesn't match global checksum %llx from metadata file "
+                    "(%s)\r\n",
+                    *global_checksum,
+                    wal->data_path,
+                    wal->checksum,
+                    wal->meta_path);
+            goto close_data_file;
+        }
     }
     wal->entry_cnt = entry_cnt;
 

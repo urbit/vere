@@ -122,9 +122,50 @@ test_wal_(void)
 
         int fd = open(wal.meta_path, O_RDWR, 0644);
         assert(fd != -1);
-        uint64_t bad_pg_idx = -1;
-        assert(lseek(fd, 0, SEEK_SET) == 0);
+        int64_t bad_pg_idx = -1518391;
+        assert(lseek(fd, sizeof(int64_t), SEEK_SET) != -1);
         assert(write_all(fd, &bad_pg_idx, sizeof(bad_pg_idx)) == 0);
+        assert(fsync(fd) == 0);
+
+        // Can't use wal_destroy() here because it'll remove the WAL files.
+        close(wal.data_fd);
+        close(wal.meta_fd);
+        const char *data_path = strdup(wal.data_path);
+        const char *meta_path = strdup(wal.meta_path);
+        free((void *)wal.data_path);
+        free((void *)wal.meta_path);
+
+        assert(wal_open(kPath, &wal) == -1);
+        assert(errno == ENOTRECOVERABLE);
+
+        char buf[512];
+
+        assert(unlink(data_path) == 0);
+        assert(unlink(meta_path) == 0);
+    }
+
+    // Corrupt global checksum of write-ahead log.
+    {
+        wal_t      wal;
+        const char kPath[] = "/tmp";
+        assert(wal_open(kPath, &wal) == 0);
+
+        char pg[kPageSz];
+        char start = '0';
+        char end   = '9';
+        assert(start <= end);
+        for (char ch = start; ch <= end; ch++) {
+            memset(pg, ch, sizeof(pg));
+            assert(wal_append(&wal, ch - start, pg) == 0);
+        }
+        assert(wal_sync(&wal) == 0);
+
+        int fd = open(wal.meta_path, O_RDWR, 0644);
+        assert(fd != -1);
+        uint64_t bad_global_checksum = -1;
+        assert(lseek(fd, 0, SEEK_SET) != -1);
+        assert(write_all(fd, &bad_global_checksum, sizeof(bad_global_checksum))
+               == 0);
         assert(fsync(fd) == 0);
 
         // Can't use wal_destroy() here because it'll remove the WAL files.
