@@ -8,6 +8,6 @@
 #include "util.h"
 
 /// Number of bytes in a page.
-#define kPageSz ((size_t)KiB(64))
+#define kPageSz ((size_t)KiB(16))
 
 #endif /* ifndef PMA_PAGE_H */
