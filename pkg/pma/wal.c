@@ -83,6 +83,15 @@ _open_file(const char *dir,
            int        *fd,
            size_t     *len);
 
+/// Compute the checksum of a page and its accompanying page index.
+///
+/// @param[in] pg_idx  Page index.
+/// @param[in] pg      Page contents.
+///
+/// @return  checksum
+static uint64_t
+_page_checksum(ssize_t pg_idx, const char pg[kPageSz]);
+
 static int
 _open_file(const char *dir,
            const char *stem,
@@ -134,6 +143,21 @@ free_path:
 fail:
     errno = err;
     return -1;
+}
+
+static uint64_t
+_page_checksum(ssize_t pg_idx, const char pg[kPageSz])
+{
+    uint64_t pg_idx_checksum = 0;
+    MurmurHash3_x86_32(&pg_idx, kPageIdxSz, kSeed, &pg_idx_checksum);
+
+    uint64_t pg_checksum = 0;
+    MurmurHash3_x86_32(pg, kPageSz, kSeed, &pg_checksum);
+
+    uint64_t checksums[] = {pg_idx_checksum, pg_checksum};
+    uint64_t checksum    = 0;
+    MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &checksum);
+    return checksum;
 }
 
 //==============================================================================
@@ -244,16 +268,15 @@ wal_open(const char *path, wal_t *wal)
                 strerror(err));
             goto fail;
         }
-        wal->checksum = hdr.global_checksum;
-        char              page[kPageIdxSz + kPageSz];
-        _metadata_entry_t entry;
-        uint64_t          checksums[]     = {0, 0};
-        uint64_t         *global_checksum = checksums;
-        uint64_t         *checksum        = checksums + 1;
+        wal->checksum             = hdr.global_checksum;
+        uint64_t  checksums[]     = {0, 0};
+        uint64_t *global_checksum = checksums;
+        uint64_t *checksum        = checksums + 1;
         // i is unused since read_all() implicitly updates the underlying file
         // offset for the given file descriptor.
         for (size_t i = 0; i < entry_cnt; i++) {
-            if (read_all(wal->data_fd, page + kPageIdxSz, kPageSz) == -1) {
+            static char page[kPageSz];
+            if (read_all(wal->data_fd, page, sizeof(page)) == -1) {
                 err = errno;
                 fprintf(
                     stderr,
@@ -263,6 +286,7 @@ wal_open(const char *path, wal_t *wal)
                     strerror(err));
                 goto close_data_file;
             }
+            _metadata_entry_t entry;
             if (read_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
                 err = errno;
                 fprintf(
@@ -274,9 +298,7 @@ wal_open(const char *path, wal_t *wal)
                     strerror(err));
                 goto close_data_file;
             }
-            memcpy(page, &entry.pg_idx, kPageIdxSz);
-            *checksum = 0;
-            MurmurHash3_x86_32(page, sizeof(page), kSeed, checksum);
+            *checksum = _page_checksum(entry.pg_idx, page);
             if (*checksum != entry.checksum) {
                 err = ENOTRECOVERABLE;
                 fprintf(stderr,
@@ -341,10 +363,7 @@ wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz])
     char              page[kPageIdxSz + kPageSz];
     _metadata_entry_t entry;
     entry.pg_idx   = pg_idx;
-    entry.checksum = 0;
-    memcpy(page, &entry.pg_idx, kPageIdxSz);
-    memcpy(page + kPageIdxSz, pg, kPageSz);
-    MurmurHash3_x86_32(page, kPageIdxSz + kPageSz, kSeed, &entry.checksum);
+    entry.checksum = _page_checksum(entry.pg_idx, pg);
     if (write_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
         return -1;
     }
