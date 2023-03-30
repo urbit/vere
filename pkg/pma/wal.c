@@ -272,7 +272,7 @@ wal_open(const char *path, wal_t *wal)
             }
             // Compute the new global checksum using the existing global
             // checksum and this entry's checksum.
-            uint64_t tmp;
+            uint64_t tmp = 0;
             MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &tmp);
             *global_checksum = tmp;
         }
