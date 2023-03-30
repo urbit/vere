@@ -22,6 +22,9 @@
 //==============================================================================
 // CONSTANTS
 
+/// WAL version number.
+static const size_t kWalVersion = 0;
+
 //==============================================================================
 // TYPES
 
@@ -49,6 +52,9 @@ typedef struct wal {
 
     /// In-progress global checksum.
     uint64_t checksum;
+
+    /// WAL version number.
+    uint64_t version;
 } wal_t;
 
 //==============================================================================

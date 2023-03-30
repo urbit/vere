@@ -49,6 +49,8 @@ static const char kWalExt[] = "wal";
 typedef struct _metadata_hdr {
     /// Global checksum.
     uint64_t global_checksum;
+    /// WAL version number.
+    uint64_t version;
 } _metadata_hdr_t;
 
 /// An entry in a WAL's metadata file.
@@ -268,6 +270,8 @@ wal_open(const char *path, wal_t *wal)
                 strerror(err));
             goto fail;
         }
+        assert(hdr.version == kWalVersion);
+        wal->version              = hdr.version;
         wal->checksum             = hdr.global_checksum;
         uint64_t  checksums[]     = {0, 0};
         uint64_t *global_checksum = checksums;
