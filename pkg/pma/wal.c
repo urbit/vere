@@ -165,7 +165,7 @@ wal_open(const char *path, wal_t *wal)
 
     // Don't include the header length in the entry count calculation.
     if (meta_len > 0) {
-      meta_len -= sizeof(_metadata_hdr_t);
+        meta_len -= sizeof(_metadata_hdr_t);
     }
 
     if (meta_len % sizeof(_metadata_entry_t) != 0) {
@@ -236,12 +236,13 @@ wal_open(const char *path, wal_t *wal)
         // Verify checksums.
         _metadata_hdr_t hdr;
         if (read_all(wal->meta_fd, &hdr, sizeof(hdr)) == -1) {
-          err = errno;
-          fprintf(stderr,
-                  "wal: failed to read header from metadata file (%s): %s\r\n",
-                  wal->meta_path,
-                  strerror(err));
-          goto fail;
+            err = errno;
+            fprintf(
+                stderr,
+                "wal: failed to read header from metadata file (%s): %s\r\n",
+                wal->meta_path,
+                strerror(err));
+            goto fail;
         }
         wal->checksum = hdr.global_checksum;
         char              page[kPageIdxSz + kPageSz];
