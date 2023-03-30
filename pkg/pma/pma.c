@@ -778,12 +778,30 @@ pma_sync(pma_t *pma)
         goto fail;
     }
 
-    // Remove unused mappings between new heap and stack boundaries.
-    void  *unmap_start = (char *)pma->heap_start + pma->heap_len;
-    size_t unmap_len   = total_len_(pma) - (pma->heap_len + pma->stack_len);
+    // Update protections between new heap and stack boundaries.
+    char  *unmap_start = (char *)pma->heap_start + pma->heap_len;
+    size_t unmap_len   = _total_len(pma) - (pma->heap_len + pma->stack_len);
     assert(unmap_len % kPageSz == 0);
-    assert(munmap(unmap_start, unmap_len) == 0);
-    set_page_status_range_(unmap_start, unmap_len / kPageSz, PS_UNMAPPED, pma);
+    for (char *ptr = unmap_start; ptr < unmap_start + unmap_len; ptr += kPageSz)
+    {
+        switch (_page_status(ptr, pma)) {
+            case PS_MAPPED_DIRTY:
+                if (mprotect(ptr, kPageSz, PROT_READ) == -1) {
+                    err = errno;
+                    fprintf(stderr,
+                            "pma: failed to mark untracked dirty %zu-byte page "
+                            "at %p as read-only: %s\r\n",
+                            kPageSz,
+                            ptr,
+                            strerror(err));
+                    goto fail;
+                }
+                _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
+                break;
+            default:
+                break;
+        }
+    }
 
     return 0;
 
