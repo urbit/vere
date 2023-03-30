@@ -45,6 +45,12 @@ static const char kWalExt[] = "wal";
 //==============================================================================
 // TYPES
 
+/// The header in a WAL's metadata file.
+typedef struct _metadata_hdr {
+    /// Global checksum.
+    uint64_t global_checksum;
+} _metadata_hdr_t;
+
 /// An entry in a WAL's metadata file.
 typedef struct _metadata_entry {
     /// Page index.
@@ -157,6 +163,11 @@ wal_open(const char *path, wal_t *wal)
         goto fail;
     }
 
+    // Don't include the header length in the entry count calculation.
+    if (meta_len > 0) {
+      meta_len -= sizeof(_metadata_hdr_t);
+    }
+
     if (meta_len % sizeof(_metadata_entry_t) != 0) {
         err = ENOTRECOVERABLE;
         fprintf(stderr,
@@ -223,6 +234,16 @@ wal_open(const char *path, wal_t *wal)
         }
     } else {
         // Verify checksums.
+        _metadata_hdr_t hdr;
+        if (read_all(wal->meta_fd, &hdr, sizeof(hdr)) == -1) {
+          err = errno;
+          fprintf(stderr,
+                  "wal: failed to read header from metadata file (%s): %s\r\n",
+                  wal->meta_path,
+                  strerror(err));
+          goto fail;
+        }
+        wal->checksum = hdr.global_checksum;
         char              page[kPageIdxSz + kPageSz];
         _metadata_entry_t entry;
         uint64_t          checksums[]     = {0, 0};
@@ -253,6 +274,7 @@ wal_open(const char *path, wal_t *wal)
                 goto close_data_file;
             }
             memcpy(page, &entry.pg_idx, kPageIdxSz);
+            *checksum = 0;
             MurmurHash3_x86_32(page, sizeof(page), kSeed, checksum);
             if (*checksum != entry.checksum) {
                 err = ENOTRECOVERABLE;
@@ -317,6 +339,7 @@ wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz])
 
     _metadata_entry_t entry;
     entry.pg_idx = pg_idx;
+    entry.checksum = 0;
     MurmurHash3_x86_32(pg, kPageSz, kSeed, &entry.checksum);
     if (write_all(wal->meta_fd, &entry, sizeof(entry)) == -1) {
         return -1;
@@ -328,7 +351,9 @@ wal_append(wal_t *wal, ssize_t pg_idx, const char pg[kPageSz])
         wal->checksum,
         entry.checksum,
     };
-    MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &wal->checksum);
+    uint64_t tmp = 0;
+    MurmurHash3_x86_32(checksums, sizeof(checksums), kSeed, &tmp);
+    wal->checksum = tmp;
 
     wal->entry_cnt++;
     return 0;
