@@ -1816,7 +1816,7 @@ _cm_free2(void* tox_v, size_t siz_i)
 static int
 _cm_pma_len_getter(size_t *heap_len_i, size_t *stack_len_i)
 {
-  assert(heap_len_i && stack_len_i);
+  c3_assert(heap_len_i && stack_len_i);
   if ( !u3R ) {
     *heap_len_i = 0;
     *stack_len_i = 0;
@@ -1871,7 +1871,7 @@ u3m_init(size_t len_i, c3_c *heap_c, c3_c *stack_c)
                     stack_c,
                     _cm_pma_len_getter,
                     _cm_pma_oom_handler);
-  assert(u3_pma);
+  c3_assert(u3_pma);
   u3C.wor_i = len_i >> 2;
   u3l_log("loom: maximum size is %zuMB", len_i >> 20);
 }
@@ -2181,13 +2181,13 @@ u3m_migrate(u3v_version ver_w)
 
   /* finally update the version and commit to disk */
   u3H->ver_w = ver_w;
-  assert(u3m_save_snapshot() == c3y);
+  c3_assert(u3m_save_snapshot() == c3y);
 }
 
 c3_o
 u3m_save_snapshot(void)
 {
-  assert(u3_pma);
+  c3_assert(u3_pma);
   u3a_loom_sane();
 
   if (pma_sync(u3_pma) == -1) {
