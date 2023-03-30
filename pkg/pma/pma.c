@@ -703,11 +703,7 @@ pma_sync(pma_t *pma)
 
     if (pma->heap_fd != -1) {
         assert(wal);
-        if (_append_dirty_pages(wal,
-                                pma->heap_start,
-                                false,
-                                pma,
-                                heap_len)
+        if (_append_dirty_pages(wal, pma->heap_start, false, pma, heap_len)
             == -1)
         {
             err = ECANCELED;
@@ -720,11 +716,7 @@ pma_sync(pma_t *pma)
 
     if (pma->stack_fd != -1) {
         assert(wal);
-        if (_append_dirty_pages(wal,
-                                pma->stack_start,
-                                true,
-                                pma,
-                                stack_len)
+        if (_append_dirty_pages(wal, pma->stack_start, true, pma, stack_len)
             == -1)
         {
             err = errno;
