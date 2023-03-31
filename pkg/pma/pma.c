@@ -1,19 +1,11 @@
 /// @file
 ///
 /// This file implements the PMA interface by creating file-backed memory
-/// mappings for the backing heap and stack files and lazily mapping new
-/// pages in response to heap or stack growth. On pma_sync(), all dirty files
-/// (those that incurred a write since the last pma_sync()) within the bounds of
-/// the heap and stack (as defined by the user-provided len_getter_t function)
-/// are written to disk via a write-ahead log and the just-updated files are
-/// re-mapped into memory.
-///
-/// The free space within the PMA may be unmapped, which leaves this
-/// implementation vulnerable to other mmap() calls originating from within the
-/// same process "stealing" the address space in the free space. However, this
-/// implementation will clobber those existing mappings, leaving the PMA
-/// unaffected at the expense of the functionality from which the other mmap()
-/// calls originated.
+/// mappings for the backing heap and stack files. On pma_sync(), all dirty
+/// files (those that incurred a write since the last pma_sync()) within the
+/// bounds of the heap and stack (as defined by the user-provided len_getter_t
+/// function) are written to disk via a write-ahead log and the just-updated
+/// files are re-mapped into memory.
 
 #include "pma.h"
 
@@ -205,6 +197,9 @@ _handle_page_fault(void *fault_addr, void *user_arg)
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
     pma_t *pma = user_arg;
     switch (_page_status(fault_addr, pma)) {
+        // A page should never be unmapped because we create an anonymous
+        // mapping spanning the entire PMA in pma_load(). In case a page is
+        // unmapped, we map it in here.
         case PS_UNMAPPED:
             if (MAP_FAILED
                 == mmap(fault_addr,
@@ -447,6 +442,28 @@ pma_load(void         *base,
     pma->num_pgs        = num_pgs;
     pma->pg_status      = calloc(bytes_needed, sizeof(*pma->pg_status));
 
+    if (mmap(base, len, PROT_READ, MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0)
+        == MAP_FAILED)
+    {
+        err = errno;
+        fprintf(stderr,
+                "pma: failed to reserve %zu bytes at %p: %s\r\n",
+                len,
+                base,
+                strerror(err));
+        goto free_pma;
+    }
+    _set_page_status_range(base, len / kPageSz, PS_MAPPED_CLEAN, pma);
+    if (madvise(base, len, MADV_DONTNEED) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "pma: madvise() failed for %zu-byte chunk at %p: %s\r\n",
+                len,
+                base,
+                strerror(err));
+        goto unmap_anon;
+    }
+
     // Open heap file.
     if (heap_file) {
         pma->heap_file = strdup(heap_file);
@@ -577,7 +594,10 @@ free_heap_file:
     if (heap_file) {
         free((void *)pma->heap_file);
     }
+unmap_anon:
+    munmap(base, len);
 free_pma:
+    free(pma->pg_status);
     free(pma);
 fail:
     errno = err;

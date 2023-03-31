@@ -104,21 +104,21 @@ _test_pma(void)
         assert(pma->heap_fd == -1);
         assert(pma->stack_fd == -1);
 
-        assert(_page_status((char *)base + kPageSz, pma) == PS_UNMAPPED);
+        assert(_page_status((char *)base + kPageSz, pma) == PS_MAPPED_CLEAN);
 
         void *addr;
         char  ch;
 
         // Write to the heap.
         addr = base;
-        assert(_page_status(addr, pma) == PS_UNMAPPED);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         ch            = *(char *)addr;
         *(char *)addr = 'h';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
         addr = (char *)base + len - 1;
-        assert(_page_status(addr, pma) == PS_UNMAPPED);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         ch            = *(char *)addr;
         *(char *)addr = 'i';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
@@ -153,17 +153,17 @@ _test_pma(void)
 
         // Write to the heap.
         addr = base;
-        assert(_page_status(addr, pma) == PS_UNMAPPED);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         ch = *(char *)addr;
-        assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         *(char *)addr = 'h';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
 
         // Write to the stack.
         addr = (char *)base + len - 1;
-        assert(_page_status(addr, pma) == PS_UNMAPPED);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         ch = *(char *)addr;
-        assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
+        assert(_page_status(addr, pma) == PS_MAPPED_CLEAN);
         *(char *)addr = 'i';
         assert(_page_status(addr, pma) == PS_MAPPED_DIRTY);
 
