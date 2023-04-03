@@ -173,6 +173,14 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "gperftools",
+    build_file = "//bazel/third_party/gperftools:gperftools.BUILD",
+    sha256 = "83e3bfdd28b8bcf53222c3798d4d395d52dadbbae59e8730c4a6d31a9c3732d8",
+    url = "https://github.com/gperftools/gperftools/releases/download/gperftools-{version}/gperftools-{version}.tar.gz",
+    version = "2.10",
+)
+
+versioned_http_archive(
     name = "h2o",
     build_file = "//bazel/third_party/h2o:h2o.BUILD",
     patch_args = ["-p1"],
