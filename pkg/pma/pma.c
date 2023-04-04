@@ -36,7 +36,7 @@ static const size_t kBitsPerByte = 8;
 
 /// Number of bits required to track the status of a page, which is equivalent
 /// to the base-2 log of PS_MASK (see page_status_t).
-static const size_t kBitsPerPage = 2;
+static const size_t kBitsPerPage = 1;
 
 /// Number of pages whose status can be tracked in a single byte.
 static const size_t kPagesPerByte = kBitsPerByte / kBitsPerPage;
@@ -196,55 +196,32 @@ _handle_page_fault(void *fault_addr, void *user_arg)
 {
     fault_addr = (void *)round_down((uintptr_t)fault_addr, kPageSz);
     pma_t *pma = user_arg;
-    switch (_page_status(fault_addr, pma)) {
-        // A page should never be unmapped because we create an anonymous
-        // mapping spanning the entire PMA in pma_load(). In case a page is
-        // unmapped, we map it in here.
-        case PS_UNMAPPED:
-            if (MAP_FAILED
-                == mmap(fault_addr,
-                        kPageSz,
-                        PROT_READ | PROT_WRITE,
-                        MAP_ANON | MAP_FIXED | MAP_PRIVATE,
-                        -1,
-                        0))
-            {
-                fprintf(stderr,
-                        "pma: failed to create %zu-byte anonymous mapping at "
-                        "%p: %s\r\n",
-                        kPageSz,
-                        fault_addr,
-                        strerror(errno));
-                return 0;
-            }
-            _set_page_status(fault_addr, PS_MAPPED_DIRTY, pma);
-            break;
-        case PS_MAPPED_CLEAN:
-            if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {
-                fprintf(stderr,
-                        "pma: failed to remove write protections from %zu-byte "
-                        "page at %p: %s\r\n",
-                        kPageSz,
-                        fault_addr,
-                        strerror(errno));
-                return 0;
-            }
-            _set_page_status(fault_addr, PS_MAPPED_DIRTY, pma);
-            break;
-        case PS_MAPPED_DIRTY:
+
+    if (fault_addr == pma->guard_pg) {
+        // Center guard page.
+        if (pma_adjust(pma) == -1) {
+            return 0;
+        }
+        return 1;
+    } else if (_page_status(fault_addr, pma) == PS_MAPPED_DIRTY) {
+        fprintf(stderr,
+                "pma: unexpectedly received a page fault on a dirty page "
+                "at %p\r\n",
+                fault_addr);
+        exit(EFAULT);
+    } else {  // PS_MAPPED_CLEAN
+        if (mprotect(fault_addr, kPageSz, PROT_READ | PROT_WRITE) == -1) {
             fprintf(stderr,
-                    "pma: unexpectedly received a page fault on a dirty page "
-                    "at %p\r\n",
-                    fault_addr);
-            exit(EFAULT);
-        case PS_MAPPED_INACCESSIBLE:
-            // Center guard page.
-            if (pma_adjust(pma) == -1) {
-                return 0;
-            }
-            break;
+                    "pma: failed to remove write protections from %zu-byte "
+                    "page at %p: %s\r\n",
+                    kPageSz,
+                    fault_addr,
+                    strerror(errno));
+            return 0;
+        }
+        _set_page_status(fault_addr, PS_MAPPED_DIRTY, pma);
+        return 1;
     }
-    return 1;
 }
 
 static int
@@ -313,7 +290,6 @@ _map_file(int fd, void *base, bool grows_down, pma_t *pma, size_t *len)
                         strerror(err));
                 // Unmap already-mapped mappings.
                 munmap(ptr + kPageSz, offset_);
-                _set_page_status_range(base, i, PS_UNMAPPED, pma);
                 goto fail;
             }
             _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
@@ -366,7 +342,6 @@ _append_dirty_pages(wal_t *wal,
     ssize_t step = grows_down ? -kPageSz : kPageSz;
     for (size_t i = 0; i < len; i += kPageSz) {
         page_status_t status = _page_status(ptr, pma);
-        assert(status != PS_UNMAPPED);
         if (status == PS_MAPPED_DIRTY) {
             ssize_t pg_idx = _addr_to_page_idx(ptr, pma);
             pg_idx         = grows_down ? pg_idx - max_idx : pg_idx;
@@ -454,15 +429,6 @@ pma_load(void         *base,
         goto free_pma;
     }
     _set_page_status_range(base, len / kPageSz, PS_MAPPED_CLEAN, pma);
-    if (madvise(base, len, MADV_DONTNEED) == -1) {
-        err = errno;
-        fprintf(stderr,
-                "pma: madvise() failed for %zu-byte chunk at %p: %s\r\n",
-                len,
-                base,
-                strerror(err));
-        goto unmap_anon;
-    }
 
     // Open heap file.
     if (heap_file) {
@@ -594,7 +560,6 @@ free_heap_file:
     if (heap_file) {
         free((void *)pma->heap_file);
     }
-unmap_anon:
     munmap(base, len);
 free_pma:
     free(pma->pg_status);
@@ -668,7 +633,6 @@ pma_adjust(pma_t *pma)
                 strerror(err));
         goto fail;
     }
-    _set_page_status(guard_pg, PS_MAPPED_INACCESSIBLE, pma);
     pma->guard_pg = guard_pg;
     return 0;
 
@@ -699,9 +663,9 @@ pma_sync(pma_t *pma)
     heap_len  = round_up(heap_len, kPageSz);
     stack_len = round_up(stack_len, kPageSz);
 
-    wal_t      *wal     = pma->heap_fd != -1 || pma->stack_fd != -1
-                              ? malloc(sizeof(*wal))
-                              : NULL;
+    wal_t *wal = pma->heap_fd != -1 || pma->stack_fd != -1
+                     ? malloc(sizeof(*wal))
+                     : NULL;
     const char *wal_dir = NULL;
     if (wal) {
         // We arbitrarily use the heap file's base directory to house the WAL;
@@ -798,29 +762,26 @@ pma_sync(pma_t *pma)
         goto fail;
     }
 
-    // Update protections between new heap and stack boundaries.
+    // Return ephemeral memory.
+    //
+    // To verify correct behavior, watch memory usage after the command:
+    //
+    //   =/  a  (bex (bex 30))  ~
+    //
+    // This is likely fast enough to do after every event, at least if
+    // we use MADV_FREE, which is lazy.  We use the strict MADV_DONTNEED
+    // to make it easier to observe its behavior.
     char  *unmap_start = (char *)pma->heap_start + pma->heap_len;
     size_t unmap_len   = _total_len(pma) - (pma->heap_len + pma->stack_len);
     assert(unmap_len % kPageSz == 0);
-    for (char *ptr = unmap_start; ptr < unmap_start + unmap_len; ptr += kPageSz)
-    {
-        switch (_page_status(ptr, pma)) {
-            case PS_MAPPED_DIRTY:
-                if (mprotect(ptr, kPageSz, PROT_READ) == -1) {
-                    err = errno;
-                    fprintf(stderr,
-                            "pma: failed to mark untracked dirty %zu-byte page "
-                            "at %p as read-only: %s\r\n",
-                            kPageSz,
-                            ptr,
-                            strerror(err));
-                    goto fail;
-                }
-                _set_page_status(ptr, PS_MAPPED_CLEAN, pma);
-                break;
-            default:
-                break;
-        }
+    if (madvise(unmap_start, unmap_len, MADV_DONTNEED) == -1) {
+        err = errno;
+        fprintf(stderr,
+                "pma: madvise() failed for %zu-byte chunk at %p: %s\r\n",
+                unmap_len,
+                unmap_start,
+                strerror(err));
+        goto fail;
     }
 
     return 0;

@@ -48,15 +48,11 @@
 
 /// Status of a page in a PMA.
 typedef enum page_status {
-    /// Page hasn't been read or written.
-    PS_UNMAPPED = 0x0,
+    /// Page may have been written.
+    PS_MAPPED_DIRTY = 0x0,
     /// Page has been read but not written.
     PS_MAPPED_CLEAN = 0x1,
-    /// Page has been written.
-    PS_MAPPED_DIRTY = 0x2,
-    /// Page is mapped but can't be read or written.
-    PS_MAPPED_INACCESSIBLE = 0x3,
-    PS_MASK                = 0x3,
+    PS_MASK         = 0x1,
 } page_status_t;
 
 /// Get the active length of the heap and stack.
