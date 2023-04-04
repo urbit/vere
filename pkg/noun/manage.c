@@ -23,7 +23,7 @@
 #include "urcrypt/urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
-#include "execinfo.h"
+#include "util.h"
 
 //  XX stack-overflow recovery should be gated by -a
 //
@@ -590,31 +590,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
 static void
 _find_home(void)
 {
-  void *buffer[10];
-  char **strings;
-
-#if 0
-  /* disable dirty page tracking */
-  u3e_yolo();
-  int size = backtrace(buffer, 10);
-  strings  = backtrace_symbols(buffer, size);
-  c3_dessert(strings != NULL);
-
-  printf ("Obtained %d stack frames.\n", size);
-  for (size_t i = 0; i < size; i++)
-    printf ("%s\n", strings[i]);
-
-  free(strings);
-#else
-  void * frame = __builtin_frame_address(0);
-  void ** fun_rets[10] = {0};
-  fun_rets[0] = __builtin_return_address(0);
-  fun_rets[1] = __builtin_return_address(1);
-  fun_rets[2] = __builtin_return_address(2);
-  fun_rets[3] = __builtin_return_address(3);
-  fun_rets[4] = __builtin_return_address(11);
-#endif
-  c3_dessert(0);
+  minidump();
 
   c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
   u3a_config_loom(ver_w);

@@ -23,6 +23,8 @@
 #include "version.h"
 #include "whereami.h"
 
+#include "util.h"
+
 //  serf module state
 //
 static u3_serf        u3V;             //  one serf per process
@@ -2386,10 +2388,25 @@ _cw_utils(c3_i argc, c3_c* argv[])
   return 0;
 }
 
+/* __attribute__ ((noinline)) */
+/* void f(void) { */
+/*   void * frame = __builtin_frame_address(0); */
+/*   void ** fun_frm_addrs[12] = {0}; */
+/*   void *  fun_ret_addrs[12] = {0}; */
+/*   fun_frm_addrs[0] = __builtin_frame_address(0); */
+/*   fun_ret_addrs[0] = __builtin_return_address(0); */
+/*   fun_frm_addrs[1] = __builtin_frame_address(1); */
+/*   fun_ret_addrs[1] = __builtin_return_address(1); */
+/*   fun_frm_addrs[2] = __builtin_frame_address(2); */
+/*   c3_dessert(0); */
+/* } */
+
 c3_i
 main(c3_i   argc,
      c3_c** argv)
 {
+  minidump_init();
+  
   if ( argc <= 0 ) {
     fprintf(stderr, "nice try, fbi\r\n");
     exit(1);
