@@ -43,7 +43,8 @@
         u3o_dryrun        = 1 << 5,           //  don't touch checkpoint
         u3o_quiet         = 1 << 6,           //  disable ~&
         u3o_hashless      = 1 << 7,           //  disable hashboard
-        u3o_trace         = 1 << 8            //  enables trace dumping
+        u3o_trace         = 1 << 8,           //  enables trace dumping
+        u3o_no_demand     = 1 << 9            // disables demand paging
       };
 
   /** Globals.

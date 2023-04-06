@@ -304,6 +304,7 @@
         c3_o    con;                        //      run conn
         c3_o    doc;                        //      dock binary in pier
         c3_o    nuu;                        //      new pier
+        c3_o    map;                        //  --no-demand (reversed)
       } u3_opts;
 
     /* u3_host: entire host.

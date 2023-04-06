@@ -167,6 +167,7 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+  u3_Host.ops_u.map = c3y;
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -263,6 +264,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-format",         required_argument, NULL, 'Z' },
     //
     { "urth-loom",           required_argument, NULL, 5 },
+    { "no-demand",           no_argument,       NULL, 6 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -272,12 +274,14 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      //  urth-loom
-      //
-      case 5: {
+      case 5: {  //  urth-loom
         if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
+        break;
+      }
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
         break;
       }
       //  special args
@@ -2520,6 +2524,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_w |= u3o_debug_ram;
+      }
+
+      /*  Set no-demand flag.
+      */
+      if ( !_(u3_Host.ops_u.map) ) {
+        u3C.wag_w |= u3o_no_demand;
       }
 
       /*  Set profile flag.
