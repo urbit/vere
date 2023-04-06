@@ -1215,6 +1215,31 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_image_sync(&u3P.sou_u);
   _ce_patch_free(pat_u);
   _ce_patch_delete();
+
+  // Return ephemeral memory.
+  //
+  // To verify correct behavior, watch memory usage after the command:
+  //
+  //   =/  a  (bex (bex 30))  ~
+  //
+  // This is likely fast enough to do after every event, at least if
+  // we use MADV_FREE, which is lazy.  We use the strict MADV_DONTNEED
+  // to make it easier to observe its behavior.
+
+  {
+    void* beg_v = u3a_into(c3_rop(low_p, pag_wiz_i));
+    void* end_v = u3a_into(c3_rod(hig_p, pag_wiz_i));
+    c3_w len_w = (end_v - beg_v);
+    assert(len_w % pag_siz_i == 0);
+
+    if (madvise(beg_v, len_w, MADV_DONTNEED) == -1) {
+        fprintf(stderr,
+                "loom: madvise() failed for %zu-byte chunk at %p: %s\r\n",
+                beg_v,
+                len_w,
+                strerror(errno));
+    }
+  }
 }
 
 /* u3e_live(): start the checkpointing system.
