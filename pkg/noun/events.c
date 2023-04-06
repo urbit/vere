@@ -157,6 +157,20 @@ u3e_check(c3_c* cap_c)
 #endif
 
 #ifdef U3_GUARD_PAGE
+/* _ce_ward_protect(): protect the guard page.
+*/
+static inline c3_i
+_ce_ward_protect(void)
+{
+  if ( 0 != mprotect(u3a_into(gar_pag_p), _ce_pag_y(1), PROT_NONE) ) {
+    fprintf(stderr, "loom: failed to protect guard page (%u): %s\r\n",
+                    (gar_pag_p >> u3a_page), strerror(errno));
+    return 1;
+  }
+
+  return 0;
+}
+
 //! Place a guard page at the (approximate) middle of the free space between
 //! the heap and stack of the current road, bailing if memory has been
 //! exhausted.
@@ -193,12 +207,7 @@ _ce_center_guard_page(void)
     goto bail;
   }
 
-  if ( -1 == mprotect(u3a_into(gar_pag_p), _ce_pag_y(1), PROT_NONE) ) {
-    fprintf(stderr,
-            "loom: failed to protect the guard page "
-            "(base address %p): %s\r\n",
-            u3a_into(gar_pag_p),
-            strerror(errno));
+  if ( _ce_ward_protect() ) {
     goto fail;
   }
 
@@ -1183,11 +1192,7 @@ u3e_yolo(void)
     return c3n;
   }
 
-  if ( 0 != mprotect(u3a_into(gar_pag_p), _ce_pag_y(1), PROT_NONE) ) {
-    fprintf(stderr, "loom: failed to protect guard page: %s\r\n",
-                    strerror(errno));
-    c3_assert(0);
-  }
+  c3_assert( !_ce_ward_protect() );
 
   return c3y;
 }
