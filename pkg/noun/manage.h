@@ -40,6 +40,21 @@
         c3_i
         u3m_bail(c3_m how_m) __attribute__((noreturn));
 
+      /* u3m_foul(): dirty all pages and disable tracking.
+      */
+        void
+        u3m_foul(void);
+
+      /* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
+      */
+        c3_o
+        u3m_backup(c3_o);
+
+      /* u3m_save(): update the checkpoint.
+      */
+        void
+        u3m_save(void);
+
       /* u3m_init(): start the environment.
       */
         void

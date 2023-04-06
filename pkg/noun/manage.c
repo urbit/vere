@@ -1711,6 +1711,34 @@ _cm_limits(void)
 # endif
 }
 
+/* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
+*/
+c3_o
+u3m_backup(c3_o ovw_o)
+{
+  return u3e_backup(ovw_o);
+}
+
+/* u3m_foul(): dirty all pages and disable tracking.
+*/
+void
+u3m_foul(void)
+{
+  if ( c3n == u3e_yolo() ) {
+    return;
+  }
+
+  u3e_foul();
+}
+
+/* u3m_save(): update the checkpoint.
+*/
+void
+u3m_save(void)
+{
+  u3e_save();
+}
+
 /* _cm_signals(): set up interrupts, etc.
 */
 static void
@@ -1880,6 +1908,8 @@ c3_d
 u3m_boot(c3_c* dir_c, size_t len_i)
 {
   c3_o nuu_o;
+
+  u3C.dir_c = dir_c;
 
   /* Activate the loom.
   */
