@@ -1373,6 +1373,16 @@ u3e_save(void)
 
   _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
 
+  {
+    c3_w* ptr_w = u3_Loom + _ce_pag_w(u3P.nor_u.pgs_w);
+    c3_w  len_w = u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w);
+
+    if ( -1 == madvise((void*)ptr_w, _ce_pag_y(len_w), MADV_DONTNEED) ) {
+        fprintf(stderr, "loom: madvise() failed for %u pages at %p: %s\r\n",
+                        len_w, ptr_w, strerror(errno));
+    }
+  }
+
   u3e_backup(c3n);
 }
 
