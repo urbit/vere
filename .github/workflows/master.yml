@@ -18,8 +18,13 @@ jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
-      docker: true
       pace: 'live'
       upload: true
       fake_tests: false
+    secrets: inherit
+
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'live'
     secrets: inherit
