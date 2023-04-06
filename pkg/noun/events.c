@@ -967,6 +967,73 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
   _ce_loom_track_south(pgs_w, dif_w);
 }
 
+/* _ce_loom_mapf_north(): map [pgs_w] of [fid_i] into the bottom of memory
+**                        (and anonymize [old_w - pgs_w] after if needed).
+**
+**   NB: _ce_loom_mapf_south() is possible, but it would make separate mappings
+**       for each page since the south segment is reversed on disk.
+**       in practice, the south segment is a single page (and always dirty);
+**       a file-backed mapping for it is just not worthwhile.
+*/
+static void
+_ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
+{
+  c3_w dif_w = 0;
+
+  if ( pgs_w ) {
+    if ( MAP_FAILED == mmap((void*)u3_Loom,
+                            _ce_pag_y(pgs_w),
+                            PROT_READ,
+                            (MAP_FIXED | MAP_PRIVATE),
+                            fid_i, 0) )
+    {
+      fprintf(stderr, "loom: file-backed mmap failed (%u pages): %s\r\n",
+                      pgs_w, strerror(errno));
+      c3_assert(0);
+    }
+  }
+
+  if ( old_w > pgs_w ) {
+    dif_w = old_w - pgs_w;
+
+    if ( MAP_FAILED == mmap((void*)(u3_Loom + _ce_pag_w(pgs_w)),
+                            _ce_pag_y(dif_w),
+                            (PROT_READ | PROT_WRITE),
+                            (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                            -1, 0) )
+    {
+      fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
+                      pgs_w, old_w, strerror(errno));
+      c3_assert(0);
+    }
+
+#ifdef U3_GUARD_PAGE
+    //  protect guard page if clobbered
+    //
+    //    NB: < pgs_w is precluded by assertion in u3e_save()
+    //
+    if ( (gar_pag_p >> u3a_page) < old_w ) {
+      fprintf(stderr, "loom: guard on remap\r\n");
+      c3_assert( !_ce_ward_protect() );
+    }
+#endif
+  }
+
+#if 1  // XX redundant
+  {
+    c3_w blk_w, bit_w;
+    for ( c3_w i_w = 0; i_w < pgs_w; i_w++ ) {
+      blk_w = i_w >> 5;
+      bit_w = i_w & 31;
+      u3P.dit_w[blk_w] &= ~(1 << bit_w);
+    }
+  }
+#endif
+
+
+  _ce_loom_track_north(pgs_w, dif_w);
+}
+
 /* _ce_loom_blit_north(): apply pages, in order, from the bottom of memory.
 */
 static void
@@ -1297,8 +1364,13 @@ u3e_save(void)
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
+  if ( u3C.wag_w & u3o_no_demand ) {
+    _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
+  }
+  else {
+    _ce_loom_mapf_north(u3P.nor_u.fid_i, u3P.nor_u.pgs_w, nod_w);
+  }
 
-  _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
   _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
 
   u3e_backup(c3n);
@@ -1373,7 +1445,13 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
-        _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
+        if ( u3C.wag_w & u3o_no_demand ) {
+          _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
+        }
+        else {
+          _ce_loom_mapf_north(u3P.nor_u.fid_i, nor_w, 0);
+        }
+
         _ce_loom_blit_south(u3P.sou_u.fid_i, sou_w);
 
         u3l_log("boot: protected loom");
@@ -1385,8 +1463,12 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         u3l_log("live: logical boot");
         nuu_o = c3y;
       }
-      else {
+      else if ( u3C.wag_w & u3o_no_demand ) {
         u3a_print_memory(stderr, "live: loaded", _ce_pag_w(nor_w + sou_w));
+      }
+      else {
+        u3a_print_memory(stderr, "live: mapped", nor_w << u3a_page);
+        u3a_print_memory(stderr, "live: loaded", sou_w << u3a_page);
       }
     }
   }
