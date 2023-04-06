@@ -434,11 +434,9 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
     mug_w = pat_u->con_u->mem_u[i_z].mug_w;
 
-    if ( -1 == lseek(pat_u->mem_i, _ce_pag_y(i_z), SEEK_SET) ) {
-      fprintf(stderr, "loom: patch seek: %s\r\n", strerror(errno));
-      return c3n;
-    }
-    if ( _ce_pag_y(1) != (ret_zs = read(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
+    if ( _ce_pag_y(1) !=
+         (ret_zs = pread(pat_u->mem_i, mem_w, _ce_pag_y(1), _ce_pag_y(i_z))) )
+    {
       if ( 0 < ret_zs ) {
         fprintf(stderr, "loom: patch partial read: %"PRIc3_zs"\r\n", ret_zs);
       }
@@ -533,20 +531,16 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
                      c3_w         pgc_w,
                      c3_w*        mem_w)
 {
-  ssize_t ret_i;
+  c3_zs ret_zs;
 
-  if ( -1 == lseek(pat_u->mem_i, _ce_pag_y(pgc_w), SEEK_SET) ) {
-    fprintf(stderr, "loom: patch page seek: %s\r\n", strerror(errno));
-    c3_assert(0);
-  }
-
-  if ( _ce_pag_y(1) != (ret_i = write(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: patch page partial write: %zu\r\n",
-                      (size_t)ret_i);
+  if ( _ce_pag_y(1) !=
+       (ret_zs = pwrite(pat_u->mem_i, mem_w, _ce_pag_y(1), _ce_pag_y(pgc_w))) )
+  {
+    if ( 0 < ret_zs ) {
+      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
-      fprintf(stderr, "loom: patch page write: %s\r\n", strerror(errno));
+      fprintf(stderr, "loom: patch write: fail: %s\r\n", strerror(errno));
     }
     c3_assert(0);
   }
@@ -732,21 +726,18 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
 static void
 _ce_patch_apply(u3_ce_patch* pat_u)
 {
-  ssize_t ret_i;
-  c3_w      i_w;
+  c3_zs ret_zs;
+  c3_w     i_w;
 
   //  resize images
   //
   _ce_image_resize(&u3P.nor_u, pat_u->con_u->nor_w);
   _ce_image_resize(&u3P.sou_u, pat_u->con_u->sou_w);
 
-  //  seek to begining of patch and images
+  //  seek to begining of patch
   //
-  if (  (-1 == lseek(pat_u->mem_i, 0, SEEK_SET))
-     || (-1 == lseek(u3P.nor_u.fid_i, 0, SEEK_SET))
-     || (-1 == lseek(u3P.sou_u.fid_i, 0, SEEK_SET)) )
-  {
-    fprintf(stderr, "loom: patch apply seek 0: %s\r\n", strerror(errno));
+  if ( -1 == lseek(pat_u->mem_i, 0, SEEK_SET) ) {
+    fprintf(stderr, "loom: patch apply seek: %s\r\n", strerror(errno));
     c3_assert(0);
   }
 
@@ -756,21 +747,21 @@ _ce_patch_apply(u3_ce_patch* pat_u)
     c3_w pag_w = pat_u->con_u->mem_u[i_w].pag_w;
     c3_w mem_w[_ce_pag_w(1)];
     c3_i fid_i;
-    c3_z off_w;
+    c3_z off_z;
 
     if ( pag_w < pat_u->con_u->nor_w ) {
       fid_i = u3P.nor_u.fid_i;
-      off_w = pag_w;
+      off_z = _ce_pag_y(pag_w);
     }
     else {
       fid_i = u3P.sou_u.fid_i;
-      off_w = (u3P.pag_w - (pag_w + 1));
+      off_z = _ce_pag_y((u3P.pag_w - (pag_w + 1)));
     }
 
-    if ( _ce_pag_y(1) != (ret_i = read(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
-      if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: patch apply partial read: %zu\r\n",
-                        (size_t)ret_i);
+    if ( _ce_pag_y(1) != (ret_zs = read(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: patch apply partial read: %"PRIc3_zs"\r\n",
+                        ret_zs);
       }
       else {
         fprintf(stderr, "loom: patch apply read: %s\r\n", strerror(errno));
@@ -778,14 +769,12 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       c3_assert(0);
     }
     else {
-      if ( -1 == lseek(fid_i, _ce_pag_y(off_w), SEEK_SET) ) {
-        fprintf(stderr, "loom: patch apply seek: %s\r\n", strerror(errno));
-        c3_assert(0);
-      }
-      if ( _ce_pag_y(1) != (ret_i = write(fid_i, mem_w, _ce_pag_y(1))) ) {
-        if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: patch apply partial write: %zu\r\n",
-                          (size_t)ret_i);
+      if ( _ce_pag_y(1) !=
+           (ret_zs = pwrite(fid_i, mem_w, _ce_pag_y(1), off_z)) )
+      {
+        if ( 0 < ret_zs ) {
+          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs"\r\n",
+                          ret_zs);
         }
         else {
           fprintf(stderr, "loom: patch apply write: %s\r\n", strerror(errno));
