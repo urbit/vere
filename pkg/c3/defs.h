@@ -44,7 +44,7 @@
               fprintf(stderr, "\rAssertion '%s' " \
                       "failed in %s:%d\r\n",      \
                       #x, __FILE__, __LINE__);    \
-              assert(x);                          \
+              abort();                            \
             }                                     \
           } while(0)
 #endif
