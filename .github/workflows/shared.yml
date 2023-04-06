@@ -22,10 +22,11 @@ on:
         description: 'Run fake ship tests'
         type: boolean
         default: true
-      release:
-        description: 'Create a GitHub release'
-        type: boolean
-        default: false
+        required: false
+      next:
+        description: 'Next Kelvin version branch name'
+        type: string
+        default: null
         required: false
     secrets:
       GCP_CREDENTIALS:
@@ -35,6 +36,7 @@ on:
 
 env:
   UPLOAD_BASE: bootstrap.urbit.org/vere
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   urbit:
@@ -66,7 +68,7 @@ jobs:
           # this on linux-aarch64 because we run on a self-hosted GitHub Actions
           # runner for which `/usr/local` has already been `chown`d to the user
           # running the GitHub Actions runner.
-          sudo chown -R $(whoami) /usr/local
+          sudo chown $(whoami) /usr/local && (chown -R $USER /usr/local/*-musl || true)
 
       - name: Set up build cache
         uses: actions/cache@v3
@@ -159,7 +161,11 @@ jobs:
         run: |
           bazel build :version_str
           sha_version=$(cat ./bazel-bin/version)
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          if ${{ inputs.next != null }}; then
+            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          else
+            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+          fi
 
           args=""
           # We never overwrite a binary deployed to the "live" train, but we do
@@ -176,27 +182,7 @@ jobs:
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
-      
-      - name: Create a GitHub release
-        if: ${{ inputs.release }}
-        run: |
-          # Create or update the GitHub release.
-          # Compress and upload binary assets to release.
-          version="vere-v$(cat ./VERSION)"
-          exists=$(gh release list | cut -f 1 | grep -c "$version")
-          if [[ $exists -eq 0 ]]; then
-            # Create a new tag.
-            git tag $version
-            git push origin --tags
-            # Create a draft release with automatically-generated notes and
-            # source code archives.
-            gh release create $version \
-              --draft \
-              --generate-notes
-          fi
-          # Upload the binary to the release.
-          tar -czf ${{ matrix.target }}.tgz ${{ env.urbit_static }}
-          gh release upload $version ${{ matrix.target }}.tgz
+
 
       #
       # DOCKER
@@ -223,6 +209,11 @@ jobs:
         run: |
           bazel run //docker:push_version_x86_64
 
+      - name: Build and push pace-tagged Docker image
+        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
+        run: |
+          bazel run //docker:push_pace_x86_64
+
       - name: Build and push latest-tagged Docker image
         if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
         run: |
@@ -247,7 +238,12 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
+          if ${{ inputs.next != null }}; then
+            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/last"
+          else
+            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
+          fi
 
           bazel build :version_str
           # We don't use -n here because we want to overwrite the version

@@ -395,29 +395,32 @@ _ce_patch_delete(void)
 static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
-  c3_w i_w, pag_w, mug_w;
-  c3_w      mem_w[pag_wiz_i];
-  size_t    off_i, siz_i = pag_siz_i;
-  ssize_t   ret_i;
+  c3_w  pag_w, mug_w;
+  c3_w  mem_w[pag_wiz_i];
+  c3_zs ret_zs;
 
-  if ( u3e_version != pat_u->con_u->ver_y ) {
-    fprintf(stderr, "loom: patch version mismatch: have %u, need %u\r\n",
-                    pat_u->con_u->ver_y,
-                    u3e_version);
+  if ( U3E_VERLAT != pat_u->con_u->ver_w ) {
+    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %u\r\n",
+                    pat_u->con_u->ver_w,
+                    U3E_VERLAT);
     return c3n;
   }
 
-  for ( i_w = 0; i_w < pat_u->con_u->pgs_w; i_w++ ) {
-    pag_w = pat_u->con_u->mem_u[i_w].pag_w;
-    mug_w = pat_u->con_u->mem_u[i_w].mug_w;
-    off_i = (size_t)i_w << (u3a_page + 2);
+  for ( c3_z i_z = 0; i_z < pat_u->con_u->pgs_w; i_z++ ) {
+    pag_w = pat_u->con_u->mem_u[i_z].pag_w;
+    mug_w = pat_u->con_u->mem_u[i_z].mug_w;
 
-    if ( siz_i != (ret_i = c3_pread(pat_u->mem_i, mem_w, siz_i, off_i)) ) {
-      if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: patch partial read: %zu\r\n", (size_t)ret_i);
+    if ( -1 == lseek(pat_u->mem_i, (i_z << (u3a_page + 2)), SEEK_SET) ) {
+      fprintf(stderr, "loom: patch seek: %s\r\n", strerror(errno));
+      return c3n;
+    }
+    if ( pag_siz_i != (ret_zs = read(pat_u->mem_i, mem_w, pag_siz_i)) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: patch partial read: %"PRIc3_zs"\r\n", ret_zs);
       }
       else {
-        fprintf(stderr, "loom: patch read fail: %s\r\n", strerror(errno));
+        fprintf(stderr, "loom: patch read: fail %"PRIc3_zs" of %"PRIc3_z" bytes\r\n",
+                        ret_zs, pag_siz_i);
       }
       return c3n;
     }
@@ -425,13 +428,13 @@ _ce_patch_verify(u3_ce_patch* pat_u)
       c3_w nug_w = u3r_mug_words(mem_w, pag_wiz_i);
 
       if ( mug_w != nug_w ) {
-        fprintf(stderr, "loom: patch mug mismatch %d/%d; (%x, %x)\r\n",
-                        pag_w, i_w, mug_w, nug_w);
+        fprintf(stderr, "loom: patch mug mismatch %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
+                        pag_w, i_z, mug_w, nug_w);
         return c3n;
       }
 #if 0
       else {
-        u3l_log("verify: patch %d/%d, %x\r\n", pag_w, i_w, mug_w);
+        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, mug_w);
       }
 #endif
     }
@@ -568,7 +571,7 @@ _ce_patch_compose(c3_w nor_w, c3_w sou_w)
 
     _ce_patch_create(pat_u);
     pat_u->con_u = c3_malloc(sizeof(u3e_control) + (pgs_w * sizeof(u3e_line)));
-    pat_u->con_u->ver_y = u3e_version;
+    pat_u->con_u->ver_w = U3E_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
@@ -647,7 +650,8 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
 static void
 _ce_patch_apply(u3_ce_patch* pat_u)
 {
-  c3_w i_w, pag_w, off_w, mem_w[pag_wiz_i];
+  c3_w i_w, pag_w, mem_w[pag_wiz_i];
+  c3_z      off_w;
   c3_i      fid_i;
   size_t    rof_i, wof_i, siz_i = pag_siz_i;
   ssize_t   ret_i;
@@ -1172,6 +1176,9 @@ u3e_save(u3_post low_p, u3_post hig_p)
   nod_w = u3P.nor_u.pgs_w;
   sod_w = u3P.sou_u.pgs_w;
 
+  /* attempt to avoid propagating anything insane to disk */
+  u3a_loom_sane();
+
   _ce_patch_sync(pat_u);
 
   if ( c3n == _ce_patch_verify(pat_u) ) {
@@ -1208,8 +1215,6 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_image_sync(&u3P.sou_u);
   _ce_patch_free(pat_u);
   _ce_patch_delete();
-
-  u3e_backup(c3y);
 }
 
 /* u3e_live(): start the checkpointing system.
@@ -1365,6 +1370,8 @@ u3e_init(void)
 void
 u3e_ward(u3_post low_p, u3_post hig_p)
 {
+  // XX review: not sure if these guard page changes are better than
+  // what's on develop
 #ifdef U3_GUARD_PAGE
   c3_w nop_w = low_p >> u3a_page;
   c3_w sop_w = hig_p >> u3a_page;

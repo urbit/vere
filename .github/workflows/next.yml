@@ -1,9 +1,9 @@
-name: Push to master
+name: Push to next/kelvin/*
 
 on:
   push:
     branches:
-      - master
+      - 'next/kelvin/*'
     paths:
       - '*.bazel'
       - '.bazelrc'
@@ -13,13 +13,11 @@ on:
       - 'bazel/**'
       - 'pkg/**'
 
-
 jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
       docker: true
-      pace: 'live'
       upload: true
-      fake_tests: false
+      next: ${{ github.ref_name }}
     secrets: inherit

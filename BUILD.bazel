@@ -1,4 +1,5 @@
 load("//bazel:common_settings.bzl", "string_flag")
+exports_files(["PACE"])
 
 #
 # OS-CPU CONFIG SETTINGS

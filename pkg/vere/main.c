@@ -65,7 +65,7 @@ _main_self_path(void)
 
 /* _main_readw(): parse a word from a string.
 */
-static u3_noun
+static c3_o
 _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
 {
   c3_c* end_c;
@@ -76,6 +76,21 @@ _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
     return c3y;
   }
   else return c3n;
+}
+
+/* _main_readw_loom(): parse loom pointer bit size from a string.
+*/
+static c3_i
+_main_readw_loom(const c3_c* arg_c, c3_y* out_y)
+{
+  c3_w lom_w;
+  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
+  if ( res_o == c3n || (lom_w < 20) ) {
+    fprintf(stderr, "error: --%s must be >= 20 and <= %u\r\n", arg_c, u3a_bits_max);
+    return -1;
+  }
+  *out_y = lom_w;
+  return 0;
 }
 
 /* _main_presig(): prefix optional sig.
@@ -168,8 +183,9 @@ _main_init(void)
   u3_Host.ops_u.hap_w = 50000;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
-  u3_Host.ops_u.lut_y = u3a_bits + 1;
-  u3_Host.ops_u.lom_y = u3a_bits + 1;
+  u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
+  u3_Host.ops_u.lut_y = 31;     /* aka 2G */
+  u3_Host.ops_u.lom_y = 31;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -201,6 +217,7 @@ _main_getopt(c3_i argc, c3_c** argv)
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o want_creat_o = c3n;
 
   static struct option lop_u[] = {
     { "arvo",                required_argument, NULL, 'A' },
@@ -230,6 +247,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "ames-port",           required_argument, NULL, 'p' },
     { "http-port",           required_argument, NULL, c3__http },
     { "https-port",          required_argument, NULL, c3__htls },
+    { "snap-time",           required_argument, NULL, c3__snap },
     { "no-conn",             no_argument,       NULL, c3__noco },
     { "no-dock",             no_argument,       NULL, c3__nodo },
     { "quiet",               no_argument,       NULL, 'q' },
@@ -252,35 +270,60 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:cde:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      case 5: {  //  urth-loom
-        c3_w lut_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lut_w);
-        if ( (c3n == res_o) || (lut_w < 20) ) {
-          fprintf(stderr, "error: --urth-loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+      //  urth-loom
+      //
+      case 5: {
+        if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
-
-        u3_Host.ops_u.lut_y = lut_w;
         break;
       }
-      case 'X': {
-        u3_Host.ops_u.pek_c = strdup(optarg);
+      //  special args
+      //
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          return c3n;
+        }
         break;
       }
-      case 'Y': {
-        u3_Host.ops_u.puk_c = strdup(optarg);
+      case c3__http: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.per_s = arg_w;
         break;
       }
-      case 'Z': {
-        u3_Host.ops_u.puf_c = strdup(optarg);
+      case c3__htls: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else u3_Host.ops_u.pes_s = arg_w;
         break;
       }
-      case 'J': {
-        u3_Host.ops_u.lit_c = _main_repath(optarg);
+      case c3__noco: {
+        u3_Host.ops_u.con = c3n;
+        break;
+      }
+      case c3__nodo: {
+        u3_Host.ops_u.doc = c3n;
+        break;
+      }
+      case c3__snap: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else {
+          u3_Host.ops_u.sap_w = arg_w * 60;
+          if ( 0 == u3_Host.ops_u.sap_w) 
+            return c3n;
+        }
+        break;
+      }
+      //  opts with args
+      //
+      case 'A': {
+        u3_Host.ops_u.arv_c = _main_repath(optarg);
         break;
       }
       case 'B': {
@@ -291,12 +334,29 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.bin_c = strdup(optarg);
         break;
       }
-      case 'G': {
-        u3_Host.ops_u.gen_c = strdup(optarg);
+      case 'C': {
+        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
+          return c3n;
+        }
         break;
       }
-      case 'A': {
-        u3_Host.ops_u.arv_c = _main_repath(optarg);
+      case 'c': {
+        u3_Host.dir_c     = _main_repath(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'e': {
+        u3_Host.ops_u.eth_c = strdup(optarg);
+        break;
+      }
+      case 'F': {
+        u3_Host.ops_u.fak_c = _main_presig(optarg);
+        u3_Host.ops_u.net   = c3n;
+        u3_Host.ops_u.nuu   = c3y;
+        break;
+      }
+      case 'G': {
+        u3_Host.ops_u.gen_c = strdup(optarg);
         break;
       }
       case 'H': {
@@ -307,32 +367,12 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.jin_c = _main_repath(optarg);
         break;
       }
-      case 'C': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
-          return c3n;
-        }
+      case 'i': {
+        u3_Host.ops_u.imp_c = _main_repath(optarg);
         break;
       }
-      case 'e': {
-        u3_Host.ops_u.eth_c = strdup(optarg);
-        break;
-      }
-      case 'F': {
-        u3_Host.ops_u.fak_c = _main_presig(optarg);
-        u3_Host.ops_u.net   = c3n;
-        break;
-      }
-      case 'w': {
-        u3_Host.ops_u.who_c = _main_presig(optarg);
-        u3_Host.ops_u.nuu = c3y;
-        break;
-      }
-      case 'u': {
-        u3_Host.ops_u.url_c = strdup(optarg);
-        break;
-      }
-      case 'x': {
-        u3_Host.ops_u.tex = c3y;
+      case 'J': {
+        u3_Host.ops_u.lit_c = _main_repath(optarg);
         break;
       }
       case 'K': {
@@ -355,36 +395,6 @@ _main_getopt(c3_i argc, c3_c** argv)
         } else u3_Host.ops_u.por_s = arg_w;
         break;
       }
-      case c3__http: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.per_s = arg_w;
-        break;
-      }
-      case c3__htls: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
-          return c3n;
-        } else u3_Host.ops_u.pes_s = arg_w;
-        break;
-      }
-      case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
-          return c3n;
-        }
-        u3_Host.ops_u.lom_y = lom_w;
-        break;
-      }
-      case c3__noco: {
-        u3_Host.ops_u.con = c3n;
-        break;
-      }
-      case c3__nodo: {
-        u3_Host.ops_u.doc = c3n;
-        break;
-      }
       case 'R': {
         u3_Host.ops_u.rep = c3y;
         return c3y;
@@ -393,24 +403,48 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.roc_c = strdup(optarg);
         break;
       }
-      case 'i': {
-        u3_Host.ops_u.imp_c = _main_repath(optarg);
+      case 'u': {
+        u3_Host.ops_u.url_c = strdup(optarg);
         break;
       }
-      case 'L': { u3_Host.ops_u.net = c3n; break; }
-      case 'l': { u3_Host.ops_u.lit = c3y; break; }
-      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'w': {
+        u3_Host.ops_u.who_c = _main_presig(optarg);
+        u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'X': {
+        u3_Host.ops_u.pek_c = strdup(optarg);
+        break;
+      }
+      case 'x': {
+        u3_Host.ops_u.tex = c3y;
+        break;
+      }
+      case 'Y': {
+        u3_Host.ops_u.puk_c = strdup(optarg);
+        break;
+      }
+      case 'Z': {
+        u3_Host.ops_u.puf_c = strdup(optarg);
+        break;
+      }
+      //  opts without args
+      //
       case 'a': { u3_Host.ops_u.abo = c3y; break; }
-      case 'c': { u3_Host.ops_u.nuu = c3y; break; }
+      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'd': { u3_Host.ops_u.dem = c3y; break; }
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
+      case 'j': { u3_Host.ops_u.tra = c3y; break; }
+      case 'L': { u3_Host.ops_u.net = c3n; break; }
+      case 'l': { u3_Host.ops_u.lit = c3y; break; }
       case 'P': { u3_Host.ops_u.pro = c3y; break; }
-      case 'D': { u3_Host.ops_u.dry = c3y; break; }
       case 'q': { u3_Host.ops_u.qui = c3y; break; }
-      case 'v': { u3_Host.ops_u.veb = c3y; break; }
       case 's': { u3_Host.ops_u.git = c3y; break; }
       case 'S': { u3_Host.ops_u.has = c3y; break; }
       case 't': { u3_Host.ops_u.tem = c3y; break; }
+      case 'v': { u3_Host.ops_u.veb = c3y; break; }
+      //  unknown opt
+      //
       case '?': default: {
         return c3n;
       }
@@ -426,36 +460,37 @@ _main_getopt(c3_i argc, c3_c** argv)
 
   if ( 0 != u3_Host.ops_u.fak_c ) {
     if ( 28 < strlen(u3_Host.ops_u.fak_c) ) {
-      fprintf(stderr, "fake comets are disallowed\r\n");
+      fprintf(stderr, "fake comets are forbidden\r\n");
+      return c3n;
+    }
+    if ( 0 != u3_Host.ops_u.who_c ) {
+      fprintf(stderr, "-F and -w cannot be used together\r\n");
       return c3n;
     }
 
     u3_Host.ops_u.who_c = strdup(u3_Host.ops_u.fak_c);
     u3_Host.ops_u.has = c3y;  /* no battery hashing on fake ships. */
     u3_Host.ops_u.net = c3n;  /* no networking on fake ships. */
-    u3_Host.ops_u.nuu = c3y;
   }
 
-  if ( argc != (optind + 1) ) {
-    if ( u3_Host.ops_u.who_c != 0 ) {
-      u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
-    }
-    //  no trailing positional arg, argv[0] != $pier/.run, invalid command
-    //
-    else  if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+  if ( argc == optind && u3_Host.ops_u.nuu != c3y ) {
+    if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
+      //  no trailing arg, argv[0] != $pier/.run, not making new pier: invalid command
+      fprintf(stderr, "no pier provided\n");
       return c3n;
     }
   }
-  else {
-    {
-      c3_c* ash_c;
-
-      if ( (ash_c = strrchr(argv[optind], '/')) && (ash_c[1] == 0) ) {
-        *ash_c = 0;
-      }
+  else if ( argc != optind ) {
+    if ( u3_Host.ops_u.nuu == c3y || argc > (optind + 1) ) {
+      //  path with new pier or multiple paths: invalid command
+      fprintf(stderr, "too many arguments\n");
+      return c3n;
     }
-
     u3_Host.dir_c = _main_repath(argv[optind]);
+  }
+
+  if ( 0 == u3_Host.dir_c ) {
+    u3_Host.dir_c = strdup(1 + u3_Host.ops_u.who_c);
   }
 
   //  daemon mode (-d) implies disabling terminal assumptions (-t)
@@ -464,64 +499,51 @@ _main_getopt(c3_i argc, c3_c** argv)
     u3_Host.ops_u.tem = c3y;
   }
 
-  //  make -c optional, catch invalid boot of existing pier
-  //
   {
     struct stat s;
+    //  catch invalid boot
     if ( 0 != stat(u3_Host.dir_c, &s) ) {
-      if ( c3n == u3_Host.ops_u.nuu ) {
-        u3_Host.ops_u.nuu = c3y;
+      if ( u3_Host.ops_u.nuu != c3y ) {
+        fprintf(stderr, "couldn't find pier %s\n", u3_Host.dir_c);
+        exit(1);
       }
     }
-    else if ( c3y == u3_Host.ops_u.nuu ) {
-      fprintf(stderr, "tried to create, but %s already exists\n", u3_Host.dir_c);
-      fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
-      exit(1);
+    //  catch invalid boot of existing pier
+    else {
+      if ( u3_Host.ops_u.nuu == c3y ) {
+        fprintf(stderr, "tried to create pier %s but it already exists\n", u3_Host.dir_c);
+        fprintf(stderr, "normal usage: %s %s\n", argv[0], u3_Host.dir_c);
+        exit(1);
+      }
+      else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
+        fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
+        exit(1);
+      }
     }
-    else if ( 0 != access(u3_Host.dir_c, W_OK) ) {
-      fprintf(stderr, "urbit: write permissions are required for %s\n", u3_Host.dir_c);
-      exit(1);
-    }
   }
 
-  if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.nuu == c3n ) {
-    fprintf(stderr, "-G only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.who_c != 0) {
-    fprintf(stderr, "-w only makes sense when creating a new ship\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0 ) {
     fprintf(stderr, "-B only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  struct sockaddr_in t;
-  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
-    fprintf(stderr, "-b invalid IP address\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.gen_c != 0 ) {
+    fprintf(stderr, "-G only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0) {
-    fprintf(stderr, "-H only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
+    fprintf(stderr, "-H only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.pil_c != 0) {
-    fprintf(stderr, "-B only makes sense when bootstrapping a new instance\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0) {
-    fprintf(stderr, "-k only makes sense when bootstrapping a new instance\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-k only makes sense when creating a new ship\n");
     return c3n;
   }
 
   if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.url_c != 0 ) {
-    fprintf(stderr, "-u only makes sense when bootstrapping a new instance\n");
+    fprintf(stderr, "-u only makes sense when creating a new ship\n");
     return c3n;
   }
 
@@ -554,6 +576,7 @@ _main_getopt(c3_i argc, c3_c** argv)
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.arv_c == 0 ) {
 
+    // implicitly: u3_Host.ops_u.git == c3y
     fprintf(stderr, "-s only makes sense with -A\n");
     return c3n;
   }
@@ -564,6 +587,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       fprintf(stderr, "pill %s not found\n", u3_Host.ops_u.pil_c);
       return c3n;
     }
+  }
+
+  struct sockaddr_in t;
+  if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
+    fprintf(stderr, "-b invalid IP address\n");
+    return c3n;
   }
 
   if ( u3_Host.ops_u.key_c != 0 ) {
@@ -691,11 +720,11 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-B, --bootstrap PILL          Bootstrap from this pill\n",
     "-b, --http-ip IP              Bind HTTP server to this IP address\n",
     "-C, --memo-cache-limit LIMIT  Set memo cache max size; 0 means uncapped\n",
-    "-c, --pier PIER               Create a new urbit in pier/\n",
+    "-c, --pier PIER               Create a new urbit in <pier>/\n",
     "-D, --replay                  Recompute from events\n",
     "-d, --daemon                  Daemon mode; implies -t\n",
     "-e, --ethereum URL            Ethereum gateway\n",
-    "-F, --fake SHIP               Fake keys; also disables networking\n",
+    "-F, --fake SHIP               Boot fake urbit; also disables networking\n",
     "-G, --key-string STRING       Private key string (@uw, see also -k)\n"
     "-g, --gc                      Set GC flag\n",
     "-I, --inject FILE             Inject event from jamfile\n",
@@ -712,6 +741,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-p, --ames-port PORT          Set the ames port to bind to\n",
     "    --http-port PORT          Set the http port to bind to\n",
     "    --https-port PORT         Set the https port to bind to\n",
+    "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-r, --replay-from NUMBER      Load snapshot from event\n",
@@ -721,7 +751,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-t, --no-tty                  Disable terminal/tty assumptions\n",
     "-u, --bootstrap-url URL       URL from which to download pill\n",
     "-v, --verbose                 Verbose\n",
-    "-w, --name NAME               Boot as ~name\n",
+    "-w, --name NAME               Initial boot as ~name (with ticket)\n",
     "-X, --scry PATH               Scry, write to file, then exit\n",
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",
@@ -820,6 +850,15 @@ _cw_serf_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   exit(1);
 }
 
+/* _cw_king_fail(): local failure stub.
+*/
+static void
+_cw_king_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
+{
+  fprintf(stderr, "king: eval error: %s\r\n", err_c);
+  exit(1);
+}
+
 /* _cw_serf_send(): send plea back to daemon.
 */
 static void
@@ -857,7 +896,6 @@ _cw_serf_send_stdr(c3_c* str_c)
 {
   _cw_serf_send(u3nc(c3__flog, u3i_string(str_c)));
 }
-
 
 /* _cw_serf_step_trace(): initialize or rotate trace file.
 */
@@ -916,7 +954,7 @@ static void
 _cw_serf_stdio(c3_i* inn_i, c3_i* out_i)
 {
   //  the serf is spawned with [FD 0] = events and [FD 1] = effects
-  //  we dup [FD 0 & 1] so we don't accidently use them for something else
+  //  we dup [FD 0 & 1] so we don't accidentally use them for something else
   //  we replace [FD 0] (stdin) with a fd pointing to /dev/null
   //  we replace [FD 1] (stdout) with a dup of [FD 2] (stderr)
   //
@@ -951,7 +989,7 @@ static void
 _cw_init_io(uv_loop_t* lup_u)
 {
   //  mars is spawned with [FD 0] = events and [FD 1] = effects
-  //  we dup [FD 0 & 1] so we don't accidently use them for something else
+  //  we dup [FD 0 & 1] so we don't accidentally use them for something else
   //  we replace [FD 0] (stdin) with a fd pointing to /dev/null
   //  we replace [FD 1] (stdout) with a dup of [FD 2] (stderr)
   //
@@ -1150,14 +1188,14 @@ _cw_dock(c3_i argc, c3_c* argv[])
   u3_king_dock(U3_VERE_PACE);
 }
 
-/* _cw_eval_get_input(): read file til EOF and return a malloc'd string
+/* _cw_eval_get_string(): read file til EOF and return a malloc'd string
 */
 c3_c*
-_cw_eval_get_input(FILE* fil_u, size_t siz_i)
+_cw_eval_get_string(FILE* fil_u, size_t siz_i)
 {
   c3_i   car_i;
   size_t len_i = 0;
-  c3_c*  str_c = c3_realloc(NULL, siz_i);//size is start size
+  c3_c*  str_c = c3_malloc(siz_i); //  size is start size
 
   while( EOF != (car_i = fgetc(fil_u)) ){
     str_c[len_i++] = car_i;
@@ -1172,43 +1210,83 @@ _cw_eval_get_input(FILE* fil_u, size_t siz_i)
   return c3_realloc(str_c, len_i);
 }
 
+/* _cw_eval_get_newt(): read a newt-encoded jammed noun from file and return a
+**                      malloc'd byte buffer
+*/
+c3_y*
+_cw_eval_get_newt(FILE* fil_u, c3_d* len_d)
+{
+  //  TODO: can't reuse u3_newt_decode; coupled to reading from pipe
+  c3_d  i;
+  c3_y  hed_y = sizeof(((u3_mess*)NULL)->hed_u.hed_y);
+  c3_y* byt_y = c3_malloc(hed_y);
+
+  for ( i = 0; i < hed_y; ++i ) {
+    byt_y[i] = fgetc(fil_u);
+  }
+
+  if ( 0x0 != byt_y[0] ) {
+    fprintf(stderr, "corrupted newt passed to cue\n");
+    exit(1);
+  }
+
+  *len_d = (((c3_d)byt_y[1]) <<  0)
+         | (((c3_d)byt_y[2]) <<  8)
+         | (((c3_d)byt_y[3]) << 16)
+         | (((c3_d)byt_y[4]) << 24);
+  byt_y = c3_realloc(byt_y, *len_d);
+
+  for ( i = 0; i < *len_d; ++i ) {
+    byt_y[i] = fgetc(fil_u);
+  }
+
+  return byt_y;
+}
+
 /* _cw_eval(): initialize and run the hoon evaluator
 */
 static void
 _cw_eval(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
-  c3_w arg_w;
-  c3_o jam_o = c3n;
-  c3_o kan_o = c3n;
+  u3_mojo std_u;
+  c3_i    ch_i, lid_i;
+  c3_w    arg_w;
+  c3_o    cue_o = c3n;
+  c3_o    jam_o = c3n;
+  c3_o    kan_o = c3n;
+  c3_o    new_o = c3n;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
-    { "jam", no_argument, NULL, 'j' },
-    { "jamkhan", no_argument, NULL, 'k' },
+    { "loom", required_argument,  NULL, c3__loom },
+    { "cue",  no_argument,        NULL, 'c'},
+    { "jam",  no_argument,        NULL, 'j' },
+    { "newt", no_argument,        NULL, 'n' },
+    //
     { NULL, 0, NULL, 0 }
   };
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 24) ) {
-          fprintf(stderr, "error: --loom must be >= 24 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case 'c': {
+        cue_o = c3y;
       } break;
 
       case 'j': {
         jam_o = c3y;
-        kan_o = c3n;
       } break;
 
       case 'k': {
-        jam_o = c3y;
         kan_o = c3y;
+      } break;
+
+      case 'n': {
+        new_o = c3y;
       } break;
 
       case '?': {
@@ -1217,13 +1295,38 @@ _cw_eval(c3_i argc, c3_c* argv[])
       } break;
     }
   }
+
+  //  cannot have both jam and cue set
+  //
+  if ( ( c3y == cue_o ) && ( c3y == jam_o ) ) {
+    fprintf(stderr, "cannot enable both jam and cue\r\n");
+    exit(1);
+  }
+  //  newt meaningless without jam or cue set
+  //
+  if ( ( c3y == new_o ) && ( c3n == cue_o ) && ( c3n == jam_o) ) {
+    fprintf(stderr, "newt meaningless w/o jam or cue; ignoring\r\n");
+    new_o = c3n;
+  }
   //  argv[optind] is always "eval"
   //
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
-  c3_c* evl_c = _cw_eval_get_input(stdin, 10);
+
+  //  configure stdout as u3_mojo
+  //
+  {
+    c3_i err_i;
+    err_i = uv_pipe_init(uv_default_loop(), &std_u.pyp_u, 0);
+    c3_assert(!err_i);
+    uv_pipe_open(&std_u.pyp_u, 1);
+
+    std_u.ptr_v = NULL;
+    std_u.bal_f = _cw_king_fail;
+  }
+
   //  initialize the Loom and load the Ivory Pill
   //
   {
@@ -1245,10 +1348,88 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
   }
-  fprintf(stderr, "eval:\n");
-  if ( c3n == jam_o ) {
+
+  fprintf(stderr, "eval (");
+  if ( c3y == cue_o ) {
+    fprintf(stderr, "cue");
+  } else if ( c3y == jam_o ) {
+    fprintf(stderr, "jam");
+  } else {
+    fprintf(stderr, "run");
+  }
+  if ( c3y == new_o ) {
+    fprintf(stderr, ", newt");
+  }
+  fprintf(stderr,"):\n");
+
+  //  cue input and pretty-print on stdout
+  //
+  if ( c3y == cue_o ) {
+    c3_d    len_d;
+    c3_y*   byt_y;
+    u3_weak som;
+    if ( c3n == new_o ) {
+      fprintf(stderr, "cue only supports newt encoding (for now)\n");
+      exit(1);
+    }
+    byt_y = _cw_eval_get_newt(stdin, &len_d);
+    som = u3s_cue_xeno(len_d, byt_y);
+    if ( u3_none == som ) {
+      fprintf(stderr, "cue failed\n");
+      exit(1);
+    }
+    c3_c* pre_c;
+    u3k(som);
+    //  if input is jammed khan output
+    if ( c3y == kan_o ) {
+      u3_noun cop, uid, mar, res, tan;
+      u3x_qual(som, &uid, &mar, &res, &tan);
+      //  and if result is a goof
+      if ( c3n == res ) {
+        //  pretty-print tang to stderr and output only header
+        u3_Host.ops_u.dem = c3y;
+        u3_pier_punt_goof("eval", tan);
+        cop = som;
+        som = u3i_trel(uid, mar, res);
+        u3k(som);
+        u3z(cop);
+      }
+    }
+    pre_c = u3m_pretty(som);
+    fprintf(stdout, "%s\n", pre_c);
+    c3_free(pre_c);
+    u3z(som);
+    free(byt_y);
+  }
+  //  jam input and return on stdout
+  //
+  else if ( c3y == jam_o ) {
+    c3_d    bits = 0;
+    c3_d    len_d = 0;
+    c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
+    c3_y*   byt_y;
+    u3_noun sam = u3i_string(evl_c);
+    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
+    if ( 0 == u3h(res) ) {                //  successful execution, print output
+      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      if ( c3y == new_o ) {
+        u3_newt_send(&std_u, len_d, byt_y);
+      } else {
+        for ( size_t p=0; p < len_d; p++ ) {
+          fprintf(stdout,"\\x%2x", byt_y[p++]);
+        }
+      }
+    } else {                              //  error, print stack trace
+      u3_pier_punt_goof("eval", u3k(res));
+    }
+    u3z(res);
+    free(evl_c);
+  }
+  //  slam eval gate with input
+  //
+  else {
+    c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
     //  +wish for an eval gate (virtualized twice for pretty-printing)
-    //
     u3_noun gat = u3v_wish("|=(a=@t (sell (slap !>(+>.$) (rain /eval a))))");
     u3_noun res;
     {
@@ -1256,53 +1437,15 @@ _cw_eval(c3_i argc, c3_c* argv[])
       u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
       res = u3m_soft(0, u3n_kick_on, cor);
     }
-    if ( 0 == u3h(res) ) {  //  successful execution, print output
+    if ( 0 == u3h(res) ) {                //  successful execution, print output
       u3_pier_tank(0, 0, u3k(u3t(res)));
-    } else {                  //  error, print stack trace
-       u3_pier_punt_goof("eval", u3k(res));
+    } else {                              //  error, print stack trace
+      u3_pier_punt_goof("eval", u3k(res));
     }
     u3z(res);
     u3z(gat);
-  } else {
-    u3_noun sam = u3i_string(evl_c);
-    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
-    c3_d bits = 0;
-    c3_d len_d = 0;
-    c3_y* byt_y;
-    if ( 0 == u3h(res) ) {  //  successful execution, print output
-      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
-      if ( c3n == kan_o ) {
-        fprintf(stderr,"jammed noun: ");
-        for ( size_t p=0; p < len_d; p++ ){
-          fprintf(stdout,"\\x%2x", byt_y[p++]);
-        }
-        fprintf(stderr,"\n");
-      } else {
-         fprintf(stderr,"khan jammed noun: ");
-         c3_y out_y[5];
-         out_y[0] = 0x0;
-         out_y[1] = ( len_d        & 0xff);
-         out_y[2] = ((len_d >>  8) & 0xff);
-         out_y[3] = ((len_d >> 16) & 0xff);
-         out_y[4] = ((len_d >> 24) & 0xff);
-         fwrite(out_y, 1, 5, stdout);
-         if( ferror(stdout) ) {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-         }
-         fwrite(byt_y, 1, len_d, stdout);
-         if( ferror(stdout) ) {
-           fprintf(stderr, "Write Failed : %s\n",strerror(errno) );
-           exit(1);
-         }
-         fprintf(stderr, "\n");
-      }
-    } else {                  //  error, print stack trace
-       u3_pier_punt_goof("eval", u3k(res));
-    }
-    u3z(res);
+    free(evl_c);
   }
-  free(evl_c);
 }
 
 /* _cw_info(): print pier info
@@ -1389,13 +1532,9 @@ _cw_cram(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1468,13 +1607,9 @@ _cw_queu(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1553,13 +1688,9 @@ _cw_meld(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1627,13 +1758,9 @@ _cw_next(c3_i argc, c3_c* argv[])
       } break;
 
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1686,13 +1813,9 @@ _cw_pack(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1801,13 +1924,9 @@ _cw_prep(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -1859,13 +1978,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
@@ -2146,13 +2261,9 @@ _cw_vile(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case '?': {
