@@ -58,7 +58,7 @@
 //!   - update atomicity is suspect: patch application must either
 //!     completely succeed or leave on-disk segments intact. unapplied
 //!     patches can be discarded (triggering event replay), but once
-//!     patch application begins it must succeed (can fail if disk is full).
+//!     patch application begins it must succeed.
 //!     may require integration into the overall signal-handling regime.
 //!   - any errors are handled with assertions; failed/partial writes are not
 //!     retried.
@@ -67,7 +67,6 @@
 //!
 //!   - use platform specific page fault mechanism (mach rpc, userfaultfd, &c).
 //!   - implement demand paging / heuristic page-out.
-//!   - add a guard page in the middle of the loom to reactively handle stack overflow.
 //!   - parallelism
 //!
 
@@ -83,17 +82,17 @@
 #include "retrieve.h"
 #include "types.h"
 
+/* _ce_pag_w: word position of given page
+** _ce_pag_y: byte position of given page
+*/
+#define _ce_pag_w(i)  ((size_t)(i) << u3a_page)
+#define _ce_pag_y(i)  ((size_t)(i) << (u3a_page + 2))
+
 /// Snapshotting system.
 u3e_pool u3e_Pool;
 
 // Base loom offset of the guard page.
 static u3p(c3_w) gar_pag_p;
-
-//! Urbit page size in 4-byte words.
-static const size_t pag_wiz_i = 1 << u3a_page;
-
-//! Urbit page size in bytes.
-static const size_t pag_siz_i = sizeof(c3_w) * pag_wiz_i;
 
 #ifdef U3_SNAPSHOT_VALIDATION
 /* Image check.
@@ -109,8 +108,8 @@ struct {
 static c3_w
 _ce_check_page(c3_w pag_w)
 {
-  c3_w* mem_w = u3_Loom + (pag_w << u3a_page);
-  c3_w  mug_w = u3r_mug_words(mem_w, (1 << u3a_page));
+  c3_w* mem_w = u3_Loom + _ce_pag_w(pag_w);
+  c3_w  mug_w = u3r_mug_words(mem_w, _ce_pag_w(1));
 
   return mug_w;
 }
@@ -128,8 +127,8 @@ u3e_check(c3_c* cap_c)
 
     u3m_water(&nwr_w, &swu_w);
 
-    nor_w = (nwr_w + ((1 << u3a_page) - 1)) >> u3a_page;
-    sou_w = (swu_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    nor_w = (nwr_w + (_ce_pag_w(1) - 1)) >> u3a_page;
+    sou_w = (swu_w + (_ce_pag_w(1) - 1)) >> u3a_page;
   }
 
   /* Count dirty pages.
@@ -155,45 +154,6 @@ u3e_check(c3_c* cap_c)
     u3l_log("%s: sum %x (%x, %x)", cap_c, sum_w, nor_w, sou_w);
   }
 }
-
-/* _ce_maplloc(): crude off-loom allocator.
-*/
-static void*
-_ce_maplloc(c3_w len_w)
-{
-  void* map_v;
-
-  map_v = mmap(0,
-               len_w,
-               (PROT_READ | PROT_WRITE),
-               (MAP_ANON | MAP_PRIVATE),
-               -1, 0);
-
-  if ( -1 == (c3_ps)map_v ) {
-    c3_assert(0);
-  }
-  else {
-    c3_w* map_w = map_v;
-
-    map_w[0] = len_w;
-
-    return map_w + 1;
-  }
-}
-
-/* _ce_mapfree(): crude off-loom allocator.
-*/
-static void
-_ce_mapfree(void* map_v)
-{
-  c3_w* map_w = map_v;
-  c3_i res_i;
-
-  map_w -= 1;
-  res_i = munmap(map_w, map_w[0]);
-
-  c3_assert(0 == res_i);
-}
 #endif
 
 #ifdef U3_GUARD_PAGE
@@ -209,22 +169,22 @@ _ce_center_guard_page(void)
     bot_p = u3a_outa(u3_Loom);
   }
   else if ( c3y == u3a_is_north(u3R) ) {
-    top_p = c3_rod(u3R->cap_p, pag_wiz_i);
-    bot_p = c3_rop(u3R->hat_p, pag_wiz_i);
+    top_p = c3_rod(u3R->cap_p, _ce_pag_w(1));
+    bot_p = c3_rop(u3R->hat_p, _ce_pag_w(1));
   }
   else {
-    top_p = c3_rod(u3R->hat_p, pag_wiz_i);
-    bot_p = c3_rop(u3R->cap_p, pag_wiz_i);
+    top_p = c3_rod(u3R->hat_p, _ce_pag_w(1));
+    bot_p = c3_rop(u3R->cap_p, _ce_pag_w(1));
   }
 
-  if ( top_p < bot_p + pag_wiz_i ) {
+  if ( top_p < bot_p + _ce_pag_w(1) ) {
     fprintf(stderr,
             "loom: not enough memory to recenter the guard page\r\n");
     goto bail;
   }
   const u3p(c3_w) old_gar_p = gar_pag_p;
   const c3_w      mid_p     = (top_p - bot_p) / 2;
-  gar_pag_p                 = bot_p + c3_rod(mid_p, pag_wiz_i);
+  gar_pag_p                 = bot_p + c3_rod(mid_p, _ce_pag_w(1));
   if ( old_gar_p == gar_pag_p ) {
     fprintf(stderr,
             "loom: can't move the guard page to the same location"
@@ -233,7 +193,7 @@ _ce_center_guard_page(void)
     goto bail;
   }
 
-  if ( -1 == mprotect(u3a_into(gar_pag_p), pag_siz_i, PROT_NONE) ) {
+  if ( -1 == mprotect(u3a_into(gar_pag_p), _ce_pag_y(1), PROT_NONE) ) {
     fprintf(stderr,
             "loom: failed to protect the guard page "
             "(base address %p): %s\r\n",
@@ -280,7 +240,7 @@ u3e_fault(void* adr_v, c3_i ser_i)
 
 #ifdef U3_GUARD_PAGE
   // The fault happened in the guard page.
-  if ( gar_pag_p <= adr_p && adr_p < gar_pag_p + pag_wiz_i ) {
+  if ( gar_pag_p <= adr_p && adr_p < gar_pag_p + _ce_pag_w(1) ) {
     if ( 0 == _ce_center_guard_page() ) {
       return 0;
     }
@@ -295,8 +255,8 @@ u3e_fault(void* adr_v, c3_i ser_i)
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
-  if ( -1 == mprotect((void *)(u3_Loom + (pag_w << u3a_page)),
-                      pag_siz_i,
+  if ( -1 == mprotect((void *)(u3_Loom + _ce_pag_w(pag_w)),
+                      _ce_pag_y(1),
                       (PROT_READ | PROT_WRITE)) )
   {
     fprintf(stderr, "loom: fault mprotect: %s\r\n", strerror(errno));
@@ -338,20 +298,19 @@ _ce_image_open(u3e_image* img_u)
       return c3n;
     }
     else {
-      c3_d siz_d = buf_u.st_size;
-      c3_d pgs_d = (siz_d + (c3_d)(pag_siz_i - 1)) >>
-                   (c3_d)(u3a_page + 2);
+      c3_z siz_z = buf_u.st_size;
+      c3_z pgs_z = (siz_z + (_ce_pag_y(1) - 1)) >> (u3a_page + 2);
 
-      if ( !siz_d ) {
+      if ( !siz_z ) {
         return c3y;
       }
       else {
-        if ( siz_d != (pgs_d << (c3_d)(u3a_page + 2)) ) {
-          fprintf(stderr, "%s: corrupt size %" PRIx64 "\r\n", ful_c, siz_d);
+        if ( siz_z != _ce_pag_y(pgs_z) ) {
+          fprintf(stderr, "%s: corrupt size %zu\r\n", ful_c, siz_z);
           return c3n;
         }
-        img_u->pgs_w = (c3_w) pgs_d;
-        c3_assert(pgs_d == (c3_d)img_u->pgs_w);
+        img_u->pgs_w = (c3_w)pgs_z;
+        c3_assert( pgs_z == (c3_z)img_u->pgs_w );
 
         return c3y;
       }
@@ -461,7 +420,7 @@ static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
   c3_w  pag_w, mug_w;
-  c3_w  mem_w[pag_wiz_i];
+  c3_w  mem_w[_ce_pag_w(1)];
   c3_zs ret_zs;
 
   if ( U3E_VERLAT != pat_u->con_u->ver_w ) {
@@ -475,25 +434,26 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
     mug_w = pat_u->con_u->mem_u[i_z].mug_w;
 
-    if ( -1 == lseek(pat_u->mem_i, (i_z << (u3a_page + 2)), SEEK_SET) ) {
+    if ( -1 == lseek(pat_u->mem_i, _ce_pag_y(i_z), SEEK_SET) ) {
       fprintf(stderr, "loom: patch seek: %s\r\n", strerror(errno));
       return c3n;
     }
-    if ( pag_siz_i != (ret_zs = read(pat_u->mem_i, mem_w, pag_siz_i)) ) {
+    if ( _ce_pag_y(1) != (ret_zs = read(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
       if ( 0 < ret_zs ) {
         fprintf(stderr, "loom: patch partial read: %"PRIc3_zs"\r\n", ret_zs);
       }
       else {
-        fprintf(stderr, "loom: patch read: fail %"PRIc3_zs" of %"PRIc3_z" bytes\r\n",
-                        ret_zs, pag_siz_i);
+        fprintf(stderr, "loom: patch read: fail %s\r\n", strerror(errno));
       }
       return c3n;
     }
+
     {
-      c3_w nug_w = u3r_mug_words(mem_w, pag_wiz_i);
+      c3_w nug_w = u3r_mug_words(mem_w, _ce_pag_w(1));
 
       if ( mug_w != nug_w ) {
-        fprintf(stderr, "loom: patch mug mismatch %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
+        fprintf(stderr, "loom: patch mug mismatch"
+                        " %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
                         pag_w, i_z, mug_w, nug_w);
         return c3n;
       }
@@ -575,12 +535,12 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
 {
   ssize_t ret_i;
 
-  if ( -1 == lseek(pat_u->mem_i, pgc_w * pag_siz_i, SEEK_SET) ) {
+  if ( -1 == lseek(pat_u->mem_i, _ce_pag_y(pgc_w), SEEK_SET) ) {
     fprintf(stderr, "loom: patch page seek: %s\r\n", strerror(errno));
     c3_assert(0);
   }
 
-  if ( pag_siz_i != (ret_i = write(pat_u->mem_i, mem_w, pag_siz_i)) ) {
+  if ( _ce_pag_y(1) != (ret_i = write(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
     if ( 0 < ret_i ) {
       fprintf(stderr, "loom: patch page partial write: %zu\r\n",
                       (size_t)ret_i);
@@ -618,18 +578,18 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   c3_w bit_w = (pag_w & 31);
 
   if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
-    c3_w* mem_w = u3_Loom + (pag_w << u3a_page);
+    c3_w* mem_w = u3_Loom + _ce_pag_w(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
-    pat_u->con_u->mem_u[pgc_w].mug_w = u3r_mug_words(mem_w, pag_wiz_i);
+    pat_u->con_u->mem_u[pgc_w].mug_w = u3r_mug_words(mem_w, _ce_pag_w(1));
 
 #if 0
     u3l_log("protect a: page %d", pag_w);
 #endif
     _ce_patch_write_page(pat_u, pgc_w, mem_w);
 
-    if ( -1 == mprotect(u3_Loom + (pag_w << u3a_page),
-                        pag_siz_i,
+    if ( -1 == mprotect(u3_Loom + _ce_pag_w(pag_w),
+                        _ce_pag_y(1),
                         PROT_READ) )
     {
       fprintf(stderr, "loom: patch mprotect: %s\r\n", strerror(errno));
@@ -658,8 +618,8 @@ _ce_patch_compose(void)
 
     u3m_water(&nwr_w, &swu_w);
 
-    nor_w = (nwr_w + (pag_wiz_i - 1)) >> u3a_page;
-    sou_w = (swu_w + (pag_wiz_i - 1)) >> u3a_page;
+    nor_w = (nwr_w + (_ce_pag_w(1) - 1)) >> u3a_page;
+    sou_w = (swu_w + (_ce_pag_w(1) - 1)) >> u3a_page;
 
     c3_assert(  ((gar_pag_p >> u3a_page) >= nor_w)
              && ((gar_pag_p >> u3a_page) <= (u3a_pages - (sou_w + 1))) );
@@ -736,8 +696,7 @@ _ce_image_sync(u3e_image* img_u)
 {
   if ( -1 == c3_sync(img_u->fid_i) ) {
     fprintf(stderr, "loom: image (%s) sync failed: %s\r\n",
-                    img_u->nam_c,
-                    strerror(errno));
+                    img_u->nam_c, strerror(errno));
     c3_assert(!"loom: image sync");
   }
 }
@@ -747,11 +706,20 @@ _ce_image_sync(u3e_image* img_u)
 static void
 _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
 {
+  c3_z  off_z = _ce_pag_y(pgs_w);
+  off_t off_i = (off_t)off_z;
+
   if ( img_u->pgs_w > pgs_w ) {
-    if ( ftruncate(img_u->fid_i, pgs_w << (u3a_page + 2)) ) {
+    if ( off_z != (size_t)off_i ) {
+      fprintf(stderr, "loom: image (%s) truncate: "
+                      "offset overflow (%" PRId64 ") for page %u\r\n",
+                      img_u->nam_c, (c3_ds)off_i, pgs_w);
+      c3_assert(0);
+    }
+
+    if ( ftruncate(img_u->fid_i, off_i) ) {
       fprintf(stderr, "loom: image (%s) truncate: %s\r\n",
-                      img_u->nam_c,
-                      strerror(errno));
+                      img_u->nam_c, strerror(errno));
       c3_assert(0);
     }
   }
@@ -786,7 +754,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
   //
   for ( i_w = 0; i_w < pat_u->con_u->pgs_w; i_w++ ) {
     c3_w pag_w = pat_u->con_u->mem_u[i_w].pag_w;
-    c3_w mem_w[pag_wiz_i];
+    c3_w mem_w[_ce_pag_w(1)];
     c3_i fid_i;
     c3_z off_w;
 
@@ -799,7 +767,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       off_w = (u3P.pag_w - (pag_w + 1));
     }
 
-    if ( pag_siz_i != (ret_i = read(pat_u->mem_i, mem_w, pag_siz_i)) ) {
+    if ( _ce_pag_y(1) != (ret_i = read(pat_u->mem_i, mem_w, _ce_pag_y(1))) ) {
       if ( 0 < ret_i ) {
         fprintf(stderr, "loom: patch apply partial read: %zu\r\n",
                         (size_t)ret_i);
@@ -810,11 +778,11 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       c3_assert(0);
     }
     else {
-      if ( -1 == lseek(fid_i, (off_w << (u3a_page + 2)), SEEK_SET) ) {
+      if ( -1 == lseek(fid_i, _ce_pag_y(off_w), SEEK_SET) ) {
         fprintf(stderr, "loom: patch apply seek: %s\r\n", strerror(errno));
         c3_assert(0);
       }
-      if ( pag_siz_i != (ret_i = write(fid_i, mem_w, pag_siz_i)) ) {
+      if ( _ce_pag_y(1) != (ret_i = write(fid_i, mem_w, _ce_pag_y(1))) ) {
         if ( 0 < ret_i ) {
           fprintf(stderr, "loom: patch apply partial write: %zu\r\n",
                           (size_t)ret_i);
@@ -826,7 +794,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       }
     }
 #if 0
-    u3l_log("apply: %d, %x", pag_w, u3r_mug_words(mem_w, pag_wiz_i));
+    u3l_log("apply: %d, %x", pag_w, u3r_mug_words(mem_w, _ce_pag_w(1)));
 #endif
   }
 }
@@ -844,7 +812,7 @@ _ce_image_blit(u3e_image* img_u,
 
   ssize_t ret_i;
   c3_w      i_w;
-  c3_w    siz_w = pag_siz_i;
+  c3_w    siz_w = _ce_pag_y(1);
 
   if ( -1 == lseek(img_u->fid_i, 0, SEEK_SET) ) {
     fprintf(stderr, "loom: image (%s) blit seek 0: %s\r\n",
@@ -884,12 +852,12 @@ _ce_image_blit(u3e_image* img_u,
 */
 static void
 _ce_image_fine(u3e_image* img_u,
-               c3_w*        ptr_w,
-               c3_ws        stp_ws)
+               c3_w*      ptr_w,
+               c3_ws     stp_ws)
 {
   ssize_t ret_i;
   c3_w      i_w;
-  c3_w    buf_w[pag_wiz_i];
+  c3_w    buf_w[_ce_pag_w(1)];
 
   if ( -1 == lseek(img_u->fid_i, 0, SEEK_SET) ) {
     fprintf(stderr, "loom: image fine seek 0: %s\r\n", strerror(errno));
@@ -899,7 +867,7 @@ _ce_image_fine(u3e_image* img_u,
   for ( i_w=0; i_w < img_u->pgs_w; i_w++ ) {
     c3_w mem_w, fil_w;
 
-    if ( pag_siz_i != (ret_i = read(img_u->fid_i, buf_w, pag_siz_i)) ) {
+    if ( _ce_pag_y(1) != (ret_i = read(img_u->fid_i, buf_w, _ce_pag_y(1))) ) {
       if ( 0 < ret_i ) {
         fprintf(stderr, "loom: image (%s) fine partial read: %zu\r\n",
                         img_u->nam_c, (size_t)ret_i);
@@ -910,8 +878,8 @@ _ce_image_fine(u3e_image* img_u,
       }
       c3_assert(0);
     }
-    mem_w = u3r_mug_words(ptr_w, pag_wiz_i);
-    fil_w = u3r_mug_words(buf_w, pag_wiz_i);
+    mem_w = u3r_mug_words(ptr_w, _ce_pag_w(1));
+    fil_w = u3r_mug_words(buf_w, _ce_pag_w(1));
 
     if ( mem_w != fil_w ) {
       c3_w pag_w = (ptr_w - u3_Loom) >> u3a_page;
@@ -930,7 +898,7 @@ _ce_image_fine(u3e_image* img_u,
 }
 #endif
 
-/* _ce_image_copy():
+/* _ce_image_copy(): copy all of [fom_u] to [tou_u]
 */
 static c3_o
 _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
@@ -956,10 +924,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   //  copy pages into destination image
   //
   for ( i_w = 0; i_w < fom_u->pgs_w; i_w++ ) {
-    c3_w mem_w[pag_wiz_i];
+    c3_w mem_w[_ce_pag_w(1)];
     c3_w off_w = i_w;
 
-    if ( pag_siz_i != (ret_i = read(fom_u->fid_i, mem_w, pag_siz_i)) ) {
+    if ( _ce_pag_y(1) != (ret_i = read(fom_u->fid_i, mem_w, _ce_pag_y(1))) ) {
       if ( 0 < ret_i ) {
         fprintf(stderr, "loom: image (%s) copy partial read: %zu\r\n",
                         fom_u->nam_c, (size_t)ret_i);
@@ -971,12 +939,12 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
       return c3n;
     }
     else {
-      if ( -1 == lseek(tou_u->fid_i, (off_w << (u3a_page + 2)), SEEK_SET) ) {
+      if ( -1 == lseek(tou_u->fid_i, _ce_pag_y(off_w), SEEK_SET) ) {
         fprintf(stderr, "loom: image (%s) copy seek: %s\r\n",
                         tou_u->nam_c, strerror(errno));
         return c3n;
       }
-      if ( pag_siz_i != (ret_i = write(tou_u->fid_i, mem_w, pag_siz_i)) ) {
+      if ( _ce_pag_y(1) != (ret_i = write(tou_u->fid_i, mem_w, _ce_pag_y(1))) ) {
         if ( 0 < ret_i ) {
           fprintf(stderr, "loom: image (%s) copy partial write: %zu\r\n",
                           tou_u->nam_c, (size_t)ret_i);
@@ -993,14 +961,14 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* u3e_backup();
+/* u3e_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
 */
 c3_o
 u3e_backup(c3_o ovw_o)
 {
   u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
   u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
-  c3_i mod_i = O_RDWR | O_CREAT;
+  c3_i mod_i = O_RDWR | O_CREAT; // XX O_TRUNC ?
   c3_c ful_c[8193];
 
   snprintf(ful_c, 8192, "%s/.urb/bhk", u3P.dir_c);
@@ -1095,11 +1063,11 @@ u3e_save(void)
   {
     _ce_image_fine(&u3P.nor_u,
                    u3_Loom,
-                   pag_wiz_i);
+                   _ce_pag_w(1));
 
     _ce_image_fine(&u3P.sou_u,
-                   (u3_Loom + u3C.wor_i) - pag_wiz_i,
-                   -(ssize_t)pag_wiz_i);
+                   (u3_Loom + u3C.wor_i) - _ce_pag_w(1),
+                   -(ssize_t)_ce_pag_w(1));
 
     c3_assert(u3P.nor_u.pgs_w == u3K.nor_w);
     c3_assert(u3P.sou_u.pgs_w == u3K.sou_w);
@@ -1124,7 +1092,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   {
     size_t sys_i = sysconf(_SC_PAGESIZE);
 
-    if ( pag_siz_i % sys_i ) {
+    if ( _ce_pag_y(1) % sys_i ) {
       fprintf(stderr, "loom: incompatible system page size (%zuKB)\r\n",
                       sys_i >> 10);
       exit(1);
@@ -1154,6 +1122,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     }
     else {
       u3_ce_patch* pat_u;
+      c3_w nor_w, sou_w;
 
       /* Load any patch files; apply them to images.
       */
@@ -1165,9 +1134,12 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         _ce_patch_delete();
       }
 
+      nor_w = u3P.nor_u.pgs_w;
+      sou_w = u3P.sou_u.pgs_w;
+
       //  detect snapshots from a larger loom
       //
-      if ( (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w + 1) >= u3a_pages ) {
+      if ( (nor_w + sou_w + 1) >= u3P.pag_w ) {
         fprintf(stderr, "boot: snapshot too big for loom\r\n");
         exit(1);
       }
@@ -1181,24 +1153,23 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       {
         _ce_image_blit(&u3P.nor_u,
                        u3_Loom,
-                       pag_wiz_i);
+                       _ce_pag_w(1));
 
         _ce_image_blit(&u3P.sou_u,
-                       (u3_Loom + u3C.wor_i) - pag_wiz_i,
-                       -(ssize_t)pag_wiz_i);
+                       (u3_Loom + u3C.wor_i) - _ce_pag_w(1),
+                       -(ssize_t)_ce_pag_w(1));
 
         u3l_log("boot: protected loom");
       }
 
       /* If the images were empty, we are logically booting.
       */
-      if ( (0 == u3P.nor_u.pgs_w) && (0 == u3P.sou_u.pgs_w) ) {
+      if ( !nor_w && !sou_w ) {
         u3l_log("live: logical boot");
         nuu_o = c3y;
       }
       else {
-        u3a_print_memory(stderr, "live: loaded",
-                         (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w) << u3a_page);
+        u3a_print_memory(stderr, "live: loaded", _ce_pag_w(nor_w + sou_w));
       }
     }
   }
@@ -1223,7 +1194,7 @@ u3e_yolo(void)
     return c3n;
   }
 
-  if ( 0 != mprotect(u3a_into(gar_pag_p), pag_siz_i, PROT_NONE) ) {
+  if ( 0 != mprotect(u3a_into(gar_pag_p), _ce_pag_y(1), PROT_NONE) ) {
     fprintf(stderr, "loom: failed to protect guard page: %s\r\n",
                     strerror(errno));
     c3_assert(0);
@@ -1264,7 +1235,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
     _ce_center_guard_page();
 
     if ( 0 != mprotect(u3a_into(gar_p),
-                       pag_siz_i,
+                       _ce_pag_y(1),
                        (PROT_READ | PROT_WRITE)) )
     {
       fprintf(stderr, "loom: failed to unprotect old guard page: %s\r\n",
