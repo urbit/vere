@@ -7,7 +7,7 @@
 //!   - page: 16KB chunk of the loom.
 //!   - north segment (u3e_image, north.bin): low contiguous loom pages,
 //!     (in practice, the home road heap). indexed from low to high:
-//!     in-order on disk.
+//!     in-order on disk. in a file-backed mapping by default.
 //!   - south segment (u3e_image, south.bin): high contiguous loom pages,
 //!     (in practice, the home road stack). indexed from high to low:
 //!     reversed on disk.
@@ -20,8 +20,8 @@
 //!   - with the loom already mapped, all pages are marked dirty in a bitmap.
 //!   - if snapshot is missing or partial, empty segments are created.
 //!   - if a patch is present, it's applied (crash recovery).
-//!   - snapshot segments are copied onto the loom; all included pages
-//!     are marked clean and protected (read-only).
+//!   - snapshot segments are mapped or copied onto the loom;
+//!     all included pages are marked clean and protected (read-only).
 //!
 //! #### page faults (u3e_fault())
 //!
@@ -47,27 +47,48 @@
 //!       contiguous free space).
 //!   - patch pages are written to memory.bin, metadata to control.bin.
 //!   - the patch is applied to the snapshot segments, in-place.
-//!   - patch files are deleted.
+//!   - segments are fsync'd; patch files are deleted.
+//!   - memory protections (and file-backed mappings) are re-established.
+//!
+//! ### invariants
+//!
+//!  definitions:
+//!    - a clean page is PROT_READ and 0 in the bitmap
+//!    - a dirty page is (PROT_READ|PROT_WRITE) and 1 in the bitmap
+//!    - the guard page is PROT_NONE and 1 in the bitmap
+//!
+//!  assumptions:
+//!    - all memory access patterns are outside-in, a page at a time
+//!      - ad-hoc exceptions are supported by calling u3e_ward()
+//!
+//!  - there is a single guard page, between the segments
+//!  - dirty pages only become clean by being:
+//!    - loaded from a snapshot during initialization
+//!    - present in a snapshot after save
+//!  - clean pages only become dirty by being:
+//!    - modified (and caught by the fault handler)
+//!    - orphaned due to segment truncation (explicitly dirtied)
+//!  - at points of quiescence (initialization, after save)
+//!    - all pages of the north and south segments are clean
+//!    - all other pages are dirty
 //!
 //! ### limitations
 //!
 //!   - loom page size is fixed (16 KB), and must be a multiple of the
-//!     system page size. (can the size vary at runtime give south.bin's
-//!     reversed order? alternately, if system page size > ours, the fault
-//!     handler could dirty N pages at a time.)
-//!   - update atomicity is suspect: patch application must either
-//!     completely succeed or leave on-disk segments intact. unapplied
-//!     patches can be discarded (triggering event replay), but once
-//!     patch application begins it must succeed.
-//!     may require integration into the overall signal-handling regime.
-//!   - any errors are handled with assertions; failed/partial writes are not
-//!     retried.
+//!     system page size.
+//!   - update atomicity is crucial:
+//!     - patch application must either completely succeed or
+//!       leave on-disk segments (memory image) intact.
+//!     - unapplied patches can be discarded (triggering event replay),
+//!       but once patch application begins it must succeed.
+//!     - may require integration into the overall signal-handling regime.
+//!   - any errors are handled with assertions; error messages are poor;
+//!     failed/partial writes are not retried.
 //!
 //! ### enhancements
 //!
 //!   - use platform specific page fault mechanism (mach rpc, userfaultfd, &c).
-//!   - implement demand paging / heuristic page-out.
-//!   - parallelism
+//!   - parallelism (conflicts with demand paging)
 //!
 
 #include "events.h"
