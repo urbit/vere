@@ -1528,9 +1528,12 @@ void
 u3e_ward(u3_post low_p, u3_post hig_p)
 {
 #ifdef U3_GUARD_PAGE
-  const u3p(c3_w) gar_p = gar_pag_p;
+  c3_w nop_w = low_p >> u3a_page;
+  c3_w sop_w = hig_p >> u3a_page;
+  u3_post gar_p = gar_pag_p;
+  c3_w    pag_w = gar_p >> u3a_page;
 
-  if ( (low_p > gar_p) || (hig_p < gar_p) ) {
+  if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     _ce_center_guard_page();
 
     if ( 0 != mprotect(u3a_into(gar_p),
@@ -1542,14 +1545,8 @@ u3e_ward(u3_post low_p, u3_post hig_p)
       c3_assert(0);
     }
 
-    {
-      c3_w pag_w = gar_p >> u3a_page;
-      c3_w blk_w = (pag_w >> 5);
-      c3_w bit_w = (pag_w & 31);
-
-      u3P.dit_w[blk_w] |= (1 << bit_w);
-      u3P.zit_w[blk_w] |= (1 << bit_w); // XX redundant
-    }
+    c3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
+    c3_assert( u3P.zit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
 }

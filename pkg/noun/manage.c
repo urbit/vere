@@ -843,7 +843,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->hat_p + pad_w;
 
       rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->cap_p, rod_u->hat_p);
 #if 0
       fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -854,7 +853,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->cap_p;
 
       rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->hat_p, rod_u->cap_p);
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -876,6 +874,7 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
+    u3m_ward();
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
@@ -1785,6 +1784,39 @@ u3m_save(void)
 #endif
 
   return u3e_save(low_p, hig_p);
+}
+
+/* u3m_ward(): tend the guardpage.
+*/
+void
+u3m_ward(void)
+{
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+
+#if 0  // XX redundant
+  {
+    c3_w low_w, hig_w;
+
+    if ( c3y == u3a_is_north(u3R) ) {
+      low_w = u3R->hat_p;
+      hig_w = u3R->cap_p;
+    }
+    else {
+      low_w = u3R->cap_p;
+      hig_w = u3R->hat_p;
+    }
+
+    if (  (low_w > (u3P.gar_w << u3a_page))
+       || (hig_w < (u3P.gar_w << u3a_page)) )
+    {
+      c3_assert(  ((low_p >> u3a_page) >= u3P.gar_w)
+               || ((hig_p >> u3a_page) <= u3P.gar_w) );
+    }
+  }
+#endif
+
+  return u3e_ward(low_p, hig_p);
 }
 
 /* _cm_signals(): set up interrupts, etc.

@@ -55,6 +55,11 @@
         void
         u3m_save(void);
 
+      /* u3m_ward(): tend the guardpage.
+      */
+        void
+        u3m_ward(void);
+
       /* u3m_init(): start the environment.
       */
         void
