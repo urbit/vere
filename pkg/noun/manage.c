@@ -1737,6 +1737,60 @@ u3m_backup(c3_o ovw_o)
   return u3e_backup(ovw_o);
 }
 
+/* u3m_fault(): handle a memory event with libsigsegv protocol.
+*/
+c3_i
+u3m_fault(void* adr_v, c3_i ser_i)
+{
+  c3_w*   adr_w = (c3_w*)adr_v;
+  u3_post low_p, hig_p;
+
+  //  let the stack overflow handler run.
+  //
+  if ( 0 == ser_i ) {
+    return 0;
+  }
+  //  this could be avoided by registering the loom bounds in libsigsegv
+  //
+  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
+                    adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+    c3_assert(0);
+    return 0;
+  }
+
+  u3m_water(&low_p, &hig_p);
+
+  switch ( u3e_fault(low_p, hig_p, u3a_outa(adr_w)) ) {
+    //  page tracking invariants violated, fatal
+    //
+    case u3e_flaw_sham: {
+      c3_assert(0);
+      return 0;
+    }
+
+    //  virtual memory failure (protections)
+    //
+    //    XX s/b recoverable, need to u3m_signal() a new mote
+    //
+    case u3e_flaw_base: {
+      c3_assert(0);
+      return 0;
+    }
+
+    //  loom limits exceeded, recoverable
+    //
+    case u3e_flaw_meme: {
+      u3m_signal(c3__meme); // doesn't return
+      return 1;
+    }
+
+    case u3e_flaw_good: return 1;
+  }
+
+  c3_assert(!"unpossible");
+}
+
 /* u3m_foul(): dirty all pages and disable tracking.
 */
 void
@@ -1794,7 +1848,7 @@ u3m_ward(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
-#if 0  // XX redundant
+#if 1  // XX redundant
   {
     c3_w low_w, hig_w;
 
@@ -1824,7 +1878,7 @@ u3m_ward(void)
 static void
 _cm_signals(void)
 {
-  if ( 0 != sigsegv_install_handler(u3e_fault) ) {
+  if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
   }
@@ -2009,10 +2063,6 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(nuu_o);
-
-  /* Place the guard page.
-  */
-  u3e_init();
 
   /* Initialize the jet system.
   */
