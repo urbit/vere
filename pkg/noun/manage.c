@@ -1027,12 +1027,31 @@ u3m_flog(c3_w gof_w)
 /* u3m_water(): produce watermarks.
 */
 void
-u3m_water(c3_w* low_w, c3_w* hig_w)
+u3m_water(u3_post* low_p, u3_post* hig_p)
 {
-  c3_assert(u3R == &u3H->rod_u);
-
-  *low_w = u3a_heap(u3R);
-  *hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+  //  allow the segfault handler to fire before the road is set
+  //
+  //    while not explicitly possible in the codebase,
+  //    compiler optimizations can reorder stores
+  //
+  if ( !u3R ) {
+    *low_p = 0;
+    *hig_p = u3C.wor_i - 1;
+  }
+  //  in a north road, hat points to the end of the heap + 1 word,
+  //  while cap points to the top of the stack
+  //
+  else if ( c3y == u3a_is_north(u3R) ) {
+    *low_p = u3R->hat_p - 1;
+    *hig_p = u3R->cap_p;
+  }
+  //  in a south road, hat points to the end of the heap,
+  //  while cap points to the top of the stack + 1 word
+  //
+  else {
+    *low_p = u3R->cap_p - 1;
+    *hig_p = u3R->hat_p;
+  }
 }
 
 /* u3m_soft_top(): top-level safety wrapper.
@@ -1736,7 +1755,36 @@ u3m_foul(void)
 void
 u3m_save(void)
 {
-  u3e_save();
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+
+  c3_assert(u3R == &u3H->rod_u);
+
+#if 1  // XX redundant
+  {
+    c3_w low_w = u3a_heap(u3R);  // old u3m_water()
+    c3_w hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+
+    c3_w nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
+
+    c3_w nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w sop_w = hig_p >> u3a_page;
+    c3_w sor_w = u3P.pag_w - sop_w;
+
+    if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
+      fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
+                      nox_w, nor_w, sox_w, sor_w);
+    }
+    else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
+      fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
+                      nox_w, nor_w, sox_w, sor_w);
+      c3_assert(!"busted");
+    }
+  }
+#endif
+
+  return u3e_save(low_p, hig_p);
 }
 
 /* _cm_signals(): set up interrupts, etc.
@@ -2197,5 +2245,5 @@ u3m_migrate(u3v_version ver_w)
   u3H->ver_w = ver_w;
   /* extra assurance we haven't corrupted the loom before writing to disk */
   u3a_loom_sane();
-  u3e_save();
+  u3m_save();
 }

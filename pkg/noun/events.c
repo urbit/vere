@@ -627,25 +627,9 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
 /* _ce_patch_compose(): make and write current patch.
 */
 static u3_ce_patch*
-_ce_patch_compose(void)
+_ce_patch_compose(c3_w nor_w, c3_w sou_w)
 {
   c3_w pgs_w = 0;
-  c3_w nor_w = 0;
-  c3_w sou_w = 0;
-
-  /* Calculate number of saved pages, north and south.
-  */
-  {
-    c3_w nwr_w, swu_w;
-
-    u3m_water(&nwr_w, &swu_w);
-
-    nor_w = (nwr_w + (_ce_pag_w(1) - 1)) >> u3a_page;
-    sou_w = (swu_w + (_ce_pag_w(1) - 1)) >> u3a_page;
-
-    c3_assert(  ((gar_pag_p >> u3a_page) >= nor_w)
-             && ((gar_pag_p >> u3a_page) <= (u3a_pages - (sou_w + 1))) );
-  }
 
 #ifdef U3_SNAPSHOT_VALIDATION
   u3K.nor_w = nor_w;
@@ -1317,7 +1301,7 @@ u3e_backup(c3_o ovw_o)
   before we try to make another snapshot.
 */
 void
-u3e_save(void)
+u3e_save(u3_post low_p, u3_post hig_p)
 {
   u3_ce_patch* pat_u;
   c3_w nod_w = u3P.nor_u.pgs_w;
@@ -1327,8 +1311,17 @@ u3e_save(void)
     return;
   }
 
-  if ( !(pat_u = _ce_patch_compose()) ) {
-    return;
+  {
+    c3_w nop_w = (low_p >> u3a_page);
+    c3_w nor_w = (low_p + (_ce_pag_w(1) - 1)) >> u3a_page;
+    c3_w sop_w = hig_p >> u3a_page;
+
+    c3_assert(  ((gar_pag_p >> u3a_page) > nor_w)
+             && ((gar_pag_p >> u3a_page) < sop_w) );
+
+    if ( !(pat_u = _ce_patch_compose(nor_w, u3P.pag_w - sop_w)) ) {
+      return;
+    }
   }
 
   /* attempt to avoid propagating anything insane to disk */

@@ -75,10 +75,10 @@
       c3_i
       u3e_fault(void* adr_v, c3_i ser_i);
 
-    /* u3e_save():
+    /* u3e_save(): update the checkpoint.
     */
       void
-      u3e_save(void);
+      u3e_save(u3_post low_p, u3_post hig_p);
 
     /* u3e_live(): start the persistence system.  Return c3y if no image.
     */
