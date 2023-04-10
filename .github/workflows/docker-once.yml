@@ -1,0 +1,11 @@
+name: Deploy to DockerHub once
+
+on:
+  workflow_dispatch
+
+jobs:
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'edge'
+    secrets: inherit

@@ -17,7 +17,10 @@ jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
-      docker: true
       upload: true
       next: ${{ github.ref_name }}
+    secrets: inherit
+
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
     secrets: inherit
