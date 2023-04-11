@@ -2142,9 +2142,11 @@ static c3_c* _k140_ha[] = {
 };
 
 static u3j_harm _139_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
+static u3j_harm _139_hex_json_en_a[] = {{".2", u3we_json_en}, {}};
 
 static u3j_core _139_hex_json_d[] =
   { { "de", 15, _139_hex_json_de_a, 0, no_hashes },
+    { "en", 15, _139_hex_json_en_a, 0, no_hashes },
     {}
   };
 

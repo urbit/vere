@@ -218,6 +218,7 @@
     u3_noun u3we_de_base16(u3_noun);
 
     u3_noun u3we_json_de(u3_noun);
+    u3_atom u3we_json_en(u3_noun);
 
     u3_noun u3we_bend_fun(u3_noun);
     u3_noun u3we_cold_fun(u3_noun);
