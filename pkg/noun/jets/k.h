@@ -150,6 +150,11 @@
     u3_noun
     u3ke_trip(u3_noun a);
 
+  /* u3ke_json_de(): parse JSON from cord.
+  */
+    u3_noun
+    u3ke_json_de(u3_atom);
+
   /* u3kf_fork(): build %fork span.
   */
     u3_noun
