@@ -1271,12 +1271,12 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
 
   {
-    c3_w* ptr_w = _ce_ptr(u3P.nor_u.pgs_w);
-    c3_z  len_z = _ce_len(u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w));
+    void* ptr_v = _ce_ptr(u3P.nor_u.pgs_w);
+    c3_w  pgs_w = u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w);
 
-    if ( -1 == madvise((void*)ptr_w, len_z, MADV_DONTNEED) ) {
-        fprintf(stderr, "loom: madvise() failed for %zu pages at %p: %s\r\n",
-                        len_z, ptr_w, strerror(errno));
+    if ( -1 == madvise((void*)ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
+        fprintf(stderr, "loom: madvise() failed for %u pages at %p: %s\r\n",
+                        pgs_w, ptr_v, strerror(errno));
     }
   }
 
