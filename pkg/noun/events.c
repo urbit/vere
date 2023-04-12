@@ -268,8 +268,6 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
       return u3e_flaw_sham;
     }
-
-    c3_assert( u3P.zit_w[blk_w] & (1 << bit_w) );  // XX redundant
   }
   else
 #endif
@@ -277,18 +275,6 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
-
-#if 1  // XX redundant
-  if (  (u3P.dit_w[blk_w] & (1 << bit_w))
-     != (u3P.zit_w[blk_w] & (1 << bit_w)) )
-  {
-    fprintf(stderr, "loom: page state mismatch %u cap %u hat %u\r\n",
-                    pag_w, u3R->cap_p >> u3a_page, u3R->hat_p >> u3a_page);
-    c3_assert(!"page bits fault");
-  }
-
-  u3P.zit_w[blk_w] |= (1 << bit_w);
-#endif
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
@@ -604,36 +590,18 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   c3_w bit_w = (pag_w & 31);
 
   if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
-#if 1  // XX redundant
-    if ( !(u3P.zit_w[blk_w] & (1 << bit_w)) ) {
-      fprintf(stderr, "loom: page state mismatch %u cap %u hat %u\r\n",
-                    pag_w, u3R->cap_p >> u3a_page, u3R->hat_p >> u3a_page);
-      c3_assert(!"page bits save");
-    }
-#endif
-
     c3_w* mem_w = u3_Loom + _ce_pag_w(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
     pat_u->con_u->mem_u[pgc_w].mug_w = u3r_mug_words(mem_w, _ce_pag_w(1));
 
 #if 0
-    u3l_log("protect a: page %d", pag_w);
+    fprintf(stderr, "loom: save page %d %x\r\n",
+                    pag_w, pat_u->con_u->mem_u[pgc_w].mug_w);
 #endif
     _ce_patch_write_page(pat_u, pgc_w, mem_w);
 
-#if 1  // XX redundant
-    if ( -1 == mprotect(u3_Loom + _ce_pag_w(pag_w),
-                        _ce_pag_y(1),
-                        PROT_READ) )
-    {
-      fprintf(stderr, "loom: patch mprotect: %s\r\n", strerror(errno));
-      c3_assert(0);
-    }
-
-    u3P.dit_w[blk_w] &= ~(1 << bit_w);
     pgc_w += 1;
-#endif
   }
   return pgc_w;
 }
@@ -681,6 +649,8 @@ _ce_patch_compose(c3_w nor_w, c3_w sou_w)
     for ( i_w = 0; i_w < sou_w; i_w++ ) {
       pgc_w = _ce_patch_save_page(pat_u, (u3P.pag_w - (i_w + 1)), pgc_w);
     }
+
+    c3_assert( pgc_w == pgs_w );
 
     pat_u->con_u->nor_w = nor_w;
     pat_u->con_u->sou_w = sou_w;
@@ -824,14 +794,7 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-#if 1  // XX redundant
-    u3P.zit_w[blk_w] &= ~(1 << bit_w);
-    // if ( !blk_w && !bit_w ) {
-    //   fprintf(stderr, "  it_w 0 clean\r\n");
-    // }
-#else
     u3P.dit_w[blk_w] &= ~(1 << bit_w);
-#endif
   }
 
   max_w += dif_w;
@@ -839,11 +802,7 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-#if 1  // XX redundant
-    u3P.zit_w[blk_w] |= (1 << bit_w);
-#else
     u3P.dit_w[blk_w] |= (1 << bit_w);
-#endif
   }
 }
 
@@ -857,11 +816,7 @@ _ce_loom_track_south(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-#if 1  // XX redundant
-    u3P.zit_w[blk_w] &= ~(1 << bit_w);
-#else
     u3P.dit_w[blk_w] &= ~(1 << bit_w);
-#endif
   }
 
   max_w -= dif_w;
@@ -869,11 +824,7 @@ _ce_loom_track_south(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-#if 1  // XX redundant
-    u3P.zit_w[blk_w] |= (1 << bit_w);
-#else
     u3P.dit_w[blk_w] |= (1 << bit_w);
-#endif
   }
 }
 
@@ -1017,18 +968,6 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 #endif
   }
 
-#if 1  // XX redundant
-  {
-    c3_w blk_w, bit_w;
-    for ( c3_w i_w = 0; i_w < pgs_w; i_w++ ) {
-      blk_w = i_w >> 5;
-      bit_w = i_w & 31;
-      u3P.dit_w[blk_w] &= ~(1 << bit_w);
-    }
-  }
-#endif
-
-
   _ce_loom_track_north(pgs_w, dif_w);
 }
 
@@ -1059,24 +998,6 @@ _ce_loom_blit_north(c3_i fid_i, c3_w pgs_w)
       }
       c3_assert(0);
     }
-
-#if 1  // XX redundant
-    if ( 0 != mprotect(ptr_w, _ce_pag_y(1), PROT_READ) ) {
-      fprintf(stderr, "loom: live mprotect: %s\r\n", strerror(errno));
-      c3_assert(0);
-    }
-
-    {
-      c3_w pag_w = u3a_outa(ptr_w) >> u3a_page;
-      c3_w blk_w = pag_w >> 5;
-      c3_w bit_w = pag_w & 31;
-      u3P.dit_w[blk_w] &= ~(1 << bit_w);
-
-      // if ( !blk_w && !bit_w ) {
-      //   fprintf(stderr, "loom dit_w 0 clean\r\n");
-      // }
-    }
-#endif
   }
 
   _ce_loom_protect_north(pgs_w, 0);
@@ -1109,20 +1030,6 @@ _ce_loom_blit_south(c3_i fid_i, c3_w pgs_w)
       }
       c3_assert(0);
     }
-
-#if 1  // XX redundant
-    if ( 0 != mprotect(ptr_w, _ce_pag_y(1), PROT_READ) ) {
-      fprintf(stderr, "loom: live mprotect: %s\r\n", strerror(errno));
-      c3_assert(0);
-    }
-
-    {
-      c3_w pag_w = u3a_outa(ptr_w) >> u3a_page;
-      c3_w blk_w = pag_w >> 5;
-      c3_w bit_w = pag_w & 31;
-      u3P.dit_w[blk_w] &= ~(1 << bit_w);
-    }
-#endif
   }
 
   _ce_loom_protect_south(pgs_w, 0);
@@ -1523,8 +1430,7 @@ u3e_yolo(void)
 void
 u3e_foul(void)
 {
-  memset((void*)u3P.dit_w, 0xff, sizeof(u3P.dit_w));  // XX redundant
-  _ce_loom_track_north(0, u3P.pag_w);
+  memset((void*)u3P.dit_w, 0xff, sizeof(u3P.dit_w));
 }
 
 /* u3e_init(): initialize guard page tracking, dirty loom
@@ -1539,8 +1445,6 @@ u3e_init(void)
 #ifdef U3_GUARD_PAGE
   c3_assert( !_ce_ward_post(0, u3P.pag_w) );
 #endif
-
-  u3e_foul();
 }
 
 /* u3e_ward(): reposition guard page if needed.
@@ -1557,7 +1461,6 @@ u3e_ward(u3_post low_p, u3_post hig_p)
     c3_assert( !_ce_ward_post(nop_w, sop_w) );
     c3_assert( !_ce_flaw_protect(pag_w) );
     c3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
-    c3_assert( u3P.zit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
 }
