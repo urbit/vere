@@ -867,7 +867,9 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     c3_free(dir_c);
   }
 
-  //  create/load $pier/.urb/log, initialize db
+  //  create/load $pier/.urb/log
+  //  create/load $pier/.urb/log/0iN (epoch dir)
+  //  initialize db
   //
   {
     c3_c* log_c = c3_malloc(10 + strlen(pax_c));
@@ -882,6 +884,30 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
+    //  iterate through the log directory to find the latest epoch,
+    //  or set it to "0i0" if none exist
+    //
+    u3_dent* den_u = log_u->com_u->all_u;
+    c3_c* lat_c;  //  latest epoch or "0i0" if none exist
+    if ( !den_u ) {
+      lat_c = "0i0";
+    } else {
+      while ( den_u ) {
+        if ( 0 == strncmp(den_u->nam_c, "0i", 2) ) {
+          //  update the lat_c if it's a later epoch
+          if ( !lat_c || (strcmp(den_u->nam_c, lat_c) > 0) ) {
+            lat_c = den_u->nam_c;
+          }
+        }
+        den_u = den_u->nex_u;
+      }
+    }
+
+    //  create/load $pier/.urb/log/0iN epoch directory
+    c3_c epo_c[8193];
+    snprintf(epo_c, sizeof(epo_c), "%s/%s", log_c, lat_c);
+    c3_mkdir(epo_c, 0700);
+
     //  Arbitrarily choosing 1TB as a "large enough" mapsize
     //
     //  per the LMDB docs:
@@ -895,12 +921,16 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       #else
         0x10000000000;
       #endif
+      
+      fprintf(stderr, "disk: initializing database at %s\r\n", epo_c);
 
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize database\r\n");
-        c3_free(log_c);
         c3_free(log_u);
         return 0;
+      } else {
+        //  register the epoch directory in the disk struct
+        log_u->epo_u = u3_foil_folder(epo_c);
       }
     }
 
