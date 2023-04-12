@@ -778,6 +778,53 @@ _ce_patch_apply(u3_ce_patch* pat_u)
   }
 }
 
+/* _ce_loom_track_sane(): quiescent page state invariants.
+*/
+static c3_o
+_ce_loom_track_sane(void)
+{
+  c3_w blk_w, bit_w, max_w, i_w = 0;
+  c3_o san_o = c3y;
+
+  max_w = u3P.nor_u.pgs_w;
+
+  for ( ; i_w < max_w; i_w++ ) {
+    blk_w = i_w >> 5;
+    bit_w = i_w & 31;
+
+    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+      fprintf(stderr, "loom: insane north %u\r\n", i_w);
+      san_o = c3n;
+    }
+  }
+
+  max_w = u3P.pag_w - u3P.sou_u.pgs_w;
+
+  for ( ; i_w < max_w; i_w++ ) {
+    blk_w = i_w >> 5;
+    bit_w = i_w & 31;
+
+    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+      fprintf(stderr, "loom: insane open %u\r\n", i_w);
+      san_o = c3n;
+    }
+  }
+
+  max_w = u3P.pag_w;
+
+  for ( ; i_w < max_w; i_w++ ) {
+    blk_w = i_w >> 5;
+    bit_w = i_w & 31;
+
+    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+      fprintf(stderr, "loom: insane south %u\r\n", i_w);
+      san_o = c3n;
+    }
+  }
+
+  return san_o;
+}
+
 /* _ce_loom_track_north(): [pgs_w] clean, followed by [dif_w] dirty.
 */
 void
@@ -1269,6 +1316,10 @@ u3e_save(u3_post low_p, u3_post hig_p)
   }
 
   _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
+
+#ifdef U3_SNAPSHOT_VALIDATION
+  c3_assert( c3y == _ce_loom_track_sane() );
+#endif
 
   {
     void* ptr_v = _ce_ptr(u3P.nor_u.pgs_w);
