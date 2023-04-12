@@ -103,6 +103,8 @@
 #include "retrieve.h"
 #include "types.h"
 
+#define U3_SNAPSHOT_VALIDATION
+
 /* _ce_pag_w: word position of given page
 ** _ce_pag_y: byte position of given page
 */
