@@ -144,15 +144,14 @@ u3e_check(c3_c* cap_c)
   c3_w sou_w = 0;
 
   {
-    c3_w nwr_w, swu_w;
+    u3_post low_p, hig_p;
+    u3m_water(&low_p, &hig_p);
 
-    u3m_water(&nwr_w, &swu_w);
-
-    nor_w = (nwr_w + (_ce_len_words(1) - 1)) >> u3a_page;
-    sou_w = (swu_w + (_ce_len_words(1) - 1)) >> u3a_page;
+    nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+    sou_w = u3P.pag_w - (hig_p >> u3a_page);
   }
 
-  /* Count dirty pages.
+  /* compute checksum over active pages.
   */
   {
     c3_w i_w, sum_w, mug_w;
