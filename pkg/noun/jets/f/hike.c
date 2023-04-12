@@ -89,7 +89,8 @@
   u3qf_hike(u3_noun axe,
             u3_noun pac)
   {
-    c3_assert(0);
+    // Effectively disable this jet. See commit fad65ff83e2 for more.
+    u3m_bail(c3__oops);
     if ( (u3_nul == pac) ) {
       return u3nc(0, u3k(axe));
     }

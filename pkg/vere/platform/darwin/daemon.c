@@ -31,7 +31,9 @@ static void _on_boot_completed_cb() {
   }
 
   if ( 0 == write(_child_process_booted_signal_fd, buf, 1) ) {
-    c3_assert(!"_on_boot_completed_cb: Can't write to parent FD");
+    c3_i err_i = errno;
+    fprintf(stderr, "daemon: write() failed: %s\r\n", strerror(err_i));
+    exit(err_i);
   }
 
   close(_child_process_booted_signal_fd);
@@ -65,7 +67,11 @@ u3_daemon_init()
   c3_i pipefd[2];
 
   if ( 0 != pipe(pipefd) ) {
-    c3_assert(!"Failed to create pipe");
+    c3_i err_i = errno;
+    fprintf(stderr,
+            "daemon: failed to create pipe: %s\r\n",
+            strerror(err_i));
+    exit(err_i);
   }
 
   pid_t childpid = fork();

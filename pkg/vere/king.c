@@ -106,8 +106,8 @@ _king_doom(u3_noun doom)
   u3_noun load;
   void (*next)(u3_noun);
 
-  c3_assert(_(u3a_is_cell(doom)));
-  c3_assert(_(u3a_is_cat(u3h(doom))));
+  u3_assert(_(u3a_is_cell(doom)));
+  u3_assert(_(u3a_is_cat(u3h(doom))));
 
   switch ( u3h(doom) ) {
     case c3__boot:
@@ -133,9 +133,9 @@ _king_boot(u3_noun bul)
   u3_noun boot, pill, path;
   void (*next)(u3_noun, u3_noun, u3_noun);
 
-  c3_assert(_(u3a_is_cell(bul)));
+  u3_assert(_(u3a_is_cell(bul)));
   u3x_trel(bul, &boot, &pill, &path);
-  c3_assert(_(u3a_is_cat(u3h(boot))));
+  u3_assert(_(u3a_is_cat(u3h(boot))));
 
   switch ( u3h(boot) ) {
     case c3__fake: {
@@ -319,7 +319,7 @@ _king_get_pace(void)
   c3_i ret_i, fid_i;
 
   ret_i = asprintf(&pat_c, "%s/.bin/pace", u3_Host.dir_c);
-  c3_assert( ret_i > 0 );
+  u3_assert( ret_i > 0 );
 
   fid_i = c3_open(pat_c, O_RDONLY, 0644);
 
@@ -364,7 +364,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   c3_i  ret_i;
 
   ret_i = asprintf(&url_c, "%s/%s/%s/next", ver_hos_c, pac_c, URBIT_VERSION);
-  c3_assert( ret_i > 0 );
+  u3_assert( ret_i > 0 );
 
   //  skip printfs on failed requests (/next is usually not present)
   //
@@ -372,7 +372,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
     c3_free(url_c);
 
     ret_i = asprintf(&url_c, "%s/%s/last", ver_hos_c, pac_c);
-    c3_assert( ret_i > 0 );
+    u3_assert( ret_i > 0 );
 
     //  enable printfs on failed requests (/last must be present)
     //  XX support channel redirections
@@ -454,7 +454,7 @@ _git_pill_url(c3_c *out_c, c3_c *arv_c)
 {
   c3_c hax_c[11];
 
-  assert(NULL != arv_c);
+  u3_assert(NULL != arv_c);
 
   if ( 0 != system("which git >> /dev/null") ) {
     c3_i err_i = errno;
@@ -487,7 +487,7 @@ _boothack_pill(void)
       _git_pill_url(url_c, u3_Host.ops_u.arv_c);
     }
     else {
-      c3_assert( 0 != u3_Host.ops_u.url_c );
+      u3_assert( 0 != u3_Host.ops_u.url_c );
       strcpy(url_c, u3_Host.ops_u.url_c);
     }
 
@@ -939,7 +939,8 @@ u3_pier*
 u3_king_stub(void)
 {
   if ( !u3K.pir_u ) {
-    c3_assert(!"king: no pier");
+    fprintf(stderr, "king: no pier\r\n");
+    exit(EEXIST);
   }
   else {
     return u3K.pir_u;
@@ -1026,8 +1027,9 @@ _king_make_pace(c3_c* pac_c)
   c3_c* bin_c;
   c3_i  ret_i;
 
-  ret_i = asprintf(&bin_c, "%s/.bin", u3_Host.dir_c);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&bin_c, "%s/.bin", u3_Host.dir_c) == -1 ) {
+    return -1;
+  }
 
   ret_i = c3_mkdir(bin_c, 0700);
 
@@ -1041,8 +1043,9 @@ _king_make_pace(c3_c* pac_c)
 
   c3_free(bin_c);
 
-  ret_i = asprintf(&bin_c, "%s/.bin/%s/", u3_Host.dir_c, pac_c);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&bin_c, "%s/.bin/%s/", u3_Host.dir_c, pac_c) == -1 ) {
+    return -1;
+  }
 
   //  XX asserting wrapper conflicts here (and is bypassed for .urb)
   //
@@ -1069,8 +1072,10 @@ static c3_i
 _king_init_pace(c3_c* pac_c)
 {
   c3_c* bin_c;
-  c3_i  fid_i, ret_i = asprintf(&bin_c, "%s/.bin/pace", u3_Host.dir_c);
-  c3_assert( ret_i > 0 );
+  c3_i  fid_i;
+  if ( asprintf(&bin_c, "%s/.bin/pace", u3_Host.dir_c) == -1 ) {
+    return -1;
+  }
 
   if ( (-1 == (fid_i = open(bin_c, O_WRONLY | O_CREAT | O_EXCL, 0644))) ) {
     if ( EEXIST == errno ) {
@@ -1114,8 +1119,9 @@ _king_link_run(c3_c* bin_c)
   c3_c* lin_c;
   c3_i  ret_i;
 
-  ret_i = asprintf(&lin_c, "%s/%s", u3_Host.dir_c, U3_BIN_ALIAS);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&lin_c, "%s/%s", u3_Host.dir_c, U3_BIN_ALIAS) == -1 ) {
+    return -1;
+  }
 
   ret_i = unlink(lin_c);
 
@@ -1128,9 +1134,11 @@ _king_link_run(c3_c* bin_c)
   ret_i = link(bin_c, lin_c);
 
   if ( ret_i ) {
+    ret_i = errno;
     fprintf(stderr, "vere: link %s -> %s failed: %s\n",
                     lin_c, bin_c, strerror(errno));
     c3_free(lin_c);
+    errno = ret_i;
     return -1;
   }
 
@@ -1152,8 +1160,9 @@ u3_king_vere(c3_c* pac_c,  // pace
   FILE* fil_u;
   c3_i  fid_i, ret_i;
 
-  ret_i = asprintf(&bin_c, "%s/vere-v%s-%s", dir_c, ver_c, arc_c);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&bin_c, "%s/vere-v%s-%s", dir_c, ver_c, arc_c) == -1 ) {
+    return -1;
+  }
 
   if (   (-1 == (fid_i = open(bin_c, O_WRONLY | O_CREAT | O_EXCL, 0755)))
      || !(fil_u = fdopen(fid_i, "wb")) )
@@ -1170,9 +1179,10 @@ u3_king_vere(c3_c* pac_c,  // pace
     }
   }
 
-  ret_i = asprintf(&url_c, "%s/%s/v%s/vere-v%s-%s",
-                   ver_hos_c, pac_c, ver_c, ver_c, arc_c);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&url_c, "%s/%s/v%s/vere-v%s-%s",
+                ver_hos_c, pac_c, ver_c, ver_c, arc_c) == -1 ) {
+    return -1;
+  }
 
   if ( (ret_i = _king_save_file(url_c, fil_u)) ) {
     u3l_log("unable to save %s to %s: %d", url_c, bin_c, ret_i);
@@ -1243,9 +1253,10 @@ _king_do_upgrade(c3_c* pac_c, c3_c* ver_c)
     exit(err_i);
   }
 
-  {
-    c3_i ret_i = asprintf(&dir_c, "%s/.bin/%s", u3_Host.dir_c, pac_c);
-    c3_assert( ret_i > 0 );
+  if ( asprintf(&dir_c, "%s/.bin/%s", u3_Host.dir_c, pac_c) == -1 ) {
+    c3_i err_i = errno;
+    fprintf(stderr, "vere: asprintf() failed: %s\r\n", strerror(err_i));
+    exit(err_i);
   }
 
   //  XX get link option
@@ -1437,9 +1448,10 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
     return -1; // XX
   }
 
-  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s",
-                           u3_Host.dir_c, pac_c, ver_c, arc_c);
-  c3_assert( ret_i > 0 );
+  if ( asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s",
+               u3_Host.dir_c, pac_c, ver_c, arc_c) == -1 ) {
+    return -1;
+  }
 
   ret_i = _king_copy_file(u3_Host.dem_c, bin_c);
 
@@ -1550,7 +1562,7 @@ u3_king_done(void)
           c3_free(ver_c);
         } break;
 
-        default: c3_assert(0);
+        default: exit(ENOTSUP);
       }
 
       c3_free(pac_c);
@@ -1606,7 +1618,7 @@ u3_king_grab(void* vod_p)
   c3_w tot_w = 0;
   FILE* fil_u;
 
-  c3_assert( u3R == &(u3H->rod_u) );
+  u3_assert(u3R == &(u3H->rod_u));
 
 #ifdef U3_MEMORY_LOG
   {

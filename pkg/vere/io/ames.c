@@ -130,7 +130,7 @@ _ames_panc_free(u3_panc* pac_u)
     pac_u->pre_u->nex_u = pac_u->nex_u;
   }
   else {
-    c3_assert(pac_u == pac_u->sam_u->pac_u);
+    u3_assert(pac_u == pac_u->sam_u->pac_u);
     pac_u->sam_u->pac_u = pac_u->nex_u;
   }
 
@@ -283,7 +283,10 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
 
   //  only version 0 currently recognized
   //
-  c3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
+  if ( 0 != hed_u->ver_y ) {
+    fprintf(stderr, "ames: unsupported version %u\r\n", hed_u->ver_y);
+    exit(ENOTSUP);
+  }
 
   buf_y[0] = hed_w & 0xff;
   buf_y[1] = (hed_w >>  8) & 0xff;
@@ -699,13 +702,15 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
 
   u3_noun tag, val;
   u3x_cell(lan, &tag, &val);
-  c3_assert( (c3y == tag) || (c3n == tag) );
+  u3_assert(c3y == tag || c3n == tag);
 
   //  galaxy lane; do DNS lookup and send packet
   //
   if ( c3y == tag ) {
-    c3_assert( c3y == u3a_is_cat(val) );
-    c3_assert( val < 256 );
+    if ( c3n == u3a_is_cat(val) || val >= 256 ) {
+      fprintf(stderr, "ames: bad value in galaxy lane DNS lookup\r\n");
+      exit(EINVAL);
+    }
 
     pac_u->imp_y = val;
     _ames_czar(pac_u);
@@ -1260,7 +1265,7 @@ _ames_io_start(u3_ames* sam_u)
     }
 
     uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    c3_assert(add_u.sin_port);
+    u3_assert(add_u.sin_port);
 
     sam_u->pir_u->por_s = ntohs(add_u.sin_port);
   }
@@ -1566,7 +1571,13 @@ u3_ames_io_init(u3_pier* pir_u)
   //
   sam_u->lax_p = u3h_new_cache(500000);
 
-  c3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
+  c3_i ret_i = uv_udp_init(u3L, &sam_u->wax_u);
+  if (  ret_i != 0 ) {
+    fprintf(stderr,
+            "ames: failed to initialize UDP: %s\r\n",
+            uv_strerror(ret_i));
+    return NULL;
+  }
   sam_u->wax_u.data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();

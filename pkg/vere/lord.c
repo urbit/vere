@@ -74,7 +74,7 @@ static void
 _lord_writ_free(u3_writ* wit_u)
 {
   switch ( wit_u->typ_e ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     case u3_writ_work: {
       //  XX confirm
@@ -170,7 +170,9 @@ _lord_writ_pop(u3_lord* god_u)
 {
   u3_writ* wit_u = god_u->ext_u;
 
-  c3_assert( wit_u );
+  if ( !wit_u ) {
+    return NULL;
+  }
 
   if ( !wit_u->nex_u ) {
     god_u->ent_u = god_u->ext_u = 0;
@@ -191,7 +193,7 @@ static inline const c3_c*
 _lord_writ_str(u3_writ_type typ_e)
 {
   switch ( typ_e ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     case u3_writ_work: return "work";
     case u3_writ_peek: return "peek";
@@ -530,7 +532,9 @@ _lord_work_spin(u3_lord* god_u)
 
   //  complete spinner
   //
-  c3_assert( c3y == god_u->pin_o );
+  if ( c3y != god_u->pin_o ) {
+    return;
+  }
   god_u->cb_u.spun_f(god_u->cb_u.ptr_v);
   god_u->pin_o = c3n;
 
@@ -764,7 +768,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
   u3_noun msg;
 
   switch ( wit_u->typ_e ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     case u3_writ_work: {
       u3_noun mil = u3i_words(1, &wit_u->wok_u.egg_u->mil_w);
@@ -855,8 +859,8 @@ static void
 _lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {
-    c3_assert( !god_u->ext_u );
-    c3_assert( !god_u->dep_w );
+    u3_assert( !god_u->ext_u );
+    u3_assert( !god_u->dep_w );
     god_u->dep_w = 1;
     god_u->ent_u = god_u->ext_u = wit_u;
   }
@@ -886,7 +890,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
   {
     u3_noun sam;
     switch ( pic_u->typ_e ) {
-      default: c3_assert(0);
+      default: exit(ENOTSUP);
 
       case u3_pico_full: {
         sam = u3k(pic_u->ful);
@@ -919,7 +923,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
 
   //  XX wat do?
   //
-  // c3_assert( !pay_u.ent_u->nex_u );
+  // u3_assert( !pay_u.ent_u->nex_u );
 
   _lord_writ_plan(god_u, wit_u);
 }

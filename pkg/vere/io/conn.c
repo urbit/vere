@@ -266,7 +266,8 @@ _conn_poke_bail(u3_ovum* egg_u, u3_noun lud)
   {
     //  wtf?
     //
-    c3_assert(!"not reached");
+    fprintf(stderr, "conn: unreachable\r\n");
+    exit(ECANCELED);
     u3z(lud); return;
   }
   can_u = _conn_find_chan(con_u, sev_l, coq_l);
@@ -661,11 +662,26 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->coq_l = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
-  c3_assert(!err_i);
+  if ( err_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to initialize timer: %s\r\n",
+            uv_strerror(err_i));
+    exit(err_i);
+  }
   err_i = uv_pipe_init(u3L, &can_u->mor_u.pyp_u, 0);
-  c3_assert(!err_i);
+  if ( err_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to initialize pipe: %s\r\n",
+            uv_strerror(err_i));
+    exit(err_i);
+  }
   err_i = uv_accept(sem_u, (uv_stream_t*)&can_u->mor_u.pyp_u);
-  c3_assert(!err_i);
+  if ( err_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to accept connection: %s\r\n",
+            uv_strerror(err_i));
+    exit(err_i);
+  }
   u3_newt_read((u3_moat*)&can_u->mor_u);
   can_u->mor_u.nex_u = (u3_moor*)san_u->can_u;
   san_u->can_u = can_u;
@@ -685,14 +701,29 @@ _conn_init_sock(u3_shan* san_u)
 
   u3z(who);
   ret_i = snprintf(pip_c, sizeof(pip_c), "\\\\.\\pipe\\urbit-conn-%s", who_c + 1);
-  c3_assert(19 + strlen(who_c) == ret_i);
+  u3_assert(19 + strlen(who_c) == ret_i);
   c3_free(who_c);
   ret_i = uv_pipe_init(u3L, &san_u->pyp_u, 0);
-  c3_assert(!ret_i);
+  if ( ret_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to initialize pipe: %s\r\n",
+            uv_strerror(ret_i));
+    exit(ret_i);
+  }
   ret_i = uv_pipe_bind(&san_u->pyp_u, pip_c);
-  c3_assert(!ret_i);
+  if ( ret_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to bind: %s\r\n",
+            uv_strerror(ret_i));
+    exit(ret_i);
+  }
   ret_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0, _conn_sock_cb);
-  c3_assert(!ret_i);
+  if ( ret_i != 0 ) {
+    fprintf(stderr,
+            "conn: failed to listen: %s\r\n",
+            uv_strerror(ret_i));
+    exit(ret_i);
+  }
   u3l_log("conn: listening on %s", pip_c);
 
 #else   //  _WIN32
@@ -792,7 +823,9 @@ _conn_io_talk(u3_auto* car_u)
 
   //  initialize server, opening socket.
   //
-  c3_assert(!con_u->san_u);
+  if ( con_u->san_u ) {
+    exit(EINVAL);
+  }
   san_u = c3_calloc(sizeof(*san_u));
   san_u->nex_l = 1;
   san_u->con_u = con_u;
@@ -864,8 +897,8 @@ _conn_io_exit(u3_auto* car_u)
   c3_i              wit_i;
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, URB_SOCK_PATH);
-  c3_assert(wit_i > 0);
-  c3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(wit_i > 0);
+  u3_assert(len_w == (c3_w)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {

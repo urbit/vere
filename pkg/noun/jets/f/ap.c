@@ -513,7 +513,8 @@
                             u3qdb_put(q_gen, u3_blip, diz)),
                        u3nc(c3__cnzy, u3_blip));
 
-    c3_assert(0);
+    // It's unclear why we're bailing here. See cf63265ac05 for more.
+    u3m_bail(c3__oops);
     u3z(diz);
     return ret;
   }

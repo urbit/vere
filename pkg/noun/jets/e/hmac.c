@@ -16,7 +16,7 @@
             u3_atom wid,
             u3_atom dat)
   {
-    c3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
+    u3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
 
     // prep the hashing gate
     u3j_site sit_u;

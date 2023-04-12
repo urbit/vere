@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include "allocate.h"
+#include "error.h"
 #include "hashtable.h"
 #include "jets/k.h"
 #include "jets/q.h"
@@ -461,7 +462,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
     }
 
     switch ( tag_e ) {
-      default: c3_assert(0);
+      default: exit(ENOTSUP);
 
       case ur_jam_cell: {
         _cue_frame_t* fam_u = u3a_push(pil_u);
@@ -611,7 +612,7 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
 {
   u3_cue_xeno* sil_u;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert(&(u3H->rod_u) == u3R);
 
   sil_u = c3_calloc(sizeof(*sil_u));
   ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
@@ -636,7 +637,7 @@ u3s_cue_xeno_with(u3_cue_xeno* sil_u,
 {
   u3_weak som;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert(&(u3H->rod_u) == u3R);
 
   som = _cs_cue_xeno(sil_u, len_d, byt_y);
   ur_dict32_wipe(&sil_u->dic_u);
@@ -661,7 +662,7 @@ u3s_cue_xeno(c3_d        len_d,
   u3_cue_xeno* sil_u;
   u3_weak        som;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert(&(u3H->rod_u) == u3R);
 
   sil_u = u3s_cue_xeno_init();
   som   = _cs_cue_xeno(sil_u, len_d, byt_y);
@@ -719,7 +720,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
     _cs_cue_need(ur_bsr_tag(red_u, &tag_e));
 
     switch ( tag_e ) {
-      default: c3_assert(0);
+      default: exit(ENOTSUP);
 
       case ur_jam_cell: {
         _cue_frame_t* fam_u = u3a_push(pil_u);

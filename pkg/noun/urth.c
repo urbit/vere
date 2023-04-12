@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 #include "allocate.h"
+#include "error.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -44,7 +45,7 @@ _cu_atom_to_ref(ur_root_t* rot_u, u3a_atom* vat_u)
       c3_y* byt_y = (c3_y*)vat_u->buf_w;
       c3_d  len_d = ((c3_d)vat_u->len_w) << 2;
 
-      c3_assert( len_d );
+      u3_assert(len_d > 0);
 
       //  NB: this call will account for any trailing null bytes
       //  caused by an overestimate in [len_d]
@@ -254,7 +255,7 @@ static u3_noun
 _cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
 {
   switch ( ur_nref_tag(ref) ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     //  all ur indirect atoms have been pre-reallocated on the loom.
     //
@@ -369,7 +370,7 @@ static ur_nref
 _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 {
 #ifdef U3_MEMORY_DEBUG
-  c3_assert(0);
+  exit(ENOSYS);
 #endif
 
   //  bypassing page tracking as an optimization
@@ -451,7 +452,7 @@ u3u_meld(void)
   ur_root_t* rot_u;
   ur_nvec_t  cod_u;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert(&(u3H->rod_u) == u3R);
 
   _cu_realloc(stderr, &rot_u, &cod_u);
 
@@ -643,7 +644,7 @@ u3u_cram(c3_c* dir_c, c3_d eve_d)
   c3_d  len_d;
   c3_y* byt_y;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert(&(u3H->rod_u) == u3R);
 
   {
     ur_root_t* rot_u;

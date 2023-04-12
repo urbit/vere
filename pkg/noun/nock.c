@@ -189,7 +189,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           return pro;
         }
       }
-      c3_assert(!"not reached");
 
       case 1: {
         u3_noun pro = u3k(gal);
@@ -197,7 +196,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
         u3a_lose(bus); u3a_lose(fol);
         return pro;
       }
-      c3_assert(!"not reached");
 
       case 2: {
         u3_noun nex = _n_nock_on(u3k(bus), u3k(u3t(gal)));
@@ -208,7 +206,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
         fol = nex;
         continue;
       }
-      c3_assert(!"not reached");
 
       case 3: {
         u3_noun gof, pro;
@@ -219,7 +216,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
         u3a_lose(gof); u3a_lose(fol);
         return pro;
       }
-      c3_assert(!"not reached");
 
       case 4: {
         u3_noun gof, pro;
@@ -230,7 +226,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
         u3a_lose(fol);
         return pro;
       }
-      c3_assert(!"not reached");
 
       case 5: {
         u3_noun wim = _n_nock_on(bus, u3k(gal));
@@ -239,7 +234,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
         u3a_lose(wim); u3a_lose(fol);
         return pro;
       }
-      c3_assert(!"not reached");
 
       case 6: {
         u3_noun b_gal, c_gal, d_gal;
@@ -260,7 +254,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           continue;
         }
       }
-      c3_assert(!"not reached");
 
       case 7: {
         u3_noun b_gal, c_gal;
@@ -276,7 +269,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           continue;
         }
       }
-      c3_assert(!"not reached");
 
       case 8: {
         u3_noun b_gal, c_gal;
@@ -293,7 +285,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           continue;
         }
       }
-      c3_assert(!"not reached");
 
       case 9: {
         u3_noun b_gal, c_gal;
@@ -326,7 +317,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           }
         }
       }
-      c3_assert(!"not reached");
 
       case 10: {
         u3_noun p_gal, q_gal;
@@ -389,7 +379,6 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           return pro;
         }
       }
-      c3_assert(!"not reached");
     }
   }
 }
@@ -556,7 +545,7 @@ _n_arg(c3_y cod_y)
       return sizeof(c3_l);
 
     default:
-      c3_assert( cod_y < LAST );
+      u3_assert(cod_y < LAST);
       return 0;
   }
 }
@@ -592,7 +581,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           }
           else {
             fprintf(stderr, "_n_melt(): over 2^16 registration sites.\r\n");
-            c3_assert(0);
+            u3m_bail(c3__oops);
           }
           break;
       }
@@ -634,7 +623,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           }
           else {
             fprintf(stderr, "_n_melt(): over 2^16 memos.\r\n");
-            c3_assert(0);
+            u3m_bail(c3__oops);
           }
           break;
         }
@@ -644,7 +633,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         case FISK: case FISL: case SUSH: case SANS:
         case LISL: case LISK: case SKIS: case SLIS:
         case HILS: case HINS:
-          c3_assert(0); //overflows
+          u3m_bail(c3__oops); //overflows
           break;
 
         case KICB: case TICB:
@@ -657,7 +646,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           }
           else {
             fprintf(stderr, "_n_melt(): over 2^16 call sites.\r\n");
-            c3_assert(0);
+            u3m_bail(c3__oops);
           }
           break;
 
@@ -674,7 +663,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           }
           else {
             fprintf(stderr, "_n_melt(): over 2^16 literals.\r\n");
-            c3_assert(0);
+            u3m_bail(c3__oops);
           }
           break;
       }
@@ -817,8 +806,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
       u3_noun cod = u3h(op);
       switch ( cod ) {
         default:
-          c3_assert(0);
-          return;
+          u3m_bail(c3__oops);
 
         /* memo index args */
         case SKIB: case SLIB: {
@@ -924,9 +912,9 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
   }
   u3z(top);
   // this assert will fail if we overflow a c3_w worth of instructions
-  c3_assert(u3_nul == ops);
+  u3_assert(u3_nul == ops);
   // this is just a sanity check
-  c3_assert(u3_nul == sip);
+  u3_assert(u3_nul == sip);
 }
 
 /* _n_prog_from_ops(): new program from _n_comp() product
@@ -1612,8 +1600,7 @@ _n_print_byc(c3_y* pog, c3_w her_w)
         fprintf(stderr, "%u]", _n_rewo(pog, &ip_w));
         break;
       default:
-        c3_assert(0);
-        break;
+        u3m_bail(c3__oops);
     }
   }
   fprintf(stderr, " halt}\r\n");
@@ -1890,7 +1877,7 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
     u3z(delta);
   }
   else {
-    c3_assert( u3_nul == tok );
+    u3_assert(u3_nul == tok);
   }
 
   u3z(tok);
@@ -1985,7 +1972,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // unpack q_tok to get the priority integer and the tank
     // p_q_tok is the priority, q_q_tok is the tank we will work with
     u3_noun p_q_tok, q_q_tok;
-    c3_assert(c3y == u3r_cell(q_tok, &p_q_tok, &q_q_tok));
+    u3_assert(c3y == u3r_cell(q_tok, &p_q_tok, &q_q_tok));
 
     // format the timing report
     c3_c str_c[64];
@@ -2000,7 +1987,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     u3z(delta);
   }
   else {
-    c3_assert( u3_nul == tok );
+    u3_assert( u3_nul == tok );
   }
 
   u3z(tok);
@@ -2991,7 +2978,7 @@ _n_ream(u3_noun kev)
 void
 u3n_ream()
 {
-  c3_assert(u3R == &(u3H->rod_u));
+  u3_assert(u3R == &(u3H->rod_u));
   u3h_walk(u3R->byc.har_p, _n_ream);
 }
 
@@ -3118,7 +3105,7 @@ u3n_slam_on(u3_noun gat, u3_noun sam)
 #if 0
   if ( &u3H->rod_u == u3R ) {
     if ( exc_w == 1 ) {
-      c3_assert(0);
+      u3m_bail(c3__oops);
     }
     exc_w++;
   }

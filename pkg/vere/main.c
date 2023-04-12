@@ -120,7 +120,7 @@ _main_repath(c3_c* pax_c)
   c3_w  len_w;
   c3_i  wit_i;
 
-  c3_assert(pax_c);
+  assert(pax_c);
   if ( 0 != (rel_c = realpath(pax_c, 0)) ) {
     return rel_c;
   }
@@ -128,11 +128,13 @@ _main_repath(c3_c* pax_c)
   if ( !fas_c ) {
     c3_c rec_c[2048];
 
-    wit_i = snprintf(rec_c, sizeof(rec_c), "./%s", pax_c);
-    c3_assert(sizeof(rec_c) > wit_i);
+    assert(sizeof(rec_c) > snprintf(rec_c, sizeof(rec_c), "./%s", pax_c));
     return _main_repath(rec_c);
   }
-  c3_assert(u3_unix_cane(fas_c + 1));
+  if ( !u3_unix_cane(fas_c + 1) ) {
+    fprintf(stderr, "main: path %s is not canonical\r\n", fas_c + 1);
+    exit(ECANCELED);
+  }
   *fas_c = 0;
   dir_c = realpath(pax_c, 0);
   *fas_c = '/';
@@ -142,7 +144,7 @@ _main_repath(c3_c* pax_c)
   len_w = strlen(dir_c) + strlen(fas_c) + 1;
   rel_c = c3_malloc(len_w);
   wit_i = snprintf(rel_c, len_w, "%s%s", dir_c, fas_c);
-  c3_assert(len_w == wit_i + 1);
+  assert(len_w == wit_i + 1);
   c3_free(dir_c);
   return rel_c;
 }
@@ -1021,13 +1023,34 @@ _cw_init_io(uv_loop_t* lup_u)
   {
     c3_i err_i;
     err_i = uv_timer_init(lup_u, &inn_u.tim_u);
-    c3_assert(!err_i);
+    if ( err_i != 0 ) {
+      fprintf(stderr,
+              "main: failed to initialize timer: %s\r\n",
+              uv_strerror(err_i));
+      exit(err_i);
+    }
     err_i = uv_pipe_init(lup_u, &inn_u.pyp_u, 0);
-    c3_assert(!err_i);
+    if ( err_i != 0 ) {
+      fprintf(stderr,
+              "main: failed to initialize pipe: %s\r\n",
+              uv_strerror(err_i));
+      exit(err_i);
+    }
     uv_pipe_open(&inn_u.pyp_u, inn_i);
     err_i = uv_pipe_init(lup_u, &out_u.pyp_u, 0);
-    c3_assert(!err_i);
+    if ( err_i != 0 ) {
+      fprintf(stderr,
+              "main: failed to failed to initialize pipe: %s\r\n",
+              uv_strerror(err_i));
+      exit(err_i);
+    }
     uv_pipe_open(&out_u.pyp_u, out_i);
+    if ( err_i != 0 ) {
+      fprintf(stderr,
+              "main: failed to failed to open pipe: %s\r\n",
+              uv_strerror(err_i));
+      exit(err_i);
+    }
 
     uv_stream_set_blocking((uv_stream_t*)&out_u.pyp_u, 1);
   }
@@ -1320,7 +1343,12 @@ _cw_eval(c3_i argc, c3_c* argv[])
   {
     c3_i err_i;
     err_i = uv_pipe_init(uv_default_loop(), &std_u.pyp_u, 0);
-    c3_assert(!err_i);
+    if ( err_i != 0 ) {
+      fprintf(stderr,
+              "conn: failed to initialize pipe: %s\r\n",
+              uv_strerror(err_i));
+      exit(err_i);
+    }
     uv_pipe_open(&std_u.pyp_u, 1);
 
     std_u.ptr_v = NULL;
@@ -2239,7 +2267,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
         fprintf(stderr, "vere: next (%%%s): %s\n", pac_c, ver_c);
       } break;
 
-      default: c3_assert(0);
+      default: exit(ENOTSUP);
     }
   }
 
@@ -2311,7 +2339,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
 
 
   switch ( u3h(res) ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     case c3n: {
       fprintf(stderr, "vile: unable to retrieve key file\r\n");
@@ -2426,7 +2454,7 @@ main(c3_i   argc,
   //  parse for subcommands
   //
   switch ( _cw_utils(argc, argv) ) {
-    default: c3_assert(0);
+    default: exit(ENOTSUP);
 
     //  no matching subcommand, parse arguments
     //

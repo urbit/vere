@@ -2,6 +2,7 @@
 
 #include "allocate.h"
 
+#include "error.h"
 #include "hashtable.h"
 #include "log.h"
 #include "manage.h"
@@ -111,7 +112,7 @@ _box_make(void* box_v, c3_w siz_w, c3_w use_w)
   u3a_box* box_u = box_v;
   c3_w*    box_w = box_v;
 
-  c3_assert(siz_w >= u3a_minimum);
+  u3_assert(siz_w >= u3a_minimum);
 
   box_u->siz_w = siz_w;
   box_w[siz_w - 1] = siz_w;     /* stor size at end of allocation as well */
@@ -132,8 +133,8 @@ _box_make(void* box_v, c3_w siz_w, c3_w use_w)
 static void
 _box_attach(u3a_box* box_u)
 {
-  c3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_fbox)));
-  c3_assert(0 != u3of(u3a_fbox, box_u));
+  u3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_fbox)));
+  u3_assert(0 != u3of(u3a_fbox, box_u));
 
 #if 0
   //  For debugging, fill the box with beef.
@@ -176,13 +177,15 @@ _box_detach(u3a_box* box_u)
 
   if ( nex_p ) {
     if ( u3to(u3a_fbox, nex_p)->pre_p != fre_p ) {
-      c3_assert(!"loom: corrupt");
+      fprintf(stderr, "loom: corrupt\r\n");
+      exit(ENOTRECOVERABLE);
     }
     u3to(u3a_fbox, nex_p)->pre_p = pre_p;
   }
   if ( pre_p ) {
     if( u3to(u3a_fbox, pre_p)->nex_p != fre_p ) {
-      c3_assert(!"loom: corrupt");
+      fprintf(stderr, "loom: corrupt\r\n");
+      exit(ENOTRECOVERABLE);
     }
     u3to(u3a_fbox, pre_p)->nex_p = nex_p;
   }
@@ -190,7 +193,8 @@ _box_detach(u3a_box* box_u)
     c3_w sel_w = _box_slot(box_u->siz_w);
 
     if ( fre_p != u3R->all.fre_p[sel_w] ) {
-      c3_assert(!"loom: corrupt");
+      fprintf(stderr, "loom: corrupt\r\n");
+      exit(ENOTRECOVERABLE);
     }
     u3R->all.fre_p[sel_w] = nex_p;
   }
@@ -203,7 +207,7 @@ _box_free(u3a_box* box_u)
 {
   c3_w* box_w = (c3_w *)(void *)box_u;
 
-  c3_assert(box_u->use_w != 0);
+  u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
   if ( 0 != box_u->use_w ) {
     return;
@@ -378,13 +382,13 @@ u3a_sane(void)
 
     while ( fre_u ) {
       if ( fre_u == u3R->all.fre_u[i_w] ) {
-        c3_assert(fre_u->pre_u == 0);
+        u3_assert(fre_u->pre_u == 0);
       }
       else {
-        c3_assert(fre_u->pre_u != 0);
-        c3_assert(fre_u->pre_u->nex_u == fre_u);
+        u3_assert(fre_u->pre_u != 0);
+        u3_assert(fre_u->pre_u->nex_u == fre_u);
         if ( fre_u->nex_u != 0 ) {
-          c3_assert(fre_u->nex_u->pre_u == fre_u);
+          u3_assert(fre_u->nex_u->pre_u == fre_u);
         }
       }
       fre_u = fre_u->nex_u;
@@ -536,14 +540,16 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
                  (u3to(u3a_fbox, u3to(u3a_fbox, *pfr_p)->pre_p)->nex_p
                     != (*pfr_p)) )
             {                   /* this->pre->nex isn't this */
-              c3_assert(!"loom: corrupt");
+              fprintf(stderr, "loom: corrupt\r\n");
+              exit(ENOTRECOVERABLE);
             }
 
             if( (0 != u3to(u3a_fbox, *pfr_p)->nex_p) &&
                 (u3to(u3a_fbox, u3to(u3a_fbox, *pfr_p)->nex_p)->pre_p
                    != (*pfr_p)) )
             {                   /* this->nex->pre isn't this */
-              c3_assert(!"loom: corrupt");
+              fprintf(stderr, "loom: corrupt\r\n");
+              exit(ENOTRECOVERABLE);
             }
 
             /* pop the block */
@@ -575,7 +581,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
             return u3a_boxto(_box_make(box_w, des_w, 1));
           }
           else {
-            c3_assert(0 == box_u->use_w);
+            u3_assert(0 == box_u->use_w);
             box_u->use_w = 1;
 
 #ifdef      U3_MEMORY_DEBUG
@@ -738,7 +744,7 @@ u3a_calloc(size_t num_i, size_t len_i)
   size_t byt_i = num_i * len_i;
   c3_w* out_w;
 
-  c3_assert(byt_i / len_i == num_i);
+  u3_assert(byt_i / len_i == num_i);
   out_w = u3a_malloc(byt_i);
   memset(out_w, 0, byt_i);
 
@@ -981,8 +987,8 @@ _me_wash_north_in(u3_noun som)
 static void
 _me_wash_north(u3_noun dog)
 {
-  c3_assert(c3y == u3a_is_dog(dog));
-  // c3_assert(c3y == u3a_north_is_junior(u3R, dog));
+  u3_assert(c3y == u3a_is_dog(dog));
+  // u3_assert(c3y == u3a_north_is_junior(u3R, dog));
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
@@ -1014,8 +1020,8 @@ _me_wash_south_in(u3_noun som)
 static void
 _me_wash_south(u3_noun dog)
 {
-  c3_assert(c3y == u3a_is_dog(dog));
-  // c3_assert(c3y == u3a_south_is_junior(u3R, dog));
+  u3_assert(c3y == u3a_is_dog(dog));
+  // u3_assert(c3y == u3a_south_is_junior(u3R, dog));
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
@@ -1185,7 +1191,7 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
       if ( veb_u->mug_w >> 31 ) {
         u3_noun nov = (u3_noun)veb_u->mug_w;
 
-        c3_assert( c3y == u3a_north_is_normal(u3R, nov) );
+        u3_assert(c3y == u3a_north_is_normal(u3R, nov));
 
 #ifdef VERBOSE_TAKE
         u3l_log("north: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -1240,7 +1246,7 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
       if ( veb_u->mug_w >> 31 ) {
         u3_noun nov = (u3_noun)veb_u->mug_w;
 
-        c3_assert( c3y == u3a_south_is_normal(u3R, nov) );
+        u3_assert(c3y == u3a_south_is_normal(u3R, nov));
 
 #ifdef VERBOSE_TAKE
         u3l_log("south: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -1355,7 +1361,7 @@ u3a_take(u3_noun veb)
   u3_noun pro;
   u3t_on(coy_o);
 
-  c3_assert(u3_none != veb);
+  u3_assert(u3_none != veb);
 
   pro = ( c3y == u3a_is_north(u3R) )
         ? _ca_take_north(veb)
@@ -1395,7 +1401,7 @@ _me_gain_north(u3_noun dog)
   else {
     /* junior nouns are disallowed
     */
-    c3_assert(!_(u3a_north_is_junior(u3R, dog)));
+    u3_assert(!_(u3a_north_is_junior(u3R, dog)));
 
     /* normal pointers are refcounted
     */
@@ -1417,7 +1423,7 @@ _me_gain_south(u3_noun dog)
   else {
     /* junior nouns are disallowed
     */
-    c3_assert(!_(u3a_south_is_junior(u3R, dog)));
+    u3_assert(!_(u3a_south_is_junior(u3R, dog)));
 
     /* normal nouns are refcounted
     */
@@ -1512,7 +1518,7 @@ u3_noun
 u3a_gain(u3_noun som)
 {
   u3t_on(mal_o);
-  c3_assert(u3_none != som);
+  u3_assert(u3_none != som);
 
   if ( !_(u3a_is_cat(som)) ) {
     som = _(u3a_is_north(u3R))
@@ -1711,7 +1717,7 @@ u3a_mark_ptr(void* ptr_v)
       siz_w = 0;
     }
     else {
-      c3_assert(use_ws != 0);
+      u3_assert(use_ws != 0);
 
       if ( 0x80000000 == (c3_w)use_ws ) {    // see _raft_prof()
         use_ws = -1;
@@ -1839,7 +1845,7 @@ u3a_count_ptr(void* ptr_v)
       siz_w = 0;
     }
     else {
-      c3_assert(use_ws != 0);
+      u3_assert(use_ws != 0);
 
       if ( use_ws < 0 ) {
         siz_w = 0;
@@ -1913,7 +1919,7 @@ u3a_discount_ptr(void* ptr_v)
     siz_w = 0;
   }
   else {
-    c3_assert(use_ws != 0);
+    u3_assert(use_ws != 0);
 
     if ( use_ws < 0 ) {
       use_ws = -use_ws;
@@ -1963,7 +1969,7 @@ u3a_discount_noun(u3_noun som)
 void
 u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
 {
-  c3_assert( 0 != str_c );
+  u3_assert(0 != str_c);
 
   c3_w sec_w = (mic_d / 1000000);
   c3_w mec_w = (mic_d % 1000000) / 1000;
@@ -1985,7 +1991,7 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
 void
 u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
 {
-  c3_assert( 0 != fil_u );
+  u3_assert(0 != fil_u);
 
   c3_z byt_z = ((c3_z)wor_w * 4);
   c3_z gib_z = (byt_z / 1000000000);
@@ -2318,8 +2324,8 @@ u3a_sweep(void)
   u3a_print_memory(stderr, "leaked", leq_w);
   u3a_print_memory(stderr, "weaked", weq_w);
 
-  c3_assert( (pos_w + leq_w + weq_w) == neg_w );
-  c3_assert( (0 == leq_w) && (0 == weq_w) );
+  u3_assert((pos_w + leq_w + weq_w) == neg_w);
+  u3_assert((0 == leq_w) && (0 == weq_w));
 
   return neg_w;
 }
@@ -2408,7 +2414,7 @@ _ca_pack_move_north(c3_w* box_w, c3_w* end_w, u3_post new_p)
     if ( old_u->use_w ) {
       c3_w* new_w = (void*)u3a_botox(u3a_into(new_p));
 
-      c3_assert( box_w[siz_w - 1] == new_p );
+      u3_assert(box_w[siz_w - 1] == new_p);
 
       //  note: includes leading size
       //
@@ -2420,7 +2426,7 @@ _ca_pack_move_north(c3_w* box_w, c3_w* end_w, u3_post new_p)
         }
       }
       else {
-        c3_assert( new_w == box_w );
+        u3_assert(new_w == box_w);
       }
 
       //  restore trailing size
@@ -2464,7 +2470,7 @@ _ca_pack_move_south(c3_w* box_w, c3_w* end_w, u3_post new_p)
     if ( old_u->use_w ) {
       c3_w* new_w = (void*)u3a_botox(u3a_into(new_p));
 
-      c3_assert( old_u->siz_w == new_p );
+      u3_assert(old_u->siz_w == new_p);
 
       //  note: includes trailing size
       //
@@ -2476,7 +2482,7 @@ _ca_pack_move_south(c3_w* box_w, c3_w* end_w, u3_post new_p)
         }
       }
       else {
-        c3_assert( new_w == box_w );
+        u3_assert(new_w == box_w);
       }
 
       //  restore leading size
@@ -2500,7 +2506,7 @@ _ca_pack_move_south(c3_w* box_w, c3_w* end_w, u3_post new_p)
       }
     }
     else {
-      c3_assert( end_w == box_w );
+      u3_assert(end_w == box_w);
       break;
     }
   }
@@ -2734,11 +2740,19 @@ u3a_loom_sane()
       u3a_fbox *pre_u = u3to(u3a_fbox, this_u->pre_p)
         ,      *nex_u = u3to(u3a_fbox, this_u->nex_p);
 
-      if (nex_p && nex_u->pre_p != this_p) c3_assert(!"loom: wack");
-      if (pre_p && pre_u->nex_p != this_p) c3_assert(!"loom: wack");
+      if (nex_p && nex_u->pre_p != this_p) {
+        fprintf(stderr, "loom: corrupt\r\n");
+        exit(ENOTRECOVERABLE);
+      }
+      if (pre_p && pre_u->nex_p != this_p) {
+        fprintf(stderr, "loom: corrupt\r\n");
+        exit(ENOTRECOVERABLE);
+      }
       if (!pre_p                /* this must be the head of a freelist */
-          && u3R->all.fre_p[_box_slot(this_u->box_u.siz_w)] != this_p)
-        c3_assert(!"loom: wack");
+          && u3R->all.fre_p[_box_slot(this_u->box_u.siz_w)] != this_p) {
+        fprintf(stderr, "loom: corrupt\r\n");
+        exit(ENOTRECOVERABLE);
+      }
     }
   }
 }

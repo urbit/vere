@@ -3,6 +3,7 @@
 #include "hashcons.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stddef.h>
@@ -436,7 +437,7 @@ ur_mug
 ur_nref_mug(ur_root_t *r, ur_nref ref)
 {
   switch ( ur_nref_tag(ref) ) {
-    default: assert(0);
+    default: exit(ENOTSUP);
 
     case ur_direct: return ur_mug64(ref);
     case ur_iatom:  return r->atoms.mugs[ur_nref_idx(ref)];
@@ -525,7 +526,7 @@ ur_bytes(ur_root_t *r, ur_nref ref, uint8_t **byt, uint64_t *len)
 {
   assert( !ur_deep(ref) );
   switch ( ur_nref_tag(ref) ) {
-    default: assert(0);
+    default: exit(ENOTSUP);
 
     case ur_direct: {
       *len = ur_met3_64(ref);

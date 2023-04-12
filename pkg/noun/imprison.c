@@ -2,6 +2,7 @@
 
 #include "imprison.h"
 
+#include "error.h"
 #include "jets/k.h"
 #include "jets/q.h"
 #include "manage.h"
@@ -40,7 +41,7 @@ _ci_slab_init(u3i_slab* sab_u, c3_w len_w)
   vat_u->len_w = len_w;
 
 #ifdef U3_MEMORY_DEBUG
-  c3_assert( len_w );
+  u3_assert(len_w > 0);
 #endif
 
   sab_u->_._vat_u = vat_u;
@@ -203,11 +204,11 @@ u3i_slab_free(u3i_slab* sab_u)
   u3t_on(mal_o);
 
   if ( 1 == len_w ) {
-    c3_assert( !vat_u );
+    u3_assert(vat_u == NULL);
   }
   else {
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    c3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert(tav_w == (c3_w*)vat_u);
     u3a_wfree(vat_u);
   }
 
@@ -228,7 +229,7 @@ u3i_slab_mint(u3i_slab* sab_u)
   if ( 1 == len_w ) {
     c3_w dat_w = *sab_u->buf_w;
 
-    c3_assert( !vat_u );
+    u3_assert(vat_u == NULL);
 
     u3t_off(mal_o);
     pro = u3i_word(dat_w);
@@ -237,7 +238,7 @@ u3i_slab_mint(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    c3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert(tav_w == (c3_w*)vat_u);
 
     //  trim trailing zeros
     //
@@ -266,7 +267,7 @@ u3i_slab_moot(u3i_slab* sab_u)
   if ( 1 == len_w) {
     c3_w dat_w = *sab_u->buf_w;
 
-    c3_assert( !sab_u->_._vat_u );
+    u3_assert(sab_u->_._vat_u == NULL);
 
     u3t_off(mal_o);
     pro = u3i_word(dat_w);
@@ -275,7 +276,7 @@ u3i_slab_moot(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    c3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert(tav_w == (c3_w*)vat_u);
 
     pro = _ci_atom_mint(vat_u, len_w);
   }
@@ -456,7 +457,7 @@ u3i_mp(mpz_t a_mp)
 u3_atom
 u3i_vint(u3_noun a)
 {
-  c3_assert(u3_none != a);
+  u3_assert(u3_none != a);
 
   if ( _(u3a_is_cat(a)) ) {
     return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
@@ -819,7 +820,7 @@ u3i_molt(u3_noun som, ...)
     va_end(ap);
   }
 
-  c3_assert( 0 != len_w );
+  u3_assert(0 != len_w);
   pms_m = alloca(len_w * sizeof(struct _molt_pair));
 
   //  Install.

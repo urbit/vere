@@ -20,7 +20,7 @@ static void
 _pier_peek_plan(u3_pier* pir_u, u3_pico* pic_u)
 {
   if (!pir_u->pec_u.ent_u) {
-    c3_assert( !pir_u->pec_u.ext_u );
+    u3_assert(!pir_u->pec_u.ext_u);
     pir_u->pec_u.ent_u = pir_u->pec_u.ext_u = pic_u;
   }
   else {
@@ -128,7 +128,7 @@ _pier_work_send(u3_work* wok_u)
 static void
 _pier_gift_plan(u3_work* wok_u, u3_gift* gif_u)
 {
-  c3_assert( gif_u->eve_d > wok_u->fec_u.rel_d );
+  u3_assert(gif_u->eve_d > wok_u->fec_u.rel_d);
 
 #ifdef VERBOSE_PIER
   fprintf(stderr, "pier: (%" PRIu64 "): compute: complete\r\n", gif_u->eve_d);
@@ -137,7 +137,7 @@ _pier_gift_plan(u3_work* wok_u, u3_gift* gif_u)
   gif_u->nex_u = 0;
 
   if ( !wok_u->fec_u.ent_u ) {
-    c3_assert( !wok_u->fec_u.ext_u );
+    u3_assert(!wok_u->fec_u.ext_u);
     wok_u->fec_u.ent_u = wok_u->fec_u.ext_u = gif_u;
   }
   else {
@@ -165,7 +165,7 @@ _pier_gift_next(u3_work* wok_u)
       wok_u->fec_u.ent_u = 0;
     }
 
-    c3_assert( (1ULL + wok_u->fec_u.rel_d) == gif_u->eve_d );
+    u3_assert((1ULL + wok_u->fec_u.rel_d) == gif_u->eve_d);
     wok_u->fec_u.rel_d = gif_u->eve_d;
 
     return gif_u;
@@ -195,7 +195,7 @@ static void
 _pier_wall_plan(u3_pier* pir_u, c3_d eve_d,
                 void* ptr_v, void (*wal_f)(void*, c3_d))
 {
-  c3_assert( u3_psat_work == pir_u->sat_e );
+  u3_assert(u3_psat_work == pir_u->sat_e);
 
   u3_wall* wal_u = c3_malloc(sizeof(*wal_u));
   wal_u->ptr_v = ptr_v;
@@ -271,7 +271,7 @@ _pier_work(u3_work* wok_u)
     _pier_work_send(wok_u);
   }
   else {
-    c3_assert( u3_psat_done == pir_u->sat_e );
+    u3_assert(u3_psat_done == pir_u->sat_e);
   }
 }
 
@@ -282,7 +282,7 @@ _pier_on_lord_work_spin(void* ptr_v, u3_atom pin, c3_o del_o)
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert(  (u3_psat_wyrd == pir_u->sat_e)
+  u3_assert((u3_psat_wyrd == pir_u->sat_e)
            || (u3_psat_work == pir_u->sat_e)
            || (u3_psat_done == pir_u->sat_e) );
 
@@ -296,7 +296,7 @@ _pier_on_lord_work_spun(void* ptr_v)
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert(  (u3_psat_wyrd == pir_u->sat_e)
+  u3_assert((u3_psat_wyrd == pir_u->sat_e)
            || (u3_psat_work == pir_u->sat_e)
            || (u3_psat_done == pir_u->sat_e) );
 
@@ -313,8 +313,7 @@ _pier_on_lord_work_done(void*    ptr_v,
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert(  (u3_psat_work == pir_u->sat_e)
-           || (u3_psat_done == pir_u->sat_e) );
+  u3_assert(u3_psat_work == pir_u->sat_e || u3_psat_done == pir_u->sat_e);
 
 #ifdef VERBOSE_PIER
   fprintf(stderr, "pier (%" PRIu64 "): work: done\r\n", tac_u->eve_d);
@@ -341,8 +340,7 @@ _pier_on_lord_work_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
   fprintf(stderr, "pier: work: bail\r\n");
 #endif
 
-  c3_assert(  (u3_psat_work == pir_u->sat_e)
-           || (u3_psat_done == pir_u->sat_e) );
+  u3_assert(u3_psat_work == pir_u->sat_e || u3_psat_done == pir_u->sat_e);
 
   u3_auto_bail(egg_u, lud);
 
@@ -537,7 +535,7 @@ _pier_work_init(u3_pier* pir_u)
 {
   u3_work* wok_u;
 
-  c3_assert( u3_psat_wyrd == pir_u->sat_e );
+  u3_assert(u3_psat_wyrd == pir_u->sat_e);
 
   pir_u->sat_e = u3_psat_work;
   pir_u->wok_u = wok_u = c3_calloc(sizeof(*wok_u));
@@ -728,7 +726,13 @@ _pier_on_lord_wyrd_done(void*    ptr_v,
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert( u3_psat_wyrd == pir_u->sat_e );
+  if ( u3_psat_wyrd != pir_u->sat_e ) {
+    fprintf(stderr,
+            "pier: unsupported state %u, expected %u\r\n",
+            pir_u->sat_e,
+            u3_psat_wyrd);
+    exit(ENOTSUP);
+  }
 
   //  arvo's side of version negotiation succeeded
   //  traverse [gif_y] and validate
@@ -764,7 +768,14 @@ _pier_on_lord_wyrd_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert( u3_psat_wyrd == pir_u->sat_e );
+  if ( u3_psat_wyrd != pir_u->sat_e ) {
+    fprintf(stderr,
+            "pier: unsupported state %u, expected %u\r\n",
+            pir_u->sat_e,
+            u3_psat_wyrd);
+    exit(ENOTSUP);
+  }
+
 
   //  XX add cli argument to bypass negotiation failure
   //
@@ -851,7 +862,7 @@ _pier_wyrd_init(u3_pier* pir_u)
     god_u->cb_u.work_done_f = _pier_on_lord_wyrd_done;
     god_u->cb_u.work_bail_f = _pier_on_lord_wyrd_bail;
 
-    c3_assert( u3_auto_next(car_u, &ovo) == egg_u );
+    u3_assert( u3_auto_next(car_u, &ovo) == egg_u );
 
     {
       struct timeval tim_tv;
@@ -870,7 +881,7 @@ _pier_play_plan(u3_play* pay_u, u3_info fon_u)
   c3_d      old_d;
 
   if ( !pay_u->ext_u ) {
-    c3_assert( !pay_u->ent_u );
+    u3_assert( !pay_u->ent_u );
     ext_u = &pay_u->ext_u;
     old_d = pay_u->sen_d;
   }
@@ -886,7 +897,7 @@ _pier_play_plan(u3_play* pay_u, u3_info fon_u)
                   old_d);
 #endif
 
-  c3_assert( (1ULL + old_d) == fon_u.ext_u->eve_d );
+  u3_assert( (1ULL + old_d) == fon_u.ext_u->eve_d );
 
   *ext_u = fon_u.ext_u;
   pay_u->ent_u = fon_u.ent_u;
@@ -1055,7 +1066,7 @@ _pier_play(u3_play* pay_u)
     }
   }
   else {
-    c3_assert( god_u->eve_d < pay_u->eve_d );
+    u3_assert( god_u->eve_d < pay_u->eve_d );
     _pier_play_send(pay_u);
     _pier_play_read(pay_u);
   }
@@ -1070,7 +1081,7 @@ _pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l mug_l)
   u3_fact* tac_u = fon_u.ent_u;
   u3_fact* nex_u;
 
-  c3_assert( u3_psat_play == pir_u->sat_e );
+  u3_assert( u3_psat_play == pir_u->sat_e );
 
   u3l_log("pier: (%" PRIu64 "): play: done", tac_u->eve_d);
 
@@ -1107,7 +1118,7 @@ _pier_on_lord_play_bail(void* ptr_v, u3_info fon_u,
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert( u3_psat_play == pir_u->sat_e );
+  u3_assert( u3_psat_play == pir_u->sat_e );
 
   {
     u3_fact* tac_u = fon_u.ext_u;
@@ -1182,11 +1193,11 @@ _pier_play_init(u3_pier* pir_u, c3_d eve_d)
   u3_disk* log_u = pir_u->log_u;
   u3_play* pay_u;
 
-  c3_assert(  (u3_psat_init == pir_u->sat_e)
+  u3_assert(  (u3_psat_init == pir_u->sat_e)
            || (u3_psat_boot == pir_u->sat_e) );
 
-  c3_assert( eve_d >  god_u->eve_d );
-  c3_assert( eve_d <= log_u->dun_d );
+  u3_assert( eve_d >  god_u->eve_d );
+  u3_assert( eve_d <= log_u->dun_d );
 
   pir_u->sat_e = u3_psat_play;
   pir_u->pay_u = pay_u = c3_calloc(sizeof(*pay_u));
@@ -1216,7 +1227,7 @@ _pier_on_disk_read_done(void* ptr_v, u3_info fon_u)
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert( u3_psat_play == pir_u->sat_e );
+  u3_assert( u3_psat_play == pir_u->sat_e );
 
   _pier_play_plan(pir_u->pay_u, fon_u);
   _pier_play(pir_u->pay_u);
@@ -1229,7 +1240,7 @@ _pier_on_disk_read_bail(void* ptr_v, c3_d eve_d)
 {
   u3_pier* pir_u = ptr_v;
 
-  c3_assert( u3_psat_play == pir_u->sat_e );
+  u3_assert( u3_psat_play == pir_u->sat_e );
 
   //  XX s/b play_bail_cb
   //
@@ -1261,7 +1272,7 @@ _pier_on_disk_write_done(void* ptr_v, c3_d eve_d)
     }
   }
   else {
-    c3_assert(  (u3_psat_work == pir_u->sat_e)
+    u3_assert(  (u3_psat_work == pir_u->sat_e)
              || (u3_psat_done == pir_u->sat_e) );
 
     _pier_work(pir_u->wok_u);
@@ -1394,7 +1405,7 @@ _pier_on_lord_live(void* ptr_v)
   fprintf(stderr, "pier: (%" PRIu64 "): boot at mug %x\r\n", god_u->eve_d, god_u->mug_l);
 #endif
 
-  c3_assert( god_u->eve_d <= log_u->dun_d );
+  u3_assert( god_u->eve_d <= log_u->dun_d );
 
   if ( u3_psat_boot == pir_u->sat_e ) {
     //  boot-sequence commit complete
@@ -1408,8 +1419,8 @@ _pier_on_lord_live(void* ptr_v)
     }
   }
   else {
-    c3_assert( u3_psat_init == pir_u->sat_e );
-    c3_assert( log_u->sen_d == log_u->dun_d );
+    u3_assert( u3_psat_init == pir_u->sat_e );
+    u3_assert( log_u->sen_d == log_u->dun_d );
 
     if ( god_u->eve_d < log_u->dun_d ) {
       c3_d eve_d;
@@ -1737,7 +1748,7 @@ _pier_pill_parse(u3_noun pil)
   u3_boot bot_u;
   u3_noun pil_p, pil_q;
 
-  c3_assert( c3y == u3du(pil) );
+  u3_assert( c3y == u3du(pil) );
   u3x_cell(pil, &pil_p, &pil_q);
 
   {
@@ -1803,7 +1814,7 @@ _pier_pill_parse(u3_noun pil)
 
       u3_noun tag = u3h(u3t(ovo));
       if ( ( c3__into == tag ) || ( c3__park == tag ) ) {
-        c3_assert( 0 == len_w );
+        u3_assert( 0 == len_w );
         len_w++;
         ovo = u3t(pil_q);
       }
@@ -1812,7 +1823,7 @@ _pier_pill_parse(u3_noun pil)
       ova = u3t(ova);
     }
 
-    c3_assert( 1 == len_w );
+    u3_assert( 1 == len_w );
 
     u3z(bot_u.use);
     bot_u.use = u3kb_flop(new);
@@ -1874,7 +1885,7 @@ _pier_boot_make(u3_noun who,
     //  XX do something about this wire
     //  XX route directly to %jael?
     //
-    c3_assert( c3y == u3a_is_cell(ven) );
+    u3_assert( c3y == u3a_is_cell(ven) );
 
     u3_noun wir = u3nq(c3__d, c3__term, '1', u3_nul);
     u3_noun cad = u3nt(c3__boot, u3_Host.ops_u.lit, ven); // transfer
@@ -2163,7 +2174,7 @@ _pier_done(u3_pier* pir_u)
 static void
 _pier_exit(u3_pier* pir_u)
 {
-  c3_assert( u3_psat_done == pir_u->sat_e );
+  u3_assert( u3_psat_done == pir_u->sat_e );
 
   if ( pir_u->log_u ) {
     u3_disk_exit(pir_u->log_u);
@@ -2221,7 +2232,7 @@ u3_pier_exit(u3_pier* pir_u)
   switch ( pir_u->sat_e ) {
     default: {
       fprintf(stderr, "pier: unknown exit: %u\r\n", pir_u->sat_e);
-      c3_assert(0);
+      exit(ECANCELED);
     }
 
     case u3_psat_done: return;
