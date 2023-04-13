@@ -1181,12 +1181,12 @@
         u3_auto*
         u3_behn_io_init(u3_pier* pir_u);
 
-    /**  loch, hardware control.
+    /**  lick, IPC communication.
     **/
-      /* u3_loch_io_init(): initialize loch vane.
+      /* u3_lick_io_init(): initialize loch vane.
       */
         u3_auto*
-        u3_loch_io_init(u3_pier* pir_u);
+        u3_lick_io_init(u3_pier* pir_u);
 
     /**  HTTP server.
     **/
