@@ -44,8 +44,8 @@ config_setting(
 # Version flag for clang.
 string_flag(
     name = "clang_version",
-    # macOS uses `clang-14.0.0` by default.
-    build_setting_default = "14.0.0",
+    # macOS uses `clang-14.0.3` by default.
+    build_setting_default = "14.0.3",
     visibility = ["//visibility:public"],
 )
 

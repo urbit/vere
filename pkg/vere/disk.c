@@ -2,6 +2,7 @@
 
 #include "noun.h"
 #include "vere.h"
+#include "version.h"
 #include "db/lmdb.h"
 
 struct _cd_read {
@@ -21,6 +22,12 @@ struct _cd_save {
   size_t*          siz_i;               //  array of lengths
   struct _u3_disk* log_u;
 };
+
+/* DISK FORMAT
+ */
+
+#define U3D_VER1   1
+#define U3D_VERLAT U3L_VER1
 
 #undef VERBOSE_DISK
 #undef DISK_TRACE_JAM
@@ -868,8 +875,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   }
 
   //  create/load $pier/.urb/log
-  //  create/load $pier/.urb/log/0iN (epoch dir)
-  //  initialize db
+  //  XX closures?
   //
   {
     c3_c* log_c = c3_malloc(10 + strlen(pax_c));
@@ -884,34 +890,26 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  iterate through the log directory to find the latest epoch,
-    //  or set it to "0i0" if none exist
+    //  validation before migration
     //
-    u3_dent* den_u = log_u->com_u->all_u;
-    c3_c* lat_c;  //  latest epoch or "0i0" if none exist
-    if ( !den_u ) {
-      lat_c = "0i0";
-    } else {
-      while ( den_u ) {
-        if ( 0 == strncmp(den_u->nam_c, "0i", 2) ) {
-          //  update the lat_c if it's a later epoch
-          if ( !lat_c || (strcmp(den_u->nam_c, lat_c) > 0) ) {
-            lat_c = den_u->nam_c;
-          }
-        }
-        den_u = den_u->nex_u;
-      }
-    }
 
-    //  create/load $pier/.urb/log/0iN epoch directory
+    //  migrate to the correct disk format
+    //
+    u3_disk_migrate(log_u);
+
+    //  find the latest epoch directory
+    //
+    c3_d lat_d;
+    u3_disk_last_epoc(log_u, &lat_d);
+    fprintf(stderr, "disk: latest epoch is 0i%" PRIu64 "\r\n", lat_d);
+
+    //  load latest epoch directory and set it in log_u
+    //
     c3_c epo_c[8193];
-    snprintf(epo_c, sizeof(epo_c), "%s/%s", log_c, lat_c);
-    c3_mkdir(epo_c, 0700);
+    snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
+    log_u->epo_u = u3_foil_folder(epo_c);
 
-    //  Arbitrarily choosing 1TB as a "large enough" mapsize
-    //
-    //  per the LMDB docs:
-    //  "[..] on 64-bit there is no penalty for making this huge (say 1TB)."
+    //  initialize db of latest epoch
     //
     {
       const size_t siz_i =
@@ -922,15 +920,10 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         0x10000000000;
       #endif
       
-      fprintf(stderr, "disk: initializing database at %s\r\n", epo_c);
-
       if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize database\r\n");
         c3_free(log_u);
         return 0;
-      } else {
-        //  register the epoch directory in the disk struct
-        log_u->epo_u = u3_foil_folder(epo_c);
       }
     }
 
@@ -959,4 +952,62 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 #endif
 
   return log_u;
+}
+
+/* u3_disk_last_epoc: get latest epoch number.
+ */
+c3_d u3_disk_last_epoc(u3_disk* log_u, c3_d* lat_d) {
+  c3_d ret_d = 1;  //  return code 1 if no epoch directories exist
+  *lat_d = 0;      //  initialize lat_d to 0
+  u3_dent* den_u = log_u->com_u->dir_u;
+  while ( den_u ) {
+    c3_d epo_d = 0;
+    if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
+      fprintf(stderr, "disk: epoch directory is not a @ui: %s\r\n", den_u->nam_c);
+    } else {
+      ret_d = 0;  //  return code 0 if at least one epoch directory exists
+    }
+    *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
+    den_u = den_u->nex_u;
+  }
+
+  return ret_d;
+}
+
+/* u3_disk_migrate: migrates disk format.
+ */
+void u3_disk_migrate(u3_disk* log_u)
+{
+  c3_d lat_d;  //  latest epoch number
+
+  //  initialize disk v1 on fresh boots
+  //
+  if ( 1 == u3_disk_last_epoc(log_u, &lat_d) ) {  //  XX add another condition to ensure fresh boot
+    fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
+
+    //  create first epoch directory "0i0"
+    c3_c epo_c[8193];
+    snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_u->com_u->pax_c);
+    c3_mkdir(epo_c, 0700);
+
+    //  create epoch version file
+    c3_c epv_c[8193];
+    snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
+    FILE* epv_f = fopen(epv_c, "a");
+    fprintf(epv_f, "%d\n", U3D_VER1);
+    fclose(epv_f);
+
+    //  create binary version file
+    c3_c biv_c[8193];
+    snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
+    FILE* biv_f = fopen(biv_c, "a");
+    fprintf(biv_f, URBIT_VERSION);
+    fclose(biv_f);
+  }
+
+  //  migrate existing unversioned pier to v1
+  //
+  //  XX write this
+
+  return;
 }
