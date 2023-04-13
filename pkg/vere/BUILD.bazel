@@ -295,6 +295,8 @@ genrule(
       [ 3 -eq $$(lensd 3) ]
     }
 
+    lensd '+vat %base'
+
     if check && sleep 10 && check; then
       echo "boot success"
       lensa hood "+hood/exit"
@@ -360,6 +362,10 @@ genrule(
     }
 
     trap cleanup EXIT
+
+    #  print the arvo version
+    #
+    lensd '+vat %base'
 
     #  measure initial memory usage
     #
