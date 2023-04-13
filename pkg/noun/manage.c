@@ -597,13 +597,32 @@ _find_home(void)
   c3_w* mem_w = u3_Loom + u3C.walign_w;
   c3_w  siz_w = c3_wiseof(u3v_home);
   c3_w  len_w = u3C.wor_i - u3C.walign_w;
-  c3_w*  mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
 
-  //  this looks risky, but there are no legitimate scenarios where it's wrong
-  u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
+  //  this looks risky, but there are no legitimate scenarios
+  //  where it's wrong
+  //
+  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
+
+  //  check for obvious corruption
+  //
+  {
+    c3_w    nor_w, sou_w;
+    u3_post low_p, hig_p;
+    u3m_water(&low_p, &hig_p);
+
+    nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
+    sou_w = u3P.pag_w - (hig_p >> u3a_page);
+
+    if ( (nor_w != u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
+      fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
+                      nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
+      c3_assert(!"loom: corrupt size");
+    }
+  }
 
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
