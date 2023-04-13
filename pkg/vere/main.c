@@ -181,6 +181,7 @@ _main_init(void)
   u3_Host.ops_u.hap_w = 50000;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
+  u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
 }
@@ -244,6 +245,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "ames-port",           required_argument, NULL, 'p' },
     { "http-port",           required_argument, NULL, c3__http },
     { "https-port",          required_argument, NULL, c3__htls },
+    { "snap-time",           required_argument, NULL, c3__snap },
     { "no-conn",             no_argument,       NULL, c3__noco },
     { "no-dock",             no_argument,       NULL, c3__nodo },
     { "quiet",               no_argument,       NULL, 'q' },
@@ -304,6 +306,16 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case c3__nodo: {
         u3_Host.ops_u.doc = c3n;
+        break;
+      }
+      case c3__snap: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else {
+          u3_Host.ops_u.sap_w = arg_w * 60;
+          if ( 0 == u3_Host.ops_u.sap_w) 
+            return c3n;
+        }
         break;
       }
       //  opts with args
@@ -727,6 +739,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-p, --ames-port PORT          Set the ames port to bind to\n",
     "    --http-port PORT          Set the http port to bind to\n",
     "    --https-port PORT         Set the https port to bind to\n",
+    "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-r, --replay-from NUMBER      Load snapshot from event\n",

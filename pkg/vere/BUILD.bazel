@@ -332,7 +332,7 @@ genrule(
 
     set -x
 
-    $(execpath :urbit) --lite-boot --daemon ./pier 2> urbit-output
+    $(execpath :urbit) --lite-boot --daemon --gc ./pier 2> urbit-output
 
     port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
 
