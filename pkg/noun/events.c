@@ -1067,53 +1067,72 @@ _ce_loom_blit_south(c3_i fid_i, c3_w pgs_w)
 }
 
 #ifdef U3_SNAPSHOT_VALIDATION
-/* _ce_image_fine(): compare image to memory.
+/* _ce_page_fine(): compare page in memory and on disk.
 */
-static void
-_ce_image_fine(u3e_image* img_u,
-               c3_w*      ptr_w,
-               c3_ws     stp_ws)
+static c3_o
+_ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 {
   ssize_t ret_i;
-  c3_w      i_w;
   c3_y    buf_y[_ce_page];
 
-  if ( -1 == lseek(img_u->fid_i, 0, SEEK_SET) ) {
-    fprintf(stderr, "loom: image fine seek 0: %s\r\n", strerror(errno));
+  if ( _ce_page !=
+       (ret_i = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
+  {
+    if ( 0 < ret_i ) {
+      fprintf(stderr, "loom: image (%s) fine partial read: %zu\r\n",
+                      img_u->nam_c, (size_t)ret_i);
+    }
+    else {
+      fprintf(stderr, "loom: image (%s) fine read: %s\r\n",
+                      img_u->nam_c, strerror(errno));
+    }
     c3_assert(0);
   }
 
-  for ( i_w=0; i_w < img_u->pgs_w; i_w++ ) {
-    c3_w mem_w, fil_w;
+  {
+    c3_w mug_w = _ce_mug_page(_ce_ptr(pag_w));
+    c3_w fug_w = _ce_mug_page(buf_y);
 
-    if ( _ce_page != (ret_i = read(img_u->fid_i, buf_y, _ce_page)) ) {
-      if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: image (%s) fine partial read: %zu\r\n",
-                        img_u->nam_c, (size_t)ret_i);
-      }
-      else {
-        fprintf(stderr, "loom: image (%s) fine read: %s\r\n",
-                        img_u->nam_c, strerror(errno));
-      }
-      c3_assert(0);
-    }
-    mem_w = _ce_mug_page(ptr_w);
-    fil_w = _ce_mug_page(buf_y);
-
-    if ( mem_w != fil_w ) {
-      c3_w pag_w = (ptr_w - u3_Loom) >> u3a_page;
-
+    if ( mug_w != fug_w ) {
       fprintf(stderr, "loom: image (%s) mismatch: "
                       "page %d, mem_w %x, fil_w %x, K %x\r\n",
-                      img_u->nam_c,
-                      pag_w,
-                      mem_w,
-                      fil_w,
-                      u3K.mug_w[pag_w]);
-      abort();
+                      img_u->nam_c, pag_w, mug_w, fug_w, u3K.mug_w[pag_w]);
+      return c3n;
     }
-    ptr_w += stp_ws;
   }
+
+  return c3y;
+}
+
+/* _ce_loom_fine(): compare clean pages in memory and on disk.
+*/
+static c3_o
+_ce_loom_fine(void)
+{
+  c3_w blk_w, bit_w, pag_w, i_w;
+  c3_o fin_o = c3y;
+
+  for ( i_w = 0; i_w < u3P.nor_u.pgs_w; i_w++ ) {
+    pag_w = i_w;
+    blk_w = pag_w >> 5;
+    bit_w = pag_w & 31;
+
+    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+      fin_o = c3a(fin_o, _ce_page_fine(&u3P.nor_u, pag_w, _ce_len(pag_w)));
+    }
+  }
+
+  for ( i_w = 0; i_w < u3P.sou_u.pgs_w; i_w++ ) {
+    pag_w = u3P.pag_w - (i_w + 1);
+    blk_w = pag_w >> 5;
+    bit_w = pag_w & 31;
+
+    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+      fin_o = c3a(fin_o, _ce_page_fine(&u3P.sou_u, pag_w, _ce_len(i_w)));
+    }
+  }
+
+  return fin_o;
 }
 #endif
 
@@ -1275,7 +1294,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
     }
   }
 
-  /* attempt to avoid propagating anything insane to disk */
+  //  attempt to avoid propagating anything insane to disk
+  //
   u3a_loom_sane();
 
   // u3a_print_memory(stderr, "sync: save", 4096 * pat_u->con_u->pgs_w);
@@ -1286,46 +1306,48 @@ u3e_save(u3_post low_p, u3_post hig_p)
     c3_assert(!"loom: save failed");
   }
 
-  _ce_patch_apply(pat_u);
-
 #ifdef U3_SNAPSHOT_VALIDATION
-  {
-    _ce_image_fine(&u3P.nor_u,
-                   u3_Loom,
-                   _ce_len_words(1));
-
-    _ce_image_fine(&u3P.sou_u,
-                   (u3_Loom + u3C.wor_i) - _ce_len_words(1),
-                   -(ssize_t)_ce_len_words(1));
-
-    c3_assert(u3P.nor_u.pgs_w == u3K.nor_w);
-    c3_assert(u3P.sou_u.pgs_w == u3K.sou_w);
-  }
+  //  check that clean pages are correct
+  //
+  c3_assert( c3y == _ce_loom_fine() );
 #endif
+
+  _ce_patch_apply(pat_u);
 
   _ce_image_sync(&u3P.nor_u);
   _ce_image_sync(&u3P.sou_u);
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
+  _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
+
+#ifdef U3_SNAPSHOT_VALIDATION
+  //  check that all pages in the north/south segments are clean,
+  //  all between are dirty, and clean pages are *fine*
+  //
+  //    since total finery requires total cleanliness,
+  //    pages of the north segment are protected twice.
+  //
+  _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
+
+  c3_assert( c3y == _ce_loom_track_sane() );
+  c3_assert( c3y == _ce_loom_fine() );
+#endif
+
   if ( u3C.wag_w & u3o_no_demand ) {
+#ifndef U3_SNAPSHOT_VALIDATION
     _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
+#endif
   }
   else {
     _ce_loom_mapf_north(u3P.nor_u.fid_i, u3P.nor_u.pgs_w, nod_w);
   }
 
-  _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
-
-#ifdef U3_SNAPSHOT_VALIDATION
-  c3_assert( c3y == _ce_loom_track_sane() );
-#endif
-
   {
     void* ptr_v = _ce_ptr(u3P.nor_u.pgs_w);
     c3_w  pgs_w = u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w);
 
-    if ( -1 == madvise((void*)ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
+    if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
         fprintf(stderr, "loom: madvise() failed for %u pages at %p: %s\r\n",
                         pgs_w, ptr_v, strerror(errno));
     }
