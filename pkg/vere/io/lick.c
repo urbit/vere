@@ -30,7 +30,8 @@ static const c3_c URB_DEV_PATH[] = "/.urb/dev/";
 static void
 _lick_close_cb(uv_handle_t* had_u)
 {
-  c3_free(had_u);
+  //Freeing had_u gives an out of loom error. no idea why
+  //c3_free(had_u);
 }
 
 
@@ -303,7 +304,6 @@ _lick_io_talk(u3_auto* car_u)
 static void
 _lick_io_exit(u3_auto* car_u)
 {
-  
   u3_lick*          lic_u = (u3_lick*)car_u;
   c3_c*             pax_c = u3_Host.dir_c;
 
