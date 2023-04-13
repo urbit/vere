@@ -2072,7 +2072,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // gracefully shutdown the pier if it's running
   u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
 
-  // note: this include patch applications (if any)
+  // note: this includes patch applications (if any)
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   // check if there's a *current* snapshot
@@ -2083,7 +2083,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
+  if ( c3n == u3e_backup(c3y) ) {  //  backup current snapshot
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }

@@ -8,6 +8,7 @@
 #include "noun.h"
 #include "serf.h"
 #include "uv.h"
+#include "version.h"
 
   /** Quasi-tunable parameters.
   **/
@@ -981,6 +982,16 @@
       */
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
+      
+      /* u3_disk_last_epoc(): get latest epoch number.
+       */
+       c3_d
+       u3_disk_last_epoc(u3_disk* log_u, c3_d* lat_d);
+      
+      /* u3_disk_migrate(): migrates disk format.
+       */
+        void
+        u3_disk_migrate(u3_disk* log_u);
 
       /* u3_lord_init(): start serf.
       */
