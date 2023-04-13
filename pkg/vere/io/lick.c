@@ -159,14 +159,14 @@ _lick_sock_err_chdir:
 }
 
 
-/* u3_lick_ef_book(): Open an IPC port
+/* u3_lick_ef_sync(): Open an IPC port
 */
 static void
-_lick_ef_book(u3_lick* lic_u, u3_noun wir_i, 
+_lick_ef_sync(u3_lick* lic_u, u3_noun wir_i, 
     u3_noun nam, u3_noun ver)
 {
 
-  u3l_log("lick book: %s %s", u3r_string(nam), u3r_string(ver));
+  u3l_log("lick sync: %s %s", u3r_string(nam), u3r_string(ver));
 
   u3_agent* gen_u = c3_calloc(sizeof(*gen_u));
   gen_u->nam_c = u3r_string(nam);
@@ -222,25 +222,25 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     return  c3n;
   }
   else {
-    if ( (c3__book == tag) ){
+    if ( (c3__sync == tag) ){
       if( c3y == u3r_cell(tmp, &nam, &ver) )
       {
-        _lick_ef_book(lic_u, wir, nam, ver); // execute read command
+        _lick_ef_sync(lic_u, wir, nam, ver); // execute sync command
         ret_o = c3y;
       } else { ret_o = c3n; }
 
-    } else if ( (c3__read == tag) )
+    } else if ( (c3__soak == tag) )
     {
-      u3l_log("lick read");
+      u3l_log("lick soak");
        ret_o=c3y;
       /*if( c3y == u3r_trel(tmp, &wut, &cmd, &cnt) )
       {
         _lick_ef_read(loc_u, wir, dev_d, wut, cmd, cnt); // execute read command
         ret_o = c3y;
       } else { ret_o = c3n; }*/
-    } else if ( c3__rite == tag )
+    } else if ( c3__spew == tag )
     {
-      u3l_log("lick: rite ");
+      u3l_log("lick: spew ");
        ret_o=c3y;
       /*if( c3y == u3r_qual(tmp, &wut, &cmd, &dat, &cnt) )
       {
