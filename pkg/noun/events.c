@@ -279,6 +279,41 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   return u3e_flaw_good;
 }
 
+/* _ce_image_stat(): measure image.
+*/
+static c3_o
+_ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
+{
+  struct stat buf_u;
+
+  if ( -1 == fstat(img_u->fid_i, &buf_u) ) {
+    fprintf(stderr, "loom: stat %s: %s\r\n", img_u->nam_c, strerror(errno));
+    c3_assert(0);
+    return c3n;
+  }
+  else {
+    c3_z siz_z = buf_u.st_size;
+    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + 2);
+
+    if ( !siz_z ) {
+      *pgs_w = 0;
+      return c3y;
+    }
+    else if ( siz_z != _ce_len(pgs_z) ) {
+      fprintf(stderr, "loom: %s corrupt size %zu\r\n", img_u->nam_c, siz_z);
+      return c3n;
+    }
+    else if ( pgs_z > UINT32_MAX ) {
+      fprintf(stderr, "loom: %s overflow %zu\r\n", img_u->nam_c, siz_z);
+      return c3n;
+    }
+    else {
+      *pgs_w = (c3_w)pgs_z;
+      return c3y;
+    }
+  }
+}
+
 /* _ce_image_open(): open or create image.
 */
 static c3_o
@@ -301,32 +336,11 @@ _ce_image_open(u3e_image* img_u)
     fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
     return c3n;
   }
+  else if ( c3n == _ce_image_stat(img_u, &img_u->pgs_w) ) {
+    return c3n;
+  }
   else {
-    struct stat buf_u;
-
-    if ( -1 == fstat(img_u->fid_i, &buf_u) ) {
-      fprintf(stderr, "loom: stat %s: %s\r\n", ful_c, strerror(errno));
-      c3_assert(0);
-      return c3n;
-    }
-    else {
-      c3_z siz_z = buf_u.st_size;
-      c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + 2);
-
-      if ( !siz_z ) {
-        return c3y;
-      }
-      else {
-        if ( siz_z != _ce_len(pgs_z) ) {
-          fprintf(stderr, "%s: corrupt size %zu\r\n", ful_c, siz_z);
-          return c3n;
-        }
-        img_u->pgs_w = (c3_w)pgs_z;
-        c3_assert( pgs_z == (c3_z)img_u->pgs_w );
-
-        return c3y;
-      }
-    }
+    return c3y;
   }
 }
 
@@ -1320,6 +1334,16 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_image_sync(&u3P.sou_u);
   _ce_patch_free(pat_u);
   _ce_patch_delete();
+
+#ifdef U3_SNAPSHOT_VALIDATION
+  {
+    c3_w pgs_w;
+    c3_assert( c3y   == _ce_image_stat(&u3P.nor_u, &pgs_w) );
+    c3_assert( pgs_w == u3P.nor_u.pgs_w );
+    c3_assert( c3y   == _ce_image_stat(&u3P.sou_u, &pgs_w) );
+    c3_assert( pgs_w == u3P.sou_u.pgs_w );
+  }
+#endif
 
   _ce_loom_protect_south(u3P.sou_u.pgs_w, sod_w);
 
