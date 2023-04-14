@@ -893,24 +893,22 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     //  validation before migration
     //
 
-    //  migrate to the correct disk format
+    //  migrate to the correct disk format if necessary
     //
     u3_disk_migrate(log_u);
 
-    //  find the latest epoch directory
+    //  initialize latest epoch
     //
     c3_d lat_d;
-    u3_disk_last_epoc(log_u, &lat_d);
+    u3_disk_epoc_last(log_u, &lat_d);
     fprintf(stderr, "disk: latest epoch is 0i%" PRIu64 "\r\n", lat_d);
 
-    //  load latest epoch directory and set it in log_u
+    //  initialize epoch's db
     //
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
-    log_u->epo_u = u3_foil_folder(epo_c);
-
-    //  initialize db of latest epoch
-    //
+    fprintf(stderr, "epo_c: %s\r\n", epo_c);
+    c3_free(log_c);
     {
       const size_t siz_i =
       // 500 GiB is as large as musl on aarch64 wants to allow
@@ -919,15 +917,13 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       #else
         0x10000000000;
       #endif
-      
+
       if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize database\r\n");
         c3_free(log_u);
         return 0;
       }
     }
-
-    c3_free(log_c);
   }
 
   //  get the latest event number from the db
@@ -954,18 +950,101 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   return log_u;
 }
 
-/* u3_disk_last_epoc: get latest epoch number.
- */
-c3_d u3_disk_last_epoc(u3_disk* log_u, c3_d* lat_d) {
-  c3_d ret_d = 1;  //  return code 1 if no epoch directories exist
-  *lat_d = 0;      //  initialize lat_d to 0
+/* u3_disk_epoc_init: create new epoch.
+*/
+c3_o u3_disk_epoc_init(u3_disk* log_u) {
+  //  set new epoch number
+  c3_d lat_d, new_d;
+  c3_o eps_o = u3_disk_epoc_last(log_u, &lat_d);
+  if ( c3n == eps_o ) {
+    new_d = 0;  //  no epochs yet, so create first one 0i0
+  } else {
+    //  ensure latest epoch isn't empty
+    c3_d fir_d, las_d;
+    if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      return c3n;
+    }
+    if ( fir_d == las_d ) {
+      fprintf(stderr, "disk: latest epoch is empty; skipping epoch init\r\n");
+      return c3n;
+    }
+    new_d = 1 + lat_d;  //  create next epoch
+  }
+
+  //  create new epoch directory
+  c3_c epo_c[8193];
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, new_d);
+  fprintf(stderr, "disk: creating new epoch directory 0i%" PRIu64 "\r\n", new_d);
+  if ( 0 != c3_mkdir(epo_c, 0700) ) {
+    fprintf(stderr, "disk: failed to create epoch directory\r\n");
+    return c3n;
+  }
+
+  //  create epoch version file
+  c3_c epv_c[8193];
+  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
+  FILE* epv_f = fopen(epv_c, "a");
+  fprintf(epv_f, "%d\n", U3D_VER1);
+  fclose(epv_f);
+
+  //  create binary version file
+  c3_c biv_c[8193];
+  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(biv_c, "a");
+  fprintf(biv_f, URBIT_VERSION);
+  fclose(biv_f);
+
+  //  copy snapshot (skip if first epoch 0i0)
+  if ( new_d > 0 ) {
+    if ( c3n == u3e_backup(epo_c, c3n) ) {
+      fprintf(stderr, "disk: failed to copy snapshot to new epoch\r\n");
+      goto fail;
+    }
+  }
+
+  //  initialize db of latest epoch
+  {
+    const size_t siz_i =
+    // 500 GiB is as large as musl on aarch64 wants to allow
+    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+      0x7d00000000;
+    #else
+      0x10000000000;
+    #endif
+
+    if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+      fprintf(stderr, "disk: failed to initialize database\r\n");
+      c3_free(log_u);
+      goto fail;
+    }
+  }
+
+  //  load new epoch directory and set it in log_u
+  log_u->epo_u = u3_foil_folder(epo_c);
+
+  //  success
+  return c3y;
+
+fail:
+  c3_unlink(epv_c);
+  c3_unlink(biv_c);
+  c3_rmdir(epo_c);
+  return c3n;
+}
+
+/* u3_disk_epoc_last: get latest epoch number.
+*/
+c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
+  c3_o ret_d = c3n;  //  return no if no epoch directories exist
+  *lat_d = 0;        //  initialize lat_d to 0
   u3_dent* den_u = log_u->com_u->dir_u;
   while ( den_u ) {
     c3_d epo_d = 0;
     if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
       fprintf(stderr, "disk: epoch directory is not a @ui: %s\r\n", den_u->nam_c);
     } else {
-      ret_d = 0;  //  return code 0 if at least one epoch directory exists
+      ret_d = c3y;   //  return yes if at least one epoch directory exists
     }
     *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
     den_u = den_u->nex_u;
@@ -982,30 +1061,17 @@ void u3_disk_migrate(u3_disk* log_u)
 
   //  initialize disk v1 on fresh boots
   //
-  if ( 1 == u3_disk_last_epoc(log_u, &lat_d) ) {  //  XX add another condition to ensure fresh boot
+  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {  //  XX ensure fresh boot
     fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
 
-    //  create first epoch directory "0i0"
-    c3_c epo_c[8193];
-    snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_u->com_u->pax_c);
-    c3_mkdir(epo_c, 0700);
-
-    //  create epoch version file
-    c3_c epv_c[8193];
-    snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-    FILE* epv_f = fopen(epv_c, "a");
-    fprintf(epv_f, "%d\n", U3D_VER1);
-    fclose(epv_f);
-
-    //  create binary version file
-    c3_c biv_c[8193];
-    snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-    FILE* biv_f = fopen(biv_c, "a");
-    fprintf(biv_f, URBIT_VERSION);
-    fclose(biv_f);
+    //  initialize first epoch "0i0"
+    if ( c3n == u3_disk_epoc_init(log_u) ) {
+      fprintf(stderr, "disk: migrate: failed to initialize first epoch\r\n");
+      exit(1);
+    }
   }
 
-  //  migrate existing unversioned pier to v1
+  //  migrate existing, unversioned disk to v1
   //
   //  XX write this
 
