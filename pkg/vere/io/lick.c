@@ -238,9 +238,9 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         _lick_ef_read(loc_u, wir, dev_d, wut, cmd, cnt); // execute read command
         ret_o = c3y;
       } else { ret_o = c3n; }*/
-    } else if ( c3__spew == tag )
+    } else if ( c3__spit == tag )
     {
-      u3l_log("lick: spew ");
+      u3l_log("lick: spit ");
        ret_o=c3y;
       /*if( c3y == u3r_qual(tmp, &wut, &cmd, &dat, &cnt) )
       {
