@@ -993,48 +993,48 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* u3e_backup();
+/* u3e_backup(): copy snapshot to pax_c, overwrite optionally.
 */
 c3_o
-u3e_backup(c3_o ovw_o)
+u3e_backup(c3_c* pax_c, c3_o ovw_o)
 {
   u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
   u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
   c3_i mod_i = O_RDWR | O_CREAT;
-  c3_c ful_c[8193];
 
-  snprintf(ful_c, 8192, "%s/.urb/bhk", u3P.dir_c);
+  if ( !pax_c ) {
+    fprintf(stderr, "loom: image backup: bad path\r\n");
+    return c3n;
+  }
 
-  if ( (c3n == ovw_o) && c3_mkdir(ful_c, 0700) ) {
+  if ( (c3n == ovw_o) && c3_mkdir(pax_c, 0700) ) {
     if ( EEXIST != errno ) {
       fprintf(stderr, "loom: image backup: %s\r\n", strerror(errno));
     }
     return c3n;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, nop_u.nam_c);
+  c3_c nop_c[8193];
+  snprintf(nop_c, 8192, "%s/%s.bin", pax_c, nop_u.nam_c);
 
-  if ( -1 == (nop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
+  if ( -1 == (nop_u.fid_i = c3_open(nop_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: c3_open %s: %s\r\n", nop_c, strerror(errno));
     return c3n;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, sop_u.nam_c);
+  c3_c sop_c[8193];
+  snprintf(sop_c, 8192, "%s/%s.bin", pax_c, sop_u.nam_c);
 
-  if ( -1 == (sop_u.fid_i = c3_open(ful_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
+  if ( -1 == (sop_u.fid_i = c3_open(sop_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: c3_open %s: %s\r\n", sop_c, strerror(errno));
     return c3n;
   }
 
   if (  (c3n == _ce_image_copy(&u3P.nor_u, &nop_u))
      || (c3n == _ce_image_copy(&u3P.sou_u, &sop_u)) )
   {
-
-    c3_unlink(ful_c);
-    snprintf(ful_c, 8192, "%s/.urb/bhk/%s.bin", u3P.dir_c, nop_u.nam_c);
-    c3_unlink(ful_c);
-    snprintf(ful_c, 8192, "%s/.urb/bhk", u3P.dir_c);
-    c3_rmdir(ful_c);
+    c3_unlink(nop_c);
+    c3_unlink(sop_c);
     fprintf(stderr, "loom: image backup failed\r\n");
     return c3n;
   }
@@ -1111,7 +1111,9 @@ u3e_save(void)
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
-  u3e_backup(c3n);
+  c3_c bhk_c[8193];
+  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3P.dir_c);
+  u3e_backup(bhk_c, c3n);
 }
 
 /* u3e_live(): start the checkpointing system.
