@@ -21,6 +21,7 @@
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt/urcrypt.h"
+#include "util.h"
 #include "vortex.h"
 #include "xtract.h"
 
@@ -885,13 +886,6 @@ u3m_leap(c3_w pad_w)
   _rod_vaal(u3R);
 }
 
-void
-_print_diff(c3_c* cap_c, c3_w a, c3_w b)
-{
-  c3_w diff = a<b ? b-a : a-b;
-  u3a_print_memory(stderr, cap_c, diff);
-}
-
 /* u3m_fall(): in u3R, return an inner road to its parent.
 */
 void
@@ -901,7 +895,7 @@ u3m_fall()
 
 #if 0
   /*  If you're printing a lot of these you need to change
-   *  u3a_print_memory from fprintf to u3l_log
+   *  c3_print_mem_w from fprintf to u3l_log
   */
   fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%x, was 0x%x)\r\n",
           _(u3a_is_north(u3R)) ? "north" : "south",
@@ -910,9 +904,9 @@ u3m_fall()
           u3to(u3_road, u3R->par_p),
           u3R->hat_p,
           u3R->rut_p);
-  _print_diff("unused free", u3R->hat_p, u3R->cap_p);
-  _print_diff("freeing", u3R->rut_p, u3R->hat_p);
-  _print_diff("stack", u3R->cap_p, u3R->mat_p);
+  c3_print_memdiff_w(stderr, u3R->hat_p, u3R->cap_p, "unused free");
+  c3_print_memdiff_w(stderr, u3R->rut_p, u3R->hat_p, "freeing");
+  c3_print_memdiff_w(stderr, u3R->cap_p, u3R->mat_p, "stack");
   static c3_w wat_w = 500000000;
   if (u3to(u3_road, u3R->par_p) == &u3H->rod_u) {
     wat_w = 500000000;
@@ -923,7 +917,7 @@ u3m_fall()
                      u3R->cap_p - u3R->hat_p :
                      u3R->hat_p - u3R->cap_p);
   }
-  u3a_print_memory(stderr, "low water mark", wat_w);
+  c3_print_mem_w(stderr, wat_w, "low water mark");
 
 #endif
 
@@ -1078,7 +1072,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     if ( u3C.wag_w & u3o_debug_ram ) {
 #ifdef U3_CPU_DEBUG
       if ( u3R->all.max_w > 1000000 ) {
-        u3a_print_memory(stderr, "execute: top", u3R->all.max_w);
+        c3_print_mem_w(stderr, u3R->all.max_w, "execute: top");
       }
 #endif
       u3m_grab(pro, u3_none);
@@ -1175,7 +1169,7 @@ u3m_soft_run(u3_noun gul,
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
-      u3a_print_memory(stderr, "execute: run", u3R->all.max_w);
+      c3_print_mem_w(stderr, u3R->all.max_w, "execute: run");
     }
 #endif
 

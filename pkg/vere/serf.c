@@ -1,7 +1,7 @@
 /// @file
 
 #include "noun.h"
-
+#include "util.h"               /* ;;:can we make it so that file directories prefix the header? */
 #include "vere.h"
 
 /*
@@ -58,34 +58,6 @@ _serf_space(FILE* fil_u,  c3_w n)
     (fprintf(fil_u," "));
 }
 
-/* _serf_print_memory(): print memory amount.
-**
-**  Helper for _serf_prof(), just an un-captioned u3a_print_memory().
-*/
-static void
-_serf_print_memory(FILE* fil_u, c3_w wor_w)
-{
-  c3_w byt_w = (wor_w * 4);
-  c3_w gib_w = (byt_w / 1000000000);
-  c3_w mib_w = (byt_w % 1000000000) / 1000000;
-  c3_w kib_w = (byt_w % 1000000) / 1000;
-  c3_w bib_w = (byt_w % 1000);
-
-  if ( gib_w ) {
-    (fprintf(fil_u, "GB/%d.%03d.%03d.%03d\r\n",
-        gib_w, mib_w, kib_w, bib_w));
-  }
-  else if ( mib_w ) {
-    (fprintf(fil_u, "MB/%d.%03d.%03d\r\n", mib_w, kib_w, bib_w));
-  }
-  else if ( kib_w ) {
-    (fprintf(fil_u, "KB/%d.%03d\r\n", kib_w, bib_w));
-  }
-  else {
-    (fprintf(fil_u, "B/%d\r\n", bib_w));
-  }
-}
-
 /* _serf_prof(): print memory profile. RETAIN.
 */
 c3_w
@@ -126,7 +98,7 @@ _serf_prof(FILE* fil_u, c3_w den, u3_noun mas)
     }
     else if ( c3y == it_mas ) {
       tot_w += u3a_mark_noun(tt_mas);
-      _serf_print_memory(fil_u, tot_w);
+      c3_print_mem_w(fil_u, tot_w);
 
 #if 1
       /* The basic issue here is that tt_mas is included in .sac
@@ -167,7 +139,7 @@ _serf_prof(FILE* fil_u, c3_w den, u3_noun mas)
 
       _serf_space(fil_u, den);
       fprintf(fil_u, "--");
-      _serf_print_memory(fil_u, tot_w);
+      c3_print_mem_w(fil_u, tot_w);
 
       return tot_w;
 
@@ -225,13 +197,13 @@ _serf_grab(u3_noun sac)
     c3_assert( u3R == &(u3H->rod_u) );
     fprintf(fil_u, "\r\n");
 
-    tot_w += u3a_maid(fil_u, "total userspace", _serf_prof(fil_u, 0, sac));
+    tot_w += c3_maid_w(fil_u, _serf_prof(fil_u, 0, sac), "total userspace");
     tot_w += u3m_mark(fil_u);
-    tot_w += u3a_maid(fil_u, "space profile", u3a_mark_noun(sac));
+    tot_w += c3_maid_w(fil_u, u3a_mark_noun(sac), "space profile");
 
-    u3a_print_memory(fil_u, "total marked", tot_w);
-    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
-    u3a_print_memory(fil_u, "sweep", u3a_sweep());
+    c3_print_mem_w(fil_u, tot_w, "total marked");
+    c3_print_mem_w(fil_u, u3a_idle(u3R), "free lists");
+    c3_print_mem_w(fil_u, u3a_sweep(), "sweep");
 
     fflush(fil_u);
 
@@ -289,9 +261,9 @@ u3_serf_grab(void)
     _serf_grab(sac);
   }
   else {
-    u3a_print_memory(stderr, "total marked", u3m_mark(stderr));
-    u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
-    u3a_print_memory(stderr, "sweep", u3a_sweep());
+    c3_print_mem_w(stderr, u3m_mark(stderr), "total marked");
+    c3_print_mem_w(stderr, u3a_idle(u3R), "free lists");
+    c3_print_mem_w(stderr, u3a_sweep(), "sweep");
     fprintf(stderr, "\r\n");
   }
 
@@ -317,7 +289,7 @@ u3_serf_post(u3_serf* sef_u)
   }
 
   if ( c3y == sef_u->pac_o ) {
-    u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
+    c3_print_mem_w(stderr, u3m_pack(), "serf: pack: gained");
     u3l_log("");
     sef_u->pac_o = c3n;
   }
@@ -968,7 +940,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
       else {
         u3z(com);
-        u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
+        c3_print_mem_w(stderr, u3m_pack(), "serf: pack: gained");
         *ret = u3nc(c3__live, u3_nul);
         return c3y;
       }
@@ -1119,7 +1091,7 @@ u3_serf_init(u3_serf* sef_u)
 
   //   if ( !(pen_w > (1 << 28)) ) {
   //     fprintf(stderr, "\r\n");
-  //     u3a_print_memory(stderr, "serf: contiguous free space", pen_w);
+  //     c3_print_mem_w(stderr, pen_w, "serf: contiguous free space");
   //     u3_serf_grab();
   //   }
   // }

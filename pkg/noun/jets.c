@@ -14,6 +14,7 @@
 #include "retrieve.h"
 #include "serial.h"
 #include "trace.h"
+#include "util.h"
 #include "urcrypt/urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
@@ -2319,22 +2320,22 @@ u3j_mark(FILE* fil_u)
 {
   c3_w tot_w = 0;
 
-  tot_w += u3a_maid(fil_u, "  warm jet state", u3h_mark(u3R->jed.war_p));
-  tot_w += u3a_maid(fil_u, "  cold jet state", u3h_mark(u3R->jed.cod_p));
-  tot_w += u3a_maid(fil_u, "  hank cache", u3h_mark(u3R->jed.han_p));
-  tot_w += u3a_maid(fil_u, "  battery hash cache", u3h_mark(u3R->jed.bas_p));
+  tot_w += c3_maid_w(fil_u, u3h_mark(u3R->jed.war_p), "  warm jet state");
+  tot_w += c3_maid_w(fil_u, u3h_mark(u3R->jed.cod_p), "  cold jet state");
+  tot_w += c3_maid_w(fil_u, u3h_mark(u3R->jed.han_p), "  hank cache");
+  tot_w += c3_maid_w(fil_u, u3h_mark(u3R->jed.bas_p), "  battery hash cache");
 
   {
     c3_w han_w = 0;
     u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &han_w);
-    tot_w += u3a_maid(fil_u, "  call site cache", han_w);
+    tot_w += c3_maid_w(fil_u, han_w, "  call site cache");
   }
 
   if ( u3R == &(u3H->rod_u) ) {
-    tot_w += u3a_maid(fil_u, "  hot jet state", u3h_mark(u3R->jed.hot_p));
+    tot_w += c3_maid_w(fil_u, u3h_mark(u3R->jed.hot_p), "  hot jet state");
   }
 
-  return u3a_maid(fil_u, "total jet stuff", tot_w);
+  return c3_maid_w(fil_u, tot_w, "total jet stuff");
 }
 
 /* _cj_free_hank(): free an entry from the hank cache.

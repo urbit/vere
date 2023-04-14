@@ -20,6 +20,7 @@
 
 #include "ca_bundle.h"
 #include "pace.h"
+#include "util.h"
 #include "version.h"
 #include "whereami.h"
 
@@ -1726,7 +1727,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   pre_w = u3a_open(u3R);
   u3u_meld();
-  u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
+  c3_print_mem_w(stderr, (u3a_open(u3R) - pre_w), "urbit: meld: gained");
 
   u3e_save();
   u3_disk_exit(log_u);
@@ -1846,7 +1847,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
+  c3_print_mem_w(stderr, u3m_pack(), "urbit: pack: gained");
 
   u3e_save();
   u3_disk_exit(log_u);
