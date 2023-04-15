@@ -155,7 +155,7 @@
     u3_noun
     u3ke_json_de(u3_atom);
 
-  /* u3ke_json_en(): parse JSON from cord.
+  /* u3ke_json_en(): serialize JSON to cord.
   */
     u3_atom
     u3ke_json_en(u3_noun);

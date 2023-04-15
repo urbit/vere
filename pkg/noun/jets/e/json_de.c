@@ -14,7 +14,6 @@
 */
 
 typedef struct _u3qedj_coll {
-  c3_b    key_b : 1;  // key flag
   u3_noun col;        // collection (list for array, map for object)
   union {             // store context for recursive arrays/objects:
     u3_noun* tel;     //   - pointer to tail for array
@@ -47,7 +46,7 @@ _close_stack(const u3a_pile *pil_u)
     u3qedj_coll *tak_u = u3a_peek(pil_u);
 
     u3z(tak_u->col);
-    if ( tak_u->key_b ) {
+    if ( u3_none != tak_u->key ) {
       u3z(tak_u->key);
     }
 
@@ -143,7 +142,6 @@ _parse(u3_atom txt)
         if ( (json_get_context(sam_u, &cnt_d) == JSON_OBJECT) && (cnt_d & 1) ) {
           // since object key must be followed by value, skip ahead
           tak_u->key = _json_get_string_as_atom(sam_u);
-          tak_u->key_b = 1;
           continue;
         }
         else {
@@ -207,7 +205,6 @@ _parse(u3_atom txt)
         c3_assert(cnt_d);
 
         tak_u->col = u3kdb_put(tak_u->col, tak_u->key, val);
-        tak_u->key_b = 0;
         tak_u->key = u3_none;
       } break;
     }
