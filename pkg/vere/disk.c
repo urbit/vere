@@ -890,26 +890,25 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  validation before migration
+    //  XX validation before migration
     //
 
     //  migrate to the correct disk format if necessary
     //
     u3_disk_migrate(log_u);
 
-    //  initialize latest epoch
+    //  get latest epoch number
     //
     c3_d lat_d;
     u3_disk_epoc_last(log_u, &lat_d);
-    fprintf(stderr, "disk: latest epoch is 0i%" PRIu64 "\r\n", lat_d);
 
     //  initialize epoch's db
     //
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
-    fprintf(stderr, "epo_c: %s\r\n", epo_c);
     c3_free(log_c);
     {
+      // XX extract into function?
       const size_t siz_i =
       // 500 GiB is as large as musl on aarch64 wants to allow
       #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
@@ -924,24 +923,33 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
     }
-  }
+    fprintf(stderr, "disk: loaded epoch 0i%" PRIu64 "\r\n", lat_d);
 
-  //  get the latest event number from the db
-  //
-  {
-    log_u->dun_d = 0;
-    c3_d fir_d;
-
-    if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
-      fprintf(stderr, "disk: failed to load latest event from database\r\n");
-      c3_free(log_u);
+    //  get first/last event numbers from lmdb
+    c3_d fir_d, las_d;
+    if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
       return 0;
     }
 
-    log_u->sen_d = log_u->dun_d;
+    //  initialize dun_d/sen_d values
+    if ( 0 == las_d ) {               //  fresh epoch (no events in lmdb yet)
+      if ( 0 == lat_d ) {             //  first epoch
+        log_u->dun_d = 0;
+        log_u->sen_d = 0;
+      } else {                        //  not first epoch
+        log_u->dun_d = lat_d - 1;     //  set dun_d to last event in prev epoch
+        log_u->sen_d = log_u->dun_d;
+      }
+    } else {                          //  not fresh epoch            
+      log_u->dun_d = las_d;           //  set dun_d to last event in lmdb        
+      log_u->sen_d = las_d;
+    }
+
+    //  mark the log as live
+    log_u->liv_o = c3y;
   }
 
-  log_u->liv_o = c3y;
 
 #if defined(DISK_TRACE_JAM) || defined(DISK_TRACE_CUE)
   u3t_trace_open(pax_c);
@@ -966,16 +974,15 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
       return c3n;
     }
     if ( fir_d == las_d ) {
-      fprintf(stderr, "disk: latest epoch is empty; skipping epoch init\r\n");
+      fprintf(stderr, "disk: latest epoch is empty; skipping rollover\r\n");
       return c3n;
     }
-    new_d = 1 + lat_d;  //  create next epoch
+    new_d = 1 + las_d;  //  create next epoch
   }
 
   //  create new epoch directory
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, new_d);
-  fprintf(stderr, "disk: creating new epoch directory 0i%" PRIu64 "\r\n", new_d);
   if ( 0 != c3_mkdir(epo_c, 0700) ) {
     fprintf(stderr, "disk: failed to create epoch directory\r\n");
     return c3n;
@@ -995,15 +1002,26 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
   fprintf(biv_f, URBIT_VERSION);
   fclose(biv_f);
 
-  //  copy snapshot (skip if first epoch 0i0)
+  //  copy snapshot (skip if first epoch)
   if ( new_d > 0 ) {
-    if ( c3n == u3e_backup(epo_c, c3n) ) {
+    if ( c3n == u3e_backup(epo_c, c3y) ) {
       fprintf(stderr, "disk: failed to copy snapshot to new epoch\r\n");
       goto fail;
     }
   }
 
-  //  initialize db of latest epoch
+  //  get metadata from old epoch's db
+  c3_d     who_d[2];
+  c3_o     fak_o;
+  c3_w     lif_w;
+  if ( c3y == eps_o ) {
+    if ( c3y != u3_disk_read_meta(log_u->mdb_u, who_d, &fak_o, &lif_w) ) {
+      fprintf(stderr, "disk: failed to read metadata\r\n");
+      goto fail;
+    }
+  }
+
+  //  initialize db of new epoch
   {
     const size_t siz_i =
     // 500 GiB is as large as musl on aarch64 wants to allow
@@ -1017,6 +1035,14 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
       goto fail;
+    }
+  }
+
+  // write the metadata to the database
+  if ( c3y == eps_o ) {
+    if ( c3n == u3_disk_save_meta(log_u->mdb_u, who_d, fak_o, lif_w) ) {
+      fprintf(stderr, "disk: failed to save metadata\r\n");
+      exit(1);
     }
   }
 
@@ -1038,7 +1064,7 @@ fail:
 c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
   c3_o ret_d = c3n;  //  return no if no epoch directories exist
   *lat_d = 0;        //  initialize lat_d to 0
-  u3_dent* den_u = log_u->com_u->dir_u;
+  u3_dent* den_u = log_u->com_u->dil_u;
   while ( den_u ) {
     c3_d epo_d = 0;
     if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
