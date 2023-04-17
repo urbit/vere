@@ -2071,125 +2071,53 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // gracefully shutdown the pier if it's running
-  u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   // note: this includes patch applications (if any)
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   // check if there's a *current* snapshot
-  if ( old_u->dun_d != u3A->eve_d ) {
+  if ( log_u->dun_d != u3A->eve_d ) {
     fprintf(stderr, "chop: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
+    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, log_u->dun_d);
     exit(1);
   }
 
-  c3_c bhk_c[8193];
-  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3_Host.dir_c);
-  if ( c3n == u3e_backup(bhk_c, c3y) ) {  //  backup current snapshot
-    fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
+  //  create new epoch
+  if ( c3n == u3_disk_epoc_init(log_u) ) {
+    fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
   }
 
-  // initialize the lmdb environment
-  // see disk.c:885
-  const size_t siz_i =
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-    0x7d00000000;
-  #else
-    0x10000000000;
-  #endif
-  c3_c log_c[8193];
-  snprintf(log_c, sizeof(log_c), "%s/.urb/log", u3_Host.dir_c);
-
-  // get the first/last event numbers from the event log
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "chop: failed to load latest event from database\r\n");
+  //  get latest epoch number
+  c3_d lat_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
+    fprintf(stderr, "chop: failed to find last epoch\r\n");
     exit(1);
   }
 
-  // get the metadata
-  c3_d     who_d[2];
-  c3_o     fak_o;
-  c3_w     lif_w;
-  if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
-    fprintf(stderr, "chop: failed to read metadata\r\n");
-    exit(1);
-  }
-
-  // get the last event
-  u3_lmdb_walk itr_u;
-  size_t       len_i;
-  void*        buf_v[1];
-  if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
-    fprintf(stderr, "chop: failed to initialize iterator\r\n");
-    exit(1);
-  }
-  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
-    fprintf(stderr, "chop: failed to read event\r\n");
-    exit(1);
-  }
-  u3_lmdb_walk_done(&itr_u);
-
-  // initialize a fresh lmdb environment in the "chop" subdir
-  c3_c cho_c[8193];
-  snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
-  if ( 0 != access(cho_c, F_OK) ) {
-    if ( 0 != c3_mkdir(cho_c, 0700) ) {
-      fprintf(stderr, "chop: failed to create chop directory\r\n");
-      exit(1);
+  //  delete all but the last epoch
+  u3_dent* den_u = log_u->com_u->dil_u;
+  c3_d epo_d = 0;
+  while ( den_u && epo_d <= lat_d ) {
+    if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
+      fprintf(stderr, "disk: epoch directory is not a @ui: %s\r\n", den_u->nam_c);
+    } else {
+      fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", epo_d);
+      if ( c3y != u3_disk_epoc_kill(log_u, epo_d) ) {
+        fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", epo_d);
+      }
     }
-  }
-  MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
-  if ( !new_u ) {
-    fprintf(stderr, "chop: failed to initialize new database\r\n");
-    exit(1);
-  }
-
-  // write the metadata to the database
-  if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
-    fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
-  }
-
-  // write the last event to the database
-  // warning: this relies on the old database still being open
-  if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
-    fprintf(stderr, "chop: failed to write last event\r\n");
-    exit(1);
-  }
-
-  // backup the original database file
-  c3_c dat_c[8193], bak_c[8193];
-  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_c);
-  // "data_<first>-<last>.mdb.bak"
-  snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
-  if ( 0 != c3_rename(dat_c, bak_c) ) {
-    fprintf(stderr, "chop: failed to backup original database file\r\n");
-    exit(1);
-  }
-
-  // rename new database file to be official
-  c3_c new_c[8193];
-  snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
-  if ( 0 != c3_rename(new_c, dat_c) ) {
-    fprintf(stderr, "chop: failed to rename new database file\r\n");
-    exit(1);
+    den_u = den_u->nex_u;
   }
 
   // cleanup
-  u3_disk_exit(old_u);
-  u3_lmdb_exit(new_u);
+  u3_disk_exit(log_u);
   u3m_stop();
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
-  fprintf(stderr, "      event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "      WARNING: ENSURE YOU CAN RESTART YOUR SHIP BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
-  fprintf(stderr, "      if you can't, restore your log by running:\r\n");
-  fprintf(stderr, "      `mv %s %s` then try again\r\n", bak_c, dat_c);
 }
 
 /* _cw_roll(): rollover to new epoch
