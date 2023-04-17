@@ -1059,6 +1059,36 @@ fail:
   return c3n;
 }
 
+/* u3_disk_epoc_kill: delete an epoch.
+*/
+c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
+  //  get epoch directory
+  c3_c epo_c[8193];
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, epo_d);
+
+  //  delete files in epoch directory
+  u3_dire* dir_u = u3_foil_folder(epo_c);
+  u3_dent* den_u = dir_u->all_u;
+  while ( den_u ) {
+    c3_c fil_c[8193];
+    snprintf(fil_c, sizeof(fil_c), "%s/%s", epo_c, den_u->nam_c);
+    if ( 0 != c3_unlink(fil_c) ) {
+      fprintf(stderr, "disk: failed to delete file in epoch directory\r\n");
+      return c3n;
+    }
+    den_u = den_u->nex_u;
+  }
+
+  //  delete epoch directory
+  if ( 0 != c3_rmdir(epo_c) ) {
+    fprintf(stderr, "disk: failed to delete epoch directory\r\n");
+    return c3n;
+  }
+
+  //  success
+  return c3y;
+}
+
 /* u3_disk_epoc_last: get latest epoch number.
 */
 c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
