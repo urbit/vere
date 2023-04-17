@@ -682,6 +682,7 @@ _cw_usage(c3_c* bin_c)
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
     "  %s chop %.*s              truncate event log:\n",
+    "  %s roll %.*s              rollover to new epoch:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
@@ -1151,7 +1152,7 @@ _cw_disk_init(c3_c* dir_c)
   u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
 
   if ( !log_u ) {
-    fprintf(stderr, "unable to open event log\n");
+    fprintf(stderr, "unable to open event log\n");;
     exit(1);
   }
 
@@ -2083,7 +2084,9 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( c3n == u3e_backup(c3y) ) {  //  backup current snapshot
+  c3_c bhk_c[8193];
+  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3_Host.dir_c);
+  if ( c3n == u3e_backup(bhk_c, c3y) ) {  //  backup current snapshot
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }
@@ -2187,6 +2190,82 @@ _cw_chop(c3_i argc, c3_c* argv[])
   fprintf(stderr, "      WARNING: ENSURE YOU CAN RESTART YOUR SHIP BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
   fprintf(stderr, "      if you can't, restore your log by running:\r\n");
   fprintf(stderr, "      `mv %s %s` then try again\r\n", bak_c, dat_c);
+}
+
+/* _cw_roll(): rollover to new epoch
+ */
+static void
+_cw_roll(c3_i argc, c3_c* argv[])
+{
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
+
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "roll"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  // gracefully shutdown the pier if it's running
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  // note: this includes patch applications (if any)
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+  // check if there's a *current* snapshot
+  if ( log_u->dun_d != u3A->eve_d ) {
+    fprintf(stderr, "roll: error: snapshot is out of date, please "
+                    "start/shutdown your pier gracefully first\r\n");
+    fprintf(stderr, "roll: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", \
+                     u3A->eve_d, log_u->dun_d);
+    exit(1);
+  }
+
+  //  create new epoch
+  if ( c3n == u3_disk_epoc_init(log_u) ) {
+    fprintf(stderr, "roll: error: failed to initialize new epoch\r\n");
+    exit(1);
+  }
+
+  //  report success
+  c3_d epo_d = log_u->dun_d + 1;
+  fprintf(stderr, "roll: success: created epoch 0i%" PRIu64 "\r\n", epo_d);
 }
 
 /* _cw_vere(): download vere
@@ -2451,6 +2530,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__chop: _cw_chop(argc, argv); return 1;
+    case c3__roll: _cw_roll(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
 

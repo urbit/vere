@@ -130,7 +130,7 @@
         c3_c*    pax_c;                     //  path of directory
         uv_file  fil_u;                     //  file, opened read-only to fsync
         u3_dent* all_u;                     //  file list
-        u3_dent* dir_u;                     //  directory list
+        u3_dent* dil_u;                     //  directory list
       } u3_dire;
 
     /* u3_save: checkpoint control.
