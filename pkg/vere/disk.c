@@ -891,19 +891,15 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     }
 
     //  XX validation before migration
-    //
 
     //  migrate to the correct disk format if necessary
-    //
     u3_disk_migrate(log_u);
 
     //  get latest epoch number
-    //
     c3_d lat_d;
     u3_disk_epoc_last(log_u, &lat_d);
 
     //  initialize epoch's db
-    //
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
     c3_free(log_c);
@@ -984,7 +980,7 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, new_d);
   if ( 0 != c3_mkdir(epo_c, 0700) ) {
-    fprintf(stderr, "disk: failed to create epoch directory\r\n");
+    fprintf(stderr, "disk: failed to create epoch directory %" PRIu64 "\r\n", new_d);
     return c3n;
   }
 
@@ -1094,7 +1090,7 @@ c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
 c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
   c3_o ret_d = c3n;  //  return no if no epoch directories exist
   *lat_d = 0;        //  initialize lat_d to 0
-  u3_dent* den_u = log_u->com_u->dil_u;
+  u3_dent* den_u = u3_foil_folder(log_u->com_u->pax_c)->dil_u;
   while ( den_u ) {
     c3_d epo_d = 0;
     if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
@@ -1113,23 +1109,122 @@ c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
  */
 void u3_disk_migrate(u3_disk* log_u)
 {
-  c3_d lat_d;  //  latest epoch number
+  //  check if data.mdb exists in log directory
+  c3_o dat_o = c3n;
+  c3_c dat_c[8193];
+  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_u->com_u->pax_c);
+  if ( 0 == access(dat_c, F_OK) ) {
+    dat_o = c3y;
+  }
 
-  //  initialize disk v1 on fresh boots
-  //
-  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {  //  XX ensure fresh boot
-    fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
+  //  check if any epochs exist
+  c3_d lat_d;
+  c3_o epo_o = u3_disk_epoc_last(log_u, &lat_d);
+
+  if ( c3n == epo_o && c3n == dat_o ) {
+    //  initialize disk v1 on fresh boots
+    fprintf(stderr, "disk: initializing disk with v%d format\r\n", U3D_VER1);
 
     //  initialize first epoch "0i0"
     if ( c3n == u3_disk_epoc_init(log_u) ) {
       fprintf(stderr, "disk: migrate: failed to initialize first epoch\r\n");
       exit(1);
     }
-  }
+  } else if ( c3n == epo_o ) {
+    //  migrate existing, unversioned disk to v1
+    fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
 
-  //  migrate existing, unversioned disk to v1
-  //
-  //  XX write this
+    //  initialize pre-migrated lmdb
+    MDB_env* old_u;
+    {
+      const size_t siz_i =
+      // 500 GiB is as large as musl on aarch64 wants to allow
+      #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+        0x7d00000000;
+      #else
+        0x10000000000;
+      #endif
+
+      if ( 0 == (old_u = u3_lmdb_init(log_u->com_u->pax_c, siz_i)) ) {
+        fprintf(stderr, "disk: failed to initialize database\r\n");
+        c3_free(log_u);
+        return;
+      }
+    }
+
+    //  get first/last event numbers from pre-migrated lmdb
+    c3_d fir_d, las_d;
+    if ( c3n == u3_lmdb_gulf(old_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      return;
+    }
+
+    //  boot
+    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+    //  make sure there's a current snapshot
+    if ( las_d != u3A->eve_d ) {
+      fprintf(stderr, "disk: migrate: error: snapshot is out of date, please "
+                      "start/shutdown your pier gracefully first\r\n");
+      exit(1);
+    }
+
+    //  shutdown pre-migrated u3 system and lmdb
+    u3m_stop();
+
+    //  initialize first epoch "0i0"
+    if ( c3n == u3_disk_epoc_init(log_u) ) {
+      fprintf(stderr, "disk: migrate: failed to initialize first epoch\r\n");
+      exit(1);
+    }
+
+    //  move data.mdb to 0i0/data.mdb
+    c3_c new_c[8193];
+    snprintf(new_c, sizeof(new_c), "%s/0i0/data.mdb", log_u->com_u->pax_c);
+    if ( 0 != rename(dat_c, new_c) ) {
+      fprintf(stderr, "disk: migrate: failed to move data.mdb\r\n");
+      exit(1);
+    }
+
+    //  move lock.mdb to 0i0/lock.mdb
+    c3_c old_c[8193];
+    snprintf(old_c, sizeof(old_c), "%s/lock.mdb", log_u->com_u->pax_c);
+    snprintf(new_c, sizeof(new_c), "%s/0i0/lock.mdb", log_u->com_u->pax_c);
+    if ( 0 != rename(old_c, new_c) ) {
+      fprintf(stderr, "disk: migrate: failed to move lock.mdb\r\n");
+      exit(1);
+    }
+
+    //  rollover to new epoch
+    log_u->mdb_u = old_u;
+    if ( c3n == u3_disk_epoc_init(log_u) ) {
+      fprintf(stderr, "roll: error: failed to initialize new epoch\r\n");
+      exit(1);
+    }
+
+    //  delete backup snapshot
+    c3_c bhk_c[8193];
+    snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3_Host.dir_c);
+    c3_c nop_c[8193];
+    snprintf(nop_c, sizeof(nop_c), "%s/north.bin", bhk_c);
+    c3_c sop_c[8193];
+    snprintf(sop_c, sizeof(sop_c), "%s/south.bin", bhk_c);
+    if ( c3n == c3_unlink(nop_c) ) {
+      fprintf(stderr, "disk: migrate: failed to delete north.bin\r\n");
+      exit(1);
+    } else if ( c3n == c3_unlink(sop_c) ) {
+      fprintf(stderr, "disk: migrate: failed to delete south.bin\r\n");
+      exit(1);
+    } else {
+      if ( c3n == c3_rmdir(bhk_c) ) {
+        fprintf(stderr, "disk: migrate: failed to delete bhk\r\n");
+        exit(1);
+      }
+    }
+
+    //  success
+    fprintf(stderr, "disk: migrated disk to v%d format\r\n", U3D_VER1);
+  }
 
   return;
 }

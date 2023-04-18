@@ -2097,7 +2097,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  delete all but the last epoch
+  //  delete all but the newly created epoch
   u3_dent* den_u = log_u->com_u->dil_u;
   c3_d epo_d = 0;
   while ( den_u && epo_d <= lat_d ) {
@@ -2191,9 +2191,9 @@ _cw_roll(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  report success
+  //  success
   c3_d epo_d = log_u->dun_d + 1;
-  fprintf(stderr, "roll: success: created epoch 0i%" PRIu64 "\r\n", epo_d);
+  fprintf(stderr, "roll: epoch rollover complete");
 }
 
 /* _cw_vere(): download vere
