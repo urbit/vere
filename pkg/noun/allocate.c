@@ -2741,16 +2741,16 @@ u3a_loom_sane()
         ,      *nex_u = u3to(u3a_fbox, this_u->nex_p);
 
       if (nex_p && nex_u->pre_p != this_p) {
-        fprintf(stderr, "loom: corrupt\r\n");
+        fprintf(stderr, "loom: wack\r\n");
         exit(ENOTRECOVERABLE);
       }
       if (pre_p && pre_u->nex_p != this_p) {
-        fprintf(stderr, "loom: corrupt\r\n");
+        fprintf(stderr, "loom: wack\r\n");
         exit(ENOTRECOVERABLE);
       }
       if (!pre_p                /* this must be the head of a freelist */
           && u3R->all.fre_p[_box_slot(this_u->box_u.siz_w)] != this_p) {
-        fprintf(stderr, "loom: corrupt\r\n");
+        fprintf(stderr, "loom: wack\r\n");
         exit(ENOTRECOVERABLE);
       }
     }
