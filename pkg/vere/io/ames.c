@@ -2322,8 +2322,11 @@ _ames_io_info(u3_auto* car_u)
 {
   u3_ames*  sam_u = (u3_ames*)car_u;
 
+  c3_w num_w = u3h_count(sam_u->fin_s.sac_p);
+  u3h_discount(sam_u->fin_s.sac_p);
+
   return u3i_list(
-    u3_pier_mase("scry-cache",       u3i_word(u3h_mark(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache",       u3i_word(num_w)),
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         sam_u->fig_u.net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
