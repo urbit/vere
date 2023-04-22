@@ -86,19 +86,19 @@
     c3_d  rog_d;                        //  origin lane (optional)
   } u3_prel;
 
-/* u3_keen: unsigned fine request body
+/* u3_peep: unsigned fine request body
 */
-  typedef struct _u3_keen {
+  typedef struct _u3_peep {
     c3_w    fra_w;                      //  fragment number
     c3_s    len_s;                      //  path length
     c3_c*   pat_c;                      //  path as ascii
-  } u3_keen;
+  } u3_peep;
 
 /*  u3_wail: signed fine request body
 */
   typedef struct _u3_wail {
     c3_y    sig_y[64];                  //  signature
-    u3_keen ken_u;                      //  request payload
+    u3_peep pep_u;                      //  request payload
   } u3_wail;
 
 /* u3_meow: response portion of purr packet
@@ -117,7 +117,7 @@
 /* u3_purr: fine packet response
 */
   typedef struct _u3_purr {
-    u3_keen ken_u;
+    u3_peep pep_u;
     u3_meow mew_u;
   } u3_purr;
 
@@ -202,7 +202,7 @@ _log_prel(u3_prel* pre_u)
 }
 
 static void
-_log_keen(u3_keen* req_u)
+_log_peep(u3_peep* req_u)
 {
   u3l_log("--- REQUEST ---");
   u3l_log("strlen: %u", req_u->len_s);
@@ -276,11 +276,11 @@ _ames_pact_free(u3_pact* pac_u)
       break;
 
     case PACT_WAIL:
-      c3_free(pac_u->wal_u.ken_u.pat_c);
+      c3_free(pac_u->wal_u.pep_u.pat_c);
       break;
 
     case PACT_PURR:
-      c3_free(pac_u->pur_u.ken_u.pat_c);
+      c3_free(pac_u->pur_u.pep_u.pat_c);
       c3_free(pac_u->pur_u.mew_u.dat_y);
       break;
 
@@ -347,12 +347,12 @@ _ames_body_size(u3_body* bod_u)
 }
 
 static inline c3_s
-_fine_keen_size(u3_keen* ken_u)
+_fine_peep_size(u3_peep* pep_u)
 {
   return (
-    sizeof(ken_u->fra_w) +
-    sizeof(ken_u->len_s) +
-    ken_u->len_s);
+    sizeof(pep_u->fra_w) +
+    sizeof(pep_u->len_s) +
+    pep_u->len_s);
 }
 
 static inline c3_s
@@ -368,7 +368,7 @@ _fine_meow_size(u3_meow* mew_u)
 static c3_s
 _fine_purr_size(u3_purr* pur_u)
 {
-  c3_s pur_s = _fine_keen_size(&pur_u->ken_u);
+  c3_s pur_s = _fine_peep_size(&pur_u->pep_u);
   c3_s mew_s = _fine_meow_size(&pur_u->mew_u);
   return pur_s + mew_s;
 }
@@ -525,8 +525,8 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
   c3_s len_s;
 
   c3_w sig_w = sizeof(pac_u->wal_u.sig_y);
-  c3_w fra_w = sizeof(pac_u->wal_u.ken_u.fra_w);
-  c3_w len_w = sizeof(pac_u->wal_u.ken_u.len_s);
+  c3_w fra_w = sizeof(pac_u->wal_u.pep_u.fra_w);
+  c3_w len_w = sizeof(pac_u->wal_u.pep_u.len_s);
   exp_w = sig_w + fra_w + len_w;
 
   if ( cur_w + exp_w > pac_u->len_w ) {
@@ -540,13 +540,13 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
 
   //  parse fragment number
   //
-  pac_u->wal_u.ken_u.fra_w = _ames_sift_word(pac_u->hun_y + cur_w);
+  pac_u->wal_u.pep_u.fra_w = _ames_sift_word(pac_u->hun_y + cur_w);
   cur_w += fra_w;
 
   //  parse path length field
   //
   len_s = _ames_sift_short(pac_u->hun_y + cur_w);
-  pac_u->wal_u.ken_u.len_s = len_s;
+  pac_u->wal_u.pep_u.len_s = len_s;
   cur_w += len_w;
 
   if ( len_s > FINE_PATH_MAX ) {
@@ -563,9 +563,9 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
 
   //  parse request path
   //
-  pac_u->wal_u.ken_u.pat_c = c3_calloc(len_s + 1);
-  memcpy(pac_u->wal_u.ken_u.pat_c, pac_u->hun_y + cur_w, len_s);
-  pac_u->wal_u.ken_u.pat_c[len_s] = '\0';
+  pac_u->wal_u.pep_u.pat_c = c3_calloc(len_s + 1);
+  memcpy(pac_u->wal_u.pep_u.pat_c, pac_u->hun_y + cur_w, len_s);
+  pac_u->wal_u.pep_u.pat_c[len_s] = '\0';
   return c3y;
 }
 
@@ -695,26 +695,26 @@ _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
   cur_w += rec_y;
 }
 
-/* _fine_etch_keen(): serialize unsigned scry request
+/* _fine_etch_peep(): serialize unsigned scry request
 */
 static void
-_fine_etch_keen(u3_keen* ken_u, c3_y* buf_y)
+_fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 {
   c3_w cur_w = 0;
 
   //  write fragment number
   //
-  _ames_etch_word(buf_y + cur_w, ken_u->fra_w);
-  cur_w += sizeof(ken_u->fra_w);
+  _ames_etch_word(buf_y + cur_w, pep_u->fra_w);
+  cur_w += sizeof(pep_u->fra_w);
 
   //  write path length
   //
-  _ames_etch_short(buf_y + cur_w, ken_u->len_s);
-  cur_w += sizeof(ken_u->len_s);
+  _ames_etch_short(buf_y + cur_w, pep_u->len_s);
+  cur_w += sizeof(pep_u->len_s);
 
   //  write request path
   //
-  memcpy(buf_y + cur_w, ken_u->pat_c, ken_u->len_s);
+  memcpy(buf_y + cur_w, pep_u->pat_c, pep_u->len_s);
 }
 
 /* fine_etch_meow(): serialize signed scry response fragment
@@ -754,8 +754,8 @@ _fine_etch_purr(u3_purr* pur_u, c3_y* buf_y)
 
   //  write unsigned scry request
   //
-  _fine_etch_keen(&pur_u->ken_u, buf_y + cur_w);
-  cur_w += _fine_keen_size(&pur_u->ken_u);
+  _fine_etch_peep(&pur_u->pep_u, buf_y + cur_w);
+  cur_w += _fine_peep_size(&pur_u->pep_u);
 
   //  write signed response fragment
   _fine_etch_meow(&pur_u->mew_u, buf_y + cur_w);
@@ -1549,14 +1549,14 @@ _fine_lop(c3_w fra_w)
 static u3_weak
 _fine_scry_path(u3_pact* pac_u, c3_o lop_o)
 {
-  u3_keen* ken_u = (
+  u3_peep* pep_u = (
     ( PACT_WAIL == pac_u->typ_y )
-    ? &pac_u->wal_u.ken_u
-    : &pac_u->pur_u.ken_u);
+    ? &pac_u->wal_u.pep_u
+    : &pac_u->pur_u.pep_u);
 
   u3_noun pat;
   {
-    u3_noun pux = u3i_string(ken_u->pat_c);
+    u3_noun pux = u3i_string(pep_u->pat_c);
     u3_noun ful = u3dc("rush", pux, u3v_wish("stap"));
     if ( u3_nul == ful ) {
       u3z(ful);
@@ -1566,7 +1566,7 @@ _fine_scry_path(u3_pact* pac_u, c3_o lop_o)
     u3z(ful);
   }
 
-  c3_w fra_w = ken_u->fra_w;
+  c3_w fra_w = pep_u->fra_w;
   if ( c3y == lop_o ) {
     fra_w = _fine_lop(fra_w);
   }
@@ -1581,10 +1581,10 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
   u3_pact* pac_u = vod_p;
   c3_assert( PACT_PURR == pac_u->typ_y );
   u3_ames* sam_u = pac_u->sam_u;
-  u3_keen* ken_u = &pac_u->pur_u.ken_u;
+  u3_peep* pep_u = &pac_u->pur_u.pep_u;
 
-  u3_noun pax = u3do("stab", u3i_string(ken_u->pat_c));
-  c3_w lop_w = _fine_lop(ken_u->fra_w);
+  u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
+  c3_w lop_w = _fine_lop(pep_u->fra_w);
 
   //  if not [~ ~ fragments], mark as dead
   //
@@ -1604,7 +1604,7 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
   c3_w fra_w = lop_w;
   u3_noun puz = pas;
   while ( pas != u3_nul ) {
-    if ( ken_u->fra_w == fra_w ) {
+    if ( pep_u->fra_w == fra_w ) {
       fra = u3k(u3h(puz));
       break;
     }
@@ -1680,15 +1680,15 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     //  copy unsigned request payload into response body
     //
     res_u->pur_u = (u3_purr) {
-      .ken_u = req_u->wal_u.ken_u,
+      .pep_u = req_u->wal_u.pep_u,
       .mew_u = {0}  //  filled in later
     };
 
     //  copy path string from request into response body
     {
-      c3_s len_s = req_u->wal_u.ken_u.len_s;
-      res_u->pur_u.ken_u.pat_c = c3_calloc(len_s + 1);
-      memcpy(res_u->pur_u.ken_u.pat_c, req_u->wal_u.ken_u.pat_c, len_s);
+      c3_s len_s = req_u->wal_u.pep_u.len_s;
+      res_u->pur_u.pep_u.pat_c = c3_calloc(len_s + 1);
+      memcpy(res_u->pur_u.pep_u.pat_c, req_u->wal_u.pep_u.pat_c, len_s);
     }
 
     //  make scry cache key
@@ -1718,16 +1718,16 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  already pending; drop
   //
   if ( FINE_PEND == cac ) {
-    u3l_log("fine: pend %u %s", res_u->pur_u.ken_u.fra_w,
-                                  res_u->pur_u.ken_u.pat_c);
+    u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
+                                  res_u->pur_u.pep_u.pat_c);
     _ames_pact_free(res_u);
   }
   //  cache miss or a previous scry blocked; try again
   //
   else if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-    u3l_log("fine: miss %u %s", res_u->pur_u.ken_u.fra_w,
-                                  res_u->pur_u.ken_u.pat_c);
-    c3_w lop_w = _fine_lop(res_u->pur_u.ken_u.fra_w);
+    u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
+                                  res_u->pur_u.pep_u.pat_c);
+    c3_w lop_w = _fine_lop(res_u->pur_u.pep_u.fra_w);
     u3_noun pax =
       u3nc(c3__fine,
       u3nq(c3__hunk,
@@ -1747,8 +1747,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  cache hit, fill in response meow and send
   //
   else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-    u3l_log("fine: hit  %u %s", res_u->pur_u.ken_u.fra_w,
-                                  res_u->pur_u.ken_u.pat_c);
+    u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
+                                  res_u->pur_u.pep_u.pat_c);
     _fine_etch_response(res_u);
     _ames_try_send(res_u, c3n);
   }
