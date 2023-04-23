@@ -97,7 +97,7 @@
 /*  u3_wail: signed fine request body
 */
   typedef struct _u3_wail {
-    c3_y    sig_y[64];                  //  signature
+    c3_y    tag_y;                      //  tag (always 0, unsigned)
     u3_peep pep_u;                      //  request payload
   } u3_wail;
 
@@ -521,22 +521,25 @@ _ames_sift_prel(u3_head* hed_u,
 static c3_o
 _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
 {
-  c3_w tot_w, exp_w;
-  c3_s len_s;
-
-  c3_w sig_w = sizeof(pac_u->wal_u.sig_y);
   c3_w fra_w = sizeof(pac_u->wal_u.pep_u.fra_w);
   c3_w len_w = sizeof(pac_u->wal_u.pep_u.len_s);
-  exp_w = sig_w + fra_w + len_w;
+  c3_w exp_w = fra_w + len_w;
+  c3_s len_s;
 
   if ( cur_w + exp_w > pac_u->len_w ) {
     u3l_log("fine: wail not big enough");
     return c3n;
   }
-  //  parse signature
+
+  //  parse tag
   //
-  memcpy(pac_u->wal_u.sig_y, pac_u->hun_y + cur_w, sig_w);
-  cur_w += sig_w;
+  pac_u->wal_u.tag_y = *(pac_u->hun_y + cur_w);
+  cur_w++;
+
+  if ( 0 != pac_u->wal_u.tag_y ) {
+    u3l_log("fine: wail tag unknown %u", pac_u->wal_u.tag_y);
+    return c3n;
+  }
 
   //  parse fragment number
   //
@@ -554,11 +557,13 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
     return c3n;
   }
 
-  tot_w = cur_w + len_s;
-  if ( tot_w != pac_u->len_w ) {
-    u3l_log("fine: wail expected total len: %u, actual %u",
-            tot_w, pac_u->len_w);
-    return c3n;
+  {
+    c3_w tot_w = cur_w + len_s;
+    if ( tot_w != pac_u->len_w ) {
+      u3l_log("fine: wail expected total len: %u, actual %u",
+              tot_w, pac_u->len_w);
+      return c3n;
+    }
   }
 
   //  parse request path
