@@ -103,14 +103,12 @@
 
 /* u3_meow: response portion of purr packet
  *
- *   siz_s: number of bytes to stitch into a message
- *   act_s: number of bytes in the actual packet
+ *   siz_s: number of bytes in the packet
 */
   typedef struct _u3_meow {
     c3_y    sig_y[64];                  //  host signature
     c3_w    num_w;                      //  number of fragments
-    c3_s    siz_s;                      //  datum size (official)
-    c3_w    act_s;                      //  datum size (actual)
+    c3_w    siz_s;                      //  datum size (actual)
     c3_y*   dat_y;                      //  datum (0 if null response)
   } u3_meow;
 
@@ -223,17 +221,15 @@ static void
 _log_meow(u3_meow* mew_u)
 {
   c3_c* sig_c = _show_mug_buf(mew_u->sig_y, sizeof(mew_u->sig_y));
-  c3_c* dat_c = _show_mug_buf(mew_u->dat_y, mew_u->act_s);
+  c3_c* dat_c = _show_mug_buf(mew_u->dat_y, mew_u->siz_s);
 
   u3l_log("  sig=%s"
           "  num=%u"
           "  siz=%u"
-          "  act=%u"
           "  dat=%s",
     sig_c,
     mew_u->num_w,
     mew_u->siz_s,
-    mew_u->act_s,
     dat_c
   );
 
@@ -361,8 +357,7 @@ _fine_meow_size(u3_meow* mew_u)
   return (
     sizeof(mew_u->sig_y) +
     sizeof(mew_u->num_w) +
-    sizeof(mew_u->siz_s) +
-    mew_u->act_s);
+    mew_u->siz_s);
 }
 
 static c3_s
@@ -584,9 +579,8 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 
   c3_y sig_w = sizeof(mew_u->sig_y);
   c3_y num_w = sizeof(mew_u->num_w);
-  c3_y siz_w = sizeof(mew_u->siz_s);
 
-  c3_y mew_w = sig_w + num_w + siz_w;
+  c3_y mew_w = sig_w + num_w;
 
   if ( (len_w < mew_w) || (len_w > FINE_FRAG + mew_w) )
   {
@@ -606,16 +600,11 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
     u3r_bytes(cur_w, num_w, (c3_y*)&mew_u->num_w, mew);
     cur_w += num_w;
 
-    //  parse data size field
-    //
-    u3r_bytes(cur_w, siz_w, (c3_y*)&mew_u->siz_s, mew);
-    cur_w += siz_w;
-
     //  parse data payload
     //
-    mew_u->act_s = len_w - cur_w;
-    mew_u->dat_y = c3_calloc(mew_u->act_s);
-    u3r_bytes(cur_w, mew_u->act_s, mew_u->dat_y, mew);
+    mew_u->siz_s = len_w - cur_w;
+    mew_u->dat_y = c3_calloc(mew_u->siz_s);
+    u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
 
     ret_o = c3y;
   }
@@ -740,14 +729,9 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
   _ames_etch_word(buf_y + cur_w, mew_u->num_w);
   cur_w += sizeof(mew_u->num_w);
 
-  //  write response length field
-  //
-  _ames_etch_short(buf_y + cur_w, mew_u->siz_s);
-  cur_w += sizeof(mew_u->siz_s);
-
   //  write response fragment data
   //
-  memcpy(buf_y + cur_w, mew_u->dat_y, mew_u->act_s);
+  memcpy(buf_y + cur_w, mew_u->dat_y, mew_u->siz_s);
 }
 
 /* _fine_etch_purr(): serialise response packet
