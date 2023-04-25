@@ -2200,7 +2200,6 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
       ret_o = c3n;
     } break;
 
-    case c3__hoot:
     case c3__send: {
       u3_noun lan = u3k(u3h(dat));
       u3_noun pac = u3k(u3t(dat));
