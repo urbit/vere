@@ -277,7 +277,7 @@ _lick_init_sock(u3_shan* san_u)
   strcat(por_c, URB_DEV_PATH);
   strcat(por_c, gen_u->nam_c);
 
-  if ( 0 != unlink(gen_u->nam_c) && errno != ENOENT ) {
+  if ( 0 != unlink(por_c) && errno != ENOENT ) {
     u3l_log("lick: unlink: %s", uv_strerror(errno));
     goto _lick_sock_err_chdir;
   }
@@ -314,6 +314,46 @@ _lick_sock_err_chdir:
     u3l_log("lick: chdir: %s", uv_strerror(errno));
   }
   u3_king_bail();
+}
+
+/* u3_lick_ef_shut(): Close an IPC port
+*/
+static void
+_lick_ef_shut(u3_lick* lic_u, u3_noun nam)
+{
+
+  u3l_log("lick shut: %s", u3r_string(nam));
+
+  c3_c* nam_c = u3r_string(nam); 
+
+  u3_agent* cur_u = lic_u->gen_u;
+  u3_agent* las_u;
+
+  if ( (NULL != cur_u) && (NULL != cur_u->nam_c) &&
+       ( 0 == strcmp(cur_u->nam_c, nam_c) ) )
+  {
+    lic_u->gen_u = cur_u->nex_u;
+    _lick_close_sock(cur_u->san_u);
+    //free(cur_u);
+    return;
+  }
+
+  while ( (NULL != cur_u) && (NULL != cur_u->nam_c) && 
+       ( 0 != strcmp(cur_u->nam_c, nam_c) ) )
+  {
+    las_u = cur_u;
+    cur_u = cur_u->nex_u;
+  }
+
+  if ( NULL == cur_u )
+  {
+    return;
+  }
+
+  las_u->nex_u = cur_u->nex_u;
+  _lick_close_sock(cur_u->san_u);
+  //free(cur_u);
+
 }
 
 
@@ -354,12 +394,10 @@ _lick_ef_spin(u3_lick* lic_u, u3_noun wir_i, u3_noun nam)
 
     if( 0 != strcmp(las_u->nam_c, gen_u->nam_c) )
     {
-    u3l_log("lick last");
       _lick_init_sock(gen_u->san_u);
       las_u->nex_u = gen_u;
     }
   }
-
 }
 
 /* _lick_io_kick(): apply effects.
@@ -387,7 +425,8 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
     } else if ( (c3__shut == tag) )
     {
-      u3l_log("lick shut");
+      nam = u3k(tmp); 
+      _lick_ef_shut(lic_u, nam); // execute shut command
       ret_o=c3y;
     } else if ( c3__spit == tag )
     {
@@ -502,13 +541,14 @@ u3_lick_io_init(u3_pier* pir_u)
 {
   u3_lick* lic_u = c3_calloc(sizeof(*lic_u));
 
-  c3_c pax_c[2048];
+  c3_c pax_c[2048] = "";
   struct stat st = {0};
   strcat(pax_c, u3_Host.dir_c);
   strcat(pax_c, URB_DEV_PATH);
 
   if( -1 == stat(pax_c, &st) ) {
     u3l_log("lick init %s", lic_u->fod_c);
+    u3l_log("lick init mkdir %s",pax_c );
     mkdir(pax_c, 0700);
   }
 
