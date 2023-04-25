@@ -290,7 +290,7 @@ cc_toolchain_config(
     compiler_version = "//:clang_version",
     ld = "/usr/bin/ld",
     sys_includes = [
-        "/usr/local/Cellar/llvm/15.0.7_1/lib/clang/15.0.7/include",
+        "/usr/local/Cellar/llvm@15/15.0.7/lib/clang/15.0.7/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
     ],
     target_cpu = "x86_64",
