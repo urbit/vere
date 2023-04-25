@@ -1,6 +1,7 @@
 #ifndef U3_ALLOCATE_H
 #define U3_ALLOCATE_H
 
+#include "error.h"
 #include "manage.h"
 #include "options.h"
 
