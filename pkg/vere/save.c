@@ -27,10 +27,10 @@ u3_save_ef_chld(u3_pier *pir_u)
   u3l_log("checkpoint: complete %d", sav_u->pid_w);
   pid_w = wait(&loc_i);
   if (0 != sav_u->pid_w) {
-    c3_assert(pid_w == sav_u->pid_w);
+    u3_assert(pid_w == sav_u->pid_w);
   }
   else {
-    c3_assert(pid_w > 0);
+    u3_assert(pid_w > 0);
   }
   sav_u->pid_w = 0;
 }

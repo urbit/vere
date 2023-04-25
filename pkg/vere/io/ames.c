@@ -305,7 +305,7 @@ _ames_panc_free(u3_panc* pan_u)
       pan_u->pre_u->nex_u = pan_u->nex_u;
     }
     else {
-      c3_assert(pan_u == pan_u->pac_u->sam_u->pan_u);
+      u3_assert(pan_u == pan_u->pac_u->sam_u->pan_u);
       pan_u->pac_u->sam_u->pan_u = pan_u->nex_u;
     }
   }
@@ -636,7 +636,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
 {
   //  only version 0 currently recognized
   //
-  c3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
+  u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
   c3_w hed_w = ((hed_u->req_o &     0x1) <<  2)
              ^ ((hed_u->sim_o &     0x1) <<  3)
@@ -782,7 +782,7 @@ _fine_etch_response(u3_pact* pac_u)
                                      pac_u->len_w - rog_w);
   _ames_etch_head(&pac_u->hed_u, pac_u->hun_y);
 
-  c3_assert( c3y == _ames_check_mug(pac_u) );
+  u3_assert( c3y == _ames_check_mug(pac_u) );
 }
 
 /* _lane_scry_path(): format scry path for retrieving a lane
@@ -1175,13 +1175,13 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
 
   u3_noun tag, val;
   u3x_cell(lan, &tag, &val);
-  c3_assert( (c3y == tag) || (c3n == tag) );
+  u3_assert( (c3y == tag) || (c3n == tag) );
 
   //  galaxy lane; do DNS lookup and send packet
   //
   if ( c3y == tag ) {
-    c3_assert( c3y == u3a_is_cat(val) );
-    c3_assert( val < 256 );
+    u3_assert( c3y == u3a_is_cat(val) );
+    u3_assert( val < 256 );
 
     //u3l_log("_ames_ef_send imp %s %u", _str_typ(pac_u->typ_y), val);
     pac_u->rut_u.imp_y = val;
@@ -1568,7 +1568,7 @@ _fine_scry_path(u3_pact* pac_u, c3_o lop_o)
 static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_pact* pac_u = vod_p;
-  c3_assert( PACT_PURR == pac_u->typ_y );
+  u3_assert( PACT_PURR == pac_u->typ_y );
   u3_ames* sam_u = pac_u->sam_u;
   u3_peep* pep_u = &pac_u->pur_u.pep_u;
 
@@ -2047,7 +2047,7 @@ _ames_io_start(u3_ames* sam_u)
     }
 
     uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    c3_assert(add_u.sin_port);
+    u3_assert(add_u.sin_port);
 
     sam_u->pir_u->por_s = ntohs(add_u.sin_port);
   }
@@ -2393,7 +2393,7 @@ u3_ames_io_init(u3_pier* pir_u)
   //
   sam_u->lax_p = u3h_new_cache(500000);
 
-  c3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
+  u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();
