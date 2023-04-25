@@ -1167,7 +1167,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
 
       //  detect snapshots from a larger loom
       //
-      if ( (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w + 1) >= u3a_pages ) {
+      if ( (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w + 1) >= u3P.pag_w ) {
         fprintf(stderr, "boot: snapshot too big for loom\r\n");
         exit(1);
       }
