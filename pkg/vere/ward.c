@@ -170,7 +170,7 @@ u3_pico_free(u3_pico* pic_u)
   u3z(pic_u->gan);
 
   switch ( pic_u->typ_e ) {
-    default: c3_assert(0);
+    default: u3_assert(0);
 
     case u3_pico_full: {
       u3z(pic_u->ful);

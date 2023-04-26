@@ -1,6 +1,7 @@
 #ifndef U3_ALLOCATE_H
 #define U3_ALLOCATE_H
 
+#include "error.h"
 #include "manage.h"
 #include "options.h"
 
@@ -386,7 +387,7 @@
       u3C.vits_w = 1;
       break;
     default:
-      c3_assert(0);
+      u3_assert(0);
     }
 
   u3C.walign_w = 1 << u3C.vits_w;
@@ -479,7 +480,7 @@
                 u3m_bail(c3__meme);
               }
 # ifdef U3_MEMORY_DEBUG
-              c3_assert( pil_u->top_p >= u3R->cap_p );
+              u3_assert( pil_u->top_p >= u3R->cap_p );
 # endif
             }
             else {
@@ -487,13 +488,13 @@
                 u3m_bail(c3__meme);
               }
 # ifdef U3_MEMORY_DEBUG
-              c3_assert( pil_u->top_p <= u3R->cap_p );
+              u3_assert( pil_u->top_p <= u3R->cap_p );
 # endif
             }
 #endif /* ifndef U3_GUARD_PAGE */
 
 #ifdef U3_MEMORY_DEBUG
-            c3_assert( pil_u->rod_u == u3R );
+            u3_assert( pil_u->rod_u == u3R );
 #endif
 
             return u3a_peek(pil_u);

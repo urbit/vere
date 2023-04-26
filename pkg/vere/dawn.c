@@ -185,7 +185,7 @@ _dawn_fail(u3_noun who, u3_noun rac, u3_noun sas)
   c3_c* rac_c;
 
   switch (rac) {
-    default: c3_assert(0);
+    default: u3_assert(0);
     case c3__czar: {
       rac_c = "galaxy";
       break;

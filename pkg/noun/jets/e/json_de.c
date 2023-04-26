@@ -121,7 +121,7 @@ _parse(u3_atom txt)
   while ( json_peek(sam_u) != JSON_DONE ) {
     switch ( json_next(sam_u) ) {
       // unreachable barring programming error
-      default: c3_assert(0);
+      default: u3_assert(0);
 
       case JSON_ARRAY:
       case JSON_OBJECT: {
@@ -175,7 +175,7 @@ _parse(u3_atom txt)
 
     switch ( json_get_context(sam_u, &cnt_d) ) {
       // unreachable barring programming error
-      default: c3_assert(0);
+      default: u3_assert(0);
 
       case JSON_DONE: {
         res = val;
@@ -199,10 +199,10 @@ _parse(u3_atom txt)
 
       case JSON_OBJECT: {
         // odd cnt_d and unset key weeded out by continue command on key
-        c3_assert(!(cnt_d & 1));
-        c3_assert(tak_u->key != u3_none);
+        u3_assert(!(cnt_d & 1));
+        u3_assert(tak_u->key != u3_none);
         // cnt_d == 0 weeded out by continue command on array/object open
-        c3_assert(cnt_d);
+        u3_assert(cnt_d);
 
         tak_u->col = u3kdb_put(tak_u->col, tak_u->key, val);
         tak_u->key = u3_none;
@@ -214,7 +214,7 @@ _parse(u3_atom txt)
   // clean up
   //
 
-  c3_assert(c3y == u3a_pile_done(pil_u));
+  u3_assert(c3y == u3a_pile_done(pil_u));
 
   // skip over whitespce
   while ( json_isspace(json_source_peek(sam_u)) ) {

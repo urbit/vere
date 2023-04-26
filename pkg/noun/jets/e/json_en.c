@@ -102,7 +102,7 @@ static void
 _serialize_loobean(json_buffer *buf_u, u3_noun a)
 {
   switch ( a ) {
-    default: c3_assert(0);
+    default: u3_assert(0);
     case c3y: return _append_text(buf_u, _JSON_TRUE, sizeof(_JSON_TRUE) - 1);
     case c3n: return _append_text(buf_u, _JSON_FALSE, sizeof(_JSON_FALSE) - 1);
   }
@@ -369,7 +369,7 @@ _serialize(json_buffer *buf_u, u3_noun a)
     u3x_cell(a, &s, &p);
 
     switch ( s ) {
-      default: c3_assert(0);
+      default: u3_assert(0);
       case c3__a: return _serialize_array(buf_u, p);
       case c3__o: return _serialize_object(buf_u, p);
       case c3__b: return _serialize_loobean(buf_u, p);

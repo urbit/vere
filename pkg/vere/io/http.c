@@ -370,7 +370,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
     }
 
     u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
-    c3_assert(c3y == aut || c3n == aut);
+    u3_assert(c3y == aut || c3n == aut);
 
     return aut;
   }
@@ -596,7 +596,7 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 {
-  c3_assert(u3_rsat_init == req_u->sat_e);
+  u3_assert(u3_rsat_init == req_u->sat_e);
   req_u->sat_e = u3_rsat_plan;
 
   {
@@ -658,7 +658,7 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
 static c3_o
 _http_req_cache(u3_hreq* req_u)
 {
-  c3_assert(u3_rsat_init == req_u->sat_e);
+  u3_assert(u3_rsat_init == req_u->sat_e);
 
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
@@ -699,7 +699,7 @@ _http_hgen_dispose(void* ptr_v)
 static void
 _http_hgen_send(u3_hgen* gen_u)
 {
-  c3_assert( c3y == gen_u->red );
+  u3_assert( c3y == gen_u->red );
 
   u3_hreq* req_u = gen_u->req_u;
   h2o_req_t* rec_u = req_u->rec_u;
@@ -759,7 +759,7 @@ _http_hgen_proceed(h2o_generator_t* neg_u, h2o_req_t* rec_u)
   u3_hreq* req_u = gen_u->req_u;
 
   // sanity check
-  c3_assert( rec_u == req_u->rec_u );
+  u3_assert( rec_u == req_u->rec_u );
 
   gen_u->red = c3y;
 
@@ -881,7 +881,7 @@ _http_continue_respond(u3_hreq* req_u,
   //   return;
   // }
   //
-  // c3_assert( sequence == ++gen_u->sequence );
+  // u3_assert( sequence == ++gen_u->sequence );
 
   gen_u->dun = complete;
 
@@ -950,7 +950,7 @@ _http_rec_sock(h2o_req_t* rec_u)
 
   //  sanity check
   //
-  c3_assert( hon_u->sok_u == &suv_u->sok_u );
+  u3_assert( hon_u->sok_u == &suv_u->sok_u );
 
   return hon_u;
 }
@@ -1125,7 +1125,7 @@ _http_conn_free(uv_handle_t* han_t)
   u3_http* htp_u = hon_u->htp_u;
   u3_h2o_serv* h2o_u = htp_u->h2o_u;
 
-  c3_assert( 0 == hon_u->req_u );
+  u3_assert( 0 == hon_u->req_u );
 
 #if 0
   {
@@ -1315,7 +1315,7 @@ _http_h2o_context_dispose(h2o_context_t* ctx)
 static void
 _http_serv_really_free(u3_http* htp_u)
 {
-  c3_assert( 0 == htp_u->hon_u );
+  u3_assert( 0 == htp_u->hon_u );
 
   if ( 0 != htp_u->h2o_u ) {
     u3_h2o_serv* h2o_u = htp_u->h2o_u;
@@ -1361,7 +1361,7 @@ _http_serv_free(u3_http* htp_u)
   u3l_log("http serv free %d", htp_u->sev_l);
 #endif
 
-  c3_assert( 0 == htp_u->hon_u );
+  u3_assert( 0 == htp_u->hon_u );
 
   if ( 0 == htp_u->h2o_u ) {
     _http_serv_really_free(htp_u);
@@ -1803,8 +1803,8 @@ _http_release_ports_file(c3_c *pax_c)
   c3_i  wit_i;
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, nam_c);
-  c3_assert(wit_i > 0);
-  c3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(wit_i > 0);
+  u3_assert(len_w == (c3_w)wit_i + 1);
 
   c3_unlink(paf_c);
   c3_free(paf_c);
@@ -1857,7 +1857,7 @@ _http_serv_start_all(u3_httd* htd_u)
   u3_noun   dis;
   u3_form*  for_u = htd_u->fig_u.for_u;
 
-  c3_assert( 0 != for_u );
+  u3_assert( 0 != for_u );
 
   // if the SSL_CTX existed, it'll be freed with the servers
   htd_u->tls_u = 0;
@@ -1914,7 +1914,7 @@ _http_serv_start_all(u3_httd* htd_u)
 
   //  send listening ports to %eyre
   {
-    c3_assert( u3_none != non );
+    u3_assert( u3_none != non );
 
     //  XX remove [sen]
     //
