@@ -1971,6 +1971,8 @@ _cw_play(c3_i argc, c3_c* argv[])
 static void
 _cw_prep(c3_i argc, c3_c* argv[])
 {
+  //  XX roll with old binary
+  //     check that new epoch is empty, migrate snapshot in-place
   c3_i ch_i, lid_i;
   c3_w arg_w;
 
@@ -2025,6 +2027,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
 static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
+  //  XX keep the last epoch (2 epochs left after chop)
   c3_i ch_i, lid_i;
   c3_w arg_w;
 
@@ -2628,6 +2631,13 @@ main(c3_i   argc,
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
       }
+    }
+
+    //  we need the current snapshot's latest event number to 
+    //  validate whether we can execute disk migration
+    if ( c3n == u3_Host.ops_u.nuu ) {
+      u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+      //  XX u3e_close()
     }
 
     //  starting u3m configures OpenSSL memory functions, so we must do it

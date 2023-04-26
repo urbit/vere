@@ -312,6 +312,7 @@
       typedef struct _u3_host {
         c3_w       kno_w;                   //  current executing stage
         c3_c*      dir_c;                   //  pier path (no trailing /)
+        c3_d       eve_d;                   //  initial current snapshot
         c3_c*      dem_c;                   //  daemon executable path
         c3_c*      wrk_c;                   //  worker executable path
         c3_d       now_d;                   //  event tick
@@ -999,7 +1000,7 @@
       
       /* u3_disk_migrate(): migrates disk format.
        */
-        void
+        c3_o
         u3_disk_migrate(u3_disk* log_u);
 
       /* u3_lord_init(): start serf.
