@@ -261,6 +261,18 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "pdjson",
+    build_file = "//bazel/third_party/pdjson:pdjson.BUILD",
+    sha256 = "928913d44d9021d69c0d23a8f59ed67028e5abf1ae7910f79c23a7af4e779b92",
+    strip_prefix = "pdjson-{version}",
+    url = "https://github.com/skeeto/pdjson/archive/{version}.tar.gz",
+    # When bumping the version, compare `Makefile` in the `pdjson` repo to
+    # {build_file} and confirm that {build_file} remains an accurate description
+    # of the pdjson build process.
+    version = "67108d883061043e55d0fb13961ac1b6fc8a485c",
+)
+
+versioned_http_archive(
     name = "scrypt",
     build_file = "//bazel/third_party/scrypt:scrypt.BUILD",
     sha256 = "df681fb19b653b1a12970ebb6091bb2b58411b9e7baf01143870f6be3f099541",

@@ -287,6 +287,7 @@
         c3_s    per_s;                      //      http port
         c3_s    pes_s;                      //      https port
         c3_s    por_s;                      //  -p, ames port
+        c3_w    sap_w;                      //      Snapshot timer legth (seconds)
         c3_o    qui;                        //  -q, quiet
         c3_o    rep;                        //  -R, report build info
         c3_c*   roc_c;                      //  -r, load rock by eve_d

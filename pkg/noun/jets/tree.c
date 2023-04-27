@@ -21,30 +21,29 @@
 #include "jets.h"
 #include "jets/w.h"
 
+
 static c3_c* no_hashes[] = { 0 };
 
-static u3j_harm _140_hex_mimes_base16_en_a[] = {{".2", u3we_en_base16}, {}};
-static c3_c* _140_hex_mimes_base16_en_ha[] = {
-  "669807766b6802719769fcbfe149d77fb352fcf0922afaf35dc4ab8c201d84e5",
-  0
-};
 
-static u3j_harm _140_hex_mimes_base16_de_a[] = {{".2", u3we_de_base16}, {}};
-static c3_c* _140_hex_mimes_base16_de_ha[] = {
-  "f1e04d0f452f2783e17b3bd5bbbcf95a651624fe7a2aca28dd9a7feae1319734",
-  0
-};
-
-static u3j_core _140_hex_mimes_base16_d[] =
-  { { "en", 7, _140_hex_mimes_base16_en_a, 0, _140_hex_mimes_base16_en_ha },
-    { "de", 7, _140_hex_mimes_base16_de_a, 0, _140_hex_mimes_base16_de_ha },
-    {}
+    static u3j_harm _140_hex_mimes_base16_en_a[] = {{".2", u3we_en_base16}, {}};
+    static c3_c* _140_hex_mimes_base16_en_ha[] = {
+      "669807766b6802719769fcbfe149d77fb352fcf0922afaf35dc4ab8c201d84e5",
+      0
+    };
+    static u3j_harm _140_hex_mimes_base16_de_a[] = {{".2", u3we_de_base16}, {}};
+    static c3_c* _140_hex_mimes_base16_de_ha[] = {
+      "f1e04d0f452f2783e17b3bd5bbbcf95a651624fe7a2aca28dd9a7feae1319734",
+      0
+    };
+  static u3j_core _140_hex_mimes_base16_d[] =
+    { { "en", 7, _140_hex_mimes_base16_en_a, 0, _140_hex_mimes_base16_en_ha },
+      { "de", 7, _140_hex_mimes_base16_de_a, 0, _140_hex_mimes_base16_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_mimes_base16_ha[] = {
+    "c71bdcc8542fd49aa307f296ac097e300a714fb3b3d1e475426f0916fa61f12c",
+    0
   };
-static c3_c* _140_hex_mimes_base16_ha[] = {
-  "c71bdcc8542fd49aa307f296ac097e300a714fb3b3d1e475426f0916fa61f12c",
-  0
-};
-
 static u3j_core _140_hex_mimes_d[] =
   { { "base16", 3, 0, _140_hex_mimes_base16_d, _140_hex_mimes_base16_ha },
     {}
@@ -54,186 +53,185 @@ static c3_c* _140_hex_mimes_ha[] = {
   0
 };
 
-static u3j_harm _140_hex_aes_ecba_en_a[] = {{".2", u3wea_ecba_en}, {}};
-static c3_c* _140_hex_aes_ecba_en_ha[] = {
-  "d7674ad72666a787580c52785c5d4d37ca462ba05e904efbeded5d1bd8b02b4b",
-  0
-};
-static u3j_harm _140_hex_aes_ecba_de_a[] = {{".2", u3wea_ecba_de}, {}};
-static c3_c* _140_hex_aes_ecba_de_ha[] = {
-  "6e6599e93bea2e4297b621814bfb17a9b10849f920d50b14e808ef2e4fe62383",
-  0
-};
-static u3j_harm _140_hex_aes_ecbb_en_a[] = {{".2", u3wea_ecbb_en}, {}};
-static c3_c* _140_hex_aes_ecbb_en_ha[] = {
-  "2c0e3c8f4d741b37324563ecd0ab8fbf87721d1e017f1eeeaf8b6a60515c483b",
-  0
-};
-static u3j_harm _140_hex_aes_ecbb_de_a[] = {{".2", u3wea_ecbb_de}, {}};
-static c3_c* _140_hex_aes_ecbb_de_ha[] = {
-  "cf78f314a1dbbc53b28d6405b98c66a4451350757872d8f7cf0477411e731acc",
-  0
-};
-static u3j_harm _140_hex_aes_ecbc_en_a[] = {{".2", u3wea_ecbc_en}, {}};
-static c3_c* _140_hex_aes_ecbc_en_ha[] = {
-  "f56450f2662082e27ba1aecd2fe04c66aa8641d6eb155f8d3707e242a1e1cf1c",
-  0
-};
-static u3j_harm _140_hex_aes_ecbc_de_a[] = {{".2", u3wea_ecbc_de}, {}};
-static c3_c* _140_hex_aes_ecbc_de_ha[] = {
-  "28c8c44002799fbe94d4aa07922f2b74dbbf234c84684cd8c3187622b4be6a5f",
-  0
-};
-
-static u3j_harm _140_hex_aes_cbca_en_a[] = {{".2", u3wea_cbca_en}, {}};
-static c3_c* _140_hex_aes_cbca_en_ha[] = {
-  "f85366d520b3179c5dabfb58ee1fa0554f5044f676340439db875841cd4058de",
-  0
-};
-static u3j_harm _140_hex_aes_cbca_de_a[] = {{".2", u3wea_cbca_de}, {}};
-static c3_c* _140_hex_aes_cbca_de_ha[] = {
-  "8b876fbdb1849d8fbabba5e143aea0532a0e5dfff1c784d7ad15fd497ea376b1",
-  0
-};
-static u3j_harm _140_hex_aes_cbcb_en_a[] = {{".2", u3wea_cbcb_en}, {}};
-static c3_c* _140_hex_aes_cbcb_en_ha[] = {
-  "6f961e0629c5efce47793e6a352220d355bb8fba6656c6941a68efb3ba10999d",
-  0
-};
-static u3j_harm _140_hex_aes_cbcb_de_a[] = {{".2", u3wea_cbcb_de}, {}};
-static c3_c* _140_hex_aes_cbcb_de_ha[] = {
-  "7ee2f33f80612e91fda1fd84201266dea6cab596a4e23a535d1a14fb0763f1a3",
-  0
-};
-static u3j_harm _140_hex_aes_cbcc_en_a[] = {{".2", u3wea_cbcc_en}, {}};
-static c3_c* _140_hex_aes_cbcc_en_ha[] = {
-  "b2578cf17a3095f48cc96cf7690dd7ab4f4e0b76b2578eadc1dce31a075f5b12",
-  0
-};
-static u3j_harm _140_hex_aes_cbcc_de_a[] = {{".2", u3wea_cbcc_de}, {}};
-static c3_c* _140_hex_aes_cbcc_de_ha[] = {
-  "36586f89d702bedb8c2a01ea3614f61627e762488e373106cbb1b27c46e3493c",
-  0
-};
-static u3j_harm _140_hex_aes_siva_en_a[] = {{".2", u3wea_siva_en}, {}};
-static c3_c* _140_hex_aes_siva_en_ha[] = {
-  "2a137039301788b8540ed81cbfafe450c9306348d02a6576f5c14f6d6f20ba81",
-  0
-};
-static u3j_harm _140_hex_aes_siva_de_a[] = {{".2", u3wea_siva_de}, {}};
-static c3_c* _140_hex_aes_siva_de_ha[] = {
-  "d0130e9229e71c589429dd87843dc104bc4ee5b426400a547081d8c91a548eaa",
-  0
-};
-static u3j_harm _140_hex_aes_sivb_en_a[] = {{".2", u3wea_sivb_en}, {}};
-static c3_c* _140_hex_aes_sivb_en_ha[] = {
-  "1638f56e8728f285e4175c7b514c5a4e1a24205acf33e105f0513cad7ae843cf",
-  0
-};
-static u3j_harm _140_hex_aes_sivb_de_a[] = {{".2", u3wea_sivb_de}, {}};
-static c3_c* _140_hex_aes_sivb_de_ha[] = {
-  "64c9b199fffd6d31baf7457bf27d5a510121be45201b2ae5cc1d9565c0bdd0ff",
-  0
-};
-static u3j_harm _140_hex_aes_sivc_en_a[] = {{".2", u3wea_sivc_en}, {}};
-static c3_c* _140_hex_aes_sivc_en_ha[] = {
-  "d721486dea943efd52d9e6450f4f48dd191c89637a2f842d3ff6edfd3beecbb9",
-  0
-};
-static u3j_harm _140_hex_aes_sivc_de_a[] = {{".2", u3wea_sivc_de}, {}};
-static c3_c* _140_hex_aes_sivc_de_ha[] = {
-  "3ded831b992ea100582229a4d1d9b5c80380128ae6b59b5bb36403ed13dc5d55",
-  0
-};
-
-static u3j_core _140_hex_aes_ecba_d[] =
-  { { "en", 7, _140_hex_aes_ecba_en_a, 0, _140_hex_aes_ecba_en_ha },
-    { "de", 7, _140_hex_aes_ecba_de_a, 0, _140_hex_aes_ecba_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_ecba_en_a[] = {{".2", u3wea_ecba_en}, {}};
+    static c3_c* _140_hex_aes_ecba_en_ha[] = {
+      "d7674ad72666a787580c52785c5d4d37ca462ba05e904efbeded5d1bd8b02b4b",
+      0
+    };
+    static u3j_harm _140_hex_aes_ecba_de_a[] = {{".2", u3wea_ecba_de}, {}};
+    static c3_c* _140_hex_aes_ecba_de_ha[] = {
+      "6e6599e93bea2e4297b621814bfb17a9b10849f920d50b14e808ef2e4fe62383",
+      0
+    };
+  static u3j_core _140_hex_aes_ecba_d[] =
+    { { "en", 7, _140_hex_aes_ecba_en_a, 0, _140_hex_aes_ecba_en_ha },
+      { "de", 7, _140_hex_aes_ecba_de_a, 0, _140_hex_aes_ecba_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_ecba_ha[] = {
+    "693409d27b777f73ce92cebd38e9ebceebe1e9c27ad8c9de9afc091e31bd7d9f",
+    0
   };
-static c3_c* _140_hex_aes_ecba_ha[] = {
-  "693409d27b777f73ce92cebd38e9ebceebe1e9c27ad8c9de9afc091e31bd7d9f",
-  0
-};
 
-static u3j_core _140_hex_aes_ecbb_d[] =
-  { { "en", 7, _140_hex_aes_ecbb_en_a, 0, _140_hex_aes_ecbb_en_ha },
-    { "de", 7, _140_hex_aes_ecbb_de_a, 0, _140_hex_aes_ecbb_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_ecbb_en_a[] = {{".2", u3wea_ecbb_en}, {}};
+    static c3_c* _140_hex_aes_ecbb_en_ha[] = {
+      "2c0e3c8f4d741b37324563ecd0ab8fbf87721d1e017f1eeeaf8b6a60515c483b",
+      0
+    };
+    static u3j_harm _140_hex_aes_ecbb_de_a[] = {{".2", u3wea_ecbb_de}, {}};
+    static c3_c* _140_hex_aes_ecbb_de_ha[] = {
+      "cf78f314a1dbbc53b28d6405b98c66a4451350757872d8f7cf0477411e731acc",
+      0
+    };
+  static u3j_core _140_hex_aes_ecbb_d[] =
+    { { "en", 7, _140_hex_aes_ecbb_en_a, 0, _140_hex_aes_ecbb_en_ha },
+      { "de", 7, _140_hex_aes_ecbb_de_a, 0, _140_hex_aes_ecbb_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_ecbb_ha[] = {
+    "7255c39f10e068007d0d64dd40e4f6e83492ed2e3222919440be0d28fd42a5e3",
+    0
   };
-static c3_c* _140_hex_aes_ecbb_ha[] = {
-  "7255c39f10e068007d0d64dd40e4f6e83492ed2e3222919440be0d28fd42a5e3",
-  0
-};
 
-static u3j_core _140_hex_aes_ecbc_d[] =
-  { { "en", 7, _140_hex_aes_ecbc_en_a, 0, _140_hex_aes_ecbc_en_ha },
-    { "de", 7, _140_hex_aes_ecbc_de_a, 0, _140_hex_aes_ecbc_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_ecbc_en_a[] = {{".2", u3wea_ecbc_en}, {}};
+    static c3_c* _140_hex_aes_ecbc_en_ha[] = {
+      "f56450f2662082e27ba1aecd2fe04c66aa8641d6eb155f8d3707e242a1e1cf1c",
+      0
+    };
+    static u3j_harm _140_hex_aes_ecbc_de_a[] = {{".2", u3wea_ecbc_de}, {}};
+    static c3_c* _140_hex_aes_ecbc_de_ha[] = {
+      "28c8c44002799fbe94d4aa07922f2b74dbbf234c84684cd8c3187622b4be6a5f",
+      0
+    };
+  static u3j_core _140_hex_aes_ecbc_d[] =
+    { { "en", 7, _140_hex_aes_ecbc_en_a, 0, _140_hex_aes_ecbc_en_ha },
+      { "de", 7, _140_hex_aes_ecbc_de_a, 0, _140_hex_aes_ecbc_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_ecbc_ha[] = {
+    "65da73b8de06a6660ca2d36be881b708362e1f8bc12c01290aed90fdb2977667",
+    0
   };
-static c3_c* _140_hex_aes_ecbc_ha[] = {
-  "65da73b8de06a6660ca2d36be881b708362e1f8bc12c01290aed90fdb2977667",
-  0
-};
 
-static u3j_core _140_hex_aes_cbca_d[] =
-  { { "en", 7, _140_hex_aes_cbca_en_a, 0, _140_hex_aes_cbca_en_ha },
-    { "de", 7, _140_hex_aes_cbca_de_a, 0, _140_hex_aes_cbca_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_cbca_en_a[] = {{".2", u3wea_cbca_en}, {}};
+    static c3_c* _140_hex_aes_cbca_en_ha[] = {
+      "f85366d520b3179c5dabfb58ee1fa0554f5044f676340439db875841cd4058de",
+      0
+    };
+    static u3j_harm _140_hex_aes_cbca_de_a[] = {{".2", u3wea_cbca_de}, {}};
+    static c3_c* _140_hex_aes_cbca_de_ha[] = {
+      "8b876fbdb1849d8fbabba5e143aea0532a0e5dfff1c784d7ad15fd497ea376b1",
+      0
+    };
+  static u3j_core _140_hex_aes_cbca_d[] =
+    { { "en", 7, _140_hex_aes_cbca_en_a, 0, _140_hex_aes_cbca_en_ha },
+      { "de", 7, _140_hex_aes_cbca_de_a, 0, _140_hex_aes_cbca_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_cbca_ha[] = {
+    "420d04c03b7816b656fe4e8d9fce04f7e6d51d3d274c6511e89cfdb43ebf107e",
+    0
   };
-static c3_c* _140_hex_aes_cbca_ha[] = {
-  "420d04c03b7816b656fe4e8d9fce04f7e6d51d3d274c6511e89cfdb43ebf107e",
-  0
-};
 
-static u3j_core _140_hex_aes_cbcb_d[] =
-  { { "en", 7, _140_hex_aes_cbcb_en_a, 0, _140_hex_aes_cbcb_en_ha },
-    { "de", 7, _140_hex_aes_cbcb_de_a, 0, _140_hex_aes_cbcb_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_cbcb_en_a[] = {{".2", u3wea_cbcb_en}, {}};
+    static c3_c* _140_hex_aes_cbcb_en_ha[] = {
+      "6f961e0629c5efce47793e6a352220d355bb8fba6656c6941a68efb3ba10999d",
+      0
+    };
+    static u3j_harm _140_hex_aes_cbcb_de_a[] = {{".2", u3wea_cbcb_de}, {}};
+    static c3_c* _140_hex_aes_cbcb_de_ha[] = {
+      "7ee2f33f80612e91fda1fd84201266dea6cab596a4e23a535d1a14fb0763f1a3",
+      0
+    };
+  static u3j_core _140_hex_aes_cbcb_d[] =
+    { { "en", 7, _140_hex_aes_cbcb_en_a, 0, _140_hex_aes_cbcb_en_ha },
+      { "de", 7, _140_hex_aes_cbcb_de_a, 0, _140_hex_aes_cbcb_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_cbcb_ha[] = {
+    "1b84daab497795f2afd7238a6a6090be68b78eb6051b0ffa076b2ed9fedeebe5",
+    0
   };
-static c3_c* _140_hex_aes_cbcb_ha[] = {
-  "1b84daab497795f2afd7238a6a6090be68b78eb6051b0ffa076b2ed9fedeebe5",
-  0
-};
 
-static u3j_core _140_hex_aes_cbcc_d[] =
-  { { "en", 7, _140_hex_aes_cbcc_en_a, 0, _140_hex_aes_cbcc_en_ha },
-    { "de", 7, _140_hex_aes_cbcc_de_a, 0, _140_hex_aes_cbcc_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_cbcc_en_a[] = {{".2", u3wea_cbcc_en}, {}};
+    static c3_c* _140_hex_aes_cbcc_en_ha[] = {
+      "b2578cf17a3095f48cc96cf7690dd7ab4f4e0b76b2578eadc1dce31a075f5b12",
+      0
+    };
+    static u3j_harm _140_hex_aes_cbcc_de_a[] = {{".2", u3wea_cbcc_de}, {}};
+    static c3_c* _140_hex_aes_cbcc_de_ha[] = {
+      "36586f89d702bedb8c2a01ea3614f61627e762488e373106cbb1b27c46e3493c",
+      0
+    };
+  static u3j_core _140_hex_aes_cbcc_d[] =
+    { { "en", 7, _140_hex_aes_cbcc_en_a, 0, _140_hex_aes_cbcc_en_ha },
+      { "de", 7, _140_hex_aes_cbcc_de_a, 0, _140_hex_aes_cbcc_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_cbcc_ha[] = {
+    "3bab1a59c7673afeb659821d54754e8e5e281243e79624fdbe4d7f85cae192c5",
+    0
   };
-static c3_c* _140_hex_aes_cbcc_ha[] = {
-  "3bab1a59c7673afeb659821d54754e8e5e281243e79624fdbe4d7f85cae192c5",
-  0
-};
 
-static u3j_core _140_hex_aes_siva_d[] =
-  { { "en", 7, _140_hex_aes_siva_en_a, 0, _140_hex_aes_siva_en_ha },
-    { "de", 7, _140_hex_aes_siva_de_a, 0, _140_hex_aes_siva_de_ha },
-    {}
+    static u3j_harm _140_hex_aes_siva_en_a[] = {{".2", u3wea_siva_en}, {}};
+    static c3_c* _140_hex_aes_siva_en_ha[] = {
+      "2a137039301788b8540ed81cbfafe450c9306348d02a6576f5c14f6d6f20ba81",
+      0
+    };
+    static u3j_harm _140_hex_aes_siva_de_a[] = {{".2", u3wea_siva_de}, {}};
+    static c3_c* _140_hex_aes_siva_de_ha[] = {
+      "d0130e9229e71c589429dd87843dc104bc4ee5b426400a547081d8c91a548eaa",
+      0
+    };
+  static u3j_core _140_hex_aes_siva_d[] =
+    { { "en", 7, _140_hex_aes_siva_en_a, 0, _140_hex_aes_siva_en_ha },
+      { "de", 7, _140_hex_aes_siva_de_a, 0, _140_hex_aes_siva_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_siva_ha[] = {
+    "435c5c769d2522d71ab60332bb57440d69c6803d5ca9a5faae88c825cb55d72e",
+    0
   };
-static c3_c* _140_hex_aes_siva_ha[] = {
-  "435c5c769d2522d71ab60332bb57440d69c6803d5ca9a5faae88c825cb55d72e",
-  0
-};
-static u3j_core _140_hex_aes_sivb_d[] =
-  { { "en", 7, _140_hex_aes_sivb_en_a, 0, _140_hex_aes_sivb_en_ha },
-    { "de", 7, _140_hex_aes_sivb_de_a, 0, _140_hex_aes_sivb_de_ha },
-    {}
-  };
-static c3_c* _140_hex_aes_sivb_ha[] = {
-  "0683f3f9067c2a16f68805c778c404179dc5df9019bbbe0f8d680a99a69e61fc",
-  0
-};
-static u3j_core _140_hex_aes_sivc_d[] =
-  { { "en", 7, _140_hex_aes_sivc_en_a, 0, _140_hex_aes_sivc_en_ha },
-    { "de", 7, _140_hex_aes_sivc_de_a, 0, _140_hex_aes_sivc_de_ha },
-    {}
-  };
-static c3_c* _140_hex_aes_sivc_ha[] = {
-  "23ef582f110d28aff82b0795305b02e5a718d667bcae97091c08bc26790e7176",
-  0
-};
 
+    static u3j_harm _140_hex_aes_sivb_en_a[] = {{".2", u3wea_sivb_en}, {}};
+    static c3_c* _140_hex_aes_sivb_en_ha[] = {
+      "1638f56e8728f285e4175c7b514c5a4e1a24205acf33e105f0513cad7ae843cf",
+      0
+    };
+    static u3j_harm _140_hex_aes_sivb_de_a[] = {{".2", u3wea_sivb_de}, {}};
+    static c3_c* _140_hex_aes_sivb_de_ha[] = {
+      "64c9b199fffd6d31baf7457bf27d5a510121be45201b2ae5cc1d9565c0bdd0ff",
+      0
+    };
+  static u3j_core _140_hex_aes_sivb_d[] =
+    { { "en", 7, _140_hex_aes_sivb_en_a, 0, _140_hex_aes_sivb_en_ha },
+      { "de", 7, _140_hex_aes_sivb_de_a, 0, _140_hex_aes_sivb_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_sivb_ha[] = {
+    "0683f3f9067c2a16f68805c778c404179dc5df9019bbbe0f8d680a99a69e61fc",
+    0
+  };
+
+    static u3j_harm _140_hex_aes_sivc_en_a[] = {{".2", u3wea_sivc_en}, {}};
+    static c3_c* _140_hex_aes_sivc_en_ha[] = {
+      "d721486dea943efd52d9e6450f4f48dd191c89637a2f842d3ff6edfd3beecbb9",
+      0
+    };
+    static u3j_harm _140_hex_aes_sivc_de_a[] = {{".2", u3wea_sivc_de}, {}};
+    static c3_c* _140_hex_aes_sivc_de_ha[] = {
+      "3ded831b992ea100582229a4d1d9b5c80380128ae6b59b5bb36403ed13dc5d55",
+      0
+    };
+  static u3j_core _140_hex_aes_sivc_d[] =
+    { { "en", 7, _140_hex_aes_sivc_en_a, 0, _140_hex_aes_sivc_en_ha },
+      { "de", 7, _140_hex_aes_sivc_de_a, 0, _140_hex_aes_sivc_de_ha },
+      {}
+    };
+  static c3_c* _140_hex_aes_sivc_ha[] = {
+    "23ef582f110d28aff82b0795305b02e5a718d667bcae97091c08bc26790e7176",
+    0
+  };
 static u3j_core _140_hex_aes_d[] =
   { { "ecba", 7, 0, _140_hex_aes_ecba_d, _140_hex_aes_ecba_ha },
     { "ecbb", 7, 0, _140_hex_aes_ecbb_d, _140_hex_aes_ecbb_ha },
@@ -293,36 +291,36 @@ static c3_c* _140_hex_coed__ed_shar_ha[] = {
   0
 };
 
-static u3j_harm _140_hex_coed__ed_point_add_a[] =
-    {{".2", u3wee_point_add}, {}};
+  static u3j_harm _140_hex_coed__ed_point_add_a[] =
+      {{".2", u3wee_point_add}, {}};
 
-static u3j_harm _140_hex_coed__ed_scalarmult_a[] =
-    {{".2", u3wee_scalarmult}, {}};
-static c3_c* _140_hex_coed__ed_scalarmult_ha[] = {
-  "72e71cd3aa3af429cd65baa78632500c60edd1d4c82a39d3ba7f231ef97e6316",
-  0
-};
+  static u3j_harm _140_hex_coed__ed_scalarmult_a[] =
+      {{".2", u3wee_scalarmult}, {}};
+  static c3_c* _140_hex_coed__ed_scalarmult_ha[] = {
+    "72e71cd3aa3af429cd65baa78632500c60edd1d4c82a39d3ba7f231ef97e6316",
+    0
+  };
 
-static u3j_harm _140_hex_coed__ed_scalarmult_base_a[] =
-    {{".2", u3wee_scalarmult_base}, {}};
-static c3_c* _140_hex_coed__ed_scalarmult_base_ha[] = {
-  "976fdb8251f9b767af689a0d2c41b88941921bf53777c1ceeb5297511021f9d8",
-  0
-};
+  static u3j_harm _140_hex_coed__ed_scalarmult_base_a[] =
+      {{".2", u3wee_scalarmult_base}, {}};
+  static c3_c* _140_hex_coed__ed_scalarmult_base_ha[] = {
+    "976fdb8251f9b767af689a0d2c41b88941921bf53777c1ceeb5297511021f9d8",
+    0
+  };
 
-static u3j_harm _140_hex_coed__ed_add_scalarmult_scalarmult_base_a[] =
-    {{".2", u3wee_add_scalarmult_scalarmult_base}, {}};
-static c3_c* _140_hex_coed__ed_add_scalarmult_scalarmult_base_ha[] = {
-  "11819071c24a2d7b36daea6e16c78b2e05f9ca3e857cf4815ffe652ce677a61a",
-  0
-};
+  static u3j_harm _140_hex_coed__ed_add_scalarmult_scalarmult_base_a[] =
+      {{".2", u3wee_add_scalarmult_scalarmult_base}, {}};
+  static c3_c* _140_hex_coed__ed_add_scalarmult_scalarmult_base_ha[] = {
+    "11819071c24a2d7b36daea6e16c78b2e05f9ca3e857cf4815ffe652ce677a61a",
+    0
+  };
 
-static u3j_harm _140_hex_coed__ed_add_double_scalarmult_a[] =
-    {{".2", u3wee_add_double_scalarmult}, {}};
-static c3_c* _140_hex_coed__ed_add_double_scalarmult_ha[] = {
-  "0fab78a1e890e53cecade1c22b95813db77e066044e33417a0919695b6cde9ba",
-  0
-};
+  static u3j_harm _140_hex_coed__ed_add_double_scalarmult_a[] =
+      {{".2", u3wee_add_double_scalarmult}, {}};
+  static c3_c* _140_hex_coed__ed_add_double_scalarmult_ha[] = {
+    "0fab78a1e890e53cecade1c22b95813db77e066044e33417a0919695b6cde9ba",
+    0
+  };
 
 static u3j_core _140_hex_coed__ed_d[] =
   { { "sign", 7, _140_hex_coed__ed_sign_a, 0, _140_hex_coed__ed_sign_ha },
@@ -384,16 +382,14 @@ static c3_c* _140_hex_argon_ha[] = {
   0
 };
 
-static c3_c* _140_hex_scr_pbk_ha[] = { 0 };
-static u3j_harm _140_hex_scr_pbk_a[] = {{".2", u3wes_pbk, c3y}, {}};
-static c3_c* _140_hex_scr_pbl_ha[] = { 0 };
-static u3j_harm _140_hex_scr_pbl_a[] = {{".2", u3wes_pbl, c3y}, {}};
-static c3_c* _140_hex_scr_hsh_ha[] = { 0 };
-static u3j_harm _140_hex_scr_hsh_a[] = {{".2", u3wes_hsh, c3y}, {}};
-static c3_c* _140_hex_scr_hsl_ha[] = { 0 };
-static u3j_harm _140_hex_scr_hsl_a[] = {{".2", u3wes_hsl, c3y}, {}};
-
-static c3_c* _140_hex_scr_ha[] = { 0 };
+  static u3j_harm _140_hex_scr_pbk_a[] = {{".2", u3wes_pbk, c3y}, {}};
+  static c3_c* _140_hex_scr_pbk_ha[] = { 0 };
+  static u3j_harm _140_hex_scr_pbl_a[] = {{".2", u3wes_pbl, c3y}, {}};
+  static c3_c* _140_hex_scr_pbl_ha[] = { 0 };
+  static u3j_harm _140_hex_scr_hsh_a[] = {{".2", u3wes_hsh, c3y}, {}};
+  static c3_c* _140_hex_scr_hsh_ha[] = { 0 };
+  static u3j_harm _140_hex_scr_hsl_a[] = {{".2", u3wes_hsl, c3y}, {}};
+  static c3_c* _140_hex_scr_hsl_ha[] = { 0 };
 static u3j_core _140_hex_scr_d[] =
   { { "pbk", 7, _140_hex_scr_pbk_a, 0, _140_hex_scr_pbk_ha },
     { "pbl", 7, _140_hex_scr_pbl_a, 0, _140_hex_scr_pbl_ha },
@@ -401,54 +397,53 @@ static u3j_core _140_hex_scr_d[] =
     { "hsl", 7, _140_hex_scr_hsl_a, 0, _140_hex_scr_hsl_ha },
     {}
   };
+static c3_c* _140_hex_scr_ha[] = { 0 };
 
-static c3_c* _140_hex_secp_secp256k1_make_ha[] = { 0 };
-static u3j_harm _140_hex_secp_secp256k1_make_a[] = {{".2", u3we_make, c3y}, {}};
-static c3_c* _140_hex_secp_secp256k1_sign_ha[] = { 0 };
-static u3j_harm _140_hex_secp_secp256k1_sign_a[] = {{".2", u3we_sign, c3y}, {}};
-static c3_c* _140_hex_secp_secp256k1_reco_ha[] = { 0 };
-static u3j_harm _140_hex_secp_secp256k1_reco_a[] = {{".2", u3we_reco, c3y}, {}};
+    static u3j_harm _140_hex_secp_secp256k1_make_a[] = {{".2", u3we_make, c3y}, {}};
+    static c3_c* _140_hex_secp_secp256k1_make_ha[] = { 0 };
+    static u3j_harm _140_hex_secp_secp256k1_sign_a[] = {{".2", u3we_sign, c3y}, {}};
+    static c3_c* _140_hex_secp_secp256k1_sign_ha[] = { 0 };
+    static u3j_harm _140_hex_secp_secp256k1_reco_a[] = {{".2", u3we_reco, c3y}, {}};
+    static c3_c* _140_hex_secp_secp256k1_reco_ha[] = { 0 };
 
-static c3_c* _140_hex_secp_secp256k1_schnorr_sosi_ha[] = { 0 };
-static u3j_harm _140_hex_secp_secp256k1_schnorr_sosi_a[] =
-  {{".2", u3we_sosi}, {}};
-static c3_c* _140_hex_secp_secp256k1_schnorr_sove_ha[] = { 0 };
-static u3j_harm _140_hex_secp_secp256k1_schnorr_sove_a[] =
-  {{".2", u3we_sove}, {}};
+      static u3j_harm _140_hex_secp_secp256k1_schnorr_sosi_a[] =
+        {{".2", u3we_sosi}, {}};
+      static c3_c* _140_hex_secp_secp256k1_schnorr_sosi_ha[] = { 0 };
+      static u3j_harm _140_hex_secp_secp256k1_schnorr_sove_a[] =
+        {{".2", u3we_sove}, {}};
+      static c3_c* _140_hex_secp_secp256k1_schnorr_sove_ha[] = { 0 };
+    static u3j_core _140_hex_secp_secp256k1_schnorr_d[] =
+      { { "sosi", 7,
+          _140_hex_secp_secp256k1_schnorr_sosi_a, 0,
+          _140_hex_secp_secp256k1_schnorr_sosi_ha },
+        { "sove", 7,
+          _140_hex_secp_secp256k1_schnorr_sove_a, 0,
+          _140_hex_secp_secp256k1_schnorr_sove_ha },
+        {}
+      };
+    static c3_c* _140_hex_secp_secp256k1_schnorr_ha[] = { 0 };
 
-static c3_c* _140_hex_secp_secp256k1_schnorr_ha[] = { 0 };
-static u3j_core _140_hex_secp_secp256k1_schnorr_d[] =
-  { { "sosi", 7,
-      _140_hex_secp_secp256k1_schnorr_sosi_a, 0,
-      _140_hex_secp_secp256k1_schnorr_sosi_ha },
-    { "sove", 7,
-      _140_hex_secp_secp256k1_schnorr_sove_a, 0,
-      _140_hex_secp_secp256k1_schnorr_sove_ha },
-    {}
+  static u3j_core _140_hex_secp_secp256k1_d[] =
+    { { "make", 7, _140_hex_secp_secp256k1_make_a, 0, _140_hex_secp_secp256k1_make_ha },
+      { "sign", 7, _140_hex_secp_secp256k1_sign_a, 0, _140_hex_secp_secp256k1_sign_ha },
+      { "reco", 7, _140_hex_secp_secp256k1_reco_a, 0, _140_hex_secp_secp256k1_reco_ha },
+      { "schnorr", 7, 0,
+        _140_hex_secp_secp256k1_schnorr_d,
+        _140_hex_secp_secp256k1_schnorr_ha },
+      {}
+    };
+  static c3_c* _140_hex_secp_secp256k1_ha[] = {
+    "e7fc0971a970aba7ded43bd89e9c82623eb2f346c9c720c63b22f2a646927861",
+    0
   };
-
-static c3_c* _140_hex_secp_secp256k1_ha[] = {
-  "e7fc0971a970aba7ded43bd89e9c82623eb2f346c9c720c63b22f2a646927861",
-  0
-};
-static u3j_core _140_hex_secp_secp256k1_d[] =
-  { { "make", 7, _140_hex_secp_secp256k1_make_a, 0, _140_hex_secp_secp256k1_make_ha },
-    { "sign", 7, _140_hex_secp_secp256k1_sign_a, 0, _140_hex_secp_secp256k1_sign_ha },
-    { "reco", 7, _140_hex_secp_secp256k1_reco_a, 0, _140_hex_secp_secp256k1_reco_ha },
-    { "schnorr", 7, 0,
-      _140_hex_secp_secp256k1_schnorr_d,
-      _140_hex_secp_secp256k1_schnorr_ha },
-    {}
-  };
-
-static c3_c* _140_hex_secp_ha[] = {
-  "9f5c23f0e7923b6cf1603388ba52401b6e43881be3560b3acfaab20b25071792",
-  0
-};
 static u3j_core _140_hex_secp_d[] =
   { { "secp256k1", 3, 0, _140_hex_secp_secp256k1_d, _140_hex_secp_secp256k1_ha },
     {}
   };
+static c3_c* _140_hex_secp_ha[] = {
+  "9f5c23f0e7923b6cf1603388ba52401b6e43881be3560b3acfaab20b25071792",
+  0
+};
 
   static u3j_harm _140_hex_blake2b_a[] = {{".2", u3we_blake, c3y}, {}};
   static c3_c* _140_hex_blake2b_ha[] = {
@@ -466,16 +461,12 @@ static c3_c* _140_hex_blake_ha[] = {
 
   static u3j_harm _140_hex_kecc_k224_a[] =
     {{".2", u3we_kecc224, c3y, c3y, c3y}, {}};
-
   static u3j_harm _140_hex_kecc_k256_a[] =
     {{".2", u3we_kecc256, c3y, c3y, c3y}, {}};
-
   static u3j_harm _140_hex_kecc_k384_a[] =
     {{".2", u3we_kecc384, c3y, c3y, c3y}, {}};
-
   static u3j_harm _140_hex_kecc_k512_a[] =
     {{".2", u3we_kecc512, c3y, c3y, c3y}, {}};
-
 static u3j_core _140_hex_kecc_d[] =
   { { "k224", 7, _140_hex_kecc_k224_a, 0, no_hashes },
     { "k256", 7, _140_hex_kecc_k256_a, 0, no_hashes },
@@ -498,30 +489,30 @@ static c3_c* _140_hex_ripe_ha[] = {
   0
 };
 
-
 static u3j_core _140_hex_d[] =
-{ { "lore",   63, _140_hex_lore_a, 0, _140_hex_lore_ha },
-  { "leer",   63, _140_hex_leer_a, 0, _140_hex_leer_ha },
-  { "loss",   63, _140_hex_loss_a, 0, _140_hex_loss_ha },
-  { "lune",  127, _140_hex_lune_a, 0, _140_hex_lune_ha },
+{ { "lore",  63, _140_hex_lore_a, 0, _140_hex_lore_ha },
+  { "leer",  63, _140_hex_leer_a, 0, _140_hex_leer_ha },
+  { "loss",  63, _140_hex_loss_a, 0, _140_hex_loss_ha },
+  { "lune", 127, _140_hex_lune_a, 0, _140_hex_lune_ha },
 
-  { "coed",   63, 0, _140_hex_coed_d, _140_hex_coed_ha },
-  { "aes",    31, 0, _140_hex_aes_d, _140_hex_aes_ha },
+  { "coed", 63, 0, _140_hex_coed_d, _140_hex_coed_ha },
+  { "aes",  31, 0, _140_hex_aes_d,  _140_hex_aes_ha  },
 
   { "hmac",   63, 0, _140_hex_hmac_d,  _140_hex_hmac_ha  },
   { "argon",  31, 0, _140_hex_argon_d, _140_hex_argon_ha },
   { "blake",  31, 0, _140_hex_blake_d, _140_hex_blake_ha },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
+  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes         },
   { "ripemd", 31, 0, _140_hex_ripe_d,  _140_hex_ripe_ha  },
   { "scr",    31, 0, _140_hex_scr_d,   _140_hex_scr_ha   },
-  { "secp",    6, 0, _140_hex_secp_d,  _140_hex_secp_ha },
-  { "mimes",  31, 0, _140_hex_mimes_d, _140_hex_mimes_ha  },
+  { "secp",    6, 0, _140_hex_secp_d,  _140_hex_secp_ha  },
+  { "mimes",  31, 0, _140_hex_mimes_d, _140_hex_mimes_ha },
   {}
 };
 static c3_c* _140_hex_ha[] = {
   "7e393356dd7ac64eed5cd9f5cf0e320d401ca36a0a0ce0f954e7538824114844",
   0
 };
+
 
 /* layer five
 */
@@ -617,11 +608,11 @@ static c3_c* _140_pen_loot_ha[] = {
     0
   };
 
-    static u3j_harm _140_pen__ut_nest_dext_a[] = {{".2", u3wfu_nest_dext}, {}};
-    static c3_c* _140_pen__ut_nest_dext_ha[] = {
-      "72f33df96800034fc63531293f9b110e6505027195bf8a10ff94b9a1f1ef719b",
-      0
-    };
+      static u3j_harm _140_pen__ut_nest_dext_a[] = {{".2", u3wfu_nest_dext}, {}};
+      static c3_c* _140_pen__ut_nest_dext_ha[] = {
+        "72f33df96800034fc63531293f9b110e6505027195bf8a10ff94b9a1f1ef719b",
+        0
+      };
     static u3j_core _140_pen__ut_nest_in_d[] =
       {
         { "nest-dext", 3, _140_pen__ut_nest_dext_a, 0, _140_pen__ut_nest_dext_ha },
@@ -631,7 +622,6 @@ static c3_c* _140_pen_loot_ha[] = {
       "68378dfa1d1fee0b1cd9593fb561234cec2ae9371a5ffa287c3d2ab9620e198c",
       0
     };
-
   static u3j_core _140_pen__ut_nest_d[] =
     {
       { "nest-in", 7, 0, _140_pen__ut_nest_in_d, _140_pen__ut_nest_in_ha },
@@ -659,59 +649,58 @@ static u3j_core _140_pen__ut_d[] =
     { "rest", 7, _140_pen__ut_rest_a, 0, _140_pen__ut_rest_ha },
     {}
   };
-
 static c3_c* _140_pen__ut_ha[] = {
   "50c79204c82a3ba8f01e085a2e27e7716e5c7ab1929f94423ef1da92cf5ac631",
   0
 };
 
-static u3j_hood _140_pen__ut_ho[] = {
-  { "ar",     12282 },
-  { "fan",  28, c3n },
-  { "rib",  58, c3n },
-  { "vet",  59, c3n },
+static u3j_hood _140_pen__ut_ho[] =
+  { { "ar",     12282 },
+    { "fan",       28, c3n },
+    { "rib",       58, c3n },
+    { "vet",       59, c3n },
 
-  { "blow",    6015 },
-  { "burp",     342 },
-  { "busk",    1373 },
-  { "buss",     374 },
-  { "crop",    1494 },
-  { "duck",    1524 },
-  { "dune",    2991 },
-  { "dunk",    3066 },
-  { "epla",   12206 },
-  { "emin",    1534 },
-  { "emul",    6134 },
-  { "feel",    1502 },
-  { "felt",      94 },
-  { "fine",   49086 },
-  { "fire",       4 },
-  { "fish",    6006 },
-  { "fond",   12283 },
-  { "fund",    6014 },
-  //  XX +funk is not part of +ut, and this hook appears to be unused
-  //  remove from here and the +ut hint
-  //
-  { "funk", 0xbefafa, c3y, 31 },
-  { "fuse",   24021 },
-  { "gain",     380 },
-  { "lose", 0x2fefe },
-  { "mile",     382 },
-  { "mine",     372 },
-  { "mint",   49083 },
-  { "moot", 0x2feff },
-  { "mull",   24020 },
-  { "nest",      92 },
-  { "peel",    1526 },
-  { "play",    3006 },
-  { "peek",    1532 },
-  { "repo",      22 },
-  { "rest",    6102 },
-  { "tack",    6007 },
-  { "toss",   24540 },
-  { "wrap",    6140 },
-  {},
-};
+    { "blow",    6015 },
+    { "burp",     342 },
+    { "busk",    1373 },
+    { "buss",     374 },
+    { "crop",    1494 },
+    { "duck",    1524 },
+    { "dune",    2991 },
+    { "dunk",    3066 },
+    { "epla",   12206 },
+    { "emin",    1534 },
+    { "emul",    6134 },
+    { "feel",    1502 },
+    { "felt",      94 },
+    { "fine",   49086 },
+    { "fire",       4 },
+    { "fish",    6006 },
+    { "fond",   12283 },
+    { "fund",    6014 },
+    //  XX +funk is not part of +ut, and this hook appears to be unused
+    //  remove from here and the +ut hint
+    //
+    { "funk", 0xbefafa, c3y, 31 },
+    { "fuse",    24021 },
+    { "gain",      380 },
+    { "lose",  0x2fefe },
+    { "mile",      382 },
+    { "mine",      372 },
+    { "mint",    49083 },
+    { "moot",  0x2feff },
+    { "mull",    24020 },
+    { "nest",       92 },
+    { "peel",     1526 },
+    { "play",     3006 },
+    { "peek",     1532 },
+    { "repo",       22 },
+    { "rest",     6102 },
+    { "tack",     6007 },
+    { "toss",    24540 },
+    { "wrap",     6140 },
+    {},
+  };
 
 //  XX unused, hook removed, delete source
 //
@@ -760,6 +749,7 @@ static u3j_hood _140_pen_ho[] = {
   {},
 };
 
+
 /* layer four
 */
 static u3j_harm _140_qua_trip_a[] = {{".2", u3we_trip}, {}};
@@ -782,219 +772,219 @@ static c3_c* _140_qua_scow_ha[] = {
   0
 };
 
-static u3j_harm _140_qua__po_ind_a[] = {{".2", u3wcp_ind}, {}};
-static c3_c* _140_qua__po_ind_ha[] = {
-  "95bbe9867dbbd1b9ce12671d64cf7b1dee8d987c6770955a83c73291c4537a61",
-  0
-};
-static u3j_harm _140_qua__po_ins_a[] = {{".2", u3wcp_ins}, {}};
-static c3_c* _140_qua__po_ins_ha[] = {
-  "aae783fb258dff7f8ade49756e01f96a2d2100411a88a886732270dcf9f174f0",
-  0
-};
-static u3j_harm _140_qua__po_tod_a[] = {{".2", u3wcp_tod}, {}};
-static c3_c* _140_qua__po_tod_ha[] = {
-  "153aeba45ca2a87aa918e9cea1b26e8104a6e4395979257b075546c1e2654a17",
-  0
-};
-static u3j_harm _140_qua__po_tos_a[] = {{".2", u3wcp_tos}, {}};
-static c3_c* _140_qua__po_tos_ha[] = {
-  "7c5ffad03bcf8b4ea9bdf0c7f7500351923bc0431f3d62d6ce0472790f668fb4",
-  0
-};
-  static u3j_core _140_qua__po_d[] =
-    { { "ind", 7, _140_qua__po_ind_a, 0, _140_qua__po_ind_ha },
-      { "ins", 7, _140_qua__po_ins_a, 0, _140_qua__po_ins_ha },
-      { "tod", 7, _140_qua__po_tod_a, 0, _140_qua__po_tod_ha },
-      { "tos", 7, _140_qua__po_tos_a, 0, _140_qua__po_tos_ha },
-      {}
-    };
-  static c3_c* _140_qua__po_ha[] = {
-    "efc5fa7c0efedd490e9a270bb5cf9f90809e6b224f8a381a6b8a481253b237a1",
+  static u3j_harm _140_qua__po_ind_a[] = {{".2", u3wcp_ind}, {}};
+  static c3_c* _140_qua__po_ind_ha[] = {
+    "95bbe9867dbbd1b9ce12671d64cf7b1dee8d987c6770955a83c73291c4537a61",
     0
   };
+  static u3j_harm _140_qua__po_ins_a[] = {{".2", u3wcp_ins}, {}};
+  static c3_c* _140_qua__po_ins_ha[] = {
+    "aae783fb258dff7f8ade49756e01f96a2d2100411a88a886732270dcf9f174f0",
+    0
+  };
+  static u3j_harm _140_qua__po_tod_a[] = {{".2", u3wcp_tod}, {}};
+  static c3_c* _140_qua__po_tod_ha[] = {
+    "153aeba45ca2a87aa918e9cea1b26e8104a6e4395979257b075546c1e2654a17",
+    0
+  };
+  static u3j_harm _140_qua__po_tos_a[] = {{".2", u3wcp_tos}, {}};
+  static c3_c* _140_qua__po_tos_ha[] = {
+    "7c5ffad03bcf8b4ea9bdf0c7f7500351923bc0431f3d62d6ce0472790f668fb4",
+    0
+  };
+static u3j_core _140_qua__po_d[] =
+  { { "ind", 7, _140_qua__po_ind_a, 0, _140_qua__po_ind_ha },
+    { "ins", 7, _140_qua__po_ins_a, 0, _140_qua__po_ins_ha },
+    { "tod", 7, _140_qua__po_tod_a, 0, _140_qua__po_tod_ha },
+    { "tos", 7, _140_qua__po_tos_a, 0, _140_qua__po_tos_ha },
+    {}
+  };
+static c3_c* _140_qua__po_ha[] = {
+  "efc5fa7c0efedd490e9a270bb5cf9f90809e6b224f8a381a6b8a481253b237a1",
+  0
+};
 
-static u3j_harm _140_qua__bend_fun_a[] = {{".2", u3we_bend_fun}, {}};
-static c3_c* _140_qua__bend_fun_ha[] = {
-  "e6ea05e3d765a005fccde9eb88fb93e06f0b6ea198afa8ed599b056ba179396a",
-  0
-};
-  static u3j_core _140_qua__bend_d[] =
-    { { "fun", 7, _140_qua__bend_fun_a, 0, _140_qua__bend_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__bend_ha[] = {
-    "adc59c6db6d5b26122bc6c04e25c3efe830c9eef68ecf81c492a59ee5e9e20a2",
+  static u3j_harm _140_qua__bend_fun_a[] = {{".2", u3we_bend_fun}, {}};
+  static c3_c* _140_qua__bend_fun_ha[] = {
+    "e6ea05e3d765a005fccde9eb88fb93e06f0b6ea198afa8ed599b056ba179396a",
     0
   };
+static u3j_core _140_qua__bend_d[] =
+  { { "fun", 7, _140_qua__bend_fun_a, 0, _140_qua__bend_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__bend_ha[] = {
+  "adc59c6db6d5b26122bc6c04e25c3efe830c9eef68ecf81c492a59ee5e9e20a2",
+  0
+};
 
-static u3j_harm _140_qua__cold_fun_a[] = {{".2", u3we_cold_fun}, {}};
-static c3_c* _140_qua__cold_fun_ha[] = {
-  "ad5a0ab7405be9ffda0a9dd34580c6039f6bbb0301920fb2df0c31be3c72c58e",
-  0
-};
-  static u3j_core _140_qua__cold_d[] =
-    { { "fun", 7, _140_qua__cold_fun_a, 0, _140_qua__cold_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__cold_ha[] = {
-    "06c49d8dab6cb057e3ae1d1164e96950944ea48e54ad72347239ea434f1d4b9c",
+  static u3j_harm _140_qua__cold_fun_a[] = {{".2", u3we_cold_fun}, {}};
+  static c3_c* _140_qua__cold_fun_ha[] = {
+    "ad5a0ab7405be9ffda0a9dd34580c6039f6bbb0301920fb2df0c31be3c72c58e",
     0
   };
+static u3j_core _140_qua__cold_d[] =
+  { { "fun", 7, _140_qua__cold_fun_a, 0, _140_qua__cold_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__cold_ha[] = {
+  "06c49d8dab6cb057e3ae1d1164e96950944ea48e54ad72347239ea434f1d4b9c",
+  0
+};
 
-static u3j_harm _140_qua__cook_fun_a[] = {{".2", u3we_cook_fun}, {}};
-static c3_c* _140_qua__cook_fun_ha[] = {
-  "f2a45612ad9c279b723334ab0915d3ed3ece7727309968c2555f45e0668eeb27",
-  0
-};
-  static u3j_core _140_qua__cook_d[] =
-    { { "fun", 7, _140_qua__cook_fun_a, 0, _140_qua__cook_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__cook_ha[] = {
-    "3ccd46dd21828d7be11f8c093536e305b1df982393a69c40ea73f63a574b3bb1",
+  static u3j_harm _140_qua__cook_fun_a[] = {{".2", u3we_cook_fun}, {}};
+  static c3_c* _140_qua__cook_fun_ha[] = {
+    "f2a45612ad9c279b723334ab0915d3ed3ece7727309968c2555f45e0668eeb27",
     0
   };
+static u3j_core _140_qua__cook_d[] =
+  { { "fun", 7, _140_qua__cook_fun_a, 0, _140_qua__cook_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__cook_ha[] = {
+  "3ccd46dd21828d7be11f8c093536e305b1df982393a69c40ea73f63a574b3bb1",
+  0
+};
 
-static u3j_harm _140_qua__comp_fun_a[] = {{".2", u3we_comp_fun}, {}};
-static c3_c* _140_qua__comp_fun_ha[] = {
-  "bd7fdba84b05b00a63c24d19a03b882578ee9a3b922a3a688f7827c6e64daf96",
-  0
-};
-  static u3j_core _140_qua__comp_d[] =
-    { { "fun", 7, _140_qua__comp_fun_a, 0, _140_qua__comp_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__comp_ha[] = {
-    "7baad25ba87bcbba8ce4fe328280a799765dcf62a8bb761ffd87b939dd8734f2",
+  static u3j_harm _140_qua__comp_fun_a[] = {{".2", u3we_comp_fun}, {}};
+  static c3_c* _140_qua__comp_fun_ha[] = {
+    "bd7fdba84b05b00a63c24d19a03b882578ee9a3b922a3a688f7827c6e64daf96",
     0
   };
+static u3j_core _140_qua__comp_d[] =
+  { { "fun", 7, _140_qua__comp_fun_a, 0, _140_qua__comp_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__comp_ha[] = {
+  "7baad25ba87bcbba8ce4fe328280a799765dcf62a8bb761ffd87b939dd8734f2",
+  0
+};
 
-static u3j_harm _140_qua__easy_fun_a[] = {{".2", u3we_easy_fun}, {}};
-static c3_c* _140_qua__easy_fun_ha[] = {
-  "4bbbc43ece463d961e572301d0824d3e3cab3ba09ec2756cbefae63ee106044b",
-  0
-};
-  static u3j_core _140_qua__easy_d[] =
-    { { "fun", 7, _140_qua__easy_fun_a, 0, _140_qua__easy_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__easy_ha[] = {
-    "fdcf833943e24323deb6b071497498933ce6c4ba7d4742f2752b6ddb7fb9634e",
+  static u3j_harm _140_qua__easy_fun_a[] = {{".2", u3we_easy_fun}, {}};
+  static c3_c* _140_qua__easy_fun_ha[] = {
+    "4bbbc43ece463d961e572301d0824d3e3cab3ba09ec2756cbefae63ee106044b",
     0
   };
+static u3j_core _140_qua__easy_d[] =
+  { { "fun", 7, _140_qua__easy_fun_a, 0, _140_qua__easy_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__easy_ha[] = {
+  "fdcf833943e24323deb6b071497498933ce6c4ba7d4742f2752b6ddb7fb9634e",
+  0
+};
 
-static u3j_harm _140_qua__glue_fun_a[] = {{".2", u3we_glue_fun}, {}};
-static c3_c* _140_qua__glue_fun_ha[] = {
-  "ffe0fe8815a2298c51a58e963efbbb7af90830abf11ce50bf9a47f479ce452fb",
-  0
-};
-  static u3j_core _140_qua__glue_d[] =
-    { { "fun", 7, _140_qua__glue_fun_a, 0, _140_qua__glue_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__glue_ha[] = {
-    "079c8a395428c2921b266a84bcf271fbe62f3d873b26680661e13a78df1a3989",
+  static u3j_harm _140_qua__glue_fun_a[] = {{".2", u3we_glue_fun}, {}};
+  static c3_c* _140_qua__glue_fun_ha[] = {
+    "ffe0fe8815a2298c51a58e963efbbb7af90830abf11ce50bf9a47f479ce452fb",
     0
   };
+static u3j_core _140_qua__glue_d[] =
+  { { "fun", 7, _140_qua__glue_fun_a, 0, _140_qua__glue_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__glue_ha[] = {
+  "079c8a395428c2921b266a84bcf271fbe62f3d873b26680661e13a78df1a3989",
+  0
+};
 
-static u3j_harm _140_qua__here_fun_a[] = {{".2", u3we_here_fun}, {}};
-static c3_c* _140_qua__here_fun_ha[] = {
-  "47ec445fcfa89d266dae3c3590ed041d1b05f92d1bce360f232da5d496e4f2eb",
-  0
-};
-  static u3j_core _140_qua__here_d[] =
-    { { "fun", 7, _140_qua__here_fun_a, 0, _140_qua__here_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__here_ha[] = {
-    "4600093be5becba9a65a14b67624e3d9e4c66e0c97ba57b2bc271907eea32ffe",
+  static u3j_harm _140_qua__here_fun_a[] = {{".2", u3we_here_fun}, {}};
+  static c3_c* _140_qua__here_fun_ha[] = {
+    "47ec445fcfa89d266dae3c3590ed041d1b05f92d1bce360f232da5d496e4f2eb",
     0
   };
+static u3j_core _140_qua__here_d[] =
+  { { "fun", 7, _140_qua__here_fun_a, 0, _140_qua__here_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__here_ha[] = {
+  "4600093be5becba9a65a14b67624e3d9e4c66e0c97ba57b2bc271907eea32ffe",
+  0
+};
 
-static u3j_harm _140_qua__just_fun_a[] = {{".2", u3we_just_fun}, {}};
-static c3_c* _140_qua__just_fun_ha[] = {
-  "38bf1fb843bc29837868f2828f32d7e2bbb419b0cb9a1236adea28dfc6ce1040",
-  0
-};
-  static u3j_core _140_qua__just_d[] =
-    { { "fun", 7, _140_qua__just_fun_a, 0, _140_qua__just_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__just_ha[] = {
-    "7d6b2165e52dec478d96cf72478a35b7a92b014e6a15f046f026c0c8cb07679b",
+  static u3j_harm _140_qua__just_fun_a[] = {{".2", u3we_just_fun}, {}};
+  static c3_c* _140_qua__just_fun_ha[] = {
+    "38bf1fb843bc29837868f2828f32d7e2bbb419b0cb9a1236adea28dfc6ce1040",
     0
   };
+static u3j_core _140_qua__just_d[] =
+  { { "fun", 7, _140_qua__just_fun_a, 0, _140_qua__just_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__just_ha[] = {
+  "7d6b2165e52dec478d96cf72478a35b7a92b014e6a15f046f026c0c8cb07679b",
+  0
+};
 
-static u3j_harm _140_qua__mask_fun_a[] = {{".2", u3we_mask_fun}, {}};
-static c3_c* _140_qua__mask_fun_ha[] = {
-  "892dfcd5f3d90981fa6e7608e93f0517000d316e7d9c07b3bd390c4966c97f5f",
-  0
-};
-  static u3j_core _140_qua__mask_d[] =
-    { { "fun", 7, _140_qua__mask_fun_a, 0, _140_qua__mask_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__mask_ha[] = {
-    "48e11fc12d7c453cda6ca42577d68e968446aa4d0ad3b99cc674affc7f4507b4",
+  static u3j_harm _140_qua__mask_fun_a[] = {{".2", u3we_mask_fun}, {}};
+  static c3_c* _140_qua__mask_fun_ha[] = {
+    "892dfcd5f3d90981fa6e7608e93f0517000d316e7d9c07b3bd390c4966c97f5f",
     0
   };
+static u3j_core _140_qua__mask_d[] =
+  { { "fun", 7, _140_qua__mask_fun_a, 0, _140_qua__mask_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__mask_ha[] = {
+  "48e11fc12d7c453cda6ca42577d68e968446aa4d0ad3b99cc674affc7f4507b4",
+  0
+};
 
-static u3j_harm _140_qua__shim_fun_a[] = {{".2", u3we_shim_fun}, {}};
-static c3_c* _140_qua__shim_fun_ha[] = {
-  "4e26a0e98adb13ee6718fd68d90910c630df9bb7023b3e3ef40cda6710075fc9",
-  0
-};
-  static u3j_core _140_qua__shim_d[] =
-    { { "fun", 7, _140_qua__shim_fun_a, 0, _140_qua__shim_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__shim_ha[] = {
-    "226b96d1a59daada23a1ea80227c2dbf32ddd748d4c6363f316147ab7f292ced",
+  static u3j_harm _140_qua__shim_fun_a[] = {{".2", u3we_shim_fun}, {}};
+  static c3_c* _140_qua__shim_fun_ha[] = {
+    "4e26a0e98adb13ee6718fd68d90910c630df9bb7023b3e3ef40cda6710075fc9",
     0
   };
+static u3j_core _140_qua__shim_d[] =
+  { { "fun", 7, _140_qua__shim_fun_a, 0, _140_qua__shim_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__shim_ha[] = {
+  "226b96d1a59daada23a1ea80227c2dbf32ddd748d4c6363f316147ab7f292ced",
+  0
+};
 
-static u3j_harm _140_qua__stag_fun_a[] = {{".2", u3we_stag_fun}, {}};
-static c3_c* _140_qua__stag_fun_ha[] = {
-  "f76c7205c23e77809af793bc506f4727071fd029d234317fe78a7f65e2b7d6ea",
-  0
-};
-  static u3j_core _140_qua__stag_d[] =
-    { { "fun", 7, _140_qua__stag_fun_a, 0, _140_qua__stag_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__stag_ha[] = {
-    "fc978af18fb13dc0d77501b6f3eeb538b079b4345eb9195c3dd44c516e69424a",
+  static u3j_harm _140_qua__stag_fun_a[] = {{".2", u3we_stag_fun}, {}};
+  static c3_c* _140_qua__stag_fun_ha[] = {
+    "f76c7205c23e77809af793bc506f4727071fd029d234317fe78a7f65e2b7d6ea",
     0
   };
+static u3j_core _140_qua__stag_d[] =
+  { { "fun", 7, _140_qua__stag_fun_a, 0, _140_qua__stag_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__stag_ha[] = {
+  "fc978af18fb13dc0d77501b6f3eeb538b079b4345eb9195c3dd44c516e69424a",
+  0
+};
 
-static u3j_harm _140_qua__stew_fun_a[] = {{".2", u3we_stew_fun}, {}};
-static c3_c* _140_qua__stew_fun_ha[] = {
-  "a700f6bdfdb83ba33b2a3fe92fda3cb1bbfe95e595401538c8371b55fcc61447",
-  0
-};
-  static u3j_core _140_qua__stew_d[] =
-    { { "fun", 31, _140_qua__stew_fun_a, 0, _140_qua__stew_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__stew_ha[] = {
-    "29303fd6ab78cbbccdfc5bcf23d0bff126a0ef2bf4fa11ce70fcf4e6aa5fe60b",
+  static u3j_harm _140_qua__stew_fun_a[] = {{".2", u3we_stew_fun}, {}};
+  static c3_c* _140_qua__stew_fun_ha[] = {
+    "a700f6bdfdb83ba33b2a3fe92fda3cb1bbfe95e595401538c8371b55fcc61447",
     0
   };
+static u3j_core _140_qua__stew_d[] =
+  { { "fun", 31, _140_qua__stew_fun_a, 0, _140_qua__stew_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__stew_ha[] = {
+  "29303fd6ab78cbbccdfc5bcf23d0bff126a0ef2bf4fa11ce70fcf4e6aa5fe60b",
+  0
+};
 
-static u3j_harm _140_qua__stir_fun_a[] = {{".2", u3we_stir_fun}, {}};
-static c3_c* _140_qua__stir_fun_ha[] = {
-  "6251308ea3c741e76ef9cb2dc5a71c9d8706d6cce6fdb420fef12915e0c032d6",
-  0
-};
-  static u3j_core _140_qua__stir_d[] =
-    { { "fun", 7, _140_qua__stir_fun_a, 0, _140_qua__stir_fun_ha },
-      {}
-    };
-  static c3_c* _140_qua__stir_ha[] = {
-    "4e466aef4d91f0ced008c00e8a4330afb3a43ef81dc1a6d93f1853685f69b9ca",
+  static u3j_harm _140_qua__stir_fun_a[] = {{".2", u3we_stir_fun}, {}};
+  static c3_c* _140_qua__stir_fun_ha[] = {
+    "6251308ea3c741e76ef9cb2dc5a71c9d8706d6cce6fdb420fef12915e0c032d6",
     0
   };
+static u3j_core _140_qua__stir_d[] =
+  { { "fun", 7, _140_qua__stir_fun_a, 0, _140_qua__stir_fun_ha },
+    {}
+  };
+static c3_c* _140_qua__stir_ha[] = {
+  "4e466aef4d91f0ced008c00e8a4330afb3a43ef81dc1a6d93f1853685f69b9ca",
+  0
+};
 
 static u3j_harm _140_qua_pfix_a[] = {{".2", u3we_pfix}, {}};
 static c3_c* _140_qua_pfix_ha[] = {
@@ -1084,6 +1074,7 @@ static u3j_hood _140_qua_ho[] = {
   { "mure",     1404 },
   {},
 };
+
 
 /* layer three
 */
@@ -1250,10 +1241,10 @@ static u3j_core _140_tri__rs_d[] =
     { "gth", 7, _140_tri__rs_gth_a, 0, _140_tri__rs_gth_ha },
     {}
   };
-  static c3_c* _140_tri__rs_ha[] = {
-    "6c7027c5de34540a4b1548039e5423fb44727079af054b7135a3e961ec8dede8",
-    0
-  };
+static c3_c* _140_tri__rs_ha[] = {
+  "6c7027c5de34540a4b1548039e5423fb44727079af054b7135a3e961ec8dede8",
+  0
+};
 
   static u3j_harm _140_tri__rq_add_a[] = {{".2", u3weq_add}, {}};
   static c3_c* _140_tri__rq_add_ha[] = {
@@ -1452,17 +1443,14 @@ static c3_c* _140_tri_shal_ha[] = {
   0
 };
 
-static u3j_harm _140_ob_fein_a[] = {{".2", u3we_fein_ob}, {}};
-static c3_c* _140_ob_fein_ha[] = {
-  0
-};
-
-static u3j_harm _140_ob_fynd_a[] = {{".2", u3we_fynd_ob}, {}};
-static c3_c* _140_ob_fynd_ha[] = {
-  0
-};
-
-
+  static u3j_harm _140_ob_fein_a[] = {{".2", u3we_fein_ob}, {}};
+  static c3_c* _140_ob_fein_ha[] = {
+    0
+  };
+  static u3j_harm _140_ob_fynd_a[] = {{".2", u3we_fynd_ob}, {}};
+  static c3_c* _140_ob_fynd_ha[] = {
+    0
+  };
 static u3j_core _140_ob_d[] = {
   { "fein", 7, _140_ob_fein_a, 0, _140_ob_fein_ha },
   { "fynd", 7, _140_ob_fynd_a, 0, _140_ob_fynd_ha },
@@ -1479,20 +1467,22 @@ static u3j_hood _140_ob_ho[] = {
 };
 
 static u3j_core _140_tri_d[] =
-{ { "qua",  3, 0, _140_qua_d, _140_qua_ha, _140_qua_ho },
-  { "cofl", 7, 0, _140_tri__cofl_d, _140_tri__cofl_ha },
-  { "rd",   7, 0, _140_tri__rd_d, _140_tri__rd_ha },
-  { "rs",   7, 0, _140_tri__rs_d, _140_tri__rs_ha },
-  { "rq",   7, 0, _140_tri__rq_d, _140_tri__rq_ha },
-  { "rh",   7, 0, _140_tri__rh_d, _140_tri__rh_ha },
-  { "og",   7, 0, _140_tri__og_d, _140_tri__og_ha },
+{ { "qua", 3, 0, _140_qua_d, _140_qua_ha, _140_qua_ho },
 
-  { "sha",  7, 0, _140_tri__sha_d, _140_tri__sha_ha },
-  { "shax", 7, _140_tri_shax_a, 0, _140_tri_shax_ha },
-  { "shay", 7, _140_tri_shay_a, 0, _140_tri_shay_ha },
-  { "shas", 7, _140_tri_shas_a, 0, _140_tri_shas_ha },
-  { "shal", 7, _140_tri_shal_a, 0, _140_tri_shal_ha },
-  { "ob",   3, 0, _140_ob_d, _140_ob_ha, _140_ob_ho },
+  { "cofl", 7, 0, _140_tri__cofl_d, _140_tri__cofl_ha },
+  { "rd",   7, 0, _140_tri__rd_d,   _140_tri__rd_ha   },
+  { "rs",   7, 0, _140_tri__rs_d,   _140_tri__rs_ha   },
+  { "rq",   7, 0, _140_tri__rq_d,   _140_tri__rq_ha   },
+  { "rh",   7, 0, _140_tri__rh_d,   _140_tri__rh_ha   },
+  { "og",   7, 0, _140_tri__og_d,   _140_tri__og_ha   },
+
+  { "sha",  7, 0,               _140_tri__sha_d, _140_tri__sha_ha },
+  { "shax", 7, _140_tri_shax_a, 0,               _140_tri_shax_ha },
+  { "shay", 7, _140_tri_shay_a, 0,               _140_tri_shay_ha },
+  { "shas", 7, _140_tri_shas_a, 0,               _140_tri_shas_ha },
+  { "shal", 7, _140_tri_shal_a, 0,               _140_tri_shal_ha },
+
+  { "ob", 3, 0, _140_ob_d, _140_ob_ha, _140_ob_ho },
   {}
 };
 static c3_c* _140_tri_ha[] = {
@@ -1506,6 +1496,7 @@ static u3j_hood _140_tri_ho[] = {
   { "year", 44975 },
   {},
 };
+
 
 /* layer two
 */
@@ -1766,13 +1757,11 @@ static c3_c* _140_two_xeb_ha[] = {
     "a65e666e92176401040a883801e4f05bd650fe6c094a6c8d7f4afcaee9cf55ad",
     0
   };
-
   static u3j_harm _140_two__in_int_a[] = {{".2", u3wdi_int}, {}};
   static c3_c* _140_two__in_int_ha[] = {
     "a71b0e355fa02d18447c02922f69096f42043da451e8c79e7a9270460c3a44e6",
     0
   };
-
   static u3j_harm _140_two__in_put_a[] = {{".2", u3wdi_put}, {}};
   static c3_c* _140_two__in_put_ha[] = {
     "19b27267e18ef156d85d84d37e02692a17fec0b7a2a0fe4120a3ae02b841c8f4",
@@ -1803,7 +1792,6 @@ static c3_c* _140_two_xeb_ha[] = {
     "6bd72ef1fb12482a839f4435a2b163ace1b56036297a3cec6968be33d6863096",
     0
   };
-
 static u3j_core _140_two__in_d[] =
   { { "apt", 7, _140_two__in_apt_a, 0, _140_two__in_apt_ha },
     { "bif", 7, _140_two__in_bif_a, 0, _140_two__in_bif_ha },
@@ -1824,6 +1812,7 @@ static c3_c* _140_two__in_ha[] = {
   "8bbb90ce0a49d627194aa267f6cf1fd78df677111b553ce03119fea19f9d763c",
   0
 };
+
   static u3j_harm _140_two__by_all_a[] = {{".2", u3wdb_all, c3y}, {}};
   static c3_c* _140_two__by_all_ha[] = {
     "c2e87d0047c14b4488d03aad98fa43080c736d86d2ff723a037aaf1843aa9285",
@@ -1869,13 +1858,11 @@ static c3_c* _140_two__in_ha[] = {
     "04ecc67ab25961bee1b7c9dbcf42965d16f32474b9bbdd2b286983f998e3957a",
     0
   };
-
   static u3j_harm _140_two__by_int_a[] = {{".2", u3wdb_int, c3y}, {}};
   static c3_c* _140_two__by_int_ha[] = {
     "a2345429482c271a1668f3c0675a559452bb7b13cb7393c3acb7de44c603aef9",
     0
   };
-
   static u3j_harm _140_two__by_jab_a[] = {{".2", u3wdb_jab, c3y}, {}};
   static c3_c* _140_two__by_jab_ha[] = {
     "48930133d9b26e912dce54d1bc486cfe9dcb32bb3c2b1ad76143382799aec156",
@@ -1921,7 +1908,6 @@ static c3_c* _140_two__in_ha[] = {
     "fac9248ebd1defade9df695cd81f94355bebb271f85b164ff34658a5f45c71a0",
     0
   };
-
 static u3j_core _140_two__by_d[] =
   { { "all", 7, _140_two__by_all_a, 0, _140_two__by_all_ha },
     { "any", 7, _140_two__by_any_a, 0, _140_two__by_any_ha },
@@ -1971,7 +1957,7 @@ static c3_c* _140_two_rub_ha[] = {
 };
 
 static u3j_core _140_two_d[] =
-{ { "tri",  3, 0, _140_tri_d, _140_tri_ha, _140_tri_ho },
+{ { "tri", 3, 0, _140_tri_d, _140_tri_ha, _140_tri_ho },
 
   { "find", 7, _140_two_find_a, 0, _140_two_find_ha },
   { "flop", 7, _140_two_flop_a, 0, _140_two_flop_ha },
@@ -1995,43 +1981,44 @@ static u3j_core _140_two_d[] =
   { "welp", 7, _140_two_welp_a, 0, _140_two_welp_ha },
   { "zing", 7, _140_two_zing_a, 0, _140_two_zing_ha },
 
-  { "bex", 7, _140_two_bex_a, 0, _140_two_bex_ha },
-  { "cat", 7, _140_two_cat_a, 0, _140_two_cat_ha },
-  { "can", 7, _140_two_can_a, 0, _140_two_can_ha },
-  { "con", 7, _140_two_con_a, 0, _140_two_con_ha },
-  { "cue", 7, _140_two_cue_a, 0, _140_two_cue_ha },
-  { "cut", 7, _140_two_cut_a, 0, _140_two_cut_ha },
-  { "dis", 7, _140_two_dis_a, 0, _140_two_dis_ha },
-  { "dor", 7, _140_two_dor_a, 0, _140_two_dor_ha },
-  { "end", 7, _140_two_end_a, 0, _140_two_end_ha },
-  { "gor", 7, _140_two_gor_a, 0, _140_two_gor_ha },
-  { "jam", 7, _140_two_jam_a, 0, _140_two_jam_ha },
-  { "lsh", 7, _140_two_lsh_a, 0, _140_two_lsh_ha },
-  { "mat", 7, _140_two_mat_a, 0, _140_two_mat_ha },
-  { "met", 7, _140_two_met_a, 0, _140_two_met_ha },
-  { "mix", 7, _140_two_mix_a, 0, _140_two_mix_ha },
-  { "mor", 7, _140_two_mor_a, 0, _140_two_mor_ha },
-  { "mug", 7, _140_two_mug_a, 0, _140_two_mug_ha },
+  { "bex",  7, _140_two_bex_a, 0, _140_two_bex_ha },
+  { "cat",  7, _140_two_cat_a, 0, _140_two_cat_ha },
+  { "can",  7, _140_two_can_a, 0, _140_two_can_ha },
+  { "con",  7, _140_two_con_a, 0, _140_two_con_ha },
+  { "cue",  7, _140_two_cue_a, 0, _140_two_cue_ha },
+  { "cut",  7, _140_two_cut_a, 0, _140_two_cut_ha },
+  { "dis",  7, _140_two_dis_a, 0, _140_two_dis_ha },
+  { "dor",  7, _140_two_dor_a, 0, _140_two_dor_ha },
+  { "end",  7, _140_two_end_a, 0, _140_two_end_ha },
+  { "gor",  7, _140_two_gor_a, 0, _140_two_gor_ha },
+  { "jam",  7, _140_two_jam_a, 0, _140_two_jam_ha },
+  { "lsh",  7, _140_two_lsh_a, 0, _140_two_lsh_ha },
+  { "mat",  7, _140_two_mat_a, 0, _140_two_mat_ha },
+  { "met",  7, _140_two_met_a, 0, _140_two_met_ha },
+  { "mix",  7, _140_two_mix_a, 0, _140_two_mix_ha },
+  { "mor",  7, _140_two_mor_a, 0, _140_two_mor_ha },
+  { "mug",  7, _140_two_mug_a, 0, _140_two_mug_ha },
   { "muk", 59, _140_two_muk_a, 0, _140_two_muk_ha },
-  { "rap", 7, _140_two_rap_a, 0, _140_two_rap_ha },
-  { "rep", 7, _140_two_rep_a, 0, _140_two_rep_ha },
-  { "rev", 7, _140_two_rev_a, 0, _140_two_rev_ha },
-  { "rip", 7, _140_two_rip_a, 0, _140_two_rip_ha },
-  { "rsh", 7, _140_two_rsh_a, 0, _140_two_rsh_ha },
-  { "swp", 7, _140_two_swp_a, 0, _140_two_swp_ha },
-  { "rub", 7, _140_two_rub_a, 0, _140_two_rub_ha },
-  { "pow", 7, _140_two_pow_a, 0, _140_two_pow_ha },
-  { "sqt", 7, _140_two_sqt_a, 0, _140_two_sqt_ha },
-  { "xeb", 7, _140_two_xeb_a, 0, _140_two_xeb_ha },
+  { "rap",  7, _140_two_rap_a, 0, _140_two_rap_ha },
+  { "rep",  7, _140_two_rep_a, 0, _140_two_rep_ha },
+  { "rev",  7, _140_two_rev_a, 0, _140_two_rev_ha },
+  { "rip",  7, _140_two_rip_a, 0, _140_two_rip_ha },
+  { "rsh",  7, _140_two_rsh_a, 0, _140_two_rsh_ha },
+  { "swp",  7, _140_two_swp_a, 0, _140_two_swp_ha },
+  { "rub",  7, _140_two_rub_a, 0, _140_two_rub_ha },
+  { "pow",  7, _140_two_pow_a, 0, _140_two_pow_ha },
+  { "sqt",  7, _140_two_sqt_a, 0, _140_two_sqt_ha },
+  { "xeb",  7, _140_two_xeb_a, 0, _140_two_xeb_ha },
 
-  { "by",  7, 0, _140_two__by_d, _140_two__by_ha },
-  { "in",  7, 0, _140_two__in_d, _140_two__in_ha },
+  { "by", 7, 0, _140_two__by_d, _140_two__by_ha },
+  { "in", 7, 0, _140_two__in_d, _140_two__in_ha },
   {}
 };
 static c3_c* _140_two_ha[] = {
   "f693e1f5ff57ec741fe28a48a18252b3e12dead2bfe3bcd4ea8e904a36905c0b",
   0
 };
+
 
 /* layer one
 */
@@ -2141,6 +2128,122 @@ static c3_c* _k140_ha[] = {
   0
 };
 
+/* new jets
+*/
+  static u3j_harm _139_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
+  static u3j_harm _139_hex_json_en_a[] = {{".2", u3we_json_en}, {}};
+static u3j_core _139_hex_json_d[] =
+  { { "de", 15, _139_hex_json_de_a, 0, no_hashes },
+    { "en", 15, _139_hex_json_en_a, 0, no_hashes },
+    {}
+  };
+
+static u3j_core _139_hex_d[] =
+{ { "lore",  63, _140_hex_lore_a, 0, no_hashes },
+  { "leer",  63, _140_hex_leer_a, 0, no_hashes },
+  { "loss",  63, _140_hex_loss_a, 0, no_hashes },
+  { "lune", 127, _140_hex_lune_a, 0, no_hashes },
+
+  { "coed", 63, 0, _140_hex_coed_d, no_hashes },
+  { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
+
+  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
+  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
+  { "blake",  31, 0, _140_hex_blake_d, no_hashes },
+  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
+  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
+  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
+  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
+  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
+  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  {}
+};
+
+static u3j_core _139_pen_d[] =
+{ { "hex", 7, 0, _139_hex_d, no_hashes },
+
+  { "cell", 7, _140_pen_cell_a, 0, no_hashes },
+  { "comb", 7, _140_pen_comb_a, 0, no_hashes },
+  { "cons", 7, _140_pen_cons_a, 0, no_hashes },
+  { "core", 7, _140_pen_core_a, 0, no_hashes },
+  { "face", 7, _140_pen_face_a, 0, no_hashes },
+  { "fitz", 7, _140_pen_fitz_a, 0, no_hashes },
+  { "flan", 7, _140_pen_flan_a, 0, no_hashes },
+  { "flip", 7, _140_pen_flip_a, 0, no_hashes },
+  { "flor", 7, _140_pen_flor_a, 0, no_hashes },
+  { "fork", 7, _140_pen_fork_a, 0, no_hashes },
+  //  XX implementation obsolete, update or remove
+  //
+  // { "hike", 7, _140_pen_hike_a, 0, no_hashes },
+  { "look", 7, _140_pen_look_a, 0, no_hashes },
+  { "loot", 7, _140_pen_loot_a, 0, no_hashes },
+
+  //  XX unused, hook removed, delete source
+  //
+  // { "ap", 7, _140_pen__ap_a, 0, no_hashes },
+  { "ut", 15, 0, _140_pen__ut_d, no_hashes, _140_pen__ut_ho },
+  {}
+};
+
+static u3j_core _139_qua_d[] =
+{ { "pen", 3, 0, _139_pen_d, no_hashes, _140_pen_ho },
+
+  { "po", 7, 0, _140_qua__po_d, no_hashes },
+
+  { "trip", 7, _140_qua_trip_a, 0, no_hashes },
+
+  { "bend", 7, 0, _140_qua__bend_d, no_hashes },
+  { "cold", 7, 0, _140_qua__cold_d, no_hashes },
+  { "comp", 7, 0, _140_qua__comp_d, no_hashes },
+  { "cook", 7, 0, _140_qua__cook_d, no_hashes },
+  { "easy", 7, 0, _140_qua__easy_d, no_hashes },
+  { "glue", 7, 0, _140_qua__glue_d, no_hashes },
+  { "here", 7, 0, _140_qua__here_d, no_hashes },
+  { "just", 7, 0, _140_qua__just_d, no_hashes },
+  { "mask", 7, 0, _140_qua__mask_d, no_hashes },
+  { "shim", 7, 0, _140_qua__shim_d, no_hashes },
+  { "stag", 7, 0, _140_qua__stag_d, no_hashes },
+  { "stew", 7, 0, _140_qua__stew_d, no_hashes },
+  { "stir", 7, 0, _140_qua__stir_d, no_hashes },
+
+  { "pfix", 7, _140_qua_pfix_a, 0, no_hashes },
+  { "plug", 7, _140_qua_plug_a, 0, no_hashes },
+  { "pose", 7, _140_qua_pose_a, 0, no_hashes },
+  { "sfix", 7, _140_qua_sfix_a, 0, no_hashes },
+
+  { "mink", 7, _140_qua_mink_a, 0, no_hashes },
+  { "mole", 7, _140_qua_mole_a, 0, no_hashes },
+  { "mule", 7, _140_qua_mule_a, 0, no_hashes },
+
+  //  XX disabled, implicated in memory corruption
+  //  write tests and re-enable
+  //
+  // { "scot", 7, _140_qua_scot_a, 0, no_hashes },
+  // { "scow", 7, _140_qua_scow_a, 0, no_hashes },
+  { "slaw", 7, _140_qua_slaw_a, 0, no_hashes },
+  {}
+};
+
+static u3j_core _139_tri_d[] =
+{ { "qua", 3, 0, _139_qua_d, no_hashes, _140_qua_ho },
+
+  { "cofl", 7, 0, _140_tri__cofl_d, no_hashes },
+  { "rd",   7, 0, _140_tri__rd_d,   no_hashes },
+  { "rs",   7, 0, _140_tri__rs_d,   no_hashes },
+  { "rq",   7, 0, _140_tri__rq_d,   no_hashes },
+  { "rh",   7, 0, _140_tri__rh_d,   no_hashes },
+  { "og",   7, 0, _140_tri__og_d,   no_hashes },
+
+  { "sha",  7, 0,               _140_tri__sha_d, no_hashes },
+  { "shax", 7, _140_tri_shax_a, 0,               no_hashes },
+  { "shay", 7, _140_tri_shay_a, 0,               no_hashes },
+  { "shas", 7, _140_tri_shas_a, 0,               no_hashes },
+  { "shal", 7, _140_tri_shal_a, 0,               no_hashes },
+
+  { "ob", 3, 0, _140_ob_d, no_hashes, _140_ob_ho },
+  {}
+};
+
 static u3j_harm _139_two__in_apt_a[] = {{".2", u3wdi_apt}, {}};
 
 static u3j_core _139_two__in_d[] =
@@ -2161,7 +2264,7 @@ static u3j_core _139_two__in_d[] =
   };
 
 static u3j_core _139_two_d[] =
-{ { "tri",  3, 0, _140_tri_d, no_hashes, _140_tri_ho },
+{ { "tri", 3, 0, _139_tri_d, no_hashes, _140_tri_ho },
 
   { "find", 7, _140_two_find_a, 0, no_hashes },
   { "flop", 7, _140_two_flop_a, 0, no_hashes },
@@ -2185,37 +2288,37 @@ static u3j_core _139_two_d[] =
   { "welp", 7, _140_two_welp_a, 0, no_hashes },
   { "zing", 7, _140_two_zing_a, 0, no_hashes },
 
-  { "bex", 7, _140_two_bex_a, 0, no_hashes },
-  { "cat", 7, _140_two_cat_a, 0, no_hashes },
-  { "can", 7, _140_two_can_a, 0, no_hashes },
-  { "con", 7, _140_two_con_a, 0, no_hashes },
-  { "cue", 7, _140_two_cue_a, 0, no_hashes },
-  { "cut", 7, _140_two_cut_a, 0, no_hashes },
-  { "dis", 7, _140_two_dis_a, 0, no_hashes },
-  { "dor", 7, _140_two_dor_a, 0, no_hashes },
-  { "end", 7, _140_two_end_a, 0, no_hashes },
-  { "gor", 7, _140_two_gor_a, 0, no_hashes },
-  { "jam", 7, _140_two_jam_a, 0, no_hashes },
-  { "lsh", 7, _140_two_lsh_a, 0, no_hashes },
-  { "mat", 7, _140_two_mat_a, 0, no_hashes },
-  { "met", 7, _140_two_met_a, 0, no_hashes },
-  { "mix", 7, _140_two_mix_a, 0, no_hashes },
-  { "mor", 7, _140_two_mor_a, 0, no_hashes },
-  { "mug", 7, _140_two_mug_a, 0, no_hashes },
+  { "bex",  7, _140_two_bex_a, 0, no_hashes },
+  { "cat",  7, _140_two_cat_a, 0, no_hashes },
+  { "can",  7, _140_two_can_a, 0, no_hashes },
+  { "con",  7, _140_two_con_a, 0, no_hashes },
+  { "cue",  7, _140_two_cue_a, 0, no_hashes },
+  { "cut",  7, _140_two_cut_a, 0, no_hashes },
+  { "dis",  7, _140_two_dis_a, 0, no_hashes },
+  { "dor",  7, _140_two_dor_a, 0, no_hashes },
+  { "end",  7, _140_two_end_a, 0, no_hashes },
+  { "gor",  7, _140_two_gor_a, 0, no_hashes },
+  { "jam",  7, _140_two_jam_a, 0, no_hashes },
+  { "lsh",  7, _140_two_lsh_a, 0, no_hashes },
+  { "mat",  7, _140_two_mat_a, 0, no_hashes },
+  { "met",  7, _140_two_met_a, 0, no_hashes },
+  { "mix",  7, _140_two_mix_a, 0, no_hashes },
+  { "mor",  7, _140_two_mor_a, 0, no_hashes },
+  { "mug",  7, _140_two_mug_a, 0, no_hashes },
   { "muk", 59, _140_two_muk_a, 0, no_hashes },
-  { "rap", 7, _140_two_rap_a, 0, no_hashes },
-  { "rep", 7, _140_two_rep_a, 0, no_hashes },
-  { "rev", 7, _140_two_rev_a, 0, no_hashes },
-  { "rip", 7, _140_two_rip_a, 0, no_hashes },
-  { "rsh", 7, _140_two_rsh_a, 0, no_hashes },
-  { "swp", 7, _140_two_swp_a, 0, no_hashes },
-  { "rub", 7, _140_two_rub_a, 0, no_hashes },
-  { "pow", 7, _140_two_pow_a, 0, no_hashes },
-  { "sqt", 7, _140_two_sqt_a, 0, no_hashes },
-  { "xeb", 7, _140_two_xeb_a, 0, no_hashes },
+  { "rap",  7, _140_two_rap_a, 0, no_hashes },
+  { "rep",  7, _140_two_rep_a, 0, no_hashes },
+  { "rev",  7, _140_two_rev_a, 0, no_hashes },
+  { "rip",  7, _140_two_rip_a, 0, no_hashes },
+  { "rsh",  7, _140_two_rsh_a, 0, no_hashes },
+  { "swp",  7, _140_two_swp_a, 0, no_hashes },
+  { "rub",  7, _140_two_rub_a, 0, no_hashes },
+  { "pow",  7, _140_two_pow_a, 0, no_hashes },
+  { "sqt",  7, _140_two_sqt_a, 0, no_hashes },
+  { "xeb",  7, _140_two_xeb_a, 0, no_hashes },
 
-  { "by",  7, 0, _140_two__by_d, no_hashes },
-  { "in",  7, 0, _139_two__in_d, no_hashes },
+  { "by", 7, 0, _140_two__by_d, no_hashes },
+  { "in", 7, 0, _139_two__in_d, no_hashes },
   {}
 };
 
@@ -2277,25 +2380,25 @@ u3j_core _a50_d[] =
   { "mul", 7, _140_one_mul_a, 0, _140_one_mul_ha },
   { "sub", 7, _140_one_sub_a, 0, _140_one_sub_ha },
 
-  { "bex", 7, _140_two_bex_a, 0, _140_two_bex_ha },
-  { "cat", 7, _140_two_cat_a, 0, _140_two_cat_ha },
-  { "can", 7, _140_two_can_a, 0, _140_two_can_ha },
-  { "con", 7, _140_two_con_a, 0, _140_two_con_ha },
-  { "cut", 7, _140_two_cut_a, 0, _140_two_cut_ha },
-  { "dis", 7, _140_two_dis_a, 0, _140_two_dis_ha },
-  { "dor", 7, _140_two_dor_a, 0, _140_two_dor_ha },
-  { "end", 7, _140_two_end_a, 0, _140_two_end_ha },
-  { "gor", 7, _140_two_gor_a, 0, _140_two_gor_ha },
-  { "lsh", 7, _140_two_lsh_a, 0, _140_two_lsh_ha },
-  { "met", 7, _140_two_met_a, 0, _140_two_met_ha },
-  { "mix", 7, _140_two_mix_a, 0, _140_two_mix_ha },
-  { "mor", 7, _140_two_mor_a, 0, _140_two_mor_ha },
-  { "mug", 7, _140_two_mug_a, 0, _140_two_mug_ha },
+  { "bex", 7,  _140_two_bex_a, 0, _140_two_bex_ha },
+  { "cat", 7,  _140_two_cat_a, 0, _140_two_cat_ha },
+  { "can", 7,  _140_two_can_a, 0, _140_two_can_ha },
+  { "con", 7,  _140_two_con_a, 0, _140_two_con_ha },
+  { "cut", 7,  _140_two_cut_a, 0, _140_two_cut_ha },
+  { "dis", 7,  _140_two_dis_a, 0, _140_two_dis_ha },
+  { "dor", 7,  _140_two_dor_a, 0, _140_two_dor_ha },
+  { "end", 7,  _140_two_end_a, 0, _140_two_end_ha },
+  { "gor", 7,  _140_two_gor_a, 0, _140_two_gor_ha },
+  { "lsh", 7,  _140_two_lsh_a, 0, _140_two_lsh_ha },
+  { "met", 7,  _140_two_met_a, 0, _140_two_met_ha },
+  { "mix", 7,  _140_two_mix_a, 0, _140_two_mix_ha },
+  { "mor", 7,  _140_two_mor_a, 0, _140_two_mor_ha },
+  { "mug", 7,  _140_two_mug_a, 0, _140_two_mug_ha },
   { "muk", 59, _140_two_muk_a, 0, _140_two_muk_ha },  //  TODO: why 59?
-  { "rep", 7, _140_two_rep_a, 0, _140_two_rep_ha },
-  { "rip", 7, _140_two_rip_a, 0, _140_two_rip_ha },
-  { "rsh", 7, _140_two_rsh_a, 0, _140_two_rsh_ha },
-  { "swp", 7, _140_two_swp_a, 0, _140_two_swp_ha },
+  { "rep", 7,  _140_two_rep_a, 0, _140_two_rep_ha },
+  { "rip", 7,  _140_two_rip_a, 0, _140_two_rip_ha },
+  { "rsh", 7,  _140_two_rsh_a, 0, _140_two_rsh_ha },
+  { "swp", 7,  _140_two_swp_a, 0, _140_two_swp_ha },
 
   { "flop", 7, _140_two_flop_a, 0, _140_two_flop_ha },
   { "lent", 7, _140_two_lent_a, 0, _140_two_lent_ha },
@@ -2306,15 +2409,15 @@ u3j_core _a50_d[] =
   { "turn", 7, _140_two_turn_a, 0, _140_two_turn_ha },
   { "welp", 7, _140_two_welp_a, 0, _140_two_welp_ha },
 
-  { "by",  7, 0, _a50_two__by_d, _140_two__by_ha },
-  { "in",  7, 0, _a50_two__in_d, _140_two__in_ha },
+  { "by", 7, 0, _a50_two__by_d, _140_two__by_ha },
+  { "in", 7, 0, _a50_two__in_d, _140_two__in_ha },
   {}
 };
 
-static u3j_core _d[] = {
-  { "k140", 0, 0, _k140_d, _k140_ha, 0, (u3j_core*) 140, 0 },
-  { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139, 0 },
-  { "a50", 0, 0, _a50_d, _k140_ha, 0, (u3j_core*) c3__a50, 0 },
+static u3j_core _d[] =
+{ { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
+  { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
+  { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };
 

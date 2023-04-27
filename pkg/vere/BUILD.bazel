@@ -295,6 +295,8 @@ genrule(
       [ 3 -eq $$(lensd 3) ]
     }
 
+    lensd '+vat %base'
+
     if check && sleep 10 && check; then
       echo "boot success"
       lensa hood "+hood/exit"
@@ -332,7 +334,7 @@ genrule(
 
     set -x
 
-    $(execpath :urbit) --lite-boot --daemon ./pier 2> urbit-output
+    $(execpath :urbit) --lite-boot --daemon --gc ./pier 2> urbit-output
 
     port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
 
@@ -360,6 +362,10 @@ genrule(
     }
 
     trap cleanup EXIT
+
+    #  print the arvo version
+    #
+    lensd '+vat %base'
 
     #  measure initial memory usage
     #

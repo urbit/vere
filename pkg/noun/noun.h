@@ -5,6 +5,7 @@
 
 #include "allocate.h"
 #include "hashtable.h"
+#include "error.h"
 #include "jets.h"
 #include "jets/k.h"
 #include "jets/q.h"

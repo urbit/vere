@@ -116,7 +116,7 @@
                (inx_w == 0) ? u3_nul
                             : u3k(loc_u->kad[inx_w - 1]));
     if ( loc_u->kct_w == inx_w ) {
-      c3_assert(loc_u->kct_w < (1 << 31));
+      u3_assert(loc_u->kct_w < (1 << 31));
       loc_u->kct_w++;
     } else {
       u3z(loc_u->kad[inx_w]);
@@ -181,7 +181,7 @@
         c3_w     max_w,
         c3_w     goy_w)
   {
-    c3_assert(max_w >= *inx_w);
+    u3_assert(max_w >= *inx_w);
 
     if ( max_w == *inx_w ) {
       if ( c3n == _lonk(loc_u, *inx_w, goy_w) ) {

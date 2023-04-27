@@ -61,7 +61,7 @@ the next release.
 ## Deploy Endpoints
 
 Binaries are deployed to the following endpoints, where `{VN}` is the version
-number in VERSION, `{CS}` is the shortened commit SHA of the commit the binary
+number in `VERSION`, `{CS}` is the shortened commit SHA of the commit the binary
 is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 `macos-aarch64`, and `macos-x86_64`:
 
@@ -71,7 +71,18 @@ is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 
 The most recently deployed version of a given train (pace) is uploaded to
 https://bootstrap.urbit.org/vere/{T}/last, where `{T}` is one of `edge`, `soon`,
-and `live`:
+and `live`.
+
+### `next/kelvin/*` Endpoints
+
+We also upload binaries for `next/kelvin/*` branches, where `{K}` is the Kelvin
+version of the branch:
+
+- https://bootstrap.urbit.org/vere/next/kelvin/{K}/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
+
+Last deployed version strings for the `next/kelvin/*` branches are uploaded to:
+
+- https://bootstrap.urbit.org/vere/next/kelvin/{K}/last
 
 ## Releases
 

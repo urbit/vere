@@ -53,7 +53,7 @@ u3t_mean(u3_noun roc)
 void
 u3t_drop(void)
 {
-  c3_assert(_(u3du(u3R->bug.tax)));
+  u3_assert(_(u3du(u3R->bug.tax)));
   {
     u3_noun tax = u3R->bug.tax;
 
@@ -113,8 +113,8 @@ static void
 _ct_sane(u3_noun lab)
 {
   if ( u3_nul != lab ) {
-    c3_assert(c3y == u3du(lab));
-    c3_assert(c3y == u3ud(u3h(lab)));
+    u3_assert(c3y == u3du(lab));
+    u3_assert(c3y == u3ud(u3h(lab)));
     _ct_sane(u3t(lab));
   }
 }
@@ -237,7 +237,7 @@ u3t_samp(void)
       mot_l = c3_s3('f','a','r');
     }
     else if ( _(u3T.noc_o) ) {
-      c3_assert(!_(u3T.glu_o));
+      u3_assert(!_(u3T.glu_o));
       mot_l = c3_s3('n','o','c');
     }
     else if ( _(u3T.glu_o) ) {
@@ -252,7 +252,7 @@ u3t_samp(void)
     {
       u3_noun lab = _t_samp_process(rod_u);
 
-      c3_assert(u3R == &u3H->rod_u);
+      u3_assert(u3R == &u3H->rod_u);
       if ( 0 == u3R->pro.day ) {
         /* bunt a +doss
         */
@@ -464,7 +464,7 @@ u3t_event_trace(const c3_c* name, c3_c type)
 void
 u3t_print_steps(FILE* fil_u, c3_c* cap_c, c3_d sep_d)
 {
-  c3_assert( 0 != fil_u );
+  u3_assert( 0 != fil_u );
 
   c3_w gib_w = (sep_d / 1000000000ULL);
   c3_w mib_w = (sep_d % 1000000000ULL) / 1000000ULL;
@@ -495,7 +495,7 @@ u3t_print_steps(FILE* fil_u, c3_c* cap_c, c3_d sep_d)
 void
 u3t_damp(FILE* fil_u)
 {
-  c3_assert( 0 != fil_u );
+  u3_assert( 0 != fil_u );
 
   if ( 0 != u3R->pro.day ) {
     u3_noun wol = u3do("pi-tell", u3R->pro.day);

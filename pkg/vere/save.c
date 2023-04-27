@@ -27,10 +27,10 @@ u3_save_ef_chld(u3_pier *pir_u)
   u3l_log("checkpoint: complete %d", sav_u->pid_w);
   pid_w = wait(&loc_i);
   if (0 != sav_u->pid_w) {
-    c3_assert(pid_w == sav_u->pid_w);
+    u3_assert(pid_w == sav_u->pid_w);
   }
   else {
-    c3_assert(pid_w > 0);
+    u3_assert(pid_w > 0);
   }
   sav_u->pid_w = 0;
 }
@@ -49,7 +49,8 @@ u3_save_io_init(u3_pier *pir_u)
 
   sav_u->tim_u.data = pir_u;
   uv_timer_init(u3L, &sav_u->tim_u);
-  uv_timer_start(&sav_u->tim_u, _save_time_cb, 120000, 120000);
+  uv_timer_start(&sav_u->tim_u, _save_time_cb, u3_Host.ops_u.sap_w * 1000,
+      u3_Host.ops_u.sap_w * 1000);
 }
 
 /* u3_save_io_exit(): terminate save I/O.
