@@ -29,6 +29,7 @@
  */
   typedef struct _u3_agent {
     c3_c*              nam_c;            //  name of device
+    c3_o               con_o;
     struct _u3_shan*   san_u;            //  server reference
     struct _u3_lick*   lic_u;            //  device backpointer
     struct _u3_agent*  nex_u;            //  next pointer
@@ -94,6 +95,7 @@ _lick_poke_bail(u3_ovum* egg_u, u3_noun lud)
 static void
 _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
 {
+  u3l_log("lick poke");
   u3_weak   put;
   u3_noun   dev, nam, dat, wir, cad;
 
@@ -120,14 +122,14 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   dev = u3i_string(gen_u->nam_c);
   cad = u3nt(c3__soak, dev, put);
   u3_auto_peer(
-    u3_auto_plan(&lic_u->car_u,
-                 u3_ovum_init(0, c3__l, wir, cad)),
+    u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
     0, 0, _lick_poke_bail);
   return;
 _moor_poke_out:
   if ( 0 != err_i ) {
     can_u->mor_u.bal_f(can_u, err_i, err_c);
   }
+  
 }
 
 /* _lick_close_chan(): close given channel, freeing.
@@ -199,6 +201,8 @@ static void
 _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
 {
   u3_shan*  san_u = (u3_shan*)sem_u;
+  u3_agent* gen_u = san_u->gen_u;
+  u3_noun   dev, dat, wir, cad, mar;
   u3_chan*  can_u;
   c3_i      err_i;
 
@@ -217,6 +221,17 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   u3_newt_read((u3_moat*)&can_u->mor_u);
   can_u->mor_u.nex_u = (u3_moor*)san_u->can_u;
   san_u->can_u = can_u;
+  gen_u->con_o = c3y;
+  u3l_log("lick: sock cb");
+
+  wir = u3nc(c3__lick, u3_nul);
+  dev = u3i_string(gen_u->nam_c);
+  mar = u3i_string("connected");
+  dat = u3i_string("");
+  cad = u3nq(c3__soak, dev, mar, dat);
+  u3_auto_peer(
+    u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+    0, 0, _lick_poke_bail);
 }
 
 
@@ -334,7 +349,7 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
   {
     lic_u->gen_u = cur_u->nex_u;
     _lick_close_sock(cur_u->san_u);
-    //free(cur_u);
+    c3_free(cur_u);
     return;
   }
 
@@ -352,8 +367,7 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 
   las_u->nex_u = cur_u->nex_u;
   _lick_close_sock(cur_u->san_u);
-  //free(cur_u);
-
+  c3_free(cur_u);
 }
 
 
@@ -371,6 +385,7 @@ _lick_ef_spin(u3_lick* lic_u, u3_noun wir_i, u3_noun nam)
   gen_u->nam_c = u3r_string(nam);
   gen_u->lic_u = lic_u;
   gen_u->san_u->gen_u = gen_u;
+  gen_u->con_o = c3n;
 
   u3_agent* hed_u = lic_u->gen_u;
   
@@ -452,7 +467,21 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         return c3n;
       }
 
-      _lick_send_noun(gen_u->san_u->can_u, dat);
+      if( c3y == gen_u->con_o){
+        _lick_send_noun(gen_u->san_u->can_u, dat);
+      } else 
+      {
+        u3_noun   dev, dat, wir, cad, mar;
+        wir = u3nc(c3__lick, u3_nul);
+        dev = u3i_string(gen_u->nam_c);
+        mar = u3i_string("error");
+        dat = u3i_string("not connected");
+        cad = u3nq(c3__soak, dev, mar, dat);
+        u3_auto_peer(
+          u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+          0, 0, _lick_poke_bail);
+  
+      }
       /*if( c3y == u3r_qual(tmp, &wut, &cmd, &dat, &cnt) )
       {
         _lick_ef_rite(loc_u, wir, dev_d, wut, cmd, dat, cnt); // execute write command
@@ -553,6 +582,7 @@ u3_lick_io_init(u3_pier* pir_u)
   }
 
   lic_u->fod_c = c3_calloc(strlen(pax_c));
+  lic_u->sil_u = u3s_cue_xeno_init();
   strcpy(lic_u->fod_c, pax_c);
 
 
