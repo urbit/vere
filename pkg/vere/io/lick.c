@@ -29,6 +29,7 @@
  */
   typedef struct _u3_agent {
     c3_c*              nam_c;            //  name of device
+    u3_noun            nam;
     c3_o               con_o;
     struct _u3_shan*   san_u;            //  server reference
     struct _u3_lick*   lic_u;            //  device backpointer
@@ -90,6 +91,7 @@ _lick_it_path(u3_noun pax)
   u3z(pax);
   return pas_c;
 }
+
 /* _lick_send_noun(): jam and send noun over chan.
 */
 static void
@@ -163,7 +165,7 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   wir = u3nc(c3__lick, u3_nul);
-  dev = u3i_string(gen_u->nam_c);
+  dev = gen_u->nam;
   cad = u3nt(c3__soak, dev, put);
   u3_auto_peer(
     u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
@@ -206,9 +208,9 @@ _lick_close_chan(u3_shan* san_u, u3_chan* can_u)
     u3_noun wir, cad, dev, dat, mar;
 
     wir = u3nc(c3__lick, u3_nul);
-    dev = u3i_string(gen_u->nam_c);
+    dev = gen_u->nam;
     mar = u3i_string("disconnect");
-    dat = u3i_string("");
+    dat = u3_nul;
     
     cad = u3nq(c3__soak, dev, mar, dat);
 
@@ -271,9 +273,10 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   u3l_log("lick: sock cb");
 
   wir = u3nc(c3__lick, u3_nul);
-  dev = u3i_string(gen_u->nam_c);
+  dev = gen_u->nam;
   mar = u3i_string("connect");
-  dat = u3i_string("");
+  dat = u3_nul;
+
   cad = u3nq(c3__soak, dev, mar, dat);
   u3_auto_peer(
     u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
@@ -348,7 +351,6 @@ _lick_mkdirp(c3_c* por_c)
 static void
 _lick_init_sock(u3_shan* san_u)
 {
-  
   //  the full socket path is limited to about 108 characters,
   //  and we want it to be relative to the pier. save our current
   //  path, chdir to the pier, open the socket at the desired
@@ -418,8 +420,6 @@ _lick_sock_err_chdir:
 static void
 _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 {
-
-
   c3_c* nam_c = _lick_it_path(nam); 
   u3l_log("lick shut: %s", nam_c);
 
@@ -450,6 +450,8 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
   las_u->nex_u = cur_u->nex_u;
   _lick_close_sock(cur_u->san_u);
   c3_free(cur_u);
+
+  // XX We should delete empty folders in the pier/.urb/dev path
 }
 
 
@@ -458,13 +460,11 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 static void
 _lick_ef_spin(u3_lick* lic_u, u3_noun wir_i, u3_noun nam)
 {
-
   u3_agent* gen_u = c3_calloc(sizeof(*gen_u));
   gen_u->san_u = c3_calloc(sizeof(*gen_u->san_u));
   gen_u->san_u->can_u = c3_calloc(sizeof(*gen_u->san_u->can_u));
   gen_u->nam_c = _lick_it_path(nam);
-
-  u3l_log("lick spin: %s", gen_u->nam_c);
+  gen_u->nam = nam;
 
   gen_u->lic_u = lic_u;
   gen_u->san_u->gen_u = gen_u;
@@ -528,7 +528,6 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
       ret_o=c3y;
     } else if ( c3__spit == tag )
     {
-      u3l_log("lick: spit ");
       ret_o=c3y;
       
       if ( c3n == u3r_cell(tmp, &nam, &dat) ){
@@ -550,26 +549,19 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         return c3n;
       }
 
-      if( c3y == gen_u->con_o){
+      if( c3y == gen_u->con_o ) {
         _lick_send_noun(gen_u->san_u->can_u, dat);
-      } else 
-      {
+      } else {
         u3_noun   dev, dat, wir, cad, mar;
         wir = u3nc(c3__lick, u3_nul);
-        dev = u3i_string(gen_u->nam_c);
+        dev = gen_u->nam;
         mar = u3i_string("error");
         dat = u3i_string("not connected");
         cad = u3nq(c3__soak, dev, mar, dat);
         u3_auto_peer(
           u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
           0, 0, _lick_poke_bail);
-  
       }
-      /*if( c3y == u3r_qual(tmp, &wut, &cmd, &dat, &cnt) )
-      {
-        _lick_ef_rite(loc_u, wir, dev_d, wut, cmd, dat, cnt); // execute write command
-        ret_o = c3y;
-      } else { ret_o = c3n; }*/
     }
     else {
       ret_o = c3n;
@@ -610,7 +602,6 @@ static void
 _lick_io_talk(u3_auto* car_u)
 {
   u3_lick* lic_u = (u3_lick*)car_u;
-  u3l_log("lick born");
   u3_noun  wir = u3nc(c3__lick, u3_nul);
   u3_noun  cad = u3nc(c3__born, u3_nul);
 
@@ -629,7 +620,6 @@ static void
 _lick_io_exit(u3_auto* car_u)
 {
   u3_lick*          lic_u = (u3_lick*)car_u;
-  c3_c*             pax_c = u3_Host.dir_c;
 
   u3_agent*         cur_u=lic_u->gen_u;
   u3_agent*         nex_u;
@@ -668,10 +658,8 @@ u3_lick_io_init(u3_pier* pir_u)
   lic_u->sil_u = u3s_cue_xeno_init();
   strcpy(lic_u->fod_c, pax_c);
 
-
   u3_auto* car_u = &lic_u->car_u;
   car_u->nam_m = c3__lick;
-
   car_u->liv_o = c3n;
   car_u->io.talk_f = _lick_io_talk;
   car_u->io.kick_f = _lick_io_kick;
