@@ -138,8 +138,9 @@ static void
 _lick_close_chan(u3_shan* san_u, u3_chan* can_u)
 {
   u3_lick*  lic_u = san_u->gen_u->lic_u;
+  u3_agent* gen_u = san_u->gen_u;
+  gen_u->con_o = c3n;
   u3_chan*  inn_u;
-  // TODO Write close channel command it should give a disconnect mark to %lick
   //  remove chan from server's connection list.
   //
   if ( san_u->can_u == can_u ) {
@@ -161,14 +162,15 @@ _lick_close_chan(u3_shan* san_u, u3_chan* can_u)
     u3_noun wir, cad, dev, dat, mar;
 
     wir = u3nc(c3__lick, u3_nul);
-    dev = u3i_string(san_u->gen_u->nam_c);
+    dev = u3i_string(gen_u->nam_c);
     mar = u3i_string("disconnect");
+    dat = u3i_string("");
     
-    cad = u3nq(c3__soak, dev, mar, u3_nul);
+    cad = u3nq(c3__soak, dev, mar, dat);
 
     u3_auto_peer(
       u3_auto_plan(&lic_u->car_u,
-                   u3_ovum_init(0, c3__k, wir, cad)),
+                   u3_ovum_init(0, c3__l, wir, cad)),
       0, 0, _lick_poke_bail);
   }
 
