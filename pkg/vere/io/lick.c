@@ -46,6 +46,50 @@
 
 static const c3_c URB_DEV_PATH[] = "/.urb/dev/";
 
+/* _lick_it_path(): path for ipc files
+*/
+static c3_c*
+_lick_it_path(u3_noun pax)
+{
+  c3_w len_w = 0;
+  c3_c *pas_c;
+
+  //  measure
+  //
+  {
+    u3_noun wiz = pax;
+
+    while ( u3_nul != wiz ) {
+      len_w += (1 + u3r_met(3, u3h(wiz)));
+      wiz = u3t(wiz);
+    }
+  }
+
+  //  cut
+  //
+  pas_c = c3_malloc(len_w + 1);
+  pas_c[len_w] = '\0';
+  {
+    u3_noun wiz   = pax;
+    c3_c*   waq_c = pas_c;
+
+    while ( u3_nul != wiz ) {
+      c3_w tis_w = u3r_met(3, u3h(wiz));
+
+      if ( (u3_nul == u3t(wiz)) ) {
+        *waq_c++ = '/';
+      } else *waq_c++ = '/';
+
+      u3r_bytes(0, tis_w, (c3_y*)waq_c, u3h(wiz));
+      waq_c += tis_w;
+
+      wiz = u3t(wiz);
+    }
+    *waq_c = 0;
+  }
+  u3z(pax);
+  return pas_c;
+}
 /* _lick_send_noun(): jam and send noun over chan.
 */
 static void
@@ -215,11 +259,11 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->coq_l = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
-  c3_assert(!err_i);
+  u3_assert(!err_i);
   err_i = uv_pipe_init(u3L, &can_u->mor_u.pyp_u, 0);
-  c3_assert(!err_i);
+  u3_assert(!err_i);
   err_i = uv_accept(sem_u, (uv_stream_t*)&can_u->mor_u.pyp_u);
-  c3_assert(!err_i);
+  u3_assert(!err_i);
   u3_newt_read((u3_moat*)&can_u->mor_u);
   can_u->mor_u.nex_u = (u3_moor*)san_u->can_u;
   san_u->can_u = can_u;
@@ -228,7 +272,7 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
 
   wir = u3nc(c3__lick, u3_nul);
   dev = u3i_string(gen_u->nam_c);
-  mar = u3i_string("connected");
+  mar = u3i_string("connect");
   dat = u3i_string("");
   cad = u3nq(c3__soak, dev, mar, dat);
   u3_auto_peer(
@@ -250,8 +294,8 @@ _lick_close_sock(u3_shan* san_u)
 
   u3l_log("lick: closing %s/%s/%s",pax_c, URB_DEV_PATH, san_u->gen_u->nam_c);
 
-  c3_assert(wit_i > 0);
-  c3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(wit_i > 0);
+  u3_assert(len_w == (c3_w)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {
@@ -263,6 +307,39 @@ _lick_close_sock(u3_shan* san_u)
   }
   uv_close((uv_handle_t*)&san_u->pyp_u, _lick_close_cb);
   c3_free(paf_c);
+}
+
+/* _lick_mkdirp(): recursive mkdir of dirname of pax_c.
+*/
+static void
+_lick_mkdirp(c3_c* por_c)
+{
+  c3_c pax_c[2048];
+
+  strncpy(pax_c, por_c, sizeof(pax_c));
+
+  
+
+  c3_c* sas_c = strrchr(pax_c, '/');
+  if ( sas_c != NULL ) {
+    *sas_c = '\0';
+  } else
+  {
+    u3l_log("lick: bad path %s", pax_c);
+    u3_king_bail();
+  }
+
+  c3_c* fas_c = strchr(pax_c + 1, '/');
+
+  while ( fas_c ) {
+    *fas_c = 0;
+    if ( 0 != mkdir(pax_c, 0777) && EEXIST != errno ) {
+      u3l_log("unix: mkdir %s: %s", pax_c, strerror(errno));
+      u3m_bail(c3__fail);
+    }
+    *fas_c++ = '/';
+    fas_c = strchr(fas_c, '/');
+  }
 }
 
 
@@ -293,6 +370,9 @@ _lick_init_sock(u3_shan* san_u)
 
   strcat(por_c, URB_DEV_PATH);
   strcat(por_c, gen_u->nam_c);
+
+  _lick_mkdirp(por_c);
+  u3l_log("lick por_c: %s", por_c);
 
   if ( 0 != unlink(por_c) && errno != ENOENT ) {
     u3l_log("lick: unlink: %s", uv_strerror(errno));
@@ -339,9 +419,9 @@ static void
 _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 {
 
-  u3l_log("lick shut: %s", u3r_string(nam));
 
-  c3_c* nam_c = u3r_string(nam); 
+  c3_c* nam_c = _lick_it_path(nam); 
+  u3l_log("lick shut: %s", nam_c);
 
   u3_agent* cur_u = lic_u->gen_u;
   u3_agent* las_u;
@@ -379,12 +459,13 @@ static void
 _lick_ef_spin(u3_lick* lic_u, u3_noun wir_i, u3_noun nam)
 {
 
-  u3l_log("lick spin: %s", u3r_string(nam));
-
   u3_agent* gen_u = c3_calloc(sizeof(*gen_u));
   gen_u->san_u = c3_calloc(sizeof(*gen_u->san_u));
   gen_u->san_u->can_u = c3_calloc(sizeof(*gen_u->san_u->can_u));
-  gen_u->nam_c = u3r_string(nam);
+  gen_u->nam_c = _lick_it_path(nam);
+
+  u3l_log("lick spin: %s", gen_u->nam_c);
+
   gen_u->lic_u = lic_u;
   gen_u->san_u->gen_u = gen_u;
   gen_u->con_o = c3n;
@@ -560,7 +641,7 @@ _lick_io_exit(u3_auto* car_u)
     cur_u = nex_u;
   }
 
-  //u3s_cue_xeno_done(lic_u->sil_u);
+  u3s_cue_xeno_done(lic_u->sil_u);
   c3_free(lic_u);
 }
 
