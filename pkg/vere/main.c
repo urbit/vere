@@ -2088,7 +2088,16 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   //  create new epoch
-  if ( c3n == u3_disk_epoc_init(log_u) ) {
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "chop: failed to get first/last events\r\n");
+    exit(1);
+  }
+  if ( fir_d == las_d == 0 ) {
+    fprintf(stderr, "chop: latest epoch already empty\r\n");
+    exit(1);
+  }
+  else if ( c3n == u3_disk_epoc_init(log_u) ) {
     fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
   }
@@ -2189,8 +2198,17 @@ _cw_roll(c3_i argc, c3_c* argv[])
   }
 
   //  create new epoch
-  if ( c3n == u3_disk_epoc_init(log_u) ) {
-    fprintf(stderr, "roll: error: failed to initialize new epoch\r\n");
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "roll: failed to get first/last events\r\n");
+    exit(1);
+  }
+  if ( fir_d == las_d == 0 ) {
+    fprintf(stderr, "roll: latest epoch already empty\r\n");
+    exit(1);
+  }
+  else if ( c3n == u3_disk_epoc_init(log_u) ) {
+    fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }
 
