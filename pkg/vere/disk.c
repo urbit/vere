@@ -906,16 +906,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
     {
-      // XX extract into function?
-      const size_t siz_i =
-      // 500 GiB is as large as musl on aarch64 wants to allow
-      #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-        0x7d00000000;
-      #else
-        0x10000000000;
-      #endif
 
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
         fprintf(stderr, "disk: failed to initialize database\r\n");
         c3_free(log_u);
         return 0;
@@ -1023,15 +1015,7 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
 
   //  initialize db of new epoch
   {
-    const size_t siz_i =
-    // 500 GiB is as large as musl on aarch64 wants to allow
-    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-      0x7d00000000;
-    #else
-      0x10000000000;
-    #endif
-
-    if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+    if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
       goto fail;
@@ -1136,15 +1120,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     //  initialize pre-migrated lmdb
     MDB_env* old_u;
     {
-      const size_t siz_i =
-      // 500 GiB is as large as musl on aarch64 wants to allow
-      #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-        0x7d00000000;
-      #else
-        0x10000000000;
-      #endif
-
-      if ( 0 == (old_u = u3_lmdb_init(log_u->com_u->pax_c, siz_i)) ) {
+      if ( 0 == (old_u = u3_lmdb_init(log_u->com_u->pax_c)) ) {
         fprintf(stderr, "disk: failed to initialize database\r\n");
         return c3n;
       }
