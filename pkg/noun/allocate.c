@@ -95,7 +95,7 @@ _box_slot(c3_w siz_w)
 
   for (c3_w i_w = 1; i_w < u3a_fbox_no; i_w++) {
     if ( siz_w < 16 ) return i_w;
-    siz_w = siz_w + 1 >> 1;
+    siz_w = (siz_w + 1) >> 1;
   }
   return u3a_fbox_no - 1;
 }
