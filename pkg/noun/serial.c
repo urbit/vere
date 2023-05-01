@@ -883,7 +883,7 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   else {
     while ( 1 ) {
       b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
-      c3_assert( mpz_get_ui(b_mp) == b_w ); // XX
+      u3_assert( mpz_get_ui(b_mp) == b_w ); // XX
 
       if ( !mpz_size(a_mp) ) {
         while ( b_w ) {
@@ -904,7 +904,7 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 
   buf_y++;
 
-  c3_assert( buf_y >= hun_y ); // XX
+  u3_assert( buf_y >= hun_y ); // XX
 
   //  mpz_sizeinbase may overestimate by 1
   //
