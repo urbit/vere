@@ -875,7 +875,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   }
 
   //  create/load $pier/.urb/log
-  //  XX closures?
   //
   {
     c3_c log_c[8193];
@@ -902,18 +901,23 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
+    //  get binary version from latest epoch
+    c3_c ver_w[8193];
+    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_w) ) {
+      fprintf(stderr, "disk: failed to load epoch version\r\n");
+      c3_free(log_u);
+      return 0;
+    }
+
     //  set path to latest epoch
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
 
-    //  initialize epoch's db
-    {
-
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
-        fprintf(stderr, "disk: failed to initialize database\r\n");
-        c3_free(log_u);
-        return 0;
-      }
+    //  initialize latest epoch's db
+    if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
+      fprintf(stderr, "disk: failed to initialize database\r\n");
+      c3_free(log_u);
+      return 0;
     }
     fprintf(stderr, "disk: loaded epoch 0i%" PRIu64 "\r\n", lat_d);
 
@@ -935,6 +939,16 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       log_u->dun_d = las_d;           //  set dun_d to last event in lmdb        
     }
     log_u->sen_d = log_u->dun_d;
+
+    //  if binary version of latest epoch is not the same as the
+    //  running binary, then we need to create a new epoch
+    if ( 0 != strcmp(ver_w, URBIT_VERSION) ) {
+      if ( c3n == u3_disk_epoc_init(log_u) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        c3_free(log_u);
+        return 0;
+      }
+    }
 
     //  mark the log as live
     log_u->liv_o = c3y;
@@ -1088,6 +1102,29 @@ c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
   return ret_d;
 }
 
+/* u3_disk_epoc_vere: get binary version from epoch.
+*/
+c3_o
+u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w) {
+  c3_c ver_c[8193];
+  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIu64 "/vere.txt", 
+                  log_u->com_u->pax_c, epo_d);
+
+  FILE* fil_u = fopen(ver_c, "r");
+  if ( NULL == fil_u ) {
+    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIu64 
+                    "\r\n", epo_d);
+    return c3n;
+  }
+
+  if ( 1 != fscanf(fil_u, "%s", ver_w) ) {
+    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIu64 
+                    "\r\n", epo_d);
+    return c3n;
+  }
+  return c3y;
+}
+
 /* u3_disk_migrate: migrates disk format.
  */
 c3_o u3_disk_migrate(u3_disk* log_u)
@@ -1115,7 +1152,6 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     }
   } else if ( c3n == epo_o ) {
     //  migrate existing pier
-    fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
 
     //  initialize pre-migrated lmdb
     MDB_env* old_u;
