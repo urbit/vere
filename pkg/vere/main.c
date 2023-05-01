@@ -2119,9 +2119,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_dent* den_u = log_u->com_u->dil_u;
   c3_d epo_d = 0;
   while ( den_u ) {
-    if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
-      fprintf(stderr, "disk: epoch directory is not a @ui: %s\r\n", den_u->nam_c);
-    } else if ( epo_d != pre_d && epo_d != pos_d ) {
+    c3_d res_d = sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d);
+    if ( (1 == res_d) && (epo_d != pre_d) && (epo_d != pos_d) ) {
       fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", epo_d);
       if ( c3y != u3_disk_epoc_kill(log_u, epo_d) ) {
         fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", epo_d);
