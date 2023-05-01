@@ -2027,7 +2027,6 @@ _cw_prep(c3_i argc, c3_c* argv[])
 static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
-  //  XX keep the last epoch (2 epochs left after chop)
   c3_i ch_i, lid_i;
   c3_w arg_w;
 
@@ -2087,13 +2086,20 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  //  get latest epoch number prior to creating a new one
+  c3_d pre_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &pre_d) ) {
+    fprintf(stderr, "chop: failed to find last epoch\r\n");
+    exit(1);
+  }
+
   //  create new epoch
   c3_d fir_d, las_d;
   if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "chop: failed to get first/last events\r\n");
     exit(1);
   }
-  if ( fir_d == las_d == 0 ) {
+  if ( fir_d == las_d ) {
     fprintf(stderr, "chop: latest epoch already empty\r\n");
     exit(1);
   }
@@ -2102,20 +2108,20 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  get latest epoch number
-  c3_d lat_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
+  //  get latest epoch number prior to creating a new one
+  c3_d pos_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &pos_d) ) {
     fprintf(stderr, "chop: failed to find last epoch\r\n");
     exit(1);
   }
 
-  //  delete all but the newly created epoch
+  //  delete all but the last two epochs
   u3_dent* den_u = log_u->com_u->dil_u;
   c3_d epo_d = 0;
-  while ( den_u && epo_d <= lat_d ) {
+  while ( den_u ) {
     if ( 1 != sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
       fprintf(stderr, "disk: epoch directory is not a @ui: %s\r\n", den_u->nam_c);
-    } else {
+    } else if ( epo_d != pre_d && epo_d != pos_d ) {
       fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", epo_d);
       if ( c3y != u3_disk_epoc_kill(log_u, epo_d) ) {
         fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", epo_d);
@@ -2203,7 +2209,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
     fprintf(stderr, "roll: failed to get first/last events\r\n");
     exit(1);
   }
-  if ( fir_d == las_d == 0 ) {
+
+  if ( fir_d == las_d ) {
     fprintf(stderr, "roll: latest epoch already empty\r\n");
     exit(1);
   }

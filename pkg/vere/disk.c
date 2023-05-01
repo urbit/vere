@@ -906,43 +906,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
 
-    //  get vere version from the latest epoch
-    c3_c fil_c[8193];
-    snprintf(fil_c, 8192, "%s/vere.txt", epo_c);
-    if ( 0 != access(fil_c, F_OK) ) {
-      fprintf(stderr, "disk: failed to access %s\r\n", fil_c);
-      c3_free(log_u);
-      return 0;
-    }
-
-    //  read string from vere.txt file
-    c3_c ver_c[8193];
-    {
-      FILE* fil_u = fopen(fil_c, "r");
-      if ( !fil_u ) {
-        fprintf(stderr, "disk: failed to open %s\r\n", fil_c);
-        c3_free(log_u);
-        return 0;
-      }
-      if ( !fgets(ver_c, 8192, fil_u) ) {
-        fprintf(stderr, "disk: failed to read %s\r\n", fil_c);
-        c3_free(log_u);
-        return 0;
-      }
-      fclose(fil_u);
-    }
-
-    //  if binary version from vere.txt is different 
-    //  than current version, then create a new epoch
-    if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
-      fprintf(stderr, "disk: binary version mismatch, creating new epoch\r\n");
-      if ( c3n == u3_disk_epoc_init(log_u) ) {
-        fprintf(stderr, "disk: failed to initialize epoch\r\n");
-        c3_free(log_u);
-        return 0;
-      }
-    }
-
     //  initialize epoch's db
     {
 
@@ -966,12 +929,11 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       if ( 0 == lat_d ) {             //  first epoch
         log_u->dun_d = 0;
       } else {                        //  not first epoch
-        log_u->dun_d = lat_d - 1;     //  set dun_d to last event in prev epoch
+        log_u->dun_d = lat_d;         //  set dun_d to last event in prev epoch
       }
     } else {                          //  not fresh epoch            
       log_u->dun_d = las_d;           //  set dun_d to last event in lmdb        
     }
-
     log_u->sen_d = log_u->dun_d;
 
     //  mark the log as live
@@ -1001,7 +963,7 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
       fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
       return c3n;
     }
-    new_d = 1 + las_d;  //  create next epoch
+    new_d = las_d;  //  create next epoch
   }
 
   //  create new epoch directory
