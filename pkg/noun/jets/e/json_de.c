@@ -94,7 +94,7 @@ _parse(u3_atom txt)
   u3_noun val;
 
   const c3_y *byt_y;
-  c3_d        cnt_d;
+  c3_z        cnt_z;
   c3_w        len_w = u3r_met(3, txt);
 
   //
@@ -139,7 +139,7 @@ _parse(u3_atom txt)
       } break;
 
       case JSON_STRING: {
-        if ( (json_get_context(sam_u, &cnt_d) == JSON_OBJECT) && (cnt_d & 1) ) {
+        if ( (json_get_context(sam_u, &cnt_z) == JSON_OBJECT) && (cnt_z & 1) ) {
           // since object key must be followed by value, skip ahead
           tak_u->key = _json_get_string_as_atom(sam_u);
           continue;
@@ -173,7 +173,7 @@ _parse(u3_atom txt)
       } break;
     }
 
-    switch ( json_get_context(sam_u, &cnt_d) ) {
+    switch ( json_get_context(sam_u, &cnt_z) ) {
       // unreachable barring programming error
       default: u3_assert(0);
 
@@ -198,11 +198,11 @@ _parse(u3_atom txt)
       } break;
 
       case JSON_OBJECT: {
-        // odd cnt_d and unset key weeded out by continue command on key
-        u3_assert(!(cnt_d & 1));
+        // odd cnt_z and unset key weeded out by continue command on key
+        u3_assert(!(cnt_z & 1));
         u3_assert(tak_u->key != u3_none);
-        // cnt_d == 0 weeded out by continue command on array/object open
-        u3_assert(cnt_d);
+        // cnt_z == 0 weeded out by continue command on array/object open
+        u3_assert(cnt_z);
 
         tak_u->col = u3kdb_put(tak_u->col, tak_u->key, val);
         tak_u->key = u3_none;
