@@ -323,7 +323,7 @@ _cttp_cres_new(u3_creq* ceq_u, c3_w sas_w)
 static void
 _cttp_cres_fire_body(u3_cres* res_u, u3_hbod* bod_u)
 {
-  c3_assert(!bod_u->nex_u);
+  u3_assert(!bod_u->nex_u);
 
   if ( !(res_u->bod_u) ) {
     res_u->bod_u = res_u->dob_u = bod_u;
@@ -589,7 +589,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
 
   //  XX this should be checked against a whitelist
   //
-  c3_assert( c3y == u3ud(method) );
+  u3_assert( c3y == u3ud(method) );
   ceq_u->met_c = u3r_string(method);
   ceq_u->url_c = _cttp_creq_url(u3k(pul));
 
@@ -612,7 +612,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
 static void
 _cttp_creq_fire_body(u3_creq* ceq_u, u3_hbod *rub_u)
 {
-  c3_assert(!rub_u->nex_u);
+  u3_assert(!rub_u->nex_u);
 
   if ( !(ceq_u->rub_u) ) {
     ceq_u->rub_u = ceq_u->bur_u = rub_u;
@@ -826,7 +826,7 @@ _cttp_creq_on_connect(h2o_http1client_t* cli_u, const c3_c* err_c,
       ceq_u->sat_e = u3_csat_quit;
     }
     else {
-      c3_assert( u3_csat_ripe == ceq_u->sat_e );
+      u3_assert( u3_csat_ripe == ceq_u->sat_e );
       _cttp_creq_fail(ceq_u, err_c);
     }
     return 0;
@@ -853,8 +853,8 @@ _cttp_creq_on_connect(h2o_http1client_t* cli_u, const c3_c* err_c,
 static void
 _cttp_creq_connect(u3_creq* ceq_u)
 {
-  c3_assert( u3_csat_conn == ceq_u->sat_e );
-  c3_assert( ceq_u->ipf_c );
+  u3_assert( u3_csat_conn == ceq_u->sat_e );
+  u3_assert( ceq_u->ipf_c );
 
   //  connect by ip/port, avoiding synchronous getaddrinfo()
   //
@@ -872,7 +872,7 @@ _cttp_creq_connect(u3_creq* ceq_u)
   //  connect() failed, cb invoked synchronously
   //
   if ( u3_csat_conn != ceq_u->sat_e ) {
-    c3_assert( u3_csat_quit == ceq_u->sat_e );
+    u3_assert( u3_csat_quit == ceq_u->sat_e );
     //  only one such failure case
     //
     _cttp_creq_fail(ceq_u, "socket create error");
@@ -885,7 +885,7 @@ _cttp_creq_connect(u3_creq* ceq_u)
     //    must be synchronous, after successfull connect() call
     //
     if ( ceq_u->hot_c && (c3y == ceq_u->sec) ) {
-      c3_assert( ceq_u->cli_u );
+      u3_assert( ceq_u->cli_u );
       c3_free(ceq_u->cli_u->ssl.server_name);
       ceq_u->cli_u->ssl.server_name = strdup(ceq_u->hot_c);
     }
@@ -925,8 +925,8 @@ _cttp_creq_resolve_cb(uv_getaddrinfo_t* adr_u,
 static void
 _cttp_creq_resolve(u3_creq* ceq_u)
 {
-  c3_assert(u3_csat_addr == ceq_u->sat_e);
-  c3_assert(ceq_u->hot_c);
+  u3_assert(u3_csat_addr == ceq_u->sat_e);
+  u3_assert(ceq_u->hot_c);
 
   uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
   adr_u->data = ceq_u;

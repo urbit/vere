@@ -14,7 +14,7 @@
         return u3nc(1, c3n);
       }
       else {
-        c3_assert((c3n == u3t(hel)));
+        u3_assert((c3n == u3t(hel)));
 
         return u3nc(1, c3y);
       }

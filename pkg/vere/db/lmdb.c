@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #include "c3.h"
+#include "noun.h"
 
 /* mdb_logerror(): writes an error message and lmdb error code to f.
 */
@@ -574,7 +575,7 @@ u3_lmdb_walk_next(u3_lmdb_walk* itr_u, size_t* len_i, void** buf_v)
   MDB_val key_u, val_u;
   c3_w    ret_w, ops_w;
 
-  c3_assert( itr_u->nex_d <= itr_u->las_d );
+  u3_assert( itr_u->nex_d <= itr_u->las_d );
 
   ops_w = ( c3y == itr_u->red_o ) ? MDB_NEXT : MDB_GET_CURRENT;
   if ( (ret_w = mdb_cursor_get(itr_u->cur_u, &key_u, &val_u, ops_w)) ) {

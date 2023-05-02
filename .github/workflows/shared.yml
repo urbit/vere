@@ -157,7 +157,8 @@ jobs:
           bazel build :version_str
           sha_version=$(cat ./bazel-bin/version)
           if ${{ inputs.next != null }}; then
-            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
           else
             target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
           fi
