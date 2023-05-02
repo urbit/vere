@@ -29,7 +29,6 @@
  */
   typedef struct _u3_agent {
     c3_c*              nam_c;            //  name of device
-    u3_noun            nam;
     c3_o               con_o;
     struct _u3_shan*   san_u;            //  server reference
     struct _u3_lick*   lic_u;            //  device backpointer
@@ -45,7 +44,50 @@
     struct _u3_agent*          gen_u;            //  agent list
   } u3_lick;
 
-static const c3_c URB_DEV_PATH[] = "/.urb/dev/";
+static const c3_c URB_DEV_PATH[] = "/.urb/dev";
+
+/* _unix_string_to_knot(): convert c unix path component to $knot
+*/
+static u3_atom
+_lick_string_to_knot(c3_c* pax_c)
+{
+  u3_assert(pax_c);
+  //  XX  this can happen if we encounter a file without an extension.
+  //
+  // u3_assert(*pax_c);
+  u3_assert(!strchr(pax_c, '/'));
+  //  XX  horrible
+  //
+  if ( '!' == *pax_c ) {
+    pax_c++;
+  }
+  return u3i_string(pax_c);
+}
+
+
+/* _lick_string_to_path(): convert c string to u3_noun $path
+**
+**  c string must begin with the pier path plus mountpoint
+*/
+static u3_noun
+_lick_string_to_path(c3_c* pax_c)
+{
+  u3_noun not;
+
+  //u3_assert(pax_c[-1] == '/');
+  c3_c* end_c = strchr(pax_c, '/');
+  if ( !end_c ) {
+    return u3nc(_lick_string_to_knot(pax_c), u3_nul);
+  }
+  else {
+    *end_c = 0;
+    not = _lick_string_to_knot(pax_c);
+    *end_c = '/';
+    return u3nc(not, _lick_string_to_path(end_c + 1));
+  }
+}
+
+
 
 /* _lick_it_path(): path for ipc files
 */
@@ -165,7 +207,7 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   wir = u3nc(c3__lick, u3_nul);
-  dev = gen_u->nam;
+  dev = _lick_string_to_path(gen_u->nam_c+1);
   cad = u3nt(c3__soak, dev, put);
   u3_auto_peer(
     u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
@@ -208,7 +250,7 @@ _lick_close_chan(u3_shan* san_u, u3_chan* can_u)
     u3_noun wir, cad, dev, dat, mar;
 
     wir = u3nc(c3__lick, u3_nul);
-    dev = gen_u->nam;
+    dev = _lick_string_to_path(gen_u->nam_c+1);
     mar = u3i_string("disconnect");
     dat = u3_nul;
     
@@ -273,7 +315,7 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   u3l_log("lick: sock cb");
 
   wir = u3nc(c3__lick, u3_nul);
-  dev = gen_u->nam;
+  dev = _lick_string_to_path(gen_u->nam_c+1);
   mar = u3i_string("connect");
   dat = u3_nul;
 
@@ -320,24 +362,14 @@ _lick_mkdirp(c3_c* por_c)
   c3_c pax_c[2048];
 
   strncpy(pax_c, por_c, sizeof(pax_c));
-
   
-
-  c3_c* sas_c = strrchr(pax_c, '/');
-  if ( sas_c != NULL ) {
-    *sas_c = '\0';
-  } else
-  {
-    u3l_log("lick: bad path %s", pax_c);
-    u3_king_bail();
-  }
-
   c3_c* fas_c = strchr(pax_c + 1, '/');
+  u3l_log("lick fas_c: %s", fas_c);
 
   while ( fas_c ) {
     *fas_c = 0;
     if ( 0 != mkdir(pax_c, 0777) && EEXIST != errno ) {
-      u3l_log("unix: mkdir %s: %s", pax_c, strerror(errno));
+      u3l_log("lick: mkdir %s: %s", pax_c, strerror(errno));
       u3m_bail(c3__fail);
     }
     *fas_c++ = '/';
@@ -373,8 +405,8 @@ _lick_init_sock(u3_shan* san_u)
   strcat(por_c, URB_DEV_PATH);
   strcat(por_c, gen_u->nam_c);
 
-  _lick_mkdirp(por_c);
   u3l_log("lick por_c: %s", por_c);
+  _lick_mkdirp(por_c);
 
   if ( 0 != unlink(por_c) && errno != ENOENT ) {
     u3l_log("lick: unlink: %s", uv_strerror(errno));
@@ -464,7 +496,6 @@ _lick_ef_spin(u3_lick* lic_u, u3_noun wir_i, u3_noun nam)
   gen_u->san_u = c3_calloc(sizeof(*gen_u->san_u));
   gen_u->san_u->can_u = c3_calloc(sizeof(*gen_u->san_u->can_u));
   gen_u->nam_c = _lick_it_path(nam);
-  gen_u->nam = nam;
 
   gen_u->lic_u = lic_u;
   gen_u->san_u->gen_u = gen_u;
@@ -518,7 +549,7 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   else {
     if ( (c3__spin == tag) ){
       nam = u3k(tmp); 
-      _lick_ef_spin(lic_u, wir, nam); // execute spin command
+      _lick_ef_spin(lic_u, wir, tmp); // execute spin command
       ret_o = c3y;
 
     } else if ( (c3__shut == tag) )
@@ -534,7 +565,7 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         return c3n;
       }
        
-      c3_c* nam_c = u3r_string(nam);
+      c3_c* nam_c = _lick_it_path(nam);
       u3_agent* gen_u = NULL;
       u3_agent* cur_u = lic_u->gen_u;
       while (cur_u != NULL){
@@ -554,7 +585,7 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
       } else {
         u3_noun   dev, dat, wir, cad, mar;
         wir = u3nc(c3__lick, u3_nul);
-        dev = gen_u->nam;
+        dev = _lick_string_to_path(gen_u->nam_c+1);
         mar = u3i_string("error");
         dat = u3i_string("not connected");
         cad = u3nq(c3__soak, dev, mar, dat);
