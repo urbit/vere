@@ -49,7 +49,8 @@ u3_save_io_init(u3_pier *pir_u)
 
   sav_u->tim_u.data = pir_u;
   uv_timer_init(u3L, &sav_u->tim_u);
-  uv_timer_start(&sav_u->tim_u, _save_time_cb, 120000, 120000);
+  uv_timer_start(&sav_u->tim_u, _save_time_cb, u3_Host.ops_u.sap_w * 1000,
+      u3_Host.ops_u.sap_w * 1000);
 }
 
 /* u3_save_io_exit(): terminate save I/O.
