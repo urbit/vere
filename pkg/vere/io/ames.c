@@ -95,7 +95,7 @@
     c3_c*   pat_c;                      //  path as ascii
   } u3_peep;
 
-/*  u3_wail: signed fine request body
+/*  u3_wail: fine request body
 */
   typedef struct _u3_wail {
     c3_y    tag_y;                      //  tag (always 0, unsigned)
@@ -1536,6 +1536,8 @@ _fine_lop(c3_w fra_w)
   return 1 + (((fra_w - 1) / FINE_PAGE) * FINE_PAGE);
 }
 
+/* _fine_scry_path(): parse path from wail or purr.
+*/
 static u3_weak
 _fine_scry_path(u3_pact* pac_u)
 {
@@ -1619,6 +1621,8 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   u3z(nun);
 }
 
+/* _fine_hear_request(): hear wail (fine equeust packet packet).
+*/
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 {
@@ -1764,6 +1768,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   u3z(key);
 }
 
+/* _fine_hear_response(): hear purr (fine response packet).
+*/
 static void
 _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
@@ -1776,6 +1782,8 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
 }
 
+/* _ames_hear_ames(): hear ames packet.
+*/
 static void
 _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 {
@@ -1793,6 +1801,8 @@ _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
   }
 }
 
+/* _ames_try_forward(): forward packet, updating lane if needed.
+*/
 static void
 _ames_try_forward(u3_pact* pac_u)
 {
@@ -1833,18 +1843,18 @@ _ames_try_forward(u3_pact* pac_u)
 }
 
 /* _ames_hear(): parse a (potential) packet, dispatch appropriately.
-
-  packet filtering needs to revised for two protocol-change scenarios
-
-    - packets using old protocol versions from our sponsees
-      these must be let through, and this is a transitive condition;
-      they must also be forwarded where appropriate
-      they can be validated, as we know their semantics
-
-    - packets using newer protocol versions
-      these should probably be let through, or at least
-      trigger printfs suggesting upgrade.
-      they cannot be filtered, as we do not know their semantics
+**
+**    packet filtering needs to revised for two protocol-change scenarios
+**
+**    - packets using old protocol versions from our sponsees
+**      these must be let through, and this is a transitive condition;
+**      they must also be forwarded where appropriate
+**      they can be validated, as we know their semantics
+**
+**    - packets using newer protocol versions
+**      these should probably be let through, or at least
+**      trigger printfs suggesting upgrade.
+**      they cannot be filtered, as we do not know their semantics
 */
 static void
 _ames_hear(u3_ames* sam_u,
@@ -1853,11 +1863,12 @@ _ames_hear(u3_ames* sam_u,
            c3_y*    hun_y)
 {
   u3_pact* pac_u;
-  c3_w pre_w;
-  c3_w cur_w = 0;  //  cursor: how many bytes we've read from hun_y
+  c3_w     pre_w;
+  c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
 
   //  make sure packet is big enough to have a header
-  if (HEAD_SIZE > len_w) {
+  //
+  if ( HEAD_SIZE > len_w ) {
     sam_u->sat_u.hed_d++;
     if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
       u3l_log("ames: %" PRIu64 " dropped, failed to read header",
