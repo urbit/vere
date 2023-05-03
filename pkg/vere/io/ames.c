@@ -1766,11 +1766,8 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
                      u3nc(c3n, u3_ames_encode_lane(pac_u->rut_u.lan_u)),
                      u3i_bytes(pac_u->len_w, pac_u->hun_y));
 
-  u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, u3k(wir), u3k(cad));
+  u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
-
-  u3z(cad);
-  u3z(wir);
 }
 
 static void
