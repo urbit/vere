@@ -5,22 +5,22 @@
 #include "noun.h"
 #include "ur.h"
 
-#define FINE_PAGE       512  //  packets per page
-#define FINE_FRAG      1024  //  bytes per fragment packet
-#define FINE_PATH_MAX   384  //  longest allowed scry path
-#define HEAD_SIZE         4  //  header size in bytes
+#define FINE_PAGE       512             //  packets per page
+#define FINE_FRAG      1024             //  bytes per fragment packet
+#define FINE_PATH_MAX   384             //  longest allowed scry path
+#define HEAD_SIZE         4             //  header size in bytes
 
 //  a hack to work around the inability to delete from a hashtable
 //
-#define FINE_PEND         1  //  scry cache sentinel value: "pending"
-#define FINE_DEAD         2  //  scry cache sentinel value: "dead"
+#define FINE_PEND         1             //  scry cache sentinel value: "pending"
+#define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
 /* u3_fine: fine networking
 */
   typedef struct _u3_fine {
-    c3_y              ver_y;               //  fine protocol
-    u3p(u3h_root)     sac_p;               //  scry cache hashtable
-    struct _u3_ames*  sam_u;               // ames backpointer
+    c3_y              ver_y;            //  fine protocol
+    u3p(u3h_root)     sac_p;            //  scry cache hashtable
+    struct _u3_ames*  sam_u;            //  ames backpointer
   } u3_fine;
 
 /* u3_ames: ames networking.
@@ -115,8 +115,8 @@
 /* u3_purr: fine packet response
 */
   typedef struct _u3_purr {
-    u3_peep pep_u;
-    u3_meow mew_u;
+    u3_peep pep_u;                      //  fragment number + path
+    u3_meow mew_u;                      //  fragment
   } u3_purr;
 
 /* u3_body: ames packet body
@@ -130,9 +130,9 @@
 /* u3_ptag: packet-type tag
 */
   typedef enum _u3_ptag {
-    PACT_AMES = 1,  //  ames packet
-    PACT_WAIL = 2,  //  fine request packet
-    PACT_PURR = 3   //  fine response packet
+    PACT_AMES = 1,                      //  ames packet
+    PACT_WAIL = 2,                      //  fine request packet
+    PACT_PURR = 3                       //  fine response packet
   } u3_ptag;
 
 /* u3_pact: ames packet
