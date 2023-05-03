@@ -1720,7 +1720,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     u3_noun pax =
       u3nc(c3__fine,
       u3nq(c3__hunk,
-           u3dc("scot", c3__ud, lop_w),
+           u3dc("scot", c3__ud, u3i_word(lop_w)),
            u3dc("scot", c3__ud, FINE_PAGE),
            u3k(u3h(key))));
 
