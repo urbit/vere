@@ -1618,7 +1618,6 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
   u3z(fra);
 }
 
-//  TODO: check protocol version
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 {
@@ -1756,7 +1755,6 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   u3z(key);
 }
 
-//  TODO: check protocol version
 static void
 _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
@@ -1775,37 +1773,16 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 static void
 _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 {
-  //  ensure the protocol version matches ours
-  //
-  //    XX rethink use of [fit_o] here and elsewhere
-  //
-  u3_ames* sam_u = pac_u->sam_u;
-  if (  (c3y == sam_u->fig_u.fit_o)
-     && (sam_u->ver_y != pac_u->hed_u.ver_y) )
-  {
-    sam_u->sat_u.vet_d++;
-    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
-              sam_u->sat_u.vet_d);
-    }
-
+#ifdef AMES_SKIP
+  if ( c3_y == _ames_skip(&pac_u->pre_u) ) {
     _ames_pact_free(pac_u);
+    return;
   }
+#endif
 
-  //  otherwise, inject the packet as an event
-  //
-  else {
+  {
     u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
-#ifdef AMES_SKIP
-    if ( _ames_skip(&pac_u->pre_u) == c3y ) {
-      u3z(msg);
-    }
-    else {
-#endif
-      _ames_put_packet(sam_u, msg, pac_u->rut_u.lan_u);
-#ifdef AMES_SKIP
-    }
-#endif
+    _ames_put_packet(pac_u->sam_u, msg, pac_u->rut_u.lan_u);
     _ames_pact_free(pac_u);
   }
 }
@@ -1898,6 +1875,22 @@ _ames_hear(u3_ames* sam_u,
   cur_w += HEAD_SIZE;
 
   pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
+
+  //  ensure the protocol version matches ours
+  //
+  //    XX rethink use of [fit_o] here and elsewhere
+  //
+  if (  (c3y == sam_u->fig_u.fit_o)
+     && (sam_u->ver_y != pac_u->hed_u.ver_y) )
+  {
+    sam_u->sat_u.vet_d++;
+    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
+              sam_u->sat_u.vet_d);
+    }
+    _ames_pact_free(pac_u);
+    return;
+  }
 
   //  check contents match mug in header
   //
