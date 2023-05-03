@@ -86,7 +86,7 @@ _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
   c3_w lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %u\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
