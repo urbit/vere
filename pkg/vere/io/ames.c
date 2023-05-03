@@ -1895,11 +1895,9 @@ _ames_hear(u3_ames* sam_u,
   //  check contents match mug in header
   //
   if ( c3n == _ames_check_mug(pac_u) ) {
-    _log_head(&pac_u->hed_u);
+    // _log_head(&pac_u->hed_u);
     sam_u->sat_u.mut_d++;
-    //  TODO: reinstate filter after debugging is over
-    //  if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
-    if ( 1 ) {
+    if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
       u3l_log("ames: %" PRIu64 " dropped for invalid mug",
               sam_u->sat_u.mut_d);
     }
@@ -1912,8 +1910,10 @@ _ames_hear(u3_ames* sam_u,
   pre_w = _ames_prel_size(&pac_u->hed_u);
   if ( len_w < cur_w + pre_w ) {
     sam_u->sat_u.pre_d++;
-    u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
-            sam_u->sat_u.pre_d);
+    if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
+              sam_u->sat_u.pre_d);
+    }
     _ames_pact_free(pac_u);
     return;
   }
