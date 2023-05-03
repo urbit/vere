@@ -1131,7 +1131,7 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
-/* _fine_put_cache(): put list of packets into cache
+/* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
 _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
@@ -1139,16 +1139,16 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
     u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
     u3h_put(sam_u->fin_s.sac_p, key, lis);
+    u3z(key);
   }
   else {
-    c3_w cur_w = lop_w;
-    while ( lis != u3_nul ) {
-      u3_noun key = u3nc(u3k(pax), u3i_word(cur_w));
+    while ( u3_nul != lis ) {
+      u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
       u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+      u3z(key);
 
       lis = u3t(lis);
-      cur_w++;
-      u3z(key);
+      lop_w++;
     }
   }
 }
@@ -1564,49 +1564,60 @@ _fine_scry_path(u3_pact* pac_u, c3_o lop_o)
   return u3nc(pat, u3i_word(fra_w));
 }
 
-/* _fine_pack_scry_cb(): receive packets for datum out of fine
+/* _fine_hunk_scry_cb(): receive packets for datum out of fine
  */
-static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
+static void
+_fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_pact* pac_u = vod_p;
-  u3_assert( PACT_PURR == pac_u->typ_y );
   u3_ames* sam_u = pac_u->sam_u;
   u3_peep* pep_u = &pac_u->pur_u.pep_u;
+  u3_weak    fra = u3_none;
 
-  u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
-  c3_w lop_w = _fine_lop(pep_u->fra_w);
+  u3_assert( PACT_PURR == pac_u->typ_y );
 
-  //  if not [~ ~ fragments], mark as dead
-  //
-  u3_weak pas = u3r_at(7, nun);
-  if( pas == u3_none ) {
-    _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
-    _ames_pact_free(pac_u);
+  {
+    //  XX virtualize
+    u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
+    c3_w  lop_w = _fine_lop(pep_u->fra_w);
+    u3_weak pas = u3r_at(7, nun);
 
-    u3z(nun);
-    return;
-  }
+    //  if not [~ ~ fragments], mark as dead
+    //
+    if( u3_none == pas ) {
+      _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
+      _ames_pact_free(pac_u);
 
-  _fine_put_cache(sam_u, pax, lop_w, pas);
-
-  // find requested fragment
-  u3_weak fra = u3_none;
-  c3_w fra_w = lop_w;
-  u3_noun puz = pas;
-  while ( pas != u3_nul ) {
-    if ( pep_u->fra_w == fra_w ) {
-      fra = u3k(u3h(puz));
-      break;
+      u3z(nun);
+      return;
     }
-    fra_w++;
-    puz = u3t(puz);
+
+    _fine_put_cache(sam_u, pax, lop_w, pas);
+
+    //  find requested fragment
+    //
+    while ( u3_nul != pas ) {
+      if ( pep_u->fra_w == lop_w ) {
+        fra = u3k(u3h(pas));
+        break;
+      }
+      lop_w++;
+      pas = u3t(pas);
+    }
+
+    u3z(pax);
   }
 
   if ( fra == u3_none ) {
     u3l_log("fine: fragment number out of range");
     _ames_pact_free(pac_u);
   }
-  else if ( c3y == _fine_sift_meow(&pac_u->pur_u.mew_u, u3k(fra)) ) {
+  else if ( c3y == _fine_sift_meow(&pac_u->pur_u.mew_u, fra) ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: send %u %s", pac_u->pur_u.pep_u.fra_w,
+                                  pac_u->pur_u.pep_u.pat_c);
+    }
+
     _fine_etch_response(pac_u);
     _ames_try_send(pac_u, c3n);
   }
@@ -1616,7 +1627,6 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
   }
 
   u3z(nun);
-  u3z(fra);
 }
 
 static void
@@ -1733,12 +1743,12 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
     //  mark as pending in the scry cache
     //
-    _fine_put_cache(res_u->sam_u, u3k(u3h(key)), lop_w, FINE_PEND);
+    _fine_put_cache(res_u->sam_u, u3h(key), lop_w, FINE_PEND);
 
     //  scry into arvo for a page of packets
     //
     u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
-                      pax, res_u, _fine_pack_scry_cb);
+                      pax, res_u, _fine_hunk_scry_cb);
   }
   //  cache hit, fill in response meow and send
   //
