@@ -1707,15 +1707,20 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  already pending; drop
   //
   if ( FINE_PEND == cac ) {
-    u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
     _ames_pact_free(res_u);
   }
   //  cache miss or a previous scry blocked; try again
   //
   else if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-    u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
+
     c3_w lop_w = _fine_lop(res_u->pur_u.pep_u.fra_w);
     u3_noun pax =
       u3nc(c3__fine,
@@ -1736,8 +1741,10 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  cache hit, fill in response meow and send
   //
   else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-    u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
     _fine_etch_response(res_u);
     _ames_try_send(res_u, c3n);
   }
