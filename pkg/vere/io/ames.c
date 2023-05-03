@@ -1323,7 +1323,7 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
 
   //  if forwarding, track metrics
   //
-  if ( for_o ) {
+  if ( c3y == for_o ) {
     u3_ames* sam_u = pac_u->sam_u;
 
     sam_u->sat_u.fow_d++;
