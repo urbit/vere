@@ -1537,31 +1537,21 @@ _fine_lop(c3_w fra_w)
 }
 
 static u3_weak
-_fine_scry_path(u3_pact* pac_u, c3_o lop_o)
+_fine_scry_path(u3_pact* pac_u)
 {
-  u3_peep* pep_u = (
-    ( PACT_WAIL == pac_u->typ_y )
-    ? &pac_u->wal_u.pep_u
-    : &pac_u->pur_u.pep_u);
+  u3_peep* pep_u = ( PACT_WAIL == pac_u->typ_y )
+                   ? &pac_u->wal_u.pep_u
+                   : &pac_u->pur_u.pep_u;
+  u3_noun    ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish("stap"));
 
-  u3_noun pat;
-  {
-    u3_noun pux = u3i_string(pep_u->pat_c);
-    u3_noun ful = u3dc("rush", pux, u3v_wish("stap"));
-    if ( u3_nul == ful ) {
-      u3z(ful);
-      return u3_none;
-    }
-    pat = u3k(u3t(ful));
+  if ( u3_nul == ful ) {
+    return u3_none;
+  }
+  else {
+    u3_noun pro = u3k(u3t(ful));
     u3z(ful);
+    return pro;
   }
-
-  c3_w fra_w = pep_u->fra_w;
-  if ( c3y == lop_o ) {
-    fra_w = _fine_lop(fra_w);
-  }
-
-  return u3nc(pat, u3i_word(fra_w));
 }
 
 /* _fine_hunk_scry_cb(): receive packets for datum out of fine
@@ -1634,7 +1624,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 {
   u3_ames* sam_u = req_u->sam_u;
   u3_pact* res_u;
-  u3_weak    key;
+  u3_noun    key;
 
   if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
     sam_u->sat_u.wal_d++;
@@ -1647,14 +1637,20 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   }
   //  make scry cache key
   //
-  else if ( u3_none == (key = _fine_scry_path(req_u, c3n)) ) {
-    sam_u->sat_u.wap_d++;
-    if ( 0 == (sam_u->sat_u.wap_d % 100) ) {
-      u3l_log("fine: %" PRIu64 " dropped wails (path)",
-              sam_u->sat_u.wap_d);
+  else {
+    u3_weak yek = _fine_scry_path(req_u);
+
+    if ( u3_none == yek  ) {
+      sam_u->sat_u.wap_d++;
+      if ( 0 == (sam_u->sat_u.wap_d % 100) ) {
+        u3l_log("fine: %" PRIu64 " dropped wails (path)",
+                sam_u->sat_u.wap_d);
+      }
+      _ames_pact_free(req_u);
+      return;
     }
-    _ames_pact_free(req_u);
-    return;
+
+    key = yek;
   }
 
   //  fill in the parts of res_u that we know from req_u
@@ -1739,11 +1735,11 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
       u3nq(c3__hunk,
            u3dc("scot", c3__ud, u3i_word(lop_w)),
            u3dc("scot", c3__ud, FINE_PAGE),
-           u3k(u3h(key))));
+           u3k(key)));
 
     //  mark as pending in the scry cache
     //
-    _fine_put_cache(res_u->sam_u, u3h(key), lop_w, FINE_PEND);
+    _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
 
     //  scry into arvo for a page of packets
     //
