@@ -57,6 +57,8 @@
       c3_d           vet_d;             //  version mismatches filtered
       c3_d           mut_d;             //  invalid mugs filtered
       c3_d           pre_d;             //  failed to read prelude
+      c3_d           wal_d;             //  failed to read wail
+      c3_d           wap_d;             //  failed to read wail path
       c3_d           fal_d;             //  crash count
       c3_d           vil_d;             //  encryption failures
       c3_d           saw_d;             //  successive scry failures
@@ -1620,17 +1622,27 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 {
+  u3_ames* sam_u = req_u->sam_u;
   u3_pact* res_u;
-  u3_weak key;
+  u3_weak    key;
 
   if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
-    u3l_log("_fine_hear_request bad wail");
+    sam_u->sat_u.wal_d++;
+    if ( 0 == (sam_u->sat_u.wal_d % 100) ) {
+      u3l_log("fine: %" PRIu64 " dropped wails",
+              sam_u->sat_u.wal_d);
+    }
     _ames_pact_free(req_u);
     return;
   }
-
-  if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
-    u3l_log("fine: _fine_hear_request bad wail");
+  //  make scry cache key
+  //
+  else if ( u3_none == (key = _fine_scry_path(req_u, c3n)) ) {
+    sam_u->sat_u.wap_d++;
+    if ( 0 == (sam_u->sat_u.wap_d % 100) ) {
+      u3l_log("fine: %" PRIu64 " dropped wails (path)",
+              sam_u->sat_u.wap_d);
+    }
     _ames_pact_free(req_u);
     return;
   }
@@ -1678,14 +1690,6 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
       memcpy(res_u->pur_u.pep_u.pat_c, req_u->wal_u.pep_u.pat_c, len_s);
     }
 
-    //  make scry cache key
-    //
-    key = _fine_scry_path(req_u, c3n);
-    if ( u3_none == key ) {
-      u3l_log("fine: bad request");
-      _ames_pact_free(req_u);
-      return;
-    }
     //  free incoming request
     //
     _ames_pact_free(req_u);
@@ -2332,6 +2336,8 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("filtered-ver",     u3i_chub(sam_u->sat_u.vet_d)),
     u3_pier_mase("filtered-mug",     u3i_chub(sam_u->sat_u.mut_d)),
     u3_pier_mase("filtered-pre",     u3i_chub(sam_u->sat_u.pre_d)),
+    u3_pier_mase("filtered-wal",     u3i_chub(sam_u->sat_u.wal_d)),
+    u3_pier_mase("filtered-wap",     u3i_chub(sam_u->sat_u.wap_d)),
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
     u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
     u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
@@ -2374,6 +2380,8 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("          filtered (ver): %" PRIu64, sam_u->sat_u.vet_d);
   u3l_log("          filtered (mug): %" PRIu64, sam_u->sat_u.mut_d);
   u3l_log("          filtered (pre): %" PRIu64, sam_u->sat_u.pre_d);
+  u3l_log("          filtered (wal): %" PRIu64, sam_u->sat_u.wal_d);
+  u3l_log("          filtered (wap): %" PRIu64, sam_u->sat_u.wap_d);
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
   u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
