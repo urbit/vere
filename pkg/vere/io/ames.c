@@ -50,17 +50,16 @@
     } fig_u;                            //
     struct {                            //    stats:
       c3_d           dop_d;             //  drop count
-      c3_d           fal_d;             //  crash count
-      c3_d           saw_d;             //  successive scry failures
-      c3_d           hed_d;             //  failed to read header
-      c3_d           pre_d;             //  failed to read prelude
-      c3_d           vet_d;             //  version mismatches filtered
-      c3_d           mut_d;             //  invalid mugs filtered
-      c3_d           bod_d;             //  failed to read body
+      c3_d           fod_d;             //  forwards dropped count
       c3_d           foq_d;             //  forward queue size
       c3_d           fow_d;             //  forwarded count
-      c3_d           fod_d;             //  forwards dropped count
+      c3_d           hed_d;             //  failed to read header
+      c3_d           vet_d;             //  version mismatches filtered
+      c3_d           mut_d;             //  invalid mugs filtered
+      c3_d           pre_d;             //  failed to read prelude
+      c3_d           fal_d;             //  crash count
       c3_d           vil_d;             //  encryption failures
+      c3_d           saw_d;             //  successive scry failures
     } sat_u;                            //
   } u3_ames;
 
@@ -2308,16 +2307,23 @@ _ames_io_exit(u3_auto* car_u)
 static u3_noun
 _ames_io_info(u3_auto* car_u)
 {
-  u3_ames*  sam_u = (u3_ames*)car_u;
+  u3_ames*    sam_u = (u3_ames*)car_u;
+  c3_w sac_w, lax_w;
 
-  c3_w num_w = u3h_count(sam_u->fin_s.sac_p);
+  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);
 
+  lax_w = u3h_count(sam_u->lax_p) * 4;
+  u3h_discount(sam_u->lax_p);
+
   return u3i_list(
-    u3_pier_mase("scry-cache",       u3i_word(num_w)),
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         sam_u->fig_u.net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
+    u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
+    u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("lane-cache-size",  u3i_word(lax_w)),
     u3_pier_mase("dropped",          u3i_chub(sam_u->sat_u.dop_d)),
     u3_pier_mase("forwards-dropped", u3i_chub(sam_u->sat_u.fod_d)),
     u3_pier_mase("forwards-pending", u3i_chub(sam_u->sat_u.foq_d)),
@@ -2325,8 +2331,10 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("filtered-hed",     u3i_chub(sam_u->sat_u.hed_d)),
     u3_pier_mase("filtered-ver",     u3i_chub(sam_u->sat_u.vet_d)),
     u3_pier_mase("filtered-mug",     u3i_chub(sam_u->sat_u.mut_d)),
-    u3_pier_mase("filtered-bod",     u3i_chub(sam_u->sat_u.bod_d)),
+    u3_pier_mase("filtered-pre",     u3i_chub(sam_u->sat_u.pre_d)),
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
+    u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
+    u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
     u3_pier_mase("cached-lanes",     u3i_word(u3h_wyt(sam_u->lax_p))),
     u3_none);
 }
@@ -2336,7 +2344,15 @@ _ames_io_info(u3_auto* car_u)
 static void
 _ames_io_slog(u3_auto* car_u)
 {
-  u3_ames* sam_u = (u3_ames*)car_u;
+  u3_ames*    sam_u = (u3_ames*)car_u;
+  c3_w sac_w, lax_w;
+
+  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
+  u3h_discount(sam_u->fin_s.sac_p);
+
+  lax_w = u3h_count(sam_u->lax_p) * 4;
+  u3h_discount(sam_u->lax_p);
+
 
 # define FLAG(a) ( (c3y == a) ? "&" : "|" )
 
@@ -2346,6 +2362,9 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("        filtering: %s", FLAG(sam_u->fig_u.fit_o));
   u3l_log("         can send: %s", FLAG(sam_u->fig_u.net_o));
   u3l_log("         can scry: %s", FLAG(sam_u->fig_u.see_o));
+  u3l_log("        caches:");
+  u3l_log("          cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("          cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2354,8 +2373,10 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("          filtered (hed): %" PRIu64, sam_u->sat_u.hed_d);
   u3l_log("          filtered (ver): %" PRIu64, sam_u->sat_u.vet_d);
   u3l_log("          filtered (mug): %" PRIu64, sam_u->sat_u.mut_d);
-  u3l_log("          filtered (bod): %" PRIu64, sam_u->sat_u.bod_d);
+  u3l_log("          filtered (pre): %" PRIu64, sam_u->sat_u.pre_d);
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
+  u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
+  u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
   u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
 }
 
