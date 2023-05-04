@@ -543,6 +543,9 @@ _http_seq_done(void* ptr_v)
   _http_seq_unlink(seq_u);
 }
 
+static void
+_http_hgen_send(u3_hgen* gen_u);
+
 /* _http_req_timer_cb(): request timeout callback
 */
 static void
@@ -550,12 +553,26 @@ _http_req_timer_cb(uv_timer_t* tim_u)
 {
   u3_hreq* req_u = tim_u->data;
 
-  if ( u3_rsat_plan == req_u->sat_e ) {
-    _http_req_kill(req_u);
-    req_u->sat_e = u3_rsat_ripe;
+  switch ( req_u->sat_e ) {
+    case u3_rsat_init: u3_assert(0);
 
-    c3_c* msg_c = "gateway timeout";
-    h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    case u3_rsat_plan: {
+      _http_req_kill(req_u);
+      req_u->sat_e = u3_rsat_ripe;
+
+      c3_c* msg_c = "gateway timeout";
+      h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_ripe: {
+      u3_hgen* gen_u = req_u->gen_u;
+
+      gen_u->sat_e = u3_hgen_fail;
+
+      if ( c3y == gen_u->red ) {
+        _http_hgen_send(gen_u);
+      }
+    } break;
   }
 }
 
