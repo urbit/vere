@@ -15,6 +15,15 @@
 #include "vortex.h"
 #include "xtract.h"
 
+const c3_y u3s_dit_y[64] = {
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '-', '~'
+};
+
 /* _cs_jam_buf: struct for tracking the fibonacci-allocated jam of a noun
 */
 struct _cs_jam_fib {
@@ -461,7 +470,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
     }
 
     switch ( tag_e ) {
-      default: c3_assert(0);
+      default: u3_assert(0);
 
       case ur_jam_cell: {
         _cue_frame_t* fam_u = u3a_push(pil_u);
@@ -611,7 +620,7 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
 {
   u3_cue_xeno* sil_u;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( &(u3H->rod_u) == u3R );
 
   sil_u = c3_calloc(sizeof(*sil_u));
   ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
@@ -636,7 +645,7 @@ u3s_cue_xeno_with(u3_cue_xeno* sil_u,
 {
   u3_weak som;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( &(u3H->rod_u) == u3R );
 
   som = _cs_cue_xeno(sil_u, len_d, byt_y);
   ur_dict32_wipe(&sil_u->dic_u);
@@ -661,7 +670,7 @@ u3s_cue_xeno(c3_d        len_d,
   u3_cue_xeno* sil_u;
   u3_weak        som;
 
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( &(u3H->rod_u) == u3R );
 
   sil_u = u3s_cue_xeno_init();
   som   = _cs_cue_xeno(sil_u, len_d, byt_y);
@@ -719,7 +728,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
     _cs_cue_need(ur_bsr_tag(red_u, &tag_e));
 
     switch ( tag_e ) {
-      default: c3_assert(0);
+      default: u3_assert(0);
 
       case ur_jam_cell: {
         _cue_frame_t* fam_u = u3a_push(pil_u);
@@ -846,6 +855,443 @@ u3s_cue_atom(u3_atom a)
 
   return u3s_cue_bytes((c3_d)len_w, byt_y);
 }
+
+/* _cs_etch_ud_size(): output length in @ud for given mpz_t.
+*/
+static inline size_t
+_cs_etch_ud_size(mpz_t a_mp)
+{
+  size_t len_i = mpz_sizeinbase(a_mp, 10);
+  return len_i + (len_i / 3); // separators
+}
+
+/* _cs_etch_ud_bytes(): atom to @ud impl.
+*/
+static size_t
+_cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
+{
+  c3_y*   buf_y = hun_y + (len_i - 1);
+  mpz_t   b_mp;
+  c3_w     b_w;
+  size_t dif_i;
+
+  mpz_init2(b_mp, 10);
+
+  if ( !mpz_size(a_mp) ) {
+    *buf_y-- = '0';
+  }
+  else {
+    while ( 1 ) {
+      b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
+      u3_assert( mpz_get_ui(b_mp) == b_w ); // XX
+
+      if ( !mpz_size(a_mp) ) {
+        while ( b_w ) {
+          *buf_y-- = '0' + (b_w % 10);
+          b_w /= 10;
+        }
+        break;
+      }
+
+      *buf_y-- = '0' + (b_w % 10);
+      b_w /= 10;
+      *buf_y-- = '0' + (b_w % 10);
+      b_w /= 10;
+      *buf_y-- = '0' + (b_w % 10);
+      *buf_y-- = '.';
+    }
+  }
+
+  buf_y++;
+
+  u3_assert( buf_y >= hun_y ); // XX
+
+  //  mpz_sizeinbase may overestimate by 1
+  //
+  {
+    size_t dif_i = buf_y - hun_y;
+
+    if ( dif_i ) {
+      len_i -= dif_i;
+      memmove(hun_y, buf_y, len_i);
+      memset(hun_y + len_i, 0, dif_i);
+    }
+  }
+
+  mpz_clear(b_mp);
+
+  return len_i;
+}
+
+/* u3s_etch_ud_smol(): c3_d to @ud
+**
+**   =(26 (met 3 (scot %ud (dec (bex 64)))))
+*/
+c3_y*
+u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26])
+{
+  c3_y*  buf_y = hun_y + 25;
+  c3_w     b_w;
+
+  if ( !a_d ) {
+    *buf_y-- = '0';
+  }
+  else {
+    while ( 1 ) {
+      b_w  = a_d % 1000;
+      a_d /= 1000;
+
+      if ( !a_d ) {
+        while ( b_w ) {
+          *buf_y-- = '0' + (b_w % 10);
+          b_w /= 10;
+        }
+        break;
+      }
+
+      *buf_y-- = '0' + (b_w % 10);
+      b_w /= 10;
+      *buf_y-- = '0' + (b_w % 10);
+      b_w /= 10;
+      *buf_y-- = '0' + (b_w % 10);
+      *buf_y-- = '.';
+    }
+  }
+
+  return buf_y + 1;
+}
+
+/* u3s_etch_ud(): atom to @ud.
+*/
+u3_atom
+u3s_etch_ud(u3_atom a)
+{
+  c3_d a_d;
+
+  if ( c3y == u3r_safe_chub(a, &a_d) ) {
+    c3_y  hun_y[26];
+    c3_y* buf_y = u3s_etch_ud_smol(a_d, hun_y);
+    c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
+    return u3i_bytes(26 - dif_w, buf_y);
+  }
+
+  u3i_slab sab_u;
+  size_t   len_i;
+  mpz_t     a_mp;
+  u3r_mp(a_mp, a);
+
+  len_i = _cs_etch_ud_size(a_mp);
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_ud_bytes(a_mp, len_i, sab_u.buf_y);
+
+  mpz_clear(a_mp);
+  return u3i_slab_mint_bytes(&sab_u);
+}
+
+/* u3s_etch_ud_c(): atom to @ud, as a malloc'd c string.
+*/
+size_t
+u3s_etch_ud_c(u3_atom a, c3_c** out_c)
+{
+  c3_d     a_d;
+  size_t len_i;
+  c3_y*  buf_y;
+
+  if ( c3y == u3r_safe_chub(a, &a_d) ) {
+    c3_y  hun_y[26];
+
+    buf_y = u3s_etch_ud_smol(a_d, hun_y);
+    len_i = 26 - ((c3_p)buf_y - (c3_p)hun_y);
+
+    *out_c = c3_malloc(len_i + 1);
+    (*out_c)[len_i] = 0;
+    memcpy(*out_c, buf_y, len_i);
+
+    return len_i;
+  }
+
+  mpz_t   a_mp;
+  u3r_mp(a_mp, a);
+
+  len_i = _cs_etch_ud_size(a_mp);
+  buf_y = c3_malloc(len_i + 1);
+  buf_y[len_i] = 0;
+
+  len_i = _cs_etch_ud_bytes(a_mp, len_i, buf_y);
+
+  mpz_clear(a_mp);
+
+  *out_c = (c3_c*)buf_y;
+  return len_i;
+}
+
+/* _cs_etch_ux_bytes(): atom to @ux impl.
+*/
+static void
+_cs_etch_ux_bytes(u3_atom a, c3_w len_w, c3_y* buf_y)
+{
+  c3_w   i_w;
+  c3_s inp_s;
+
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    inp_s = u3r_short(i_w, a);
+
+    *buf_y-- = u3s_dit_y[(inp_s >>  0) & 0xf];
+    *buf_y-- = u3s_dit_y[(inp_s >>  4) & 0xf];
+    *buf_y-- = u3s_dit_y[(inp_s >>  8) & 0xf];
+    *buf_y-- = u3s_dit_y[(inp_s >> 12) & 0xf];
+    *buf_y-- = '.';
+  }
+
+  inp_s = u3r_short(len_w, a);
+
+  while ( inp_s ) {
+    *buf_y-- = u3s_dit_y[inp_s & 0xf];
+    inp_s >>= 4;
+  }
+
+  *buf_y-- = 'x';
+  *buf_y   = '0';
+}
+
+/* u3s_etch_ux(): atom to @ux.
+*/
+u3_atom
+u3s_etch_ux(u3_atom a)
+{
+  if ( u3_blip == a ) {
+    return c3_s3('0', 'x', '0');
+  }
+
+  c3_w     sep_w = u3r_met(4, a) - 1;                //  number of separators
+  c3_w     las_w = u3r_met(2, u3r_short(sep_w, a));  //  digits before separator
+  c3_w     len_w = 2 + las_w + (sep_w * 5);          //  output bytes
+  u3i_slab sab_u;
+  u3i_slab_bare(&sab_u, 3, len_w);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_ux_bytes(a, sep_w, sab_u.buf_y + len_w - 1);
+
+  return u3i_slab_moot_bytes(&sab_u);
+}
+
+/* u3s_etch_ux_c(): atom to @ux, as a malloc'd c string.
+*/
+size_t
+u3s_etch_ux_c(u3_atom a, c3_c** out_c)
+{
+  if ( u3_blip == a ) {
+    *out_c = strdup("0x0");
+    return 3;
+  }
+
+  c3_y*  buf_y;
+  c3_w   sep_w = u3r_met(4, a) - 1;
+  c3_w   las_w = u3r_met(2, u3r_short(sep_w, a));
+  size_t len_i = 2 + las_w + (sep_w * 5);
+
+  buf_y = c3_malloc(1 + len_i);
+  buf_y[len_i] = 0;
+  _cs_etch_ux_bytes(a, sep_w, buf_y + len_i - 1);
+
+  *out_c = (c3_c*)buf_y;
+  return len_i;
+}
+
+//  uint div+ceil non-zero
+//
+#define _divc_nz(x, y)  (((x) + ((y) - 1)) / (y))
+
+/* _cs_etch_uv_size(): output length in @uv (and aligned bits).
+*/
+static inline size_t
+_cs_etch_uv_size(u3_atom a, c3_w* out_w)
+{
+  c3_w met_w = u3r_met(0, a);
+  c3_w sep_w = _divc_nz(met_w, 25) - 1;  //  number of separators
+  c3_w max_w = sep_w * 25;
+  c3_w end_w = 0;
+  u3r_chop(0, max_w, 25, 0, &end_w, a);
+
+  c3_w bit_w = c3_bits_word(end_w);
+  c3_w las_w = _divc_nz(bit_w, 5);       //  digits before separator
+
+  *out_w = max_w;
+  return 2 + las_w + (sep_w * 6);
+}
+
+
+/* _cs_etch_uv_bytes(): atom to @uv impl.
+*/
+static void
+_cs_etch_uv_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
+{
+  c3_w   i_w;
+  c3_w inp_w;
+
+  for ( i_w = 0; i_w < max_w; i_w += 25 ) {
+    inp_w = 0;
+    u3r_chop(0, i_w, 25, 0, &inp_w, a);
+
+    *buf_y-- = u3s_dit_y[(inp_w >>  0) & 0x1f];
+    *buf_y-- = u3s_dit_y[(inp_w >>  5) & 0x1f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 10) & 0x1f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 15) & 0x1f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 20) & 0x1f];
+    *buf_y-- = '.';
+  }
+
+  inp_w = 0;
+  u3r_chop(0, max_w, 25, 0, &inp_w, a);
+
+  while ( inp_w ) {
+    *buf_y-- = u3s_dit_y[inp_w & 0x1f];
+    inp_w >>= 5;
+  }
+
+  *buf_y-- = 'v';
+  *buf_y   = '0';
+}
+
+/* u3s_etch_uv(): atom to @uv.
+*/
+u3_atom
+u3s_etch_uv(u3_atom a)
+{
+  if ( u3_blip == a ) {
+    return c3_s3('0', 'v', '0');
+  }
+
+  u3i_slab sab_u;
+  c3_w     max_w;
+  size_t   len_i = _cs_etch_uv_size(a, &max_w);
+
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_uv_bytes(a, max_w, sab_u.buf_y + len_i - 1);
+
+  return u3i_slab_moot_bytes(&sab_u);
+}
+
+/* u3s_etch_uv_c(): atom to @uv, as a malloc'd c string.
+*/
+size_t
+u3s_etch_uv_c(u3_atom a, c3_c** out_c)
+{
+  if ( u3_blip == a ) {
+    *out_c = strdup("0v0");
+    return 3;
+  }
+
+  c3_y*  buf_y;
+  c3_w   max_w;
+  size_t len_i = _cs_etch_uv_size(a, &max_w);
+
+  buf_y = c3_malloc(1 + len_i);
+  buf_y[len_i] = 0;
+  _cs_etch_uv_bytes(a, max_w, buf_y + len_i - 1);
+
+  *out_c = (c3_c*)buf_y;
+  return len_i;
+}
+
+/* _cs_etch_uw_size(): output length in @uw (and aligned bits).
+*/
+static inline size_t
+_cs_etch_uw_size(u3_atom a, c3_w* out_w)
+{
+  c3_w met_w = u3r_met(0, a);
+  c3_w sep_w = _divc_nz(met_w, 30) - 1;  //  number of separators
+  c3_w max_w = sep_w * 30;
+  c3_w end_w = 0;
+  u3r_chop(0, max_w, 30, 0, &end_w, a);
+
+  c3_w bit_w = c3_bits_word(end_w);
+  c3_w las_w = _divc_nz(bit_w, 6);       //  digits before separator
+
+  *out_w = max_w;
+  return 2 + las_w + (sep_w * 6);
+}
+
+/* _cs_etch_uw_bytes(): atom to @uw impl.
+*/
+static void
+_cs_etch_uw_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
+{
+  c3_w   i_w;
+  c3_w inp_w;
+
+  for ( i_w = 0; i_w < max_w; i_w += 30 ) {
+    inp_w = 0;
+    u3r_chop(0, i_w, 30, 0, &inp_w, a);
+
+    *buf_y-- = u3s_dit_y[(inp_w >>  0) & 0x3f];
+    *buf_y-- = u3s_dit_y[(inp_w >>  6) & 0x3f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 12) & 0x3f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 18) & 0x3f];
+    *buf_y-- = u3s_dit_y[(inp_w >> 24) & 0x3f];
+    *buf_y-- = '.';
+  }
+
+  inp_w = 0;
+  u3r_chop(0, max_w, 30, 0, &inp_w, a);
+
+  while ( inp_w ) {
+    *buf_y-- = u3s_dit_y[inp_w & 0x3f];
+    inp_w >>= 6;
+  }
+
+  *buf_y-- = 'w';
+  *buf_y   = '0';
+}
+
+/* u3s_etch_uw(): atom to @uw.
+*/
+u3_atom
+u3s_etch_uw(u3_atom a)
+{
+  if ( u3_blip == a ) {
+    return c3_s3('0', 'w', '0');
+  }
+
+  u3i_slab sab_u;
+  c3_w     max_w;
+  size_t   len_i = _cs_etch_uw_size(a, &max_w);
+
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_uw_bytes(a, max_w, sab_u.buf_y + len_i - 1);
+
+  return u3i_slab_moot_bytes(&sab_u);
+}
+
+/* u3s_etch_uw_c(): atom to @uw, as a malloc'd c string.
+*/
+size_t
+u3s_etch_uw_c(u3_atom a, c3_c** out_c)
+{
+  if ( u3_blip == a ) {
+    *out_c = strdup("0w0");
+    return 3;
+  }
+
+  c3_y*  buf_y;
+  c3_w   max_w;
+  size_t len_i = _cs_etch_uw_size(a, &max_w);
+
+  buf_y = c3_malloc(1 + len_i);
+  buf_y[len_i] = 0;
+  _cs_etch_uw_bytes(a, max_w, buf_y + len_i - 1);
+
+  *out_c = (c3_c*)buf_y;
+  return len_i;
+}
+
+#undef _divc_nz
 
 #define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
 #define BLOCK(a) (  ('.' == (a)[0]) \

@@ -224,7 +224,7 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
                                kev,
                                use_w);
 
-    c3_assert( c3y == u3h_slot_is_node(*sot_w) );
+    u3_assert( c3y == u3h_slot_is_node(*sot_w) );
     *sot_w = u3h_node_to_slot(hav_v);
   }
   else {

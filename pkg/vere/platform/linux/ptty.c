@@ -47,7 +47,7 @@ _ttyf_start_raw_input(u3_utty* uty_u)
     return c3n;
   }
   if ( -1 == fcntl(uty_u->fid_i, F_SETFL, pty_u->nob_i) ) {
-    c3_assert(!"init-fcntl");
+    u3_assert(!"init-fcntl");
   }
   return c3y;
 }
@@ -62,7 +62,7 @@ _ttyf_end_raw_input(u3_utty* uty_u)
     return c3n;
   }
   if ( -1 == fcntl(uty_u->fid_i, F_SETFL, pty_u->cug_i) ) {
-    c3_assert(!"exit-fcntl");
+    u3_assert(!"exit-fcntl");
   }
   return c3y;
 }
@@ -75,19 +75,19 @@ _ttyf_hija(u3_utty* uty_u)
   u3_ptty* pty_u = (u3_ptty*)uty_u;
   if ( 0 != _term_tcsetattr(1, TCSADRAIN, &pty_u->bak_u) ) {
     perror("hija-tcsetattr-1");
-    c3_assert(!"hija-tcsetattr");
+    u3_assert(!"hija-tcsetattr");
   }
   if ( -1 == fcntl(1, F_SETFL, pty_u->cug_i) ) {
     perror("hija-fcntl-1");
-    c3_assert(!"hija-fcntl");
+    u3_assert(!"hija-fcntl");
   }
   if ( 0 != _term_tcsetattr(0, TCSADRAIN, &pty_u->bak_u) ) {
     perror("hija-tcsetattr-0");
-    c3_assert(!"hija-tcsetattr");
+    u3_assert(!"hija-tcsetattr");
   }
   if ( -1 == fcntl(0, F_SETFL, pty_u->cug_i) ) {
     perror("hija-fcntl-0");
-    c3_assert(!"hija-fcntl");
+    u3_assert(!"hija-fcntl");
   }
   return c3y;
 }
@@ -100,19 +100,19 @@ _ttyf_loja(u3_utty* uty_u)
   u3_ptty* pty_u = (u3_ptty*)uty_u;
   if ( 0 != _term_tcsetattr(1, TCSADRAIN, &pty_u->raw_u) ) {
     perror("loja-tcsetattr-1");
-    c3_assert(!"loja-tcsetattr");
+    u3_assert(!"loja-tcsetattr");
   }
   if ( -1 == fcntl(1, F_SETFL, pty_u->nob_i) ) {
     perror("hija-fcntl-1");
-    c3_assert(!"loja-fcntl");
+    u3_assert(!"loja-fcntl");
   }
   if ( 0 != _term_tcsetattr(0, TCSADRAIN, &pty_u->raw_u) ) {
     perror("loja-tcsetattr-0");
-    c3_assert(!"loja-tcsetattr");
+    u3_assert(!"loja-tcsetattr");
   }
   if ( -1 == fcntl(0, F_SETFL, pty_u->nob_i) ) {
     perror("hija-fcntl-0");
-    c3_assert(!"loja-fcntl");
+    u3_assert(!"loja-fcntl");
   }
   return c3y;
 }
@@ -156,10 +156,10 @@ u3_ptty_init(uv_loop_t* lup_u, const c3_c** err_c)
   //
   {
     if ( 0 != tcgetattr(uty_u->fid_i, &pty_u->bak_u) ) {
-      c3_assert(!"init-tcgetattr");
+      u3_assert(!"init-tcgetattr");
     }
     if ( -1 == fcntl(uty_u->fid_i, F_GETFL, &pty_u->cug_i) ) {
-      c3_assert(!"init-fcntl");
+      u3_assert(!"init-fcntl");
     }
     pty_u->cug_i &= ~O_NONBLOCK;                // could fix?
     pty_u->nob_i = pty_u->cug_i | O_NONBLOCK;   // O_NDELAY on older unix

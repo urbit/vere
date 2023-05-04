@@ -12,7 +12,7 @@ u3_auto_plan(u3_auto* car_u, u3_ovum *egg_u)
   egg_u->car_u = car_u;
 
   if ( !car_u->ent_u ) {
-    c3_assert(!car_u->ext_u);
+    u3_assert(!car_u->ext_u);
 
     egg_u->pre_u = egg_u->nex_u = 0;
     car_u->ent_u = car_u->ext_u = egg_u;
@@ -42,12 +42,12 @@ u3_auto_plan(u3_auto* car_u, u3_ovum *egg_u)
 u3_ovum*
 u3_auto_redo(u3_auto* car_u, u3_ovum *egg_u)
 {
-  c3_assert( egg_u->car_u == car_u );
+  u3_assert( egg_u->car_u == car_u );
 
   egg_u->try_w++;
 
   if ( !car_u->ent_u ) {
-    c3_assert(!car_u->ext_u);
+    u3_assert(!car_u->ext_u);
 
     egg_u->pre_u = egg_u->nex_u = 0;
     car_u->ent_u = car_u->ext_u = egg_u;
@@ -159,7 +159,7 @@ void
 u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u)
 {
   {
-    c3_assert( egg_u->car_u );
+    u3_assert( egg_u->car_u );
 
     //  the previous ovum (or [ext_u]) will point to our next ovum
     //
@@ -206,7 +206,7 @@ u3_auto_next(u3_auto* car_u, u3_noun* ovo)
     else {
       u3_ovum* egg_u = car_u->ext_u;
 
-      c3_assert( !egg_u->pre_u );
+      u3_assert( !egg_u->pre_u );
 
       if ( egg_u->nex_u ) {
         egg_u->nex_u->pre_u = 0;
@@ -413,9 +413,9 @@ _auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u)
 
   //  assert that io callbacks are present (info_f and slog_f are optional)
   //
-  c3_assert( car_u->io.talk_f );
-  c3_assert( car_u->io.kick_f );
-  c3_assert( car_u->io.exit_f );
+  u3_assert( car_u->io.talk_f );
+  u3_assert( car_u->io.kick_f );
+  u3_assert( car_u->io.exit_f );
 
   car_u->pir_u = pir_u;
   car_u->nex_u = nex_u;
