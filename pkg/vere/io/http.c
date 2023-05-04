@@ -495,7 +495,11 @@ _http_req_kill(u3_hreq* req_u)
 typedef struct _u3_hgen {
   h2o_generator_t neg_u;             // response callbacks
   c3_o            red;               // ready to send
-  c3_o            dun;               // done sending
+  enum {                             //
+    u3_hgen_wait = 0,                //  more expected
+    u3_hgen_done = 1,                //  complete
+    u3_hgen_fail = 2                 //  failed
+  } sat_e;
   u3_hbod*        bod_u;             // pending body
   u3_hbod*        nud_u;             // pending free
   u3_hhed*        hed_u;             // pending free
@@ -717,20 +721,27 @@ _http_hgen_send(u3_hgen* gen_u)
   gen_u->nud_u = gen_u->bod_u;
   gen_u->bod_u = 0;
 
-  if ( c3n == gen_u->dun ) {
-    h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
-    uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
-  }
-  else {
-    //  close connection if shutdown pending
-    //
-    u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
+  switch ( gen_u->sat_e ) {
+    case u3_hgen_wait: {
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
+      uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
+    } break;
 
-    if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
-      rec_u->http1_is_persistent = 0;
-    }
+    case u3_hgen_done: {
+      //  close connection if shutdown pending
+      //
+      u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
 
-    h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+      if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
+        rec_u->http1_is_persistent = 0;
+      }
+
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+    } break;
+
+    case u3_hgen_fail: {
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_ERROR);
+    } break;
   }
 
   c3_free(vec_u);
@@ -745,7 +756,7 @@ _http_hgen_stop(h2o_generator_t* neg_u, h2o_req_t* rec_u)
 
   //  response not complete, enqueue cancel
   //
-  if ( c3n == gen_u->dun ) {
+  if ( u3_hgen_wait == gen_u->sat_e ) {
     _http_req_kill(gen_u->req_u);
   }
 }
@@ -763,7 +774,7 @@ _http_hgen_proceed(h2o_generator_t* neg_u, h2o_req_t* rec_u)
 
   gen_u->red = c3y;
 
-  if ( 0 != gen_u->bod_u || c3y == gen_u->dun ) {
+  if ( gen_u->bod_u || (u3_hgen_wait != gen_u->sat_e) ) {
     _http_hgen_send(gen_u);
   }
 }
@@ -827,7 +838,7 @@ _http_start_respond(u3_hreq* req_u,
                                         _http_hgen_dispose);
   gen_u->neg_u = (h2o_generator_t){ _http_hgen_proceed, _http_hgen_stop };
   gen_u->red   = c3y;
-  gen_u->dun   = complete;
+  gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
   gen_u->bod_u = ( u3_nul == data ) ?
                  0 : _cttp_bod_from_octs(u3k(u3t(data)));
   gen_u->nud_u = 0;
@@ -876,14 +887,7 @@ _http_continue_respond(u3_hreq* req_u,
 
   uv_timer_stop(req_u->tim_u);
 
-  // XX proposed sequence number safety check
-  // if ( sequence <= gen_u->sequence ) {
-  //   return;
-  // }
-  //
-  // u3_assert( sequence == ++gen_u->sequence );
-
-  gen_u->dun = complete;
+  gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
 
   if ( u3_nul != data ) {
     u3_hbod* bod_u = _cttp_bod_from_octs(u3k(u3t(data)));
@@ -907,6 +911,34 @@ _http_continue_respond(u3_hreq* req_u,
   }
 
   u3z(data); u3z(complete);
+}
+
+/* _http_cancel_respond(): apply [%http-response %cancel ~].
+*/
+static void
+_http_cancel_respond(u3_hreq* req_u)
+{
+  switch ( req_u->sat_e ) {
+    case u3_rsat_init: u3_assert(0);
+
+    case u3_rsat_plan: {
+      req_u->sat_e = u3_rsat_ripe; // XX confirm
+
+      c3_c* msg_c = "hosed";
+      h2o_send_error_generic(req_u->rec_u, 500, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_ripe: {
+      u3_hgen* gen_u = req_u->gen_u;
+
+      uv_timer_stop(req_u->tim_u);
+      gen_u->sat_e = u3_hgen_fail;
+
+      if ( c3y == gen_u->red ) {
+        _http_hgen_send(gen_u);
+      }
+    }
+  }
 }
 
 /* _http_rec_to_httq(): convert h2o_req_t to httq
@@ -2118,7 +2150,7 @@ _http_ef_http_server(u3_httd* htd_u,
         _http_continue_respond(req_u, u3k(data), u3k(complete));
       }
       else if (c3y == u3r_sing_c("cancel", u3h(response))) {
-        u3l_log("http: %%cancel not handled yet");
+        _http_cancel_respond(req_u);
       }
       else {
         u3l_log("http: strange response");
