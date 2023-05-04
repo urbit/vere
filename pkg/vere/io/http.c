@@ -700,19 +700,19 @@ _http_hgen_dispose(void* ptr_v)
   gen_u->bod_u = 0;
 }
 
+/* _http_hgen_send(): send (some/more of a) response.
+*/
 static void
 _http_hgen_send(u3_hgen* gen_u)
 {
-  u3_assert( c3y == gen_u->red );
-
-  u3_hreq* req_u = gen_u->req_u;
-  h2o_req_t* rec_u = req_u->rec_u;
-
-  c3_w len_w;
+  u3_hreq*     req_u = gen_u->req_u;
+  h2o_req_t*   rec_u = req_u->rec_u;
+  c3_w         len_w;
   h2o_iovec_t* vec_u = _cttp_bods_to_vec(gen_u->bod_u, &len_w);
 
   //  not ready again until _proceed
   //
+  u3_assert( c3y == gen_u->red );
   gen_u->red = c3n;
 
   //  stash [bod_u] to free later
@@ -788,10 +788,9 @@ _http_start_respond(u3_hreq* req_u,
                     u3_noun data,
                     u3_noun complete)
 {
-  // u3l_log("start");
-
   if ( u3_rsat_plan != req_u->sat_e ) {
-    //u3l_log("duplicate response");
+    u3l_log("http: %%start not sane");
+    u3z(status); u3z(headers); u3z(data); u3z(complete);
     return;
   }
 
@@ -862,24 +861,16 @@ _http_start_respond(u3_hreq* req_u,
   u3z(status); u3z(headers); u3z(data); u3z(complete);
 }
 
-/* _http_continue_respond(): write a [%http-response %continue ...] to
- * h2o_req_t->res
+/* _http_continue_respond(): apply [%http-response %continue ...].
 */
 static void
 _http_continue_respond(u3_hreq* req_u,
-                       /* u3_noun status, */
-                       /* u3_noun headers, */
-                       u3_noun data,
+                       u3_noun   data,
                        u3_noun complete)
 {
-  // u3l_log("continue");
-
-  // XX add sequence numbers for %continue effects?
-  // Arvo does not (currently) guarantee effect idempotence!!
-
-  // response has not yet been started
   if ( u3_rsat_ripe != req_u->sat_e ) {
-    // u3l_log("duplicate response");
+    u3l_log("http: %%continue before %%start");
+    u3z(data); u3z(complete);
     return;
   }
 
