@@ -5,22 +5,22 @@
 #include "noun.h"
 #include "ur.h"
 
-#define FINE_PAGE       512  //  packets per page
-#define FINE_FRAG      1024  //  bytes per fragment packet
-#define FINE_PATH_MAX   384  //  longest allowed scry path
-#define HEAD_SIZE         4  //  header size in bytes
+#define FINE_PAGE       512             //  packets per page
+#define FINE_FRAG      1024             //  bytes per fragment packet
+#define FINE_PATH_MAX   384             //  longest allowed scry path
+#define HEAD_SIZE         4             //  header size in bytes
 
 //  a hack to work around the inability to delete from a hashtable
 //
-#define FINE_PEND         1  //  scry cache sentinel value: "pending"
-#define FINE_DEAD         2  //  scry cache sentinel value: "dead"
+#define FINE_PEND         1             //  scry cache sentinel value: "pending"
+#define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
 /* u3_fine: fine networking
 */
   typedef struct _u3_fine {
-    c3_y              ver_y;               //  fine protocol
-    u3p(u3h_root)     sac_p;               //  scry cache hashtable
-    struct _u3_ames*  sam_u;               // ames backpointer
+    c3_y              ver_y;            //  fine protocol
+    u3p(u3h_root)     sac_p;            //  scry cache hashtable
+    struct _u3_ames*  sam_u;            //  ames backpointer
   } u3_fine;
 
 /* u3_ames: ames networking.
@@ -50,17 +50,18 @@
     } fig_u;                            //
     struct {                            //    stats:
       c3_d           dop_d;             //  drop count
-      c3_d           fal_d;             //  crash count
-      c3_d           saw_d;             //  successive scry failures
-      c3_d           hed_d;             //  failed to read header
-      c3_d           pre_d;             //  failed to read prelude
-      c3_d           vet_d;             //  version mismatches filtered
-      c3_d           mut_d;             //  invalid mugs filtered
-      c3_d           bod_d;             //  failed to read body
+      c3_d           fod_d;             //  forwards dropped count
       c3_d           foq_d;             //  forward queue size
       c3_d           fow_d;             //  forwarded count
-      c3_d           fod_d;             //  forwards dropped count
+      c3_d           hed_d;             //  failed to read header
+      c3_d           vet_d;             //  version mismatches filtered
+      c3_d           mut_d;             //  invalid mugs filtered
+      c3_d           pre_d;             //  failed to read prelude
+      c3_d           wal_d;             //  failed to read wail
+      c3_d           wap_d;             //  failed to read wail path
+      c3_d           fal_d;             //  crash count
       c3_d           vil_d;             //  encryption failures
+      c3_d           saw_d;             //  successive scry failures
     } sat_u;                            //
   } u3_ames;
 
@@ -94,7 +95,7 @@
     c3_c*   pat_c;                      //  path as ascii
   } u3_peep;
 
-/*  u3_wail: signed fine request body
+/*  u3_wail: fine request body
 */
   typedef struct _u3_wail {
     c3_y    tag_y;                      //  tag (always 0, unsigned)
@@ -115,8 +116,8 @@
 /* u3_purr: fine packet response
 */
   typedef struct _u3_purr {
-    u3_peep pep_u;
-    u3_meow mew_u;
+    u3_peep pep_u;                      //  fragment number + path
+    u3_meow mew_u;                      //  fragment
   } u3_purr;
 
 /* u3_body: ames packet body
@@ -130,9 +131,9 @@
 /* u3_ptag: packet-type tag
 */
   typedef enum _u3_ptag {
-    PACT_AMES = 1,  //  ames packet
-    PACT_WAIL = 2,  //  fine request packet
-    PACT_PURR = 3   //  fine response packet
+    PACT_AMES = 1,                      //  ames packet
+    PACT_WAIL = 2,                      //  fine request packet
+    PACT_PURR = 3                       //  fine response packet
   } u3_ptag;
 
 /* u3_pact: ames packet
@@ -1130,7 +1131,7 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
-/* _fine_put_cache(): put list of packets into cache
+/* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
 _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
@@ -1138,16 +1139,16 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
     u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
     u3h_put(sam_u->fin_s.sac_p, key, lis);
+    u3z(key);
   }
   else {
-    c3_w cur_w = lop_w;
-    while ( lis != u3_nul ) {
-      u3_noun key = u3nc(u3k(pax), u3i_word(cur_w));
+    while ( u3_nul != lis ) {
+      u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
       u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+      u3z(key);
 
       lis = u3t(lis);
-      cur_w++;
-      u3z(key);
+      lop_w++;
     }
   }
 }
@@ -1322,7 +1323,7 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
 
   //  if forwarding, track metrics
   //
-  if ( for_o ) {
+  if ( c3y == for_o ) {
     u3_ames* sam_u = pac_u->sam_u;
 
     sam_u->sat_u.fow_d++;
@@ -1535,77 +1536,80 @@ _fine_lop(c3_w fra_w)
   return 1 + (((fra_w - 1) / FINE_PAGE) * FINE_PAGE);
 }
 
+/* _fine_scry_path(): parse path from wail or purr.
+*/
 static u3_weak
-_fine_scry_path(u3_pact* pac_u, c3_o lop_o)
+_fine_scry_path(u3_pact* pac_u)
 {
-  u3_peep* pep_u = (
-    ( PACT_WAIL == pac_u->typ_y )
-    ? &pac_u->wal_u.pep_u
-    : &pac_u->pur_u.pep_u);
+  u3_peep* pep_u = ( PACT_WAIL == pac_u->typ_y )
+                   ? &pac_u->wal_u.pep_u
+                   : &pac_u->pur_u.pep_u;
+  u3_noun    ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish("stap"));
 
-  u3_noun pat;
-  {
-    u3_noun pux = u3i_string(pep_u->pat_c);
-    u3_noun ful = u3dc("rush", pux, u3v_wish("stap"));
-    if ( u3_nul == ful ) {
-      u3z(ful);
-      return u3_none;
-    }
-    pat = u3k(u3t(ful));
+  if ( u3_nul == ful ) {
+    return u3_none;
+  }
+  else {
+    u3_noun pro = u3k(u3t(ful));
     u3z(ful);
+    return pro;
   }
-
-  c3_w fra_w = pep_u->fra_w;
-  if ( c3y == lop_o ) {
-    fra_w = _fine_lop(fra_w);
-  }
-
-  return u3nc(pat, u3i_word(fra_w));
 }
 
-/* _fine_pack_scry_cb(): receive packets for datum out of fine
+/* _fine_hunk_scry_cb(): receive packets for datum out of fine
  */
-static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
+static void
+_fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_pact* pac_u = vod_p;
-  u3_assert( PACT_PURR == pac_u->typ_y );
   u3_ames* sam_u = pac_u->sam_u;
   u3_peep* pep_u = &pac_u->pur_u.pep_u;
+  u3_weak    fra = u3_none;
 
-  u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
-  c3_w lop_w = _fine_lop(pep_u->fra_w);
+  u3_assert( PACT_PURR == pac_u->typ_y );
 
-  //  if not [~ ~ fragments], mark as dead
-  //
-  u3_weak pas = u3r_at(7, nun);
-  if( pas == u3_none ) {
-    _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
-    _ames_pact_free(pac_u);
+  {
+    //  XX virtualize
+    u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
+    c3_w  lop_w = _fine_lop(pep_u->fra_w);
+    u3_weak pas = u3r_at(7, nun);
 
-    u3z(nun);
-    return;
-  }
+    //  if not [~ ~ fragments], mark as dead
+    //
+    if( u3_none == pas ) {
+      _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
+      _ames_pact_free(pac_u);
 
-  _fine_put_cache(sam_u, pax, lop_w, pas);
-
-  // find requested fragment
-  u3_weak fra = u3_none;
-  c3_w fra_w = lop_w;
-  u3_noun puz = pas;
-  while ( pas != u3_nul ) {
-    if ( pep_u->fra_w == fra_w ) {
-      fra = u3k(u3h(puz));
-      break;
+      u3z(nun);
+      return;
     }
-    fra_w++;
-    puz = u3t(puz);
+
+    _fine_put_cache(sam_u, pax, lop_w, pas);
+
+    //  find requested fragment
+    //
+    while ( u3_nul != pas ) {
+      if ( pep_u->fra_w == lop_w ) {
+        fra = u3k(u3h(pas));
+        break;
+      }
+      lop_w++;
+      pas = u3t(pas);
+    }
+
+    u3z(pax);
   }
 
   if ( fra == u3_none ) {
     u3l_log("fine: fragment number out of range");
     _ames_pact_free(pac_u);
   }
-  else if ( c3y == _fine_sift_meow(&pac_u->pur_u.mew_u, u3k(fra)) ) {
+  else if ( c3y == _fine_sift_meow(&pac_u->pur_u.mew_u, fra) ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: send %u %s", pac_u->pur_u.pep_u.fra_w,
+                                  pac_u->pur_u.pep_u.pat_c);
+    }
+
     _fine_etch_response(pac_u);
     _ames_try_send(pac_u, c3n);
   }
@@ -1615,26 +1619,42 @@ static void _fine_pack_scry_cb(void* vod_p, u3_noun nun)
   }
 
   u3z(nun);
-  u3z(fra);
 }
 
-//  TODO: check protocol version
+/* _fine_hear_request(): hear wail (fine equeust packet packet).
+*/
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 {
+  u3_ames* sam_u = req_u->sam_u;
   u3_pact* res_u;
-  u3_weak key;
+  u3_noun    key;
 
   if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
-    u3l_log("_fine_hear_request bad wail");
+    sam_u->sat_u.wal_d++;
+    if ( 0 == (sam_u->sat_u.wal_d % 100) ) {
+      u3l_log("fine: %" PRIu64 " dropped wails",
+              sam_u->sat_u.wal_d);
+    }
     _ames_pact_free(req_u);
     return;
   }
+  //  make scry cache key
+  //
+  else {
+    u3_weak yek = _fine_scry_path(req_u);
 
-  if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
-    u3l_log("fine: _fine_hear_request bad wail");
-    _ames_pact_free(req_u);
-    return;
+    if ( u3_none == yek  ) {
+      sam_u->sat_u.wap_d++;
+      if ( 0 == (sam_u->sat_u.wap_d % 100) ) {
+        u3l_log("fine: %" PRIu64 " dropped wails (path)",
+                sam_u->sat_u.wap_d);
+      }
+      _ames_pact_free(req_u);
+      return;
+    }
+
+    key = yek;
   }
 
   //  fill in the parts of res_u that we know from req_u
@@ -1680,14 +1700,6 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
       memcpy(res_u->pur_u.pep_u.pat_c, req_u->wal_u.pep_u.pat_c, len_s);
     }
 
-    //  make scry cache key
-    //
-    key = _fine_scry_path(req_u, c3n);
-    if ( u3_none == key ) {
-      u3l_log("fine: bad request");
-      _ames_pact_free(req_u);
-      return;
-    }
     //  free incoming request
     //
     _ames_pact_free(req_u);
@@ -1707,37 +1719,44 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  already pending; drop
   //
   if ( FINE_PEND == cac ) {
-    u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
     _ames_pact_free(res_u);
   }
   //  cache miss or a previous scry blocked; try again
   //
   else if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-    u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
+
     c3_w lop_w = _fine_lop(res_u->pur_u.pep_u.fra_w);
     u3_noun pax =
       u3nc(c3__fine,
       u3nq(c3__hunk,
-           u3dc("scot", c3__ud, lop_w),
+           u3dc("scot", c3__ud, u3i_word(lop_w)),
            u3dc("scot", c3__ud, FINE_PAGE),
-           u3k(u3h(key))));
+           u3k(key)));
 
     //  mark as pending in the scry cache
     //
-    _fine_put_cache(res_u->sam_u, u3k(u3h(key)), lop_w, FINE_PEND);
+    _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
 
     //  scry into arvo for a page of packets
     //
     u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
-                      pax, res_u, _fine_pack_scry_cb);
+                      pax, res_u, _fine_hunk_scry_cb);
   }
   //  cache hit, fill in response meow and send
   //
   else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-    u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
+    }
     _fine_etch_response(res_u);
     _ames_try_send(res_u, c3n);
   }
@@ -1749,7 +1768,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   u3z(key);
 }
 
-//  TODO: check protocol version
+/* _fine_hear_response(): hear purr (fine response packet).
+*/
 static void
 _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
@@ -1758,51 +1778,31 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
                      u3nc(c3n, u3_ames_encode_lane(pac_u->rut_u.lan_u)),
                      u3i_bytes(pac_u->len_w, pac_u->hun_y));
 
-  u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, u3k(wir), u3k(cad));
+  u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
-
-  u3z(cad);
-  u3z(wir);
 }
 
+/* _ames_hear_ames(): hear ames packet.
+*/
 static void
 _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 {
-  //  ensure the protocol version matches ours
-  //
-  //    XX rethink use of [fit_o] here and elsewhere
-  //
-  u3_ames* sam_u = pac_u->sam_u;
-  if (  (c3y == sam_u->fig_u.fit_o)
-     && (sam_u->ver_y != pac_u->hed_u.ver_y) )
-  {
-    sam_u->sat_u.vet_d++;
-    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
-              sam_u->sat_u.vet_d);
-    }
-
+#ifdef AMES_SKIP
+  if ( c3_y == _ames_skip(&pac_u->pre_u) ) {
     _ames_pact_free(pac_u);
+    return;
   }
+#endif
 
-  //  otherwise, inject the packet as an event
-  //
-  else {
+  {
     u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
-#ifdef AMES_SKIP
-    if ( _ames_skip(&pac_u->pre_u) == c3y ) {
-      u3z(msg);
-    }
-    else {
-#endif
-      _ames_put_packet(sam_u, msg, pac_u->rut_u.lan_u);
-#ifdef AMES_SKIP
-    }
-#endif
+    _ames_put_packet(pac_u->sam_u, msg, pac_u->rut_u.lan_u);
     _ames_pact_free(pac_u);
   }
 }
 
+/* _ames_try_forward(): forward packet, updating lane if needed.
+*/
 static void
 _ames_try_forward(u3_pact* pac_u)
 {
@@ -1843,18 +1843,18 @@ _ames_try_forward(u3_pact* pac_u)
 }
 
 /* _ames_hear(): parse a (potential) packet, dispatch appropriately.
-
-  packet filtering needs to revised for two protocol-change scenarios
-
-    - packets using old protocol versions from our sponsees
-      these must be let through, and this is a transitive condition;
-      they must also be forwarded where appropriate
-      they can be validated, as we know their semantics
-
-    - packets using newer protocol versions
-      these should probably be let through, or at least
-      trigger printfs suggesting upgrade.
-      they cannot be filtered, as we do not know their semantics
+**
+**    packet filtering needs to revised for two protocol-change scenarios
+**
+**    - packets using old protocol versions from our sponsees
+**      these must be let through, and this is a transitive condition;
+**      they must also be forwarded where appropriate
+**      they can be validated, as we know their semantics
+**
+**    - packets using newer protocol versions
+**      these should probably be let through, or at least
+**      trigger printfs suggesting upgrade.
+**      they cannot be filtered, as we do not know their semantics
 */
 static void
 _ames_hear(u3_ames* sam_u,
@@ -1863,11 +1863,12 @@ _ames_hear(u3_ames* sam_u,
            c3_y*    hun_y)
 {
   u3_pact* pac_u;
-  c3_w pre_w;
-  c3_w cur_w = 0;  //  cursor: how many bytes we've read from hun_y
+  c3_w     pre_w;
+  c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
 
   //  make sure packet is big enough to have a header
-  if (HEAD_SIZE > len_w) {
+  //
+  if ( HEAD_SIZE > len_w ) {
     sam_u->sat_u.hed_d++;
     if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
       u3l_log("ames: %" PRIu64 " dropped, failed to read header",
@@ -1892,14 +1893,28 @@ _ames_hear(u3_ames* sam_u,
 
   pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
 
+  //  ensure the protocol version matches ours
+  //
+  //    XX rethink use of [fit_o] here and elsewhere
+  //
+  if (  (c3y == sam_u->fig_u.fit_o)
+     && (sam_u->ver_y != pac_u->hed_u.ver_y) )
+  {
+    sam_u->sat_u.vet_d++;
+    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
+              sam_u->sat_u.vet_d);
+    }
+    _ames_pact_free(pac_u);
+    return;
+  }
+
   //  check contents match mug in header
   //
   if ( c3n == _ames_check_mug(pac_u) ) {
-    _log_head(&pac_u->hed_u);
+    // _log_head(&pac_u->hed_u);
     sam_u->sat_u.mut_d++;
-    //  TODO: reinstate filter after debugging is over
-    //  if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
-    if ( 1 ) {
+    if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
       u3l_log("ames: %" PRIu64 " dropped for invalid mug",
               sam_u->sat_u.mut_d);
     }
@@ -1912,8 +1927,10 @@ _ames_hear(u3_ames* sam_u,
   pre_w = _ames_prel_size(&pac_u->hed_u);
   if ( len_w < cur_w + pre_w ) {
     sam_u->sat_u.pre_d++;
-    u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
-            sam_u->sat_u.pre_d);
+    if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
+              sam_u->sat_u.pre_d);
+    }
     _ames_pact_free(pac_u);
     return;
   }
@@ -2308,16 +2325,23 @@ _ames_io_exit(u3_auto* car_u)
 static u3_noun
 _ames_io_info(u3_auto* car_u)
 {
-  u3_ames*  sam_u = (u3_ames*)car_u;
+  u3_ames*    sam_u = (u3_ames*)car_u;
+  c3_w sac_w, lax_w;
 
-  c3_w num_w = u3h_count(sam_u->fin_s.sac_p);
+  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);
 
+  lax_w = u3h_count(sam_u->lax_p) * 4;
+  u3h_discount(sam_u->lax_p);
+
   return u3i_list(
-    u3_pier_mase("scry-cache",       u3i_word(num_w)),
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         sam_u->fig_u.net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
+    u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
+    u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("lane-cache-size",  u3i_word(lax_w)),
     u3_pier_mase("dropped",          u3i_chub(sam_u->sat_u.dop_d)),
     u3_pier_mase("forwards-dropped", u3i_chub(sam_u->sat_u.fod_d)),
     u3_pier_mase("forwards-pending", u3i_chub(sam_u->sat_u.foq_d)),
@@ -2325,8 +2349,12 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("filtered-hed",     u3i_chub(sam_u->sat_u.hed_d)),
     u3_pier_mase("filtered-ver",     u3i_chub(sam_u->sat_u.vet_d)),
     u3_pier_mase("filtered-mug",     u3i_chub(sam_u->sat_u.mut_d)),
-    u3_pier_mase("filtered-bod",     u3i_chub(sam_u->sat_u.bod_d)),
+    u3_pier_mase("filtered-pre",     u3i_chub(sam_u->sat_u.pre_d)),
+    u3_pier_mase("filtered-wal",     u3i_chub(sam_u->sat_u.wal_d)),
+    u3_pier_mase("filtered-wap",     u3i_chub(sam_u->sat_u.wap_d)),
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
+    u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
+    u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
     u3_pier_mase("cached-lanes",     u3i_word(u3h_wyt(sam_u->lax_p))),
     u3_none);
 }
@@ -2336,7 +2364,15 @@ _ames_io_info(u3_auto* car_u)
 static void
 _ames_io_slog(u3_auto* car_u)
 {
-  u3_ames* sam_u = (u3_ames*)car_u;
+  u3_ames*    sam_u = (u3_ames*)car_u;
+  c3_w sac_w, lax_w;
+
+  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
+  u3h_discount(sam_u->fin_s.sac_p);
+
+  lax_w = u3h_count(sam_u->lax_p) * 4;
+  u3h_discount(sam_u->lax_p);
+
 
 # define FLAG(a) ( (c3y == a) ? "&" : "|" )
 
@@ -2346,6 +2382,9 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("        filtering: %s", FLAG(sam_u->fig_u.fit_o));
   u3l_log("         can send: %s", FLAG(sam_u->fig_u.net_o));
   u3l_log("         can scry: %s", FLAG(sam_u->fig_u.see_o));
+  u3l_log("        caches:");
+  u3l_log("          cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("          cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2354,8 +2393,12 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("          filtered (hed): %" PRIu64, sam_u->sat_u.hed_d);
   u3l_log("          filtered (ver): %" PRIu64, sam_u->sat_u.vet_d);
   u3l_log("          filtered (mug): %" PRIu64, sam_u->sat_u.mut_d);
-  u3l_log("          filtered (bod): %" PRIu64, sam_u->sat_u.bod_d);
+  u3l_log("          filtered (pre): %" PRIu64, sam_u->sat_u.pre_d);
+  u3l_log("          filtered (wal): %" PRIu64, sam_u->sat_u.wal_d);
+  u3l_log("          filtered (wap): %" PRIu64, sam_u->sat_u.wap_d);
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
+  u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
+  u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
   u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
 }
 
