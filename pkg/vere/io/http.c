@@ -567,6 +567,12 @@ _http_req_timer_cb(uv_timer_t* tim_u)
     case u3_rsat_ripe: {
       u3_hgen* gen_u = req_u->gen_u;
 
+      //  inform %eyre if response was incomplete
+      //
+      if ( u3_hgen_wait == gen_u->sat_e ) {
+        _http_req_kill(req_u);
+      }
+
       gen_u->sat_e = u3_hgen_fail;
 
       if ( c3y == gen_u->red ) {
