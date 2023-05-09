@@ -1031,7 +1031,7 @@ u3m_water(c3_w* low_w, c3_w* hig_w)
 {
   u3_assert(u3R == &u3H->rod_u);
 
-  *low_w = u3a_heap(u3R);
+  *low_w = u3R->hat_p;
   *hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
 }
 
