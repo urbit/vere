@@ -121,7 +121,7 @@ _test_skip_slot(void)
   {
     c3_w mug_w = 31 << 20; //  5 bits, all ones
     c3_w res_w = _ch_skip_slot(mug_w, 20);
-    c3_assert((1 << 25) == res_w);
+    u3_assert((1 << 25) == res_w);
 
     if ( (1 << 25) != res_w ) {
       fprintf(stderr, "bit skip_slot (d): failed\r\n");

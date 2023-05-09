@@ -3,11 +3,6 @@ name: shared
 on:
   workflow_call:
     inputs:
-      docker:
-        description: 'Build and upload image to Docker Hub'
-        type: boolean
-        default: false
-        required: false
       pace:
         description: 'Release pace'
         type: string
@@ -126,7 +121,7 @@ jobs:
       - name: Run unit tests
         run: |
           if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-            bazel test --build_tests_only --clang_version=14.0.6 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
+            bazel test --build_tests_only --clang_version=15.0.7 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
           else
             bazel test --build_tests_only ...
           fi
@@ -162,7 +157,8 @@ jobs:
           bazel build :version_str
           sha_version=$(cat ./bazel-bin/version)
           if ${{ inputs.next != null }}; then
-            target="gs://${UPLOAD_BASE}/next/kelvin/${{ inputs.next }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
+            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
           else
             target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
           fi
@@ -182,42 +178,6 @@ jobs:
             echo "upload to $target complete." ||
             echo "upload to $target failed.";
           exit $exitcode
-
-
-      #
-      # DOCKER
-      #
-      - uses: docker/docker-login-action@v1.8.0
-        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - uses: christian-korneck/update-container-description-action@v1
-        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/urbit
-          provider: dockerhub
-          short_description: 'Urbit: a clean-slate OS and network for the 21st century'
-          readme_file: 'docker/README.md'
-
-      - name: Build and push version-tagged Docker image
-        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
-        run: |
-          bazel run //docker:push_version_x86_64
-
-      - name: Build and push pace-tagged Docker image
-        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' }}
-        run: |
-          bazel run //docker:push_pace_x86_64
-
-      - name: Build and push latest-tagged Docker image
-        if: ${{ inputs.docker && matrix.target == 'linux-x86_64' && inputs.pace == 'live' }}
-        run: |
-          bazel run //docker:push_latest_x86_64
 
   upload-version-string:
     name: Upload latest deployed version string to GCP

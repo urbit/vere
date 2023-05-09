@@ -49,7 +49,7 @@ u3_write_fd(c3_i fid_i, const void* buf_v, size_t len_i)
     //
     if ( ret_i < 0 ) {
       fprintf(stderr, "term: write failed %s\r\n", strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
     //  continue partial writes
     //
@@ -188,7 +188,7 @@ u3_term_log_init(void)
     //  Start raw input.
     //
     if ( c3n == uty_u->sta_f(uty_u) ) {
-      c3_assert(!"init-tcsetattr");
+      u3_assert(!"init-tcsetattr");
     }
 
     //  initialize spinner timeout
@@ -211,7 +211,7 @@ u3_term_log_exit(void)
     for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
       if ( uty_u->fid_i == -1 ) { continue; }
       if ( c3n == uty_u->sto_f(uty_u) ) {
-        c3_assert(!"exit-tcsetattr");
+        u3_assert(!"exit-tcsetattr");
       }
       u3_write_fd(uty_u->fid_i, "\r\n", 2);
     }
@@ -603,8 +603,8 @@ _term_io_belt(u3_utty* uty_u, u3_noun blb)
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
   u3_noun cad = u3nc(c3__belt, blb);
 
-  c3_assert( 1 == uty_u->tid_l );
-  c3_assert( uty_u->car_u );
+  u3_assert( 1 == uty_u->tid_l );
+  u3_assert( uty_u->car_u );
 
   {
     u3_ovum* egg_u = _term_ovum_plan(uty_u->car_u, wir, cad);
@@ -1072,7 +1072,7 @@ u3_term_ef_winc(void)
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
     u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
 
-    c3_assert( 1 == u3_Host.uty_u->tid_l );
+    u3_assert( 1 == u3_Host.uty_u->tid_l );
 
     _term_ovum_plan(u3_Host.uty_u->car_u, wir, cad);
   }
@@ -1089,7 +1089,7 @@ u3_term_ef_ctlc(void)
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
     u3_noun cad = u3nq(c3__belt, c3__mod, c3__ctl, 'c');
 
-    c3_assert( 1 == uty_u->tid_l );
+    u3_assert( 1 == uty_u->tid_l );
     _term_ovum_plan(uty_u->car_u, wir, cad);
   }
 }
@@ -1465,12 +1465,12 @@ u3_term_io_hija(void)
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
       //
-      c3_assert(0);
+      u3_assert(0);
     }
     else {
       if ( c3n == u3_Host.ops_u.tem ) {
         if ( c3y != uty_u->hij_f(uty_u) ) {
-          c3_assert(!"hija-tcsetattr");
+          u3_assert(!"hija-tcsetattr");
         }
 
         //  move the cursor to the bottom left corner,
@@ -1496,7 +1496,7 @@ u3_term_io_loja(int x, FILE* f)
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
       //
-      c3_assert(0);
+      u3_assert(0);
     }
     else {
       if ( c3y == u3_Host.ops_u.tem ) {
@@ -1505,7 +1505,7 @@ u3_term_io_loja(int x, FILE* f)
       }
       else {
         if ( c3y != uty_u->loj_f(uty_u) ) {
-          c3_assert(!"loja-tcsetattr");
+          u3_assert(!"loja-tcsetattr");
         }
 
         //  push the printfs up one more line,
@@ -1775,7 +1775,7 @@ u3_term_io_init(u3_pier* pir_u)
 {
   u3_auto* car_u = c3_calloc(sizeof(*car_u));
 
-  c3_assert( u3_Host.uty_u );
+  u3_assert( u3_Host.uty_u );
   u3_Host.uty_u->car_u = car_u;
 
   car_u->nam_m = c3__term;

@@ -21,34 +21,6 @@
 
   /** Random useful C macros.
   **/
-    /* Assert.  Good to capture.
-
-       TODO: determine which c3_assert calls can rather call c3_dessert, i.e. in
-       public releases, which calls to c3_assert should abort and which should
-       no-op? If the latter, is the assert useful inter-development to validate
-       conditions we might accidentally break or not useful at all?
-    */
-
-#     if defined(ASAN_ENABLED) && defined(__clang__)
-#       define c3_assert(x)                       \
-          do {                                    \
-            if (!(x)) {                           \
-              assert(x);                          \
-            }                                     \
-          } while(0)
-#     else
-#       define c3_assert(x)                       \
-          do {                                    \
-            if (!(x)) {                           \
-              fflush(stderr);                     \
-              fprintf(stderr, "\rAssertion '%s' " \
-                      "failed in %s:%d\r\n",      \
-                      #x, __FILE__, __LINE__);    \
-              abort();                            \
-            }                                     \
-          } while(0)
-#endif
-
     /* Dessert. Debug assert. If a debugger is attached, it will break in and
        execution can be allowed to proceed without aborting the process.
        Otherwise, the unhandled SIGTRAP will dump core.
@@ -71,7 +43,7 @@
 
     /* Stub.
     */
-#     define c3_stub       c3_assert(!"stub")
+#     define c3_stub       u3_assert(!"stub")
 
     /* Size in words.
     */
@@ -137,7 +109,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_malloc(%" PRIu64 ") failed\r\n",  \
                           (c3_d)s);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 #     define c3_calloc(s) ({                                    \
@@ -145,7 +117,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_calloc(%" PRIu64 ") failed\r\n",  \
                           (c3_d)s);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 #     define c3_realloc(a, b) ({                                \
@@ -153,7 +125,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_realloc(%" PRIu64 ") failed\r\n", \
                           (c3_d)b);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 

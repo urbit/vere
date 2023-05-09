@@ -17,7 +17,12 @@ jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
     with:
-      docker: true
       pace: 'soon'
       upload: true
+    secrets: inherit
+
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'soon'
     secrets: inherit

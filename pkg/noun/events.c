@@ -160,14 +160,14 @@ u3e_check(c3_c* cap_c)
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
       mug_w = _ce_mug_page(_ce_ptr(i_w));
       if ( strcmp(cap_c, "boot") ) {
-        c3_assert(mug_w == u3K.mug_w[i_w]);
+        u3_assert(mug_w == u3K.mug_w[i_w]);
       }
       sum_w += mug_w;
     }
     for ( i_w = 0; i_w < sou_w; i_w++ ) {
       mug_w = _ce_mug_page(_ce_ptr((u3P.pag_w - (i_w + 1))));
       if ( strcmp(cap_c, "boot") ) {
-        c3_assert(mug_w == u3K.mug_w[(u3P.pag_w - (i_w + 1))]);
+        u3_assert(mug_w == u3K.mug_w[(u3P.pag_w - (i_w + 1))]);
       }
       sum_w += mug_w;
     }
@@ -235,7 +235,7 @@ _ce_ward_clip(c3_w nop_w, c3_w sop_w)
     return u3e_flaw_base;
   }
 
-  c3_assert( old_w != u3P.gar_w );
+  u3_assert( old_w != u3P.gar_w );
 
   return u3e_flaw_good;
 }
@@ -288,7 +288,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
 
   if ( -1 == fstat(img_u->fid_i, &buf_u) ) {
     fprintf(stderr, "loom: stat %s: %s\r\n", img_u->nam_c, strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
     return c3n;
   }
   else {
@@ -360,7 +360,7 @@ _ce_patch_write_control(u3_ce_patch* pat_u)
     else {
       fprintf(stderr, "loom: patch ctl write: %s\r\n", strerror(errno));
     }
-    c3_assert(0);
+    u3_assert(0);
   }
 }
 
@@ -371,12 +371,12 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
 {
   c3_w len_w;
 
-  c3_assert(0 == pat_u->con_u);
+  u3_assert(0 == pat_u->con_u);
   {
     struct stat buf_u;
 
     if ( -1 == fstat(pat_u->ctl_i, &buf_u) ) {
-      c3_assert(0);
+      u3_assert(0);
       return c3n;
     }
     len_w = (c3_w) buf_u.st_size;
@@ -410,13 +410,13 @@ _ce_patch_create(u3_ce_patch* pat_u)
   snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
   if ( -1 == (pat_u->ctl_i = c3_open(ful_c, O_RDWR | O_CREAT | O_EXCL, 0600)) ) {
     fprintf(stderr, "loom: patch c3_open control.bin: %s\r\n", strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 
   snprintf(ful_c, 8192, "%s/.urb/chk/memory.bin", u3P.dir_c);
   if ( -1 == (pat_u->mem_i = c3_open(ful_c, O_RDWR | O_CREAT | O_EXCL, 0600)) ) {
     fprintf(stderr, "loom: patch c3_open memory.bin: %s\r\n", strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 }
 
@@ -568,7 +568,7 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
     else {
       fprintf(stderr, "loom: patch write: fail: %s\r\n", strerror(errno));
     }
-    c3_assert(0);
+    u3_assert(0);
   }
 }
 
@@ -658,7 +658,7 @@ _ce_patch_compose(c3_w nor_w, c3_w sou_w)
       pgc_w = _ce_patch_save_page(pat_u, (u3P.pag_w - (i_w + 1)), pgc_w);
     }
 
-    c3_assert( pgc_w == pgs_w );
+    u3_assert( pgc_w == pgs_w );
 
     pat_u->con_u->nor_w = nor_w;
     pat_u->con_u->sou_w = sou_w;
@@ -677,13 +677,13 @@ _ce_patch_sync(u3_ce_patch* pat_u)
   if ( -1 == c3_sync(pat_u->ctl_i) ) {
     fprintf(stderr, "loom: control file sync failed: %s\r\n",
                     strerror(errno));
-    c3_assert(!"loom: control sync");
+    u3_assert(!"loom: control sync");
   }
 
   if ( -1 == c3_sync(pat_u->mem_i) ) {
     fprintf(stderr, "loom: patch file sync failed: %s\r\n",
                     strerror(errno));
-    c3_assert(!"loom: patch sync");
+    u3_assert(!"loom: patch sync");
   }
 }
 
@@ -695,7 +695,7 @@ _ce_image_sync(u3e_image* img_u)
   if ( -1 == c3_sync(img_u->fid_i) ) {
     fprintf(stderr, "loom: image (%s) sync failed: %s\r\n",
                     img_u->nam_c, strerror(errno));
-    c3_assert(!"loom: image sync");
+    u3_assert(!"loom: image sync");
   }
 }
 
@@ -712,13 +712,13 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
       fprintf(stderr, "loom: image (%s) truncate: "
                       "offset overflow (%" PRId64 ") for page %u\r\n",
                       img_u->nam_c, (c3_ds)off_i, pgs_w);
-      c3_assert(0);
+      u3_assert(0);
     }
 
     if ( ftruncate(img_u->fid_i, off_i) ) {
       fprintf(stderr, "loom: image (%s) truncate: %s\r\n",
                       img_u->nam_c, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -742,7 +742,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
   //
   if ( -1 == lseek(pat_u->mem_i, 0, SEEK_SET) ) {
     fprintf(stderr, "loom: patch apply seek: %s\r\n", strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 
   //  write patch pages into the appropriate image
@@ -770,7 +770,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       else {
         fprintf(stderr, "loom: patch apply read: %s\r\n", strerror(errno));
       }
-      c3_assert(0);
+      u3_assert(0);
     }
     else {
       if ( _ce_page !=
@@ -783,7 +783,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
         else {
           fprintf(stderr, "loom: patch apply write: %s\r\n", strerror(errno));
         }
-        c3_assert(0);
+        u3_assert(0);
       }
     }
 #if 0
@@ -894,7 +894,7 @@ _ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
     if ( 0 != mprotect(_ce_ptr(0), _ce_len(pgs_w), PROT_READ) ) {
       fprintf(stderr, "loom: pure north (%u pages): %s\r\n",
                       pgs_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -907,7 +907,7 @@ _ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
     {
       fprintf(stderr, "loom: foul north (%u pages, %u old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
 
 #ifdef U3_GUARD_PAGE
@@ -917,7 +917,7 @@ _ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
     //
     if ( u3P.gar_w < old_w ) {
       fprintf(stderr, "loom: guard on reprotect\r\n");
-      c3_assert( !_ce_ward_protect() );
+      u3_assert( !_ce_ward_protect() );
     }
 #endif
   }
@@ -939,7 +939,7 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
     {
       fprintf(stderr, "loom: pure south (%u pages): %s\r\n",
                       pgs_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -953,7 +953,7 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
     {
       fprintf(stderr, "loom: foul south (%u pages, %u old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
 
 #ifdef U3_GUARD_PAGE
@@ -963,7 +963,7 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
     //
     if ( u3P.gar_w >= off_w ) {
       fprintf(stderr, "loom: guard on reprotect\r\n");
-      c3_assert( !_ce_ward_protect() );
+      u3_assert( !_ce_ward_protect() );
     }
 #endif
   }
@@ -993,7 +993,7 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
     {
       fprintf(stderr, "loom: file-backed mmap failed (%u pages): %s\r\n",
                       pgs_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -1008,7 +1008,7 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
     {
       fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
-      c3_assert(0);
+      u3_assert(0);
     }
 
 #ifdef U3_GUARD_PAGE
@@ -1018,7 +1018,7 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
     //
     if ( u3P.gar_w < old_w ) {
       fprintf(stderr, "loom: guard on remap\r\n");
-      c3_assert( !_ce_ward_protect() );
+      u3_assert( !_ce_ward_protect() );
     }
 #endif
   }
@@ -1046,7 +1046,7 @@ _ce_loom_blit_north(c3_i fid_i, c3_w pgs_w)
       else {
         fprintf(stderr, "loom: blit north read %s\r\n", strerror(errno));
       }
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -1073,7 +1073,7 @@ _ce_loom_blit_south(c3_i fid_i, c3_w pgs_w)
       else {
         fprintf(stderr, "loom: blit south read: %s\r\n", strerror(errno));
       }
-      c3_assert(0);
+      u3_assert(0);
     }
   }
 
@@ -1100,7 +1100,7 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
       fprintf(stderr, "loom: image (%s) fine read: %s\r\n",
                       img_u->nam_c, strerror(errno));
     }
-    c3_assert(0);
+    u3_assert(0);
   }
 
   {
@@ -1301,7 +1301,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
     c3_w nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
     c3_w sop_w = hig_p >> u3a_page;
 
-    c3_assert( (u3P.gar_w > nop_w) && (u3P.gar_w < sop_w) );
+    u3_assert( (u3P.gar_w > nop_w) && (u3P.gar_w < sop_w) );
 
     if ( !(pat_u = _ce_patch_compose(nor_w, u3P.pag_w - sop_w)) ) {
       return;
@@ -1319,13 +1319,13 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_patch_sync(pat_u);
 
   if ( c3n == _ce_patch_verify(pat_u) ) {
-    c3_assert(!"loom: save failed");
+    u3_assert(!"loom: save failed");
   }
 
 #ifdef U3_SNAPSHOT_VALIDATION
   //  check that clean pages are correct
   //
-  c3_assert( c3y == _ce_loom_fine() );
+  u3_assert( c3y == _ce_loom_fine() );
 #endif
 
   _ce_patch_apply(pat_u);
@@ -1338,10 +1338,10 @@ u3e_save(u3_post low_p, u3_post hig_p)
 #ifdef U3_SNAPSHOT_VALIDATION
   {
     c3_w pgs_w;
-    c3_assert( c3y   == _ce_image_stat(&u3P.nor_u, &pgs_w) );
-    c3_assert( pgs_w == u3P.nor_u.pgs_w );
-    c3_assert( c3y   == _ce_image_stat(&u3P.sou_u, &pgs_w) );
-    c3_assert( pgs_w == u3P.sou_u.pgs_w );
+    u3_assert( c3y   == _ce_image_stat(&u3P.nor_u, &pgs_w) );
+    u3_assert( pgs_w == u3P.nor_u.pgs_w );
+    u3_assert( c3y   == _ce_image_stat(&u3P.sou_u, &pgs_w) );
+    u3_assert( pgs_w == u3P.sou_u.pgs_w );
   }
 #endif
 
@@ -1356,8 +1356,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
   //
   _ce_loom_protect_north(u3P.nor_u.pgs_w, nod_w);
 
-  c3_assert( c3y == _ce_loom_track_sane() );
-  c3_assert( c3y == _ce_loom_fine() );
+  u3_assert( c3y == _ce_loom_track_sane() );
+  u3_assert( c3y == _ce_loom_fine() );
 #endif
 
   if ( u3C.wag_w & u3o_no_demand ) {
@@ -1478,7 +1478,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       }
 
 #ifdef U3_GUARD_PAGE
-      c3_assert( !_ce_ward_post(nor_w, u3P.pag_w - sou_w) );
+      u3_assert( !_ce_ward_post(nor_w, u3P.pag_w - sou_w) );
 #endif
     }
   }
@@ -1503,7 +1503,7 @@ u3e_yolo(void)
     return c3n;
   }
 
-  c3_assert( !_ce_ward_protect() );
+  u3_assert( !_ce_ward_protect() );
 
   return c3y;
 }
@@ -1526,7 +1526,7 @@ u3e_init(void)
   u3e_foul();
 
 #ifdef U3_GUARD_PAGE
-  c3_assert( !_ce_ward_post(0, u3P.pag_w) );
+  u3_assert( !_ce_ward_post(0, u3P.pag_w) );
 #endif
 }
 
@@ -1541,9 +1541,9 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   c3_w pag_w = u3P.gar_w;
 
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
-    c3_assert( !_ce_ward_post(nop_w, sop_w) );
-    c3_assert( !_ce_flaw_protect(pag_w) );
-    c3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
+    u3_assert( !_ce_ward_post(nop_w, sop_w) );
+    u3_assert( !_ce_flaw_protect(pag_w) );
+    u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
 }

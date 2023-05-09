@@ -620,7 +620,7 @@ _find_home(void)
     if ( (nor_w != u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
       fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
-      c3_assert(!"loom: corrupt size");
+      u3_assert(!"loom: corrupt size");
     }
   }
 
@@ -758,7 +758,7 @@ u3m_bail(u3_noun how)
         fprintf(stderr, "\r\nbail: %s\r\n", str_c);
       }
       else if ( 1 != u3h(how) ) {
-        c3_assert(_(u3ud(u3h(how))));
+        u3_assert(_(u3ud(u3h(how))));
         fprintf(stderr, "\r\nbail: %d\r\n", u3h(how));
       }
     }
@@ -784,7 +784,7 @@ u3m_bail(u3_noun how)
     //    XX JB: these seem unrecoverable, at least wrt memory management,
     //    so they've been disabled above for now
     //
-    c3_assert(_(u3a_is_cat(how)));
+    u3_assert(_(u3a_is_cat(how)));
     u3m_signal(how);
   }
 
@@ -884,7 +884,7 @@ u3m_leap(c3_w pad_w)
   /* Attach the new road to its parents.
   */
   {
-    c3_assert(0 == u3R->kid_p);
+    u3_assert(0 == u3R->kid_p);
     rod_u->par_p = u3of(u3_road, u3R);
     u3R->kid_p = u3of(u3_road, rod_u);
   }
@@ -915,7 +915,7 @@ _print_diff(c3_c* cap_c, c3_w a, c3_w b)
 void
 u3m_fall()
 {
-  c3_assert(0 != u3R->par_p);
+  u3_assert(0 != u3R->par_p);
 
 #if 0
   /*  If you're printing a lot of these you need to change
@@ -963,7 +963,7 @@ u3m_fall()
 void
 u3m_hate(c3_w pad_w)
 {
-  c3_assert(0 == u3R->ear_p);
+  u3_assert(0 == u3R->ear_p);
 
   u3R->ear_p = u3R->cap_p;
   u3m_leap(pad_w);
@@ -1155,7 +1155,7 @@ u3m_soft_sure(u3_funk fun_f, u3_noun arg)
 {
   u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg);
 
-  c3_assert(_(u3du(pru)));
+  u3_assert(_(u3du(pru)));
   pro = u3k(u3t(pru));
   u3z(pru);
 
@@ -1235,9 +1235,9 @@ u3m_soft_run(u3_noun gul,
     /* Produce - or fall again.
     */
     {
-      c3_assert(_(u3du(why)));
+      u3_assert(_(u3du(why)));
       switch ( u3h(why) ) {
-        default: c3_assert(0); return 0;
+        default: u3_assert(0); return 0;
 
         case 0: {                             //  unusual: bail with success.
           pro = u3m_love(why);
@@ -1290,7 +1290,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Assert preconditions.
   */
   {
-    c3_assert(0 != u3R->ski.gul);
+    u3_assert(0 != u3R->ski.gul);
     gul = u3h(u3R->ski.gul);
   }
 
@@ -1397,7 +1397,7 @@ u3m_soft(c3_w    mil_w,
       //
       default: {
         u3m_p("invalid mot", u3h(why));
-        c3_assert(0);
+        u3_assert(0);
       }
     }
 
@@ -1704,7 +1704,7 @@ _cm_limits(void)
   //  Moar stack.
   //
   {
-    c3_assert( 0 == getrlimit(RLIMIT_STACK, &rlm) );
+    u3_assert( 0 == getrlimit(RLIMIT_STACK, &rlm) );
 
     rlm.rlim_cur = c3_min(rlm.rlim_max, (65536 << 10));
 
@@ -1774,7 +1774,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
                     adr_w, u3_Loom, u3_Loom + u3C.wor_i);
-    c3_assert(0);
+    u3_assert(0);
     return 0;
   }
 
@@ -1784,7 +1784,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
     //  page tracking invariants violated, fatal
     //
     case u3e_flaw_sham: {
-      c3_assert(0);
+      u3_assert(0);
       return 0;
     }
 
@@ -1793,7 +1793,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
     //    XX s/b recoverable, need to u3m_signal() a new mote
     //
     case u3e_flaw_base: {
-      c3_assert(0);
+      u3_assert(0);
       return 0;
     }
 
@@ -1807,7 +1807,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
     case u3e_flaw_good: return 1;
   }
 
-  c3_assert(!"unpossible");
+  u3_assert(!"unpossible");
 }
 
 /* u3m_foul(): dirty all pages and disable tracking.
@@ -1830,7 +1830,7 @@ u3m_save(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
-  c3_assert(u3R == &u3H->rod_u);
+  u3_assert(u3R == &u3H->rod_u);
 
 #if 1  // XX redundant
   {
@@ -1851,7 +1851,7 @@ u3m_save(void)
     else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
       fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
                       nox_w, nor_w, sox_w, sor_w);
-      c3_assert(!"busted");
+      u3_assert(!"busted");
     }
   }
 #endif
@@ -1883,7 +1883,7 @@ u3m_ward(void)
     if (  (low_w > (u3P.gar_w << u3a_page))
        || (hig_w < (u3P.gar_w << u3a_page)) )
     {
-      c3_assert(  ((low_p >> u3a_page) >= u3P.gar_w)
+      u3_assert(  ((low_p >> u3a_page) >= u3P.gar_w)
                || ((hig_p >> u3a_page) <= u3P.gar_w) );
     }
   }
@@ -2157,7 +2157,7 @@ _cm_pack_rewrite(void)
 {
   //  XX fix u3a_rewrit* to support south roads
   //
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( &(u3H->rod_u) == u3R );
 
   //  NB: these implementations must be kept in sync with u3m_reclaim();
   //  anything not reclaimed must be rewritable
@@ -2224,8 +2224,8 @@ _migrate_seek(const u3a_road *rod_u)
     {
       if (!box_u->use_w)
         continue;
-      c3_assert(box_u->siz_w);
-      c3_assert(box_u->use_w);
+      u3_assert(box_u->siz_w);
+      u3_assert(box_u->use_w);
       box_w[box_u->siz_w - 1] = new_p;
       new_p = c3_align(new_p + box_u->siz_w, 2, C3_ALGHI);
     }
@@ -2281,8 +2281,8 @@ _migrate_move(u3a_road *rod_u)
       continue;
 
     new_w = (void *)u3a_botox(u3a_into(new_p));
-    c3_assert(box_w[siz_w - 1] == new_p);
-    c3_assert(new_w <= box_w);
+    u3_assert(box_w[siz_w - 1] == new_p);
+    u3_assert(new_w <= box_w);
 
     c3_w i_w;
     for (i_w = 0; i_w < siz_w - 1; i_w++)
