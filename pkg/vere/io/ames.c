@@ -1393,8 +1393,6 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
   u3_ames* sam_u = pac_u->sam_u;
   u3_weak    las = u3r_at(7, nun);
 
-  sam_u->sat_u.foq_d--;
-
   //  if scry fails, remember we can't scry, and just inject the packet
   //
   if ( u3_none == las ) {
@@ -1423,6 +1421,19 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
   }
   _ames_panc_free(pan_u);
   u3z(nun);
+}
+
+/*  _ames_lane_scry_forward_cb(): learn lanes to forward packet on
+ */
+static void
+_ames_lane_scry_forward_cb(void *vod_p, u3_noun nun)
+{
+  u3_panc *pan_u = vod_p;
+  u3_ames *sam_u = pan_u->pac_u->sam_u;
+
+  sam_u->sat_u.foq_d--;
+
+  _ames_lane_scry_cb(vod_p, nun);
 }
 
 /* _ames_try_send(): try to send a packet to a ship and its sponsors
@@ -1488,7 +1499,9 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
     pan_u->pac_u = pac_u;
     pan_u->for_o = for_o;
 
-    //  if forwarding, enqueue
+    u3_noun pax = _lane_scry_path(u3i_chubs(2, pac_u->pre_u.rec_d));
+
+    //  if forwarding, enqueue the packet and scry for the lane
     //
     if ( c3y == for_o ) {
       if ( 0 != sam_u->pan_u ) {
@@ -1497,14 +1510,16 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
       }
       sam_u->pan_u = pan_u;
       sam_u->sat_u.foq_d++;
+
+      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+                        u3_nul, pax, pan_u, _ames_lane_scry_forward_cb);
     }
-
-    //  scry the lane out of ames
+    //  otherwise, just scry for the lane
     //
-    u3_noun pax = _lane_scry_path(u3i_chubs(2, pac_u->pre_u.rec_d));
-
-    u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
-                      u3_nul, pax, pan_u, _ames_lane_scry_cb);
+    else {
+      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+                        u3_nul, pax, pan_u, _ames_lane_scry_cb);
+    }
   }
 }
 
