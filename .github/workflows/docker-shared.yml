@@ -40,6 +40,9 @@ jobs:
         if: steps.build-cache.outputs.cache-hit != 'true'
         run: bazel run //bazel/toolchain:x86_64-linux-musl-gcc
 
+      - name: Set pace
+        run: echo "${{ inputs.pace }}" > ./PACE
+
       #
       # UPLOAD TO DOCKER
       #
