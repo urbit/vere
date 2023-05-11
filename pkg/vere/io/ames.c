@@ -1134,9 +1134,9 @@ _ames_czar(u3_pact* pac_u)
 /* _fine_put_cache(): get packet list or status from cache. RETAIN
  */
 static u3_weak
-_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w)
+_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
 {
-  u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
+  u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
   u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
   u3z(key);
   return pro;
