@@ -1131,6 +1131,17 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
+/* _fine_put_cache(): get packet list or status from cache. RETAIN
+ */
+static u3_weak
+_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
+{
+  u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
+  u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
+  u3z(key);
+  return pro;
+}
+
 /* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
@@ -1152,6 +1163,7 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
     }
   }
 }
+
 
 /* _ames_ef_send(): send packet to network (v4).
 */
@@ -1730,7 +1742,9 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
   //  look up request in scry cache
   //
-  u3_weak cac = u3h_git(res_u->sam_u->fin_s.sac_p, key);
+  c3_w  fra_w = res_u->pur_u.pep_u.fra_w;
+  u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+
   //  already pending; drop
   //
   if ( FINE_PEND == cac ) {
@@ -1748,7 +1762,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
                                   res_u->pur_u.pep_u.pat_c);
     }
 
-    c3_w lop_w = _fine_lop(res_u->pur_u.pep_u.fra_w);
+    c3_w  lop_w = _fine_lop(fra_w);
     u3_noun pax =
       u3nc(c3__fine,
       u3nq(c3__hunk,
