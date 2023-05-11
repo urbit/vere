@@ -1503,7 +1503,6 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
   //
   if ( u3_none != lac ) {
     _ames_send_many(pac_u, lac, for_o);
-    _ames_pact_free(pac_u);
   }
   //  store the packet to be sent later when the lane scry completes
   //
