@@ -1451,25 +1451,51 @@ _cw_eval(c3_i argc, c3_c* argv[])
 static void
 _cw_info(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
-      }
-    } break;
+  c3_i lid_i, ch_i;
+  c3_w arg_w;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
-      exit(1);
-    } break;
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, u3a_bytes);
+  //  argv[optind] is always "info"
+  //
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
@@ -1488,25 +1514,51 @@ _cw_info(c3_i argc, c3_c* argv[])
 static void
 _cw_grab(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
-      }
-    } break;
+  c3_i lid_i, ch_i;
+  c3_w arg_w;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
-      exit(1);
-    } break;
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
   }
 
-  u3m_boot(u3_Host.dir_c, u3a_bytes);
+  //  argv[optind] is always "grab"
+  //
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
   u3_serf_grab();
   u3m_stop();
