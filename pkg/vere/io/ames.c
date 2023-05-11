@@ -602,8 +602,14 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
     //  parse data payload
     //
     mew_u->siz_s = len_w - cur_w;
-    mew_u->dat_y = c3_calloc(mew_u->siz_s);
-    u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
+
+    if ( !mew_u->siz_s ) {
+      mew_u->dat_y = 0;
+    }
+    else {
+      mew_u->dat_y = c3_calloc(mew_u->siz_s);
+      u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
+    }
 
     ret_o = c3y;
   }
