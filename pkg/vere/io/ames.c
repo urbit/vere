@@ -577,15 +577,18 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 {
   c3_o ret_o;
   c3_w len_w = u3r_met(3, mew);
+  c3_w min_w, max_w;
 
-  c3_y sig_w = sizeof(mew_u->sig_y);
-  c3_y num_w = sizeof(mew_u->num_w);
-
-  c3_y mew_w = sig_w + num_w;
-
-  if ( (len_w < mew_w) || (len_w > FINE_FRAG + mew_w) )
   {
-    u3l_log("sift_meow len_w %u, mew_w %u", len_w, mew_w);
+    c3_w sig_w = sizeof(mew_u->sig_y);
+    c3_w num_w = sizeof(mew_u->num_w);
+
+    min_w = sig_w + 1;
+    max_w = sig_w + num_w + FINE_FRAG;
+  }
+
+  if ( (len_w < min_w) || (len_w > max_w) ) {
+    u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_w, min_w, max_w);
     ret_o = c3n;
   }
   else {
