@@ -577,15 +577,13 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 {
   c3_o ret_o;
   c3_w len_w = u3r_met(3, mew);
+  c3_w sig_w = sizeof(mew_u->sig_y);
+  c3_w num_w = sizeof(mew_u->num_w);
+  c3_w min_w = sig_w + 1;
+  c3_w max_w = sig_w + num_w + FINE_FRAG;
 
-  c3_y sig_w = sizeof(mew_u->sig_y);
-  c3_y num_w = sizeof(mew_u->num_w);
-
-  c3_y mew_w = sig_w + num_w;
-
-  if ( (len_w < mew_w) || (len_w > FINE_FRAG + mew_w) )
-  {
-    u3l_log("sift_meow len_w %u, mew_w %u", len_w, mew_w);
+  if ( (len_w < min_w) || (len_w > max_w) ) {
+    u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_w, min_w, max_w);
     ret_o = c3n;
   }
   else {
@@ -604,8 +602,14 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
     //  parse data payload
     //
     mew_u->siz_s = len_w - cur_w;
-    mew_u->dat_y = c3_calloc(mew_u->siz_s);
-    u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
+
+    if ( !mew_u->siz_s ) {
+      mew_u->dat_y = 0;
+    }
+    else {
+      mew_u->dat_y = c3_calloc(mew_u->siz_s);
+      u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
+    }
 
     ret_o = c3y;
   }
@@ -1131,6 +1135,17 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
+/* _fine_put_cache(): get packet list or status from cache. RETAIN
+ */
+static u3_weak
+_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
+{
+  u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
+  u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
+  u3z(key);
+  return pro;
+}
+
 /* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
@@ -1152,6 +1167,7 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
     }
   }
 }
+
 
 /* _ames_ef_send(): send packet to network (v4).
 */
@@ -1491,6 +1507,7 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
   //
   if ( u3_none != lac ) {
     _ames_send_many(pac_u, lac, for_o);
+    _ames_pact_free(pac_u);
   }
   //  store the packet to be sent later when the lane scry completes
   //
@@ -1730,7 +1747,9 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
   //  look up request in scry cache
   //
-  u3_weak cac = u3h_git(res_u->sam_u->fin_s.sac_p, key);
+  c3_w  fra_w = res_u->pur_u.pep_u.fra_w;
+  u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+
   //  already pending; drop
   //
   if ( FINE_PEND == cac ) {
@@ -1748,7 +1767,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
                                   res_u->pur_u.pep_u.pat_c);
     }
 
-    c3_w lop_w = _fine_lop(res_u->pur_u.pep_u.fra_w);
+    c3_w  lop_w = _fine_lop(fra_w);
     u3_noun pax =
       u3nc(c3__fine,
       u3nq(c3__hunk,
