@@ -21,7 +21,8 @@ typedef struct _u3_h2o_serv {
   typedef enum {
     u3_rsat_init = 0,                   //  initialized
     u3_rsat_plan = 1,                   //  planned
-    u3_rsat_ripe = 2                    //  responded
+    u3_rsat_peek = 2,                   //  peek planned
+    u3_rsat_ripe = 3                    //  responded
   } u3_rsat;
 
 /* u3_hreq: incoming http request.
@@ -32,10 +33,19 @@ typedef struct _u3_h2o_serv {
     u3_rsat          sat_e;             //  request state
     uv_timer_t*      tim_u;             //  timeout
     void*            gen_u;             //  response generator
+    struct _u3_preq* peq_u;             //  scry-backed (rsat_peek only)
     struct _u3_hcon* hon_u;             //  connection backlink
     struct _u3_hreq* nex_u;             //  next in connection's list
     struct _u3_hreq* pre_u;             //  prev in connection's list
   } u3_hreq;
+
+  /* u3_preq: scry-backed http request.
+  */
+    typedef struct _u3_preq {
+      struct _u3_hreq* req_u;           //  originating request (nullable)
+      struct _u3_httd* htd_u;           //  device backpointer
+      u3_noun  pax;                     //  partial scry path
+    } u3_preq;
 
 /* u3_hcon: incoming http connection.
 */
@@ -466,6 +476,12 @@ _http_seq_unlink(u3_hreq* req_u)
       req_u->nex_u->pre_u = 0;
     }
   }
+
+  //  unlink from async scry request if present
+  //
+  if ( req_u->peq_u ) {
+    req_u->peq_u->req_u = 0;
+  }
 }
 
 /* _http_req_to_duct(): translate srv/con/req to duct
@@ -560,6 +576,12 @@ _http_req_timer_cb(uv_timer_t* tim_u)
       _http_req_kill(req_u);
       req_u->sat_e = u3_rsat_ripe;
 
+      c3_c* msg_c = "gateway timeout";
+      h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_peek: {
+      req_u->peq_u = 0;
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
@@ -680,22 +702,24 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun) {
   u3z(nun);
 }
 
-typedef struct _cache_scry_cb_t {
-  u3_hreq* req_u;
-  u3_noun  pax;
-} cache_scry_cb_t;
-
 /* _http_cache_scry_cb(): insert scry result into noun cache
 */
 static void
 _http_cache_scry_cb(void* vod_p, u3_noun nun)
 {
-  cache_scry_cb_t* cbt = vod_p;
-  u3_httd* htd_u = cbt->req_u->hon_u->htp_u->htd_u;
-  u3h_put(htd_u->nax_p, cbt->pax, u3k(nun));
-  u3z(cbt->pax);
-  _http_cache_respond(cbt->req_u, nun);
-  c3_free(cbt);
+  u3_preq* peq_u = vod_p;
+  u3_httd* htd_u = peq_u->htd_u;
+  u3_hreq* req_u = peq_u->req_u;
+
+  if ( req_u ) {
+    u3_assert(u3_rsat_peek == req_u->sat_e);
+    req_u->peq_u = 0;
+    _http_cache_respond(req_u, u3k(nun));
+  }
+
+  u3h_put(htd_u->nax_p, peq_u->pax, nun);
+  u3z(peq_u->pax);
+  c3_free(peq_u);
 }
 
 /* _http_req_cache(): attempt to serve http request from cache
@@ -716,11 +740,14 @@ _http_req_cache(u3_hreq* req_u)
   u3_weak nac = u3h_get(htd_u->nax_p, sac);
   if ( u3_none == nac ) {
     // noun not in cache; scry it
-    cache_scry_cb_t* cbt = c3_malloc(sizeof(cache_scry_cb_t));
-    cbt->req_u = req_u;
-    cbt->pax = sac;
+    req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
+    req_u->peq_u->req_u = req_u;
+    req_u->peq_u->htd_u = htd_u;
+    req_u->peq_u->pax   = sac;
+
+    req_u->sat_e = u3_rsat_peek;
     u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
-                      u3_nul, sac, cbt, _http_cache_scry_cb);
+                      u3_nul, sac, req_u->peq_u, _http_cache_scry_cb);
     return c3y;
   }
   u3z(sac);
@@ -953,6 +980,7 @@ _http_cancel_respond(u3_hreq* req_u)
 {
   switch ( req_u->sat_e ) {
     case u3_rsat_init: u3_assert(0);
+    case u3_rsat_peek: u3_assert(0);
 
     case u3_rsat_plan: {
       req_u->sat_e = u3_rsat_ripe; // XX confirm
