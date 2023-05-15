@@ -611,11 +611,9 @@ _http_req_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 {
   u3_hreq* req_u = h2o_mem_alloc_shared(&rec_u->pool, sizeof(*req_u),
                                         _http_req_done);
+  memset(req_u, 0, sizeof(*req_u));
   req_u->rec_u = rec_u;
   req_u->sat_e = u3_rsat_init;
-  req_u->tim_u = 0;
-  req_u->gen_u = 0;
-  req_u->pre_u = 0;
 
   _http_req_link(hon_u, req_u);
 
@@ -629,11 +627,9 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 {
   u3_hreq* req_u = h2o_mem_alloc_shared(&rec_u->pool, sizeof(*req_u),
                                         _http_seq_done);
+  memset(req_u, 0, sizeof(*req_u));
   req_u->rec_u = rec_u;
   req_u->sat_e = u3_rsat_plan;
-  req_u->tim_u = 0;
-  req_u->gen_u = 0;
-  req_u->pre_u = 0;
 
   _http_seq_link(hon_u, req_u);
 
