@@ -723,6 +723,7 @@ _http_req_cache(u3_hreq* req_u)
                       u3_nul, sac, cbt, _http_cache_scry_cb);
     return c3y;
   }
+  u3z(sac);
   _http_cache_respond(req_u, nac);
   return c3y;
 }
