@@ -651,14 +651,32 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 */
 static void
 _http_cache_respond(u3_hreq* req_u, u3_noun nun) {
-  // XX check auth
-  u3_noun auth, response_header, data;
-  u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
-  u3_noun status, headers;
-  u3x_cell(response_header, &status, &headers);
+  h2o_req_t* rec_u = req_u->rec_u;
+  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
-  req_u->sat_e = u3_rsat_plan;
-  _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+  if ( u3_nul == nun ) {
+    h2o_send_error_404(rec_u, "Not Found", "not found", 0);
+  }
+  else if ( u3_none == u3r_at(7, nun) ) {
+    h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
+  }
+  else {
+    u3_noun auth, response_header, data;
+    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    u3_noun status, headers;
+    u3x_cell(response_header, &status, &headers);
+
+    // check auth
+    if ( (c3y == auth)
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
+    {
+      h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
+    }
+    else {
+      req_u->sat_e = u3_rsat_plan;
+      _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+    }
+  }
   u3z(nun);
 }
 
