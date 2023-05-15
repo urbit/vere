@@ -692,7 +692,7 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
 {
   cache_scry_cb_t* cbt = vod_p;
   u3_httd* htd_u = cbt->req_u->hon_u->htp_u->htd_u;
-  u3h_put(htd_u->nax_p, cbt->pax, nun);
+  u3h_put(htd_u->nax_p, cbt->pax, u3k(nun));
   u3z(cbt->pax);
   _http_cache_respond(cbt->req_u, nun);
   c3_free(cbt);
