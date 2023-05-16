@@ -145,7 +145,7 @@ _disk_commit_start(struct _cd_save* req_u)
 {
   u3_disk* log_u = req_u->log_u;
 
-  c3_assert( c3n == log_u->ted_o );
+  u3_assert( c3n == log_u->ted_o );
   log_u->ted_o = c3y;
   log_u->ted_u.data = req_u;
 
@@ -203,8 +203,8 @@ _disk_batch(u3_disk* log_u, c3_d len_d)
 {
   u3_fact* tac_u = log_u->put_u.ext_u;
 
-  c3_assert( (1ULL + log_u->dun_d) == tac_u->eve_d );
-  c3_assert( log_u->sen_d == log_u->put_u.ent_u->eve_d );
+  u3_assert( (1ULL + log_u->dun_d) == tac_u->eve_d );
+  u3_assert( log_u->sen_d == log_u->put_u.ent_u->eve_d );
 
   struct _cd_save* req_u = c3_malloc(sizeof(*req_u));
   req_u->log_u = log_u;
@@ -215,7 +215,7 @@ _disk_batch(u3_disk* log_u, c3_d len_d)
   req_u->siz_i = c3_malloc(len_d * sizeof(size_t));
 
   for ( c3_d i_d = 0ULL; i_d < len_d; ++i_d) {
-    c3_assert( (req_u->eve_d + i_d) == tac_u->eve_d );
+    u3_assert( (req_u->eve_d + i_d) == tac_u->eve_d );
 
     req_u->siz_i[i_d] = u3_disk_etch(log_u, tac_u->job,
                                      tac_u->mug_l, &req_u->byt_y[i_d]);
@@ -258,11 +258,11 @@ _disk_commit(u3_disk* log_u)
 void
 u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 {
-  c3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
+  u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
   log_u->sen_d++;
 
   if ( !log_u->put_u.ent_u ) {
-    c3_assert( !log_u->put_u.ext_u );
+    u3_assert( !log_u->put_u.ext_u );
     log_u->put_u.ent_u = log_u->put_u.ext_u = tac_u;
   }
   else {
@@ -283,8 +283,8 @@ u3_disk_boot_plan(u3_disk* log_u, u3_noun job)
   u3_fact* tac_u = u3_fact_init(++log_u->sen_d, 0, job);
 
   if ( !log_u->put_u.ent_u ) {
-    c3_assert( !log_u->put_u.ext_u );
-    c3_assert( 1ULL == log_u->sen_d );
+    u3_assert( !log_u->put_u.ext_u );
+    u3_assert( 1ULL == log_u->sen_d );
 
     log_u->put_u.ent_u = log_u->put_u.ext_u = tac_u;
   }
@@ -303,7 +303,7 @@ u3_disk_boot_plan(u3_disk* log_u, u3_noun job)
 void
 u3_disk_boot_save(u3_disk* log_u)
 {
-  c3_assert( !log_u->dun_d );
+  u3_assert( !log_u->dun_d );
   _disk_commit(log_u);
 }
 
@@ -367,8 +367,8 @@ _disk_read_done_cb(uv_timer_t* tim_u)
   u3_disk* log_u = red_u->log_u;
   u3_info  pay_u = { .ent_u = red_u->ent_u, .ext_u = red_u->ext_u };
 
-  c3_assert( red_u->ent_u );
-  c3_assert( red_u->ext_u );
+  u3_assert( red_u->ent_u );
+  u3_assert( red_u->ext_u );
   red_u->ent_u = 0;
   red_u->ext_u = 0;
 
@@ -432,13 +432,13 @@ _disk_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
   }
 
   if ( !red_u->ent_u ) {
-    c3_assert( !red_u->ext_u );
+    u3_assert( !red_u->ext_u );
 
-    c3_assert( red_u->eve_d == eve_d );
+    u3_assert( red_u->eve_d == eve_d );
     red_u->ent_u = red_u->ext_u = tac_u;
   }
   else {
-    c3_assert( (1ULL + red_u->ent_u->eve_d) == eve_d );
+    u3_assert( (1ULL + red_u->ent_u->eve_d) == eve_d );
     red_u->ent_u->nex_u = tac_u;
     red_u->ent_u = tac_u;
   }
@@ -636,7 +636,7 @@ u3_disk_save_meta(MDB_env* mdb_u,
                   c3_o     fak_o,
                   c3_w     lif_w)
 {
-  c3_assert( c3y == u3a_is_cat(lif_w) );
+  u3_assert( c3y == u3a_is_cat(lif_w) );
 
   if (  (c3n == _disk_save_meta(mdb_u, "version", 1))
      || (c3n == _disk_save_meta(mdb_u, "who", u3i_chubs(2, who_d)))
@@ -746,7 +746,7 @@ _disk_lock(c3_c* pax_c)
   c3_i  wit_i;
 
   wit_i = snprintf(paf_c, len_w, "%s/.vere.lock", pax_c);
-  c3_assert(wit_i + 1 == len_w);
+  u3_assert(wit_i + 1 == len_w);
   return paf_c;
 }
 
@@ -763,7 +763,7 @@ u3_disk_acquire(c3_c* pax_c)
     if ( 1 != fscanf(loq_u, "%" SCNu32, &pid_w) ) {
       u3l_log("lockfile %s is corrupt!", paf_c);
       kill(getpid(), SIGTERM);
-      sleep(1); c3_assert(0);
+      sleep(1); u3_assert(0);
     }
     else if (pid_w != getpid()) {
       c3_w i_w;
@@ -773,7 +773,7 @@ u3_disk_acquire(c3_c* pax_c)
       if ( -1 == ret && errno == EPERM ) {
         u3l_log("disk: permission denied when trying to kill process %d!", pid_w);
         kill(getpid(), SIGTERM);
-        sleep(1); c3_assert(0);
+        sleep(1); u3_assert(0);
       }
 
       if ( -1 != ret ) {
@@ -796,7 +796,7 @@ u3_disk_acquire(c3_c* pax_c)
         }
         if ( 16 == i_w ) {
           u3l_log("disk: process %d seems unkillable!", pid_w);
-          c3_assert(0);
+          u3_assert(0);
         }
         u3l_log("disk: stopped old process %u", pid_w);
       }
@@ -807,7 +807,7 @@ u3_disk_acquire(c3_c* pax_c)
 
   if ( NULL == (loq_u = c3_fopen(paf_c, "w")) ) {
     u3l_log("disk: unable to open %s", paf_c);
-    c3_assert(0);
+    u3_assert(0);
   }
 
   fprintf(loq_u, "%u\n", getpid());

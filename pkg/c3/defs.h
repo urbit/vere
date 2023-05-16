@@ -21,32 +21,29 @@
 
   /** Random useful C macros.
   **/
-    /* Assert.  Good to capture.
+    /* Dessert. Debug assert. If a debugger is attached, it will break in and
+       execution can be allowed to proceed without aborting the process.
+       Otherwise, the unhandled SIGTRAP will dump core.
     */
-
-#     if defined(ASAN_ENABLED) && defined(__clang__)
-#       define c3_assert(x)                       \
-          do {                                    \
-            if (!(x)) {                           \
-              assert(x);                          \
-            }                                     \
-          } while(0)
-#     else
-#       define c3_assert(x)                       \
-          do {                                    \
-            if (!(x)) {                           \
-              fflush(stderr);                     \
-              fprintf(stderr, "\rAssertion '%s' " \
-                      "failed in %s:%d\r\n",      \
-                      #x, __FILE__, __LINE__);    \
-              assert(x);                          \
-            }                                     \
-          } while(0)
+#ifdef C3DBG
+  #if defined(__i386__) || defined(__x86_64__)
+    #define c3_dessert(x) do { if(!(x)) __asm__ volatile("int $3"); } while (0)
+  #elif defined(__thumb__)
+    #define c3_dessert(x) do { if(!(x)) __asm__ volatile(".inst 0xde01"); } while (0)
+  #elif defined(__aarch64__)
+    #define c3_dessert(x) do { if(!(x)) __asm__ volatile(".inst 0xd4200000"); } while (0)
+  #elif defined(__arm__)
+    #define c3_dessert(x) do { if(!(x)) __asm__ volatile(".inst 0xe7f001f0"); } while (0)
+  #else
+    STATIC_ASSERT(0, "debugger break instruction unimplemented");
+  #endif
+#else
+  #define c3_dessert(x) ((void)(0))
 #endif
 
     /* Stub.
     */
-#     define c3_stub       c3_assert(!"stub")
+#     define c3_stub       u3_assert(!"stub")
 
     /* Size in words.
     */
@@ -112,7 +109,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_malloc(%" PRIu64 ") failed\r\n",  \
                           (c3_d)s);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 #     define c3_calloc(s) ({                                    \
@@ -120,7 +117,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_calloc(%" PRIu64 ") failed\r\n",  \
                           (c3_d)s);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 #     define c3_realloc(a, b) ({                                \
@@ -128,7 +125,7 @@
         if ( 0 == rut ) {                                       \
           fprintf(stderr, "c3_realloc(%" PRIu64 ") failed\r\n", \
                           (c3_d)b);                             \
-          c3_assert(!"memory lost");                            \
+          u3_assert(!"memory lost");                            \
         }                                                       \
         rut;})
 
@@ -160,5 +157,45 @@
         remove(a);})
 #     define c3_rename(a, b) ({                                 \
         rename(a, b);})
+
+/* c3_align(
+       x    - the address/quantity to align,
+       al   - the alignment,
+       hilo - [C3_ALGHI, C3_ALGLO] high or low align
+   )
+
+   hi or lo align x to al
+
+   unless effective type of x is c3_w or c3_d, assumes x is a pointer.
+*/
+#define c3_align(x, al, hilo)                   \
+  _Generic((x),                                 \
+           c3_w     : c3_align_w,               \
+           c3_d     : c3_align_d,               \
+           default  : c3_align_p)               \
+       (x, al, hilo)
+typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
+inline c3_w
+c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return x;
+}
+inline c3_d
+c3_align_d(c3_d x, c3_d al, align_dir hilo) {
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return x;
+}
+inline void*
+c3_align_p(void const * p, size_t al, align_dir hilo) {
+  uintptr_t x = (uintptr_t)p;
+  c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
+  x += hilo * (al - 1);
+  x &= ~(al - 1);
+  return (void*)x;
+}
 
 #endif /* ifndef C3_DEFS_H */

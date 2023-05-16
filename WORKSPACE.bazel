@@ -254,10 +254,22 @@ versioned_http_archive(
 versioned_http_archive(
     name = "openssl",
     build_file = "//bazel/third_party/openssl:openssl.BUILD",
-    sha256 = "d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca",
+    sha256 = "8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b",
     strip_prefix = "openssl-{version}",
     url = "https://www.openssl.org/source/openssl-{version}.tar.gz",
-    version = "1.1.1q",
+    version = "1.1.1t",
+)
+
+versioned_http_archive(
+    name = "pdjson",
+    build_file = "//bazel/third_party/pdjson:pdjson.BUILD",
+    sha256 = "928913d44d9021d69c0d23a8f59ed67028e5abf1ae7910f79c23a7af4e779b92",
+    strip_prefix = "pdjson-{version}",
+    url = "https://github.com/skeeto/pdjson/archive/{version}.tar.gz",
+    # When bumping the version, compare `Makefile` in the `pdjson` repo to
+    # {build_file} and confirm that {build_file} remains an accurate description
+    # of the pdjson build process.
+    version = "67108d883061043e55d0fb13961ac1b6fc8a485c",
 )
 
 versioned_http_archive(
@@ -279,6 +291,8 @@ versioned_http_archive(
     strip_prefix = "secp256k1-{version}",
     url = "https://github.com/bitcoin-core/secp256k1/archive/{version}.tar.gz",
     version = "694ce8fb2d1fd8a3d641d7c33705691d41a2a860",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/secp256k1:{version}.patch"],
 )
 
 versioned_http_archive(

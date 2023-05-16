@@ -51,6 +51,11 @@ Reference any related issues, links, papers, etc. here.
 Tests will run automatically via GitHub Actions when you open a pull request or
 push new commits to an existing pull request.
 
+With current github permissions, a PR is merge-ready after a single approval
+from any member of @urbit/runtime. Although anyone can hit the merge button,
+defer to the PR author to merge unless it's an urgent hotfix that needs to be
+merged ASAP.
+
 Once you've collected and addressed feedback and are ready to merge, merge the
 pull request. Use the default commit message which should default to your PR
 title and description. Assuming that you properly included the "Resolves #N."

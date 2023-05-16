@@ -3,16 +3,31 @@
 set -eu
 
 # set defaults
-amesPort=34343
+amesPort="34343"
+httpPort="80"
+loom="31"
+snap="2"
 
 # check args
 for i in "$@"
 do
 case $i in
-    -p=*|--port=*)
-        amesPort="''${i#*=}"
-        shift
-        ;;
+  -p=*|--port=*)
+      amesPort="${i#*=}"
+      shift
+      ;;
+  --http-port=*)
+      httpPort="${i#*=}"
+      shift
+      ;;
+  --loom=*)
+      loom="${i#*=}"
+      shift
+      ;;
+  --snap-time=*)
+      snap="${i#*=}"
+      shift
+      ;;
 esac
 done
 
@@ -34,7 +49,7 @@ if [ -e *.key ]; then
   mv $keyname /tmp
 
   # Boot urbit with the key, exit when done booting
-  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x
+  urbit $ttyflag -w $(basename $keyname .key) -k /tmp/$keyname -c $(basename $keyname .key) -p $amesPort -x --http-port $httpPort --loom $loom --snap-time $snap
 
   # Remove the keyfile for security
   rm /tmp/$keyname
@@ -45,7 +60,7 @@ elif [ -e *.comet ]; then
   cometname=''${comets[0]}
   rm *.comet
 
-  urbit $ttyflag -c $(basename $cometname .comet) -p $amesPort -x
+  urbit $ttyflag -c $(basename $cometname .comet) -p $amesPort -x --http-port $httpPort --loom $loom --snap-time $snap
 fi
 
 # Find the first directory and start urbit with the ship therein
@@ -53,4 +68,4 @@ dirnames="*/"
 dirs=( $dirnames )
 dirname=''${dirnames[0]}
 
-exec urbit $ttyflag -p $amesPort $dirname
+exec urbit $ttyflag -p $amesPort --http-port $httpPort --loom $loom $dirname --snap-time $snap

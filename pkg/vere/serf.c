@@ -91,7 +91,7 @@ _serf_grab(u3_noun sac)
     }
 #endif
 
-    c3_assert( u3R == &(u3H->rod_u) );
+    u3_assert( u3R == &(u3H->rod_u) );
     fprintf(fil_u, "\r\n");
 
     tot_w += u3a_maid(fil_u, "total userspace", u3a_prof(fil_u, 0, sac));
@@ -123,7 +123,7 @@ u3_serf_grab(void)
 {
   u3_noun sac = u3_nul;
 
-  c3_assert( u3R == &(u3H->rod_u) );
+  u3_assert( u3R == &(u3H->rod_u) );
 
   {
     u3_noun sam, gon;
@@ -419,7 +419,7 @@ _serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
 
   //  event numbers must be continuous
   //
-  c3_assert( sef_u->sen_d == sef_u->dun_d);
+  u3_assert( sef_u->sen_d == sef_u->dun_d);
   sef_u->sen_d++;
 
   gon = _serf_poke(sef_u, "work", mil_w, job);  // retain
@@ -508,7 +508,7 @@ u3_serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
 
   //  %work must be performed against an extant kernel
   //
-  c3_assert( 0 != sef_u->mug_l);
+  u3_assert( 0 != sef_u->mug_l);
 
   pro = u3nc(c3__work, _serf_work(sef_u, mil_w, job));
 
@@ -526,11 +526,11 @@ _serf_play_life(u3_serf* sef_u, u3_noun eve)
 {
   u3_noun gon;
 
-  c3_assert( 0ULL == sef_u->sen_d );
+  u3_assert( 0ULL == sef_u->sen_d );
 
   {
     u3_noun len = u3qb_lent(eve);
-    c3_assert( c3y == u3r_safe_chub(len, &sef_u->sen_d) );
+    u3_assert( c3y == u3r_safe_chub(len, &sef_u->sen_d) );
     u3z(len);
   }
 
@@ -656,7 +656,7 @@ _serf_play_list(u3_serf* sef_u, u3_noun eve)
 u3_noun
 u3_serf_play(u3_serf* sef_u, c3_d eve_d, u3_noun lit)
 {
-  c3_assert( eve_d == 1ULL + sef_u->sen_d );
+  u3_assert( eve_d == 1ULL + sef_u->sen_d );
 
   //  XX better condition for no kernel?
   //

@@ -1,0 +1,73 @@
+name: docker
+
+on:
+  workflow_call:
+    inputs:
+      pace:
+        description: 'Release pace'
+        type: string
+        default: 'edge'
+        required: false
+
+jobs:
+  urbit:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      #
+      # BUILD OR READ FROM CACHE
+      #
+
+      - name: chown /usr/local
+        run: |
+          # See https://github.com/actions/cache/issues/845.
+          sudo chown $(whoami) /usr/local && (chown -R $USER /usr/local/*-musl || true)
+
+      - name: Set up build cache
+        id: build-cache
+        uses: actions/cache@v3
+        with:
+          key: linux-x86_64-cache
+          path: |
+            # # Cache bazel path on Linux.
+            ~/.cache/bazel/_bazel_$(whoami)
+            # Cache musl libc toolchains.
+            /usr/local/*-musl
+
+      - name: Install toolchains
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+
+      - name: Set pace
+        run: echo "${{ inputs.pace }}" > ./PACE
+
+      #
+      # UPLOAD TO DOCKER
+      #
+
+      - uses: docker/docker-login-action@v1.8.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/vere
+          provider: dockerhub
+          short_description: 'Urbit: a clean-slate OS and network for the 21st century'
+          readme_file: 'docker/README.md'
+
+      - name: Build and push version-tagged Docker image
+        run: bazel run //docker:push_version_x86_64
+
+      - name: Build and push pace-tagged Docker image
+        run: bazel run //docker:push_pace_x86_64
+
+      - name: Build and push latest-tagged Docker image
+        if: ${{ inputs.pace == 'live' }}
+        run: bazel run //docker:push_latest_x86_64

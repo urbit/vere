@@ -14,7 +14,7 @@
 static u3_weak
 _frag_word(c3_w a_w, u3_noun b)
 {
-  c3_assert(0 != a_w);
+  u3_assert(0 != a_w);
 
   {
     c3_w dep_w = u3x_dep(a_w);
@@ -62,8 +62,8 @@ _frag_deep(c3_w a_w, u3_noun b)
 u3_weak
 u3r_at(u3_atom a, u3_noun b)
 {
-  c3_assert(u3_none != a);
-  c3_assert(u3_none != b);
+  u3_assert(u3_none != a);
+  u3_assert(u3_none != b);
 
   u3t_on(far_o);
 
@@ -173,7 +173,7 @@ u3r_vmean(u3_noun som, va_list ap)
   c3_w               len_w;
   struct _mean_pair* prs_m;
 
-  c3_assert(u3_none != som);
+  u3_assert(u3_none != som);
 
   //  traverse copy of va_list for alloca
   //
@@ -190,7 +190,7 @@ u3r_vmean(u3_noun som, va_list ap)
 
   va_end(aq);
 
-  c3_assert( 0 != len_w );
+  u3_assert( 0 != len_w );
   prs_m = alloca(len_w * sizeof(struct _mean_pair));
 
   //  traverse va_list and extract args
@@ -445,7 +445,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       } break;
 
       default: {
-        c3_assert(0);
+        u3_assert(0);
       } break;
     }
 
@@ -548,7 +548,7 @@ _cr_sing(u3_noun a, u3_noun b)
       } break;
 
       default: {
-        c3_assert(0);
+        u3_assert(0);
       } break;
     }
 
@@ -695,8 +695,8 @@ u3_atom
 u3r_nord(u3_noun a,
         u3_noun b)
 {
-  c3_assert(u3_none != a);
-  c3_assert(u3_none != b);
+  u3_assert(u3_none != a);
+  u3_assert(u3_none != b);
 
   if ( a == b ) {
     return 1;
@@ -762,7 +762,7 @@ c3_o
 u3r_sing_c(const c3_c* a_c,
            u3_noun     b)
 {
-  c3_assert(u3_none != b);
+  u3_assert(u3_none != b);
 
   if ( !_(u3a_is_atom(b)) ) {
     return c3n;
@@ -792,7 +792,7 @@ u3r_bush(u3_noun  a,
            u3_noun* b,
            u3_noun* c)
 {
-  c3_assert(u3_none != a);
+  u3_assert(u3_none != a);
 
   if ( _(u3a_is_atom(a)) ) {
     return c3n;
@@ -842,7 +842,7 @@ u3r_cell(u3_noun  a,
            u3_noun* b,
            u3_noun* c)
 {
-  c3_assert(u3_none != a);
+  u3_assert(u3_none != a);
 
   if ( _(u3a_is_atom(a)) ) {
     return c3n;
@@ -1033,63 +1033,46 @@ c3_w
 u3r_met(c3_y  a_y,
         u3_atom b)
 {
-  c3_assert(u3_none != b);
-  c3_assert(_(u3a_is_atom(b)));
+  c3_dessert(u3_none != b);
+  c3_dessert(_(u3a_is_atom(b)));
 
   if ( b == 0 ) {
     return 0;
   }
-  else {
-    /* gal_w: number of words besides (daz_w) in (b).
-    ** daz_w: top word in (b).
-    */
-    c3_w gal_w;
-    c3_w daz_w;
+  /* gal_w: number of words besides (daz_w) in (b).
+  ** daz_w: top word in (b).
+  */
+  c3_w gal_w;
+  c3_w daz_w;
 
-    if ( _(u3a_is_cat(b)) ) {
-      gal_w = 0;
-      daz_w = b;
-    }
-    else {
-      u3a_atom* b_u = u3a_to_ptr(b);
-
-      gal_w = (b_u->len_w) - 1;
-      daz_w = b_u->buf_w[gal_w];
-    }
-
-    switch ( a_y ) {
-      case 0:
-      case 1:
-      case 2: {
-        /* col_w: number of bits in (daz_w)
-        ** bif_w: number of bits in (b)
-        */
-        c3_w bif_w, col_w;
-
-        if ( gal_w > ((UINT32_MAX - 35) >> 5) ) {
-          return u3m_bail(c3__fail);
-        }
-
-        col_w = c3_bits_word(daz_w);
-        bif_w = col_w + (gal_w << 5);
-
-        return (bif_w + ((1 << a_y) - 1)) >> a_y;
-      }
-
-      STATIC_ASSERT((UINT32_MAX > ((c3_d)u3a_maximum << 2)),
-                    "met overflow");
-
-      case 3: return (gal_w << 2) + ((c3_bits_word(daz_w) +  7) >> 3);
-
-      case 4: return (gal_w << 1) + ((c3_bits_word(daz_w) + 15) >> 4);
-
-      default: {
-        c3_y gow_y = (a_y - 5);
-
-        return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
-      }
-    }
+  if ( _(u3a_is_cat(b)) ) {
+    gal_w = 0;
+    daz_w = b;
   }
+  else {
+    u3a_atom* b_u = u3a_to_ptr(b);
+
+    gal_w = (b_u->len_w) - 1;
+    daz_w = b_u->buf_w[gal_w];
+  }
+
+  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
+     aka log2(CHAR_BIT * sizeof gal_w)
+     a_y < 5 informs whether we shift return left or right
+     */
+  if (a_y < 5) {
+    c3_y max_y = (1 << a_y) - 1;
+    c3_y gow_y = 5 - a_y;
+
+    if (gal_w > ((UINT32_MAX - (32 + max_y)) >> gow_y))
+      return u3m_bail(c3__fail);
+
+    return (gal_w << gow_y)
+      + ((c3_bits_word(daz_w) + max_y)
+         >> a_y);
+  }
+  c3_y gow_y = (a_y - 5);
+  return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
 }
 
 /* u3r_bit():
@@ -1100,8 +1083,8 @@ c3_b
 u3r_bit(c3_w    a_w,
           u3_atom b)
 {
-  c3_assert(u3_none != b);
-  c3_assert(_(u3a_is_atom(b)));
+  u3_assert(u3_none != b);
+  u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
     if ( a_w >= 31 ) {
@@ -1133,8 +1116,8 @@ c3_y
 u3r_byte(c3_w    a_w,
            u3_atom b)
 {
-  c3_assert(u3_none != b);
-  c3_assert(_(u3a_is_atom(b)));
+  u3_assert(u3_none != b);
+  u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
     if ( a_w > 3 ) {
@@ -1168,8 +1151,8 @@ u3r_bytes(c3_w    a_w,
             c3_y*   c_y,
             u3_atom d)
 {
-  c3_assert(u3_none != d);
-  c3_assert(_(u3a_is_atom(d)));
+  u3_assert(u3_none != d);
+  u3_assert(_(u3a_is_atom(d)));
 
   if ( _(u3a_is_cat(d)) ) {
     c3_w e_w = d >> (c3_min(a_w, 4) << 3);
@@ -1248,8 +1231,8 @@ void
 u3r_mp(mpz_t   a_mp,
        u3_atom b)
 {
-  c3_assert(u3_none != b);
-  c3_assert(_(u3a_is_atom(b)));
+  u3_assert(u3_none != b);
+  u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
     mpz_init_set_ui(a_mp, b);
@@ -1274,8 +1257,8 @@ c3_s
 u3r_short(c3_w  a_w,
           u3_atom b)
 {
-  c3_assert( u3_none != b );
-  c3_assert( c3y == u3a_is_atom(b) );
+  u3_assert( u3_none != b );
+  u3_assert( c3y == u3a_is_atom(b) );
 
   if ( c3y == u3a_is_cat(b) ) {
     switch ( a_w ) {
@@ -1307,8 +1290,8 @@ c3_w
 u3r_word(c3_w    a_w,
            u3_atom b)
 {
-  c3_assert(u3_none != b);
-  c3_assert(_(u3a_is_atom(b)));
+  u3_assert(u3_none != b);
+  u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
     if ( a_w > 0 ) {
@@ -1366,8 +1349,8 @@ u3r_words(c3_w    a_w,
           c3_w*   c_w,
           u3_atom d)
 {
-  c3_assert(u3_none != d);
-  c3_assert(_(u3a_is_atom(d)));
+  u3_assert(u3_none != d);
+  u3_assert(_(u3a_is_atom(d)));
 
   if ( b_w == 0 ) {
     return;
@@ -1644,8 +1627,8 @@ u3r_chop(c3_g  met_g,
   else {
     u3a_atom* src_u = u3a_to_ptr(src);
 
-    c3_assert(u3_none != src);
-    c3_assert(_(u3a_is_atom(src)));
+    u3_assert(u3_none != src);
+    u3_assert(_(u3a_is_atom(src)));
 
     len_w = src_u->len_w;
     src_w = src_u->buf_w;
@@ -1882,7 +1865,7 @@ u3r_mug(u3_noun veb)
 
   //  sanity check
   //
-  c3_assert( u3_none != veb );
+  u3_assert( u3_none != veb );
 
   u3a_pile_prep(&pil_u, sizeof(*fam_u));
 

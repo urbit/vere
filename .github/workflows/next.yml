@@ -1,0 +1,26 @@
+name: Push to next/kelvin/*
+
+on:
+  push:
+    branches:
+      - 'next/kelvin/*'
+    paths:
+      - '*.bazel'
+      - '.bazelrc'
+      - '.github/workflows/**.yml'
+      - 'PACE'
+      - 'VERSION'
+      - 'bazel/**'
+      - 'pkg/**'
+
+jobs:
+  urbit:
+    uses: ./.github/workflows/shared.yml
+    with:
+      upload: true
+      next: ${{ github.ref_name }}
+    secrets: inherit
+
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
+    secrets: inherit

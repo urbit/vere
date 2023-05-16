@@ -83,6 +83,8 @@ typedef struct _u3_h2o_serv {
 */
   typedef struct _u3_hfig {
     u3_form*         for_u;             //  config from %eyre
+    c3_c*            key_c;             //  auth token key
+    u3_noun          ses;               //  valid session tokens
     struct _u3_hreq* seq_u;             //  open slog requests
     uv_timer_t*      sit_u;             //  slog stream heartbeat
   } u3_hfig;
@@ -95,11 +97,18 @@ typedef struct _u3_httd {
   u3_hfig            fig_u;             //  http configuration
   u3_http*           htp_u;             //  http servers
   SSL_CTX*           tls_u;             //  server SSL_CTX*
+  u3p(u3h_root)      sax_p;             //  url->scry cache
+  u3p(u3h_root)      nax_p;             //  scry->noun cache
 } u3_httd;
 
 static void _http_serv_free(u3_http* htp_u);
 static void _http_serv_start_all(u3_httd* htd_u);
 static void _http_form_free(u3_httd* htd_u);
+static void _http_start_respond(u3_hreq* req_u,
+                    u3_noun status,
+                    u3_noun headers,
+                    u3_noun data,
+                    u3_noun complete);
 
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
@@ -302,6 +311,71 @@ _http_heds_from_noun(u3_noun hed)
   return hed_u;
 }
 
+/* _http_req_is_auth(): returns c3y if rec_u contains a valid auth cookie
+*/
+static c3_o
+_http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+{
+  //  try to find a cookie header
+  //
+  h2o_iovec_t coo_u = {NULL, 0};
+  {
+    //TODO  http2 allows the client to put multiple 'cookie' headers,
+    //      runtime should support that once eyre does too.
+    ssize_t hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, -1);
+    if ( hin_i != -1 ) {
+      coo_u = rec_u->headers.entries[hin_i].value;
+    }
+  }
+
+  //  if there is no cookie header, it can't possibly be authenticated
+  //
+  if ( NULL == coo_u.base ) {
+    return c3n;
+  }
+  //  if there is a cookie, see if it contains a valid auth token
+  //
+  else {
+    c3_c* key_c = fig_u->key_c;
+    c3_c  val_c[128];
+    c3_y  val_y = 0;
+    size_t  i_i = 0;
+    size_t  j_i = 0;
+
+    //  step through the cookie string
+    //
+    while (i_i < coo_u.len) {
+      //  if we found our key, read the value
+      //
+      if (key_c[j_i] == '\0' && coo_u.base[i_i] == '=') {
+        i_i++;
+        while ( i_i < coo_u.len
+             && coo_u.base[i_i] != ';'
+             && val_y < sizeof(val_c) ) {
+          val_c[val_y] = coo_u.base[i_i];
+          val_y++;
+          i_i++;
+        }
+        break;
+      }
+      //  keep reading the key as long as it matches
+      //
+      else if (coo_u.base[i_i] == key_c[j_i]) {
+        j_i++;
+      }
+      else {
+        j_i = 0;
+      }
+      i_i++;
+    }
+
+    u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
+    u3_assert(c3y == aut || c3n == aut);
+
+    return aut;
+  }
+}
+
 /* _http_req_find(): find http request in connection by sequence.
 */
 static u3_hreq*
@@ -421,7 +495,11 @@ _http_req_kill(u3_hreq* req_u)
 typedef struct _u3_hgen {
   h2o_generator_t neg_u;             // response callbacks
   c3_o            red;               // ready to send
-  c3_o            dun;               // done sending
+  enum {                             //
+    u3_hgen_wait = 0,                //  more expected
+    u3_hgen_done = 1,                //  complete
+    u3_hgen_fail = 2                 //  failed
+  } sat_e;
   u3_hbod*        bod_u;             // pending body
   u3_hbod*        nud_u;             // pending free
   u3_hhed*        hed_u;             // pending free
@@ -465,6 +543,9 @@ _http_seq_done(void* ptr_v)
   _http_seq_unlink(seq_u);
 }
 
+static void
+_http_hgen_send(u3_hgen* gen_u);
+
 /* _http_req_timer_cb(): request timeout callback
 */
 static void
@@ -472,12 +553,32 @@ _http_req_timer_cb(uv_timer_t* tim_u)
 {
   u3_hreq* req_u = tim_u->data;
 
-  if ( u3_rsat_plan == req_u->sat_e ) {
-    _http_req_kill(req_u);
-    req_u->sat_e = u3_rsat_ripe;
+  switch ( req_u->sat_e ) {
+    case u3_rsat_init: u3_assert(0);
 
-    c3_c* msg_c = "gateway timeout";
-    h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    case u3_rsat_plan: {
+      _http_req_kill(req_u);
+      req_u->sat_e = u3_rsat_ripe;
+
+      c3_c* msg_c = "gateway timeout";
+      h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_ripe: {
+      u3_hgen* gen_u = req_u->gen_u;
+
+      //  inform %eyre if response was incomplete
+      //
+      if ( u3_hgen_wait == gen_u->sat_e ) {
+        _http_req_kill(req_u);
+      }
+
+      gen_u->sat_e = u3_hgen_fail;
+
+      if ( c3y == gen_u->red ) {
+        _http_hgen_send(gen_u);
+      }
+    } break;
   }
 }
 
@@ -522,7 +623,7 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 {
-  c3_assert(u3_rsat_init == req_u->sat_e);
+  u3_assert(u3_rsat_init == req_u->sat_e);
   req_u->sat_e = u3_rsat_plan;
 
   {
@@ -546,6 +647,68 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   }
 }
 
+/* _http_cache_respond(): respond with a simple-payload:http
+*/
+static void
+_http_cache_respond(u3_hreq* req_u, u3_noun nun) {
+  // XX check auth
+  u3_noun auth, response_header, data;
+  u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+  u3_noun status, headers;
+  u3x_cell(response_header, &status, &headers);
+
+  req_u->sat_e = u3_rsat_plan;
+  _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+  u3z(nun);
+}
+
+typedef struct _cache_scry_cb_t {
+  u3_hreq* req_u;
+  u3_noun  pax;
+} cache_scry_cb_t;
+
+/* _http_cache_scry_cb(): insert scry result into noun cache
+*/
+static void
+_http_cache_scry_cb(void* vod_p, u3_noun nun)
+{
+  cache_scry_cb_t* cbt = vod_p;
+  u3_httd* htd_u = cbt->req_u->hon_u->htp_u->htd_u;
+  u3h_put(htd_u->nax_p, cbt->pax, nun);
+  u3z(cbt->pax);
+  _http_cache_respond(cbt->req_u, nun);
+  c3_free(cbt);
+}
+
+/* _http_req_cache(): attempt to serve http request from cache
+*/
+static c3_o
+_http_req_cache(u3_hreq* req_u)
+{
+  u3_assert(u3_rsat_init == req_u->sat_e);
+
+  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
+
+  u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
+  u3_weak sac = u3h_get(htd_u->sax_p, url);
+  if ( u3_none == sac ) {
+    return c3n;
+  }
+
+  u3_weak nac = u3h_get(htd_u->nax_p, sac);
+  if ( u3_none == nac ) {
+    // noun not in cache; scry it
+    cache_scry_cb_t* cbt = c3_malloc(sizeof(cache_scry_cb_t));
+    cbt->req_u = req_u;
+    cbt->pax = sac;
+    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
+                      u3_nul, sac, cbt, _http_cache_scry_cb);
+    return c3y;
+  }
+  _http_cache_respond(req_u, nac);
+  return c3y;
+}
+
 /* _http_hgen_dispose(): dispose response generator and buffers
 */
 static void
@@ -560,19 +723,19 @@ _http_hgen_dispose(void* ptr_v)
   gen_u->bod_u = 0;
 }
 
+/* _http_hgen_send(): send (some/more of a) response.
+*/
 static void
 _http_hgen_send(u3_hgen* gen_u)
 {
-  c3_assert( c3y == gen_u->red );
-
-  u3_hreq* req_u = gen_u->req_u;
-  h2o_req_t* rec_u = req_u->rec_u;
-
-  c3_w len_w;
+  u3_hreq*     req_u = gen_u->req_u;
+  h2o_req_t*   rec_u = req_u->rec_u;
+  c3_w         len_w;
   h2o_iovec_t* vec_u = _cttp_bods_to_vec(gen_u->bod_u, &len_w);
 
   //  not ready again until _proceed
   //
+  u3_assert( c3y == gen_u->red );
   gen_u->red = c3n;
 
   //  stash [bod_u] to free later
@@ -581,20 +744,27 @@ _http_hgen_send(u3_hgen* gen_u)
   gen_u->nud_u = gen_u->bod_u;
   gen_u->bod_u = 0;
 
-  if ( c3n == gen_u->dun ) {
-    h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
-    uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
-  }
-  else {
-    //  close connection if shutdown pending
-    //
-    u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
+  switch ( gen_u->sat_e ) {
+    case u3_hgen_wait: {
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
+      uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
+    } break;
 
-    if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
-      rec_u->http1_is_persistent = 0;
-    }
+    case u3_hgen_done: {
+      //  close connection if shutdown pending
+      //
+      u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
 
-    h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+      if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
+        rec_u->http1_is_persistent = 0;
+      }
+
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+    } break;
+
+    case u3_hgen_fail: {
+      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_ERROR);
+    } break;
   }
 
   c3_free(vec_u);
@@ -609,7 +779,7 @@ _http_hgen_stop(h2o_generator_t* neg_u, h2o_req_t* rec_u)
 
   //  response not complete, enqueue cancel
   //
-  if ( c3n == gen_u->dun ) {
+  if ( u3_hgen_wait == gen_u->sat_e ) {
     _http_req_kill(gen_u->req_u);
   }
 }
@@ -623,11 +793,11 @@ _http_hgen_proceed(h2o_generator_t* neg_u, h2o_req_t* rec_u)
   u3_hreq* req_u = gen_u->req_u;
 
   // sanity check
-  c3_assert( rec_u == req_u->rec_u );
+  u3_assert( rec_u == req_u->rec_u );
 
   gen_u->red = c3y;
 
-  if ( 0 != gen_u->bod_u || c3y == gen_u->dun ) {
+  if ( gen_u->bod_u || (u3_hgen_wait != gen_u->sat_e) ) {
     _http_hgen_send(gen_u);
   }
 }
@@ -641,10 +811,9 @@ _http_start_respond(u3_hreq* req_u,
                     u3_noun data,
                     u3_noun complete)
 {
-  // u3l_log("start");
-
   if ( u3_rsat_plan != req_u->sat_e ) {
-    //u3l_log("duplicate response");
+    u3l_log("http: %%start not sane");
+    u3z(status); u3z(headers); u3z(data); u3z(complete);
     return;
   }
 
@@ -691,7 +860,7 @@ _http_start_respond(u3_hreq* req_u,
                                         _http_hgen_dispose);
   gen_u->neg_u = (h2o_generator_t){ _http_hgen_proceed, _http_hgen_stop };
   gen_u->red   = c3y;
-  gen_u->dun   = complete;
+  gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
   gen_u->bod_u = ( u3_nul == data ) ?
                  0 : _cttp_bod_from_octs(u3k(u3t(data)));
   gen_u->nud_u = 0;
@@ -715,24 +884,16 @@ _http_start_respond(u3_hreq* req_u,
   u3z(status); u3z(headers); u3z(data); u3z(complete);
 }
 
-/* _http_continue_respond(): write a [%http-response %continue ...] to
- * h2o_req_t->res
+/* _http_continue_respond(): apply [%http-response %continue ...].
 */
 static void
 _http_continue_respond(u3_hreq* req_u,
-                       /* u3_noun status, */
-                       /* u3_noun headers, */
-                       u3_noun data,
+                       u3_noun   data,
                        u3_noun complete)
 {
-  // u3l_log("continue");
-
-  // XX add sequence numbers for %continue effects?
-  // Arvo does not (currently) guarantee effect idempotence!!
-
-  // response has not yet been started
   if ( u3_rsat_ripe != req_u->sat_e ) {
-    // u3l_log("duplicate response");
+    u3l_log("http: %%continue before %%start");
+    u3z(data); u3z(complete);
     return;
   }
 
@@ -740,14 +901,7 @@ _http_continue_respond(u3_hreq* req_u,
 
   uv_timer_stop(req_u->tim_u);
 
-  // XX proposed sequence number safety check
-  // if ( sequence <= gen_u->sequence ) {
-  //   return;
-  // }
-  //
-  // c3_assert( sequence == ++gen_u->sequence );
-
-  gen_u->dun = complete;
+  gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
 
   if ( u3_nul != data ) {
     u3_hbod* bod_u = _cttp_bod_from_octs(u3k(u3t(data)));
@@ -771,6 +925,34 @@ _http_continue_respond(u3_hreq* req_u,
   }
 
   u3z(data); u3z(complete);
+}
+
+/* _http_cancel_respond(): apply [%http-response %cancel ~].
+*/
+static void
+_http_cancel_respond(u3_hreq* req_u)
+{
+  switch ( req_u->sat_e ) {
+    case u3_rsat_init: u3_assert(0);
+
+    case u3_rsat_plan: {
+      req_u->sat_e = u3_rsat_ripe; // XX confirm
+
+      c3_c* msg_c = "hosed";
+      h2o_send_error_generic(req_u->rec_u, 500, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_ripe: {
+      u3_hgen* gen_u = req_u->gen_u;
+
+      uv_timer_stop(req_u->tim_u);
+      gen_u->sat_e = u3_hgen_fail;
+
+      if ( c3y == gen_u->red ) {
+        _http_hgen_send(gen_u);
+      }
+    }
+  }
 }
 
 /* _http_rec_to_httq(): convert h2o_req_t to httq
@@ -814,7 +996,7 @@ _http_rec_sock(h2o_req_t* rec_u)
 
   //  sanity check
   //
-  c3_assert( hon_u->sok_u == &suv_u->sok_u );
+  u3_assert( hon_u->sok_u == &suv_u->sok_u );
 
   return hon_u;
 }
@@ -836,20 +1018,24 @@ _http_req_prepare(h2o_req_t* rec_u,
   return seq_u;
 }
 
-/* _http_seq_continue(): respond to slogstream request based on auth scry result
+/* _http_seq_accept(): handle incoming http request on slogstream endpoint
 */
-static void
-_http_seq_continue(void* vod_p, u3_noun nun)
+static c3_i
+_http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
-  h2o_req_t* rec_u = vod_p;
-  u3_weak    aut   = u3r_at(7, nun);
+  u3_hcon* hon_u = _http_rec_sock(rec_u);
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
 
-  //  if the request is authenticated properly, send slogstream/sse headers
+  //  if the request is not authenticated, reject it
   //
-  //TODO  authentication might expire after the connection has been opened!
-  //      eyre could notify us about this, or we could re-check periodically.
+  if ( c3n == aut_o ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
+  }
+  //  if it is authenticated, send slogstream/sse headers
   //
-  if ( c3y == aut ) {
+  else {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_seq_new);
     u3_noun  hed   = u3nl(u3nc(u3i_string("Content-Type"),
                                u3i_string("text/event-stream")),
@@ -860,67 +1046,10 @@ _http_seq_continue(void* vod_p, u3_noun nun)
                           u3_none);
 
     _http_start_respond(req_u, 200, hed, u3_nul, c3n);
-  }
-  //  if the scry failed, the result is unexpected, or there is no auth,
-  //  respond with the appropriate status code
-  //
-  else {
-    //NOTE  we use req_new because we don't want to consider this a slog stream
-    //      request, but this means we need to manually skip past the "in event
-    //      queue" state on the hreq.
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    req_u->sat_e = u3_rsat_plan;
 
-    if ( c3n == aut ) {
-      _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
-    }
-    else if ( u3_none == aut ) {
-      u3l_log("http: authentication scry failed");
-      _http_start_respond(req_u, 500, u3_nul, u3_nul, c3y);
-    }
-    else {
-      u3m_p("http: weird authentication scry result", aut);
-      _http_start_respond(req_u, 500, u3_nul, u3_nul, c3y);
-    }
-  }
-
-  u3z(nun);
-}
-
-/* _http_seq_accept(): handle incoming http request on slogstream endpoint
-*/
-static c3_i
-_http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
-{
-  //  try to find a cookie header
-  //
-  u3_weak coo = u3_none;
-  {
-    //TODO  http2 allows the client to put multiple 'cookie' headers
-    ssize_t hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, -1);
-    if ( hin_i != -1 ) {
-      coo = _http_vec_to_atom(rec_u->headers.entries[hin_i].value);
-    }
-  }
-
-  //  if there is no cookie header, it can't possibly be authenticated
-  //
-  if ( u3_none == coo ) {
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    req_u->sat_e = u3_rsat_plan;
-    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
-  }
-  //  if there is a cookie, scry to see if it constitutes authentication
-  //
-  else {
-    u3_hcon* hon_u = _http_rec_sock(rec_u);
-
-    u3_noun pax = u3nq(u3i_string("authenticated"),
-                       u3i_string("cookie"),
-                       u3dc("scot", 't', coo),
-                       u3_nul);
-    u3_pier_peek_last(hon_u->htp_u->htd_u->car_u.pir_u, u3_nul, c3__ex,
-                      u3_nul, pax, rec_u, _http_seq_continue);
+    //TODO  auth token may expire at some point. if we want to close the
+    //      slogstream when that happens, we need to store the token that
+    //      was used alongside it...
   }
 
   return 0;
@@ -971,7 +1100,9 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   }
   else {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    _http_req_dispatch(req_u, req);
+    if ( c3n == _http_req_cache(req_u) ) {
+      _http_req_dispatch(req_u, req);
+    }
   }
 
   return 0;
@@ -1040,7 +1171,7 @@ _http_conn_free(uv_handle_t* han_t)
   u3_http* htp_u = hon_u->htp_u;
   u3_h2o_serv* h2o_u = htp_u->h2o_u;
 
-  c3_assert( 0 == hon_u->req_u );
+  u3_assert( 0 == hon_u->req_u );
 
 #if 0
   {
@@ -1230,7 +1361,7 @@ _http_h2o_context_dispose(h2o_context_t* ctx)
 static void
 _http_serv_really_free(u3_http* htp_u)
 {
-  c3_assert( 0 == htp_u->hon_u );
+  u3_assert( 0 == htp_u->hon_u );
 
   if ( 0 != htp_u->h2o_u ) {
     u3_h2o_serv* h2o_u = htp_u->h2o_u;
@@ -1276,7 +1407,7 @@ _http_serv_free(u3_http* htp_u)
   u3l_log("http serv free %d", htp_u->sev_l);
 #endif
 
-  c3_assert( 0 == htp_u->hon_u );
+  u3_assert( 0 == htp_u->hon_u );
 
   if ( 0 == htp_u->h2o_u ) {
     _http_serv_really_free(htp_u);
@@ -1718,8 +1849,8 @@ _http_release_ports_file(c3_c *pax_c)
   c3_i  wit_i;
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, nam_c);
-  c3_assert(wit_i > 0);
-  c3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(wit_i > 0);
+  u3_assert(len_w == (c3_w)wit_i + 1);
 
   c3_unlink(paf_c);
   c3_free(paf_c);
@@ -1772,7 +1903,7 @@ _http_serv_start_all(u3_httd* htd_u)
   u3_noun   dis;
   u3_form*  for_u = htd_u->fig_u.for_u;
 
-  c3_assert( 0 != for_u );
+  u3_assert( 0 != for_u );
 
   // if the SSL_CTX existed, it'll be freed with the servers
   htd_u->tls_u = 0;
@@ -1829,7 +1960,7 @@ _http_serv_start_all(u3_httd* htd_u)
 
   //  send listening ports to %eyre
   {
-    c3_assert( u3_none != non );
+    u3_assert( u3_none != non );
 
     //  XX remove [sen]
     //
@@ -1892,6 +2023,16 @@ _http_form_free(u3_httd* htd_u)
   htd_u->fig_u.for_u = 0;
 }
 
+/* _http_auth_free(): free stored auth token state
+*/
+static void
+_http_auth_free(u3_httd* htd_u)
+{
+  u3z(htd_u->fig_u.ses);
+  htd_u->fig_u.ses = u3_nul;
+  c3_free(htd_u->fig_u.key_c);
+}
+
 /* u3_http_ef_form(): apply configuration, restart servers.
 */
 void
@@ -1940,6 +2081,15 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   htd_u->car_u.liv_o = c3y;
 }
 
+/* u3_http_ef_form(): store set of auth tokens
+*/
+void
+u3_http_ef_auth(u3_httd* htd_u, u3_noun fig)
+{
+  u3z(htd_u->fig_u.ses);
+  htd_u->fig_u.ses = fig;
+}
+
 /* _http_io_talk(): start http I/O.
 */
 static void
@@ -1977,6 +2127,17 @@ _http_ef_http_server(u3_httd* htd_u,
   if ( c3y == u3r_sing_c("set-config", tag) ) {
     u3_http_ef_form(htd_u, u3k(dat));
   }
+  else if ( c3y == u3r_sing_c("sessions", tag) ) {
+    u3_http_ef_auth(htd_u, u3k(dat));
+  }
+  //  handles a cache notification
+  //
+  else if ( c3y == u3r_sing_c("grow", tag) ) {
+    // cache paths are /cache/(scot %ud aeon)/(scot %t url)
+    u3_noun pax = u3k(dat);
+    u3_noun url = u3h(u3t(u3t(pax)));
+    u3h_put(htd_u->sax_p, url, pax);
+  }
   //  responds to an open request
   //
   else if ( 0 != (req_u = _http_search_req(htd_u, sev_l, coq_l, seq_l)) ) {
@@ -2003,7 +2164,7 @@ _http_ef_http_server(u3_httd* htd_u,
         _http_continue_respond(req_u, u3k(data), u3k(complete));
       }
       else if (c3y == u3r_sing_c("cancel", u3h(response))) {
-        u3l_log("http: %%cancel not handled yet");
+        _http_cancel_respond(req_u);
       }
       else {
         u3l_log("http: strange response");
@@ -2180,9 +2341,13 @@ _http_io_exit(u3_auto* car_u)
 {
   u3_httd* htd_u = (u3_httd*)car_u;
 
+  u3h_free(htd_u->sax_p);
+  u3h_free(htd_u->nax_p);
+
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
+  _http_auth_free(htd_u);
 
   //  close all servers
   //
@@ -2266,6 +2431,17 @@ u3_auto*
 u3_http_io_init(u3_pier* pir_u)
 {
   u3_httd* htd_u = c3_calloc(sizeof(*htd_u));
+  htd_u->sax_p = u3h_new();
+  htd_u->nax_p = u3h_new_cache(512);
+
+  {
+    u3_noun key = u3dt("cat", 3,
+      u3i_string("urbauth-"),
+      u3dc("scot", 'p', u3i_chubs(2, pir_u->who_d)));
+    htd_u->fig_u.ses = u3_nul;
+    htd_u->fig_u.key_c = u3r_string(key);
+    u3z(key);
+  }
 
   u3_auto* car_u = &htd_u->car_u;
   car_u->nam_m = c3__http;

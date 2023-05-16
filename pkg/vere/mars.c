@@ -67,7 +67,7 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
       return _play_log_e;
     }
 
-    c3_assert( ++mar_u->sen_d == tac_u.eve_d );
+    u3_assert( ++mar_u->sen_d == tac_u.eve_d );
 
     if ( u3_none != (dud = _mars_poke_play(mar_u, tac_u.eve_d, tac_u.job)) ) {
       c3_m mot_m;
@@ -75,7 +75,7 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
 
-      c3_assert( c3y == u3r_safe_word(u3h(dud), &mot_m) );
+      u3_assert( c3y == u3r_safe_word(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
         case c3__meme: {

@@ -176,15 +176,15 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 static u3_atom
 _unix_string_to_knot(c3_c* pax_c)
 {
-  c3_assert(pax_c);
+  u3_assert(pax_c);
   //  XX  this can happen if we encounter a file without an extension.
   //
-  // c3_assert(*pax_c);
-  c3_assert(!strchr(pax_c, '/'));
+  // u3_assert(*pax_c);
+  u3_assert(!strchr(pax_c, '/'));
   //  XX  horrible
   //
 # ifdef _WIN32
-  c3_assert(!strchr(pax_c, '\\'));
+  u3_assert(!strchr(pax_c, '\\'));
 # endif
   if ( '!' == *pax_c ) {
     pax_c++;
@@ -214,9 +214,9 @@ _unix_knot_to_string(u3_atom pon)
     u3r_bytes(0, met_w, (c3_y*)ret_c + 1, pon);
     ret_c[met_w + 1] = 0;
   }
-  c3_assert(!strchr(ret_c, '/'));
+  u3_assert(!strchr(ret_c, '/'));
 # ifdef _WIN32
-  c3_assert(!strchr(ret_c, '\\'));
+  u3_assert(!strchr(ret_c, '\\'));
 # endif
   return ret_c;
 }
@@ -247,7 +247,7 @@ _unix_string_to_path_helper(c3_c* pax_c)
 {
   u3_noun not;
 
-  c3_assert(pax_c[-1] == '/');
+  u3_assert(pax_c[-1] == '/');
   c3_c* end_c = strchr(pax_c, '/');
   if ( !end_c ) {
     end_c = strrchr(pax_c, '.');
@@ -332,7 +332,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
   len_w = lod_w + sizeof("/.urb/put/") + strlen(pax_c);
   ful_c = c3_malloc(len_w);
   rit_w = snprintf(ful_c, len_w, "%s/.urb/put/%s", u3_Host.dir_c, pax_c);
-  c3_assert(len_w == rit_w + 1);
+  u3_assert(len_w == rit_w + 1);
 
   _unix_mkdirp(ful_c);
   fid_i = c3_open(ful_c, O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -374,7 +374,7 @@ _unix_rm_r_cb(const c3_c* pax_c,
       if ( 0 != c3_unlink(pax_c) && ENOENT != errno ) {
         u3l_log("error unlinking (in rm_r) %s: %s",
                 pax_c, strerror(errno));
-        c3_assert(0);
+        u3_assert(0);
       }
       break;
     case FTW_D:
@@ -389,7 +389,7 @@ _unix_rm_r_cb(const c3_c* pax_c,
     case FTW_DP:
       if ( 0 != c3_rmdir(pax_c) && ENOENT != errno ) {
         u3l_log("error rmdiring %s: %s", pax_c, strerror(errno));
-        c3_assert(0);
+        u3_assert(0);
       }
       break;
     case FTW_SL:
@@ -421,7 +421,7 @@ _unix_mkdir(c3_c* pax_c)
 {
   if ( 0 != c3_mkdir(pax_c, 0755) && EEXIST != errno) {
     u3l_log("error mkdiring %s: %s", pax_c, strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 }
 
@@ -540,7 +540,7 @@ static u3_umon*
 _unix_get_mount_point(u3_unix* unx_u, u3_noun mon)
 {
   if ( c3n == u3ud(mon) ) {
-    c3_assert(!"mount point must be an atom");
+    u3_assert(!"mount point must be an atom");
     u3z(mon);
     return NULL;
   }
@@ -598,7 +598,7 @@ _unix_scan_mount_point(u3_unix* unx_u, u3_umon* mon_u)
       u3l_log("erroring loading pier directory %s: %s",
               mon_u->dir_u.pax_c, strerror(errno));
 
-      c3_assert(0);
+      u3_assert(0);
     }
     else if ( !out_u ) {
       break;
@@ -659,7 +659,7 @@ _unix_free_file(u3_ufil *fil_u)
 {
   if ( 0 != c3_unlink(fil_u->pax_c) && ENOENT != errno ) {
     u3l_log("error unlinking %s: %s", fil_u->pax_c, strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 
   c3_free(fil_u->pax_c);
@@ -759,7 +759,7 @@ static void
 _unix_delete_mount_point(u3_unix* unx_u, u3_noun mon)
 {
   if ( c3n == u3ud(mon) ) {
-    c3_assert(!"mount point must be an atom");
+    u3_assert(!"mount point must be an atom");
     u3z(mon);
     return;
   }
@@ -887,7 +887,7 @@ static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 static u3_noun
 _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 {
-  c3_assert( c3n == fil_u->dir );
+  u3_assert( c3n == fil_u->dir );
 
   if ( c3y == fil_u->dry ) {
     return u3_nul;
@@ -960,7 +960,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
 {
   u3_noun can = u3_nul;
 
-  c3_assert( c3y == dir_u->dir );
+  u3_assert( c3y == dir_u->dir );
 
   if ( c3y == dir_u->dry ) {
     return u3_nul;
@@ -1023,7 +1023,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
   if ( !rid_u ) {
     u3l_log("error opening directory %s: %s",
             dir_u->pax_c, strerror(errno));
-    c3_assert(0);
+    u3_assert(0);
   }
 
   while ( 1 ) {
@@ -1035,7 +1035,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
     if ( (err_w = u3_readdir_r(rid_u, &ent_u, &out_u)) != 0 ) {
       u3l_log("error loading directory %s: %s",
               dir_u->pax_c, strerror(err_w));
-      c3_assert(0);
+      u3_assert(0);
     }
     else if ( !out_u ) {
       break;
@@ -1060,13 +1060,13 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
             if ( S_ISDIR(buf_u.st_mode) ) {
               if ( c3n == nod_u->dir ) {
                 u3l_log("not a directory: %s", nod_u->pax_c);
-                c3_assert(0);
+                u3_assert(0);
               }
             }
             else {
               if ( c3y == nod_u->dir ) {
                 u3l_log("not a file: %s", nod_u->pax_c);
-                c3_assert(0);
+                u3_assert(0);
               }
             }
             break;
@@ -1235,7 +1235,7 @@ _unix_initial_update_dir(c3_c* pax_c, c3_c* bas_c)
       u3l_log("error loading initial directory %s: %s",
               pax_c, strerror(errno));
 
-      c3_assert(0);
+      u3_assert(0);
     }
     else if ( !out_u ) {
       break;
@@ -1290,8 +1290,8 @@ u3_unix_initial_into_card(c3_c* arv_c)
 static void
 _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_noun mim)
 {
-  c3_assert( par_u );
-  c3_assert( c3y == par_u->dir );
+  u3_assert( par_u );
+  u3_assert( c3y == par_u->dir );
 
   // form file path
 
@@ -1354,7 +1354,7 @@ _unix_sync_file_out:
 static void
 _unix_sync_change(u3_unix* unx_u, u3_udir* dir_u, u3_noun pax, u3_noun mim)
 {
-  c3_assert( c3y == dir_u->dir );
+  u3_assert( c3y == dir_u->dir );
 
   if ( c3n == u3du(pax) ) {
     if ( u3_nul == pax ) {
@@ -1398,7 +1398,7 @@ _unix_sync_change(u3_unix* unx_u, u3_udir* dir_u, u3_noun pax, u3_noun mim)
 
       if ( c3n == nod_u->dir ) {
         u3l_log("weird, we got a file when we weren't expecting to");
-        c3_assert(0);
+        u3_assert(0);
       }
 
       _unix_sync_change(unx_u, (u3_udir*) nod_u, u3k(t_pax), mim);

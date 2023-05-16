@@ -90,9 +90,9 @@ _cj_hash(c3_c* has_c)
   c3_w i_w, len_w = strlen(has_c);
   if ( 64 != len_w ) {
     u3l_log("bash not 64 characters: %s", has_c);
-    c3_assert(0);
+    u3_assert(0);
   }
-  c3_assert( 64 == len_w );
+  u3_assert( 64 == len_w );
   c3_y dig_y[32];
   for ( i_w = 0; i_w < 64; ) {
     c3_y hi_y  = has_c[i_w++],
@@ -321,7 +321,7 @@ static c3_w
 _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
 {
   c3_w i_w;
-  c3_assert(u3R == &(u3H->rod_u));
+  u3_assert(u3R == &(u3H->rod_u));
 
   if ( dev_u ) {
     for ( i_w = 0; 0 != dev_u[i_w].cos_c; i_w++ ) {
@@ -709,7 +709,7 @@ _cj_cast(u3_noun cor, u3_noun loc)
     fis_u->pax = u3k(u3t(par));
   }
   u3z(rev);
-  c3_assert( u3_nul == j );
+  u3_assert( u3_nul == j );
 
   return u3of(u3j_fink, fin_u);
 }
@@ -746,7 +746,7 @@ _cj_nail(u3_noun loc, u3_noun axe,
   u3_noun jax, hap, bal, jit;
   u3_weak act;
   act = _cj_find_warm(loc);
-  c3_assert(u3_none != act);
+  u3_assert(u3_none != act);
   u3x_qual(act, &jax, &hap, &bal, &jit);
 
   *lab = u3k(bal);
@@ -813,9 +813,9 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
 c3_w
 u3j_boot(c3_o nuu_o)
 {
-  c3_assert(u3R == &(u3H->rod_u));
+  u3_assert(u3R == &(u3H->rod_u));
 
-  u3D.len_l =_cj_count(0, u3D.dev_u);
+  u3D.len_l = _cj_count(0, u3D.dev_u);
   u3D.all_l = (2 * u3D.len_l) + 1024;     //  horrid heuristic
 
   u3D.ray_u = c3_malloc(u3D.all_l * sizeof(u3j_core));
@@ -1125,7 +1125,7 @@ _cj_hank_fine(_cj_hank* han_u, u3_noun cor, u3_noun *inn)
     }
     else {
       u3j_site* sit_u = &(han_u->sit_u);
-      c3_assert(u3_none != sit_u->loc);
+      u3_assert(u3_none != sit_u->loc);
       return _cj_fine(*inn, sit_u->fin_p);
     }
   }
@@ -1704,7 +1704,7 @@ u3j_gate_prep(u3j_site* sit_u, u3_noun cor)
       u3l_log("u3j_gate_prep(): parent axis includes sample");
       u3m_p("axis", pax);
       u3_weak act = _cj_find_warm(loc);
-      c3_assert( u3_none != act );
+      u3_assert( u3_none != act );
       sit_u->jet_o = c3n;
       sit_u->lab = u3k(u3h(u3t(u3t(act))));
       u3z(act);
@@ -1828,7 +1828,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     }
     else {
       u3_weak pac = _cj_find_warm(pel);
-      c3_assert(u3_none != pac);
+      u3_assert(u3_none != pac);
       par_l = u3h(pac);
       bal   = u3nc(u3k(nam), u3k(u3h(u3t(u3t(pac)))));
       u3z(pac);
@@ -2179,7 +2179,7 @@ void
 u3j_ream(void)
 {
   u3_noun rel = u3_nul;
-  c3_assert(u3R == &(u3H->rod_u));
+  u3_assert(u3R == &(u3H->rod_u));
   u3h_free(u3R->jed.war_p);
   u3R->jed.war_p = u3h_new();
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &rel);
@@ -2195,7 +2195,7 @@ u3_noun
 u3j_stay(void)
 {
   u3_noun rel = u3_nul;
-  c3_assert(u3R == &(u3H->rod_u));
+  u3_assert(u3R == &(u3H->rod_u));
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &rel);
   return rel;
 }

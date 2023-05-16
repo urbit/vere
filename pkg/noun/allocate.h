@@ -1,47 +1,56 @@
 #ifndef U3_ALLOCATE_H
 #define U3_ALLOCATE_H
 
+#include "error.h"
 #include "manage.h"
+#include "options.h"
 
   /**  Constants.
   **/
     /* u3a_bits: number of bits in word-addressed pointer.  29 == 2GB.
     */
-#     define u3a_bits  U3_OS_LoomBits
+#     define u3a_bits    U3_OS_LoomBits /* 30 */
 
-    /* u3a_page: number of bits in word-addressed page.  12 == 16Kbyte page.
+    /* u3a_vits_max: number of virtual bits in a reference gained via pointer
+       compression
     */
-#     define u3a_page   12
+#     define u3a_vits_max 1
+
+     /* u3a_bits_max: max loom bex
+     */
+#    define u3a_bits_max (8 * sizeof(c3_w) + u3a_vits_max)
+
+    /* u3a_page: number of bits in word-addressed page.  12 == 16K page
+    */
+#     define u3a_page    12ULL
 
     /* u3a_pages: maximum number of pages in memory.
     */
-#     define u3a_pages  (1 << (u3a_bits - u3a_page))
+#     define u3a_pages   (1ULL << (u3a_bits + u3a_vits_max - u3a_page) )
 
     /* u3a_words: maximum number of words in memory.
     */
-#     define u3a_words  (1 << u3a_bits)
+#     define u3a_words   ( 1ULL << (u3a_bits + u3a_vits_max ))
 
     /* u3a_bytes: maximum number of bytes in memory.
     */
-#     define u3a_bytes  (sizeof(c3_w) * u3a_words)
+#     define u3a_bytes   ((sizeof(c3_w) * u3a_words))
 
     /* u3a_cells: number of representable cells.
     */
-#     define u3a_cells  (c3_w)(u3a_words / u3a_minimum)
+#     define u3a_cells   (( u3a_words / u3a_minimum ))
 
     /* u3a_maximum: maximum loom object size (largest possible atom).
     */
-#     define u3a_maximum   \
-        (c3_w)(u3a_words - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom)))
+#     define u3a_maximum ( u3a_words - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom) + 1))
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum   (c3_w)(1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell))
+#     define u3a_minimum ((c3_w)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
 
     /* u3a_fbox_no: number of free lists per size.
     */
-#     define u3a_fbox_no   27
-
+#     define u3a_fbox_no 27
 
   /**  Structures.
   **/
@@ -186,15 +195,15 @@
   /**  Macros.  Should be better commented.
   **/
     /* In and out of the box.
+       u3a_boxed -> sizeof u3a_box + allocation size (len_w) + 1 (for storing the redundant size)
+       u3a_boxto -> the region of memory adjacent to the box.
+       u3a_botox -> the box adjacent to the region of memory
     */
 #     define u3a_boxed(len_w)  (len_w + c3_wiseof(u3a_box) + 1)
 #     define u3a_boxto(box_v)  ( (void *) \
-                                   ( ((c3_w *)(void*)(box_v)) + \
-                                     c3_wiseof(u3a_box) ) )
-#     define u3a_botox(tox_v)  ( (struct _u3a_box *) \
-                                   (void *) \
-                                   ( ((c3_w *)(void*)(tox_v)) - \
-                                      c3_wiseof(u3a_box)  ) )
+                                   ( (u3a_box *)(void *)(box_v) + 1 ) )
+#     define u3a_botox(tox_v)  ( (u3a_box *)(void *)(tox_v) - 1 )
+
     /* Inside a noun.
     */
 
@@ -213,26 +222,6 @@
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
 #     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
-
-    /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
-    */
-#     define u3a_to_off(som)    ((som) & 0x3fffffff)
-
-    /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
-    */
-#     define u3a_to_ptr(som)    (u3a_into(u3a_to_off(som)))
-
-    /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
-    */
-#     define u3a_to_wtr(som)    ((c3_w *)u3a_to_ptr(som))
-
-    /* u3a_to_pug(): set bit 31 of [off].
-    */
-#     define u3a_to_pug(off)    (off | 0x80000000)
-
-    /* u3a_to_pom(): set bits 30 and 31 of [off].
-    */
-#     define u3a_to_pom(off)    (off | 0xc0000000)
 
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
@@ -261,69 +250,63 @@
            : u3m_bail(c3__exit) )
 #     define u3t(som) u3a_t(som)
 
-    /* u3a_into(): convert loom offset [x] into generic pointer.
-    */
-#     define  u3a_into(x) ((void *)(u3_Loom + (x)))
 #     define  u3to(type, x) ((type *)u3a_into(x))
 #     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
 
-    /* u3a_outa(): convert pointer [p] into word offset into loom.
-    */
-#     define  u3a_outa(p) (((c3_w*)(void*)(p)) - u3_Loom)
 #     define  u3of(type, x) (u3a_outa((type*)x))
 
     /* u3a_is_north(): yes if road [r] is north road.
     */
-#     define  u3a_is_north(r)  __(r->cap_p > r->hat_p)
+#     define  u3a_is_north(r)  __((r)->cap_p > (r)->hat_p)
 
     /* u3a_is_south(): yes if road [r] is south road.
     */
-#     define  u3a_is_south(r)  !u3a_is_north(r)
+#     define  u3a_is_south(r)  !u3a_is_north((r))
 
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->cap_p - r->hat_p) \
-                             : (c3_w)(r->hat_p - r->cap_p) )
+                             ? (c3_w)((r)->cap_p - (r)->hat_p) \
+                             : (c3_w)((r)->hat_p - (r)->cap_p) )
 
     /* u3a_full(): total words in road [r];
     ** u3a_full(r) == u3a_heap(r) + u3a_temp(r) + u3a_open(r)
     */
 #     define  u3a_full(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->mat_p - r->rut_p) \
-                             : (c3_w)(r->rut_p - r->mat_p) )
+                             ? (c3_w)((r)->mat_p - (r)->rut_p) \
+                             : (c3_w)((r)->rut_p - (r)->mat_p) )
 
     /* u3a_heap(): words of heap in road [r]
     */
 #     define  u3a_heap(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->hat_p - r->rut_p) \
-                             : (c3_w)(r->rut_p - r->hat_p) )
+                             ? (c3_w)((r)->hat_p - (r)->rut_p) \
+                             : (c3_w)((r)->rut_p - (r)->hat_p) )
 
     /* u3a_temp(): words of stack in road [r]
     */
 #     define  u3a_temp(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)(r->mat_p - r->cap_p) \
-                             : (c3_w)(r->cap_p - r->mat_p) )
+                             ? (c3_w)((r)->mat_p - (r)->cap_p) \
+                             : (c3_w)((r)->cap_p - (r)->mat_p) )
 
 #     define  u3a_north_is_senior(r, dog) \
-                __((u3a_to_off(dog) < r->rut_p) ||  \
-                       (u3a_to_off(dog) >= r->mat_p))
+                __((u3a_to_off(dog) < (r)->rut_p) ||  \
+                       (u3a_to_off(dog) >= (r)->mat_p))
 
 #     define  u3a_north_is_junior(r, dog) \
-                __((u3a_to_off(dog) >= r->cap_p) && \
-                       (u3a_to_off(dog) < r->mat_p))
+                __((u3a_to_off(dog) >= (r)->cap_p) && \
+                       (u3a_to_off(dog) < (r)->mat_p))
 
 #     define  u3a_north_is_normal(r, dog) \
                 c3a(!(u3a_north_is_senior(r, dog)),  \
                        !(u3a_north_is_junior(r, dog)))
 
 #     define  u3a_south_is_senior(r, dog) \
-                __((u3a_to_off(dog) < r->mat_p) || \
-                       (u3a_to_off(dog) >= r->rut_p))
+                __((u3a_to_off(dog) < (r)->mat_p) || \
+                       (u3a_to_off(dog) >= (r)->rut_p))
 
 #     define  u3a_south_is_junior(r, dog) \
-                __((u3a_to_off(dog) < r->cap_p) && \
-                       (u3a_to_off(dog) >= r->mat_p))
+                __((u3a_to_off(dog) < (r)->cap_p) && \
+                       (u3a_to_off(dog) >= (r)->mat_p))
 
 #     define  u3a_south_is_normal(r, dog) \
                 c3a(!(u3a_south_is_senior(r, dog)),  \
@@ -353,6 +336,30 @@
                   : (u3a_botox(u3a_to_ptr(som))->use_w == 1) \
                   ? c3y : c3n )
 
+/* like _box_vaal but for rods. Again, probably want to prefix validation
+   functions at the very least. Maybe they can be defined in their own header.
+
+   ps. while arguably cooler to have this compile to
+
+   do {(void(0));(void(0));} while(0)
+
+   It may be nicer to just wrap an inline function in #ifdef C3DBG guards. You
+   could even return the then validated road like
+
+   u3a_road f() {
+   u3a_road rod_u;
+   ...
+   return _rod_vaal(rod_u);
+   }
+*/
+#     define _rod_vaal(rod_u)                                           \
+             do {                                                       \
+               c3_dessert(((uintptr_t)((u3a_road*)(rod_u))->hat_p       \
+                           & u3C.walign_w-1) == 0);                     \
+             } while(0)
+
+
+
   /**  Globals.
   **/
       /// Current road (thread-local).
@@ -369,6 +376,68 @@
 
   /**  inline functions.
   **/
+  /* u3a_config_loom(): configure loom information by u3v version
+   */
+  inline void u3a_config_loom(c3_w ver_w) {
+    switch (ver_w) {
+    case U3V_VER1:
+      u3C.vits_w = 0;
+      break;
+    case U3V_VER2:
+      u3C.vits_w = 1;
+      break;
+    default:
+      u3_assert(0);
+    }
+
+  u3C.walign_w = 1 << u3C.vits_w;
+  u3C.balign_d = sizeof(c3_w) * u3C.walign_w;
+}
+
+  /* u3a_into(): convert loom offset [x] into generic pointer.
+   */
+  inline void *u3a_into(c3_w x) {
+    return u3_Loom + x;
+  }
+
+  /* u3a_outa(): convert pointer [p] into word offset into loom.
+   */
+  inline c3_w u3a_outa(void *p) {
+    return ((c3_w *)p) - u3_Loom;
+  }
+
+  /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
+   */
+  inline c3_w u3a_to_off(c3_w som) {
+    return (som & 0x3fffffff) << u3C.vits_w;
+  }
+
+  /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
+   */
+  inline void *u3a_to_ptr(c3_w som) {
+    return u3a_into(u3a_to_off(som));
+  }
+
+  /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
+   */
+  inline c3_w *u3a_to_wtr(c3_w som) {
+    return (c3_w *)u3a_to_ptr(som);
+  }
+
+  /* u3a_to_pug(): set bit 31 of [off].
+   */
+  inline c3_w u3a_to_pug(c3_w off) {
+    c3_dessert((off & u3C.walign_w-1) == 0);
+    return (off >> u3C.vits_w) | 0x80000000;
+  }
+
+  /* u3a_to_pom(): set bits 30 and 31 of [off].
+   */
+  inline c3_w u3a_to_pom(c3_w off) {
+    c3_dessert((off & u3C.walign_w-1) == 0);
+    return (off >> u3C.vits_w) | 0xc0000000;
+  }
+
     /**  road stack.
     **/
         /* u3a_drop(): drop a road stack frame per [pil_u].
@@ -411,7 +480,7 @@
                 u3m_bail(c3__meme);
               }
 # ifdef U3_MEMORY_DEBUG
-              c3_assert( pil_u->top_p >= u3R->cap_p );
+              u3_assert( pil_u->top_p >= u3R->cap_p );
 # endif
             }
             else {
@@ -419,13 +488,13 @@
                 u3m_bail(c3__meme);
               }
 # ifdef U3_MEMORY_DEBUG
-              c3_assert( pil_u->top_p <= u3R->cap_p );
+              u3_assert( pil_u->top_p <= u3R->cap_p );
 # endif
             }
 #endif /* ifndef U3_GUARD_PAGE */
 
 #ifdef U3_MEMORY_DEBUG
-            c3_assert( pil_u->rod_u == u3R );
+            u3_assert( pil_u->rod_u == u3R );
 #endif
 
             return u3a_peek(pil_u);
@@ -684,5 +753,10 @@
         */
           c3_c*
           u3a_string(u3_atom a);
+
+        /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
+        */
+          void
+          u3a_loom_sane();
 
 #endif /* ifndef U3_ALLOCATE_H */

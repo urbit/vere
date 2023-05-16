@@ -124,6 +124,9 @@
     u3_noun u3qe_rexp(u3_noun, u3_noun);
     u3_noun u3qe_trip(u3_atom);
 
+    u3_atom u3qe_scot(u3_atom, u3_atom);
+    u3_atom u3qe_scow(u3_atom, u3_atom);
+
     u3_noun u3qea_ecba_en(u3_atom, u3_atom);
     u3_noun u3qea_ecba_de(u3_atom, u3_atom);
     u3_noun u3qea_ecbb_en(u3_atom, u3_atom);
@@ -149,6 +152,9 @@
 
     u3_noun u3qe_en_base16(u3_atom len, u3_atom dat);
     u3_noun u3qe_de_base16(u3_atom inp);
+
+    u3_noun u3qe_json_de(u3_atom);
+    u3_atom u3qe_json_en(u3_noun);
 
     u3_noun u3qeo_raw(u3_atom, u3_atom);
 

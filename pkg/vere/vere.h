@@ -264,7 +264,6 @@
         c3_c*   pil_c;                      //  -B, bootstrap from
         c3_c*   bin_c;                      //  -b, http server bind ip
         c3_w    hap_w;                      //  -C, cap memo cache
-        c3_o    nuu;                        //  -c, new pier
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
         c3_c*   eth_c;                      //  -e, ethereum node url
@@ -288,6 +287,7 @@
         c3_s    per_s;                      //      http port
         c3_s    pes_s;                      //      https port
         c3_s    por_s;                      //  -p, ames port
+        c3_w    sap_w;                      //      Snapshot timer legth (seconds)
         c3_o    qui;                        //  -q, quiet
         c3_o    rep;                        //  -R, report build info
         c3_c*   roc_c;                      //  -r, load rock by eve_d
@@ -303,6 +303,7 @@
         c3_c*   puf_c;                      //  -Z, scry result format
         c3_o    con;                        //      run conn
         c3_o    doc;                        //      dock binary in pier
+        c3_o    nuu;                        //      new pier
       } u3_opts;
 
     /* u3_host: entire host.

@@ -42,7 +42,7 @@ u3v_boot(u3_noun eve)
 
   {
     u3_noun len = u3qb_lent(eve);
-    c3_assert( c3y == u3r_safe_chub(len, &len_d) );
+    u3_assert( c3y == u3r_safe_chub(len, &len_d) );
     u3z(len);
   }
 
