@@ -17,8 +17,8 @@
       return u3m_bail(c3__exit);
     }
     else {
-      c = u3qc_bex((b_w - 1));
-      d = u3qc_bex((b_w - 2));
+      c = u3qc_bex(u3i_word(b_w - 1));
+      d = u3qc_bex(u3i_word(b_w - 2));
       e = u3qa_sub(a, c);
       f = u3qc_con(e, d);
 
