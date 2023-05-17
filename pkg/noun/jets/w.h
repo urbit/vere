@@ -58,6 +58,7 @@
     u3_noun u3wc_dor(u3_noun);
     u3_noun u3wc_dvr(u3_noun);
     u3_noun u3wc_end(u3_noun);
+    u3_noun u3wc_hub(u3_noun);
     u3_noun u3wc_gor(u3_noun);
     u3_noun u3wc_lsh(u3_noun);
     u3_noun u3wc_mas(u3_noun);
