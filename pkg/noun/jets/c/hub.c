@@ -18,12 +18,16 @@ u3qc_hub(u3_atom a, u3_atom b)
   c_w = b_w - a_w;
 
   if ( (c3y == u3a_is_cat(a)) && (c3y == u3a_is_cat(b)) ) {
+    c3_w d_w;
+
     if ( a != (b >> c_w) ) return u3m_bail(c3__exit);
 
-    return b & ((1 << c_w) - 1);
+    d_w = 1 << c_w;
+
+    return (b & (d_w - 1)) | d_w;
   }
   else {
-    u3_atom c, d, e, f, g;
+    u3_atom c, d, e, f, g, h;
 
     c = u3i_word(c_w);
     d = u3qc_rsh(0, c, b);
@@ -33,13 +37,15 @@ u3qc_hub(u3_atom a, u3_atom b)
     e = u3qc_bex(c);
     f = u3qa_dec(e);
     g = u3qc_dis(b, f);
+    h = u3qc_con(g, e);
 
     u3z(c);
     u3z(d);
     u3z(e);
     u3z(f);
+    u3z(g);
 
-    return g;
+    return h;
   }
 }
 
