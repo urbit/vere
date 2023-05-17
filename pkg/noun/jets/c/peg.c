@@ -14,16 +14,15 @@
       return u3k(a);
     }
 
-    u3_atom c, d, e, f, g, h;
+    u3_atom d, e, f, g, h;
+    c3_w  c_w = u3r_met(0, b) - 1;
 
-    c = u3r_met(0, b);
-    d = u3qa_dec(c);
+    d = u3i_word(c_w);
     e = u3qc_lsh(0, d, 1);
     f = u3qa_sub(b, e);
     g = u3qc_lsh(0, d, a);
     h = u3qa_add(f, g);
 
-    u3z(c);
     u3z(d);
     u3z(e);
     u3z(f);
