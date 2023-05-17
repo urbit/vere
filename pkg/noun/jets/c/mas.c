@@ -16,6 +16,9 @@
     if ( b_w < 2 ) {
       return u3m_bail(c3__exit);
     }
+    else if ( c3y == u3a_is_cat(a) ) {
+      return (a - (1 << (b_w - 1))) | (1 << (b_w - 2));
+    }
     else {
       c = u3qc_bex(u3i_word(b_w - 1));
       d = u3qc_bex(u3i_word(b_w - 2));
