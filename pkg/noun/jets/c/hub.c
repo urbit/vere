@@ -25,7 +25,7 @@ u3qc_hub(u3_atom a, u3_atom b)
   else {
     u3_atom c, d, e, f, g;
 
-    c = u3i_word(b_w - a_w);
+    c = u3i_word(c_w);
     d = u3qc_rsh(0, c, b);
 
     if ( c3n == u3r_sing(a, d) ) return u3m_bail(c3__exit);

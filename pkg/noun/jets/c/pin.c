@@ -19,12 +19,12 @@ u3qc_pin(u3_atom a, u3_atom b)
   c_w = b_w - a_w;
 
   if ( (c3y == u3a_is_cat(a)) && (c3y == u3a_is_cat(b)) ) {
-    return __(a == (b >> (b_w - a_w)));
+    return __(a == (b >> c_w));
   }
   else {
     u3_atom c, d, e;
 
-    c = u3i_word(b_w - a_w);
+    c = u3i_word(c_w);
     d = u3qc_rsh(0, c, b);
     e = u3r_sing(a, d);
 
