@@ -982,6 +982,11 @@
       */
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
+
+      /* u3_disk_epoc_good(): check for valid epoch.
+       */
+       c3_o
+       u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d);
       
       /* u3_disk_epoc_init(): create new epoch.
        */

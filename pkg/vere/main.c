@@ -2220,7 +2220,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   //  success
   c3_d epo_d = log_u->dun_d + 1;
-  fprintf(stderr, "roll: epoch rollover complete");
+  fprintf(stderr, "roll: epoch rollover complete\r\n");
 }
 
 /* _cw_vere(): download vere
@@ -2659,7 +2659,7 @@ main(c3_i   argc,
 
     //  we need the current snapshot's latest event number to 
     //  validate whether we can execute disk migration
-    if ( c3n == u3_Host.ops_u.nuu ) {
+    if ( u3_Host.ops_u.nuu == c3n ) {
       u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
       //  XX u3e_close()
     }
