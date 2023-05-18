@@ -1459,7 +1459,8 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1471,6 +1472,11 @@ _cw_info(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1522,7 +1528,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1534,6 +1541,11 @@ _cw_grab(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1577,7 +1589,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1589,6 +1602,11 @@ _cw_cram(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1654,6 +1672,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
+    { "no-demand",   no_argument,       NULL, 6 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1666,6 +1685,11 @@ _cw_queu(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case 'r': {
@@ -1742,7 +1766,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1754,6 +1779,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1807,8 +1837,9 @@ _cw_next(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "arch", required_argument, NULL, 'a' },
-    { "loom", required_argument, NULL, c3__loom },
+    { "arch",      required_argument, NULL, 'a' },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1824,6 +1855,11 @@ _cw_next(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1867,7 +1903,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1879,6 +1916,11 @@ _cw_pack(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1978,7 +2020,8 @@ _cw_prep(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1990,6 +2033,11 @@ _cw_prep(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2032,7 +2080,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2044,6 +2093,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2315,7 +2369,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2327,6 +2382,11 @@ _cw_vile(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
