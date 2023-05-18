@@ -749,7 +749,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
   //
   for ( i_w = 0; i_w < pat_u->con_u->pgs_w; i_w++ ) {
     c3_w pag_w = pat_u->con_u->mem_u[i_w].pag_w;
-    c3_w buf_y[_ce_page];
+    c3_y buf_y[_ce_page];
     c3_i fid_i;
     c3_z off_z;
 
