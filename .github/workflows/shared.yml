@@ -40,11 +40,11 @@ jobs:
       matrix:
         include:
           # GitHub doesn't provide AArch64 Linux machines, so we self-host a
-          # runner instead.
-          - { target: linux-aarch64, runner: [self-hosted, Linux, ARM64] }
+          # runner with BuildJet instead.
+          - { target: linux-aarch64, runner: buildjet-4vcpu-ubuntu-2204-arm	}
           - { target: linux-x86_64, runner: ubuntu-22.04 }
-          # GitHub doesn't provide M1 macOS machines, so we self-host a runner
-          # instead.
+          # GitHub doesn't provide macOS machines with Apple Silicon, so we 
+          # self-host a runner with MacStadium instead.
           - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
           - { target: macos-x86_64, runner: macos-12 }
 
