@@ -167,6 +167,7 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+  u3_Host.ops_u.map = c3y;
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -263,6 +264,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-format",         required_argument, NULL, 'Z' },
     //
     { "urth-loom",           required_argument, NULL, 5 },
+    { "no-demand",           no_argument,       NULL, 6 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -272,12 +274,14 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      //  urth-loom
-      //
-      case 5: {
+      case 5: {  //  urth-loom
         if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
+        break;
+      }
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
         break;
       }
       //  special args
@@ -1455,7 +1459,8 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1467,6 +1472,11 @@ _cw_info(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1518,7 +1528,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1530,6 +1541,11 @@ _cw_grab(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1573,7 +1589,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1585,6 +1602,11 @@ _cw_cram(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1629,7 +1651,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   //  save even on failure, as we just did all the work of deduplication
   //
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
 
   if ( c3n == ret_o ) {
@@ -1650,6 +1672,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
+    { "no-demand",   no_argument,       NULL, 6 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1662,6 +1685,11 @@ _cw_queu(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case 'r': {
@@ -1721,7 +1749,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
       exit(1);
     }
 
-    u3e_save();
+    u3m_save();
     u3_disk_exit(log_u);
 
     fprintf(stderr, "urbit: queu: rock loaded at event %" PRIu64 "\r\n", eve_d);
@@ -1738,7 +1766,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1750,6 +1779,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1789,7 +1823,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   u3u_meld();
   u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
 
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -1803,8 +1837,9 @@ _cw_next(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "arch", required_argument, NULL, 'a' },
-    { "loom", required_argument, NULL, c3__loom },
+    { "arch",      required_argument, NULL, 'a' },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1820,6 +1855,11 @@ _cw_next(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1863,7 +1903,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1875,6 +1916,11 @@ _cw_pack(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1909,7 +1955,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -1974,7 +2020,8 @@ _cw_prep(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1986,6 +2033,11 @@ _cw_prep(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2028,7 +2080,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2040,6 +2093,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2083,7 +2141,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
+  if ( c3n == u3m_backup(c3y)) {  //  backup current snapshot
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }
@@ -2311,7 +2369,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2323,6 +2382,11 @@ _cw_vile(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2581,6 +2645,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_w |= u3o_debug_ram;
+      }
+
+      /*  Set no-demand flag.
+      */
+      if ( !_(u3_Host.ops_u.map) ) {
+        u3C.wag_w |= u3o_no_demand;
       }
 
       /*  Set profile flag.
