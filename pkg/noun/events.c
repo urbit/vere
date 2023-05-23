@@ -179,28 +179,21 @@ u3e_check(c3_c* cap_c)
 /* _ce_flaw_protect(): protect page after fault.
 */
 static inline c3_i
-_ce_flaw_protect(c3_w pag_w)
+_ce_flaw_protect(c3_w pag_w, c3_w gar_w)
 {
-  // NB: if this is not static, sometimes we SIGSEGV in the memcpy,
-  // and I don't know why.
+  // NB: must be static, since the stack is grown via page faults, and
+  // we're already in a page fault handler.
   //
   static c3_y con_y[16384];
-
-  // a guard page is PROT_NONE, so the memcpy will fail.  even if we
-  // excluded the current guard page, sometimes the guard page is moved
-  // without resetting PROT_NONE.  we handle all such cases by
-  // mprotecting ahead of the memcpy.
-  //
-  if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
-    fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
-                     pag_w, strerror(errno));
-    return 1;
-  }
 
   if ( 0 != u3P.eph_i ) {
     // save contents of page, to be restored after the mmap
     //
-    memcpy(con_y, _ce_ptr(pag_w), _ce_page);
+    // NB: don't copy guard page because unnecessary, and it's PROT_NONE.
+    //
+    if ( gar_w != pag_w ) {
+      memcpy(con_y, _ce_ptr(pag_w), _ce_page);
+    }
 
     // map the dirty page into the ephemeral file
     //
@@ -217,7 +210,9 @@ _ce_flaw_protect(c3_w pag_w)
 
     // restore contents of page
     //
-    memcpy(_ce_ptr(pag_w), con_y, _ce_page);
+    if ( gar_w != pag_w ) {
+      memcpy(_ce_ptr(pag_w), con_y, _ce_page);
+    }
   }
 
   return 0;
@@ -282,6 +277,7 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   c3_w pag_w = off_p >> u3a_page;
   c3_w blk_w = pag_w >> 5;
   c3_w bit_w = pag_w & 31;
+  c3_w gar_w = u3P.gar_w;
 
 #ifdef U3_GUARD_PAGE
   if ( pag_w == u3P.gar_w ) {
@@ -305,7 +301,7 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
-  if ( _ce_flaw_protect(pag_w) ) {
+  if ( _ce_flaw_protect(pag_w, gar_w) ) {
     fprintf(stderr, "flawed\r\n");
     return u3e_flaw_base;
   }
@@ -369,7 +365,7 @@ _ce_ephemeral_open(c3_i* eph_i)
     return c3n;
   }
 
-  if ( ftruncate(*eph_i, u3a_bytes) < 0 ) {
+  if ( ftruncate(*eph_i, _ce_len(u3P.pag_w)) < 0 ) {
     fprintf(stderr, "loom: ephemeral ftruncate %s: %s\r\n", ful_c,
             strerror(errno));
     return c3n;
@@ -1051,7 +1047,7 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
     if ( MAP_FAILED == mmap(_ce_ptr(0),
                             _ce_len(pgs_w),
                             PROT_READ,
-                            (MAP_FIXED | MAP_SHARED),
+                            (MAP_FIXED | MAP_PRIVATE),
                             fid_i, 0) )
     {
       fprintf(stderr, "loom: file-backed mmap failed (%u pages): %s\r\n",
@@ -1603,7 +1599,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
 
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
-    u3_assert( !_ce_flaw_protect(pag_w) );
+    u3_assert( !_ce_flaw_protect(pag_w, pag_w) );
     u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
