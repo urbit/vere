@@ -1037,6 +1037,23 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
   _ce_loom_track_south(pgs_w, dif_w);
 }
 
+/* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
+*/
+static void
+_ce_loom_mapf_ephemeral()
+{
+  if ( MAP_FAILED == mmap(_ce_ptr(0),
+                          _ce_len(u3P.pag_w),
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_SHARED),
+                          u3P.eph_i, 0) )
+  {
+    fprintf(stderr, "loom: initial ephemeral mmap failed (%u pages): %s\r\n",
+                    u3P.pag_w, strerror(errno));
+    u3_assert(0);
+  }
+}
+
 /* _ce_loom_mapf_north(): map [pgs_w] of [fid_i] into the bottom of memory
 **                        (and ephemeralize [old_w - pgs_w] after if needed).
 **
@@ -1076,6 +1093,17 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                       pgs_w, old_w, strerror(errno));
       u3_assert(0);
     }
+
+#ifdef U3_GUARD_PAGE
+    //  protect guard page if clobbered
+    //
+    //    NB: < pgs_w is precluded by assertion in u3e_save()
+    //
+    if ( u3P.gar_w < old_w ) {
+      fprintf(stderr, "loom: guard on remap\r\n");
+      u3_assert( !_ce_ward_protect() );
+    }
+#endif
   }
 
   _ce_loom_track_north(pgs_w, dif_w);
@@ -1499,7 +1527,6 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
 
       nor_w = u3P.nor_u.pgs_w;
       sou_w = u3P.sou_u.pgs_w;
-      old_w = u3P.pag_w - sou_w;
 
       //  detect snapshots from a larger loom
       //
@@ -1519,7 +1546,8 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
           _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
         }
         else {
-          _ce_loom_mapf_north(u3P.nor_u.fid_i, nor_w, old_w);
+          _ce_loom_mapf_ephemeral();
+          _ce_loom_mapf_north(u3P.nor_u.fid_i, nor_w, 0);
         }
 
         _ce_loom_blit_south(u3P.sou_u.fid_i, sou_w);
