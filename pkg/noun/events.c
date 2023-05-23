@@ -186,7 +186,14 @@ _ce_flaw_protect(c3_w pag_w, c3_w gar_w)
   //
   static c3_y con_y[16384];
 
-  if ( 0 != u3P.eph_i ) {
+  if ( 0 == u3P.eph_i ) {
+    if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
+      fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
+                       pag_w, strerror(errno));
+      return 1;
+    }
+  }
+  else {
     // save contents of page, to be restored after the mmap
     //
     // NB: don't copy guard page because unnecessary, and it's PROT_NONE.
