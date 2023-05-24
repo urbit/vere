@@ -20,6 +20,18 @@ _parse_ud(u3_noun a)
   return u3nc(u3_nul, pro);
 }
 
+static inline u3_noun
+_parse_ux(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_ux(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
+
 static
 u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
   if (islower((*cur_ptr)[0]) && islower((*cur_ptr)[1]) &&
@@ -465,6 +477,9 @@ u3we_slaw(u3_noun cor)
 
     case c3__ud:
       return _parse_ud(txt);
+
+    case c3__ux:
+      return _parse_ux(txt);
 
       // %ta is used once in link.hoon. don't bother.
 

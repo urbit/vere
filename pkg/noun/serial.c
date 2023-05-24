@@ -1293,6 +1293,20 @@ u3s_etch_uw_c(u3_atom a, c3_c** out_c)
 
 #undef _divc_nz
 
+/* +dot
+ */
+static inline c3_o _cs_dot(c3_w* len_w, c3_y** byt_yp)
+{
+  if ( *len_w > 0 && **byt_yp == '.' ) {
+    (*byt_yp)++;
+    (*len_w)--;
+    return c3y;
+  }
+  else {
+    return c3n;
+  }
+}
+
 #define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
 #define BLOCK(a) (  ('.' == (a)[0]) \
                  && DIGIT(a[1])     \
@@ -1417,3 +1431,220 @@ u3s_sift_ud(u3_atom a)
 
   return u3s_sift_ud_bytes(len_w, byt_y);
 }
+
+#define PFIXD(a,b) { \
+  if ( len_w < 3) { \
+    return u3_none; \
+  } \
+  if ( !(*byt_y == a && *(byt_y+1) == b) ) { \
+    return u3_none; \
+  } \
+  len_w -= 2; \
+  byt_y += 2; \
+}
+
+/* _cs_hex_val: char to hexadecimal digit.
+ */
+static inline c3_s _cs_hex_val(c3_y hex) {
+
+  if ( hex > '9' ) {
+    if ( hex < 'a' ) {
+      return -1;
+    }
+    // hex >= 'a'
+    else {
+      return (hex - 'a') + 10;
+    }
+  }
+  // hex <= '9'
+  else {
+    return hex - '0';
+  }
+}
+
+/* u3s_sift_ux_bytes: parse @ux impl.
+ */
+u3_weak
+u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse the 0x prefix
+  //
+  PFIXD('0', 'x');
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse 0x0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  // Parse a small 64-bit hex number
+  //
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head
+  //
+  for ( size_t i = 0; i < 4; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_hex_val(*byt_y);
+
+    if ( dit_s < 16 ) {
+      val_d <<= 4;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  // Parse a list of dog followed by
+  // a quadruple of hex digits
+  //
+  size_t cuk = 0;
+
+  while ( len_w && cuk < 3) {
+
+    if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+      return u3_none;
+    }
+
+    for ( size_t i = 0; i < 4; i++ ) {
+
+      if ( ! len_w ) {
+        return u3_none;
+      }
+
+      dit_s = _cs_hex_val(*byt_y);
+
+      if ( dit_s < 16 ) {
+        val_d <<= 4;
+        val_d += dit_s;
+      }
+      else {
+        return u3_none;
+      }
+
+      byt_y++;
+      len_w--;
+    }
+    cuk++;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+
+  // Parse a big hex
+  //
+  else {
+    mpz_t a_mp;
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
+
+    val_d = 0;
+
+    // Parse a list of dog followed by
+    // a quadruple of hex digits
+    //
+    cuk = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_ux_fail;
+      }
+
+      for ( size_t i = 0; i < 4; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_ux_fail;
+        }
+
+        dit_s = _cs_hex_val(*byt_y);
+
+        if ( dit_s < 16 ) {
+          val_d <<= 4;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_ux_fail;
+        }
+
+        byt_y++;
+        len_w--;
+      }
+
+      cuk++;
+
+      // Read 4 chunks
+      //
+      if ( cuk == 4 ) {
+        mpz_mul_2exp(a_mp, a_mp, cuk*16);
+        mpz_add_ui(a_mp, a_mp, val_d);
+
+        val_d = 0;
+        cuk = 0;
+      }
+    }
+
+    if ( cuk ) {
+      mpz_mul_2exp(a_mp, a_mp, cuk*16);
+      mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_ux_fail:
+      mpz_clear(a_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(a_mp);
+  }
+
+}
+
+/* u3s_sift_ux: parse @ux.
+ */
+u3_weak
+u3s_sift_ux(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_ux_bytes(len_w, byt_y);
+}
+
+#undef PFIXD
