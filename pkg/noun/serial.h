@@ -81,8 +81,9 @@
       **
       **   =(26 (met 3 (scot %ud (dec (bex 64)))))
       */
+#define SMOL_UD 26
         c3_y*
-        u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26]);
+        u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[SMOL_UD]);
 
       /* u3s_etch_ud(): atom to @ud.
       */

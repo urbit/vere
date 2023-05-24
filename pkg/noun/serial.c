@@ -883,7 +883,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   else {
     while ( 1 ) {
       b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
-      u3_assert( mpz_get_ui(b_mp) == b_w ); // XX
 
       if ( !mpz_size(a_mp) ) {
         while ( b_w ) {
@@ -904,8 +903,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 
   buf_y++;
 
-  u3_assert( buf_y >= hun_y ); // XX
-
   //  mpz_sizeinbase may overestimate by 1
   //
   {
@@ -919,7 +916,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   }
 
   mpz_clear(b_mp);
-
   return len_i;
 }
 
@@ -928,14 +924,15 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 **   =(26 (met 3 (scot %ud (dec (bex 64)))))
 */
 c3_y*
-u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26])
+u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[SMOL_UD])
 {
-  c3_y*  buf_y = hun_y + 25;
+  c3_y*  buf_y = hun_y + SMOL_UD - 1;
   c3_w     b_w;
 
   if ( !a_d ) {
     *buf_y-- = '0';
   }
+
   else {
     while ( 1 ) {
       b_w  = a_d % 1000;
@@ -969,10 +966,10 @@ u3s_etch_ud(u3_atom a)
   c3_d a_d;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
     c3_y* buf_y = u3s_etch_ud_smol(a_d, hun_y);
     c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
-    return u3i_bytes(26 - dif_w, buf_y);
+    return u3i_bytes(SMOL_UD - dif_w, buf_y);
   }
 
   u3i_slab sab_u;
@@ -1000,10 +997,10 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   c3_y*  buf_y;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
 
     buf_y = u3s_etch_ud_smol(a_d, hun_y);
-    len_i = 26 - ((c3_p)buf_y - (c3_p)hun_y);
+    len_i = SMOL_UD - ((c3_p)buf_y - (c3_p)hun_y);
 
     *out_c = c3_malloc(len_i + 1);
     (*out_c)[len_i] = 0;
@@ -1021,9 +1018,9 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
 
   len_i = _cs_etch_ud_bytes(a_mp, len_i, buf_y);
 
-  mpz_clear(a_mp);
-
   *out_c = (c3_c*)buf_y;
+
+  mpz_clear(a_mp);
   return len_i;
 }
 
