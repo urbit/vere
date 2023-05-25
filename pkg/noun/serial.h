@@ -161,6 +161,16 @@
         u3_weak
         u3s_sift_da(u3_atom a);
 
+      /* u3s_sift_p_bytes: parse @p.
+      */
+        u3_weak
+        u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y);
+
+      /* u3s_sift_p: parse @p.
+      */
+        u3_weak
+        u3s_sift_p(u3_atom a);
+
       /* u3s_sift_ud_bytes: parse @ud.
       */
         u3_weak

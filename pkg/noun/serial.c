@@ -2130,6 +2130,282 @@ static inline c3_o _cs_dot(c3_w* len_w, c3_y** byt_yp)
   }
 }
 
+#define arelower(a,b,c) (islower(a) && islower(b) && islower(c))
+
+static inline c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
+
+  c3_y a,b,c;
+  c3_y* byt_y = *byt_yp;
+
+  if ( *len_w < 3 ) {
+    return -1;
+  }
+
+  a = *byt_y;
+  b = *(byt_y + 1);
+  c = *(byt_y + 2);
+
+  if ( ! arelower(a,b,c) ) {
+    return -1;
+  }
+
+  *byt_yp += 3;
+  *len_w -= 3;
+
+  return u3_po_find_prefix(a,b,c);
+}
+
+static inline c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
+
+  c3_y a,b,c;
+  c3_y* byt_y = *byt_yp;
+
+  if ( *len_w < 3 ) {
+    return -1;
+  }
+
+  a = *byt_y;
+  b = *(byt_y + 1);
+  c = *(byt_y + 2);
+
+  if ( ! arelower(a,b,c) ) {
+    return -1;
+  }
+
+  *byt_yp += 3;
+  *len_w -= 3;
+
+  return u3_po_find_suffix(a,b,c);
+}
+
+#undef arelower
+
+/* u3s_sift_p_bytes: parse @p impl.
+ */
+u3_weak
+u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
+{
+  c3_d pun_d;
+
+  c3_s suf_s;
+  c3_s puf_s;
+
+  if ( !len_w || *byt_y != '~') {
+    return u3_none;
+  }
+
+  len_w--;
+  byt_y++;
+
+  suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+  // A galaxy
+  //
+  if ( !len_w && suf_s <= 0xff) {
+    return (u3_atom) suf_s;
+  }
+
+  if ( !len_w ) {
+    return u3_none;
+  }
+
+  // Rewind to match a star
+  //
+  len_w += 3;
+  byt_y -= 3;
+
+  puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+  if ( puf_s > 0xff) {
+    return u3_none;
+  }
+
+  suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+  if ( suf_s > 0xff ) {
+    return u3_none;
+  }
+
+  pun_d = (puf_s << 8 ) + suf_s;
+
+  // A star, disallow ~doz for prefix
+  //
+  if ( !len_w && puf_s > 0 ) {
+    return (u3_atom) pun_d;
+  }
+
+  // +hef
+  if ( !pun_d ) {
+    return u3_none;
+  }
+
+  // At least a planet
+  //
+  if ( len_w < 7 ) {
+    return u3_none;
+  }
+
+  size_t hak = 1;
+
+  // Parse up to 3 head words (64-bit)
+  //
+  while ( len_w && hak < 4) {
+
+    if ( *byt_y != '-') {
+      return u3_none;
+    }
+
+    byt_y++;
+    len_w--;
+
+    puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+    if ( puf_s > 0xff ) {
+
+      // --, end of head
+      //
+      if ( *byt_y == '-' ) {
+        break;
+      }
+
+      else {
+        return u3_none;
+      }
+    }
+
+    suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+    if ( suf_s > 0xff ) {
+      return u3_none;
+    }
+
+    pun_d <<= 16;
+    pun_d += (puf_s << 8) + suf_s;
+
+    hak++;
+  }
+
+  if ( !len_w ) {
+
+      if ( c3y == u3a_is_cat(pun_d) ) {
+          return (u3_atom) u3qe_fynd_ob(pun_d);
+      }
+      else {
+          u3_atom pun = u3i_chub(pun_d);
+          u3_atom sun = u3qe_fynd_ob(pun);
+
+          u3z(pun);
+          return sun;
+      }
+  }
+
+  // Parse a big address in quadruples
+  //
+  mpz_t pun_mp;
+  mpz_init2(pun_mp, 128);
+
+  mpz_set_ui(pun_mp, pun_d);
+  pun_d = 0;
+
+  hak = 0;
+
+  // Rewind to separating --
+  //
+  byt_y -= 1;
+  len_w += 1;
+
+  // Parse in 64-bit chunks
+  //
+  while ( len_w ) {
+
+    if ( *byt_y != '-') {
+      goto sift_p_fail;
+    }
+
+    byt_y++;
+    len_w--;
+
+    if ( 0 == (hak % 4) ) {
+
+      // Separated by --
+      //
+      if ( *byt_y != '-' || len_w < 7) {
+        goto sift_p_fail;
+      }
+
+      byt_y++;
+      len_w--;
+    }
+
+    puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+    if ( puf_s > 0xff ) {
+      goto sift_p_fail;
+    }
+
+    suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+    if ( suf_s > 0xff ) {
+      goto sift_p_fail;
+    }
+
+    pun_d <<= 16;
+    pun_d += (puf_s << 8) + suf_s;
+
+    hak++;
+
+    if ( hak == 4 ) {
+      mpz_mul_2exp(pun_mp, pun_mp, 64);
+      mpz_add_ui(pun_mp, pun_mp, pun_d);
+
+      pun_d = 0;
+      hak = 0;
+    }
+  }
+
+  // Number of words in the tail
+  // must be a multiple of four
+  //
+  if ( hak ) {
+    goto sift_p_fail;
+  }
+
+  if ( len_w ) {
+sift_p_fail:
+
+  mpz_clear(pun_mp);
+  return u3_none;
+  }
+
+  u3_atom pun = u3i_mp(pun_mp);
+  u3_atom sun = u3qe_fynd_ob(pun);
+
+  u3z(pun);
+  return sun;
+}
+
+/* u3s_sift_p: parse @p.
+*/
+u3_weak
+u3s_sift_p(u3_atom a)
+{
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  //
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+     byt_y = (c3_y*)&a;
+   }
+   else {
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_p_bytes(len_w, byt_y);
+}
+
 #define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
 
 /* +two: parse a maximum 2 digit decimal number, greater than 0.

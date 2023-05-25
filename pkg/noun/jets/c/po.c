@@ -5,410 +5,410 @@
 
 #include "noun.h"
 
-u3_noun
+c3_s
 u3_po_find_prefix(c3_y one, c3_y two, c3_y three) {
   switch (one) {
     case 'b': switch (two) {
       case 'a': switch (three)  {
-        case 'c': return u3nc(0, 238);
-        case 'l': return u3nc(0, 107);
-        case 'n': return u3nc(0, 92);
-        case 'r': return u3nc(0, 183);
-        case 't': return u3nc(0, 172);
-        default: return 0;
+        case 'c': return 238;
+        case 'l': return 107;
+        case 'n': return 92;
+        case 'r': return 183;
+        case 't': return 172;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'c': return u3nc(0, 56);
-        case 'd': return u3nc(0, 106);
-        case 'l': return u3nc(0, 144);
-        case 'n': return u3nc(0, 2);
-        case 's': return u3nc(0, 60);
-        case 't': return u3nc(0, 182);
-        default: return 0;
+        case 'c': return 56;
+        case 'd': return 106;
+        case 'l': return 144;
+        case 'n': return 2;
+        case 's': return 60;
+        case 't': return 182;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'l': return u3nc(0, 45);
-        case 'n': return u3nc(0, 244);
-        case 'r': return u3nc(0, 188);
-        case 's': return u3nc(0, 171);
-        case 't': return u3nc(0, 98);
-        default: return 0;
+        case 'l': return 45;
+        case 'n': return 244;
+        case 'r': return 188;
+        case 's': return 171;
+        case 't': return 98;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'd': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 181);
-        case 'c': return u3nc(0, 117);
-        case 'l': return u3nc(0, 37);
-        case 'n': return u3nc(0, 234);
-        case 'p': return u3nc(0, 66);
-        case 'r': return u3nc(0, 23);
-        case 's': return u3nc(0, 61);
-        case 't': return u3nc(0, 215);
-        case 'v': return u3nc(0, 105);
-        default: return 0;
+        case 'b': return 181;
+        case 'c': return 117;
+        case 'l': return 37;
+        case 'n': return 234;
+        case 'p': return 66;
+        case 'r': return 23;
+        case 's': return 61;
+        case 't': return 215;
+        case 'v': return 105;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'b': return u3nc(0, 179);
-        case 'f': return u3nc(0, 57);
-        case 'g': return u3nc(0, 193);
-        case 'l': return u3nc(0, 49);
-        case 'n': return u3nc(0, 217);
-        case 'r': return u3nc(0, 11);
-        case 's': return u3nc(0, 129);
-        case 'v': return u3nc(0, 116);
-        default: return 0;
+        case 'b': return 179;
+        case 'f': return 57;
+        case 'g': return 193;
+        case 'l': return 49;
+        case 'n': return 217;
+        case 'r': return 11;
+        case 's': return 129;
+        case 'v': return 116;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 146);
-        case 'l': return u3nc(0, 102);
-        case 'n': return u3nc(0, 233);
-        case 'p': return u3nc(0, 18);
-        case 'r': return u3nc(0, 24);
-        case 's': return u3nc(0, 187);
-        case 't': return u3nc(0, 47);
-        case 'v': return u3nc(0, 236);
-        case 'z': return u3nc(0, 0);
-        default: return 0;
+        case 'c': return 146;
+        case 'l': return 102;
+        case 'n': return 233;
+        case 'p': return 18;
+        case 'r': return 24;
+        case 's': return 187;
+        case 't': return 47;
+        case 'v': return 236;
+        case 'z': return 0;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'f': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 120);
-        case 'd': return u3nc(0, 206);
-        case 'l': return u3nc(0, 152);
-        case 'm': return u3nc(0, 214);
-        case 'n': return u3nc(0, 158);
-        case 's': return u3nc(0, 195);
-        default: return 0;
+        case 'b': return 120;
+        case 'd': return 206;
+        case 'l': return 152;
+        case 'm': return 214;
+        case 'n': return 158;
+        case 's': return 195;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'd': return u3nc(0, 8);
-        case 'g': return u3nc(0, 138);
-        case 'l': return u3nc(0, 194);
-        case 'n': return u3nc(0, 90);
-        case 'p': return u3nc(0, 255);
-        case 'r': return u3nc(0, 169);
-        case 't': return u3nc(0, 226);
-        default: return 0;
+        case 'd': return 8;
+        case 'g': return 138;
+        case 'l': return 194;
+        case 'n': return 90;
+        case 'p': return 255;
+        case 'r': return 169;
+        case 't': return 226;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'd': return u3nc(0, 247);
-        case 'g': return u3nc(0, 20);
-        case 'l': return u3nc(0, 27);
-        case 'n': return u3nc(0, 91);
-        case 'p': return u3nc(0, 213);
-        case 'r': return u3nc(0, 50);
-        case 's': return u3nc(0, 46);
-        case 't': return u3nc(0, 221);
-        default: return 0;
+        case 'd': return 247;
+        case 'g': return 20;
+        case 'l': return 27;
+        case 'n': return 91;
+        case 'p': return 213;
+        case 'r': return 50;
+        case 's': return 46;
+        case 't': return 221;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'h': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 209);
-        case 'c': return u3nc(0, 174);
-        case 'd': return u3nc(0, 145);
-        case 'l': return u3nc(0, 203);
-        case 'n': return u3nc(0, 41);
-        case 'p': return u3nc(0, 156);
-        case 'r': return u3nc(0, 198);
-        case 's': return u3nc(0, 170);
-        case 't': return u3nc(0, 218);
-        case 'v': return u3nc(0, 176);
-        default: return 0;
+        case 'b': return 209;
+        case 'c': return 174;
+        case 'd': return 145;
+        case 'l': return 203;
+        case 'n': return 41;
+        case 'p': return 156;
+        case 'r': return 198;
+        case 's': return 170;
+        case 't': return 218;
+        case 'v': return 176;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'd': return u3nc(0, 7);
-        case 'l': return u3nc(0, 190);
-        case 'n': return u3nc(0, 200);
-        default: return 0;
+        case 'd': return 7;
+        case 'l': return 190;
+        case 'n': return 200;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'b': return u3nc(0, 197);
-        case 'c': return u3nc(0, 223);
-        case 'd': return u3nc(0, 26);
-        case 'l': return u3nc(0, 32);
-        case 'p': return u3nc(0, 22);
-        case 's': return u3nc(0, 180);
-        default: return 0;
+        case 'b': return 197;
+        case 'c': return 223;
+        case 'd': return 26;
+        case 'l': return 32;
+        case 'p': return 22;
+        case 's': return 180;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'l': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 161);
-        case 'c': return u3nc(0, 34);
-        case 'd': return u3nc(0, 235);
-        case 'g': return u3nc(0, 205);
-        case 'n': return u3nc(0, 232);
-        case 'p': return u3nc(0, 240);
-        case 'r': return u3nc(0, 225);
-        case 's': return u3nc(0, 128);
-        case 't': return u3nc(0, 134);
-        case 'v': return u3nc(0, 252);
-        default: return 0;
+        case 'b': return 161;
+        case 'c': return 34;
+        case 'd': return 235;
+        case 'g': return 205;
+        case 'n': return 232;
+        case 'p': return 240;
+        case 'r': return 225;
+        case 's': return 128;
+        case 't': return 134;
+        case 'v': return 252;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'b': return u3nc(0, 39);
-        case 'd': return u3nc(0, 21);
-        case 'g': return u3nc(0, 111);
-        case 'n': return u3nc(0, 178);
-        case 's': return u3nc(0, 9);
-        case 't': return u3nc(0, 5);
-        case 'v': return u3nc(0, 36);
-        default: return 0;
+        case 'b': return 39;
+        case 'd': return 21;
+        case 'g': return 111;
+        case 'n': return 178;
+        case 's': return 9;
+        case 't': return 5;
+        case 'v': return 36;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 69);
-        case 'd': return u3nc(0, 186);
-        case 'm': return u3nc(0, 166);
-        case 'n': return u3nc(0, 135);
-        case 'p': return u3nc(0, 63);
-        case 'r': return u3nc(0, 25);
-        case 's': return u3nc(0, 48);
-        default: return 0;
+        case 'c': return 69;
+        case 'd': return 186;
+        case 'm': return 166;
+        case 'n': return 135;
+        case 'p': return 63;
+        case 'r': return 25;
+        case 's': return 48;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'm': switch (two) {
       case 'a': switch (three)  {
-        case 'c': return u3nc(0, 191);
-        case 'g': return u3nc(0, 103);
-        case 'l': return u3nc(0, 110);
-        case 'p': return u3nc(0, 130);
-        case 'r': return u3nc(0, 1);
-        case 's': return u3nc(0, 202);
-        case 't': return u3nc(0, 253);
-        default: return 0;
+        case 'c': return 191;
+        case 'g': return 103;
+        case 'l': return 110;
+        case 'p': return 130;
+        case 'r': return 1;
+        case 's': return 202;
+        case 't': return 253;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'c': return u3nc(0, 157);
-        case 'd': return u3nc(0, 62);
-        case 'g': return u3nc(0, 199);
-        case 'l': return u3nc(0, 212);
-        case 'n': return u3nc(0, 79);
-        case 'p': return u3nc(0, 254);
-        case 'r': return u3nc(0, 31);
-        case 's': return u3nc(0, 126);
-        case 't': return u3nc(0, 196);
-        default: return 0;
+        case 'c': return 157;
+        case 'd': return 62;
+        case 'g': return 199;
+        case 'l': return 212;
+        case 'n': return 79;
+        case 'p': return 254;
+        case 'r': return 31;
+        case 's': return 126;
+        case 't': return 196;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 148);
-        case 'd': return u3nc(0, 19);
-        case 'g': return u3nc(0, 162);
-        case 'l': return u3nc(0, 67);
-        case 'n': return u3nc(0, 122);
-        case 'p': return u3nc(0, 208);
-        case 'r': return u3nc(0, 93);
-        case 's': return u3nc(0, 231);
-        case 't': return u3nc(0, 82);
-        default: return 0;
+        case 'c': return 148;
+        case 'd': return 19;
+        case 'g': return 162;
+        case 'l': return 67;
+        case 'n': return 122;
+        case 'p': return 208;
+        case 'r': return 93;
+        case 's': return 231;
+        case 't': return 82;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'n': switch (two) {
       case 'a': switch (three)  {
-        case 'c': return u3nc(0, 219);
-        case 'l': return u3nc(0, 230);
-        case 'm': return u3nc(0, 243);
-        case 'p': return u3nc(0, 87);
-        case 'r': return u3nc(0, 65);
-        case 't': return u3nc(0, 77);
-        case 'v': return u3nc(0, 137);
-        default: return 0;
+        case 'c': return 219;
+        case 'l': return 230;
+        case 'm': return 243;
+        case 'p': return 87;
+        case 'r': return 65;
+        case 't': return 77;
+        case 'v': return 137;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'b': return u3nc(0, 140);
-        case 'd': return u3nc(0, 72);
-        case 'l': return u3nc(0, 210);
-        case 'm': return u3nc(0, 224);
-        case 's': return u3nc(0, 124);
-        default: return 0;
+        case 'b': return 140;
+        case 'd': return 72;
+        case 'l': return 210;
+        case 'm': return 224;
+        case 's': return 124;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 250);
-        case 'd': return u3nc(0, 136);
-        case 'l': return u3nc(0, 216);
-        case 'm': return u3nc(0, 139);
-        case 'p': return u3nc(0, 88);
-        case 'r': return u3nc(0, 97);
-        case 's': return u3nc(0, 211);
-        case 'v': return u3nc(0, 70);
-        default: return 0;
+        case 'c': return 250;
+        case 'd': return 136;
+        case 'l': return 216;
+        case 'm': return 139;
+        case 'p': return 88;
+        case 'r': return 97;
+        case 's': return 211;
+        case 'v': return 70;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'p': switch (two) {
       case 'a': switch (three)  {
-        case 'c': return u3nc(0, 149);
-        case 'd': return u3nc(0, 114);
-        case 'g': return u3nc(0, 141);
-        case 'l': return u3nc(0, 127);
-        case 'n': return u3nc(0, 78);
-        case 'r': return u3nc(0, 185);
-        case 's': return u3nc(0, 33);
-        case 't': return u3nc(0, 159);
-        default: return 0;
+        case 'c': return 149;
+        case 'd': return 114;
+        case 'g': return 141;
+        case 'l': return 127;
+        case 'n': return 78;
+        case 'r': return 185;
+        case 's': return 33;
+        case 't': return 159;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'c': return u3nc(0, 104);
-        case 'd': return u3nc(0, 43);
-        case 'l': return u3nc(0, 51);
-        case 'n': return u3nc(0, 165);
-        case 't': return u3nc(0, 242);
-        default: return 0;
+        case 'c': return 104;
+        case 'd': return 43;
+        case 'l': return 51;
+        case 'n': return 165;
+        case 't': return 242;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 173);
-        case 'd': return u3nc(0, 81);
-        case 'l': return u3nc(0, 239);
-        case 'n': return u3nc(0, 248);
-        case 's': return u3nc(0, 86);
-        default: return 0;
+        case 'c': return 173;
+        case 'd': return 81;
+        case 'l': return 239;
+        case 'n': return 248;
+        case 's': return 86;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'r': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 131);
-        case 'c': return u3nc(0, 184);
-        case 'd': return u3nc(0, 201);
-        case 'g': return u3nc(0, 204);
-        case 'l': return u3nc(0, 143);
-        case 'm': return u3nc(0, 52);
-        case 'n': return u3nc(0, 123);
-        case 'p': return u3nc(0, 228);
-        case 'v': return u3nc(0, 150);
-        default: return 0;
+        case 'b': return 131;
+        case 'c': return 184;
+        case 'd': return 201;
+        case 'g': return 204;
+        case 'l': return 143;
+        case 'm': return 52;
+        case 'n': return 123;
+        case 'p': return 228;
+        case 'v': return 150;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'b': return u3nc(0, 222);
-        case 'c': return u3nc(0, 167);
-        case 'd': return u3nc(0, 147);
-        case 'g': return u3nc(0, 16);
-        case 'l': return u3nc(0, 64);
-        case 'n': return u3nc(0, 28);
-        case 'p': return u3nc(0, 151);
-        case 's': return u3nc(0, 220);
-        case 't': return u3nc(0, 80);
-        case 'v': return u3nc(0, 237);
-        default: return 0;
+        case 'b': return 222;
+        case 'c': return 167;
+        case 'd': return 147;
+        case 'g': return 16;
+        case 'l': return 64;
+        case 'n': return 28;
+        case 'p': return 151;
+        case 's': return 220;
+        case 't': return 80;
+        case 'v': return 237;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 58);
-        case 'l': return u3nc(0, 133);
-        case 'n': return u3nc(0, 96);
-        case 'p': return u3nc(0, 75);
-        case 's': return u3nc(0, 245);
-        case 'v': return u3nc(0, 35);
-        default: return 0;
+        case 'c': return 58;
+        case 'l': return 133;
+        case 'n': return 96;
+        case 'p': return 75;
+        case 's': return 245;
+        case 'v': return 35;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 's': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 13);
-        case 'l': return u3nc(0, 115);
-        case 'm': return u3nc(0, 4);
-        case 'n': return u3nc(0, 68);
-        case 'p': return u3nc(0, 177);
-        case 'r': return u3nc(0, 229);
-        case 't': return u3nc(0, 38);
-        case 'v': return u3nc(0, 85);
-        default: return 0;
+        case 'b': return 13;
+        case 'l': return 115;
+        case 'm': return 4;
+        case 'n': return 68;
+        case 'p': return 177;
+        case 'r': return 229;
+        case 't': return 38;
+        case 'v': return 85;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'b': return u3nc(0, 15);
-        case 'c': return u3nc(0, 74);
-        case 'd': return u3nc(0, 119);
-        case 'g': return u3nc(0, 6);
-        case 'l': return u3nc(0, 30);
-        case 'm': return u3nc(0, 163);
-        case 'p': return u3nc(0, 95);
-        case 't': return u3nc(0, 71);
-        case 'v': return u3nc(0, 112);
-        default: return 0;
+        case 'b': return 15;
+        case 'c': return 74;
+        case 'd': return 119;
+        case 'g': return 6;
+        case 'l': return 30;
+        case 'm': return 163;
+        case 'p': return 95;
+        case 't': return 71;
+        case 'v': return 112;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'c': return u3nc(0, 100);
-        case 'g': return u3nc(0, 10);
-        case 'l': return u3nc(0, 17);
-        case 'm': return u3nc(0, 89);
-        case 'n': return u3nc(0, 164);
-        case 'p': return u3nc(0, 142);
-        case 'r': return u3nc(0, 251);
-        case 'v': return u3nc(0, 249);
-        default: return 0;
+        case 'c': return 100;
+        case 'g': return 10;
+        case 'l': return 17;
+        case 'm': return 89;
+        case 'n': return 164;
+        case 'p': return 142;
+        case 'r': return 251;
+        case 'v': return 249;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 't': switch (two) {
       case 'a': switch (three)  {
-        case 'b': return u3nc(0, 40);
-        case 'c': return u3nc(0, 160);
-        case 'd': return u3nc(0, 55);
-        case 'g': return u3nc(0, 113);
-        case 'l': return u3nc(0, 241);
-        case 'm': return u3nc(0, 83);
-        case 'n': return u3nc(0, 118);
-        case 'p': return u3nc(0, 168);
-        case 'r': return u3nc(0, 121);
-        case 's': return u3nc(0, 109);
-        default: return 0;
+        case 'b': return 40;
+        case 'c': return 160;
+        case 'd': return 55;
+        case 'g': return 113;
+        case 'l': return 241;
+        case 'm': return 83;
+        case 'n': return 118;
+        case 'p': return 168;
+        case 'r': return 121;
+        case 's': return 109;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'c': return u3nc(0, 42);
-        case 'd': return u3nc(0, 175);
-        case 'l': return u3nc(0, 154);
-        case 'm': return u3nc(0, 108);
-        case 'n': return u3nc(0, 155);
-        case 'p': return u3nc(0, 73);
-        case 'r': return u3nc(0, 53);
-        default: return 0;
+        case 'c': return 42;
+        case 'd': return 175;
+        case 'l': return 154;
+        case 'm': return 108;
+        case 'n': return 155;
+        case 'p': return 73;
+        case 'r': return 53;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'b': return u3nc(0, 132);
-        case 'c': return u3nc(0, 189);
-        case 'd': return u3nc(0, 153);
-        case 'g': return u3nc(0, 29);
-        case 'l': return u3nc(0, 84);
-        case 'm': return u3nc(0, 192);
-        case 'n': return u3nc(0, 246);
-        case 'p': return u3nc(0, 207);
-        case 'r': return u3nc(0, 44);
-        default: return 0;
+        case 'b': return 132;
+        case 'c': return 189;
+        case 'd': return 153;
+        case 'g': return 29;
+        case 'l': return 84;
+        case 'm': return 192;
+        case 'n': return 246;
+        case 'p': return 207;
+        case 'r': return 44;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'w': switch (two) {
       case 'a': switch (three)  {
-        case 'c': return u3nc(0, 12);
-        case 'l': return u3nc(0, 227);
-        case 'n': return u3nc(0, 3);
-        case 't': return u3nc(0, 101);
-        default: return 0;
+        case 'c': return 12;
+        case 'l': return 227;
+        case 'n': return 3;
+        case 't': return 101;
+        default: return -1;
       }
       case 'i': switch (three)  {
-        case 'c': return u3nc(0, 99);
-        case 'd': return u3nc(0, 59);
-        case 'n': return u3nc(0, 54);
-        case 's': return u3nc(0, 14);
-        case 't': return u3nc(0, 76);
-        default: return 0;
+        case 'c': return 99;
+        case 'd': return 59;
+        case 'n': return 54;
+        case 's': return 14;
+        case 't': return 76;
+        default: return -1;
       }
       case 'o': switch (three)  {
-        case 'l': return u3nc(0, 125);
-        case 'r': return u3nc(0, 94);
-        default: return 0;
+        case 'l': return 125;
+        case 'r': return 94;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
-    default: return 0;
+    default: return -1;
   }
 }
 
@@ -676,410 +676,410 @@ u3_po_to_prefix(u3_noun id, c3_y* a, c3_y* b, c3_y* c)
   }
 }
 
-u3_noun
+c3_s
 u3_po_find_suffix(c3_y one, c3_y two, c3_y three) {
   switch (one) {
     case 'b': switch (two) {
       case 'e': switch (three)  {
-        case 'c': return u3nc(0, 238);
-        case 'l': return u3nc(0, 107);
-        case 'n': return u3nc(0, 92);
-        case 'p': return u3nc(0, 183);
-        case 'r': return u3nc(0, 172);
-        case 's': return u3nc(0, 56);
-        case 't': return u3nc(0, 106);
-        case 'x': return u3nc(0, 144);
-        default: return 0;
+        case 'c': return 238;
+        case 'l': return 107;
+        case 'n': return 92;
+        case 'p': return 183;
+        case 'r': return 172;
+        case 's': return 56;
+        case 't': return 106;
+        case 'x': return 144;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'd': return u3nc(0, 2);
-        case 'r': return u3nc(0, 60);
-        case 's': return u3nc(0, 182);
-        default: return 0;
+        case 'd': return 2;
+        case 'r': return 60;
+        case 's': return 182;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'l': return u3nc(0, 176);
-        case 'n': return u3nc(0, 45);
-        case 'r': return u3nc(0, 244);
-        case 't': return u3nc(0, 188);
-        default: return 0;
+        case 'l': return 176;
+        case 'n': return 45;
+        case 'r': return 244;
+        case 't': return 188;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'd': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 171);
-        case 'c': return u3nc(0, 98);
-        case 'f': return u3nc(0, 181);
-        case 'g': return u3nc(0, 117);
-        case 'l': return u3nc(0, 37);
-        case 'm': return u3nc(0, 234);
-        case 'n': return u3nc(0, 66);
-        case 'p': return u3nc(0, 23);
-        case 'r': return u3nc(0, 61);
-        case 's': return u3nc(0, 215);
-        case 't': return u3nc(0, 105);
-        case 'v': return u3nc(0, 179);
-        case 'x': return u3nc(0, 57);
-        default: return 0;
+        case 'b': return 171;
+        case 'c': return 98;
+        case 'f': return 181;
+        case 'g': return 117;
+        case 'l': return 37;
+        case 'm': return 234;
+        case 'n': return 66;
+        case 'p': return 23;
+        case 'r': return 61;
+        case 's': return 215;
+        case 't': return 105;
+        case 'v': return 179;
+        case 'x': return 57;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'c': return u3nc(0, 193);
-        case 'l': return u3nc(0, 49);
-        case 'n': return u3nc(0, 217);
-        case 'r': return u3nc(0, 11);
-        case 's': return u3nc(0, 129);
-        case 't': return u3nc(0, 116);
-        case 'x': return u3nc(0, 146);
-        default: return 0;
+        case 'c': return 193;
+        case 'l': return 49;
+        case 'n': return 217;
+        case 'r': return 11;
+        case 's': return 129;
+        case 't': return 116;
+        case 'x': return 146;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'l': return u3nc(0, 102);
-        case 'n': return u3nc(0, 233);
-        case 'r': return u3nc(0, 18);
-        case 's': return u3nc(0, 24);
-        case 't': return u3nc(0, 187);
-        default: return 0;
+        case 'l': return 102;
+        case 'n': return 233;
+        case 'r': return 18;
+        case 's': return 24;
+        case 't': return 187;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'f': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 47);
-        case 'd': return u3nc(0, 236);
-        case 'l': return u3nc(0, 120);
-        case 'n': return u3nc(0, 206);
-        case 'p': return u3nc(0, 152);
-        case 'r': return u3nc(0, 158);
-        case 's': return u3nc(0, 255);
-        case 't': return u3nc(0, 214);
-        case 'x': return u3nc(0, 195);
-        default: return 0;
+        case 'b': return 47;
+        case 'd': return 236;
+        case 'l': return 120;
+        case 'n': return 206;
+        case 'p': return 152;
+        case 'r': return 158;
+        case 's': return 255;
+        case 't': return 214;
+        case 'x': return 195;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'l': return u3nc(0, 8);
-        case 'n': return u3nc(0, 138);
-        case 'r': return u3nc(0, 194);
-        case 's': return u3nc(0, 90);
-        default: return 0;
+        case 'l': return 8;
+        case 'n': return 138;
+        case 'r': return 194;
+        case 's': return 90;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'l': return u3nc(0, 169);
-        case 'n': return u3nc(0, 226);
-        case 'r': return u3nc(0, 247);
-        default: return 0;
+        case 'l': return 169;
+        case 'n': return 226;
+        case 'r': return 247;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'h': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 20);
-        case 'c': return u3nc(0, 27);
-        case 'p': return u3nc(0, 91);
-        case 's': return u3nc(0, 213);
-        case 't': return u3nc(0, 50);
-        case 'x': return u3nc(0, 46);
-        default: return 0;
+        case 'b': return 20;
+        case 'c': return 27;
+        case 'p': return 91;
+        case 's': return 213;
+        case 't': return 50;
+        case 'x': return 46;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'l': return u3nc(0, 221);
-        case 's': return u3nc(0, 209);
-        case 't': return u3nc(0, 174);
-        default: return 0;
+        case 'l': return 221;
+        case 's': return 209;
+        case 't': return 174;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'l': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 145);
-        case 'c': return u3nc(0, 203);
-        case 'd': return u3nc(0, 41);
-        case 'g': return u3nc(0, 156);
-        case 'n': return u3nc(0, 198);
-        case 'p': return u3nc(0, 170);
-        case 'r': return u3nc(0, 218);
-        case 't': return u3nc(0, 7);
-        case 'v': return u3nc(0, 190);
-        case 'x': return u3nc(0, 200);
-        default: return 0;
+        case 'b': return 145;
+        case 'c': return 203;
+        case 'd': return 41;
+        case 'g': return 156;
+        case 'n': return 198;
+        case 'p': return 170;
+        case 'r': return 218;
+        case 't': return 7;
+        case 'v': return 190;
+        case 'x': return 200;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'c': return u3nc(0, 197);
-        case 'd': return u3nc(0, 223);
-        case 'g': return u3nc(0, 26);
-        case 'n': return u3nc(0, 32);
-        case 'p': return u3nc(0, 22);
-        case 'r': return u3nc(0, 180);
-        case 's': return u3nc(0, 161);
-        case 't': return u3nc(0, 34);
-        case 'x': return u3nc(0, 235);
-        default: return 0;
+        case 'c': return 197;
+        case 'd': return 223;
+        case 'g': return 26;
+        case 'n': return 32;
+        case 'p': return 22;
+        case 'r': return 180;
+        case 's': return 161;
+        case 't': return 34;
+        case 'x': return 235;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'd': return u3nc(0, 205);
-        case 'n': return u3nc(0, 232);
-        case 'r': return u3nc(0, 240);
-        case 's': return u3nc(0, 225);
-        case 't': return u3nc(0, 128);
-        case 'x': return u3nc(0, 134);
-        default: return 0;
+        case 'd': return 205;
+        case 'n': return 232;
+        case 'r': return 240;
+        case 's': return 225;
+        case 't': return 128;
+        case 'x': return 134;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'm': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 114);
-        case 'c': return u3nc(0, 141);
-        case 'd': return u3nc(0, 127);
-        case 'g': return u3nc(0, 78);
-        case 'l': return u3nc(0, 185);
-        case 'p': return u3nc(0, 33);
-        case 'r': return u3nc(0, 159);
-        case 's': return u3nc(0, 104);
-        case 't': return u3nc(0, 43);
-        case 'v': return u3nc(0, 51);
-        case 'x': return u3nc(0, 165);
-        default: return 0;
+        case 'b': return 114;
+        case 'c': return 141;
+        case 'd': return 127;
+        case 'g': return 78;
+        case 'l': return 185;
+        case 'p': return 33;
+        case 'r': return 159;
+        case 's': return 104;
+        case 't': return 43;
+        case 'v': return 51;
+        case 'x': return 165;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'd': return u3nc(0, 242);
-        case 'g': return u3nc(0, 173);
-        case 'l': return u3nc(0, 81);
-        case 'n': return u3nc(0, 239);
-        case 'r': return u3nc(0, 248);
-        case 's': return u3nc(0, 93);
-        case 't': return u3nc(0, 86);
-        default: return 0;
+        case 'd': return 242;
+        case 'g': return 173;
+        case 'l': return 81;
+        case 'n': return 239;
+        case 'r': return 248;
+        case 's': return 93;
+        case 't': return 86;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'l': return u3nc(0, 191);
-        case 'n': return u3nc(0, 103);
-        case 'r': return u3nc(0, 110);
-        default: return 0;
+        case 'l': return 191;
+        case 'n': return 103;
+        case 'r': return 110;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'n': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 130);
-        case 'c': return u3nc(0, 1);
-        case 'd': return u3nc(0, 202);
-        case 'l': return u3nc(0, 253);
-        case 'm': return u3nc(0, 157);
-        case 'p': return u3nc(0, 62);
-        case 'r': return u3nc(0, 199);
-        case 's': return u3nc(0, 212);
-        case 't': return u3nc(0, 79);
-        case 'v': return u3nc(0, 254);
-        case 'x': return u3nc(0, 31);
-        default: return 0;
+        case 'b': return 130;
+        case 'c': return 1;
+        case 'd': return 202;
+        case 'l': return 253;
+        case 'm': return 157;
+        case 'p': return 62;
+        case 'r': return 199;
+        case 's': return 212;
+        case 't': return 79;
+        case 'v': return 254;
+        case 'x': return 31;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'b': return u3nc(0, 126);
-        case 'l': return u3nc(0, 196);
-        case 'm': return u3nc(0, 148);
-        case 'p': return u3nc(0, 19);
-        case 's': return u3nc(0, 162);
-        case 't': return u3nc(0, 67);
-        case 'x': return u3nc(0, 122);
-        default: return 0;
+        case 'b': return 126;
+        case 'l': return 196;
+        case 'm': return 148;
+        case 'p': return 19;
+        case 's': return 162;
+        case 't': return 67;
+        case 'x': return 122;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'd': return u3nc(0, 208);
-        case 'l': return u3nc(0, 231);
-        case 'm': return u3nc(0, 82);
-        case 'r': return u3nc(0, 219);
-        case 's': return u3nc(0, 230);
-        case 't': return u3nc(0, 243);
-        case 'x': return u3nc(0, 87);
-        default: return 0;
+        case 'd': return 208;
+        case 'l': return 231;
+        case 'm': return 82;
+        case 'r': return 219;
+        case 's': return 230;
+        case 't': return 243;
+        case 'x': return 87;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'p': switch (two) {
       case 'e': switch (three)  {
-        case 'c': return u3nc(0, 252);
-        case 'd': return u3nc(0, 39);
-        case 'g': return u3nc(0, 21);
-        case 'l': return u3nc(0, 111);
-        case 'm': return u3nc(0, 178);
-        case 'n': return u3nc(0, 9);
-        case 'r': return u3nc(0, 5);
-        case 's': return u3nc(0, 36);
-        case 't': return u3nc(0, 69);
-        case 'x': return u3nc(0, 186);
-        default: return 0;
+        case 'c': return 252;
+        case 'd': return 39;
+        case 'g': return 21;
+        case 'l': return 111;
+        case 'm': return 178;
+        case 'n': return 9;
+        case 'r': return 5;
+        case 's': return 36;
+        case 't': return 69;
+        case 'x': return 186;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'b': return u3nc(0, 166);
-        case 'n': return u3nc(0, 135);
-        case 'r': return u3nc(0, 63);
-        case 't': return u3nc(0, 25);
-        default: return 0;
+        case 'b': return 166;
+        case 'n': return 135;
+        case 'r': return 63;
+        case 't': return 25;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'l': return u3nc(0, 48);
-        case 'x': return u3nc(0, 149);
-        default: return 0;
+        case 'l': return 48;
+        case 'x': return 149;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'r': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 65);
-        case 'c': return u3nc(0, 77);
-        case 'd': return u3nc(0, 137);
-        case 'f': return u3nc(0, 140);
-        case 'g': return u3nc(0, 72);
-        case 'l': return u3nc(0, 210);
-        case 'm': return u3nc(0, 224);
-        case 'n': return u3nc(0, 124);
-        case 'p': return u3nc(0, 250);
-        case 's': return u3nc(0, 136);
-        case 't': return u3nc(0, 216);
-        case 'v': return u3nc(0, 139);
-        case 'x': return u3nc(0, 88);
-        default: return 0;
+        case 'b': return 65;
+        case 'c': return 77;
+        case 'd': return 137;
+        case 'f': return 140;
+        case 'g': return 72;
+        case 'l': return 210;
+        case 'm': return 224;
+        case 'n': return 124;
+        case 'p': return 250;
+        case 's': return 136;
+        case 't': return 216;
+        case 'v': return 139;
+        case 'x': return 88;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'c': return u3nc(0, 97);
-        case 'd': return u3nc(0, 211);
-        case 'l': return u3nc(0, 70);
-        case 'm': return u3nc(0, 131);
-        case 'n': return u3nc(0, 184);
-        case 'p': return u3nc(0, 201);
-        case 's': return u3nc(0, 143);
-        case 't': return u3nc(0, 52);
-        case 'x': return u3nc(0, 123);
-        default: return 0;
+        case 'c': return 97;
+        case 'd': return 211;
+        case 'l': return 70;
+        case 'm': return 131;
+        case 'n': return 184;
+        case 'p': return 201;
+        case 's': return 143;
+        case 't': return 52;
+        case 'x': return 123;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'c': return u3nc(0, 228);
-        case 'd': return u3nc(0, 204);
-        case 'g': return u3nc(0, 150);
-        case 'l': return u3nc(0, 222);
-        case 'm': return u3nc(0, 167);
-        case 'n': return u3nc(0, 147);
-        case 'p': return u3nc(0, 16);
-        case 's': return u3nc(0, 64);
-        case 't': return u3nc(0, 28);
-        case 'x': return u3nc(0, 151);
-        default: return 0;
+        case 'c': return 228;
+        case 'd': return 204;
+        case 'g': return 150;
+        case 'l': return 222;
+        case 'm': return 167;
+        case 'n': return 147;
+        case 'p': return 16;
+        case 's': return 64;
+        case 't': return 28;
+        case 'x': return 151;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 's': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 220);
-        case 'c': return u3nc(0, 80);
-        case 'd': return u3nc(0, 237);
-        case 'f': return u3nc(0, 58);
-        case 'g': return u3nc(0, 133);
-        case 'l': return u3nc(0, 96);
-        case 'm': return u3nc(0, 75);
-        case 'n': return u3nc(0, 245);
-        case 'p': return u3nc(0, 35);
-        case 'r': return u3nc(0, 13);
-        case 't': return u3nc(0, 115);
-        case 'v': return u3nc(0, 4);
-        default: return 0;
+        case 'b': return 220;
+        case 'c': return 80;
+        case 'd': return 237;
+        case 'f': return 58;
+        case 'g': return 133;
+        case 'l': return 96;
+        case 'm': return 75;
+        case 'n': return 245;
+        case 'p': return 35;
+        case 'r': return 13;
+        case 't': return 115;
+        case 'v': return 4;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'b': return u3nc(0, 68);
-        case 'd': return u3nc(0, 177);
-        case 'g': return u3nc(0, 229);
-        case 'l': return u3nc(0, 38);
-        case 'm': return u3nc(0, 85);
-        case 'n': return u3nc(0, 15);
-        case 'p': return u3nc(0, 74);
-        case 'r': return u3nc(0, 119);
-        case 't': return u3nc(0, 6);
-        default: return 0;
+        case 'b': return 68;
+        case 'd': return 177;
+        case 'g': return 229;
+        case 'l': return 38;
+        case 'm': return 85;
+        case 'n': return 15;
+        case 'p': return 74;
+        case 'r': return 119;
+        case 't': return 6;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'd': return u3nc(0, 30);
-        case 'l': return u3nc(0, 163);
-        case 'm': return u3nc(0, 95);
-        case 'n': return u3nc(0, 71);
-        case 'p': return u3nc(0, 112);
-        case 'r': return u3nc(0, 100);
-        case 't': return u3nc(0, 10);
-        case 'x': return u3nc(0, 17);
-        default: return 0;
+        case 'd': return 30;
+        case 'l': return 163;
+        case 'm': return 95;
+        case 'n': return 71;
+        case 'p': return 112;
+        case 'r': return 100;
+        case 't': return 10;
+        case 'x': return 17;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 't': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 89);
-        case 'c': return u3nc(0, 164);
-        case 'd': return u3nc(0, 142);
-        case 'g': return u3nc(0, 251);
-        case 'l': return u3nc(0, 249);
-        case 'm': return u3nc(0, 40);
-        case 'n': return u3nc(0, 160);
-        case 'p': return u3nc(0, 55);
-        case 'r': return u3nc(0, 113);
-        case 's': return u3nc(0, 241);
-        case 'v': return u3nc(0, 83);
-        case 'x': return u3nc(0, 118);
-        default: return 0;
+        case 'b': return 89;
+        case 'c': return 164;
+        case 'd': return 142;
+        case 'g': return 251;
+        case 'l': return 249;
+        case 'm': return 40;
+        case 'n': return 160;
+        case 'p': return 55;
+        case 'r': return 113;
+        case 's': return 241;
+        case 'v': return 83;
+        case 'x': return 118;
+        default: return -1;
       }
       case 'u': switch (three)  {
-        case 'c': return u3nc(0, 168);
-        case 'd': return u3nc(0, 121);
-        case 'g': return u3nc(0, 109);
-        case 'l': return u3nc(0, 42);
-        case 'n': return u3nc(0, 175);
-        case 's': return u3nc(0, 154);
-        case 'x': return u3nc(0, 108);
-        default: return 0;
+        case 'c': return 168;
+        case 'd': return 121;
+        case 'g': return 109;
+        case 'l': return 42;
+        case 'n': return 175;
+        case 's': return 154;
+        case 'x': return 108;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'c': return u3nc(0, 155);
-        case 'd': return u3nc(0, 73);
-        case 'l': return u3nc(0, 53);
-        case 'n': return u3nc(0, 132);
-        case 'p': return u3nc(0, 189);
-        case 'r': return u3nc(0, 153);
-        case 'v': return u3nc(0, 29);
-        default: return 0;
+        case 'c': return 155;
+        case 'd': return 73;
+        case 'l': return 53;
+        case 'n': return 132;
+        case 'p': return 189;
+        case 'r': return 153;
+        case 'v': return 29;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'w': switch (two) {
       case 'e': switch (three)  {
-        case 'b': return u3nc(0, 84);
-        case 'd': return u3nc(0, 192);
-        case 'g': return u3nc(0, 246);
-        case 'l': return u3nc(0, 207);
-        case 'n': return u3nc(0, 44);
-        case 'p': return u3nc(0, 12);
-        case 'r': return u3nc(0, 227);
-        case 's': return u3nc(0, 3);
-        case 't': return u3nc(0, 101);
-        case 'x': return u3nc(0, 99);
-        default: return 0;
+        case 'b': return 84;
+        case 'd': return 192;
+        case 'g': return 246;
+        case 'l': return 207;
+        case 'n': return 44;
+        case 'p': return 12;
+        case 'r': return 227;
+        case 's': return 3;
+        case 't': return 101;
+        case 'x': return 99;
+        default: return -1;
       }
       case 'y': switch (three)  {
-        case 'c': return u3nc(0, 59);
-        case 'd': return u3nc(0, 54);
-        case 'l': return u3nc(0, 14);
-        case 'n': return u3nc(0, 76);
-        case 't': return u3nc(0, 125);
-        case 'x': return u3nc(0, 94);
-        default: return 0;
+        case 'c': return 59;
+        case 'd': return 54;
+        case 'l': return 14;
+        case 'n': return 76;
+        case 't': return 125;
+        case 'x': return 94;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
     case 'z': switch (two) {
       case 'o': switch (three)  {
-        case 'd': return u3nc(0, 0);
-        default: return 0;
+        case 'd': return 0;
+        default: return -1;
       }
-      default: return 0;
+      default: return -1;
     }
-    default: return 0;
+    default: return -1;
   }
 }
 
@@ -1353,7 +1353,15 @@ u3qc_po_ins(u3_noun a)
   c3_y byt_y[3];
   u3r_bytes(0, 3, byt_y, a);
 
-  return u3_po_find_prefix(byt_y[0], byt_y[1], byt_y[2]);
+  c3_s puf_s;
+
+  puf_s = u3_po_find_prefix(byt_y[0], byt_y[1], byt_y[2]);
+
+  if ( puf_s <= 0xff ) {
+      return u3nc(u3_nul, u3i_word(puf_s));
+  }
+
+  return u3_nul;
 }
 
 u3_noun
@@ -1375,7 +1383,15 @@ u3qc_po_ind(u3_noun a)
   c3_y byt_y[3];
   u3r_bytes(0, 3, byt_y, a);
 
-  return u3_po_find_suffix(byt_y[0], byt_y[1], byt_y[2]);
+  c3_s suf_s;
+
+  suf_s = u3_po_find_suffix(byt_y[0], byt_y[1], byt_y[2]);
+
+  if ( suf_s <= 0xff ) {
+      return u3nc(u3_nul, suf_s);
+  }
+
+  return u3_nul;
 }
 
 u3_noun
