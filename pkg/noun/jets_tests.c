@@ -14,6 +14,154 @@ _setup(void)
 #define _neq_etch_out(sa, sb, len) ((strlen((sa)) != strlen((sb))) || (0 != strncmp((sa), (sb), (len))))
 
 static inline c3_i
+_da_etch(mpz_t a_mp, const c3_c* dat_c)
+{
+  u3_atom dat = u3i_mp(a_mp);
+  c3_c*  out_c;
+  c3_i   ret_i = 1;
+  size_t len_i;
+
+  len_i = u3s_etch_da_c(dat, &out_c);
+
+  if ( _neq_etch_out(dat_c, out_c, len_i) ) {
+    fprintf(stderr, "etch_da: 0x");
+    mpz_out_str(stderr, 16, a_mp);
+    fprintf(stderr, " fail; expected %s, got '%s'\r\n",
+                    dat_c, out_c);
+    ret_i = 0;
+  }
+
+  else {
+    u3_noun out = u3s_etch_da(dat);
+    u3_noun tou = u3i_bytes(len_i, (c3_y*)out_c);
+
+    if ( c3n == u3r_sing(tou, out) ) {
+      fprintf(stderr, "etch_da: 0x");
+      mpz_out_str(stderr, 16, a_mp);
+      fprintf(stderr, " mismatch; expected %s\r\n", dat_c);
+      u3m_p("out", out);
+      ret_i = 0;
+    }
+
+    u3z(out);
+    u3z(tou);
+  }
+
+  c3_free(out_c);
+  u3z(dat);
+
+  return ret_i;
+}
+
+#define _init_date_atom(mp, hi, lo) \
+  { \
+    mpz_init(mp); \
+    mpz_set_ui(dat_mp, hi); \
+    mpz_mul_2exp(dat_mp, dat_mp, 64); \
+    mpz_add_ui(dat_mp, dat_mp, lo); \
+  } \
+
+#define _init_date_atom_big(mp, ex, hi, lo) \
+  { \
+    mpz_init(mp); \
+    mpz_set_ui(dat_mp, ex); \
+    mpz_mul_2exp(dat_mp, dat_mp, 64); \
+    mpz_add_ui(dat_mp, dat_mp, hi); \
+    mpz_mul_2exp(dat_mp, dat_mp, 64); \
+    mpz_add_ui(dat_mp, dat_mp, lo); \
+  } \
+
+static c3_i
+_test_etch_da(void)
+{
+  mpz_t dat_mp;
+  c3_i ret_i = 1;
+
+  // In the beginning was the Word
+  _init_date_atom(dat_mp, 0x0, 0x0);
+  ret_i &= _da_etch(dat_mp, "~292277024401-.1.1");
+
+  // the Word was with God
+  _init_date_atom(dat_mp,
+      0x7ffffffe58e40f80,
+      0xbabe000000000000);
+  ret_i &= _da_etch(dat_mp, "~1.12.25..00.00.00..babe");
+
+  // and the Word was God - John 1:1
+  _init_date_atom(dat_mp,
+      0x7ffffffe93b72f70,
+      0x3300000000000000)
+  ret_i &= _da_etch(dat_mp, "~33.4.3..15.00.00..3300");
+
+  // Test fractional seconds
+  //
+  _init_date_atom(dat_mp,
+      0x8000000d32bb462f,
+      0xcafe000000000000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.24..05.44.15..cafe");
+
+  _init_date_atom(dat_mp,
+      0x8000000d32bb462f,
+      0x0000cafe00000000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.24..05.44.15..0000.cafe");
+
+  _init_date_atom(dat_mp,
+      0x8000000d32bb462f,
+      0x00000000cafe0000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.24..05.44.15..0000.0000.cafe");
+
+  _init_date_atom(dat_mp,
+      0x8000000d32bb462f,
+      0x000000000000cafe);
+  ret_i &= _da_etch(dat_mp, "~2023.3.24..05.44.15..0000.0000.0000.cafe");
+
+  // General tests
+  //
+  _init_date_atom(dat_mp,
+      0x8000000d329d6f76,
+      0xadef000000000000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.1..14.32.22..adef");
+
+  _init_date_atom(dat_mp,
+      0x8000000d32c33b88,
+      0x2d00000000000000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.30..06.36.56..2d00");
+
+  _init_date_atom(dat_mp,
+      0x8000000d32c51c00,
+      0x2d00000000000000);
+  ret_i &= _da_etch(dat_mp, "~2023.3.31..16.46.56..2d00");
+
+  _init_date_atom(dat_mp,
+      0x8000000d3a19f0c0,
+      0x2d00000000000000);
+  ret_i &= _da_etch(dat_mp, "~2027.2.22..07.26.56..2d00");
+
+  _init_date_atom(dat_mp,
+      0x80000029dd78fec0,
+      0x2d00000000000000);
+  ret_i &= _da_etch(dat_mp, "~5924.11.10..10.06.56..2d00");
+
+  _init_date_atom(dat_mp,
+      0x8000700808c7aec0,
+      0x2d00000000000000);
+  ret_i &= _da_etch(dat_mp, "~3903639.9.11..12.46.56..2d00");
+
+  _init_date_atom_big(dat_mp,
+      0xcafeabcd,
+      0x8000000d330a6fca,
+      0xd022000000000000);
+  ret_i &= _da_etch(dat_mp, "~1990808568848630424650.2.5..23.52.42..d022");
+
+  _init_date_atom_big(dat_mp,
+      0xcafeabcd,
+      0x8000000d330a6fca,
+      0xd0220000cafe0000);
+  ret_i &= _da_etch(dat_mp, "~1990808568848630424650.2.5..23.52.42..d022.0000.cafe");
+
+  return ret_i;
+}
+static inline c3_i
 _ud_etch(c3_d num_d, const c3_c* num_c)
 {
   u3_atom  num = u3i_chub(num_d);
@@ -1021,6 +1169,11 @@ static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_etch_da() ) {
+    fprintf(stderr, "test jets: etch_da: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");

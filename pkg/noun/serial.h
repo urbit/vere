@@ -77,6 +77,14 @@
         u3_noun
         u3s_cue_atom(u3_atom a);
 
+      /* u3s_etch_da(): atom to @da.
+       */
+        u3_atom u3s_etch_da(u3_atom a);
+
+      /* u3s_etch_da_c(): atom to @da, as a malloc'd c string.
+       */
+        size_t u3s_etch_da_c(u3_atom a, c3_c** out_c);
+
       /* u3s_etch_ud_smol(): c3_d to @ud
       **
       **   =(26 (met 3 (scot %ud (dec (bex 64)))))
