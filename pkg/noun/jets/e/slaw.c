@@ -1,4 +1,4 @@
-/// @file
+/// @fil
 
 #include "jets/k.h"
 #include "jets/q.h"
@@ -7,6 +7,18 @@
 #include "noun.h"
 
 #include <ctype.h>
+
+static inline u3_noun
+_parse_da(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_da(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
 
 static inline u3_noun
 _parse_ud(u3_noun a)
@@ -270,165 +282,10 @@ _parse_p(u3_noun cor, u3_noun txt) {
          combine(d_part, combine(c_part, combine(b_part, a_part)))))))))))))));
 }
 
-#define PARSE_NONZERO_NUMBER(numname)               \
-  c3_w numname = 0;                                 \
-  do {                                              \
-    if (cur[0] > '9' || cur[0] < '1') {             \
-      u3a_free(c);                                  \
-      return u3_none;                               \
-    }                                               \
-    numname = cur[0] - '0';                         \
-    cur++;                                          \
-    while (isdigit(cur[0])) {                       \
-      numname = u3ka_mul(numname, 10);              \
-      numname = u3ka_add(numname, cur[0] - '0');    \
-      cur++;                                        \
-    }                                               \
-  } while (0)
-
-#define PARSE_INCLUDING_ZERO_NUMBER(numname)        \
-  c3_w numname = 0;                                 \
-  do {                                              \
-    if (cur[0] > '9' || cur[0] < '0') {             \
-      u3a_free(c);                                  \
-      return u3_none;                               \
-    }                                               \
-    numname = cur[0] - '0';                         \
-    cur++;                                          \
-    while (isdigit(cur[0])) {                       \
-      numname = u3ka_mul(numname, 10);              \
-      numname = u3ka_add(numname, cur[0] - '0');    \
-      cur++;                                        \
-    }                                               \
-  } while (0)
-
-#define PARSE_HEX_DIGIT(out)                        \
-  do {                                              \
-    if (cur[0] >= '0' && cur[0] <= '9') {           \
-      out = cur[0] - '0';                           \
-    } else if (cur[0] >= 'a' && cur[0] <= 'f') {    \
-      out = 10 + cur[0] - 'a';                      \
-    } else {                                        \
-      u3a_free(c);                                  \
-      return u3_none;                               \
-    }                                               \
-    cur++;                                          \
-  } while(0)
-
-
-u3_noun
-_parse_da(u3_noun cor, u3_noun txt) {
-  c3_c* c = u3a_string(txt);
-
-  c3_c* cur = c;
-  CONSUME('~');
-
-  // Parse out an arbitrary year number. Starts with a nonzero digit followed
-  // by a series of any digits.
-  PARSE_NONZERO_NUMBER(year);
-
-  // Parse the optional negative sign for BC dates.
-  u3_noun bc = c3y;
-  if (cur[0] == '-') {
-    bc = c3n;
-    cur++;
-  }
-
-  CONSUME('.');
-
-  // Parse out a two digit month (mot:ag). Either a single digit 1-9 or 1[012].
-  c3_y month;
-  if (cur[0] == '1') {
-    if (cur[1] <= '2' && cur[1] >= '0') {
-      // This is a two number month.
-      month = 10 + cur[1] - '0';
-      cur += 2;
-    } else {
-      // This is January.
-      month = 1;
-      cur++;
-    }
-  } else if (cur[0] <= '9' && cur[0] >= '2') {
-    month = cur[0] - '0';
-    cur++;
-  } else {
-    u3a_free(c);
-    return u3_none;
-  }
-
-  CONSUME('.');
-
-  // Parse out a two digit day (dip:ag). This number can be really big, so we
-  // can track number of days since September 1993.
-  PARSE_NONZERO_NUMBER(day);
-
-  if (cur[0] == 0) {
-    u3a_free(c);
-    u3_noun hok = u3j_cook("u3we_slaw_parse_da", u3k(cor), "year");
-    u3_noun res = u3n_slam_on(hok,
-                              u3nt(u3nc(bc, year), month,
-                                   u3nc(day, u3nq(0, 0, 0, 0))));
-    return u3nc(0, res);
-  }
-
-  CONSUME('.');
-  CONSUME('.');
-
-  PARSE_INCLUDING_ZERO_NUMBER(hour);
-  CONSUME('.');
-  PARSE_INCLUDING_ZERO_NUMBER(minute);
-  CONSUME('.');
-  PARSE_INCLUDING_ZERO_NUMBER(second);
-
-  if (cur[0] == 0) {
-    u3a_free(c);
-    u3_noun hok = u3j_cook("u3we_slaw_parse_da", u3k(cor), "year");
-    u3_noun res = u3n_slam_on(hok,
-                              u3nt(u3nc(bc, year), month,
-                                   u3nc(day, u3nq(hour, minute, second, 0))));
-    return u3nc(0, res);
-  }
-
-  CONSUME('.');
-  CONSUME('.');
-
-  // Now we have to parse a list of hexidecimal numbers 0-f of length 4 only
-  // (zero padded otherwise) separated by dots.
-  u3_noun list = 0;
-  while (1) {
-    // Parse 4 hex digits
-    c3_y one, two, three, four;
-    PARSE_HEX_DIGIT(one);
-    PARSE_HEX_DIGIT(two);
-    PARSE_HEX_DIGIT(three);
-    PARSE_HEX_DIGIT(four);
-
-    c3_w current = (one << 12) + (two << 8) + (three << 4) + four;
-    list = u3nc(u3i_words(1, &current), list);
-
-    if (cur[0] == 0) {
-      u3a_free(c);
-
-      u3_noun flopped = u3qb_flop(list);
-      u3z(list);
-
-      u3_noun hok = u3j_cook("u3we_slaw_parse_da", u3k(cor), "year");
-      u3_noun res = u3n_slam_on(hok,
-                                u3nt(u3nc(bc, year), month,
-                                     u3nc(day,
-                                          u3nq(hour, minute, second, flopped))));
-      return u3nc(0, res);
-    }
-
-    CONSUME('.');
-  }
-}
 
 #undef ENSURE_NOT_END
 #undef CONSUME
 #undef TRY_GET_SYLLABLE
-#undef PARSE_NONZERO_NUMBER
-#undef PARSE_HEX_DIGIT
 
 u3_noun
 _parse_tas(u3_noun txt) {
@@ -470,7 +327,7 @@ u3we_slaw(u3_noun cor)
 
   switch (mod) {
     case c3__da:
-      return _parse_da(cor, txt);
+      return _parse_da(txt);
 
     case 'p':
       return _parse_p(cor, txt);

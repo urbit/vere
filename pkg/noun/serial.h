@@ -133,6 +133,16 @@
         size_t
         u3s_etch_uw_c(u3_atom a, c3_c** out_c);
 
+      /* u3s_sift_da_bytes: parse @da.
+      */
+        u3_weak
+        u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y);
+
+      /* u3s_sift_da: parse @da.
+      */
+        u3_weak
+        u3s_sift_da(u3_atom a);
+
       /* u3s_sift_ud_bytes: parse @ud.
       */
         u3_weak

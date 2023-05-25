@@ -547,6 +547,122 @@ _test_etch_uw(void)
 #undef _neq_etch_out
 
 static inline c3_i
+_da_good(c3_d hi, c3_d lo, const c3_c* dat_c)
+{
+  u3_weak out;
+
+  out = u3s_sift_da_bytes(strlen(dat_c), (c3_y*)dat_c);
+
+  if ( u3_none == out) {
+    fprintf(stderr, "sift_da: %s fail; expected hi: 0x%llx, lo: 0x%llx\r\n",
+        dat_c, hi, lo);
+
+    return 0;
+  }
+
+  c3_d out_lo = u3r_chub(0, out);
+
+  // Careful, works only on 128-bit dates
+  //
+  c3_d out_hi = u3r_chub(1, out);
+
+  if ( out_hi != hi || out_lo != lo ) {
+    fprintf(stderr, "sift_da: %s fail; expected 0x%llx,0x%llx: actual 0x%llx,0x%llx\r\n",dat_c, hi, lo, out_hi, out_lo);
+
+    u3z(out);
+
+    return 0;
+  }
+
+  u3z(out);
+
+  return 1;
+}
+
+static inline c3_i
+_da_fail(const c3_c* dat_c)
+{
+  u3_weak out;
+
+  if ( u3_none != (out = u3s_sift_da_bytes(strlen(dat_c), (c3_y*)dat_c)) ) {
+    u3m_p("out", out);
+    fprintf(stderr, "sift_da: %s expected fail\r\n", dat_c);
+
+    u3z(out);
+
+    return 0;
+  }
+
+  u3z(out);
+
+  return 1;
+}
+
+static c3_i
+_test_sift_da(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _da_good(0x0, 0x0, "~292277024401-.1.1");
+  ret_i &= _da_good(0x7ffffffe58e40f80,
+                    0xbabe000000000000,
+                    "~1.12.25..00.00.00..babe");
+  ret_i &= _da_good(0x7ffffffe93b72f70,
+                    0x3300000000000000,
+                    "~33.4.3..15.00.00..3300");
+  ret_i &= _da_good(0x7ffffffe93b72f70,
+                    0x3300000000000000,
+                    "~33.4.3..15.00.00..3300");
+  ret_i &= _da_good(0x8000000d32bb462f,
+                    0xcafe000000000000,
+                    "~2023.3.24..05.44.15..cafe");
+  ret_i &= _da_good(0x8000000d32bb462f,
+                    0xcafe00000000,
+                    "~2023.3.24..05.44.15..0000.cafe");
+  ret_i &= _da_good(0x8000000d32bb462f,
+                    0xcafe0000,
+                    "~2023.3.24..05.44.15..0000.0000.cafe");
+  ret_i &= _da_good(0x8000000d32bb462f,
+                    0xcafe,
+                    "~2023.3.24..05.44.15..0000.0000.0000.cafe");
+  ret_i &= _da_good(0x8000000d329d6f76,
+                    0xadef000000000000,
+                    "~2023.3.1..14.32.22..adef");
+  ret_i &= _da_good(0x8000000d32c33b88,
+                    0x2d00000000000000,
+                    "~2023.3.30..06.36.56..2d00");
+  ret_i &= _da_good(0x8000000d32c51c00,
+                    0x2d00000000000000,
+                    "~2023.3.31..16.46.56..2d00");
+  ret_i &= _da_good(0x8000000d3a19f0c0,
+                    0x2d00000000000000,
+                    "~2027.2.22..07.26.56..2d00");
+  ret_i &= _da_good(0x80000029dd78fec0,
+                    0x2d00000000000000,
+                    "~5924.11.10..10.06.56..2d00");
+  ret_i &= _da_good(0x8000700808c7aec0,
+                    0x2d00000000000000,
+                    "~3903639.9.11..12.46.56..2d00");
+
+  ret_i &= _da_fail("~2023--.1.1");
+  ret_i &= _da_fail("~2.023.1.1");
+  ret_i &= _da_fail("~2023.01.1");
+  ret_i &= _da_fail("~2023.1.01");
+  ret_i &= _da_fail("~2023.13.1");
+  ret_i &= _da_fail("~2023.12.32");
+  ret_i &= _da_fail("~2023.2.31");
+  ret_i &= _da_fail("~2023.2.29");
+
+  ret_i &= _da_fail("~2023.3.3..24.00.00");
+  ret_i &= _da_fail("~2023.3.3..24.00.00..ca");
+  ret_i &= _da_fail("~2023.3.3..24.00.00..cAFE");
+  ret_i &= _da_fail("~2023.3.3..24.00.00..cAFE");
+  ret_i &= _da_fail("~2023.3.3..24.00.00..cafe.cafe.");
+
+  return ret_i;
+}
+
+static inline c3_i
 _ud_good(c3_w num_w, const c3_c* num_c)
 {
   u3_weak out;
@@ -1192,6 +1308,11 @@ _test_jets(void)
 
   if ( !_test_etch_uw() ) {
     fprintf(stderr, "test jets: etch_uw: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sift_da() ) {
+    fprintf(stderr, "test jets: sift_da: failed\r\n");
     ret_i = 0;
   }
 
