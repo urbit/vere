@@ -1203,6 +1203,107 @@ _test_sift_ud(void)
 }
 
 static inline c3_i
+_ui_good(c3_w num_w, const c3_c* num_c)
+{
+  u3_weak out;
+  if ( num_w != (out = u3s_sift_ui_bytes(strlen(num_c), (c3_y*)num_c)) ) {
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ui: %s fail; expected %u\r\n", num_c, num_w);
+    }
+    else {
+      fprintf(stderr, "sift_ui: %s wrong; expected %u: actual %u\r\n", num_c, num_w, out);
+    }
+    return 0;
+  }
+
+  return 1;
+}
+
+static inline c3_i
+_ui_fail(const c3_c* num_c)
+{
+  u3_weak out;
+  if ( u3_none != (out = u3s_sift_ui_bytes(strlen(num_c), (c3_y*)num_c)) ) {
+    u3m_p("out", out);
+    fprintf(stderr, "sift_ui: %s expected fail\r\n", num_c);
+    return 0;
+  }
+
+  return 1;
+}
+
+extern c3_d _cs_bit_dec(c3_d l);
+
+static c3_i
+_test_sift_ui(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _ui_good(0, "0i0");
+  ret_i &= _ui_good(1, "0i1");
+  ret_i &= _ui_good(12, "0i12");
+  ret_i &= _ui_good(123, "0i123");
+  ret_i &= _ui_good(1234, "0i1234");
+  ret_i &= _ui_good(12345, "0i12345");
+  ret_i &= _ui_good(123456, "0i123456");
+  ret_i &= _ui_good(1234567, "0i1234567");
+  ret_i &= _ui_good(12345678, "0i12345678");
+  ret_i &= _ui_good(123456789, "0i123456789");
+  ret_i &= _ui_good(100000000, "0i100000000");
+  ret_i &= _ui_good(101101101, "0i101101101");
+  ret_i &= _ui_good(201201201, "0i201201201");
+  ret_i &= _ui_good(302201100, "0i302201100");
+
+  ret_i &= _ui_fail("0i");
+  ret_i &= _ui_fail("i0");
+  ret_i &= _ui_fail("0i01");
+
+  {
+    c3_c* num_c = "0i4294967296";
+    u3_weak out = u3s_sift_ui_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom pro = u3qc_bex(32);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ui: (bex 32) fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(pro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_ui: (bex 32) wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(pro);
+  }
+
+  {
+    c3_c* num_c = "0i340282366920938463463374607431768211456";
+    u3_weak out = u3s_sift_ui_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom pro = u3qc_bex(128);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ui: (bex 128) fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(pro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_ui: (bex 128) wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(pro);
+  }
+
+  return ret_i;
+}
+
+static inline c3_i
 _ux_good(c3_d num_d, const c3_c* num_c)
 {
   u3_weak out;
@@ -1765,12 +1866,17 @@ _test_jets(void)
   }
 
   if ( !_test_sift_p() ) {
-    fprintf(stderr, "test jets: sift_ud: failed\r\n");
+    fprintf(stderr, "test jets: sift_p: failed\r\n");
     ret_i = 0;
   }
 
   if ( !_test_sift_ud() ) {
     fprintf(stderr, "test jets: sift_ud: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sift_ui() ) {
+    fprintf(stderr, "test jets: sift_ui: failed\r\n");
     ret_i = 0;
   }
 
