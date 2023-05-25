@@ -172,7 +172,6 @@ _lick_poke_bail(u3_ovum* egg_u, u3_noun lud)
 static void
 _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
 {
-  u3l_log("lick poke");
   u3_weak   put;
   u3_noun   dev, nam, dat, wir, cad;
 
@@ -300,7 +299,6 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->mor_u.nex_u = (u3_moor*)san_u->can_u;
   san_u->can_u = can_u;
   gen_u->con_o = c3y;
-  u3l_log("lick: sock cb");
 
   wir = u3nc(c3__lick, u3_nul);
   dev = _lick_string_to_path(gen_u->nam_c+1);
@@ -332,9 +330,7 @@ _lick_close_sock(u3_shan* san_u)
       u3l_log("lick: failed to unlink socket: %s", uv_strerror(errno));
     }
   }
-  else {
-    // u3l_log("lick: unlinked %s", paf_c);
-  }
+
   uv_close((uv_handle_t*)&san_u->pyp_u, _lick_close_cb);
   c3_free(paf_c);
 }
@@ -434,7 +430,6 @@ static void
 _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 {
   c3_c* nam_c = _lick_it_path(nam); 
-  u3l_log("lick shut: %s", nam_c);
 
   u3_port* cur_u = lic_u->gen_u;
   u3_port* las_u;
