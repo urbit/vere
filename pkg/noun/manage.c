@@ -597,13 +597,32 @@ _find_home(void)
   c3_w* mem_w = u3_Loom + u3C.walign_w;
   c3_w  siz_w = c3_wiseof(u3v_home);
   c3_w  len_w = u3C.wor_i - u3C.walign_w;
-  c3_w*  mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
 
-  //  this looks risky, but there are no legitimate scenarios where it's wrong
-  u3R->cap_p = u3R->mat_p = u3C.wor_i - c3_wiseof(*u3H);
+  //  this looks risky, but there are no legitimate scenarios
+  //  where it's wrong
+  //
+  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
+
+  //  check for obvious corruption
+  //
+  {
+    c3_w    nor_w, sou_w;
+    u3_post low_p, hig_p;
+    u3m_water(&low_p, &hig_p);
+
+    nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
+    sou_w = u3P.pag_w - (hig_p >> u3a_page);
+
+    if ( (nor_w != u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
+      fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
+                      nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
+      u3_assert(!"loom: corrupt size");
+    }
+  }
 
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
@@ -843,7 +862,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->hat_p + pad_w;
 
       rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->cap_p, rod_u->hat_p);
 #if 0
       fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -854,7 +872,6 @@ u3m_leap(c3_w pad_w)
       bot_p = u3R->cap_p;
 
       rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
-      u3e_ward(rod_u->hat_p, rod_u->cap_p);
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -876,6 +893,7 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
+    u3m_ward();
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
@@ -1027,12 +1045,31 @@ u3m_flog(c3_w gof_w)
 /* u3m_water(): produce watermarks.
 */
 void
-u3m_water(c3_w* low_w, c3_w* hig_w)
+u3m_water(u3_post* low_p, u3_post* hig_p)
 {
-  u3_assert(u3R == &u3H->rod_u);
-
-  *low_w = u3R->hat_p;
-  *hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+  //  allow the segfault handler to fire before the road is set
+  //
+  //    while not explicitly possible in the codebase,
+  //    compiler optimizations can reorder stores
+  //
+  if ( !u3R ) {
+    *low_p = 0;
+    *hig_p = u3C.wor_i - 1;
+  }
+  //  in a north road, hat points to the end of the heap + 1 word,
+  //  while cap points to the top of the stack
+  //
+  else if ( c3y == u3a_is_north(u3R) ) {
+    *low_p = u3R->hat_p - 1;
+    *hig_p = u3R->cap_p;
+  }
+  //  in a south road, hat points to the end of the heap,
+  //  while cap points to the top of the stack + 1 word
+  //
+  else {
+    *low_p = u3R->cap_p - 1;
+    *hig_p = u3R->hat_p;
+  }
 }
 
 /* u3m_soft_top(): top-level safety wrapper.
@@ -1711,12 +1748,158 @@ _cm_limits(void)
 # endif
 }
 
+/* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
+*/
+c3_o
+u3m_backup(c3_o ovw_o)
+{
+  c3_c bhk_c[2048];
+  snprintf(bhk_c, 2048, "%s/.urb/bhk", u3P.dir_c);
+  return u3e_backup(bhk_c, ovw_o);
+}
+
+/* u3m_fault(): handle a memory event with libsigsegv protocol.
+*/
+c3_i
+u3m_fault(void* adr_v, c3_i ser_i)
+{
+  c3_w*   adr_w = (c3_w*)adr_v;
+  u3_post low_p, hig_p;
+
+  //  let the stack overflow handler run.
+  //
+  if ( 0 == ser_i ) {
+    return 0;
+  }
+  //  this could be avoided by registering the loom bounds in libsigsegv
+  //
+  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
+                    adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+    u3_assert(0);
+    return 0;
+  }
+
+  u3m_water(&low_p, &hig_p);
+
+  switch ( u3e_fault(low_p, hig_p, u3a_outa(adr_w)) ) {
+    //  page tracking invariants violated, fatal
+    //
+    case u3e_flaw_sham: {
+      u3_assert(0);
+      return 0;
+    }
+
+    //  virtual memory failure (protections)
+    //
+    //    XX s/b recoverable, need to u3m_signal() a new mote
+    //
+    case u3e_flaw_base: {
+      u3_assert(0);
+      return 0;
+    }
+
+    //  loom limits exceeded, recoverable
+    //
+    case u3e_flaw_meme: {
+      u3m_signal(c3__meme); // doesn't return
+      return 1;
+    }
+
+    case u3e_flaw_good: return 1;
+  }
+
+  u3_assert(!"unpossible");
+}
+
+/* u3m_foul(): dirty all pages and disable tracking.
+*/
+void
+u3m_foul(void)
+{
+  if ( c3n == u3e_yolo() ) {
+    return;
+  }
+
+  u3e_foul();
+}
+
+/* u3m_save(): update the checkpoint.
+*/
+void
+u3m_save(void)
+{
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+
+  u3_assert(u3R == &u3H->rod_u);
+
+#if 1  // XX redundant
+  {
+    c3_w low_w = u3a_heap(u3R);  // old u3m_water()
+    c3_w hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+
+    c3_w nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
+
+    c3_w nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w sop_w = hig_p >> u3a_page;
+    c3_w sor_w = u3P.pag_w - sop_w;
+
+    if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
+      fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
+                      nox_w, nor_w, sox_w, sor_w);
+    }
+    else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
+      fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
+                      nox_w, nor_w, sox_w, sor_w);
+      u3_assert(!"busted");
+    }
+  }
+#endif
+
+  return u3e_save(low_p, hig_p);
+}
+
+/* u3m_ward(): tend the guardpage.
+*/
+void
+u3m_ward(void)
+{
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+
+#if 1  // XX redundant
+  {
+    c3_w low_w, hig_w;
+
+    if ( c3y == u3a_is_north(u3R) ) {
+      low_w = u3R->hat_p;
+      hig_w = u3R->cap_p;
+    }
+    else {
+      low_w = u3R->cap_p;
+      hig_w = u3R->hat_p;
+    }
+
+    if (  (low_w > (u3P.gar_w << u3a_page))
+       || (hig_w < (u3P.gar_w << u3a_page)) )
+    {
+      u3_assert(  ((low_p >> u3a_page) >= u3P.gar_w)
+               || ((hig_p >> u3a_page) <= u3P.gar_w) );
+    }
+  }
+#endif
+
+  return u3e_ward(low_p, hig_p);
+}
+
 /* _cm_signals(): set up interrupts, etc.
 */
 static void
 _cm_signals(void)
 {
-  if ( 0 != sigsegv_install_handler(u3e_fault) ) {
+  if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
   }
@@ -1881,6 +2064,8 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 {
   c3_o nuu_o;
 
+  u3C.dir_c = dir_c;
+
   /* Activate the loom.
   */
   u3m_init(len_i);
@@ -1899,10 +2084,6 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(nuu_o);
-
-  /* Place the guard page.
-  */
-  u3e_init();
 
   /* Initialize the jet system.
   */
@@ -2167,5 +2348,5 @@ u3m_migrate(u3v_version ver_w)
   u3H->ver_w = ver_w;
   /* extra assurance we haven't corrupted the loom before writing to disk */
   u3a_loom_sane();
-  u3e_save();
+  u3m_save();
 }
