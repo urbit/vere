@@ -80,6 +80,18 @@ _parse_uv(u3_noun a)
   return u3nc(u3_nul, pro);
 }
 
+static inline u3_noun
+_parse_uw(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_uw(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
+
 u3_noun
 _parse_tas(u3_noun txt) {
   // For any symbol which matches, txt will return itself as a
@@ -136,6 +148,9 @@ u3we_slaw(u3_noun cor)
 
     case c3__uv:
       return _parse_uv(txt);
+
+    case c3__uw:
+      return _parse_uw(txt);
 
       // %ta is used once in link.hoon. don't bother.
 

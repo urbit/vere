@@ -1571,6 +1571,154 @@ _test_sift_uv(void)
   return ret_i;
 }
 
+static inline c3_i
+_uw_good(c3_d num_d, const c3_c* num_c)
+{
+  u3_weak out;
+
+  out = u3s_sift_uw_bytes(strlen(num_c), (c3_y*)num_c);
+
+  if ( c3y == u3a_is_cat(out) ) {
+    if ( num_d != out ) {
+        fprintf(stderr, "sift_uw: %s wrong; expected 0x%llx: actual 0x%x\r\n", num_c, num_d, out);
+      return 0;
+    }
+
+    return 1;
+  }
+
+  else {
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_uw: %s fail; expected 0x%llx\r\n", num_c, num_d);
+      return 0;
+    }
+
+    c3_d out_d = u3r_chub(0, out);
+
+    if ( num_d != out_d ) {
+        fprintf(stderr, "sift_uw: %s wrong; expected 0x%llx: actual 0x%llx\r\n", num_c, num_d, out_d);
+
+        u3z(out);
+        return 0;
+    }
+
+    u3z(out);
+    return 1;
+  }
+}
+
+static inline c3_i
+_uw_fail(const c3_c* num_c)
+{
+  u3_weak out;
+  if ( u3_none != (out = u3s_sift_uw_bytes(strlen(num_c), (c3_y*)num_c)) ) {
+    u3m_p("out", out);
+    fprintf(stderr, "sift_uw: %s expected fail\r\n", num_c);
+    u3z(out);
+
+    return 0;
+  }
+
+
+  return 1;
+}
+
+static c3_i
+_test_sift_uw(void)
+{
+  c3_i ret_i = 1;
+
+
+  ret_i &= _uw_good(0x0, "0w0");
+  ret_i &= _uw_good(0x1, "0w1");
+  ret_i &= _uw_good(0x1083105, "0w12345");
+  ret_i &= _uw_good(0x61c824a, "0w6789a");
+  ret_i &= _uw_good(0xb30d38f, "0wbcdef");
+  ret_i &= _uw_good(0x104524d4, "0wghijk");
+  ret_i &= _uw_good(0x15597619, "0wlmnop");
+  ret_i &= _uw_good(0x1a6dc75e, "0wqrstu");
+  ret_i &= _uw_good(0x1f8218a3, "0wvwxyz");
+  ret_i &= _uw_good(0x249669e8, "0wABCDE");
+  ret_i &= _uw_good(0x29aabb2d, "0wFGHIJ");
+  ret_i &= _uw_good(0x2ebf0c72, "0wKLMNO");
+  ret_i &= _uw_good(0x33d35db7, "0wPQRST");
+  ret_i &= _uw_good(0x38e7aefc, "0wUVWXY");
+  ret_i &= _uw_good(0x3dffe24a, "0wZ~-9a");
+  ret_i &= _uw_good(0x3efbefbe, "0w-----");
+  ret_i &= _uw_good(0x3fffffff, "0w~~~~~");
+  ret_i &= _uw_good(0x3effeffe, "0w-~-~-");
+  ret_i &= _uw_good(0x108310a2cc34e,"0w1234.abcde");
+  ret_i &= _uw_good(0x3d04524d45565d8, "0wfghij.klmno");
+  ret_i &= _uw_good(0x65a6dc75e7e0862, "0wpqrst.uvwxy");
+  ret_i &= _uw_good(0x8e49669e8a6aaec, "0wzABCD.EFGHI");
+  ret_i &= _uw_good(0xb6ebf0c72cf4d76, "0wJKLMN.OPQRS");
+  ret_i &= _uw_good(0xdf8e7aefcf41083, "0wTUVWX.YZ123");
+  ret_i &= _uw_good(0x105187209fbffbe, "0w45678.9-~--");
+  ret_i &= _uw_good(0xffffffffffffffff, "0wf.~~~~~.~~~~~");
+
+  ret_i &= _uw_fail("w0");
+  ret_i &= _uw_fail("0w01");
+  ret_i &= _uw_fail("0w12.345");
+  ret_i &= _uw_fail("0w1~.f3456.-789");
+  ret_i &= _uw_fail("0w1.3456-.-789~-");
+  ret_i &= _uw_fail("0wwwwww.wwwwww");
+
+  {
+    c3_c* num_c = "0w4.00000";
+    u3_weak out = u3s_sift_uw_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom pro = u3qc_bex(32);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_uw: (bex 32) fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(pro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_uw: (bex 32) wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(pro);
+  }
+
+  {
+
+    c3_c* num_c = "0w9.37a8e.elucg.lcgpl.~--38.alllz.-----.~~~~~";
+    c3_c* hex_c = "0x24.31ca.20e3.9578.c415.3106.55ff.ef83.20a5.5556.3fbe.fbef.bfff.ffff";
+
+    u3_weak hot = u3s_sift_ux_bytes(strlen(hex_c), (c3_y*)hex_c);
+    u3_atom out = u3s_sift_uw_bytes(strlen(num_c), (c3_y*)num_c);
+
+    if ( u3_none == out) {
+      fprintf(stderr, "sift_uw: big wiz fail\r\n");
+      ret_i = 0;
+    }
+
+    if ( u3_none == hot ) {
+      fprintf(stderr, "sift_uw: big hex fail during big wiz test\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(hot, out) ) {
+        u3m_p("out", out);
+        u3m_p("hot", hot);
+        fprintf(stderr, "sift_uw: big wiz wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out);
+    u3z(hot);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_en_base16(void)
 {
@@ -2024,6 +2172,11 @@ _test_jets(void)
 
   if ( !_test_sift_uv() ) {
     fprintf(stderr, "test jets: sift_uv: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sift_uw() ) {
+    fprintf(stderr, "test jets: sift_uw: failed\r\n");
     ret_i = 0;
   }
 
