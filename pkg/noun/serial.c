@@ -857,6 +857,241 @@ u3s_cue_atom(u3_atom a)
   return u3s_cue_bytes((c3_d)len_w, byt_y);
 }
 
+/* Compute the length of the address
+ */
+size_t _cs_etch_p_size(mpz_t a_mp) {
+
+  size_t syb_i = mpz_sizeinbase(a_mp, 256);
+
+  // 3 characters per syllabe, - every 2 syllabes, and -- every 8 syllabes,
+  // and ~
+  size_t len_i = syb_i * 3 + (syb_i / 2) + (syb_i / 8) + 1;
+
+  // Discount hep at the boundary of 2 syllabes
+  if ( 0 == (syb_i % 2) ) {
+    len_i -= 1;
+  }
+
+  // Discount hep at the boundary of 8 syllabes
+  if ( 0 == (syb_i % 8) ) {
+    len_i -= 1;
+  }
+
+  return len_i;
+}
+
+/* _cs_etch_p_bytes: atom to @p impl.
+ */
+c3_y*
+_cs_etch_p_bytes(mpz_t sxz_mp, c3_w len_w, c3_y* hun_y)
+{
+  c3_y* byt_y = hun_y + len_w - 1;
+
+  // Comets and below
+  //
+  c3_d sxz;
+  c3_s huk, hi, lo;
+
+  // Process in chunks of 64 bits
+  //
+  while ( mpz_size(sxz_mp) ) {
+
+    sxz = (c3_d) mpz_get_ui(sxz_mp);
+    mpz_tdiv_q_2exp(sxz_mp, sxz_mp, 64);
+
+    while ( sxz ) {
+
+      huk = sxz & 0xffff;
+
+      hi = huk >> 8;
+      lo = huk & 0xff;
+
+      u3_po_to_suffix(lo, byt_y - 2, byt_y - 1, byt_y);
+      u3_po_to_prefix(hi, byt_y - 5, byt_y - 4,  byt_y - 3);
+
+      sxz >>= 16;
+      byt_y -= 6;
+      len_w -= 6;
+
+      // Print - every two syllabes
+      if ( sxz ) {
+        *byt_y = '-';
+        byt_y--;
+        len_w--;
+      }
+    }
+
+    // Print -- every four syllabes
+    if ( mpz_size(sxz_mp) ) {
+      *byt_y = '-';
+      *(byt_y - 1) = '-';
+
+      byt_y -= 2;
+      len_w -= 2;
+    }
+  }
+
+  *byt_y = '~';
+
+  return byt_y;
+}
+
+
+/* u3s_etch_p_smol(): c3_d to @p
+**
+**   =(28 (met 3 (scot %p (dec (bex 64)))))
+*/
+c3_y*
+u3s_etch_p_smol(c3_d sxz, c3_y hun_y[SMOL_P])
+{
+  c3_y* byt_y = hun_y + SMOL_P - 1;
+
+  // Galaxy
+  //
+  if ( sxz <= 0xff) {
+
+    u3_po_to_suffix(sxz & 0xff, byt_y - 2, byt_y - 1, byt_y);
+    byt_y -= 3;
+
+    *byt_y = '~';
+
+    return byt_y;
+  }
+
+  // Stars, planets and moons
+  //
+  c3_s huk, hi, lo;
+
+  while ( sxz ) {
+
+    huk = sxz & 0xffff;
+
+    hi = huk >> 8;
+    lo = huk & 0xff;
+
+    u3_po_to_suffix(lo, byt_y - 2, byt_y - 1, byt_y);
+    u3_po_to_prefix(hi, byt_y - 5, byt_y - 4,  byt_y - 3);
+
+    sxz >>= 16;
+    byt_y -= 6;
+
+    // Print a separator every two syllabes
+    if ( sxz ) {
+      *byt_y = '-';
+      byt_y--;
+    }
+  }
+
+  *byt_y = '~';
+
+  return byt_y;
+}
+
+/* u3s_etch_p_c(): atom to @p, as a malloc'd c string.
+ */
+size_t
+u3s_etch_p_c(u3_atom a, c3_c** out_c)
+{
+
+  c3_d a_d;
+  size_t len_i;
+  c3_y* buf_y;
+
+  u3_atom sxz = a;
+  c3_o fen_o = c3n;
+
+  // We only need to unscramble planets and below
+  //
+  if ( c3n == u3a_is_cat(a) ||
+      (c3y == u3a_is_cat(a) && a >= 0x10000) ) {
+
+    sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
+  }
+
+  if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
+    c3_y hun_y[SMOL_P];
+
+    buf_y = u3s_etch_p_smol(a_d, hun_y);
+    len_i = SMOL_P - ((c3_p)buf_y - (c3_p)hun_y);
+
+    *out_c = c3_malloc(len_i + 1);
+    (*out_c)[len_i] = 0;
+    memcpy(*out_c, buf_y, len_i);
+
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
+
+    return len_i;
+  }
+
+  mpz_t     sxz_mp;
+  u3r_mp(sxz_mp, sxz);
+
+  len_i = _cs_etch_p_size(sxz_mp);
+  buf_y = malloc(len_i+1);
+  buf_y[len_i] = 0;
+
+  _cs_etch_p_bytes(sxz_mp, len_i, buf_y);
+
+  *out_c = (c3_c*)buf_y;
+
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
+  mpz_clear(sxz_mp);
+  return len_i;
+}
+
+/* u3s_etch_p(): atom to @p.
+ */
+u3_atom
+u3s_etch_p(u3_atom a)
+{
+  c3_d a_d;
+
+  u3_atom sxz = a;
+  c3_o fen_o = c3n;
+
+  // We only need to unscramble planets and below
+  //
+  if ( c3n == u3a_is_cat(a) ||
+      (c3y == u3a_is_cat(a) && a >= 0x10000) ) {
+
+    sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
+  }
+
+  if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
+    c3_y  hun_y[SMOL_P];
+    c3_y* buf_y = u3s_etch_p_smol(a_d, hun_y);
+    c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
+
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
+    return u3i_bytes(SMOL_P - dif_w, buf_y);
+  }
+
+  u3i_slab sab_u;
+  size_t   len_i;
+  mpz_t     sxz_mp;
+  u3r_mp(sxz_mp, sxz);
+
+  len_i = _cs_etch_p_size(sxz_mp);
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_p_bytes(sxz_mp, len_i, sab_u.buf_y);
+
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
+  mpz_clear(sxz_mp);
+  return u3i_slab_mint_bytes(&sab_u);
+}
+
 /* +yo time constants
  */
 #define CET_YO 36524

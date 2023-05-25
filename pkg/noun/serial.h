@@ -85,6 +85,24 @@
        */
         size_t u3s_etch_da_c(u3_atom a, c3_c** out_c);
 
+      /* u3s_etch_p_smol(): c3_d to @p
+      **
+      **   =(28 (met 3 (scot %p (dec (bex 64)))))
+      */
+#define SMOL_P 28
+        c3_y*
+        u3s_etch_p_smol(c3_d sxz_d, c3_y hun_y[SMOL_P]);
+
+      /* u3s_etch_p(): atom to @p.
+      */
+        u3_atom
+        u3s_etch_p(u3_atom a);
+
+      /* u3s_etch_p_c(): atom to @p, as a malloc'd c string.
+      */
+        size_t
+        u3s_etch_p_c(u3_atom a, c3_c** out_c);
+
       /* u3s_etch_ud_smol(): c3_d to @ud
       **
       **   =(26 (met 3 (scot %ud (dec (bex 64)))))
