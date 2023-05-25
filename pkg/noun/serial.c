@@ -2631,6 +2631,27 @@ static inline c3_s _cs_hex_val(c3_y hex) {
   }
 }
 
+/* _cs_viz_val: char to base-32 digit.
+ */
+static inline c3_s _cs_viz_val(c3_y viz) {
+
+  if ( viz > '9' ) {
+    if ( viz < 'a' ) {
+      return -1;
+    }
+    // viz >= 'a'
+    else {
+      return (viz - 'a') + 10;
+    }
+  }
+
+  // viz <= '9'
+  else {
+    return viz - '0';
+  }
+
+}
+
 /* +yelp
  */
 static inline c3_o _cs_yelp_mp(mpz_t yer_mp)
@@ -3495,6 +3516,147 @@ u3s_sift_ux(u3_noun a)
   }
 
   return u3s_sift_ux_bytes(len_w, byt_y);
+}
+
+/* u3s_sift_uv_bytes: parse @uv impl.
+ */
+u3_weak
+u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  PFIXD('0', 'v');
+
+  // Parse 0v0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  // Parse a 64-bit viz number
+  //
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head
+  //
+  for ( size_t i = 0; i < 5; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_viz_val(*byt_y);
+
+    if ( dit_s < 32) {
+      val_d <<= 5;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+
+  // Parse a big viz
+  //
+  else {
+    mpz_t a_mp;
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
+
+    val_d = 0;
+
+    // Parse a list of dog followed by
+    // a quintuple of viz digits
+    //
+    size_t dit = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_uv_fail;
+      }
+
+      for ( size_t i = 0; i < 5; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_uv_fail;
+        }
+
+        dit_s = _cs_viz_val(*byt_y);
+
+        if ( dit_s < 32) {
+          val_d <<= 5;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_uv_fail;
+        }
+
+        byt_y++;
+        len_w--;
+        dit++;
+
+        // Read 12 digits
+        //
+        if ( dit == 12 ) {
+          mpz_mul_2exp(a_mp, a_mp, dit*5);
+          mpz_add_ui(a_mp, a_mp, val_d);
+
+          val_d = 0;
+          dit = 0;
+        }
+      }
+
+    }
+
+    if ( dit ) {
+      mpz_mul_2exp(a_mp, a_mp, dit*5);
+      mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_uv_fail:
+      mpz_clear(a_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(a_mp);
+  }
+
+}
+
+/* u3s_sift_uv: parse @uv.
+ */
+u3_weak
+u3s_sift_uv(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_uv_bytes(len_w, byt_y);
 }
 
 #undef PFIXD

@@ -1434,6 +1434,143 @@ _test_sift_ux(void)
   return ret_i;
 }
 
+static inline c3_i
+_uv_good(c3_d num_d, const c3_c* num_c)
+{
+  u3_weak out;
+
+  out = u3s_sift_uv_bytes(strlen(num_c), (c3_y*)num_c);
+
+  if ( c3y == u3a_is_cat(out) ) {
+    if ( num_d != out ) {
+        fprintf(stderr, "sift_uv: %s wrong; expected 0x%llx: actual 0x%x\r\n", num_c, num_d, out);
+      return 0;
+    }
+    return 1;
+  }
+
+  else {
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_uv: %s fail; expected 0x%llx\r\n", num_c, num_d);
+      return 1;
+    }
+
+    c3_d out_d = u3r_chub(0, out);
+
+    if ( num_d != out_d ) {
+        fprintf(stderr, "sift_uv: %s wrong; expected 0x%llx: actual 0x%llx\r\n", num_c, num_d, out_d);
+
+        u3z(out);
+        return 0;
+    }
+    u3z(out);
+
+    return 1;
+  }
+
+}
+
+static inline c3_i
+_uv_fail(const c3_c* num_c)
+{
+  u3_weak out;
+  if ( u3_none != (out = u3s_sift_uv_bytes(strlen(num_c), (c3_y*)num_c)) ) {
+    u3m_p("out", out);
+    fprintf(stderr, "sift_uv: %s expected fail\r\n", num_c);
+    u3z(out);
+
+    return 0;
+  }
+
+
+  return 1;
+}
+
+static c3_i
+_test_sift_uv(void)
+{
+  c3_i ret_i = 1;
+
+
+  ret_i &= _uv_good(0x0, "0v0");
+  ret_i &= _uv_good(0x1, "0v1");
+  ret_i &= _uv_good(0x110c85, "0v12345");
+  ret_i &= _uv_good(0x63a12a, "0v6789a");
+  ret_i &= _uv_good(0xb635cf, "0vbcdef");
+  ret_i &= _uv_good(0x108ca74, "0vghijk");
+  ret_i &= _uv_good(0x15b5f19, "0vlmnop");
+  ret_i &= _uv_good(0x1adf3be, "0vqrstu");
+  ret_i &= _uv_good(0xa5b1bf, "0vabcdv");
+  ret_i &= _uv_good(0x886110c85, "0v123.12345");
+  ret_i &= _uv_good(0x88663a12a, "0v123.6789a");
+  ret_i &= _uv_good(0x886b635cf, "0v123.bcdef");
+  ret_i &= _uv_good(0x88708ca74, "0v123.ghijk");
+  ret_i &= _uv_good(0x8875b5f19, "0v123.lmnop");
+  ret_i &= _uv_good(0x887adf3be, "0v123.qrstu");
+  ret_i &= _uv_good(0x887f0887f, "0v123.v123v");
+  ret_i &= _uv_good(0xfffffffffffffff, "0vvv.vvvvv.vvvvv");
+
+  ret_i &= _uv_fail("0v");
+  ret_i &= _uv_fail("v0");
+  ret_i &= _uv_fail("0v01");
+  ret_i &= _uv_fail("0v12.345");
+  ret_i &= _uv_fail("0v12.f3456.v789");
+  ret_i &= _uv_fail("0v1.3456v.v789vv");
+
+  {
+    c3_c* num_c = "0v40.00000";
+    u3_weak out = u3s_sift_uv_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom pro = u3qc_bex(32);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_uv: (bex 32) fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(pro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_uv: (bex 32) wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(pro);
+  }
+
+  {
+    c3_c* hex_c = "0x1.1234.5678.9abc.def0.1234.5678.9abc.def0";
+    c3_c* num_c = "0v8.i6hb7.h6lsr.ro14d.2mf2d.bpnng";
+
+    u3_weak out = u3s_sift_uv_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_weak hot = u3s_sift_ux_bytes(strlen(hex_c), (c3_y*)hex_c);
+
+    if ( u3_none == out) {
+      fprintf(stderr, "sift_uv: big viz fail\r\n");
+      ret_i = 0;
+    }
+
+    if ( u3_none == hot ) {
+      fprintf(stderr, "sift_uv: big hex fail during big viz test\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(out, hot) ) {
+        u3m_p("hot", hot);
+        u3m_p("out", out);
+        fprintf(stderr, "sift_uv: big viz wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out);
+    u3z(hot);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_en_base16(void)
 {
@@ -1882,6 +2019,11 @@ _test_jets(void)
 
   if ( !_test_sift_ux() ) {
     fprintf(stderr, "test jets: sift_ux: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sift_uv() ) {
+    fprintf(stderr, "test jets: sift_uv: failed\r\n");
     ret_i = 0;
   }
 

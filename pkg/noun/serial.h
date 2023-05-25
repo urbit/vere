@@ -209,6 +209,16 @@
         u3_weak
         u3s_sift_ui(u3_atom a);
 
+      /* u3s_sift_uv_bytes: parse @uv.
+      */
+        u3_weak
+        u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y);
+
+      /* u3s_sift_uv: parse @uv.
+      */
+        u3_weak
+        u3s_sift_uv(u3_atom a);
+
       /* u3s_sift_ux_bytes: parse @ux.
       */
         u3_weak

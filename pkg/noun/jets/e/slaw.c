@@ -56,13 +56,24 @@ _parse_ui(u3_noun a)
   return u3nc(u3_nul, pro);
 }
 
-
 static inline u3_noun
 _parse_ux(u3_noun a)
 {
   u3_weak pro;
 
   if ( u3_none == (pro = u3s_sift_ux(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
+
+static inline u3_noun
+_parse_uv(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_uv(u3x_atom(a))) ) {
     return u3_nul;
   }
 
@@ -122,6 +133,9 @@ u3we_slaw(u3_noun cor)
 
     case c3__ux:
       return _parse_ux(txt);
+
+    case c3__uv:
+      return _parse_uv(txt);
 
       // %ta is used once in link.hoon. don't bother.
 
