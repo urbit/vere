@@ -121,6 +121,24 @@
         size_t
         u3s_etch_ud_c(u3_atom a, c3_c** out_c);
 
+      /* u3s_etch_ui_smol(): c3_d to @ui
+      **
+      **   =(22 (met 3 (scot %ui (dec (bex 64)))))
+      */
+#define SMOL_UI 22
+        c3_y*
+        u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI]);
+
+      /* u3s_etch_ui(): atom to @ui.
+      */
+        u3_atom
+        u3s_etch_ui(u3_atom a);
+
+      /* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string.
+      */
+        size_t
+        u3s_etch_ui_c(u3_atom a, c3_c** out_c);
+
       /* u3s_etch_ux(): atom to @ux.
       */
         u3_atom

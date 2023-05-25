@@ -390,6 +390,95 @@ _test_etch_ud(void)
 }
 
 static inline c3_i
+_ui_etch(c3_d num_d, const c3_c* num_c)
+{
+  u3_atom  num = u3i_chub(num_d);
+  c3_c*  out_c;
+  size_t len_i = u3s_etch_ui_c(num, &out_c);
+  c3_i   ret_i = 1;
+
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
+    fprintf(stderr, "etch_ui: %" PRIu64 " fail; expected %s, got '%s'\r\n",
+                    num_d, num_c, out_c);
+    ret_i = 0;
+  }
+  else {
+    u3_noun out = u3s_etch_ui(num);
+    u3_noun tou = u3i_bytes(len_i, (c3_y*)out_c);
+
+    if ( c3n == u3r_sing(tou, out) ) {
+      fprintf(stderr, "etch_ui: %" PRIu64 " mismatch; expected %s\r\n", num_d, num_c);
+      u3m_p("out", out);
+      ret_i = 0;
+    }
+
+    u3z(out);
+    u3z(tou);
+  }
+
+  c3_free(out_c);
+  u3z(num);
+
+  return ret_i;
+}
+
+static c3_i
+_test_etch_ui(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _ui_etch(0, "0i0");
+  ret_i &= _ui_etch(1, "0i1");
+  ret_i &= _ui_etch(12, "0i12");
+  ret_i &= _ui_etch(123, "0i123");
+  ret_i &= _ui_etch(1234, "0i1234");
+  ret_i &= _ui_etch(12345, "0i12345");
+  ret_i &= _ui_etch(123456, "0i123456");
+  ret_i &= _ui_etch(1234567, "0i1234567");
+  ret_i &= _ui_etch(12345678, "0i12345678");
+  ret_i &= _ui_etch(123456789, "0i123456789");
+  ret_i &= _ui_etch(100000000, "0i100000000");
+  ret_i &= _ui_etch(101101101, "0i101101101");
+  ret_i &= _ui_etch(201201201, "0i201201201");
+  ret_i &= _ui_etch(302201100, "0i302201100");
+
+  ret_i &= _ui_etch(8589934592ULL, "0i8589934592");
+  ret_i &= _ui_etch(2305843009213693952ULL, "0i2305843009213693952");
+  ret_i &= _ui_etch(18446744073709551615ULL, "0i18446744073709551615");
+
+  {
+    c3_c* num_c = "0i340282366920938463463374607431768211456";
+    u3_atom num = u3qc_bex(128);
+    c3_c*  out_c;
+    size_t len_i = u3s_etch_ui_c(num, &out_c);
+
+    if ( _neq_etch_out(num_c, out_c, len_i) ) {
+      fprintf(stderr, "etch_ui: (bex 128) fail; expected %s, got '%s'\r\n",
+                      num_c, out_c);
+      ret_i = 0;
+    }
+    else {
+      u3_noun out = u3s_etch_ui(num);
+      u3_noun tou = u3i_bytes(len_i, (c3_y*)out_c);
+
+      if ( c3n == u3r_sing(tou, out) ) {
+        fprintf(stderr, "etch_ui: (bex 128) mismatch; expected %s\r\n", num_c);
+        u3m_p("out", out);
+        ret_i = 0;
+      }
+
+      u3z(out);
+      u3z(tou);
+    }
+
+    c3_free(out_c);
+    u3z(num);
+  }
+
+  return ret_i;
+}
+
+static inline c3_i
 _ux_etch(c3_d num_d, const c3_c* num_c)
 {
   u3_atom  num = u3i_chub(num_d);
@@ -1647,6 +1736,11 @@ _test_jets(void)
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_etch_ui() ) {
+    fprintf(stderr, "test jets: etch_ui: failed\r\n");
     ret_i = 0;
   }
 
