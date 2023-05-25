@@ -2157,13 +2157,46 @@ _cw_chop(c3_i argc, c3_c* argv[])
     fprintf(stderr, "chop: failed to get first/last events\r\n");
     exit(1);
   }
-  if ( fir_d == las_d ) {
-    fprintf(stderr, "chop: latest epoch already empty\r\n");
-    exit(1);
-  }
-  else if ( c3n == u3_disk_epoc_init(log_u) ) {
+
+  //  create new epoch if latest isn't empty
+  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_init(log_u)) ) {
     fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
+  }
+
+  //  sort epoch directories in descending order
+  u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dent* den_u = ned_u->dil_u;
+  c3_z len_z = 0;
+  while ( den_u ) {  //  count epochs
+    len_z++;
+    den_u = den_u->nex_u;
+  }
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  len_z = 0;
+  den_u = ned_u->dil_u;
+  while ( den_u ) {
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIu64, (sot_d + len_z)) ) {
+      len_z++;
+    }
+    den_u = den_u->nex_u;
+  }
+
+  if ( len_z <= 2 ) {
+    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
+    exit(0);  //  enjoy
+  }
+
+  //  sort sot_d naively in descending order
+  c3_d tmp_d;
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    for ( c3_z j_z = i_z + 1; j_z < len_z; j_z++ ) {
+      if ( sot_d[i_z] < sot_d[j_z] ) {
+        tmp_d = sot_d[i_z];
+        sot_d[i_z] = sot_d[j_z];
+        sot_d[j_z] = tmp_d;
+      }
+    }
   }
 
   //  get latest epoch number prior to creating a new one
@@ -2174,20 +2207,25 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   //  delete all but the last two epochs
-  u3_dent* den_u = log_u->com_u->dil_u;
+  //  XX parameterize the number of epochs to chop
+  for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
+    fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
+    if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
+      fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
+      exit(1);
+    }
+  }
+
   c3_d epo_d = 0;
   while ( den_u ) {
-    c3_d res_d = sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d);
-    if ( (1 == res_d) && (epo_d != pre_d) && (epo_d != pos_d) ) {
-      fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", epo_d);
-      if ( c3y != u3_disk_epoc_kill(log_u, epo_d) ) {
-        fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", epo_d);
-      }
+    c3_i res_i = sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d);
+    if ( (1 == res_i) && (epo_d < pre_d) && (epo_d < pos_d) ) {
     }
     den_u = den_u->nex_u;
   }
 
   // cleanup
+  u3_dire_free(ned_u);
   u3_disk_exit(log_u);
   u3m_stop();
 
@@ -2269,7 +2307,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   if ( fir_d == las_d ) {
     fprintf(stderr, "roll: latest epoch already empty\r\n");
-    exit(1);
+    exit(0);
   }
   else if ( c3n == u3_disk_epoc_init(log_u) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");

@@ -1224,6 +1224,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    *  0. detect whether we need to migrate or not
    *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration
    *     b. if data.mdb is readable in log directory -> execute migration
+   *        if not -> skip migration
    *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init())
    *     a. creates epoch directory
    *     b. creates epoch version file
