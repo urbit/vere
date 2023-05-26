@@ -34,8 +34,6 @@ _parse_tas(u3_noun txt)
 
     for ( i_w = 1; i_w < len_w; i_w++ ) {
 
-      // XX Is this future-proof?
-      //
       c = (c3_y) u3r_byte(i_w, txt);
 
       if (!(islower(c) || isdigit(c) || c == '-')) {
