@@ -6,13 +6,19 @@ add_executable(
   ${PROJECT_NAME}
 )
 
+add_subdirectory(extern)
+
 subdirs(
+  # # external dependencies
+  # extern
+
+  # submodules
   pkg/c3
   pkg/ent
-  pkg/noun
+  # pkg/noun
   pkg/ur
-  pkg/urcrypt
-  pkg/vere
+  # pkg/urcrypt
+  # pkg/vere
 )
 
 target_link_libraries(
@@ -20,10 +26,10 @@ target_link_libraries(
   PUBLIC
   c3
   ent
-  noun
+  # noun
   ur
-  urcrypt
-  vere
+  # urcrypt
+  # vere
 )
 
 target_include_directories(
@@ -31,10 +37,10 @@ target_include_directories(
   PUBLIC
   pkg/c3
   pkg/ent
-  pkg/noun
+  # pkg/noun
   pkg/ur
-  pkg/urcrypt
-  pkg/vere
+  # pkg/urcrypt
+  # pkg/vere
 )
 
 # specify source files
