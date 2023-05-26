@@ -23,12 +23,6 @@ struct _cd_save {
   struct _u3_disk* log_u;
 };
 
-/* DISK FORMAT
- */
-
-#define U3D_VER1   1
-#define U3D_VERLAT U3L_VER1
-
 #undef VERBOSE_DISK
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
