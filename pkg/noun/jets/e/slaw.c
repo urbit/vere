@@ -9,30 +9,41 @@
 #include <ctype.h>
 
 u3_noun
-_parse_tas(u3_noun txt) {
-  // For any symbol which matches, txt will return itself as a
-  // value. Therefore, this is mostly checking validity.
-  c3_c* c = u3a_string(txt);
+_parse_tas(u3_noun txt)
+{
+    c3_w len_w = u3r_met(3, txt);
 
-  // First character must represent a lowercase letter
-  c3_c* cur = c;
-  if (!islower(cur[0])) {
-    u3a_free(c);
-    return u3_none;
-  }
-  cur++;
-
-  while (cur[0] != 0) {
-    if (!(islower(cur[0]) || isdigit(cur[0]) || cur[0] == '-')) {
-      u3a_free(c);
-      return u3_none;
+    if ( !len_w ) {
+        return u3_none;
     }
 
-    cur++;
-  }
+    // For any symbol which matches, txt will return itself as a
+    // value. Therefore, this is mostly checking validity.
+    //
 
-  u3a_free(c);
-  return u3k(txt);
+    c3_w i_w;
+    c3_c c;
+
+    // First character must represent a lowercase letter
+    //
+    c = u3r_byte(0, txt);
+
+    if (!islower(c)) {
+    return u3_none;
+    }
+
+    for ( i_w = 1; i_w < len_w; i_w++ ) {
+
+      // XX Is this future-proof?
+      //
+      c = (c3_y) u3r_byte(i_w, txt);
+
+      if (!(islower(c) || isdigit(c) || c == '-')) {
+          return u3_none;
+      }
+    }
+
+    return u3k(txt);
 }
 
 u3_noun
@@ -75,7 +86,6 @@ u3qe_slaw(u3_atom a, u3_atom b)
   }
 
   return u3nc(u3_nul, res);
-
 }
 
 u3_noun
