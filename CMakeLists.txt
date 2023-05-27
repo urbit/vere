@@ -17,7 +17,7 @@ subdirs(
   pkg/ent
   # pkg/noun
   pkg/ur
-  # pkg/urcrypt
+  pkg/urcrypt
   # pkg/vere
 )
 
@@ -28,7 +28,7 @@ target_link_libraries(
   ent
   # noun
   ur
-  # urcrypt
+  urcrypt
   # vere
 )
 
@@ -39,7 +39,7 @@ target_include_directories(
   pkg/ent
   # pkg/noun
   pkg/ur
-  # pkg/urcrypt
+  pkg/urcrypt
   # pkg/vere
 )
 
@@ -47,5 +47,6 @@ target_include_directories(
 target_sources(
   ${PROJECT_NAME}
   PUBLIC
-  pkg/vere/main.c
+  main.c
+  # pkg/vere/main.c
 )
