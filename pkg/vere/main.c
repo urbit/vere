@@ -1995,20 +1995,18 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
-    { "auto-meld", no_argument,       NULL, 4 },
+    { "no-demand", no_argument,       NULL, 6 },
+    { "auto-meld", no_argument,       NULL, 7 },
     { "full",      required_argument, NULL, 'f' },
     { "replay-to", no_argument,       NULL, 'n' },
     { NULL, 0, NULL, 0 }
   };
 
+
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case 4: {  //  auto-meld
-        mel_o = c3y;
-      } break;
-
       case c3__loom: {
         c3_w lom_w;
         c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
@@ -2017,6 +2015,15 @@ _cw_play(c3_i argc, c3_c* argv[])
           exit(1);
         }
         u3_Host.ops_u.lom_y = lom_w;
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
+      } break;
+
+      case 7: {  //  auto-meld
+        mel_o = c3y;
       } break;
 
       case 'f': {
