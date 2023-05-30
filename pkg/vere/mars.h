@@ -11,6 +11,7 @@
         c3_c*    dir_c;                     //  execution directory (pier)
         c3_d     sen_d;                     //  last event requested
         c3_d     dun_d;                     //  last event processed
+        c3_c*    bat_c;                    //  batch size
         c3_l     mug_l;                     //  hash of state
       } u3_mars;
 

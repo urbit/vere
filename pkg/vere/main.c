@@ -2091,6 +2091,7 @@ fprintf(stderr, "pier: %s\r\n", u3_Host.dir_c);
       .dir_c = u3_Host.dir_c,
       .sen_d = u3A->eve_d,
       .dun_d = u3A->eve_d,
+      .bat_c  = u3_Host.ops_u.batch_sz_c,
       .mug_l = u3r_mug(u3A->roc)
     };
     c3_d    eve_d = 0;

@@ -216,7 +216,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
 
       //  XX get batch from args
       //
-      switch ( _mars_play_batch(mar_u, c3y, 1024) ) {
+      switch ( _mars_play_batch(mar_u, c3y, mar_u->bat_c) ) {
         case _play_yes_e: {
           u3l_log("play (%" PRIu64 "): done\r\n", mar_u->dun_d);
           u3m_reclaim();
