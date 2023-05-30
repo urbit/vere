@@ -128,10 +128,19 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
   u3_weak eve;
   c3_l  mug_l;
 
+  //  hack to recover structural sharing
+  //
+  u3m_hate(1 << 18);
+
   if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_l)) ) {
     fprintf(stderr, "boot: read failed\r\n");
+    u3m_love(u3_nul);
     return c3n;
   }
+
+  //  hack to recover structural sharing
+  //
+  eve = u3m_love(u3ke_cue(u3ke_jam(eve)));
 
   u3l_log("--------------- bootstrap starting ----------------");
 
