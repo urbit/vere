@@ -2,58 +2,56 @@
 
 #define U3_GLOBAL
 #define C3_GLOBAL
-#include "noun.h"
+#include "curl/curl.h"
+#include "db/lmdb.h"
+#include "getopt.h"
+#include "h2o.h"
 #include "ivory.h"
-#include "ur.h"
-#include "platform/rsignal.h"
-#include "vere.h"
-#include "sigsegv.h"
+#include "libgen.h"
+#include "noun.h"
 #include "openssl/conf.h"
 #include "openssl/engine.h"
 #include "openssl/err.h"
 #include "openssl/ssl.h"
-#include "h2o.h"
-#include "curl/curl.h"
-#include "db/lmdb.h"
-#include "getopt.h"
-#include "libgen.h"
+#include "platform/rsignal.h"
+#include "sigsegv.h"
+#include "ur.h"
+#include "vere.h"
 
 #include "ca_bundle.h"
+#include "mars.h"
 #include "pace.h"
 #include "version.h"
 #include "whereami.h"
 
 //  serf module state
 //
-static u3_serf        u3V;             //  one serf per process
-static u3_moat      inn_u;             //  input stream
-static u3_mojo      out_u;             //  output stream
-static u3_cue_xeno* sil_u;             //  cue handle
+static u3_serf u3V;        //  one serf per process
+static u3_moat inn_u;      //  input stream
+static u3_mojo out_u;      //  output stream
+static u3_cue_xeno *sil_u; //  cue handle
 
 #undef SERF_TRACE_JAM
 #undef SERF_TRACE_CUE
 
 /* Require unsigned char
  */
-//STATIC_ASSERT(( 0 == CHAR_MIN && UCHAR_MAX == CHAR_MAX ),
-              //"unsigned char required");
+// STATIC_ASSERT(( 0 == CHAR_MIN && UCHAR_MAX == CHAR_MAX ),
+//"unsigned char required");
 
 /* _main_self_path(): get binary self-path.
-*/
-static void
-_main_self_path(void)
-{
-  c3_c* pat_c;
-  c3_i  len_i, pat_i;
+ */
+static void _main_self_path(void) {
+  c3_c *pat_c;
+  c3_i len_i, pat_i;
 
-  if ( 0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i)) ) {
-    pat_c = c3_malloc( 1 + len_i );
+  if (0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i))) {
+    pat_c = c3_malloc(1 + len_i);
     wai_getExecutablePath(pat_c, len_i, &pat_i);
     pat_c[len_i] = 0;
 
     u3_Host.dem_c = pat_c;
-  }
-  else {
+  } else {
     fprintf(stderr, "unable to get binary self path\r\n");
     exit(1);
 
@@ -167,7 +165,6 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
-  u3_Host.ops_u.map = c3y;
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -682,6 +679,7 @@ _cw_usage(c3_c* bin_c)
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
     "  %s pack %.*s              defragment snapshot:\n",
+    "  %s play %.*s              recompute events:\n",
     "  %s prep %.*s              prepare for upgrade:\n",
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
@@ -1960,6 +1958,26 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_stop();
 }
 
+/* _cw_play_slog(): print during replay.
+*/
+static void
+_cw_play_slog(u3_noun hod)
+{
+  u3_pier_tank(0, 0, u3k(u3t(hod)));
+  u3z(hod);
+}
+
+/* _cw_play_exit(): exit immediately.
+*/
+static void
+_cw_play_exit(c3_i int_i)
+{
+  //  explicit fprintf to avoid allocation in u3l_log
+  //
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
+  raise(SIGINT);
+}
+
 /* _cw_play(): replay events.
 */
 static void
@@ -1967,48 +1985,128 @@ _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
   c3_w arg_w;
+  c3_o ful_o = c3n;
+  c3_o mel_o = c3n;
 
   static const c3_c usage_c[] = "error: invalid usage, expected "
                                 "`urbit play [--replay-to <event_num> "
                                 "| --batch-size <event_cnt>] <pier>`";
   static struct option lop_u[] = {
-    { "batch-size", required_argument, NULL, 'b' },
-    { "replay-to",  required_argument, NULL, 'n' },
-    { NULL,         0,                 NULL, 0   }
+    { "loom",      required_argument, NULL, c3__loom },
+    { "auto-meld", no_argument,       NULL, 4 },
+    { "full",      required_argument, NULL, 'f' },
+    { "replay-to", required_argument,       NULL, 'n' },
+    { "batch-size",required_argument, NULL, 'b' },
+    { NULL, 0, NULL, 0 }
   };
 
-  while ( -1 != (ch_i = getopt_long(argc, argv, "b:n:", lop_u, &lid_i)) ) {
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+fprintf(stderr, "pier: %s\r\n", u3_Host.dir_c);
+  while ( -1 != (ch_i=getopt_long(argc, argv, "b:fn:", lop_u, &lid_i)) ) {
+
     switch ( ch_i ) {
-      case 'b':
+      case 4: {  //  auto-meld
+        fprintf(stderr, "auto-meld\r\n");
+        mel_o = c3y;
+      } break;
+
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case 'f': {
+        fprintf(stderr, "full\r\n");
+        ful_o = c3y;
+        break;
+      }
+      case 'b': {
+        fprintf(stderr, "batch size: %s\r\n", optarg);
         u3_Host.ops_u.batch_sz_c = strdup(optarg);
         break;
-      case 'n':
+      }
+      case 'n': {
+        fprintf(stderr, "replay-to: %s\r\n", optarg);
         u3_Host.ops_u.til_c = strdup(optarg);
         break;
-      case '?':
+      }
+
+      case '?': {
         fprintf(stderr, "%s\r\n", usage_c);
         exit(1);
+      } break;
     }
   }
 
+  //  argv[optind] is always "play"
+  //
+
   if ( !u3_Host.dir_c ) {
-    assert(strcmp(argv[optind], "play") == 0);
     if ( optind + 1 < argc ) {
       u3_Host.dir_c = argv[optind + 1];
     }
     else {
-      fprintf(stderr, "%s\r\n", usage_c);
+      fprintf(stderr, "invalid command, pier required\r\n");
       exit(1);
     }
+
     optind++;
   }
 
   if ( optind + 1 != argc ) {
-    fprintf(stderr, "%s\r\n", usage_c);
+    fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
 
-  u3_Host.play_o = c3y;
+  //  XX handle SIGTSTP so that the lockfile is not orphaned?
+  //
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+
+  if ( c3y == mel_o ) {
+    u3C.wag_w |= u3o_auto_meld;
+  }
+
+  u3C.wag_w |= u3o_hashless;
+  fprintf(stderr, "play (%" PRIu64 ")\r\n", u3C.wag_w);
+
+  if ( c3y == ful_o ) {
+    u3l_log("mars: preparing for full replay\r\n");
+    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    u3e_live(c3n, u3_Host.dir_c);
+    u3e_yolo();
+    u3m_pave(c3y);
+    u3j_boot(c3y);
+    u3A->eve_d = 0;
+  }
+  else {
+    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  }
+
+  u3C.slog_f = _cw_play_slog;
+
+  {
+    u3_mars mar_u = {
+      .log_u = log_u,
+      .dir_c = u3_Host.dir_c,
+      .sen_d = u3A->eve_d,
+      .dun_d = u3A->eve_d,
+      .mug_l = u3r_mug(u3A->roc)
+    };
+    c3_d    eve_d = 0;
+    c3_c*   eve_c = u3_Host.ops_u.til_c;
+
+    if ( u3_Host.ops_u.til_c ) {
+      if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
+        fprintf(stderr, "mars: replay-to invalid: '%s'\r\n", eve_c);
+      }
+    }
+
+    u3_mars_play(&mar_u, eve_d);
+  }
+
+  u3_disk_exit(log_u);
+  u3m_stop();
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2069,182 +2167,6 @@ _cw_prep(c3_i argc, c3_c* argv[])
 
   u3_Host.pep_o = c3y;
   u3_Host.ops_u.tem = c3y;
-}
-
-/* _cw_chop(): truncate event log
-*/
-static void
-_cw_chop(c3_i argc, c3_c* argv[])
-{
-  c3_i ch_i, lid_i;
-  c3_w arg_w;
-
-  static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { NULL, 0, NULL, 0 }
-  };
-
-  u3_Host.dir_c = _main_pier_run(argv[0]);
-
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
-    switch ( ch_i ) {
-      case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
-          exit(1);
-        }
-      } break;
-
-      case 6: {  //  no-demand
-        u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
-      } break;
-
-      case '?': {
-        fprintf(stderr, "invalid argument\r\n");
-        exit(1);
-      } break;
-    }
-  }
-
-  //  argv[optind] is always "chop"
-  //
-
-  if ( !u3_Host.dir_c ) {
-    if ( optind + 1 < argc ) {
-      u3_Host.dir_c = argv[optind + 1];
-    }
-    else {
-      fprintf(stderr, "invalid command, pier required\r\n");
-      exit(1);
-    }
-
-    optind++;
-  }
-
-  if ( optind + 1 != argc ) {
-    fprintf(stderr, "invalid command\r\n");
-    exit(1);
-  }
-
-  // gracefully shutdown the pier if it's running
-  u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
-
-  // note: this include patch applications (if any)
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  // check if there's a *current* snapshot
-  if ( old_u->dun_d != u3A->eve_d ) {
-    fprintf(stderr, "chop: error: snapshot is out of date, please "
-                    "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
-    exit(1);
-  }
-
-  if ( c3n == u3m_backup(c3y)) {  //  backup current snapshot
-    fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
-    exit(1);
-  }
-
-  // initialize the lmdb environment
-  // see disk.c:885
-  const size_t siz_i =
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-    0x7d00000000;
-  #else
-    0x10000000000;
-  #endif
-  c3_c log_c[8193];
-  snprintf(log_c, sizeof(log_c), "%s/.urb/log", u3_Host.dir_c);
-
-  // get the first/last event numbers from the event log
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "chop: failed to load latest event from database\r\n");
-    exit(1);
-  }
-
-  // get the metadata
-  c3_d     who_d[2];
-  c3_o     fak_o;
-  c3_w     lif_w;
-  if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
-    fprintf(stderr, "chop: failed to read metadata\r\n");
-    exit(1);
-  }
-
-  // get the last event
-  u3_lmdb_walk itr_u;
-  size_t       len_i;
-  void*        buf_v[1];
-  if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
-    fprintf(stderr, "chop: failed to initialize iterator\r\n");
-    exit(1);
-  }
-  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
-    fprintf(stderr, "chop: failed to read event\r\n");
-    exit(1);
-  }
-  u3_lmdb_walk_done(&itr_u);
-
-  // initialize a fresh lmdb environment in the "chop" subdir
-  c3_c cho_c[8193];
-  snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
-  if ( 0 != access(cho_c, F_OK) ) {
-    if ( 0 != c3_mkdir(cho_c, 0700) ) {
-      fprintf(stderr, "chop: failed to create chop directory\r\n");
-      exit(1);
-    }
-  }
-  MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
-  if ( !new_u ) {
-    fprintf(stderr, "chop: failed to initialize new database\r\n");
-    exit(1);
-  }
-
-  // write the metadata to the database
-  if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
-    fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
-  }
-
-  // write the last event to the database
-  // warning: this relies on the old database still being open
-  if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
-    fprintf(stderr, "chop: failed to write last event\r\n");
-    exit(1);
-  }
-
-  // backup the original database file
-  c3_c dat_c[8193], bak_c[8193];
-  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_c);
-  // "data_<first>-<last>.mdb.bak"
-  snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
-  if ( 0 != c3_rename(dat_c, bak_c) ) {
-    fprintf(stderr, "chop: failed to backup original database file\r\n");
-    exit(1);
-  }
-
-  // rename new database file to be official
-  c3_c new_c[8193];
-  snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
-  if ( 0 != c3_rename(new_c, dat_c) ) {
-    fprintf(stderr, "chop: failed to rename new database file\r\n");
-    exit(1);
-  }
-
-  // cleanup
-  u3_disk_exit(old_u);
-  u3_lmdb_exit(new_u);
-  u3m_stop();
-
-  // success
-  fprintf(stderr, "chop: event log truncation complete\r\n");
-  fprintf(stderr, "      event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "      WARNING: ENSURE YOU CAN RESTART YOUR SHIP BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
-  fprintf(stderr, "      if you can't, restore your log by running:\r\n");
-  fprintf(stderr, "      `mv %s %s` then try again\r\n", bak_c, dat_c);
 }
 
 /* _cw_vere(): download vere
@@ -2471,6 +2393,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
   //        [%meld dir=@t]                                ::  deduplicate
   //        [?(%next %upgrade) dir=@t]                    ::  upgrade
   //        [%pack dir=@t]                                ::  defragment
+  //        [%play dir=@t]                                ::  recompute
   //        [%prep dir=@t]                                ::  prep upgrade
   //        [%queu dir=@t eve=@ud]                        ::  cue state
   //        [?(%vere %fetch-vere) dir=@t]                 ::  download vere
@@ -2511,10 +2434,9 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
-    case c3__play: _cw_play(argc, argv); return 2; // continue on
+    case c3__play: _cw_play(argc, argv); return 1; // continue on
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
-    case c3__chop: _cw_chop(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
 

@@ -5,7 +5,6 @@
 
 #include "c3.h"
 #include "allocate.h"
-#include "version.h"
 
   /** Data structures.
   **/
@@ -19,11 +18,11 @@
     /* u3e_control: memory change, control file.
     */
       typedef struct _u3e_control {
-        u3e_version ver_w;                  //  version number
-        c3_w        nor_w;                  //  new page count north
-        c3_w        sou_w;                  //  new page count south
-        c3_w        pgs_w;                  //  number of changed pages
-        u3e_line    mem_u[0];               //  per page
+        c3_w     ver_y;                     //  version number
+        c3_w     nor_w;                     //  new page count north
+        c3_w     sou_w;                     //  new page count south
+        c3_w     pgs_w;                     //  number of changed pages
+        u3e_line mem_u[0];                  //  per page
       } u3e_control;
 
     /* u3_cs_patch: memory change, top level.
@@ -70,23 +69,23 @@
 
   /** Constants.
   **/
+#     define u3e_version 1
 
   /** Functions.
   **/
-    /* u3e_backup(): copy the snapshot from chk to bhk. 
+    /* _ce_backup(): copy the snapshot from chk to bhk. 
     */
-      c3_o 
-      u3e_backup(c3_o ovw_o);
-
-    /* u3e_fault(): handle a memory fault.
+      static void
+      _ce_backup();
+    /* u3e_fault(): handle a memory event with libsigsegv protocol.
     */
-      u3e_flaw
-      u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p);
+      c3_i
+      u3e_fault(void* adr_v, c3_i ser_i);
 
-    /* u3e_save(): update the checkpoint.
+    /* u3e_save():
     */
       void
-      u3e_save(u3_post low_p, u3_post hig_p);
+      u3e_save(void);
 
     /* u3e_live(): start the persistence system.  Return c3y if no image.
     */

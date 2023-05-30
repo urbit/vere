@@ -40,20 +40,10 @@
         c3_i
         u3m_bail(c3_m how_m) __attribute__((noreturn));
 
-      /* u3m_fault(): handle a memory event with libsigsegv protocol.
-      */
-        c3_i
-        u3m_fault(void* adr_v, c3_i ser_i);
-
       /* u3m_foul(): dirty all pages and disable tracking.
       */
         void
         u3m_foul(void);
-
-      /* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
-      */
-        c3_o
-        u3m_backup(c3_o);
 
       /* u3m_save(): update the checkpoint.
       */

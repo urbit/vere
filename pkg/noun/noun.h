@@ -15,6 +15,7 @@
 #include "types.h"
 #include "vortex.h"
 #include "zave.h"
+#include "events.h"
 #include "imprison.h"
 #include "log.h"
 #include "nock.h"
