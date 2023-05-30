@@ -537,6 +537,7 @@ u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
   if ( c3n == u3_lmdb_read(log_u->mdb_u, &ven_u,
                            eve_d, len_d, _disk_read_list_cb) )
   {
+    u3z(ven_u.eve);
     return u3_none;
   }
 
