@@ -156,7 +156,6 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
-  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
