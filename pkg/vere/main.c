@@ -2140,7 +2140,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   if ( log_u->dun_d != u3A->eve_d ) {
     fprintf(stderr, "chop: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, log_u->dun_d);
+    fprintf(stderr, "chop: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", u3A->eve_d, log_u->dun_d);
     exit(1);
   }
 
@@ -2176,7 +2176,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   len_z = 0;
   den_u = ned_u->dil_u;
   while ( den_u ) {
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIu64, (sot_d + len_z)) ) {
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
       len_z++;
     }
     den_u = den_u->nex_u;
@@ -2209,7 +2209,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   //  delete all but the last two epochs
   //  XX parameterize the number of epochs to chop
   for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
-    fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
+    fprintf(stderr, "chop: deleting epoch 0i%" PRIc3_d "\r\n", sot_d[i_z]);
     if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
       fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
       exit(1);
@@ -2218,7 +2218,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   c3_d epo_d = 0;
   while ( den_u ) {
-    c3_i res_i = sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d);
+    c3_i res_i = sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d);
     if ( (1 == res_i) && (epo_d < pre_d) && (epo_d < pos_d) ) {
     }
     den_u = den_u->nex_u;
@@ -2293,7 +2293,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
   if ( log_u->dun_d != u3A->eve_d ) {
     fprintf(stderr, "roll: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "roll: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", \
+    fprintf(stderr, "roll: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", \
                      u3A->eve_d, log_u->dun_d);
     exit(1);
   }

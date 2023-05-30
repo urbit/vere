@@ -905,7 +905,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
     //  set path to latest epoch
     c3_c epo_c[8193];
-    snprintf(epo_c, 8192, "%s/0i%" PRIu64, log_c, lat_d);
+    snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_c, lat_d);
 
     //  initialize latest epoch's db
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
@@ -913,7 +913,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       c3_free(log_u);
       return 0;
     }
-    fprintf(stderr, "disk: loaded epoch 0i%" PRIu64 "\r\n", lat_d);
+    fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
 
     //  get first/last event numbers from lmdb
     c3_d fir_d, las_d;
@@ -975,7 +975,7 @@ c3_o u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
 
   //  file paths
   c3_c epo_c[8193], dat_c[8193], epv_c[8193], biv_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, epo_d);
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
@@ -1014,23 +1014,23 @@ c3_o u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
 
   //  print error messages
   if ( c3n == dir_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIu64 " is not writable\r\n", epo_d);
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d " is not writable\r\n", epo_d);
     ret_o = c3n;
   }
   if ( c3n == dat_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIu64 "/data.mdb is not writable\r\n", epo_d);
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb is not writable\r\n", epo_d);
     ret_o = c3n;
   }
   if ( c3n == mdb_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIu64 "/data.mdb can't be opened\r\n", epo_d);
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb can't be opened\r\n", epo_d);
     ret_o = c3n;
   }
   if ( c3n == epv_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIu64 "/epoc.txt is not writable\r\n", epo_d);
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/epoc.txt is not writable\r\n", epo_d);
     ret_o = c3n;
   }
   if ( c3n == biv_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIu64 "/vere.txt is not writable\r\n", epo_d);
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/vere.txt is not writable\r\n", epo_d);
     ret_o = c3n;
   }
 
@@ -1063,10 +1063,10 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
 
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, new_d);
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, new_d);
   c3_d ret_d = c3_mkdir(epo_c, 0700);
   if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
-    fprintf(stderr, "disk: failed to create epoch directory %" PRIu64 "\r\n", new_d);
+    fprintf(stderr, "disk: failed to create epoch directory %" PRIc3_d "\r\n", new_d);
     return c3n;
   }
 
@@ -1107,10 +1107,6 @@ c3_o u3_disk_epoc_init(u3_disk* log_u) {
   if ( c3y == u3_Host.ops_u.nuu || new_d > 0 ) {
     c3_c dat_c[8193];
     snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
-    // if ( c3n == c3_unlink(dat_c) ) {
-    //   fprintf(stderr, "disk: failed to rm 0i%" PRIu64 "/data.mdb\r\n", new_d);
-    //   goto fail;
-    // };
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
@@ -1144,7 +1140,7 @@ fail:
 c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
   //  get epoch directory
   c3_c epo_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIu64, log_u->com_u->pax_c, epo_d);
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
 
   //  delete files in epoch directory
   u3_dire* dir_u = u3_foil_folder(epo_c);
@@ -1177,7 +1173,7 @@ c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
   u3_dent* den_u = u3_foil_folder(log_u->com_u->pax_c)->dil_u;
   while ( den_u ) {
     c3_d epo_d = 0;
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIu64, &epo_d) ) {
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d) ) {
       ret_d = c3y;   //  NB: returns yes if the directory merely exists
     }
     *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
@@ -1192,18 +1188,18 @@ c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
 c3_o
 u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w) {
   c3_c ver_c[8193];
-  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIu64 "/vere.txt", 
+  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIc3_d "/vere.txt", 
                   log_u->com_u->pax_c, epo_d);
 
   FILE* fil_u = fopen(ver_c, "r");
   if ( NULL == fil_u ) {
-    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIu64 
+    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIc3_d 
                     "\r\n", epo_d);
     return c3n;
   }
 
   if ( 1 != fscanf(fil_u, "%s", ver_w) ) {
-    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIu64 
+    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIc3_d 
                     "\r\n", epo_d);
     return c3n;
   }
@@ -1283,7 +1279,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     if ( u3_Host.eve_d != las_d ) {
       fprintf(stderr, "disk: migrate: error: snapshot is out of date, please "
                       "start/shutdown your pier gracefully first\r\n");
-      fprintf(stderr, "disk: migrate: eve_d (%" PRIu64 ") != las_d (%" PRIu64 ")\r\n",
+      fprintf(stderr, "disk: migrate: eve_d (%" PRIc3_d ") != las_d (%" PRIc3_d ")\r\n",
                       u3_Host.eve_d, las_d);
       return c3n;
     }
