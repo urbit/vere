@@ -154,10 +154,10 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
   return c3y;
 }
 
-/* u3_mars_play(): replay logged events up to [eve_d].
+/* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
 */
 void
-u3_mars_play(u3_mars* mar_u, c3_d eve_d)
+u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 {
   u3_disk* log_u = mar_u->log_u;
 
@@ -192,6 +192,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
     }
 
     mar_u->sen_d = mar_u->dun_d = lif_w;
+    u3m_save();
   }
 
   if ( mar_u->dun_d == log_u->dun_d ) {
@@ -217,6 +218,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
   }
 
   {
+    c3_d pas_d = mar_u->dun_d;  // last snapshot
     c3_d mem_d = 0;             // last event to meme
     c3_w try_w = 0;             // [mem_d] retry count
 
@@ -227,11 +229,16 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
       //
       switch ( _mars_play_batch(mar_u, c3y, 1024) ) {
         case _play_yes_e: {
-          u3l_log("play (%" PRIu64 "): done", mar_u->dun_d);
           u3m_reclaim();
 
-          //  XX save a snapshot every N events?
-          //
+          if ( sap_d && ((mar_u->dun_d - pas_d) >= sap_d) ) {
+            u3m_save();
+            pas_d = mar_u->dun_d;
+            u3l_log("play (%" PRIu64 "): save", mar_u->dun_d);
+          }
+          else {
+            u3l_log("play (%" PRIu64 "): done", mar_u->dun_d);
+          }
         } break;
 
         case _play_mem_e: {

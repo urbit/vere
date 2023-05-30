@@ -14,9 +14,9 @@
         c3_l     mug_l;                     //  hash of state
       } u3_mars;
 
-    /* u3_mars_play(): replay logged events up to [eve_d].
+    /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
     */
       void
-      u3_mars_play(u3_mars* mar_u, c3_d eve_d);
+      u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d);
 
 #endif /* ifndef U3_VERE_MARS_H */

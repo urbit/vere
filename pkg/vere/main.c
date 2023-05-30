@@ -1987,10 +1987,12 @@ _cw_play_exit(c3_i int_i)
 static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
+  c3_i lid_i, ch_i;
   c3_w arg_w;
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
+  c3_d eve_d = 0;
+  c3_d sap_d = 0;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -1998,9 +2000,9 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "auto-meld", no_argument,       NULL, 7 },
     { "full",      required_argument, NULL, 'f' },
     { "replay-to", no_argument,       NULL, 'n' },
+    { "snap-at",   no_argument,       NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
-
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
@@ -2027,13 +2029,21 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 'f': {
         ful_o = c3y;
-        break;
-      }
+      } break;
 
       case 'n': {
-        u3_Host.ops_u.til_c = strdup(optarg);
-        break;
-      }
+        if ( 1 != sscanf(optarg, "%" PRIu64 "", &eve_d) ) {
+          fprintf(stderr, "mars: replay-to invalid: '%s'\r\n", optarg);
+          exit(1);
+        }
+      } break;
+
+      case 's': {
+        if ( 1 != sscanf(optarg, "%" PRIu64 "", &sap_d) ) {
+          fprintf(stderr, "mars: snap-at invalid: '%s'\r\n", optarg);
+          exit(1);
+        }
+      } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2103,16 +2113,8 @@ _cw_play(c3_i argc, c3_c* argv[])
       .dun_d = u3A->eve_d,
       .mug_l = u3r_mug(u3A->roc)
     };
-    c3_d    eve_d = 0;
-    c3_c*   eve_c = u3_Host.ops_u.til_c;
 
-    if ( u3_Host.ops_u.til_c ) {
-      if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
-        fprintf(stderr, "mars: replay-to invalid: '%s'\r\n", eve_c);
-      }
-    }
-
-    u3_mars_play(&mar_u, eve_d);
+    u3_mars_play(&mar_u, eve_d, sap_d);
   }
 
   u3_disk_exit(log_u);
