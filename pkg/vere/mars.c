@@ -241,7 +241,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
           }
           else if ( 3 == ++try_w ) {
             fprintf(stderr, "play (%" PRIu64 "): failed\r\n", mar_u->dun_d + 1);
-            u3e_save();
+            u3m_save();
             //  XX check loom size, suggest --loom X
             //  XX exit code, cb
             //
@@ -266,7 +266,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
         case _play_mug_e:
         case _play_bad_e: {
           fprintf(stderr, "play (%" PRIu64 "): failed\r\n", mar_u->dun_d + 1);
-          u3e_save();
+          u3m_save();
           //  XX exit code, cb
           //
           u3_disk_exit(log_u);
@@ -277,5 +277,5 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d)
   }
 
   u3l_log("---------------- playback complete ----------------");
-  u3e_save();
+  u3m_save();
 }

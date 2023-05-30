@@ -40,11 +40,11 @@ jobs:
       matrix:
         include:
           # GitHub doesn't provide AArch64 Linux machines, so we self-host a
-          # runner instead.
-          - { target: linux-aarch64, runner: [self-hosted, Linux, ARM64] }
+          # runner with BuildJet instead.
+          - { target: linux-aarch64, runner: buildjet-2vcpu-ubuntu-2204-arm	}
           - { target: linux-x86_64, runner: ubuntu-22.04 }
-          # GitHub doesn't provide M1 macOS machines, so we self-host a runner
-          # instead.
+          # GitHub doesn't provide macOS machines with Apple Silicon, so we 
+          # self-host a runner with MacStadium instead.
           - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
           - { target: macos-x86_64, runner: macos-12 }
 
@@ -76,6 +76,37 @@ jobs:
             /private/var/tmp/_bazel_$(whoami)
             # Cache musl libc toolchains.
             /usr/local/*-musl
+      
+      - name: Install bazel
+        if: ${{ matrix.target == 'linux-aarch64' }}
+        run: |
+          version="6.2.0"
+          platform="linux-arm64"
+          base_url="https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-${platform}"
+          # download bazel from github releases
+          curl -L -O "${base_url}"
+          # make bazel executable
+          chmod +x bazel-${version}-${platform}
+          # verify the binary has a good checksum
+          curl -L -O "${base_url}.sha256"
+          if [[ "$(sha256sum bazel-${version}-${platform})" == "$(cat bazel-${version}-${platform}.sha256)" ]]; then
+            echo "Checksum matches"
+          else
+            echo "Checksum does not match"
+            exit 1
+          fi
+          # download and import the public key
+          curl -L -O https://bazel.build/bazel-release.pub.gpg
+          gpg --import bazel-release.pub.gpg
+          # verify the binary has a good signature
+          curl -L -O "${base_url}.sig"
+          if [[ `gpg --verify bazel-${version}-${platform}.sig` -eq 0 ]]; then
+            echo "Good signature from bazel"
+            sudo mv bazel-${version}-${platform} /usr/local/bin/bazel
+          else
+            echo "Bad signature from bazel"
+            exit 1
+          fi
 
       - name: Install toolchains
         run: |

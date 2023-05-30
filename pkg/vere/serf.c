@@ -69,7 +69,7 @@ _serf_grab(u3_noun sac)
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
-      snprintf(nam_c, 2048, "%s/.urb/put/mass", u3P.dir_c);
+      snprintf(nam_c, 2048, "%s/.urb/put/mass", u3C.dir_c);
 
       struct stat st;
       if ( -1 == stat(nam_c, &st) ) {
@@ -708,7 +708,7 @@ _serf_writ_live_exit(u3_serf* sef_u, c3_w cod_w)
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
-      snprintf(nam_c, 2048, "%s/.urb/put/profile", u3P.dir_c);
+      snprintf(nam_c, 2048, "%s/.urb/put/profile", u3C.dir_c);
 
       struct stat st;
       if ( -1 == stat(nam_c, &st) ) {
@@ -752,7 +752,7 @@ _serf_writ_live_save(u3_serf* sef_u, c3_d eve_d)
     exit(1);
   }
 
-  u3e_save();
+  u3m_save();
 }
 
 /* u3_serf_live(): apply %live command [com], producing *ret on c3y.
@@ -823,7 +823,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
         return c3n;
       }
 
-      u3e_save();
+      u3m_save();
       u3_serf_grab();
 
       *ret = u3nc(c3__live, u3_nul);
