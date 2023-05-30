@@ -54,14 +54,36 @@ FetchContent_Declare(
   URL_HASH SHA256=373923c85f61276e3cad2c0ae7a5d5cd4809ffe46c5abc1dc8276683a55782a0
 )
 
-set(GMP_VERSION 6.2.1)
+set(gmp_VERSION 6.2.1)
+# platform-specific configure flags (as a list)
+set(gmp_CONFIGURE_FLAGS "")
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  list(APPEND gmp_CONFIGURE_FLAGS "--disable-assembly")
+endif()
+list(APPEND gmp_CONFIGURE_FLAGS "--disable-shared")
+list(APPEND gmp_CONFIGURE_FLAGS "--with-pic")
+# TODO: add --host options for linux-aarch64 and linux-x86_64
+list(JOIN gmp_CONFIGURE_FLAGS " " gmp_CONFIGURE_FLAGS)
+message(STATUS "gmp_CONFIGURE_FLAGS: ${gmp_CONFIGURE_FLAGS}")
+
+set(gmp_BUILD_FLAGS "")
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  # TODO: learn how to drop into bash/shell
+  list(APPEND gmp_BUILD_FLAGS "--jobs=8")
+else()
+  list(APPEND gmp_BUILD_FLAGS "--jobs=`nproc`")
+endif()
+message(STATUS "gmp_BUILD_FLAGS: ${gmp_BUILD_FLAGS}")
+
 FetchContent_Declare(
   gmp
-  URL https://gmplib.org/download/gmp/gmp-${GMP_VERSION}.tar.xz
+  URL https://gmplib.org/download/gmp/gmp-${gmp_VERSION}.tar.xz
   URL_HASH SHA256=fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2
+  CONFIGURE_COMMAND "./configure ${gmp_CONFIGURE_FLAGS}"
+  BUILD_COMMAND "make ${gmp_BUILD_FLAGS}"
 )
 
-set(H2O_VERSION 2.2.6)
+set(h2o_VERSION 2.2.6)
 FetchContent_Declare(
   h2o
   URL https://github.com/h2o/h2o/archive/refs/tags/v${H2O_VERSION}.tar.gz
@@ -93,12 +115,12 @@ FetchContent_Declare(
   PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/keccak_tiny-${keccak_tiny_VERSION}.patch
 )
 
-set(LMDB_VERSION 0.9.29)
+set(lmdb_VERSION 0.9.29)
 FetchContent_Declare(
   lmdb
-  URL https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_${LMDB_VERSION}.tar.gz
+  URL https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_${lmdb_VERSION}.tar.gz
   URL_HASH SHA256=22054926b426c66d8f2bc22071365df6e35f3aacf19ad943bc6167d4cae3bebb
-  PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/lmdb-${LMDB_VERSION}.patch
+  PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/lmdb-${lmdb_VERSION}.patch
   # When bumping the version compare `libraries/liblmdb/Makefile` in the
   # accurate description of the lmdb build process.
 )
@@ -215,6 +237,7 @@ FetchContent_MakeAvailable(
   scrypt
   secp256k1
   murmur3
+  gmp
 )
 
 # murmur3
@@ -361,8 +384,12 @@ target_compile_definitions(
 
 # secp256k1
 set(secp256k1_SOURCE_DIR ${secp256k1_SOURCE_DIR} PARENT_SCOPE)
-# add_library(
-#   secp256k1
-#   STATIC
 
-# )
+# gmp
+file(GLOB gmp_SOURCE_FILES ${gmp_SOURCE_DIR}/*)
+add_library(
+  gmp
+  STATIC
+  ${gmp_SOURCE_FILES}
+)
+set(gmp_SOURCE_DIR ${gmp_SOURCE_DIR} PARENT_SCOPE)

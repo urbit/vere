@@ -38,3 +38,5 @@ else()
     ENT_GETENTROPY_UNISTD
   )
 endif()
+
+set(ent_SOURCE_DIR ${ent_SOURCE_DIR} PARENT_SCOPE)

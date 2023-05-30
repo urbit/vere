@@ -1,110 +1,39 @@
+file(
+  GLOB
+  noun_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+)
+
+file(
+  GLOB
+  jet_HEADERS
+  ${CMAKE_CURRENT_SOURCE_DIR}/jets/*.h
+)
+
+file(
+  GLOB_RECURSE
+  jet_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/jets/*/*.c
+)
+
 add_library(
   noun
   STATIC
-  allocate.c
-  allocate.h
-  error.h
-  events.c
-  events.h
-  hashtable.c
-  hashtable.h
-  imprison.c
-  imprison.h
-  jets/k.h
-  jets/q.h
-  jets/tree.c
-  jets/w.h
-  jets/a/add.c
-  jets/a/dec.c
-  jets/a/div.c
-  jets/a/gte.c
-  jets/a/gth.c
-  jets/a/lte.c
-  jets/a/lth.c
-  jets/a/mod.c
-  jets/a/mul.c
-  jets/a/sub.c
-  jets/b/bind.c
-  jets/b/clap.c
-  jets/b/drop.c
-  jets/b/find.c
-  jets/b/flop.c
-  jets/b/lent.c
-  jets/b/levy.c
-  jets/b/lien.c
-  jets/b/murn.c
-  jets/b/need.c
-  jets/b/reap.c
-  jets/b/reel.c
-  jets/b/roll.c
-  jets/b/scag.c
-  jets/b/skid.c
-  jets/b/skim.c
-  jets/b/skip.c
-  jets/b/slag.c
-  jets/b/snag.c
-  jets/b/sort.c
-  jets/b/turn.c
-  jets/b/weld.c
-  jets/b/zing.c
-  jets/c/bex.c
-  jets/c/c0n.c
-  jets/c/can.c
-  jets/c/cap.c
-  jets/c/cat.c
-  jets/c/cut.c
-  jets/c/dis.c
-  jets/c/dor.c
-  jets/c/dvr.c
-  jets/c/end.c
-  jets/c/gor.c
-  jets/c/lsh.c
-  jets/c/mas.c
-  jets/c/met.c
-  jets/c/mix.c
-  jets/c/mor.c
-  jets/c/mug.c
-  jets/c/muk.c
-  jets/c/peg.c
-  jets/c/po.c
-  jets/c/pow.c
-  jets/c/rap.c
-  jets/c/rep.c
-  jets/c/rev.c
-  jets/c/rip.c
-  jets/c/rsh.c
-  jets/c/sqt.c
-  jets/c/swp.c
-  jets/c/xeb.c
-  # add rest of jets
-  jets.c
-  jets.h
-  log.c
-  log.h
-  manage.c
-  manage.h
-  nock.c
-  nock.h
-  noun.h
-  options.c
-  options.h
-  platform/
-  retrieve.c
-  retrieve.h
-  serial.c
-  serial.h
-  trace.c
-  trace.h
-  types.h
-  urth.c
-  urth.h
-  version.h
-  vortex.c
-  vortex.h
-  xtract.c
-  xtract.h
-  zave.c
-  zave.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/jets/tree.c
+  ${jet_HEADERS}
+  ${jet_SOURCES}
+)
+
+target_include_directories(
+  noun
+  PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${c3_SOURCE_DIR}
+  ${ent_SOURCE_DIR}
+  ${openssl_SOURCE_DIR}/include
+  ${ur_SOURCE_DIR}
+  ${urcrypt_SOURCE_DIR}
 )
 
 # define macros
@@ -114,4 +43,16 @@ target_compile_definitions(
   U3_GUARD_PAGE
 )
 
-# define subdirectory dependencies
+add_dependencies(
+  noun
+  gmp
+  c3
+  ent
+  ur
+  urcrypt
+  # murmur3
+  # openssl
+  # pdjson
+  # sigsegv
+  # softfloat
+)

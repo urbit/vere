@@ -20,3 +20,5 @@ target_include_directories(
   PUBLIC
   ${murmur3_SOURCE_DIR}
 )
+
+set(ur_SOURCE_DIR ${ur_SOURCE_DIR} PARENT_SCOPE)

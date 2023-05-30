@@ -39,7 +39,9 @@ add_dependencies(
   argon2
   ed25519
   keccak_tiny
-  # openssj
+  # openssl
   scrypt
   # secp256k1
 )
+
+set(urcrypt_SOURCE_DIR ${urcrypt_SOURCE_DIR} PARENT_SCOPE)
