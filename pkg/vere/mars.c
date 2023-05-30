@@ -54,10 +54,10 @@ typedef enum {
 /* _mars_play_batch(): replay a batch of events.
 */
 static _mars_play_e
-_mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
+_mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_c bat_c)
 {
   u3_disk*      log_u = mar_u->log_u;
-  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_w);
+  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_c);
   u3_fact       tac_u;
   u3_noun         dud;
 
