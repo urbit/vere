@@ -41,7 +41,7 @@ jobs:
         include:
           # GitHub doesn't provide AArch64 Linux machines, so we self-host a
           # runner with BuildJet instead.
-          - { target: linux-aarch64, runner: buildjet-4vcpu-ubuntu-2204-arm	}
+          - { target: linux-aarch64, runner: buildjet-2vcpu-ubuntu-2204-arm	}
           - { target: linux-x86_64, runner: ubuntu-22.04 }
           # GitHub doesn't provide macOS machines with Apple Silicon, so we 
           # self-host a runner with MacStadium instead.
