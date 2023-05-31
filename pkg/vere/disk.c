@@ -958,7 +958,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
 /* u3_disk_epoc_good: check for valid epoch.
 */
-c3_o u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
+c3_o
+u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
   /*  a "valid" epoch is currently defined as a writable folder in 
    *  the <pier>/.urb/log directory named with a @ui and contains:
    *  - a writable data.mdb file which can be opened by lmdb (add db checking?)
@@ -1039,7 +1040,8 @@ c3_o u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
  
 /* u3_disk_epoc_init: create new epoch.
 */
-c3_o u3_disk_epoc_init(u3_disk* log_u) {
+c3_o
+u3_disk_epoc_init(u3_disk* log_u) {
   //  set new epoch number
   c3_d lat_d, new_d;
   c3_o eps_o = u3_disk_epoc_last(log_u, &lat_d);
@@ -1137,7 +1139,8 @@ fail:
 
 /* u3_disk_epoc_kill: delete an epoch.
 */
-c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
+c3_o
+u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
   //  get epoch directory
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
@@ -1170,7 +1173,8 @@ c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
 
 /* u3_disk_epoc_last: get latest epoch number.
 */
-c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
+c3_o
+u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
   c3_o ret_o = c3n;  //  return no if no epoch directories exist
   *lat_d = 0;        //  initialize lat_d to 0
   u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
