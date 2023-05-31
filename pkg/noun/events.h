@@ -89,6 +89,11 @@
       void
       u3e_save(u3_post low_p, u3_post hig_p);
 
+    /* u3e_toss(): discard ephemeral pages.
+    */
+      void
+      u3e_toss(u3_post low_p, u3_post hig_p);
+
     /* u3e_live(): start the persistence system.  Return c3y if no image.
     */
       c3_o

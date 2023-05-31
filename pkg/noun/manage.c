@@ -1859,6 +1859,16 @@ u3m_save(void)
   return u3e_save(low_p, hig_p);
 }
 
+/* u3m_toss(): discard ephemeral memory.
+*/
+void
+u3m_toss(void)
+{
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+  u3e_toss(low_p, hig_p);
+}
+
 /* u3m_ward(): tend the guardpage.
 */
 void
