@@ -896,8 +896,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     }
 
     //  get binary version from latest epoch
-    c3_c ver_w[8193];
-    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_w) ) {
+    c3_c ver_c[8193];
+    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
       fprintf(stderr, "disk: failed to load epoch version\r\n");
       c3_free(log_u);
       return 0;
@@ -936,7 +936,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
     //  if binary version of latest epoch is not the same as the
     //  running binary, then we need to create a new epoch
-    if ( 0 != strcmp(ver_w, URBIT_VERSION) ) {
+    if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
       if ( c3n == u3_disk_epoc_init(log_u) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         c3_free(log_u);
@@ -1161,6 +1161,9 @@ c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
     return c3n;
   }
 
+  //  cleanup
+  u3_dire_free(dir_u);
+
   //  success
   return c3y;
 }
@@ -1168,25 +1171,31 @@ c3_o u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d) {
 /* u3_disk_epoc_last: get latest epoch number.
 */
 c3_o u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
-  c3_o ret_d = c3n;  //  return no if no epoch directories exist
+  c3_o ret_o = c3n;  //  return no if no epoch directories exist
   *lat_d = 0;        //  initialize lat_d to 0
-  u3_dent* den_u = u3_foil_folder(log_u->com_u->pax_c)->dil_u;
+  u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dent* den_u = die_u->dil_u;
   while ( den_u ) {
     c3_d epo_d = 0;
     if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d) ) {
-      ret_d = c3y;   //  NB: returns yes if the directory merely exists
+      ret_o = c3y;   //  NB: returns yes if the directory merely exists
+      *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
     }
-    *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
     den_u = den_u->nex_u;
   }
+  
+  u3_dire_free(die_u);
 
-  return ret_d;
+  return ret_o;
 }
 
 /* u3_disk_epoc_vere: get binary version from epoch.
 */
 c3_o
 u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w) {
+  //  XX  check implementation (similar code is in king.c, _king_get_pace)
+  //      should probably write a generic function to read a string from 
+  //      a file into malloc'd memory, with an optional whitespace trimming
   c3_c ver_c[8193];
   snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIc3_d "/vere.txt", 
                   log_u->com_u->pax_c, epo_d);
@@ -1210,12 +1219,12 @@ u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w) {
  */
 c3_o u3_disk_migrate(u3_disk* log_u)
 {
-  /*  migration steps:
+  /*  migration steps (* indicates breakpoint set):
    *  0. detect whether we need to migrate or not
-   *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration
-   *     b. if data.mdb is readable in log directory -> execute migration
-   *        if not -> skip migration
-   *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init())
+   *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration (returns yes)
+   *     b. if data.mdb is readable in log directory -> execute migration (returns yes or no)
+   *        if not -> skip migration (returns yes)
+   *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init()) *
    *     a. creates epoch directory
    *     b. creates epoch version file
    *     c. creates binary version file
@@ -1224,10 +1233,10 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    *     f. writes metadata to new database
    *     g. loads new epoch directory and sets it in log_u
    *  2. create hard links to data.mdb and lock.mdb in 0i0/
-   *  3. rollover to new epoch (second call to u3_disk_epoc_init())
+   *  3. rollover to new epoch (second call to u3_disk_epoc_init()) *
    *     a. same as 1a-g but also copies current snapshot between c/d steps
-   *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls)
-   *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
+   *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls) *
+   *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls) *
    */
 
   //  check if data.mdb is readable in log directory
@@ -1252,7 +1261,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
 
     //  initialize first epoch "0i0"
     if ( c3n == u3_disk_epoc_init(log_u) ) {
-      fprintf(stderr, "disk: migrate: failed to initialize first epoch\r\n");
+      fprintf(stderr, "disk: failed to initialize first epoch\r\n");
       return c3n;
     }
   } else if ( c3y == dat_o ) {

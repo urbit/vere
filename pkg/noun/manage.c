@@ -2054,6 +2054,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop()
 {
+  //  XX make sure to cleanup snapshot file descriptors if necessary
   u3je_secp_stop();
 }
 

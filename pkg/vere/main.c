@@ -2216,14 +2216,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
     }
   }
 
-  c3_d epo_d = 0;
-  while ( den_u ) {
-    c3_i res_i = sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d);
-    if ( (1 == res_i) && (epo_d < pre_d) && (epo_d < pos_d) ) {
-    }
-    den_u = den_u->nex_u;
-  }
-
   // cleanup
   u3_dire_free(ned_u);
   u3_disk_exit(log_u);
@@ -2769,7 +2761,8 @@ main(c3_i   argc,
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
       u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-      //  XX u3e_close()
+      u3m_stop();
+      //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
