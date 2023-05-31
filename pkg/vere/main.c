@@ -2009,13 +2009,9 @@ _cw_play(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        c3_w lom_w;
-        c3_o res_o = _main_readw(optarg, u3a_bits + 3, &lom_w);
-        if ( (c3n == res_o) || (lom_w < 20) ) {
-          fprintf(stderr, "error: --loom must be >= 20 and <= %u\r\n", u3a_bits + 2);
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
-        u3_Host.ops_u.lom_y = lom_w;
       } break;
 
       case 6: {  //  no-demand
