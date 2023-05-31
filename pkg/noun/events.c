@@ -995,6 +995,11 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
+
+    if ( -1 == madvise(_ce_ptr(0), _ce_len(pgs_w), MADV_RANDOM) ) {
+        fprintf(stderr, "loom: madv_random failed (%u pages): %s\r\n",
+                        pgs_w, strerror(errno));
+    }
   }
 
   if ( old_w > pgs_w ) {
