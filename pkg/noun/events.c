@@ -176,10 +176,10 @@ u3e_check(c3_c* cap_c)
 }
 #endif
 
-/* _ce_flaw_protect(): protect page after fault.
+/* _ce_flaw_protect(): protect non-guard page after fault.
 */
 static inline c3_i
-_ce_flaw_protect(c3_w pag_w, c3_w gar_w)
+_ce_flaw_protect(c3_w pag_w)
 {
   // NB: must be static, since the stack is grown via page faults, and
   // we're already in a page fault handler.
@@ -196,11 +196,7 @@ _ce_flaw_protect(c3_w pag_w, c3_w gar_w)
   else {
     // save contents of page, to be restored after the mmap
     //
-    // NB: don't copy guard page because unnecessary, and it's PROT_NONE.
-    //
-    if ( gar_w != pag_w ) {
-      memcpy(con_y, _ce_ptr(pag_w), _ce_page);
-    }
+    memcpy(con_y, _ce_ptr(pag_w), _ce_page);
 
     // map the dirty page into the ephemeral file
     //
@@ -217,9 +213,21 @@ _ce_flaw_protect(c3_w pag_w, c3_w gar_w)
 
     // restore contents of page
     //
-    if ( gar_w != pag_w ) {
-      memcpy(_ce_ptr(pag_w), con_y, _ce_page);
-    }
+    memcpy(_ce_ptr(pag_w), con_y, _ce_page);
+  }
+
+  return 0;
+}
+
+/* _ce_guard_protect(): protect guard page after fault.
+*/
+static inline c3_i
+_ce_guard_protect(c3_w pag_w)
+{
+  if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
+    fprintf(stderr, "loom: guard fault mprotect (%u): %s\r\n",
+                     pag_w, strerror(errno));
+    return 1;
   }
 
   return 0;
@@ -284,10 +292,11 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   c3_w pag_w = off_p >> u3a_page;
   c3_w blk_w = pag_w >> 5;
   c3_w bit_w = pag_w & 31;
-  c3_w gar_w = u3P.gar_w;
 
 #ifdef U3_GUARD_PAGE
-  if ( pag_w == u3P.gar_w ) {
+  c3_w gar_w = u3P.gar_w;
+
+  if ( pag_w == gar_w ) {
     u3e_flaw fal_e = _ce_ward_clip(low_p >> u3a_page, hig_p >> u3a_page);
 
     if ( u3e_flaw_good != fal_e ) {
@@ -308,8 +317,15 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
-  if ( _ce_flaw_protect(pag_w, gar_w) ) {
-    fprintf(stderr, "flawed\r\n");
+#ifdef U3_GUARD_PAGE
+  if ( pag_w == gar_w ) {
+    if ( _ce_guard_protect(pag_w) ) {
+      return u3e_flaw_base;
+    }
+  }
+  else
+#endif
+  if ( _ce_flaw_protect(pag_w) ) {
     return u3e_flaw_base;
   }
 
@@ -1634,7 +1650,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
 
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
-    u3_assert( !_ce_flaw_protect(pag_w, pag_w) );
+    u3_assert( !_ce_guard_protect(pag_w) );
     u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
