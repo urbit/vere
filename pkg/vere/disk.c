@@ -983,6 +983,7 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
 
   c3_o dir_o = c3n;  //  directory is writable
   c3_o dat_o = c3n;  //  data.mdb is writable
+  c3_o len_o = c3n;  //  data.mdb has events
   c3_o mdb_o = c3n;  //  data.mdb can be opened
   c3_o epv_o = c3n;  //  epoc.txt is writable
   c3_o biv_o = c3n;  //  vere.txt is writable
@@ -999,6 +1000,17 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
     MDB_env* env_u;
     if ( 0 != (env_u = u3_lmdb_init(epo_c)) ) {
       mdb_o = c3y;
+    }
+
+    //  check if there are any events in the database
+    c3_d low_d, hig_d;
+    if ( 0 != u3_lmdb_gulf(env_u, &low_d, &hig_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      ret_o = c3n;
+    } else {
+      if ( low_d == hig_d == 0 ) {
+        len_o = c3y;  //  yes, data.mdb has events
+      }
     }
     u3_lmdb_exit(env_u);
   }
@@ -1024,6 +1036,10 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
   }
   if ( c3n == mdb_o ) {
     fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb can't be opened\r\n", epo_d);
+    ret_o = c3n;
+  }
+  if ( c3n == len_o ) {
+    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb has no events\r\n", epo_d);
     ret_o = c3n;
   }
   if ( c3n == epv_o ) {
