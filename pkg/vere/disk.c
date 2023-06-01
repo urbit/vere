@@ -1270,7 +1270,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   //  check if lock.mdb is readable in log directory
   c3_o lok_o = c3n;
   c3_c lok_c[8193];
-  snprintf(lok_c, sizeof(dat_c), "%s/data.mdb", log_u->com_u->pax_c);
+  snprintf(lok_c, sizeof(dat_c), "%s/lock.mdb", log_u->com_u->pax_c);
   if ( 0 == access(dat_c, R_OK) ) {
     lok_o = c3y;
   }
