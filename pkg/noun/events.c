@@ -1379,10 +1379,6 @@ u3e_save(u3_post low_p, u3_post hig_p)
                         pgs_w, ptr_v, strerror(errno));
     }
   }
-
-  c3_c bhk_c[8193];
-  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3P.dir_c);
-  u3e_backup(bhk_c, c3n);
 }
 
 /* u3e_live(): start the checkpointing system.

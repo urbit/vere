@@ -1748,16 +1748,6 @@ _cm_limits(void)
 # endif
 }
 
-/* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
-*/
-c3_o
-u3m_backup(c3_o ovw_o)
-{
-  c3_c bhk_c[2048];
-  snprintf(bhk_c, 2048, "%s/.urb/bhk", u3P.dir_c);
-  return u3e_backup(bhk_c, ovw_o);
-}
-
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
 */
 c3_i
