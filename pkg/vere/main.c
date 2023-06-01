@@ -241,7 +241,6 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "loom",                required_argument, NULL, c3__loom },
     { "local",               no_argument,       NULL, 'L' },
     { "lite-boot",           no_argument,       NULL, 'l' },
-    { "map",                 no_argument,       NULL, 'm' },
     { "replay-to",           required_argument, NULL, 'n' },
     { "profile",             no_argument,       NULL, 'P' },
     { "ames-port",           required_argument, NULL, 'p' },
@@ -266,6 +265,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     //
     { "urth-loom",           required_argument, NULL, 5 },
     { "no-demand",           no_argument,       NULL, 6 },
+    { "no-validate",         no_argument,       NULL, 7 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -283,6 +283,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
+        break;
+      }
+      case 7: {  //  no-validate
+        u3_Host.ops_u.vet = c3n;
         break;
       }
       //  special args
@@ -762,6 +766,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --no-conn                 Do not run control plane\n",
     "    --no-dock                 Skip binary \"docking\" on boot\n",
     "    --no-demand               Skip demand paging\n",
+    "    --no-validate             Skip snapshot validation\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",

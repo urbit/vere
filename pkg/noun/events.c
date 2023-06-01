@@ -1089,6 +1089,9 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
   ssize_t ret_i;
   c3_y    buf_y[_ce_page];
 
+  //  skip if user requested
+  if ( c3y == u3H.ops_u.vet ) return c3y;
+
   if ( _ce_page !=
        (ret_i = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
   {
