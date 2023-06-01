@@ -988,27 +988,27 @@
        */
        c3_o
        u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d);
-      
+
       /* u3_disk_epoc_init(): create new epoch.
        */
        c3_o
        u3_disk_epoc_init(u3_disk* log_u);
-      
+
       /* u3_disk_epoc_kill(): delete an epoch.
        */
        c3_o
        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
-      
+
       /* u3_disk_epoc_last(): get latest epoch number.
        */
        c3_o
        u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
-      
+
       /* u3_disk_epoc_vere(): get binary version from epoch.
        */
        c3_o
        u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w);
-      
+
       /* u3_disk_migrate(): migrates disk format.
        */
         c3_o

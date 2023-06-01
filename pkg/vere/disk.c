@@ -929,8 +929,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       } else {                        //  not first epoch
         log_u->dun_d = lat_d;         //  set dun_d to last event in prev epoch
       }
-    } else {                          //  not fresh epoch            
-      log_u->dun_d = las_d;           //  set dun_d to last event in lmdb        
+    } else {                          //  not fresh epoch
+      log_u->dun_d = las_d;           //  set dun_d to last event in lmdb
     }
     log_u->sen_d = log_u->dun_d;
 
@@ -960,7 +960,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 */
 c3_o
 u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
-  /*  a "valid" epoch is currently defined as a writable folder in 
+  /*  a "valid" epoch is currently defined as a writable folder in
    *  the <pier>/.urb/log directory named with a @ui and contains:
    *  - a writable data.mdb file which can be opened by lmdb (add db checking?)
    *  - a writable epoc.txt file
@@ -968,7 +968,7 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
    *
    *  XX: should we check if the correct event sequence exists in the data.mdb file?
    *
-   *  note that this does not check if the epoch even contains snapshot files, 
+   *  note that this does not check if the epoch even contains snapshot files,
    *  let alone whether they're valid or not
    */
 
@@ -1053,7 +1053,7 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d) {
 
   return ret_o;
 }
- 
+
 /* u3_disk_epoc_init: create new epoch.
 */
 c3_o
@@ -1203,7 +1203,7 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
     }
     den_u = den_u->nex_u;
   }
-  
+
   u3_dire_free(die_u);
 
   return ret_o;
@@ -1214,21 +1214,21 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d) {
 c3_o
 u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w) {
   //  XX  check implementation (similar code is in king.c, _king_get_pace)
-  //      should probably write a generic function to read a string from 
+  //      should probably write a generic function to read a string from
   //      a file into malloc'd memory, with an optional whitespace trimming
   c3_c ver_c[8193];
-  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIc3_d "/vere.txt", 
+  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIc3_d "/vere.txt",
                   log_u->com_u->pax_c, epo_d);
 
   FILE* fil_u = fopen(ver_c, "r");
   if ( NULL == fil_u ) {
-    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIc3_d 
+    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIc3_d
                     "\r\n", epo_d);
     return c3n;
   }
 
   if ( 1 != fscanf(fil_u, "%s", ver_w) ) {
-    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIc3_d 
+    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIc3_d
                     "\r\n", epo_d);
     return c3n;
   }
@@ -1286,7 +1286,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     }
   } else if ( c3y == dat_o ) {
     //  migrate existing pier which has either:
-    //  - not started the migration, or 
+    //  - not started the migration, or
     //  - crashed before completing the migration
 
     //  initialize pre-migrated lmdb

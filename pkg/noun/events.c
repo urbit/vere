@@ -1220,7 +1220,7 @@ u3e_backup(c3_c* pax_c, c3_o ovw_o)
 {
   u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
   u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
-  
+
   c3_i mod_i = O_RDWR | O_CREAT;
 
   if ( !pax_c ) {

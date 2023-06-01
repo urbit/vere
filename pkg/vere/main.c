@@ -317,7 +317,7 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         } else {
           u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w) 
+          if ( 0 == u3_Host.ops_u.sap_w)
             return c3n;
         }
         break;
@@ -2757,7 +2757,7 @@ main(c3_i   argc,
       }
     }
 
-    //  we need the current snapshot's latest event number to 
+    //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
       u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
