@@ -373,15 +373,23 @@ static c3_o
 _ce_ephemeral_open(c3_i* eph_i)
 {
   c3_i mod_i = O_RDWR | O_CREAT;
-  c3_c ful_c[8193];
+  c3_c fol_c[8193];
+  c3_c* ful_c;
 
-  snprintf(ful_c, 8192, "%s", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
+  if ( u3C.eph_c != 0 ) {
+    ful_c = u3C.eph_c;
+  }
+  else {
+    snprintf(fol_c, 8192, "%s", u3P.dir_c);
+    c3_mkdir(fol_c, 0700);
 
-  snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
+    snprintf(fol_c, 8192, "%s/.urb", u3P.dir_c);
+    c3_mkdir(fol_c, 0700);
 
-  snprintf(ful_c, 8192, "%s/.urb/ephemeral.bin", u3P.dir_c);
+    snprintf(fol_c, 8192, "%s/.urb/ephemeral.bin", u3P.dir_c);
+    ful_c = fol_c;
+  }
+
   if ( -1 == (*eph_i = c3_open(ful_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: ephemeral c3_open %s: %s\r\n", ful_c,
             strerror(errno));
@@ -1514,9 +1522,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   {
     //  Open the ephemeral space file.
     //
-    if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
-      fprintf(stderr, "boot: failed to load ephemeral file\r\n");
-      exit(1);
+    if ( u3C.wag_w & u3o_swap ) {
+      if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
+        fprintf(stderr, "boot: failed to load ephemeral file\r\n");
+        exit(1);
+      }
     }
 
     //  Open image files.
@@ -1562,7 +1572,9 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
           _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
         }
         else {
-          _ce_loom_mapf_ephemeral();
+          if ( u3C.wag_w & u3o_swap ) {
+            _ce_loom_mapf_ephemeral();
+          }
           _ce_loom_mapf_north(u3P.nor_u.fid_i, nor_w, 0);
         }
 

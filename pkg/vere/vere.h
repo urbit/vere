@@ -305,6 +305,7 @@
         c3_o    doc;                        //      dock binary in pier
         c3_o    nuu;                        //      new pier
         c3_o    map;                        //  --no-demand (reversed)
+        c3_o    eph;                        //  --swap, use ephemeral file
       } u3_opts;
 
     /* u3_host: entire host.

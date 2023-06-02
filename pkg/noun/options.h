@@ -13,6 +13,7 @@
       typedef struct _u3o_config {
         u3_noun who;                          //  single identity
         c3_c*   dir_c;                        //  execution directory (pier)
+        c3_c*   eph_c;                        //  ephemeral file
         c3_w    wag_w;                        //  flags (both ways)
         c3_w    vits_w;                       //  number of virtual bits in reference
         c3_w    walign_w;                     //  word alignment
@@ -44,7 +45,8 @@
         u3o_quiet         = 1 << 6,           //  disable ~&
         u3o_hashless      = 1 << 7,           //  disable hashboard
         u3o_trace         = 1 << 8,           //  enables trace dumping
-        u3o_no_demand     = 1 << 9            // disables demand paging
+        u3o_no_demand     = 1 << 9,           //  disables demand paging
+        u3o_swap          = 1 << 10           //  enables ephemeral file
       };
 
   /** Globals.
