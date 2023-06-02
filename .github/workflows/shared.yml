@@ -41,7 +41,7 @@ jobs:
         include:
           # GitHub doesn't provide AArch64 Linux machines, so we self-host a
           # runner with BuildJet instead.
-          - { target: linux-aarch64, runner: buildjet-4vcpu-ubuntu-2204-arm	}
+          - { target: linux-aarch64, runner: buildjet-2vcpu-ubuntu-2204-arm	}
           - { target: linux-x86_64, runner: ubuntu-22.04 }
           # GitHub doesn't provide macOS machines with Apple Silicon, so we 
           # self-host a runner with MacStadium instead.
@@ -57,13 +57,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: chown /usr/local
-        if: ${{ matrix.target == 'linux-x86_64' }}
+        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
         run: |
-          # See https://github.com/actions/cache/issues/845. Note we don't run
-          # this on linux-aarch64 because we run on a self-hosted GitHub Actions
-          # runner for which `/usr/local` has already been `chown`d to the user
-          # running the GitHub Actions runner.
-          sudo chown $(whoami) /usr/local && (chown -R $USER /usr/local/*-musl || true)
+          sudo chown $(whoami) /usr/local
 
       - name: Set up build cache
         uses: actions/cache@v3
@@ -77,6 +73,11 @@ jobs:
             # Cache musl libc toolchains.
             /usr/local/*-musl
       
+      - name: chown /usr/local/*-musl
+        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
+        run: |
+          chown -R $USER /usr/local/*-musl || true
+
       - name: Install bazel
         if: ${{ matrix.target == 'linux-aarch64' }}
         run: |
