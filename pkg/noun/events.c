@@ -373,31 +373,27 @@ static c3_o
 _ce_ephemeral_open(c3_i* eph_i)
 {
   c3_i mod_i = O_RDWR | O_CREAT;
-  c3_c fol_c[8193];
-  c3_c* ful_c;
+  c3_c ful_c[8193];
 
-  if ( u3C.eph_c != 0 ) {
-    ful_c = u3C.eph_c;
-  }
-  else {
-    snprintf(fol_c, 8192, "%s", u3P.dir_c);
-    c3_mkdir(fol_c, 0700);
+  if ( u3C.eph_c == 0 ) {
+    snprintf(ful_c, 8192, "%s", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
 
-    snprintf(fol_c, 8192, "%s/.urb", u3P.dir_c);
-    c3_mkdir(fol_c, 0700);
+    snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
 
-    snprintf(fol_c, 8192, "%s/.urb/ephemeral.bin", u3P.dir_c);
-    ful_c = fol_c;
+    snprintf(ful_c, 8192, "%s/.urb/ephemeral.bin", u3P.dir_c);
+    u3C.eph_c = strdup(ful_c);
   }
 
-  if ( -1 == (*eph_i = c3_open(ful_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: ephemeral c3_open %s: %s\r\n", ful_c,
+  if ( -1 == (*eph_i = c3_open(u3C.eph_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: ephemeral c3_open %s: %s\r\n", u3C.eph_c,
             strerror(errno));
     return c3n;
   }
 
   if ( ftruncate(*eph_i, _ce_len(u3P.pag_w)) < 0 ) {
-    fprintf(stderr, "loom: ephemeral ftruncate %s: %s\r\n", ful_c,
+    fprintf(stderr, "loom: ephemeral ftruncate %s: %s\r\n", u3C.eph_c,
             strerror(errno));
     return c3n;
   }
@@ -1604,6 +1600,25 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   }
 
   return nuu_o;
+}
+
+/* u3e_stop(): gracefully stop the persistence system.
+*/
+void
+u3e_stop(void)
+{
+  if ( u3P.eph_i ) {
+    void* ptr_v = _ce_ptr(u3P.nor_u.pgs_w);
+    c3_w  pgs_w = u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w);
+    if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
+        fprintf(stderr,
+                "loom: exit: madvise() failed for %u pages at %p: %s\r\n",
+                pgs_w, ptr_v, strerror(errno));
+    }
+
+    close(u3P.eph_i);
+    unlink(u3C.eph_c);
+  }
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.

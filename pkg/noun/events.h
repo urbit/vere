@@ -94,6 +94,11 @@
       c3_o
       u3e_live(c3_o nuu_o, c3_c* dir_c);
 
+    /* u3e_stop(): gracefully stop the persistence system.
+    */
+      void
+      u3e_stop(void);
+
     /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
     */
       c3_o

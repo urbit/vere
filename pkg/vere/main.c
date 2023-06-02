@@ -1003,6 +1003,7 @@ _cw_serf_exit(void)
 {
   u3s_cue_xeno_done(sil_u);
   u3t_trace_close();
+  u3m_stop();
 }
 
 /* _cw_init_io(): initialize i/o streams.

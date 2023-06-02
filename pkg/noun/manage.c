@@ -2052,6 +2052,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop()
 {
+  u3e_stop();
   u3je_secp_stop();
 }
 
