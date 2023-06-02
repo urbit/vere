@@ -1263,19 +1263,19 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    */
 
   //  check if data.mdb is readable in log directory
-  c3_o dat_o = c3n;
-  c3_c dat_c[8193];
-  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_u->com_u->pax_c);
-  if ( 0 == access(dat_c, R_OK) ) {
-    dat_o = c3y;
+  c3_o dut_o = c3n;
+  c3_c dut_c[8193];
+  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
+  if ( 0 == access(dut_c, R_OK) ) {
+    dut_o = c3y;
   }
 
   //  check if lock.mdb is readable in log directory
-  c3_o lok_o = c3n;
-  c3_c lok_c[8193];
-  snprintf(lok_c, sizeof(dat_c), "%s/lock.mdb", log_u->com_u->pax_c);
-  if ( 0 == access(dat_c, R_OK) ) {
-    lok_o = c3y;
+  c3_o luk_o = c3n;
+  c3_c luk_c[8193];
+  snprintf(luk_c, sizeof(luk_c), "%s/lock.mdb", log_u->com_u->pax_c);
+  if ( 0 == access(luk_c, R_OK) ) {
+    luk_o = c3y;
   }
 
   //  if fresh boot, initialize disk v1
@@ -1291,8 +1291,8 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     return c3y;
   }
   
-  //  if data.mdb is not readable, skip migration
-  if ( c3n == dat_o ) return c3y;
+  //  if .urb/log/data.mdb is not readable, skip migration
+  if ( c3n == dut_o ) return c3y;
 
   //  migrate existing pier which has either:
   //  - not started the migration, or
@@ -1329,11 +1329,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   }
 
   //  create hard links to data.mdb and lock.mdb in 0i0/
-  c3_c dut_c[8193], luk_c[8193];  //  old paths
-  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
-  snprintf(luk_c, sizeof(luk_c), "%s/lock.mdb", log_u->com_u->pax_c);
-
-  c3_c epo_c[8193];
+  c3_c epo_c[8193], dat_c[8193], lok_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_u->com_u->pax_c);
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
   snprintf(lok_c, sizeof(lok_c), "%s/lock.mdb", epo_c);
@@ -1343,7 +1339,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     fprintf(stderr, "errno %d: %s\r\n", errno, strerror(errno));
     return c3n;
   }
-  if ( c3y == lok_o ) {  //  only link lock.mdb if it exists
+  if ( c3y == luk_o ) {  //  only link lock.mdb if it exists
     if ( 0 < c3_link(luk_c, lok_c) ) {
       fprintf(stderr, "disk: migrate: failed to create lock.mdb hard link\r\n");
       c3_rename(dat_c, dut_c);
