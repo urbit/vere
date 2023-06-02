@@ -1263,11 +1263,12 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    */
 
   //  check if data.mdb is readable in log directory
-  c3_o dut_o = c3n;
   c3_c dut_c[8193];
   snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
-  if ( 0 == access(dut_c, R_OK) ) {
-    dut_o = c3y;
+  if ( !_(u3_Host.ops_u.nuu)
+       && 0 != access(dut_c, R_OK) ) {
+    // if .urb/log/data.mdb is not readable, skip migration
+    return c3y;
   }
 
   //  check if lock.mdb is readable in log directory
@@ -1290,9 +1291,6 @@ c3_o u3_disk_migrate(u3_disk* log_u)
 
     return c3y;
   }
-  
-  //  if .urb/log/data.mdb is not readable, skip migration
-  if ( c3n == dut_o ) return c3y;
 
   //  migrate existing pier which has either:
   //  - not started the migration, or
