@@ -176,56 +176,47 @@ u3e_check(c3_c* cap_c)
 }
 #endif
 
-/* _ce_flaw_protect(): protect non-guard page after fault.
+/* _ce_flaw_mmap(): remap non-guard page after fault.
 */
 static inline c3_i
-_ce_flaw_protect(c3_w pag_w)
+_ce_flaw_mmap(c3_w pag_w)
 {
   // NB: must be static, since the stack is grown via page faults, and
   // we're already in a page fault handler.
   //
   static c3_y con_y[16384];
 
-  if ( 0 == u3P.eph_i ) {
-    if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
-      fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
-                       pag_w, strerror(errno));
-      return 1;
-    }
-  }
-  else {
-    // save contents of page, to be restored after the mmap
-    //
-    memcpy(con_y, _ce_ptr(pag_w), _ce_page);
+  // save contents of page, to be restored after the mmap
+  //
+  memcpy(con_y, _ce_ptr(pag_w), _ce_page);
 
-    // map the dirty page into the ephemeral file
-    //
-    if ( MAP_FAILED == mmap(_ce_ptr(pag_w),
-                            _ce_page,
-                            (PROT_READ | PROT_WRITE),
-                            (MAP_FIXED | MAP_SHARED),
-                            u3P.eph_i, _ce_len(pag_w)) )
-    {
-      fprintf(stderr, "loom: fault mmap failed (%u): %s\r\n",
-                       pag_w, strerror(errno));
-      return 1;
-    }
-
-    // restore contents of page
-    //
-    memcpy(_ce_ptr(pag_w), con_y, _ce_page);
+  // map the dirty page into the ephemeral file
+  //
+  if ( MAP_FAILED == mmap(_ce_ptr(pag_w),
+                          _ce_page,
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_SHARED),
+                          u3P.eph_i, _ce_len(pag_w)) )
+  {
+    fprintf(stderr, "loom: fault mmap failed (%u): %s\r\n",
+                     pag_w, strerror(errno));
+    return 1;
   }
+
+  // restore contents of page
+  //
+  memcpy(_ce_ptr(pag_w), con_y, _ce_page);
 
   return 0;
 }
 
-/* _ce_guard_protect(): protect guard page after fault.
+/* _ce_flaw_mprotect(): protect page after fault.
 */
 static inline c3_i
-_ce_guard_protect(c3_w pag_w)
+_ce_flaw_mprotect(c3_w pag_w)
 {
   if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
-    fprintf(stderr, "loom: guard fault mprotect (%u): %s\r\n",
+    fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
                      pag_w, strerror(errno));
     return 1;
   }
@@ -319,13 +310,18 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
 #ifdef U3_GUARD_PAGE
   if ( pag_w == gar_w ) {
-    if ( _ce_guard_protect(pag_w) ) {
+    if ( _ce_flaw_mprotect(pag_w) ) {
       return u3e_flaw_base;
     }
   }
   else
 #endif
-  if ( _ce_flaw_protect(pag_w) ) {
+  if ( u3P.eph_i ) {
+    if ( _ce_flaw_mmap(pag_w) ) {
+      return u3e_flaw_base;
+    }
+  }
+  else if ( _ce_flaw_mprotect(pag_w) ) {
     return u3e_flaw_base;
   }
 
@@ -1677,7 +1673,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
 
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
-    u3_assert( !_ce_guard_protect(pag_w) );
+    u3_assert( !_ce_flaw_mprotect(pag_w) );
     u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif
