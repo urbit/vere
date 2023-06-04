@@ -61,11 +61,12 @@ u3qdb_dif(u3_noun a,
     return u3k(a);
   }
   else {
-    u3_noun n_b, l_b, r_b;
+    u3_noun n_b, p_n_b, q_n_b, l_b, r_b;
     u3_noun c, l_c, r_c;
     u3x_trel(b, &n_b, &l_b, &r_b);
+    u3x_cell(n_b, &p_n_b, &q_n_b);
 
-    c = u3qdb_bif(a, n_b);
+    c = u3qdb_bif(a, p_n_b);
     u3x_cell(c, &l_c, &r_c);
 
     u3_noun d = u3qdb_dif(l_c, l_b);
