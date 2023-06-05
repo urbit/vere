@@ -251,14 +251,20 @@ versioned_http_archive(
     version = "dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4",
 )
 
-versioned_http_archive(
-    name = "openssl",
-    build_file = "//bazel/third_party/openssl:openssl.BUILD",
-    sha256 = "8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b",
-    strip_prefix = "openssl-{version}",
-    url = "https://www.openssl.org/source/openssl-{version}.tar.gz",
-    version = "1.1.1t",
-)
+load("//bazel/third_party/openssl:openssl_repositories.bzl", "openssl_repositories")
+openssl_repositories()
+
+load("//bazel/third_party/openssl:openssl_setup.bzl", "openssl_setup")
+openssl_setup()
+
+# versioned_http_archive(
+#     name = "openssl",
+#     build_file = "//bazel/third_party/openssl:openssl.BUILD",
+#     sha256 = "8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b",
+#     strip_prefix = "openssl-{version}",
+#     url = "https://www.openssl.org/source/openssl-{version}.tar.gz",
+#     version = "1.1.1t",
+# )
 
 versioned_http_archive(
     name = "pdjson",
