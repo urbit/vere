@@ -1216,25 +1216,38 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
 c3_o
 u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w)
 {
-  //  XX  check implementation (similar code is in king.c, _king_get_pace)
-  //      should probably write a generic function to read a string from
-  //      a file into malloc'd memory, with an optional whitespace trimming
-  c3_c ver_c[8193];
-  snprintf(ver_c, sizeof(ver_c), "%s/0i%" PRIc3_d "/vere.txt",
-                  log_u->com_u->pax_c, epo_d);
+  struct stat buf_u;
+  c3_c* ver_c;
+  c3_w red_w, len_w;
+  c3_i ret_i, fid_i;
+  ret_i = asprintf(&ver_c, "%s/0i%" PRIc3_d "/vere.txt",
+           log_u->com_u->pax_c, epo_d);
+  u3_assert( ret_i > 0 );
 
-  FILE* fil_u = fopen(ver_c, "r");
-  if ( NULL == fil_u ) {
+  fid_i = c3_open(ver_c, O_RDONLY, 0644);
+
+  if ( (fid_i < 0) || (fstat(fid_i, &buf_u) < 0) ) {
     fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIc3_d
                     "\r\n", epo_d);
     return c3n;
   }
 
-  if ( 1 != fscanf(fil_u, "%s", ver_w) ) {
+  len_w = buf_u.st_size;
+  red_w = read(fid_i, ver_w, len_w);
+  close(fid_i);
+
+  if ( len_w != red_w ) {
     fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIc3_d
                     "\r\n", epo_d);
     return c3n;
   }
+
+  //  trim trailing whitespace
+  ver_w[len_w] = 0;
+  while ( len_w-- && isspace(ver_w[len_w]) ) {
+    ver_w[len_w] = 0;
+  }
+
   return c3y;
 }
 
