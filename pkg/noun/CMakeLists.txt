@@ -34,6 +34,7 @@ target_include_directories(
   ${openssl_SOURCE_DIR}/include
   ${ur_SOURCE_DIR}
   ${urcrypt_SOURCE_DIR}
+  ${gmp_SOURCE_DIR}
 )
 
 # define macros

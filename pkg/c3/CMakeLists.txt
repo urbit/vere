@@ -25,23 +25,13 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
   )
 endif()
 
-# define universal macros
+# universal definitions
 target_compile_definitions(
   c3
   PUBLIC
   U3_OS_ENDIAN_little=1
   U3_OS_PROF=1
 )
-
-# include dirs
-target_include_directories(
-  c3
-  PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# link statically
-target_link_libraries(c3 PUBLIC -static)
 
 # export variables
 set(c3_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)

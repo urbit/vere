@@ -29,7 +29,7 @@ target_include_directories(
   ${keccak_tiny_SOURCE_DIR}
   ${scrypt_SOURCE_DIR}
   ${secp256k1_SOURCE_DIR}/include
-  ${openssl_SOURCE_DIR}/include
+  ${openssl_BINARY_DIR}/include
 )
 
 add_dependencies(

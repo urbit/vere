@@ -1,3 +1,4 @@
+include(ExternalProject)
 include(FetchContent)
 
 set(aes_siv_VERSION 9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b)
@@ -7,23 +8,13 @@ FetchContent_Declare(
   URL_HASH SHA256=1916a428dff480e06b09dc0fb1c9d849c048f838dc9b8d141452233b508f6bb1
 )
 
-set(openssl_VERSION 1.1.1t)
+# openssl with CMake support
+set(openssl_VERSION 1.1.1t-20230216)
 FetchContent_Declare(
   openssl
-  URL https://www.openssl.org/source/openssl-${openssl_VERSION}.tar.gz
-  URL_HASH SHA256=8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b
-  CONFIGURE_COMMAND "./config no-shared"
-  BUILD_COMMAND "make build_libs && make install_dev"
+  URL https://github.com/janbar/openssl-cmake/archive/refs/tags/${openssl_VERSION}.tar.gz
+  URL_HASH SHA256=902f2d64feade5f5dc03d9d248aca1f69e8a2a21db9e3866507117a0fd9b57b1
 )
-
-# openssl with CMake support
-# set(openssl_VERSION 1.1.1t-20230216)
-# FetchContent_Declare(
-#   openssl
-#   URL https://github.com/janbar/openssl-cmake/archive/refs/tags/${openssl_VERSION}.tar.gz
-#   URL_HASH SHA256=902f2d64feade5f5dc03d9d248aca1f69e8a2a21db9e3866507117a0fd9b57b1
-# )
-
 
 set(argon2_VERSION a4c1e3f7138c2e577376beb99f964cf71e1c8b1b)
 FetchContent_Declare(
@@ -64,23 +55,21 @@ list(APPEND gmp_CONFIGURE_FLAGS "--disable-shared")
 list(APPEND gmp_CONFIGURE_FLAGS "--with-pic")
 # TODO: add --host options for linux-aarch64 and linux-x86_64
 list(JOIN gmp_CONFIGURE_FLAGS " " gmp_CONFIGURE_FLAGS)
-message(STATUS "gmp_CONFIGURE_FLAGS: ${gmp_CONFIGURE_FLAGS}")
 
-set(gmp_BUILD_FLAGS "")
+set(gmp_BUILD_ARGS "")
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   # TODO: learn how to drop into bash/shell
-  list(APPEND gmp_BUILD_FLAGS "--jobs=8")
+  list(APPEND gmp_BUILD_ARGS "--jobs=8")
 else()
-  list(APPEND gmp_BUILD_FLAGS "--jobs=`nproc`")
+  list(APPEND gmp_BUILD_ARGS "--jobs=`nproc`")
 endif()
-message(STATUS "gmp_BUILD_FLAGS: ${gmp_BUILD_FLAGS}")
 
-FetchContent_Declare(
+ExternalProject_Add(
   gmp
   URL https://gmplib.org/download/gmp/gmp-${gmp_VERSION}.tar.xz
   URL_HASH SHA256=fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2
-  CONFIGURE_COMMAND "./configure ${gmp_CONFIGURE_FLAGS}"
-  BUILD_COMMAND "make ${gmp_BUILD_FLAGS}"
+  CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/configure ${gmp_CONFIGURE_FLAGS}"
+  BUILD_COMMAND "${MAKE_EXE} ${gmp_BUILD_ARGS}"
 )
 
 set(h2o_VERSION 2.2.6)
@@ -134,17 +123,10 @@ FetchContent_Declare(
   # of the murmur3 build process.
 )
 
-set(openssl_VERSION 1.1.1t)
-FetchContent_Declare(
-  openssl
-  URL https://www.openssl.org/source/openssl-${openssl_VERSION}.tar.gz
-  URL_HASH SHA256=8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b
-)
-
-set(PDJSON_VERSION 67108d883061043e55d0fb13961ac1b6fc8a485c)
+set(pdjson_VERSION 67108d883061043e55d0fb13961ac1b6fc8a485c)
 FetchContent_Declare(
   pdjson
-  URL https://github.com/skeeto/pdjson/archive/${PDJSON_VERSION}.tar.gz
+  URL https://github.com/skeeto/pdjson/archive/${pdjson_VERSION}.tar.gz
   URL_HASH SHA256=928913d44d9021d69c0d23a8f59ed67028e5abf1ae7910f79c23a7af4e779b92
   # When bumping the version compare `Makefile` in the `pdjson` repo to
   # of the pdjson build process.
@@ -237,7 +219,6 @@ FetchContent_MakeAvailable(
   scrypt
   secp256k1
   murmur3
-  gmp
 )
 
 # murmur3
@@ -251,21 +232,6 @@ set(murmur3_SOURCE_DIR ${murmur3_SOURCE_DIR} PARENT_SCOPE)
 
 # openssl
 set(openssl_SOURCE_DIR ${openssl_SOURCE_DIR} PARENT_SCOPE)
-# file(GLOB_RECURSE openssl_SOURCE_FILES ${openssl_SOURCE_DIR}/*.c ${openssl_SOURCE_DIR}/*.h)
-# add_library(
-#   openssl
-#   STATIC
-#   ${openssl_SOURCE_FILES}
-# )
-# target_include_directories(
-#   openssl
-#   PUBLIC
-#   ${openssl_SOURCE_DIR}
-#   ${openssl_SOURCE_DIR}/include
-#   ${openssl_SOURCE_DIR}/include/openssl
-#   ${openssl_SOURCE_DIR}/include/crypto
-#   ${openssl_SOURCE_DIR}/include/internal
-# )
 
 # aes_siv
 set(aes_siv_SOURCE_DIR ${aes_siv_SOURCE_DIR} PARENT_SCOPE)
@@ -279,7 +245,11 @@ add_library(
 target_include_directories(
   aes_siv
   PUBLIC
-  ${openssl_SOURCE_DIR}/include
+  ${openssl_BINARY_DIR}/include
+)
+add_dependencies(
+  aes_siv
+  openssl
 )
 
 # argon2
@@ -386,10 +356,4 @@ target_compile_definitions(
 set(secp256k1_SOURCE_DIR ${secp256k1_SOURCE_DIR} PARENT_SCOPE)
 
 # gmp
-file(GLOB gmp_SOURCE_FILES ${gmp_SOURCE_DIR}/*)
-add_library(
-  gmp
-  STATIC
-  ${gmp_SOURCE_FILES}
-)
 set(gmp_SOURCE_DIR ${gmp_SOURCE_DIR} PARENT_SCOPE)
