@@ -22,7 +22,7 @@
     /* u3_lmdb_init(): open lmdb at [pax_c], mmap up to [siz_i].
     */
       MDB_env*
-      u3_lmdb_init(const c3_c* pax_c);
+      u3_lmdb_init(const c3_c* pax_c, size_t siz_i);
 
     /* u3_lmdb_exit(): close lmdb.
     */

@@ -38,19 +38,10 @@ intmax_t mdb_get_filesize(mdb_filehandle_t han_u);
 /* u3_lmdb_init(): open lmdb at [pax_c], mmap up to [siz_i].
 */
 MDB_env*
-u3_lmdb_init(const c3_c* pax_c)
+u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
 {
   MDB_env* env_u;
   c3_w     ret_w;
-
-  //  calculate db size based on architecture
-  const size_t siz_i =
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-    0x7d00000000;
-  #else
-    0x10000000000;
-  #endif
 
   if ( (ret_w = mdb_env_create(&env_u)) ) {
     mdb_logerror(stderr, ret_w, "lmdb: init fail");
