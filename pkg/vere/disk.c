@@ -1,6 +1,7 @@
 /// @file
 
 #include "noun.h"
+#include "events.h"
 #include "vere.h"
 #include "version.h"
 #include "db/lmdb.h"

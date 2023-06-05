@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 
 #include "allocate.h"
-#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
