@@ -103,8 +103,6 @@
 #include "retrieve.h"
 #include "types.h"
 
-#define U3_SNAPSHOT_VALIDATION
-
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
 ** _ce_page:      byte length of a single page
