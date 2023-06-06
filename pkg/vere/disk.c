@@ -24,6 +24,15 @@ struct _cd_save {
   struct _u3_disk* log_u;
 };
 
+// for u3_lmdb_init() calls
+static const size_t siz_i =
+#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+  // 500 GiB is as large as musl on aarch64 wants to allow
+  0x7d00000000;
+#else
+  0x10000000000;
+#endif
+
 #undef VERBOSE_DISK
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
@@ -909,13 +918,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_c, lat_d);
 
     //  initialize latest epoch's db
-    const size_t siz_i =
-    // 500 GiB is as large as musl on aarch64 wants to allow
-    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-      0x7d00000000;
-    #else
-      0x10000000000;
-    #endif
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
@@ -1005,13 +1007,6 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d)
     dat_o = c3y;
     //  check if we can open data.mdb
     MDB_env* env_u;
-    const size_t siz_i =
-    // 500 GiB is as large as musl on aarch64 wants to allow
-    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-      0x7d00000000;
-    #else
-      0x10000000000;
-    #endif
     if ( 0 != (env_u = u3_lmdb_init(epo_c, siz_i)) ) {
       mdb_o = c3y;
     }
@@ -1140,13 +1135,6 @@ u3_disk_epoc_init(u3_disk* log_u)
   if ( c3y == u3_Host.ops_u.nuu || new_d > 0 ) {
     c3_c dat_c[8193];
     snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
-    const size_t siz_i =
-    // 500 GiB is as large as musl on aarch64 wants to allow
-    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-      0x7d00000000;
-    #else
-      0x10000000000;
-    #endif
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
@@ -1333,13 +1321,6 @@ c3_o u3_disk_migrate(u3_disk* log_u)
 
   //  initialize pre-migrated lmdb
   {
-    const size_t siz_i =
-    // 500 GiB is as large as musl on aarch64 wants to allow
-    #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-      0x7d00000000;
-    #else
-      0x10000000000;
-    #endif
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_u->com_u->pax_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       return c3n;
@@ -1382,13 +1363,11 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   if ( c3y == luk_o ) {  //  only link lock.mdb if it exists
     if ( 0 < c3_link(luk_c, lok_c) ) {
       fprintf(stderr, "disk: migrate: failed to create lock.mdb hard link\r\n");
-      c3_rename(dat_c, dut_c);
       return c3n;
     }
   }
 
   //  rollover to new epoch
-  // log_u->mdb_u = old_u;
   if ( c3n == u3_disk_epoc_init(log_u) ) {
     fprintf(stderr, "roll: error: failed to initialize new epoch\r\n");
     return c3n;
