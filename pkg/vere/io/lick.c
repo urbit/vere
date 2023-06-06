@@ -324,8 +324,6 @@ _lick_close_sock(u3_shan* san_u)
   c3_i  wit_i;
   wit_i = snprintf(paf_c, len_w, "%s/%s/%s", pax_c, URB_DEV_PATH, san_u->gen_u->nam_c);
 
-  u3l_log("lick: closing %s/%s/%s",pax_c, URB_DEV_PATH, san_u->gen_u->nam_c);
-
   u3_assert(wit_i > 0);
   u3_assert(len_w == (c3_w)wit_i + 1);
 
@@ -351,7 +349,6 @@ _lick_mkdirp(c3_c* por_c)
   strncpy(pax_c, por_c, sizeof(pax_c));
   
   c3_c* fas_c = strchr(pax_c + 1, '/');
-  u3l_log("lick fas_c: %s", fas_c);
 
   while ( fas_c ) {
     *fas_c = 0;
@@ -391,7 +388,6 @@ _lick_init_sock(u3_shan* san_u)
   strcat(por_c, URB_DEV_PATH);
   strcat(por_c, gen_u->nam_c);
 
-  u3l_log("lick por_c: %s", por_c);
   _lick_mkdirp(por_c);
 
   if ( 0 != unlink(por_c) && errno != ENOENT ) {
@@ -417,7 +413,6 @@ _lick_init_sock(u3_shan* san_u)
     u3l_log("lick: chdir: %s", uv_strerror(errno));
     goto _lick_sock_err_close;
   }
-  u3l_log("lick: listening on %s/%s", u3_Host.dir_c, por_c);
   return;
 
 _lick_sock_err_close:
@@ -585,7 +580,6 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     }
   }
 
-  u3l_log("lick kick done");
   return ret_o;
 }
 
