@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-
 static u3_noun
 _fitz_fiz(u3_noun yaz,
           u3_noun wix)
@@ -21,10 +20,11 @@ _fitz_fiz(u3_noun yaz,
   if ( (wix_y < 'A') || (wix_y > 'Z') ) wix_y = 0;
 
   if ( yaz_y && wix_y ) {
-    if ( !wix_y || (wix_y > yaz_y) ) {
+    if ( wix_y > yaz_y ) {
       return c3n;
     }
   }
+
   return c3y;
 }
 
@@ -32,7 +32,10 @@ u3_noun
 u3qf_fitz(u3_noun yaz,
           u3_noun wix)
 {
-  c3_w i_w, met_w = c3_min(u3r_met(3, yaz), u3r_met(3, wix));
+  c3_w yet_w = u3r_met(3, yaz);
+  c3_w wet_w = u3r_met(3, wix);
+
+  c3_w i_w, met_w = c3_min(yet_w, wet_w);
 
   if ( c3n == _fitz_fiz(yaz, wix) ) {
     return c3n;
@@ -41,10 +44,15 @@ u3qf_fitz(u3_noun yaz,
     c3_y yaz_y = u3r_byte(i_w, yaz);
     c3_y wix_y = u3r_byte(i_w, wix);
 
-    if ( (yaz_y >= 'A') && (yaz_y <= 'Z') ) yaz_y = 0;
-    if ( (wix_y >= 'A') && (wix_y <= 'Z') ) wix_y = 0;
+    if ( (i_w == (yet_w - 1)) && (yaz_y >= 'A') && (yaz_y <= 'Z')) {
+      return c3y;
+    }
 
-    if ( yaz_y && wix_y && (yaz_y != wix_y) ) {
+    if ( (i_w == (wet_w - 1)) && (wix_y >= 'A') && (wix_y <= 'Z')) {
+      return c3y;
+    }
+
+    if ( yaz_y != wix_y ) {
       return c3n;
     }
   }
