@@ -148,6 +148,8 @@ versioned_http_file(
 versioned_http_archive(
     name = "curl",
     build_file = "//bazel/third_party/curl:curl.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//bazel/third_party/curl:{version}.patch"],
     sha256 = "78a06f918bd5fde3c4573ef4f9806f56372b32ec1829c9ec474799eeee641c27",
     strip_prefix = "curl-{version}",
     url = "https://curl.se/download/curl-{version}.tar.gz",

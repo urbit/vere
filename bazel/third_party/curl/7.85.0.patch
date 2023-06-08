@@ -1,0 +1,13 @@
+diff --git a/lib/easy_lock.h b/lib/easy_lock.h
+index d96e56b8d..313baf32f 100644
+--- a/lib/easy_lock.h
++++ b/lib/easy_lock.h
+@@ -23,6 +23,8 @@
+  ***************************************************************************/
+ 
+ #include "curl_setup.h"
++#undef HAVE_ATOMIC
++#undef HAVE_STDATOMIC_H
+ 
+ #define GLOBAL_INIT_IS_THREADSAFE
+ 
