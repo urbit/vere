@@ -1183,6 +1183,13 @@
         u3_auto*
         u3_behn_io_init(u3_pier* pir_u);
 
+    /**  hugo, file syncing
+    **/
+      /* u3_hugo_io_init(): initialize hugo directory.
+      */
+        u3_auto*
+        u3_hugo_io_init(u3_pier* pir_u);
+
     /**  HTTP server.
     **/
       /* u3_http_io_init(): initialize http I/O.

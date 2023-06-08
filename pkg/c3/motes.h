@@ -583,6 +583,7 @@
 #   define c3__htmt   c3_s4('h','t','m','t')
 #   define c3__http   c3_s4('h','t','t','p')
 #   define c3__hume   c3_s4('h','u','m','e')
+#   define c3__hugo   c3_s4('h','u','g','o')
 #   define c3__hunk   c3_s4('h','u','n','k')
 #   define c3__hxgl   c3_s4('h','x','g','l')
 #   define c3__hxgr   c3_s4('h','x','g','r')
