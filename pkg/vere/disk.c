@@ -5,6 +5,7 @@
 #include "vere.h"
 #include "version.h"
 #include "db/lmdb.h"
+#include <types.h>
 
 struct _cd_read {
   uv_timer_t       tim_u;
@@ -905,14 +906,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  get binary version from latest epoch
-    c3_c ver_c[8193];
-    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
-      fprintf(stderr, "disk: failed to load epoch version\r\n");
-      c3_free(log_u);
-      return 0;
-    }
-
     //  set path to latest epoch
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_c, lat_d);
@@ -946,6 +939,12 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
     //  if binary version of latest epoch is not the same as the
     //  running binary, then we need to create a new epoch
+    c3_c ver_c[8193];
+    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
+      fprintf(stderr, "disk: failed to load epoch version\r\n");
+      c3_free(log_u);
+      return 0;
+    }
     if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
       if ( c3n == u3_disk_epoc_init(log_u) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
@@ -971,14 +970,10 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 c3_o
 u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d)
 {
-  /*  a "valid" epoch is currently defined as a writable folder in
-   *  the <pier>/.urb/log directory named with a @ui and contains:
-   *  - a writable data.mdb file which can be opened by lmdb and contains 1+ events
-   *  - a writable epoc.txt file
-   *  - a writable vere.txt file
-   *
-   *  note that this does not check if the epoch even contains snapshot files,
-   *  let alone whether they're valid or not
+  /*  this function is used to check whether or not we can overwrite 
+   *  an epoch. if the epoch contains an openable data.mdb file that 
+   *  also contains events, then we consider it good and *cannot* 
+   *  overwrite it. if not, then we consider it bad and *can* overwrite it.
    */
 
   c3_o ret_o = c3y;  //  return code
@@ -987,76 +982,31 @@ u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d)
   c3_c epo_c[8193], dat_c[8193], epv_c[8193], biv_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
-  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
 
-  c3_o dir_o = c3n;  //  directory is writable
-  c3_o dat_o = c3n;  //  data.mdb is writable
-  c3_o len_o = c3n;  //  data.mdb has events
-  c3_o mdb_o = c3n;  //  data.mdb can be opened
-  c3_o epv_o = c3n;  //  epoc.txt is writable
-  c3_o biv_o = c3n;  //  vere.txt is writable
+  c3_o len_o = c3n;  //  data.mdb is empty
 
-  //  check if dir is writable
-  if ( 0 == access(epo_c, W_OK) ) {
-    dir_o = c3y;
+  //  check if we can open data.mdb
+  MDB_env* env_u;
+  if ( 0 == (env_u = u3_lmdb_init(epo_c, siz_i)) ) {
+    fprintf(stderr, "disk: failed to open epoch 0i%" PRIc3_d "/data.mdb\r\n", epo_d);
+    exit(1);
   }
 
-  //  check if data.mdb is writable
-  if ( 0 == access(dat_c, W_OK) ) {
-    dat_o = c3y;
-    //  check if we can open data.mdb
-    MDB_env* env_u;
-    if ( 0 != (env_u = u3_lmdb_init(epo_c, siz_i)) ) {
-      mdb_o = c3y;
+  //  check if there are any events in the database
+  c3_d low_d, hig_d;
+  if ( 0 != u3_lmdb_gulf(env_u, &low_d, &hig_d) ) {
+    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+    ret_o = c3n;
+  } else {
+    if ( low_d == hig_d == 0 ) {
+      len_o = c3y;  //  yes, data.mdb is empty
     }
-
-    //  check if there are any events in the database
-    c3_d low_d, hig_d;
-    if ( 0 != u3_lmdb_gulf(env_u, &low_d, &hig_d) ) {
-      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-      ret_o = c3n;
-    } else {
-      if ( low_d == hig_d == 0 ) {
-        len_o = c3y;  //  yes, data.mdb has events
-      }
-    }
-    u3_lmdb_exit(env_u);
   }
-
-  //  check if epoc.txt is writable
-  if ( 0 == access(epv_c, W_OK) ) {
-    epv_o = c3y;
-  }
-
-  //  check if vere.txt is writable
-  if ( 0 == access(biv_c, W_OK) ) {
-    biv_o = c3y;
-  }
+  u3_lmdb_exit(env_u);
 
   //  print error messages
-  if ( c3n == dir_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d " is not writable\r\n", epo_d);
-    ret_o = c3n;
-  }
-  if ( c3n == dat_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb is not writable\r\n", epo_d);
-    ret_o = c3n;
-  }
-  if ( c3n == mdb_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb can't be opened\r\n", epo_d);
-    ret_o = c3n;
-  }
   if ( c3n == len_o ) {
     fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb has no events\r\n", epo_d);
-    ret_o = c3n;
-  }
-  if ( c3n == epv_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/epoc.txt is not writable\r\n", epo_d);
-    ret_o = c3n;
-  }
-  if ( c3n == biv_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/vere.txt is not writable\r\n", epo_d);
     ret_o = c3n;
   }
 
