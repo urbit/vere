@@ -1,13 +1,16 @@
 diff --git a/lib/easy_lock.h b/lib/easy_lock.h
-index d96e56b8d..313baf32f 100644
+index d96e56b8d..92e963240 100644
 --- a/lib/easy_lock.h
 +++ b/lib/easy_lock.h
-@@ -23,6 +23,8 @@
-  ***************************************************************************/
+@@ -24,6 +24,11 @@
  
  #include "curl_setup.h"
+ 
++#if defined(URBIT_RUNTIME_CPU_AARCH64) && defined(URBIT_RUNTIME_OS_DARWIN)
 +#undef HAVE_ATOMIC
 +#undef HAVE_STDATOMIC_H
- 
++#endif
++
  #define GLOBAL_INIT_IS_THREADSAFE
  
+ #if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x600
