@@ -776,6 +776,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",
     "-Z, --scry-format FORMAT      Optional file format ('jam', or aura, for -X)\n",
+    "    --no-demand               Skip demand paging\n"
     "    --no-conn                 Do not run control plane\n",
     "    --no-dock                 Skip binary \"docking\" on boot\n",
     "    --swap                    Use an explicit ephemeral (swap-like) file\n",
