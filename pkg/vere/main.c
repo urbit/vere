@@ -2160,7 +2160,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   //  create new epoch if latest isn't empty
-  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_init(log_u)) ) {
+  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_init(log_u, las_d)) ) {
     fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
   }
@@ -2302,7 +2302,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
     fprintf(stderr, "roll: latest epoch already empty\r\n");
     exit(0);
   }
-  else if ( c3n == u3_disk_epoc_init(log_u) ) {
+  else if ( c3n == u3_disk_epoc_init(log_u, las_d) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }

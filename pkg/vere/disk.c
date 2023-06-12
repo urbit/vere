@@ -946,7 +946,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
     if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
-      if ( c3n == u3_disk_epoc_init(log_u) ) {
+      if ( c3n == u3_disk_epoc_init(log_u, log_u->dun_d) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         c3_free(log_u);
         return 0;
@@ -965,86 +965,21 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   return log_u;
 }
 
-/* u3_disk_epoc_good: check for valid epoch.
-*/
-c3_o
-u3_disk_epoc_good(u3_disk* log_u, c3_d epo_d)
-{
-  /*  this function is used to check whether or not we can overwrite 
-   *  an epoch. if the epoch contains an openable data.mdb file that 
-   *  also contains events, then we consider it good and *cannot* 
-   *  overwrite it. if not, then we consider it bad and *can* overwrite it.
-   */
-
-  c3_o ret_o = c3y;  //  return code
-
-  //  file paths
-  c3_c epo_c[8193], dat_c[8193], epv_c[8193], biv_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
-  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
-
-  c3_o len_o = c3n;  //  data.mdb is empty
-
-  //  check if we can open data.mdb
-  MDB_env* env_u;
-  if ( 0 == (env_u = u3_lmdb_init(epo_c, siz_i)) ) {
-    fprintf(stderr, "disk: failed to open epoch 0i%" PRIc3_d "/data.mdb\r\n", epo_d);
-    exit(1);
-  }
-
-  //  check if there are any events in the database
-  c3_d low_d, hig_d;
-  if ( 0 != u3_lmdb_gulf(env_u, &low_d, &hig_d) ) {
-    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-    ret_o = c3n;
-  } else {
-    if ( low_d == hig_d == 0 ) {
-      len_o = c3y;  //  yes, data.mdb is empty
-    }
-  }
-  u3_lmdb_exit(env_u);
-
-  //  print error messages
-  if ( c3n == len_o ) {
-    fprintf(stderr, "disk: epoch 0i%" PRIc3_d "/data.mdb has no events\r\n", epo_d);
-    ret_o = c3n;
-  }
-
-  return ret_o;
-}
-
 /* u3_disk_epoc_init: create new epoch.
 */
 c3_o
-u3_disk_epoc_init(u3_disk* log_u)
+u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
 {
-  //  set new epoch number
-  c3_d lat_d, new_d;
+  //  check if any epoch directories exist
+  c3_d lat_d;
   c3_o eps_o = u3_disk_epoc_last(log_u, &lat_d);
-  if ( c3n == eps_o ) {
-    //  no epochs yet, so create first one 0i0
-    new_d = 0;
-  } else if ( c3n == u3_disk_epoc_good(log_u, lat_d) ) {
-    //  last epoch is invalid, so overwrite it
-    new_d = lat_d;
-  } else {
-    //  last epoch is valid, so create next one
-
-    //  get first/last event numbers
-    c3_d fir_d, las_d;
-    if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-      return c3n;
-    }
-    new_d = las_d;  //  create next epoch
-  }
 
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, new_d);
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
   c3_d ret_d = c3_mkdir(epo_c, 0700);
   if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
-    fprintf(stderr, "disk: failed to create epoch directory %" PRIc3_d "\r\n", new_d);
+    fprintf(stderr, "disk: failed to create epoch directory %" PRIc3_d "\r\n", epo_d);
     return c3n;
   }
 
@@ -1063,7 +998,7 @@ u3_disk_epoc_init(u3_disk* log_u)
   fclose(biv_f);
 
   //  copy snapshot (skip if first epoch)
-  if ( new_d > 0 ) {
+  if ( epo_d > 0 ) {
     if ( c3n == u3e_backup(epo_c, c3y) ) {
       fprintf(stderr, "disk: failed to copy snapshot to new epoch\r\n");
       goto fail;
@@ -1074,7 +1009,7 @@ u3_disk_epoc_init(u3_disk* log_u)
   c3_d     who_d[2];
   c3_o     fak_o;
   c3_w     lif_w;
-  if ( c3y == eps_o ) {
+  if ( c3y == eps_o ) {  //  skip if no epochs yet
     if ( c3y != u3_disk_read_meta(log_u->mdb_u, who_d, &fak_o, &lif_w) ) {
       fprintf(stderr, "disk: failed to read metadata\r\n");
       goto fail;
@@ -1082,7 +1017,7 @@ u3_disk_epoc_init(u3_disk* log_u)
   }
 
   //  initialize db of new epoch
-  if ( c3y == u3_Host.ops_u.nuu || new_d > 0 ) {
+  if ( c3y == u3_Host.ops_u.nuu || epo_d > 0 ) {
     c3_c dat_c[8193];
     snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
@@ -1153,7 +1088,7 @@ u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
 c3_o
 u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
 {
-  c3_o ret_o = c3n;  //  return no if no epoch directories exist
+  c3_o ret_o = c3n;  //  return c3n if no epoch directories exist
   *lat_d = 0;        //  initialize lat_d to 0
   u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
   u3_dent* den_u = die_u->dil_u;
@@ -1257,7 +1192,7 @@ c3_o u3_disk_migrate(u3_disk* log_u)
     fprintf(stderr, "disk: initializing disk with v%d format\r\n", U3D_VER1);
 
     //  initialize first epoch "0i0"
-    if ( c3n == u3_disk_epoc_init(log_u) ) {
+    if ( c3n == u3_disk_epoc_init(log_u, 0) ) {
       fprintf(stderr, "disk: failed to initialize first epoch\r\n");
       return c3n;
     }
@@ -1286,16 +1221,16 @@ c3_o u3_disk_migrate(u3_disk* log_u)
 
   // ensure there's a current snapshot
   if ( u3_Host.eve_d != las_d ) {
-    fprintf(stderr, "disk: migrate: error: snapshot is out of date, please "
+    fprintf(stderr, "disk: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "disk: migrate: eve_d (%" PRIc3_d ") != las_d (%" PRIc3_d ")\r\n",
+    fprintf(stderr, "disk: eve_d (%" PRIc3_d ") != las_d (%" PRIc3_d ")\r\n",
                     u3_Host.eve_d, las_d);
     return c3n;
   }
 
   //  initialize first epoch "0i0"
-  if ( c3n == u3_disk_epoc_init(log_u) ) {
-    fprintf(stderr, "disk: migrate: failed to initialize first epoch\r\n");
+  if ( c3n == u3_disk_epoc_init(log_u, 0) ) {
+    fprintf(stderr, "disk: failed to initialize first epoch\r\n");
     return c3n;
   }
 
@@ -1306,20 +1241,19 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   snprintf(lok_c, sizeof(lok_c), "%s/lock.mdb", epo_c);
 
   if ( 0 < c3_link(dut_c, dat_c) ) {
-    fprintf(stderr, "disk: migrate: failed to create data.mdb hard link\r\n");
-    fprintf(stderr, "errno %d: %s\r\n", errno, strerror(errno));
+    fprintf(stderr, "disk: failed to create data.mdb hard link\r\n");
     return c3n;
   }
   if ( c3y == luk_o ) {  //  only link lock.mdb if it exists
     if ( 0 < c3_link(luk_c, lok_c) ) {
-      fprintf(stderr, "disk: migrate: failed to create lock.mdb hard link\r\n");
+      fprintf(stderr, "disk: failed to create lock.mdb hard link\r\n");
       return c3n;
     }
   }
 
   //  rollover to new epoch
-  if ( c3n == u3_disk_epoc_init(log_u) ) {
-    fprintf(stderr, "roll: error: failed to initialize new epoch\r\n");
+  if ( c3n == u3_disk_epoc_init(log_u, las_d) ) {
+    fprintf(stderr, "disk: failed to initialize new epoch\r\n");
     return c3n;
   }
 
@@ -1329,21 +1263,21 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   snprintf(nop_c, sizeof(nop_c), "%s/north.bin", bhk_c);
   snprintf(sop_c, sizeof(sop_c), "%s/south.bin", bhk_c);
   if ( c3n == c3_unlink(nop_c) ) {
-    fprintf(stderr, "disk: migrate: failed to delete bhk/north.bin\r\n");
+    fprintf(stderr, "disk: failed to delete bhk/north.bin\r\n");
   } else if ( c3n == c3_unlink(sop_c) ) {
-    fprintf(stderr, "disk: migrate: failed to delete bhk/south.bin\r\n");
+    fprintf(stderr, "disk: failed to delete bhk/south.bin\r\n");
   } else {
     if ( c3n == c3_rmdir(bhk_c) ) {
-      fprintf(stderr, "disk: migrate: failed to delete bhk/\r\n");
+      fprintf(stderr, "disk: failed to delete bhk/\r\n");
     }
   }
 
   //  delete old lock.mdb and data.mdb files
   if ( 0 != c3_unlink(luk_c) ) {
-    fprintf(stderr, "disk: migrate: failed to unlink lock.mdb\r\n");
+    fprintf(stderr, "disk: failed to unlink lock.mdb\r\n");
   }
   if ( 0 != c3_unlink(dut_c) ) {
-    fprintf(stderr, "disk: migrate: failed to unlink data.mdb\r\n");
+    fprintf(stderr, "disk: failed to unlink data.mdb\r\n");
     return c3n;  //  migration succeeds only if we can unlink data.mdb
   }
 
