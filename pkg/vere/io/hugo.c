@@ -8,6 +8,11 @@
 */
   typedef struct _u3_hugo {
     u3_auto     car_u;           //  driver
+    // XX pretty sure you don't need any runtime state - the state
+    //    is either in arvo or in the directory, and teh runtime is
+    //    just shuttling those back and forth    
+    //
+    // u3_umon     mon_u;           //  mount point XX should this be a pointer?
     c3_c*       pax_c;           //  pier directory
   } u3_hugo;
 
@@ -38,7 +43,7 @@ _hugo_born_bail(u3_ovum* egg_u, u3_noun lud)
 
   u3l_log("hugo: initialization failed");
 
-  u3_pier_bail(car_u->pir_u);
+  // u3_pier_bail(car_u->pir_u);
 }
 
 /* _hugo_io_talk(): notify %hugo that we're live
@@ -61,36 +66,34 @@ _hugo_io_talk(u3_auto* car_u)
 /* u3_behn_ef_doze(): set or cancel timer
 */
 static void
-_hugo_ef_vary(u3_hugo* hug_u, u3_noun wen)
+_hugo_ef_grab(u3_hugo* hug_u)
 {
   if ( c3n == hug_u->car_u.liv_o ) {
     hug_u->car_u.liv_o = c3y; // XX what is this doing
   }
 
-  //  XX  copy over unix.c logic to save
-  //      inject %fill event into the pier
-
-  // behn.c logic copied over
-  // if ( c3y == hug_u->alm_o ) {
-  //   uv_timer_stop(&hug_u->tim_u);
-  //   hug_u->alm_o = c3n;
+  // DIR* rid_u = c3_opendir("%s/.urb/get", u3_Host.dir_c);
+  // if ( !rid_u ) {
+  //   u3l_log("error opening pier directory: %s: %s",
+  //           mon_u->dir_u.pax_c, strerror(errno));
+  //   return;
   // }
-
-  // if ( (u3_nul != wen) &&
-  //      (c3y == u3du(wen)) &&
-  //      (c3y == u3ud(u3t(wen))) )
-  // {
-  //   struct timeval tim_tv;
-  //   gettimeofday(&tim_tv, 0);
-
-  //   u3_noun now = u3_time_in_tv(&tim_tv);
-  //   c3_d gap_d = u3_time_gap_ms(now, u3k(u3t(wen)));
-
-  //   hug_u->alm_o = c3y;
-  //   uv_timer_start(&hug_u->tim_u, _behn_time_cb, gap_d, 0);
+  
+  // u3_noun  can = u3_nul;
+  // u3_unod* nod_u;
+  // for ( nod_u = mon_u->dir_u.kid_u; nod_u; nod_u = nod_u->nex_u ) {
+  //   can = u3kb_weld(_unix_update_node(unx_u, nod_u), can);
   // }
+  //  see _unix_initial_update_dir - creates a (list [path mim=(unit mime)])
+  //      we need this but it's a (unit octs)
 
-  u3z(wen);
+  //  my job is to read a directory in unix and spit out a (list [path octs])
+  //  package that into a card
+  {
+    u3_noun wir = u3nc(c3__hugo, u3_nul);
+    u3_noun cad = u3nc(c3__fill, u3nc(u3_nul, u3_nul));
+    u3_auto_plan(&hug_u->car_u, u3_ovum_init(0, c3__h, wir, cad));
+  }
 }
 
 /* _hugo_io_kick(): apply effects.
@@ -106,13 +109,14 @@ _hugo_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
      || (c3n == u3r_cell(cad, &tag, &dat))
      || (c3__hugo != i_wir) //  /hugo 
-     || (c3__vary != tag) ) //  %vary
+     || (c3__grab != tag)   //  %grab
+     || (c3y != dat) )      // ~
   {
     ret_o = c3n;
   }
   else {
     ret_o = c3y;
-    _hugo_ef_vary(hug_u, u3k(dat));
+    _hugo_ef_grab(hug_u);
   }
 
   u3z(wir); u3z(cad);
