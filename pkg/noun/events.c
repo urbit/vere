@@ -1099,15 +1099,29 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   if ( old_w > pgs_w ) {
     dif_w = old_w - pgs_w;
 
-    if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
-                            _ce_len(dif_w),
-                            (PROT_READ | PROT_WRITE),
-                            (MAP_FIXED | MAP_SHARED),
-                            u3P.eph_i, _ce_len(pgs_w)) )
-    {
-      fprintf(stderr, "loom: ephemeral mmap failed (%u pages, %u old): %s\r\n",
-                      pgs_w, old_w, strerror(errno));
-      u3_assert(0);
+    if ( u3C.wag_w & u3o_swap ) {
+      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+                              _ce_len(dif_w),
+                              (PROT_READ | PROT_WRITE),
+                              (MAP_FIXED | MAP_SHARED),
+                              u3P.eph_i, _ce_len(pgs_w)) )
+      {
+        fprintf(stderr, "loom: ephemeral mmap failed (%u pages, %u old): %s\r\n",
+                        pgs_w, old_w, strerror(errno));
+        u3_assert(0);
+      }
+    }
+    else {
+      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+                              _ce_len(dif_w),
+                              (PROT_READ | PROT_WRITE),
+                              (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                              -1, 0) )
+      {
+        fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
+                        pgs_w, old_w, strerror(errno));
+        u3_assert(0);
+      }
     }
 
 #ifdef U3_GUARD_PAGE
@@ -1531,7 +1545,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     }
     else {
       u3_ce_patch* pat_u;
-      c3_w nor_w, sou_w, old_w;
+      c3_w nor_w, sou_w;
 
       /* Load any patch files; apply them to images.
       */
