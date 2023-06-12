@@ -2107,7 +2107,6 @@ _cw_play(c3_i argc, c3_c* argv[])
       .dir_c = u3_Host.dir_c,
       .sen_d = u3A->eve_d,
       .dun_d = u3A->eve_d,
-      .mug_l = u3r_mug(u3A->roc)
     };
 
     u3_mars_play(&mar_u, eve_d, sap_d);

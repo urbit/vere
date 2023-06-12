@@ -30,17 +30,46 @@ _mars_step_trace(const c3_c* dir_c)
 /* _mars_poke_play(): replay an event.
 */
 static u3_weak
-_mars_poke_play(u3_mars* mar_u, c3_d eve_d, u3_noun job)
+_mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 {
-  u3_noun vir;
+  u3_noun gon = u3m_soft(0, u3v_poke_raw, tac_u->job);
+  u3_noun tag, dat;
+  u3x_cell(gon, &tag, &dat);
 
-  if ( c3n == u3v_poke_sure(0, job, &vir) ) {
-    return vir;
+  //  event failed, produce trace
+  //
+  if ( u3_blip != tag ) {
+    return gon;
   }
 
-  u3z(vir);
+  //  event succeeded, check mug
+  //
+  {
+    u3_noun cor = u3t(dat);
+    c3_l  mug_l;
+
+    if ( tac_u->mug_l && (tac_u->mug_l != (mug_l = u3r_mug(cor))) ) {
+      fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
+                      "expected %08x, actual %08x\r\n",
+                      tac_u->eve_d, tac_u->mug_l, mug_l);
+
+      //  XX add argument to skip mug checks
+      //
+      // if ( !(u3C.wag_w & u3o_skip_mugs) ) {
+        u3z(gon);
+        return u3nc(c3__awry, u3_nul);
+      // }
+    }
+
+    u3z(u3A->roc);
+    u3A->roc = u3k(cor);
+    u3A->eve_d++;
+  }
+
+  u3z(gon);
   return u3_none;
 }
+
 
 typedef enum {
   _play_yes_e,  //  success
@@ -69,7 +98,7 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
 
     u3_assert( ++mar_u->sen_d == tac_u.eve_d );
 
-    if ( u3_none != (dud = _mars_poke_play(mar_u, tac_u.eve_d, tac_u.job)) ) {
+    if ( u3_none != (dud = _mars_poke_play(mar_u, &tac_u)) ) {
       c3_m mot_m;
 
       mar_u->sen_d = mar_u->dun_d;
@@ -90,6 +119,12 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
           return _play_int_e;
         }
 
+        case c3__awry: {
+          fprintf(stderr, "play (%" PRIu64 "): %%awry\r\n", tac_u.eve_d);
+          u3z(dud);
+          return _play_mug_e;
+        }
+
         default: {
           fprintf(stderr, "play (%" PRIu64 "): failed\r\n", tac_u.eve_d);
           u3_pier_punt_goof("play", dud);
@@ -97,20 +132,6 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
           //
           return _play_bad_e;
         }
-      }
-    }
-
-    mar_u->mug_l = u3r_mug(u3A->roc);
-
-    if ( tac_u.mug_l && (mar_u->mug_l != tac_u.mug_l) ) {
-      fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
-                      "expected %08x, actual %08x\r\n",
-                      tac_u.eve_d, tac_u.mug_l, mar_u->mug_l);
-
-      if ( c3y == mug_o ) {
-        mar_u->sen_d = mar_u->dun_d;
-        u3_disk_walk_done(wok_u);
-        return _play_mug_e;
       }
     }
 
@@ -146,6 +167,8 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 
   u3l_log("boot: 1-%u", u3qb_lent(eve));
 
+  //  XX check mug if available
+  //
   if ( c3n == u3v_boot(eve) ) {
     return c3n;
   }
