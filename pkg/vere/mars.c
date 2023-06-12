@@ -53,12 +53,10 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
                       "expected %08x, actual %08x\r\n",
                       tac_u->eve_d, tac_u->mug_l, mug_l);
 
-      //  XX add argument to skip mug checks
-      //
-      // if ( !(u3C.wag_w & u3o_skip_mugs) ) {
+      if ( !(u3C.wag_w & u3o_soft_mugs) ) {
         u3z(gon);
         return u3nc(c3__awry, u3_nul);
-      // }
+      }
     }
 
     u3z(u3A->roc);

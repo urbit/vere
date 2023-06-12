@@ -45,7 +45,8 @@
         u3o_hashless      = 1 <<  7,          //  disable hashboard
         u3o_trace         = 1 <<  8,          //  enables trace dumping
         u3o_no_demand     = 1 <<  9,          //  disables demand paging
-        u3o_auto_meld     = 1 << 10           //  enables meld under pressure
+        u3o_auto_meld     = 1 << 10,          //  enables meld under pressure
+        u3o_soft_mugs     = 1 << 11           //  continue replay on mismatch
       };
 
   /** Globals.
