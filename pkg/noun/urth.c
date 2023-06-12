@@ -431,7 +431,7 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
   return ken;
 }
 
-/* u3u_meld(): globally deduplicate memory.
+/* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
 */
 #ifdef U3_MEMORY_DEBUG
 c3_w

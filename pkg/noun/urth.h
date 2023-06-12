@@ -7,7 +7,7 @@
 
     /**  Functions.
     **/
-      /* u3u_meld(): globally deduplicate memory.
+      /* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
       */
         c3_w
         u3u_meld(void);
