@@ -174,6 +174,11 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     eve_d = c3_min(eve_d, log_u->dun_d);
   }
 
+  if ( mar_u->dun_d == log_u->dun_d ) {
+    u3l_log("mars: nothing to do!");
+    return;
+  }
+
   if ( !mar_u->dun_d ) {
     c3_w lif_w;
 
@@ -193,11 +198,6 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
     mar_u->sen_d = mar_u->dun_d = lif_w;
     u3m_save();
-  }
-
-  if ( mar_u->dun_d == log_u->dun_d ) {
-    u3l_log("mars: nothing to do!");
-    return;
   }
 
   u3l_log("---------------- playback starting ----------------");
@@ -247,7 +247,8 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
             try_w = 0;
           }
           else if ( 3 == ++try_w ) {
-            fprintf(stderr, "play (%" PRIu64 "): failed\r\n", mar_u->dun_d + 1);
+            fprintf(stderr, "play (%" PRIu64 "): failed, out of loom\r\n",
+                            mar_u->dun_d + 1);
             u3m_save();
             //  XX check loom size, suggest --loom X
             //  XX exit code, cb
@@ -266,9 +267,17 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           }
         } break;
 
+        case _play_int_e: {
+          fprintf(stderr, "play (%" PRIu64 "): interrupted\r\n", mar_u->dun_d + 1);
+          u3m_save();
+          //  XX exit code, cb
+          //
+          u3_disk_exit(log_u);
+          exit(1);
+        } break;
+
         //  XX handle any specifically?
         //
-        case _play_int_e:
         case _play_log_e:
         case _play_mug_e:
         case _play_bad_e: {
@@ -278,7 +287,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //
           u3_disk_exit(log_u);
           exit(1);
-        }
+        } break;
       }
     }
   }

@@ -1999,8 +1999,8 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "auto-meld", no_argument,       NULL, 7 },
     { "full",      required_argument, NULL, 'f' },
-    { "replay-to", no_argument,       NULL, 'n' },
-    { "snap-at",   no_argument,       NULL, 's' },
+    { "replay-to", required_argument, NULL, 'n' },
+    { "snap-at",   required_argument, NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
 
