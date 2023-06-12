@@ -1572,13 +1572,14 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
+        if ( u3C.wag_w & u3o_swap ) {
+          _ce_loom_mapf_ephemeral();
+        }
+
         if ( u3C.wag_w & u3o_no_demand ) {
           _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
         }
         else {
-          if ( u3C.wag_w & u3o_swap ) {
-            _ce_loom_mapf_ephemeral();
-          }
           _ce_loom_mapf_north(u3P.nor_u.fid_i, nor_w, 0);
         }
 
