@@ -11,6 +11,7 @@
 #include "ur.h"
 #include "uv.h"
 #include "version.h"
+#include <sys/xattr.h>
 
 // It's unclear which file owns this variable, so put it here for now.
 u3_host u3_Host;
@@ -1202,20 +1203,17 @@ u3_king_vere(c3_c* pac_c,  // pace
   u3l_log("vere: saved to %s", bin_c);
 
   #if defined(U3_OS_linux)
-  #include <sys/xattr.h>
-    #define CAP_TO_MASK(x)      (1U << ((x) & 31)) /* mask for indexed __u32 */
-#define CAP_SETFCAP	     31
-#define CAP_NET_BIND_SERVICE 10
 
-  	c3_w value[4];
-	  value[0] = 0x19980330;
-	  value[1] = CAP_TO_MASK(CAP_NET_BIND_SERVICE) & CAP_TO_MASK(CAP_SETFCAP);
+  	c3_w value[5];
+	  value[0] = 0x02000001;
+	  value[1] = 0x80000400;
 	  value[2] = 0;
 	  value[3] = 0;
-    ret_i = setxattr(bin_c, "security.capability", value, 4*sizeof(c3_w), 0);
-    u3l_log("set %s to netcap; return code %d", bin_c, ret_i);
-    u3l_log("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
+	  value[4] = 0;
+    ret_i = setxattr(bin_c, "security.capability", value, 5*sizeof(c3_w), 0);
+    if( -1 == ret_i ) {
+      u3l_log("netcap permissions failed error: %s", strerror(errno));
+    }
 
   #endif
 
