@@ -12,7 +12,7 @@ u3_noun
 u3qa_min(u3_atom a, u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    return u3k(min(a, b));
+    return u3k(MIN(a, b));
   }
   else {
     c3_w a_w = u3r_met(0, a);
