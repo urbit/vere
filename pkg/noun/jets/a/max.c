@@ -1,7 +1,5 @@
 /// @file
 
-#define MAX(i, j) (((i) > (j)) ? (i) : (j))
-
 #include "jets/k.h"
 #include "jets/q.h"
 #include "jets/w.h"
@@ -12,7 +10,7 @@ u3_noun
 u3qa_max(u3_atom a, u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    return u3k(MAX(a, b));
+    return u3k(c3_max(a, b));
   }
   else {
     c3_w a_w = u3r_met(0, a);
@@ -28,7 +26,7 @@ u3qa_max(u3_atom a, u3_atom b)
       u3r_mp(a_mp, a);
       u3r_mp(b_mp, b);
 
-      max = (mpz_cmp(a_mp, b_mp) >= 0) ? a : b;
+      max = (mpz_cmp(a_mp, b_mp) > 0) ? a : b;
 
       mpz_clear(a_mp);
       mpz_clear(b_mp);
