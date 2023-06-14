@@ -2100,10 +2100,9 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3l_log("mars: preparing for full replay");
     u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
     u3e_live(c3n, u3_Host.dir_c);
-    u3e_yolo();
+    u3m_foul();
     u3m_pave(c3y);
     u3j_boot(c3y);
-    u3A->eve_d = 0;
   }
   else {
     u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
