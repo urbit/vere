@@ -15,11 +15,14 @@
 #define FINE_PEND         1             //  scry cache sentinel value: "pending"
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
+#define FINE_REQS_EMPTY   1            //  request cache sentinel value: "empty"
+
 /* u3_fine: fine networking
 */
   typedef struct _u3_fine {
     c3_y              ver_y;            //  fine protocol
     u3p(u3h_root)     sac_p;            //  scry cache hashtable
+    u3p(u3h_root)     req_p;            //  request cache hashtable
     struct _u3_ames*  sam_u;            //  ames backpointer
   } u3_fine;
 
@@ -1135,10 +1138,10 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
-/* _fine_put_cache(): get packet list or status from cache. RETAIN
+/* _fine_cache_scry_get(): get packet list or status from scry cache. RETAIN
  */
 static u3_weak
-_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
+_fine_cache_scry_get(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
 {
   u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
   u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
@@ -1146,10 +1149,10 @@ _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
   return pro;
 }
 
-/* _fine_put_cache(): put packet list or status into cache. RETAIN.
+/* _fine_cache_scry_put(): put packet list or status into cache. RETAIN.
  */
 static void
-_fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
+_fine_cache_scry_put(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
 {
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
     u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
@@ -1168,6 +1171,33 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   }
 }
 
+/* _fine_cache_reqs_get(): get all requests for a given from cache. RETAIN
+ * XX is this retain?
+ */
+static u3_weak
+_fine_cache_reqs_get(u3_ames* sam_u, u3_noun pax)
+{
+  u3_noun key = u3k(pax);
+  u3_weak pro = u3h_git(sam_u->fin_s.req_p, key);
+  u3z(key);
+  return pro;
+}
+
+/* _fine_cache_reqs_put(): put a list of requests at a path. RETAIN.
+ * XX is this retain?
+ *  (map path (list [who=@p exp=@da]))
+ *  (map [who=@p =path])
+ *  (map )
+ **  QUEUE of [expiration path who] sorted by expiration
+ **  AND a (map path who)
+ */
+static void
+_fine_cache_reqs_put(u3_ames* sam_u, u3_noun pax, u3_noun lis)
+{
+  u3_noun key = u3k(pax);
+  u3h_put(sam_u->fin_s.req_p, key, lis);
+  u3z(key);
+}
 
 /* _ames_ef_send(): send packet to network (v4).
 */
@@ -1609,14 +1639,14 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
     //  if not [~ ~ fragments], mark as dead
     //
     if( u3_none == pas ) {
-      _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
+      _fine_cache_scry_put(sam_u, pax, lop_w, FINE_DEAD);
       _ames_pact_free(pac_u);
 
       u3z(nun);
       return;
     }
 
-    _fine_put_cache(sam_u, pax, lop_w, pas);
+    _fine_cache_scry_put(sam_u, pax, lop_w, pas);
 
     //  find requested fragment
     //
@@ -1653,7 +1683,16 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   u3z(nun);
 }
 
-/* _fine_hear_request(): hear wail (fine equeust packet packet).
+/* _fine_fill_scry_cache(): take grew effect and build cache entry
+*/
+//  static void
+//  _fine_fill_scry_cache(u3_noun pax)
+//
+//    u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
+//                         pax, res_u, _fine_hunk_scry_cb);
+//
+
+/* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
@@ -1749,7 +1788,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //
   c3_w  fra_w = res_u->pur_u.pep_u.fra_w;
   c3_w  lop_w = _fine_lop(fra_w);
-  u3_weak pec = _fine_get_cache(sam_u, key, lop_w);
+  u3_weak pec = _fine_cache_scry_get(sam_u, key, lop_w);
 
   //  already pending; drop
   //
@@ -1760,16 +1799,19 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     }
     _ames_pact_free(res_u);
   }
-  //  cache miss or a previous scry blocked; try again
-  //
   else {
-    u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+    u3l_log("fine: got valid scry request");
+
+    u3_weak cac = _fine_cache_scry_get(sam_u, key, fra_w);
 
     if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-      if ( u3C.wag_w & u3o_verbose ) {
+      if ( u3C.wag_w ) { // & u3o_verbose ) {
         u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
                                     res_u->pur_u.pep_u.pat_c);
       }
+
+      //  XX save request for a little more than 2 minutes,
+      //  and if a newly-grown path matches that request, share with requester
 
       u3_noun pax =
         u3nc(c3__fine,
@@ -1780,8 +1822,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
       //  mark as pending in the scry cache
       //
-      _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
-
+      _fine_cache_scry_put(res_u->sam_u, key, lop_w, FINE_PEND);
       //  scry into arvo for a page of packets
       //
       u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
@@ -1790,7 +1831,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     //  cache hit, fill in response meow and send
     //
     else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-      if ( u3C.wag_w & u3o_verbose ) {
+      if ( u3C.wag_w ) { // & u3o_verbose ) {
         u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
                                     res_u->pur_u.pep_u.pat_c);
       }
@@ -2282,6 +2323,16 @@ _ames_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   u3_noun tag, dat, i_wir;
   c3_o ret_o;
 
+  if ( c3__grew == u3h(cad) ) {
+    u3l_log("grew!!!!");
+    u3l_log("path: %s", u3r_string(u3do("spat", u3t(cad))));
+    //  grew effect notifies us that a new scry path has been bound in arvo
+    //  take this path and add it to our scry cache by scrying, then saving
+    //  _fine_fill_scry_cache(u3t(cad));
+
+    return c3y;
+  }
+
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
      || (c3n == u3r_cell(cad, &tag, &dat)) )
   {
@@ -2456,6 +2507,9 @@ u3_ames_io_init(u3_pier* pir_u)
   // 1500 bytes per packet * 100_000 = 150MB
   // 50 bytes (average) per path * 100_000 = 5MB
   sam_u->fin_s.sac_p = u3h_new_cache(100000);
+
+  // hashtable for request cache
+  sam_u->fin_s.req_p = u3h_new_cache(10000);
 
   //NOTE  some numbers on memory usage for the lane cache
   //

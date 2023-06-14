@@ -509,6 +509,7 @@
 #   define c3__gray   c3_s4('g','r','a','y')
 #   define c3__grel   c3_s4('g','r','e','l')
 #   define c3__gret   c3_s4('g','r','e','t')
+#   define c3__grew   c3_s4('g','r','e','w')
 #   define c3__grik   c3_s4('g','r','i','k')
 #   define c3__gril   c3_s4('g','r','i','l')
 #   define c3__grip   c3_s4('g','r','i','p')
