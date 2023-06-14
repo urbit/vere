@@ -1866,7 +1866,17 @@ u3m_toss(void)
 {
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
-  u3e_toss(low_p, hig_p);
+
+  if (  ((low_p + u3C.tos_w) < u3C.wor_i)
+     && (hig_p > u3C.tos_w) )
+  {
+    low_p += u3C.tos_w;
+    hig_p -= u3C.tos_w;
+
+    if ( low_p < hig_p ) {
+      u3e_toss(low_p, hig_p);
+    }
+  }
 }
 
 /* u3m_ward(): tend the guardpage.

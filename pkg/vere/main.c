@@ -176,6 +176,7 @@ _main_init(void)
   u3_Host.ops_u.qui = c3n;
   u3_Host.ops_u.rep = c3n;
   u3_Host.ops_u.eph = c3n;
+  u3_Host.ops_u.tos = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -189,6 +190,7 @@ _main_init(void)
   u3_Host.ops_u.lom_y = 31;
 
   u3C.eph_c = 0;
+  u3C.tos_w = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -271,6 +273,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "no-demand",           no_argument,       NULL, 6 },
     { "swap",                no_argument,       NULL, 7 },
     { "swap-to",             required_argument, NULL, 8 },
+    { "toss",                required_argument, NULL, 9 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -297,6 +300,13 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+      case 9: {  //  toss
+        u3_Host.ops_u.tos = c3y;
+        if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+          return c3n;
+        }
         break;
       }
       //  special args
@@ -1075,6 +1085,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_w       lom_w;
   c3_c*      eve_c = argv[7];
   c3_c*      eph_c = argv[8];
+  c3_c*      tos_c = argv[9];
+  c3_w       tos_w;
 
   _cw_init_io(lup_u);
 
@@ -1095,12 +1107,18 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   //  load runtime config
   //
   {
+    //  XX check return
+    //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+    }
+
     if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
-      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", argv[4]);
+      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", eve_c);
     }
   }
 
@@ -2971,6 +2989,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.eph) ) {
         u3C.wag_w |= u3o_swap;
+      }
+
+      /*  Set toss flog
+      */
+      if ( _(u3_Host.ops_u.tos) ) {
+        u3C.wag_w |= u3o_toss;
       }
     }
 
