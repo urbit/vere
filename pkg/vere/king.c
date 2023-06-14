@@ -1204,12 +1204,13 @@ u3_king_vere(c3_c* pac_c,  // pace
 
   #if defined(U3_OS_linux)
 
-  	c3_w value[5];
-	  value[0] = 0x02000001;
-	  value[1] = 0x80000400;
-	  value[2] = 0;
-	  value[3] = 0;
-	  value[4] = 0;
+    // This runs `sudo setcap 'cap_net_bind_service,cap_setfcap=+ep'` on the new binary
+    c3_w value[5];
+    value[0] = 0x02000001;
+    value[1] = 0x80000400;
+    value[2] = 0;
+    value[3] = 0;
+    value[4] = 0;
     ret_i = setxattr(bin_c, "security.capability", value, 5*sizeof(c3_w), 0);
     if( -1 == ret_i ) {
       u3l_log("netcap permissions failed error: %s", strerror(errno));
