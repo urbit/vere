@@ -1201,6 +1201,25 @@ u3_king_vere(c3_c* pac_c,  // pace
 
   u3l_log("vere: saved to %s", bin_c);
 
+  #if defined(U3_OS_linux)
+  #include <sys/xattr.h>
+    #define CAP_TO_MASK(x)      (1U << ((x) & 31)) /* mask for indexed __u32 */
+#define CAP_SETFCAP	     31
+#define CAP_NET_BIND_SERVICE 10
+
+  	c3_w value[4];
+	  value[0] = 0x19980330;
+	  value[1] = CAP_TO_MASK(CAP_NET_BIND_SERVICE) & CAP_TO_MASK(CAP_SETFCAP);
+	  value[2] = 0;
+	  value[3] = 0;
+    ret_i = setxattr(bin_c, "security.capability", value, 4*sizeof(c3_w), 0);
+    u3l_log("set %s to netcap; return code %d", bin_c, ret_i);
+    u3l_log("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+
+
+  #endif
+
+
   c3_free(url_c);
   c3_free(bin_c);
 
