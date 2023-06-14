@@ -5,7 +5,7 @@
 #include "noun.h"
 #include "ur.h"
 
-#define FINE_PAGE       512             //  packets per page
+#define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
 #define HEAD_SIZE         4             //  header size in bytes
