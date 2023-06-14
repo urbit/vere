@@ -175,6 +175,9 @@
   : ( PACT_WAIL == typ_y ) ? "wail" \
   : ( PACT_PURR == typ_y ) ? "purr" : "????")
 
+const c3_c* PATH_PARSER =
+  ";~(pfix fas (most fas (cook crip (star ;~(less fas prn)))))";
+
 static void
 _log_head(u3_head* hed_u)
 {
@@ -1576,7 +1579,7 @@ _fine_scry_path(u3_pact* pac_u)
   u3_peep* pep_u = ( PACT_WAIL == pac_u->typ_y )
                    ? &pac_u->wal_u.pep_u
                    : &pac_u->pur_u.pep_u;
-  u3_noun    ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish("stap"));
+  u3_noun  ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
 
   if ( u3_nul == ful ) {
     return u3_none;
@@ -1602,7 +1605,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 
   {
     //  XX virtualize
-    u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
+    u3_noun pax = u3dc("rash", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
     c3_w  lop_w = _fine_lop(pep_u->fra_w);
     u3_weak pas = u3r_at(7, nun);
 
