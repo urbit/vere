@@ -68,6 +68,13 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   return u3_none;
 }
 
+/* _mars_show_time(): print date, truncated to seconds.
+*/
+static u3_noun
+_mars_show_time(u3_noun wen)
+{
+  return u3dc("scot", c3__da, u3kc_lsh(6, 1, u3kc_rsh(6, 1, wen)));
+}
 
 typedef enum {
   _play_yes_e,  //  success
@@ -78,15 +85,19 @@ typedef enum {
   _play_bad_e   //  total failure
 } _mars_play_e;
 
-/* _mars_play_batch(): replay a batch of events.
+/* _mars_play_batch(): replay a batch of events, return status and batch date.
 */
 static _mars_play_e
-_mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
+_mars_play_batch(u3_mars* mar_u,
+                 c3_o     mug_o,
+                 c3_w     bat_w,
+                 c3_c**   wen_c)
 {
   u3_disk*      log_u = mar_u->log_u;
   u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_w);
   u3_fact       tac_u;
   u3_noun         dud;
+  u3_weak         wen = u3_none;
 
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
@@ -95,6 +106,10 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
     }
 
     u3_assert( ++mar_u->sen_d == tac_u.eve_d );
+
+    if ( u3_none == wen ) {
+      wen = _mars_show_time(u3k(u3h(tac_u.job)));
+    }
 
     if ( u3_none != (dud = _mars_poke_play(mar_u, &tac_u)) ) {
       c3_m mot_m;
@@ -107,25 +122,26 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
       switch ( mot_m ) {
         case c3__meme: {
           fprintf(stderr, "play (%" PRIu64 "): %%meme\r\n", tac_u.eve_d);
-          u3z(dud);
+          u3z(dud); u3z(wen);
           return _play_mem_e;
         }
 
         case c3__intr: {
           fprintf(stderr, "play (%" PRIu64 "): %%intr\r\n", tac_u.eve_d);
-          u3z(dud);
+          u3z(dud); u3z(wen);
           return _play_int_e;
         }
 
         case c3__awry: {
           fprintf(stderr, "play (%" PRIu64 "): %%awry\r\n", tac_u.eve_d);
-          u3z(dud);
+          u3z(dud); u3z(wen);
           return _play_mug_e;
         }
 
         default: {
           fprintf(stderr, "play (%" PRIu64 "): failed\r\n", tac_u.eve_d);
           u3_pier_punt_goof("play", dud);
+          u3z(wen);
           //  XX say something uplifting
           //
           return _play_bad_e;
@@ -138,6 +154,8 @@ _mars_play_batch(u3_mars* mar_u, c3_o mug_o, c3_w bat_w)
 
   u3_disk_walk_done(wok_u);
 
+  *wen_c = u3r_string(wen);
+  u3z(wen);
   return _play_yes_e;
 }
 
@@ -239,27 +257,45 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   }
 
   {
-    c3_d pas_d = mar_u->dun_d;  // last snapshot
-    c3_d mem_d = 0;             // last event to meme
-    c3_w try_w = 0;             // [mem_d] retry count
+    c3_d  pas_d = mar_u->dun_d;  // last snapshot
+    c3_d  mem_d = 0;             // last event to meme
+    c3_w  try_w = 0;             // [mem_d] retry count
+    c3_c* wen_c;
 
     while ( mar_u->dun_d < eve_d ) {
       _mars_step_trace(mar_u->dir_c);
 
       //  XX get batch from args
       //
-      switch ( _mars_play_batch(mar_u, c3y, 1024) ) {
+      switch ( _mars_play_batch(mar_u, c3y, 1024, &wen_c) ) {
         case _play_yes_e: {
+          c3_c* now_c;
+
+          {
+            u3_noun          now;
+            struct timeval tim_u;
+            gettimeofday(&tim_u, 0);
+
+            now   = _mars_show_time(u3_time_in_tv(&tim_u));
+            now_c = u3r_string(now);
+            u3z(now);
+          }
+
           u3m_reclaim();
 
           if ( sap_d && ((mar_u->dun_d - pas_d) >= sap_d) ) {
             u3m_save();
             pas_d = mar_u->dun_d;
-            u3l_log("play (%" PRIu64 "): save", mar_u->dun_d);
+            u3l_log("play (%" PRIu64 "): save (%s, now=%s)",
+                    mar_u->dun_d, wen_c, now_c);
           }
           else {
-            u3l_log("play (%" PRIu64 "): done", mar_u->dun_d);
+            u3l_log("play (%" PRIu64 "): done (%s, now=%s)",
+                    mar_u->dun_d, wen_c, now_c);
           }
+
+          c3_free(now_c);
+          c3_free(wen_c);
         } break;
 
         case _play_mem_e: {
