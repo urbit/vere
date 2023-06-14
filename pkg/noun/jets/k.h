@@ -11,6 +11,8 @@
     u3_noun u3ka_dec(u3_atom a);
     u3_noun u3ka_div(u3_noun a, u3_noun b);
     u3_noun u3ka_sub(u3_noun a, u3_noun b);
+    u3_noun u3ka_max(u3_noun a, u3_noun b);
+    u3_noun u3ka_min(u3_noun a, u3_noun b);
     u3_noun u3ka_mod(u3_noun a, u3_noun b);
     u3_noun u3ka_mul(u3_noun a, u3_noun b);
     u3_noun u3ka_gth(u3_noun a, u3_noun b);
