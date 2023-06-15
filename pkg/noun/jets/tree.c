@@ -2059,6 +2059,16 @@ static c3_c* _140_one_lth_ha[] = {
   "39260325faffbbf5bd88c4abb3efb09c5a7e1deb81a2126498d6c0f49474955e",
   0
 };
+static u3j_harm _140_one_max_a[] = {{".2", u3wa_max, c3y}, {}};
+static c3_c* _140_one_max_ha[] = {
+  "39260325faffbbf5bd88c4abb3efb09c5a7e1deb81a2126498d6c0f49474955e",
+  0
+};
+static u3j_harm _140_one_min_a[] = {{".2", u3wa_min, c3y}, {}};
+static c3_c* _140_one_min_ha[] = {
+  "39260325faffbbf5bd88c4abb3efb09c5a7e1deb81a2126498d6c0f49474955e",
+  0
+};
 static u3j_harm _140_one_mod_a[] = {{".2", u3wa_mod, c3y}, {}};
 static c3_c* _140_one_mod_ha[] = {
   "374d2f3cd0ece33f680bd7103b99891d7dae03590f9eb9faac03a4a501f17038",
@@ -2102,6 +2112,8 @@ static u3j_core _140_one_d[] =
   { "gth", 7, _140_one_gth_a, 0, _140_one_gth_ha },
   { "lte", 7, _140_one_lte_a, 0, _140_one_lte_ha },
   { "lth", 7, _140_one_lth_a, 0, _140_one_lth_ha },
+  { "max", 7, _140_one_max_a, 0, _140_one_max_ha },
+  { "min", 7, _140_one_min_a, 0, _140_one_min_ha },
   { "mod", 7, _140_one_mod_a, 0, _140_one_mod_ha },
   { "mul", 7, _140_one_mul_a, 0, _140_one_mul_ha },
   { "sub", 7, _140_one_sub_a, 0, _140_one_sub_ha },
@@ -2330,6 +2342,8 @@ static u3j_core _139_one_d[] =
   { "gth", 7, _140_one_gth_a, 0, no_hashes },
   { "lte", 7, _140_one_lte_a, 0, no_hashes },
   { "lth", 7, _140_one_lth_a, 0, no_hashes },
+  { "max", 7, _140_one_max_a, 0, no_hashes },
+  { "min", 7, _140_one_min_a, 0, no_hashes },
   { "mod", 7, _140_one_mod_a, 0, no_hashes },
   { "mul", 7, _140_one_mul_a, 0, no_hashes },
   { "sub", 7, _140_one_sub_a, 0, no_hashes },
