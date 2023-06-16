@@ -15,6 +15,8 @@
 #define FINE_PEND         1             //  scry cache sentinel value: "pending"
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
+#define QUEUE_MAX        30             //  max number of packets in queue
+
 /* u3_fine: fine networking
 */
   typedef struct _u3_fine {
@@ -1240,14 +1242,14 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
   u3z(lan); u3z(pac);
 }
 
-/* _ames_cap_queue(): cap ovum queue at 1k, dropping oldest packets.
+/* _ames_cap_queue(): cap ovum queue at QUEUE_MAX, dropping oldest packets.
 */
 static void
 _ames_cap_queue(u3_ames* sam_u)
 {
   u3_ovum* egg_u = sam_u->car_u.ext_u;
 
-  while ( egg_u && (1000 < sam_u->car_u.dep_w) ) {
+  while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
     u3_ovum* nex_u = egg_u->nex_u;
 
     if ( c3__hear == u3h(egg_u->cad) ) {
