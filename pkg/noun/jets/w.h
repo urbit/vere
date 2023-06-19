@@ -14,6 +14,8 @@
     u3_noun u3wa_gth(u3_noun);
     u3_noun u3wa_lte(u3_noun);
     u3_noun u3wa_lth(u3_noun);
+    u3_noun u3wa_max(u3_noun);
+    u3_noun u3wa_min(u3_noun);
     u3_noun u3wa_mod(u3_noun);
     u3_noun u3wa_mul(u3_noun);
     u3_noun u3wa_sub(u3_noun);

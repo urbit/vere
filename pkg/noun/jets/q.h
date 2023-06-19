@@ -15,6 +15,8 @@
     u3_noun u3qa_inc(u3_atom);
     u3_noun u3qa_lte(u3_atom, u3_atom);
     u3_noun u3qa_lth(u3_atom, u3_atom);
+    u3_noun u3qa_max(u3_atom, u3_atom);
+    u3_noun u3qa_min(u3_atom, u3_atom);
     u3_noun u3qa_mod(u3_atom, u3_atom);
     u3_noun u3qa_mul(u3_atom, u3_atom);
     u3_noun u3qa_sub(u3_atom, u3_atom);
