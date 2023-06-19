@@ -300,11 +300,11 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
 static void
 _lick_close_sock(u3_shan* san_u)
 {
-  c3_c* pax_c = u3_Host.dir_c;
-  c3_w len_w = strlen(pax_c) + 2 + sizeof(URB_DEV_PATH) + strlen(san_u->gen_u->nam_c);
+  u3_lick*  lic_u = san_u->gen_u->lic_u;
+  c3_w len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
-  wit_i = snprintf(paf_c, len_w, "%s/%s/%s", pax_c, URB_DEV_PATH, san_u->gen_u->nam_c);
+  wit_i = snprintf(paf_c, len_w, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);
 
   u3_assert(wit_i > 0);
   u3_assert(len_w == (c3_w)wit_i + 1);
@@ -321,7 +321,7 @@ _lick_close_sock(u3_shan* san_u)
 
 /* _lick_mkdirp(): recursive mkdir of dirname of pax_c.
 */
-static void
+static c3_o
 _lick_mkdirp(c3_c* por_c)
 {
   c3_c pax_c[2048];
@@ -333,12 +333,12 @@ _lick_mkdirp(c3_c* por_c)
   while ( fas_c ) {
     *fas_c = 0;
     if ( 0 != mkdir(pax_c, 0777) && EEXIST != errno ) {
-      u3l_log("lick: mkdir %s: %s", pax_c, strerror(errno));
-      u3m_bail(c3__fail);
+      return c3n;
     }
     *fas_c++ = '/';
     fas_c = strchr(fas_c, '/');
   }
+  return c3y;
 }
 
 /* _lick_init_sock(): initialize socket device.
@@ -368,7 +368,10 @@ _lick_init_sock(u3_shan* san_u)
   strcat(por_c, URB_DEV_PATH);
   strcat(por_c, gen_u->nam_c);
 
-  _lick_mkdirp(por_c);
+  if ( c3y != _lick_mkdirp(por_c) ) {
+    u3l_log("lick: mkdir %s: %s", por_c, strerror(errno));
+    goto _lick_sock_err_chdir;
+  }
 
   if ( 0 != unlink(por_c) && errno != ENOENT ) {
     u3l_log("lick: unlink: %s", uv_strerror(errno));
@@ -622,7 +625,6 @@ u3_lick_io_init(u3_pier* pir_u)
   strcat(pax_c, URB_DEV_PATH);
 
   if ( -1 == stat(pax_c, &st) ) {
-    u3l_log("lick init %s", lic_u->fod_c);
     u3l_log("lick init mkdir %s",pax_c );
     if ( mkdir(pax_c, 0700) && (errno != EEXIST) ) {
       u3l_log("lick cannot make directory");
@@ -630,9 +632,8 @@ u3_lick_io_init(u3_pier* pir_u)
     }
   }
 
-  lic_u->fod_c = c3_calloc(strlen(pax_c));
   lic_u->sil_u = u3s_cue_xeno_init();
-  strcpy(lic_u->fod_c, pax_c);
+  lic_u->fod_c = strdup(pax_c);
 
   u3_auto* car_u = &lic_u->car_u;
   car_u->nam_m = c3__lick;
