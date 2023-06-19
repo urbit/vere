@@ -7,10 +7,8 @@
 #include "version.h"
 
 #define PIER_READ_BATCH 1000ULL
+#define PIER_PLAY_BATCH 500ULL
 #define PIER_WORK_BATCH 10ULL
-
-/// The default replay batch size. This can be overridden at the command line.
-static c3_d replay_batch_sz_d = 500ULL;
 
 #undef VERBOSE_PIER
 
@@ -949,11 +947,11 @@ _pier_play_send(u3_play* pay_u)
   //  the first batch must be >= the lifecycle barrier
   //
   if ( !pay_u->sen_d ) {
-    len_w = c3_max(pir_u->lif_w, replay_batch_sz_d - 1);
+    len_w = c3_max(pir_u->lif_w, PIER_PLAY_BATCH);
   }
   else {
     c3_d lef_d = (pay_u->eve_d - pay_u->sen_d);
-    len_w = c3_min(lef_d, replay_batch_sz_d - 1);
+    len_w = c3_min(lef_d, PIER_PLAY_BATCH);
   }
 
   {
@@ -968,8 +966,6 @@ _pier_play_send(u3_play* pay_u)
 #endif
 
     u3_lord_play(pir_u->god_u, fon_u);
-    // Save a snaphot when replaying the batch completes.
-    u3_lord_save(pir_u->god_u);
   }
 }
 
@@ -986,7 +982,7 @@ _pier_play_read(u3_play* pay_u)
 
     //  cap the pir_u->pay_u queue depth
     //
-    if ( (las_d - pay_u->ext_u->eve_d) >= replay_batch_sz_d - 1 ) {
+    if ( (las_d - pay_u->ext_u->eve_d) >= PIER_PLAY_BATCH ) {
       return;
     }
   }
@@ -1046,7 +1042,7 @@ _pier_play(u3_play* pay_u)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
+      if ( c3y == u3_Host.pep_o ) {
         u3_pier_exit(pir_u);
       }
       else {
@@ -1414,18 +1410,6 @@ _pier_on_lord_live(void* ptr_v)
     if ( god_u->eve_d < log_u->dun_d ) {
       c3_d eve_d;
 
-      if ( u3_Host.ops_u.batch_sz_c ) {
-        if ( 1 == sscanf(u3_Host.ops_u.batch_sz_c,
-                         "%" PRIu64,
-                         &replay_batch_sz_d) )
-        {
-          u3l_log("pier: replay in %" PRIu64 "-event batches", replay_batch_sz_d);
-        }
-        else {
-          u3l_log("pier: ignoring invalid user-specified batch size '%s'",
-                  u3_Host.ops_u.batch_sz_c);
-        }
-      }
       //  XX revisit
       //
       if (  u3_Host.ops_u.til_c ) {
@@ -1449,7 +1433,7 @@ _pier_on_lord_live(void* ptr_v)
       //
       //    XX check kelvins?
       //
-      if ( c3y == u3_Host.pep_o || c3y == u3_Host.play_o ) {
+      if ( c3y == u3_Host.pep_o ) {
         u3_pier_exit(pir_u);
       }
       else {
