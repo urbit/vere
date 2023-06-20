@@ -2169,7 +2169,7 @@ _cm_pack_rewrite(void)
   u3a_rewrite_compact();
 }
 
-/* u3m_pack: compact (defragment) memory.
+/* u3m_pack: compact (defragment) memory, returns u3a_open delta.
 */
 c3_w
 u3m_pack(void)

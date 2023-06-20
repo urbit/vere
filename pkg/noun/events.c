@@ -536,11 +536,18 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   c3_w  pag_w, mug_w;
   c3_y  buf_y[_ce_page];
   c3_zs ret_zs;
+  c3_o  sou_o = c3n;  // south seen
 
   if ( U3E_VERLAT != pat_u->con_u->ver_w ) {
     fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %u\r\n",
                     pat_u->con_u->ver_w,
                     U3E_VERLAT);
+    return c3n;
+  }
+
+  if ( pat_u->con_u->sou_w > 1 ) {
+    fprintf(stderr, "loom: patch strange south size: %u\r\n",
+                    pat_u->con_u->sou_w);
     return c3n;
   }
 
@@ -574,6 +581,16 @@ _ce_patch_verify(u3_ce_patch* pat_u)
         u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, mug_w);
       }
 #endif
+    }
+
+    if ( pag_w >= pat_u->con_u->nor_w ) {
+      if ( c3n == sou_o ) {
+        sou_o = c3y;
+      }
+      else {
+        fprintf(stderr, "loom: patch multiple south pages\r\n");
+        return c3n;
+      }
     }
   }
   return c3y;
@@ -845,9 +862,12 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       fid_i = u3P.nor_u.fid_i;
       off_z = _ce_len(pag_w);
     }
+    //  NB: this assumes that there never more than one south page,
+    //  as enforced by _ce_patch_verify()
+    //
     else {
       fid_i = u3P.sou_u.fid_i;
-      off_z = _ce_len((u3P.pag_w - (pag_w + 1)));
+      off_z = 0;
     }
 
     if ( _ce_page != (ret_zs = read(pat_u->mem_i, buf_y, _ce_page)) ) {
