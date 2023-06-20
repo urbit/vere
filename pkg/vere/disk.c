@@ -1105,6 +1105,9 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       }
     }
 
+    //  mark the latest epoch directory
+    log_u->epo_u = u3_foil_folder(epo_c);
+
     //  mark the log as live
     log_u->liv_o = c3y;
   }
