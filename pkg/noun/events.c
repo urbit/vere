@@ -182,7 +182,7 @@ _ce_flaw_mmap(c3_w pag_w)
   // NB: must be static, since the stack is grown via page faults, and
   // we're already in a page fault handler.
   //
-  static c3_y con_y[16384];
+  static c3_y con_y[_ce_page];
 
   // save contents of page, to be restored after the mmap
   //
@@ -296,9 +296,22 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
       return u3e_flaw_sham;
     }
+
+    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+      fprintf(stderr, "loom: strange guard page (%d): %x\r\n", pag_w, off_p);
+      return u3e_flaw_sham;
+    }
+
+    u3P.dit_w[blk_w] |= (1 << bit_w);
+
+    if ( _ce_flaw_mprotect(pag_w) ) {
+      return u3e_flaw_base;
+    }
+
+    return u3e_flaw_good;
   }
-  else
 #endif
+
   if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
@@ -306,14 +319,6 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
-#ifdef U3_GUARD_PAGE
-  if ( pag_w == gar_w ) {
-    if ( _ce_flaw_mprotect(pag_w) ) {
-      return u3e_flaw_base;
-    }
-  }
-  else
-#endif
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
       return u3e_flaw_base;
@@ -376,7 +381,10 @@ _ce_ephemeral_open(c3_i* eph_i)
     snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
     c3_mkdir(ful_c, 0700);
 
-    snprintf(ful_c, 8192, "%s/.urb/ephemeral.bin", u3P.dir_c);
+    snprintf(ful_c, 8192, "%s/.urb/chk", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
+
+    snprintf(ful_c, 8192, "%s/.urb/chk/limbo.bin", u3P.dir_c);
     u3C.eph_c = strdup(ful_c);
   }
 

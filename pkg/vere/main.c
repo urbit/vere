@@ -294,6 +294,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -559,11 +560,6 @@ _main_getopt(c3_i argc, c3_c** argv)
 
   if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.url_c != 0 ) {
     fprintf(stderr, "-u only makes sense when creating a new ship\n");
-    return c3n;
-  }
-
-  if ( u3_Host.ops_u.eph != c3y && u3C.eph_c != 0 ) {
-    fprintf(stderr, "--swap-to only makes sense with --swap\n");
     return c3n;
   }
 
@@ -1512,6 +1508,8 @@ _cw_info(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1593,6 +1591,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1666,6 +1666,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1761,6 +1763,8 @@ _cw_queu(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1867,6 +1871,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1955,6 +1961,8 @@ _cw_next(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2028,6 +2036,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2157,6 +2167,8 @@ _cw_prep(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2229,6 +2241,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2530,6 +2544,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
       } break;
 
       case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
