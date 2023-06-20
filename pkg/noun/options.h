@@ -24,6 +24,7 @@
         } migration_state;
 
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
+        c3_w    tos_w;                        //  loom toss skip-length
         void (*stderr_log_f)(c3_c*);          //  errors from c code
         void (*slog_f)(u3_noun);              //  function pointer for slog
         void (*sign_hold_f)(void);            //  suspend system signal regime
@@ -48,7 +49,8 @@
         u3o_no_demand     = 1 <<  9,          //  disables demand paging
         u3o_auto_meld     = 1 << 10,          //  enables meld under pressure
         u3o_soft_mugs     = 1 << 11,          //  continue replay on mismatch
-        u3o_swap          = 1 << 12           //  enables ephemeral file
+        u3o_swap          = 1 << 12,          //  enables ephemeral file
+        u3o_toss          = 1 << 13           //  reclaim often
       };
 
   /** Globals.
