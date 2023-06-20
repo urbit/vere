@@ -166,9 +166,9 @@ versioned_http_archive(
 versioned_http_archive(
     name = "gmp",
     build_file = "//bazel/third_party/gmp:gmp.BUILD",
-    sha256 = "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
-    strip_prefix = "gmp-{version}",
-    url = "https://gmplib.org/download/gmp/gmp-{version}.tar.xz",
+    sha256 = "fb776e19e0267053c3d6ffef0dcc001fb441da0e2b5224cfd9656aa2f1b8614d",
+    strip_prefix = "GMP-{version}",
+    url = "https://github.com/alisw/GMP/archive/refs/tags/v{version}.tar.gz",
     version = "6.2.1",
 )
 
