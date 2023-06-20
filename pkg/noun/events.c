@@ -297,13 +297,6 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       return u3e_flaw_sham;
     }
 
-    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
-      fprintf(stderr, "loom: strange guard page (%d): %x\r\n", pag_w, off_p);
-      return u3e_flaw_sham;
-    }
-
-    u3P.dit_w[blk_w] |= (1 << bit_w);
-
     if ( _ce_flaw_mprotect(pag_w) ) {
       return u3e_flaw_base;
     }
