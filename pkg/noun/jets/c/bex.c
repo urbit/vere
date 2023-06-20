@@ -36,7 +36,7 @@ u3qc_bex(u3_atom a)
 
   sab_u.buf_w[a_d >> 5] = 1 << (a_d & 31);
 
-  return u3i_slab_mint(&sab_u);
+  return u3i_slab_moot(&sab_u);
 }
 
 u3_noun
