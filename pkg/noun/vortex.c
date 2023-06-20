@@ -38,9 +38,18 @@ u3v_life(u3_noun eve)
 c3_o
 u3v_boot(u3_noun eve)
 {
+  c3_d len_d;
+
+  {
+    u3_noun len = u3qb_lent(eve);
+    u3_assert( c3y == u3r_safe_chub(len, &len_d) );
+    u3z(len);
+  }
+
   //  ensure zero-initialized kernel
   //
-  u3A->roc = 0;
+  u3A->roc   = 0;
+  u3A->eve_d = 0;
 
   {
     u3_noun pro = u3m_soft(0, u3v_life, eve);
@@ -50,7 +59,8 @@ u3v_boot(u3_noun eve)
       return c3n;
     }
 
-    u3A->roc = u3k(u3t(pro));
+    u3A->roc   = u3k(u3t(pro));
+    u3A->eve_d = len_d;
     u3z(pro);
   }
 
@@ -285,17 +295,62 @@ u3v_soft_peek(c3_w mil_w, u3_noun sam)
 u3_noun
 u3v_poke(u3_noun ovo)
 {
+  return u3v_poke_raw(u3nc(u3k(u3A->now), ovo));
+}
+
+/* u3v_poke_raw(): u3v_poke w/out u3A->now XX replace
+*/
+u3_noun
+u3v_poke_raw(u3_noun sam)
+{
   u3_noun fun = u3n_nock_on(u3k(u3A->roc), u3k(u3x_at(_CVX_POKE, u3A->roc)));
-  u3_noun sam = u3nc(u3k(u3A->now), ovo);
   u3_noun pro;
 
   {
-    c3_w cod_w = u3a_lush(u3h(u3t(ovo)));
+# ifdef  U3_MEMORY_DEBUG
+    c3_w cod_w = u3a_lush(u3h(u3t(u3t(sam))));
+# endif
+
     pro = u3n_slam_on(fun, sam);
+
+# ifdef  U3_MEMORY_DEBUG
     u3a_lop(cod_w);
+# endif
   }
 
   return pro;
+}
+
+/* u3v_poke_sure(): inject an event, saving new state if successful.
+*/
+c3_o
+u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
+{
+  u3_noun gon = u3m_soft(mil_w, u3v_poke_raw, eve);
+  u3_noun tag, dat;
+  u3x_cell(gon, &tag, &dat);
+
+  //  event failed, produce trace
+  //
+  if ( u3_blip != tag ) {
+    *pro = gon;
+    return c3n;
+  }
+
+  //  event succeeded, persist state and produce effects
+  //
+  {
+    u3_noun vir, cor;
+    u3x_cell(dat, &vir, &cor);
+
+    u3z(u3A->roc);
+    u3A->roc = u3k(cor);
+    u3A->eve_d++;
+
+    *pro = u3k(vir);
+    u3z(gon);
+    return c3y;
+  }
 }
 
 /* u3v_tank(): dump single tank.

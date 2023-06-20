@@ -5,7 +5,7 @@
 #include "noun.h"
 #include "ur.h"
 
-#define FINE_PAGE       512             //  packets per page
+#define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
 #define HEAD_SIZE         4             //  header size in bytes
@@ -14,6 +14,8 @@
 //
 #define FINE_PEND         1             //  scry cache sentinel value: "pending"
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
+
+#define QUEUE_MAX        30             //  max number of packets in queue
 
 /* u3_fine: fine networking
 */
@@ -174,6 +176,9 @@
     ( PACT_AMES == typ_y ) ? "ames" \
   : ( PACT_WAIL == typ_y ) ? "wail" \
   : ( PACT_PURR == typ_y ) ? "purr" : "????")
+
+const c3_c* PATH_PARSER =
+  ";~(pfix fas (most fas (cook crip (star ;~(less fas prn)))))";
 
 static void
 _log_head(u3_head* hed_u)
@@ -1237,14 +1242,14 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
   u3z(lan); u3z(pac);
 }
 
-/* _ames_cap_queue(): cap ovum queue at 1k, dropping oldest packets.
+/* _ames_cap_queue(): cap ovum queue at QUEUE_MAX, dropping oldest packets.
 */
 static void
 _ames_cap_queue(u3_ames* sam_u)
 {
   u3_ovum* egg_u = sam_u->car_u.ext_u;
 
-  while ( egg_u && (1000 < sam_u->car_u.dep_w) ) {
+  while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
     u3_ovum* nex_u = egg_u->nex_u;
 
     if ( c3__hear == u3h(egg_u->cad) ) {
@@ -1576,7 +1581,7 @@ _fine_scry_path(u3_pact* pac_u)
   u3_peep* pep_u = ( PACT_WAIL == pac_u->typ_y )
                    ? &pac_u->wal_u.pep_u
                    : &pac_u->pur_u.pep_u;
-  u3_noun    ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish("stap"));
+  u3_noun  ful = u3dc("rush", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
 
   if ( u3_nul == ful ) {
     return u3_none;
@@ -1602,7 +1607,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 
   {
     //  XX virtualize
-    u3_noun pax = u3do("stab", u3i_string(pep_u->pat_c));
+    u3_noun pax = u3dc("rash", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
     c3_w  lop_w = _fine_lop(pep_u->fra_w);
     u3_weak pas = u3r_at(7, nun);
 
@@ -1748,11 +1753,12 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   //  look up request in scry cache
   //
   c3_w  fra_w = res_u->pur_u.pep_u.fra_w;
-  u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+  c3_w  lop_w = _fine_lop(fra_w);
+  u3_weak pec = _fine_get_cache(sam_u, key, lop_w);
 
   //  already pending; drop
   //
-  if ( FINE_PEND == cac ) {
+  if ( FINE_PEND == pec ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
                                   res_u->pur_u.pep_u.pat_c);
@@ -1761,42 +1767,45 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
   }
   //  cache miss or a previous scry blocked; try again
   //
-  else if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
-                                  res_u->pur_u.pep_u.pat_c);
-    }
-
-    c3_w  lop_w = _fine_lop(fra_w);
-    u3_noun pax =
-      u3nc(c3__fine,
-      u3nq(c3__hunk,
-           u3dc("scot", c3__ud, u3i_word(lop_w)),
-           u3dc("scot", c3__ud, FINE_PAGE),
-           u3k(key)));
-
-    //  mark as pending in the scry cache
-    //
-    _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
-
-    //  scry into arvo for a page of packets
-    //
-    u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
-                      pax, res_u, _fine_hunk_scry_cb);
-  }
-  //  cache hit, fill in response meow and send
-  //
-  else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
-                                  res_u->pur_u.pep_u.pat_c);
-    }
-    _fine_etch_response(res_u);
-    _ames_try_send(res_u, c3n);
-  }
   else {
-    u3l_log("fine: _fine_hear_request meow bad");
-    _ames_pact_free(res_u);
+    u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+
+    if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
+                                    res_u->pur_u.pep_u.pat_c);
+      }
+
+      u3_noun pax =
+        u3nc(c3__fine,
+        u3nq(c3__hunk,
+             u3dc("scot", c3__ud, u3i_word(lop_w)),
+             u3dc("scot", c3__ud, FINE_PAGE),
+             u3k(key)));
+
+      //  mark as pending in the scry cache
+      //
+      _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
+
+      //  scry into arvo for a page of packets
+      //
+      u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
+                        pax, res_u, _fine_hunk_scry_cb);
+    }
+    //  cache hit, fill in response meow and send
+    //
+    else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
+                                    res_u->pur_u.pep_u.pat_c);
+      }
+      _fine_etch_response(res_u);
+      _ames_try_send(res_u, c3n);
+    }
+    else {
+      u3l_log("fine: _fine_hear_request meow bad");
+      _ames_pact_free(res_u);
+    }
   }
 
   u3z(key);
@@ -1814,6 +1823,8 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 
   u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
+
+  _ames_cap_queue(pac_u->sam_u);
 }
 
 /* _ames_hear_ames(): hear ames packet.

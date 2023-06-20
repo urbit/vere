@@ -3,6 +3,7 @@
 #define U3_GLOBAL
 #define C3_GLOBAL
 #include "noun.h"
+#include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
 #include "ur.h"
 #include "platform/rsignal.h"
@@ -22,6 +23,7 @@
 #include "pace.h"
 #include "version.h"
 #include "whereami.h"
+#include "mars.h"
 
 //  serf module state
 //
@@ -154,7 +156,6 @@ _main_init(void)
 {
   u3_Host.nex_o = c3n;
   u3_Host.pep_o = c3n;
-  u3_Host.play_o = c3n;
 
   u3_Host.ops_u.abo = c3n;
   u3_Host.ops_u.dem = c3n;
@@ -167,6 +168,7 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+  u3_Host.ops_u.map = c3y;
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -263,6 +265,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-format",         required_argument, NULL, 'Z' },
     //
     { "urth-loom",           required_argument, NULL, 5 },
+    { "no-demand",           no_argument,       NULL, 6 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -272,12 +275,14 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
-      //  urth-loom
-      //
-      case 5: {
+      case 5: {  //  urth-loom
         if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
+        break;
+      }
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
         break;
       }
       //  special args
@@ -678,6 +683,7 @@ _cw_usage(c3_c* bin_c)
     "  %s info %.*s              print pier info:\n",
     "  %s meld %.*s              deduplicate snapshot:\n",
     "  %s pack %.*s              defragment snapshot:\n",
+    "  %s play %.*s              recompute events:\n",
     "  %s prep %.*s              prepare for upgrade:\n",
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
@@ -754,6 +760,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",
     "-Z, --scry-format FORMAT      Optional file format ('jam', or aura, for -X)\n",
+    "    --no-demand               Skip demand paging\n"
     "    --no-conn                 Do not run control plane\n",
     "    --no-dock                 Skip binary \"docking\" on boot\n",
     "\n",
@@ -1455,7 +1462,8 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1467,6 +1475,11 @@ _cw_info(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1518,7 +1531,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1530,6 +1544,11 @@ _cw_grab(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1573,7 +1592,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1585,6 +1605,11 @@ _cw_cram(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1629,7 +1654,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   //  save even on failure, as we just did all the work of deduplication
   //
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
 
   if ( c3n == ret_o ) {
@@ -1650,6 +1675,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
+    { "no-demand",   no_argument,       NULL, 6 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1662,6 +1688,11 @@ _cw_queu(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case 'r': {
@@ -1721,7 +1752,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
       exit(1);
     }
 
-    u3e_save();
+    u3m_save();
     u3_disk_exit(log_u);
 
     fprintf(stderr, "urbit: queu: rock loaded at event %" PRIu64 "\r\n", eve_d);
@@ -1738,7 +1769,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1750,6 +1782,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1787,9 +1824,9 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   pre_w = u3a_open(u3R);
   u3u_meld();
-  u3a_print_memory(stderr, "urbit: meld: gained", (u3a_open(u3R) - pre_w));
+  u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
 
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -1803,8 +1840,9 @@ _cw_next(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "arch", required_argument, NULL, 'a' },
-    { "loom", required_argument, NULL, c3__loom },
+    { "arch",      required_argument, NULL, 'a' },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1820,6 +1858,11 @@ _cw_next(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1863,7 +1906,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1875,6 +1919,11 @@ _cw_pack(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -1909,60 +1958,172 @@ _cw_pack(c3_i argc, c3_c* argv[])
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
-  u3e_save();
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }
 
-/* _cw_play(): replay events.
+/* _cw_play_slog(): print during replay.
+*/
+static void
+_cw_play_slog(u3_noun hod)
+{
+  u3_pier_tank(0, 0, u3k(u3t(hod)));
+  u3z(hod);
+}
+
+/* _cw_play_exit(): exit immediately.
+*/
+static void
+_cw_play_exit(c3_i int_i)
+{
+  //  explicit fprintf to avoid allocation in u3l_log
+  //
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
+  raise(SIGINT);
+}
+
+/* _cw_play(): replay events, but better.
 */
 static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
+  c3_i lid_i, ch_i;
   c3_w arg_w;
+  c3_o ful_o = c3n;
+  c3_o mel_o = c3n;
+  c3_o sof_o = c3n;
+  c3_d eve_d = 0;
+  c3_d sap_d = 0;
 
-  static const c3_c usage_c[] = "error: invalid usage, expected "
-                                "`urbit play [--replay-to <event_num> "
-                                "| --batch-size <event_cnt>] <pier>`";
   static struct option lop_u[] = {
-    { "batch-size", required_argument, NULL, 'b' },
-    { "replay-to",  required_argument, NULL, 'n' },
-    { NULL,         0,                 NULL, 0   }
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
+    { "auto-meld", no_argument,       NULL, 7 },
+    { "soft-mugs", no_argument,       NULL, 8 },
+    { "full",      no_argument,       NULL, 'f' },
+    { "replay-to", required_argument, NULL, 'n' },
+    { "snap-at",   required_argument, NULL, 's' },
+    { NULL, 0, NULL, 0 }
   };
 
-  while ( -1 != (ch_i = getopt_long(argc, argv, "b:n:", lop_u, &lid_i)) ) {
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case 'b':
-        u3_Host.ops_u.batch_sz_c = strdup(optarg);
-        break;
-      case 'n':
-        u3_Host.ops_u.til_c = strdup(optarg);
-        break;
-      case '?':
-        fprintf(stderr, "%s\r\n", usage_c);
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
+      } break;
+
+      case 7: {  //  auto-meld
+        mel_o = c3y;
+      } break;
+
+      case 8: {  //  soft-mugs
+        sof_o = c3y;
+      } break;
+
+      case 'f': {
+        ful_o = c3y;
+      } break;
+
+      case 'n': {
+        if ( 1 != sscanf(optarg, "%" PRIu64 "", &eve_d) ) {
+          fprintf(stderr, "mars: replay-to invalid: '%s'\r\n", optarg);
+          exit(1);
+        }
+      } break;
+
+      case 's': {
+        if ( 1 != sscanf(optarg, "%" PRIu64 "", &sap_d) ) {
+          fprintf(stderr, "mars: snap-at invalid: '%s'\r\n", optarg);
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
         exit(1);
+      } break;
     }
   }
 
+  //  argv[optind] is always "play"
+  //
+
   if ( !u3_Host.dir_c ) {
-    assert(strcmp(argv[optind], "play") == 0);
     if ( optind + 1 < argc ) {
       u3_Host.dir_c = argv[optind + 1];
     }
     else {
-      fprintf(stderr, "%s\r\n", usage_c);
+      fprintf(stderr, "invalid command, pier required\r\n");
       exit(1);
     }
+
     optind++;
   }
 
   if ( optind + 1 != argc ) {
-    fprintf(stderr, "%s\r\n", usage_c);
+    fprintf(stderr, "invalid command\r\n");
     exit(1);
   }
 
-  u3_Host.play_o = c3y;
+  //  XX handle SIGTSTP so that the lockfile is not orphaned?
+  //
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+  signal(SIGTSTP, _cw_play_exit);
+
+  if ( c3y == mel_o ) {
+    u3C.wag_w |= u3o_auto_meld;
+  }
+
+  if ( c3y == sof_o ) {
+    u3C.wag_w |= u3o_soft_mugs;
+  }
+
+  u3C.wag_w |= u3o_hashless;
+
+  //  XX this should restore the epoch snapshot and replay that
+  //
+  if ( c3y == ful_o ) {
+    u3l_log("mars: preparing for full replay");
+    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    u3e_live(c3n, u3_Host.dir_c);
+    u3m_foul();
+    u3m_pave(c3y);
+    u3j_boot(c3y);
+  }
+  else {
+    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  }
+
+  u3C.slog_f = _cw_play_slog;
+
+  {
+    u3_mars mar_u = {
+      .log_u = log_u,
+      .dir_c = u3_Host.dir_c,
+      .sen_d = u3A->eve_d,
+      .dun_d = u3A->eve_d,
+    };
+
+    u3_mars_play(&mar_u, eve_d, sap_d);
+  }
+
+  u3_disk_exit(log_u);
+  u3m_stop();
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -1974,7 +2135,8 @@ _cw_prep(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1986,6 +2148,11 @@ _cw_prep(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2028,7 +2195,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2040,6 +2208,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2083,7 +2256,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( c3n == u3e_backup(c3y)) {  //  backup current snapshot
+  if ( c3n == u3m_backup(c3y)) {  //  backup current snapshot
     fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
     exit(1);
   }
@@ -2311,7 +2484,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2323,6 +2497,11 @@ _cw_vile(c3_i argc, c3_c* argv[])
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
       } break;
 
       case '?': {
@@ -2407,6 +2586,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
   //        [%meld dir=@t]                                ::  deduplicate
   //        [?(%next %upgrade) dir=@t]                    ::  upgrade
   //        [%pack dir=@t]                                ::  defragment
+  //        [%play dir=@t]                                ::  recompute
   //        [%prep dir=@t]                                ::  prep upgrade
   //        [%queu dir=@t eve=@ud]                        ::  cue state
   //        [?(%vere %fetch-vere) dir=@t]                 ::  download vere
@@ -2447,7 +2627,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__meld: _cw_meld(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
-    case c3__play: _cw_play(argc, argv); return 2; // continue on
+    case c3__play: _cw_play(argc, argv); return 1;
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__chop: _cw_chop(argc, argv); return 1;
@@ -2581,6 +2761,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_w |= u3o_debug_ram;
+      }
+
+      /*  Set no-demand flag.
+      */
+      if ( !_(u3_Host.ops_u.map) ) {
+        u3C.wag_w |= u3o_no_demand;
       }
 
       /*  Set profile flag.
