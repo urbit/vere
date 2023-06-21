@@ -1289,27 +1289,27 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
     return c3n;
   }
 
-  c3_c nop_c[8193];
-  snprintf(nop_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
+  c3_c nax_c[8193];
+  snprintf(nax_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
 
-  if ( -1 == (nax_u.fid_i = c3_open(nop_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", nop_c, strerror(errno));
+  if ( -1 == (nax_u.fid_i = c3_open(nax_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: c3_open %s: %s\r\n", nax_c, strerror(errno));
     return c3n;
   }
 
-  c3_c sop_c[8193];
-  snprintf(sop_c, 8192, "%s/%s.bin", pax_c, sax_u.nam_c);
+  c3_c sax_c[8193];
+  snprintf(sax_c, 8192, "%s/%s.bin", pax_c, sax_u.nam_c);
 
-  if ( -1 == (sax_u.fid_i = c3_open(sop_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", sop_c, strerror(errno));
+  if ( -1 == (sax_u.fid_i = c3_open(sax_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: c3_open %s: %s\r\n", sax_c, strerror(errno));
     return c3n;
   }
 
   if (  (c3n == _ce_image_copy(&nux_u, &nax_u))
      || (c3n == _ce_image_copy(&sux_u, &sax_u)) )
   {
-    c3_unlink(nop_c);
-    c3_unlink(sop_c);
+    c3_unlink(nax_c);
+    c3_unlink(sax_c);
     fprintf(stderr, "loom: image backup failed\r\n");
     return c3n;
   }
