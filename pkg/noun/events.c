@@ -312,26 +312,44 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
 }
 
-/* _ce_image_open(): open or create image.
+/* _ce_image_open(): open or create image, creating directories if necessary.
 */
 static c3_o
-_ce_image_open(u3e_image* img_u)
+_ce_image_open(u3e_image* img_u, c3_c* ful_c)
 {
   c3_i mod_i = O_RDWR | O_CREAT;
-  c3_c ful_c[8193];
 
-  snprintf(ful_c, 8192, "%s", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
+  //  create directories if necessary
+  //
+  {
+    c3_c pax_c[8192];
+    c3_c* end_c = pax_c + 8192;
+    c3_c* cur_c = pax_c + snprintf(pax_c, 8192, "%s", ful_c);
 
-  snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
+    while ( cur_c < end_c ) {
+      c3_c* nxt_c = strchr(cur_c, '/');
 
-  snprintf(ful_c, 8192, "%s/.urb/chk", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
+      if ( !nxt_c ) {
+        break;
+      }
+      else {
+        *nxt_c = 0;
 
-  snprintf(ful_c, 8192, "%s/.urb/chk/%s.bin", u3P.dir_c, img_u->nam_c);
-  if ( -1 == (img_u->fid_i = c3_open(ful_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", ful_c, strerror(errno));
+        if ( 0 != mkdir(pax_c, 0777) && EEXIST != errno ) {
+          fprintf(stderr, "loom: mkdir %s: %s\r\n", pax_c, strerror(errno));
+          return c3n;
+        }
+
+        *nxt_c = '/';
+        cur_c = nxt_c + 1;
+      }
+    }
+  }
+
+  c3_c pax_c[8192];
+  snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
+  if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: c3_open %s: %s\r\n", pax_c, strerror(errno));
     return c3n;
   }
   else if ( c3n == _ce_image_stat(img_u, &img_u->pgs_w) ) {
@@ -1231,17 +1249,24 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* u3e_backup(): copy snapshot to pax_c, overwrite optionally.
+/* u3e_backup(): copy snapshot from [pux_c] to [pax_c], 
+ * overwriting optionally. note that image files must 
+ * be named "north" and "south".
 */
 c3_o
-u3e_backup(c3_c* pax_c, c3_o ovw_o)
+u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
 {
-  u3e_image nop_u = { .nam_c = "north", .pgs_w = 0 };
-  u3e_image sop_u = { .nam_c = "south", .pgs_w = 0 };
+  //  source image files from [pux_c]
+  u3e_image nux_u = { .nam_c = "north", .pgs_w = 0 };
+  u3e_image sux_u = { .nam_c = "south", .pgs_w = 0 };
+
+  //  destination image files to [pax_c]
+  u3e_image nax_u = { .nam_c = "north" };
+  u3e_image sax_u = { .nam_c = "south" };
 
   c3_i mod_i = O_RDWR | O_CREAT;
 
-  if ( !pax_c ) {
+  if ( !pux_c || !pax_c ) {
     fprintf(stderr, "loom: image backup: bad path\r\n");
     return c3n;
   }
@@ -1253,24 +1278,35 @@ u3e_backup(c3_c* pax_c, c3_o ovw_o)
     return c3n;
   }
 
-  c3_c nop_c[8193];
-  snprintf(nop_c, 8192, "%s/%s.bin", pax_c, nop_u.nam_c);
+  //  open source image files
+  //
+  if ( c3n == _ce_image_open(&nux_u, pux_c) ) {
+    fprintf(stderr, "loom: couldn't open north image at %s\r\n", pux_c);
+    return c3n;
+  }
+  if ( c3n == _ce_image_open(&sux_u, pux_c) ) {
+    fprintf(stderr, "loom: couldn't open south image at %s\r\n", pux_c);
+    return c3n;
+  }
 
-  if ( -1 == (nop_u.fid_i = c3_open(nop_c, mod_i, 0666)) ) {
+  c3_c nop_c[8193];
+  snprintf(nop_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
+
+  if ( -1 == (nax_u.fid_i = c3_open(nop_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", nop_c, strerror(errno));
     return c3n;
   }
 
   c3_c sop_c[8193];
-  snprintf(sop_c, 8192, "%s/%s.bin", pax_c, sop_u.nam_c);
+  snprintf(sop_c, 8192, "%s/%s.bin", pax_c, sax_u.nam_c);
 
-  if ( -1 == (sop_u.fid_i = c3_open(sop_c, mod_i, 0666)) ) {
+  if ( -1 == (sax_u.fid_i = c3_open(sop_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", sop_c, strerror(errno));
     return c3n;
   }
 
-  if (  (c3n == _ce_image_copy(&u3P.nor_u, &nop_u))
-     || (c3n == _ce_image_copy(&u3P.sou_u, &sop_u)) )
+  if (  (c3n == _ce_image_copy(&nux_u, &nax_u))
+     || (c3n == _ce_image_copy(&sux_u, &sax_u)) )
   {
     c3_unlink(nop_c);
     c3_unlink(sop_c);
@@ -1278,8 +1314,8 @@ u3e_backup(c3_c* pax_c, c3_o ovw_o)
     return c3n;
   }
 
-  close(nop_u.fid_i);
-  close(sop_u.fid_i);
+  close(nax_u.fid_i);
+  close(sax_u.fid_i);
   fprintf(stderr, "loom: image backup complete\r\n");
   return c3y;
 }
@@ -1431,8 +1467,10 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   {
     //  Open image files.
     //
-    if ( (c3n == _ce_image_open(&u3P.nor_u)) ||
-         (c3n == _ce_image_open(&u3P.sou_u)) )
+    c3_c chk_c[8193];
+    snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
+    if ( (c3n == _ce_image_open(&u3P.nor_u, chk_c)) ||
+         (c3n == _ce_image_open(&u3P.sou_u, chk_c)) )
     {
       fprintf(stderr, "boot: image failed\r\n");
       exit(1);

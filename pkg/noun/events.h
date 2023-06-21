@@ -73,10 +73,11 @@
 
   /** Functions.
   **/
-    /* u3e_backup(): copy the snapshot to pax_c, overwrite optional.
+    /* u3e_backup(): copy the snapshot from [pux_c] to [pax_c], 
+     * overwriting optional.
     */
       c3_o 
-      u3e_backup(c3_c* pax_c, c3_o ovw_o);
+      u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o);
 
     /* u3e_fault(): handle a memory fault.
     */

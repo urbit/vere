@@ -2118,19 +2118,18 @@ _cw_play(c3_i argc, c3_c* argv[])
   //              his need for a serious surgical operation
   //
 
-  //  XX this should restore the epoch snapshot and replay that
-  //
   if ( c3y == ful_o ) {
+    //  copy the latest epoch's snapshot files into chk/
     u3l_log("mars: preparing for full replay");
-    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-    u3e_live(c3n, u3_Host.dir_c);
-    u3m_foul();
-    u3m_pave(c3y);
-    u3j_boot(c3y);
+    c3_c chk_c[8193];
+    snprintf(chk_c, 8193, "%s/.urb/chk", u3_Host.dir_c);
+    if ( 0 != u3e_backup(log_u->epo_u->pax_c, chk_c, c3y) ) {
+      fprintf(stderr, "mars: failed to copy snapshot\r\n");
+      exit(1);
+    }
   }
-  else {
-    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
 
