@@ -174,10 +174,44 @@ u3e_check(c3_c* cap_c)
 }
 #endif
 
-/* _ce_flaw_protect(): protect page after fault.
+/* _ce_flaw_mmap(): remap non-guard page after fault.
 */
 static inline c3_i
-_ce_flaw_protect(c3_w pag_w)
+_ce_flaw_mmap(c3_w pag_w)
+{
+  // NB: must be static, since the stack is grown via page faults, and
+  // we're already in a page fault handler.
+  //
+  static c3_y con_y[_ce_page];
+
+  // save contents of page, to be restored after the mmap
+  //
+  memcpy(con_y, _ce_ptr(pag_w), _ce_page);
+
+  // map the dirty page into the ephemeral file
+  //
+  if ( MAP_FAILED == mmap(_ce_ptr(pag_w),
+                          _ce_page,
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_SHARED),
+                          u3P.eph_i, _ce_len(pag_w)) )
+  {
+    fprintf(stderr, "loom: fault mmap failed (%u): %s\r\n",
+                     pag_w, strerror(errno));
+    return 1;
+  }
+
+  // restore contents of page
+  //
+  memcpy(_ce_ptr(pag_w), con_y, _ce_page);
+
+  return 0;
+}
+
+/* _ce_flaw_mprotect(): protect page after fault.
+*/
+static inline c3_i
+_ce_flaw_mprotect(c3_w pag_w)
 {
   if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
     fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
@@ -249,7 +283,9 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   c3_w bit_w = pag_w & 31;
 
 #ifdef U3_GUARD_PAGE
-  if ( pag_w == u3P.gar_w ) {
+  c3_w gar_w = u3P.gar_w;
+
+  if ( pag_w == gar_w ) {
     u3e_flaw fal_e = _ce_ward_clip(low_p >> u3a_page, hig_p >> u3a_page);
 
     if ( u3e_flaw_good != fal_e ) {
@@ -260,9 +296,15 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
       return u3e_flaw_sham;
     }
+
+    if ( _ce_flaw_mprotect(pag_w) ) {
+      return u3e_flaw_base;
+    }
+
+    return u3e_flaw_good;
   }
-  else
 #endif
+
   if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
@@ -270,7 +312,12 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
   u3P.dit_w[blk_w] |= (1 << bit_w);
 
-  if ( _ce_flaw_protect(pag_w) ) {
+  if ( u3P.eph_i ) {
+    if ( _ce_flaw_mmap(pag_w) ) {
+      return u3e_flaw_base;
+    }
+  }
+  else if ( _ce_flaw_mprotect(pag_w) ) {
     return u3e_flaw_base;
   }
 
@@ -312,7 +359,43 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
 }
 
-/* _ce_image_open(): open or create image, creating directories if necessary.
+/* _ce_ephemeral_open(): open or create ephemeral file
+*/
+static c3_o
+_ce_ephemeral_open(c3_i* eph_i)
+{
+  c3_i mod_i = O_RDWR | O_CREAT;
+  c3_c ful_c[8193];
+
+  if ( u3C.eph_c == 0 ) {
+    snprintf(ful_c, 8192, "%s", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
+
+    snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
+
+    snprintf(ful_c, 8192, "%s/.urb/chk", u3P.dir_c);
+    c3_mkdir(ful_c, 0700);
+
+    snprintf(ful_c, 8192, "%s/.urb/chk/limbo.bin", u3P.dir_c);
+    u3C.eph_c = strdup(ful_c);
+  }
+
+  if ( -1 == (*eph_i = c3_open(u3C.eph_c, mod_i, 0666)) ) {
+    fprintf(stderr, "loom: ephemeral c3_open %s: %s\r\n", u3C.eph_c,
+            strerror(errno));
+    return c3n;
+  }
+
+  if ( ftruncate(*eph_i, _ce_len(u3P.pag_w)) < 0 ) {
+    fprintf(stderr, "loom: ephemeral ftruncate %s: %s\r\n", u3C.eph_c,
+            strerror(errno));
+    return c3n;
+  }
+  return c3y;
+}
+
+/* _ce_image_open(): open or create image.
 */
 static c3_o
 _ce_image_open(u3e_image* img_u, c3_c* ful_c)
@@ -1007,8 +1090,25 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
   _ce_loom_track_south(pgs_w, dif_w);
 }
 
+/* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
+*/
+static void
+_ce_loom_mapf_ephemeral()
+{
+  if ( MAP_FAILED == mmap(_ce_ptr(0),
+                          _ce_len(u3P.pag_w),
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_SHARED),
+                          u3P.eph_i, 0) )
+  {
+    fprintf(stderr, "loom: initial ephemeral mmap failed (%u pages): %s\r\n",
+                    u3P.pag_w, strerror(errno));
+    u3_assert(0);
+  }
+}
+
 /* _ce_loom_mapf_north(): map [pgs_w] of [fid_i] into the bottom of memory
-**                        (and anonymize [old_w - pgs_w] after if needed).
+**                        (and ephemeralize [old_w - pgs_w] after if needed).
 **
 **   NB: _ce_loom_mapf_south() is possible, but it would make separate mappings
 **       for each page since the south segment is reversed on disk.
@@ -1036,15 +1136,29 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   if ( old_w > pgs_w ) {
     dif_w = old_w - pgs_w;
 
-    if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
-                            _ce_len(dif_w),
-                            (PROT_READ | PROT_WRITE),
-                            (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                            -1, 0) )
-    {
-      fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
-                      pgs_w, old_w, strerror(errno));
-      u3_assert(0);
+    if ( u3C.wag_w & u3o_swap ) {
+      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+                              _ce_len(dif_w),
+                              (PROT_READ | PROT_WRITE),
+                              (MAP_FIXED | MAP_SHARED),
+                              u3P.eph_i, _ce_len(pgs_w)) )
+      {
+        fprintf(stderr, "loom: ephemeral mmap failed (%u pages, %u old): %s\r\n",
+                        pgs_w, old_w, strerror(errno));
+        u3_assert(0);
+      }
+    }
+    else {
+      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+                              _ce_len(dif_w),
+                              (PROT_READ | PROT_WRITE),
+                              (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                              -1, 0) )
+      {
+        fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
+                        pgs_w, old_w, strerror(errno));
+        u3_assert(0);
+      }
     }
 
 #ifdef U3_GUARD_PAGE
@@ -1424,15 +1538,32 @@ u3e_save(u3_post low_p, u3_post hig_p)
     _ce_loom_mapf_north(u3P.nor_u.fid_i, u3P.nor_u.pgs_w, nod_w);
   }
 
-  {
-    void* ptr_v = _ce_ptr(u3P.nor_u.pgs_w);
-    c3_w  pgs_w = u3P.pag_w - (u3P.nor_u.pgs_w + u3P.sou_u.pgs_w);
+  u3e_toss(low_p, hig_p);
+}
 
-    if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
-        fprintf(stderr, "loom: madvise() failed for %u pages at %p: %s\r\n",
-                        pgs_w, ptr_v, strerror(errno));
-    }
+/* _ce_toss_pages(): discard ephemeral pages.
+*/
+static void
+_ce_toss_pages(c3_w nor_w, c3_w sou_w)
+{
+  c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
+  void* ptr_v = _ce_ptr(nor_w);
+
+  if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
+      fprintf(stderr, "loom: madv_dontneed failed (%u pages at %u): %s\r\n",
+                      pgs_w, nor_w, strerror(errno));
   }
+}
+
+/* u3e_toss(): discard ephemeral pages.
+*/
+void
+u3e_toss(u3_post low_p, u3_post hig_p)
+{
+  c3_w nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+  c3_w sou_w = u3P.pag_w - (hig_p >> u3a_page);
+
+  _ce_toss_pages(nor_w, sou_w);
 }
 
 /* u3e_live(): start the checkpointing system.
@@ -1453,6 +1584,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   }
 
   u3P.dir_c = dir_c;
+  u3P.eph_i = 0;
   u3P.nor_u.nam_c = "north";
   u3P.sou_u.nam_c = "south";
   u3P.pag_w = u3C.wor_i >> u3a_page;
@@ -1465,6 +1597,15 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   } else
 #endif
   {
+    //  Open the ephemeral space file.
+    //
+    if ( u3C.wag_w & u3o_swap ) {
+      if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
+        fprintf(stderr, "boot: failed to load ephemeral file\r\n");
+        exit(1);
+      }
+    }
+
     //  Open image files.
     //
     c3_c chk_c[8193];
@@ -1506,6 +1647,10 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
+        if ( u3C.wag_w & u3o_swap ) {
+          _ce_loom_mapf_ephemeral();
+        }
+
         if ( u3C.wag_w & u3o_no_demand ) {
           _ce_loom_blit_north(u3P.nor_u.fid_i, nor_w);
         }
@@ -1539,6 +1684,18 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   }
 
   return nuu_o;
+}
+
+/* u3e_stop(): gracefully stop the persistence system.
+*/
+void
+u3e_stop(void)
+{
+  if ( u3P.eph_i ) {
+    _ce_toss_pages(u3P.nor_u.pgs_w, u3P.sou_u.pgs_w);
+    close(u3P.eph_i);
+    unlink(u3C.eph_c);
+  }
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
@@ -1597,7 +1754,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
 
   if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
-    u3_assert( !_ce_flaw_protect(pag_w) );
+    u3_assert( !_ce_flaw_mprotect(pag_w) );
     u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
   }
 #endif

@@ -175,6 +175,8 @@ _main_init(void)
   u3_Host.ops_u.pro = c3n;
   u3_Host.ops_u.qui = c3n;
   u3_Host.ops_u.rep = c3n;
+  u3_Host.ops_u.eph = c3n;
+  u3_Host.ops_u.tos = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -186,6 +188,9 @@ _main_init(void)
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
+
+  u3C.eph_c = 0;
+  u3C.tos_w = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -266,6 +271,9 @@ _main_getopt(c3_i argc, c3_c** argv)
     //
     { "urth-loom",           required_argument, NULL, 5 },
     { "no-demand",           no_argument,       NULL, 6 },
+    { "swap",                no_argument,       NULL, 7 },
+    { "swap-to",             required_argument, NULL, 8 },
+    { "toss",                required_argument, NULL, 9 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -283,6 +291,22 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
+        break;
+      }
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        break;
+      }
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
+      case 9: {  //  toss
+        u3_Host.ops_u.tos = c3y;
+        if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+          return c3n;
+        }
         break;
       }
       //  special args
@@ -764,6 +788,8 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --no-demand               Skip demand paging\n"
     "    --no-conn                 Do not run control plane\n",
     "    --no-dock                 Skip binary \"docking\" on boot\n",
+    "    --swap                    Use an explicit ephemeral (swap-like) file\n",
+    "    --swap-to FILE            Specify ephemeral file location\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -987,6 +1013,7 @@ _cw_serf_exit(void)
 {
   u3s_cue_xeno_done(sil_u);
   u3t_trace_close();
+  u3m_stop();
 }
 
 /* _cw_init_io(): initialize i/o streams.
@@ -1044,7 +1071,7 @@ _cw_init_io(uv_loop_t* lup_u)
 static void
 _cw_serf_commence(c3_i argc, c3_c* argv[])
 {
-  if ( 8 > argc ) {
+  if ( 9 > argc ) {
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
@@ -1058,6 +1085,9 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      lom_c = argv[6];
   c3_w       lom_w;
   c3_c*      eve_c = argv[7];
+  c3_c*      eph_c = argv[8];
+  c3_c*      tos_c = argv[9];
+  c3_w       tos_w;
 
   _cw_init_io(lup_u);
 
@@ -1078,12 +1108,18 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   //  load runtime config
   //
   {
+    //  XX check return
+    //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+    }
+
     if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
-      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", argv[4]);
+      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", eve_c);
     }
   }
 
@@ -1103,6 +1139,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   //  setup loom
   //
   {
+    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
+
     u3V.dir_c = strdup(dir_c);
     u3V.sen_d = u3V.dun_d = u3m_boot(dir_c, (size_t)1 << lom_w);
 
@@ -1465,6 +1503,8 @@ _cw_info(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1482,6 +1522,18 @@ _cw_info(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1534,6 +1586,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1551,6 +1605,18 @@ _cw_grab(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1595,6 +1661,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1612,6 +1680,18 @@ _cw_cram(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1677,6 +1757,8 @@ _cw_queu(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
     { "no-demand",   no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1695,6 +1777,18 @@ _cw_queu(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case 'r': {
         roc_c = strdup(optarg);
@@ -1772,6 +1866,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1789,6 +1885,18 @@ _cw_meld(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1844,6 +1952,8 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "arch",      required_argument, NULL, 'a' },
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1865,6 +1975,18 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1909,6 +2031,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1926,6 +2050,18 @@ _cw_pack(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2161,6 +2297,8 @@ _cw_prep(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2178,6 +2316,18 @@ _cw_prep(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2221,6 +2371,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2238,6 +2390,18 @@ _cw_chop(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2571,6 +2735,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2588,6 +2754,18 @@ _cw_vile(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2891,6 +3069,18 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
+      }
+
+      /*  Set swap flag
+      */
+      if ( _(u3_Host.ops_u.eph) ) {
+        u3C.wag_w |= u3o_swap;
+      }
+
+      /*  Set toss flog
+      */
+      if ( _(u3_Host.ops_u.tos) ) {
+        u3C.wag_w |= u3o_toss;
       }
     }
 
