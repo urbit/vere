@@ -60,6 +60,11 @@
         void
         u3m_save(void);
 
+      /* u3m_toss(): discard ephemeral memory.
+      */
+        void
+        u3m_toss(void);
+
       /* u3m_ward(): tend the guardpage.
       */
         void
