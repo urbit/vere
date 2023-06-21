@@ -9,17 +9,34 @@
 u3_noun
 u3qc_bex(u3_atom a)
 {
-  mpz_t a_mp;
+  c3_d a_d;
+  u3i_slab sab_u;
 
-  if ( !_(u3a_is_cat(a)) ) {
-    return u3m_bail(c3__fail);
+  if ( a < 31 ) {
+    return 1 << a;
+  }
+
+  if ( c3y == u3a_is_cat(a) ) {
+    a_d = a;
   }
   else {
-    mpz_init_set_ui(a_mp, 1);
-    mpz_mul_2exp(a_mp, a_mp, a);
+    if ( c3n == u3r_safe_chub(a, &a_d) ) {
+      return u3m_bail(c3__fail);
+    }
 
-    return u3i_mp(a_mp);
+    // We don't currently support atoms 2GB or larger (fails while
+    // mugging).  The extra term of 16 is experimentally determined.
+    if ( a_d >= ((c3_d)1 << (c3_d)34) - 16 ) {
+      u3l_log("bex: overflow");
+      return u3m_bail(c3__fail);
+    }
   }
+
+  u3i_slab_init(&sab_u, 0, a_d + 1);
+
+  sab_u.buf_w[a_d >> 5] = 1 << (a_d & 31);
+
+  return u3i_slab_moot(&sab_u);
 }
 
 u3_noun

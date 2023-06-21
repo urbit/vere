@@ -807,7 +807,7 @@ u3_disk_acquire(c3_c* pax_c)
   }
 
   if ( NULL == (loq_u = c3_fopen(paf_c, "w")) ) {
-    u3l_log("disk: unable to open %s", paf_c);
+    u3l_log("disk: unable to open %s: %s", paf_c, strerror(errno));
     u3_assert(0);
   }
 

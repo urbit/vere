@@ -190,6 +190,10 @@ u3_serf_post(u3_serf* sef_u)
     u3l_log("");
     sef_u->pac_o = c3n;
   }
+
+  if ( u3C.wag_w & u3o_toss ) {
+    u3m_toss();
+  }
 }
 
 /* _serf_sure_feck(): event succeeded, send effects.
