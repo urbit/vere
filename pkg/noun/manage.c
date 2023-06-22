@@ -617,15 +617,18 @@ _find_home(void)
     nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
     sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
-    if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w > u3P.sou_u.pgs_w) ) {
+    if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
       fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
 
-    if ( (nor_w < u3P.nor_u.pgs_w) || (sou_w < u3P.sou_u.pgs_w) ) {
-      fprintf(stderr, "loom: strange size north (%u, %u) south (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
+    //  the north segment is in-order on disk; it being oversized
+    //  doesn't necessarily indicate corruption.
+    //
+    if ( nor_w < u3P.nor_u.pgs_w ) {
+      fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
+                      nor_w, u3P.nor_u.pgs_w,);
     }
   }
 
