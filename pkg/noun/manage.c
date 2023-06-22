@@ -628,7 +628,7 @@ _find_home(void)
     //
     if ( nor_w < u3P.nor_u.pgs_w ) {
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w,);
+                      nor_w, u3P.nor_u.pgs_w);
     }
   }
 
