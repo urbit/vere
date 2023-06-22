@@ -1156,7 +1156,7 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   if ( epo_d > 0 ) {
     c3_c chk_c[8193];
     snprintf(chk_c, 8192, "%s/.urb/chk", u3_Host.dir_c);
-    if ( c3n == u3e_backup(epo_c, chk_c, c3y) ) {
+    if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
       fprintf(stderr, "disk: failed to copy snapshot to new epoch\r\n");
       goto fail;
     }
