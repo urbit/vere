@@ -2234,11 +2234,11 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   //  replaying events with the epoch system
   //
-  //  there should be one process that accounts for what is actually available 
+  //  there should be one process that accounts for what is actually available
   //  in the pier and replays the least events possible to produce a valid,
   //  up-to-date snapshot.
   //
-  //  this replay process also uses the chk/ folder as a place to 
+  //  this replay process also uses the chk/ folder as a place to
   //  "accumulate" snapshots over the course of a replay if it needs to,
   //  overwriting the existing .bin files as it goes.
   //
@@ -2250,7 +2250,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   //        i. the snapshot in the latest epoch
   //           1. if it is valid, replay the events and save the resulting
   //              snapshot into chk/, exit 0 or boot into live mode as before
-  //           2. if it is invalid, return an error that informs the user of 
+  //           2. if it is invalid, return an error that informs the user of
   //              his need for a serious surgical operation
   //
 

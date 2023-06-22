@@ -1336,8 +1336,8 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
-/* u3e_backup(): copy snapshot from [pux_c] to [pax_c], 
- * overwriting optionally. note that image files must 
+/* u3e_backup(): copy snapshot from [pux_c] to [pax_c],
+ * overwriting optionally. note that image files must
  * be named "north" and "south".
 */
 c3_o
