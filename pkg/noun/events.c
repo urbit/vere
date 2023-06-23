@@ -402,23 +402,6 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
 {
   c3_i mod_i = O_RDWR | O_CREAT;
 
-  //  create directories recursively like `mkdir -p`
-  //
-  {
-    c3_c* dir_c = ful_c;
-    c3_c* end_c = ful_c + strlen(ful_c);
-
-    while ( dir_c < end_c ) {
-      if ( '/' == *dir_c ) {
-        *dir_c = 0;
-        c3_mkdir(ful_c, 0700);
-        *dir_c = '/';
-      }
-      dir_c++;
-    }
-    c3_mkdir(ful_c, 0700);
-  }
-
   c3_c pax_c[8192];
   snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
@@ -1384,10 +1367,6 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
 
   //  open source image files if they exist
   //
-
-  //  check if file exists with access
-  //
-
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
   if ( (0 < access(nux_c, F_OK)) && (c3n == _ce_image_open(&nux_u, pux_c)) ) {
