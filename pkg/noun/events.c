@@ -1382,13 +1382,21 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
     return c3n;
   }
 
-  //  open source image files
+  //  open source image files if they exist
   //
-  if ( c3n == _ce_image_open(&nux_u, pux_c) ) {
+
+  //  check if file exists with access
+  //
+
+  c3_c nux_c[8193];
+  snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
+  if ( (0 < access(nux_c, F_OK)) && (c3n == _ce_image_open(&nux_u, pux_c)) ) {
     fprintf(stderr, "loom: couldn't open north image at %s\r\n", pux_c);
     return c3n;
   }
-  if ( c3n == _ce_image_open(&sux_u, pux_c) ) {
+  c3_c sux_c[8193];
+  snprintf(sux_c, 8192, "%s/%s.bin", pux_c, sux_u.nam_c);
+  if ( (0 < access(sux_c, F_OK)) && (c3n == _ce_image_open(&sux_u, pux_c)) ) {
     fprintf(stderr, "loom: couldn't open south image at %s\r\n", pux_c);
     return c3n;
   }
