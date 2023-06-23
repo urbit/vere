@@ -1028,6 +1028,10 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     strcat(dir_c, "/.urb/get");
     c3_mkdir(dir_c, 0700);
 
+    strcpy(dir_c, pax_c);
+    strcat(dir_c, "/.urb/chk");
+    c3_mkdir(dir_c, 0700);
+
     c3_free(dir_c);
   }
 
@@ -1078,14 +1082,10 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     }
 
     //  initialize dun_d/sen_d values
-    if ( 0 == las_d ) {               //  fresh epoch (no events in lmdb yet)
-      if ( 0 == lat_d ) {             //  first epoch
-        log_u->dun_d = 0;
-      } else {                        //  not first epoch
-        log_u->dun_d = lat_d;         //  set dun_d to last event in prev epoch
-      }
-    } else {                          //  not fresh epoch
-      log_u->dun_d = las_d;           //  set dun_d to last event in lmdb
+    if ( 0 == las_d ) {      //  first epoch (no events in lmdb yet)
+      log_u->dun_d = lat_d;  //  set dun_d to last event in prev epoch
+    } else {
+      log_u->dun_d = las_d;  //  set dun_d to last event in lmdb
     }
     log_u->sen_d = log_u->dun_d;
 
@@ -1307,12 +1307,12 @@ u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w)
  */
 c3_o u3_disk_migrate(u3_disk* log_u)
 {
-  /*  migration steps (* indicates breakpoint set):
+  /*  migration steps:
    *  0. detect whether we need to migrate or not
-   *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration (returns yes)
-   *     b. if data.mdb is readable in log directory -> execute migration (returns yes or no)
+   *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration
+   *     b. if data.mdb is readable in log directory -> execute migration
    *        if not -> skip migration (returns yes)
-   *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init()) *
+   *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init())
    *     a. creates epoch directory
    *     b. creates epoch version file
    *     c. creates binary version file
@@ -1321,10 +1321,10 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    *     f. writes metadata to new database
    *     g. loads new epoch directory and sets it in log_u
    *  2. create hard links to data.mdb and lock.mdb in 0i0/
-   *  3. rollover to new epoch (second call to u3_disk_epoc_init()) *
+   *  3. rollover to new epoch (second call to u3_disk_epoc_init())
    *     a. same as 1a-g but also copies current snapshot between c/d steps
-   *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls) *
-   *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls) *
+   *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls)
+   *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
    */
 
   //  check if data.mdb is readable in log directory
