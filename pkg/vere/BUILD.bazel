@@ -139,7 +139,7 @@ cc_library(
 #
 
 cc_binary(
-    name = "urbit",
+    name = "urbit-rel",
     srcs = [
         "main.c",
         ":ca_bundle",
@@ -164,6 +164,48 @@ cc_binary(
         "@sigsegv",
         "@whereami",
     ],
+    copts = [ "-O3" ]
+    # Don't include source level debug info on macOS. See
+    # https://github.com/urbit/urbit/issues/5561 and
+    # https://github.com/urbit/vere/issues/131.
+    + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": ["-g"],
+    }),
+)
+
+cc_binary(
+    name = "urbit-dbg",
+    srcs = [
+        "main.c",
+        ":ca_bundle",
+        ":ivory",
+        "//:pace_hdr",
+        "//:version_hdr",
+    ],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/noun",
+        "//pkg/ur",
+        ":vere",
+        # TODO: remove dependency (only used to report version).
+        "@h2o",
+        "@openssl",
+        # TODO: remove dependency (only used to report version).
+        "@sigsegv",
+        "@whereami",
+    ],
+    copts = ["-O0", "-g3"]
+    + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [],
+    }),
+    defines = ["C3DBG"]
 )
 
 #
@@ -264,7 +306,7 @@ genrule(
     tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
     cp -RL ./urbit/tests ./urbit/pkg/arvo/tests
 
-    $(execpath :urbit) --lite-boot --daemon --fake bus \
+    $(execpath :urbit-rel) --lite-boot --daemon --fake bus \
       --bootstrap $(execpath @solid_pill//file)        \
       --arvo ./urbit/pkg/arvo                          \
       --pier ./pier
@@ -316,7 +358,7 @@ genrule(
     ls -a ./pier
     zip -q -r $@ ./pier
     """,
-    tools = [":urbit"],
+    tools = [":urbit-rel"],
     visibility = ["//visibility:public"],
 )
 
@@ -334,7 +376,7 @@ genrule(
 
     set -x
 
-    $(execpath :urbit) --lite-boot --daemon --gc ./pier 2> urbit-output
+    $(execpath :urbit-rel) --lite-boot --daemon --gc ./pier 2> urbit-output
 
     port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
 
@@ -494,6 +536,6 @@ genrule(
 
     exit "$$fail"
     """,
-    tools = [":urbit"],
+    tools = [":urbit-rel"],
     visibility = ["//visibility:public"],
 )

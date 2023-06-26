@@ -47,7 +47,7 @@ container_image(
         ":get-urbit-code",
         ":reset-urbit-code",
         ":start-urbit",
-        "//pkg/vere:urbit",
+        "//pkg/vere:urbit-rel",
     ],
     layers = [":install_pkgs"],
     ports = [

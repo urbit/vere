@@ -20,16 +20,7 @@ build --@io_bazel_rules_docker//transitions:enable=false
 build --flag_alias=clang_version=//:clang_version
 build --flag_alias=gcc_version=//:gcc_version
 
-# Don't include source level debug info on macOS. See
-# https://github.com/urbit/urbit/issues/5561 and
-# https://github.com/urbit/vere/issues/131.
-build:linux --per_file_copt='pkg/.*@-g'
-build:linux --host_copt='-g'
 build --strip=never
-
-# Use -O3 as the default optimization level.
-build --per_file_copt='pkg/.*@-O3'
-build --host_copt='-O3'
 
 # Turn on CPU and memory debug for exec config, which we only use to run the
 # fake ship tests.  Also turn on extra snapshot validation.
@@ -44,13 +35,6 @@ build --host_copt='-DU3_SNAPSHOT_VALIDATION'
 build:mem_dbg --per_file_copt='pkg/.*@-DU3_MEMORY_DEBUG'
 build:cpu_dbg --per_file_copt='pkg/.*@-DU3_CPU_DEBUG'
 build:snp_dbg --per_file_copt='pkg/.*@-DU3_SNAPSHOT_VALIDATION'
-
-# Enable maximum debug info and disable optimizations for debug config. It's
-# important that these lines come after setting the default debug and
-# optimization level flags above.
-build:dbg --per_file_copt='pkg/.*@-O0'
-build:dbg --per_file_copt='pkg/.*@-g3'
-build:dbg --per_file_copt='pkg/.*@-DC3DBG'
 
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc

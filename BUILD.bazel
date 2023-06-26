@@ -178,5 +178,10 @@ genrule(
 
 alias(
     name = "urbit",
-    actual = "//pkg/vere:urbit",
+    actual = "//pkg/vere:urbit-rel",
+)
+
+alias(
+    name = "urbit-dbg",
+    actual = "//pkg/vere:urbit-dbg",
 )

@@ -12,7 +12,7 @@ refresh_compile_commands(
         "//pkg/noun",
         "//pkg/ur",
         "//pkg/urcrypt",
-        "//pkg/vere:urbit",
+        "//pkg/vere:urbit-rel",
     ],
     # No need to add flags already in .bazelrc. They're automatically picked up.
     # If you don't need flags, a list of targets is also okay, as is a single target string.
