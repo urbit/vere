@@ -60,6 +60,11 @@
         void
         u3m_save(void);
 
+      /* u3m_toss(): discard ephemeral memory.
+      */
+        void
+        u3m_toss(void);
+
       /* u3m_ward(): tend the guardpage.
       */
         void
@@ -180,7 +185,7 @@
         void
         u3m_reclaim(void);
 
-      /* u3m_pack: compact (defragment) memory.
+      /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
         c3_w
         u3m_pack(void);

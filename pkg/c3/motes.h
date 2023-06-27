@@ -32,6 +32,7 @@
 #   define c3__auth   c3_s4('a','u','t','h')
 #   define c3__auto   c3_s4('a','u','t','o')
 #   define c3__avow   c3_s4('a','v','o','w')
+#   define c3__awry   c3_s4('a','w','r','y')
 #   define c3__ax     c3_s2('a','x')
 #   define c3__axe    c3_s3('a','x','e')
 #   define c3__axil   c3_s4('a','x','i','l')

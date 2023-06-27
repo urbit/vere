@@ -617,10 +617,18 @@ _find_home(void)
     nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
     sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
-    if ( (nor_w != u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
+    if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
       fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
       u3_assert(!"loom: corrupt size");
+    }
+
+    //  the north segment is in-order on disk; it being oversized
+    //  doesn't necessarily indicate corruption.
+    //
+    if ( nor_w < u3P.nor_u.pgs_w ) {
+      fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
+                      nor_w, u3P.nor_u.pgs_w);
     }
   }
 
@@ -1859,6 +1867,26 @@ u3m_save(void)
   return u3e_save(low_p, hig_p);
 }
 
+/* u3m_toss(): discard ephemeral memory.
+*/
+void
+u3m_toss(void)
+{
+  u3_post low_p, hig_p;
+  u3m_water(&low_p, &hig_p);
+
+  if (  ((low_p + u3C.tos_w) < u3C.wor_i)
+     && (hig_p > u3C.tos_w) )
+  {
+    low_p += u3C.tos_w;
+    hig_p -= u3C.tos_w;
+
+    if ( low_p < hig_p ) {
+      u3e_toss(low_p, hig_p);
+    }
+  }
+}
+
 /* u3m_ward(): tend the guardpage.
 */
 void
@@ -2052,6 +2080,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop()
 {
+  u3e_stop();
   u3je_secp_stop();
 }
 
@@ -2168,7 +2197,7 @@ _cm_pack_rewrite(void)
   u3a_rewrite_compact();
 }
 
-/* u3m_pack: compact (defragment) memory.
+/* u3m_pack: compact (defragment) memory, returns u3a_open delta.
 */
 c3_w
 u3m_pack(void)
