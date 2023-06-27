@@ -1082,15 +1082,15 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     }
 
     //  initialize dun_d/sen_d values
-    if ( 0 == las_d ) {      //  first epoch (no events in lmdb yet)
-      log_u->dun_d = lat_d;  //  set dun_d to last event in prev epoch
-    } else {
-      log_u->dun_d = las_d;  //  set dun_d to last event in lmdb
-    }
+    log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
     log_u->sen_d = log_u->dun_d;
+
+    //  mark the latest epoch directory
+    log_u->epo_d = lat_d;
 
     //  if binary version of latest epoch is not the same as the
     //  running binary, then we need to create a new epoch
+    //  XX move this into its own function and call it in `u3_pier_stay()`
     c3_c ver_c[8193];
     if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
       fprintf(stderr, "disk: failed to load epoch version\r\n");
@@ -1104,9 +1104,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
     }
-
-    //  mark the latest epoch directory
-    log_u->epo_u = u3_foil_folder(epo_c);
 
     //  mark the log as live
     log_u->liv_o = c3y;
@@ -1193,7 +1190,7 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   }
 
   //  load new epoch directory and set it in log_u
-  log_u->epo_u = u3_foil_folder(epo_c);
+  log_u->epo_d = epo_d;
 
   //  success
   return c3y;
@@ -1346,8 +1343,6 @@ c3_o u3_disk_migrate(u3_disk* log_u)
 
   //  if fresh boot, initialize disk v1
   if ( c3y == u3_Host.ops_u.nuu ) {
-    fprintf(stderr, "disk: initializing disk with v%d format\r\n", U3D_VER1);
-
     //  initialize first epoch "0i0"
     if ( c3n == u3_disk_epoc_init(log_u, 0) ) {
       fprintf(stderr, "disk: failed to initialize first epoch\r\n");

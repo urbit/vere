@@ -539,11 +539,11 @@
           u3_dire*         dir_u;               //  main pier directory
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
-          u3_dire*         epo_u;               //  current epoch directory
           c3_o             liv_o;               //  live
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
+          c3_d             epo_d;               //  current epoch number
           u3_disk_cb        cb_u;               //  callbacks
           u3_read*         red_u;               //  read requests
           union {                               //  write thread/request

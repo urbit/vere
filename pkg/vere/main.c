@@ -2232,34 +2232,31 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   u3C.wag_w |= u3o_hashless;
 
-  //  replaying events with the epoch system
-  //
-  //  there should be one process that accounts for what is actually available
-  //  in the pier and replays the least events possible to produce a valid,
-  //  up-to-date snapshot.
-  //
-  //  this replay process also uses the chk/ folder as a place to
-  //  "accumulate" snapshots over the course of a replay if it needs to,
-  //  overwriting the existing .bin files as it goes.
-  //
-  //  0. try loading the snapshot in chk/
-  //     a. if it is valid and up-to-date with the log
-  //        i. if we executed via `urbit play`, exit 0
-  //        ii. if we executed via `urbit`, boot into live mode
-  //     b. if it is invalid, try loading a snapshot from
-  //        i. the snapshot in the latest epoch
-  //           1. if it is valid, replay the events and save the resulting
-  //              snapshot into chk/, exit 0 or boot into live mode as before
-  //           2. if it is invalid, return an error that informs the user of
-  //              his need for a serious surgical operation
-  //
-
   if ( c3y == ful_o ) {
-    //  copy the latest epoch's snapshot files into chk/
     u3l_log("mars: preparing for full replay");
-    c3_c chk_c[8193];
+
+    c3_c chk_c[8193], epo_c[8193];
     snprintf(chk_c, 8193, "%s/.urb/chk", u3_Host.dir_c);
-    if ( 0 != u3e_backup(log_u->epo_u->pax_c, chk_c, c3y) ) {
+    snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, log_u->epo_d);
+
+    //  if epoch 0 is the latest, delete the snapshot files in chk/
+    if ( 0 == log_u->epo_d ) {
+      c3_c nor_c[8193], sop_c[8193];
+      snprintf(nor_c, 8193, "%s/.urb/chk/north.bin", u3_Host.dir_c);
+      snprintf(sop_c, 8193, "%s/.urb/chk/south.bin", u3_Host.dir_c);
+      if ( c3_unlink(nor_c) && (ENOENT != errno) ) {
+        fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                        nor_c, strerror(errno));
+        exit(1);
+      }
+      if ( c3_unlink(sop_c) && (ENOENT != errno) ) {
+        fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                        sop_c, strerror(errno));
+        exit(1);
+      }
+    }
+    else if ( 0 != u3e_backup(epo_c, chk_c, c3y) ) {
+      //  copy the latest epoch's snapshot files into chk/
       fprintf(stderr, "mars: failed to copy snapshot\r\n");
       exit(1);
     }
