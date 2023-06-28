@@ -1028,10 +1028,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     strcat(dir_c, "/.urb/get");
     c3_mkdir(dir_c, 0700);
 
-    strcpy(dir_c, pax_c);
-    strcat(dir_c, "/.urb/chk");
-    c3_mkdir(dir_c, 0700);
-
     c3_free(dir_c);
   }
 
