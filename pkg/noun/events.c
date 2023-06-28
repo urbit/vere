@@ -1344,8 +1344,8 @@ c3_o
 u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
 {
   //  source image files from [pux_c]
-  u3e_image nux_u = { .nam_c = "north", .pgs_w = 0 };
-  u3e_image sux_u = { .nam_c = "south", .pgs_w = 0 };
+  u3e_image nux_u = { .nam_c = "north" };
+  u3e_image sux_u = { .nam_c = "south" };
 
   //  destination image files to [pax_c]
   u3e_image nax_u = { .nam_c = "north" };
@@ -1369,28 +1369,26 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   //
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
-  if ( (0 < access(nux_c, F_OK)) && (c3n == _ce_image_open(&nux_u, pux_c)) ) {
+  if ( (0 != access(nux_c, F_OK)) || (c3n == _ce_image_open(&nux_u, pux_c)) ) {
     fprintf(stderr, "loom: couldn't open north image at %s\r\n", pux_c);
     return c3n;
   }
   c3_c sux_c[8193];
   snprintf(sux_c, 8192, "%s/%s.bin", pux_c, sux_u.nam_c);
-  if ( (0 < access(sux_c, F_OK)) && (c3n == _ce_image_open(&sux_u, pux_c)) ) {
+  if ( (0 != access(sux_c, F_OK)) || (c3n == _ce_image_open(&sux_u, pux_c)) ) {
     fprintf(stderr, "loom: couldn't open south image at %s\r\n", pux_c);
     return c3n;
   }
 
+  //  open destination image files
   c3_c nax_c[8193];
   snprintf(nax_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
-
   if ( -1 == (nax_u.fid_i = c3_open(nax_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", nax_c, strerror(errno));
     return c3n;
   }
-
   c3_c sax_c[8193];
   snprintf(sax_c, 8192, "%s/%s.bin", pax_c, sax_u.nam_c);
-
   if ( -1 == (sax_u.fid_i = c3_open(sax_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", sax_c, strerror(errno));
     return c3n;

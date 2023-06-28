@@ -1025,6 +1025,11 @@
        c3_o
        u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w);
 
+      /* u3_disk_vere_diff(): checks if vere version mismatches latest epoch's.
+       */
+       c3_o
+       u3_disk_vere_diff(u3_disk* log_u);
+
       /* u3_disk_migrate(): migrates disk format.
        */
         c3_o

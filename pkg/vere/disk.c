@@ -1088,23 +1088,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
     //  mark the latest epoch directory
     log_u->epo_d = lat_d;
 
-    //  if binary version of latest epoch is not the same as the
-    //  running binary, then we need to create a new epoch
-    //  XX move this into its own function and call it in `u3_pier_stay()`
-    c3_c ver_c[8193];
-    if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
-      fprintf(stderr, "disk: failed to load epoch version\r\n");
-      c3_free(log_u);
-      return 0;
-    }
-    if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
-      if ( c3n == u3_disk_epoc_init(log_u, log_u->dun_d) ) {
-        fprintf(stderr, "disk: failed to initialize epoch\r\n");
-        c3_free(log_u);
-        return 0;
-      }
-    }
-
     //  mark the log as live
     log_u->liv_o = c3y;
   }
@@ -1416,9 +1399,11 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   snprintf(sop_c, sizeof(sop_c), "%s/south.bin", bhk_c);
   if ( c3n == c3_unlink(nop_c) ) {
     fprintf(stderr, "disk: failed to delete bhk/north.bin\r\n");
-  } else if ( c3n == c3_unlink(sop_c) ) {
+  }
+  else if ( c3n == c3_unlink(sop_c) ) {
     fprintf(stderr, "disk: failed to delete bhk/south.bin\r\n");
-  } else {
+  }
+  else {
     if ( c3n == c3_rmdir(bhk_c) ) {
       fprintf(stderr, "disk: failed to delete bhk/\r\n");
     }
@@ -1437,4 +1422,30 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   fprintf(stderr, "disk: migrated disk to v%d format\r\n", U3D_VER1);
 
   return c3y;
+}
+
+
+/* u3_disk_vere_diff(): checks if vere version mismatches latest epoch's.
+*/
+c3_o
+u3_disk_vere_diff(u3_disk* log_u)
+{
+  c3_d lat_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
+    fprintf(stderr, "disk: failed to load last epoch\r\n");
+    c3_free(log_u);
+    return 0;
+  }
+
+  c3_c ver_c[8193];
+  if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
+    fprintf(stderr, "disk: failed to load epoch version\r\n");
+    c3_free(log_u);
+    return 0;
+  }
+  if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
+    return c3y;
+  }
+
+  return c3n;
 }
