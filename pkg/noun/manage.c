@@ -518,7 +518,7 @@ _pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
    len_w - size of your loom in words
 */
 static u3_road*
-_pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w)
+_pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
 {
   //  in a north road, the heap is low and the stack is high
   //
@@ -532,6 +532,10 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
   c3_w* rut_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
   c3_w* cap_w = mat_w;
+
+  if ( c3y == kid_o ) {
+    u3e_ward(u3of(c3_w, rut_w) - 1, u3of(c3_w, cap_w));
+  }
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
 }
@@ -555,9 +559,12 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //
   //    00~~~|M|+++|C|######|H|---|R|~~~FFF
   //         ^---u3R which _pave_road returns
+  //
   c3_w* mat_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
   c3_w* rut_w = c3_align(mem_w + len_w, u3C.balign_d, C3_ALGLO);
   c3_w* cap_w = mat_w + siz_w;
+
+  u3e_ward(u3of(c3_w, cap_w) - 1, u3of(c3_w, rut_w));
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
 }
@@ -574,7 +581,7 @@ _pave_home(void)
   c3_w  siz_w = c3_wiseof(u3v_home);
   c3_w  len_w = u3C.wor_i - u3C.walign_w;
 
-  u3H = (void *)_pave_north(mem_w, siz_w, len_w);
+  u3H = (void *)_pave_north(mem_w, siz_w, len_w, c3n);
   u3H->ver_w = U3V_VERLAT;
   u3R = &u3H->rod_u;
 
@@ -879,7 +886,7 @@ u3m_leap(c3_w pad_w)
     else {
       bot_p = u3R->cap_p;
 
-      rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
+      rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w, c3y);
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -901,7 +908,6 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
-    u3m_ward();
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
