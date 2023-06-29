@@ -24,11 +24,13 @@ u3wfu_crop(u3_noun cor)
 
     if ( u3_none != pro ) {
       // fprintf(stderr, "crop: hit %x\r\n", u3r_mug(key));
+      u3m_Comp_u.crop_u.hit_d++;
       u3z(key);
       return pro;
     }
     else {
       // fprintf(stderr, "crop: miss %x\r\n", u3r_mug(key));
+      u3m_Comp_u.crop_u.mis_d++;
       pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
       return u3z_save(key, pro);
     }

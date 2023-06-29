@@ -24,6 +24,8 @@
 #include "vortex.h"
 #include "xtract.h"
 
+u3m_comp_jets u3m_Comp_u;
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -2080,6 +2082,8 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop()
 {
+  fprintf(stderr, "crop: hit: %" PRIu64 " miss: %" PRIu64 "\r\n",
+                  u3m_Comp_u.crop_u.hit_d, u3m_Comp_u.crop_u.mis_d);
   u3e_stop();
   u3je_secp_stop();
 }

@@ -7,6 +7,18 @@
 #include "types.h"
 #include "version.h"
 
+typedef struct _u3m_comp_jets {
+  struct { c3_d hit_d; c3_d mis_d; } crop_u;
+  struct { c3_d hit_d; c3_d mis_d; } fish_u;
+  struct { c3_d hit_d; c3_d mis_d; } fuse_u;
+  struct { c3_d hit_d; c3_d mis_d; } mint_u;
+  struct { c3_d hit_d; c3_d mis_d; } mull_u;
+  struct { c3_d hit_sav_d; c3_d hit_dop_d; c3_d mis_d; } nest_u;
+  struct { c3_d hit_d; c3_d mis_d; } rest_u;
+} u3m_comp_jets;
+
+extern u3m_comp_jets u3m_Comp_u;
+
     /** System management.
     **/
       /* u3m_boot(): start the u3 system. return next event, starting from 1.
