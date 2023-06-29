@@ -845,6 +845,7 @@ u3m_leap(c3_w pad_w)
 {
   c3_w     len_w; /* the length of the new road (avail - (pad + wiseof(u3a_road))) */
   u3_road* rod_u;
+  const c3_w gar_w = u3P.gar_w;
 
   _rod_vaal(u3R);
 
@@ -894,6 +895,12 @@ u3m_leap(c3_w pad_w)
 
 #endif
     }
+  }
+
+  if (  ((u3a_outa(rod_u) >> u3a_page) == gar_w)
+     || ((u3a_outa(rod_u) + c3_wiseof(u3a_road) - 1) >> u3a_page) == gar_w )
+  {
+    fprintf(stderr, "loom: ward would've been bogus\r\n");
   }
 
   /* Attach the new road to its parents.
