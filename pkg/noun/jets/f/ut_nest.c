@@ -30,6 +30,7 @@ u3wfu_nest_dext(u3_noun dext_core)
     u3_weak pro = u3z_find(key);
 
     if ( u3_none != pro ) {
+      // fprintf(stderr, "nest: hit %x\r\n", u3r_mug(key));
       u3z(key);
       return pro;
     }
@@ -39,9 +40,11 @@ u3wfu_nest_dext(u3_noun dext_core)
       if ( ((c3y == pro) && (u3_nul == reg)) ||
            ((c3n == pro) && (u3_nul == seg)) )
       {
+        // fprintf(stderr, "nest: miss save %x\r\n", u3r_mug(key));
         return u3z_save(key, pro);
       }
       else {
+        // fprintf(stderr, "nest: miss drop %x\r\n", u3r_mug(key));
         u3z(key);
         return pro;
       }

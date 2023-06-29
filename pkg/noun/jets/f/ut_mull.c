@@ -26,10 +26,12 @@ u3wfu_mull(u3_noun cor)
     u3_weak pro = u3z_find(key);
 
     if ( u3_none != pro ) {
+      // fprintf(stderr, "mull: hit %x\r\n", u3r_mug(key));
       u3z(key);
       return pro;
     }
     else {
+      // fprintf(stderr, "mull: miss %x\r\n", u3r_mug(key));
       pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
       return u3z_save(key, pro);
     }
