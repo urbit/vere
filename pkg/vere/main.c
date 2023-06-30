@@ -1561,11 +1561,11 @@ _cw_info(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
-                  u3_Host.dir_c, eve_d);
+                  u3_Host.dir_c, u3_Host.eve_d);
 
   u3_disk_slog(log_u);
   printf("\n");
@@ -1720,17 +1720,17 @@ _cw_cram(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
   c3_o  ret_o;
 
   fprintf(stderr, "urbit: cram: preparing\r\n");
 
-  if ( c3n == (ret_o = u3u_cram(u3_Host.dir_c, eve_d)) ) {
+  if ( c3n == (ret_o = u3u_cram(u3_Host.dir_c, u3_Host.eve_d)) ) {
     fprintf(stderr, "urbit: cram: unable to jam state\r\n");
   }
   else {
-    fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", eve_d);
+    fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", u3_Host.eve_d);
   }
 
   //  save even on failure, as we just did all the work of deduplication
@@ -1832,11 +1832,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
     exit(1);
   }
   else {
+    u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
     u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
-
-    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
@@ -1925,11 +1924,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
   c3_w     pre_w;
 
   u3C.wag_w |= u3o_hashless;
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   pre_w = u3a_open(u3R);
   u3u_meld();
@@ -2090,9 +2089,9 @@ _cw_pack(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
   u3m_save();
@@ -2246,6 +2245,7 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
   //  Handle SIGTSTP as if it was SIGINT.
@@ -2268,8 +2268,6 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3l_log("mars: preparing for full replay");
     _cw_play_snap(log_u);
   }
-
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
 
@@ -2435,18 +2433,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // gracefully shutdown the pier if it's running
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
-
-  // note: this includes patch applications (if any)
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  // check if there's a *current* snapshot
-  if ( log_u->dun_d != u3A->eve_d ) {
-    fprintf(stderr, "chop: error: snapshot is out of date, please "
-                    "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "chop: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", u3A->eve_d, log_u->dun_d);
-    exit(1);
-  }
 
   //  get latest epoch number prior to creating a new one
   c3_d pre_d;
@@ -2523,7 +2511,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
   // cleanup
   u3_dire_free(ned_u);
   u3_disk_exit(log_u);
-  u3m_stop();
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
@@ -2580,10 +2567,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   }
 
   // gracefully shutdown the pier if it's running
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
-
-  // note: this includes patch applications (if any)
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   // check if there's a *current* snapshot
   if ( log_u->dun_d != u3A->eve_d ) {
