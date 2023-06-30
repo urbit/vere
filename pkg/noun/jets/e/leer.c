@@ -94,7 +94,7 @@ u3qe_leer(u3_atom txt)
     u3_noun* hed;
     u3_noun* tel;
 
-    while ( i_w < len_w ) {
+    while ( i_w <= len_w ) {
       //  scan till end or newline
       //
       for ( pos_w = i_w; i_w < len_w; ++i_w ) {
