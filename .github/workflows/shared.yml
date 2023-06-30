@@ -241,6 +241,7 @@ jobs:
           # We don't use -n here because we want to overwrite the version
           # string.
           gsutil cp ./bazel-bin/version "$target"
+          exitcode=$?
 
           [ $exitcode -eq 0 ] &&
             echo "Upload to $target completed successfully." ||
