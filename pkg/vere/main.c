@@ -342,7 +342,7 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         } else {
           u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w)
+          if ( 0 == u3_Host.ops_u.sap_w )
             return c3n;
         }
         break;
@@ -1197,7 +1197,7 @@ _cw_disk_init(c3_c* dir_c)
   u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
 
   if ( !log_u ) {
-    fprintf(stderr, "unable to open event log\n");;
+    fprintf(stderr, "unable to open event log\n");
     exit(1);
   }
 
@@ -1924,11 +1924,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  u3C.wag_w |= u3o_hashless;
+
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
   c3_w     pre_w;
-
-  u3C.wag_w |= u3o_hashless;
 
   pre_w = u3a_open(u3R);
   u3u_meld();
@@ -2245,7 +2245,6 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
   //  Handle SIGTSTP as if it was SIGINT.
@@ -2268,6 +2267,8 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3l_log("mars: preparing for full replay");
     _cw_play_snap(log_u);
   }
+
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
 
