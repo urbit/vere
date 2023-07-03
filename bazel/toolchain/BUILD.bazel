@@ -50,7 +50,7 @@ _aarch64_gcc = "toolchain-gcc-linux-aarch64"
 
 cc_toolchain_config(
     name = "gcc-linux-aarch64-config",
-    ar = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-ar".format(_install_prefix),
+    ar = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-gcc-ar".format(_install_prefix),
     cc = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-gcc".format(_install_prefix),
     cc_flags = [
         "-static",
@@ -104,7 +104,7 @@ _x86_64_gcc = "toolchain-gcc-linux-x86_64"
 
 cc_toolchain_config(
     name = "gcc-linux-x86_64-config",
-    ar = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-ar".format(_install_prefix),
+    ar = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-gcc-ar".format(_install_prefix),
     cc = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-gcc".format(_install_prefix),
     cc_flags = [
         "-static",
