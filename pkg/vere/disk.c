@@ -1043,11 +1043,23 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  migrate to the correct disk format if necessary
+    //  try migrating the disk format
     if ( c3n == u3_disk_migrate(log_u) ) {
-      fprintf(stderr, "disk: failed to migrate to v%d\r\n", U3D_VER1);
-      c3_free(log_u);
-      return 0;
+      fprintf(stderr, "disk: loading old format\r\n");
+
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+        fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+        c3_free(log_u);
+      }
+
+      c3_d fir_d;
+      if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
+        c3_free(log_u);
+        return 0;
+      }
+
+      return log_u;
     }
 
     //  get latest epoch number

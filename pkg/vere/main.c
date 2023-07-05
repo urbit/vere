@@ -1924,11 +1924,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3C.wag_w |= u3o_hashless;
-
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
   c3_w     pre_w;
+
+  u3C.wag_w |= u3o_hashless;
 
   pre_w = u3a_open(u3R);
   u3u_meld();
@@ -2245,7 +2245,11 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u;
+  if ( 0 == (log_u = _cw_disk_init(u3_Host.dir_c)) ) {
+    fprintf(stderr, "mars: failed to load event log\r\n");
+    exit(1);
+  }
 
   //  Handle SIGTSTP as if it was SIGINT.
   //
@@ -2281,6 +2285,10 @@ _cw_play(c3_i argc, c3_c* argv[])
     };
 
     u3_mars_play(&mar_u, eve_d, sap_d);
+
+    //  migrate after replay, if necessary
+    u3_Host.eve_d = mar_u.dun_d;
+    u3_disk_migrate(log_u);
   }
 
   u3_disk_exit(log_u);
