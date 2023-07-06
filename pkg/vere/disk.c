@@ -975,7 +975,7 @@ u3_disk_slog(u3_disk* log_u)
 /* u3_disk_init(): load or create pier directories and event log.
 */
 u3_disk*
-u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
+u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
   log_u->liv_o = c3n;
@@ -1043,23 +1043,33 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  try migrating the disk format
-    if ( c3n == u3_disk_migrate(log_u) ) {
-      fprintf(stderr, "disk: loading old format\r\n");
-
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
-        fprintf(stderr, "disk: failed to initialize lmdb\r\n");
-        c3_free(log_u);
+    if ( c3y == u3_disk_need_migrate(log_u) ) {
+      if ( c3y == mig_o ) {
+        if ( c3n == u3_disk_migrate(log_u) ) {
+          fprintf(stderr, "disk: failed to migrate log\r\n");
+          c3_free(log_u);
+          return 0;
+        }
       }
+      else {
+        fprintf(stderr, "disk: loading old format\r\n");
 
-      c3_d fir_d;
-      if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
-        fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
-        c3_free(log_u);
-        return 0;
+        if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+          fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+          c3_free(log_u);
+        }
+
+        c3_d fir_d;
+        if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
+          fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
+          c3_free(log_u);
+          return 0;
+        }
+
+        log_u->sen_d = log_u->dun_d;
+
+        return log_u;
       }
-
-      return log_u;
     }
 
     //  get latest epoch number
@@ -1291,9 +1301,27 @@ u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w)
   return c3y;
 }
 
+/* u3_disk_need_migrate: does the desk need to be migrated?
+*/
+c3_o
+u3_disk_need_migrate(u3_disk* log_u)
+{
+  //  check if data.mdb is readable in log directory
+  c3_c dut_c[8193];
+  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
+  if ( !_(u3_Host.ops_u.nuu)
+       && 0 != access(dut_c, R_OK) ) {
+    // if .urb/log/data.mdb is not readable, skip migration
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* u3_disk_migrate: migrates disk format.
  */
-c3_o u3_disk_migrate(u3_disk* log_u)
+c3_o
+u3_disk_migrate(u3_disk* log_u)
 {
   /*  migration steps:
    *  0. detect whether we need to migrate or not
@@ -1315,14 +1343,6 @@ c3_o u3_disk_migrate(u3_disk* log_u)
    *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
    */
 
-  //  check if data.mdb is readable in log directory
-  c3_c dut_c[8193];
-  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
-  if ( !_(u3_Host.ops_u.nuu)
-       && 0 != access(dut_c, R_OK) ) {
-    // if .urb/log/data.mdb is not readable, skip migration
-    return c3y;
-  }
 
   //  check if lock.mdb is readable in log directory
   c3_o luk_o = c3n;
@@ -1378,8 +1398,9 @@ c3_o u3_disk_migrate(u3_disk* log_u)
   }
 
   //  create hard links to data.mdb and lock.mdb in 0i0/
-  c3_c epo_c[8193], dat_c[8193], lok_c[8193];
+  c3_c epo_c[8193], dut_c[8193], dat_c[8193], lok_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_u->com_u->pax_c);
+  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
   snprintf(lok_c, sizeof(lok_c), "%s/lock.mdb", epo_c);
 

@@ -8,6 +8,7 @@
 #include "noun.h"
 #include "serf.h"
 #include "uv.h"
+#include <types.h>
 
   /** Quasi-tunable parameters.
   **/
@@ -935,7 +936,7 @@
       /* u3_disk_init(): load or create pier directories and event log.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u);
+        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */
@@ -1029,6 +1030,11 @@
        */
        c3_o
        u3_disk_vere_diff(u3_disk* log_u);
+
+      /* u3_disk_need_migrate(): does the disk need migration?
+      */
+        c3_o
+        u3_disk_need_migrate(u3_disk* log_u);
 
       /* u3_disk_migrate(): migrates disk format.
        */

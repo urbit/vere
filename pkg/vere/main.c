@@ -1194,7 +1194,7 @@ static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
   u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
+  u3_disk*  log_u = u3_disk_init(dir_c, cb_u, c3y);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -2151,6 +2151,69 @@ _cw_play_exit(c3_i int_i)
   raise(SIGINT);
 }
 
+/* _cw_play_impl(): replay events, but better.
+*/
+static void
+_cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
+{
+  //  XX factor this into its own function for calling here and
+  //     from main() (urbit play and boot replay)
+
+  //  XX handle SIGTSTP so that the lockfile is not orphaned?
+  //
+  u3_disk* log_u;
+  if ( 0 == (log_u = u3_disk_init(u3_Host.dir_c, (u3_disk_cb){0}, c3n)) ) {
+    fprintf(stderr, "mars: failed to load event log\r\n");
+    exit(1);
+  }
+
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+  signal(SIGTSTP, _cw_play_exit);
+
+  //  XX source these from a shared struct ops_u
+  if ( c3y == mel_o ) {
+    u3C.wag_w |= u3o_auto_meld;
+  }
+
+  if ( c3y == sof_o ) {
+    u3C.wag_w |= u3o_soft_mugs;
+  }
+
+  u3C.wag_w |= u3o_hashless;
+
+  if ( c3y == ful_o ) {
+    u3l_log("mars: preparing for full replay");
+    _cw_play_snap(log_u);
+  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+  u3C.slog_f = _cw_play_slog;
+
+  {
+    u3_mars mar_u = {
+      .log_u = log_u,
+      .dir_c = u3_Host.dir_c,
+      .sen_d = u3A->eve_d,
+      .dun_d = u3A->eve_d,
+    };
+
+    u3_mars_play(&mar_u, eve_d, sap_d);
+
+    //  migrate after replay, if necessary
+    u3_Host.eve_d = mar_u.dun_d;
+    if ( c3y == u3_disk_need_migrate(log_u) ) {
+      u3_disk_migrate(log_u);
+    }
+  }
+
+  u3_disk_exit(log_u);
+  u3m_stop();
+}
+
 /* _cw_play(): replay events, but better.
 */
 static void
@@ -2243,56 +2306,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  XX handle SIGTSTP so that the lockfile is not orphaned?
-  //
-  u3_disk* log_u;
-  if ( 0 == (log_u = _cw_disk_init(u3_Host.dir_c)) ) {
-    fprintf(stderr, "mars: failed to load event log\r\n");
-    exit(1);
-  }
-
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-
-  if ( c3y == mel_o ) {
-    u3C.wag_w |= u3o_auto_meld;
-  }
-
-  if ( c3y == sof_o ) {
-    u3C.wag_w |= u3o_soft_mugs;
-  }
-
-  u3C.wag_w |= u3o_hashless;
-
-  if ( c3y == ful_o ) {
-    u3l_log("mars: preparing for full replay");
-    _cw_play_snap(log_u);
-  }
-
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  u3C.slog_f = _cw_play_slog;
-
-  {
-    u3_mars mar_u = {
-      .log_u = log_u,
-      .dir_c = u3_Host.dir_c,
-      .sen_d = u3A->eve_d,
-      .dun_d = u3A->eve_d,
-    };
-
-    u3_mars_play(&mar_u, eve_d, sap_d);
-
-    //  migrate after replay, if necessary
-    u3_Host.eve_d = mar_u.dun_d;
-    u3_disk_migrate(log_u);
-  }
-
-  u3_disk_exit(log_u);
-  u3m_stop();
+  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -3085,8 +3099,7 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-      u3m_stop();
+      _cw_play_impl(0, 0, c3n, c3n, c3n);
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
