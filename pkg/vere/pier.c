@@ -1408,6 +1408,8 @@ _pier_on_lord_live(void* ptr_v)
       //  XX print bootstrap commit complete
       //  XX s/b boot_complete_cb
       //
+      //  XX this codepath should never be hit due to sync replay
+      u3l_log("pier: warning: async replay");
       _pier_play_init(pir_u, log_u->dun_d);
     }
   }
