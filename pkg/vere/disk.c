@@ -1310,8 +1310,8 @@ u3_disk_need_migrate(u3_disk* log_u)
   c3_c dut_c[8193];
   snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
   if ( !_(u3_Host.ops_u.nuu)
-       && 0 != access(dut_c, R_OK) ) {
-    // if .urb/log/data.mdb is not readable, skip migration
+       && 0 != access(dut_c, F_OK) ) {
+    // if .urb/log/data.mdb does not exist, skip migration
     return c3n;
   }
 

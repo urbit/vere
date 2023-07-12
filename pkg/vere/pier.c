@@ -1645,7 +1645,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       .write_bail_f = _pier_on_disk_write_bail
     };
 
-    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u, c3n)) ) {
+    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u, c3y)) ) {
       c3_free(pir_u);
       return 0;
     }

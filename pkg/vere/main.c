@@ -2153,9 +2153,6 @@ _cw_play_exit(c3_i int_i)
 static void
 _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  //  XX factor this into its own function for calling here and
-  //     from main() (urbit play and boot replay)
-
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
   u3_disk* log_u;
