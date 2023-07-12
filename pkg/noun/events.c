@@ -1727,7 +1727,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   c3_w sop_w = hig_p >> u3a_page;
   c3_w pag_w = u3P.gar_w;
 
-  if ( !((pag_w > nop_w) && (pag_w < hig_p)) ) {
+  if ( !((pag_w > nop_w) && (pag_w < sop_w)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
     u3_assert( !_ce_flaw_mprotect(pag_w) );
     u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
