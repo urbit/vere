@@ -60,9 +60,10 @@ bazel build :urbit
 ```
 
 If you want a debug build, which changes the optimization level from `-O3` to
-`-O0` and includes more debugging information, specify the `dbg` configuration:
+`-O0` and includes more debugging information, specify `dbg` as the
+`compilation_mode`:
 ```console
-bazel build --config=dbg :urbit
+bazel build --compilation_mode=dbg :urbit
 ```
 Note that you cannot change the optimization level for third party
 dependencies--those targets specified in `bazel/third_party`--from the command

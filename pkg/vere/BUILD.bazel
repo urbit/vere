@@ -2,6 +2,8 @@
 # GENERATED FILES
 #
 
+load("//bazel:common_settings.bzl", "vere_library", "vere_binary")
+
 # An approximation of `xxd -i` that runs on all platforms where Bash is
 # present. Generates a `.h` file that declares the array and array length as
 # `extern` global variables and a `.c` file containing the array and array
@@ -86,7 +88,7 @@ genrule(
 # LIBRARIES
 #
 
-cc_library(
+vere_library(
     name = "vere",
     srcs = glob(
         [
@@ -138,7 +140,7 @@ cc_library(
 # BINARIES
 #
 
-cc_binary(
+vere_binary(
     name = "urbit",
     srcs = [
         "main.c",
