@@ -279,7 +279,7 @@ cc_toolchain_config(
     # NOTE: building with `libtool` does not work on macOS due to lack of
     # support in the `configure_make` rule provided by `rules_foreign_cc`.
     # Therefore, we require setting `ar` as the archiver tool on macOS.
-    ar = "/usr/bin/ar",
+    ar = "/usr/local/opt/llvm@15/bin/llvm-ar",
     # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
     # implementation doesn't support `D`. We remove it with this attribute
     # and corresponding `ar_flags_feature` in `cfg.bzl`.
@@ -288,7 +288,8 @@ cc_toolchain_config(
     cc = "/usr/local/opt/llvm@15/bin/clang",
     compiler = "clang",
     compiler_version = "//:clang_version",
-    ld = "/usr/bin/ld",
+    ld = "/usr/local/opt/llvm@15/bin/llvm-lld",
+    nm = "/usr/local/opt/llvm@15/bin/llvm-nm",
     sys_includes = [
         "/usr/local/Cellar/llvm@15/15.0.7/lib/clang/15.0.7/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
