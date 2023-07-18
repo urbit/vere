@@ -1344,12 +1344,12 @@ c3_o
 u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
 {
   //  source image files from [pux_c]
-  u3e_image nux_u = { .nam_c = "north" };
-  u3e_image sux_u = { .nam_c = "south" };
+  u3e_image nux_u = { .nam_c = "north", .pgs_w = 0 };
+  u3e_image sux_u = { .nam_c = "south", .pgs_w = 0 };
 
   //  destination image files to [pax_c]
-  u3e_image nax_u = { .nam_c = "north" };
-  u3e_image sax_u = { .nam_c = "south" };
+  u3e_image nax_u = { .nam_c = "north", .pgs_w = 0 };
+  u3e_image sax_u = { .nam_c = "south", .pgs_w = 0 };
 
   c3_i mod_i = O_RDWR | O_CREAT;
 

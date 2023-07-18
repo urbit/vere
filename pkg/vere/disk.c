@@ -1044,12 +1044,10 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
     }
 
     if ( c3y == u3_disk_need_migrate(log_u) ) {
-      if ( c3y == mig_o ) {
-        if ( c3n == u3_disk_migrate(log_u) ) {
-          fprintf(stderr, "disk: failed to migrate log\r\n");
-          c3_free(log_u);
-          return 0;
-        }
+      if ( (c3y == mig_o) && (c3n == u3_disk_migrate(log_u)) ) {
+        fprintf(stderr, "disk: failed to migrate log\r\n");
+        c3_free(log_u);
+        return 0;
       }
       else {
         fprintf(stderr, "disk: loading old format\r\n");
