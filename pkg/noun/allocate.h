@@ -154,11 +154,11 @@
 
         u3a_jets jed;                         //  jet dashboard
 
-        struct {                              // bytecode state
-          u3p(u3h_root) har_p;                // formula->post of bytecode
+        struct {                              //  bytecode state
+          u3p(u3h_root) har_p;                //  formula->post of bytecode
         } byc;
 
-        struct {                              //  namespace
+        struct {                              //  scry namespace
           u3_noun gul;                        //  (list $+(* (unit (unit)))) now
         } ski;
 
@@ -175,8 +175,9 @@
           u3_noun day;                        //  doss, only in u3H (moveme)
         } pro;
 
-        struct {                              //  memoization
+        struct {                              //  transient/persistent memoization
           u3p(u3h_root) har_p;                //  (map (pair term noun) noun)
+          u3p(u3h_root) per_p;                //  (map (pair term noun) noun)
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;
