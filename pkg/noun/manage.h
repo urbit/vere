@@ -193,9 +193,4 @@
         c3_w
         u3m_pack(void);
 
-      /* u3m_migrate: perform loom migrations.
-      */
-        void
-        u3m_migrate();
-
 #endif /* ifndef U3_MANAGE_H */

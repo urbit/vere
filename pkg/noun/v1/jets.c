@@ -9,19 +9,6 @@
 #include "pkg/noun/v1/allocate.h"
 #include "pkg/noun/v1/hashtable.h"
 
-/**  Data structures.
-**/
-
-/* _cj_v1_hank: cached hook information.
-**       NB: copy of _cj_hank from pkg/noun/jets.c
- */
-typedef struct {
-  u3_weak  hax;                     //  axis of hooked inner core
-  u3j_v1_site sit_u;                   //  call-site data
-} _cj_v1_hank;
-
-/**  Functions.
-**/
 
 /* _cj_fink_free(): lose and free everything in a u3j_v1_fink.
 */
@@ -75,13 +62,12 @@ u3j_v1_site_lose(u3j_v1_site* sit_u)
 }
 
 /* _cj_v1_free_hank(): free an entry from the hank cache.
-**              NB: copy of _cj_v1_free_hank() from pkg/noun/jets.c
 */
 static void
 _cj_v1_free_hank(u3_noun kev)
 {
   u3a_v1_cell* cel_u = (u3a_v1_cell*) u3a_v1_to_ptr(kev);
-  _cj_v1_hank* han_u = u3to(_cj_v1_hank, cel_u->tel);
+  u3j_v1_hank* han_u = u3to(u3j_v1_hank, cel_u->tel);
   if ( u3_none != han_u->hax ) {
     u3a_v1_lose(han_u->hax);
     u3j_v1_site_lose(&(han_u->sit_u));

@@ -2131,7 +2131,8 @@ u3a_mark_road(FILE* fil_u)
   tot_w += u3a_maid(fil_u, "  profile batteries", u3a_mark_noun(u3R->pro.don));
   tot_w += u3a_maid(fil_u, "  profile doss", u3a_mark_noun(u3R->pro.day));
   tot_w += u3a_maid(fil_u, "  new profile trace", u3a_mark_noun(u3R->pro.trace));
-  tot_w += u3a_maid(fil_u, "  memoization cache", u3h_mark(u3R->cax.har_p));
+  tot_w += u3a_maid(fil_u, "  transient memoization cache", u3h_mark(u3R->cax.har_p));
+  tot_w += u3a_maid(fil_u, "  persistent memoization cache", u3h_mark(u3R->cax.per_p));
   return   u3a_maid(fil_u, "total road stuff", tot_w);
 }
 
@@ -2158,6 +2159,7 @@ u3a_rewrite_compact(void)
   u3a_rewrite_noun(u3R->pro.day);
   u3a_rewrite_noun(u3R->pro.trace);
   u3h_rewrite(u3R->cax.har_p);
+  u3h_rewrite(u3R->cax.per_p);
 
   u3R->ski.gul = u3a_rewritten_noun(u3R->ski.gul);
   u3R->bug.tax = u3a_rewritten_noun(u3R->bug.tax);
@@ -2166,6 +2168,7 @@ u3a_rewrite_compact(void)
   u3R->pro.day = u3a_rewritten_noun(u3R->pro.day);
   u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
   u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
+  u3R->cax.per_p = u3a_rewritten(u3R->cax.per_p);
 }
 
 /* _ca_print_box(): heuristically print the contents of an allocation box.

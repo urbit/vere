@@ -32,9 +32,9 @@
 
   /**  Functions.
   **/
-    /* u3v_v2_rewrite_compact(): rewrite arvo kernel for compaction.
+    /* u3v_v2_mig_rewrite_compact(): rewrite arvo kernel for compaction.
     */
       void
-      u3v_v2_rewrite_compact();
+      u3v_v2_mig_rewrite_compact();
 
 #endif /* ifndef U3_VORTEX_V2_H */

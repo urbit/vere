@@ -1903,3 +1903,29 @@ u3r_mug(u3_noun veb)
 
   return mug_l;
 }
+
+/* u3r_skip():
+**
+**  Extract a constant from a formula, ignoring
+**  safe/static hints, doing no computation.
+*/
+u3_weak
+u3r_skip(u3_noun fol)
+{
+  while ( c3y == u3du(fol) ) {
+    switch ( u3h(fol) ) {
+      default: return u3_none;
+      case 1:  return u3t(fol);
+      case 11: {
+        u3_noun arg = u3t(fol),
+                hod = u3h(arg);
+
+        if ( (c3y == u3du(hod)) && (u3_none == u3r_skip(u3t(hod))) ) {
+          return u3_none;
+        }
+        fol = u3t(arg);
+      }
+    }
+  }
+  return u3_none;
+}

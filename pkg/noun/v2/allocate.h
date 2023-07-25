@@ -21,6 +21,7 @@
 #     define u3a_v2_is_north     u3a_is_north
 #     define u3a_v2_is_pom       u3a_is_pom
 #     define u3a_v2_is_pug       u3a_is_pug
+#     define u3a_v2_lose         u3a_lose
 #     define u3a_v2_malloc       u3a_malloc
 #     define u3a_v2_minimum      u3a_minimum
 #     define u3a_v2_outa         u3a_outa
@@ -63,8 +64,8 @@
           c3_w fag_w;                         //  flag bits
         } how;                                //
 
-        struct {                              //  allocation pools
-          u3p(u3a_fbox) fre_p[u3a_fbox_no];   //  heap by node size log
+        struct {                                   //  allocation pools
+          u3p(u3a_v2_fbox) fre_p[u3a_v2_fbox_no];  //  heap by node size log
           u3p(u3a_fbox) cel_p;                //  custom cell allocator
           c3_w fre_w;                         //  number of free words
           c3_w max_w;                         //  maximum allocated
@@ -110,10 +111,10 @@
     **/
       /* Reference and arena control.
       */
-        /* u3a_v2_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
+        /* u3a_v2_mig_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
         */
           void
-          u3a_v2_rewrite_compact(void);
+          u3a_v2_mig_rewrite_compact(void);
 
         /* u3a_v2_rewrite_noun(): rewrite a noun for compaction.
         */

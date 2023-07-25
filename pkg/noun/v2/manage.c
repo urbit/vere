@@ -2,28 +2,25 @@
 
 #include "pkg/noun/v2/manage.h"
 
+#include "pkg/noun/v1/allocate.h"
 #include "pkg/noun/v2/allocate.h"
 #include "pkg/noun/v2/hashtable.h"
 #include "pkg/noun/v2/jets.h"
 #include "pkg/noun/v2/nock.h"
 #include "pkg/noun/v2/options.h"
 #include "pkg/noun/vortex.h"
+#include "pkg/noun/v1/vortex.h"
 #include "pkg/noun/v2/vortex.h"
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
- *                     XX need to version; dynamic scope insanity!
 */
 static void
 _cm_pack_rewrite(void)
 {
-  //  XX fix u3a_v2_rewrite* to support south roads
-  //
-  u3_assert( &(u3H_v2->rod_u) == u3R_v2 );
-
-  u3v_v2_rewrite_compact();
-  u3j_v2_rewrite_compact();
-  u3n_v2_rewrite_compact();
-  u3a_v2_rewrite_compact();
+  u3v_v2_mig_rewrite_compact();
+  u3j_v2_mig_rewrite_compact();
+  u3n_v2_mig_rewrite_compact();
+  u3a_v2_mig_rewrite_compact();
 }
 
 static void
@@ -80,7 +77,7 @@ _migrate_move(u3a_v2_road *rod_u)
   c3_z hiz_z = u3a_v2_heap(rod_u) * sizeof(c3_w);
 
   /* calculate required shift distance to prevent write head overlapping read head */
-  c3_w  off_w = 1;  /* at least 1 word because u3R_v2->rut_p migrates from 1 to 2 */
+  c3_w  off_w = 1;  /* at least 1 word because u3R_v1->rut_p migrates from 1 to 2 */
   for (u3a_v2_box *box_u = u3a_v2_into(rod_u->rut_p)
          ; (void *)box_u < u3a_v2_into(rod_u->hat_p)
          ; box_u = (void *)((c3_w *)box_u + box_u->siz_w))
@@ -136,10 +133,10 @@ _migrate_move(u3a_v2_road *rod_u)
 
   /* like |pack, clear the free lists and cell allocator */
   for (c3_w i_w = 0; i_w < u3a_v2_fbox_no; i_w++)
-    u3R_v2->all.fre_p[i_w] = 0;
+    u3R_v1->all.fre_p[i_w] = 0;
 
-  u3R_v2->all.fre_w = 0;
-  u3R_v2->all.cel_p = 0;
+  u3R_v1->all.fre_w = 0;
+  u3R_v1->all.cel_p = 0;
 }
 
 
@@ -154,24 +151,24 @@ u3m_v2_migrate()
   u3_assert( U3V_VER1 == ver_w );
 
   c3_w* mem_w = u3_Loom + 1;
-  c3_w  siz_w = c3_wiseof(u3v_v2_home);
+  c3_w  siz_w = c3_wiseof(u3v_v1_home);
   c3_w* mat_w = (mem_w + len_w) - siz_w;
 
-  u3H_v2 = (void *)mat_w;
-  u3R_v2 = &u3H_v2->rod_u;
+  u3H_v1 = (void *)mat_w;
+  u3R_v1 = &u3H_v1->rod_u;
 
-  u3R_v2->cap_p = u3R_v2->mat_p = u3a_v2_outa(u3H_v2);
+  u3R_v1->cap_p = u3R_v1->mat_p = u3a_v1_outa(u3H_v1);
 
   fprintf(stderr, "loom: pointer compression migration running...\r\n");
 
   /* perform the migration in a pattern similar to |pack */
   _migrate_reclaim();
-  _migrate_seek(&u3H_v2->rod_u);
+  _migrate_seek(&u3H_v1->rod_u);
   _migrate_rewrite();
-  _migrate_move(&u3H_v2->rod_u);
+  _migrate_move(&u3H_v1->rod_u);
 
   /* finally update the version and commit to disk */
-  u3H_v2->ver_w = U3V_VER2;
+  u3H_v1->ver_w = U3V_VER2;
 
   fprintf(stderr, "loom: pointer compression migration done\r\n");
 }

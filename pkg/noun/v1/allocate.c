@@ -59,18 +59,6 @@ _box_v1_attach(u3a_v1_box* box_u)
   u3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_v1_fbox)));
   u3_assert(0 != u3of(u3a_v1_fbox, box_u));
 
-#if 0
-  //  For debugging, fill the box with beef.
-  {
-    c3_w* box_w = (void *)box_u;
-    c3_w  i_w;
-
-    for ( i_w = c3_wiseof(u3a_v1_box); (i_w + 1) < box_u->siz_w; i_w++ ) {
-      box_w[i_w] = 0xdeadbeef;
-    }
-  }
-#endif
-
   {
     c3_w           sel_w = _box_v1_slot(box_u->siz_w);
     u3p(u3a_v1_fbox)  fre_p = u3of(u3a_v1_fbox, box_u);
@@ -131,19 +119,8 @@ _box_v1_free(u3a_v1_box* box_u)
     return;
   }
 
-#if 0
-  /* Clear the contents of the block, for debugging.
-  */
+  //  we're always migrating a north road, so no need to check for it
   {
-    c3_w i_w;
-
-    for ( i_w = c3_wiseof(u3a_v1_box); (i_w + 1) < box_u->siz_w; i_w++ ) {
-      box_w[i_w] = 0xdeadbeef;
-    }
-  }
-#endif
-
-  if ( c3y == u3a_v1_is_north(u3R_v1) ) {
     /* Try to coalesce with the block below.
     */
     if ( box_w != u3a_v1_into(u3R_v1->rut_p) ) {
@@ -210,10 +187,10 @@ u3a_v1_reclaim(void)
   u3h_v1_free_nodes(u3R_v1->cax.har_p);
 }
 
-/* _me_lose_north(): lose on a north road.
+/* _me_v1_lose_north(): lose on a north road.
 */
 static void
-_me_lose_north(u3_noun dog)
+_me_v1_lose_north(u3_noun dog)
 {
 top:
   {
@@ -234,7 +211,7 @@ top:
           u3_noun     t_dog = dog_u->tel;
 
           if ( !_(u3a_v1_is_cat(h_dog)) ) {
-            _me_lose_north(h_dog);
+            _me_v1_lose_north(h_dog);
           }
           u3a_v1_wfree(dog_w);
           if ( !_(u3a_v1_is_cat(t_dog)) ) {
@@ -256,6 +233,6 @@ void
 u3a_v1_lose(u3_noun som)
 {
   if ( !_(u3a_v1_is_cat(som)) ) {
-    _me_lose_north(som);
+    _me_v1_lose_north(som);
   }
 }

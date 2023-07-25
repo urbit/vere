@@ -154,11 +154,11 @@
 
         u3a_jets jed;                         //  jet dashboard
 
-        struct {                              // bytecode state
-          u3p(u3h_root) har_p;                // formula->post of bytecode
+        struct {                              //  bytecode state
+          u3p(u3h_root) har_p;                //  formula->post of bytecode
         } byc;
 
-        struct {                              //  namespace
+        struct {                              //  scry namespace
           u3_noun gul;                        //  (list $+(* (unit (unit)))) now
         } ski;
 
@@ -175,8 +175,9 @@
           u3_noun day;                        //  doss, only in u3H (moveme)
         } pro;
 
-        struct {                              //  memoization
-          u3p(u3h_root) har_p;                //  (map (pair term noun) noun)
+        struct {                              //  memoization caches
+          u3p(u3h_root) har_p;                //  transient
+          u3p(u3h_root) per_p;                //  persistent
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;
@@ -232,7 +233,7 @@
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
 #     define u3a_is_atom(som)    c3o(u3a_is_cat(som), \
-                                         u3a_is_pug(som))
+                                     u3a_is_pug(som))
 #     define u3ud(som)           u3a_is_atom(som)
 
     /* u3a_is_cell: yes if noun [som] is cell.
@@ -380,8 +381,6 @@
 
 #   define u3_Loom      ((c3_w *)(void *)U3_OS_LoomBase)
 
-  /**  Inline functions.
-  **/
   /* u3a_into(): convert loom offset [x] into generic pointer.
    */
 #   define u3a_into(x)  ((void *)(u3_Loom + (x)))
@@ -402,6 +401,8 @@
    */
 #   define u3a_to_wtr(som)  ((c3_w *)u3a_to_ptr(som))
 
+  /**  Inline functions.
+  **/
   /* u3a_to_pug(): set bit 31 of [off].
    */
   inline c3_w u3a_to_pug(c3_w off) {

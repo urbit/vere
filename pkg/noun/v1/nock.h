@@ -7,6 +7,7 @@
 
   /**  Aliases.
   **/
+#     define  u3n_v1_memo  u3n_v2_memo
 #     define  u3n_v1_prog  u3n_v2_prog
 
   /**  Functions.

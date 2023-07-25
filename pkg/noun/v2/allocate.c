@@ -32,10 +32,10 @@ u3a_v2_rewritten_noun(u3_noun som)
   return som_p;
 }
 
-/* u3a_v2_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
+/* u3a_v2_mig_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
 */
 void
-u3a_v2_rewrite_compact(void)
+u3a_v2_mig_rewrite_compact(void)
 {
   u3a_v2_rewrite_noun(u3R_v2->ski.gul);
   u3a_v2_rewrite_noun(u3R_v2->bug.tax);
