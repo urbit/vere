@@ -23,6 +23,7 @@
 #include "urcrypt/urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
+#include "zave.h"
 
 //  XX stack-overflow recovery should be gated by -a
 //
@@ -475,7 +476,8 @@ _pave_parts(void)
 {
   // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
   // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(50000);
+  u3R->cax.har_p = u3h_new_cache(50000);  //  transient cache
+  u3R->cax.per_p = u3h_new_cache(50000);  //  persistent cache
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
@@ -996,6 +998,7 @@ u3m_love(u3_noun pro)
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
+  u3p(u3h_root) per_p = u3R->cax.per_p;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1006,6 +1009,7 @@ u3m_love(u3_noun pro)
   pro   = u3a_take(pro);
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
+  per_p = u3h_take(per_p);
 
   //  pop the stack
   //
@@ -1016,6 +1020,7 @@ u3m_love(u3_noun pro)
   //
   u3j_reap(jed_u);
   u3n_reap(byc_p);
+  u3z_reap(u3z_memo_keep, per_p);
 
   return pro;
 }
@@ -2130,6 +2135,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   if ( c3n == nuu_o ) {
     u3j_ream();
     u3n_ream();
+    // u3z_ream();
     return u3A->eve_d;
   }
   else {

@@ -2152,7 +2152,8 @@ u3a_mark_road(FILE* fil_u)
   tot_w += u3a_maid(fil_u, "  profile batteries", u3a_mark_noun(u3R->pro.don));
   tot_w += u3a_maid(fil_u, "  profile doss", u3a_mark_noun(u3R->pro.day));
   tot_w += u3a_maid(fil_u, "  new profile trace", u3a_mark_noun(u3R->pro.trace));
-  tot_w += u3a_maid(fil_u, "  memoization cache", u3h_mark(u3R->cax.har_p));
+  tot_w += u3a_maid(fil_u, "  transient memoization cache", u3h_mark(u3R->cax.har_p));
+  tot_w += u3a_maid(fil_u, "  persistent memoization cache", u3h_mark(u3R->cax.per_p));
   return   u3a_maid(fil_u, "total road stuff", tot_w);
 }
 
