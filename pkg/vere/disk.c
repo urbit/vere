@@ -1341,6 +1341,7 @@ u3_disk_migrate(u3_disk* log_u)
    *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
    */
 
+  fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
 
   //  check if lock.mdb is readable in log directory
   c3_o luk_o = c3n;
