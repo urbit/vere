@@ -1231,6 +1231,13 @@
         u3_auto*
         u3_behn_io_init(u3_pier* pir_u);
 
+    /**  lick, IPC communication.
+    **/
+      /* u3_lick_io_init(): initialize loch vane.
+      */
+        u3_auto*
+        u3_lick_io_init(u3_pier* pir_u);
+
     /**  HTTP server.
     **/
       /* u3_http_io_init(): initialize http I/O.

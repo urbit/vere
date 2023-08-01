@@ -438,6 +438,7 @@ u3_auto_init(u3_pier* pir_u)
   car_u = _auto_link(u3_unix_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_term_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_fore_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
 
   return car_u;
 }
