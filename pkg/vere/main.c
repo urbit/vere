@@ -1924,10 +1924,10 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  u3C.wag_w |= u3o_hashless;
+
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-
-  u3C.wag_w |= u3o_hashless;
 
   u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
 
