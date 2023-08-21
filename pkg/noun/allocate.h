@@ -233,7 +233,7 @@
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
 #     define u3a_is_atom(som)    c3o(u3a_is_cat(som), \
-                                         u3a_is_pug(som))
+                                     u3a_is_pug(som))
 #     define u3ud(som)           u3a_is_atom(som)
 
     /* u3a_is_cell: yes if noun [som] is cell.

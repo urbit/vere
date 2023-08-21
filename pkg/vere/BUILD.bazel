@@ -301,7 +301,7 @@ genrule(
 
     if check && sleep 10 && check; then
       echo "boot success"
-      lensa hood "+hood/exit"
+      lensa hood '+hood/exit'
       while [ -f ./pier/.vere.lock ]; do
         echo "waiting for pier to shut down"
         sleep 5
