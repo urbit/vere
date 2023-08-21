@@ -5,6 +5,7 @@
 #include "allocate.h"
 #include "hashtable.h"
 #include "imprison.h"
+#include "vortex.h"
 
 /* u3z_key(): construct a memo cache-key.  Arguments retained.
 */
@@ -57,16 +58,17 @@ u3z_find(u3z_cid cid, u3_noun key)
     return u3h_get(_har(u3R, cid), key);
   }
   else {
-    u3a_road* rod_u = u3R;
+    //  XX needs to be benchmarked (up vs. down search)
+    u3a_road* rod_u = &(u3H->rod_u);
     while ( 1 ) {
       u3_weak got = u3h_get(_har(rod_u, cid), key);
       if ( u3_none != got ) {
         return got;
       }
-      if ( 0 == rod_u->par_p ) {
+      if ( 0 == rod_u->kid_p ) {
         return u3_none;
       }
-      rod_u = u3to(u3a_road, rod_u->par_p);
+      rod_u = u3to(u3a_road, rod_u->kid_p);
     };
   }
 }
