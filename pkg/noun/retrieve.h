@@ -486,4 +486,11 @@
         c3_y*
         u3r_tape(u3_noun a);
 
+      /* u3r_skip():
+      **
+      **  Extract a constant from a formula, ignoring
+      **  safe/static hints, doing no computation.
+      */
+        u3_weak u3r_skip(u3_noun fol);
+
 #endif /* ifndef U3_RETRIEVE_H */

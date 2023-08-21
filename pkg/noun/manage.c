@@ -476,8 +476,8 @@ _pave_parts(void)
 {
   // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
   // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(50000);  //  transient cache
-  u3R->cax.per_p = u3h_new_cache(50000);  //  persistent cache
+  u3R->cax.har_p = u3h_new_cache(50000);  //  transient
+  u3R->cax.per_p = u3h_new_cache(5000);   //  persistent
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();

@@ -16,9 +16,8 @@
     ***  corresponding to the 32-slot nodes for everything under
     ***  the root node.
     ***
-    ***  We store an extra "freshly warm" bit for a simple
-    ***  clock-algorithm reclamation policy, not yet implemented.
-    ***  Search "clock algorithm" to figure it out.
+    ***  We store an extra "freshly warm" bit and use it for a simple
+    ***  clock-algorithm reclamation policy.
     **/
       /* u3h_slot: map slot.
       **
