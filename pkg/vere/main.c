@@ -183,6 +183,9 @@ _main_init(void)
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
   u3_Host.ops_u.hap_w = 50000;
+  u3C.hap_w = u3_Host.ops_u.hap_w;
+  u3_Host.ops_u.per_w = 50000;
+  u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
@@ -247,6 +250,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "loom",                required_argument, NULL, c3__loom },
     { "local",               no_argument,       NULL, 'L' },
     { "lite-boot",           no_argument,       NULL, 'l' },
+    { "keep-cache-limit",    required_argument, NULL, 'M' },
     { "replay-to",           required_argument, NULL, 'n' },
     { "profile",             no_argument,       NULL, 'P' },
     { "ames-port",           required_argument, NULL, 'p' },
@@ -279,7 +283,7 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
@@ -342,7 +346,7 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         } else {
           u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w) 
+          if ( 0 == u3_Host.ops_u.sap_w )
             return c3n;
         }
         break;
@@ -365,6 +369,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
           return c3n;
         }
+        u3C.hap_w = u3_Host.ops_u.hap_w;
         break;
       }
       case 'c': {
@@ -410,6 +415,13 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 'k': {
         u3_Host.ops_u.key_c = _main_repath(optarg);
+        break;
+      }
+      case 'M': {
+        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.per_w) ) {
+          return c3n;
+        }
+        u3C.per_w = u3_Host.ops_u.per_w;
         break;
       }
       case 'n': {
@@ -764,6 +776,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-L, --local                   Local networking only\n",
     "    --loom                    Set loom to binary exponent (31 == 2GB)\n"
     "-l, --lite-boot               Most-minimal startup\n",
+    "-M, --keep-cache-limit LIMIT  Set persistent memo cache max size; 0 means default\n",
     "-n, --replay-to NUMBER        Replay up to event\n",
     "-P, --profile                 Profiling\n",
     "-p, --ames-port PORT          Set the ames port to bind to\n",
@@ -1075,6 +1088,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  //  XX use named arguments and getopt
+
   c3_d       eve_d = 0;
   uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
   c3_c*      dir_c = argv[2];
@@ -1086,6 +1101,7 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      eve_c = argv[7];
   c3_c*      eph_c = argv[8];
   c3_c*      tos_c = argv[9];
+  c3_c*      per_c = argv[10];
   c3_w       tos_w;
 
   _cw_init_io(lup_u);
@@ -1110,7 +1126,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     //  XX check return
     //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(hap_c, "%" SCNu32, &u3C.hap_w);
+    sscanf(per_c, "%" SCNu32, &u3C.per_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
