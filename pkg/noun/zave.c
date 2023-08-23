@@ -63,6 +63,7 @@ u3z_find(u3z_cid cid, u3_noun key)
     while ( 1 ) {
       u3_weak got = u3h_get(_har(rod_u, cid), key);
       if ( u3_none != got ) {
+        fprintf(stderr, "\r\nHIT MY BOY!\r\n");
         return got;
       }
       if ( 0 == rod_u->kid_p ) {

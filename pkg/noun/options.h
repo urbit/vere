@@ -17,6 +17,8 @@
         c3_w    wag_w;                        //  flags (both ways)
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
         c3_w    tos_w;                        //  loom toss skip-length
+        c3_w    hap_w;                        //  transient memoization cache size
+        c3_w    per_w;                        //  persistent memoization cache size
         void (*stderr_log_f)(c3_c*);          //  errors from c code
         void (*slog_f)(u3_noun);              //  function pointer for slog
         void (*sign_hold_f)(void);            //  suspend system signal regime
