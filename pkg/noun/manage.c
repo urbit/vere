@@ -609,8 +609,6 @@ _find_home(void)
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
 
-  u3l_log("sizeof(u3R): %zu\r\n", sizeof(u3a_road));
-
   //  this looks risky, but there are no legitimate scenarios
   //  where it's wrong
   //
@@ -662,11 +660,7 @@ _find_home(void)
     abort();
   }
 
-  if ( U3V_VER2 == ver_w ) {
-    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-    u3H->ver_w = U3V_VER3;
-    u3m_save();
-  }
+  u3m_pack();
 
   _rod_vaal(u3R);
 }
