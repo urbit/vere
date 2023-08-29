@@ -387,6 +387,9 @@
     case U3V_VER2:
       u3C.vits_w = 1;
       break;
+    case U3V_VER3:
+      u3C.vits_w = 1;
+      break;
     default:
       u3_assert(0);
     }
