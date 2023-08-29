@@ -660,7 +660,12 @@ _find_home(void)
     abort();
   }
 
+  //                              calls are in desc. order of ham-fistedness
   u3m_pack();
+  // u3m_reclaim();               XX works
+  // u3n_reclaim();               XX works
+  // u3n_free();                  XX works
+  // u3R->byc.har_p = u3h_new();     works
 
   _rod_vaal(u3R);
 }
