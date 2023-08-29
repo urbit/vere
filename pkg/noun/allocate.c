@@ -428,12 +428,23 @@ _ca_reclaim_half(void)
     fprintf(stderr, "allocate: reclaim: memo cache: empty\r\n");
     u3m_bail(c3__meme);
   }
+  if ( (0 == u3R->cax.per_p) ||
+       (0 == u3to(u3h_root, u3R->cax.per_p)->use_w) )
+  {
+    fprintf(stderr, "allocate: reclaim: persistent memo cache: empty\r\n");
+    u3m_bail(c3__meme);
+  }
 
 #if 1
   fprintf(stderr, "allocate: reclaim: half of %d entries\r\n",
           u3to(u3h_root, u3R->cax.har_p)->use_w);
 
   u3h_trim_to(u3R->cax.har_p, u3to(u3h_root, u3R->cax.har_p)->use_w / 2);
+
+  fprintf(stderr, "allocate: reclaim: half of %d persistent entries\r\n",
+          u3to(u3h_root, u3R->cax.per_p)->use_w);
+
+  u3h_trim_to(u3R->cax.per_p, u3to(u3h_root, u3R->cax.per_p)->use_w / 2);
 #else
   /*  brutal and guaranteed effective
   */
@@ -2166,6 +2177,9 @@ u3a_reclaim(void)
   //
   u3h_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new();
 }
 
 /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
@@ -2180,6 +2194,7 @@ u3a_rewrite_compact(void)
   u3a_rewrite_noun(u3R->pro.day);
   u3a_rewrite_noun(u3R->pro.trace);
   u3h_rewrite(u3R->cax.har_p);
+  u3h_rewrite(u3R->cax.per_p);
 
   u3R->ski.gul = u3a_rewritten_noun(u3R->ski.gul);
   u3R->bug.tax = u3a_rewritten_noun(u3R->bug.tax);
@@ -2188,6 +2203,7 @@ u3a_rewrite_compact(void)
   u3R->pro.day = u3a_rewritten_noun(u3R->pro.day);
   u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
   u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
+  u3R->cax.per_p = u3a_rewritten(u3R->cax.per_p);
 }
 
 /* _ca_print_box(): heuristically print the contents of an allocation box.
