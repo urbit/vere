@@ -17,6 +17,12 @@
 
 #define QUEUE_MAX        30             //  max number of packets in queue
 
+typedef enum u3_stun_state {
+  STUN_OFF = 0,
+  STUN_TRYING = 1,
+  STUN_KEEPALIVE = 2,
+} u3_stun_state;
+
 /* u3_fine: fine networking
 */
   typedef struct _u3_fine {
@@ -45,6 +51,16 @@
     c3_w             imp_w[256];        //  imperial IPs
     time_t           imp_t[256];        //  imperial IP timestamps
     c3_o             imp_o[256];        //  imperial print status
+    struct {                            //    stun client state:
+      u3_stun_state  sat_y;             //  formal state
+      c3_y           tid_y[16];         //  last transaction id
+      c3_d           dad_d[2];          //  sponsoring ship @p
+      u3_lane        lan_u;             //  sponsoring ship IP and port
+      uv_timer_t     tim_u;             //  keepalive timer handle
+      struct timeval las_u;             //  last sent date
+      struct timeval sar_u;             //  date we started trying to send
+      u3_lane        sef_u;             //  our lane, if we know it
+    } sun_u;                            //
     struct {                            //    config:
       c3_o           net_o;             //  can send
       c3_o           see_o;             //  can scry
@@ -1173,6 +1189,193 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   }
 }
 
+static void
+_stun_stop(u3_ames* sam_u)
+{
+  switch ( sam_u->sun_u.sat_y ) {
+    case STUN_OFF: break;  //  ignore; already stopped
+    case STUN_TRYING: {
+      uv_timer_stop(&sam_u->sun_u.tim_u);
+    } break;
+    case STUN_KEEPALIVE: {
+      uv_timer_stop(&sam_u->sun_u.tim_u);
+    } break;
+    default: u3_assert(!"programmer error");
+  }
+  sam_u->sun_u.sat_y = STUN_OFF;
+}
+
+static void _stun_send_request(u3_ames*); // forward declaration
+
+static void
+_stun_timer_cb(uv_timer_t* tim_u)
+{
+  u3_ames* sam_u = (u3_ames*)(tim_u->data);
+  switch ( sam_u->sun_u.sat_y ) {
+    case STUN_OFF: {
+      //  ignore; stray timer (although this shouldn't happen)
+      u3l_log("stun: stray timer STUN_OFF");
+    } break;
+    case STUN_KEEPALIVE: {
+      sam_u->sun_u.sat_y = STUN_TRYING;
+      _stun_send_request(sam_u);
+    } break;
+    case STUN_TRYING: {
+      c3_d gap_d;
+      {
+        struct timeval tim_tv;
+        gettimeofday(&tim_tv, 0);
+        u3_noun now = u3_time_in_tv(&tim_tv);
+        u3_noun den = u3_time_in_tv(&sam_u->sun_u.sar_u);
+        gap_d = u3_time_gap_ms(den, now);
+      }
+      if ( gap_d >= (5 * 1000) ) {
+        _stun_stop(sam_u);
+        //  TODO inject event into arvo to ping repeatedly
+      }
+      else {
+        sam_u->sun_u.tim_u.data = sam_u;
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 1*1000, 0);
+      }
+    } break;
+    default: u3_assert(!"programmer error");
+  }
+}
+
+typedef struct _u3_stun_send {
+  uv_udp_send_t req_u;  //  uv udp request handle
+  u3_ames* sam_u;       //  backpointer to driver state
+} u3_stun_send;
+
+static void
+_stun_send_cb(uv_udp_send_t *req_u, c3_i sas_i)
+{
+  u3_stun_send* snd_u = (u3_stun_send*)req_u;
+  if ( sas_i ) {
+    //  TODO take error handling action
+  }
+  else {
+    u3_ames* sam_u = snd_u->sam_u;
+    gettimeofday(&sam_u->sun_u.las_u, 0);  //  overwrite last sent date
+  }
+}
+
+static void
+_stun_on_response(u3_ames* sam_u) // TODO read arg
+{
+  u3_stun_state old_y = sam_u->sun_u.sat_y;
+  switch ( sam_u->sun_u.sat_y ) {
+    case STUN_OFF: break;       //  ignore; stray response
+    case STUN_KEEPALIVE: break; //  ignore; duplicate response
+    case STUN_TRYING: {
+      sam_u->sun_u.sat_y = STUN_KEEPALIVE;
+      sam_u->sun_u.tid_y[1]++;
+      uv_timer_stop(&sam_u->sun_u.tim_u);
+      sam_u->sun_u.tim_u.data = sam_u;
+      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+    } break;
+    default: assert("programmer error");
+  }
+}
+
+static void
+_stun_send_request(u3_ames* sam_u)
+{
+  u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
+
+  struct sockaddr_in add_u;
+  memset(&add_u, 0, sizeof(add_u));
+  add_u.sin_family = AF_INET;
+  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
+  add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
+
+  c3_y buf_y[20] = {0};
+  buf_y[1] = 0x1;  //  message type "binding request"
+  memcpy(buf_y + 4, sam_u->sun_u.tid_y, 16);  //  TODO convert byte order?
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 20);
+  u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
+  snd_u->sam_u = sam_u;
+  c3_i sas_i = uv_udp_send(
+    (uv_udp_send_t*)snd_u, &sam_u->wax_u, &buf_u, 1,
+    (const struct sockaddr*)&add_u, _stun_send_cb
+  );
+
+  if ( sas_i ) {
+    u3l_log("stun: send fail_sync: %s", uv_strerror(sas_i));
+    //  TODO take error handling actions
+  }
+}
+
+static void
+_stun_czar_cb(uv_getaddrinfo_t* adr_u,
+              c3_i              sas_i,
+              struct addrinfo*  aif_u)
+{
+  u3_ames* sam_u;  //  TODO get sam_u from args
+  gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
+  _stun_send_request(sam_u);
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 1, 0);
+
+}
+
+static void
+_stun_czar(u3_ames* sam_u)
+{
+  //  TODO rip off _ames_czar()
+}
+
+static void
+_stun_start(u3_ames* sam_u, u3_noun dad)
+{
+  sam_u->sun_u.sat_y = STUN_TRYING;
+  u3r_chubs(0, 2, sam_u->sun_u.dad_d, dad);
+  u3z(dad);
+
+  //  initialize STUN transaction id to mug of now
+  {
+    u3_noun mug;
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+
+    mug = u3r_mug(u3_time_in_tv(&tim_u));
+    memcpy(sam_u->sun_u.tid_y, (c3_y*)&mug, 4);
+    u3z(mug);
+  }
+
+  _stun_czar(sam_u);
+}
+
+static c3_o
+_ames_is_czar(u3_noun who)
+{
+  u3_noun rac = u3do("clan:title", u3k(who));
+  c3_o zar = ( c3y == (c3__czar == rac) );
+  u3z(rac);
+  return zar;
+}
+
+/* _ames_ef_saxo(): handle sponsorship chain notification
+*/
+static void
+_ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
+{
+  u3_noun daz, dad;
+
+  daz = u3qb_flop(zad);
+  if ( u3_nul == daz ) {
+    u3l_log("ames: empty sponsorship chain");
+    return;
+  }
+
+  dad = u3k(u3h(daz));
+  if ( c3y == _ames_is_czar(dad) ) {
+    _stun_stop(sam_u);
+    _stun_start(sam_u, u3k(dad));
+  }
+
+  u3z(zad); u3z(daz); u3z(dad);
+}
 
 /* _ames_ef_send(): send packet to network (v4).
 */
@@ -2064,10 +2267,11 @@ _ames_io_start(u3_ames* sam_u)
 {
   c3_s     por_s = sam_u->pir_u->por_s;
   u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
-  u3_noun    rac = u3do("clan:title", u3k(who));
+  c3_o     zar_o = _ames_is_czar(who);
   c3_i     ret_i;
 
-  if ( c3__czar == rac ) {
+
+  if ( c3y == zar_o ) {
     c3_y num_y = (c3_y)sam_u->pir_u->who_d[0];
     c3_s zar_s = _ames_czar_port(num_y);
 
@@ -2097,7 +2301,7 @@ _ames_io_start(u3_ames* sam_u)
     {
       u3l_log("ames: bind: %s", uv_strerror(ret_i));
 
-      if ( (c3__czar == rac) &&
+      if ( (c3y == zar_o) &&
            (UV_EADDRINUSE == ret_i) )
       {
         u3l_log("    ...perhaps you've got two copies of vere running?");
@@ -2124,7 +2328,6 @@ _ames_io_start(u3_ames* sam_u)
   uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _ames_recv_cb);
 
   sam_u->car_u.liv_o = c3y;
-  u3z(rac);
   u3z(who);
 }
 
@@ -2272,6 +2475,10 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
     case c3__turf: {
       _ames_ef_turf(sam_u, u3k(dat));
       ret_o = c3y;
+    } break;
+
+    case c3__saxo: {
+      _ames_ef_saxo(sam_u, u3k(dat));
     } break;
   }
 

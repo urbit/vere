@@ -996,6 +996,7 @@
 #   define c3__sard   c3_s4('s','a','r','d')
 #   define c3__sav    c3_s3('s','a','v')
 #   define c3__save   c3_s4('s','a','v','e')
+#   define c3__saxo   c3_s4('s','a','x','o')
 #   define c3__scam   c3_s4('s','c','a','m')
 #   define c3__scan   c3_s4('s','c','a','n')
 #   define c3__scry   c3_s4('s','c','r','y')
