@@ -3,6 +3,8 @@
 #ifndef U3_NOCK_H
 #define U3_NOCK_H
 
+#include "pkg/noun/v2/nock.h"
+
 #include <stdio.h>
 
 #include "c3.h"
@@ -127,7 +129,7 @@
     /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
     */
       void
-      u3n_reclaim(void);
+      u3n_reclaim();
 
     /* u3n_rewrite_compact(): rewrite bytecode cache for compaction.
      */
