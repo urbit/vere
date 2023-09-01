@@ -1905,6 +1905,7 @@ static c3_c* _140_two__in_ha[] = {
     "fac9248ebd1defade9df695cd81f94355bebb271f85b164ff34658a5f45c71a0",
     0
   };
+
 static u3j_core _140_two__by_d[] =
   { { "all", 7, _140_two__by_all_a, 0, _140_two__by_all_ha },
     { "any", 7, _140_two__by_any_a, 0, _140_two__by_any_ha },
@@ -2272,6 +2273,31 @@ static u3j_core _139_two__in_d[] =
     {}
   };
 
+static u3j_harm _139_two__by_jub_a[] = {{".2", u3wdb_jub, c3y}, {}};
+static u3j_core _139_two__by_d[] =
+  { { "all", 7, _140_two__by_all_a, 0, no_hashes },
+    { "any", 7, _140_two__by_any_a, 0, no_hashes },
+    { "apt", 7, _140_two__by_apt_a, 0, no_hashes },
+    { "bif", 7, _140_two__by_bif_a, 0, no_hashes },
+    { "del", 7, _140_two__by_del_a, 0, no_hashes },
+    { "dif", 7, _140_two__by_dif_a, 0, no_hashes },
+    { "gas", 7, _140_two__by_gas_a, 0, no_hashes },
+    { "get", 7, _140_two__by_get_a, 0, no_hashes },
+    { "has", 7, _140_two__by_has_a, 0, no_hashes },
+    { "int", 7, _140_two__by_int_a, 0, no_hashes },
+    { "jab", 7, _140_two__by_jab_a, 0, no_hashes },
+    { "key", 7, _140_two__by_key_a, 0, no_hashes },
+    { "put", 7, _140_two__by_put_a, 0, no_hashes },
+    { "rep", 7, _140_two__by_rep_a, 0, no_hashes },
+    { "run", 7, _140_two__by_run_a, 0, no_hashes },
+    { "tap", 7, _140_two__by_tap_a, 0, no_hashes },
+    { "uni", 7, _140_two__by_uni_a, 0, no_hashes },
+    { "urn", 7, _140_two__by_urn_a, 0, no_hashes },
+    { "wyt", 3, _140_two__by_wyt_a, 0, no_hashes },
+    { "jub", 7, _139_two__by_jub_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _139_two_d[] =
 { { "tri", 3, 0, _139_tri_d, no_hashes, _140_tri_ho },
 
@@ -2326,7 +2352,7 @@ static u3j_core _139_two_d[] =
   { "sqt",  7, _140_two_sqt_a, 0, no_hashes },
   { "xeb",  7, _140_two_xeb_a, 0, no_hashes },
 
-  { "by", 7, 0, _140_two__by_d, no_hashes },
+  { "by", 7, 0, _139_two__by_d, no_hashes },
   { "in", 7, 0, _139_two__in_d, no_hashes },
   {}
 };

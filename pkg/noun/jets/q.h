@@ -89,6 +89,7 @@
     u3_noun u3qdb_dif(u3_noun, u3_noun);
     u3_noun u3qdb_gas(u3_noun, u3_noun);
     u3_noun u3qdb_get(u3_noun, u3_noun);
+    u3_noun u3qdb_del(u3_noun, u3_noun);
     u3_noun u3qdb_has(u3_noun, u3_noun);
     u3_noun u3qdb_int(u3_noun, u3_noun);
     u3_noun u3qdb_key(u3_noun);

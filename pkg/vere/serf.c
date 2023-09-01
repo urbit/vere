@@ -976,7 +976,7 @@ u3_serf_init(u3_serf* sef_u)
 
   {
     c3_w  pro_w = 1;
-    c3_y  hon_y = 139;
+    c3_y  hon_y = 138;
     c3_y  noc_y = 4;
     u3_noun ver = u3nt(pro_w, hon_y, noc_y);
 
