@@ -8,6 +8,8 @@ vere_library(
     name = "noun",
     srcs = glob(
         [
+            "**/*.c",
+            "**/*.h",
             "*.c",
             "*.h",
             "jets/tree.c",

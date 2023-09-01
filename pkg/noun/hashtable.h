@@ -79,7 +79,9 @@
 #     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
 #     define  u3h_slot_is_warm(sot)  (((sot) & 0x40000000) ? c3y : c3n)
+//  XX need to version
 #     define  u3h_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffff) << u3C.vits_w))
+//  XX need to version
 #     define  u3h_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3C.vits_w) | 0x40000000)
 #     define  u3h_noun_be_warm(sot)  ((sot) | 0x40000000)
 #     define  u3h_noun_be_cold(sot)  ((sot) & ~0x40000000)
@@ -132,6 +134,7 @@
         u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w);
 
       /* u3h_free(): free hashtable.
+       *             XX need to version
       */
         void
         u3h_free(u3p(u3h_root) har_p);
@@ -158,6 +161,7 @@
 
       /* u3h_walk_with(): traverse hashtable with key, value fn and data
        *                  argument; RETAINS.
+       *                  XX need to version
       */
         void
         u3h_walk_with(u3p(u3h_root) har_p,

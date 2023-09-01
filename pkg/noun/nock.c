@@ -3046,6 +3046,7 @@ u3n_mark(FILE* fil_u)
 }
 
 /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+**  XX need to version
 */
 void
 u3n_reclaim(void)
