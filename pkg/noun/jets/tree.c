@@ -2139,6 +2139,7 @@ static c3_c* _k140_ha[] = {
 
 /* new jets
 */
+  static u3j_harm _139_two_mate_a[] = {{".2", u3wb_mate, c3y}, {}};
   static u3j_harm _139_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
   static u3j_harm _139_hex_json_en_a[] = {{".2", u3we_json_en}, {}};
 static u3j_core _139_hex_json_d[] =
@@ -2282,6 +2283,7 @@ static u3j_core _139_two_d[] =
   { "lien", 7, _140_two_lien_a, 0, no_hashes },
   { "murn", 7, _140_two_murn_a, 0, no_hashes },
   { "need", 7, _140_two_need_a, 0, no_hashes },
+  { "mate", 7, _139_two_mate_a, 0, no_hashes },
   { "reap", 7, _140_two_reap_a, 0, no_hashes },
   { "reel", 7, _140_two_reel_a, 0, no_hashes },
   { "roll", 7, _140_two_roll_a, 0, no_hashes },
@@ -2438,3 +2440,4 @@ u3j_Dash = {
   0,
   0
 };
+
