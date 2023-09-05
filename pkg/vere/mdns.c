@@ -199,6 +199,7 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
 
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: service register error %i", err);
+    c3_free(our);
     DNSServiceRefDeallocate(sref);
     return;
   }
