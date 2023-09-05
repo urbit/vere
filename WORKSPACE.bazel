@@ -207,7 +207,7 @@ versioned_http_archive(
     patches = ["//bazel/third_party/h2o:{version}.patch"],
     sha256 = "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201",
     strip_prefix = "h2o-{version}",
-    url = "https://urbit-foundation.s3.us-east-2.amazonaws.com/h2o-{version}.tar.gz",
+    url = "https://github.com/h2o/h2o/archive/refs/tags/v{version}.tar.gz",
     # When bumping the version, compare `CMakeLists.txt` in the `h2o` repo to
     # {build_file} and confirm that {build_file} remains an accurate description
     # of the h2o build process.
