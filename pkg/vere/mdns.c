@@ -55,7 +55,7 @@ static void resolve_cb(DNSServiceRef sref,
 {
   mdns_payload* payload = (mdns_payload*)context;
 
-	if (err != kDNSServiceErr_NoError) {
+  if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: dns resolve error %d", err);
     uv_poll_stop(payload->poll);
     c3_free(payload->poll);
@@ -105,11 +105,11 @@ static void resolve_cb(DNSServiceRef sref,
 
 static void poll_cb(uv_poll_t *handle, int status, int events) {
   DNSServiceRef sref = (DNSServiceRef) handle->data;
-	int err = DNSServiceProcessResult(sref);
+  int err = DNSServiceProcessResult(sref);
 }
 
 static void dns_sd_cb(DNSServiceRef sref, mdns_payload* payload) {
-	int fd = DNSServiceRefSockFD(sref);
+  int fd = DNSServiceRefSockFD(sref);
   uv_loop_t* loop = uv_default_loop();
   uv_poll_t* poll = (uv_poll_t *)c3_malloc(sizeof(uv_poll_t));
   poll->data = (void *)sref;
@@ -214,7 +214,7 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
   DNSServiceErrorType dnserr;
   DNSServiceRef sref2;
 
-	dnserr = DNSServiceBrowse(&sref2, 0, 0, "_ames._udp", NULL, browse_cb, (void *)browse_payload);
+  dnserr = DNSServiceBrowse(&sref2, 0, 0, "_ames._udp", NULL, browse_cb, (void *)browse_payload);
 
   if (dnserr != kDNSServiceErr_NoError) {
     u3l_log("mdns: service browse error %i", dnserr);
