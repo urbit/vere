@@ -20,8 +20,6 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
 
   if (status < 0) {
     u3l_log("mdns: getaddrinfo error: %s", uv_strerror(status));
-    uv_poll_stop(payload->poll);
-    c3_free(payload->poll);
     DNSServiceRefDeallocate(payload->sref);
     c3_free(payload);
     c3_free(req);
@@ -33,8 +31,6 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
   payload->cb(payload->who, addr->sin_addr.s_addr, payload->port, payload->context);
 
   c3_free(payload->who);
-  uv_poll_stop(payload->poll);
-  c3_free(payload->poll);
   uv_freeaddrinfo(res);
   c3_free(req);
   DNSServiceRefDeallocate(payload->sref);
@@ -55,10 +51,11 @@ static void resolve_cb(DNSServiceRef sref,
 {
   mdns_payload* payload = (mdns_payload*)context;
 
+  uv_poll_stop(payload->poll);
+  c3_free(payload->poll);
+
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: dns resolve error %d", err);
-    uv_poll_stop(payload->poll);
-    c3_free(payload->poll);
     c3_free(payload);
     DNSServiceRefDeallocate(sref);
     return;
@@ -71,8 +68,6 @@ static void resolve_cb(DNSServiceRef sref,
 
   if (who == NULL) {
     u3l_log("mdns: invalid domain name");
-    uv_poll_stop(payload->poll);
-    c3_free(payload->poll);
     c3_free(payload);
     DNSServiceRefDeallocate(sref);
     return;
@@ -95,8 +90,6 @@ static void resolve_cb(DNSServiceRef sref,
 
   if (error < 0) {
     u3l_log("mdns: getaddrinfo error: %s\n", uv_strerror(error));
-    uv_poll_stop(payload->poll);
-    c3_free(payload->poll);
     c3_free(payload);
     c3_free(req);
     DNSServiceRefDeallocate(sref);
