@@ -1748,7 +1748,7 @@ u3a_rewritten_noun(u3_noun som)
   if ( c3y == u3a_is_cat(som) ) {
     return som;
   }
-  u3_post som_p = u3a_rewritten(u3a_v1_to_off(som));
+  u3_post som_p = u3a_rewritten(u3a_to_off(som));
 
   /* If this is being called during a migration, one-bit pointer compression
      needs to be temporarily enabled so the rewritten reference is compressed */

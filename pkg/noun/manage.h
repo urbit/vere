@@ -3,6 +3,9 @@
 #ifndef U3_MANAGE_H
 #define U3_MANAGE_H
 
+#include "v1/manage.h"
+#include "v2/manage.h"
+
 #include "c3.h"
 #include "types.h"
 #include "version.h"
@@ -194,6 +197,6 @@
          ver_w - target version
       */
         void
-        u3m_migrate(u3v_version ver_w);
+        u3m_migrate();
 
 #endif /* ifndef U3_MANAGE_H */

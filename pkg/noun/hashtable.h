@@ -169,6 +169,7 @@
                       void* wit);
 
       /* u3h_walk(): u3h_walk_with, but with no data argument
+       *             XX need to version
       */
         void
         u3h_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun));

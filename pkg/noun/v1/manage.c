@@ -475,12 +475,12 @@ _pave_parts(void)
 {
   // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
   // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(50000);
-  u3R->jed.war_p = u3h_new();
-  u3R->jed.cod_p = u3h_new();
-  u3R->jed.han_p = u3h_new();
-  u3R->jed.bas_p = u3h_new();
-  u3R->byc.har_p = u3h_new();
+  u3R->cax.har_p = u3h_v1_new_cache(50000);
+  u3R->jed.war_p = u3h_v1_new();
+  u3R->jed.cod_p = u3h_v1_new();
+  u3R->jed.han_p = u3h_v1_new();
+  u3R->jed.bas_p = u3h_v1_new();
+  u3R->byc.har_p = u3h_v1_new();
 }
 
 /* _pave_road(): writes road boundaries to loom mem (stored at mat_w)
@@ -643,7 +643,7 @@ _find_home(void)
   u3a_loom_sane();
 
   if (U3V_VERLAT > ver_w) {
-    u3m_v1_migrate(U3V_VERLAT);
+    // u3m_v1_migrate(U3V_VERLAT);
     u3a_config_loom(U3V_VERLAT);
   }
   else if ( U3V_VERLAT < ver_w ) {
@@ -2204,31 +2204,6 @@ _cm_pack_rewrite(void)
   u3a_rewrite_compact();
 }
 
-/* u3m_v1_pack: compact (defragment) memory, returns u3a_open delta.
-*/
-c3_w
-u3m_v1_pack(void)
-{
-  c3_w pre_w = u3a_open(u3R);
-
-  //  reclaim first, to free space, and discard anything we can't/don't rewrite
-  //
-  u3m_v1_reclaim();
-
-  //  sweep the heap, finding and saving new locations
-  //
-  u3a_pack_seek(u3R);
-
-  //  trace roots, rewriting inner pointers
-  //
-  _cm_pack_rewrite();
-
-  //  sweep the heap, relocating objects to their new locations
-  //
-  u3a_pack_move(u3R);
-
-  return (u3a_open(u3R) - pre_w);
-}
 
 static void
 _migrate_v1_reclaim()
