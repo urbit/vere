@@ -14,10 +14,10 @@
       return u3k(a);
     } else if ( u3_nul == a ) {
       return u3k(b);
-    } else if ( c3y == u3r_sing(a, b) ) {
+    } else if ( c3y == u3r_sing(u3t(a), u3t(b)) ) {
       return u3k(a);
     } else {
-      return u3m_bail(c3__fail);
+      return u3m_error("mate");
     }
   }
   u3_noun
