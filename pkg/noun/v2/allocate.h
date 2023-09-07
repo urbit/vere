@@ -1,6 +1,8 @@
 #ifndef U3_ALLOCATE_V2_H
 #define U3_ALLOCATE_V2_H
 
+#include "pkg/noun/allocate.h"
+
 #include "error.h"
 #include "pkg/noun/v2/manage.h"
 #include "options.h"
@@ -37,7 +39,7 @@
   /* u3a_v2_to_ptr(): convert noun [som] into generic pointer into loom.
    */
   inline void *u3a_v2_to_ptr(c3_w som) {
-    return u3a_v2_into(u3a_v2_to_off(som));
+    return u3a_into(u3a_v2_to_off(som));
   }
 
   /* u3a_v2_to_wtr(): convert noun [som] into word pointer into loom.
@@ -80,5 +82,15 @@
         */
           void
           u3a_v2_rewrite_noun(u3_noun som);
+
+        /* u3a_v2_rewritten(): rewrite a pointer for compaction.
+        */
+          u3_post
+          u3a_v2_rewritten(u3_post som_p);
+
+        /* u3a_v2_rewritten(): rewritten noun pointer for compaction.
+        */
+          u3_noun
+          u3a_v2_rewritten_noun(u3_noun som);
 
 #endif /* ifndef U3_ALLOCATE_V2_H */

@@ -1,11 +1,11 @@
 /// @file
 
+#include "pkg/noun/nock.h"
 #include "pkg/noun/v2/nock.h"
 
 #include "pkg/noun/v2/hashtable.h"
 
 /* u3n_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-**  XX need to version
 */
 void
 u3n_v2_reclaim(void)
@@ -17,6 +17,37 @@ u3n_v2_reclaim(void)
   //
   u3n_v2_free();
   u3R->byc.har_p = u3h_new();
+}
+
+/* _cn_prog_free(): free memory retained by program pog_u
+**              NB: copy of _cn_prog_free in pkg/noun/nock.c
+*/
+static void
+_cn_prog_free(u3n_prog* pog_u)
+{
+  c3_w dex_w;
+  for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
+    u3z(pog_u->lit_u.non[dex_w]);
+  }
+  for (dex_w = 0; dex_w < pog_u->mem_u.len_w; ++dex_w) {
+    u3z(pog_u->mem_u.sot_u[dex_w].key);
+  }
+  for (dex_w = 0; dex_w < pog_u->cal_u.len_w; ++dex_w) {
+    u3j_site_lose(&(pog_u->cal_u.sit_u[dex_w]));
+  }
+  for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
+    u3j_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
+  }
+  u3a_free(pog_u);
+}
+
+
+/* _n_feb(): u3h_walk helper for u3n_free
+ */
+static void
+_n_feb(u3_noun kev)
+{
+  _cn_prog_free(u3to(u3n_prog, u3t(kev)));
 }
 
 /* u3n_v2_free(): free bytecode cache

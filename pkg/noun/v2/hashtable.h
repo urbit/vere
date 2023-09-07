@@ -36,6 +36,11 @@
         void
         u3h_v2_free(u3p(u3h_root) har_p);
 
+      /* u3h_v2_rewrite(): rewrite hashtable for compaction.
+      */
+        void
+        u3h_v2_rewrite(u3p(u3h_v2_root) har_p);
+
       /* u3h_v2_walk_with(): traverse hashtable with key, value fn and data
        *                  argument; RETAINS.
       */
