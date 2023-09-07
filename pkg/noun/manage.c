@@ -644,9 +644,11 @@ _find_home(void)
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
 
-  if ( U3V_VER2 == ver_w ) {
+  if ( U3V_VER2 == ver_w ) {    /* ;;: seems that if the migration fails, the loom still ends up getting saved as of ver3 despite the migration failing!! */
+    u3m_reclaim();
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-    u3H->ver_w = U3V_VER3;
+    ver_w = u3H->ver_w = U3V_VER3;
+    u3m_pack();
     u3m_save();
   }
 
@@ -664,7 +666,7 @@ _find_home(void)
 
   if ( U3V_VER2 == ver_w ) {
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-    u3H->ver_w = U3V_VER3;
+    ver_w = u3H->ver_w = U3V_VER3;
     u3m_save();
   }
 
