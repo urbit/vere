@@ -643,7 +643,7 @@ _find_home(void)
   u3a_loom_sane();
 
   if (U3V_VERLAT > ver_w) {
-    u3m_migrate(U3V_VERLAT);
+    u3m_migrate();
     u3a_config_loom(U3V_VERLAT);
   }
   else if ( U3V_VERLAT < ver_w ) {

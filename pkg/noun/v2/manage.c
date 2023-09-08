@@ -184,13 +184,12 @@ u3m_v2_migrate()
     return;
 
   /* 1 -> 2 is all that is currently supported */
-  c3_dessert(u3H->ver_w == U3V_VER1 &&
-             ver_w == U3V_VER2);
+  c3_dessert(u3H->ver_w == U3V_VER1);
 
   /* only home road migration is supported */
   c3_dessert((uintptr_t)u3H == (uintptr_t)u3R);
 
-  fprintf(stderr, "loom: pointer compression migration running...");
+  fprintf(stderr, "loom: pointer compression migration running...\r\n");
 
   /* packing first simplifies migration logic and minimizes required buffer space */
   //  XX determine if we need to version this for the v2 migration

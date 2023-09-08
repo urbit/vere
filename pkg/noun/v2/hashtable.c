@@ -11,20 +11,20 @@
 #include "retrieve.h"
 #include "xtract.h"
 
-/* _ch_popcount(): number of bits set in word.  A standard intrinsic.
-**             NB: copy of _ch_popcount in pkg/noun/hashtable.c
+/* _ch_v2_popcount(): number of bits set in word.  A standard intrinsic.
+**             NB: copy of _ch_v2_popcount in pkg/noun/hashtable.c
 */
 static c3_w
-_ch_popcount(c3_w num_w)
+_ch_v2_popcount(c3_w num_w)
 {
   return __builtin_popcount(num_w);
 }
 
-/* _ch_free_buck(): free bucket
-**              NB: copy of _ch_free_buck in pkg/noun/hashtable.c
+/* _ch_v2_free_buck(): free bucket
+**              NB: copy of _ch_v2_free_buck in pkg/noun/hashtable.c
 */
 static void
-_ch_free_buck(u3h_buck* hab_u)
+_ch_v2_free_buck(u3h_buck* hab_u)
 {
   c3_w i_w;
 
@@ -34,12 +34,12 @@ _ch_free_buck(u3h_buck* hab_u)
   u3a_wfree(hab_u);
 }
 
-/* _ch_free_node(): free node.
+/* _ch_v2_free_node(): free node.
 */
 static void
-_ch_free_node(u3h_node* han_u, c3_w lef_w)
+_ch_v2_free_node(u3h_node* han_u, c3_w lef_w)
 {
-  c3_w len_w = _ch_popcount(han_u->map_w);
+  c3_w len_w = _ch_v2_popcount(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -55,9 +55,9 @@ _ch_free_node(u3h_node* han_u, c3_w lef_w)
       void* hav_v = u3h_v2_slot_to_node(sot_w);
 
       if ( 0 == lef_w ) {
-        _ch_free_buck(hav_v);
+        _ch_v2_free_buck(hav_v);
       } else {
-        _ch_free_node(hav_v, lef_w);
+        _ch_v2_free_node(hav_v, lef_w);
       }
     }
   }
@@ -81,17 +81,17 @@ u3h_v2_free(u3p(u3h_root) har_p)
     else if ( _(u3h_slot_is_node(sot_w)) ) {
       u3h_node* han_u = u3h_v2_slot_to_node(sot_w);
 
-      _ch_free_node(han_u, 25);
+      _ch_v2_free_node(han_u, 25);
     }
   }
   u3a_wfree(har_u);
 }
 
-/* _ch_walk_buck(): walk bucket for gc.
-**              NB: copy of _ch_walk_buck in pkg/noun/hashtable.c
+/* _ch_v2_walk_buck(): walk bucket for gc.
+**              NB: copy of _ch_v2_walk_buck in pkg/noun/hashtable.c
 */
 static void
-_ch_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v2_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 {
   c3_w i_w;
 
@@ -100,12 +100,12 @@ _ch_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
   }
 }
 
-/* _ch_walk_node(): walk node for gc.
+/* _ch_v2_walk_node(): walk node for gc.
 */
 static void
-_ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v2_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w len_w = _ch_popcount(han_u->map_w);
+  c3_w len_w = _ch_v2_popcount(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -122,9 +122,9 @@ _ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* 
       void* hav_v = u3h_v2_slot_to_node(sot_w);
 
       if ( 0 == lef_w ) {
-        _ch_walk_buck(hav_v, fun_f, wit);
+        _ch_v2_walk_buck(hav_v, fun_f, wit);
       } else {
-        _ch_walk_node(hav_v, lef_w, fun_f, wit);
+        _ch_v2_walk_node(hav_v, lef_w, fun_f, wit);
       }
     }
   }
@@ -152,15 +152,15 @@ u3h_v2_walk_with(u3p(u3h_root) har_p,
     else if ( _(u3h_slot_is_node(sot_w)) ) {
       u3h_node* han_u = u3h_v2_slot_to_node(sot_w);
 
-      _ch_walk_node(han_u, 25, fun_f, wit);
+      _ch_v2_walk_node(han_u, 25, fun_f, wit);
     }
   }
 }
 
-/* _ch_walk_plain(): use plain u3_noun fun_f for each node
+/* _ch_v2_walk_plain(): use plain u3_noun fun_f for each node
  */
 static void
-_ch_walk_plain(u3_noun kev, void* wit)
+_ch_v2_walk_plain(u3_noun kev, void* wit)
 {
   void (*fun_f)(u3_noun) = wit;
   fun_f(kev);
@@ -171,13 +171,13 @@ _ch_walk_plain(u3_noun kev, void* wit)
 void
 u3h_v2_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun))
 {
-  u3h_v2_walk_with(har_p, _ch_walk_plain, fun_f);
+  u3h_v2_walk_with(har_p, _ch_v2_walk_plain, fun_f);
 }
 
-/* _ch_rewrite_buck(): rewrite buck for compaction.
+/* _ch_v2_rewrite_buck(): rewrite buck for compaction.
 */
 void
-_ch_rewrite_buck(u3h_buck* hab_u)
+_ch_v2_rewrite_buck(u3h_buck* hab_u)
 {
   if ( c3n == u3a_rewrite_ptr(hab_u) ) return;
   c3_w i_w;
@@ -189,14 +189,14 @@ _ch_rewrite_buck(u3h_buck* hab_u)
   }
 }
 
-/* _ch_rewrite_node(): rewrite node for compaction.
+/* _ch_v2_rewrite_node(): rewrite node for compaction.
 */
 void
-_ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
+_ch_v2_rewrite_node(u3h_node* han_u, c3_w lef_w)
 {
   if ( c3n == u3a_rewrite_ptr(han_u) ) return;
 
-  c3_w len_w = _ch_popcount(han_u->map_w);
+  c3_w len_w = _ch_v2_popcount(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -212,7 +212,7 @@ _ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
     }
     else {
       void* hav_v = u3h_v1_slot_to_node(sot_w);
-      u3h_node* nod_u = u3to(u3h_node, u3a_v1_rewritten(u3of(u3h_node,hav_v)));
+      u3h_node* nod_u = u3to(u3h_node, u3a_rewritten(u3of(u3h_node,hav_v)));
 
       if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
         u3C.vits_w = 1;
@@ -223,9 +223,9 @@ _ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
         u3C.vits_w = 0;
 
       if ( 0 == lef_w ) {
-        _ch_rewrite_buck(hav_v);
+        _ch_v2_rewrite_buck(hav_v);
       } else {
-        _ch_rewrite_node(hav_v, lef_w);
+        _ch_v2_rewrite_node(hav_v, lef_w);
       }
     }
   }
@@ -263,7 +263,7 @@ u3h_v2_rewrite(u3p(u3h_root) har_p)
       if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
         u3C.vits_w = 0;
 
-      _ch_rewrite_node(han_u, 25);
+      _ch_v2_rewrite_node(han_u, 25);
     }
   }
 }

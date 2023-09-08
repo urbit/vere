@@ -28,7 +28,7 @@ u3a_v1_rewritten_noun(u3_noun som)
   if ( c3y == u3a_is_cat(som) ) {
     return som;
   }
-  u3_post som_p = u3a_v1_rewritten(u3a_v1_to_off(som));
+  u3_post som_p = u3a_rewritten(u3a_v1_to_off(som));
 
   if ( c3y == u3a_is_pug(som) ) {
     som_p = u3a_v1_to_pug(som_p);  //  XX alias?
@@ -60,8 +60,8 @@ u3a_v1_rewrite_compact(void)
   u3R->bug.mer = u3a_v1_rewritten_noun(u3R->bug.mer);
   u3R->pro.don = u3a_v1_rewritten_noun(u3R->pro.don);
   u3R->pro.day = u3a_v1_rewritten_noun(u3R->pro.day);
-  u3R->pro.trace = u3a_v1_rewritten_noun(u3R->pro.trace);
-  u3R->cax.har_p = u3a_v1_rewritten(u3R->cax.har_p);
+  u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
+  u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
 }
 void
 u3a_v1_rewrite_noun(u3_noun som)
