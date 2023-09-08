@@ -2,7 +2,9 @@
 # LIBRARIES
 #
 
-cc_library(
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
     name = "urcrypt",
     srcs = glob(
         [

@@ -366,6 +366,15 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   ret_i = asprintf(&url_c, "%s/%s/%s/next", ver_hos_c, pac_c, URBIT_VERSION);
   u3_assert( ret_i > 0 );
 
+  //  no-op if pace is set to once
+  //
+  if ( 0 == strcmp(pac_c, "once") ) {
+    c3_free(url_c);
+    fprintf(stderr, "vere: pace is set to \"once\", skipping upgrade\r\n");
+    fprintf(stderr, "vere: set pace to \"live\" and try again\r\n");
+    return -1;
+  }
+
   //  skip printfs on failed requests (/next is usually not present)
   //
   if ( _king_curl_bytes(url_c, &len_w, &hun_y, 0) ) {
