@@ -119,6 +119,7 @@ vere_library(
     hdrs = [
         "db/lmdb.h",
         "vere.h",
+        "mdns.h",
     ] + select({
         "@platforms//os:macos": [],
         "@platforms//os:linux": [

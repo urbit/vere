@@ -1,6 +1,7 @@
 /// @file
 
 #include "vere.h"
+#include "mdns.h"
 
 #include "noun.h"
 #include "ur.h"
@@ -2063,7 +2064,6 @@ _ames_recv_cb(uv_udp_t*        wax_u,
 static void
 _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 {
-  u3l_log("mdns: %%dear failure;");
   u3z(lud);
   u3_ovum_free(egg_u);
 }
@@ -2071,7 +2071,7 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(char* ship, unsigned long s_addr, uint16_t port, void* context)
+_ames_put_dear(c3_c* ship, c3_w s_addr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
 
@@ -2088,6 +2088,7 @@ _ames_put_dear(char* ship, unsigned long s_addr, uint16_t port, void* context)
 
   u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
   if (our == u3t(shp_u)) {
+    u3z(shp_u);
     u3z(our);
     return;
   }
@@ -2168,11 +2169,14 @@ _ames_io_start(u3_ames* sam_u)
     u3l_log("ames: live on %d (localhost only)", sam_u->pir_u->por_s);
   }
 
-  u3_noun our = u3dc("scot", 'p', who);
-  char* our_s = u3r_string(our);
-  u3z(our);
+  {
+    u3_noun our = u3dc("scot", 'p', u3k(who));
+    char* our_s = u3r_string(our);
+    u3z(our);
 
-  mdns_init(por_s, our_s, _ames_put_dear, (void *)sam_u);
+    mdns_init(por_s, our_s, _ames_put_dear, (void *)sam_u);
+    c3_free(our_s);
+  }
 
   uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _ames_recv_cb);
 

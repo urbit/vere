@@ -674,12 +674,6 @@
           uv_timer_t       tim_u;               //  gc timer
         } u3_king;
 
-      /* mdns_cb: callback when mdns finds a new ship
-      */
-        typedef void mdns_cb(char* ship,
-                             unsigned long s_addr,
-                             uint16_t port,
-                             void* context);
       /* u3_pier_spin(): (re-)activate idle handler
       */
         void
@@ -1244,12 +1238,6 @@
         u3_auto*
         u3_lick_io_init(u3_pier* pir_u);
 
-    /**  mdns, routing for the local network
-    **/
-      /* mdns_init(): initialize mdns.
-      */
-        void
-        mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context);
     /**  HTTP server.
     **/
       /* u3_http_io_init(): initialize http I/O.

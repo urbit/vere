@@ -1,16 +1,15 @@
 /// @file
 
 #include "vere.h"
-
+#include "mdns.h"
 #include "dns_sd.h"
 
 typedef struct _mdns_payload {
   mdns_cb*      cb;
   DNSServiceRef sref;
-  char*         who;
-  char*         our;
+  char          who[58];
   uint16_t      port;
-  uv_poll_t*    poll;
+  uv_poll_t     poll;
   void*         context;
 } mdns_payload;
 
@@ -30,7 +29,6 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
   struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
   payload->cb(payload->who, addr->sin_addr.s_addr, payload->port, payload->context);
 
-  c3_free(payload->who);
   uv_freeaddrinfo(res);
   c3_free(req);
   DNSServiceRefDeallocate(payload->sref);
@@ -51,8 +49,7 @@ static void resolve_cb(DNSServiceRef sref,
 {
   mdns_payload* payload = (mdns_payload*)context;
 
-  uv_poll_stop(payload->poll);
-  c3_free(payload->poll);
+  uv_poll_stop(&payload->poll);
 
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: dns resolve error %d", err);
@@ -64,18 +61,12 @@ static void resolve_cb(DNSServiceRef sref,
   payload->sref = sref;
   payload->port = port;
 
-  char* who = strtok(name, ".");
-
-  if (who == NULL) {
-    u3l_log("mdns: invalid domain name");
-    c3_free(payload);
-    DNSServiceRefDeallocate(sref);
-    return;
+  int i;
+  payload->who[0] = '~';
+  for (i = 0; name[i] != '\0' && name[i] != '.' && i < 58; ++i)
+  {
+    payload->who[i+1] = name[i];
   }
-
-  char* who2 = c3_malloc(strlen(who) + 1);
-  snprintf(who2, sizeof who2, "~%s", who);
-  payload->who = who2;
 
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
@@ -96,19 +87,17 @@ static void resolve_cb(DNSServiceRef sref,
   }
 }
 
-static void poll_cb(uv_poll_t *handle, int status, int events) {
+static void poll_cb(uv_poll_t* handle, int status, int events) {
   DNSServiceRef sref = (DNSServiceRef) handle->data;
   int err = DNSServiceProcessResult(sref);
 }
 
-static void dns_sd_cb(DNSServiceRef sref, mdns_payload* payload) {
+static void init_sref_poll(DNSServiceRef sref, mdns_payload* payload) {
   int fd = DNSServiceRefSockFD(sref);
   uv_loop_t* loop = uv_default_loop();
-  uv_poll_t* poll = (uv_poll_t *)c3_malloc(sizeof(uv_poll_t));
-  poll->data = (void *)sref;
-  payload->poll = poll;
-  uv_poll_init(loop, poll, fd);
-  uv_poll_start(poll, UV_READABLE, poll_cb);
+  payload->poll.data = (void*)sref;
+  uv_poll_init(loop, &payload->poll, fd);
+  uv_poll_start(&payload->poll, UV_READABLE, poll_cb);
 }
 
 static void browse_cb(DNSServiceRef s,
@@ -145,7 +134,7 @@ static void browse_cb(DNSServiceRef s,
       DNSServiceRefDeallocate(sr);
       return;
     }
-    dns_sd_cb(sr, payload_copy);
+    init_sref_poll(sr, payload_copy);
   }
 }
 
@@ -164,9 +153,9 @@ static void register_cb(DNSServiceRef sref,
   } else {
     u3l_log("mdns: %s registered on all interfaces", name);
   }
-  uv_poll_stop(payload->poll);
-  c3_free(payload->poll);
-  c3_free(payload->our);
+  // not freeing sref with DNSServiceRefDeallocate since that
+  // deregisters us from mdns
+  uv_poll_stop(&payload->poll);
   c3_free(payload);
 }
 
@@ -181,10 +170,6 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
 
   mdns_payload* register_payload = (mdns_payload*)c3_malloc(sizeof(mdns_payload));
 
-  register_payload->cb = cb;
-  register_payload->context = context;
-  register_payload->our = our;
-
   DNSServiceRef sref;
   DNSServiceErrorType err;
   err = DNSServiceRegister(&sref, 0, 0, our, "_ames._udp",
@@ -192,12 +177,11 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
 
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: service register error %i", err);
-    c3_free(our);
     DNSServiceRefDeallocate(sref);
     return;
   }
 
-  dns_sd_cb(sref, register_payload);
+  init_sref_poll(sref, register_payload);
 
   mdns_payload* browse_payload = (mdns_payload*)c3_malloc(sizeof(mdns_payload));
 
@@ -215,6 +199,6 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
     return;
   }
 
-  dns_sd_cb(sref2, browse_payload);
+  init_sref_poll(sref2, browse_payload);
 
 }
