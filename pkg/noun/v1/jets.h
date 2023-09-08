@@ -3,7 +3,7 @@
 #ifndef U3_JETS_V1_H
 #define U3_JETS_V1_H
 
-#include "allocate.h"
+#include "pkg/noun/allocate.h"
 #include "c3.h"
 #include "types.h"
 
@@ -11,5 +11,10 @@
       */
         void
         u3j_v1_reclaim(void);
+
+      /* u3j_v1_rewrite_compact(): rewrite jet state for compaction.
+      */
+        void
+        u3j_v1_rewrite_compact();
 
 #endif /* ifndef U3_JETS_V1_H */

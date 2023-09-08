@@ -59,7 +59,7 @@ static void
 _migrate_reclaim()
 {
   fprintf(stderr, "loom: migration reclaim\r\n");
-  u3m_reclaim();
+  u3m_v2_reclaim();
 }
 
 static void

@@ -2186,7 +2186,6 @@ u3m_reclaim(void)
 }
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
- *                     XX need to version; dynamic scope insanity!
 */
 static void
 _cm_pack_rewrite(void)

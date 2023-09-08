@@ -7,7 +7,7 @@
 #include "pkg/noun/v2/manage.h"
 #include "options.h"
 
-  /**  Constants.  XX TODO
+  /**  Constants.
   **/
 
   /**  inline functions.

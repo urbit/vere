@@ -1,5 +1,6 @@
 /// @file
 
+#include "pkg/noun/allocate.h"
 #include "pkg/noun/v2/allocate.h"
 
 #include "pkg/noun/v2/hashtable.h"
@@ -49,10 +50,8 @@ u3a_v2_rewritten_noun(u3_noun som)
 }
 
 /* u3a_v2_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
- *                        XX need to version
 */
 void
-// u3a_v2_v1_rewrite_compact(u3a_v2_v1_road *rod_u)
 u3a_v2_rewrite_compact(void)
 {
   u3a_v2_rewrite_noun(u3R->ski.gul);
@@ -61,7 +60,7 @@ u3a_v2_rewrite_compact(void)
   u3a_v2_rewrite_noun(u3R->pro.don);
   u3a_v2_rewrite_noun(u3R->pro.day);
   u3a_v2_rewrite_noun(u3R->pro.trace);
-  u3h_rewrite(u3R->cax.har_p);
+  u3h_v2_rewrite(u3R->cax.har_p);
 
   u3R->ski.gul = u3a_v2_rewritten_noun(u3R->ski.gul);
   u3R->bug.tax = u3a_v2_rewritten_noun(u3R->bug.tax);

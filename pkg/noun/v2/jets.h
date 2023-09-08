@@ -3,7 +3,7 @@
 #ifndef U3_JETS_V2_H
 #define U3_JETS_V2_H
 
-#include "allocate.h"
+#include "pkg/noun/allocate.h"
 #include "c3.h"
 #include "types.h"
 

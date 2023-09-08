@@ -1,8 +1,11 @@
 /// @file
 
+#include "pkg/noun/hashtable.h"
+#include "pkg/noun/v1/hashtable.h"
 #include "pkg/noun/v2/hashtable.h"
 
 #include "pkg/noun/allocate.h"
+#include "pkg/noun/v1/allocate.h"
 #include "pkg/noun/v2/allocate.h"
 #include "imprison.h"
 #include "retrieve.h"
@@ -98,7 +101,6 @@ _ch_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 }
 
 /* _ch_walk_node(): walk node for gc.
-**              NB: copy of _ch_walk_node in pkg/noun/hashtable.c
 */
 static void
 _ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
@@ -117,7 +119,7 @@ _ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* 
       fun_f(kev, wit);
     }
     else {
-      void* hav_v = u3h_slot_to_node(sot_w);
+      void* hav_v = u3h_v2_slot_to_node(sot_w);
 
       if ( 0 == lef_w ) {
         _ch_walk_buck(hav_v, fun_f, wit);
@@ -209,8 +211,8 @@ _ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
       u3a_v2_rewrite_noun(kev);
     }
     else {
-      void* hav_v = u3h_v2_slot_to_node(sot_w);
-      u3h_node* nod_u = u3to(u3h_node,u3a_v2_rewritten(u3of(u3h_node,hav_v)));
+      void* hav_v = u3h_v1_slot_to_node(sot_w);
+      u3h_node* nod_u = u3to(u3h_node, u3a_v1_rewritten(u3of(u3h_node,hav_v)));
 
       if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
         u3C.vits_w = 1;
@@ -249,6 +251,7 @@ u3h_v2_rewrite(u3p(u3h_root) har_p)
       u3a_v2_rewrite_noun(kev);
     }
     else if ( _(u3h_slot_is_node(sot_w)) ) {
+      //  XX check for correctness
       u3h_node* han_u = u3h_v2_slot_to_node(sot_w);
       u3h_node* nod_u = u3to(u3h_node, u3a_rewritten(u3of(u3h_node,han_u)));
 
