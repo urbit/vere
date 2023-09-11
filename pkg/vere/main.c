@@ -2,7 +2,7 @@
 
 #define U3_GLOBAL
 #define C3_GLOBAL
-#include "noun.h"
+#include "u3.h"
 #include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
 #include "ur.h"
@@ -342,7 +342,7 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         } else {
           u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w) 
+          if ( 0 == u3_Host.ops_u.sap_w)
             return c3n;
         }
         break;

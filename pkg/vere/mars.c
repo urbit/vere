@@ -3,7 +3,7 @@
 **  the main loop of a mars process.
 */
 #include "c3.h"
-#include "noun.h"
+#include "u3.h"
 #include "types.h"
 #include "vere.h"
 #include "db/lmdb.h"

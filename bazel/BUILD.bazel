@@ -9,7 +9,7 @@ refresh_compile_commands(
     # For example, specify a dict of targets and any flags required to build.
     targets = [
         "//pkg/ent",
-        "//pkg/noun",
+        "//pkg/u3",
         "//pkg/ur",
         "//pkg/urcrypt",
         "//pkg/vere:urbit",

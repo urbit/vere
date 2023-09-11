@@ -2,7 +2,7 @@
 
 #include "vere.h"
 
-#include "noun.h"
+#include "u3.h"
 
 /* _hind_io_talk():
 */

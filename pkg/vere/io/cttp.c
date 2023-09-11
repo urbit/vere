@@ -3,7 +3,7 @@
 #include "vere.h"
 
 #include "h2o.h"
-#include "noun.h"
+#include "u3.h"
 #include "openssl/ssl.h"
 
 /* u3_csat: client connection state.

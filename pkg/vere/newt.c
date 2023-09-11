@@ -15,7 +15,7 @@
 
 #include "vere.h"
 
-#include "noun.h"
+#include "u3.h"
 
 /* _newt_mess_head(): await next msg header.
 */

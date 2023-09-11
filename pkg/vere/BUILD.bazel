@@ -126,7 +126,7 @@ vere_library(
     deps = [
         "//pkg/c3",
         "//pkg/ent",
-        "//pkg/noun",
+        "//pkg/u3",
         "//pkg/ur",
         "@curl",
         "@h2o",
@@ -156,7 +156,7 @@ vere_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/c3",
-        "//pkg/noun",
+        "//pkg/u3",
         "//pkg/ur",
         ":vere",
         # TODO: remove dependency (only used to report version).
@@ -209,9 +209,9 @@ cc_test(
 )
 
 cc_test(
-    name = "noun_tests",
+    name = "u3_tests",
     timeout = "short",
-    srcs = ["noun_tests.c"],
+    srcs = ["u3_tests.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],
@@ -243,7 +243,7 @@ cc_test(
     visibility = ["//visibility:private"],
     deps = [
         ":vere",
-        "//pkg/noun",
+        "//pkg/u3",
         "//pkg/ur",
     ],
 )

@@ -1,0 +1,113 @@
+#
+# LIBRARIES
+#
+
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
+    name = "u3",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+            "jets/tree.c",
+            "jets/*.h",
+            "jets/**/*.c",
+        ],
+        exclude = [
+            "u3.h",
+            "*_tests.c",
+        ],
+    ),
+    hdrs = ["u3.h"],
+    includes = ["."],
+    linkopts = select({
+        # NOTE: macOS builds fail to link the `u3o_Config` symbol (and maybe
+        # others) without this. We should figure out why, and remove this.
+        "@platforms//os:macos": ["-force_load $(GENDIR)/pkg/u3/libu3.a"],
+        "//conditions:default": [],
+    }),
+    linkstatic = True,
+    local_defines = ["U3_GUARD_PAGE"],
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/ent",
+        "//pkg/ur",
+        "//pkg/urcrypt",
+        "@gmp",
+        "@murmur3",
+        "@openssl",
+        "@pdjson",
+        "@sigsegv",
+        "@softfloat",
+    ] + select({
+        "@platforms//os:macos": ["//pkg/u3/platform/darwin"],
+        "@platforms//os:linux": ["//pkg/u3/platform/linux"],
+        "//conditions:default": [],
+    }),
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "hashtable_tests",
+    timeout = "short",
+    srcs = ["hashtable_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":u3"],
+)
+
+cc_test(
+    name = "jets_tests",
+    timeout = "short",
+    srcs = ["jets_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":u3"],
+)
+
+cc_test(
+    name = "nock_tests",
+    timeout = "short",
+    srcs = ["nock_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":u3"],
+)
+
+cc_test(
+    name = "retrieve_tests",
+    timeout = "short",
+    srcs = ["retrieve_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":u3"],
+)
+
+cc_test(
+    name = "serial_tests",
+    timeout = "short",
+    srcs = ["serial_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":u3"],
+)

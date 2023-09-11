@@ -2,7 +2,7 @@
 
 #include "vere.h"
 
-#include "noun.h"
+#include "u3.h"
 
 /* _fore_inject_bail(): handle failure on arbitrary injection.
 */

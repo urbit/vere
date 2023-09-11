@@ -2,7 +2,7 @@
 
 #include "vere.h"
 
-#include "noun.h"
+#include "u3.h"
 
 /* u3_auto_plan(): enqueue an ovum.
 */

@@ -3,7 +3,7 @@
 #include "vere.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "noun.h"
+#include "u3.h"
 
 /* u3_chan: incoming ipc port connection.
 */
@@ -223,7 +223,7 @@ _lick_close_chan(u3_chan* can_u)
     dev = _lick_string_to_path(gen_u->nam_c+1);
     mar = u3i_string("disconnect");
     dat = u3_nul;
-    
+
     cad = u3nq(c3__soak, dev, mar, dat);
 
     u3_auto_peer(
@@ -327,7 +327,7 @@ _lick_mkdirp(c3_c* por_c)
   c3_c pax_c[2048];
 
   strncpy(pax_c, por_c, sizeof(pax_c));
-  
+
   c3_c* fas_c = strchr(pax_c + 1, '/');
 
   while ( fas_c ) {
@@ -416,7 +416,7 @@ _lick_sock_err_chdir:
 static void
 _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 {
-  c3_c* nam_c = _lick_it_path(nam); 
+  c3_c* nam_c = _lick_it_path(nam);
 
   u3_port* cur_u = lic_u->gen_u;
   u3_port* las_u = NULL;
@@ -427,7 +427,7 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
       if( las_u == NULL ) {
         lic_u->gen_u = cur_u->nex_u;
       }
-      else { 
+      else {
         las_u->nex_u = cur_u->nex_u;
       }
       c3_free(cur_u);
@@ -493,7 +493,7 @@ _lick_ef_spit(u3_lick* lic_u, u3_noun nam, u3_noun dat)
 
   if( c3y == gen_u->con_o ) {
     _lick_send_noun(gen_u->san_u->can_u, dat);
-  } 
+  }
   else {
     u3_noun dev, wir, cad, mar;
     u3z(dat);
@@ -530,11 +530,11 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     if ( (c3__spin == tag) ) {
       _lick_ef_spin(lic_u, u3k(tmp)); // execute spin command
       ret_o = c3y;
-    } 
+    }
     else if ( (c3__shut == tag) ) {
       _lick_ef_shut(lic_u, u3k(tmp)); // execute shut command
       ret_o = c3y;
-    } 
+    }
     else if ( c3__spit == tag ) {
       if ( c3y == u3r_cell(tmp, &nam, &dat) ) {
         _lick_ef_spit(lic_u, u3k(nam), u3k(dat));
