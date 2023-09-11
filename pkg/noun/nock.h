@@ -3,6 +3,8 @@
 #ifndef U3_NOCK_H
 #define U3_NOCK_H
 
+#include "pkg/noun/v2/nock.h"
+
 #include <stdio.h>
 
 #include "c3.h"
@@ -45,6 +47,12 @@
       u3j_rite* rit_u;                // array of sites
     } reg_u;                          // registration site data
   } u3n_prog;
+
+  /**  Versioned functions.
+   **/
+    /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+    */
+#     define u3n_reclaim() u3n_v2_reclaim();
 
   /**  Functions.
   **/
@@ -123,11 +131,6 @@
      */
       c3_w
       u3n_mark(FILE* fil_u);
-
-    /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-    */
-      void
-      u3n_reclaim(void);
 
     /* u3n_rewrite_compact(): rewrite bytecode cache for compaction.
      */

@@ -183,7 +183,7 @@
         void
         u3m_wall(u3_noun wol);
 
-      /* u3m_reclaim: clear persistent caches to reclaim memory
+      /* u3m_reclaim: clear persistent caches to reclaim memory.
       */
         void
         u3m_reclaim(void);
@@ -193,8 +193,7 @@
         c3_w
         u3m_pack(void);
 
-      /* u3m_migrate: perform loom migration if necessary.
-         ver_w - target version
+      /* u3m_migrate: perform loom migrations.
       */
         void
         u3m_migrate();

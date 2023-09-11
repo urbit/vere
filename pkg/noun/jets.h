@@ -3,6 +3,8 @@
 #ifndef U3_JETS_H
 #define U3_JETS_H
 
+#include "pkg/noun/v2/jets.h"
+
 #include "allocate.h"
 #include "c3.h"
 #include "types.h"
@@ -132,6 +134,12 @@
     */
       extern u3j_dash u3j_Dash;
 #     define u3D u3j_Dash
+
+    /**  Versioned functions.
+     **/
+      /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+      */
+#     define u3j_reclaim() u3j_v2_reclaim();
 
     /**  Functions.
     **/
@@ -296,11 +304,6 @@
       */
         void
         u3j_free(void);
-
-      /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-      */
-        void
-        u3j_reclaim(void);
 
       /* u3j_rewrite_compact(): rewrite jet state for compaction.
       */

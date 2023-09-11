@@ -2174,14 +2174,14 @@ u3m_boot_lite(size_t len_i)
   return 0;
 }
 
-/* u3m_reclaim: clear persistent caches to reclaim memory
+/* u3m_reclaim: clear persistent caches to reclaim memory.
 */
 void
 u3m_reclaim(void)
 {
   u3v_reclaim();
-  u3j_reclaim();  //  XX need to version
-  u3n_reclaim();  //  XX need to version
+  u3j_reclaim();
+  u3n_reclaim();
   u3a_reclaim();
 }
 
@@ -2230,7 +2230,7 @@ u3m_pack(void)
 }
 
 
-/* u3m_migrate: perform loom migration(s) if necessary.
+/* u3m_migrate: perform loom migrations.
 */
 void
 u3m_migrate()

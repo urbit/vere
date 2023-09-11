@@ -58,6 +58,7 @@ _cm_pack_rewrite(void)
 static void
 _migrate_reclaim()
 {
+  //  XX update this and similar printfs
   fprintf(stderr, "loom: migration reclaim\r\n");
   u3m_v2_reclaim();
 }

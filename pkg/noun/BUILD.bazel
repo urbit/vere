@@ -10,9 +10,6 @@ vere_library(
         [
             "**/*.c",
             "**/*.h",
-            "*.c",
-            "*.h",
-            "jets/tree.c",
             "jets/*.h",
             "jets/**/*.c",
         ],

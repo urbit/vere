@@ -1740,8 +1740,6 @@ u3a_rewritten(u3_post ptr_v)
   return (u3_post)box_w[box_u->siz_w - 1];
 }
 
-//  XX need to version
-//  you can trace this one upwards
 u3_noun
 u3a_rewritten_noun(u3_noun som)
 {
@@ -1752,18 +1750,18 @@ u3a_rewritten_noun(u3_noun som)
 
   /* If this is being called during a migration, one-bit pointer compression
      needs to be temporarily enabled so the rewritten reference is compressed */
-  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)  //  XX will be removed
+  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
     u3C.vits_w = 1;
 
   if ( c3y == u3a_is_pug(som) ) {
-    som_p = u3a_to_pug(som_p);  //  XX needs to call "current" version, which is aliased to v2
+    som_p = u3a_to_pug(som_p);
   }
   else {
-    som_p = u3a_to_pom(som_p);  //  XX needs to call "current" version, which is aliased to v2
+    som_p = u3a_to_pom(som_p);
   }
 
   /* likewise, pointer compression is disabled until migration is complete */
-  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)  //  XX will be removed
+  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
     u3C.vits_w = 0;
 
   return som_p;
@@ -2170,7 +2168,6 @@ u3a_reclaim(void)
 }
 
 /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
- *                        XX need to version
 */
 void
 // u3a_v1_rewrite_compact(u3a_v1_road *rod_u)
