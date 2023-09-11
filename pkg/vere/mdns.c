@@ -77,6 +77,7 @@ static void resolve_cb(DNSServiceRef sref,
   req->data = (void*)payload;
 
   uv_loop_t* loop = uv_default_loop();
+
   int error = uv_getaddrinfo(loop, req, getaddrinfo_cb, host, NULL, &hints);
 
   if (error < 0) {
@@ -166,13 +167,12 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
   setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/var/run/dbus/system_bus_socket", 0);
   #   endif
 
-  memmove(our, our+1, strlen(our)); // certain url parsers don't like the sig
-
   mdns_payload* register_payload = (mdns_payload*)c3_malloc(sizeof(mdns_payload));
 
   DNSServiceRef sref;
   DNSServiceErrorType err;
-  err = DNSServiceRegister(&sref, 0, 0, our, "_ames._udp",
+  char* our_no_sig = our + 1; // certain url parsers don't like the ~
+  err = DNSServiceRegister(&sref, 0, 0, our_no_sig, "_ames._udp",
                            NULL, NULL, htons(port), 0, NULL, register_cb, (void*)register_payload);
 
   if (err != kDNSServiceErr_NoError) {
