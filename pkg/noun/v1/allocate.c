@@ -4,12 +4,6 @@
 #include "pkg/noun/v1/allocate.h"
 
 #include "pkg/noun/v1/hashtable.h"
-#include "log.h"
-#include "pkg/noun/v1/manage.h"
-#include "options.h"
-#include "retrieve.h"
-#include "trace.h"
-#include "vortex.h"
 
 /* u3a_v1_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */
@@ -18,65 +12,56 @@ u3a_v1_reclaim(void)
 {
   //  clear the memoization cache
   //
-  u3h_free(u3R->cax.har_p);
+  u3h_v1_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
 }
 
-u3_noun
-u3a_v1_rewritten_noun(u3_noun som)
+/* _me_lose_north(): lose on a north road.
+*/
+static void
+_me_lose_north(u3_noun dog)
 {
-  if ( c3y == u3a_is_cat(som) ) {
-    return som;
-  }
-  u3_post som_p = u3a_rewritten(u3a_v1_to_off(som));
+top:
+  {
+    c3_w* dog_w      = u3a_v1_to_ptr(dog);
+    u3a_box* box_u = u3a_botox(dog_w);
 
-  if ( c3y == u3a_is_pug(som) ) {
-    som_p = u3a_v1_to_pug(som_p);  //  XX alias?
-  }
-  else {
-    som_p = u3a_v1_to_pom(som_p);
-  }
+    if ( box_u->use_w > 1 ) {
+      box_u->use_w -= 1;
+    }
+    else {
+      if ( 0 == box_u->use_w ) {
+        u3m_bail(c3__foul);
+      }
+      else {
+        if ( _(u3a_is_pom(dog)) ) {
+          u3a_cell* dog_u = (void *)dog_w;
+          u3_noun     h_dog = dog_u->hed;
+          u3_noun     t_dog = dog_u->tel;
 
-  return som_p;
+          if ( !_(u3a_is_cat(h_dog)) ) {
+            _me_lose_north(h_dog);
+          }
+          u3a_wfree(dog_w);
+          if ( !_(u3a_is_cat(t_dog)) ) {
+            dog = t_dog;
+            goto top;
+          }
+        }
+        else {
+          u3a_wfree(dog_w);
+        }
+      }
+    }
+  }
 }
 
-/* u3a_v1_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
- *                        XX need to version
+/* u3a_v1_lose(): lose a reference count.
 */
 void
-// u3a_v1_rewrite_compact(u3a_v1_road *rod_u)
-u3a_v1_rewrite_compact(void)
+u3a_v1_lose(u3_noun som)
 {
-  u3a_v1_rewrite_noun(u3R->ski.gul);
-  u3a_v1_rewrite_noun(u3R->bug.tax);
-  u3a_v1_rewrite_noun(u3R->bug.mer);
-  u3a_v1_rewrite_noun(u3R->pro.don);
-  u3a_v1_rewrite_noun(u3R->pro.day);
-  u3a_v1_rewrite_noun(u3R->pro.trace);
-  u3h_v1_rewrite(u3R->cax.har_p);
-
-  u3R->ski.gul = u3a_v1_rewritten_noun(u3R->ski.gul);
-  u3R->bug.tax = u3a_v1_rewritten_noun(u3R->bug.tax);
-  u3R->bug.mer = u3a_v1_rewritten_noun(u3R->bug.mer);
-  u3R->pro.don = u3a_v1_rewritten_noun(u3R->pro.don);
-  u3R->pro.day = u3a_v1_rewritten_noun(u3R->pro.day);
-  u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
-  u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
-}
-void
-u3a_v1_rewrite_noun(u3_noun som)
-{
-  if ( c3n == u3a_is_cell(som) ) {
-    return;
+  if ( !_(u3a_is_cat(som)) ) {
+    _me_lose_north(som);
   }
-
-  if ( c3n == u3a_rewrite_ptr(u3a_v1_to_ptr((som))) ) return;
-
-  u3a_cell* cel = u3a_v1_to_ptr(som);
-
-  u3a_v1_rewrite_noun(cel->hed);
-  u3a_v1_rewrite_noun(cel->tel);
-
-  cel->hed = u3a_v1_rewritten_noun(cel->hed);
-  cel->tel = u3a_v1_rewritten_noun(cel->tel);
 }

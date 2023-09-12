@@ -3,10 +3,6 @@
 #ifndef U3_MANAGE_V2_H
 #define U3_MANAGE_V2_H
 
-#include "c3.h"
-#include "types.h"
-#include "version.h"
-
     /** System management.
     **/
       /* u3m_v2_reclaim: clear persistent caches to reclaim memory

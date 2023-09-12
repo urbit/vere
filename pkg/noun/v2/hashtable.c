@@ -7,9 +7,6 @@
 #include "pkg/noun/allocate.h"
 #include "pkg/noun/v1/allocate.h"
 #include "pkg/noun/v2/allocate.h"
-#include "imprison.h"
-#include "retrieve.h"
-#include "xtract.h"
 
 /* _ch_v2_popcount(): number of bits set in word.  A standard intrinsic.
 **             NB: copy of _ch_v2_popcount in pkg/noun/hashtable.c
@@ -214,13 +211,13 @@ _ch_v2_rewrite_node(u3h_node* han_u, c3_w lef_w)
       void* hav_v = u3h_v1_slot_to_node(sot_w);
       u3h_node* nod_u = u3to(u3h_node, u3a_rewritten(u3of(u3h_node,hav_v)));
 
-      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-        u3C.vits_w = 1;
+      // if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+      //   u3C.vits_w = 1;
 
       han_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
-      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-        u3C.vits_w = 0;
+      // if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+      //   u3C.vits_w = 0;
 
       if ( 0 == lef_w ) {
         _ch_v2_rewrite_buck(hav_v);
@@ -252,16 +249,16 @@ u3h_v2_rewrite(u3p(u3h_root) har_p)
     }
     else if ( _(u3h_slot_is_node(sot_w)) ) {
       //  XX check for correctness
-      u3h_node* han_u = u3h_v2_slot_to_node(sot_w);
+      u3h_node* han_u = u3h_v1_slot_to_node(sot_w);
       u3h_node* nod_u = u3to(u3h_node, u3a_rewritten(u3of(u3h_node,han_u)));
 
-      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-        u3C.vits_w = 1;
+      // if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+      //   u3C.vits_w = 1;
 
       har_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
-      if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-        u3C.vits_w = 0;
+      // if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
+      //   u3C.vits_w = 0;
 
       _ch_v2_rewrite_node(han_u, 25);
     }

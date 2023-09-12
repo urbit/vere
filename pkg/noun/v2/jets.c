@@ -3,7 +3,6 @@
 #include "pkg/noun/vortex.h"
 
 #include "pkg/noun/jets.h"
-#include "pkg/noun/v1/jets.h"
 #include "pkg/noun/v2/jets.h"
 
 #include "pkg/noun/v2/hashtable.h"
@@ -11,13 +10,13 @@
 /**  Data structures.
 **/
 
-/* _cj_v2_hank: cached hook information.
-**       NB: copy of _cj_v2_hank from pkg/noun/jets.c
+/* _cj_hank: cached hook information.
+**       NB: copy of _cj_hank from pkg/noun/jets.c
  */
 typedef struct {
   u3_weak  hax;                     //  axis of hooked inner core
   u3j_site sit_u;                   //  call-site data
-} _cj_v2_hank;
+} _cj_hank;
 
 /**  Functions.
 **/
@@ -28,32 +27,12 @@ typedef struct {
 static void
 _cj_v2_free_hank(u3_noun kev)
 {
-  _cj_v2_hank* han_u = u3to(_cj_v2_hank, u3t(kev));
+  _cj_hank* han_u = u3to(_cj_hank, u3t(kev));
   if ( u3_none != han_u->hax ) {
     u3z(han_u->hax);
     u3j_site_lose(&(han_u->sit_u));
   }
   u3a_wfree(han_u);
-}
-
-/* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-*/
-void
-u3j_v2_reclaim(void)
-{
-  //  re-establish the warm jet state
-  //
-  //    XX might this reduce fragmentation?
-  //
-  // if ( &(u3H->rod_u) == u3R ) {
-  //   u3j_v2_ream();
-  // }
-
-  //  clear the jet hank cache
-  //
-  u3h_v2_walk(u3R->jed.han_p, _cj_v2_free_hank);
-  u3h_v2_free(u3R->jed.han_p);
-  u3R->jed.han_p = u3h_new();
 }
 
 /* u3j_v2_rewrite_compact(): rewrite jet state for compaction.

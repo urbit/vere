@@ -2366,7 +2366,6 @@ u3j_free(void)
 }
 
 /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-**  XX need to version
 */
 void
 u3j_reclaim(void)
@@ -2378,7 +2377,6 @@ u3j_reclaim(void)
   // if ( &(u3H->rod_u) == u3R ) {
   //   u3j_ream();
   // }
-
   //  clear the jet hank cache
   //
   u3h_walk(u3R->jed.han_p, _cj_free_hank);

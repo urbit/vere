@@ -5,20 +5,6 @@
 
 #include "pkg/noun/v2/hashtable.h"
 
-/* u3n_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-*/
-void
-u3n_v2_reclaim(void)
-{
-  //  clear the bytecode cache
-  //
-  //    We can't just u3h_free() -- the value is a post to a u3n_v2_prog.
-  //    Note that the hank cache *must* also be freed (in u3j_reclaim())
-  //
-  u3n_v2_free();
-  u3R->byc.har_p = u3h_new();
-}
-
 /* _cn_prog_free(): free memory retained by program pog_u
 **              NB: copy of _cn_prog_free in pkg/noun/nock.c
 */

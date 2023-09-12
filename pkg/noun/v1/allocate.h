@@ -3,10 +3,6 @@
 
 #include "pkg/noun/allocate.h"
 
-#include "error.h"
-#include "manage.h"
-#include "options.h"
-
   /**  Constants.
   **/
 
@@ -48,24 +44,9 @@
           void
           u3a_v1_reclaim(void);
 
-        /* u3a_v1_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
+        /* u3a_v1_lose(): lose a reference count.
         */
           void
-          u3a_v1_rewrite_compact(void);
-
-        /* u3a_v1_rewrite_noun(): rewrite a noun for compaction.
-        */
-          void
-          u3a_v1_rewrite_noun(u3_noun som);
-
-        /* u3a_v1_rewritten(): rewrite a pointer for compaction.
-        */
-          u3_post
-          u3a_v1_rewritten(u3_post som_p);
-
-        /* u3a_v1_rewritten(): rewritten noun pointer for compaction.
-        */
-          u3_noun
-          u3a_v1_rewritten_noun(u3_noun som);
+          u3a_v1_lose(u3_noun som);
 
 #endif /* ifndef U3_ALLOCATE_H */

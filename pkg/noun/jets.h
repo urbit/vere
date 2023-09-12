@@ -135,12 +135,6 @@
       extern u3j_dash u3j_Dash;
 #     define u3D u3j_Dash
 
-    /**  Versioned functions.
-     **/
-      /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-      */
-#     define u3j_reclaim() u3j_v2_reclaim();
-
     /**  Functions.
     **/
       /* u3j_boot(): initialize jet system.
@@ -304,6 +298,11 @@
       */
         void
         u3j_free(void);
+
+      /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+      */
+        void
+        u3j_reclaim(void);
 
       /* u3j_rewrite_compact(): rewrite jet state for compaction.
       */

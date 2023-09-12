@@ -3,9 +3,6 @@
 
 #include "pkg/noun/hashtable.h"
 
-#include "c3.h"
-#include "types.h"
-
   /**  Data structures.
   **/
 
@@ -27,11 +24,6 @@
       */
         void
         u3h_v1_free(u3p(u3h_root) har_p);
-
-      /* u3h_v1_rewrite(): rewrite hashtable for compaction.
-      */
-        void
-        u3h_v1_rewrite(u3p(u3h_root) har_p);
 
       /* u3h_v1_walk_with(): traverse hashtable with key, value fn and data
        *                  argument; RETAINS.

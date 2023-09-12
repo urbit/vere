@@ -655,6 +655,8 @@ _find_home(void)
   }
 
   _rod_vaal(u3R);
+  // u3m_pack();
+  fprintf(stderr, "hi\r\n");
 }
 
 /* u3m_pave(): instantiate or activate image.

@@ -3,15 +3,8 @@
 #ifndef U3_NOCK_V2_H
 #define U3_NOCK_V2_H
 
-#include "pkg/noun/jets.h"
-
   /**  Functions.
   **/
-    /* u3n_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-    */
-      void
-      u3n_v2_reclaim(void);
-
     /* u3n_v2_free(): free bytecode cache.
      */
       void

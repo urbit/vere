@@ -48,12 +48,6 @@
     } reg_u;                          // registration site data
   } u3n_prog;
 
-  /**  Versioned functions.
-   **/
-    /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-    */
-#     define u3n_reclaim() u3n_v2_reclaim();
-
   /**  Functions.
   **/
     /* u3n_nock_on(): produce .*(bus fol).
@@ -131,6 +125,11 @@
      */
       c3_w
       u3n_mark(FILE* fil_u);
+
+    /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+    */
+      void
+      u3n_reclaim();
 
     /* u3n_rewrite_compact(): rewrite bytecode cache for compaction.
      */

@@ -2,39 +2,12 @@
 
 #include "pkg/noun/v2/manage.h"
 
-#include <ctype.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-
 #include "pkg/noun/v2/allocate.h"
-#include "events.h"
 #include "pkg/noun/v2/hashtable.h"
-#include "imprison.h"
 #include "pkg/noun/v2/jets.h"
-#include "jets/k.h"
-#include "log.h"
-#include "nock.h"
-#include "openssl/crypto.h"
-#include "options.h"
-#include "platform/rsignal.h"
-#include "retrieve.h"
-#include "trace.h"
-#include "urcrypt/urcrypt.h"
+#include "pkg/noun/v2/nock.h"
 #include "pkg/noun/vortex.h"
 #include "pkg/noun/v2/vortex.h"
-#include "xtract.h"
-
-/* u3m_v2_reclaim: clear persistent caches to reclaim memory
-*/
-void
-u3m_v2_reclaim(void)
-{
-  u3v_reclaim();
-  u3j_v2_reclaim();
-  u3n_v2_reclaim();
-  u3a_v2_reclaim();
-}
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
  *                     XX need to version; dynamic scope insanity!
@@ -49,10 +22,10 @@ _cm_pack_rewrite(void)
   //  NB: these implementations must be kept in sync with u3m_reclaim();
   //  anything not reclaimed must be rewritable
   //
-  u3v_v2_rewrite_compact();  //  XX need to version
-  u3j_v2_rewrite_compact();  //  XX need to version
-  u3n_v2_rewrite_compact();  //  XX need to version
-  u3a_v2_rewrite_compact();  //  XX need to version
+  u3v_v2_rewrite_compact();
+  u3j_v2_rewrite_compact();
+  u3n_v2_rewrite_compact();
+  u3a_v2_rewrite_compact();
 }
 
 static void
@@ -60,7 +33,7 @@ _migrate_reclaim()
 {
   //  XX update this and similar printfs
   fprintf(stderr, "loom: migration reclaim\r\n");
-  u3m_v2_reclaim();
+  u3m_v1_reclaim();
 }
 
 static void
@@ -98,10 +71,10 @@ _migrate_rewrite()
 {
   fprintf(stderr, "loom: migration rewrite\r\n");
 
-  /* So that rewritten pointers are compressed, this flag is set */
-  u3C.migration_state = MIG_REWRITE_COMPRESSED;
-  _cm_pack_rewrite();  //  XX need to version
-  u3C.migration_state = MIG_NONE;
+  // /* So that rewritten pointers are compressed, this flag is set */
+  // u3C.migration_state = MIG_REWRITE_COMPRESSED;
+  _cm_pack_rewrite();
+  // u3C.migration_state = MIG_NONE;
 }
 
 static void
@@ -176,7 +149,6 @@ _migrate_move(u3a_road *rod_u)
 
 
 /* u3m_v2_migrate: perform loom migration if necessary.
-   ver_w - target version
 */
 void
 u3m_v2_migrate()
@@ -204,4 +176,6 @@ u3m_v2_migrate()
 
   /* finally update the version and commit to disk */
   u3H->ver_w = U3V_VER2;
+
+  fprintf(stderr, "loom: pointer compression migration done\r\n");
 }
