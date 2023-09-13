@@ -1,6 +1,7 @@
 #ifndef U3_HASHTABLE_V2_H
 #define U3_HASHTABLE_V2_H
 
+#define VITS_W 1
 #include "pkg/noun/hashtable.h"
 
 #include "c3.h"
@@ -16,8 +17,8 @@
       /* u3h_v2_slot_to_node(): slot to node pointer
       ** u3h_v2_node_to_slot(): node pointer to slot
       */
-#     define  u3h_v2_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffff) << u3C.vits_w))
-#     define  u3h_v2_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3C.vits_w) | 0x40000000)
+#     define  u3h_v2_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffff) << VITS_W))
+#     define  u3h_v2_node_to_slot(ptr)  ((u3a_outa((ptr)) >> VITS_W) | 0x40000000)
 
     /**  Functions.
     ***
