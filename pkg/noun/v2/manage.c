@@ -34,6 +34,7 @@ _migrate_reclaim()
   //  XX update this and similar printfs
   fprintf(stderr, "loom: migration reclaim\r\n");
   u3m_v1_reclaim();
+  fprintf(stderr, "loom: migration reclaim done\r\n");
 }
 
 static void
