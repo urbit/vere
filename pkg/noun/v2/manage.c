@@ -153,14 +153,19 @@ _migrate_move(u3a_road *rod_u)
 void
 u3m_v2_migrate()
 {
-  if ( U3V_VER2 == u3H->ver_w )
-    return;
+  c3_w len_w = u3C.wor_i - 1;
+  c3_w ver_w = *(u3_Loom + len_w);
 
-  /* 1 -> 2 is all that is currently supported */
-  c3_dessert(u3H->ver_w == U3V_VER1);
+  u3_assert( U3V_VER1 == ver_w );
 
-  /* only home road migration is supported */
-  c3_dessert((uintptr_t)u3H == (uintptr_t)u3R);
+  c3_w* mem_w = u3_Loom + 1;
+  c3_w  siz_w = c3_wiseof(u3v_home);
+  c3_w* mat_w = (mem_w + len_w) - siz_w;
+
+  u3H = (void *)mat_w;
+  u3R = &u3H->rod_u;
+
+  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
 
   fprintf(stderr, "loom: pointer compression migration running...\r\n");
 

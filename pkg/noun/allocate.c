@@ -18,8 +18,6 @@ c3_w u3_Code;
 
 //  declarations of inline functions
 //
-
-void u3a_config_loom(c3_w ver_w);
 void *u3a_into(c3_w x);
 c3_w u3a_outa(void *p);
 c3_w u3a_to_off(c3_w som);
@@ -67,12 +65,12 @@ _box_count(c3_ws siz_ws) { }
    _box_count, (others?) should have perhaps its own header and certainly its
    own prefix. having to remind yourself that _box_count doesn't actually do
    anything unless U3_CPU_DEBUG is defined is annoying. */
-#define _box_vaal(box_u)                                                \
-  do {                                                                  \
-    c3_dessert(((uintptr_t)u3a_boxto(box_u)                             \
-                & u3C.balign_d-1) == 0);                                \
-    c3_dessert((((u3a_box*)(box_u))->siz_w                              \
-                & u3C.walign_w-1) == 0);                                \
+#define _box_vaal(box_u)                                        \
+  do {                                                          \
+  c3_dessert(((uintptr_t)u3a_boxto(box_u)                       \
+              & u3a_balign-1) == 0);                            \
+  c3_dessert((((u3a_box*)(box_u))->siz_w                        \
+              & u3a_walign-1) == 0);                            \
   } while(0)
 
 /* _box_slot(): select the right free list to search for a block.
@@ -302,7 +300,7 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
     all_p += c3_wiseof(u3a_box) + off_w;
     pad_w = c3_align(all_p, ald_w, C3_ALGHI)
       - all_p;
-    siz_w = c3_align(len_w + pad_w, u3C.walign_w, C3_ALGHI);
+    siz_w = c3_align(len_w + pad_w, u3a_walign, C3_ALGHI);
 
     //  hand-inlined: siz_w >= u3a_open(u3R)
     //
@@ -316,7 +314,7 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
     all_p += c3_wiseof(u3a_box) + off_w;
     pad_w = all_p
       - c3_align(all_p, ald_w, C3_ALGLO);
-    siz_w = c3_align(len_w + pad_w, u3C.walign_w, C3_ALGHI);
+    siz_w = c3_align(len_w + pad_w, u3a_walign, C3_ALGHI);
 
     //  hand-inlined: siz_w >= u3a_open(u3R)
     //
@@ -508,7 +506,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         box_p = all_p = *pfr_p;
         all_p += c3_wiseof(u3a_box) + off_w;
         c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
-        c3_w des_w = c3_align(siz_w + pad_w, u3C.walign_w, C3_ALGHI);
+        c3_w des_w = c3_align(siz_w + pad_w, u3a_walign, C3_ALGHI);
 
         /* calls maximally requesting DWORD alignment of returned pointer
            shouldn't require padding. */
@@ -711,17 +709,17 @@ u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w)
     c3_w*    box_w = (void*)u3a_botox(nov_w);
 
     c3_w* end_w = c3_align(nov_w + len_w + 1, /* +1 for trailing allocation size */
-                           u3C.balign_d,
+                           u3a_balign,
                            C3_ALGHI);
 
     c3_w  asz_w = (end_w - box_w);      /* total size in words of new allocation */
     if (box_u->siz_w <= asz_w) return;
     c3_w  bsz_w = box_u->siz_w - asz_w; /* size diff in words between old and new */
 
-    c3_dessert(asz_w && ((asz_w & u3C.walign_w-1) == 0)); /* new allocation size must be non-zero and DWORD multiple */
+    c3_dessert(asz_w && ((asz_w & u3a_walign-1) == 0)); /* new allocation size must be non-zero and DWORD multiple */
     c3_dessert(end_w < (box_w + box_u->siz_w));         /* desired alloc end must not exceed existing boundaries */
-    c3_dessert(((uintptr_t)end_w & u3C.balign_d-1) == 0); /* address of box getting freed must be DWORD aligned */
-    c3_dessert((bsz_w & u3C.walign_w-1) == 0);            /* size of box getting freed must be DWORD multiple */
+    c3_dessert(((uintptr_t)end_w & u3a_balign-1) == 0); /* address of box getting freed must be DWORD aligned */
+    c3_dessert((bsz_w & u3a_walign-1) == 0);            /* size of box getting freed must be DWORD multiple */
 
     _box_attach(_box_make(end_w, bsz_w, 0)); /* free the unneeded space */
 
@@ -1747,24 +1745,12 @@ u3a_rewritten_noun(u3_noun som)
     return som;
   }
   u3_post som_p = u3a_rewritten(u3a_to_off(som));
-
-  /* If this is being called during a migration, one-bit pointer compression
-     needs to be temporarily enabled so the rewritten reference is compressed */
-  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-    u3C.vits_w = 1;
-
   if ( c3y == u3a_is_pug(som) ) {
-    som_p = u3a_to_pug(som_p);
+    return u3a_to_pug(som_p);
   }
   else {
-    som_p = u3a_to_pom(som_p);
+    return u3a_to_pom(som_p);
   }
-
-  /* likewise, pointer compression is disabled until migration is complete */
-  if (u3C.migration_state == MIG_REWRITE_COMPRESSED)
-    u3C.vits_w = 0;
-
-  return som_p;
 }
 
 /* u3a_mark_mptr(): mark a malloc-allocated ptr for gc.

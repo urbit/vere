@@ -488,7 +488,7 @@ _pave_parts(void)
 static u3_road*
 _pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
 {
-  c3_dessert(((uintptr_t)rut_w & u3C.balign_d-1) == 0);
+  c3_dessert(((uintptr_t)rut_w & u3a_balign-1) == 0);
   u3_road* rod_u = (void*) mat_w;
 
   //  enable in case of corruption
@@ -529,8 +529,8 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
   //    00~~~|R|---|H|######|C|+++|M|~~~FF
   //                                ^--u3R which _pave_road returns (u3H for home road)
   //
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
-  c3_w* rut_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
   c3_w* cap_w = mat_w;
 
   if ( c3y == kid_o ) {
@@ -560,8 +560,8 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    00~~~|M|+++|C|######|H|---|R|~~~FFF
   //         ^---u3R which _pave_road returns
   //
-  c3_w* mat_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
-  c3_w* rut_w = c3_align(mem_w + len_w, u3C.balign_d, C3_ALGLO);
+  c3_w* mat_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
+  c3_w* rut_w = c3_align(mem_w + len_w, u3a_balign, C3_ALGLO);
   c3_w* cap_w = mat_w + siz_w;
 
   u3e_ward(u3of(c3_w, cap_w) - 1, u3of(c3_w, rut_w));
@@ -574,12 +574,9 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
 static void
 _pave_home(void)
 {
-  /* a pristine home road will always have compressed references */
-  u3a_config_loom(U3V_VERLAT);
-
-  c3_w* mem_w = u3_Loom + u3C.walign_w;
+  c3_w* mem_w = u3_Loom + u3a_walign;
   c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3C.walign_w;
+  c3_w  len_w = u3C.wor_i - u3a_walign;
 
   u3H = (void *)_pave_north(mem_w, siz_w, len_w, c3n);
   u3H->ver_w = U3V_VERLAT;
@@ -597,14 +594,24 @@ static void
 _find_home(void)
 {
   c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
-  u3a_config_loom(ver_w);
+
+  switch ( ver_w ) {
+    case 1: u3m_v2_migrate();
+    case 2: break;
+    default: {
+      fprintf(stderr, "loom: checkpoint version mismatch: "
+                      "have %u, need %u\r\n",
+                      ver_w, U3V_VERLAT);
+      abort();
+    }
+  }
 
   //  NB: the home road is always north
   //
-  c3_w* mem_w = u3_Loom + u3C.walign_w;
+  c3_w* mem_w = u3_Loom + u3a_walign;
   c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3C.walign_w;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
+  c3_w  len_w = u3C.wor_i - u3a_walign;
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
@@ -641,18 +648,6 @@ _find_home(void)
 
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
-
-  if (U3V_VERLAT > ver_w) {
-    u3m_migrate();
-    u3a_config_loom(U3V_VERLAT);
-  }
-  else if ( U3V_VERLAT < ver_w ) {
-    fprintf(stderr, "loom: checkpoint version mismatch: "
-            "have %u, need %u\r\n",
-            ver_w,
-            U3V_VERLAT);
-    abort();
-  }
 
   _rod_vaal(u3R);
   // u3m_pack();
@@ -867,7 +862,7 @@ u3m_leap(c3_w pad_w)
     }
     pad_w += c3_wiseof(u3a_road);
     len_w = u3a_open(u3R) - pad_w;
-    c3_align(len_w, u3C.walign_w, C3_ALGHI);
+    c3_align(len_w, u3a_walign, C3_ALGHI);
   }
 
   /* Allocate a region on the cap.
@@ -2229,14 +2224,4 @@ u3m_pack(void)
   u3a_pack_move(u3R);
 
   return (u3a_open(u3R) - pre_w);
-}
-
-
-/* u3m_migrate: perform loom migrations.
-*/
-void
-u3m_migrate()
-{
-  u3m_v2_migrate();  //  pointer compression
-  // u3m_v3_migrate();  //  persistent nock caching
 }
