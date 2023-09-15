@@ -175,9 +175,11 @@
           u3_noun day;                        //  doss, only in u3H (moveme)
         } pro;
 
-        struct {                              //  transient/persistent memoization
-          u3p(u3h_root) har_p;                //  (map (pair term noun) noun)
-          u3p(u3h_root) per_p;                //  (map (pair term noun) noun)
+        struct {                              //  memoization caches
+          u3p(u3h_root) har_p;                //  transient
+          u3p(u3h_root) per_p;                //  persistent
+          u3p(u3h_root) fod_p;                //  ford
+          u3p(u3h_root) sam_p;                //  ames
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;

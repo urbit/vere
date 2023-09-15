@@ -1,6 +1,8 @@
 /// @file
 
-#include "manage.h"
+#include "pkg/noun/manage.h"
+#include "pkg/noun/v2/manage.h"
+#include "pkg/noun/v3/manage.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -597,7 +599,8 @@ _find_home(void)
 
   switch ( ver_w ) {
     case 1: u3m_v2_migrate();
-    case 2: break;
+    case 2: u3m_v3_migrate();
+    case 3: break;
     default: {
       fprintf(stderr, "loom: checkpoint version mismatch: "
                       "have %u, need %u\r\n",
