@@ -210,10 +210,10 @@ u3a_v1_reclaim(void)
   u3h_v1_free_nodes(u3R_v1->cax.har_p);
 }
 
-/* _me_lose_north(): lose on a north road.
+/* _me_v1_lose_north(): lose on a north road.
 */
 static void
-_me_lose_north(u3_noun dog)
+_me_v1_lose_north(u3_noun dog)
 {
 top:
   {
@@ -234,7 +234,7 @@ top:
           u3_noun     t_dog = dog_u->tel;
 
           if ( !_(u3a_v1_is_cat(h_dog)) ) {
-            _me_lose_north(h_dog);
+            _me_v1_lose_north(h_dog);
           }
           u3a_v1_wfree(dog_w);
           if ( !_(u3a_v1_is_cat(t_dog)) ) {
@@ -256,6 +256,6 @@ void
 u3a_v1_lose(u3_noun som)
 {
   if ( !_(u3a_v1_is_cat(som)) ) {
-    _me_lose_north(som);
+    _me_v1_lose_north(som);
   }
 }

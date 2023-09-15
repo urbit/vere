@@ -21,6 +21,7 @@
 #     define u3a_v2_is_north     u3a_is_north
 #     define u3a_v2_is_pom       u3a_is_pom
 #     define u3a_v2_is_pug       u3a_is_pug
+#     define u3a_v2_lose         u3a_lose
 #     define u3a_v2_malloc       u3a_malloc
 #     define u3a_v2_minimum      u3a_minimum
 #     define u3a_v2_outa         u3a_outa

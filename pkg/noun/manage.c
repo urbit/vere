@@ -1,6 +1,8 @@
 /// @file
 
-#include "manage.h"
+#include "pkg/noun/manage.h"
+#include "pkg/noun/v2/manage.h"
+#include "pkg/noun/v3/manage.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -23,7 +25,6 @@
 #include "urcrypt/urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
-#include "zave.h"
 
 //  XX stack-overflow recovery should be gated by -a
 //
@@ -597,7 +598,8 @@ _find_home(void)
 
   switch ( ver_w ) {
     case 1: u3m_v2_migrate();
-    case 2: break;
+    case 2: u3m_v3_migrate();
+    case 3: break;
     default: {
       fprintf(stderr, "loom: checkpoint version mismatch: "
                       "have %u, need %u\r\n",
@@ -2128,7 +2130,6 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   if ( c3n == nuu_o ) {
     u3j_ream();
     u3n_ream();
-    // u3z_ream();
     return u3A->eve_d;
   }
   else {

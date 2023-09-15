@@ -15,7 +15,6 @@
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
-#include "log.h"
 
 // define to have each opcode printed as it executes,
 // along with some other debugging info
@@ -1128,9 +1127,11 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
 
         op_y   = (c3y == los_o) ? SLIB : SKIB; // overflows to SLIS / SKIS
         u3z_cid cid = u3z_memo_toss;
-        hod = u3r_skip(hod);
-        if ( c3y == u3du(hod) ) {
-          cid = u3z_memo_keep;
+        {
+          u3_weak con = u3r_skip(hod);
+          if ( (u3_none != con) && (c3y == u3du(con)) ) {
+            cid = u3z_memo_keep;
+          }
         }
         ++tot_w; _n_emit(ops, u3nq(op_y, cid, mem_w, u3k(nef)));
         tot_w += mem_w; _n_apen(ops, mem);
@@ -2634,13 +2635,11 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       o   = *top;
       if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
-        //  : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
-         : ( 1 ) ) {  //  prevents userspace from persistence
+         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
         u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
       }
-      else if ( ( u3z_memo_keep == u3h(o) ) &&
-                ( 0 != u3R->ski.gul ) ) {
-        u3l_log("nock: userspace can't save to persistent cache\r\n");
+      else if ( u3z_memo_keep == u3h(o) ) {
+        fprintf(stderr, "\r\nnock: userspace can't save to persistent cache\r\n");
       }
       *top = x;
       u3z(o);

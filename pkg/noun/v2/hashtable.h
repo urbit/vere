@@ -3,6 +3,7 @@
 
 #define u3h_v2_buck          u3h_buck
 #define u3h_v2_free          u3h_free
+#define u3h_v2_new           u3h_new
 #define u3h_v2_node          u3h_node
 #define u3h_v2_noun_to_slot  u3h_noun_to_slot
 #define u3h_v2_root          u3h_root

@@ -1,11 +1,9 @@
 /// @file
 
-#include "pkg/noun/nock.h"
 #include "pkg/noun/v2/nock.h"
 
 #include "pkg/noun/v2/allocate.h"
 #include "pkg/noun/v2/hashtable.h"
-#include "pkg/noun/v2/vortex.h"
 
 /* u3n_v2_rewrite_compact(): rewrite the bytecode cache for compaction.
  *

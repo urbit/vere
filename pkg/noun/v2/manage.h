@@ -3,10 +3,9 @@
 #ifndef U3_MANAGE_V2_H
 #define U3_MANAGE_V2_H
 
-    /** System management.
+    /**  System management.
     **/
       /* u3m_v2_migrate: perform pointer compression loom migration if necessary.
-         ver_w - target version
       */
         void
         u3m_v2_migrate();

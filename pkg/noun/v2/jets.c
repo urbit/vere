@@ -9,6 +9,18 @@
 #include "pkg/noun/v2/hashtable.h"
 #include "pkg/noun/v2/vortex.h"
 
+/* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+*/
+void
+u3j_v2_reclaim(void)
+{
+  //  clear the jet hank cache
+  //
+  u3h_v2_walk(u3R_v2->jed.han_p, u3j_v2_free_hank);
+  u3h_v2_free(u3R_v2->jed.han_p);
+  u3R_v2->jed.han_p = u3h_v2_new();
+}
+
 /* u3j_v2_rewrite_compact(): rewrite jet state for compaction.
  *
  * NB: u3R_v2->jed.han_p *must* be cleared (currently via u3j_v2_reclaim above)
