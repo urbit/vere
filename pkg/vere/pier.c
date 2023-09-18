@@ -783,7 +783,7 @@ _pier_on_lord_wyrd_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
 #endif
 }
 
-/* _pier_wyrd_init(): construct %wyrd.
+/* _pier_wyrd_card(): construct %wyrd.
 */
 static u3_noun
 _pier_wyrd_card(u3_pier* pir_u)
@@ -827,6 +827,14 @@ _pier_wyrd_card(u3_pier* pir_u)
 static void
 _pier_wyrd_init(u3_pier* pir_u)
 {
+  //  create a new epoch if current version mismatches the latest epoch's
+  if ( c3y == u3_disk_vere_diff(pir_u->log_u) ) {
+    if ( c3n == u3_disk_epoc_init(pir_u->log_u, pir_u->log_u->dun_d) ) {
+      fprintf(stderr, "disk: failed to initialize epoch\r\n");
+      exit(1);
+    }
+  }
+
   u3_noun cad = _pier_wyrd_card(pir_u);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
 
@@ -1402,6 +1410,8 @@ _pier_on_lord_live(void* ptr_v)
       //  XX print bootstrap commit complete
       //  XX s/b boot_complete_cb
       //
+      //  XX this codepath should never be hit due to sync replay
+      u3l_log("pier: warning: async replay");
       _pier_play_init(pir_u, log_u->dun_d);
     }
   }
@@ -1637,7 +1647,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       .write_bail_f = _pier_on_disk_write_bail
     };
 
-    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u)) ) {
+    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u, c3y)) ) {
       c3_free(pir_u);
       return 0;
     }
