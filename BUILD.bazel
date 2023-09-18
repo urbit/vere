@@ -38,6 +38,38 @@ config_setting(
 )
 
 #
+# CONFIGS DETAILING WHEN TO ENABLE CERTAIN FEATURES BY DEFAULT.
+# CHANGES BEHAVIOR OF //bazel/common_settings.bzl:vere_library.
+#
+
+config_setting(
+    name = "thinlto",
+    constraint_values = [
+        "@platforms//os:macos",
+    ],
+    values = {
+        "compilation_mode": "opt"
+    }
+)
+
+config_setting(
+    name = "lto",
+    constraint_values = [
+        "@platforms//os:linux",
+    ],
+    values = {
+        "compilation_mode": "opt"
+    }
+)
+
+config_setting(
+    name = "debug",
+    values = {
+        "compilation_mode": "dbg"
+    }
+)
+
+#
 # COMPILERS
 #
 

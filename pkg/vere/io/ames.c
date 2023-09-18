@@ -55,6 +55,7 @@
       c3_d           fod_d;             //  forwards dropped count
       c3_d           foq_d;             //  forward queue size
       c3_d           fow_d;             //  forwarded count
+      c3_o           for_o;             //  forwarding enabled
       c3_d           hed_d;             //  failed to read header
       c3_d           vet_d;             //  version mismatches filtered
       c3_d           mut_d;             //  invalid mugs filtered
@@ -1993,7 +1994,9 @@ _ames_hear(u3_ames* sam_u,
      && (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
         || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) ) )
   {
-    _ames_try_forward(pac_u);
+    if ( c3y == sam_u->sat_u.for_o ) {
+      _ames_try_forward(pac_u);
+    }
   }
   else {
     //  enter protocol-specific packet handling
@@ -2457,6 +2460,11 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->fig_u.net_o = c3y;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
+
+  //  enable forwarding on galaxies only
+  u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun rac = u3do("clan:title", who);
+  sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
 
   // hashtable for scry cache
   //
