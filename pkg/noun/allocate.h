@@ -178,8 +178,8 @@
         struct {                              //  memoization caches
           u3p(u3h_root) har_p;                //  transient
           u3p(u3h_root) per_p;                //  persistent
-          // u3p(u3h_root) fod_p;                //  ford
-          // u3p(u3h_root) sam_p;                //  ames
+          u3p(u3h_root) fod_p;                //  ford  NB: not used
+          u3p(u3h_root) sam_p;                //  ames  NB: not used
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;
