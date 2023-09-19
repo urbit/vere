@@ -1289,9 +1289,21 @@ _stun_send_request(u3_ames* sam_u)
   add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
+  // see STUN RFC 8489
+  // https://datatracker.ietf.org/doc/html/rfc8489#section-5
   c3_y buf_y[20] = {0};
-  buf_y[1] = 0x1;  //  message type "binding request"
-  memcpy(buf_y + 4, sam_u->sun_u.tid_y, 16);  //  TODO convert byte order?
+
+  // STUN message type: "binding request"
+  buf_y[1] = 0x01;
+
+  // STUN message length: 0 (header-only)
+  // (implicit in initialization)
+
+  // STUN "magic cookie" 0x2112A442 in network byte order
+  buf_y[4] = 0x21; buf_y[5] = 0x12; buf_y[6] = 0xa4; buf_y[7] = 0x42;
+
+  // STUN "transaction id"
+  memcpy(buf_y + 8, sam_u->sun_u.tid_y, 12);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 20);
   u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
