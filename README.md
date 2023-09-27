@@ -19,8 +19,6 @@ defined in its own package:
 
 - [`pkg/c3`](pkg/c3): A set of basic utilities for writing Urbit's style of C.
 - [`pkg/ent`](pkg/ent): A cross-platform wrapper for `getentropy(2)`.
-- [`pkg/urcrypt`](pkg/urcrypt): A standardized interface for calling various
-  cryptographic functions used in the Urbit runtime.
 - [`pkg/ur`](pkg/ur): An implementation of [jam][jam] and [cue][cue], Urbit's
   bitwise noun serialization and deserialization algorithms, respectively.
 - [`pkg/noun`](pkg/noun): The Nock virtual machine and snapshotting system.

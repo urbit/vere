@@ -20,7 +20,7 @@
 #include "platform/rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
-#include "urcrypt/urcrypt.h"
+#include "urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
 

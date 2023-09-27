@@ -14,7 +14,7 @@
 #include "retrieve.h"
 #include "serial.h"
 #include "trace.h"
-#include "urcrypt/urcrypt.h"
+#include "urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
 
