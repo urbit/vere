@@ -126,7 +126,9 @@
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        u3_noun   def;
+
+        c3_w fut_w[31];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -589,6 +591,11 @@
           void
           u3a_lose(u3_weak som);
 #         define u3z(som) u3a_lose(som)
+
+        /* u3a_mend(): apply deferred free list.
+        */
+          u3_noun
+          u3a_mend(u3_noun def, u3_noun fed);
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */

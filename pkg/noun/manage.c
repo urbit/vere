@@ -931,7 +931,7 @@ u3m_fall()
 {
   u3_assert(0 != u3R->par_p);
 
-#if 0
+#if 1
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
   */
@@ -996,6 +996,7 @@ u3m_love(u3_noun pro)
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
+  u3_noun         fed = u3R->def;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1006,6 +1007,8 @@ u3m_love(u3_noun pro)
   pro   = u3a_take(pro);
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
+
+  u3R->def = u3a_mend(u3R->def, fed);
 
   //  pop the stack
   //

@@ -262,6 +262,14 @@ _cr_sing_push(u3a_pile* pil_u, u3_noun a, u3_noun b)
   return fam_u;
 }
 
+static inline void
+_cr_sing_wed(u3_noun* a, u3_noun* b)
+{
+  if ( *a != *b ) {
+    u3a_wed(a, b);
+  }
+}
+
 /* _cr_sing_mug(): short-circuit comparison if mugs are present and not equal.
 */
 static inline c3_o
@@ -427,7 +435,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -441,7 +449,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -530,7 +538,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -544,7 +552,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -557,6 +565,7 @@ _cr_sing(u3_noun a, u3_noun b)
     //  subsequent comparisons by maintaining a set of equal pairs.
     //
     if ( 0 == ++ovr_s ) {
+      fprintf(stderr, "bout to cape\r\n");
       u3p(u3h_root) har_p = u3h_new();
       c3_o ret_o = _cr_sing_cape(&pil_u, har_p);
       u3h_free(har_p);

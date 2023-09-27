@@ -1540,6 +1540,80 @@ u3a_lose(u3_noun som)
   u3t_off(mal_o);
 }
 
+static u3_noun
+_ca_mend_north(u3_noun def, u3_noun fed)
+{
+  u3_noun i, t = fed;
+
+  while ( u3_nul != t ) {
+    u3_assert( c3y == u3du(t) );
+    i = u3h(t);
+    t = u3t(t);
+
+    if ( c3y == u3a_north_is_senior(u3R, i) ) {
+      fprintf(stderr, "re-put north %x %p\r\n", i, u3R);
+      def = u3nc(i, def);
+    }
+    else {
+      u3_assert( c3n == u3a_north_is_junior(u3R, i) );
+      if ( c3y == u3du(i) ) {
+        fprintf(stderr, "lose north cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
+      }
+      else {
+        fprintf(stderr, "lose north %x %p\r\n", i, u3R);
+      }
+      _me_lose_north(i);
+    }
+  }
+
+  return def;
+}
+
+static u3_noun
+_ca_mend_south(u3_noun def, u3_noun fed)
+{
+  u3_noun i, t = fed;
+
+  while ( u3_nul != t ) {
+    u3_assert( c3y == u3du(t) );
+    i = u3h(t);
+    t = u3t(t);
+
+    if ( c3y == u3a_south_is_senior(u3R, i) ) {
+      fprintf(stderr, "re-put south %x %p\r\n", i, u3R);
+      def = u3nc(i, def);
+    }
+    else {
+      u3_assert( c3n == u3a_south_is_junior(u3R, i) );
+      if ( c3y == u3du(i) ) {
+        fprintf(stderr, "lose south cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
+      }
+      else {
+        fprintf(stderr, "lose south %x %p\r\n", i, u3R);
+      }
+      _me_lose_south(i);
+    }
+  }
+
+  return def;
+}
+
+/* u3a_mend(): apply deferred free list.
+*/
+u3_noun
+u3a_mend(u3_noun def, u3_noun fed)
+{
+  u3t_on(coy_o);
+
+  def = ( c3y == u3a_is_north(u3R) )
+        ? _ca_mend_north(def, fed)
+        : _ca_mend_south(def, fed);
+
+  u3t_off(coy_o);
+
+  return def;
+}
+
 /* u3a_use(): reference count.
 */
 c3_w
@@ -1613,7 +1687,7 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
 /* u3a_wed(): unify noun references.
 */
 void
-u3a_wed(u3_noun* a, u3_noun* b)
+u3a_wed1(u3_noun* a, u3_noun* b)
 {
   if ( *a != *b ) {
     u3_road* rod_u = u3R;
@@ -1649,6 +1723,89 @@ u3a_wed(u3_noun* a, u3_noun* b)
 #else
       rod_u = u3to(u3_road, rod_u->par_p);
 #endif
+    }
+  }
+}
+
+static void
+_ca_lose_senior(u3_noun dog)
+{
+  c3_w*    dog_w = u3a_to_ptr(dog);
+  u3a_box* box_u = u3a_botox(dog_w);
+
+  switch ( box_u->use_w ) {
+    case 0: {
+      u3m_bail(c3__foul);
+    } break;
+
+    case 1: {
+      fprintf(stderr, "put %x %p\r\n", dog, u3R);
+      u3R->def = u3nc(dog, u3R->def);
+    } break;
+
+    default: {
+      box_u->use_w -= 1;
+    }
+  }
+}
+
+/* u3a_wed(): unify noun references.
+*/
+void
+u3a_wed(u3_noun* a, u3_noun* b)
+{
+  u3_road* rod_u = u3R;
+  c3_t     asr_t, bsr_t, own_t = 1;
+
+  u3_assert( *a != *b );
+
+  while ( 1 ) {
+    asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
+    bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
+
+    //  both are on [rod_u]; gain a reference to whichever we keep
+    //
+    if ( !asr_t && !bsr_t ) {
+      //  keep [a]; it's deeper in the heap
+      //
+      //    (N && >) || (S && <)
+      //
+      if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) {
+        _me_gain_use(*a);
+        ( own_t ) ? u3z(*b) : _ca_lose_senior(*b);
+        *b = *a;
+      }
+      //  keep [b]; it's deeper in the heap
+      //
+      else {
+        _me_gain_use(*b);
+        ( own_t ) ? u3z(*a) : _ca_lose_senior(*a);
+        *a = *b;
+      }
+
+      return;
+    }
+    //  keep [a]; it's senior
+    //
+    else if ( asr_t && !bsr_t ) {
+      ( own_t ) ? u3z(*b) : _ca_lose_senior(*b);
+      *b = *a;
+      return;
+    }
+    //  keep [b]; it's senior
+    //
+    else if ( !asr_t && bsr_t ) {
+      ( own_t ) ? u3z(*a) : _ca_lose_senior(*a);
+      *a = *b;
+      return;
+    }
+
+    if ( rod_u == &u3H->rod_u ) {
+      return;
+    }
+    else {
+      rod_u = u3to(u3_road, rod_u->par_p);
+      own_t = 0;
     }
   }
 }
@@ -2153,6 +2310,7 @@ u3a_mark_road(FILE* fil_u)
   tot_w += u3a_maid(fil_u, "  profile doss", u3a_mark_noun(u3R->pro.day));
   tot_w += u3a_maid(fil_u, "  new profile trace", u3a_mark_noun(u3R->pro.trace));
   tot_w += u3a_maid(fil_u, "  memoization cache", u3h_mark(u3R->cax.har_p));
+  tot_w += u3a_maid(fil_u, "  deferred free", u3a_mark_noun(u3R->def));
   return   u3a_maid(fil_u, "total road stuff", tot_w);
 }
 
