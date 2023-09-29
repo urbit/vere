@@ -1,3 +1,7 @@
+# IDEs.
+/.vscode
+/.idea
+
 # Bazel.
 /.user.bazelrc
 /bazel-*
