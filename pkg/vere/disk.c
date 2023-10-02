@@ -1043,7 +1043,18 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
       return 0;
     }
 
-    if ( c3y == u3_disk_need_migrate(log_u) ) {
+
+
+    //  if fresh boot, initialize disk v1
+    //
+    if ( c3y == u3_Host.ops_u.nuu ) {
+      //  initialize first epoch "0i0"
+      if ( c3n == u3_disk_epoc_init(log_u, 0) ) {
+        fprintf(stderr, "disk: failed to initialize first epoch\r\n");
+        return 0;
+      }
+    }
+    else if ( c3y == u3_disk_need_migrate(log_u) ) {
       if ( (c3y == mig_o) && (c3n == u3_disk_migrate(log_u)) ) {
         fprintf(stderr, "disk: failed to migrate log\r\n");
         c3_free(log_u);
@@ -1341,8 +1352,6 @@ u3_disk_migrate(u3_disk* log_u)
    *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
    */
 
-  fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
-
   //  check if lock.mdb is readable in log directory
   c3_o luk_o = c3n;
   c3_c luk_c[8193];
@@ -1351,16 +1360,7 @@ u3_disk_migrate(u3_disk* log_u)
     luk_o = c3y;
   }
 
-  //  if fresh boot, initialize disk v1
-  if ( c3y == u3_Host.ops_u.nuu ) {
-    //  initialize first epoch "0i0"
-    if ( c3n == u3_disk_epoc_init(log_u, 0) ) {
-      fprintf(stderr, "disk: failed to initialize first epoch\r\n");
-      return c3n;
-    }
-
-    return c3y;
-  }
+  fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER1);
 
   //  migrate existing pier which has either:
   //  - not started the migration, or
