@@ -2150,9 +2150,11 @@ _cw_play_exit(c3_i int_i)
 
 /* _cw_play_impl(): replay events, but better.
 */
-static void
+static c3_d
 _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
+  c3_d pay_d;
+
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
   u3_disk* log_u;
@@ -2195,7 +2197,7 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
       .dun_d = u3A->eve_d,
     };
 
-    u3_mars_play(&mar_u, eve_d, sap_d);
+    pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
 
     //  migrate after replay, if necessary
     u3_Host.eve_d = mar_u.dun_d;
@@ -2206,6 +2208,8 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   u3_disk_exit(log_u);
   u3m_stop();
+
+  return pay_d;
 }
 
 /* _cw_play(): replay events, but better.
@@ -2300,7 +2304,9 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
+    fprintf(stderr, "mars: nothing to do!");
+  }
 }
 
 /* _cw_prep(): prepare for upgrade
