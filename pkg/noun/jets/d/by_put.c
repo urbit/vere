@@ -33,7 +33,7 @@ u3qdb_put(u3_noun a,
       }
     }
     else {
-      u3_noun d, n_d, l_d, r_d;
+      u3_noun d;
 
       if ( c3y == u3qc_gor(b, pn_a) ) {
         d = u3qdb_put(l_a, b, c);
@@ -44,6 +44,7 @@ u3qdb_put(u3_noun a,
                       u3k(r_a));
         }
         else {
+          u3_noun n_d, l_d, r_d;
           u3r_trel(d, &n_d, &l_d, &r_d);
 
           u3_noun e = u3nt(u3k(n_d),
@@ -65,6 +66,7 @@ u3qdb_put(u3_noun a,
                       d);
         }
         else {
+          u3_noun n_d, l_d, r_d;
           u3r_trel(d, &n_d, &l_d, &r_d);
 
           u3_noun e = u3nt(u3k(n_d),

@@ -97,6 +97,8 @@
     u3_noun u3wdb_int(u3_noun);
     u3_noun u3wdb_jab(u3_noun);
     u3_noun u3wdb_jub(u3_noun);
+    u3_noun u3wdb_pyt(u3_noun);
+    u3_noun u3wdb_gos(u3_noun);
     u3_noun u3wdb_key(u3_noun);
     u3_noun u3wdb_put(u3_noun);
 #   define u3wdb_tap u3wdi_tap

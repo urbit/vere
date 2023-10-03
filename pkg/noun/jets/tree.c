@@ -2274,6 +2274,8 @@ static u3j_core _139_two__in_d[] =
   };
 
 static u3j_harm _139_two__by_jub_a[] = {{".2", u3wdb_jub, c3y}, {}};
+static u3j_harm _139_two__by_gos_a[] = {{".2", u3wdb_gos, c3y}, {}};
+static u3j_harm _139_two__by_pyt_a[] = {{".2", u3wdb_pyt, c3y}, {}};
 static u3j_core _139_two__by_d[] =
   { { "all", 7, _140_two__by_all_a, 0, no_hashes },
     { "any", 7, _140_two__by_any_a, 0, no_hashes },
@@ -2295,6 +2297,8 @@ static u3j_core _139_two__by_d[] =
     { "urn", 7, _140_two__by_urn_a, 0, no_hashes },
     { "wyt", 3, _140_two__by_wyt_a, 0, no_hashes },
     { "jub", 7, _139_two__by_jub_a, 0, no_hashes },
+    { "pyt", 7, _139_two__by_pyt_a, 0, no_hashes },
+    { "gos", 7, _139_two__by_gos_a, 0, no_hashes },
     {}
   };
 
