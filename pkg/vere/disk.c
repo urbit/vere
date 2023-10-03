@@ -972,6 +972,59 @@ u3_disk_slog(u3_disk* log_u)
   }
 }
 
+/* _disk_epoc_meta: read metadata from epoch.
+*/
+static c3_o
+_disk_epoc_meta(u3_disk*    log_u,
+                c3_d        epo_d,
+                const c3_c* met_c,
+                c3_w        max_w,
+                c3_c*       buf_c)
+{
+  struct stat buf_u;
+  c3_w red_w, len_w;
+  c3_i ret_i, fid_i;
+  c3_c*       pat_c;
+
+  ret_i = asprintf(&pat_c, "%s/0i%" PRIc3_d "/%s.txt",
+                   log_u->com_u->pax_c, epo_d, met_c);
+  u3_assert( ret_i > 0 );
+
+  fid_i = c3_open(pat_c, O_RDONLY, 0644);
+  c3_free(pat_c);
+
+  if ( (fid_i < 0) || (fstat(fid_i, &buf_u) < 0) ) {
+    fprintf(stderr, "disk: failed to open %s.txt in epoch 0i%" PRIc3_d "\r\n",
+                    met_c, epo_d);
+    return c3n;
+  }
+  else if ( buf_u.st_size >= max_w ) {
+    fprintf(stderr, "disk: %s.txt in epoch 0i%" PRIc3_d " too large "
+                    "(%" PRIc3_z ")\r\n",
+                    met_c, epo_d, (c3_z)buf_u.st_size);
+    return c3n;
+  }
+
+  len_w = buf_u.st_size;
+  red_w = read(fid_i, buf_c, len_w);
+  close(fid_i);
+
+  if ( len_w != red_w ) {
+    fprintf(stderr, "disk: failed to read %s.txt in epoch 0i%" PRIc3_d "\r\n",
+                    met_c, epo_d);
+    return c3n;
+  }
+
+  //  trim trailing whitespace
+  //
+  do {
+    buf_c[len_w] = 0;
+  }
+  while ( len_w-- && isspace(buf_c[len_w]) );
+
+  return c3y;
+}
+
 /* u3_disk_init(): load or create pier directories and event log.
 */
 u3_disk*
@@ -1042,8 +1095,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
       c3_free(log_u);
       return 0;
     }
-
-
 
     //  if fresh boot, initialize disk v1
     //
@@ -1270,46 +1321,6 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   return ret_o;
 }
 
-/* u3_disk_epoc_vere: get binary version from epoch.
-*/
-c3_o
-u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w)
-{
-  struct stat buf_u;
-  c3_c* ver_c;
-  c3_w red_w, len_w;
-  c3_i ret_i, fid_i;
-  ret_i = asprintf(&ver_c, "%s/0i%" PRIc3_d "/vere.txt",
-           log_u->com_u->pax_c, epo_d);
-  u3_assert( ret_i > 0 );
-
-  fid_i = c3_open(ver_c, O_RDONLY, 0644);
-
-  if ( (fid_i < 0) || (fstat(fid_i, &buf_u) < 0) ) {
-    fprintf(stderr, "disk: failed to open vere.txt in epoch 0i%" PRIc3_d
-                    "\r\n", epo_d);
-    return c3n;
-  }
-
-  len_w = buf_u.st_size;
-  red_w = read(fid_i, ver_w, len_w);
-  close(fid_i);
-
-  if ( len_w != red_w ) {
-    fprintf(stderr, "disk: failed to read vere.txt in epoch 0i%" PRIc3_d
-                    "\r\n", epo_d);
-    return c3n;
-  }
-
-  //  trim trailing whitespace
-  ver_w[len_w] = 0;
-  while ( len_w-- && isspace(ver_w[len_w]) ) {
-    ver_w[len_w] = 0;
-  }
-
-  return c3y;
-}
-
 /* u3_disk_need_migrate: does the desk need to be migrated?
 */
 c3_o
@@ -1452,25 +1463,19 @@ u3_disk_migrate(u3_disk* log_u)
   return c3y;
 }
 
-
 /* u3_disk_vere_diff(): checks if vere version mismatches latest epoch's.
 */
 c3_o
 u3_disk_vere_diff(u3_disk* log_u)
 {
-  c3_d lat_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
-    fprintf(stderr, "disk: failed to load last epoch\r\n");
-    c3_free(log_u);
-    return 0;
+  c3_c ver_c[128];
+
+  if ( c3n == _disk_epoc_meta(log_u, log_u->epo_d, "vere",
+                             sizeof(ver_c) - 1, ver_c) )
+  {
+    return c3y; // assume mismatch if we can't read version
   }
 
-  c3_c ver_c[8193];
-  if ( c3n == u3_disk_epoc_vere(log_u, lat_d, ver_c) ) {
-    fprintf(stderr, "disk: failed to load epoch version\r\n");
-    c3_free(log_u);
-    return 0;
-  }
   if ( 0 != strcmp(ver_c, URBIT_VERSION) ) {
     return c3y;
   }
