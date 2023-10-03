@@ -1122,6 +1122,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
         c3_d fir_d;
         if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
           fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
+          // XX dispose mdb_u
           c3_free(log_u);
           return 0;
         }
@@ -1140,13 +1141,40 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
       return 0;
     }
 
+    //  check latest epoc version
+    //
+    {
+      c3_c ver_c[8];
+      c3_w ver_w;
+      if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
+                                  sizeof(ver_c) - 1, ver_c) )
+      {
+        fprintf(stderr, "disk: failed to load epoch version\r\n");
+        c3_free(log_u);
+        return 0;
+      }
+
+      if ( 1 != sscanf(ver_c, "%d", &ver_w) ) {
+        fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
+        c3_free(log_u);
+        return 0;
+      }
+
+      if ( U3D_VER1 != ver_w ) {
+        fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d'\r\n",
+                        ver_c, U3D_VER1);
+        c3_free(log_u);
+        return 0;
+      }
+    }
+
     //  set path to latest epoch
     c3_c epo_c[8193];
     snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_c, lat_d);
 
     //  initialize latest epoch's db
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
-      fprintf(stderr, "disk: failed to initialize database\r\n");
+      fprintf(stderr, "disk: failed to initialize database at '%s' '%s' '%s'\r\n", pax_c, log_c, epo_c);
       c3_free(log_u);
       return 0;
     }
@@ -1156,6 +1184,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
     c3_d fir_d, las_d;
     if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
       fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      //  XX dispose mdb_u
+      c3_free(log_u);
       return 0;
     }
 
@@ -1200,7 +1230,7 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   c3_c epv_c[8193];
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   FILE* epv_f = fopen(epv_c, "w");
-  fprintf(epv_f, "%d\n", U3D_VER1);
+  fprintf(epv_f, "%d", U3D_VER1);
   fclose(epv_f);
 
   //  create binary version file, overwriting any existing file
