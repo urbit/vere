@@ -1022,20 +1022,11 @@
        c3_o
        u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
 
-      /* u3_disk_vere_diff(): checks if vere version mismatches latest epoch's.
-       */
-       c3_o
-       u3_disk_vere_diff(u3_disk* log_u);
-
-      /* u3_disk_need_migrate(): does the disk need migration?
+      /* u3_disk_kindly(): do the needful.
       */
-        c3_o
-        u3_disk_need_migrate(u3_disk* log_u);
+        void
+        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
 
-      /* u3_disk_migrate(): migrates disk format.
-       */
-        c3_o
-        u3_disk_migrate(u3_disk* log_u);
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
         u3_weak

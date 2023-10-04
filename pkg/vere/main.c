@@ -2199,15 +2199,9 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
     u3_Host.eve_d = mar_u.dun_d;
 
-    if ( c3y == u3_disk_need_migrate(log_u) ) {
-      u3_disk_migrate(log_u);
-    }
-    else if ( c3y == u3_disk_vere_diff(log_u) ) {
-      if ( c3n == u3_disk_epoc_init(log_u, log_u->dun_d) ) {
-        fprintf(stderr, "disk: failed to initialize epoch\r\n");
-        exit(1);
-      }
-    }
+    //  migrate or rollover as needed
+    //
+    u3_disk_kindly(log_u, u3_Host.eve_d);
   }
 
   u3_disk_exit(log_u);
