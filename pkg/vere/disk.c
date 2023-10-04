@@ -1150,10 +1150,12 @@ u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
 c3_o
 u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
 {
-  c3_o ret_o = c3n;  //  return c3n if no epoch directories exist
-  *lat_d = 0;        //  initialize lat_d to 0
   u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
   u3_dent* den_u = die_u->dil_u;
+  c3_o     ret_o = c3n;
+
+  *lat_d = 0;
+
   while ( den_u ) {
     c3_d epo_d = 0;
     if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d) ) {
@@ -1283,24 +1285,29 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3_Host.dir_c);
   snprintf(nop_c, sizeof(nop_c), "%s/north.bin", bhk_c);
   snprintf(sop_c, sizeof(sop_c), "%s/south.bin", bhk_c);
-  if ( c3n == c3_unlink(nop_c) ) {
-    fprintf(stderr, "disk: failed to delete bhk/north.bin\r\n");
+  if ( c3_unlink(nop_c) ) {
+    fprintf(stderr, "disk: failed to delete bhk/north.bin: %s\r\n",
+                    strerror(errno));
   }
-  else if ( c3n == c3_unlink(sop_c) ) {
-    fprintf(stderr, "disk: failed to delete bhk/south.bin\r\n");
+  else if ( c3_unlink(sop_c) ) {
+    fprintf(stderr, "disk: failed to delete bhk/south.bin: %s\r\n",
+                    strerror(errno));
   }
   else {
-    if ( c3n == c3_rmdir(bhk_c) ) {
-      fprintf(stderr, "disk: failed to delete bhk/\r\n");
+    if ( c3_rmdir(bhk_c) ) {
+      fprintf(stderr, "disk: failed to delete bhk/: %s\r\n",
+                      strerror(errno));
     }
   }
 
   //  delete old lock.mdb and data.mdb files
-  if ( 0 != c3_unlink(luk_c) ) {
-    fprintf(stderr, "disk: failed to unlink lock.mdb\r\n");
+  if ( c3_unlink(luk_c) ) {
+    fprintf(stderr, "disk: failed to unlink lock.mdb: %s\r\n",
+                    strerror(errno));
   }
-  if ( 0 != c3_unlink(dut_c) ) {
-    fprintf(stderr, "disk: failed to unlink data.mdb\r\n");
+  if ( c3_unlink(dut_c) ) {
+    fprintf(stderr, "disk: failed to unlink data.mdb: %s\r\n",
+                    strerror(errno));
     return c3n;  //  migration succeeds only if we can unlink data.mdb
   }
 
