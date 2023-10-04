@@ -1671,6 +1671,9 @@ u3e_stop(void)
     close(u3P.eph_i);
     unlink(u3C.eph_c);
   }
+
+  close(u3P.sou_u.fid_i);
+  close(u3P.sou_u.fid_i);
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
@@ -1709,6 +1712,8 @@ void
 u3e_init(void)
 {
   u3P.pag_w = u3C.wor_i >> u3a_page;
+
+  u3P.nor_u.fid_i = u3P.sou_u.fid_i = -1;
 
   u3e_foul();
 
