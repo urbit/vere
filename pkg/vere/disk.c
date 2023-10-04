@@ -1173,16 +1173,16 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
 static c3_o
 _disk_need_migrate(u3_disk* log_u)
 {
-  //  check if data.mdb is readable in log directory
   c3_c dut_c[8193];
   snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
-  if ( !_(u3_Host.ops_u.nuu)
-       && 0 != access(dut_c, F_OK) ) {
-    // if .urb/log/data.mdb does not exist, skip migration
-    return c3n;
+
+  //  check if data.mdb is readable in log directory
+  //
+  if ( 0 == access(dut_c, F_OK)) {
+    return c3y;
   }
 
-  return c3y;
+  return c3n;
 }
 
 /* _disk_migrate: migrates disk format.
@@ -1445,10 +1445,36 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
 
-      log_u->sen_d = log_u->dun_d;
-      log_u->ver_w = 0;
+      //  if a top-level log exists but is empty it's safe to remove.
+      //  for extra safety, we only do this if we also have epochs.
+      //  (the top-level log was most likely created by vere downgrade)
+      //
+      c3_d nop_d;
+      if (  !fir_d
+         && !log_u->dun_d
+         && (c3y == u3_disk_epoc_last(log_u, &nop_d)) )
+      {
+        u3_lmdb_exit(log_u->mdb_u);
+        c3_c luk_c[8193]; c3_c dut_c[8193];
+        snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_c);
+        snprintf(luk_c, sizeof(luk_c), "%s/lock.mdb", log_u->com_u->pax_c);
 
-      return log_u;
+        if ( c3_unlink(dut_c)
+           ||  (  (0 == access(luk_c, R_OK))
+               && c3_unlink(luk_c) ))
+        {
+          fprintf(stderr, "disk: failed to unlink empty, old log\r\n");
+        }
+
+        //  continue to epoc initialization
+      }
+
+      else {
+        log_u->sen_d = log_u->dun_d;
+        log_u->ver_w = 0;
+
+        return log_u;
+      }
     }
 
     //  get latest epoch number
