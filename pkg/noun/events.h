@@ -46,6 +46,7 @@
     */
       typedef struct _u3e_pool {
         c3_c*     dir_c;                     //  path to
+        c3_i      eph_i;                     //  ephemeral file descriptor
         c3_w      dit_w[u3a_pages >> 5];     //  touched since last save
         c3_w      pag_w;                     //  number of pages (<= u3a_pages)
         c3_w      gar_w;                     //  guard page
@@ -73,10 +74,11 @@
 
   /** Functions.
   **/
-    /* u3e_backup(): copy the snapshot from chk to bhk. 
+    /* u3e_backup(): copy the snapshot from [pux_c] to [pax_c],
+     * overwriting optional.
     */
-      c3_o 
-      u3e_backup(c3_o ovw_o);
+      c3_o
+      u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o);
 
     /* u3e_fault(): handle a memory fault.
     */
@@ -88,10 +90,20 @@
       void
       u3e_save(u3_post low_p, u3_post hig_p);
 
+    /* u3e_toss(): discard ephemeral pages.
+    */
+      void
+      u3e_toss(u3_post low_p, u3_post hig_p);
+
     /* u3e_live(): start the persistence system.  Return c3y if no image.
     */
       c3_o
       u3e_live(c3_o nuu_o, c3_c* dir_c);
+
+    /* u3e_stop(): gracefully stop the persistence system.
+    */
+      void
+      u3e_stop(void);
 
     /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
     */

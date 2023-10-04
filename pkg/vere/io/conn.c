@@ -337,12 +337,9 @@ _conn_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
 
   if ( err_i != UV_EOF ) {
     u3l_log("conn: moor bail %zd %s", err_i, err_c);
-    if ( _(can_u->liv_o) ) {
-      _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_word(err_i),
-                      u3i_string(err_c)));
-      can_u->liv_o = c3n;
-    }
+    can_u->liv_o = c3n;
   }
+
   _conn_close_chan(san_u, can_u);
 }
 

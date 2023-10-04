@@ -39,6 +39,7 @@ u3_dire_init(const c3_c* pax_c)
 {
   u3_dire *dir_u = c3_malloc(sizeof *dir_u);
   dir_u->all_u = 0;
+  dir_u->dil_u = 0;
   dir_u->pax_c = c3_malloc(1 + strlen(pax_c));
   strcpy(dir_u->pax_c, pax_c);
 
@@ -52,6 +53,17 @@ u3_dire_free(u3_dire *dir_u)
 {
   {
     u3_dent *det_u = dir_u->all_u;
+    u3_dent *nex_u;
+
+    while ( det_u ) {
+      nex_u = det_u->nex_u;
+      u3_dent_free(det_u);
+      det_u = nex_u;
+    }
+  }
+
+  {
+    u3_dent *det_u = dir_u->dil_u;
     u3_dent *nex_u;
 
     while ( det_u ) {

@@ -175,6 +175,8 @@ _main_init(void)
   u3_Host.ops_u.pro = c3n;
   u3_Host.ops_u.qui = c3n;
   u3_Host.ops_u.rep = c3n;
+  u3_Host.ops_u.eph = c3n;
+  u3_Host.ops_u.tos = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -186,6 +188,9 @@ _main_init(void)
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
+
+  u3C.eph_c = 0;
+  u3C.tos_w = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -266,6 +271,9 @@ _main_getopt(c3_i argc, c3_c** argv)
     //
     { "urth-loom",           required_argument, NULL, 5 },
     { "no-demand",           no_argument,       NULL, 6 },
+    { "swap",                no_argument,       NULL, 7 },
+    { "swap-to",             required_argument, NULL, 8 },
+    { "toss",                required_argument, NULL, 9 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -283,6 +291,22 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
+        break;
+      }
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        break;
+      }
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
+      case 9: {  //  toss
+        u3_Host.ops_u.tos = c3y;
+        if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+          return c3n;
+        }
         break;
       }
       //  special args
@@ -318,7 +342,7 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         } else {
           u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w) 
+          if ( 0 == u3_Host.ops_u.sap_w )
             return c3n;
         }
         break;
@@ -688,6 +712,7 @@ _cw_usage(c3_c* bin_c)
     "  %s next %.*s              request upgrade:\n",
     "  %s queu %.*s<at-event>    cue state:\n",
     "  %s chop %.*s              truncate event log:\n",
+    "  %s roll %.*s              rollover to new epoch:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
     "\n  run as a 'serf':\n",
     "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
@@ -763,6 +788,8 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --no-demand               Skip demand paging\n"
     "    --no-conn                 Do not run control plane\n",
     "    --no-dock                 Skip binary \"docking\" on boot\n",
+    "    --swap                    Use an explicit ephemeral (swap-like) file\n",
+    "    --swap-to FILE            Specify ephemeral file location\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -986,6 +1013,7 @@ _cw_serf_exit(void)
 {
   u3s_cue_xeno_done(sil_u);
   u3t_trace_close();
+  u3m_stop();
 }
 
 /* _cw_init_io(): initialize i/o streams.
@@ -1043,7 +1071,7 @@ _cw_init_io(uv_loop_t* lup_u)
 static void
 _cw_serf_commence(c3_i argc, c3_c* argv[])
 {
-  if ( 8 > argc ) {
+  if ( 9 > argc ) {
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
@@ -1057,6 +1085,9 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      lom_c = argv[6];
   c3_w       lom_w;
   c3_c*      eve_c = argv[7];
+  c3_c*      eph_c = argv[8];
+  c3_c*      tos_c = argv[9];
+  c3_w       tos_w;
 
   _cw_init_io(lup_u);
 
@@ -1077,12 +1108,18 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   //  load runtime config
   //
   {
+    //  XX check return
+    //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+    }
+
     if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
-      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", argv[4]);
+      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", eve_c);
     }
   }
 
@@ -1102,6 +1139,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   //  setup loom
   //
   {
+    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
+
     u3V.dir_c = strdup(dir_c);
     u3V.sen_d = u3V.dun_d = u3m_boot(dir_c, (size_t)1 << lom_w);
 
@@ -1155,7 +1194,7 @@ static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
   u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
+  u3_disk*  log_u = u3_disk_init(dir_c, cb_u, c3y);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -1464,6 +1503,8 @@ _cw_info(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1481,6 +1522,18 @@ _cw_info(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1508,11 +1561,11 @@ _cw_info(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
-                  u3_Host.dir_c, eve_d);
+                  u3_Host.dir_c, u3_Host.eve_d);
 
   u3_disk_slog(log_u);
   printf("\n");
@@ -1533,6 +1586,8 @@ _cw_grab(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1550,6 +1605,18 @@ _cw_grab(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1594,6 +1661,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1611,6 +1680,18 @@ _cw_cram(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1639,17 +1720,17 @@ _cw_cram(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
   c3_o  ret_o;
 
   fprintf(stderr, "urbit: cram: preparing\r\n");
 
-  if ( c3n == (ret_o = u3u_cram(u3_Host.dir_c, eve_d)) ) {
+  if ( c3n == (ret_o = u3u_cram(u3_Host.dir_c, u3_Host.eve_d)) ) {
     fprintf(stderr, "urbit: cram: unable to jam state\r\n");
   }
   else {
-    fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", eve_d);
+    fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", u3_Host.eve_d);
   }
 
   //  save even on failure, as we just did all the work of deduplication
@@ -1676,6 +1757,8 @@ _cw_queu(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",        required_argument, NULL, c3__loom },
     { "no-demand",   no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
@@ -1694,6 +1777,18 @@ _cw_queu(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case 'r': {
         roc_c = strdup(optarg);
@@ -1737,11 +1832,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
     exit(1);
   }
   else {
+    u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
     u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
-
-    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
@@ -1771,6 +1865,8 @@ _cw_meld(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1788,6 +1884,18 @@ _cw_meld(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1816,14 +1924,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-  c3_w     pre_w;
-
   u3C.wag_w |= u3o_hashless;
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
-  pre_w = u3a_open(u3R);
-  u3u_meld();
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+
   u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
 
   u3m_save();
@@ -1843,6 +1948,8 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "arch",      required_argument, NULL, 'a' },
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1864,6 +1971,18 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1908,6 +2027,8 @@ _cw_pack(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1925,6 +2046,18 @@ _cw_pack(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1953,9 +2086,9 @@ _cw_pack(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
   u3m_save();
@@ -1972,6 +2105,38 @@ _cw_play_slog(u3_noun hod)
   u3z(hod);
 }
 
+/* _cw_play_snap(): prepare snapshot for full replay.
+*/
+static void
+_cw_play_snap(u3_disk* log_u)
+{
+  c3_c chk_c[8193], epo_c[8193];
+  snprintf(chk_c, 8193, "%s/.urb/chk", u3_Host.dir_c);
+  snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, log_u->epo_d);
+
+  if ( 0 == log_u->epo_d ) {
+    //  if epoch 0 is the latest, delete the snapshot files in chk/
+    c3_c nor_c[8193], sop_c[8193];
+    snprintf(nor_c, 8193, "%s/.urb/chk/north.bin", u3_Host.dir_c);
+    snprintf(sop_c, 8193, "%s/.urb/chk/south.bin", u3_Host.dir_c);
+    if ( c3_unlink(nor_c) && (ENOENT != errno) ) {
+      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                      nor_c, strerror(errno));
+      exit(1);
+    }
+    if ( c3_unlink(sop_c) && (ENOENT != errno) ) {
+      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                      sop_c, strerror(errno));
+      exit(1);
+    }
+  }
+  else if ( 0 != u3e_backup(epo_c, chk_c, c3y) ) {
+    //  copy the latest epoch's snapshot files into chk/
+    fprintf(stderr, "mars: failed to copy snapshot\r\n");
+    exit(1);
+  }
+}
+
 /* _cw_play_exit(): exit immediately.
 */
 static void
@@ -1981,6 +2146,66 @@ _cw_play_exit(c3_i int_i)
   //
   fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
   raise(SIGINT);
+}
+
+/* _cw_play_impl(): replay events, but better.
+*/
+static void
+_cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
+{
+  //  XX handle SIGTSTP so that the lockfile is not orphaned?
+  //
+  u3_disk* log_u;
+  if ( 0 == (log_u = u3_disk_init(u3_Host.dir_c, (u3_disk_cb){0}, c3n)) ) {
+    fprintf(stderr, "mars: failed to load event log\r\n");
+    exit(1);
+  }
+
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+  signal(SIGTSTP, _cw_play_exit);
+
+  //  XX source these from a shared struct ops_u
+  if ( c3y == mel_o ) {
+    u3C.wag_w |= u3o_auto_meld;
+  }
+
+  if ( c3y == sof_o ) {
+    u3C.wag_w |= u3o_soft_mugs;
+  }
+
+  u3C.wag_w |= u3o_hashless;
+
+  if ( c3y == ful_o ) {
+    u3l_log("mars: preparing for full replay");
+    _cw_play_snap(log_u);
+  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+  u3C.slog_f = _cw_play_slog;
+
+  {
+    u3_mars mar_u = {
+      .log_u = log_u,
+      .dir_c = u3_Host.dir_c,
+      .sen_d = u3A->eve_d,
+      .dun_d = u3A->eve_d,
+    };
+
+    u3_mars_play(&mar_u, eve_d, sap_d);
+
+    //  migrate after replay, if necessary
+    u3_Host.eve_d = mar_u.dun_d;
+    if ( c3y == u3_disk_need_migrate(log_u) ) {
+      u3_disk_migrate(log_u);
+    }
+  }
+
+  u3_disk_exit(log_u);
+  u3m_stop();
 }
 
 /* _cw_play(): replay events, but better.
@@ -2075,55 +2300,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  XX handle SIGTSTP so that the lockfile is not orphaned?
-  //
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-
-  if ( c3y == mel_o ) {
-    u3C.wag_w |= u3o_auto_meld;
-  }
-
-  if ( c3y == sof_o ) {
-    u3C.wag_w |= u3o_soft_mugs;
-  }
-
-  u3C.wag_w |= u3o_hashless;
-
-  //  XX this should restore the epoch snapshot and replay that
-  //
-  if ( c3y == ful_o ) {
-    u3l_log("mars: preparing for full replay");
-    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-    u3e_live(c3n, u3_Host.dir_c);
-    u3m_foul();
-    u3m_pave(c3y);
-    u3j_boot(c3y);
-  }
-  else {
-    u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  }
-
-  u3C.slog_f = _cw_play_slog;
-
-  {
-    u3_mars mar_u = {
-      .log_u = log_u,
-      .dir_c = u3_Host.dir_c,
-      .sen_d = u3A->eve_d,
-      .dun_d = u3A->eve_d,
-    };
-
-    u3_mars_play(&mar_u, eve_d, sap_d);
-  }
-
-  u3_disk_exit(log_u);
-  u3m_stop();
+  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2131,12 +2308,16 @@ _cw_play(c3_i argc, c3_c* argv[])
 static void
 _cw_prep(c3_i argc, c3_c* argv[])
 {
+  //  XX roll with old binary
+  //     check that new epoch is empty, migrate snapshot in-place
   c3_i ch_i, lid_i;
   c3_w arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2154,6 +2335,18 @@ _cw_prep(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2197,6 +2390,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2214,6 +2409,18 @@ _cw_chop(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2243,123 +2450,171 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // gracefully shutdown the pier if it's running
-  u3_disk* old_u = _cw_disk_init(u3_Host.dir_c);
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
-  // note: this include patch applications (if any)
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  // check if there's a *current* snapshot
-  if ( old_u->dun_d != u3A->eve_d ) {
-    fprintf(stderr, "chop: error: snapshot is out of date, please "
-                    "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "chop: eve_d: %" PRIu64 ", dun_d: %" PRIu64 "\r\n", u3A->eve_d, old_u->dun_d);
+  //  get latest epoch number prior to creating a new one
+  c3_d pre_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &pre_d) ) {
+    fprintf(stderr, "chop: failed to find last epoch\r\n");
     exit(1);
   }
 
-  if ( c3n == u3m_backup(c3y)) {  //  backup current snapshot
-    fprintf(stderr, "chop: error: failed to backup snapshot\r\n");
-    exit(1);
-  }
-
-  // initialize the lmdb environment
-  // see disk.c:885
-  const size_t siz_i =
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-    0x7d00000000;
-  #else
-    0x10000000000;
-  #endif
-  c3_c log_c[8193];
-  snprintf(log_c, sizeof(log_c), "%s/.urb/log", u3_Host.dir_c);
-
-  // get the first/last event numbers from the event log
+  //  create new epoch
   c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(old_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "chop: failed to load latest event from database\r\n");
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "chop: failed to get first/last events\r\n");
     exit(1);
   }
 
-  // get the metadata
-  c3_d     who_d[2];
-  c3_o     fak_o;
-  c3_w     lif_w;
-  if ( c3y != u3_disk_read_meta(old_u->mdb_u, who_d, &fak_o, &lif_w) ) {
-    fprintf(stderr, "chop: failed to read metadata\r\n");
+  //  create new epoch if latest isn't empty
+  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_init(log_u, las_d)) ) {
+    fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
   }
 
-  // get the last event
-  u3_lmdb_walk itr_u;
-  size_t       len_i;
-  void*        buf_v[1];
-  if ( c3n == u3_lmdb_walk_init(old_u->mdb_u, &itr_u, las_d, las_d) ) {
-    fprintf(stderr, "chop: failed to initialize iterator\r\n");
-    exit(1);
+  //  sort epoch directories in descending order
+  u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dent* den_u = ned_u->dil_u;
+  c3_z len_z = 0;
+  while ( den_u ) {  //  count epochs
+    len_z++;
+    den_u = den_u->nex_u;
   }
-  if ( c3n == u3_lmdb_walk_next(&itr_u, &len_i, buf_v) ) {
-    fprintf(stderr, "chop: failed to read event\r\n");
-    exit(1);
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  len_z = 0;
+  den_u = ned_u->dil_u;
+  while ( den_u ) {
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
+      len_z++;
+    }
+    den_u = den_u->nex_u;
   }
-  u3_lmdb_walk_done(&itr_u);
 
-  // initialize a fresh lmdb environment in the "chop" subdir
-  c3_c cho_c[8193];
-  snprintf(cho_c, sizeof(cho_c), "%s/chop", log_c);
-  if ( 0 != access(cho_c, F_OK) ) {
-    if ( 0 != c3_mkdir(cho_c, 0700) ) {
-      fprintf(stderr, "chop: failed to create chop directory\r\n");
+  if ( len_z <= 2 ) {
+    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
+    exit(0);  //  enjoy
+  }
+
+  //  sort sot_d naively in descending order
+  c3_d tmp_d;
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    for ( c3_z j_z = i_z + 1; j_z < len_z; j_z++ ) {
+      if ( sot_d[i_z] < sot_d[j_z] ) {
+        tmp_d = sot_d[i_z];
+        sot_d[i_z] = sot_d[j_z];
+        sot_d[j_z] = tmp_d;
+      }
+    }
+  }
+
+  //  get latest epoch number prior to creating a new one
+  c3_d pos_d;
+  if ( c3n == u3_disk_epoc_last(log_u, &pos_d) ) {
+    fprintf(stderr, "chop: failed to find last epoch\r\n");
+    exit(1);
+  }
+
+  //  delete all but the last two epochs
+  //  XX parameterize the number of epochs to chop
+  for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
+    fprintf(stderr, "chop: deleting epoch 0i%" PRIc3_d "\r\n", sot_d[i_z]);
+    if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
+      fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
       exit(1);
     }
   }
-  MDB_env* new_u = u3_lmdb_init(cho_c, siz_i);
-  if ( !new_u ) {
-    fprintf(stderr, "chop: failed to initialize new database\r\n");
-    exit(1);
-  }
-
-  // write the metadata to the database
-  if ( c3n == u3_disk_save_meta(new_u, who_d, fak_o, lif_w) ) {
-    fprintf(stderr, "chop: failed to save metadata\r\n");
-    exit(1);
-  }
-
-  // write the last event to the database
-  // warning: this relies on the old database still being open
-  if ( c3n == u3_lmdb_save(new_u, las_d, 1, buf_v, &len_i) ) {
-    fprintf(stderr, "chop: failed to write last event\r\n");
-    exit(1);
-  }
-
-  // backup the original database file
-  c3_c dat_c[8193], bak_c[8193];
-  snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", log_c);
-  // "data_<first>-<last>.mdb.bak"
-  snprintf(bak_c, sizeof(bak_c), "%s/data_%" PRIu64 "-%" PRIu64 ".mdb.bak", cho_c, fir_d, las_d);
-  if ( 0 != c3_rename(dat_c, bak_c) ) {
-    fprintf(stderr, "chop: failed to backup original database file\r\n");
-    exit(1);
-  }
-
-  // rename new database file to be official
-  c3_c new_c[8193];
-  snprintf(new_c, sizeof(new_c), "%s/data.mdb", cho_c);
-  if ( 0 != c3_rename(new_c, dat_c) ) {
-    fprintf(stderr, "chop: failed to rename new database file\r\n");
-    exit(1);
-  }
 
   // cleanup
-  u3_disk_exit(old_u);
-  u3_lmdb_exit(new_u);
-  u3m_stop();
+  u3_dire_free(ned_u);
+  u3_disk_exit(log_u);
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
-  fprintf(stderr, "      event log backup written to %s\r\n", bak_c);
-  fprintf(stderr, "      WARNING: ENSURE YOU CAN RESTART YOUR SHIP BEFORE DELETING YOUR EVENT LOG BACKUP FILE!\r\n");
-  fprintf(stderr, "      if you can't, restore your log by running:\r\n");
-  fprintf(stderr, "      `mv %s %s` then try again\r\n", bak_c, dat_c);
+}
+
+/* _cw_roll(): rollover to new epoch
+ */
+static void
+_cw_roll(c3_i argc, c3_c* argv[])
+{
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
+
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "roll"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  // gracefully shutdown the pier if it's running
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  // check if there's a *current* snapshot
+  if ( log_u->dun_d != u3A->eve_d ) {
+    fprintf(stderr, "roll: error: snapshot is out of date, please "
+                    "start/shutdown your pier gracefully first\r\n");
+    fprintf(stderr, "roll: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", \
+                     u3A->eve_d, log_u->dun_d);
+    exit(1);
+  }
+
+  //  create new epoch
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "roll: failed to get first/last events\r\n");
+    exit(1);
+  }
+
+  if ( fir_d == las_d ) {
+    fprintf(stderr, "roll: latest epoch already empty\r\n");
+    exit(0);
+  }
+  else if ( c3n == u3_disk_epoc_init(log_u, las_d) ) {
+    fprintf(stderr, "roll: failed to create new epoch\r\n");
+    exit(1);
+  }
+
+  //  success
+  c3_d epo_d = log_u->dun_d + 1;
+  fprintf(stderr, "roll: epoch rollover complete\r\n");
 }
 
 /* _cw_vere(): download vere
@@ -2486,6 +2741,8 @@ _cw_vile(c3_i argc, c3_c* argv[])
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2503,6 +2760,18 @@ _cw_vile(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.map = c3n;
         u3C.wag_w |= u3o_no_demand;
       } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2631,6 +2900,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__prep: _cw_prep(argc, argv); return 2; // continue on
     case c3__queu: _cw_queu(argc, argv); return 1;
     case c3__chop: _cw_chop(argc, argv); return 1;
+    case c3__roll: _cw_roll(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
 
@@ -2806,6 +3076,25 @@ main(c3_i   argc,
       if ( _(u3_Host.ops_u.tra) ) {
         u3C.wag_w |= u3o_trace;
       }
+
+      /*  Set swap flag
+      */
+      if ( _(u3_Host.ops_u.eph) ) {
+        u3C.wag_w |= u3o_swap;
+      }
+
+      /*  Set toss flog
+      */
+      if ( _(u3_Host.ops_u.tos) ) {
+        u3C.wag_w |= u3o_toss;
+      }
+    }
+
+    //  we need the current snapshot's latest event number to
+    //  validate whether we can execute disk migration
+    if ( u3_Host.ops_u.nuu == c3n ) {
+      _cw_play_impl(0, 0, c3n, c3n, c3n);
+      //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
