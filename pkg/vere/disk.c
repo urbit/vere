@@ -1028,7 +1028,7 @@ _disk_epoc_meta(u3_disk*    log_u,
 /* u3_disk_init(): load or create pier directories and event log.
 */
 u3_disk*
-u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
+u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
   log_u->liv_o = c3n;
@@ -1106,31 +1106,25 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
       }
     }
     else if ( c3y == u3_disk_need_migrate(log_u) ) {
-      if ( (c3y == mig_o) && (c3n == u3_disk_migrate(log_u)) ) {
-        fprintf(stderr, "disk: failed to migrate log\r\n");
+      fprintf(stderr, "disk: loading old format\r\n");
+
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+        fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+        c3_free(log_u);
+      }
+
+      c3_d fir_d;
+      if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
+        // XX dispose mdb_u
         c3_free(log_u);
         return 0;
       }
-      else {
-        fprintf(stderr, "disk: loading old format\r\n");
 
-        if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
-          fprintf(stderr, "disk: failed to initialize lmdb\r\n");
-          c3_free(log_u);
-        }
+      log_u->sen_d = log_u->dun_d;
+      log_u->ver_w = 0;
 
-        c3_d fir_d;
-        if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &log_u->dun_d) ) {
-          fprintf(stderr, "disk: failed to load latest event from lmdb\r\n");
-          // XX dispose mdb_u
-          c3_free(log_u);
-          return 0;
-        }
-
-        log_u->sen_d = log_u->dun_d;
-
-        return log_u;
-      }
+      return log_u;
     }
 
     //  get latest epoch number
@@ -1166,6 +1160,8 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o)
         c3_free(log_u);
         return 0;
       }
+
+      log_u->ver_w = ver_w;
     }
 
     //  set path to latest epoch

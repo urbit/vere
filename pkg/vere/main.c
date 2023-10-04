@@ -1194,7 +1194,7 @@ static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
   u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u, c3y);
+  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -2157,11 +2157,7 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_disk* log_u;
-  if ( 0 == (log_u = u3_disk_init(u3_Host.dir_c, (u3_disk_cb){0}, c3n)) ) {
-    fprintf(stderr, "mars: failed to load event log\r\n");
-    exit(1);
-  }
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   //  Handle SIGTSTP as if it was SIGINT.
   //

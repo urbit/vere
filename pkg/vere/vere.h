@@ -541,6 +541,7 @@
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
+          c3_w             ver_w;               //  pier version
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
@@ -936,7 +937,7 @@
       /* u3_disk_init(): load or create pier directories and event log.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o);
+        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */

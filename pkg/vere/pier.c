@@ -1639,10 +1639,12 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       .write_bail_f = _pier_on_disk_write_bail
     };
 
-    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u, c3y)) ) {
+    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u)) ) {
       c3_free(pir_u);
       return 0;
     }
+
+    u3_assert( U3D_VER1 == pir_u->log_u->ver_w );
   }
 
   //  initialize compute
