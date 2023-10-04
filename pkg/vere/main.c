@@ -2457,6 +2457,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
+  u3_disk_kindly(log_u, u3_Host.eve_d);
+
   //  get latest epoch number prior to creating a new one
   c3_d pre_d;
   if ( c3n == u3_disk_epoc_last(log_u, &pre_d) ) {
@@ -2590,6 +2592,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   // gracefully shutdown the pier if it's running
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  u3_disk_kindly(log_u, u3_Host.eve_d);
 
   // check if there's a *current* snapshot
   if ( log_u->dun_d != u3A->eve_d ) {
