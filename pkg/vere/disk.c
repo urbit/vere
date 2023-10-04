@@ -1076,12 +1076,17 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
       fprintf(stderr, "disk: failed to read metadata\r\n");
       goto fail;
     }
+
+    u3_lmdb_exit(log_u->mdb_u);
+    log_u->mdb_u = 0;
   }
+
 
   //  initialize db of new epoch
   if ( c3y == u3_Host.ops_u.nuu || epo_d > 0 ) {
     c3_c dat_c[8193];
     snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
+
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
@@ -1225,14 +1230,6 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  migrate existing pier which has either:
   //  - not started the migration, or
   //  - crashed before completing the migration
-
-  //  initialize pre-migrated lmdb
-  {
-    if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_u->com_u->pax_c, siz_i)) ) {
-      fprintf(stderr, "disk: failed to initialize database\r\n");
-      return c3n;
-    }
-  }
 
   //  get first/last event numbers from pre-migrated lmdb
   c3_d fir_d, las_d;
@@ -1461,10 +1458,12 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
          && !log_u->dun_d
          && (c3y == u3_disk_epoc_last(log_u, &nop_d)) )
       {
-        u3_lmdb_exit(log_u->mdb_u);
         c3_c luk_c[8193]; c3_c dut_c[8193];
         snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_c);
         snprintf(luk_c, sizeof(luk_c), "%s/lock.mdb", log_u->com_u->pax_c);
+
+        u3_lmdb_exit(log_u->mdb_u);
+        log_u->mdb_u = 0;
 
         if ( c3_unlink(dut_c)
            ||  (  (0 == access(luk_c, R_OK))
