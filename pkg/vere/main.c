@@ -2185,6 +2185,9 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     _cw_play_snap(log_u);
   }
 
+  //  XX this should check that snapshot is within epoc,
+  //  and load from the epoc / reboot if it is not
+  //
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
@@ -2198,11 +2201,16 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     };
 
     pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
-
-    //  migrate after replay, if necessary
     u3_Host.eve_d = mar_u.dun_d;
+
     if ( c3y == u3_disk_need_migrate(log_u) ) {
       u3_disk_migrate(log_u);
+    }
+    else if ( c3y == u3_disk_vere_diff(log_u) ) {
+      if ( c3n == u3_disk_epoc_init(log_u, log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
     }
   }
 

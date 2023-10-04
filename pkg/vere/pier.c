@@ -827,14 +827,6 @@ _pier_wyrd_card(u3_pier* pir_u)
 static void
 _pier_wyrd_init(u3_pier* pir_u)
 {
-  //  create a new epoch if current version mismatches the latest epoch's
-  if ( c3y == u3_disk_vere_diff(pir_u->log_u) ) {
-    if ( c3n == u3_disk_epoc_init(pir_u->log_u, pir_u->log_u->dun_d) ) {
-      fprintf(stderr, "disk: failed to initialize epoch\r\n");
-      exit(1);
-    }
-  }
-
   u3_noun cad = _pier_wyrd_card(pir_u);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
 
