@@ -1,8 +1,10 @@
-set(installable_libs "c3" "ent" "noun" "ur" "urcrypt" "vere")
+set(installable_libs "c3" "ent" "ur" "noun" "urcrypt" "vere")
 
 foreach (pkg ${installable_libs})
     add_subdirectory("${pkg}")
 endforeach (pkg ${installable_libs})
+
+list(APPEND installable_libs "ge-additions")
 
 #########
 # Tests #

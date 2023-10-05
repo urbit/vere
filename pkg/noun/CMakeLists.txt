@@ -56,20 +56,60 @@ target_link_libraries(
         PRIVATE
         "${PROJECT_NAME}_compiler_flags"
 )
+
+set(rsignal "${CMAKE_CURRENT_SOURCE_DIR}/platform")
+if (LINUX)
+    set(rsignal "${rsignal}/linux")
+elseif (APPLE)
+    set(rsignal "${rsignal}/darwin")
+else ()
+    message(FATAL_ERROR "You need to port rsignal.h")
+endif ()
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${rsignal}>"
+)
+set(rsignal "${rsignal}/rsignal.h")
+
+
 target_link_libraries(
         "${LIBRARY_NAME}"
         PUBLIC
         "c3"
+        "ur"
 )
 
-foreach (header ${Header_Files})
-    target_sources(
-            "${LIBRARY_NAME}"
-            PUBLIC
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${header}>"
-            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${header}>"
-    )
-endforeach (header ${Header_Files})
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/pkg>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
+# TODO: Port libavutil to vcpkg
+find_path(LIBAVUTIL_INCLUDE_DIR
+        NAMES libavutil/murmur3.h
+        PATHS
+        /usr/include /usr/local/include    #system level
+        /opt/local/include /sw/include     #macports & fink
+        /usr/include/x86_64-linux-gnu
+        /usr/include/x86_64-linux-gnu/libavutil
+        PATH_SUFFIXES libav ffmpeg libavutil
+        REQUIRED
+)
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PRIVATE
+        "${LIBAVUTIL_INCLUDE_DIR}"
+)
 
 ###########
 # Install #
@@ -84,3 +124,5 @@ generate_export_header("${LIBRARY_NAME}" EXPORT_FILE_NAME "${_export_file}")
 
 install(FILES ${Header_Files} "${_export_file}"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${rsignal}
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/platform")

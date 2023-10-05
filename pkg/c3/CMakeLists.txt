@@ -8,6 +8,26 @@ source_group("Source Files" FILES "${Source_Files}")
 
 add_library("${LIBRARY_NAME}" "${Header_Files}" "${Source_Files}")
 
+if (LINUX)
+    target_compile_definitions("${LIBRARY_NAME}" PUBLIC -DU3_OS_linux=1)
+elseif (APPLE)
+    target_compile_definitions("${LIBRARY_NAME}" PUBLIC -DU3_OS_osx=1)
+elseif (BSD)
+    target_compile_definitions("${LIBRARY_NAME}" PUBLIC -DU3_OS_bsd=1)
+else ()
+    message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} unsupported. Port it!")
+endif ()
+
+if (CMAKE_VERSION VERSION_LESS "3.20")
+    include(TestBigEndian)
+    test_big_endian(CMAKE_C_BYTE_ORDER)
+endif ()
+if (CMAKE_C_BYTE_ORDER EQUAL 1)
+    target_compile_definitions("${LIBRARY_NAME}" PUBLIC -DU3_OS_ENDIAN_big=1)
+else ()
+    target_compile_definitions("${LIBRARY_NAME}" PUBLIC -DU3_OS_ENDIAN_little=1)
+endif ()
+
 include(GNUInstallDirs)
 
 target_link_libraries(
@@ -16,15 +36,19 @@ target_link_libraries(
         "${PROJECT_NAME}_compiler_flags"
 )
 
-foreach (header ${Header_Files})
-    target_sources(
-            "${LIBRARY_NAME}"
-            PUBLIC
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${header}>"
-            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${header}>"
-    )
-    message(STATUS "Added ${CMAKE_CURRENT_SOURCE_DIR}/${header}")
-endforeach (header ${Header_Files})
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
 
 ###########
 # Install #

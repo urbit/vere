@@ -16,14 +16,12 @@ target_link_libraries(
         "${PROJECT_NAME}_compiler_flags"
 )
 
-foreach (header ${Header_Files})
-    target_sources(
-            "${LIBRARY_NAME}"
-            PUBLIC
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${header}>"
-            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${header}>"
-    )
-endforeach (header ${Header_Files})
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
 
 ###########
 # Install #

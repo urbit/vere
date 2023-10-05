@@ -2,15 +2,26 @@ cmake_minimum_required(VERSION 3.11)
 
 project(vere VERSION 2.1.2 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 90)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 add_library("${PROJECT_NAME}_compiler_flags" INTERFACE)
+
+if (NOT DEFINED CMAKE_SYSTEM_NAME)
+    set(CMAKE_SYSTEM_NAME "${CMAKE_HOST_SYSTEM_NAME}")
+endif (NOT DEFINED CMAKE_SYSTEM_NAME)
 
 if (NOT DEFINED MSVC_VERSION
         OR MSVC_VERSION STRGREATER "1900" # 2015
         OR NOT (CMAKE_C_COMPILER_ID STREQUAL "OpenWatcom"))
-    target_compile_features("${PROJECT_NAME}_compiler_flags" INTERFACE "c_std_${CMAKE_C_STANDARD}")
+    target_compile_features(
+            "${PROJECT_NAME}_compiler_flags"
+            INTERFACE
+            "c_std_${CMAKE_C_STANDARD}"
+    )
 endif ()
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15")
     # add compiler warning flags just when building this project via
@@ -20,7 +31,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15")
     target_compile_options(
             "${PROJECT_NAME}_compiler_flags"
             INTERFACE
-            "$<${gcc_like}:$<BUILD_INTERFACE:-Wshadow;-Wformat=2;-Wall;-pedantic>>"
+            "$<${gcc_like}:$<BUILD_INTERFACE:-Wshadow;-Wformat=2;-Wall;-Wno-zero-length-array;-Wno-gnu-statement-expression-from-macro-expansion;-Wno-gnu-binary-literal;-Wno-gnu-label-as-value;-Wno-gnu-pointer-arith;-pedantic>>"
             "$<${msvc}:$<BUILD_INTERFACE:-W3;-WX;-Zi;-permissive->>"
     )
 endif (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15")

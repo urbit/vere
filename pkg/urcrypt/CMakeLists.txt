@@ -21,22 +21,26 @@ source_group("Source Files" FILES "${Source_Files}")
 
 add_library("${LIBRARY_NAME}" "${Header_Files}" "${Source_Files}")
 
-include(GNUInstallDirs)
-
+find_package(unofficial-argon2 CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+add_subdirectory("ge-additions")
 target_link_libraries(
         "${LIBRARY_NAME}"
         PRIVATE
         "${PROJECT_NAME}_compiler_flags"
+        ge-additions
+        unofficial::argon2::libargon2
+        OpenSSL::SSL OpenSSL::Crypto
 )
 
-foreach (header ${Header_Files})
-    target_sources(
-            "${LIBRARY_NAME}"
-            PUBLIC
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${header}>"
-            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${header}>"
-    )
-endforeach (header ${Header_Files})
+include(GNUInstallDirs)
+
+target_include_directories(
+        "${LIBRARY_NAME}"
+        PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
 
 ###########
 # Install #
