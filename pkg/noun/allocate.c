@@ -504,8 +504,8 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         }
       }
       else {                    /* we got a non-null freelist */
-        u3_post box_p, all_p;
-        box_p = all_p = *pfr_p;
+        u3_post all_p;
+        all_p = *pfr_p;
         all_p += c3_wiseof(u3a_box) + off_w;
         c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
         c3_w des_w = c3_align(siz_w + pad_w, u3C.walign_w, C3_ALGHI);
@@ -909,7 +909,8 @@ u3a_cfree(c3_w* cel_w)
 #endif
 
   if ( u3R == &(u3H->rod_u) ) {
-    return u3a_wfree(cel_w);
+    u3a_wfree(cel_w);
+    return;
   }
   else {
     u3a_box*      box_u = u3a_botox(cel_w);
@@ -2281,7 +2282,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ws use_ws)
 {
   fprintf(stderr, "%s: %p mug=%x swept=%d\r\n",
                   cap_c,
-                  box_u,
+                  (void*)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
                   use_ws);
 
@@ -2831,7 +2832,7 @@ u3a_string(u3_atom a)
 /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
  */
 void
-u3a_loom_sane()
+u3a_loom_sane(void)
 {
   /*
     Only checking validity of freelists for now. Other checks could be added,

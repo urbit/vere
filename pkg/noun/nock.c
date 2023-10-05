@@ -2989,7 +2989,7 @@ _n_ream(u3_noun kev)
 /* u3n_ream(): refresh after restoring from checkpoint.
 */
 void
-u3n_ream()
+u3n_ream(void)
 {
   u3_assert(u3R == &(u3H->rod_u));
   u3h_walk(u3R->byc.har_p, _n_ream);
@@ -3073,7 +3073,7 @@ u3n_reclaim(void)
  * many more words (plus one?).
  */
 void
-u3n_rewrite_compact()
+u3n_rewrite_compact(void)
 {
   u3h_rewrite(u3R->byc.har_p);
   u3R->byc.har_p = u3a_rewritten(u3R->byc.har_p);
@@ -3091,7 +3091,7 @@ _n_feb(u3_noun kev)
 /* u3n_free(): free bytecode cache
  */
 void
-u3n_free()
+u3n_free(void)
 {
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk(har_p, _n_feb);

@@ -1066,7 +1066,7 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
 /* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
 */
 static void
-_ce_loom_mapf_ephemeral()
+_ce_loom_mapf_ephemeral(void)
 {
   if ( MAP_FAILED == mmap(_ce_ptr(0),
                           _ce_len(u3P.pag_w),
@@ -1690,7 +1690,9 @@ u3e_yolo(void)
     return c3n;
   }
 
+#ifdef U3_GUARD_PAGE
   u3_assert( !_ce_ward_protect() );
+#endif
 
   return c3y;
 }

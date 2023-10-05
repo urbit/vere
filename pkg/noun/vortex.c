@@ -427,7 +427,7 @@ u3v_reclaim(void)
 /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
-u3v_rewrite_compact()
+u3v_rewrite_compact(void)
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
