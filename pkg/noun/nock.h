@@ -9,9 +9,9 @@
 #include "jets.h"
 #include "types.h"
 
-  /** Data structures.
-  ***
-  **/
+/** Data structures.
+***
+**/
 
   /* u3n_memo: %memo hint space
    */

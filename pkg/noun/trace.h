@@ -3,7 +3,7 @@
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
 
-#include "c3/c3.h"
+#include "c3.h"
 #include "options.h"
 #include "types.h"
 
