@@ -1825,11 +1825,15 @@ static c3_c* _140_two__in_ha[] = {
     "1f0a6f8b945b243520b77069060589938d9e651e34b24924db9528d02a98014f",
     0
   };
-  static u3j_harm _140_two__by_bif_a[] = {{".2", u3wdb_bif, c3y}, {}};
-  static c3_c* _140_two__by_bif_ha[] = {
-    "d377a032a3866e76f6f5217c7c0ed0519b768d8b1c5107e35f7dbf18d8f60880",
-    0
-  };
+
+  //  disabled for all due sharing, interface changed in hoon %138
+  //
+  // static u3j_harm _140_two__by_bif_a[] = {{".2", u3wdb_bif, c3y}, {}};
+  // static c3_c* _140_two__by_bif_ha[] = {
+  //   "d377a032a3866e76f6f5217c7c0ed0519b768d8b1c5107e35f7dbf18d8f60880",
+  //   0
+  // };
+
   static u3j_harm _140_two__by_del_a[] = {{".2", u3wdb_del, c3y}, {}};
   static c3_c* _140_two__by_del_ha[] = {
     "09f78d6235d3fce8303c7bc663988349b7d4592abdacfb09b833d2f43629b6b6",
@@ -1909,7 +1913,7 @@ static u3j_core _140_two__by_d[] =
   { { "all", 7, _140_two__by_all_a, 0, _140_two__by_all_ha },
     { "any", 7, _140_two__by_any_a, 0, _140_two__by_any_ha },
     { "apt", 7, _140_two__by_apt_a, 0, _140_two__by_apt_ha },
-    { "bif", 7, _140_two__by_bif_a, 0, _140_two__by_bif_ha },
+    // { "bif", 7, _140_two__by_bif_a, 0, _140_two__by_bif_ha },
     { "del", 7, _140_two__by_del_a, 0, _140_two__by_del_ha },
     { "dif", 7, _140_two__by_dif_a, 0, _140_two__by_dif_ha },
     { "gas", 7, _140_two__by_gas_a, 0, _140_two__by_gas_ha },
@@ -2356,6 +2360,11 @@ u3j_core _k139_d[] =
   {}
 };
 
+u3j_core _k138_d[] =
+{ { "one", 3, 0, _139_one_d, no_hashes },
+  {}
+};
+
 
 //  TODO: probably need different ha hashes
 
@@ -2425,6 +2434,7 @@ u3j_core _a50_d[] =
 static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
   { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
+  { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };
