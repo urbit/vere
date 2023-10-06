@@ -1397,7 +1397,9 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   }
 
   if (  (c3n == _ce_image_copy(&nux_u, &nax_u))
-     || (c3n == _ce_image_copy(&sux_u, &sax_u)) )
+     || (c3n == _ce_image_copy(&sux_u, &sax_u))
+     || (c3n == _ce_image_sync(&nax_u))
+     || (c3n == _ce_image_sync(&sax_u)) )
   {
     c3_unlink(nax_c);
     c3_unlink(sax_c);
