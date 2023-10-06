@@ -1009,18 +1009,23 @@
 
       /* u3_disk_epoc_init(): create new epoch.
        */
-       c3_o
-       u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
+        c3_o
+        u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_epoc_kill(): delete an epoch.
        */
-       c3_o
-       u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
+        c3_o
+        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_epoc_last(): get latest epoch number.
        */
-       c3_o
-       u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
+        c3_o
+        u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
+
+      /* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
+      */
+        c3_z
+        u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
       /* u3_disk_kindly(): do the needful.
       */

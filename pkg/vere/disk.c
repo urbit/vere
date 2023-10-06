@@ -1199,6 +1199,52 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   return ret_o;
 }
 
+/* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
+*/
+c3_z
+u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
+{
+  u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dent* den_u = ned_u->dil_u;
+  c3_z     len_z = 0;
+
+  while ( den_u ) {  //  count epochs
+    len_z++;
+    den_u = den_u->nex_u;
+  }
+
+  if ( !sot_d ) {
+    u3_dire_free(ned_u);
+    return len_z;
+  }
+
+  len_z = 0;
+  den_u = ned_u->dil_u;
+
+  while ( den_u ) {
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
+      len_z++;
+    }
+    den_u = den_u->nex_u;
+  }
+
+  //  sort sot_d naively in descending order
+  //
+  c3_d tmp_d;
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    for ( c3_z j_z = i_z + 1; j_z < len_z; j_z++ ) {
+      if ( sot_d[i_z] < sot_d[j_z] ) {
+        tmp_d = sot_d[i_z];
+        sot_d[i_z] = sot_d[j_z];
+        sot_d[j_z] = tmp_d;
+      }
+    }
+  }
+
+  u3_dire_free(ned_u);
+  return len_z;
+}
+
 /* _disk_need_migrate: does the disk need to be migrated?
 */
 static c3_o
