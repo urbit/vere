@@ -1423,6 +1423,86 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
   }
 }
 
+typedef enum {
+  _epoc_good = 0,  // load successfully
+  _epoc_gone = 1,  // version missing, total failure
+  _epoc_fail = 2,  // transient failure (?)
+  _epoc_void = 3,  // empty event log (cheaper to recover?)
+  _epoc_late = 4   // format from the future
+} _epoc_kind;
+
+/* _disk_epoc_load(): load existing epoch, enumerating failures
+*/
+static _epoc_kind
+_disk_epoc_load(u3_disk* log_u, c3_d lat_d)
+{
+  //  check latest epoc version
+  //
+  {
+    c3_c ver_c[8];
+    c3_w ver_w;
+    if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
+                                sizeof(ver_c) - 1, ver_c) )
+    {
+      fprintf(stderr, "disk: failed to load epoch 0i%" PRIc3_d " version\r\n",
+                      lat_d);
+
+      return _epoc_gone;
+    }
+
+    if ( 1 != sscanf(ver_c, "%d", &ver_w) ) {
+      fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
+      return _epoc_fail;
+    }
+
+    if ( U3D_VER1 != ver_w ) {
+      fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d'\r\n",
+                      ver_c, U3D_VER1);
+      return _epoc_late;
+    }
+
+    log_u->ver_w = ver_w;
+  }
+
+  //  set path to latest epoch
+  c3_c epo_c[8193];
+  snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, lat_d);
+
+  //  initialize latest epoch's db
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+    fprintf(stderr, "disk: failed to initialize database at %s\r\n",
+                    epo_c);
+    return _epoc_fail;
+  }
+
+  fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
+
+  //  get first/last event numbers from lmdb
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+    u3_lmdb_exit(log_u->mdb_u);
+    log_u->mdb_u = 0;
+    return _epoc_fail;
+  }
+
+  if (  (c3n == u3_Host.ops_u.nuu )
+     && !fir_d
+     && !las_d
+     && (c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, 0)) )
+  {
+    u3_lmdb_exit(log_u->mdb_u);
+    log_u->mdb_u = 0;
+    return _epoc_void;
+  }
+
+  //  initialize dun_d/sen_d values
+  log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
+  log_u->sen_d = log_u->dun_d;
+
+  return _epoc_good;
+}
+
 /* u3_disk_init(): load or create pier directories and event log.
 */
 u3_disk*
@@ -1561,71 +1641,74 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
-    //  check latest epoc version
-    //
+    c3_o try_o = c3n;
+
+try_init:
     {
-      c3_c ver_c[8];
-      c3_w ver_w;
-      if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
-                                  sizeof(ver_c) - 1, ver_c) )
-      {
-        fprintf(stderr, "disk: failed to load epoch version\r\n");
-        c3_free(log_u);
-        return 0;
-      }
+      _epoc_kind kin_e = _disk_epoc_load(log_u, lat_d);
 
-      if ( 1 != sscanf(ver_c, "%d", &ver_w) ) {
-        fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
-        c3_free(log_u);
-        return 0;
-      }
+      switch ( kin_e ) {
+        case _epoc_good: {
+          //  mark the latest epoch directory
+          log_u->epo_d = lat_d;
 
-      if ( U3D_VER1 != ver_w ) {
-        fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d'\r\n",
-                        ver_c, U3D_VER1);
-        c3_free(log_u);
-        return 0;
-      }
-
-      log_u->ver_w = ver_w;
-    }
-
-    //  set path to latest epoch
-    c3_c epo_c[8193];
-    snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_c, lat_d);
-
-    //  initialize latest epoch's db
-    if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
-      fprintf(stderr, "disk: failed to initialize database at '%s' '%s' '%s'\r\n", pax_c, log_c, epo_c);
-      c3_free(log_u);
-      return 0;
-    }
-    fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
-
-    //  get first/last event numbers from lmdb
-    c3_d fir_d, las_d;
-    if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-      //  XX dispose mdb_u
-      c3_free(log_u);
-      return 0;
-    }
-
-    //  initialize dun_d/sen_d values
-    log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
-    log_u->sen_d = log_u->dun_d;
-
-    //  mark the latest epoch directory
-    log_u->epo_d = lat_d;
-
-    //  mark the log as live
-    log_u->liv_o = c3y;
-  }
-
+          //  mark the log as live
+          log_u->liv_o = c3y;
 
 #if defined(DISK_TRACE_JAM) || defined(DISK_TRACE_CUE)
-  u3t_trace_open(pax_c);
+          u3t_trace_open(pax_c);
 #endif
 
-  return log_u;
+          return log_u;
+        } break;
+
+        case _epoc_void: // XX could handle more efficiently
+
+        case _epoc_gone: {
+          // XX if there is no version number, the epoc is invalid
+          // backup and try previous
+
+          if ( c3y == try_o ) {
+            fprintf(stderr, "multiple bad epochs, bailing out\r\n");
+            c3_free(log_u);
+            return 0;
+          }
+
+          c3_z len_z = u3_disk_epoc_list(log_u, 0);
+
+          if ( len_z <= 1 ) {
+            fprintf(stderr, "only epoch is bad, bailing out\r\n");
+            c3_free(log_u);
+            return 0;
+          }
+
+          c3_d* sot_d = c3_malloc(len_z * sizeof(*sot_d));
+          u3_disk_epoc_list(log_u, sot_d);
+
+          fprintf(stderr, "disk: latest epoch is 0i%" PRIc3_d " is bogus; "
+                          "falling back to previous at 0i%" PRIc3_d "\r\n",
+                          lat_d, sot_d[1]);
+
+          u3_disk_epoc_kill(log_u, lat_d);
+
+          lat_d = sot_d[1];
+          try_o = c3y;
+          c3_free(sot_d);
+          goto try_init;
+        } break;
+
+        case _epoc_fail: {
+          fprintf(stderr, "failed to load epoch\r\n");
+          c3_free(log_u);
+          return 0;
+        } break;
+
+        case _epoc_late: {
+          fprintf(stderr, "upgrade runtime version\r\n");
+          c3_free(log_u);
+          return 0;
+        }
+      }
+    }
+  }
 }
