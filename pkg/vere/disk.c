@@ -1175,7 +1175,7 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   return ret_o;
 }
 
-/* _disk_need_migrate: does the desk need to be migrated?
+/* _disk_need_migrate: does the disk need to be migrated?
 */
 static c3_o
 _disk_need_migrate(u3_disk* log_u)
