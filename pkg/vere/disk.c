@@ -1036,36 +1036,50 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
 
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
+  c3_i epo_i;
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
   c3_d ret_d = c3_mkdir(epo_c, 0700);
   if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
-    fprintf(stderr, "disk: failed to create epoch directory %" PRIc3_d "\r\n", epo_d);
+    fprintf(stderr, "disk: create epoch dir %" PRIc3_d " failed: %s\r\n",
+                    epo_d, strerror(errno));
     return c3n;
   }
-
-  //  create epoch version file, overwriting any existing file
-  c3_c epv_c[8193];
-  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");
-  fprintf(epv_f, "%d", U3D_VER1);
-  fclose(epv_f);
-
-  //  create binary version file, overwriting any existing file
-  c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");
-  fprintf(biv_f, URBIT_VERSION);
-  fclose(biv_f);
 
   //  copy snapshot files (skip if first epoch)
   if ( epo_d > 0 ) {
     c3_c chk_c[8193];
     snprintf(chk_c, 8192, "%s/.urb/chk", u3_Host.dir_c);
     if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
-      fprintf(stderr, "disk: failed to copy snapshot to new epoch\r\n");
-      goto fail;
+      fprintf(stderr, "disk: copy epoch snapshot failed\r\n");
+      goto fail1;
     }
   }
+
+  if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
+    fprintf(stderr, "disk: open epoch dir %" PRIc3_d " failed: %s\r\n",
+                    epo_d, strerror(errno));
+    goto fail1;
+  }
+
+  if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
+    fprintf(stderr, "disk: sync epoch dir %" PRIc3_d " failed: %s\r\n",
+                    epo_d, strerror(errno));
+    goto fail2;
+  }
+
+  //  create epoch version file, overwriting any existing file
+  c3_c epv_c[8193];
+  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
+  FILE* epv_f = fopen(epv_c, "w");  // XX errors
+  fprintf(epv_f, "%d", U3D_VER1);
+  fclose(epv_f);
+
+  //  create binary version file, overwriting any existing file
+  c3_c biv_c[8193];
+  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
+  fprintf(biv_f, URBIT_VERSION);
+  fclose(biv_f);
 
   //  get metadata from old epoch or unmigrated event log's db
   c3_d     who_d[2];
@@ -1074,13 +1088,12 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   if ( c3y == eps_o ) {  //  skip if no epochs yet
     if ( c3y != u3_disk_read_meta(log_u->mdb_u, who_d, &fak_o, &lif_w) ) {
       fprintf(stderr, "disk: failed to read metadata\r\n");
-      goto fail;
+      goto fail3;
     }
 
     u3_lmdb_exit(log_u->mdb_u);
     log_u->mdb_u = 0;
   }
-
 
   //  initialize db of new epoch
   if ( c3y == u3_Host.ops_u.nuu || epo_d > 0 ) {
@@ -1090,7 +1103,7 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
       c3_free(log_u);
-      goto fail;
+      goto fail3;
     }
   }
 
@@ -1098,9 +1111,17 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   if ( c3y == eps_o ) {
     if ( c3n == u3_disk_save_meta(log_u->mdb_u, who_d, fak_o, lif_w) ) {
       fprintf(stderr, "disk: failed to save metadata\r\n");
-      goto fail;
+      goto fail3;
     }
   }
+
+  if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
+    fprintf(stderr, "disk: sync epoch dir %" PRIc3_d " failed: %s\r\n",
+                    epo_d, strerror(errno));
+    goto fail3;
+  }
+
+  close(epo_i);
 
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
@@ -1108,9 +1129,12 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   //  success
   return c3y;
 
-fail:
+fail3:
   c3_unlink(epv_c);
   c3_unlink(biv_c);
+fail2:
+  close(epo_i);
+fail1:
   c3_rmdir(epo_c);
   return c3n;
 }
