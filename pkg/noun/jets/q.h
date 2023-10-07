@@ -57,7 +57,6 @@
     u3_noun u3qc_dvr(u3_atom, u3_atom);
     u3_noun u3qc_end(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_gor(u3_atom, u3_atom);
-    u3_noun u3qc_hub(u3_atom, u3_atom);
     u3_noun u3qc_lsh(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_mas(u3_atom);
     u3_noun u3qc_met(u3_atom, u3_atom);
@@ -65,7 +64,6 @@
     u3_noun u3qc_mor(u3_atom, u3_atom);
     u3_noun u3qc_muk(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_peg(u3_atom, u3_atom);
-    u3_noun u3qc_pin(u3_atom, u3_atom);
     u3_noun u3qc_pow(u3_atom, u3_atom);
     u3_noun u3qc_rap(u3_atom, u3_noun);
     u3_noun u3qc_rep(u3_atom, u3_atom, u3_noun);

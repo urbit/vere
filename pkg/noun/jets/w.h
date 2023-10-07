@@ -58,7 +58,6 @@
     u3_noun u3wc_dor(u3_noun);
     u3_noun u3wc_dvr(u3_noun);
     u3_noun u3wc_end(u3_noun);
-    u3_noun u3wc_hub(u3_noun);
     u3_noun u3wc_gor(u3_noun);
     u3_noun u3wc_lsh(u3_noun);
     u3_noun u3wc_mas(u3_noun);
@@ -68,7 +67,6 @@
     u3_noun u3wc_mug(u3_noun);
     u3_noun u3wc_muk(u3_noun);
     u3_noun u3wc_peg(u3_noun);
-    u3_noun u3wc_pin(u3_noun);
     u3_noun u3wc_pow(u3_noun);
     u3_noun u3wc_rap(u3_noun);
     u3_noun u3wc_rep(u3_noun);
