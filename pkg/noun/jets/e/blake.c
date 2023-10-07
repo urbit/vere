@@ -6,9 +6,8 @@
 #include "noun.h"
 #include "urcrypt.h"
 
-
   static u3_atom
-  _cqe_blake(u3_atom wid, u3_atom dat,
+  _cqe_blake2b(u3_atom wid, u3_atom dat,
              u3_atom wik, u3_atom dak,
              u3_atom out)
   {
@@ -39,7 +38,7 @@
   }
 
   u3_noun
-  u3we_blake(u3_noun cor)
+  u3we_blake2b(u3_noun cor)
   {
     u3_noun msg, key, out, // arguments
             wid, dat,      // destructured msg
@@ -54,6 +53,46 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("blake", _cqe_blake(wid, dat, wik, dak, out));
+      return u3l_punt("blake2b", _cqe_blake2b(wid, dat, wik, dak, out));
+    }
+  }
+
+  static u3_atom
+  _cqe_blake3_hash(u3_atom wid, u3_atom dat,
+             u3_atom key, u3_atom out)
+  {
+    c3_w wid_w;
+    if ( !u3r_word_fit(&wid_w, wid) ) {
+      // impossible to represent an atom this large
+      return u3m_bail(c3__fail);
+    }
+    else {
+      c3_y  out_y[64], key_y[32];
+      c3_w  out_w = c3_max(1, c3_min(out, 64));
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
+      u3r_bytes(0, 32, key_y, key);
+      urcrypt_blake3_hash(wid_w, dat_y, key_y, out_w, out_y);
+      u3a_free(dat_y);
+      return u3i_bytes(out_w, out_y);
+    }
+  }
+
+  u3_noun
+  u3we_blake3_hash(u3_noun cor)
+  {
+    u3_noun out, msg,      // arguments
+            wid, dat,      // destructured msg
+            key;           // context
+
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &out,
+                              u3x_sam_3, &msg,
+                              u3x_con_sam_2, &key, 0) ||
+                u3ud(out) ||
+                u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
+                u3ud(key))
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      return u3l_punt("blake3_hash", _cqe_blake3_hash(wid, dat, key, out));
     }
   }

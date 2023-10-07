@@ -445,13 +445,26 @@ static c3_c* _140_hex_secp_ha[] = {
   0
 };
 
-  static u3j_harm _140_hex_blake2b_a[] = {{".2", u3we_blake, c3y}, {}};
+  static u3j_harm _140_hex_blake2b_a[] = {{".2", u3we_blake2b, c3y}, {}};
   static c3_c* _140_hex_blake2b_ha[] = {
     "c432216ca53b5ad2284259167952761bb1046e280268c4d3b9ca70a2024e1934",
     0
   };
+  static u3j_harm _140_hex_blake3_hash_a[] = {{".2", u3we_blake3_hash, c3y}, {}};
+  static c3_c* _140_hex_blake3_hash_ha[] = {
+    "c432216ca53b5ad2284259167952761bb1046e280268c4d3b9ca70a2024e1934",
+    0
+  };
+  static u3j_core _140_hex_blake3_d[] =
+    { { "hash", 7, _140_hex_blake3_hash_a, 0, _140_hex_blake3_hash_ha },
+      {}
+    };
+  static c3_c* _140_hex_blake3_ha[] = { 0 };
 static u3j_core _140_hex_blake_d[] =
   { { "blake2b", 7, _140_hex_blake2b_a, 0, _140_hex_blake2b_ha },
+
+    { "blake3",  7, 0, _140_hex_blake3_d, _140_hex_blake3_ha },
+    { "hash", 7, _140_hex_blake3_hash_a, 0, _140_hex_blake3_hash_ha },
     {}
   };
 static c3_c* _140_hex_blake_ha[] = {
