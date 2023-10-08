@@ -17,11 +17,14 @@
         inline c3_o
         u3r_cell(u3_noun a, u3_noun* b, u3_noun* c)
         {
+          u3a_cell* cel_u;
+
           u3_assert(u3_none != a);
 
           if ( c3y == u3a_is_cell(a) ) {
-            if ( b ) *b = u3a_h(a); // XX use unchecked
-            if ( c ) *c = u3a_t(a);
+            cel_u = u3a_to_ptr(a);
+            if ( b ) *b = cel_u->hed;
+            if ( c ) *c = cel_u->tel;
             return c3y;
           }
           else {
