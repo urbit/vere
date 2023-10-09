@@ -12,7 +12,8 @@
         u3_serf_sav_e = 1 <<  3,   //  snapshot requested
         u3_serf_mel_e = 1 <<  4,   //  meld requested
         u3_serf_ram_e = 1 <<  5,   //  cram requested
-        u3_serf_xit_e = 1 <<  6    //  exit requested
+        u3_serf_gab_e = 1 <<  6,   //  grab requested
+        u3_serf_xit_e = 1 <<  7    //  exit requested
       } u3_serf_flag_e;
 
     /* u3_serf: worker-process state
@@ -23,7 +24,6 @@
         c3_d    sen_d;             //  last event requested
         c3_d    dun_d;             //  last event processed
         c3_l    mug_l;             //  hash of state
-        u3_noun sac;               //  space measurementl
         u3_serf_flag_e fag_e;
         c3_y    xit_y;
         void  (*xit_f)(void);      //  exit callback

@@ -49,78 +49,12 @@
 --
 */
 
-/* _serf_grab(): garbage collect, checking for profiling. RETAIN.
-*/
-static void
-_serf_grab(u3_noun sac)
-{
-  if ( u3_nul == sac) {
-    if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
-      u3m_grab(sac, u3_none);
-    }
-  }
-  else {
-    c3_w tot_w = 0;
-    FILE* fil_u;
-
-#ifdef U3_MEMORY_LOG
-    {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
-      c3_c* wen_c = u3r_string(wen);
-
-      c3_c nam_c[2048];
-      snprintf(nam_c, 2048, "%s/.urb/put/mass", u3C.dir_c);
-
-      struct stat st;
-      if ( -1 == stat(nam_c, &st) ) {
-        c3_mkdir(nam_c, 0700);
-      }
-
-      c3_c man_c[2054];
-      snprintf(man_c, 2053, "%s/%s-serf.txt", nam_c, wen_c);
-
-      fil_u = c3_fopen(man_c, "w");
-      fprintf(fil_u, "%s\r\n", wen_c);
-
-      c3_free(wen_c);
-      u3z(wen);
-    }
-#else
-    {
-      fil_u = stderr;
-    }
-#endif
-
-    u3_assert( u3R == &(u3H->rod_u) );
-    fprintf(fil_u, "\r\n");
-
-    tot_w += u3a_maid(fil_u, "total userspace", u3a_prof(fil_u, 0, sac));
-    tot_w += u3m_mark(fil_u);
-    tot_w += u3a_maid(fil_u, "space profile", u3a_mark_noun(sac));
-
-    u3a_print_memory(fil_u, "total marked", tot_w);
-    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
-    u3a_print_memory(fil_u, "sweep", u3a_sweep());
-
-    fflush(fil_u);
-
-#ifdef U3_MEMORY_LOG
-    {
-      fclose(fil_u);
-    }
-#endif
-
-    u3z(sac);
-
-    u3l_log("");
-  }
-}
-
 /* u3_serf_grab(): garbage collect.
 */
 void
 u3_serf_grab(void)
 {
+  FILE* fil_u = stderr;
   u3_noun sac = u3_nul;
 
   u3_assert( u3R == &(u3H->rod_u) );
@@ -154,17 +88,62 @@ u3_serf_grab(void)
 
   fprintf(stderr, "serf: measuring memory:\r\n");
 
-  if ( u3_nul != sac ) {
-    _serf_grab(sac);
+  if ( u3_nul == sac ) {
+    u3a_print_memory(fil_u, "total marked", u3m_mark(stderr));
+    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
+    u3a_print_memory(fil_u, "sweep", u3a_sweep());
   }
   else {
-    u3a_print_memory(stderr, "total marked", u3m_mark(stderr));
-    u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
-    u3a_print_memory(stderr, "sweep", u3a_sweep());
-    fprintf(stderr, "\r\n");
+    c3_w tot_w = 0;
+
+#ifdef U3_MEMORY_LOG
+    {
+      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
+      c3_c* wen_c = u3r_string(wen);
+
+      c3_c nam_c[2048];
+      snprintf(nam_c, 2048, "%s/.urb/put/mass", u3C.dir_c);
+
+      struct stat st;
+      if ( -1 == stat(nam_c, &st) ) {
+        c3_mkdir(nam_c, 0700);
+      }
+
+      c3_c man_c[2054];
+      snprintf(man_c, 2053, "%s/%s-serf.txt", nam_c, wen_c);
+
+      fil_u = c3_fopen(man_c, "w");
+      fprintf(fil_u, "%s\r\n", wen_c);
+
+      c3_free(wen_c);
+      u3z(wen);
+    }
+#endif
+
+    u3_assert( u3R == &(u3H->rod_u) );
+    fprintf(fil_u, "\r\n");
+
+    tot_w += u3a_maid(fil_u, "total userspace", u3a_prof(fil_u, 0, sac));
+    tot_w += u3m_mark(fil_u);
+    tot_w += u3a_maid(fil_u, "space profile", u3a_mark_noun(sac));
+
+    u3a_print_memory(fil_u, "total marked", tot_w);
+    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
+    u3a_print_memory(fil_u, "sweep", u3a_sweep());
+
+#ifdef U3_MEMORY_LOG
+    {
+      fclose(fil_u);
+    }
+#endif
+
   }
 
-  fflush(stderr);
+  u3z(sac);
+
+  fprintf(fil_u, "\r\n");
+  fflush(fil_u);
+  u3l_log("");
 }
 
 /* u3_serf_post(): update serf state post-writ.
@@ -177,12 +156,23 @@ u3_serf_post(u3_serf* sef_u)
     sef_u->fag_e &= ~u3_serf_rec_e;
   }
 
-  //  XX this runs on replay too, |mass s/b elsewhere
-  //
   if ( sef_u->fag_e & u3_serf_mut_e ) {
-    _serf_grab(sef_u->sac);
-    sef_u->sac    = u3_nul;
+    // XX wat do
     sef_u->fag_e &= ~u3_serf_mut_e;
+  }
+
+  //  XX won't work, requires non-asserting u3a_sweep()
+  //
+  if ( u3C.wag_w & u3o_check_corrupt ) {
+    u3m_grab(u3_none);
+  }
+
+  if ( sef_u->fag_e & u3_serf_gab_e ) {
+    u3_serf_grab();
+    sef_u->fag_e &= ~u3_serf_gab_e;
+  }
+  else if ( u3C.wag_w & u3o_debug_ram ) {
+    u3m_grab(u3_none);
   }
 
   if ( sef_u->fag_e & u3_serf_pac_e ) {
@@ -281,16 +271,18 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
       //  assumes a max of one %mass effect per event
       //
       if ( c3__mass == u3h(fec) ) {
-        //  save a copy of the %mass data
-        //
-        sef_u->sac = u3k(u3t(fec));
-        //  replace the %mass data with ~
+        sef_u->fag_e |= u3_serf_gab_e;
+
+        //  replace %mass payload with ~
         //
         //    For efficient transmission to daemon.
         //
         riv = u3kb_weld(u3qb_scag(i_w, vir),
                         u3nc(u3nt(u3k(u3h(u3h(riv))), c3__mass, u3_nul),
                              u3qb_slag(1 + i_w, vir)));
+
+        //  discard original %mass effect, will be retrieved via +peek
+        //
         u3z(vir);
         vir = riv;
         break;
@@ -642,8 +634,7 @@ _serf_play_list(u3_serf* sef_u, u3_noun eve)
 
       //  skip |mass on replay
       //
-      u3z(sef_u->sac);
-      sef_u->sac = u3_nul;
+      sef_u->fag_e &= ~u3_serf_gab_e;
 
       eve = u3t(eve);
     }
@@ -942,7 +933,6 @@ u3_serf_init(u3_serf* sef_u)
   // }
 
   sef_u->fag_e = 0;
-  sef_u->sac   = u3_nul;
 
   return rip;
 }
