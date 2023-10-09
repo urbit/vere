@@ -2088,6 +2088,7 @@ u3m_stop()
 {
   u3e_stop();
   u3je_secp_stop();
+  c3_free(u3D.ray_u);
 }
 
 /* u3m_boot(): start the u3 system. return next event, starting from 1.

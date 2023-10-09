@@ -8,7 +8,11 @@
       typedef enum {               //  execution flags
         u3_serf_mut_e = 1 <<  0,   //  state changed
         u3_serf_pac_e = 1 <<  1,   //  pack requested
-        u3_serf_rec_e = 1 <<  2    //  reclaim requested
+        u3_serf_rec_e = 1 <<  2,   //  reclaim requested
+        u3_serf_sav_e = 1 <<  3,   //  snapshot requested
+        u3_serf_mel_e = 1 <<  4,   //  meld requested
+        u3_serf_ram_e = 1 <<  5,   //  cram requested
+        u3_serf_xit_e = 1 <<  6    //  exit requested
       } u3_serf_flag_e;
 
     /* u3_serf: worker-process state
@@ -21,6 +25,7 @@
         c3_l    mug_l;             //  hash of state
         u3_noun sac;               //  space measurementl
         u3_serf_flag_e fag_e;
+        c3_y    xit_y;
         void  (*xit_f)(void);      //  exit callback
       } u3_serf;
 

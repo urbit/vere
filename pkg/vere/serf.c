@@ -191,6 +191,74 @@ u3_serf_post(u3_serf* sef_u)
     sef_u->fag_e &= ~u3_serf_pac_e;
   }
 
+  if ( sef_u->fag_e & u3_serf_mel_e ) {
+    u3a_print_memory(stderr, "serf: meld: gained", u3u_meld());
+    u3l_log("");
+    sef_u->fag_e &= ~u3_serf_mel_e;
+  }
+
+  if ( sef_u->fag_e & u3_serf_ram_e ) {
+    u3l_log("serf (%" PRIu64 "): saving rock", sef_u->dun_d);
+
+    if ( c3n == u3u_cram(sef_u->dir_c, sef_u->dun_d) ) {
+      fprintf(stderr, "serf (%" PRIu64 "): unable to jam state\r\n", sef_u->dun_d);
+      exit(1);
+    }
+
+    if ( u3r_mug(u3A->roc) != sef_u->mug_l ) {
+      fprintf(stderr, "serf (%" PRIu64 "): mug mismatch 0x%08x 0x%08x\r\n",
+                      sef_u->dun_d, sef_u->mug_l, u3r_mug(u3A->roc));
+      exit(1);
+    }
+
+    u3m_save();
+    u3_serf_grab();
+    sef_u->fag_e &= ~u3_serf_ram_e;
+  }
+
+
+  if ( sef_u->fag_e & u3_serf_sav_e ) {
+    u3m_save();
+    sef_u->fag_e &= ~u3_serf_sav_e;
+  }
+
+  if ( sef_u->fag_e & u3_serf_xit_e ) {
+    if ( u3C.wag_w & u3o_debug_cpu ) {
+      FILE* fil_u;
+
+      {
+        u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
+        c3_c* wen_c = u3r_string(wen);
+
+        c3_c nam_c[2048];
+        snprintf(nam_c, 2048, "%s/.urb/put/profile", u3C.dir_c);
+
+        struct stat st;
+        if ( -1 == stat(nam_c, &st) ) {
+          c3_mkdir(nam_c, 0700);
+        }
+
+        c3_c man_c[2054];
+        snprintf(man_c, 2053, "%s/%s.txt", nam_c, wen_c);
+
+        fil_u = c3_fopen(man_c, "w");
+
+        c3_free(wen_c);
+        u3z(wen);
+      }
+
+      u3t_damp(fil_u);
+
+      {
+        fclose(fil_u);
+      }
+    }
+
+    sef_u->fag_e &= ~u3_serf_xit_e;
+    sef_u->xit_f();
+    exit(sef_u->xit_y);
+  }
+
   if ( u3C.wag_w & u3o_toss ) {
     u3m_toss();
   }
@@ -646,66 +714,6 @@ u3_serf_peek(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
   return u3nc(c3__peek, pro);
 }
 
-/* _serf_writ_live_exit(): exit on command.
-*/
-static void
-_serf_writ_live_exit(u3_serf* sef_u, c3_w cod_w)
-{
-  if ( u3C.wag_w & u3o_debug_cpu ) {
-    FILE* fil_u;
-
-    {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
-      c3_c* wen_c = u3r_string(wen);
-
-      c3_c nam_c[2048];
-      snprintf(nam_c, 2048, "%s/.urb/put/profile", u3C.dir_c);
-
-      struct stat st;
-      if ( -1 == stat(nam_c, &st) ) {
-        c3_mkdir(nam_c, 0700);
-      }
-
-      c3_c man_c[2054];
-      snprintf(man_c, 2053, "%s/%s.txt", nam_c, wen_c);
-
-      fil_u = c3_fopen(man_c, "w");
-
-      c3_free(wen_c);
-      u3z(wen);
-    }
-
-    u3t_damp(fil_u);
-
-    {
-      fclose(fil_u);
-    }
-  }
-
-  //  XX move to jets.c
-  //
-  c3_free(u3D.ray_u);
-
-  sef_u->xit_f();
-
-  exit(cod_w);
-}
-
-/* _serf_writ_live_save(): save snapshot.
-*/
-static void
-_serf_writ_live_save(u3_serf* sef_u, c3_d eve_d)
-{
-  if( eve_d != sef_u->dun_d ) {
-    fprintf(stderr, "serf (%" PRIu64 "): save failed: %" PRIu64 "\r\n",
-                    sef_u->dun_d,
-                    eve_d);
-    exit(1);
-  }
-
-  u3m_save();
-}
-
 /* u3_serf_live(): apply %live command [com], producing *ret on c3y.
 */
 c3_o
@@ -727,17 +735,14 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
     }
 
     case c3__exit: {
-      c3_y cod_y;
-
-      if ( c3n == u3r_safe_byte(dat, &cod_y) ) {
+      if ( c3n == u3r_safe_byte(dat, &sef_u->xit_y) ) {
         u3z(com);
         return c3n;
       }
 
       u3z(com);
-      //  NB, doesn't return
-      //
-      _serf_writ_live_exit(sef_u, cod_y);
+
+      sef_u->fag_e |= u3_serf_xit_e;
       *ret = u3nc(c3__live, u3_nul);
       return c3y;
     }
@@ -761,22 +766,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
         return c3n;
       }
 
-      u3l_log("serf (%" PRIu64 "): saving rock", sef_u->dun_d);
-
-      if ( c3n == u3u_cram(sef_u->dir_c, eve_d) ) {
-        fprintf(stderr, "serf (%" PRIu64 "): unable to jam state\r\n", eve_d);
-        return c3n;
-      }
-
-      if ( u3r_mug(u3A->roc) != sef_u->mug_l ) {
-        fprintf(stderr, "serf (%" PRIu64 "): mug mismatch 0x%08x 0x%08x\r\n",
-                        eve_d, sef_u->mug_l, u3r_mug(u3A->roc));
-        return c3n;
-      }
-
-      u3m_save();
-      u3_serf_grab();
-
+      sef_u->fag_e |= u3_serf_ram_e;
       *ret = u3nc(c3__live, u3_nul);
       return c3y;
     }
@@ -788,7 +778,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
       else {
         u3z(com);
-        u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
+        sef_u->fag_e |= u3_serf_pac_e;
         *ret = u3nc(c3__live, u3_nul);
         return c3y;
       }
@@ -801,7 +791,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
       else {
         u3z(com);
-        u3a_print_memory(stderr, "serf: meld: gained", u3u_meld());
+        sef_u->fag_e |= u3_serf_mel_e;
         *ret = u3nc(c3__live, u3_nul);
         return c3y;
       }
@@ -816,7 +806,14 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
 
       u3z(com);
-      _serf_writ_live_save(sef_u, eve_d);
+      if( eve_d != sef_u->dun_d ) {
+        fprintf(stderr, "serf (%" PRIu64 "): save failed: %" PRIu64 "\r\n",
+                        sef_u->dun_d,
+                        eve_d);
+        return c3n;
+      }
+
+      sef_u->fag_e |= u3_serf_sav_e;
       *ret = u3nc(c3__live, u3_nul);
       return c3y;
     }
