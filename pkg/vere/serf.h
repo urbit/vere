@@ -3,6 +3,14 @@
 
   /** Data types.
   **/
+    /* u3_serf_flag_e: process/system flags.
+    */
+      typedef enum {               //  execution flags
+        u3_serf_mut_e = 1 <<  0,   //  state changed
+        u3_serf_pac_e = 1 <<  1,   //  pack requested
+        u3_serf_rec_e = 1 <<  2    //  reclaim requested
+      } u3_serf_flag_e;
+
     /* u3_serf: worker-process state
     */
       typedef struct _u3_serf {
@@ -11,10 +19,8 @@
         c3_d    sen_d;             //  last event requested
         c3_d    dun_d;             //  last event processed
         c3_l    mug_l;             //  hash of state
-        c3_o    pac_o;             //  pack kernel
-        c3_o    rec_o;             //  reclaim cache
-        c3_o    mut_o;             //  mutated kerne
         u3_noun sac;               //  space measurementl
+        u3_serf_flag_e fag_e;
         void  (*xit_f)(void);      //  exit callback
       } u3_serf;
 

@@ -172,23 +172,23 @@ u3_serf_grab(void)
 void
 u3_serf_post(u3_serf* sef_u)
 {
-  if ( c3y == sef_u->rec_o ) {
+  if ( sef_u->fag_e & u3_serf_rec_e ) {
     u3m_reclaim();
-    sef_u->rec_o = c3n;
+    sef_u->fag_e &= ~u3_serf_rec_e;
   }
 
   //  XX this runs on replay too, |mass s/b elsewhere
   //
-  if ( c3y == sef_u->mut_o ) {
+  if ( sef_u->fag_e & u3_serf_mut_e ) {
     _serf_grab(sef_u->sac);
-    sef_u->sac   = u3_nul;
-    sef_u->mut_o = c3n;
+    sef_u->sac    = u3_nul;
+    sef_u->fag_e &= ~u3_serf_mut_e;
   }
 
-  if ( c3y == sef_u->pac_o ) {
+  if ( sef_u->fag_e & u3_serf_pac_e ) {
     u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
     u3l_log("");
-    sef_u->pac_o = c3n;
+    sef_u->fag_e &= ~u3_serf_pac_e;
   }
 
   if ( u3C.wag_w & u3o_toss ) {
@@ -201,9 +201,6 @@ u3_serf_post(u3_serf* sef_u)
 static u3_noun
 _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
 {
-  c3_o rec_o = c3n;
-  c3_o pac_o = c3n;
-
   //  intercept |mass, observe |reset
   //
   {
@@ -234,7 +231,7 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
       //  reclaim memory from persistent caches on |reset
       //
       if ( c3__vega == u3h(fec) ) {
-        rec_o = c3y;
+        sef_u->fag_e |= u3_serf_rec_e;
       }
 
       riv = u3t(riv);
@@ -251,9 +248,9 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
   //    For future flexibility, the urgency of the notification is represented
   //    by a *decreasing* number: 0 is maximally urgent, 1 less so, &c.
   //
-  //    high-priority: 2^22 contiguous words remaining (~8 MB)
+  //    high-priority: 2^22 contiguous words remaining (~16 MB)
   //    low-priority:  2^27 contiguous words remaining (~536 MB)
-  //    XX maybe use 2^23 (~16 MB) and 2^26 (~268 MB?
+  //    XX maybe use 2^23 (~32 MB) and 2^26 (~268 MB)?
   //
   //    XX these thresholds should trigger notifications sent to the king
   //    instead of directly triggering these remedial actions.
@@ -267,13 +264,13 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
     if ( (pre_w > low_w) && !(pos_w > low_w) ) {
       //  XX set flag(s) in u3V so we don't repeat endlessly?
       //
-      pac_o = c3y;
-      rec_o = c3y;
+      sef_u->fag_e |= u3_serf_pac_e;
+      sef_u->fag_e |= u3_serf_rec_e;
       pri   = 1;
     }
     else if ( (pre_w > hig_w) && !(pos_w > hig_w) ) {
-      pac_o = c3y;
-      rec_o = c3y;
+      sef_u->fag_e |= u3_serf_pac_e;
+      sef_u->fag_e |= u3_serf_rec_e;
       pri   = 0;
     }
     //  reclaim memory from persistent caches periodically
@@ -283,7 +280,7 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
     //    - we don't make very effective use of our free lists
     //
     else if ( 0 == (sef_u->dun_d % 1000ULL) ) {
-      rec_o = c3y;
+      sef_u->fag_e |= u3_serf_rec_e;
     }
 
     //  notify daemon of memory pressure via "fake" effect
@@ -295,9 +292,6 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
     }
   }
 
-  sef_u->rec_o = c3o(sef_u->rec_o, rec_o);
-  sef_u->pac_o = c3o(sef_u->pac_o, pac_o);
-
   return vir;
 }
 
@@ -306,13 +300,13 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
 static void
 _serf_sure_core(u3_serf* sef_u, u3_noun cor)
 {
-  sef_u->dun_d = sef_u->sen_d;
+  sef_u->dun_d  = sef_u->sen_d;
 
   u3z(u3A->roc);
-  u3A->roc     = cor;
-  u3A->eve_d   = sef_u->dun_d;
-  sef_u->mug_l = u3r_mug(u3A->roc);
-  sef_u->mut_o = c3y;
+  u3A->roc      = cor;
+  u3A->eve_d    = sef_u->dun_d;
+  sef_u->mug_l  = u3r_mug(u3A->roc);
+  sef_u->fag_e |= u3_serf_mut_e;
 }
 
 /* _serf_sure(): event succeeded, save state and process effects.
@@ -950,9 +944,7 @@ u3_serf_init(u3_serf* sef_u)
   //   }
   // }
 
-  sef_u->pac_o = c3n;
-  sef_u->rec_o = c3n;
-  sef_u->mut_o = c3n;
+  sef_u->fag_e = 0;
   sef_u->sac   = u3_nul;
 
   return rip;
