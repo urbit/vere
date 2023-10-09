@@ -65,7 +65,7 @@ _serf_grab(u3_noun sac)
 
 #ifdef U3_MEMORY_LOG
     {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
@@ -349,70 +349,6 @@ _serf_make_crud(u3_noun job, u3_noun dud)
   return new;
 }
 
-/* _serf_poke(): RETAIN
-*/
-static u3_noun
-_serf_poke(u3_serf* sef_u, c3_c* cap_c, c3_w mil_w, u3_noun job)
-{
-  u3_noun now, ovo, wen, gon;
-  u3x_cell(job, &now, &ovo);
-
-  wen      = u3A->now;
-  u3A->now = u3k(now);
-
-#ifdef U3_EVENT_TIME_DEBUG
-  struct timeval b4;
-  c3_c*       txt_c;
-
-  gettimeofday(&b4, 0);
-
-  {
-    u3_noun tag = u3h(u3t(ovo));
-    txt_c = u3r_string(tag);
-
-    if (  (c3__belt != tag)
-       && (c3__crud != tag) )
-    {
-      u3l_log("serf: %s (%" PRIu64 ") %s", cap_c, sef_u->sen_d, txt_c);
-    }
-  }
-#endif
-
-  gon = u3m_soft(mil_w, u3v_poke, u3k(ovo));
-
-#ifdef U3_EVENT_TIME_DEBUG
-  {
-    struct timeval f2, d0;
-    c3_w ms_w;
-    c3_w clr_w;
-
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-
-    ms_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    clr_w = ms_w > 1000 ? 1 : ms_w < 100 ? 2 : 3; //  red, green, yellow
-
-    if ( clr_w != 2 ) {
-      u3l_log("\x1b[3%dm%%%s (%" PRIu64 ") %4d.%02dms\x1b[0m",
-              clr_w, txt_c, sef_u->sen_d, ms_w,
-              (int) (d0.tv_usec % 1000) / 10);
-    }
-
-    c3_free(txt_c);
-  }
-#endif
-
-  if ( u3_blip != u3h(gon) ) {
-    u3z(u3A->now);
-    u3A->now = wen;
-  }
-  else {
-    u3z(wen);
-  }
-
-  return gon;
-}
-
 /* _serf_work():  apply event, capture effects.
 */
 static u3_noun
@@ -426,7 +362,7 @@ _serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
   u3_assert( sef_u->sen_d == sef_u->dun_d);
   sef_u->sen_d++;
 
-  gon = _serf_poke(sef_u, "work", mil_w, job);  // retain
+  gon = u3m_soft(mil_w, u3v_poke_raw, u3k(job));
 
   //  event accepted
   //
@@ -457,7 +393,7 @@ _serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
     //
 
     job = _serf_make_crud(job, dud);
-    gon = _serf_poke(sef_u, "crud", mil_w, job);  // retain
+    gon = u3m_soft(mil_w, u3v_poke_raw, u3k(job));
 
     //  error notification accepted
     //
@@ -510,11 +446,51 @@ u3_serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
     u3t_event_trace(lab_c, 'B');
   }
 
+#ifdef U3_EVENT_TIME_DEBUG
+  struct timeval b4;
+  c3_c*       txt_c;
+
+  gettimeofday(&b4, 0);
+
+  {
+    u3_noun tag = u3h(u3t(u3t(job)));
+    txt_c = u3r_string(tag);
+
+    if (  (c3__belt != tag)
+       && (c3__crud != tag) )
+    {
+      u3l_log("serf: (%" PRIu64 ") %s", sef_u->sen_d, txt_c);
+    }
+  }
+#endif
+
   //  %work must be performed against an extant kernel
   //
   u3_assert( 0 != sef_u->mug_l);
 
   pro = u3nc(c3__work, _serf_work(sef_u, mil_w, job));
+
+#ifdef U3_EVENT_TIME_DEBUG
+  {
+    struct timeval f2, d0;
+    c3_w ms_w;
+    c3_w clr_w;
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+
+    ms_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    clr_w = ms_w > 1000 ? 1 : ms_w < 100 ? 2 : 3; //  red, green, yellow
+
+    if ( clr_w != 2 ) {
+      u3l_log("\x1b[3%dm%%%s (%" PRIu64 ") %4d.%02dms\x1b[0m",
+              clr_w, txt_c, sef_u->sen_d, ms_w,
+              (int) (d0.tv_usec % 1000) / 10);
+    }
+
+    c3_free(txt_c);
+  }
+#endif
 
   if ( tac_t ) {
     u3t_event_trace(lab_c, 'E');
@@ -567,29 +543,6 @@ _serf_play_life(u3_serf* sef_u, u3_noun eve)
   }
 }
 
-/* _serf_play_poke(): RETAIN
-*/
-static u3_noun
-_serf_play_poke(u3_noun job)
-{
-  u3_noun now, ovo, wen, gon;
-  u3x_cell(job, &now, &ovo);
-
-  wen      = u3A->now;
-  u3A->now = u3k(now);
-  gon      = u3m_soft(0, u3v_poke, u3k(ovo));
-
-  if ( u3_blip != u3h(gon) ) {
-    u3z(u3A->now);
-    u3A->now = wen;
-  }
-  else {
-    u3z(wen);
-  }
-
-  return gon;
-}
-
 /* _serf_play_list():
 */
 static u3_noun
@@ -606,7 +559,7 @@ _serf_play_list(u3_serf* sef_u, u3_noun eve)
     //
     sef_u->sen_d++;
 
-    gon = _serf_play_poke(job);
+    gon = u3m_soft(0, u3v_poke_raw, u3k(job));
 
     //  event succeeded, save and continue
     //
@@ -708,7 +661,7 @@ _serf_writ_live_exit(u3_serf* sef_u, c3_w cod_w)
     FILE* fil_u;
 
     {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now)); // XX now
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
