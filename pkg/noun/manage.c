@@ -995,7 +995,7 @@ u3m_love(u3_noun pro)
   //  save cache pointers from current road
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;
-  u3a_jets*     jed_u = &(u3R->jed);
+  u3a_jets      jed_u = u3R->jed;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1007,7 +1007,7 @@ u3m_love(u3_noun pro)
 
   //  integrate junior caches
   //
-  u3j_reap(jed_u);
+  u3j_reap(&jed_u);
   u3n_reap(byc_p);
 
   //  pop the stack
