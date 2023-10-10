@@ -2949,8 +2949,6 @@ _cn_reap_prog_cb(u3_cell kev)
   //  we must always keep what we have taken,
   //  or we can break relocation pointers.
   //
-  //    XX double check
-  //
   u3h_put(u3R->byc.har_p, key, u3of(u3n_prog, pog_u));
   u3z(key);
 }

@@ -1996,37 +1996,44 @@ static void
 _cj_reap_hank(u3_cell kev)
 {
   u3a_cell* kev_u = u3a_to_ptr(kev);
-  u3_noun     key = u3a_take(kev_u->hed);
-  u3_weak     got = u3h_git(u3R->jed.han_p, key);
   _cj_hank* nah_u = u3to(_cj_hank, kev_u->tel);
   _cj_hank* han_u;
+  u3_weak     got;
+  u3_noun     key;
 
-  if ( u3_none != got ) {
-    if ( u3_none != nah_u->hax ) {
-      u3_weak old;
-      han_u = u3to(_cj_hank, got);
-      old = han_u->hax;
-      han_u->hax = u3a_take(nah_u->hax);
-
-      u3j_site_take(&(nah_u->sit_u), &(nah_u->sit_u));
-      u3j_site_merge(&(han_u->sit_u), &(nah_u->sit_u));
-
-      if ( u3_none != old ) {
-        u3z(old);
-      }
-
-      //  XX double check, see _cn_reap_prog_cb()
-      //
-      u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
-    }
+  if ( u3_none == nah_u->hax ) {
+    return;
   }
-  else if ( u3_none != nah_u->hax ) {
+
+  //  you have to keep what you take
+  //
+  key = u3a_take(kev_u->hed);
+  got = u3h_git(u3R->jed.han_p, key);
+
+  //  promote
+  //
+  if ( u3_none == got ) {
     han_u      = u3a_walloc(c3_wiseof(_cj_hank));
     han_u->hax = u3a_take(nah_u->hax);
     u3j_site_take(&(han_u->sit_u), &(nah_u->sit_u));
-    u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
+  }
+  //  integrate
+  //
+  else {
+    u3_weak old;
+
+    han_u      = u3to(_cj_hank, got);
+    old        = han_u->hax;
+    han_u->hax = u3a_take(nah_u->hax);
+    u3j_site_take(&(nah_u->sit_u), &(nah_u->sit_u));
+    u3j_site_merge(&(han_u->sit_u), &(nah_u->sit_u));
+
+    if ( u3_none != old ) {
+      u3z(old);
+    }
   }
 
+  u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
   u3z(key);
 }
 
