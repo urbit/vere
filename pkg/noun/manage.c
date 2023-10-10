@@ -1007,15 +1007,15 @@ u3m_love(u3_noun pro)
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
 
-  //  pop the stack
-  //
-  u3R->cap_p = u3R->ear_p;
-  u3R->ear_p = 0;
-
   //  integrate junior caches
   //
   u3j_reap(jed_u);
   u3n_reap(byc_p);
+
+  //  pop the stack
+  //
+  u3R->cap_p = u3R->ear_p;
+  u3R->ear_p = 0;
 
   return pro;
 }
