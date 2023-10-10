@@ -898,6 +898,31 @@ u3h_take(u3p(u3h_root) har_p)
   return u3h_take_with(har_p, u3a_take);
 }
 
+/* _ch_take_uni_cb(): take a key/value pair, put into [dst_p].
+*/
+static void
+_ch_take_uni_cb(u3_cell kev, void* wit)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3_noun     key = u3a_take(kev_u->hed);
+  u3_noun     val = u3a_take(kev_u->tel);
+
+  {
+    u3p(u3h_root) dst_p = *(u3p(u3h_root)*)wit;
+    u3h_put(dst_p, key, val);
+  }
+
+  u3z(key);
+}
+
+/* u3h_take_uni(): take entries from [src_p], put into [dst_p].
+*/
+void
+u3h_take_uni(u3p(u3h_root) dst_p, u3p(u3h_root) src_p)
+{
+  u3h_walk_with(src_p, _ch_take_uni_cb, &dst_p);
+}
+
 /* _ch_mark_buck(): mark bucket for gc.
 */
 c3_w

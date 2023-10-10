@@ -2866,12 +2866,11 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   }
 }
 
-/*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
+/*  _cn_take_prog(): take junior u3n_prog.
 */
-static u3p(u3n_prog)
-_cn_take_prog_cb(u3p(u3n_prog) pog_p)
+static u3n_prog*
+_cn_take_prog(u3n_prog* pog_u)
 {
-  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
   u3n_prog* gop_u;
 
   if ( c3y == pog_u->byc_u.own_o ) {
@@ -2889,7 +2888,16 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
   _cn_take_prog_dat(gop_u, pog_u);
   // _n_prog_take_dat(gop_u, pog_u, c3n);
 
-  return u3of(u3n_prog, gop_u);
+  return gop_u;
+}
+
+/*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
+*/
+static u3p(u3n_prog)
+_cn_take_prog_cb(u3p(u3n_prog) pog_p)
+{
+  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
+  return u3of(u3n_prog, _cn_take_prog(pog_u));
 }
 
 /* u3n_take(): copy junior bytecode state.
@@ -2897,7 +2905,8 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
 u3p(u3h_root)
 u3n_take(u3p(u3h_root) har_p)
 {
-  return u3h_take_with(har_p, _cn_take_prog_cb);
+  // return u3h_take_with(har_p, _cn_take_prog_cb);
+  return har_p;
 }
 
 /* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
@@ -2956,14 +2965,46 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
   u3h_put(har_p, key, u3of(u3n_prog, pog_u));
 }
 
+static void
+_cn_reap_prog_cb(u3_cell kev)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3_noun     key = u3a_take(kev_u->hed);
+  u3n_prog* pog_u = u3to(u3n_prog, kev_u->tel);
+  u3_weak     got = u3h_git(u3R->byc.har_p, key);
+
+  //  promote
+  //
+  if ( u3_none == got ) {
+    pog_u = _cn_take_prog(pog_u);
+  }
+  //  integrate
+  //
+  else {
+    u3n_prog* sep_u = u3to(u3n_prog, got);
+    _cn_take_prog_dat(pog_u, pog_u);
+    _cn_merge_prog_dat(sep_u, pog_u);
+    pog_u = sep_u;
+  }
+
+  //  we must always put, because we have taken.
+  //  we must always keep what we have taken,
+  //  or we can break relocation pointers.
+  //
+  //    XX double check
+  //
+  u3h_put(u3R->byc.har_p, key, u3of(u3n_prog, pog_u));
+  u3z(key);
+}
+
 /* u3n_reap(): promote bytecode state.
 */
 void
 u3n_reap(u3p(u3h_root) har_p)
 {
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
+  u3h_walk(har_p, _cn_reap_prog_cb);
   // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
+  // u3h_free(har_p);
 }
 
 /* _n_ream(): ream program call sites

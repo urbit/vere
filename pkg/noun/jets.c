@@ -2015,10 +2015,10 @@ _cj_take_hank_cb(u3p(_cj_hank) nah_p)
 u3a_jets
 u3j_take(u3a_jets jed_u)
 {
-  jed_u.war_p = u3h_take(jed_u.war_p);
-  jed_u.cod_p = u3h_take(jed_u.cod_p);
-  jed_u.han_p = u3h_take_with(jed_u.han_p, _cj_take_hank_cb);
-  jed_u.bas_p = u3h_take(jed_u.bas_p);
+  // jed_u.war_p = u3h_take(jed_u.war_p);
+  // jed_u.cod_p = u3h_take(jed_u.cod_p);
+  // jed_u.han_p = u3h_take_with(jed_u.han_p, _cj_take_hank_cb);
+  // jed_u.bas_p = u3h_take(jed_u.bas_p);
   return jed_u;
 }
 
@@ -2062,22 +2062,64 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
   }
 }
 
+static void
+_cj_reap_hank(u3_cell kev)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3_noun     key = u3a_take(kev_u->hed);
+  u3_weak     got = u3h_git(u3R->jed.han_p, key);
+  _cj_hank* nah_u = u3to(_cj_hank, kev_u->tel);
+  _cj_hank* han_u;
+
+  if ( u3_none != got ) {
+    if ( u3_none != nah_u->hax ) {
+      u3_weak old;
+      han_u = u3to(_cj_hank, got);
+      old = han_u->hax;
+      han_u->hax = u3a_take(nah_u->hax);
+
+      u3j_site_take(&(nah_u->sit_u), &(nah_u->sit_u));
+      u3j_site_merge(&(han_u->sit_u), &(nah_u->sit_u));
+
+      if ( u3_none != old ) {
+        u3z(old);
+      }
+
+      //  XX double check, see _cn_reap_prog_cb()
+      //
+      u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
+    }
+  }
+  else if ( u3_none != nah_u->hax ) {
+    han_u      = u3a_walloc(c3_wiseof(_cj_hank));
+    han_u->hax = u3a_take(nah_u->hax);
+    u3j_site_take(&(han_u->sit_u), &(nah_u->sit_u));
+    u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
+  }
+
+  u3z(key);
+}
+
 /* u3j_reap(): promote jet state.
 */
 void
 u3j_reap(u3a_jets jed_u)
 {
-  u3h_uni(u3R->jed.war_p, jed_u.war_p);
-  u3h_free(jed_u.war_p);
+  // u3h_uni(u3R->jed.cod_p, jed_u.cod_p);
+  // u3h_free(jed_u.cod_p);
+  u3h_take_uni(u3R->jed.cod_p, jed_u.cod_p);
 
-  u3h_uni(u3R->jed.cod_p, jed_u.cod_p);
-  u3h_free(jed_u.cod_p);
+  u3h_walk(jed_u.han_p, _cj_reap_hank);
+  // u3h_walk_with(jed_u.han_p, _cj_merge_hank_cb, &u3R->jed.han_p);
+  // u3h_free(jed_u.han_p);
 
-  u3h_walk_with(jed_u.han_p, _cj_merge_hank_cb, &u3R->jed.han_p);
-  u3h_free(jed_u.han_p);
+  // u3h_uni(u3R->jed.war_p, jed_u.war_p);
+  // u3h_free(jed_u.war_p);
+  u3h_take_uni(u3R->jed.war_p, jed_u.war_p);
 
-  u3h_uni(u3R->jed.bas_p, jed_u.bas_p);
-  u3h_free(jed_u.bas_p);
+  // u3h_uni(u3R->jed.bas_p, jed_u.bas_p);
+  // u3h_free(jed_u.bas_p);
+  u3h_take_uni(u3R->jed.bas_p, jed_u.bas_p);
 }
 
 /* _cj_ream(): ream list of battery [bash registry] pairs. RETAIN.
