@@ -959,6 +959,10 @@ _cw_serf_writ(void* vod_p, c3_d len_d, c3_y* byt_y)
   u3t_event_trace("serf ipc cue", 'B');
 #endif
 
+  // u3_assert( &(u3H->rod_u) == u3R );
+  u3m_hate(1 << 18);
+  // u3_assert( &(u3H->rod_u) != u3R );
+
   jar = u3s_cue_xeno_with(sil_u, len_d, byt_y);
 
 #ifdef SERF_TRACE_CUE

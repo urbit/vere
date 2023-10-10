@@ -620,7 +620,7 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
 {
   u3_cue_xeno* sil_u;
 
-  u3_assert( &(u3H->rod_u) == u3R );
+  // u3_assert( &(u3H->rod_u) == u3R );
 
   sil_u = c3_calloc(sizeof(*sil_u));
   ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
@@ -645,7 +645,7 @@ u3s_cue_xeno_with(u3_cue_xeno* sil_u,
 {
   u3_weak som;
 
-  u3_assert( &(u3H->rod_u) == u3R );
+  // u3_assert( &(u3H->rod_u) == u3R );
 
   som = _cs_cue_xeno(sil_u, len_d, byt_y);
   ur_dict32_wipe(&sil_u->dic_u);
