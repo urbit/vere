@@ -13,7 +13,8 @@
         u3_serf_mel_e = 1 <<  4,   //  meld requested
         u3_serf_ram_e = 1 <<  5,   //  cram requested
         u3_serf_gab_e = 1 <<  6,   //  grab requested
-        u3_serf_xit_e = 1 <<  7    //  exit requested
+        u3_serf_inn_e = 1 <<  7,   //  in an inner road
+        u3_serf_xit_e = 1 <<  8    //  exit requested
       } u3_serf_flag_e;
 
     /* u3_serf: worker-process state

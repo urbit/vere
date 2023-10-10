@@ -179,6 +179,9 @@ void
 u3_serf_post(u3_serf* sef_u)
 {
   // if ( sef_u->fag_e & u3_serf_mut_e )
+
+  if (  (sef_u->fag_e & u3_serf_inn_e)
+     && (sef_u->fag_e & ~(u3_serf_mut_e|u3_serf_inn_e)) )
   {
     // u3_assert( &(u3H->rod_u) != u3R );
     sef_u->roc    = u3m_love(sef_u->roc);
@@ -187,10 +190,12 @@ u3_serf_post(u3_serf* sef_u)
     u3z(u3A->roc);  // XX really groace
     u3A->roc      = u3k(sef_u->roc);
     u3A->eve_d    = sef_u->dun_d;
-    sef_u->fag_e &= ~u3_serf_mut_e;
+    sef_u->fag_e &= ~u3_serf_inn_e;
   }
   // XX wat do?
   // else if u3_serf_inn_e ?
+
+  sef_u->fag_e &= ~u3_serf_mut_e;
 
   if ( sef_u->fag_e & u3_serf_rec_e ) {
     u3m_reclaim();
