@@ -19,14 +19,15 @@
     /* u3_serf: worker-process state
     */
       typedef struct _u3_serf {
-        c3_d    key_d[4];          //  disk key
-        c3_c*   dir_c;             //  execution directory (pier)
-        c3_d    sen_d;             //  last event requested
-        c3_d    dun_d;             //  last event processed
-        c3_l    mug_l;             //  hash of state
-        u3_serf_flag_e fag_e;
-        c3_y    xit_y;
-        void  (*xit_f)(void);      //  exit callback
+        c3_d           key_d[4];   //  disk key
+        c3_c*          dir_c;      //  execution directory (pier)
+        c3_d           sen_d;      //  last event requested
+        c3_d           dun_d;      //  last event processed
+        u3_noun          roc;      //  arvo kernel at [dun_d]
+        c3_l           mug_l;      //  hash of state
+        u3_serf_flag_e fag_e;      //  flags
+        c3_y           xit_y;      //  exit code
+        void         (*xit_f)(void);  //  exit callback
       } u3_serf;
 
   /** Functions.
@@ -69,6 +70,6 @@
     /* u3_serf_grab(): garbage collect.
     */
       void
-      u3_serf_grab(void);
+      u3_serf_grab(u3_serf* sef_u);
 
 #endif /* ifndef U3_VERE_SERF_H */

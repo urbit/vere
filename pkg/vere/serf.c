@@ -49,13 +49,33 @@
 --
 */
 
+static u3_noun
+_serf_peek_in(u3_cell dat)
+{
+  u3a_cell* dat_u = u3a_to_ptr(dat);
+  return u3v_peek_raw2(dat_u->hed, dat_u->tel);
+}
+
+static u3_noun
+_serf_peek_soft(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
+{
+  u3_cell dat = u3nc(u3k(sef_u->roc), sam);
+  return u3m_soft(mil_w, _serf_peek_in, dat);
+}
+
 /* u3_serf_grab(): garbage collect.
 */
 void
-u3_serf_grab(void)
+u3_serf_grab(u3_serf* sef_u)
 {
-  FILE* fil_u = stderr;
-  u3_noun sac = u3_nul;
+  FILE*   fil_u = stderr;
+  u3_noun   sac = u3_nul;
+  u3_serf fes_u = {0};
+
+  if ( !sef_u ) {
+    fes_u.roc = u3k(u3A->roc);
+    sef_u = &fes_u;
+  }
 
   u3_assert( u3R == &(u3H->rod_u) );
 
@@ -68,7 +88,7 @@ u3_serf_grab(void)
       sam = u3nt(lyc, c3n, u3nq(c3__once, u3_blip, u3_blip, pax));
     }
 
-    gon = u3m_soft(0, u3v_peek, sam);
+    gon = _serf_peek_soft(sef_u, 0, sam);
 
     {
       u3_noun tag, dat, val;
@@ -87,6 +107,8 @@ u3_serf_grab(void)
   }
 
   fprintf(stderr, "serf: measuring memory:\r\n");
+
+  u3a_mark_noun(sef_u->roc);
 
   if ( u3_nul == sac ) {
     u3a_print_memory(fil_u, "total marked", u3m_mark(stderr));
@@ -141,6 +163,11 @@ u3_serf_grab(void)
 
   u3z(sac);
 
+  if ( fes_u.roc ) {
+    u3z(fes_u.roc);
+    fes_u.roc = 0;
+  }
+
   fprintf(fil_u, "\r\n");
   fflush(fil_u);
   u3l_log("");
@@ -151,64 +178,77 @@ u3_serf_grab(void)
 void
 u3_serf_post(u3_serf* sef_u)
 {
+  if ( sef_u->fag_e & u3_serf_mut_e ) {
+    // sef_u->roc    = u3m_love(sef_u->roc);
+    u3z(u3A->roc);
+    u3A->roc      = u3k(sef_u->roc);
+    u3A->eve_d    = sef_u->dun_d;
+    sef_u->fag_e &= ~u3_serf_mut_e;
+  }
+
   if ( sef_u->fag_e & u3_serf_rec_e ) {
     u3m_reclaim();
     sef_u->fag_e &= ~u3_serf_rec_e;
   }
 
-  if ( sef_u->fag_e & u3_serf_mut_e ) {
-    // XX wat do
-    sef_u->fag_e &= ~u3_serf_mut_e;
-  }
-
   //  XX won't work, requires non-asserting u3a_sweep()
   //
   if ( u3C.wag_w & u3o_check_corrupt ) {
-    u3m_grab(u3_none);
+    u3m_grab(sef_u->roc, u3_none);
   }
 
   if ( sef_u->fag_e & u3_serf_gab_e ) {
-    u3_serf_grab();
+    u3_serf_grab(sef_u);
     sef_u->fag_e &= ~u3_serf_gab_e;
   }
   else if ( u3C.wag_w & u3o_debug_ram ) {
-    u3m_grab(u3_none);
+    u3m_grab(sef_u->roc, u3_none);
   }
 
   if ( sef_u->fag_e & u3_serf_pac_e ) {
+    u3z(sef_u->roc);
     u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
     u3l_log("");
+    sef_u->roc = u3k(u3A->roc);
     sef_u->fag_e &= ~u3_serf_pac_e;
   }
 
   if ( sef_u->fag_e & u3_serf_mel_e ) {
+    u3z(sef_u->roc);
     u3a_print_memory(stderr, "serf: meld: gained", u3u_meld());
     u3l_log("");
+    sef_u->roc = u3k(u3A->roc);
     sef_u->fag_e &= ~u3_serf_mel_e;
   }
 
   if ( sef_u->fag_e & u3_serf_ram_e ) {
     u3l_log("serf (%" PRIu64 "): saving rock", sef_u->dun_d);
 
+    u3z(sef_u->roc);
+
     if ( c3n == u3u_cram(sef_u->dir_c, sef_u->dun_d) ) {
       fprintf(stderr, "serf (%" PRIu64 "): unable to jam state\r\n", sef_u->dun_d);
       exit(1);
     }
 
-    if ( u3r_mug(u3A->roc) != sef_u->mug_l ) {
+    sef_u->roc = u3k(u3A->roc);
+
+    if ( u3r_mug(sef_u->roc) != sef_u->mug_l ) {
       fprintf(stderr, "serf (%" PRIu64 "): mug mismatch 0x%08x 0x%08x\r\n",
-                      sef_u->dun_d, sef_u->mug_l, u3r_mug(u3A->roc));
+                      sef_u->dun_d, sef_u->mug_l, u3r_mug(sef_u->roc));
       exit(1);
     }
 
     u3m_save();
-    u3_serf_grab();
+    u3_serf_grab(sef_u);
     sef_u->fag_e &= ~u3_serf_ram_e;
   }
 
 
   if ( sef_u->fag_e & u3_serf_sav_e ) {
+    u3z(sef_u->roc);
     u3m_save();
+    sef_u->roc = u3k(u3A->roc);
     sef_u->fag_e &= ~u3_serf_sav_e;
   }
 
@@ -360,12 +400,10 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
 static void
 _serf_sure_core(u3_serf* sef_u, u3_noun cor)
 {
+  u3z(sef_u->roc);
   sef_u->dun_d  = sef_u->sen_d;
-
-  u3z(u3A->roc);
-  u3A->roc      = cor;
-  u3A->eve_d    = sef_u->dun_d;
-  sef_u->mug_l  = u3r_mug(u3A->roc);
+  sef_u->roc    = cor;
+  sef_u->mug_l  = u3r_mug(sef_u->roc);
   sef_u->fag_e |= u3_serf_mut_e;
 }
 
@@ -403,6 +441,20 @@ _serf_make_crud(u3_noun job, u3_noun dud)
   return new;
 }
 
+static u3_noun
+_serf_poke_in(u3_cell dat)
+{
+  u3a_cell* dat_u = u3a_to_ptr(dat);
+  return u3v_poke_raw2(dat_u->hed, dat_u->tel);
+}
+
+static u3_noun
+_serf_poke_soft(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
+{
+  u3_cell dat = u3nc(u3k(sef_u->roc), sam);
+  return u3m_soft(mil_w, _serf_poke_in, dat);
+}
+
 /* _serf_work():  apply event, capture effects.
 */
 static u3_noun
@@ -416,7 +468,7 @@ _serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
   u3_assert( sef_u->sen_d == sef_u->dun_d);
   sef_u->sen_d++;
 
-  gon = u3m_soft(mil_w, u3v_poke_raw, u3k(job));
+  gon = _serf_poke_soft(sef_u, mil_w, u3k(job));
 
   //  event accepted
   //
@@ -447,7 +499,7 @@ _serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job)
     //
 
     job = _serf_make_crud(job, dud);
-    gon = u3m_soft(mil_w, u3v_poke_raw, u3k(job));
+    gon = _serf_poke_soft(sef_u, mil_w, u3k(job));
 
     //  error notification accepted
     //
@@ -570,9 +622,9 @@ _serf_play_life(u3_serf* sef_u, u3_noun eve)
 
   //  ensure zero-initialized kernel
   //
-  //    XX assert?
+  //    XX wat do?
   //
-  u3A->roc = 0;
+  // u3A->roc = 0;
 
   gon = u3m_soft(0, u3v_life, eve);
 
@@ -613,7 +665,7 @@ _serf_play_list(u3_serf* sef_u, u3_noun eve)
     //
     sef_u->sen_d++;
 
-    gon = u3m_soft(0, u3v_poke_raw, u3k(job));
+    gon = _serf_poke_soft(sef_u, 0, u3k(job));
 
     //  event succeeded, save and continue
     //
@@ -680,7 +732,7 @@ u3_serf_play(u3_serf* sef_u, c3_d eve_d, u3_noun lit)
 u3_noun
 u3_serf_peek(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
 {
-  u3_noun gon = u3m_soft(mil_w, u3v_peek, sam);
+  u3_noun gon = _serf_peek_soft(sef_u, mil_w, sam);
   u3_noun pro;
 
   {
@@ -888,20 +940,6 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
   return ret_o;
 }
 
-/* _serf_ripe(): produce initial serf state as [eve=@ mug=@]
-*/
-static u3_noun
-_serf_ripe(u3_serf* sef_u)
-{
-  // u3l_log("serf: ripe %" PRIu64, sef_u->dun_d);
-
-  sef_u->mug_l = ( 0 == sef_u->dun_d )
-                 ? 0
-                 : u3r_mug(u3A->roc);
-
-  return u3nc(u3i_chubs(1, &sef_u->dun_d), sef_u->mug_l);
-}
-
 /* u3_serf_init(): init or restore, producing status.
 */
 u3_noun
@@ -915,7 +953,16 @@ u3_serf_init(u3_serf* sef_u)
     c3_y  noc_y = 4;
     u3_noun ver = u3nt(pro_w, hon_y, noc_y);
 
-    rip = u3nt(c3__ripe, ver, _serf_ripe(sef_u));
+    u3_assert( sef_u->dun_d == sef_u->sen_d );
+    u3_assert( sef_u->dun_d == u3A->eve_d );
+
+    sef_u->roc   = u3k(u3A->roc);
+    sef_u->mug_l = ( 0 == sef_u->dun_d )
+                 ? 0
+                 : u3r_mug(sef_u->roc);
+
+    rip = u3nt(c3__ripe, ver,
+               u3nc(u3i_chubs(1, &sef_u->dun_d), sef_u->mug_l));
   }
 
   //  XX move to u3_serf_post()
@@ -928,7 +975,7 @@ u3_serf_init(u3_serf* sef_u)
   //   if ( !(pen_w > (1 << 28)) ) {
   //     fprintf(stderr, "\r\n");
   //     u3a_print_memory(stderr, "serf: contiguous free space", pen_w);
-  //     u3_serf_grab();
+  //     u3_serf_grab(sef_u);
   //   }
   // }
 

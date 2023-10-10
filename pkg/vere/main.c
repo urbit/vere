@@ -1645,7 +1645,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_serf_grab();
+  u3_serf_grab(0);
   u3m_stop();
 }
 
