@@ -255,6 +255,16 @@ u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
   }
 }
 
+/* u3v_peek_raw2(): raw +peek
+*/
+u3_noun
+u3v_peek_raw2(u3_noun roc, u3_noun sam)
+{
+  u3_noun fol = u3k(u3x_at(_CVX_PEEK, roc));
+  u3_noun fun = u3n_nock_on(roc, fol);
+  return u3n_slam_on(fun, sam);
+}
+
 /* u3v_peek(): query the reck namespace (protected).
 */
 u3_noun
@@ -304,6 +314,30 @@ u3_noun
 u3v_poke_raw(u3_noun sam)
 {
   u3_noun fun = u3n_nock_on(u3k(u3A->roc), u3k(u3x_at(_CVX_POKE, u3A->roc)));
+  u3_noun pro;
+
+  {
+# ifdef  U3_MEMORY_DEBUG
+    c3_w cod_w = u3a_lush(u3h(u3t(u3t(sam))));
+# endif
+
+    pro = u3n_slam_on(fun, sam);
+
+# ifdef  U3_MEMORY_DEBUG
+    u3a_lop(cod_w);
+# endif
+  }
+
+  return pro;
+}
+
+/* u3v_poke_raw2(): raw +poke
+*/
+u3_noun
+u3v_poke_raw2(u3_noun roc, u3_noun sam)
+{
+  u3_noun fol = u3k(u3x_at(_CVX_POKE, roc));
+  u3_noun fun = u3n_nock_on(roc, fol);
   u3_noun pro;
 
   {

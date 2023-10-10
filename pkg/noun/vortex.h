@@ -86,6 +86,11 @@
       c3_o
       u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l);
 
+    /* u3v_peek_raw2(): raw +peek
+    */
+      u3_noun
+      u3v_peek_raw2(u3_noun roc, u3_noun sam);
+
     /* u3v_peek(): query the reck namespace.
     */
       u3_noun
@@ -95,6 +100,11 @@
     */
       u3_noun
       u3v_soft_peek(c3_w mil_w, u3_noun sam);
+
+    /* u3v_poke_raw2(): raw +poke
+    */
+      u3_noun
+      u3v_poke_raw2(u3_noun roc, u3_noun sam);
 
     /* u3v_poke(): insert and apply an input ovum (protected).
     */
