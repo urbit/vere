@@ -184,6 +184,7 @@ u3_serf_post(u3_serf* sef_u)
      && (sef_u->fag_e & ~(u3_serf_mut_e|u3_serf_inn_e)) )
   {
     // u3_assert( &(u3H->rod_u) != u3R );
+    u3r_sing(u3A->roc, sef_u->roc); // try to unify
     sef_u->roc    = u3m_love(sef_u->roc);
     // u3_assert( &(u3H->rod_u) == u3R );
     u3z(u3A->roc);
