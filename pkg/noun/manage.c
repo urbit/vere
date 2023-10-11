@@ -639,6 +639,10 @@ _find_home(void)
     }
   }
 
+  //  XX move me
+  //
+  u3a_ream();
+
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
 

@@ -2318,6 +2318,69 @@ u3a_idle(u3a_road* rod_u)
   return fre_w;
 }
 
+/* u3a_ream(): ream free-lists.
+*/
+void
+u3a_ream(void)
+{
+  u3p(u3a_fbox) lit_p;
+  u3a_fbox*     fox_u;
+  c3_w     sel_w, i_w;
+
+  for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
+    lit_p = u3R->all.fre_p[i_w];
+
+    while ( lit_p ) {
+      fox_u = u3to(u3a_fbox, lit_p);
+      lit_p = fox_u->nex_p;
+      sel_w = _box_slot(fox_u->box_u.siz_w);
+
+      if ( sel_w != i_w ) {
+        //  inlined _box_detach()
+        //
+        {
+          u3p(u3a_fbox) fre_p = u3of(u3a_fbox, &(fox_u->box_u));
+          u3p(u3a_fbox) pre_p = u3to(u3a_fbox, fre_p)->pre_p;
+          u3p(u3a_fbox) nex_p = u3to(u3a_fbox, fre_p)->nex_p;
+
+          if ( nex_p ) {
+            if ( u3to(u3a_fbox, nex_p)->pre_p != fre_p ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3to(u3a_fbox, nex_p)->pre_p = pre_p;
+          }
+          if ( pre_p ) {
+            if( u3to(u3a_fbox, pre_p)->nex_p != fre_p ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3to(u3a_fbox, pre_p)->nex_p = nex_p;
+          }
+          else {
+            if ( fre_p != u3R->all.fre_p[i_w] ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3R->all.fre_p[i_w] = nex_p;
+          }
+        }
+
+        //  inlined _box_attach()
+        {
+          u3p(u3a_fbox)  fre_p = u3of(u3a_fbox, &(fox_u->box_u));
+          u3p(u3a_fbox)* pfr_p = &u3R->all.fre_p[sel_w];
+          u3p(u3a_fbox)  nex_p = *pfr_p;
+
+          u3to(u3a_fbox, fre_p)->pre_p = 0;
+          u3to(u3a_fbox, fre_p)->nex_p = nex_p;
+          if ( nex_p ) {
+            u3to(u3a_fbox, nex_p)->pre_p = fre_p;
+          }
+          (*pfr_p) = fre_p;
+        }
+      }
+    }
+  }
+}
+
 /* u3a_sweep(): sweep a fully marked road.
 */
 c3_w
