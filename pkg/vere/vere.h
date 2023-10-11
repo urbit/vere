@@ -541,6 +541,7 @@
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
+          c3_w             ver_w;               //  pier version
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
@@ -936,7 +937,7 @@
       /* u3_disk_init(): load or create pier directories and event log.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u, c3_o mig_o);
+        u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */
@@ -1008,38 +1009,29 @@
 
       /* u3_disk_epoc_init(): create new epoch.
        */
-       c3_o
-       u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
+        c3_o
+        u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_epoc_kill(): delete an epoch.
        */
-       c3_o
-       u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
+        c3_o
+        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_epoc_last(): get latest epoch number.
        */
-       c3_o
-       u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
+        c3_o
+        u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
 
-      /* u3_disk_epoc_vere(): get binary version from epoch.
-       */
-       c3_o
-       u3_disk_epoc_vere(u3_disk* log_u, c3_d epo_d, c3_c* ver_w);
-
-      /* u3_disk_vere_diff(): checks if vere version mismatches latest epoch's.
-       */
-       c3_o
-       u3_disk_vere_diff(u3_disk* log_u);
-
-      /* u3_disk_need_migrate(): does the disk need migration?
+      /* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
       */
-        c3_o
-        u3_disk_need_migrate(u3_disk* log_u);
+        c3_z
+        u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
-      /* u3_disk_migrate(): migrates disk format.
-       */
-        c3_o
-        u3_disk_migrate(u3_disk* log_u);
+      /* u3_disk_kindly(): do the needful.
+      */
+        void
+        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
+
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
         u3_weak

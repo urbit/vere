@@ -1194,7 +1194,7 @@ static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
   u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u, c3y);
+  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -2150,16 +2150,14 @@ _cw_play_exit(c3_i int_i)
 
 /* _cw_play_impl(): replay events, but better.
 */
-static void
+static c3_d
 _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
+  c3_d pay_d;
+
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_disk* log_u;
-  if ( 0 == (log_u = u3_disk_init(u3_Host.dir_c, (u3_disk_cb){0}, c3n)) ) {
-    fprintf(stderr, "mars: failed to load event log\r\n");
-    exit(1);
-  }
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   //  Handle SIGTSTP as if it was SIGINT.
   //
@@ -2183,6 +2181,9 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     _cw_play_snap(log_u);
   }
 
+  //  XX this should check that snapshot is within epoc,
+  //  and load from the epoc / reboot if it is not
+  //
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
@@ -2195,17 +2196,18 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
       .dun_d = u3A->eve_d,
     };
 
-    u3_mars_play(&mar_u, eve_d, sap_d);
-
-    //  migrate after replay, if necessary
+    pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
     u3_Host.eve_d = mar_u.dun_d;
-    if ( c3y == u3_disk_need_migrate(log_u) ) {
-      u3_disk_migrate(log_u);
-    }
+
+    //  migrate or rollover as needed
+    //
+    u3_disk_kindly(log_u, u3_Host.eve_d);
   }
 
   u3_disk_exit(log_u);
   u3m_stop();
+
+  return pay_d;
 }
 
 /* _cw_play(): replay events, but better.
@@ -2300,7 +2302,9 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
+    fprintf(stderr, "mars: nothing to do!");
+  }
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2453,12 +2457,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
-  //  get latest epoch number prior to creating a new one
-  c3_d pre_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &pre_d) ) {
-    fprintf(stderr, "chop: failed to find last epoch\r\n");
-    exit(1);
-  }
+  u3_disk_kindly(log_u, u3_Host.eve_d);
 
   //  create new epoch
   c3_d fir_d, las_d;
@@ -2473,50 +2472,20 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  sort epoch directories in descending order
-  u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
-  u3_dent* den_u = ned_u->dil_u;
-  c3_z len_z = 0;
-  while ( den_u ) {  //  count epochs
-    len_z++;
-    den_u = den_u->nex_u;
-  }
-  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
-  len_z = 0;
-  den_u = ned_u->dil_u;
-  while ( den_u ) {
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
-      len_z++;
-    }
-    den_u = den_u->nex_u;
-  }
+  c3_z len_z = u3_disk_epoc_list(log_u, 0);
 
   if ( len_z <= 2 ) {
     fprintf(stderr, "chop: nothing to do, have a great day\r\n");
     exit(0);  //  enjoy
   }
 
-  //  sort sot_d naively in descending order
-  c3_d tmp_d;
-  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    for ( c3_z j_z = i_z + 1; j_z < len_z; j_z++ ) {
-      if ( sot_d[i_z] < sot_d[j_z] ) {
-        tmp_d = sot_d[i_z];
-        sot_d[i_z] = sot_d[j_z];
-        sot_d[j_z] = tmp_d;
-      }
-    }
-  }
-
-  //  get latest epoch number prior to creating a new one
-  c3_d pos_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &pos_d) ) {
-    fprintf(stderr, "chop: failed to find last epoch\r\n");
-    exit(1);
-  }
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  u3_disk_epoc_list(log_u, sot_d);
 
   //  delete all but the last two epochs
-  //  XX parameterize the number of epochs to chop
+  //
+  //    XX parameterize the number of epochs to chop
+  //
   for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
     fprintf(stderr, "chop: deleting epoch 0i%" PRIc3_d "\r\n", sot_d[i_z]);
     if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
@@ -2526,7 +2495,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // cleanup
-  u3_dire_free(ned_u);
+  c3_free(sot_d);
   u3_disk_exit(log_u);
 
   // success
@@ -2586,6 +2555,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   // gracefully shutdown the pier if it's running
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  u3_disk_kindly(log_u, u3_Host.eve_d);
 
   // check if there's a *current* snapshot
   if ( log_u->dun_d != u3A->eve_d ) {

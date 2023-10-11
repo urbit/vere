@@ -220,10 +220,11 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 
 /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
 */
-void
+c3_d
 u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 {
   u3_disk* log_u = mar_u->log_u;
+  c3_d     pay_d = 0;
 
   if ( !eve_d ) {
     eve_d = log_u->dun_d;
@@ -232,16 +233,17 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     u3l_log("mars: already computed %" PRIu64 "", eve_d);
     u3l_log("      state=%" PRIu64 ", log=%" PRIu64 "",
             mar_u->dun_d, log_u->dun_d);
-    return;
+    return pay_d;
   }
   else {
     eve_d = c3_min(eve_d, log_u->dun_d);
   }
 
   if ( mar_u->dun_d == log_u->dun_d ) {
-    u3l_log("mars: nothing to do!");
-    return;
+    return pay_d;
   }
+
+  pay_d = eve_d - mar_u->dun_d;
 
   if ( !mar_u->dun_d ) {
     c3_w lif_w;
@@ -376,4 +378,6 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
+
+  return pay_d;
 }
