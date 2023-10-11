@@ -76,27 +76,28 @@ _box_count(c3_ws siz_ws) { }
   } while(0)
 
 /* _box_slot(): select the right free list to search for a block.
-   TODO: do we really need a loop to do this?
-
-   so our free list logic looks like this:
-   siz_w < 6 words then [0]
-   siz_w < 16      then [1]
-   siz_w < 32      then [2]
-   siz_w < 64      then [3]
-   ...
-   siz_w > 4G      then [26]
+**
+**   siz_w ==  6 words then  [0]
+**   siz_w  < 16       then  [1]
+**   siz_w  < 32       then  [2]
+**   siz_w  < 64       then  [3]
+**   ...
+**   siz_w >=  2GB     then [26]
 */
 static c3_w
 _box_slot(c3_w siz_w)
 {
-  if ( siz_w < u3a_minimum ) {
-    return 0;
+  if ( u3a_minimum == siz_w ) return 0;
+
+  c3_dessert( u3a_minimum <= siz_w );
+
+  {
+    c3_w bit_w = c3_bits_word(siz_w);
+
+    if ( 5 > bit_w ) return 1;
+    if ( (u3a_fbox_no + 1) >= bit_w ) return bit_w - 3;
   }
 
-  for (c3_w i_w = 1; i_w < u3a_fbox_no; i_w++) {
-    if ( siz_w < 16 ) return i_w;
-    siz_w = (siz_w + 1) >> 1;
-  }
   return u3a_fbox_no - 1;
 }
 
