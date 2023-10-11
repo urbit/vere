@@ -1123,9 +1123,7 @@ _ca_take_atom(u3a_atom* old_u)
 static inline u3_cell
 _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
 {
-  //  XX use u3a_celloc?
-  //
-  c3_w*     new_w = u3a_walloc(c3_wiseof(u3a_cell));
+  c3_w*     new_w = u3a_celloc();
   u3a_cell* new_u = (u3a_cell*)(void *)new_w;
   u3_cell     new = u3a_to_pom(u3a_outa(new_u));
 
