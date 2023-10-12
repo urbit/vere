@@ -3,6 +3,7 @@
 #include "serial.h"
 
 #include <errno.h>
+#include <math.h>
 #include <fcntl.h>
 
 #include "allocate.h"
@@ -856,6 +857,831 @@ u3s_cue_atom(u3_atom a)
   return u3s_cue_bytes((c3_d)len_w, byt_y);
 }
 
+/* Compute the length of the address
+ */
+size_t _cs_etch_p_size(mpz_t a_mp) {
+
+  size_t syb_i = mpz_sizeinbase(a_mp, 256);
+
+  // 3 characters per syllabe, - every 2 syllabes, and -- every 8 syllabes,
+  // and ~
+  size_t len_i = syb_i * 3 + (syb_i / 2) + (syb_i / 8) + 1;
+
+  // Discount hep at the boundary of 2 syllabes
+  if ( 0 == (syb_i % 2) ) {
+    len_i -= 1;
+  }
+
+  // Discount hep at the boundary of 8 syllabes
+  if ( 0 == (syb_i % 8) ) {
+    len_i -= 1;
+  }
+
+  return len_i;
+}
+
+/* _cs_etch_p_bytes: atom to @p impl.
+ */
+c3_y*
+_cs_etch_p_bytes(mpz_t sxz_mp, c3_w len_w, c3_y* hun_y)
+{
+  c3_y* byt_y = hun_y + len_w - 1;
+
+  // Comets and below
+  //
+  c3_d sxz;
+  c3_s huk, hi, lo;
+
+  // Process in chunks of 64 bits
+  //
+  while ( mpz_size(sxz_mp) ) {
+
+    sxz = (c3_d) mpz_get_ui(sxz_mp);
+    mpz_tdiv_q_2exp(sxz_mp, sxz_mp, 64);
+
+    while ( sxz ) {
+
+      huk = sxz & 0xffff;
+
+      hi = huk >> 8;
+      lo = huk & 0xff;
+
+      u3_po_to_suffix(lo, byt_y - 2, byt_y - 1, byt_y);
+      u3_po_to_prefix(hi, byt_y - 5, byt_y - 4,  byt_y - 3);
+
+      sxz >>= 16;
+      byt_y -= 6;
+      len_w -= 6;
+
+      // Print - every two syllabes
+      if ( sxz ) {
+        *byt_y = '-';
+        byt_y--;
+        len_w--;
+      }
+    }
+
+    // Print -- every four syllabes
+    if ( mpz_size(sxz_mp) ) {
+      *byt_y = '-';
+      *(byt_y - 1) = '-';
+
+      byt_y -= 2;
+      len_w -= 2;
+    }
+  }
+
+  *byt_y = '~';
+
+  return byt_y;
+}
+
+
+/* u3s_etch_p_smol(): c3_d to @p
+**
+**   =(28 (met 3 (scot %p (dec (bex 64)))))
+*/
+c3_y*
+u3s_etch_p_smol(c3_d sxz, c3_y hun_y[SMOL_P])
+{
+  c3_y* byt_y = hun_y + SMOL_P - 1;
+
+  // Galaxy
+  //
+  if ( sxz <= 0xff) {
+
+    u3_po_to_suffix(sxz & 0xff, byt_y - 2, byt_y - 1, byt_y);
+    byt_y -= 3;
+
+    *byt_y = '~';
+
+    return byt_y;
+  }
+
+  // Stars, planets and moons
+  //
+  c3_s huk, hi, lo;
+
+  while ( sxz ) {
+
+    huk = sxz & 0xffff;
+
+    hi = huk >> 8;
+    lo = huk & 0xff;
+
+    u3_po_to_suffix(lo, byt_y - 2, byt_y - 1, byt_y);
+    u3_po_to_prefix(hi, byt_y - 5, byt_y - 4,  byt_y - 3);
+
+    sxz >>= 16;
+    byt_y -= 6;
+
+    // Print a separator every two syllabes
+    if ( sxz ) {
+      *byt_y = '-';
+      byt_y--;
+    }
+  }
+
+  *byt_y = '~';
+
+  return byt_y;
+}
+
+/* u3s_etch_p_c(): atom to @p, as a malloc'd c string.
+ */
+size_t
+u3s_etch_p_c(u3_atom a, c3_c** out_c)
+{
+
+  c3_d a_d;
+  size_t len_i;
+  c3_y* buf_y;
+
+  u3_atom sxz = a;
+  c3_o fen_o = c3n;
+
+  // We only need to unscramble planets and below
+  //
+  if ( c3n == u3a_is_cat(a) ||
+      (c3y == u3a_is_cat(a) && a >= 0x10000) ) {
+
+    sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
+  }
+
+  if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
+    c3_y hun_y[SMOL_P];
+
+    buf_y = u3s_etch_p_smol(a_d, hun_y);
+    len_i = SMOL_P - ((c3_p)buf_y - (c3_p)hun_y);
+
+    *out_c = c3_malloc(len_i + 1);
+    (*out_c)[len_i] = 0;
+    memcpy(*out_c, buf_y, len_i);
+
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
+
+    return len_i;
+  }
+
+  mpz_t     sxz_mp;
+  u3r_mp(sxz_mp, sxz);
+
+  len_i = _cs_etch_p_size(sxz_mp);
+  buf_y = malloc(len_i+1);
+  buf_y[len_i] = 0;
+
+  _cs_etch_p_bytes(sxz_mp, len_i, buf_y);
+
+  *out_c = (c3_c*)buf_y;
+
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
+  mpz_clear(sxz_mp);
+  return len_i;
+}
+
+/* u3s_etch_p(): atom to @p.
+ */
+u3_atom
+u3s_etch_p(u3_atom a)
+{
+  c3_d a_d;
+
+  u3_atom sxz = a;
+  c3_o fen_o = c3n;
+
+  // We only need to unscramble planets and below
+  //
+  if ( c3n == u3a_is_cat(a) ||
+      (c3y == u3a_is_cat(a) && a >= 0x10000) ) {
+
+    sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
+  }
+
+  if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
+    c3_y  hun_y[SMOL_P];
+    c3_y* buf_y = u3s_etch_p_smol(a_d, hun_y);
+    c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
+
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
+    return u3i_bytes(SMOL_P - dif_w, buf_y);
+  }
+
+  u3i_slab sab_u;
+  size_t   len_i;
+  mpz_t     sxz_mp;
+  u3r_mp(sxz_mp, sxz);
+
+  len_i = _cs_etch_p_size(sxz_mp);
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_p_bytes(sxz_mp, len_i, sab_u.buf_y);
+
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
+  mpz_clear(sxz_mp);
+  return u3i_slab_mint_bytes(&sab_u);
+}
+
+/* +yo time constants
+ */
+#define CET_YO 36524
+#define DAY_YO 86400
+#define ERA_YO 146097
+#define HOR_YO 3600
+#define MIT_YO 60
+#define JES_YO 292277024400
+
+static c3_s _cs_moh_yo[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static c3_s _cs_moy_yo[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+/* +tarp - parsed time
+ */
+struct _tarp {
+
+  // days
+  union {
+    mpz_t day_mp;  // big
+    c3_d  day_d;   // smol
+  };
+  c3_o dag_o;  // is day big?
+
+  c3_w  hor_w;  // hours
+  c3_w  mit_w;  // minutes
+  c3_w  sec_w;  // seconds
+
+  c3_d  fan_d;  // fractional seconds
+  size_t cuk_i; // number 4-bit chunks in fan_d
+
+};
+
+/* [year month day]
+ */
+struct _cald {
+
+  // year
+  union {
+    mpz_t yer_mp;
+    c3_d  yer_d;
+  };
+
+  // year AD?
+  c3_y yad_o;
+
+  c3_s mot_s; // month
+  c3_s day_s; // day
+};
+
+static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
+{
+  size_t len_i = 0;
+
+  // Space for fractional part
+  //
+  if ( rip->fan_d > 0 ) {
+
+    len_i += 4*rip->cuk_i + rip->cuk_i; // cuk_i 2-byte chunks + cuk_i .
+
+    len_i += 1; // .
+
+    len_i += 8+2; // hh.mm.ss + ..
+  }
+
+  // No fractional part
+  //
+  else {
+
+    // Time hh.mm.ss
+    if ( !( rip->hor_w == 0 && rip->mit_w == 0 && rip->sec_w == 0) ) {
+      len_i += 8 + 2; // + ..
+    }
+  }
+
+  // year.month.day
+  //
+  if ( ger->day_s < 10 ) {
+    len_i += 1;
+  }
+  else {
+    len_i += 2;
+  }
+
+  len_i += 1; // .
+
+  if( ger->mot_s < 10 ) {
+    len_i += 1;
+  }
+  else {
+    len_i += 2;
+  }
+
+  len_i += 1; // .
+
+  if ( _(rip->dag_o) ) {
+    len_i += mpz_sizeinbase(ger->yer_mp, 10);
+  }
+  else {
+    len_i += ceil(log10(ger->yer_d)) + 1;
+  }
+
+  if ( !_(ger->yad_o) ) {
+    len_i += 1; // -
+  }
+
+  len_i += 1; // ~
+
+  return len_i;
+}
+
+/* +yell: atom to +tarp
+ */
+static struct _tarp _cs_yell(u3_atom a) {
+
+  u3_atom sec_a;
+  mpz_t sec_mp;
+
+  struct _tarp rip;
+
+  rip.fan_d = u3r_chub(0,a);
+  rip.cuk_i = 4;
+
+  // Shift right until first non-zero chunk
+  //
+  if (rip.fan_d > 0) {
+    while ( (rip.fan_d & 0xffff) == 0) {
+      rip.fan_d >>= 16;
+      rip.cuk_i--;
+    }
+  }
+  else {
+    rip.cuk_i = 0;
+  }
+
+  c3_d sec_d;
+  sec_a = u3qc_rsh(6, 1, a);
+
+  if ( c3y == u3r_safe_chub(sec_a, &sec_d) ) {
+    rip.day_d = sec_d / DAY_YO;
+    rip.sec_w = sec_d % DAY_YO;
+
+    rip.dag_o = c3n;
+  }
+
+  else {
+    u3r_mp(sec_mp, sec_a);
+    mpz_init2(rip.day_mp, 64+32);
+
+    mpz_tdiv_qr_ui(rip.day_mp, sec_mp, sec_mp, DAY_YO);
+    rip.sec_w = mpz_get_ui(sec_mp);
+
+    if ( mpz_fits_ulong_p(rip.day_mp) ) {
+      // XX make sure this C is solid
+      rip.day_d = mpz_get_ui(rip.day_mp);
+
+      mpz_clear(rip.day_mp);
+
+      rip.dag_o = c3n;
+    }
+    else {
+      rip.dag_o = c3y;
+    }
+
+    mpz_clear(sec_mp);
+  }
+
+  rip.hor_w = rip.sec_w / HOR_YO;
+  rip.sec_w %= HOR_YO;
+
+  rip.mit_w = rip.sec_w / MIT_YO;
+  rip.sec_w %= MIT_YO;
+
+
+  u3z(sec_a);
+  return rip;
+}
+
+/* +yall: small day / day of year
+ */
+static struct _cald _cs_yall_smol(c3_d day_d) {
+
+  c3_d  era_d;
+  c3_d  cet_d;
+  c3_y  lep_o;
+
+  struct _cald ger;
+
+  era_d = 0;
+  ger.yer_d = 0;
+
+  era_d = day_d / ERA_YO;
+  day_d %= ERA_YO;
+
+  // We are within the first century,
+  // and the first year is a leap year, despite
+  // it being a centurial year -- it is divisible by 400
+  //
+  if ( day_d <= CET_YO ) {
+    lep_o = c3y;
+    cet_d = 0;
+  }
+
+  // We are past the first century
+  //
+  else {
+    lep_o = c3n;
+    cet_d = 1;
+    day_d -= (CET_YO + 1);
+
+    cet_d += day_d / CET_YO;
+    day_d = day_d % CET_YO;
+
+    // yer <- yer + cet*100
+    ger.yer_d += cet_d*100;
+
+  }
+
+  // yer <- yer + era*400
+  ger.yer_d += era_d*400;
+
+  c3_d dis_d;
+  c3_d ner_d = 0;
+
+  if ( _(lep_o) ) {
+    dis_d = 366;
+  }
+  else {
+    dis_d = 365;
+  }
+
+  // Exceeded a year
+  //
+  while ( day_d >= dis_d ) {
+    ner_d += 1;
+    day_d -= dis_d;
+
+    // leap year
+    //
+    if ( !(ner_d % 4) ) {
+      lep_o = c3y;
+      dis_d = 366;
+    }
+    else {
+      lep_o = c3n;
+      dis_d = 365;
+    }
+  }
+
+  ger.yer_d += ner_d;
+
+  c3_s* cah;
+  ger.mot_s = 0;
+
+  if ( _(lep_o) ) {
+    cah = _cs_moy_yo;
+  }
+  else {
+    cah = _cs_moh_yo;
+  }
+
+  // At this point day_d < 366
+  ger.day_s = day_d;
+
+  // Count towards the month
+  //
+  while ( ger.day_s >= cah[ger.mot_s] ) {
+    ger.day_s -= cah[ger.mot_s];
+    ger.mot_s++;
+  }
+
+  ger.day_s++;
+  ger.mot_s++;
+
+  // Year before Christ
+  //
+  if ( ger.yer_d <= JES_YO ) {
+    ger.yer_d = 1 + JES_YO - ger.yer_d; // 0 AD is 1 BC
+    ger.yad_o = c3n;
+  }
+
+  // Year after Christ
+  //
+  else {
+    ger.yer_d -= JES_YO;
+    ger.yad_o = c3y;
+  }
+
+  return ger;
+}
+/* +yall: day / day of year
+ */
+static struct _cald _cs_yall(mpz_t day_mp) {
+
+  mpz_t era_mp;
+  c3_d  cet_d;
+  c3_d  day_d;
+  c3_y  lep_o;
+
+  struct _cald ger;
+
+  mpz_init(era_mp);
+  mpz_init(ger.yer_mp);
+
+  mpz_tdiv_qr_ui(era_mp, day_mp, day_mp, ERA_YO);
+
+  day_d = mpz_get_ui(day_mp);
+
+  // We are within the first century,
+  // and the first year is a leap year, despite
+  // it being a centurial year -- it is divisible by 400
+  //
+  if ( day_d <= CET_YO ) {
+    lep_o = c3y;
+    cet_d = 0;
+  }
+
+  // We are past the first century
+  //
+  else {
+    lep_o = c3n;
+    cet_d = 1;
+    day_d -= (CET_YO + 1);
+
+    cet_d += day_d / CET_YO;
+    day_d = day_d % CET_YO;
+
+    // yer <- yer + cet*100
+    mpz_add_ui(ger.yer_mp, ger.yer_mp, cet_d*100);
+
+  }
+
+  // yer <- yer + era*400
+  mpz_addmul_ui(ger.yer_mp, era_mp, 400);
+
+  c3_d dis_d;
+  c3_d ner_d = 0;
+
+  if ( _(lep_o) ) {
+    dis_d = 366;
+  }
+  else {
+    dis_d = 365;
+  }
+
+  // Exceeded a year
+  //
+  while ( day_d >= dis_d ) {
+    ner_d += 1;
+    day_d -= dis_d;
+
+    // leap year
+    //
+    if ( !(ner_d % 4) ) {
+      lep_o = c3y;
+      dis_d = 366;
+    }
+    else {
+      lep_o = c3n;
+      dis_d = 365;
+    }
+  }
+
+  mpz_add_ui(ger.yer_mp, ger.yer_mp, ner_d);
+
+  c3_s* cah;
+  ger.mot_s = 0;
+
+  if ( _(lep_o) ) {
+    cah = _cs_moy_yo;
+  }
+  else {
+    cah = _cs_moh_yo;
+  }
+
+  // At this point day_d < 366
+  ger.day_s = day_d;
+
+  // Count towards the month
+  //
+  while ( ger.day_s >= cah[ger.mot_s] ) {
+    ger.day_s -= cah[ger.mot_s];
+    ger.mot_s++;
+  }
+
+  ger.day_s++;
+  ger.mot_s++;
+
+  // Year before Christ
+  //
+  if ( mpz_cmp_ui(ger.yer_mp, JES_YO) <= 0 ) {
+
+    mpz_ui_sub(ger.yer_mp, 1 + JES_YO, ger.yer_mp);
+    ger.yad_o = c3n;
+  }
+
+  // Year after Christ
+  //
+  else {
+    mpz_sub_ui(ger.yer_mp, ger.yer_mp, JES_YO);
+    ger.yad_o = c3y;
+  }
+
+  mpz_clear(era_mp);
+  return ger;
+}
+/* _cs_etch_da_bytes(): atom to @da impl.
+ */
+size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3_y* hun_y)
+{
+
+  c3_y* buf_y = hun_y + (len_i - 1);
+
+  c3_s paf_s = 0x0;
+
+  // Print out up to four 16-bit chunks
+  //
+  if ( rip->fan_d > 0) {
+
+    while ( rip->cuk_i > 0) {
+
+      paf_s = rip->fan_d & 0xffff;
+      rip->fan_d >>= 16;
+
+      // Print the 16-bit chunk in hexadecimal
+      *buf_y-- = u3s_dit_y[ (paf_s >> 0) & 0xf ];
+      *buf_y-- = u3s_dit_y[ (paf_s >> 4) & 0xf ];
+      *buf_y-- = u3s_dit_y[ (paf_s >> 8) & 0xf ];
+      *buf_y-- = u3s_dit_y[ (paf_s >> 12) & 0xf ];
+      *buf_y-- = '.';
+
+      rip->cuk_i--;
+    }
+
+    *buf_y-- = '.';
+  }
+
+  // Print the time if the time is non-zero, or
+  // if we have printed fractional seconds
+  //
+  if ( buf_y < (hun_y + len_i - 1) || ! ( rip->fan_d == 0 && rip->hor_w == 0 && rip->mit_w == 0 && rip->sec_w == 0 ) ) {
+
+      *buf_y-- = '0' + ( rip->sec_w % 10 );
+      *buf_y-- = '0' + ( rip->sec_w / 10 );
+      *buf_y-- = '.';
+
+      *buf_y-- = '0' + ( rip->mit_w % 10 );
+      *buf_y-- = '0' + ( rip->mit_w / 10 );
+      *buf_y-- = '.';
+
+      *buf_y-- = '0' + ( rip->hor_w % 10 );
+      *buf_y-- = '0' + ( rip->hor_w / 10 );
+      *buf_y-- = '.';
+      *buf_y-- = '.';
+  }
+
+  // print out the day of the year
+  //
+  *buf_y-- = '0' + ( ger->day_s % 10);
+  ger->day_s /= 10;
+  if ( ger->day_s > 0 ) {
+    *buf_y-- = '0' + ger->day_s;
+  }
+  *buf_y-- = '.';
+
+  *buf_y-- = '0' + ( ger->mot_s % 10);
+  ger->mot_s /= 10;
+  if ( ger->mot_s > 0 ) {
+    *buf_y-- = '0' + ger->mot_s;
+  }
+  *buf_y-- = '.';
+
+  // Print out the year
+  //
+
+  // BC year
+  if( ger->yad_o == c3n ) {
+    *buf_y-- = '-';
+  }
+
+
+  // Smol year
+  //
+  if ( !_(rip->dag_o) ) {
+    while ( ger->yer_d > 0 ) {
+      *buf_y-- = '0' + ger->yer_d % 10;
+      ger->yer_d /= 10;
+    }
+  }
+
+  else {
+
+    mpz_t r_mp;
+    mpz_init(r_mp);
+    c3_d dit_d;
+
+    // XX speed up by reading whole words ?
+    //
+    while ( mpz_size(ger->yer_mp) > 0 ) {
+
+      dit_d = mpz_tdiv_qr_ui(ger->yer_mp, r_mp, ger->yer_mp, 10);
+      *buf_y-- = '0' + dit_d;
+    }
+
+    mpz_clear(r_mp);
+  }
+
+  *buf_y = '~';
+
+  size_t dif_i = buf_y - hun_y;
+
+  if ( dif_i > 0 ) {
+    len_i -= dif_i;
+    memmove(hun_y, buf_y, len_i);
+    memset(hun_y + len_i, 0, dif_i);
+  }
+
+  return len_i;
+}
+
+/* _u3s_etch_da: atom to @da.
+ */
+u3_atom
+u3s_etch_da(u3_atom a)
+{
+
+  struct _tarp rip;
+  struct _cald ger;
+  size_t len_i;
+
+  rip = _cs_yell(a);
+
+  if ( !_(rip.dag_o) ) {
+    ger = _cs_yall_smol(rip.day_d);
+  }
+  else {
+    ger = _cs_yall(rip.day_mp);
+  }
+
+  len_i = _cs_etch_da_size(&rip, &ger);
+
+  u3i_slab sab_u;
+  c3_y* buf_y;
+
+  u3i_slab_bare(&sab_u, 3, len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  _cs_etch_da_bytes(&rip, &ger, len_i, sab_u.buf_y);
+
+  if ( _(rip.dag_o) ) {
+    mpz_clear(rip.day_mp);
+    mpz_clear(ger.yer_mp);
+  }
+  return u3i_slab_mint_bytes(&sab_u);
+}
+
+/* u3s_etch_da_c: atom to @da, as a malloc'd c string.
+ */
+size_t
+u3s_etch_da_c(u3_atom a, c3_c** out_c)
+{
+  c3_y* buf_y;
+  size_t len_i;
+  struct _tarp rip;
+  struct _cald ger;
+
+  rip = _cs_yell(a);
+
+  if ( !_(rip.dag_o) ) {
+    ger = _cs_yall_smol(rip.day_d);
+  }
+  else {
+    ger = _cs_yall(rip.day_mp);
+  }
+
+  len_i = _cs_etch_da_size(&rip, &ger);
+
+  buf_y = c3_malloc(len_i + 1);
+  buf_y[len_i] = 0;
+
+  len_i = _cs_etch_da_bytes(&rip, &ger, len_i, buf_y);
+
+  *out_c = (c3_c*)buf_y;
+
+  if ( _(rip.dag_o) ) {
+    mpz_clear(rip.day_mp);
+    mpz_clear(ger.yer_mp);
+  }
+  return len_i;
+}
+
 /* _cs_etch_ud_size(): output length in @ud for given mpz_t.
 */
 static inline size_t
@@ -883,7 +1709,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   else {
     while ( 1 ) {
       b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
-      u3_assert( mpz_get_ui(b_mp) == b_w ); // XX
 
       if ( !mpz_size(a_mp) ) {
         while ( b_w ) {
@@ -904,8 +1729,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 
   buf_y++;
 
-  u3_assert( buf_y >= hun_y ); // XX
-
   //  mpz_sizeinbase may overestimate by 1
   //
   {
@@ -919,7 +1742,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   }
 
   mpz_clear(b_mp);
-
   return len_i;
 }
 
@@ -928,14 +1750,15 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 **   =(26 (met 3 (scot %ud (dec (bex 64)))))
 */
 c3_y*
-u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26])
+u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[SMOL_UD])
 {
-  c3_y*  buf_y = hun_y + 25;
+  c3_y*  buf_y = hun_y + SMOL_UD - 1;
   c3_w     b_w;
 
   if ( !a_d ) {
     *buf_y-- = '0';
   }
+
   else {
     while ( 1 ) {
       b_w  = a_d % 1000;
@@ -969,10 +1792,10 @@ u3s_etch_ud(u3_atom a)
   c3_d a_d;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
     c3_y* buf_y = u3s_etch_ud_smol(a_d, hun_y);
     c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
-    return u3i_bytes(26 - dif_w, buf_y);
+    return u3i_bytes(SMOL_UD - dif_w, buf_y);
   }
 
   u3i_slab sab_u;
@@ -1000,10 +1823,10 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   c3_y*  buf_y;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
 
     buf_y = u3s_etch_ud_smol(a_d, hun_y);
-    len_i = 26 - ((c3_p)buf_y - (c3_p)hun_y);
+    len_i = SMOL_UD - ((c3_p)buf_y - (c3_p)hun_y);
 
     *out_c = c3_malloc(len_i + 1);
     (*out_c)[len_i] = 0;
@@ -1021,10 +1844,153 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
 
   len_i = _cs_etch_ud_bytes(a_mp, len_i, buf_y);
 
-  mpz_clear(a_mp);
-
   *out_c = (c3_c*)buf_y;
+
+  mpz_clear(a_mp);
   return len_i;
+}
+
+/* _cs_etch_ui_size(): output length in @ui for given mpz_t
+ */
+static inline size_t
+_cs_etch_ui_size(mpz_t a_mp)
+{
+    size_t len_i = mpz_sizeinbase(a_mp, 10);
+    return len_i + 2; // + 0i
+}
+
+/* _cs_etch_ui_bytes(): atom to @ui impl.
+ */
+static size_t
+_cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
+{
+    c3_y* buf_y = hun_y + (len_i - 1);
+    c3_w    b_w;
+    size_t  dif_i;
+
+    if ( !mpz_size(a_mp) ) {
+        *buf_y-- = '0';
+    }
+    else {
+        while ( mpz_size(a_mp) ) {
+
+            // 9 digits fit into a word
+            b_w = mpz_tdiv_q_ui(a_mp, a_mp, 1000000000);
+
+            while ( b_w ) {
+                *buf_y-- = '0' + (b_w % 10);
+                b_w /= 10;
+            }
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y = '0';
+
+    // XX mpz_sizeinbase may overestimate by 1
+    {
+        size_t dif_i = buf_y - hun_y;
+
+        if ( dif_i ) {
+            len_i -= dif_i;
+            memmove(hun_y, buf_y, len_i);
+            memset(hun_y + len_i, 0, dif_i);
+        }
+    }
+
+    return len_i;
+}
+
+/* u3s_etch_ui_smol(): c3_d to @ui
+ **
+ **  =(22 (met 3 (scot %ud (dec (bex 64)))))
+ */
+c3_y*
+u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI])
+{
+    c3_y* buf_y = hun_y + SMOL_UI - 1;
+    c3_w  b_w;
+
+    if ( !a_d ) {
+        *buf_y-- = '0';
+    }
+    else{
+        while ( a_d > 0 ) {
+            b_w = a_d % 10;
+            a_d /= 10;
+
+            *buf_y-- = '0' + b_w;
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y-- = '0';
+
+    return buf_y + 1;
+}
+
+/* u3s_etch_ui(): atom to @ui.
+ */
+u3_atom
+u3s_etch_ui(u3_atom a)
+{
+    c3_d a_d;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI];
+        c3_y* buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        c3_w dif_w = (c3_p)buf_y - (c3_p)hun_y;
+        return u3i_bytes(SMOL_UI - dif_w, buf_y);
+    }
+
+    u3i_slab sab_u;
+    size_t   len_i;
+    mpz_t    a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    u3i_slab_bare(&sab_u, 3, len_i);
+    sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+    _cs_etch_ui_bytes(a_mp, len_i, sab_u.buf_y);
+
+    mpz_clear(a_mp);
+    return u3i_slab_mint_bytes(&sab_u);
+}
+
+/* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string.
+ */
+size_t
+u3s_etch_ui_c(u3_atom a, c3_c** out_c)
+{
+    c3_d   a_d;
+    size_t len_i;
+    c3_y*  buf_y;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI];
+        buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        len_i = SMOL_UI - ((c3_p)buf_y - (c3_p)hun_y);
+        *out_c = c3_malloc(len_i + 1);
+        (*out_c)[len_i] = 0;
+        memcpy(*out_c, buf_y, len_i);
+
+        return len_i;
+    }
+
+    mpz_t a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    buf_y = c3_malloc(len_i + 1);
+    buf_y[len_i] = 0;
+
+    len_i = _cs_etch_ui_bytes(a_mp, len_i, buf_y);
+
+    *out_c = (c3_c*)buf_y;
+
+    mpz_clear(a_mp);
+    return len_i;
 }
 
 /* _cs_etch_ux_bytes(): atom to @ux impl.
@@ -1293,7 +2259,881 @@ u3s_etch_uw_c(u3_atom a, c3_c** out_c)
 
 #undef _divc_nz
 
+/* +dot
+ */
+static inline c3_o _cs_dot(c3_w* len_w, c3_y** byt_yp)
+{
+  if ( *len_w > 0 && **byt_yp == '.' ) {
+    (*byt_yp)++;
+    (*len_w)--;
+    return c3y;
+  }
+  else {
+    return c3n;
+  }
+}
+
+#define arelower(a,b,c) (islower(a) && islower(b) && islower(c))
+
+static inline c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
+
+  c3_y a,b,c;
+  c3_y* byt_y = *byt_yp;
+
+  if ( *len_w < 3 ) {
+    return -1;
+  }
+
+  a = *byt_y;
+  b = *(byt_y + 1);
+  c = *(byt_y + 2);
+
+  if ( ! arelower(a,b,c) ) {
+    return -1;
+  }
+
+  *byt_yp += 3;
+  *len_w -= 3;
+
+  return u3_po_find_prefix(a,b,c);
+}
+
+static inline c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
+
+  c3_y a,b,c;
+  c3_y* byt_y = *byt_yp;
+
+  if ( *len_w < 3 ) {
+    return -1;
+  }
+
+  a = *byt_y;
+  b = *(byt_y + 1);
+  c = *(byt_y + 2);
+
+  if ( ! arelower(a,b,c) ) {
+    return -1;
+  }
+
+  *byt_yp += 3;
+  *len_w -= 3;
+
+  return u3_po_find_suffix(a,b,c);
+}
+
+#undef arelower
+
+/* u3s_sift_p_bytes: parse @p impl.
+ */
+u3_weak
+u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
+{
+  c3_d pun_d;
+
+  c3_s suf_s;
+  c3_s puf_s;
+
+  if ( !len_w || *byt_y != '~') {
+    return u3_none;
+  }
+
+  len_w--;
+  byt_y++;
+
+  suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+  // A galaxy
+  //
+  if ( !len_w && suf_s <= 0xff) {
+    return (u3_atom) suf_s;
+  }
+
+  if ( !len_w ) {
+    return u3_none;
+  }
+
+  // Rewind to match a star
+  //
+  len_w += 3;
+  byt_y -= 3;
+
+  puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+  if ( puf_s > 0xff) {
+    return u3_none;
+  }
+
+  suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+  if ( suf_s > 0xff ) {
+    return u3_none;
+  }
+
+  pun_d = (puf_s << 8 ) + suf_s;
+
+  // A star, disallow ~doz for prefix
+  //
+  if ( !len_w && puf_s > 0 ) {
+    return (u3_atom) pun_d;
+  }
+
+  // +hef
+  if ( !pun_d ) {
+    return u3_none;
+  }
+
+  // At least a planet
+  //
+  if ( len_w < 7 ) {
+    return u3_none;
+  }
+
+  size_t hak = 1;
+
+  // Parse up to 3 head words (64-bit)
+  //
+  while ( len_w && hak < 4) {
+
+    if ( *byt_y != '-') {
+      return u3_none;
+    }
+
+    byt_y++;
+    len_w--;
+
+    puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+    if ( puf_s > 0xff ) {
+
+      // --, end of head
+      //
+      if ( *byt_y == '-' ) {
+        break;
+      }
+
+      else {
+        return u3_none;
+      }
+    }
+
+    suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+    if ( suf_s > 0xff ) {
+      return u3_none;
+    }
+
+    pun_d <<= 16;
+    pun_d += (puf_s << 8) + suf_s;
+
+    hak++;
+  }
+
+  if ( !len_w ) {
+
+      if ( c3y == u3a_is_cat(pun_d) ) {
+          return (u3_atom) u3qe_fynd_ob(pun_d);
+      }
+      else {
+          u3_atom pun = u3i_chub(pun_d);
+          u3_atom sun = u3qe_fynd_ob(pun);
+
+          u3z(pun);
+          return sun;
+      }
+  }
+
+  // Parse a big address in quadruples
+  //
+  mpz_t pun_mp;
+  mpz_init2(pun_mp, 128);
+
+  mpz_set_ui(pun_mp, pun_d);
+  pun_d = 0;
+
+  hak = 0;
+
+  // Rewind to separating --
+  //
+  byt_y -= 1;
+  len_w += 1;
+
+  // Parse in 64-bit chunks
+  //
+  while ( len_w ) {
+
+    if ( *byt_y != '-') {
+      goto sift_p_fail;
+    }
+
+    byt_y++;
+    len_w--;
+
+    if ( 0 == (hak % 4) ) {
+
+      // Separated by --
+      //
+      if ( *byt_y != '-' || len_w < 7) {
+        goto sift_p_fail;
+      }
+
+      byt_y++;
+      len_w--;
+    }
+
+    puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+    if ( puf_s > 0xff ) {
+      goto sift_p_fail;
+    }
+
+    suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
+    if ( suf_s > 0xff ) {
+      goto sift_p_fail;
+    }
+
+    pun_d <<= 16;
+    pun_d += (puf_s << 8) + suf_s;
+
+    hak++;
+
+    if ( hak == 4 ) {
+      mpz_mul_2exp(pun_mp, pun_mp, 64);
+      mpz_add_ui(pun_mp, pun_mp, pun_d);
+
+      pun_d = 0;
+      hak = 0;
+    }
+  }
+
+  // Number of words in the tail
+  // must be a multiple of four
+  //
+  if ( hak ) {
+    goto sift_p_fail;
+  }
+
+  if ( len_w ) {
+sift_p_fail:
+
+  mpz_clear(pun_mp);
+  return u3_none;
+  }
+
+  u3_atom pun = u3i_mp(pun_mp);
+  u3_atom sun = u3qe_fynd_ob(pun);
+
+  u3z(pun);
+  return sun;
+}
+
+/* u3s_sift_p: parse @p.
+*/
+u3_weak
+u3s_sift_p(u3_atom a)
+{
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  //
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+     byt_y = (c3_y*)&a;
+   }
+   else {
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_p_bytes(len_w, byt_y);
+}
+
 #define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
+
+/* +two: parse a maximum 2 digit decimal number, greater than 0.
+ */
+static inline c3_o _cs_two(c3_s* num, c3_w* len_w, c3_y** byt_yp)
+{
+
+  if ( !(*len_w) || !DIGIT(**byt_yp) || **byt_yp == '0' ) {
+    return c3n;
+  }
+
+  *num = **byt_yp - '0';
+
+  (*byt_yp)++;
+  (*len_w)--;
+
+  if ( *len_w && DIGIT(**byt_yp)) {
+    *num *= 10;
+    *num += **byt_yp - '0';
+
+    (*byt_yp)++;
+    (*len_w)--;
+  }
+
+  return c3y;
+}
+
+/* +duo: parse a maximum 2 digit decimal number,
+ * allowing for leading 0.
+ */
+static inline c3_o _cs_duo(c3_s* num, c3_w* len_w, c3_y** byt_yp)
+{
+
+  if ( !(*len_w) || !DIGIT(**byt_yp) ) {
+    return c3n;
+  }
+
+  *num = **byt_yp - '0';
+  (*byt_yp)++;
+  (*len_w)--;
+
+  if ( *len_w && DIGIT(**byt_yp)) {
+    *num *= 10;
+    *num += **byt_yp - '0';
+    (*byt_yp)++;
+    (*len_w)--;
+  }
+
+  return c3y;
+}
+
+/* _cs_dex_val: char to decimal digit.
+ */
+static inline c3_s _cs_dex_val(c3_y dex) {
+
+  if ( dex > '9' ) {
+    return -1;
+  }
+  else {
+    return dex  - '0';
+  }
+}
+
+/* _cs_hex_val: char to hexadecimal digit.
+ */
+static inline c3_s _cs_hex_val(c3_y hex) {
+
+  if ( hex > '9' ) {
+    if ( hex < 'a' ) {
+      return -1;
+    }
+    // hex >= 'a'
+    else {
+      return (hex - 'a') + 10;
+    }
+  }
+  // hex <= '9'
+  else {
+    return hex - '0';
+  }
+}
+
+/* _cs_viz_val: char to base-32 digit.
+ */
+static inline c3_s _cs_viz_val(c3_y viz) {
+
+  if ( viz > '9' ) {
+    if ( viz < 'a' ) {
+      return -1;
+    }
+    // viz >= 'a'
+    else {
+      return (viz - 'a') + 10;
+    }
+  }
+
+  // viz <= '9'
+  else {
+    return viz - '0';
+  }
+
+}
+
+/* _cs_wiz_val: char to base-64 digit.
+ */
+static inline c3_s _cs_wiz_val(c3_y wiz) {
+
+  if ( wiz > '9' ) {
+
+    if ( wiz < 'A' ) {
+      return -1;
+    }
+
+    // wiz >= 'A'
+    else {
+
+      if ( wiz > 'Z' ) {
+
+        if ( wiz < 'a' ) {
+          return -1;
+        }
+
+        // wiz >= 'a'
+        else {
+
+          if ( wiz > 'z' ) {
+
+            if ( wiz == '~' ) {
+              return 63;
+            }
+
+            else {
+              return -1;
+            }
+          }
+          // 'a' <= wiz <= 'z'
+          else {
+            return wiz - 'a' + 10;
+          }
+
+        }
+      }
+
+      // 'A' <= wiz <= 'Z'
+      else {
+        return wiz - 'A' + 36;
+      }
+    }
+
+  }
+  // wiz <= '9'
+  else {
+    if ( wiz == '-' ) {
+      return 62;
+    }
+    else {
+      return wiz - '0';
+    }
+  }
+}
+
+
+/* +yelp
+ */
+static inline c3_o _cs_yelp_mp(mpz_t yer_mp)
+{
+
+  c3_o res_o;
+
+  if ( mpz_divisible_ui_p(yer_mp, 4) ) {
+
+    if ( mpz_divisible_ui_p(yer_mp, 100) ) {
+
+      if ( mpz_divisible_ui_p(yer_mp, 400) ) {
+        res_o = c3y;
+      }
+      else {
+        res_o = c3n;
+      }
+    }
+
+    else {
+      res_o = c3y;
+    }
+  }
+  else {
+    res_o = c3n;
+  }
+
+  return res_o;
+}
+
+/* ++yelq:when:so
+ */
+static inline c3_o _cs_yelq_mp(c3_o ad_o, mpz_t yer_mp) {
+
+  if ( _(ad_o) ) {
+    return _cs_yelp_mp(yer_mp);
+  }
+  else {
+    c3_o res_o;
+
+    mpz_t ber_mp;
+    mpz_init(ber_mp);
+
+    mpz_sub_ui(ber_mp, yer_mp, 1);
+
+    res_o = _cs_yelp_mp(ber_mp);
+
+    mpz_clear(ber_mp);
+    return res_o;
+  }
+}
+/* +yawn: days since the beginning.
+ */
+static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
+{
+  c3_s* cah;
+
+  mpz_init2(days_mp, 128);
+
+  if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
+    cah = _cs_moy_yo;
+  }
+  else {
+    cah = _cs_moh_yo;
+  }
+
+  cal->day_s--;
+  cal->mot_s--;
+
+  // Elapsed days
+  //
+  mpz_add_ui(days_mp, days_mp, cal->day_s);
+
+  // Elapsed days in months
+  //
+  for ( size_t mot = 0; mot < cal->mot_s; mot++ ) {
+    mpz_add_ui(days_mp, days_mp, cah[mot]);
+  }
+
+  // Elapsed days in years
+  //
+  while ( mpz_cmp_ui(cal->yer_mp, 0) > 0) {
+
+    // Not divisible by 4
+    //
+    if ( ! mpz_divisible_ui_p(cal->yer_mp, 4) ) {
+
+      mpz_sub_ui(cal->yer_mp, cal->yer_mp, 1);
+
+      if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
+        mpz_add_ui(days_mp, days_mp, 366);
+      }
+      else {
+        mpz_add_ui(days_mp, days_mp, 365);
+      }
+    }
+
+    // Divisible by 4
+    //
+    else {
+
+      // Not divisible by 100
+      //
+      if ( ! mpz_divisible_ui_p(cal->yer_mp, 100) ) {
+
+        mpz_sub_ui(cal->yer_mp, cal->yer_mp, 4);
+
+        if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
+          mpz_add_ui(days_mp, days_mp, 1 + 365*4);
+        }
+        else {
+          mpz_add_ui(days_mp, days_mp, 365*4);
+        }
+      }
+
+      // Divisible by 4 & 100
+      //
+      else {
+
+        // Not divisible by 400
+        //
+        if ( ! mpz_divisible_ui_p(cal->yer_mp, 400) ) {
+          mpz_sub_ui(cal->yer_mp, cal->yer_mp, 100);
+
+          if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
+            mpz_add_ui(days_mp, days_mp, 1 + 365*100 + 24);
+          }
+          else {
+            mpz_add_ui(days_mp, days_mp, 365*100 + 24);
+          }
+        }
+        // Divisible by 4 & 100 & 400,
+        // finish the calculation
+        //
+        else {
+          mpz_tdiv_q_ui(cal->yer_mp, cal->yer_mp, 400);
+          mpz_addmul_ui(days_mp, cal->yer_mp, 1 + (365*100+24)*4);
+          break;
+        }
+      }
+    }
+  }
+}
+
+#define HEXDIGIT(a) ( ((a) >= '0' && (a) <= '9') || ((a) >= 'a' && (a) <= 'f') )
+
+/* u3s_sift_da_bytes: parse @da impl.
+ */
+u3_weak
+u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
+{
+  struct _cald cal;
+
+  if ( !len_w ) return u3_none;
+
+  // ++ slaw %da
+  //
+
+  // The shortest date is ~1.1.1, 6 bytes
+  if ( *byt_y != '~' || len_w < 6) return u3_none;
+
+  byt_y++;
+  len_w--;
+
+  // Parse the year
+  //
+  if ( DIGIT(*byt_y) && *byt_y != '0' ) {
+
+    mpz_init(cal.yer_mp);
+
+    mpz_add_ui(cal.yer_mp, cal.yer_mp, *byt_y - '0');
+
+    len_w--;
+    byt_y++;
+
+    while ( DIGIT(*byt_y) && len_w > 0) {
+
+      mpz_mul_ui(cal.yer_mp, cal.yer_mp, 10);
+      mpz_add_ui(cal.yer_mp, cal.yer_mp, *byt_y - '0');
+
+      len_w--;
+      byt_y++;
+    }
+
+  }
+
+  else {
+    return u3_none;
+  }
+
+  if ( !len_w ) {
+    goto sift_da_fail;
+  }
+
+  // Optional following hep to indicate a BC year
+  //
+  if ( *byt_y == '-' ) {
+
+    cal.yad_o = c3n;
+
+    len_w--;
+    byt_y++;
+  }
+  else {
+    cal.yad_o = c3y;
+  }
+
+  // +veal: check whether the year is in proper range
+  // For AD years: from 1 AD to the future
+  // For BC years: from 1 BC until JES_YO+1 BC
+  //
+  if ( mpz_cmp_ui(cal.yer_mp, 0) == 0 ||
+      (!_(cal.yad_o) && mpz_cmp_ui(cal.yer_mp, JES_YO+1) > 0 ) ) {
+    goto sift_da_fail;
+  }
+
+  // We need at least .m.d
+  //
+  if ( len_w < 4 ) {
+    goto sift_da_fail;
+  }
+
+  // Parse .month
+  //
+  cal.mot_s = 0;
+
+  if ( !_(_cs_dot(&len_w, &byt_y)) ||
+       !_(_cs_two(&cal.mot_s, &len_w, &byt_y)) ) {
+    goto sift_da_fail;
+  }
+
+  if ( cal.mot_s > 12 ) {
+    goto sift_da_fail;
+  }
+
+  // Parse .day
+  //
+  cal.day_s = 0;
+
+  if ( !_(_cs_dot(&len_w, &byt_y)) ||
+       !_(_cs_two(&cal.day_s, &len_w, &byt_y)) ){
+    goto sift_da_fail;
+  }
+
+
+  // Validate the day
+  //
+  c3_s mob;
+
+  // Leap year
+  //
+  if ( _(_cs_yelq_mp(cal.yad_o, cal.yer_mp)) ) {
+    mob = _cs_moy_yo[cal.mot_s-1];
+  }
+  else {
+    mob = _cs_moh_yo[cal.mot_s-1];
+  }
+
+  if ( cal.day_s > mob ) {
+    goto sift_da_fail;
+  }
+
+
+  /* hor.mit.sec..fan
+   */
+  c3_s hor_s = 0;
+  c3_s mit_s = 0;
+  c3_s sec_s = 0;
+  c3_d fan_d = 0;
+
+  // Parse the time ..hh.mm.ss
+  // This requires minimum of 10 bytes
+  //
+  if ( len_w >= 10 ) {
+
+    if ( *byt_y != '.' || *(byt_y+1) != '.') {
+      goto sift_da_fail;
+    }
+
+    len_w -= 2;
+    byt_y += 2;
+
+    // Parse hour
+    //
+    if ( !_(_cs_duo(&hor_s, &len_w, &byt_y)) ) {
+      goto sift_da_fail;
+    }
+
+    if ( hor_s > 23 ) {
+      goto sift_da_fail;
+    }
+
+    // Parse .minutes
+    //
+    if ( !_(_cs_dot(&len_w, &byt_y)) ||
+         !_(_cs_duo(&mit_s, &len_w, &byt_y)) ) {
+      goto sift_da_fail;
+    }
+
+    if ( mit_s > 59 ) {
+      goto sift_da_fail;
+    }
+
+    // Parse .seconds
+    //
+    if ( !_(_cs_dot(&len_w, &byt_y)) ||
+         !_(_cs_duo(&sec_s, &len_w, &byt_y)) ) {
+      goto sift_da_fail;
+    }
+
+    if ( sec_s > 59 ) {
+      goto sift_da_fail;
+    }
+
+    // Parse ..fractional, at least ..cafe
+    //
+    if ( len_w >= 6 ) {
+
+      if ( *byt_y != '.' ) {
+        goto sift_da_fail;
+      }
+
+      byt_y++;
+      len_w--;
+
+      size_t muc = 4;
+
+      while ( len_w >= 5 && muc > 0 ) {
+
+        if ( *byt_y != '.' ) {
+          goto sift_da_fail;
+        }
+
+        if ( !( HEXDIGIT(*(byt_y+1)) &&
+              HEXDIGIT(*(byt_y+2)) &&
+              HEXDIGIT(*(byt_y+3)) &&
+              HEXDIGIT(*(byt_y+4)) ) ) {
+          goto sift_da_fail;
+        }
+
+        fan_d += (c3_d)((_cs_hex_val(*(byt_y+1)) << 12) +
+                  (_cs_hex_val(*(byt_y+2)) << 8) +
+                  (_cs_hex_val(*(byt_y+3)) << 4) +
+                  (_cs_hex_val(*(byt_y+4))) ) << ((muc-1)*16);
+        muc--;
+        len_w -= 5;
+        byt_y += 5;
+
+      }
+
+    }
+  }
+
+  if ( len_w != 0 ) {
+sift_da_fail:
+    mpz_clear(cal.yer_mp);
+    return u3_none;
+  }
+
+  //
+  // ++ year, date to @da
+  //
+
+  // year to absolute year
+  //
+  if ( _(cal.yad_o) ) {
+    mpz_add_ui(cal.yer_mp, cal.yer_mp, JES_YO);
+  }
+
+  else {
+    mpz_ui_sub(cal.yer_mp, JES_YO+1, cal.yer_mp);
+  }
+
+  mpz_t days_mp;
+
+  _cs_yawn(days_mp, &cal);
+
+  // day_mp is now expressed in seconds
+  //
+  mpz_mul_ui(days_mp, days_mp, DAY_YO);
+
+  if ( hor_s ) {
+    mpz_add_ui(days_mp, days_mp, hor_s*HOR_YO);
+  }
+
+  if ( mit_s ) {
+    mpz_add_ui(days_mp, days_mp, mit_s*MIT_YO);
+  }
+
+  if ( sec_s ) {
+    mpz_add_ui(days_mp, days_mp, sec_s);
+  }
+
+  mpz_mul_2exp(days_mp, days_mp, 64);
+  mpz_add_ui(days_mp, days_mp, fan_d);
+
+  mpz_clear(cal.yer_mp);
+  return u3i_mp(days_mp);
+}
+
+#undef HEXDIGIT
+
+/* u3s_sift_da: parse @da.
+*/
+u3_weak
+u3s_sift_da(u3_atom a)
+{
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+     byt_y = (c3_y*)&a;
+   }
+   else {
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_da_bytes(len_w, byt_y);
+}
+
 #define BLOCK(a) (  ('.' == (a)[0]) \
                  && DIGIT(a[1])     \
                  && DIGIT(a[2])     \
@@ -1395,7 +3235,6 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 }
 
 #undef BLOCK
-#undef DIGIT
 
 /* u3s_sift_ud: parse @ud.
 */
@@ -1417,3 +3256,611 @@ u3s_sift_ud(u3_atom a)
 
   return u3s_sift_ud_bytes(len_w, byt_y);
 }
+
+#define PFIXD(a,b) { \
+  if ( len_w < 3) { \
+    return u3_none; \
+  } \
+  if ( !(*byt_y == a && *(byt_y+1) == b) ) { \
+    return u3_none; \
+  } \
+  len_w -= 2; \
+  byt_y += 2; \
+}
+
+/* u3s_sift_ui_bytes: parse @ui.
+ */
+u3_weak
+u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  PFIXD('0', 'i');
+
+  // Parse 0i0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  c3_d val_d = 0;
+
+  // Avoid gmp allocation if possible
+  //  - 19 decimal digits fit in 64 bits
+  //
+  if ( len_w <= 19 ) {
+
+    c3_s dit_s;
+
+    while ( len_w > 0 ) {
+
+      dit_s = _cs_dex_val(*byt_y);
+
+      if ( dit_s > 9 ) {
+        return u3_none;
+      }
+
+      val_d *= 10;
+      val_d += dit_s;
+
+      byt_y++;
+      len_w--;
+    }
+
+    return u3i_chub(val_d);
+  }
+
+  else {
+    mpz_t a_mp;
+    mpz_t bas_mp;
+
+    // avoid gmp realloc if possible
+    //
+    {
+      c3_d bit_d = len_w/3 * 10;
+      mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
+
+      mpz_init(bas_mp);
+      mpz_ui_pow_ui(bas_mp, 10, 19);
+    }
+
+    val_d = 0;
+    c3_s hak_s = 0;
+
+    while ( len_w ) {
+
+      if ( ! DIGIT(*byt_y) ) {
+
+        mpz_clear(bas_mp);
+        mpz_clear(a_mp);
+        return u3_none;
+      }
+
+      val_d *= 10;
+      val_d += *byt_y++ - '0';
+
+      len_w--;
+      hak_s++;
+
+      if ( hak_s == 19) {
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
+
+        val_d = 0;
+        hak_s = 0;
+      }
+
+    }
+
+    if ( hak_s ) {
+        mpz_ui_pow_ui(bas_mp, 10, hak_s);
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    mpz_clear(bas_mp);
+    return u3i_mp(a_mp);
+  }
+}
+
+#undef DIGIT
+
+/* u3s_sift_ui: parse @ui.
+ */
+u3_weak
+u3s_sift_ui(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_ui_bytes(len_w, byt_y);
+}
+
+
+/* u3s_sift_ux_bytes: parse @ux impl.
+ */
+u3_weak
+u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse the 0x prefix
+  //
+  PFIXD('0', 'x');
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse 0x0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  // Parse a small 64-bit hex number
+  //
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head
+  //
+  for ( size_t i = 0; i < 4; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_hex_val(*byt_y);
+
+    if ( dit_s < 16 ) {
+      val_d <<= 4;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  // Parse a list of dog followed by
+  // a quadruple of hex digits
+  //
+  size_t cuk = 0;
+
+  while ( len_w && cuk < 3) {
+
+    if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+      return u3_none;
+    }
+
+    for ( size_t i = 0; i < 4; i++ ) {
+
+      if ( ! len_w ) {
+        return u3_none;
+      }
+
+      dit_s = _cs_hex_val(*byt_y);
+
+      if ( dit_s < 16 ) {
+        val_d <<= 4;
+        val_d += dit_s;
+      }
+      else {
+        return u3_none;
+      }
+
+      byt_y++;
+      len_w--;
+    }
+    cuk++;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+
+  // Parse a big hex
+  //
+  else {
+    mpz_t a_mp;
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
+
+    val_d = 0;
+
+    // Parse a list of dog followed by
+    // a quadruple of hex digits
+    //
+    cuk = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_ux_fail;
+      }
+
+      for ( size_t i = 0; i < 4; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_ux_fail;
+        }
+
+        dit_s = _cs_hex_val(*byt_y);
+
+        if ( dit_s < 16 ) {
+          val_d <<= 4;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_ux_fail;
+        }
+
+        byt_y++;
+        len_w--;
+      }
+
+      cuk++;
+
+      // Read 4 chunks
+      //
+      if ( cuk == 4 ) {
+        mpz_mul_2exp(a_mp, a_mp, cuk*16);
+        mpz_add_ui(a_mp, a_mp, val_d);
+
+        val_d = 0;
+        cuk = 0;
+      }
+    }
+
+    if ( cuk ) {
+      mpz_mul_2exp(a_mp, a_mp, cuk*16);
+      mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_ux_fail:
+      mpz_clear(a_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(a_mp);
+  }
+
+}
+
+/* u3s_sift_ux: parse @ux.
+ */
+u3_weak
+u3s_sift_ux(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_ux_bytes(len_w, byt_y);
+}
+
+/* u3s_sift_uv_bytes: parse @uv impl.
+ */
+u3_weak
+u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  PFIXD('0', 'v');
+
+  // Parse 0v0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  // Parse a 64-bit viz number
+  //
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head
+  //
+  for ( size_t i = 0; i < 5; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_viz_val(*byt_y);
+
+    if ( dit_s < 32) {
+      val_d <<= 5;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+
+  // Parse a big viz
+  //
+  else {
+    mpz_t a_mp;
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
+
+    val_d = 0;
+
+    // Parse a list of dog followed by
+    // a quintuple of viz digits
+    //
+    size_t dit = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_uv_fail;
+      }
+
+      for ( size_t i = 0; i < 5; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_uv_fail;
+        }
+
+        dit_s = _cs_viz_val(*byt_y);
+
+        if ( dit_s < 32) {
+          val_d <<= 5;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_uv_fail;
+        }
+
+        byt_y++;
+        len_w--;
+        dit++;
+
+        // Read 12 digits
+        //
+        if ( dit == 12 ) {
+          mpz_mul_2exp(a_mp, a_mp, dit*5);
+          mpz_add_ui(a_mp, a_mp, val_d);
+
+          val_d = 0;
+          dit = 0;
+        }
+      }
+
+    }
+
+    if ( dit ) {
+      mpz_mul_2exp(a_mp, a_mp, dit*5);
+      mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_uv_fail:
+      mpz_clear(a_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(a_mp);
+  }
+
+}
+
+/* u3s_sift_uv: parse @uv.
+ */
+u3_weak
+u3s_sift_uv(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_uv_bytes(len_w, byt_y);
+}
+
+/* u3s_sift_uw_bytes: parse @uw impl.
+ */
+u3_weak
+u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse the 0w prefix
+  //
+  PFIXD('0', 'w');
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse 0w0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head
+  //
+  for ( size_t i = 0; i < 5; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_wiz_val(*byt_y);
+
+    if ( dit_s < 64) {
+      val_d <<= 6;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+
+  // Parse the tail
+  //
+  else {
+    mpz_t a_mp;
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
+
+    val_d = 0;
+
+    size_t dit = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_uw_fail;
+      }
+
+      for ( size_t i = 0; i < 5; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_uw_fail;
+        }
+
+
+        dit_s = _cs_wiz_val(*byt_y);
+
+        if ( dit_s < 64) {
+          val_d <<= 6;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_uw_fail;
+        }
+
+        byt_y++;
+        len_w--;
+        dit++;
+
+        if ( dit == 10) {
+          mpz_mul_2exp(a_mp, a_mp, dit*6);
+          mpz_add_ui(a_mp, a_mp, val_d);
+
+          val_d = 0;
+          dit = 0;
+        }
+      }
+
+    }
+
+    if ( dit ) {
+      mpz_mul_2exp(a_mp, a_mp, dit*6);
+      mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_uw_fail:
+      mpz_clear(a_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(a_mp);
+  }
+
+}
+
+/* u3s_sift_uw: parse @uw.
+ */
+u3_weak
+u3s_sift_uw(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_uw_bytes(len_w, byt_y);
+}
+
+#undef PFIXD
