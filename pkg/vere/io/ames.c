@@ -920,27 +920,11 @@ _ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
   u3z(who);
 }
 
-/* _ames_lane_from_cache(): retrieve lane for who from cache, if any & fresh
+/* _ames_lane_from_cache(): retrieve lane for who from cache, if any
 */
 static u3_weak
 _ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who) {
   u3_weak lac = u3h_git(lax_p, who);
-
-  if ( u3_none != lac ) {
-    struct timeval tim_tv;
-    gettimeofday(&tim_tv, 0);
-    u3_noun now = u3_time_in_tv(&tim_tv);
-    u3_noun den = u3t(lac);
-
-    //  consider entries older than 2 minutes stale, ignore them
-    //
-    if ( 120000 > u3_time_gap_ms(u3k(den), now) ) {
-      lac = u3k(u3h(lac));
-    } else {
-      lac = u3_none;
-    }
-  }
-
   u3z(who);
   return lac;
 }
@@ -2274,6 +2258,13 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
 
     case c3__turf: {
       _ames_ef_turf(sam_u, u3k(dat));
+      ret_o = c3y;
+    } break;
+
+    case c3__nail: {
+      u3_noun who = u3k(u3h(dat));
+      u3_noun las = u3k(u3t(dat));
+      _ames_lane_into_cache(sam_u->lax_p, who, las);
       ret_o = c3y;
     } break;
   }
