@@ -1,4 +1,4 @@
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 #include <string.h>
 #include <ed25519.h>
 

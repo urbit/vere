@@ -5,7 +5,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
 
   static u3_atom

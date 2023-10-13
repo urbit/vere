@@ -4,7 +4,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
 /* All of the CBC hoon truncates its key and prv inputs by passing them to
  * the ECB functions, which truncate them, hence the raw u3r_bytes unpacking.

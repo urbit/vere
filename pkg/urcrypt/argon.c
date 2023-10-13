@@ -1,4 +1,4 @@
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 #include "util.h"
 #include <argon2.h>
 #include <blake2.h>

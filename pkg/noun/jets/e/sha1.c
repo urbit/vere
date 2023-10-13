@@ -4,7 +4,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
   static u3_noun
   _cqe_sha1(u3_atom wid, u3_atom dat)

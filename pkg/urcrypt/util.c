@@ -1,4 +1,4 @@
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
 void
 urcrypt__reverse(size_t size, uint8_t *ptr) {

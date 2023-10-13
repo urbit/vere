@@ -4,7 +4,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
 typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
 

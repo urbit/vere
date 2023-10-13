@@ -5,7 +5,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "urcrypt.h"
+#include "urcrypt/urcrypt.h"
 
   static u3_weak
   _cqes_hs(u3_atom p, c3_w pwd_w,
