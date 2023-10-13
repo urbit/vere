@@ -87,18 +87,18 @@ _box_count(c3_ws siz_ws) { }
 static c3_w
 _box_slot(c3_w siz_w)
 {
-  if ( u3a_minimum == siz_w ) return 0;
-
-  c3_dessert( u3a_minimum <= siz_w );
-
-  {
-    c3_w bit_w = c3_bits_word(siz_w);
-
-    if ( 5 > bit_w ) return 1;
-    if ( (u3a_fbox_no + 1) >= bit_w ) return bit_w - 3;
+  if ( u3a_minimum == siz_w ) {
+    return 0;
   }
-
-  return u3a_fbox_no - 1;
+  else if ( !(siz_w >> 4) ) {
+    c3_dessert( u3a_minimum < siz_w );
+    return 1;
+  }
+  else {
+    c3_w bit_w = c3_bits_word(siz_w) - 3;
+    c3_w max_w = u3a_fbox_no - 1;
+    return c3_min(bit_w, max_w);
+  }
 }
 
 /* _box_make(): construct a box.
