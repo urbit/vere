@@ -1,87 +1,79 @@
 .{
     .name = "urbit",
     .version = "3.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
     .dependendcies = .{
         .aes_siv = .{
             .url = "https://github.com/dfoxfranke/libaes_siv/archive/9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b.tar.gz",
+            .hash = "blahblahblah",
         },
         .argon2 = .{
             .url = "https://github.com/urbit/argon2/archive/a4c1e3f7138c2e577376beb99f964cf71e1c8b1b.tar.gz",
+            .hash = "blahblahblah",
         },
         .ca_bundle = .{
             .url = "https://curl.se/ca/cacert-2022-10-11.pem",
+            .hash = "blahblahblah",
         },
         .curl = .{
             .url = "https://curl.se/download/curl-7.85.0.tar.gz",
+            .hash = "blahblahblah",
         },
         .ed25519 = .{
             .url = "https://github.com/orlp/ed25519/archive/7fa6712ef5d581a6981ec2b08ee623314cd1d1c4.tar.gz",
+            .hash = "blahblahblah",
         },
-
         .gmp = .{
             .url = "https://github.com/alisw/GMP/archive/refs/tags/v6.2.1.tar.gz",
         },
-
         .h2o = .{ // patched
             .url = "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz",
         },
-
         .ivory_pill = .{
             .url = "https://github.com/urbit/urbit/blob/721fa05/bin/ivory.pill?raw=true",
         },
-
         .solid_pill = .{
             .url = "https://github.com/urbit/urbit/raw/255fb1ca8206072f1d09425f0db61ecfe7ff5b17/bin/solid.pill",
         },
-
         .keccak_tiny = .{ // patched
             .url = "https://github.com/coruus/keccak-tiny/archive/64b6647514212b76ae7bca0dea9b7b197d1d8186.tar.gz",
         },
-
         .lmdb = .{ // patched
             .url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_0.9.29.tar.gz",
         },
-
         .murmur3 = .{
             .url = "https://github.com/PeterScott/murmur3/archive/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4.tar.gz",
         },
-
         .openssl = .{
             .url = "https://www.openssl.org/source/openssl-1.1.1t.tar.gz",
         },
-
         .pdjson = .{
             .url = "https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz",
         },
-
         .scrypt = .{
             .url = "https://github.com/technion/libscrypt/archive/60e585cdd752262b22ed4113eca41c0461a61608.tar.gz",
         },
-
         .secp256k1 = .{ // patched
             .url = "https://github.com/bitcoin-core/secp256k1/archive/694ce8fb2d1fd8a3d641d7c33705691d41a2a860.tar.gz",
         },
-
         .sigsegv = .{
             .url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.14.tar.gz",
         },
-
         .softfloat = .{ // patched
             .url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/5c06db33fc1e2130f67c045327b0ec949032df1d.tar.gz",
         },
-
         .sse2neon = .{
             .url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v1.5.1.tar.gz",
         },
-
         .urbit = .{
             .url = "https://github.com/urbit/urbit/archive/ea8fee3aa0434d4bdf1bf785e5ec346c7ecba7fd.tar.gz",
         },
-
         .uv = .{
             .url = "https://dist.libuv.org/dist/v1.44.2/libuv-v{version}.tar.gz",
         },
-
         .whereami = .{
             .url = "https://github.com/gpakosz/whereami/archive/ba364cd54fd431c76c045393b6522b4bff547f50.tar.gz",
         },

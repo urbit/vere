@@ -8,7 +8,8 @@
 /urbit
 
 # Zig
-zig-cache
+/zig-cache
+/zig-out
 
 # Swap files.
 *.swo
