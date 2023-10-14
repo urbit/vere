@@ -7,6 +7,9 @@
 /bazel-*
 /urbit
 
+# Zig
+zig-cache
+
 # Swap files.
 *.swo
 *.swp
