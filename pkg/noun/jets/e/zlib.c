@@ -77,7 +77,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     return u3_none;
   }
 
-  while (Z_OK == (zas_w = inflate(&zea, Z_FINISH))) {
+  while (Z_OK == (zas_w = inflate(&zea, Z_FINISH)) || zas_w == Z_BUF_ERROR) {
 
     if (zea.avail_in == 0) break;
 
@@ -96,7 +96,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   }
 
   if (zas_w != Z_STREAM_END) {
-    fprintf(stderr, "u3qe_zlib_expand: error while expanding, zas_w = %d\r\n", zas_w);
+    fprintf(stderr, "u3qe_zlib_expand: error while expanding, zas_w = %d, msg = %s\r\n", zas_w, zea.msg);
 
     c3_free(cuf_y);
     return u3_none;
@@ -122,6 +122,9 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   if (zas_w != Z_OK) {
     fprintf(stderr, "u3qe_zlib_expand: zlib stream inconsistent upon finish, zas_w = %d\r\n", 
             zas_w);
+
+    c3_free(cuf_y);
+    return u3_none;
   }
 
   c3_free(cuf_y);

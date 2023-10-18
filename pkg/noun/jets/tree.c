@@ -2120,6 +2120,16 @@ static u3j_core _139_hex_json_d[] =
     {}
   };
 
+/* 
+ * DEFLATE decompression 
+ */
+static u3j_harm _139_hex__zlib_expand_a[] = {{".2", u3we_zlib_expand, c3y}, {}};
+static u3j_core _139_hex__zlib_d[] =
+  {
+    { "expand", 7, _139_hex__zlib_expand_a, 0, no_hashes }, 
+    {}
+  };
+
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2138,6 +2148,7 @@ static u3j_core _139_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "zlib",   31, 0, _139_hex__zlib_d,  no_hashes}, 
   {}
 };
 
