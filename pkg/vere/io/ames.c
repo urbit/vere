@@ -71,6 +71,7 @@ typedef enum u3_stun_state {
       c3_d           fod_d;             //  forwards dropped count
       c3_d           foq_d;             //  forward queue size
       c3_d           fow_d;             //  forwarded count
+      c3_o           for_o;             //  forwarding enabled
       c3_d           hed_d;             //  failed to read header
       c3_d           vet_d;             //  version mismatches filtered
       c3_d           mut_d;             //  invalid mugs filtered
@@ -1045,17 +1046,9 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
     struct addrinfo* rai_u = aif_u;
     time_t             now = time(0);
 
-    while ( rai_u ) {
-      if ( (AF_INET == rai_u->ai_family) ) {
-        _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
-        break;
-      }
-      else {
-        rai_u = rai_u->ai_next;
-      }
-    }
-
-    if ( !rai_u ) {
+    if ( sas_i == 0 ) {
+      _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
+    } else {
       _ames_czar_gone(pac_u, now);
     }
   }
@@ -1143,9 +1136,13 @@ _ames_czar(u3_pact* pac_u)
         uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
         adr_u->data = pac_u;
 
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET; // only IPv4 addresses
+
         if ( 0 != (sas_i = uv_getaddrinfo(u3L, adr_u,
                                           _ames_czar_cb,
-                                          pac_u->rut_u.dns_c, 0, 0)) )
+                                          pac_u->rut_u.dns_c, 0, &hints)) )
         {
           u3l_log("ames: %s", uv_strerror(sas_i));
           _ames_czar_gone(pac_u, now);
@@ -2208,7 +2205,9 @@ _ames_hear(u3_ames* sam_u,
      && (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
         || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) ) )
   {
-    _ames_try_forward(pac_u);
+    if ( c3y == sam_u->sat_u.for_o ) {
+      _ames_try_forward(pac_u);
+    }
   }
   else {
     //  enter protocol-specific packet handling
@@ -2676,6 +2675,11 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->fig_u.net_o = c3y;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
+
+  //  enable forwarding on galaxies only
+  u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun rac = u3do("clan:title", who);
+  sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
 
   // hashtable for scry cache
   //

@@ -3,6 +3,7 @@
 #include "db/lmdb.h"
 #include "ent.h"
 #include "noun.h"
+#include "pace.h"
 #include "vere.h"
 #include "version.h"
 
@@ -674,8 +675,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  413
-#define VERE_LULL  324
+#define VERE_ZUSE  412
+#define VERE_LULL  323
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -782,7 +783,7 @@ _pier_on_lord_wyrd_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
 #endif
 }
 
-/* _pier_wyrd_init(): construct %wyrd.
+/* _pier_wyrd_card(): construct %wyrd.
 */
 static u3_noun
 _pier_wyrd_card(u3_pier* pir_u)
@@ -807,12 +808,13 @@ _pier_wyrd_card(u3_pier* pir_u)
 
   //  XX god_u not necessarily available yet, refactor call sites
   //
-  u3_noun ver = u3nt(u3i_string(VERE_NAME),
+  u3_noun ver = u3nq(u3i_string(VERE_NAME),
+                     u3i_string(U3_VERE_PACE),
                      u3dc("scot", c3__ta, u3i_string(URBIT_VERSION)),
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 238),        //  XX from both king and serf?
+                     u3nc(c3__arvo, 237),        //  XX from both king and serf?
                      u3nc(c3__hoon, 139),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
@@ -1400,6 +1402,8 @@ _pier_on_lord_live(void* ptr_v)
       //  XX print bootstrap commit complete
       //  XX s/b boot_complete_cb
       //
+      //  XX this codepath should never be hit due to sync replay
+      u3l_log("pier: warning: async replay");
       _pier_play_init(pir_u, log_u->dun_d);
     }
   }
@@ -1639,6 +1643,8 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       c3_free(pir_u);
       return 0;
     }
+
+    u3_assert( U3D_VER1 == pir_u->log_u->ver_w );
   }
 
   //  initialize compute
