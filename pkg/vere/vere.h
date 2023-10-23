@@ -258,6 +258,14 @@
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
 
+    /* u3_even: boot event specifier
+    */
+      typedef struct _u3_even {
+       c3_i             kin_i;
+       c3_c*            loc_c;
+       struct _u3_even* pre_u;
+     } u3_even;
+
     /* u3_opts: command line configuration.
     */
       typedef struct _u3_opts {
@@ -308,6 +316,7 @@
         c3_o    map;                        //  --no-demand (reversed)
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
+        u3_even* vex_u;                     //  --prop-*, boot enhancements
       } u3_opts;
 
     /* u3_host: entire host.
@@ -1417,7 +1426,8 @@
                      u3_noun ven,                   //  boot event
                      u3_noun pil,                   //  type-of/path-to pill
                      u3_noun pax,                   //  path to pier
-                     u3_weak fed);                  //  extra private keys
+                     u3_weak fed,                   //  extra private keys
+                     u3_noun mor);                  //  extra boot seq props
 
       /* u3_pier_stay(): restart the pier.
       */

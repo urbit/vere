@@ -90,6 +90,8 @@ void _king_doom(u3_noun doom);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
+static u3_noun _king_get_atom(c3_c* url_c);
+
 /* _king_defy_fate(): invalid fate
 */
 void
@@ -158,6 +160,49 @@ _king_boot(u3_noun bul)
   u3z(bul);
 }
 
+/* _king_prop(): events from prop arguments
+*/
+u3_noun
+_king_prop()
+{
+  u3_noun mor = u3_nul;
+  while ( 0 != u3_Host.ops_u.vex_u ) {
+    u3_even* vex_u = u3_Host.ops_u.vex_u;
+    switch ( vex_u->kin_i ) {
+      case 1: {  //  file
+        u3_atom jam = u3m_file(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 2: {  //  url
+        u3l_log("boot: downloading prop %s", vex_u->loc_c);
+        u3_atom jam = _king_get_atom(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 3: {  //  name
+        //NOTE  this implementation limits us to max 38 char prop names
+        c3_c url_c[80];
+        sprintf(url_c,
+                //TODO  should maybe respect ops_u.url_c
+                "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
+                vex_u->loc_c);
+        u3l_log("boot: downloading prop %s", url_c);
+        u3_atom jam = _king_get_atom(url_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      default: {
+        u3l_log("invalid prop source %d", vex_u->kin_i);
+        exit(1);
+      }
+    }
+
+    u3_Host.ops_u.vex_u = vex_u->pre_u;
+  }
+  return mor;
+}
+
 /* _king_fake(): boot with fake keys
 */
 void
@@ -166,7 +211,8 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
   //  XX link properly
   //
   u3_noun vent = u3nc(c3__fake, u3k(ship));
-  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path, u3_none);
+  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path,
+                              u3_none, _king_prop());
 }
 
 /* _king_come(): mine a comet under star (unit)
@@ -201,7 +247,8 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed));
   //  XX link properly
   //
-  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path, feed);
+  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path,
+                              feed, _king_prop());
 
   // disable ivory slog printfs
   //
