@@ -2524,3 +2524,483 @@ u3_ames_io_init(u3_pier* pir_u)
 
   return car_u;
 }
+
+//  presumes already valid path with no leading slash
+//
+static u3_noun
+_dire_path(c3_w len_w, c3_y* buf_y)
+{
+  u3_noun  pro;
+  u3_noun* lit = &pro;
+
+  {
+    u3_noun*   hed;
+    u3_noun*   tel;
+    c3_y*    fub_y = buf_y;
+    c3_y     car_y;
+    c3_w     tem_w;
+    u3i_slab sab_u;
+
+    while ( len_w-- ) {
+      car_y = *buf_y++;
+
+      if ( 47 == car_y ) {
+        tem_w = buf_y - fub_y - 2;
+        u3i_slab_bare(&sab_u, 3, tem_w);
+        sab_u.buf_w[sab_u.len_w - 1] = 0;
+        memcpy(sab_u.buf_y, fub_y, tem_w);
+
+        *lit  = u3i_defcons(&hed, &tel);
+        *hed  = u3i_slab_moot(&sab_u);
+        lit   = tel;
+        fub_y = buf_y;
+      }
+    }
+  }
+
+  *lit = u3_nul;
+
+  return pro;
+}
+
+static c3_o
+_dire_test_path(c3_w len_w, c3_y* buf_y)
+{
+  c3_y car_y;
+
+  if ( 47 == *buf_y ) {
+    return c3n;
+  }
+
+  while ( len_w-- ) {
+    car_y = *buf_y++;
+    if ( (127 == car_y) || (32 > car_y) ) {
+      return c3n;
+    }
+  }
+
+  return c3y;
+}
+
+typedef struct {
+  c3_y nex_y;  //  2 bits
+  c3_y typ_y;  //  2 bits
+  c3_y hop_y;  //  3 bits
+  c3_l gum_l;  // 20 bits
+} u3_dhead;
+
+
+typedef struct {
+  c3_w    len_w;
+  c3_y*   buf_y;
+  c3_y    hed_y;
+  struct {
+    c3_y  len_y;
+    c3_y* buf_y;
+  } who;
+  struct {
+    c3_s  len_s;
+    c3_y* buf_y;
+  } pat;
+  c3_y    boq_y;
+  c3_w    fag_w;
+} u3_dname;
+
+// typedef struct {
+//   c3_w    len_w;
+//   c3_y*   buf_y;
+//   c3_w    tot_w;
+//   struct {
+//     c3_y  len_y;
+//     c3_y* buf_y;
+//   } aut;
+//   struct {
+//     c3_s  len_s;
+//     c3_y* buf_y;
+//   } dat;
+// } u3_ddata;
+
+typedef struct {
+  c3_w  len_w;
+  c3_y* buf_y;
+  u3_dhead hed_u;
+  u3_dname nam_u;
+} u3_dpact;
+
+void
+u3h_del(u3p(u3h_root) har_p, u3_noun key);
+
+static void
+_dire_send_one(u3_lane* lan_u, u3_atom hav) // pre-serialized packed
+{
+
+}
+
+static void
+_dire_send_many(u3_dpact* pac_u, u3_noun rot) // route list
+{
+
+}
+
+static u3_atom
+_dire_etch_ud(c3_d num_d)
+{
+  c3_y  hun_y[26];
+  c3_y* buf_y = u3s_etch_ud_smol(num_d, hun_y);
+  c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
+  return u3i_bytes(26 - dif_w, buf_y); // XX known-non-null
+}
+
+static void
+_dire_plan_peek_cb(void *vod_p, u3_noun nun)
+{
+
+}
+
+static void
+_dire_plan_peek(u3_dpact* pac_u)
+{
+  u3_dname*  nam_u = &(pac_u->nam_u);
+  u3_noun sam, our;
+
+  sam = u3nc(u3i_string("beam"), // XX c3__beam,
+             u3nt(c3__ax, u3nt(our, u3_blip, '1'),
+                  u3nq(c3__dire,
+                       _dire_etch_ud((c3_d)nam_u->boq_y),
+                       _dire_etch_ud((c3_d)nam_u->fag_w),
+                       _dire_path(nam_u->pat.len_s, nam_u->pat.buf_y))));
+
+  u3_pier_peek((void*)0, u3_nul, sam, (void*)0, _dire_plan_peek_cb);
+}
+
+static void
+_dire_plan_poke(u3_lane* lan_u, u3_dpact* pac_u)
+{
+
+}
+
+static void
+_dire_plan_page(u3_dpact* pac_u)
+{
+}
+
+static void
+_dire_give_page(u3_dpact* pac_u, u3_noun who) // (map lane @da)
+{
+
+}
+
+static c3_o
+_dire_is_our(u3_dpact* pac_u)
+{
+  // XX _ames_ship_to_chubs()
+  return c3n;
+}
+
+static c3_o
+_dire_put_pit(u3_lane* lan_u, u3_noun nam)
+{
+  u3p(u3h_root) pit_p;
+
+  u3_noun lan; // from lan_u
+  u3_noun now; // timestamp
+  u3_weak hav = u3h_git(pit_p, nam);
+  u3_noun pit = u3_nul;
+  c3_o  ret_o;
+
+  if ( u3_none == hav ) {
+    ret_o = c3y;
+  }
+  else {
+    pit = hav;
+    ret_o = c3n;
+  }
+
+  pit = u3qdb_put(pit, lan, now);
+  u3h_put(pit_p, nam, pit);
+
+  return ret_o;
+}
+
+static void
+_dire_hear_request(u3_lane* lan_u, u3_dpact* pac_u)
+{
+  u3p(u3h_root) cac_p;
+  u3p(u3h_root) pit_p;
+  u3p(u3h_root) rot_p;
+
+  u3_atom nam = u3i_bytes(pac_u->nam_u.len_w,
+                          pac_u->nam_u.buf_y);
+  u3_weak hav = u3h_git(cac_p, nam);
+
+  if ( u3_none != hav ) {
+    _dire_send_one(lan_u, hav);
+  }
+  else if ( c3y == _dire_is_our(pac_u) ) {
+    //  suppress duplicate requests
+    //
+    if ( c3y == _dire_put_pit(lan_u, nam) ) {
+      if ( 2 == pac_u->hed_u.typ_y ) {
+        _dire_plan_peek(pac_u);
+      }
+      else {
+        _dire_plan_poke(lan_u, pac_u);
+      }
+    }
+  }
+  else if ( /* is_czar && */ (7 > pac_u->hed_u.hop_y) )
+  {
+    u3_atom who = u3i_bytes(pac_u->nam_u.who.len_y,
+                            pac_u->nam_u.who.buf_y);
+    u3_weak rot = u3h_git(rot_p, who);
+
+    if ( u3_none != rot ) {
+      //  NB: duplicate forward requests *not* suppressed
+      //
+      _dire_put_pit(lan_u, nam);
+
+      pac_u->hed_u.hop_y = c3_min(pac_u->hed_u.hop_y + 1, 7);
+      _dire_send_many(pac_u, rot); // retain
+    }
+
+    u3z(who);
+  }
+
+  u3z(nam);
+}
+
+#define _DIRE_PEND 1
+
+static void
+_dire_hear_response(u3_lane*lan_u, u3_dpact* pac_u)
+{
+  u3p(u3h_root) pit_p;
+  u3p(u3h_root) own_p;
+
+  u3_atom nam = u3i_bytes(pac_u->nam_u.len_w,
+                          pac_u->nam_u.buf_y);
+  u3_weak hav = u3h_git(own_p, nam);
+
+  //  suppress duplicate responses
+  //
+  if ( u3_blip == hav  ) {  //  ?(0 1)
+    _dire_plan_page(pac_u);
+    u3h_put(own_p, nam, _DIRE_PEND);
+    // XX delete in ovum callback
+  }
+
+  hav = u3h_git(pit_p, nam);
+
+  if ( u3_none != hav ) {  //  (map lane @da)
+    // XX hopcount, next hop
+    _dire_give_page(pac_u, u3k(hav));
+    u3h_del(pit_p, nam);
+  }
+
+  u3z(nam);
+}
+
+static c3_o
+_dire_sift_name(u3_dname* nam_u, c3_w len_w, c3_y* buf_y)
+{
+  c3_b typ_b, loq_b;
+  c3_y ran_y, fag_y;
+
+  c3_w nel_w = len_w;
+  c3_w ned_w = 1;
+
+  if ( ned_w > len_w ) {
+    return c3n;
+  }
+
+  nam_u->buf_y = buf_y;
+  nam_u->hed_y = *buf_y++;
+
+  {
+    c3_y nul_y = (nam_u->hed_y >> 0) & 0x3;
+    c3_y nar_y = (nam_u->hed_y >> 2) & 0x3;
+
+    if ( nul_y ) {
+      return c3n;
+    }
+
+    typ_b = (nam_u->hed_y >> 4) & 0x1;
+    loq_b = (nam_u->hed_y >> 5) & 0x1;
+    fag_y = (nam_u->hed_y >> 6) & 0x3;
+    ran_y = 2 << (nar_y + 1);
+  }
+
+  len_w -= ned_w;
+  ned_w  = ran_y + typ_b + 1;
+
+  if ( ned_w > len_w ) {
+    return c3n;
+  }
+
+  nam_u->who.len_y = ran_y;
+  nam_u->who.buf_y = buf_y;
+  buf_y += ran_y;
+
+  nam_u->pat.len_s = ( typ_b )
+                     ? *buf_y
+                     : _ames_sift_short(buf_y);
+  buf_y += typ_b + 1;
+
+  len_w -= ned_w;
+  ned_w  = nam_u->pat.len_s + loq_b + fag_y;
+
+  if ( ned_w > len_w ) {
+    return c3n;
+  }
+
+  nam_u->pat.buf_y = buf_y;
+  buf_y += nam_u->pat.len_s;
+
+  if ( c3n == _dire_test_path(nam_u->pat.len_s, nam_u->pat.buf_y) ) {
+    return c3n;
+  }
+
+  nam_u->boq_y = ( loq_b ) ? 13 : *buf_y++;
+
+  {
+    c3_y gaf_y[4] = {0};
+    memcpy(gaf_y, buf_y, fag_y);
+    nam_u->fag_w = _ames_sift_word(gaf_y);
+  }
+
+  buf_y += fag_y;
+  len_w -= ned_w;
+
+  nam_u->len_w = nel_w - len_w;
+
+  return c3y;
+}
+
+static c3_o
+_dire_sift_head(u3_dhead* hed_u, c3_w hed_w)
+{
+  c3_y nul_y = hed_w & 0x3;
+  c3_y typ_y = (hed_w >> 7) & 0x3;
+
+  if ( nul_y || !typ_y ) {
+    return c3n;
+  }
+
+  hed_u->nex_y = (hed_w >>  2) & 0x3;
+  hed_u->typ_y = typ_y;
+  hed_u->hop_y = (hed_w >>  9) & 0x7;
+  hed_u->gum_l = (hed_w >> 12) & 0xfffff; // 20 bits
+
+  return c3y;
+}
+
+typedef enum {
+  _dire_good = 0,
+  _dire_old  = 1,
+  _dire_fail = 2
+} _dire_result;
+
+static _dire_result
+_dire_hear(u3_lane* lan_u, c3_w len_w, c3_y* buf_y)
+{
+  u3_dpact pac_u = { .len_w = len_w, .buf_y = buf_y };
+
+  if ( 4 > len_w ) {
+    return _dire_fail;
+  }
+
+  //  parse header
+  //
+  {
+    c3_w hed_w = _ames_sift_word(buf_y);
+    c3_y ver_y = (hed_w >> 4) & 0x7;
+
+    if ( 1 != ver_y ) {
+      return _dire_old;
+    }
+
+    if ( c3n == _dire_sift_head(&(pac_u.hed_u), hed_w) ) {
+      return _dire_fail;
+    }
+
+    len_w -= 4;
+    buf_y += 4;
+  }
+
+  //  validate mug
+  //
+  //    XX exclude next hop from mug?
+  //
+  {
+    c3_l mug_l = u3r_mug_bytes(buf_y, len_w);
+
+    if ( (mug_l & 0xfffff) != pac_u.hed_u.gum_l ) {
+      return _dire_fail;
+    }
+  }
+
+  //  parse path
+  //
+  if ( c3n == _dire_sift_name(&(pac_u.nam_u), len_w, buf_y) ) {
+    return _dire_fail;
+  }
+
+  if ( 1 == pac_u.hed_u.typ_y ) {
+    //  XX parse/validate the rest of the packet
+    _dire_hear_response(lan_u, &pac_u);
+  }
+  else {
+    //  no next-hop, packet fully parsed
+    //
+    if (  pac_u.hed_u.nex_y
+       || ((pac_u.nam_u.len_w + 4) != pac_u.len_w) )
+    {
+      return _dire_fail;
+    }
+
+    _dire_hear_request(lan_u, &pac_u);
+  }
+
+  return _dire_good;
+}
+
+static void
+_dire_send_response(u3_atom rep)
+{
+  c3_w  len_w = u3r_met(3, rep);
+  c3_w* buf_w = ( c3y == u3a_is_cat(rep) )
+                ? &rep
+                : ((u3a_atom*)u3a_to_ptr(rep))->buf_w;
+  c3_y* buf_y = (c3_y*)buf_w;
+
+  u3_dpact pac_u = { .len_w = len_w, .buf_y = buf_y };
+
+  // if ( 4 > len_w ) {
+  //   return _dire_fail;
+  // }
+
+  // {
+  //   c3_w hed_w = _ames_sift_word(buf_y);
+  //   c3_y ver_y = (hed_w >> 4) & 0x7;
+
+  //   if ( 1 != ver_y ) {
+  //     return _dire_old;
+  //   }
+
+  //   if ( c3n == _dire_sift_head(&(pac_u.hed_u), hed_w) ) {
+  //     return _dire_fail;
+  //   }
+  // }
+
+  // if ( c3n == _dire_sift_name(&(pac_u.nam_u), len_w - 4, buf_y + 4) ) {
+  //   return _dire_fail;
+  // }
+
+  // XX _dire_hear_response w/ null lane?
+}
+
+static void
+_dire_send_request(void)
+{
+
+}
