@@ -194,6 +194,9 @@ void
 u3_serf_post(u3_serf* sef_u)
 {
   if ( sef_u->fag_w & _serf_fag_hit1 ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("serf: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
+    }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
     u3m_reclaim();
   }
@@ -216,6 +219,9 @@ u3_serf_post(u3_serf* sef_u)
   }
 
   if ( sef_u->fag_w & _serf_fag_hit0 ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("serf: threshold 0: per_p %u", u3h_wyt(u3R->cax.per_p));
+    }
     u3h_free(u3R->cax.per_p);
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
     u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
