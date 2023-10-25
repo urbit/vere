@@ -1386,7 +1386,11 @@ _ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
   }
 
   dad = u3k(u3h(daz));
-  if ( c3y == _ames_is_czar(dad) ) {
+  u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
+
+  if ( c3y == _ames_is_czar(dad) && c3n == _ames_is_czar(our)) {
+    // if we are a galaxy, don't STUN
+    u3l_log("ames: start STUN");
     _stun_stop(sam_u);
     _stun_start(sam_u, u3k(dad));
   }
