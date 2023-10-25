@@ -198,6 +198,22 @@ u3_serf_post(u3_serf* sef_u)
   }
 }
 
+/* _serf_curb(): check for memory threshold
+*/
+static inline c3_t
+_serf_curb(c3_w pre_w, c3_w pos_w, c3_w hes_w)
+{
+  return (pre_w > hes_w) && (pos_w <= hes_w);
+}
+
+/*  serf memory-threshold levels
+*/
+enum {
+  _serf_init = 0,
+  _serf_hit1 = 1,
+  _serf_hit0 = 2
+};
+
 /* _serf_sure_feck(): event succeeded, send effects.
 */
 static u3_noun
@@ -253,38 +269,59 @@ _serf_sure_feck(u3_serf* sef_u, c3_w pre_w, u3_noun vir)
   //    For future flexibility, the urgency of the notification is represented
   //    by a *decreasing* number: 0 is maximally urgent, 1 less so, &c.
   //
-  //    high-priority: 2^22 contiguous words remaining (~8 MB)
+  //    high-priority: 2^25 contiguous words remaining (~128 MB)
   //    low-priority:  2^27 contiguous words remaining (~536 MB)
-  //    XX maybe use 2^23 (~16 MB) and 2^26 (~268 MB?
+  //
+  //    once a threshold is hit, it's not a candidate to be hit again
+  //    until memory usage falls below:
+  //
+  //    high-priority: 2^26 contiguous words remaining (~256 MB)
+  //    low-priority:  2^26 + 2^27 contiguous words remaining (~768 MB)
   //
   //    XX these thresholds should trigger notifications sent to the king
   //    instead of directly triggering these remedial actions.
   //
   {
     u3_noun pri = u3_none;
-    c3_w pos_w = u3a_open(u3R);
-    c3_w low_w = (1 << 27);
-    c3_w hig_w = (1 << 22);
+    c3_w  pos_w = u3a_open(u3R);
 
-    if ( (pre_w > low_w) && !(pos_w > low_w) ) {
-      //  XX set flag(s) in u3V so we don't repeat endlessly?
-      //
-      pac_o = c3y;
-      rec_o = c3y;
-      pri   = 1;
+    //  if contiguous free space shrunk, check thresholds
+    //  (and track state to avoid thrashing)
+    //
+    if ( pos_w < pre_w ) {
+      if (  (_serf_hit0 != sef_u->mas_w)
+         && _serf_curb(pre_w, pos_w, 1 << 25) )
+      {
+        sef_u->mas_w = _serf_hit0;
+        pac_o = c3y;
+        pri   = 0;
+      }
+      else if (  (_serf_init == sef_u->mas_w)
+              && _serf_curb(pre_w, pos_w, 1 << 27) )
+      {
+        sef_u->mas_w = _serf_hit1;
+        rec_o = c3y;
+        pri   = 1;
+      }
     }
-    else if ( (pre_w > hig_w) && !(pos_w > hig_w) ) {
-      pac_o = c3y;
-      rec_o = c3y;
-      pri   = 0;
+    else if ( _serf_init != sef_u->mas_w ) {
+      if ( ((1 << 26) + (1 << 27)) < pos_w ) {
+        sef_u->mas_w = _serf_init;
+      }
+      else if (  (_serf_hit0 == sef_u->mas_w)
+              && ((1 << 26) < pos_w) )
+      {
+        sef_u->mas_w = _serf_hit1;
+      }
     }
+
     //  reclaim memory from persistent caches periodically
     //
     //    XX this is a hack to work two things
     //    - bytecode caches grow rapidly and can't be simply capped
     //    - we don't make very effective use of our free lists
     //
-    else if ( 0 == (sef_u->dun_d % 1000ULL) ) {
+    if ( 0 == (sef_u->dun_d % 1000ULL) ) {
       rec_o = c3y;
     }
 
