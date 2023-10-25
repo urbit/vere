@@ -1112,6 +1112,7 @@
 #   define c3__ston   c3_s4('s','t','o','n')
 #   define c3__stop   c3_s4('s','t','o','p')
 #   define c3__stub   c3_s4('s','t','u','b')
+#   define c3__stun   c3_s4('s','t','u','n')
 #   define c3__stur   c3_s4('s','t','u','r')
 #   define c3__sub    c3_s3('s','u','b')
 #   define c3__sunt   c3_s4('s','u','n','t')

@@ -1270,6 +1270,11 @@ _stun_on_response(u3_ames* sam_u) // TODO read arg
       uv_timer_stop(&sam_u->sun_u.tim_u);
       sam_u->sun_u.tim_u.data = sam_u;
       uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+      // inject %stun task into arvo
+      u3_noun wir = u3nc(c3__ames, u3_nul);
+      u3_noun cad = u3nc(c3__stun, c3n);
+      u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+      u3_auto_plan(&sam_u->car_u, ovo_u);
     } break;
     default: assert("programmer error");
   }
