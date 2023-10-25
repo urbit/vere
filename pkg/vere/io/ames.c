@@ -1257,6 +1257,63 @@ _stun_send_cb(uv_udp_send_t *req_u, c3_i sas_i)
   }
 }
 
+static void _stun_on_request(u3_ames *sam_u, c3_y buf_r[20],
+                            const struct sockaddr* adr_u) {
+  // XX TODO
+
+  c3_y buf_y[36] = {0};
+
+  // copy STUN request header
+  memcpy(buf_y, buf_r, 0);
+
+  // 0x0101 SUCCESS RESPONSE
+  buf_y[0] = 0x01;
+  buf_y[1] = 0x01;
+
+  // XX TODO: add sponsee's IP Addres (32 bits)
+  //          use _ames_etch functions
+  //
+  buf_y[22] = 0x01;  // 21-22 STUN attribute type 0x0001
+  buf_y[24] = 0x10;  // 23-24 STUN attribute length
+  buf_y[26] = 0x01;  // 25-26 family  0x01:IPv4
+  buf_y[27] = 0x01;  // 27-28 family  0x01:IPv4
+  //  Port
+  //buf_y[27] = (adr_u.sin_port >> 8); // Most significant byte
+  //buf_y[28] = adr_u.sin_port & 0xFF; // Least significant byte
+  _ames_etch_short(buf_y + 16, adr_u.sin_port);
+
+  buf_y[29] = adr_u.sin_addr.s_addr >> 24;
+  buf_y[28] = adr_u.sin_addr.s_addr >> 16;
+  buf_y[28] = adr_u.sin_addr.s_addr >> 8;
+  buf_y[28] = adr_u.sin_addr.s_addr & 0xFFFF;
+
+  u3l_log("hear request");
+  struct sockaddr_in add_u;
+
+  // memset(&add_u, 0, sizeof(add_u));
+  // add_u.sin_family = AF_INET;
+  // add_u.sin_addr.s_addr = htonl(lan_u.pip_w);
+  // add_u.sin_port = htons(lan_u.por_s);
+
+  // u3l_log("(%d %d)", add_u.sin_addr.s_addr, add_u.sin_port);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 20);
+  u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
+  snd_u->sam_u = sam_u;
+  c3_i sas_i = uv_udp_send(
+    (uv_udp_send_t*)snd_u, &sam_u->wax_u, &buf_u, 1,
+    adr_u, _stun_send_cb
+  );
+
+  u3l_log("sas %d", sas_i);
+
+  if ( sas_i != 0) {
+    u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
+    //  TODO take error handling actions
+    //  XX sam_u->fig_u.net_o = c3n;
+  }
+}
+
 static void
 _stun_on_response(u3_ames* sam_u) // TODO read arg
 {
@@ -1315,7 +1372,7 @@ _stun_send_request(u3_ames* sam_u)
     (const struct sockaddr*)&add_u, _stun_send_cb
   );
 
-  if ( sas_i ) {
+  if ( sas_i != 0) {
     u3l_log("stun: send fail_sync: %s", uv_strerror(sas_i));
     //  TODO take error handling actions
   }
@@ -2368,6 +2425,22 @@ _ames_recv_cb(uv_udp_t*        wax_u,
       u3l_log("ames: recv: fail: message truncated");
     }
     c3_free(buf_u->base);
+  }
+  else if ( nrd_i == 20 ) {
+    // STUN resquest/response
+    // TODO sanity checks
+    // TODO check STUN cookie
+    u3_ames* sam_u = wax_u->data;
+
+    if (buf_u->base[0] == 0x0 && buf_u->base[1] == 0x01) {
+      // STUN request
+      _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
+    } else if ((buf_u->base[0] == 0x01 && buf_u->base[1] == 0x01)) {
+      // STUN response
+      _stun_on_response(sam_u);
+    } else {
+      // TODO STUN error
+    }
   }
   else {
     u3_ames*            sam_u = wax_u->data;
