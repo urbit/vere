@@ -39,17 +39,11 @@ c3_o
 u3v_boot(u3_noun eve)
 {
   c3_d len_d;
-
   {
     u3_noun len = u3qb_lent(eve);
     u3_assert( c3y == u3r_safe_chub(len, &len_d) );
     u3z(len);
   }
-
-  //  ensure zero-initialized kernel
-  //
-  u3A->roc   = 0;
-  u3A->eve_d = 0;
 
   {
     u3_noun pro = u3m_soft(0, u3v_life, eve);
@@ -59,6 +53,7 @@ u3v_boot(u3_noun eve)
       return c3n;
     }
 
+    u3z(u3A->roc);
     u3A->roc   = u3k(u3t(pro));
     u3A->eve_d = len_d;
     u3z(pro);

@@ -9,6 +9,35 @@
 #include "trace.h"
 #include "xtract.h"
 
+
+//  declarations of inline functions
+//
+c3_o
+u3r_cell(u3_noun a, u3_noun* b, u3_noun* c);
+c3_o
+u3r_trel(u3_noun a, u3_noun* b, u3_noun* c, u3_noun* d);
+c3_o
+u3r_qual(u3_noun  a,
+         u3_noun* b,
+         u3_noun* c,
+         u3_noun* d,
+         u3_noun* e);
+c3_o
+u3r_quil(u3_noun  a,
+         u3_noun* b,
+         u3_noun* c,
+         u3_noun* d,
+         u3_noun* e,
+         u3_noun* f);
+c3_o
+u3r_hext(u3_noun  a,
+         u3_noun* b,
+         u3_noun* c,
+         u3_noun* d,
+         u3_noun* e,
+         u3_noun* f,
+         u3_noun* g);
+
 /* _frag_word(): fast fragment/branch prediction for top word.
 */
 static u3_weak
@@ -833,27 +862,6 @@ u3r_bite(u3_noun bite, u3_atom* bloq, u3_atom *step)
   }
 }
 
-/* u3r_cell():
-**
-**   Factor (a) as a cell (b c).
-*/
-c3_o
-u3r_cell(u3_noun  a,
-           u3_noun* b,
-           u3_noun* c)
-{
-  u3_assert(u3_none != a);
-
-  if ( _(u3a_is_atom(a)) ) {
-    return c3n;
-  }
-  else {
-    if ( b ) *b = u3a_h(a);
-    if ( c ) *c = u3a_t(a);
-    return c3y;
-  }
-}
-
 /* u3r_p():
 **
 **   & [0] if [a] is of the form [b *c].
@@ -932,90 +940,6 @@ u3r_pqrs(u3_noun  a,
   if ( (c3y == u3r_p(a, b, &nux)) &&
        (c3y == u3r_qual(nux, c, d, e, f)) )
   {
-    return c3y;
-  }
-  else return c3n;
-}
-
-/* u3r_trel():
-**
-**   Factor (a) as a trel (b c d).
-*/
-c3_o
-u3r_trel(u3_noun a,
-           u3_noun *b,
-           u3_noun *c,
-           u3_noun *d)
-{
-  u3_noun guf;
-
-  if ( (c3y == u3r_cell(a, b, &guf)) &&
-       (c3y == u3r_cell(guf, c, d)) ) {
-    return c3y;
-  }
-  else {
-    return c3n;
-  }
-}
-
-/* u3r_qual():
-**
-**   Factor (a) as a qual (b c d e).
-*/
-c3_o
-u3r_qual(u3_noun  a,
-           u3_noun* b,
-           u3_noun* c,
-           u3_noun* d,
-           u3_noun* e)
-{
-  u3_noun guf;
-
-  if ( (c3y == u3r_cell(a, b, &guf)) &&
-       (c3y == u3r_trel(guf, c, d, e)) ) {
-    return c3y;
-  }
-  else return c3n;
-}
-
-/* u3r_quil():
-**
-**   Factor (a) as a quil (b c d e f).
-*/
-c3_o
-u3r_quil(u3_noun  a,
-           u3_noun* b,
-           u3_noun* c,
-           u3_noun* d,
-           u3_noun* e,
-           u3_noun* f)
-{
-  u3_noun guf;
-
-  if ( (c3y == u3r_cell(a, b, &guf)) &&
-       (c3y == u3r_qual(guf, c, d, e, f)) ) {
-    return c3y;
-  }
-  else return c3n;
-}
-
-/* u3r_hext():
-**
-**   Factor (a) as a hext (b c d e f g)
-*/
-c3_o
-u3r_hext(u3_noun  a,
-           u3_noun* b,
-           u3_noun* c,
-           u3_noun* d,
-           u3_noun* e,
-           u3_noun* f,
-           u3_noun* g)
-{
-  u3_noun guf;
-
-  if ( (c3y == u3r_cell(a, b, &guf)) &&
-       (c3y == u3r_quil(guf, c, d, e, f, g)) ) {
     return c3y;
   }
   else return c3n;

@@ -106,13 +106,17 @@ u3_foil_folder(const c3_c* pax_c)
     dir_u = u3_dire_init(pax_c);
   }
 
-  /*  create entries for all files
+  /*  create entries for all files and directories
   */
   while ( UV_EOF != uv_fs_scandir_next(&ruq_u, &den_u) ) {
     if ( UV_DIRENT_FILE == den_u.type ) {
       u3_dent* det_u = u3_dent_init(den_u.name);
       det_u->nex_u = dir_u->all_u;
       dir_u->all_u = det_u;
+    } else if ( UV_DIRENT_DIR == den_u.type ) {
+      u3_dent* det_u = u3_dent_init(den_u.name);
+      det_u->nex_u = dir_u->dil_u;
+      dir_u->dil_u = det_u;
     }
   }
 
