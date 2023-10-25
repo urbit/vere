@@ -12,9 +12,7 @@
         c3_d    dun_d;             //  last event processed
         c3_l    mug_l;             //  hash of state
         c3_w    mas_w;             //  memory threshold state
-        c3_o    pac_o;             //  pack kernel
-        c3_o    rec_o;             //  reclaim cache
-        c3_o    mut_o;             //  mutated kerne
+        c3_w    fag_w;             //  post-op flags
         u3_noun sac;               //  space measurementl
         void  (*xit_f)(void);      //  exit callback
       } u3_serf;
