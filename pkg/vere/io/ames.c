@@ -1339,7 +1339,107 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
 static void
 _stun_czar(u3_ames* sam_u)
 {
-  //  TODO rip off _ames_czar()
+  // TODO rip off _ames_czar()
+  c3_y imp_y = sam_u->sun_u.dad_d[0];
+
+  u3l_log("stun : %i", imp_y);
+
+  sam_u->sun_u.lan_u.por_s = _ames_czar_port(imp_y);
+
+  if (c3n == u3_Host.ops_u.net) {
+    // XX remove/fix
+    sam_u->sun_u.lan_u.pip_w = 0x7f000001;
+    u3l_log("sending");
+
+    _stun_send_request(sam_u);
+
+    // XX timer stuff to be removed
+    // XX maybe enabled with a flag?
+
+    u3l_log("start timer");
+    uv_timer_t* tim_u = c3_malloc(sizeof(*tim_u));
+    sam_u->sun_u.tim_u.data = sam_u;
+    gettimeofday(&sam_u->sun_u.sar_u, 0);
+    uv_timer_init(u3L, &sam_u->sun_u.tim_u);
+    uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 1, 0);
+
+    return;
+  }
+
+  //  if we don't have a galaxy domain, no-op
+  //
+  if (!sam_u->dns_c) {
+    u3_noun nam = u3dc("scot", 'p', imp_y);
+    c3_c *nam_c = u3r_string(nam);
+    u3l_log("ames: no galaxy domain for %s, no-op\r", nam_c);
+
+    c3_free(nam_c);
+    u3z(nam);
+    return;
+  }
+
+  {
+    c3_w pip_w = sam_u->imp_w[imp_y];
+    time_t wen = sam_u->imp_t[imp_y];
+    time_t now = time(0);
+
+    //  XX keep the same 5 minutes as ames?
+    //  backoff for 5 minutes after failed lookup
+    //
+    if ((now < wen)               //  time shenanigans!
+        || ((0xffffffff == pip_w) //  sentinal ip address
+            && ((now - wen) < 300))) {
+        return;
+    }
+    //  cached addresses have a 5 minute TTL
+    //
+    else if ((0 != pip_w) && ((now - wen) < 300)) {
+        sam_u->sun_u.lan_u.pip_w = pip_w;
+        _stun_send_request(sam_u);
+        return;
+    } else {
+        c3_i sas_i;
+        c3_c dns_c[255];
+
+        {
+          u3_noun nam = u3dc("scot", 'p', imp_y);
+          c3_c *nam_c = u3r_string(nam);
+
+          //  NB: . separator not counted, as [nam_c] includes a ~ that we skip
+          //
+          // dns_c =
+          //     c3_malloc(1 + strlen(nam_c) + strlen(sam_u->dns_c));
+
+          sas_i =
+              snprintf(dns_c, 255, "%s.%s", nam_c + 1, sam_u->dns_c);
+
+          c3_free(nam_c);
+          u3z(nam);
+        }
+
+        if (255 <= sas_i) {
+          u3l_log("ames: czar: galaxy domain %s truncated", sam_u->dns_c);
+          return;
+        }
+
+        {
+
+          uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
+          adr_u->data = sam_u;
+
+          struct addrinfo hints;
+          memset(&hints, 0, sizeof(hints));
+          hints.ai_family = AF_INET; // only IPv4 addresses
+
+          if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
+                                          dns_c, 0, &hints))) {
+            u3l_log("stun: %s", uv_strerror(sas_i));
+            // XX TODO handle error
+            return;
+          }
+        }
+    }
+  }
 }
 
 static void
