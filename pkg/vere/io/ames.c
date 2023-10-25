@@ -1326,11 +1326,14 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
               c3_i              sas_i,
               struct addrinfo*  aif_u)
 {
-  u3_ames* sam_u;  //  TODO get sam_u from args
+  u3_ames* sam_u = (u3_ames*)(adr_u->data);
   gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-  _stun_send_request(sam_u);
-  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 1, 0);
 
+  _stun_send_request(sam_u);
+
+  sam_u->sun_u.tim_u.data = sam_u;
+  uv_timer_init(u3L, &sam_u->sun_u.tim_u);
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 1, 0);
 }
 
 static void
