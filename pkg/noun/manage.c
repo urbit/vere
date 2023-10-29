@@ -1762,14 +1762,6 @@ _cm_limits(void)
 # endif
 }
 
-/* u3m_backup(): copy snapshot to .urb/bhk (if it doesn't exist yet).
-*/
-c3_o
-u3m_backup(c3_o ovw_o)
-{
-  return u3e_backup(ovw_o);
-}
-
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
 */
 c3_i
@@ -2090,6 +2082,42 @@ u3m_stop()
   u3je_secp_stop();
 }
 
+/* u3m_pier(): make a pier.
+*/
+c3_c*
+u3m_pier(c3_c* dir_c)
+{
+  c3_c ful_c[8193];
+
+  u3C.dir_c = dir_c;
+
+  snprintf(ful_c, 8192, "%s", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: pier create: %s\r\n", strerror(errno));
+      exit(1);
+    }
+  }
+
+  snprintf(ful_c, 8192, "%s/.urb", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: .urb create: %s\r\n", strerror(errno));
+      exit(1);
+    }
+  }
+
+  snprintf(ful_c, 8192, "%s/.urb/chk", dir_c);
+  if ( c3_mkdir(ful_c, 0700) ) {
+    if ( EEXIST != errno ) {
+      fprintf(stderr, "loom: .urb/chk create: %s\r\n", strerror(errno));
+      exit(1);
+    }
+  }
+
+  return strdup(dir_c);
+}
+
 /* u3m_boot(): start the u3 system. return next event, starting from 1.
 */
 c3_d
@@ -2105,7 +2133,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 
   /* Activate the storage system.
   */
-  nuu_o = u3e_live(c3n, dir_c);
+  nuu_o = u3e_live(c3n, u3m_pier(dir_c));
 
   /* Activate tracing.
   */

@@ -783,7 +783,7 @@ _pier_on_lord_wyrd_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
 #endif
 }
 
-/* _pier_wyrd_init(): construct %wyrd.
+/* _pier_wyrd_card(): construct %wyrd.
 */
 static u3_noun
 _pier_wyrd_card(u3_pier* pir_u)
@@ -1402,6 +1402,8 @@ _pier_on_lord_live(void* ptr_v)
       //  XX print bootstrap commit complete
       //  XX s/b boot_complete_cb
       //
+      //  XX this codepath should never be hit due to sync replay
+      u3l_log("pier: warning: async replay");
       _pier_play_init(pir_u, log_u->dun_d);
     }
   }
@@ -1641,6 +1643,8 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       c3_free(pir_u);
       return 0;
     }
+
+    u3_assert( U3D_VER1 == pir_u->log_u->ver_w );
   }
 
   //  initialize compute

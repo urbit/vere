@@ -1031,17 +1031,9 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
     struct addrinfo* rai_u = aif_u;
     time_t             now = time(0);
 
-    while ( rai_u ) {
-      if ( (AF_INET == rai_u->ai_family) ) {
-        _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
-        break;
-      }
-      else {
-        rai_u = rai_u->ai_next;
-      }
-    }
-
-    if ( !rai_u ) {
+    if ( sas_i == 0 ) {
+      _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
+    } else {
       _ames_czar_gone(pac_u, now);
     }
   }
@@ -1129,9 +1121,13 @@ _ames_czar(u3_pact* pac_u)
         uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
         adr_u->data = pac_u;
 
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET; // only IPv4 addresses
+
         if ( 0 != (sas_i = uv_getaddrinfo(u3L, adr_u,
                                           _ames_czar_cb,
-                                          pac_u->rut_u.dns_c, 0, 0)) )
+                                          pac_u->rut_u.dns_c, 0, &hints)) )
         {
           u3l_log("ames: %s", uv_strerror(sas_i));
           _ames_czar_gone(pac_u, now);
