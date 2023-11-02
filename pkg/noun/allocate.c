@@ -1541,6 +1541,31 @@ u3a_lose(u3_noun som)
 }
 
 static u3_noun
+_ca_mend_home(u3_noun def, u3_noun fed)
+{
+  u3_noun i, t = fed;
+
+  while ( u3_nul != t ) {
+    u3_assert( c3y == u3du(t) );
+    i = u3h(t);
+    t = u3t(t);
+
+    u3_assert( c3y == u3a_north_is_normal(u3R, i) );
+
+    if ( c3y == u3du(i) ) {
+      fprintf(stderr, "lose north cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
+    }
+    else {
+      fprintf(stderr, "lose north %x %p\r\n", i, u3R);
+    }
+
+    _me_lose_north(i);
+  }
+
+  return def;
+}
+
+static u3_noun
 _ca_mend_north(u3_noun def, u3_noun fed)
 {
   u3_noun i, t = fed;
@@ -1556,13 +1581,14 @@ _ca_mend_north(u3_noun def, u3_noun fed)
     }
     else {
       u3_assert( c3n == u3a_north_is_junior(u3R, i) );
-      if ( c3y == u3du(i) ) {
-        fprintf(stderr, "lose north cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
-      }
-      else {
-        fprintf(stderr, "lose north %x %p\r\n", i, u3R);
-      }
-      _me_lose_north(i);
+      fprintf(stderr, "leak north %x %p\r\n", i, u3R);
+      // if ( c3y == u3du(i) ) {
+      //   fprintf(stderr, "lose north cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
+      // }
+      // else {
+      //   fprintf(stderr, "lose north %x %p\r\n", i, u3R);
+      // }
+      // _me_lose_north(i);
     }
   }
 
@@ -1585,13 +1611,14 @@ _ca_mend_south(u3_noun def, u3_noun fed)
     }
     else {
       u3_assert( c3n == u3a_south_is_junior(u3R, i) );
-      if ( c3y == u3du(i) ) {
-        fprintf(stderr, "lose south cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
-      }
-      else {
-        fprintf(stderr, "lose south %x %p\r\n", i, u3R);
-      }
-      _me_lose_south(i);
+      fprintf(stderr, "leak south %x %p\r\n", i, u3R);
+      // if ( c3y == u3du(i) ) {
+      //   fprintf(stderr, "lose south cell %x [%x %x] %p\r\n", i, u3h(i), u3t(i), u3R);
+      // }
+      // else {
+      //   fprintf(stderr, "lose south %x %p\r\n", i, u3R);
+      // }
+      // _me_lose_south(i);
     }
   }
 
@@ -1605,9 +1632,11 @@ u3a_mend(u3_noun def, u3_noun fed)
 {
   u3t_on(coy_o);
 
-  def = ( c3y == u3a_is_north(u3R) )
-        ? _ca_mend_north(def, fed)
-        : _ca_mend_south(def, fed);
+  def = ( c3n == u3a_is_north(u3R) )
+        ? _ca_mend_south(def, fed)
+        : ( u3R != &u3H->rod_u )
+          ? _ca_mend_north(def, fed)
+          : _ca_mend_home(def, fed);
 
   u3t_off(coy_o);
 
