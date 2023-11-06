@@ -45,7 +45,7 @@
     c3_w             imp_w[256];        //  imperial IPs
     time_t           imp_t[256];        //  imperial IP timestamps
     c3_o             imp_o[256];        //  imperial print status
-    c3_d             nal_d;             //  lane cache backcompat flag
+    c3_o             nal_d;             //  lane cache backcompat flag
     struct {                            //    config:
       c3_o           net_o;             //  can send
       c3_o           see_o;             //  can scry
