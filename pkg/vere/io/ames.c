@@ -924,10 +924,19 @@ _ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
 /* _ames_lane_from_cache(): retrieve lane for who from cache, if any
 */
 static u3_weak
-_ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal) {
+_ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
   u3_weak lac = u3h_git(lax_p, who);
 
-  if (nal == c3n && u3_none != lac ) {
+  if ( u3_none == lac ) {
+    u3z(who);
+    return lac;
+  }
+
+  if ( nal_o == c3y ) {
+    lac = u3k(u3h(lac));
+  }
+
+  else {
     struct timeval tim_tv;
     gettimeofday(&tim_tv, 0);
     u3_noun now = u3_time_in_tv(&tim_tv);
