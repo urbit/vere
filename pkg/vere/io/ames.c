@@ -2522,14 +2522,9 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   } else if (_stun_is_our_response(buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
       c3_w cookie = 0x2112A442;
-      c3_w ip_addr_map = _ames_sift_word(buf_u->base + 28);
-      c3_s port_map = _ames_sift_short(buf_u->base + 26);
-
       c3_w ip_addr_xor = _ames_sift_word(buf_u->base + 28 + 12);
       c3_s port_xor = _ames_sift_short(buf_u->base + 26 + 12);
 
-      u3l_log("ip: %u", ntohl(ip_addr));
-      u3l_log("port: %u", ntohs(port));
       // New lane
       u3_lane lan_u;
       lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
