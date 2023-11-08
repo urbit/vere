@@ -13,27 +13,26 @@ typedef struct _mdns_payload {
   void*         context;
 } mdns_payload;
 
+static void close_cb(uv_handle_t* poll) {
+  mdns_payload* payload = (mdns_payload*)poll->data;
+  DNSServiceRefDeallocate(payload->sref);
+  c3_free(payload);
+}
 
 static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
   mdns_payload* payload = (mdns_payload*)req->data;
 
   if (status < 0) {
     u3l_log("mdns: getaddrinfo error: %s", uv_strerror(status));
-    DNSServiceRefDeallocate(payload->sref);
-    c3_free(payload);
-    c3_free(req);
-    uv_freeaddrinfo(res);
-    return;
+  } else {
+    struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
+    payload->cb(payload->who, addr->sin_addr.s_addr, payload->port, payload->context);
   }
 
-  struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
-  payload->cb(payload->who, addr->sin_addr.s_addr, payload->port, payload->context);
-
-  uv_freeaddrinfo(res);
+  payload->poll.data = payload;
+  uv_close((uv_handle_t*)&payload->poll, close_cb);
   c3_free(req);
-  DNSServiceRefDeallocate(payload->sref);
-  c3_free(payload);
-
+  uv_freeaddrinfo(res);
 }
 
 static void resolve_cb(DNSServiceRef sref,
@@ -53,8 +52,8 @@ static void resolve_cb(DNSServiceRef sref,
 
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: dns resolve error %d", err);
-    c3_free(payload);
-    DNSServiceRefDeallocate(sref);
+    payload->poll.data = payload;
+    uv_close((uv_handle_t*)&payload->poll, close_cb);
     return;
   }
 
@@ -82,9 +81,9 @@ static void resolve_cb(DNSServiceRef sref,
 
   if (error < 0) {
     u3l_log("mdns: getaddrinfo error: %s\n", uv_strerror(error));
-    c3_free(payload);
+    payload->poll.data = payload;
+    uv_close((uv_handle_t*)&payload->poll, close_cb);
     c3_free(req);
-    DNSServiceRefDeallocate(sref);
   }
 }
 
@@ -116,28 +115,37 @@ static void browse_cb(DNSServiceRef s,
   }
 
   if (f & kDNSServiceFlagsAdd) {	// Add
-    DNSServiceRef sr;
-
+    // we are leaking payload because we don't know when we are done
+    // browsing, luckily we only browse once
     mdns_payload* payload = (mdns_payload*)context;
     mdns_payload* payload_copy = c3_malloc(sizeof *payload_copy);
 
     // copy to prevent asynchronous thrashing of payload
     memcpy(payload_copy, payload, sizeof(mdns_payload));
 
+
     DNSServiceErrorType err =
-      DNSServiceResolve(&sr, 0, interface,
+      DNSServiceResolve(&payload_copy->sref, 0, interface,
                         name, type, domain, resolve_cb,
                         (void*)payload_copy);
 
+    init_sref_poll(payload_copy->sref, payload_copy);
+
     if (err != kDNSServiceErr_NoError) {
       u3l_log("mdns: dns service resolve error %i", err);
-      c3_free(payload_copy);
-      DNSServiceRefDeallocate(sr);
-      return;
+      payload_copy->poll.data = payload_copy;
+      uv_close((uv_handle_t*)&payload_copy->poll, close_cb);
     }
-    init_sref_poll(sr, payload_copy);
   }
 }
+
+static void register_close_cb(uv_handle_t* poll) {
+  // not freeing sref with DNSServiceRefDeallocate since that
+  // deregisters us from mdns
+  mdns_payload* payload = (mdns_payload*)poll->data;
+  c3_free(payload);
+}
+
 
 static void register_cb(DNSServiceRef sref,
                         DNSServiceFlags f,
@@ -154,10 +162,8 @@ static void register_cb(DNSServiceRef sref,
   } else {
     u3l_log("mdns: %s registered on all interfaces", name);
   }
-  // not freeing sref with DNSServiceRefDeallocate since that
-  // deregisters us from mdns
   uv_poll_stop(&payload->poll);
-  c3_free(payload);
+  uv_close((uv_handle_t*)&payload->poll, register_close_cb);
 }
 
 void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
