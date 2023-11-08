@@ -1258,27 +1258,38 @@ _stun_send_cb(uv_udp_send_t *req_u, c3_i sas_i)
 }
 
 static void _stun_on_request(u3_ames *sam_u, c3_y buf_r[20],
-                            const struct sockaddr* adr_u) {
+                             const struct sockaddr* adr_u) {
   // XX TODO
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  c3_y buf_y[32] = {0};
+  c3_y buf_y[44] = {0};
+  c3_w cookie = 0x2112A442;
 
-  // copy STUN request header
-  memcpy(buf_y, buf_r, 20);
+  c3_w cur_w = 20;                                   // STUN header is 20 bytes
+  memcpy(buf_y, buf_r, cur_w);                       // copy STUN request header
+  buf_y[0] = 0x01; buf_y[1] = 0x01;                  // 0x0101 SUCCESS RESPONSE
+  buf_y[2] = 0x00; buf_y[3] = 0x18;                  // Length: 24 bytes
 
-  c3_w cur_w = 20; // STUN header is 20 bytes
-  buf_y[0] = 0x01; buf_y[1] = 0x01;  // 0x0101 SUCCESS RESPONSE
-  buf_y[2] = 0x00; buf_y[3] = 0x0c;  // 12 bytes
-  buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x01;  // STUN attribute type 0x0001
+  //  MAPPED-ADDRESS
+  buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x01;      // attribute type 0x0001
   buf_y[cur_w + 2] = 0x00; buf_y[cur_w + 3] = 0x08;  // STUN attribute length
   // extra reserved 0x0 byte
-  buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
-  memcpy(buf_y + cur_w + 6, &add_u->sin_port, 2); // Port
+  buf_y[cur_w + 5] = 0x01;                               // family  0x01:IPv4
+  memcpy(buf_y + cur_w + 6, &add_u->sin_port, 2);        // Port
   memcpy(buf_y + cur_w + 8, &add_u->sin_addr.s_addr, 4); // IP Addres
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 32);
-  u3l_log("hear request on %u", add_u->sin_addr.s_addr);
-  u3l_log("send ip: %u", _ames_sift_word(buf_y + 28));
+  // XOR-MAPPED-ADDRESS
+  buf_y[cur_w + 12] = 0x00; buf_y[cur_w + 13] = 0x20;  // attribute type 0x00020
+  buf_y[cur_w + 14] = 0x00; buf_y[cur_w + 15] = 0x08;  // STUN attribute length
+  // extra reserved 0x0 byte
+  buf_y[cur_w + 17] = 0x01;                            // family  0x01:IPv4
+
+  c3_s x_port = htons(ntohs(add_u->sin_port) ^ cookie >> 16);
+  c3_w x_ip = htonl(ntohl(add_u->sin_addr.s_addr) ^ cookie);
+  memcpy(buf_y + cur_w + 18, &x_port, 2);  // X-Port
+  memcpy(buf_y + cur_w + 20, &x_ip, 4);    // X-IP Addres
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 44);
+
   u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
   snd_u->sam_u = sam_u;
   c3_i sas_i = uv_udp_send(
@@ -1496,15 +1507,27 @@ _stun_start(u3_ames* sam_u, u3_noun dad)
 }
 
 static c3_o
-_stun_is_our_response(c3_y buf_y[32], c3_y tid_y[12], c3_w buf_len)
+_stun_is_our_response(c3_y buf_y[44], c3_y tid_y[12], c3_w buf_len)
 {
   c3_w cookie = htonl(0x2112A442);
 
-  return !(buf_len == 32 &&
+  return !(buf_len == 44 &&
            buf_y[0] == 0x01 && buf_y[1] == 0x01 &&
            memcmp(&cookie, buf_y + 4, 4) == 0 &&
            memcmp(tid_y, buf_y + 8, 12) == 0
   );
+}
+
+static c3_o
+_stun_is_request(c3_y buf_y[32], c3_w buf_len)
+{
+  c3_w cookie = htonl(0x2112A442);
+
+  return !(buf_len >= 20 &&  // at least the STUN header
+           buf_y[0] == 0x0 && buf_y[1] == 0x01 &&
+           memcmp(&cookie, buf_y + 4, 4) == 0
+  );
+
 }
 
 static c3_o
@@ -2415,37 +2438,39 @@ _ames_recv_cb(uv_udp_t*        wax_u,
     }
     c3_free(buf_u->base);
   }
-  else if (buf_u->base[0] == 0x0 && buf_u->base[1] == 0x01) {
-      // STUN request
-      // TODO more sanity checks on proper STUN requests?
+  else if (_stun_is_request(buf_u->base, nrd_i) == c3y) {
       u3_ames* sam_u = wax_u->data;
       _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
   } else if (_stun_is_our_response(buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
-      // STUN response
-      c3_w ip_addr = _ames_sift_word(buf_u->base + 28);
-      c3_s port = _ames_sift_short(buf_u->base + 26);
+      c3_w cookie = 0x2112A442;
+      c3_w ip_addr_map = _ames_sift_word(buf_u->base + 28);
+      c3_s port_map = _ames_sift_short(buf_u->base + 26);
+
+      c3_w ip_addr_xor = _ames_sift_word(buf_u->base + 28 + 12);
+      c3_s port_xor = _ames_sift_short(buf_u->base + 26 + 12);
 
       u3l_log("ip: %u", ntohl(ip_addr));
       u3l_log("port: %u", ntohs(port));
       // New lane
       u3_lane lan_u;
-      lan_u.por_s = ntohs(port);
-      lan_u.pip_w = ntohs(ip_addr);
+      lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
+      lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
 
       u3_noun wir = u3nc(c3__ames, u3_nul);
-      if (sam_u->sun_u.sef_u.por_s == 0 && sam_u->sun_u.sef_u.pip_w == 0) {
-        // inject %stun task into arvo
-        u3l_log("First STUN response");
-        u3_noun cad = u3nc(c3__stun, c3n);
-        u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-        u3_auto_plan(&sam_u->car_u, ovo_u);
-      }
-      else if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
+      if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
                sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
         // inject %once task into arvo
         u3l_log("IP port changed");
-        u3_noun cad = u3nc(c3__once, u3_nul);
+        u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
+        u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+        u3_auto_plan(&sam_u->car_u, ovo_u);
+      } else {
+        // XX previously, only the first STUN response would stop the ping app
+        //    now, every successful response injects the %stop task, and %ping
+        //    takes care of handling that appropiatedly
+        // inject %stun task into arvo
+        u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
         u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
         u3_auto_plan(&sam_u->car_u, ovo_u);
       }
