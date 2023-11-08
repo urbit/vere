@@ -758,7 +758,9 @@ u3_disk_read_meta(MDB_env* mdb_u,
     }
   }
   else if ( (1 == val_u.hav_i) || !((*val_u.buf_y) >> 1) ) {
-    *fak_o = (*val_u.buf_y) & 1;
+    if ( fak_o ) {
+      *fak_o = (*val_u.buf_y) & 1;
+    }
   }
   else {
     fprintf(stderr, "disk: read meta: invalid fake bit %u %zd\r\n",
