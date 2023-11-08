@@ -521,6 +521,32 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
   u3z(dat);
 }
 
+/* _lord_plea_mass(): inject mass report
+ */
+static void
+_lord_plea_mass(u3_lord* god_u, u3_noun dat)
+{
+  u3_noun cad = u3nc(c3__quac, dat);
+  u3_noun wir = u3nc(c3__quac, u3_nul);
+  u3_ovum* egg_u = u3_ovum_init(0, c3__k, wir, cad);
+
+  u3_pier* pir_u = god_u->cb_u.ptr_v;
+  u3_auto* car_u = c3_calloc(sizeof(*car_u));
+  u3_noun    ovo;
+
+  car_u->pir_u = pir_u;
+  car_u->nam_m = c3__quac;  //   is that right? I did it by analogy w/ smth
+
+  u3_auto_plan(car_u, egg_u);
+
+  u3_assert( u3_auto_next(car_u, &ovo) == egg_u );
+
+  {
+      struct timeval tim_tv;
+      gettimeofday(&tim_tv, 0);
+      u3_lord_work(god_u, egg_u, u3nc(u3_time_in_tv(&tim_tv), ovo));
+    }
+}
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
  static void
@@ -741,6 +767,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case c3__ripe: {
       _lord_plea_ripe(god_u, u3k(dat));
+    } break;
+
+    case c3__quac: {
+      _lord_plea_mass(god_u, u3k(dat));
+
     } break;
   }
 

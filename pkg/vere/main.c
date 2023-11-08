@@ -1041,7 +1041,10 @@ _cw_serf_writ(void* vod_p, c3_d len_d, c3_y* byt_y)
 
     //  all references must now be counted, and all roots recorded
     //
-    u3_serf_post(&u3V);
+    u3_weak serf_post_out = u3_serf_post(&u3V);
+    if (serf_post_out != u3_none) {
+      _cw_serf_send(u3nc(c3__quac, serf_post_out));
+    }
   }
 }
 

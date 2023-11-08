@@ -32,6 +32,7 @@
 +$  plea
   $%  [%live ~]
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
+      [%quac p=(unit *)]
       [%slog pri=@ tank]
       [%flog cord]
       $:  %peek
@@ -72,13 +73,15 @@ enum {
 
 /* _serf_grab(): garbage collect, checking for profiling. RETAIN.
 */
-static void
+static u3_weak
 _serf_grab(u3_noun sac)
 {
+  u3_noun out = u3_none;
   if ( u3_nul == sac) {
     if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
     }
+    return u3_none;
   }
   else {
     c3_w tot_w = 0;
@@ -134,6 +137,8 @@ _serf_grab(u3_noun sac)
     u3z(sac);
 
     u3l_log("");
+
+    return u3i_word(tot_w * 4);
   }
 }
 
@@ -174,11 +179,13 @@ u3_serf_grab(void)
   }
 
   fprintf(stderr, "serf: measuring memory:\r\n");
-
+  fprintf(stderr, "BEFORE sac FORK:\r\n");
   if ( u3_nul != sac ) {
+    printf("enter _serf_grab\r\n");
     _serf_grab(sac);
   }
   else {
+    fprintf(stderr, "sac is empty\r\n");
     u3a_print_memory(stderr, "total marked", u3m_mark(stderr));
     u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
     u3a_print_memory(stderr, "sweep", u3a_sweep());
@@ -190,9 +197,10 @@ u3_serf_grab(void)
 
 /* u3_serf_post(): update serf state post-writ.
 */
-void
+u3_weak
 u3_serf_post(u3_serf* sef_u)
 {
+  u3_noun out = u3_none;
   if ( sef_u->fag_w & _serf_fag_hit1 ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("serf: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
@@ -213,8 +221,11 @@ u3_serf_post(u3_serf* sef_u)
   //  XX this runs on replay too, |mass s/b elsewhere
   //
   if ( sef_u->fag_w & _serf_fag_mute ) {
-    _serf_grab(sef_u->sac);
+    u3_weak grab_mass = _serf_grab(sef_u->sac);
     sef_u->sac   = u3_nul;
+    if (grab_mass != u3_none) {
+      out = u3nc(u3_nul, grab_mass);
+    }
   }
 
   if ( sef_u->fag_w & _serf_fag_hit0 ) {
@@ -232,6 +243,7 @@ u3_serf_post(u3_serf* sef_u)
   }
 
   sef_u->fag_w = _serf_fag_none;
+  return out;
 }
 
 /* _serf_curb(): check for memory threshold

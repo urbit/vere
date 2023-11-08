@@ -51,7 +51,7 @@
 
     /* u3_serf_post(): update serf state post-writ.
     */
-      void
+      u3_weak
       u3_serf_post(u3_serf* sef_u);
 
     /* u3_serf_grab(): garbage collect.
