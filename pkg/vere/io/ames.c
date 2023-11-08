@@ -1655,7 +1655,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   u3z(nun);
 }
 
-/* _fine_hear_request(): hear wail (fine equeust packet packet).
+/* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
