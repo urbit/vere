@@ -27,7 +27,7 @@ u3wfu_nest_dext(u3_noun dext_core)
     u3_weak vet = u3r_at(u3qfu_van_vet, van);
     c3_m  fun_m = 141 + c3__dext + ((!!vet) << 8);
     u3_noun key = u3z_key_3(fun_m, sut, ref, bat);
-    u3_weak pro = u3z_find(key);
+    u3_weak pro = u3z_find(u3z_memo_toss, key);
 
     if ( u3_none != pro ) {
       u3z(key);
@@ -39,7 +39,7 @@ u3wfu_nest_dext(u3_noun dext_core)
       if ( ((c3y == pro) && (u3_nul == reg)) ||
            ((c3n == pro) && (u3_nul == seg)) )
       {
-        return u3z_save(key, pro);
+        return u3z_save(u3z_memo_toss, key, pro);
       }
       else {
         u3z(key);

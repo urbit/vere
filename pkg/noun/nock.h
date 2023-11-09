@@ -8,6 +8,7 @@
 #include "c3.h"
 #include "jets.h"
 #include "types.h"
+#include "zave.h"
 
   /** Data structures.
   ***
@@ -18,6 +19,7 @@
   typedef struct {
     c3_l    sip_l;
     u3_noun key;
+    u3z_cid cid;
   } u3n_memo;
 
   /* u3n_prog: program compiled from nock

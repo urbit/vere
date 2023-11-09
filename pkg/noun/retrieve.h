@@ -4,11 +4,107 @@
 #define U3_RETRIEVE_H
 
 #include "c3.h"
+#include "allocate.h"
+#include "error.h"
 #include "gmp.h"
 #include "types.h"
 
     /** u3r_*: read without ever crashing.
     **/
+
+      /* u3r_cell(): factor (a) as a cell (b c).
+      */
+        inline c3_o
+        u3r_cell(u3_noun a, u3_noun* b, u3_noun* c)
+        {
+          u3a_cell* cel_u;
+
+          u3_assert(u3_none != a);
+
+          if ( c3y == u3a_is_cell(a) ) {
+            cel_u = u3a_to_ptr(a);
+            if ( b ) *b = cel_u->hed;
+            if ( c ) *c = cel_u->tel;
+            return c3y;
+          }
+          else {
+            return c3n;
+          }
+        }
+
+      /* u3r_trel(): factor (a) as a trel (b c d).
+      */
+        inline c3_o
+        u3r_trel(u3_noun a, u3_noun *b, u3_noun *c, u3_noun *d)
+        {
+          u3_noun guf;
+
+          if ( (c3y == u3r_cell(a, b, &guf)) &&
+               (c3y == u3r_cell(guf, c, d)) ) {
+            return c3y;
+          }
+          else {
+            return c3n;
+          }
+        }
+
+      /* u3r_qual(): factor (a) as a qual (b c d e).
+      */
+        inline c3_o
+        u3r_qual(u3_noun  a,
+                 u3_noun* b,
+                 u3_noun* c,
+                 u3_noun* d,
+                 u3_noun* e)
+        {
+          u3_noun guf;
+
+          if ( (c3y == u3r_cell(a, b, &guf)) &&
+               (c3y == u3r_trel(guf, c, d, e)) ) {
+            return c3y;
+          }
+          else return c3n;
+        }
+
+      /* u3r_quil(): factor (a) as a quil (b c d e f).
+      */
+        inline c3_o
+        u3r_quil(u3_noun  a,
+                 u3_noun* b,
+                 u3_noun* c,
+                 u3_noun* d,
+                 u3_noun* e,
+                 u3_noun* f)
+        {
+          u3_noun guf;
+
+          if ( (c3y == u3r_cell(a, b, &guf)) &&
+               (c3y == u3r_qual(guf, c, d, e, f)) ) {
+            return c3y;
+          }
+          else return c3n;
+        }
+
+      /* u3r_hext(): factor (a) as a hext (b c d e f g)
+      */
+        inline c3_o
+        u3r_hext(u3_noun  a,
+                 u3_noun* b,
+                 u3_noun* c,
+                 u3_noun* d,
+                 u3_noun* e,
+                 u3_noun* f,
+                 u3_noun* g)
+        {
+          u3_noun guf;
+
+          if ( (c3y == u3r_cell(a, b, &guf)) &&
+               (c3y == u3r_quil(guf, c, d, e, f, g)) ) {
+            return c3y;
+          }
+          else return c3n;
+        }
+
       /* u3r_at(): fragment `a` of `b`, or u3_none.
       */
         u3_weak
@@ -182,61 +278,6 @@
       */
         c3_o
         u3r_bite(u3_noun bite, u3_atom* bloq, u3_atom *step);
-
-      /* u3r_cell():
-      **
-      **   Divide `a` as a cell `[b c]`.
-      */
-        c3_o
-        u3r_cell(u3_noun  a,
-                 u3_noun* b,
-                 u3_noun* c);
-
-      /* u3r_trel():
-      **
-      **   Divide `a` as a trel `[b c d]`.
-      */
-        c3_o
-        u3r_trel(u3_noun  a,
-                 u3_noun* b,
-                 u3_noun* c,
-                 u3_noun* d);
-
-      /* u3r_qual():
-      **
-      **   Divide (a) as a qual [b c d e].
-      */
-        c3_o
-        u3r_qual(u3_noun  a,
-                 u3_noun* b,
-                 u3_noun* c,
-                 u3_noun* d,
-                 u3_noun* e);
-
-      /* u3r_quil():
-      **
-      **   Divide (a) as a quil [b c d e f].
-      */
-        c3_o
-        u3r_quil(u3_noun  a,
-                 u3_noun* b,
-                 u3_noun* c,
-                 u3_noun* d,
-                 u3_noun* e,
-                 u3_noun* f);
-
-      /* u3r_hext():
-      **
-      **   Divide (a) as a hext [b c d e f g].
-      */
-        c3_o
-        u3r_hext(u3_noun  a,
-                 u3_noun* b,
-                 u3_noun* c,
-                 u3_noun* d,
-                 u3_noun* e,
-                 u3_noun* f,
-                 u3_noun* g);
 
       /* u3r_p():
       **
@@ -485,5 +526,13 @@
       */
         c3_y*
         u3r_tape(u3_noun a);
+
+      /* u3r_skip():
+      **
+      **  Extract a constant from a formula, ignoring
+      **  safe/static hints, doing no computation.
+      */
+        u3_weak
+        u3r_skip(u3_noun fol);
 
 #endif /* ifndef U3_RETRIEVE_H */

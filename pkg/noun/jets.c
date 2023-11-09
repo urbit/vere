@@ -18,15 +18,6 @@
 #include "vortex.h"
 #include "xtract.h"
 
-/**  Data structures.
-**/
-
-/* _cj_hank: cached hook information.
- */
-typedef struct {
-  u3_weak  hax;                     //  axis of hooked inner core
-  u3j_site sit_u;                   //  call-site data
-} _cj_hank;
 
 /**  Functions.
 **/
@@ -1069,7 +1060,7 @@ _cj_prog(u3_weak loc, u3_noun fol)
 /* cj_hank_find(): find cached hook information, keyed by arbitrary
  *                 prefix and term cords. RETAIN.
  */
-static _cj_hank*
+static u3j_hank*
 _cj_hank_find(u3_noun pre, u3_noun tam)
 {
   u3_noun key = u3nc(u3k(pre), u3k(tam));
@@ -1077,10 +1068,10 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
 
   if ( u3_none != got ) {
     u3z(key);
-    return u3to(_cj_hank, got);
+    return u3to(u3j_hank, got);
   }
   else {
-    _cj_hank* new_u = u3a_walloc(c3_wiseof(_cj_hank));
+    u3j_hank* new_u = u3a_walloc(c3_wiseof(u3j_hank));
     u3a_road* rod_u = u3R;
 
     while ( rod_u->par_p && u3_none == got ) {
@@ -1092,7 +1083,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
       new_u->hax = u3_none;
     }
     else {
-      _cj_hank* old_u = u3to(_cj_hank, got);
+      u3j_hank* old_u = u3to(u3j_hank, got);
       if ( u3_none != (new_u->hax = old_u->hax) ) {
         //  it's unusual but safe to "take" here, because
         //  u3a_take will no-op on senior nouns (just as u3k would)
@@ -1101,7 +1092,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
       }
     }
 
-    u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, new_u));
+    u3h_put(u3R->jed.han_p, key, u3of(u3j_hank, new_u));
     u3z(key);
     return new_u;
   }
@@ -1112,7 +1103,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
  *                  core on return if valid. RETAIN.
  */
 static c3_o
-_cj_hank_fine(_cj_hank* han_u, u3_noun cor, u3_noun *inn)
+_cj_hank_fine(u3j_hank* han_u, u3_noun cor, u3_noun *inn)
 {
   u3_noun hax = han_u->hax;
   if ( u3_none == hax ) {
@@ -1134,7 +1125,7 @@ _cj_hank_fine(_cj_hank* han_u, u3_noun cor, u3_noun *inn)
 /* _cj_hank_lose(): release memory maintained in a hook cache.
 */
 static void
-_cj_hank_lose(_cj_hank* han_u)
+_cj_hank_lose(u3j_hank* han_u)
 {
   if ( u3_none != han_u->hax ) {
     u3z(han_u->hax);
@@ -1145,7 +1136,7 @@ _cj_hank_lose(_cj_hank* han_u)
 /* _cj_hank_fill(): slow path, populate han_u.
  */
 static u3_noun
-_cj_hank_fill(_cj_hank* han_u, u3_noun tam, u3_noun cor)
+_cj_hank_fill(u3j_hank* han_u, u3_noun tam, u3_noun cor)
 {
   u3_weak   loc, col;
   u3_noun   got, pat, nam, huc;
@@ -1642,7 +1633,7 @@ u3j_cook(const c3_c* key_c,
          const c3_c* tam_c)
 {
   u3_noun pro, key, tam, inn;
-  _cj_hank* han_u;
+  u3j_hank* han_u;
 
   u3t_on(glu_o);
   key = u3i_string(key_c);
@@ -1996,8 +1987,8 @@ static void
 _cj_reap_hank(u3_cell kev)
 {
   u3a_cell* kev_u = u3a_to_ptr(kev);
-  _cj_hank* nah_u = u3to(_cj_hank, kev_u->tel);
-  _cj_hank* han_u;
+  u3j_hank* nah_u = u3to(u3j_hank, kev_u->tel);
+  u3j_hank* han_u;
   u3_weak     got;
   u3_noun     key;
 
@@ -2013,7 +2004,7 @@ _cj_reap_hank(u3_cell kev)
   //  promote
   //
   if ( u3_none == got ) {
-    han_u      = u3a_walloc(c3_wiseof(_cj_hank));
+    han_u      = u3a_walloc(c3_wiseof(u3j_hank));
     han_u->hax = u3a_take(nah_u->hax);
     u3j_site_take(&(han_u->sit_u), &(nah_u->sit_u));
   }
@@ -2022,7 +2013,7 @@ _cj_reap_hank(u3_cell kev)
   else {
     u3_weak old;
 
-    han_u      = u3to(_cj_hank, got);
+    han_u      = u3to(u3j_hank, got);
     old        = han_u->hax;
     han_u->hax = u3a_take(nah_u->hax);
     u3j_site_take(&(nah_u->sit_u), &(nah_u->sit_u));
@@ -2033,7 +2024,7 @@ _cj_reap_hank(u3_cell kev)
     }
   }
 
-  u3h_put(u3R->jed.han_p, key, u3of(_cj_hank, han_u));
+  u3h_put(u3R->jed.han_p, key, u3of(u3j_hank, han_u));
   u3z(key);
 }
 
@@ -2141,7 +2132,7 @@ _cj_warm_tap(u3_noun kev, void* wit)
 static void
 _cj_ream_hank(u3_noun kev)
 {
-  u3j_site_ream(&(u3to(_cj_hank, u3t(kev))->sit_u));
+  u3j_site_ream(&(u3to(u3j_hank, u3t(kev))->sit_u));
 }
 
 /* u3j_ream(): rebuild warm state
@@ -2275,7 +2266,7 @@ static void
 _cj_mark_hank(u3_noun kev, void* dat)
 {
   c3_w* tot_w = (c3_w*) dat;
-  _cj_hank* han_u = u3to(_cj_hank, u3t(kev));
+  u3j_hank* han_u = u3to(u3j_hank, u3t(kev));
   *tot_w += u3a_mark_ptr(han_u);
   if ( u3_none != han_u->hax ) {
     *tot_w += u3a_mark_noun(han_u->hax);
@@ -2308,12 +2299,12 @@ u3j_mark(FILE* fil_u)
   return u3a_maid(fil_u, "total jet stuff", tot_w);
 }
 
-/* _cj_free_hank(): free an entry from the hank cache.
+/* u3j_free_hank(): free an entry from the hank cache.
 */
-static void
-_cj_free_hank(u3_noun kev)
+void
+u3j_free_hank(u3_noun kev)
 {
-  _cj_hank* han_u = u3to(_cj_hank, u3t(kev));
+  u3j_hank* han_u = u3to(u3j_hank, u3t(kev));
   if ( u3_none != han_u->hax ) {
     u3z(han_u->hax);
     u3j_site_lose(&(han_u->sit_u));
@@ -2326,7 +2317,7 @@ _cj_free_hank(u3_noun kev)
 void
 u3j_free(void)
 {
-  u3h_walk(u3R->jed.han_p, _cj_free_hank);
+  u3h_walk(u3R->jed.han_p, u3j_free_hank);
   u3h_free(u3R->jed.war_p);
   u3h_free(u3R->jed.cod_p);
   u3h_free(u3R->jed.han_p);
@@ -2348,10 +2339,9 @@ u3j_reclaim(void)
   // if ( &(u3H->rod_u) == u3R ) {
   //   u3j_ream();
   // }
-
   //  clear the jet hank cache
   //
-  u3h_walk(u3R->jed.han_p, _cj_free_hank);
+  u3h_walk(u3R->jed.han_p, u3j_free_hank);
   u3h_free(u3R->jed.han_p);
   u3R->jed.han_p = u3h_new();
 }

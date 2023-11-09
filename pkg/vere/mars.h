@@ -15,7 +15,7 @@
 
     /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
     */
-      void
+      c3_d
       u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d);
 
 #endif /* ifndef U3_VERE_MARS_H */
