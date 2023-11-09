@@ -63,7 +63,7 @@
       u3_lmdb_read_meta(MDB_env*    env_u,
                         void*       ptr_v,
                         const c3_c* key_c,
-                        void     (*read_f)(void*, size_t, void*));
+                        void     (*read_f)(void*, ssize_t, void*));
 
     /* u3_lmdb_save_meta(): save by string into the META db.
     */

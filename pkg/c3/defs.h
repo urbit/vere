@@ -149,6 +149,8 @@
         mkdir(a, b);})
 #     define c3_rmdir(a) ({                                     \
         rmdir(a);})
+#     define c3_link(a, b) ({                                   \
+        link(a, b);})
 #     define c3_unlink(a) ({                                    \
         unlink(a);})
 #     define c3_fopen(a, b) ({                                  \

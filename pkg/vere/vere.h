@@ -8,6 +8,7 @@
 #include "noun.h"
 #include "serf.h"
 #include "uv.h"
+#include <types.h>
 
   /** Quasi-tunable parameters.
   **/
@@ -130,6 +131,7 @@
         c3_c*    pax_c;                     //  path of directory
         uv_file  fil_u;                     //  file, opened read-only to fsync
         u3_dent* all_u;                     //  file list
+        u3_dent* dil_u;                     //  directory list
       } u3_dire;
 
     /* u3_save: checkpoint control.
@@ -263,7 +265,7 @@
         c3_o    abo;                        //  -a, abort aggressively
         c3_c*   pil_c;                      //  -B, bootstrap from
         c3_c*   bin_c;                      //  -b, http server bind ip
-        c3_w    hap_w;                      //  -C, cap memo cache
+        c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
         c3_c*   eth_c;                      //  -e, ethereum node url
@@ -281,6 +283,7 @@
         c3_o    lit;                        //  -l, lite mode
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
+        c3_w    per_w;                      //  -M, cap persistent memo cache
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port
@@ -313,6 +316,7 @@
       typedef struct _u3_host {
         c3_w       kno_w;                   //  current executing stage
         c3_c*      dir_c;                   //  pier path (no trailing /)
+        c3_d       eve_d;                   //  initial current snapshot
         c3_c*      dem_c;                   //  daemon executable path
         c3_c*      wrk_c;                   //  worker executable path
         c3_d       now_d;                   //  event tick
@@ -538,9 +542,11 @@
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
-          void*            mdb_u;               //  lmdb environment.
+          c3_w             ver_w;               //  pier version
+          void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
+          c3_d             epo_d;               //  current epoch number
           u3_disk_cb        cb_u;               //  callbacks
           u3_read*         red_u;               //  read requests
           union {                               //  write thread/request
@@ -1001,6 +1007,31 @@
       */
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
+
+      /* u3_disk_epoc_init(): create new epoch.
+       */
+        c3_o
+        u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
+
+      /* u3_disk_epoc_kill(): delete an epoch.
+       */
+        c3_o
+        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
+
+      /* u3_disk_epoc_last(): get latest epoch number.
+       */
+        c3_o
+        u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d);
+
+      /* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
+      */
+        c3_z
+        u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
+
+      /* u3_disk_kindly(): do the needful.
+      */
+        void
+        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
 
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
