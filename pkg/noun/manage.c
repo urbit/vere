@@ -1011,7 +1011,7 @@ u3m_love(u3_noun pro)
   //
   u3j_reap(&jed_u);
   u3n_reap(byc_p);
-  u3z_reap(u3z_memo_keep, per_p);
+  u3z_reap(per_p);
 
   //  pop the stack
   //
