@@ -662,6 +662,11 @@
           c3_w
           u3a_idle(u3a_road* rod_u);
 
+        /* u3a_ream(): ream free-lists.
+        */
+          void
+          u3a_ream(void);
+
         /* u3a_sweep(): sweep a fully marked road.
         */
           c3_w

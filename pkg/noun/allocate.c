@@ -67,28 +67,29 @@ _box_count(c3_ws siz_ws) { }
   } while(0)
 
 /* _box_slot(): select the right free list to search for a block.
-   TODO: do we really need a loop to do this?
-
-   so our free list logic looks like this:
-   siz_w < 6 words then [0]
-   siz_w < 16      then [1]
-   siz_w < 32      then [2]
-   siz_w < 64      then [3]
-   ...
-   siz_w > 4G      then [26]
+**
+**   siz_w ==  6 words then  [0]
+**   siz_w  < 16       then  [1]
+**   siz_w  < 32       then  [2]
+**   siz_w  < 64       then  [3]
+**   ...
+**   siz_w >=  2GB     then [26]
 */
 static c3_w
 _box_slot(c3_w siz_w)
 {
-  if ( siz_w < u3a_minimum ) {
+  if ( u3a_minimum == siz_w ) {
     return 0;
   }
-
-  for (c3_w i_w = 1; i_w < u3a_fbox_no; i_w++) {
-    if ( siz_w < 16 ) return i_w;
-    siz_w = (siz_w + 1) >> 1;
+  else if ( !(siz_w >> 4) ) {
+    c3_dessert( u3a_minimum < siz_w );
+    return 1;
   }
-  return u3a_fbox_no - 1;
+  else {
+    c3_w bit_w = c3_bits_word(siz_w) - 3;
+    c3_w max_w = u3a_fbox_no - 1;
+    return c3_min(bit_w, max_w);
+  }
 }
 
 /* _box_make(): construct a box.
@@ -1113,9 +1114,7 @@ _ca_take_atom(u3a_atom* old_u)
 static inline u3_cell
 _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
 {
-  //  XX use u3a_celloc?
-  //
-  c3_w*     new_w = u3a_walloc(c3_wiseof(u3a_cell));
+  c3_w*     new_w = u3a_celloc();
   u3a_cell* new_u = (u3a_cell*)(void *)new_w;
   u3_cell     new = u3a_to_pom(u3a_outa(new_u));
 
@@ -2297,6 +2296,69 @@ u3a_idle(u3a_road* rod_u)
   }
 
   return fre_w;
+}
+
+/* u3a_ream(): ream free-lists.
+*/
+void
+u3a_ream(void)
+{
+  u3p(u3a_fbox) lit_p;
+  u3a_fbox*     fox_u;
+  c3_w     sel_w, i_w;
+
+  for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
+    lit_p = u3R->all.fre_p[i_w];
+
+    while ( lit_p ) {
+      fox_u = u3to(u3a_fbox, lit_p);
+      lit_p = fox_u->nex_p;
+      sel_w = _box_slot(fox_u->box_u.siz_w);
+
+      if ( sel_w != i_w ) {
+        //  inlined _box_detach()
+        //
+        {
+          u3p(u3a_fbox) fre_p = u3of(u3a_fbox, &(fox_u->box_u));
+          u3p(u3a_fbox) pre_p = u3to(u3a_fbox, fre_p)->pre_p;
+          u3p(u3a_fbox) nex_p = u3to(u3a_fbox, fre_p)->nex_p;
+
+          if ( nex_p ) {
+            if ( u3to(u3a_fbox, nex_p)->pre_p != fre_p ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3to(u3a_fbox, nex_p)->pre_p = pre_p;
+          }
+          if ( pre_p ) {
+            if( u3to(u3a_fbox, pre_p)->nex_p != fre_p ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3to(u3a_fbox, pre_p)->nex_p = nex_p;
+          }
+          else {
+            if ( fre_p != u3R->all.fre_p[i_w] ) {
+              u3_assert(!"loom: corrupt");
+            }
+            u3R->all.fre_p[i_w] = nex_p;
+          }
+        }
+
+        //  inlined _box_attach()
+        {
+          u3p(u3a_fbox)  fre_p = u3of(u3a_fbox, &(fox_u->box_u));
+          u3p(u3a_fbox)* pfr_p = &u3R->all.fre_p[sel_w];
+          u3p(u3a_fbox)  nex_p = *pfr_p;
+
+          u3to(u3a_fbox, fre_p)->pre_p = 0;
+          u3to(u3a_fbox, fre_p)->nex_p = nex_p;
+          if ( nex_p ) {
+            u3to(u3a_fbox, nex_p)->pre_p = fre_p;
+          }
+          (*pfr_p) = fre_p;
+        }
+      }
+    }
+  }
 }
 
 /* u3a_sweep(): sweep a fully marked road.
