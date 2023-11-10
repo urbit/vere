@@ -45,6 +45,7 @@
     c3_w             imp_w[256];        //  imperial IPs
     time_t           imp_t[256];        //  imperial IP timestamps
     c3_o             imp_o[256];        //  imperial print status
+    c3_o             nal_o;             //  lane cache backcompat flag
     struct {                            //    config:
       c3_o           net_o;             //  can send
       c3_o           see_o;             //  can scry
@@ -920,13 +921,22 @@ _ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
   u3z(who);
 }
 
-/* _ames_lane_from_cache(): retrieve lane for who from cache, if any & fresh
+/* _ames_lane_from_cache(): retrieve lane for who from cache, if any
 */
 static u3_weak
-_ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who) {
+_ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
   u3_weak lac = u3h_git(lax_p, who);
 
-  if ( u3_none != lac ) {
+  if ( u3_none == lac ) {
+    u3z(who);
+    return lac;
+  }
+
+  if ( nal_o == c3y ) {
+    lac = u3k(u3h(lac));
+  }
+
+  else {
     struct timeval tim_tv;
     gettimeofday(&tim_tv, 0);
     u3_noun now = u3_time_in_tv(&tim_tv);
@@ -1477,7 +1487,7 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
   //
   else {
     u3_noun key = u3i_chubs(2, pac_u->pre_u.rec_d);
-    lac = _ames_lane_from_cache(sam_u->lax_p, key);
+    lac = _ames_lane_from_cache(sam_u->lax_p, key, sam_u->nal_o);
   }
 
   //  if we know there's no lane, drop the packet
@@ -2276,6 +2286,14 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
       _ames_ef_turf(sam_u, u3k(dat));
       ret_o = c3y;
     } break;
+
+    case c3__nail: {
+      u3_noun who = u3k(u3h(dat));
+      u3_noun las = u3k(u3t(dat));
+      _ames_lane_into_cache(sam_u->lax_p, who, las);
+      sam_u->nal_o = c3y;
+      ret_o = c3y;
+    } break;
   }
 
   u3z(tag); u3z(dat);
@@ -2457,6 +2475,7 @@ u3_ames_io_init(u3_pier* pir_u)
 {
   u3_ames* sam_u  = c3_calloc(sizeof(*sam_u));
   sam_u->pir_u    = pir_u;
+  sam_u->nal_o    = c3n;
   sam_u->fig_u.net_o = c3y;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
