@@ -149,6 +149,21 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
   //  copies [a], zero-initializes any additional space
   //
   u3r_words(0, sab_u->len_w, sab_u->buf_w, a);
+
+  //  if necessary, mask off extra most-significant bits
+  //  from most-significant word
+  //
+  if ( (5 > met_g) && (u3r_met(5, a) >= sab_u->len_w) ) {
+    //  NB: overflow already checked in _ci_slab_size()
+    //
+    c3_d bit_d = len_d << met_g;
+    c3_w wor_w = bit_d >> 5;
+    c3_w bit_w = bit_d & 0x1f;
+
+    if ( bit_w ) {
+      sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
+    }
+  }
 }
 
 /* u3i_slab_grow(): resize slab, zero-initializing new space.
