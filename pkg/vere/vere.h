@@ -265,7 +265,7 @@
         c3_o    abo;                        //  -a, abort aggressively
         c3_c*   pil_c;                      //  -B, bootstrap from
         c3_c*   bin_c;                      //  -b, http server bind ip
-        c3_w    hap_w;                      //  -C, cap memo cache
+        c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
         c3_c*   eth_c;                      //  -e, ethereum node url
@@ -283,6 +283,7 @@
         c3_o    lit;                        //  -l, lite mode
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
+        c3_w    per_w;                      //  -M, cap persistent memo cache
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port

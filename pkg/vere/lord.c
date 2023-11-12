@@ -1160,10 +1160,11 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[11];
+    c3_c* arg_c[12];
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
+    c3_c  per_c[11];
     c3_c  cev_c[11];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
@@ -1178,6 +1179,8 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     sprintf(wag_c, "%u", god_u->wag_w);
 
     sprintf(hap_c, "%u", u3_Host.ops_u.hap_w);
+
+    sprintf(per_c, "%u", u3_Host.ops_u.per_w);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
@@ -1208,7 +1211,8 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     }
 
     arg_c[9] = tos_c;
-    arg_c[10] = NULL;
+    arg_c[10] = per_c;
+    arg_c[11] = NULL;
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
