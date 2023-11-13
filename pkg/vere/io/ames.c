@@ -1246,16 +1246,11 @@ _stun_reset(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
 
-  sam_u->fig_u.net_o = c3n;
-  c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
+  sam_u->fig_u.net_o = c3n;  // XX needed?
 
-  if ( gap_d >= 5*1000 ) {
-    gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-    sam_u->sun_u.sat_y = STUN_TRYING;
-    _stun_czar(sam_u);
-  } else {
-    uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
-  }
+  gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
+  sam_u->sun_u.sat_y = STUN_TRYING;
+  _stun_czar(sam_u);
 }
 
 static void
@@ -1396,17 +1391,14 @@ _stun_on_lost(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
   u3l_log("stun: waited too long...");
-  uv_timer_stop(&sam_u->sun_u.tim_u);
-  uv_timer_stop(&sam_u->sun_u.dns_u);
+  _stun_stop(sam_u);
   //  inject event into arvo to %kick ping app
   u3_noun wir = u3nc(c3__ames, u3_nul);
   u3_noun cad = u3nt(c3__stun, c3__fail, u3_nul);
   u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
   u3_auto_plan(&sam_u->car_u, ovo_u);
-  sam_u->sun_u.sat_y = STUN_TRYING;
-  gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
   // resolve DNS again, and (re)start STUN
-  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 1, 0);
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
 }
 
 static void
@@ -1480,8 +1472,7 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
       _stun_stop(sam_u);
       _stun_czar_gone(sam_u, now);
       sam_u->sun_u.dns_u.data = sam_u;
-      gettimeofday(&sam_u->sun_u.sar_u, 0);
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 1, 0);
+      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
     }
   }
   u3l_log("free");
@@ -1636,8 +1627,7 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
       _stun_stop(sam_u);
       _stun_czar_gone(sam_u, time(0));
       sam_u->sun_u.dns_u.data = sam_u;
-      gettimeofday(&sam_u->sun_u.sar_u, 0);
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 1, 0);
+      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
       return;
     }
   }
