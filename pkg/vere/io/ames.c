@@ -1533,6 +1533,7 @@ _stun_czar(u3_ames* sam_u)
     //  cached addresses have a 5 minute TTL
     //
     else if ((0 != pip_w) && ((now - wen) < 300)) {
+        sam_u->sun_u.sat_y = STUN_TRYING;
         sam_u->sun_u.lan_u.pip_w = pip_w;
         _stun_send_request(sam_u);
         gettimeofday(&sam_u->sun_u.sar_u, 0);
