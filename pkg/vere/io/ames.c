@@ -982,7 +982,7 @@ _ames_czar_port(c3_y imp_y)
   }
 }
 
-static c3_c*
+static c3_i
 _ames_czar_dns(c3_c dns_c[255], c3_y imp_y, c3_c* czar_c)
 {
   u3_noun nam = u3dc("scot", 'p', imp_y);
@@ -1441,7 +1441,7 @@ _stun_send_request(u3_ames* sam_u)
     sam_u->sun_u.tim_u.data = sam_u;
     gettimeofday(&sam_u->sun_u.sar_u, 0);
     sam_u->sun_u.sat_y = STUN_TRYING;
-    uv_timer_start(&sam_u->sun_u.tim_u, _stun_send_request_cb, 500, 0);
+    _stun_send_request_cb((uv_udp_send_t*)snd_u, sas_i);
   }
 }
 
@@ -1646,7 +1646,7 @@ _stun_is_our_response(c3_y buf_y[44], c3_y tid_y[12], c3_w buf_len)
 }
 
 static c3_o
-_stun_is_request(c3_y buf_y[32], c3_w buf_len)
+_stun_is_request(c3_y buf_y[32], c3_w buf_len) // buf_y[20] ?
 {
   c3_w cookie = htonl(0x2112A442);
 
@@ -2567,14 +2567,14 @@ _ames_recv_cb(uv_udp_t*        wax_u,
     }
     c3_free(buf_u->base);
   }
-  else if (_stun_is_request(buf_u->base, nrd_i) == c3y) {
+  else if (_stun_is_request((c3_y*)buf_u->base, nrd_i) == c3y) {
       u3_ames* sam_u = wax_u->data;
       _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
-  } else if (_stun_is_our_response(buf_u->base, sam_u->sun_u.tid_y, nrd_i)
+  } else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
       c3_w cookie = 0x2112A442;
-      c3_w ip_addr_xor = _ames_sift_word(buf_u->base + 28 + 12);
-      c3_s port_xor = _ames_sift_short(buf_u->base + 26 + 12);
+      c3_w ip_addr_xor = _ames_sift_word((c3_y *)buf_u->base + 28 + 12);
+      c3_s port_xor = _ames_sift_short((c3_y *)buf_u->base + 26 + 12);
 
       // New lane
       u3_lane lan_u;
