@@ -650,6 +650,10 @@ _find_home(void)
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w);
     }
+
+    //  XX move me
+    //
+    u3a_ream();
   }
 
   /* As a further guard against any sneaky loom corruption */
