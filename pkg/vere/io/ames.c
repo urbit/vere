@@ -1247,9 +1247,6 @@ _stun_reset(uv_timer_t* tim_u)
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
 
   sam_u->fig_u.net_o = c3n;  // XX needed?
-
-  gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-  sam_u->sun_u.sat_y = STUN_TRYING;
   _stun_czar(sam_u);
 }
 
@@ -1463,8 +1460,11 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
 
     if (sas_i == 0) {
       _ames_czar_here(sam_u, now, aid_u);
-      _stun_send_request(sam_u);
-      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 500, 0);
+      if (sam_u->sun_u.sat_y == STUN_OFF) {
+        sam_u->sun_u.sat_y = STUN_TRYING;
+        _stun_send_request(sam_u);
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 500, 0);
+      }
       // resolve DNS again in five minutes
       uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, 5*60*1000, 0);
     } else {
@@ -1573,7 +1573,6 @@ _stun_czar_gone(u3_ames* sam_u, time_t now)
 static void
 _stun_start(u3_ames* sam_u, u3_noun dad)
 {
-  sam_u->sun_u.sat_y = STUN_TRYING;
   u3r_chubs(0, 2, sam_u->sun_u.dad_d, dad);
   u3z(dad);
   //  initialize global ~m5 timer to resolve sponsors DNS
