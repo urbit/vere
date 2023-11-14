@@ -856,11 +856,11 @@ _ames_send(u3_pact* pac_u)
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
 
-      c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
+      c3_i     sas_i = 0; /*uv_udp_send(&pac_u->snd_u,
                                    &sam_u->wax_u,
                                    &buf_u, 1,
                                    (const struct sockaddr*)&add_u,
-                                   _ames_send_cb);
+                                   _ames_send_cb); */
 
       if ( sas_i ) {
         if ( c3y == sam_u->fig_u.net_o ) {
@@ -2129,8 +2129,7 @@ _ames_io_start(u3_ames* sam_u)
   u3z(who);
 }
 
-/* _ames_ef_turf(): initialize ames I/O on domain(s).
-*/
+/* _ames_ef_turf(): initialize ames I/O on domain(s). */
 static void
 _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
 {
