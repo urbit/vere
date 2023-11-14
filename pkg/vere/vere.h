@@ -1215,6 +1215,10 @@
         u3_noun
         u3_ames_encode_lane(u3_lane);
 
+    /**  xmas
+    **/
+        u3_auto*
+        u3_xmas_io_init(u3_pier* pir_u);
     /**  Autosave.
     **/
       /* u3_save_ef_chld(): report SIGCHLD.

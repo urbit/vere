@@ -2090,10 +2090,12 @@ _ames_io_start(u3_ames* sam_u)
                               htonl(INADDR_ANY) :
                               htonl(INADDR_LOOPBACK);
     add_u.sin_port = htons(por_s);
+    u3l_log("ames: skippign port: %u", por_s);
 
-    if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
+    /*if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
                               (const struct sockaddr*)&add_u, 0)) != 0 )
     {
+      u3l_log("ames: port: %u", por_s);
       u3l_log("ames: bind: %s", uv_strerror(ret_i));
 
       if ( (c3__czar == rac) &&
@@ -2105,7 +2107,7 @@ _ames_io_start(u3_ames* sam_u)
       //  XX revise
       //
       u3_pier_bail(u3_king_stub());
-    }
+    }*/
 
     uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
     u3_assert(add_u.sin_port);
