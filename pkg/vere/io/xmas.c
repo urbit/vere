@@ -446,7 +446,6 @@ _xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[4])
   if ( c3y == req_o ) {
     hed_w = hed_w ^ ((hed_u->ran_y & 0x3) << 30);
   }
-  u3l_log("head as int: %u", hed_w);
 
   _ames_etch_word(buf_y, hed_w);
 }
@@ -454,7 +453,6 @@ _xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[4])
 static c3_w
 _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
 {
-  u3l_log("beggining etch");
   c3_w cur_w = 0;
  
   // hops
@@ -463,18 +461,15 @@ _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
 
   // path length
   _ames_etch_short(buf_y + cur_w, pac_u->pat_s);
-  u3l_log("path length: %u", pac_u->pat_s);
   cur_w += 2;
 
   // path
-  u3l_log("path : %s", pac_u->pat_c);
   memcpy(buf_y + cur_w, pac_u->pat_c, pac_u->pat_s + 1);
   cur_w += pac_u->pat_s + 1;
 
   //  total
   _ames_etch_word(buf_y + cur_w, pac_u->tot_w);
   cur_w += 4;
-  u3l_log("total: %u", pac_u->tot_w);
 
   // auth
   memcpy(buf_y + cur_w, &pac_u->aut_y, 96);
@@ -484,7 +479,6 @@ _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
   memcpy(buf_y + cur_w, pac_u->dat_y, 1024);
   cur_w += 1024;
 
-  u3l_log("done: %u", cur_w);
   return cur_w;
 }
 
@@ -582,7 +576,6 @@ static void _xmas_send(u3_xmas_pact* pac_u)
   add_u.sin_family = AF_INET;
   c3_s por_s;
   c3_w pip_w;
-  u3l_log("typ_y: %u", pac_u->rut_u.typ_y);
   if( pac_u->rut_u.typ_y == ROUT_GALAXY ) {
     por_s = _ames_czar_port(pac_u->rut_u.imp_u.her_y);
     pip_w = 0x7f000001;
@@ -591,9 +584,8 @@ static void _xmas_send(u3_xmas_pact* pac_u)
     pip_w = c3n == u3_Host.ops_u.net ? pac_u->rut_u.lan_u.pip_w : 0x7f000001;
     por_s = pac_u->rut_u.lan_u.por_s;
   }
+  u3l_log("%x,%u", pip_w, por_s);
 
-  u3l_log("%x", pip_w);
-  u3l_log("%u", por_s);
 
   add_u.sin_addr.s_addr = htonl(pip_w);
   add_u.sin_port = htons(por_s);
@@ -607,7 +599,6 @@ static void _xmas_send(u3_xmas_pact* pac_u)
     }
     
     c3_w siz_w = _xmas_etch_pact(buf_y, pac_u, u3k(who));
-    _log_buf(buf_y, siz_w);
 
     uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, siz_w);
 
@@ -617,7 +608,6 @@ static void _xmas_send(u3_xmas_pact* pac_u)
                                  (const struct sockaddr*)&add_u,
                                  _xmas_send_cb);
 
-    u3l_log("udp sent");
     if ( sas_i ) {
       u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
       /*if ( c3y == sam_u->fig_u.net_o ) {
@@ -879,6 +869,7 @@ _xmas_respond(u3_xmas_pact* req_u, u3_lane lan_u, u3_noun hit, u3_noun fra)
 {
   u3_xmas_pact* res_u = c3_calloc(sizeof(*res_u));
   res_u->typ_y = PACT_PAGE;
+  res_u->sam_u = req_u->sam_u;
   res_u->pag_u = (u3_xmas_page_pact) {
     .pat_s = req_u->pek_u.pat_s,
     .tot_w = u3r_word(0, u3h(hit)),
@@ -888,6 +879,7 @@ _xmas_respond(u3_xmas_pact* req_u, u3_lane lan_u, u3_noun hit, u3_noun fra)
   res_u->pag_u.pat_c[req_u->pek_u.pat_s] = '\0';
   memcpy(res_u->pag_u.pat_c, req_u->pek_u.pat_c, req_u->pek_u.pat_s);
   u3r_bytes(0, 1024, res_u->pag_u.dat_y, u3dc("snag", fra, u3t(hit)));
+  res_u->rut_u.typ_y = ROUT_OTHER;
   res_u->rut_u.lan_u.por_s = lan_u.por_s;
   res_u->rut_u.lan_u.pip_w = lan_u.pip_w;
   _xmas_send(res_u);
@@ -1006,6 +998,7 @@ _xmas_hear(u3_xmas* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
+  u3l_log("xmas_hear");
 
   u3_xmas_pact* pac_u;
   c3_w pre_w;
