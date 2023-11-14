@@ -1137,7 +1137,7 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
-/* _fine_put_cache(): get packet list or status from cache. RETAIN
+/* _fine_get_cache(): get packet list or status from cache. RETAIN
  */
 static u3_weak
 _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
@@ -1655,7 +1655,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   u3z(nun);
 }
 
-/* _fine_hear_request(): hear wail (fine equeust packet packet).
+/* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
