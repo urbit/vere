@@ -1276,7 +1276,6 @@ _stun_timer_cb(uv_timer_t* tim_u)
       c3_d nex_d = (gap_d * 2) + rto - gap_d;
 
       if ( gap_d >= (39500) ) {
-        u3l_log("stun: more than 39 seconds passed...");
         _stun_on_lost(&sam_u->sun_u.tim_u);
       } else if ( gap_d >= (31500) ) {
         //  wait ~s8 for the last STUN request
@@ -1286,7 +1285,6 @@ _stun_timer_cb(uv_timer_t* tim_u)
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb,
                        (nex_d >= 31500) ? 31500 : nex_d, 0);
         _stun_send_request(sam_u);
-        u3l_log("stun: set RTO + last_timer * 2 %llu next: %llu", gap_d, (gap_d * 2) + rto);
       }
     } break;
     default: u3_assert(!"programmer error");
@@ -1421,9 +1419,7 @@ _stun_on_lost(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
 
-  u3l_log("stun: waited too long...");
   _stun_stop(sam_u);
-  // only inject event into arvo to %kick ping app on first failure
   _stun_on_failure(sam_u);
   // resolve DNS again, and (re)start STUN
   uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
@@ -2600,7 +2596,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
       c3_w ip_addr_xor = _ames_sift_word((c3_y *)buf_u->base + 28 + 12);
       c3_s port_xor = _ames_sift_short((c3_y *)buf_u->base + 26 + 12);
 
-      // New lane
+      // new lane
       u3_lane lan_u;
       lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
       lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
@@ -2608,14 +2604,13 @@ _ames_recv_cb(uv_udp_t*        wax_u,
       u3_noun wir = u3nc(c3__ames, u3_nul);
       if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
           sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
-        // inject %once task into arvo
-        u3l_log("IP port changed");
+        // IP:PORT changed
         u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
         u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
         u3_auto_plan(&sam_u->car_u, ovo_u);
       } else {
         if (sam_u->sun_u.wok_o == c3n) {
-          // inject %stun task into arvo
+          // stop %ping app
           u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
           u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
           u3_auto_plan(&sam_u->car_u, ovo_u);
