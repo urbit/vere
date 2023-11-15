@@ -100,9 +100,6 @@ u3m_v3_migrate()
   u3R_v3 = &u3H_v3->rod_u;
   u3H_v3->ver_w = U3V_VER3;
 
-  //  recalculate free lists
-  u3a_v3_ream();
-
   //  initialize persistent cache
   u3R_v3->cax.per_p = u3h_v3_new_cache(u3C.per_w);
 
