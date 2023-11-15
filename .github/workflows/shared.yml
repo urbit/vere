@@ -113,18 +113,20 @@ jobs:
         run: |
           case "${{ matrix.target }}" in
             "linux-aarch64")
+              sudo apt-get -y install autoconf-archive
               bazel run //bazel/toolchain:aarch64-linux-musl-gcc
               ;;
             "linux-x86_64")
+              sudo apt-get -y install autoconf-archive
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
               ;;
             "macos-aarch64")
-              brew install pkg-config
+              brew install pkg-config autoconf-archive
               ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
-              brew install automake libtool llvm@15
+              brew install automake autoconf-archive libtool llvm@15
               ;;
             *)
               echo "Unsupported target: ${{ matrix.target }}"

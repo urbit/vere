@@ -299,10 +299,10 @@ versioned_http_file(
 versioned_http_archive(
     name = "urcrypt",
     build_file = "//bazel/third_party/urcrypt:urcrypt.BUILD",
-    sha256 = "00ec597c14c418802d5db2d6a68cf83bd4f5419071b95f979374d3184599d6c8",
+    sha256 = "afc1182e10eeebaeb2a111c2bd889747792d255e26aba7fdcd6751d0d3c2bb35",
     strip_prefix = "urcrypt-{version}",
     url = "https://github.com/urbit/urcrypt/archive/{version}.tar.gz",
-    version = "b970baefa6e0a680fffa2b2ee19c956a4ae20355",
+    version = "43479c3262a11e20da5f6218f3b0b3d63931ceea",
 )
 
 versioned_http_archive(
