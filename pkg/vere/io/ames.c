@@ -1266,10 +1266,10 @@ _stun_timer_cb(uv_timer_t* tim_u)
     } break;
     case STUN_KEEPALIVE: {
       sam_u->sun_u.sat_y = STUN_TRYING;
-      _stun_send_request(sam_u);
       sam_u->sun_u.tim_u.data = sam_u;
       gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
       uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto, 0);
+      _stun_send_request(sam_u);
     } break;
     case STUN_TRYING: {
       c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
@@ -1279,9 +1279,9 @@ _stun_timer_cb(uv_timer_t* tim_u)
         u3l_log("stun: more than 39 seconds passed...");
         _stun_on_lost(&sam_u->sun_u.tim_u);
       } else if ( gap_d >= (31500) ) {
-        _stun_send_request(sam_u);
         //  wait ~s8 for the last STUN request
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 8000 , 0);
+        _stun_send_request(sam_u);
       } else {
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb,
                        (nex_d >= 31500) ? 31500 : nex_d, 0);
@@ -1312,8 +1312,8 @@ _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
     _stun_on_failure(sam_u);  // %kick ping app
 
     sam_u->sun_u.sat_y = STUN_TRYING;
-    // retry sending the failed request
-    _stun_timer_cb(&sam_u->sun_u.tim_u);
+    uv_timer_stop(&sam_u->sun_u.tim_u);   //  stop any active timers
+    _stun_timer_cb(&sam_u->sun_u.tim_u);  //  retry sending the failed request
     c3_free(snd_u->hun_y);
     c3_free(snd_u);
   }
@@ -1472,8 +1472,8 @@ _stun_send_request(u3_ames* sam_u)
     _stun_on_failure(sam_u);  // %kick ping app
 
     sam_u->sun_u.sat_y = STUN_TRYING;
-    // retry sending the failed request
-    _stun_timer_cb(&sam_u->sun_u.tim_u);
+    uv_timer_stop(&sam_u->sun_u.tim_u);   //  stop any active timers XX needed?
+    _stun_timer_cb(&sam_u->sun_u.tim_u);  //  retry sending the failed request
     c3_free(buf_y);
     c3_free(snd_u);
   }
