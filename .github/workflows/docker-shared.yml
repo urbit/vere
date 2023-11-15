@@ -38,7 +38,9 @@ jobs:
 
       - name: Install toolchains
         if: steps.build-cache.outputs.cache-hit != 'true'
-        run: bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+        run: |
+          sudo apt-get install -y autoconf-archive
+          bazel run //bazel/toolchain:x86_64-linux-musl-gcc
 
       - name: Set pace
         run: echo "${{ inputs.pace }}" > ./PACE
