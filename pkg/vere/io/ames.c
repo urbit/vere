@@ -1500,10 +1500,8 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
       uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, 5*60*1000, 0);
     } else {
       u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
-      _stun_stop(sam_u);
-      _stun_czar_gone(sam_u, now);
-      _stun_on_failure(sam_u);  // %kick ping app
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
+      _stun_czar_gone(sam_u, time(0));
+      _stun_on_lost(&sam_u->sun_u.dns_u);
     }
   }
   c3_free(adr_u);
@@ -1644,10 +1642,8 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
                                      dns_c, 0, &hints))) {
       u3l_log("stun: uv_getaddrinfo failed %s", uv_strerror(sas_i));
-      _stun_stop(sam_u);
       _stun_czar_gone(sam_u, time(0));
-      _stun_on_failure(sam_u);  // %kick ping app
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
+      _stun_on_lost(&sam_u->sun_u.dns_u);
       return;
     }
   }
