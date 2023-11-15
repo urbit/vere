@@ -1309,10 +1309,7 @@ _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
   if ( sas_i ) {
     u3l_log("stun: send callback fail_async: %s", uv_strerror(sas_i));
 
-    if (sam_u->sun_u.wok_o == c3y) {
-      _stun_on_failure(sam_u);  // %kick ping app
-    }
-    sam_u->sun_u.wok_o = c3n;
+    _stun_on_failure(sam_u);  // %kick ping app
 
     sam_u->sun_u.sat_y = STUN_TRYING;
     // retry sending the failed request
@@ -1409,10 +1406,14 @@ _stun_on_response(u3_ames* sam_u) // TODO read arg
 static void
 _stun_on_failure(u3_ames* sam_u)
 {
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  u3_noun cad = u3nt(c3__stun, c3__fail, u3_nul);
-  u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-  u3_auto_plan(&sam_u->car_u, ovo_u);
+  // only inject event into arvo to %kick ping app on first failure
+  if (sam_u->sun_u.wok_o == c3y) {
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nt(c3__stun, c3__fail, u3_nul);
+    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+    u3_auto_plan(&sam_u->car_u, ovo_u);
+  }
+  sam_u->sun_u.wok_o = c3n;
 }
 
 static void
@@ -1423,10 +1424,7 @@ _stun_on_lost(uv_timer_t* tim_u)
   u3l_log("stun: waited too long...");
   _stun_stop(sam_u);
   // only inject event into arvo to %kick ping app on first failure
-  if (sam_u->sun_u.wok_o == c3y) {
-    _stun_on_failure(sam_u);
-  }
-  sam_u->sun_u.wok_o = c3n;
+  _stun_on_failure(sam_u);
   // resolve DNS again, and (re)start STUN
   uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
 }
@@ -1471,10 +1469,7 @@ _stun_send_request(u3_ames* sam_u)
   if ( sas_i != 0) {
     u3l_log("stun: send request fail_sync: %s", uv_strerror(sas_i));
 
-    if (sam_u->sun_u.wok_o == c3y) {
-      _stun_on_failure(sam_u);  // %kick ping app
-    }
-    sam_u->sun_u.wok_o = c3n;
+    _stun_on_failure(sam_u);  // %kick ping app
 
     sam_u->sun_u.sat_y = STUN_TRYING;
     // retry sending the failed request
@@ -1511,7 +1506,7 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
       u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
       _stun_stop(sam_u);
       _stun_czar_gone(sam_u, now);
-      sam_u->sun_u.wok_o = c3n;
+      _stun_on_failure(sam_u);  // %kick ping app
       uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
     }
   }
