@@ -1336,39 +1336,30 @@ static void _stun_on_request(u3_ames *sam_u, c3_y buf_r[20],
                              const struct sockaddr* adr_u)
 {
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  c3_y buf_y[44] = {0};
+  c3_y *buf_y = c3_calloc(32);
   c3_w cookie = 0x2112A442;
 
   c3_w cur_w = 20;                                   // STUN header is 20 bytes
   memcpy(buf_y, buf_r, cur_w);                       // copy STUN request header
   buf_y[0] = 0x01; buf_y[1] = 0x01;                  // 0x0101 SUCCESS RESPONSE
-  buf_y[2] = 0x00; buf_y[3] = 0x18;                  // Length: 24 bytes
-
-  //  XX REMOVE
-  //  MAPPED-ADDRESS
-  buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x01;      // attribute type 0x0001
-  buf_y[cur_w + 2] = 0x00; buf_y[cur_w + 3] = 0x08;  // STUN attribute length
-  // extra reserved 0x0 byte
-  buf_y[cur_w + 5] = 0x01;                               // family  0x01:IPv4
-  memcpy(buf_y + cur_w + 6, &add_u->sin_port, 2);        // Port
-  memcpy(buf_y + cur_w + 8, &add_u->sin_addr.s_addr, 4); // IP Addres
+  buf_y[2] = 0x00; buf_y[3] = 0x0c;                  // Length: 12 bytes
 
   // XOR-MAPPED-ADDRESS
-  buf_y[cur_w + 12] = 0x00; buf_y[cur_w + 13] = 0x20;  // attribute type 0x00020
-  buf_y[cur_w + 14] = 0x00; buf_y[cur_w + 15] = 0x08;  // STUN attribute length
+  buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x20;      // attribute type 0x00020
+  buf_y[cur_w + 2] = 0x00; buf_y[cur_w + 3] = 0x08;  // STUN attribute length
   // extra reserved 0x0 byte
-  buf_y[cur_w + 17] = 0x01;                            // family  0x01:IPv4
+  buf_y[cur_w + 5] = 0x01;                           // family  0x01:IPv4
 
   c3_s x_port = htons(ntohs(add_u->sin_port) ^ cookie >> 16);
   c3_w x_ip = htonl(ntohl(add_u->sin_addr.s_addr) ^ cookie);
-  memcpy(buf_y + cur_w + 18, &x_port, 2);  // X-Port
-  memcpy(buf_y + cur_w + 20, &x_ip, 4);    // X-IP Addres
+  memcpy(buf_y + cur_w + 6, &x_port, 2);  // X-Port
+  memcpy(buf_y + cur_w + 8, &x_ip, 4);    // X-IP Addres
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 44);
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 32);
   u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
 
   snd_u->sam_u = sam_u;
-  snd_u->hun_y = buf_r;
+  snd_u->hun_y = buf_y;
   c3_i sas_i = uv_udp_send(
     (uv_udp_send_t*)snd_u, &sam_u->wax_u, &buf_u, 1,
     adr_u, _stun_send_response_cb
@@ -1376,7 +1367,7 @@ static void _stun_on_request(u3_ames *sam_u, c3_y buf_r[20],
 
   if ( sas_i != 0) {
     u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
-    c3_free(buf_r);
+    c3_free(buf_y);
     c3_free(snd_u);
   }
 }
@@ -2585,6 +2576,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   else if (_stun_is_request((c3_y*)buf_u->base, nrd_i) == c3y) {
       u3_ames* sam_u = wax_u->data;
       _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
+      c3_free(buf_u->base);
   }
   else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
