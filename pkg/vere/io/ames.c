@@ -1227,6 +1227,7 @@ static void _stun_czar(u3_ames* sam_u, c3_d tim_d);
 static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
 static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
 static void _stun_on_failure(u3_ames* sam_u);
+static void _stun_start(u3_ames* sam_u, c3_o fail);
 
 static c3_d
 _stun_time_gap(struct timeval start)
@@ -1313,10 +1314,9 @@ _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
     }
     sam_u->sun_u.wok_o = c3n;
 
-    gettimeofday(&sam_u->sun_u.sar_u, 0);  // reset timer to now
     sam_u->sun_u.sat_y = STUN_TRYING;
-    // retry sending the failed request in 500ms
-    uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 500, 0);
+    // retry sending the failed request
+    _stun_timer_cb(&sam_u->sun_u.tim_u);
     c3_free(snd_u->hun_y);
     c3_free(snd_u);
   }
@@ -1476,9 +1476,9 @@ _stun_send_request(u3_ames* sam_u)
     }
     sam_u->sun_u.wok_o = c3n;
 
-    gettimeofday(&sam_u->sun_u.sar_u, 0);
     sam_u->sun_u.sat_y = STUN_TRYING;
-    _stun_send_request_cb((uv_udp_send_t*)snd_u, sas_i);
+    // retry sending the failed request
+    _stun_timer_cb(&sam_u->sun_u.tim_u);
     c3_free(buf_y);
     c3_free(snd_u);
   }
