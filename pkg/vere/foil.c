@@ -62,11 +62,13 @@ _foil_path(u3_dire*    dir_u,
 {
   c3_w  len_w = strlen(dir_u->pax_c);
   c3_c* pax_c;
-
-  pax_c = c3_malloc(1 + len_w + 1 + strlen(nam_c));
-  strcpy(pax_c, dir_u->pax_c);
+  c3_w pax_c_size = 1 + len_w + 1 + strlen(nam_c);
+  pax_c = c3_malloc(pax_c_size);
+  snprintf(pax_c, pax_c_size, "%s", dir_u->pax_c);
   pax_c[len_w] = '/';
-  strcpy(pax_c + len_w + 1, nam_c);
+  c3_c* pax_c_epilogue = pax_c + len_w + 1;
+  c3_w pax_c_epilogue_size = pax_c_size - len_w - 1;
+  snprintf(pax_c_epilogue, pax_c_epilogue_size, "%s", nam_c);
 
   return pax_c;
 }

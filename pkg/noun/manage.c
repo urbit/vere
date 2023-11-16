@@ -1546,9 +1546,17 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_w len_w;
 
       snprintf(buf_c, 6, "%d", som);
-      len_w = strlen(buf_c);
+      len_w = strnlen(buf_c, 6);
 
-      if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
+      if ( str_c ) {
+        snprintf(str_c, len_w, "%s", buf_c);
+
+        // this line appears to do nothing,
+        // since str_c is a local variable,
+        // and we return immediately after.
+        // Can we just delete this?
+        str_c += len_w; 
+      }
       return len_w;
     }
     else {
@@ -1595,7 +1603,12 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         buf_c[a_w] = 0;
         len_w = a_w;
 
-        if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
+        if ( str_c ) {
+          snprintf(str_c, len_w, "%s", buf_c);
+
+          // The line below appears to be unnecessary
+          str_c += len_w; 
+        }
 
         c3_free(buf_c);
         return len_w;

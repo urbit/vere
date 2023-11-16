@@ -100,13 +100,14 @@ _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
 c3_c*
 _main_presig(c3_c* txt_c)
 {
-  c3_c* new_c = c3_malloc(2 + strlen(txt_c));
+  c3_w new_c_size = 2 + strlen(txt_c);
+  c3_c* new_c = c3_malloc(new_c_size);
 
   if ( '~' == *txt_c ) {
-    strcpy(new_c, txt_c);
+    snprintf(new_c, new_c_size, "%s", txt_c);
   } else {
     new_c[0] = '~';
-    strcpy(new_c + 1, txt_c);
+    snprintf(new_c + 1, new_c_size - 1, "%s", txt_c);
   }
   return new_c;
 }
@@ -594,8 +595,9 @@ _main_getopt(c3_i argc, c3_c** argv)
            && u3_Host.ops_u.url_c == 0
            && u3_Host.ops_u.git == c3n ) {
 
-    c3_c version_c[strlen(URBIT_VERSION) + 1];
-    strcpy(version_c, URBIT_VERSION);
+    c3_w version_c_size = strlen(URBIT_VERSION) + 1;
+    c3_c version_c[version_c_size];
+    snprintf(version_c, version_c_size, "%s", URBIT_VERSION);
     c3_c* hyphen_c = strchr(version_c, '-');
     // URBIT_VERSION has the form {version}-{commit_sha} when built on
     // non-"live" channels, which means we need to strip off the trailing commit

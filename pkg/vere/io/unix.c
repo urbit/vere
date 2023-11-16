@@ -228,12 +228,10 @@ _unix_down(c3_c* pax_c, c3_c* sub_c)
 {
   c3_w pax_w = strlen(pax_c);
   c3_w sub_w = strlen(sub_c);
-  c3_c* don_c = c3_malloc(pax_w + sub_w + 2);
+  c3_w don_c_size = pax_w + sub_w + 2;
+  c3_c* don_c = c3_malloc(don_c_size);
 
-  strcpy(don_c, pax_c);
-  don_c[pax_w] = '/';
-  strcpy(don_c + pax_w + 1, sub_c);
-  don_c[pax_w + 1 + sub_w] = '\0';
+  snprintf(don_c, don_c_size, "%s/%s", pax_c, sub_c);
 
   return don_c;
 }
@@ -818,8 +816,9 @@ _unix_watch_file(u3_unix* unx_u, u3_ufil* fil_u, u3_udir* par_u, c3_c* pax_c)
 
   fil_u->dir = c3n;
   fil_u->dry = c3n;
-  fil_u->pax_c = c3_malloc(1 + strlen(pax_c));
-  strcpy(fil_u->pax_c, pax_c);
+  c3_w fil_u_pax_c_size = 1 + strlen(pax_c);
+  fil_u->pax_c = c3_malloc(fil_u_pax_c_size);
+  snprintf(fil_u->pax_c, fil_u_pax_c_size, "%s", pax_c);
   fil_u->par_u = par_u;
   fil_u->nex_u = NULL;
   fil_u->gum_w = 0;
@@ -839,8 +838,9 @@ _unix_watch_dir(u3_udir* dir_u, u3_udir* par_u, c3_c* pax_c)
 
   dir_u->dir = c3y;
   dir_u->dry = c3n;
-  dir_u->pax_c = c3_malloc(1 + strlen(pax_c));
-  strcpy(dir_u->pax_c, pax_c);
+  c3_w dir_u_pax_c_size = 1 + strlen(pax_c);
+  dir_u->pax_c = c3_malloc(dir_u_pax_c_size);
+  snprintf(dir_u->pax_c, dir_u_pax_c_size, "%s", pax_c);
   dir_u->par_u = par_u;
   dir_u->nex_u = NULL;
   dir_u->kid_u = NULL;
@@ -859,12 +859,9 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
   c3_c* nam_c = _unix_knot_to_string(nam);
   c3_w  nam_w = strlen(nam_c);
   c3_w  pax_w = strlen(par_u->pax_c);
-  c3_c* pax_c = c3_malloc(pax_w + 1 + nam_w + 1);
-
-  strcpy(pax_c, par_u->pax_c);
-  pax_c[pax_w] = '/';
-  strcpy(pax_c + pax_w + 1, nam_c);
-  pax_c[pax_w + 1 + nam_w] = '\0';
+  c3_w  pax_c_size = pax_w + 1 + nam_w + 1;
+  c3_c* pax_c = c3_malloc(pax_c_size);
+  snprintf(pax_c, pax_c_size, "%s/%s", par_u->pax_c, nam_c);
 
   c3_free(nam_c);
   u3z(nam);
@@ -1300,14 +1297,10 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
   c3_w  par_w = strlen(par_u->pax_c);
   c3_w  nam_w = strlen(nam_c);
   c3_w  ext_w = strlen(ext_c);
-  c3_c* pax_c = c3_malloc(par_w + 1 + nam_w + 1 + ext_w + 1);
+  c3_w  pax_c_size = par_w + 1 + nam_w + 1 + ext_w + 1;
+  c3_c* pax_c = c3_malloc(pax_c_size);
 
-  strcpy(pax_c, par_u->pax_c);
-  pax_c[par_w] = '/';
-  strcpy(pax_c + par_w + 1, nam_c);
-  pax_c[par_w + 1 + nam_w] = '.';
-  strcpy(pax_c + par_w + 1 + nam_w + 1, ext_c);
-  pax_c[par_w + 1 + nam_w + 1 + ext_w] = '\0';
+  snprintf(pax_c, pax_c_size, "%s/%s.%s", par_u->pax_c, nam_c, ext_c);
 
   c3_free(nam_c); c3_free(ext_c);
   u3z(nam); u3z(ext);

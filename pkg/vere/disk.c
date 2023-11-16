@@ -1576,10 +1576,9 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   //  create/load $pier/.urb
   //
   {
-    c3_c* urb_c = c3_malloc(6 + strlen(pax_c));
-
-    strcpy(urb_c, pax_c);
-    strcat(urb_c, "/.urb");
+    c3_w urb_c_size = 6 + strlen(pax_c);
+    c3_c* urb_c = c3_malloc(urb_c_size);
+    snprintf(urb_c, urb_c_size, "%s/.urb", pax_c);
 
     if ( 0 == (log_u->urb_u = u3_foil_folder(urb_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb in %s\r\n", pax_c);
@@ -1593,14 +1592,12 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
   //  create/load $pier/.urb/put and $pier/.urb/get
   //
   {
-    c3_c* dir_c = c3_malloc(10 + strlen(pax_c));
-
-    strcpy(dir_c, pax_c);
-    strcat(dir_c, "/.urb/put");
+    c3_w c3_c_size = 10 + strlen(pax_c);
+    c3_c* dir_c = c3_malloc(c3_c_size);
+    snprintf(dir_c, 10 + strlen(pax_c), "%s/.urb/put", pax_c);
     c3_mkdir(dir_c, 0700);
 
-    strcpy(dir_c, pax_c);
-    strcat(dir_c, "/.urb/get");
+    snprintf(dir_c, 10 + strlen(pax_c), "%s/.urb/get", pax_c);
     c3_mkdir(dir_c, 0700);
 
     c3_free(dir_c);
