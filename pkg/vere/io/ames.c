@@ -1001,13 +1001,10 @@ _ames_czar_dns(c3_c dns_c[255], c3_y imp_y, c3_c* czar_c)
 /* _ames_czar_gone(): galaxy address resolution failed.
 */
 static void
-_ames_czar_gone(u3_pact* pac_u, time_t now)
+_ames_czar_gone(u3_ames* sam_u, time_t now, c3_d imp_y, c3_c* dns_c)
 {
-  u3_ames* sam_u = pac_u->sam_u;
-  c3_d imp_y = pac_u->rut_u.imp_y;
-
   if ( c3y == sam_u->imp_o[imp_y] ) {
-    u3l_log("ames: czar at %s: not found (b)", pac_u->rut_u.dns_c);
+    u3l_log("ames: czar at %s: not found (b)", dns_c);
     sam_u->imp_o[imp_y] = c3n;
   }
 
@@ -1020,8 +1017,6 @@ _ames_czar_gone(u3_pact* pac_u, time_t now)
   //  keep existing ip for 5 more minutes
   //
   sam_u->imp_t[imp_y] = now;
-
-  _ames_pact_free(pac_u);
 }
 
 /* _ames_czar_here(): galaxy address resolution succeeded.
@@ -1063,11 +1058,14 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
     struct addrinfo*     rai_u = aif_u;
     struct sockaddr_in*  aid_u = (struct sockaddr_in *)rai_u->ai_addr;
     time_t               now   = time(0);
+    c3_d                 imp_y = pac_u->rut_u.imp_y;
+    c3_c*                dns_c = pac_u->rut_u.dns_c;
 
     if ( sas_i == 0 ) {
-     pac_u->rut_u.lan_u.pip_w = _ames_czar_here(pac_u->sam_u, now, aid_u);
+      pac_u->rut_u.lan_u.pip_w = _ames_czar_here(pac_u->sam_u, now, aid_u);
     } else {
-      _ames_czar_gone(pac_u, now);
+      _ames_czar_gone(pac_u->sam_u, now, imp_y, dns_c);
+      _ames_pact_free(pac_u);
     }
   }
 
@@ -1153,7 +1151,8 @@ _ames_czar(u3_pact* pac_u)
       {
         uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
         adr_u->data = pac_u;
-
+        c3_d  imp_y = pac_u->rut_u.imp_y;
+        c3_c* dns_c = pac_u->rut_u.dns_c;
         struct addrinfo hints;
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET; // only IPv4 addresses
@@ -1163,7 +1162,8 @@ _ames_czar(u3_pact* pac_u)
                                           pac_u->rut_u.dns_c, 0, &hints)) )
         {
           u3l_log("ames: %s", uv_strerror(sas_i));
-          _ames_czar_gone(pac_u, now);
+          _ames_czar_gone(pac_u->sam_u, now, imp_y, dns_c);
+          _ames_pact_free(pac_u);
           return;
         }
       }
@@ -1222,7 +1222,6 @@ _stun_stop(u3_ames* sam_u)
 // XX (code reordering?) forward declarations
 static void _stun_send_request(u3_ames*);
 static void _stun_on_lost(u3_ames* sam_u);
-static void _stun_czar_gone(u3_ames* sam_u, time_t now);
 static void _stun_czar(u3_ames* sam_u, c3_d tim_d);
 static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
 static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
@@ -1472,6 +1471,8 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
     struct addrinfo*     rai_u = aif_u;
     struct sockaddr_in*  aid_u = (struct sockaddr_in *)rai_u->ai_addr;
     time_t               now   = time(0);
+    c3_d                 imp_y = sam_u->sun_u.dad_y;
+    c3_c*                dns_c = sam_u->dns_c;
 
     gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
 
@@ -1487,7 +1488,7 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
       uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, 5*60*1000, 0);
     } else {
       u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
-      _stun_czar_gone(sam_u, time(0));
+      _ames_czar_gone(sam_u, time(0), imp_y, dns_c);
       _stun_on_lost(sam_u);
     }
   }
@@ -1558,30 +1559,6 @@ _stun_czar(u3_ames* sam_u, c3_d tim_d)
   }
 }
 
-// XX refactor (see _ames_czar_gone)
-/* _stun_czar_gone(): galaxy address resolution failed.
-*/
-static void
-_stun_czar_gone(u3_ames* sam_u, time_t now)
-{
-  c3_y imp_y = sam_u->sun_u.dad_y;
-
-  if ( c3y == sam_u->imp_o[imp_y] ) {
-    u3l_log("stun: czar at %s: not found (b)", sam_u->dns_c); // XX
-    sam_u->imp_o[imp_y] = c3n;
-  }
-
-  if ( (0 == sam_u->imp_w[imp_y]) ||
-       (0xffffffff == sam_u->imp_w[imp_y]) )
-  {
-    sam_u->imp_w[imp_y] = 0xffffffff;
-  }
-
-  //  keep existing ip for 5 more minutes
-  //
-  sam_u->imp_t[imp_y] = now;
-}
-
 static void
 _stun_start(u3_ames* sam_u, c3_o fail)
 {
@@ -1629,7 +1606,7 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
                                      dns_c, 0, &hints))) {
       u3l_log("stun: uv_getaddrinfo failed %s", uv_strerror(sas_i));
-      _stun_czar_gone(sam_u, time(0));
+      _ames_czar_gone(sam_u, time(0), sam_u->sun_u.dad_y, sam_u->dns_c);
       _stun_on_lost(sam_u);
       return;
     }
