@@ -58,6 +58,7 @@ typedef enum u3_stun_state {
       u3_lane        lan_u;             //  sponsoring galaxy IP and port
       uv_timer_t     tim_u;             //  keepalive timer handle
       uv_timer_t     dns_u;             //  DNS resolution timer handle
+      c3_c*          dns_c;             //  sponsoring galaxy fqdn
       struct timeval las_u;             //  XX last sent date (not used?)
       struct timeval sar_u;             //  date we started trying to send
       u3_lane        sef_u;             //  our lane, if we know it
@@ -984,14 +985,13 @@ _ames_czar_port(c3_y imp_y)
 }
 
 static c3_i
-_ames_czar_dns(c3_c dns_c[255], c3_y imp_y, c3_c* czar_c)
+_ames_czar_dns(c3_c** dns_c, c3_y imp_y, c3_c* czar_c)
 {
   u3_noun nam = u3dc("scot", 'p', imp_y);
-  u3m_p("imp", nam);
   c3_c* nam_c = u3r_string(nam);
-  u3l_log("stun: 1");
-  c3_i sas_i = snprintf(dns_c, 255, "%s.%s", nam_c + 1, czar_c);
-  u3l_log("stun: 2");
+  *dns_c = c3_malloc(1 + strlen(nam_c) + strlen(czar_c));
+
+  c3_i sas_i = snprintf(*dns_c, 255, "%s.%s", nam_c + 1, czar_c);
   c3_free(nam_c);
   u3z(nam);
 
@@ -1124,23 +1124,7 @@ _ames_czar(u3_pact* pac_u)
       return;
     }
     else {
-      c3_i sas_i;
-
-      {
-        u3_noun nam = u3dc("scot", 'p', imp_y);
-        c3_c* nam_c = u3r_string(nam);
-
-        //  NB: . separator not counted, as [nam_c] includes a ~ that we skip
-        //
-        pac_u->rut_u.dns_c =
-          c3_malloc(1 + strlen(nam_c) + strlen(sam_u->dns_c));
-
-        sas_i =
-          snprintf(pac_u->rut_u.dns_c, 255, "%s.%s", nam_c + 1, sam_u->dns_c);
-
-        c3_free(nam_c);
-        u3z(nam);
-      }
+      c3_i sas_i = _ames_czar_dns(&pac_u->rut_u.dns_c, imp_y, sam_u->dns_c);
 
       if ( 255 <= sas_i ) {
         u3l_log("ames: czar: galaxy domain %s truncated", sam_u->dns_c);
@@ -1153,6 +1137,7 @@ _ames_czar(u3_pact* pac_u)
         adr_u->data = pac_u;
         c3_d  imp_y = pac_u->rut_u.imp_y;
         c3_c* dns_c = pac_u->rut_u.dns_c;
+
         struct addrinfo hints;
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET; // only IPv4 addresses
@@ -1479,7 +1464,6 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
     if (sas_i == 0) {
       _ames_czar_here(sam_u, now, aid_u);
       if (sam_u->sun_u.sat_y == STUN_OFF) {
-        u3l_log("stun: was OFF, start TRYING");
         sam_u->sun_u.sat_y = STUN_TRYING;
         _stun_send_request(sam_u);
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 500, 0);
@@ -1514,6 +1498,7 @@ _stun_czar(u3_ames* sam_u, c3_d tim_d)
 
     return;
   }
+
 
   //  if we don't have a galaxy domain, no-op
   //
@@ -1584,11 +1569,10 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
   c3_i sas_i;
-  c3_c dns_c[255];
 
   c3_y imp_y = sam_u->sun_u.dad_y;
   sam_u->sun_u.lan_u.por_s = _ames_czar_port(imp_y);
-  sas_i = _ames_czar_dns(dns_c, imp_y, sam_u->dns_c);
+  sas_i = _ames_czar_dns(&sam_u->sun_u.dns_c, imp_y, sam_u->dns_c);
 
   if (255 <= sas_i) {
     u3l_log("stun: czar: galaxy domain %s truncated", sam_u->dns_c);
@@ -1604,8 +1588,8 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     hints.ai_family = AF_INET; // only IPv4 addresses
 
     if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
-                                     dns_c, 0, &hints))) {
-      u3l_log("stun: uv_getaddrinfo failed %s", uv_strerror(sas_i));
+                                     sam_u->sun_u.dns_c, 0, &hints))) {
+      u3l_log("stun: uv_getaddrinfo failed %s %s", uv_strerror(sas_i), sam_u->sun_u.dns_c);
       _ames_czar_gone(sam_u, time(0), sam_u->sun_u.dad_y, sam_u->dns_c);
       _stun_on_lost(sam_u);
       return;
