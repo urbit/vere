@@ -1221,7 +1221,7 @@ _stun_stop(u3_ames* sam_u)
 
 // XX (code reordering?) forward declarations
 static void _stun_send_request(u3_ames*);
-static void _stun_on_lost(uv_timer_t* tim_u);
+static void _stun_on_lost(u3_ames* sam_u);
 static void _stun_czar_gone(u3_ames* sam_u, time_t now);
 static void _stun_czar(u3_ames* sam_u, c3_d tim_d);
 static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
@@ -1247,7 +1247,6 @@ _stun_reset(uv_timer_t* tim_u)
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
 
   // sam_u->fig_u.net_o = c3n;  // XX needed?
-  c3_d tim_d = 39500;
 
   _stun_start(sam_u, c3y);
 }
@@ -1276,7 +1275,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
       c3_d nex_d = (gap_d * 2) + rto - gap_d;
 
       if ( gap_d >= (39500) ) {
-        _stun_on_lost(&sam_u->sun_u.tim_u);
+        _stun_on_lost(sam_u);
       } else if ( gap_d >= (31500) ) {
         //  wait ~s8 for the last STUN request
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 8000 , 0);
@@ -1384,8 +1383,6 @@ _stun_on_response(u3_ames* sam_u) // TODO read arg
       sam_u->sun_u.sat_y = STUN_KEEPALIVE;
       sam_u->sun_u.tid_y[1]++;
       uv_timer_stop(&sam_u->sun_u.tim_u);
-
-      sam_u->sun_u.wok_o = c3y;
       uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
     } break;
     default: assert("programmer error");
@@ -1406,14 +1403,13 @@ _stun_on_failure(u3_ames* sam_u)
 }
 
 static void
-_stun_on_lost(uv_timer_t* tim_u)
+_stun_on_lost(u3_ames* sam_u)
 {
-  u3_ames* sam_u = (u3_ames*)(tim_u->data);
-
   _stun_stop(sam_u);
   _stun_on_failure(sam_u);
   // resolve DNS again, and (re)start STUN
-  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
+  //  XX call _stun_start(sam_u, c3y) directly?
+  uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
 }
 
 static void
@@ -1492,7 +1488,7 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
     } else {
       u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
       _stun_czar_gone(sam_u, time(0));
-      _stun_on_lost(&sam_u->sun_u.dns_u);
+      _stun_on_lost(sam_u);
     }
   }
   c3_free(adr_u);
@@ -1634,18 +1630,17 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
                                      dns_c, 0, &hints))) {
       u3l_log("stun: uv_getaddrinfo failed %s", uv_strerror(sas_i));
       _stun_czar_gone(sam_u, time(0));
-      _stun_on_lost(&sam_u->sun_u.dns_u);
+      _stun_on_lost(sam_u);
       return;
     }
   }
 }
 
 static c3_o
-_stun_is_our_response(c3_y buf_y[44], c3_y tid_y[12], c3_w buf_len)
+_stun_is_our_response(c3_y buf_y[32], c3_y tid_y[12], c3_w buf_len)
 {
   c3_w cookie = htonl(0x2112A442);
-
-  return !(buf_len == 44 &&
+  return !(buf_len == 32 &&
            buf_y[0] == 0x01 && buf_y[1] == 0x01 &&
            memcmp(&cookie, buf_y + 4, 4) == 0 &&
            memcmp(tid_y, buf_y + 8, 12) == 0
@@ -2581,9 +2576,8 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
       c3_w cookie = 0x2112A442;
-      c3_w ip_addr_xor = _ames_sift_word((c3_y *)buf_u->base + 28 + 12);
-      c3_s port_xor = _ames_sift_short((c3_y *)buf_u->base + 26 + 12);
-
+      c3_w ip_addr_xor = _ames_sift_word((c3_y *)buf_u->base + 28);
+      c3_s port_xor = _ames_sift_short((c3_y *)buf_u->base + 26);
       // new lane
       u3_lane lan_u;
       lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
@@ -2596,13 +2590,13 @@ _ames_recv_cb(uv_udp_t*        wax_u,
         u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
         u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
         u3_auto_plan(&sam_u->car_u, ovo_u);
-      } else {
-        if (sam_u->sun_u.wok_o == c3n) {
-          // stop %ping app
-          u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
-          u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-          u3_auto_plan(&sam_u->car_u, ovo_u);
-        }
+      }
+      else if (sam_u->sun_u.wok_o == c3n) {
+        // stop %ping app
+        u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
+        u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+        u3_auto_plan(&sam_u->car_u, ovo_u);
+        sam_u->sun_u.wok_o = c3y;
       }
       sam_u->sun_u.sef_u = lan_u;
       _stun_on_response(sam_u);
