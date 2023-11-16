@@ -1559,9 +1559,7 @@ _stun_start(u3_ames* sam_u, c3_o fail)
     u3z(mug);
   }
 
-  c3_d tim_d = (fail == c3n) ? 500 : 39500;
-
-  _stun_czar(sam_u, tim_d);
+  _stun_czar(sam_u, (fail == c3n) ? 500 : 39500);
 }
 
 static void
