@@ -53,7 +53,7 @@ typedef enum u3_stun_state {
     c3_o             imp_o[256];        //  imperial print status
     struct {                            //    stun client state:
       u3_stun_state  sat_y;             //  formal state
-      c3_y           tid_y[16];         //  last transaction id
+      c3_y           tid_y[12];         //  last transaction id
       c3_y           dad_y;             //  sponsoring galaxy
       u3_lane        lan_u;             //  sponsoring galaxy IP and port
       uv_timer_t     tim_u;             //  keepalive timer handle
@@ -990,7 +990,6 @@ _ames_czar_dns(c3_y imp_y, c3_c* czar_c)
   u3_noun nam = u3dc("scot", 'p', imp_y);
   c3_c* nam_c = u3r_string(nam);
   c3_w len_w = 3 + strlen(nam_c) + strlen(czar_c);
-  u3l_log("len %u", len_w);
   u3_assert(len_w <= 256);
   c3_c* dns_c = c3_malloc(len_w);
 
@@ -1398,9 +1397,16 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y)
     case STUN_KEEPALIVE: break; //  ignore; duplicate response
     case STUN_TRYING: {
       sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-      sam_u->sun_u.tid_y[1]++;  // XX needs to be random every time
-      uv_timer_stop(&sam_u->sun_u.tim_u);
-      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+      c3_y buf_y[12] = {0};
+      c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
+      if (sas_i != 0) {
+        u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
+        _stun_on_lost(sam_u);
+      }
+      else {
+        memcpy(sam_u->sun_u.tid_y, buf_y, 12);
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+      }
     } break;
     default: assert("programmer error");
   }
@@ -1574,20 +1580,17 @@ _stun_czar(u3_ames* sam_u, c3_d tim_d)
 static void
 _stun_start(u3_ames* sam_u, c3_o fail)
 {
+  c3_y buf_y[12] = {0};
+  //  XX uv_random may block indefinitely when not enough entropy is available.
+  c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
 
-  //  initialize STUN transaction id to mug of now
-  {
-    u3_noun mug;
-    struct timeval tim_u;
-    gettimeofday(&tim_u, 0);
-
-    mug = u3r_mug(u3_time_in_tv(&tim_u));
-    // XX doesn't work, revisit
-    memcpy(sam_u->sun_u.tid_y, (c3_y*)&mug, 4);
-    u3z(mug);
+  if (sas_i != 0) {
+    u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
+    _stun_on_lost(sam_u);
+  } else {
+    memcpy(sam_u->sun_u.tid_y, buf_y, 12);
+    _stun_czar(sam_u, (fail == c3n) ? 500 : 39500);
   }
-
-  _stun_czar(sam_u, (fail == c3n) ? 500 : 39500);
 }
 
 static void
