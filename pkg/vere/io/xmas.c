@@ -776,7 +776,7 @@ _xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
   memcpy(pac_u->aut_y, buf_y + cur_w, 96);
   cur_w += 96;
 
-  memcpy(pac_u->dat_y, buf_y + cur_w, 1024);
+  memcpy(pac_u->dat_y, buf_y + cur_w, len_w - cur_w);
   cur_w += 1024;
 }
 
@@ -834,7 +834,6 @@ _xmas_sift_pact(u3_xmas_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_
   switch ( hed_u->typ_y ) {
     case PACT_PEEK: {
       _xmas_sift_peek_pact(&pac_u->pek_u, hed_u, buf_y, len_w, c3y);
-      _log_peek_pact(&pac_u->pek_u);
     } break;
     case PACT_PAGE: {
       _xmas_sift_page_pact(&pac_u->pag_u, hed_u, buf_y, len_w);
