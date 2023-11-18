@@ -626,38 +626,48 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      const c3_w  len_w = u3r_met(0, u3x_atom(axe)) - 2;
       const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
                         : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;
+      c3_w* cur_w = (c3_w*)axe_w + (len_w >> 5);
+      c3_w  mas_w = (c3_w)1 << (len_w & 31);
+      c3_w  wor_w;
 
       do {
-        u3a_cell*  big_u = u3a_to_ptr(big);
-        u3_noun*     old = (u3_noun*)&(big_u->hed);
-        const c3_y bit_y = 1 & (axe_w[dep_w >> 5] >> (dep_w & 31));
+        wor_w = *cur_w;
 
-        if ( c3n == u3a_is_cell(big) ) {
-          return u3m_bail(c3__exit);
-        }
-        else if ( c3y == u3a_is_mutable(u3R, big) ) {
-          *out = big;
-          out  = &(old[bit_y]);
-          big  = *out;
-          big_u->mug_w = 0;
-        }
-        else  {
-          u3_noun  luz = big;
-          u3_noun* new[2];
+        do {
+          u3a_cell*  big_u = u3a_to_ptr(big);
+          u3_noun*     old = (u3_noun*)&(big_u->hed);
+          const c3_y bit_y = !!(wor_w & mas_w);
 
-          *out = u3i_defcons(&new[0], &new[1]);
-          out  = new[bit_y];
-          big  = u3k(old[bit_y]);
-          *(new[!bit_y]) = u3k(old[!bit_y]);
+          if ( c3n == u3a_is_cell(big) ) {
+            return u3m_bail(c3__exit);
+          }
+          else if ( c3y == u3a_is_mutable(u3R, big) ) {
+            *out = big;
+            out  = &(old[bit_y]);
+            big  = *out;
+            big_u->mug_w = 0;
+          }
+          else  {
+            u3_noun  luz = big;
+            u3_noun* new[2];
 
-          u3z(luz);
-        }
-      }
-      while ( dep_w-- );
+            *out = u3i_defcons(&new[0], &new[1]);
+            out  = new[bit_y];
+            big  = u3k(old[bit_y]);
+            *(new[!bit_y]) = u3k(old[!bit_y]);
+
+            u3z(luz);
+          }
+
+          mas_w >>= 1;
+        } while ( mas_w );
+
+        mas_w = (c3_w)1 << 31;
+      } while ( cur_w-- != axe_w );
     }
   }
 
