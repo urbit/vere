@@ -327,7 +327,10 @@ u3_xmas_encode_lane(u3_lane lan) {
 static u3_noun _xmas_get_now() {
   struct timeval tim_u;
   gettimeofday(&tim_u, 0);
-  return u3_time_in_tv(&tim_u);
+  u3_noun res = u3_time_in_tv(&tim_u);
+  u3l_log("now: %s", u3r_string(u3dc("scot", c3__da, u3k(res))));
+  return res;
+
 }
 
 static c3_o
@@ -513,7 +516,7 @@ _xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
   cur_w += 4;
 
   // auth
-  memcpy(buf_y + cur_w, &pac_u->aut_y, 96);
+  memcpy(buf_y + cur_w, pac_u->aut_y, 96);
   cur_w += 96;
 
   // day
@@ -776,8 +779,9 @@ _xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
   memcpy(pac_u->aut_y, buf_y + cur_w, 96);
   cur_w += 96;
 
-  memcpy(pac_u->dat_y, buf_y + cur_w, len_w - cur_w);
-  cur_w += 1024;
+  c3_w dat_w = 1024; // len_w - cur_w;
+  pac_u->dat_y = c3_calloc(dat_w);
+  memcpy(pac_u->dat_y, buf_y + cur_w, dat_w);
 }
 
 static c3_w
@@ -847,13 +851,20 @@ _xmas_sift_pact(u3_xmas_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_
 static u3_weak
 _xmas_get_cache(u3_xmas* sam_u, u3_noun pax)
 {
-  return u3h_git(sam_u->pen_p, u3k(pax));
+  u3m_p("get cache", pax);
+  u3_weak res = u3h_git(sam_u->pen_p, u3k(pax));
+  if( res == u3_none ) {
+    return res;
+  } else {
+    return u3k(res);
+  }
 }
 
 static void
 _xmas_put_cache(u3_xmas* sam_u, u3_noun pax, u3_noun val)
 {
-  u3h_put(sam_u->pen_p, u3k(pax), val);
+
+  u3h_put(sam_u->pen_p, u3k(pax), u3k(val));
 }
 
 
@@ -894,6 +905,7 @@ _xmas_serve_cache_hit(u3_xmas_pact* req_u, u3_lane lan_u, u3_noun fra, u3_noun h
   if (  (her_d[0] != our_d[0])
     ||  (her_d[1] != our_d[1]) ) 
   {
+    u3l_log("publisher is not ours");
     if (  (256 > our_d[0])
        && (0  == our_d[1]) )
     {
@@ -903,9 +915,14 @@ _xmas_serve_cache_hit(u3_xmas_pact* req_u, u3_lane lan_u, u3_noun fra, u3_noun h
       u3l_log("no forward, we are not a galaxy");
     }
   } else {
+    u3k(hit);
+    u3l_log("attempting to serve from cache");
+    u3l_log("fragment: %u", u3r_word(0, fra));
+    u3l_log("lent: %u", u3r_word(0, u3k(u3h(hit))));
+    //u3l_log("first: %x", u3r_string(u3dc("scot", c3__uv, u3k(u3h(u3t(hit))))));
+    _xmas_respond(req_u, lan_u, fra, hit);
   }
 }
-
 
 /* 
  */
@@ -929,7 +946,8 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
   u3_weak old = _xmas_get_cache(sam_u, u3k(pax));
   if ( old == u3_none ) {
     u3l_log("bad");
-  } 
+  }
+  u3m_p("old", old);
   u3_noun tag;
   u3_noun dat;
   u3x_cell(old, &tag, &dat);
@@ -944,10 +962,39 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
 
     }
   }
+  u3m_p("scry response val", pas);
   _xmas_put_cache(sam_u, u3k(pax), u3nc(c3__item, u3k(pas)));
 }
 
+static void
+_xmas_hear_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3l_log("xmas: hear bail");
+  u3_ovum_free(egg_u);
+}
 
+static void
+_xmas_hear_page(u3_xmas_pact* pac_u, u3_lane lan_u)
+{
+  u3_xmas* sam_u = pac_u->sam_u;
+
+  u3_noun wir = u3nc(c3__xmas, u3_nul);
+  u3_noun pat = u3do("stab", u3i_string(pac_u->pag_u.pat_c));
+  u3_noun mess = u3nq(
+      pat,
+      u3i_word(pac_u->pag_u.tot_w),
+      u3i_bytes(96, pac_u->pag_u.aut_y),
+      u3i_bytes(1024, pac_u->pag_u.dat_y)
+  );
+  u3_noun cad = u3nt(c3__mess, c3__page, mess);
+
+  u3_auto_peer(
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__x, wir, cad)),
+    0, 0, _xmas_hear_bail);
+
+
+}
 
 static void
 _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
@@ -957,7 +1004,7 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
   u3_noun pat = u3i_string(pac_u->pek_u.pat_c);
   u3_noun pax = u3do("stab", u3k(pat));
   u3_noun key = u3do("snip", u3k(pax));
-  u3_noun fra = u3do("rear", u3k(pax));
+  u3_noun fra = u3dc("slav", c3__ud, u3do("rear", u3k(pax)));
   u3_weak hit = _xmas_get_cache(sam_u, u3k(key));
   if ( u3_none != hit ) {
     u3_noun tag, dat;
@@ -965,15 +1012,21 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
     if ( c3y == u3r_sing(u3i_string("wait"), u3k(tag)) ) {
       u3_noun liv, las;
       u3x_cell(dat, &liv, &las);
+      u3m_p("lane", las);
+      u3m_p("live", liv);
       u3_noun val = u3nc(
           _xmas_get_now(), 
           u3nc(u3_xmas_encode_lane(lan_u), u3k(las))
           //  TODO: a set instead of list?
       );
+      u3m_p("wait update key", key);
       _xmas_put_cache(sam_u, u3k(key), u3nc(u3i_string("wait"), u3k(val)));
     }
     else if ( c3y == u3r_sing(u3i_string("item"), u3k(tag)) ) {
-      _xmas_serve_cache_hit(pac_u, lan_u, u3k(pax), u3k(dat));
+      u3l_log("item hit");
+      //u3m_p("dat", u3k(dat));
+      u3l_log("after dat");
+      _xmas_serve_cache_hit(pac_u, lan_u, fra, u3k(dat));
     } else {
       u3l_log("xmas: weird case in cache, dropping");
     }
@@ -986,6 +1039,7 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
           //  TODO: a set instead of list?
     );
 
+    u3m_p("key new wait", key);
     _xmas_put_cache(sam_u, u3k(key), u3nc(u3i_string("wait"), val));
     // TODO: retrieve from namespace
   }
@@ -1018,6 +1072,9 @@ _xmas_hear(u3_xmas* sam_u,
       _xmas_hear_peek(pac_u, *lan_u);
     } break;
     default: {
+    case PACT_PAGE: {
+      _xmas_hear_page(pac_u, *lan_u);
+    } break;
       u3l_log("xmas: unimplemented packet type %u", pac_u->typ_y);
     } break;
   }
