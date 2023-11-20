@@ -1662,71 +1662,71 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
 }
 
 static c3_w
-_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
+_stun_find_attribute(c3_y* buf_y, c3_w len,
+                     c3_y atr[2], c3_y atr_len[2],
+                     c3_w min_len)
 {
-  c3_w i, header, len, index;
-  c3_y finger[4];
+  c3_w i, header, index, cur;
+
   c3_o stop = c3n;
   i = 0;
   header = 20;
   index = 0;
+  cur = 0;
 
-  if (buf_len < 40) {  // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
-    return c3n;
+  while (len-- && stop == c3n) {
+    cur = header + i;
+    if (len < min_len) {
+      stop = c3y;
+    }
+    else if (buf_y[cur] == atr[0] && buf_y[cur + 1] == atr[1]&&
+             buf_y[cur + 2] == atr_len[0] && buf_y[cur + 3] == atr_len[1] ) {
+      stop = c3y;
+      index = cur;
+    }
+    else {
+      i = i + 1;
+    }
+  }
+  return index;
+}
+
+static c3_w
+_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
+{
+  c3_y xor_buf[2]; xor_buf[0]= 0x00; xor_buf[1]= 0x20;
+  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[1]= 0x08;
+
+  if (buf_len < 40) { // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
+    return 0;
   }
   else {
-    len = buf_len - header + 1;
-    // search for XOR-MAPPED-ADDRESS attribute type 0x0020
-    while (len-- && stop == c3n) {
-      if (len < 8) {
-        stop = c3y;
-      }
-      else if (buf_y[header + i] == 0x00 && buf_y[header + i + 1] == 0x20 &&
-              buf_y[header + i + 2] == 0x00 && buf_y[header + i + 3] == 0x08) {
-        stop = c3y;
-        index = header + i + 6; // Skip reserved byte and IPv4 family
-      }
-      else {
-        i = i + 1;
-      }
-    }
-    return index;
+    c3_w len = buf_len - 20 + 1;
+    c3_w index = _stun_find_attribute(buf_y, len, xor_buf, atr_len, 9);
+    // If non-zero, skip attribute type, length, reserved byte and IP family
+    return (index == 0) ? 0 : index + 6;
   }
 }
 
 static c3_o
 _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
 {
-  c3_w i, header, len, index;
   c3_y finger[4];
-  c3_o stop = c3n;
-  i = 0;
-  index = 0;
-  header = 20;
 
-  if (buf_len < 28) {
+  c3_y finger_buf[2]; finger_buf[0]= 0x80; finger_buf[0]= 0x28;
+  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[0]= 0x04;
+
+  if (buf_len < 28) { // At least STUN header and FINGERPRINT
     return c3n;
   }
   else {
-    len = buf_len - header + 1;
-    // search for FINGERPRINT attribute type 0x8028
-    while (len-- && stop == c3n) {
-      if (len < 8) {
-        stop = c3y;
-      }
-      else if (buf_y[header + i] == 0x80 && buf_y[header + i + 1] == 0x28 &&
-              buf_y[header + i + 2] == 0x00 && buf_y[header + i + 3] == 0x04) {
-        stop = c3y;
-        index = header + i + 4;
-      }
-      else {
-        i = i + 1;
-      }
-    }
+    c3_w len = buf_len - 20 + 1;
+    c3_w index = _stun_find_attribute(buf_y, len, finger_buf, atr_len, 8);
     if (index == 0) {
       return c3n;
     }
     else {
+      index += 4;  // Skip attribute type and length
       finger[0] = buf_y[index]; finger[1] = buf_y[index + 1];
       finger[2] = buf_y[index + 2]; finger[3] = buf_y[index + 3];
 
