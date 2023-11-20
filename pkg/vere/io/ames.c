@@ -1212,6 +1212,7 @@ static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
 static void _stun_on_failure(u3_ames* sam_u);
 static void _stun_start(u3_ames* sam_u, c3_o fail);
 static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
+static c3_w   _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len);
 
 static c3_d
 _stun_time_gap(struct timeval start)
@@ -1362,57 +1363,63 @@ static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
 }
 
 static void
-_stun_on_response(u3_ames* sam_u, c3_y* buf_y)
+_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
 {
   u3_stun_state old_y = sam_u->sun_u.sat_y;
 
   c3_w cookie = 0x2112A442;
   // XX check attribute tags (see RFC)
-  c3_w ip_addr_xor = _ames_sift_word(buf_y + 28);
-  c3_s port_xor = _ames_sift_short(buf_y + 26);
-  // new lane
-  u3_lane lan_u;
-  lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
-  lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
+  c3_w xor_index = _stun_find_xor_mapped_address(buf_y, buf_len);
 
-  u3_noun wir = u3nc(c3__ames, u3_nul);
+  //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
+  if (xor_index != 0) {
+    c3_w ip_addr_xor = _ames_sift_word(buf_y + xor_index + 2);
+    c3_s port_xor = _ames_sift_short(buf_y + xor_index);
 
-  if (sam_u->sun_u.wok_o == c3n) {
-    // stop %ping app
-    u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
-    sam_u->sun_u.wok_o = c3y;
-  }
-  else if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
-      sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
-    // IP:PORT changed
-    u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
-  }
-  else {
-    u3z(wir);
-  }
-  sam_u->sun_u.sef_u = lan_u;
+    // new lane
+    u3_lane lan_u;
+    lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
+    lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
 
-  switch ( sam_u->sun_u.sat_y ) {
-    case STUN_OFF: break;       //  ignore; stray response
-    case STUN_KEEPALIVE: break; //  ignore; duplicate response
-    case STUN_TRYING: {
-      sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-      c3_y buf_y[12] = {0};
-      c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
-      if (sas_i != 0) {
-        u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
-        _stun_on_lost(sam_u);
-      }
-      else {
-        memcpy(sam_u->sun_u.tid_y, buf_y, 12);
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
-      }
-    } break;
-    default: assert("programmer error");
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+
+    if (sam_u->sun_u.wok_o == c3n) {
+      // stop %ping app
+      u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
+      u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+      u3_auto_plan(&sam_u->car_u, ovo_u);
+      sam_u->sun_u.wok_o = c3y;
+    }
+    else if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
+        sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
+      // IP:PORT changed
+      u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
+      u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+      u3_auto_plan(&sam_u->car_u, ovo_u);
+    }
+    else {
+      u3z(wir);
+    }
+    sam_u->sun_u.sef_u = lan_u;
+
+    switch ( sam_u->sun_u.sat_y ) {
+      case STUN_OFF: break;       //  ignore; stray response
+      case STUN_KEEPALIVE: break; //  ignore; duplicate response
+      case STUN_TRYING: {
+        sam_u->sun_u.sat_y = STUN_KEEPALIVE;
+        c3_y buf_y[12] = {0};
+        c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
+        if (sas_i != 0) {
+          u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
+          _stun_on_lost(sam_u);
+        }
+        else {
+          memcpy(sam_u->sun_u.tid_y, buf_y, 12);
+          uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+        }
+      } break;
+      default: assert("programmer error");
+    }
   }
 }
 
@@ -1653,6 +1660,40 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     }
   }
 }
+
+static c3_w
+_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
+{
+  c3_w i, header, len, index;
+  c3_y finger[4];
+  c3_o stop = c3n;
+  i = 0;
+  header = 20;
+  index = 0;
+
+  if (buf_len < 40) {  // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
+    return c3n;
+  }
+  else {
+    len = buf_len - header + 1;
+    // search for XOR-MAPPED-ADDRESS attribute type 0x0020
+    while (len-- && stop == c3n) {
+      if (len < 8) {
+        stop = c3y;
+      }
+      else if (buf_y[header + i] == 0x00 && buf_y[header + i + 1] == 0x20 &&
+              buf_y[header + i + 2] == 0x00 && buf_y[header + i + 3] == 0x08) {
+        stop = c3y;
+        index = header + i + 6; // Skip reserved byte and IPv4 family
+      }
+      else {
+        i = i + 1;
+      }
+    }
+    return index;
+  }
+}
+
 static c3_o
 _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
 {
@@ -1660,6 +1701,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
   c3_y finger[4];
   c3_o stop = c3n;
   i = 0;
+  index = 0;
   header = 20;
 
   if (buf_len < 28) {
@@ -1668,15 +1710,12 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
   else {
     len = buf_len - header + 1;
     // search for FINGERPRINT attribute type 0x8028
-    c3_o found_attr = c3n;
     while (len-- && stop == c3n) {
       if (len < 8) {
-        found_attr = c3n;
         stop = c3y;
       }
       else if (buf_y[header + i] == 0x80 && buf_y[header + i + 1] == 0x28 &&
               buf_y[header + i + 2] == 0x00 && buf_y[header + i + 3] == 0x04) {
-        found_attr = c3y;
         stop = c3y;
         index = header + i + 4;
       }
@@ -1684,7 +1723,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
         i = i + 1;
       }
     }
-    if (found_attr == c3n) {
+    if (index == 0) {
       return c3n;
     }
     else {
@@ -2672,7 +2711,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   }
   else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
               == c3y) {
-    _stun_on_response(sam_u, (c3_y*)buf_u->base);
+    _stun_on_response(sam_u, (c3_y*)buf_u->base, nrd_i);
     c3_free(buf_u->base);
   } else {
     u3_ames*            sam_u = wax_u->data;
