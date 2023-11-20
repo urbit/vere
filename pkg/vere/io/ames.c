@@ -1211,6 +1211,7 @@ static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
 static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
 static void _stun_on_failure(u3_ames* sam_u);
 static void _stun_start(u3_ames* sam_u, c3_o fail);
+static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
 
 static c3_d
 _stun_time_gap(struct timeval start)
@@ -1321,13 +1322,13 @@ static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
                              const struct sockaddr* adr_u)
 {
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  c3_y *buf_y = c3_calloc(32);
+  c3_y *buf_y = c3_calloc(40);
   c3_w cookie = 0x2112A442;
 
   c3_w cur_w = 20;                                   // STUN header is 20 bytes
   memcpy(buf_y, buf_r, cur_w);                       // copy STUN request header
   buf_y[0] = 0x01; buf_y[1] = 0x01;                  // 0x0101 SUCCESS RESPONSE
-  buf_y[2] = 0x00; buf_y[3] = 0x0c;                  // Length: 12 bytes
+  buf_y[2] = 0x00; buf_y[3] = 0x14;                  // Length: 20 bytes
 
   // XOR-MAPPED-ADDRESS
   buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x20;      // attribute type 0x00020
@@ -1337,10 +1338,13 @@ static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
 
   c3_s x_port = htons(ntohs(add_u->sin_port) ^ cookie >> 16);
   c3_w x_ip = htonl(ntohl(add_u->sin_addr.s_addr) ^ cookie);
-  memcpy(buf_y + cur_w + 6, &x_port, 2);  // X-Port
-  memcpy(buf_y + cur_w + 8, &x_ip, 4);    // X-IP Addres
+  memcpy(buf_y + cur_w + 6, &x_port, 2);             // X-Port
+  memcpy(buf_y + cur_w + 8, &x_ip, 4);               // X-IP Addres
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 32);
+  // FINGERPRINT
+  buf_y = _stun_add_fingerprint(buf_y, cur_w + 12);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 40);
   u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
 
   snd_u->sam_u = sam_u;
@@ -1435,6 +1439,28 @@ _stun_on_lost(u3_ames* sam_u)
   uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
 }
 
+/* Adapted from:
+https://web.archive.org/web/20190108202303/http://www.hackersdelight.org/hdcodetxt/crc.c.txt
+*/
+static c3_w crc32b(c3_y *message, c3_w len) {
+   c3_w i, j;
+   c3_y byte;
+   c3_w crc, mask;
+
+   i = 0;
+   crc = 0xFFFFFFFF;
+   while (len--) {
+      byte = message[i];           // Get next byte.
+      crc = crc ^ byte;
+      for (j = 0; j < 8; j++) {    // Do eight times.
+         mask = -(crc & 1);
+         crc = (crc >> 1) ^ (0xEDB88320 & mask);
+      }
+      i = i + 1;
+   }
+   return ~crc;
+}
+
 static void
 _stun_send_request(u3_ames* sam_u)
 {
@@ -1448,13 +1474,14 @@ _stun_send_request(u3_ames* sam_u)
 
   // see STUN RFC 8489
   // https://datatracker.ietf.org/doc/html/rfc8489#section-5
-  c3_y *buf_y = c3_calloc(20);
+  c3_y *buf_y = c3_calloc(28);
 
   // STUN message type: "binding request"
   buf_y[1] = 0x01;
 
-  // STUN message length: 0 (header-only)
-  // (implicit in initialization)
+  // STUN message length: 8 (header and 32-bit FINGERPRINT)
+  buf_y[2] = 0x00; buf_y[3] = 0x08;
+
 
   // STUN "magic cookie" 0x2112A442 in network byte order
   buf_y[4] = 0x21; buf_y[5] = 0x12; buf_y[6] = 0xa4; buf_y[7] = 0x42;
@@ -1462,7 +1489,10 @@ _stun_send_request(u3_ames* sam_u)
   // STUN "transaction id"
   memcpy(buf_y + 8, sam_u->sun_u.tid_y, 12);
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 20);
+  // FINGERPRINT
+  buf_y = _stun_add_fingerprint(buf_y, 20);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 28);
   u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
   snd_u->sam_u = sam_u;
   snd_u->hun_y = buf_y;
@@ -1623,15 +1653,85 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     }
   }
 }
+static c3_o
+_stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
+{
+  c3_w i, header, len, index;
+  c3_y finger[4];
+  c3_o stop = c3n;
+  i = 0;
+  header = 20;
+
+  if (buf_len < 28) {
+    return c3n;
+  }
+  else {
+    len = buf_len - header + 1;
+    // search for FINGERPRINT attribute type 0x8028
+    c3_o found_attr = c3n;
+    while (len-- && stop == c3n) {
+      if (len < 8) {
+        found_attr = c3n;
+        stop = c3y;
+      }
+      else if (buf_y[header + i] == 0x80 && buf_y[header + i + 1] == 0x28 &&
+              buf_y[header + i + 2] == 0x00 && buf_y[header + i + 3] == 0x04) {
+        found_attr = c3y;
+        stop = c3y;
+        index = header + i + 4;
+      }
+      else {
+        i = i + 1;
+      }
+    }
+    if (found_attr == c3n) {
+      return c3n;
+    }
+    else {
+      finger[0] = buf_y[index]; finger[1] = buf_y[index + 1];
+      finger[2] = buf_y[index + 2]; finger[3] = buf_y[index + 3];
+
+      c3_w fingerprint = _ames_sift_word(finger);
+      c3_w crc = htonl(crc32b(buf_y, index - 4) ^ 0x5354554e);
+
+      return fingerprint == crc;
+    }
+  }
+}
+
+static c3_y*
+_stun_add_fingerprint(c3_y *message, c3_w index)
+{
+  // Compute FINGERPRINT value as CRC-32 of the STUN message
+  // up to (but excluding) the FINGERPRINT attribute itself,
+  // XOR'ed with the 32-bit value 0x5354554e
+  c3_w crc = htonl(crc32b(message, index) ^ 0x5354554e);
+
+  // STUN attribute type: "FINGERPRINT"
+  message[index] = 0x80;  message[index + 1] = 0x28;
+  // STUN attribute length: 4 bytes
+  message[index + 2] = 0x00; message[index + 3] = 0x04;
+  // FINGERPRINT dummy value  XX needed? see https://datatracker.ietf.org/doc/html/rfc5389#section-15.5
+  message[index + 4] = 0xAB; message[index + 5] = 0xCD;
+  message[index + 6] = 0xCD; message[index + 7] = 0xAB;
+
+  memcpy(message + index + 4, &crc, 4);
+
+  return message;
+}
 
 static c3_o
 _stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w buf_len)
 {
   c3_w cookie = htonl(0x2112A442);
-  return !(buf_len == 32 &&
+
+  // Expects at least:
+  //   STUN header, 12 byte XOR-MAPPED-ADDRESS and 8 byte FINGERPRINT
+  return !(buf_len == 40 &&
            buf_y[0] == 0x01 && buf_y[1] == 0x01 &&
            memcmp(&cookie, buf_y + 4, 4) == 0 &&
-           memcmp(tid_y, buf_y + 8, 12) == 0
+           memcmp(tid_y, buf_y + 8, 12) == 0 &&
+           _stun_has_fingerprint(buf_y, buf_len)
   );
 }
 
@@ -1640,9 +1740,12 @@ _stun_is_request(c3_y* buf_y, c3_w buf_len)
 {
   c3_w cookie = htonl(0x2112A442);
 
-  return !(buf_len >= 20 &&  // at least the STUN header
+  // Expects at least:
+  //   STUN header and 8 byte FINGERPRINT
+  return !(buf_len >= 28 &&
            buf_y[0] == 0x0 && buf_y[1] == 0x01 &&
-           memcmp(&cookie, buf_y + 4, 4) == 0
+           memcmp(&cookie, buf_y + 4, 4) == 0 &&
+           _stun_has_fingerprint(buf_y, buf_len)
   );
 
 }
