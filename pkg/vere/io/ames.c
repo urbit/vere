@@ -1713,8 +1713,8 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
 {
   c3_y finger[4];
 
-  c3_y finger_buf[2]; finger_buf[0]= 0x80; finger_buf[0]= 0x28;
-  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[0]= 0x04;
+  c3_y finger_buf[2]; finger_buf[0]= 0x80; finger_buf[1]= 0x28;
+  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[1]= 0x04;
 
   if (buf_len < 28) { // At least STUN header and FINGERPRINT
     return c3n;
