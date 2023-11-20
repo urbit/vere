@@ -1711,7 +1711,8 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
       finger[2] = buf_y[index + 2]; finger[3] = buf_y[index + 3];
 
       c3_w fingerprint = _ames_sift_word(finger);
-      c3_w crc = htonl(crc32(0, buf_y, index - 4) ^ 0x5354554e);
+      c3_w init = crc32(0L, Z_NULL, 0);
+      c3_w crc = htonl(crc32(init, buf_y, index - 4) ^ 0x5354554e);
 
       return fingerprint == crc;
     }
@@ -1724,7 +1725,8 @@ _stun_add_fingerprint(c3_y *message, c3_w index)
   // Compute FINGERPRINT value as CRC-32 of the STUN message
   // up to (but excluding) the FINGERPRINT attribute itself,
   // XOR'ed with the 32-bit value 0x5354554e
-  c3_w crc = htonl(crc32(0, message, index) ^ 0x5354554e);
+  c3_w init = crc32(0L, Z_NULL, 0);
+  c3_w crc = htonl(crc32(init, message, index) ^ 0x5354554e);
 
   // STUN attribute type: "FINGERPRINT"
   message[index] = 0x80;  message[index + 1] = 0x28;
