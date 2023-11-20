@@ -5,6 +5,8 @@
 #include "noun.h"
 #include "ur.h"
 
+#include "zlib.h"
+
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
@@ -1446,28 +1448,6 @@ _stun_on_lost(u3_ames* sam_u)
   uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
 }
 
-/* Adapted from:
-https://web.archive.org/web/20190108202303/http://www.hackersdelight.org/hdcodetxt/crc.c.txt
-*/
-static c3_w crc32b(c3_y *message, c3_w len) {
-   c3_w i, j;
-   c3_y byte;
-   c3_w crc, mask;
-
-   i = 0;
-   crc = 0xFFFFFFFF;
-   while (len--) {
-      byte = message[i];           // Get next byte.
-      crc = crc ^ byte;
-      for (j = 0; j < 8; j++) {    // Do eight times.
-         mask = -(crc & 1);
-         crc = (crc >> 1) ^ (0xEDB88320 & mask);
-      }
-      i = i + 1;
-   }
-   return ~crc;
-}
-
 static void
 _stun_send_request(u3_ames* sam_u)
 {
@@ -1731,7 +1711,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
       finger[2] = buf_y[index + 2]; finger[3] = buf_y[index + 3];
 
       c3_w fingerprint = _ames_sift_word(finger);
-      c3_w crc = htonl(crc32b(buf_y, index - 4) ^ 0x5354554e);
+      c3_w crc = htonl(crc32(0, buf_y, index - 4) ^ 0x5354554e);
 
       return fingerprint == crc;
     }
@@ -1744,7 +1724,7 @@ _stun_add_fingerprint(c3_y *message, c3_w index)
   // Compute FINGERPRINT value as CRC-32 of the STUN message
   // up to (but excluding) the FINGERPRINT attribute itself,
   // XOR'ed with the 32-bit value 0x5354554e
-  c3_w crc = htonl(crc32b(message, index) ^ 0x5354554e);
+  c3_w crc = htonl(crc32(0, message, index) ^ 0x5354554e);
 
   // STUN attribute type: "FINGERPRINT"
   message[index] = 0x80;  message[index + 1] = 0x28;
