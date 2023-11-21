@@ -1384,18 +1384,19 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
     lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
 
     u3_noun wir = u3nc(c3__ames, u3_nul);
-
     if (sam_u->sun_u.wok_o == c3n) {
       // stop %ping app
-      u3_noun cad = u3nt(c3__stun, c3__stop, u3_nul);
+      u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
+                         u3nc(c3n, u3_ames_encode_lane(lan_u)));
       u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
       u3_auto_plan(&sam_u->car_u, ovo_u);
       sam_u->sun_u.wok_o = c3y;
     }
     else if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
         sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
-      // IP:PORT changed
-      u3_noun cad = u3nt(c3__stun, c3__once, u3_nul);
+      // lane changed
+      u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
+                         u3nc(c3n, u3_ames_encode_lane(lan_u)));
       u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
       u3_auto_plan(&sam_u->car_u, ovo_u);
     }
@@ -1431,7 +1432,8 @@ _stun_on_failure(u3_ames* sam_u)
   // only inject event into arvo to %kick ping app on first failure
   if (sam_u->sun_u.wok_o == c3y) {
     u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nt(c3__stun, c3__fail, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__fail, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(sam_u->sun_u.sef_u)));
     u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
     u3_auto_plan(&sam_u->car_u, ovo_u);
   }
