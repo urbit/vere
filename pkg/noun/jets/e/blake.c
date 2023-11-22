@@ -96,3 +96,67 @@
       return u3l_punt("blake3_hash", _cqe_blake3_hash(wid, dat, key, out));
     }
   }
+
+  static u3_noun
+  _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
+  {
+    c3_w wid_w;
+    if ( !u3r_word_fit(&wid_w, wid) ) {
+      return u3m_bail(c3__fail);
+    } else {
+      c3_y  cv_y[32], block_y[64], block_len;
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
+      c3_d counter_d = u3r_chub(0, counter);
+      c3_y flags_y = u3r_byte(0, flags);
+      u3r_bytes(0, 32, cv_y, cv);
+      urcrypt_blake3_chunk_output(wid_w, dat_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
+      return u3i_cell(u3i_bytes(32, cv_y), u3i_qual(u3i_chub(counter_d), u3i_bytes(64, block_y), block_len, u3i_bytes(1, &flags_y)));
+    }
+  }
+
+  u3_noun
+  u3we_blake3_chunk_output(u3_noun cor)
+  {
+    u3_noun counter, msg,      // arguments
+            wid, dat,          // destructured msg
+            key, flags;        // context
+
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &counter,
+                              u3x_sam_3, &msg,
+                              u3x_con_sam_2, &key,
+                              u3x_con_sam_3, &flags, 0) ||
+                u3ud(counter) ||
+                u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
+                u3ud(key) || u3ud(flags))
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      return u3l_punt("blake3_chunk_output", _cqe_blake3_chunk_output(wid, dat, key, counter, flags));
+    }
+  }
+
+  static u3_atom
+  _cqe_blake3_compress(u3_atom cv, u3_atom counter,
+                       u3_atom block, u3_atom block_len, u3_atom flags)
+  {
+    c3_y cv_y[32], block_y[64], out_y[64];
+    u3r_bytes(0, 32, cv_y, cv);
+    u3r_bytes(0, 64, block_y, block);
+    urcrypt_blake3_compress(cv_y, block_y, block_len, counter, flags, out_y);
+    return u3i_bytes(64, out_y);
+  }
+
+  u3_noun
+  u3we_blake3_compress(u3_noun cor)
+  {
+    u3_noun output = u3x_at(u3x_sam, cor);
+    u3_noun cv, counter, block, block_len, flags;  // destructured output
+
+    if ( u3r_quil(output, &cv, &counter, &block, &block_len, &flags) ||
+         u3ud(cv) || u3ud(block) || u3ud(block_len) || u3ud(counter) || u3ud(flags))
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      return u3l_punt("blake3_compress", _cqe_blake3_compress(cv, counter, block, block_len,  flags));
+    }
+  }
