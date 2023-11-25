@@ -225,26 +225,26 @@ u3t_samp(void)
     u3a_road* rod_u;
 
     if ( _(u3T.mal_o) ) {
-      mot_l = c3_s3('m','a','l');
+      mot_l = c3_tas(mal);
     }
     else if ( _(u3T.coy_o) ) {
-      mot_l = c3_s3('c','o','y');
+      mot_l = c3_tas(coy);
     }
     else if ( _(u3T.euq_o) ) {
-      mot_l = c3_s3('e','u','q');
+      mot_l = c3_tas(euq);
     }
     else if ( _(u3T.far_o) ) {
-      mot_l = c3_s3('f','a','r');
+      mot_l = c3_tas(far);
     }
     else if ( _(u3T.noc_o) ) {
       u3_assert(!_(u3T.glu_o));
-      mot_l = c3_s3('n','o','c');
+      mot_l = c3_tas(noc);
     }
     else if ( _(u3T.glu_o) ) {
-      mot_l = c3_s3('g','l','u');
+      mot_l = c3_tas(glu);
     }
     else {
-      mot_l = c3_s3('f','u','n');
+      mot_l = c3_tas(fun);
     }
 
     rod_u = u3R;
