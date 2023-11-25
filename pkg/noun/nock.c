@@ -1985,7 +1985,8 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3_tas(bout) == p_tok) ) {
+  if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) &&
+       (c3_tas(bout) == p_tok) ) {
     // get the microseconds elapsed
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(r_tok));
 

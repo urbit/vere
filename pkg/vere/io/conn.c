@@ -457,7 +457,8 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
                    u3nc(c3_tas(khan), u3_nul), u3nc(c3_tas(live), u3_nul),
                    u3nc(c3_tas(mass), u3_nul),
                    u3nc(c3_tas(port),
-                        u3i_list(c3_tas(ames), c3_tas(htls), c3_tas(http), u3_none)),
+                        u3i_list(c3_tas(ames), c3_tas(htls), c3_tas(http),
+                                 u3_none)),
                    u3nc(c3_tas(v), u3_nul), u3nc(c3_tas(who), u3_nul),
                    u3_none));
       } break;
@@ -589,7 +590,8 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
       }
       wir = u3nc(c3_tas(khan),
                  u3nq(u3dc("scot", c3_tas(uv), con_u->sev_l),
-                      u3dc("scot", c3_tas(ud), can_u->coq_l), u3k(rud), u3_nul));
+                      u3dc("scot", c3_tas(ud), can_u->coq_l),
+                      u3k(rud), u3_nul));
       u3_auto_peer(
         u3_auto_plan(&con_u->car_u,
                      u3_ovum_init(0, c3_tas(k), wir, u3k(can))),

@@ -694,7 +694,8 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
         tat_u->esc.ape = c3n;
         //  XX backwards compatibility [%met @c]
         //
-        _term_io_spit(uty_u, u3nq(c3_tas(mod), c3_tas(met), c3_tas(bac), u3_nul));
+        _term_io_spit(uty_u,
+                      u3nq(c3_tas(mod), c3_tas(met), c3_tas(bac), u3_nul));
       }
       else if ( ('[' == cay_y) || ('O' == cay_y) ) {
         tat_u->esc.bra = c3y;
@@ -719,7 +720,8 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       c3_y row_y = cay_y - 32;
       //  only acknowledge button 1 presses within our known window
       if ( 1 != tat_u->esc.ton_y && row_y <= tat_u->siz.row_l ) {
-        _term_io_spit(uty_u, u3nt(c3_tas(hit), tat_u->esc.col_y - 1, row_y - 1));
+        _term_io_spit(uty_u,
+                      u3nt(c3_tas(hit), tat_u->esc.col_y - 1, row_y - 1));
       }
       tat_u->esc.mou = c3n;
       tat_u->esc.ton_y = tat_u->esc.col_y = 0;
