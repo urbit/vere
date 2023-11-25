@@ -11,7 +11,7 @@
   {
     c3_w len_w;
     if ( !u3r_word_fit(&len_w, wid) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       u3_atom ret;
@@ -37,7 +37,7 @@
                  u3ud(wid) || u3ud(dat))
        )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3l_punt("ripe", _cqe_ripe(wid, dat));

@@ -35,7 +35,7 @@ u3qb_skid(u3_noun a, u3_noun b)
           rig  = tel;
         } break;
 
-        default: u3m_bail(c3__exit);
+        default: u3m_bail(c3_tas(exit));
       }
     }
     while ( u3_nul != t );

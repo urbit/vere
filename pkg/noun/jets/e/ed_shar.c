@@ -17,7 +17,7 @@
     }
     else if ( 0 != u3r_bytes_fit(32, sek_y, sek) ) {
       // sek explicitly bails through suck
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       c3_y shr_y[32];
@@ -35,7 +35,7 @@
          (c3n == u3ud(pub)) ||
          (c3n == u3ud(sek)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3l_punt("shar", _cqee_shar(pub, sek));
     }

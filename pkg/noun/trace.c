@@ -45,7 +45,7 @@ u3t_push(u3_noun mon)
 void
 u3t_mean(u3_noun roc)
 {
-  u3R->bug.tax = u3nc(u3nc(c3__mean, roc), u3R->bug.tax);
+  u3R->bug.tax = u3nc(u3nc(c3_tas(mean), roc), u3R->bug.tax);
 }
 
 /* u3t_drop(): drop from meaning stack.
@@ -155,7 +155,7 @@ _t_samp_process(u3_road* rod_u)
         }
         else {
           if ( !_(u3a_is_cat(old)) ) {
-            u3m_bail(c3__fail);
+            u3m_bail(c3_tas(fail));
           }
 
           u3z(muf);
@@ -650,7 +650,7 @@ u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
     u3nc(
       pri_l,
       u3nt(
-        c3__rose,
+        c3_tas(rose),
         u3nt(u3nt(':', ' ', u3_nul), u3_nul, u3_nul),
         u3nt(cap, tan, u3_nul)
       )

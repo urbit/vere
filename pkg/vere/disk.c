@@ -961,7 +961,7 @@ u3_disk_info(u3_disk* log_u)
   if ( log_u->put_u.ext_u ) {
     lit = u3nc(
       u3_pier_mass(
-        c3__save,
+        c3_tas(save),
         u3i_list(
           u3_pier_mase("save-start", u3i_chub(log_u->put_u.ext_u->eve_d)),
           u3_pier_mase("save-final", u3i_chub(log_u->put_u.ent_u->eve_d)),
@@ -972,7 +972,7 @@ u3_disk_info(u3_disk* log_u)
   while ( red_u ) {
     red = u3nc(
       u3_pier_mass(
-        u3dc("scot", c3__ux, u3i_chub((c3_d)red_u)),
+        u3dc("scot", c3_tas(ux), u3i_chub((c3_d)red_u)),
         u3i_list(
           u3_pier_mase("start", u3i_chub(red_u->eve_d)),
           u3_pier_mase("final", u3i_chub(red_u->eve_d + red_u->len_d - 1)),
@@ -980,8 +980,8 @@ u3_disk_info(u3_disk* log_u)
       red);
     red_u = red_u->nex_u;
   }
-  lit = u3nc(u3_pier_mass(c3__read, red), lit);
-  return u3_pier_mass(c3__disk, lit);
+  lit = u3nc(u3_pier_mass(c3_tas(read), red), lit);
+  return u3_pier_mass(c3_tas(disk), lit);
 }
 
 /* u3_disk_slog(): print status info.

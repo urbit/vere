@@ -24,7 +24,7 @@ u3wc_swp(u3_noun cor)
   if (  (c3n == u3ud(a))
      || (c3n == u3ud(b)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
 
   return u3qc_swp(a, b);

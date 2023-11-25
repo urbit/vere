@@ -162,7 +162,7 @@ _cttp_bod_from_octs(u3_noun oct)
   c3_w len_w;
 
   if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
-    u3m_bail(c3__fail); return 0;
+    u3m_bail(c3_tas(fail)); return 0;
   }
   len_w = u3h(oct);
 
@@ -718,13 +718,13 @@ _cttp_http_client_receive(u3_creq* ceq_u, c3_w sas_w, u3_noun mes, u3_noun uct)
   //  XX inject partial responses as separate events
   //
   u3_noun wir = u3nt(u3i_string("http-client"),
-                     u3dc("scot", c3__uv, ctp_u->sev_l),
+                     u3dc("scot", c3_tas(uv), ctp_u->sev_l),
                      u3_nul);
   u3_noun cad = u3nt(u3i_string("receive"),
                     ceq_u->num_l,
                     u3nq(u3i_string("start"), u3nc(sas_w, mes), uct, c3y));
 
-  u3_auto_plan(&ctp_u->car_u, u3_ovum_init(0, c3__i, wir, cad));
+  u3_auto_plan(&ctp_u->car_u, u3_ovum_init(0, c3_tas(i), wir, cad));
 }
 
 /* _cttp_creq_fail(): dispatch error response
@@ -1050,11 +1050,11 @@ _cttp_io_talk(u3_auto* car_u)
   //  XX remove u3A->sen
   //
   u3_noun wir = u3nt(u3i_string("http-client"),
-                     u3dc("scot", c3__uv, ctp_u->sev_l),
+                     u3dc("scot", c3_tas(uv), ctp_u->sev_l),
                      u3_nul);
-  u3_noun cad = u3nc(c3__born, u3_nul);
+  u3_noun cad = u3nc(c3_tas(born), u3_nul);
 
-  u3_auto_plan(car_u, u3_ovum_init(0, c3__i, wir, cad));
+  u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(i), wir, cad));
 }
 
 /* _cttp_io_kick(): apply effects
@@ -1144,7 +1144,7 @@ u3_cttp_io_init(u3_pier* pir_u)
   ctp_u->ctx_u.ssl_ctx = ctp_u->tls_u;
 
   u3_auto* car_u = &ctp_u->car_u;
-  car_u->nam_m = c3__cttp;
+  car_u->nam_m = c3_tas(cttp);
 
   //  XX set in done_cb for %born
   //

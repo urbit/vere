@@ -21,9 +21,9 @@
 
       u3r_trel(dab, &n_dab, &l_dab, &r_dab);
       if ( c3n == u3du(n_dab) ) {
-        // return u3m_bail(c3__fail);
+        // return u3m_bail(c3_tas(fail));
         u3l_log("bad look");
-        return u3m_bail(c3__exit) ;
+        return u3m_bail(c3_tas(exit)) ;
       }
       else {
         u3_noun pn_dab = u3h(n_dab);
@@ -127,7 +127,7 @@
     u3_noun cog, dab;
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &cog, u3x_sam_3, &dab, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qf_look(cog, dab);
     }

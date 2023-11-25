@@ -57,7 +57,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
       if ( !(u3C.wag_w & u3o_soft_mugs) ) {
         u3z(gon);
-        return u3nc(c3__awry, u3_nul);
+        return u3nc(c3_tas(awry), u3_nul);
       }
     }
 
@@ -75,7 +75,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 static u3_noun
 _mars_show_time(u3_noun wen)
 {
-  return u3dc("scot", c3__da, u3kc_lsh(6, 1, u3kc_rsh(6, 1, wen)));
+  return u3dc("scot", c3_tas(da), u3kc_lsh(6, 1, u3kc_rsh(6, 1, wen)));
 }
 
 typedef enum {
@@ -122,19 +122,19 @@ _mars_play_batch(u3_mars* mar_u,
       u3_assert( c3y == u3r_safe_word(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
-        case c3__meme: {
+        case c3_tas(meme): {
           fprintf(stderr, "play (%" PRIu64 "): %%meme\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_mem_e;
         }
 
-        case c3__intr: {
+        case c3_tas(intr): {
           fprintf(stderr, "play (%" PRIu64 "): %%intr\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_int_e;
         }
 
-        case c3__awry: {
+        case c3_tas(awry): {
           fprintf(stderr, "play (%" PRIu64 "): %%awry\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_mug_e;

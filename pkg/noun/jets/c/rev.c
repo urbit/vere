@@ -14,7 +14,7 @@
   {
     if ( !_(u3a_is_cat(boz)) || (boz >= 32) ||
          !_(u3a_is_cat(len)) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
 
     dat = u3qc_end(boz, len, dat);
@@ -34,7 +34,7 @@
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qc_rev(boz, len, dat);
     }

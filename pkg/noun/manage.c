@@ -142,7 +142,7 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
   (void)(arg1);
   (void)(arg2);
   (void)(arg3);
-  u3m_signal(c3__over);
+  u3m_signal(c3_tas(over));
 }
 
 /* _cm_signal_handle(): handle a signal in general.
@@ -150,7 +150,7 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_l sig_l)
 {
-  if ( c3__over == sig_l ) {
+  if ( c3_tas(over) == sig_l ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
@@ -164,7 +164,7 @@ _cm_signal_handle(c3_l sig_l)
 static void
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
 {
-  _cm_signal_handle(c3__over);
+  _cm_signal_handle(c3_tas(over));
 }
 #endif
 
@@ -174,10 +174,10 @@ _cm_signal_handle_term(int x)
   //  Ignore if we are using base memory from work memory, very rare.
   //
   if ( (0 != u3H->rod_u.kid_p) && (&(u3H->rod_u) == u3R) ) {
-    _cm_emergency("ignored", c3__term);
+    _cm_emergency("ignored", c3_tas(term));
   }
   else {
-    _cm_signal_handle(c3__term);
+    _cm_signal_handle(c3_tas(term));
   }
 }
 
@@ -187,17 +187,17 @@ _cm_signal_handle_intr(int x)
   //  Interrupt: stop work.  Ignore if not working, or (rarely) using base.
   //
   if ( &(u3H->rod_u) == u3R ) {
-    _cm_emergency("ignored", c3__intr);
+    _cm_emergency("ignored", c3_tas(intr));
   }
   else {
-    _cm_signal_handle(c3__intr);
+    _cm_signal_handle(c3_tas(intr));
   }
 }
 
 static void
 _cm_signal_handle_alrm(int x)
 {
-  _cm_signal_handle(c3__alrm);
+  _cm_signal_handle(c3_tas(alrm));
 }
 
 /* _cm_signal_reset(): reset top road after signal longjmp.
@@ -246,7 +246,7 @@ _cm_stack_recover(u3a_road* rod_u)
       for ( i_w = 0; i_w < (len_w - 4096); i_w++ ) {
         tax = u3t(tax);
       }
-      fin = u3nc(u3nc(c3__lose, c3__over), u3a_take(tax));
+      fin = u3nc(u3nc(c3_tas(lose), c3_tas(over)), u3a_take(tax));
 
       return u3kb_weld(beg, fin);
     }
@@ -294,14 +294,14 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
     //
     _cm_signal_reset();
 
-    if ( (c3__meme == sig_l) && (u3a_open(u3R) <= 256) ) {
-      // Out of memory at the top level.  Error becomes c3__full,
+    if ( (c3_tas(meme) == sig_l) && (u3a_open(u3R) <= 256) ) {
+      // Out of memory at the top level.  Error becomes c3_tas(full),
       // and we release the emergency buffer.  To continue work,
       // we need to readjust the image, eg, migrate to 64 bit.
       //
       u3z(u3R->bug.mer);
       u3R->bug.mer = 0;
-      sig_l = c3__full;
+      sig_l = c3_tas(full);
     }
     return u3nt(3, sig_l, tax);
   }
@@ -437,7 +437,7 @@ u3m_file(c3_c* pas_c)
 
   if ( (fid_i < 0) || (fstat(fid_i, &buf_b) < 0) ) {
     u3l_log("%s: %s", pas_c, strerror(errno));
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   fln_w = buf_b.st_size;
   pad_y = c3_malloc(buf_b.st_size);
@@ -447,7 +447,7 @@ u3m_file(c3_c* pas_c)
 
   if ( fln_w != red_w ) {
     c3_free(pad_y);
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     u3_noun pad = u3i_bytes(fln_w, (c3_y *)pad_y);
@@ -756,8 +756,8 @@ u3m_bail(u3_noun how)
   //  printf some metadata
   //
   switch ( how ) {
-    case c3__evil:
-    case c3__exit: break;
+    case c3_tas(evil):
+    case c3_tas(exit): break;
 
     default: {
       if ( _(u3ud(how)) ) {
@@ -787,8 +787,8 @@ u3m_bail(u3_noun how)
   //  intercept fatal errors
   //
   switch ( how ) {
-    case c3__foul:
-    case c3__oops: {
+    case c3_tas(foul):
+    case c3_tas(oops): {
       //  XX set exit code
       //
       fprintf(stderr, "bailing out\r\n");
@@ -817,7 +817,7 @@ u3m_bail(u3_noun how)
   */
   if ( _(u3ud(how)) ) {
     switch ( how ) {
-      case c3__exit: {
+      case c3_tas(exit): {
         how = u3nc(2, u3R->bug.tax);
       } break;
 
@@ -832,7 +832,7 @@ u3m_bail(u3_noun how)
   _longjmp(u3R->esc.buf, how);
 }
 
-int c3_cooked() { return u3m_bail(c3__oops); }
+int c3_cooked() { return u3m_bail(c3_tas(oops)); }
 
 /* u3m_error(): bail out with %exit, ct_pushing error.
 */
@@ -840,7 +840,7 @@ c3_i
 u3m_error(c3_c* str_c)
 {
   u3t_mean(u3i_string(str_c));
-  return u3m_bail(c3__exit);
+  return u3m_bail(c3_tas(exit));
 }
 
 /* u3m_leap(): in u3R, create a new road within the existing one.
@@ -866,7 +866,7 @@ u3m_leap(c3_w pad_w)
 #endif
     if ( (pad_w + c3_wiseof(u3a_road)) >= u3a_open(u3R) ) {
       /* not enough storage to leap */
-      u3m_bail(c3__meme);
+      u3m_bail(c3_tas(meme));
     }
     pad_w += c3_wiseof(u3a_road);
     len_w = u3a_open(u3R) - pad_w;
@@ -1406,7 +1406,7 @@ u3m_soft(c3_w    mil_w,
 
     switch ( u3h(why) ) {
       case 2: {
-        cod = c3__exit;
+        cod = c3_tas(exit);
         tax = u3t(why);
       } break;
 
@@ -1433,10 +1433,10 @@ u3m_soft(c3_w    mil_w,
         u3x_cell(tax, &dat, &tax);
 
         if ( c3y == u3r_cell(dat, &mot, &val) ) {
-          if ( c3__spot == mot ) {
+          if ( c3_tas(spot) == mot ) {
             u3m_p("tax", val);
           }
-          else if (  (c3__mean == mot)
+          else if (  (c3_tas(mean) == mot)
                   && (c3y == u3a_is_atom(val)) )
           {
             u3m_p("men", val);
@@ -1451,7 +1451,7 @@ u3m_soft(c3_w    mil_w,
     }
     //  %evil leaves no trace
     //
-    else if ( c3__evil == cod ) {
+    else if ( c3_tas(evil) == cod ) {
       pro = u3nc(u3k(cod), u3_nul);
     }
     else {
@@ -1814,7 +1814,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
     //  loom limits exceeded, recoverable
     //
     case u3e_flaw_meme: {
-      u3m_signal(c3__meme); // doesn't return
+      u3m_signal(c3_tas(meme)); // doesn't return
       return 1;
     }
 

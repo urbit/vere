@@ -41,10 +41,10 @@ _n_hint(u3_noun zep,
       return _n_nock_on(bus, nex);
     }
 
-    case c3__hunk:
-    case c3__lose:
-    case c3__mean:
-    case c3__spot: {
+    case c3_tas(hunk):
+    case c3_tas(lose):
+    case c3_tas(mean):
+    case c3_tas(spot): {
       u3_noun tac = u3nc(zep, hod);
       u3_noun pro;
 
@@ -56,7 +56,7 @@ _n_hint(u3_noun zep,
         if ( !low_i ) {
           low_i = 1;
           if ( 0 == (u3R->pro.nox_d % 65536ULL) ) {
-            if ( c3__spot == zep ) {
+            if ( c3_tas(spot) == zep ) {
               u3l_log("spot %d/%d : %d/%d",
                       u3h(u3h(u3t(hod))),
                       u3t(u3h(u3t(hod))),
@@ -74,7 +74,7 @@ _n_hint(u3_noun zep,
       return pro;
     }
 
-    case c3__live: {
+    case c3_tas(live): {
       if ( c3y == u3ud(hod) ) {
         u3t_off(noc_o);
         u3t_heck(hod);
@@ -85,7 +85,7 @@ _n_hint(u3_noun zep,
       return _n_nock_on(bus, nex);
     }
 
-    case c3__slog: {
+    case c3_tas(slog): {
       if ( !(u3C.wag_w & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(hod);
@@ -94,7 +94,7 @@ _n_hint(u3_noun zep,
       return _n_nock_on(bus, nex);
     }
 
-    case c3__germ: {
+    case c3_tas(germ): {
       u3_noun pro = _n_nock_on(bus, nex);
 
       if ( c3y == u3r_sing(pro, hod) ) {
@@ -104,7 +104,7 @@ _n_hint(u3_noun zep,
       }
     }
 
-    case c3__fast: {
+    case c3_tas(fast): {
       u3_noun pro = _n_nock_on(bus, nex);
 
       u3t_off(noc_o);
@@ -114,13 +114,13 @@ _n_hint(u3_noun zep,
       return pro;
     }
 
-    case c3__memo: {
+    case c3_tas(memo): {
       u3z(hod);
 #if 0
       return _n_nock_on(bus, nex);
 #else
       {
-        u3_noun pro = u3z_find_2(144 + c3__nock, bus, nex);
+        u3_noun pro = u3z_find_2(144 + c3_tas(nock), bus, nex);
 
         if ( pro != u3_none ) {
           u3z(bus); u3z(nex);
@@ -129,7 +129,7 @@ _n_hint(u3_noun zep,
         pro = _n_nock_on(u3k(bus), u3k(nex));
 
         if ( &(u3H->rod_u) != u3R ) {
-          u3z_save_2(144 + c3__nock, bus, nex, pro);
+          u3z_save_2(144 + c3_tas(nock), bus, nex, pro);
         }
 
         u3z(bus); u3z(nex);
@@ -139,7 +139,7 @@ _n_hint(u3_noun zep,
 #endif
     }
 
-    case c3__sole: {
+    case c3_tas(sole): {
       u3z(hod);
       {
         u3_noun pro = _n_nock_on(bus, nex);
@@ -176,11 +176,11 @@ _n_nock_on(u3_noun bus, u3_noun fol)
       return u3i_cell(poz, riv);
     }
     else switch ( hib ) {
-      default: return u3m_bail(c3__exit);
+      default: return u3m_bail(c3_tas(exit));
 
       case 0: {
         if ( c3n == u3ud(gal) ) {
-          return u3m_bail(c3__exit);
+          return u3m_bail(c3_tas(exit));
         }
         else {
           u3_noun pro = u3k(u3at(gal, bus));
@@ -253,7 +253,7 @@ _n_nock_on(u3_noun bus, u3_noun fol)
             nex = u3k(c_gal);
           } else if ( 1 == tys ) {
             nex = u3k(d_gal);
-          } else return u3m_bail(c3__exit);
+          } else return u3m_bail(c3_tas(exit));
 
           u3a_lose(fol);
           fol = nex;
@@ -313,7 +313,7 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           }
           else {
             if ( c3n == u3ud(b_gal) ) {
-              return u3m_bail(c3__exit);
+              return u3m_bail(c3_tas(exit));
             }
             else {
               u3_noun nex = u3k(u3at(b_gal, seb));
@@ -374,8 +374,8 @@ _n_nock_on(u3_noun bus, u3_noun fol)
           //
           //  replace with proper error stack push
           //
-          u3t_push(u3nt(c3__hunk, ref, gof));
-          return u3m_bail(c3__exit);
+          u3t_push(u3nt(c3_tas(hunk), ref, gof));
+          return u3m_bail(c3_tas(exit));
         }
         else {
           u3_noun pro;
@@ -1018,11 +1018,11 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       default: {
         return _n_comp(ops, nef, los_o, tel_o);
       }
-      case c3__xray:
-      case c3__meme:
-      case c3__nara:
-      case c3__hela:
-      case c3__bout: {
+      case c3_tas(xray):
+      case c3_tas(meme):
+      case c3_tas(nara):
+      case c3_tas(hela):
+      case c3_tas(bout): {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
         // add appropriate hind opcode
@@ -1056,11 +1056,11 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
             ++tot_w; _n_emit(ops, TOSS);
             tot_w += _n_comp(ops, nef, los_o, tel_o);
           } break;
-          case c3__xray:
-          case c3__meme:
-          case c3__nara:
-          case c3__hela:
-          case c3__bout: {
+          case c3_tas(xray):
+          case c3_tas(meme):
+          case c3_tas(nara):
+          case c3_tas(hela):
+          case c3_tas(bout): {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
             // add appropriate hind opcode
@@ -1082,23 +1082,23 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         }
       } break;
 
-      case c3__hunk:
-      case c3__lose:
-      case c3__mean:
-      case c3__spot:
+      case c3_tas(hunk):
+      case c3_tas(lose):
+      case c3_tas(mean):
+      case c3_tas(spot):
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, u3nc(BUSH, zep)); // overflows to SUSH
         tot_w += _n_comp(ops, nef, los_o, c3n);
         ++tot_w; _n_emit(ops, DROP);
         break;
 
-      case c3__live:
+      case c3_tas(live):
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, HECK);
         tot_w += _n_comp(ops, nef, los_o, tel_o);
         break;
 
-      case c3__slog:
+      case c3_tas(slog):
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, SLOG);
         tot_w += _n_comp(ops, nef, los_o, tel_o);
@@ -1106,7 +1106,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
 
       // germ and sole are unused...
 
-      case c3__fast:
+      case c3_tas(fast):
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, SWAP);
         tot_w += _n_comp(ops, nef, c3n, c3n);
@@ -1114,7 +1114,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         ++tot_w; _n_emit(ops, (c3y == los_o) ? BALT : BAST);
         break;
 
-      case c3__memo: {
+      case c3_tas(memo): {
         u3_noun mem = u3_nul;
         c3_w mem_w = 0;
         c3_y op_y;
@@ -1229,7 +1229,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
   else switch ( cod ) {
     case 0:
       if ( c3n == u3ud(arg) ) {
-        u3m_bail(c3__exit);
+        u3m_bail(c3_tas(exit));
         return 0;
       }
       switch ( arg ) {
@@ -1299,14 +1299,14 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(arg, &hed, &tel);
 
       if ( c3n == u3du(hed) ) {
-        u3m_bail(c3__exit);
+        u3m_bail(c3_tas(exit));
         return 0;
       }
       else {
         c3_t hec_t, tec_t;
         hec_t = (1 == u3h(hed));
         if ( c3n == u3du(tel) ) {
-          u3m_bail(c3__exit);
+          u3m_bail(c3_tas(exit));
           break;
         }
         else {
@@ -1359,7 +1359,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       nop_t = _n_formulaic(tel);
 
       if ( !yep_t && !nop_t ) {
-        u3m_bail(c3__exit);
+        u3m_bail(c3_tas(exit));
         break;
       }
 
@@ -1458,7 +1458,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       break;
 
     default:
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
       return 0;
   }
   return tot_w;
@@ -1478,12 +1478,12 @@ _n_push(c3_ys mov, c3_ys off, u3_noun a)
 #ifndef U3_GUARD_PAGE
   if ( 0 == off ) {
     if( !(u3R->cap_p > u3R->hat_p) ) {
-      u3m_bail(c3__meme);
+      u3m_bail(c3_tas(meme));
     }
   }
   else {
     if( !(u3R->cap_p < u3R->hat_p) ) {
-      u3m_bail(c3__meme);
+      u3m_bail(c3_tas(meme));
     }
   }
 #endif
@@ -1847,27 +1847,27 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
-    case c3__bout: {
+    case c3_tas(bout): {
       u3_atom now = u3i_chub(u3t_trace_time());
       *out = u3i_cell(tag, now);
     } break;
 
-    case c3__nara : {
+    case c3_tas(nara) : {
       u3t_slog_nara(0);
       *out = u3_nul;
     } break;
 
-    case c3__hela : {
+    case c3_tas(hela) : {
       u3t_slog_hela(0);
       *out = u3_nul;
     } break;
 
-    case c3__xray : {
+    case c3_tas(xray) : {
       u3t_slog(u3nc(0, _cn_etch_bytecode(fol)));
       *out = u3_nul;
     } break;
 
-    case c3__meme : {
+    case c3_tas(meme) : {
       u3t_slog(u3nc(0, u3t_etch_meme(0)));
       *out = u3_nul;
     } break;
@@ -1889,7 +1889,7 @@ static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok;
-  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
+  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3_tas(bout) == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
@@ -1919,12 +1919,12 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
-    case c3__bout: {
+    case c3_tas(bout): {
       u3_atom now = u3i_chub(u3t_trace_time());
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
-    case c3__nara: {
+    case c3_tas(nara): {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
         c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
@@ -1935,7 +1935,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3_nul;
     } break;
 
-    case c3__hela: {
+    case c3_tas(hela): {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
         c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
@@ -1946,7 +1946,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3_nul;
     } break;
 
-    case c3__xray : {
+    case c3_tas(xray) : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
         c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
@@ -1956,7 +1956,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3_nul;
     } break;
 
-    case c3__meme : {
+    case c3_tas(meme) : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
         c3_l mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
@@ -1985,7 +1985,7 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
+  if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3_tas(bout) == p_tok) ) {
     // get the microseconds elapsed
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(r_tok));
 
@@ -2031,7 +2031,7 @@ static inline u3_noun
 _n_kale(u3_noun a)
 {
   if ( c3n == u3du(a) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
   return a;
 }
@@ -2102,7 +2102,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       }
 
     do_bail:
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
       return u3_none;
 
     do_copy:
@@ -2417,7 +2417,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         ip_w += sip_w;
       }
       else if ( c3y != x ) {
-        u3m_bail(c3__exit);
+        u3m_bail(c3_tas(exit));
         return u3_none;
       }
       BURN();
@@ -2510,8 +2510,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         return u3_none;
       }
       else if ( c3n == u3du(u3t(x)) ) {
-        u3t_push(u3nt(c3__hunk, *top, o));
-        u3m_bail(c3__exit);
+        u3t_push(u3nt(c3_tas(hunk), *top, o));
+        u3m_bail(c3_tas(exit));
         return u3_none;
       }
       else {
@@ -2617,7 +2617,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     skim_out:
       o     = u3k(mem_u->key);
       x     = u3nc(x, o);
-      o     = u3z_find_m(mem_u->cid, 144 + c3__nock, x);
+      o     = u3z_find_m(mem_u->cid, 144 + c3_tas(nock), x);
       if ( u3_none == o ) {
         _n_push(mov, off, u3nc(mem_u->cid, x));
         _n_push(mov, off, u3k(u3h(x)));
@@ -2636,7 +2636,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
          : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
-        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+        u3z_save_m(u3h(o), 144 + c3_tas(nock), u3t(o), x);
       }
       else if ( u3z_memo_keep == u3h(o) ) {
         fprintf(stderr, "\r\nnock: userspace can't save to persistent cache\r\n");

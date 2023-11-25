@@ -202,7 +202,7 @@ top:
     }
     else {
       if ( 0 == box_u->use_w ) {
-        u3m_v1_bail(c3__foul);
+        u3m_v1_bail(c3_tas(foul));
       }
       else {
         if ( _(u3a_v1_is_pom(dog)) ) {

@@ -11,7 +11,7 @@ u3qc_end(u3_atom a,
          u3_atom c)
 {
   if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else if ( !_(u3a_is_cat(b)) ) {
     return u3k(c);

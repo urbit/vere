@@ -11,10 +11,10 @@
             u3_noun lup,
             u3_noun mar)
   {
-    if ( (c3__void == lup) || (c3__void == mar) ) {
-      return c3__void;
+    if ( (c3_tas(void) == lup) || (c3_tas(void) == mar) ) {
+      return c3_tas(void);
     } else {
-      return u3nq(c3__fine,
+      return u3nq(c3_tas(fine),
                   u3k(fuv),
                   u3k(lup),
                   u3k(mar));
@@ -28,7 +28,7 @@
     if ( c3n == u3r_mean(cor, u3x_sam_2, &fuv,
                               u3x_sam_6, &lup,
                               u3x_sam_7, &mar, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qf_fine(fuv, lup, mar);
     }

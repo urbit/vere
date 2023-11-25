@@ -9,7 +9,7 @@ u3_noun
 u3qe_en_base16(u3_atom len, u3_atom dat)
 {
   if ( c3n == u3a_is_cat(len) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     c3_w     len_w = (c3_w)len;

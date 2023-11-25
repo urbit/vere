@@ -21,7 +21,7 @@ _ci_slab_size(c3_g met_g, c3_d len_d)
   if (  (wor_w != wor_d)
      || (len_d != (bit_d >> met_g)) )
   {
-    return (c3_w)u3m_bail(c3__fail);
+    return (c3_w)u3m_bail(c3_tas(fail));
   }
 
   return wor_w;
@@ -477,7 +477,7 @@ u3i_vint(u3_noun a)
     return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
   }
   else if ( _(u3a_is_cell(a)) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     mpz_t a_mp;
@@ -614,7 +614,7 @@ static u3_noun
 _edit_cat(u3_noun big, c3_l axe_l, u3_noun som)
 {
   if ( c3n == u3du(big) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     u3_noun pro;
@@ -645,7 +645,7 @@ _edit(u3_noun big, u3_noun axe, u3_noun som)
     return _edit_cat(big, (c3_l) axe, som);
   }
   else if ( c3n == u3du(big) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     u3_noun mor = u3qc_mas(axe),
@@ -665,7 +665,7 @@ static void
 _mutate_cat(u3_noun big, c3_l axe_l, u3_noun som)
 {
   if ( c3n == u3du(big) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
   else {
     u3a_cell* cel_u = (void*) u3a_to_ptr(big);
@@ -696,7 +696,7 @@ _mutate(u3_noun big, u3_noun axe, u3_noun som)
     _mutate_cat(big, (c3_l) axe, som);
   }
   else if ( c3n == u3du(big) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
   else {
     u3a_cell* cel_u = (void*) u3a_to_ptr(big);
@@ -747,7 +747,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 {
   switch ( axe ) {
     case 0:
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     case 1:
       u3z(big);
       return som;
@@ -801,7 +801,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
       c3_w cut_w = _molt_cut(len_w, pms_m);
 
       if ( c3n == u3a_is_cell(som) ) {
-        return u3m_bail(c3__exit);
+        return u3m_bail(c3_tas(exit));
       }
       else {
         return u3i_cell

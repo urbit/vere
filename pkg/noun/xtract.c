@@ -26,6 +26,6 @@ u3x_mean(u3_noun som, ...)
   va_end(ap);
 
   if ( c3n == ret_o ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
 }

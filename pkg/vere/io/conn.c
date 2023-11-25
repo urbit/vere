@@ -212,7 +212,7 @@ _conn_read_wire(u3_noun   wir,
             uco, p_uco, q_uco;
 
     if ( (c3n == u3r_cell(pud, &p_pud, &t_pud)) ||
-         (c3n == u3v_lily(c3__uv, u3k(p_pud), sev_l)) )
+         (c3n == u3v_lily(c3_tas(uv), u3k(p_pud), sev_l)) )
     {
       u3z(wir); return c3n;
     }
@@ -221,7 +221,7 @@ _conn_read_wire(u3_noun   wir,
     }
     else {
       if ( (c3n == u3r_cell(t_pud, &q_pud, &tt_pud)) ||
-           (c3n == u3v_lily(c3__ud, u3k(q_pud), coq_l)) )
+           (c3n == u3v_lily(c3_tas(ud), u3k(q_pud), coq_l)) )
       {
         u3z(wir); return c3n;
       }
@@ -235,7 +235,7 @@ _conn_read_wire(u3_noun   wir,
         {
           u3z(wir); return c3n;
         }
-        uco = u3dc("slaw", c3__uv, u3k(r_pud));
+        uco = u3dc("slaw", c3_tas(uv), u3k(r_pud));
         if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
              (u3_nul != p_uco) )
         {
@@ -261,7 +261,7 @@ _conn_poke_bail(u3_ovum* egg_u, u3_noun lud)
   u3_atom   rid;
 
   u3_auto_bail_slog(egg_u, u3k(lud));
-  if ( (c3n == _conn_read_wire(u3k(wir), c3__khan, &sev_l, &coq_l, &rid)) ||
+  if ( (c3n == _conn_read_wire(u3k(wir), c3_tas(khan), &sev_l, &coq_l, &rid)) ||
        (con_u->sev_l != sev_l) )
   {
     //  wtf?
@@ -271,7 +271,7 @@ _conn_poke_bail(u3_ovum* egg_u, u3_noun lud)
   }
   can_u = _conn_find_chan(con_u, sev_l, coq_l);
   if ( can_u ) {
-    _conn_send_noun(can_u, u3nt(rid, c3__bail, lud));
+    _conn_send_noun(can_u, u3nt(rid, c3_tas(bail), lud));
   }
   else {
     u3z(rid); u3z(lud);
@@ -314,14 +314,14 @@ _conn_close_chan(u3_shan* san_u, u3_chan* can_u)
   if ( _(con_u->kan_o) ) {
     u3_noun wir, cad;
 
-    wir = u3nq(c3__khan,
-               u3dc("scot", c3__uv, con_u->sev_l),
-               u3dc("scot", c3__ud, can_u->coq_l),
+    wir = u3nq(c3_tas(khan),
+               u3dc("scot", c3_tas(uv), con_u->sev_l),
+               u3dc("scot", c3_tas(ud), can_u->coq_l),
                u3_nul);
-    cad = u3nc(c3__done, u3_nul);
+    cad = u3nc(c3_tas(done), u3_nul);
     u3_auto_peer(
       u3_auto_plan(&con_u->car_u,
-                   u3_ovum_init(0, c3__k, wir, cad)),
+                   u3_ovum_init(0, c3_tas(k), wir, cad)),
       0, 0, _conn_poke_bail);
   }
   u3_newt_moat_stop((u3_moat*)&can_u->mor_u, _conn_moat_free);
@@ -380,7 +380,7 @@ _conn_peek_cb(void* ptr_v, u3_noun res)
     u3z(ran_u->rid); c3_free(ran_u);
     u3z(res); return;
   }
-  _conn_send_noun(can_u, u3nt(ran_u->rid, c3__peek, res));
+  _conn_send_noun(can_u, u3nt(ran_u->rid, c3_tas(peek), res));
   _conn_drop_cran(can_u, ran_u);
 }
 
@@ -399,7 +399,7 @@ _conn_ovum_bail(u3_ovum* egg_u, u3_noun lud)
     u3z(ran_u->rid); c3_free(ran_u);
     u3z(lud); return;
   }
-  _conn_send_noun(can_u, u3nt(ran_u->rid, c3__bail, lud));
+  _conn_send_noun(can_u, u3nt(ran_u->rid, c3_tas(bail), lud));
   _conn_drop_cran(can_u, ran_u);
   u3_ovum_free(egg_u);
 }
@@ -417,10 +417,10 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   {
     if ( can_u ) {
       _conn_send_noun(can_u,
-                      u3nt(ran_u->rid, c3__news,
+                      u3nt(ran_u->rid, c3_tas(news),
                            ( u3_ovum_done == new_e
-                             ? c3__done
-                             : c3__drop )));
+                             ? c3_tas(done)
+                             : c3_tas(drop) )));
       _conn_drop_cran(can_u, ran_u);
     }
     else {
@@ -450,47 +450,47 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       } break;
       //  command list.
       //
-      case c3__help: {
+      case c3_tas(help): {
         res = u3nc(
           u3_nul,
-          u3i_list(u3nc(c3__help, u3_nul), u3nc(c3__info, u3_nul),
-                   u3nc(c3__khan, u3_nul), u3nc(c3__live, u3_nul),
-                   u3nc(c3__mass, u3_nul),
-                   u3nc(c3__port,
-                        u3i_list(c3__ames, c3__htls, c3__http, u3_none)),
-                   u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul),
+          u3i_list(u3nc(c3_tas(help), u3_nul), u3nc(c3_tas(info), u3_nul),
+                   u3nc(c3_tas(khan), u3_nul), u3nc(c3_tas(live), u3_nul),
+                   u3nc(c3_tas(mass), u3_nul),
+                   u3nc(c3_tas(port),
+                        u3i_list(c3_tas(ames), c3_tas(htls), c3_tas(http), u3_none)),
+                   u3nc(c3_tas(v), u3_nul), u3nc(c3_tas(who), u3_nul),
                    u3_none));
       } break;
       //  simple health check.
       //
-      case c3__live: {
+      case c3_tas(live): {
         res = u3nc(u3_nul, pir_u->liv_o);
       } break;
       //  true iff the %khan vane is live (meaning %fyrd is supported.)
       //
-      case c3__khan: {
+      case c3_tas(khan): {
         res = u3nc(u3_nul, con_u->kan_o);
       } break;
       //  |mass output
       //
-      case c3__mass: {
+      case c3_tas(mass): {
         //  TODO  |mass
         //
         res = u3_nul;
       } break;
       //  runtime metrics.
       //
-      case c3__info: {
+      case c3_tas(info): {
         res = u3nc(u3_nul, u3_pier_info(pir_u));
       } break;
       //  vere version.
       //
-      case c3__v: {
+      case c3_tas(v): {
         res = u3nc(u3_nul, u3i_string(URBIT_VERSION));
       } break;
       //  current ship.
       //
-      case c3__who: {
+      case c3_tas(who): {
         res = u3nc(u3_nul, u3i_chubs(2, pir_u->who_d));
       }
     }
@@ -505,18 +505,18 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       default: {
         res = u3_nul;
       } break;
-      case c3__port: {
+      case c3_tas(port): {
         switch (it_dat) {
           default: {
             res = u3_nul;
           } break;
-          case c3__ames: {
+          case c3_tas(ames): {
             res = u3nc(u3_nul, pir_u->por_s);
           } break;
-          case c3__htls: {
+          case c3_tas(htls): {
             res = u3nc(u3_nul, pir_u->pes_s);
           } break;
-          case c3__http: {
+          case c3_tas(http): {
             res = u3nc(u3_nul, pir_u->per_s);
           } break;
         }
@@ -570,7 +570,7 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     goto _moor_poke_out;
   }
 
-  rud = u3dc("scot", c3__uv, u3k(rid));
+  rud = u3dc("scot", c3_tas(uv), u3k(rid));
   tag_c = u3r_string(tag);
   rid_c = u3r_string(rud);
   u3l_log("conn: %s %s", tag_c, rid_c);
@@ -582,31 +582,31 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
       goto _moor_poke_out;
     } break;
 
-    case c3__fyrd: {
+    case c3_tas(fyrd): {
       if ( c3n == con_u->kan_o ) {
         err_i = -8; err_c = "khan-miss";
         goto _moor_poke_out;
       }
-      wir = u3nc(c3__khan,
-                 u3nq(u3dc("scot", c3__uv, con_u->sev_l),
-                      u3dc("scot", c3__ud, can_u->coq_l), u3k(rud), u3_nul));
+      wir = u3nc(c3_tas(khan),
+                 u3nq(u3dc("scot", c3_tas(uv), con_u->sev_l),
+                      u3dc("scot", c3_tas(ud), can_u->coq_l), u3k(rud), u3_nul));
       u3_auto_peer(
         u3_auto_plan(&con_u->car_u,
-                     u3_ovum_init(0, c3__k, wir, u3k(can))),
+                     u3_ovum_init(0, c3_tas(k), wir, u3k(can))),
         0, 0, _conn_poke_bail);
     } break;
 
-    case c3__peek: {
+    case c3_tas(peek): {
       u3_pier_peek(con_u->car_u.pir_u, u3nc(u3_nul, u3_nul), u3k(dat),
                    _conn_make_cran(can_u, u3k(rid)), _conn_peek_cb);
     } break;
 
-    case c3__peel: {
+    case c3_tas(peel): {
       _conn_send_noun(
         can_u, u3nc(u3k(rid), _conn_read_peel(con_u, u3k(dat))));
     } break;
 
-    case c3__ovum: {
+    case c3_tas(ovum): {
       if ( (c3n == u3r_trel(dat, &tar, &wir, &cad)) ) {
         err_i = -6; err_c = "ovum-bad";
         goto _moor_poke_out;
@@ -617,17 +617,17 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
         _conn_make_cran(can_u, u3k(rid)), _conn_ovum_news, _conn_ovum_bail);
     } break;
 
-    case c3__urth: {
+    case c3_tas(urth): {
       switch (dat) {
         default: {
           err_i = -7; err_c = "urth-bad";
           goto _moor_poke_out;
         } break;
-        case c3__meld: {
+        case c3_tas(meld): {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
           u3_pier_meld(con_u->car_u.pir_u);
         } break;
-        case c3__pack: {
+        case c3_tas(pack): {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
           u3_pier_pack(con_u->car_u.pir_u);
         } break;
@@ -675,7 +675,7 @@ _conn_init_sock(u3_shan* san_u)
 {
 #ifdef _WIN32
   u3_pier*  pir_u = san_u->con_u->car_u.pir_u;
-  u3_atom   who = u3dc("scot", c3__p, u3i_chubs(2, pir_u->who_d));
+  u3_atom   who = u3dc("scot", c3_tas(p), u3i_chubs(2, pir_u->who_d));
   c3_c*     who_c = u3r_string(who);
   c3_c      pip_c[256];
   c3_i      ret_i;
@@ -776,13 +776,13 @@ _conn_io_talk(u3_auto* car_u)
 {
   u3_conn* con_u = (u3_conn*)car_u;
   u3_shan* san_u;
-  u3_noun  wir = u3nt(c3__khan,
-                      u3dc("scot", c3__uv, con_u->sev_l),
+  u3_noun  wir = u3nt(c3_tas(khan),
+                      u3dc("scot", c3_tas(uv), con_u->sev_l),
                       u3_nul);
-  u3_noun  cad = u3nc(c3__born, u3_nul);
+  u3_noun  cad = u3nc(c3_tas(born), u3_nul);
 
   u3_auto_peer(
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__k, wir, cad)),
+    u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(k), wir, cad)),
     0,
     _conn_born_news,
     _conn_born_bail);
@@ -811,8 +811,8 @@ _conn_ef_handle(u3_conn*  con_u,
   u3_chan* can_u;
 
   if ( 0 != (can_u = _conn_find_chan(con_u, sev_l, coq_l)) ) {
-    if ( c3__avow == tag ) {
-      _conn_send_noun(can_u, u3nt(u3k(rid), c3__avow, u3k(dat)));
+    if ( c3_tas(avow) == tag ) {
+      _conn_send_noun(can_u, u3nt(u3k(rid), c3_tas(avow), u3k(dat)));
     }
     else {
       can_u->mor_u.bal_f(can_u, -4, "handle-unknown");
@@ -836,7 +836,7 @@ _conn_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   c3_l      sev_l, coq_l;
   u3_atom   rid;
 
-  if ( c3n == _conn_read_wire(wir, c3__khan, &sev_l, &coq_l, &rid) ) {
+  if ( c3n == _conn_read_wire(wir, c3_tas(khan), &sev_l, &coq_l, &rid) ) {
     u3z(cad); return c3n;
   }
   if ( (con_u->sev_l != sev_l) ||
@@ -906,7 +906,7 @@ u3_conn_io_init(u3_pier* pir_u)
   con_u->sil_u = u3s_cue_xeno_init();
   con_u->kan_o = c3n;
   car_u = &con_u->car_u;
-  car_u->nam_m = c3__conn;
+  car_u->nam_m = c3_tas(conn);
   car_u->liv_o = c3n;
   car_u->io.talk_f = _conn_io_talk;
   car_u->io.kick_f = _conn_io_kick;

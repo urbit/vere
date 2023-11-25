@@ -21,14 +21,14 @@ u3qc_bex(u3_atom a)
   }
   else {
     if ( c3n == u3r_safe_chub(a, &a_d) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
 
     // We don't currently support atoms 2GB or larger (fails while
     // mugging).  The extra term of 16 is experimentally determined.
     if ( a_d >= ((c3_d)1 << (c3_d)34) - 16 ) {
       u3l_log("bex: overflow");
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
   }
 

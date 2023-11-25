@@ -14,13 +14,13 @@
       u3_noun loz;
 
       if ( c3n == u3du(a) ) {
-        return u3m_bail(c3__exit);
+        return u3m_bail(c3_tas(exit));
       }
       else switch ( (loz = u3j_gate_slam(sit_u, u3k(u3h(a)))) ) {
         case c3y:  return c3y;
         case c3n:  return _lien_in(sit_u, u3t(a));
         default:   u3z(loz);
-                   return u3m_bail(c3__exit);
+                   return u3m_bail(c3_tas(exit));
       }
     }
   }
@@ -42,7 +42,7 @@
     u3_noun a, b;
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qb_lien(a, b);
     }

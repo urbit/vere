@@ -12,7 +12,7 @@ u3qc_muk(u3_atom sed,
          u3_atom key)
 {
   if ( c3n == u3a_is_cat(len) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     c3_w len_w = (c3_w)len;
@@ -21,7 +21,7 @@ u3qc_muk(u3_atom sed,
     //  NB: this condition is implicit in the pad subtraction
     //
     if ( key_w > len_w ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       c3_w  sed_w = u3r_word(0, sed);
@@ -68,7 +68,7 @@ u3wc_muk(u3_noun cor)
      || (c3n == u3ud(len))
      || (c3n == u3ud(key)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qc_muk(sed, len, key);

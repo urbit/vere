@@ -28,16 +28,16 @@
     switch ( in ) {
       default:
         return 0;
-      case c3__d:
+      case c3_tas(d):
         *out = urcrypt_argon2_d;
         return 1;
-      case c3__i:
+      case c3_tas(i):
         *out = urcrypt_argon2_i;
         return 1;
-      case c3__id:
+      case c3_tas(id):
         *out = urcrypt_argon2_id;
         return 1;
-      case c3__u:
+      case c3_tas(u):
         *out = urcrypt_argon2_u;
         return 1;
     }
@@ -61,7 +61,7 @@
            u3r_word_fit(&wid_w, wid) &&
            u3r_word_fit(&wis_w, wis)) ) {
       // too big to allocate
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else if ( !(_cqear_unpack_type(&typ_u, type) &&
                 u3r_word_fit(&ver_w, version) &&
@@ -139,7 +139,7 @@
                 u3r_cell(wext, &wix, &extra) || u3ud(wix) || u3ud(extra)
        )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3l_punt("argon2",

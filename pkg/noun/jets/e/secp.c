@@ -85,7 +85,7 @@ _cqes_unpack_fe(u3_atom k, c3_y out_y[32])
     u3r_bytes(0, 32, out_y, k);
   }
   else {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
 }
 
@@ -98,7 +98,7 @@ _cqes_sign(u3_atom has,
   c3_y has_y[32];
 
   if ( 0 != u3r_bytes_fit(32, has_y, has) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     c3_y prv_y[32], v_y, r_y[32], s_y[32];
@@ -122,7 +122,7 @@ u3we_sign(u3_noun cor)
                         0)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv))) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3l_punt("secp-sign", _cqes_sign(has, prv));
@@ -139,7 +139,7 @@ _cqes_reco(u3_atom has,
 {
   c3_y has_y[32];
   if ( !((siv < 4) && (0 == u3r_bytes_fit(32, has_y, has)) ) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     c3_y sir_y[32], sis_y[32], x_y[32], y_y[32];
@@ -168,7 +168,7 @@ u3we_reco(u3_noun cor)
        (c3n == u3ud(siv)) ||
        (c3n == u3ud(sir)) ||
        (c3n == u3ud(sis)) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3l_punt("secp-reco", _cqes_reco(has, siv, sir, sis));
@@ -182,7 +182,7 @@ _cqes_make(u3_atom has,
   c3_y has_y[32];
 
   if ( 0 != u3r_bytes_fit(32, has_y, has) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     c3_y prv_y[32], out_y[32];
@@ -203,7 +203,7 @@ u3we_make(u3_noun cor)
                         0)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv)) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3l_punt("secp-make", _cqes_make(has, prv));
@@ -223,7 +223,7 @@ _cqes_sosi(u3_atom sk, u3_atom m, u3_atom a)
        (0 != u3r_bytes_fit(32, mes_y, m)) ||
        (0 != u3r_bytes_fit(32, aux_y, a)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     c3_y sig_y[64];
@@ -249,7 +249,7 @@ u3we_sosi(u3_noun cor)
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(aux)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3l_punt("secp-sosi", _cqes_sosi(key, mes, aux));
@@ -269,7 +269,7 @@ _cqes_sove(u3_atom pk, u3_atom m, u3_atom sig)
        (0 != u3r_bytes_fit(32, mes_y, m)) ||
        (0 != u3r_bytes_fit(64, sig_y, sig)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return __(urcrypt_secp_schnorr_veri(sec_u, sig_y, mes_y, pub_y));
@@ -290,7 +290,7 @@ u3we_sove(u3_noun cor)
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(sig)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return _cqes_sove(pub, mes, sig);

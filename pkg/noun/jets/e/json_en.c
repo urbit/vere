@@ -92,7 +92,7 @@ static c3_w
 _measure_loobean(u3_noun a)
 {
   switch ( a ) {
-    default: u3m_bail(c3__exit);
+    default: u3m_bail(c3_tas(exit));
     case c3y: return sizeof(_JSON_TRUE) - 1;
     case c3n: return sizeof(_JSON_FALSE) - 1;
   }
@@ -112,7 +112,7 @@ static c3_w
 _measure_number(u3_noun a)
 {
   if ( _(u3du(a)) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
 
   return u3r_met(3, a);
@@ -140,7 +140,7 @@ static c3_w
 _measure_string(u3_noun a)
 {
   if ( _(u3du(a)) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
   }
 
   c3_w len_w = u3r_met(3, a);
@@ -348,12 +348,12 @@ _measure(u3_noun a)
     u3x_cell(a, &s, &p);
 
     switch ( s ) {
-      default: u3m_bail(c3__fail);
-      case c3__a: return _measure_array(p);
-      case c3__o: return _measure_object(p);
-      case c3__b: return _measure_loobean(p);
-      case c3__n: return _measure_number(p);
-      case c3__s: return _measure_string(p);
+      default: u3m_bail(c3_tas(fail));
+      case c3_tas(a): return _measure_array(p);
+      case c3_tas(o): return _measure_object(p);
+      case c3_tas(b): return _measure_loobean(p);
+      case c3_tas(n): return _measure_number(p);
+      case c3_tas(s): return _measure_string(p);
     }
   }
 }
@@ -370,11 +370,11 @@ _serialize(json_buffer *buf_u, u3_noun a)
 
     switch ( s ) {
       default: u3_assert(0);
-      case c3__a: return _serialize_array(buf_u, p);
-      case c3__o: return _serialize_object(buf_u, p);
-      case c3__b: return _serialize_loobean(buf_u, p);
-      case c3__n: return _serialize_number(buf_u, p);
-      case c3__s: return _serialize_string(buf_u, p);
+      case c3_tas(a): return _serialize_array(buf_u, p);
+      case c3_tas(o): return _serialize_object(buf_u, p);
+      case c3_tas(b): return _serialize_loobean(buf_u, p);
+      case c3_tas(n): return _serialize_number(buf_u, p);
+      case c3_tas(s): return _serialize_string(buf_u, p);
     }
   }
 }

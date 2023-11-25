@@ -368,7 +368,7 @@ u3_newt_moat_info(u3_moat* mot_u)
     met_u = met_u->nex_u;
   }
   return u3_pier_mass(
-    c3__moat,
+    c3_tas(moat),
     u3i_list(u3_pier_mase("pending-inbound", u3i_word(len_w)),
              u3_none));
 }

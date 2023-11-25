@@ -181,11 +181,11 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     return;
   }
 
-  wir = u3nc(c3__lick, u3_nul);
+  wir = u3nc(c3_tas(lick), u3_nul);
   dev = _lick_string_to_path(gen_u->nam_c+1);
-  cad = u3nt(c3__soak, dev, put);
+  cad = u3nt(c3_tas(soak), dev, put);
   u3_auto_peer(
-    u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+    u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3_tas(l), wir, cad)),
     0, 0, 0);
 }
 
@@ -219,16 +219,16 @@ _lick_close_chan(u3_chan* can_u)
     //
     u3_noun wir, cad, dev, dat, mar;
 
-    wir = u3nc(c3__lick, u3_nul);
+    wir = u3nc(c3_tas(lick), u3_nul);
     dev = _lick_string_to_path(gen_u->nam_c+1);
     mar = u3i_string("disconnect");
     dat = u3_nul;
     
-    cad = u3nq(c3__soak, dev, mar, dat);
+    cad = u3nq(c3_tas(soak), dev, mar, dat);
 
     u3_auto_peer(
       u3_auto_plan(&lic_u->car_u,
-                   u3_ovum_init(0, c3__l, wir, cad)),
+                   u3_ovum_init(0, c3_tas(l), wir, cad)),
       0, 0, 0);
   }
 
@@ -245,7 +245,7 @@ _lick_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   if ( err_i != UV_EOF ) {
     u3l_log("lick: moor bail %zd %s", err_i, err_c);
     if ( _(can_u->liv_o) ) {
-      _lick_send_noun(can_u, u3nq(0, c3__bail, u3i_word(err_i),
+      _lick_send_noun(can_u, u3nq(0, c3_tas(bail), u3i_word(err_i),
                       u3i_string(err_c)));
       can_u->liv_o = c3n;
     }
@@ -283,14 +283,14 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   // only send on first connection
   if ( NULL == can_u->mor_u.nex_u ) {
     u3_noun   dev, dat, wir, cad, mar;
-    wir = u3nc(c3__lick, u3_nul);
+    wir = u3nc(c3_tas(lick), u3_nul);
     dev = _lick_string_to_path(gen_u->nam_c+1);
     mar = u3i_string("connect");
     dat = u3_nul;
 
-    cad = u3nq(c3__soak, dev, mar, dat);
+    cad = u3nq(c3_tas(soak), dev, mar, dat);
     u3_auto_peer(
-      u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+      u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3_tas(l), wir, cad)),
       0, 0, 0);
   }
 }
@@ -497,13 +497,13 @@ _lick_ef_spit(u3_lick* lic_u, u3_noun nam, u3_noun dat)
   else {
     u3_noun dev, wir, cad, mar;
     u3z(dat);
-    wir =  u3nc(c3__lick, u3_nul);
+    wir =  u3nc(c3_tas(lick), u3_nul);
     dev = _lick_string_to_path(gen_u->nam_c+1);
     mar = u3i_string("error");
     dat = u3i_string("not connected");
-    cad = u3nq(c3__soak, dev, mar, dat);
+    cad = u3nq(c3_tas(soak), dev, mar, dat);
     u3_auto_peer(
-      u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+      u3_auto_plan(&gen_u->lic_u->car_u, u3_ovum_init(0, c3_tas(l), wir, cad)),
       0, 0, 0);
   }
 }
@@ -522,20 +522,20 @@ _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
      || (c3n == u3r_cell(cad, &tag, &tmp))
-     || (c3__lick != i_wir) )
+     || (c3_tas(lick) != i_wir) )
   {
     ret_o = c3n;
   }
   else {
-    if ( (c3__spin == tag) ) {
+    if ( (c3_tas(spin) == tag) ) {
       _lick_ef_spin(lic_u, u3k(tmp)); // execute spin command
       ret_o = c3y;
     } 
-    else if ( (c3__shut == tag) ) {
+    else if ( (c3_tas(shut) == tag) ) {
       _lick_ef_shut(lic_u, u3k(tmp)); // execute shut command
       ret_o = c3y;
     } 
-    else if ( c3__spit == tag ) {
+    else if ( c3_tas(spit) == tag ) {
       if ( c3y == u3r_cell(tmp, &nam, &dat) ) {
         _lick_ef_spit(lic_u, u3k(nam), u3k(dat));
       }
@@ -580,11 +580,11 @@ static void
 _lick_io_talk(u3_auto* car_u)
 {
   u3_lick* lic_u = (u3_lick*)car_u;
-  u3_noun    wir = u3nc(c3__lick, u3_nul);
-  u3_noun    cad = u3nc(c3__born, u3_nul);
+  u3_noun    wir = u3nc(c3_tas(lick), u3_nul);
+  u3_noun    cad = u3nc(c3_tas(born), u3_nul);
 
   u3_auto_peer(
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__l, wir, cad)),
+    u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(l), wir, cad)),
     0,
     _lick_born_news,
     _lick_born_bail);
@@ -636,7 +636,7 @@ u3_lick_io_init(u3_pier* pir_u)
   lic_u->fod_c = strdup(pax_c);
 
   u3_auto* car_u = &lic_u->car_u;
-  car_u->nam_m = c3__lick;
+  car_u->nam_m = c3_tas(lick);
   car_u->liv_o = c3n;
   car_u->io.talk_f = _lick_io_talk;
   car_u->io.kick_f = _lick_io_kick;

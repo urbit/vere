@@ -12,7 +12,7 @@ u3qc_mas(u3_atom a)
     b_w = c3_bits_word(a);
 
     if ( 2 > b_w ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       a  &= ~((c3_w)1 << (b_w - 1));

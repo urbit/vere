@@ -10,8 +10,8 @@
   u3qf_core(u3_noun pac,
             u3_noun con)
   {
-    if ( (c3__void == pac) ) {
-      return c3__void;
+    if ( (c3_tas(void) == pac) ) {
+      return c3_tas(void);
     } else {
       {
         u3_noun p_con, q_con, r_con, hr_con, tr_con;
@@ -26,7 +26,7 @@
           abort();
         }
       }
-      return u3nt(c3__core, u3k(pac), u3k(con));
+      return u3nt(c3_tas(core), u3k(pac), u3k(con));
     }
   }
   u3_noun
@@ -35,7 +35,7 @@
     u3_noun pac, con;
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &pac, u3x_sam_3, &con, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qf_core(pac, con);
     }
@@ -63,52 +63,52 @@
     u3_noun p_sut, q_sut;
 
     if ( c3n == u3du(sut) ) switch ( sut ) {
-      default: u3m_bail(c3__fail); return;
+      default: u3m_bail(c3_tas(fail)); return;
 
-      case c3__noun:
+      case c3_tas(noun):
       {
         return;
       }
-      case c3__void:
+      case c3_tas(void):
       {
         return;
       }
     }
     else switch ( u3h(sut) ) {
-      default: u3m_bail(c3__fail); return;
+      default: u3m_bail(c3_tas(fail)); return;
 
-      case c3__atom: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(atom): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         return;
       }
-      case c3__cell: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(cell): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         u3qf_test(lab_c, p_sut);
         u3qf_test(lab_c, q_sut);
         return;
       }
-      case c3__core: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(core): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         u3qf_test(lab_c, p_sut);
         return;
       }
-      case c3__face: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(face): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         u3qf_test(lab_c, q_sut);
         return;
       }
-      case c3__fork: p_sut = u3t(sut);
+      case c3_tas(fork): p_sut = u3t(sut);
       {
         _fork_test(lab_c, p_sut);
         return;
       }
-      case c3__hint: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(hint): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         u3qf_test(lab_c, q_sut);
         u3qf_test(lab_c, u3h(p_sut));
         return;
       }
-      case c3__hold: u3x_cell(u3t(sut), &p_sut, &q_sut);
+      case c3_tas(hold): u3x_cell(u3t(sut), &p_sut, &q_sut);
       {
         u3qf_test(lab_c, p_sut);
         return;

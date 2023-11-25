@@ -86,7 +86,7 @@
          (c3n == u3a_is_cat(wid)) ||
          (c3n == u3ud(dat)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qe_hmac(haj, boq, out, wik, key, wid, dat);

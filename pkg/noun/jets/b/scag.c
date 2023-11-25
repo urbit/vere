@@ -12,7 +12,7 @@ u3qb_scag(u3_atom a, u3_noun b)
     return u3_nul;
   }
   else if ( !_(u3a_is_cat(a)) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     u3_noun  pro;
@@ -46,7 +46,7 @@ u3wb_scag(u3_noun cor)
   u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
 
   if ( (c3n == u3ud(a)) && (u3_nul != b) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
 
   return u3qb_scag(a, b);

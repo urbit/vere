@@ -13,7 +13,7 @@
            u3_atom d)
   {
     if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     if ( !_(u3a_is_cat(b)) ) {
       return 0;
@@ -61,7 +61,7 @@
          (c3n == u3ud(c)) ||
          (c3n == u3ud(d)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qc_cut(a, b, c, d);
     }

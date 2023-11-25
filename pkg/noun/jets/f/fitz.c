@@ -60,7 +60,7 @@
          (c3n == u3ud(yaz)) ||
          (c3n == u3ud(wix)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qf_fitz(yaz, wix);
     }

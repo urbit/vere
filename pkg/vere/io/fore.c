@@ -89,7 +89,7 @@ _fore_import(u3_auto* car_u, c3_c* pax_c)
   u3_noun wir = u3nc(u3i_string("http-server"), u3_nul);
   u3_noun cad = u3nc(u3i_string("request-local"), req);
   u3_auto_peer(
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad)),
+    u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(e), wir, cad)),
     0, 0, _fore_import_bail);
 }
 
@@ -106,8 +106,8 @@ _fore_io_talk(u3_auto* car_u)
     c3_w    eny_w[16];
     c3_rand(eny_w);
 
-    wir = u3nc(c3__arvo, u3_nul);
-    cad = u3nc(c3__wack, u3i_words(16, eny_w));
+    wir = u3nc(c3_tas(arvo), u3_nul);
+    cad = u3nc(c3_tas(wack), u3i_words(16, eny_w));
 
     u3_auto_plan(car_u, u3_ovum_init(0, u3_blip, wir, cad));
   }
@@ -116,8 +116,8 @@ _fore_io_talk(u3_auto* car_u)
   //
   {
     c3_o lac_o = ( c3y == u3_Host.ops_u.veb ) ? c3n : c3y;
-    wir = u3nc(c3__arvo, u3_nul);
-    cad = u3nt(c3__verb, u3_nul, lac_o);
+    wir = u3nc(c3_tas(arvo), u3_nul);
+    cad = u3nt(c3_tas(verb), u3_nul, lac_o);
     u3_auto_plan(car_u, u3_ovum_init(0, u3_blip, wir, cad));
   }
 
@@ -155,7 +155,7 @@ u3_auto*
 u3_fore_io_init(u3_pier* pir_u)
 {
   u3_auto* car_u = c3_calloc(sizeof(*car_u));
-  car_u->nam_m = c3__fore;
+  car_u->nam_m = c3_tas(fore);
   //  XX set in done_cb for %wack
   //
   car_u->liv_o = c3y;

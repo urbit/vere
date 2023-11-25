@@ -110,10 +110,10 @@ _king_doom(u3_noun doom)
   u3_assert(_(u3a_is_cat(u3h(doom))));
 
   switch ( u3h(doom) ) {
-    case c3__boot:
+    case c3_tas(boot):
       next = _king_boot;
       break;
-    case c3__pier:
+    case c3_tas(pier):
       next = _king_pier;
       break;
     default:
@@ -138,15 +138,15 @@ _king_boot(u3_noun bul)
   u3_assert(_(u3a_is_cat(u3h(boot))));
 
   switch ( u3h(boot) ) {
-    case c3__fake: {
+    case c3_tas(fake): {
       next = _king_fake;
       break;
     }
-    case c3__come: {
+    case c3_tas(come): {
       next = _king_come;
       break;
     }
-    case c3__dawn: {
+    case c3_tas(dawn): {
       next = _king_dawn;
       break;
     }
@@ -165,7 +165,7 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 {
   //  XX link properly
   //
-  u3_noun vent = u3nc(c3__fake, u3k(ship));
+  u3_noun vent = u3nc(c3_tas(fake), u3k(ship));
   u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path, u3_none);
 }
 
@@ -520,7 +520,7 @@ _boothack_key(u3_noun kef)
   u3_weak ship = u3_none;
 
   {
-    u3_noun des = u3dc("slaw", c3__uw, u3k(kef));
+    u3_noun des = u3dc("slaw", c3_tas(uw), u3k(kef));
 
     if ( u3_nul == des ) {
       c3_c* kef_c = u3r_string(kef);
@@ -590,7 +590,7 @@ _boothack_doom(void)
   u3_noun bot;
 
   if ( c3n == u3_Host.ops_u.nuu ) {
-    return u3nt(c3__pier, u3_nul, pax);
+    return u3nt(c3_tas(pier), u3_nul, pax);
   }
   else if ( 0 != u3_Host.ops_u.fak_c ) {
     u3_noun fak = u3i_string(u3_Host.ops_u.fak_c);
@@ -601,7 +601,7 @@ _boothack_doom(void)
       u3_king_bail();
     }
 
-    bot = u3nc(c3__fake, u3k(u3t(whu)));
+    bot = u3nc(c3_tas(fake), u3k(u3t(whu)));
 
     u3z(whu);
     u3z(fak);
@@ -635,15 +635,15 @@ _boothack_doom(void)
       exit(1);
     }
 
-    bot = u3nc(c3__dawn, _boothack_key(kef));
+    bot = u3nc(c3_tas(dawn), _boothack_key(kef));
   }
   else {
     //  XX allow parent star to be specified?
     //
-    bot = u3nc(c3__come, u3_nul);
+    bot = u3nc(c3_tas(come), u3_nul);
   }
 
-  return u3nq(c3__boot, bot, _boothack_pill(), pax);
+  return u3nq(c3_tas(boot), bot, _boothack_pill(), pax);
 }
 
 /* _king_sign_init(): initialize daemon signal handlers
@@ -1608,7 +1608,7 @@ u3_king_grab(void* vod_p)
   {
     //  XX date will not match up with that of the worker
     //
-    u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun wen = u3dc("scot", c3_tas(da), u3k(u3A->now));
     c3_c* wen_c = u3r_string(wen);
 
     c3_c nam_c[2048];

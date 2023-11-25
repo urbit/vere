@@ -145,7 +145,7 @@ _http_vec_to_meth(h2o_iovec_t vec_u)
          ( 0 == strncmp(vec_u.base, "OPTIONS", vec_u.len) ) ? u3i_string("OPTIONS") :
          ( 0 == strncmp(vec_u.base, "TRACE",   vec_u.len) ) ? u3i_string("TRACE") :
          // TODO ??
-         // ( 0 == strncmp(vec_u.base, "PATCH",   vec_u.len) ) ? c3__patc :
+         // ( 0 == strncmp(vec_u.base, "PATCH",   vec_u.len) ) ? c3_tas(patc) :
          u3_none;
 }
 
@@ -192,7 +192,7 @@ _cttp_bod_from_octs(u3_noun oct)
   c3_w len_w;
 
   if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
-    u3m_bail(c3__fail); return 0;
+    u3m_bail(c3_tas(fail)); return 0;
   }
   len_w = u3h(oct);
 
@@ -490,9 +490,9 @@ static u3_noun
 _http_req_to_duct(u3_hreq* req_u)
 {
   return u3nc(u3i_string("http-server"),
-              u3nq(u3dc("scot", c3__uv, req_u->hon_u->htp_u->sev_l),
-                   u3dc("scot", c3__ud, req_u->hon_u->coq_l),
-                   u3dc("scot", c3__ud, req_u->seq_l),
+              u3nq(u3dc("scot", c3_tas(uv), req_u->hon_u->htp_u->sev_l),
+                   u3dc("scot", c3_tas(ud), req_u->hon_u->coq_l),
+                   u3dc("scot", c3_tas(ud), req_u->seq_l),
                    u3_nul));
 }
 
@@ -505,7 +505,7 @@ _http_req_kill(u3_hreq* req_u)
   u3_noun wir    = _http_req_to_duct(req_u);
   u3_noun cad    = u3nc(u3i_string("cancel-request"), u3_nul);
 
-  u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+  u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3_tas(e), wir, cad));
 }
 
 typedef struct _u3_hgen {
@@ -651,7 +651,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     u3_noun cad;
 
     {
-      u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
+      u3_noun adr = u3nc(c3_tas(ipv4), u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
      //
       u3_noun dat = u3nt(htp_u->sec, adr, req);
@@ -661,7 +661,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             : u3nc(u3i_string("request"), dat);
     }
 
-    u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+    u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3_tas(e), wir, cad));
   }
 }
 
@@ -742,7 +742,7 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u->pax   = sac;
 
     req_u->sat_e = u3_rsat_peek;
-    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
+    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3_tas(ex),
                       u3_nul, sac, req_u->peq_u, _http_cache_scry_cb);
     return c3y;
   }
@@ -1653,7 +1653,7 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     // XX move this to post serv_start and put the port in the name
 #if 0
     c3_c* pax_c = u3_Host.dir_c;
-    u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun now = u3dc("scot", c3_tas(da), u3k(u3A->now));
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
     c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
@@ -2008,11 +2008,11 @@ _http_serv_start_all(u3_httd* htd_u)
     //  XX remove [sen]
     //
     u3_noun wir = u3nt(u3i_string("http-server"),
-                       u3dc("scot", c3__uv, htd_u->sev_l),
+                       u3dc("scot", c3_tas(uv), htd_u->sev_l),
                        u3_nul);
-    u3_noun cad = u3nt(c3__live, non, sec);
+    u3_noun cad = u3nt(c3_tas(live), non, sec);
 
-    u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+    u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3_tas(e), wir, cad));
   }
 
   _http_write_ports_file(htd_u, u3_Host.dir_c);
@@ -2143,11 +2143,11 @@ _http_io_talk(u3_auto* car_u)
   //  XX remove [sen]
   //
   u3_noun wir = u3nt(u3i_string("http-server"),
-                     u3dc("scot", c3__uv, htd_u->sev_l),
+                     u3dc("scot", c3_tas(uv), htd_u->sev_l),
                      u3_nul);
-  u3_noun cad = u3nc(c3__born, u3_nul);
+  u3_noun cad = u3nc(c3_tas(born), u3_nul);
 
-  u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
+  u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(e), wir, cad));
 
   //  XX set liv_o on done/swap?
   //
@@ -2251,7 +2251,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
       //  only send %leaf tanks
       //
       if ( 0 == u3A->roc ) {
-        if ( c3__leaf == u3h(tan) ) {
+        if ( c3_tas(leaf) == u3h(tan) ) {
           wol = u3nc(u3k(u3t(tan)), u3_nul);
         }
       }
@@ -2341,7 +2341,7 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
 
     if ( (c3n == u3r_cell(pud, &p_pud, &t_pud)) ||
-         (c3n == u3v_lily(c3__uv, u3k(p_pud), &sev_l)) )
+         (c3n == u3v_lily(c3_tas(uv), u3k(p_pud), &sev_l)) )
     {
       u3z(wir); u3z(cad);
       return c3n;
@@ -2352,7 +2352,7 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     }
     else {
       if ( (c3n == u3r_cell(t_pud, &q_pud, &tt_pud)) ||
-           (c3n == u3v_lily(c3__ud, u3k(q_pud), &coq_l)) )
+           (c3n == u3v_lily(c3_tas(ud), u3k(q_pud), &coq_l)) )
       {
         u3z(wir); u3z(cad);
         return c3n;
@@ -2363,7 +2363,7 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
       } else {
         if ( (c3n == u3r_cell(tt_pud, &r_pud, &s_pud)) ||
              (u3_nul != s_pud) ||
-             (c3n == u3v_lily(c3__ud, u3k(r_pud), &seq_l)) )
+             (c3n == u3v_lily(c3_tas(ud), u3k(r_pud), &seq_l)) )
         {
           u3z(wir); u3z(cad);
           return c3n;
@@ -2439,7 +2439,7 @@ _http_io_info(u3_auto* car_u)
   while ( 0 != htp_u ) {
     res = u3nc(
       u3_pier_mass(
-        u3dc("scot", c3__uv, htp_u->sev_l),
+        u3dc("scot", c3_tas(uv), htp_u->sev_l),
         u3i_list(
           u3_pier_mase("secure",      htp_u->sec),
           u3_pier_mase("loopback",    htp_u->lop),
@@ -2487,7 +2487,7 @@ u3_http_io_init(u3_pier* pir_u)
   }
 
   u3_auto* car_u = &htd_u->car_u;
-  car_u->nam_m = c3__http;
+  car_u->nam_m = c3_tas(http);
   car_u->liv_o = c3n;
   car_u->io.talk_f = _http_io_talk;
   car_u->io.info_f = _http_io_info;

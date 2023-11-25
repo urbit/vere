@@ -583,7 +583,7 @@ _term_it_save(u3_noun pax, u3_noun pad)
 static u3_ovum*
 _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
-  u3_ovum* egg_u = u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
+  u3_ovum* egg_u = u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(d), wir, cad));
 
   //  term events have no spinner label
   //
@@ -598,10 +598,10 @@ _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
 static void
 _term_io_belt(u3_utty* uty_u, u3_noun blb)
 {
-  //  XX s/b u3dc("scot", c3__ud, uty_u->tid_l)
+  //  XX s/b u3dc("scot", c3_tas(ud), uty_u->tid_l)
   //
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
-  u3_noun cad = u3nc(c3__belt, blb);
+  u3_noun wir = u3nt(c3_tas(term), '1', u3_nul);
+  u3_noun cad = u3nc(c3_tas(belt), blb);
 
   u3_assert( 1 == uty_u->tid_l );
   u3_assert( uty_u->car_u );
@@ -611,7 +611,7 @@ _term_io_belt(u3_utty* uty_u, u3_noun blb)
 
     //  no spinner delay on %ret
     //
-    if ( c3__ret == u3h(blb) ) {
+    if ( c3_tas(ret) == u3h(blb) ) {
       egg_u->pin_u.del_o = c3n;
     }
   }
@@ -623,7 +623,7 @@ static void
 _term_io_spit(u3_utty* uty_u, u3_noun bet) {
   u3_utat* tat_u = &uty_u->tat_u;
   if (u3_nul != tat_u->fut.imp) {
-    _term_io_belt(uty_u, u3nc(c3__txt, u3kb_flop(tat_u->fut.imp)));
+    _term_io_belt(uty_u, u3nc(c3_tas(txt), u3kb_flop(tat_u->fut.imp)));
     tat_u->fut.imp = u3_nul;
   }
   if (u3_none != bet) {
@@ -655,7 +655,7 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
             _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
             break;
           }
-          case '3': _term_io_spit(uty_u, u3nc(c3__del, u3_nul)); break;
+          case '3': _term_io_spit(uty_u, u3nc(c3_tas(del), u3_nul)); break;
         }
         tat_u->esc.ape = tat_u->esc.bra = c3n;
         tat_u->esc.seq_y = 0;
@@ -671,10 +671,10 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
             _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
             break;
           }
-          case 'A': _term_io_spit(uty_u, u3nc(c3__aro, 'u')); break;
-          case 'B': _term_io_spit(uty_u, u3nc(c3__aro, 'd')); break;
-          case 'C': _term_io_spit(uty_u, u3nc(c3__aro, 'r')); break;
-          case 'D': _term_io_spit(uty_u, u3nc(c3__aro, 'l')); break;
+          case 'A': _term_io_spit(uty_u, u3nc(c3_tas(aro), 'u')); break;
+          case 'B': _term_io_spit(uty_u, u3nc(c3_tas(aro), 'd')); break;
+          case 'C': _term_io_spit(uty_u, u3nc(c3_tas(aro), 'r')); break;
+          case 'D': _term_io_spit(uty_u, u3nc(c3_tas(aro), 'l')); break;
         //
           //NOTE  mouse reporting not presently enabled, see #109
           case 'M': tat_u->esc.mou = c3y; break;
@@ -688,13 +688,13 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
         //  XX for backwards compatibility, check kelvin version
         //  and fallback to [%met @c]
         //
-        _term_io_spit(uty_u, u3nt(c3__mod, c3__met, cay_y));
+        _term_io_spit(uty_u, u3nt(c3_tas(mod), c3_tas(met), cay_y));
       }
       else if ( 8 == cay_y || 127 == cay_y ) {
         tat_u->esc.ape = c3n;
         //  XX backwards compatibility [%met @c]
         //
-        _term_io_spit(uty_u, u3nq(c3__mod, c3__met, c3__bac, u3_nul));
+        _term_io_spit(uty_u, u3nq(c3_tas(mod), c3_tas(met), c3_tas(bac), u3_nul));
       }
       else if ( ('[' == cay_y) || ('O' == cay_y) ) {
         tat_u->esc.bra = c3y;
@@ -719,7 +719,7 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       c3_y row_y = cay_y - 32;
       //  only acknowledge button 1 presses within our known window
       if ( 1 != tat_u->esc.ton_y && row_y <= tat_u->siz.row_l ) {
-        _term_io_spit(uty_u, u3nt(c3__hit, tat_u->esc.col_y - 1, row_y - 1));
+        _term_io_spit(uty_u, u3nt(c3_tas(hit), tat_u->esc.col_y - 1, row_y - 1));
       }
       tat_u->esc.mou = c3n;
       tat_u->esc.ton_y = tat_u->esc.col_y = 0;
@@ -752,15 +752,15 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
     }
     else if ( 8 == cay_y || 127 == cay_y ) {  //  backspace & delete
-      _term_io_spit(uty_u, u3nc(c3__bac, u3_nul));
+      _term_io_spit(uty_u, u3nc(c3_tas(bac), u3_nul));
     }
     else if ( 10 == cay_y || 13 == cay_y ) {  //  newline & carriage return
-      _term_io_spit(uty_u, u3nc(c3__ret, u3_nul));
+      _term_io_spit(uty_u, u3nc(c3_tas(ret), u3_nul));
     }
     else if ( cay_y <= 26 ) {
       //  XX backwards compatibility [%ctl @c]
       //
-      _term_io_spit(uty_u, u3nt(c3__mod, c3__ctl, ('a' + (cay_y - 1))));
+      _term_io_spit(uty_u, u3nt(c3_tas(mod), c3_tas(ctl), ('a' + (cay_y - 1))));
     }
     else if ( 27 == cay_y ) {
       tat_u->esc.ape = c3y;
@@ -1069,8 +1069,8 @@ u3_term_ef_winc(void)
   //  XX groace, this should be a global handler sent to each pier
   //
   if ( u3_Host.uty_u->car_u ) {
-    u3_noun wir = u3nt(c3__term, '1', u3_nul);
-    u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
+    u3_noun wir = u3nt(c3_tas(term), '1', u3_nul);
+    u3_noun cad = u3nc(c3_tas(blew), u3_term_get_blew(1));
 
     u3_assert( 1 == u3_Host.uty_u->tid_l );
 
@@ -1086,8 +1086,8 @@ u3_term_ef_ctlc(void)
   u3_utty* uty_u = _term_main();
 
   if ( uty_u->car_u ) {
-    u3_noun wir = u3nt(c3__term, '1', u3_nul);
-    u3_noun cad = u3nq(c3__belt, c3__mod, c3__ctl, 'c');
+    u3_noun wir = u3nt(c3_tas(term), '1', u3_nul);
+    u3_noun cad = u3nq(c3_tas(belt), c3_tas(mod), c3_tas(ctl), 'c');
 
     u3_assert( 1 == uty_u->tid_l );
     _term_ovum_plan(uty_u->car_u, wir, cad);
@@ -1172,9 +1172,9 @@ _term_it_put_deco(c3_w* lin_w,
   switch ( dec ) {
     default:
     case u3_nul: *lin_w = '0'; break;
-    case c3__br: *lin_w = '1'; break;
-    case c3__un: *lin_w = '4'; break;
-    case c3__bl: *lin_w = '5'; break;
+    case c3_tas(br): *lin_w = '1'; break;
+    case c3_tas(un): *lin_w = '4'; break;
+    case c3_tas(bl): *lin_w = '5'; break;
   }
 }
 
@@ -1343,15 +1343,15 @@ _term_ef_blit(u3_utty* uty_u,
   switch ( u3h(blt) ) {
     default: break;
 
-    case c3__bel: {
+    case c3_tas(bel): {
       _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
     } break;
 
-    case c3__clr: {
+    case c3_tas(clr): {
       _term_it_show_blank(uty_u);
     } break;
 
-    case c3__hop: {
+    case c3_tas(hop): {
       u3_noun pos = u3t(blt);
       if ( c3y == u3ud(pos) ) {
         _term_it_move_cursor(uty_u, pos, uty_u->tat_u.siz.row_l - 1);
@@ -1361,19 +1361,19 @@ _term_ef_blit(u3_utty* uty_u,
       }
     } break;
 
-    case c3__klr: {
+    case c3_tas(klr): {
       _term_it_show_stub(uty_u, u3k(u3t(blt)));
     } break;
 
-    case c3__lin: {  //TMP  backwards compatibility
+    case c3_tas(lin): {  //TMP  backwards compatibility
       _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_l - 1);
       _term_it_clear_line(uty_u);
     }  //
-    case c3__put: {
+    case c3_tas(put): {
       _term_it_show_tour(uty_u, u3k(u3t(blt)));
     } break;
 
-    case c3__mor: {
+    case c3_tas(mor): {
       if (u3_nul != u3t(blt)) {
         u3_noun bis = u3t(blt);
         while (u3_nul != bis) {
@@ -1384,30 +1384,30 @@ _term_ef_blit(u3_utty* uty_u,
       }
       //TMP  fall through to nel for backwards compatibility
     }
-    case c3__nel: {
+    case c3_tas(nel): {
       _term_it_show_nel(uty_u);
     } break;
 
-    case c3__sav: {
+    case c3_tas(sav): {
       u3_noun pax, dat;
       u3x_cell(u3t(blt), &pax, &dat);
 
       _term_it_save(u3k(pax), u3k(dat));
     } break;
 
-    case c3__sag: {
+    case c3_tas(sag): {
       u3_noun pax, dat;
       u3x_cell(u3t(blt), &pax, &dat);
 
       _term_it_save(u3k(pax), u3qe_jam(dat));
     } break;
 
-    case c3__url: {
+    case c3_tas(url): {
       //  platform-agnostically opening the default web browser from within a
       //  c program is an unsolved problem.
     } break;
 
-    case c3__wyp: {
+    case c3_tas(wyp): {
       _term_it_clear_line(uty_u);
     } break;
   }
@@ -1424,25 +1424,25 @@ _term_ef_blit_lame(u3_utty* uty_u,
   switch ( u3h(blt) ) {
     default: break;
 
-    case c3__klr: {
+    case c3_tas(klr): {
       _term_it_show_stub(uty_u, u3k(u3t(blt)));
       _term_it_show_nel(uty_u);
     } break;
 
-    case c3__lin:  //TMP  backwards compatibility
-    case c3__put: {
+    case c3_tas(lin):  //TMP  backwards compatibility
+    case c3_tas(put): {
       _term_it_show_tour(uty_u, u3k(u3t(blt)));
       _term_it_show_nel(uty_u);
     } break;
 
-    case c3__sav: {
+    case c3_tas(sav): {
       u3_noun pax, dat;
       u3x_cell(u3t(blt), &pax, &dat);
 
       _term_it_save(u3k(pax), u3k(dat));
     } break;
 
-    case c3__sag: {
+    case c3_tas(sag): {
       u3_noun pax, dat;
       u3x_cell(u3t(blt), &pax, &dat);
 
@@ -1600,20 +1600,20 @@ _term_io_talk(u3_auto* car_u)
 
   //TODO  reevaluate wrt dill sessions
   //
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
+  u3_noun wir = u3nt(c3_tas(term), '1', u3_nul);
   u3_noun cad;
 
   //  send terminal dimensions
   //
   {
-    cad = u3nc(c3__blew, u3_term_get_blew(1));
+    cad = u3nc(c3_tas(blew), u3_term_get_blew(1));
     _term_ovum_plan(car_u, u3k(wir), cad);
   }
 
   //  refresh terminal state
   //
   {
-    cad = u3nc(c3__hail, u3_nul);
+    cad = u3nc(c3_tas(hail), u3_nul);
     _term_ovum_plan(car_u, wir, cad);
   }
 }
@@ -1649,7 +1649,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
   if (  (c3n == u3r_cell(wir, &i_wir, &t_wir))
      || (c3n == u3r_cell(cad, &tag, &dat))
-     || (c3__term != i_wir) )
+     || (c3_tas(term) != i_wir) )
   {
     ret_o = c3n;
   }
@@ -1660,7 +1660,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
     if (  (c3n == u3r_cell(pud, &p_pud, &q_pud))
        || (u3_nul != q_pud)
-       || (c3n == _reck_orchid(c3__ud, u3k(p_pud), &tid_l)) )
+       || (c3n == _reck_orchid(c3_tas(ud), u3k(p_pud), &tid_l)) )
     {
       u3l_log("term: bad tire");
       ret_o = c3n;
@@ -1671,7 +1671,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           ret_o = c3n;
         } break;
 
-        case c3__blit: {
+        case c3_tas(blit): {
           ret_o = c3y;
 
           {
@@ -1698,9 +1698,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         //  XX obsolete %ames
         //
-        // case c3__send:
+        // case c3_tas(send):
 
-        case c3__logo: {
+        case c3_tas(logo): {
           ret_o = c3y;
           u3_pier_exit(car_u->pir_u);
           //  XX validate? ignore?
@@ -1708,7 +1708,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           u3_Host.xit_i = dat;
         } break;
 
-        case c3__mass: {
+        case c3_tas(mass): {
           ret_o = c3y;
 
           //  gc the daemon area
@@ -1718,12 +1718,12 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           // uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
         } break;
 
-        case c3__meld: {
+        case c3_tas(meld): {
           ret_o = c3y;
           u3_pier_meld(car_u->pir_u);
         } break;
 
-        case c3__pack: {
+        case c3_tas(pack): {
           ret_o = c3y;
           u3_pier_pack(car_u->pir_u);
         } break;
@@ -1778,7 +1778,7 @@ u3_term_io_init(u3_pier* pir_u)
   u3_assert( u3_Host.uty_u );
   u3_Host.uty_u->car_u = car_u;
 
-  car_u->nam_m = c3__term;
+  car_u->nam_m = c3_tas(term);
   car_u->liv_o = c3y;
   car_u->io.talk_f = _term_io_talk;
   car_u->io.kick_f = _term_io_kick;

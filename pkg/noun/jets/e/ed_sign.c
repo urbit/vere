@@ -14,7 +14,7 @@
 
     if ( 0 != u3r_bytes_fit(32, sed_y, b) ) {
       // hoon calls suck, which calls puck, which crashes
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       c3_y  sig_y[64];
@@ -34,7 +34,7 @@
     u3_noun a, b;
     if ( c3n == u3r_mean(cor,
                          u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqee_sign(a, b);
     }

@@ -665,7 +665,7 @@ u3u_cram(c3_c* dir_c, c3_d eve_d)
         roc = ur_cons(rot_u, has, roc);
       }
 
-      roc = ur_cons(rot_u, ur_coin64(rot_u, c3__arvo),
+      roc = ur_cons(rot_u, ur_coin64(rot_u, c3_tas(arvo)),
                            ur_cons(rot_u, ken, roc));
 
       ur_jam(rot_u, roc, &len_d, &byt_y);
@@ -868,7 +868,7 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
       c3_free(nam_c);
       return c3n;
     }
-    else if (  c3n == u3r_pq(ref, c3__arvo, &roc, &doc)
+    else if (  c3n == u3r_pq(ref, c3_tas(arvo), &roc, &doc)
             || (c3n == u3r_cell(doc, &tag, &cod))
             || (c3n == u3r_sing_c("hashboard", tag)) )
    {

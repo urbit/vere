@@ -25,7 +25,7 @@ static u3_noun
 _bit_rep(u3_atom bits, u3_noun blox)
 {
   if ( (c3n == u3a_is_cat(bits) || bits==0 || bits>31) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   //
@@ -58,7 +58,7 @@ _bit_rep(u3_atom bits, u3_noun blox)
       blox = u3t(blox);
 
       if ( c3n == u3a_is_cat(blok_n) ) {
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
 
       c3_w blok_w = blok_n;
@@ -101,7 +101,7 @@ _block_rep(u3_atom a,
            u3_noun b)
 {
   if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     c3_g       a_g = a;
@@ -121,13 +121,13 @@ _block_rep(u3_atom a,
           break;
         }
         else if ( c3n == u3du(cab) ) {
-          return u3m_bail(c3__exit);
+          return u3m_bail(c3_tas(exit));
         }
         else if ( c3n == u3ud(h_cab = u3h(cab)) ) {
-          return u3m_bail(c3__exit);
+          return u3m_bail(c3_tas(exit));
         }
         else if ( (tot_w + (len_w = u3r_met(a_g, h_cab))) < tot_w ) {
-          return u3m_bail(c3__fail);
+          return u3m_bail(c3_tas(fail));
         }
         tot_w++;
         cab = u3t(cab);

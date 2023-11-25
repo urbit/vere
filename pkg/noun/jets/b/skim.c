@@ -30,7 +30,7 @@ u3qb_skim(u3_noun a, u3_noun b)
 
         case c3n: break;
 
-        default: u3m_bail(c3__exit);
+        default: u3m_bail(c3_tas(exit));
       }
     }
     while ( u3_nul != t );

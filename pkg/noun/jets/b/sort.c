@@ -19,7 +19,7 @@
       return u3nc(u3_nul, u3_nul);
     }
     else if ( c3n == u3du(a) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       u3_noun acc = _split_in(sit_u, u3t(a), second);
       u3_noun hoz = u3j_gate_slam(sit_u, u3nc(u3k(u3h(a)), u3k(second)));
@@ -45,7 +45,7 @@
       return u3_nul;
     }
     else if ( c3n == u3du(list) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       u3_noun hed, tal;
       u3x_cell(list, &hed, &tal);
@@ -80,7 +80,7 @@
     u3_noun a, b;
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qb_sort(a, b);
     }

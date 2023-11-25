@@ -44,7 +44,7 @@ _cs_jam_fib_grow(struct _cs_jam_fib* fib_u, c3_w mor_w)
   // check for c3_w overflow
   //
   if ( wan_w < mor_w ) {
-    u3m_bail(c3__fail);
+    u3m_bail(c3_tas(fail));
   }
 
   if ( wan_w > fib_u->a_w ) {
@@ -687,7 +687,7 @@ _cs_cue_need(ur_cue_res_e res_e)
     return;
   }
   else {
-    c3_m mot_m = (ur_cue_meme == res_e) ? c3__meme : c3__exit;
+    c3_m mot_m = (ur_cue_meme == res_e) ? c3_tas(meme) : c3_tas(exit);
     u3m_bail(mot_m);
   }
 }
@@ -742,7 +742,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
 
         if ( 62 < len_d ) {
-          return u3m_bail(c3__meme);
+          return u3m_bail(c3_tas(meme));
         }
         else {
           c3_d  bak_d = ur_bsr64_any(red_u, len_d);
@@ -799,7 +799,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
   //  bit-cursor (and backreferences) must fit in 62-bit direct atoms
   //
   if ( 0x7ffffffffffffffULL < len_d ) {
-    return u3m_bail(c3__meme);
+    return u3m_bail(c3_tas(meme));
   }
 
   //  advance into stream

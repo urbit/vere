@@ -11,7 +11,7 @@
             u3_noun b)
   {
     if ( !_(u3a_is_cat(a)) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       u3_noun acc = u3_nul;
@@ -34,7 +34,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
          (c3n == u3ud(a)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qb_reap(a, b);
     }

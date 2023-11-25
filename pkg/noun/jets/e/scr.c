@@ -19,26 +19,26 @@
     c3_w out_w;
 
     if ( !u3r_word_fit(&out_w, d) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     if ( 0 == r || 0 == z ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     chk = u3qc_bex(31);
     if ( (c3n == u3qa_lth(pwd_w, chk)) ||
          (c3n == u3qa_lth(sal_w, chk)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     u3z(chk);
     chk = u3kc_bex(u3ka_dec(u3qc_xeb(n)));
     if ( c3n == u3r_sing(n, chk) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     u3z(chk);
     if ( c3n == u3ka_lte(
           u3ka_mul(u3qa_mul(128, r), u3ka_dec(u3qa_add(n, z))),
           u3qc_bex(30)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
 
     if ( (u3r_met(6, n) > 1) ||
@@ -80,7 +80,7 @@
     c3_w pwd_w, sal_w;
     if ( !(u3r_word_fit(&pwd_w, pl) &&
            u3r_word_fit(&sal_w, sl)) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       return _cqes_hs(p, pwd_w, s, sal_w, n, r, z, d);
@@ -100,7 +100,7 @@
            _(u3a_is_atom(s)) && _(u3a_is_atom(sl)) &&
            _(u3a_is_atom(n)) && _(u3a_is_atom(r))  &&
            _(u3a_is_atom(z)) && _(u3a_is_atom(d))) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
      return u3l_punt("scr-hsl", _cqes_hsl(p, pl, s, sl, n, r, z, d));
@@ -132,7 +132,7 @@
     if ( !(_(u3a_is_atom(p)) && _(u3a_is_atom(s))  &&
            _(u3a_is_atom(n)) && _(u3a_is_atom(r))  &&
            _(u3a_is_atom(z)) && _(u3a_is_atom(d))) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3l_punt("scr-hsh", _cqes_hsh(p, s, n, r, z, d));
@@ -149,7 +149,7 @@
          (d > (1 << 30)) ) {
       // max key length 1gb
       // max iterations 2^28
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       u3_noun pro;
@@ -176,7 +176,7 @@
     c3_w pwd_w, sal_w;
     if ( !(u3r_word_fit(&pwd_w, pl) &&
            u3r_word_fit(&sal_w, sl)) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       return _cqes_pb(p, pwd_w, s, sal_w, c, d);
@@ -195,7 +195,7 @@
     if ( !(_(u3a_is_atom(p))  && _(u3a_is_atom(s))  &&
            _(u3a_is_atom(pl)) && _(u3a_is_atom(sl)) &&
            _(u3a_is_atom(c))  && _(u3a_is_atom(d))) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return _cqes_pbl(p, pl, s, sl, c, d);
@@ -219,7 +219,7 @@
 
     if ( !(_(u3a_is_atom(p)) && _(u3a_is_atom(s)) &&
            _(u3a_is_atom(c)) && _(u3a_is_atom(d))) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return _cqes_pbk(p, s, c, d);

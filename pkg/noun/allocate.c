@@ -340,7 +340,7 @@ static c3_w*
 _me_road_all_cap(c3_w len_w)
 {
   if ( len_w > u3a_open(u3R) ) {
-    u3m_bail(c3__meme); return 0;
+    u3m_bail(c3_tas(meme)); return 0;
   }
 
   if ( c3y == u3a_is_north(u3R) ) {
@@ -418,7 +418,7 @@ _ca_reclaim_half(void)
        (0 == u3to(u3h_root, u3R->cax.har_p)->use_w) )
   {
     fprintf(stderr, "allocate: reclaim: memo cache: empty\r\n");
-    u3m_bail(c3__meme);
+    u3m_bail(c3_tas(meme));
   }
 
 #if 1
@@ -1055,11 +1055,11 @@ _me_gain_use(u3_noun dog)
 
   if ( 0x7fffffff == box_u->use_w ) {
     u3l_log("fail in _me_gain_use");
-    u3m_bail(c3__fail);
+    u3m_bail(c3_tas(fail));
   }
   else {
     if ( box_u->use_w == 0 ) {
-      u3m_bail(c3__foul);
+      u3m_bail(c3_tas(foul));
     }
     box_u->use_w += 1;
 
@@ -1431,7 +1431,7 @@ top:
     }
     else {
       if ( 0 == box_u->use_w ) {
-        u3m_bail(c3__foul);
+        u3m_bail(c3_tas(foul));
       }
       else {
         if ( _(u3a_is_pom(dog)) ) {
@@ -1471,7 +1471,7 @@ top:
     }
     else {
       if ( 0 == box_u->use_w ) {
-        u3m_bail(c3__foul);
+        u3m_bail(c3_tas(foul));
       }
       else {
         if ( _(u3a_is_pom(dog)) ) {

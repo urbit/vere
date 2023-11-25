@@ -43,7 +43,7 @@
     if ( !_(u3a_is_cat(p_zyc)) || !_(u3a_is_cat(q_zyc)) ||
          !_(u3a_is_cat(p_naz)) || !_(u3a_is_cat(q_naz)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       if ( p_zyc == p_naz ) {
         return (q_zyc > q_naz) ? u3k(zyc) : u3k(naz);
@@ -150,7 +150,7 @@
                                u3x_con, &van, 0)) ||
          (u3_none == (raq = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_bend_fun(raq, vex, sab);
     }
@@ -195,7 +195,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (c3n == u3r_mean(van, u3x_sam_2, &cus, u3x_sam_3, &sef, 0)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_cold_fun(cus, sef, tub);
     }
@@ -242,7 +242,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (c3n == u3r_mean(van, u3x_sam_2, &poq, u3x_sam_3, &sef, 0)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_cook_fun(poq, sef, tub);
     }
@@ -303,7 +303,7 @@
                                u3x_con, &van, 0)) ||
          (u3_none == (raq = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_comp_fun(raq, vex, sab);
     }
@@ -332,7 +332,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (huf = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_easy_fun(huf, tub);
     }
@@ -409,7 +409,7 @@
                                 u3x_con, &van, 0)) ||
          (u3_none == (bus = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_glue_fun(bus, vex, sab);
     }
@@ -464,7 +464,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (c3n == u3r_mean(van, u3x_sam_2, &hez, u3x_sam_3, &sef, 0)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       return _cqe_here_fun(hez, sef, tub);
@@ -501,7 +501,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (daf = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_just_fun(daf, tub);
     }
@@ -540,7 +540,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (bud = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_mask_fun(bud, tub);
     }
@@ -580,7 +580,7 @@
     u3_noun vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return _cqe_pfix(vex, sab);
     }
@@ -635,7 +635,7 @@
     u3_noun vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return _cqe_plug(vex, sab);
     }
@@ -671,7 +671,7 @@
     u3_noun vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qe_pose(vex, sab);
     }
@@ -725,7 +725,7 @@
     u3_noun vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return _cqe_sfix(vex, sab);
     }
@@ -759,7 +759,7 @@
         else return _fail(tub);
       }
       else {
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
     }
   }
@@ -771,7 +771,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (zep = u3r_at(u3x_sam, van))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_shim_fun(zep, tub);
     }
@@ -818,7 +818,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (c3n == u3r_mean(van, u3x_sam_2, &gob, u3x_sam_3, &sef, 0)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_stag_fun(gob, sef, tub);
     }
@@ -831,12 +831,12 @@
             u3_noun wan)
   {
     if ( !_(u3a_is_cat(ort)) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       if ( c3n == u3du(wan) ) {
         if ( !_(u3a_is_cat(wan)) ) {
-          return u3m_bail(c3__fail);
+          return u3m_bail(c3_tas(fail));
         }
         else return (ort < wan) ? c3y : c3n;
       }
@@ -844,7 +844,7 @@
         u3_noun h_wan = u3h(wan);
 
         if ( !_(u3a_is_cat(h_wan)) ) {
-          return u3m_bail(c3__fail);
+          return u3m_bail(c3_tas(fail));
         }
         else return (ort < h_wan) ? c3y : c3n;
       }
@@ -865,7 +865,7 @@
       u3_noun iq_tub = u3h(q_tub);
 
       if ( !_(u3a_is_cat(iq_tub)) ) {
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
       else while ( 1 ) {
         if ( c3n == u3du(hel) ) {
@@ -914,7 +914,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &con, 0)) ||
          (u3_none == (hel = u3r_at(2, con))) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_stew_fun(hel, tub);
     }
@@ -1009,7 +1009,7 @@
                                u3x_sam_7, &fel,
                                0)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return _cqe_stir_fun(rud, raq, fel, tub);
     }

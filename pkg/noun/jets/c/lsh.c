@@ -12,10 +12,10 @@ u3qc_lsh(u3_atom a,
          u3_atom c)
 {
   if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else if ( !_(u3a_is_cat(b)) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     c3_g a_g   = a;
@@ -26,7 +26,7 @@ u3qc_lsh(u3_atom a,
       return 0;
     }
     else if ( (b_w + len_w) < len_w ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       u3i_slab sab_u;

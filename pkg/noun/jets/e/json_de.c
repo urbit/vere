@@ -129,12 +129,12 @@ _parse(u3_atom txt)
       } continue;
 
       case JSON_ARRAY_END: {
-        val = u3nc(c3__a, tak_u->col);
+        val = u3nc(c3_tas(a), tak_u->col);
         tak_u = _pop_stack(pil_u);
       } break;
 
       case JSON_OBJECT_END: {
-        val = u3nc(c3__o, tak_u->col);
+        val = u3nc(c3_tas(o), tak_u->col);
         tak_u = _pop_stack(pil_u);
       } break;
 
@@ -145,22 +145,22 @@ _parse(u3_atom txt)
           continue;
         }
         else {
-          val = u3nc(c3__s, _json_get_string_as_atom(sam_u));
+          val = u3nc(c3_tas(s), _json_get_string_as_atom(sam_u));
           break;
         }
       }
 
       case JSON_NUMBER: {
         // read number from string in the JSON reparser
-        val = u3nc(c3__n, _json_get_string_as_atom(sam_u));
+        val = u3nc(c3_tas(n), _json_get_string_as_atom(sam_u));
       } break;
 
       case JSON_TRUE: {
-        val = u3nc(c3__b, c3y);
+        val = u3nc(c3_tas(b), c3y);
       } break;
 
       case JSON_FALSE: {
-        val = u3nc(c3__b, c3n);
+        val = u3nc(c3_tas(b), c3n);
       } break;
 
       case JSON_NULL: {

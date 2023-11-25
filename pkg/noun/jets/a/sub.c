@@ -49,7 +49,7 @@ u3wa_sub(u3_noun cor)
        (c3n == u3ud(b)) ||
        (c3n == u3ud(a) && b != 0) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qa_sub(a, b);

@@ -905,7 +905,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
                u3r_mug(pro));
         ham_u->liv = c3n;
 
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
       else {
 
@@ -934,13 +934,13 @@ _cj_hook_in(u3_noun     cor,
 
   if ( c3n == u3du(cor) ) {
     u3l_log("_cj_hook_in failure: c3n == u3du(cor)");
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   loc = _cj_spot(cor, NULL);
   if ( u3_none == loc ) {
     u3l_log("_cj_hook_in failure: u3_none == loc");
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   tem = u3i_string(tam_c);
@@ -1005,7 +1005,7 @@ _cj_hook_in(u3_noun     cor,
       u3_noun sat = u3t(pat);
       if ( c3y == u3h(sat) ) {
         u3l_log("_cj_hook_in failure: c3y == u3h(sat)");
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
       else {
         col = u3k(u3t(sat));
@@ -1145,13 +1145,13 @@ _cj_hank_fill(u3j_hank* han_u, u3_noun tam, u3_noun cor)
 
   if ( c3n == u3du(cor) ) {
     u3l_log("fail in _cj_hank_fill (c3n == u3du(cor))");
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   sit_u->bas = u3_none;
   if ( u3_none == (col = loc = _cj_spot(cor, NULL)) ) {
     u3l_log("fail in _cj_hank_fill (_cj_spot(cor, NULL))");
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   while ( 1 ) {
@@ -1194,7 +1194,7 @@ _cj_hank_fill(u3j_hank* han_u, u3_noun tam, u3_noun cor)
       u3_noun sat = u3t(pat);
       if ( c3y == u3h(sat) ) {
         u3l_log("fail in _cj_hank_fill (c3y == u3h(sat))");
-        return u3m_bail(c3__fail);
+        return u3m_bail(c3_tas(fail));
       }
       else {
         u3_noun xah;
@@ -1679,7 +1679,7 @@ u3j_gate_prep(u3j_site* sit_u, u3_noun cor)
   u3_noun loc;
   u3t_on(glu_o);
   if ( c3n == u3du(cor) || c3n == u3du(u3t(cor)) ) {
-    u3m_bail(c3__exit);
+    u3m_bail(c3_tas(exit));
     return;
   }
   sit_u->bas   = u3_none;

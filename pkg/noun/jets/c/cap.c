@@ -11,7 +11,7 @@ u3qc_cap(u3_atom a)
   c3_w met_w = u3r_met(0, a);
 
   if ( 2 > met_w ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return 2 + u3r_bit((met_w - 2), a);

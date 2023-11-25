@@ -34,7 +34,7 @@
          (c3n == u3ud(b)) ||
          (c3n == u3ud(a) && 0 != b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qc_met(a, b);
     }

@@ -14,7 +14,7 @@
     c3_y* buf_y = u3r_bytes_alloc(0, len_w, a); \
     if ( 0 != urcrypt_keccak_##bits(buf_y, len_w, out) ) { \
       /* urcrypt_keccac_##bits always succeeds when called correctly */ \
-      return u3m_bail(c3__oops); \
+      return u3m_bail(c3_tas(oops)); \
     } \
     else { \
       u3_atom pro = u3i_bytes(byts, out); \
@@ -30,9 +30,9 @@
     u3_noun len, tom; \
     u3x_mean(cor, u3x_sam_2, &len, u3x_sam_3, &tom, 0); \
     return ( (c3n == u3ud(len)) || (c3n == u3ud(tom)) ) \
-      ? u3m_bail(c3__exit) \
+      ? u3m_bail(c3_tas(exit)) \
       : (!u3r_word_fit(&len_w, len)) \
-      ? u3m_bail(c3__fail) \
+      ? u3m_bail(c3_tas(fail)) \
       : _kecc_##bits(len_w, tom); \
   }
 

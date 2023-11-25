@@ -26,8 +26,8 @@ _ames_writ_ex(void)
      0xa, 0x53, 0xdf, 0xe8, 0x8a, 0x9c, 0x6f, 0xb3
   };
   u3_noun lan = u3nc(0, 1);
-  u3_noun cad = u3nt(c3__send, lan, u3i_bytes(sizeof(bod_y), bod_y));
-  u3_noun wir = u3nt(c3__newt, 0x1234, u3_nul);
+  u3_noun cad = u3nt(c3_tas(send), lan, u3i_bytes(sizeof(bod_y), bod_y));
+  u3_noun wir = u3nt(c3_tas(newt), 0x1234, u3_nul);
   u3_noun ovo = u3nc(u3nc(u3_blip, wir), cad);
   u3_noun wen;
 
@@ -37,7 +37,7 @@ _ames_writ_ex(void)
     wen = u3_time_in_tv(&tim_u);
   }
 
-  return u3nt(c3__work, 0, u3nc(wen, ovo));
+  return u3nt(c3_tas(work), 0, u3nc(wen, ovo));
 }
 
 static void

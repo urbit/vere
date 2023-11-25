@@ -290,7 +290,7 @@
          (c3n == _listp(hel)) ||
          (c3n == _listp(hev)) )
     {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qe_loss(hel, hev);
     }

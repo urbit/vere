@@ -15,7 +15,7 @@
                               u3x_sam_3, &gul,
                               0) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       u3_noun som;

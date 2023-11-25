@@ -1002,7 +1002,7 @@ _ames_czar_here(u3_pact* pac_u, time_t now, struct sockaddr_in* add_u)
   c3_w     pip_w = ntohl(add_u->sin_addr.s_addr);
 
   if ( pip_w != old_w ) {
-    u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
+    u3_noun nam = u3dc("scot", c3_tas(if), u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
     u3l_log("ames: czar %s: ip %s", pac_u->rut_u.dns_c, nam_c);
@@ -1249,7 +1249,7 @@ _ames_cap_queue(u3_ames* sam_u)
   while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
     u3_ovum* nex_u = egg_u->nex_u;
 
-    if ( c3__hear == u3h(egg_u->cad) ) {
+    if ( c3_tas(hear) == u3h(egg_u->cad) ) {
       u3_auto_drop(&sam_u->car_u, egg_u);
       sam_u->sat_u.dop_d++;
 
@@ -1276,7 +1276,7 @@ _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
   u3_ames* sam_u = (u3_ames*)egg_u->car_u;
   c3_w     len_w = u3qb_lent(lud);
 
-  if ( (1 == len_w) && c3__evil == u3h(u3h(lud)) ) {
+  if ( (1 == len_w) && c3_tas(evil) == u3h(u3h(lud)) ) {
     sam_u->sat_u.vil_d++;
 
     if (  (u3C.wag_w & u3o_verbose)
@@ -1319,12 +1319,12 @@ _ames_put_packet(u3_ames* sam_u,
                  u3_noun  msg,
                  u3_lane  lan_u)
 {
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  u3_noun cad = u3nt(c3__hear, u3nc(c3n, u3_ames_encode_lane(lan_u)), msg);
+  u3_noun wir = u3nc(c3_tas(ames), u3_nul);
+  u3_noun cad = u3nt(c3_tas(hear), u3nc(c3n, u3_ames_encode_lane(lan_u)), msg);
 
   u3_auto_peer(
     u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__a, wir, cad)),
+                 u3_ovum_init(0, c3_tas(a), wir, cad)),
     0, 0, _ames_hear_bail);
 
   _ames_cap_queue(sam_u);
@@ -1530,13 +1530,13 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
       sam_u->pan_u = pan_u;
       sam_u->sat_u.foq_d++;
 
-      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3_tas(ax),
                         u3_nul, pax, pan_u, _ames_lane_scry_forward_cb);
     }
     //  otherwise, just scry for the lane
     //
     else {
-      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3_tas(ax),
                         u3_nul, pax, pan_u, _ames_lane_scry_cb);
     }
   }
@@ -1774,10 +1774,10 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
       }
 
       u3_noun pax =
-        u3nc(c3__fine,
-        u3nq(c3__hunk,
-             u3dc("scot", c3__ud, u3i_word(lop_w)),
-             u3dc("scot", c3__ud, FINE_PAGE),
+        u3nc(c3_tas(fine),
+        u3nq(c3_tas(hunk),
+             u3dc("scot", c3_tas(ud), u3i_word(lop_w)),
+             u3dc("scot", c3_tas(ud), FINE_PAGE),
              u3k(key)));
 
       //  mark as pending in the scry cache
@@ -1786,7 +1786,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
       //  scry into arvo for a page of packets
       //
-      u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
+      u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3_tas(ax), u3_nul,
                         pax, res_u, _fine_hunk_scry_cb);
     }
     //  cache hit, fill in response meow and send
@@ -1813,12 +1813,12 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 static void
 _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
-  u3_noun wir = u3nc(c3__fine, u3_nul);
-  u3_noun cad = u3nt(c3__hear,
+  u3_noun wir = u3nc(c3_tas(fine), u3_nul);
+  u3_noun cad = u3nt(c3_tas(hear),
                      u3nc(c3n, u3_ames_encode_lane(pac_u->rut_u.lan_u)),
                      u3i_bytes(pac_u->len_w, pac_u->hun_y));
 
-  u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+  u3_ovum* ovo_u = u3_ovum_init(0, c3_tas(ames), wir, cad);
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
 
   _ames_cap_queue(pac_u->sam_u);
@@ -2066,7 +2066,7 @@ _ames_io_start(u3_ames* sam_u)
   u3_noun    rac = u3do("clan:title", u3k(who));
   c3_i     ret_i;
 
-  if ( c3__czar == rac ) {
+  if ( c3_tas(czar) == rac ) {
     c3_y num_y = (c3_y)sam_u->pir_u->who_d[0];
     c3_s zar_s = _ames_czar_port(num_y);
 
@@ -2096,7 +2096,7 @@ _ames_io_start(u3_ames* sam_u)
     {
       u3l_log("ames: bind: %s", uv_strerror(ret_i));
 
-      if ( (c3__czar == rac) &&
+      if ( (c3_tas(czar) == rac) &&
            (UV_EADDRINUSE == ret_i) )
       {
         u3l_log("    ...perhaps you've got two copies of vere running?");
@@ -2226,15 +2226,15 @@ _ames_io_talk(u3_auto* car_u)
   {
     //  XX remove [sev_l]
     //
-    u3_noun wir = u3nt(c3__newt,
-                       u3dc("scot", c3__uv, sam_u->sev_l),
+    u3_noun wir = u3nt(c3_tas(newt),
+                       u3dc("scot", c3_tas(uv), sam_u->sev_l),
                        u3_nul);
-    u3_noun cad = u3nc(c3__born, u3_nul);
+    u3_noun cad = u3nc(c3_tas(born), u3_nul);
 
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__a, wir, cad));
+    u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(a), wir, cad));
   }
 
-  u3_pier_peek_last(car_u->pir_u, u3_nul, c3__fx, u3_nul,
+  u3_pier_peek_last(car_u->pir_u, u3_nul, c3_tas(fx), u3_nul,
                     u3nt(u3i_string("protocol"), u3i_string("version"), u3_nul),
                     sam_u, _fine_prot_scry_cb);
 
@@ -2244,7 +2244,7 @@ _ames_io_talk(u3_auto* car_u)
   //    or, better yet, %ames should emit a %turf
   //    (or some other reconfig) effect when it is reset.
   //
-  u3_pier_peek_last(car_u->pir_u, u3_nul, c3__ax, u3_nul,
+  u3_pier_peek_last(car_u->pir_u, u3_nul, c3_tas(ax), u3_nul,
                     u3nt(u3i_string("protocol"), u3i_string("version"), u3_nul),
                     sam_u, _ames_prot_scry_cb);
 }
@@ -2261,14 +2261,14 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
       ret_o = c3n;
     } break;
 
-    case c3__send: {
+    case c3_tas(send): {
       u3_noun lan = u3k(u3h(dat));
       u3_noun pac = u3k(u3t(dat));
       _ames_ef_send(sam_u, lan, pac);
       ret_o = c3y;
     } break;
 
-    case c3__turf: {
+    case c3_tas(turf): {
       _ames_ef_turf(sam_u, u3k(dat));
       ret_o = c3y;
     } break;
@@ -2299,9 +2299,9 @@ _ames_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         ret_o = c3n;
       } break;
 
-      //  XX should also be c3__ames
+      //  XX should also be c3_tas(ames)
       //
-      case c3__newt: {
+      case c3_tas(newt): {
         ret_o = _ames_kick_newt(sam_u, u3k(tag), u3k(dat));
       } break;
 
@@ -2309,16 +2309,16 @@ _ames_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
       //
       //    used to also handle %west and %woot for tcp proxy setup
       //
-      case c3__ames: {
-        ret_o = _( c3__init == tag);
+      case c3_tas(ames): {
+        ret_o = _( c3_tas(init) == tag);
       } break;
 
       //  this can return through dill due to our fscked up boot sequence
       //
       //    XX s/b obsolete, verify
       //
-      case c3__term: {
-        if ( c3__send != tag ) {
+      case c3_tas(term): {
+        if ( c3_tas(send) != tag ) {
           ret_o = c3n;
         }
         else {
@@ -2460,7 +2460,7 @@ u3_ames_io_init(u3_pier* pir_u)
   //  enable forwarding on galaxies only
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun rac = u3do("clan:title", who);
-  sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
+  sam_u->sat_u.for_o = ( c3_tas(czar) == rac ) ? c3y : c3n;
 
   // hashtable for scry cache
   //
@@ -2498,7 +2498,7 @@ u3_ames_io_init(u3_pier* pir_u)
   }
 
   u3_auto* car_u = &sam_u->car_u;
-  car_u->nam_m = c3__ames;
+  car_u->nam_m = c3_tas(ames);
   car_u->liv_o = c3n;
   car_u->io.talk_f = _ames_io_talk;
   car_u->io.info_f = _ames_io_info;

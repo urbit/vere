@@ -34,7 +34,7 @@ _test_nock_meme(void)
   for ( i_w = 0; i_w < 3; i_w++ ) {
     gon = u3m_soft(0, _nock_fol, u3k(fol));
 
-    if ( c3n == u3r_p(gon, c3__meme, 0) ) {
+    if ( c3n == u3r_p(gon, c3_tas(meme), 0) ) {
       u3m_p("nock meme unexpected mote", u3h(gon));
       ret_i = 0;
       u3z(gon);

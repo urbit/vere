@@ -15,7 +15,7 @@
     c3_w wid_w;
     if ( !u3r_word_fit(&wid_w, wid) ) {
       // impossible to represent an atom this large
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       // the hoon adjusts these widths to its liking
@@ -52,7 +52,7 @@
                 u3r_cell(key, &wik, &dak) || u3ud(wik) || u3ud(dak) ||
                 u3ud(out) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3l_punt("blake", _cqe_blake(wid, dat, wik, dak, out));
     }

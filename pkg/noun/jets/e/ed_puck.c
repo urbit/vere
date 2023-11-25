@@ -13,7 +13,7 @@
 
     if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
       // hoon explicitly crashes on mis-size
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       c3_y pub_y[32];
@@ -28,7 +28,7 @@
     u3_noun a = u3r_at(u3x_sam, cor);
 
     if ( (u3_none == a) || (c3n == u3ud(a)) ) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return _cqee_puck(a);

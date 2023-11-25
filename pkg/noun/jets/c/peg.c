@@ -7,7 +7,7 @@ u3_noun
 u3qc_peg(u3_atom a, u3_atom b)
 {
   if ( (0 == a) || (0 == b) ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else if ( 1 == b ) {
     return u3k(a);
@@ -58,7 +58,7 @@ u3wc_peg(u3_noun cor)
        (c3n == u3ud(b)) ||
        (c3n == u3ud(a) && b != 1) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qc_peg(a, b);

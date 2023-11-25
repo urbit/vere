@@ -11,7 +11,7 @@
            u3_noun b)
   {
     if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       c3_g       a_g = a;
@@ -31,13 +31,13 @@
             break;
           }
           else if ( c3n == u3du(cab) ) {
-            return u3m_bail(c3__exit);
+            return u3m_bail(c3_tas(exit));
           }
           else if ( c3n == u3ud(h_cab = u3h(cab)) ) {
-            return u3m_bail(c3__exit);
+            return u3m_bail(c3_tas(exit));
           }
           else if ( (tot_w + (len_w = u3r_met(a_g, h_cab))) < tot_w ) {
-            return u3m_bail(c3__fail);
+            return u3m_bail(c3_tas(fail));
           }
           tot_w += len_w;
           cab = u3t(cab);
@@ -77,7 +77,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
          (c3n == u3ud(a)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       u3_noun pro;
 

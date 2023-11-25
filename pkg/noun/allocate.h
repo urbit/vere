@@ -246,7 +246,7 @@
 #     define u3a_h(som) \
         ( _(u3a_is_cell(som)) \
            ? ( ((u3a_cell *)u3a_to_ptr(som))->hed )\
-           : u3m_bail(c3__exit) )
+           : u3m_bail(c3_tas(exit)) )
 #     define u3h(som) u3a_h(som)
 
     /* u3a_t(): get tail of cell [som]. Bail if [som] is not cell.
@@ -254,7 +254,7 @@
 #     define u3a_t(som) \
         ( _(u3a_is_cell(som)) \
            ? ( ((u3a_cell *)u3a_to_ptr(som))->tel )\
-           : u3m_bail(c3__exit) )
+           : u3m_bail(c3_tas(exit)) )
 #     define u3t(som) u3a_t(som)
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
@@ -456,7 +456,7 @@
             //
             if ( !pil_u->off_ws ) {
               if( !(u3R->cap_p > u3R->hat_p) ) {
-                u3m_bail(c3__meme);
+                u3m_bail(c3_tas(meme));
               }
 # ifdef U3_MEMORY_DEBUG
               u3_assert( pil_u->top_p >= u3R->cap_p );
@@ -464,7 +464,7 @@
             }
             else {
               if( !(u3R->cap_p < u3R->hat_p) ) {
-                u3m_bail(c3__meme);
+                u3m_bail(c3_tas(meme));
               }
 # ifdef U3_MEMORY_DEBUG
               u3_assert( pil_u->top_p <= u3R->cap_p );

@@ -40,7 +40,7 @@
     u3_noun bos, nif;
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &bos, u3x_sam_3, &nif, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3qf_flor(bos, nif);
     }

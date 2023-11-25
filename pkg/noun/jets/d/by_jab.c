@@ -11,7 +11,7 @@ u3qdb_jab(u3_noun a,
           u3_noun fun)
 {
   if ( u3_nul == a ) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     u3_noun n_a, lr_a;

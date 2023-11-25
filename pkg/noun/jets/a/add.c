@@ -40,7 +40,7 @@ u3wa_add(u3_noun cor)
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b) && a != 0) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qa_add(a, b);

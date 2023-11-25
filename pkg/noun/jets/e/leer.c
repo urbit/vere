@@ -53,7 +53,7 @@ u3qe_lore(u3_atom lub)
     }
 
     if ((byt_y == 0) && ((pos_w + meg_w + 1) < len_w)) {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
 
     if ( !_(end_y) && pos_w >= len_w ) {
@@ -77,7 +77,7 @@ u3we_lore(u3_noun cor)
   if ( (u3_none == (lub = u3r_at(u3x_sam, cor))) ||
        (c3n == u3ud(lub)) )
   {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   } else {
     return u3qe_lore(lub);
   }
@@ -124,7 +124,7 @@ u3we_leer(u3_noun cor)
   u3_noun txt = u3x_at(u3x_sam, cor);
 
   if ( c3n == u3ud(txt) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   return u3qe_leer(txt);

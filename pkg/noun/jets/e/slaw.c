@@ -453,22 +453,22 @@ u3we_slaw(u3_noun cor)
 
   if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
                       u3x_sam_3, &txt, 0)) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
 
   switch (mod) {
-    case c3__da:
+    case c3_tas(da):
       return _parse_da(cor, txt);
 
     case 'p':
       return _parse_p(cor, txt);
 
-    case c3__ud:
+    case c3_tas(ud):
       return _parse_ud(txt);
 
       // %ta is used once in link.hoon. don't bother.
 
-    case c3__tas:
+    case c3_tas(tas):
       return _parse_tas(txt);
 
     default:

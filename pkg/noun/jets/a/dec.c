@@ -41,7 +41,7 @@ u3wa_dec(u3_noun cor)
   if ( (u3_none == (a = u3r_at(u3x_sam, cor))) ||
        (c3n == u3ud(a)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qa_dec(a);

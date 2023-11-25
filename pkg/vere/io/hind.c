@@ -28,7 +28,7 @@ _hind_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         ret_o = c3n;
       } break;
 
-      case c3__exit: {
+      case c3_tas(exit): {
         ret_o = c3y;
         u3l_log("<<<goodbye>>>");
         u3_pier_exit(car_u->pir_u);
@@ -36,13 +36,13 @@ _hind_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
       //  XX fake effect, check //arvo wire?
       //
-      case c3__trim: {
+      case c3_tas(trim): {
         ret_o = c3y;
         u3_auto_plan(car_u, u3_ovum_init(0, u3_blip,
-                                         u3nc(c3__arvo, u3_nul), u3k(cad)));
+                                         u3nc(c3_tas(arvo), u3_nul), u3k(cad)));
       } break;
 
-      case c3__vega: {
+      case c3_tas(vega): {
         ret_o = c3y;
         u3l_log("<<<reset>>>");
       } break;
@@ -51,7 +51,7 @@ _hind_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
       //
       //    XX review arvo upgrade scenaria
       //
-      case c3__wend: {
+      case c3_tas(wend): {
         ret_o = c3y;
       } break;
     }
@@ -75,7 +75,7 @@ u3_auto*
 u3_hind_io_init(u3_pier* pir_u)
 {
   u3_auto* car_u = c3_calloc(sizeof(*car_u));
-  car_u->nam_m = c3__hind;
+  car_u->nam_m = c3_tas(hind);
   car_u->liv_o = c3y;
   car_u->io.talk_f = _hind_io_talk;
   car_u->io.kick_f = _hind_io_kick;

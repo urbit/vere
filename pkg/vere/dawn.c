@@ -186,23 +186,23 @@ _dawn_fail(u3_noun who, u3_noun rac, u3_noun sas)
 
   switch (rac) {
     default: u3_assert(0);
-    case c3__czar: {
+    case c3_tas(czar): {
       rac_c = "galaxy";
       break;
     }
-    case c3__king: {
+    case c3_tas(king): {
       rac_c = "star";
       break;
     }
-    case c3__duke: {
+    case c3_tas(duke): {
       rac_c = "planet";
       break;
     }
-    case c3__earl: {
+    case c3_tas(earl): {
       rac_c = "moon";
       break;
     }
-    case c3__pawn: {
+    case c3_tas(pawn): {
       rac_c = "comet";
       break;
     }
@@ -300,12 +300,12 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
     //
     u3_noun pot;
 
-    if ( c3__pawn == rank ) {
+    if ( c3_tas(pawn) == rank ) {
       //  irrelevant, just bunt +point
       //
       pot = u3v_wish("*point:azimuth");
     }
-    else  if ( c3__earl == rank ) {
+    else  if ( c3_tas(earl) == rank ) {
       pot = u3v_wish("*point:azimuth");
     }
     else {
@@ -376,7 +376,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   }
 
   pon = u3_nul;
-  while (c3__czar != rank) {
+  while (c3_tas(czar) != rank) {
     u3_noun son;
     //  print message
     //
@@ -416,7 +416,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   //
   //NOTE  blocknum of 0 is fine because jael ignores it.
   //      should probably be removed from dawn event.
-  u3_noun ven = u3nc(c3__dawn,
+  u3_noun ven = u3nc(c3_tas(dawn),
                      u3nq(u3k(u3t(sed)), pon, zar, u3nt(tuf, 0, u3_nul)));
 
   u3z(sed); u3z(rank); u3z(pos); u3z(ship); u3z(feed);
@@ -454,7 +454,7 @@ _dawn_come(u3_noun stars)
   //
 #if 0
     {
-      u3_noun key = u3dc("scot", c3__uw, u3qe_jam(seed));
+      u3_noun key = u3dc("scot", c3_tas(uw), u3qe_jam(seed));
       c3_c* key_c = u3r_string(key);
 
       u3l_log("boot: comet private key\n  %s", key_c);

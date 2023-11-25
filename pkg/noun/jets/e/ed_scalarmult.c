@@ -33,7 +33,7 @@
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3l_punt("scalarmult", _cqee_scalarmult(a, b));
     }

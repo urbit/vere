@@ -45,7 +45,7 @@ u3wa_min(u3_noun cor)
      || (c3n == u3ud(b) && 0 != a)
      || (c3n == u3ud(a) && 0 != b) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
   else {
     return u3qa_min(a, b);

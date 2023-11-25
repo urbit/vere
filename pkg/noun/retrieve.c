@@ -989,7 +989,7 @@ u3r_met(c3_y  a_y,
     c3_y gow_y = 5 - a_y;
 
     if (gal_w > ((UINT32_MAX - (32 + max_y)) >> gow_y))
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
 
     return (gal_w << gow_y)
       + ((c3_bits_word(daz_w) + max_y)
@@ -1470,7 +1470,7 @@ u3r_chop_words(c3_g  met_g,
       //  neither conversion can overflow
       //
       if ( (fum_i >> hut_g != fum_w) || (tot_i  - wid_i != fum_i) ) {
-        u3m_bail(c3__fail);
+        u3m_bail(c3_tas(fail));
         return;
       }
       else if ( fum_i >= len_w ) {
@@ -1504,7 +1504,7 @@ u3r_chop_words(c3_g  met_g,
       // see above
       //
       if ( (fum_d >> met_g != fum_w) || (tot_d  - wid_d != fum_d) ) {
-        u3m_bail(c3__fail);
+        u3m_bail(c3_tas(fail));
         return;
       }
       else if ( fum_d > len_d ) {

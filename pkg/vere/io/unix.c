@@ -298,7 +298,7 @@ _unix_mkdirp(c3_c* pax_c)
     *fas_c = 0;
     if ( 0 != mkdir(pax_c, 0777) && EEXIST != errno ) {
       u3l_log("unix: mkdir %s: %s", pax_c, strerror(errno));
-      u3m_bail(c3__fail);
+      u3m_bail(c3_tas(fail));
     }
     *fas_c++ = '/';
     fas_c = strchr(fas_c, '/');
@@ -323,7 +323,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
 
   if ( !u3_unix_cane(pax_c) ) {
     u3l_log("%s: non-canonical path", pax_c);
-    u3z(pad); u3m_bail(c3__fail);
+    u3z(pad); u3m_bail(c3_tas(fail));
   }
   if ( '/' == *pax_c) {
     pax_c++;
@@ -339,7 +339,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
   if ( fid_i < 0 ) {
     u3l_log("%s: %s", ful_c, strerror(errno));
     c3_free(ful_c);
-    u3z(pad); u3m_bail(c3__fail);
+    u3z(pad); u3m_bail(c3_tas(fail));
   }
 
   fln_w = u3r_met(3, pad);
@@ -353,7 +353,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
   if ( rit_w != fln_w ) {
     u3l_log("%s: %s", ful_c, strerror(errno));
     c3_free(ful_c);
-    u3m_bail(c3__fail);
+    u3m_bail(c3_tas(fail));
   }
   c3_free(ful_c);
 }
@@ -941,7 +941,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
     }
     else {
       u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
-      u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
+      u3_noun mim = u3nt(c3_tas(text), u3i_string("plain"), u3_nul);
       u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
 
       c3_free(dat_y);
@@ -1144,13 +1144,13 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, u3_noun all)
     {
       //  XX remove u3A->sen
       //
-      u3_noun wir = u3nt(c3__sync,
-                        u3dc("scot", c3__uv, unx_u->sev_l),
+      u3_noun wir = u3nt(c3_tas(sync),
+                        u3dc("scot", c3_tas(uv), unx_u->sev_l),
                         u3_nul);
-      u3_noun cad = u3nq(c3__into, _unix_string_to_knot(mon_u->nam_c), all,
+      u3_noun cad = u3nq(c3_tas(into), _unix_string_to_knot(mon_u->nam_c), all,
                          can);
 
-      u3_auto_plan(&unx_u->car_u, u3_ovum_init(0, c3__c, wir, cad));
+      u3_auto_plan(&unx_u->car_u, u3_ovum_init(0, c3_tas(c), wir, cad));
     }
   }
 }
@@ -1203,7 +1203,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
     u3_noun pax = _unix_string_to_path_helper(pax_c
                    + strlen(bas_c)
                    + 1); /* XX slightly less VERY BAD than before*/
-    u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
+    u3_noun mim = u3nt(c3_tas(text), u3i_string("plain"), u3_nul);
     u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
 
     c3_free(dat_y);
@@ -1281,8 +1281,8 @@ u3_unix_initial_into_card(c3_c* arv_c)
 {
   u3_noun can = _unix_initial_update_dir(arv_c, arv_c);
 
-  return u3nc(u3nt(c3__c, c3__sync, u3_nul),
-              u3nq(c3__into, u3_nul, c3y, can));
+  return u3nc(u3nt(c3_tas(c), c3_tas(sync), u3_nul),
+              u3nq(c3_tas(into), u3_nul, c3y, can));
 }
 
 /* _unix_sync_file(): sync file to unix
@@ -1497,10 +1497,10 @@ _unix_io_talk(u3_auto* car_u)
 {
   //  XX review wire
   //
-  u3_noun wir = u3nc(c3__boat, u3_nul);
-  u3_noun cad = u3nc(c3__boat, u3_nul);
+  u3_noun wir = u3nc(c3_tas(boat), u3_nul);
+  u3_noun cad = u3nc(c3_tas(boat), u3_nul);
 
-  u3_auto_plan(car_u, u3_ovum_init(0, c3__c, wir, cad));
+  u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(c), wir, cad));
 }
 
 /* _unix_io_kick(): apply effects.
@@ -1515,9 +1515,9 @@ _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
      || (c3n == u3r_cell(cad, &tag, &dat))
-     || (  (c3__clay != i_wir)
-        && (c3__boat != i_wir)
-        && (c3__sync != i_wir) )  )
+     || (  (c3_tas(clay) != i_wir)
+        && (c3_tas(boat) != i_wir)
+        && (c3_tas(sync) != i_wir) )  )
   {
     ret_o = c3n;
   }
@@ -1527,12 +1527,12 @@ _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         ret_o = c3n;
       } break;
 
-      case c3__dirk: {
+      case c3_tas(dirk): {
         u3_unix_ef_dirk(unx_u, u3k(dat));
         ret_o = c3y;
       } break;
 
-      case c3__ergo: {
+      case c3_tas(ergo): {
         u3_noun mon = u3k(u3h(dat));
         u3_noun can = u3k(u3t(dat));
         u3_unix_ef_ergo(unx_u, mon, can);
@@ -1540,12 +1540,12 @@ _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         ret_o = c3y;
       } break;
 
-      case c3__ogre: {
+      case c3_tas(ogre): {
         u3_unix_ef_ogre(unx_u, u3k(dat));
         ret_o = c3y;
       } break;
 
-      case c3__hill: {
+      case c3_tas(hill): {
         u3_unix_ef_hill(unx_u, u3k(dat));
         ret_o = c3y;
       } break;
@@ -1578,10 +1578,10 @@ u3_unix_io_init(u3_pier* pir_u)
   unx_u->pax_c = strdup(pir_u->pax_c);
   unx_u->alm = c3n;
   unx_u->dyr = c3n;
-  unx_u->sat = u3do("sane", c3__ta);
+  unx_u->sat = u3do("sane", c3_tas(ta));
 
   u3_auto* car_u = &unx_u->car_u;
-  car_u->nam_m = c3__unix;
+  car_u->nam_m = c3_tas(unix);
   car_u->liv_o = c3n;
   car_u->io.talk_f = _unix_io_talk;
   car_u->io.kick_f = _unix_io_kick;

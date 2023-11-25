@@ -22,8 +22,8 @@ _behn_bail_dire(u3_noun lud)
 {
   u3_noun mot = u3r_at(4, lud);
 
-  if (  (c3__meme == mot)
-     || (c3__intr == mot) )
+  if (  (c3_tas(meme) == mot)
+     || (c3_tas(intr) == mot) )
   {
     return c3n;
   }
@@ -80,11 +80,11 @@ _behn_time_cb(uv_timer_t* tim_u)
   // send timer event
   //
   {
-    u3_noun wir = u3nc(c3__behn, u3_nul);
-    u3_noun cad = u3nc(c3__wake, u3_nul);
+    u3_noun wir = u3nc(c3_tas(behn), u3_nul);
+    u3_noun cad = u3nc(c3_tas(wake), u3_nul);
 
     u3_auto_peer(
-      u3_auto_plan(&teh_u->car_u, u3_ovum_init(0, c3__b, wir, cad)),
+      u3_auto_plan(&teh_u->car_u, u3_ovum_init(0, c3_tas(b), wir, cad)),
       0, 0, _behn_wake_bail);
   }
 }
@@ -165,13 +165,13 @@ _behn_io_talk(u3_auto* car_u)
 
   //  XX remove [sev_l]
   //
-  u3_noun wir = u3nt(c3__behn,
-                     u3dc("scot", c3__uv, teh_u->sev_l),
+  u3_noun wir = u3nt(c3_tas(behn),
+                     u3dc("scot", c3_tas(uv), teh_u->sev_l),
                      u3_nul);
-  u3_noun cad = u3nc(c3__born, u3_nul);
+  u3_noun cad = u3nc(c3_tas(born), u3_nul);
 
   u3_auto_peer(
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__b, wir, cad)),
+    u3_auto_plan(car_u, u3_ovum_init(0, c3_tas(b), wir, cad)),
     0,
     _behn_born_news,
     _behn_born_bail);
@@ -189,8 +189,8 @@ _behn_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
      || (c3n == u3r_cell(cad, &tag, &dat))
-     || (c3__behn != i_wir) 
-     || (c3__doze != tag) )
+     || (c3_tas(behn) != i_wir) 
+     || (c3_tas(doze) != tag) )
   {
     ret_o = c3n;
   }
@@ -233,7 +233,7 @@ u3_behn_io_init(u3_pier* pir_u)
   teh_u->tim_u.data = teh_u;
 
   u3_auto* car_u = &teh_u->car_u;
-  car_u->nam_m = c3__behn;
+  car_u->nam_m = c3_tas(behn);
 
   car_u->liv_o = c3n;
   car_u->io.talk_f = _behn_io_talk;

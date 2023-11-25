@@ -150,12 +150,12 @@ _test_jam_roundtrip(void)
 
   {
     c3_y res_y[6] = { 0xc0, 0x37, 0xb, 0x9b, 0xa3, 0x3 };
-    TEST_CASE("%fast", c3__fast);
+    TEST_CASE("%fast", c3_tas(fast));
   }
 
   {
     c3_y res_y[6] = { 0xc0, 0x37, 0xab, 0x63, 0x63, 0x3 };
-    TEST_CASE("%full", c3__full);
+    TEST_CASE("%full", c3_tas(full));
   }
 
   {
@@ -180,7 +180,7 @@ _test_jam_roundtrip(void)
 
   {
     c3_y res_y[11] = { 0x1, 0xdf, 0x2c, 0x6c, 0x8e, 0xe, 0x7c, 0xb3, 0x3a, 0x36, 0x36 };
-    TEST_CASE("[%fast %full]", u3nc(c3__fast, c3__full));
+    TEST_CASE("[%fast %full]", u3nc(c3_tas(fast), c3_tas(full)));
   }
 
   {
@@ -195,7 +195,7 @@ _test_jam_roundtrip(void)
 
   {
     c3_y res_y[12] = { 0x1, 0xdf, 0x2c, 0x6c, 0x8e, 0x1e, 0xf0, 0xcd, 0xea, 0xd8, 0xd8, 0x93 };
-    TEST_CASE("[%fast %full %fast]", u3nc(c3__fast, u3nc(c3__full, c3__fast)));
+    TEST_CASE("[%fast %full %fast]", u3nc(c3_tas(fast), u3nc(c3_tas(full), c3_tas(fast))));
   }
 
   {

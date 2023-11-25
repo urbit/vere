@@ -17,7 +17,7 @@
 # define u3_assert(x)                       \
     do {                                    \
       if (!(x)) {                           \
-        u3m_bail(c3__oops);                 \
+        u3m_bail(c3_tas(oops));                 \
         abort();                            \
       }                                     \
     } while(0)
@@ -29,7 +29,7 @@
         fprintf(stderr, "\rAssertion '%s' " \
                 "failed in %s:%d\r\n",      \
                 #x, __FILE__, __LINE__);    \
-        u3m_bail(c3__oops);                 \
+        u3m_bail(c3_tas(oops));                 \
         abort();                            \
       }                                     \
     } while(0)

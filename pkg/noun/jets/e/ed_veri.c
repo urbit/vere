@@ -35,7 +35,7 @@
     if ( c3n == u3r_mean(cor,
                          u3x_sam_2, &a, u3x_sam_6, &b,
                          u3x_sam_7, &c, 0) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     } else {
       return u3l_punt("veri", _cqee_veri(a, b, c));
     }

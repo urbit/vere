@@ -55,7 +55,7 @@ static u3_noun
 _bit_rip(u3_atom bits, u3_atom atom)
 {
   if ( !_(u3a_is_cat(bits) || bits==0 || bits>31) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   c3_w bit_width  = u3r_met(0, atom);
@@ -92,7 +92,7 @@ static u3_noun
 _block_rip(u3_atom bloq, u3_atom b)
 {
   if ( !_(u3a_is_cat(bloq)) || (bloq >= 32) ) {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
 
   c3_g bloq_g = bloq;

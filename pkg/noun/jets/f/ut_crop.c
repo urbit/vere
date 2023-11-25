@@ -14,11 +14,11 @@ u3wfu_crop(u3_noun cor)
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {
-    return u3m_bail(c3__fail);
+    return u3m_bail(c3_tas(fail));
   }
   else {
     u3_weak vet = u3r_at(u3qfu_van_vet, van);
-    c3_m  fun_m = 141 + c3__crop + ((!!vet) << 8);
+    c3_m  fun_m = 141 + c3_tas(crop) + ((!!vet) << 8);
     u3_noun key = u3z_key_3(fun_m, sut, ref, bat);
     u3_weak pro = u3z_find(u3z_memo_toss, key);
 

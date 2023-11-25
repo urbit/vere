@@ -47,7 +47,7 @@
   {
     c3_ws b = mpz_sgn(a_mp);
     switch ( b ) {
-      default: return u3m_bail(c3__fail);
+      default: return u3m_bail(c3_tas(fail));
       case  0: {
         mpz_clear(a_mp);
         return 0;
@@ -78,12 +78,12 @@
     u3r_mp(i, f);
     if ( !mpz_fits_uint_p(i) ) {
       mpz_clear(i);
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
     a->precision = mpz_get_ui(i);
     mpz_clear(i);
 
-    if ( a->precision < 2 ) u3m_bail(c3__exit);
+    if ( a->precision < 2 ) u3m_bail(c3_tas(exit));
 
     _satom_to_mp(a->minExp, g);
     u3r_mp(a->expWidth, h);
@@ -91,7 +91,7 @@
     if ( !(_(u3a_is_cat(d)) && _(u3a_is_cat(e))) ) {
       mpz_clear(a->minExp);
       mpz_clear(a->expWidth);
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
     a->rMode = d;
     a->eMode = e;
@@ -105,7 +105,7 @@
     u3x_cell(b, &c, &d);
 
     if ( !(_(u3a_is_cat(c))) ) {
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
 
     _satom_to_mp(a->e, c);
@@ -129,7 +129,7 @@
     if ( z >= b->precision ) return;
     c3_w c = b->precision - z;
 
-    if ( b->eMode != c3__i ) {
+    if ( b->eMode != c3_tas(i) ) {
       mpz_t i;
       mpz_init_set(i, a->e);
       mpz_sub(i, i, b->minExp);
@@ -163,25 +163,25 @@
     if ( mpz_sgn(c.a) == 0 ) {
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     size_t m = mpz_sizeinbase(c.a, 2);
     if ( !_(j) && (m <= d.precision) ) {
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     c3_w q = 0;
     c3_w f = (m > d.precision) ? m - d.precision : 0;
     mpz_init(g);
-    if ( (d.eMode != c3__i) &&
+    if ( (d.eMode != c3_tas(i)) &&
          (mpz_cmp(c.e, d.minExp) < 0) ) {
       mpz_sub(g, d.minExp, c.e);
       if ( !mpz_fits_uint_p(g) ) {
         mpz_clear(g);
         mpz_clear(d.minExp); mpz_clear(d.expWidth);
         mpz_clear(c.a); mpz_clear(c.e);
-        return u3m_bail(c3__exit);
+        return u3m_bail(c3_tas(exit));
       }
       q = mpz_get_ui(g);
     }
@@ -200,23 +200,23 @@
           mpz_clear(v); mpz_clear(h); mpz_clear(g);
           mpz_clear(d.minExp); mpz_clear(d.expWidth);
           mpz_clear(c.a); mpz_clear(c.e);
-          return u3m_bail(c3__exit);
-        case c3__fl:
-        case c3__sm:
+          return u3m_bail(c3_tas(exit));
+        case c3_tas(fl):
+        case c3_tas(sm):
           mpz_set_ui(c.a, 0);
           mpz_set_ui(c.e, 0);
           mpz_clear(v); mpz_clear(h); mpz_clear(g);
           break;
-        case c3__ce:
-        case c3__lg:
+        case c3_tas(ce):
+        case c3_tas(lg):
           mpz_set_ui(c.a, 1);
           mpz_set(c.e, d.minExp);
           mpz_clear(v); mpz_clear(h); mpz_clear(g);
           break;
-        case c3__ne:
-        case c3__nt:
-        case c3__na:
-          if ( (i != c3__na) && _(j) ) {
+        case c3_tas(ne):
+        case c3_tas(nt):
+        case c3_tas(na):
+          if ( (i != c3_tas(na)) && _(j) ) {
             y = (mpz_cmp(v, h) <= 0);
           } else {
             y = (mpz_cmp(v, h) < 0);
@@ -240,15 +240,15 @@
         mpz_clear(v); mpz_clear(h); mpz_clear(g);
         mpz_clear(d.minExp); mpz_clear(d.expWidth);
         mpz_clear(c.a); mpz_clear(c.e);
-        return u3m_bail(c3__exit);
-      case c3__fl:
+        return u3m_bail(c3_tas(exit));
+      case c3_tas(fl):
         break;
-      case c3__lg:
+      case c3_tas(lg):
         mpz_add_ui(c.a, c.a, 1);
         break;
-      case c3__sm:
+      case c3_tas(sm):
         if ( (mpz_sgn(v) != 0) || !_(j) ) break;
-        if ( (mpz_cmp(c.e, d.minExp) == 0) && (d.eMode != c3__i) ) {
+        if ( (mpz_cmp(c.e, d.minExp) == 0) && (d.eMode != c3_tas(i)) ) {
           mpz_sub_ui(c.a, c.a, 1);
           break;
         }
@@ -261,12 +261,12 @@
           mpz_sub_ui(c.a, c.a, 1);
         }
         break;
-      case c3__ce:
+      case c3_tas(ce):
         if ( (mpz_sgn(v) != 0) || !_(j) ) {
           mpz_add_ui(c.a, c.a, 1);
         }
         break;
-      case c3__ne:
+      case c3_tas(ne):
         if ( mpz_sgn(v) == 0 ) break;
         x = mpz_cmp(v, h);
         if ( (x == 0) && _(j) ) {
@@ -278,12 +278,12 @@
           mpz_add_ui(c.a, c.a, 1);
         }
         break;
-      case c3__na:
-      case c3__nt:
+      case c3_tas(na):
+      case c3_tas(nt):
         if ( mpz_sgn(v) == 0 ) break;
         x = mpz_cmp(v, h);
         if ( (x < 0) ) break;
-        if ( (i == c3__nt) && (x == 0) ) {
+        if ( (i == c3_tas(nt)) && (x == 0) ) {
           if (!_(j)) mpz_add_ui(c.a, c.a, 1);
         } else {
           mpz_add_ui(c.a, c.a, 1);
@@ -301,23 +301,23 @@
     }
     mpz_set(g, d.minExp);
     mpz_add(g, g, d.expWidth);
-    if ( (d.eMode != c3__i) && (mpz_cmp(g, c.e) < 0) ) {
+    if ( (d.eMode != c3_tas(i)) && (mpz_cmp(g, c.e) < 0) ) {
       mpz_clear(v); mpz_clear(h); mpz_clear(g);
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
-      return u3nc(c3__i, c3y);
+      return u3nc(c3_tas(i), c3y);
     }
     mpz_clear(v); mpz_clear(h); mpz_clear(g);
 
     //  all mpz except in c, d structures cleared; c contains result
     end:
-    if ( d.eMode == c3__f ) {
+    if ( d.eMode == c3_tas(f) ) {
       if ( mpz_sizeinbase(c.a, 2) != d.precision ) {
         mpz_set_ui(c.a, 0);
         mpz_set_ui(c.e, 0);
       }
     }
-    u3_noun ret = u3nq(c3__f, c3y, _mp_to_satom(c.e), u3i_mp(c.a));
+    u3_noun ret = u3nq(c3_tas(f), c3y, _mp_to_satom(c.e), u3i_mp(c.a));
     mpz_clear(d.minExp); mpz_clear(d.expWidth);
     return ret;
   }
@@ -344,13 +344,13 @@
     if ( mpz_sgn(c.a) == 0 ) {
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
     _xpd(&c, &d);
     if ( !mpz_fits_sint_p(c.e) ) {
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
     mpz_t r, s, mn, mp, i, j, u, o;
     mpz_init_set(r, c.a);
@@ -371,7 +371,7 @@
     mpz_mul_2exp(i, i, d.precision - 1);
     if ( (mpz_cmp(c.a, i) == 0) &&
          ((mpz_cmp(c.e, d.minExp) != 0 ) ||
-         (d.eMode == c3__i)) ) {
+         (d.eMode == c3_tas(i))) ) {
       mpz_mul_2exp(mp, mp, 1);
       mpz_mul_2exp(r, r, 1);
       mpz_mul_2exp(s, s, 1);

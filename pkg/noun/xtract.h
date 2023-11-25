@@ -53,7 +53,7 @@
 #       define u3x_bite(a, b, c)                      \
           do {                                        \
             if ( c3n == u3r_bite(a, b, c) ) {         \
-              u3m_bail(c3__exit);                     \
+              u3m_bail(c3_tas(exit));                     \
             }                                         \
           } while (0)
 
@@ -83,7 +83,7 @@
 #       define u3x_cell(a, b, c)                      \
           do {                                        \
             if ( c3n == u3r_cell(a, b, c) ) {         \
-              u3m_bail(c3__exit);                     \
+              u3m_bail(c3_tas(exit));                     \
             }                                         \
           } while (0)
 
@@ -92,7 +92,7 @@
 #       define u3x_trel(a, b, c, d)                   \
           do {                                        \
             if ( c3n == u3r_trel(a, b, c, d) ) {      \
-              u3m_bail(c3__exit);                     \
+              u3m_bail(c3_tas(exit));                     \
             }                                         \
           } while (0)
 
@@ -101,7 +101,7 @@
 #       define u3x_qual(a, b, c, d, e)                \
           do {                                        \
             if ( c3n == u3r_qual(a, b, c, d, e) ) {   \
-              u3m_bail(c3__exit);                     \
+              u3m_bail(c3_tas(exit));                     \
             }                                         \
           } while (0)
 
@@ -110,7 +110,7 @@
 #       define u3x_quil(a, b, c, d, e, f)                  \
           do {                                             \
             if ( c3n == u3r_quil(a, b, c, d, e, f) ) {     \
-              u3m_bail(c3__exit);                          \
+              u3m_bail(c3_tas(exit));                          \
             }                                              \
           } while (0)
 
@@ -119,20 +119,20 @@
 #       define u3x_hext(a, b, c, d, e, f, g)               \
           do {                                             \
             if ( c3n == u3r_hext(a, b, c, d, e, f, g) ) {  \
-              u3m_bail(c3__exit);                          \
+              u3m_bail(c3_tas(exit));                          \
             }                                              \
           } while (0)
 
   /**  Functions.
   **/
-    /** u3x_*: read, but bail with c3__exit on a crash.
+    /** u3x_*: read, but bail with c3_tas(exit) on a crash.
     **/
       /* u3x_atom(): atom or exit.
       */
         inline u3_atom
         u3x_atom(u3_noun a)
         {
-          return ( c3y == u3a_is_cell(a) ) ? u3m_bail(c3__exit) : a;
+          return ( c3y == u3a_is_cell(a) ) ? u3m_bail(c3_tas(exit)) : a;
         }
 
       /* u3x_good(): test for u3_none.
@@ -140,7 +140,7 @@
         inline u3_noun
         u3x_good(u3_weak som)
         {
-          return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
+          return ( u3_none == som ) ? u3m_bail(c3_tas(exit)) : som;
         }
 
       /* u3x_mean():

@@ -247,18 +247,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "json-trace",          no_argument,       NULL, 'j' },
     { "kernel-stage",        required_argument, NULL, 'K' },
     { "key-file",            required_argument, NULL, 'k' },
-    { "loom",                required_argument, NULL, c3__loom },
+    { "loom",                required_argument, NULL, c3_tas(loom) },
     { "local",               no_argument,       NULL, 'L' },
     { "lite-boot",           no_argument,       NULL, 'l' },
     { "keep-cache-limit",    required_argument, NULL, 'M' },
     { "replay-to",           required_argument, NULL, 'n' },
     { "profile",             no_argument,       NULL, 'P' },
     { "ames-port",           required_argument, NULL, 'p' },
-    { "http-port",           required_argument, NULL, c3__http },
-    { "https-port",          required_argument, NULL, c3__htls },
-    { "snap-time",           required_argument, NULL, c3__snap },
-    { "no-conn",             no_argument,       NULL, c3__noco },
-    { "no-dock",             no_argument,       NULL, c3__nodo },
+    { "http-port",           required_argument, NULL, c3_tas(http) },
+    { "https-port",          required_argument, NULL, c3_tas(htls) },
+    { "snap-time",           required_argument, NULL, c3_tas(snap) },
+    { "no-conn",             no_argument,       NULL, c3_tas(noco) },
+    { "no-dock",             no_argument,       NULL, c3_tas(nodo) },
     { "quiet",               no_argument,       NULL, 'q' },
     { "versions",            no_argument,       NULL, 'R' },
     { "replay-from",         required_argument, NULL, 'r' },
@@ -315,33 +315,33 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       //  special args
       //
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           return c3n;
         }
         break;
       }
-      case c3__http: {
+      case c3_tas(http): {
         if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
           return c3n;
         } else u3_Host.ops_u.per_s = arg_w;
         break;
       }
-      case c3__htls: {
+      case c3_tas(htls): {
         if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
           return c3n;
         } else u3_Host.ops_u.pes_s = arg_w;
         break;
       }
-      case c3__noco: {
+      case c3_tas(noco): {
         u3_Host.ops_u.con = c3n;
         break;
       }
-      case c3__nodo: {
+      case c3_tas(nodo): {
         u3_Host.ops_u.doc = c3n;
         break;
       }
-      case c3__snap: {
+      case c3_tas(snap): {
         if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
           return c3n;
         } else {
@@ -931,7 +931,7 @@ _cw_serf_send(u3_noun pel)
 static void
 _cw_serf_send_slog(u3_noun hod)
 {
-  _cw_serf_send(u3nc(c3__slog, hod));
+  _cw_serf_send(u3nc(c3_tas(slog), hod));
 }
 
 /* _cw_serf_send_stdr(): send stderr output (%flog)
@@ -939,7 +939,7 @@ _cw_serf_send_slog(u3_noun hod)
 static void
 _cw_serf_send_stdr(c3_c* str_c)
 {
-  _cw_serf_send(u3nc(c3__flog, u3i_string(str_c)));
+  _cw_serf_send(u3nc(c3_tas(flog), u3i_string(str_c)));
 }
 
 /* _cw_serf_step_trace(): initialize or rotate trace file.
@@ -1318,7 +1318,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   c3_o    new_o = c3n;
 
   static struct option lop_u[] = {
-    { "loom", required_argument,  NULL, c3__loom },
+    { "loom", required_argument,  NULL, c3_tas(loom) },
     { "cue",  no_argument,        NULL, 'c'},
     { "jam",  no_argument,        NULL, 'j' },
     { "newt", no_argument,        NULL, 'n' },
@@ -1328,7 +1328,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1518,7 +1518,7 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1529,7 +1529,7 @@ _cw_info(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1601,7 +1601,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1612,7 +1612,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1676,7 +1676,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1687,7 +1687,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1772,7 +1772,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
-    { "loom",        required_argument, NULL, c3__loom },
+    { "loom",        required_argument, NULL, c3_tas(loom) },
     { "no-demand",   no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1784,7 +1784,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "r:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1880,7 +1880,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1891,7 +1891,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -1963,7 +1963,7 @@ _cw_next(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "arch",      required_argument, NULL, 'a' },
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -1978,7 +1978,7 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.arc_c = strdup(optarg);
       } break;
 
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2042,7 +2042,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -2053,7 +2053,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2241,7 +2241,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_d sap_d = 0;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "auto-meld", no_argument,       NULL, 7 },
     { "soft-mugs", no_argument,       NULL, 8 },
@@ -2255,7 +2255,7 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2335,7 +2335,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -2346,7 +2346,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2409,7 +2409,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -2420,7 +2420,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2528,7 +2528,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom", required_argument, NULL, c3_tas(loom) },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2536,7 +2536,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2727,7 +2727,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
+    { "loom",      required_argument, NULL, c3_tas(loom) },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
@@ -2738,7 +2738,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
-      case c3__loom: {
+      case c3_tas(loom): {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
@@ -2792,7 +2792,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
-                     u3nc(c3n, u3nq(c3__once, 'j', c3__vile, u3_nul)));
+                     u3nc(c3n, u3nq(c3_tas(once), 'j', c3_tas(vile), u3_nul)));
   u3_noun res = u3v_soft_peek(0, sam);
 
 
@@ -2808,15 +2808,15 @@ _cw_vile(c3_i argc, c3_c* argv[])
       c3_c* out_c;
 
       if (  (u3_nul != u3h(u3t(res)))
-         || (c3n == u3r_pq(u3t(u3t(res)), c3__omen, 0, &dat))
-         || (c3n == u3r_p(dat, c3__atom, &vil))
+         || (c3n == u3r_pq(u3t(u3t(res)), c3_tas(omen), 0, &dat))
+         || (c3n == u3r_p(dat, c3_tas(atom), &vil))
          || (c3n == u3a_is_atom(vil)) )
       {
         fprintf(stderr, "vile: unable to extract key file\r\n");
         u3m_p("vil", res);
       }
       else {
-        out = u3dc("scot", c3__uw, u3k(vil));
+        out = u3dc("scot", c3_tas(uw), u3k(vil));
         out_c = u3r_string(out);
         puts(out_c);
         c3_free(out_c);
@@ -2865,34 +2865,34 @@ _cw_utils(c3_i argc, c3_c* argv[])
       mot_m = c3_s4(s[0], s[1], s[2], s[3]);
     }
     else if ( 0 == strcmp(argv[1], "upgrade") ) {
-      mot_m = c3__next;
+      mot_m = c3_tas(next);
     }
     else if ( 0 == strcmp(argv[1], "fetch-vere") ) {
-      mot_m = c3__vere;
+      mot_m = c3_tas(vere);
     }
   }
 
   switch ( mot_m ) {
-    case c3__cram: _cw_cram(argc, argv); return 1;
-    case c3__dock: _cw_dock(argc, argv); return 1;
-    case c3__eval: _cw_eval(argc, argv); return 1;
+    case c3_tas(cram): _cw_cram(argc, argv); return 1;
+    case c3_tas(dock): _cw_dock(argc, argv); return 1;
+    case c3_tas(eval): _cw_eval(argc, argv); return 1;
 
-    case c3__mass:
-    case c3__grab: _cw_grab(argc, argv); return 1;
+    case c3_tas(mass):
+    case c3_tas(grab): _cw_grab(argc, argv); return 1;
 
-    case c3__info: _cw_info(argc, argv); return 1;
-    case c3__meld: _cw_meld(argc, argv); return 1;
-    case c3__next: _cw_next(argc, argv); return 2; // continue on
-    case c3__pack: _cw_pack(argc, argv); return 1;
-    case c3__play: _cw_play(argc, argv); return 1;
-    case c3__prep: _cw_prep(argc, argv); return 2; // continue on
-    case c3__queu: _cw_queu(argc, argv); return 1;
-    case c3__chop: _cw_chop(argc, argv); return 1;
-    case c3__roll: _cw_roll(argc, argv); return 1;
-    case c3__vere: _cw_vere(argc, argv); return 1;
-    case c3__vile: _cw_vile(argc, argv); return 1;
+    case c3_tas(info): _cw_info(argc, argv); return 1;
+    case c3_tas(meld): _cw_meld(argc, argv); return 1;
+    case c3_tas(next): _cw_next(argc, argv); return 2; // continue on
+    case c3_tas(pack): _cw_pack(argc, argv); return 1;
+    case c3_tas(play): _cw_play(argc, argv); return 1;
+    case c3_tas(prep): _cw_prep(argc, argv); return 2; // continue on
+    case c3_tas(queu): _cw_queu(argc, argv); return 1;
+    case c3_tas(chop): _cw_chop(argc, argv); return 1;
+    case c3_tas(roll): _cw_roll(argc, argv); return 1;
+    case c3_tas(vere): _cw_vere(argc, argv); return 1;
+    case c3_tas(vile): _cw_vile(argc, argv); return 1;
 
-    case c3__serf: _cw_serf_commence(argc, argv); return 1;
+    case c3_tas(serf): _cw_serf_commence(argc, argv); return 1;
   }
 
   return 0;

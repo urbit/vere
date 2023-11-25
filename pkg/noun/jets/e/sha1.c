@@ -11,7 +11,7 @@
   {
     c3_w len_w;
     if ( !u3r_word_fit(&len_w, wid) ) {
-      return u3m_bail(c3__fail);
+      return u3m_bail(c3_tas(fail));
     }
     else {
       c3_y out_y[20];
@@ -32,7 +32,7 @@
          (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return _cqe_sha1(wid, dat);

@@ -73,7 +73,7 @@ _print_da(u3_noun cor, u3_atom raw_da)
                       126, &sec,
                       127, &f,
                       0)) {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3_tas(exit));
   }
 
   if (f != 0) {
@@ -225,7 +225,7 @@ u3qe_scow(u3_atom a, u3_atom b)
     //  XX disabled due to memory corruption
     //  rewrite for +scot jet and test there
     //
-    // case c3__da: return _print_da(cor, atom);
+    // case c3_tas(da): return _print_da(cor, atom);
     // case 'p':    return _print_p(cor, atom);
 
     default: {

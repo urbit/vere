@@ -35,18 +35,18 @@
     switch ( a )
     {
     default:
-      u3m_bail(c3__fail);
+      u3m_bail(c3_tas(fail));
       break;
-    case c3__n:
+    case c3_tas(n):
       softfloat_roundingMode = softfloat_round_near_even;
       break;
-    case c3__z:
+    case c3_tas(z):
       softfloat_roundingMode = softfloat_round_minMag;
       break;
-    case c3__u:
+    case c3_tas(u):
       softfloat_roundingMode = softfloat_round_max;
       break;
-    case c3__d:
+    case c3_tas(d):
       softfloat_roundingMode = softfloat_round_min;
       break;
     }
@@ -77,7 +77,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_add(a, b, u3x_at(30, cor));
@@ -109,7 +109,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_sub(a, b, u3x_at(30, cor));
@@ -141,7 +141,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_mul(a, b, u3x_at(30, cor));
@@ -173,7 +173,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_div(a, b, u3x_at(30, cor));
@@ -202,7 +202,7 @@
     if ( c3n == (a = u3r_at(u3x_sam, cor)) ||
          c3n == u3ud(a) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_sqt(a, u3x_at(30, cor));
@@ -237,7 +237,7 @@
          c3n == u3ud(b) ||
          c3n == u3ud(c) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_fma(a, b, c, u3x_at(30, cor));
@@ -266,7 +266,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_lth(a, b);
@@ -295,7 +295,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_lte(a, b);
@@ -324,7 +324,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_equ(a, b);
@@ -353,7 +353,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_gte(a, b);
@@ -382,7 +382,7 @@
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     }
     else {
       return u3qer_gth(a, b);

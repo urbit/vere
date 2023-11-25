@@ -73,7 +73,7 @@ _cv_lite(u3_noun pil)
     u3_noun hed, tal;
     u3x_cell(pil, &hed, &tal);
     if ( !_(u3r_sing_c("ivory", hed)) ) {
-      u3m_bail(c3__exit);
+      u3m_bail(c3_tas(exit));
     }
     eve = tal;
   }

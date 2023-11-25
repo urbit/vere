@@ -39,7 +39,7 @@
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3_tas(exit));
     } else {
       return u3qc_con(a, b);
     }

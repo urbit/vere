@@ -18,7 +18,7 @@ _by_any(u3_noun a, u3j_site* sit_u)
     switch ( u3j_gate_slam(sit_u, u3k(u3t(n_a))) ) {
       case c3y: return c3y;
       case c3n: break;
-      default:  return u3m_bail(c3__exit);
+      default:  return u3m_bail(c3_tas(exit));
     }
 
     if ( c3y == _by_any(l_a, sit_u) ) {
