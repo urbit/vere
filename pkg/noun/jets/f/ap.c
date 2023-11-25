@@ -736,23 +736,23 @@
         }
 
 #     define _open_p(stem) \
-          case c3__##stem: \
+          case c3_tas(stem): \
             return _open_in_##stem(ter, u3t(gen));  \
 
 #     define _open_pq(stem) \
-          case c3__##stem: \
+          case c3_tas(stem): \
             if ( c3n == u3r_cell(u3t(gen), &p_gen, &q_gen) ) { \
               return u3m_bail(c3_tas(fail)); \
             } else return _open_in_##stem(ter, p_gen, q_gen);
 
 #     define _open_pqr(stem) \
-          case c3__##stem: \
+          case c3_tas(stem): \
             if ( c3n == u3r_trel(u3t(gen), &p_gen, &q_gen, &r_gen) ) { \
               return u3m_bail(c3_tas(fail)); \
             } else return _open_in_##stem(ter, p_gen, q_gen, r_gen);
 
 #     define _open_pqrs(stem) \
-          case c3__##stem: \
+          case c3_tas(stem): \
             if ( c3n == u3r_qual\
                           (u3t(gen), &p_gen, &q_gen, &r_gen, &s_gen) )\
             { \
