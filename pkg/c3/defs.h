@@ -85,8 +85,7 @@
 #     define c3_s4(a, b, c, d) ( ((d) << 24) | c3_s3(a, b, c) )
 
 #     define c3_tas(s) \
-        (sizeof #s == 5 ? c3_s4(#s[0], #s[1], #s[2], #s[3]) : \
-         sizeof #s == 4 ? c3_s3(#s[0], #s[1], #s[2]) : \
+        (sizeof #s >= 4 ? c3_s4(#s[0], #s[1], #s[2], #s[3]) : \
          sizeof #s == 3 ? c3_s2(#s[0], #s[1]) : \
          sizeof #s <= 2 ? c3_s1(#s[0]) : \
          (c3_i)sizeof(char[1 - 2 * (sizeof #s > 5)]))
