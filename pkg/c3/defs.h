@@ -84,15 +84,6 @@
 #     define c3_s3(a, b, c)    ( ((c) << 16) | c3_s2(a, b) )
 #     define c3_s4(a, b, c, d) ( ((d) << 24) | c3_s3(a, b, c) )
 
-#     define c3_s5(a, b, c, d, e) \
-        ( ((uint64_t)c3_s1(e) << 32ULL) | c3_s4(a, b, c, d) )
-#     define c3_s6(a, b, c, d, e, f) \
-        ( ((uint64_t)c3_s2(e, f) << 32ULL) | c3_s4(a, b, c, d) )
-#     define c3_s7(a, b, c, d, e, f, g) \
-        ( ((uint64_t)c3_s3(e, f, g) << 32ULL) | c3_s4(a, b, c, d) )
-#     define c3_s8(a, b, c, d, e, f, g, h) \
-        ( ((uint64_t)c3_s4(e, f, g, h) << 32ULL) | c3_s4(a, b, c, d) )
-
     /* Byte-order twiddling.
     */
 #     define c3_flip32(w) \
