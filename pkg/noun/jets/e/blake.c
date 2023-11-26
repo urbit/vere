@@ -67,13 +67,13 @@
       return u3m_bail(c3__fail);
     }
     else {
-      c3_y  out_y[64], key_y[32];
-      c3_w  out_w = c3_max(1, c3_min(out, 64));
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
+      c3_y  key_y[32];
       u3r_bytes(0, 32, key_y, key);
-      urcrypt_blake3_hash(wid_w, dat_y, key_y, out_w, out_y);
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat),
+           *out_y = c3_malloc(out);
+      urcrypt_blake3_hash(wid_w, dat_y, key_y, out, out_y);
       u3a_free(dat_y);
-      return u3i_bytes(out_w, out_y);
+      return u3i_bytes(out, out_y);
     }
   }
 
