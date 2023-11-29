@@ -125,10 +125,7 @@ u3z_uniq(u3z_cid cid, u3_noun som)
 /* u3z_reap(): promote memoization cache state.
 */
 void
-u3z_reap(u3z_cid cid, u3p(u3h_root) har_p)
+u3z_reap(u3p(u3h_root) per_p)
 {
-  u3_assert(u3z_memo_toss != cid);
-
-  u3h_uni(_har(u3R, cid), har_p);
-  u3h_free(har_p);
+  u3h_take_uni(u3R->cax.per_p, per_p);
 }

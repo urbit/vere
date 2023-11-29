@@ -50,10 +50,10 @@
       u3_noun
       u3z_uniq(u3z_cid cid, u3_noun som);
 
-    /* u3z_reap(): promote memoization cache state.
+    /* u3z_reap(): promote persistent memoization cache.
     */
       void
-      u3z_reap(u3z_cid cid, u3p(u3h_root) har_p);
+      u3z_reap(u3p(u3h_root) per_p);
 
     /* u3z_free(): free memoization cache.
     */
