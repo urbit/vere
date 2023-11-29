@@ -2228,11 +2228,8 @@ static u3j_core _139_qua_d[] =
   { "mole", 7, _140_qua_mole_a, 0, no_hashes },
   { "mule", 7, _140_qua_mule_a, 0, no_hashes },
 
-  //  XX disabled, implicated in memory corruption
-  //  write tests and re-enable
-  //
-  // { "scot", 7, _140_qua_scot_a, 0, no_hashes },
-  // { "scow", 7, _140_qua_scow_a, 0, no_hashes },
+  { "scot", 7, _140_qua_scot_a, 0, no_hashes },
+  { "scow", 7, _140_qua_scow_a, 0, no_hashes },
   { "slaw", 7, _140_qua_slaw_a, 0, no_hashes },
   {}
 };

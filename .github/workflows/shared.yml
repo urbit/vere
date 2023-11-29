@@ -43,7 +43,7 @@ jobs:
           # runner with BuildJet instead.
           - { target: linux-aarch64, runner: buildjet-2vcpu-ubuntu-2204-arm	}
           - { target: linux-x86_64, runner: ubuntu-22.04 }
-          # GitHub doesn't provide macOS machines with Apple Silicon, so we 
+          # GitHub doesn't provide macOS machines with Apple Silicon, so we
           # self-host a runner with MacStadium instead.
           - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
           - { target: macos-x86_64, runner: macos-12 }
@@ -72,7 +72,7 @@ jobs:
             /private/var/tmp/_bazel_$(whoami)
             # Cache musl libc toolchains.
             /usr/local/*-musl
-      
+
       - name: chown /usr/local/*-musl
         if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
         run: |
@@ -113,17 +113,20 @@ jobs:
         run: |
           case "${{ matrix.target }}" in
             "linux-aarch64")
+              sudo apt-get -y install autoconf-archive
               bazel run //bazel/toolchain:aarch64-linux-musl-gcc
               ;;
             "linux-x86_64")
+              sudo apt-get -y install autoconf-archive
               bazel run //bazel/toolchain:x86_64-linux-musl-gcc
               ;;
             "macos-aarch64")
+              brew install pkg-config autoconf-archive
               ;;
             "macos-x86_64")
               # Switch Xcode path to match the path specified in our bazel toolchain.
               sudo xcode-select --switch /Library/Developer/CommandLineTools
-              brew install automake libtool llvm@15
+              brew install automake autoconf-archive libtool llvm@15
               ;;
             *)
               echo "Unsupported target: ${{ matrix.target }}"

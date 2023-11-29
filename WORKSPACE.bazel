@@ -122,15 +122,6 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
-    name = "argon2",
-    build_file = "//bazel/third_party/argon2:argon2.BUILD",
-    sha256 = "40850e6e6324be10f14228d17b617ad2074bb926eeddd6fe40ad5df833833949",
-    strip_prefix = "argon2-{version}",
-    url = "https://github.com/urbit/argon2/archive/{version}.tar.gz",
-    version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
-)
-
-versioned_http_archive(
     name = "bazel_gazelle",
     sha256 = "efbbba6ac1a4fd342d5122cbdfdb82aeb2cf2862e35022c752eaddffada7c3f3",
     url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/v{version}/bazel-gazelle-v{version}.tar.gz",
@@ -152,15 +143,6 @@ versioned_http_archive(
     strip_prefix = "curl-{version}",
     url = "https://curl.se/download/curl-{version}.tar.gz",
     version = "7.85.0",
-)
-
-versioned_http_archive(
-    name = "ed25519",
-    build_file = "//bazel/third_party/ed25519:ed25519.BUILD",
-    sha256 = "373923c85f61276e3cad2c0ae7a5d5cd4809ffe46c5abc1dc8276683a55782a0",
-    strip_prefix = "ed25519-{version}",
-    url = "https://github.com/orlp/ed25519/archive/{version}.tar.gz",
-    version = "7fa6712ef5d581a6981ec2b08ee623314cd1d1c4",
 )
 
 versioned_http_archive(
@@ -215,17 +197,6 @@ versioned_http_file(
 )
 
 versioned_http_archive(
-    name = "keccak_tiny",
-    build_file = "//bazel/third_party/keccak_tiny:keccak_tiny.BUILD",
-    patch_args = ["-p1"],
-    patches = ["//bazel/third_party/keccak_tiny:{version}.patch"],
-    sha256 = "6d4717f96b84805886c74bad89e911076664d992f197634fd7cdfca2ac0f62ef",
-    strip_prefix = "keccak-tiny-{version}",
-    url = "https://github.com/coruus/keccak-tiny/archive/{version}.tar.gz",
-    version = "64b6647514212b76ae7bca0dea9b7b197d1d8186",
-)
-
-versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
     patch_args = ["-p1"],
@@ -270,18 +241,6 @@ versioned_http_archive(
     # {build_file} and confirm that {build_file} remains an accurate description
     # of the pdjson build process.
     version = "67108d883061043e55d0fb13961ac1b6fc8a485c",
-)
-
-versioned_http_archive(
-    name = "scrypt",
-    build_file = "//bazel/third_party/scrypt:scrypt.BUILD",
-    sha256 = "df681fb19b653b1a12970ebb6091bb2b58411b9e7baf01143870f6be3f099541",
-    strip_prefix = "libscrypt-{version}",
-    url = "https://github.com/technion/libscrypt/archive/{version}.tar.gz",
-    # When bumping the version, compare `Makefile` in the `scrypt` repo to
-    # {build_file} and confirm that {build_file} remains an accurate description
-    # of the scrypt build process.
-    version = "60e585cdd752262b22ed4113eca41c0461a61608",
 )
 
 versioned_http_archive(
@@ -335,6 +294,15 @@ versioned_http_file(
     # We can't use a branch name for the `version` because each new commit
     # will change the SHA256 hash.
     version = "ea8fee3aa0434d4bdf1bf785e5ec346c7ecba7fd",
+)
+
+versioned_http_archive(
+    name = "urcrypt",
+    build_file = "//bazel/third_party/urcrypt:urcrypt.BUILD",
+    sha256 = "afc1182e10eeebaeb2a111c2bd889747792d255e26aba7fdcd6751d0d3c2bb35",
+    strip_prefix = "urcrypt-{version}",
+    url = "https://github.com/urbit/urcrypt/archive/{version}.tar.gz",
+    version = "43479c3262a11e20da5f6218f3b0b3d63931ceea",
 )
 
 versioned_http_archive(

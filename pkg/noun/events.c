@@ -778,14 +778,16 @@ _ce_patch_sync(u3_ce_patch* pat_u)
 
 /* _ce_image_sync(): make sure image is synced to disk.
 */
-static void
+static c3_o
 _ce_image_sync(u3e_image* img_u)
 {
   if ( -1 == c3_sync(img_u->fid_i) ) {
     fprintf(stderr, "loom: image (%s) sync failed: %s\r\n",
                     img_u->nam_c, strerror(errno));
-    u3_assert(!"loom: image sync");
+    return c3n;
   }
+
+  return c3y;
 }
 
 /* _ce_image_resize(): resize image, truncating if it shrunk.
@@ -1395,7 +1397,9 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   }
 
   if (  (c3n == _ce_image_copy(&nux_u, &nax_u))
-     || (c3n == _ce_image_copy(&sux_u, &sax_u)) )
+     || (c3n == _ce_image_copy(&sux_u, &sax_u))
+     || (c3n == _ce_image_sync(&nax_u))
+     || (c3n == _ce_image_sync(&sax_u)) )
   {
     c3_unlink(nax_c);
     c3_unlink(sax_c);
@@ -1474,8 +1478,9 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
   _ce_patch_apply(pat_u);
 
-  _ce_image_sync(&u3P.nor_u);
-  _ce_image_sync(&u3P.sou_u);
+  u3_assert( c3y == _ce_image_sync(&u3P.nor_u) );
+  u3_assert( c3y == _ce_image_sync(&u3P.sou_u) );
+
   _ce_patch_free(pat_u);
   _ce_patch_delete();
 
@@ -1599,8 +1604,8 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       */
       if ( 0 != (pat_u = _ce_patch_open()) ) {
         _ce_patch_apply(pat_u);
-        _ce_image_sync(&u3P.nor_u);
-        _ce_image_sync(&u3P.sou_u);
+        u3_assert( c3y == _ce_image_sync(&u3P.nor_u) );
+        u3_assert( c3y == _ce_image_sync(&u3P.sou_u) );
         _ce_patch_free(pat_u);
         _ce_patch_delete();
       }
@@ -1671,6 +1676,9 @@ u3e_stop(void)
     close(u3P.eph_i);
     unlink(u3C.eph_c);
   }
+
+  close(u3P.sou_u.fid_i);
+  close(u3P.sou_u.fid_i);
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
@@ -1709,6 +1717,8 @@ void
 u3e_init(void)
 {
   u3P.pag_w = u3C.wor_i >> u3a_page;
+
+  u3P.nor_u.fid_i = u3P.sou_u.fid_i = -1;
 
   u3e_foul();
 
