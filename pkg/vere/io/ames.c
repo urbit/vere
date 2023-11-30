@@ -7,6 +7,8 @@
 
 #include "zlib.h"
 
+#include <ent.h>
+
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
@@ -1316,9 +1318,9 @@ _stun_send_response_cb(uv_udp_send_t *rep_u, c3_i sas_i)
   u3_stun_send* snd_u = (u3_stun_send*)rep_u;
   if ( sas_i != 0 ) {
     u3l_log("stun: _stun_send_response_cb fail_sync: %s", uv_strerror(sas_i));
-    c3_free(snd_u->hun_y);
-    c3_free(snd_u);
   }
+  c3_free(snd_u->hun_y);
+  c3_free(snd_u);
 }
 
 static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
@@ -1410,14 +1412,11 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
       case STUN_KEEPALIVE: break; //  ignore; duplicate response
       case STUN_TRYING: {
         sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-        c3_y buf_y[12] = {0};
-        c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
-        if (sas_i != 0) {
-          u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
+        if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
+          u3l_log("stun: getentropy fail: %s", strerror(errno));
           _stun_on_lost(sam_u);
         }
         else {
-          memcpy(sam_u->sun_u.tid_y, buf_y, 12);
           uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
         }
       } break;
@@ -1599,15 +1598,10 @@ _stun_czar(u3_ames* sam_u, c3_d tim_d)
 static void
 _stun_start(u3_ames* sam_u, c3_o fail)
 {
-  c3_y buf_y[12] = {0};
-  //  XX uv_random may block indefinitely when not enough entropy is available.
-  c3_i sas_i = uv_random(NULL, NULL, buf_y, 12, 0, NULL);
-
-  if (sas_i != 0) {
-    u3l_log("stun: can't STUN uv_random fail: %s", uv_strerror(sas_i));
+  if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
+    u3l_log("stun: getentropy fail: %s", strerror(errno));
     _stun_on_lost(sam_u);
   } else {
-    memcpy(sam_u->sun_u.tid_y, buf_y, 12);
     _stun_czar(sam_u, (fail == c3n) ? 500 : 39500);
   }
 }
@@ -1621,7 +1615,7 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
   c3_y imp_y = sam_u->sun_u.dad_y;
   sam_u->sun_u.lan_u.por_s = _ames_czar_port(imp_y);
 
-  if (!sam_u->sun_u.dns_c) {
+  if ( !sam_u->sun_u.dns_c ) {
     sam_u->sun_u.dns_c = _ames_czar_dns(imp_y, sam_u->dns_c);
   }
 
@@ -1634,7 +1628,8 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
     hints.ai_family = AF_INET; // only IPv4 addresses
 
     if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
-                                     sam_u->sun_u.dns_c, 0, &hints))) {
+                                     sam_u->sun_u.dns_c, 0, &hints)))
+    {
       u3l_log("stun: uv_getaddrinfo failed %s %s", uv_strerror(sas_i), sam_u->sun_u.dns_c);
       _ames_czar_gone(sam_u, time(0), sam_u->sun_u.dad_y, sam_u->dns_c);
       _stun_on_lost(sam_u);
@@ -1644,79 +1639,45 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
 }
 
 static c3_w
-_stun_find_attribute(c3_y* buf_y, c3_w len,
-                     c3_y atr[2], c3_y atr_len[2],
-                     c3_w min_len)
-{
-  c3_w i, header, index, cur;
-
-  c3_o stop = c3n;
-  i = 0;
-  header = 20;
-  index = 0;
-  cur = 0;
-
-  while (len-- && stop == c3n) {
-    cur = header + i;
-    if (len < min_len) {
-      stop = c3y;
-    }
-    else if (buf_y[cur] == atr[0] && buf_y[cur + 1] == atr[1]&&
-             buf_y[cur + 2] == atr_len[0] && buf_y[cur + 3] == atr_len[1] ) {
-      stop = c3y;
-      index = cur;
-    }
-    else {
-      i = i + 1;
-    }
-  }
-  return index;
-}
-
-static c3_w
 _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
 {
-  c3_y xor_buf[2]; xor_buf[0]= 0x00; xor_buf[1]= 0x20;
-  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[1]= 0x08;
+  c3_y xor_y[4] = {0x00, 0x20, 0x00, 0x08};
 
   if (buf_len < 40) { // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
     return 0;
   }
   else {
-    c3_w len = buf_len - 20 + 1;
-    c3_w index = _stun_find_attribute(buf_y, len, xor_buf, atr_len, 9);
+    c3_y* fin_y = memmem(buf_y + 20, buf_len - 20, xor_y, sizeof(xor_y));
     // If non-zero, skip attribute type, length, reserved byte and IP family
-    return (index == 0) ? 0 : index + 6;
+    return (fin_y) ? 0 : (c3_w)(fin_y - buf_y) + 6;
   }
 }
 
 static c3_o
 _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
 {
-  c3_y finger[4];
+  c3_y ned_y[4] = {0x80, 0x28, 0x00, 0x04};
 
-  c3_y finger_buf[2]; finger_buf[0]= 0x80; finger_buf[1]= 0x28;
-  c3_y atr_len[2]; atr_len[0]= 0x00; atr_len[1]= 0x04;
-
-  if (buf_len < 28) { // At least STUN header and FINGERPRINT
+  if ( buf_len < 28 ) { // At least STUN header and FINGERPRINT
     return c3n;
   }
-  else {
-    c3_w len = buf_len - 20 + 1;
-    c3_w index = _stun_find_attribute(buf_y, len, finger_buf, atr_len, 8);
-    if (index == 0) {
+
+  {
+    c3_y* fin_y = memmem(buf_y + 20, buf_len - 20, ned_y, sizeof(ned_y));
+
+    if ( !fin_y ) {
       return c3n;
     }
     else {
-      index += 4;  // Skip attribute type and length
-      finger[0] = buf_y[index]; finger[1] = buf_y[index + 1];
-      finger[2] = buf_y[index + 2]; finger[3] = buf_y[index + 3];
 
-      c3_w fingerprint = _ames_sift_word(finger);
+      c3_w len_w = (buf_len - (fin_y - buf_y));
+
+      // Skip attribute type and length
+      c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
       c3_w init = crc32(0L, Z_NULL, 0);
-      c3_w crc = htonl(crc32(init, buf_y, index - 4) ^ 0x5354554e);
+      c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
 
-      return fingerprint == crc;
+      return fingerprint == crc ? c3y : c3n;
     }
   }
 }
@@ -1750,12 +1711,15 @@ _stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w buf_len)
 
   // Expects at least:
   //   STUN header, 12 byte XOR-MAPPED-ADDRESS and 8 byte FINGERPRINT
-  return !(buf_len == 40 &&
-           buf_y[0] == 0x01 && buf_y[1] == 0x01 &&
-           memcmp(&cookie, buf_y + 4, 4) == 0 &&
-           memcmp(tid_y, buf_y + 8, 12) == 0 &&
-           _stun_has_fingerprint(buf_y, buf_len)
-  );
+  if ( (buf_len == 40) &&
+       (buf_y[0] == 0x01 && buf_y[1] == 0x01) &&
+       (memcmp(&cookie, buf_y + 4, 4) == 0) &&
+       (memcmp(tid_y, buf_y + 8, 12) == 0) &&
+       (c3y == _stun_has_fingerprint(buf_y, buf_len)) )
+  {
+    return c3y;
+  }
+  return c3n;
 }
 
 static c3_o
@@ -1765,12 +1729,14 @@ _stun_is_request(c3_y* buf_y, c3_w buf_len)
 
   // Expects at least:
   //   STUN header and 8 byte FINGERPRINT
-  return !(buf_len >= 28 &&
-           buf_y[0] == 0x0 && buf_y[1] == 0x01 &&
-           memcmp(&cookie, buf_y + 4, 4) == 0 &&
-           _stun_has_fingerprint(buf_y, buf_len)
-  );
-
+  if ( (buf_len >= 28) &&
+       (buf_y[0] == 0x0 && buf_y[1] == 0x01) &&
+       (memcmp(&cookie, buf_y + 4, 4) == 0) &&
+       (c3y == _stun_has_fingerprint(buf_y, buf_len)) )
+  {
+    return c3y;
+  }
+  return c3n;
 }
 
 static c3_o
@@ -2804,7 +2770,8 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
     }
 
     //  XX invalidate sam_u->imp_w &c ?
-    //     also invalidate sun_u.dns_c
+    c3_free(sam_u->sun_u.dns_c);
+    sam_u->sun_u.dns_c = 0;
 
     u3z(tuf);
   }
