@@ -9,6 +9,8 @@
 
 #include <ent.h>
 
+#include <arpa/inet.h>
+
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
@@ -1647,7 +1649,33 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
     return 0;
   }
   else {
-    c3_y* fin_y = memmem(buf_y + 20, buf_len - 20, xor_y, sizeof(xor_y));
+    c3_y* fin_y = 0;
+    c3_w i = 20; // start after the header
+    c3_w cookie = 0x2112A442;
+
+    while ( fin_y == 0 && i < buf_len ) {
+      fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
+      if ( fin_y != 0 ) {
+        c3_w cur = (c3_w)(fin_y - buf_y) + 6;
+
+        c3_s port = ntohs(htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16); // XX wrong
+        c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
+
+        char ip_str[INET_ADDRSTRLEN];
+
+        if ( (inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN) == NULL) ||
+              port > 65535 ) {
+          fin_y = 0;
+          i = buf_len;
+        } else {
+          if ( u3o_verbose && 1) {
+            u3l_log("ip:port %s:%u", ip_str, port);
+          }
+        }
+      }
+      i += 1;
+    }
+
     // If non-zero, skip attribute type, length, reserved byte and IP family
     return (fin_y) ? 0 : (c3_w)(fin_y - buf_y) + 6;
   }
@@ -1657,28 +1685,29 @@ static c3_o
 _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
 {
   c3_y ned_y[4] = {0x80, 0x28, 0x00, 0x04};
-
   if ( buf_len < 28 ) { // At least STUN header and FINGERPRINT
     return c3n;
   }
 
   {
-    c3_y* fin_y = memmem(buf_y + 20, buf_len - 20, ned_y, sizeof(ned_y));
+    c3_y* fin_y = 0;
+    c3_w i = 20; // start after the header
+    c3_o not_found = c3n;
 
-    if ( !fin_y ) {
-      return c3n;
+    while ( fin_y == 0 && i < buf_len && not_found == c3n) {
+      fin_y = memmem(buf_y + i, buf_len - i, ned_y, sizeof(ned_y));
+      if ( fin_y != 0 ) {
+        c3_w len_w = buf_len - sizeof(fin_y);
+        // Skip attribute type and length
+        c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
+        c3_w init = crc32(0L, Z_NULL, 0);
+        c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
+        not_found = (fingerprint == crc) ? c3y : c3n;
+      }
+      i += 1;
     }
-    else {
 
-      c3_w len_w = buf_len - sizeof(fin_y);
-
-      // Skip attribute type and length
-      c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
-      c3_w init = crc32(0L, Z_NULL, 0);
-      c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
-
-      return fingerprint == crc ? c3y : c3n;
-    }
+    return not_found;
   }
 }
 
