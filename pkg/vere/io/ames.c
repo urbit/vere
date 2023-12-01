@@ -1670,7 +1670,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
     }
     else {
 
-      c3_w len_w = (buf_len - (fin_y - buf_y));
+      c3_w len_w = buf_len - sizeof(fin_y);
 
       // Skip attribute type and length
       c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
