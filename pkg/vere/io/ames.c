@@ -1361,7 +1361,7 @@ static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
     adr_u, _stun_send_response_cb
   );
 
-  if ( sas_i != 0) {
+  if ( sas_i != 0 ) {
     u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
     c3_free(buf_y);
     c3_free(snd_u);
@@ -1378,7 +1378,7 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
   c3_w xor_index = _stun_find_xor_mapped_address(buf_y, buf_len);
 
   //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
-  if (xor_index != 0) {
+  if ( xor_index != 0 ) {
     c3_w ip_addr_xor = _ames_sift_word(buf_y + xor_index + 2);
     c3_s port_xor = _ames_sift_short(buf_y + xor_index);
 
@@ -1658,18 +1658,17 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
       if ( fin_y != 0 ) {
         c3_w cur = (c3_w)(fin_y - buf_y) + 6;
 
-        c3_s port = ntohs(htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16); // XX wrong
+        c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
         c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
 
         char ip_str[INET_ADDRSTRLEN];
 
-        if ( (inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN) == NULL) ||
-              port > 65535 ) {
+        if (inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN) == NULL) {
           fin_y = 0;
           i = buf_len;
         } else {
-          if ( u3o_verbose && 1) {
-            u3l_log("ip:port %s:%u", ip_str, port);
+          if ( u3o_verbose ) {
+            u3l_log("stun: hear ip:port %s:%u", ip_str, port);
           }
         }
       }
@@ -1677,7 +1676,7 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
     }
 
     // If non-zero, skip attribute type, length, reserved byte and IP family
-    return (fin_y) ? 0 : (c3_w)(fin_y - buf_y) + 6;
+    return ( !fin_y ) ? 0 : (c3_w)(fin_y - buf_y) + 6;
   }
 }
 
