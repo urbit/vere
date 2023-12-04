@@ -182,16 +182,12 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     return;
   }
 
-  if ( c3y == gen_u->liv_o ) {
-    wir = u3nc(c3__lick, u3_nul);
-    dev = _lick_string_to_path(gen_u->nam_c+1);
-    cad = u3nt(c3__soak, dev, put);
-    u3_auto_peer(
-      u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
-      0, 0, 0);
-  } else {
-    u3z(put);
-  }
+  wir = u3nc(c3__lick, u3_nul);
+  dev = _lick_string_to_path(gen_u->nam_c+1);
+  cad = u3nt(c3__soak, dev, put);
+  u3_auto_peer(
+    u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
+    0, 0, 0);
 }
 
 /* _lick_close_chan(): close given channel, freeing.
@@ -306,6 +302,12 @@ static void
 _lick_close_sock(u3_shan* san_u)
 {
   u3_lick*  lic_u = san_u->gen_u->lic_u;
+  u3_chan*  can_u = san_u->can_u;
+
+  if ( NULL != can_u ) {
+    _lick_close_chan(san_u->can_u);
+  }
+
   c3_w len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
