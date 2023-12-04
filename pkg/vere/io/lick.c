@@ -303,7 +303,7 @@ _lick_close_sock(u3_shan* san_u)
 {
   u3_lick*  lic_u = san_u->gen_u->lic_u;
 
-  if ( NULL != can_u ) {
+  if ( NULL != san_u->can_u ) {
     _lick_close_chan(san_u->can_u);
   }
 
