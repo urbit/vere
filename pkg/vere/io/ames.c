@@ -1,6 +1,7 @@
 /// @file
 
 #include "vere.h"
+#include "mdns.h"
 
 #include "noun.h"
 #include "ur.h"
@@ -2083,6 +2084,50 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   }
 }
 
+static void
+_mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3z(lud);
+  u3_ovum_free(egg_u);
+}
+
+/* _ames_put_dear(): send lane to arvo after hearing mdns response
+*/
+static void
+_ames_put_dear(c3_c* ship, c3_w s_addr, c3_s port, void* context)
+{
+  u3_ames* sam_u = (u3_ames*)context;
+
+  u3_lane lan;
+  lan.pip_w = ntohl(s_addr);
+  lan.por_s = ntohs(port);
+
+  u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
+
+  if (u3_nul == whu) {
+    u3l_log("ames: strange ship from mdns: %s", ship);
+    return;
+  }
+
+  u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
+  if (our == u3t(whu)) {
+    u3z(whu);
+    u3z(our);
+    return;
+  }
+
+  u3z(our);
+
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  u3_noun cad = u3nt(c3__dear, u3k(u3t(whu)), u3nc(c3n, u3_ames_encode_lane(lan)));
+
+  u3_auto_peer(
+               u3_auto_plan(&sam_u->car_u,
+                            u3_ovum_init(0, c3__a, wir, cad)),
+               0, 0, _mdns_dear_bail);
+  u3z(whu);
+}
+
 /* _ames_io_start(): initialize ames I/O.
 */
 static void
@@ -2145,6 +2190,15 @@ _ames_io_start(u3_ames* sam_u)
   }
   else {
     u3l_log("ames: live on %d (localhost only)", sam_u->pir_u->por_s);
+  }
+
+  {
+    u3_noun our = u3dc("scot", 'p', u3k(who));
+    char* our_s = u3r_string(our);
+    u3z(our);
+
+    mdns_init(por_s, our_s, _ames_put_dear, (void *)sam_u);
+    c3_free(our_s);
   }
 
   uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _ames_recv_cb);

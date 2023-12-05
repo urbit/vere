@@ -122,6 +122,15 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "avahi",
+    build_file = "//bazel/third_party/avahi:avahi.BUILD",
+    sha256 = "060309d7a333d38d951bc27598c677af1796934dbd98e1024e7ad8de798fedda",
+    strip_prefix = "avahi-{version}",
+    url = "https://github.com/lathiat/avahi/releases/download/v{version}/avahi-{version}.tar.gz",
+    version = "0.8",
+)
+
+versioned_http_archive(
     name = "bazel_gazelle",
     sha256 = "efbbba6ac1a4fd342d5122cbdfdb82aeb2cf2862e35022c752eaddffada7c3f3",
     url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/v{version}/bazel-gazelle-v{version}.tar.gz",
@@ -143,6 +152,25 @@ versioned_http_archive(
     strip_prefix = "curl-{version}",
     url = "https://curl.se/download/curl-{version}.tar.gz",
     version = "7.85.0",
+)
+
+versioned_http_archive(
+    name = "dbus",
+    build_file = "//bazel/third_party/dbus:dbus.BUILD",
+    sha256 = "a6bd5bac5cf19f0c3c594bdae2565a095696980a683a0ef37cb6212e093bde35",
+    strip_prefix = "dbus-{version}",
+    url = "https://dbus.freedesktop.org/releases/dbus/dbus-{version}.tar.xz",
+    version = "1.14.8",
+)
+
+versioned_http_archive(
+    name = "expat",
+    build_file = "//bazel/third_party/expat:expat.BUILD",
+    strip_prefix = "expat-{version}",
+    sha256 = "ef2420f0232c087801abf705e89ae65f6257df6b7931d37846a193ef2e8cdcbe",
+    # TODO: fix the R_2_5_0 nonsense
+    url = "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-{version}.tar.xz",
+    version = "2.5.0",
 )
 
 versioned_http_archive(
