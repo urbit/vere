@@ -149,6 +149,21 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
   //  copies [a], zero-initializes any additional space
   //
   u3r_words(0, sab_u->len_w, sab_u->buf_w, a);
+
+  //  if necessary, mask off extra most-significant bits
+  //  from most-significant word
+  //
+  if ( (5 > met_g) && (u3r_met(5, a) >= sab_u->len_w) ) {
+    //  NB: overflow already checked in _ci_slab_size()
+    //
+    c3_d bit_d = len_d << met_g;
+    c3_w wor_w = bit_d >> 5;
+    c3_w bit_w = bit_d & 0x1f;
+
+    if ( bit_w ) {
+      sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
+    }
+  }
 }
 
 /* u3i_slab_grow(): resize slab, zero-initializing new space.
@@ -595,133 +610,6 @@ u3i_list(u3_weak som, ...)
   return u3kb_flop(lit);
 }
 
-static u3_noun
-_edit_cat(u3_noun big, c3_l axe_l, u3_noun som)
-{
-  if ( c3n == u3du(big) ) {
-    return u3m_bail(c3__exit);
-  }
-  else {
-    u3_noun pro;
-    switch ( axe_l ) {
-      case 2:
-        pro = u3nc(som, u3k(u3t(big)));
-        break;
-      case 3:
-        pro = u3nc(u3k(u3h(big)), som);
-        break;
-      default: {
-        c3_l mor_l = u3x_mas(axe_l);
-        pro = ( 2 == u3x_cap(axe_l) )
-            ? u3nc(_edit_cat(u3k(u3h(big)), mor_l, som), u3k(u3t(big)))
-            : u3nc(u3k(u3h(big)), _edit_cat(u3k(u3t(big)), mor_l, som));
-        break;
-      }
-    }
-    u3z(big);
-    return pro;
-  }
-}
-
-static u3_noun
-_edit(u3_noun big, u3_noun axe, u3_noun som)
-{
-  if ( c3y == u3a_is_cat(axe) ) {
-    return _edit_cat(big, (c3_l) axe, som);
-  }
-  else if ( c3n == u3du(big) ) {
-    return u3m_bail(c3__exit);
-  }
-  else {
-    u3_noun mor = u3qc_mas(axe),
-            pro = ( 2 == u3qc_cap(axe) )
-                ? u3nc(_edit(u3k(u3h(big)), mor, som), u3k(u3t(big)))
-                : u3nc(u3k(u3h(big)), _edit(u3k(u3t(big)), mor, som));
-    u3z(mor);
-    u3z(big);
-    return pro;
-  }
-}
-
-static u3_noun _edit_or_mutate_cat(u3_noun, c3_l, u3_noun);
-static u3_noun _edit_or_mutate(u3_noun, u3_noun, u3_noun);
-
-static void
-_mutate_cat(u3_noun big, c3_l axe_l, u3_noun som)
-{
-  if ( c3n == u3du(big) ) {
-    u3m_bail(c3__exit);
-  }
-  else {
-    u3a_cell* cel_u = (void*) u3a_to_ptr(big);
-    switch ( axe_l ) {
-      case 2:
-        u3z(cel_u->hed);
-        cel_u->hed = som;
-        break;
-      case 3:
-        u3z(cel_u->tel);
-        cel_u->tel = som;
-        break;
-      default: {
-        u3_noun* tar = ( 2 == u3x_cap(axe_l) )
-                     ? &(cel_u->hed)
-                     : &(cel_u->tel);
-        *tar = _edit_or_mutate_cat(*tar, u3x_mas(axe_l), som);
-      }
-    }
-    cel_u->mug_w = 0;
-  }
-}
-
-static void
-_mutate(u3_noun big, u3_noun axe, u3_noun som)
-{
-  if ( c3y == u3a_is_cat(axe) ) {
-    _mutate_cat(big, (c3_l) axe, som);
-  }
-  else if ( c3n == u3du(big) ) {
-    u3m_bail(c3__exit);
-  }
-  else {
-    u3a_cell* cel_u = (void*) u3a_to_ptr(big);
-    u3_noun mor = u3qc_mas(axe);
-    u3_noun* tar = ( 2 == u3qc_cap(axe) )
-                 ? &(cel_u->hed)
-                 : &(cel_u->tel);
-    *tar = _edit_or_mutate(*tar, mor, som);
-    cel_u->mug_w = 0;
-    u3z(mor);
-  }
-}
-
-static u3_noun
-_edit_or_mutate_cat(u3_noun big, c3_l axe_l, u3_noun som)
-{
-  if ( c3y == u3a_is_mutable(u3R, big) ) {
-    _mutate_cat(big, axe_l, som);
-    return big;
-  }
-  else {
-    return _edit_cat(big, axe_l, som);
-  }
-}
-
-static u3_noun
-_edit_or_mutate(u3_noun big, u3_noun axe, u3_noun som)
-{
-  if ( c3y == u3a_is_cat(axe) ) {
-    return _edit_or_mutate_cat(big, (c3_l) axe, som);
-  }
-  else if ( c3y == u3a_is_mutable(u3R, big) ) {
-    _mutate(big, axe, som);
-    return big;
-  }
-  else {
-    return _edit(big, axe, som);
-  }
-}
-
 /* u3i_edit():
 **
 **   Mutate `big` at axis `axe` with new value `som`.
@@ -730,15 +618,52 @@ _edit_or_mutate(u3_noun big, u3_noun axe, u3_noun som)
 u3_noun
 u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 {
+  u3_noun  pro;
+  u3_noun* out = &pro;
+
   switch ( axe ) {
-    case 0:
-      return u3m_bail(c3__exit);
-    case 1:
-      u3z(big);
-      return som;
-    default:
-      return _edit_or_mutate(big, axe, som);
+    case 0: return u3m_bail(c3__exit);
+    case 1: break;
+
+    default: {
+      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
+                        ? &axe
+                        : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;
+
+      do {
+        u3a_cell*  big_u = u3a_to_ptr(big);
+        u3_noun*     old = (u3_noun*)&(big_u->hed);
+        const c3_y bit_y = 1 & (axe_w[dep_w >> 5] >> (dep_w & 31));
+
+        if ( c3n == u3a_is_cell(big) ) {
+          return u3m_bail(c3__exit);
+        }
+        else if ( c3y == u3a_is_mutable(u3R, big) ) {
+          *out = big;
+          out  = &(old[bit_y]);
+          big  = *out;
+          big_u->mug_w = 0;
+        }
+        else  {
+          u3_noun  luz = big;
+          u3_noun* new[2];
+
+          *out = u3i_defcons(&new[0], &new[1]);
+          out  = new[bit_y];
+          big  = u3k(old[bit_y]);
+          *(new[!bit_y]) = u3k(old[!bit_y]);
+
+          u3z(luz);
+        }
+      }
+      while ( dep_w-- );
+    }
   }
+
+  u3z(big);
+  *out = som;
+  return pro;
 }
 
 /* u3i_molt():

@@ -29,6 +29,7 @@ typedef struct _u3_shan {
 typedef struct _u3_port {
   c3_c*              nam_c;           //  name of port
   c3_o               con_o;
+  c3_o               liv_o;
   struct _u3_shan*   san_u;           //  server reference
   struct _u3_lick*   lic_u;           //  device backpointer
   struct _u3_port*   nex_u;           //  next pointer
@@ -214,7 +215,7 @@ _lick_close_chan(u3_chan* can_u)
   }
   can_u->mor_u.nex_u = NULL;
 
-  if ( NULL == san_u->can_u ) {
+  if ( NULL == san_u->can_u && c3y == gen_u->liv_o ) {
     //  send a close event to arvo and stop reading.
     //
     u3_noun wir, cad, dev, dat, mar;
@@ -301,6 +302,11 @@ static void
 _lick_close_sock(u3_shan* san_u)
 {
   u3_lick*  lic_u = san_u->gen_u->lic_u;
+
+  if ( NULL != san_u->can_u ) {
+    _lick_close_chan(san_u->can_u);
+  }
+
   c3_w len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
@@ -423,6 +429,7 @@ _lick_ef_shut(u3_lick* lic_u, u3_noun nam)
 
   while ( NULL != cur_u ) {
     if ( 0 == strcmp(cur_u->nam_c, nam_c) ) {
+      cur_u->liv_o = c3n;
       _lick_close_sock(cur_u->san_u);
       if( las_u == NULL ) {
         lic_u->gen_u = cur_u->nex_u;
@@ -462,6 +469,7 @@ _lick_ef_spin(u3_lick* lic_u, u3_noun nam)
   gen_u->san_u->gen_u = gen_u;
   gen_u->nam_c        = nam_c;
   gen_u->con_o        = c3n;
+  gen_u->liv_o        = c3y;
 
   _lick_init_sock(gen_u->san_u);
   if ( NULL == las_u) {

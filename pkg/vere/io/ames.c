@@ -113,7 +113,7 @@
   typedef struct _u3_meow {
     c3_y    sig_y[64];                  //  host signature
     c3_w    num_w;                      //  number of fragments
-    c3_w    siz_s;                      //  datum size (actual)
+    c3_s    siz_s;                      //  datum size (actual)
     c3_y*   dat_y;                      //  datum (0 if null response)
   } u3_meow;
 
@@ -359,12 +359,25 @@ _fine_peep_size(u3_peep* pep_u)
     pep_u->len_s);
 }
 
+static inline c3_y
+_fine_bytes_word(c3_w num_w)
+{
+  return (c3_bits_word(num_w) + 7) >> 3;
+}
+
 static inline c3_s
 _fine_meow_size(u3_meow* mew_u)
 {
+  c3_y cur_y = 0;
+  if (mew_u->siz_s != 0) {
+    cur_y = sizeof(mew_u->num_w);
+  }
+  else {
+    cur_y = _fine_bytes_word(mew_u->num_w);
+  }
   return (
     sizeof(mew_u->sig_y) +
-    sizeof(mew_u->num_w) +
+    cur_y +
     mew_u->siz_s);
 }
 
@@ -604,7 +617,9 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
     //  parse number of fragments
     //
     u3r_bytes(cur_w, num_w, (c3_y*)&mew_u->num_w, mew);
+    num_w = c3_min(num_w, (len_w - cur_w));
     cur_w += num_w;
+    u3_assert(len_w >= cur_w);
 
     //  parse data payload
     //
@@ -736,10 +751,22 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
   memcpy(buf_y + cur_w, mew_u->sig_y, sig_w);
   cur_w += sig_w;
 
-  //  write number of fragments
-  //
-  _ames_etch_word(buf_y + cur_w, mew_u->num_w);
-  cur_w += sizeof(mew_u->num_w);
+  {
+    c3_y num_y[4];
+    c3_y len_y = _fine_bytes_word(mew_u->num_w);
+
+    //  write number of fragments
+    //
+    _ames_etch_word(num_y, mew_u->num_w);
+    memcpy(buf_y + cur_w, num_y, len_y);
+
+    if (mew_u->siz_s != 0) {
+      cur_w += sizeof(mew_u->num_w);
+    }
+    else {
+      cur_w += len_y;
+    }
+  }
 
   //  write response fragment data
   //
@@ -1138,7 +1165,7 @@ _ames_czar(u3_pact* pac_u)
   }
 }
 
-/* _fine_put_cache(): get packet list or status from cache. RETAIN
+/* _fine_get_cache(): get packet list or status from cache. RETAIN
  */
 static u3_weak
 _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
@@ -1656,7 +1683,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   u3z(nun);
 }
 
-/* _fine_hear_request(): hear wail (fine equeust packet packet).
+/* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
 _fine_hear_request(u3_pact* req_u, c3_w cur_w)
