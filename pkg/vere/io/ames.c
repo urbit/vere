@@ -1218,7 +1218,7 @@ static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
 static void _stun_on_failure(u3_ames* sam_u);
 static void _stun_start(u3_ames* sam_u, c3_o fail);
 static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
-static c3_w   _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len);
+static c3_o   _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u);
 
 static c3_d
 _stun_time_gap(struct timeval start)
@@ -1373,57 +1373,49 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
 {
   u3_stun_state old_y = sam_u->sun_u.sat_y;
 
-  c3_w cookie = 0x2112A442;
-  // XX check attribute tags (see RFC)
-  c3_w xor_index = _stun_find_xor_mapped_address(buf_y, buf_len);
+  u3_lane lan_u;
 
   //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
-  if ( xor_index != 0 ) {
-    c3_w ip_addr_xor = _ames_sift_word(buf_y + xor_index + 2);
-    c3_s port_xor = _ames_sift_short(buf_y + xor_index);
+  if ( c3n == _stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
+    return;
+  }
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  if (sam_u->sun_u.wok_o == c3n) {
+    // stop %ping app
+    u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
+    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+    u3_auto_plan(&sam_u->car_u, ovo_u);
+    sam_u->sun_u.wok_o = c3y;
+  }
+  else if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
+            (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
+  {
+    // lane changed
+    u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
+    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
+    u3_auto_plan(&sam_u->car_u, ovo_u);
+  }
+  else {
+    u3z(wir);
+  }
+  sam_u->sun_u.sef_u = lan_u;
 
-    // new lane
-    u3_lane lan_u;
-    lan_u.por_s = ntohs(htons(port_xor) ^ cookie >> 16);
-    lan_u.pip_w = ntohl(htonl(ip_addr_xor) ^ cookie);
-
-    u3_noun wir = u3nc(c3__ames, u3_nul);
-    if (sam_u->sun_u.wok_o == c3n) {
-      // stop %ping app
-      u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
-                         u3nc(c3n, u3_ames_encode_lane(lan_u)));
-      u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-      u3_auto_plan(&sam_u->car_u, ovo_u);
-      sam_u->sun_u.wok_o = c3y;
-    }
-    else if (sam_u->sun_u.sef_u.por_s != lan_u.por_s ||
-        sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) {
-      // lane changed
-      u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
-                         u3nc(c3n, u3_ames_encode_lane(lan_u)));
-      u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-      u3_auto_plan(&sam_u->car_u, ovo_u);
+  switch ( sam_u->sun_u.sat_y ) {
+  case STUN_OFF: break;       //  ignore; stray response
+  case STUN_KEEPALIVE: break; //  ignore; duplicate response
+  case STUN_TRYING: {
+    sam_u->sun_u.sat_y = STUN_KEEPALIVE;
+    if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
+      u3l_log("stun: getentropy fail: %s", strerror(errno));
+      _stun_on_lost(sam_u);
     }
     else {
-      u3z(wir);
+      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
     }
-    sam_u->sun_u.sef_u = lan_u;
-
-    switch ( sam_u->sun_u.sat_y ) {
-      case STUN_OFF: break;       //  ignore; stray response
-      case STUN_KEEPALIVE: break; //  ignore; duplicate response
-      case STUN_TRYING: {
-        sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-        if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
-          u3l_log("stun: getentropy fail: %s", strerror(errno));
-          _stun_on_lost(sam_u);
-        }
-        else {
-          uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
-        }
-      } break;
-      default: assert("programmer error");
-    }
+  } break;
+  default: assert("programmer error");
   }
 }
 
@@ -1640,44 +1632,43 @@ _stun_resolve_dns_cb(uv_timer_t* tim_u)
   }
 }
 
-static c3_w
-_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len)
+static c3_o
+_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
 {
   c3_y xor_y[4] = {0x00, 0x20, 0x00, 0x08};
+  c3_w cookie = 0x2112A442;
 
   if (buf_len < 40) { // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
-    return 0;
+    return c3n;
   }
-  else {
-    c3_y* fin_y = 0;
-    c3_w i = 20; // start after the header
-    c3_w cookie = 0x2112A442;
 
-    while ( fin_y == 0 && i < buf_len ) {
-      fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
-      if ( fin_y != 0 ) {
-        c3_w cur = (c3_w)(fin_y - buf_y) + 6;
+  // start after header
+  for (c3_w i = 20; i < buf_len; i++) {
+    c3_y* fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
+    if ( fin_y != 0 ) {
+      c3_w cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
 
-        c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
-        c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
-
-        char ip_str[INET_ADDRSTRLEN];
-
-        if (inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN) == NULL) {
-          fin_y = 0;
-          i = buf_len;
-        } else {
-          if ( u3o_verbose ) {
-            u3l_log("stun: hear ip:port %s:%u", ip_str, port);
-          }
-        }
+      if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
+        return c3n;
       }
-      i += 1;
-    }
 
-    // If non-zero, skip attribute type, length, reserved byte and IP family
-    return ( !fin_y ) ? 0 : (c3_w)(fin_y - buf_y) + 6;
+      cur += 2;
+
+      c3_s port = ntohs(htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16);
+      c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
+
+      lan_u->por_s = port;
+      lan_u->pip_w = ip;
+
+      if ( u3o_verbose ) {
+        c3_c ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+        u3l_log("stun: hear ip:port %s:%u", ip_str, port);
+      }
+      return c3y;
+    }
   }
+  return c3n;
 }
 
 static c3_o
@@ -1696,7 +1687,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
     while ( fin_y == 0 && i < buf_len && not_found == c3n) {
       fin_y = memmem(buf_y + i, buf_len - i, ned_y, sizeof(ned_y));
       if ( fin_y != 0 ) {
-        c3_w len_w = buf_len - sizeof(fin_y);
+        c3_w len_w = fin_y - buf_y;
         // Skip attribute type and length
         c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
         c3_w init = crc32(0L, Z_NULL, 0);
