@@ -1652,31 +1652,30 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
     return c3n;
   }
 
-  // start after header
-  for (c3_w i = 20; i < buf_len; i++) {
-    c3_y* fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
-    if ( fin_y != 0 ) {
-      c3_w cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
+  c3_w i = 20;  // start after header
 
-      if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
-        return c3n;
-      }
+  c3_y* fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
+  if ( fin_y != 0 ) {
+    c3_w cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
 
-      cur += 2;
-
-      c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
-      c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
-
-      lan_u->por_s = ntohs(port);
-      lan_u->pip_w = ip;
-
-      if ( u3C.wag_w & u3o_verbose ) {
-        c3_c ip_str[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
-        u3l_log("stun: hear ip:port %s:%u", ip_str, port);
-      }
-      return c3y;
+    if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
+      return c3n;
     }
+
+    cur += 2;
+
+    c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
+    c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
+
+    lan_u->por_s = ntohs(port);
+    lan_u->pip_w = ip;
+
+    if ( u3C.wag_w & u3o_verbose ) {
+      c3_c ip_str[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
+      u3l_log("stun: hear ip:port %s:%u", ip_str, port);
+    }
+    return c3y;
   }
   return c3n;
 }
@@ -1692,22 +1691,20 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
   {
     c3_y* fin_y = 0;
     c3_w i = 20; // start after the header
-    c3_o not_found = c3n;
 
-    while ( fin_y == 0 && i < buf_len && not_found == c3n) {
-      fin_y = memmem(buf_y + i, buf_len - i, ned_y, sizeof(ned_y));
-      if ( fin_y != 0 ) {
-        c3_w len_w = fin_y - buf_y;
-        // Skip attribute type and length
-        c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
-        c3_w init = crc32(0L, Z_NULL, 0);
-        c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
-        not_found = (fingerprint == crc) ? c3y : c3n;
+    fin_y = memmem(buf_y + i, buf_len - i, ned_y, sizeof(ned_y));
+    if ( fin_y != 0 ) {
+      c3_w len_w = fin_y - buf_y;
+      // Skip attribute type and length
+      c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
+      c3_w init = crc32(0L, Z_NULL, 0);
+      c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
+      if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len) {
+        return c3y;
       }
-      i += 1;
     }
 
-    return not_found;
+    return c3n;
   }
 }
 
@@ -1724,9 +1721,6 @@ _stun_add_fingerprint(c3_y *message, c3_w index)
   message[index] = 0x80;  message[index + 1] = 0x28;
   // STUN attribute length: 4 bytes
   message[index + 2] = 0x00; message[index + 3] = 0x04;
-  // FINGERPRINT dummy value  XX needed? see https://datatracker.ietf.org/doc/html/rfc5389#section-15.5
-  message[index + 4] = 0xAB; message[index + 5] = 0xCD;
-  message[index + 6] = 0xCD; message[index + 7] = 0xAB;
 
   memcpy(message + index + 4, &crc, 4);
 
