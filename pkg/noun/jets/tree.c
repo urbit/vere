@@ -567,10 +567,6 @@ static c3_c* _140_pen_fork_ha[] = {
   0
 };
 
-// hike disabled while implementing edit
-// static u3j_harm _140_pen_hike_a[] = {{".2", u3wf_hike}, {}};
-// static c3_c* _140_pen_hike_ha[] = {0};
-
 static u3j_harm _140_pen_look_a[] = {{".2", u3wf_look}, {}};
 static c3_c* _140_pen_look_ha[] = {
   "fdda2166a2b9e1a9bda6ab375dd6fb6c610e18f54636a5e89896b45fd0a7169b",
@@ -702,17 +698,6 @@ static u3j_hood _140_pen__ut_ho[] =
     {},
   };
 
-//  XX unused, hook removed, delete source
-//
-#if 0
-static u3j_harm _140_pen__ap_a[] =
-  { {"open", u3wfp_open},
-    {"rake", u3wfp_rake},
-    {}
-  };
-static c3_c* _140_pen__ap_ha[] = {0};
-#endif
-
 static u3j_core _140_pen_d[] =
 { { "hex", 7, 0, _140_hex_d, _140_hex_ha },
 
@@ -726,15 +711,8 @@ static u3j_core _140_pen_d[] =
   { "flip", 7, _140_pen_flip_a, 0, _140_pen_flip_ha },
   { "flor", 7, _140_pen_flor_a, 0, _140_pen_flor_ha },
   { "fork", 7, _140_pen_fork_a, 0, _140_pen_fork_ha },
-  //  XX implementation obsolete, update or remove
-  //
-  // { "hike", 7, _140_pen_hike_a, 0, _140_pen_hike_ha },
   { "look", 7, _140_pen_look_a, 0, _140_pen_look_ha },
   { "loot", 7, _140_pen_loot_a, 0, _140_pen_loot_ha },
-
-  //  XX unused, hook removed, delete source
-  //
-  // { "ap", 7, _140_pen__ap_a, 0, _140_pen__ap_ha },
   { "ut", 15, 0, _140_pen__ut_d, _140_pen__ut_ha, _140_pen__ut_ho },
   {}
 };
@@ -2179,15 +2157,8 @@ static u3j_core _139_pen_d[] =
   { "flip", 7, _140_pen_flip_a, 0, no_hashes },
   { "flor", 7, _140_pen_flor_a, 0, no_hashes },
   { "fork", 7, _140_pen_fork_a, 0, no_hashes },
-  //  XX implementation obsolete, update or remove
-  //
-  // { "hike", 7, _140_pen_hike_a, 0, no_hashes },
   { "look", 7, _140_pen_look_a, 0, no_hashes },
   { "loot", 7, _140_pen_loot_a, 0, no_hashes },
-
-  //  XX unused, hook removed, delete source
-  //
-  // { "ap", 7, _140_pen__ap_a, 0, no_hashes },
   { "ut", 15, 0, _140_pen__ut_d, no_hashes, _140_pen__ut_ho },
   {}
 };
