@@ -35,7 +35,7 @@
     }
   }
   u3_noun
-  u3wf_flan(u3_noun cor)
+  u3wf_flan_139(u3_noun cor)
   {
     u3_noun bos, nif;
 
