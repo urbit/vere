@@ -2121,14 +2121,46 @@ static u3j_core _139_hex_json_d[] =
   };
 
 /* 
- * DEFLATE decompression 
+ * Zlib
  */
-static u3j_harm _139_hex__zlib_expand_a[] = {{".2", u3we_zlib_expand, c3y}, {}};
-static u3j_core _139_hex__zlib_d[] =
+static u3j_harm _139_hex_zlib_expand_a[] = {{".2", u3we_zlib_expand, c3y}, {}};
+static u3j_core _139_hex_zlib_d[] =
   {
-    { "expand", 7, _139_hex__zlib_expand_a, 0, no_hashes }, 
+    { "expand", 7, _139_hex_zlib_expand_a, 0, no_hashes }, 
     {}
   };
+
+/* 
+ *  Stream library
+ */
+static u3j_harm _139_hex_stream_append_get_bytes_a[] = 
+  {{".2", u3we_stream_append_get_bytes, c3y},{}};
+
+static u3j_harm _139_hex_stream_append_read_bytes_a[] = 
+  {{".2", u3we_stream_append_read_bytes, c3y},{}};
+
+static u3j_core _139_hex_stream_d[] =
+  {
+    { "append-get-bytes", 7, _139_hex_stream_append_get_bytes_a, 0, no_hashes }, 
+    { "append-read-bytes", 7, _139_hex_stream_append_read_bytes_a, 0, no_hashes }, 
+    {}
+  };
+
+/*
+ * Git protocol
+ */
+static u3j_harm _139_hex_git_protocol_stream_pkt_lines_on_band_a[] =
+  {{".2", u3we_git_protocol_stream_pkt_lines_on_band, c3y}, {}};
+
+static u3j_core _139_hex_git_protocol_d[] =
+  {
+    { "stream-pkt-lines-on-band", 7, _139_hex_git_protocol_stream_pkt_lines_on_band_a, 0, no_hashes},
+    {}
+  };
+
+/*
+ * Git core
+ */
 
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
@@ -2148,7 +2180,11 @@ static u3j_core _139_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
-  { "zlib",   31, 0, _139_hex__zlib_d,  no_hashes}, 
+  { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
+  { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
+  { "git", 31, 0, _139_hex_git_d, no_hashes}, 
+  // XX this be under git, even though the cores are separate
+  { "git-protocol", 31, 0, _139_hex_git_protocol_d, no_hashes},
   {}
 };
 

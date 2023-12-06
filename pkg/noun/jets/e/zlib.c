@@ -10,6 +10,7 @@
 #include "noun.h"
 
 #include <zlib.h>
+#include <time.h>
 
 #define OUTBUF_SZ 4096
 
@@ -32,7 +33,6 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     return u3_none;
   }
 
-
   c3_y* byt_y;
 
   if ( c3y == u3a_is_cat(dat)) {
@@ -43,8 +43,6 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     byt_y = (c3_y*)vat_u->buf_w;
   }
 
-  c3_y* buf_y = byt_y;
-
   /* Leading zeros do not make sense 
     * for a Zlib stream 
     */
@@ -53,13 +51,18 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   z_stream zea;
   c3_w zas_w;
 
-  zea.next_in = buf_y + pos_d;
-  zea.avail_in = (sad_i - pos_d);
+  zea.next_in = byt_y + pos_d;
+  zea.avail_in = (wid_d - pos_d);
+
   zea.zalloc = Z_NULL;
-  zea.zfree = Z_NULL;
+  zea.zfree  = Z_NULL;
+  zea.opaque = Z_NULL; 
 
   /* Allocate output buffer 
     */
+
+  // Size of the output buffer
+  //
   size_t sob_i = OUTBUF_SZ;
   c3_y* cuf_y = c3_malloc(sob_i);
 
@@ -79,7 +82,10 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
 
   while (Z_OK == (zas_w = inflate(&zea, Z_FINISH)) || zas_w == Z_BUF_ERROR) {
 
-    if (zea.avail_in == 0) break;
+    if (zea.avail_in == 0){
+      fprintf(stderr, "Exhausted input\r\n");
+      break;
+    }
 
     if (zea.avail_out == 0) {
 
@@ -89,6 +95,9 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
       cuf_y = new_y;
 
       zea.avail_out = OUTBUF_SZ;
+
+      u3_assert(sob_i == zea.total_out);
+
       zea.next_out = cuf_y + sob_i;
       
       sob_i += OUTBUF_SZ;
@@ -96,22 +105,50 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   }
 
   if (zas_w != Z_STREAM_END) {
+
+    fprintf(stderr, "u3qe_zlib_expand: %d input bytes\r\n", sad_i);
+    fprintf(stderr, "u3qe_zlib_expand: processed %d bytes\r\n", zea.total_in);
+    fprintf(stderr, "u3qe_zlib_expand: uncompressed %d bytes\r\n", zea.total_out);
     fprintf(stderr, "u3qe_zlib_expand: error while expanding, zas_w = %d, msg = %s\r\n", zas_w, zea.msg);
 
-    c3_free(cuf_y);
-    return u3_none;
+    // Dump ZLIB stream 
+    //
+    time_t now;
+    time(&now);
+    char filename[256];
+    if ( zas_w != Z_STREAM_END ) {
+      sprintf(filename, "error-stream-%d.dat", now);
+    }
+    else {
+      sprintf(filename, "good-stream-%d.dat", now);
+    }
+
+    fprintf(stderr, "u3qe_zlib_expand: dumping corrupted stream to %s\r\n", filename);
+    FILE* file= fopen(filename, "w");
+    assert(file != NULL);
+
+    // byt_y + pos_d, for zea.total_in bytes
+    //
+    fwrite(byt_y+pos_d, sizeof(char), zea.total_in, file);
+
+    fclose(file);
+
+    if ( zas_w != Z_STREAM_END ) {
+      c3_free(cuf_y);
+      return u3_none;
+    }
+
   }
 
-
-
-  u3i_slab sab_u;
   size_t len_i = sob_i - zea.avail_out;
-  u3i_slab_bare(&sab_u, 3, len_i);
-  // XX find out why this is important - otherwise we get memory leaks
-  // Are slabs supposed to be zero terminated at their length?
-  //
-  sab_u.buf_w[sab_u.len_w - 1] = 0;
-  memmove(sab_u.buf_y, cuf_y, len_i);
+  c3_y *buf_y = c3_malloc(len_i);
+
+  if (buf_y == NULL) {
+    c3_free(cuf_y);
+    u3m_bail(c3__meme);
+  }
+
+  memcpy(buf_y, cuf_y, len_i);
 
   u3_atom len_a = u3i_chub(len_i);
 
@@ -128,9 +165,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   }
 
   c3_free(cuf_y);
-  // u3k is needed for byts, since it becomes a
-  // part of a new cell
-  return u3nc(u3nc(len_a, u3i_slab_moot_bytes(&sab_u)),
+  return u3nc(u3nc(len_a, u3i_bytes(len_i, buf_y)),
               u3nc(u3i_chub(pos_d), u3k(byts)));
 }
 
