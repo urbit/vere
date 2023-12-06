@@ -1,6 +1,7 @@
 /// @file
 
 #include "noun.h"
+#include "jets/q.h"
 #include "ur.h"
 #include "vere.h"
 
@@ -387,6 +388,63 @@ _cue_soft_bench(void)
   u3z(vat);
 }
 
+static void
+_edit_bench_impl(c3_w max_w)
+{
+  u3_assert( max_w && (c3y == u3a_is_cat(max_w)) );
+
+  c3_w* axe_w = c3_calloc(((max_w + 31) >> 5) << 2);
+  c3_w  bit_w;
+  u3_noun lit = u3qb_reap(max_w, 1);
+  u3_noun axe;
+
+  axe_w[0] = bit_w = 2;
+
+  do {
+    axe = u3i_words((bit_w + 31) >> 5, axe_w);
+    lit = u3i_edit(lit, axe, 2);
+    u3z(axe);
+
+    axe_w[bit_w >> 5] |= (c3_w)1 << (bit_w & 31);
+    bit_w++;
+  }
+  while ( bit_w <= max_w );
+
+  u3z(lit);
+  c3_free(axe_w);
+}
+
+static void
+_edit_bench(void)
+{
+  struct timeval b4, f2, d0;
+  c3_w mil_w;
+
+  fprintf(stderr, "\r\nopcode 10 microbenchmark:\r\n");
+
+  {
+    gettimeofday(&b4, 0);
+
+    _edit_bench_impl(1000);
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  opcode 10 1k list: %u ms\r\n", mil_w);
+  }
+
+  {
+    gettimeofday(&b4, 0);
+
+    _edit_bench_impl(10000);
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  opcode 10 10k list: %u ms\r\n", mil_w);
+  }
+}
+
 /* main(): run all benchmarks
 */
 int
@@ -397,6 +455,7 @@ main(int argc, char* argv[])
   _jam_bench();
   _cue_bench();
   _cue_soft_bench();
+  _edit_bench();
 
   //  GC
   //
