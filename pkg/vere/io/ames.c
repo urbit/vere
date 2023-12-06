@@ -1660,7 +1660,7 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
       lan_u->por_s = port;
       lan_u->pip_w = ip;
 
-      if ( u3o_verbose ) {
+      if ( u3C.wag_w & u3o_verbose ) {
         c3_c ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
         u3l_log("stun: hear ip:port %s:%u", ip_str, port);
