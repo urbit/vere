@@ -1654,10 +1654,10 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
 
       cur += 2;
 
-      c3_s port = ntohs(htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16);
+      c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
       c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
 
-      lan_u->por_s = port;
+      lan_u->por_s = ntohs(port);
       lan_u->pip_w = ip;
 
       if ( u3C.wag_w & u3o_verbose ) {
