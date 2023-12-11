@@ -299,10 +299,10 @@
     u3_noun u3wf_face(u3_noun);
     u3_noun u3wf_fine(u3_noun);
     u3_noun u3wf_fitz(u3_noun);
-    u3_noun u3wf_flan(u3_noun);
+    u3_noun u3wf_flan_139(u3_noun);
     u3_noun u3wf_flay(u3_noun);
-    u3_noun u3wf_flip(u3_noun);
-    u3_noun u3wf_flor(u3_noun);
+    u3_noun u3wf_flip_139(u3_noun);
+    u3_noun u3wf_flor_139(u3_noun);
     u3_noun u3wf_forq(u3_noun);
     u3_noun u3wf_fork(u3_noun);
     u3_noun u3wf_hint(u3_noun);
