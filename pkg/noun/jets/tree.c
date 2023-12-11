@@ -446,39 +446,23 @@ static c3_c* _140_hex_secp_ha[] = {
 };
 
   static u3j_harm _140_hex_blake2b_a[] = {{".2", u3we_blake2b, c3y}, {}};
-  static c3_c* _140_hex_blake2b_ha[] = {
-    "c432216ca53b5ad2284259167952761bb1046e280268c4d3b9ca70a2024e1934",
-    0
-  };
   static u3j_harm _140_hex_blake3_hash_a[] = {{".2", u3we_blake3_hash, c3y}, {}};
-  static c3_c* _140_hex_blake3_hash_ha[] = {
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    0
-  };
   static u3j_harm _140_hex_blake3_compress_a[] = {{".2", u3we_blake3_compress, c3y}, {}};
-  static c3_c* _140_hex_blake3_compress_ha[] = {
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    0
-  };
   static u3j_harm _140_hex_blake3_chunk_output_a[] = {{".2", u3we_blake3_chunk_output, c3y}, {}};
-  static c3_c* _140_hex_blake3_chunk_output_ha[] = {
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    0
-  };
   static u3j_core _140_hex_blake3_d[] =
-    { { "hash", 7, _140_hex_blake3_hash_a, 0, _140_hex_blake3_hash_ha },
-      { "chunk-output", 7, _140_hex_blake3_chunk_output_a, 0, _140_hex_blake3_chunk_output_ha },
-      { "compress", 7, _140_hex_blake3_compress_a, 0, _140_hex_blake3_compress_ha },
+    { { "hash", 7, _140_hex_blake3_hash_a, 0, no_hashes },
+      { "chunk-output", 7, _140_hex_blake3_chunk_output_a, 0, no_hashes },
       {}
     };
-  static c3_c* _140_hex_blake3_ha[] = { 0 };
+  static u3j_core _140_hex_blake3_impl_d[] =
+    { { "compress", 7, _140_hex_blake3_compress_a, 0, no_hashes },
+      { "blake3", 7, 0, _140_hex_blake3_d, no_hashes },
+      {}
+    };
 static u3j_core _140_hex_blake_d[] =
-  { { "blake2b", 7, _140_hex_blake2b_a, 0, _140_hex_blake2b_ha },
+  { { "blake2b", 7, _140_hex_blake2b_a, 0, no_hashes },
 
-    { "blake3",  7, 0, _140_hex_blake3_d, _140_hex_blake3_ha },
-    { "hash", 7, _140_hex_blake3_hash_a, 0, _140_hex_blake3_hash_ha },
-    { "chunk-output", 7, _140_hex_blake3_chunk_output_a, 0, _140_hex_blake3_chunk_output_ha },
-    { "compress", 7, _140_hex_blake3_compress_a, 0, _140_hex_blake3_compress_ha },
+    { "blake3-impl", 7, 0, _140_hex_blake3_impl_d, no_hashes },
     {}
   };
 static c3_c* _140_hex_blake_ha[] = {
