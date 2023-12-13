@@ -2150,6 +2150,7 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
 
     //  if forwarding, enqueue the packet and scry for the lane
     //
+    u3_noun gang = u3nc(u3_nul, u3_nul);
     if ( c3y == for_o ) {
       if ( 0 != sam_u->pan_u ) {
         pan_u->nex_u = sam_u->pan_u;
@@ -2158,13 +2159,13 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
       sam_u->pan_u = pan_u;
       sam_u->sat_u.foq_d++;
 
-      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+      u3_pier_peek_last(sam_u->pir_u, gang, c3__ax,
                         u3_nul, pax, pan_u, _ames_lane_scry_forward_cb);
     }
     //  otherwise, just scry for the lane
     //
     else {
-      u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__ax,
+      u3_pier_peek_last(sam_u->pir_u, gang, c3__ax,
                         u3_nul, pax, pan_u, _ames_lane_scry_cb);
     }
   }
@@ -2822,45 +2823,23 @@ _ames_prot_scry_cb(void* vod_p, u3_noun nun)
     //  assume protocol version 0
     //
     sam_u->ver_y = 0;
+    sam_u->fin_s.ver_y = 0;
   }
   else if ( (c3n == u3a_is_cat(ver))
          || (7 < ver) ) {
     u3m_p("ames: strange protocol", nun);
     sam_u->ver_y = 0;
+    sam_u->fin_s.ver_y = 0;
   }
   else {
     sam_u->ver_y = ver;
+    sam_u->fin_s.ver_y = ver;
   }
 
   //  XX revise: filtering should probably be disabled if
   //  we get a protocol version above the latest one we know
   //
   sam_u->fig_u.fit_o = c3y;
-  u3z(nun);
-}
-
-/* _fine_prot_scry_cb(): receive fine protocol version
-*/
-static void
-_fine_prot_scry_cb(void* vod_p, u3_noun nun)
-{
-  u3_ames* sam_u = vod_p;
-  u3_weak    ver = u3r_at(7, nun);
-
-  if ( u3_none == ver ) {
-    //  assume protocol version 0
-    //
-    sam_u->fin_s.ver_y = 0;
-  }
-  else if ( (c3n == u3a_is_cat(ver))
-         || (7 < ver) ) {
-    u3m_p("fine: strange protocol", nun);
-    sam_u->fin_s.ver_y = 0;
-  }
-  else {
-    sam_u->fin_s.ver_y = ver;
-  }
-
   u3z(nun);
 }
 
@@ -2885,17 +2864,14 @@ _ames_io_talk(u3_auto* car_u)
     u3_auto_plan(car_u, u3_ovum_init(0, c3__a, wir, cad));
   }
 
-  u3_pier_peek_last(car_u->pir_u, u3_nul, c3__fx, u3_nul,
-                    u3nt(u3i_string("protocol"), u3i_string("version"), u3_nul),
-                    sam_u, _fine_prot_scry_cb);
-
   //  scry the protocol version out of arvo
   //
   //    XX this should be re-triggered periodically,
   //    or, better yet, %ames should emit a %turf
   //    (or some other reconfig) effect when it is reset.
   //
-  u3_pier_peek_last(car_u->pir_u, u3_nul, c3__ax, u3_nul,
+  u3_noun gang = u3nc(u3_nul, u3_nul);
+  u3_pier_peek_last(car_u->pir_u, gang, c3__ax, u3_nul,
                     u3nt(u3i_string("protocol"), u3i_string("version"), u3_nul),
                     sam_u, _ames_prot_scry_cb);
 }
