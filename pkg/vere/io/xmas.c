@@ -67,17 +67,25 @@ typedef struct _u3_xmas_head {
   c3_y             hop_y;  // hopcount
 } u3_xmas_head;
 
+typedef struct _u3_xmas_name {
+  c3_d             her_d[2];
+  c3_c*            pat_c;
+  c3_s             pat_s;
+  c3_s             boq_s;
+  c3_s             fra_s;
+} u3_xmas_name;
+
 
 typedef struct _u3_xmas_peek_pact {
-  c3_d              pub_d[2];
-  c3_s              pat_s;
-  c3_c*             pat_c;
+  c3_d             pub_d[2];
+  c3_c*            pat_c;
+  c3_s             pat_s;
 } u3_xmas_peek_pact;
 
 typedef struct _u3_xmas_page_pact {
   c3_y              hop_y[6];
-  c3_s              pat_s;
   c3_c*             pat_c;
+  c3_s              pat_s;
   c3_w              tot_w;
   c3_y              aut_y[96]; // heap allocate??
   c3_y*             dat_y;
@@ -449,7 +457,7 @@ _xmas_head_from_pact(u3_xmas_pact* pac_u, u3_noun her)
   hed_u.hop_y = 0;
   hed_u.mug_w = 0;
 
-  u3z(her);
+  //u3z(her);
   return hed_u;
 }
 
@@ -517,7 +525,7 @@ _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
   memcpy(buf_y + cur_w, &pac_u->aut_y, 96);
   cur_w += 96;
 
-  // day
+  // dat
   memcpy(buf_y + cur_w, pac_u->dat_y, 1024);
   cur_w += 1024;
 
@@ -828,6 +836,13 @@ _xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
 }
 
 static c3_w
+_xmas_sift_name(u3_xmas_name* nam_u, c3_y siz_y, c3_y* buf_y, c3_w len_w)
+{
+  return 0;
+}
+
+
+static c3_w
 _xmas_sift_peek_pact(u3_xmas_peek_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_w, c3_o tag_o)
 {
   c3_y pub_y = 2 << hed_u->ran_y; // Publisher size
@@ -868,9 +883,6 @@ _xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
   // Datum
   memcpy(pac_u->dat_y, buf_y + cur_w, len_w - cur_w);
 }
-
-
-
 
 static void
 _xmas_sift_pact(u3_xmas_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_w)
@@ -1040,6 +1052,7 @@ _xmas_add_lane_to_cache(u3_xmas* sam_u, u3_noun las, u3_noun pax, u3_lane lan_u)
 static void
 _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
 {
+  u3l_log("xmas: hear peek");
 
   u3_xmas* sam_u = pac_u->sam_u;
   c3_s fra_s;
@@ -1060,10 +1073,11 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
     }
     u3z(hit);
   } else {
-    u3_noun sky = u3nc(c3__page, u3k(pax));
-    u3_pier_peek_last(sam_u->car_u.pir_u, u3_nul, c3__xx, u3_nul, sky, pac_u, _xmas_page_scry_cb);
     _xmas_add_lane_to_cache(sam_u, u3_nul, u3k(pax), lan_u); // TODO: retrieve from namespace
+    u3_noun sky = u3nc(c3__page, pax);
+    u3_pier_peek_last(sam_u->car_u.pir_u, u3_nul, c3__xx, u3_nul, sky, pac_u, _xmas_page_scry_cb);
   }
+  u3l_log("xmas: finished hear peek");
   u3z(pax);
 }
 

@@ -185,6 +185,19 @@ cc_test(
 )
 
 cc_test(
+    name = "xmas_tests",
+    timeout = "short",
+    srcs = ["xmas_tests.c", "io/xmas.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+
+cc_test(
     name = "boot_tests",
     timeout = "short",
     srcs = ["boot_tests.c"],
