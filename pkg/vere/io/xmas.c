@@ -457,7 +457,7 @@ _xmas_head_from_pact(u3_xmas_pact* pac_u, u3_noun her)
   hed_u.hop_y = 0;
   hed_u.mug_w = 0;
 
-  //u3z(her);
+  u3z(her);
   return hed_u;
 }
 
