@@ -2415,7 +2415,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
       //  scry into arvo for a page of packets
       //
-      u3_pier_peek_last(res_u->sam_u->car_u.pir_u, u3_nul, c3__ax, u3_nul,
+      u3_noun gang = u3nq(u3_nul, u3i_chubs(2, res_u->pre_u.rec_d), u3_nul, u3_nul);
+      u3_pier_peek_last(res_u->sam_u->car_u.pir_u, gang, c3__ax, u3_nul,
                         pax, res_u, _fine_hunk_scry_cb);
     }
     //  cache hit, fill in response meow and send
