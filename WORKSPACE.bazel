@@ -205,9 +205,9 @@ versioned_http_archive(
 
 versioned_http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
+    sha256 = "d6ab6b57e48c09523e93050f13698f708428cfd5e619252e369d377af6597707",
     url = "https://github.com/bazelbuild/rules_go/releases/download/v{version}/rules_go-v{version}.zip",
-    version = "0.31.0",
+    version = "0.43.0",
 )
 
 versioned_http_file(
