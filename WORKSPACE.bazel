@@ -159,7 +159,7 @@ versioned_http_archive(
     build_file = "//bazel/third_party/dbus:dbus.BUILD",
     sha256 = "a6bd5bac5cf19f0c3c594bdae2565a095696980a683a0ef37cb6212e093bde35",
     strip_prefix = "dbus-{version}",
-    url = "https://dbus.freedesktop.org/releases/dbus/dbus-{version}.tar.xz",
+    url = "https://src.fedoraproject.org/repo/pkgs/dbus/dbus-{version}.tar.xz/sha512/f3dfc73da28cbe20449d15bbe4166c3574f0e551dfd15fca7cce2b8c71e778360ed2dd391ee5c414a7a47ff4b958727b26ef4cabfee70564f8d0a34bf5ad2386/dbus-1.14.8.tar.xz",
     version = "1.14.8",
 )
 
