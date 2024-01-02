@@ -1069,8 +1069,35 @@ _ames_czar_gone(u3_ames* sam_u, time_t now, c3_d imp_y, c3_c* dns_c)
 
 /* _ames_czar_here(): galaxy address resolution succeeded.
 */
+static void
+_ames_czar_here(u3_pact* pac_u, time_t now, struct sockaddr_in* add_u)
+{
+  u3_ames* sam_u = pac_u->sam_u;
+  c3_y     imp_y = pac_u->rut_u.imp_y;
+  c3_w     old_w = sam_u->imp_w[imp_y];
+  c3_w     pip_w = ntohl(add_u->sin_addr.s_addr);
+
+  if ( pip_w != old_w ) {
+    u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
+    c3_c* nam_c = u3r_string(nam);
+
+    u3l_log("ames: czar %s: ip %s", pac_u->rut_u.dns_c, nam_c);
+
+    c3_free(nam_c);
+    u3z(nam);
+  }
+
+  sam_u->imp_w[imp_y] = pip_w;
+  sam_u->imp_t[imp_y] = now;
+  sam_u->imp_o[imp_y] = c3y;
+
+  pac_u->rut_u.lan_u.pip_w = pip_w;
+}
+
+/* _stun_czar_here(): sponsor galaxy address resolution succeeded.
+*/
 static c3_w
-_ames_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
+_stun_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
 {
   c3_y  imp_y = sam_u->sun_u.dad_y;
   c3_w  old_w = sam_u->imp_w[imp_y];
@@ -1080,7 +1107,7 @@ _ames_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
     u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
-    u3l_log("ames: czar %s: ip %s", sam_u->dns_c, nam_c);
+    u3l_log("stun: czar %s: ip %s", sam_u->dns_c, nam_c);
 
     c3_free(nam_c);
     u3z(nam);
@@ -1102,17 +1129,16 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
               struct addrinfo*  aif_u)
 {
   {
-    u3_pact*             pac_u = (u3_pact*)adr_u->data;
-    struct addrinfo*     rai_u = aif_u;
-    struct sockaddr_in*  aid_u = (struct sockaddr_in *)rai_u->ai_addr;
-    time_t               now   = time(0);
-    c3_d                 imp_y = pac_u->rut_u.imp_y;
-    c3_c*                dns_c = pac_u->rut_u.dns_c;
+    u3_pact*          pac_u = (u3_pact*)adr_u->data;
+    struct addrinfo*  rai_u = aif_u;
+    time_t            now   = time(0);
 
     if ( sas_i == 0 ) {
-      pac_u->rut_u.lan_u.pip_w = _ames_czar_here(pac_u->sam_u, now, aid_u);
+      _ames_czar_here(pac_u->sam_u, now, (struct sockaddr_in *)rai_u->ai_addr);
     } else {
-      _ames_czar_gone(pac_u->sam_u, now, imp_y, dns_c);
+      _ames_czar_gone(pac_u->sam_u, now,
+                      pac_u->rut_u.imp_y,
+                      pac_u->rut_u.dns_c);
       _ames_pact_free(pac_u);
     }
   }
@@ -1535,17 +1561,14 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
               struct addrinfo*  aif_u)
 {
   {
-    u3_ames*             sam_u = (u3_ames*)(adr_u->data);
-    struct addrinfo*     rai_u = aif_u;
-    struct sockaddr_in*  aid_u = (struct sockaddr_in *)rai_u->ai_addr;
-    time_t               now   = time(0);
-    c3_d                 imp_y = sam_u->sun_u.dad_y;
-    c3_c*                dns_c = sam_u->dns_c;
+    u3_ames*          sam_u = (u3_ames*)(adr_u->data);
+    struct addrinfo*  rai_u = aif_u;
+    time_t            now   = time(0);
 
     gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
 
     if (sas_i == 0) {
-      _ames_czar_here(sam_u, now, aid_u);
+      _stun_czar_here(sam_u, now, (struct sockaddr_in *)rai_u->ai_addr);
       if (sam_u->sun_u.sat_y == STUN_OFF) {
         sam_u->sun_u.sat_y = STUN_TRYING;
         _stun_send_request(sam_u);
@@ -1555,7 +1578,7 @@ _stun_czar_cb(uv_getaddrinfo_t* adr_u,
       uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, 5*60*1000, 0);
     } else {
       u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
-      _ames_czar_gone(sam_u, time(0), imp_y, dns_c);
+      _ames_czar_gone(sam_u, now, sam_u->sun_u.dad_y, sam_u->dns_c);
       _stun_on_lost(sam_u);
     }
   }
