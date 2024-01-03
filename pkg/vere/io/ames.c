@@ -1134,7 +1134,7 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
     time_t            now   = time(0);
 
     if ( sas_i == 0 ) {
-      _ames_czar_here(pac_u->sam_u, now, (struct sockaddr_in *)rai_u->ai_addr);
+      _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
     } else {
       _ames_czar_gone(pac_u->sam_u, now,
                       pac_u->rut_u.imp_y,
@@ -2891,7 +2891,7 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
     u3_mcut_host(sam_u->dns_c, 0, hot);
     sam_u->dns_c[len_w] = 0;
 
-    if (len_w <= 250) {
+    if ( 250 <= len_w ) {
       //  3 char for the galaxy (e.g. zod) and two dots
       u3l_log("ames: galaxy domain too big %s len=%u", sam_u->dns_c, len_w);
       u3_pier_bail(u3_king_stub());
