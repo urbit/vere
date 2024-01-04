@@ -698,50 +698,53 @@ _conn_init_sock(u3_shan* san_u)
   //  path, chdir to the pier, open the socket at the desired
   //  path, then chdir back. hopefully there aren't any threads.
   //
-  c3_c pax_c[2048];
-  c3_i err_i;
+  c3_i err_i, fid_i;
 
-  if ( NULL == getcwd(pax_c, sizeof(pax_c)) ) {
-    u3l_log("conn: getcwd: %s", uv_strerror(errno));
-    u3_king_bail();
+  fid_i = open(".", O_EXEC);
+  if ( -1 == fid_i ) {
+    u3l_log("conn: open (non-fatal): %s", uv_strerror(errno));
   }
   if ( 0 != chdir(u3_Host.dir_c) ) {
     u3l_log("conn: chdir: %s", uv_strerror(errno));
-    u3_king_bail();
+    goto _conn_sock_err_close;
   }
   if ( 0 != unlink(URB_SOCK_PATH) && errno != ENOENT ) {
     u3l_log("conn: unlink: %s", uv_strerror(errno));
-    goto _conn_sock_err_chdir;
+    goto _conn_sock_err_fchdir;
   }
   if ( 0 != (err_i = uv_pipe_init(u3L, &san_u->pyp_u, 0)) ) {
     u3l_log("conn: uv_pipe_init: %s", uv_strerror(err_i));
-    goto _conn_sock_err_chdir;
+    goto _conn_sock_err_fchdir;
   }
   if ( 0 != (err_i = uv_pipe_bind(&san_u->pyp_u, URB_SOCK_PATH)) ) {
     u3l_log("conn: uv_pipe_bind: %s", uv_strerror(err_i));
-    goto _conn_sock_err_chdir;
+    goto _conn_sock_err_fchdir;
   }
   if ( 0 != (err_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0,
                                _conn_sock_cb)) ) {
     u3l_log("conn: uv_listen: %s", uv_strerror(err_i));
     goto _conn_sock_err_unlink;
   }
-  if ( 0 != chdir(pax_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
-    goto _conn_sock_err_close;
+  if ( -1 != fid_i ) {
+    if ( 0 != fchdir(fid_i) ) {
+      u3l_log("conn: fchdir (non-fatal): %s", uv_strerror(errno));
+    }
+    close(fid_i);
   }
   u3l_log("conn: listening on %s/%s", u3_Host.dir_c, URB_SOCK_PATH);
   return;
 
-_conn_sock_err_close:
-  uv_close((uv_handle_t*)&san_u->pyp_u, _conn_close_cb);
 _conn_sock_err_unlink:
   if ( 0 != unlink(URB_SOCK_PATH) ) {
     u3l_log("conn: unlink: %s", uv_strerror(errno));
   }
-_conn_sock_err_chdir:
-  if ( 0 != chdir(pax_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
+_conn_sock_err_fchdir:
+  if ( -1 != fid_i && 0 != fchdir(fid_i) ) {
+    u3l_log("conn: fchdir: %s", uv_strerror(errno));
+  }
+_conn_sock_err_close:
+  if ( -1 != fid_i ) {
+    close(fid_i);
   }
   u3_king_bail();
 #endif  //  _WIN32
