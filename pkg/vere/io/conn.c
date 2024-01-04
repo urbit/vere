@@ -702,14 +702,14 @@ _conn_init_sock(u3_shan* san_u)
 
   fid_i = open(".", O_EXEC);
   if ( -1 == fid_i ) {
-    u3l_log("conn: open (non-fatal): %s", uv_strerror(errno));
+    u3l_log("conn: open (non-fatal): %s", strerror(errno));
   }
   if ( 0 != chdir(u3_Host.dir_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
+    u3l_log("conn: chdir: %s", strerror(errno));
     goto _conn_sock_err_close;
   }
   if ( 0 != unlink(URB_SOCK_PATH) && errno != ENOENT ) {
-    u3l_log("conn: unlink: %s", uv_strerror(errno));
+    u3l_log("conn: unlink: %s", strerror(errno));
     goto _conn_sock_err_fchdir;
   }
   if ( 0 != (err_i = uv_pipe_init(u3L, &san_u->pyp_u, 0)) ) {
@@ -727,7 +727,7 @@ _conn_init_sock(u3_shan* san_u)
   }
   if ( -1 != fid_i ) {
     if ( 0 != fchdir(fid_i) ) {
-      u3l_log("conn: fchdir (non-fatal): %s", uv_strerror(errno));
+      u3l_log("conn: fchdir (non-fatal): %s", strerror(errno));
     }
     close(fid_i);
   }
@@ -736,11 +736,11 @@ _conn_init_sock(u3_shan* san_u)
 
 _conn_sock_err_unlink:
   if ( 0 != unlink(URB_SOCK_PATH) ) {
-    u3l_log("conn: unlink: %s", uv_strerror(errno));
+    u3l_log("conn: unlink: %s", strerror(errno));
   }
 _conn_sock_err_fchdir:
   if ( -1 != fid_i && 0 != fchdir(fid_i) ) {
-    u3l_log("conn: fchdir: %s", uv_strerror(errno));
+    u3l_log("conn: fchdir: %s", strerror(errno));
   }
 _conn_sock_err_close:
   if ( -1 != fid_i ) {
