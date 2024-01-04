@@ -619,6 +619,7 @@ _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 static void _xmas_send(u3_xmas_pact* pac_u)
 {
   u3_xmas* sam_u = pac_u->sam_u;
+  u3l_log("xmas sending");
 
   struct sockaddr_in add_u;
 
@@ -676,10 +677,12 @@ _xmas_rout_pacs(u3_xmas_pact* pac_u, u3_noun las)
 {
   c3_o suc_o = c3n;
   u3_noun lan, t = las;
-  while ( u3_nul != t ) {
+  while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
-
-    if( c3n == _xmas_rout_pact(pac_u, u3k(lan)) ) {
+    // if ( c3n == u3r_cell(t, &lan, &t) ) {
+    //   break;
+    // }
+    if ( c3n == _xmas_rout_pact(pac_u, u3k(lan)) ) {
       u3l_log("xmas: failed to set route");
     } else {
        u3l_log("xmas_send");
@@ -714,7 +717,7 @@ _xmas_ef_peek(u3_xmas* sam_u, u3_noun her, u3_noun las, u3_noun pat)
       _xmas_pact_free(pac_u);
     } else {
 
-      c3_o rut_o = _xmas_rout_pacs(pac_u, las);
+      c3_o rut_o = _xmas_rout_pacs(pac_u, u3k(las));
 
       if ( c3n == rut_o ) {
         _xmas_pact_free(pac_u);
@@ -905,15 +908,23 @@ _xmas_sift_pact(u3_xmas_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_
 /*
  * RETAIN
  */
-static c3_o
+static u3_weak
 _xmas_get_cache(u3_xmas* sam_u, u3_noun pax)
 {
-  return u3h_git(sam_u->pen_p, pax);
+  u3_weak res = u3h_git(sam_u->pen_p, pax);
+  if ( u3_none == res ) {
+    u3m_p("miss", u3k(pax));
+  } else { 
+    u3m_p("hit", u3nc(u3k(pax), u3k(res)));
+  }
+  return res;
 }
 
 static void
 _xmas_put_cache(u3_xmas* sam_u, u3_noun pax, u3_noun val)
 {
+  u3m_p("new key", u3k(pax));
+  u3m_p("new value", u3k(val));
   u3h_put(sam_u->pen_p, pax, val);
 }
 
@@ -928,6 +939,7 @@ static void
 _xmas_respond(u3_xmas_pact* req_u, u3_xmas_pact* res_u, u3_noun hit, c3_s fra_s)
 {
   res_u->typ_y = PACT_PAGE;
+
   res_u->sam_u = req_u->sam_u;
   res_u->pag_u = (u3_xmas_page_pact) {
     .pat_s = req_u->pek_u.pat_s,
@@ -944,6 +956,7 @@ _xmas_respond(u3_xmas_pact* req_u, u3_xmas_pact* res_u, u3_noun hit, c3_s fra_s)
 static void
 _xmas_serve_cache_hit(u3_xmas_pact* req_u, u3_lane lan_u, c3_s fra_s, u3_noun hit) 
 {
+  u3l_log("serving cache hit");
   c3_d her_d[2];
   memcpy(her_d, req_u->pek_u.pub_d, 2);
   c3_d our_d[2];
@@ -963,7 +976,9 @@ _xmas_serve_cache_hit(u3_xmas_pact* req_u, u3_lane lan_u, c3_s fra_s, u3_noun hi
   } else {
     //u3l_log("first: %x", u3r_string(u3dc("scot", c3__uv, u3k(u3h(u3t(hit))))));
     u3_xmas_pact* res_u = c3_calloc(sizeof(*res_u));
-    _xmas_respond(req_u, res_u, fra_s, hit);
+    res_u->rut_u.typ_y = ROUT_OTHER;
+    res_u->rut_u.lan_u = lan_u;
+    _xmas_respond(req_u, res_u, hit, fra_s);
     _xmas_send(res_u);
   }
   // no lose needed because all nouns are moved in both
@@ -993,14 +1008,14 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
     } else {
       u3_noun tag;
       u3_noun dat;
-      u3x_cell(old, &tag, &dat);
-      if ( c3y == u3r_sing(u3i_string("wait"), tag) ) {
+      u3x_cell(u3k(old), &tag, &dat);
+      if ( XMAS_WAIT == tag ) {
         u3_xmas_pact* res_u = c3_calloc(sizeof(*res_u));
         _xmas_respond(pac_u, res_u, u3k(hit), fra_s);
         
         _xmas_rout_pacs(res_u, u3k(u3t(dat)));
       }
-      _xmas_put_cache(sam_u, u3k(pax), u3nc(c3__item, u3k(hit)));
+      _xmas_put_cache(sam_u, u3k(pax), u3nc(XMAS_ITEM, u3k(hit)));
       u3z(old);
     }
     u3z(hit);
@@ -1043,29 +1058,31 @@ _xmas_add_lane_to_cache(u3_xmas* sam_u, u3_noun las, u3_noun pax, u3_lane lan_u)
 {
   u3_noun hit = u3nq(XMAS_WAIT,
                      _xmas_get_now(), 
-                     u3_xmas_encode_lane(lan_u),
-                     las);
+                     u3nc(c3n, u3_xmas_encode_lane(lan_u)),
+                     u3k(las));
   _xmas_put_cache(sam_u, pax, hit);
-  u3z(hit); u3z(las); u3z(pax);
+  u3z(las);
 }
 
 static void
 _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
 {
   u3l_log("xmas: hear peek");
-
+  u3l_log("%hu", lan_u.por_s);
   u3_xmas* sam_u = pac_u->sam_u;
   c3_s fra_s;
   u3_noun pax = _xmas_path_with_fra(pac_u->pek_u.pat_c, &fra_s);
+  u3l_log("fra: %s", fra_s);
   u3_weak hit = _xmas_get_cache(sam_u, u3k(pax));
   if ( u3_none != hit ) {
     u3_noun tag, dat;
-    u3x_cell(hit, &tag, &dat);
+    u3x_cell(u3k(hit), &tag, &dat);
+    u3m_p("dat", dat);
     if ( tag == XMAS_WAIT ) {
       _xmas_add_lane_to_cache(sam_u, u3k(u3t(dat)), u3k(pax), lan_u);
     } else if ( tag == XMAS_ITEM ) {
       u3l_log("item hit");
-      //u3m_p("dat", u3k(dat));
+      u3m_p("dat", u3k(dat));
       u3l_log("after dat");
       _xmas_serve_cache_hit(pac_u, lan_u, fra_s, u3k(dat));
     } else {
@@ -1087,6 +1104,7 @@ _xmas_hear(u3_xmas* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
+
   u3l_log("xmas_hear");
 
   u3_xmas_pact* pac_u;
@@ -1143,9 +1161,12 @@ _xmas_recv_cb(uv_udp_t*        wax_u,
     struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
     u3_lane             lan_u;
 
-    lan_u.por_s = ntohs(add_u->sin_port);
-    lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+    u3l_log("test");
 
+    lan_u.por_s = ntohs(add_u->sin_port);
+   // u3l_log("port: %s", lan_u.por_s);
+    lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+  //  u3l_log("IP: %x", lan_u.pip_w);
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
     _xmas_hear(sam_u, &lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
