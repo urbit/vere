@@ -725,6 +725,7 @@ _conn_init_sock(u3_shan* san_u)
     u3l_log("conn: uv_listen: %s", uv_strerror(err_i));
     goto _conn_sock_err_unlink;
   }
+  u3l_log("conn: listening on %s/%s", u3_Host.dir_c, URB_SOCK_PATH);
   if ( -1 == fid_i || 0 != fchdir(fid_i) ) {
     if ( -1 != fid_i ) {
       u3l_log("conn: fchdir: %s", strerror(errno));
@@ -732,7 +733,6 @@ _conn_init_sock(u3_shan* san_u)
     }
     u3l_log("conn: cd to old cwd failed\r\n      new cwd: %s", u3_Host.dir_c);
   }
-  u3l_log("conn: listening on %s/%s", u3_Host.dir_c, URB_SOCK_PATH);
   return;
 
 _conn_sock_err_unlink:
