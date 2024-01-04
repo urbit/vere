@@ -16,9 +16,8 @@
     ***  corresponding to the 32-slot nodes for everything under
     ***  the root node.
     ***
-    ***  We store an extra "freshly warm" bit for a simple
-    ***  clock-algorithm reclamation policy, not yet implemented.
-    ***  Search "clock algorithm" to figure it out.
+    ***  We store an extra "freshly warm" bit and use it for a simple
+    ***  clock-algorithm reclamation policy.
     **/
       /* u3h_slot: map slot.
       **
@@ -79,8 +78,8 @@
 #     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
 #     define  u3h_slot_is_warm(sot)  (((sot) & 0x40000000) ? c3y : c3n)
-#     define  u3h_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffff) << u3C.vits_w))
-#     define  u3h_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3C.vits_w) | 0x40000000)
+#     define  u3h_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffff) << u3a_vits))
+#     define  u3h_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3a_vits) | 0x40000000)
 #     define  u3h_noun_be_warm(sot)  ((sot) | 0x40000000)
 #     define  u3h_noun_be_cold(sot)  ((sot) & ~0x40000000)
 #     define  u3h_slot_to_noun(sot)  (0x40000000 | (sot))
@@ -179,6 +178,11 @@
       */
         u3p(u3h_root)
         u3h_take(u3p(u3h_root) har_p);
+
+      /* u3h_take_uni(): take entries from [src_p], put into [dst_p].
+      */
+        void
+        u3h_take_uni(u3p(u3h_root) dst_p, u3p(u3h_root) src_p);
 
       /* u3h_wyt(): number of entries
       */

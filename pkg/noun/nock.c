@@ -619,7 +619,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
 
         case SKIB: case SLIB: {
           c3_l tot_l = 0,
-               sip_l = u3h(u3t(op));
+               sip_l = u3h(u3t(u3t(op)));
           c3_w j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
             tot_l += siz_y[++k_w];
@@ -830,7 +830,9 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           _n_prog_asm_inx(buf_y, &i_w, mem_s, cod);
           mem_u        = &(pog_u->mem_u.sot_u[mem_s++]);
           mem_u->sip_l = sip_l;
-          mem_u->key   = u3k(u3t(u3t(op)));
+          // [op_y, cid, mem_w, nef]
+          mem_u->key   = u3k(u3t(u3t(u3t(op))));
+          mem_u->cid   = u3h(u3t(op));
           break;
         }
 
@@ -1117,16 +1119,21 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         c3_w mem_w = 0;
         c3_y op_y;
 
-        // we just throw away the hint (why is this not a static hint?)
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, TOSS);
 
-        // memoizing code always loses TOS because SAVE needs [pro key]
         mem_w += _n_comp(&mem, nef, c3y, c3n);
         ++mem_w; _n_emit(&mem, SAVE);
 
         op_y   = (c3y == los_o) ? SLIB : SKIB; // overflows to SLIS / SKIS
-        ++tot_w; _n_emit(ops, u3nt(op_y, mem_w, u3k(nef)));
+        u3z_cid cid = u3z_memo_toss;
+        {
+          u3_weak con = u3r_skip(hod);
+          if ( (u3_none != con) && (c3y == u3du(con)) ) {
+            cid = u3z_memo_keep;
+          }
+        }
+        ++tot_w; _n_emit(ops, u3nq(op_y, cid, mem_w, u3k(nef)));
         tot_w += mem_w; _n_apen(ops, mem);
         break;
       }
@@ -2610,9 +2617,9 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     skim_out:
       o     = u3k(mem_u->key);
       x     = u3nc(x, o);
-      o     = u3z_find_m(144 + c3__nock, x);
+      o     = u3z_find_m(mem_u->cid, 144 + c3__nock, x);
       if ( u3_none == o ) {
-        _n_push(mov, off, x);
+        _n_push(mov, off, u3nc(mem_u->cid, x));
         _n_push(mov, off, u3k(u3h(x)));
       }
       else {
@@ -2623,11 +2630,16 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       BURN();
 
     do_save:
-      x   = _n_pep(mov, off);
+      x   = _n_pep(mov, off);  // product
       top = _n_peek(off);
       o   = *top;
-      if ( &(u3H->rod_u) != u3R ) {
-        u3z_save_m(144 + c3__nock, o, x);
+      if ( ( u3z_memo_toss == u3h(o) )
+         ? ( &(u3H->rod_u) != u3R )
+         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
+        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+      }
+      else if ( u3z_memo_keep == u3h(o) ) {
+        fprintf(stderr, "\r\nnock: userspace can't save to persistent cache\r\n");
       }
       *top = x;
       u3z(o);
@@ -2853,6 +2865,7 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
     u3n_memo* ome_u = &(dst_u->mem_u.sot_u[i_w]);
     ome_u->sip_l    = emo_u->sip_l;
     ome_u->key      = u3a_take(emo_u->key);
+    ome_u->cid      = emo_u->cid;
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
@@ -2866,12 +2879,11 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   }
 }
 
-/*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
+/*  _cn_take_prog(): take junior u3n_prog.
 */
-static u3p(u3n_prog)
-_cn_take_prog_cb(u3p(u3n_prog) pog_p)
+static u3n_prog*
+_cn_take_prog(u3n_prog* pog_u)
 {
-  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
   u3n_prog* gop_u;
 
   if ( c3y == pog_u->byc_u.own_o ) {
@@ -2887,17 +2899,8 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
   }
 
   _cn_take_prog_dat(gop_u, pog_u);
-  // _n_prog_take_dat(gop_u, pog_u, c3n);
 
-  return u3of(u3n_prog, gop_u);
-}
-
-/* u3n_take(): copy junior bytecode state.
-*/
-u3p(u3h_root)
-u3n_take(u3p(u3h_root) har_p)
-{
-  return u3h_take_with(har_p, _cn_take_prog_cb);
+  return gop_u;
 }
 
 /* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
@@ -2918,6 +2921,7 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
     u3z(emo_u->key);
     emo_u->sip_l    = ome_u->sip_l;
     emo_u->key      = ome_u->key;
+    emo_u->cid      = ome_u->cid;
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
@@ -2931,29 +2935,36 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   }
 }
 
-/*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
+/* _cn_reap_prog_cb(): promote junior bytecode entry.
 */
 static void
-_cn_merge_prog_cb(u3_noun kev, void* wit)
+_cn_reap_prog_cb(u3_cell kev)
 {
-  u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
-  u3n_prog*     pog_u;
-  u3_weak         got;
-  u3_noun         key;
-  u3p(u3n_prog) pog_p;
-  u3x_cell(kev, &key, &pog_p);
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3_noun     key = u3a_take(kev_u->hed);
+  u3n_prog* pog_u = u3to(u3n_prog, kev_u->tel);
+  u3_weak     got = u3h_git(u3R->byc.har_p, key);
 
-  pog_u = u3to(u3n_prog, pog_p);
-  got   = u3h_git(har_p, key);
-
-  if ( u3_none != got ) {
+  //  promote
+  //
+  if ( u3_none == got ) {
+    pog_u = _cn_take_prog(pog_u);
+  }
+  //  integrate
+  //
+  else {
     u3n_prog* sep_u = u3to(u3n_prog, got);
+    _cn_take_prog_dat(pog_u, pog_u);
     _cn_merge_prog_dat(sep_u, pog_u);
-    u3a_free(pog_u);
     pog_u = sep_u;
   }
 
-  u3h_put(har_p, key, u3of(u3n_prog, pog_u));
+  //  we must always put, because we have taken.
+  //  we must always keep what we have taken,
+  //  or we can break relocation pointers.
+  //
+  u3h_put(u3R->byc.har_p, key, u3of(u3n_prog, pog_u));
+  u3z(key);
 }
 
 /* u3n_reap(): promote bytecode state.
@@ -2961,9 +2972,7 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
 void
 u3n_reap(u3p(u3h_root) har_p)
 {
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
-  // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
+  u3h_walk(har_p, _cn_reap_prog_cb);
 }
 
 /* _n_ream(): ream program call sites

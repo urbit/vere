@@ -22,7 +22,7 @@ u3wfu_mint(u3_noun cor)
     c3_m  fun_m = 141 + c3__mint;
     u3_noun vet = u3r_at(u3qfu_van_vet, van);
     u3_noun key = u3z_key_5(fun_m, vet, sut, gol, gen, bat);
-    u3_weak pro = u3z_find(key);
+    u3_weak pro = u3z_find(u3z_memo_toss, key);
 
     if ( u3_none != pro ) {
       u3z(key);
@@ -30,7 +30,7 @@ u3wfu_mint(u3_noun cor)
     }
     else {
       pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
-      return u3z_save(key, pro);
+      return u3z_save(u3z_memo_toss, key, pro);
     }
   }
 }

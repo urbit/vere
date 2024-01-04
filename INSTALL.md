@@ -50,7 +50,7 @@ This will take a few minutes.
 
 ### macOS
 
-After installing `automake` and `libtool`, you're ready to build Vere.
+After installing `automake`, `autoconf-archive`, `pkg-config`, and `libtool`, you're ready to build Vere.
 
 ## Build Commands
 

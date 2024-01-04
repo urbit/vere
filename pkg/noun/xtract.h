@@ -5,6 +5,8 @@
 
 #include "c3.h"
 #include "types.h"
+#include "allocate.h"
+#include "manage.h"
 
   /**  Constants.
   **/
@@ -40,6 +42,21 @@
   **/
     /* Word axis macros.  For 31-bit axes only.
     */
+
+      /* u3x_at (u3at): fragment.
+      */
+#       define u3x_at(a, b)   u3x_good(u3r_at(a, b))
+#       define u3at(a, b)     u3x_at(a, b)
+
+      /* u3x_bite(): xtract/default $bloq and $step from $bite.
+      */
+#       define u3x_bite(a, b, c)                      \
+          do {                                        \
+            if ( c3n == u3r_bite(a, b, c) ) {         \
+              u3m_bail(c3__exit);                     \
+            }                                         \
+          } while (0)
+
       /* u3x_dep(): number of axis bits.
       */
 #       define u3x_dep(a_w)   (c3_bits_word(a_w) - 1)
@@ -61,25 +78,70 @@
 #       define u3x_peg(a_w, b_w) \
           ( (a_w << u3x_dep(b_w)) | (b_w &~ (1 << u3x_dep(b_w))) )
 
-      /* u3x_atom(): atom or exit.
+      /* u3x_cell(): divide `a` as a cell `[b c]`.
       */
-#       define u3x_atom(a)                            \
-          ( (c3y == u3a_is_cell(a)) ? u3m_bail(c3__exit) : a )
+#       define u3x_cell(a, b, c)                      \
+          do {                                        \
+            if ( c3n == u3r_cell(a, b, c) ) {         \
+              u3m_bail(c3__exit);                     \
+            }                                         \
+          } while (0)
+
+      /* u3x_trel(): divide `a` as a trel `[b c d]`, or bail.
+      */
+#       define u3x_trel(a, b, c, d)                   \
+          do {                                        \
+            if ( c3n == u3r_trel(a, b, c, d) ) {      \
+              u3m_bail(c3__exit);                     \
+            }                                         \
+          } while (0)
+
+      /* u3x_qual(): divide `a` as a quadruple `[b c d e]`.
+      */
+#       define u3x_qual(a, b, c, d, e)                \
+          do {                                        \
+            if ( c3n == u3r_qual(a, b, c, d, e) ) {   \
+              u3m_bail(c3__exit);                     \
+            }                                         \
+          } while (0)
+
+      /* u3x_quil(): divide `a` as a quintuple `[b c d e f]`.
+      */
+#       define u3x_quil(a, b, c, d, e, f)                  \
+          do {                                             \
+            if ( c3n == u3r_quil(a, b, c, d, e, f) ) {     \
+              u3m_bail(c3__exit);                          \
+            }                                              \
+          } while (0)
+
+      /* u3x_hext(): divide `a` as a hextuple `[b c d e f g]`.
+      */
+#       define u3x_hext(a, b, c, d, e, f, g)               \
+          do {                                             \
+            if ( c3n == u3r_hext(a, b, c, d, e, f, g) ) {  \
+              u3m_bail(c3__exit);                          \
+            }                                              \
+          } while (0)
 
   /**  Functions.
   **/
     /** u3x_*: read, but bail with c3__exit on a crash.
     **/
+      /* u3x_atom(): atom or exit.
+      */
+        inline u3_atom
+        u3x_atom(u3_noun a)
+        {
+          return ( c3y == u3a_is_cell(a) ) ? u3m_bail(c3__exit) : a;
+        }
+
       /* u3x_good(): test for u3_none.
       */
-        u3_noun
-        u3x_good(u3_weak som);
-
-      /* u3x_at (u3at): fragment.
-      */
-        u3_noun
-        u3x_at(u3_noun axe, u3_noun som);
-#       define u3at(axe, som) u3x_at(axe, som)
+        inline u3_noun
+        u3x_good(u3_weak som)
+        {
+          return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
+        }
 
       /* u3x_mean():
       **
@@ -88,65 +150,5 @@
       */
         void
         u3x_mean(u3_noun a, ...);
-
-      /* u3x_bite(): xtract/default $bloq and $step from $bite.
-      */
-        void
-        u3x_bite(u3_noun bite, u3_atom* bloq, u3_atom *step);
-
-      /* u3x_cell():
-      **
-      **   Divide `a` as a cell `[b c]`.
-      */
-        void
-        u3x_cell(u3_noun  a,
-                   u3_noun* b,
-                   u3_noun* c);
-
-      /* u3x_trel():
-      **
-      **   Divide `a` as a trel `[b c d]`, or bail.
-      */
-        void
-        u3x_trel(u3_noun  a,
-                   u3_noun* b,
-                   u3_noun* c,
-                   u3_noun* d);
-
-      /* u3x_qual():
-      **
-      **   Divide `a` as a quadruple `[b c d e]`.
-      */
-        void
-        u3x_qual(u3_noun  a,
-                   u3_noun* b,
-                   u3_noun* c,
-                   u3_noun* d,
-                   u3_noun* e);
-
-      /* u3x_quil():
-      **
-      **   Divide `a` as a quintuple `[b c d e f]`.
-      */
-        void
-        u3x_quil(u3_noun  a,
-                   u3_noun* b,
-                   u3_noun* c,
-                   u3_noun* d,
-                   u3_noun* e,
-                   u3_noun* f);
-
-      /* u3x_hext():
-      **
-      **   Divide `a` as a hextuple `[b c d e f g]`.
-      */
-        void
-        u3x_hext(u3_noun  a,
-                   u3_noun* b,
-                   u3_noun* c,
-                   u3_noun* d,
-                   u3_noun* e,
-                   u3_noun* f,
-                   u3_noun* g);
 
 #endif /* ifndef U3_XTRACT_H */

@@ -20,7 +20,3 @@ jobs:
       upload: true
       next: ${{ github.ref_name }}
     secrets: inherit
-
-  docker:
-    uses: ./.github/workflows/docker-shared.yml
-    secrets: inherit

@@ -742,7 +742,9 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u->pax   = sac;
 
     req_u->sat_e = u3_rsat_peek;
-    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
+
+    u3_noun gang = u3nc(u3_nul, u3_nul);
+    u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                       u3_nul, sac, req_u->peq_u, _http_cache_scry_cb);
     return c3y;
   }

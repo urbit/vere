@@ -15,16 +15,10 @@
         c3_c*   dir_c;                        //  execution directory (pier)
         c3_c*   eph_c;                        //  ephemeral file
         c3_w    wag_w;                        //  flags (both ways)
-        c3_w    vits_w;                       //  number of virtual bits in reference
-        c3_w    walign_w;                     //  word alignment
-        c3_d    balign_d;                     //  byte alignment
-        enum {
-          MIG_NONE,
-          MIG_REWRITE_COMPRESSED,
-        } migration_state;
-
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
         c3_w    tos_w;                        //  loom toss skip-length
+        c3_w    hap_w;                        //  transient memoization cache size
+        c3_w    per_w;                        //  persistent memoization cache size
         void (*stderr_log_f)(c3_c*);          //  errors from c code
         void (*slog_f)(u3_noun);              //  function pointer for slog
         void (*sign_hold_f)(void);            //  suspend system signal regime
