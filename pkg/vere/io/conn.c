@@ -742,7 +742,7 @@ _conn_init_sock(u3_shan* san_u)
   if ( 0 != close(fid_i) ) {
     u3l_log("conn: close: %s", strerror(errno));
   }
-  u3l_log("conn: listening on %s/%s (%s)", u3_Host.dir_c, URB_SOCK_PATH, tad_c);
+  u3l_log("conn: listening on %s", tad_c);
   return;
 
 _conn_sock_err_close:
