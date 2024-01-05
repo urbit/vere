@@ -13,7 +13,7 @@ configure_make(
         "//conditions:default": ["--jobs=`nproc`"],
     }),
     copts = ["-O3"],
-    configure_options = ["--disable-selinux --without-x --disable-tests"],
+    configure_options = ["--disable-selinux --without-x --disable-tests --disable-systemd --disable-apparmor"],
     lib_source = ":all",
     configure_in_place = True,
     deps = ["@expat"],
