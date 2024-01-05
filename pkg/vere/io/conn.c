@@ -729,7 +729,7 @@ _conn_init_sock(u3_shan* san_u)
     u3l_log("conn: open: %s", strerror(errno));
     goto _conn_sock_err_unlink;
   }
-  if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && errno != ENOENT ) {
+  if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && ENOENT != errno ) {
     u3l_log("conn: unlinkat: %s", strerror(errno));
     goto _conn_sock_err_close;
   }
@@ -874,28 +874,22 @@ _conn_io_exit(u3_auto* car_u)
     u3l_log("conn: readlinkat: %s", strerror(errno));
   } else {
     tad_c[got_i] = 0;
-    if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) ) {
-      if ( ENOENT != errno ) {
-        u3l_log("unlinkat: %s", strerror(errno));
-      }
+    if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && ENOENT != errno ) {
+      u3l_log("conn: unlinkat: %s", strerror(errno));
     }
-    if ( 0 != unlink(tad_c) ) {
-      if ( ENOENT != errno ) {
-        u3l_log("conn: unlink: %s", strerror(errno));
-      }
+    if ( 0 != close(fid_i) ) {
+      u3l_log("conn: close: %s", strerror(errno));
+    }
+    if ( 0 != unlink(tad_c) && ENOENT != errno ) {
+      u3l_log("conn: unlink: %s", strerror(errno));
     } else if ( !(fas_c = strrchr(tad_c, '/')) ) {
       u3l_log("conn: strange conn.sock: %s", tad_c);
     } else {
       *fas_c = 0;
-      if ( 0 != rmdir(tad_c) ) {
-        if ( ENOENT != errno ) {
-          u3l_log("conn: rmdir: %s", strerror(errno));
-        }
+      if ( 0 != rmdir(tad_c) && ENOENT != errno ) {
+        u3l_log("conn: rmdir: %s", strerror(errno));
       }
     }
-  }
-  if ( -1 == fid_i && 0 != close(fid_i) ) {
-    u3l_log("conn: close: %s", strerror(errno));
   }
 
   {
