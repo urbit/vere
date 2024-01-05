@@ -714,11 +714,11 @@ _conn_init_sock(u3_shan* san_u)
   strncat(tad_c, "/conn.sock", sizeof(tad_c) - strlen(tad_c) - 1);
   if ( 0 != (err_i = uv_pipe_init(u3L, &san_u->pyp_u, 0)) ) {
     u3l_log("conn: uv_pipe_init: %s", uv_strerror(err_i));
-    u3_king_bail();
+    goto _conn_sock_err_rmdir;
   }
   if ( 0 != (err_i = uv_pipe_bind(&san_u->pyp_u, tad_c)) ) {
     u3l_log("conn: uv_pipe_bind: %s", uv_strerror(err_i));
-    u3_king_bail();
+    goto _conn_sock_err_rmdir;
   }
   if ( 0 != (err_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0,
                                _conn_sock_cb)) ) {
@@ -750,6 +750,11 @@ _conn_sock_err_close:
 _conn_sock_err_unlink:
   if ( 0 != unlink(tad_c) ) {
     u3l_log("conn: unlink: %s", strerror(errno));
+  }
+_conn_sock_err_rmdir:
+  *strrchr(tad_c, '/') = 0;
+  if ( 0 != rmdir(tad_c) ) {
+    u3l_log("conn: rmdir: %s", strerror(errno));
   }
   u3_king_bail();
 #endif  //  _WIN32
