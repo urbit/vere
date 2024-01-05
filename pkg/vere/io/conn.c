@@ -877,9 +877,6 @@ _conn_io_exit(u3_auto* car_u)
     if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && ENOENT != errno ) {
       u3l_log("conn: unlinkat: %s", strerror(errno));
     }
-    if ( 0 != close(fid_i) ) {
-      u3l_log("conn: close: %s", strerror(errno));
-    }
     if ( 0 != unlink(tad_c) && ENOENT != errno ) {
       u3l_log("conn: unlink: %s", strerror(errno));
     } else if ( !(fas_c = strrchr(tad_c, '/')) ) {
@@ -890,6 +887,9 @@ _conn_io_exit(u3_auto* car_u)
         u3l_log("conn: rmdir: %s", strerror(errno));
       }
     }
+  }
+  if ( -1 != fid_i && 0 != close(fid_i) ) {
+    u3l_log("conn: close: %s", strerror(errno));
   }
 
   {
