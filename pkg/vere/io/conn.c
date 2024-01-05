@@ -100,6 +100,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 
 #include "noun.h"
 #include "uv.h"
@@ -143,6 +144,7 @@
   } u3_conn;
 
 static const c3_c URB_SOCK_PATH[] = ".urb/conn.sock";
+#define SOCK_PATH_MAX sizeof(((struct sockaddr_un *)0)->sun_path)
 
 /* _conn_close_cb(): socket close callback.
 */
@@ -693,12 +695,12 @@ _conn_init_sock(u3_shan* san_u)
   u3l_log("conn: listening on %s", pip_c);
 
 #else   //  _WIN32
-  c3_c tad_c[104];
+  c3_c tad_c[SOCK_PATH_MAX];
   c3_i err_i, fid_i;
   c3_c *ven_c;
 
   if ( (ven_c = getenv("TMPDIR")) ) {
-    if ( strlen(ven_c) >= 80 ) {
+    if ( strlen(ven_c) >= SOCK_PATH_MAX - sizeof("/urbit-XXXXXX/conn.sock") ) {
       u3l_log("conn: TMPDIR too long");
       ven_c = 0;
     }
@@ -869,7 +871,7 @@ _conn_io_exit(u3_auto* car_u)
 {
   u3_conn*          con_u = (u3_conn*)car_u;
   c3_c*             fas_c;
-  c3_c              tad_c[104];
+  c3_c              tad_c[SOCK_PATH_MAX];
   c3_i              fid_i, got_i;
 
   if ( -1 == (fid_i = open(u3_Host.dir_c, O_DIRECTORY)) ) {
