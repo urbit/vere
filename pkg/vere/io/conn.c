@@ -696,24 +696,35 @@ _conn_init_sock(u3_shan* san_u)
 
 #else   //  _WIN32
   c3_c tad_c[SOCK_PATH_MAX];
+  c3_w len_w;
   c3_i err_i, fid_i;
   c3_c *ven_c;
 
   if ( (ven_c = getenv("TMPDIR")) ) {
-    if ( strlen(ven_c) >= SOCK_PATH_MAX - sizeof("/urbit-XXXXXX/conn.sock") ) {
-      u3l_log("conn: TMPDIR too long");
+    if ( !(len_w = strlen(ven_c)) ) {
       ven_c = 0;
+    } else {
+      if ( ven_c[len_w - 1] == '/' ) {
+        --len_w;
+      }
+      if ( len_w >= SOCK_PATH_MAX - sizeof("/urbit-XXXXXX/conn.sock") ) {
+        u3l_log("conn: TMPDIR too long");
+        ven_c = 0;
+      }
     }
   }
   if ( !ven_c ) {
     ven_c = "/tmp";
+    len_w = 4;
   }
-  snprintf(tad_c, sizeof(tad_c), "%s/urbit-XXXXXX", ven_c);
+  memcpy(tad_c, ven_c, len_w);
+  memcpy(tad_c + len_w, "/urbit-XXXXXX", sizeof("/urbit-XXXXXX"));
   if ( !mkdtemp(tad_c) ) {
     u3l_log("conn: mkdtemp: %s", strerror(errno));
     u3_king_bail();
   }
-  strncat(tad_c, "/conn.sock", sizeof(tad_c) - strlen(tad_c) - 1);
+  memcpy(tad_c + len_w + sizeof("/urbit-XXXXXX") - 1, "/conn.sock",
+         sizeof("/conn.sock"));
   if ( 0 != (err_i = uv_pipe_init(u3L, &san_u->pyp_u, 0)) ) {
     u3l_log("conn: uv_pipe_init: %s", uv_strerror(err_i));
     goto _conn_sock_err_rmdir;
