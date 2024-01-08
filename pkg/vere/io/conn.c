@@ -693,10 +693,10 @@ _conn_init_sock(u3_shan* san_u)
   u3l_log("conn: listening on %s", pip_c);
 
 #else   //  _WIN32
-  c3_c tad_c[U3_SOCK_MAX];
-  c3_w len_w;
-  c3_i err_i, fid_i;
-  c3_c *ven_c;
+  c3_c  tad_c[U3_SOCK_MAX];
+  c3_w  len_w;
+  c3_i  err_i, fid_i;
+  c3_c* ven_c;
 
   if ( (ven_c = getenv("TMPDIR")) ) {
     if ( !(len_w = strlen(ven_c)) ) {
