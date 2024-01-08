@@ -722,11 +722,6 @@ _conn_init_sock(u3_shan* san_u)
     u3l_log("conn: uv_pipe_bind: %s", uv_strerror(err_i));
     goto _conn_sock_err_rmdir;
   }
-  if ( 0 != (err_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0,
-                               _conn_sock_cb)) ) {
-    u3l_log("conn: uv_listen: %s", uv_strerror(err_i));
-    goto _conn_sock_err_unlink;
-  }
   if ( -1 == (fid_i = open(u3_Host.dir_c, O_DIRECTORY)) ) {
     u3l_log("conn: open: %s", strerror(errno));
     goto _conn_sock_err_unlink;
@@ -741,6 +736,11 @@ _conn_init_sock(u3_shan* san_u)
   }
   if ( 0 != close(fid_i) ) {
     u3l_log("conn: close: %s", strerror(errno));
+  }
+  if ( 0 != (err_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0,
+                               _conn_sock_cb)) ) {
+    u3l_log("conn: uv_listen: %s", uv_strerror(err_i));
+    goto _conn_sock_err_unlink;
   }
   u3l_log("conn: listening on %s", tad_c);
   return;
