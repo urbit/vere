@@ -2158,10 +2158,17 @@ static u3j_core _139_hex_git_protocol_d[] =
     {}
   };
 
-/*
- * Git core
- */
+static u3j_harm _139_hex_git_pak_expand_delta_object_a[] = 
+  {{".2", u3we_git_pak_expand_delta_object, c3y}, {}};
 
+static u3j_core _139_hex_git_pak_d[] = 
+  {{"expand-delta-object", 7, _139_hex_git_pak_expand_delta_object_a, c3y}, {}};
+
+static u3j_core _139_hex_git_d[] = 
+  {
+    {"pak", 3, 0, _139_hex_git_pak_d, no_hashes},
+    {}
+  };
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2182,7 +2189,7 @@ static u3j_core _139_hex_d[] =
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
   { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
   { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
-  { "git", 31, 0, _139_hex_git_d, no_hashes}, 
+  { "git"   , 31, 0, _139_hex_git_d, no_hashes}, 
   // XX this be under git, even though the cores are separate
   { "git-protocol", 31, 0, _139_hex_git_protocol_d, no_hashes},
   {}

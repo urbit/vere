@@ -86,8 +86,10 @@ u3_noun u3qe_stream_append_get_bytes(u3_atom n, u3_noun red, u3_noun sea)
   c3_i red_len_i = u3r_met(3, q_octs_red);
   c3_i new_red_len_i = p_octs_red_w + n_w;
 
-  c3_y *buf_y = c3_malloc(1+new_red_len_i);
-  buf_y[new_red_len_i] = 0;
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, 3, new_red_len_i);
+
+  c3_y* buf_y = sab_u.buf_y;
 
   // Copy over existing content in red 
   //
@@ -103,9 +105,7 @@ u3_noun u3qe_stream_append_get_bytes(u3_atom n, u3_noun red, u3_noun sea)
 
   u3_atom new_red = u3nt(u3k(pos_red), 
                          u3i_chub(new_red_len_i),
-                         u3i_bytes(new_red_len_i, buf_y));
-
-  c3_free(buf_y);
+                         u3i_slab_mint(&sab_u));
 
   return u3nc(new_red, u3k(sea));
 }
@@ -203,8 +203,11 @@ u3_noun u3qe_stream_append_read_bytes(u3_atom n, u3_noun red, u3_noun sea)
   c3_i red_len_i = u3r_met(3, q_octs_red);
   c3_i new_red_len_i = p_octs_red_w + n_w;
 
-  c3_y *buf_y = c3_malloc(1+new_red_len_i);
-  buf_y[new_red_len_i] = 0;
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, 3, new_red_len_i);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+  c3_y* buf_y = sab_u.buf_y;
 
   // Copy over existing content in red 
   //
@@ -220,9 +223,7 @@ u3_noun u3qe_stream_append_read_bytes(u3_atom n, u3_noun red, u3_noun sea)
 
   u3_atom new_red = u3nt(u3k(pos_red), 
                          u3i_chub(new_red_len_i),
-                         u3i_bytes(new_red_len_i, buf_y));
-
-  c3_free(buf_y);
+                         u3i_slab_mint(&sab_u));
 
   return u3nc(new_red, u3nc(u3i_word(pos_sea_w + n_w), u3k(octs_sea)));
 }

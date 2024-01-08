@@ -79,11 +79,11 @@ u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
 
   c3_w len_w = PKT_LINE_MAX;
   c3_w total_w = 0;
-  c3_y *buf_y = c3_malloc(len_w);
 
-  if (buf_y == NULL) {
-    u3m_bail(c3__fail);
-  }
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, 3, len_w);
+
+  c3_y* buf_y = sab_u.buf_y;
 
   c3_w pkt_len_w;
   c3_y pkt_band_y;
@@ -119,26 +119,8 @@ u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
      * Make space for pkt_len_w bytes in the buffer
      */
     if (pos_w + pkt_len_w > p_octs_w) {
-      c3_free(buf_y);
+      u3i_slab_free(&sab_u);
       u3m_bail(c3__fail);
-    }
-
-    if (total_w + pkt_len_w > len_w) {
-
-      // Should we malloc & copy here?
-      //
-      c3_y *new_y = c3_malloc(len_w + 2*PKT_LINE_MAX);
-
-      if ( new_y == NULL) {
-        c3_free(buf_y);
-        u3m_bail(c3__fail);
-      }
-
-      memcpy(new_y, buf_y, len_w);
-      len_w += 2*PKT_LINE_MAX;
-
-      c3_free(buf_y);
-      buf_y = new_y;
     }
 
     /*
@@ -150,10 +132,16 @@ u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
     pos_w += 1;
     pkt_len_w -= 1;
 
-    memmove(buf_y + total_w, sea_y, pkt_len_w);
 
     if (pkt_band_y == band_w) {
-      // fprintf(stderr, "u3we_git__stream_pkt_lines_on_band: accumulating %d bytes\r\n", pkt_len_w);
+      if (total_w + pkt_len_w > len_w) {
+
+        len_w += 4*PKT_LINE_MAX;
+        u3i_slab_grow(&sab_u, 3, len_w);
+        buf_y = sab_u.buf_y;
+      }
+
+      memcpy(buf_y + total_w, sea_y, pkt_len_w);
       total_w += pkt_len_w;
     }
     else {
@@ -164,9 +152,7 @@ u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
     sea_y += pkt_len_w;
     pos_w += pkt_len_w;
   }
-
-  u3_noun octs_red = u3nc(u3i_word(total_w), u3i_bytes(total_w, buf_y));
-  c3_free(buf_y);
+  u3_noun octs_red = u3nc(u3i_word(total_w), u3i_slab_mint(&sab_u));
 
   return u3nc(u3nc(u3i_word(0), octs_red), u3k(sea));
 }

@@ -22,7 +22,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   u3_atom wid;
   u3_atom dat;
 
-  u3x_mean(byts, 2, &wid, 3, &dat, 0);
+  u3x_cell(byts, &wid, &dat);
 
   size_t sad_i = u3r_met(3, dat);
 
@@ -64,7 +64,9 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   // Size of the output buffer
   //
   size_t sob_i = OUTBUF_SZ;
-  c3_y* cuf_y = c3_malloc(sob_i);
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, 3, sob_i);
+  c3_y* cuf_y = sab_u.buf_y;
 
   u3_assert(cuf_y != NULL);
 
@@ -76,7 +78,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   if( Z_OK != zas_w) { 
     fprintf(stderr, "u3qe_zlib_expand: error while initializing Zlib, zas_w = %d\r\n", zas_w);
 
-    c3_free(cuf_y);
+    u3i_slab_free(&sab_u);
     return u3_none;
   }
 
@@ -88,70 +90,17 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     }
 
     if (zea.avail_out == 0) {
-
-      c3_y* new_y = c3_realloc(cuf_y, sob_i + OUTBUF_SZ);
-      u3_assert(new_y != NULL);
-
-      cuf_y = new_y;
+      u3i_slab_grow(&sab_u, 3, sob_i + OUTBUF_SZ);
+      cuf_y = sab_u.buf_y + sob_i;
 
       zea.avail_out = OUTBUF_SZ;
-
+      zea.next_out = cuf_y;
       u3_assert(sob_i == zea.total_out);
-
-      zea.next_out = cuf_y + sob_i;
-      
       sob_i += OUTBUF_SZ;
     }
   }
 
-  if (zas_w != Z_STREAM_END) {
-
-    fprintf(stderr, "u3qe_zlib_expand: %d input bytes\r\n", sad_i);
-    fprintf(stderr, "u3qe_zlib_expand: processed %d bytes\r\n", zea.total_in);
-    fprintf(stderr, "u3qe_zlib_expand: uncompressed %d bytes\r\n", zea.total_out);
-    fprintf(stderr, "u3qe_zlib_expand: error while expanding, zas_w = %d, msg = %s\r\n", zas_w, zea.msg);
-
-    // Dump ZLIB stream 
-    //
-    time_t now;
-    time(&now);
-    char filename[256];
-    if ( zas_w != Z_STREAM_END ) {
-      sprintf(filename, "error-stream-%d.dat", now);
-    }
-    else {
-      sprintf(filename, "good-stream-%d.dat", now);
-    }
-
-    fprintf(stderr, "u3qe_zlib_expand: dumping corrupted stream to %s\r\n", filename);
-    FILE* file= fopen(filename, "w");
-    assert(file != NULL);
-
-    // byt_y + pos_d, for zea.total_in bytes
-    //
-    fwrite(byt_y+pos_d, sizeof(char), zea.total_in, file);
-
-    fclose(file);
-
-    if ( zas_w != Z_STREAM_END ) {
-      c3_free(cuf_y);
-      return u3_none;
-    }
-
-  }
-
   size_t len_i = sob_i - zea.avail_out;
-  c3_y *buf_y = c3_malloc(len_i);
-
-  if (buf_y == NULL) {
-    c3_free(cuf_y);
-    u3m_bail(c3__meme);
-  }
-
-  memcpy(buf_y, cuf_y, len_i);
-
-  u3_atom len_a = u3i_chub(len_i);
-
   pos_d += zea.total_in;
 
   zas_w = inflateEnd(&zea);
@@ -160,12 +109,14 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     fprintf(stderr, "u3qe_zlib_expand: zlib stream inconsistent upon finish, zas_w = %d\r\n", 
             zas_w);
 
-    c3_free(cuf_y);
+    u3i_slab_free(&sab_u);
     return u3_none;
   }
 
-  c3_free(cuf_y);
-  return u3nc(u3nc(len_a, u3i_bytes(len_i, buf_y)),
+  u3_atom len_a = u3i_chub(len_i);
+  u3_atom buf_a = u3i_slab_mint(&sab_u);
+
+  return u3nc(u3nc(len_a, buf_a),
               u3nc(u3i_chub(pos_d), u3k(byts)));
 }
 
