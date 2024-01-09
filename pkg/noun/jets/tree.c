@@ -2149,12 +2149,12 @@ static u3j_core _139_hex_stream_d[] =
 /*
  * Git protocol
  */
-static u3j_harm _139_hex_git_protocol_stream_pkt_lines_on_band_a[] =
-  {{".2", u3we_git_protocol_stream_pkt_lines_on_band, c3y}, {}};
+static u3j_harm _139_hex_git_io_stream_pkt_lines_on_band_a[] =
+  {{".2", u3we_git_io_stream_pkt_lines_on_band, c3y}, {}};
 
-static u3j_core _139_hex_git_protocol_d[] =
+static u3j_core _139_hex_git_io_d[] =
   {
-    { "stream-pkt-lines-on-band", 7, _139_hex_git_protocol_stream_pkt_lines_on_band_a, 0, no_hashes},
+    { "stream-pkt-lines-on-band", 7, _139_hex_git_io_stream_pkt_lines_on_band_a, 0, no_hashes},
     {}
   };
 
@@ -2190,8 +2190,7 @@ static u3j_core _139_hex_d[] =
   { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
   { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
   { "git"   , 31, 0, _139_hex_git_d, no_hashes}, 
-  // XX this be under git, even though the cores are separate
-  { "git-protocol", 31, 0, _139_hex_git_protocol_d, no_hashes},
+  { "git-io", 31, 0, _139_hex_git_io_d, no_hashes},
   {}
 };
 

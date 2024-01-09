@@ -164,7 +164,7 @@
     u3_noun u3qe_stream_append_get_bytes(u3_atom n, u3_noun red, u3_noun sea);
     u3_noun u3qe_stream_append_read_bytes(u3_atom n, u3_noun red, u3_noun sea);
 
-    u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(u3_atom band, u3_noun sea);
+    u3_noun u3qe_git_io_stream_pkt_lines_on_band(u3_atom band, u3_noun sea);
     u3_noun u3qe_git_pak_expand_delta_object(u3_noun, u3_noun);
 
     u3_noun u3qeo_raw(u3_atom, u3_atom);

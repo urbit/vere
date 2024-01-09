@@ -31,7 +31,7 @@ static c3_w _hex_dit(c3_y byt)
   return dit_w;
 }
 
-u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
+u3_noun u3qe_git_io_stream_pkt_lines_on_band(
   u3_atom band, 
   u3_noun sea){
 
@@ -156,7 +156,7 @@ u3_noun u3qe_git_protocol_stream_pkt_lines_on_band(
 
   return u3nc(u3nc(u3i_word(0), octs_red), u3k(sea));
 }
-u3_noun u3we_git_protocol_stream_pkt_lines_on_band(u3_noun cor) {
+u3_noun u3we_git_io_stream_pkt_lines_on_band(u3_noun cor) {
 
   u3_atom band;
   u3_noun sea;
@@ -164,5 +164,5 @@ u3_noun u3we_git_protocol_stream_pkt_lines_on_band(u3_noun cor) {
   u3x_mean(cor, u3x_sam_2, &band,
            u3x_sam_3, &sea, 0);
 
-  return u3qe_git_protocol_stream_pkt_lines_on_band(band, sea);
+  return u3qe_git_io_stream_pkt_lines_on_band(band, sea);
 }
