@@ -269,11 +269,12 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-into",           required_argument, NULL, 'Y' },
     { "scry-format",         required_argument, NULL, 'Z' },
     //
-    { "urth-loom",           required_argument, NULL, 5 },
-    { "no-demand",           no_argument,       NULL, 6 },
-    { "swap",                no_argument,       NULL, 7 },
-    { "swap-to",             required_argument, NULL, 8 },
-    { "toss",                required_argument, NULL, 9 },
+    { "urth-loom",           required_argument, NULL,  5 },
+    { "no-demand",           no_argument,       NULL,  6 },
+    { "swap",                no_argument,       NULL,  7 },
+    { "swap-to",             required_argument, NULL,  8 },
+    { "toss",                required_argument, NULL,  9 },
+    { "serf-bin",            required_argument, NULL, 10 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -307,6 +308,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
           return c3n;
         }
+        break;
+      }
+      case 10: {  // serf-bin
+        u3_Host.wrk_c = strdup(optarg);
         break;
       }
       //  special args
