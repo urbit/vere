@@ -1078,6 +1078,7 @@ _xmas_sift_peek_pact(u3_xmas_peek_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
       u3l_log("xmas: buffer overrun (FIXME)");
       u3m_bail(c3__foul);
   }*/
+  return siz_w;
 }
 
 static void
