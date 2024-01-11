@@ -2166,7 +2166,7 @@ static u3j_core _139_hex_git_pak_d[] =
 
 static u3j_core _139_hex_git_d[] = 
   {
-    {"pak", 3, 0, _139_hex_git_pak_d, no_hashes},
+    {"pak", 7, 0, _139_hex_git_pak_d, no_hashes},
     {}
   };
 static u3j_core _139_hex_d[] =
