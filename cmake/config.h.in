@@ -1,0 +1,9 @@
+#ifndef VERE_CONFIG_H
+#define VERE_CONFIG_H
+
+#define VERE_VERSION_MAJOR @vere_VERSION_MAJOR@
+#define VERE_VERSION_MINOR @vere_VERSION_MINOR@
+#define VERE_VERSION_PATCH @vere_VERSION_PATCH@
+#define VERE_VERSION       "@vere_VERSION@"
+
+#endif /* !VERE_CONFIG_H */

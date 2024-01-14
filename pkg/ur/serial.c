@@ -23,11 +23,14 @@ _bsw_atom(ur_root_t *r, ur_nref ref, ur_bsw_t *bsw, uint64_t len)
   switch ( ur_nref_tag(ref) ) {
     default: assert(0);
 
-    case ur_direct: return ur_bsw_atom64(bsw, len, ref);
+    case ur_direct:
+        ur_bsw_atom64(bsw, len, ref);
+        break;
 
     case ur_iatom: {
       uint8_t *byt = r->atoms.bytes[ur_nref_idx(ref)];
-      return ur_bsw_atom_bytes(bsw, len, byt);
+      ur_bsw_atom_bytes(bsw, len, byt);
+      break;
     }
   }
 }

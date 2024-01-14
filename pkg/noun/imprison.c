@@ -250,9 +250,9 @@ u3i_slab_mint(u3i_slab* sab_u)
     u3t_on(mal_o);
   }
   else {
-    u3a_atom* vat_u = sab_u->_._vat_u;
+    u3a_atom* sab_u_vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert( tav_w == (c3_w*)sab_u_vat_u );
 
     //  trim trailing zeros
     //
@@ -260,7 +260,7 @@ u3i_slab_mint(u3i_slab* sab_u)
       len_w--;
     }
 
-    pro = _ci_atom_mint(vat_u, len_w);
+    pro = _ci_atom_mint(sab_u_vat_u, len_w);
   }
 
   u3t_off(mal_o);

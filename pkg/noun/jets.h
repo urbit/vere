@@ -312,6 +312,6 @@
       /* u3j_rewrite_compact(): rewrite jet state for compaction.
       */
         void
-        u3j_rewrite_compact();
+        u3j_rewrite_compact(void);
 
 #endif /* ifndef U3_JETS_H */

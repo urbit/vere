@@ -141,6 +141,6 @@
     /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
     */
       void
-      u3v_rewrite_compact();
+      u3v_rewrite_compact(void);
 
 #endif /* ifndef U3_VORTEX_H */

@@ -343,12 +343,12 @@ _cu_all_to_loom(ur_root_t* rot_u, ur_nref ken, ur_nvec_t* cod_u)
   //
   {
     c3_d  max_d = cod_u->fill;
-    c3_d    i_d;
+    c3_d    j_d;
     ur_nref ref;
     u3_noun kev;
 
-    for ( i_d = 0; i_d < max_d; i_d++) {
-      ref = cod_u->refs[i_d];
+    for ( j_d = 0; j_d < max_d; j_d++) {
+      ref = cod_u->refs[j_d];
       kev = lom_u.cel[ur_nref_idx(ref)];
       u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
       u3z(kev);

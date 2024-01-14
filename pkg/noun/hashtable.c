@@ -801,7 +801,7 @@ u3h_walk_with(u3p(u3h_root) har_p,
 static void
 _ch_walk_plain(u3_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = wit;
+  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
   fun_f(kev);
 }
 
