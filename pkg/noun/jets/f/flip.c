@@ -27,7 +27,7 @@
     }
   }
   u3_noun
-  u3wf_flip(u3_noun cor)
+  u3wf_flip_139(u3_noun cor)
   {
     u3_noun hel;
 

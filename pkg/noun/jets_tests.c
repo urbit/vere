@@ -861,6 +861,71 @@ _test_ob(void)
 }
 
 static c3_i
+_test_mas(void)
+{
+  c3_i  ret_i = 1;
+  u3_atom res;
+
+  if ( 0x4000 != (res = u3qc_mas(0x8000)) ) {
+    fprintf(stderr, "test mas fail: (mas 0x8000) != 0x4000: 0x'%x'\r\n", res);
+    ret_i = 0;
+  }
+
+  if ( 0x20000000 != (res = u3qc_mas(0x40000000)) ) {
+    fprintf(stderr, "test mas fail: (mas 0x4000.0000) != 0x2000.0000: 0x%x\r\n", res);
+    ret_i = 0;
+  }
+
+  {
+    u3_atom sam, pro;
+
+    sam = u3qc_bex(36);
+    pro = u3qc_bex(35);
+    res = u3qc_mas(sam);
+
+    if ( c3n == u3r_sing(pro, res) ) {
+      c3_c* out_c;
+      u3s_etch_ux_c(res, &out_c);
+      fprintf(stderr, "test mas fail: (mas (bex 36)) != (bex 35): %s\r\n", out_c);
+      c3_free(out_c);
+      ret_i = 0;
+    }
+
+    u3z(res); u3z(sam); u3z(pro);
+
+    sam = u3qc_bex(64);
+    pro = u3qc_bex(63);
+    res = u3qc_mas(sam);
+
+    if ( c3n == u3r_sing(pro, res) ) {
+      c3_c* out_c;
+      u3s_etch_ux_c(res, &out_c);
+      fprintf(stderr, "test mas fail: (mas (bex 64)) != (bex 63): %s\r\n", out_c);
+      c3_free(out_c);
+      ret_i = 0;
+    }
+
+    u3z(res); u3z(sam); u3z(pro);
+
+    sam = u3qc_bex(65);
+    pro = u3qc_bex(64);
+    res = u3qc_mas(sam);
+
+    if ( c3n == u3r_sing(pro, res) ) {
+      c3_c* out_c;
+      u3s_etch_ux_c(res, &out_c);
+      fprintf(stderr, "test mas fail: (mas (bex 65)) != (bex 64): %s\r\n", out_c);
+      c3_free(out_c);
+      ret_i = 0;
+    }
+
+    u3z(res); u3z(sam); u3z(pro);
+  }
+
+  return ret_i;
+}
+
+static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
@@ -897,6 +962,11 @@ _test_jets(void)
 
   if ( !_test_ob() ) {
     fprintf(stderr, "test jets: ob: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_mas() ) {
+    fprintf(stderr, "test jets: mas: failed\r\n");
     ret_i = 0;
   }
 

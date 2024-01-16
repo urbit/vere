@@ -126,6 +126,13 @@
         u3p(u3j_fink) fin_p;          //  fine check
       } u3j_site;
 
+      /* u3j_hank: cached hook information.
+       */
+      typedef struct {
+        u3_weak  hax;                     //  axis of hooked inner core
+        u3j_site sit_u;                   //  call-site data
+      } u3j_hank;
+
   /** Globals.
   **/
     /* u3_Dash: jet dashboard.
@@ -208,12 +215,7 @@
       /* u3j_reap(): promote jet state.
       */
         void
-        u3j_reap(u3a_jets jed_u);
-
-      /* u3j_take(): copy junior jet state.
-      */
-        u3a_jets
-        u3j_take(u3a_jets jed_u);
+        u3j_reap(u3a_jets* jed_u);
 
       /* u3j_rite_mine(): mine cor with clu, using u3j_rite for caching
       */
@@ -296,6 +298,11 @@
       */
         void
         u3j_free(void);
+
+      /* u3j_free_hank(): free an entry from the hank cache.
+      */
+        void
+        u3j_free_hank(u3_noun kev);
 
       /* u3j_reclaim(): clear ad-hoc persistent caches to reclaim memory.
       */
