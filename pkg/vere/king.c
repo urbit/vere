@@ -181,12 +181,12 @@ _king_prop()
       } break;
 
       case 3: {  //  name
-        //NOTE  this implementation limits us to max 38 char prop names
-        c3_c url_c[80];
-        sprintf(url_c,
-                //TODO  should maybe respect ops_u.url_c
-                "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
-                vex_u->loc_c);
+        //NOTE  this implementation limits us to max 213 char prop names
+        c3_c url_c[256];
+        snprintf(url_c, 255,
+                 //TODO  should maybe respect ops_u.url_c
+                 "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
+                 vex_u->loc_c);
         u3l_log("boot: downloading prop %s", url_c);
         u3_atom jam = _king_get_atom(url_c);
         mor = u3nc(u3ke_cue(jam), mor);
