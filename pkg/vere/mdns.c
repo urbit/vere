@@ -8,6 +8,7 @@ typedef struct _mdns_payload {
   mdns_cb*      cb;
   DNSServiceRef sref;
   char          who[58];
+  bool          fake;
   uint16_t      port;
   uv_poll_t     poll;
   void*         context;
@@ -26,7 +27,7 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
     u3l_log("mdns: getaddrinfo error: %s", uv_strerror(status));
   } else {
     struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
-    payload->cb(payload->who, addr->sin_addr.s_addr, payload->port, payload->context);
+    payload->cb(payload->who, payload->fake, addr->sin_addr.s_addr, payload->port, payload->context);
   }
 
   payload->poll.data = payload;
@@ -60,11 +61,18 @@ static void resolve_cb(DNSServiceRef sref,
   payload->sref = sref;
   payload->port = port;
 
-  int i;
+  char *start = name;
+  if (strncmp(name, "fake-", 4) == 0) {
+    payload->fake = 1;
+    start = name + 5;
+  } else {
+    payload->fake = 0;
+  }
+
   payload->who[0] = '~';
-  for (i = 0; name[i] != '\0' && name[i] != '.' && i < 58; ++i)
+  for (int i = 0; start[i] != '\0' && start[i] != '.' && i < 58; ++i)
   {
-    payload->who[i+1] = name[i];
+    payload->who[i+1] = start[i];
   }
 
   struct addrinfo hints;
@@ -166,7 +174,7 @@ static void register_cb(DNSServiceRef sref,
   uv_close((uv_handle_t*)&payload->poll, register_close_cb);
 }
 
-void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
+void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
 {
   #if defined(U3_OS_linux)
   setenv("AVAHI_COMPAT_NOWARN", "1", 0);
@@ -177,8 +185,18 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
 
   DNSServiceRef sref;
   DNSServiceErrorType err;
-  char* our_no_sig = our + 1; // certain url parsers don't like the ~
-  err = DNSServiceRegister(&sref, 0, 0, our_no_sig, "_ames._udp",
+
+  char* domain;
+  char s[63] = {0};
+  if (fake) {
+    strcat(s, "fake-");
+    strcat(s, our + 1); // certain url parsers don't like the ~
+    domain = s;
+  } else {
+    domain = our + 1;
+  }
+
+  err = DNSServiceRegister(&sref, 0, 0, domain, "_ames._udp",
                            NULL, NULL, htons(port), 0, NULL, register_cb, (void*)register_payload);
 
   if (err != kDNSServiceErr_NoError) {
