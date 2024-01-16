@@ -1875,6 +1875,10 @@ _pier_boot_make(u3_noun who,
 
   //  prepend & append additional boot enhancements to the userspace sequence
   //
+  //    +$  prop  [%prop meta tier (list ovum)]
+  //    +$  meta  term
+  //    +$  tier  ?(%fore %hind)  ::  before or after userspace
+  //
   {
     u3_noun mos = mor;
     u3_noun pre = u3_nul;
