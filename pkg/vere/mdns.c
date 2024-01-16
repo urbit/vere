@@ -182,7 +182,15 @@ void mdns_init(uint16_t port, char* our, mdns_cb* cb, void* context)
                            NULL, NULL, htons(port), 0, NULL, register_cb, (void*)register_payload);
 
   if (err != kDNSServiceErr_NoError) {
-    u3l_log("mdns: service register error %i", err);
+    if (err == kDNSServiceErr_Unknown) {
+      #if defined(U3_OS_linux)
+      u3l_log("mdns: init failed, install avahi on this system for mdns support");
+      #else
+      u3l_log("mdns: service register error %i", err);
+      #   endif
+    } else {
+      u3l_log("mdns: service register error %i", err);
+    }
     DNSServiceRefDeallocate(sref);
     return;
   }
