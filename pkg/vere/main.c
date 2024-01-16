@@ -222,7 +222,7 @@ _main_add_prop(c3_i kin_i, c3_c* loc_c)
 {
   u3_even* nex_u = c3_calloc(sizeof(*nex_u));
   nex_u->kin_i = kin_i;
-  nex_u->loc_c = loc_c;  //  XX _main_repath where appropriate?
+  nex_u->loc_c = loc_c;
   nex_u->pre_u = u3_Host.ops_u.vex_u;
   u3_Host.ops_u.vex_u = nex_u;
   return nex_u;
