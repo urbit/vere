@@ -1328,7 +1328,6 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
         c3_y* buf_y;
         
         c3_w len_w = _xmas_respond(pac_u, &buf_y, hit);
-        
         //_xmas_rout_pacs(res_u, u3k(u3t(dat)));
       }
       // _xmas_put_cache(sam_u, u3k(pax), u3nc(XMAS_ITEM, u3k(hit)));
