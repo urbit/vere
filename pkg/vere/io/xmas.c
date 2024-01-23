@@ -426,6 +426,46 @@ static u3_noun _xmas_get_now() {
 }
 
 // refcounted
+static u3_lane
+_xmas_rout_to_lane(u3_xmas_pact* pac_u, u3_noun lan) {
+  u3_lane lan_u = {0,0};
+  u3_noun tag, val;
+  u3x_cell(lan, &tag, &val);
+
+  u3_assert( (c3y == tag) || (c3n == tag) );
+  if ( c3y == tag ) {
+    u3_assert( c3y == u3a_is_cat(val) );
+    u3_assert( val < 256 );
+    if ( c3n == u3_Host.ops_u.net ) {
+      lan_u.pip_w =  0x7f000001 ;
+      lan_u.por_s = _ames_czar_port(val);
+      u3z(lan);
+    }
+
+  } else {
+    lan_u = u3_xmas_decode_lane(u3k(val));
+    //  if in local-only mode, don't send remote packets
+    //
+    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
+      lan_u = {0,0};
+    }
+    //  if the lane is uninterpretable, silently drop the packet
+    //
+    else if ( 0 == lan_u.por_s ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("ames: inscrutable lane");
+      }
+      suc_o = c3n;
+    } else {
+      pac_u->rut_u.typ_y = ROUT_OTHER;
+      pac_u->rut_u.lan_u = lan_u;
+    }
+  }
+  u3z(lan);
+  return suc_o;
+}
+
+// refcounted
 static c3_o
 _xmas_rout_pact(u3_xmas_pact* pac_u, u3_noun lan) {
   u3_noun tag, val;
@@ -777,6 +817,28 @@ static void _xmas_send(u3_xmas_pact* pac_u)
 }
 
 static c3_o
+_xmas_rout_pacs(c3_y* buf_y, c3_w len_w, u3_noun las)
+{
+  c3_o suc_o = c3n;
+  u3_noun lan, t = las;
+  while ( t != u3_nul ) {
+    u3x_cell(t, &lan, &t);
+    // if ( c3n == u3r_cell(t, &lan, &t) ) {
+    //   break;
+    // }
+    if ( c3n == _xmas_rout_pact(pac_u, u3k(lan)) ) {
+      u3l_log("xmas: failed to set route");
+    } else {
+       u3l_log("xmas_send");
+      _xmas_send_buf(pac_u);
+      suc_o = c3y;
+    }
+  }
+  u3z(las);
+  return suc_o;
+}
+
+static c3_o
 _xmas_rout_pacs(u3_xmas_pact* pac_u, u3_noun las)
 {
   c3_o suc_o = c3n;
@@ -790,7 +852,7 @@ _xmas_rout_pacs(u3_xmas_pact* pac_u, u3_noun las)
       u3l_log("xmas: failed to set route");
     } else {
        u3l_log("xmas_send");
-      _xmas_send(pac_u);
+      _xmas_send_buf(pac_u);
       suc_o = c3y;
     }
   }
@@ -1267,6 +1329,7 @@ _xmas_respond(u3_xmas_pact* req_u, c3_y** buf_y, u3_noun hit)
   u3r_bytes(0, len, *buf_y, dat);
 
   u3z(hit);
+  return len;
 }
 
 static void
