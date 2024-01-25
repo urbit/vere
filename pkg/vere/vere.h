@@ -542,7 +542,7 @@
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
-          c3_w             ver_w;               //  pier version
+          c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
@@ -976,6 +976,7 @@
       */
         c3_o
         u3_disk_read_meta(MDB_env* mdb_u,
+                          c3_w*    ver_w,
                           c3_d*    who_d,
                           c3_o*    fak_o,
                           c3_w*    lif_w);
@@ -984,6 +985,7 @@
       */
         c3_o
         u3_disk_save_meta(MDB_env* mdb_u,
+                          c3_w     ver_w,
                           c3_d     who_d[2],
                           c3_o     fak_o,
                           c3_w     lif_w);
