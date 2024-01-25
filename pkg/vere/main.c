@@ -183,6 +183,9 @@ _main_init(void)
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
   u3_Host.ops_u.hap_w = 50000;
+  u3C.hap_w = u3_Host.ops_u.hap_w;
+  u3_Host.ops_u.per_w = 50000;
+  u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
@@ -247,6 +250,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "loom",                required_argument, NULL, c3__loom },
     { "local",               no_argument,       NULL, 'L' },
     { "lite-boot",           no_argument,       NULL, 'l' },
+    { "keep-cache-limit",    required_argument, NULL, 'M' },
     { "replay-to",           required_argument, NULL, 'n' },
     { "profile",             no_argument,       NULL, 'P' },
     { "ames-port",           required_argument, NULL, 'p' },
@@ -279,7 +283,7 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LPRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
@@ -365,6 +369,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
           return c3n;
         }
+        u3C.hap_w = u3_Host.ops_u.hap_w;
         break;
       }
       case 'c': {
@@ -410,6 +415,13 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 'k': {
         u3_Host.ops_u.key_c = _main_repath(optarg);
+        break;
+      }
+      case 'M': {
+        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.per_w) ) {
+          return c3n;
+        }
+        u3C.per_w = u3_Host.ops_u.per_w;
         break;
       }
       case 'n': {
@@ -765,6 +777,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-L, --local                   Local networking only\n",
     "    --loom                    Set loom to binary exponent (31 == 2GB)\n"
     "-l, --lite-boot               Most-minimal startup\n",
+    "-M, --keep-cache-limit LIMIT  Set persistent memo cache max size; 0 means default\n",
     "-n, --replay-to NUMBER        Replay up to event\n",
     "-P, --profile                 Profiling\n",
     "-p, --ames-port PORT          Set the ames port to bind to\n",
@@ -1076,6 +1089,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  //  XX use named arguments and getopt
+
   c3_d       eve_d = 0;
   uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
   c3_c*      dir_c = argv[2];
@@ -1087,6 +1102,7 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      eve_c = argv[7];
   c3_c*      eph_c = argv[8];
   c3_c*      tos_c = argv[9];
+  c3_c*      per_c = argv[10];
   c3_w       tos_w;
 
   _cw_init_io(lup_u);
@@ -1111,7 +1127,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     //  XX check return
     //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(hap_c, "%" SCNu32, &u3C.hap_w);
+    sscanf(per_c, "%" SCNu32, &u3C.per_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
@@ -1194,7 +1211,7 @@ static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
   u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u, c3y);
+  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -2150,16 +2167,14 @@ _cw_play_exit(c3_i int_i)
 
 /* _cw_play_impl(): replay events, but better.
 */
-static void
+static c3_d
 _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
+  c3_d pay_d;
+
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_disk* log_u;
-  if ( 0 == (log_u = u3_disk_init(u3_Host.dir_c, (u3_disk_cb){0}, c3n)) ) {
-    fprintf(stderr, "mars: failed to load event log\r\n");
-    exit(1);
-  }
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   //  Handle SIGTSTP as if it was SIGINT.
   //
@@ -2183,6 +2198,9 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     _cw_play_snap(log_u);
   }
 
+  //  XX this should check that snapshot is within epoc,
+  //  and load from the epoc / reboot if it is not
+  //
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   u3C.slog_f = _cw_play_slog;
@@ -2195,17 +2213,18 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
       .dun_d = u3A->eve_d,
     };
 
-    u3_mars_play(&mar_u, eve_d, sap_d);
-
-    //  migrate after replay, if necessary
+    pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
     u3_Host.eve_d = mar_u.dun_d;
-    if ( c3y == u3_disk_need_migrate(log_u) ) {
-      u3_disk_migrate(log_u);
-    }
+
+    //  migrate or rollover as needed
+    //
+    u3_disk_kindly(log_u, u3_Host.eve_d);
   }
 
   u3_disk_exit(log_u);
   u3m_stop();
+
+  return pay_d;
 }
 
 /* _cw_play(): replay events, but better.
@@ -2300,7 +2319,9 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
+    fprintf(stderr, "mars: nothing to do!");
+  }
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2453,12 +2474,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
-  //  get latest epoch number prior to creating a new one
-  c3_d pre_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &pre_d) ) {
-    fprintf(stderr, "chop: failed to find last epoch\r\n");
-    exit(1);
-  }
+  u3_disk_kindly(log_u, u3_Host.eve_d);
 
   //  create new epoch
   c3_d fir_d, las_d;
@@ -2473,50 +2489,20 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  sort epoch directories in descending order
-  u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
-  u3_dent* den_u = ned_u->dil_u;
-  c3_z len_z = 0;
-  while ( den_u ) {  //  count epochs
-    len_z++;
-    den_u = den_u->nex_u;
-  }
-  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
-  len_z = 0;
-  den_u = ned_u->dil_u;
-  while ( den_u ) {
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
-      len_z++;
-    }
-    den_u = den_u->nex_u;
-  }
+  c3_z len_z = u3_disk_epoc_list(log_u, 0);
 
   if ( len_z <= 2 ) {
     fprintf(stderr, "chop: nothing to do, have a great day\r\n");
     exit(0);  //  enjoy
   }
 
-  //  sort sot_d naively in descending order
-  c3_d tmp_d;
-  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    for ( c3_z j_z = i_z + 1; j_z < len_z; j_z++ ) {
-      if ( sot_d[i_z] < sot_d[j_z] ) {
-        tmp_d = sot_d[i_z];
-        sot_d[i_z] = sot_d[j_z];
-        sot_d[j_z] = tmp_d;
-      }
-    }
-  }
-
-  //  get latest epoch number prior to creating a new one
-  c3_d pos_d;
-  if ( c3n == u3_disk_epoc_last(log_u, &pos_d) ) {
-    fprintf(stderr, "chop: failed to find last epoch\r\n");
-    exit(1);
-  }
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  u3_disk_epoc_list(log_u, sot_d);
 
   //  delete all but the last two epochs
-  //  XX parameterize the number of epochs to chop
+  //
+  //    XX parameterize the number of epochs to chop
+  //
   for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
     fprintf(stderr, "chop: deleting epoch 0i%" PRIc3_d "\r\n", sot_d[i_z]);
     if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
@@ -2526,7 +2512,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   // cleanup
-  u3_dire_free(ned_u);
+  c3_free(sot_d);
   u3_disk_exit(log_u);
 
   // success
@@ -2586,6 +2572,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   // gracefully shutdown the pier if it's running
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  u3_disk_kindly(log_u, u3_Host.eve_d);
 
   // check if there's a *current* snapshot
   if ( log_u->dun_d != u3A->eve_d ) {

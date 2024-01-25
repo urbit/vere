@@ -675,8 +675,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  412
-#define VERE_LULL  323
+#define VERE_ZUSE  411
+#define VERE_LULL  322
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -814,8 +814,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 237),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 139),        //  god_u->hon_y
+                     u3nc(c3__arvo, 236),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 138),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
@@ -827,14 +827,6 @@ _pier_wyrd_card(u3_pier* pir_u)
 static void
 _pier_wyrd_init(u3_pier* pir_u)
 {
-  //  create a new epoch if current version mismatches the latest epoch's
-  if ( c3y == u3_disk_vere_diff(pir_u->log_u) ) {
-    if ( c3n == u3_disk_epoc_init(pir_u->log_u, pir_u->log_u->dun_d) ) {
-      fprintf(stderr, "disk: failed to initialize epoch\r\n");
-      exit(1);
-    }
-  }
-
   u3_noun cad = _pier_wyrd_card(pir_u);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
 
@@ -1647,10 +1639,12 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       .write_bail_f = _pier_on_disk_write_bail
     };
 
-    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u, c3y)) ) {
+    if ( !(pir_u->log_u = u3_disk_init(pax_c, cb_u)) ) {
       c3_free(pir_u);
       return 0;
     }
+
+    u3_assert( U3D_VER1 == pir_u->log_u->ver_w );
   }
 
   //  initialize compute

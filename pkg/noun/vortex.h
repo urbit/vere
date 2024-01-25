@@ -37,9 +37,6 @@
 #       define u3H  u3v_Home
 #       define u3A  (&(u3v_Home->arv_u))
 
-  /** Constants.
-  **/
-
   /**  Functions.
   **/
     /* u3v_life(): execute initial lifecycle, producing Arvo core.

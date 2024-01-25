@@ -1,6 +1,8 @@
 /// @file
 
-#include "manage.h"
+#include "pkg/noun/manage.h"
+#include "pkg/noun/v2/manage.h"
+#include "pkg/noun/v3/manage.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -473,9 +475,8 @@ u3m_mark(FILE* fil_u)
 static void
 _pave_parts(void)
 {
-  // TODO: pass `u3_Host.ops_u.hap_w` into `noun` library as an argument and use
-  // as size of memo cache.
-  u3R->cax.har_p = u3h_new_cache(50000);
+  u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
@@ -488,7 +489,7 @@ _pave_parts(void)
 static u3_road*
 _pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
 {
-  c3_dessert(((uintptr_t)rut_w & u3C.balign_d-1) == 0);
+  c3_dessert(((uintptr_t)rut_w & u3a_balign-1) == 0);
   u3_road* rod_u = (void*) mat_w;
 
   //  enable in case of corruption
@@ -529,8 +530,8 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
   //    00~~~|R|---|H|######|C|+++|M|~~~FF
   //                                ^--u3R which _pave_road returns (u3H for home road)
   //
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
-  c3_w* rut_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
   c3_w* cap_w = mat_w;
 
   if ( c3y == kid_o ) {
@@ -560,8 +561,8 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    00~~~|M|+++|C|######|H|---|R|~~~FFF
   //         ^---u3R which _pave_road returns
   //
-  c3_w* mat_w = c3_align(mem_w, u3C.balign_d, C3_ALGHI);
-  c3_w* rut_w = c3_align(mem_w + len_w, u3C.balign_d, C3_ALGLO);
+  c3_w* mat_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
+  c3_w* rut_w = c3_align(mem_w + len_w, u3a_balign, C3_ALGLO);
   c3_w* cap_w = mat_w + siz_w;
 
   u3e_ward(u3of(c3_w, cap_w) - 1, u3of(c3_w, rut_w));
@@ -574,12 +575,9 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
 static void
 _pave_home(void)
 {
-  /* a pristine home road will always have compressed references */
-  u3a_config_loom(U3V_VERLAT);
-
-  c3_w* mem_w = u3_Loom + u3C.walign_w;
+  c3_w* mem_w = u3_Loom + u3a_walign;
   c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3C.walign_w;
+  c3_w  len_w = u3C.wor_i - u3a_walign;
 
   u3H = (void *)_pave_north(mem_w, siz_w, len_w, c3n);
   u3H->ver_w = U3V_VERLAT;
@@ -597,14 +595,29 @@ static void
 _find_home(void)
 {
   c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
-  u3a_config_loom(ver_w);
+  c3_o mig_o = c3y;  //  did we migrate?
+
+  switch ( ver_w ) {
+    case U3V_VER1: u3m_v2_migrate();
+    case U3V_VER2: u3m_v3_migrate();
+    case U3V_VER3: {
+      mig_o = c3n;
+      break;
+    }
+    default: {
+      fprintf(stderr, "loom: checkpoint version mismatch: "
+                      "have %u, need %u\r\n",
+                      ver_w, U3V_VERLAT);
+      abort();
+    }
+  }
 
   //  NB: the home road is always north
   //
-  c3_w* mem_w = u3_Loom + u3C.walign_w;
+  c3_w* mem_w = u3_Loom + u3a_walign;
   c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3C.walign_w;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3C.balign_d, C3_ALGLO);
+  c3_w  len_w = u3C.wor_i - u3a_walign;
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
@@ -616,7 +629,7 @@ _find_home(void)
 
   //  check for obvious corruption
   //
-  {
+  if ( c3n == mig_o ) {
     c3_w    nor_w, sou_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
@@ -637,22 +650,14 @@ _find_home(void)
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w);
     }
+
+    //  XX move me
+    //
+    u3a_ream();
   }
 
   /* As a further guard against any sneaky loom corruption */
   u3a_loom_sane();
-
-  if (U3V_VERLAT > ver_w) {
-    u3m_migrate(U3V_VERLAT);
-    u3a_config_loom(U3V_VERLAT);
-  }
-  else if ( U3V_VERLAT < ver_w ) {
-    fprintf(stderr, "loom: checkpoint version mismatch: "
-            "have %u, need %u\r\n",
-            ver_w,
-            U3V_VERLAT);
-    abort();
-  }
 
   _rod_vaal(u3R);
 }
@@ -748,13 +753,6 @@ u3m_dump(void)
 c3_i
 u3m_bail(u3_noun how)
 {
-  if ( &(u3H->rod_u) == u3R ) {
-    //  XX set exit code
-    //
-    fprintf(stderr, "home: bailing out\r\n");
-    abort();
-  }
-
   //  printf some metadata
   //
   switch ( how ) {
@@ -777,6 +775,13 @@ u3m_bail(u3_noun how)
         fprintf(stderr, "\r\nbail: %d\r\n", u3h(how));
       }
     }
+  }
+
+  if ( &(u3H->rod_u) == u3R ) {
+    //  XX set exit code
+    //
+    fprintf(stderr, "home: bailing out\r\n");
+    abort();
   }
 
   //  intercept fatal errors
@@ -865,7 +870,7 @@ u3m_leap(c3_w pad_w)
     }
     pad_w += c3_wiseof(u3a_road);
     len_w = u3a_open(u3R) - pad_w;
-    c3_align(len_w, u3C.walign_w, C3_ALGHI);
+    c3_align(len_w, u3a_walign, C3_ALGHI);
   }
 
   /* Allocate a region on the cap.
@@ -996,26 +1001,26 @@ u3m_love(u3_noun pro)
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
+  u3p(u3h_root) per_p = u3R->cax.per_p;
 
   //  fallback to parent road (child heap on parent's stack)
   //
   u3m_fall();
 
-  //  copy product and caches off our stack
+  //  copy product off our stack
   //
-  pro   = u3a_take(pro);
-  jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
+  pro = u3a_take(pro);
+
+  //  integrate junior caches
+  //
+  u3j_reap(&jed_u);
+  u3n_reap(byc_p);
+  u3z_reap(per_p);
 
   //  pop the stack
   //
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
-
-  //  integrate junior caches
-  //
-  u3j_reap(jed_u);
-  u3n_reap(byc_p);
 
   return pro;
 }
@@ -2202,7 +2207,7 @@ u3m_boot_lite(size_t len_i)
   return 0;
 }
 
-/* u3m_reclaim: clear persistent caches to reclaim memory
+/* u3m_reclaim: clear persistent caches to reclaim memory.
 */
 void
 u3m_reclaim(void)
@@ -2218,7 +2223,7 @@ u3m_reclaim(void)
 static void
 _cm_pack_rewrite(void)
 {
-  //  XX fix u3a_rewrit* to support south roads
+  //  XX fix u3a_rewrite* to support south roads
   //
   u3_assert( &(u3H->rod_u) == u3R );
 
@@ -2255,159 +2260,4 @@ u3m_pack(void)
   u3a_pack_move(u3R);
 
   return (u3a_open(u3R) - pre_w);
-}
-
-static void
-_migrate_reclaim()
-{
-  fprintf(stderr, "loom: migration reclaim\r\n");
-  u3m_reclaim();
-}
-
-static void
-_migrate_seek(const u3a_road *rod_u)
-{
-  /*
-    very much like u3a_pack_seek with the following changes:
-    - there is no need to account for free space as |pack is performed before
-      the migration
-    - odd sized boxes will be padded by one word to achieve an even size
-    - rut will be moved from one word ahead of u3_Loom to two words ahead
-  */
-  c3_w *    box_w = u3a_into(rod_u->rut_p);
-  c3_w *    end_w = u3a_into(rod_u->hat_p);
-  u3_post   new_p = (rod_u->rut_p + 1 + c3_wiseof(u3a_box));
-  u3a_box * box_u = (void *)box_w;
-
-  fprintf(stderr, "loom: migration seek\r\n");
-
-  for (; box_w < end_w
-         ; box_w += box_u->siz_w
-         , box_u = (void*)box_w)
-    {
-      if (!box_u->use_w)
-        continue;
-      u3_assert(box_u->siz_w);
-      u3_assert(box_u->use_w);
-      box_w[box_u->siz_w - 1] = new_p;
-      new_p = c3_align(new_p + box_u->siz_w, 2, C3_ALGHI);
-    }
-}
-
-static void
-_migrate_rewrite()
-{
-  fprintf(stderr, "loom: migration rewrite\r\n");
-
-  /* So that rewritten pointers are compressed, this flag is set */
-  u3C.migration_state = MIG_REWRITE_COMPRESSED;
-  _cm_pack_rewrite();
-  u3C.migration_state = MIG_NONE;
-}
-
-static void
-_migrate_move(u3a_road *rod_u)
-{
-  fprintf(stderr, "loom: migration move\r\n");
-
-  c3_z hiz_z = u3a_heap(rod_u) * sizeof(c3_w);
-
-  /* calculate required shift distance to prevent write head overlapping read head */
-  c3_w  off_w = 1;  /* at least 1 word because u3R->rut_p migrates from 1 to 2 */
-  for (u3a_box *box_u = u3a_into(rod_u->rut_p)
-         ; (void *)box_u < u3a_into(rod_u->hat_p)
-         ; box_u = (void *)((c3_w *)box_u + box_u->siz_w))
-    off_w += box_u->siz_w & 1; /* odd-sized boxes are padded by one word */
-
-  /* shift */
-  memmove(u3a_into(u3H->rod_u.rut_p + off_w),
-          u3a_into(u3H->rod_u.rut_p),
-          hiz_z);
-  /* manually zero the former rut */
-  *(c3_w *)u3a_into(rod_u->rut_p) = 0;
-
-  /* relocate boxes to DWORD-aligned addresses stored in trailing size word */
-  c3_w *box_w = u3a_into(rod_u->rut_p + off_w);
-  c3_w *end_w = u3a_into(rod_u->hat_p + off_w);
-  u3a_box *old_u = (void *)box_w;
-  c3_w siz_w = old_u->siz_w;
-  u3p(c3_w) new_p = rod_u->rut_p + 1 + c3_wiseof(u3a_box);
-  c3_w *new_w;
-
-  for (; box_w < end_w
-         ; box_w += siz_w
-         , old_u = (void *)box_w
-         , siz_w = old_u->siz_w) {
-    old_u->use_w &= 0x7fffffff;
-
-    if (!old_u->use_w)
-      continue;
-
-    new_w = (void *)u3a_botox(u3a_into(new_p));
-    u3_assert(box_w[siz_w - 1] == new_p);
-    u3_assert(new_w <= box_w);
-
-    c3_w i_w;
-    for (i_w = 0; i_w < siz_w - 1; i_w++)
-      new_w[i_w] = box_w[i_w];
-
-    if (siz_w & 1) {
-      new_w[i_w++] = 0;         /* pad odd sized boxes */
-      new_w[i_w++] = siz_w + 1; /* restore trailing size word */
-      new_w[0] = siz_w + 1;     /* and the leading size word */
-    }
-    else {
-      new_w[i_w++] = siz_w;
-    }
-
-    new_p += i_w;
-  }
-
-  /* restore proper heap state */
-  rod_u->rut_p = 2;
-  rod_u->hat_p = new_p - c3_wiseof(u3a_box);
-
-  /* like |pack, clear the free lists and cell allocator */
-  for (c3_w i_w = 0; i_w < u3a_fbox_no; i_w++)
-    u3R->all.fre_p[i_w] = 0;
-
-  u3R->all.fre_w = 0;
-  u3R->all.cel_p = 0;
-}
-
-
-/* u3m_migrate: perform loom migration if necessary.
-   ver_w - target version
-*/
-void
-u3m_migrate(u3v_version ver_w)
-{
-  if (u3H->ver_w == ver_w)
-    return;
-
-  /* 1 -> 2 is all that is currently supported */
-  c3_dessert(u3H->ver_w == U3V_VER1 &&
-             ver_w == U3V_VER2);
-
-  /* only home road migration is supported */
-  c3_dessert((uintptr_t)u3H == (uintptr_t)u3R);
-
-  fprintf(stderr, "loom: migration running. This may take several minutes to perform.\r\n");
-  fprintf(stderr, "loom: have version: %"PRIc3_w" migrating to version: %"PRIc3_w"\r\n",
-          u3H->ver_w, ver_w);
-
-  /* packing first simplifies migration logic and minimizes required buffer space */
-  u3m_pack();
-
-  /* perform the migration in a pattern similar to |pack */
-  _migrate_reclaim();
-  _migrate_seek(&u3H->rod_u);
-  _migrate_rewrite();
-  _migrate_move(&u3H->rod_u);
-
-  /* finally update the version and commit to disk */
-  u3H->ver_w = ver_w;
-  /* extra assurance we haven't corrupted the loom before writing to disk */
-  u3a_loom_sane();
-  u3m_save();
 }

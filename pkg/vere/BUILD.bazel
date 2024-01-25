@@ -119,7 +119,13 @@ vere_library(
     hdrs = [
         "db/lmdb.h",
         "vere.h",
-    ],
+        "mdns.h",
+    ] + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [
+            "dns_sd.h",
+        ],
+        }),
     includes = ["."],
     linkstatic = True,
     visibility = ["//pkg:__subpackages__"],
@@ -133,7 +139,12 @@ vere_library(
         "@lmdb",
         "@openssl",
         "@uv",
-    ],
+    ] + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [
+            "@avahi",
+        ],
+        })
 )
 
 #
@@ -301,7 +312,7 @@ genrule(
 
     if check && sleep 10 && check; then
       echo "boot success"
-      lensa hood "+hood/exit"
+      lensa hood '+hood/exit'
       while [ -f ./pier/.vere.lock ]; do
         echo "waiting for pier to shut down"
         sleep 5

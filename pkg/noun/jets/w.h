@@ -32,6 +32,7 @@
     u3_noun u3wb_lien(u3_noun);
     u3_noun u3wb_murn(u3_noun);
     u3_noun u3wb_need(u3_noun);
+    u3_noun u3wb_mate(u3_noun);
     u3_noun u3wb_reap(u3_noun);
     u3_noun u3wb_reel(u3_noun);
     u3_noun u3wb_roll(u3_noun);
@@ -301,10 +302,10 @@
     u3_noun u3wf_face(u3_noun);
     u3_noun u3wf_fine(u3_noun);
     u3_noun u3wf_fitz(u3_noun);
-    u3_noun u3wf_flan(u3_noun);
+    u3_noun u3wf_flan_139(u3_noun);
     u3_noun u3wf_flay(u3_noun);
-    u3_noun u3wf_flip(u3_noun);
-    u3_noun u3wf_flor(u3_noun);
+    u3_noun u3wf_flip_139(u3_noun);
+    u3_noun u3wf_flor_139(u3_noun);
     u3_noun u3wf_forq(u3_noun);
     u3_noun u3wf_fork(u3_noun);
     u3_noun u3wf_hint(u3_noun);
@@ -335,3 +336,4 @@
     u3_noun u3wfu_rest(u3_noun);
 
 #endif /* ifndef U3_JETS_W_H */
+
