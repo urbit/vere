@@ -685,6 +685,34 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
   }
 }
 
+/* _disk_meta_read_vers(): read metadata version.
+*/
+c3_o
+_disk_meta_read_vers(MDB_env* mdb_u, c3_w* ver_w)
+{
+  _mdb_val val_u;
+
+  //  version
+  //
+  u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
+
+  if ( 0 > val_u.hav_i ) {
+    fprintf(stderr, "disk: read meta: no version\r\n");
+    return c3n;
+  }
+  else if ( (1 != val_u.hav_i) || (U3D_VERLAT < *val_u.buf_y) ) {
+    fprintf(stderr, "disk: read vers: unknown version %u\r\n", *val_u.buf_y);
+    return c3n;
+  }
+
+  if ( ver_w ) {
+    c3_y* byt_y = val_u.buf_y;
+    *ver_w = (c3_w)byt_y[0];
+  }
+
+  return c3y;
+}
+
 /* u3_disk_read_meta(): read metadata.
 */
 c3_o
@@ -705,13 +733,17 @@ u3_disk_read_meta(MDB_env* mdb_u,
     return c3n;
   }
   else if ( (1 != val_u.hav_i) || (U3D_VERLAT < *val_u.buf_y) ) {
-    fprintf(stderr, "disk: read meta: unknown version %u\r\n", *val_u.buf_y);
+    fprintf(stderr, "disk: read vers: have bytes %zd\r\n", val_u.hav_i);
+    fprintf(stderr, "disk: read vers: unknown version %u\r\n", *val_u.buf_y);
     return c3n;
   }
 
   if ( ver_w ) {
     c3_y* byt_y = val_u.buf_y;
-    *ver_w = (c3_w)byt_y[0];
+    *ver_w = (c3_w)byt_y[0]
+           | (c3_w)byt_y[1] << 8
+           | (c3_w)byt_y[2] << 16
+           | (c3_w)byt_y[3] << 24;
   }
 
   //  identity
@@ -1133,12 +1165,11 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
   fclose(biv_f);
 
   //  get metadata from old epoch or unmigrated event log's db
-  c3_w     ver_w;
   c3_d     who_d[2];
   c3_o     fak_o;
   c3_w     lif_w;
   if ( c3y == eps_o ) {  //  skip if no epochs yet
-    if ( c3y != u3_disk_read_meta(log_u->mdb_u, &ver_w, who_d, &fak_o, &lif_w) ) {
+    if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
       fprintf(stderr, "disk: failed to read metadata\r\n");
       goto fail3;
     }
@@ -1161,7 +1192,7 @@ u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d)
 
   // write the metadata to the database
   if ( c3y == eps_o ) {
-    if ( c3n == u3_disk_save_meta(log_u->mdb_u, log_u->ver_w, who_d, fak_o, lif_w) ) {
+    if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VER3, who_d, fak_o, lif_w) ) {
       fprintf(stderr, "disk: failed to save metadata\r\n");
       goto fail3;
     }
@@ -1302,25 +1333,15 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
 static c3_o
 _disk_need_migrate(u3_disk* log_u)
 {
-  c3_c dut_c[8193];
-  snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_u->com_u->pax_c);
-
-  //  check if data.mdb is readable in log directory
-  //
-  if ( 0 == access(dut_c, F_OK)) {
-    //  check if data.mdb has version 3
-    c3_w ver_w;
-    if ( c3y == u3_disk_read_meta(log_u->mdb_u, &ver_w, 0, 0, 0) &&
-         ver_w == U3D_VER3 )
-    {
-      fprintf(stderr, "disk: failed to read metadata\r\n");
-      return c3n;
-    }
-
-    return c3y;
+  //  check if log/data.mdb has version 3
+  c3_w ver_w;
+  if ( c3n == _disk_meta_read_vers(log_u->mdb_u, &ver_w) ) {
+    fprintf(stderr, "disk: failed to read version\r\n");
   }
-
-  return c3n;
+  else if ( U3D_VER3 == ver_w ) {
+    return c3n;
+  }
+  return c3y;
 }
 
 /* _disk_migrate: migrates disk format.
@@ -1331,8 +1352,9 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   /*  migration steps:
    *  0. detect whether we need to migrate or not
    *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration
-   *     b. if data.mdb is readable in log directory -> execute migration
+   *     b. if log/data.mdb is readable and is v3 -> execute migration
    *        if not -> skip migration (returns yes)
+   *  1. set log/data.mdb to version 2 (migration in progress)
    *  1. initialize epoch 0i0 (first call to u3_disk_epoc_init())
    *     a. creates epoch directory
    *     b. creates epoch version file
@@ -1345,8 +1367,14 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
    *  3. rollover to new epoch (second call to u3_disk_epoc_init())
    *     a. same as 1a-g but also copies current snapshot between c/d steps
    *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls)
-   *  5. delete old data.mdb and lock.mdb files (c3_unlink() calls)
+   *  5. set log/data.mdb to version 3 (migration complete)
    */
+  
+  //  set version to 2 (migration in progress)
+  if ( c3n == _disk_save_meta(log_u->mdb_u, "version", (c3_w)U3D_VER2) ) {
+    fprintf(stderr, "disk: failed to set version to 2\r\n");
+    return c3n;
+  }
 
   //  check if lock.mdb is readable in log directory
   c3_o luk_o = c3n;
@@ -1428,15 +1456,11 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     }
   }
 
-  //  delete old lock.mdb and data.mdb files
-  if ( c3_unlink(luk_c) ) {
-    fprintf(stderr, "disk: failed to unlink lock.mdb: %s\r\n",
-                    strerror(errno));
-  }
-  if ( c3_unlink(dut_c) ) {
-    fprintf(stderr, "disk: failed to unlink data.mdb: %s\r\n",
-                    strerror(errno));
-    return c3n;  //  migration succeeds only if we can unlink data.mdb
+  //  set log/data.mdb to version 3 (migration complete)
+  MDB_env* mub_u = u3_lmdb_init(log_u->com_u->pax_c, siz_i);
+  if ( c3n == _disk_save_meta(mub_u, "version", U3D_VER3) ) {
+    fprintf(stderr, "disk: failed to set version to 3\r\n");
+    return c3n;
   }
 
   //  success
@@ -1653,10 +1677,9 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
 
-      //  set its meta table version key to U3D_VER3 to ensure that if our pier
-      //  is booted with <= vere-v2, it crashes instead of potentially
-      //  corrupting its event log
-      if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VER3, pir_u->) ) {
+      //  set version to U3D_VER3 to ensure that if our pier is booted with
+      //  <= vere-v2, it crashes instead of potentially corrupting its log
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", U3D_VER3) ) {
         fprintf(stderr, "disk: failed to save metadata version\r\n");
         c3_free(log_u);
         return 0;
@@ -1673,10 +1696,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
       //  we keep the old event log around forever
       //  
-      //  U3D_VER2 in meta table means in-progress migration to vere-v3
-      //  U3D_VER3 in meta table means migration complete
-      //
-      //  this prevents the pier from booting with <= vere-v2
       if ( c3n == _disk_save_meta(log_u->mdb_u, "version", U3D_VER2) ) {
         fprintf(stderr, "disk: failed to save metadata version\r\n");
         c3_free(log_u);
