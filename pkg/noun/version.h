@@ -24,7 +24,7 @@ typedef c3_w       u3e_version;
  * synchronized between:
  * - u3_disk->ver_w
  * - log/<0iN>/epoc.txt
- * - version field in META table of data.mdb files
+ * - version key in META table of data.mdb files
  */
 
 #define U3D_VER1   1         // <= vere-v2

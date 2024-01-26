@@ -1659,13 +1659,29 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return 0;
     }
 
+    //  check if old data.mdb file exists
+    c3_c dut_c[8193];
+    c3_o exs_o = c3n;
+    snprintf(dut_c, sizeof(dut_c), "%s/data.mdb", log_c);
+    if ( 0 == access(dut_c, F_OK) ) {
+      exs_o = c3y;
+    }
     //  load the old data.mdb file
-    fprintf(stderr, "disk: loading old format\r\n");
-
     if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
       fprintf(stderr, "disk: failed to initialize lmdb\r\n");
       c3_free(log_u);
       return 0;
+    }
+    fprintf(stderr, "disk: loaded old log\r\n");
+    //  if old data.mdb did not exist before loading, set it to v3, indicating
+    //  that it is an epoch system pier whose old event log was removed, most
+    //  likely by a development release of vere-v3 or an operator
+    if ( c3n == exs_o ) {
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", U3D_VER3) ) {
+        fprintf(stderr, "disk: failed to set version to 3\r\n");
+        c3_free(log_u);
+        return 0;
+      }
     }
 
     //  if fresh boot, initialize disk U3D_VER3
