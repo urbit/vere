@@ -2484,7 +2484,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   }
 
   //  create new epoch if latest isn't empty
-  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_init(log_u, las_d)) ) {
+  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_roll(log_u, las_d)) ) {
     fprintf(stderr, "chop: failed to create new epoch\r\n");
     exit(1);
   }
@@ -2576,7 +2576,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
   u3_disk_kindly(log_u, u3_Host.eve_d);
 
   // check if there's a *current* snapshot
-  if ( log_u->dun_d != u3A->eve_d ) {
+  if ( log_u->dun_d != u3_Host.eve_d ) {
     fprintf(stderr, "roll: error: snapshot is out of date, please "
                     "start/shutdown your pier gracefully first\r\n");
     fprintf(stderr, "roll: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", \
@@ -2595,7 +2595,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
     fprintf(stderr, "roll: latest epoch already empty\r\n");
     exit(0);
   }
-  else if ( c3n == u3_disk_epoc_init(log_u, las_d) ) {
+  else if ( c3n == u3_disk_epoc_roll(log_u, las_d) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }
