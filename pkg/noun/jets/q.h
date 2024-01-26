@@ -101,6 +101,7 @@
 
     u3_noun u3qdi_apt(u3_noun);
     u3_noun u3qdi_bif(u3_noun, u3_noun);
+    u3_noun u3qdi_del(u3_noun, u3_noun);
     u3_noun u3qdi_dif(u3_noun, u3_noun);
     u3_noun u3qdi_gas(u3_noun, u3_noun);
     u3_noun u3qdi_has(u3_noun, u3_noun);
