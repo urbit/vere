@@ -11,13 +11,13 @@ typedef c3_w       u3v_version;
 #define U3V_VER3   3
 #define U3V_VERLAT U3V_VER3
 
-/* EVENTS
+/* PATCHES
  */
 
 typedef c3_w       u3e_version;
 
-#define U3E_VER1   1
-#define U3E_VERLAT U3E_VER1
+#define U3P_VER1   1
+#define U3P_VERLAT U3P_VER1
 
 /* DISK FORMAT
  *
@@ -31,5 +31,12 @@ typedef c3_w       u3e_version;
 #define U3D_VER2   2         // migrating to >= vere-v3
 #define U3D_VER3   3         // >= vere-v3
 #define U3D_VERLAT U3D_VER3
+
+/* EPOCH SYSTEM
+ * XX use this instead of U3D_VER for epoc.txt files
+*/
+
+#define U3E_VER1   1
+#define U3E_VERLAT U3E_VER3
 
 #endif /* ifndef U3_VERSION_H */
