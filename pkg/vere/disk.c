@@ -1555,6 +1555,11 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
         fprintf(stderr, "disk: failed to migrate event log\r\n");
         exit(1);
       }
+
+      if ( c3n == u3_disk_epoc_roll(log_u, log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
       break;
     }
 
@@ -1615,7 +1620,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_late;
     }
 
-    log_u->ver_w = ver_w;
+    log_u->ver_w = ver_w;  //  XX conflicts with data.mdb version
   }
 
   //  set path to latest epoch
@@ -1751,23 +1756,29 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       }
     }
 
-    if ( c3n == exs_o ) {  //  XX handle later
-      fprintf(stderr, "disk: vere-v3.0 pre-release pier needs fixing\r\n");
-      return 0;
+    if ( c3n == exs_o ) {
+      c3_d lat_d;
+      if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
+        fprintf(stderr, "disk: no event log anywhere\r\n");
+        return 0;
+      }
+      //  presume pre-release migrated pier
+      log_u->ver_w = U3D_VER3;
     }
+    else {
+      //  load the old data.mdb file
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+        fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+        c3_free(log_u);
+        return 0;
+      }
 
-    //  load the old data.mdb file
-    if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
-      fprintf(stderr, "disk: failed to initialize lmdb\r\n");
-      c3_free(log_u);
-      return 0;
-    }
-
-    //  read version from old log
-    if ( c3n == u3_disk_read_meta(log_u->mdb_u, &log_u->ver_w, 0, 0, 0) ) {
-      fprintf(stderr, "disk: failed to read metadata\r\n");
-      c3_free(log_u);
-      return 0;
+      //  read version from old log
+      if ( c3n == u3_disk_read_meta(log_u->mdb_u, &log_u->ver_w, 0, 0, 0) ) {
+        fprintf(stderr, "disk: failed to read metadata\r\n");
+        c3_free(log_u);
+        return 0;
+      }
     }
 
     switch ( log_u->ver_w ) {
@@ -1795,6 +1806,12 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       }
     }
 
+    //  close lmdb
+    if ( c3y == exs_o ) {
+      u3_lmdb_exit(log_u->mdb_u);
+      log_u->mdb_u = 0;
+    }
+
     //  get latest epoch number
     c3_d lat_d;
     if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
@@ -1820,6 +1837,36 @@ try_init:
 #if defined(DISK_TRACE_JAM) || defined(DISK_TRACE_CUE)
           u3t_trace_open(pax_c);
 #endif
+
+          if ( c3n == exs_o ) {
+            fprintf(stderr, "disk: repairing pre-release pier metadata\r\n");
+
+            //  read metadata from epoch's log
+            c3_d who_d[2];
+            c3_o fak_o;
+            c3_w lif_w;
+            if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) )
+            {
+              fprintf(stderr, "disk: failed to read metadata\r\n");
+              c3_free(log_u);
+              return 0;
+            }
+
+            MDB_env* dbm_u;
+            if ( 0 == (dbm_u = u3_lmdb_init(log_c, siz_i)) ) {
+              fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+              c3_free(log_u);
+              return 0;
+            }
+
+            if ( c3n == u3_disk_save_meta(dbm_u, U3D_VER3, who_d, fak_o, lif_w) ) {
+              fprintf(stderr, "disk: failed to read metadata\r\n");
+              c3_free(log_u);
+              return 0;
+            }
+
+            u3_lmdb_exit(dbm_u);
+          }
 
           return log_u;
         } break;

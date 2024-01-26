@@ -2222,6 +2222,7 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   }
 
   u3_disk_exit(log_u);
+  //  NB: loom migrations without replay are not saved
   u3m_stop();
 
   return pay_d;
