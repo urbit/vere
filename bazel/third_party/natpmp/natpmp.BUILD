@@ -1,21 +1,8 @@
-load("@rules_foreign_cc//foreign_cc:defs.bzl", "make")
-
-filegroup(
-    name = "all",
-    srcs = glob(["**"]),
-)
-
-make(
+cc_library(
     name = "natpmp",
-    out_static_libs = ["libnatpmp.a"],
-    out_lib_dir = "/usr/lib",
-    out_include_dir	 = "/usr/include",
-    args = select({
-        "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
-        "//conditions:default": ["--jobs=`nproc`"],
-    }),
+    srcs = ["natpmp.c", "getgateway.c"],
+    hdrs = ["natpmp.h", "getgateway.h", "natpmp_declspec.h"],
     copts = ["-O3"],
-    lib_source = ":all",
+    linkstatic = True,
     visibility = ["//visibility:public"],
-    postfix_script = "cp $BUILD_TMPDIR/natpmp_declspec.h $INSTALLDIR/usr/include/natpmp_declspec.h",
 )
