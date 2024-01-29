@@ -1135,7 +1135,7 @@ fail1:
   return c3n;
 }
 
-/* u3_disk_epoc_init: create new epoch.
+/* u3_disk_epoc_roll: epoch rollover.
 */
 c3_o
 u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
