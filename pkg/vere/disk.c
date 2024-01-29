@@ -1897,13 +1897,6 @@ try_init:
                           "falling back to previous at 0i%" PRIc3_d "\r\n",
                           lat_d, sot_d[1]);
 
-          fprintf(stderr, "kindly: len_z: %ld\r\n", len_z);
-          for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-            fprintf(stderr, "kindly: sot_d[%ld]: %" PRIc3_d "\r\n",
-                            i_z, sot_d[i_z]);
-          }
-          return 0;
-
           u3_disk_epoc_kill(log_u, lat_d);
 
           lat_d = sot_d[1];
