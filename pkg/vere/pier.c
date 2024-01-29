@@ -814,7 +814,7 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 237),        //  XX from both king and serf?
+                     u3nc(c3__arvo, 236),        //  XX from both king and serf?
                      u3nc(c3__hoon, 138),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);

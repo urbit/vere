@@ -17,19 +17,17 @@ _b_bif_putroot(u3_noun a,
   else {
     u3_noun n_a, l_a, r_a;
     u3_noun p_n_a, q_n_a;
-    u3_noun p_b, q_b;
     u3x_trel(a, &n_a, &l_a, &r_a);
-    u3x_cell(b, &p_b, &q_b);
     u3x_cell(n_a, &p_n_a, &q_n_a);
 
-    if ( c3y == u3r_sing(p_b, p_n_a) ) {
+    if ( c3y == u3r_sing(b, p_n_a) ) {
       return u3nt(u3k(b), u3k(l_a), u3k(r_a));
     }
     else {
       u3_noun c, n_c, l_c, r_c;
       u3_noun d;
 
-      if ( c3y == u3qc_gor(p_b, p_n_a) ) {
+      if ( c3y == u3qc_gor(b, p_n_a) ) {
         c = _b_bif_putroot(l_a, b);
         u3r_trel(c, &n_c, &l_c, &r_c);
         d = u3nt(u3k(n_c),

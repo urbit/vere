@@ -22,7 +22,7 @@
 #include "platform/rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
-#include "urcrypt/urcrypt.h"
+#include "urcrypt.h"
 #include "vortex.h"
 #include "xtract.h"
 
@@ -650,6 +650,10 @@ _find_home(void)
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
                       nor_w, u3P.nor_u.pgs_w);
     }
+
+    //  XX move me
+    //
+    u3a_ream();
   }
 
   /* As a further guard against any sneaky loom corruption */
@@ -1003,23 +1007,20 @@ u3m_love(u3_noun pro)
   //
   u3m_fall();
 
-  //  copy product and caches off our stack
+  //  copy product off our stack
   //
-  pro   = u3a_take(pro);
-  jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
-  per_p = u3h_take(per_p);
+  pro = u3a_take(pro);
+
+  //  integrate junior caches
+  //
+  u3j_reap(&jed_u);
+  u3n_reap(byc_p);
+  u3z_reap(per_p);
 
   //  pop the stack
   //
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
-
-  //  integrate junior caches
-  //
-  u3j_reap(jed_u);
-  u3n_reap(byc_p);
-  u3z_reap(u3z_memo_keep, per_p);
 
   return pro;
 }
