@@ -1435,12 +1435,12 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   snprintf(dat_c, sizeof(dat_c), "%s/data.mdb", epo_c);
   snprintf(lok_c, sizeof(lok_c), "%s/lock.mdb", epo_c);
 
-  if ( c3_link(dut_c, dat_c) ) {
+  if ( c3_link(dut_c, dat_c) && (EEXIST != errno) ) {
     fprintf(stderr, "disk: failed to create data.mdb hard link\r\n");
     return c3n;
   }
   if ( c3y == luk_o ) {  //  only link lock.mdb if it exists
-    if ( c3_link(luk_c, lok_c) ) {
+    if ( c3_link(luk_c, lok_c) && (EEXIST != errno) ) {
       fprintf(stderr, "disk: failed to create lock.mdb hard link\r\n");
       return c3n;
     }
