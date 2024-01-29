@@ -5,6 +5,8 @@
 
 #include "noun.h"
 #include "ur.h"
+#include "cong.h"
+#include "cubic.h"
 #include <allocate.h>
 #include <defs.h>
 #include <error.h>
@@ -63,6 +65,7 @@ typedef struct _u3_xmas {
   u3_cue_xeno*       sil_u;             //  cue handle
   u3p(u3h_root)      her_p;             //
   u3p(u3h_root)      pac_p;             // pending
+  u3_gage*           gag_u;
   c3_w               imp_w[256];
   time_t             imp_t[256];        //  imperial IP timestamps
   c3_o               imp_o[256];        //  imperial print status
