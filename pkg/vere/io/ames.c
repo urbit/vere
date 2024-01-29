@@ -7,6 +7,7 @@
 #include "ur.h"
 
 #include "zlib.h"
+#include "natpmp.h"
 
 #include <ent.h>
 
@@ -71,6 +72,11 @@ typedef enum u3_stun_state {
       u3_lane        sef_u;             //  our lane, if we know it
       c3_o           wok_o;             //  STUN worked, set on first success
     } sun_u;                            //
+    struct {
+      natpmp_t       req_u;             //  libnatpmp struct for mapping request
+      uv_poll_t      pol_u;             //  handle waits on libnatpmp socket
+      uv_timer_t     tim_u;             //  every two hours if mapping succeeds
+    } nat_u;                            //  libnatpmp stuff for port forwarding
     c3_o             nal_o;             //  lane cache backcompat flag
     struct {                            //    config:
       c3_o           net_o;             //  can send
@@ -2752,6 +2758,48 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   }
 }
 
+static void natpmp_init(uv_timer_t* handle);
+
+static void natpmp_cb(uv_poll_t* handle, int status, int events) {
+  u3_ames* sam_u = handle->data;
+
+  natpmpresp_t response;
+  c3_w r = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
+  if ( NATPMP_TRYAGAIN == r ) {
+    return;
+  }
+  if ( 0 != r ) {
+    u3l_log("ames: natpmp error %i", r);
+    uv_poll_stop(handle);
+    closenatpmp(&sam_u->nat_u.req_u);
+    return;
+  }
+  uv_poll_stop(handle);
+
+  u3l_log("ames: mapped public port %hu to localport %hu lifetime %u",
+         response.pnu.newportmapping.mappedpublicport,
+         response.pnu.newportmapping.privateport,
+         response.pnu.newportmapping.lifetime);
+
+  closenatpmp(&sam_u->nat_u.req_u);
+  sam_u->nat_u.tim_u.data = sam_u;
+  uv_timer_init(u3L, &sam_u->nat_u.tim_u);
+  uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 7200000, 0);
+}
+
+static void natpmp_init(uv_timer_t* handle) {
+
+  u3_ames* sam_u = handle->data;
+  c3_s por_s = sam_u->pir_u->por_s;
+
+  initnatpmp(&sam_u->nat_u.req_u, 0, 0);
+  sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
+
+  sam_u->nat_u.pol_u.data = sam_u;
+  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
+  uv_poll_start(&sam_u->nat_u.pol_u, UV_READABLE, natpmp_cb);
+}
+
 static void
 _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 {
@@ -2872,6 +2920,13 @@ _ames_io_start(u3_ames* sam_u)
     u3z(our);
 
     mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
+
+    if ( c3n == sam_u->pir_u->fak_o ) {
+      sam_u->nat_u.tim_u.data = sam_u;
+      uv_timer_init(u3L, &sam_u->nat_u.tim_u);
+      uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
+    }
+
     c3_free(our_s);
   }
 
