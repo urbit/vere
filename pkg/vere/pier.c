@@ -1644,7 +1644,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       return 0;
     }
 
-    u3_assert( U3D_VER3 == pir_u->log_u->ver_w );
+    u3_assert( U3D_VERLAT == pir_u->log_u->ver_w );
   }
 
   //  initialize compute

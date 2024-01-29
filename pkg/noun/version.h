@@ -23,7 +23,6 @@ typedef c3_w       u3e_version;
  *
  * synchronized between:
  * - u3_disk->ver_w
- * - log/<0iN>/epoc.txt
  * - version key in META table of data.mdb files
  */
 
@@ -33,10 +32,9 @@ typedef c3_w       u3e_version;
 #define U3D_VERLAT U3D_VER3
 
 /* EPOCH SYSTEM
- * XX use this instead of U3D_VER for epoc.txt files
 */
 
 #define U3E_VER1   1
-#define U3E_VERLAT U3E_VER3
+#define U3E_VERLAT U3E_VER1
 
 #endif /* ifndef U3_VERSION_H */

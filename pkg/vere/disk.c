@@ -1102,7 +1102,7 @@ u3_disk_epoc_zero(u3_disk* log_u)
   c3_c epv_c[8193];
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3D_VER3);
+  fprintf(epv_f, "%d", U3E_VERLAT);
   fclose(epv_f);
 
   //  create binary version file, overwriting any existing file
@@ -1120,7 +1120,7 @@ u3_disk_epoc_zero(u3_disk* log_u)
 
   //  load new epoch directory and set it in log_u
   log_u->epo_d = 0;
-  log_u->ver_w = U3D_VER3;
+  log_u->ver_w = U3D_VERLAT;
 
   //  success
   return c3y;
@@ -1184,7 +1184,7 @@ u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   c3_c epv_c[8193];
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3D_VER3);
+  fprintf(epv_f, "%d", U3E_VERLAT);
   fclose(epv_f);
 
   //  create binary version file, overwriting any existing file
@@ -1214,7 +1214,7 @@ u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   // write the metadata to the database
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VER3, who_d, fak_o, lif_w) ) {
+  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     goto fail3;
   }
@@ -1229,7 +1229,7 @@ u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
-  log_u->ver_w = U3D_VER3;
+  log_u->ver_w = U3D_VERLAT;
 
   //  success
   return c3y;
@@ -1314,7 +1314,9 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
   c3_z     len_z = 0;
 
   while ( den_u ) {  //  count epochs
-    len_z++;
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
+      len_z++;
+    }
     den_u = den_u->nex_u;
   }
 
@@ -1411,7 +1413,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     luk_o = c3y;
   }
 
-  fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VER3);
+  fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VERLAT);
 
   // ensure there's a current snapshot
   if ( eve_d != las_d ) {
@@ -1481,7 +1483,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
   //  u3_disk_save_meta with v3
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VER3, who_d, fak_o, lif_w) ) {
+  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
@@ -1518,7 +1520,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  XX: maybe rollover
 
   //  success
-  fprintf(stderr, "disk: migrated disk to v%d format\r\n", U3D_VER3);
+  fprintf(stderr, "disk: migrated disk to v%d format\r\n", U3D_VERLAT);
 
   return c3y;
 }
@@ -1614,13 +1616,11 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_fail;
     }
 
-    if ( U3D_VER3 != ver_w ) {
+    if ( U3E_VERLAT != ver_w ) {
       fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d'\r\n",
-                      ver_c, U3D_VER3);
+                      ver_c, U3E_VERLAT);
       return _epoc_late;
     }
-
-    log_u->ver_w = ver_w;  //  XX conflicts with data.mdb version
   }
 
   //  set path to latest epoch
@@ -1741,7 +1741,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       exs_o = c3y;
     }
 
-    //  if fresh boot, initialize disk U3D_VER3
+    //  if fresh boot, initialize disk U3D_VERLAT
     //
     if ( c3y == u3_Host.ops_u.nuu ) {
       //  ensure old data.mdb file does not exist
@@ -1763,7 +1763,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
       //  presume pre-release migrated pier
-      log_u->ver_w = U3D_VER3;
+      log_u->ver_w = U3D_VERLAT;
     }
     else {
       //  load the old data.mdb file
@@ -1797,7 +1797,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return log_u;
       }
 
-      case U3D_VER3: break;
+      case U3D_VERLAT: break;
 
       default: {
         fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
@@ -1859,7 +1859,7 @@ try_init:
               return 0;
             }
 
-            if ( c3n == u3_disk_save_meta(dbm_u, U3D_VER3, who_d, fak_o, lif_w) ) {
+            if ( c3n == u3_disk_save_meta(dbm_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
               fprintf(stderr, "disk: failed to read metadata\r\n");
               c3_free(log_u);
               return 0;
