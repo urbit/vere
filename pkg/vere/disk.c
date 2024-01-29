@@ -1363,17 +1363,17 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
    *     b. if log/data.mdb is readable and is not v3 -> execute migration
    *        if not -> skip migration (returns yes)
    *  1. set log/data.mdb to version 2 (migration in progress)
-   *  2. initialize epoch 0i0 (first call to u3_disk_epoc_init())
+   *  2. initialize epoch 0i0
    *     a. creates epoch directory
    *     b. creates epoch version file
    *     c. creates binary version file
-   *     d. initializes database
-   *     e. reads metadata from old database
-   *     f. writes metadata to new database
-   *     g. loads new epoch directory and sets it in log_u
+   *     d. creates hard links to data.mdb and lock.mdb in 0i0/
+   *     e. deletes backup snapshot
    *  3. create hard links to data.mdb and lock.mdb in 0i0/
-   *  4. delete backup snapshot (c3_unlink() and c3_rmdir() calls)
-   *  5. set log/data.mdb to version 3 (migration complete)
+   *  4. use scratch space to initialize new log/data.db in log/tmp
+   *  5. save old metadata to new db in scratch space
+   *  6. clobber old log/data.mdb with new log/tmp/data.mdb
+   *  7. open epoch lmdb and set it in log_u
    */
   
   //  NB: requires that log_u->mdb_u is initialized to log/data.mdb
@@ -1468,7 +1468,9 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     }
   }
 
-  //  make log/tmp
+  //  use scratch space to initialize new log/data.db
+  //  and clobber old log/data.db
+  //
   c3_c tmp_c[8193];
   snprintf(tmp_c, sizeof(tmp_c), "%s/tmp", log_u->com_u->pax_c);
   if ( c3_mkdir(tmp_c, 0700) && (errno != EEXIST) ) {
@@ -1476,13 +1478,13 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
                     strerror(errno));
     return c3n;
   }
-  //  u3_lmdb_init
+
   if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     tmp_c);
     return c3n;
   }
-  //  u3_disk_save_meta with v3
+
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
