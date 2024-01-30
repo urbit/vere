@@ -248,7 +248,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   if ( !mar_u->dun_d ) {
     c3_w lif_w;
 
-    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, &lif_w) ) {
+    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, 0, &lif_w) ) {
       fprintf(stderr, "mars: disk read meta fail\r\n");
       //  XX exit code, cb
       //
