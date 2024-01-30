@@ -1760,7 +1760,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return 0;
       }
 
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+      if ( _epoc_good != _disk_epoc_load(log_u, 0) ) {
         fprintf(stderr, "disk: failed to initialize lmdb\r\n");
         c3_free(log_u);
         return 0;
