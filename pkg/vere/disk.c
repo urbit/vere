@@ -1749,19 +1749,31 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       //  ensure old data.mdb file does not exist
       if ( c3y == exs_o ) {
         fprintf(stderr, "disk: old data.mdb file exists\r\n");
+        c3_free(log_u);
         return 0;
       }
+
       //  initialize first epoch "0i0"
       if ( c3n == u3_disk_epoc_zero(log_u) ) {
         fprintf(stderr, "disk: failed to initialize first epoch\r\n");
-        return log_u;  //  XX
+        c3_free(log_u);
+        return 0;
       }
+
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+        fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+        c3_free(log_u);
+        return 0;
+      }
+
+      return log_u;
     }
 
     if ( c3n == exs_o ) {
       c3_d lat_d;
       if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
         fprintf(stderr, "disk: no event log anywhere\r\n");
+        c3_free(log_u);
         return 0;
       }
       //  presume pre-release migrated pier
