@@ -53,19 +53,18 @@ void u3_cbic_reset(u3_gage* gag_u)
 }
 
 
-void u3_cbic_tcp(u3_cbic* cub_u)
+void u3_cbic_tcp(u3_gage* gag_u)
 {
-  u3_cbic sat_u = cub_u->sat_u;
-  u3_cong con_u = cub_u->con_u;
+  u3_cbic* cub_u = gag_u->alg_u;
 
-  sat_u.tcp_w = sat_u.tcp_w + ((c3_w)((3*bet_f)/(2-bet_f)) * (sat_u.cac_w/con_u.wnd_w));
+  /*sat_u.tcp_w = sat_u.tcp_w + ((c3_w)((3*bet_f)/(2-bet_f)) * (sat_u.cac_w/con_u.wnd_w));
   sat_u.cac_w = 0;
   if ( sat_u.tcp_w > con_u.wnd_w ) {
     sat_u.max_w = con_u.wnd_w/(sat_u.tcp_w-con_u.wnd_w);
     if ( sat_u.cnt_w > sat_u.max_w ) {
       sat_u.cnt_w = sat_u.max_w;
     }
-  } 
+  } */
 }
 
 void u3_cbic_update(u3_gage* gag_u)
@@ -95,7 +94,7 @@ void u3_cbic_update(u3_gage* gag_u)
     cub_u->cnt_w = gag_u->wnd_w * 100;
   }
   if ( c3y == cub_u->tcp_o ) {
-    u3_cbic_tcp(cub_u);
+    u3_cbic_tcp(gag_u);
   }
 }
 

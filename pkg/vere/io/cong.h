@@ -17,6 +17,8 @@ typedef struct _u3_gage {
   c3_w     con_w;  // counter
   void*    alg_u;  // algorithm backpointer
   c3_c*    alg_c;  // algorithm name
+  //
+  uv_timer_t tim_u;
 } u3_gage;
 
 typedef void (*u3_gage_func)(u3_gage*);
