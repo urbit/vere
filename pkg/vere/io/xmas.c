@@ -281,7 +281,7 @@ _log_buf(c3_y* buf_y, c3_w len_w)
     snprintf(res_c + (2*idx_w), siz_w - (2*idx_w), "%02x", buf_y[idx_w]); 
   }
   u3l_log("buffer: %s", res_c);
-  free(res_c);
+  c3_free(res_c);
 }
 
 static void
@@ -409,7 +409,7 @@ _xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
   u3_pend_req* ret_u = NULL;
   u3_noun key = _xmas_request_key(nam_u);
 
-  u3_weak res = u3h_get(sam_u->req_p, key);
+  u3_weak res = u3h_git(sam_u->req_p, key);
   if ( res != u3_none ) {
     ret_u = u3to(u3_pend_req, res);
   }
@@ -423,12 +423,16 @@ _xmas_put_request(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_pend_req* req_u) {
   u3_pend_req* old_u = _xmas_get_request(sam_u, nam_u);
   u3_pend_req* new_u = req_u;
   if ( old_u == NULL ) {
-    new_u = c3_calloc(sizeof(u3_pend_req));
-    memcpy(new_u, req_u, sizeof(*req_u));
+    new_u = u3a_calloc(sizeof(u3_pend_req),1);
+    u3l_log("new request alloc %p", new_u);
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
   } else {
-    memcpy(old_u, new_u, sizeof(*old_u));
     new_u = old_u;
+    u3l_log("overwriting %p", new_u);
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
   }
+
+
   u3_noun val = u3of(u3_pend_req, new_u);
   u3h_put(sam_u->req_p, key, val);
   u3z(key);
@@ -447,15 +451,18 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, c3_w tot_w, u3_noun fra
       u3k(sam_u->mop_u.put), 
       u3nt(req_u->dat, u3i_word(nam_u->fra_w), fra)
     );
-    req_u->wat = u3t(u3n_slam_on(
+    u3_noun wit = u3n_slam_on(
       u3k(sam_u->mop_u.del),
       u3nc(req_u->wat, u3i_word(nam_u->fra_w))
-    ));
+    );
+
+    req_u->wat = u3k(u3t(wit));
+    u3z(wit);
 
     req_u->tot_w = tot_w;
     u3_noun tot = u3i_word(req_u->tot_w);
     if ( c3y == u3r_sing(u3qdb_wyt(req_u->dat), tot) ) {
-      ret = u3dc("rip", 13, u3n_slam_on(u3k(sam_u->mop_u.tap), req_u->dat));
+      ret = u3dc("rap", 13, u3dc("turn", u3n_slam_on(u3k(sam_u->mop_u.tap), req_u->dat), u3v_wish("tail")));
       //_xmas_put_request_raw(sam_u, nam_u, u3_none);
     } else {
       _xmas_put_request(sam_u, nam_u, req_u);
@@ -465,7 +472,6 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, c3_w tot_w, u3_noun fra
     u3l_log("xmas: attempting to mark packet done, no request"); 
     u3m_bail(c3__foul);
   }
-  u3z(fra);
   return ret;
 }
 
@@ -477,6 +483,7 @@ _xmas_req_get_nex(u3_xmas* sam_u, u3_xmas_name* nam_u)
   if ( NULL != req_u ) {
     res_w = req_u->nex_w;
   } 
+  u3l_log("nex: %u", res_w);
   return res_w;
 }
 
@@ -485,8 +492,8 @@ _xmas_req_get_cwnd(u3_xmas* sam_u, u3_xmas_name* nam_u)
 {
   c3_w res_w = 0;
   u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-  if ( NULL != req_u ) {
-    res_w = req_u->nex_w;
+  if ( NULL == req_u ) {
+    return 0;
   }
   c3_w liv_w = u3r_word(0, u3qdb_wyt(req_u->wat));
 
@@ -525,7 +532,7 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
     // TODO: optional assertions?
     req_u->wat = u3n_slam_on(
       u3k(sam_u->mop_u.put), 
-      u3nt(req_u->dat, u3i_word(nam_u->fra_w), pac)
+      u3nt(req_u->wat, u3i_word(nam_u->fra_w), pac)
     );
   } else {
     req_u = alloca(sizeof(u3_pend_req));
@@ -537,9 +544,11 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
     req_u->dat = u3_nul;
     uv_timer_init(u3L, &req_u->tim_u);
     req_u->wat = u3n_slam_on(
-      u3k(sam_u->mop_u.put), 
+      u3k(sam_u->mop_u.put),
       u3nt(u3_nul, u3i_word(nam_u->fra_w), u3k(pac))
     );
+    u3m_p("wat", req_u->wat);
+    u3m_p("dat", req_u->dat);
   }
   _xmas_put_request(sam_u, nam_u, req_u);
 }
@@ -1413,7 +1422,7 @@ _xmas_rout_bufs(u3_xmas* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
     #ifdef XMAS_DEBUG
-    //u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
+     u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
     
     #endif /* ifdef XMAS_DEBUG
         u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
@@ -1423,7 +1432,7 @@ _xmas_rout_bufs(u3_xmas* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
       _xmas_send_buf(sam_u, lan_u, buf_y, len_w);
     }
   }
-  u3z(las);
+  // u3z(las);
   return suc_o;
 }
 
@@ -1694,7 +1703,7 @@ _xmas_put_cache(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
 
-  u3h_put(sam_u->pac_p, pax, val);
+  u3h_put(sam_u->pac_p, pax, u3k(val));
   u3z(pax); // TODO: fix refcount
 }
 
@@ -1807,9 +1816,9 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
         _xmas_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
       }
       _xmas_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(XMAS_ITEM, u3k(hit)));
-      u3z(old);
+      // u3z(old);
     }
-    u3z(hit);
+    // u3z(hit);
   }
   // u3z(pax);
 }
@@ -1860,11 +1869,11 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
   c3_s fra_s;
   
   u3_noun fra = u3i_bytes(pac_u->pag_u.mat_u.len_d, pac_u->pag_u.mat_u.fra_y) ;
-/*  if ( dop_o == c3n && pac_u->pag_u.nam_u.fra_w == 150) {
+  if ( dop_o == c3n && pac_u->pag_u.nam_u.fra_w == 150) {
     dop_o = c3y;
     u3l_log("simulating dropped packet");
     return;
-  }*/
+  }
 
   _log_pact(pac_u);
   u3_weak res = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, pac_u->pag_u.mat_u.tot_w, fra);
@@ -1873,14 +1882,15 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
     u3l_log("finished");
 
     u3l_log("now: %" PRIu64"ms", get_millis());
-    u3l_log("for %u bytes", u3r_met(3, res));
-    u3z(res);
+    // u3l_log("for %u bytes", u3r_met(3, res));
+    // u3z(res);
     return;
   }
 
 
   c3_w nex_w = _xmas_req_get_nex(sam_u, &pac_u->pag_u.nam_u);
   c3_w win_w = _xmas_req_get_cwnd(sam_u, &pac_u->pag_u.nam_u);
+  u3l_log("continuing flow nex: %u, win: %u", nex_w, win_w);
   if ( win_w != 0 ) {
 #ifdef XMAS_DEBUG
     u3l_log("xmas: continuing flow, sending %u packets", win_w);
@@ -1900,10 +1910,10 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
       }
       // TODO: better route management
       _xmas_send_buf(sam_u, lan_u, buf_y, siz_w);
-      //_xmas_req_pact_sent(sam_u, &nex_u[i].pek_u.nam_u);;
+      _xmas_req_pact_sent(sam_u, &nex_u[i].pek_u.nam_u);;
     }
     u3l_log("xmas: sent packets");
-    free(nex_u);
+    c3_free(nex_u);
   }
 }
 
@@ -1925,6 +1935,7 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
 {
 #ifdef XMAS_DEBUG
   u3l_log("xmas: hear peek");
+  _log_name(&pac_u->pek_u.nam_u);
   u3l_log("%hu", lan_u.por_s);
   // u3_assert(pac_u->typ_y == PACT_PEEK);
 #endif
@@ -1935,7 +1946,7 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
     u3_noun tag, dat;
     u3x_cell(u3k(hit), &tag, &dat);
     if ( tag == XMAS_SCRY ) {
-      _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3t(dat), lan_u);
+      _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
     } else if ( tag == XMAS_ITEM ) {
       c3_y* buf_y;
 
@@ -1944,7 +1955,7 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
     } else {
       u3l_log("xmas: weird case in cache, dropping");
     }
-    u3z(hit);
+    // u3z(hit);
   } else {
     _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     u3_noun sky = _name_to_scry(&pac_u->pek_u.nam_u); 
