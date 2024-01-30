@@ -1905,6 +1905,13 @@ _pier_boot_plan(u3_pier* pir_u,
     return c3n;
   }
 
+  if ( c3n == u3_disk_save_meta_meta(pir_u->log_u->com_u->pax_c,
+                                     pir_u->who_d, pir_u->fak_o, pir_u->lif_w) )
+  {
+    fprintf(stderr, "disk: failed to save top-level metadata\r\n");
+    return c3n;
+  }
+
   //  insert boot sequence directly
   //
   //    Note that these are not ovum or (pair @da ovum) events,

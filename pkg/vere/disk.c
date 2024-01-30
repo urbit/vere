@@ -663,6 +663,33 @@ u3_disk_save_meta(MDB_env* mdb_u,
   return c3y;
 }
 
+
+/* u3_disk_save_meta_meta(): save meta metadata.
+*/
+c3_o
+u3_disk_save_meta_meta(c3_c* log_c,
+                       c3_d  who_d[2],
+                       c3_o  fak_o,
+                       c3_w  lif_w)
+{
+  MDB_env* dbm_u;
+
+  if ( 0 == (dbm_u = u3_lmdb_init(log_c, siz_i)) ) {
+    fprintf(stderr, "disk: failed to initialize meta-lmdb\r\n");
+    return c3n;
+  }
+
+  if ( c3n == u3_disk_save_meta(dbm_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
+    fprintf(stderr, "disk: failed to save metadata\r\n");
+    return c3n;
+  }
+
+  u3_lmdb_exit(dbm_u);
+
+  return c3y;
+}
+
+
 typedef struct {
   ssize_t hav_i;
   c3_y    buf_y[16];
@@ -1866,20 +1893,11 @@ try_init:
               return 0;
             }
 
-            MDB_env* dbm_u;
-            if ( 0 == (dbm_u = u3_lmdb_init(log_c, siz_i)) ) {
-              fprintf(stderr, "disk: failed to initialize lmdb\r\n");
+            if ( c3n == u3_disk_save_meta_meta(log_c, who_d, fak_o, lif_w) ) {
+              fprintf(stderr, "disk: failed to save top-level metadata\r\n");
               c3_free(log_u);
               return 0;
             }
-
-            if ( c3n == u3_disk_save_meta(dbm_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
-              fprintf(stderr, "disk: failed to read metadata\r\n");
-              c3_free(log_u);
-              return 0;
-            }
-
-            u3_lmdb_exit(dbm_u);
           }
 
           return log_u;

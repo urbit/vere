@@ -990,6 +990,14 @@
                           c3_o     fak_o,
                           c3_w     lif_w);
 
+      /* u3_disk_save_meta_meta(): save meta metadata.
+      */
+        c3_o
+        u3_disk_save_meta_meta(c3_c* log_c,
+                               c3_d  who_d[2],
+                               c3_o  fak_o,
+                               c3_w  lif_w);
+
       /* u3_disk_read(): read [len_d] events starting at [eve_d].
       */
         void
