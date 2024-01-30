@@ -1743,13 +1743,6 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       exs_o = c3y;
     }
 
-    //  check if epochs exist
-    c3_o epx_o = c3n;
-    c3_d lax_d;
-    if ( c3y == u3_disk_epoc_last(log_u, &lax_d) ) {
-      epx_o = c3y;
-    }
-
     //  if fresh boot, initialize disk U3D_VERLAT
     //
     if ( c3y == u3_Host.ops_u.nuu ) {
@@ -1847,7 +1840,7 @@ try_init:
           u3t_trace_open(pax_c);
 #endif
 
-          if ( c3n == exs_o && c3y == epx_o ) {
+          if ( c3n == exs_o ) {
             fprintf(stderr, "disk: repairing pre-release pier metadata\r\n");
 
             //  read metadata from epoch's log
