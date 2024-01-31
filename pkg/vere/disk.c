@@ -1800,17 +1800,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       return log_u;
     }
 
-    if ( c3n == exs_o ) {
-      c3_d lat_d;
-      if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
-        fprintf(stderr, "disk: no event log anywhere\r\n");
-        c3_free(log_u);
-        return 0;
-      }
-      //  presume pre-release migrated pier
-      log_u->ver_w = U3D_VERLAT;
-    }
-    else {
+    if ( c3y == exs_o ) {
       //  load the old data.mdb file
       if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize lmdb\r\n");
@@ -1821,8 +1811,21 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
       //  read version from old log
       if ( c3n == u3_disk_read_meta(log_u->mdb_u, &log_u->ver_w, 0, 0, 0) ) {
         fprintf(stderr, "disk: failed to read metadata\r\n");
-        c3_free(log_u);
-        return 0;
+        goto try_epoc_no;
+      }
+    }
+    else {
+try_epoc_no:
+      {
+        c3_d lat_d;
+        if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
+          fprintf(stderr, "disk: no event log anywhere\r\n");
+          c3_free(log_u);
+          return 0;
+        }
+        //  presume pre-release migrated pier
+        log_u->ver_w = U3D_VERLAT;
+        exs_o = c3n;
       }
     }
 
@@ -1842,7 +1845,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
         return log_u;
       }
 
-      case U3D_VERLAT: break;
+      case U3D_VER3: break;
 
       default: {
         fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
