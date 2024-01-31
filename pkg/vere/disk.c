@@ -628,17 +628,15 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, u3_atom dat)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 {
-  c3_w  len_w = u3r_met(3, dat);
-  c3_y* byt_y = c3_malloc(len_w);
-  u3r_bytes(0, len_w, byt_y, dat);
-
-  {
-    c3_o ret_o = u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
-    c3_free(byt_y);
-    return ret_o;
+  //  strip trailing zeroes.
+  //
+  while ( len_w && !byt_y[len_w - 1] ) {
+    len_w--;
   }
+
+  return u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
 }
 
 /* u3_disk_save_meta(): save metadata.
@@ -650,12 +648,15 @@ u3_disk_save_meta(MDB_env* mdb_u,
                   c3_o     fak_o,
                   c3_w     lif_w)
 {
+  u3_assert( c3y == u3a_is_cat(ver_w) );
   u3_assert( c3y == u3a_is_cat(lif_w) );
 
-  if (  (c3n == _disk_save_meta(mdb_u, "version", ver_w))
-     || (c3n == _disk_save_meta(mdb_u, "who", u3i_chubs(2, who_d)))
-     || (c3n == _disk_save_meta(mdb_u, "fake", fak_o))
-     || (c3n == _disk_save_meta(mdb_u, "life", lif_w)) )
+  //  XX assumes little-endian
+  //
+  if (  (c3n == _disk_save_meta(mdb_u, "version", 4, (c3_y*)&ver_w))
+     || (c3n == _disk_save_meta(mdb_u, "who",    16, (c3_y*)who_d))
+     || (c3n == _disk_save_meta(mdb_u, "fake",    1, (c3_y*)&fak_o))
+     || (c3n == _disk_save_meta(mdb_u, "life",    4, (c3_y*)&lif_w)) )
   {
     return c3n;
   }
@@ -1423,9 +1424,12 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   }
 
   //  set version to 2 (migration in progress)
-  if ( c3n == _disk_save_meta(log_u->mdb_u, "version", (c3_w)U3D_VER2) ) {
-    fprintf(stderr, "disk: failed to set version to 2\r\n");
-    return c3n;
+  {
+    c3_w ver_w = U3D_VER2;
+    if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
+      fprintf(stderr, "disk: failed to set version to 2\r\n");
+      return c3n;
+    }
   }
 
   //  finish with old log
