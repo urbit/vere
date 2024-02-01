@@ -1342,7 +1342,8 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
   c3_z     len_z = 0;
 
   while ( den_u ) {  //  count epochs
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
+    c3_d tmp_d;
+    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &tmp_d) ) {
       len_z++;
     }
     den_u = den_u->nex_u;
