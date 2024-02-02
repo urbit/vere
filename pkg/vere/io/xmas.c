@@ -81,8 +81,14 @@ typedef struct _u3_pend_req {
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_w                   len_w;
   c3_w                   las_w; // frag num of last packet sent
+  u3_gage*                gag_u;
 } u3_pend_req;
 
+typedef struct _u3_czar_info {
+  c3_w               pip_w;
+  time_t             tim_t;
+  u3_noun            pen;
+} u3_czar_info;
 
 /* _u3_xmas: next generation networking
  */
@@ -98,19 +104,10 @@ typedef struct _u3_xmas {
   u3_cue_xeno*       sil_u;             //  cue handle
   u3p(u3h_root)      her_p;             //
   u3p(u3h_root)      pac_p;             // pending
-  u3_gage*           gag_u;
-  c3_w               imp_w[256];
-  time_t             imp_t[256];        //  imperial IP timestamps
-  c3_o               imp_o[256];        //  imperial print status
-  c3_c*              dns_c;             //
-  //  jj
+  u3p(u3h_root)      lan_p;             // lanes
+  u3_czar_info       imp_u[256];
   u3p(u3h_root)      req_p;            // hashtable of u3_pend_req
-  struct {
-    u3_noun put;
-    u3_noun del;
-    u3_noun tap;
-    u3_noun pry;
-  } mop_u;               // pointer to ordered map functions
+  c3_c*              dns_c;
   c3_d              tim_d;
 } u3_xmas;
 
@@ -151,6 +148,8 @@ typedef struct _u3_xmas_name {
   c3_y               boq_y;
   c3_w               fra_w;
 } u3_xmas_name;
+
+
 
 typedef struct _u3_xmas_rout {
   u3_xmas_rout_tag  typ_y;  // type tag
@@ -532,6 +531,69 @@ u3_noun _xmas_request_key(u3_xmas_name* nam_u)
   return res;
 }
 
+/* u3_xmas_encode_lane(): serialize lane to noun
+*/
+static u3_atom
+u3_xmas_encode_lane(u3_lane lan_u) {
+  // [%if ip=@ port=@]
+  return u3nt(c3__if, u3i_word(lan_u.pip_w), lan_u.por_s);
+}
+
+static u3_noun
+_xmas_lane_key(c3_d her_d[2], u3_lane* lan_u)
+{
+  return u3nc(u3i_chubs(2,her_d), u3_xmas_encode_lane(*lan_u));
+}
+
+/* RETAIN
+*/
+static u3_gage*
+_xmas_get_lane_raw(u3_xmas* sam_u, u3_noun key)
+{
+  u3_gage* ret_u = NULL;
+  u3_weak res = u3h_git(sam_u->lan_p, key);
+
+  if ( res != u3_none && res != u3_nul ) {
+    ret_u = u3to(u3_gage, res);
+  }
+
+  return ret_u;
+}
+
+/* _xmas_get_lane(): get lane
+*/
+static u3_gage*
+_xmas_get_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u) {
+  u3_noun key =_xmas_lane_key(her_d, lan_u);
+  u3_gage* ret_u = _xmas_get_lane_raw(sam_u, key);
+  u3z(key);
+  return ret_u;
+}
+
+/* _xmas_put_lane(): put lane state in state
+ *
+ *   uses same copying trick as _xmas_put_request()
+*/
+static void
+_xmas_put_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u, u3_gage* gag_u)
+{
+  u3_noun key = _xmas_lane_key(her_d, lan_u);
+  u3_gage* old_u = _xmas_get_lane_raw(sam_u, key);
+  u3_gage* new_u = gag_u;
+
+  if ( old_u == NULL ) {
+    new_u = u3a_calloc(sizeof(u3_gage),1);
+    memcpy(new_u, gag_u, sizeof(u3_gage));
+  } else {
+    new_u = old_u;
+    memcpy(new_u, gag_u, sizeof(u3_gage));
+  }
+
+  u3_noun val = u3of(u3_gage, new_u);
+  u3h_put(sam_u->req_p, key, val);
+  u3z(key);
+}
+
 /* _xmas_get_request(): produce pending request state for nam_u
  *
  *   produces a NULL pointer if no pending request exists
@@ -549,6 +611,7 @@ _xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
     ret_u = NULL;
   }
 
+  u3z(key);
   return ret_u;
 }
 
@@ -592,10 +655,36 @@ _xmas_packet_timeout(uv_timer_t* tim_u) {
   u3l_log("%u packet timed out", req_u->las_w);
 }
 
+static void _init_gage(u3_gage* gag_u)
+{
+  gag_u->rto_w = 1000000;
+  gag_u->rtt_w = 1000000;
+  gag_u->rtv_w = 1000000;
+  gag_u->con_w = 0;
+  gag_u->wnd_w = 1;
+}
+
+static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
+{
+
+  gag_u->con_w++;
+
+  c3_d now_d = _get_now_micros();
+  c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
+
+  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
+
+  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
+  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
+  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
+
+  u3_cbic_on_ack(gag_u);
+}
+
 /* _xmas_req_pact_done(): mark packet as done, possibly producing the result 
 */
 static u3_weak
-_xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, c3_w tot_w, c3_y* buf_y, c3_w len_w)
+_xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_u, u3_lane* lan_u)
 {
   u3_weak ret = u3_none;
   c3_d now_d = _get_now_micros();
@@ -607,16 +696,25 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, c3_w tot_w, c3_y* buf_y
 #endif
     return u3_none;
   }
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
 
+  c3_w siz_w = (1 << (nam_u->boq_y - 3));
   // First packet received, instantiate request fully
   if ( req_u->tot_w == 0 ) {
     u3_assert( siz_w == 1024); // boq_y == 13
-    req_u->dat_y = c3_calloc(siz_w * tot_w);
-    req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * tot_w);
-    req_u->tot_w = tot_w;
-    _init_bitset(&req_u->was_u, tot_w + 1);
+    req_u->dat_y = c3_calloc(siz_w * mat_u->tot_w);
+    req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * mat_u->tot_w);
+    req_u->tot_w = mat_u->tot_w;
+    _init_bitset(&req_u->was_u, mat_u->tot_w + 1);
     req_u->las_w = 0;
+  } else {
+    // handle gauge update
+    u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
+
+    if ( gag_u == NULL ) {
+      gag_u = alloca(sizeof(u3_gage));
+      _init_gage(gag_u);
+    }
+    _xmas_handle_ack(gag_u, &req_u->wat_u[nam_u->fra_w]);
   }
 
   // received duplicate
@@ -630,7 +728,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, c3_w tot_w, c3_y* buf_y
   req_u->len_w++;
 
 
-  memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), buf_y, len_w);
+  memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), mat_u->fra_y, mat_u->len_w);
 
   // in-order
   if (nam_u->fra_w == req_u->las_w ) {
@@ -874,14 +972,6 @@ u3_xmas_lane_to_chub(u3_lane lan) {
   return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_w;
 }
 
-/* u3_xmas_encode_lane(): serialize lane to noun
-*/
-static u3_atom
-u3_xmas_encode_lane(u3_lane lan_u) {
-  // [%| p=@]
-  // [%& p=@pC]
-  return u3nt(c3__if, u3i_word(lan_u.pip_w), lan_u.por_s);
-}
 
 
 
@@ -1756,10 +1846,6 @@ _xmas_exit_cb(uv_handle_t* had_u)
   u3h_free(sam_u->her_p);
   u3h_free(sam_u->req_p);
 
-  u3_cbic_done(sam_u->gag_u);
-  c3_free(sam_u->gag_u);
-
-
   c3_free(sam_u);
 }
 
@@ -1982,27 +2068,7 @@ _xmas_hear_bail(u3_ovum* egg_u, u3_noun lud)
   u3_ovum_free(egg_u);
 }
 
-static void _xmas_handle_ack(u3_xmas* sam_u, u3_noun pas)
-{
-  u3_noun las, tie, kip;
-  u3x_cell(pas, &las, &tie);
-  c3_d las_d = u3r_chub(0, las);
-  c3_w tie_w = u3r_word(0, tie);
-  u3_gage* gag_u = sam_u->gag_u;
 
-  gag_u->con_w++;
-
-  c3_d now_d = _get_now_micros();
-  c3_d rtt_d = now_d < las_d ? 0 : now_d - las_d;
-
-  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
-
-  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
-  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
-  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
-
-  u3_cbic_on_ack(gag_u);
-}
 
 static void
 _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
@@ -2021,7 +2087,7 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
     return;
   }*/
 
-  u3_weak res = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, pac_u->pag_u.mat_u.tot_w, pac_u->pag_u.mat_u.fra_y, pac_u->pag_u.mat_u.len_w);
+  u3_weak res = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.mat_u, &lan_u);
 
   if ( u3_none != res ) {
     u3l_log("finished");
@@ -2286,6 +2352,7 @@ u3_xmas_io_init(u3_pier* pir_u)
 
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->req_p = u3h_new_cache(100000);
+  sam_u->lan_p = u3h_new_cache(100000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
@@ -2308,15 +2375,7 @@ u3_xmas_io_init(u3_pier* pir_u)
   car_u->io.kick_f = _xmas_io_kick;
   car_u->io.exit_f = _xmas_io_exit;
 
-  sam_u->gag_u = c3_calloc(sizeof(u3_gage));
 
-  uv_timer_init(u3L, &sam_u->gag_u->tim_u);
-  u3_cbic_init(sam_u->gag_u);
-
-  sam_u->mop_u.put = u3v_wish("put:((on @ud *) lte)");
-  sam_u->mop_u.del = u3v_wish("del:((on @ud *) lte)");
-  sam_u->mop_u.pry = u3v_wish("pry:((on @ud *) lte)");
-  sam_u->mop_u.tap = u3v_wish("tap:((on @ud *) lte)");
 
   /*{
     u3_noun now;
