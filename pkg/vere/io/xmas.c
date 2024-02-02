@@ -15,6 +15,7 @@
 #include <motes.h>
 #include <retrieve.h>
 #include <types.h>
+#include <stdlib.h>
 
 c3_o dop_o = c3n;
 
@@ -27,6 +28,7 @@ c3_o dop_o = c3n;
 #define PACT_SIZE      1472
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
+#define REORDER_THRESH  5
 
 #define IN_FLIGHT  10
 
@@ -68,7 +70,10 @@ typedef struct _u3_pact_stat {
   c3_d  sen_d; // last sent
   c3_y  sip_y; // skips 
   c3_y  tie_y; // tries
+  c3_y  dup_y; // dupes
 } u3_pact_stat;
+
+struct _u3_xmas;
 
 
 typedef struct _u3_pend_req {
@@ -80,8 +85,11 @@ typedef struct _u3_pend_req {
   u3_bitset              was_u; // ((mop @ud packet-state) lte)
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_w                   len_w;
-  c3_w                   las_w; // frag num of last packet sent
-  u3_gage*                gag_u;
+  c3_w                   lef_w; // lowest fragment number currently in flight/pending
+  c3_w                   old_w; // frag num of oldest packet sent
+  c3_w                   ack_w; // highest acked fragment number
+  u3_lane                lan_u; // last lane heard
+  u3_gage*               gag_u;
 } u3_pend_req;
 
 typedef struct _u3_czar_info {
@@ -346,14 +354,14 @@ static void
 _log_gage(u3_gage* gag_u)
 {
   u3l_log("gauge");
-  u3l_log("rtt: %u", gag_u->rtt_w);
-  u3l_log("rto: %u", gag_u->rto_w);
-  u3l_log("rttvar: %u", gag_u->rtv_w);
+  u3l_log("rtt: %f", ((double)gag_u->rtt_w / 1000));
+  u3l_log("rto: %f", ((double)gag_u->rto_w / 1000));
+  u3l_log("rttvar: %f", ((double)gag_u->rtv_w / 1000));
   u3l_log("cwnd: %u", gag_u->wnd_w);
   u3l_log("cwnd cnt: %u", gag_u->wnc_w);
   u3l_log("ssthresh: %u", gag_u->sst_w);
   u3l_log("counter: %u", gag_u->con_w);
-  u3l_log("algorithm: %s", gag_u->alg_c);
+  //u3l_log("algorithm: %s", gag_u->alg_c);
 }
 
 static void
@@ -521,394 +529,6 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
   return pro;
 }
 
-
-/* _xmas_request_key(): produce key for request hashtable sam_u->req_p from nam_u
-*/
-u3_noun _xmas_request_key(u3_xmas_name* nam_u)
-{
-  u3_noun pax = _xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun res = u3nt(u3i_chubs(2, nam_u->her_d), u3i_word(nam_u->rif_w), pax);
-  return res;
-}
-
-/* u3_xmas_encode_lane(): serialize lane to noun
-*/
-static u3_atom
-u3_xmas_encode_lane(u3_lane lan_u) {
-  // [%if ip=@ port=@]
-  return u3nt(c3__if, u3i_word(lan_u.pip_w), lan_u.por_s);
-}
-
-static u3_noun
-_xmas_lane_key(c3_d her_d[2], u3_lane* lan_u)
-{
-  return u3nc(u3i_chubs(2,her_d), u3_xmas_encode_lane(*lan_u));
-}
-
-/* RETAIN
-*/
-static u3_gage*
-_xmas_get_lane_raw(u3_xmas* sam_u, u3_noun key)
-{
-  u3_gage* ret_u = NULL;
-  u3_weak res = u3h_git(sam_u->lan_p, key);
-
-  if ( res != u3_none && res != u3_nul ) {
-    ret_u = u3to(u3_gage, res);
-  }
-
-  return ret_u;
-}
-
-/* _xmas_get_lane(): get lane
-*/
-static u3_gage*
-_xmas_get_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u) {
-  u3_noun key =_xmas_lane_key(her_d, lan_u);
-  u3_gage* ret_u = _xmas_get_lane_raw(sam_u, key);
-  u3z(key);
-  return ret_u;
-}
-
-/* _xmas_put_lane(): put lane state in state
- *
- *   uses same copying trick as _xmas_put_request()
-*/
-static void
-_xmas_put_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u, u3_gage* gag_u)
-{
-  u3_noun key = _xmas_lane_key(her_d, lan_u);
-  u3_gage* old_u = _xmas_get_lane_raw(sam_u, key);
-  u3_gage* new_u = gag_u;
-
-  if ( old_u == NULL ) {
-    new_u = u3a_calloc(sizeof(u3_gage),1);
-    memcpy(new_u, gag_u, sizeof(u3_gage));
-  } else {
-    new_u = old_u;
-    memcpy(new_u, gag_u, sizeof(u3_gage));
-  }
-
-  u3_noun val = u3of(u3_gage, new_u);
-  u3h_put(sam_u->req_p, key, val);
-  u3z(key);
-}
-
-/* _xmas_get_request(): produce pending request state for nam_u
- *
- *   produces a NULL pointer if no pending request exists
-*/
-static u3_pend_req*
-_xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
-  u3_pend_req* ret_u = NULL;
-  u3_noun key = _xmas_request_key(nam_u);
-
-  u3_weak res = u3h_git(sam_u->req_p, key);
-  if ( res != u3_none && res != u3_nul ) {
-    ret_u = u3to(u3_pend_req, res);
-  }
-  if ( ret_u != NULL && ret_u->tot_w != 0 && ret_u->tot_w == ret_u->len_w ) {
-    ret_u = NULL;
-  }
-
-  u3z(key);
-  return ret_u;
-}
-
-/* _xmas_put_request(): save new pending request state for nam_u
- *
- *   the memory in the hashtable is allocated once in the lifecycle of the 
- *   request. req_u will be copied into the hashtable memory, and so can be
- *   immediately freed
- *
-*/
-static void
-_xmas_put_request(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_pend_req* req_u) {
-  u3_noun key = _xmas_request_key(nam_u);
-
-  if ( req_u == NULL) {
-    u3h_put(sam_u->req_p, key, u3_nul);
-    u3z(key);
-    return;
-  }
-  u3_pend_req* old_u = _xmas_get_request(sam_u, nam_u);
-  u3_pend_req* new_u = req_u;
-  if ( old_u == NULL ) {
-    new_u = u3a_calloc(sizeof(u3_pend_req),1);
-    memcpy(new_u, req_u, sizeof(u3_pend_req));
-  } else {
-    new_u = old_u;
-    memcpy(new_u, req_u, sizeof(u3_pend_req));
-  }
-
-
-  u3_noun val = u3of(u3_pend_req, new_u);
-  u3h_put(sam_u->req_p, key, val);
-  u3z(key);
-}
-
-/* _xmas_packet_timeout(): callback for packet timeout
-*/
-static void
-_xmas_packet_timeout(uv_timer_t* tim_u) {
-  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
-  u3l_log("%u packet timed out", req_u->las_w);
-}
-
-static void _init_gage(u3_gage* gag_u)
-{
-  gag_u->rto_w = 1000000;
-  gag_u->rtt_w = 1000000;
-  gag_u->rtv_w = 1000000;
-  gag_u->con_w = 0;
-  gag_u->wnd_w = 1;
-}
-
-static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
-{
-
-  gag_u->con_w++;
-
-  c3_d now_d = _get_now_micros();
-  c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
-
-  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
-
-  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
-  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
-  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
-
-  u3_cbic_on_ack(gag_u);
-}
-
-/* _xmas_req_pact_done(): mark packet as done, possibly producing the result 
-*/
-static u3_weak
-_xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_u, u3_lane* lan_u)
-{
-  u3_weak ret = u3_none;
-  c3_d now_d = _get_now_micros();
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-  
-  if ( NULL == req_u ) {
-#ifdef XMAS_DEBUG
-    u3l_log("xmas: attempting to mark packet done, no request"); 
-#endif
-    return u3_none;
-  }
-
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
-  // First packet received, instantiate request fully
-  if ( req_u->tot_w == 0 ) {
-    u3_assert( siz_w == 1024); // boq_y == 13
-    req_u->dat_y = c3_calloc(siz_w * mat_u->tot_w);
-    req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * mat_u->tot_w);
-    req_u->tot_w = mat_u->tot_w;
-    _init_bitset(&req_u->was_u, mat_u->tot_w + 1);
-    req_u->las_w = 0;
-  } else {
-    // handle gauge update
-    u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
-
-    if ( gag_u == NULL ) {
-      gag_u = alloca(sizeof(u3_gage));
-      _init_gage(gag_u);
-    }
-    _xmas_handle_ack(gag_u, &req_u->wat_u[nam_u->fra_w]);
-  }
-
-  // received duplicate
-  if ( nam_u->fra_w != 0 && c3n == _has_bitset(&req_u->was_u, nam_u->fra_w) ) {
-#ifdef XMAS_DEBUG
-      u3l_log("duplicate page");
-#endif 
-    return u3_none;
-  } 
-  _del_bitset(&req_u->was_u, nam_u->fra_w);
-  req_u->len_w++;
-
-
-  memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), mat_u->fra_y, mat_u->len_w);
-
-  // in-order
-  if (nam_u->fra_w == req_u->las_w ) {
-    u3l_log("in order %u", nam_u->fra_w);
-  } else {
-    // out of order
-    u3l_log("misordered last: %u have %u", req_u->las_w, nam_u->fra_w);
-  }
-
-
-  if ( req_u->len_w == req_u->tot_w ) {
-    uv_timer_stop(&req_u->tim_u);
-  //u3dc("rap", 13, u3dc("turn", u3n_slam_on(u3k(sam_u->mop_u.tap), req_u->dat), u3v_wish("tail")));
-    //_xmas_put_request(sam_u, nam_u, u3_none);
-    return u3i_word(req_u->tot_w);
-  } else {
-    _xmas_put_request(sam_u, nam_u, req_u);
-  }
-  return u3_none;
-}
-
-/*
- * _xmas_req_get_cwnd(): produce current state of packet pump
- *
- * saves next fragment number and preallocated pact into the passed pointers.
- * Will not do so if returning 0
-*/
-static c3_w
-_xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas_pact** nex_u)
-{
-  c3_w res_w = 0;
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-  if ( NULL == req_u ) {
-    return 0;
-  }
-  *nex_w = req_u->tot_w != 0 ? c3_min(req_u->nex_w, req_u->tot_w - 1) : req_u->nex_w;
-  *nex_u = req_u->pac_u;
-
-  c3_w liv_w = _wyt_bitset(&req_u->was_u);
-
-  c3_w lef_w = req_u->tot_w - (req_u->len_w + liv_w);
-  if ( liv_w < IN_FLIGHT ) {
-    return c3_min(IN_FLIGHT - liv_w, lef_w);
-  }
-  return 0;
-}
-
-
-/* _xmas_req_pact_sent(): mark packet as sent
-**
-*/
-static void
-_xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
-{
-  c3_d now_d = _get_now_micros();
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-
-  // if we already have pending request
-  if ( NULL != req_u ) {
-    if( req_u->nex_w == nam_u->fra_w ) {
-      req_u->nex_w++;
-    }
-    // TODO: optional assertions?
-    req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1 };
-    _put_bitset(&req_u->was_u, nam_u->fra_w);
-    if ( nam_u->fra_w == 1 ) {
-      req_u->las_w = 1;
-    }
-
-  } else {
-    // instantiate pending request
-    // stack allocating is ok, because _xmas_put_pend will copy it out anyway
-    req_u = alloca(sizeof(u3_pend_req));
-    req_u->pac_u = c3_calloc(sizeof(u3_xmas_pact));
-    req_u->pac_u->sam_u = sam_u;
-    req_u->pac_u->hed_u.typ_y = PACT_PEEK;
-    memcpy(&req_u->pac_u->pek_u.nam_u, nam_u, sizeof(u3_xmas_name));
-    // TODO: handle restart
-    // u3_assert( nam_u->fra_w == 0 ); 
-    req_u->nex_w = 1;
-    req_u->tot_w = 0;
-    req_u->len_w = 0;
-    req_u->dat_y = NULL;
-    uv_timer_init(u3L, &req_u->tim_u);
-    req_u->wat_u = NULL;
-    req_u->was_u.buf_y = NULL;
-    req_u->las_w = 0;
-  }
-
-  if ( req_u->las_w != 0 && c3n == _has_bitset(&req_u->was_u, req_u->las_w) ) {
-    while ( req_u->las_w++ < req_u->tot_w ) {
-      if ( c3y == _has_bitset(&req_u->was_u, req_u->las_w) ) {
-	break;
-      }
-    }
-  }
-  _xmas_put_request(sam_u, nam_u, req_u);
-}
-
-// cut and pasted from ames.c
-//
-static void
-_ames_etch_short(c3_y buf_y[2], c3_s sot_s)
-{
-  buf_y[0] = sot_s         & 0xff;
-  buf_y[1] = (sot_s >>  8) & 0xff;
-}
-
-static void
-_ames_etch_word(c3_y buf_y[4], c3_w wod_w)
-{
-  buf_y[0] = wod_w         & 0xff;
-  buf_y[1] = (wod_w >>  8) & 0xff;
-  buf_y[2] = (wod_w >> 16) & 0xff;
-  buf_y[3] = (wod_w >> 24) & 0xff;
-}
-
-/* _ames_czar_port(): udp port for galaxy.
-*/
-static c3_s
-_ames_czar_port(c3_y imp_y)
-{
-  if ( c3n == u3_Host.ops_u.net ) {
-    return 31337 + imp_y;
-  }
-  else {
-    return 13337 + imp_y;
-  }
-}
-
-
-/* _ames_alloc(): libuv buffer allocator.
-*/
-static void
-_ames_alloc(uv_handle_t* had_u,
-            size_t len_i,
-            uv_buf_t* buf
-            )
-{
-  //  we allocate 2K, which gives us plenty of space
-  //  for a single ames packet (max size 1060 bytes)
-  //
-  void* ptr_v = c3_malloc(4096);
-  *buf = uv_buf_init(ptr_v, 4096);
-}
-
-static inline c3_s
-_ames_sift_short(c3_y buf_y[2])
-{
-  return (buf_y[1] << 8 | buf_y[0]);
-}
-
-static inline c3_w
-_ames_sift_word(c3_y buf_y[4])
-{
-  return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
-}
-
-/* u3_xmas_decode_lane(): deserialize noun to lane; 0.0.0.0:0 if invalid
-*/
-static u3_lane
-u3_xmas_decode_lane(u3_atom lan) {
-  u3_lane lan_u;
-  c3_d lan_d;
-
-  if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
-    return (u3_lane){0, 0};
-  }
-
-  u3z(lan);
-
-  lan_u.pip_w = (c3_w)lan_d;
-  lan_u.por_s = (c3_s)(lan_d >> 32);
-  //  convert incoming localhost to outgoing localhost
-  //
-  lan_u.pip_w = ( 0 == lan_u.pip_w ) ? 0x7f000001 : lan_u.pip_w;
-
-  return lan_u;
-}
-
 /* _ames_chub_bytes(): c3_y[8] to c3_d
 ** XX factor out, deduplicate with other conversions
 */
@@ -965,78 +585,18 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 }
 
 
-/* u3_xmas_lane_to_chub(): serialize lane to double-word
-*/
-static c3_d
-u3_xmas_lane_to_chub(u3_lane lan) {
-  return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_w;
-}
-
-
-
-
-//  END plagariasm zone
-//
-//
-//
-//
-//
-//
-static void _xmas_free_seal(u3_seal* sel_u)
+static inline c3_s
+_ames_sift_short(c3_y buf_y[2])
 {
-  //c3_free(sel_u->buf_y);
-  //c3_free(sel_u);
+  return (buf_y[1] << 8 | buf_y[0]);
 }
 
-static u3_noun _xmas_get_now() {
-  struct timeval tim_u;
-  gettimeofday(&tim_u, 0);
-  u3_noun res = u3_time_in_tv(&tim_u);
-  return res;
+static inline c3_w
+_ames_sift_word(c3_y buf_y[4])
+{
+  return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
 }
 
-
-// refcounted
-static c3_o
-_xmas_rout_pact(u3_xmas_pact* pac_u, u3_noun lan) {
-  u3_noun tag, val;
-  u3x_cell(lan, &tag, &val);
-
-  u3_assert( (c3y == tag) || (c3n == tag) );
-  c3_o suc_o = c3y;
-  if ( c3y == tag ) {
-    u3_assert( c3y == u3a_is_cat(val) );
-    u3_assert( val < 256 );
-    pac_u->rut_u.typ_y = ROUT_GALAXY;
-    pac_u->rut_u.imp_y = val;
-  } else {
-    u3_lane lan_u = u3_xmas_decode_lane(u3k(val));
-    //  if in local-only mode, don't send remote packets
-    //
-    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
-      suc_o = c3n;
-    }
-    //  if the lane is uninterpretable, silently drop the packet
-    //
-    else if ( 0 == lan_u.por_s ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("ames: inscrutable lane");
-      }
-      suc_o = c3n;
-    } else {
-      pac_u->rut_u.typ_y = ROUT_OTHER;
-      pac_u->rut_u.lan_u = lan_u;
-    }
-  }
-  u3z(lan);
-  return suc_o;
-}
-
-
-
-static void _xmas_pact_free(u3_xmas_pact* pac_u) {
-  // TODO: i'm lazy
-}
 
 static c3_o
 _xmas_sift_head(c3_y buf_y[8], u3_xmas_head* hed_u) 
@@ -1330,6 +890,24 @@ _xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
   return res_w;
 }
 
+// cut and pasted from ames.c
+//
+static void
+_ames_etch_short(c3_y buf_y[2], c3_s sot_s)
+{
+  buf_y[0] = sot_s         & 0xff;
+  buf_y[1] = (sot_s >>  8) & 0xff;
+}
+
+static void
+_ames_etch_word(c3_y buf_y[4], c3_w wod_w)
+{
+  buf_y[0] = wod_w         & 0xff;
+  buf_y[1] = (wod_w >>  8) & 0xff;
+  buf_y[2] = (wod_w >> 16) & 0xff;
+  buf_y[3] = (wod_w >> 24) & 0xff;
+}
+
 
 static u3_atom
 _dire_etch_ud(c3_d num_d)
@@ -1544,6 +1122,391 @@ _xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u, u3_noun her)
   return cur_w;
 }
 
+
+/* _xmas_request_key(): produce key for request hashtable sam_u->req_p from nam_u
+*/
+u3_noun _xmas_request_key(u3_xmas_name* nam_u)
+{
+  u3_noun pax = _xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+  u3_noun res = u3nt(u3i_chubs(2, nam_u->her_d), u3i_word(nam_u->rif_w), pax);
+  return res;
+}
+
+static void _init_gage(u3_gage* gag_u)
+{
+  gag_u->rto_w = 1000000;
+  gag_u->rtt_w = 1000000;
+  gag_u->rtv_w = 1000000;
+  gag_u->con_w = 0;
+  gag_u->wnd_w = 1;
+}
+
+/* u3_xmas_encode_lane(): serialize lane to noun
+*/
+static u3_atom
+u3_xmas_encode_lane(u3_lane lan_u) {
+  // [%if ip=@ port=@]
+  return u3nt(c3__if, u3i_word(lan_u.pip_w), lan_u.por_s);
+}
+
+static u3_noun
+_xmas_lane_key(c3_d her_d[2], u3_lane* lan_u)
+{
+  return u3nc(u3i_chubs(2,her_d), u3_xmas_encode_lane(*lan_u));
+}
+
+/* RETAIN
+*/
+static u3_gage*
+_xmas_get_lane_raw(u3_xmas* sam_u, u3_noun key)
+{
+  u3_gage* ret_u = NULL;
+  u3_weak res = u3h_git(sam_u->lan_p, key);
+
+  if ( res != u3_none && res != u3_nul ) {
+    ret_u = u3to(u3_gage, res);
+  }
+
+  return ret_u;
+}
+
+/* _xmas_get_lane(): get lane
+*/
+static u3_gage*
+_xmas_get_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u) {
+  u3_noun key =_xmas_lane_key(her_d, lan_u);
+  u3_gage* ret_u = _xmas_get_lane_raw(sam_u, key);
+  u3z(key);
+  return ret_u;
+}
+
+/* _xmas_put_lane(): put lane state in state
+ *
+ *   uses same copying trick as _xmas_put_request()
+*/
+static void
+_xmas_put_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u, u3_gage* gag_u)
+{
+  u3_noun key = _xmas_lane_key(her_d, lan_u);
+  u3_gage* old_u = _xmas_get_lane_raw(sam_u, key);
+  u3_gage* new_u = gag_u;
+
+  if ( old_u == NULL ) {
+    new_u = u3a_calloc(sizeof(u3_gage),1);
+    memcpy(new_u, gag_u, sizeof(u3_gage));
+  } else {
+    new_u = old_u;
+    memcpy(new_u, gag_u, sizeof(u3_gage));
+  }
+
+  u3_noun val = u3of(u3_gage, new_u);
+  u3h_put(sam_u->lan_p, key, val);
+  u3z(key);
+}
+
+/* _xmas_get_request(): produce pending request state for nam_u
+ *
+ *   produces a NULL pointer if no pending request exists
+*/
+static u3_pend_req*
+_xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
+  u3_pend_req* ret_u = NULL;
+  u3_noun key = _xmas_request_key(nam_u);
+
+  u3_weak res = u3h_git(sam_u->req_p, key);
+  if ( res != u3_none && res != u3_nul ) {
+    ret_u = u3to(u3_pend_req, res);
+  }
+  if ( ret_u != NULL && ret_u->tot_w != 0 && ret_u->tot_w == ret_u->len_w ) {
+    ret_u = NULL;
+  }
+
+  u3z(key);
+  return ret_u;
+}
+
+/* _xmas_put_request(): save new pending request state for nam_u
+ *
+ *   the memory in the hashtable is allocated once in the lifecycle of the 
+ *   request. req_u will be copied into the hashtable memory, and so can be
+ *   immediately freed
+ *
+*/
+static void
+_xmas_put_request(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_pend_req* req_u) {
+  u3_noun key = _xmas_request_key(nam_u);
+
+  if ( req_u == NULL) {
+    u3h_put(sam_u->req_p, key, u3_nul);
+    u3z(key);
+    return;
+  }
+  u3_pend_req* old_u = _xmas_get_request(sam_u, nam_u);
+  u3_pend_req* new_u = req_u;
+  if ( old_u == NULL ) {
+    new_u = u3a_calloc(sizeof(u3_pend_req),1);
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
+  } else {
+    new_u = old_u;
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
+  }
+
+
+  u3_noun val = u3of(u3_pend_req, new_u);
+  u3h_put(sam_u->req_p, key, val);
+  u3z(key);
+}
+
+/* _xmas_packet_timeout(): callback for packet timeout
+*/
+static void
+_xmas_packet_timeout(uv_timer_t* tim_u) {
+  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
+  u3l_log("%u packet timed out", req_u->old_w);
+}
+static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
+{
+
+  gag_u->con_w++;
+
+  c3_d now_d = _get_now_micros();
+  c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
+
+  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
+
+  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
+  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
+  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
+
+  //u3_cbic_on_ack(gag_u);
+}
+
+/*
+ * _xmas_req_get_cwnd(): produce current state of packet pump
+ *
+ * saves next fragment number and preallocated pact into the passed pointers.
+ * Will not do so if returning 0
+*/
+static c3_w
+_xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas_pact** nex_u)
+{
+  c3_w res_w = 0;
+  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
+  if ( NULL == req_u ) {
+    return 0;
+  }
+  *nex_u = req_u->pac_u;
+  if ( req_u->tot_w == 0 ) {
+    u3l_log("shouldn't happen");
+    *nex_w = 0;
+    return 1;
+
+  }
+  *nex_w = req_u->nex_w;
+
+  c3_w liv_w = _wyt_bitset(&req_u->was_u);
+
+  c3_w rem_w = req_u->tot_w - req_u->nex_w + 1;
+  return c3_min(rem_w, IN_FLIGHT - liv_w);
+}
+
+/* _xmas_req_pact_sent(): mark packet as sent
+**
+*/
+static void
+_xmas_req_pact_resent(u3_xmas* sam_u, u3_xmas_name* nam_u)
+{
+  c3_d now_d = _get_now_micros();
+  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
+  // if we already have pending request
+  if ( NULL == req_u ) {
+    return;
+
+  }
+  req_u->wat_u[nam_u->fra_w].sen_d = now_d;
+  req_u->wat_u[nam_u->fra_w].tie_y++;
+}
+
+/* _xmas_req_pact_sent(): mark packet as sent
+**
+*/
+static void
+_xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
+{
+  c3_d now_d = _get_now_micros();
+  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
+
+  // if we already have pending request
+  if ( NULL != req_u ) {
+    if( req_u->nex_w == nam_u->fra_w ) {
+      req_u->nex_w++;
+    }
+    // TODO: optional assertions?
+    req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1, 0 };
+    _put_bitset(&req_u->was_u, nam_u->fra_w);
+    if ( nam_u->fra_w == 1 ) {
+      req_u->lef_w = 1;
+    }
+
+  } else {
+    // instantiate pending request
+    // stack allocating is ok, because _xmas_put_pend will copy it out anyway
+    req_u = alloca(sizeof(u3_pend_req));
+    req_u->pac_u = c3_calloc(sizeof(u3_xmas_pact));
+    req_u->pac_u->sam_u = sam_u;
+    req_u->pac_u->hed_u.typ_y = PACT_PEEK;
+    req_u->gag_u = c3_calloc(sizeof(u3_gage));
+    _init_gage(req_u->gag_u);
+    memcpy(&req_u->pac_u->pek_u.nam_u, nam_u, sizeof(u3_xmas_name));
+    // TODO: handle restart
+    // u3_assert( nam_u->fra_w == 0 ); 
+    req_u->nex_w = 1;
+    req_u->tot_w = 0;
+    req_u->len_w = 0;
+    req_u->dat_y = NULL;
+    uv_timer_init(u3L, &req_u->tim_u);
+    req_u->wat_u = NULL;
+    req_u->was_u.buf_y = NULL;
+    req_u->lef_w = 0;
+    req_u->old_w = 1;
+  }
+
+  if ( req_u->lef_w != 0 && c3n == _has_bitset(&req_u->was_u, req_u->lef_w) ) {
+    while ( req_u->lef_w++ < req_u->tot_w ) {
+      if ( c3y == _has_bitset(&req_u->was_u, req_u->lef_w) ) {
+	break;
+      }
+    }
+  }
+  _xmas_put_request(sam_u, nam_u, req_u);
+}
+
+
+/* _ames_czar_port(): udp port for galaxy.
+*/
+static c3_s
+_ames_czar_port(c3_y imp_y)
+{
+  if ( c3n == u3_Host.ops_u.net ) {
+    return 31337 + imp_y;
+  }
+  else {
+    return 13337 + imp_y;
+  }
+}
+
+
+/* _ames_alloc(): libuv buffer allocator.
+*/
+static void
+_ames_alloc(uv_handle_t* had_u,
+            size_t len_i,
+            uv_buf_t* buf
+            )
+{
+  //  we allocate 2K, which gives us plenty of space
+  //  for a single ames packet (max size 1060 bytes)
+  //
+  void* ptr_v = c3_malloc(4096);
+  *buf = uv_buf_init(ptr_v, 4096);
+}
+
+/* u3_xmas_decode_lane(): deserialize noun to lane; 0.0.0.0:0 if invalid
+*/
+static u3_lane
+u3_xmas_decode_lane(u3_atom lan) {
+  u3_lane lan_u;
+  c3_d lan_d;
+
+  if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
+    return (u3_lane){0, 0};
+  }
+
+  u3z(lan);
+
+  lan_u.pip_w = (c3_w)lan_d;
+  lan_u.por_s = (c3_s)(lan_d >> 32);
+  //  convert incoming localhost to outgoing localhost
+  //
+  lan_u.pip_w = ( 0 == lan_u.pip_w ) ? 0x7f000001 : lan_u.pip_w;
+
+  return lan_u;
+}
+
+/* u3_xmas_lane_to_chub(): serialize lane to double-word
+*/
+static c3_d
+u3_xmas_lane_to_chub(u3_lane lan) {
+  return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_w;
+}
+
+
+
+
+//  END plagariasm zone
+//
+//
+//
+//
+//
+//
+static void _xmas_free_seal(u3_seal* sel_u)
+{
+  //c3_free(sel_u->buf_y);
+  //c3_free(sel_u);
+}
+
+static u3_noun _xmas_get_now() {
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  u3_noun res = u3_time_in_tv(&tim_u);
+  return res;
+}
+
+
+// refcounted
+static c3_o
+_xmas_rout_pact(u3_xmas_pact* pac_u, u3_noun lan) {
+  u3_noun tag, val;
+  u3x_cell(lan, &tag, &val);
+
+  u3_assert( (c3y == tag) || (c3n == tag) );
+  c3_o suc_o = c3y;
+  if ( c3y == tag ) {
+    u3_assert( c3y == u3a_is_cat(val) );
+    u3_assert( val < 256 );
+    pac_u->rut_u.typ_y = ROUT_GALAXY;
+    pac_u->rut_u.imp_y = val;
+  } else {
+    u3_lane lan_u = u3_xmas_decode_lane(u3k(val));
+    //  if in local-only mode, don't send remote packets
+    //
+    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
+      suc_o = c3n;
+    }
+    //  if the lane is uninterpretable, silently drop the packet
+    //
+    else if ( 0 == lan_u.por_s ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("ames: inscrutable lane");
+      }
+      suc_o = c3n;
+    } else {
+      pac_u->rut_u.typ_y = ROUT_OTHER;
+      pac_u->rut_u.lan_u = lan_u;
+    }
+  }
+  u3z(lan);
+  return suc_o;
+}
+
+
+
+static void _xmas_pact_free(u3_xmas_pact* pac_u) {
+  // TODO: i'm lazy
+}
+
+
 static void
 _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 {
@@ -1598,6 +1561,189 @@ static void _xmas_send_buf(u3_xmas* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
     _xmas_free_seal(sel_u);
   }
 }
+
+static void
+_update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
+{
+  if( req_u->tot_w == 0 ) {
+    return;
+  }
+  // scan in flight packets, find oldest
+  c3_w idx_w = req_u->lef_w;
+  c3_d now_d = _get_now_micros();
+  c3_d wen_d = now_d;
+  for ( c3_w i = req_u->lef_w; i < req_u->nex_w; i++ ) {
+    if ( c3y == _has_bitset(&req_u->was_u, i) &&
+	 wen_d > req_u->wat_u[i].sen_d
+    ) {
+      wen_d = req_u->wat_u[i].sen_d;
+      idx_w = i;
+    }
+  }
+  if ( now_d == wen_d ) {
+    u3l_log("failed to find new oldest");
+    _log_bitset(&req_u->was_u);
+
+  }
+  req_u->old_w = idx_w;
+  uv_timer_start(&gag_u->tim_u, _xmas_packet_timeout, ((req_u->wat_u[req_u->old_w].sen_d + gag_u->rto_w) / 1000), 0);
+}
+
+
+static void
+_try_resend(u3_pend_req* req_u)
+{
+  u3_xmas* sam_u = req_u->pac_u->sam_u;
+  u3_lane* lan_u = &req_u->lan_u;
+  if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) {
+    return;
+  }
+  c3_w ack_w = req_u->ack_w - REORDER_THRESH;
+  c3_d now_d = _get_now_micros();
+  for( int i = req_u->lef_w; i < ack_w; i++ ) {
+    if ( c3y == _has_bitset(&req_u->was_u, i) ) {
+      if ( req_u->wat_u[i].tie_y == 1 ) {
+	c3_y* buf_y = c3_calloc(PACT_SIZE);
+	req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
+	u3l_log("fast resending %u ", req_u->old_w);
+	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+	if( siz_w == 0 ) {
+	  u3l_log("failed to etch");
+	  u3_assert( 0 );
+	}
+	// TODO: better route management
+	_xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
+	_xmas_req_pact_resent(sam_u, &req_u->pac_u->pek_u.nam_u);
+
+      } else if ( (now_d - req_u->wat_u[i].sen_d) < req_u->gag_u->rto_w ) {
+	c3_y* buf_y = c3_calloc(PACT_SIZE);
+	req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
+	u3l_log("slow resending %u ", req_u->old_w);
+	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+	if( siz_w == 0 ) {
+	  u3l_log("failed to etch");
+	  u3_assert( 0 );
+	}
+	// TODO: better route management
+	_xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
+	_xmas_req_pact_resent(sam_u, &req_u->pac_u->pek_u.nam_u);
+
+      }
+    }
+  }
+}
+
+/* _xmas_req_pact_done(): mark packet as done, possibly producing the result 
+*/
+static u3_weak
+_xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_u, u3_lane* lan_u)
+{
+  u3_weak ret = u3_none;
+  c3_d now_d = _get_now_micros();
+  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
+
+  req_u->lan_u = *lan_u;
+
+  u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
+
+  // first we hear from lane
+  if ( gag_u == NULL ) {
+    gag_u = alloca(sizeof(u3_gage));
+    _init_gage(gag_u);
+  }
+
+  
+  if ( NULL == req_u ) {
+#ifdef XMAS_DEBUG
+    u3l_log("xmas: attempting to mark packet done, no request"); 
+#endif
+    return u3_none;
+  }
+
+  c3_w siz_w = (1 << (nam_u->boq_y - 3));
+  // First packet received, instantiate request fully
+  if ( req_u->tot_w == 0 ) {
+    u3_assert( siz_w == 1024); // boq_y == 13
+    req_u->dat_y = c3_calloc(siz_w * mat_u->tot_w);
+    req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * mat_u->tot_w);
+    req_u->tot_w = mat_u->tot_w;
+    _init_bitset(&req_u->was_u, mat_u->tot_w + 1);
+    req_u->lef_w = 2;
+  }
+
+  if ( mat_u->tot_w <= nam_u->fra_w ) {
+    u3l_log("xmas: invalid packet (exceeded bounds)");
+    return u3_none;
+  }
+
+  // received duplicate
+  if ( nam_u->fra_w != 0 && c3n == _has_bitset(&req_u->was_u, nam_u->fra_w) ) {
+#ifdef XMAS_DEBUG
+      u3l_log("duplicate page");
+#endif 
+ 
+    req_u->wat_u[nam_u->fra_w].dup_y++;
+    u3l_log("duplicate %u", req_u->wat_u[nam_u->fra_w].dup_y);
+
+    return u3_none;
+  } 
+
+  _del_bitset(&req_u->was_u, nam_u->fra_w);
+  if ( nam_u->fra_w > req_u->ack_w ) {
+    req_u->ack_w = nam_u->fra_w;
+  }
+  if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
+    u3l_log("received retry %u", nam_u->fra_w);
+  }
+
+  req_u->len_w++;
+  if ( req_u->lef_w == nam_u->fra_w ) {
+    req_u->lef_w++;
+  }
+
+  if ( nam_u->fra_w != 0 ) {
+    // handle gauge update
+    _xmas_handle_ack(gag_u, &req_u->wat_u[nam_u->fra_w]);
+    if ( (nam_u->fra_w % 10) == 0 ) {
+    }
+  }
+
+
+  memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), mat_u->fra_y, mat_u->len_w);
+  c3_d wen_d = _get_now_micros();
+
+  _try_resend(req_u);
+  /*
+   * // in-order
+  if ( nam_u->fra_w != 0 && ((nam_u->fra_w - req_u->lef_w) > 5) ) {
+    u3l_log("diff: %u", _abs(nam_u->fra_w - req_u->old_w);
+    c3_y* buf_y = c3_calloc(PACT_SIZE);
+    req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
+    u3l_log("resending %u on num %u", req_u->old_w, nam_u->fra_w);
+    c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+    if( siz_w == 0 ) {
+      u3l_log("failed to etch");
+      u3_assert( 0 );
+    }
+    // TODO: better route management
+    _xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
+    _xmas_req_pact_resent(sam_u, &req_u->pac_u->pek_u.nam_u);
+  }*/
+  _update_oldest_req(req_u, gag_u);
+
+
+  if ( req_u->len_w == req_u->tot_w ) {
+    uv_timer_stop(&req_u->tim_u);
+  //u3dc("rap", 13, u3dc("turn", u3n_slam_on(u3k(sam_u->mop_u.tap), req_u->dat), u3v_wish("tail")));
+    //_xmas_put_request(sam_u, nam_u, u3_none);
+    return u3i_word(req_u->tot_w);
+  } else {
+    _xmas_put_request(sam_u, nam_u, req_u);
+    _xmas_put_lane(sam_u, nam_u->her_d, lan_u, gag_u);
+  }
+  return u3_none;
+}
+
 
 static void _xmas_send(u3_xmas_pact* pac_u)
 {
@@ -1692,8 +1838,8 @@ _xmas_rout_pacs(u3_xmas_pact* pac_u, u3_noun las)
 
 static void
 _xmas_timer_cb(uv_timer_t* tim_u) {
-  c3_w rto_w = 500;
-
+  u3_pend_req* req_u = tim_u->data;
+  _try_resend(req_u);
 }
 
 static void 
@@ -2088,6 +2234,7 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
   }*/
 
   u3_weak res = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.mat_u, &lan_u);
+  u3l_log("done");
 
   if ( u3_none != res ) {
     u3l_log("finished");
@@ -2154,7 +2301,10 @@ _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
       _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
     } else if ( tag == XMAS_ITEM ) {
       c3_y* buf_y;
-
+      if ( rand() % 20 == 0) {
+	u3l_log("dropping packet %u", pac_u->pek_u.nam_u.fra_w);
+	return;
+      }
       c3_w len_w = _xmas_respond(pac_u, &buf_y, u3k(dat));
       _xmas_send_buf(pac_u->sam_u, lan_u, buf_y, len_w);
     } else {
