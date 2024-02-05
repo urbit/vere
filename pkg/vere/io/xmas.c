@@ -19,7 +19,7 @@
 
 c3_o dop_o = c3n;
 
-//#define XMAS_DEBUG     c3y
+#define XMAS_DEBUG     c3y
 #define XMAS_VER       1
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
@@ -1139,6 +1139,7 @@ static void _init_gage(u3_gage* gag_u)
   gag_u->rtv_w = 1000000;
   gag_u->con_w = 0;
   gag_u->wnd_w = 1;
+  gag_u->sst_w = 10000;
 }
 
 /* u3_xmas_encode_lane(): serialize lane to noun
@@ -1278,6 +1279,14 @@ static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
   gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
 
+  if ( gag_u->wnd_w < gag_u->sst_w ) {
+    gag_u->wnd_w++;
+  } else {
+    _log_gage(gag_u);
+    // ??
+    //gag_u->wnd_w += (0 == (
+  }
+
   //u3_cbic_on_ack(gag_u);
 }
 
@@ -1307,7 +1316,7 @@ _xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas
   c3_w liv_w = _wyt_bitset(&req_u->was_u);
 
   c3_w rem_w = req_u->tot_w - req_u->nex_w + 1;
-  return c3_min(rem_w, IN_FLIGHT - liv_w);
+  return c3_min(rem_w, req_u->gag_u->wnd_w - liv_w);
 }
 
 /* _xmas_req_pact_sent(): mark packet as sent
@@ -1355,8 +1364,7 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
     req_u->pac_u = c3_calloc(sizeof(u3_xmas_pact));
     req_u->pac_u->sam_u = sam_u;
     req_u->pac_u->hed_u.typ_y = PACT_PEEK;
-    req_u->gag_u = c3_calloc(sizeof(u3_gage));
-    _init_gage(req_u->gag_u);
+    req_u->gag_u = NULL;
     memcpy(&req_u->pac_u->pek_u.nam_u, nam_u, sizeof(u3_xmas_name));
     // TODO: handle restart
     // u3_assert( nam_u->fra_w == 0 ); 
@@ -1586,7 +1594,8 @@ _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
 
   }
   req_u->old_w = idx_w;
-  uv_timer_start(&gag_u->tim_u, _xmas_packet_timeout, ((req_u->wat_u[req_u->old_w].sen_d + gag_u->rto_w) / 1000), 0);
+  req_u->tim_u.data = req_u;
+  uv_timer_start(&req_u->tim_u, _xmas_packet_timeout, ((req_u->wat_u[req_u->old_w].sen_d + gag_u->rto_w) / 1000), 0);
 }
 
 
@@ -1595,6 +1604,7 @@ _try_resend(u3_pend_req* req_u)
 {
   u3_xmas* sam_u = req_u->pac_u->sam_u;
   u3_lane* lan_u = &req_u->lan_u;
+  c3_o los_o = c3n;
   if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) {
     return;
   }
@@ -1603,9 +1613,9 @@ _try_resend(u3_pend_req* req_u)
   for( int i = req_u->lef_w; i < ack_w; i++ ) {
     if ( c3y == _has_bitset(&req_u->was_u, i) ) {
       if ( req_u->wat_u[i].tie_y == 1 ) {
+	los_o = c3y;
 	c3_y* buf_y = c3_calloc(PACT_SIZE);
-	req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
-	u3l_log("fast resending %u ", req_u->old_w);
+	req_u->pac_u->pek_u.nam_u.fra_w = i;
 	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
 	if( siz_w == 0 ) {
 	  u3l_log("failed to etch");
@@ -1615,10 +1625,11 @@ _try_resend(u3_pend_req* req_u)
 	_xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
 	_xmas_req_pact_resent(sam_u, &req_u->pac_u->pek_u.nam_u);
 
-      } else if ( (now_d - req_u->wat_u[i].sen_d) < req_u->gag_u->rto_w ) {
+      } else if ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) {
+	los_o = c3y;
 	c3_y* buf_y = c3_calloc(PACT_SIZE);
-	req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
-	u3l_log("slow resending %u ", req_u->old_w);
+	req_u->pac_u->pek_u.nam_u.fra_w = i;
+	u3l_log("slow resending %u ", i);
 	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
 	if( siz_w == 0 ) {
 	  u3l_log("failed to etch");
@@ -1627,9 +1638,14 @@ _try_resend(u3_pend_req* req_u)
 	// TODO: better route management
 	_xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
 	_xmas_req_pact_resent(sam_u, &req_u->pac_u->pek_u.nam_u);
-
       }
     }
+  }
+  
+  if ( c3y == los_o ) {
+    req_u->gag_u->sst_w = (req_u->gag_u->wnd_w / 2) + 1;
+    req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
+    req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
   }
 }
 
@@ -1645,6 +1661,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_
   req_u->lan_u = *lan_u;
 
   u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
+  req_u->gag_u = gag_u;
 
   // first we hear from lane
   if ( gag_u == NULL ) {
