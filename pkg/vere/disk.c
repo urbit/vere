@@ -1315,19 +1315,25 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
   u3_dent* den_u = die_u->dil_u;
   c3_o     ret_o = c3n;
-
-  *lat_d = 0;
+  c3_d     epo_d = 0;
+  c3_d     val_d;
+  c3_i     car_i;
 
   while ( den_u ) {
-    c3_d epo_d = 0;
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &epo_d) ) {
+    if (  (1 == sscanf(den_u->nam_c, "0i%" SCNu64 "%n", &val_d, &car_i))
+       && (0 < car_i)
+       && ('\0' == *(den_u->nam_c + car_i)) )
+    {
       ret_o = c3y;   //  NB: returns yes if the directory merely exists
-      *lat_d = c3_max(epo_d, *lat_d);  //  update the latest epoch number
+      epo_d = c3_max(epo_d, val_d);
     }
+
     den_u = den_u->nex_u;
   }
 
   u3_dire_free(die_u);
+
+  *lat_d = epo_d;
 
   return ret_o;
 }
@@ -1340,12 +1346,17 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
   u3_dire* ned_u = u3_foil_folder(log_u->com_u->pax_c);
   u3_dent* den_u = ned_u->dil_u;
   c3_z     len_z = 0;
+  c3_i     car_i;
+  c3_d     val_d;
 
   while ( den_u ) {  //  count epochs
-    c3_d tmp_d;
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, &tmp_d) ) {
+    if (  (1 == sscanf(den_u->nam_c, "0i%" SCNu64 "%n", &val_d, &car_i))
+       && (0 < car_i)
+       && ('\0' == *(den_u->nam_c + car_i)) )
+    {
       len_z++;
     }
+
     den_u = den_u->nex_u;
   }
 
@@ -1358,9 +1369,13 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
   den_u = ned_u->dil_u;
 
   while ( den_u ) {
-    if ( 1 == sscanf(den_u->nam_c, "0i%" PRIc3_d, (sot_d + len_z)) ) {
-      len_z++;
+    if (  (1 == sscanf(den_u->nam_c, "0i%" SCNu64 "%n", &val_d, &car_i))
+       && (0 < car_i)
+       && ('\0' == *(den_u->nam_c + car_i)) )
+    {
+      sot_d[len_z++] = val_d;
     }
+
     den_u = den_u->nex_u;
   }
 
@@ -1636,6 +1651,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   {
     c3_c ver_c[8];
     c3_w ver_w;
+    c3_i car_i;
+
     if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
                                 sizeof(ver_c) - 1, ver_c) )
     {
@@ -1645,7 +1662,10 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_gone;
     }
 
-    if ( 1 != sscanf(ver_c, "%d", &ver_w) ) {
+    if (  (1 != sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+       && (0 < car_i)
+       && ('\0' == *(ver_c + car_i)) )
+    {
       fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
       return _epoc_fail;
     }
