@@ -1586,6 +1586,23 @@ _cw_info(c3_i argc, c3_c* argv[])
 
   u3_disk_slog(log_u);
   printf("\n");
+
+
+  {
+    c3_z  len_z = u3_disk_epoc_list(log_u, 0);
+    c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+    u3_disk_epoc_list(log_u, sot_d);
+
+    fprintf(stderr, "epocs:\r\n");
+
+    while ( len_z-- ) {
+      fprintf(stderr, "  0i%" PRIu64 "\r\n", sot_d[len_z]);
+    }
+
+    c3_free(sot_d);
+    fprintf(stderr, "\r\n");
+  }
+
   u3_lmdb_stat(log_u->mdb_u, stdout);
   u3_disk_exit(log_u);
 
