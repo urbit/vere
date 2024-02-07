@@ -573,6 +573,11 @@ u3_disk_walk_init(u3_disk* log_u,
                                    eve_d,
                                    c3_min(max_d, log_u->dun_d));
 
+  if ( c3n == wok_u->liv_o ) {
+    c3_free(wok_u);
+    return 0;
+  }
+
   return wok_u;
 }
 
