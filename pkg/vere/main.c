@@ -2215,10 +2215,17 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     _cw_play_snap(log_u);
   }
 
-  //  XX this should check that snapshot is within epoc,
-  //  and load from the epoc / reboot if it is not
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+  //  XX this should load from the epoc snapshot
+  //  but that clobbers chk/ which is risky
   //
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  if ( u3_Host.eve_d < log_u->epo_d ) {
+    fprintf(stderr, "mars: pier corrupt: "
+                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 "\r\n",
+                    u3_Host.eve_d, log_u->epo_d);
+    exit(1);
+  }
 
   u3C.slog_f = _cw_play_slog;
 
@@ -2338,7 +2345,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   }
 
   if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
-    fprintf(stderr, "mars: nothing to do!");
+    fprintf(stderr, "mars: nothing to do!\r\n");
   }
 }
 
