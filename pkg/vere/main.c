@@ -2494,19 +2494,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   u3_disk_kindly(log_u, u3_Host.eve_d);
 
-  //  create new epoch
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "chop: failed to get first/last events\r\n");
-    exit(1);
-  }
-
-  //  create new epoch if latest isn't empty
-  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_roll(log_u, las_d)) ) {
-    fprintf(stderr, "chop: failed to create new epoch\r\n");
-    exit(1);
-  }
-
   c3_z len_z = u3_disk_epoc_list(log_u, 0);
 
   if ( len_z <= 2 ) {
