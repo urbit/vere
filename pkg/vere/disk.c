@@ -1163,10 +1163,10 @@ fail1:
   return c3n;
 }
 
-/* u3_disk_epoc_roll: epoch rollover.
+/* _disk_epoc_roll: epoch rollover.
 */
-c3_o
-u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
+static c3_o
+_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 {
   u3_assert(epo_d);
 
@@ -1255,6 +1255,8 @@ u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   close(epo_i);
 
+  fprintf(stderr, "disk: created epoch %" PRIc3_d "\r\n", epo_d);
+
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
   log_u->ver_w = U3D_VERLAT;
@@ -1272,10 +1274,10 @@ fail1:
   return c3n;
 }
 
-/* u3_disk_epoc_kill: delete an epoch.
+/* _disk_epoc_kill: delete an epoch.
 */
-c3_o
-u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
+static c3_o
+_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
 {
   //  get epoch directory
   c3_c epo_c[8193];
@@ -1424,28 +1426,13 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  XX: put old log in separate pointer (old_u?)?
 
   //  get metadata from old log
-  c3_d     who_d[2];
-  c3_o     fak_o;
-  c3_w     lif_w;
+  c3_d who_d[2];
+  c3_o fak_o;
+  c3_w lif_w;
+
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
-  }
-
-  //  get first/last event numbers from old log
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-    return c3n;
-  }
-
-  //  set version to 2 (migration in progress)
-  {
-    c3_w ver_w = U3D_VER2;
-    if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
-      fprintf(stderr, "disk: failed to set version to 2\r\n");
-      return c3n;
-    }
   }
 
   //  finish with old log
@@ -1461,15 +1448,6 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   }
 
   fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VERLAT);
-
-  // ensure there's a current snapshot
-  if ( eve_d != las_d ) {
-    fprintf(stderr, "disk: snapshot is out of date, please "
-                    "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "disk: eve_d (%" PRIc3_d ") != las_d (%" PRIc3_d ")\r\n",
-                    eve_d, las_d);
-    return c3n;
-  }
 
   //  initialize first epoch "0i0"
   if ( c3n == u3_disk_epoc_zero(log_u) ) {
@@ -1566,8 +1544,6 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  //  XX: maybe rollover
-
   //  success
   fprintf(stderr, "disk: migrated disk to v%d format\r\n", U3D_VERLAT);
 
@@ -1599,37 +1575,118 @@ _disk_vere_diff(u3_disk* log_u)
 void
 u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
 {
+  //  ensure there's a current snapshot
+  //
+  if ( eve_d != log_u->dun_d ) {
+    fprintf(stderr, "disk: snapshot (event %" PRIc3_d ") is out of date\r\n"
+                    "      (latest event is %" PRIc3_d "\r\n",
+                    eve_d, log_u->dun_d);
+    //  XX need better instructions
+    //
+    fprintf(stderr, "start/shutdown your pier gracefully first\r\n");
+    exit(1);
+  }
+
   switch ( log_u->ver_w ) {
-    case U3D_VER1:
+    case U3D_VER1: {
+      //  set version to 2 (migration in progress)
+      c3_w ver_w = U3D_VER2;
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
+        fprintf(stderr, "disk: failed to set version to 2\r\n");
+        exit(1);
+      }
+    }  // fallthru
+
     case U3D_VER2: {
       if ( c3n == _disk_migrate(log_u, eve_d) ) {
         fprintf(stderr, "disk: failed to migrate event log\r\n");
         exit(1);
       }
 
-      if ( c3n == u3_disk_epoc_roll(log_u, log_u->dun_d) ) {
+      if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         exit(1);
       }
-      break;
-    }
+    } break;
 
     case U3D_VER3: {
       if ( (0 == log_u->epo_d) || 
            (c3y == _disk_vere_diff(log_u)) )
       {
-        if ( c3n == u3_disk_epoc_roll(log_u, log_u->dun_d) ) {
+        if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
           fprintf(stderr, "disk: failed to initialize epoch\r\n");
           exit(1);
         }
       }
-      break;
-    }
+    } break;
 
     default: {
       fprintf(stderr, "disk: unknown disk version: %d\r\n", log_u->ver_w);
       exit(1);
     }
+  }
+}
+
+/* u3_disk_chop(): delete all but the latest 2 epocs.
+*/
+void
+u3_disk_chop(u3_disk* log_u, c3_d eve_d)
+{
+  c3_z  len_z = u3_disk_epoc_list(log_u, 0);
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  u3_disk_epoc_list(log_u, sot_d);
+
+  if ( len_z <= 2 ) {
+    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
+    exit(0);  //  enjoy
+  }
+
+  //  delete all but the last two epochs
+  //
+  //    XX parameterize the number of epochs to chop
+  //
+  for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
+    fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n",
+                    sot_d[i_z]);
+    if ( c3y != _disk_epoc_kill(log_u, sot_d[i_z]) ) {
+      fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
+      exit(1);
+    }
+  }
+
+  // cleanup
+  c3_free(sot_d);
+
+  // success
+  fprintf(stderr, "chop: event log truncation complete\r\n");
+}
+
+/* u3_disk_roll(): rollover to a new epoc.
+*/
+void
+u3_disk_roll(u3_disk* log_u, c3_d eve_d)
+{
+  //  XX get fir_d from log_u
+  c3_d fir_d, las_d;
+
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "roll: failed to read first/last event numbers\r\n");
+    exit(1);
+  }
+
+  if ( fir_d == las_d ) {
+    fprintf(stderr, "roll: latest epoch is empty\r\n");
+    exit(0);
+  }
+
+  if ( (eve_d != las_d) || (eve_d != log_u->dun_d) ) {
+    fprintf(stderr, "roll: shenanigans!\r\n");
+    exit(1);
+  }
+
+  else if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
+    fprintf(stderr, "roll: failed to create new epoch\r\n");
+    exit(1);
   }
 }
 
@@ -1710,6 +1767,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   }
 
   //  initialize dun_d/sen_d values
+  //
+  //    XX save [fir_d] in struct, check on play
+  //
   log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
   log_u->sen_d = log_u->dun_d;
 
@@ -1957,7 +2017,7 @@ try_init:
                           "falling back to previous at 0i%" PRIc3_d "\r\n",
                           lat_d, sot_d[1]);
 
-          u3_disk_epoc_kill(log_u, lat_d);
+          _disk_epoc_kill(log_u, lat_d);
 
           lat_d = sot_d[1];
           try_o = c3y;
