@@ -2222,7 +2222,7 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   //
   if ( u3_Host.eve_d < log_u->epo_d ) {
     fprintf(stderr, "mars: pier corrupt: "
-                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 "\r\n",
+                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 ")\r\n",
                     u3_Host.eve_d, log_u->epo_d);
     exit(1);
   }

@@ -1409,22 +1409,12 @@ static c3_o
 _disk_migrate(u3_disk* log_u, c3_d eve_d)
 {
   /*  migration steps:
-   *  0. detect whether we need to migrate or not
-   *     a. if it's a fresh boot via u3_Host.ops_u.nuu -> skip migration
-   *     b. if log/data.mdb is readable and is not v3 -> execute migration
-   *        if not -> skip migration (returns yes)
-   *  1. set log/data.mdb to version 2 (migration in progress)
-   *  2. initialize epoch 0i0
-   *     a. creates epoch directory
-   *     b. creates epoch version file
-   *     c. creates binary version file
-   *     d. creates hard links to data.mdb and lock.mdb in 0i0/
-   *     e. deletes backup snapshot
-   *  3. create hard links to data.mdb and lock.mdb in 0i0/
-   *  4. use scratch space to initialize new log/data.db in log/tmp
-   *  5. save old metadata to new db in scratch space
-   *  6. clobber old log/data.mdb with new log/tmp/data.mdb
-   *  7. open epoch lmdb and set it in log_u
+   *  1. initialize epoch 0i0 (see u3_disk_epoc_zero)
+   *  2. create hard links to data.mdb and lock.mdb in 0i0/
+   *  3. use scratch space to initialize new log/data.db in log/tmp
+   *  4. save old metadata to new db in scratch space
+   *  5. clobber old log/data.mdb with new log/tmp/data.mdb
+   *  6. open epoch lmdb and set it in log_u
    */
   
   //  NB: requires that log_u->mdb_u is initialized to log/data.mdb
