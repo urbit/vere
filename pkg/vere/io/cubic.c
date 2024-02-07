@@ -112,11 +112,11 @@ void u3_cbic_on_ack(u3_gage* gag_u)
   if ( gag_u->wnd_w <= gag_u->sst_w ) {
     gag_u->wnd_w += 1;
   } else {
-    if ( gag_u->wnc_w > gag_u->wnd_w ) {
+    if ( gag_u->wnf_w > gag_u->wnd_w ) {
       gag_u->wnd_w += 1;
-      gag_u->wnc_w = 0;
+      gag_u->wnf_w = 0;
     } else {
-      gag_u->wnc_w += 1;
+      gag_u->wnf_w += 1;
     }
   }
 }

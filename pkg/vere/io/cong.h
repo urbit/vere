@@ -12,7 +12,7 @@ typedef struct _u3_gage {
   c3_w     rto_w;  // rto
   c3_w     rtv_w;  // rttvar
   c3_w     wnd_w;  // cwnd
-  c3_w     wnc_w; // cwnd_cnt
+  c3_w     wnf_w;  // cwnd fraction
   c3_w     sst_w;  // ssthresh
   c3_w     con_w;  // counter
   void*    alg_u;  // algorithm backpointer
