@@ -714,7 +714,6 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
   }
 
   u3h_put(htd_u->nax_p, peq_u->pax, nun);
-  u3z(peq_u->pax);
   c3_free(peq_u);
 }
 
