@@ -1018,16 +1018,6 @@
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
 
-      /* u3_disk_epoc_init(): create new epoch.
-       */
-        c3_o
-        u3_disk_epoc_roll(u3_disk* log_u, c3_d epo_d);
-
-      /* u3_disk_epoc_kill(): delete an epoch.
-       */
-        c3_o
-        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
-
       /* u3_disk_epoc_last(): get latest epoch number.
        */
         c3_o
@@ -1042,6 +1032,16 @@
       */
         void
         u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
+
+      /* u3_disk_chop(): delete all but the latest 2 epocs.
+       */
+        void
+        u3_disk_chop(u3_disk* log_u, c3_d epo_d);
+
+      /* u3_disk_roll(): rollover to a new epoc.
+       */
+        void
+        u3_disk_roll(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */

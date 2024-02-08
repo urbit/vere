@@ -101,6 +101,11 @@ _mars_play_batch(u3_mars* mar_u,
   u3_noun         dud;
   u3_weak         wen = u3_none;
 
+  if ( !wok_u ) {
+    fprintf(stderr, "play: failed to open event log iterator\r\n");
+    return _play_log_e;
+  }
+
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);

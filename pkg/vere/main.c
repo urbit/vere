@@ -1586,6 +1586,23 @@ _cw_info(c3_i argc, c3_c* argv[])
 
   u3_disk_slog(log_u);
   printf("\n");
+
+
+  {
+    c3_z  len_z = u3_disk_epoc_list(log_u, 0);
+    c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+    u3_disk_epoc_list(log_u, sot_d);
+
+    fprintf(stderr, "epocs:\r\n");
+
+    while ( len_z-- ) {
+      fprintf(stderr, "  0i%" PRIu64 "\r\n", sot_d[len_z]);
+    }
+
+    c3_free(sot_d);
+    fprintf(stderr, "\r\n");
+  }
+
   u3_lmdb_stat(log_u->mdb_u, stdout);
   u3_disk_exit(log_u);
 
@@ -2198,10 +2215,17 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     _cw_play_snap(log_u);
   }
 
-  //  XX this should check that snapshot is within epoc,
-  //  and load from the epoc / reboot if it is not
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+
+  //  XX this should load from the epoc snapshot
+  //  but that clobbers chk/ which is risky
   //
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  if ( u3_Host.eve_d < log_u->epo_d ) {
+    fprintf(stderr, "mars: pier corrupt: "
+                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 ")\r\n",
+                    u3_Host.eve_d, log_u->epo_d);
+    exit(1);
+  }
 
   u3C.slog_f = _cw_play_slog;
 
@@ -2321,7 +2345,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   }
 
   if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
-    fprintf(stderr, "mars: nothing to do!");
+    fprintf(stderr, "mars: nothing to do!\r\n");
   }
 }
 
@@ -2476,48 +2500,10 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   u3_disk_kindly(log_u, u3_Host.eve_d);
+  u3_disk_chop(log_u, u3_Host.eve_d);
 
-  //  create new epoch
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "chop: failed to get first/last events\r\n");
-    exit(1);
-  }
-
-  //  create new epoch if latest isn't empty
-  if ( (fir_d != las_d) && (c3n == u3_disk_epoc_roll(log_u, las_d)) ) {
-    fprintf(stderr, "chop: failed to create new epoch\r\n");
-    exit(1);
-  }
-
-  c3_z len_z = u3_disk_epoc_list(log_u, 0);
-
-  if ( len_z <= 2 ) {
-    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
-    exit(0);  //  enjoy
-  }
-
-  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
-  u3_disk_epoc_list(log_u, sot_d);
-
-  //  delete all but the last two epochs
-  //
-  //    XX parameterize the number of epochs to chop
-  //
-  for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
-    fprintf(stderr, "chop: deleting epoch 0i%" PRIc3_d "\r\n", sot_d[i_z]);
-    if ( c3y != u3_disk_epoc_kill(log_u, sot_d[i_z]) ) {
-      fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
-      exit(1);
-    }
-  }
-
-  // cleanup
-  c3_free(sot_d);
   u3_disk_exit(log_u);
-
-  // success
-  fprintf(stderr, "chop: event log truncation complete\r\n");
+  u3m_stop();
 }
 
 /* _cw_roll(): rollover to new epoch
@@ -2575,35 +2561,10 @@ _cw_roll(c3_i argc, c3_c* argv[])
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   u3_disk_kindly(log_u, u3_Host.eve_d);
+  u3_disk_roll(log_u, u3_Host.eve_d);
 
-  // check if there's a *current* snapshot
-  if ( log_u->dun_d != u3_Host.eve_d ) {
-    fprintf(stderr, "roll: error: snapshot is out of date, please "
-                    "start/shutdown your pier gracefully first\r\n");
-    fprintf(stderr, "roll: eve_d: %" PRIc3_d ", dun_d: %" PRIc3_d "\r\n", \
-                     u3A->eve_d, log_u->dun_d);
-    exit(1);
-  }
-
-  //  create new epoch
-  c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "roll: failed to get first/last events\r\n");
-    exit(1);
-  }
-
-  if ( fir_d == las_d ) {
-    fprintf(stderr, "roll: latest epoch already empty\r\n");
-    exit(0);
-  }
-  else if ( c3n == u3_disk_epoc_roll(log_u, las_d) ) {
-    fprintf(stderr, "roll: failed to create new epoch\r\n");
-    exit(1);
-  }
-
-  //  success
-  c3_d epo_d = log_u->dun_d + 1;
-  fprintf(stderr, "roll: epoch rollover complete\r\n");
+  u3_disk_exit(log_u);
+  u3m_stop();
 }
 
 /* _cw_vere(): download vere
