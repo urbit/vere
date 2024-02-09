@@ -729,6 +729,8 @@ _http_req_cache(u3_hreq* req_u)
 
   u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
   u3_weak sac = u3h_get(htd_u->sax_p, url);
+  u3z(url);
+  
   if ( u3_none == sac ) {
     return c3n;
   }
@@ -739,7 +741,7 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
     req_u->peq_u->req_u = req_u;
     req_u->peq_u->htd_u = htd_u;
-    req_u->peq_u->pax   = sac;
+    req_u->peq_u->pax   = u3k(sac);
 
     req_u->sat_e = u3_rsat_peek;
 
