@@ -125,6 +125,13 @@
         u3_weak
         u3h_git(u3p(u3h_root) har_p, u3_noun key);
 
+      /* u3h_del(); delete from hashtable.
+      **
+      ** `key` is RETAINED
+      */
+       void
+       u3h_del(u3p(u3h_root) har_p, u3_noun key);
+
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
