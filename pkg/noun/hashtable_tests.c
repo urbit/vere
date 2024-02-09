@@ -14,6 +14,59 @@ _setup(void)
   u3m_pave(c3y);
 }
 
+/* _test_put_del(): 
+*/
+static c3_i
+_test_put_del()
+{
+  u3p(u3h_root) har_p = u3h_new();
+  c3_i ret_i = 1;
+
+  c3_w i_w;
+  for ( i_w = 0; i_w < 5000; i_w++ ) {
+    u3_noun key = u3i_word(i_w);
+    u3_noun val = u3k(key);
+    u3h_put(har_p, key, val);
+    u3z(key);
+  }
+  fprintf(stderr, "inserted");
+
+  for ( i_w = 0; i_w < 5000; i_w++ ) {
+    u3_noun key = u3i_word(i_w);
+    u3_weak val = u3h_get(har_p, key);
+    if ( val == u3_none ) {
+      fprintf(stderr, "failed insert\r\n");
+      ret_i = 0;
+    }
+    u3z(key);
+    u3z(val);
+  }
+  fprintf(stderr, "presence");
+  c3_w del_w[4] = {30, 82, 4921, 535};
+
+  for ( i_w = 0; i_w < 4; i_w++ ) {
+    u3_noun key = u3i_word(del_w[i_w]);
+    u3h_del(har_p, key);
+    u3z(key);
+  }
+  fprintf(stderr, "deleted");
+
+  for ( i_w = 0; i_w < 4; i_w++ ) {
+    u3_noun key = u3i_word(del_w[i_w]);
+    u3_weak val = u3h_get(har_p, key);
+    if ( u3_none != val ) {
+      fprintf(stderr, "failed delete\r\n");
+      ret_i = 0;
+      break;
+    }
+  }
+  fprintf(stderr, "presence two");
+  u3h_free(har_p);
+  fprintf(stderr, "freed");
+
+  return ret_i;
+}
+
 /* _test_bit_manipulation():
 */
 static c3_i
@@ -220,6 +273,7 @@ _test_hashtable(void)
   ret_i &= _test_skip_slot();
   ret_i &= _test_cache_trimming();
   ret_i &= _test_cache_replace_value();
+  ret_i &= _test_put_del();
 
   return ret_i;
 }

@@ -2791,7 +2791,7 @@ _test_sift_page()
 {
   u3_xmas_pact pac_u;
   memset(&pac_u,0, sizeof(u3_xmas_pact));
-  pac_u.typ_y = PACT_PAGE;
+  pac_u.hed_u.typ_y = PACT_PAGE;
   u3l_log("checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pag_u.nam_u;
   u3_noun her = u3v_wish("~hastuc-dibtux");
@@ -2853,7 +2853,7 @@ _test_sift_peek()
 {
   u3_xmas_pact pac_u;
   memset(&pac_u,0, sizeof(u3_xmas_pact));
-  pac_u.typ_y = PACT_PEEK;;
+  pac_u.hed_u.typ_y = PACT_PEEK;;
   u3l_log("checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pek_u.nam_u;
   u3_noun her = u3v_wish("~hastuc-dibtux");
@@ -2865,7 +2865,7 @@ _test_sift_peek()
   nam_u->fra_w = 511;
 
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w len_w =_xmas_etch_pact(buf_y, &pac_u, her);
+  c3_w len_w =_xmas_etch_pact(buf_y, &pac_u);
   u3_xmas_pact nex_u;
   memset(&nex_u, 0, sizeof(u3_xmas_pact));
   _xmas_sift_pact(&nex_u, buf_y, len_w);
