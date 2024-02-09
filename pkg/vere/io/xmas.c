@@ -34,7 +34,7 @@ c3_o dop_o = c3n;
 
 // pending interest sentinels
 #define XMAS_ITEM         1  // cached item
-#define XMAS_SCRY         2  // waiting on scry
+#define XMAS_WAIT         2  // waiting on scry
 
 // routing table sentinels
 #define XMAS_CZAR         1  // pending dns lookup
@@ -130,7 +130,7 @@ typedef struct _u3_peer {
   u3_peer_last   las_u; // last check timestamps
   u3_lane        dir_u; // direct lane (if any)
   u3_lane        ind_u; // indirect lane (if any)
-  c3_y           imp_y; // galaxy
+  c3_s           imp_s; // galaxy
   u3_xmas*       sam_u; // backpointer
 } u3_peer;
 
@@ -244,17 +244,14 @@ typedef struct _u3_xmas_page_pact {
 } u3_xmas_page_pact;
 
 typedef struct _u3_xmas_poke_pact {
-  u3_xmas_peek_pact*     pek_u;
-  c3_w                   tot_w;
-  c3_y              aut_y[96]; // heap allocate??
-  c3_y*             dat_y;
+  u3_xmas_peek_pact     pek_u;
+  u3_xmas_page_pact     pag_u;
 } u3_xmas_poke_pact;
 
 typedef struct _u3_xmas_pact {
   u3_xmas_head      hed_u;
   uv_udp_send_t     snd_u;
   struct _u3_xmas*  sam_u;
-  u3_xmas_rout      rut_u;
   union {
     u3_xmas_poke_pact  pok_u;
     u3_xmas_page_pact  pag_u;
@@ -315,8 +312,7 @@ _log_head(u3_xmas_head* hed_u)
 static void
 _log_lane(u3_lane* lan_u)
 {
-  c3_c* sip_c = inet_ntoa(inet_makeaddr(AF_INET, lan_u->pip_w));
-  u3l_log("xmas: lane (%s,%u)", sip_c, lan_u->por_s);
+  u3l_log("xmas: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word(lan_u->pip_w))), lan_u->por_s);
 }
 
 static void
@@ -351,7 +347,6 @@ _log_name(u3_xmas_name* nam_u)
 }
 
 
-
 static void
 _log_peek_pact(u3_xmas_peek_pact* pac_u)
 {
@@ -374,6 +369,13 @@ _log_page_pact(u3_xmas_page_pact *pac_u)
 }
 
 static void
+_log_poke_pact(u3_xmas_poke_pact* pac_u) {
+  _log_peek_pact(&pac_u->pek_u);
+  _log_page_pact(&pac_u->pag_u);
+}
+
+
+static void
 _log_gage(u3_gage* gag_u)
 {
   u3l_log("gauge");
@@ -385,6 +387,19 @@ _log_gage(u3_gage* gag_u)
   u3l_log("ssthresh: %u", gag_u->sst_w);
   u3l_log("counter: %u", gag_u->con_w);
   //u3l_log("algorithm: %s", gag_u->alg_c);
+}
+
+static void _log_peer(u3_peer* per_u)
+{
+  if ( per_u == NULL ) {
+    u3l_log("NULL peer");
+    return;
+  }
+  u3l_log("dir");
+  _log_lane(&per_u->dir_u);
+  u3l_log("ind");
+  _log_lane(&per_u->ind_u);
+  u3l_log("galaxy: %s", u3r_string(u3dc("scot", 'p', per_u->imp_s)));
 }
 
 static void
@@ -410,10 +425,9 @@ _log_pact(u3_xmas_pact* pac_u)
     case PACT_PAGE: {
       _log_page_pact(&pac_u->pag_u);
       break;
-
     }
     default: {
-      u3l_log("logging not implemented for %i", pac_u->hed_u.typ_y);
+      _log_poke_pact(&pac_u->pok_u);
       break;
     }
   }
@@ -441,7 +455,7 @@ _clamp_rto(c3_d rto_d) {
 static void
 _update_hopcount(u3_xmas_head* hed_u)
 {
-  hed_u->hop_y = c3_max(hed_u->hop_y, 7);
+  hed_u->hop_y = c3_max(hed_u->hop_y+1, 7);
 }
 
 static inline void
@@ -461,7 +475,7 @@ _get_her(u3_xmas_pact* pac_u, c3_d* our_d)
       break;
     }
     case PACT_POKE: {
-      //memcpy(our_d, pac_u->pok_u.pek_u.nam_u.her_d, 2);
+      memcpy(our_d, pac_u->pok_u.pag_u.nam_u.her_d, 2);
       break;
     }
   }
@@ -870,23 +884,12 @@ _xmas_sift_peek_pact(u3_xmas_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
 }
 
 static c3_w
-_xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
+_xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0;
-  // Peek portion
-  pac_u->pek_u = c3_calloc(sizeof(*(pac_u->pek_u)));
-  cur_w += _xmas_sift_peek_pact(pac_u->pek_u, buf_y, len_w);
+  cur_w += _xmas_sift_name(&pac_u->pek_u.nam_u, buf_y + cur_w, len_w - cur_w);
+  cur_w += _xmas_sift_page_pact(&pac_u->pag_u, hed_u, buf_y + cur_w, len_w - cur_w);
 
-  // Total fragments
-  pac_u->tot_w = _ames_sift_word(buf_y + cur_w);
-  cur_w += 4;
-
-  // Authenticator
-  memcpy(pac_u->aut_y, buf_y + cur_w, 96);
-  cur_w += 96;
-
-  // Datum
-  memcpy(pac_u->dat_y, buf_y + cur_w, len_w - cur_w);
   return cur_w;
 }
 
@@ -911,7 +914,7 @@ _xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
       res_w = _xmas_sift_page_pact(&pac_u->pag_u, &hed_u, buf_y, len_w);
     } break;
     case PACT_POKE: {
-      res_w = _xmas_sift_poke_pact(&pac_u->pok_u, buf_y, len_w);
+      res_w = _xmas_sift_poke_pact(&pac_u->pok_u, &hed_u, buf_y, len_w);
     } break;
     default: {
       u3l_log("xmas: received unknown packet type");
@@ -1099,19 +1102,19 @@ static c3_w
 _xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
 {
   c3_w cur_w = 0;
+  c3_w siz_w = _xmas_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u);
+  if ( siz_w == 0 ) {
+    return 0;
+  }
+  cur_w += siz_w;
 
-  //  total
-  _ames_etch_word(buf_y + cur_w, pac_u->tot_w);
-  cur_w += 4;
-
-  // auth
-  memcpy(buf_y + cur_w, pac_u->aut_y, 96);
-  cur_w += 96;
-
-  // day
-  memcpy(buf_y + cur_w, pac_u->dat_y, PACT_SIZE - cur_w);
-
-  return PACT_SIZE;
+  siz_w = _xmas_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u);
+  if ( siz_w == 0 ) {
+    return 0;
+  }
+  cur_w += siz_w;
+  
+  return cur_w;
 }
 
 static c3_w
@@ -1502,42 +1505,6 @@ static u3_noun _xmas_get_now() {
 }
 
 
-// refcounted
-static c3_o
-_xmas_rout_pact(u3_xmas_pact* pac_u, u3_noun lan) {
-  u3_noun tag, val;
-  u3x_cell(lan, &tag, &val);
-
-  u3_assert( (c3y == tag) || (c3n == tag) );
-  c3_o suc_o = c3y;
-  if ( c3y == tag ) {
-    u3_assert( c3y == u3a_is_cat(val) );
-    u3_assert( val < 256 );
-    pac_u->rut_u.typ_y = ROUT_GALAXY;
-    pac_u->rut_u.imp_y = val;
-  } else {
-    u3_lane lan_u = u3_xmas_decode_lane(u3k(val));
-    //  if in local-only mode, don't send remote packets
-    //
-    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
-      suc_o = c3n;
-    }
-    //  if the lane is uninterpretable, silently drop the packet
-    //
-    else if ( 0 == lan_u.por_s ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("ames: inscrutable lane");
-      }
-      suc_o = c3n;
-    } else {
-      pac_u->rut_u.typ_y = ROUT_OTHER;
-      pac_u->rut_u.lan_u = lan_u;
-    }
-  }
-  u3z(lan);
-  return suc_o;
-}
-
 
 
 static void _xmas_pact_free(u3_xmas_pact* pac_u) {
@@ -1699,12 +1666,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_
     memset(gag_u, 0, sizeof(u3_gage));
     _init_gage(gag_u);
   }
-  if ( gag_u->wnd_w > 20 ) {
-    if ( ( rand() % 10 ) == 0 ) {
-      //u3l_log("overloaded, pretending to drop %u", nam_u->fra_w);
-      return u3_none;
-    }
-  }
+  //if ( gag_u->wnd_w > 20 ) { }
 
 
 
@@ -1826,32 +1788,12 @@ _xmas_rout_bufs(u3_xmas* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
     if ( lan_u.por_s == 0 ) {
       u3l_log("xmas: failed to realise lane");
     } else { 
-      _xmas_send_buf(sam_u, lan_u, buf_y, len_w);
+      c3_y* sen_y = c3_calloc(len_w);
+      memcpy(sen_y, buf_y, len_w);
+      _xmas_send_buf(sam_u, lan_u, sen_y, len_w);
     }
   }
   // u3z(las);
-  return suc_o;
-}
-
-static c3_o
-_xmas_rout_pacs(u3_xmas_pact* pac_u, u3_noun las)
-{
-  c3_o suc_o = c3n;
-  u3_noun lan, t = las;
-  while ( t != u3_nul ) {
-    u3x_cell(t, &lan, &t);
-    // if ( c3n == u3r_cell(t, &lan, &t) ) {
-    //   break;
-    // }
-    if ( c3n == _xmas_rout_pact(pac_u, u3k(lan)) ) {
-      u3l_log("xmas: failed to set route");
-    } else {
-       u3l_log("xmas_send");
-      //_xmas_send_buf(pac_u);
-      suc_o = c3y;
-    }
-  }
-  u3z(las);
   return suc_o;
 }
 
@@ -1899,44 +1841,6 @@ _xmas_ef_send(u3_xmas* sam_u, u3_noun las, u3_noun pac)
   u3z(pac);
 }
 
-static void
-_xmas_ef_peek(u3_xmas* sam_u, u3_noun las, u3_noun who, u3_noun pat, u3_noun cop) 
-{
-  u3_noun boq, fra, her, rif;
-  u3x_cell(who, &her, &rif);
-  u3x_cell(cop, &boq, &fra);
-  
-  if ( c3n == sam_u->car_u.liv_o ) {
-    u3l_log("xmas: not yet live, dropping outbound\r");
-    u3z(pat);
-  } else {
-    u3_xmas_pact* pac_u = c3_calloc(sizeof(*pac_u));
-    pac_u->hed_u.typ_y = PACT_PEEK;
-    pac_u->sam_u = sam_u;
-    {
-      u3_noun pas = u3do("spat", pat);
-      pac_u->pek_u.nam_u.pat_c = u3r_string(pas);
-      pac_u->pek_u.nam_u.pat_s = strlen(pac_u->pek_u.nam_u.pat_c);
-      u3z(pas);
-    }
-    u3r_chubs(0, 2, pac_u->pek_u.nam_u.her_d, her);
-    pac_u->pek_u.nam_u.rif_w = u3r_word(0, rif);
-    pac_u->pek_u.nam_u.boq_y = u3r_byte(0, boq);
-
-    if( 384 < pac_u->pek_u.nam_u.pat_s ) {
-      u3l_log("xmas: path in peek too long");
-      _xmas_pact_free(pac_u);
-    } else {
-      c3_o rut_o = _xmas_rout_pacs(pac_u, u3k(las));
-
-      if ( c3n == rut_o ) {
-        _xmas_pact_free(pac_u);
-      }
-    }
-  }
-  // do not need to lose pat because moved in spat call
-  u3z(who); u3z(cop);
-}
 
 
 static c3_o _xmas_kick(u3_xmas* sam_u, u3_noun tag, u3_noun dat)
@@ -2021,6 +1925,8 @@ static void
 _init_peer(u3_xmas* sam_u, u3_peer* per_u)
 {
   per_u->sam_u = sam_u;
+
+  per_u->imp_s = 256;
   per_u->dir_u = (u3_lane){0,0};
   per_u->ind_u = (u3_lane){0,0};
   per_u->las_u = (u3_peer_last){0,0};
@@ -2080,24 +1986,6 @@ _xmas_put_peer(u3_xmas* sam_u, c3_d her_d[2], u3_peer* per_u)
   _xmas_put_peer_raw(sam_u, u3i_chubs(2, her_d), per_u);
 }
 
-/*
- * RETAIN
- */
-static void
-_xmas_put_direct_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u)
-{
-  u3_noun her = u3i_chubs(2, her_d);
-  u3_peer* per_u = _xmas_get_peer_raw(sam_u, u3k(her));
-  if ( per_u == NULL ) {
-    per_u = alloca(sizeof(u3_peer));
-    _init_peer(sam_u, per_u);
-  }
-  c3_d now_d = _get_now_micros();
-  per_u->las_u.acc_d = now_d;
-  per_u->dir_u = *lan_u;
-
-  _xmas_put_peer_raw(sam_u, her, per_u);
-}
 
 static u3_lane
 _xmas_get_direct_lane_raw(u3_xmas* sam_u, u3_noun her)
@@ -2132,22 +2020,6 @@ _xmas_get_indirect_lane(u3_xmas* sam_u, u3_noun her, u3_noun lan)
     return (u3_lane){0,0};
   }
   return per_u->ind_u;
-}
-
-static void
-_xmas_put_indirect_lane(u3_xmas* sam_u, c3_d her_d[2], u3_lane* lan_u)
-{
-  u3_noun her = u3i_chubs(2, her_d);
-  u3_peer* per_u = _xmas_get_peer_raw(sam_u, u3k(her));
-  if ( per_u == NULL ) {
-    per_u = alloca(sizeof(u3_peer));
-    _init_peer(sam_u, per_u);
-  }
-  c3_d now_d = _get_now_micros();
-  per_u->las_u.acc_d = now_d;
-  per_u->ind_u = *lan_u;
-
-  _xmas_put_peer_raw(sam_u, her, per_u);
 }
 
 
@@ -2320,7 +2192,7 @@ _xmas_page_scry_cb(void* vod_p, u3_noun nun)
       u3_noun tag;
       u3_noun dat;
       u3x_cell(u3k(old), &tag, &dat);
-      if ( XMAS_SCRY == tag ) {
+      if ( XMAS_WAIT == tag ) {
         c3_y* buf_y;
         
         c3_w len_w = _xmas_respond(pac_u, &buf_y, u3k(hit));
@@ -2352,14 +2224,20 @@ static void
 _saxo_cb(void* vod_p, u3_noun nun)
 {
   u3_peer* per_u = vod_p;
-  u3_xmas* sam_u = per_u->sam_u;
   u3_weak sax    = u3r_at(7, nun);
 
   if ( sax != u3_none ) {
+    u3_noun her = u3do("head", u3k(sax));
+    u3_peer* new_u = _xmas_get_peer_raw(per_u->sam_u, u3k(her));
+    if ( new_u != NULL ) {
+      per_u = new_u;
+    }
+    u3_xmas* sam_u = per_u->sam_u;
     u3_noun gal = u3do("rear", u3k(sax));
     u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
-    per_u->imp_y = gal;
+    per_u->imp_s = gal;
+    _xmas_put_peer_raw(per_u->sam_u, her, per_u);
   }
 
   u3z(nun);
@@ -2374,6 +2252,7 @@ _meet_peer(u3_xmas* sam_u, u3_peer* per_u, c3_d her_d[2])
   u3_noun her = u3i_chubs(2, her_d);
   u3_noun gan = u3nc(u3_nul, u3_nul);
   u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
+  u3m_p("meet peer", pax);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
 }
 
@@ -2389,7 +2268,46 @@ _hear_peer(u3_xmas* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
   }
 }
 
+static void
+_xmas_forward(u3_xmas_pact* pac_u, u3_lane lan_u)
+{
 
+  u3_xmas* sam_u = pac_u->sam_u;
+  c3_d her_d[2];
+  _get_her(pac_u, her_d);
+  _update_hopcount(&pac_u->hed_u);
+
+  if ( pac_u->hed_u.typ_y == PACT_PAGE ) {
+    //u3l_log("should update next hop");
+    u3_weak hit = _xmas_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    if ( u3_none == hit ) {
+      u3l_log("xmas: got forward, no interest");
+      return;
+    }
+    u3_noun tag, dat;
+    u3x_cell(u3k(hit), &tag, &dat);
+    if ( tag == XMAS_WAIT ) {
+      u3m_p("lanes", u3t(dat));
+      c3_y* buf_y = c3_calloc(PACT_SIZE);
+      c3_w len_w = _xmas_etch_pact(buf_y, pac_u);
+      _xmas_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
+    } else {
+      u3l_log("xmas: weird pending interest");
+    }
+  } else {
+    u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
+    if ( NULL != per_u ) {
+      u3_lane lin_u = _xmas_get_direct_lane(sam_u, her_d);
+      if ( lin_u.pip_w != 0 ) {
+        _xmas_send(pac_u, &lin_u);
+      }
+    }
+  }
+
+
+
+  _xmas_pact_free(pac_u);
+}
 
 
 
@@ -2407,7 +2325,7 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
   c3_o new_o = c3n;
   if ( NULL == per_u ) {
     new_o = c3y;
-    per_u = alloca(sizeof(u3_peer));
+    per_u = c3_calloc(sizeof(u3_peer));
     _init_peer(sam_u, per_u);
     _meet_peer(sam_u, per_u, pac_u->pag_u.nam_u.her_d);
   }
@@ -2421,6 +2339,14 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
   if ( new_o == c3y ) {
     u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
     _log_lane(&lan_u);
+  }
+
+  _xmas_put_peer(sam_u, pac_u->pag_u.nam_u.her_d, per_u);
+  u3_weak hit = _xmas_get_cache(sam_u, &pac_u->pag_u.nam_u);
+
+  if ( u3_none != hit ) {
+    _xmas_forward(pac_u, lan_u);
+    return;
   }
   
   u3_noun fra = u3i_bytes(pac_u->pag_u.mat_u.len_w, pac_u->pag_u.mat_u.fra_y) ;
@@ -2468,7 +2394,7 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
 static void
 _xmas_add_lane_to_cache(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_noun las, u3_lane lan_u)
 {
-  u3_noun hit = u3nq(XMAS_SCRY,
+  u3_noun hit = u3nq(XMAS_WAIT,
                      _xmas_get_now(), 
                      u3_xmas_encode_lane(lan_u),
                      u3k(las));
@@ -2476,89 +2402,105 @@ _xmas_add_lane_to_cache(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_noun las, u3_lan
   u3z(las);
 }
 
-static void
-_xmas_forward(u3_xmas_pact* pac_u, u3_lane lan_u)
-{
 
-  u3_xmas* sam_u = pac_u->sam_u;
-  c3_d her_d[2];
-  _get_her(pac_u, her_d);
-  _update_hopcount(&pac_u->hed_u);
-
-  if ( pac_u->hed_u.typ_y == PACT_PAGE ) {
-    u3l_log("should update next hop");
-  }
-
-  u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
-  if ( NULL != per_u ) {
-    u3_lane lin_u = _xmas_get_direct_lane(sam_u, her_d);
-    if ( lin_u.pip_w != 0 ) {
-      _xmas_send(pac_u, &lin_u);
-    }
-  }
-
-
-  _xmas_pact_free(pac_u);
-}
 
 static void
 _xmas_hear_peek(u3_xmas_pact* pac_u, u3_lane lan_u)
 {
 #ifdef XMAS_DEBUG
   u3l_log("xmas: hear peek");
-  _log_name(&pac_u->pek_u.nam_u);
-  u3l_log("%hu", lan_u.por_s);
   // u3_assert(pac_u->hed_u.typ_y == PACT_PEEK);
 #endif
   u3_xmas* sam_u = pac_u->sam_u;
-  u3_peer* per_u = _xmas_get_peer(sam_u, pac_u->pek_u.nam_u.her_d);
   c3_d her_d[2];
-  memcpy(her_d, pac_u->pek_u.nam_u.her_d, 2*sizeof(c3_d));
+  her_d[0] = 0;
+  her_d[1] = 0;
+  memcpy(her_d, pac_u->pek_u.nam_u.her_d, 2);
+  c3_o our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, 2) );
 
-  if ( 0 != memcmp(her_d, sam_u->pir_u->who_d, 2*sizeof(c3_d)) ) {
-    if ( c3y == sam_u->for_o && her_d[0] == per_u->imp_y ) {
+
+  if ( c3n == our_o ) {
+    u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
+    if ( per_u == NULL ) {
+      u3l_log("xmas: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
+      _xmas_pact_free(pac_u);
+      return;
+    }
+    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
 //#ifdef XMAS_DEBUG
-      u3l_log("xmas: forwarding peek");
       u3_lane lin_u = _xmas_get_direct_lane(sam_u, her_d);
-      _log_lane(&lin_u);
 //#endif
       _update_hopcount(&pac_u->hed_u);
+       u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
       _xmas_send(pac_u, &lin_u);
     }
-    _xmas_pact_free(pac_u);
-    return;
   }
 
   u3_weak hit = _xmas_get_cache(sam_u, &pac_u->pek_u.nam_u);
+
   if ( u3_none != hit ) {
     u3_noun tag, dat;
     u3x_cell(u3k(hit), &tag, &dat);
-    if ( tag == XMAS_SCRY ) {
+    if ( tag == XMAS_WAIT ) {
       _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
-    } else if ( tag == XMAS_ITEM ) {
+    } else if ( c3y == our_o && tag == XMAS_ITEM ) {
       c3_y* buf_y;
 //      if ( rand() % 20 == 0) {
 //	u3l_log("dropping packet %u", pac_u->pek_u.nam_u.fra_w);
 //	return;
 //      }
       c3_w len_w = _xmas_respond(pac_u, &buf_y, u3k(dat));
+      u3l_log("sending page %u", pac_u->pek_u.nam_u.fra_w);
       _xmas_send_buf(pac_u->sam_u, lan_u, buf_y, len_w);
     } else {
       u3l_log("xmas: weird case in cache, dropping");
     }
+    _xmas_pact_free(pac_u);
     // u3z(hit);
   } else {
     _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
-    u3_noun sky = _name_to_scry(&pac_u->pek_u.nam_u); 
+    if ( c3y == our_o ) {
+      u3_noun sky = _name_to_scry(&pac_u->pek_u.nam_u); 
 
-    u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
-    u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
-    u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pac_u, _xmas_page_scry_cb);
-    // u3_pier_peek_last(sam_u->car_u.pir_u, u3_nul, c3__xx, u3_nul, sky, pac_u, _xmas_page_scry_cb);
+      u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
+      u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pac_u, _xmas_page_scry_cb);
+    } else {
+      _xmas_pact_free(pac_u);
+    }
   }
   // u3z(pax);
 }
 
+// xx: should inject event directly, but vane does not work
+// so we just hack it to get 
+static void
+_xmas_hear_poke(u3_xmas_pact* pac_u, u3_lane* lan_u)
+{
+  u3_xmas* sam_u = pac_u->sam_u;
+  u3_peer* per_u = _xmas_get_peer(sam_u, pac_u->pok_u.pag_u.nam_u.her_d);
+  c3_o new_o = c3n;
+  if ( NULL == per_u ) {
+    new_o = c3y;
+    per_u = c3_calloc(sizeof(u3_peer));
+    _init_peer(sam_u, per_u);
+    _meet_peer(sam_u, per_u, pac_u->pok_u.pag_u.nam_u.her_d);
+  }
+
+  c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
+  if ( pac_u->hed_u.hop_y == 0 ) {
+    new_o = c3y;
+    _hear_peer(sam_u, per_u, *lan_u, dir_o);
+    u3l_log("learnt lane");
+  } else {
+    u3l_log("received forwarded peek");
+  }
+  if ( new_o == c3y ) {
+    u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
+    _log_lane(lan_u);
+  }
+  _xmas_put_peer(sam_u, pac_u->pok_u.pag_u.nam_u.her_d, per_u);
+}
 
 static void
 _xmas_hear(u3_xmas* sam_u,
@@ -2584,7 +2526,7 @@ _xmas_hear(u3_xmas* sam_u,
   if ( lin_w == 0 ) {
 #ifdef XMAS_DEBUG
     u3l_log("xmas: failed to parse packet");
-    _log_pact(pac_u);
+    //_log_pact(pac_u);
 #endif
     // TODO free everything
     return;
@@ -2596,13 +2538,6 @@ _xmas_hear(u3_xmas* sam_u,
   u3l_log("xmas: sifted packet");
 #endif
 
-  c3_d her_d[2];
-  _get_her(pac_u, her_d);
-
-  if ( 0 != memcmp(her_d, sam_u->pir_u->who_d, 2*sizeof(c3_d)) ) {
-
-  }
-
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
       _xmas_hear_peek(pac_u, *lan_u);
@@ -2611,7 +2546,7 @@ _xmas_hear(u3_xmas* sam_u,
       _xmas_hear_page(pac_u, hun_y, len_w, *lan_u);
     } break;
     default: {
-      u3l_log("xmas: unimplemented packet type %u", pac_u->hed_u.typ_y);
+      _xmas_hear_poke(pac_u, lan_u);
     } break;
   }
 }
