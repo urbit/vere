@@ -1,6 +1,7 @@
 /// @file
 
 #include "noun.h"
+#define TEST_SIZE 100000
 
 // defined in noun/hashtable.c
 c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);
@@ -23,15 +24,15 @@ _test_put_del()
   c3_i ret_i = 1;
 
   c3_w i_w;
-  for ( i_w = 0; i_w < 5000; i_w++ ) {
+  for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
-    u3_noun val = u3k(key);
+    u3_noun val = u3nc(u3_nul, u3k(key));
     u3h_put(har_p, key, val);
     u3z(key);
   }
   fprintf(stderr, "inserted");
 
-  for ( i_w = 0; i_w < 5000; i_w++ ) {
+  for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
     u3_weak val = u3h_get(har_p, key);
     if ( val == u3_none ) {
@@ -42,7 +43,7 @@ _test_put_del()
     u3z(val);
   }
   fprintf(stderr, "presence");
-  c3_w del_w[4] = {30, 82, 4921, 535};
+   c3_w del_w[4] = {30, 82, 4921, 535};
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
     u3_noun key = u3i_word(del_w[i_w]);
