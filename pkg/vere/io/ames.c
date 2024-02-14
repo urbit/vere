@@ -1081,7 +1081,7 @@ _ames_czar_here(u3_pact* pac_u, time_t now, struct sockaddr_in* add_u)
     u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
-    u3l_log("ames: czar %s: ip %s", pac_u->rut_u.dns_c, nam_c);
+    u3l_log("ames: czar %s ip %s", pac_u->rut_u.dns_c, nam_c);
 
     c3_free(nam_c);
     u3z(nam);
@@ -1107,7 +1107,7 @@ _stun_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
     u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
-    u3l_log("stun: czar %s: ip %s", sam_u->dns_c, nam_c);
+    u3l_log("stun: czar %s ip %s", sam_u->sun_u.dns_c, nam_c);
 
     c3_free(nam_c);
     u3z(nam);
@@ -2762,9 +2762,14 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(c3_c* ship, c3_w s_addr, c3_s port, void* context)
+_ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
+
+  // one is loobean one is boolean
+  if (fake == sam_u->pir_u->fak_o) {
+    return;
+  }
 
   u3_lane lan;
   lan.pip_w = ntohl(s_addr);
@@ -2866,7 +2871,7 @@ _ames_io_start(u3_ames* sam_u)
     char* our_s = u3r_string(our);
     u3z(our);
 
-    mdns_init(por_s, our_s, _ames_put_dear, (void *)sam_u);
+    mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
     c3_free(our_s);
   }
 
