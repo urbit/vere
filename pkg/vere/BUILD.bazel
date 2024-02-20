@@ -197,6 +197,20 @@ cc_test(
 )
 
 cc_test(
+    name = "blake_tests",
+    timeout = "short",
+    srcs = ["io/blake.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    deps = [":vere"],
+    defines = ["BLAKE_TEST"]
+)
+
+
+
+cc_test(
     name = "xmas_tests",
     timeout = "short",
     srcs = ["io/xmas.c"],
