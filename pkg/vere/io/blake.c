@@ -20,11 +20,11 @@ enum blake3_flags {
 };
 
 typedef struct _blake_node {
-	c3_w  cev_w[8];
-	c3_w  boq_w[16];
-	c3_d  con_d;
-	c3_w  len_w;
-	c3_w  fag_w;
+  c3_w  cev_w[8];
+  c3_w  boq_w[16];
+  c3_d  con_d;
+  c3_w  len_w;
+  c3_w  fag_w;
 } blake_node;
 
 
@@ -116,18 +116,24 @@ _vec_append(u3_raw_vec* vec_u, void* tem_p)
 }
 
 static void*
-_vec_popf(u3_raw_vec* vec_u) {
-  if ( vec_u->len_w == 0 ) {
+_vec_pop(u3_raw_vec* vec_u, c3_w idx_w) 
+{
+  if ( vec_u->len_w ==  0 || idx_w >= vec_u->siz_w ) {
     fprintf(stderr, "Failed pop\r\n");
     return NULL;
   }
-  void* hit_p = vec_u->vod_p[0];
-  void* vod_p = c3_calloc(vec_u->siz_w);
-  memcpy(vod_p, vec_u->vod_p + sizeof(void*), vec_u->len_w - 1);
-  c3_free(vec_u->vod_p);
+  void* hit_p = vec_u->vod_p[idx_w];
   vec_u->len_w--;
-  vec_u->vod_p = vod_p;
+  for ( c3_w i_w = idx_w; i_w < vec_u->len_w; i_w++ ) {
+    vec_u->vod_p[i_w] = vec_u->vod_p[i_w+1];
+  }
   return hit_p;
+}
+
+static void*
+_vec_popf(u3_raw_vec* vec_u) 
+{
+  return _vec_pop(vec_u, 0);
 }
 
 static void
@@ -486,10 +492,13 @@ static void _test_bao()
     c3_y has_y[32];
     u3_vec(c3_w[8])* pof_u = _vec_make(10);
     u3_vec(pair)* par_u = _vec_make(10);
+    fprintf(stderr, "Bao building\r\n");
     _bao_build(num_w, has_y, pof_u, par_u);
+    fprintf(stderr, "Bao built\r\n");
     verifier ver_u;
     memset(&ver_u, 0, sizeof(verifier));
     _veri_init(&ver_u, num_w);
+    fprintf(stderr, "veri initted\r\n");
     if ( c3n == _verifier_init(&ver_u, has_y, pof_u) ) {
       fprintf(stderr, "Failed on %u\r\n", num_w);
       exit(1);
@@ -577,8 +586,8 @@ static void _test_vec() {
 }
 
 int main() {
-  //_test_bao();
   _test_vec();
+  _test_bao();
   
   return 0;
 }
