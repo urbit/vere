@@ -223,23 +223,30 @@ typedef struct _u3_xmas_page_meat {
   c3_y*                   fra_y; // fragment
 } u3_xmas_page_meat;
 
-typedef struct _u3_xmas_hop {
+typedef struct _u3_xmas_hop_once {
   c3_w  len_w;
   c3_y* dat_y;
+} u3_xmas_hop_once;
+
+typedef struct _u3_xmas_hop_more {
+  c3_w len_w;
+  u3_xmas_hop_once* dat_y;
+} u3_xmas_hop_more;
+
+typedef union {
+  c3_y sot_u[6];
+  u3_xmas_hop_once one_u;
+  u3_xmas_hop_more man_u;
 } u3_xmas_hop;
 
-typedef struct _u3_xmas_hops {
-  c3_w len_w;
-  u3_xmas_hop** dat_y;
-} u3_xmas_hops;
 
 typedef struct _u3_xmas_page_pact {
   u3_xmas_name            nam_u;
   u3_xmas_page_meat       mat_u;
   union {
     c3_y sot_u[6];
-    u3_xmas_hop one_u;
-    u3_xmas_hops man_u;
+    u3_xmas_hop_once one_u;
+    u3_xmas_hop_more man_u;
   };
 } u3_xmas_page_pact;
 
@@ -433,6 +440,8 @@ _log_pact(u3_xmas_pact* pac_u)
   }
 }
 
+
+
 static c3_d
 _get_now_micros()
 {
@@ -489,6 +498,12 @@ _init_bitset(u3_bitset* bit_u, c3_w len_w)
 {
   bit_u->buf_y = c3_calloc(len_w >> 3);
   bit_u->len_w = len_w;
+}
+
+static void
+_free_bitset(u3_bitset* bit_u)
+{
+  c3_free(bit_u->buf_y);
 }
 
 static c3_w
@@ -762,7 +777,7 @@ _xmas_sift_name(u3_xmas_name* nam_u, c3_y* buf_y, c3_w len_w)
 }
 
 static c3_w
-_xmas_sift_hop_long(u3_xmas_hop* hop_u, c3_y* buf_y, c3_w len_w)
+_xmas_sift_hop_long(u3_xmas_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0;
   CHECK_BOUNDS(cur_w + 1);
@@ -853,11 +868,10 @@ _xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
       pac_u->man_u.len_w = buf_y[cur_w];
       cur_w++;
 
-      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_xmas_hop*) * pac_u->man_u.len_w);
+      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_xmas_hop_once) * pac_u->man_u.len_w);
 
       for( int i = 0; i < pac_u->man_u.len_w; i++ ) {
-        pac_u->man_u.dat_y[i] = c3_calloc(sizeof(u3_xmas_hop));
-        c3_w hop_w = _xmas_sift_hop_long(pac_u->man_u.dat_y[i], buf_y + cur_w ,len_w - cur_w);
+        c3_w hop_w = _xmas_sift_hop_long(&pac_u->man_u.dat_y[i], buf_y + cur_w ,len_w - cur_w);
         if ( hop_w == 0 ) {
           return 0;
         }
@@ -1177,6 +1191,28 @@ static void _init_gage(u3_gage* gag_u)
   gag_u->sst_w = 10000;
 }
 
+// xx: imcomplete
+static void _xmas_pact_free(u3_xmas_pact* pac_u) {
+  switch ( pac_u->hed_u.typ_y ) {
+    default: {
+      u3m_bail(c3__foul);
+    };
+    case PACT_PEEK: {
+      break;
+    };
+    case PACT_PAGE: {
+      c3_free(pac_u->pag_u.mat_u.fra_y);
+      c3_free(pac_u->pag_u.mat_u.aut_y);
+      break;
+    };
+    case PACT_POKE: {
+      break;
+    };
+  }
+  c3_free(pac_u);
+}
+
+
 /* u3_xmas_encode_lane(): serialize lane to noun
 */
 static u3_noun
@@ -1259,6 +1295,25 @@ _xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
 
   u3z(key);
   return ret_u;
+}
+
+static void
+_xmas_del_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
+  u3_noun key = _xmas_request_key(nam_u);
+
+  u3_weak req = u3h_get(sam_u->req_p, key);
+  if ( req == u3_none ) {
+    u3z(key);
+    return;
+  }
+  u3_pend_req* req_u = u3to(u3_pend_req, req);
+  _xmas_pact_free(req_u->pac_u);
+  _free_bitset(&req_u->was_u);
+  c3_free(req_u->pac_u);
+  c3_free(req_u->dat_y);
+  u3a_free(req_u);
+  u3h_del(sam_u->req_p, key);
+  u3z(key);
 }
 
 /* _xmas_put_request(): save new pending request state for nam_u
@@ -1507,9 +1562,6 @@ static u3_noun _xmas_get_now() {
 
 
 
-static void _xmas_pact_free(u3_xmas_pact* pac_u) {
-  // TODO: i'm lazy
-}
 
 
 static void
@@ -1731,6 +1783,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_page_meat* mat_
 
   if ( req_u->len_w == req_u->tot_w ) {
     uv_timer_stop(&req_u->tim_u);
+    _xmas_del_request(sam_u, nam_u);
   //u3dc("rap", 13, u3dc("turn", u3n_slam_on(u3k(sam_u->mop_u.tap), req_u->dat), u3v_wish("tail")));
     //_xmas_put_request(sam_u, nam_u, u3_none);
     return u3i_word(req_u->tot_w);
@@ -2690,6 +2743,12 @@ u3_xmas_io_init(u3_pier* pir_u)
   sam_u->tes_u = ur_cue_test_init();
 
 
+  for ( c3_w i_w = 0; i_w < 5000; i_w++ ) {
+    u3_noun key = u3i_word(i_w);
+    u3_noun val = u3k(val);
+
+    u3h_put(sam_u->req_p, key, val);
+  }
 
   //  Disable networking for fake ships
   //
