@@ -680,6 +680,8 @@ _xmas_sift_head(c3_y buf_y[8], u3_xmas_head* hed_u)
   hed_u->hop_y = (hed_w >> 9)  & 0x7;
   hed_u->mug_w = (hed_w >> 12) & 0xFFFFFF;
 
+  assert( 1 == hed_u->pro_y );
+
   return c3y;
 
   /*if(c3o((hed_u->typ_y == PACT_PEEK), (hed_u->typ_y == PACT_POKE))) {
@@ -837,7 +839,7 @@ _xmas_sift_hop_long(u3_xmas_hop* hop_u, c3_y* buf_y, c3_w len_w)
 
 
 static c3_w
-_xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y, c3_w len_w)
+_xmas_sift_page_pact(u3_xmas_page_pact* pac_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0, nex_w;
 
@@ -851,7 +853,7 @@ _xmas_sift_page_pact(u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u, c3_y* buf_y,
   }
   cur_w += nex_w;
 
-  switch ( hed_u->nex_y ) {
+  switch ( nex_y ) {
     default: {
       u3l_log("xmas: bad hopcount");
       return 0;
@@ -937,22 +939,22 @@ _xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
 static c3_w
 _xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
-  u3_xmas_head hed_u;
-  if( len_w < 8 ) {
+  c3_w res_w = 0;
+
+  if ( len_w < 8 ) {
     u3l_log("xmas: attempted to parse overly short packet of size %u", len_w);
   }
 
-  _xmas_sift_head(buf_y, &hed_u);
-  pac_u->hed_u.typ_y = hed_u.typ_y;
-  c3_w res_w = 0;
+  _xmas_sift_head(buf_y, &pac_u->hed_u);
   buf_y += 8;
   len_w -= 8;
+
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
       res_w = _xmas_sift_peek_pact(&pac_u->pek_u, buf_y, len_w);
     } break;
     case PACT_PAGE: {
-      res_w = _xmas_sift_page_pact(&pac_u->pag_u, &hed_u, buf_y, len_w);
+      res_w = _xmas_sift_page_pact(&pac_u->pag_u, pac_u->hed_u.nex_y, buf_y, len_w);
     } break;
     case PACT_POKE: {
       res_w = _xmas_sift_poke_pact(&pac_u->pok_u, buf_y, len_w);
@@ -1005,11 +1007,14 @@ _xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[8])
     }
   }
 #endif
+
+  assert( 1 == hed_u->pro_y );
+
   // c3_o req_o = c3o((hed_u->typ_y == PACT_PEEK), (hed_u->typ_y == PACT_POKE));
   // c3_y siz_y = req_o ? 5 : 7;
   c3_w hed_w = (hed_u->nex_y & 0x3) << 2
-             ^ (hed_u->pro_y & 0x7) << 4
-             ^ (hed_u->typ_y & 0x3) << 7  // XX constant, 1
+             ^ (hed_u->pro_y & 0x7) << 4  // XX constant, 1
+             ^ (hed_u->typ_y & 0x3) << 7
              ^ (hed_u->hop_y & 0x7) << 9
              ^ (hed_u->mug_w & 0xFFFFFF) << 12;
              // XX: we don't expand hopcount if no request. Correct?
@@ -1052,6 +1057,7 @@ _xmas_etch_name(c3_y* buf_y, u3_xmas_name* nam_u)
   met_u.rif_y = safe_dec(_xmas_met3_w(nam_u->rif_w));
 
   if ( c3y == nam_u->nit_o ) {
+    assert( c3n == nam_u->aut_o ); // XX
     met_u.nit_y = 1;
     met_u.tau_y = 0;
     met_u.gaf_y = 0;
@@ -1240,7 +1246,7 @@ _xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
     } break;
 
     default: {
-      u3l_log("bad pact type");//u3m_bail(c3__bail);
+      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);//u3m_bail(c3__bail);
       return 0;
     }
   }
@@ -2729,6 +2735,7 @@ _test_sift_page()
   u3_xmas_pact pac_u;
   memset(&pac_u,0, sizeof(u3_xmas_pact));
   pac_u.hed_u.typ_y = PACT_PAGE;
+  pac_u.hed_u.pro_y = 1;
   u3l_log("%%page checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pag_u.nam_u;
 
@@ -2802,7 +2809,8 @@ _test_sift_peek()
 {
   u3_xmas_pact pac_u;
   memset(&pac_u,0, sizeof(u3_xmas_pact));
-  pac_u.hed_u.typ_y = PACT_PEEK;;
+  pac_u.hed_u.typ_y = PACT_PEEK;
+  pac_u.hed_u.pro_y = 1;
   u3l_log("%%peek checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pek_u.nam_u;
   {
