@@ -217,22 +217,6 @@ typedef struct _u3_xmas_peek_pact {
   u3_xmas_name     nam_u;
 } u3_xmas_peek_pact;
 
-typedef struct _u3_xmas_page_meat_meta {
-  c3_y             tot_y; // total fragments length (2bit)
-  c3_o             aut_b; // authentication len len (1bit)
-  c3_y             len_y; // fragment length (5bit)
-} u3_xmas_page_meat_meta;
-
-typedef struct _u3_xmas_page_meat {
-  u3_xmas_page_meat_meta  met_u;  // metadata
-  c3_w                    tot_w;  // total fragments
-  c3_y                    aul_y;  // authentication length
-  u3_xmas_auth_type       ayp_y;  // authentication type
-  c3_y*                   aut_y;  // authentication
-  c3_w                    len_w;  // fragment length
-  c3_y*                   fra_y;  // fragment
-} u3_xmas_page_meat;
-
 typedef struct _u3_xmas_hop {
   c3_w  len_w;
   c3_y* dat_y;
@@ -832,6 +816,7 @@ _xmas_sift_data(u3_xmas_data* dat_u, c3_y* buf_y, c3_w len_w)
   CHECK_BOUNDS(cur_w + dat_u->len_w);
   dat_u->fra_y = c3_calloc(dat_u->len_w);
   memcpy(dat_u->fra_y, buf_y + cur_w, dat_u->len_w);
+  cur_w += dat_u->len_w;
 
   return cur_w;
 }
