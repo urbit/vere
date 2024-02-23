@@ -596,6 +596,11 @@ bao_ingest(blake_bao* bao_u, c3_w num_w, c3_y* dat_y, c3_w dat_w)
       _push_parent(&bao_u->ver_u, pir_u->sin_y);
     }
   }
+  bao_u->con_w++;
+  if ( bao_u->con_w == bao_u->ver_u.num_d ) {
+    return BAO_DONE;
+  }
+  return BAO_GOOD;
 }
  
 #ifdef BLAKE_TEST

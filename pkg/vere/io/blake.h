@@ -13,7 +13,8 @@
 enum bao_ingest_result {
   BAO_BAD_ORDER = 1,
   BAO_FAILED = 2,
-  BAO_SUCCESS = 3
+  BAO_GOOD = 3,
+  BAO_DONE = 4,
 };
 
 
