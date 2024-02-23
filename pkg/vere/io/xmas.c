@@ -1228,7 +1228,7 @@ _xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
 }
 
 static c3_w
-_xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u, u3_noun her)
+_xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
 {
   c3_w cur_w = 0, nex_w;
   u3_xmas_head* hed_u = &pac_u->hed_u;
@@ -1759,7 +1759,7 @@ _try_resend(u3_pend_req* req_u)
 	los_o = c3y;
 	c3_y* buf_y = c3_calloc(PACT_SIZE);
 	req_u->pac_u->pek_u.nam_u.fra_w = i;
-	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u);
 	if( siz_w == 0 ) {
 	  u3l_log("failed to etch");
 	  u3_assert( 0 );
@@ -1773,7 +1773,7 @@ _try_resend(u3_pend_req* req_u)
 	c3_y* buf_y = c3_calloc(PACT_SIZE);
 	req_u->pac_u->pek_u.nam_u.fra_w = i;
 	u3l_log("slow resending %u ", i);
-	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+	c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u);
 	if( siz_w == 0 ) {
 	  u3l_log("failed to etch");
 	  u3_assert( 0 );
@@ -1880,7 +1880,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
     c3_y* buf_y = c3_calloc(PACT_SIZE);
     req_u->pac_u->pek_u.nam_u.fra_w = req_u->old_w;
     u3l_log("resending %u on num %u", req_u->old_w, nam_u->fra_w);
-    c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u, 0);
+    c3_w siz_w  = _xmas_etch_pact(buf_y, req_u->pac_u);
     if( siz_w == 0 ) {
       u3l_log("failed to etch");
       u3_assert( 0 );
@@ -1913,12 +1913,7 @@ static void _xmas_send(u3_xmas_pact* pac_u)
   //u3l_log("_ames_send %s %u", _str_typ(pac_u->hed_u.typ_y),
   //                              pac_u->rut_u.lan_u.por_s);
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w siz_w;
-  {
-    u3_noun who = 0;
-    
-    siz_w = _xmas_etch_pact(buf_y, pac_u, who);
-  }
+  c3_w  siz_w = _xmas_etch_pact(buf_y, pac_u);
 
   _xmas_send_buf(sam_u, pac_u->rut_u.lan_u, buf_y, siz_w);
 }
@@ -2416,7 +2411,7 @@ _xmas_hear_page(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
     c3_y* cur_y = buf_y;
     for(int i = 0; i < win_w; i++) {
       nex_u->pek_u.nam_u.fra_w = nex_w + i;
-      c3_w siz_w  =_xmas_etch_pact(cur_y, nex_u, 0);
+      c3_w siz_w  =_xmas_etch_pact(cur_y, nex_u);
       if( siz_w == 0 ) {
         u3l_log("failed to etch");
         u3_assert( 0 );
@@ -2751,8 +2746,12 @@ _test_sift_page()
   pac_u.hed_u.typ_y = PACT_PAGE;
   u3l_log("%%page checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pag_u.nam_u;
-  u3_noun her = u3v_wish("~hastuc-dibtux");
-  u3r_chubs(0, 2, nam_u->her_d, her);
+
+  {
+    u3_noun her = u3v_wish("~hastuc-dibtux");
+    u3r_chubs(0, 2, nam_u->her_d, her);
+    u3z(her);
+  }
   nam_u->rif_w = 15;
   nam_u->pat_c = "foo/bar";
   nam_u->pat_s = strlen(nam_u->pat_c);
@@ -2767,7 +2766,7 @@ _test_sift_page()
   dat_u->fra_y = c3_calloc(1024);
 
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w len_w =_xmas_etch_pact(buf_y, &pac_u, her);
+  c3_w len_w =_xmas_etch_pact(buf_y, &pac_u);
 
   if ( !len_w ) {
     u3l_log("%%page etch failed");
@@ -2821,8 +2820,11 @@ _test_sift_peek()
   pac_u.hed_u.typ_y = PACT_PEEK;;
   u3l_log("%%peek checking sift/etch idempotent");
   u3_xmas_name* nam_u = &pac_u.pek_u.nam_u;
-  u3_noun her = u3v_wish("~hastuc-dibtux");
-  u3r_chubs(0, 2, nam_u->her_d, her);
+  {
+    u3_noun her = u3v_wish("~hastuc-dibtux");
+    u3r_chubs(0, 2, nam_u->her_d, her);
+    u3z(her);
+  }
   nam_u->rif_w = 15;
   nam_u->pat_c = "foo/bar";
   nam_u->pat_s = strlen(nam_u->pat_c);
@@ -2832,7 +2834,7 @@ _test_sift_peek()
   nam_u->aut_o = c3n;
 
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w len_w =_xmas_etch_pact(buf_y, &pac_u, her);
+  c3_w  len_w =_xmas_etch_pact(buf_y, &pac_u);
 
   if ( !len_w ) {
     u3l_log("%%peek etch failed");
