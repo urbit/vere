@@ -1294,6 +1294,8 @@ _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
   }
   cur_w += nex_w;
 
+  // XX hops
+
   return cur_w;
 }
 
@@ -1321,8 +1323,106 @@ _xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
 }
 
 static c3_w
+_xmas_size_name(u3_xmas_name* nam_u)
+{
+  c3_w siz_w = 1;
+  u3_xmas_name_meta met_u;
+
+  met_u.ran_y = _xmas_rank(nam_u->her_d);
+  met_u.rif_y = safe_dec(_xmas_met3_w(nam_u->rif_w));
+
+  siz_w += 2 << met_u.ran_y;
+  siz_w += met_u.rif_y + 1;
+  siz_w++;  // bloq
+
+  if (c3n == nam_u->nit_o ) {
+    met_u.gaf_y = safe_dec(_xmas_met3_w(nam_u->fra_w));
+    siz_w += met_u.gaf_y + 1;
+  }
+
+  siz_w += 2;  // path-length
+  siz_w += nam_u->pat_s;
+
+  return siz_w;
+}
+
+static c3_w
+_xmas_size_data(u3_xmas_data* dat_u)
+{
+  c3_w siz_w = 1;
+  u3_xmas_data_meta met_u;
+
+  met_u.bot_y = safe_dec(_xmas_met3_w(dat_u->tot_w));
+
+  siz_w += met_u.bot_y + 1;
+
+  switch ( dat_u->aum_u.typ_e ) {
+    case AUTH_SIGN: {
+      siz_w += 64;
+    } break;
+
+    case AUTH_HMAC: {
+      siz_w += 32;
+    } break;
+
+    default: break;
+  }
+
+  siz_w += 32 * dat_u->aup_u.len_y;
+
+  c3_y nel_y = _xmas_met3_w(dat_u->len_w);
+  met_u.men_y = (3 >= nel_y) ? nel_y : 3;
+
+  if ( 3 == met_u.men_y ) {
+    siz_w++;
+  }
+
+  siz_w += nel_y;
+  siz_w += dat_u->len_w;
+
+  return siz_w;
+}
+
+static c3_w
+_xmas_size_pact(u3_xmas_pact* pac_u)
+{
+  c3_w siz_w = 8; // header + cookie;
+
+  switch ( pac_u->hed_u.typ_y ) {
+    case PACT_PEEK: {
+      siz_w += _xmas_size_name(&pac_u->pek_u.nam_u);
+    } break;
+
+    case PACT_PAGE: {
+      siz_w += _xmas_size_name(&pac_u->pag_u.nam_u);
+      siz_w += _xmas_size_data(&pac_u->pag_u.dat_u);
+      // XX hops
+    } break;
+
+    case PACT_POKE: {
+      siz_w += _xmas_size_name(&pac_u->pok_u.nam_u);
+      siz_w += _xmas_size_name(&pac_u->pok_u.pay_u);
+      siz_w += _xmas_size_data(&pac_u->pok_u.dat_u);
+    } break;
+
+    default: {
+      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);//u3m_bail(c3__bail);
+      return 0;
+    }
+  }
+
+  return siz_w;
+}
+
+static c3_w
 _xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
 {
+  c3_w siz_w = _xmas_size_pact(pac_u);
+  if ( siz_w > PACT_SIZE ) {
+    fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
+    return 0;
+  }
+
   c3_w cur_w = 0, nex_w;
   u3_xmas_head* hed_u = &pac_u->hed_u;
   _xmas_etch_head(hed_u, buf_y + cur_w);
@@ -1354,6 +1454,8 @@ _xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
   }
 
   cur_w += nex_w;
+
+  assert( siz_w == cur_w );
 
   return cur_w;
 }
