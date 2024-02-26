@@ -16,11 +16,12 @@
 #include <retrieve.h>
 #include <types.h>
 #include <stdlib.h>
+#include "blake.h"
 
 c3_o dop_o = c3n;
 
 //#define XMAS_DEBUG     c3y
-#define XMAS_TEST
+//#define XMAS_TEST
 #define XMAS_VER       1
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
@@ -82,7 +83,10 @@ typedef struct _u3_peer_last {
   c3_d son_d; // time of sponsor check
 } u3_peer_last;
 
-
+typedef struct _u3_buf {
+  c3_y* fra_y;
+  c3_w  fra_w;
+} u3_buf;
 
 typedef struct _u3_pend_req {
   c3_w                   nex_w;
@@ -98,6 +102,8 @@ typedef struct _u3_pend_req {
   c3_w                   ack_w; // highest acked fragment number
   u3_lane                lan_u; // last lane heard
   u3_gage*               gag_u;
+  u3_vec(u3_buf)         mis_u; // misordered blake hash
+  blake_bao*             bao_u; // blake verifier
 } u3_pend_req;
 
 typedef struct _u3_czar_info {
@@ -185,8 +191,8 @@ typedef struct _u3_xmas_data_meta {
 
 typedef enum  {
   AUTH_NONE = 0,
-  AUTH_NEXT = 1,
-  AUTH_SIGN = 2,
+  AUTH_NEXT = 1,  // %1, must be two hash
+  AUTH_SIGN = 2,  // %0, hashes are optional depending on num frag
   AUTH_HMAC = 3
 } u3_xmas_auth_type;
 
@@ -1535,6 +1541,7 @@ _xmas_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
   u3l_log("%u packet timed out", req_u->old_w);
 }
+
 static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
 
@@ -1628,6 +1635,7 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
     // instantiate pending request
     // stack allocating is ok, because _xmas_put_pend will copy it out anyway
     req_u = alloca(sizeof(u3_pend_req));
+    memset(req_u, 0, sizeof(u3_pend_req));
     req_u->pac_u = c3_calloc(sizeof(u3_xmas_pact));
     req_u->pac_u->sam_u = sam_u;
     req_u->pac_u->hed_u.typ_y = PACT_PEEK;
@@ -1890,6 +1898,35 @@ _try_resend(u3_pend_req* req_u)
   }
 }
 
+static u3_vec(c3_y[BLAKE3_OUT_LEN])*
+_xmas_get_proof_vec(u3_xmas_data* dat_u)
+{
+  u3_assert( dat_u->aum_u.typ_e == AUTH_SIGN );
+  u3_assert( dat_u->aup_u.len_y != 0 );
+  u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(4);
+  {
+    c3_y* lef_y = c3_calloc(BLAKE3_OUT_LEN);
+    blake_node* nod_u = blake_leaf_hash(dat_u->fra_y, dat_u->len_w, 0);
+    memcpy(lef_y, nod_u->cev_y, BLAKE3_OUT_LEN);
+    c3_free(nod_u);
+    vec_append(pof_u, lef_y);
+  }
+  
+  for ( c3_w i_w = 0; i_w < dat_u->aup_u.len_y; i_w++ ) {
+    c3_y* has_y = c3_calloc(BLAKE3_OUT_LEN);
+    memcpy(has_y, dat_u->aup_u.has_y[i_w], BLAKE3_OUT_LEN);
+    vec_append(pof_u, has_y);
+  }
+  return pof_u;
+}
+
+static c3_y
+_xmas_verify_data(u3_xmas_data* dat_u, blake_bao* bao_u)
+{
+  blake_pair* par_u = NULL;
+  return blake_bao_verify(bao_u, dat_u->fra_y, dat_u->len_w, par_u);
+}
+
 /* _xmas_req_pact_done(): mark packet as done, possibly producing the result 
 */
 static u3_weak
@@ -1924,12 +1961,17 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
   c3_w siz_w = (1 << (nam_u->boq_y - 3));
   // First packet received, instantiate request fully
   if ( req_u->tot_w == 0 ) {
-    u3_assert( siz_w == 1024); // boq_y == 13
+    u3_assert( siz_w == 1024 ); // boq_y == 13
     req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
     req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w);
     req_u->tot_w = dat_u->tot_w;
     _init_bitset(&req_u->was_u, dat_u->tot_w + 1);
     req_u->lef_w = 2;
+    u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = _xmas_get_proof_vec(dat_u);
+    req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
+  } else {
+    //blake_bao_verify(req_u->bao_u);
+
   }
 
   if ( dat_u->tot_w <= nam_u->fra_w ) {
@@ -2536,7 +2578,6 @@ _hear_peer(u3_xmas* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
 static void
 _xmas_forward(u3_xmas_pact* pac_u, u3_lane lan_u)
 {
-
   u3_xmas* sam_u = pac_u->sam_u;
   c3_d her_d[2];
   _get_her(pac_u, her_d);
@@ -2568,9 +2609,6 @@ _xmas_forward(u3_xmas_pact* pac_u, u3_lane lan_u)
       }
     }
   }
-
-
-
   _xmas_pact_free(pac_u);
 }
 
