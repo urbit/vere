@@ -3373,12 +3373,12 @@ _test_make_head(void* ptr_v, u3_xmas_head* hed_u)
 }
 
 static void
-_test_make_name(void* ptr_v, u3_xmas_name* nam_u)
+_test_make_name(void* ptr_v, c3_s pat_s, u3_xmas_name* nam_u)
 {
   _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_d);
   nam_u->rif_w = _test_rand_word(ptr_v);
 
-  nam_u->pat_s = _test_rand_gulf_w(ptr_v, 300);
+  nam_u->pat_s = _test_rand_gulf_w(ptr_v, pat_s);
   nam_u->pat_c = c3_malloc(nam_u->pat_s + 1);
   _test_rand_path(ptr_v, nam_u->pat_s, nam_u->pat_c);
   nam_u->pat_c[nam_u->pat_s] = 0;
@@ -3439,17 +3439,17 @@ _test_make_pact(void* ptr_v, u3_xmas_pact* pac_u)
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
-      _test_make_name(ptr_v, &pac_u->pek_u.nam_u);
+      _test_make_name(ptr_v, 277, &pac_u->pek_u.nam_u);
     } break;
 
     case PACT_PAGE: {
-      _test_make_name(ptr_v, &pac_u->pag_u.nam_u);
+      _test_make_name(ptr_v, 277, &pac_u->pag_u.nam_u);
       _test_make_data(ptr_v, &pac_u->pag_u.dat_u);
     } break;
 
     case PACT_POKE: {
-      _test_make_name(ptr_v, &pac_u->pok_u.nam_u);
-      _test_make_name(ptr_v, &pac_u->pok_u.pay_u);
+      _test_make_name(ptr_v, 124, &pac_u->pok_u.nam_u);
+      _test_make_name(ptr_v, 124, &pac_u->pok_u.pay_u);
       _test_make_data(ptr_v, &pac_u->pok_u.dat_u);
     } break;
 
@@ -3594,7 +3594,7 @@ int main()
   _test_sift_peek();
   _test_sift_page();
 
-  _test_rand_pact(10);
+  _test_rand_pact(100000);
 
   _test_encode_path("foo/bar/baz");
   _test_encode_path("publ/0/xx//1/foo/g");
