@@ -390,7 +390,7 @@ static void recurse_blake_subtree(blake_subtree* sub_u, blake_node* nod_u, u3_ve
 {
   c3_d hit_d = _height(sub_u);
   if ( hit_d == 0 ) {
-    blake_node* new_u = leaf_hash(emp_y, emp_w, sub_u->sin_d);
+    blake_node* new_u = blake_leaf_hash(emp_y, emp_w, sub_u->sin_d);
     memcpy(nod_u, new_u, sizeof(blake_node));
     return;
   }
@@ -499,14 +499,14 @@ _veri_check_leaf(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w)
     c3_y out_y[BLAKE3_OUT_LEN];
     _pop_leaf(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
-    blake_node* nod_u = leaf_hash(dat_y, dat_w, bao_u->con_w);
+    blake_node* nod_u = blake_leaf_hash(dat_y, dat_w, bao_u->con_w);
     _make_chain_value(cav_y, nod_u);
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
   } else if ( _vec_len(&bao_u->sta_u) > 0 ) {
     c3_y out_y[BLAKE3_OUT_LEN];
     _pop_parent(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
-    blake_node* nod_u = leaf_hash(dat_y, dat_w, bao_u->con_w);
+    blake_node* nod_u = blake_leaf_hash(dat_y, dat_w, bao_u->con_w);
     _make_chain_value(cav_y, nod_u);
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
   }
@@ -643,7 +643,7 @@ static void _test_bao()
 
     if ( num_w == 1 ) {
       c3_y out_y[BLAKE3_BLOCK_LEN];
-      blake_node* nod_u = leaf_hash(dat_y, dat_w, 0);
+      blake_node* nod_u = blake_leaf_hash(dat_y, dat_w, 0);
       _root_hash(out_y, nod_u);
       if ( memcmp(out_y, has_y, BLAKE3_BLOCK_LEN) != 0 ) {
         _log_buf("expected", has_y, BLAKE3_BLOCK_LEN);
