@@ -76,8 +76,8 @@ static c3_y IV[BLAKE3_OUT_LEN] = {103, 230, 9, 106, 133, 174, 103, 187, 114, 243
 #define VEC_SCALING 2
 
 
-static void
-_vec_init(u3_raw_vec* vec_u, c3_w siz_w)
+void
+vec_init(u3_raw_vec* vec_u, c3_w siz_w)
 {
   vec_u->siz_w = siz_w;
   vec_u->vod_p = c3_calloc(siz_w * sizeof(void*));
@@ -96,14 +96,13 @@ _vec_free(u3_raw_vec* vec_u)
   c3_free(vec_u->vod_p);
 }
 
-static u3_raw_vec*
-_vec_make(c3_w siz_w)
+u3_raw_vec*
+vec_make(c3_w siz_w)
 {
   u3_raw_vec* vec_u = c3_calloc(sizeof(u3_raw_vec));
-  _vec_init(vec_u, siz_w);
+  vec_init(vec_u, siz_w);
   return vec_u;
 }
-
 
 
 static c3_w
@@ -143,14 +142,24 @@ _vec_resize(u3_raw_vec* vec_u, c3_w siz_w) {
   vec_u->siz_w = siz_w;
 }
 
-static void
-_vec_append(u3_raw_vec* vec_u, void* tem_p)
+void
+vec_append(u3_raw_vec* vec_u, void* tem_p)
 {
   if(vec_u->siz_w == vec_u->len_w ) {
     _vec_resize(vec_u, vec_u->siz_w * VEC_SCALING);
   }
   vec_u->vod_p[vec_u->len_w] = tem_p;
   vec_u->len_w++;
+}
+
+void
+vec_copy(u3_raw_vec* dst_u, u3_raw_vec* src_u) {
+  if ( dst_u->siz_w < src_u->siz_w ) {
+    _vec_resize(dst_u, src_u->siz_w);
+  }
+  for ( c3_w i_w = 0; i_w < src_u->len_w; i_w++ ) {
+    dst_u->vod_p[i_w] = src_u->vod_p[i_w];
+  }
 }
 
 static void*
@@ -168,8 +177,8 @@ _vec_pop(u3_raw_vec* vec_u, c3_w idx_w)
   return hit_p;
 }
 
-static void*
-_vec_popf(u3_raw_vec* vec_u) 
+void*
+vec_popf(u3_raw_vec* vec_u) 
 {
   return _vec_pop(vec_u, 0);
 }
@@ -216,14 +225,14 @@ _log_blake_subtree(blake_subtree* sub_u)
 }
 
 static void
-_log_verifier(blake_verifier* ver_u)
+_log_bao(blake_bao* bao_u)
 {
-  fprintf(stderr, "num: %llu\r\n", ver_u->num_d);
-  fprintf(stderr, "sub: (%llu, %llu)\r\n", ver_u->sub_u.sin_d, ver_u->sub_u.dex_d);
+  fprintf(stderr, "num: %llu\r\n", bao_u->num_w);
+  fprintf(stderr, "sub: (%llu, %llu)\r\n", bao_u->sub_u.sin_d, bao_u->sub_u.dex_d);
   fprintf(stderr, "queue\r\n");
-  _vec_each(&ver_u->que_u, print_proof);
+  _vec_each(&bao_u->que_u, print_proof);
   fprintf(stderr, "stack\r\n");
-  _vec_each(&ver_u->sta_u, print_proof);
+  _vec_each(&bao_u->sta_u, print_proof);
 }
 
 static c3_y
@@ -330,7 +339,7 @@ _compress_chunk(c3_y* dat_y, c3_w dat_w, c3_y cev_y[BLAKE3_OUT_LEN], c3_d con_d,
   return nod_u;
 }
 
-blake_node* leaf_hash(c3_y* dat_y, c3_w dat_w, c3_d con_d)
+blake_node* blake_leaf_hash(c3_y* dat_y, c3_w dat_w, c3_d con_d)
 {
   return _compress_chunk(dat_y, dat_w, IV, con_d, 0);
 }
@@ -391,13 +400,13 @@ static void recurse_blake_subtree(blake_subtree* sub_u, blake_node* nod_u, u3_ve
   blake_subtree* sin_u = c3_calloc(sizeof(blake_subtree));
   *sin_u = (blake_subtree){sub_u->sin_d, mid_d};
   blake_node* lod_u = c3_calloc(sizeof(blake_node));
-  u3_vec(pair)* lar_u = _vec_make(8);
+  u3_vec(pair)* lar_u = vec_make(8);
   recurse_blake_subtree(sin_u, lod_u, lar_u);
 
   blake_subtree* dex_u = c3_calloc(sizeof(blake_subtree));
   *dex_u = (blake_subtree){mid_d, sub_u->dex_d};
   blake_node* rod_u = c3_calloc(sizeof(blake_node));
-  u3_vec(pair)* rar_u = _vec_make(8);
+  u3_vec(pair)* rar_u = vec_make(8);
   recurse_blake_subtree(dex_u, rod_u, rar_u);
 
   blake_pair* new_u = c3_calloc(sizeof(blake_pair));
@@ -405,13 +414,14 @@ static void recurse_blake_subtree(blake_subtree* sub_u, blake_node* nod_u, u3_ve
   _make_chain_value(new_u->dex_y, rod_u);
   memcpy(nod_u, _parent_hash(lod_u, rod_u), sizeof(blake_node));
 
-  _vec_append(par_u, new_u);
+  vec_append(par_u, new_u);
   _vec_weld_mut(par_u, lar_u);
   _vec_weld_mut(par_u, rar_u);
 }
 
 static void
-_bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par_u) {
+_bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par_u) 
+{
   blake_subtree* sub_u = c3_calloc(sizeof(blake_subtree));
   *sub_u = (blake_subtree){0, num_d};
   blake_node* nod_u = c3_calloc(sizeof(blake_node));
@@ -420,12 +430,12 @@ _bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par
 
   if ( _vec_len(par_u) != 0 ) {
     for ( c3_w i_w = _bitlen(num_d - 1); i_w > 1; i_w-- ) {
-      blake_pair* pir_u = _vec_popf(par_u);
-      _vec_append(pof_u, pir_u->dex_y);
+      blake_pair* pir_u = vec_popf(par_u);
+      vec_append(pof_u, pir_u->dex_y);
     }
-    blake_pair* pir_u = _vec_popf(par_u);
-    _vec_append(pof_u, pir_u->dex_y);
-    _vec_append(pof_u, pir_u->sin_y);
+    blake_pair* pir_u = vec_popf(par_u);
+    vec_append(pof_u, pir_u->dex_y);
+    vec_append(pof_u, pir_u->sin_y);
     for ( c3_w i_w = 0; i_w < (_vec_len(pof_u) >> 1); i_w++ ) {
       c3_w jay_w = _vec_len(pof_u) - i_w - 1;
       _vec_swap(pof_u, i_w, jay_w);
@@ -434,101 +444,69 @@ _bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par
 }
 
 static void
-_push_leaf(blake_verifier* ver_u, c3_y lef_y[BLAKE3_OUT_LEN]) 
+_push_leaf(blake_bao* bao_u, c3_y lef_y[BLAKE3_OUT_LEN]) 
 {
-  _vec_append(&ver_u->que_u, lef_y);
+  vec_append(&bao_u->que_u, lef_y);
 }
 
 static void
-_pop_leaf(c3_y out_y[BLAKE3_OUT_LEN], blake_verifier* ver_u)
+_pop_leaf(c3_y out_y[BLAKE3_OUT_LEN], blake_bao* bao_u)
 {
-  c3_y* res_y = _vec_popf(&ver_u->que_u);
+  c3_y* res_y = vec_popf(&bao_u->que_u);
   memcpy(out_y, res_y, BLAKE3_OUT_LEN);
 }
 
 static void
-_push_parent(blake_verifier* ver_u, c3_y par_y[BLAKE3_OUT_LEN])
+_push_parent(blake_bao* bao_u, c3_y par_y[BLAKE3_OUT_LEN])
 {
-  _vec_append(&ver_u->sta_u, par_y);
+  vec_append(&bao_u->sta_u, par_y);
 }
 
 static void
-_pop_parent(c3_y out_y[BLAKE3_OUT_LEN], blake_verifier* ver_u)
+_pop_parent(c3_y out_y[BLAKE3_OUT_LEN], blake_bao* bao_u)
 {
-  c3_y* res_y = _vec_popl(&ver_u->sta_u);
+  c3_y* res_y = _vec_popl(&bao_u->sta_u);
   memcpy(out_y, res_y, BLAKE3_OUT_LEN);
 }
 
 static void
-_verifier_next(blake_verifier* ver_u) 
+_verifier_next(blake_bao* bao_u) 
 {
-  if ( _height(&ver_u->sub_u) == 0 ) {
-    ver_u->sub_u.sin_d += 1;
-    ver_u->sub_u.dex_d += (1 << _count_trail_zero(ver_u->sub_u.dex_d));
-    if ( ver_u->sub_u.dex_d > ver_u->num_d ) {
-      ver_u->sub_u.dex_d = ver_u->num_d;
+  if ( _height(&bao_u->sub_u) == 0 ) {
+    bao_u->sub_u.sin_d += 1;
+    bao_u->sub_u.dex_d += (1 << _count_trail_zero(bao_u->sub_u.dex_d));
+    if ( bao_u->sub_u.dex_d > bao_u->num_w ) {
+      bao_u->sub_u.dex_d = bao_u->num_w;
     }
   } else {
-    ver_u->sub_u = (blake_subtree){ver_u->sub_u.sin_d, ver_u->sub_u.sin_d + _largest_pow2(ABS_DIFF(ver_u->sub_u.dex_d, ver_u->sub_u.sin_d))};
+    bao_u->sub_u = (blake_subtree){bao_u->sub_u.sin_d, bao_u->sub_u.sin_d + _largest_pow2(ABS_DIFF(bao_u->sub_u.dex_d, bao_u->sub_u.sin_d))};
   }
 }
 
-
-static c3_o
-_verifier_init(blake_verifier* ver_u, c3_y rot_y[BLAKE3_BLOCK_LEN], u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u)
+static void
+_push_leaves(blake_bao* bao_u, c3_y lef_y[BLAKE3_OUT_LEN], c3_y rig_y[BLAKE3_OUT_LEN])
 {
-  if ( _vec_len(pof_u) == 0 ) {
-    return ver_u->num_d <= 1 ? c3y : c3n;
-  }
-  blake_node* nod_u = _parent_node(_vec_get(c3_y, pof_u, 0), _vec_get(c3_y, pof_u, 1), IV, 0);
-  for (c3_w i_w = 2; i_w < (_vec_len(pof_u)); i_w++ ) {
-    c3_y* cev_y = c3_calloc(BLAKE3_OUT_LEN);
-    _make_chain_value(cev_y, nod_u);
-    c3_y* pof_y = _vec_get(c3_y, pof_u, i_w);
-    nod_u = _parent_node(cev_y, pof_y, IV, 0);
-  }
-  c3_y ron_y[BLAKE3_BLOCK_LEN];
-  _root_hash(ron_y, nod_u);
-
-// TODO: double check
-  if ( memcmp(ron_y, rot_y, BLAKE3_BLOCK_LEN) != 0 ) {
-    fprintf(stderr, "mismatch\r\n");
-    _log_buf("ron_y", ron_y, BLAKE3_BLOCK_LEN);
-    return c3n;
-  }
-
-  ver_u->sub_u = (blake_subtree){2,4};
-  _vec_init(&ver_u->que_u, 8);
-
-  _vec_append(&ver_u->que_u, _vec_popf(pof_u));
-  _vec_append(&ver_u->que_u, _vec_popf(pof_u));
-
-  _vec_init(&ver_u->sta_u, 8);
-  _vec_weld_mut(&ver_u->sta_u, pof_u);
-
-  for ( c3_w i_w = 0; i_w < (_vec_len(&ver_u->sta_u)/2); i_w++ ) {
-    c3_w jay_w = _vec_len(&ver_u->sta_u) - i_w - 1;
-    _vec_swap(&ver_u->sta_u, i_w, jay_w);
-  }
-  return c3y;
+  _push_leaf(bao_u, lef_y);
+  _push_leaf(bao_u, rig_y);
+  _verifier_next(bao_u);
+  _verifier_next(bao_u);
 }
 
 static c3_o
-_veri_check_leaf(blake_verifier* ver_u, c3_d lef_d, c3_y* dat_y, c3_w dat_w)
+_veri_check_leaf(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w)
 {
-
-  if ( _vec_len(&ver_u->que_u) > 0 ) {
+  if ( _vec_len(&bao_u->que_u) > 0 ) {
     c3_y out_y[BLAKE3_OUT_LEN];
-    _pop_leaf(out_y, ver_u);
+    _pop_leaf(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
-    blake_node* nod_u = leaf_hash(dat_y, dat_w, lef_d);
+    blake_node* nod_u = leaf_hash(dat_y, dat_w, bao_u->con_w);
     _make_chain_value(cav_y, nod_u);
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
-  } else if ( _vec_len(&ver_u->sta_u) > 0 ) {
+  } else if ( _vec_len(&bao_u->sta_u) > 0 ) {
     c3_y out_y[BLAKE3_OUT_LEN];
-    _pop_parent(out_y, ver_u);
+    _pop_parent(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
-    blake_node* nod_u = leaf_hash(dat_y, dat_w, lef_d);
+    blake_node* nod_u = leaf_hash(dat_y, dat_w, bao_u->con_w);
     _make_chain_value(cav_y, nod_u);
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
   }
@@ -536,68 +514,73 @@ _veri_check_leaf(blake_verifier* ver_u, c3_d lef_d, c3_y* dat_y, c3_w dat_w)
 }
 
 static c3_o
-_veri_check_pair(blake_verifier* ver_u, blake_pair* par_u)
+_veri_check_pair(blake_bao* bao_u, blake_pair* par_u)
 {
-  if ( _vec_len(&ver_u->sta_u) == 0 ) {
+  if ( _vec_len(&bao_u->sta_u) == 0 ) {
     fprintf(stderr, "bailing empty stack\r\n");
     return c3n;
   }
   c3_y par_y[BLAKE3_OUT_LEN];
   // par_y is wrong
-  _pop_parent(par_y, ver_u);
+  _pop_parent(par_y, bao_u);
   blake_node* nod_u = _parent_node(par_u->sin_y, par_u->dex_y, IV, 0);
   c3_y cav_y[BLAKE3_OUT_LEN];
   _make_chain_value(cav_y, nod_u);
   return _(memcmp(par_y, cav_y, BLAKE3_OUT_LEN) == 0);
 }
 
-static void _veri_init(blake_verifier* ver_u, c3_d num_d)
-{
-  ver_u->num_d = num_d;
-  ver_u->sub_u = (blake_subtree){0, num_d};
-}
-
 
 blake_bao*
-blake_bao_make(c3_w num_w, c3_y has_y[BLAKE3_BLOCK_LEN], u3_vec(c3_y[8])* pof_u, u3_vec(blake_pair)* par_u)
+blake_bao_make(c3_w num_w, u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u)
 {
   blake_bao* bao_u = c3_calloc(sizeof(blake_bao));
-  // TODO semantics here  
-  bao_u->par_u = *par_u;
-  _veri_init(&bao_u->ver_u, num_w);
-  if ( c3n == _verifier_init(&bao_u->ver_u, has_y, pof_u) ) {
-    return NULL;
+  bao_u->num_w = num_w;
+  bao_u->con_w = 0;
+  bao_u->sub_u = (blake_subtree){0,1};
+  if ( _vec_len(pof_u) == 0 ) {
+    if ( num_w < 2 ) {
+      c3_free(bao_u);
+      return NULL; 
+    }
+    vec_init(&bao_u->sta_u, 1);
+    vec_init(&bao_u->que_u, 1);
+    return bao_u;
   }
+  c3_y* fst_y = vec_popf(pof_u);
+  c3_y* snd_y = vec_popf(pof_u);
+  vec_init(&bao_u->sta_u, 8);
+  vec_init(&bao_u->que_u, 8);
+  vec_copy(&bao_u->que_u, pof_u);
+  _push_leaves(bao_u, fst_y, snd_y);
   return bao_u;
 }
 
-c3_y
-bao_ingest(blake_bao* bao_u, c3_w num_w, c3_y* dat_y, c3_w dat_w)
+static void
+_push_parents(blake_bao* bao_u, blake_pair* par_u)
 {
-  if ( bao_u->con_w != num_w ) {
-    return BAO_BAD_ORDER;
-  }
-  if ( c3n == _veri_check_leaf(&bao_u->ver_u, num_w, dat_y, dat_w) ) {
+  _push_parent(bao_u, par_u->dex_y);
+  _push_parent(bao_u, par_u->sin_y);
+}
+
+c3_y
+blake_bao_verify(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w, blake_pair* par_u)
+{
+  if ( c3n == _veri_check_leaf(bao_u, dat_y, dat_w) ) {
     return BAO_FAILED;
   }
-  if ( num_w < _vec_len(&bao_u->par_u) ) {
-    blake_pair* pir_u = _vec_get(blake_pair, &bao_u->par_u, num_w);
-    if ( _veri_check_pair(&bao_u->ver_u, pir_u) == c3n ) {
-      return BAO_FAILED;
-    }
-    _verifier_next(&bao_u->ver_u);
-    if ( _height(&bao_u->ver_u.sub_u) == 0 ) {
-      _push_leaf(&bao_u->ver_u, pir_u->sin_y);
-      _push_leaf(&bao_u->ver_u, pir_u->dex_y);
-      _verifier_next(&bao_u->ver_u);
-      _verifier_next(&bao_u->ver_u);
-    } else {
-      _push_parent(&bao_u->ver_u, pir_u->dex_y);
-      _push_parent(&bao_u->ver_u, pir_u->sin_y);
-    }
+  if ( par_u == NULL ) {
+    return BAO_GOOD;
+  }
+  if ( c3n == _veri_check_pair(bao_u, par_u) ) {
+    return BAO_FAILED;
+  }
+  if ( _height(&bao_u->sub_u) == 0 ) {
+    _push_leaves(bao_u, par_u->sin_y, par_u->dex_y);
+  } else {
+    _push_parents(bao_u, par_u);
   }
   bao_u->con_w++;
-  if ( bao_u->con_w == bao_u->ver_u.num_d ) {
+  if ( bao_u->con_w == bao_u->num_w ) {
     return BAO_DONE;
   }
   return BAO_GOOD;
@@ -646,14 +629,14 @@ static void _test_bao()
   c3_y* dat_y = c3_calloc(dat_w);
   for ( c3_w num_w = 1; num_w <= 100; num_w++ ) {
     c3_y has_y[BLAKE3_BLOCK_LEN];
-    u3_vec(c3_y[8])* pof_u = _vec_make(10);
-    u3_vec(blake_pair)* par_u = _vec_make(10);
+    u3_vec(c3_y[8])* pof_u = vec_make(10);
+    u3_vec(blake_pair)* par_u = vec_make(10);
     _bao_build(num_w, has_y, pof_u, par_u);
     
-    blake_verifier ver_u;
-    memset(&ver_u, 0, sizeof(blake_verifier));
-    _veri_init(&ver_u, num_w);
-    if ( c3n == _verifier_init(&ver_u, has_y, pof_u) ) {
+    blake_bao bao_u;
+    memset(&bao_u, 0, sizeof(blake_bao));
+    _veri_init(&bao_u, num_w);
+    if ( c3n == _verifier_init(&bao_u, has_y, pof_u) ) {
       fprintf(stderr, "Failed on %u\r\n", num_w);
       exit(1);
     }
@@ -671,28 +654,28 @@ static void _test_bao()
       continue;
     }
     for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-      if ( c3n == _veri_check_leaf(&ver_u, i_w, dat_y, dat_w) ) {
+      if ( c3n == _veri_check_leaf(&bao_u, i_w, dat_y, dat_w) ) {
         fprintf(stderr, "Check leaf %u failed for %u\r\n", i_w, num_w);
         exit(1);
       }
 
       // pl
-      // _log_verifier(&ver_u);
+      // _log_verifier(&bao_u);
       if ( i_w < _vec_len(par_u) ) {
         blake_pair* pir_u = _vec_get(blake_pair, par_u, i_w);
-        if ( _veri_check_pair(&ver_u, pir_u) == c3n ) {
+        if ( _veri_check_pair(&bao_u, pir_u) == c3n ) {
           fprintf(stderr, "check pair failed (%u, %u)", i_w, num_w);
           exit(1);
         }
-        _verifier_next(&ver_u);
-        if ( _height(&ver_u.sub_u) == 0 ) {
-          _push_leaf(&ver_u, pir_u->sin_y);
-          _push_leaf(&ver_u, pir_u->dex_y);
-          _verifier_next(&ver_u);
-          _verifier_next(&ver_u);
+        _verifier_next(&bao_u);
+        if ( _height(&bao_u.sub_u) == 0 ) {
+          _push_leaf(&bao_u, pir_u->sin_y);
+          _push_leaf(&bao_u, pir_u->dex_y);
+          _verifier_next(&bao_u);
+          _verifier_next(&bao_u);
         } else {
-          _push_parent(&ver_u, pir_u->dex_y);
-          _push_parent(&ver_u, pir_u->sin_y);
+          _push_parent(&bao_u, pir_u->dex_y);
+          _push_parent(&bao_u, pir_u->sin_y);
         }
       }
     }
@@ -706,19 +689,19 @@ static void print_int(void* vod_p, c3_w i_w) {
 
 static void _test_vec() {
   fprintf(stderr, "Making vec");
-  u3_vec(c3_w)* vec_u = _vec_make(2);
+  u3_vec(c3_w)* vec_u = vec_make(2);
 
   c3_w fst = 1;
   c3_w snd = 2;
   c3_w thd = 3;
-  _vec_append(vec_u, &fst);
+  vec_append(vec_u, &fst);
   fprintf(stderr, "put one\r\n");
-  _vec_append(vec_u, &snd);
+  vec_append(vec_u, &snd);
   fprintf(stderr, "put two\r\n");
-  _vec_append(vec_u, &thd);
+  vec_append(vec_u, &thd);
   fprintf(stderr, "put three\r\n");
 
-  c3_w* one_w = _vec_popf(vec_u);
+  c3_w* one_w = (vec_u);
 
   if ( *one_w != 1 ) {
     fprintf(stderr, "(one) Vec failure\r\n");
@@ -726,7 +709,7 @@ static void _test_vec() {
   }
   fprintf(stderr, "popped %u", *one_w);
 
-  c3_w* two_w = _vec_popf(vec_u);
+  c3_w* two_w = (vec_u);
   fprintf(stderr, "two pointer %p, %p\r\n", &snd, two_w);
   if ( *two_w != 2 ) {
     fprintf(stderr, "(two) Vec failure\r\n");
@@ -734,7 +717,7 @@ static void _test_vec() {
   }
   fprintf(stderr, "popped %u", *two_w);
 
-  c3_w* thr_w = _vec_popf(vec_u);
+  c3_w* thr_w = (vec_u);
   if ( *thr_w != 3 ) {
     fprintf(stderr, "(three) Vec failure\r\n");
     exit(1);
@@ -747,16 +730,16 @@ static void _test_vec() {
     exit(1);
   }
 
-  _vec_append(vec_u, &fst);
-  _vec_append(vec_u, &snd);
-  _vec_append(vec_u, &thd);
+  vec_append(vec_u, &fst);
+  vec_append(vec_u, &snd);
+  vec_append(vec_u, &thd);
   c3_w for_w = 4;
   c3_w fiv_w = 5;
   c3_w six_w = 6;
-  u3_vec(c3_w)* new_u = _vec_make(4);
-  _vec_append(new_u, &for_w);
-  _vec_append(new_u, &fiv_w);
-  _vec_append(new_u, &six_w);
+  u3_vec(c3_w)* new_u = vec_make(4);
+  vec_append(new_u, &for_w);
+  vec_append(new_u, &fiv_w);
+  vec_append(new_u, &six_w);
 
   _vec_weld_mut(vec_u, new_u);
   _vec_each(vec_u, print_int);
