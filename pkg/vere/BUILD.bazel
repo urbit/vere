@@ -110,6 +110,7 @@ vere_library(
         "@platforms//os:macos": [
             "platform/darwin/daemon.c",
             "platform/darwin/ptty.c",
+            "platform/darwin/mach.c",
         ],
         "@platforms//os:linux": [
             "platform/linux/daemon.c",
