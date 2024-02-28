@@ -331,4 +331,6 @@
     u3_noun u3wfu_repo(u3_noun);
     u3_noun u3wfu_rest(u3_noun);
 
+    u3_noun u3wf_la_add(u3_noun);
+
 #endif /* ifndef U3_JETS_W_H */

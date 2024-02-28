@@ -38,6 +38,7 @@ vere_library(
         "@openssl",
         "@pdjson",
         "@sigsegv",
+        "@softblas",
         "@softfloat",
         "@urcrypt",
     ] + select({
