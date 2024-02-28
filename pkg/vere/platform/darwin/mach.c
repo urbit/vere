@@ -23,6 +23,6 @@ void darwin_register_mach_exception_handler() {
     EXCEPTION_STATE_IDENTITY,
     MACHINE_THREAD_STATE);
   if ( KERN_SUCCESS != kr) {
-    u3l_log("mono_runtime_install_handlers: task_set_exception_ports failed");
+    u3l_log("mach: unable to register exception handler");
   }
 }
