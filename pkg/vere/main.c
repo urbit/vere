@@ -2790,6 +2790,124 @@ _cw_vile(c3_i argc, c3_c* argv[])
   u3z(res);
 }
 
+static c3_w
+_box_slot(c3_w siz_w)
+{
+  if ( u3a_minimum == siz_w ) {
+    return 0;
+  }
+  else if ( !(siz_w >> 4) ) {
+    c3_dessert( u3a_minimum < siz_w );
+    return 1;
+  }
+  else {
+    c3_w bit_w = c3_bits_word(siz_w) - 3;
+    c3_w max_w = u3a_fbox_no - 1;
+    return c3_min(bit_w, max_w);
+  }
+}
+
+static void
+_cw_foo(c3_i argc, c3_c* argv[])
+{
+  assert(argc > 2);
+  fprintf(stderr, "loading from %s\r\n", argv[2]);
+  u3C.stderr_log_f = 0;
+  u3m_init((size_t)1 << 31);
+  u3e_live(c3y, argv[2]);
+
+  c3_w* mem_w = u3_Loom + u3a_walign;
+  c3_w  siz_w = c3_wiseof(u3v_home);
+  c3_w  len_w = u3C.wor_i - u3a_walign;
+  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+
+  u3H = (void *)mat_w;
+  u3R = &u3H->rod_u;
+
+  // u3a_ream();
+
+  u3a_box* wox_u = (void*)0x2265277d8;
+  u3_post  pox_p = ((c3_w*)(void*)wox_u - (c3_w*)(void*)0x200000000);
+  const u3a_box* box_u = u3to(u3a_box, pox_p);
+
+  u3p(u3a_fbox) lit_p;
+  u3a_fbox*     fox_u;
+  c3_w     sel_w, i_w;
+
+  for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
+    lit_p = u3R->all.fre_p[i_w];
+
+    fprintf(stderr, "free list %u\r\n    ", i_w);
+
+    while ( lit_p ) {
+      fox_u = u3to(u3a_fbox, lit_p);
+      lit_p = fox_u->nex_p;
+      sel_w = _box_slot(fox_u->box_u.siz_w);
+
+      // fprintf(stderr, "%p, ", fox_u);
+
+      if ( sel_w != i_w ) {
+        fprintf(stderr, "\r\nbox at %p wrong slot need %u\r\n",
+                        fox_u, sel_w);
+      }
+
+      if ( &fox_u->box_u == box_u ) {
+        fprintf(stderr, "\r\nfound box in %u\r\n", i_w);
+      }
+
+      {
+        u3p(u3a_fbox) fre_p = u3of(u3a_fbox, &(fox_u->box_u));
+        u3p(u3a_fbox) pre_p = u3to(u3a_fbox, fre_p)->pre_p;
+        u3p(u3a_fbox) nex_p = u3to(u3a_fbox, fre_p)->nex_p;
+
+        if ( nex_p ) {
+          if ( u3to(u3a_fbox, nex_p)->pre_p != fre_p ) {
+            u3_assert(!"loom: corrupt");
+          }
+        }
+
+        if ( pre_p ) {
+          if( u3to(u3a_fbox, pre_p)->nex_p != fre_p ) {
+            u3_assert(!"loom: corrupt");
+          }
+        }
+        else if ( fre_p != u3R->all.fre_p[i_w] ) {
+          u3_assert(!"loom: corrupt");
+        }
+      }
+    }
+  }
+
+  fprintf(stderr, "\r\n box_u %p wox_u %p w wox_u %p post %x\r\n", box_u, wox_u, (c3_w*)wox_u, pox_p);
+  fprintf(stderr, "box_u size %u use %u\r\n", box_u->siz_w, box_u->use_w);
+
+  c3_w* wor_w = (c3_w*)box_u;
+
+  wor_w -= 6;
+
+  fprintf(stderr, "{ ");
+
+  for ( c3_w i_w = 0; i_w < 24; i_w++ ) {
+    fprintf(stderr, "0x%x, ", wor_w[i_w]);
+  }
+
+  fprintf(stderr, " }\r\n");
+
+
+  // u3m_grab(u3_none);
+
+
+  /* Initialize the jet system.
+  */
+  {
+    c3_w len_w = u3j_boot(c3n);
+    u3l_log("boot: installed %d jets", len_w);
+  }
+
+  u3j_ream();
+  u3n_ream();
+}
+
 /* _cw_utils(): "worker" utilities and "serf" entrypoint
 */
 static c3_i
@@ -2835,6 +2953,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
   }
 
   switch ( mot_m ) {
+    case c3__bank:   _cw_foo(argc, argv);  return 1;
     case c3__cram: _cw_cram(argc, argv); return 1;
     case c3__dock: _cw_dock(argc, argv); return 1;
     case c3__eval: _cw_eval(argc, argv); return 1;
