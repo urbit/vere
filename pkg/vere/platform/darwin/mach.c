@@ -18,7 +18,7 @@
 void darwin_register_mach_exception_handler() {
   kern_return_t kr = task_set_exception_ports(
     mach_task_self(),
-    EXC_MASK_BAD_ACCESS | EXC_MASK_ARITHMETIC, // SIGSEGV, SIGFPE
+    EXC_MASK_BAD_ACCESS, // SIGSEGV
     MACH_PORT_NULL,
     EXCEPTION_STATE_IDENTITY,
     MACHINE_THREAD_STATE);
