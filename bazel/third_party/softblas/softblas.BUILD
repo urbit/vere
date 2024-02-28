@@ -6,7 +6,7 @@ cc_library(
     name = "softblas",
     visibility = ["//visibility:public"],
     hdrs = ["include/softblas.h"],
-    # includes = ["include"],
+    includes = ["include"],
     srcs = ["src/blas/level1/sasum.c",
             "src/blas/level1/dasum.c",
             "src/blas/level1/hasum.c",

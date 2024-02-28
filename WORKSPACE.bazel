@@ -296,7 +296,7 @@ versioned_http_archive(
     build_file = "//bazel/third_party/softblas:softblas.BUILD",
     # sha256 = "",
     url = "https://github.com/urbit/SoftBLAS/archive/{version}.tar.gz",
-    version = "bd637fdb23ac4ebd4048eb546633262ddf647b18",
+    version = "cbf3dfff5882fd03f28a74c7c0c6ef4c27ec176d",
 )
 
 versioned_http_archive(
