@@ -2148,9 +2148,13 @@ static u3j_core _139_hex_json_d[] =
   };
 
 /* linear algebra jets
+   XX move to outer _hep_ core for /lib?
 */
-
-static u3j_harm _139_hex_lagoon_add_a[] = {{".2", u3wf_la_add}, {}};
+static u3j_harm _139_hex__lagoon_add_a[] = {{".2", u3wf_la_add}, {}};
+static u3j_core _139_hex__lagoon_d[] =
+  { { "add-rays", 7, _139_hex__lagoon_add_a, 0, no_hashes },
+    {}
+  };
 
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
@@ -2171,7 +2175,7 @@ static u3j_core _139_hex_d[] =
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
 
-  { "add",     7, _139_hex_lagoon_add_a, 0, no_hashes },
+  { "lagoon", 31, 0, _139_hex__lagoon_d, no_hashes },
   {}
 };
 
