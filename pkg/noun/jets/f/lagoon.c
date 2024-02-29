@@ -52,6 +52,18 @@
     }
   }
 
+/* shape
+*/
+  static inline uint64_t _get_shape(u3_noun shape)
+  {
+    uint64_t res = 1;
+    while (u3_nul != shape) {
+      res = res * u3h(shape);
+      shape = u3t(shape);
+    }
+    return res;
+  }
+
 /* add
 */
   u3_noun
@@ -64,31 +76,72 @@
 
     fprintf(stderr, ">>  u3qf_la_add_real\n");
 
-    // SoftBLAS needs to be used here.
-    return u3_none;
+    //  Unpack the data as a byte array for SoftBLAS.
+    uint64_t len_a = _get_shape(shape);
+    uint8_t* a_bytes = (uint8_t*)malloc(len_a*sizeof(uint8_t));
+    u3r_bytes(0, len_a, a_bytes, a_data);
+    uint8_t* b_bytes = (uint8_t*)malloc(len_a*sizeof(uint8_t));
+    u3r_bytes(0, len_a, b_bytes, b_data);
 
-  //   // Split a into component atoms.
-  //   //  (roll shape mul) => 2 x 3 = 6
-  //   c3_w size = 1;
-  //   u3_atom shp = shape;
-  //   while (u3_nul != shp) {
-  //     shp = u3t(shp);
-  //     size *= shp;
-  //   }
+    u3_noun r_data;
 
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        haxpy(len_a, (float16_t){SB_REAL16_ONE}, (float16_t*)a_bytes, 1, (float16_t*)b_bytes, 1);
 
+        //  Unpack the result back into a noun.
+        r_data = u3i_bytes(len_a, b_bytes);
 
+        //  Clean up.
+        free(a_bytes);
+        free(b_bytes);
 
-  // return u3i_word(len_w);
+        return u3nc(a_data, r_data);
+        break;
 
+      case 5:
+        saxpy(len_a, (float32_t){SB_REAL32_ONE}, (float32_t*)a_bytes, 1, (float32_t*)b_bytes, 1);
 
-  //   union sing c, d, e;
-  //   _set_rounding(r);
-  //   c.c = u3r_word(0, a);
-  //   d.c = u3r_word(0, b);
-  //   e.s = _nan_unify_s(f32_add(c.s, d.s));
+        //  Unpack the result back into a noun.
+        r_data = u3i_bytes(len_a, b_bytes);
 
-  //   return u3i_words(1, &e.c);
+        //  Clean up.
+        free(a_bytes);
+        free(b_bytes);
+
+        return u3nc(a_data, r_data);
+        break;
+
+      case 6:
+        daxpy(len_a, (float64_t){SB_REAL64_ONE}, (float64_t*)a_bytes, 1, (float64_t*)b_bytes, 1);
+
+        //  Unpack the result back into a noun.
+        r_data = u3i_bytes(len_a, b_bytes);
+
+        //  Clean up.
+        free(a_bytes);
+        free(b_bytes);
+
+        return u3nc(a_data, r_data);
+        break;
+
+      case 7:
+        qaxpy(len_a, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)a_bytes, 1, (float128_t*)b_bytes, 1);
+
+        //  Unpack the result back into a noun.
+        r_data = u3i_bytes(len_a, b_bytes);
+
+        //  Clean up.
+        free(a_bytes);
+        free(b_bytes);
+
+        return u3nc(a_data, r_data);
+        break;
+
+      default:
+        return u3_none;
+    }
   }
 
   u3_noun
@@ -97,7 +150,6 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun a_meta, a_data,
             b_meta, b_data;
-    fprintf(stderr, "\n>>  u3wf_la_add\n");
 
     if ( c3n == u3r_mean(cor,
                          u3x_sam_4, &a_meta,
@@ -134,7 +186,6 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        fprintf(stderr, ">>  u3wf_la_add: a_kind: %x\n", a_kind);
         switch (a_kind) {
           case c3__real:
             return u3qf_la_add_real(a_data, b_data, a_shape, a_bloq, rnd);
