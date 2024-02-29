@@ -2148,11 +2148,17 @@ static u3j_core _139_hex_json_d[] =
   };
 
 /* linear algebra jets
-   XX move to outer _hep_ core for /lib?
+   XX move to outer _sep_ core for /lib? eventually
+static u3j_core _139_sep_d[] =
 */
 static u3j_harm _139_hex__lagoon_add_a[] = {{".2", u3wf_la_add}, {}};
-static u3j_core _139_hex__lagoon_d[] =
+static u3j_core _139_hex__la_core_d[] =
   { { "add-rays", 7, _139_hex__lagoon_add_a, 0, no_hashes },
+    {}
+  };
+
+static u3j_core _139_hex__lagoon_d[] =
+  { { "la-core", 7, 0, _139_hex__la_core_d, no_hashes },
     {}
   };
 

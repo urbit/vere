@@ -97,6 +97,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun a_meta, a_data,
             b_meta, b_data;
+    fprintf(stderr, "\n>>  u3wf_la_add\n");
 
     if ( c3n == u3r_mean(cor,
                          u3x_sam_4, &a_meta,
@@ -109,27 +110,31 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      u3_noun a_shape, a_bloq, a_kind,
-              b_shape, b_bloq, b_kind,
-              rnd, fxp;
+      u3_noun a_shape, a_bloq, a_kind, a_fxp,
+              b_shape, b_bloq, b_kind, b_fxp,
+              rnd;
       if ( c3n == u3r_mean(a_meta,
-                           2, &a_shape,
-                           6, &a_bloq,
-                           7, &a_kind,
-                           0) ||
+                            2, &a_shape,
+                            6, &a_bloq,
+                           14, &a_kind,
+                           15, &a_fxp,
+                            0) ||
            c3n == u3r_mean(b_meta,
-                           2, &b_shape,
-                           6, &b_bloq,
-                           7, &b_kind,
-                           0) ||
+                            2, &b_shape,
+                            6, &b_bloq,
+                           14, &b_kind,
+                           15, &b_fxp,
+                            0) ||
            c3n == u3r_sing(a_shape, b_shape) ||
            c3n == u3r_sing(a_bloq, b_bloq) ||
            c3n == u3r_sing(a_kind, b_kind) ||
-           c3n == u3r_mean(cor, 60, &rnd, 61, &fxp, 0)
+           //  fxp does not need to match so no check
+           c3n == u3r_mean(cor, 31, &rnd, 0)
          )
       {
         return u3m_bail(c3__exit);
       } else {
+        fprintf(stderr, ">>  u3wf_la_add: a_kind: %x\n", a_kind);
         switch (a_kind) {
           case c3__real:
             return u3qf_la_add_real(a_data, b_data, a_shape, a_bloq, rnd);
