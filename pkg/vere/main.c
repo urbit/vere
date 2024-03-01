@@ -1901,6 +1901,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1928,6 +1929,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
         break;
       }
 
@@ -2063,6 +2069,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2090,6 +2097,11 @@ _cw_pack(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
         break;
       }
 
