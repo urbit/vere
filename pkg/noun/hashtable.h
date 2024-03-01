@@ -179,11 +179,6 @@
         u3p(u3h_root)
         u3h_take(u3p(u3h_root) har_p);
 
-      /* u3h_take_uni(): take entries from [src_p], put into [dst_p].
-      */
-        void
-        u3h_take_uni(u3p(u3h_root) dst_p, u3p(u3h_root) src_p);
-
       /* u3h_wyt(): number of entries
       */
         c3_w
