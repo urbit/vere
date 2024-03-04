@@ -30,8 +30,6 @@ typedef struct _u3_raw_vec {
   void** vod_p;
 } u3_raw_vec;
 
-
-
 typedef struct _blake_node {
   c3_y  cev_y[BLAKE3_OUT_LEN];
   c3_y  boq_y[BLAKE3_BLOCK_LEN];
@@ -46,11 +44,11 @@ typedef struct _blake_subtree {
 } blake_subtree;
 
 typedef struct _blake_bao {
-	c3_w            num_w;
-  c3_w            con_w;
-	blake_subtree   sub_u;
-  u3_vec(c3_y[BLAKE3_OUT_LEN]) que_u;
-  u3_vec(c3_w[BLAKE3_OUT_LEN]) sta_u;
+	c3_w            num_w; // number of leaves == num of packets
+  c3_w            con_w; // next packet to be ingested
+	blake_subtree   sub_u; // internal cursor 
+  u3_vec(c3_y[BLAKE3_OUT_LEN]) que_u; // internal
+  u3_vec(c3_w[BLAKE3_OUT_LEN]) sta_u; // interal
 } blake_bao;
 
 void* vec_popf(u3_raw_vec*);

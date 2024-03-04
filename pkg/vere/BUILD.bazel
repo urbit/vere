@@ -224,6 +224,18 @@ cc_test(
     defines = ["XMAS_TEST"]
 )
 
+cc_test(
+    name = "pact_tests",
+    timeout = "short",
+    srcs = ["io/xmas/pact.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    deps = [":vere"],
+    defines = ["PACT_TEST"]
+)
+
 
 cc_test(
     name = "boot_tests",

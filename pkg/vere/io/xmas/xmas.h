@@ -156,4 +156,6 @@ c3_w xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u);
 
 void xmas_free_pact(u3_xmas_pact* pac_u);
 
+void log_pact(u3_xmas_pact* pac_u);
+
 #endif

@@ -22,7 +22,7 @@
 
 c3_o dop_o = c3n;
 
-// #define XMAS_DEBUG     c3y
+#define XMAS_DEBUG     c3y
 //#define XMAS_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
@@ -138,8 +138,11 @@ typedef struct _u3_pend_req {
 
 typedef struct _u3_czar_info {
   c3_w               pip_w; // IP of galaxy
+  c3_y               imp_y; // galaxy number
+  struct _u3_xmas*   sam_u; // backpointer
   time_t             tim_t; // time of retrieval
-  u3_noun            pen;  // (list @) of pending packet
+  c3_c*              dns_c; // domain
+  u3_noun            pen;   // (list @) of pending packet
 } u3_czar_info;
 
 /* _u3_xmas: next generation networking
@@ -252,6 +255,20 @@ static void _log_peer(u3_peer* per_u)
 }
 
 static void
+_log_czar_info(u3_czar_info* zar_u)
+{
+  {
+    u3_noun nam = u3dc("scot", 'p', zar_u->imp_y);
+    u3l_log("czar: %s", u3r_string(nam));
+    u3_noun pip = u3dc("scot", c3__if, zar_u->pip_w);
+    u3l_log("IP: %s", u3r_string(pip));
+    u3l_log("time: %u", zar_u->tim_t);
+    u3l_log("dns: %s", zar_u->dns_c);
+    u3l_log("pending: %u", u3r_word(0, u3do("lent", zar_u->pen)));
+  }
+}
+
+static void
 _log_pend_req(u3_pend_req* req_u)
 {
   if( req_u == NULL ) {
@@ -306,18 +323,22 @@ _get_her(u3_xmas_pact* pac_u, c3_d* our_d)
   }
 }
 
-
-
-
-// TODO: fix with scry into jael??
-// remove rear call to enable star routing
-//  XX: remove
-static u3_noun
-_xmas_get_sponsor_list(c3_d her_d[2])
+static c3_c*
+_xmas_czar_dns(c3_y imp_y, c3_c* zar_c)
 {
-  u3_noun her = u3i_chubs(2, her_d);
-  u3_noun lis = u3do("rear", u3do("^saxo:title", her));
-  return lis;
+  u3_noun nam = u3dc("scot", 'p', imp_y);
+  c3_c* nam_c = u3r_string(nam);
+  c3_w len_w = 3 + strlen(nam_c) + strlen(zar_c);
+  u3_assert(len_w <= 256);
+  c3_c* dns_c = c3_calloc(len_w);
+
+  c3_i sas_i = snprintf(dns_c, len_w, "%s.%s.", nam_c + 1, zar_c);
+  u3_assert(sas_i <= 255);
+
+  c3_free(nam_c);
+  u3z(nam);
+
+  return dns_c;
 }
 
 
@@ -340,8 +361,8 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
     while ( len_w-- ) {
       car_y = *buf_y++;
       if ( len_w == 0 ) {
-	buf_y++;
-	car_y = 47;
+        buf_y++;
+        car_y = 47;
       }
 
       if ( 47 == car_y ) {
@@ -363,55 +384,6 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
   return pro;
 }
 
-/* _ames_chub_bytes(): c3_y[8] to c3_d
-** XX factor out, deduplicate with other conversions
-*/
-static inline c3_d
-_ames_chub_bytes(c3_y byt_y[8])
-{
-  return (c3_d)byt_y[0]
-       | (c3_d)byt_y[1] << 8
-       | (c3_d)byt_y[2] << 16
-       | (c3_d)byt_y[3] << 24
-       | (c3_d)byt_y[4] << 32
-       | (c3_d)byt_y[5] << 40
-       | (c3_d)byt_y[6] << 48
-       | (c3_d)byt_y[7] << 56;
-}
-
-
-static inline c3_s
-_ames_sift_short(c3_y buf_y[2])
-{
-  return (buf_y[1] << 8 | buf_y[0]);
-}
-
-static inline c3_w
-_ames_sift_word(c3_y buf_y[4])
-{
-  return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
-}
-
-
-
-// cut and pasted from ames.c
-//
-static void
-_ames_etch_short(c3_y buf_y[2], c3_s sot_s)
-{
-  buf_y[0] = sot_s         & 0xff;
-  buf_y[1] = (sot_s >>  8) & 0xff;
-}
-
-static void
-_ames_etch_word(c3_y buf_y[4], c3_w wod_w)
-{
-  buf_y[0] = wod_w         & 0xff;
-  buf_y[1] = (wod_w >>  8) & 0xff;
-  buf_y[2] = (wod_w >> 16) & 0xff;
-  buf_y[3] = (wod_w >> 24) & 0xff;
-}
-
 
 static u3_atom
 _dire_etch_ud(c3_d num_d)
@@ -421,11 +393,6 @@ _dire_etch_ud(c3_d num_d)
   c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
   return u3i_bytes(26 - dif_w, buf_y); // XX known-non-null
 }
-
-
-
-
-
 
 /* _xmas_request_key(): produce key for request hashtable sam_u->req_p from nam_u
 */
@@ -524,9 +491,6 @@ _xmas_get_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
   u3_weak res = u3h_git(sam_u->req_p, key);
   if ( res != u3_none && res != u3_nul ) {
     ret_u = u3to(u3_pend_req, res);
-  }
-  if ( ret_u != NULL ) {
-    ret_u = NULL;
   }
 
   u3z(key);
@@ -627,6 +591,7 @@ _xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas
   c3_w res_w = 0;
   u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
   if ( NULL == req_u ) {
+    u3l_log("no request");
     return 0;
   }
   *nex_u = req_u->pic_u;
@@ -775,11 +740,10 @@ static u3_noun _xmas_get_now() {
 
 
 
-
-
 static void
 _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 {
+  u3l_log("sent");
   u3_seal* sel_u = (u3_seal*)req_u;
   u3_xmas* sam_u = sel_u->sam_u;
 
@@ -791,7 +755,7 @@ _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
     //sam_u->fig_u.net_o = c3y;
   }
 
-  _xmas_free_seal(sel_u);
+  //_xmas_free_seal(sel_u);
 }
 
 static void _xmas_send_buf(u3_xmas* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_w)
@@ -854,7 +818,6 @@ _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
   if ( now_d == wen_d ) {
 #ifdef XMAS_DEBUG
     u3l_log("failed to find new oldest");
-    _log_bitset(&req_u->was_u);
 #endif
   }
   req_u->old_w = idx_w;
@@ -923,35 +886,6 @@ _try_resend(u3_pend_req* req_u)
     req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
   }
 }
-
-// static u3_vec(c3_y[BLAKE3_OUT_LEN])*
-// _xmas_get_proof_vec(u3_xmas_data* dat_u)
-// {
-//   u3_assert( dat_u->aum_u.typ_e == AUTH_SIGN );
-//   u3_assert( dat_u->aup_u.len_y != 0 );
-//   u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(4);
-//   {
-//     c3_y* lef_y = c3_calloc(BLAKE3_OUT_LEN);
-//     blake_node* nod_u = blake_leaf_hash(dat_u->fra_y, dat_u->len_w, 0);
-//     memcpy(lef_y, nod_u->cev_y, BLAKE3_OUT_LEN);
-//     c3_free(nod_u);
-//     vec_append(pof_u, lef_y);
-//   }
-  
-//   for ( c3_w i_w = 0; i_w < dat_u->aup_u.len_y; i_w++ ) {
-//     c3_y* has_y = c3_calloc(BLAKE3_OUT_LEN);
-//     memcpy(has_y, dat_u->aup_u.has_y[i_w], BLAKE3_OUT_LEN);
-//     vec_append(pof_u, has_y);
-//   }
-//   return pof_u;
-// }
-
-// static c3_y
-// _xmas_verify_data(u3_xmas_data* dat_u, blake_bao* bao_u)
-// {
-//   blake_pair* par_u = NULL;
-//   return blake_bao_verify(bao_u, dat_u->fra_y, dat_u->len_w, par_u);
-// }
 
 /* _xmas_req_pact_done(): mark packet as done, returning if we should continue
 */
@@ -1101,10 +1035,146 @@ _xmas_timer_cb(uv_timer_t* tim_u) {
   _try_resend(req_u);
 }
 
+static void
+_xmas_czar_here(u3_czar_info* imp_u, time_t now_t, struct sockaddr_in* add_u)
+{
+  u3_xmas* sam_u = imp_u->sam_u;
+  c3_y imp_y = imp_u->imp_y;
+  c3_w pip_w = ntohl(add_u->sin_addr.s_addr);
+
+  if ( imp_u->pip_w != pip_w ) {
+    u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
+    c3_c* nam_c = u3r_string(nam);
+
+    u3l_log("xmas: czar %s: ip %s", imp_u->dns_c, nam_c);
+
+    c3_free(nam_c);
+    u3z(nam);
+  }
+  imp_u->pip_w = pip_w;
+  imp_u->tim_t = now_t;
+
+  u3_noun pac, t = imp_u->pen;
+
+  while ( t != u3_nul ) {
+    u3x_cell(t, &pac, &t);
+    c3_w len_w = u3r_met(3,pac);
+    c3_y* buf_y = c3_calloc(len_w);
+    u3r_bytes(0, len_w, buf_y, pac);
+    u3_lane lan_u = (u3_lane){pip_w, _ames_czar_port(imp_y)};
+    _xmas_send_buf(sam_u, lan_u, buf_y, len_w);
+  }
+  u3z(imp_u->pen);
+  imp_u->pen = u3_nul;
+}
+
+static void
+_xmas_czar_gone(u3_xmas* sam_u, c3_i sas_i, c3_y imp_y, time_t now_t)
+{
+  u3_czar_info* imp_u = &sam_u->imp_u[imp_y];
+  imp_u->tim_t = now_t;
+  u3l_log("xmas: %s", uv_strerror(sas_i));
+}
+
+static void
+_xmas_czar_cb(uv_getaddrinfo_t* adr_u, c3_i sas_i, struct addrinfo* aif_u)
+{
+  u3_czar_info* imp_u = (u3_czar_info*)adr_u->data;
+  c3_y imp_y = imp_u->imp_y;
+  u3_xmas* sam_u = imp_u->sam_u;
+  time_t now_t = time(0);
+
+  if ( 0 == sas_i ) {
+    // XX: lifetimes for addrinfo, ames does something funny
+    _xmas_czar_here(imp_u, now_t, (struct sockaddr_in*)aif_u->ai_addr);
+  } else {
+    _xmas_czar_gone(sam_u, sas_i, imp_y, now_t);
+  }
+
+  c3_free(adr_u);
+  uv_freeaddrinfo(aif_u);
+
+}
+
+
+
+static void
+_xmas_resolve_czar(u3_xmas* sam_u, c3_y imp_y, u3_noun pac)
+{
+  u3_assert( c3y == u3_Host.ops_u.net );
+  u3_czar_info* imp_u = &sam_u->imp_u[imp_y];
+  time_t now_t = time(0);
+  time_t wen_t = imp_u->tim_t;
+  if ( ((now_t - wen_t) < 300) ) {
+    // XX: confirm validity of drop
+    return;
+  }
+  if ( pac != u3_nul && u3_nul != imp_u->pen ) {
+    // already pending, add to queue
+    imp_u->pen = u3nc(pac, imp_u->pen);
+    return;
+  }
+  if ( pac != u3_nul ) {
+    imp_u->pen = u3nc(pac, imp_u->pen);
+  }
+
+  if ( !sam_u->dns_c ) {
+    u3l_log("xmas: no galaxy domain");
+    return;
+  }
+  imp_u->dns_c = _xmas_czar_dns(imp_y, sam_u->dns_c);
+  {
+    uv_getaddrinfo_t* adr_u = c3_calloc(sizeof(*adr_u));
+    c3_i sas_i;
+    adr_u->data = imp_u;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    if ( 0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _xmas_czar_cb, imp_u->dns_c, 0, &hints))) {
+      time_t now_t = time(0);
+      _xmas_czar_gone(sam_u, sas_i, imp_y, now_t);
+      return;
+    }
+  }
+
+
+}
+
+static u3_noun
+_xmas_queue_czar(u3_xmas* sam_u, u3_noun las, u3_noun pac)
+{
+  las = u3do("flop", las);
+  u3_noun lan, t = las;
+  u3_noun res = u3_nul;
+  time_t now_t = time(0);
+
+  while ( t != u3_nul ) {
+    u3x_cell(t, &lan, &t);
+    if ( (c3y == u3a_is_cat(lan) && lan < 256 ) ) {
+      u3l_log("imp %u", lan);
+      u3_czar_info* imp_u = &sam_u->imp_u[lan];
+      _log_czar_info(imp_u);
+
+      if ( 0 != imp_u->pip_w ) {
+        res = u3nc(u3nt(c3__if, u3i_word(imp_u->pip_w), _ames_czar_port(lan)), res);
+      } 
+      if ( c3y == u3_Host.ops_u.net ) {
+        _xmas_resolve_czar(sam_u, lan, u3k(pac));
+      }
+    } else {
+      res = u3nc(u3k(lan), res);
+    }
+  }
+  u3z(las);
+  u3z(pac);
+  return res;
+}
+
 
 static void
 _xmas_ef_send(u3_xmas* sam_u, u3_noun las, u3_noun pac)
 {
+  las = _xmas_queue_czar(sam_u, las, u3k(pac));
   c3_w len_w = u3r_met(3, pac);
   c3_y* buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1116,11 +1186,9 @@ _xmas_ef_send(u3_xmas* sam_u, u3_noun las, u3_noun pac)
   }
 
   c3_o suc_o = c3n;
-  u3_noun lan, t = las;
   _xmas_rout_bufs(sam_u, buf_y, len_w, las);
   u3z(pac);
 }
-
 
 
 static c3_o _xmas_kick(u3_xmas* sam_u, u3_noun tag, u3_noun dat)
@@ -1370,37 +1438,6 @@ _xmas_put_cache(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_noun val)
   u3z(pax); // TODO: fix refcount
 }
 
-/* _xmas_czar(): add packet to queue, possibly begin DNS resolution
- */
-static void
-_xmas_czar(u3_xmas_pict* pic_u, c3_y her_y)
-{
-  u3_xmas* sam_u = pic_u->sam_u;
-#ifdef XMAS_DEBUG
-  if ( pac_u->hed_u.typ_y != PACT_PEEK ) {
-    u3l_log("xmas: attempted to resolve galaxy for packet that was not peek");
-    u3m_bail(c3__oops);
-    return;
-  }
-#endif
-  u3_czar_info* her_u = &sam_u->imp_u[her_y];
-  if ( her_u->pip_w == 0 ) {
-    c3_y* buf_y = c3_calloc(PACT_SIZE);
-    c3_w siz_w = xmas_etch_pact(buf_y, &pic_u->pac_u);
-    her_u->pen = u3nc(u3i_bytes(siz_w, buf_y), her_u->pen);
-  }
-
-  u3_noun pat = u3i_string(pic_u->pac_u.pek_u.nam_u.pat_c);
-
-  //u3_weak her = _xmas_get_peer(sam_u, her_y);
-
-  c3_o lok_o = _xmas_add_galaxy_pend(sam_u, her_y, pat);
-
-  // TODO: actually resolve DNS
-  u3z(pat);
-}
-
-
 static void
 _xmas_try_forward(u3_xmas_pict* pic_u, u3_noun fra, u3_noun hit)
 {
@@ -1417,7 +1454,7 @@ _xmas_respond(u3_xmas_pict* req_u, c3_y** buf_y, u3_noun hit)
   *buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, *buf_y, hit);
 
-  u3z(hit);
+  //u3z(hit);
   return len_w;
 }
 
@@ -1556,6 +1593,7 @@ _hear_peer(u3_xmas* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
 static void
 _xmas_forward(u3_xmas_pict* pic_u, u3_lane lan_u)
 {
+  u3l_log("forwarding");
   u3_xmas_pact* pac_u = &pic_u->pac_u;
   u3_xmas* sam_u = pic_u->sam_u;
   c3_d her_d[2];
@@ -1573,7 +1611,6 @@ _xmas_forward(u3_xmas_pict* pic_u, u3_lane lan_u)
     u3_noun tag, dat;
     u3x_cell(u3k(hit), &tag, &dat);
     if ( tag == XMAS_WAIT ) {
-      u3m_p("lanes", u3t(dat));
       c3_y* buf_y = c3_calloc(PACT_SIZE);
       c3_w len_w = xmas_etch_pact(buf_y, pac_u);
       _xmas_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
@@ -1603,8 +1640,7 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
 
   u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
   if ( NULL != req_u ) {
-    XMAS_LOG(INVARIANT);
-    u3_assert(0);
+    // duplicate 
     return c3n;
   } else {
     req_u = alloca(sizeof(u3_pend_req));
@@ -1678,7 +1714,7 @@ static void
 _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
 {
 #ifdef XMAS_DEBUG
-  u3l_log("xmas hear page");
+  u3l_log("xmas hear page %u", pic_u->pac_u.pag_u.nam_u);
 #endif
   u3_xmas* sam_u = pic_u->sam_u;
   u3_xmas_pact* pac_u = &pic_u->pac_u;
@@ -1723,15 +1759,21 @@ _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
   }*/
  
   if ( pac_u->pag_u.nam_u.fra_w == 0 || pac_u->pag_u.nam_u.aut_o == c3y ) {
-    _xmas_req_pact_init(sam_u, pic_u, &lan_u);
+    u3l_log("initialising request");
+    c3_o run_o = _xmas_req_pact_init(sam_u, pic_u, &lan_u);
+    u3l_log("initialised request %c", run_o == c3y ? 'y' : 'n');
+    if ( run_o == c3n ) {
+      return;
+    }
   } else {
+    u3l_log("continuing request");
     c3_o run_o = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
     if ( c3n == run_o ) {
       // cleanup
       return;
     } 
   }
-
+  
   u3_xmas_pict* nex_u;
 
   c3_w nex_w;
@@ -1778,6 +1820,7 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
   // u3_assert(pac_u->hed_u.typ_y == PACT_PEEK);
 #endif
   u3_xmas_pact* pac_u = &pic_u->pac_u;
+  log_pact(pac_u);
   u3_xmas* sam_u = pic_u->sam_u;
   c3_d her_d[2];
   her_d[0] = 0;
@@ -1790,7 +1833,7 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
     u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
     if ( per_u == NULL ) {
       u3l_log("xmas: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
-      xmas_free_pact(pac_u);
+      //xmas_free_pact(pac_u);
       return;
     }
     if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
@@ -1818,11 +1861,11 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
 //      }
       c3_w len_w = _xmas_respond(pic_u, &buf_y, u3k(dat));
       u3l_log("sending page %u", pac_u->pek_u.nam_u.fra_w);
-      _xmas_send_buf(pic_u->sam_u, lan_u, buf_y, len_w);
+      _xmas_send_buf(sam_u, lan_u, buf_y, len_w);
     } else {
       u3l_log("xmas: weird case in cache, dropping");
     }
-    xmas_free_pact(pac_u);
+    //xmas_free_pact(pac_u);
     // u3z(hit);
   } else {
     _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
@@ -1831,7 +1874,7 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
 
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pac_u, _xmas_page_scry_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pic_u, _xmas_page_scry_cb);
     } else {
       xmas_free_pact(pac_u);
     }
@@ -2052,12 +2095,6 @@ u3_xmas_io_init(u3_pier* pir_u)
   sam_u->tes_u = ur_cue_test_init();
 
 
-  for ( c3_w i_w = 0; i_w < 5000; i_w++ ) {
-    u3_noun key = u3i_word(i_w);
-    u3_noun val = u3k(val);
-
-    u3h_put(sam_u->req_p, key, val);
-  }
 
   //  Disable networking for fake ships
   //
@@ -2070,12 +2107,13 @@ u3_xmas_io_init(u3_pier* pir_u)
     u3_noun her = u3i_chubs(2, pir_u->who_d);
     for (int i = 0; i < 256; i++) {
       sam_u->imp_u[i].pen = u3_nul;
+      sam_u->imp_u[i].sam_u = sam_u;
+      sam_u->imp_u[i].imp_y = i;
       //sam_u.imp_u[i].tim = 0;
-      if ( u3_Host.ops_u.net == c3y ) {
+      if ( u3_Host.ops_u.net == c3n ) {
         sam_u->imp_u[i].pip_w = 0x7f000001;
       } else {
         sam_u->imp_u[i].pip_w = 0;
-
       }
     }
 
@@ -2110,516 +2148,4 @@ u3_xmas_io_init(u3_pier* pir_u)
 
   return car_u;
 }
-
-#ifdef XMAS_TEST 
-
-#define cmp_scalar(nam, str, fmt)                       \
-  if ( hav_u->nam != ned_u->nam ) {                     \
-    fprintf(stderr, "xmas test cmp " str " differ:\r\n" \
-                    "    have: " fmt "\r\n"             \
-                    "    need: " fmt "\r\n",            \
-                    hav_u->nam, ned_u->nam);            \
-    ret_i = 1;                                          \
-  }
-
-#define cmp_string(nam, siz, str)                       \
-  if ( memcmp(hav_u->nam, ned_u->nam, siz) ) {          \
-    fprintf(stderr, "xmas test cmp " str " differ:\r\n" \
-                    "    have: %*.s\r\n"                \
-                    "    need: %*.s\r\n",               \
-                    siz, hav_u->nam, siz, ned_u->nam);  \
-    ret_i = 1;                                          \
-  }
-
-#define cmp_buffer(nam, siz, str)                 \
-  if ( memcmp(hav_u->nam, ned_u->nam, siz) ) {    \
-    fprintf(stderr, "xmas test cmp " str "\r\n"); \
-    ret_i = 1;                                    \
-  }
-
-static c3_i
-_test_cmp_head(u3_xmas_head* hav_u, u3_xmas_head* ned_u)
-{
-  c3_i ret_i = 0;
-
-  cmp_scalar(nex_y, "head: next", "%u");
-  cmp_scalar(pro_y, "head: protocol", "%u");
-  cmp_scalar(typ_y, "head: type", "%u");
-  cmp_scalar(hop_y, "head: hop", "%u");
-  cmp_scalar(mug_w, "head: mug", "%u");
-
-  return ret_i;
-}
-
-static c3_i
-_test_cmp_name(u3_xmas_name* hav_u, u3_xmas_name* ned_u)
-{
-  c3_i ret_i = 0;
-
-  cmp_buffer(her_d, sizeof(ned_u->her_d), "name: ships differ");
-
-  cmp_scalar(rif_w, "name: rifts", "%u");
-  cmp_scalar(boq_y, "name: bloqs", "%u");
-  cmp_scalar(nit_o, "name: inits", "%u");
-  cmp_scalar(aut_o, "name: auths", "%u");
-  cmp_scalar(fra_w, "name: fragments", "%u");
-  cmp_scalar(pat_s, "name: path-lengths", "%u");
-
-  cmp_string(pat_c, ned_u->pat_s, "name: paths");
-
-  return ret_i;
-}
-
-static c3_i
-_test_cmp_data(u3_xmas_data* hav_u, u3_xmas_data* ned_u)
-{
-  c3_i ret_i = 0;
-
-  cmp_scalar(tot_w, "data: total packets", "%u");
-
-  cmp_scalar(aum_u.typ_e, "data: auth-types", "%u");
-  cmp_buffer(aum_u.sig_y, 64, "data: sig|hmac|null");
-
-  cmp_scalar(aup_u.len_y, "data: hash-lengths", "%u");
-  cmp_buffer(aup_u.has_y, ned_u->aup_u.len_y, "data: hashes");
-
-  cmp_scalar(len_w, "data: fragments-lengths", "%u");
-  cmp_buffer(fra_y, ned_u->len_w, "data: fragments");
-
-  return ret_i;
-}
-
-static c3_i
-_test_pact(u3_xmas_pact* pac_u)
-{
-  c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w  len_w = xmas_etch_pact(buf_y, pac_u);
-  c3_i  ret_i = 0;
-  c3_i  bot_i = 0;
-  c3_w  sif_w;
-
-  u3_xmas_pact nex_u;
-  memset(&nex_u, 0, sizeof(u3_xmas_pact));
-
-  if ( !len_w ) {
-    fprintf(stderr, "pact: etch failed\r\n");
-    ret_i = 1; goto done;
-  }
-  else if ( len_w > PACT_SIZE ) {
-    fprintf(stderr, "pact: etch overflowed: %u\r\n", len_w);
-    ret_i = 1; goto done;
-  }
-
-  if ( len_w != (sif_w = xmas_sift_pact(&nex_u, buf_y, len_w)) ) {
-    fprintf(stderr, "pact: sift failed len=%u sif=%u\r\n", len_w, sif_w);
-    _log_buf(buf_y, len_w);
-    ret_i = 1; goto done;
-  }
-
-  bot_i = 1;
-
-  if ( _test_cmp_head(&nex_u.hed_u, &pac_u->hed_u) ) {
-    fprintf(stderr, "pact: head cmp fail\r\n");
-    ret_i = 1;
-  }
-
-  switch ( pac_u->hed_u.typ_y ) {
-    case PACT_PEEK: {
-      if ( _test_cmp_name(&nex_u.pek_u.nam_u, &pac_u->pek_u.nam_u) ) {
-        fprintf(stderr, "%%peek name cmp fail\r\n");
-        ret_i = 1;
-      }
-    } break;
-
-    case PACT_PAGE: {
-      if ( _test_cmp_name(&nex_u.pag_u.nam_u, &pac_u->pag_u.nam_u) ) {
-        fprintf(stderr, "%%page name cmp fail\r\n");
-        ret_i = 1;
-      }
-      else if ( _test_cmp_data(&nex_u.pag_u.dat_u, &pac_u->pag_u.dat_u) ) {
-        fprintf(stderr, "%%page data cmp fail\r\n");
-        ret_i = 1;
-      }
-    } break;
-
-    case PACT_POKE: {
-      if ( _test_cmp_name(&nex_u.pok_u.nam_u, &pac_u->pok_u.nam_u) ) {
-        fprintf(stderr, "%%poke name cmp fail\r\n");
-        ret_i = 1;
-      }
-      else if ( _test_cmp_name(&nex_u.pok_u.pay_u, &pac_u->pok_u.pay_u) ) {
-        fprintf(stderr, "%%poke pay-name cmp fail\r\n");
-        ret_i = 1;
-      }
-      else if ( _test_cmp_data(&nex_u.pok_u.dat_u, &pac_u->pok_u.dat_u) ) {
-        fprintf(stderr, "%%poke data cmp fail\r\n");
-        ret_i = 1;
-      }
-    } break;
-
-    default: {
-      fprintf(stderr, "test: strange packet\r\n");
-      ret_i = 1;
-    }
-  }
-
-done:
-  if ( ret_i ) {
-    _log_head(&pac_u->hed_u);
-    _log_pact(pac_u);
-    _log_buf(buf_y, len_w);
-
-    if ( bot_i ) {
-      u3l_log(RED_TEXT);
-      _log_head(&nex_u.hed_u);
-      _log_pact(&nex_u);
-      u3l_log(DEF_TEXT);
-    }
-  }
-
-  c3_free(buf_y);
-
-  return ret_i;
-}
-
-static c3_y
-_test_rand_bit(void* ptr_v)
-{
-  return rand() & 1;
-}
-
-static c3_y
-_test_rand_bits(void* ptr_v, c3_y len_y)
-{
-  assert( 8 >= len_y );
-  return rand() & ((1 << len_y) - 1);
-}
-
-static c3_w
-_test_rand_word(void* ptr_v)
-{
-  c3_w low_w = rand();
-  c3_w hig_w = rand();
-  return (hig_w << 16) ^ (low_w & ((1 << 16) - 1));
-}
-
-static c3_y
-_test_rand_gulf_y(void* ptr_v, c3_y top_y)
-{
-  c3_y bit_y = c3_bits_word(top_y);
-  c3_y res_y = 0;
-
-  if ( !bit_y ) return res_y;
-
-  while ( 1 ) {
-    res_y = _test_rand_bits(ptr_v, bit_y);
-
-    if ( res_y < top_y ) {
-      return res_y;
-    }
-  }
-}
-
-static c3_w
-_test_rand_gulf_w(void* ptr_v, c3_w top_w)
-{
-  c3_w bit_w = c3_bits_word(top_w);
-  c3_w res_w = 0;
-
-  if ( !bit_w ) return res_w;
-
-  while ( 1 ) {
-    res_w  = _test_rand_word(ptr_v);
-    res_w &= (1 << bit_w) - 1;
-
-    if ( res_w < top_w ) {
-      return res_w;
-    }
-  }
-}
-
-static void
-_test_rand_bytes(void* ptr_v, c3_w len_w, c3_y* buf_y)
-{
-  c3_w max_w = len_w / 2;
-
-  while ( max_w-- ) {
-    c3_w wor_w = rand();
-    *buf_y++ = (wor_w >> 0) & 0xff;
-    *buf_y++ = (wor_w >> 8) & 0xff;
-  }
-
-  if ( len_w & 1 ) {
-    *buf_y = rand() & 0xff;
-  }
-}
-
-const char* ta_c = "-~_.0123456789abcdefghijklmnopqrstuvwxyz";
-
-static void
-_test_rand_knot(void* ptr_v, c3_w len_w, c3_c* not_c)
-{
-  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-    *not_c++ = ta_c[_test_rand_gulf_y(ptr_v, 40)];
-  }
-}
-
-static void
-_test_rand_path(void* ptr_v, c3_s len_s, c3_c* pat_c)
-{
-  c3_s not_s = 0;
-
-  while ( len_s ) {
-    not_s = _test_rand_gulf_w(ptr_v, len_s);
-    _test_rand_knot(ptr_v, not_s, pat_c);
-    pat_c[not_s] = '/';
-    pat_c += not_s + 1;
-    len_s -= not_s + 1;
-  }
-}
-
-static void
-_test_make_head(void* ptr_v, u3_xmas_head* hed_u)
-{
-  hed_u->nex_y = NEXH_NONE; // XX
-  hed_u->pro_y = 1;
-  hed_u->typ_y = _test_rand_gulf_y(ptr_v, 3) + 1;
-  hed_u->hop_y = _test_rand_gulf_y(ptr_v, 8);
-  hed_u->mug_w = 0;
-  // XX set mug_w in etch?
-}
-
-static void
-_test_make_name(void* ptr_v, c3_s pat_s, u3_xmas_name* nam_u)
-{
-  _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_d);
-  nam_u->rif_w = _test_rand_word(ptr_v);
-
-  nam_u->pat_s = _test_rand_gulf_w(ptr_v, pat_s);
-  nam_u->pat_c = c3_malloc(nam_u->pat_s + 1);
-  _test_rand_path(ptr_v, nam_u->pat_s, nam_u->pat_c);
-  nam_u->pat_c[nam_u->pat_s] = 0;
-
-  nam_u->boq_y = _test_rand_bits(ptr_v, 8);
-  nam_u->nit_o = _test_rand_bits(ptr_v, 1);
-
-  if ( c3y == nam_u->nit_o ) {
-    nam_u->aut_o = c3n;
-    nam_u->fra_w = 0;
-  }
-  else {
-    nam_u->aut_o = _test_rand_bits(ptr_v, 1);
-    nam_u->fra_w = _test_rand_word(ptr_v);
-  }
-}
-
-static void
-_test_make_data(void* ptr_v, u3_xmas_data* dat_u)
-{
-  dat_u->tot_w = _test_rand_word(ptr_v);
-
-  memset(dat_u->aum_u.sig_y, 0, 64);
-  dat_u->aup_u.len_y = 0;
-  memset(dat_u->aup_u.has_y, 0, sizeof(dat_u->aup_u.has_y));
-
-  switch ( dat_u->aum_u.typ_e = _test_rand_bits(ptr_v, 2) ) {
-    case AUTH_NEXT: {
-      dat_u->aup_u.len_y = 2;
-    } break;
-
-    case AUTH_SIGN: {
-      dat_u->aup_u.len_y = _test_rand_gulf_y(ptr_v, 3);
-      _test_rand_bytes(ptr_v, 64, dat_u->aum_u.sig_y);
-    } break;
-
-    case AUTH_HMAC: {
-      dat_u->aup_u.len_y = _test_rand_gulf_y(ptr_v, 3);
-      _test_rand_bytes(ptr_v, 32, dat_u->aum_u.mac_y);
-    } break;
-
-    default: break;
-  }
-
-  for ( c3_w i_w = 0; i_w < dat_u->aup_u.len_y; i_w++ ) {
-    _test_rand_bytes(ptr_v, 32, dat_u->aup_u.has_y[i_w]);
-  }
-
-  dat_u->len_w = _test_rand_gulf_w(ptr_v, 1024);
-  dat_u->fra_y = c3_calloc(dat_u->len_w);
-  _test_rand_bytes(ptr_v, dat_u->len_w, dat_u->fra_y);
-}
-
-static void
-_test_make_pact(void* ptr_v, u3_xmas_pact* pac_u)
-{
-  _test_make_head(ptr_v, &pac_u->hed_u);
-
-  switch ( pac_u->hed_u.typ_y ) {
-    case PACT_PEEK: {
-      _test_make_name(ptr_v, 277, &pac_u->pek_u.nam_u);
-    } break;
-
-    case PACT_PAGE: {
-      _test_make_name(ptr_v, 277, &pac_u->pag_u.nam_u);
-      _test_make_data(ptr_v, &pac_u->pag_u.dat_u);
-    } break;
-
-    case PACT_POKE: {
-      _test_make_name(ptr_v, 124, &pac_u->pok_u.nam_u);
-      _test_make_name(ptr_v, 124, &pac_u->pok_u.pay_u);
-      _test_make_data(ptr_v, &pac_u->pok_u.dat_u);
-    } break;
-
-    default: break; // XX
-  }
-}
-
-static c3_i
-_test_rand_pact(c3_w bat_w)
-{
-  u3_xmas_pact pac_u;
-  void*        ptr_v = 0;
-
-  fprintf(stderr, "pact: test roundtrip %u random packets\r\n", bat_w);
-
-  for ( c3_w i_w = 0; i_w < bat_w; i_w++ ) {
-    _test_make_pact(ptr_v, &pac_u);
-
-    if ( _test_pact(&pac_u) ) {
-      fprintf(stderr, RED_TEXT "pact: roundtrip attempt %u failed\r\n", i_w);
-      exit(1);
-    }
-
-    // XX free pat_s / buf_y
-  }
-
-  return 0;
-}
-
-static void
-_test_sift_page()
-{
-  u3_xmas_pact pac_u;
-  memset(&pac_u,0, sizeof(u3_xmas_pact));
-  pac_u.hed_u.typ_y = PACT_PAGE;
-  pac_u.hed_u.pro_y = 1;
-  u3l_log("%%page checking sift/etch idempotent");
-  u3_xmas_name* nam_u = &pac_u.pag_u.nam_u;
-
-  {
-    u3_noun her = u3v_wish("~hastuc-dibtux");
-    u3r_chubs(0, 2, nam_u->her_d, her);
-    u3z(her);
-  }
-  nam_u->rif_w = 15;
-  nam_u->pat_c = "foo/bar";
-  nam_u->pat_s = strlen(nam_u->pat_c);
-  nam_u->boq_y = 13;
-  nam_u->fra_w = 54;
-  nam_u->nit_o = c3n;
-
-  u3_xmas_data* dat_u = &pac_u.pag_u.dat_u;
-  dat_u->aum_u.typ_e = AUTH_NONE;
-  dat_u->tot_w = 1000;
-  dat_u->len_w = 1024;
-  dat_u->fra_y = c3_calloc(1024);
-  // dat_u->fra_y[1023] = 1;
-
-  if ( _test_pact(&pac_u) ) {
-    fprintf(stderr, RED_TEXT "%%page failed\r\n");
-    exit(1);
-  }
-}
-
-static void
-_test_sift_peek() 
-{
-  u3_xmas_pact pac_u;
-  memset(&pac_u,0, sizeof(u3_xmas_pact));
-  pac_u.hed_u.typ_y = PACT_PEEK;
-  pac_u.hed_u.pro_y = 1;
-  u3l_log("%%peek checking sift/etch idempotent");
-  u3_xmas_name* nam_u = &pac_u.pek_u.nam_u;
-  {
-    u3_noun her = u3v_wish("~hastuc-dibtux");
-    u3r_chubs(0, 2, nam_u->her_d, her);
-    u3z(her);
-  }
-  nam_u->rif_w = 15;
-  nam_u->pat_c = "foo/bar";
-  nam_u->pat_s = strlen(nam_u->pat_c);
-  nam_u->boq_y = 13;
-  nam_u->fra_w = 511;
-  nam_u->nit_o = c3n;
-  nam_u->aut_o = c3n;
-
-  if ( _test_pact(&pac_u) ) {
-    fprintf(stderr, RED_TEXT "%%page failed\r\n");
-    exit(1);
-  }
-}
-
-static void
-_test_encode_path(c3_c* pat_c)
-{
-  u3_noun wan = u3do("stab", u3dt("cat", 3, '/', u3i_string(pat_c)));
-  u3_noun hav = _xmas_encode_path(strlen(pat_c), (c3_y*)pat_c);
-
-  if ( c3n == u3r_sing(wan, hav) ) {
-    u3l_log(RED_TEXT);
-    u3l_log("path encoding mismatch");
-    u3m_p("want", wan);
-    u3m_p("have", hav);
-    exit(1);
-  }
-}
-
-
-static void
-_setup()
-{
-  c3_d          len_d = u3_Ivory_pill_len;
-  c3_y*         byt_y = u3_Ivory_pill;
-  u3_cue_xeno*  sil_u;
-  u3_weak       pil;
-
-  u3C.wag_w |= u3o_hashless;
-  u3m_boot_lite(1 << 26);
-  sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
-  if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-    printf("*** fail _setup 1\n");
-    exit(1);
-  }
-  u3s_cue_xeno_done(sil_u);
-  if ( c3n == u3v_boot_lite(pil) ) {
-    printf("*** fail _setup 2\n");
-    exit(1);
-  }
-
-  {
-    c3_w pid_w = getpid();
-    srand(pid_w);
-    fprintf(stderr, "test: seeding rand() with pid %u\r\n", pid_w);
-  }
-}
-
-int main()
-{
-  _setup();
-  _test_bitset();
-
-  _test_sift_peek();
-  _test_sift_page();
-
-  _test_rand_pact(100000);
-
-  _test_encode_path("foo/bar/baz");
-  _test_encode_path("publ/0/xx//1/foo/g");
-  return 0;
-}
-
-#endif
-
-
-
 
