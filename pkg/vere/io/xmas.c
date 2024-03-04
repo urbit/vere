@@ -221,6 +221,16 @@ get_millis() {
 }
 
 static void
+_log_buf(c3_y* buf_y, c3_w len_w)
+{
+  for( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    fprintf(stderr, "%02x", buf_y[i_w]);
+  }
+  fprintf(stderr, "\r\n");
+}
+
+
+static void
 _log_gage(u3_gage* gag_u)
 {
   u3l_log("gauge");
@@ -909,10 +919,14 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
 
   c3_y ver_y;
   // TODO: move to bottom
-  if( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u))) {
+  if ( req_u->bao_u->con_w != nam_u->fra_w ) { 
+    // TODO: queue packet
+    u3l_log("misordered hash");
+  } else if( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u))) {
     // TODO: do we drop the whole request on the floor?
     XMAS_LOG(AUTH);
     return c3n;
+  } else {
   }
 
   u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
@@ -1641,7 +1655,9 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
   u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
   if ( NULL != req_u ) {
     // duplicate 
-    return c3n;
+    if ( req_u->tot_w <= 4 ) {
+      return c3n;
+    }
   } else {
     req_u = alloca(sizeof(u3_pend_req));
     memset(req_u, 0, sizeof(u3_pend_req));
@@ -1678,30 +1694,43 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
   // TODO: handle restart
   // u3_assert( nam_u->fra_w == 0 ); 
 
-  req_u->nex_w = c3y == lin_o ? 1 : 0;
+  req_u->nex_w = (c3y == lin_o) ? 1 : 0;
   req_u->len_w = (c3y == lin_o) ? 1 : 0;
   uv_timer_init(u3L, &req_u->tim_u);
   req_u->lef_w = 0;
   req_u->old_w = 0;
   req_u->ack_w = 0;
 
-  u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(8);
-  {
-    blake_node* nod_u = blake_leaf_hash(dat_u->fra_y, dat_u->len_w, 0);
-    c3_y* lef_y = c3_calloc(BLAKE3_OUT_LEN);
-    make_chain_value(lef_y, nod_u);
-    c3_free(nod_u);
-    vec_append(pof_u, lef_y);
-  }
+  if ( c3y == lin_o ) {
+    u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(8);
+    {
+      blake_node* nod_u = blake_leaf_hash(dat_u->fra_y, dat_u->len_w, 0);
+      c3_y* lef_y = c3_calloc(BLAKE3_OUT_LEN);
+      make_chain_value(lef_y, nod_u);
+      c3_free(nod_u);
+      vec_append(pof_u, lef_y);
+    }
 
-  for ( int i = 0; i < pac_u->pag_u.dat_u.aup_u.len_y; i++ ) {
-    c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
-    memcpy(pof_y, pac_u->pag_u.dat_u.aup_u.has_y[i], BLAKE3_OUT_LEN);
-    vec_append(pof_u, pof_y);
-  }
+    for ( int i = 0; i < pac_u->pag_u.dat_u.aup_u.len_y; i++ ) {
+      c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
+      memcpy(pof_y, pac_u->pag_u.dat_u.aup_u.has_y[i], BLAKE3_OUT_LEN);
+      vec_append(pof_u, pof_y);
+    }
 
-  req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
-  blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL);
+    req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
+    blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL);
+  } else {
+    c3_w len_w = dat_u->len_w / BLAKE3_OUT_LEN;
+    u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(len_w);
+    for ( int i = 0; i < len_w; i++ ) {
+      c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
+      u3l_log("proof %u", i);
+      memcpy(pof_y, dat_u->fra_y + (BLAKE3_OUT_LEN*i), BLAKE3_OUT_LEN);
+      _log_buf(pof_y, BLAKE3_OUT_LEN);
+      vec_append(pof_u, pof_y);
+    }
+    req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
+  }
 
   _xmas_put_request(sam_u, nam_u, req_u);
   return c3y;
@@ -1714,7 +1743,7 @@ static void
 _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
 {
 #ifdef XMAS_DEBUG
-  u3l_log("xmas hear page %u", pic_u->pac_u.pag_u.nam_u);
+  u3l_log("xmas hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
 #endif
   u3_xmas* sam_u = pic_u->sam_u;
   u3_xmas_pact* pac_u = &pic_u->pac_u;
@@ -1758,7 +1787,7 @@ _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
     return;
   }*/
  
-  if ( pac_u->pag_u.nam_u.fra_w == 0 || pac_u->pag_u.nam_u.aut_o == c3y ) {
+  if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
     u3l_log("initialising request");
     c3_o run_o = _xmas_req_pact_init(sam_u, pic_u, &lan_u);
     u3l_log("initialised request %c", run_o == c3y ? 'y' : 'n');
@@ -1820,7 +1849,6 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
   // u3_assert(pac_u->hed_u.typ_y == PACT_PEEK);
 #endif
   u3_xmas_pact* pac_u = &pic_u->pac_u;
-  log_pact(pac_u);
   u3_xmas* sam_u = pic_u->sam_u;
   c3_d her_d[2];
   her_d[0] = 0;

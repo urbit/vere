@@ -24,7 +24,7 @@
     }                                     \
   } while(0)
 
-#define u3l_log(...)  fprintf(stderr, __VA_ARGS__)
+//#define u3l_log(...)  fprintf(stderr, __VA_ARGS__)
 #define c3_calloc(s) ({                                    \
     void* rut = calloc(1,s);                                \
     if ( 0 == rut ) {                                       \
