@@ -61,9 +61,17 @@ void vec_append(u3_raw_vec*, void*);
 
 u3_raw_vec* vec_make(c3_w);
 
+void vec_free(u3_raw_vec*);
+void vec_drop(u3_raw_vec*);
+
 blake_node* blake_leaf_hash(c3_y* dat_y, c3_w dat_w, c3_d con_d);
 
 blake_bao* blake_bao_make(c3_w, u3_raw_vec* pof_u);
+
+void make_chain_value(c3_y*, blake_node*);
+
+void log_node(blake_node*);
+void log_bao(blake_bao*);
 
 c3_y blake_bao_verify(blake_bao*, c3_y*, c3_w, blake_pair* par_u);
 

@@ -50,11 +50,11 @@ _log_words(c3_c* str_c, c3_w* buf_w, c3_w len_w)
   fprintf(stderr, "\r\n");
 }
 
-static void
-_log_node(blake_node* nod_u)
+void
+log_node(blake_node* nod_u)
 {
-  _log_words("CV", (c3_w*)nod_u->cev_y, 8);
-  _log_words("block", (c3_w*)nod_u->boq_y, 16);
+  _log_buf("CV", (c3_w*)nod_u->cev_y, BLAKE3_OUT_LEN);
+  _log_buf("block", (c3_w*)nod_u->boq_y, BLAKE3_BLOCK_LEN);
   fprintf(stderr, "counter: %llu\r\n", nod_u->con_d);
   fprintf(stderr, "length: %u\r\n", nod_u->len_y);
   fprintf(stderr, "flag: %x\r\n", nod_u->fag_y);
@@ -62,8 +62,8 @@ _log_node(blake_node* nod_u)
 
 static void print_proof(void* vod_p, c3_w i_w) {
   c3_y* pof_y = (c3_y*)vod_p;
-  fprintf(stderr, "proof: %u", i_w);
-  _log_words("", pof_y, BLAKE3_OUT_LEN/4);
+  fprintf(stderr, "proof: %u\r\n", i_w);
+  _log_buf("", pof_y, BLAKE3_OUT_LEN);
 }
 
 
@@ -90,10 +90,17 @@ _vec_each(u3_raw_vec* vec_u, void (*func)(void*, c3_w)) {
   }
 }
 
-static void
-_vec_free(u3_raw_vec* vec_u)
+void
+vec_free(u3_raw_vec* vec_u)
 {
   c3_free(vec_u->vod_p);
+}
+
+void
+vec_drop(u3_raw_vec* vec_u)
+{
+  vec_free(vec_u);
+  c3_free(vec_u);
 }
 
 u3_raw_vec*
@@ -160,6 +167,7 @@ vec_copy(u3_raw_vec* dst_u, u3_raw_vec* src_u) {
   for ( c3_w i_w = 0; i_w < src_u->len_w; i_w++ ) {
     dst_u->vod_p[i_w] = src_u->vod_p[i_w];
   }
+  dst_u->len_w = src_u->len_w;
 }
 
 static void*
@@ -224,10 +232,11 @@ _log_blake_subtree(blake_subtree* sub_u)
   fprintf(stderr, "sub: (%llu, %llu)\r\n", sub_u->sin_d, sub_u->dex_d);
 }
 
-static void
-_log_bao(blake_bao* bao_u)
+void
+log_bao(blake_bao* bao_u)
 {
   fprintf(stderr, "num: %llu\r\n", bao_u->num_w);
+  fprintf(stderr, "con: %llu\r\n", bao_u->con_w);
   fprintf(stderr, "sub: (%llu, %llu)\r\n", bao_u->sub_u.sin_d, bao_u->sub_u.dex_d);
   fprintf(stderr, "queue\r\n");
   _vec_each(&bao_u->que_u, print_proof);
@@ -320,8 +329,8 @@ _compress_node(c3_y out_y[BLAKE3_BLOCK_LEN], blake_node* nod_u)
 }
 
 
-static void
-_make_chain_value(c3_y out_y[32], blake_node* nod_u)
+void
+make_chain_value(c3_y out_y[32], blake_node* nod_u)
 {
   c3_y tmp_y[64];
   _compress_node(tmp_y, nod_u);
@@ -362,8 +371,8 @@ _parent_hash(blake_node* sin_u, blake_node* dex_u)
 {
   c3_y* sin_y = c3_calloc(BLAKE3_OUT_LEN);
   c3_y* dex_y = c3_calloc(BLAKE3_OUT_LEN);
-  _make_chain_value(sin_y, sin_u);
-  _make_chain_value(dex_y, dex_u);
+  make_chain_value(sin_y, sin_u);
+  make_chain_value(dex_y, dex_u);
   return _parent_node(sin_y, dex_y, IV, 0);
 }
 
@@ -410,8 +419,8 @@ static void recurse_blake_subtree(blake_subtree* sub_u, blake_node* nod_u, u3_ve
   recurse_blake_subtree(dex_u, rod_u, rar_u);
 
   blake_pair* new_u = c3_calloc(sizeof(blake_pair));
-  _make_chain_value(new_u->sin_y, lod_u);
-  _make_chain_value(new_u->dex_y, rod_u);
+  make_chain_value(new_u->sin_y, lod_u);
+  make_chain_value(new_u->dex_y, rod_u);
   memcpy(nod_u, _parent_hash(lod_u, rod_u), sizeof(blake_node));
 
   vec_append(par_u, new_u);
@@ -500,14 +509,21 @@ _veri_check_leaf(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w)
     _pop_leaf(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
     blake_node* nod_u = blake_leaf_hash(dat_y, dat_w, bao_u->con_w);
-    _make_chain_value(cav_y, nod_u);
+    make_chain_value(cav_y, nod_u);
+    if ( bao_u->con_w == 3 ) {
+      log_node(nod_u);
+      _log_buf("have", cav_y, 32);
+      _log_buf("want", out_y, 32);
+    }
+    bao_u->con_w++;
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
   } else if ( _vec_len(&bao_u->sta_u) > 0 ) {
     c3_y out_y[BLAKE3_OUT_LEN];
     _pop_parent(out_y, bao_u);
     c3_y cav_y[BLAKE3_OUT_LEN];
     blake_node* nod_u = blake_leaf_hash(dat_y, dat_w, bao_u->con_w);
-    _make_chain_value(cav_y, nod_u);
+    make_chain_value(cav_y, nod_u);
+    bao_u->con_w++;
     return 0 == memcmp(cav_y, out_y, BLAKE3_OUT_LEN) ? c3y : c3n;
   }
   return c3n;
@@ -525,7 +541,7 @@ _veri_check_pair(blake_bao* bao_u, blake_pair* par_u)
   _pop_parent(par_y, bao_u);
   blake_node* nod_u = _parent_node(par_u->sin_y, par_u->dex_y, IV, 0);
   c3_y cav_y[BLAKE3_OUT_LEN];
-  _make_chain_value(cav_y, nod_u);
+  make_chain_value(cav_y, nod_u);
   return _(memcmp(par_y, cav_y, BLAKE3_OUT_LEN) == 0);
 }
 
@@ -550,7 +566,7 @@ blake_bao_make(c3_w num_w, u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u)
   c3_y* snd_y = vec_popf(pof_u);
   vec_init(&bao_u->sta_u, 8);
   vec_init(&bao_u->que_u, 8);
-  vec_copy(&bao_u->que_u, pof_u);
+  vec_copy(&bao_u->sta_u, pof_u);
   _push_leaves(bao_u, fst_y, snd_y);
   return bao_u;
 }
@@ -579,7 +595,6 @@ blake_bao_verify(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w, blake_pair* par_u)
   } else {
     _push_parents(bao_u, par_u);
   }
-  bao_u->con_w++;
   if ( bao_u->con_w == bao_u->num_w ) {
     return BAO_DONE;
   }
