@@ -9,6 +9,7 @@ cc_library(
     includes = ["include"],
     srcs = [
         "include/softblas.h",
+        "src/softblas_state.c",
         "src/blas/level1/sasum.c",
         "src/blas/level1/dasum.c",
         "src/blas/level1/hasum.c",

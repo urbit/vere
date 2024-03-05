@@ -247,7 +247,8 @@
     u3_noun u3qfp_nepo(u3_noun, u3_noun);
     u3_noun u3qfp_rake(u3_noun);
 
-    u3_noun u3qf_la_add_real(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_noun u3qf_la_add_real(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_noun u3qf_la_mmul_real(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58
