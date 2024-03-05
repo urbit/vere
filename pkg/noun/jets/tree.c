@@ -2152,9 +2152,11 @@ static u3j_core _139_hex_json_d[] =
 static u3j_core _139_sep_d[] =
 */
 static u3j_harm _139_hex__lagoon_add_a[] = {{".2", u3wf_la_add}, {}};
+static u3j_harm _139_hex__lagoon_sub_a[] = {{".2", u3wf_la_sub}, {}};
 static u3j_harm _139_hex__lagoon_mmul_a[] = {{".2", u3wf_la_mmul}, {}};
 static u3j_core _139_hex__la_core_d[] =
   { { "add-rays", 7, _139_hex__lagoon_add_a,  0, no_hashes },
+    { "sub-rays", 7, _139_hex__lagoon_sub_a,  0, no_hashes },
     { "mmul",     7, _139_hex__lagoon_mmul_a, 0, no_hashes },
     {}
   };
