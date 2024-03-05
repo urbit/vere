@@ -2154,6 +2154,15 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   u3m_pave(nuu_o);
 
+  /* GC immediately if requested
+  */
+  if ( (c3n == nuu_o) && (u3C.wag_w & u3o_check_corrupt) ) {
+    u3l_log("boot: gc requested");
+    u3m_grab(u3_none);
+    u3C.wag_w &= ~u3o_check_corrupt;
+    u3l_log("boot: gc complete");
+  }
+
   /* Initialize the jet system.
   */
   {
