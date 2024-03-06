@@ -1,6 +1,8 @@
 #include "bitset.h"
 #include <stdio.h>
 
+#include "vere.h"
+
 
 #define u3_assert(x)                      \
   do {                                    \
@@ -14,22 +16,12 @@
     }                                     \
   } while(0)
 
-#define u3l_log(...)  fprintf(stderr, __VA_ARGS__)
-#define c3_calloc(s) ({                                    \
-    void* rut = calloc(1,s);                                \
-    if ( 0 == rut ) {                                       \
-      fprintf(stderr, "c3_calloc(%" PRIu64 ") failed\r\n",  \
-                      (c3_d)s);                             \
-      u3_assert(!"memory lost");                            \
-    }                                                       \
-    rut;})
-#define c3_free  free
 
 
 void bitset_init(u3_bitset* bit_u, c3_w len_w)
 {
   bit_u->len_w = len_w;
-  bit_u->buf_y = c3_calloc(bit_u->len_w >> 3);
+  bit_u->buf_y = c3_calloc(len_w >> 3);
 }
 
 void
@@ -38,12 +30,31 @@ bitset_free(u3_bitset* bit_u)
   c3_free(bit_u->buf_y);
 }
 
+static c3_y
+_popcnt(c3_y num_y)
+{
+  return __builtin_popcount(num_y);
+}
+
+static void
+_log_bitset(u3_bitset* bit_u)
+{
+  c3_w cur_w = 0;
+  while( cur_w < bit_u->len_w ) {
+    if ( c3y == bitset_has(bit_u, cur_w) ) {
+      u3l_log("%u", cur_w);
+    }
+    cur_w++;
+  }
+}
+
 c3_w
 bitset_wyt(u3_bitset* bit_u)
 {
   c3_w ret_w = 0;
-  for(int i = 0; i < (bit_u->len_w >> 3); i++ ) {
-    ret_w += __builtin_popcount(bit_u->buf_y[i]);
+  c3_w len_w = (bit_u->len_w >> 3);
+  for(int i = 0; i < len_w; i++ ) {
+    ret_w += _popcnt(bit_u->buf_y[i]);
   }
   return ret_w;
 }
@@ -86,19 +97,7 @@ bitset_del(u3_bitset* bit_u, c3_w mem_w)
 }
 
 
-static void
-_log_bitset(u3_bitset* bit_u)
-{
-  c3_w cur_w = 0;
-  u3l_log("logging bitset");
-  while( cur_w < bit_u->len_w ) {
-    if ( c3y == bitset_has(bit_u, cur_w) ) {
-      u3l_log("%u", cur_w);
-    }
-    cur_w++;
-  }
-  u3l_log("finished");
-}
+
 
 #ifdef BITSET_TEST
 c3_w main()

@@ -3,6 +3,7 @@
 #include "vere.h"
 #include "ivory.h"
 
+
 #include "noun.h"
 #include "ur.h"
 #include "cubic.h"
@@ -22,7 +23,7 @@
 
 c3_o dop_o = c3n;
 
-#define XMAS_DEBUG     c3y
+// #define XMAS_DEBUG     c3y
 //#define XMAS_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
@@ -105,10 +106,12 @@ typedef struct _u3_peer_last {
   c3_d son_d; // time of sponsor check
 } u3_peer_last;
 
-typedef struct _u3_buf {
+typedef struct _u3_misord_buf {
   c3_y* fra_y;
-  c3_w  fra_w;
-} u3_buf;
+  c3_w  len_w;
+  c3_w  num_w;
+  blake_pair* par_u;
+} u3_misord_buf;
 
 struct _u3_xmas;
 
@@ -122,9 +125,6 @@ typedef struct _u3_pend_req {
   c3_w                   nex_w; // number of the next fragment to be sent
   c3_w                   tot_w; // total number of fragments expected
   uv_timer_t             tim_u; // timehandler
-  u3_xmas_pict*          pic_u; // preallocated request packet
-  u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
-  u3_bitset              was_u; // ((mop @ud packet-state) lte)
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_w                   len_w;
   c3_w                   lef_w; // lowest fragment number currently in flight/pending
@@ -134,6 +134,10 @@ typedef struct _u3_pend_req {
   u3_gage*               gag_u; // congestion control
   u3_vec(u3_buf)         mis_u; // misordered blake hash
   blake_bao*             bao_u; // blake verifier
+  u3_xmas_pict*          pic_u; // preallocated request packet
+  u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
+  u3_bitset              was_u; // ((mop @ud packet-state) lte)
+  c3_y                  pad_y[64];
 } u3_pend_req;
 
 typedef struct _u3_czar_info {
@@ -273,7 +277,7 @@ _log_czar_info(u3_czar_info* zar_u)
     u3_noun pip = u3dc("scot", c3__if, zar_u->pip_w);
     u3l_log("IP: %s", u3r_string(pip));
     u3l_log("time: %u", zar_u->tim_t);
-    u3l_log("dns: %s", zar_u->dns_c);
+    u3l_log("dns: %s", zar_u->dns_c != NULL ? zar_u->dns_c : "NO DNS");
     u3l_log("pending: %u", u3r_word(0, u3do("lent", zar_u->pen)));
   }
 }
@@ -285,6 +289,7 @@ _log_pend_req(u3_pend_req* req_u)
     u3l_log("pending request was NULL");
     return;
   }
+  u3l_log("have: %u", req_u->len_w);
   u3l_log("next: %u", req_u->nex_w);
   u3l_log("total: %u", req_u->tot_w);
   u3l_log("gage: %c", req_u->gag_u == NULL ? 'n' : 'y');
@@ -394,6 +399,12 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
   return pro;
 }
 
+static void
+_xmas_free_pict(u3_xmas_pict* pic_u)
+{
+  xmas_free_pact(&pic_u->pac_u);
+  c3_free(pic_u);
+}
 
 static u3_atom
 _dire_etch_ud(c3_d num_d)
@@ -517,12 +528,16 @@ _xmas_del_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
     return;
   }
   u3_pend_req* req_u = u3to(u3_pend_req, req);
-  // xmas_free_pact(req_u->pac_u);
-  // _free_bitset(&req_u->was_u);
-  // c3_free(req_u->pac_u);
-  // c3_free(req_u->dat_y);
-  // u3a_free(req_u);
+    // u3l_log("wat_u %p", req_u->wat_u);
+  // u3l_log("was_u buf %p", req_u->was_u.buf_y);
+  uv_timer_stop(&req_u->tim_u);
+  _xmas_free_pict(req_u->pic_u);
+  c3_free(req_u->wat_u);
+  vec_free(&req_u->mis_u);
+  c3_free(req_u->dat_y);
+  blake_bao_free(req_u->bao_u);
   u3h_del(sam_u->req_p, key);
+  u3a_free(req_u);
   u3z(key);
 }
 
@@ -533,19 +548,20 @@ _xmas_del_request(u3_xmas* sam_u, u3_xmas_name* nam_u) {
  *   immediately freed
  *
 */
-static void
+static u3_pend_req*
 _xmas_put_request(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_pend_req* req_u) {
   u3_noun key = _xmas_request_key(nam_u);
 
   if ( req_u == NULL) {
     u3h_put(sam_u->req_p, key, u3_nul);
     u3z(key);
-    return;
+    return req_u;
   }
   u3_pend_req* old_u = _xmas_get_request(sam_u, nam_u);
   u3_pend_req* new_u = req_u;
   if ( old_u == NULL ) {
-    new_u = u3a_calloc(sizeof(u3_pend_req),1);
+    new_u = u3a_calloc(1, sizeof(u3_pend_req));
+    // u3l_log("putting fresh req %p", new_u);
     memcpy(new_u, req_u, sizeof(u3_pend_req));
   } else {
     new_u = old_u;
@@ -556,15 +572,10 @@ _xmas_put_request(u3_xmas* sam_u, u3_xmas_name* nam_u, u3_pend_req* req_u) {
   u3_noun val = u3of(u3_pend_req, new_u);
   u3h_put(sam_u->req_p, key, val);
   u3z(key);
+  return new_u;
 }
 
-/* _xmas_packet_timeout(): callback for packet timeout
-*/
-static void
-_xmas_packet_timeout(uv_timer_t* tim_u) {
-  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
-  u3l_log("%u packet timed out", req_u->old_w);
-}
+
 
 // congestion control update
 static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
@@ -590,33 +601,27 @@ static void _xmas_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 }
 
 /*
- * _xmas_req_get_cwnd(): produce current state of packet pump
+ * _xmas_req_get_cwnd(): produce packets to send
  *
  * saves next fragment number and preallocated pact into the passed pointers.
  * Will not do so if returning 0
 */
 static c3_w
-_xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas_pict** nex_u)
+_xmas_req_get_cwnd(u3_pend_req* req_u)
 {
   c3_w res_w = 0;
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-  if ( NULL == req_u ) {
-    u3l_log("no request");
-    return 0;
-  }
-  *nex_u = req_u->pic_u;
 
   if ( req_u->tot_w == 0 || req_u->gag_u == NULL ) {
     u3l_log("shouldn't happen");
-    *nex_w = 0;
     _log_pend_req(req_u);
     u3_assert(0);
     return 1;
   }
 
-  *nex_w = req_u->nex_w;
-
   c3_w liv_w = bitset_wyt(&req_u->was_u);
+  if ( req_u->nex_w == req_u->tot_w ) {
+    return 0;
+  }
 
   c3_w rem_w = req_u->tot_w - req_u->nex_w + 1;
   return c3_min(rem_w, req_u->gag_u->wnd_w - liv_w);
@@ -626,10 +631,9 @@ _xmas_req_get_cwnd_nex(u3_xmas* sam_u, u3_xmas_name* nam_u, c3_w* nex_w, u3_xmas
 **
 */
 static void
-_xmas_req_pact_resent(u3_xmas* sam_u, u3_xmas_name* nam_u)
+_xmas_req_pact_resent(u3_pend_req* req_u, u3_xmas_name* nam_u)
 {
   c3_d now_d = _get_now_micros();
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
   // if we dont have pending request noop
   if ( NULL == req_u ) {
     return;
@@ -643,11 +647,9 @@ _xmas_req_pact_resent(u3_xmas* sam_u, u3_xmas_name* nam_u)
 **   after 1-RT first packet is handled in _xmas_req_pact_init()
 */
 static void
-_xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
+_xmas_req_pact_sent(u3_pend_req* req_u, u3_xmas_name* nam_u)
 {
   c3_d now_d = _get_now_micros();
-  u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
-
   // if we already have pending request
   if ( NULL != req_u ) {
     if( req_u->nex_w == nam_u->fra_w ) {
@@ -656,10 +658,6 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
     // TODO: optional assertions?
     req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1, 0 };
     bitset_put(&req_u->was_u, nam_u->fra_w);
-    // if ( nam_u->fra_w == 1 ) {
-    //   req_u->lef_w = 1;
-    // }
-
   } else {
     u3l_log("xmas: no req for sent");
     return;
@@ -672,7 +670,6 @@ _xmas_req_pact_sent(u3_xmas* sam_u, u3_xmas_name* nam_u)
       }
     }
   }
-  _xmas_put_request(sam_u, nam_u, req_u);
 }
 
 
@@ -736,8 +733,8 @@ u3_xmas_decode_lane(u3_atom lan) {
 //
 static void _xmas_free_seal(u3_seal* sel_u)
 {
-  //c3_free(sel_u->buf_y);
-  //c3_free(sel_u);
+  c3_free(sel_u->buf_y);
+  c3_free(sel_u);
 }
 
 static u3_noun _xmas_get_now() {
@@ -753,7 +750,6 @@ static u3_noun _xmas_get_now() {
 static void
 _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 {
-  u3l_log("sent");
   u3_seal* sel_u = (u3_seal*)req_u;
   u3_xmas* sam_u = sel_u->sam_u;
 
@@ -765,7 +761,7 @@ _xmas_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
     //sam_u->fig_u.net_o = c3y;
   }
 
-  //_xmas_free_seal(sel_u);
+  _xmas_free_seal(sel_u);
 }
 
 static void _xmas_send_buf(u3_xmas* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_w)
@@ -807,33 +803,7 @@ static void _xmas_send_buf(u3_xmas* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
   }
 }
 
-static void
-_update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
-{
-  if( req_u->tot_w == 0 ) {
-    return;
-  }
-  // scan in flight packets, find oldest
-  c3_w idx_w = req_u->lef_w;
-  c3_d now_d = _get_now_micros();
-  c3_d wen_d = now_d;
-  for ( c3_w i = req_u->lef_w; i < req_u->nex_w; i++ ) {
-    if ( c3y == bitset_has(&req_u->was_u, i) &&
-	 wen_d > req_u->wat_u[i].sen_d
-    ) {
-      wen_d = req_u->wat_u[i].sen_d;
-      idx_w = i;
-    }
-  }
-  if ( now_d == wen_d ) {
-#ifdef XMAS_DEBUG
-    u3l_log("failed to find new oldest");
-#endif
-  }
-  req_u->old_w = idx_w;
-  req_u->tim_u.data = req_u;
-  uv_timer_start(&req_u->tim_u, _xmas_packet_timeout, ((req_u->wat_u[req_u->old_w].sen_d + gag_u->rto_w) / 1000), 0);
-}
+
 
 static void _xmas_send(u3_xmas_pict* pic_u, u3_lane* lan_u)
 {
@@ -861,6 +831,7 @@ _try_resend(u3_pend_req* req_u)
     if ( c3y == bitset_has(&req_u->was_u, i) ) {
       req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
       if ( req_u->wat_u[i].tie_y == 1 ) {
+        u3l_log("fast resend %u", i);
         los_o = c3y;
         c3_y* buf_y = c3_calloc(PACT_SIZE);
         req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
@@ -871,7 +842,7 @@ _try_resend(u3_pend_req* req_u)
         }
         // TODO: better route management
         _xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
-        _xmas_req_pact_resent(sam_u, &req_u->pic_u->pac_u.pek_u.nam_u);
+        _xmas_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
 
       } else if ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) {
         los_o = c3y;
@@ -885,7 +856,7 @@ _try_resend(u3_pend_req* req_u)
         }
         // TODO: better route management
         _xmas_send_buf(sam_u, *lan_u, buf_y, siz_w);
-        _xmas_req_pact_resent(sam_u, &req_u->pic_u->pac_u.pek_u.nam_u);
+        _xmas_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
             }
           }
         }
@@ -897,9 +868,86 @@ _try_resend(u3_pend_req* req_u)
   }
 }
 
+/* _xmas_packet_timeout(): callback for packet timeout
+*/
+static void
+_xmas_packet_timeout(uv_timer_t* tim_u) {
+  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
+  u3l_log("%u packet timed out", req_u->old_w);
+  _try_resend(req_u);
+}
+
+static void
+_update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
+{
+  if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
+    return;
+  }
+  // scan in flight packets, find oldest
+  c3_w idx_w = req_u->lef_w;
+  c3_d now_d = _get_now_micros();
+  c3_d wen_d = now_d;
+  for ( c3_w i = req_u->lef_w; i < req_u->nex_w; i++ ) {
+    // u3l_log("fra %u (%u)", i, __LINE__);
+    if ( c3y == bitset_has(&req_u->was_u, i) &&
+	 wen_d > req_u->wat_u[i].sen_d
+    ) {
+      wen_d = req_u->wat_u[i].sen_d;
+      idx_w = i;
+    }
+  }
+  if ( now_d == wen_d ) {
+#ifdef XMAS_DEBUG
+    u3l_log("failed to find new oldest");
+#endif
+  }
+  req_u->old_w = idx_w;
+  req_u->tim_u.data = req_u;
+  c3_d gap_d = now_d -req_u->wat_u[idx_w].sen_d;
+  uv_timer_start(&req_u->tim_u, _xmas_packet_timeout, (gag_u->rto_w - gap_d) / 1000, 0);
+}
+
+static void _xmas_free_misord_buf(u3_misord_buf* buf_u)
+{
+  c3_free(buf_u->fra_y);
+  if ( buf_u->par_u != NULL ) {
+    c3_free(buf_u->par_u);
+  }
+  c3_free(buf_u);
+}
+
+static bao_ingest_result 
+_xmas_burn_misorder_queue(u3_pend_req* req_u)
+{
+  c3_w wan_w = req_u->bao_u->con_w;
+  c3_w len_w;
+  c3_o fon_o;
+  bao_ingest_result res_y = BAO_GOOD;
+  while ( (len_w = vec_len(&req_u->mis_u)) != 0 ) {
+    fon_o = c3n;
+    for (int i = 0; i < len_w; i++) {
+      u3_misord_buf* buf_u = (u3_misord_buf*)req_u->mis_u.vod_p[i];
+      if ( buf_u->num_w == wan_w ) {
+        fon_o = c3y;
+        if ( BAO_GOOD != (res_y = blake_bao_verify(req_u->bao_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u))) {
+          return res_y;
+        } else { 
+          _xmas_free_misord_buf((u3_misord_buf*)vec_pop(&req_u->mis_u, i));
+          break;
+        }
+      }
+    }
+    wan_w++;
+    if ( c3n == fon_o ) {
+      break;
+    }
+  }
+  return res_y; 
+}
+
 /* _xmas_req_pact_done(): mark packet as done, returning if we should continue
 */
-static c3_o
+static u3_pend_req*
 _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3_lane* lan_u)
 {
   u3_weak ret = u3_none;
@@ -908,25 +956,7 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
   
   if ( NULL == req_u ) {
     XMAS_LOG(APATHY);
-    return c3n;
-  }
-  blake_pair* par_u = NULL;
-  if ( dat_u->aum_u.typ_e == AUTH_NEXT ) {
-    par_u = c3_calloc(sizeof(blake_pair));
-    memcpy(par_u->sin_y, dat_u->aup_u.has_y[0], BLAKE3_OUT_LEN);
-    memcpy(par_u->dex_y, dat_u->aup_u.has_y[1], BLAKE3_OUT_LEN);
-  }
-
-  c3_y ver_y;
-  // TODO: move to bottom
-  if ( req_u->bao_u->con_w != nam_u->fra_w ) { 
-    // TODO: queue packet
-    u3l_log("misordered hash");
-  } else if( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u))) {
-    // TODO: do we drop the whole request on the floor?
-    XMAS_LOG(AUTH);
-    return c3n;
-  } else {
+    return NULL;
   }
 
   u3_gage* gag_u = _xmas_get_lane(sam_u, nam_u->her_d, lan_u);
@@ -947,14 +977,14 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
   if ( dat_u->tot_w <= nam_u->fra_w ) {
     XMAS_LOG(STRANGE);
     //  XX: is this sufficient to drop whole request
-    return c3y;
+    return req_u;
   }
 
   // received duplicate
   if ( nam_u->fra_w != 0 && c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
     XMAS_LOG(DUPE);
     req_u->wat_u[nam_u->fra_w].dup_y++;
-    return c3y;
+    return req_u;
   } 
 
   bitset_del(&req_u->was_u, nam_u->fra_w);
@@ -972,20 +1002,52 @@ _xmas_req_pact_done(u3_xmas* sam_u, u3_xmas_name *nam_u, u3_xmas_data* dat_u, u3
     req_u->lef_w++;
   }
 
+  blake_pair* par_u = NULL;
+  if ( dat_u->aum_u.typ_e == AUTH_NEXT ) {
+    // needs to be heap allocated bc will be saved if misordered
+    par_u = c3_calloc(sizeof(blake_pair));
+    memcpy(par_u->sin_y, dat_u->aup_u.has_y[0], BLAKE3_OUT_LEN);
+    memcpy(par_u->dex_y, dat_u->aup_u.has_y[1], BLAKE3_OUT_LEN);
+  }
+
+  c3_y ver_y;
+  // TODO: move to bottom
+  if ( req_u->bao_u->con_w != nam_u->fra_w ) { 
+    // TODO: queue packet
+    u3_misord_buf* buf_u = c3_calloc(sizeof(u3_misord_buf));
+    buf_u->fra_y = c3_calloc(dat_u->len_w);
+    buf_u->len_w = dat_u->len_w;
+    memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
+    buf_u->par_u = par_u;
+    buf_u->num_w = nam_u->fra_w;
+    vec_append(&req_u->mis_u, buf_u);
+  } else if ( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u)) ) {
+    c3_free(par_u);
+    // TODO: do we drop the whole request on the floor?
+    XMAS_LOG(AUTH);
+    return req_u;
+  } else if ( vec_len(&req_u->mis_u) != 0 
+            && BAO_GOOD != (ver_y = _xmas_burn_misorder_queue(req_u))) {
+    c3_free(par_u);
+    XMAS_LOG(AUTH)
+    return req_u;
+  } else {
+    c3_free(par_u);
+  }
+
   // handle gauge update
   _xmas_handle_ack(gag_u, &req_u->wat_u[nam_u->fra_w]);
 
 
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), dat_u->fra_y, dat_u->len_w);
-  c3_d wen_d = _get_now_micros();
 
   _try_resend(req_u);
 
   _update_oldest_req(req_u, gag_u);
 
-  _xmas_put_request(sam_u, nam_u, req_u);
-  _xmas_put_lane(sam_u, nam_u->her_d, lan_u, gag_u);
-  return c3y;
+  // _xmas_put_request(sam_u, nam_u, req_u);
+  // _xmas_put_lane(sam_u, nam_u->her_d, lan_u, gag_u);
+  return req_u;
 }
 
 
@@ -1165,9 +1227,7 @@ _xmas_queue_czar(u3_xmas* sam_u, u3_noun las, u3_noun pac)
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     if ( (c3y == u3a_is_cat(lan) && lan < 256 ) ) {
-      u3l_log("imp %u", lan);
       u3_czar_info* imp_u = &sam_u->imp_u[lan];
-      _log_czar_info(imp_u);
 
       if ( 0 != imp_u->pip_w ) {
         res = u3nc(u3nt(c3__if, u3i_word(imp_u->pip_w), _ames_czar_port(lan)), res);
@@ -1192,15 +1252,12 @@ _xmas_ef_send(u3_xmas* sam_u, u3_noun las, u3_noun pac)
   c3_w len_w = u3r_met(3, pac);
   c3_y* buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, buf_y, pac);
-  u3_xmas_pict pic_u;
-  pic_u.sam_u = sam_u;
-  xmas_sift_pact(&pic_u.pac_u, buf_y, len_w);
-  if ( pic_u.pac_u.hed_u.typ_y == PACT_PEEK ) {
-    sam_u->tim_d = _get_now_micros();
-  }
+  sam_u->tim_d = _get_now_micros();
 
   c3_o suc_o = c3n;
   _xmas_rout_bufs(sam_u, buf_y, len_w, las);
+  
+  c3_free(buf_y);
   u3z(pac);
 }
 
@@ -1472,38 +1529,6 @@ _xmas_respond(u3_xmas_pict* req_u, c3_y** buf_y, u3_noun hit)
   return len_w;
 }
 
-static void
-_xmas_serve_cache_hit(u3_xmas_pict* pic_u, u3_lane lan_u, u3_noun hit) 
-{
-  u3_xmas_pact* req_u = &pic_u->pac_u;
-  u3l_log("serving cache hit");
-  c3_d her_d[2];
-  memcpy(her_d, req_u->pek_u.nam_u.her_d, 2);
-  c3_d our_d[2];
-  memcpy(our_d, pic_u->sam_u->pir_u->who_d, 2);
-  if (  (her_d[0] != our_d[0])
-    ||  (her_d[1] != our_d[1]) ) 
-  {
-    u3l_log("publisher is not ours");
-    if (  (256 > our_d[0])
-       && (0  == our_d[1]) )
-    {
-      // Forward only if requested datum is not ours, and we are a galaxy
-      //_xmas_try_forward(req_u, fra_s, hit);
-    } else {
-      u3l_log("no forward, we are not a galaxy");
-    }
-  } else {
-    //u3l_log("first: %x", u3r_string(u3dc("scot", c3__uv, u3k(u3h(u3t(hit))))));
-    c3_y* buf_y;
-
-    c3_w len_w = _xmas_respond(pic_u, &buf_y, hit);
-    _xmas_send_buf(pic_u->sam_u, lan_u, buf_y, len_w);
-  }
-  // no lose needed because all nouns are moved in both
-  // branches of the conditional
-}
-
 /* 
  */
 static void
@@ -1643,7 +1668,7 @@ _xmas_forward(u3_xmas_pict* pic_u, u3_lane lan_u)
   xmas_free_pact(pac_u);
 }
 
-static c3_o
+static u3_pend_req*
 _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
 {
   u3_xmas_pact* pac_u = &pic_u->pac_u;
@@ -1651,12 +1676,11 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
   u3_xmas_data* dat_u = &pac_u->pag_u.dat_u;
   c3_o lin_o = dat_u->tot_w <= 4 ? c3y : c3n;
 
-
   u3_pend_req* req_u = _xmas_get_request(sam_u, nam_u);
   if ( NULL != req_u ) {
     // duplicate 
     if ( req_u->tot_w <= 4 ) {
-      return c3n;
+      return NULL;
     }
   } else {
     req_u = alloca(sizeof(u3_pend_req));
@@ -1674,22 +1698,21 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
     u3_assert( gag_u != NULL );
   }
 
-  c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
-  u3_assert( siz_w == 1024 ); // boq_y == 13
-  req_u->gag_u = gag_u;
-  req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
-  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w);
-  req_u->tot_w = dat_u->tot_w;
-  bitset_init(&req_u->was_u, dat_u->tot_w + 1);
-
-
-  req_u->pic_u = c3_calloc(sizeof(u3_xmas_pact));
+  req_u->pic_u = c3_calloc(sizeof(u3_xmas_pict));
   req_u->pic_u->sam_u = sam_u;
   req_u->pic_u->pac_u.hed_u.typ_y = PACT_PEEK;
   req_u->pic_u->pac_u.hed_u.pro_y = XMAS_VER;
   memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_xmas_name));
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
   req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
+
+  c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
+  u3_assert( siz_w == 1024 ); // boq_y == 13
+  req_u->gag_u = gag_u;
+  req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
+  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w + 2 );
+  req_u->tot_w = dat_u->tot_w;
+  bitset_init(&req_u->was_u, dat_u->tot_w);
 
   // TODO: handle restart
   // u3_assert( nam_u->fra_w == 0 ); 
@@ -1724,26 +1747,25 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
     u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(len_w);
     for ( int i = 0; i < len_w; i++ ) {
       c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
-      u3l_log("proof %u", i);
       memcpy(pof_y, dat_u->fra_y + (BLAKE3_OUT_LEN*i), BLAKE3_OUT_LEN);
-      _log_buf(pof_y, BLAKE3_OUT_LEN);
       vec_append(pof_u, pof_y);
     }
     req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
   }
+  vec_init(&req_u->mis_u, 8);
 
-  _xmas_put_request(sam_u, nam_u, req_u);
-  return c3y;
+  req_u = _xmas_put_request(sam_u, nam_u, req_u);
+  return req_u;
 }
 
 
 
 
 static void
-_xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
+_xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
 {
 #ifdef XMAS_DEBUG
-  u3l_log("xmas hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+  // u3l_log("xmas hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
 #endif
   u3_xmas* sam_u = pic_u->sam_u;
   u3_xmas_pact* pac_u = &pic_u->pac_u;
@@ -1777,6 +1799,8 @@ _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
 
   if ( u3_none != hit ) {
     _xmas_forward(pic_u, lan_u);
+    _xmas_free_pict(pic_u);
+    u3z(hit);
     return;
   }
   
@@ -1786,46 +1810,62 @@ _xmas_hear_page(u3_xmas_pict* pic_u, c3_y* buf_y, c3_w len_w, u3_lane lan_u)
     u3l_log("simulating dropped packet");
     return;
   }*/
+  u3_pend_req* req_u;
  
   if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
-    u3l_log("initialising request");
-    c3_o run_o = _xmas_req_pact_init(sam_u, pic_u, &lan_u);
-    u3l_log("initialised request %c", run_o == c3y ? 'y' : 'n');
-    if ( run_o == c3n ) {
+    req_u = _xmas_req_pact_init(sam_u, pic_u, &lan_u);
+    if ( req_u == NULL ) {
+      _xmas_free_pict(pic_u);
       return;
     }
   } else {
-    u3l_log("continuing request");
-    c3_o run_o = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
-    if ( c3n == run_o ) {
+    req_u = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
+    if ( req_u == NULL ) {
       // cleanup
+      _xmas_free_pict(pic_u);
       return;
     } 
   }
-  
-  u3_xmas_pict* nex_u;
 
-  c3_w nex_w;
-  c3_w win_w = _xmas_req_get_cwnd_nex(sam_u, &pac_u->pag_u.nam_u, &nex_w, &nex_u);
+  if ( req_u == NULL ) {
+    u3_assert(!"invalid");
+    return;
+  }
+  c3_w win_w = _xmas_req_get_cwnd(req_u);
+  u3_xmas_pict* nex_u = req_u->pic_u;
+  c3_w nex_w = req_u->nex_w;
   if ( win_w != 0 ) {
 #ifdef XMAS_DEBUG
     u3l_log("continuing flow nex: %u, win: %u", nex_w, win_w);
+    u3l_log("in flight %u", bitset_wyt(&req_u->was_u));
 #endif
-    c3_y* buf_y = c3_calloc(PACT_SIZE * win_w);
-    c3_y* cur_y = buf_y;
-    for(int i = 0; i < win_w; i++) {
+    for ( int i = 0; i < win_w; i++ ) {
+      c3_y* buf_y = c3_calloc(PACT_SIZE);
+      c3_w fra_w = nex_w + i;
+      if ( fra_w >= req_u->tot_w ) {
+        break;
+      }
       nex_u->pac_u.pek_u.nam_u.fra_w = nex_w + i;
-      c3_w siz_w  = xmas_etch_pact(cur_y, &nex_u->pac_u);
+      c3_w siz_w  = xmas_etch_pact(buf_y, &nex_u->pac_u);
       if ( siz_w == 0 ) {
         u3l_log("failed to etch");
         u3_assert( 0 );
       }
       // TODO: better route management
-      _xmas_send_buf(sam_u, lan_u, cur_y, siz_w);
-      _xmas_req_pact_sent(sam_u, &nex_u->pac_u.pek_u.nam_u);
-      cur_y += siz_w;
+      _xmas_send_buf(sam_u, lan_u, buf_y, siz_w);
+      _xmas_req_pact_sent(req_u, &nex_u->pac_u.pek_u.nam_u);
     }
   }
+  if ( req_u->len_w == req_u->tot_w ) {
+    // fprintf(stderr, "finished");
+    // u3l_log("queue size %u", req_u->mis_u.len_w);
+    c3_d now_d = _get_now_micros();
+    u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
+    c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
+    //u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
+    _xmas_del_request(sam_u, &pac_u->pag_u.nam_u);
+  }
+  _xmas_free_pict(pic_u);
 }
 
 static void
@@ -1861,7 +1901,7 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
     u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
     if ( per_u == NULL ) {
       u3l_log("xmas: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
-      //xmas_free_pact(pac_u);
+      _xmas_free_pict(pic_u);
       return;
     }
     if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
@@ -1872,6 +1912,8 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
        u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
       _xmas_send(pic_u, &lin_u);
     }
+    _xmas_free_pict(pic_u);
+    return;
   }
 
   u3_weak hit = _xmas_get_cache(sam_u, &pac_u->pek_u.nam_u);
@@ -1883,18 +1925,14 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
       _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
     } else if ( c3y == our_o && tag == XMAS_ITEM ) {
       c3_y* buf_y;
-//      if ( rand() % 20 == 0) {
-//	u3l_log("dropping packet %u", pac_u->pek_u.nam_u.fra_w);
-//	return;
-//      }
       c3_w len_w = _xmas_respond(pic_u, &buf_y, u3k(dat));
-      u3l_log("sending page %u", pac_u->pek_u.nam_u.fra_w);
       _xmas_send_buf(sam_u, lan_u, buf_y, len_w);
     } else {
       u3l_log("xmas: weird case in cache, dropping");
     }
-    //xmas_free_pact(pac_u);
-    // u3z(hit);
+    _xmas_free_pict(pic_u);
+    u3z(hit);
+    return;
   } else {
     _xmas_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
@@ -1902,9 +1940,10 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
 
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
+      // only branch where we do not free pic_u
       u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pic_u, _xmas_page_scry_cb);
     } else {
-      xmas_free_pact(pac_u);
+      _xmas_free_pict(pic_u);
     }
   }
   // u3z(pax);
@@ -1947,10 +1986,6 @@ _xmas_hear(u3_xmas* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
-#ifdef XMAS_DEBUG
-  u3l_log("xmas_hear");
-#endif
-
   u3_xmas_pict* pic_u;
   c3_w pre_w;
   c3_y* cur_y = hun_y;
@@ -1962,12 +1997,11 @@ _xmas_hear(u3_xmas* sam_u,
   pic_u = c3_calloc(sizeof(u3_xmas_pict));
   pic_u->sam_u = sam_u;
   c3_w lin_w = xmas_sift_pact(&pic_u->pac_u, hun_y, len_w);
+  c3_free(hun_y);
   if ( lin_w == 0 ) {
-#ifdef XMAS_DEBUG
-    u3l_log("xmas: failed to parse packet");
-    //_log_pact(pac_u);
-#endif
-    // TODO free everything
+    XMAS_LOG(SERIAL)
+    c3_free(hun_y);
+    xmas_free_pact(&pic_u->pac_u);
     return;
   }
 
@@ -1976,7 +2010,7 @@ _xmas_hear(u3_xmas* sam_u,
       _xmas_hear_peek(pic_u, *lan_u);
     } break;
     case PACT_PAGE: {
-      _xmas_hear_page(pic_u, hun_y, len_w, *lan_u);
+      _xmas_hear_page(pic_u, *lan_u);
     } break;
     default: {
       _xmas_hear_poke(pic_u, lan_u);
@@ -2039,7 +2073,6 @@ _xmas_io_talk(u3_auto* car_u)
 
     u3_auto_plan(car_u, u3_ovum_init(0, c3__x, wir, cad));
   }
-  //_xmas_io_start(sam_u);
   u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun    rac = u3do("clan:title", u3k(who));
   c3_s     por_s = sam_u->pir_u->por_s;

@@ -19,4 +19,5 @@ void bitset_put(u3_bitset* bit_u, c3_w mem_w);
 c3_o bitset_has(u3_bitset* bit_u, c3_w mem_w);
 
 void bitset_del(u3_bitset* bit_u, c3_w mem_w);
+
 #endif

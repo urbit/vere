@@ -12,27 +12,6 @@
 #define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("xmas: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
 #define safe_dec(num) (num == 0 ? num : num - 1)
 #define _xmas_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
-#define u3_assert(x)                      \
-  do {                                    \
-    if (!(x)) {                           \
-      fflush(stderr);                     \
-      fprintf(stderr, "\rAssertion '%s' " \
-              "failed in %s:%d\r\n",      \
-              #x, __FILE__, __LINE__);    \
-      /*u3m_bail(c3__oops); */                \
-      /*abort(); */                            \
-    }                                     \
-  } while(0)
-
-//#define u3l_log(...)  fprintf(stderr, __VA_ARGS__)
-#define c3_calloc(s) ({                                    \
-    void* rut = calloc(1,s);                                \
-    if ( 0 == rut ) {                                       \
-      fprintf(stderr, "c3_calloc(%" PRIu64 ") failed\r\n",  \
-                      (c3_d)s);                             \
-      u3_assert(!"memory lost");                            \
-    }                                                       \
-    rut;})
 
 
 /* Logging functions
@@ -220,6 +199,10 @@ _xmas_rank(c3_d who_d[2])
 
 /* lifecycle
 */
+
+/* xmas_free_pact(): free contents of packet.
+*    Does *not* free pac_u itself
+*/
 void xmas_free_pact(u3_xmas_pact* pac_u) 
 {
   switch ( pac_u->hed_u.typ_y ) {
@@ -230,14 +213,14 @@ void xmas_free_pact(u3_xmas_pact* pac_u)
       break;
     };
     case PACT_PAGE: {
-      //c3_free(pac_u->pag_u.dat_u.fra_y);
+      c3_free(pac_u->pag_u.dat_u.fra_y);
       break;
     };
     case PACT_POKE: {
+      c3_free(pac_u->pok_u.dat_u.fra_y);
       break;
     };
   }
-  c3_free(pac_u);
 }
 
 /* deserialisation
@@ -614,16 +597,9 @@ xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
 static void
 _xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[8])
 {
-#ifdef XMAS_DEBUG
-  if( c3y == XMAS_DEBUG ) {
-    if( hed_u->pro_y > 7 ) {
-      u3l_log("xmas: bad protocol version");
-      return;
-    }
+  if ( 1 != hed_u->pro_y ) {
+    u3l_log("etching bad head");
   }
-#endif
-
-  assert( 1 == hed_u->pro_y );
 
   // c3_o req_o = c3o((hed_u->typ_y == PACT_PEEK), (hed_u->typ_y == PACT_POKE));
   // c3_y siz_y = req_o ? 5 : 7;

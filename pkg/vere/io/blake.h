@@ -12,12 +12,12 @@
 
 #define u3_vec(type) u3_raw_vec
 
-enum bao_ingest_result {
+typedef enum _bao_ingest_result {
   BAO_BAD_ORDER = 1,
   BAO_FAILED = 2,
   BAO_GOOD = 3,
   BAO_DONE = 4,
-};
+} bao_ingest_result;
 
 typedef struct _blake_pair {
   c3_y sin_y[BLAKE3_OUT_LEN];
@@ -52,8 +52,11 @@ typedef struct _blake_bao {
 } blake_bao;
 
 void* vec_popf(u3_raw_vec*);
+void* vec_pop(u3_raw_vec*, c3_w);
 
 void vec_init(u3_raw_vec*, c3_w);
+
+c3_w vec_len(u3_raw_vec*);
 
 void vec_append(u3_raw_vec*, void*);
 
@@ -65,6 +68,7 @@ void vec_drop(u3_raw_vec*);
 blake_node* blake_leaf_hash(c3_y* dat_y, c3_w dat_w, c3_d con_d);
 
 blake_bao* blake_bao_make(c3_w, u3_raw_vec* pof_u);
+void blake_bao_free(blake_bao*);
 
 void make_chain_value(c3_y*, blake_node*);
 
