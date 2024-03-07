@@ -177,6 +177,7 @@ _main_init(void)
   u3_Host.ops_u.rep = c3n;
   u3_Host.ops_u.eph = c3n;
   u3_Host.ops_u.tos = c3n;
+  u3_Host.ops_u.beb = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -274,6 +275,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "swap",                no_argument,       NULL, 7 },
     { "swap-to",             required_argument, NULL, 8 },
     { "toss",                required_argument, NULL, 9 },
+    { "behn-allow-blocked",  no_argument,       NULL, 10 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -307,6 +309,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
           return c3n;
         }
+        break;
+      }
+      case 10: { //  behn-allow-blocked
+        u3_Host.ops_u.beb = c3y;
         break;
       }
       //  special args

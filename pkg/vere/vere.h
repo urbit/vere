@@ -306,6 +306,7 @@
         c3_o    map;                        //  --no-demand (reversed)
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
+        c3_o    beb;                        //  --behn-allow-blocked
       } u3_opts;
 
     /* u3_host: entire host.

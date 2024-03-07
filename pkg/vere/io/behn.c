@@ -50,9 +50,14 @@ _behn_wake_bail(u3_ovum* egg_u, u3_noun lud)
 
     u3l_log("behn: timer failed; queue blocked");
 
-    //  XX review, add flag to continue?
-    //
-    u3_pier_bail(car_u->pir_u);
+    if ( c3n == u3_Host.ops_u.beb ) {
+      u3_pier_bail(car_u->pir_u);
+    }
+    else {
+      u3l_log("vere: warning: continuing without timers");
+      u3z(lud);
+      u3_ovum_free(egg_u);
+    }
   }
 }
 
