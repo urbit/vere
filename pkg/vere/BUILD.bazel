@@ -97,8 +97,8 @@ vere_library(
             "db/*.c",
             "io/*.c",
             "io/*.h",
-            "io/xmas/*.c",
-            "io/xmas/*.h",
+            "io/mesa/*.c",
+            "io/mesa/*.h",
         ],
         exclude = [
             "main.c",
@@ -113,6 +113,7 @@ vere_library(
         "@platforms//os:macos": [
             "platform/darwin/daemon.c",
             "platform/darwin/ptty.c",
+            "platform/darwin/mach.c",
         ],
         "@platforms//os:linux": [
             "platform/linux/daemon.c",

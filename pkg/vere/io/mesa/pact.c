@@ -1,4 +1,4 @@
-#include "xmas.h"
+#include "mesa.h"
 #include <stdio.h>
 // only need for tests, can remove
 #include "vere.h"
@@ -9,16 +9,16 @@
 // endif tests
 
 #define SIFT_VAR(dest, src, len) dest = 0; for(int i = 0; i < len; i++ ) { dest |= ((src + i) >> (8*i)); }
-#define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("xmas: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
+#define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
 #define safe_dec(num) (num == 0 ? num : num - 1)
-#define _xmas_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
+#define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
 
 
 /* Logging functions
 */
 
 static void
-_log_head(u3_xmas_head* hed_u)
+_log_head(u3_mesa_head* hed_u)
 {
   u3l_log("-- HEADER --");
   u3l_log("next hop: %u", hed_u->nex_y);
@@ -40,7 +40,7 @@ _log_buf(c3_y* buf_y, c3_w len_w)
 }
 
 static void
-_log_name(u3_xmas_name* nam_u)
+_log_name(u3_mesa_name* nam_u)
 {
   // u3l_log("meta");
   // u3l_log("rank: %u", nam_u->met_u.ran_y);
@@ -67,7 +67,7 @@ _log_name(u3_xmas_name* nam_u)
 }
 
 static void
-_log_data(u3_xmas_data* dat_u)
+_log_data(u3_mesa_data* dat_u)
 {
   u3l_log("total fragments: %u", dat_u->tot_w);
 
@@ -129,20 +129,20 @@ _log_data(u3_xmas_data* dat_u)
 }
 
 static void
-_log_peek_pact(u3_xmas_peek_pact* pac_u)
+_log_peek_pact(u3_mesa_peek_pact* pac_u)
 {
   _log_name(&pac_u->nam_u);
 }
 
 static void
-_log_page_pact(u3_xmas_page_pact *pac_u)
+_log_page_pact(u3_mesa_page_pact *pac_u)
 {
   _log_name(&pac_u->nam_u);
   _log_data(&pac_u->dat_u);
 }
 
 static void
-_log_poke_pact(u3_xmas_poke_pact *pac_u)
+_log_poke_pact(u3_mesa_poke_pact *pac_u)
 {
   _log_name(&pac_u->nam_u);
   _log_name(&pac_u->pay_u);
@@ -150,7 +150,7 @@ _log_poke_pact(u3_xmas_poke_pact *pac_u)
 }
 
 void
-log_pact(u3_xmas_pact* pac_u)
+log_pact(u3_mesa_pact* pac_u)
 {
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
@@ -175,13 +175,13 @@ log_pact(u3_xmas_pact* pac_u)
 /* Helper utilities
 */
 static void
-_update_hopcount(u3_xmas_head* hed_u)
+_update_hopcount(u3_mesa_head* hed_u)
 {
   hed_u->hop_y = c3_max(hed_u->hop_y+1, 7);
 }
 
 static c3_y
-_xmas_rank(c3_d who_d[2])
+_mesa_rank(c3_d who_d[2])
 {
   if ( who_d[1] ) {
     return 3;
@@ -200,10 +200,10 @@ _xmas_rank(c3_d who_d[2])
 /* lifecycle
 */
 
-/* xmas_free_pact(): free contents of packet.
+/* mesa_free_pact(): free contents of packet.
 *    Does *not* free pac_u itself
 */
-void xmas_free_pact(u3_xmas_pact* pac_u) 
+void mesa_free_pact(u3_mesa_pact* pac_u)
 {
   switch ( pac_u->hed_u.typ_y ) {
     default: {
@@ -295,9 +295,9 @@ _ames_ship_to_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 }
 
 static c3_o
-_xmas_sift_head(c3_y buf_y[8], u3_xmas_head* hed_u)
+_mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u)
 {
-  if ( memcmp(buf_y + 4, &XMAS_COOKIE, XMAS_COOKIE_LEN) ) {
+  if ( memcmp(buf_y + 4, &MESA_COOKIE, MESA_COOKIE_LEN) ) {
     return c3n;
 
   }
@@ -319,14 +319,14 @@ _xmas_sift_head(c3_y buf_y[8], u3_xmas_head* hed_u)
 }
 
 static c3_w
-_xmas_sift_name(u3_xmas_name* nam_u, c3_y* buf_y, c3_w len_w)
+_mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
 {
-#ifdef XMAS_DEBUG
-  //u3l_log("xmas: sifting name %i", len_w);
+#ifdef MESA_DEBUG
+  //u3l_log("mesa: sifting name %i", len_w);
 #endif
 
   c3_w cur_w = 0;
-  u3_xmas_name_meta met_u;
+  u3_mesa_name_meta met_u;
 
   CHECK_BOUNDS(cur_w + 1);
   c3_y met_y = buf_y[cur_w];
@@ -387,14 +387,14 @@ _xmas_sift_name(u3_xmas_name* nam_u, c3_y* buf_y, c3_w len_w)
 }
 
 static c3_w
-_xmas_sift_data(u3_xmas_data* dat_u, c3_y* buf_y, c3_w len_w)
+_mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 {
-#ifdef XMAS_DEBUG
-  //u3l_log("xmas: sifting data %i", len_w);
+#ifdef MESA_DEBUG
+  //u3l_log("mesa: sifting data %i", len_w);
 #endif
 
   c3_w cur_w = 0;
-  u3_xmas_data_meta met_u;
+  u3_mesa_data_meta met_u;
 
   CHECK_BOUNDS(cur_w + 1);
   c3_y met_y = buf_y[cur_w];
@@ -453,7 +453,7 @@ _xmas_sift_data(u3_xmas_data* dat_u, c3_y* buf_y, c3_w len_w)
 }
 
 static c3_w
-_xmas_sift_hop_long(u3_xmas_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
+_mesa_sift_hop_long(u3_mesa_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0;
   CHECK_BOUNDS(cur_w + 1);
@@ -468,17 +468,17 @@ _xmas_sift_hop_long(u3_xmas_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
 
 
 static c3_w
-_xmas_sift_page_pact(u3_xmas_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
+_mesa_sift_page_pact(u3_mesa_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
 {
-  u3_xmas_page_pact* pac_u = &pat_u->pag_u;
+  u3_mesa_page_pact* pac_u = &pat_u->pag_u;
   c3_w cur_w = 0, nex_w;
 
-  if ( !(nex_w = _xmas_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
+  if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
     return 0;
   }
   cur_w += nex_w;
 
-  if ( !(nex_w = _xmas_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
+  if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
     return 0;
   }
   cur_w += nex_w;
@@ -494,7 +494,7 @@ _xmas_sift_page_pact(u3_xmas_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
       cur_w += 6;
     } break;
     case HOP_LONG: {
-      c3_w hop_w = _xmas_sift_hop_long(&pac_u->one_u, buf_y + cur_w, len_w - cur_w);
+      c3_w hop_w = _mesa_sift_hop_long(&pac_u->one_u, buf_y + cur_w, len_w - cur_w);
       if( hop_w == 0 ) {
         return 0;
       }
@@ -505,10 +505,10 @@ _xmas_sift_page_pact(u3_xmas_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
       pac_u->man_u.len_w = buf_y[cur_w];
       cur_w++;
 
-      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_xmas_hop_once) * pac_u->man_u.len_w);
+      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pac_u->man_u.len_w);
 
       for( int i = 0; i < pac_u->man_u.len_w; i++ ) {
-        c3_w hop_w = _xmas_sift_hop_long(&pac_u->man_u.dat_y[i], buf_y + cur_w ,len_w - cur_w);
+        c3_w hop_w = _mesa_sift_hop_long(&pac_u->man_u.dat_y[i], buf_y + cur_w ,len_w - cur_w);
         if ( hop_w == 0 ) {
           return 0;
         }
@@ -522,11 +522,11 @@ _xmas_sift_page_pact(u3_xmas_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
 
 
 static c3_w
-_xmas_sift_peek_pact(u3_xmas_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
+_mesa_sift_peek_pact(u3_mesa_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
-  c3_w siz_w = _xmas_sift_name(&pac_u->nam_u, buf_y, len_w);
+  c3_w siz_w = _mesa_sift_name(&pac_u->nam_u, buf_y, len_w);
   if ( siz_w < len_w ) {
-    u3l_log("xmas: failed to consume entire packet");
+    u3l_log("mesa: failed to consume entire packet");
     _log_buf(buf_y + siz_w, len_w - siz_w);
     return 0;
   }
@@ -535,23 +535,23 @@ _xmas_sift_peek_pact(u3_xmas_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
 }
 
 static c3_w
-_xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
+_mesa_sift_poke_pact(u3_mesa_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0, nex_w;
   //  ack path
-  if ( !(nex_w = _xmas_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
+  if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
     return 0;
   }
   cur_w += nex_w;
 
   //  payload path
-  if ( !(nex_w = _xmas_sift_name(&pac_u->pay_u, buf_y + cur_w, len_w)) ) {
+  if ( !(nex_w = _mesa_sift_name(&pac_u->pay_u, buf_y + cur_w, len_w)) ) {
     return 0;
   }
   cur_w += nex_w;
 
   //  payload
-  if ( !(nex_w = _xmas_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
+  if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
     return 0;
   }
   cur_w += nex_w;
@@ -560,30 +560,30 @@ _xmas_sift_poke_pact(u3_xmas_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
 }
 
 c3_w
-xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
+mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w res_w = 0;
 
   if ( len_w < 8 ) {
-    u3l_log("xmas: attempted to parse overly short packet of size %u", len_w);
+    u3l_log("mesa: attempted to parse overly short packet of size %u", len_w);
   }
 
-  _xmas_sift_head(buf_y, &pac_u->hed_u);
+  _mesa_sift_head(buf_y, &pac_u->hed_u);
   buf_y += 8;
   len_w -= 8;
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
-      res_w = _xmas_sift_peek_pact(&pac_u->pek_u, buf_y, len_w);
+      res_w = _mesa_sift_peek_pact(&pac_u->pek_u, buf_y, len_w);
     } break;
     case PACT_PAGE: {
-      res_w = _xmas_sift_page_pact(pac_u, pac_u->hed_u.nex_y, buf_y, len_w);
+      res_w = _mesa_sift_page_pact(pac_u, pac_u->hed_u.nex_y, buf_y, len_w);
     } break;
     case PACT_POKE: {
-      res_w = _xmas_sift_poke_pact(&pac_u->pok_u, buf_y, len_w);
+      res_w = _mesa_sift_poke_pact(&pac_u->pok_u, buf_y, len_w);
     } break;
     default: {
-      u3l_log("xmas: received unknown packet type");
+      u3l_log("mesa: received unknown packet type");
       _log_buf(buf_y, len_w);
       break;
     }
@@ -595,7 +595,7 @@ xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
 /* serialisation
 */
 static void
-_xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[8])
+_mesa_etch_head(u3_mesa_head* hed_u, c3_y buf_y[8])
 {
   if ( 1 != hed_u->pro_y ) {
     u3l_log("etching bad head");
@@ -615,20 +615,20 @@ _xmas_etch_head(u3_xmas_head* hed_u, c3_y buf_y[8])
   }*/
 
   _ames_etch_word(buf_y, hed_w);
-  memcpy(buf_y + 4, XMAS_COOKIE, XMAS_COOKIE_LEN);
+  memcpy(buf_y + 4, MESA_COOKIE, MESA_COOKIE_LEN);
 }
 
 static c3_w
-_xmas_etch_name(c3_y* buf_y, u3_xmas_name* nam_u)
+_mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
 {
-#ifdef XMAS_DEBUG
+#ifdef MESA_DEBUG
 
-#endif 
+#endif
   c3_w cur_w = 0;
-  u3_xmas_name_meta met_u;
+  u3_mesa_name_meta met_u;
 
-  met_u.ran_y = _xmas_rank(nam_u->her_d);
-  met_u.rif_y = safe_dec(_xmas_met3_w(nam_u->rif_w));
+  met_u.ran_y = _mesa_rank(nam_u->her_d);
+  met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
   if ( c3y == nam_u->nit_o ) {
     assert( c3n == nam_u->aut_o ); // XX
@@ -639,7 +639,7 @@ _xmas_etch_name(c3_y* buf_y, u3_xmas_name* nam_u)
   else {
     met_u.nit_y = 0;
     met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
-    met_u.gaf_y = safe_dec(_xmas_met3_w(nam_u->fra_w));
+    met_u.gaf_y = safe_dec(_mesa_met3_w(nam_u->fra_w));
   }
 
   c3_y met_y = (met_u.ran_y & 0x3) << 0
@@ -687,21 +687,21 @@ _xmas_etch_name(c3_y* buf_y, u3_xmas_name* nam_u)
 }
 
 static c3_w
-_xmas_etch_data(c3_y* buf_y, u3_xmas_data* dat_u)
+_mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 {
-#ifdef XMAS_DEBUG
+#ifdef MESA_DEBUG
 
 #endif
   c3_w cur_w = 0;
-  u3_xmas_data_meta met_u;
+  u3_mesa_data_meta met_u;
 
-  met_u.bot_y = safe_dec(_xmas_met3_w(dat_u->tot_w));
+  met_u.bot_y = safe_dec(_mesa_met3_w(dat_u->tot_w));
 
   // XX
   met_u.aul_y = dat_u->aum_u.typ_e;
   met_u.aur_y = dat_u->aup_u.len_y;
 
-  c3_y nel_y = _xmas_met3_w(dat_u->len_w);
+  c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
 
   c3_y met_y = (met_u.bot_y & 0x3) << 0
@@ -751,16 +751,16 @@ _xmas_etch_data(c3_y* buf_y, u3_xmas_data* dat_u)
 }
 
 static c3_w
-_xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
+_mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
 {
   c3_w cur_w = 0, nex_w;
 
-  if ( !(nex_w = _xmas_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
+  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
     return 0;
   }
   cur_w += nex_w;
 
-  if ( !(nex_w = _xmas_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
+  if ( !(nex_w = _mesa_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
     return 0;
   }
   cur_w += nex_w;
@@ -771,21 +771,21 @@ _xmas_etch_page_pact(c3_y* buf_y, u3_xmas_page_pact* pac_u, u3_xmas_head* hed_u)
 }
 
 static c3_w
-_xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
+_mesa_etch_poke_pact(c3_y* buf_y, u3_mesa_poke_pact* pac_u, u3_mesa_head* hed_u)
 {
   c3_w cur_w = 0, nex_w;
 
-  if ( !(nex_w = _xmas_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
+  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
     return 0;
   }
   cur_w += nex_w;
 
-  if ( !(nex_w = _xmas_etch_name(buf_y + cur_w, &pac_u->pay_u)) ) {
+  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pay_u)) ) {
     return 0;
   }
   cur_w += nex_w;
 
-  if ( !(nex_w = _xmas_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
+  if ( !(nex_w = _mesa_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
     return 0;
   }
   cur_w += nex_w;
@@ -798,20 +798,20 @@ _xmas_etch_poke_pact(c3_y* buf_y, u3_xmas_poke_pact* pac_u, u3_xmas_head* hed_u)
 /* sizing
 */
 static c3_w
-_xmas_size_name(u3_xmas_name* nam_u)
+_mesa_size_name(u3_mesa_name* nam_u)
 {
   c3_w siz_w = 1;
-  u3_xmas_name_meta met_u;
+  u3_mesa_name_meta met_u;
 
-  met_u.ran_y = _xmas_rank(nam_u->her_d);
-  met_u.rif_y = safe_dec(_xmas_met3_w(nam_u->rif_w));
+  met_u.ran_y = _mesa_rank(nam_u->her_d);
+  met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
   siz_w += 2 << met_u.ran_y;
   siz_w += met_u.rif_y + 1;
   siz_w++;  // bloq
 
   if (c3n == nam_u->nit_o ) {
-    met_u.gaf_y = safe_dec(_xmas_met3_w(nam_u->fra_w));
+    met_u.gaf_y = safe_dec(_mesa_met3_w(nam_u->fra_w));
     siz_w += met_u.gaf_y + 1;
   }
 
@@ -822,12 +822,12 @@ _xmas_size_name(u3_xmas_name* nam_u)
 }
 
 static c3_w
-_xmas_size_data(u3_xmas_data* dat_u)
+_mesa_size_data(u3_mesa_data* dat_u)
 {
   c3_w siz_w = 1;
-  u3_xmas_data_meta met_u;
+  u3_mesa_data_meta met_u;
 
-  met_u.bot_y = safe_dec(_xmas_met3_w(dat_u->tot_w));
+  met_u.bot_y = safe_dec(_mesa_met3_w(dat_u->tot_w));
 
   siz_w += met_u.bot_y + 1;
 
@@ -845,7 +845,7 @@ _xmas_size_data(u3_xmas_data* dat_u)
 
   siz_w += 32 * dat_u->aup_u.len_y;
 
-  c3_y nel_y = _xmas_met3_w(dat_u->len_w);
+  c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
 
   if ( 3 == met_u.men_y ) {
@@ -859,25 +859,25 @@ _xmas_size_data(u3_xmas_data* dat_u)
 }
 
 static c3_w
-_xmas_size_pact(u3_xmas_pact* pac_u)
+_mesa_size_pact(u3_mesa_pact* pac_u)
 {
   c3_w siz_w = 8; // header + cookie;
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
-      siz_w += _xmas_size_name(&pac_u->pek_u.nam_u);
+      siz_w += _mesa_size_name(&pac_u->pek_u.nam_u);
     } break;
 
     case PACT_PAGE: {
-      siz_w += _xmas_size_name(&pac_u->pag_u.nam_u);
-      siz_w += _xmas_size_data(&pac_u->pag_u.dat_u);
+      siz_w += _mesa_size_name(&pac_u->pag_u.nam_u);
+      siz_w += _mesa_size_data(&pac_u->pag_u.dat_u);
       // XX hops
     } break;
 
     case PACT_POKE: {
-      siz_w += _xmas_size_name(&pac_u->pok_u.nam_u);
-      siz_w += _xmas_size_name(&pac_u->pok_u.pay_u);
-      siz_w += _xmas_size_data(&pac_u->pok_u.dat_u);
+      siz_w += _mesa_size_name(&pac_u->pok_u.nam_u);
+      siz_w += _mesa_size_name(&pac_u->pok_u.pay_u);
+      siz_w += _mesa_size_data(&pac_u->pok_u.dat_u);
     } break;
 
     default: {
@@ -890,34 +890,34 @@ _xmas_size_pact(u3_xmas_pact* pac_u)
 }
 
 c3_w
-xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
+mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 {
-  c3_w siz_w = _xmas_size_pact(pac_u);
+  c3_w siz_w = _mesa_size_pact(pac_u);
   if ( siz_w > PACT_SIZE ) {
     fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
     return 0;
   }
 
   c3_w cur_w = 0, nex_w;
-  u3_xmas_head* hed_u = &pac_u->hed_u;
-  _xmas_etch_head(hed_u, buf_y + cur_w);
+  u3_mesa_head* hed_u = &pac_u->hed_u;
+  _mesa_etch_head(hed_u, buf_y + cur_w);
   cur_w += 8;
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_POKE: {
-      if ( !(nex_w = _xmas_etch_poke_pact(buf_y + cur_w, &pac_u->pok_u, hed_u)) ) {
+      if ( !(nex_w = _mesa_etch_poke_pact(buf_y + cur_w, &pac_u->pok_u, hed_u)) ) {
         return 0;
       }
     } break;
 
     case PACT_PEEK: {
-      if ( !(nex_w = _xmas_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u)) ) {
+      if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u)) ) {
         return 0;
       }
     } break;
 
     case PACT_PAGE: {
-      if ( !(nex_w = _xmas_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u)) ) {
+      if ( !(nex_w = _mesa_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u)) ) {
         return 0;
       }
     } break;
@@ -937,10 +937,10 @@ xmas_etch_pact(c3_y* buf_y, u3_xmas_pact* pac_u)
 
 #ifdef PACT_TEST
 
-/*  _xmas_encode_path(): produce buf_y as a parsed path
+/*  _mesa_encode_path(): produce buf_y as a parsed path
 */
 static u3_noun
-_xmas_encode_path(c3_w len_w, c3_y* buf_y)
+_mesa_encode_path(c3_w len_w, c3_y* buf_y)
 {
   u3_noun  pro;
   u3_noun* lit = &pro;
@@ -981,7 +981,7 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
 
 #define cmp_scalar(nam, str, fmt)                       \
   if ( hav_u->nam != ned_u->nam ) {                     \
-    fprintf(stderr, "xmas test cmp " str " differ:\r\n" \
+    fprintf(stderr, "mesa test cmp " str " differ:\r\n" \
                     "    have: " fmt "\r\n"             \
                     "    need: " fmt "\r\n",            \
                     hav_u->nam, ned_u->nam);            \
@@ -990,7 +990,7 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
 
 #define cmp_string(nam, siz, str)                       \
   if ( memcmp(hav_u->nam, ned_u->nam, siz) ) {          \
-    fprintf(stderr, "xmas test cmp " str " differ:\r\n" \
+    fprintf(stderr, "mesa test cmp " str " differ:\r\n" \
                     "    have: %*.s\r\n"                \
                     "    need: %*.s\r\n",               \
                     siz, hav_u->nam, siz, ned_u->nam);  \
@@ -999,12 +999,12 @@ _xmas_encode_path(c3_w len_w, c3_y* buf_y)
 
 #define cmp_buffer(nam, siz, str)                 \
   if ( memcmp(hav_u->nam, ned_u->nam, siz) ) {    \
-    fprintf(stderr, "xmas test cmp " str "\r\n"); \
+    fprintf(stderr, "mesa test cmp " str "\r\n"); \
     ret_i = 1;                                    \
   }
 
 static c3_i
-_test_cmp_head(u3_xmas_head* hav_u, u3_xmas_head* ned_u)
+_test_cmp_head(u3_mesa_head* hav_u, u3_mesa_head* ned_u)
 {
   c3_i ret_i = 0;
 
@@ -1018,7 +1018,7 @@ _test_cmp_head(u3_xmas_head* hav_u, u3_xmas_head* ned_u)
 }
 
 static c3_i
-_test_cmp_name(u3_xmas_name* hav_u, u3_xmas_name* ned_u)
+_test_cmp_name(u3_mesa_name* hav_u, u3_mesa_name* ned_u)
 {
   c3_i ret_i = 0;
 
@@ -1037,7 +1037,7 @@ _test_cmp_name(u3_xmas_name* hav_u, u3_xmas_name* ned_u)
 }
 
 static c3_i
-_test_cmp_data(u3_xmas_data* hav_u, u3_xmas_data* ned_u)
+_test_cmp_data(u3_mesa_data* hav_u, u3_mesa_data* ned_u)
 {
   c3_i ret_i = 0;
 
@@ -1056,16 +1056,16 @@ _test_cmp_data(u3_xmas_data* hav_u, u3_xmas_data* ned_u)
 }
 
 static c3_i
-_test_pact(u3_xmas_pact* pac_u)
+_test_pact(u3_mesa_pact* pac_u)
 {
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w  len_w = xmas_etch_pact(buf_y, pac_u);
+  c3_w  len_w = mesa_etch_pact(buf_y, pac_u);
   c3_i  ret_i = 0;
   c3_i  bot_i = 0;
   c3_w  sif_w;
 
-  u3_xmas_pact nex_u;
-  memset(&nex_u, 0, sizeof(u3_xmas_pact));
+  u3_mesa_pact nex_u;
+  memset(&nex_u, 0, sizeof(u3_mesa_pact));
 
   if ( !len_w ) {
     fprintf(stderr, "pact: etch failed\r\n");
@@ -1076,7 +1076,7 @@ _test_pact(u3_xmas_pact* pac_u)
     ret_i = 1; goto done;
   }
 
-  if ( len_w != (sif_w = xmas_sift_pact(&nex_u, buf_y, len_w)) ) {
+  if ( len_w != (sif_w = mesa_sift_pact(&nex_u, buf_y, len_w)) ) {
     fprintf(stderr, "pact: sift failed len=%u sif=%u\r\n", len_w, sif_w);
     _log_buf(buf_y, len_w);
     ret_i = 1; goto done;
@@ -1245,7 +1245,7 @@ _test_rand_path(void* ptr_v, c3_s len_s, c3_c* pat_c)
 }
 
 static void
-_test_make_head(void* ptr_v, u3_xmas_head* hed_u)
+_test_make_head(void* ptr_v, u3_mesa_head* hed_u)
 {
   hed_u->nex_y = NEXH_NONE; // XX
   hed_u->pro_y = 1;
@@ -1256,7 +1256,7 @@ _test_make_head(void* ptr_v, u3_xmas_head* hed_u)
 }
 
 static void
-_test_make_name(void* ptr_v, c3_s pat_s, u3_xmas_name* nam_u)
+_test_make_name(void* ptr_v, c3_s pat_s, u3_mesa_name* nam_u)
 {
   _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_d);
   nam_u->rif_w = _test_rand_word(ptr_v);
@@ -1280,7 +1280,7 @@ _test_make_name(void* ptr_v, c3_s pat_s, u3_xmas_name* nam_u)
 }
 
 static void
-_test_make_data(void* ptr_v, u3_xmas_data* dat_u)
+_test_make_data(void* ptr_v, u3_mesa_data* dat_u)
 {
   dat_u->tot_w = _test_rand_word(ptr_v);
 
@@ -1316,7 +1316,7 @@ _test_make_data(void* ptr_v, u3_xmas_data* dat_u)
 }
 
 static void
-_test_make_pact(void* ptr_v, u3_xmas_pact* pac_u)
+_test_make_pact(void* ptr_v, u3_mesa_pact* pac_u)
 {
   _test_make_head(ptr_v, &pac_u->hed_u);
 
@@ -1343,7 +1343,7 @@ _test_make_pact(void* ptr_v, u3_xmas_pact* pac_u)
 static c3_i
 _test_rand_pact(c3_w bat_w)
 {
-  u3_xmas_pact pac_u;
+  u3_mesa_pact pac_u;
   void*        ptr_v = 0;
 
   fprintf(stderr, "pact: test roundtrip %u random packets\r\n", bat_w);
@@ -1365,12 +1365,12 @@ _test_rand_pact(c3_w bat_w)
 static void
 _test_sift_page()
 {
-  u3_xmas_pact pac_u;
-  memset(&pac_u,0, sizeof(u3_xmas_pact));
+  u3_mesa_pact pac_u;
+  memset(&pac_u,0, sizeof(u3_mesa_pact));
   pac_u.hed_u.typ_y = PACT_PAGE;
   pac_u.hed_u.pro_y = 1;
   u3l_log("%%page checking sift/etch idempotent");
-  u3_xmas_name* nam_u = &pac_u.pag_u.nam_u;
+  u3_mesa_name* nam_u = &pac_u.pag_u.nam_u;
 
   {
     u3_noun her = u3v_wish("~hastuc-dibtux");
@@ -1384,7 +1384,7 @@ _test_sift_page()
   nam_u->fra_w = 54;
   nam_u->nit_o = c3n;
 
-  u3_xmas_data* dat_u = &pac_u.pag_u.dat_u;
+  u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
   dat_u->aum_u.typ_e = AUTH_NONE;
   dat_u->tot_w = 1000;
   dat_u->len_w = 1024;
@@ -1402,7 +1402,7 @@ static void
 _test_encode_path(c3_c* pat_c)
 {
   u3_noun wan = u3do("stab", u3dt("cat", 3, '/', u3i_string(pat_c)));
-  u3_noun hav = _xmas_encode_path(strlen(pat_c), (c3_y*)pat_c);
+  u3_noun hav = _mesa_encode_path(strlen(pat_c), (c3_y*)pat_c);
 
   if ( c3n == u3r_sing(wan, hav) ) {
     u3l_log(RED_TEXT);
