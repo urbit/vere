@@ -253,10 +253,10 @@ versioned_http_archive(
 versioned_http_archive(
     name = "openssl",
     build_file = "//bazel/third_party/openssl:openssl.BUILD",
-    sha256 = "8dee9b24bdb1dcbf0c3d1e9b02fb8f6bf22165e807f45adeb7c9677536859d3b",
+    sha256 = "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8",
     strip_prefix = "openssl-{version}",
     url = "https://www.openssl.org/source/openssl-{version}.tar.gz",
-    version = "1.1.1t",
+    version = "1.1.1w",
 )
 
 versioned_http_archive(
@@ -327,10 +327,10 @@ versioned_http_file(
 versioned_http_archive(
     name = "urcrypt",
     build_file = "//bazel/third_party/urcrypt:urcrypt.BUILD",
-    sha256 = "afc1182e10eeebaeb2a111c2bd889747792d255e26aba7fdcd6751d0d3c2bb35",
+    sha256 = "d27ec04d3854da7c479dd815af92ffef986616bc7ff400022e2dfb7971853d86",
     strip_prefix = "urcrypt-{version}",
     url = "https://github.com/urbit/urcrypt/archive/{version}.tar.gz",
-    version = "43479c3262a11e20da5f6218f3b0b3d63931ceea",
+    version = "9ae5d604528bc54ae48430f55ebbb17b1ad7956c",
 )
 
 versioned_http_archive(
@@ -354,10 +354,10 @@ versioned_http_archive(
 versioned_http_archive(
     name = "zlib",
     build_file = "//bazel/third_party/zlib:zlib.BUILD",
-    sha256 = "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
     strip_prefix = "zlib-{version}",
     url = "https://www.zlib.net/zlib-{version}.tar.gz",
-    version = "1.3",
+    version = "1.3.1",
 )
 
 #

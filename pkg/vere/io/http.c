@@ -111,6 +111,8 @@ typedef struct _u3_httd {
   u3p(u3h_root)      nax_p;             //  scry->noun cache
 } u3_httd;
 
+static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
+static u3_hreq* _http_req_prepare(h2o_req_t* rec_u, u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
 static void _http_serv_free(u3_http* htp_u);
 static void _http_serv_start_all(u3_httd* htd_u);
 static void _http_form_free(u3_httd* htd_u);
@@ -673,7 +675,19 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun) {
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   if ( u3_nul == nun ) {
-    h2o_send_error_404(rec_u, "Not Found", "not found", 0);
+    u3_weak req = _http_rec_to_httq(rec_u);
+    if ( u3_none == req ) {
+      if ( (u3C.wag_w & u3o_verbose) ) {
+        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
+                rec_u->method.base);
+      }
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
+    }
+    else {
+      u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+      _http_req_dispatch(req_u, req);
+    }
   }
   else if ( u3_none == u3r_at(7, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
@@ -729,6 +743,8 @@ _http_req_cache(u3_hreq* req_u)
 
   u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
   u3_weak sac = u3h_get(htd_u->sax_p, url);
+  u3z(url);
+  
   if ( u3_none == sac ) {
     return c3n;
   }
@@ -739,7 +755,7 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
     req_u->peq_u->req_u = req_u;
     req_u->peq_u->htd_u = htd_u;
-    req_u->peq_u->pax   = sac;
+    req_u->peq_u->pax   = u3k(sac);
 
     req_u->sat_e = u3_rsat_peek;
 
