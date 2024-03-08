@@ -33,7 +33,7 @@ _log_buf(c3_c* str_c, c3_y* buf_y, c3_w len_w)
   c3_w cur_w = 0;
   c3_c tmp_c[3];
   for(c3_w idx_w = 0; idx_w < len_w; idx_w++ ) {
-    snprintf(res_c + (2*idx_w), siz_w - (2*idx_w), "%02x", buf_y[idx_w]); 
+    snprintf(res_c + (2*idx_w), siz_w - (2*idx_w), "%02x", buf_y[idx_w]);
   }
   fprintf(stderr, "%s: %s", str_c, res_c);
   fprintf(stderr, "\r\n");
@@ -182,7 +182,7 @@ vec_copy(u3_raw_vec* dst_u, u3_raw_vec* src_u) {
 }
 
 void*
-vec_pop(u3_raw_vec* vec_u, c3_w idx_w) 
+vec_pop(u3_raw_vec* vec_u, c3_w idx_w)
 {
   if ( vec_u->len_w ==  0 || idx_w >= vec_u->len_w ) {
     fprintf(stderr, "Failed pop (len: %u, idx: %u)\r\n", vec_u->len_w, idx_w);
@@ -197,13 +197,13 @@ vec_pop(u3_raw_vec* vec_u, c3_w idx_w)
 }
 
 void*
-vec_popf(u3_raw_vec* vec_u) 
+vec_popf(u3_raw_vec* vec_u)
 {
   return vec_pop(vec_u, 0);
 }
 
 static void*
-_vec_popl(u3_raw_vec* vec_u) 
+_vec_popl(u3_raw_vec* vec_u)
 {
   return vec_pop(vec_u, vec_u->len_w - 1);
 }
@@ -277,12 +277,12 @@ static c3_y _count_trail_zero(c3_d val_d)
     return 64;
   }
   c3_y ret_y = 0;
-  if ((val_d & 0x00000000FFFFFFFFULL) == 0) { ret_y += 32; val_d >>= 32; } 
-  if ((val_d & 0x000000000000FFFFULL) == 0) { ret_y += 16; val_d >>= 16; } 
-  if ((val_d & 0x00000000000000FFULL) == 0) { ret_y += 8; val_d >>= 8; } 
-  if ((val_d & 0x000000000000000FULL) == 0) { ret_y += 4; val_d >>= 4; } 
-  if ((val_d & 0x0000000000000003ULL) == 0) { ret_y += 2; val_d >>= 2; } 
-  if ((val_d & 0x0000000000000001ULL) == 0) { ret_y += 1; val_d >>= 1; } 
+  if ((val_d & 0x00000000FFFFFFFFULL) == 0) { ret_y += 32; val_d >>= 32; }
+  if ((val_d & 0x000000000000FFFFULL) == 0) { ret_y += 16; val_d >>= 16; }
+  if ((val_d & 0x00000000000000FFULL) == 0) { ret_y += 8; val_d >>= 8; }
+  if ((val_d & 0x000000000000000FULL) == 0) { ret_y += 4; val_d >>= 4; }
+  if ((val_d & 0x0000000000000003ULL) == 0) { ret_y += 2; val_d >>= 2; }
+  if ((val_d & 0x0000000000000001ULL) == 0) { ret_y += 1; val_d >>= 1; }
   return ret_y;
 }
 
@@ -299,7 +299,7 @@ _height(blake_subtree* sub_u)
 }
 
 static c3_d
-_largest_pow2(c3_d val_d) 
+_largest_pow2(c3_d val_d)
 {
 	c3_d ret_d = 1 << (_bitlen(val_d-1) - 1);
   return ret_d;
@@ -389,7 +389,7 @@ _parent_hash(blake_node* sin_u, blake_node* dex_u)
 
 
 
-static void 
+static void
 _root_hash(c3_y out_y[64], blake_node* nod_u)
 {
   nod_u->fag_y |= ROOT;
@@ -440,7 +440,7 @@ static void recurse_blake_subtree(blake_subtree* sub_u, blake_node* nod_u, u3_ve
 }
 
 static void
-_bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par_u) 
+_bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par_u)
 {
   blake_subtree* sub_u = c3_calloc(sizeof(blake_subtree));
   *sub_u = (blake_subtree){0, num_d};
@@ -464,7 +464,7 @@ _bao_build(c3_d num_d, c3_y has_y[64], u3_vec(c3_w[8])* pof_u, u3_vec(pair)* par
 }
 
 static void
-_push_leaf(blake_bao* bao_u, c3_y lef_y[BLAKE3_OUT_LEN]) 
+_push_leaf(blake_bao* bao_u, c3_y lef_y[BLAKE3_OUT_LEN])
 {
   vec_append(&bao_u->que_u, lef_y);
 }
@@ -492,7 +492,7 @@ _pop_parent(c3_y out_y[BLAKE3_OUT_LEN], blake_bao* bao_u)
 }
 
 static void
-_verifier_next(blake_bao* bao_u) 
+_verifier_next(blake_bao* bao_u)
 {
   if ( _height(&bao_u->sub_u) == 0 ) {
     bao_u->sub_u.sin_d += 1;
@@ -573,7 +573,7 @@ blake_bao_make(c3_w num_w, u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u)
   if ( vec_len(pof_u) == 0 ) {
     if ( num_w < 2 ) {
       c3_free(bao_u);
-      return NULL; 
+      return NULL;
     }
     vec_init(&bao_u->sta_u, 1);
     vec_init(&bao_u->que_u, 1);
@@ -641,7 +641,7 @@ blake_bao_verify(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w, blake_pair* par_u)
   }
   return BAO_GOOD;
 }
- 
+
 #ifdef BLAKE_TEST
 
 
@@ -679,7 +679,7 @@ static void _test_lead_zeros()
 }
 
 
-static void _test_bao() 
+static void _test_bao()
 {
   c3_w dat_w = 1024;
   c3_y* dat_y = c3_calloc(dat_w);
@@ -688,7 +688,7 @@ static void _test_bao()
     u3_vec(c3_y[8])* pof_u = vec_make(10);
     u3_vec(blake_pair)* par_u = vec_make(10);
     _bao_build(num_w, has_y, pof_u, par_u);
-    
+
     blake_bao bao_u;
     memset(&bao_u, 0, sizeof(blake_bao));
     _veri_init(&bao_u, num_w);
@@ -813,7 +813,7 @@ int main() {
   //_test_root_hash();
   // _test_lead_zeros();
   _test_bao();
-  
+
   return 0;
 }
 

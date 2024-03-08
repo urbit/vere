@@ -38,7 +38,7 @@ _test_xmas(void)
     .pat_s = 8,
     .boq_s = 13,
     .fra_s = 1,
-  };  
+  };
 }
 
 /* main(): run all test cases.

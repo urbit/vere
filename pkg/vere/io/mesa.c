@@ -1059,10 +1059,8 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
 {
   c3_o suc_o = c3n;
   u3_noun lan, t = las;
-  u3m_p("las", las);   u3m_p("t", t);
   // u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
   while ( t != u3_nul ) {
-    u3m_p("t", t);
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
     u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
@@ -1079,7 +1077,6 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
       _mesa_send_buf(sam_u, lan_u, sen_y, len_w);
     }
   }
-  u3m_p("t", t);
   // u3z(las);
   return suc_o;
 }
@@ -1154,7 +1151,6 @@ _mesa_czar_cb(uv_getaddrinfo_t* adr_u, c3_i sas_i, struct addrinfo* aif_u)
 static void
 _mesa_resolve_czar(u3_mesa* sam_u, c3_y imp_y, u3_noun pac)
 {
-  u3m_p("imp", imp_y);
   u3_assert( c3y == u3_Host.ops_u.net );
   u3_czar_info* imp_u = &sam_u->imp_u[imp_y];
   time_t now_t = time(0);
@@ -1201,7 +1197,6 @@ _mesa_queue_czar(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   u3_noun lan, t = las;
   u3_noun res = u3_nul;
   time_t now_t = time(0);
-  u3m_p("_mesa_queue_czar", las);
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     if ( (c3y == u3a_is_cat(lan) && lan < 256 ) ) {
@@ -1217,7 +1212,6 @@ _mesa_queue_czar(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       res = u3nc(u3k(lan), res);
     }
   }
-  u3m_p("_mesa_queue_czar res", res);
   u3z(las);
   u3z(pac);
   return res;
@@ -1732,7 +1726,7 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-  // u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+  u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
 #endif
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
@@ -1861,7 +1855,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   memcpy(her_d, pac_u->pek_u.nam_u.her_d, 2);
   c3_o our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, 2) );
 
-
   if ( c3n == our_o ) {
     u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
     if ( per_u == NULL ) {
@@ -1906,7 +1899,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
       // only branch where we do not free pic_u
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pic_u, _mesa_page_scry_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _mesa_page_scry_cb);
     } else {
       _mesa_free_pict(pic_u);
     }
