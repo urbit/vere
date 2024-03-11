@@ -729,6 +729,8 @@ _http_req_cache(u3_hreq* req_u)
 
   u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
   u3_weak sac = u3h_get(htd_u->sax_p, url);
+  u3z(url);
+  
   if ( u3_none == sac ) {
     return c3n;
   }
@@ -739,10 +741,12 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
     req_u->peq_u->req_u = req_u;
     req_u->peq_u->htd_u = htd_u;
-    req_u->peq_u->pax   = sac;
+    req_u->peq_u->pax   = u3k(sac);
 
     req_u->sat_e = u3_rsat_peek;
-    u3_pier_peek_last(htd_u->car_u.pir_u, u3_nul, c3__ex,
+
+    u3_noun gang = u3nc(u3_nul, u3_nul);
+    u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                       u3_nul, sac, req_u->peq_u, _http_cache_scry_cb);
     return c3y;
   }

@@ -7,8 +7,8 @@
 
 
   u3_noun
-  u3qc_dor(u3_atom a,
-           u3_atom b)
+  u3qc_dor(u3_noun a,
+           u3_noun b)
   {
     if ( c3y == u3r_sing(a, b) ) {
       return c3y;

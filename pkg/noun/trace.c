@@ -299,7 +299,7 @@ u3t_flee(void)
 /*  u3t_trace_open(): opens a trace file and writes the preamble.
 */
 void
-u3t_trace_open(c3_c* dir_c)
+u3t_trace_open(const c3_c* dir_c)
 {
   c3_c fil_c[2048];
 

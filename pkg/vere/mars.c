@@ -6,6 +6,8 @@
 #include "noun.h"
 #include "types.h"
 #include "vere.h"
+#include "ivory.h"
+#include "ur.h"
 #include "db/lmdb.h"
 #include <mars.h>
 #include <stdio.h>
@@ -99,6 +101,11 @@ _mars_play_batch(u3_mars* mar_u,
   u3_noun         dud;
   u3_weak         wen = u3_none;
 
+  if ( !wok_u ) {
+    fprintf(stderr, "play: failed to open event log iterator\r\n");
+    return _play_log_e;
+  }
+
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);
@@ -179,6 +186,29 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
   //
   eve = u3m_love(u3ke_cue(u3ke_jam(eve)));
 
+  //  install an ivory pill to support stack traces
+  //
+  //    XX support -J
+  //
+  {
+    c3_d  len_d = u3_Ivory_pill_len;
+    c3_y* byt_y = u3_Ivory_pill;
+    u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
+    u3_weak pil;
+
+    if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
+      u3l_log("lite: unable to cue ivory pill");
+      exit(1);
+    }
+
+    u3s_cue_xeno_done(sil_u);
+
+    if ( c3n == u3v_boot_lite(pil)) {
+      u3l_log("lite: boot failed");
+      exit(1);
+    }
+  }
+
   u3l_log("--------------- bootstrap starting ----------------");
 
   u3l_log("boot: 1-%u", u3qb_lent(eve));
@@ -195,10 +225,11 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 
 /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
 */
-void
+c3_d
 u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 {
   u3_disk* log_u = mar_u->log_u;
+  c3_d     pay_d = 0;
 
   if ( !eve_d ) {
     eve_d = log_u->dun_d;
@@ -207,21 +238,22 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     u3l_log("mars: already computed %" PRIu64 "", eve_d);
     u3l_log("      state=%" PRIu64 ", log=%" PRIu64 "",
             mar_u->dun_d, log_u->dun_d);
-    return;
+    return pay_d;
   }
   else {
     eve_d = c3_min(eve_d, log_u->dun_d);
   }
 
   if ( mar_u->dun_d == log_u->dun_d ) {
-    u3l_log("mars: nothing to do!");
-    return;
+    return pay_d;
   }
+
+  pay_d = eve_d - mar_u->dun_d;
 
   if ( !mar_u->dun_d ) {
     c3_w lif_w;
 
-    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, &lif_w) ) {
+    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, 0, &lif_w) ) {
       fprintf(stderr, "mars: disk read meta fail\r\n");
       //  XX exit code, cb
       //
@@ -351,4 +383,6 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
+
+  return pay_d;
 }

@@ -122,12 +122,12 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
-    name = "argon2",
-    build_file = "//bazel/third_party/argon2:argon2.BUILD",
-    sha256 = "40850e6e6324be10f14228d17b617ad2074bb926eeddd6fe40ad5df833833949",
-    strip_prefix = "argon2-{version}",
-    url = "https://github.com/urbit/argon2/archive/{version}.tar.gz",
-    version = "a4c1e3f7138c2e577376beb99f964cf71e1c8b1b",
+    name = "avahi",
+    build_file = "//bazel/third_party/avahi:avahi.BUILD",
+    sha256 = "060309d7a333d38d951bc27598c677af1796934dbd98e1024e7ad8de798fedda",
+    strip_prefix = "avahi-{version}",
+    url = "https://github.com/lathiat/avahi/releases/download/v{version}/avahi-{version}.tar.gz",
+    version = "0.8",
 )
 
 versioned_http_archive(
@@ -155,12 +155,22 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
-    name = "ed25519",
-    build_file = "//bazel/third_party/ed25519:ed25519.BUILD",
-    sha256 = "373923c85f61276e3cad2c0ae7a5d5cd4809ffe46c5abc1dc8276683a55782a0",
-    strip_prefix = "ed25519-{version}",
-    url = "https://github.com/orlp/ed25519/archive/{version}.tar.gz",
-    version = "7fa6712ef5d581a6981ec2b08ee623314cd1d1c4",
+    name = "dbus",
+    build_file = "//bazel/third_party/dbus:dbus.BUILD",
+    sha256 = "a6bd5bac5cf19f0c3c594bdae2565a095696980a683a0ef37cb6212e093bde35",
+    strip_prefix = "dbus-{version}",
+    url = "https://src.fedoraproject.org/repo/pkgs/dbus/dbus-{version}.tar.xz/sha512/f3dfc73da28cbe20449d15bbe4166c3574f0e551dfd15fca7cce2b8c71e778360ed2dd391ee5c414a7a47ff4b958727b26ef4cabfee70564f8d0a34bf5ad2386/dbus-1.14.8.tar.xz",
+    version = "1.14.8",
+)
+
+versioned_http_archive(
+    name = "expat",
+    build_file = "//bazel/third_party/expat:expat.BUILD",
+    strip_prefix = "expat-{version}",
+    sha256 = "ef2420f0232c087801abf705e89ae65f6257df6b7931d37846a193ef2e8cdcbe",
+    # TODO: fix the R_2_5_0 nonsense
+    url = "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-{version}.tar.xz",
+    version = "2.5.0",
 )
 
 versioned_http_archive(
@@ -195,9 +205,9 @@ versioned_http_archive(
 
 versioned_http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
+    sha256 = "d6ab6b57e48c09523e93050f13698f708428cfd5e619252e369d377af6597707",
     url = "https://github.com/bazelbuild/rules_go/releases/download/v{version}/rules_go-v{version}.zip",
-    version = "0.31.0",
+    version = "0.43.0",
 )
 
 versioned_http_file(
@@ -212,17 +222,6 @@ versioned_http_file(
     sha256 = "8b658fcee6978e2b19004a54233cab953e77ea0bb6c3a04d1bfda4ddc6be63c5",
     url = "https://github.com/urbit/urbit/raw/{version}/bin/solid.pill",
     version = "255fb1ca8206072f1d09425f0db61ecfe7ff5b17",
-)
-
-versioned_http_archive(
-    name = "keccak_tiny",
-    build_file = "//bazel/third_party/keccak_tiny:keccak_tiny.BUILD",
-    patch_args = ["-p1"],
-    patches = ["//bazel/third_party/keccak_tiny:{version}.patch"],
-    sha256 = "6d4717f96b84805886c74bad89e911076664d992f197634fd7cdfca2ac0f62ef",
-    strip_prefix = "keccak-tiny-{version}",
-    url = "https://github.com/coruus/keccak-tiny/archive/{version}.tar.gz",
-    version = "64b6647514212b76ae7bca0dea9b7b197d1d8186",
 )
 
 versioned_http_archive(
@@ -270,18 +269,6 @@ versioned_http_archive(
     # {build_file} and confirm that {build_file} remains an accurate description
     # of the pdjson build process.
     version = "67108d883061043e55d0fb13961ac1b6fc8a485c",
-)
-
-versioned_http_archive(
-    name = "scrypt",
-    build_file = "//bazel/third_party/scrypt:scrypt.BUILD",
-    sha256 = "df681fb19b653b1a12970ebb6091bb2b58411b9e7baf01143870f6be3f099541",
-    strip_prefix = "libscrypt-{version}",
-    url = "https://github.com/technion/libscrypt/archive/{version}.tar.gz",
-    # When bumping the version, compare `Makefile` in the `scrypt` repo to
-    # {build_file} and confirm that {build_file} remains an accurate description
-    # of the scrypt build process.
-    version = "60e585cdd752262b22ed4113eca41c0461a61608",
 )
 
 versioned_http_archive(
@@ -338,6 +325,15 @@ versioned_http_file(
 )
 
 versioned_http_archive(
+    name = "urcrypt",
+    build_file = "//bazel/third_party/urcrypt:urcrypt.BUILD",
+    sha256 = "afc1182e10eeebaeb2a111c2bd889747792d255e26aba7fdcd6751d0d3c2bb35",
+    strip_prefix = "urcrypt-{version}",
+    url = "https://github.com/urbit/urcrypt/archive/{version}.tar.gz",
+    version = "43479c3262a11e20da5f6218f3b0b3d63931ceea",
+)
+
+versioned_http_archive(
     name = "uv",
     build_file = "//bazel/third_party/uv:uv.BUILD",
     sha256 = "ccfcdc968c55673c6526d8270a9c8655a806ea92468afcbcabc2b16040f03cb4",
@@ -358,10 +354,10 @@ versioned_http_archive(
 versioned_http_archive(
     name = "zlib",
     build_file = "//bazel/third_party/zlib:zlib.BUILD",
-    sha256 = "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
     strip_prefix = "zlib-{version}",
     url = "https://www.zlib.net/zlib-{version}.tar.gz",
-    version = "1.3",
+    version = "1.3.1",
 )
 
 #

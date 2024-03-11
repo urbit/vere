@@ -675,8 +675,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  412
-#define VERE_LULL  323
+#define VERE_ZUSE  411
+#define VERE_LULL  322
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -783,7 +783,7 @@ _pier_on_lord_wyrd_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
 #endif
 }
 
-/* _pier_wyrd_init(): construct %wyrd.
+/* _pier_wyrd_card(): construct %wyrd.
 */
 static u3_noun
 _pier_wyrd_card(u3_pier* pir_u)
@@ -814,8 +814,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 237),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 139),        //  god_u->hon_y
+                     u3nc(c3__arvo, 236),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 138),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
@@ -1402,6 +1402,8 @@ _pier_on_lord_live(void* ptr_v)
       //  XX print bootstrap commit complete
       //  XX s/b boot_complete_cb
       //
+      //  XX this codepath should never be hit due to sync replay
+      u3l_log("pier: warning: async replay");
       _pier_play_init(pir_u, log_u->dun_d);
     }
   }
@@ -1641,6 +1643,8 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       c3_free(pir_u);
       return 0;
     }
+
+    u3_assert( U3D_VERLAT == pir_u->log_u->ver_w );
   }
 
   //  initialize compute
@@ -1694,7 +1698,8 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
     return 0;
   }
 
-  if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,  pir_u->who_d,
+  if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,
+                               &pir_u->log_u->ver_w,  pir_u->who_d,
                                &pir_u->fak_o,        &pir_u->lif_w) )
   {
     fprintf(stderr, "pier: disk read meta fail\r\n");
@@ -1891,11 +1896,19 @@ _pier_boot_plan(u3_pier* pir_u,
     pir_u->lif_w = u3qb_lent(bot_u.bot);
   }
 
-  if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u, pir_u->who_d,
+  if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,
+                                pir_u->log_u->ver_w, pir_u->who_d,
                                 pir_u->fak_o,        pir_u->lif_w) )
   {
     //  XX dispose bot_u
     //
+    return c3n;
+  }
+
+  if ( c3n == u3_disk_save_meta_meta(pir_u->log_u->com_u->pax_c,
+                                     pir_u->who_d, pir_u->fak_o, pir_u->lif_w) )
+  {
+    fprintf(stderr, "disk: failed to save top-level metadata\r\n");
     return c3n;
   }
 

@@ -32,6 +32,7 @@
     u3_noun u3qb_lien(u3_noun, u3_noun);
     u3_noun u3qb_murn(u3_noun, u3_noun);
     u3_noun u3qb_need(u3_noun);
+    u3_noun u3qb_mate(u3_noun, u3_noun);
     u3_noun u3qb_reap(u3_atom, u3_noun);
     u3_noun u3qb_reel(u3_noun, u3_noun);
     u3_noun u3qb_roll(u3_noun, u3_noun);
@@ -222,10 +223,7 @@
     u3_noun u3qf_face(u3_noun, u3_noun);
     u3_noun u3qf_fine(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_fitz(u3_noun, u3_noun);
-    u3_noun u3qf_flan(u3_noun, u3_noun);
     u3_noun u3qf_flay(u3_noun);
-    u3_noun u3qf_flip(u3_noun);
-    u3_noun u3qf_flor(u3_noun, u3_noun);
     u3_noun u3qf_forq(u3_noun, u3_noun);
     u3_noun u3qf_fork(u3_noun);
     u3_noun u3qf_grof(u3_noun);
@@ -254,3 +252,4 @@
     void u3qf_test(const c3_c*, u3_noun);
 
 #endif /* ifndef U3_JETS_Q_H */
+
