@@ -37,6 +37,8 @@
 #     include <sys/resource.h>
 #     include <sys/mman.h>
 #     include <sys/sendfile.h>
+#     include <sys/socket.h>
+#     include <sys/un.h>
 
 #   elif defined(U3_OS_osx)
 #     include <ctype.h>
@@ -57,6 +59,8 @@
 #     include <sys/syslimits.h>
 #     include <sys/mman.h>
 #     include <sys/clonefile.h>
+#     include <sys/types.h>
+#     include <sys/un.h>
 #     include <copyfile.h>
 
 #   elif defined(U3_OS_bsd)
@@ -75,6 +79,8 @@
 #     include <sys/time.h>
 #     include <sys/resource.h>
 #     include <sys/mman.h>
+#     include <sys/types.h>
+#     include <sys/un.h>
 
 #   else
       #error "port: headers"
@@ -111,6 +117,7 @@
 
 
 #   define U3_BIN_ALIAS ".run"
+#   define U3_SOCK_MAX sizeof(((struct sockaddr_un *)0)->sun_path)
 
   /** Address space layout.
   ***
