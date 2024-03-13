@@ -265,7 +265,7 @@ _log_czar_info(u3_czar_info* zar_u)
     u3l_log("czar: %s", u3r_string(nam));
     u3_noun pip = u3dc("scot", c3__if, zar_u->pip_w);
     u3l_log("IP: %s", u3r_string(pip));
-    u3l_log("time: %u", zar_u->tim_t);
+    u3l_log("time: %" PRIu64, (c3_d)zar_u->tim_t);
     u3l_log("dns: %s", zar_u->dns_c != NULL ? zar_u->dns_c : "NO DNS");
     u3l_log("pending: %u", u3r_word(0, u3do("lent", zar_u->pen)));
   }
@@ -1600,7 +1600,7 @@ _mesa_forward(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
   c3_d her_d[2];
-  _get_her(pac_u, her_d);
+  _get_her(pac_u, her_d); // XX wrong
   // XX: revive
   //_update_hopcount(&pac_u->hed_u);
 
@@ -1731,7 +1731,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 #endif
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
-  u3_noun wir = u3nc(c3__mesa, u3_nul);
   c3_s fra_s;
 
   u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pag_u.nam_u.her_d);
@@ -1747,7 +1746,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( pac_u->hed_u.hop_y == 0 ) {
     _hear_peer(sam_u, per_u, lan_u, dir_o);
   } else {
-    u3l_log("received forwarded peek");
+    u3l_log("received forwarded page");
   }
   if ( new_o == c3y ) {
     //u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
@@ -1831,6 +1830,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                                     (c3_y*)(pac_u->pag_u.nam_u.pat_c));
     u3_noun spar = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
     // inject $page = [%page =spar auth =gage]
+    u3_noun wir = u3nc(c3__mesa, u3_nul);
     u3_noun cad = u3nt(c3__mess, u3_nul,  // XX lane=(unit)
                     u3nq(c3__page, spar, u3nc(c3y, 0), dat));
     u3_ovum *ovo_u = u3_ovum_init(0, c3__mesa, wir, cad);
@@ -1859,15 +1859,14 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 #endif
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
-  c3_d her_d[2];
-  her_d[0] = 0;
-  her_d[1] = 0;
-  memcpy(her_d, pac_u->pek_u.nam_u.her_d, 2);
-  c3_o our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, 2) );
+  c3_d* her_d = pac_u->pek_u.nam_u.her_d;
+  c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
 
+  //  XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
     u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
     if ( per_u == NULL ) {
+      //  XX leaks
       u3l_log("mesa: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
       _mesa_free_pict(pic_u);
       return;
@@ -1891,7 +1890,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3x_cell(u3k(hit), &tag, &dat);
     if ( tag == MESA_WAIT ) {
       _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
-    } else if ( c3y == our_o && tag == MESA_ITEM ) {
+    } else if ( c3y == our_o && tag == MESA_ITEM ) { // XX our_o redundant
       c3_y* buf_y;
       c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(dat));
       _mesa_send_buf(sam_u, lan_u, buf_y, len_w);
@@ -1911,6 +1910,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       // only branch where we do not free pic_u
       u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _mesa_page_scry_cb);
     } else {
+      // XX unpossible
       _mesa_free_pict(pic_u);
     }
   }
@@ -2111,9 +2111,11 @@ u3_mesa_io_init(u3_pier* pir_u)
   u3_mesa* sam_u  = c3_calloc(sizeof(*sam_u));
   sam_u->pir_u    = pir_u;
 
+  //  XX config
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->req_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
+  sam_u->pac_p = u3h_new_cache(100000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
