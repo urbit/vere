@@ -1706,6 +1706,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
 
     req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
     blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL);
+    memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
     c3_w len_w = dat_u->len_w / BLAKE3_OUT_LEN;
     u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(len_w);
@@ -1823,8 +1824,17 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     c3_d now_d = _get_now_micros();
     u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
     c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
-    //u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
+    u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
     _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
+
+    u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+                                    (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+    u3_noun spar = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+    // inject $page = [%page =spar auth =gage]
+    u3_noun cad = u3nt(c3__mess, u3_nul,  // XX lane=(unit)
+                    u3nq(c3__page, spar, u3nc(c3y, 0), dat));
+    u3_ovum *ovo_u = u3_ovum_init(0, c3__mesa, wir, cad);
+    u3_auto_plan(&sam_u->car_u, ovo_u);
   }
   _mesa_free_pict(pic_u);
 }
