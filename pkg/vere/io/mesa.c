@@ -1991,7 +1991,7 @@ static void
 _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
 #ifdef MESA_DEBUG
-  u3l_log("mesa: hear peek");
+  u3l_log("mesa: hear poke");
   // u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
 #endif
   u3_mesa_pact* pac_u = &pic_u->pac_u;
