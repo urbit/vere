@@ -588,6 +588,17 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
       break;
     }
   }
+
+  {
+    c3_w mug_w = u3r_mug_bytes(buf_y, res_w);
+    mug_w &= 0xFFFFF;
+
+    if ( mug_w != pac_u->hed_u.mug_w ) {
+      u3l_log("mesa: failed mug");
+      return 0;
+    }
+  }
+
   //u3_assert(res_w <= len_w );
   return res_w + 8;
 }
