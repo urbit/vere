@@ -1768,6 +1768,45 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
 
+  if ( 1 == pac_u->pag_u.dat_u.tot_w ) {
+    u3_noun wir = u3nc(c3__mesa, u3_nul);
+    u3_noun aut, cad;
+
+    switch ( pac_u->pag_u.dat_u.aum_u.typ_e ) {
+      case AUTH_SIGN: {
+        aut = u3nc(c3y, u3i_bytes(64, pac_u->pag_u.dat_u.aum_u.sig_y));
+      } break;
+
+      case AUTH_HMAC: {
+        aut = u3nc(c3n, u3i_bytes(32, pac_u->pag_u.dat_u.aum_u.mac_y));
+      } break;
+
+      default: {
+        u3l_log("page: strange auth");
+        _mesa_free_pict(pic_u);
+        return;
+      }
+    }
+
+    {
+      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun lan = u3nc(u3_nul, u3_mesa_encode_lane(lan_u));
+      u3_noun dat = u3i_bytes(pac_u->pag_u.dat_u.len_w,
+                              pac_u->pag_u.dat_u.fra_y);
+
+      cad = u3nt(c3__mess, lan,
+                 u3nq(c3__page, par, aut, dat));
+    }
+
+    //  XX should put in cache on success
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__mesa, wir, cad));
+    _mesa_free_pict(pic_u);
+    return;
+  }
+
   // u3_noun fra = u3i_bytes(pac_u->pag_u.dat_u.len_w, pac_u->pag_u.dat_u.fra_y) ;
   /*if ( dop_o == c3n && pac_u->pag_u.nam_u.fra_w == 150) {
     dop_o = c3y;
@@ -1829,16 +1868,23 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
     _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
-    u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
-                                    (c3_y*)(pac_u->pag_u.nam_u.pat_c));
-    u3_noun spar = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
-    // inject $page = [%page =spar auth =gage]
     u3_noun wir = u3nc(c3__mesa, u3_nul);
-    u3_noun cad = u3nt(c3__mess, u3_nul,  // XX lane=(unit)
-                    u3nq(c3__page, spar, u3nc(c3y, 0), dat));
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__mesa, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
+    u3_noun cad;
+    {
+      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun lan = u3_nul;
+      u3_noun aut = u3nc(c3y, 0); // XX s/b saved in request state
+
+      cad = u3nt(c3__mess, lan,
+                 u3nq(c3__page, par, aut, dat));
+    }
+
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__mesa, wir, cad));
   }
+
   _mesa_free_pict(pic_u);
 }
 
