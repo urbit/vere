@@ -214,7 +214,7 @@ cc_test(
 
 
 cc_test(
-    name = "xmas_tests",
+    name = "mesa_tests",
     timeout = "short",
     srcs = ["io/mesa.c"],
     features = select({
@@ -222,13 +222,13 @@ cc_test(
         "//conditions:default": [],
     }),
     deps = [":vere"],
-    defines = ["XMAS_TEST"]
+    defines = ["MESA_TEST"]
 )
 
 cc_test(
     name = "pact_tests",
     timeout = "short",
-    srcs = ["io/xmas/pact.c"],
+    srcs = ["io/mesa/pact.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],

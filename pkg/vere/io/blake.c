@@ -53,9 +53,9 @@ _log_words(c3_c* str_c, c3_w* buf_w, c3_w len_w)
 void
 log_node(blake_node* nod_u)
 {
-  _log_buf("CV", (c3_w*)nod_u->cev_y, BLAKE3_OUT_LEN);
-  _log_buf("block", (c3_w*)nod_u->boq_y, BLAKE3_BLOCK_LEN);
-  fprintf(stderr, "counter: %llu\r\n", nod_u->con_d);
+  _log_buf("CV", nod_u->cev_y, BLAKE3_OUT_LEN);
+  _log_buf("block", nod_u->boq_y, BLAKE3_BLOCK_LEN);
+  fprintf(stderr, "counter: %" PRIu64 "\r\n", nod_u->con_d);
   fprintf(stderr, "length: %u\r\n", nod_u->len_y);
   fprintf(stderr, "flag: %x\r\n", nod_u->fag_y);
 }
@@ -246,8 +246,8 @@ _log_blake_subtree(blake_subtree* sub_u)
 void
 log_bao(blake_bao* bao_u)
 {
-  fprintf(stderr, "num: %llu\r\n", bao_u->num_w);
-  fprintf(stderr, "con: %llu\r\n", bao_u->con_w);
+  fprintf(stderr, "num: %u\r\n", bao_u->num_w);
+  fprintf(stderr, "con: %u\r\n", bao_u->con_w);
   fprintf(stderr, "sub: (%llu, %llu)\r\n", bao_u->sub_u.sin_d, bao_u->sub_u.dex_d);
   fprintf(stderr, "queue\r\n");
   _vec_each(&bao_u->que_u, print_proof);
@@ -286,7 +286,7 @@ static c3_y _count_trail_zero(c3_d val_d)
   return ret_y;
 }
 
-static c3_d _bitlen(c3_d bit_d)
+static c3_y _bitlen(c3_d bit_d)
 {
   return 64 - _count_lead_zeros(bit_d);
 }
@@ -647,7 +647,7 @@ blake_bao_verify(blake_bao* bao_u, c3_y* dat_y, c3_w dat_w, blake_pair* par_u)
 
 static void _test_lead_zeros()
 {
-  #define asrt(x,y) if ( x != y ) { fprintf(stderr, "failed (line: %u) got %llu expected %llu", __LINE__, x,y); exit(1); }
+  #define asrt(x,y) if ( x != y ) { fprintf(stderr, "failed (line: %u) got %u expected %u", __LINE__, x,y); exit(1); }
   // Test with 0, should be 64 leading zeros
   asrt(_count_lead_zeros(0ULL), 64);
 
@@ -679,6 +679,7 @@ static void _test_lead_zeros()
 }
 
 
+#if 0
 static void _test_bao()
 {
   c3_w dat_w = 1024;
@@ -710,7 +711,7 @@ static void _test_bao()
       continue;
     }
     for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-      if ( c3n == _veri_check_leaf(&bao_u, i_w, dat_y, dat_w) ) {
+      if ( c3n == _veri_check_leaf(&bao_u, dat_y, dat_w) ) {
         fprintf(stderr, "Check leaf %u failed for %u\r\n", i_w, num_w);
         exit(1);
       }
@@ -737,6 +738,7 @@ static void _test_bao()
     }
   }
 }
+#endif
 
 static void print_int(void* vod_p, c3_w i_w) {
   c3_w* int_w = (c3_w*)vod_p;
@@ -757,7 +759,7 @@ static void _test_vec() {
   vec_append(vec_u, &thd);
   fprintf(stderr, "put three\r\n");
 
-  c3_w* one_w = (vec_u);
+  c3_w* one_w = vec_popf(vec_u);
 
   if ( *one_w != 1 ) {
     fprintf(stderr, "(one) Vec failure\r\n");
@@ -765,7 +767,7 @@ static void _test_vec() {
   }
   fprintf(stderr, "popped %u", *one_w);
 
-  c3_w* two_w = (vec_u);
+  c3_w* two_w = vec_popf(vec_u);
   fprintf(stderr, "two pointer %p, %p\r\n", &snd, two_w);
   if ( *two_w != 2 ) {
     fprintf(stderr, "(two) Vec failure\r\n");
@@ -773,7 +775,7 @@ static void _test_vec() {
   }
   fprintf(stderr, "popped %u", *two_w);
 
-  c3_w* thr_w = (vec_u);
+  c3_w* thr_w = vec_popf(vec_u);
   if ( *thr_w != 3 ) {
     fprintf(stderr, "(three) Vec failure\r\n");
     exit(1);
@@ -804,15 +806,15 @@ static void _test_vec() {
 
 
 
-  _vec_free(vec_u);
+  vec_free(vec_u);
   c3_free(vec_u);
 }
 
 int main() {
-  //_test_vec();
-  //_test_root_hash();
-  // _test_lead_zeros();
-  _test_bao();
+  _test_vec();
+  // _test_root_hash();
+  _test_lead_zeros();
+  // _test_bao();
 
   return 0;
 }

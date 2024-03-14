@@ -150,7 +150,7 @@ _log_poke_pact(u3_mesa_poke_pact *pac_u)
 }
 
 void
-log_pact(u3_mesa_pact* pac_u)
+_log_pact(u3_mesa_pact* pac_u)
 {
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
