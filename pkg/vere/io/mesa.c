@@ -1920,13 +1920,62 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   // u3z(pax);
 }
 
+static void
+_mesa_poke_news(u3_ovum* egg_u, u3_ovum_news new_e)
+{
+  u3_mesa_pict* pic_u = egg_u->ptr_v;
+
+  if ( u3_ovum_done == new_e ) {
+    // XX success stuff here
+    u3l_log("mesa: poke success");
+  }
+}
+
+static void
+_mesa_poke_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3_mesa_pict* pic_u = egg_u->ptr_v;
+  // XX failure stuff here
+  u3l_log("mesa: poke failure");
+}
+
 // xx: should inject event directly, but vane does not work
 // so we just hack it to get
 static void
 _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
+#ifdef MESA_DEBUG
+  u3l_log("mesa: hear peek");
+  // u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
+#endif
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
+  c3_d* her_d = pac_u->pek_u.nam_u.her_d;
+  c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
+
+  //  XX forwarding wrong, need a PIT entry
+  if ( c3n == our_o ) {
+    u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
+    if ( per_u == NULL ) {
+      //  XX leaks
+      u3l_log("mesa: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
+      _mesa_free_pict(pic_u);
+      return;
+    }
+    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
+//#ifdef MESA_DEBUG
+      u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
+//#endif
+      //_update_hopcount(&pac_u->hed_u);
+       u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
+      _mesa_send(pic_u, &lin_u);
+    }
+    _mesa_free_pict(pic_u);
+    return;
+  }
+
+  //  XX if this lane management stuff is necessary
+  // it should be deferred to after successful event processing
   u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pok_u.pay_u.her_d);
   c3_o new_o = c3n;
   if ( NULL == per_u ) {
@@ -1942,13 +1991,51 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     _hear_peer(sam_u, per_u, *lan_u, dir_o);
     u3l_log("learnt lane");
   } else {
-    u3l_log("received forwarded peek");
+    u3l_log("received forwarded poke");
   }
   if ( new_o == c3y ) {
     u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
     _log_lane(lan_u);
   }
   _mesa_put_peer(sam_u, pac_u->pok_u.pay_u.her_d, per_u);
+
+  //  XX could check cache for ack (completed duplicate)
+
+  u3_ovum_peer nes_f;
+  u3_ovum_bail bal_f;
+  void*        ptr_v;
+
+  if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
+    nes_f = bal_f = ptr_v = NULL;
+    _mesa_free_pict(pic_u);
+  }
+  else {
+    assert(pac_u->pok_u.dat_u.tot_w);
+    //  XX check request state for *payload* (in-progress duplicate)
+    nes_f = _mesa_poke_news;
+    bal_f = _mesa_poke_bail;
+    ptr_v = pic_u;
+  }
+
+  //  XX create PIT entry for ack
+
+  u3_noun wir = u3nc(c3__mesa, u3_nul);
+  u3_noun cad;
+  {
+    u3_noun    lan = u3_mesa_encode_lane(*lan_u);
+    u3i_slab sab_u;
+    u3i_slab_init(&sab_u, 3, PACT_SIZE);
+
+    //  XX should just preserve input buffer
+    mesa_etch_pact(sab_u.buf_y, pac_u);
+
+    cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
+  }
+
+  u3_auto_peer(
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__mesa, wir, cad)),
+    ptr_v, nes_f, bal_f);
 }
 
 static void
