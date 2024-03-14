@@ -96,7 +96,7 @@ typedef struct _u3_mesa_head {
   c3_y             pro_y;  // protocol version
   u3_mesa_ptag     typ_y;  // packet type
   c3_y             hop_y;  // hopcount
-  c3_w             mug_w; // mug checksum
+  c3_w             mug_w;  // truncated mug checksum
 } u3_mesa_head;
 
 //

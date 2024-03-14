@@ -24,7 +24,7 @@ _log_head(u3_mesa_head* hed_u)
   u3l_log("next hop: %u", hed_u->nex_y);
   u3l_log("protocol: %u", hed_u->pro_y);
   u3l_log("packet type: %u", hed_u->typ_y);
-  u3l_log("mug: 0x%05x", (hed_u->mug_w & 0xfffff));
+  u3l_log("mug: 0x%05x", (hed_u->mug_w & 0xFFFFF));
   u3l_log("hopcount: %u", hed_u->hop_y);
   u3l_log("");
 }
@@ -307,7 +307,7 @@ _mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u)
   hed_u->pro_y = (hed_w >> 4)  & 0x7;
   hed_u->typ_y = (hed_w >> 7)  & 0x3;
   hed_u->hop_y = (hed_w >> 9)  & 0x7;
-  hed_u->mug_w = (hed_w >> 12) & 0xFFFFFF;
+  hed_u->mug_w = (hed_w >> 12) & 0xFFFFF;
 
   assert( 1 == hed_u->pro_y );
 
@@ -607,7 +607,7 @@ _mesa_etch_head(u3_mesa_head* hed_u, c3_y buf_y[8])
              ^ (hed_u->pro_y & 0x7) << 4  // XX constant, 1
              ^ (hed_u->typ_y & 0x3) << 7
              ^ (hed_u->hop_y & 0x7) << 9
-             ^ (hed_u->mug_w & 0xFFFFFF) << 12;
+             ^ (hed_u->mug_w & 0xFFFFF) << 12;
              // XX: we don't expand hopcount if no request. Correct?
       //
   /*if ( c3y == req_o ) {
@@ -898,10 +898,9 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
     return 0;
   }
 
-  c3_w cur_w = 0, nex_w;
   u3_mesa_head* hed_u = &pac_u->hed_u;
-  _mesa_etch_head(hed_u, buf_y + cur_w);
-  cur_w += 8;
+
+  c3_w nex_w, cur_w = 8; // space for header + cookie
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_POKE: {
@@ -927,6 +926,10 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
       return 0;
     }
   }
+
+  hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
+  hed_u->mug_w &= 0xFFFFF;
+  _mesa_etch_head(hed_u, buf_y);
 
   cur_w += nex_w;
 
