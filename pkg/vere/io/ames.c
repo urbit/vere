@@ -2836,7 +2836,7 @@ _ames_io_start(u3_ames* sam_u)
                               htonl(INADDR_ANY) :
                               htonl(INADDR_LOOPBACK);
     add_u.sin_port = htons(por_s);
-    u3l_log("ames: skippign port: %u", por_s);
+    u3l_log("ames: skipping port: %u", por_s);
 
     /*if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
                               (const struct sockaddr*)&add_u, 0)) != 0 )
