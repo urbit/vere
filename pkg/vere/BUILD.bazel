@@ -210,17 +210,21 @@ cc_test(
     defines = ["BLAKE_TEST"]
 )
 
-
+# see https://github.com/bazelbuild/bazel/issues/680
+cc_library(
+  name = "xmas_src",
+  hdrs = ["io/xmas.c"],
+)
 
 cc_test(
     name = "xmas_tests",
     timeout = "short",
-    srcs = ["io/xmas.c"],
+    srcs = ["xmas_tests.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],
     }),
-    deps = [":vere"],
+    deps = [":vere", ":xmas_src"],
     defines = ["XMAS_TEST"]
 )
 

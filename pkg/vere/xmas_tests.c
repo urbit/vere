@@ -21,7 +21,7 @@ _test_xmas(void)
   lan_u.por_s = 12345;
 
   u3_noun lan = u3_ames_encode_lane(lan_u);
- u3_lane nal_u = u3_ames_decode_lane(u3k(lan));
+  u3_lane nal_u = u3_ames_decode_lane(u3k(lan));
   u3_lane nal_u2 = u3_ames_decode_lane(lan);
 
   if ( !(lan_u.pip_w == nal_u.pip_w && lan_u.por_s == nal_u.por_s) ) {
@@ -30,15 +30,16 @@ _test_xmas(void)
     exit(1);
   }
 
-
-
   u3_xmas_name pok_u = (u3_xmas_name) {
     .her_d = {43, 0},
-    .pat_c = "/foo/bar",
+    .rif_w = 1,
+    .boq_y = 13,
+    .nit_o = c3n,
+    .aut_o = c3n,
+    .fra_w = 1,
     .pat_s = 8,
-    .boq_s = 13,
-    .fra_s = 1,
-  };  
+    .pat_c = "/foo/bar"
+  };
 }
 
 /* main(): run all test cases.
