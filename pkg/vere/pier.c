@@ -1644,7 +1644,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
       return 0;
     }
 
-    u3_assert( U3D_VER1 == pir_u->log_u->ver_w );
+    u3_assert( U3D_VERLAT == pir_u->log_u->ver_w );
   }
 
   //  initialize compute
@@ -1698,7 +1698,8 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
     return 0;
   }
 
-  if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,  pir_u->who_d,
+  if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,
+                               &pir_u->log_u->ver_w,  pir_u->who_d,
                                &pir_u->fak_o,        &pir_u->lif_w) )
   {
     fprintf(stderr, "pier: disk read meta fail\r\n");
@@ -1820,7 +1821,8 @@ _pier_boot_make(u3_noun who,
                 u3_noun wyr,
                 u3_noun ven,
                 u3_noun pil,
-                u3_weak fed)
+                u3_weak fed,
+                u3_noun mor)
 {
   u3_boot bot_u = _pier_pill_parse(pil); // transfer
 
@@ -1872,7 +1874,52 @@ _pier_boot_make(u3_noun who,
     bot_u.use = u3nc(u3nc(wir, cad), bot_u.use);
   }
 
+  //  prepend & append additional boot enhancements to the userspace sequence
+  //
+  //    +$  prop  [%prop meta tier (list ovum)]
+  //    +$  meta  term
+  //    +$  tier  ?(%fore %hind)  ::  before or after userspace
+  //
+  {
+    u3_noun mos = mor;
+    u3_noun pre = u3_nul;
+    u3_noun aft = u3_nul;
+    while ( u3_nul != mos ) {
+      u3_noun mot = u3h(mos);
+
+      switch ( u3h(mot) ) {
+        case c3__prop: {
+          u3_noun ter, met, ves;
+
+          if ( c3n == u3r_trel(u3t(mot), &met, &ter, &ves) ) {
+            u3m_p("invalid prop", u3t(mot));
+            break;
+          }
+
+          if ( c3__fore == ter ) {
+            u3m_p("prop: fore", met);
+            pre = u3kb_weld(pre, u3k(ves));
+          }
+          else if ( c3__hind == ter ) {
+            u3m_p("prop: hind", met);
+            aft = u3kb_weld(aft, u3k(ves));
+          }
+          else {
+            u3m_p("unrecognized prop tier", ter);
+          }
+        } break;
+
+        default: u3m_p("unrecognized boot sequence enhancement", u3h(mot));
+      }
+
+      mos = u3t(mos);
+    }
+
+    bot_u.use = u3kb_weld(pre, u3kb_weld(bot_u.use, aft)); // transfer
+  }
+
   u3z(fed);
+  u3z(mor);
   return bot_u;
 }
 
@@ -1883,7 +1930,8 @@ _pier_boot_plan(u3_pier* pir_u,
                 u3_noun who,
                 u3_noun ven,
                 u3_noun pil,
-                u3_weak fed)
+                u3_weak fed,
+                u3_noun mor)
 {
   u3_boot bot_u;
   {
@@ -1891,15 +1939,23 @@ _pier_boot_plan(u3_pier* pir_u,
     pir_u->fak_o = ( c3__fake == u3h(ven) ) ? c3y : c3n;
     u3r_chubs(0, 2, pir_u->who_d, who);
 
-    bot_u = _pier_boot_make(who, _pier_wyrd_card(pir_u), ven, pil, fed);
+    bot_u = _pier_boot_make(who, _pier_wyrd_card(pir_u), ven, pil, fed, mor);
     pir_u->lif_w = u3qb_lent(bot_u.bot);
   }
 
-  if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u, pir_u->who_d,
+  if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,
+                                pir_u->log_u->ver_w, pir_u->who_d,
                                 pir_u->fak_o,        pir_u->lif_w) )
   {
     //  XX dispose bot_u
     //
+    return c3n;
+  }
+
+  if ( c3n == u3_disk_save_meta_meta(pir_u->log_u->com_u->pax_c,
+                                     pir_u->who_d, pir_u->fak_o, pir_u->lif_w) )
+  {
+    fprintf(stderr, "disk: failed to save top-level metadata\r\n");
     return c3n;
   }
 
@@ -1967,7 +2023,8 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
              u3_noun ven,                   //  boot event
              u3_noun pil,                   //  type-of/path-to pill
              u3_noun pax,                   //  path to pier
-             u3_weak fed)                   //  extra private keys
+             u3_weak fed,                   //  extra private keys
+             u3_noun mor)                   //  extra boot sequence props
 {
   u3_pier* pir_u;
 
@@ -1979,7 +2036,7 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
 
   //  XX must be called from on_lord_live
   //
-  if ( c3n == _pier_boot_plan(pir_u, who, ven, pil, fed) ) {
+  if ( c3n == _pier_boot_plan(pir_u, who, ven, pil, fed, mor) ) {
     fprintf(stderr, "pier: boot plan fail\r\n");
     //  XX dispose
     //

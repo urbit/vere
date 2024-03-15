@@ -1081,7 +1081,7 @@ _ames_czar_here(u3_pact* pac_u, time_t now, struct sockaddr_in* add_u)
     u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
-    u3l_log("ames: czar %s: ip %s", pac_u->rut_u.dns_c, nam_c);
+    u3l_log("ames: czar %s ip %s", pac_u->rut_u.dns_c, nam_c);
 
     c3_free(nam_c);
     u3z(nam);
@@ -1107,7 +1107,7 @@ _stun_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
     u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
     c3_c* nam_c = u3r_string(nam);
 
-    u3l_log("stun: czar %s: ip %s", sam_u->dns_c, nam_c);
+    u3l_log("stun: czar %s ip %s", sam_u->sun_u.dns_c, nam_c);
 
     c3_free(nam_c);
     u3z(nam);

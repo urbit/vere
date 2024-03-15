@@ -215,7 +215,12 @@
       /* u3j_reap(): promote jet state.
       */
         void
-        u3j_reap(u3a_jets* jed_u);
+        u3j_reap(u3a_jets jed_u);
+
+      /* u3j_take(): copy junior jet state.
+      */
+        u3a_jets
+        u3j_take(u3a_jets jed_u);
 
       /* u3j_rite_mine(): mine cor with clu, using u3j_rite for caching
       */

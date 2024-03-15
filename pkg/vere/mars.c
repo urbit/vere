@@ -101,6 +101,11 @@ _mars_play_batch(u3_mars* mar_u,
   u3_noun         dud;
   u3_weak         wen = u3_none;
 
+  if ( !wok_u ) {
+    fprintf(stderr, "play: failed to open event log iterator\r\n");
+    return _play_log_e;
+  }
+
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);
@@ -248,7 +253,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   if ( !mar_u->dun_d ) {
     c3_w lif_w;
 
-    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, &lif_w) ) {
+    if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, 0, &lif_w) ) {
       fprintf(stderr, "mars: disk read meta fail\r\n");
       //  XX exit code, cb
       //
