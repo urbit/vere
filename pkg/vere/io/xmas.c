@@ -1944,7 +1944,7 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
       // only branch where we do not free pic_u
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__xx, bem)), pic_u, _xmas_page_scry_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _xmas_page_scry_cb);
     } else {
       // XX unpossible
       _xmas_free_pict(pic_u);
@@ -2075,7 +2075,7 @@ _xmas_io_talk(u3_auto* car_u)
                        u3_nul);
     u3_noun cad = u3nc(c3__born, u3_nul);
 
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__x, wir, cad));
+    u3_auto_plan(car_u, u3_ovum_init(0, c3__m, wir, cad));
   }
   u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun    rac = u3do("clan:title", u3k(who));
