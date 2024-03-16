@@ -96,7 +96,7 @@ typedef struct _u3_xmas_head {
   c3_y             pro_y;  // protocol version
   u3_xmas_ptag     typ_y;  // packet type
   c3_y             hop_y;  // hopcount
-  c3_w             mug_w; // mug checksum
+  c3_w             mug_w;  // truncated mug checksum
 } u3_xmas_head;
 
 // 
