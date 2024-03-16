@@ -1291,13 +1291,16 @@ static c3_o _xmas_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
   u3_xmas* sam_u = (u3_xmas*)car_u;
 
-  u3_noun tag, dat;
+  u3_noun tag, dat, i_wir;
   c3_o ret_o;
 
-  if( c3n == u3r_cell(cad, &tag, &dat) )
+  if (  (c3n == u3r_cell(wir, &i_wir, 0))
+     || (c3__xmas != i_wir)
+     || (c3n == u3r_cell(cad, &tag, &dat)) )
   {
     ret_o = c3n;
-  } else {
+  }
+  else {
     ret_o = _xmas_kick(sam_u, u3k(tag), u3k(dat));
   }
 
