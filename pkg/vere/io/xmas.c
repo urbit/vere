@@ -131,6 +131,7 @@ typedef struct _u3_pend_req {
   c3_w                   old_w; // frag num of oldest packet sent
   c3_w                   ack_w; // highest acked fragment number
   u3_lane                lan_u; // last lane heard
+  u3_xmas_auth           aum_u;
   u3_gage*               gag_u; // congestion control
   u3_vec(u3_buf)         mis_u; // misordered blake hash
   blake_bao*             bao_u; // blake verifier
@@ -1727,6 +1728,18 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
   req_u->old_w = 0;
   req_u->ack_w = 0;
 
+  memcpy(&(req_u->aum_u), &(dat_u->aum_u), sizeof(req_u->aum_u));
+
+  switch ( dat_u->aum_u.typ_e ) {
+    case AUTH_SIGN:
+    case AUTH_HMAC: break;
+    default: {
+      u3l_log("page: strange auth");
+      // XX refactor for clean drop;
+      u3_assert(0);
+    }
+  }
+
   if ( c3y == lin_o ) {
     u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(8);
     {
@@ -1773,7 +1786,6 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
 #endif
   u3_xmas* sam_u = pic_u->sam_u;
   u3_xmas_pact* pac_u = &pic_u->pac_u;
-  u3_noun wir = u3nc(c3__xmas, u3_nul);
   c3_s fra_s;
 
   u3_peer* per_u = _xmas_get_peer(sam_u, pac_u->pag_u.nam_u.her_d);
@@ -1805,6 +1817,45 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
     _xmas_forward(pic_u, lan_u);
     _xmas_free_pict(pic_u);
     u3z(hit);
+    return;
+  }
+
+  if ( 1 == pac_u->pag_u.dat_u.tot_w ) {
+    u3_noun wir = u3nc(c3__xmas, u3_nul);
+    u3_noun aut, cad;
+
+    switch ( pac_u->pag_u.dat_u.aum_u.typ_e ) {
+      case AUTH_SIGN: {
+        aut = u3nc(c3y, u3i_bytes(64, pac_u->pag_u.dat_u.aum_u.sig_y));
+      } break;
+
+      case AUTH_HMAC: {
+        aut = u3nc(c3n, u3i_bytes(32, pac_u->pag_u.dat_u.aum_u.mac_y));
+      } break;
+
+      default: {
+        u3l_log("page: strange auth");
+        _xmas_free_pict(pic_u);
+        return;
+      }
+    }
+
+    {
+      u3_noun pax = _xmas_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun lan = u3nc(u3_nul, u3_xmas_encode_lane(lan_u));
+      u3_noun dat = u3i_bytes(pac_u->pag_u.dat_u.len_w,
+                              pac_u->pag_u.dat_u.fra_y);
+
+      cad = u3nt(c3__mess, lan,
+                 u3nq(c3__page, par, aut, dat));
+    }
+
+    //  XX should put in cache on success
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__m, wir, cad));
+    _xmas_free_pict(pic_u);
     return;
   }
   
@@ -1866,9 +1917,38 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
     c3_d now_d = _get_now_micros();
     u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
     c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
-    //u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
+    u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
     _xmas_del_request(sam_u, &pac_u->pag_u.nam_u);
+
+    u3_noun wir = u3nc(c3__xmas, u3_nul);
+    u3_noun cad;
+    {
+      u3_noun pax = _xmas_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun lan = u3_nul;
+      u3_noun aut = u3nc(c3y, 0); // XX s/b saved in request state
+
+      switch ( req_u->aum_u.typ_e ) {
+        case AUTH_SIGN: {
+          aut = u3nc(c3y, u3i_bytes(64, req_u->aum_u.sig_y));
+        } break;
+
+        case AUTH_HMAC: {
+          aut = u3nc(c3n, u3i_bytes(32, req_u->aum_u.mac_y));
+        } break;
+
+        default: u3_assert(0);
+      }
+
+      cad = u3nt(c3__mess, lan,
+                 u3nq(c3__page, par, aut, dat));
+    }
+
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__m, wir, cad));
   }
+
   _xmas_free_pict(pic_u);
 }
 

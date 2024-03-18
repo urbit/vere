@@ -72,16 +72,18 @@ typedef enum  {
   AUTH_HMAC = 3
 } u3_xmas_auth_type;
 
+typedef struct _u3_xmas_auth {
+  u3_xmas_auth_type typ_e;  // none, traversal (none), sig, or hmac
+  union {                   //
+    c3_y        sig_y[64];  // signature
+    c3_y        mac_y[32];  // hmac
+  };
+} u3_xmas_auth;
+
 typedef struct _u3_xmas_data {
   // u3_xmas_data_meta   met_u;
   c3_w                tot_w;  // total fragments
-  struct {
-    u3_xmas_auth_type typ_e;  // none, traversal (none), sig, or hmac
-    union {                   //
-      c3_y        sig_y[64];  // signature
-      c3_y        mac_y[32];  // hmac
-    };
-  } aum_u;
+  u3_xmas_auth        aum_u;
   struct {
     c3_y       len_y;         //  number of hashes (0, 1, or 2)
     c3_y       has_y[2][32];  //  hashes
