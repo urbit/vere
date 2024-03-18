@@ -1744,7 +1744,8 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
     }
 
     req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
-    blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL);
+    blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL); // XX unchecked
+    memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
     c3_w len_w = dat_u->len_w / BLAKE3_OUT_LEN;
     u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(len_w);
