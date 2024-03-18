@@ -96,6 +96,9 @@ vere_library(
             "*.h",
             "db/*.c",
             "io/*.c",
+            "io/*.h",
+            "io/xmas/*.c",
+            "io/xmas/*.h",
         ],
         exclude = [
             "main.c",
@@ -194,6 +197,49 @@ cc_test(
     visibility = ["//visibility:private"],
     deps = [":vere"],
 )
+
+cc_test(
+    name = "blake_tests",
+    timeout = "short",
+    srcs = ["io/blake.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    deps = [":vere"],
+    defines = ["BLAKE_TEST"]
+)
+
+# see https://github.com/bazelbuild/bazel/issues/680
+cc_library(
+  name = "xmas_src",
+  hdrs = ["io/xmas.c"],
+)
+
+cc_test(
+    name = "xmas_tests",
+    timeout = "short",
+    srcs = ["xmas_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    deps = [":vere", ":xmas_src"],
+    defines = ["XMAS_TEST"]
+)
+
+cc_test(
+    name = "pact_tests",
+    timeout = "short",
+    srcs = ["io/xmas/pact.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    deps = [":vere"],
+    defines = ["PACT_TEST"]
+)
+
 
 cc_test(
     name = "boot_tests",
