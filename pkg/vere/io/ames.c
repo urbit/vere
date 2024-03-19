@@ -1343,12 +1343,11 @@ _stun_timer_cb(uv_timer_t* tim_u)
   }
 }
 
-typedef struct _u3_stun_send {
-  uv_udp_send_t req_u;  //  uv udp request handle
-  u3_ames*      sam_u;  //  backpointer to driver state
-  c3_y*         hun_y;  //  buffer
-
-} u3_stun_send;
+typedef struct _stun_send {
+  uv_udp_send_t req_u;     //  uv udp request handle
+  u3_ames*      sam_u;     //  backpointer to driver state
+  c3_y          hun_y[0];  //  buffer
+} _stun_send;
 
 static void
 _stun_on_request_fail(u3_ames* sam_u, c3_i sas_i)
@@ -1364,8 +1363,8 @@ _stun_on_request_fail(u3_ames* sam_u, c3_i sas_i)
 static void
 _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
 {
-  u3_stun_send* snd_u = (u3_stun_send*)req_u;
-  u3_ames*      sam_u = snd_u->sam_u;
+  _stun_send* snd_u = (_stun_send*)req_u;
+  u3_ames*    sam_u = snd_u->sam_u;
 
   if ( sas_i ) {
     _stun_on_request_fail(sam_u, sas_i);
@@ -1374,60 +1373,71 @@ _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
     //  XX curently not used
     gettimeofday(&sam_u->sun_u.las_u, 0);  //  overwrite last sent date
   }
-  c3_free(snd_u->hun_y);
+
   c3_free(snd_u);
 }
 
 static void
 _stun_send_response_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 {
-  u3_stun_send* snd_u = (u3_stun_send*)rep_u;
+  _stun_send* snd_u = (_stun_send*)rep_u;
+
   if ( sas_i != 0 ) {
     u3l_log("stun: _stun_send_response_cb fail_sync: %s", uv_strerror(sas_i));
   }
-  c3_free(snd_u->hun_y);
+
   c3_free(snd_u);
 }
 
-static void _stun_on_request(u3_ames *sam_u, c3_y* buf_r,
-                             const struct sockaddr* adr_u)
+static void
+_stun_make_response(const c3_y req_y[20],
+                    const struct sockaddr_in* add_u,
+                    c3_y buf_y[40])
 {
-  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  c3_y *buf_y = c3_calloc(40);
-  c3_w cookie = 0x2112A442;
+  c3_w cok_w = 0x2112A442;
+  c3_w cur_w = 20;
 
-  c3_w cur_w = 20;                                   // STUN header is 20 bytes
-  memcpy(buf_y, buf_r, cur_w);                       // copy STUN request header
-  buf_y[0] = 0x01; buf_y[1] = 0x01;                  // 0x0101 SUCCESS RESPONSE
-  buf_y[2] = 0x00; buf_y[3] = 0x14;                  // Length: 20 bytes
+  //  XX hardcoded to match the requests we produce
+  //
+  memcpy(buf_y, req_y, cur_w);
+
+  memset(buf_y + cur_w, 0, cur_w);
 
   // XOR-MAPPED-ADDRESS
-  buf_y[cur_w] = 0x00; buf_y[cur_w + 1] = 0x20;      // attribute type 0x00020
-  buf_y[cur_w + 2] = 0x00; buf_y[cur_w + 3] = 0x08;  // STUN attribute length
-  // extra reserved 0x0 byte
-  buf_y[cur_w + 5] = 0x01;                           // family  0x01:IPv4
+  buf_y[cur_w + 0] = 0x00;  //
+  buf_y[cur_w + 1] = 0x20;  // attribute type 0x00020
+  buf_y[cur_w + 2] = 0x00;  //
+  buf_y[cur_w + 3] = 0x08;  // STUN attribute length
+  buf_y[cur_w + 4] = 0x00;  // extra reserved 0x0 byte
+  buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
 
-  c3_s x_port = htons(ntohs(add_u->sin_port) ^ cookie >> 16);
-  c3_w x_ip = htonl(ntohl(add_u->sin_addr.s_addr) ^ cookie);
-  memcpy(buf_y + cur_w + 6, &x_port, 2);             // X-Port
-  memcpy(buf_y + cur_w + 8, &x_ip, 4);               // X-IP Addres
+  c3_s por_s = htons(ntohs(add_u->sin_port) ^ cok_w >> 16);
+  c3_w pip_w = htonl(ntohl(add_u->sin_addr.s_addr) ^ cok_w);
+
+  memcpy(buf_y + cur_w + 6, &por_s, 2);  // X-Port
+  memcpy(buf_y + cur_w + 8, &pip_w, 4);  // X-IP Addres
 
   // FINGERPRINT
-  buf_y = _stun_add_fingerprint(buf_y, cur_w + 12);
+  _stun_add_fingerprint(buf_y, cur_w + 12);
+}
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 40);
-  u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
-
+static void
+_stun_on_request(u3_ames*               sam_u,
+                 const c3_y*            req_y,
+                 const struct sockaddr* adr_u)
+{
+  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sam_u = sam_u;
-  snd_u->hun_y = buf_y;
-  c3_i sas_i = uv_udp_send(
-    (uv_udp_send_t*)snd_u, &sam_u->wax_u, &buf_u, 1,
-    adr_u, _stun_send_response_cb
-  );
+
+  // XX check req_y length
+  _stun_make_response(req_y, (struct sockaddr_in*)adr_u, snd_u->hun_y);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
+                               &buf_u, 1, adr_u, _stun_send_response_cb);
 
   if ( sas_i != 0 ) {
     u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
-    c3_free(buf_y);
     c3_free(snd_u);
   }
 }
@@ -1508,19 +1518,11 @@ _stun_on_lost(u3_ames* sam_u)
 }
 
 static void
-_stun_send_request(u3_ames* sam_u)
+_stun_make_request(c3_y buf_y[28], c3_y tid_y[12])
 {
-  u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
-
-  struct sockaddr_in add_u;
-  memset(&add_u, 0, sizeof(add_u));
-  add_u.sin_family = AF_INET;
-  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
-  add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
-
   // see STUN RFC 8489
   // https://datatracker.ietf.org/doc/html/rfc8489#section-5
-  c3_y *buf_y = c3_calloc(28);
+  memset(buf_y, 0, 28);
 
   // STUN message type: "binding request"
   buf_y[1] = 0x01;
@@ -1528,29 +1530,38 @@ _stun_send_request(u3_ames* sam_u)
   // STUN message length: 8 (header and 32-bit FINGERPRINT)
   buf_y[2] = 0x00; buf_y[3] = 0x08;
 
-
   // STUN "magic cookie" 0x2112A442 in network byte order
   buf_y[4] = 0x21; buf_y[5] = 0x12; buf_y[6] = 0xa4; buf_y[7] = 0x42;
 
   // STUN "transaction id"
-  memcpy(buf_y + 8, sam_u->sun_u.tid_y, 12);
+  memcpy(buf_y + 8, tid_y, 12);
 
   // FINGERPRINT
-  buf_y = _stun_add_fingerprint(buf_y, 20);
+  _stun_add_fingerprint(buf_y, 20);
+}
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, 28);
-  u3_stun_send* snd_u = c3_calloc(sizeof(*snd_u));
+static void
+_stun_send_request(u3_ames* sam_u)
+{
+  u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
+
+  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
   snd_u->sam_u = sam_u;
-  snd_u->hun_y = buf_y;
 
-  c3_i sas_i = uv_udp_send(
-    (uv_udp_send_t*)snd_u, &sam_u->wax_u, &buf_u, 1,
-    (const struct sockaddr*)&add_u, _stun_send_request_cb
-  );
+  _stun_make_request(snd_u->hun_y, sam_u->sun_u.tid_y);
+
+  struct sockaddr_in add_u;
+  memset(&add_u, 0, sizeof(add_u));
+  add_u.sin_family = AF_INET;
+  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
+  add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
+  c3_i sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
+                           (const struct sockaddr*)&add_u, _stun_send_request_cb);
 
   if ( sas_i != 0) {
     _stun_on_request_fail(sam_u, sas_i);
-    c3_free(buf_y);
     c3_free(snd_u);
   }
 }
