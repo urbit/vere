@@ -1391,8 +1391,8 @@ _stun_send_response_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 
 static void
 _stun_make_response(const c3_y req_y[20],
-                    const struct sockaddr_in* add_u,
-                    c3_y buf_y[40])
+                    u3_lane*   lan_u,
+                    c3_y       buf_y[40])
 {
   c3_w cok_w = 0x2112A442;
   c3_w cur_w = 20;
@@ -1411,8 +1411,8 @@ _stun_make_response(const c3_y req_y[20],
   buf_y[cur_w + 4] = 0x00;  // extra reserved 0x0 byte
   buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
 
-  c3_s por_s = htons(ntohs(add_u->sin_port) ^ cok_w >> 16);
-  c3_w pip_w = htonl(ntohl(add_u->sin_addr.s_addr) ^ cok_w);
+  c3_s por_s = htons(lan_u->por_s ^ (cok_w >> 16));
+  c3_w pip_w = htonl(lan_u->pip_w ^ cok_w);
 
   memcpy(buf_y + cur_w + 6, &por_s, 2);  // X-Port
   memcpy(buf_y + cur_w + 8, &pip_w, 4);  // X-IP Addres
@@ -1422,15 +1422,19 @@ _stun_make_response(const c3_y req_y[20],
 }
 
 static void
-_stun_on_request(u3_ames*               sam_u,
-                 const c3_y*            req_y,
-                 const struct sockaddr* adr_u)
+_stun_on_request(u3_ames*              sam_u,
+                const c3_y*            req_y,
+                const struct sockaddr* adr_u)
 {
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sam_u = sam_u;
 
-  // XX check req_y length
-  _stun_make_response(req_y, (struct sockaddr_in*)adr_u, snd_u->hun_y);
+  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+  u3_lane lan_u = {
+    .por_s = ntohs(add_u->sin_port),
+    .pip_w = ntohl(add_u->sin_addr.s_addr)
+  };
+  _stun_make_response(req_y, &lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
@@ -2749,13 +2753,13 @@ _ames_recv_cb(uv_udp_t*        wax_u,
               == c3y) {
     _stun_on_response(sam_u, (c3_y*)buf_u->base, nrd_i);
     c3_free(buf_u->base);
-  } else {
-    u3_ames*            sam_u = wax_u->data;
+  }
+  else {
     struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-    u3_lane             lan_u;
-
-    lan_u.por_s = ntohs(add_u->sin_port);
-    lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+    u3_lane             lan_u = {
+      .por_s = ntohs(add_u->sin_port),
+      .pip_w = ntohl(add_u->sin_addr.s_addr)
+    };
 
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //

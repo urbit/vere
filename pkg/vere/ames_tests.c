@@ -40,13 +40,7 @@ _test_stun(void)
   c3_y    req_y[20] = {0};
   c3_i    ret_i     = 0;
 
-  struct sockaddr_in add_u;
-  memset(&add_u, 0, sizeof(add_u));
-  add_u.sin_family      = AF_INET;
-  add_u.sin_addr.s_addr = htonl(inn_u.pip_w);
-  add_u.sin_port        = htons(inn_u.por_s);
-
-  _stun_make_response(req_y, &add_u, rep_y);
+  _stun_make_response(req_y, &inn_u, rep_y);
 
   u3_lane lan_u;
 
