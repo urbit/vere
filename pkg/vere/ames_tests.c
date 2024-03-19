@@ -32,15 +32,14 @@ _test_ames(void)
 }
 
 static c3_i
-_test_stun(void)
+_test_stun_addr_roundtrip(u3_lane* inn_u)
 {
-  u3_lane inn_u     = { .pip_w = 0x7f000001, .por_s = 13337 };
   c3_c    res_c[16] = {0};
   c3_y    rep_y[40];
   c3_y    req_y[20] = {0};
   c3_i    ret_i     = 0;
 
-  _stun_make_response(req_y, &inn_u, rep_y);
+  _stun_make_response(req_y, inn_u, rep_y);
 
   u3_lane lan_u;
 
@@ -49,18 +48,36 @@ _test_stun(void)
     ret_i = 1;
   }
   else {
-    if ( lan_u.pip_w != inn_u.pip_w ) {
-      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_w, inn_u.pip_w);
+    if ( lan_u.pip_w != inn_u->pip_w ) {
+      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_w, inn_u->pip_w);
       ret_i = 1;
     }
 
-    if ( lan_u.por_s != inn_u.por_s ) {
-      fprintf(stderr, "stun: addr mismatch %u %u\r\n", lan_u.por_s, inn_u.por_s);
+    if ( lan_u.por_s != inn_u->por_s ) {
+      fprintf(stderr, "stun: addr mismatch %u %u\r\n", lan_u.por_s, inn_u->por_s);
       ret_i = 1;
     }
   }
 
   return ret_i;
+}
+
+static c3_i
+_test_stun(void)
+{
+  u3_lane inn_u = { .pip_w = 0x7f000001, .por_s = 13337 };
+  c3_w    len_w = 256;
+
+  while ( len_w-- ) {
+    if ( _test_stun_addr_roundtrip(&inn_u) ) {
+      return 1;
+    }
+
+    inn_u.pip_w++;
+    inn_u.por_s++;
+  }
+
+  return 0;
 }
 
 /* main(): run all test cases.
