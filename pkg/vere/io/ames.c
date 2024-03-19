@@ -1449,51 +1449,51 @@ _stun_on_request(u3_ames*              sam_u,
 static void
 _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
 {
-  u3_stun_state old_y = sam_u->sun_u.sat_y;
-
   u3_lane lan_u;
 
   //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
   if ( c3n == _stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
     return;
   }
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  if (sam_u->sun_u.wok_o == c3n) {
-    // stop %ping app
-    u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
-                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
-    sam_u->sun_u.wok_o = c3y;
-  }
-  else if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
-            (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
+
+  if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
+       (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
   {
     // lane changed
+    u3_noun wir = u3nc(c3__ames, u3_nul);
     u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
                        u3nc(c3n, u3_ames_encode_lane(lan_u)));
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
   }
-  else {
-    u3z(wir);
+  else if ( c3n == sam_u->sun_u.wok_o ) {
+    // stop %ping app
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
+    sam_u->sun_u.wok_o = c3y;
   }
+
   sam_u->sun_u.sef_u = lan_u;
 
   switch ( sam_u->sun_u.sat_y ) {
-  case STUN_OFF: break;       //  ignore; stray response
-  case STUN_KEEPALIVE: break; //  ignore; duplicate response
-  case STUN_TRYING: {
-    sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-    if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
-      u3l_log("stun: getentropy fail: %s", strerror(errno));
-      _stun_on_lost(sam_u);
-    }
-    else {
-      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
-    }
-  } break;
-  default: assert("programmer error");
+    case STUN_OFF:       break; //  ignore; stray response
+    case STUN_KEEPALIVE: break; //  ignore; duplicate response
+
+    case STUN_TRYING: {
+      sam_u->sun_u.sat_y = STUN_KEEPALIVE;
+      if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
+        u3l_log("stun: getentropy fail: %s", strerror(errno));
+        _stun_on_lost(sam_u);
+      }
+      else {
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+      }
+    } break;
+
+    default: assert("programmer error");
   }
 }
 
