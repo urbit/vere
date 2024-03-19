@@ -1730,16 +1730,14 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
 
     cur += 2;
 
-    c3_s port = htons(_ames_sift_short(buf_y + cur)) ^ cookie >> 16;
-    c3_w ip = ntohl(htonl(_ames_sift_word(buf_y + cur + 2)) ^ cookie);
-
-    lan_u->por_s = ntohs(port);
-    lan_u->pip_w = ip;
+    lan_u->por_s = ntohs(_ames_sift_short(buf_y + cur)) ^ (cookie >> 16);
+    lan_u->pip_w = ntohl(_ames_sift_word(buf_y + cur + 2)) ^ cookie;
 
     if ( u3C.wag_w & u3o_verbose ) {
-      c3_c ip_str[INET_ADDRSTRLEN];
-      inet_ntop(AF_INET, &ip, ip_str, INET_ADDRSTRLEN);
-      u3l_log("stun: hear ip:port %s:%u", ip_str, port);
+      c3_w nip_w = htonl(lan_u->pip_w);
+      c3_c nip_c[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
+      u3l_log("stun: hear ip:port %s:%u", nip_c, lan_u->por_s);
     }
     return c3y;
   }
