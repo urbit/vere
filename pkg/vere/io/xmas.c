@@ -1775,8 +1775,44 @@ _xmas_req_pact_init(u3_xmas* sam_u, u3_xmas_pict* pic_u, u3_lane* lan_u)
   return req_u;
 }
 
+/* _xmas_plan_mess(): construct and enqueue [%mess %page] ovum.
+*/
+static u3_ovum*
+_xmas_plan_mess(u3_xmas*      sam_u,
+                u3_xmas_auth* aum_u,
+                u3_xmas_name* nam_u,
+                u3_lane       lan_u,
+                c3_w          len_w,
+                c3_y*         buf_y)
+{
+  u3_noun wir = u3nc(c3__xmas, u3_nul);
+  u3_noun aut, cad;
 
+  switch ( aum_u->typ_e ) {
+    case AUTH_SIGN: {
+      aut = u3nc(c3y, u3i_bytes(64, aum_u->sig_y));
+    } break;
 
+    case AUTH_HMAC: {
+      aut = u3nc(c3n, u3i_bytes(32, aum_u->mac_y));
+    } break;
+
+    default: u3_assert(0);
+  }
+
+  {
+    u3_noun pax = _xmas_encode_path(nam_u->pat_s,
+                            (c3_y*)(nam_u->pat_c));
+    u3_noun par = u3nc(u3i_chubs(2, nam_u->her_d), pax);
+    u3_noun lan = u3nc(u3_nul, u3_xmas_encode_lane(lan_u));
+    u3_noun dat = u3i_bytes(len_w, buf_y);
+
+    cad = u3nt(c3__mess, lan,
+               u3nq(c3__page, par, aut, dat));
+  }
+  return u3_auto_plan(&sam_u->car_u,
+                      u3_ovum_init(0, c3__m, wir, cad));
+}
 
 static void
 _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
@@ -1786,15 +1822,16 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
 #endif
   u3_xmas* sam_u = pic_u->sam_u;
   u3_xmas_pact* pac_u = &pic_u->pac_u;
-  c3_s fra_s;
+  u3_xmas_name *nam_u = &pac_u->pag_u.nam_u;
+  u3_xmas_data* dat_u = &pac_u->pag_u.dat_u;
 
-  u3_peer* per_u = _xmas_get_peer(sam_u, pac_u->pag_u.nam_u.her_d);
+  u3_peer* per_u = _xmas_get_peer(sam_u, nam_u->her_d);
   c3_o new_o = c3n;
   if ( NULL == per_u ) {
     new_o = c3y;
     per_u = c3_calloc(sizeof(u3_peer));
     _init_peer(sam_u, per_u);
-    _meet_peer(sam_u, per_u, pac_u->pag_u.nam_u.her_d);
+    _meet_peer(sam_u, per_u, nam_u->her_d);
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
@@ -1808,10 +1845,10 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
     //_log_lane(&lan_u);
   }
 
-  _xmas_put_peer(sam_u, pac_u->pag_u.nam_u.her_d, per_u);
+  _xmas_put_peer(sam_u, nam_u->her_d, per_u);
 
 
-  u3_weak hit = _xmas_get_cache(sam_u, &pac_u->pag_u.nam_u);
+  u3_weak hit = _xmas_get_cache(sam_u, nam_u);
 
   if ( u3_none != hit ) {
     _xmas_forward(pic_u, lan_u);
@@ -1820,18 +1857,11 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
     return;
   }
 
-  if ( 1 == pac_u->pag_u.dat_u.tot_w ) {
-    u3_noun wir = u3nc(c3__xmas, u3_nul);
-    u3_noun aut, cad;
-
-    switch ( pac_u->pag_u.dat_u.aum_u.typ_e ) {
-      case AUTH_SIGN: {
-        aut = u3nc(c3y, u3i_bytes(64, pac_u->pag_u.dat_u.aum_u.sig_y));
-      } break;
-
-      case AUTH_HMAC: {
-        aut = u3nc(c3n, u3i_bytes(32, pac_u->pag_u.dat_u.aum_u.mac_y));
-      } break;
+  if ( 1 == dat_u->tot_w ) {
+    //  XX should validate elsewhere
+    switch ( dat_u->aum_u.typ_e ) {
+      case AUTH_SIGN:
+      case AUTH_HMAC: break;
 
       default: {
         u3l_log("page: strange auth");
@@ -1840,41 +1870,29 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
       }
     }
 
-    {
-      u3_noun pax = _xmas_encode_path(pac_u->pag_u.nam_u.pat_s,
-                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
-      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
-      u3_noun lan = u3nc(u3_nul, u3_xmas_encode_lane(lan_u));
-      u3_noun dat = u3i_bytes(pac_u->pag_u.dat_u.len_w,
-                              pac_u->pag_u.dat_u.fra_y);
-
-      cad = u3nt(c3__mess, lan,
-                 u3nq(c3__page, par, aut, dat));
-    }
-
     //  XX should put in cache on success
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__m, wir, cad));
+    _xmas_plan_mess(sam_u, &dat_u->aum_u, nam_u,
+                    lan_u, dat_u->len_w, dat_u->fra_y);
+
     _xmas_free_pict(pic_u);
     return;
   }
   
-  // u3_noun fra = u3i_bytes(pac_u->pag_u.dat_u.len_w, pac_u->pag_u.dat_u.fra_y) ;
-  /*if ( dop_o == c3n && pac_u->pag_u.nam_u.fra_w == 150) {
+  /*if ( dop_o == c3n && pag_u->nam_u.fra_w == 150) {
     dop_o = c3y;
     u3l_log("simulating dropped packet");
     return;
   }*/
   u3_pend_req* req_u;
  
-  if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
+  if ( nam_u->nit_o == c3y ) {
     req_u = _xmas_req_pact_init(sam_u, pic_u, &lan_u);
     if ( req_u == NULL ) {
       _xmas_free_pict(pic_u);
       return;
     }
   } else {
-    req_u = _xmas_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
+    req_u = _xmas_req_pact_done(sam_u, nam_u, dat_u, &lan_u);
     if ( req_u == NULL ) {
       // cleanup
       _xmas_free_pict(pic_u);
@@ -1916,37 +1934,13 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
     // u3l_log("queue size %u", req_u->mis_u.len_w);
     c3_d now_d = _get_now_micros();
     u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
-    c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
-    u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
-    _xmas_del_request(sam_u, &pac_u->pag_u.nam_u);
+    c3_w siz_w = (1 << (nam_u->boq_y - 3));
 
-    u3_noun wir = u3nc(c3__xmas, u3_nul);
-    u3_noun cad;
-    {
-      u3_noun pax = _xmas_encode_path(pac_u->pag_u.nam_u.pat_s,
-                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
-      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
-      u3_noun lan = u3_nul;
-      u3_noun aut = u3nc(c3y, 0); // XX s/b saved in request state
+    _xmas_plan_mess(sam_u, &req_u->aum_u, nam_u,
+                    lan_u, (siz_w * req_u->tot_w), req_u->dat_y);
 
-      switch ( req_u->aum_u.typ_e ) {
-        case AUTH_SIGN: {
-          aut = u3nc(c3y, u3i_bytes(64, req_u->aum_u.sig_y));
-        } break;
-
-        case AUTH_HMAC: {
-          aut = u3nc(c3n, u3i_bytes(32, req_u->aum_u.mac_y));
-        } break;
-
-        default: u3_assert(0);
-      }
-
-      cad = u3nt(c3__mess, lan,
-                 u3nq(c3__page, par, aut, dat));
-    }
-
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__m, wir, cad));
+    // XX shouldn't delete request till success
+    _xmas_del_request(sam_u, nam_u);
   }
 
   _xmas_free_pict(pic_u);
