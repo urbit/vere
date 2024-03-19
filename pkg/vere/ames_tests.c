@@ -1,7 +1,6 @@
 /// @file
 
-#include "noun.h"
-#include "vere.h"
+#include "./io/ames.c"
 
 /* _setup(): prepare for tests.
 */

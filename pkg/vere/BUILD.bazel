@@ -183,6 +183,12 @@ vere_binary(
 # TESTS
 #
 
+
+cc_library(
+  name = "ames_src",
+  hdrs = ["io/ames.c"],
+)
+
 cc_test(
     name = "ames_tests",
     timeout = "short",
@@ -192,7 +198,7 @@ cc_test(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
-    deps = [":vere"],
+    deps = [":vere", ":ames_src"]
 )
 
 cc_test(
