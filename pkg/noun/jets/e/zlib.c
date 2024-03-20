@@ -43,11 +43,6 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     byt_y = (c3_y*)vat_u->buf_w;
   }
 
-  /* Leading zeros do not make sense 
-    * for a Zlib stream 
-    */
-  u3_assert(wid_d == sad_i);
-
   z_stream zea;
   c3_w zas_w;
 
@@ -73,7 +68,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   zea.next_out = cuf_y;
   zea.avail_out = sob_i;
 
-  zas_w = inflateInit(&zea);
+  zas_w = inflateInit2(&zea, 47);
 
   if( Z_OK != zas_w) { 
     fprintf(stderr, "u3qe_zlib_expand: error while initializing Zlib, zas_w = %d\r\n", zas_w);

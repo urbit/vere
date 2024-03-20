@@ -82,7 +82,7 @@ static c3_w _read_size(c3_y* buf_y, c3_w* pos_wp, c3_w buf_len_w, c3_w len_w) {
   return size;
 }
 
-u3_noun u3qe_git_pak_expand_delta_object(u3_noun base, 
+u3_noun u3qe_git_pack_expand_delta_object(u3_noun base, 
                                          u3_noun delta) {
 
   /* +$  raw-object  [type=object-type data=stream:libstream]
@@ -97,13 +97,14 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
   // base=raw-object
   //
   u3_atom base_type;
+  u3_atom base_size;
   u3_noun base_data;
 
   u3_atom base_data_pos;
   u3_atom base_data_p_octs;
   u3_atom base_data_q_octs;
 
-  u3x_cell(base, &base_type, &base_data);
+  u3x_trel(base, &base_type, &base_size, &base_data);
   u3x_trel(base_data, &base_data_pos, &base_data_p_octs, &base_data_q_octs);
 
   // delta=pack-object
@@ -152,6 +153,7 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
   c3_w  bas_len_w;
 
   bas_y = _unpack_octs(base_data_p_octs, &base_data_q_octs, &bas_buf_len_w);
+  // u3_assert(base_size == (base_data_p_octs - base_data_pos));
   bas_begin_y = bas_y;
   bas_len_w = base_data_p_octs;
 
@@ -162,14 +164,14 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
   c3_w biz_w = _read_size(sea_y, &sea_pos_w, sea_buf_len_w, sea_len_w);
   c3_w siz_w = _read_size(sea_y, &sea_pos_w, sea_buf_len_w, sea_len_w);
 
-  // fprintf(stderr, "u3qe__pak_expand_delta_object: biz_w = %d, siz_w = %d\r\n", biz_w, siz_w);
+  // fprintf(stderr, "u3qe__pack_expand_delta_object: biz_w = %d, siz_w = %d\r\n", biz_w, siz_w);
 
   // Base size mismatch
   //
   if (biz_w != (base_data_p_octs - base_data_pos)) {
     fprintf(stderr, "bas_buf_len_w = %d, bas_len_w = %d\r\n", bas_buf_len_w, bas_len_w);
     fprintf(stderr, "sea_pos = %d, sea_buf_len = %d, sea_len = %d\r\n", sea_pos_w, sea_buf_len_w, sea_len_w);
-    fprintf(stderr, "u3qe_git_pak_expand_delta_object: base (pos = %d) object size mismatch!\r\n", base_data_pos);
+    fprintf(stderr, "u3qe_git_pack_expand_delta_object: base (pos = %d) object size mismatch!\r\n", base_data_pos);
 
     // u3_assert(false);
     // _free();
@@ -191,7 +193,7 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
 
     // XX ?>  (lth pos.sea p.octs.sea)
     if ( 0x0 == bat_y ) {
-      fprintf(stderr, "u3qe__pak_expand_delta_object: hit reserved instruction 0x0\r\n");
+      fprintf(stderr, "u3qe__pack_expand_delta_object: hit reserved instruction 0x0\r\n");
 
       u3m_bail(c3__fail);
     }
@@ -203,16 +205,16 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
         c3_w siz_w = bat_y & 0x7f;
 
         if (sea_len_w - sea_pos_w < siz_w) {
-          fprintf(stderr, "u3qe__pak_expand_delta_object: invalid add instruction\r\n");
+          fprintf(stderr, "u3qe__pack_expand_delta_object: invalid add instruction\r\n");
           
           u3_assert(false);
           return u3_none;
         }
 
-        // fprintf(stderr, "u3qe__pak_expand_delta: ADD[siz_w = %d]\r\n", siz_w);
+        // fprintf(stderr, "u3qe__pack_expand_delta: ADD[siz_w = %d]\r\n", siz_w);
 
         if (tar_len_w < siz_w) {
-          fprintf(stderr, "u3qe__pak_expand_delta: ADD overflowed\r\n");
+          fprintf(stderr, "u3qe__pack_expand_delta: ADD overflowed\r\n");
 
           u3_assert(false);
           return u3_none;
@@ -280,12 +282,12 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
         }
 
         if (tar_len_w < siz_w || (bas_len_w - off_w) < siz_w) {
-          fprintf(stderr, "u3qe__pak_expand_delta: copy out of range\r\n");
+          fprintf(stderr, "u3qe__pack_expand_delta: copy out of range\r\n");
           u3_assert(false);
           return u3_none;
         }
 
-        // fprintf(stderr, "u3qe__pak_expand_delta: COPY[siz_w = %d, off_w = %d]\r\n", siz_w, off_w);
+        // fprintf(stderr, "u3qe__pack_expand_delta: COPY[siz_w = %d, off_w = %d]\r\n", siz_w, off_w);
         
         // Region to be copied overlaps with the atom buffer
         //
@@ -316,18 +318,18 @@ u3_noun u3qe_git_pak_expand_delta_object(u3_noun base,
   }
 
   if (tar_len_w) {
-    fprintf(stderr, "u3qe__pak_expand_delta: target object underfilled (%d bytes left)\r\n", tar_len_w);
+    fprintf(stderr, "u3qe__pack_expand_delta: target object underfilled (%d bytes left)\r\n", tar_len_w);
     u3_assert(false);
     return u3_none;
   }
 
   u3_noun data = u3nc(0, u3nc(u3i_chub(siz_w), u3i_slab_mint(&sab_u)));
-  u3_noun rob = u3nc(u3k(base_type), data);
+  u3_noun rob = u3nt(u3k(base_type), u3k(base_size), data);
 
   return rob;
 }
 
-u3_noun u3we_git_pak_expand_delta_object(u3_noun cor) {
+u3_noun u3we_git_pack_expand_delta_object(u3_noun cor) {
 
   u3_noun base;
   u3_noun delta;
@@ -335,5 +337,5 @@ u3_noun u3we_git_pak_expand_delta_object(u3_noun cor) {
   u3x_mean(cor, u3x_sam_2, &base,
            u3x_sam_3, &delta, 0);
 
-  return u3qe_git_pak_expand_delta_object(base, delta);
+  return u3qe_git_pack_expand_delta_object(base, delta);
 }

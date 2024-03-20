@@ -231,8 +231,10 @@
     u3_noun u3we_stream_append_get_bytes(u3_noun);
     u3_noun u3we_stream_append_read_bytes(u3_noun);
       
-    u3_noun u3we_git_io_stream_pkt_lines_on_band(u3_noun);
-    u3_noun u3we_git_pak_expand_delta_object(u3_noun);
+    u3_noun u3we_git_http_read_pkt_lines_on_band(u3_noun);
+    u3_noun u3we_git_http_write_pkt_lines_on_band(u3_noun);
+
+    u3_noun u3we_git_pack_expand_delta_object(u3_noun);
 
     u3_noun u3we_bend_fun(u3_noun);
     u3_noun u3we_cold_fun(u3_noun);
