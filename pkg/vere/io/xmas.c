@@ -164,9 +164,9 @@ typedef struct _u3_xmas {
   c3_o               for_o;             //  is forwarding
   ur_cue_test_t*     tes_u;             //  cue-test handle
   u3_cue_xeno*       sil_u;             //  cue handle
-  u3p(u3h_root)      her_p;             // (map ship
-  u3p(u3h_root)      pac_p;             // packet cache
-  u3p(u3h_root)      lan_p;             // lane cache
+  u3p(u3h_root)      her_p;             // (map ship u3_peer)
+  u3p(u3h_root)      pac_p;             // (map name-scry $%([%wait @da (list lane)] [%item response-packet]))
+  u3p(u3h_root)      lan_p;             // (map [lane ship] u3_gage)
   u3_czar_info       imp_u[256];       // galaxy information
   u3p(u3h_root)      req_p;            // hashtable of u3_pend_req
   c3_c*              dns_c;            // turf (urb.otrg)
@@ -1825,6 +1825,10 @@ _xmas_hear_page(u3_xmas_pict* pic_u, u3_lane lan_u)
   u3_xmas_name *nam_u = &pac_u->pag_u.nam_u;
   u3_xmas_data* dat_u = &pac_u->pag_u.dat_u;
 
+  // XX if response to our request
+  //      req_plan_init/req_plan_done
+  //    if request in PIT, send response to all lanes
+
   u3_peer* per_u = _xmas_get_peer(sam_u, nam_u->her_d);
   c3_o new_o = c3n;
   if ( NULL == per_u ) {
@@ -1971,6 +1975,12 @@ _xmas_hear_peek(u3_xmas_pict* pic_u, u3_lane lan_u)
   c3_d* her_d = pac_u->pek_u.nam_u.her_d;
   c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
 
+  //    if our, put in PIT and suppress duplicates
+  //    if not duplicate, plan scry
+  //    if relaying, check PIT
+  //    if in PIT, add lane (and send upstream)
+  //    if routable, send to upstream and put in PIT
+
   // XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
     u3_peer* per_u = _xmas_get_peer(sam_u, her_d);
@@ -2060,6 +2070,14 @@ _xmas_hear_poke(u3_xmas_pict* pic_u, u3_lane* lan_u)
   u3_xmas* sam_u = pic_u->sam_u;
   c3_d* her_d = pac_u->pek_u.nam_u.her_d;
   c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
+
+  // XX if cached, send response
+  //    if our, put in PIT and suppress duplicates
+  //    if not duplicate, plan event
+  //       if >1 fragment, on success, hairpin payload request
+  //    if relaying, check PIT
+  //    if in PIT, add lane (and send upstream)
+  //    if routable, send to upstream and put in PIT
 
   //  XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
