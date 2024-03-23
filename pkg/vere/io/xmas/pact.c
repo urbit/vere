@@ -585,7 +585,7 @@ xmas_sift_pact(u3_xmas_pact* pac_u, c3_y* buf_y, c3_w len_w)
     default: {
       u3l_log("xmas: received unknown packet type");
       _log_buf(buf_y, len_w);
-      break;
+      return 0;
     }
   }
 
