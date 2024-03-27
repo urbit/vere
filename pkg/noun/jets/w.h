@@ -339,6 +339,9 @@
     u3_noun u3wf_la_subs(u3_noun);
     u3_noun u3wf_la_muls(u3_noun);
     u3_noun u3wf_la_divs(u3_noun);
+    u3_noun u3wf_la_dot(u3_noun);
+    u3_noun u3wf_la_diag(u3_noun);
+    u3_noun u3wf_la_trace(u3_noun);
     u3_noun u3wf_la_mmul(u3_noun);
 
 #endif /* ifndef U3_JETS_W_H */
