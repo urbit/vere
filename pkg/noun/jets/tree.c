@@ -2153,10 +2153,22 @@ static u3j_core _139_sep_d[] =
 */
 static u3j_harm _139_hex__lagoon_add_a[] = {{".2", u3wf_la_add}, {}};
 static u3j_harm _139_hex__lagoon_sub_a[] = {{".2", u3wf_la_sub}, {}};
+static u3j_harm _139_hex__lagoon_mul_a[] = {{".2", u3wf_la_mul}, {}};
+static u3j_harm _139_hex__lagoon_div_a[] = {{".2", u3wf_la_div}, {}};
+static u3j_harm _139_hex__lagoon_adds_a[] = {{".2", u3wf_la_adds}, {}};
+static u3j_harm _139_hex__lagoon_subs_a[] = {{".2", u3wf_la_subs}, {}};
+static u3j_harm _139_hex__lagoon_muls_a[] = {{".2", u3wf_la_muls}, {}};
+static u3j_harm _139_hex__lagoon_divs_a[] = {{".2", u3wf_la_divs}, {}};
 static u3j_harm _139_hex__lagoon_mmul_a[] = {{".2", u3wf_la_mmul}, {}};
 static u3j_core _139_hex__la_core_d[] =
   { { "add-rays", 7, _139_hex__lagoon_add_a,  0, no_hashes },
     { "sub-rays", 7, _139_hex__lagoon_sub_a,  0, no_hashes },
+    { "mul-rays", 7, _139_hex__lagoon_mul_a,  0, no_hashes },
+    { "div-rays", 7, _139_hex__lagoon_div_a,  0, no_hashes },
+    { "add-scal", 7, _139_hex__lagoon_adds_a, 0, no_hashes },
+    { "sub-scal", 7, _139_hex__lagoon_subs_a, 0, no_hashes },
+    { "mul-scal", 7, _139_hex__lagoon_muls_a, 0, no_hashes },
+    { "div-scal", 7, _139_hex__lagoon_divs_a, 0, no_hashes },
     { "mmul",     7, _139_hex__lagoon_mmul_a, 0, no_hashes },
     {}
   };

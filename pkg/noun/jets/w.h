@@ -333,6 +333,12 @@
 
     u3_noun u3wf_la_add(u3_noun);
     u3_noun u3wf_la_sub(u3_noun);
+    u3_noun u3wf_la_mul(u3_noun);
+    u3_noun u3wf_la_div(u3_noun);
+    u3_noun u3wf_la_adds(u3_noun);
+    u3_noun u3wf_la_subs(u3_noun);
+    u3_noun u3wf_la_muls(u3_noun);
+    u3_noun u3wf_la_divs(u3_noun);
     u3_noun u3wf_la_mmul(u3_noun);
 
 #endif /* ifndef U3_JETS_W_H */
