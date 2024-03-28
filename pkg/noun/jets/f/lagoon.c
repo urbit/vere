@@ -73,32 +73,42 @@
     }
   }
 
-/* shape
+/* length of shape = x * y * z * w * ...
 */
-  static inline uint64_t _get_length(u3_noun shape)
+  static inline c3_d _get_length(u3_noun shape)
   {
-    uint64_t len = 1;
+    c3_d len = 1;
     while (u3_nul != shape) {
-      len = len * u3h(shape);
+      len = len * u3x_atom(u3h(shape));
       shape = u3t(shape);
     }
     return len;
   }
 
-  static inline uint64_t* _get_dims(u3_noun shape)
+/* get dims from shape as array [x y z w ...]
+*/
+  static inline c3_d* _get_dims(u3_noun shape)
   {
-    uint64_t len = u3kb_lent(shape);
-    uint64_t* dims = (uint64_t*)u3a_malloc(len*sizeof(uint64_t));
-    for (uint64_t i = 0; i < len; i++) {
-      dims[i] = u3h(shape);
+    u3_atom len = u3qb_lent(shape);
+    c3_d len_d = u3r_chub(0, len);
+    c3_d* dims = (c3_d*)u3a_malloc(len_d*sizeof(c3_d));
+    for (uint64_t i = 0; i < len_d; i++) {
+      dims[i] = u3r_chub(0, u3x_atom(u3h(shape)));
       shape = u3t(shape);
     }
+    u3z(len);
     return dims;
   }
 
+/* 
+*/
   static inline size_t _get_array_length(uint64_t* array)
   {
     size_t n = sizeof(array)/sizeof(array[0]);
+    for (size_t i = 0; i < n; i++) {
+      fprintf(stderr, "%x ", array[i]);
+    }
+    fprintf(stderr, " => %x \n", n);
     return n;
   }
 
@@ -434,7 +444,9 @@
   {
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     uint64_t len_a = _get_length(shape);
+    fprintf(stderr, "len_a: %d 0x%x units\r\n", len_a, len_a);
     uint64_t siz_a = len_a * pow(2, bloq - 3);
+    fprintf(stderr, "siz_a: %d 0x%x bytes\r\n", siz_a, siz_a);
     uint8_t* x_bytes = (uint8_t*)u3a_malloc(siz_a*sizeof(uint8_t));
     u3r_bytes(0, siz_a, x_bytes, x_data);
     uint8_t* y_bytes = (uint8_t*)u3a_malloc((siz_a+1)*sizeof(uint8_t));
@@ -875,28 +887,33 @@
                u3_noun shape,
                u3_noun bloq)
   {
-    //  Unpack shape into an array of dimensions.
-    uint64_t* dims = _get_dims(shape);
     //  Assert length of dims is 2.
+    assert(u3qb_lent(shape) == 2);
+    //  Unpack shape into an array of dimensions.
+    uint64_t *dims = _get_dims(shape);
     assert(dims[0] == dims[1]);
-    assert(_get_array_length(dims) == 2);
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     uint64_t len_a = _get_length(shape);
     uint64_t siz_a = len_a * pow(2, bloq - 3);
+    uint64_t stride = dims[0] * pow(2, bloq - 3);
     uint8_t* x_bytes = (uint8_t*)u3a_malloc((siz_a+1)*sizeof(uint8_t));
-    u3r_bytes(0, siz_a, x_bytes, x_data);
-    uint8_t* y_bytes = (uint8_t*)u3a_malloc((dims[0]*dims[1]+1)*sizeof(uint8_t));
+    u3r_bytes(0, siz_a+1, x_bytes, x_data);
+    uint64_t siz_b = stride * dims[1];
+    uint8_t* y_bytes = (uint8_t*)u3a_malloc((siz_b+1)*sizeof(uint8_t));
 
     u3_noun r_data;
 
-    for (uint64_t i = 0; i < dims[0]; i++) {
-      y_bytes[i] = x_bytes[i*dims[0] + i];
+    for (uint64_t i = 0; i < dims[1]; i++) {
+      for (uint64_t j = 0; j < stride; j++) {
+        fprintf(stderr, "i*s+j = %d*%d+%d = %d // x_bytes[i]: %lx\r\n", i, stride, j, i*stride+j, x_bytes[i*stride+j + i]);
+        y_bytes[i*stride+j] = x_bytes[i*stride+j + i];
+      }
     }
-    y_bytes[dims[0]*dims[1]] = 1;  // pin head
+    y_bytes[siz_b] = 1;  // pin head
 
     //  Unpack the result back into a noun.
-    r_data = u3i_bytes((dims[0]*dims[1]+1)*sizeof(uint8_t), y_bytes);
+    r_data = u3i_bytes((siz_b+1)*sizeof(uint8_t), y_bytes);
     
     u3a_free(x_bytes);
     u3a_free(y_bytes);
@@ -913,7 +930,8 @@
                      u3_noun bloq)
   {
     u3_noun diag_data = u3qf_la_diag(x_data, shape, bloq);
-    return u3qf_la_dot_real(diag_data, diag_data, shape, bloq);
+    uint64_t len_x0 = _get_dims(shape)[0];
+    return u3qf_la_dot_real(diag_data, diag_data, u3nt(len_x0, 0x1, u3_nul), bloq);
   }
 
 /* mmul
@@ -1053,7 +1071,7 @@
           case c3__real:
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_add_real(x_data, y_data, x_shape, a_bloq);
-            return u3nc(u3nq(x_shape, a_bloq, a_kind, a_fxp), r_data);
+            return u3nc(u3nq(y_shape, a_bloq, a_kind, a_fxp), r_data);
             break;
 
           default:
@@ -1482,8 +1500,8 @@
     u3_noun a_meta, x_data;
 
     if ( c3n == u3r_mean(cor,
-                         u3x_sam_4, &a_meta,
-                         u3x_sam_5, &x_data,
+                         u3x_sam_2, &a_meta,
+                         u3x_sam_3, &x_data,
                          0) ||
          c3n == u3ud(x_data) )
     {
@@ -1507,7 +1525,8 @@
         return u3m_bail(c3__exit);
       } else {
         u3_noun r_data = u3qf_la_diag(x_data, x_shape, a_bloq);
-        return u3nc(u3nq(x_shape, a_bloq, a_kind, a_fxp), r_data);
+        uint64_t len_x0 = _get_dims(x_shape)[0];
+        return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), a_bloq, a_kind, a_fxp), r_data);
       }
     }
   }
@@ -1519,8 +1538,8 @@
     u3_noun a_meta, x_data;
 
     if ( c3n == u3r_mean(cor,
-                         u3x_sam_4, &a_meta,
-                         u3x_sam_5, &x_data,
+                         u3x_sam_2, &a_meta,
+                         u3x_sam_3, &x_data,
                          0) ||
          c3n == u3ud(x_data) )
     {
@@ -1547,8 +1566,7 @@
           case c3__real:
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_trace_real(x_data, x_shape, a_bloq);
-            uint64_t len_x0 = _get_dims(x_shape)[0];
-            return u3nc(u3nq(len_x0, a_bloq, a_kind, a_fxp), r_data);
+            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), a_bloq, a_kind, a_fxp), r_data);
             break;
 
           default:
