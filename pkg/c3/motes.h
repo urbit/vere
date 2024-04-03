@@ -756,6 +756,7 @@
 #   define c3__mesa   c3_s4('m','e','s','a')
 #   define c3__mesh   c3_s4('m','e','s','h')
 #   define c3__mess   c3_s4('m','e','s','s')
+#   define c3__mess_ser   c3_s8('m','e','s','s','-', 's', 'e','r')
 #   define c3__met    c3_s3('m','e','t')
 #   define c3__meta   c3_s4('m','e','t','a')
 #   define c3__mill   c3_s4('m','i','l','l')

@@ -302,6 +302,7 @@ _mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u)
 
   }
   c3_w hed_w = _ames_sift_word(buf_y);
+  u3l_log("hed_w %x", hed_w);
 
   hed_u->nex_y = (hed_w >> 2)  & 0x3;
   hed_u->pro_y = (hed_w >> 4)  & 0x7;
@@ -389,9 +390,9 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
 static c3_w
 _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 {
-#ifdef MESA_DEBUG
-  //u3l_log("mesa: sifting data %i", len_w);
-#endif
+// #ifdef MESA_DEBUG
+  u3l_log("mesa: sifting data %i", len_w);
+// #endif
 
   c3_w cur_w = 0;
   u3_mesa_data_meta met_u;
@@ -540,21 +541,26 @@ _mesa_sift_poke_pact(u3_mesa_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
   c3_w cur_w = 0, nex_w;
   //  ack path
   if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
+    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
 
   //  payload path
   if ( !(nex_w = _mesa_sift_name(&pac_u->pay_u, buf_y + cur_w, len_w)) ) {
+    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
 
   //  payload
   if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
+    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
+
+  u3l_log("_mesa_sift_poke_pact cur_w %u", cur_w);
 
   return cur_w;
 }
@@ -571,6 +577,8 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   _mesa_sift_head(buf_y, &pac_u->hed_u);
   buf_y += 8;
   len_w -= 8;
+
+  u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
@@ -707,27 +715,27 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   u3_mesa_data_meta met_u;
 
   met_u.bot_y = safe_dec(_mesa_met3_w(dat_u->tot_w));
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   // XX
   met_u.aul_y = dat_u->aum_u.typ_e;
   met_u.aur_y = dat_u->aup_u.len_y;
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y met_y = (met_u.bot_y & 0x3) << 0
              ^ (met_u.aul_y & 0x3) << 2
              ^ (met_u.aur_y & 0x3) << 4
              ^ (met_u.men_y & 0x3) << 6;
   buf_y[cur_w] = met_y;
   cur_w++;
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y tot_y = met_u.bot_y + 1;
   for (int i = 0; i < tot_y; i++ ) {
     buf_y[cur_w] = (dat_u->tot_w >> (8 * i)) & 0xFF;
     cur_w++;
   }
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   switch ( dat_u->aum_u.typ_e ) {
     case AUTH_SIGN: {
       memcpy(buf_y + cur_w, dat_u->aum_u.sig_y, 64);
@@ -741,7 +749,7 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 
     default: break;
   }
-
+    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   for ( int i = 0; i < dat_u->aup_u.len_y; i++ ) {
     memcpy(buf_y + cur_w, dat_u->aup_u.has_y[i], 32);
     cur_w += 32;
@@ -751,12 +759,14 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     buf_y[cur_w] = nel_y;
     cur_w++;
   }
-
+    u3l_log("_mesa_etch_data cur_w %u", cur_w);
   memcpy(buf_y + cur_w, (c3_y*)&dat_u->len_w, nel_y);
   cur_w += nel_y;
+    u3l_log("_mesa_etch_data cur_w %u", cur_w);
 
   memcpy(buf_y + cur_w, dat_u->fra_y, dat_u->len_w);
   cur_w += dat_u->len_w;
+    u3l_log("_mesa_etch_data cur_w %u", cur_w);
 
   return cur_w;
 }
@@ -775,7 +785,7 @@ _mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
     return 0;
   }
   cur_w += nex_w;
-
+    u3l_log("_mesa_etch_page_pact cur_w %u", cur_w);
   // XX hops
 
   return cur_w;
@@ -904,10 +914,11 @@ c3_w
 mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 {
   c3_w siz_w = _mesa_size_pact(pac_u);
-  if ( siz_w > PACT_SIZE ) {
-    fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
-    return 0;
-  }
+  u3l_log("mesa_etch_pact siz_w %u", siz_w);
+  // if ( siz_w > PACT_SIZE ) {
+  //   fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
+  //   return 0;
+  // }
 
   u3_mesa_head* hed_u = &pac_u->hed_u;
 
@@ -940,10 +951,11 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 
   hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
   hed_u->mug_w &= 0xFFFFF;
+      u3l_log("mesa_etch_pact mug_w %u", hed_u->mug_w);//u3m_bail(c3__bail);
   _mesa_etch_head(hed_u, buf_y);
 
   cur_w += nex_w;
-
+      u3l_log("mesa_etch_pact cur_w %u", cur_w);//u3m_bail(c3__bail);
   assert( siz_w == cur_w );
 
   return cur_w;

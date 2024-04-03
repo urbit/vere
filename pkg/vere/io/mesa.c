@@ -285,6 +285,14 @@ _log_pend_req(u3_pend_req* req_u)
   //u3l_log("timer in: %" PRIu64 " ms", uv_timer_get_due_in(&req_u->tim_u));
 }
 
+static void
+_log_mesa_data(u3_mesa_data dat_u)
+{
+  u3l_log("total frag: %u", dat_u.tot_w);
+  u3l_log("frag len: %u", dat_u.len_w);
+  // u3l_log("frag: %xxx", dat_u.fra_y);
+}
+
 static c3_d
 _get_now_micros()
 {
@@ -1034,7 +1042,7 @@ _realise_lane(u3_noun lan) {
   lan_u.pip_w = 0;
 
   if ( c3y == u3a_is_cat(lan)  ) {
-    u3_assert( lan < 256 );
+    // u3_assert( lan < 256 );
     if ( (c3n == u3_Host.ops_u.net) ) {
       lan_u.pip_w =  0x7f000001 ;
       lan_u.por_s = _ames_czar_port(lan);
@@ -1220,6 +1228,7 @@ _mesa_queue_czar(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
+  u3m_p("pac", pac);
   las = _mesa_queue_czar(sam_u, las, u3k(pac));
   c3_w len_w = u3r_met(3, pac);
   c3_y* buf_y = c3_calloc(len_w);
@@ -1758,7 +1767,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   _mesa_put_peer(sam_u, pac_u->pag_u.nam_u.her_d, per_u);
 
-
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
 
   if ( u3_none != hit ) {
@@ -1789,15 +1797,25 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     }
 
     {
-      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
-                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
-      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
-      u3_noun lan = u3nc(u3_nul, u3_mesa_encode_lane(lan_u));
-      u3_noun dat = u3i_bytes(pac_u->pag_u.dat_u.len_w,
-                              pac_u->pag_u.dat_u.fra_y);
+      // u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+      //                         (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      // u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      // u3_noun lan = u3nc(u3_nul, u3_mesa_encode_lane(lan_u));
+      // u3_noun dat = u3i_bytes(pac_u->pag_u.dat_u.len_w,
+      //                         pac_u->pag_u.dat_u.fra_y);
 
-      cad = u3nt(c3__mess, lan,
-                 u3nq(c3__page, par, aut, dat));
+      // cad = u3nt(c3__mess_ser, lan,
+      //            u3nq(c3__page, par, aut, dat));
+
+      u3_noun lan = u3_mesa_encode_lane(lan_u);
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, PACT_SIZE);
+
+      //  XX should just preserve input buffer
+      mesa_etch_pact(sab_u.buf_y, pac_u);
+
+      cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
+
     }
 
     //  XX should put in cache on success
@@ -1871,14 +1889,24 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_noun wir = u3nc(c3__mesa, u3_nul);
     u3_noun cad;
     {
-      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
-                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
-      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
-      u3_noun lan = u3_nul;
-      u3_noun aut = u3nc(c3y, 0); // XX s/b saved in request state
+      // u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+      //                         (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      // u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      // u3_noun lan = u3_nul;
+      // u3_noun aut = u3nc(c3y, 0); // XX s/b saved in request state
 
-      cad = u3nt(c3__mess, lan,
-                 u3nq(c3__page, par, aut, dat));
+      // cad = u3nt(c3__mess_ser, lan,
+      //            u3nq(c3__page, par, aut, dat));
+      u3_noun lan = u3_nul;
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, (siz_w * req_u->tot_w) + 135);
+      pac_u->pag_u.dat_u.len_w = (siz_w * req_u->tot_w);
+      // memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, pac_u->pag_u.dat_u.len_w);
+      pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
+      //  XX should just preserve input buffer
+      mesa_etch_pact(sab_u.buf_y, pac_u);
+
+      cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
     u3_auto_plan(&sam_u->car_u,
@@ -1990,14 +2018,16 @@ _mesa_poke_bail(u3_ovum* egg_u, u3_noun lud)
 static void
 _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
-#ifdef MESA_DEBUG
-  u3l_log("mesa: hear poke");
-  // u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
-#endif
+
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
   c3_d* her_d = pac_u->pek_u.nam_u.her_d;
   c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
+
+#ifdef MESA_DEBUG
+  u3l_log("mesa: hear poke");
+  u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
+#endif
 
   //  XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
@@ -2051,18 +2081,6 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   u3_ovum_bail bal_f;
   void*        ptr_v;
 
-  if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
-    nes_f = bal_f = ptr_v = NULL;
-    _mesa_free_pict(pic_u);
-  }
-  else {
-    assert(pac_u->pok_u.dat_u.tot_w);
-    //  XX check request state for *payload* (in-progress duplicate)
-    nes_f = _mesa_poke_news;
-    bal_f = _mesa_poke_bail;
-    ptr_v = pic_u;
-  }
-
   //  XX create PIT entry for ack
 
   u3_noun wir = u3nc(c3__mesa, u3_nul);
@@ -2076,6 +2094,18 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     mesa_etch_pact(sab_u.buf_y, pac_u);
 
     cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
+  }
+
+  if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
+    nes_f = bal_f = ptr_v = NULL;
+    _mesa_free_pict(pic_u);
+  }
+  else {
+    assert(pac_u->pok_u.dat_u.tot_w);
+    //  XX check request state for *payload* (in-progress duplicate)
+    nes_f = _mesa_poke_news;
+    bal_f = _mesa_poke_bail;
+    ptr_v = pic_u;
   }
 
   u3_auto_peer(
@@ -2100,7 +2130,9 @@ _mesa_hear(u3_mesa* sam_u,
 
   pic_u = c3_calloc(sizeof(u3_mesa_pict));
   pic_u->sam_u = sam_u;
+
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
+  u3l_log("_mesa_hear len_w %u lin_w %u", len_w, lin_w);
   c3_free(hun_y);
   if ( lin_w == 0 ) {
     MESA_LOG(SERIAL)
