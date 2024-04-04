@@ -2187,7 +2187,7 @@ static u3j_core _139_hex_d[] =
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
   { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
   { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
-  { "git-pack"   , 31, 0, _139_hex_git_pack_d, no_hashes}, 
+  { "git-pack", 31, 0, _139_hex_git_pack_d, no_hashes}, 
   { "git-http", 31, 0, _139_hex_git_http_d, no_hashes},
   {}
 };
@@ -2410,6 +2410,11 @@ static u3j_core _138_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  /* Git jets */
+  { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
+  { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
+  { "git-pack", 31, 0, _139_hex_git_pack_d, no_hashes}, 
+  { "git-http", 31, 0, _139_hex_git_http_d, no_hashes},
   {}
 };
 
