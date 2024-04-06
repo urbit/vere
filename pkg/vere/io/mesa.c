@@ -556,8 +556,9 @@ _mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
   u3_pend_req* new_u = req_u;
   if ( old_u == NULL ) {
     new_u = u3a_calloc(1, sizeof(u3_pend_req));
-    // u3l_log("putting fresh req %p", new_u);
+    u3l_log("putting fresh req %p", new_u);
     memcpy(new_u, req_u, sizeof(u3_pend_req));
+    uv_timer_init(u3L, &new_u->tim_u);
   } else {
     new_u = old_u;
     memcpy(new_u, req_u, sizeof(u3_pend_req));
@@ -1695,7 +1696,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   req_u->nex_w = (c3y == lin_o) ? 1 : 0;
   req_u->len_w = (c3y == lin_o) ? 1 : 0;
-  uv_timer_init(u3L, &req_u->tim_u);
   req_u->lef_w = 0;
   req_u->old_w = 0;
   req_u->ack_w = 0;
