@@ -55,6 +55,7 @@
     u3_noun u3wc_can(u3_noun);
     u3_noun u3wc_cap(u3_noun);
     u3_noun u3wc_cat(u3_noun);
+    u3_noun u3wc_clz(u3_noun);
     u3_noun u3wc_con(u3_noun);
     u3_noun u3wc_cut(u3_noun);
     u3_noun u3wc_dis(u3_noun);
