@@ -2553,6 +2553,7 @@ u3j_core _k138_d[] =
 
 
 static u3j_harm _137_two_clz_a[] = {{".2", u3wc_clz, c3y}, {}};
+static u3j_harm _137_two_ctz_a[] = {{".2", u3wc_ctz, c3y}, {}};
 static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3y}, {}};
 
 static u3j_core _137_two_d[] =
@@ -2586,6 +2587,7 @@ static u3j_core _137_two_d[] =
   { "can",  7, _140_two_can_a, 0, no_hashes },
   { "clz",  7, _137_two_clz_a, 0, no_hashes },
   { "con",  7, _140_two_con_a, 0, no_hashes },
+  { "ctz",  7, _137_two_ctz_a, 0, no_hashes },
   { "cue",  7, _140_two_cue_a, 0, no_hashes },
   { "cut",  7, _140_two_cut_a, 0, no_hashes },
   { "dis",  7, _140_two_dis_a, 0, no_hashes },

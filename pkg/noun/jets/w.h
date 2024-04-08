@@ -57,6 +57,7 @@
     u3_noun u3wc_cat(u3_noun);
     u3_noun u3wc_clz(u3_noun);
     u3_noun u3wc_con(u3_noun);
+    u3_noun u3wc_ctz(u3_noun);
     u3_noun u3wc_cut(u3_noun);
     u3_noun u3wc_dis(u3_noun);
     u3_noun u3wc_dor(u3_noun);

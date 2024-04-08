@@ -55,6 +55,7 @@
     u3_noun u3qc_cat(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_clz(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_con(u3_atom, u3_atom);
+    u3_noun u3qc_ctz(u3_atom);
     u3_noun u3qc_cut(u3_atom, u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_dis(u3_atom, u3_atom);
     u3_noun u3qc_dor(u3_atom, u3_atom);
