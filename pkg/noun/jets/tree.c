@@ -2552,6 +2552,8 @@ u3j_core _k138_d[] =
 };
 
 
+static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3y}, {}};
+
 static u3j_core _137_two_d[] =
 { { "tri", 3, 0, _138_tri_d, no_hashes, _140_tri_ho },
 
@@ -2599,6 +2601,7 @@ static u3j_core _137_two_d[] =
   { "rap",  7, _140_two_rap_a, 0, no_hashes },
   { "rep",  7, _140_two_rep_a, 0, no_hashes },
   { "rev",  7, _140_two_rev_a, 0, no_hashes },
+  { "rig",  7, _137_two_rig_a, 0, no_hashes },
   { "rip",  7, _140_two_rip_a, 0, no_hashes },
   { "rsh",  7, _140_two_rsh_a, 0, no_hashes },
   { "swp",  7, _140_two_swp_a, 0, no_hashes },
