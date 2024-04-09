@@ -1088,10 +1088,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
-
-#if defined(U3_OS_osx)
-  darwin_register_mach_exception_handler();
-#endif
   //  XX use named arguments and getopt
 
   c3_d       eve_d = 0;
