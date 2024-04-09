@@ -2552,17 +2552,17 @@ u3j_core _k138_d[] =
 };
 
 
-static u3j_harm _137_two_clz_a[] = {{".2", u3wc_clz, c3y}, {}};
-static u3j_harm _137_two_ctz_a[] = {{".2", u3wc_ctz, c3y}, {}};
-static u3j_harm _137_two_ham_a[] = {{".2", u3wc_ham, c3y}, {}};
+static u3j_harm _137_two_clz_a[] = {{".2", u3wc_clz, c3n}, {}};
+static u3j_harm _137_two_ctz_a[] = {{".2", u3wc_ctz, c3n}, {}};
+static u3j_harm _137_two_ham_a[] = {{".2", u3wc_ham, c3n}, {}};
 
-static u3j_harm _137_two__hew_fun_a[] = {{".2", u3wc_hew, c3y}, {}};
+static u3j_harm _137_two__hew_fun_a[] = {{".2", u3wc_hew, c3n}, {}};
 static u3j_core _137_two__hew_d[] =
   { { "fun", 15, _137_two__hew_fun_a, 0, no_hashes },
     {}
   };
 
-static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3y}, {}};
+static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3n}, {}};
 
 static u3j_core _137_two_d[] =
 { { "tri", 3, 0, _138_tri_d, no_hashes, _140_tri_ho },
