@@ -258,5 +258,11 @@
 
     void u3qf_test(const c3_c*, u3_noun);
 
+
+  /** Tier 6.
+  **/
+    u3_noun u3qg_plot_fax(u3_noun, u3_noun);
+    u3_noun u3qg_plot_met(u3_noun, u3_noun);
+
 #endif /* ifndef U3_JETS_Q_H */
 

@@ -2552,8 +2552,18 @@ u3j_core _k138_d[] =
 };
 
 
+static u3j_harm _137_lull_plot_fax_a[] = {{".2", u3wg_plot_fax, c3y}, {}};
+static u3j_harm _137_lull_plot_met_a[] = {{".2", u3wg_plot_met, c3y}, {}};
+
+static u3j_core _137_lull_plot_d[] =
+  { { "fax", 7, _137_lull_plot_fax_a, 0, no_hashes },
+    { "met", 7, _137_lull_plot_met_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _137_lull_d[] =
-  { {}
+  { { "plot", 31, 0, _137_lull_plot_d, no_hashes },
+    {}
   };
 
 static u3j_core _137_hex_d[] =

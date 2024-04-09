@@ -340,5 +340,10 @@
     u3_noun u3wfu_repo(u3_noun);
     u3_noun u3wfu_rest(u3_noun);
 
+  /** Tier 7.
+  **/
+    u3_noun u3wg_plot_fax(u3_noun);
+    u3_noun u3wg_plot_met(u3_noun);
+
 #endif /* ifndef U3_JETS_W_H */
 
