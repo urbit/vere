@@ -2555,6 +2555,13 @@ u3j_core _k138_d[] =
 static u3j_harm _137_two_clz_a[] = {{".2", u3wc_clz, c3y}, {}};
 static u3j_harm _137_two_ctz_a[] = {{".2", u3wc_ctz, c3y}, {}};
 static u3j_harm _137_two_ham_a[] = {{".2", u3wc_ham, c3y}, {}};
+
+static u3j_harm _137_two__hew_fun_a[] = {{".2", u3wc_hew, c3y}, {}};
+static u3j_core _137_two__hew_d[] =
+  { { "fun", 15, _137_two__hew_fun_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3y}, {}};
 
 static u3j_core _137_two_d[] =
@@ -2596,6 +2603,7 @@ static u3j_core _137_two_d[] =
   { "end",  7, _140_two_end_a, 0, no_hashes },
   { "gor",  7, _140_two_gor_a, 0, no_hashes },
   { "ham",  7, _137_two_ham_a, 0, no_hashes },
+  { "hew", 7, 0, _137_two__hew_d, no_hashes },
   { "jam",  7, _140_two_jam_a, 0, no_hashes },
   { "lsh",  7, _140_two_lsh_a, 0, no_hashes },
   { "mat",  7, _140_two_mat_a, 0, no_hashes },
