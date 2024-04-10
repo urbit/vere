@@ -715,27 +715,22 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   u3_mesa_data_meta met_u;
 
   met_u.bot_y = safe_dec(_mesa_met3_w(dat_u->tot_w));
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   // XX
   met_u.aul_y = dat_u->aum_u.typ_e;
   met_u.aur_y = dat_u->aup_u.len_y;
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y met_y = (met_u.bot_y & 0x3) << 0
              ^ (met_u.aul_y & 0x3) << 2
              ^ (met_u.aur_y & 0x3) << 4
              ^ (met_u.men_y & 0x3) << 6;
   buf_y[cur_w] = met_y;
   cur_w++;
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   c3_y tot_y = met_u.bot_y + 1;
   for (int i = 0; i < tot_y; i++ ) {
     buf_y[cur_w] = (dat_u->tot_w >> (8 * i)) & 0xFF;
     cur_w++;
   }
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   switch ( dat_u->aum_u.typ_e ) {
     case AUTH_SIGN: {
       memcpy(buf_y + cur_w, dat_u->aum_u.sig_y, 64);
@@ -749,7 +744,6 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 
     default: break;
   }
-    u3l_log("_mesa_etch_data tot_w %u", dat_u->tot_w);
   for ( int i = 0; i < dat_u->aup_u.len_y; i++ ) {
     memcpy(buf_y + cur_w, dat_u->aup_u.has_y[i], 32);
     cur_w += 32;
@@ -759,14 +753,11 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     buf_y[cur_w] = nel_y;
     cur_w++;
   }
-    u3l_log("_mesa_etch_data cur_w %u", cur_w);
   memcpy(buf_y + cur_w, (c3_y*)&dat_u->len_w, nel_y);
   cur_w += nel_y;
-    u3l_log("_mesa_etch_data cur_w %u", cur_w);
 
   memcpy(buf_y + cur_w, dat_u->fra_y, dat_u->len_w);
   cur_w += dat_u->len_w;
-    u3l_log("_mesa_etch_data cur_w %u", cur_w);
 
   return cur_w;
 }
@@ -785,7 +776,7 @@ _mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
     return 0;
   }
   cur_w += nex_w;
-    u3l_log("_mesa_etch_page_pact cur_w %u", cur_w);
+
   // XX hops
 
   return cur_w;
@@ -914,7 +905,7 @@ c3_w
 mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 {
   c3_w siz_w = _mesa_size_pact(pac_u);
-  u3l_log("mesa_etch_pact siz_w %u", siz_w);
+
   // if ( siz_w > PACT_SIZE ) {
   //   fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
   //   return 0;
@@ -951,11 +942,11 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 
   hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
   hed_u->mug_w &= 0xFFFFF;
-      u3l_log("mesa_etch_pact mug_w %u", hed_u->mug_w);//u3m_bail(c3__bail);
+
   _mesa_etch_head(hed_u, buf_y);
 
   cur_w += nex_w;
-      u3l_log("mesa_etch_pact cur_w %u", cur_w);//u3m_bail(c3__bail);
+
   assert( siz_w == cur_w );
 
   return cur_w;

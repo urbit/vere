@@ -66,6 +66,9 @@ typedef struct _u3_mesa_stat {
 
 #define IN_FLIGHT  10
 
+// XX
+#define MESA_HUNK  4096
+
 // pending interest sentinels
 #define MESA_ITEM         1  // cached item
 #define MESA_WAIT         2  // waiting on scry
@@ -1462,6 +1465,28 @@ _name_to_scry(u3_mesa_name* nam_u)
   return res;
 }
 
+static u3_noun
+_name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
+{
+  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
+  u3_noun boq = _dire_etch_ud(nam_u->boq_y);
+  u3_noun fag = _dire_etch_ud(nam_u->fra_w);
+  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+
+  u3_noun lop = _dire_etch_ud(lop_w);
+  u3_noun len = _dire_etch_ud(len_w);
+
+  u3_noun wer = nam_u->nit_o == c3y
+    ? u3nc(c3__init, pax)
+    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+
+  u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
+  // [%hunk lop=@t len=@t pat=*]
+  u3_noun bat = u3nq(c3__hunk, lop, len, res);
+
+  return bat;
+}
+
 /*
  * RETAIN
  */
@@ -1539,6 +1564,57 @@ _mesa_page_scry_cb(void* vod_p, u3_noun nun)
         _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
       }
       _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(hit)));
+      // u3z(old);
+    }
+    // u3z(hit);
+  }
+  // u3z(pax);
+}
+
+/*
+ */
+static void
+_mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
+{
+  u3_mesa_pict* pic_u = vod_p;
+  u3_mesa_pact* pac_u = &pic_u->pac_u;
+  u3_mesa* sam_u = pic_u->sam_u;
+  //u3_noun pax = _mesa_path_with_fra(pac_u->pek_u.nam_u.pat_c, &fra_s);
+
+  u3_weak hit = u3r_at(7, nun);
+  if ( u3_none == hit ) {
+    // TODO: mark as dead
+    //u3z(nun);
+    u3l_log("unbound");
+
+  } else {
+    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    if ( old == u3_none ) {
+      u3l_log("bad");
+      MESA_LOG(APATHY);
+    } else {
+      u3_noun tag;
+      u3_noun dat;
+      u3x_cell(u3k(old), &tag, &dat);
+      if ( MESA_WAIT == tag ) {
+        c3_y* buf_y;
+        // u3m_p("hit", u3a_is_cell(hit));
+        c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+        _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
+      }
+
+      c3_w len_w = pac_u->pek_u.nam_u.fra_w;
+      while ( u3_nul != hit ) {
+        // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
+        // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+
+        _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
+        // u3z(key);
+
+        hit = u3t(hit);
+        len_w++;
+        pac_u->pek_u.nam_u.fra_w = len_w;
+      }
       // u3z(old);
     }
     // u3z(hit);
@@ -1812,8 +1888,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3i_slab_init(&sab_u, 3, PACT_SIZE);
 
       //  XX should just preserve input buffer
-      mesa_etch_pact(sab_u.buf_y, pac_u);
-
+      c3_w cur_w  = mesa_etch_pact(sab_u.buf_y, pac_u);
+      // _log_buf(sab_u.buf_y, cur_w);
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
 
     }
@@ -1868,6 +1944,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       }
       nex_u->pac_u.pek_u.nam_u.fra_w = nex_w + i;
       c3_w siz_w  = mesa_etch_pact(buf_y, &nex_u->pac_u);
+      // _log_buf(buf_y, siz_w);
       if ( siz_w == 0 ) {
         u3l_log("failed to etch");
         u3_assert( 0 );
@@ -1974,7 +2051,9 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     } else if ( c3y == our_o && tag == MESA_ITEM ) { // XX our_o redundant
       c3_y* buf_y;
       c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(dat));
+      // _log_buf(buf_y, len_w);
       _mesa_send_buf(sam_u, lan_u, buf_y, len_w);
+
     } else {
       u3l_log("mesa: weird case in cache, dropping");
     }
@@ -1984,12 +2063,12 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   } else {
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
-      u3_noun sky = _name_to_scry(&pac_u->pek_u.nam_u);
+      u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u, pac_u->pek_u.nam_u.fra_w, pac_u->pek_u.nam_u.fra_w + MESA_HUNK);
 
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
       // only branch where we do not free pic_u
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _mesa_page_scry_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _mesa_page_scry_hunk_cb);
     } else {
       // XX unpossible
       _mesa_free_pict(pic_u);
