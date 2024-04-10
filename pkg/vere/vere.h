@@ -1557,6 +1557,13 @@
         void
         u3_daemon_init();
 
+#if defined(U3_OS_osx)
+      /* darwin_register_mach_exception_handler(): make lldb work
+       */
+        void
+        darwin_register_mach_exception_handler();
+#endif
+
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */
         void
