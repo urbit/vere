@@ -21,49 +21,65 @@ static c3_i
 _test_put_del()
 {
   u3p(u3h_root) har_p = u3h_new();
-  c3_i ret_i = 1;
+  c3_w       i_w, j_w;
+  c3_i          ret_i = 1;
 
-  c3_w i_w;
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
     u3_noun val = u3nc(u3_nul, u3k(key));
     u3h_put(har_p, key, val);
     u3z(key);
   }
-  fprintf(stderr, "inserted");
+  fprintf(stderr, "inserted\r\n");
 
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
-    u3_weak val = u3h_get(har_p, key);
+    u3_weak val = u3h_git(har_p, key);
     if ( val == u3_none ) {
       fprintf(stderr, "failed insert\r\n");
       ret_i = 0;
     }
     u3z(key);
-    u3z(val);
   }
-  fprintf(stderr, "presence");
-   c3_w del_w[4] = {30, 82, 4921, 535};
+  fprintf(stderr, "presence\r\n");
+
+  c3_w del_w[4] = {30, 82, 4921, 535};
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
     u3_noun key = u3i_word(del_w[i_w]);
     u3h_del(har_p, key);
     u3z(key);
   }
-  fprintf(stderr, "deleted");
+  fprintf(stderr, "deleted\r\n");
 
-  for ( i_w = 0; i_w < 4; i_w++ ) {
-    u3_noun key = u3i_word(del_w[i_w]);
-    u3_weak val = u3h_get(har_p, key);
-    if ( u3_none != val ) {
-      fprintf(stderr, "failed delete\r\n");
-      ret_i = 0;
-      break;
+  for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
+    u3_noun key = u3i_word(i_w);
+    u3_weak val = u3h_git(har_p, key);
+    c3_o  mis_o = __( val == u3_none );
+    c3_o  del_o = c3n;
+
+    for ( j_w = 0; j_w < 4; j_w++ ) {
+      if ( i_w == del_w[j_w] ) {
+        del_o = c3y;
+      }
     }
+
+    if ( mis_o != del_o ) {
+      if ( c3n == del_o ) {
+        fprintf(stderr, "delete collateral damage %u\r\n", i_w);
+      }
+      else {
+        fprintf(stderr, "failed delete %u\r\n", i_w);
+      }
+      ret_i = 0;
+    }
+
+    u3z(key);
   }
-  fprintf(stderr, "presence two");
+  fprintf(stderr, "presence two\r\n");
+
   u3h_free(har_p);
-  fprintf(stderr, "freed");
+  fprintf(stderr, "freed\r\n");
 
   return ret_i;
 }
