@@ -1982,35 +1982,85 @@ _cw_meld(c3_i argc, c3_c* argv[])
 static void
 _cw_melt(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
+
+  static struct option lop_u[] = {
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
+      } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
       }
-    } break;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
-      exit(1);
-    } break;
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
   }
 
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-  c3_w     pre_w;
+  //  argv[optind] is always "melt"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
 
   u3C.wag_w |= u3o_hashless;
-  u3m_boot(u3_Host.dir_c);
 
-  pre_w = u3a_open(u3R);
-  u3u_melt();
-  u3a_print_memory(stderr, "urbit: melt: gained", (u3a_open(u3R) - pre_w));
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
-  u3e_save();
+  u3a_print_memory(stderr, "urbit: melt: gained", u3u_melt());
+
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }

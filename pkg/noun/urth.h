@@ -14,7 +14,7 @@
 
       /* u3u_melt(): globally deduplicate memory and pack in-place.
       */
-        void
+        c3_w
         u3u_melt(void);
 
       /* u3u_cram(): globably deduplicate memory, and write a rock to disk.

@@ -534,12 +534,14 @@ _traverse(u3_noun som, u3p(u3h_root) set_p)
 
 /* u3u_melt(): globally deduplicate memory and pack in-place.
 */
-void
+c3_w
 u3u_melt(void)
 {
+  c3_w pre_w = u3a_open(u3R);
+
   // Verify that we're on the main road.
   //
-  c3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( &(u3H->rod_u) == u3R );
 
   // Store a cons list of the cold jet registrations in `cod`
   //
@@ -587,6 +589,8 @@ u3u_melt(void)
   //
   u3j_ream();
   u3m_pack();
+
+  return (u3a_open(u3R) - pre_w);
 }
 
 /* _cu_rock_path(): format rock path.
