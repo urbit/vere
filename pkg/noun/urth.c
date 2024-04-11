@@ -474,12 +474,11 @@ _cj_warm_tap(u3_noun kev, void* wit)
 }
 
 static inline u3_weak
-_get(u3_noun som, u3p(u3h_root) set_p)
+_cu_melt_get(u3p(u3h_root) set_p, u3_noun som)
 {
   u3_post hav_p = u3h_git(set_p, som);
 
-  if (u3_none == hav_p)
-  {
+  if ( u3_none == hav_p ) {
     return u3_none;
   }
 
@@ -489,7 +488,7 @@ _get(u3_noun som, u3p(u3h_root) set_p)
 }
 
 static inline void
-_put(u3_noun som, u3p(u3h_root) set_p)
+_cu_melt_put(u3p(u3h_root) set_p, u3_noun som)
 {
   //  strip tag bits from [som] to skip refcounts
   //
@@ -497,44 +496,39 @@ _put(u3_noun som, u3p(u3h_root) set_p)
   u3h_put(set_p, som, hav_p);
 }
 
-static u3_noun
-_traverse(u3_noun som, u3p(u3h_root) set_p)
+static void
+_cu_melt_noun(u3p(u3h_root) set_p, u3_noun* mos)
 {
+  u3_noun som = *mos;
   u3_weak hav;
 
   //  skip direct atoms
   //
-  if (c3y == u3a_is_cat(som))
-  {
-    return som;
+  if ( c3y == u3a_is_cat(som) ) {
+    return;
   }
 
   //  [som] equals [hav], and [hav] is canonical
   //
-  if (u3_none != (hav = _get(som, set_p)))
-  {
-    if ( som == hav ) {
-      return som;
+  if ( u3_none != (hav = _cu_melt_get(set_p, som)) ) {
+    if ( hav != som ) {
+      u3z(som);
+      *mos = u3k(hav);
     }
-
-    u3z(som);
-    return u3k(hav);
+    return;
   }
 
   //  traverse subtrees
   //
-  if (c3y == u3a_is_cell(som))
-  {
+  if ( c3y == u3a_is_cell(som) ) {
     u3a_cell *cel_u = u3a_to_ptr(som);
-
-    cel_u->hed = _traverse(cel_u->hed, set_p);
-    cel_u->tel = _traverse(cel_u->tel, set_p);
+    _cu_melt_noun(set_p, &cel_u->hed);
+    _cu_melt_noun(set_p, &cel_u->tel);
   }
 
   //  [som] is canonical
   //
-  _put(som, set_p);
-  return som;
+  _cu_melt_put(set_p, som);
 }
 
 /* u3u_melt(): globally deduplicate memory and pack in-place.
@@ -570,8 +564,8 @@ u3u_melt(void)
 
   u3p(u3h_root) set_p = u3h_new(); // temp hashtable
 
-  cod = _traverse(cod, set_p);            // melt the jets
-  u3A->roc = _traverse(u3A->roc, set_p);  // melt the kernel
+  _cu_melt_noun(set_p, &cod);      // melt the jets
+  _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
 
   u3h_free(set_p);  // release the temp hashtable
 
