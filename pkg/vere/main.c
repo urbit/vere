@@ -177,6 +177,7 @@ _main_init(void)
   u3_Host.ops_u.rep = c3n;
   u3_Host.ops_u.eph = c3n;
   u3_Host.ops_u.tos = c3n;
+  u3_Host.ops_u.beb = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -216,6 +217,19 @@ _main_pier_run(c3_c* bin_c)
   }
 
   return dir_c;
+}
+
+/* _main_add_prop(): add a boot prop to u3_Host.ops_u.vex_u.
+*/
+u3_even*
+_main_add_prop(c3_i kin_i, c3_c* loc_c)
+{
+  u3_even* nex_u = c3_calloc(sizeof(*nex_u));
+  nex_u->kin_i = kin_i;
+  nex_u->loc_c = loc_c;
+  nex_u->pre_u = u3_Host.ops_u.vex_u;
+  u3_Host.ops_u.vex_u = nex_u;
+  return nex_u;
 }
 
 /* _main_getopt(): extract option map from command line.
@@ -273,11 +287,16 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-into",           required_argument, NULL, 'Y' },
     { "scry-format",         required_argument, NULL, 'Z' },
     //
+    { "prop-file",           required_argument, NULL, 1 },
+    { "prop-url",            required_argument, NULL, 2 },
+    { "prop-name",           required_argument, NULL, 3 },
+    //
     { "urth-loom",           required_argument, NULL, 5 },
     { "no-demand",           no_argument,       NULL, 6 },
     { "swap",                no_argument,       NULL, 7 },
     { "swap-to",             required_argument, NULL, 8 },
     { "toss",                required_argument, NULL, 9 },
+    { "behn-allow-blocked",  no_argument,       NULL, 10 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -287,6 +306,10 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
+      case 1: case 2: case 3: {  //  prop-*
+        _main_add_prop(ch_i, strdup(optarg));
+        break;
+      }
       case 5: {  //  urth-loom
         if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
@@ -311,6 +334,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
           return c3n;
         }
+        break;
+      }
+      case 10: { //  behn-allow-blocked
+        u3_Host.ops_u.beb = c3y;
         break;
       }
       //  special args
@@ -603,6 +630,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     if ( hyphen_c ) {
       *hyphen_c = '\0';
     }
+    //TODO  use brass pill from b.u.org/props/etc eventually
     c3_i res_i = asprintf(&u3_Host.ops_u.url_c,
                           "https://bootstrap.urbit.org/urbit-v%s.pill",
                           version_c);
@@ -628,6 +656,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     }
   }
 
+  if ( u3_Host.ops_u.vex_u != 0 ) {
+    struct stat s;
+    u3_even* vex_u = u3_Host.ops_u.vex_u;
+    while ( vex_u != 0 ) {
+      if ( vex_u->kin_i == 1 && stat(vex_u->loc_c, &s) != 0 ) {
+        fprintf(stderr, "events file %s not found\n", vex_u->loc_c);
+        return c3n;
+      }
+      vex_u = vex_u->pre_u;
+    }
+  }
+
   struct sockaddr_in t;
   if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
     fprintf(stderr, "-b invalid IP address\n");
@@ -641,6 +681,15 @@ _main_getopt(c3_i argc, c3_c** argv)
       return c3n;
     }
   }
+
+  //TODO  split up "default distribution" packages eventually
+  // //  if we're not in lite mode, include the default props
+  // //
+  // if ( u3_Host.ops_u.lit == c3n ) {
+  //   _main_add_prop(3, "landscape");
+  //   _main_add_prop(3, "webterm");
+  //   _main_add_prop(3, "groups");
+  // }
 
   return c3y;
 }
@@ -803,6 +852,9 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --no-dock                 Skip binary \"docking\" on boot\n",
     "    --swap                    Use an explicit ephemeral (swap-like) file\n",
     "    --swap-to FILE            Specify ephemeral file location\n",
+    "    --prop-file FILE          Add a prop into the boot sequence\n"
+    "    --prop-url URL            Download a prop into the boot sequence\n",
+    "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -1088,7 +1140,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
-
   //  XX use named arguments and getopt
 
   c3_d       eve_d = 0;
@@ -1901,6 +1952,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1928,6 +1980,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
         break;
       }
 
@@ -2063,6 +2120,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2090,6 +2148,11 @@ _cw_pack(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
         break;
       }
 
@@ -2870,6 +2933,10 @@ main(c3_i   argc,
   }
 
   _main_init();
+
+#if defined(U3_OS_osx)
+  darwin_register_mach_exception_handler();
+#endif
 
   c3_c* bin_c = strdup(argv[0]);
 

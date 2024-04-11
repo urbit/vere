@@ -61,7 +61,7 @@ static void resolve_cb(DNSServiceRef sref,
   payload->sref = sref;
   payload->port = port;
 
-  char *start = name;
+  const char *start = name;
   if (strncmp(name, "fake-", 4) == 0) {
     payload->fake = 1;
     start = name + 5;

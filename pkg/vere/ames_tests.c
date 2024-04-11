@@ -1,7 +1,6 @@
 /// @file
 
-#include "noun.h"
-#include "vere.h"
+#include "./io/ames.c"
 
 /* _setup(): prepare for tests.
 */
@@ -32,6 +31,55 @@ _test_ames(void)
   }
 }
 
+static c3_i
+_test_stun_addr_roundtrip(u3_lane* inn_u)
+{
+  c3_c    res_c[16] = {0};
+  c3_y    rep_y[40];
+  c3_y    req_y[20] = {0};
+  c3_i    ret_i     = 0;
+
+  _stun_make_response(req_y, inn_u, rep_y);
+
+  u3_lane lan_u;
+
+  if ( c3n == _stun_find_xor_mapped_address(rep_y, sizeof(rep_y), &lan_u) ) {
+    fprintf(stderr, "stun: failed to find addr in response\r\n");
+    ret_i = 1;
+  }
+  else {
+    if ( lan_u.pip_w != inn_u->pip_w ) {
+      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_w, inn_u->pip_w);
+      ret_i = 1;
+    }
+
+    if ( lan_u.por_s != inn_u->por_s ) {
+      fprintf(stderr, "stun: addr mismatch %u %u\r\n", lan_u.por_s, inn_u->por_s);
+      ret_i = 1;
+    }
+  }
+
+  return ret_i;
+}
+
+static c3_i
+_test_stun(void)
+{
+  u3_lane inn_u = { .pip_w = 0x7f000001, .por_s = 13337 };
+  c3_w    len_w = 256;
+
+  while ( len_w-- ) {
+    if ( _test_stun_addr_roundtrip(&inn_u) ) {
+      return 1;
+    }
+
+    inn_u.pip_w++;
+    inn_u.por_s++;
+  }
+
+  return 0;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -40,6 +88,10 @@ main(int argc, char* argv[])
   _setup();
 
   _test_ames();
+
+  if ( _test_stun() ) {
+    fprintf(stderr, "ames: stun tests failed\r\n");
+  }
 
   //  GC
   //
