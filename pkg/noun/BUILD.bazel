@@ -40,6 +40,7 @@ vere_library(
         "@sigsegv",
         "@softfloat",
         "@urcrypt",
+        "@uv",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
