@@ -485,7 +485,7 @@ _get(u3_noun som, u3p(u3h_root) set_p)
 
   //  restore tag bits from [som]
   //
-  return (hav_p >> u3a_vits) | ((som >> 30) << 30);
+  return (hav_p >> u3a_vits) | (som & 0xc0000000);
 }
 
 static inline void
