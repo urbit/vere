@@ -513,6 +513,10 @@ _traverse(u3_noun som, u3p(u3h_root) set_p)
   //
   if (u3_none != (hav = _get(som, set_p)))
   {
+    if ( som == hav ) {
+      return som;
+    }
+
     u3z(som);
     return u3k(hav);
   }
