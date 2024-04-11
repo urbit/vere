@@ -12,6 +12,7 @@
 #include "imprison.h"
 #include "jets.h"
 #include "manage.h"
+#include "options.h"
 #include "retrieve.h"
 #include "serial.h"
 #include "ur.h"
@@ -550,6 +551,9 @@ u3u_melt(void)
 
   u3m_reclaim();     // refresh the byte-code interpreter.
   u3j_free();        // free cold & warm jet state
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
 
   u3z(u3A->yot);     // Clear the hoon run-time cache
   u3A->yot = 0;
