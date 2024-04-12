@@ -1978,10 +1978,16 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       // u3i_slab_init(&sab_u, 3, PACT_SIZE);
       // u3i_slab_init(&sab_u, 3, (siz_w * req_u->tot_w) + 135);
       u3i_slab_init(&sab_u, 3, (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w));
+
       pac_u->pag_u.dat_u.len_w = (siz_w * req_u->tot_w);
       pac_u->pag_u.dat_u.fra_y = c3_realloc(pac_u->pag_u.dat_u.fra_y, pac_u->pag_u.dat_u.len_w);
       memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, pac_u->pag_u.dat_u.len_w);
-      // pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
+
+
+      u3l_log("last frag %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+      // this could be a retry, so we just rewrite the fragment to be the last one
+      //
+      pic_u->pac_u.pag_u.nam_u.fra_w = req_u->tot_w - 1;
       //  XX should just preserve input buffer
       mesa_etch_pact(sab_u.buf_y, pac_u);
 
@@ -2012,7 +2018,7 @@ static void
 _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-  u3l_log("mesa: hear peek");
+  // u3l_log("mesa: hear peek");
   // u3_assert(pac_u->hed_u.typ_y == PACT_PEEK);
 #endif
   u3_mesa_pact* pac_u = &pic_u->pac_u;
@@ -2108,7 +2114,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
 
 #ifdef MESA_DEBUG
-  u3l_log("mesa: hear poke");
+  // u3l_log("mesa: hear poke");
   u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
 #endif
 
@@ -2148,13 +2154,13 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   if ( pac_u->hed_u.hop_y == 0 ) {
     new_o = c3y;
     _hear_peer(sam_u, per_u, *lan_u, dir_o);
-    u3l_log("learnt lane");
+    // u3l_log("learnt lane");
   } else {
-    u3l_log("received forwarded poke");
+    // u3l_log("received forwarded poke");
   }
   if ( new_o == c3y ) {
-    u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
-    _log_lane(lan_u);
+    // u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
+    // _log_lane(lan_u);
   }
   _mesa_put_peer(sam_u, pac_u->pok_u.pay_u.her_d, per_u);
 
@@ -2215,7 +2221,7 @@ _mesa_hear(u3_mesa* sam_u,
   pic_u->sam_u = sam_u;
 
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
-  u3l_log("_mesa_hear len_w %u lin_w %u", len_w, lin_w);
+
   c3_free(hun_y);
   if ( lin_w == 0 ) {
     MESA_LOG(SERIAL)

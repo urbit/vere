@@ -302,7 +302,6 @@ _mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u)
 
   }
   c3_w hed_w = _ames_sift_word(buf_y);
-  u3l_log("hed_w %x", hed_w);
 
   hed_u->nex_y = (hed_w >> 2)  & 0x3;
   hed_u->pro_y = (hed_w >> 4)  & 0x7;
@@ -391,7 +390,7 @@ static c3_w
 _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 {
 // #ifdef MESA_DEBUG
-  u3l_log("mesa: sifting data %i", len_w);
+  // u3l_log("mesa: sifting data %i", len_w);
 // #endif
 
   c3_w cur_w = 0;
@@ -541,26 +540,26 @@ _mesa_sift_poke_pact(u3_mesa_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
   c3_w cur_w = 0, nex_w;
   //  ack path
   if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, len_w)) ) {
-    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
+    // u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
 
   //  payload path
   if ( !(nex_w = _mesa_sift_name(&pac_u->pay_u, buf_y + cur_w, len_w)) ) {
-    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
+    // u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
 
   //  payload
   if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, len_w)) ) {
-    u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
+    // u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
     return 0;
   }
   cur_w += nex_w;
 
-  u3l_log("_mesa_sift_poke_pact cur_w %u", cur_w);
+  // u3l_log("_mesa_sift_poke_pact cur_w %u", cur_w);
 
   return cur_w;
 }
@@ -578,7 +577,7 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   buf_y += 8;
   len_w -= 8;
 
-  u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
+  // u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
