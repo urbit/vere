@@ -1631,6 +1631,12 @@ u3a_wed(u3_noun* a, u3_noun* b)
     //    cause a very slow boot process as the compiler compiles
     //    itself, constantly running into duplicates.
     //
+    //  TMP unify and leak on the home road
+    if ( rod_u == &u3H->rod_u ) {
+      *a = *b;
+      return;
+    }
+
     while ( (rod_u != &u3H->rod_u) &&
             (c3n == _ca_wed_who(rod_u, a, b)) )
     {
