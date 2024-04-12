@@ -564,8 +564,12 @@ u3u_melt(void)
 
   u3p(u3h_root) set_p = u3h_new(); // temp hashtable
 
+  u3C.wag_w |= u3o_check_fatal;
+
   _cu_melt_noun(set_p, &cod);      // melt the jets
   _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
+
+  u3C.wag_w |= ~u3o_check_fatal;
 
   u3h_free(set_p);  // release the temp hashtable
 

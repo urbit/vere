@@ -1632,7 +1632,7 @@ u3a_wed(u3_noun* a, u3_noun* b)
     //    itself, constantly running into duplicates.
     //
     //  TMP unify and leak on the home road
-    if ( rod_u == &u3H->rod_u ) {
+    if ( (u3C.wag_w & u3o_check_fatal) && (rod_u == &u3H->rod_u) ) {
       *a = *b;
       return;
     }
