@@ -251,6 +251,7 @@
     u3_noun u3qf_la_sub_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_mul_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_div_real(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_noun u3qf_la_mod_real(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_adds_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_subs_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_muls_real(u3_noun, u3_noun, u3_noun, u3_noun);

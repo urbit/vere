@@ -335,6 +335,7 @@
     u3_noun u3wf_la_sub(u3_noun);
     u3_noun u3wf_la_mul(u3_noun);
     u3_noun u3wf_la_div(u3_noun);
+    u3_noun u3wf_la_mod(u3_noun);
     u3_noun u3wf_la_adds(u3_noun);
     u3_noun u3wf_la_subs(u3_noun);
     u3_noun u3wf_la_muls(u3_noun);
