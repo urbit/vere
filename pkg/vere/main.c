@@ -2056,12 +2056,13 @@ _cw_melt(c3_i argc, c3_c* argv[])
   u3C.wag_w |= u3o_hashless;
 
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  // yolol
+  // u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
   u3a_print_memory(stderr, "urbit: melt: gained", u3u_melt());
 
   u3m_save();
-  u3_disk_exit(log_u);
+  // u3_disk_exit(log_u);
   u3m_stop();
 }
 
