@@ -128,8 +128,7 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
   
   if ( c3y == u3r_sing(delta_type, REF_DELTA) ) {
     // fprintf(stderr, "Expanding %%ref-delta object\r\n");
-    delta_octs = delta_obj;
-    u3_assert(false);
+    return u3_none;
   }
 
   u3x_cell(delta_octs, &delta_p_octs, &delta_q_octs);
