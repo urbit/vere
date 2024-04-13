@@ -99,18 +99,6 @@
     return dims;
   }
 
-/* 
-*/
-  static inline size_t _get_array_length(c3_d* array)
-  {
-    size_t n = sizeof(array)/sizeof(array[0]);
-    for (size_t i = 0; i < n; i++) {
-      fprintf(stderr, "%x ", array[i]);
-    }
-    fprintf(stderr, " => %x \n", n);
-    return n;
-  }
-
 /* add - axpy = 1*x+y
 */
   u3_noun
@@ -444,31 +432,18 @@
         for (c3_d i = 0; i < len_x; i++) {
           float128_t x_val128 = ((float128_t*)x_bytes)[i];
           float128_t y_val128 = ((float128_t*)y_bytes)[i];
-          fprintf(stderr, "x_val128: %llx %llx\r\n", x_val128.v[0], x_val128.v[1]);
-          fprintf(stderr, "y_val128: %llx %llx\r\n", y_val128.v[0], y_val128.v[1]);
           // Perform division x/n
           float128_t div_result128;
-          // float128_t div_result128 = f128_div(x_val128, y_val128);
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
-          fprintf(stderr, "div_result128: %llx %llx\r\n", div_result128.v[0], div_result128.v[1]);
           // Compute floor of the division result
-          int64_t floor_result128 = f128_to_i64(div_result128, softfloat_round_minMag, false);
-          fprintf(stderr, "floor_result128: %llx\r\n", floor_result128);
+          int64_t floor_result128 = f128_to_i64(div_result128, rnd, false);
           float128_t floor_float128 = i64_to_f128(floor_result128);
-          fprintf(stderr, "floor_float128: %llx %llx\r\n", floor_float128.v[0], floor_float128.v[1]);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
-          // float128_t mult_result128 = f128_mul(y_val128, floor_float128);
           f128M_mul(((float128_t*)&y_val128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
-          fprintf(stderr, "mult_result128: %llx %llx\r\n", mult_result128.v[0], mult_result128.v[1]);
           // Compute remainder: x - n * floor(x/n)
-          // ((float128_t*)y_bytes)[i] = f128_sub(x_val128, mult_result128);
-          f128M_div(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)y_bytes)[i]));
-          fprintf(stderr, "y_bytes: %llx %llx\r\n", ((float128_t*)y_bytes)[i].v[0], ((float128_t*)y_bytes)[i].v[1]);
+          f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)y_bytes)[i]));
         }
-        // for (c3_d i = 0; i < len_x; i++) {
-        //   f128M_div(&(((float128_t*)y_bytes)[i]), &(((float128_t*)x_bytes)[i]), &(((float128_t*)y_bytes)[i]));
-        // }
         break;
     }
 
