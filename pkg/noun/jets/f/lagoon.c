@@ -355,8 +355,7 @@
   u3qf_la_mod_real(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
-                   u3_noun bloq,
-                   u3_noun rnd)
+                   u3_noun bloq)
   {
     //  Fence on valid bloq size.
     if (bloq < 4 || bloq > 7) {
@@ -387,7 +386,7 @@
           // Perform division x/n
           float16_t div_result16 = f16_div(x_val16, y_val16);
           // Compute floor of the division result
-          int64_t floor_result16 = f16_to_i64(div_result16, rnd, false);
+          int64_t floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
           float16_t floor_float16 = i64_to_f16(floor_result16);
           // Multiply n by floor(x/n)
           float16_t mult_result16 = f16_mul(y_val16, floor_float16);
@@ -403,7 +402,7 @@
           // Perform division x/n
           float32_t div_result32 = f32_div(x_val32, y_val32);
           // Compute floor of the division result
-          int64_t floor_result32 = f32_to_i64(div_result32, rnd, false);
+          int64_t floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t floor_float32 = i64_to_f32(floor_result32);
           // Multiply n by floor(x/n)
           float32_t mult_result32 = f32_mul(y_val32, floor_float32);
@@ -419,7 +418,7 @@
           // Perform division x/n
           float64_t div_result64 = f64_div(x_val64, y_val64);
           // Compute floor of the division result
-          int64_t floor_result64 = f64_to_i64(div_result64, rnd, false);
+          int64_t floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
           float64_t floor_float64 = i64_to_f64(floor_result64);
           // Multiply n by floor(x/n)
           float64_t mult_result64 = f64_mul(y_val64, floor_float64);
@@ -436,7 +435,7 @@
           float128_t div_result128;
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
           // Compute floor of the division result
-          int64_t floor_result128 = f128_to_i64(div_result128, rnd, false);
+          int64_t floor_result128 = f128_to_i64(div_result128, softfloat_round_minMag, false);
           float128_t floor_float128 = i64_to_f128(floor_result128);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
@@ -710,35 +709,170 @@
     u3r_bytes(0, siz_x, x_bytes, x_data);
     x_bytes[siz_x] = 1;  // pin head
 
-    float16_t n16;
-    float32_t n32;
-    float64_t n64;
-    float128_t n128;
+    float16_t in16;
+    float32_t in32;
+    float64_t in64;
+    float128_t in128;
 
     //  Switch on the block size.
     switch (bloq) {
       case 4:
-        u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
-        n16 = f16_div((float16_t){SB_REAL16_ONE}, n16);
-        hscal(len_x, n16, (float16_t*)x_bytes, 1);
+        //  XX note that in16 is doing double duty here
+        u3r_bytes(0, 2, (c3_y*)&(in16.v), n);
+        in16 = f16_div((float16_t){SB_REAL16_ONE}, in16);
+        hscal(len_x, in16, (float16_t*)x_bytes, 1);
         break;
 
       case 5:
-        u3r_bytes(0, 4, (c3_y*)&(n32.v), n);
-        n32 = f32_div((float32_t){SB_REAL32_ONE}, n32);
-        sscal(len_x, n32, (float32_t*)x_bytes, 1);
+        //  XX note that in32 is doing double duty here
+        u3r_bytes(0, 4, (c3_y*)&(in32.v), n);
+        in32 = f32_div((float32_t){SB_REAL32_ONE}, in32);
+        sscal(len_x, in32, (float32_t*)x_bytes, 1);
         break;
 
       case 6:
-        u3r_bytes(0, 8, (c3_y*)&(n64.v), n);
-        n64 = f64_div((float64_t){SB_REAL64_ONE}, n64);
-        dscal(len_x, n64, (float64_t*)x_bytes, 1);
+        //  XX note that in64 is doing double duty here
+        u3r_bytes(0, 8, (c3_y*)&(in64.v), n);
+        in64 = f64_div((float64_t){SB_REAL64_ONE}, in64);
+        dscal(len_x, in64, (float64_t*)x_bytes, 1);
         break;
 
       case 7:
-        u3r_bytes(0, 16, (c3_y*)&(n128.v[0]), n);
-        f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}), &n128, &n128);
-        qscal(len_x, n128, (float128_t*)x_bytes, 1);
+        //  XX note that in128 is doing double duty here
+        u3r_bytes(0, 16, (c3_y*)&(in128.v[0]), n);
+        f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}), &in128, &in128);
+        qscal(len_x, in128, (float128_t*)x_bytes, 1);
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), x_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+
+    return r_data;
+  }
+
+/* mods - x % [n] = x - r*floor(x/r)
+   remainder after scalar division
+*/
+  u3_noun
+  u3qf_la_mods_real(u3_noun x_data,
+                    u3_noun n,
+                    u3_noun shape,
+                    u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+    fprintf(stderr, "len_x: %ld\r\n", len_x);
+
+    // siz_x is length in bytes
+    c3_d siz_x = len_x * pow(2, bloq-3);
+    fprintf(stderr, "siz_x: %ld\r\n", siz_x);
+
+    // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
+    // we reuse it for results for parsimony
+    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, siz_x+1, x_bytes, x_data);
+    for (c3_d i = 0; i < siz_x+1; i++) {
+      fprintf(stderr, "x_bytes[%ld]: %x\r\n", i, x_bytes[i]);
+    }
+
+    float16_t n16, in16;
+    float32_t n32, in32;
+    float64_t n64, in64;
+    float128_t n128, in128;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        u3r_bytes(0, 2, (c3_y*)&n16, n);
+        in16 = f16_div((float16_t){SB_REAL16_ONE}, n16);
+
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          // Perform division x/n
+          float16_t div_result16 = f16_mul(in16, x_val16);
+          // Compute floor of the division result
+          int64_t floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
+          float16_t floor_float16 = i64_to_f16(floor_result16);
+          // Multiply n by floor(x/n)
+          float16_t mult_result16 = f16_mul(n16, floor_float16);
+          // Compute remainder: x - n * floor(x/n)
+          ((float16_t*)x_bytes)[i] = f16_sub(x_val16, mult_result16);
+        }
+        break;
+
+      case 5:
+        u3l_log("n: %x", n);
+        u3r_bytes(0, 4, (c3_y*)&(n32.v), n);
+        fprintf(stderr, "n32: %f\r\n", n32.v);
+        in32 = f32_div((float32_t){SB_REAL32_ONE}, n32);
+        fprintf(stderr, "in32: %f\r\n", in32);
+
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          fprintf(stderr, "x_val32: %f\r\n", (float32_t)x_val32);
+          // Perform division x/n
+          float32_t div_result32 = f32_mul((float32_t)in32, (float32_t)x_val32);
+          fprintf(stderr, "div_result32: %f\r\n", div_result32);
+          // Compute floor of the division result
+          int64_t floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
+          fprintf(stderr, "floor_result32: %ld\r\n", floor_result32);
+          float32_t floor_float32 = i64_to_f32(floor_result32);
+          fprintf(stderr, "floor_float32: %f\r\n", floor_float32);
+          // Multiply n by floor(x/n)
+          float32_t mult_result32 = f32_mul(n32, floor_float32);
+          fprintf(stderr, "mult_result32: %f\r\n", mult_result32);
+          // Compute remainder: x - n * floor(x/n)
+          ((float32_t*)x_bytes)[i] = f32_sub(x_val32, mult_result32);
+          fprintf(stderr, "x_bytes[i]: %f\r\n\r\n", ((float32_t*)x_bytes)[i]);
+        }
+        break;
+
+      case 6:
+        u3r_bytes(0, 8, (c3_y*)&n64, n);
+        in64 = f64_div((float64_t){SB_REAL64_ONE}, n64);
+
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          // Perform division x/n
+          float64_t div_result64 = f64_mul(in64, x_val64);
+          // Compute floor of the division result
+          int64_t floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
+          float64_t floor_float64 = i64_to_f64(floor_result64);
+          // Multiply n by floor(x/n)
+          float64_t mult_result64 = f64_mul(n64, floor_float64);
+          // Compute remainder: x - n * floor(x/n)
+          ((float64_t*)x_bytes)[i] = f64_sub(x_val64, mult_result64);
+        }
+        break;
+
+      case 7:
+        u3r_bytes(0, 16, (c3_y*)&n128, n);
+        f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ZERO}), &n128, &in128);
+
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          // Perform division x/n
+          float128_t div_result128;
+          f128M_mul((float128_t*)&in128, (float128_t*)&x_val128, (float128_t*)&div_result128);
+          // Compute floor of the division result
+          int64_t floor_result128 = f128_to_i64(div_result128, softfloat_round_minMag, false);
+          float128_t floor_float128 = i64_to_f128(floor_result128);
+          // Multiply n by floor(x/n)
+          float128_t mult_result128;
+          f128M_mul(((float128_t*)&n128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
+          // Compute remainder: x - n * floor(x/n)
+          f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)x_bytes)[i]));
+        }
         break;
     }
 
@@ -1216,9 +1350,9 @@
         return u3m_bail(c3__exit);
       } else {
         switch (x_kind) {
-          case c3__real: ; // XX satisfy label
-            // Global rounding mode is ignored by SoftFloat conversions so we pass it in.
-            u3_noun r_data = u3qf_la_mod_real(x_data, y_data, x_shape, x_bloq, rnd);
+          case c3__real:
+            _set_rounding(rnd);
+            u3_noun r_data = u3qf_la_mod_real(x_data, y_data, x_shape, x_bloq);
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
@@ -1360,6 +1494,41 @@
         case c3__real:
           _set_rounding(rnd);
           u3_noun r_data = u3qf_la_divs_real(x_data, n, x_shape, x_bloq);
+          return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+        default:
+          return u3_none;
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_mods(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data, n;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_4, &x_meta,
+                         u3x_sam_5, &x_data,
+                         u3x_sam_3, &n,
+                         0) ||
+         c3n == u3ud(x_data) ||
+         c3n == u3ud(n) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp,
+              rnd;
+            x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      rnd = u3h(u3t(u3t(u3t(cor))));  // 30
+      switch (x_kind) {
+        case c3__real:
+          _set_rounding(rnd);
+          u3_noun r_data = u3qf_la_mods_real(x_data, n, x_shape, x_bloq);
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
         default:
