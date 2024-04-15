@@ -259,6 +259,7 @@
     u3_noun u3qf_la_mods_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_dot_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_diag(u3_noun, u3_noun, u3_noun);
+    u3_noun u3qf_la_transpose(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_trace_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_mmul_real(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 

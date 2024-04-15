@@ -343,6 +343,7 @@
     u3_noun u3wf_la_mods(u3_noun);
     u3_noun u3wf_la_dot(u3_noun);
     u3_noun u3wf_la_diag(u3_noun);
+    u3_noun u3wf_la_transpose(u3_noun);
     u3_noun u3wf_la_trace(u3_noun);
     u3_noun u3wf_la_mmul(u3_noun);
 
