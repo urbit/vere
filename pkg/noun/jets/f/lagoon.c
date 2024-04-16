@@ -117,16 +117,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
     
     //  Switch on the block size.
     switch (bloq) {
@@ -148,7 +148,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -175,16 +175,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
     
     //  Switch on the block size.
     switch (bloq) {
@@ -206,7 +206,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -234,16 +234,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
     switch (bloq) {
@@ -273,7 +273,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -300,16 +300,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
     switch (bloq) {
@@ -339,7 +339,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -366,16 +366,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
     switch (bloq) {
@@ -447,7 +447,358 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+    u3a_free(y_bytes);
+
+    return r_data;
+  }
+
+/* abs - |x|
+*/
+  u3_noun
+  u3qf_la_abs_real(u3_noun x_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/ leading 0x1, skipped by for range)
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          ((float16_t*)x_bytes)[i] = f16_abs(((float16_t*)x_bytes)[i]);
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          ((float32_t*)x_bytes)[i] = f32_abs(((float32_t*)x_bytes)[i]);
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          ((float64_t*)x_bytes)[i] = f64_abs(((float64_t*)x_bytes)[i]);
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          ((float128_t*)x_bytes)[i] = f128_abs(((float128_t*)x_bytes)[i]);
+        }
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+
+    return r_data;
+  }
+
+/* gth - x > y
+*/
+  u3_noun
+  u3qf_la_gth_real(u3_noun x_data,
+                   u3_noun y_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          float16_t y_val16 = ((float16_t*)y_bytes)[i];
+          ((float16_t*)y_bytes)[i] = f16_gt(x_val16, y_val16) ? (float16_t){SB_REAL16_ONE} : (float16_t){SB_REAL16_ZERO};
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          float32_t y_val32 = ((float32_t*)y_bytes)[i];
+          ((float32_t*)y_bytes)[i] = f32_gt(x_val32, y_val32) ? (float32_t){SB_REAL32_ONE} : (float32_t){SB_REAL32_ZERO};
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          float64_t y_val64 = ((float64_t*)y_bytes)[i];
+          ((float64_t*)y_bytes)[i] = f64_gt(x_val64, y_val64) ? (float64_t){SB_REAL64_ONE} : (float64_t){SB_REAL64_ZERO};
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          float128_t y_val128 = ((float128_t*)y_bytes)[i];
+          ((float128_t*)y_bytes)[i] = f128M_gt(((float128_t*)&x_val128), ((float128_t*)&y_val128)) ? (float128_t){SB_REAL128L_ONE, SB_REAL128U_ONE} : (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
+        }
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+    u3a_free(y_bytes);
+
+    return r_data;
+  }
+
+/* gte - x > y
+*/
+  u3_noun
+  u3qf_la_gte_real(u3_noun x_data,
+                   u3_noun y_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          float16_t y_val16 = ((float16_t*)y_bytes)[i];
+          ((float16_t*)y_bytes)[i] = f16_ge(x_val16, y_val16) ? (float16_t){SB_REAL16_ONE} : (float16_t){SB_REAL16_ZERO};
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          float32_t y_val32 = ((float32_t*)y_bytes)[i];
+          ((float32_t*)y_bytes)[i] = f32_ge(x_val32, y_val32) ? (float32_t){SB_REAL32_ONE} : (float32_t){SB_REAL32_ZERO};
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          float64_t y_val64 = ((float64_t*)y_bytes)[i];
+          ((float64_t*)y_bytes)[i] = f64_ge(x_val64, y_val64) ? (float64_t){SB_REAL64_ONE} : (float64_t){SB_REAL64_ZERO};
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          float128_t y_val128 = ((float128_t*)y_bytes)[i];
+          ((float128_t*)y_bytes)[i] = f128M_ge(((float128_t*)&x_val128), ((float128_t*)&y_val128)) ? (float128_t){SB_REAL128L_ONE, SB_REAL128U_ONE} : (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
+        }
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+    u3a_free(y_bytes);
+
+    return r_data;
+  }
+
+/* lth - x > y
+*/
+  u3_noun
+  u3qf_la_lth_real(u3_noun x_data,
+                   u3_noun y_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          float16_t y_val16 = ((float16_t*)y_bytes)[i];
+          ((float16_t*)y_bytes)[i] = f16_lt(x_val16, y_val16) ? (float16_t){SB_REAL16_ONE} : (float16_t){SB_REAL16_ZERO};
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          float32_t y_val32 = ((float32_t*)y_bytes)[i];
+          ((float32_t*)y_bytes)[i] = f32_lt(x_val32, y_val32) ? (float32_t){SB_REAL32_ONE} : (float32_t){SB_REAL32_ZERO};
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          float64_t y_val64 = ((float64_t*)y_bytes)[i];
+          ((float64_t*)y_bytes)[i] = f64_lt(x_val64, y_val64) ? (float64_t){SB_REAL64_ONE} : (float64_t){SB_REAL64_ZERO};
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          float128_t y_val128 = ((float128_t*)y_bytes)[i];
+          ((float128_t*)y_bytes)[i] = f128M_lt(((float128_t*)&x_val128), ((float128_t*)&y_val128)) ? (float128_t){SB_REAL128L_ONE, SB_REAL128U_ONE} : (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
+        }
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+    u3a_free(y_bytes);
+
+    return r_data;
+  }
+
+/* lte - x > y
+*/
+  u3_noun
+  u3qf_la_lte_real(u3_noun x_data,
+                   u3_noun y_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          float16_t y_val16 = ((float16_t*)y_bytes)[i];
+          ((float16_t*)y_bytes)[i] = f16_le(x_val16, y_val16) ? (float16_t){SB_REAL16_ONE} : (float16_t){SB_REAL16_ZERO};
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          float32_t y_val32 = ((float32_t*)y_bytes)[i];
+          ((float32_t*)y_bytes)[i] = f32_le(x_val32, y_val32) ? (float32_t){SB_REAL32_ONE} : (float32_t){SB_REAL32_ZERO};
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          float64_t y_val64 = ((float64_t*)y_bytes)[i];
+          ((float64_t*)y_bytes)[i] = f64_le(x_val64, y_val64) ? (float64_t){SB_REAL64_ONE} : (float64_t){SB_REAL64_ZERO};
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          float128_t y_val128 = ((float128_t*)y_bytes)[i];
+          ((float128_t*)y_bytes)[i] = f128M_le(((float128_t*)&x_val128), ((float128_t*)&y_val128)) ? (float128_t){SB_REAL128L_ONE, SB_REAL128U_ONE} : (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
+        }
+        break;
+    }
+
+    // r_data is the result noun of [data]
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -473,15 +824,15 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
 
     float16_t n16;
     float32_t n32;
@@ -528,8 +879,8 @@
     }
 
     // r_data is the result noun of [data]
-    y_bytes[siz_x] = 1;  // pin head
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    y_bytes[syz_x] = 1;  // pin head
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -555,15 +906,15 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/o leading 0x1)
-    c3_y* y_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
+    c3_y* y_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
 
     float16_t n16;
     float32_t n32;
@@ -610,8 +961,8 @@
     }
 
     // r_data is the result noun of [data]
-    x_bytes[siz_x] = 1;  // pin head
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), x_bytes);
+    x_bytes[syz_x] = 1;  // pin head
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -638,13 +989,13 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
-    x_bytes[siz_x] = 1;  // pin head
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+    x_bytes[syz_x] = 1;  // pin head
 
     float16_t n16;
     float32_t n32;
@@ -675,7 +1026,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), x_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -701,13 +1052,13 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
-    x_bytes[siz_x] = 1;  // pin head
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+    x_bytes[syz_x] = 1;  // pin head
 
     float16_t in16;
     float32_t in32;
@@ -746,7 +1097,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), x_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -772,13 +1123,13 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
     // we reuse it for results for parsimony
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
 
     float16_t n16, in16;
     float32_t n32, in32;
@@ -863,7 +1214,7 @@
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), x_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -888,16 +1239,16 @@
     // len_x is length in base units
     c3_d len_x = _get_length(shape);
 
-    // siz_x is length in bytes
-    c3_d siz_x = len_x * pow(2, bloq-3);
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
 
     // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(siz_x*sizeof(c3_y));
-    u3r_bytes(0, siz_x, x_bytes, x_data);
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, y_bytes, y_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     u3_noun r_data;
 
@@ -958,12 +1309,12 @@
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     c3_d len_x = _get_length(shape);
-    c3_d siz_x = len_x * pow(2, bloq - 3);
+    c3_d syz_x = len_x * pow(2, bloq - 3);
     c3_d wyd = pow(2, bloq - 3);
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, x_bytes, x_data);
-    c3_d siz_y = wyd * dims[1];
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_y+1)*sizeof(c3_y));
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
+    c3_d syz_y = wyd * dims[1];
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_y+1)*sizeof(c3_y));
 
     u3_noun r_data;
 
@@ -974,10 +1325,10 @@
         y_bytes[i*wyd+k] = x_bytes[(i*dims[0]+i)*wyd+k];
       }
     }
-    y_bytes[siz_y] = 1;  // pin head
+    y_bytes[syz_y] = 1;  // pin head
 
     //  Unpack the result back into a noun.
-    r_data = u3i_bytes((siz_y+1)*sizeof(c3_y), y_bytes);
+    r_data = u3i_bytes((syz_y+1)*sizeof(c3_y), y_bytes);
     
     u3a_free(x_bytes);
     u3a_free(y_bytes);
@@ -1000,11 +1351,11 @@
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     c3_d len_x = _get_length(shape);
-    c3_d siz_x = len_x * pow(2, bloq - 3);
+    c3_d syz_x = len_x * pow(2, bloq - 3);
     c3_d wyd = pow(2, bloq - 3);
-    c3_y* x_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, siz_x+1, x_bytes, x_data);
-    c3_y* y_bytes = (c3_y*)u3a_malloc((siz_x+1)*sizeof(c3_y));
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
+    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
 
     u3_noun r_data;
 
@@ -1017,14 +1368,105 @@
         }
       }
     }
-    y_bytes[siz_x] = 1;  // pin head
+    y_bytes[syz_x] = 1;  // pin head
 
     //  Unpack the result back into a noun.
-    r_data = u3i_bytes((siz_x+1)*sizeof(c3_y), y_bytes);
+    r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
 
     u3a_free(x_bytes);
     u3a_free(y_bytes);
     u3a_free(dims);
+
+    return r_data;
+  }
+
+/* linspace - [a a+(b-a)/n ... b]
+*/
+  u3_noun
+  u3qf_la_linspace_real(u3_noun a,
+                        u3_noun b,
+                        u3_noun n,
+                        u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    u3_noun r_data;
+
+    switch (bloq) {
+      case 4: ;
+        float16_t a16, b16;
+        u3r_bytes(0, 2, (c3_y*)&(a16.v), a);
+        u3r_bytes(0, 2, (c3_y*)&(b16.v), b);
+        float16_t span16 = f16_sub(b16, a16);
+        float16_t interval16 = f16_div(span16, i32_to_f16(n));
+        c3_y* x_bytes16 = (c3_y*)u3a_malloc(((n+1)*2+1)*sizeof(c3_y));
+        for (c3_d i = 1; i <= n; i++) {
+          ((float16_t*)x_bytes16)[n-i] = f16_add(a16, f16_mul(i32_to_f16(i), interval16));
+        }
+        ((float16_t*)x_bytes16)[n] = b16;
+        x_bytes16[(n+1)*2] = 1;  // pin head
+        r_data = u3i_bytes(((n+1)*2+1)*sizeof(c3_y), x_bytes16);
+        u3a_free(x_bytes16);
+        break;
+      
+      case 5: ;
+        float32_t a32, b32;
+        u3r_bytes(0, 4, (c3_y*)&(a32.v), a);
+        u3r_bytes(0, 4, (c3_y*)&(b32.v), b);
+        float32_t span32 = f32_sub(b32, a32);
+        float32_t interval32 = f32_div(span32, i32_to_f32(n));
+        c3_y* x_bytes32 = (c3_y*)u3a_malloc(((n+1)*4+1)*sizeof(c3_y));
+        for (c3_d i = 1; i <= n; i++) {
+          ((float32_t*)x_bytes32)[n-i] = f32_add(a32, f32_mul(i32_to_f32(i), interval32));
+        }
+        ((float32_t*)x_bytes32)[n] = b32;
+        x_bytes32[(n+1)*4] = 1;  // pin head
+        r_data = u3i_bytes(((n+1)*4+1)*sizeof(c3_y), x_bytes32);
+        u3a_free(x_bytes32);
+        break;
+
+      case 6: ;
+        float64_t a64, b64;
+        u3r_bytes(0, 8, (c3_y*)&(a64.v), a);
+        u3r_bytes(0, 8, (c3_y*)&(b64.v), b);
+        float64_t span64 = f64_sub(b64, a64);
+        float64_t interval64 = f64_div(span64, i32_to_f64(n));
+        c3_y* x_bytes64 = (c3_y*)u3a_malloc(((n+1)*8+1)*sizeof(c3_y));
+        for (c3_d i = 1; i < n; i++) {
+          ((float64_t*)x_bytes64)[n-i] = f64_add(a64, f64_mul(i32_to_f64(i), interval64));
+        }
+        ((float64_t*)x_bytes64)[n] = b64;
+        x_bytes64[(n+1)*8] = 1;  // pin head
+        r_data = u3i_bytes(((n+1)*8+1)*sizeof(c3_y), x_bytes64);
+        u3a_free(x_bytes64);
+        break;
+      
+      case 7: ;
+        float128_t a128, b128;
+        u3r_bytes(0, 16, (c3_y*)&(a128.v[0]), a);
+        u3r_bytes(0, 16, (c3_y*)&(b128.v[0]), b);
+        float128_t span128;
+        f128M_sub(&b128, &a128, &span128);
+        float128_t interval128;
+        float128_t n128;
+        i32_to_f128M(n, &n128);
+        f128M_div(&span128, &n128, &interval128);
+        c3_y* x_bytes128 = (c3_y*)u3a_malloc(((n+1)*16+1)*sizeof(c3_y));
+        float128_t i128;
+        for (c3_d i = 1; i < n; i++) {
+          i32_to_f128M(i, &i128);
+          f128M_mul(&i128, &interval128, &((float128_t*)x_bytes128)[n-i]);
+          f128M_add(&a128, &((float128_t*)x_bytes128)[n-i], &((float128_t*)x_bytes128)[n-i]);
+        }
+        ((float128_t*)x_bytes128)[n] = b128;
+        x_bytes128[(n+1)*16] = 1;  // pin head
+        r_data = u3i_bytes(((n+1)*16+1)*sizeof(c3_y), x_bytes128);
+        u3a_free(x_bytes128);
+        break;
+    }
 
     return r_data;
   }
@@ -1409,6 +1851,256 @@
   }
 
   u3_noun
+  u3wf_la_abs(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_abs_real(x_data, x_shape, x_bloq);
+            fprintf(stderr, "abs: %lx\n", x_bloq);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_gth(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data,
+            y_meta, y_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_4, &x_meta,
+                         u3x_sam_5, &x_data,
+                         u3x_sam_6, &y_meta,
+                         u3x_sam_7, &y_data,
+                         0) ||
+         c3n == u3ud(x_data) ||
+         c3n == u3ud(y_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp,
+              y_shape, y_bloq, y_kind, y_fxp,
+              rnd;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      y_shape = u3h(y_meta);          //  2
+      y_bloq = u3h(u3t(y_meta));      //  6
+      y_kind = u3h(u3t(u3t(y_meta))); // 14
+      y_fxp = u3t(u3t(u3t(y_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(y_bloq) ||
+           c3n == u3ud(x_kind) ||
+           c3n == u3ud(y_kind) ||
+           c3n == u3r_sing(x_shape, y_shape) ||
+           c3n == u3r_sing(x_bloq, y_bloq) ||
+           c3n == u3r_sing(x_kind, y_kind) ||
+           c3n == u3r_sing(x_fxp, y_fxp)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_gth_real(x_data, y_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_gte(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data,
+            y_meta, y_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_4, &x_meta,
+                         u3x_sam_5, &x_data,
+                         u3x_sam_6, &y_meta,
+                         u3x_sam_7, &y_data,
+                         0) ||
+         c3n == u3ud(x_data) ||
+         c3n == u3ud(y_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp,
+              y_shape, y_bloq, y_kind, y_fxp,
+              rnd;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      y_shape = u3h(y_meta);          //  2
+      y_bloq = u3h(u3t(y_meta));      //  6
+      y_kind = u3h(u3t(u3t(y_meta))); // 14
+      y_fxp = u3t(u3t(u3t(y_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(y_bloq) ||
+           c3n == u3ud(x_kind) ||
+           c3n == u3ud(y_kind) ||
+           c3n == u3r_sing(x_shape, y_shape) ||
+           c3n == u3r_sing(x_bloq, y_bloq) ||
+           c3n == u3r_sing(x_kind, y_kind) ||
+           c3n == u3r_sing(x_fxp, y_fxp)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_gte_real(x_data, y_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_lth(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data,
+            y_meta, y_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_4, &x_meta,
+                         u3x_sam_5, &x_data,
+                         u3x_sam_6, &y_meta,
+                         u3x_sam_7, &y_data,
+                         0) ||
+         c3n == u3ud(x_data) ||
+         c3n == u3ud(y_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp,
+              y_shape, y_bloq, y_kind, y_fxp,
+              rnd;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      y_shape = u3h(y_meta);          //  2
+      y_bloq = u3h(u3t(y_meta));      //  6
+      y_kind = u3h(u3t(u3t(y_meta))); // 14
+      y_fxp = u3t(u3t(u3t(y_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(y_bloq) ||
+           c3n == u3ud(x_kind) ||
+           c3n == u3ud(y_kind) ||
+           c3n == u3r_sing(x_shape, y_shape) ||
+           c3n == u3r_sing(x_bloq, y_bloq) ||
+           c3n == u3r_sing(x_kind, y_kind) ||
+           c3n == u3r_sing(x_fxp, y_fxp)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_lth_real(x_data, y_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_lte(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data,
+            y_meta, y_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_4, &x_meta,
+                         u3x_sam_5, &x_data,
+                         u3x_sam_6, &y_meta,
+                         u3x_sam_7, &y_data,
+                         0) ||
+         c3n == u3ud(x_data) ||
+         c3n == u3ud(y_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp,
+              y_shape, y_bloq, y_kind, y_fxp,
+              rnd;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      y_shape = u3h(y_meta);          //  2
+      y_bloq = u3h(u3t(y_meta));      //  6
+      y_kind = u3h(u3t(u3t(y_meta))); // 14
+      y_fxp = u3t(u3t(u3t(y_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(y_bloq) ||
+           c3n == u3ud(x_kind) ||
+           c3n == u3ud(y_kind) ||
+           c3n == u3r_sing(x_shape, y_shape) ||
+           c3n == u3r_sing(x_bloq, y_bloq) ||
+           c3n == u3r_sing(x_kind, y_kind) ||
+           c3n == u3r_sing(x_fxp, y_fxp)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_lte_real(x_data, y_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
   u3wf_la_adds(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -1640,6 +2332,75 @@
   }
 
   u3_noun
+  u3wf_la_transpose(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        u3_noun r_data = u3qf_la_transpose(x_data, x_shape, x_bloq);
+        return u3nc(u3nq(u3nt(u3k(u3h(x_shape)), u3k(u3h(u3t(x_shape))), u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_linspace(u3_noun cor)
+  {
+    u3_noun x_meta, a, b, n;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_12, &a,
+                         u3x_sam_13, &b,
+                         u3x_sam_7, &n,
+                         0))
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_linspace_real(a, b, n, x_bloq);
+            x_shape = u3nc(u3x_atom(n)+1, u3_nul);
+            return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
   u3wf_la_diag(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -1667,37 +2428,6 @@
         u3_noun r_data = u3qf_la_diag(x_data, x_shape, x_bloq);
         c3_d len_x0 = _get_dims(x_shape)[0];
         return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
-      }
-    }
-  }
-
-  u3_noun
-  u3wf_la_transpose(u3_noun cor)
-  {
-    // Each argument is a ray, [=meta data=@ux]
-    u3_noun x_meta, x_data;
-
-    if ( c3n == u3r_mean(cor,
-                         u3x_sam_2, &x_meta,
-                         u3x_sam_3, &x_data,
-                         0) ||
-         c3n == u3ud(x_data) )
-    {
-      return u3m_bail(c3__exit);
-    } else {
-      u3_noun x_shape, x_bloq, x_kind, x_fxp;
-      x_shape = u3h(x_meta);          //  2
-      x_bloq = u3h(u3t(x_meta));      //  6
-      x_kind = u3h(u3t(u3t(x_meta))); // 14
-      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
-      if ( c3n == u3ud(x_bloq) ||
-           c3n == u3ud(x_kind)
-         )
-      {
-        return u3m_bail(c3__exit);
-      } else {
-        u3_noun r_data = u3qf_la_transpose(x_data, x_shape, x_bloq);
-        return u3nc(u3nq(u3nt(u3k(u3h(x_shape)), u3k(u3h(u3t(x_shape))), u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
       }
     }
   }

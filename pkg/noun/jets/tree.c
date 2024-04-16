@@ -2163,6 +2163,21 @@ static u3j_harm _139_hex__lagoon_divs_a[] = {{".2", u3wf_la_divs}, {}};
 static u3j_harm _139_hex__lagoon_mods_a[] = {{".2", u3wf_la_mods}, {}};
 static u3j_harm _139_hex__lagoon_dot_a[]  = {{".2", u3wf_la_dot}, {}};
 static u3j_harm _139_hex__lagoon_trans_a[] ={{".2", u3wf_la_transpose}, {}};
+// static u3j_harm _139_hex__lagoon_stack_a[] ={{".2", u3wf_la_stack}, {}};
+// static u3j_harm _139_hex__lagoon_cumsum_a[]={{".2", u3wf_la_cumsum}, {}};
+// static u3j_harm _139_hex__lagoon_argmin_a[]={{".2", u3wf_la_argmin}, {}};
+// static u3j_harm _139_hex__lagoon_argmax_a[]={{".2", u3wf_la_argmax}, {}};
+// static u3j_harm _139_hex__lagoon_ravel_a[]={{".2", u3wf_la_ravel}, {}};
+// static u3j_harm _139_hex__lagoon_min_a[]={{".2", u3wf_la_min}, {}};
+// static u3j_harm _139_hex__lagoon_max_a[]={{".2", u3wf_la_max}, {}};
+static u3j_harm _139_hex__lagoon_linspace_a[]={{".2", u3wf_la_linspace}, {}};
+// static u3j_harm _139_hex__lagoon_range_a[]={{".2", u3wf_la_range}, {}};
+// static u3j_harm _139_hex__lagoon_submatrix_a[]={{".2", u3wf_la_submatrix}, {}};
+static u3j_harm _139_hex__lagoon_abs_a[]={{".2", u3wf_la_abs}, {}};
+static u3j_harm _139_hex__lagoon_gth_a[]={{".2", u3wf_la_gth}, {}};
+static u3j_harm _139_hex__lagoon_gte_a[]={{".2", u3wf_la_gte}, {}};
+static u3j_harm _139_hex__lagoon_lth_a[]={{".2", u3wf_la_lth}, {}};
+static u3j_harm _139_hex__lagoon_lte_a[]={{".2", u3wf_la_lte}, {}};
 static u3j_harm _139_hex__lagoon_diag_a[] = {{".2", u3wf_la_diag}, {}};
 static u3j_harm _139_hex__lagoon_trace_a[]= {{".2", u3wf_la_trace}, {}};
 static u3j_harm _139_hex__lagoon_mmul_a[] = {{".2", u3wf_la_mmul}, {}};
@@ -2179,6 +2194,21 @@ static u3j_core _139_hex__la_core_d[] =
     { "mod-scal", 7, _139_hex__lagoon_mods_a, 0, no_hashes },
     { "dot",      7, _139_hex__lagoon_dot_a,  0, no_hashes },
     { "transpose",7, _139_hex__lagoon_trans_a, 0, no_hashes },
+    // { "stack",    7, _139_hex__lagoon_stack_a, 0, no_hashes },
+    // { "cumsum",   7, _139_hex__lagoon_cumsum_a, 0, no_hashes },
+    // { "argmin",   7, _139_hex__lagoon_argmin_a, 0, no_hashes },
+    // { "argmax",   7, _139_hex__lagoon_argmax_a, 0, no_hashes },
+    // { "ravel",    7, _139_hex__lagoon_ravel_a, 0, no_hashes },
+    // { "min",      7, _139_hex__lagoon_min_a, 0, no_hashes },
+    // { "max",      7, _139_hex__lagoon_max_a, 0, no_hashes },
+    { "linspace", 7, _139_hex__lagoon_linspace_a, 0, no_hashes },
+    // { "range",    7, _139_hex__lagoon_range_a, 0, no_hashes },
+    // { "submatrix",7, _139_hex__lagoon_submatrix_a, 0, no_hashes },
+    { "abs",      7, _139_hex__lagoon_abs_a, 0, no_hashes },
+    { "gth",      7, _139_hex__lagoon_gth_a, 0, no_hashes },
+    { "gte",      7, _139_hex__lagoon_gte_a, 0, no_hashes },
+    { "lth",      7, _139_hex__lagoon_lth_a, 0, no_hashes },
+    { "lte",      7, _139_hex__lagoon_lte_a, 0, no_hashes },
     { "diag",     7, _139_hex__lagoon_diag_a, 0, no_hashes },
     { "trace",    7, _139_hex__lagoon_trace_a,0, no_hashes },
     { "mmul",     7, _139_hex__lagoon_mmul_a, 0, no_hashes },
