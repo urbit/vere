@@ -150,6 +150,13 @@ doesn't match the version of `clang` installed on your system. To address this,
 run `clang --version` and pass the version number via
 `--clang_version="<version_string>"` to the failing command.
 
+If build fails on nix/NixOS, you should pass `ACLOCAL_PATH` environment
+variable to bazel, using `--action_env=ACLOCAL_PATH=$ACLOCAL_PATH`, like so:
+
+```
+bazel build :urbit --action_env=ACLOCAL_PATH=$ACLOCAL_PATH
+```
+
 [^1]: If you're interested in digging into the details of the build system,
       check out [`WORKSPACE.bazel`](WORKSPACE.bazel),
       [`BUILD.bazel`](BUILD.bazel), [`bazel/`](bazel), and the multiple
