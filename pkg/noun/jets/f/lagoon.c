@@ -672,6 +672,71 @@
     return r_data;
   }
 
+/* ravel - x -> ~[x[0], x[1], ... x[n]]
+   entire nd-array busted out as a linear list
+*/
+  u3_noun
+  u3qf_la_ravel_real(u3_noun x_data,
+                     u3_noun shape,
+                     u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // r_data is the result noun of [data]
+    u3_noun r_data;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4:
+        for (c3_d i = 0; i < len_x; i++) {
+          float16_t x_val16 = ((float16_t*)x_bytes)[i];
+          r_data = u3nc(u3i_word(x_val16.v), r_data);
+        }
+        break;
+
+      case 5:
+        for (c3_d i = 0; i < len_x; i++) {
+          float32_t x_val32 = ((float32_t*)x_bytes)[i];
+          r_data = u3nc(u3i_word(x_val32.v), r_data);
+        }
+        break;
+
+      case 6:
+        for (c3_d i = 0; i < len_x; i++) {
+          float64_t x_val64 = ((float64_t*)x_bytes)[i];
+          r_data = u3nc(u3i_chub(x_val64.v), r_data);
+        }
+        break;
+
+      case 7:
+        for (c3_d i = 0; i < len_x; i++) {
+          float128_t x_val128 = ((float128_t*)x_bytes)[i];
+          r_data = u3nc(u3i_chubs(2, (c3_d*)&(x_val128.v)), r_data);
+        }
+        break;
+    }
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+
+    // return u3qb_flop(r_data);
+    return r_data;
+  }
+
 /* min - min(x,y)
 */
   u3_noun
@@ -2291,6 +2356,43 @@
           case c3__real: ;
             u3_noun r_data = u3qf_la_argmin_real(x_data, x_shape, x_bloq);
             // bare atom (@ index)
+            return r_data;
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_ravel(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_ravel_real(x_data, x_shape, x_bloq);
+            // (list @)
             return r_data;
 
           default:
