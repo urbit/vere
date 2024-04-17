@@ -456,6 +456,162 @@
     return r_data;
   }
 
+/* min - min(x,y)
+*/
+  u3_noun
+  u3qf_la_min_real(u3_noun x_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/ leading 0x1, skipped by for range)
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
+
+    u3_noun r_data;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4: ;
+        float16_t min_val16 = ((float16_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          min_val16 = f16_min(min_val16, ((float16_t*)x_bytes)[i]);
+        }
+        float16_t r16[2];
+        r16[0] = min_val16;
+        r16[1].v = 0x1;
+        r_data = u3i_bytes((2+1)*sizeof(c3_y), (c3_y*)r16);
+        break;
+
+      case 5: ;
+        float32_t min_val32 = ((float32_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          min_val32 = f32_min(min_val32, ((float32_t*)x_bytes)[i]);
+        }
+        float32_t r32[2];
+        r32[0] = min_val32;
+        r32[1].v = 0x1;
+        r_data = u3i_bytes((4+1)*sizeof(c3_y), (c3_y*)r32);
+        break;
+
+      case 6: ;
+        float64_t min_val64 = ((float64_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          min_val64 = f64_min(min_val64, ((float64_t*)x_bytes)[i]);
+        }
+        float64_t r64[2];
+        r64[0] = min_val64;
+        r64[1].v = 0x1;
+        r_data = u3i_bytes((8+1)*sizeof(c3_y), (c3_y*)r64);
+        break;
+
+      case 7: ;
+        float128_t min_val128 = ((float128_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          min_val128 = *f128M_min(&min_val128, &((float128_t*)x_bytes)[i]);
+        }
+        float128_t r128[2];
+        r128[0] = min_val128;
+        r128[1] = (float128_t){0x1, 0x0};
+        r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)r128);
+        break;
+    }
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+
+    return r_data;
+  }
+
+/* max - max(x,y)
+*/
+  u3_noun
+  u3qf_la_max_real(u3_noun x_data,
+                   u3_noun shape,
+                   u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/ leading 0x1, skipped by for range)
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
+
+    u3_noun r_data;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4: ;
+        float16_t max_val16 = ((float16_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          max_val16 = f16_max(max_val16, ((float16_t*)x_bytes)[i]);
+        }
+        float16_t r16[2];
+        r16[0] = max_val16;
+        r16[1].v = 0x1;
+        r_data = u3i_bytes((2+1)*sizeof(c3_y), (c3_y*)r16);
+        break;
+
+      case 5: ;
+        float32_t max_val32 = ((float32_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          max_val32 = f32_max(max_val32, ((float32_t*)x_bytes)[i]);
+        }
+        float32_t r32[2];
+        r32[0] = max_val32;
+        r32[1].v = 0x1;
+        r_data = u3i_bytes((4+1)*sizeof(c3_y), (c3_y*)r32);
+        break;
+
+      case 6: ;
+        float64_t max_val64 = ((float64_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          max_val64 = f64_max(max_val64, ((float64_t*)x_bytes)[i]);
+        }
+        float64_t r64[2];
+        r64[0] = max_val64;
+        r64[1].v = 0x1;
+        r_data = u3i_bytes((8+1)*sizeof(c3_y), (c3_y*)r64);
+        break;
+
+      case 7: ;
+        float128_t max_val128 = ((float128_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+          max_val128 = *f128M_max(&max_val128, &((float128_t*)x_bytes)[i]);
+        }
+        float128_t r128[2];
+        r128[0] = max_val128;
+        r128[1] = (float128_t){0x1, 0x0};
+        r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)r128);
+        break;
+    }
+
+    //  Clean up and return.
+    u3a_free(x_bytes);
+
+    return r_data;
+  }
+
 /* abs - |x|
 */
   u3_noun
@@ -1842,6 +1998,80 @@
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_mod_real(x_data, y_data, x_shape, x_bloq);
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_min(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_min_real(x_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_max(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_max_real(x_data, x_shape, x_bloq);
+            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
             return u3_none;
