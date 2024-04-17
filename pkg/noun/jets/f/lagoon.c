@@ -456,6 +456,152 @@
     return r_data;
   }
 
+/* argmin - argmin(x)
+*/
+  u3_noun
+  u3qf_la_argmin_real(u3_noun x_data,
+                      u3_noun shape,
+                      u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1, which doesn't matter here)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    c3_w min_idx = 0;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4: ;
+        float16_t min_val16 = ((float16_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f16_lt(((float16_t*)x_bytes)[i], min_val16)) {
+             min_val16 = ((float16_t*)x_bytes)[i];
+             min_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 5: ;
+        float32_t min_val32 = ((float32_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f32_lt(((float32_t*)x_bytes)[i], min_val32)) {
+             min_val32 = ((float32_t*)x_bytes)[i];
+             min_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 6: ;
+        float64_t min_val64 = ((float64_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f64_lt(((float64_t*)x_bytes)[i], min_val64)) {
+             min_val64 = ((float64_t*)x_bytes)[i];
+             min_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 7: ;
+        float128_t min_val128 = ((float128_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f128_lt(((float128_t*)x_bytes)[i], min_val128)) {
+             min_val128 = *f128M_min(&min_val128, &((float128_t*)x_bytes)[i]);
+             min_idx = (len_x - i);
+           }
+        }
+        break;
+    }
+
+    u3_noun r_data = u3i_chub(min_idx);
+
+    return r_data;
+  }
+
+/* argmax - argmax(x)
+*/
+  u3_noun
+  u3qf_la_argmax_real(u3_noun x_data,
+                      u3_noun shape,
+                      u3_noun bloq)
+  {
+    //  Fence on valid bloq size.
+    if (bloq < 4 || bloq > 7) {
+      return u3_none;
+    }
+
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(shape);
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);
+
+    // x_bytes is the data array (w/o leading 0x1, which doesn't matter here)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    c3_w max_idx = 0;
+
+    //  Switch on the block size.
+    switch (bloq) {
+      case 4: ;
+        float16_t max_val16 = ((float16_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f16_gt(((float16_t*)x_bytes)[i], max_val16)) {
+             max_val16 = ((float16_t*)x_bytes)[i];
+             max_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 5: ;
+        float32_t max_val32 = ((float32_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f32_gt(((float32_t*)x_bytes)[i], max_val32)) {
+             max_val32 = ((float32_t*)x_bytes)[i];
+             max_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 6: ;
+        float64_t max_val64 = ((float64_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f64_gt(((float64_t*)x_bytes)[i], max_val64)) {
+             max_val64 = ((float64_t*)x_bytes)[i];
+             max_idx = (len_x - i);
+           }
+        }
+        break;
+
+      case 7: ;
+        float128_t max_val128 = ((float128_t*)x_bytes)[0];
+        for (c3_d i = 0; i < len_x; i++) {
+           if(f128_gt(((float128_t*)x_bytes)[i], max_val128)) {
+             max_val128 = *f128M_max(&max_val128, &((float128_t*)x_bytes)[i]);
+             max_idx = (len_x - i);
+           }
+        }
+        break;
+    }
+
+    u3_noun r_data = u3i_chub(max_idx);
+
+    return r_data;
+  }
+
 /* min - min(x,y)
 */
   u3_noun
@@ -1998,6 +2144,82 @@
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_mod_real(x_data, y_data, x_shape, x_bloq);
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_argmin(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_argmin_real(x_data, x_shape, x_bloq);
+            // bare atom (@ index)
+            return r_data;
+
+          default:
+            return u3_none;
+        }
+      }
+    }
+  }
+
+  u3_noun
+  u3wf_la_argmax(u3_noun cor)
+  {
+    // Each argument is a ray, [=meta data=@ux]
+    u3_noun x_meta, x_data;
+
+    if ( c3n == u3r_mean(cor,
+                         u3x_sam_2, &x_meta,
+                         u3x_sam_3, &x_data,
+                         0) ||
+         c3n == u3ud(x_data) )
+    {
+      return u3m_bail(c3__exit);
+    } else {
+      u3_noun x_shape, x_bloq, x_kind, x_fxp;
+      x_shape = u3h(x_meta);          //  2
+      x_bloq = u3h(u3t(x_meta));      //  6
+      x_kind = u3h(u3t(u3t(x_meta))); // 14
+      x_fxp = u3t(u3t(u3t(x_meta)));  // 15
+      if ( c3n == u3ud(x_bloq) ||
+           c3n == u3ud(x_kind)
+         )
+      {
+        return u3m_bail(c3__exit);
+      } else {
+        switch (x_kind) {
+          case c3__real: ;
+            u3_noun r_data = u3qf_la_argmax_real(x_data, x_shape, x_bloq);
+            // bare atom (@ index)
+            return r_data;
 
           default:
             return u3_none;

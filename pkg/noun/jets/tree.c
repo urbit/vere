@@ -2165,8 +2165,8 @@ static u3j_harm _139_hex__lagoon_dot_a[]  = {{".2", u3wf_la_dot}, {}};
 static u3j_harm _139_hex__lagoon_trans_a[] ={{".2", u3wf_la_transpose}, {}};
 // static u3j_harm _139_hex__lagoon_stack_a[] ={{".2", u3wf_la_stack}, {}};
 // static u3j_harm _139_hex__lagoon_cumsum_a[]={{".2", u3wf_la_cumsum}, {}};
-// static u3j_harm _139_hex__lagoon_argmin_a[]={{".2", u3wf_la_argmin}, {}};
-// static u3j_harm _139_hex__lagoon_argmax_a[]={{".2", u3wf_la_argmax}, {}};
+static u3j_harm _139_hex__lagoon_argmin_a[]={{".2", u3wf_la_argmin}, {}};
+static u3j_harm _139_hex__lagoon_argmax_a[]={{".2", u3wf_la_argmax}, {}};
 // static u3j_harm _139_hex__lagoon_ravel_a[]={{".2", u3wf_la_ravel}, {}};
 static u3j_harm _139_hex__lagoon_min_a[]={{".2", u3wf_la_min}, {}};
 static u3j_harm _139_hex__lagoon_max_a[]={{".2", u3wf_la_max}, {}};
@@ -2196,8 +2196,8 @@ static u3j_core _139_hex__la_core_d[] =
     { "transpose",7, _139_hex__lagoon_trans_a, 0, no_hashes },
     // { "stack",    7, _139_hex__lagoon_stack_a, 0, no_hashes },
     // { "cumsum",   7, _139_hex__lagoon_cumsum_a, 0, no_hashes },
-    // { "argmin",   7, _139_hex__lagoon_argmin_a, 0, no_hashes },
-    // { "argmax",   7, _139_hex__lagoon_argmax_a, 0, no_hashes },
+    { "argmin",   7, _139_hex__lagoon_argmin_a, 0, no_hashes },
+    { "argmax",   7, _139_hex__lagoon_argmax_a, 0, no_hashes },
     // { "ravel",    7, _139_hex__lagoon_ravel_a, 0, no_hashes },
     { "min",      7, _139_hex__lagoon_min_a, 0, no_hashes },
     { "max",      7, _139_hex__lagoon_max_a, 0, no_hashes },
