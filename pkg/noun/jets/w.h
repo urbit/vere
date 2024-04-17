@@ -345,6 +345,7 @@
     u3_noun u3wf_la_diag(u3_noun);
     u3_noun u3wf_la_transpose(u3_noun);
 
+    u3_noun u3wf_la_cumsum(u3_noun);
     u3_noun u3wf_la_argmin(u3_noun);
     u3_noun u3wf_la_argmax(u3_noun);
 

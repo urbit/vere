@@ -261,6 +261,7 @@
     u3_noun u3qf_la_diag(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_transpose(u3_noun, u3_noun, u3_noun);
 
+    u3_noun u3qf_la_cumsum_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_argmin_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_argmax_real(u3_noun, u3_noun, u3_noun);
 
