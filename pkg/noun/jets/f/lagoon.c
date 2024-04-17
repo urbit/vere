@@ -128,7 +128,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
     
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         haxpy(len_x, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
         break;
@@ -186,7 +186,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
     
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
         break;
@@ -245,7 +245,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           ((float16_t*)y_bytes)[i] = f16_mul(((float16_t*)x_bytes)[i], ((float16_t*)y_bytes)[i]);
@@ -311,7 +311,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           ((float16_t*)y_bytes)[i] = f16_div(((float16_t*)x_bytes)[i], ((float16_t*)y_bytes)[i]);
@@ -377,7 +377,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -466,6 +466,7 @@
     if (bloq < 4 || bloq > 7) {
       return u3_none;
     }
+    fprintf(stderr, "function rounding mode: %lx\r\n", softfloat_roundingMode);
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     // len_x is length in base units
@@ -481,7 +482,7 @@
     u3_noun r_data;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t sum16[2];
         for (c3_d i = 0; i < len_x; i++) {
@@ -512,7 +513,10 @@
       case 7: ;
         float128_t sum128[2];
         for (c3_d i = 0; i < len_x; i++) {
+          fprintf(stderr, " sum128[%d] = %lx %lx\r\n", i, sum128[i].v[0], sum128[i].v[1]);
+          fprintf(stderr, "x_bytes[%d] = %lx %lx\r\n", i, ((float128_t*)x_bytes)[i].v[0], ((float128_t*)x_bytes)[i].v[1]);
           f128M_add(&(sum128[0]), &(((float128_t*)x_bytes)[i]), &(sum128[0]));
+          fprintf(stderr, " equals[%d] = %lx %lx\r\n", i, sum128[i].v[0], sum128[i].v[1]);
         }
         sum128[1] = (float128_t){0x1, 0x0};
         r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)sum128);
@@ -551,7 +555,7 @@
     c3_w min_idx = 0;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t min_val16 = ((float16_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
@@ -624,7 +628,7 @@
     c3_w max_idx = 0;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t max_val16 = ((float16_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
@@ -696,10 +700,10 @@
     u3r_bytes(0, syz_x, x_bytes, x_data);
 
     // r_data is the result noun of [data]
-    u3_noun r_data;
+    u3_noun r_data = u3_nul;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -761,7 +765,7 @@
     u3_noun r_data;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t min_val16 = ((float16_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
@@ -839,7 +843,7 @@
     u3_noun r_data;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t max_val16 = ((float16_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
@@ -915,7 +919,7 @@
     u3r_bytes(0, syz_x+1, x_bytes, x_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           ((float16_t*)x_bytes)[i] = f16_abs(((float16_t*)x_bytes)[i]);
@@ -979,7 +983,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -1052,7 +1056,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -1125,7 +1129,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -1198,7 +1202,7 @@
     u3r_bytes(0, syz_x+1, y_bytes, y_data);
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
@@ -1275,7 +1279,7 @@
     float128_t n128;
 
     //  Switch on the block size.  We assume that n fits in the target block size; Hoon typecheck should prevent.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
         // set y to [n]
@@ -1357,7 +1361,7 @@
     float128_t n128;
 
     //  Switch on the block size.  We assume that n fits in the target block size; Hoon typecheck should prevent.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
         // set y to [n]
@@ -1438,7 +1442,7 @@
     float128_t n128;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
         hscal(len_x, n16, (float16_t*)x_bytes, 1);
@@ -1501,7 +1505,7 @@
     float128_t in128;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         //  XX note that in16 is doing double duty here
         u3r_bytes(0, 2, (c3_y*)&(in16.v), n);
@@ -1572,7 +1576,7 @@
     float128_t n128, in128;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
         u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
         in16 = f16_div((float16_t){SB_REAL16_ONE}, n16);
@@ -1688,7 +1692,7 @@
     u3_noun r_data;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t r16[2];
         r16[0] = hdot(len_x, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
@@ -1836,7 +1840,7 @@
 
     u3_noun r_data;
 
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t a16, b16;
         u3r_bytes(0, 2, (c3_y*)&(a16.v), a);
@@ -1931,7 +1935,7 @@
 
     u3_noun r_data;
 
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t a16, b16, interval16;
         u3r_bytes(0, 2, (c3_y*)&(a16.v), a);
@@ -2042,75 +2046,66 @@
     }
     c3_d N = Na;
 
-    c3_y* x_bytes = (c3_y*)u3a_malloc((M*N)*sizeof(c3_y));
-    u3r_bytes(0, M*N, x_bytes, x_data);
-    c3_y* y_bytes = (c3_y*)u3a_malloc((N*P)*sizeof(c3_y));
-    u3r_bytes(0, N*P, y_bytes, y_data);
-    c3_y* c_bytes = (c3_y*)u3a_malloc((M*P)*sizeof(c3_y));
+    //  Unpack the data as a byte array.  We assume total length < 2**64.
+    // len_x is length in base units
+    c3_d len_x = _get_length(x_shape);    // M*N
+
+    // syz_x is length in bytes
+    c3_d syz_x = len_x * pow(2, bloq-3);  // M*N
+
+    // x_bytes is the data array (w/o leading 0x1)
+    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*pow(2,bloq-3)*sizeof(c3_y));
+    u3r_bytes(0, syz_x, x_bytes, x_data);
+
+    // len_x is length in base units
+    c3_d len_y = _get_length(y_shape);    // N*P
+
+    // syz_x is length in bytes
+    c3_d syz_y = len_x * pow(2, bloq-3);  // N*P
+
+    // y_bytes is the data array (w/o leading 0x1)
+    c3_y* y_bytes = (c3_y*)u3a_malloc(syz_y*pow(2,bloq-3)*sizeof(c3_y));
+    u3r_bytes(0, syz_y, y_bytes, y_data);
+
+    // syz_r is length in bytes
+    c3_d syz_r = (M*P) * pow(2, bloq-3);  // M*P
+    
+    // len_r is length in base units
+    c3_d len_r = M*P;                     // M*P
+
+    // r_bytes is the result array
+    c3_y* r_bytes = (c3_y*)u3a_malloc((syz_r*pow(2,bloq-3)+1)*sizeof(c3_y));
+    r_bytes[syz_r] = 1;  // pin head
 
     u3_noun r_data;
 
     //  Switch on the block size.
-    switch (bloq) {
+    switch (u3x_atom(bloq)) {
       case 4:
-        hgemm('N', 'N', M, N, P, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, N, (float16_t*)y_bytes, N, (float16_t){SB_REAL16_ZERO}, (float16_t*)c_bytes, P);
-
-        //  Unpack the result back into a noun.
-        r_data = u3i_bytes(M*P, c_bytes);
-
-        //  Clean up.
-        u3a_free(x_bytes);
-        u3a_free(y_bytes);
-        u3a_free(c_bytes);
-
-        return u3nc(u3nq(u3nl(M, P, u3_none), bloq, c3__real, u3_nul), r_data);
+        hgemm('N', 'N', M, N, P, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, N, (float16_t*)y_bytes, N, (float16_t){SB_REAL16_ZERO}, (float16_t*)r_bytes, P);
+        break;
 
       case 5:
-        sgemm('N', 'N', M, N, P, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, N, (float32_t*)y_bytes, N, (float32_t){SB_REAL32_ZERO}, (float32_t*)c_bytes, P);
-
-        //  Unpack the result back into a noun.
-        r_data = u3i_bytes(M*P, c_bytes);
-
-        //  Clean up.
-        u3a_free(x_bytes);
-        u3a_free(y_bytes);
-        u3a_free(c_bytes);
-
-        return u3nc(u3nq(u3nl(M, P, u3_none), bloq, c3__real, u3_nul), r_data);
+        sgemm('N', 'N', M, N, P, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, N, (float32_t*)y_bytes, N, (float32_t){SB_REAL32_ZERO}, (float32_t*)r_bytes, P);
+        break;
 
       case 6:
-        dgemm('N', 'N', M, N, P, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, N, (float64_t*)y_bytes, N, (float64_t){SB_REAL64_ZERO}, (float64_t*)c_bytes, P);
-
-        //  Unpack the result back into a noun.
-        r_data = u3i_bytes(M*P, c_bytes);
-
-        //  Clean up.
-        u3a_free(x_bytes);
-        u3a_free(y_bytes);
-        u3a_free(c_bytes);
-
-        return u3nc(u3nq(u3nl(M, P, u3_none), bloq, c3__real, u3_nul), r_data);
+        dgemm('N', 'N', M, N, P, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, N, (float64_t*)y_bytes, N, (float64_t){SB_REAL64_ZERO}, (float64_t*)r_bytes, P);
+        break;
 
       case 7:
-        qgemm('N', 'N', M, N, P, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, N, (float128_t*)y_bytes, N, (float128_t){SB_REAL128L_ZERO,SB_REAL128U_ZERO}, (float128_t*)c_bytes, P);
-
-        //  Unpack the result back into a noun.
-        r_data = u3i_bytes(M*P, c_bytes);
-
-        //  Clean up.
-        u3a_free(x_bytes);
-        u3a_free(y_bytes);
-        u3a_free(c_bytes);
-
-        return u3nc(u3nq(u3nl(M, P, u3_none), bloq, c3__real, u3_nul), r_data);
-
-      default:
-        u3a_free(x_bytes);
-        u3a_free(y_bytes);
-        u3a_free(c_bytes);
-        
-        return u3_none;
+        qgemm('N', 'N', M, N, P, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, N, (float128_t*)y_bytes, N, (float128_t){SB_REAL128L_ZERO,SB_REAL128U_ZERO}, (float128_t*)r_bytes, P);
+        break;
     }
+
+    //  Unpack the result back into a noun.
+    r_data = u3i_bytes(syz_r*pow(2,bloq-3)+1, r_bytes);
+
+    u3a_free(x_bytes);
+    u3a_free(y_bytes);
+    u3a_free(r_bytes);
+
+    return u3nc(u3nq(u3nt(u3k(M), u3k(P), u3_nul), u3k(bloq), c3__real, u3_nul), u3k(r_data));
   }
 
   u3_noun
@@ -2419,6 +2414,8 @@
           case c3__real:
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_cumsum_real(x_data, x_shape, x_bloq);
+            fprintf(stderr, "desired rounding mode:  %lx\r\n", rnd);
+            fprintf(stderr, "apparent rounding mode: %lx\r\n", softfloat_roundingMode);
             return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
@@ -3349,8 +3346,10 @@
         switch (x_kind) {
           case c3__real:
             _set_rounding(rnd);
-            return u3qf_la_mmul_real(x_data, y_data, x_shape, y_shape, x_bloq);
-            break;
+            u3_noun r_data;
+            r_data = u3qf_la_mmul_real(x_data, y_data, x_shape, y_shape, x_bloq);
+            // result is already [meta data]
+            return u3k(r_data);
 
           default:
             return u3_none;
