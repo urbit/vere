@@ -260,7 +260,6 @@
     u3_noun u3qf_la_dot_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_diag(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_transpose(u3_noun, u3_noun, u3_noun);
-
     u3_noun u3qf_la_cumsum_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_argmin_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_argmax_real(u3_noun, u3_noun, u3_noun);
@@ -268,13 +267,12 @@
     u3_noun u3qf_la_min_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_max_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_linspace_real(u3_noun, u3_noun, u3_noun, u3_noun);
-
+    u3_noun u3qf_la_range_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_abs_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_gth_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_gte_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_lth_real(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_lte_real(u3_noun, u3_noun, u3_noun, u3_noun);
-
     u3_noun u3qf_la_trace_real(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_la_mmul_real(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 

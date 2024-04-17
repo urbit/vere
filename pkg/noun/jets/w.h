@@ -344,7 +344,6 @@
     u3_noun u3wf_la_dot(u3_noun);
     u3_noun u3wf_la_diag(u3_noun);
     u3_noun u3wf_la_transpose(u3_noun);
-
     u3_noun u3wf_la_cumsum(u3_noun);
     u3_noun u3wf_la_argmin(u3_noun);
     u3_noun u3wf_la_argmax(u3_noun);
@@ -352,7 +351,7 @@
     u3_noun u3wf_la_min(u3_noun);
     u3_noun u3wf_la_max(u3_noun);
     u3_noun u3wf_la_linspace(u3_noun);
-
+    u3_noun u3wf_la_range(u3_noun);
     u3_noun u3wf_la_abs(u3_noun);
     u3_noun u3wf_la_gth(u3_noun);
     u3_noun u3wf_la_gte(u3_noun);
