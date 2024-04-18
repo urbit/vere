@@ -76,7 +76,6 @@ typedef enum u3_stun_state {
       uv_timer_t     tim_u;             //  keepalive timer handle
       uv_timer_t     dns_u;             //  DNS resolution timer handle
       c3_c*          dns_c;             //  sponsoring galaxy fqdn
-      struct timeval las_u;             //  XX last sent date (not used?)
       struct timeval sar_u;             //  date we started trying to send
       u3_lane        sef_u;             //  our lane, if we know it
       c3_o           wok_o;             //  STUN worked, set on first success
@@ -1263,38 +1262,41 @@ _stun_reset(uv_timer_t* tim_u)
 static void
 _stun_timer_cb(uv_timer_t* tim_u)
 {
-  c3_w rto = 500;
-
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
+  c3_w     rto_w = 500;
 
   switch ( sam_u->sun_u.sat_y ) {
     case STUN_OFF: {
       //  ignore; stray timer (although this shouldn't happen)
       u3l_log("stun: stray timer STUN_OFF");
     } break;
+
     case STUN_KEEPALIVE: {
       sam_u->sun_u.sat_y = STUN_TRYING;
-      sam_u->sun_u.tim_u.data = sam_u;
       gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto, 0);
+      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto_w, 0);
       _stun_send_request(sam_u);
     } break;
+
     case STUN_TRYING: {
       c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
-      c3_d nex_d = (gap_d * 2) + rto - gap_d;
+      c3_d nex_d = (gap_d * 2) + rto_w - gap_d;
 
-      if ( gap_d >= (39500) ) {
+      if ( gap_d >= 39500 ) {
         _stun_on_lost(sam_u);
-      } else if ( gap_d >= (31500) ) {
+      }
+      else {
         //  wait ~s8 for the last STUN request
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 8000 , 0);
-        _stun_send_request(sam_u);
-      } else {
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb,
-                       (nex_d >= 31500) ? 31500 : nex_d, 0);
+        //
+        //    XX explain
+        //
+        c3_w tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
         _stun_send_request(sam_u);
       }
     } break;
+
     default: u3_assert(!"programmer error");
   }
 }
@@ -1324,10 +1326,6 @@ _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
 
   if ( sas_i ) {
     _stun_on_request_fail(sam_u, sas_i);
-  }
-  else {
-    //  XX curently not used
-    gettimeofday(&sam_u->sun_u.las_u, 0);  //  overwrite last sent date
   }
 
   c3_free(snd_u);
