@@ -878,18 +878,17 @@ _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
   u3_pact* pac_u = (u3_pact*)req_u;
   u3_ames* sam_u = pac_u->sam_u;
 
-  if ( sas_i ) {
-    u3l_log("ames: send fail_async: %s", uv_strerror(sas_i));
-    sam_u->fig_u.net_o = c3n;
-  }
-  else {
+  if ( !sas_i ) {
     sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("ames: send fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
   }
 
   _ames_pact_free(pac_u);
 }
 
-#define _fine_send _ames_send
 /* _ames_send(): send buffer to address on port.
 */
 static void
@@ -913,12 +912,8 @@ _ames_send(u3_pact* pac_u)
     add_u.sin_addr.s_addr = htonl(pac_u->rut_u.lan_u.pip_w);
     add_u.sin_port = htons(pac_u->rut_u.lan_u.por_s);
 
-    //u3l_log("_ames_send %s %u", _str_typ(pac_u->typ_y),
-    //                              pac_u->rut_u.lan_u.por_s);
-
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
-
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &sam_u->wax_u,
                                    &buf_u, 1,
@@ -926,12 +921,7 @@ _ames_send(u3_pact* pac_u)
                                    _ames_send_cb);
 
       if ( sas_i ) {
-        if ( c3y == sam_u->fig_u.net_o ) {
-          u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
-          sam_u->fig_u.net_o = c3n;
-        }
-
-        _ames_pact_free(pac_u);
+        _ames_send_cb(&pac_u->snd_u, sas_i);
       }
     }
   }
@@ -1233,7 +1223,6 @@ static void _stun_send_request(u3_ames*);
 static void _stun_on_lost(u3_ames* sam_u);
 static void _stun_czar(u3_ames* sam_u, c3_d tim_d);
 static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
-static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
 static void _stun_on_failure(u3_ames* sam_u);
 static void _stun_start(u3_ames* sam_u, c3_o fail);
 static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
@@ -1308,24 +1297,25 @@ typedef struct _stun_send {
 } _stun_send;
 
 static void
-_stun_on_request_fail(u3_ames* sam_u, c3_i sas_i)
-{
-  u3l_log("stun: send callback fail_async: %s", uv_strerror(sas_i));
-
-  _stun_on_failure(sam_u);  // %kick ping app
-
-  sam_u->sun_u.sat_y = STUN_TRYING;
-  _stun_timer_cb(&sam_u->sun_u.tim_u);  //  retry sending the failed request
-}
-
-static void
 _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
 {
   _stun_send* snd_u = (_stun_send*)req_u;
   u3_ames*    sam_u = snd_u->sam_u;
 
+  if ( !sas_i ) {
+    sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("stun: send request fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
+  }
+
+  //  XX review/revise
+  //
   if ( sas_i ) {
-    _stun_on_request_fail(sam_u, sas_i);
+    _stun_on_failure(sam_u);  // %kick ping app
+    sam_u->sun_u.sat_y = STUN_TRYING;
+    _stun_timer_cb(&sam_u->sun_u.tim_u);  //  retry sending the failed request
   }
 
   c3_free(snd_u);
@@ -1335,9 +1325,14 @@ static void
 _stun_send_response_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 {
   _stun_send* snd_u = (_stun_send*)rep_u;
+  u3_ames*    sam_u = snd_u->sam_u;
 
-  if ( sas_i != 0 ) {
-    u3l_log("stun: _stun_send_response_cb fail_sync: %s", uv_strerror(sas_i));
+  if ( !sas_i ) {
+    sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("stun: send response fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
   }
 
   c3_free(snd_u);
@@ -1394,9 +1389,8 @@ _stun_on_request(u3_ames*              sam_u,
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
                                &buf_u, 1, adr_u, _stun_send_response_cb);
 
-  if ( sas_i != 0 ) {
-    u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
-    c3_free(snd_u);
+  if ( sas_i ) {
+    _stun_send_response_cb(&snd_u->req_u, sas_i);
   }
 }
 
@@ -1515,12 +1509,12 @@ _stun_send_request(u3_ames* sam_u)
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
-                           (const struct sockaddr*)&add_u, _stun_send_request_cb);
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
+                               (const struct sockaddr*)&add_u,
+                               _stun_send_request_cb);
 
-  if ( sas_i != 0) {
-    _stun_on_request_fail(sam_u, sas_i);
-    c3_free(snd_u);
+  if ( sas_i ) {
+    _stun_send_request_cb(&snd_u->req_u, sas_i);
   }
 }
 
