@@ -1073,6 +1073,48 @@ _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
   return 0;
 }
 
+/* _ames_czar_lane: retrieve lane for galaxy if stored.
+*/
+static c3_o
+_ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
+{
+  c3_s por_s = _ames_czar_port(imp_y);
+  c3_w pip_w;
+
+  if ( c3n == u3_Host.ops_u.net ) {
+    pip_w = 0x7f000001;
+  }
+  else {
+    pip_w = sam_u->zar_u.pip_w[imp_y];
+
+    if ( !pip_w ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("ames: czar not resolved");
+      }
+      return c3n;
+    }
+    else if ( _CZAR_GONE == pip_w ) {
+      //  print only on first send failure
+      //
+      c3_w blk_w = imp_y >> 5;
+      c3_w bit_w = 1 << (imp_y & 31);
+
+      if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
+        c3_c dns_c[256];
+        u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
+        u3l_log("ames: czar at %s: not found (b)", dns_c);
+        sam_u->zar_u.log_w[blk_w] |= bit_w;
+      }
+
+      return c3n;
+    }
+  }
+
+  lan_u->por_s = por_s;
+  lan_u->pip_w = pip_w;
+  return c3y;
+}
+
 static c3_c*
 _ames_czar_dns(c3_y imp_y, c3_c* czar_c)
 {
@@ -1908,6 +1950,61 @@ _ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
   u3z(zad); u3z(daz); u3z(our);
 }
 
+/* _ames_send_lane(): resolve/decode lane. RETAIN
+*/
+static c3_o
+_ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
+{
+  u3_noun tag, val;
+
+  if ( c3n == u3r_cell(lan, &tag, &val) ) {
+    u3l_log("ames: bad lane; not a cell");
+    return c3n;
+  }
+
+  switch ( tag ) {
+    case c3y: {  //  galaxy
+      if ( val >= 256 ) {
+        u3l_log("ames: bad galaxy lane: 0x%x", val);
+        return c3n;
+      }
+      return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
+    }
+
+    case c3n: {  //  ip:port
+      u3_lane nal_u = u3_ames_decode_lane(u3k(val));
+
+      //  convert incoming localhost to outgoing localhost
+      //
+      //    XX this looks like en/de-coding problems ...
+      //
+      nal_u.pip_w = ( nal_u.pip_w ) ? nal_u.pip_w : 0x7f000001;
+
+      //  if in local-only mode, don't send remote packets
+      //
+      if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != nal_u.pip_w) ) {
+        return c3n;
+      }
+      //  if the lane is uninterpretable, silently drop the packet
+      //
+      else if ( !nal_u.por_s ) {
+        if ( u3C.wag_w & u3o_verbose ) {
+          u3l_log("ames: inscrutable lane");
+        }
+        return c3n;
+      }
+
+      *lan_u = nal_u;
+      return c3y;
+    }
+
+    default: {
+      u3l_log("ames: bad lane tag");
+      return c3n;
+    }
+  }
+}
+
 /* _ames_ef_send(): send packet to network (v4).
 */
 static void
@@ -1919,60 +2016,23 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     return;
   }
 
-  u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
-  pac_u->sam_u = sam_u;
-  pac_u->len_w = u3r_met(3, pac);
-  pac_u->hun_y = c3_malloc(pac_u->len_w);
+  u3_lane lan_u;
 
-  u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
+  if ( c3y == _ames_send_lane(sam_u, lan, &lan_u) ) {
+    u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
+    pac_u->sam_u = sam_u;
+    pac_u->rut_u.lan_u = lan_u;
+    pac_u->len_w = u3r_met(3, pac);
+    pac_u->hun_y = c3_malloc(pac_u->len_w);
 
-  _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
-  pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
+    u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
 
-  u3_noun tag, val;
-  u3x_cell(lan, &tag, &val);
-  u3_assert( (c3y == tag) || (c3n == tag) );
+    _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
+    pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
 
-  //  galaxy lane; do DNS lookup and send packet
-  //
-  if ( c3y == tag ) {
-    u3_assert( c3y == u3a_is_cat(val) );
-    u3_assert( val < 256 );
-
-    //u3l_log("_ames_ef_send imp %s %u", _str_typ(pac_u->typ_y), val);
-    pac_u->rut_u.imp_y = val;
-    _ames_czar(pac_u);
+    _ames_send(pac_u);
   }
-  //  non-galaxy lane
-  //
-  else {
-    u3_lane lan_u = u3_ames_decode_lane(u3k(val));
-    ////u3l_log("_ames_ef_send low %s %u", _str_typ(pac_u->typ_y),
-    //                                       lan_u.por_s);
 
-    //  convert incoming localhost to outgoing localhost
-    //
-    lan_u.pip_w = ( 0 == lan_u.pip_w )? 0x7f000001 : lan_u.pip_w;
-    //  if in local-only mode, don't send remote packets
-    //
-    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
-      _ames_pact_free(pac_u);
-    }
-    //  if the lane is uninterpretable, silently drop the packet
-    //
-    else if ( 0 == lan_u.por_s ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("ames: inscrutable lane");
-      }
-      _ames_pact_free(pac_u);
-    }
-    //  otherwise, mutate destination and send packet
-    //
-    else {
-      pac_u->rut_u.lan_u = lan_u;
-      _ames_send(pac_u);
-    }
-  }
   u3z(lan); u3z(pac);
 }
 
