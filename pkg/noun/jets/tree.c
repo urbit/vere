@@ -2148,8 +2148,8 @@ static u3j_core _139_hex_json_d[] =
   };
 
 /* linear algebra jets
-   XX move to outer _sep_ core for /lib? eventually
-static u3j_core _139_sep_d[] =
+   XX move to outer _hep_ core for /lib? eventually
+static u3j_core _139_hep_d[] =
 */
 static u3j_harm _139_hex__lagoon_add_a[]  = {{".2", u3wf_la_add}, {}};
 static u3j_harm _139_hex__lagoon_sub_a[]  = {{".2", u3wf_la_sub}, {}};
@@ -2167,15 +2167,15 @@ static u3j_harm _139_hex__lagoon_cumsum_a[]={{".2", u3wf_la_cumsum}, {}};
 static u3j_harm _139_hex__lagoon_argmin_a[]={{".2", u3wf_la_argmin}, {}};
 static u3j_harm _139_hex__lagoon_argmax_a[]={{".2", u3wf_la_argmax}, {}};
 static u3j_harm _139_hex__lagoon_ravel_a[]={{".2", u3wf_la_ravel}, {}};
-static u3j_harm _139_hex__lagoon_min_a[]={{".2", u3wf_la_min}, {}};
-static u3j_harm _139_hex__lagoon_max_a[]={{".2", u3wf_la_max}, {}};
+static u3j_harm _139_hex__lagoon_min_a[]  = {{".2", u3wf_la_min}, {}};
+static u3j_harm _139_hex__lagoon_max_a[]  = {{".2", u3wf_la_max}, {}};
 static u3j_harm _139_hex__lagoon_linspace_a[]={{".2", u3wf_la_linspace}, {}};
-static u3j_harm _139_hex__lagoon_range_a[]={{".2", u3wf_la_range}, {}};
-static u3j_harm _139_hex__lagoon_abs_a[]={{".2", u3wf_la_abs}, {}};
-static u3j_harm _139_hex__lagoon_gth_a[]={{".2", u3wf_la_gth}, {}};
-static u3j_harm _139_hex__lagoon_gte_a[]={{".2", u3wf_la_gte}, {}};
-static u3j_harm _139_hex__lagoon_lth_a[]={{".2", u3wf_la_lth}, {}};
-static u3j_harm _139_hex__lagoon_lte_a[]={{".2", u3wf_la_lte}, {}};
+static u3j_harm _139_hex__lagoon_range_a[]= {{".2", u3wf_la_range}, {}};
+static u3j_harm _139_hex__lagoon_abs_a[]  = {{".2", u3wf_la_abs}, {}};
+static u3j_harm _139_hex__lagoon_gth_a[]  = {{".2", u3wf_la_gth}, {}};
+static u3j_harm _139_hex__lagoon_gte_a[]  = {{".2", u3wf_la_gte}, {}};
+static u3j_harm _139_hex__lagoon_lth_a[]  = {{".2", u3wf_la_lth}, {}};
+static u3j_harm _139_hex__lagoon_lte_a[]  = {{".2", u3wf_la_lte}, {}};
 static u3j_harm _139_hex__lagoon_diag_a[] = {{".2", u3wf_la_diag}, {}};
 static u3j_harm _139_hex__lagoon_trace_a[]= {{".2", u3wf_la_trace}, {}};
 static u3j_harm _139_hex__lagoon_mmul_a[] = {{".2", u3wf_la_mmul}, {}};
