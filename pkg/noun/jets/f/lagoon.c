@@ -485,6 +485,7 @@
     switch (u3x_atom(bloq)) {
       case 4: ;
         float16_t sum16[2];
+        sum16[0] = (float16_t){SB_REAL16_ZERO};
         for (c3_d i = 0; i < len_x; i++) {
           sum16[0] = f16_add(sum16[0], ((float16_t*)x_bytes)[i]);
         }
@@ -494,6 +495,7 @@
 
       case 5: ;
         float32_t sum32[2];
+        sum32[0] = (float32_t){SB_REAL32_ZERO};
         for (c3_d i = 0; i < len_x; i++) {
           sum32[0] = f32_add(sum32[0], ((float32_t*)x_bytes)[i]);
         }
@@ -503,6 +505,7 @@
 
       case 6: ;
         float64_t sum64[2];
+        sum64[0] = (float64_t){SB_REAL64_ZERO};
         for (c3_d i = 0; i < len_x; i++) {
           sum64[0] = f64_add(sum64[0], ((float64_t*)x_bytes)[i]);
         }
@@ -512,11 +515,9 @@
 
       case 7: ;
         float128_t sum128[2];
+        sum128[0] = (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
         for (c3_d i = 0; i < len_x; i++) {
-          fprintf(stderr, " sum128[%d] = %lx %lx\r\n", i, sum128[i].v[0], sum128[i].v[1]);
-          fprintf(stderr, "x_bytes[%d] = %lx %lx\r\n", i, ((float128_t*)x_bytes)[i].v[0], ((float128_t*)x_bytes)[i].v[1]);
           f128M_add(&(sum128[0]), &(((float128_t*)x_bytes)[i]), &(sum128[0]));
-          fprintf(stderr, " equals[%d] = %lx %lx\r\n", i, sum128[i].v[0], sum128[i].v[1]);
         }
         sum128[1] = (float128_t){0x1, 0x0};
         r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)sum128);
@@ -2414,8 +2415,6 @@
           case c3__real:
             _set_rounding(rnd);
             u3_noun r_data = u3qf_la_cumsum_real(x_data, x_shape, x_bloq);
-            fprintf(stderr, "desired rounding mode:  %lx\r\n", rnd);
-            fprintf(stderr, "apparent rounding mode: %lx\r\n", softfloat_roundingMode);
             return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
@@ -2640,7 +2639,6 @@
         switch (x_kind) {
           case c3__real: ;
             u3_noun r_data = u3qf_la_abs_real(x_data, x_shape, x_bloq);
-            fprintf(stderr, "abs: %lx\n", x_bloq);
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
