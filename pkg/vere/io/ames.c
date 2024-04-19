@@ -2774,7 +2774,7 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
 
     u3z(tuf);
   }
-  else if ( (c3n == sam_u->pir_u->fak_o) && (c3y == sam_u->zar_u.dom_o) ) {
+  else if ( (c3n == sam_u->pir_u->fak_o) && (c3n == sam_u->zar_u.dom_o) ) {
     u3l_log("ames: turf: no domains");
   }
 
@@ -3074,6 +3074,7 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
   sam_u->sun_u.wok_o = c3n;
+  sam_u->zar_u.dom_o = c3n;
 
   uv_timer_init(u3L, &sam_u->zar_u.tim_u);
   sam_u->zar_u.tim_u.data = sam_u;
