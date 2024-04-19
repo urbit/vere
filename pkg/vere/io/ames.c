@@ -2611,10 +2611,10 @@ typedef struct _czar_resv {
   c3_y             imp_y;
 } _czar_resv;
 
-/* _ames_czar2_gone(): galaxy address resolution failed.
+/* _ames_czar_gone(): galaxy address resolution failed.
 */
 static void
-_ames_czar2_gone(u3_ames* sam_u, c3_y imp_y)
+_ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
 {
   c3_w old_w = sam_u->zar_u.pip_w[imp_y];
 
@@ -2623,10 +2623,10 @@ _ames_czar2_gone(u3_ames* sam_u, c3_y imp_y)
   }
 }
 
-/* _ames_czar2_here(): galaxy address resolution succeeded.
+/* _ames_czar_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_czar2_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
+_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
 {
   c3_w old_w = sam_u->zar_u.pip_w[imp_y];
 
@@ -2650,10 +2650,10 @@ _ames_czar2_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
   }
 }
 
-/* _ames_czar2_cb(): galaxy address resolution callback.
+/* _ames_czar_cb(): galaxy address resolution callback.
 */
 static void
-_ames_czar2_cb(uv_getaddrinfo_t* adr_u,
+_ames_czar_cb(uv_getaddrinfo_t* adr_u,
                c3_i              sas_i,
                struct addrinfo*  aif_u)
 {
@@ -2669,7 +2669,7 @@ _ames_czar2_cb(uv_getaddrinfo_t* adr_u,
   if ( rai_u && rai_u->ai_addr ) {
     struct sockaddr_in* add_u = (void*)rai_u->ai_addr;
     c3_w pip_w = ntohl(add_u->sin_addr.s_addr);
-    _ames_czar2_here(sam_u, imp_y, pip_w);
+    _ames_czar_here(sam_u, imp_y, pip_w);
   }
   else {
     if ( !sas_i ) {
@@ -2680,17 +2680,17 @@ _ames_czar2_cb(uv_getaddrinfo_t* adr_u,
       u3l_log("ames: czar fail: %s", uv_strerror(sas_i));
     }
 
-    _ames_czar2_gone(sam_u, imp_y);
+    _ames_czar_gone(sam_u, imp_y);
   }
 
   uv_freeaddrinfo(aif_u);
   c3_free(res_u);
 }
 
-/* _ames_czar2(): single galaxy address resolution.
+/* _ames_czar(): single galaxy address resolution.
 */
 static void
-_ames_czar2(u3_ames* sam_u, const c3_c* dom_c, c3_y imp_y)
+_ames_czar(u3_ames* sam_u, const c3_c* dom_c, c3_y imp_y)
 {
   struct addrinfo   hin_u = { .ai_family = AF_INET };
   uv_getaddrinfo_t* adr_u;
@@ -2705,10 +2705,10 @@ _ames_czar2(u3_ames* sam_u, const c3_c* dom_c, c3_y imp_y)
   res_u->imp_y = imp_y;
 
   adr_u = &(res_u->adr_u);
-  sas_i = uv_getaddrinfo(u3L, adr_u, _ames_czar2_cb, dns_c, 0, &hin_u);
+  sas_i = uv_getaddrinfo(u3L, adr_u, _ames_czar_cb, dns_c, 0, &hin_u);
 
   if ( sas_i ) {
-    _ames_czar2_cb(adr_u, sas_i, NULL);
+    _ames_czar_cb(adr_u, sas_i, NULL);
   }
 }
 
@@ -2728,7 +2728,7 @@ _ames_czar_all(uv_timer_t* tim_u)
   sam_u->zar_u.pen_s = 256;
 
   for ( c3_w i_w; i_w < 256; i_w++ ) {
-    _ames_czar2(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
+    _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
   }
 
   uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 300*1000, 0);
