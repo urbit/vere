@@ -53,13 +53,9 @@ typedef enum u3_stun_state {
     c3_l             sev_l;             //  instance number
     ur_cue_test_t*   tes_u;             //  cue-test handle
     u3_cue_xeno*     sil_u;             //  cue handle
-    c3_c*            dns_c;             //  domain XX multiple/fallback
     c3_y             ver_y;             //  protocol version
     u3p(u3h_root)    lax_p;             //  lane scry cache
     struct _u3_panc* pan_u;             //  outbound packet queue, backward
-    c3_w             imp_w[256];        //  imperial IPs
-    time_t           imp_t[256];        //  imperial IP timestamps
-    c3_o             imp_o[256];        //  imperial print status
     struct {                            //
       c3_c       dom_c[251];            //    domain
       c3_o       dom_o;                 //    have domain
@@ -184,14 +180,10 @@ typedef enum u3_stun_state {
     struct _u3_ames* sam_u;             //  ames backpointer
     c3_w             len_w;             //  length in bytes
     c3_y*            hun_y;             //  packet buffer
+    u3_lane          lan_u;             //  destination/origin lane
     u3_head          hed_u;             //  head of packet
     u3_prel          pre_u;             //  packet prelude
     u3_ptag          typ_y;             //  packet type tag
-    struct {
-      u3_lane        lan_u;             //  destination/origin lane
-      c3_y           imp_y;             //  galaxy (optional)
-      c3_c*          dns_c;             //  galaxy fqdn (optional)
-    } rut_u;
     union {
       u3_body bod_u;                    //  tagged by PACT_AMES
       u3_wail wal_u;                    //  tagged by PACT_WAIL
@@ -329,7 +321,6 @@ _ames_pact_free(u3_pact* pac_u)
       u3_pier_bail(u3_king_stub());
   }
 
-  c3_free(pac_u->rut_u.dns_c);
   c3_free(pac_u->hun_y);
   c3_free(pac_u);
 }
@@ -899,7 +890,7 @@ _ames_send(u3_pact* pac_u)
   if ( !pac_u->hun_y
     || !sam_u
     || !pac_u->len_w
-    || !pac_u->rut_u.lan_u.por_s )
+    || !pac_u->lan_u.por_s )
   {
     u3l_log("ames: _ames_send null");
     _ames_pact_free(pac_u);
@@ -909,8 +900,8 @@ _ames_send(u3_pact* pac_u)
 
     memset(&add_u, 0, sizeof(add_u));
     add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = htonl(pac_u->rut_u.lan_u.pip_w);
-    add_u.sin_port = htons(pac_u->rut_u.lan_u.por_s);
+    add_u.sin_addr.s_addr = htonl(pac_u->lan_u.pip_w);
+    add_u.sin_port = htons(pac_u->lan_u.por_s);
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
@@ -1701,7 +1692,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
   if ( c3y == _ames_send_lane(sam_u, lan, &lan_u) ) {
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
-    pac_u->rut_u.lan_u = lan_u;
+    pac_u->lan_u = lan_u;
     pac_u->len_w = u3r_met(3, pac);
     pac_u->hun_y = c3_malloc(pac_u->len_w);
 
@@ -1831,13 +1822,13 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
       u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
       c3_c* sen_c = u3r_string(sen);
       c3_c* rec_c = u3r_string(rec);
-      c3_y* pip_y = (c3_y*)&pac_u->rut_u.lan_u.pip_w;
+      c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_w;
 
       //NOTE ip byte order assumes little-endian
       u3l_log("ames: forwarding for %s to %s from %d.%d.%d.%d:%d",
               sen_c, rec_c,
               pip_y[3], pip_y[2], pip_y[1], pip_y[0],
-              pac_u->rut_u.lan_u.por_s);
+              pac_u->lan_u.por_s);
 
       c3_free(sen_c); c3_free(rec_c);
       u3z(sen); u3z(rec);
@@ -1897,7 +1888,7 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
     }
     _ames_put_packet(sam_u,
                      _ames_pact_to_noun(pac_u),
-                     pac_u->rut_u.lan_u);
+                     pac_u->lan_u);
   }
   else {
     sam_u->sat_u.saw_d = 0;
@@ -2174,7 +2165,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     res_u = c3_calloc(sizeof(*res_u));
     res_u->sam_u = req_u->sam_u;
     res_u->typ_y = PACT_PURR;
-    res_u->rut_u.lan_u = req_u->rut_u.lan_u;
+    res_u->lan_u = req_u->lan_u;
 
     //  copy header, swapping sender and receiver
     //
@@ -2215,14 +2206,6 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     //  free incoming request
     //
     _ames_pact_free(req_u);
-  }
-
-  //  if receiver is a galaxy, note that in res_u
-  //
-  if ( res_u->pre_u.rec_d[0] < 256
-      && res_u->pre_u.rec_d[1] == 0 )
-  {
-     res_u->rut_u.imp_y = res_u->pre_u.rec_d[0];
   }
 
   //  look up request in scry cache
@@ -2293,7 +2276,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
   u3_noun wir = u3nc(c3__fine, u3_nul);
   u3_noun cad = u3nt(c3__hear,
-                     u3nc(c3n, u3_ames_encode_lane(pac_u->rut_u.lan_u)),
+                     u3nc(c3n, u3_ames_encode_lane(pac_u->lan_u)),
                      u3i_bytes(pac_u->len_w, pac_u->hun_y));
 
   u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
@@ -2316,7 +2299,7 @@ _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 
   {
     u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
-    _ames_put_packet(pac_u->sam_u, msg, pac_u->rut_u.lan_u);
+    _ames_put_packet(pac_u->sam_u, msg, pac_u->lan_u);
     _ames_pact_free(pac_u);
   }
 }
@@ -2336,7 +2319,7 @@ _ames_try_forward(u3_pact* pac_u)
     c3_w  old_w, cur_w;
 
     pac_u->hed_u.rel_o = c3y;
-    pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->rut_u.lan_u);
+    pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->lan_u);
 
     old_w = pac_u->len_w;
     old_y = pac_u->hun_y;
@@ -2403,7 +2386,7 @@ _ames_hear(u3_ames* sam_u,
   pac_u->sam_u = sam_u;
   pac_u->len_w = len_w;
   pac_u->hun_y = hun_y;
-  pac_u->rut_u.lan_u = *lan_u;
+  pac_u->lan_u = *lan_u;
   cur_w = 0;
 
   //  parse the header
@@ -2829,12 +2812,6 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
     memset(dom_c + len_w, 0, sizeof(dom_c) - len_w);
 
     if ( 0 != memcmp(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c)) ) {
-      //  XX legacy
-      //
-      sam_u->dns_c = c3_malloc(1 + len_w);
-      memcpy(sam_u->dns_c, dom_c, len_w);
-      sam_u->dns_c[len_w] = 0;
-
       //  XX review
       //
       c3_free(sam_u->sun_u.dns_c);
