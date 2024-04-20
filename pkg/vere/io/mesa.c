@@ -1249,7 +1249,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
   c3_o ret_o;
-
+  u3l_log("blabla");
   switch ( tag ) {
     default: {
       ret_o = c3n;
@@ -1279,9 +1279,8 @@ static c3_o _mesa_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
   u3_noun tag, dat, i_wir;
   c3_o ret_o;
-
   if (  (c3n == u3r_cell(wir, &i_wir, 0))
-     || (c3__mesa != i_wir)
+     || (c3__ames != i_wir)
      || (c3n == u3r_cell(cad, &tag, &dat)) )
   {
     ret_o = c3n;
@@ -1853,7 +1852,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   }
 
   if ( 1 == pac_u->pag_u.dat_u.tot_w ) {
-    u3_noun wir = u3nc(c3__mesa, u3_nul);
+    u3_noun wir = u3nc(c3__ames, u3_nul);
     u3_noun aut, cad;
 
     switch ( pac_u->pag_u.dat_u.aum_u.typ_e ) {
@@ -1896,7 +1895,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     //  XX should put in cache on success
     u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__mesa, wir, cad));
+                 u3_ovum_init(0, c3__ames, wir, cad));
     _mesa_free_pict(pic_u);
     return;
   }
@@ -1962,7 +1961,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
     u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
 
-    u3_noun wir = u3nc(c3__mesa, u3_nul);
+    u3_noun wir = u3nc(c3__ames, u3_nul);
     u3_noun cad;
     {
       // u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
@@ -1997,7 +1996,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
     u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__mesa, wir, cad));
+                 u3_ovum_init(0, c3__ames, wir, cad));
   }
 
   _mesa_free_pict(pic_u);
@@ -2074,7 +2073,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
       // only branch where we do not free pic_u
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__mx, bem)), pic_u, _mesa_page_scry_hunk_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_hunk_cb);
     } else {
       // XX unpossible
       _mesa_free_pict(pic_u);
@@ -2172,7 +2171,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   //  XX create PIT entry for ack
 
-  u3_noun wir = u3nc(c3__mesa, u3_nul);
+  u3_noun wir = u3nc(c3__ames, u3_nul);
   u3_noun cad;
   {
     u3_noun    lan = u3_mesa_encode_lane(*lan_u);
@@ -2199,7 +2198,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   u3_auto_peer(
     u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__mesa, wir, cad)),
+                 u3_ovum_init(0, c3__ames, wir, cad)),
     ptr_v, nes_f, bal_f);
 }
 
@@ -2289,12 +2288,12 @@ _mesa_io_talk(u3_auto* car_u)
   {
     //  XX remove [sev_l]
     //
-    u3_noun wir = u3nt(c3__mesa,
+    u3_noun wir = u3nt(c3__ames,
                        u3dc("scot", c3__uv, sam_u->sev_l),
                        u3_nul);
     u3_noun cad = u3nc(c3__born, u3_nul);
 
-    u3_auto_plan(car_u, u3_ovum_init(0, c3__m, wir, cad));
+    u3_auto_plan(car_u, u3_ovum_init(0, c3__a, wir, cad));
   }
   u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun    rac = u3do("clan:title", u3k(who));
@@ -2412,7 +2411,7 @@ u3_mesa_io_init(u3_pier* pir_u)
 
 
   u3_auto* car_u = &sam_u->car_u;
-  car_u->nam_m = c3__mesa;
+  car_u->nam_m = c3__ames;
   car_u->liv_o = c3y;
   car_u->io.talk_f = _mesa_io_talk;
   car_u->io.info_f = _mesa_io_info;
