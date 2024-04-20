@@ -90,6 +90,8 @@ void _king_doom(u3_noun doom);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
+static u3_noun _king_get_atom(c3_c* url_c);
+
 /* _king_defy_fate(): invalid fate
 */
 void
@@ -158,6 +160,49 @@ _king_boot(u3_noun bul)
   u3z(bul);
 }
 
+/* _king_prop(): events from prop arguments
+*/
+u3_noun
+_king_prop()
+{
+  u3_noun mor = u3_nul;
+  while ( 0 != u3_Host.ops_u.vex_u ) {
+    u3_even* vex_u = u3_Host.ops_u.vex_u;
+    switch ( vex_u->kin_i ) {
+      case 1: {  //  file
+        u3_atom jam = u3m_file(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 2: {  //  url
+        u3l_log("boot: downloading prop %s", vex_u->loc_c);
+        u3_atom jam = _king_get_atom(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 3: {  //  name
+        //NOTE  this implementation limits us to max 213 char prop names
+        c3_c url_c[256];
+        snprintf(url_c, 255,
+                 //TODO  should maybe respect ops_u.url_c
+                 "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
+                 vex_u->loc_c);
+        u3l_log("boot: downloading prop %s", url_c);
+        u3_atom jam = _king_get_atom(url_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      default: {
+        u3l_log("invalid prop source %d", vex_u->kin_i);
+        exit(1);
+      }
+    }
+
+    u3_Host.ops_u.vex_u = vex_u->pre_u;
+  }
+  return mor;
+}
+
 /* _king_fake(): boot with fake keys
 */
 void
@@ -166,7 +211,8 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
   //  XX link properly
   //
   u3_noun vent = u3nc(c3__fake, u3k(ship));
-  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path, u3_none);
+  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path,
+                              u3_none, _king_prop());
 }
 
 /* _king_come(): mine a comet under star (unit)
@@ -201,7 +247,8 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed));
   //  XX link properly
   //
-  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path, feed);
+  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path,
+                              feed, _king_prop());
 
   // disable ivory slog printfs
   //
@@ -251,6 +298,7 @@ _king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
   CURL    *cul_u;
   CURLcode res_i;
   long     cod_i;
+  c3_y     try_y = 0;
   uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
 
   if ( !(cul_u = curl_easy_init()) ) {
@@ -263,28 +311,33 @@ _king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
   curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, _king_curl_alloc);
   curl_easy_setopt(cul_u, CURLOPT_WRITEDATA, (void*)&buf_u);
 
-  res_i = curl_easy_perform(cul_u);
-  curl_easy_getinfo(cul_u, CURLINFO_RESPONSE_CODE, &cod_i);
+  while ( 5 > try_y ) {
+    sleep(try_y++);
+    res_i = curl_easy_perform(cul_u);
+    curl_easy_getinfo(cul_u, CURLINFO_RESPONSE_CODE, &cod_i);
 
-  //  XX retry?
-  //
-  if ( CURLE_OK != res_i ) {
-    if ( veb_t ) {
-      u3l_log("curl: failed %s: %s", url_c, curl_easy_strerror(res_i));
+    if ( CURLE_OK != res_i ) {
+      if ( veb_t ) {
+        u3l_log("curl: failed to fetch %s: %s",
+                url_c, curl_easy_strerror(res_i));
+      }
+      ret_i = -1;
     }
-    ret_i = -1;
-  }
-  if ( 300 <= cod_i ) {
-    if ( veb_t ) {
-      u3l_log("curl: error %s: HTTP %ld", url_c, cod_i);
+    else if ( 300 <= cod_i ) {
+      if ( veb_t ) {
+        u3l_log("curl: error fetching %s: HTTP %ld", url_c, cod_i);
+      }
+      ret_i = -2;
     }
-    ret_i = -2;
+    else {
+      *len_w = buf_u.len;
+      *hun_y = (c3_y*)buf_u.base;
+      ret_i = 0;
+      break;
+    }
   }
 
   curl_easy_cleanup(cul_u);
-
-  *len_w = buf_u.len;
-  *hun_y = (c3_y*)buf_u.base;
 
   return ret_i;
 }
@@ -376,6 +429,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   }
 
   //  skip printfs on failed requests (/next is usually not present)
+  //REVIEW  new retry logic means this case will take longer. make retries optional?
   //
   if ( _king_curl_bytes(url_c, &len_w, &hun_y, 0) ) {
     c3_free(url_c);
