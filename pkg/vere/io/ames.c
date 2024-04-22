@@ -1170,7 +1170,6 @@ _stun_timer_cb(uv_timer_t* tim_u)
       c3_y     imp_y = sam_u->sun_u.dad_y;
 
       if ( c3n == _ames_czar_lane(sam_u, imp_y, lan_u) ) {
-        //  XX how long
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
       }
       else {
@@ -1182,8 +1181,6 @@ _stun_timer_cb(uv_timer_t* tim_u)
     } break;
 
     case STUN_TRYING: {
-      //  XX re-lookup lane every time?
-      //
       c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
       c3_d nex_d = (gap_d * 2) + rto_w - gap_d;
 
@@ -1193,7 +1190,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
       else {
         //  wait ~s8 for the last STUN request
         //
-        //    XX explain
+        //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
         c3_w tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
 
