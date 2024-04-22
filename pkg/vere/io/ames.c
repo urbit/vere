@@ -2760,7 +2760,11 @@ _ames_recv_cb(uv_udp_t*        wax_u,
 
 static void natpmp_init(uv_timer_t* handle);
 
-static void natpmp_cb(uv_poll_t* handle, int status, int events) {
+static void
+natpmp_cb(uv_poll_t* handle,
+          int        status,
+          int        events)
+{
   u3_ames* sam_u = handle->data;
 
   natpmpresp_t response;
@@ -2768,13 +2772,14 @@ static void natpmp_cb(uv_poll_t* handle, int status, int events) {
   if ( NATPMP_TRYAGAIN == r ) {
     return;
   }
+
+  uv_poll_stop(handle);
+
   if ( 0 != r ) {
     u3l_log("ames: natpmp error %i", r);
-    uv_poll_stop(handle);
     closenatpmp(&sam_u->nat_u.req_u);
     return;
   }
-  uv_poll_stop(handle);
 
   u3l_log("ames: mapped public port %hu to localport %hu lifetime %u",
          response.pnu.newportmapping.mappedpublicport,
@@ -2783,20 +2788,18 @@ static void natpmp_cb(uv_poll_t* handle, int status, int events) {
 
   closenatpmp(&sam_u->nat_u.req_u);
   sam_u->nat_u.tim_u.data = sam_u;
-  uv_timer_init(u3L, &sam_u->nat_u.tim_u);
   uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 7200000, 0);
 }
 
-static void natpmp_init(uv_timer_t* handle) {
-
+static void
+natpmp_init(uv_timer_t *handle)
+{
   u3_ames* sam_u = handle->data;
   c3_s por_s = sam_u->pir_u->por_s;
 
-  initnatpmp(&sam_u->nat_u.req_u, 0, 0);
   sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
 
   sam_u->nat_u.pol_u.data = sam_u;
-  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
   uv_poll_start(&sam_u->nat_u.pol_u, UV_READABLE, natpmp_cb);
 }
 
@@ -2922,8 +2925,6 @@ _ames_io_start(u3_ames* sam_u)
     mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
 
     if ( c3n == sam_u->pir_u->fak_o ) {
-      sam_u->nat_u.tim_u.data = sam_u;
-      uv_timer_init(u3L, &sam_u->nat_u.tim_u);
       uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
     }
 
@@ -3269,6 +3270,12 @@ u3_ames_io_init(u3_pier* pir_u)
   uv_timer_init(u3L, &sam_u->sun_u.tim_u);
   sam_u->sun_u.tim_u.data = sam_u;
   sam_u->sun_u.dns_u.data = sam_u;
+
+  //  initialize libnatpmp
+  sam_u->nat_u.tim_u.data = sam_u;
+  initnatpmp(&sam_u->nat_u.req_u, 0, 0);
+  uv_timer_init(u3L, &sam_u->nat_u.tim_u);
+  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
 
   //  enable forwarding on galaxies only
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
