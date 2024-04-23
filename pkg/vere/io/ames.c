@@ -205,7 +205,6 @@ typedef enum u3_stun_state {
     c3_o             for_o;             //  are we forwarding this?
   } u3_panc;
 
-#define _str_o(lob_o) ( ( c3y == lob_o ) ? "yes" : "no" )
 #define _str_typ(typ_y) (           \
     ( PACT_AMES == typ_y ) ? "ames" \
   : ( PACT_WAIL == typ_y ) ? "wail" \
@@ -213,80 +212,6 @@ typedef enum u3_stun_state {
 
 const c3_c* PATH_PARSER =
   ";~(pfix fas (most fas (cook crip (star ;~(less fas prn)))))";
-
-static void
-_log_head(u3_head* hed_u)
-{
-  u3l_log("-- HEADER --");
-  u3l_log("is request: %s", _str_o(hed_u->req_o));
-  u3l_log("is ames: %s", _str_o(hed_u->sim_o));
-  u3l_log("mug: 0x%05x", (hed_u->mug_l &0xfffff));
-  u3l_log("protocol version: %u", hed_u->ver_y);
-  u3l_log("sender class: %u", hed_u->sac_y);
-  u3l_log("recevr class: %u", hed_u->rac_y);
-  u3l_log("is relayed: %s", _str_o(hed_u->rel_o));
-  u3l_log("");
-}
-
-static void
-_log_prel(u3_prel* pre_u)
-{
-  u3l_log("-- PRELUDE --");
-  u3l_log("sender life: %u", pre_u->sic_y);
-  u3l_log("receiver life: %u", pre_u->ric_y);
-  u3l_log("sender: %" PRIu64 "", pre_u->sen_d[0]);
-  u3l_log("receiver: %" PRIu64" ", pre_u->rec_d[0]);
-  u3l_log("");
-}
-
-static void
-_log_peep(u3_peep* req_u)
-{
-  u3l_log("--- REQUEST ---");
-  u3l_log("strlen: %u", req_u->len_s);
-  u3l_log("path: %s", req_u->pat_c);
-  u3l_log("frag: %u", req_u->fra_w);
-  u3l_log("");
-}
-
-static c3_c*
-_show_mug_buf(c3_y* buf_y, c3_w len_w)
-{
-  u3_noun mug = u3r_mug_bytes(buf_y, len_w);
-  u3_noun cot = u3dc("scot", 'q', mug);
-  return u3r_string(cot);
-}
-
-static void
-_log_meow(u3_meow* mew_u)
-{
-  c3_c* sig_c = _show_mug_buf(mew_u->sig_y, sizeof(mew_u->sig_y));
-  c3_c* dat_c = _show_mug_buf(mew_u->dat_y, mew_u->siz_s);
-
-  u3l_log("  sig=%s"
-          "  num=%u"
-          "  siz=%u"
-          "  dat=%s",
-    sig_c,
-    mew_u->num_w,
-    mew_u->siz_s,
-    dat_c
-  );
-
-  c3_free(sig_c);
-  c3_free(dat_c);
-}
-
-static void
-_log_bytes(c3_y* byt_y, c3_w len_w)
-{
-  int i;
-  u3l_log("-- BYTES (%u) --", len_w);
-  for(i = 0; i < len_w; i++) {
-    u3l_log("%x", byt_y[i]);
-  }
-  u3l_log("");
-}
 
 /* _ames_alloc(): libuv buffer allocator.
 */
