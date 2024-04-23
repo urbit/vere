@@ -289,10 +289,10 @@ _xmas_czar_dns(c3_y imp_y, c3_c* zar_c)
 }
 
 
-/*  _xmas_encode_path(): produce buf_y as a parsed path
+/*  u3_xmas_encode_path(): produce buf_y as a parsed path
 */
-static u3_noun
-_xmas_encode_path(c3_w len_w, c3_y* buf_y)
+u3_noun
+u3_xmas_encode_path(c3_w len_w, c3_y* buf_y)
 {
   u3_noun  pro;
   u3_noun* lit = &pro;
@@ -351,7 +351,7 @@ _dire_etch_ud(c3_d num_d)
 */
 u3_noun _xmas_request_key(u3_xmas_name* nam_u)
 {
-  u3_noun pax = _xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+  u3_noun pax = u3_xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
   u3_noun res = u3nt(u3i_chubs(2, nam_u->her_d), u3i_word(nam_u->rif_w), pax);
   return res;
 }
@@ -1262,7 +1262,7 @@ _name_to_scry(u3_xmas_name* nam_u)
   u3_noun rif = _dire_etch_ud(nam_u->rif_w);
   u3_noun boq = _dire_etch_ud(nam_u->boq_y);
   u3_noun fag = _dire_etch_ud(nam_u->fra_w);
-  u3_noun pax = _xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+  u3_noun pax = u3_xmas_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
 
   u3_noun wer = nam_u->nit_o == c3y 
     ? u3nc(c3__init, pax)
@@ -1671,8 +1671,8 @@ _xmas_plan_mess(u3_xmas*      sam_u,
   }
 
   {
-    u3_noun pax = _xmas_encode_path(nam_u->pat_s,
-                            (c3_y*)(nam_u->pat_c));
+    u3_noun pax = u3_xmas_encode_path(nam_u->pat_s,
+                              (c3_y*)(nam_u->pat_c));
     u3_noun par = u3nc(u3i_chubs(2, nam_u->her_d), pax);
     u3_noun lan = u3nc(u3_nul, u3_xmas_encode_lane(*lan_u));
     u3_noun dat = u3i_bytes(len_w, buf_y);

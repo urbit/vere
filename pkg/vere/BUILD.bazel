@@ -215,6 +215,10 @@ cc_library(
   name = "xmas_src",
   hdrs = ["io/xmas.c"],
 )
+cc_library(
+  name = "pact_src",
+  hdrs = ["io/xmas/pact.c"],
+)
 
 cc_test(
     name = "xmas_tests",
@@ -231,13 +235,12 @@ cc_test(
 cc_test(
     name = "pact_tests",
     timeout = "short",
-    srcs = ["io/xmas/pact.c"],
+    srcs = ["pact_tests.c"],
     features = select({
         "@platforms//os:linux": ["fully_static_link"],
         "//conditions:default": [],
     }),
-    deps = [":vere"],
-    defines = ["PACT_TEST"]
+    deps = [":vere", ":pact_src"],
 )
 
 
