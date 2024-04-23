@@ -2762,21 +2762,21 @@ static void natpmp_init(uv_timer_t* handle);
 
 static void
 natpmp_cb(uv_poll_t* handle,
-          int        status,
-          int        events)
+          c3_i        status,
+          c3_i        events)
 {
   u3_ames* sam_u = handle->data;
 
   natpmpresp_t response;
-  c3_w r = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
-  if ( NATPMP_TRYAGAIN == r ) {
+  c3_i res_i = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
+  if ( NATPMP_TRYAGAIN == res_i ) {
     return;
   }
 
   uv_poll_stop(handle);
 
-  if ( 0 != r ) {
-    u3l_log("ames: natpmp error %i", r);
+  if ( 0 != res_i ) {
+    u3l_log("ames: natpmp error %i", res_i);
     closenatpmp(&sam_u->nat_u.req_u);
     return;
   }
