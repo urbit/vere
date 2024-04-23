@@ -2,6 +2,7 @@
 
 #include "vere.h"
 #include "mdns.h"
+#include "io/ames/stun.h"
 
 #include "noun.h"
 #include "ur.h"
@@ -1072,21 +1073,133 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   }
 }
 
-// XX (code reordering?) forward declarations
-static void _stun_send_request(u3_ames*);
-static void _stun_on_lost(u3_ames* sam_u);
-static void _stun_start(u3_ames* sam_u, c3_w tim_w);
-static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
-static c3_o   _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u);
+typedef struct _stun_send {
+  uv_udp_send_t req_u;     //  uv udp request handle
+  u3_ames*      sam_u;     //  backpointer to driver state
+  c3_y          hun_y[0];  //  buffer
+} _stun_send;
 
-static c3_d
-_stun_time_gap(struct timeval start)
+/* _stun_send_cb(): stun udp send callback.
+ */
+static void
+_stun_send_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 {
-  struct timeval tim_tv;
-  gettimeofday(&tim_tv, 0);
-  u3_noun now = u3_time_in_tv(&tim_tv);
-  u3_noun den = u3_time_in_tv(&start);
-  return u3_time_gap_ms(den, now);
+  _stun_send* snd_u = (_stun_send*)rep_u;
+  u3_ames*    sam_u = snd_u->sam_u;
+
+  if ( !sas_i ) {
+    sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("stun: send response fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
+  }
+
+  c3_free(snd_u);
+}
+
+/* _stun_on_request(): hear stun request, send response.
+ */
+static void
+_stun_on_request(u3_ames*              sam_u,
+                const c3_y*            req_y,
+                const struct sockaddr* adr_u)
+{
+  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
+  snd_u->sam_u = sam_u;
+
+  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+  u3_lane lan_u = {
+    .por_s = ntohs(add_u->sin_port),
+    .pip_w = ntohl(add_u->sin_addr.s_addr)
+  };
+  u3_stun_make_response(req_y, &lan_u, snd_u->hun_y);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
+                               &buf_u, 1, adr_u, _stun_send_cb);
+
+  if ( sas_i ) {
+    _stun_send_cb(&snd_u->req_u, sas_i);
+  }
+}
+
+static void
+_stun_start(u3_ames* sam_u, c3_w tim_w);
+
+/* _stun_on_response(): hear stun response from galaxy.
+ */
+static void
+_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
+{
+  u3_lane lan_u;
+
+  //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
+  if ( c3n == u3_stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
+    return;
+  }
+
+  if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
+       (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
+  {
+    // lane changed
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
+  }
+  else if ( c3n == sam_u->sun_u.wok_o ) {
+    // stop %ping app
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
+    sam_u->sun_u.wok_o = c3y;
+  }
+
+  sam_u->sun_u.sef_u = lan_u;
+
+  //  XX should no-op early
+  //
+  switch ( sam_u->sun_u.sat_y ) {
+    case STUN_OFF:       break; //  ignore; stray response
+    case STUN_KEEPALIVE: break; //  ignore; duplicate response
+
+    case STUN_TRYING: {
+      _stun_start(sam_u, 25000);
+    } break;
+
+    default: u3_assert(!"programmer error");
+  }
+}
+
+/* _stun_send_request(): send stun request to galaxy lane.
+ */
+static void
+_stun_send_request(u3_ames* sam_u)
+{
+  u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
+
+  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
+  snd_u->sam_u = sam_u;
+
+  u3_stun_make_request(snd_u->hun_y, sam_u->sun_u.tid_y);
+
+  struct sockaddr_in add_u;
+  memset(&add_u, 0, sizeof(add_u));
+  add_u.sin_family = AF_INET;
+  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
+  add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
+
+  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
+                               (const struct sockaddr*)&add_u, _stun_send_cb);
+
+  if ( sas_i ) {
+    _stun_send_cb(&snd_u->req_u, sas_i);
+  }
 }
 
 /* _stun_reset(): stun failed. start again using max backoff
@@ -1099,6 +1212,41 @@ _stun_reset(uv_timer_t* tim_u)
   _stun_start(sam_u, 39000);
 }
 
+/* _stun_on_lost(): stun failed (timeout); capture and reset.
+ */
+static void
+_stun_on_lost(u3_ames* sam_u)
+{
+  sam_u->sun_u.sat_y = STUN_OFF;
+
+  //  only inject event into arvo to %kick ping app on first failure
+  //
+  if ( c3y == sam_u->sun_u.wok_o ) {
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__fail, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(sam_u->sun_u.sef_u)));
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
+    sam_u->sun_u.wok_o = c3n;
+  }
+
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
+}
+
+/* _stun_time_gap(): elapsed milliseconds.
+ */
+static c3_d
+_stun_time_gap(struct timeval sar_tv)
+{
+  struct timeval tim_tv;
+  gettimeofday(&tim_tv, 0);
+  u3_noun now = u3_time_in_tv(&tim_tv);
+  u3_noun den = u3_time_in_tv(&sar_tv);
+  return u3_time_gap_ms(den, now);
+}
+
+/* _stun_timer_cb(): advance stun state machine.
+ */
 static void
 _stun_timer_cb(uv_timer_t* tim_u)
 {
@@ -1149,198 +1297,8 @@ _stun_timer_cb(uv_timer_t* tim_u)
   }
 }
 
-typedef struct _stun_send {
-  uv_udp_send_t req_u;     //  uv udp request handle
-  u3_ames*      sam_u;     //  backpointer to driver state
-  c3_y          hun_y[0];  //  buffer
-} _stun_send;
-
-static void
-_stun_send_cb(uv_udp_send_t *rep_u, c3_i sas_i)
-{
-  _stun_send* snd_u = (_stun_send*)rep_u;
-  u3_ames*    sam_u = snd_u->sam_u;
-
-  if ( !sas_i ) {
-    sam_u->fig_u.net_o = c3y;
-  }
-  else if ( c3y == sam_u->fig_u.net_o ) {
-    u3l_log("stun: send response fail: %s", uv_strerror(sas_i));
-    sam_u->fig_u.net_o = c3n;
-  }
-
-  c3_free(snd_u);
-}
-
-static void
-_stun_make_response(const c3_y req_y[20],
-                    u3_lane*   lan_u,
-                    c3_y       buf_y[40])
-{
-  c3_w cok_w = 0x2112A442;
-  c3_w cur_w = 20;
-
-  //  XX hardcoded to match the requests we produce
-  //
-  memcpy(buf_y, req_y, cur_w);
-
-  memset(buf_y + cur_w, 0, cur_w);
-
-  // XOR-MAPPED-ADDRESS
-  buf_y[cur_w + 0] = 0x00;  //
-  buf_y[cur_w + 1] = 0x20;  // attribute type 0x00020
-  buf_y[cur_w + 2] = 0x00;  //
-  buf_y[cur_w + 3] = 0x08;  // STUN attribute length
-  buf_y[cur_w + 4] = 0x00;  // extra reserved 0x0 byte
-  buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
-
-  c3_s por_s = htons(lan_u->por_s ^ (cok_w >> 16));
-  c3_w pip_w = htonl(lan_u->pip_w ^ cok_w);
-
-  memcpy(buf_y + cur_w + 6, &por_s, 2);  // X-Port
-  memcpy(buf_y + cur_w + 8, &pip_w, 4);  // X-IP Addres
-
-  // FINGERPRINT
-  _stun_add_fingerprint(buf_y, cur_w + 12);
-}
-
-static void
-_stun_on_request(u3_ames*              sam_u,
-                const c3_y*            req_y,
-                const struct sockaddr* adr_u)
-{
-  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
-  snd_u->sam_u = sam_u;
-
-  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  u3_lane lan_u = {
-    .por_s = ntohs(add_u->sin_port),
-    .pip_w = ntohl(add_u->sin_addr.s_addr)
-  };
-  _stun_make_response(req_y, &lan_u, snd_u->hun_y);
-
-  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
-                               &buf_u, 1, adr_u, _stun_send_cb);
-
-  if ( sas_i ) {
-    _stun_send_cb(&snd_u->req_u, sas_i);
-  }
-}
-
-static void
-_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
-{
-  u3_lane lan_u;
-
-  //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
-  if ( c3n == _stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
-    return;
-  }
-
-  if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
-       (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
-  {
-    // lane changed
-    u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__once, sam_u->sun_u.dad_y,
-                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__ames, wir, cad));
-  }
-  else if ( c3n == sam_u->sun_u.wok_o ) {
-    // stop %ping app
-    u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__stop, sam_u->sun_u.dad_y,
-                       u3nc(c3n, u3_ames_encode_lane(lan_u)));
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__ames, wir, cad));
-    sam_u->sun_u.wok_o = c3y;
-  }
-
-  sam_u->sun_u.sef_u = lan_u;
-
-  //  XX should no-op early
-  //
-  switch ( sam_u->sun_u.sat_y ) {
-    case STUN_OFF:       break; //  ignore; stray response
-    case STUN_KEEPALIVE: break; //  ignore; duplicate response
-
-    case STUN_TRYING: {
-      _stun_start(sam_u, 25000);
-    } break;
-
-    default: u3_assert(!"programmer error");
-  }
-}
-
-static void
-_stun_on_lost(u3_ames* sam_u)
-{
-  sam_u->sun_u.sat_y = STUN_OFF;
-
-  //  only inject event into arvo to %kick ping app on first failure
-  //
-  if ( c3y == sam_u->sun_u.wok_o ) {
-    u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__fail, sam_u->sun_u.dad_y,
-                       u3nc(c3n, u3_ames_encode_lane(sam_u->sun_u.sef_u)));
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__ames, wir, cad));
-    sam_u->sun_u.wok_o = c3n;
-  }
-
-  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
-}
-
-static void
-_stun_make_request(c3_y buf_y[28], c3_y tid_y[12])
-{
-  // see STUN RFC 8489
-  // https://datatracker.ietf.org/doc/html/rfc8489#section-5
-  memset(buf_y, 0, 28);
-
-  // STUN message type: "binding request"
-  buf_y[1] = 0x01;
-
-  // STUN message length: 8 (header and 32-bit FINGERPRINT)
-  buf_y[2] = 0x00; buf_y[3] = 0x08;
-
-  // STUN "magic cookie" 0x2112A442 in network byte order
-  buf_y[4] = 0x21; buf_y[5] = 0x12; buf_y[6] = 0xa4; buf_y[7] = 0x42;
-
-  // STUN "transaction id"
-  memcpy(buf_y + 8, tid_y, 12);
-
-  // FINGERPRINT
-  _stun_add_fingerprint(buf_y, 20);
-}
-
-static void
-_stun_send_request(u3_ames* sam_u)
-{
-  u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
-
-  _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
-  snd_u->sam_u = sam_u;
-
-  _stun_make_request(snd_u->hun_y, sam_u->sun_u.tid_y);
-
-  struct sockaddr_in add_u;
-  memset(&add_u, 0, sizeof(add_u));
-  add_u.sin_family = AF_INET;
-  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
-  add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
-
-  uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
-                               (const struct sockaddr*)&add_u, _stun_send_cb);
-
-  if ( sas_i ) {
-    _stun_send_cb(&snd_u->req_u, sas_i);
-  }
-}
-
+/* _stun_start(): begin/restart STUN state machine.
+*/
 static void
 _stun_start(u3_ames* sam_u, c3_w tim_w)
 {
@@ -1353,124 +1311,8 @@ _stun_start(u3_ames* sam_u, c3_w tim_w)
   uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
 }
 
-static c3_o
-_stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
-{
-  c3_y xor_y[4] = {0x00, 0x20, 0x00, 0x08};
-  c3_w cookie = 0x2112A442;
-
-  if (buf_len < 40) { // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
-    return c3n;
-  }
-
-  c3_w i = 20;  // start after header
-
-  c3_y* fin_y = memmem(buf_y + i, buf_len - i, xor_y, sizeof(xor_y));
-  if ( fin_y != 0 ) {
-    c3_w cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
-
-    if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
-      return c3n;
-    }
-
-    cur += 2;
-
-    lan_u->por_s = ntohs(c3_sift_short(buf_y + cur)) ^ (cookie >> 16);
-    lan_u->pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
-
-    if ( u3C.wag_w & u3o_verbose ) {
-      c3_w nip_w = htonl(lan_u->pip_w);
-      c3_c nip_c[INET_ADDRSTRLEN];
-      inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
-      u3l_log("stun: hear ip:port %s:%u", nip_c, lan_u->por_s);
-    }
-    return c3y;
-  }
-  return c3n;
-}
-
-static c3_o
-_stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
-{
-  c3_y ned_y[4] = {0x80, 0x28, 0x00, 0x04};
-  if ( buf_len < 28 ) { // At least STUN header and FINGERPRINT
-    return c3n;
-  }
-
-  {
-    c3_y* fin_y = 0;
-    c3_w i = 20; // start after the header
-
-    fin_y = memmem(buf_y + i, buf_len - i, ned_y, sizeof(ned_y));
-    if ( fin_y != 0 ) {
-      c3_w len_w = fin_y - buf_y;
-      // Skip attribute type and length
-      c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
-      c3_w init = crc32(0L, Z_NULL, 0);
-      c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
-      if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len) {
-        return c3y;
-      }
-    }
-
-    return c3n;
-  }
-}
-
-static c3_y*
-_stun_add_fingerprint(c3_y *message, c3_w index)
-{
-  // Compute FINGERPRINT value as CRC-32 of the STUN message
-  // up to (but excluding) the FINGERPRINT attribute itself,
-  // XOR'ed with the 32-bit value 0x5354554e
-  c3_w init = crc32(0L, Z_NULL, 0);
-  c3_w crc = htonl(crc32(init, message, index) ^ 0x5354554e);
-
-  // STUN attribute type: "FINGERPRINT"
-  message[index] = 0x80;  message[index + 1] = 0x28;
-  // STUN attribute length: 4 bytes
-  message[index + 2] = 0x00; message[index + 3] = 0x04;
-
-  memcpy(message + index + 4, &crc, 4);
-
-  return message;
-}
-
-static c3_o
-_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w buf_len)
-{
-  c3_w cookie = htonl(0x2112A442);
-
-  // Expects at least:
-  //   STUN header, 12 byte XOR-MAPPED-ADDRESS and 8 byte FINGERPRINT
-  if ( (buf_len == 40) &&
-       (buf_y[0] == 0x01 && buf_y[1] == 0x01) &&
-       (memcmp(&cookie, buf_y + 4, 4) == 0) &&
-       (memcmp(tid_y, buf_y + 8, 12) == 0) &&
-       (c3y == _stun_has_fingerprint(buf_y, buf_len)) )
-  {
-    return c3y;
-  }
-  return c3n;
-}
-
-static c3_o
-_stun_is_request(c3_y* buf_y, c3_w buf_len)
-{
-  c3_w cookie = htonl(0x2112A442);
-
-  // Expects at least:
-  //   STUN header and 8 byte FINGERPRINT
-  if ( (buf_len >= 28) &&
-       (buf_y[0] == 0x0 && buf_y[1] == 0x01) &&
-       (memcmp(&cookie, buf_y + 4, 4) == 0) &&
-       (c3y == _stun_has_fingerprint(buf_y, buf_len)) )
-  {
-    return c3y;
-  }
-  return c3n;
-}
-
+/* _ames_is_czar(): [who] is galaxy.
+*/
 static c3_o
 _ames_is_czar(u3_noun who)
 {
@@ -2397,12 +2239,13 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   //    check ames first, assume that STUN could maybe (not likely) overlap with ames
   //    for next protocol version, have an urbit cookie
   //
-  else if (_stun_is_request((c3_y*)buf_u->base, nrd_i) == c3y) {
+  else if ( c3y == u3_stun_is_request((c3_y*)buf_u->base, nrd_i) ) {
       _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
       c3_free(buf_u->base);
   }
-  else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
-              == c3y) {
+  else if ( c3y == u3_stun_is_our_response((c3_y*)buf_u->base,
+                                           sam_u->sun_u.tid_y, nrd_i) )
+  {
     _stun_on_response(sam_u, (c3_y*)buf_u->base, nrd_i);
     c3_free(buf_u->base);
   }
