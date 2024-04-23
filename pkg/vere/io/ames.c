@@ -434,34 +434,6 @@ _ames_check_mug(u3_pact* pac_u)
     ? c3y : c3n);
 }
 
-static inline c3_s
-_ames_sift_short(c3_y buf_y[2])
-{
-  return (buf_y[1] << 8 | buf_y[0]);
-}
-
-static inline c3_w
-_ames_sift_word(c3_y buf_y[4])
-{
-  return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
-}
-
-/* _ames_chub_bytes(): c3_y[8] to c3_d
-** XX factor out, deduplicate with other conversions
-*/
-static inline c3_d
-_ames_chub_bytes(c3_y byt_y[8])
-{
-  return (c3_d)byt_y[0]
-       | (c3_d)byt_y[1] << 8
-       | (c3_d)byt_y[2] << 16
-       | (c3_d)byt_y[3] << 24
-       | (c3_d)byt_y[4] << 32
-       | (c3_d)byt_y[5] << 40
-       | (c3_d)byt_y[6] << 48
-       | (c3_d)byt_y[7] << 56;
-}
-
 /* _ames_ship_to_chubs(): pack [len_y] bytes into c3_d[2]
 */
 static inline void
@@ -470,24 +442,8 @@ _ames_ship_to_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
   c3_y sip_y[16] = {0};
   memcpy(sip_y, buf_y, c3_min(16, len_y));
 
-  sip_d[0] = _ames_chub_bytes(sip_y);
-  sip_d[1] = _ames_chub_bytes(sip_y + 8);
-}
-
-/* _ames_chub_bytes(): c3_d to c3_y[8]
-** XX factor out, deduplicate with other conversions
-*/
-static inline void
-_ames_bytes_chub(c3_y byt_y[8], c3_d num_d)
-{
-  byt_y[0] = num_d & 0xff;
-  byt_y[1] = (num_d >>  8) & 0xff;
-  byt_y[2] = (num_d >> 16) & 0xff;
-  byt_y[3] = (num_d >> 24) & 0xff;
-  byt_y[4] = (num_d >> 32) & 0xff;
-  byt_y[5] = (num_d >> 40) & 0xff;
-  byt_y[6] = (num_d >> 48) & 0xff;
-  byt_y[7] = (num_d >> 56) & 0xff;
+  sip_d[0] = c3_sift_chub(sip_y);
+  sip_d[1] = c3_sift_chub(sip_y + 8);
 }
 
 /* _ames_ship_of_chubs(): unpack c3_d[2] into [len_y] bytes.
@@ -497,8 +453,8 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 {
   c3_y sip_y[16] = {0};
 
-  _ames_bytes_chub(sip_y, sip_d[0]);
-  _ames_bytes_chub(sip_y + 8, sip_d[1]);
+  c3_etch_chub(sip_y, sip_d[0]);
+  c3_etch_chub(sip_y + 8, sip_d[1]);
 
   memcpy(buf_y, sip_y, c3_min(16, len_y));
 }
@@ -508,7 +464,7 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 static void
 _ames_sift_head(u3_head* hed_u, c3_y buf_y[4])
 {
-  c3_w hed_w = _ames_sift_word(buf_y);
+  c3_w hed_w = c3_sift_word(buf_y);
 
   //  first two bits are reserved
   //
@@ -536,7 +492,7 @@ _ames_sift_prel(u3_head* hed_u,
   if ( c3y == hed_u->rel_o ) {
     c3_y rag_y[8] = {0};
     memcpy(rag_y, buf_y + cur_w, 6);
-    pre_u->rog_d = _ames_chub_bytes(rag_y);
+    pre_u->rog_d = c3_sift_chub(rag_y);
     cur_w += 6;
   }
   else {
@@ -589,12 +545,12 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
 
   //  parse fragment number
   //
-  pac_u->wal_u.pep_u.fra_w = _ames_sift_word(pac_u->hun_y + cur_w);
+  pac_u->wal_u.pep_u.fra_w = c3_sift_word(pac_u->hun_y + cur_w);
   cur_w += fra_w;
 
   //  parse path length field
   //
-  len_s = _ames_sift_short(pac_u->hun_y + cur_w);
+  len_s = c3_sift_short(pac_u->hun_y + cur_w);
   pac_u->wal_u.pep_u.len_s = len_s;
   cur_w += len_w;
 
@@ -670,22 +626,6 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
   return ret_o;
 }
 
-static void
-_ames_etch_short(c3_y buf_y[2], c3_s sot_s)
-{
-  buf_y[0] = sot_s         & 0xff;
-  buf_y[1] = (sot_s >>  8) & 0xff;
-}
-
-static void
-_ames_etch_word(c3_y buf_y[4], c3_w wod_w)
-{
-  buf_y[0] = wod_w         & 0xff;
-  buf_y[1] = (wod_w >>  8) & 0xff;
-  buf_y[2] = (wod_w >> 16) & 0xff;
-  buf_y[3] = (wod_w >> 24) & 0xff;
-}
-
 /* _ames_etch_head(): serialize packet header.
 */
 static void
@@ -703,14 +643,14 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
              ^ ((hed_u->mug_l & 0xfffff) << 11)
              ^ ((hed_u->rel_o &     0x1) << 31);
 
-  _ames_etch_word(buf_y, hed_w);
+  c3_etch_word(buf_y, hed_w);
 }
 
 static void
 _ames_etch_origin(c3_d rog_d, c3_y* buf_y)
 {
   c3_y rag_y[8] = {0};
-  _ames_bytes_chub(rag_y, rog_d);
+  c3_etch_chub(rag_y, rog_d);
   memcpy(buf_y, rag_y, 6);
 }
 
@@ -755,12 +695,12 @@ _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 
   //  write fragment number
   //
-  _ames_etch_word(buf_y + cur_w, pep_u->fra_w);
+  c3_etch_word(buf_y + cur_w, pep_u->fra_w);
   cur_w += sizeof(pep_u->fra_w);
 
   //  write path length
   //
-  _ames_etch_short(buf_y + cur_w, pep_u->len_s);
+  c3_etch_short(buf_y + cur_w, pep_u->len_s);
   cur_w += sizeof(pep_u->len_s);
 
   //  write request path
@@ -787,7 +727,7 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 
     //  write number of fragments
     //
-    _ames_etch_word(num_y, mew_u->num_w);
+    c3_etch_word(num_y, mew_u->num_w);
     memcpy(buf_y + cur_w, num_y, len_y);
 
     if (mew_u->siz_s != 0) {
@@ -1435,8 +1375,8 @@ _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u)
 
     cur += 2;
 
-    lan_u->por_s = ntohs(_ames_sift_short(buf_y + cur)) ^ (cookie >> 16);
-    lan_u->pip_w = ntohl(_ames_sift_word(buf_y + cur + 2)) ^ cookie;
+    lan_u->por_s = ntohs(c3_sift_short(buf_y + cur)) ^ (cookie >> 16);
+    lan_u->pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
 
     if ( u3C.wag_w & u3o_verbose ) {
       c3_w nip_w = htonl(lan_u->pip_w);
@@ -1465,7 +1405,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len)
     if ( fin_y != 0 ) {
       c3_w len_w = fin_y - buf_y;
       // Skip attribute type and length
-      c3_w fingerprint = _ames_sift_word(fin_y + sizeof(ned_y));
+      c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
       c3_w init = crc32(0L, Z_NULL, 0);
       c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
       if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len) {
