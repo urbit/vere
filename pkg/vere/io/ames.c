@@ -2995,6 +2995,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         sam_u->fig_u.net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
+    u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
     u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
     u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
     u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
@@ -3039,9 +3040,11 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("        filtering: %s", FLAG(sam_u->fig_u.fit_o));
   u3l_log("         can send: %s", FLAG(sam_u->fig_u.net_o));
   u3l_log("         can scry: %s", FLAG(sam_u->fig_u.see_o));
-  u3l_log("        caches:");
-  u3l_log("          cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("          cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("      stun:");
+  u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
+  u3l_log("      caches:");
+  u3l_log("        cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("        cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
