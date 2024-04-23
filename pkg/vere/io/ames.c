@@ -83,7 +83,6 @@ typedef enum u3_stun_state {
     } nat_u;                            //  libnatpmp stuff for port forwarding
     c3_o             nal_o;             //  lane cache backcompat flag
     struct {                            //    config:
-      c3_o           net_o;             //  can send
       c3_o           see_o;             //  can scry
       c3_o           fit_o;             //  filtering active
     } fig_u;                            //
@@ -212,6 +211,8 @@ typedef enum u3_stun_state {
 
 const c3_c* PATH_PARSER =
   ";~(pfix fas (most fas (cook crip (star ;~(less fas prn)))))";
+
+static c3_o net_o = c3y;  // online heuristic to limit verbosity
 
 /* _ames_alloc(): libuv buffer allocator.
 */
@@ -740,11 +741,11 @@ _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
   u3_ames* sam_u = pac_u->sam_u;
 
   if ( !sas_i ) {
-    sam_u->fig_u.net_o = c3y;
+    net_o = c3y;
   }
-  else if ( c3y == sam_u->fig_u.net_o ) {
+  else if ( c3y == net_o ) {
     u3l_log("ames: send fail: %s", uv_strerror(sas_i));
-    sam_u->fig_u.net_o = c3n;
+    net_o = c3n;
   }
 
   _ames_pact_free(pac_u);
@@ -1000,7 +1001,6 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
 
 typedef struct _stun_send {
   uv_udp_send_t req_u;     //  uv udp request handle
-  u3_ames*      sam_u;     //  backpointer to driver state
   c3_y          hun_y[0];  //  buffer
 } _stun_send;
 
@@ -1010,14 +1010,13 @@ static void
 _stun_send_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 {
   _stun_send* snd_u = (_stun_send*)rep_u;
-  u3_ames*    sam_u = snd_u->sam_u;
 
   if ( !sas_i ) {
-    sam_u->fig_u.net_o = c3y;
+    net_o = c3y;
   }
-  else if ( c3y == sam_u->fig_u.net_o ) {
+  else if ( c3y == net_o ) {
     u3l_log("stun: send response fail: %s", uv_strerror(sas_i));
-    sam_u->fig_u.net_o = c3n;
+    net_o = c3n;
   }
 
   c3_free(snd_u);
@@ -1031,7 +1030,6 @@ _stun_on_request(u3_ames*              sam_u,
                 const struct sockaddr* adr_u)
 {
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
-  snd_u->sam_u = sam_u;
 
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
   u3_lane lan_u = {
@@ -1108,7 +1106,6 @@ _stun_send_request(u3_ames* sam_u)
   u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
 
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
-  snd_u->sam_u = sam_u;
 
   u3_stun_make_request(snd_u->hun_y, sam_u->sun_u.tid_y);
 
@@ -2783,7 +2780,7 @@ _ames_io_info(u3_auto* car_u)
 
   return u3i_list(
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
-    u3_pier_mase("can-send",         sam_u->fig_u.net_o),
+    u3_pier_mase("can-send",         net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
     u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
     u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
@@ -2828,7 +2825,7 @@ _ames_io_slog(u3_auto* car_u)
   //
   u3l_log("      config:");
   u3l_log("        filtering: %s", FLAG(sam_u->fig_u.fit_o));
-  u3l_log("         can send: %s", FLAG(sam_u->fig_u.net_o));
+  u3l_log("         can send: %s", FLAG(net_o));
   u3l_log("         can scry: %s", FLAG(sam_u->fig_u.see_o));
   u3l_log("      stun:");
   u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
@@ -2860,7 +2857,6 @@ u3_ames_io_init(u3_pier* pir_u)
   u3_ames* sam_u  = c3_calloc(sizeof(*sam_u));
   sam_u->pir_u    = pir_u;
   sam_u->nal_o    = c3n;
-  sam_u->fig_u.net_o = c3y;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
   sam_u->sun_u.wok_o = c3n;
