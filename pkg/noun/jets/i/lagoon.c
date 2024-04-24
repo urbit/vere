@@ -385,7 +385,7 @@
           // Perform division x/n
           float16_t div_result16 = f16_div(x_val16, y_val16);
           // Compute floor of the division result
-          int64_t floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
+          c3_ds floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
           float16_t floor_float16 = i64_to_f16(floor_result16);
           // Multiply n by floor(x/n)
           float16_t mult_result16 = f16_mul(y_val16, floor_float16);
@@ -401,7 +401,7 @@
           // Perform division x/n
           float32_t div_result32 = f32_div(x_val32, y_val32);
           // Compute floor of the division result
-          int64_t floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
+          c3_ds floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t floor_float32 = i64_to_f32(floor_result32);
           // Multiply n by floor(x/n)
           float32_t mult_result32 = f32_mul(y_val32, floor_float32);
@@ -417,7 +417,7 @@
           // Perform division x/n
           float64_t div_result64 = f64_div(x_val64, y_val64);
           // Compute floor of the division result
-          int64_t floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
+          c3_ds floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
           float64_t floor_float64 = i64_to_f64(floor_result64);
           // Multiply n by floor(x/n)
           float64_t mult_result64 = f64_mul(y_val64, floor_float64);
@@ -434,7 +434,7 @@
           float128_t div_result128;
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
           // Compute floor of the division result
-          int64_t floor_result128 = f128_to_i64(div_result128, softfloat_round_minMag, false);
+          c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
           float128_t floor_float128 = i64_to_f128(floor_result128);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
@@ -1586,7 +1586,7 @@
           // Perform division x/n
           float16_t div_result16 = f16_mul(in16, x_val16);
           // Compute floor of the division result
-          int64_t floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
+          c3_ds floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
           float16_t floor_float16 = i64_to_f16(floor_result16);
           // Multiply n by floor(x/n)
           float16_t mult_result16 = f16_mul(n16, floor_float16);
@@ -1604,7 +1604,7 @@
           // Perform division x/n
           float32_t div_result32 = f32_mul((float32_t)in32, (float32_t)x_val32);
           // Compute floor of the division result
-          int64_t floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
+          c3_ds floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t floor_float32 = i64_to_f32(floor_result32);
           // Multiply n by floor(x/n)
           float32_t mult_result32 = f32_mul(n32, floor_float32);
@@ -1622,7 +1622,7 @@
           // Perform division x/n
           float64_t div_result64 = f64_mul(in64, x_val64);
           // Compute floor of the division result
-          int64_t floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
+          c3_ds floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
           float64_t floor_float64 = i64_to_f64(floor_result64);
           // Multiply n by floor(x/n)
           float64_t mult_result64 = f64_mul(n64, floor_float64);
@@ -1641,7 +1641,7 @@
           float128_t div_result128;
           f128M_mul((float128_t*)&in128, (float128_t*)&x_val128, (float128_t*)&div_result128);
           // Compute floor of the division result
-          int64_t floor_result128 = f128_to_i64(div_result128, softfloat_round_minMag, false);
+          c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
           float128_t floor_float128 = i64_to_f128(floor_result128);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
@@ -1992,7 +1992,10 @@
         u3r_bytes(0, 16, (c3_y*)&(a128.v[0]), a);
         u3r_bytes(0, 16, (c3_y*)&(b128.v[0]), b);
         u3r_bytes(0, 16, (c3_y*)&(interval128.v), d);
-        c3_d n128 = f128_to_i64(f128_div(f128_sub(b128, a128), interval128), softfloat_round_minMag, false);
+        float128_t tmp;
+        f128M_sub(&b128, &a128, &tmp);
+        f128M_div(&tmp, &interval128, &interval128);
+        c3_d n128 = f128M_to_i64(&tmp, softfloat_round_minMag, false);
         c3_y* x_bytes128 = (c3_y*)u3a_malloc(((n128+1)*16+1)*sizeof(c3_y));
         float128_t i128;
         for (c3_d i = 1; i < n128; i++) {
@@ -3220,7 +3223,10 @@
                 u3r_bytes(0, 16, (c3_y*)&a_, a);
                 u3r_bytes(0, 16, (c3_y*)&b_, b);
                 u3r_bytes(0, 16, (c3_y*)&d_, d);
-                n_ = f128_to_i64(f128_div(f128_sub((float128_t){b_}, (float128_t){a_}), (float128_t){d_}), softfloat_round_minMag, false);
+                float128_t tmp;
+                f128M_sub((float128_t*){&b_}, (float128_t*){&a_}, &tmp);
+                f128M_div(&tmp, (float128_t*){&d_}, &tmp);
+                n_ = f128M_to_i64(&tmp, softfloat_round_minMag, false);
                 break;
             }
             u3_noun n = u3i_chub(n_+1);
