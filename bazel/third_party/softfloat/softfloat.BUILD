@@ -20,6 +20,9 @@ cc_library(
     srcs = [
         # See `OBJS_PRIMITIVES` in `build/Linux-ARM-VFPv2-GCC/Makefile` in the
         # `softfloat` repo.
+        "source/s_eq128.c",
+        "source/s_le128.c",
+        "source/s_lt128.c",
         "source/s_compare96M.c",
         "source/s_compare128M.c",
         "source/s_shortShiftLeft64To96M.c",
