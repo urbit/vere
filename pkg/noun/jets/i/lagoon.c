@@ -663,7 +663,7 @@
       case 7: ;
         float128_t max_val128 = ((float128_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
-           if(f128_gt(((float128_t*)x_bytes)[i], max_val128)) {
+           if(f128M_gt(&(((float128_t*)x_bytes)[i]), &max_val128)) {
              max_val128 = *f128M_max(&max_val128, &((float128_t*)x_bytes)[i]);
              max_idx = (len_x - i - 1);
            }
