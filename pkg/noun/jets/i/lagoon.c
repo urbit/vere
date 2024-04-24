@@ -435,7 +435,8 @@
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
           // Compute floor of the division result
           c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
-          float128_t floor_float128 = i64_to_f128(floor_result128);
+          float128_t floor_float128;
+          i64_to_f128M(floor_result128, &floor_float128);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
           f128M_mul(((float128_t*)&y_val128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
@@ -1642,7 +1643,8 @@
           f128M_mul((float128_t*)&in128, (float128_t*)&x_val128, (float128_t*)&div_result128);
           // Compute floor of the division result
           c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
-          float128_t floor_float128 = i64_to_f128(floor_result128);
+          float128_t floor_float128;
+          i64_to_f128M(floor_result128, &floor_float128);
           // Multiply n by floor(x/n)
           float128_t mult_result128;
           f128M_mul(((float128_t*)&n128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
