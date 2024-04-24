@@ -495,14 +495,14 @@ static u3j_core _140_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, _140_hex_coed_ha },
   { "aes",  31, 0, _140_hex_aes_d,  _140_hex_aes_ha  },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  _140_hex_hmac_ha  },
-  { "argon",  31, 0, _140_hex_argon_d, _140_hex_argon_ha },
-  { "blake",  31, 0, _140_hex_blake_d, _140_hex_blake_ha },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes         },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  _140_hex_ripe_ha  },
-  { "scr",    31, 0, _140_hex_scr_d,   _140_hex_scr_ha   },
-  { "secp",    6, 0, _140_hex_secp_d,  _140_hex_secp_ha  },
-  { "mimes",  31, 0, _140_hex_mimes_d, _140_hex_mimes_ha },
+  { "hmac",   63, 0, _140_hex_hmac_d,   _140_hex_hmac_ha   },
+  { "argon",  31, 0, _140_hex_argon_d,  _140_hex_argon_ha  },
+  { "blake",  31, 0, _140_hex_blake_d,  _140_hex_blake_ha  },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes          },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   _140_hex_ripe_ha   },
+  { "scr",    31, 0, _140_hex_scr_d,    _140_hex_scr_ha    },
+  { "secp",    6, 0, _140_hex_secp_d,   _140_hex_secp_ha   },
+  { "mimes",  31, 0, _140_hex_mimes_d,  _140_hex_mimes_ha  },
   {}
 };
 static c3_c* _140_hex_ha[] = {
@@ -2129,15 +2129,15 @@ static u3j_core _139_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
-  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
-  { "blake",  31, 0, _140_hex_blake_d, no_hashes },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
-  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
-  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
-  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
-  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "hmac",   63, 0, _140_hex_hmac_d,   no_hashes  },
+  { "argon",  31, 0, _140_hex_argon_d,  no_hashes  },
+  { "blake",  31, 0, _140_hex_blake_d,  no_hashes  },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes  },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   no_hashes  },
+  { "scr",    31, 0, _140_hex_scr_d,    no_hashes  },
+  { "secp",    6, 0, _140_hex_secp_d,   no_hashes  },
+  { "mimes",  31, 0, _140_hex_mimes_d,  no_hashes  },
+  { "json",   31, 0, _139_hex_json_d,   no_hashes  },
   {}
 };
 
@@ -2341,6 +2341,14 @@ static u3j_core _138_hex_blake_d[] =
     {}
   };
 
+  static u3j_harm _138_hex_chacha_crypt_a[] = {{".2", u3we_chacha_crypt, c3y}, {}};
+  static u3j_harm _138_hex_chacha_xchacha_a[] = {{".2", u3we_chacha_xchacha, c3y}, {}};
+static u3j_core _138_hex_chacha_d[] =
+  { { "crypt",   7, _138_hex_chacha_crypt_a,   0, no_hashes },
+    { "xchacha", 7, _138_hex_chacha_xchacha_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _138_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2350,15 +2358,16 @@ static u3j_core _138_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
-  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
-  { "blake",  31, 0, _138_hex_blake_d, no_hashes },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
-  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
-  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
-  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
-  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "hmac",   63, 0, _140_hex_hmac_d,   no_hashes },
+  { "argon",  31, 0, _140_hex_argon_d,  no_hashes },
+  { "blake",  31, 0, _138_hex_blake_d,  no_hashes },
+  { "chacha", 31, 0, _138_hex_chacha_d, no_hashes },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   no_hashes },
+  { "scr",    31, 0, _140_hex_scr_d,    no_hashes },
+  { "secp",    6, 0, _140_hex_secp_d,   no_hashes },
+  { "mimes",  31, 0, _140_hex_mimes_d,  no_hashes },
+  { "json",   31, 0, _139_hex_json_d,   no_hashes },
   {}
 };
 
