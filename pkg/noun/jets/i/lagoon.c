@@ -590,7 +590,7 @@
       case 7: ;
         float128_t min_val128 = ((float128_t*)x_bytes)[0];
         for (c3_d i = 0; i < len_x; i++) {
-           if(f128_lt(((float128_t*)x_bytes)[i], min_val128)) {
+           if(f128M_lt(&(((float128_t*)x_bytes)[i]), &min_val128)) {
              min_val128 = *f128M_min(&min_val128, &((float128_t*)x_bytes)[i]);
              min_idx = (len_x - i - 1);
            }
