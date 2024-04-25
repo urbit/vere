@@ -17,6 +17,7 @@
     else {
       c3_y key_y[32], nonce_y[8];
       u3r_bytes(0, 32, key_y, key);
+      u3r_bytes(0, 8, nonce_y, nonce);
       c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
       urcrypt_chacha_crypt(rounds, key_y, nonce_y, counter, wid, dat_y);
       u3_noun cry = u3i_bytes(wid_w, dat_y);
