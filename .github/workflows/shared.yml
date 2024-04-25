@@ -113,7 +113,7 @@ jobs:
         run: |
           case "${{ matrix.target }}" in
             "linux-aarch64")
-              sudo apt-get -y install autoconf-archive
+              sudo apt-get -y install autoconf-archive pkg-config
               bazel run //bazel/toolchain:aarch64-linux-musl-gcc
               ;;
             "linux-x86_64")
