@@ -1632,7 +1632,9 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   u3_disk_epoc_list(log_u, sot_d);
 
   if ( len_z <= 2 ) {
-    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
+    fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
+                    "chop: for more info see "
+                    "https://docs.urbit.org/manual/running/vere#chop\r\n");
     exit(0);  //  enjoy
   }
 
