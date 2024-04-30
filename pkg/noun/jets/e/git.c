@@ -7,10 +7,27 @@
 #include "allocate.h"
 #include "noun.h"
 
-#define OFS_DELTA (u3i_string("ofs-delta"))
-#define REF_DELTA (u3i_string("ref-delta"))
-
 static u3_atom _q_octs;
+
+static inline c3_y _cord_cmp(u3_atom cord, const char* s)
+{
+  u3a_atom* cord_p = u3a_to_ptr(cord);
+  const c3_y* c = (c3_y*)cord_p->buf_w;
+  c3_w len_w = u3r_met(3, cord);
+
+  if (len_w == 0 || *s == '\0' ) {
+    return (len_w == 0 && *s == '\0') ? c3y : c3n;
+  }
+
+  do {
+    if (*(c++) != *(s++)) {
+      return c3n;
+    }
+      
+  } while (--len_w && *s != '\0');
+
+  return (len_w == 0 && *s == '\0') ? c3y : c3n;
+}
 
 static c3_y* _unpack_octs(u3_atom p_octs, u3_atom* q_octs_p, c3_w* len_wp) {
 
@@ -83,14 +100,13 @@ static c3_w _read_size(c3_y* buf_y, c3_w* pos_wp, c3_w buf_len_w, c3_w len_w) {
 }
 
 u3_noun u3qe_git_pack_expand_delta_object(u3_noun base, 
-                                         u3_noun delta) {
+                                          u3_noun delta) {
 
-  /* +$  raw-object  [type=object-type data=stream:libstream]
-   */
-  /* +$  pack-object  $%  raw-object
-                          [%ofs-delta pos=@ud base-offset=@ud =octs]
-                          [%ref-delta =octs]
-                      ==
+  /* +$  raw-object  [type=object-type size=@ud data=stream:libstream]
+     +$  pack-object  $%  raw-object
+                           [%ofs-delta pos=@ud base-offset=@ud =octs]
+                           [%ref-delta pos=@ud =hash =octs]
+                       ==
      +$  pack-delta-object  $>(?(%ofs-delta %ref-delta) pack-object)
   */
 
@@ -109,7 +125,7 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
 
   // delta=pack-object
   //
-  u3_noun delta_type;
+  u3_atom delta_type;
   u3_noun delta_obj;
 
   u3_atom delta_pos;
@@ -121,14 +137,11 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
 
   u3x_cell(delta, &delta_type, &delta_obj);
 
-  if ( c3y == u3r_sing(delta_type, OFS_DELTA) ) {
-    // fprintf(stderr, "Expanding %%ofs-delta object\r\n");
-    u3x_trel(delta_obj, &delta_pos, &delta_base_offset, &delta_octs);
-  }
-  
-  if ( c3y == u3r_sing(delta_type, REF_DELTA) ) {
-    // fprintf(stderr, "Expanding %%ref-delta object\r\n");
+  if (c3y == _cord_cmp(delta_type, "ref-delta")) {
     return u3_none;
+  }
+  if (c3y == _cord_cmp(delta_type, "ofs-delta")) {
+    u3x_trel(delta_obj, &delta_pos, &delta_base_offset, &delta_octs);
   }
 
   u3x_cell(delta_octs, &delta_p_octs, &delta_q_octs);
@@ -323,7 +336,9 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
   }
 
   u3_noun data = u3nc(0, u3nc(u3i_chub(siz_w), u3i_slab_mint(&sab_u)));
-  u3_noun rob = u3nt(u3k(base_type), u3k(base_size), data);
+  u3_noun rob = u3nt(u3k(base_type), u3i_chub(siz_w), data);
+
+  // fprintf(stderr, "Resolved object of size %d, siz_w = %d\r\n", base_size, siz_w);
 
   return rob;
 }
