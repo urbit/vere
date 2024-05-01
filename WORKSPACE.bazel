@@ -217,15 +217,6 @@ versioned_http_file(
     version = "721fa05",
 )
 
-versioned_http_archive(
-    name = "natpmp",
-    build_file = "//bazel/third_party/natpmp:natpmp.BUILD",
-    sha256 = "0684ed2c8406437e7519a1bd20ea83780db871b3a3a5d752311ba3e889dbfc70",
-    strip_prefix = "libnatpmp-{version}",
-    url = "http://miniupnp.free.fr/files/libnatpmp-{version}.tar.gz",
-    version = "20230423",
-)
-
 versioned_http_file(
     name = "solid_pill",
     sha256 = "8b658fcee6978e2b19004a54233cab953e77ea0bb6c3a04d1bfda4ddc6be63c5",
