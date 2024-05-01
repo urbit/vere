@@ -8,7 +8,7 @@
 u3_atom
 u3qc_ctz(u3_atom a)
 {
-  c3_w wor_w, i_w;
+  c3_w wor_w, i_w = 0;
 
   if ( 0 == a ) {
     return 0;
