@@ -67,7 +67,7 @@ typedef struct _u3_mesa_stat {
 #define IN_FLIGHT  10
 
 // XX
-#define MESA_HUNK  4096
+#define MESA_HUNK  4096  //  184
 
 // pending interest sentinels
 #define MESA_ITEM         1  // cached item
@@ -294,6 +294,18 @@ _log_mesa_data(u3_mesa_data dat_u)
   u3l_log("total frag: %u", dat_u.tot_w);
   u3l_log("frag len: %u", dat_u.len_w);
   // u3l_log("frag: %xxx", dat_u.fra_y);
+}
+
+/* _mesa_lop(): find beginning of page containing fra_w
+*/
+static inline c3_w
+_mesa_lop(c3_w fra_w)
+{
+  if ( fra_w == 0 ) {
+    return 1;
+  } else {
+    return 1 + ((( fra_w - 1) / MESA_HUNK) * MESA_HUNK);
+  }
 }
 
 static c3_d
@@ -621,6 +633,7 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   }
 
   c3_w rem_w = req_u->tot_w - req_u->nex_w + 1;
+  u3l_log("rem_w: %u", rem_w);
   return c3_min(rem_w, req_u->gag_u->wnd_w - liv_w);
 }
 
@@ -846,9 +859,9 @@ _try_resend(u3_pend_req* req_u)
         // TODO: better route management
         _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
         _mesa_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
-            }
-          }
-        }
+      }
+    }
+  }
 
   if ( c3y == los_o ) {
     req_u->gag_u->sst_w = (req_u->gag_u->wnd_w / 2) + 1;
@@ -1481,6 +1494,8 @@ _name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
   // [%hunk lop=@t len=@t pat=*]
+  u3l_log("lop_w %u len_w %u", lop_w, len_w);
+  u3m_p("len", len);
   u3_noun bat = u3nq(c3__hunk, lop, len, res);
 
   return bat;
@@ -1585,24 +1600,24 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
     // TODO: mark as dead
     //u3z(nun);
     u3l_log("unbound");
-
   } else {
-    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
-    if ( old == u3_none ) {
-      u3l_log("bad");
-      MESA_LOG(APATHY);
-    } else {
-      u3_noun tag;
-      u3_noun dat;
-      u3x_cell(u3k(old), &tag, &dat);
-      if ( MESA_WAIT == tag ) {
-        c3_y* buf_y;
-        // u3m_p("hit", u3a_is_cell(hit));
-        c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
-        _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
-      }
+    // u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    // if ( old == u3_none ) {
+    //   u3l_log("bad");
+    //   MESA_LOG(APATHY);
+    // } else {
+    //   u3_noun tag;
+    //   u3_noun dat;
+    //   u3x_cell(u3k(old), &tag, &dat);
+    //   if ( MESA_WAIT == tag ) {
+    //     c3_y* buf_y;
+    //     // u3m_p("hit", u3a_is_cell(hit));
+    //     c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+    //     _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
+    //   }
 
       c3_w len_w = pac_u->pek_u.nam_u.fra_w;
+      c3_w i = 0;
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
@@ -1612,12 +1627,13 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
 
         hit = u3t(hit);
         len_w++;
+        i++;
         pac_u->pek_u.nam_u.fra_w = len_w;
       }
+      u3l_log("i %u", i);
       // u3z(old);
     }
     // u3z(hit);
-  }
   // u3z(pax);
 }
 
@@ -2045,8 +2061,14 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_free_pict(pic_u);
     return;
   }
+  c3_w  bat_w = _mesa_lop(pac_u->pek_u.nam_u.fra_w);
+  c3_w  fra_w = pac_u->pek_u.nam_u.fra_w;
+  pac_u->pek_u.nam_u.fra_w = bat_w;
 
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
+  pac_u->pek_u.nam_u.fra_w = fra_w;
+
+  u3l_log("peek fra %u bat %u", fra_w, bat_w);
 
   if ( u3_none != hit ) {
     u3_noun tag, dat;
@@ -2055,10 +2077,14 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
     } else if ( c3y == our_o && tag == MESA_ITEM ) { // XX our_o redundant
       c3_y* buf_y;
-      c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(dat));
+      u3_weak hit_2 = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
+      u3_noun tag_2, dat_2;
+      u3x_cell(u3k(hit_2), &tag_2, &dat_2);
+      u3l_log("cache hit %u bat %u", fra_w, bat_w);
+      c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(dat_2));
       // _log_buf(buf_y, len_w);
       _mesa_send_buf(sam_u, lan_u, buf_y, len_w);
-
+      u3z(hit_2);
     } else {
       u3l_log("mesa: weird case in cache, dropping");
     }
@@ -2068,7 +2094,9 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   } else {
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
-      u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u, pac_u->pek_u.nam_u.fra_w, pac_u->pek_u.nam_u.fra_w + MESA_HUNK);
+      u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
+                                        pac_u->pek_u.nam_u.fra_w,
+                                        pac_u->pek_u.nam_u.fra_w + MESA_HUNK);
 
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
