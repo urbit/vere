@@ -408,6 +408,56 @@ u3_lmdb_save(MDB_env* env_u,
   return c3y;
 }
 
+/* u3_lmdb_drop(): delete [eve_d].
+*/
+c3_o
+u3_lmdb_drop(MDB_env* env_u, c3_d eve_d)
+{
+  MDB_txn* txn_u;
+  MDB_dbi  mdb_u;
+  c3_w     ret_w;
+
+  //  create a write transaction
+  //
+  if ( (ret_w = mdb_txn_begin(env_u, 0, 0, &txn_u)) ) {
+    mdb_logerror(stderr, ret_w, "lmdb: drop: begin failed");
+    return c3n;
+  }
+
+  //  opens the database in the transaction
+  //
+  {
+    c3_w ops_w = MDB_INTEGERKEY;
+
+    if ( (ret_w = mdb_dbi_open(txn_u, "EVENTS", ops_w, &mdb_u)) ) {
+      mdb_logerror(stderr, ret_w, "lmdb: drop: open failed");
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  //  delete [eve_d]
+  //
+  {
+    MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &eve_d };
+
+    if ( (ret_w = mdb_del(txn_u, mdb_u, &key_u, 0)) ) {
+      mdb_logerror(stderr, ret_w, "lmdb: drop: delete failed");
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  //  commit transaction
+  //
+  if ( (ret_w = mdb_txn_commit(txn_u)) ) {
+    mdb_logerror(stderr, ret_w, "lmdb: drop: commit failed");
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* u3_lmdb_read_meta(): read by string from the META db.
 */
 void

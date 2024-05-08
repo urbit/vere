@@ -57,6 +57,11 @@
                    void**   byt_p,
                    size_t*  siz_i);
 
+    /* u3_lmdb_drop(): delete [eve_d].
+    */
+      c3_o
+      u3_lmdb_drop(MDB_env* env_u, c3_d eve_d);
+
     /* u3_lmdb_read_meta(): read by string from the META db.
     */
       void
