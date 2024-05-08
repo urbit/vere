@@ -1249,6 +1249,89 @@ _cw_dock(c3_i argc, c3_c* argv[])
   u3_king_dock(U3_VERE_PACE);
 }
 
+/* _cw_drop(): delete events
+*/
+static void
+_cw_drop(c3_i argc, c3_c* argv[])
+{
+  c3_i lid_i, ch_i;
+  c3_d eve_d = 0;
+
+  static struct option lop_u[] = {
+    { "no-really-do-what-i-mean", required_argument, NULL, 1},
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case 1: {
+        if ( 1 != sscanf(optarg, "%" PRIu64 "", &eve_d) ) {
+          fprintf(stderr, "drop: invalid event number: '%s'\r\n", optarg);
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "drop"
+  //
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+
+  if ( !log_u->dun_d ) {
+    fprintf(stderr, "drop: strange log: empty\r\n");
+  }
+  else if ( !eve_d ) {
+    fprintf(stderr, "----------------------------------------\r\n"
+                    "WARNING: deleting events is always unsafe\r\n"
+                    "         and can easily cause unrecoverable data loss.\r\n"
+                    "DO NOT PROCEED unless you know exactly what you're doing.\r\n"
+                    "----------------------------------------\r\n");
+
+
+    fprintf(stderr, "drop: last event is %" PRIu64 "\r\n"
+                    "      rerun with --no-really-do-what-i-mean %"
+                    PRIu64 " to remove\r\n",
+                    log_u->dun_d, log_u->dun_d);
+  }
+  else if ( eve_d != log_u->dun_d ) {
+    fprintf(stderr, "drop: latest event not specified; aborting\r\n");
+  }
+  else {
+    if ( c3n == u3_lmdb_drop(log_u->mdb_u, log_u->dun_d) ) {
+      fprintf(stderr, "drop (%" PRIu64 "): failed\r\n", log_u->dun_d);
+    }
+    else {
+      fprintf(stderr, "drop (%" PRIu64 "): removed\r\n", log_u->dun_d);
+    }
+  }
+
+  u3_disk_exit(log_u);
+}
+
 /* _cw_eval_get_string(): read file til EOF and return a malloc'd string
 */
 c3_c*
@@ -2849,6 +2932,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
   switch ( mot_m ) {
     case c3__cram: _cw_cram(argc, argv); return 1;
     case c3__dock: _cw_dock(argc, argv); return 1;
+    case c3__drop: _cw_drop(argc, argv); return 1;
     case c3__eval: _cw_eval(argc, argv); return 1;
 
     case c3__mass:
