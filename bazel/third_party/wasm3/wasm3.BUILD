@@ -1,6 +1,6 @@
 # This build file is derived form `CMakeLists.txt` in the `wasm3` repo at
 # https://github.com/wasm3/wasm3.
-
+ 
 cc_library(
     name = "wasm3",
     srcs = glob(["**/*.c"], exclude=["test/**/*.c", "platforms/android/**/*.c", "platforms/emscripten/**/*.c", "platforms/emscripten_lib/**/*.c", "platforms/embedded/**/*.c", "platforms/cpp/**/*.c", "platforms/ios/**/*.c"]),
@@ -19,3 +19,4 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
