@@ -1022,7 +1022,8 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__meme:
       case c3__nara:
       case c3__hela:
-      case c3__bout: {
+      case c3__bout:
+      case c3__jinx: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
         // add appropriate hind opcode
@@ -1060,7 +1061,8 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__meme:
           case c3__nara:
           case c3__hela:
-          case c3__bout: {
+          case c3__bout:
+          case c3__jinx: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
             // add appropriate hind opcode
@@ -1872,6 +1874,11 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3_nul;
     } break;
 
+    case c3__jinx: {
+      u3_atom now = u3i_chub(u3t_trace_time());
+      *out = u3i_cell(tag, now);
+    } break;
+
     default: {
       *out = u3_nul;
     } break;
@@ -1893,6 +1900,13 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
+    u3t_slog(u3nc(0, u3i_string(str_c)));
+    u3z(delta);
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__jinx == p_tok) ) {
+    u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
+    c3_c str_c[64];
+    u3a_print_time(str_c, "jinxed at", u3r_chub(0, delta));
     u3t_slog(u3nc(0, u3i_string(str_c)));
     u3z(delta);
   }
@@ -1920,6 +1934,11 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 
   switch ( tag ) {
     case c3__bout: {
+      u3_atom now = u3i_chub(u3t_trace_time());
+      *clu = u3nt(u3k(tag), *clu, now);
+    } break;
+
+    case c3__jinx: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
