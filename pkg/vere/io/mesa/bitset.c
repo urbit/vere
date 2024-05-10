@@ -21,7 +21,7 @@
 void bitset_init(u3_bitset* bit_u, c3_w len_w)
 {
   bit_u->len_w = len_w;
-  bit_u->buf_y = c3_calloc(len_w >> 3);
+  bit_u->buf_y = c3_calloc((len_w >> 3) + 1);
 }
 
 void
