@@ -5,6 +5,7 @@
 #include "vere.h"
 #include "ivory.h"
 #include "ur.h"
+#include <manage.h>
 
 /*
 |%
@@ -752,8 +753,31 @@ u3_serf_play(u3_serf* sef_u, c3_d eve_d, u3_noun lit)
 u3_noun
 u3_serf_peek(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
 {
+  c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
+  c3_c  lab_c[2056];
+
+  // XX refactor tracing
+  //
+  if ( tac_t ) {
+    c3_c* foo_c = u3m_pretty(u3t(sam));
+
+    {
+      snprintf(lab_c, 2056, "peek %s", foo_c);
+      c3_free(foo_c);
+    }
+
+    u3t_event_trace(lab_c, 'B');
+  }
+
+
   u3_noun gon = u3m_soft(mil_w, u3v_peek, sam);
   u3_noun pro;
+
+  if ( tac_t ) {
+    u3t_event_trace(lab_c, 'E');
+  }
+
+
 
   {
     u3_noun tag, dat;
