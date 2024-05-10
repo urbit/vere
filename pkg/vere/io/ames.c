@@ -2781,15 +2781,16 @@ natpmp_cb(uv_poll_t* handle,
   u3_ames* sam_u = handle->data;
 
   natpmpresp_t response;
-  c3_i res_i = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
-  if ( NATPMP_TRYAGAIN == res_i ) {
+  c3_i err_i = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
+  if ( NATPMP_TRYAGAIN == err_i ) {
     return;
   }
 
   uv_poll_stop(handle);
 
-  if ( 0 != res_i ) {
-    u3l_log("ames: natpmp error %i", res_i);
+  if ( 0 != err_i ) {
+    u3l_log("ames: natpmp error %i", err_i);
+    uv_poll_stop(&sam_u->nat_u.pol_u);
     closenatpmp(&sam_u->nat_u.req_u);
     return;
   }
@@ -2809,6 +2810,14 @@ natpmp_init(uv_timer_t *handle)
 {
   u3_ames* sam_u = handle->data;
   c3_s por_s = sam_u->pir_u->por_s;
+
+  c3_i err_i = initnatpmp(&sam_u->nat_u.req_u, 0, 0);
+
+  if (err_i != 0) {
+    return;
+  }
+
+  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
 
   sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
 
@@ -3286,9 +3295,7 @@ u3_ames_io_init(u3_pier* pir_u)
 
   //  initialize libnatpmp
   sam_u->nat_u.tim_u.data = sam_u;
-  initnatpmp(&sam_u->nat_u.req_u, 0, 0);
   uv_timer_init(u3L, &sam_u->nat_u.tim_u);
-  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
 
   //  enable forwarding on galaxies only
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
