@@ -301,11 +301,11 @@ _log_mesa_data(u3_mesa_data dat_u)
 static inline c3_w
 _mesa_lop(c3_w fra_w)
 {
-  if ( fra_w == 0 ) {
+  c3_w res_w = ((( fra_w ) / MESA_HUNK) * MESA_HUNK);
+  if (res_w == 0) {
     return 1;
-  } else {
-    return 1 + ((( fra_w - 1) / MESA_HUNK) * MESA_HUNK);
   }
+  return res_w;
 }
 
 static c3_d
@@ -324,6 +324,7 @@ _abs_dif(c3_d ayy_d, c3_d bee_d)
 
 static c3_d
 _clamp_rto(c3_d rto_d) {
+  /* u3l_log("clamp rto %llu", rto_d); */
   return c3_min(c3_max(rto_d, 200000), 25000000);
 }
 
@@ -666,7 +667,13 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
       req_u->nex_w++;
     }
     // TODO: optional assertions?
-    req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1, 0 };
+    /* req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1, 0 }; */
+    req_u->wat_u[nam_u->fra_w].sen_d = now_d;
+    req_u->wat_u[nam_u->fra_w].sip_y = 0;
+    req_u->wat_u[nam_u->fra_w].tie_y = 1;
+    req_u->wat_u[nam_u->fra_w].dup_y = 0;
+
+    /* u3l_log("bitset_put %u", nam_u->fra_w); */
     bitset_put(&req_u->was_u, nam_u->fra_w);
   } else {
     u3l_log("mesa: no req for sent");
@@ -825,15 +832,17 @@ _try_resend(u3_pend_req* req_u)
   u3_lane* lan_u = &req_u->lan_u;
   c3_o los_o = c3n;
   if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) {
+    u3l_log("reorder thresh too low %u", req_u->ack_w);
     return;
   }
   c3_w ack_w = req_u->ack_w - REORDER_THRESH;
   c3_d now_d = _get_now_micros();
-  for ( int i = req_u->lef_w; i < ack_w; i++ ) {
+  /* u3l_log("lef_w %u, nex_w %u, len_w %u, tot_w %u", req_u->lef_w, req_u->nex_w, req_u->len_w, req_u->tot_w); */
+  for ( int i = req_u->lef_w; i < req_u->nex_w; i++ ) {
     if ( c3y == bitset_has(&req_u->was_u, i) ) {
       req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
       if ( req_u->wat_u[i].tie_y == 1 ) {
-        u3l_log("fast resend %u", i);
+        /* u3l_log("fast resend %u", i); */
         los_o = c3y;
         c3_y* buf_y = c3_calloc(PACT_SIZE);
         req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
@@ -850,7 +859,7 @@ _try_resend(u3_pend_req* req_u)
         los_o = c3y;
         c3_y* buf_y = c3_calloc(PACT_SIZE);
         req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
-        u3l_log("slow resending %u ", i);
+        /* u3l_log("slow resending %u ", i); */
         c3_w siz_w  = mesa_etch_pact(buf_y, &req_u->pic_u->pac_u);
         if( siz_w == 0 ) {
           u3l_log("failed to etch");
@@ -859,6 +868,8 @@ _try_resend(u3_pend_req* req_u)
         // TODO: better route management
         _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
         _mesa_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
+      } else {
+        /* u3l_log("did nothing %u %llu %u", req_u->wat_u[i].tie_y, (now_d - req_u->wat_u[i].sen_d), req_u->gag_u->rto_w); */
       }
     }
   }
@@ -870,19 +881,14 @@ _try_resend(u3_pend_req* req_u)
   }
 }
 
-/* _mesa_packet_timeout(): callback for packet timeout
-*/
 static void
-_mesa_packet_timeout(uv_timer_t* tim_u) {
-  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
-  u3l_log("%u packet timed out", req_u->old_w);
-  _try_resend(req_u);
-}
+_mesa_packet_timeout(uv_timer_t* tim_u); 
 
 static void
 _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
 {
   if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
+    u3l_log("bad condition");
     return;
   }
   // scan in flight packets, find oldest
@@ -905,8 +911,19 @@ _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
   }
   req_u->old_w = idx_w;
   req_u->tim_u.data = req_u;
-  c3_d gap_d = now_d -req_u->wat_u[idx_w].sen_d;
+  c3_d gap_d = req_u->wat_u[idx_w].sen_d - now_d;
+  /* u3l_log("timeout %llu", (gag_u->rto_w - gap_d) / 1000); */
   uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, (gag_u->rto_w - gap_d) / 1000, 0);
+}
+
+/* _mesa_packet_timeout(): callback for packet timeout
+*/
+static void
+_mesa_packet_timeout(uv_timer_t* tim_u) {
+  u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
+  /* u3l_log("%u packet timed out", req_u->old_w); */
+  _try_resend(req_u);
+  _update_oldest_req(req_u, req_u->gag_u);
 }
 
 static void _mesa_free_misord_buf(u3_misord_buf* buf_u)
@@ -984,22 +1001,24 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
 
   // received duplicate
   if ( nam_u->fra_w != 0 && c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
-    MESA_LOG(DUPE);
+    /* MESA_LOG(DUPE); */
     req_u->wat_u[nam_u->fra_w].dup_y++;
     return req_u;
   }
 
+  /* u3l_log("bitset_del %u", nam_u->fra_w); */
   bitset_del(&req_u->was_u, nam_u->fra_w);
   if ( nam_u->fra_w > req_u->ack_w ) {
     req_u->ack_w = nam_u->fra_w;
   }
   if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
 #ifdef MESA_DEBUG
-    u3l_log("received retry %u", nam_u->fra_w);
+    /* u3l_log("received retry %u", nam_u->fra_w); */
 #endif
   }
 
   req_u->len_w++;
+  /* u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w); */
   if ( req_u->lef_w == nam_u->fra_w ) {
     req_u->lef_w++;
   }
@@ -1026,6 +1045,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   } else if ( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u)) ) {
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
+    u3l_log("auth fail frag %u", nam_u->fra_w);
     MESA_LOG(AUTH);
     return req_u;
   } else if ( vec_len(&req_u->mis_u) != 0
@@ -1088,9 +1108,9 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
-    u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
+    /* u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
     #ifdef MESA_DEBUG
-     u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s);
+     /* u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
 
     #endif /* ifdef MESA_DEBUG
         u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
@@ -1262,7 +1282,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
   c3_o ret_o;
-  u3l_log("blabla");
+  /* u3l_log("blabla"); */
   switch ( tag ) {
     default: {
       ret_o = c3n;
@@ -1494,8 +1514,6 @@ _name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
   // [%hunk lop=@t len=@t pat=*]
-  u3l_log("lop_w %u len_w %u", lop_w, len_w);
-  u3m_p("len", len);
   u3_noun bat = u3nq(c3__hunk, lop, len, res);
 
   return bat;
@@ -1601,27 +1619,34 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
     //u3z(nun);
     u3l_log("unbound");
   } else {
-    // u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
-    // if ( old == u3_none ) {
-    //   u3l_log("bad");
-    //   MESA_LOG(APATHY);
-    // } else {
-    //   u3_noun tag;
-    //   u3_noun dat;
-    //   u3x_cell(u3k(old), &tag, &dat);
-    //   if ( MESA_WAIT == tag ) {
-    //     c3_y* buf_y;
-    //     // u3m_p("hit", u3a_is_cell(hit));
-    //     c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
-    //     _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
-    //   }
+    c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
+    c3_w  bat_w = _mesa_lop(fra_w);
+    pac_u->pek_u.nam_u.fra_w = bat_w;
+    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    if ( old == u3_none ) {
+      u3l_log("bad");
+      MESA_LOG(APATHY);
+    } else {
+      u3_noun tag;
+      u3_noun dat;
+      u3x_cell(u3k(old), &tag, &dat);
+      c3_y* buf_y;
+      // u3m_p("hit", u3a_is_cell(hit));
 
-      c3_w len_w = pac_u->pek_u.nam_u.fra_w;
+      c3_w len_w = fra_w == 0 ? 0 : bat_w;
+      /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
       c3_w i = 0;
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+        if (fra_w == len_w && tag == MESA_WAIT) {
+          c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+          pac_u->pek_u.nam_u.fra_w = fra_w;
+          _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
+        }
 
+        pac_u->pek_u.nam_u.fra_w = len_w;
+        /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
         _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
         // u3z(key);
 
@@ -1633,6 +1658,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       u3l_log("i %u", i);
       // u3z(old);
     }
+  }
     // u3z(hit);
   // u3z(pax);
 }
@@ -1823,6 +1849,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   vec_init(&req_u->mis_u, 8);
 
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
+  _update_oldest_req(req_u, gag_u);
   return req_u;
 }
 
@@ -1830,7 +1857,7 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-  u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+  /* u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
 #endif
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
@@ -1992,6 +2019,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3i_slab sab_u;
       // u3i_slab_init(&sab_u, 3, PACT_SIZE);
       // u3i_slab_init(&sab_u, 3, (siz_w * req_u->tot_w) + 135);
+      u3l_log("slab size %u", (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w));
       u3i_slab_init(&sab_u, 3, (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w));
 
       pac_u->pag_u.dat_u.len_w = (siz_w * req_u->tot_w);
@@ -2004,7 +2032,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       //
       pic_u->pac_u.pag_u.nam_u.fra_w = req_u->tot_w - 1;
       //  XX should just preserve input buffer
-      mesa_etch_pact(sab_u.buf_y, pac_u);
+      c3_w res = mesa_etch_pact(sab_u.buf_y, pac_u);
+      u3l_log("slab len_w %u mesa_etch_pact %u", sab_u.len_w, res);
 
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
@@ -2061,26 +2090,29 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_free_pict(pic_u);
     return;
   }
-  c3_w  bat_w = _mesa_lop(pac_u->pek_u.nam_u.fra_w);
   c3_w  fra_w = pac_u->pek_u.nam_u.fra_w;
+  c3_w  bat_w = _mesa_lop(fra_w);
+
   pac_u->pek_u.nam_u.fra_w = bat_w;
 
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
-  pac_u->pek_u.nam_u.fra_w = fra_w;
 
-  u3l_log("peek fra %u bat %u", fra_w, bat_w);
+  /* u3l_log("peek fra %u hit %u", fra_w, hit != u3_none); */
+  /* u3l_log("peek fra %u bat %u hit %u", fra_w, bat_w, hit != u3_none); */
 
   if ( u3_none != hit ) {
     u3_noun tag, dat;
     u3x_cell(u3k(hit), &tag, &dat);
     if ( tag == MESA_WAIT ) {
+      /* u3l_log("MESA_WAIT for %u", bat_w); */
       _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3k(u3t(dat)), lan_u);
     } else if ( c3y == our_o && tag == MESA_ITEM ) { // XX our_o redundant
+      pac_u->pek_u.nam_u.fra_w = fra_w;
       c3_y* buf_y;
       u3_weak hit_2 = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
       u3_noun tag_2, dat_2;
-      u3x_cell(u3k(hit_2), &tag_2, &dat_2);
-      u3l_log("cache hit %u bat %u", fra_w, bat_w);
+      u3x_cell(hit_2, &tag_2, &dat_2);
+      /* u3l_log("cache hit %u bat %u", fra_w, bat_w); */
       c3_w len_w = _mesa_respond(pic_u, &buf_y, u3k(dat_2));
       // _log_buf(buf_y, len_w);
       _mesa_send_buf(sam_u, lan_u, buf_y, len_w);
@@ -2095,8 +2127,10 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
       u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
-                                        pac_u->pek_u.nam_u.fra_w,
-                                        pac_u->pek_u.nam_u.fra_w + MESA_HUNK);
+                                        fra_w == 0 ? 0 : bat_w,
+                                        fra_w == 0 ? 4096 : bat_w + MESA_HUNK);
+
+      pac_u->pek_u.nam_u.fra_w = fra_w;
 
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
