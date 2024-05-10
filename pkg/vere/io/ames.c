@@ -2817,7 +2817,11 @@ natpmp_init(uv_timer_t *handle)
     return;
   }
 
-  uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
+  err_i = uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
+
+  if (err_i != 0) {
+    return;
+  }
 
   sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
 
