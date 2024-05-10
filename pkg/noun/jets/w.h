@@ -291,6 +291,8 @@
     u3_noun u3wes_gte(u3_noun);
     u3_noun u3wes_gth(u3_noun);
 
+    u3_noun u3wa_lia_main(u3_noun);
+
   /** Tier 6.
   **/
     u3_noun u3wf_bull(u3_noun);
