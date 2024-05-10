@@ -21,7 +21,7 @@ u3qa_lia_main(u3_noun module,
               u3_noun diff,
               u3_atom hint)
 {
-  fprintf(stderr, "jet hit\r\n");
+  fprintf(stderr, "\r\nJET HIT\r\n"); 
   return u3_none;
 }
 
