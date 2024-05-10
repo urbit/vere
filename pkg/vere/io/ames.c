@@ -2778,6 +2778,11 @@ natpmp_cb(uv_poll_t* handle,
           c3_i        status,
           c3_i        events)
 {
+
+  if (status != 0) {
+    return;
+  }
+
   u3_ames* sam_u = handle->data;
 
   natpmpresp_t response;
