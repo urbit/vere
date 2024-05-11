@@ -22,6 +22,9 @@ GPATH
 GRTAGS
 GTAGS
 
+# TMP
+/tmp
+
 # Fake ships.
 /zod
 /nec
