@@ -468,6 +468,9 @@ u3wa_lia_main(u3_noun cor)
         }
       }
     }
+    if (out_wasm != u3_nul) {
+      return u3m_bail(c3__fail);
+    }
     u3z(len_vals);
     u3z(input_line_vals);
     u3z(line_shop);
