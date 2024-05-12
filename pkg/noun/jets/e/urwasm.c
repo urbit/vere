@@ -420,7 +420,7 @@ u3wa_lia_main(u3_noun cor)
     for (c3_w i = 0; i < n_out; i++) {
       u3_noun lia_type, wasm_noun;
       u3x_cell(lia_types, &lia_type, &lia_types);
-      u3x_cell(out_wasm, &wasm_noun, &out_wasm);
+      u3x_cell(out_wasm, &wasm_noun, &out_wasm);  // potential leak?
       if (lia_type != TAS_OCTS) {
         if (lia_type != u3h(wasm_noun)) {
           return u3m_bail(c3__exit);
@@ -475,7 +475,7 @@ u3wa_lia_main(u3_noun cor)
     u3z(input_line_vals);
     u3z(line_shop);
     u3z(king_octs);
-    u3z(out_wasm);
+    // u3z(out_wasm);
     u3z(line_code_flopped);
     return u3nc(0, u3kb_flop(out_lia));
   }
