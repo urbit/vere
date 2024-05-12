@@ -49,25 +49,25 @@ _get_results_wasm(IM3Function i_function, c3_w i_retc)
     case c_m3Type_i32: {
       c3_w out = *(c3_w*)(s);
       s += 8;
-      list_out = u3nc(u3nc(TAS_I32, u3i_word(out)), list_out)
+      list_out = u3nc(u3nc(TAS_I32, u3i_word(out)), list_out);
       break;
     }
     case c_m3Type_i64: {
       c3_d out = *(c3_d*)(s);
       s += 8;
-      list_out = u3nc(u3nc(TAS_I64, u3i_chub(out)), list_out)
+      list_out = u3nc(u3nc(TAS_I64, u3i_chub(out)), list_out);
       break;
     }
     case c_m3Type_f32: {
       c3_w out = *(c3_w*)(s);
       s += 8;
-      list_out = u3nc(u3nc(TAS_F32, u3i_word(out)), list_out)
+      list_out = u3nc(u3nc(TAS_F32, u3i_word(out)), list_out);
       break;
     }
     case c_m3Type_f64: {
       c3_d out = *(c3_d*)(s);
       s += 8;
-      list_out = u3nc(u3nc(TAS_F64, u3i_chub(out)), list_out)
+      list_out = u3nc(u3nc(TAS_F64, u3i_chub(out)), list_out);
       break;
     }
     default: return u3m_bail(c3__fail);
@@ -76,98 +76,105 @@ _get_results_wasm(IM3Function i_function, c3_w i_retc)
   return u3kb_flop(list_out);
 }
 
-static void
+static c3_o
 _put_space(u3_cell val, IM3Runtime runtime, c3_w target)
 {
   u3_noun type, content;
   u3x_cell(val, &type, &content);
+  M3Result result;
   switch (type) {
     default: {
-      return u3m_bail(c3__fail);
+      return c3n;
     }
     case TAS_I32: {
       IM3Function f;
-      M3Result result = m3_FindFunction(&f, runtime, SET_I32);
+      result = m3_FindFunction(&f, runtime, SET_I32);
       if (result) {
-        return u3m_bail(c3__fail);
+        return c3n;
       }
       result = m3_CallV(f, u3r_word(0, content), target);
       if (result) {
         fprintf(stderr, "call i32 error: %s\r\n", result);
-        return u3m_bail(c3__fail);
+        return c3n;
       }
+      break;
     }
     case TAS_I64: {
       IM3Function f;
-      M3Result result = m3_FindFunction(&f, runtime, SET_I64);
+      result = m3_FindFunction(&f, runtime, SET_I64);
       if (result) {
-        return u3m_bail(c3__fail);
+        return c3n;
       }
       result = m3_CallV(f, u3r_chub(0, content), target);
       if (result) {
         fprintf(stderr, "call i64 error: %s\r\n", result);
-        return u3m_bail(c3__fail);
+        return c3n;
       }
+      break;
     }
     case TAS_F32: {
       IM3Function f;
-      M3Result result = m3_FindFunction (&f, runtime, SET_F32);
+      result = m3_FindFunction (&f, runtime, SET_F32);
       if (result) {
-        return u3m_bail(c3__fail);
+        return c3n;
       }
       result = m3_CallV(f, u3r_word(0, content), target);
       if (result) {
         fprintf(stderr, "call f32 error: %s\r\n", result);
-        return u3m_bail(c3__fail);
+        return c3n;
       }
+      break;
     }
     case TAS_F64: {
       IM3Function f;
-      M3Result result = m3_FindFunction(&f, runtime, SET_F64);
+      result = m3_FindFunction(&f, runtime, SET_F64);
       if (result) {
-        return u3m_bail(c3__fail);
+        return c3n;
       }
-      M3Result result = m3_CallV(f, u3r_chub(0, content), target);
+      result = m3_CallV(f, u3r_chub(0, content), target);
       if (result) {
         fprintf(stderr, "call f64 error: %s\r\n", result);
-        return u3m_bail(c3__fail);
+        return c3n;
       }
+      break;
     }
     case TAS_V128: {
-      return u3m_bail(c3__fail); // wasm3 can't accept v128 as an input
+      return c3n; // wasm3 can't accept v128 as an input
     }
     case TAS_OCTS: {
       IM3Function f;
-      M3Result result = m3_FindFunction (&f, runtime, SET_OCTS_EXT);
+      result = m3_FindFunction (&f, runtime, SET_OCTS_EXT);
       if (result) {
-        return u3m_bail(c3__fail);
+        return c3n;
       }
       u3_atom octs_len, octs_data;
       u3x_cell(content, &octs_len, &octs_data);
       c3_w w_octs_len = u3r_word(0, octs_len);
-      M3Result result = m3_CallV(f, w_octs_len, target);
+      result = m3_CallV(f, w_octs_len, target);
       if (result) {
         fprintf(stderr, "call set-octs-ext error: %s\r\n", result);
-        return u3m_bail(c3__fail);
+        return c3n;
       }
       u3_noun list_ptr =  _get_results_wasm(f, 1);
       c3_w ptr = u3r_word(0, u3at(4, list_ptr));
       u3z(list_ptr);
       if (ptr == MINUS_ONE) {
         if (c3n == u3r_sing_cell(0, 0, content)) {
-          return u3m_bail(c3__exit);
+          return c3n;
         }
       }
       else {
         c3_w len_mem;
-        c3_y* mem = m3_GetMemory(wasm3_runtime_king, &len_mem, 0);
+        c3_y* mem = m3_GetMemory(runtime, &len_mem, 0);
         if ( (mem == NULL) || (ptr + w_octs_len > len_mem) ) {
           return u3m_bail(c3__fail);
         }
-        u3r_bytes(0, w_octs_len, (c3_y *)(mem+ptr), octs_data)
+        u3r_bytes(0, w_octs_len, (c3_y *)(mem+ptr), octs_data);
       }
+      break;
     }
   }
+  return c3y;
 }
 
 u3_weak
@@ -217,11 +224,12 @@ u3wa_lia_main(u3_noun cor)
       u3_noun flag, p_diff;
       u3x_cell(line_diff, &flag, &p_diff);
       u3k(line_code);
+      u3k(line_shop);
       if (c3y == flag) {
-        line_code = u3kb_weld(line_code, u3nc(u3k(p_diff), u3_nul))
+        line_code = u3kb_weld(line_code, u3nc(u3k(p_diff), u3_nul));
       }
       else {
-        line_shop = u3kb_weld(u3k(line_shop), u3nc(u3k(p_diff), u3_nul))
+        line_shop = u3kb_weld(line_shop, u3nc(u3k(p_diff), u3_nul));
       }
     }
     king_ast = u3n_slam_on(gate_comp,
@@ -270,9 +278,9 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, "runtime is null\r\n");
       return u3m_bail(c3__fail);
     }
-
+    M3Result result;
     IM3Module wasm3_module_king;
-    M3Result result = m3_ParseModule(wasm3_env,
+    result = m3_ParseModule(wasm3_env,
                                      &wasm3_module_king,
                                      king_bytes,
                                      king_len);
@@ -294,7 +302,7 @@ u3wa_lia_main(u3_noun cor)
     }
 
     IM3Module wasm3_module_serf;
-    M3Result result = m3_ParseModule(wasm3_env,
+    result = m3_ParseModule(wasm3_env,
                                      &wasm3_module_serf,
                                      serf_bytes,
                                      serf_len);
@@ -313,12 +321,12 @@ u3wa_lia_main(u3_noun cor)
     c3_w i32_act_0, i32_n_funcs;
     IM3Global global_act_0   = m3_FindGlobal(wasm3_runtime_king->modules, ACT_0_FUNC_IDX);
     IM3Global global_n_funcs = m3_FindGlobal(wasm3_runtime_king->modules, N_FUNCS);
-    M3Result err = m3_GetGlobal (global_act_0, &tagged_act_0);
-    if (err) {
+    result = m3_GetGlobal (global_act_0, &tagged_act_0);
+    if (result) {
       return u3m_bail(c3__fail);
     }
-    M3Result err = m3_GetGlobal(global_n_funcs, &tagged_n_funcs);
-    if (err) {
+    result = m3_GetGlobal(global_n_funcs, &tagged_n_funcs);
+    if (result) {
       return u3m_bail(c3__fail);
     }
     switch (tagged_act_0.type) {
@@ -327,7 +335,7 @@ u3wa_lia_main(u3_noun cor)
       }
 
       case c_m3Type_i32:  {
-        i32_act_0 = tagged_act_0.value.i32
+        i32_act_0 = tagged_act_0.value.i32;
       }
     }
     switch (tagged_n_funcs.type) {
@@ -336,7 +344,7 @@ u3wa_lia_main(u3_noun cor)
       }
       
       case c_m3Type_i32:  {
-        i32_n_funcs = tagged_n_funcs.value.i32
+        i32_n_funcs = tagged_n_funcs.value.i32;
       }
     }
     u3_atom len_vals = u3kb_lent(u3k(vals));
@@ -347,7 +355,7 @@ u3wa_lia_main(u3_noun cor)
       return u3m_bail(c3__fail);
     }
     c3_w func_idx_last = i32_act_0 + i32_n_funcs - 1;
-    for (c3_w i_w = i32_act_0; i < func_idx_last; i_w++) {
+    for (c3_w i_w = i32_act_0; i_w < func_idx_last; i_w++) {
       u3_noun i_vals;
       u3x_cell(vals, &i_vals, &vals);
       u3_atom len_i_vals = u3kb_lent(u3k(i_vals));
@@ -357,14 +365,17 @@ u3wa_lia_main(u3_noun cor)
       for (c3_w target = 0; target < len_i_vals; target++) {
         u3_noun i_i_vals;
         u3x_cell(i_vals, &i_i_vals, &i_vals);
-        _put_space(i_i_vals, wasm3_runtime_king, target);
+        if (c3n == _put_space(i_i_vals, wasm3_runtime_king, target))
+        {
+          return u3m_bail(c3__fail);
+        }
       }
       if (i_vals != u3_nul) {
         return u3m_bail(c3__fail);
       }
       IM3Function f = Module_GetFunction(wasm3_module_king, i_w);
       CompileFunction(f);
-      M3Result result = m3_CallV(f);
+      result = m3_CallV(f);
       if (result) {
         fprintf(stderr, "call action error: %s\r\n", result);
         return u3m_bail(c3__fail);
@@ -383,7 +394,9 @@ u3wa_lia_main(u3_noun cor)
     for (c3_w target = 0; target < len_i_vals; target++) {
       u3_noun i_i_vals;
       u3x_cell(i_vals, &i_i_vals, &i_vals);
-      _put_space(i_i_vals, wasm3_runtime_king, target);
+      if (c3n == _put_space(i_i_vals, wasm3_runtime_king, target)) {
+        return u3m_bail(c3__fail);
+      }
     }
     if (i_vals != u3_nul) {
       return u3m_bail(c3__fail);
@@ -398,7 +411,7 @@ u3wa_lia_main(u3_noun cor)
     }
     u3_noun last_action = u3h(u3qb_flop(line_code));
     u3_noun lia_types = u3t(u3h(last_action));
-    c3_w n_out = u3r_word(u3qb_lent(lia_types));
+    c3_w n_out = u3r_word(0,u3qb_lent(lia_types));
     u3_noun out_wasm = _get_results_wasm(f, n_out);
     u3_noun out_lia = u3_nul;
     for (c3_w i = 0; i < n_out; i++) {
@@ -416,11 +429,11 @@ u3wa_lia_main(u3_noun cor)
           return u3m_bail(c3__exit);
         }
         IM3Function f;
-        M3Result result = m3_FindFunction (&f, runtime, GET_SPACE_PTR);
+        result = m3_FindFunction (&f, wasm3_runtime_king, GET_SPACE_PTR);
         if (result) {
           return u3m_bail(c3__fail);
         }
-        M3Result result = m3_CallV(f, u3r_word(u3t(wasm_noun)));
+        result = m3_CallV(f, u3r_word(0, u3t(wasm_noun)));
         if (result) {
           fprintf(stderr, "call GET_SPACE_PTR error: %s\r\n", result);
           return u3m_bail(c3__fail);
