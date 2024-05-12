@@ -38,6 +38,7 @@ _get_results_wasm(IM3Function i_function, c3_w i_retc)
   IM3Runtime runtime = i_function->module->runtime;
 
   if (i_retc != ftype->numRets) {
+      fprintf(stderr, "\r\nnumber of results mismatch\r\n");
       return u3m_bail(c3__exit);
   }
   if (i_function != runtime->lastCalled) {
@@ -217,11 +218,11 @@ u3wa_lia_main(u3_noun cor)
     input_line_vals = u3n_slam_on(gate_line, u3k(u3at(u3x_sam, cor)));
     u3x_cell(input_line_vals, &input_line, &vals);
     u3x_mean(input_line, 2, &line_module,
-                         6  &line_code,
-                        14  &line_shop,
-                        30  &line_ext,
-                        62  &line_import,
-                        63  &line_diff,
+                         6, &line_code,
+                        14, &line_shop,
+                        30, &line_ext,
+                        62, &line_import,
+                        63, &line_diff,
                         0);
     if (c3n == u3ud(line_diff))
     {
@@ -238,7 +239,7 @@ u3wa_lia_main(u3_noun cor)
     }
     king_ast = u3n_slam_on(gate_comp,
       u3i_qual(u3k(line_module),
-              line_code,
+              u3k(line_code),
               u3k(line_ext),
               u3k(line_import)
               )
@@ -260,13 +261,37 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, "env is null\r\n");
       return u3m_bail(c3__fail);
     }
-    
+    M3Result result;
+    // serf
+    //
+    IM3Runtime wasm3_runtime_serf = m3_NewRuntime(wasm3_env, 2097152, NULL);
+    if (!wasm3_runtime_serf) {
+      fprintf(stderr, "runtime is null\r\n");
+      return u3m_bail(c3__fail);
+    }
+    IM3Module wasm3_module_serf;
+    result = m3_ParseModule(wasm3_env,
+                            &wasm3_module_serf,
+                            serf_bytes,
+                            serf_len);
+    if (result) {
+      fprintf(stderr, "parse module error: %s\r\n", result);
+      return u3m_bail(c3__fail);
+    }
+
+    result = m3_LoadModule(wasm3_runtime_serf, wasm3_module_serf);
+    if (result) {
+      fprintf(stderr, "load module error: %s\r\n", result);
+      return u3m_bail(c3__fail);
+    }
+
+    // king
+    //
     IM3Runtime wasm3_runtime_king = m3_NewRuntime(wasm3_env, 2097152, NULL);
     if (!wasm3_runtime_king) {
       fprintf(stderr, "runtime is null\r\n");
       return u3m_bail(c3__fail);
     }
-    M3Result result;
     IM3Module wasm3_module_king;
     result = m3_ParseModule(wasm3_env,
                             &wasm3_module_king,
@@ -278,28 +303,6 @@ u3wa_lia_main(u3_noun cor)
     }
 
     result = m3_LoadModule(wasm3_runtime_king, wasm3_module_king);
-    if (result) {
-      fprintf(stderr, "load module error: %s\r\n", result);
-      return u3m_bail(c3__fail);
-    }
-
-    IM3Runtime wasm3_runtime_serf = m3_NewRuntime(wasm3_env, 2097152, NULL);
-    if (!wasm3_runtime_serf) {
-      fprintf(stderr, "runtime is null\r\n");
-      return u3m_bail(c3__fail);
-    }
-
-    IM3Module wasm3_module_serf;
-    result = m3_ParseModule(wasm3_env,
-                                     &wasm3_module_serf,
-                                     serf_bytes,
-                                     serf_len);
-    if (result) {
-      fprintf(stderr, "parse module error: %s\r\n", result);
-      return u3m_bail(c3__fail);
-    }
-
-    result = m3_LoadModule(wasm3_runtime_serf, wasm3_module_serf);
     if (result) {
       fprintf(stderr, "load module error: %s\r\n", result);
       return u3m_bail(c3__fail);
@@ -365,7 +368,6 @@ u3wa_lia_main(u3_noun cor)
       CompileFunction(f);
       result = m3_CallV(f);
       if (result) {
-        fprintf(stderr, "call action error: %s\r\n", result);
         return u3m_bail(c3__fail);
       }
       u3z(len_i_vals);
@@ -403,12 +405,16 @@ u3wa_lia_main(u3_noun cor)
     CompileFunction(f);
     result = m3_CallV(f);
     if (result) {
-      fprintf(stderr, "call last action error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
-    u3_noun last_action = u3h(u3qb_flop(line_code));
-    u3_noun lia_types = u3t(u3h(last_action));
-    c3_w n_out = u3r_word(0,u3qb_lent(lia_types));
+    u3_noun line_code_flopped = u3kb_flop(line_code); 
+    u3_noun last_action = u3h(line_code_flopped);
+    u3_weak lia_types = u3r_at(5, last_action);
+    if (u3_none == lia_types) {
+      return u3m_bail(c3__fail);
+    }
+    // u3_noun lia_types = u3t(u3h(last_action));
+    c3_w n_out = u3r_word(0, u3qb_lent(lia_types));
     u3_noun out_wasm = _get_results_wasm(f, n_out);
     u3_noun out_lia = u3_nul;
     for (c3_w i = 0; i < n_out; i++) {
@@ -419,7 +425,7 @@ u3wa_lia_main(u3_noun cor)
         if (lia_type != u3h(wasm_noun)) {
           return u3m_bail(c3__exit);
         }
-        out_lia = u3nc(wasm_noun, out_lia);
+        out_lia = u3nc(u3k(wasm_noun), out_lia);
       }
       else {
         if (TAS_I32 != u3h(wasm_noun)) {
@@ -432,7 +438,6 @@ u3wa_lia_main(u3_noun cor)
         }
         result = m3_CallV(f, u3r_word(0, u3t(wasm_noun)));
         if (result) {
-          fprintf(stderr, "call GET_SPACE_PTR error: %s\r\n", result);
           return u3m_bail(c3__fail);
         }
         u3_noun list_ptr =  _get_results_wasm(f, 1);
@@ -468,6 +473,7 @@ u3wa_lia_main(u3_noun cor)
     u3z(line_shop);
     u3z(king_octs);
     u3z(out_wasm);
+    u3z(line_code_flopped);
     return u3nc(0, u3kb_flop(out_lia));
   }
 }
