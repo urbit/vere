@@ -12,6 +12,164 @@
 // #include <stdio.h>
 // #include <math.h>
 
+const char* N_FUNCS        = "n-funcs";
+const char* SET_I32        = "set-i32";
+const char* SET_I64        = "set-i64";
+const char* SET_F32        = "set-f32";
+const char* SET_F64        = "set-f64";
+const char* SET_OCTS_EXT   = "set-octs-ext";
+const char* GET_SPACE_PTR  = "get-space-ptr";
+const char* ACT_0_FUNC_IDX = "act-0-func-idx";
+
+const c3_w TAS_I32  = c3_s3('i','3','2');
+const c3_w TAS_I64  = c3_s3('i','6','4');
+const c3_w TAS_F32  = c3_s3('f','3','2');
+const c3_w TAS_F64  = c3_s3('f','6','4');
+const c3_w TAS_V128 = c3_s4('v','1','2', '8');
+const c3_w TAS_OCTS = c3_s4('o','c','t', 's');
+
+const c3_ws MINUS_ONE = -1;
+
+static u3_noun
+_get_results_wasm(IM3Function i_function, c3_w i_retc)
+{
+  IM3FuncType ftype = i_function->funcType;
+  IM3Runtime runtime = i_function->module->runtime;
+
+  if (i_retc != ftype->numRets) {
+      return u3m_bail(c3__exit);
+  }
+  if (i_function != runtime->lastCalled) {
+      return u3m_bail(c3__fail);
+  }
+  c3_y* s = (c3_y*) runtime->stack;
+  u3_noun list_out = u3_nul;
+  for (c3_w i = 0; i < ftype->numRets; ++i) {
+    switch (d_FuncRetType(ftype, i)) {
+    case c_m3Type_i32: {
+      c3_w out = *(c3_w*)(s);
+      s += 8;
+      list_out = u3nc(u3nc(TAS_I32, u3i_word(out)), list_out)
+      break;
+    }
+    case c_m3Type_i64: {
+      c3_d out = *(c3_d*)(s);
+      s += 8;
+      list_out = u3nc(u3nc(TAS_I64, u3i_chub(out)), list_out)
+      break;
+    }
+    case c_m3Type_f32: {
+      c3_w out = *(c3_w*)(s);
+      s += 8;
+      list_out = u3nc(u3nc(TAS_F32, u3i_word(out)), list_out)
+      break;
+    }
+    case c_m3Type_f64: {
+      c3_d out = *(c3_d*)(s);
+      s += 8;
+      list_out = u3nc(u3nc(TAS_F64, u3i_chub(out)), list_out)
+      break;
+    }
+    default: return u3m_bail(c3__fail);
+    }
+  }
+  return u3kb_flop(list_out);
+}
+
+static void
+_put_space(u3_cell val, IM3Runtime runtime, c3_w target)
+{
+  u3_noun type, content;
+  u3x_cell(val, &type, &content);
+  switch (type) {
+    default: {
+      return u3m_bail(c3__fail);
+    }
+    case TAS_I32: {
+      IM3Function f;
+      M3Result result = m3_FindFunction(&f, runtime, SET_I32);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      result = m3_CallV(f, u3r_word(0, content), target);
+      if (result) {
+        fprintf(stderr, "call i32 error: %s\r\n", result);
+        return u3m_bail(c3__fail);
+      }
+    }
+    case TAS_I64: {
+      IM3Function f;
+      M3Result result = m3_FindFunction(&f, runtime, SET_I64);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      result = m3_CallV(f, u3r_chub(0, content), target);
+      if (result) {
+        fprintf(stderr, "call i64 error: %s\r\n", result);
+        return u3m_bail(c3__fail);
+      }
+    }
+    case TAS_F32: {
+      IM3Function f;
+      M3Result result = m3_FindFunction (&f, runtime, SET_F32);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      result = m3_CallV(f, u3r_word(0, content), target);
+      if (result) {
+        fprintf(stderr, "call f32 error: %s\r\n", result);
+        return u3m_bail(c3__fail);
+      }
+    }
+    case TAS_F64: {
+      IM3Function f;
+      M3Result result = m3_FindFunction(&f, runtime, SET_F64);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      M3Result result = m3_CallV(f, u3r_chub(0, content), target);
+      if (result) {
+        fprintf(stderr, "call f64 error: %s\r\n", result);
+        return u3m_bail(c3__fail);
+      }
+    }
+    case TAS_V128: {
+      return u3m_bail(c3__fail); // wasm3 can't accept v128 as an input
+    }
+    case TAS_OCTS: {
+      IM3Function f;
+      M3Result result = m3_FindFunction (&f, runtime, SET_OCTS_EXT);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      u3_atom octs_len, octs_data;
+      u3x_cell(content, &octs_len, &octs_data);
+      c3_w w_octs_len = u3r_word(0, octs_len);
+      M3Result result = m3_CallV(f, w_octs_len, target);
+      if (result) {
+        fprintf(stderr, "call set-octs-ext error: %s\r\n", result);
+        return u3m_bail(c3__fail);
+      }
+      u3_noun list_ptr =  _get_results_wasm(f, 1);
+      c3_w ptr = u3r_word(0, u3at(4, list_ptr));
+      u3z(list_ptr);
+      if (ptr == MINUS_ONE) {
+        if (c3n == u3r_sing_cell(0, 0, content)) {
+          return u3m_bail(c3__exit);
+        }
+      }
+      else {
+        c3_w len_mem;
+        c3_y* mem = m3_GetMemory(wasm3_runtime_king, &len_mem, 0);
+        if ( (mem == NULL) || (ptr + w_octs_len > len_mem) ) {
+          return u3m_bail(c3__fail);
+        }
+        u3r_bytes(0, w_octs_len, (c3_y *)(mem+ptr), octs_data)
+      }
+    }
+  }
+}
+
 u3_weak
 u3wa_lia_main(u3_noun cor)
 {
@@ -45,7 +203,7 @@ u3wa_lia_main(u3_noun cor)
     gate_line =    u3j_kink(core_line,    10);
     gate_comp =    u3j_kink(core_comp,    22);
 
-    input_line_vals = u3n_slam_on(gate_line, u3k(u3at(u3x_sam, cor)));  // u3z!
+    input_line_vals = u3n_slam_on(gate_line, u3k(u3at(u3x_sam, cor)));
     u3x_cell(input_line_vals, &input_line, &vals);
     u3x_mean(input_line, 2, &line_module,
                          6  &line_code,
@@ -63,7 +221,7 @@ u3wa_lia_main(u3_noun cor)
         line_code = u3kb_weld(line_code, u3nc(u3k(p_diff), u3_nul))
       }
       else {
-        line_shop = u3kb_weld(u3k(line_shop), u3nc(u3k(p_diff), u3_nul)) // u3z!
+        line_shop = u3kb_weld(u3k(line_shop), u3nc(u3k(p_diff), u3_nul))
       }
     }
     king_ast = u3n_slam_on(gate_comp,
@@ -73,7 +231,7 @@ u3wa_lia_main(u3_noun cor)
               u3k(line_import)
               )
     );
-    king_octs = u3n_slam_on(gate_encoder, king_ast); // u3z!
+    king_octs = u3n_slam_on(gate_encoder, king_ast);
     //  TODO octs to an appropriate type for wasm3
     //  wasm3 TODO:
     //    - how to handle function imports?
@@ -150,19 +308,6 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, "load module error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
-    const char* ACT_0_FUNC_IDX = "act-0-func-idx";
-    const char* N_FUNCS      = "n-funcs";
-    const char* SET_I32      = "set-i32";
-    const char* SET_I64      = "set-i64";
-    const char* SET_F32      = "set-f32";
-    const char* SET_F64      = "set-f64";
-    const char* SET_OCTS_EXT = "set-octs-ext";
-    const c3_w TAS_I32  = c3_s3('i','3','2');
-    const c3_w TAS_I64  = c3_s3('i','6','4');
-    const c3_w TAS_F32  = c3_s3('f','3','2');
-    const c3_w TAS_F64  = c3_s3('f','6','4');
-    const c3_w TAS_V128 = c3_s4('v','1','2', '8');
-    const c3_w TAS_OCTS = c3_s4('o','c','t', 's');
 
     M3TaggedValue tagged_act_0, tagged_n_funcs;
     c3_w i32_act_0, i32_n_funcs;
@@ -194,7 +339,7 @@ u3wa_lia_main(u3_noun cor)
         i32_n_funcs = tagged_n_funcs.value.i32
       }
     }
-    u3_atom len_vals = u3kb_lent(u3k(vals)); // u3z!
+    u3_atom len_vals = u3kb_lent(u3k(vals));
     if (c3n == u3a_is_cat(len_vals)) {
       return u3m_bail(c3__fail);
     }
@@ -205,95 +350,45 @@ u3wa_lia_main(u3_noun cor)
     for (c3_w i_w = i32_act_0; i < func_idx_last; i_w++) {
       u3_noun i_vals;
       u3x_cell(vals, &i_vals, &vals);
-      u3_atom len_i_vals = u3kb_lent(u3k(i_vals)); // u3z!
+      u3_atom len_i_vals = u3kb_lent(u3k(i_vals));
       if (c3n == u3a_is_cat(len_i_vals)) {
         return u3m_bail(c3__fail);
       }
       for (c3_w target = 0; target < len_i_vals; target++) {
         u3_noun i_i_vals;
         u3x_cell(i_vals, &i_i_vals, &i_vals);
-        switch (u3h(i_i_vals)) {
-          default: {
-            return u3m_bail(c3__fail);
-          }
-
-          case TAS_I32:{
-            IM3Function f;
-            result = m3_FindFunction (&f, wasm3_runtime_king, SET_I32);
-            if (result) {
-              return u3m_bail(c3__fail);
-            }
-            result = m3_CallV(f, u3r_word(0, u3t(i_i_vals)), target);
-            if (result) {
-              fprintf(stderr, "call i32 error: %s\r\n", result);
-              return u3m_bail(c3__fail);
-            }
-          }
-          case TAS_I64:{
-            IM3Function f;
-            result = m3_FindFunction (&f, wasm3_runtime_king, SET_I64);
-            if (result) {
-              return u3m_bail(c3__fail);
-            }
-            result = m3_CallV(f, u3r_word(0, u3t(i_i_vals)), target);
-            if (result) {
-              fprintf(stderr, "call i64 error: %s\r\n", result);
-              return u3m_bail(c3__fail);
-            }
-          }
-          case TAS_F32:{
-            IM3Function f;
-            result = m3_FindFunction (&f, wasm3_runtime_king, SET_F32);
-            if (result) {
-              return u3m_bail(c3__fail);
-            }
-            result = m3_CallV(f, u3r_word(0, u3t(i_i_vals)), target);
-            if (result) {
-              fprintf(stderr, "call f32 error: %s\r\n", result);
-              return u3m_bail(c3__fail);
-            }
-          }
-          case TAS_F64:{
-            IM3Function f;
-            result = m3_FindFunction (&f, wasm3_runtime_king, SET_F64);
-            if (result) {
-              return u3m_bail(c3__fail);
-            }
-            result = m3_CallV(f, u3r_word(0, u3t(i_i_vals)), target);
-            if (result) {
-              fprintf(stderr, "call f64 error: %s\r\n", result);
-              return u3m_bail(c3__fail);
-            }
-          }
-          case TAS_V128:{
-            return u3m_bail(c3__fail); // wasm3 can't accept v128 as an input
-          }
-          case TAS_OCTS:{
-            IM3Function f;
-            result = m3_FindFunction (&f, wasm3_runtime_king, SET_OCTS_EXT);
-            if (result) {
-              return u3m_bail(c3__fail);
-            }
-            result = m3_CallV(f, u3r_word(0, u3h(u3t(i_i_vals))), target);
-            if (result) {
-              fprintf(stderr, "call set-octs-ext error: %s\r\n", result);
-              return u3m_bail(c3__fail);
-            }
-            c3_w len_mem;
-            c3_y* mem = m3_GetMemory(wasm3_runtime_king, &len_mem, 0);
-            //  extract ptr from result, write to memory
-          }
-        }
+        _put_space(i_i_vals, wasm3_runtime_king, target);
+      }
+      if (i_vals != u3_nul) {
+        return u3m_bail(c3__fail);
       }
       IM3Function f = Module_GetFunction(wasm3_module_king, i_w);
       CompileFunction(f);
-      result = m3_CallV(f);
+      M3Result result = m3_CallV(f);
       if (result) {
         fprintf(stderr, "call action error: %s\r\n", result);
         return u3m_bail(c3__fail);
       }
+      u3z(len_i_vals);
     }
-    //  place arguments in space
+    u3_noun i_vals;
+    u3x_cell(vals, &i_vals, &vals);
+    if (vals != u3_nul) {
+      return u3m_bail(c3__fail);
+    }
+    u3_atom len_i_vals = u3kb_lent(u3k(i_vals));
+    if (c3n == u3a_is_cat(len_i_vals)) {
+      return u3m_bail(c3__fail);
+    }
+    for (c3_w target = 0; target < len_i_vals; target++) {
+      u3_noun i_i_vals;
+      u3x_cell(i_vals, &i_i_vals, &i_vals);
+      _put_space(i_i_vals, wasm3_runtime_king, target);
+    }
+    if (i_vals != u3_nul) {
+      return u3m_bail(c3__fail);
+    }
+    u3z(len_i_vals);
     IM3Function f = Module_GetFunction(wasm3_module_king, func_idx_last);
     CompileFunction(f);
     result = m3_CallV(f);
@@ -301,6 +396,65 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, "call last action error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
-    // extract results
+    u3_noun last_action = u3h(u3qb_flop(line_code));
+    u3_noun lia_types = u3t(u3h(last_action));
+    c3_w n_out = u3r_word(u3qb_lent(lia_types));
+    u3_noun out_wasm = _get_results_wasm(f, n_out);
+    u3_noun out_lia = u3_nul;
+    for (c3_w i = 0; i < n_out; i++) {
+      u3_noun lia_type, wasm_noun;
+      u3x_cell(lia_types, &lia_type, &lia_types);
+      u3x_cell(out_wasm, &wasm_noun, &out_wasm);
+      if (lia_type != TAS_OCTS) {
+        if (lia_type != u3h(wasm_noun)) {
+          return u3m_bail(c3__exit);
+        }
+        out_lia = u3nc(wasm_noun, out_lia);
+      }
+      else {
+        if (TAS_I32 != u3h(wasm_noun)) {
+          return u3m_bail(c3__exit);
+        }
+        IM3Function f;
+        M3Result result = m3_FindFunction (&f, runtime, GET_SPACE_PTR);
+        if (result) {
+          return u3m_bail(c3__fail);
+        }
+        M3Result result = m3_CallV(f, u3r_word(u3t(wasm_noun)));
+        if (result) {
+          fprintf(stderr, "call GET_SPACE_PTR error: %s\r\n", result);
+          return u3m_bail(c3__fail);
+        }
+        u3_noun list_ptr =  _get_results_wasm(f, 1);
+        c3_w ptr = u3r_word(0, u3at(4, list_ptr));
+        u3z(list_ptr);
+        if (ptr == 0) {
+          return u3m_bail(c3__exit);
+        }
+        if (ptr == MINUS_ONE) {
+          out_lia = u3nc(u3nt(TAS_OCTS, 0, 0), out_lia);
+        }
+        else {
+          c3_w len_mem;
+          c3_y* mem = m3_GetMemory(wasm3_runtime_king, &len_mem, 0);
+          if ( (mem == NULL) || (ptr + 4 > len_mem) ) {
+            return u3m_bail(c3__fail);
+          }
+          u3_atom len_octs = u3i_bytes(4, (mem+ptr));
+          c3_w w_len_octs = u3r_word(0, len_octs);
+          if (ptr + 4 + w_len_octs > len_mem) {
+            return u3m_bail(c3__fail);
+          }
+          u3_atom data_octs = u3i_bytes(w_len_octs, (mem+(ptr+4)));
+          out_lia = u3nc(u3nt(TAS_OCTS, len_octs, data_octs), out_lia);
+        }
+      }
+    }
+    u3z(len_vals);
+    u3z(input_line_vals);
+    u3z(line_shop);
+    u3z(king_octs);
+    u3z(out_wasm);
+    return u3nc(0, u3kb_flop(out_lia));
   }
 }
