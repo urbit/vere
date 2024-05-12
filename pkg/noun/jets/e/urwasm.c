@@ -17,6 +17,7 @@ const char* SET_I32        = "set-i32";
 const char* SET_I64        = "set-i64";
 const char* SET_F32        = "set-f32";
 const char* SET_F64        = "set-f64";
+const char* CLEAR_SPACE    = "clear-space";
 const char* SET_OCTS_EXT   = "set-octs-ext";
 const char* GET_SPACE_PTR  = "get-space-ptr";
 const char* ACT_0_FUNC_IDX = "act-0-func-idx";
@@ -156,7 +157,10 @@ _put_space(u3_cell val, IM3Runtime runtime, c3_w target)
         return c3n;
       }
       u3_noun list_ptr =  _get_results_wasm(f, 1);
-      c3_w ptr = u3r_word(0, u3at(4, list_ptr));
+      if (u3h(u3h(list_ptr)) != TAS_I32) {
+        return c3n;
+      }
+      c3_w ptr = u3r_word(0, u3t(u3h(list_ptr)));
       u3z(list_ptr);
       if (ptr == MINUS_ONE) {
         if (c3n == u3r_sing_cell(0, 0, content)) {
@@ -240,11 +244,6 @@ u3wa_lia_main(u3_noun cor)
               )
     );
     king_octs = u3n_slam_on(gate_encoder, king_ast);
-    //  TODO octs to an appropriate type for wasm3
-    //  wasm3 TODO:
-    //    - how to handle function imports?
-    //    - how to read global values?
-    //    - nouns-wasm3 datatypes marshalling
     u3_atom king_len = u3h(king_octs);
     if (c3n == u3a_is_cat(king_len)) {
       return u3m_bail(c3__fail);
@@ -256,17 +255,6 @@ u3wa_lia_main(u3_noun cor)
     c3_y *king_bytes = u3r_bytes_alloc(0, king_len, u3t(king_octs));
     c3_y *serf_bytes = u3r_bytes_alloc(0, serf_len, u3t(serf_octs));
 
-    // Ignoring imports for now
-    //
-    // 1. Instantiate king [X]
-    // 2. Instantiate serf [X]
-    // 3. Get globals 'act-0-func-idx' and 'n-funcs', assert 'n-funcs' > 0 [X]
-    // 4. Assert (lent vals) == 'n-funcs' [X]
-    // 5. for i = 'act-0-func-idx', i++,  i < ('act-0-func-idx' + 'n-funcs' - 1):
-    //      place args, invoke i, ignore results [ ]
-    // 6. place args, invoke ('act-0-func-idx' + 'n-funcs' - 1) [ ]
-    // 7. Extract results [ ]
-    //
     IM3Environment wasm3_env = m3_NewEnvironment();
     if (!wasm3_env) {
       fprintf(stderr, "env is null\r\n");
@@ -281,9 +269,9 @@ u3wa_lia_main(u3_noun cor)
     M3Result result;
     IM3Module wasm3_module_king;
     result = m3_ParseModule(wasm3_env,
-                                     &wasm3_module_king,
-                                     king_bytes,
-                                     king_len);
+                            &wasm3_module_king,
+                            king_bytes,
+                            king_len);
     if (result) {
       fprintf(stderr, "parse module error: %s\r\n", result);
       return u3m_bail(c3__fail);
@@ -381,6 +369,15 @@ u3wa_lia_main(u3_noun cor)
         return u3m_bail(c3__fail);
       }
       u3z(len_i_vals);
+      IM3Function f_clear;
+      result = m3_FindFunction(&f_clear, wasm3_runtime_king, CLEAR_SPACE);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
+      result = m3_CallV(f_clear);
+      if (result) {
+        return u3m_bail(c3__fail);
+      }
     }
     u3_noun i_vals;
     u3x_cell(vals, &i_vals, &vals);
@@ -439,7 +436,10 @@ u3wa_lia_main(u3_noun cor)
           return u3m_bail(c3__fail);
         }
         u3_noun list_ptr =  _get_results_wasm(f, 1);
-        c3_w ptr = u3r_word(0, u3at(4, list_ptr));
+        if (u3h(u3h(list_ptr)) != TAS_I32) {
+          return u3m_bail(c3__fail);
+        }
+        c3_w ptr = u3r_word(0, u3t(u3h(list_ptr)));
         u3z(list_ptr);
         if (ptr == 0) {
           return u3m_bail(c3__exit);
