@@ -1287,7 +1287,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     default: {
       ret_o = c3n;
      } break;
-    case c3__send: {
+    case c3__push: {
       u3_noun las, pac;
       if ( c3n == u3r_cell(dat, &las, &pac) ) {
         u3l_log(" vere: send no");
