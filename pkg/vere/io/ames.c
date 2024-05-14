@@ -3200,6 +3200,11 @@ _ames_io_exit(u3_auto* car_u)
   uv_close(&sam_u->had_u, _ames_exit_cb);
   uv_close((uv_handle_t*)&sam_u->sun_u.dns_u, 0);
   uv_close((uv_handle_t*)&sam_u->sun_u.tim_u, 0);
+  uv_close((uv_handle_t*)&sam_u->nat_u.tim_u, 0);
+
+  if (uv_is_active((uv_handle_t*)&sam_u->nat_u.pol_u)) {
+    uv_close((uv_handle_t*)&sam_u->nat_u.pol_u, 0);
+  }
 }
 
 /* _ames_io_info(): produce status info.
