@@ -2010,7 +2010,6 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
   u3_noun p_tok, q_tok, r_tok;
   if (c3__jinx == tok) {
     u3m_timer_clear();
-    // call fn in u3m to cancel ITIMER (we know no parent timer now until we add nesting)
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
