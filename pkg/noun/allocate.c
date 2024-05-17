@@ -78,18 +78,10 @@ _box_count(c3_ws siz_ws) { }
 static c3_w
 _box_slot(c3_w siz_w)
 {
-  if ( u3a_minimum == siz_w ) {
-    return 0;
+  if (siz_w > 64) {
+    return 58;
   }
-  else if ( !(siz_w >> 4) ) {
-    c3_dessert( u3a_minimum < siz_w );
-    return 1;
-  }
-  else {
-    c3_w bit_w = c3_bits_word(siz_w) - 3;
-    c3_w max_w = u3a_fbox_no - 1;
-    return c3_min(bit_w, max_w);
-  }
+  return (siz_w - u3a_minimum);
 }
 
 /* _box_make(): construct a box.
@@ -182,6 +174,7 @@ _box_detach(u3a_box* box_u)
     c3_w sel_w = _box_slot(box_u->siz_w);
 
     if ( fre_p != u3R->all.fre_p[sel_w] ) {
+      u3l_log("sel_w %u", sel_w);
       u3_assert(!"loom: corrupt");
     }
     u3R->all.fre_p[sel_w] = nex_p;
@@ -436,12 +429,27 @@ _ca_reclaim_half(void)
 
 /* _ca_willoc(): u3a_walloc() internals.
 */
+static c3_d lel_d = 0;
+
+static void hello() {
+  u3l_log("hello");
+}
+
 static void*
 _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
 {
   c3_w siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
   c3_w sel_w = _box_slot(siz_w);
 
+  if ( u3R == &(u3H->rod_u) ) {
+    lel_d++;
+    if (lel_d % 1000000 == 0) {
+      u3l_log("-----------------------------");
+      u3a_idle(u3R);
+      u3l_log("siz_w %u, sel_w %u, pid %d", siz_w, sel_w, getpid());
+      u3l_log("-----------------------------");
+    }
+  }
   /*  XX: this logic is totally bizarre, but preserve it.
   **
   **  This means we use the next size bigger instead of the "correct"
@@ -454,11 +462,13 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
   **
   **  For reference, this was added in cgyarvin/urbit ffed9e748d8f6c.
   */
-  if ( (sel_w != 0) && (sel_w != u3a_fbox_no - 1) ) {
-    sel_w += 1;
-  }
+  /* if ( (sel_w != 0) && (sel_w != u3a_fbox_no - 1) ) { */
+  /*   sel_w += 1; */
+  /* } */
 
   // u3l_log("walloc %d: *pfr_p %x", len_w, u3R->all.fre_p[sel_w]);
+  c3_w lop_w = 0;
+  c3_w lin_w = 0;
   while ( 1 ) {
     u3p(u3a_fbox) *pfr_p = &u3R->all.fre_p[sel_w];
 
@@ -510,6 +520,12 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         if ( (des_w) > u3to(u3a_fbox, *pfr_p)->box_u.siz_w ) {
           /* This free block is too small.  Continue searching.
           */
+          if ((off_w == 0) && (ald_w == 1) && (siz_w != u3to(u3a_fbox, *pfr_p)->box_u.siz_w)) {
+          /* if (des_w == siz_w) { */
+            lop_w++;
+          } else {
+            lin_w++;
+          }
           pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
           continue;
         }
@@ -520,6 +536,12 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
           ** from the free list.
           */
 
+          /* if (lop_w + lin_w > 100) { */
+          /*   if (siz_w == 6) { */
+          /*     hello(); */
+          /*   } */
+          /*   u3l_log("search lop_w %u, lin_w %u, siz_w %u, sel_w %u, slot %u", lop_w, lin_w, siz_w, sel_w, _box_slot(siz_w)); */
+          /* } */
           _box_count(-(box_u->siz_w));
           /* misc free list consistency checks.
             TODO: in the future should probably only run for C3DBG builds */
@@ -2284,6 +2306,9 @@ u3a_idle(u3a_road* rod_u)
 {
   c3_w i_w, fre_w = 0;
 
+  c3_w siz_w = 0;
+  c3_w cnt_w = 0;
+
   for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
     u3p(u3a_fbox) fre_p = rod_u->all.fre_p[i_w];
 
@@ -2291,8 +2316,14 @@ u3a_idle(u3a_road* rod_u)
       u3a_fbox* fox_u = u3to(u3a_fbox, fre_p);
 
       fre_w += fox_u->box_u.siz_w;
+      siz_w += fox_u->box_u.siz_w;
       fre_p  = fox_u->nex_p;
+      cnt_w++;
     }
+
+    u3l_log("list %u cnt %u siz %u", i_w, cnt_w, siz_w);
+    siz_w = 0;
+    cnt_w = 0;
   }
 
   return fre_w;

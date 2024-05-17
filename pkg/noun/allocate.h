@@ -56,7 +56,7 @@
 
     /* u3a_fbox_no: number of free lists per size.
     */
-#     define u3a_fbox_no 27
+#     define u3a_fbox_no 59
 
   /**  Structures.
   **/

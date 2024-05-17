@@ -3111,6 +3111,7 @@ main(c3_i   argc,
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
       _cw_play_impl(0, 0, c3n, c3n, c3n);
+      signal(SIGTSTP, _stop_exit);
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
