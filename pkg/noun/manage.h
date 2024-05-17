@@ -198,4 +198,14 @@
         c3_w
         u3m_pack(void);
 
+      /* u3m_timer_set: set the timer.
+      */
+        void
+        u3m_timer_set(c3_w mil_w);
+      
+      /* u3m_timer_clear: clear the timer.
+      */
+        void
+        u3m_timer_clear(void);
+
 #endif /* ifndef U3_MANAGE_H */

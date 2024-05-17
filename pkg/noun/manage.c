@@ -367,6 +367,20 @@ _cm_signal_deep(c3_w mil_w)
     );
   }
 
+  u3m_timer_set(mil_w);
+
+  // factor into own function, call here and in _n_hint_fore() TODO
+  // _n_hint_hind() will look like this w/ deinstall handler instead
+  // return void b/c just clearing timer, no args
+
+  u3t_boot();
+}
+
+/* u3m_timer_set
+*/
+void
+u3m_timer_set(c3_w mil_w)
+{
   if ( mil_w ) {
     struct itimerval itm_u;
 
@@ -381,8 +395,18 @@ _cm_signal_deep(c3_w mil_w)
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
     }
   }
+}
 
-  u3t_boot();
+/* u3m_timer_clear
+*/
+void
+u3m_timer_clear()
+{
+  struct itimerval itm_u;
+
+  timerclear(&itm_u.it_interval);
+
+  rsignal_deinstall_handler(SIGVTALRM);
 }
 
 /* _cm_signal_done():
