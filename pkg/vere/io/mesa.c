@@ -1033,27 +1033,36 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
 
   c3_y ver_y;
   // TODO: move to bottom
+
+  c3_y buf_y[1024];
+  memcpy(buf_y, dat_u->fra_y, dat_u->len_w);
+  memset(buf_y + dat_u->len_w, 0, 1024 - dat_u->len_w);
+  c3_w len_w = (nam_u->fra_w + 1 == dat_u->tot_w) ? dat_u->len_w : 1024;
+
   if ( req_u->bao_u->con_w != nam_u->fra_w ) {
     // TODO: queue packet
     u3_misord_buf* buf_u = c3_calloc(sizeof(u3_misord_buf));
-    buf_u->fra_y = c3_calloc(dat_u->len_w);
-    buf_u->len_w = dat_u->len_w;
-    memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
+    buf_u->fra_y = c3_calloc(len_w);
+    buf_u->len_w = len_w;
+    memcpy(buf_u->fra_y, buf_y, len_w);
     buf_u->par_u = par_u;
     buf_u->num_w = nam_u->fra_w;
     vec_append(&req_u->mis_u, buf_u);
-  } else if ( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, par_u)) ) {
+  }
+  else if ( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, buf_y, len_w, par_u)) ) {
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
     u3l_log("auth fail frag %u", nam_u->fra_w);
     MESA_LOG(AUTH);
     return req_u;
-  } else if ( vec_len(&req_u->mis_u) != 0
+  }
+  else if ( vec_len(&req_u->mis_u) != 0
             && BAO_GOOD != (ver_y = _mesa_burn_misorder_queue(req_u))) {
     c3_free(par_u);
     MESA_LOG(AUTH)
     return req_u;
-  } else {
+  }
+  else {
     c3_free(par_u);
   }
 
