@@ -68,10 +68,10 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
   strm.next_in = zipped_buf.base;
 
   ret = inflateInit2(&strm, 16);
-  if (ret < 0 || ret == 2) {
+  if (ret != 0) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    /* return u3m_bail(c3__exit); */
+    return u3m_bail(c3__exit);
   }
 
   uint chunk = zipped_buf.len / 10;
@@ -80,25 +80,37 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
 
   void* this_address = strm.next_out;
   ret = inflate(&strm, Z_FINISH);
-  if (ret < 0 || ret == 2) {
+  if ((ret > -5 && ret < 0) || ret == 2) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    /* return u3m_bail(c3__exit); */
+    return u3m_bail(c3__exit);
   }
 
-  while (ret == -5) {
+  if (strm.avail_in == 0 && ret == -5) {
+    u3l_log("%i", ret);
+    u3l_log("%s", strm.msg);
+    return u3m_bail(c3__exit);
+  }
+
+  while (strm.avail_in > 0) {
     strm.avail_out = chunk;
 
-    /* u3l_log("%lu", (strm.total_out + chunk)); */
     this_address = u3a_realloc(this_address, (strm.total_out + chunk));
     strm.next_out = this_address + strm.total_out;
 
     ret = inflate(&strm, Z_FINISH);
+
+    if ((ret > -5 && ret < 0) || ret == 2) {
+      u3l_log("%i", ret);
+      u3l_log("%s", strm.msg);
+      return u3m_bail(c3__exit);
+    }
   }
+
   if (ret < 0 || ret == 2) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    /* return u3m_bail(c3__exit); */
+    return u3m_bail(c3__exit);
   }
 
   u3a_free(zipped_buf.base);
@@ -111,9 +123,10 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
   if (ret < 0 || ret == 2) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    /* return u3m_bail(c3__exit); */
+    return u3m_bail(c3__exit);
   }
 
+  /* u3m_p("result", unzipped_octs); */
   return unzipped_octs;
 }
 
@@ -124,6 +137,7 @@ u3we_unzip_gzip(u3_noun cor)
   u3_noun a = u3r_at(u3x_sam, cor);
   /* u3m_p('hejsan', a); */
   /* u3m_p("yo ", u3r_at(u3x_sam, cor)); */
+    /* u3l_log("%lu", (strm.total_out + chunk)); */
 
   /* if ( (u3_none == (a = u3r_at(u3x_sam, cor))) || */
   /*      (c3n == u3ud(a)) ) */
@@ -134,4 +148,3 @@ u3we_unzip_gzip(u3_noun cor)
     return u3m_bail(c3__exit);
   }
 }
-

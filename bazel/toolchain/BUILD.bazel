@@ -292,7 +292,7 @@ cc_toolchain_config(
     nm = "/usr/local/opt/llvm@15/bin/llvm-nm",
     sys_includes = [
         "/usr/local/Cellar/llvm@15/15.0.7/lib/clang/15.0.7/include",
-        "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX13.sdk/usr/include",
     ],
     target_cpu = "x86_64",
     toolchain_identifier = _macos_x86_64_brew_clang,
