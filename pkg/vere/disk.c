@@ -1235,7 +1235,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  
+
   u3_lmdb_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
@@ -1416,7 +1416,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
    *  5. clobber old log/data.mdb with new log/tmp/data.mdb
    *  6. open epoch lmdb and set it in log_u
    */
-  
+
   //  NB: requires that log_u->mdb_u is initialized to log/data.mdb
   //  XX: put old log in separate pointer (old_u?)?
 
@@ -1509,7 +1509,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
-  
+
   //  atomic truncation of old log
   //
   u3_lmdb_exit(log_u->mdb_u);
@@ -1605,7 +1605,7 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
     } break;
 
     case U3D_VER3: {
-      if ( (0 == log_u->epo_d) || 
+      if ( (0 == log_u->epo_d) ||
            (c3y == _disk_vere_diff(log_u)) )
       {
         if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
@@ -1780,6 +1780,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
   log_u->liv_o = c3n;
+  log_u->mis_o = c3n;
   log_u->ted_o = c3n;
   log_u->cb_u  = cb_u;
   log_u->red_u = 0;
@@ -1983,6 +1984,10 @@ try_init:
               c3_free(log_u);
               return 0;
             }
+          }
+
+          if ( c3y == _disk_vere_diff(log_u) ) {
+            log_u->mis_o = c3y;
           }
 
           return log_u;

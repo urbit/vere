@@ -554,6 +554,7 @@
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
+          c3_o             mis_o;               //  version/epoch mismatch
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
