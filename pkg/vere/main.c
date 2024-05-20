@@ -2256,6 +2256,11 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   //
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
+  if ( c3y == log_u->mis_o ) {
+    fprintf(stderr, "mars: binary version mismatch\r\n");
+    exit(1);
+  }
+
   //  Handle SIGTSTP as if it was SIGINT.
   //
   //    Configured here using signal() so as to be immediately available.
