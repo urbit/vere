@@ -93,7 +93,7 @@ struct _u3_ufil;
     c3_c*       pax_c;                  //  pier directory
     c3_o        alm;                    //  timer set
     c3_o        dyr;                    //  ready to update
-    u3_noun     sat;                    //  (sane %ta) handle
+    u3_noun     sat;                    //  (sane %tas) handle
 #ifdef SYNCLOG
     c3_w         lot_w;                 //  sync-slot
     struct _u3_sylo {
@@ -141,13 +141,13 @@ u3_unix_cane(const c3_c* pax_c)
   return 1;
 }
 
-/* _unix_sane_ta(): true iff pat is a valid @ta
+/* _unix_sane_tas(): true iff pat is a valid @tas
 **
-**  %ta is parsed by:
-**      (star ;~(pose nud low hep dot sig cab))
+**  %tas is parsed by:
+**      ;~(plug low (star ;~(pose nud low hep)))
 */
 static c3_t
-_unix_sane_ta(u3_unix* unx_u, u3_atom pat)
+_unix_sane_tas(u3_unix* unx_u, u3_atom pat)
 {
   return _(u3n_slam_on(u3k(unx_u->sat), pat));
 }
@@ -634,7 +634,7 @@ _unix_scan_mount_point(u3_unix* unx_u, u3_umon* mon_u)
         if (  '.'  != out_u->d_name[len_w]
            || '\0' == out_u->d_name[len_w + 1]
            || '~'  == out_u->d_name[strlen(out_u->d_name) - 1]
-           || !_unix_sane_ta(unx_u, _unix_string_to_knot(out_u->d_name)) )
+           || !_unix_sane_tas(unx_u, _unix_string_to_knot(out_u->d_name)) )
         {
           c3_free(pax_c);
           continue;
@@ -1077,7 +1077,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
           if ( !S_ISDIR(buf_u.st_mode) ) {
             if (  !strchr(out_u->d_name,'.')
                || '~' == out_u->d_name[strlen(out_u->d_name) - 1]
-               || !_unix_sane_ta(unx_u, _unix_string_to_knot(out_u->d_name)) )
+               || !_unix_sane_tas(unx_u, _unix_string_to_knot(out_u->d_name)) )
             {
               c3_free(pax_c);
               continue;
@@ -1578,7 +1578,7 @@ u3_unix_io_init(u3_pier* pir_u)
   unx_u->pax_c = strdup(pir_u->pax_c);
   unx_u->alm = c3n;
   unx_u->dyr = c3n;
-  unx_u->sat = u3do("sane", c3__ta);
+  unx_u->sat = u3do("sane", c3__tas);
 
   u3_auto* car_u = &unx_u->car_u;
   car_u->nam_m = c3__unix;
