@@ -14,7 +14,7 @@ string_flag = rule(
 def vere_library(copts = [], linkopts = [], **kwargs):
   native.cc_library(
     copts = copts + select({
-        "//:debug": ["-O0", "-g3", "-DC3DBG"],
+        "//:debug": ["-O0", "-g3", "-DC3DBG", "-fdebug-compilation-dir=."],
         "//conditions:default": ["-O3"]
     }) + select({
         "//:lto": ['-flto'],
@@ -39,7 +39,7 @@ def vere_library(copts = [], linkopts = [], **kwargs):
 def vere_binary(copts = [], linkopts = [], **kwargs):
   native.cc_binary(
     copts = copts + select({
-        "//:debug": ["-O0", "-g3", "-DC3DBG"],
+        "//:debug": ["-O0", "-g3", "-DC3DBG", "-fdebug-compilation-dir=."],
         "//conditions:default": ["-O3"]
     }) + select({
         "//:lto": ['-flto'],
