@@ -42,10 +42,9 @@ u3we_crc32(u3_noun cor)
 {
   u3_noun a = u3r_at(u3x_sam, cor);
 
-  if ( (u3du(a) == c3y) && (u3ud(u3h(a))) == c3y && (u3ud(u3t(a))) == c3y) {
+  if ( (u3du(a) == c3y) && (u3ud(u3h(a)) == c3y) && (u3ud(u3t(a)) == c3y) ) {
     return u3qe_crc32(a);
-  }
-  else {
+  } else {
     return u3m_bail(c3__exit);
   }
 }
