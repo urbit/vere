@@ -182,6 +182,53 @@ _put_space(u3_cell val, IM3Runtime runtime, c3_w target)
   return c3y;
 }
 
+static const void *
+_link_king_with_serf(IM3Runtime runtime,
+                     IM3ImportContext _ctx,
+                     uint64_t * _sp,
+                     void * _mem) {
+  const char *name = _ctx->function->import->fieldUtf8;
+  IM3Runtime serf_runtime = (IM3Runtime)_ctx->userdata;
+  M3Result result;
+  IM3Function f;
+  result = m3_FindFunction(&f, serf_runtime, name);
+  if (result) {
+    fprintf(stderr, "function not found");
+    return result;
+  }
+  c3_w n_in  = f->funcType->numArgs;
+  c3_w n_out = f->funcType->numRets;
+  c3_d **valptrs_in = (c3_d **) u3a_calloc(n_in, sizeof(c3_d*));
+  for (int i = 0; i < n_in; i++) {
+      valptrs_in[i] = &_sp[i+n_out];
+    }
+  result = m3_Call(f, n_in, valptrs_in);
+  u3a_free(valptrs_in);
+  if (result) {
+    fprintf(stderr, "call error");
+    return result;
+  }
+  c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
+  for (int i = 0; i < n_out; i++) {
+      valptrs_out[i] = &_sp[i];
+    }
+  result = m3_GetResults(f, n_out, valptrs_out);
+  u3a_free(valptrs_out);
+  if (result) {
+    fprintf(stderr, "extract error");
+    return result;
+  }
+  return m3Err_none;
+}
+
+static const void *
+_link_serf(IM3Runtime runtime,
+              IM3ImportContext _ctx,
+              uint64_t * _sp,
+              void * _mem) {
+
+}
+
 u3_weak
 u3wa_lia_main(u3_noun cor)
 {
@@ -308,6 +355,35 @@ u3wa_lia_main(u3_noun cor)
       return u3m_bail(c3__fail);
     }
 
+    //  handle imports
+    //
+    c3_w n_imports = wasm3_module_king->numFuncImports;
+    for (i = 0; i < n_imports; i++) {
+      M3Function f = wasm3_module_king->functions[i];
+      const char * mod  = f.import.moduleUtf8;
+      const char * name = f.import.fieldUtf8;
+      if (strcmp(mod, "serf") == 0) {
+      result = m3_LinkRawFunction(wasm3_module_king,
+                                  mod, name, NULL,
+                                  &_link_king_with_serf,
+                                  (void *)wasm3_module_serf);
+      if (result) {
+        fprintf(stderr, "link error");
+        return u3m_bail(c3__fail);
+        }
+      }
+    }
+    n_imports = wasm3_module_serf->numFuncImports;
+    for (i = 0; i < n_imports; i++) {
+      M3Function f = wasm3_module_serf->functions[i];
+      const char * mod  = f.import.moduleUtf8;
+      const char * name = f.import.fieldUtf8;
+      result = m3_LinkRawFunction(wasm3_module_serf, mod, name, NULL, &_link_serf);
+      if (result) {
+        fprintf(stderr, "link error");
+        return u3m_bail(c3__fail);
+      }
+    }
     M3TaggedValue tagged_act_0, tagged_n_funcs;
     c3_w i32_act_0, i32_n_funcs;
     IM3Global global_act_0   = m3_FindGlobal(wasm3_runtime_king->modules, ACT_0_FUNC_IDX);
@@ -416,11 +492,11 @@ u3wa_lia_main(u3_noun cor)
     // u3_noun lia_types = u3t(u3h(last_action));
     c3_w n_out = u3r_word(0, u3qb_lent(lia_types));
     u3_noun out_wasm = _get_results_wasm(f, n_out);
-    u3_noun out_lia = u3_nul;
+    u3_noun t = out_wasm, out_lia = u3_nul;
     for (c3_w i = 0; i < n_out; i++) {
       u3_noun lia_type, wasm_noun;
       u3x_cell(lia_types, &lia_type, &lia_types);
-      u3x_cell(out_wasm, &wasm_noun, &out_wasm);  // potential leak?
+      u3x_cell(t, &wasm_noun, &t);  // potential leak?
       if (lia_type != TAS_OCTS) {
         if (lia_type != u3h(wasm_noun)) {
           return u3m_bail(c3__exit);
@@ -468,15 +544,23 @@ u3wa_lia_main(u3_noun cor)
         }
       }
     }
-    if (out_wasm != u3_nul) {
+    if (t != u3_nul) {
       return u3m_bail(c3__fail);
     }
     u3z(len_vals);
     u3z(input_line_vals);
     u3z(line_shop);
     u3z(king_octs);
-    // u3z(out_wasm);
+    // u3z(out_wasm);  returns nonsense otherwise
     u3z(line_code_flopped);
+    // m3_FreeModule(wasm3_module_king);  // external fault?
+    // m3_FreeModule(wasm3_module_serf);
+    // m3_FreeRuntime(wasm3_runtime_serf);
+    // m3_FreeRuntime(wasm3_runtime_king);
+    // m3_FreeEnvironment(wasm3_env);
+    u3a_free(king_bytes);
+    u3a_free(serf_bytes);
+
     return u3nc(0, u3kb_flop(out_lia));
   }
 }
