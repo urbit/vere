@@ -297,7 +297,7 @@ versioned_http_archive(
     strip_prefix = "SoftBLAS-{version}",
     # sha256 = "",
     url = "https://github.com/urbit/SoftBLAS/archive/{version}.tar.gz",
-    version = "7d05697aea5363dcf5f877a9c8b464e9c352d3d4",
+    version = "29daa2f2fd0ad5070e405ad287f3623804f8fc67",
 )
 
 versioned_http_archive(

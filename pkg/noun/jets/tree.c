@@ -2220,7 +2220,7 @@ static u3j_core _139_non_d[] =
   };
 
 static u3j_core _139_hex_d[] =
-{ { "sep", 7, 0, _139_non_d, no_hashes },
+{ { "non", 7, 0, _139_non_d, no_hashes },
 
   { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
