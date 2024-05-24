@@ -2330,8 +2330,6 @@ _cw_play_fork()
   c3_i sat_i;
   c3_c *argv[] = { u3_Host.wrk_c, "play", u3_Host.dir_c };  //  XX parameterize args
 
-  fprintf(stderr, "wrk_c: %s\r\n", u3_Host.wrk_c);
-
   if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, 0, 0, argv, 0) ) {
       fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
       return 1;
