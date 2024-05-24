@@ -292,12 +292,13 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "prop-url",            required_argument, NULL, 2 },
     { "prop-name",           required_argument, NULL, 3 },
     //
-    { "urth-loom",           required_argument, NULL, 5 },
-    { "no-demand",           no_argument,       NULL, 6 },
-    { "swap",                no_argument,       NULL, 7 },
-    { "swap-to",             required_argument, NULL, 8 },
-    { "toss",                required_argument, NULL, 9 },
+    { "urth-loom",           required_argument, NULL,  5 },
+    { "no-demand",           no_argument,       NULL,  6 },
+    { "swap",                no_argument,       NULL,  7 },
+    { "swap-to",             required_argument, NULL,  8 },
+    { "toss",                required_argument, NULL,  9 },
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
+    { "serf-bin",            required_argument, NULL, 11 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -339,6 +340,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 10: { //  behn-allow-blocked
         u3_Host.ops_u.beb = c3y;
+        break;
+      }
+      case 11: {  // serf-bin
+        u3_Host.wrk_c = strdup(optarg);
         break;
       }
       //  special args
