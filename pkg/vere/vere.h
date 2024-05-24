@@ -329,8 +329,7 @@
         c3_c*      dir_c;                   //  pier path (no trailing /)
         c3_d       eve_d;                   //  initial current snapshot
         c3_c*      dem_c;                   //  daemon executable path
-        c3_c*      wrk_c;                   //  worker executable name
-        c3_c*      sef_c;                   //  worker executable path
+        c3_c*      wrk_c;                   //  worker executable path
         c3_d       now_d;                   //  event tick
         uv_loop_t* lup_u;                   //  libuv event loop
         u3_usig*   sig_u;                   //  signal list

@@ -343,7 +343,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 11: {  // serf-bin
-        u3_Host.sef_c = strdup(optarg);
+        u3_Host.wrk_c = strdup(optarg);
         break;
       }
       //  special args
@@ -2330,7 +2330,9 @@ _cw_play_fork()
   c3_i sat_i;
   c3_c *argv[] = { u3_Host.wrk_c, "play", u3_Host.dir_c };  //  XX parameterize args
 
-  if ( 0 != posix_spawn(&pid, u3_Host.sef_c, 0, 0, argv, 0) ) {
+  fprintf(stderr, "wrk_c: %s\r\n", u3_Host.wrk_c);
+
+  if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, 0, 0, argv, 0) ) {
       fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
       return 1;
   }
@@ -2999,10 +3001,6 @@ main(c3_i   argc,
   }
   else {
     c3_free(bin_c);
-  }
-
-  if ( !u3_Host.sef_c ) {
-    u3_Host.sef_c = u3_Host.dem_c;
   }
 
   if ( c3y == u3_Host.ops_u.dem ) {
