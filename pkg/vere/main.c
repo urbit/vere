@@ -18,6 +18,7 @@
 #include "db/lmdb.h"
 #include "getopt.h"
 #include "libgen.h"
+#include "spawn.h"
 
 #include "ca_bundle.h"
 #include "pace.h"
@@ -2315,6 +2316,28 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   return pay_d;
 }
 
+/* _cw_play_fork(): spawn a subprocess for event replay.
+*/
+static c3_i
+_cw_play_fork(c3_c *pax_c)  //  XX use --serf-bin
+{
+  pid_t pid;
+  c3_i sat_i;
+  c3_c *argv[] = { u3_Host.wrk_c, "play", u3_Host.dir_c };  //  XX parameterize args
+
+  if ( 0 != posix_spawn(&pid, pax_c, 0, 0, argv, 0) ) {
+      fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
+      return 1;
+  }
+
+  if ( -1 == waitpid(pid, &sat_i, 0) ) {
+    fprintf(stderr, "play: waitpid: %d\r\n", errno);
+    return 1;
+  }
+
+  return WEXITSTATUS(sat_i);
+}
+
 /* _cw_play(): replay events, but better.
 */
 static void
@@ -3110,7 +3133,11 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      _cw_play_impl(0, 0, c3n, c3n, c3n);
+      c3_i sat_i = _cw_play_fork(u3_Host.dem_c);
+      if ( sat_i ) {
+        fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
+        exit(sat_i);
+      }
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
