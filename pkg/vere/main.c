@@ -297,6 +297,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "swap-to",             required_argument, NULL, 8 },
     { "toss",                required_argument, NULL, 9 },
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
+    { "lmdb-map-size",       required_argument, NULL, 12 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -338,6 +339,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 10: { //  behn-allow-blocked
         u3_Host.ops_u.beb = c3y;
+        break;
+      }
+      case 12: { //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.siz_i) ) {
+          return c3n;
+        }
         break;
       }
       //  special args
@@ -2989,6 +2996,16 @@ main(c3_i   argc,
 
   if ( c3y == u3_Host.ops_u.tex ) {
     u3_Host.bot_f = _stop_on_boot_completed_cb;
+  }
+
+  if ( !u3_Host.ops_u.siz_i ) {
+    u3_Host.ops_u.siz_i =
+#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+  // 500 GiB is as large as musl on aarch64 wants to allow
+  0x7d00000000;
+#else
+  0x10000000000;
+#endif
   }
 
 #if 0
