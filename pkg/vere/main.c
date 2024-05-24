@@ -343,7 +343,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 11: {  // serf-bin
-        u3_Host.wrk_c = strdup(optarg);
+        u3_Host.sef_c = strdup(optarg);
         break;
       }
       //  special args
@@ -2324,13 +2324,13 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 /* _cw_play_fork(): spawn a subprocess for event replay.
 */
 static c3_i
-_cw_play_fork(c3_c *pax_c)  //  XX use --serf-bin
+_cw_play_fork()
 {
   pid_t pid;
   c3_i sat_i;
   c3_c *argv[] = { u3_Host.wrk_c, "play", u3_Host.dir_c };  //  XX parameterize args
 
-  if ( 0 != posix_spawn(&pid, pax_c, 0, 0, argv, 0) ) {
+  if ( 0 != posix_spawn(&pid, u3_Host.sef_c, 0, 0, argv, 0) ) {
       fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
       return 1;
   }
@@ -2994,13 +2994,15 @@ main(c3_i   argc,
 
   _main_self_path();
 
-  //  XX add argument
-  //
   if ( !u3_Host.wrk_c ) {
     u3_Host.wrk_c = bin_c;
   }
   else {
     c3_free(bin_c);
+  }
+
+  if ( !u3_Host.sef_c ) {
+    u3_Host.sef_c = u3_Host.dem_c;
   }
 
   if ( c3y == u3_Host.ops_u.dem ) {
@@ -3138,7 +3140,7 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      c3_i sat_i = _cw_play_fork(u3_Host.dem_c);
+      c3_i sat_i = _cw_play_fork();
       if ( sat_i ) {
         fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
         exit(sat_i);
