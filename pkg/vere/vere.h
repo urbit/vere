@@ -542,7 +542,7 @@
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
           c3_o             liv_o;               //  live
-          c3_w             ver_w;               //  pier version
+          c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
@@ -976,6 +976,7 @@
       */
         c3_o
         u3_disk_read_meta(MDB_env* mdb_u,
+                          c3_w*    ver_w,
                           c3_d*    who_d,
                           c3_o*    fak_o,
                           c3_w*    lif_w);
@@ -984,9 +985,18 @@
       */
         c3_o
         u3_disk_save_meta(MDB_env* mdb_u,
+                          c3_w     ver_w,
                           c3_d     who_d[2],
                           c3_o     fak_o,
                           c3_w     lif_w);
+
+      /* u3_disk_save_meta_meta(): save meta metadata.
+      */
+        c3_o
+        u3_disk_save_meta_meta(c3_c* log_c,
+                               c3_d  who_d[2],
+                               c3_o  fak_o,
+                               c3_w  lif_w);
 
       /* u3_disk_read(): read [len_d] events starting at [eve_d].
       */
@@ -1008,16 +1018,6 @@
         void
         u3_disk_plan(u3_disk* log_u, u3_fact* tac_u);
 
-      /* u3_disk_epoc_init(): create new epoch.
-       */
-        c3_o
-        u3_disk_epoc_init(u3_disk* log_u, c3_d epo_d);
-
-      /* u3_disk_epoc_kill(): delete an epoch.
-       */
-        c3_o
-        u3_disk_epoc_kill(u3_disk* log_u, c3_d epo_d);
-
       /* u3_disk_epoc_last(): get latest epoch number.
        */
         c3_o
@@ -1032,6 +1032,16 @@
       */
         void
         u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
+
+      /* u3_disk_chop(): delete all but the latest 2 epocs.
+       */
+        void
+        u3_disk_chop(u3_disk* log_u, c3_d epo_d);
+
+      /* u3_disk_roll(): rollover to a new epoc.
+       */
+        void
+        u3_disk_roll(u3_disk* log_u, c3_d epo_d);
 
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */

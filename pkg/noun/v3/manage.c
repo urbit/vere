@@ -36,6 +36,10 @@ u3m_v3_migrate()
   u3R_v2 = &u3H_v2->rod_u;
   u3R_v2->cap_p = u3R_v2->mat_p = u3a_v2_outa(u3H_v2);
 
+  u3R = (u3a_road*)u3R_v2;
+  u3H = (u3v_home*)u3H_v2;
+  u3a_ream();
+
   //  free bytecode caches in old road
   u3j_v2_reclaim();
   u3n_v2_reclaim();
