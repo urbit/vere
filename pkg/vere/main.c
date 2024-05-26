@@ -2324,11 +2324,28 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 /* _cw_play_fork(): spawn a subprocess for event replay.
 */
 static c3_i
-_cw_play_fork()
+_cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
   pid_t pid;
   c3_i sat_i;
-  c3_c *argv[] = { u3_Host.wrk_c, "play", u3_Host.dir_c };  //  XX parameterize args
+  c3_c eve_c[21], sap_c[21] = { 0 };
+  sprintf(eve_c, "%" PRIu64, eve_d);
+  sprintf(sap_c, "%" PRIu64, sap_d);
+  // if ( 0 < sprintf(eve_c, "%" PRIu64, eve_d) ||
+  //      0 < sprintf(sap_c, "%" PRIu64, sap_d) )
+  // {
+  //   fprintf(stderr, "play: error parsing args\r\n");
+  //   return 1;
+  // }
+  c3_c *argv[] = { 
+    u3_Host.wrk_c, "play", u3_Host.dir_c, 
+    "--replay-to", eve_c,
+    "--snap-at", sap_c, 
+    _(mel_o) ? "--auto-meld" : 0,  //
+    _(sof_o) ? "--soft-mugs" : 0,  //
+    _(ful_o) ? "--full" : 0,       //  XX
+    0
+  };
 
   if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, 0, 0, argv, 0) ) {
       fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
@@ -3136,7 +3153,7 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      c3_i sat_i = _cw_play_fork();
+      c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3y);
       if ( sat_i ) {
         fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
         exit(sat_i);
