@@ -2328,24 +2328,45 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
   pid_t pid;
   c3_i sat_i;
+
   c3_c eve_c[21], sap_c[21] = { 0 };
-  sprintf(eve_c, "%" PRIu64, eve_d);
-  sprintf(sap_c, "%" PRIu64, sap_d);
-  // if ( 0 < sprintf(eve_c, "%" PRIu64, eve_d) ||
-  //      0 < sprintf(sap_c, "%" PRIu64, sap_d) )
-  // {
-  //   fprintf(stderr, "play: error parsing args\r\n");
-  //   return 1;
-  // }
-  c3_c *argv[] = { 
-    u3_Host.wrk_c, "play", u3_Host.dir_c, 
-    "--replay-to", eve_c,
-    "--snap-at", sap_c, 
-    _(mel_o) ? "--auto-meld" : 0,  //
-    _(sof_o) ? "--soft-mugs" : 0,  //
-    _(ful_o) ? "--full" : 0,       //  XX
-    0
+  if ( 0 > sprintf(eve_c, "%" PRIu64, eve_d) ||
+       0 > sprintf(sap_c, "%" PRIu64, sap_d) )
+  {
+    fprintf(stderr, "play: error parsing args\r\n");
+    return 1;
+  }
+
+  c3_c *argv[11] = {
+    u3_Host.wrk_c,
+    "play",
+    u3_Host.dir_c,
+    "--replay-to",
+    eve_c,
+    "--snap-at",
+    sap_c,
   };
+
+  c3_z i = 7;
+
+  if _(mel_o) {
+    argv[i++] = "--auto-meld";
+  }
+
+  if _(sof_o) {
+    argv[i++] = "--soft-mugs";
+  }
+
+  if _(ful_o) {
+    argv[i++] = "--full";
+  }
+
+  argv[i] = NULL;
+
+  for (c3_i j = 0; j < i; j++) {
+    fprintf(stderr, "%s ", argv[j]);
+  }
+  fprintf(stderr, "\r\n");
 
   if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, 0, 0, argv, 0) ) {
       fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
