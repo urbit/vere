@@ -9,8 +9,8 @@
 #include "wasm3.h"
 #include "m3_env.h"
 
-// #include <stdio.h>
-// #include <math.h>
+#include "string.h"
+
 
 const char* N_FUNCS        = "n-funcs";
 const char* SET_I32        = "set-i32";
@@ -30,6 +30,11 @@ const c3_w TAS_V128 = c3_s4('v','1','2', '8');
 const c3_w TAS_OCTS = c3_s4('o','c','t', 's');
 
 const c3_ws MINUS_ONE = -1;
+
+typedef struct {
+  IM3Runtime serf_runtime;
+  u3_noun* shop;
+} king_link_data;
 
 static u3_noun
 _get_results_wasm(IM3Function i_function, c3_w i_retc)
@@ -187,11 +192,69 @@ _link_king_with_serf(IM3Runtime runtime,
                      IM3ImportContext _ctx,
                      uint64_t * _sp,
                      void * _mem) {
+  const char *mod = _ctx->function->import->moduleUtf8;
   const char *name = _ctx->function->import->fieldUtf8;
-  IM3Runtime serf_runtime = (IM3Runtime)_ctx->userdata;
+  IM3Runtime serf_runtime = ((king_link_data*)_ctx->userdata)->serf_runtime;
+  u3_noun *shop = ((king_link_data*)_ctx->userdata)->shop;
   M3Result result;
+  if (strcmp(mod, "serf") == 0) {
+    IM3Function f;
+    result = m3_FindFunction(&f, serf_runtime, name);
+    if (result) {
+      fprintf(stderr, "function not found");
+      return result;
+    }
+    c3_w n_in  = f->funcType->numArgs;
+    c3_w n_out = f->funcType->numRets;
+    c3_d **valptrs_in = (c3_d **) u3a_calloc(n_in, sizeof(c3_d*));
+    for (int i = 0; i < n_in; i++) {
+        valptrs_in[i] = &_sp[i+n_out];
+      }
+    c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
+    for (int i = 0; i < n_out; i++) {
+        valptrs_out[i] = &_sp[i];
+      }
+    result = m3_Call(f, n_in, valptrs_in);
+    u3a_free(valptrs_in);
+    if (result) {
+      fprintf(stderr, "call error");
+      return result;
+    }
+    result = m3_GetResults(f, n_out, valptrs_out);
+    u3a_free(valptrs_out);
+    if (result) {
+      fprintf(stderr, "extract error");
+      return result;
+    }
+    return m3Err_none;
+  }
+  else if (strcmp(mod, "lia") == 0) {
+    // TODO: handle shop case
+    //
+    // if shop == ~: block (exit with a code to catch in main? custom error code?)
+    // else:
+    //  get space-start, space-clue, data segment
+    //  turn to array of byte-sized indices
+    //  write to space with set or octs stuff
+
+  }
+}
+
+static const void *
+_link_serf_with_king(IM3Runtime runtime,
+              IM3ImportContext _ctx,
+              uint64_t * _sp,
+              void * _mem) {
+  const char *mod = _ctx->function->import->moduleUtf8;
+  const char *name = _ctx->function->import->fieldUtf8;
+  IM3Runtime king_runtime = (IM3Runtime)_ctx->userdata;
+  M3Result result;
+  const char *name_king = u3r_bytes_alloc(0, strlen(mod) + strlen(name) + 1, 0);
+  strcat(mod, name_king);
+  strcat("/", name_king);
+  strcat(name, name_king);
   IM3Function f;
-  result = m3_FindFunction(&f, serf_runtime, name);
+  result = m3_FindFunction(&f, king_runtime, name_king);
   if (result) {
     fprintf(stderr, "function not found");
     return result;
@@ -202,16 +265,16 @@ _link_king_with_serf(IM3Runtime runtime,
   for (int i = 0; i < n_in; i++) {
       valptrs_in[i] = &_sp[i+n_out];
     }
+  c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
+  for (int i = 0; i < n_out; i++) {
+      valptrs_out[i] = &_sp[i];
+    }
   result = m3_Call(f, n_in, valptrs_in);
   u3a_free(valptrs_in);
   if (result) {
     fprintf(stderr, "call error");
     return result;
   }
-  c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
-  for (int i = 0; i < n_out; i++) {
-      valptrs_out[i] = &_sp[i];
-    }
   result = m3_GetResults(f, n_out, valptrs_out);
   u3a_free(valptrs_out);
   if (result) {
@@ -219,14 +282,6 @@ _link_king_with_serf(IM3Runtime runtime,
     return result;
   }
   return m3Err_none;
-}
-
-static const void *
-_link_serf(IM3Runtime runtime,
-              IM3ImportContext _ctx,
-              uint64_t * _sp,
-              void * _mem) {
-
 }
 
 u3_weak
@@ -357,16 +412,17 @@ u3wa_lia_main(u3_noun cor)
 
     //  handle imports
     //
+    king_link_data king_struct = {wasm3_runtime_serf, &line_shop};
     c3_w n_imports = wasm3_module_king->numFuncImports;
     for (i = 0; i < n_imports; i++) {
       M3Function f = wasm3_module_king->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
       if (strcmp(mod, "serf") == 0) {
-      result = m3_LinkRawFunction(wasm3_module_king,
+      result = m3_LinkRawFunctionEx(wasm3_module_king,
                                   mod, name, NULL,
                                   &_link_king_with_serf,
-                                  (void *)wasm3_module_serf);
+                                  (void *)king_struct);
       if (result) {
         fprintf(stderr, "link error");
         return u3m_bail(c3__fail);
@@ -378,7 +434,10 @@ u3wa_lia_main(u3_noun cor)
       M3Function f = wasm3_module_serf->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
-      result = m3_LinkRawFunction(wasm3_module_serf, mod, name, NULL, &_link_serf);
+      result = m3_LinkRawFunctionEx(wasm3_module_serf,
+                                    mod, name, NULL,
+                                    &_link_serf_with_king,
+                                    (void *)wasm3_runtime_king);
       if (result) {
         fprintf(stderr, "link error");
         return u3m_bail(c3__fail);
