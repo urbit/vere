@@ -18,6 +18,7 @@
 #include "db/lmdb.h"
 #include "getopt.h"
 #include "libgen.h"
+#include "pthread.h"
 #include "spawn.h"
 
 #include "ca_bundle.h"
@@ -2321,14 +2322,31 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   return pay_d;
 }
 
+/* _cw_play_fork_heed(): wait for EOF on STDIN or until canceled.
+*/
+void* _cw_play_fork_heed(void* arg) {
+  c3_c buf[1];
+  c3_zs red;
+
+  do {
+    pthread_testcancel();
+    red = read(STDIN_FILENO, buf, sizeof(buf));
+    if ( 0 == red ) {
+      fprintf(stderr, "play: god save the king! committing sudoku...\r\n");
+      exit(1);
+    }
+  } while ( 0 < red );
+
+  return NULL;
+}
+
 /* _cw_play_fork(): spawn a subprocess for event replay.
 */
 static c3_i
 _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  pid_t pid;
-  c3_i sat_i;
-
+  //  prepare args
+  //
   c3_c eve_c[21], sap_c[21] = { 0 };
   if ( 0 > sprintf(eve_c, "%" PRIu64, eve_d) ||
        0 > sprintf(sap_c, "%" PRIu64, sap_d) )
@@ -2348,31 +2366,47 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   };
 
   c3_z i = 7;
-
   if _(mel_o) {
     argv[i++] = "--auto-meld";
   }
-
   if _(sof_o) {
     argv[i++] = "--soft-mugs";
   }
-
   if _(ful_o) {
     argv[i++] = "--full";
   }
-
   argv[i] = NULL;
 
-  for (c3_i j = 0; j < i; j++) {
-    fprintf(stderr, "%s ", argv[j]);
-  }
-  fprintf(stderr, "\r\n");
-
-  if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, 0, 0, argv, 0) ) {
-      fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
-      return 1;
+  //  prepare a pipe for ipc with the subprocess
+  //
+  c3_i pipefd[2];
+  if ( 0 != pipe(pipefd) ) {
+    fprintf(stderr, "play: failed to open pipe\r\n");
+    return 1;
   }
 
+  //  set the child process' stdin to read from the pipe
+  //
+  posix_spawn_file_actions_t action;
+  posix_spawn_file_actions_init(&action);
+  posix_spawn_file_actions_addclose(&action, pipefd[1]);
+  posix_spawn_file_actions_adddup2(&action, pipefd[0], STDIN_FILENO);
+
+  //  spawn a new serf process and call its play subcommand
+  //
+  pid_t pid;
+  if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, &action, 0, argv, 0) ) {
+    fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
+    return 1;
+  }
+
+  //  close the read end of the pipe in the parent
+  //
+  close(pipefd[0]);
+
+  //  wait for the child to exit
+  //
+  c3_i sat_i;
   if ( -1 == waitpid(pid, &sat_i, 0) ) {
     fprintf(stderr, "play: waitpid: %d\r\n", errno);
     return 1;
@@ -2473,9 +2507,14 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  pthread_t ted;
+  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+
   if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
     fprintf(stderr, "mars: nothing to do!\r\n");
   }
+
+  pthread_cancel(ted);
 }
 
 /* _cw_prep(): prepare for upgrade
