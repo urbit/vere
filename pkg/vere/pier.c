@@ -6,6 +6,7 @@
 #include "pace.h"
 #include "vere.h"
 #include "version.h"
+#include "curl/curl.h"
 
 #define PIER_READ_BATCH 1000ULL
 #define PIER_PLAY_BATCH 500ULL
@@ -529,6 +530,181 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
   u3z(nun);
 }
 
+static size_t
+_dawn_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
+{
+  uv_buf_t* buf_u = buf_v;
+
+  size_t siz_t = uni_t * mem_t;
+  buf_u->base = c3_realloc(buf_u->base, 1 + siz_t + buf_u->len);
+
+  memcpy(buf_u->base + buf_u->len, dat_v, siz_t);
+  buf_u->len += siz_t;
+  buf_u->base[buf_u->len] = 0;
+
+  return siz_t;
+}
+
+struct HttpRes {
+  c3_i cod_i;
+  c3_c* res_c;
+};
+
+static struct HttpRes http_get(c3_c* url_c) {
+  CURL *curl;
+  CURLcode result;
+  long cod_l;
+
+  uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
+
+  if ( !(curl = curl_easy_init()) ) {
+    u3l_log("failed to initialize libcurl");
+    exit(1);
+  }
+
+  u3K.ssl_curl_f(curl);
+  curl_easy_setopt(curl, CURLOPT_URL, url_c);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
+  curl_easy_setopt(curl, CURLOPT_SERVER_RESPONSE_TIMEOUT, 30);
+
+  result = curl_easy_perform(curl);
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &cod_l);
+
+  if ( CURLE_OK != result ) {
+    u3l_log("failed to fetch %s: %s", url_c, curl_easy_strerror(result));
+    /* exit(1); */
+  }
+  if ( 300 <= cod_l && 404 != cod_l ) {
+    u3l_log("error fetching %s: HTTP %ld", url_c, cod_l);
+    /* exit(1); */
+  }
+
+  curl_easy_cleanup(curl);
+
+  struct HttpRes r = { cod_l, buf_u.base };
+  return r;
+}
+
+static c3_i fetch_ping_ack(c3_c* czar, c3_c* who, c3_i bon) {
+  c3_c url[256];
+  sprintf(url, "https://%s.urbit.org/~/boot/%s/%d", czar, who, bon + 1);
+  struct HttpRes res = http_get(url);
+  if ( 200 != res.cod_i) {
+    return -1;
+  }
+  c3_i last_acked = strtoumax(res.res_c, NULL, 10);
+  return last_acked;
+}
+
+static void
+_boot_scry_cb(void* vod_p, u3_noun nun) {
+  u3_work* wok_u = (u3_work*)vod_p;
+  u3_atom  who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
+  c3_c*    who_c = u3r_string(who);
+  u3_noun  nul, rem, typ, glx, ryf, lyf, bon, nex;
+  c3_w     glx_w, ryf_w, bon_w, nex_w;
+  if (c3y == u3r_cell(nun, &nul, &rem) &&
+      c3y == u3r_hext(rem, &typ, &glx, &ryf, &lyf, &bon, &nex)) {
+    /*
+     * Boot scry succeeded. Proceed to cross reference networking state against
+     * sponsoring galaxy.
+     */
+    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
+    bon_w = u3r_word(0, bon); nex_w = u3r_word(0, nex);
+    u3_atom czar = u3dc("scot", c3__p, glx_w);
+    c3_c*   czar_c = u3r_string(czar);
+    c3_c url[256];
+    sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
+    struct HttpRes res = http_get(url);
+    if (res.cod_i == 200) {
+      u3_noun jammed_atom =
+        u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
+      u3_noun unpacked = u3ke_cue(u3k(jammed_atom));
+      u3_noun czar_glx, czar_ryf, czar_lyf;
+      c3_w    czar_ryf_w;
+      u3x_trel(unpacked, &czar_glx, &czar_ryf, &czar_lyf);
+      czar_ryf_w = u3r_word(0, czar_ryf);
+      if (czar_ryf_w == ryf_w) {
+        c3_i last_ack = fetch_ping_ack(czar_c, who_c, bon_w);
+        if (last_ack == -1) {
+          u3l_log("boot: peer state unvailable on czar, cannot protect from double boot");
+          _pier_work(wok_u);
+        } else if (last_ack == nex_w - 1 || last_ack - 1 == nex_w - 1) {
+          _pier_work(wok_u);
+        } else {
+          u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
+                  last_ack, nex_w - 1);
+          exit(1);
+        }
+      } else {
+        // Trying to boot old ship after breach
+        u3l_log("boot: failed: rift in czar peer state: %d, current rift: %d",
+                czar_ryf_w, ryf_w);
+        exit(1);
+      }
+      u3z(jammed_atom); u3z(unpacked);
+    } else {
+      u3l_log("boot: %%boot state unvailable on czar, cannot protect from double boot");
+      _pier_work(wok_u);
+    }
+    u3z(czar);
+    c3_free(czar_c);
+  } else if (c3y == u3r_trel(nun, &nul, &typ, &rem) &&
+             rem == 1634628973 /* %muna */) {
+    /*
+     * Data not available for boot scry. Check against sponsoring galaxy.
+     * If peer state exists exit(1) unless ship has breached,
+     * otherwise continue boot.
+     */
+    c3_i sponsor = wok_u->pir_u->who_d[0] & ((1 << 8) - 1);
+    u3_noun czar = u3dc("scot", 'p', u3k(sponsor));
+    c3_c* czar_c = u3r_string(u3k(czar));
+    c3_c url[256];
+    sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
+    struct HttpRes res = http_get(url);
+    if (res.cod_i == 200) {
+      czar_c = res.res_c;
+    }
+    sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
+    res = http_get(url);
+    if (res.cod_i == 200) {
+      // Peer state found under czar
+      u3_noun jammed_atom =
+        u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
+      u3_noun unpacked = u3ke_cue(jammed_atom);
+      u3_noun czar_glx, czar_ryf, czar_lyf;
+      c3_w    czar_ryf_w;
+      u3x_trel(unpacked, &czar_glx, &czar_ryf, &czar_lyf);
+      czar_ryf_w = u3r_word(0, czar_ryf);
+      u3_weak kf_ryf = wok_u->pir_u->ryf;
+      if (kf_ryf == u3_none) {
+        u3l_log("boot: keyfile rift unavailable, cannot protect from double boot");
+        _pier_work(wok_u);
+      } else if (kf_ryf > czar_ryf_w) {
+        // Ship has breached, continue boot
+        _pier_work(wok_u);
+      } else {
+        u3l_log("boot: failed: ship not in sync with czar, double boot");
+        exit(1);
+      }
+      u3z(czar); u3z(jammed_atom); u3z(unpacked);
+      c3_free(czar_c);
+    } else {
+      _pier_work(wok_u);
+    }
+  } else {
+    /*
+     * Boot scry endpoint doesn't exists. Most likely old arvo.
+     * Continue boot and hope for the best.
+     */
+    u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double boot");
+    _pier_work(wok_u);
+  }
+  u3z(nun); u3z(who);
+  c3_free(who_c);
+}
+
 /* _pier_work_init(): begin processing new events
 */
 static void
@@ -615,7 +791,20 @@ _pier_work_init(u3_pier* pir_u)
     u3_auto_talk(wok_u->car_u);
   }
 
-  _pier_work(wok_u);
+  c3_i pi_i = wok_u->pir_u->who_d[0];
+  c3_i pt_i = wok_u->pir_u->who_d[1];
+
+  if ((pi_i < 256 && pt_i == 0) || c3n == u3_Host.ops_u.net) {
+    // Skip double boot protection for galaxies and local mode ships
+    //
+    _pier_work(wok_u);
+  } else {
+    // Double boot protection
+    //
+    u3_noun pex = u3nc(u3i_string("boot"), u3_nul);
+    u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), c3__ax, u3_nul, pex,
+                      pir_u->wok_u, _boot_scry_cb);
+  }
 }
 
 /* _pier_wyrd_good(): %wyrd version negotation succeeded.
@@ -1609,7 +1798,7 @@ u3_pier_slog(u3_pier* pir_u)
 /* _pier_init(): create a pier, loading existing.
 */
 static u3_pier*
-_pier_init(c3_w wag_w, c3_c* pax_c)
+_pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
 {
   //  create pier
   //
@@ -1618,6 +1807,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
   pir_u->pax_c = pax_c;
   pir_u->sat_e = u3_psat_init;
   pir_u->liv_o = c3n;
+  pir_u->ryf   = ryf;
 
   // XX remove
   //
@@ -1691,8 +1881,9 @@ u3_pier*
 u3_pier_stay(c3_w wag_w, u3_noun pax)
 {
   u3_pier* pir_u;
+  u3_weak  rift = u3_none;
 
-  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax))) ) {
+  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), rift)) ) {
     fprintf(stderr, "pier: stay: init fail\r\n");
     u3_king_bail();
     return 0;
@@ -1848,7 +2039,7 @@ _pier_boot_make(u3_noun who,
 
   //  include additional key configuration events if we have multiple keys
   //
-  if ( (u3_none != fed) && (c3y == u3du(u3h(fed))) ) {
+  if ( (u3_none != fed) && (c3y == u3du(u3h(fed))) && (u3h(u3h(fed))) == 1) {
     u3_noun wir = u3nt(c3__j, c3__seed, u3_nul);
     u3_noun tag = u3i_string("rekey");
     u3_noun kyz = u3t(u3t(fed));
@@ -2027,8 +2218,13 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
              u3_noun mor)                   //  extra boot sequence props
 {
   u3_pier* pir_u;
+  u3_weak  rift = u3_none;
+  if (fed != u3_none && c3y == u3du(u3h(fed)) && u3h(u3h(fed)) == 2) {
+    rift = u3h(u3t(u3t(fed)));
+    u3k(rift);
+  }
 
-  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax))) ) {
+  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), rift)) ) {
     fprintf(stderr, "pier: boot: init fail\r\n");
     u3_king_bail();
     return 0;

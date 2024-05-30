@@ -661,6 +661,7 @@
           u3_disk*         log_u;               //  event log
           u3_lord*         god_u;               //  computer
           u3_psat          sat_e;               //  type-tagged
+          u3_weak          ryf;                 //  rift
           union {                               //
             u3_boot*       bot_u;               //    bootstrap
             u3_play*       pay_u;               //    recompute
