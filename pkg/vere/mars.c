@@ -384,6 +384,5 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
 
-  fprintf(stderr, "mars: play finishing\r\n");
   return pay_d;
 }
