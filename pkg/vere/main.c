@@ -3213,7 +3213,7 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3y);
+      c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3n);
       if ( sat_i ) {
         fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
         exit(sat_i);
