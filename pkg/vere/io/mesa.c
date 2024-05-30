@@ -1648,11 +1648,11 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
-        if (fra_w == len_w && tag == MESA_WAIT) {
-          c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
-          pac_u->pek_u.nam_u.fra_w = fra_w;
-          _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
-        }
+        /* if (fra_w == len_w && tag == MESA_WAIT) { */
+        /*   c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit))); */
+        /*   pac_u->pek_u.nam_u.fra_w = fra_w; */
+        /*   _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat))); */
+        /* } */
 
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
