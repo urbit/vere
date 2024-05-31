@@ -23,6 +23,7 @@
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       [%work mil=@ job=(pair @da ovum)]
+      [%quiz $%([%quac ~])]
   ==
 ::  +plea: from serf to king
 ::
@@ -31,6 +32,7 @@
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
       [%slog pri=@ tank]
       [%flog cord]
+      [%quiz $%([%quac p=*])]
       $:  %peek
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
@@ -521,32 +523,16 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
   u3z(dat);
 }
 
-/* _lord_plea_mass(): inject mass report
+/* _lord_plea_quiz(): handle quiz (query to serf).
  */
 static void
-_lord_plea_mass(u3_lord* god_u, u3_noun dat)
+_lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 {
-  u3_noun cad = u3nc(c3__quac, dat);
-  u3_noun wir = u3nc(c3__quac, u3_nul);
-  u3_ovum* egg_u = u3_ovum_init(0, c3__k, wir, cad);
-
-  u3_pier* pir_u = god_u->cb_u.ptr_v;
-  u3_auto* car_u = c3_calloc(sizeof(*car_u));
-  u3_noun    ovo;
-
-  car_u->pir_u = pir_u;
-  car_u->nam_m = c3__quac;  //   is that right? I did it by analogy w/ smth
-
-  u3_auto_plan(car_u, egg_u);
-
-  u3_assert( u3_auto_next(car_u, &ovo) == egg_u );
-
-  {
-      struct timeval tim_tv;
-      gettimeofday(&tim_tv, 0);
-      u3_lord_work(god_u, egg_u, u3nc(u3_time_in_tv(&tim_tv), ovo));
-    }
+  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
+  wit_u->qui_u.quiz_f(wit_u->qui_u.ptr_v, dat);
+  u3z(dat);
 }
+
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
  static void
@@ -769,9 +755,8 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
       _lord_plea_ripe(god_u, u3k(dat));
     } break;
 
-    case c3__quac: {
-      _lord_plea_mass(god_u, u3k(dat));
-
+    case c3__quiz: {
+      _lord_plea_quiz(god_u, u3k(dat));
     } break;
   }
 
@@ -843,6 +828,10 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       //
       msg = u3nt(c3__live, c3__exit, 0);
     } break;
+
+    case u3_writ_quiz: {
+      msg = u3nt(c3__quiz, c3__quac, u3_nul);
+    } break;
   }
 
   return msg;
@@ -880,10 +869,10 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
   }
 }
 
-/* _lord_writ_plan(): enqueue a writ and send.
+/* lord_writ_plan(): enqueue a writ and send.
 */
-static void
-_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
+void
+lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {
     u3_assert( !god_u->ext_u );
@@ -936,7 +925,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 
   //  XX cache check, unless last
   //
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_play(): recompute batch.
@@ -952,7 +941,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
   //
   // u3_assert( !pay_u.ent_u->nex_u );
 
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_work(): attempt work.
@@ -974,7 +963,7 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
     god_u->pin_o = c3y;
   }
 
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_save(): save a snapshot.
@@ -988,7 +977,7 @@ u3_lord_save(u3_lord* god_u)
   else {
     u3_writ* wit_u = _lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_save;
-    _lord_writ_plan(god_u, wit_u);
+    lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -1004,7 +993,7 @@ u3_lord_cram(u3_lord* god_u)
   else {
     u3_writ* wit_u = _lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_cram;
-    _lord_writ_plan(god_u, wit_u);
+    lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -1016,7 +1005,7 @@ u3_lord_meld(u3_lord* god_u)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_meld;
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_pack(): defragment persistent state.
@@ -1026,7 +1015,7 @@ u3_lord_pack(u3_lord* god_u)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_pack;
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_exit(): shutdown gracefully.
@@ -1036,7 +1025,7 @@ u3_lord_exit(u3_lord* god_u)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_exit;
-  _lord_writ_plan(god_u, wit_u);
+  lord_writ_plan(god_u, wit_u);
 
   //  XX set timer, then halt
 }

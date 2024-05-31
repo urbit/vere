@@ -2305,27 +2305,59 @@ _cj_mark_hank(u3_noun kev, void* dat)
 
 /* u3j_mark(): mark jet state for gc.
 */
-c3_w
-u3j_mark(FILE* fil_u)
+quac*
+u3j_mark()
 {
-  c3_w tot_w = 0;
+  quac** qua_u = c3_malloc(sizeof(*qua_u)*6);
 
-  tot_w += u3a_maid(fil_u, "  warm jet state", u3h_mark(u3R->jed.war_p));
-  tot_w += u3a_maid(fil_u, "  cold jet state", u3h_mark(u3R->jed.cod_p));
-  tot_w += u3a_maid(fil_u, "  hank cache", u3h_mark(u3R->jed.han_p));
-  tot_w += u3a_maid(fil_u, "  battery hash cache", u3h_mark(u3R->jed.bas_p));
+  qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
+  qua_u[0]->nam_c = strdup("warm jet state");
+  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p)*4;
 
-  {
-    c3_w han_w = 0;
-    u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &han_w);
-    tot_w += u3a_maid(fil_u, "  call site cache", han_w);
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
+  qua_u[1]->nam_c = strdup("cold jet state");
+  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p)*4;
+
+  qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[2]->nam_c = strdup("hank cache");
+  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p)*4;
+
+  qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
+  qua_u[3]->nam_c = strdup("battery hash cache");
+  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p)*4;
+  
+  qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
+  qua_u[4]->nam_c = strdup("call site cache");
+  u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
+  qua_u[4]->siz_w = qua_u[4]->siz_w*4;
+  
+  c3_w sum_w = 0;
+  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
+    sum_w += qua_u[i_w]->siz_w;
   }
+
+  quac* tot_u = c3_calloc(sizeof(*tot_u));
+  tot_u->nam_c = strdup("total jet stuff");
 
   if ( u3R == &(u3H->rod_u) ) {
-    tot_w += u3a_maid(fil_u, "  hot jet state", u3h_mark(u3R->jed.hot_p));
-  }
+    qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+    qua_u[5]->nam_c = strdup("hot jet state");
+    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p)*4;
 
-  return u3a_maid(fil_u, "total jet stuff", tot_w);
+    sum_w += qua_u[5]->siz_w;
+
+    tot_u->siz_w = sum_w;
+    tot_u->len_w = 6;
+    tot_u->qua_u = qua_u;
+
+    return tot_u;
+  } else {
+    tot_u->siz_w = sum_w;
+    tot_u->len_w = 5;
+    tot_u->qua_u = qua_u;
+
+    return tot_u;
+  }
 }
 
 /* u3j_free_hank(): free an entry from the hank cache.

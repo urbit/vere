@@ -148,10 +148,20 @@
         u3_noun
         u3m_soft_esc(u3_noun ref, u3_noun sam);
 
+
+      /* quac: memory report.
+      */
+        typedef struct _quac {
+          c3_c* nam_c;
+          c3_w  siz_w;
+          c3_w  len_w;
+          struct _quac** qua_u;
+        } quac;
+
       /* u3m_mark(): mark all nouns in the road.
       */
-        c3_w
-        u3m_mark(FILE* fil_u);
+        quac**
+        u3m_mark();
 
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */

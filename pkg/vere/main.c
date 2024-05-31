@@ -1041,10 +1041,7 @@ _cw_serf_writ(void* vod_p, c3_d len_d, c3_y* byt_y)
 
     //  all references must now be counted, and all roots recorded
     //
-    u3_weak serf_post_out = u3_serf_post(&u3V);
-    if (serf_post_out != u3_none) {
-      _cw_serf_send(u3nc(c3__quac, serf_post_out));
-    }
+    u3_serf_post(&u3V);
   }
 }
 
@@ -1734,7 +1731,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_serf_grab();
+  u3z(u3_serf_grab(c3y));
   u3m_stop();
 }
 
@@ -3114,6 +3111,7 @@ main(c3_i   argc,
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
       _cw_play_impl(0, 0, c3n, c3n, c3n);
+      signal(SIGTSTP, _stop_exit);
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 

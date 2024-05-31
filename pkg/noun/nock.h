@@ -123,8 +123,8 @@
 
     /* u3n_mark(): mark bytecode cache.
      */
-      c3_w
-      u3n_mark(FILE* fil_u);
+      quac*
+      u3n_mark();
 
     /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
     */

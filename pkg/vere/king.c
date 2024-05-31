@@ -1653,7 +1653,6 @@ u3_king_bail(void)
 void
 u3_king_grab(void* vod_p)
 {
-  c3_w tot_w = 0;
   FILE* fil_u;
 
   u3_assert( u3R == &(u3H->rod_u) );
@@ -1689,11 +1688,32 @@ u3_king_grab(void* vod_p)
   }
 #endif
 
-  tot_w += u3m_mark(fil_u);
-  tot_w += u3_pier_mark(fil_u);
+  quac** all_u = c3_malloc(sizeof(*all_u)*6);
 
-  u3a_print_memory(fil_u, "total marked", tot_w);
-  u3a_print_memory(fil_u, "sweep", u3a_sweep());
+  quac** var_u = u3m_mark();
+  all_u[0] = var_u[0];
+  all_u[1] = var_u[1];
+  all_u[2] = var_u[2];
+  all_u[3] = var_u[3];
+  c3_free(var_u);
+
+  c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w
+                 + all_u[2]->siz_w + all_u[3]->siz_w;
+
+  all_u[4] = c3_calloc(sizeof(*all_u[4]));
+  all_u[4]->nam_c = "total marked";
+  all_u[4]->siz_w = tot_w;
+
+  all_u[5] = c3_calloc(sizeof(*all_u[5]));
+  all_u[5]->nam_c = "sweep";
+  all_u[5]->siz_w = u3a_sweep();
+  
+  for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+    u3a_print_quac(fil_u, 0, all_u[i_w]);
+    u3a_quac_free(all_u[i_w]);
+  }
+
+  c3_free(all_u);
 
 #ifdef U3_MEMORY_LOG
   {
