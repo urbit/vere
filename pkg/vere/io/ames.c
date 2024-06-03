@@ -1422,23 +1422,29 @@ _stun_make_response(const c3_y req_y[20],
 }
 
 static void
-_stun_on_request(u3_ames*              sam_u,
-                const c3_y*            req_y,
-                const struct sockaddr* adr_u)
+_stun_on_request(u3_ames*    sam_u,
+                const c3_y*  req_y,
+                u3_lane      lan_u)
 {
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sam_u = sam_u;
 
-  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  u3_lane lan_u = {
-    .por_s = ntohs(add_u->sin_port),
-    .pip_w = ntohl(add_u->sin_addr.s_addr)
-  };
+  struct sockaddr_in add_u;
+  memset(&add_u, 0, sizeof(add_u));
+  add_u.sin_family = AF_INET;
+  add_u.sin_addr.s_addr = htonl(lan_u.pip_w);
+  add_u.sin_port = htons(lan_u.por_s);
+
+  // struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+  // u3_lane lan_u = {
+  //   .por_s = ntohs(add_u->sin_port),
+  //   .pip_w = ntohl(add_u->sin_addr.s_addr)
+  // };
   _stun_make_response(req_y, &lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
-                               &buf_u, 1, adr_u, _stun_send_response_cb);
+                               &buf_u, 1, (struct sockaddr *)&add_u, _stun_send_response_cb);
 
   if ( sas_i != 0 ) {
     u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
@@ -2591,12 +2597,31 @@ _ames_try_forward(u3_pact* pac_u)
 **      trigger printfs suggesting upgrade.
 **      they cannot be filtered, as we do not know their semantics
 */
-static void
+void
 _ames_hear(u3_ames* sam_u,
            u3_lane* lan_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
+
+  // XX reorg, check if a STUN req/resp can look like an ames packet
+  //  check the mug hash of the body of the packet, if not check if STUN
+  //  otherwise , invalid packet, log failure
+  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
+  //    for next protocol version, have an urbit cookie
+  //
+  if (_stun_is_request(hun_y, len_w) == c3y) {
+    _stun_on_request(sam_u, hun_y, *lan_u);
+    c3_free(hun_y);
+    return;
+  }
+  else if (_stun_is_our_response(hun_y, sam_u->sun_u.tid_y, len_w)
+              == c3y) {
+    _stun_on_response(sam_u, hun_y, len_w);
+    c3_free(hun_y);
+    return;
+  }
+
   u3_pact* pac_u;
   c3_w     pre_w;
   c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
@@ -2735,21 +2760,6 @@ _ames_recv_cb(uv_udp_t*        wax_u,
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("ames: recv: fail: message truncated");
     }
-    c3_free(buf_u->base);
-  }
-  // XX reorg, check if a STUN req/resp can look like an ames packet
-  //  check the mug hash of the body of the packet, if not check if STUN
-  //  otherwise , invalid packet, log failure
-  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
-  //    for next protocol version, have an urbit cookie
-  //
-  else if (_stun_is_request((c3_y*)buf_u->base, nrd_i) == c3y) {
-      _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
-      c3_free(buf_u->base);
-  }
-  else if (_stun_is_our_response((c3_y*)buf_u->base, sam_u->sun_u.tid_y, nrd_i)
-              == c3y) {
-    _stun_on_response(sam_u, (c3_y*)buf_u->base, nrd_i);
     c3_free(buf_u->base);
   }
   else {
@@ -2994,6 +3004,8 @@ _ames_io_talk(u3_auto* car_u)
   //    (or some other reconfig) effect when it is reset.
   //
   u3_noun gang = u3nc(u3_nul, u3_nul);
+  //  XX  drop this; done at another level
+  //
   u3_pier_peek_last(car_u->pir_u, gang, c3__ax, u3_nul,
                     u3nt(u3i_string("protocol"), u3i_string("version"), u3_nul),
                     sam_u, _ames_prot_scry_cb);
@@ -3001,7 +3013,7 @@ _ames_io_talk(u3_auto* car_u)
 
 /* _ames_kick_newt(): apply packet network outputs.
 */
-static c3_o
+c3_o
 _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
 {
   c3_o ret_o;
@@ -3035,6 +3047,7 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
       sam_u->nal_o = c3y;
       ret_o = c3y;
     } break;
+
   }
 
   u3z(tag); u3z(dat);
@@ -3290,5 +3303,7 @@ u3_ames_io_init(u3_pier* pir_u)
     u3z(now);
   }
 
+  // XX declare void pointer to u3_host and add sam_u in it
+  u3_Host.sam_u = sam_u;
   return car_u;
 }

@@ -156,6 +156,6 @@ c3_w mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u);
 
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
-void log_pact(u3_mesa_pact* pac_u);
+void _log_pact(u3_mesa_pact* pac_u);
 
 #endif

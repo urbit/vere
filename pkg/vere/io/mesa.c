@@ -882,7 +882,7 @@ _try_resend(u3_pend_req* req_u)
 }
 
 static void
-_mesa_packet_timeout(uv_timer_t* tim_u); 
+_mesa_packet_timeout(uv_timer_t* tim_u);
 
 static void
 _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
@@ -1288,6 +1288,9 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   u3z(pac);
 }
 
+c3_o
+_ames_kick_newt(void* sam_u, u3_noun tag, u3_noun dat);
+
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
   c3_o ret_o;
@@ -1306,6 +1309,13 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         _mesa_ef_send(sam_u, u3k(las), u3k(pac));
         ret_o = c3y;
       }
+    } break;
+    case c3__send:
+    case c3__turf:
+    case c3__saxo:
+    case c3__nail: {
+
+      ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
   }
 
@@ -1535,6 +1545,7 @@ static u3_weak
 _mesa_get_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   u3_noun pax = _name_to_scry(nam_u);
+  u3m_p("_mesa_get_cache pax", pax);
   u3_weak res = u3h_get(sam_u->pac_p, pax);
   if ( u3_none == res ) {
     //u3m_p("miss", u3k(pax));
@@ -1548,7 +1559,7 @@ static void
 _mesa_put_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
-
+  u3m_p("_mesa_put_cache pax", pax);
   u3h_put(sam_u->pac_p, pax, u3k(val));
   u3z(pax); // TODO: fix refcount
 }
@@ -1648,14 +1659,16 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
-        /* if (fra_w == len_w && tag == MESA_WAIT) { */
-        /*   c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit))); */
-        /*   pac_u->pek_u.nam_u.fra_w = fra_w; */
-        /*   _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat))); */
-        /* } */
+        //  if (fra_w == len_w && tag == MESA_WAIT) {
+        //    c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+        //    pac_u->pek_u.nam_u.fra_w = fra_w;
+        //    _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
+        //  }
 
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
+        _log_pact(pac_u);
+        u3l_log("_mesa_put_cache loop %s", pac_u->pek_u.nam_u.pat_c);
         _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
         // u3z(key);
 
@@ -1866,7 +1879,7 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-  /* u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
+   u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
 #endif
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
@@ -1961,6 +1974,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_pend_req* req_u;
 
   if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
+    u3l_log("_mesa_req_pact_init NIT");
     req_u = _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     if ( req_u == NULL ) {
       _mesa_free_pict(pic_u);
@@ -2103,7 +2117,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_w  bat_w = _mesa_lop(fra_w);
 
   pac_u->pek_u.nam_u.fra_w = bat_w;
-
+  _log_pact(pac_u);
+  u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c);
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
 
   /* u3l_log("peek fra %u hit %u", fra_w, hit != u3_none); */
@@ -2273,6 +2288,12 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     ptr_v, nes_f, bal_f);
 }
 
+void
+_ames_hear(void*    sam_u,
+           u3_lane* lan_u,
+           c3_w     len_w,
+           c3_y*    hun_y);
+
 static void
 _mesa_hear(u3_mesa* sam_u,
            u3_lane* lan_u,
@@ -2294,9 +2315,10 @@ _mesa_hear(u3_mesa* sam_u,
 
   c3_free(hun_y);
   if ( lin_w == 0 ) {
-    MESA_LOG(SERIAL)
-    c3_free(hun_y);
+    // MESA_LOG(SERIAL)
+    // c3_free(hun_y);
     mesa_free_pact(&pic_u->pac_u);
+    _ames_hear(u3_Host.sam_u, lan_u, len_w, hun_y);
     return;
   }
 
