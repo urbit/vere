@@ -904,17 +904,17 @@ _ames_send(u3_pact* pac_u)
     add_u.sin_addr.s_addr = htonl(pac_u->rut_u.lan_u.pip_w);
     add_u.sin_port = htons(pac_u->rut_u.lan_u.por_s);
 
-    //u3l_log("_ames_send %s %u", _str_typ(pac_u->typ_y),
+    // u3l_log("_ames_send %s %u", _str_typ(pac_u->typ_y),
     //                              pac_u->rut_u.lan_u.por_s);
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
 
-      c3_i     sas_i = 0; /*uv_udp_send(&pac_u->snd_u,
+      c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &sam_u->wax_u,
                                    &buf_u, 1,
                                    (const struct sockaddr*)&add_u,
-                                   _ames_send_cb); */
+                                   _ames_send_cb);
 
       if ( sas_i ) {
         if ( c3y == sam_u->fig_u.net_o ) {

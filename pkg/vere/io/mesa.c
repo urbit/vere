@@ -1302,10 +1302,10 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__push: {
       u3_noun las, pac;
       if ( c3n == u3r_cell(dat, &las, &pac) ) {
-        u3l_log(" vere: send no");
+        u3l_log(" mesa: send no");
         ret_o = c3n;
       } else {
-        u3l_log(" vere: send yes");
+        u3l_log(" mesa: send yes");
         _mesa_ef_send(sam_u, u3k(las), u3k(pac));
         ret_o = c3y;
       }
@@ -1314,7 +1314,6 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__turf:
     case c3__saxo:
     case c3__nail: {
-
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
   }
@@ -2313,7 +2312,6 @@ _mesa_hear(u3_mesa* sam_u,
 
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
 
-  c3_free(hun_y);
   if ( lin_w == 0 ) {
     // MESA_LOG(SERIAL)
     // c3_free(hun_y);
@@ -2321,6 +2319,8 @@ _mesa_hear(u3_mesa* sam_u,
     _ames_hear(u3_Host.sam_u, lan_u, len_w, hun_y);
     return;
   }
+
+  c3_free(hun_y);
 
   switch ( pic_u->pac_u.hed_u.typ_y ) {
     case PACT_PEEK: {
