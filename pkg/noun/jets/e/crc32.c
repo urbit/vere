@@ -27,13 +27,14 @@ u3qe_crc32(u3_noun input_octs)
   c3_w leading_zeros = head - len_w;
   c3_w crc = 0L;
 
+  crc = crc32(crc, input, len_w);
+
   while (leading_zeros > 0) {
     c3_y lz_input = 0;
     crc = crc32(crc, &lz_input, 1);
     leading_zeros--;
   }
 
-  crc = crc32(crc, input, len_w);
   return u3i_word(crc);
 }
 
