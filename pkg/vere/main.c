@@ -2412,7 +2412,21 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     return 1;
   }
 
-  return WEXITSTATUS(sat_i);
+  if ( WIFEXITED(sat_i) ) {
+    c3_i ret_i = WEXITSTATUS(sat_i);
+    if ( 0 != ret_i ) {
+      fprintf(stderr, "play: exited with %d\r\n", ret_i);
+    }
+    return ret_i;
+  }
+  else if ( WIFSIGNALED(sat_i) ) {
+    fprintf(stderr, "play: terminated by signal %d\r\n", WTERMSIG(sat_i));
+    return 1;
+  }
+  else {
+    fprintf(stderr, "play: strange termination\r\n");
+    return 1;
+  }
 }
 
 /* _cw_play(): replay events, but better.
