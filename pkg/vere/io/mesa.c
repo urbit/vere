@@ -787,15 +787,15 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 
   memset(&add_u, 0, sizeof(add_u));
   add_u.sin_family = AF_INET;
-  c3_w pip_w = c3n == u3_Host.ops_u.net ? lan_u.pip_w : 0x7f000001;
+  c3_w pip_w = c3y == u3_Host.ops_u.net ? lan_u.pip_w : 0x7f000001;
   c3_s por_s = lan_u.por_s;
-
+  u3l_log("sending to ip : %x, port: %u", pip_w, por_s);
   add_u.sin_addr.s_addr = htonl(pip_w);
   add_u.sin_port = htons(por_s);
 
 #ifdef MESA_DEBUG
   c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  // u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s);
+  u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s);
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -1096,6 +1096,9 @@ _realise_lane(u3_noun lan) {
   } else {
     u3_noun tag, pip, por;
     u3x_trel(lan, &tag, &pip, &por);
+    u3m_p("tag",tag);
+    u3m_p("pip", pip);
+    u3m_p("por", por);
     if ( tag == c3__if ) {
       lan_u.pip_w = u3i_word(pip);
       u3_assert( c3y == u3a_is_cat(por) && por <= 0xFFFF);
@@ -1117,7 +1120,7 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
-    /* u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
+    u3l_log("sending to ip : %x, port: %u", lan_u.pip_w, lan_u.por_s);
     #ifdef MESA_DEBUG
      /* u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
 
@@ -1275,7 +1278,9 @@ static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
   // u3m_p("pac", pac);
+  u3m_p("las", las);
   las = _mesa_queue_czar(sam_u, las, u3k(pac));
+  u3m_p("las", las);
   c3_w len_w = u3r_met(3, pac);
   c3_y* buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1884,6 +1889,17 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   c3_s fra_s;
 
+
+  c3_d* her_d = pac_u->pek_u.nam_u.her_d;
+  c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
+
+  //  forwarding wrong, need a PIT entry
+  // if ( c3n == our_o ) {
+  //   _mesa_forward(pic_u, lan_u);
+  //   _mesa_free_pict(pic_u);
+  //   return;
+  // }
+
   u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pag_u.nam_u.her_d);
   c3_o new_o = c3n;
   if ( NULL == per_u ) {
@@ -1908,6 +1924,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
 
+  //  XX  better check to forward pages?
   if ( u3_none != hit ) {
     _mesa_forward(pic_u, lan_u);
     _mesa_free_pict(pic_u);
