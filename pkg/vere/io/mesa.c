@@ -1100,7 +1100,7 @@ _realise_lane(u3_noun lan) {
     u3m_p("pip", pip);
     u3m_p("por", por);
     if ( tag == c3__if ) {
-      lan_u.pip_w = u3i_word(pip);
+      lan_u.pip_w = u3r_word(0, pip);
       u3_assert( c3y == u3a_is_cat(por) && por <= 0xFFFF);
       lan_u.por_s = por;
     } else {
@@ -2359,6 +2359,12 @@ _mesa_recv_cb(uv_udp_t*        wax_u,
               const struct sockaddr* adr_u,
               unsigned         flg_i)
 {
+
+  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+
+  c3_c* sip_c = inet_ntoa(add_u->sin_addr);
+  u3l_log("mesa: hear packet (%s:%u)", sip_c, add_u->sin_port);
+
   if ( 0 > nrd_i ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
@@ -2376,7 +2382,7 @@ _mesa_recv_cb(uv_udp_t*        wax_u,
   }
   else {
     u3_mesa*            sam_u = wax_u->data;
-    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+    // struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
     u3_lane             lan_u;
 
 
