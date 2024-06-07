@@ -229,6 +229,7 @@ _link_king_with_serf(IM3Runtime runtime,
     return m3Err_none;
   }
   else if (strcmp(mod, "lia") == 0) {
+    return m3Err_trapAbort;
     // TODO: handle shop case
     //
     // if shop == ~: block (exit with a code to catch in main? custom error code?)
@@ -236,7 +237,6 @@ _link_king_with_serf(IM3Runtime runtime,
     //  get space-start, space-clue, data segment
     //  turn to array of byte-sized indices
     //  write to space with set or octs stuff
-
   }
 }
 
@@ -249,10 +249,11 @@ _link_serf_with_king(IM3Runtime runtime,
   const char *name = _ctx->function->import->fieldUtf8;
   IM3Runtime king_runtime = (IM3Runtime)_ctx->userdata;
   M3Result result;
-  const char *name_king = u3r_bytes_alloc(0, strlen(mod) + strlen(name) + 1, 0);
-  strcat(mod, name_king);
-  strcat("/", name_king);
-  strcat(name, name_king);
+  size_t mod_len = strlen(mod);
+  char *name_king = u3a_calloc(1, mod_len + strlen(name) + 2);
+  strcpy(name_king, mod);
+  strcpy(name_king + mod_len, "/");
+  strcpy(name_king + mod_len + 1, name);
   IM3Function f;
   result = m3_FindFunction(&f, king_runtime, name_king);
   if (result) {
@@ -326,12 +327,12 @@ u3wa_lia_main(u3_noun cor)
                         62, &line_import,
                         63, &line_diff,
                         0);
+    u3k(line_code);
+    u3k(line_shop);
     if (c3n == u3ud(line_diff))
     {
       u3_noun flag, p_diff;
       u3x_cell(line_diff, &flag, &p_diff);
-      u3k(line_code);
-      u3k(line_shop);
       if (c3y == flag) {
         line_code = u3kb_weld(line_code, u3nc(u3k(p_diff), u3_nul));
       }
@@ -610,7 +611,7 @@ u3wa_lia_main(u3_noun cor)
     u3z(input_line_vals);
     u3z(line_shop);
     u3z(king_octs);
-    // u3z(out_wasm);  returns nonsense otherwise
+    u3z(out_wasm);
     u3z(line_code_flopped);
     // m3_FreeModule(wasm3_module_king);  // external fault?
     // m3_FreeModule(wasm3_module_serf);
