@@ -41,6 +41,7 @@ vere_library(
         "@softfloat",
         "@urcrypt",
         "@uv",
+        "@zlib",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
