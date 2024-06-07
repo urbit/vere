@@ -47,5 +47,13 @@ build:mem_dbg --per_file_copt='pkg/.*@-DU3_MEMORY_DEBUG'
 build:cpu_dbg --per_file_copt='pkg/.*@-DU3_CPU_DEBUG'
 build:snp_dbg --per_file_copt='pkg/.*@-DU3_SNAPSHOT_VALIDATION'
 
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -O1
+build:asan --copt -g
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc
