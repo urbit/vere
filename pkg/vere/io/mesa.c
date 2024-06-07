@@ -789,7 +789,6 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
   add_u.sin_family = AF_INET;
   c3_w pip_w = c3y == u3_Host.ops_u.net ? lan_u.pip_w : 0x7f000001;
   c3_s por_s = lan_u.por_s;
-  u3l_log("sending to ip : %x, port: %u", pip_w, por_s);
   add_u.sin_addr.s_addr = htonl(pip_w);
   add_u.sin_port = htons(por_s);
 
@@ -1096,9 +1095,6 @@ _realise_lane(u3_noun lan) {
   } else {
     u3_noun tag, pip, por;
     u3x_trel(lan, &tag, &pip, &por);
-    u3m_p("tag",tag);
-    u3m_p("pip", pip);
-    u3m_p("por", por);
     if ( tag == c3__if ) {
       lan_u.pip_w = u3r_word(0, pip);
       u3_assert( c3y == u3a_is_cat(por) && por <= 0xFFFF);
@@ -1120,7 +1116,7 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
-    u3l_log("sending to ip : %x, port: %u", lan_u.pip_w, lan_u.por_s);
+
     #ifdef MESA_DEBUG
      /* u3l_log("sending to ip: %x, port: %u", lan_u.pip_w, lan_u.por_s); */
 
@@ -1549,7 +1545,6 @@ static u3_weak
 _mesa_get_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   u3_noun pax = _name_to_scry(nam_u);
-  u3m_p("_mesa_get_cache pax", pax);
   u3_weak res = u3h_get(sam_u->pac_p, pax);
   if ( u3_none == res ) {
     //u3m_p("miss", u3k(pax));
@@ -1563,7 +1558,6 @@ static void
 _mesa_put_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
-  u3m_p("_mesa_put_cache pax", pax);
   u3h_put(sam_u->pac_p, pax, u3k(val));
   u3z(pax); // TODO: fix refcount
 }
@@ -1672,7 +1666,6 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
         _log_pact(pac_u);
-        u3l_log("_mesa_put_cache loop %s", pac_u->pek_u.nam_u.pat_c);
         _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
         // u3z(key);
 
@@ -2359,12 +2352,6 @@ _mesa_recv_cb(uv_udp_t*        wax_u,
               const struct sockaddr* adr_u,
               unsigned         flg_i)
 {
-
-  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-
-  c3_c* sip_c = inet_ntoa(add_u->sin_addr);
-  u3l_log("mesa: hear packet (%s:%u)", sip_c, add_u->sin_port);
-
   if ( 0 > nrd_i ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
@@ -2382,7 +2369,7 @@ _mesa_recv_cb(uv_udp_t*        wax_u,
   }
   else {
     u3_mesa*            sam_u = wax_u->data;
-    // struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
     u3_lane             lan_u;
 
 
