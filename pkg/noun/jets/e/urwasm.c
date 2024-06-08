@@ -10,6 +10,7 @@
 #include "m3_env.h"
 
 #include "string.h"
+// #include <time.h>
 
 
 const char* N_FUNCS        = "n-funcs";
@@ -393,7 +394,8 @@ u3wa_lia_main(u3_noun cor)
     }
     c3_y *king_bytes = u3r_bytes_alloc(0, king_len, u3t(king_octs));
     c3_y *serf_bytes = u3r_bytes_alloc(0, serf_len, u3t(serf_octs));
-
+    // struct timeval stop, start;
+    // gettimeofday(&start, NULL);
     IM3Environment wasm3_env = m3_NewEnvironment();
     if (!wasm3_env) {
       fprintf(stderr, "env is null\r\n");
@@ -454,7 +456,7 @@ u3wa_lia_main(u3_noun cor)
       M3Function f = wasm3_module_king->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
-      if (strcmp(mod, "serf") == 0) {
+      // fprintf(stderr, "%s/%s\r\n", mod, name);
       result = m3_LinkRawFunctionEx(wasm3_module_king,
                                   mod, name, NULL,
                                   &_link_king_with_serf,
@@ -463,7 +465,6 @@ u3wa_lia_main(u3_noun cor)
         fprintf(stderr, "link error");
         return u3m_bail(c3__fail);
         }
-      }
     }
     n_imports = wasm3_module_serf->numFuncImports;
     for (int i = 0; i < n_imports; i++) {
@@ -555,6 +556,7 @@ u3wa_lia_main(u3_noun cor)
     u3_noun i_vals;
     u3x_cell(vals, &i_vals, &vals);
     if (vals != u3_nul) {
+      fprintf(stderr, "\r\nvals not null\r\n");
       return u3m_bail(c3__fail);
     }
     u3_atom len_i_vals = u3kb_lent(u3k(i_vals));
@@ -572,10 +574,13 @@ u3wa_lia_main(u3_noun cor)
       return u3m_bail(c3__fail);
     }
     u3z(len_i_vals);
+    // fprintf(stderr, "\r\nget script function\r\n");
     IM3Function f = Module_GetFunction(wasm3_module_king, func_idx_last);
     CompileFunction(f);
     result = m3_CallV(f);
     if (result) {
+      fprintf(stderr, "\r\nscript call fail\r\n");
+      fprintf(stderr, result);
       return u3m_bail(c3__fail);
     }
     u3_noun line_code_flopped = u3kb_flop(line_code); 
@@ -591,7 +596,7 @@ u3wa_lia_main(u3_noun cor)
     for (c3_w i = 0; i < n_out; i++) {
       u3_noun lia_type, wasm_noun;
       u3x_cell(lia_types, &lia_type, &lia_types);
-      u3x_cell(t, &wasm_noun, &t);  // potential leak?
+      u3x_cell(t, &wasm_noun, &t);
       if (lia_type != TAS_OCTS) {
         if (lia_type != u3h(wasm_noun)) {
           return u3m_bail(c3__exit);
@@ -599,20 +604,24 @@ u3wa_lia_main(u3_noun cor)
         out_lia = u3nc(u3k(wasm_noun), out_lia);
       }
       else {
+        // fprintf(stderr, "\r\nextract octs\r\n");
         if (TAS_I32 != u3h(wasm_noun)) {
           return u3m_bail(c3__exit);
         }
         IM3Function f;
         result = m3_FindFunction (&f, wasm3_runtime_king, GET_SPACE_PTR);
         if (result) {
+          fprintf(stderr, "\r\nGET_SPACE_PTR find error\r\n");
           return u3m_bail(c3__fail);
         }
         result = m3_CallV(f, u3r_word(0, u3t(wasm_noun)));
         if (result) {
+          fprintf(stderr, "\r\nGET_SPACE_PTR call error\r\n");
           return u3m_bail(c3__fail);
         }
         u3_noun list_ptr =  _get_results_wasm(f, 1);
         if (u3h(u3h(list_ptr)) != TAS_I32) {
+          fprintf(stderr, "\r\nspace ptr not i32\r\n");
           return u3m_bail(c3__fail);
         }
         c3_w ptr = u3r_word(0, u3t(u3h(list_ptr)));
@@ -627,11 +636,13 @@ u3wa_lia_main(u3_noun cor)
           c3_w len_mem;
           c3_y* mem = m3_GetMemory(wasm3_runtime_king, &len_mem, 0);
           if ( (mem == NULL) || (ptr + 4 > len_mem) ) {
+            fprintf(stderr, "\r\nmem too small for length prefix\r\n");
             return u3m_bail(c3__fail);
           }
           u3_atom len_octs = u3i_bytes(4, (mem+ptr));
           c3_w w_len_octs = u3r_word(0, len_octs);
           if (ptr + 4 + w_len_octs > len_mem) {
+            fprintf(stderr, "\r\nmem too small for length data\r\n");
             return u3m_bail(c3__fail);
           }
           u3_atom data_octs = u3i_bytes(w_len_octs, (mem+(ptr+4)));
@@ -655,7 +666,8 @@ u3wa_lia_main(u3_noun cor)
     // m3_FreeEnvironment(wasm3_env);
     u3a_free(king_bytes);
     u3a_free(serf_bytes);
-
+    // gettimeofday(&stop, NULL);
+    // fprintf(stderr, "\r\ntook %lu us\r\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
     return u3nc(0, u3kb_flop(out_lia));
   }
 }
