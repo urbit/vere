@@ -192,8 +192,8 @@ _link_king_with_serf(IM3Runtime king_runtime,
                      IM3ImportContext _ctx,
                      uint64_t * _sp,
                      void * _mem) {
-  const char *mod = _ctx->function->import->moduleUtf8;
-  const char *name = _ctx->function->import->fieldUtf8;
+  const char *mod = _ctx->function->import.moduleUtf8;
+  const char *name = _ctx->function->import.fieldUtf8;
   IM3Runtime serf_runtime = ((king_link_data*)_ctx->userdata)->serf_runtime;
   u3_noun *shop = ((king_link_data*)_ctx->userdata)->shop;
   M3Result result;
@@ -206,11 +206,11 @@ _link_king_with_serf(IM3Runtime king_runtime,
     }
     c3_w n_in  = f->funcType->numArgs;
     c3_w n_out = f->funcType->numRets;
-    c3_d **valptrs_in = (c3_d **) u3a_calloc(n_in, sizeof(c3_d*));
+    const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
     for (int i = 0; i < n_in; i++) {
         valptrs_in[i] = &_sp[i+n_out];
       }
-    c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
+    const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
     for (int i = 0; i < n_out; i++) {
         valptrs_out[i] = &_sp[i];
       }
@@ -279,8 +279,8 @@ _link_serf_with_king(IM3Runtime runtime,
               IM3ImportContext _ctx,
               uint64_t * _sp,
               void * _mem) {
-  const char *mod = _ctx->function->import->moduleUtf8;
-  const char *name = _ctx->function->import->fieldUtf8;
+  const char *mod = _ctx->function->import.moduleUtf8;
+  const char *name = _ctx->function->import.fieldUtf8;
   IM3Runtime king_runtime = (IM3Runtime)_ctx->userdata;
   M3Result result;
   size_t mod_len = strlen(mod);
@@ -297,11 +297,11 @@ _link_serf_with_king(IM3Runtime runtime,
   }
   c3_w n_in  = f->funcType->numArgs;
   c3_w n_out = f->funcType->numRets;
-  c3_d **valptrs_in = (c3_d **) u3a_calloc(n_in, sizeof(c3_d*));
+  const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
   for (int i = 0; i < n_in; i++) {
       valptrs_in[i] = &_sp[i+n_out];
     }
-  c3_d **valptrs_out = (c3_d **) u3a_calloc(n_out, sizeof(c3_d*));
+  const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
   for (int i = 0; i < n_out; i++) {
       valptrs_out[i] = &_sp[i];
     }
@@ -450,7 +450,7 @@ u3wa_lia_main(u3_noun cor)
     //
     king_link_data king_struct = {wasm3_runtime_serf, &line_shop};
     c3_w n_imports = wasm3_module_king->numFuncImports;
-    for (i = 0; i < n_imports; i++) {
+    for (int i = 0; i < n_imports; i++) {
       M3Function f = wasm3_module_king->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
@@ -458,7 +458,7 @@ u3wa_lia_main(u3_noun cor)
       result = m3_LinkRawFunctionEx(wasm3_module_king,
                                   mod, name, NULL,
                                   &_link_king_with_serf,
-                                  (void *)king_struct);
+                                  &king_struct);
       if (result) {
         fprintf(stderr, "link error");
         return u3m_bail(c3__fail);
@@ -466,7 +466,7 @@ u3wa_lia_main(u3_noun cor)
       }
     }
     n_imports = wasm3_module_serf->numFuncImports;
-    for (i = 0; i < n_imports; i++) {
+    for (int i = 0; i < n_imports; i++) {
       M3Function f = wasm3_module_serf->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
