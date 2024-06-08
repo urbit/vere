@@ -188,7 +188,7 @@ _put_space(u3_cell val, IM3Runtime runtime, c3_w target)
 }
 
 static const void *
-_link_king_with_serf(IM3Runtime runtime,
+_link_king_with_serf(IM3Runtime king_runtime,
                      IM3ImportContext _ctx,
                      uint64_t * _sp,
                      void * _mem) {
@@ -228,6 +228,40 @@ _link_king_with_serf(IM3Runtime runtime,
     }
     return m3Err_none;
   }
+  else if (strcmp(mod, "memio") == 0) {
+    m3ApiGetArg  (c3_w, from);
+    m3ApiGetArg  (c3_w, to);
+    m3ApiGetArg  (c3_w, len);
+    if (strcmp(name, "read") == 0) {
+      c3_w len_mem;
+      c3_y* mem_king = m3_GetMemory(king_runtime, &len_mem, 0);
+      if ( (mem_king == NULL) || (to + len > len_mem) ) {
+        return m3Err_trapAbort;
+      }
+      c3_y* mem_serf = m3_GetMemory(serf_runtime, &len_mem, 0);
+      if ( (mem_serf == NULL) || (from + len > len_mem) ) {
+        return m3Err_trapAbort;
+      }
+      memcpy(mem_king+to, mem_serf+from, len);
+      m3ApiSuccess();
+    }
+    else if (strcmp(name, "write") == 0) {
+      c3_w len_mem;
+      c3_y* mem_king = m3_GetMemory(king_runtime, &len_mem, 0);
+      if ( (mem_king == NULL) || (from + len > len_mem) ) {
+        return m3Err_trapAbort;
+      }
+      c3_y* mem_serf = m3_GetMemory(serf_runtime, &len_mem, 0);
+      if ( (mem_serf == NULL) || (to + len > len_mem) ) {
+        return m3Err_trapAbort;
+      }
+      memcpy(mem_serf+to, mem_king+from, len);
+      m3ApiSuccess();
+    }
+    else {
+      return m3Err_trapAbort;
+    }
+  }
   else if (strcmp(mod, "lia") == 0) {
     return m3Err_trapAbort;
     // TODO: handle shop case
@@ -256,6 +290,7 @@ _link_serf_with_king(IM3Runtime runtime,
   strcpy(name_king + mod_len + 1, name);
   IM3Function f;
   result = m3_FindFunction(&f, king_runtime, name_king);
+  u3a_free(name_king);
   if (result) {
     fprintf(stderr, "function not found");
     return result;
