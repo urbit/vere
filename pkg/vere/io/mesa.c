@@ -999,7 +999,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   }
 
   // received duplicate
-  if ( nam_u->fra_w != 0 && c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
+  if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
     /* MESA_LOG(DUPE); */
     req_u->wat_u[nam_u->fra_w].dup_y++;
     return req_u;
@@ -1657,11 +1657,11 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
-        //  if (fra_w == len_w && tag == MESA_WAIT) {
-        //    c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
-        //    pac_u->pek_u.nam_u.fra_w = fra_w;
-        //    _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
-        //  }
+         if (fra_w == len_w && tag == MESA_WAIT) {
+           c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+           pac_u->pek_u.nam_u.fra_w = fra_w;
+           _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
+         }
 
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
