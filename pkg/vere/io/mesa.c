@@ -2161,7 +2161,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     if ( c3y == our_o ) {
       u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
                                         fra_w == 0 ? 0 : bat_w,
-                                        fra_w == 0 ? 4096 : bat_w + MESA_HUNK);
+                                        fra_w == 0 ? MESA_HUNK : bat_w + MESA_HUNK);
 
       pac_u->pek_u.nam_u.fra_w = fra_w;
 
