@@ -2047,7 +2047,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
       // cad = u3nt(c3__mess_ser, lan,
       //            u3nq(c3__page, par, aut, dat));
-      u3_noun lan = u3_nul;
+      u3_noun  lan = u3_mesa_encode_lane(lan_u);
       u3i_slab sab_u;
       // u3i_slab_init(&sab_u, 3, PACT_SIZE);
       // u3i_slab_init(&sab_u, 3, (siz_w * req_u->tot_w) + 135);
