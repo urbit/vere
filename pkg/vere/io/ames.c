@@ -1135,6 +1135,7 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
 
     if ( sas_i == 0 ) {
       _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
+      _ames_pact_free(pac_u);
     } else {
       _ames_czar_gone(pac_u->sam_u, now,
                       pac_u->rut_u.imp_y,
