@@ -800,7 +800,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
 
   c3_i     sas_i = uv_udp_send(&sel_u->snd_u,
-                               &sam_u->wax_u,
+                               &u3_Host.wax_u,
                                &buf_u, 1,
                                (const struct sockaddr*)&add_u,
                                _mesa_send_cb);
@@ -2428,7 +2428,7 @@ _mesa_io_talk(u3_auto* car_u)
                               htonl(INADDR_LOOPBACK);
     add_u.sin_port = htons(por_s);
 
-    if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
+    if ( (ret_i = uv_udp_bind(&u3_Host.wax_u,
                               (const struct sockaddr*)&add_u, 0)) != 0 )
     {
       u3l_log("mesa: bind: %s", uv_strerror(ret_i));
@@ -2444,7 +2444,7 @@ _mesa_io_talk(u3_auto* car_u)
       u3_pier_bail(u3_king_stub());
     }
 
-    uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
+    uv_udp_getsockname(&u3_Host.wax_u, (struct sockaddr *)&add_u, &add_i);
     u3_assert(add_u.sin_port);
 
     sam_u->pir_u->por_s = ntohs(add_u.sin_port);
@@ -2456,7 +2456,8 @@ _mesa_io_talk(u3_auto* car_u)
     u3l_log("mesa: live on %d (localhost only)", sam_u->pir_u->por_s);
   }
 
-  uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _mesa_recv_cb);
+  u3_Host.wax_u.data = sam_u;
+  uv_udp_recv_start(&u3_Host.wax_u, _ames_alloc, _mesa_recv_cb);
 
   sam_u->car_u.liv_o = c3y;
   //u3z(rac); u3z(who);

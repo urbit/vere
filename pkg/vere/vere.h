@@ -341,7 +341,7 @@
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
         void*      sam_u;                   //  XX
-        uv_udp_t*  wax_u;                   //  XX
+        uv_udp_t   wax_u;                   //  XX
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.

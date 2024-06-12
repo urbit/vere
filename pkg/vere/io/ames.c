@@ -896,10 +896,6 @@ _ames_send(u3_pact* pac_u)
     u3l_log("ames: _ames_send null");
     _ames_pact_free(pac_u);
   }
-  else if ( !u3_Host.wax_u ) {
-    u3l_log("ames: send: no handle");
-    _ames_pact_free(pac_u);
-  }
   else {
     struct sockaddr_in add_u;
 
@@ -915,7 +911,7 @@ _ames_send(u3_pact* pac_u)
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
 
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
-                                   u3_Host.wax_u,
+                                   &u3_Host.wax_u,
                                    &buf_u, 1,
                                    (const struct sockaddr*)&add_u,
                                    _ames_send_cb);
@@ -1430,11 +1426,6 @@ _stun_on_request(u3_ames*    sam_u,
                 const c3_y*  req_y,
                 u3_lane      lan_u)
 {
-  if ( !u3_Host.wax_u ) {
-    u3l_log("stun: response: no handle");
-    return;
-  }
-
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sam_u = sam_u;
 
@@ -1452,7 +1443,7 @@ _stun_on_request(u3_ames*    sam_u,
   _stun_make_response(req_y, &lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, u3_Host.wax_u,
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u,
                                &buf_u, 1, (struct sockaddr *)&add_u, _stun_send_response_cb);
 
   if ( sas_i != 0 ) {
@@ -1564,11 +1555,6 @@ _stun_send_request(u3_ames* sam_u)
 {
   u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
 
-  if ( !u3_Host.wax_u ) {
-    u3l_log("stun: request: no handle");
-    return;
-  }
-
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
   snd_u->sam_u = sam_u;
 
@@ -1581,7 +1567,7 @@ _stun_send_request(u3_ames* sam_u)
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i sas_i = uv_udp_send(&snd_u->req_u, u3_Host.wax_u, &buf_u, 1,
+  c3_i sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u, &buf_u, 1,
                            (const struct sockaddr*)&add_u, _stun_send_request_cb);
 
   if ( sas_i != 0) {
@@ -3289,6 +3275,7 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->lax_p = u3h_new_cache(500000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
+  uv_udp_init(u3L, &u3_Host.wax_u);
   sam_u->wax_u.data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();
