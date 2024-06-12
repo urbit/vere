@@ -208,11 +208,11 @@ _link_king_with_serf(IM3Runtime king_runtime,
     c3_w n_in  = f->funcType->numArgs;
     c3_w n_out = f->funcType->numRets;
     const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-    for (int i = 0; i < n_in; i++) {
+    for (c3_w i = 0; i < n_in; i++) {
         valptrs_in[i] = &_sp[i+n_out];
       }
     const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-    for (int i = 0; i < n_out; i++) {
+    for (c3_w i = 0; i < n_out; i++) {
         valptrs_out[i] = &_sp[i];
       }
     result = m3_Call(f, n_in, valptrs_in);
@@ -273,6 +273,9 @@ _link_king_with_serf(IM3Runtime king_runtime,
     //  turn to array of byte-sized indices
     //  write to space with set or octs stuff
   }
+  else {
+    return m3Err_trapAbort;
+  }
 }
 
 static const void *
@@ -299,11 +302,11 @@ _link_serf_with_king(IM3Runtime runtime,
   c3_w n_in  = f->funcType->numArgs;
   c3_w n_out = f->funcType->numRets;
   const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-  for (int i = 0; i < n_in; i++) {
+  for (c3_w i = 0; i < n_in; i++) {
       valptrs_in[i] = &_sp[i+n_out];
     }
   const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-  for (int i = 0; i < n_out; i++) {
+  for (c3_w i = 0; i < n_out; i++) {
       valptrs_out[i] = &_sp[i];
     }
   result = m3_Call(f, n_in, valptrs_in);
@@ -319,6 +322,76 @@ _link_serf_with_king(IM3Runtime runtime,
     return result;
   }
   return m3Err_none;
+}
+
+static u3_noun
+_IM3FuncType_to_urwasm(IM3FuncType type) {
+  c3_s n_out = type->numRets;
+  c3_s n_in =  type->numArgs;
+  c3_b *types = type->types;
+  u3_noun params = u3_nul;
+  u3_noun results = u3_nul;
+  for (c3_s i = 0; i < n_out; i++) {
+    switch (types[i]) {
+      case c_m3Type_i32: {
+        results = u3nc(TAS_I32, results);
+        break;
+      }
+      case c_m3Type_i64: {
+        results = u3nc(TAS_I64, results);
+        break;
+      }
+      case c_m3Type_f32: {
+        results = u3nc(TAS_F32, results);
+        break;
+      }
+      case c_m3Type_f64: {
+        results = u3nc(TAS_F64, results);
+        break;
+      }
+      default: return u3m_bail(c3__fail);
+    }
+  }
+  for (c3_s i = 0; i < n_in; i++) {
+    switch (types[i+n_out]) {
+      case c_m3Type_i32: {
+        params = u3nc(TAS_I32, params);
+        break;
+      }
+      case c_m3Type_i64: {
+        params = u3nc(TAS_I64, params);
+        break;
+      }
+      case c_m3Type_f32: {
+        params = u3nc(TAS_F32, params);
+        break;
+      }
+      case c_m3Type_f64: {
+        params = u3nc(TAS_F64, params);
+        break;
+      }
+      default: return u3m_bail(c3__fail);
+    }
+  }
+  return u3nc(u3kb_flop(params), u3kb_flop(results));
+}
+
+static u3_noun
+_get_exports_serf(IM3Module serf)
+{
+  u3_noun out = u3_nul;
+  c3_w n = serf->numFunctions;
+  for (c3_w i = 0; i < n; i++) {
+    M3Function f = (serf->functions)[i];
+    c3_s numNames = f.numNames;
+    for (c3_w j = 0; j < numNames; j++) {
+      const char* export_name = f.names[j];
+      u3_atom name     = u3i_string(export_name);
+      u3_noun functype = _IM3FuncType_to_urwasm(f.funcType);
+      out = u3nc(u3nc(name, functype), out);
+    }
+  }
+  return out;
 }
 
 u3_weak
@@ -345,6 +418,41 @@ u3wa_lia_main(u3_noun cor)
     u3_noun line_module, line_code, line_shop,
             line_ext, line_import, line_diff;
     u3_noun king_ast, king_octs;
+
+    u3_atom serf_len = u3h(serf_octs);
+    if (c3n == u3a_is_cat(serf_len)) {
+      return u3m_bail(c3__fail);
+    }
+    c3_y *serf_bytes = u3r_bytes_alloc(0, serf_len, u3t(serf_octs));
+    IM3Environment wasm3_env = m3_NewEnvironment();
+    if (!wasm3_env) {
+      fprintf(stderr, "env is null\r\n");
+      return u3m_bail(c3__fail);
+    }
+    M3Result result;
+
+    IM3Runtime wasm3_runtime_serf = m3_NewRuntime(wasm3_env, 2097152, NULL);
+    if (!wasm3_runtime_serf) {
+      fprintf(stderr, "runtime is null\r\n");
+      return u3m_bail(c3__fail);
+    }
+
+    IM3Module wasm3_module_serf;
+    result = m3_ParseModule(wasm3_env,
+                            &wasm3_module_serf,
+                            serf_bytes,
+                            serf_len);
+    if (result) {
+      fprintf(stderr, "parse module error: %s\r\n", result);
+      return u3m_bail(c3__fail);
+    }
+
+    result = m3_LoadModule(wasm3_runtime_serf, wasm3_module_serf);
+    if (result) {
+      fprintf(stderr, "load module error: %s\r\n", result);
+      return u3m_bail(c3__fail);
+    }
+
 
     core_encoder = u3j_kink(u3k(u3at(31, cor)),  2);
     core_line    = u3j_kink(u3k(u3at(127, cor)), 2);
@@ -376,8 +484,9 @@ u3wa_lia_main(u3_noun cor)
         line_shop = u3kb_weld(line_shop, u3nc(u3k(p_diff), u3_nul));
       }
     }
+    u3_noun exports_serf = _get_exports_serf(wasm3_module_serf);
     king_ast = u3n_slam_on(gate_comp,
-      u3i_qual(u3k(line_module),
+      u3i_qual(exports_serf,
               u3k(line_code),
               u3k(line_ext),
               u3k(line_import)
@@ -388,45 +497,12 @@ u3wa_lia_main(u3_noun cor)
     if (c3n == u3a_is_cat(king_len)) {
       return u3m_bail(c3__fail);
     }
-    u3_atom serf_len = u3h(serf_octs);
-    if (c3n == u3a_is_cat(serf_len)) {
-      return u3m_bail(c3__fail);
-    }
+    
     c3_y *king_bytes = u3r_bytes_alloc(0, king_len, u3t(king_octs));
-    c3_y *serf_bytes = u3r_bytes_alloc(0, serf_len, u3t(serf_octs));
-    // struct timeval stop, start;
-    // gettimeofday(&start, NULL);
-    IM3Environment wasm3_env = m3_NewEnvironment();
-    if (!wasm3_env) {
-      fprintf(stderr, "env is null\r\n");
-      return u3m_bail(c3__fail);
-    }
-    M3Result result;
-    // serf
-    //
-    IM3Runtime wasm3_runtime_serf = m3_NewRuntime(wasm3_env, 2097152, NULL);
-    if (!wasm3_runtime_serf) {
-      fprintf(stderr, "runtime is null\r\n");
-      return u3m_bail(c3__fail);
-    }
-    IM3Module wasm3_module_serf;
-    result = m3_ParseModule(wasm3_env,
-                            &wasm3_module_serf,
-                            serf_bytes,
-                            serf_len);
-    if (result) {
-      fprintf(stderr, "parse module error: %s\r\n", result);
-      return u3m_bail(c3__fail);
-    }
-
-    result = m3_LoadModule(wasm3_runtime_serf, wasm3_module_serf);
-    if (result) {
-      fprintf(stderr, "load module error: %s\r\n", result);
-      return u3m_bail(c3__fail);
-    }
-
-    // king
-    //
+    
+    struct timeval stop, start;
+    gettimeofday(&start, NULL);
+    
     IM3Runtime wasm3_runtime_king = m3_NewRuntime(wasm3_env, 2097152, NULL);
     if (!wasm3_runtime_king) {
       fprintf(stderr, "runtime is null\r\n");
@@ -452,7 +528,7 @@ u3wa_lia_main(u3_noun cor)
     //
     king_link_data king_struct = {wasm3_runtime_serf, &line_shop};
     c3_w n_imports = wasm3_module_king->numFuncImports;
-    for (int i = 0; i < n_imports; i++) {
+    for (c3_w i = 0; i < n_imports; i++) {
       M3Function f = wasm3_module_king->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
@@ -467,7 +543,7 @@ u3wa_lia_main(u3_noun cor)
         }
     }
     n_imports = wasm3_module_serf->numFuncImports;
-    for (int i = 0; i < n_imports; i++) {
+    for (c3_w i = 0; i < n_imports; i++) {
       M3Function f = wasm3_module_serf->functions[i];
       const char * mod  = f.import.moduleUtf8;
       const char * name = f.import.fieldUtf8;
@@ -666,8 +742,8 @@ u3wa_lia_main(u3_noun cor)
     // m3_FreeEnvironment(wasm3_env);
     u3a_free(king_bytes);
     u3a_free(serf_bytes);
-    // gettimeofday(&stop, NULL);
-    // fprintf(stderr, "\r\ntook %lu us\r\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
+    gettimeofday(&stop, NULL);
+    fprintf(stderr, "\r\ntook %lu us\r\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
     return u3nc(0, u3kb_flop(out_lia));
   }
 }
