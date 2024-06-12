@@ -896,6 +896,10 @@ _ames_send(u3_pact* pac_u)
     u3l_log("ames: _ames_send null");
     _ames_pact_free(pac_u);
   }
+  else if ( !u3_Host.wax_u ) {
+    u3l_log("ames: send: no handle");
+    _ames_pact_free(pac_u);
+  }
   else {
     struct sockaddr_in add_u;
 
@@ -1426,6 +1430,11 @@ _stun_on_request(u3_ames*    sam_u,
                 const c3_y*  req_y,
                 u3_lane      lan_u)
 {
+  if ( !u3_Host.wax_u ) {
+    u3l_log("stun: response: no handle");
+    return;
+  }
+
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sam_u = sam_u;
 
@@ -1554,6 +1563,11 @@ static void
 _stun_send_request(u3_ames* sam_u)
 {
   u3_assert( STUN_OFF != sam_u->sun_u.sat_y );
+
+  if ( !u3_Host.wax_u ) {
+    u3l_log("stun: request: no handle");
+    return;
+  }
 
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
   snd_u->sam_u = sam_u;
