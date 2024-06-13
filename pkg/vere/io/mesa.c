@@ -67,7 +67,7 @@ typedef struct _u3_mesa_stat {
 #define IN_FLIGHT  10
 
 // XX
-#define MESA_HUNK  4096  //  184
+#define MESA_HUNK  16384  //  184
 
 // pending interest sentinels
 #define MESA_ITEM         1  // cached item
