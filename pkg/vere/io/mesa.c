@@ -793,8 +793,8 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
   add_u.sin_port = htons(por_s);
 
 #ifdef MESA_DEBUG
-  c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s);
+  /* c3_c* sip_c = inet_ntoa(add_u.sin_addr); */
+  /* u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s); */
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -950,6 +950,8 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
         if ( BAO_GOOD != (res_y = blake_bao_verify(req_u->bao_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u))) {
           return res_y;
         } else {
+          /* u3l_log("burn %u", buf_u->num_w); */
+          /* memcpy(req_u->dat_y + (1024 * buf_u->num_w), buf_u->fra_y, buf_u->len_w); */
           _mesa_free_misord_buf((u3_misord_buf*)vec_pop(&req_u->mis_u, i));
           break;
         }
@@ -1665,7 +1667,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
 
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
-        _log_pact(pac_u);
+        /* _log_pact(pac_u); */
         _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
         // u3z(key);
 
@@ -1876,7 +1878,7 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-   u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+   /* u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
 #endif
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
@@ -2126,8 +2128,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_w  bat_w = _mesa_lop(fra_w);
 
   pac_u->pek_u.nam_u.fra_w = bat_w;
-  _log_pact(pac_u);
-  u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c);
+  /* _log_pact(pac_u); */
+  /* u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c); */
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
 
   /* u3l_log("peek fra %u hit %u", fra_w, hit != u3_none); */
