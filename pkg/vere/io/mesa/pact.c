@@ -590,8 +590,8 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
       res_w = _mesa_sift_poke_pact(&pac_u->pok_u, buf_y, len_w);
     } break;
     default: {
-      u3l_log("mesa: received unknown packet type");
-      _log_buf(buf_y, len_w);
+      /* u3l_log("mesa: received unknown packet type"); */
+      /* _log_buf(buf_y, len_w); */
       break;
     }
   }
@@ -600,8 +600,12 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
     c3_w mug_w = u3r_mug_bytes(buf_y, res_w);
     mug_w &= 0xFFFFF;
 
+
     if ( mug_w != pac_u->hed_u.mug_w ) {
-      u3l_log("mesa: failed mug");
+      /* u3l_log("mesa: failed mug"); */
+      /* _log_buf(buf_y, res_w); */
+      /* u3l_log("res_w %u", res_w); */
+      /* u3l_log("frag %u", pac_u->pag_u.nam_u.fra_w); */
       return 0;
     }
   }
@@ -938,6 +942,7 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
       return 0;
     }
   }
+
 
   hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
   hed_u->mug_w &= 0xFFFFF;
