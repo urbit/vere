@@ -531,11 +531,11 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
 }
 
 struct HttpRes {
-  c3_i cod_i;
+  c3_w cod_w;
   c3_c* res_c;
 };
 
-static struct HttpRes http_get(c3_c* url_c) {
+static struct HttpRes _http_get(c3_c* url_c) {
   CURL *curl;
   CURLcode result;
   long cod_l;
@@ -558,11 +558,9 @@ static struct HttpRes http_get(c3_c* url_c) {
 
   if ( CURLE_OK != result ) {
     u3l_log("failed to fetch %s: %s", url_c, curl_easy_strerror(result));
-    /* exit(1); */
   }
   if ( 300 <= cod_l && 404 != cod_l ) {
     u3l_log("error fetching %s: HTTP %ld", url_c, cod_l);
-    /* exit(1); */
   }
 
   curl_easy_cleanup(curl);
@@ -571,14 +569,15 @@ static struct HttpRes http_get(c3_c* url_c) {
   return r;
 }
 
-static c3_i fetch_ping_ack(c3_c* czar, c3_c* who, c3_i bon) {
+static c3_w _fetch_ping_ack(c3_c* czar, c3_c* who, c3_w bon) {
   c3_c url[256];
   sprintf(url, "https://%s.urbit.org/~/boot/%s/%d", czar, who, bon + 1);
-  struct HttpRes res = http_get(url);
-  if ( 200 != res.cod_i) {
-    return -1;
+  u3l_log("dbug: fetxh: %s", url);
+  struct HttpRes res = _http_get(url);
+  if ( 200 != res.cod_w) {
+    return 0xFFFFFFFF;
   }
-  c3_i last_acked = strtoumax(res.res_c, NULL, 10);
+  c3_w last_acked = strtoumax(res.res_c, NULL, 10);
   return last_acked;
 }
 
@@ -601,8 +600,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
     c3_c*   czar_c = u3r_string(czar);
     c3_c url[256];
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
-    struct HttpRes res = http_get(url);
-    if (res.cod_i == 200) {
+    struct HttpRes res = _http_get(url);
+    if (res.cod_w == 200) {
       u3_noun jammed_atom =
         u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
       u3_noun unpacked = u3ke_cue(u3k(jammed_atom));
@@ -611,8 +610,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
       u3x_trel(unpacked, &czar_glx, &czar_ryf, &czar_lyf);
       czar_ryf_w = u3r_word(0, czar_ryf);
       if (czar_ryf_w == ryf_w) {
-        c3_i last_ack = fetch_ping_ack(czar_c, who_c, bon_w);
-        if (last_ack == -1) {
+        c3_w last_ack = _fetch_ping_ack(czar_c, who_c, bon_w);
+        if (last_ack == 0xFFFFFFFF) {
           u3l_log("boot: peer state unvailable on czar, cannot protect from double boot");
           _pier_work(wok_u);
         } else if (last_ack == nex_w - 1 || last_ack - 1 == nex_w - 1) {
@@ -642,18 +641,18 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
      * If peer state exists exit(1) unless ship has breached,
      * otherwise continue boot.
      */
-    c3_i sponsor = wok_u->pir_u->who_d[0] & ((1 << 8) - 1);
+    c3_w sponsor = wok_u->pir_u->who_d[0] & ((1 << 8) - 1);
     u3_noun czar = u3dc("scot", 'p', u3k(sponsor));
     c3_c* czar_c = u3r_string(u3k(czar));
     c3_c url[256];
     sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
-    struct HttpRes res = http_get(url);
-    if (res.cod_i == 200) {
+    struct HttpRes res = _http_get(url);
+    if (res.cod_w == 200) {
       czar_c = res.res_c;
     }
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
-    res = http_get(url);
-    if (res.cod_i == 200) {
+    res = _http_get(url);
+    if (res.cod_w == 200) {
       // Peer state found under czar
       u3_noun jammed_atom =
         u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
@@ -776,10 +775,10 @@ _pier_work_init(u3_pier* pir_u)
     u3_auto_talk(wok_u->car_u);
   }
 
-  c3_i pi_i = wok_u->pir_u->who_d[0];
-  c3_i pt_i = wok_u->pir_u->who_d[1];
+  c3_d pi_d = wok_u->pir_u->who_d[0];
+  c3_d pt_d = wok_u->pir_u->who_d[1];
 
-  if ((pi_i < 256 && pt_i == 0) || c3n == u3_Host.ops_u.net) {
+  if ((pi_d < 256 && pt_d == 0) || c3n == u3_Host.ops_u.net) {
     // Skip double boot protection for galaxies and local mode ships
     //
     _pier_work(wok_u);
