@@ -1565,6 +1565,11 @@
         darwin_register_mach_exception_handler();
 #endif
 
+      /* king_curl_alloc(): allocate a response buffer for curl
+       */
+        size_t
+        king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v);
+
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */
         void

@@ -530,21 +530,6 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
   u3z(nun);
 }
 
-static size_t
-_dawn_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
-{
-  uv_buf_t* buf_u = buf_v;
-
-  size_t siz_t = uni_t * mem_t;
-  buf_u->base = c3_realloc(buf_u->base, 1 + siz_t + buf_u->len);
-
-  memcpy(buf_u->base + buf_u->len, dat_v, siz_t);
-  buf_u->len += siz_t;
-  buf_u->base[buf_u->len] = 0;
-
-  return siz_t;
-}
-
 struct HttpRes {
   c3_i cod_i;
   c3_c* res_c;
@@ -564,7 +549,7 @@ static struct HttpRes http_get(c3_c* url_c) {
 
   u3K.ssl_curl_f(curl);
   curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
   curl_easy_setopt(curl, CURLOPT_SERVER_RESPONSE_TIMEOUT, 30);
 

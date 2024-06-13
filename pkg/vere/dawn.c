@@ -41,24 +41,6 @@ _dawn_buf_to_oct(uv_buf_t buf_u)
   return u3nc(len, u3i_bytes(buf_u.len, (const c3_y*)buf_u.base));
 }
 
-
-/* _dawn_curl_alloc(): allocate a response buffer for curl
-*/
-static size_t
-_dawn_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
-{
-  uv_buf_t* buf_u = buf_v;
-
-  size_t siz_t = uni_t * mem_t;
-  buf_u->base = c3_realloc(buf_u->base, 1 + siz_t + buf_u->len);
-
-  memcpy(buf_u->base + buf_u->len, dat_v, siz_t);
-  buf_u->len += siz_t;
-  buf_u->base[buf_u->len] = 0;
-
-  return siz_t;
-}
-
 /* _dawn_post_json(): POST JSON to url_c
 */
 static uv_buf_t
@@ -84,7 +66,7 @@ _dawn_post_json(c3_c* url_c, uv_buf_t lod_u)
   //
   u3K.ssl_curl_f(curl);
   curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hed_u);
 
@@ -131,7 +113,7 @@ _dawn_get_jam(c3_c* url_c)
   //
   u3K.ssl_curl_f(curl);
   curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
 
   result = curl_easy_perform(curl);

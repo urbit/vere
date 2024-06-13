@@ -270,11 +270,11 @@ _king_pier(u3_noun pier)
   u3z(pier);
 }
 
-/* _king_curl_alloc(): allocate a response buffer for curl
+/* king_curl_alloc(): allocate a response buffer for curl
 **  XX deduplicate with dawn.c
 */
-static size_t
-_king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
+size_t
+king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 {
   uv_buf_t* buf_u = buf_v;
 
@@ -308,7 +308,7 @@ _king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
 
   u3K.ssl_curl_f(cul_u);
   curl_easy_setopt(cul_u, CURLOPT_URL, url_c);
-  curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, _king_curl_alloc);
+  curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(cul_u, CURLOPT_WRITEDATA, (void*)&buf_u);
 
   while ( 5 > try_y ) {
