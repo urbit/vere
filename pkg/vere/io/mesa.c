@@ -572,7 +572,7 @@ _mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
   u3_pend_req* new_u = req_u;
   if ( old_u == NULL ) {
     new_u = u3a_calloc(1, sizeof(u3_pend_req));
-    u3l_log("putting fresh req %p", new_u);
+    /* u3l_log("putting fresh req %p", new_u); */
     memcpy(new_u, req_u, sizeof(u3_pend_req));
     uv_timer_init(u3L, &new_u->tim_u);
   } else {
@@ -634,7 +634,7 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   }
 
   c3_w rem_w = req_u->tot_w - req_u->nex_w + 1;
-  u3l_log("rem_w: %u", rem_w);
+  /* u3l_log("rem_w: %u", rem_w); */
   return c3_min(rem_w, req_u->gag_u->wnd_w - liv_w);
 }
 
@@ -831,7 +831,7 @@ _try_resend(u3_pend_req* req_u)
   u3_lane* lan_u = &req_u->lan_u;
   c3_o los_o = c3n;
   if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) {
-    u3l_log("reorder thresh too low %u", req_u->ack_w);
+    /* u3l_log("reorder thresh too low %u", req_u->ack_w); */
     return;
   }
   c3_w ack_w = req_u->ack_w - REORDER_THRESH;
@@ -887,7 +887,7 @@ static void
 _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
 {
   if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
-    u3l_log("bad condition");
+    /* u3l_log("bad condition"); */
     return;
   }
   // scan in flight packets, find oldest
@@ -905,7 +905,7 @@ _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
   }
   if ( now_d == wen_d ) {
 #ifdef MESA_DEBUG
-    u3l_log("failed to find new oldest");
+    /* u3l_log("failed to find new oldest"); */
 #endif
   }
   req_u->old_w = idx_w;
@@ -975,7 +975,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
 
   if ( NULL == req_u ) {
-    MESA_LOG(APATHY);
+    /* MESA_LOG(APATHY); */
     return NULL;
   }
 
@@ -1276,9 +1276,9 @@ static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
   // u3m_p("pac", pac);
-  u3m_p("las", las);
+  /* u3m_p("las", las); */
   las = _mesa_queue_czar(sam_u, las, u3k(pac));
-  u3m_p("las", las);
+  /* u3m_p("las", las); */
   c3_w len_w = u3r_met(3, pac);
   c3_y* buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1308,7 +1308,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         u3l_log(" mesa: send no");
         ret_o = c3n;
       } else {
-        u3l_log(" mesa: send yes");
+        /* u3l_log(" mesa: send yes"); */
         _mesa_ef_send(sam_u, u3k(las), u3k(pac));
         ret_o = c3y;
       }
@@ -1985,7 +1985,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_pend_req* req_u;
 
   if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
-    u3l_log("_mesa_req_pact_init NIT");
+    /* u3l_log("_mesa_req_pact_init NIT"); */
     req_u = _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     if ( req_u == NULL ) {
       _mesa_free_pict(pic_u);
@@ -2009,8 +2009,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_w nex_w = req_u->nex_w;
   if ( win_w != 0 ) {
 #ifdef MESA_DEBUG
-    u3l_log("continuing flow nex: %u, win: %u", nex_w, win_w);
-    u3l_log("in flight %u", bitset_wyt(&req_u->was_u));
+    /* u3l_log("continuing flow nex: %u, win: %u", nex_w, win_w); */
+    /* u3l_log("in flight %u", bitset_wyt(&req_u->was_u)); */
 #endif
     for ( int i = 0; i < win_w; i++ ) {
       c3_y* buf_y = c3_calloc(PACT_SIZE);
@@ -2053,7 +2053,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3i_slab sab_u;
       // u3i_slab_init(&sab_u, 3, PACT_SIZE);
       // u3i_slab_init(&sab_u, 3, (siz_w * req_u->tot_w) + 135);
-      u3l_log("slab size %u", (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w));
+      /* u3l_log("slab size %u", (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w)); */
       u3i_slab_init(&sab_u, 3, (PACT_SIZE - pac_u->pag_u.dat_u.len_w) + (siz_w * req_u->tot_w));
 
       pac_u->pag_u.dat_u.len_w = (siz_w * req_u->tot_w);
@@ -2067,7 +2067,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       pic_u->pac_u.pag_u.nam_u.fra_w = req_u->tot_w - 1;
       //  XX should just preserve input buffer
       c3_w res = mesa_etch_pact(sab_u.buf_y, pac_u);
-      u3l_log("slab len_w %u mesa_etch_pact %u", sab_u.len_w, res);
+      /* u3l_log("slab len_w %u mesa_etch_pact %u", sab_u.len_w, res); */
 
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
