@@ -530,64 +530,87 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
   u3z(nun);
 }
 
-struct HttpRes {
-  c3_w cod_w;
-  c3_c* res_c;
-};
+static c3_c*
+_resolve_czar(u3_work* wok_u, c3_c* who_c)
+{
+  u3_noun czar = u3dc("scot", 'p', u3k(wok_u->pir_u->who_d[0] & ((1 << 8) - 1)));
+  c3_c* czar_c = u3r_string(u3k(czar));
 
-static struct HttpRes _http_get(c3_c* url_c) {
-  CURL *curl;
-  CURLcode result;
-  long cod_l;
+  c3_c url[256];
+  c3_w  len_w;
+  c3_y* hun_y;
 
-  uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
+  sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
 
-  if ( !(curl = curl_easy_init()) ) {
-    u3l_log("failed to initialize libcurl");
-    exit(1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  if (!ret_i) {
+    c3_free(czar_c);
+    czar_c = (c3_c*)hun_y;
   }
 
-  u3K.ssl_curl_f(curl);
-  curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
-  curl_easy_setopt(curl, CURLOPT_SERVER_RESPONSE_TIMEOUT, 30);
-
-  result = curl_easy_perform(curl);
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &cod_l);
-
-  if ( CURLE_OK != result ) {
-    u3l_log("failed to fetch %s: %s", url_c, curl_easy_strerror(result));
-  }
-  if ( 300 <= cod_l && 404 != cod_l ) {
-    u3l_log("error fetching %s: HTTP %ld", url_c, cod_l);
-  }
-
-  curl_easy_cleanup(curl);
-
-  struct HttpRes r = { cod_l, buf_u.base };
-  return r;
+  return czar_c;
 }
 
-static c3_w _fetch_ping_ack(c3_c* czar, c3_c* who, c3_w bon) {
+static c3_w
+_czar_peer_rift(c3_c* czar_c, c3_c* who_c)
+{
+  c3_w czar_ryf_w = 0xFFFFFFFF;
   c3_c url[256];
-  sprintf(url, "https://%s.urbit.org/~/boot/%s/%d", czar, who, bon + 1);
-  u3l_log("dbug: fetxh: %s", url);
-  struct HttpRes res = _http_get(url);
-  if ( 200 != res.cod_w) {
-    return 0xFFFFFFFF;
+  c3_w  len_w;
+  c3_y* hun_y;
+
+  sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
+
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  if (!ret_i) {
+    u3_noun jamd =
+      u3dc("slav", c3__ud, u3do("crip", u3i_tape((c3_c*)hun_y)));
+    u3_noun cued = u3ke_cue(jamd);
+
+    u3_noun czar_glx, czar_ryf, czar_lyf;
+    u3x_trel(cued, &czar_glx, &czar_ryf, &czar_lyf);
+    czar_ryf_w = u3r_word(0, czar_ryf);
+
+    u3z(jamd);
+    u3z(cued);
+    c3_free(hun_y);
   }
-  c3_w last_acked = strtoumax(res.res_c, NULL, 10);
-  return last_acked;
+
+  return czar_ryf_w;
+}
+
+static c3_w
+_czar_last_ack(c3_c* czar_c,
+               c3_c* who_c,
+               c3_w  bone_w)
+{
+  c3_w czar_last_ack_w = 0xFFFFFFFF;
+  c3_c url[256];
+  c3_w  len_w;
+  c3_y* hun_y;
+
+  sprintf(url, "https://%s.urbit.org/~/boot/%s/%d", czar_c+1, who_c, bone_w + 1);
+
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  if (!ret_i) {
+    czar_last_ack_w = strtoumax((c3_c*)hun_y, NULL, 10);
+  }
+
+  c3_free(hun_y);
+  return czar_last_ack_w;
 }
 
 static void
-_boot_scry_cb(void* vod_p, u3_noun nun) {
+_boot_scry_cb(void* vod_p, u3_noun nun)
+{
   u3_work* wok_u = (u3_work*)vod_p;
+
   u3_atom  who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
   c3_c*    who_c = u3r_string(who);
+
   u3_noun  nul, rem, typ, glx, ryf, lyf, bon, nex;
   c3_w     glx_w, ryf_w, bon_w, nex_w;
+
   if (c3y == u3r_cell(nun, &nul, &rem) &&
       c3y == u3r_hext(rem, &typ, &glx, &ryf, &lyf, &bon, &nex)) {
     /*
@@ -596,42 +619,37 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
      */
     glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
     bon_w = u3r_word(0, bon); nex_w = u3r_word(0, nex);
+
     u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
-    c3_c url[256];
-    sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
-    struct HttpRes res = _http_get(url);
-    if (res.cod_w == 200) {
-      u3_noun jammed_atom =
-        u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
-      u3_noun unpacked = u3ke_cue(u3k(jammed_atom));
-      u3_noun czar_glx, czar_ryf, czar_lyf;
-      c3_w    czar_ryf_w;
-      u3x_trel(unpacked, &czar_glx, &czar_ryf, &czar_lyf);
-      czar_ryf_w = u3r_word(0, czar_ryf);
+    c3_w czar_ryf_w = _czar_peer_rift(czar_c, who_c);
+
+    if (czar_ryf_w == 0xFFFFFFFF) {
+      u3l_log("boot: peer-state unvailable on czar, cannot protect from double boot");
+      _pier_work(wok_u);
+    } else {
       if (czar_ryf_w == ryf_w) {
-        c3_w last_ack = _fetch_ping_ack(czar_c, who_c, bon_w);
-        if (last_ack == 0xFFFFFFFF) {
-          u3l_log("boot: peer state unvailable on czar, cannot protect from double boot");
+        c3_w czar_ack_w = _czar_last_ack(czar_c, who_c, bon_w);
+        c3_w ack_w = nex_w - 1;
+        if (czar_ack_w == 0xFFFFFFFF) {
+          // This codepath should never be hit
+          u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double boot");
           _pier_work(wok_u);
-        } else if (last_ack == nex_w - 1 || last_ack - 1 == nex_w - 1) {
+        } else if (czar_ack_w == ack_w || czar_ack_w - 1 == ack_w) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
-                  last_ack, nex_w - 1);
+                  czar_ack_w, ack_w);
           exit(1);
         }
       } else {
         // Trying to boot old ship after breach
-        u3l_log("boot: failed: rift in czar peer state: %d, current rift: %d",
+        u3l_log("boot: failed: rift in czar peer-state: %d, current rift: %d",
                 czar_ryf_w, ryf_w);
         exit(1);
       }
-      u3z(jammed_atom); u3z(unpacked);
-    } else {
-      u3l_log("boot: %%boot state unvailable on czar, cannot protect from double boot");
-      _pier_work(wok_u);
     }
+
     u3z(czar);
     c3_free(czar_c);
   } else if (c3y == u3r_trel(nun, &nul, &typ, &rem) &&
@@ -641,26 +659,14 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
      * If peer state exists exit(1) unless ship has breached,
      * otherwise continue boot.
      */
-    c3_w sponsor = wok_u->pir_u->who_d[0] & ((1 << 8) - 1);
-    u3_noun czar = u3dc("scot", 'p', u3k(sponsor));
-    c3_c* czar_c = u3r_string(u3k(czar));
-    c3_c url[256];
-    sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
-    struct HttpRes res = _http_get(url);
-    if (res.cod_w == 200) {
-      czar_c = res.res_c;
-    }
-    sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
-    res = _http_get(url);
-    if (res.cod_w == 200) {
+    c3_c* czar_c = _resolve_czar(wok_u, who_c);
+    c3_w czar_ryf_w = _czar_peer_rift(czar_c, who_c);
+    c3_free(czar_c);
+
+    if (czar_ryf_w == 0xFFFFFFFF) {
+      _pier_work(wok_u);
+    } else {
       // Peer state found under czar
-      u3_noun jammed_atom =
-        u3dc("slav", c3__ud, u3do("crip", u3i_tape(res.res_c)));
-      u3_noun unpacked = u3ke_cue(jammed_atom);
-      u3_noun czar_glx, czar_ryf, czar_lyf;
-      c3_w    czar_ryf_w;
-      u3x_trel(unpacked, &czar_glx, &czar_ryf, &czar_lyf);
-      czar_ryf_w = u3r_word(0, czar_ryf);
       u3_weak kf_ryf = wok_u->pir_u->ryf;
       if (kf_ryf == u3_none) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double boot");
@@ -669,13 +675,10 @@ _boot_scry_cb(void* vod_p, u3_noun nun) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
-        u3l_log("boot: failed: ship not in sync with czar, double boot");
+        u3l_log("boot: failed: rift in czar peer state: %d, keyfile rift: %d",
+                czar_ryf_w, kf_ryf);
         exit(1);
       }
-      u3z(czar); u3z(jammed_atom); u3z(unpacked);
-      c3_free(czar_c);
-    } else {
-      _pier_work(wok_u);
     }
   } else {
     /*
