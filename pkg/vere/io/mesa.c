@@ -19,6 +19,7 @@
 #include <types.h>
 #include <stdlib.h>
 #include "blake.h"
+#include "lss.h"
 
 c3_o dop_o = c3n;
 
@@ -105,10 +106,10 @@ typedef struct _u3_peer_last {
 } u3_peer_last;
 
 typedef struct _u3_misord_buf {
-  c3_y* fra_y;
-  c3_w  len_w;
-  c3_w  num_w;
-  blake_pair* par_u;
+  c3_y*     fra_y;
+  c3_w      len_w;
+  c3_w      num_w;
+  lss_pair* par_u;
 } u3_misord_buf;
 
 struct _u3_mesa;
@@ -130,8 +131,8 @@ typedef struct _u3_pend_req {
   c3_w                   ack_w; // highest acked fragment number
   u3_lane                lan_u; // last lane heard
   u3_gage*               gag_u; // congestion control
-  u3_vec(u3_buf)         mis_u; // misordered blake hash
-  blake_bao*             bao_u; // blake verifier
+  u3_vec(u3_buf)         mis_u; // misordered packets
+  lss_verifier*          los_u; // Lockstep verifier
   u3_mesa_pict*          pic_u; // preallocated request packet
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
   u3_bitset              was_u; // ((mop @ud packet-state) lte)
@@ -546,7 +547,7 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
   c3_free(req_u->wat_u);
   vec_free(&req_u->mis_u);
   c3_free(req_u->dat_y);
-  blake_bao_free(req_u->bao_u);
+  lss_verifier_free(req_u->los_u);
   u3h_del(sam_u->req_p, key);
   u3a_free(req_u);
   u3z(key);
@@ -934,20 +935,20 @@ static void _mesa_free_misord_buf(u3_misord_buf* buf_u)
   c3_free(buf_u);
 }
 
-static bao_ingest_result
+static c3_o
 _mesa_burn_misorder_queue(u3_pend_req* req_u)
 {
-  c3_w wan_w = req_u->bao_u->con_w;
+  c3_w wan_w = req_u->los_u->counter;
   c3_w len_w;
   c3_o fon_o;
-  bao_ingest_result res_y = BAO_GOOD;
+  c3_o res_y = c3y;
   while ( (len_w = vec_len(&req_u->mis_u)) != 0 ) {
     fon_o = c3n;
     for (int i = 0; i < len_w; i++) {
       u3_misord_buf* buf_u = (u3_misord_buf*)req_u->mis_u.vod_p[i];
       if ( buf_u->num_w == wan_w ) {
         fon_o = c3y;
-        if ( BAO_GOOD != (res_y = blake_bao_verify(req_u->bao_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u))) {
+        if ( c3y != (res_y = lss_verifier_ingest(req_u->los_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u))) {
           return res_y;
         } else {
           _mesa_free_misord_buf((u3_misord_buf*)vec_pop(&req_u->mis_u, i));
@@ -1022,12 +1023,12 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     req_u->lef_w++;
   }
 
-  blake_pair* par_u = NULL;
+  lss_pair* par_u = NULL;
   if ( dat_u->aum_u.typ_e == AUTH_NEXT ) {
     // needs to be heap allocated bc will be saved if misordered
-    par_u = c3_calloc(sizeof(blake_pair));
-    memcpy(par_u->sin_y, dat_u->aup_u.has_y[0], BLAKE3_OUT_LEN);
-    memcpy(par_u->dex_y, dat_u->aup_u.has_y[1], BLAKE3_OUT_LEN);
+    par_u = c3_calloc(sizeof(lss_pair));
+    memcpy((*par_u)[0], dat_u->aup_u.has_y[0], sizeof(dat_u->aup_u.has_y[0]));
+    memcpy((*par_u)[1], dat_u->aup_u.has_y[1], sizeof(dat_u->aup_u.has_y[1]));
   }
 
   c3_y ver_y;
@@ -1038,7 +1039,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   memset(buf_y + dat_u->len_w, 0, 1024 - dat_u->len_w);
   c3_w len_w = (nam_u->fra_w + 1 == dat_u->tot_w) ? dat_u->len_w : 1024;
 
-  if ( req_u->bao_u->con_w != nam_u->fra_w ) {
+  if ( req_u->los_u->counter != nam_u->fra_w ) {
     // TODO: queue packet
     u3_misord_buf* buf_u = c3_calloc(sizeof(u3_misord_buf));
     buf_u->fra_y = c3_calloc(len_w);
@@ -1048,7 +1049,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     buf_u->num_w = nam_u->fra_w;
     vec_append(&req_u->mis_u, buf_u);
   }
-  else if ( BAO_GOOD != (ver_y = blake_bao_verify(req_u->bao_u, buf_y, len_w, par_u)) ) {
+  else if ( c3y != (ver_y = lss_verifier_ingest(req_u->los_u, buf_y, len_w, par_u)) ) {
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
     u3l_log("auth fail frag %u", nam_u->fra_w);
@@ -1056,7 +1057,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     return req_u;
   }
   else if ( vec_len(&req_u->mis_u) != 0
-            && BAO_GOOD != (ver_y = _mesa_burn_misorder_queue(req_u))) {
+            && c3y != (ver_y = _mesa_burn_misorder_queue(req_u))) {
     c3_free(par_u);
     MESA_LOG(AUTH)
     return req_u;
@@ -1837,33 +1838,29 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->ack_w = 0;
 
   if ( c3y == lin_o ) {
-    u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(8);
-    {
-      blake_node* nod_u = blake_leaf_hash(dat_u->fra_y, dat_u->len_w, 0);
-      c3_y* lef_y = c3_calloc(BLAKE3_OUT_LEN);
-      make_chain_value(lef_y, nod_u);
-      c3_free(nod_u);
-      vec_append(pof_u, lef_y);
+    // complete the proof by computing the first leaf hash
+    c3_w len_w = pac_u->pag_u.dat_u.aup_u.len_y + 1;
+    lss_hash* pof_u = c3_calloc(len_w * 32);
+    for ( int i = 1; i < len_w; i++ ) {
+      memcpy(pof_u + (i * 32), pac_u->pag_u.dat_u.aup_u.has_y[i-1], 32);
     }
+    lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
 
-    for ( int i = 0; i < pac_u->pag_u.dat_u.aup_u.len_y; i++ ) {
-      c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
-      memcpy(pof_y, pac_u->pag_u.dat_u.aup_u.has_y[i], BLAKE3_OUT_LEN);
-      vec_append(pof_u, pof_y);
-    }
-
-    req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
-    blake_bao_verify(req_u->bao_u, dat_u->fra_y, dat_u->len_w, NULL);
+    // TODO: check return values
+    req_u->los_u = c3_calloc(sizeof(lss_verifier));
+    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w);
+    c3_free(pof_u);
+    lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL);
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
-    c3_w len_w = dat_u->len_w / BLAKE3_OUT_LEN;
-    u3_vec(c3_y[BLAKE3_OUT_LEN])* pof_u = vec_make(len_w);
-    for ( int i = 0; i < len_w; i++ ) {
-      c3_y* pof_y = c3_calloc(BLAKE3_OUT_LEN);
-      memcpy(pof_y, dat_u->fra_y + (BLAKE3_OUT_LEN*i), BLAKE3_OUT_LEN);
-      vec_append(pof_u, pof_y);
+    // TODO: cast directly instead of copying?
+    lss_hash* pof_u = c3_calloc(dat_u->len_w * 32);
+    for ( int i = 0; i < dat_u->len_w; i++ ) {
+      memcpy(pof_u[i], dat_u->fra_y + (i * 32), 32);
     }
-    req_u->bao_u = blake_bao_make(req_u->tot_w, pof_u);
+    req_u->los_u = c3_calloc(sizeof(lss_verifier));
+    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, dat_u->len_w/32);
+    c3_free(pof_u);
   }
   vec_init(&req_u->mis_u, 8);
 
