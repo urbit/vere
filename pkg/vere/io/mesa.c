@@ -302,9 +302,6 @@ static inline c3_w
 _mesa_lop(c3_w fra_w)
 {
   c3_w res_w = ((( fra_w ) / MESA_HUNK) * MESA_HUNK);
-  if (res_w == 0) {
-    return 1;
-  }
   return res_w;
 }
 
@@ -1653,12 +1650,21 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       c3_y* buf_y;
       // u3m_p("hit", u3a_is_cell(hit));
 
-      c3_w len_w = fra_w == 0 ? 0 : bat_w;
+      c3_w len_w = bat_w;
       /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
       c3_w i = 0;
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+
+        if ( (bat_w == 0) && (i == 0) ) {
+          pac_u->pek_u.nam_u.nit_o = c3y;
+          pac_u->pek_u.nam_u.aut_o = c3n;
+        } else {
+          pac_u->pek_u.nam_u.nit_o = c3n;
+          pac_u->pek_u.nam_u.aut_o = c3n;
+        }
+
          if (fra_w == len_w && tag == MESA_WAIT) {
            c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
            pac_u->pek_u.nam_u.fra_w = fra_w;
@@ -1668,11 +1674,16 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
         /* _log_pact(pac_u); */
+
         _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(u3h(hit))));
         // u3z(key);
 
         hit = u3t(hit);
-        len_w++;
+
+        if (!( (bat_w == 0) && (i == 0) )) {
+          len_w++;
+        }
+
         i++;
         pac_u->pek_u.nam_u.fra_w = len_w;
       }
@@ -2162,8 +2173,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
       u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
-                                        fra_w == 0 ? 0 : bat_w,
-                                        fra_w == 0 ? MESA_HUNK : bat_w + MESA_HUNK);
+                                        bat_w,
+                                        bat_w + MESA_HUNK);
 
       pac_u->pek_u.nam_u.fra_w = fra_w;
 
