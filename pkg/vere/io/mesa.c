@@ -1657,21 +1657,19 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
 
+        pac_u->pek_u.nam_u.fra_w = len_w;
+
         if ( (bat_w == 0) && (i == 0) ) {
           pac_u->pek_u.nam_u.nit_o = c3y;
-          pac_u->pek_u.nam_u.aut_o = c3n;
+          pac_u->pek_u.nam_u.aut_o = c3y;
         } else {
           pac_u->pek_u.nam_u.nit_o = c3n;
           pac_u->pek_u.nam_u.aut_o = c3n;
         }
 
-         if (fra_w == len_w && tag == MESA_WAIT) {
-           c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
-           pac_u->pek_u.nam_u.fra_w = fra_w;
-           _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
-         }
+        c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+        _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
 
-        pac_u->pek_u.nam_u.fra_w = len_w;
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
         /* _log_pact(pac_u); */
 
@@ -1685,7 +1683,6 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         }
 
         i++;
-        pac_u->pek_u.nam_u.fra_w = len_w;
       }
       u3l_log("i %u", i);
       // u3z(old);
@@ -2083,7 +2080,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
-    _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
+    /* _mesa_del_request(sam_u, &pac_u->pag_u.nam_u); */
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, wir, cad));
