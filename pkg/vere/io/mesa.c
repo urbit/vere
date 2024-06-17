@@ -1684,7 +1684,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
 
         i++;
       }
-      u3l_log("i %u", i);
+      // u3l_log("i %u", i);
       // u3z(old);
     }
   }
@@ -1955,6 +1955,25 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       }
     }
 
+    //  XX don't give rate here, handle in arvo?
+    {
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, PACT_SIZE);
+
+      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun fag = u3i_word(pic_u->pac_u.pag_u.nam_u.fra_w);
+      u3_noun tot = u3i_word(pac_u->pag_u.dat_u.tot_w);
+
+      //  [%rate spar fragment num-fragments]
+      cad = u3nq(c3__rate, par, fag, tot);
+
+    }
+
+    // u3_ovum* egg_rate = u3_ovum_init(0, c3__ames, wir, cad);
+    // u3_auto_plan(&sam_u->car_u, egg_rate);
+
     {
       // u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
       //                         (c3_y*)(pac_u->pag_u.nam_u.pat_c));
@@ -1978,8 +1997,16 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     }
 
     //  XX should put in cache on success
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__ames, wir, cad));
+    u3_ovum* egg_heer= u3_ovum_init(0, c3__ames, wir, cad);
+    u3_auto_plan(&sam_u->car_u, egg_heer);
+
+    // u3_noun    ovo;
+    // u3l_log("1");
+    // u3_assert( u3_auto_next(&sam_u->car_u, &ovo) == egg_rate );
+    // u3l_log("2");
+    // u3_assert( u3_auto_next(&sam_u->car_u, &ovo) == egg_heer );
+    // u3l_log("3");
+    // u3_ovum* egg_noun =  u3_auto_next(&sam_u->car_u, &ovo);
     _mesa_free_pict(pic_u);
     return;
   }
@@ -2012,6 +2039,35 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_assert(!"invalid");
     return;
   }
+
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  u3_noun cad;
+  if ( ( (req_u->len_w % 100) == 0)  &&      //  XX every 50 fragments (50  Kb); make this better  shows: 5     Mb/s
+                                            //                         (10  Kb)                    shows: 1     Mb/s
+                                            //                         (100 Kb)                    shows: 30-50 Mb/s
+                                            //     bandwith is correlated with how often %rate is injected
+       ( req_u->len_w != req_u->tot_w ) ) {
+    {
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, PACT_SIZE);
+
+      u3_noun pax = _mesa_encode_path(pac_u->pag_u.nam_u.pat_s,
+                              (c3_y*)(pac_u->pag_u.nam_u.pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, pac_u->pag_u.nam_u.her_d), pax);
+      u3_noun fag = u3i_word(req_u->len_w);
+      u3_noun tot = u3i_word(req_u->tot_w);
+      // u3l_log("req_u->len_w %u", req_u->len_w);
+      // u3l_log("req_u->tot_w %u", req_u->tot_w);
+      //  [%rate spar fragment num-fragments]
+      cad = u3nq(c3__rate, par, fag, tot);
+
+    }
+
+    //  XX should put in cache on success
+    u3_auto_plan(&sam_u->car_u,
+                  u3_ovum_init(0, c3__ames, wir, cad));
+  }
+
   c3_w win_w = _mesa_req_get_cwnd(req_u);
   u3_mesa_pict* nex_u = req_u->pic_u;
   c3_w nex_w = req_u->nex_w;
@@ -2042,7 +2098,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     // fprintf(stderr, "finished");
     // u3l_log("queue size %u", req_u->mis_u.len_w);
     c3_d now_d = _get_now_micros();
-    u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
+    // u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
     c3_w siz_w = (1 << (pac_u->pag_u.nam_u.boq_y - 3));
     u3_noun dat = u3i_bytes((siz_w * req_u->tot_w), req_u->dat_y);
 
@@ -2069,7 +2125,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, pac_u->pag_u.dat_u.len_w);
 
 
-      u3l_log("last frag %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+      // u3l_log("last frag %u", pic_u->pac_u.pag_u.nam_u.fra_w);
       // this could be a retry, so we just rewrite the fragment to be the last one
       //
       pic_u->pac_u.pag_u.nam_u.fra_w = req_u->tot_w - 1;
@@ -2194,7 +2250,7 @@ _mesa_poke_news(u3_ovum* egg_u, u3_ovum_news new_e)
 
   if ( u3_ovum_done == new_e ) {
     // XX success stuff here
-    u3l_log("mesa: poke success");
+    // u3l_log("mesa: poke success");
   }
 }
 

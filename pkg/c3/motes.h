@@ -978,6 +978,7 @@
 #   define c3__rald   c3_s4('r','a','l','d')
 #   define c3__ramp   c3_s4('r','a','m','p')
 #   define c3__rasp   c3_s4('r','a','s','p')
+#   define c3__rate   c3_s4('r','a','t','e')
 #   define c3__raw    c3_s3('r','a','w')
 #   define c3__read   c3_s4('r','e','a','d')
 #   define c3__reck   c3_s4('r','e','c','k')
