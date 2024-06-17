@@ -827,10 +827,10 @@ _try_resend(u3_pend_req* req_u)
   u3_mesa* sam_u = req_u->pic_u->sam_u;
   u3_lane* lan_u = &req_u->lan_u;
   c3_o los_o = c3n;
-  if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) {
-    /* u3l_log("reorder thresh too low %u", req_u->ack_w); */
-    return;
-  }
+  /* if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) { */
+  /*   u3l_log("reorder thresh too low %u", req_u->ack_w); */
+  /*   return; */
+  /* } */
   c3_w ack_w = req_u->ack_w - REORDER_THRESH;
   c3_d now_d = _get_now_micros();
   /* u3l_log("lef_w %u, nex_w %u, len_w %u, tot_w %u", req_u->lef_w, req_u->nex_w, req_u->len_w, req_u->tot_w); */
@@ -1661,11 +1661,17 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
 
         if ( (bat_w == 0) && (i == 0) ) {
           pac_u->pek_u.nam_u.nit_o = c3y;
-          pac_u->pek_u.nam_u.aut_o = c3y;
+          /* pac_u->pek_u.nam_u.aut_o = c3y; */
         } else {
           pac_u->pek_u.nam_u.nit_o = c3n;
           pac_u->pek_u.nam_u.aut_o = c3n;
         }
+
+        /* if (len_w == 0) { */
+        /*   c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit))); */
+        /*   /\* pac_u->pek_u.nam_u.fra_w = fra_w; *\/ */
+        /*   _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat))); */
+        /* } */
 
         c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
         _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
@@ -1805,6 +1811,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     if ( req_u->tot_w <= 4 ) {
       return NULL;
     }
+    return NULL;
   } else {
     req_u = alloca(sizeof(u3_pend_req));
     memset(req_u, 0, sizeof(u3_pend_req));
@@ -2019,6 +2026,18 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   }*/
   u3_pend_req* req_u;
 
+  /* req_u = _mesa_req_pact_init(sam_u, pic_u, &lan_u); */
+  /* if ( req_u == NULL ) { */
+  /*   req_u = _mesa_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u); */
+  /*   if ( req_u == NULL ) { */
+  /*     // cleanup */
+  /*     /\* u3l_log("wrong"); *\/ */
+  /*     _log_pact(pac_u); */
+  /*     _mesa_free_pict(pic_u); */
+  /*     return; */
+  /*   } */
+  /* } */
+
   if ( pac_u->pek_u.nam_u.nit_o == c3y ) {
     /* u3l_log("_mesa_req_pact_init NIT"); */
     req_u = _mesa_req_pact_init(sam_u, pic_u, &lan_u);
@@ -2030,9 +2049,13 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     req_u = _mesa_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
     if ( req_u == NULL ) {
       // cleanup
+      /* u3l_log("wrong"); */
+      /* _log_pact(pac_u); */
       _mesa_free_pict(pic_u);
       return;
     }
+    /* u3l_log("right"); */
+    /* _log_pact(pac_u); */
   }
 
   if ( req_u == NULL ) {
@@ -2069,6 +2092,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   }
 
   c3_w win_w = _mesa_req_get_cwnd(req_u);
+  /* c3_w win_w = 100000; */
   u3_mesa_pict* nex_u = req_u->pic_u;
   c3_w nex_w = req_u->nex_w;
   if ( win_w != 0 ) {
@@ -2125,7 +2149,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, pac_u->pag_u.dat_u.len_w);
 
 
-      // u3l_log("last frag %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+      /* u3l_log("last frag %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
       // this could be a retry, so we just rewrite the fragment to be the last one
       //
       pic_u->pac_u.pag_u.nam_u.fra_w = req_u->tot_w - 1;
@@ -2136,7 +2160,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
-    /* _mesa_del_request(sam_u, &pac_u->pag_u.nam_u); */
+    _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, wir, cad));
@@ -2250,7 +2274,7 @@ _mesa_poke_news(u3_ovum* egg_u, u3_ovum_news new_e)
 
   if ( u3_ovum_done == new_e ) {
     // XX success stuff here
-    // u3l_log("mesa: poke success");
+    /* u3l_log("mesa: poke success"); */
   }
 }
 
