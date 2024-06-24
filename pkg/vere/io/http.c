@@ -640,16 +640,18 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
   return req_u;
 }
 
+static void
+_http_cache_respond(u3_hreq* req_u, u3_noun nun);
+
+static void
+_http_scry_respond(u3_hreq* req_u, u3_noun nun);
+
 /* _http_foo_cb()
 */
 static void
-// _http_cache_respond(u3_hreq* req_u, u3_noun nun);
-_http_scry_respond(u3_hreq* req_u, u3_noun nun);
-
-static void
 _http_foo_cb(void* vod_p, u3_noun nun)
 {
-  u3_preq* peq_u = vod_p;  // TODO
+  u3_preq* peq_u = vod_p;
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
 
@@ -657,10 +659,11 @@ _http_foo_cb(void* vod_p, u3_noun nun)
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
     _http_scry_respond(req_u, u3k(nun));
-    // _http_cache_respond(req_u, u3k(nun));
   }
 
-  u3h_put(htd_u->nax_p, peq_u->pax, nun);
+  if ( peq_u->las_o == c3n ) {
+    u3h_put(htd_u->nax_p, peq_u->pax, nun);
+  }
   u3z(peq_u->pax);
   c3_free(peq_u);
 }
@@ -686,7 +689,8 @@ _find_tis_fas(void* txt, size_t len)
 //  TODO
 //  [x] don't blow up on bad paths
 //  [x] authentication
-//  [ ] caching
+//  [x] caching
+//  [ ] insert mime in path
 //  [ ] range header
 //
 static void
@@ -821,9 +825,17 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 
         else {
           u3_noun bem = u3nq(our, des, cas, u3t(spur));
-          //  TODO try to serve from cache
-          u3_pier_peek(htd_u->car_u.pir_u, gang, u3k(u3nt(0, c3__ex, bem)),
-                        req_u->peq_u, _http_foo_cb);
+          u3_weak nac = u3h_get(htd_u->nax_p, bem);
+
+          if ( u3_none == nac ) {
+            req_u->peq_u->las_o = c3n;
+            req_u->peq_u->pax = u3k(bem);
+            u3_pier_peek(htd_u->car_u.pir_u, gang, u3k(u3nt(0, c3__ex, bem)),
+                          req_u->peq_u, _http_foo_cb);
+          }
+          else {
+            _http_cache_respond(req_u, nac);
+          }
         }
       }
     }
