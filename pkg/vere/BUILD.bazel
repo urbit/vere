@@ -140,6 +140,7 @@ vere_library(
         "@lmdb",
         "@openssl",
         "@uv",
+        "@natpmp",
     ] + select({
         "@platforms//os:macos": [],
         "@platforms//os:linux": [
