@@ -195,6 +195,14 @@ _main_init(void)
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
 
+  u3_Host.ops_u.siz_i =
+#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+  // 500 GiB is as large as musl on aarch64 wants to allow
+  0x7d00000000;
+#else
+  0x10000000000;
+#endif
+
   u3C.eph_c = 0;
   u3C.tos_w = 0;
 }
@@ -300,6 +308,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "toss",                required_argument, NULL,  9 },
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
+    { "lmdb-map-size",       required_argument, NULL, 12 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -345,6 +354,13 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 11: {  // serf-bin
         u3_Host.wrk_c = strdup(optarg);
+        break;
+      }
+      case 12: { //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          return c3n;
+        }
+
         break;
       }
       //  special args
@@ -1576,10 +1592,11 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1607,6 +1624,13 @@ _cw_info(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1751,10 +1775,11 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1782,6 +1807,13 @@ _cw_cram(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1847,11 +1879,12 @@ _cw_queu(c3_i argc, c3_c* argv[])
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
-    { "loom",        required_argument, NULL, c3__loom },
-    { "no-demand",   no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "replay-from", required_argument, NULL, 'r' },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
+    { "replay-from",   required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1879,6 +1912,13 @@ _cw_queu(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1955,11 +1995,12 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "gc-early",  no_argument,       NULL, 9 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "gc-early",      no_argument,       NULL, 9 },
+    { "lmdb-map-size", required_argument, NULL, 10 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1992,6 +2033,13 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
       case 9: {  //  gc-early
         u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
+
+      case 10: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2123,11 +2171,12 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "gc-early",  no_argument,       NULL, 9 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "gc-early",      no_argument,       NULL, 9 },
+    { "lmdb-map-size", required_argument, NULL, 10 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2160,6 +2209,13 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
       case 9: {  //  gc-early
         u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
+
+      case 10: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2616,10 +2672,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2647,6 +2704,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2697,7 +2761,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "lmdb-map-size", required_argument, NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2705,6 +2770,13 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 6: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
+        break;
+      }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -3232,6 +3304,7 @@ main(c3_i   argc,
         fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
         exit(sat_i);
       }
+      signal(SIGTSTP, _stop_exit);
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 
