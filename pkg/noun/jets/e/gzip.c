@@ -120,13 +120,13 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
   u3_noun unzipped_octs = _dawn_buf_to_oct(unzipped_buf);
   u3a_free(unzipped_buf.base);
   ret = inflateEnd(&strm);
+
   if (ret < 0 || ret == 2) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
     return u3m_bail(c3__exit);
   }
 
-  /* u3m_p("result", unzipped_octs); */
   return unzipped_octs;
 }
 
@@ -135,12 +135,7 @@ u3we_unzip_gzip(u3_noun cor)
 {
   /* u3l_log("hejsan C"); */
   u3_noun a = u3r_at(u3x_sam, cor);
-  /* u3m_p('hejsan', a); */
-  /* u3m_p("yo ", u3r_at(u3x_sam, cor)); */
-    /* u3l_log("%lu", (strm.total_out + chunk)); */
 
-  /* if ( (u3_none == (a = u3r_at(u3x_sam, cor))) || */
-  /*      (c3n == u3ud(a)) ) */
   if ( _(u3du(a)) ) {
     return u3qe_unzip_gzip(a);
   }
