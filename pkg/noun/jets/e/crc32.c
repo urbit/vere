@@ -14,7 +14,10 @@ u3qe_crc32(u3_noun input_octs)
   u3_atom head = u3h(input_octs);
   u3_atom tail = u3t(input_octs);
   c3_w  tel_w = u3r_met(3, tail);
-  c3_w  hed_w = u3r_met(3, head);
+  c3_w hed_w;
+  if ( c3n == u3r_safe_word(head, &hed_w) ) {
+    return u3m_bail(c3__fail);
+  }
   c3_y* input;
 
   if (c3y == u3a_is_cat(tail)) {
