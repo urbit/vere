@@ -32,11 +32,11 @@ u3qe_crc32(u3_noun input_octs)
   c3_w led_w = hed_w - tel_w;
   c3_w crc_w = 0;
 
-  crc_w = crc32(crc, input, tel_w);
+  crc_w = crc32(crc_w, input, tel_w);
 
   while ( led_w > 0 ) {
     c3_y byt_y = 0;
-    crc_w = crc32(crc, &byt_y, 1);
+    crc_w = crc32(crc_w, &byt_y, 1);
     led_w--;
   }
 
