@@ -80,7 +80,7 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   // verify leaf
   c3_y leaf_hash[32];
   _leaf_hash(leaf_hash, leaf_y, leaf_w, los_u->counter);
-  if (!(lss_find_pair(los_u, 0, los_u->counter&1, leaf_hash))) {
+  if (!(lss_find_pair(los_u, 0, los_u->counter&1, leaf_hash))) { // XX segfaults
     return c3n;
   }
   // check whether pair is expected
