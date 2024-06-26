@@ -12,9 +12,9 @@ typedef c3_y lss_hash[32];
 typedef lss_hash lss_pair[2];
 
 typedef struct _lss_verifier {
-	c3_w       leaves;
-  c3_w       counter;
-  lss_pair** pairs;
+  c3_w      leaves;
+  c3_w      counter;
+  lss_pair* pairs;
 } lss_verifier;
 
 c3_o lss_verifier_ingest(lss_verifier* ver_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair);

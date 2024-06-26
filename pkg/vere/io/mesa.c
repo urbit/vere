@@ -1026,8 +1026,8 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   if ( dat_u->aum_u.typ_e == AUTH_NEXT ) {
     // needs to be heap allocated bc will be saved if misordered
     par_u = c3_calloc(sizeof(lss_pair));
-    memcpy((*par_u)[0], dat_u->aup_u.has_y[0], sizeof(dat_u->aup_u.has_y[0]));
-    memcpy((*par_u)[1], dat_u->aup_u.has_y[1], sizeof(dat_u->aup_u.has_y[1]));
+    memcpy((*par_u)[0], dat_u->aup_u.has_y[0], sizeof(lss_hash));
+    memcpy((*par_u)[1], dat_u->aup_u.has_y[1], sizeof(lss_hash));
   }
 
   c3_y ver_y;
@@ -1857,30 +1857,29 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   if ( c3y == lin_o ) {
     // complete the proof by computing the first leaf hash
     c3_w len_w = pac_u->pag_u.dat_u.aup_u.len_y + 1;
-    lss_hash* pof_u = c3_calloc(len_w * 32);
+    lss_hash* pof_u = c3_calloc(len_w * sizeof(lss_hash));
     for ( int i = 1; i < len_w; i++ ) {
-      memcpy(pof_u + (i * 32), pac_u->pag_u.dat_u.aup_u.has_y[i-1], 32);
+      memcpy(pof_u[i], pac_u->pag_u.dat_u.aup_u.has_y[i-1], sizeof(lss_hash));
     }
     lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
     // TODO: authenticate root
     // lss_root root;
     // lss_root(root, pof_u, len_w);
 
-
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    if ( c3n == lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w) ) {
+    if ( c3y != lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w) ) {
       return NULL; // XX ???
     }
     c3_free(pof_u);
-    if ( c3n == lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
+    if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
       return NULL; // XX ???
     }
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
     // TODO: cast directly instead of copying?
-    lss_hash* pof_u = c3_calloc(dat_u->len_w * 32);
+    lss_hash* pof_u = c3_calloc(dat_u->len_w * sizeof(lss_hash));
     for ( int i = 0; i < dat_u->len_w; i++ ) {
-      memcpy(pof_u[i], dat_u->fra_y + (i * 32), 32);
+      memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
     }
     // TODO: authenticate root
     // lss_root root;

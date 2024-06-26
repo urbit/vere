@@ -65,13 +65,13 @@ static c3_y bits_len64(c3_d val_d)
 
 static c3_o lss_find_pair(lss_verifier* los_u, c3_w height, c3_b sel, lss_hash h)
 {
-  if (memcmp((*los_u->pairs[height])[sel], h, 32) == 0) {
+  if (memcmp(los_u->pairs[height][sel], h, 32) == 0) {
     return c3y;
   }
   // look for "irregular" pairs, which will always be on the right
   c3_w max_height = bits_len64(los_u->leaves);
   for (height++; height < max_height; height++) {
-    if (memcmp((*los_u->pairs[height])[1], h, 32) == 0) {
+    if (memcmp(los_u->pairs[height][1], h, 32) == 0) {
       return c3y;
     }
   }
@@ -100,7 +100,8 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   if ( c3n == lss_find_pair(los_u, height, sel, parent_hash) ) {
     return c3n;
   }
-  los_u->pairs[height-1] = pair;
+  memcpy(los_u->pairs[height-1][0], (*pair)[0], sizeof(lss_hash));
+  memcpy(los_u->pairs[height-1][1], (*pair)[1], sizeof(lss_hash));
   los_u->counter++;
   return c3y;
 }
@@ -109,13 +110,10 @@ c3_o lss_verifier_init(lss_verifier* los_u, c3_w leaves, lss_hash* proof, c3_w p
   los_u->leaves = leaves;
   los_u->counter = 0;
   c3_w pairs_w = bits_len64(leaves);
-  los_u->pairs = c3_calloc(pairs_w * sizeof(lss_pair*));
-  for (c3_w i = 0; i < proof_w-1; i++) {
-    los_u->pairs[i] = c3_calloc(sizeof(lss_pair));
-  }
-  memcpy((*los_u->pairs[0])[0], proof[0], 32);
+  los_u->pairs = c3_calloc(pairs_w * sizeof(lss_pair));
+  memcpy(los_u->pairs[0][0], proof[0], sizeof(lss_hash));
   for (c3_w i = 1; i < proof_w; i++) {
-    memcpy((*los_u->pairs[i-1])[1], proof[i], 32);
+    memcpy(los_u->pairs[i-1][1], proof[i], sizeof(lss_hash));
   }
   return c3y;
 }
