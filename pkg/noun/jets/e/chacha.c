@@ -44,25 +44,31 @@
 
 
   static u3_noun
-  _cqe_chacha_xchacha(u3_atom key, u3_atom nonce)
+  _cqe_chacha_xchacha(u3_atom rounds, u3_atom key, u3_atom nonce)
   {
+    c3_w rounds_w;
+    if ( !u3r_word_fit(&rounds_w, rounds) ) {
+      return u3m_bail(c3__fail);
+    }
     c3_y key_y[32], nonce_y[64], xkey_y[32], xnonce_y[8];
     u3r_bytes(0, 32, key_y, key);
     u3r_bytes(0, 24, nonce_y, nonce);
-    urcrypt_chacha_xchacha(key_y, nonce_y, xkey_y, xnonce_y);
+    urcrypt_chacha_xchacha(rounds, key_y, nonce_y, xkey_y, xnonce_y);
     return u3i_cell(u3i_bytes(32, xkey_y), u3i_bytes(8, xnonce_y));
   }
 
   u3_noun
   u3we_chacha_xchacha(u3_noun cor)
   {
-    u3_noun key, nonce;
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &key, u3x_sam_3, &nonce, 0) ||
+    u3_noun sam = u3x_at(u3x_sam, cor);
+    u3_noun rounds, key, nonce;
+    if ( c3n == u3r_trel(sam, &rounds, &key, &nonce) ||
+         c3n == u3ud(rounds) ||
          c3n == u3ud(key) ||
          c3n == u3ud(nonce) )
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("chacha_xchacha", _cqe_chacha_xchacha(key, nonce));
+      return u3l_punt("chacha_xchacha", _cqe_chacha_xchacha(rounds, key, nonce));
     }
   }
