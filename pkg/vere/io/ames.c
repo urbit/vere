@@ -2637,7 +2637,7 @@ _ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
             (pip_w >>  0) & 0xff);
   }
 
-  sam_u->zar_u.pip_w[imp_y] = imp_y;
+  sam_u->zar_u.pip_w[imp_y] = pip_w;
 
   {
     c3_w blk_w = imp_y >> 5;
@@ -2679,6 +2679,8 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
 
     _ames_czar_gone(sam_u, imp_y);
   }
+
+  sam_u->zar_u.pen_s--;
 
   uv_freeaddrinfo(aif_u);
   c3_free(res_u);
@@ -2724,7 +2726,7 @@ _ames_czar_all(uv_timer_t* tim_u)
 
   sam_u->zar_u.pen_s = 256;
 
-  for ( c3_w i_w; i_w < 256; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
     _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
   }
 
