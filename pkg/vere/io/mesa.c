@@ -2303,15 +2303,14 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   u3_noun wir = u3nc(c3__ames, u3_nul);
   u3_noun cad;
   {
-    u3_noun   lan = u3_mesa_encode_lane(*lan_u);
-    u3_noun   hop = u3i_chub(pac_u->hed_u.hop_y);  // XX  hop_w ?
-    u3i_slab  sab_u;
+    u3_noun    lan = u3_mesa_encode_lane(*lan_u);
+    u3i_slab sab_u;
     u3i_slab_init(&sab_u, 3, PACT_SIZE);
 
     //  XX should just preserve input buffer
     mesa_etch_pact(sab_u.buf_y, pac_u);
 
-    cad = u3nq(c3__heer, hop, lan, u3i_slab_mint(&sab_u));
+    cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
   }
 
   if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
