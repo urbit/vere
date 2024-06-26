@@ -93,6 +93,11 @@
     u3_weak
     u3kdb_put(u3_noun a, u3_noun b, u3_noun c);
 
+  /* u3kdb_del(): map del for key `b`
+  */
+    u3_weak
+    u3kdb_del(u3_noun a, u3_noun b);
+
   /* u3kdb_has(): test for get.
   */
     u3_noun

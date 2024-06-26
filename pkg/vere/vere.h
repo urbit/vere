@@ -1237,6 +1237,17 @@
         u3_noun
         u3_ames_encode_lane(u3_lane);
 
+    /**  xmas
+    **/
+      /* _xmas_io_init(): initialize new-ames I/O.
+      */
+        u3_auto*
+        u3_xmas_io_init(u3_pier* pir_u);
+
+      /*  u3_xmas_encode_path():
+      */
+        u3_noun
+        u3_xmas_encode_path(c3_w len_w, c3_y* buf_y);
     /**  Autosave.
     **/
       /* u3_save_ef_chld(): report SIGCHLD.
