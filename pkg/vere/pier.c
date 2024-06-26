@@ -608,11 +608,11 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   u3_atom  who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
   c3_c*    who_c = u3r_string(who);
 
-  u3_noun  nul, typ, nil, rem, glx, ryf, lyf, bon, nex, liv;
+  u3_noun  rem, glx, ryf, bon, nex, liv;
   c3_w     glx_w, ryf_w, bon_w, nex_w, liv_w;
 
-  if (c3y == u3r_qual(nun, &nul, &typ, &nil, &rem) &&
-      c3y == u3r_hext(rem, &glx, &ryf, &lyf, &bon, &nex, &liv)) {
+  if (c3y == u3r_qual(nun, 0, 0, 0, &rem) &&
+      c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &nex, &liv)) {
     /*
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
@@ -654,7 +654,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
     u3z(czar);
     c3_free(czar_c);
-  } else if (c3y == u3r_trel(nun, &nul, &typ, &nil) && nil == 0) {
+  } else if (c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0) {
     /*
      * Data not available for boot scry. Check against sponsoring galaxy.
      * If peer state exists exit(1) unless ship has breached,
