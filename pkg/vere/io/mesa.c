@@ -1862,12 +1862,19 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
       memcpy(pof_u + (i * 32), pac_u->pag_u.dat_u.aup_u.has_y[i-1], 32);
     }
     lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
+    // TODO: authenticate root
+    // lss_root root;
+    // lss_root(root, pof_u, len_w);
 
-    // TODO: check return values
+
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w);
+    if ( c3n == lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w) ) {
+      return NULL; // XX ???
+    }
     c3_free(pof_u);
-    lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL);
+    if ( c3n == lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
+      return NULL; // XX ???
+    }
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
     // TODO: cast directly instead of copying?
@@ -1875,6 +1882,10 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     for ( int i = 0; i < dat_u->len_w; i++ ) {
       memcpy(pof_u[i], dat_u->fra_y + (i * 32), 32);
     }
+    // TODO: authenticate root
+    // lss_root root;
+    // lss_root(root, pof_u, dat_u->len_w/32);
+
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
     lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, dat_u->len_w/32);
     c3_free(pof_u);

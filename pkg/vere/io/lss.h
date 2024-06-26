@@ -25,4 +25,6 @@ void lss_verifier_free(lss_verifier* ver_u);
 
 void lss_complete_inline_proof(lss_hash* proof, c3_y* leaf_y, c3_w leaf_w);
 
+void lss_root(lss_hash root, lss_hash* proof, c3_w proof_w);
+
 #endif
