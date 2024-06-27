@@ -11,8 +11,13 @@
 u3_noun
 u3qe_crc32(u3_noun input_octs)
 {
+  u3_atom head = u3h(input_octs);
   u3_atom tail = u3t(input_octs);
-  c3_w  len_w = u3r_met(3, tail);
+  c3_w  tel_w = u3r_met(3, tail);
+  c3_w hed_w;
+  if ( c3n == u3r_safe_word(head, &hed_w) ) {
+    return u3m_bail(c3__fail);
+  }
   c3_y* input;
 
   if (c3y == u3a_is_cat(tail)) {
@@ -23,24 +28,28 @@ u3qe_crc32(u3_noun input_octs)
     input = (c3_y*)vat_u->buf_w;
   }
 
-  u3_atom head = u3h(input_octs);
-  c3_w leading_zeros = head - len_w;
-  c3_w crc = 0L;
-
-  crc = crc32(crc, input, len_w);
-
-  while (leading_zeros > 0) {
-    c3_y lz_input = 0;
-    crc = crc32(crc, &lz_input, 1);
-    leading_zeros--;
+  if ( tel_w > hed_w ) {
+    return u3m_error("subtract-underflow");
   }
 
-  return u3i_word(crc);
+  c3_w led_w = hed_w - tel_w;
+  c3_w crc_w = 0;
+
+  crc_w = crc32(crc_w, input, tel_w);
+
+  while ( led_w > 0 ) {
+    c3_y byt_y = 0;
+    crc_w = crc32(crc_w, &byt_y, 1);
+    led_w--;
+  }
+
+  return u3i_word(crc_w);
 }
 
 u3_noun
 u3we_crc32(u3_noun cor)
 {
+  u3l_log("crc32 JET");
   u3_noun a = u3r_at(u3x_sam, cor);
 
   if ( (u3du(a) == c3y) && (u3ud(u3h(a)) == c3y) && (u3ud(u3t(a)) == c3y) ) {

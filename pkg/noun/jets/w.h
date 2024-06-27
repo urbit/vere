@@ -291,6 +291,7 @@
     u3_noun u3wes_gte(u3_noun);
     u3_noun u3wes_gth(u3_noun);
 
+    u3_noun u3we_crc32(u3_noun);
     u3_noun u3we_unzip_gzip(u3_noun);
 
   /** Tier 6.

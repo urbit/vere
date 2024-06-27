@@ -133,7 +133,7 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
 u3_noun
 u3we_unzip_gzip(u3_noun cor)
 {
-  /* u3l_log("hejsan C"); */
+  u3l_log("gzip JET");
   u3_noun a = u3r_at(u3x_sam, cor);
 
   if ( _(u3du(a)) ) {
