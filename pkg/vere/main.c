@@ -2380,7 +2380,8 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
 /* _cw_play_fork_heed(): wait for EOF on STDIN or until canceled.
 */
-void* _cw_play_fork_heed(void* arg) {
+static void*
+_cw_play_fork_heed(void* arg) {
   c3_c buf[1];
   c3_zs red;
 
@@ -2401,11 +2402,9 @@ void* _cw_play_fork_heed(void* arg) {
 static c3_i
 _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  //  prepare args
-  //
-  c3_c eve_c[21];
-  c3_c sap_c[21] = { 0 };
-  c3_i run_i     = 0;
+  c3_c *argv[11] = {0};
+  c3_c eve_c[21] = {0};
+  c3_c sap_c[21] = {0};
   c3_i ret_i;
 
   ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
@@ -2414,24 +2413,21 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   u3_assert( ret_i && ret_i < sizeof(sap_c) );
 
   {
+    c3_z    i_z = 0;
+    c3_i  run_i = 0;
+
     c3_c* run_c = _main_pier_run(u3_Host.wrk_c);
     if ( run_c ) {
       c3_free(run_c);
       run_i = 1;
     }
-  }
 
-  c3_c *argv[11] = {
-    u3_Host.wrk_c,
-    "play",
-    "--replay-to",
-    eve_c,
-    "--snap-at",
-    sap_c,
-  };
-
-  {
-    c3_z i_z = 6;
+    argv[i_z++] = u3_Host.wrk_c;
+    argv[i_z++] = "play";
+    argv[i_z++] = "--replay-to";
+    argv[i_z++] = eve_c;
+    argv[i_z++] = "--snap-at";
+    argv[i_z++] = sap_c;
 
     if _(mel_o) {
       argv[i_z++] = "--auto-meld";
@@ -2442,12 +2438,12 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     if _(ful_o) {
       argv[i_z++] = "--full";
     }
-
     if ( !run_i ) {
       argv[i_z++] = u3_Host.dir_c;
     }
 
     argv[i_z] = NULL;
+    u3_assert( i_z < sizeof(argv) );
   }
 
   //  prepare a pipe for ipc with the subprocess
