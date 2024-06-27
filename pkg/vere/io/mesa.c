@@ -1306,7 +1306,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         u3l_log(" mesa: send no");
         ret_o = c3n;
       } else {
-        /* u3l_log(" mesa: send yes"); */
+        u3l_log(" mesa: send yes");
         _mesa_ef_send(sam_u, u3k(las), u3k(pac));
         ret_o = c3y;
       }
@@ -1538,6 +1538,23 @@ _name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
   return bat;
 }
 
+static u3_noun
+_name_to_jumbo_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
+{
+  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
+  u3_noun boq = _dire_etch_ud(31);
+  u3_noun fag = _dire_etch_ud(0); // XX 1
+  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+
+  u3_noun wer = nam_u->nit_o == c3y
+    ? u3nc(c3__init, pax)
+    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+
+  u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
+
+  return res;
+}
+
 /*
  * RETAIN
  */
@@ -1573,7 +1590,6 @@ static c3_w
 _mesa_respond(u3_mesa_pict* req_u, c3_y** buf_y, u3_noun hit)
 {
   c3_w len_w = u3r_met(3, hit);
-
 
   *buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, *buf_y, hit);
@@ -1692,6 +1708,72 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         i++;
       }
       u3l_log("i %u", i);
+      // u3z(old);
+    }
+  }
+    // u3z(hit);
+  // u3z(pax);
+}
+
+static void
+_mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
+{
+  u3_mesa_pict* pic_u = vod_p;
+  u3_mesa_pact* pac_u = &pic_u->pac_u;
+  u3_mesa* sam_u = pic_u->sam_u;
+  //u3_noun pax = _mesa_path_with_fra(pac_u->pek_u.nam_u.pat_c, &fra_s);
+
+  u3_weak hit = u3r_at(7, nun);
+  if ( u3_none == hit ) {
+    // TODO: mark as dead
+    //u3z(nun);
+    u3l_log("unbound");
+  } else {
+    c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
+    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    if ( old == u3_none ) {
+      u3l_log("bad");
+      MESA_LOG(APATHY);
+    } else {
+      u3_noun tag;
+      u3_noun dat;
+      u3x_cell(u3k(old), &tag, &dat);
+      c3_w siz = u3r_met(13, hit);
+      c3_y* buf_y;
+
+      /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
+      u3_mesa_pact* fac_u;
+
+      c3_w len_w = u3r_met(3, hit);
+      c3_y* puf_y = c3_calloc(len_w);
+      u3r_bytes(0, len_w, puf_y, hit);
+
+      // mesa_sift_pact(fac_u, puf_y, len_w);
+      // _log_buf(puf_y, len_w);
+
+        u3_atom lin = u3qc_cut(13, 0, 1, hit);
+
+        c3_w lin_w = u3r_met(3, lin);
+        c3_y* pef_y = c3_calloc(lin_w);
+        u3r_bytes(0, len_w, pef_y, lin);
+        mesa_sift_pact(fac_u, pef_y, lin_w);
+
+      for (c3_w i=0; i < siz; i++) {
+        // (cut 3 [wid 1] dat.byts))
+        u3_atom lin = u3qc_cut(13, i, 1, hit);
+
+        pac_u->pek_u.nam_u.fra_w = i;
+
+        _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(lin)));
+
+        c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(lin));
+        _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
+
+        /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
+        /* _log_pact(pac_u); */
+
+      }
+
       // u3z(old);
     }
   }
@@ -2200,7 +2282,11 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   } else {
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
-      u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
+      // u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
+      //                                   bat_w,
+      //                                   bat_w + MESA_HUNK);
+
+      u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u,
                                         bat_w,
                                         bat_w + MESA_HUNK);
 
@@ -2209,7 +2295,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
       u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
       // only branch where we do not free pic_u
-      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_hunk_cb);
+      u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_jumbo_cb);
     } else {
       // XX unpossible
       _mesa_free_pict(pic_u);
