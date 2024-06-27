@@ -12,6 +12,8 @@
 #include "string.h"
 // #include <time.h>
 
+#define TIME(LABEL,NAME) \
+ (fprintf(stderr, "\r\n%s: %lu us", LABEL, (stop_##NAME.tv_sec - start_##NAME.tv_sec) * 1000000 + stop_##NAME.tv_usec - start_##NAME.tv_usec))
 
 const char* N_FUNCS        = "n-funcs";
 const char* SET_I32        = "set-i32";
@@ -384,12 +386,19 @@ _get_exports_serf(IM3Module serf)
   for (c3_w i = 0; i < n; i++) {
     M3Function f = (serf->functions)[i];
     c3_s numNames = f.numNames;
+    u3_noun functype = u3_none;
     for (c3_w j = 0; j < numNames; j++) {
       const char* export_name = f.names[j];
-      u3_atom name     = u3i_string(export_name);
-      u3_noun functype = _IM3FuncType_to_urwasm(f.funcType);
+      u3_atom name = u3i_string(export_name);
+      if (functype == u3_none) {
+        functype = u3k(_IM3FuncType_to_urwasm(f.funcType));
+      }
+      else {
+        u3k(functype);
+      }
       out = u3nc(u3nc(name, functype), out);
     }
+    u3z(functype);
   }
   return out;
 }
@@ -397,18 +406,26 @@ _get_exports_serf(IM3Module serf)
 u3_weak
 u3wa_lia_main(u3_noun cor)
 {
+  struct timeval stop_jet, start_jet;
+  struct timeval stop_serf, start_serf;
+  struct timeval stop_compile, start_compile;
+  struct timeval stop_encode, start_encode;
+  struct timeval stop_king, start_king;
+  struct timeval stop_link, start_link;
+  struct timeval stop_wasm, start_wasm;
+  struct timeval stop_retr, start_retr;
   u3_noun hint = u3x_at(u3x_sam_127, cor);
   u3_noun serf_octs = u3x_at(u3x_sam_2, cor);
   if ( (c3n == u3ud(hint)) || (c3n == u3du(serf_octs)) ) {
     return u3m_bail(c3__exit);
   }
-  fprintf(stderr, "\r\nJET HIT\r\n");
-  if ( (c3y == u3a_is_cat(hint)) &&
-       (hint == c3__none) )
+  // fprintf(stderr, "\r\nJET HIT\r\n");
+  if (hint == c3__none)
   {
     return u3_none;
   }
   else {
+    gettimeofday(&start_jet, NULL);
     // main:encoder  [7 [9 2 0 31] 9 1.524 0 1]
     // main:line     [7 [9 2 0 127] 9 10 0 1]
     // main:comp     [7 [9 2 0 63] 9 22 0 1]
@@ -418,7 +435,7 @@ u3wa_lia_main(u3_noun cor)
     u3_noun line_module, line_code, line_shop,
             line_ext, line_import, line_diff;
     u3_noun king_ast, king_octs;
-
+    gettimeofday(&start_serf, NULL);
     u3_atom serf_len = u3h(serf_octs);
     if (c3n == u3a_is_cat(serf_len)) {
       return u3m_bail(c3__fail);
@@ -453,7 +470,8 @@ u3wa_lia_main(u3_noun cor)
       return u3m_bail(c3__fail);
     }
 
-
+    gettimeofday(&stop_serf, NULL);
+    gettimeofday(&start_compile, NULL);
     core_encoder = u3j_kink(u3k(u3at(31, cor)),  2);
     core_line    = u3j_kink(u3k(u3at(127, cor)), 2);
     core_comp    = u3j_kink(u3k(u3at(63, cor)),  2);
@@ -492,16 +510,16 @@ u3wa_lia_main(u3_noun cor)
               u3k(line_import)
               )
     );
+    gettimeofday(&stop_compile, NULL);
+    gettimeofday(&start_encode, NULL);
     king_octs = u3n_slam_on(gate_encoder, king_ast);
+    gettimeofday(&stop_encode, NULL);
+    gettimeofday(&start_king, NULL);
     u3_atom king_len = u3h(king_octs);
     if (c3n == u3a_is_cat(king_len)) {
       return u3m_bail(c3__fail);
     }
-    
     c3_y *king_bytes = u3r_bytes_alloc(0, king_len, u3t(king_octs));
-    
-    struct timeval stop, start;
-    gettimeofday(&start, NULL);
     
     IM3Runtime wasm3_runtime_king = m3_NewRuntime(wasm3_env, 2097152, NULL);
     if (!wasm3_runtime_king) {
@@ -523,6 +541,8 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, "load module error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
+    gettimeofday(&stop_king, NULL);
+    gettimeofday(&start_link, NULL);
 
     //  handle imports
     //
@@ -556,6 +576,8 @@ u3wa_lia_main(u3_noun cor)
         return u3m_bail(c3__fail);
       }
     }
+    gettimeofday(&stop_link, NULL);
+    gettimeofday(&start_wasm, NULL); 
     M3TaggedValue tagged_act_0, tagged_n_funcs;
     c3_w i32_act_0, i32_n_funcs;
     IM3Global global_act_0   = m3_FindGlobal(wasm3_runtime_king->modules, ACT_0_FUNC_IDX);
@@ -659,6 +681,8 @@ u3wa_lia_main(u3_noun cor)
       fprintf(stderr, result);
       return u3m_bail(c3__fail);
     }
+    gettimeofday(&stop_wasm, NULL);
+    gettimeofday(&start_retr, NULL); 
     u3_noun line_code_flopped = u3kb_flop(line_code); 
     u3_noun last_action = u3h(line_code_flopped);
     u3_weak lia_types = u3r_at(5, last_action);
@@ -729,6 +753,7 @@ u3wa_lia_main(u3_noun cor)
     if (t != u3_nul) {
       return u3m_bail(c3__fail);
     }
+    gettimeofday(&stop_retr, NULL); 
     u3z(len_vals);
     u3z(input_line_vals);
     u3z(line_shop);
@@ -742,8 +767,15 @@ u3wa_lia_main(u3_noun cor)
     // m3_FreeEnvironment(wasm3_env);
     u3a_free(king_bytes);
     u3a_free(serf_bytes);
-    gettimeofday(&stop, NULL);
-    fprintf(stderr, "\r\ntook %lu us\r\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
+    gettimeofday(&stop_jet, NULL);
+    TIME("Total", jet);
+    TIME("Serf", serf);
+    TIME("Compile Lia", compile);
+    TIME("Encode result", encode);
+    TIME("King", king);
+    TIME("Linking", link);
+    TIME("Wasm", wasm);
+    TIME("Serialize results", retr);
     return u3nc(0, u3kb_flop(out_lia));
   }
 }
