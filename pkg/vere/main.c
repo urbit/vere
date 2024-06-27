@@ -2403,35 +2403,52 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
   //  prepare args
   //
-  c3_c eve_c[21], sap_c[21] = { 0 };
-  if ( 0 > sprintf(eve_c, "%" PRIu64, eve_d) ||
-       0 > sprintf(sap_c, "%" PRIu64, sap_d) )
+  c3_c eve_c[21];
+  c3_c sap_c[21] = { 0 };
+  c3_i run_i     = 0;
+  c3_i ret_i;
+
+  ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
+  u3_assert( ret_i && ret_i < sizeof(eve_c) );
+  ret_i = snprintf(sap_c, sizeof(sap_c), "%" PRIu64, sap_d);
+  u3_assert( ret_i && ret_i < sizeof(sap_c) );
+
   {
-    fprintf(stderr, "play: error parsing args\r\n");
-    return 1;
+    c3_c* run_c = _main_pier_run(u3_Host.wrk_c);
+    if ( run_c ) {
+      c3_free(run_c);
+      run_i = 1;
+    }
   }
 
   c3_c *argv[11] = {
     u3_Host.wrk_c,
     "play",
-    u3_Host.dir_c,
     "--replay-to",
     eve_c,
     "--snap-at",
     sap_c,
   };
 
-  c3_z i = 7;
-  if _(mel_o) {
-    argv[i++] = "--auto-meld";
+  {
+    c3_z i_z = 6;
+
+    if _(mel_o) {
+      argv[i_z++] = "--auto-meld";
+    }
+    if _(sof_o) {
+      argv[i_z++] = "--soft-mugs";
+    }
+    if _(ful_o) {
+      argv[i_z++] = "--full";
+    }
+
+    if ( !run_i ) {
+      argv[i_z++] = u3_Host.dir_c;
+    }
+
+    argv[i_z] = NULL;
   }
-  if _(sof_o) {
-    argv[i++] = "--soft-mugs";
-  }
-  if _(ful_o) {
-    argv[i++] = "--full";
-  }
-  argv[i] = NULL;
 
   //  prepare a pipe for ipc with the subprocess
   //
@@ -2450,9 +2467,10 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  spawn a new serf process and call its play subcommand
   //
-  pid_t pid;
-  if ( 0 != posix_spawn(&pid, u3_Host.wrk_c, &action, 0, argv, 0) ) {
-    fprintf(stderr, "play: posix_spawn: %d\r\n", errno);
+  pid_t pid_i;
+  c3_i  sat_i;
+  if ( 0 != (sat_i = posix_spawn(&pid_i, u3_Host.wrk_c, &action, 0, argv, 0)) ) {
+    fprintf(stderr, "play: posix_spawn: %s\r\n", strerror(sat_i));
     return 1;
   }
 
@@ -2462,14 +2480,13 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  wait for the child to exit
   //
-  c3_i sat_i;
-  if ( -1 == waitpid(pid, &sat_i, 0) ) {
-    fprintf(stderr, "play: waitpid: %d\r\n", errno);
+  if ( -1 == waitpid(pid_i, &sat_i, 0) ) {
+    fprintf(stderr, "play: waitpid: %s\r\n", strerror(errno));
     return 1;
   }
 
   if ( WIFEXITED(sat_i) ) {
-    c3_i ret_i = WEXITSTATUS(sat_i);
+    ret_i = WEXITSTATUS(sat_i);
     if ( 0 != ret_i ) {
       fprintf(stderr, "play: exited with %d\r\n", ret_i);
     }
@@ -3301,7 +3318,7 @@ main(c3_i   argc,
     if ( u3_Host.ops_u.nuu == c3n ) {
       c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3n);
       if ( sat_i ) {
-        fprintf(stderr, "play: replay failed: %d\r\n", sat_i);
+        fprintf(stderr, "play: replay failed\r\n");
         exit(sat_i);
       }
       signal(SIGTSTP, _stop_exit);
