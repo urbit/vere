@@ -608,18 +608,18 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   u3_atom  who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
   c3_c*    who_c = u3r_string(who);
 
-  u3_noun  rem, glx, ryf, bon, nex, liv;
-  c3_w     glx_w, ryf_w, bon_w, nex_w, liv_w;
+  u3_noun  rem, glx, ryf, bon, cur, nex;
+  c3_w     glx_w, ryf_w, bon_w, cur_w, nex_w;
 
   if (c3y == u3r_qual(nun, 0, 0, 0, &rem) &&
-      c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &nex, &liv)) {
+      c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) {
     /*
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
      */
     glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
-    bon_w = u3r_word(0, bon); nex_w = u3r_word(0, nex);
-    liv_w = u3r_word(0, liv);
+    bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
+    nex_w = u3r_word(0, nex);
 
     u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
@@ -631,13 +631,13 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
     } else {
       if (czar_ryf_w == ryf_w) {
         c3_w czar_ack_w = _czar_last_ack(czar_c, who_c, bon_w);
-        c3_w ack_w = nex_w - 1;
+        c3_w ack_w = cur_w - 1;
         if (czar_ack_w == 0xFFFFFFFF) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double boot");
           _pier_work(wok_u);
         } else if (czar_ack_w == ack_w ||
-                   (liv_w > 0 && czar_ack_w - 1 == ack_w)) {
+                   (nex_w > cur_w && czar_ack_w - 1 == ack_w)) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
