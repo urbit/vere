@@ -2593,9 +2593,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   pthread_t ted;
   pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
 
-  if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
-    fprintf(stderr, "mars: nothing to do!\r\n");
-  }
+  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 
   pthread_cancel(ted);
 }
