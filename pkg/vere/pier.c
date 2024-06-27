@@ -563,8 +563,7 @@ _czar_peer_rift(c3_c* czar_c, c3_c* who_c)
 
   c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
   if (!ret_i) {
-    u3_noun jamd =
-      u3dc("slav", c3__ud, u3do("crip", u3i_tape((c3_c*)hun_y)));
+    u3_noun jamd = u3dc("slav", c3__uw, u3do("crip", u3i_tape((c3_c*)hun_y)));
     u3_noun cued = u3ke_cue(jamd);
 
     u3_noun czar_glx, czar_ryf, czar_lyf;
