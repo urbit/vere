@@ -551,52 +551,49 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
   return czar_c;
 }
 
-static c3_w
-_czar_peer_rift(c3_c* czar_c, c3_c* who_c)
+static c3_o
+_czar_boot_data(c3_c* czar_c,
+                c3_c* who_c,
+                c3_w* bone_w,
+                c3_w* czar_glx_w,
+                c3_w* czar_ryf_w,
+                c3_w* czar_lyf_w,
+                c3_w* czar_bon_w,
+                c3_w* czar_ack_w)
 {
-  c3_w czar_ryf_w = 0xFFFFFFFF;
   c3_c url[256];
   c3_w  len_w;
-  c3_y* hun_y;
+  c3_y* hun_y = 0;
 
-  sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
+  if (bone_w != NULL) {
+    sprintf(url, "https://%s.urbit.org/~/boot/%s/%d",
+            czar_c+1, who_c, *bone_w + 1);
+  } else {
+    sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
+  }
 
   c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
   if (!ret_i) {
     u3_noun jamd = u3dc("slav", c3__uw, u3i_bytes(len_w, hun_y));
     u3_noun cued = u3qe_cue(jamd);
 
-    u3_noun czar_glx, czar_ryf, czar_lyf;
-    u3x_trel(cued, &czar_glx, &czar_ryf, &czar_lyf);
-    czar_ryf_w = u3r_word(0, czar_ryf);
+    u3_noun czar_glx, czar_ryf, czar_lyf, czar_bon, czar_ack;
+    u3x_hext(cued, 0, &czar_glx, &czar_ryf, &czar_lyf, &czar_bon, &czar_ack);
+
+    *czar_glx_w = u3r_word(0, czar_glx);
+    *czar_ryf_w = u3r_word(0, czar_ryf);
+    *czar_lyf_w = u3r_word(0, czar_lyf);
+    if (czar_bon != 0) *czar_bon_w = u3r_word(0, u3t(czar_bon));
+    if (czar_ack != 0) *czar_ack_w = u3r_word(0, u3t(czar_ack));
 
     u3z(jamd);
     u3z(cued);
     c3_free(hun_y);
+
+    return c3y;
   }
 
-  return czar_ryf_w;
-}
-
-static c3_w
-_czar_last_ack(c3_c* czar_c,
-               c3_c* who_c,
-               c3_w  bone_w)
-{
-  c3_w czar_last_ack_w = 0xFFFFFFFF;
-  c3_c url[256];
-  c3_w  len_w;
-  c3_y* hun_y;
-
-  sprintf(url, "https://%s.urbit.org/~/boot/%s/%d", czar_c+1, who_c, bone_w + 1);
-
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
-  if (!ret_i) {
-    czar_last_ack_w = strtoumax((c3_c*)hun_y, NULL, 10);
-  }
-
-  c3_free(hun_y);
-  return czar_last_ack_w;
+  return c3n;
 }
 
 static void
@@ -604,11 +601,13 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_work* wok_u = (u3_work*)vod_p;
 
-  u3_atom  who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
-  c3_c*    who_c = u3r_string(who);
+  u3_atom who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
+  c3_c*   who_c = u3r_string(who);
 
-  u3_noun  rem, glx, ryf, bon, cur, nex;
-  c3_w     glx_w, ryf_w, bon_w, cur_w, nex_w;
+  u3_noun rem, glx, ryf, bon, cur, nex;
+  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
+
+  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
 
   if (c3y == u3r_qual(nun, 0, 0, 0, &rem) &&
       c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) {
@@ -622,14 +621,15 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
     u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
-    c3_w czar_ryf_w = _czar_peer_rift(czar_c, who_c);
 
-    if (czar_ryf_w == 0xFFFFFFFF) {
+    if (c3n == _czar_boot_data(czar_c, who_c, &bon_w,
+                               &czar_glx_w, &czar_ryf_w,
+                               &czar_lyf_w, &czar_bon_w,
+                               &czar_ack_w)) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double boot");
       _pier_work(wok_u);
     } else {
       if (czar_ryf_w == ryf_w) {
-        c3_w czar_ack_w = _czar_last_ack(czar_c, who_c, bon_w);
         c3_w ack_w = cur_w - 1;
         if (czar_ack_w == 0xFFFFFFFF) {
           // This codepath should never be hit
@@ -660,13 +660,15 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * otherwise continue boot.
      */
     c3_c* czar_c = _resolve_czar(wok_u, who_c);
-    c3_w czar_ryf_w = _czar_peer_rift(czar_c, who_c);
-    c3_free(czar_c);
 
-    if (czar_ryf_w == 0xFFFFFFFF) {
+    if (c3n == _czar_boot_data(czar_c, who_c, 0,
+                               &czar_glx_w, &czar_ryf_w,
+                               &czar_lyf_w, 0, 0)) {
+      c3_free(czar_c);
       _pier_work(wok_u);
     } else {
       // Peer state found under czar
+      c3_free(czar_c);
       u3_weak kf_ryf = wok_u->pir_u->ryf;
       if (kf_ryf == u3_none) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double boot");
