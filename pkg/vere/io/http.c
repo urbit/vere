@@ -655,6 +655,7 @@ _http_foo_cb(void* vod_p, u3_noun nun)
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
 
+  //  TODO range
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
@@ -669,7 +670,7 @@ _http_foo_cb(void* vod_p, u3_noun nun)
 }
 
 static c3_c*
-_find_tis_fas(void* txt, size_t len)
+_find_tis_fas(void* txt, c3_w len)
 {
   c3_c* tis = memchr(txt, '=', len);
   c3_c* fas = memchr(txt, '/', len);
@@ -684,15 +685,47 @@ _find_tis_fas(void* txt, size_t len)
     return fas;
   }
 }
-/* _http_req_dispatch(): dispatch http request to %eyre
-*/
+
 //  TODO
 //  [x] don't blow up on bad paths
 //  [x] authentication
 //  [x] caching
-//  [ ] insert mime in path
-//  [ ] range header
+//  [x] insert mime in path
+//  [x] range header
+//  [x] u3qc_cut
+//  [ ] _http_range_respond?
+//  [ ] 216
+//  [ ] better range header parsing
+//  [ ] better slicing
+//  [ ] multipart ranges
 //
+typedef struct _range_header {
+  c3_o ok;
+  c3_w begin;
+  c3_w end;
+} range_header;
+
+static range_header
+_get_range(void* txt, c3_w len)
+{
+  c3_c* hep = memchr(txt, '-', len);
+  range_header slice;
+
+  if ( hep ) {
+    //  XX  sscanf safety - u3i_bytes first?
+    sscanf(txt, "%" SCNu32, &slice.begin);
+    sscanf(hep+1, "%" SCNu32, &slice.end);
+    slice.ok = c3y;
+    return slice;
+  }
+  else {
+    slice.ok = c3n;
+    return slice;
+  }
+}
+
+/* _http_req_dispatch(): dispatch http request to %eyre
+*/
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 {
@@ -748,7 +781,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_noun cas;
       c3_o last = c3n;
 
-      size_t i;
+      c3_w i;
 
       //  get beak from path
       //
@@ -808,23 +841,23 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 
       u3_noun spur = u3dc("rush", u3i_bytes(len, (const c3_y*)base), u3v_wish("stap"));
 
-      if ( spur == u3_nul ) {
-        h2o_send_error_generic(req_u->rec_u, 400, "bad spur", "bad spur", 0);
+      if ( (who != our) || (spur == u3_nul) ) {
+        c3_c* msg_c = "bad scry path";
+        h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+        return;
       }
+
       else {
-        if ( who != our ) {
-          c3_c* msg_c = "who != our";
-          h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-          return;
-        }
+        spur = u3nc(u3i_string("mime"), u3t(spur));
         if ( c3y == last ) {
           //  DON'T CACHE
+          req_u->peq_u->las_o = c3y;
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                             des, u3t(spur), req_u->peq_u, _http_foo_cb);
+                             des, spur, req_u->peq_u, _http_foo_cb);
         }
 
         else {
-          u3_noun bem = u3nq(our, des, cas, u3t(spur));
+          u3_noun bem = u3nq(our, des, cas, spur);
           u3_weak nac = u3h_get(htd_u->nax_p, bem);
 
           if ( u3_none == nac ) {
@@ -834,7 +867,41 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                           req_u->peq_u, _http_foo_cb);
           }
           else {
-            _http_cache_respond(req_u, nac);
+            //  TODO range
+            h2o_headers_t req_headers = req_u->rec_u->headers;
+            c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
+
+            if (idx != UINT32_MAX) {
+              if ( (req_headers.entries[idx].value.len > 6)  &&
+                   (memcmp("bytes=", req_headers.entries[idx].value.base, 6) == 0 )) {
+                c3_w rest_len = req_headers.entries[idx].value.len - 6;
+                range_header res = _get_range(req_headers.entries[idx].value.base + 6, rest_len);
+                u3l_log("struct begin %u, end %u", res.begin, res.end);
+                if ( res.ok == c3n ) {
+                  c3_c* msg_c = "Requested Range Not Satisfiable";
+                  h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                }
+                else {
+                  u3_noun octs = u3r_at(127, nac);
+
+                  if ( octs ==  u3_none) {
+                    c3_c* msg_c = "Requested Range Not Satisfiable";
+                    h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                    return;
+                  }
+
+                  //  TODO check range vs size
+                  u3_noun piece = u3qc_cut(3, res.begin, res.end + 1, u3t(octs));
+                  u3_noun result = u3nc(res.end + 1 - res.begin, piece);
+                  u3m_p("result", result);
+                  u3_noun res = u3i_edit(nac, 127, result);
+                  _http_cache_respond(req_u, res);
+                }
+              }
+            }
+            else {
+              _http_cache_respond(req_u, nac);
+            }
           }
         }
       }
