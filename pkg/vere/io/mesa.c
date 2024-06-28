@@ -1742,21 +1742,15 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
       c3_y* buf_y;
 
       /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
-      u3_mesa_pact* fac_u;
+      u3_mesa_pact tac_u;
 
       c3_w len_w = u3r_met(3, hit);
+      u3l_log("len_w %u", len_w);
       c3_y* puf_y = c3_calloc(len_w);
       u3r_bytes(0, len_w, puf_y, hit);
 
-      // mesa_sift_pact(fac_u, puf_y, len_w);
-      // _log_buf(puf_y, len_w);
-
-        u3_atom lin = u3qc_cut(13, 0, 1, hit);
-
-        c3_w lin_w = u3r_met(3, lin);
-        c3_y* pef_y = c3_calloc(lin_w);
-        u3r_bytes(0, len_w, pef_y, lin);
-        mesa_sift_pact(fac_u, pef_y, lin_w);
+      mesa_sift_pact(&tac_u, puf_y, len_w);
+      _log_pact(&tac_u);
 
       for (c3_w i=0; i < siz; i++) {
         // (cut 3 [wid 1] dat.byts))
