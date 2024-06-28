@@ -198,12 +198,12 @@ _put_space(u3_cell val, IM3Runtime runtime, c3_w target)  // RETAIN
 }
 
 static M3Result
-_get_i32_global(IM3Runtime runtime, char *name, c3_w *out) {
+_get_i32_global(IM3Runtime runtime, const char *name, c3_w *out) {
   M3TaggedValue tagged_val;
   IM3Global global = m3_FindGlobal(runtime->modules, name);
   M3Result result = m3_GetGlobal (global, &tagged_val);
   if (result) {
-    return result
+    return result;
   }
   switch (tagged_val.type) {
     default: {
