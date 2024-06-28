@@ -329,7 +329,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
         u3l_log("curl: error fetching %s: HTTP %ld", url_c, cod_i);
       }
       ret_i = -2;
-      if ( cod_i == 404 ) {
+      if ( 400 <= cod_i && cod_i < 500 ) {
         break;
       }
     }
