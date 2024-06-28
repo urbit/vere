@@ -2402,15 +2402,18 @@ _cw_play_fork_heed(void* arg) {
 static c3_i
 _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  c3_c *argv[11] = {0};
+  c3_c *argv[12] = {0};
   c3_c eve_c[21] = {0};
   c3_c sap_c[21] = {0};
+  c3_c lom_c[3]  = {0};
   c3_i ret_i;
 
   ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
   u3_assert( ret_i && ret_i < sizeof(eve_c) );
   ret_i = snprintf(sap_c, sizeof(sap_c), "%" PRIu64, sap_d);
   u3_assert( ret_i && ret_i < sizeof(sap_c) );
+  ret_i = snprintf(lom_c, sizeof(lom_c), "%u", u3_Host.ops_u.lom_y);
+  u3_assert( ret_i && ret_i < sizeof(lom_c) );
 
   {
     c3_z    i_z = 0;
@@ -2424,6 +2427,8 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     argv[i_z++] = u3_Host.wrk_c;
     argv[i_z++] = "play";
+    argv[i_z++] = "--loom";
+    argv[i_z++] = lom_c;
     argv[i_z++] = "--replay-to";
     argv[i_z++] = eve_c;
     argv[i_z++] = "--snap-at";
