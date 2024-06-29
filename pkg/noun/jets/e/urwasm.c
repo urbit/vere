@@ -207,6 +207,7 @@ _extract(IM3Runtime runtime,
          u3_noun urtype_in) {
   u3_noun out = u3_nul;
   u3_noun type, t = urtype_in;
+  M3Result result;
   for (c3_w i = 0; i < n_in; i++) {
     if (u3ud(t) == c3y) {
       return c3n;
@@ -609,6 +610,28 @@ _get_exports_serf(IM3Module serf)
     u3z(functype);
   }
   return out;
+}
+
+static c3_o
+_sane_c(const c3_y *string) {
+  if (string == NULL) {
+    return c3n;
+  }
+  if ( !((*string >= 'a') && (*string <= 'z')) ) {
+    return c3n;
+  }
+  c3_w i = 1;
+  while (string[i] != 0) {
+    if (!(
+      ( (string[i] >= 'a') && (string[i] <= 'z') ) ||
+      ( (string[i] >= '0') && (string[i] <= '9') ) ||
+      (string[i] == '-')
+      )) {
+      return c3n;
+    } 
+    i++;
+  }
+  return c3y;
 }
 
 u3_weak
