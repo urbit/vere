@@ -617,15 +617,12 @@ _sane_c(const c3_y *string) {
   if (string == NULL) {
     return c3n;
   }
-  if ( !((*string >= 'a') && (*string <= 'z')) ) {
-    return c3n;
-  }
-  c3_w i = 1;
+  c3_w i = 0;
   while (string[i] != 0) {
     if (!(
       ( (string[i] >= 'a') && (string[i] <= 'z') ) ||
-      ( (string[i] >= '0') && (string[i] <= '9') ) ||
-      (string[i] == '-')
+      ( (string[i] >= '0') && (string[i] <= '9') && (i != 0) ) ||
+      ( (string[i] == '-') && (i != 0))
       )) {
       return c3n;
     } 
