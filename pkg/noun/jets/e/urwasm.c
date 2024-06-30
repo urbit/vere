@@ -350,7 +350,8 @@ _link_king_with_serf(IM3Runtime king_runtime,
     result = m3_Call(f, n_in, valptrs_in);
     u3a_free(valptrs_in);
     if (result) {
-      fprintf(stderr, "call error");
+      // fprintf(stderr, "\r\ncall error in king: \r\n");
+      // fprintf(stderr, result);
       return result;
     }
     result = m3_GetResults(f, n_out, valptrs_out);
@@ -402,24 +403,22 @@ _link_king_with_serf(IM3Runtime king_runtime,
     c3_y **name_ptr = ((king_link_data*)_ctx->userdata)->name_ptr;
     u3_noun* list_lia_input_ptr = ((king_link_data*)_ctx->userdata)->list_lia_input_ptr;
     if (*shop == u3_nul) {
-      IM3Function f;
-      result = m3_FindFunction(&f, king_runtime, name);
-      if (result) {
-        fprintf(stderr, "function not found");
-        return result;
+      c3_w n_in  = _ctx->function->funcType->numArgs;
+      c3_w n_out = _ctx->function->funcType->numRets;
+      if (n_out) {
+        fprintf(stderr, "\r\n non-zero numRets of Lia import \r\n");
+        return m3Err_trapAbort;
       }
-      c3_w n_in  = f->funcType->numArgs;
-      c3_w n_out = f->funcType->numRets;
       u3_noun type_sign = u3kdb_got(u3k(*import), u3i_string(name));
       if (u3ud(type_sign) == c3y) {
         return m3Err_trapAbort;
       }
       u3_noun urtype_in = u3t(type_sign);
       if ( _extract(king_runtime,
-                    _sp+n_out,
+                    _sp,
                     n_in,
                     list_lia_input_ptr,
-                    f->funcType,
+                    _ctx->function->funcType,
                     u3k(urtype_in)) == c3n ) {
         return m3Err_trapAbort;
       }
@@ -523,8 +522,9 @@ _link_serf_with_king(IM3Runtime runtime,
   result = m3_Call(f, n_in, valptrs_in);
   u3a_free(valptrs_in);
   if (result) {
-    fprintf(stderr, "call error");
-    return result;
+      // fprintf(stderr, "\r\ncall error in serf: \r\n");
+      // fprintf(stderr, result);
+      return result;
   }
   result = m3_GetResults(f, n_out, valptrs_out);
   u3a_free(valptrs_out);
@@ -688,7 +688,7 @@ u3wa_lia_main(u3_noun cor)
                             serf_bytes,
                             serf_len);
     if (result) {
-      fprintf(stderr, "parse module error: %s\r\n", result);
+      fprintf(stderr, "parse serf error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
 
@@ -760,7 +760,7 @@ u3wa_lia_main(u3_noun cor)
                             king_bytes,
                             king_len);
     if (result) {
-      fprintf(stderr, "parse module error: %s\r\n", result);
+      fprintf(stderr, "parse king error: %s\r\n", result);
       return u3m_bail(c3__fail);
     }
 
