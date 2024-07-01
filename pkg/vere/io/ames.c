@@ -1659,6 +1659,7 @@ static void
 _ames_cap_queue(u3_ames* sam_u)
 {
   u3_ovum* egg_u = sam_u->car_u.ext_u;
+  c3_d     old_d = sam_u->sat_u.dop_d;
 
   while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
     u3_ovum* nex_u = egg_u->nex_u;
@@ -1675,8 +1676,9 @@ _ames_cap_queue(u3_ames* sam_u)
     egg_u = nex_u;
   }
 
-  if (  (sam_u->sat_u.dop_d && (0 == (sam_u->sat_u.dop_d % 1000)))
-     && !(u3C.wag_w & u3o_verbose) )
+  if (  !(u3C.wag_w & u3o_verbose)
+     && (old_d != sam_u->sat_u.dop_d)
+     && !(sam_u->sat_u.dop_d % 1000) )
   {
     u3l_log("ames: packet dropped (%" PRIu64 " total)", sam_u->sat_u.dop_d);
   }
