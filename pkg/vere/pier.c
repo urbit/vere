@@ -573,28 +573,32 @@ _czar_boot_data(c3_c* czar_c,
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
   }
 
+  c3_o ret_o = c3n;
   c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
   if ( !ret_i ) {
     u3_noun jamd = u3dc("slav", c3__uw, u3i_bytes(len_w, hun_y));
     u3_noun cued = u3qe_cue(jamd);
 
     u3_noun czar_glx, czar_ryf, czar_lyf, czar_bon, czar_ack;
-    u3x_hext(cued, 0, &czar_glx, &czar_ryf, &czar_lyf, &czar_bon, &czar_ack);
 
-    *czar_glx_w = u3r_word(0, czar_glx);
-    *czar_ryf_w = u3r_word(0, czar_ryf);
-    *czar_lyf_w = u3r_word(0, czar_lyf);
-    if ( czar_bon != 0 ) *czar_bon_w = u3r_word(0, u3t(czar_bon));
-    if ( czar_ack != 0 ) *czar_ack_w = u3r_word(0, u3t(czar_ack));
+    if ( (c3y == u3r_hext(cued, 0, &czar_glx, &czar_ryf,
+                          &czar_lyf, &czar_bon, &czar_ack)) &&
+         (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
+         (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
+         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) &&
+         (c3y == u3du(czar_bon)) &&
+         (c3y == u3r_safe_word(u3t(czar_bon), czar_bon_w)) &&
+         (c3y == u3du(czar_ack)) &&
+         (c3y == u3r_safe_word(u3t(czar_ack), czar_ack_w)) ) {
+      ret_o = c3y;
+    }
 
     u3z(jamd);
     u3z(cued);
     c3_free(hun_y);
-
-    return c3y;
   }
 
-  return c3n;
+  return ret_o;
 }
 
 static void
