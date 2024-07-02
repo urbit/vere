@@ -533,8 +533,8 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
 static c3_c*
 _resolve_czar(u3_work* wok_u, c3_c* who_c)
 {
-  u3_noun czar = u3dc("scot", 'p', u3k(wok_u->pir_u->who_d[0] & ((1 << 8) - 1)));
-  c3_c* czar_c = u3r_string(u3k(czar));
+  u3_noun czar = u3dc("scot", 'p', wok_u->pir_u->who_d[0] & ((1 << 8) - 1));
+  c3_c* czar_c = u3r_string(czar);
 
   c3_c url[256];
   c3_w  len_w;
@@ -548,6 +548,7 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
     czar_c = (c3_c*)hun_y;
   }
 
+  u3z(czar);
   return czar_c;
 }
 
