@@ -646,13 +646,13 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
         } else {
           u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
                   czar_ack_w, ack_w);
-          exit(1);
+          u3_king_bail();
         }
       } else {
         // Trying to boot old ship after breach
         u3l_log("boot: failed: rift in czar peer-state: %d, current rift: %d",
                 czar_ryf_w, ryf_w);
-        exit(1);
+        u3_king_bail();
       }
     }
 
@@ -684,7 +684,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       } else {
         u3l_log("boot: failed: rift in czar peer state: %d, keyfile rift: %d",
                 czar_ryf_w, kf_ryf);
-        exit(1);
+        u3_king_bail();
       }
     }
   } else {
