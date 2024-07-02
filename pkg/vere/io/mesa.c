@@ -95,14 +95,14 @@ typedef struct _u3_pact_stat {
   c3_d  sen_d; // last sent
   c3_y  sip_y; // skips
   c3_y  tie_y; // tries
-  c3_y  dup_y; // dupes
 } u3_pact_stat;
 
 struct _u3_mesa;
 
 typedef struct _u3_peer_last {
-  c3_d acc_d; // time of last access
-  c3_d son_d; // time of sponsor check
+  c3_d her_d; // time we last heard from the direct route
+  c3_d dir_d; // time we last sent a packet on the direct route
+  c3_d ind_d; // time we last sent a packet on the indirect route
 } u3_peer_last;
 
 typedef struct _u3_misord_buf {
@@ -135,7 +135,7 @@ typedef struct _u3_pend_req {
   lss_verifier*          los_u; // Lockstep verifier
   u3_mesa_pict*          pic_u; // preallocated request packet
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
-  u3_bitset              was_u; // ((mop @ud packet-state) lte)
+  u3_bitset              was_u; // ((mop @ud ?) lte)
   c3_y                  pad_y[64];
 } u3_pend_req;
 
@@ -669,7 +669,6 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     req_u->wat_u[nam_u->fra_w].sen_d = now_d;
     req_u->wat_u[nam_u->fra_w].sip_y = 0;
     req_u->wat_u[nam_u->fra_w].tie_y = 1;
-    req_u->wat_u[nam_u->fra_w].dup_y = 0;
 
     /* u3l_log("bitset_put %u", nam_u->fra_w); */
     bitset_put(&req_u->was_u, nam_u->fra_w);
@@ -822,51 +821,34 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
   _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
 }
 
+//  TODO: check whether direct, decide what to send
 static void
 _try_resend(u3_pend_req* req_u)
 {
   u3_mesa* sam_u = req_u->pic_u->sam_u;
   u3_lane* lan_u = &req_u->lan_u;
   c3_o los_o = c3n;
-  /* if ( req_u->tot_w == 0 || req_u->ack_w <= REORDER_THRESH ) { */
-  /*   u3l_log("reorder thresh too low %u", req_u->ack_w); */
-  /*   return; */
-  /* } */
-  c3_w ack_w = req_u->ack_w - REORDER_THRESH;
   c3_d now_d = _get_now_micros();
-  /* u3l_log("lef_w %u, nex_w %u, len_w %u, tot_w %u", req_u->lef_w, req_u->nex_w, req_u->len_w, req_u->tot_w); */
-  for ( int i = req_u->lef_w; i < req_u->nex_w; i++ ) {
-    if ( c3y == bitset_has(&req_u->was_u, i) ) {
-      req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
-      if ( req_u->wat_u[i].tie_y == 1 ) {
-        /* u3l_log("fast resend %u", i); */
-        los_o = c3y;
-        c3_y* buf_y = c3_calloc(PACT_SIZE);
-        req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
-        c3_w siz_w  = mesa_etch_pact(buf_y, &req_u->pic_u->pac_u);
-        if ( siz_w == 0 ) {
-          u3l_log("failed to etch");
-          u3_assert( 0 );
-        }
-        // TODO: better route management
-        _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
-        _mesa_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
+  u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
+  u3_mesa_name *nam_u = &pac_u->pek_u.nam_u;
 
-      } else if ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) {
+  for ( int i = req_u->lef_w; i < req_u->nex_w; i++ ) {
+    //  TODO: make fast recovery different from slow
+    //  TODO: track skip count but not dupes, since dupes are meaningless
+    if ( c3y == bitset_has(&req_u->was_u, i) ) {
+      nam_u->fra_w = i;
+      if ( ( req_u->wat_u[i].tie_y == 1 ) || // TODO wth?
+           ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) ) {
         los_o = c3y;
         c3_y* buf_y = c3_calloc(PACT_SIZE);
-        req_u->pic_u->pac_u.pek_u.nam_u.fra_w = i;
-        /* u3l_log("slow resending %u ", i); */
-        c3_w siz_w  = mesa_etch_pact(buf_y, &req_u->pic_u->pac_u);
-        if( siz_w == 0 ) {
+        c3_w siz_w  = mesa_etch_pact(buf_y, pac_u);
+        if ( 0 == siz_w ) {
           u3l_log("failed to etch");
           u3_assert( 0 );
         }
         // TODO: better route management
         _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
-        _mesa_req_pact_resent(req_u, &req_u->pic_u->pac_u.pek_u.nam_u);
-      } else {
-        /* u3l_log("did nothing %u %llu %u", req_u->wat_u[i].tie_y, (now_d - req_u->wat_u[i].sen_d), req_u->gag_u->rto_w); */
+        _mesa_req_pact_resent(req_u, nam_u);
       }
     }
   }
@@ -1001,7 +983,6 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   // received duplicate
   if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
     /* MESA_LOG(DUPE); */
-    req_u->wat_u[nam_u->fra_w].dup_y++;
     return req_u;
   }
 
@@ -1814,9 +1795,6 @@ _saxo_cb(void* vod_p, u3_noun nun)
 static void
 _meet_peer(u3_mesa* sam_u, u3_peer* per_u, c3_d her_d[2])
 {
-  c3_d now_d = _get_now_micros();
-  per_u->las_u.son_d = now_d;
-
   u3_noun her = u3i_chubs(2, her_d);
   u3_noun gan = u3nc(u3_nul, u3_nul);
   u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
@@ -1826,10 +1804,9 @@ _meet_peer(u3_mesa* sam_u, u3_peer* per_u, c3_d her_d[2])
 static void
 _hear_peer(u3_mesa* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
 {
-  c3_d now_d = _get_now_micros();
-  per_u->las_u.acc_d = now_d;
   if ( c3y == dir_o ) {
     per_u->dir_u = lan_u;
+    per_u->las_u.her_d = _get_now_micros();
   } else {
     per_u->ind_u = lan_u;
   }
