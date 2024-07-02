@@ -151,21 +151,27 @@ typedef struct _u3_czar_info {
 /*
 |%
 +$  lane-state
-  $:  =lane
-      last-sent=@da
+  $:  last-sent=@da
       last-heard=@da
       rtt=@
       rttvar=@
   ==
 +$  full-state  (map ship peer-state)
 +$  peer-state
-  $:  [direct=lane-state indirect=lane-state]
-      galaxy=@p
+  $:  direct=[=lane lane-state]
+      indirect=[galaxy=@p lane-state]
       backpointer  ::  for callbacks
       requests=(map [rift path] u3_pend_req)  ::  pend_req without lan_u
   ==
 --
 */
+
+typedef struct _u3_lane_state {
+  c3_d  sen_d;  //  last sent date
+  c3_d  her_d;  //  last heard date
+  c3_d  rtt_d;  //  round-trip time
+  c3_d  rtv_d;  //  round-trip time variance
+} u3_lane_state;
 
 /* _u3_mesa: next generation networking
  */
@@ -181,7 +187,7 @@ typedef struct _u3_mesa {
   c3_o               for_o;             //  is forwarding
   ur_cue_test_t*     tes_u;             //  cue-test handle
   u3_cue_xeno*       sil_u;             //  cue handle
-  u3p(u3h_root)      her_p;             // (map ship
+  u3p(u3h_root)      her_p;             // (map ship u3_peer)
   u3p(u3h_root)      pac_p;             // packet cache
   u3p(u3h_root)      lan_p;             // lane cache
   u3_czar_info       imp_u[256];       // galaxy information
@@ -191,11 +197,12 @@ typedef struct _u3_mesa {
 } u3_mesa;
 
 typedef struct _u3_peer {
-  u3_peer_last   las_u; // last check timestamps
-  u3_lane        dir_u; // direct lane (if any)
-  u3_lane        ind_u; // indirect lane (if any)
-  c3_s           imp_s; // galaxy
-  u3_mesa*       sam_u; // backpointer
+  u3_mesa*       sam_u; //  backpointer
+  u3_lane        dan_u; //  direct lane (nullable)
+  u3_lane_state  dir_u; //  direct lane state
+  c3_y           imp_y; //  galaxy @p
+  u3_lane_state  ind_u; //  indirect lane state
+  //  TODO HAMT for (map [rift path] u3_pend_req)
 } u3_peer;
 
 typedef enum _u3_mesa_ctag {
