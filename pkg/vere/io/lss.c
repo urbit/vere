@@ -137,28 +137,20 @@ void lss_builder_free(lss_builder* bil_u) {
   c3_free(bil_u);
 }
 
-static c3_o _lss_verifier_find_pair(lss_verifier* los_u, c3_w height, c3_b sel, lss_hash h)
+static c3_o _lss_verifier_find_pair(lss_verifier* los_u, c3_w i, c3_w height, lss_hash h)
 {
-  if (memcmp(los_u->pairs[height][sel], h, 32) == 0) {
-    return c3y;
-  }
-  // "Unbalanced" pairs have two children on the left and one on the right. This
-  // results in the right child being emplaced at a greater height than it
-  // "should" be, so the standard check (above) misses it.
-  //
-  // The locations of these single children are fully determined by the size of
-  // the tree. To find the adjusted height, we simply "climb up" however many
-  // unbalanced pairs are directly above us.
-  c3_w unbalanced = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
-  height += _bits_ctz64(~(unbalanced >> height));
-  return _(memcmp(los_u->pairs[height][1], h, 32) == 0);
+  c3_w odd = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
+  c3_w mask = (1<<_bits_len64(i ^ (los_u->leaves-1))) - 1;
+  height += _bits_ctz64(~((odd&~mask) >> height));
+  c3_b parity = (i >> height) & 1;
+  return _(memcmp(los_u->pairs[height][parity], h, 32) == 0);
 }
 
 c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair) {
   // verify leaf
   lss_hash h;
   _leaf_hash(h, leaf_y, leaf_w, los_u->counter);
-  if ( c3n == _lss_verifier_find_pair(los_u, 0, los_u->counter&1, h) ) {
+  if ( c3n == _lss_verifier_find_pair(los_u, los_u->counter, 0, h) ) {
     return c3n;
   }
   // check whether pair is expected
@@ -169,15 +161,15 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
     return c3y;
   }
   // verify and insert pair
-  c3_w height = _bits_ctz64(los_u->counter) + 1;
-  c3_b sel = ~(los_u->counter >> height) & 1;
+  c3_w height = _bits_ctz64(los_u->counter);
+  c3_w pairStart = los_u->counter + (1 << height); // first leaf "covered" by this pair
   lss_hash parent_hash;
   _parent_hash(parent_hash, (*pair)[0], (*pair)[1]);
-  if ( c3n == _lss_verifier_find_pair(los_u, height, sel, parent_hash) ) {
+  if ( c3n == _lss_verifier_find_pair(los_u, pairStart, height+1, parent_hash) ) {
     return c3n;
   }
-  memcpy(los_u->pairs[height-1][0], (*pair)[0], sizeof(lss_hash));
-  memcpy(los_u->pairs[height-1][1], (*pair)[1], sizeof(lss_hash));
+  memcpy(los_u->pairs[height][0], (*pair)[0], sizeof(lss_hash));
+  memcpy(los_u->pairs[height][1], (*pair)[1], sizeof(lss_hash));
   los_u->counter++;
   return c3y;
 }
