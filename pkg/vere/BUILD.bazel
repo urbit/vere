@@ -96,6 +96,8 @@ vere_library(
             "*.h",
             "db/*.c",
             "io/*.c",
+            "io/*/*.h",
+            "io/*/*.c",
         ],
         exclude = [
             "main.c",
