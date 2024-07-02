@@ -1498,7 +1498,7 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
 
   if ( ret_i ) {
     fprintf(stderr, "vere: copy %s -> %s failed: %s\r\n",
-                    bin_c, u3_Host.dem_c, strerror(errno));
+                    u3_Host.dem_c, bin_c, strerror(errno));
     c3_free(bin_c);
     return -1;
   }

@@ -7,6 +7,7 @@
 #include "ur.h"
 
 #include "zlib.h"
+#include "natpmp.h"
 
 #include <ent.h>
 
@@ -23,6 +24,8 @@
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
 #define QUEUE_MAX        30             //  max number of packets in queue
+
+#define _CZAR_GONE  UINT32_MAX
 
 typedef enum u3_stun_state {
   STUN_OFF = 0,
@@ -51,26 +54,32 @@ typedef enum u3_stun_state {
     c3_l             sev_l;             //  instance number
     ur_cue_test_t*   tes_u;             //  cue-test handle
     u3_cue_xeno*     sil_u;             //  cue handle
-    c3_c*            dns_c;             //  domain XX multiple/fallback
     c3_y             ver_y;             //  protocol version
     u3p(u3h_root)    lax_p;             //  lane scry cache
     struct _u3_panc* pan_u;             //  outbound packet queue, backward
-    c3_w             imp_w[256];        //  imperial IPs
-    time_t           imp_t[256];        //  imperial IP timestamps
-    c3_o             imp_o[256];        //  imperial print status
+    struct {                            //
+      c3_c       dom_c[251];            //    domain
+      c3_o       dom_o;                 //    have domain
+      uv_timer_t tim_u;                 //    resolve timer
+      c3_s       pen_s;                 //    pending
+      c3_w       pip_w[256];            //    ipv4
+      c3_w       log_w[256 >> 5];       //    log error
+    } zar_u;                            //
     struct {                            //    stun client state:
       u3_stun_state  sat_y;             //  formal state
       c3_y           tid_y[12];         //  last transaction id
       c3_y           dad_y;             //  sponsoring galaxy
       u3_lane        lan_u;             //  sponsoring galaxy IP and port
       uv_timer_t     tim_u;             //  keepalive timer handle
-      uv_timer_t     dns_u;             //  DNS resolution timer handle
-      c3_c*          dns_c;             //  sponsoring galaxy fqdn
-      struct timeval las_u;             //  XX last sent date (not used?)
       struct timeval sar_u;             //  date we started trying to send
       u3_lane        sef_u;             //  our lane, if we know it
       c3_o           wok_o;             //  STUN worked, set on first success
     } sun_u;                            //
+    struct {
+      natpmp_t       req_u;             //  libnatpmp struct for mapping request
+      uv_poll_t      pol_u;             //  handle waits on libnatpmp socket
+      uv_timer_t     tim_u;             //  every two hours if mapping succeeds
+    } nat_u;                            //  libnatpmp stuff for port forwarding
     c3_o             nal_o;             //  lane cache backcompat flag
     struct {                            //    config:
       c3_o           net_o;             //  can send
@@ -175,14 +184,10 @@ typedef enum u3_stun_state {
     struct _u3_ames* sam_u;             //  ames backpointer
     c3_w             len_w;             //  length in bytes
     c3_y*            hun_y;             //  packet buffer
+    u3_lane          lan_u;             //  destination/origin lane
     u3_head          hed_u;             //  head of packet
     u3_prel          pre_u;             //  packet prelude
     u3_ptag          typ_y;             //  packet type tag
-    struct {
-      u3_lane        lan_u;             //  destination/origin lane
-      c3_y           imp_y;             //  galaxy (optional)
-      c3_c*          dns_c;             //  galaxy fqdn (optional)
-    } rut_u;
     union {
       u3_body bod_u;                    //  tagged by PACT_AMES
       u3_wail wal_u;                    //  tagged by PACT_WAIL
@@ -320,7 +325,6 @@ _ames_pact_free(u3_pact* pac_u)
       u3_pier_bail(u3_king_stub());
   }
 
-  c3_free(pac_u->rut_u.dns_c);
   c3_free(pac_u->hun_y);
   c3_free(pac_u);
 }
@@ -869,18 +873,17 @@ _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
   u3_pact* pac_u = (u3_pact*)req_u;
   u3_ames* sam_u = pac_u->sam_u;
 
-  if ( sas_i ) {
-    u3l_log("ames: send fail_async: %s", uv_strerror(sas_i));
-    sam_u->fig_u.net_o = c3n;
-  }
-  else {
+  if ( !sas_i ) {
     sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("ames: send fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
   }
 
   _ames_pact_free(pac_u);
 }
 
-#define _fine_send _ames_send
 /* _ames_send(): send buffer to address on port.
 */
 static void
@@ -891,7 +894,7 @@ _ames_send(u3_pact* pac_u)
   if ( !pac_u->hun_y
     || !sam_u
     || !pac_u->len_w
-    || !pac_u->rut_u.lan_u.por_s )
+    || !pac_u->lan_u.por_s )
   {
     u3l_log("ames: _ames_send null");
     _ames_pact_free(pac_u);
@@ -901,15 +904,11 @@ _ames_send(u3_pact* pac_u)
 
     memset(&add_u, 0, sizeof(add_u));
     add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = htonl(pac_u->rut_u.lan_u.pip_w);
-    add_u.sin_port = htons(pac_u->rut_u.lan_u.por_s);
-
-    //u3l_log("_ames_send %s %u", _str_typ(pac_u->typ_y),
-    //                              pac_u->rut_u.lan_u.por_s);
+    add_u.sin_addr.s_addr = htonl(pac_u->lan_u.pip_w);
+    add_u.sin_port = htons(pac_u->lan_u.por_s);
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
-
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &sam_u->wax_u,
                                    &buf_u, 1,
@@ -917,12 +916,7 @@ _ames_send(u3_pact* pac_u)
                                    _ames_send_cb);
 
       if ( sas_i ) {
-        if ( c3y == sam_u->fig_u.net_o ) {
-          u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
-          sam_u->fig_u.net_o = c3n;
-        }
-
-        _ames_pact_free(pac_u);
+        _ames_send_cb(&pac_u->snd_u, sas_i);
       }
     }
   }
@@ -1028,201 +1022,81 @@ _ames_czar_port(c3_y imp_y)
   }
 }
 
-static c3_c*
-_ames_czar_dns(c3_y imp_y, c3_c* czar_c)
-{
-  u3_noun nam = u3dc("scot", 'p', imp_y);
-  c3_c* nam_c = u3r_string(nam);
-  c3_w len_w = 3 + strlen(nam_c) + strlen(czar_c);
-  u3_assert(len_w <= 256);
-  c3_c* dns_c = c3_malloc(len_w);
-
-  c3_i sas_i = snprintf(dns_c, len_w, "%s.%s.", nam_c + 1, czar_c);
-  u3_assert(sas_i <= 255);
-
-  c3_free(nam_c);
-  u3z(nam);
-
-  return dns_c;
-}
-
-/* _ames_czar_gone(): galaxy address resolution failed.
+/* _ames_czar_str: galaxy name as c3_c[3]
 */
 static void
-_ames_czar_gone(u3_ames* sam_u, time_t now, c3_d imp_y, c3_c* dns_c)
+_ames_czar_str(c3_c zar_c[3], c3_y imp_y)
 {
-  if ( c3y == sam_u->imp_o[imp_y] ) {
-    u3l_log("ames: czar at %s: not found (b)", dns_c);
-    sam_u->imp_o[imp_y] = c3n;
-  }
+  u3_po_to_suffix(imp_y, (c3_y*)zar_c, (c3_y*)zar_c + 1, (c3_y*)zar_c + 2);
+}
 
-  if ( (0 == sam_u->imp_w[imp_y]) ||
-       (0xffffffff == sam_u->imp_w[imp_y]) )
-  {
-    sam_u->imp_w[imp_y] = 0xffffffff;
-  }
+/* _ames_etch_czar: galaxy fqdn
+*/
+static c3_i
+_ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
+{
+  c3_c* bas_c = dns_c;
+  c3_w  len_w = strlen(dom_c);
 
-  //  keep existing ip for 5 more minutes
+  //  name 3, '.' 2, trailing null
   //
-  sam_u->imp_t[imp_y] = now;
-}
-
-/* _ames_czar_here(): galaxy address resolution succeeded.
-*/
-static void
-_ames_czar_here(u3_pact* pac_u, time_t now, struct sockaddr_in* add_u)
-{
-  u3_ames* sam_u = pac_u->sam_u;
-  c3_y     imp_y = pac_u->rut_u.imp_y;
-  c3_w     old_w = sam_u->imp_w[imp_y];
-  c3_w     pip_w = ntohl(add_u->sin_addr.s_addr);
-
-  if ( pip_w != old_w ) {
-    u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
-    c3_c* nam_c = u3r_string(nam);
-
-    u3l_log("ames: czar %s ip %s", pac_u->rut_u.dns_c, nam_c);
-
-    c3_free(nam_c);
-    u3z(nam);
+  if ( 250 <= len_w ) {
+    return -1;
   }
 
-  sam_u->imp_w[imp_y] = pip_w;
-  sam_u->imp_t[imp_y] = now;
-  sam_u->imp_o[imp_y] = c3y;
+  _ames_czar_str(dns_c, imp_y);
+  dns_c   += 3;
+  *dns_c++ = '.';
 
-  pac_u->rut_u.lan_u.pip_w = pip_w;
+  memcpy(dns_c, dom_c, len_w);
+  dns_c   += len_w;
+  *dns_c++ = '.';
+
+  memset(dns_c, 0, 256 - (dns_c - bas_c));
+
+  return 0;
 }
 
-/* _stun_czar_here(): sponsor galaxy address resolution succeeded.
+/* _ames_czar_lane: retrieve lane for galaxy if stored.
 */
-static c3_w
-_stun_czar_here(u3_ames* sam_u, time_t now, struct sockaddr_in* add_u)
+static c3_o
+_ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 {
-  c3_y  imp_y = sam_u->sun_u.dad_y;
-  c3_w  old_w = sam_u->imp_w[imp_y];
-  c3_w  pip_w = ntohl(add_u->sin_addr.s_addr);
-
-  if ( pip_w != old_w ) {
-    u3_noun nam = u3dc("scot", c3__if, u3i_word(pip_w));
-    c3_c* nam_c = u3r_string(nam);
-
-    u3l_log("stun: czar %s ip %s", sam_u->sun_u.dns_c, nam_c);
-
-    c3_free(nam_c);
-    u3z(nam);
-  }
-  sam_u->sun_u.lan_u.pip_w = pip_w;
-
-  sam_u->imp_w[imp_y] = pip_w;
-  sam_u->imp_t[imp_y] = now;
-  sam_u->imp_o[imp_y] = c3y;
-
-  return pip_w;
-}
-
-/* _ames_czar_cb(): galaxy address resolution callback.
-*/
-static void
-_ames_czar_cb(uv_getaddrinfo_t* adr_u,
-              c3_i              sas_i,
-              struct addrinfo*  aif_u)
-{
-  {
-    u3_pact*          pac_u = (u3_pact*)adr_u->data;
-    struct addrinfo*  rai_u = aif_u;
-    time_t            now   = time(0);
-
-    if ( sas_i == 0 ) {
-      _ames_czar_here(pac_u, now, (struct sockaddr_in *)rai_u->ai_addr);
-    } else {
-      _ames_czar_gone(pac_u->sam_u, now,
-                      pac_u->rut_u.imp_y,
-                      pac_u->rut_u.dns_c);
-      _ames_pact_free(pac_u);
-    }
-  }
-
-  c3_free(adr_u);
-  uv_freeaddrinfo(aif_u);
-}
-
-/* _ames_czar(): galaxy address resolution.
-*/
-static void
-_ames_czar(u3_pact* pac_u)
-{
-  u3_ames* sam_u = pac_u->sam_u;
-
-  c3_y imp_y = pac_u->rut_u.imp_y;
-
-  pac_u->rut_u.lan_u.por_s = _ames_czar_port(imp_y);
+  c3_s por_s = _ames_czar_port(imp_y);
+  c3_w pip_w;
 
   if ( c3n == u3_Host.ops_u.net ) {
-    pac_u->rut_u.lan_u.pip_w = 0x7f000001;
-    _ames_send(pac_u);
-    return;
+    pip_w = 0x7f000001;
   }
+  else {
+    pip_w = sam_u->zar_u.pip_w[imp_y];
 
-  //  if we don't have a galaxy domain, no-op
-  //
-  if ( !sam_u->dns_c ) {
-    u3_noun nam = u3dc("scot", 'p', pac_u->rut_u.imp_y);
-    c3_c*  nam_c = u3r_string(nam);
-    u3l_log("ames: no galaxy domain for %s, no-op", nam_c);
-
-    c3_free(nam_c);
-    u3z(nam);
-    return;
-  }
-
-  {
-    c3_w pip_w = sam_u->imp_w[imp_y];
-    time_t wen = sam_u->imp_t[imp_y];
-    time_t now = time(0);
-
-    //  backoff for 5 minutes after failed lookup
-    //
-    if (  ( now < wen )               //  time shenanigans!
-       || (  (0xffffffff == pip_w)    //  sentinal ip address
-          && ((now - wen) < 300) ) )
-    {
-      _ames_pact_free(pac_u);
-      return;
-    }
-    //  cached addresses have a 5 minute TTL
-    //
-    else if ( (0 != pip_w) && ((now - wen) < 300) ) {
-      pac_u->rut_u.lan_u.pip_w = pip_w;
-      _ames_send(pac_u);
-      return;
-    }
-    else {
-      pac_u->rut_u.dns_c = _ames_czar_dns(imp_y, sam_u->dns_c);
-
-      {
-        uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
-        adr_u->data = pac_u;
-        c3_d  imp_y = pac_u->rut_u.imp_y;
-        c3_c* dns_c = pac_u->rut_u.dns_c;
-        c3_i  sas_i;
-
-        struct addrinfo hints;
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET; // only IPv4 addresses
-
-        if ( 0 != (sas_i = uv_getaddrinfo(u3L, adr_u,
-                                          _ames_czar_cb,
-                                          pac_u->rut_u.dns_c, 0, &hints)) )
-        {
-          u3l_log("ames: %s", uv_strerror(sas_i));
-          _ames_czar_gone(pac_u->sam_u, now, imp_y, dns_c);
-          _ames_pact_free(pac_u);
-          return;
-        }
+    if ( !pip_w ) {
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("ames: czar not resolved");
       }
+      return c3n;
+    }
+    else if ( _CZAR_GONE == pip_w ) {
+      //  print only on first send failure
+      //
+      c3_w blk_w = imp_y >> 5;
+      c3_w bit_w = 1 << (imp_y & 31);
+
+      if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
+        c3_c dns_c[256];
+        u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
+        u3l_log("ames: czar at %s: not found (b)", dns_c);
+        sam_u->zar_u.log_w[blk_w] |= bit_w;
+      }
+
+      return c3n;
     }
   }
+
+  lan_u->por_s = por_s;
+  lan_u->pip_w = pip_w;
+  return c3y;
 }
 
 /* _fine_get_cache(): get packet list or status from cache. RETAIN
@@ -1258,29 +1132,10 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
   }
 }
 
-static void
-_stun_stop(u3_ames* sam_u)
-{
-  switch ( sam_u->sun_u.sat_y ) {
-    case STUN_OFF: break;  //  ignore; already stopped
-    case STUN_TRYING:
-    case STUN_KEEPALIVE: {
-      uv_timer_stop(&sam_u->sun_u.tim_u);
-      uv_timer_stop(&sam_u->sun_u.dns_u);
-    } break;
-    default: u3_assert(!"programmer error");
-  }
-  sam_u->sun_u.sat_y = STUN_OFF;
-}
-
 // XX (code reordering?) forward declarations
 static void _stun_send_request(u3_ames*);
 static void _stun_on_lost(u3_ames* sam_u);
-static void _stun_czar(u3_ames* sam_u, c3_d tim_d);
-static void _stun_resolve_dns_cb(uv_timer_t* tim_u);
-static void _stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i);
-static void _stun_on_failure(u3_ames* sam_u);
-static void _stun_start(u3_ames* sam_u, c3_o fail);
+static void _stun_start(u3_ames* sam_u, c3_w tim_w);
 static c3_y*  _stun_add_fingerprint(c3_y *message, c3_w index);
 static c3_o   _stun_find_xor_mapped_address(c3_y* buf_y, c3_w buf_len, u3_lane* lan_u);
 
@@ -1301,44 +1156,55 @@ _stun_reset(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
 
-  _stun_start(sam_u, c3y);
+  _stun_start(sam_u, 39000);
 }
 
 static void
 _stun_timer_cb(uv_timer_t* tim_u)
 {
-  c3_w rto = 500;
-
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
+  c3_w     rto_w = 500;
 
   switch ( sam_u->sun_u.sat_y ) {
     case STUN_OFF: {
       //  ignore; stray timer (although this shouldn't happen)
       u3l_log("stun: stray timer STUN_OFF");
     } break;
-    case STUN_KEEPALIVE: {
-      sam_u->sun_u.sat_y = STUN_TRYING;
-      sam_u->sun_u.tim_u.data = sam_u;
-      gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-      uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto, 0);
-      _stun_send_request(sam_u);
-    } break;
-    case STUN_TRYING: {
-      c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
-      c3_d nex_d = (gap_d * 2) + rto - gap_d;
 
-      if ( gap_d >= (39500) ) {
-        _stun_on_lost(sam_u);
-      } else if ( gap_d >= (31500) ) {
-        //  wait ~s8 for the last STUN request
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 8000 , 0);
-        _stun_send_request(sam_u);
-      } else {
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb,
-                       (nex_d >= 31500) ? 31500 : nex_d, 0);
+    case STUN_KEEPALIVE: {
+      u3_lane* lan_u = &(sam_u->sun_u.lan_u);
+      c3_y     imp_y = sam_u->sun_u.dad_y;
+
+      if ( c3n == _ames_czar_lane(sam_u, imp_y, lan_u) ) {
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
+      }
+      else {
+        sam_u->sun_u.sat_y = STUN_TRYING;
+        gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto_w, 0);
         _stun_send_request(sam_u);
       }
     } break;
+
+    case STUN_TRYING: {
+      c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
+      c3_d nex_d = (gap_d * 2) + rto_w - gap_d;
+
+      if ( gap_d >= 39500 ) {
+        _stun_on_lost(sam_u);
+      }
+      else {
+        //  wait ~s8 for the last STUN request
+        //
+        //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
+        //
+        c3_w tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
+        _stun_send_request(sam_u);
+      }
+    } break;
+
     default: u3_assert(!"programmer error");
   }
 }
@@ -1350,40 +1216,17 @@ typedef struct _stun_send {
 } _stun_send;
 
 static void
-_stun_on_request_fail(u3_ames* sam_u, c3_i sas_i)
-{
-  u3l_log("stun: send callback fail_async: %s", uv_strerror(sas_i));
-
-  _stun_on_failure(sam_u);  // %kick ping app
-
-  sam_u->sun_u.sat_y = STUN_TRYING;
-  _stun_timer_cb(&sam_u->sun_u.tim_u);  //  retry sending the failed request
-}
-
-static void
-_stun_send_request_cb(uv_udp_send_t *req_u, c3_i sas_i)
-{
-  _stun_send* snd_u = (_stun_send*)req_u;
-  u3_ames*    sam_u = snd_u->sam_u;
-
-  if ( sas_i ) {
-    _stun_on_request_fail(sam_u, sas_i);
-  }
-  else {
-    //  XX curently not used
-    gettimeofday(&sam_u->sun_u.las_u, 0);  //  overwrite last sent date
-  }
-
-  c3_free(snd_u);
-}
-
-static void
-_stun_send_response_cb(uv_udp_send_t *rep_u, c3_i sas_i)
+_stun_send_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 {
   _stun_send* snd_u = (_stun_send*)rep_u;
+  u3_ames*    sam_u = snd_u->sam_u;
 
-  if ( sas_i != 0 ) {
-    u3l_log("stun: _stun_send_response_cb fail_sync: %s", uv_strerror(sas_i));
+  if ( !sas_i ) {
+    sam_u->fig_u.net_o = c3y;
+  }
+  else if ( c3y == sam_u->fig_u.net_o ) {
+    u3l_log("stun: send response fail: %s", uv_strerror(sas_i));
+    sam_u->fig_u.net_o = c3n;
   }
 
   c3_free(snd_u);
@@ -1438,11 +1281,10 @@ _stun_on_request(u3_ames*              sam_u,
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
-                               &buf_u, 1, adr_u, _stun_send_response_cb);
+                               &buf_u, 1, adr_u, _stun_send_cb);
 
-  if ( sas_i != 0 ) {
-    u3l_log("stun: send response fail_sync: %s", uv_strerror(sas_i));
-    c3_free(snd_u);
+  if ( sas_i ) {
+    _stun_send_cb(&snd_u->req_u, sas_i);
   }
 }
 
@@ -1478,47 +1320,37 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
 
   sam_u->sun_u.sef_u = lan_u;
 
+  //  XX should no-op early
+  //
   switch ( sam_u->sun_u.sat_y ) {
     case STUN_OFF:       break; //  ignore; stray response
     case STUN_KEEPALIVE: break; //  ignore; duplicate response
 
     case STUN_TRYING: {
-      sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-      if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
-        u3l_log("stun: getentropy fail: %s", strerror(errno));
-        _stun_on_lost(sam_u);
-      }
-      else {
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 25*1000, 0);
-      }
+      _stun_start(sam_u, 25000);
     } break;
 
-    default: assert("programmer error");
+    default: u3_assert(!"programmer error");
   }
-}
-
-static void
-_stun_on_failure(u3_ames* sam_u)
-{
-  // only inject event into arvo to %kick ping app on first failure
-  if (sam_u->sun_u.wok_o == c3y) {
-    u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__fail, sam_u->sun_u.dad_y,
-                       u3nc(c3n, u3_ames_encode_lane(sam_u->sun_u.sef_u)));
-    u3_ovum *ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
-    u3_auto_plan(&sam_u->car_u, ovo_u);
-  }
-  sam_u->sun_u.wok_o = c3n;
 }
 
 static void
 _stun_on_lost(u3_ames* sam_u)
 {
-  _stun_stop(sam_u);
-  _stun_on_failure(sam_u);
-  // resolve DNS again, and (re)start STUN
-  //  XX call _stun_start(sam_u, c3y) directly?
-  uv_timer_start(&sam_u->sun_u.dns_u, _stun_reset, 5*1000, 0);
+  sam_u->sun_u.sat_y = STUN_OFF;
+
+  //  only inject event into arvo to %kick ping app on first failure
+  //
+  if ( c3y == sam_u->sun_u.wok_o ) {
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+    u3_noun cad = u3nq(c3__stun, c3__fail, sam_u->sun_u.dad_y,
+                       u3nc(c3n, u3_ames_encode_lane(sam_u->sun_u.sef_u)));
+    u3_auto_plan(&sam_u->car_u,
+                 u3_ovum_init(0, c3__ames, wir, cad));
+    sam_u->sun_u.wok_o = c3n;
+  }
+
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_reset, 5*1000, 0);
 }
 
 static void
@@ -1561,151 +1393,24 @@ _stun_send_request(u3_ames* sam_u)
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
-                           (const struct sockaddr*)&add_u, _stun_send_request_cb);
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
+                               (const struct sockaddr*)&add_u, _stun_send_cb);
 
-  if ( sas_i != 0) {
-    _stun_on_request_fail(sam_u, sas_i);
-    c3_free(snd_u);
+  if ( sas_i ) {
+    _stun_send_cb(&snd_u->req_u, sas_i);
   }
 }
 
 static void
-_stun_czar_cb(uv_getaddrinfo_t* adr_u,
-              c3_i              sas_i,
-              struct addrinfo*  aif_u)
-{
-  {
-    u3_ames*          sam_u = (u3_ames*)(adr_u->data);
-    struct addrinfo*  rai_u = aif_u;
-    time_t            now   = time(0);
-
-    gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-
-    if (sas_i == 0) {
-      _stun_czar_here(sam_u, now, (struct sockaddr_in *)rai_u->ai_addr);
-      if (sam_u->sun_u.sat_y == STUN_OFF) {
-        sam_u->sun_u.sat_y = STUN_TRYING;
-        _stun_send_request(sam_u);
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, 500, 0);
-      }
-      // resolve DNS again in five minutes
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, 5*60*1000, 0);
-    } else {
-      u3l_log("stun: _stun_czar_cb request fail_sync: %s", uv_strerror(sas_i));
-      _ames_czar_gone(sam_u, now, sam_u->sun_u.dad_y, sam_u->dns_c);
-      _stun_on_lost(sam_u);
-    }
-  }
-  c3_free(adr_u);
-  uv_freeaddrinfo(aif_u);
-}
-
-static void
-_stun_czar(u3_ames* sam_u, c3_d tim_d)
-{
-  c3_d imp_y = sam_u->sun_u.dad_y;
-  sam_u->sun_u.lan_u.por_s = _ames_czar_port(imp_y);
-
-  // Enable STUN using -L
-  //  XX maybe enabled with a flag, for development?
-  if (c3n == u3_Host.ops_u.net) {
-    sam_u->sun_u.lan_u.pip_w = 0x7f000001;
-    sam_u->sun_u.sat_y = STUN_TRYING;
-    _stun_send_request(sam_u);
-
-    gettimeofday(&sam_u->sun_u.sar_u, 0);
-    uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_d, 0);
-
-    return;
-  }
-
-
-  //  if we don't have a galaxy domain, no-op
-  //
-  if (!sam_u->dns_c) {
-    u3_noun nam = u3dc("scot", 'p', imp_y);
-    c3_c *nam_c = u3r_string(nam);
-    u3l_log("ames: no galaxy domain for %s, no-op", nam_c);
-
-    c3_free(nam_c);
-    u3z(nam);
-    return;
-  }
-
-  {
-    c3_w pip_w = sam_u->imp_w[imp_y];
-    time_t wen = sam_u->imp_t[imp_y];
-    time_t now = time(0);
-
-    //  XX keep same as ames?
-    //  backoff for 5 minutes after failed lookup
-    //
-    if ((now < wen)               //  time shenanigans!
-        || ((0xffffffff == pip_w) //  sentinal ip address
-            && ((now - wen) < 300))) {
-        return;
-    }
-    //  cached addresses have a 5 minute TTL
-    //
-    else if ((0 != pip_w) && ((now - wen) < 300)) {
-        sam_u->sun_u.sat_y = STUN_TRYING;
-        sam_u->sun_u.lan_u.pip_w = pip_w;
-
-        _stun_send_request(sam_u);
-
-        gettimeofday(&sam_u->sun_u.sar_u, 0);
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_d, 0);
-        return;
-    } else {
-      //  call callback right away first time we resolve the sponsor's DNS
-      sam_u->sun_u.dns_u.data = sam_u;
-      uv_timer_start(&sam_u->sun_u.dns_u, _stun_resolve_dns_cb, tim_d, 0);
-    }
-  }
-}
-
-static void
-_stun_start(u3_ames* sam_u, c3_o fail)
+_stun_start(u3_ames* sam_u, c3_w tim_w)
 {
   if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
     u3l_log("stun: getentropy fail: %s", strerror(errno));
-    _stun_on_lost(sam_u);
-  } else {
-    _stun_czar(sam_u, (fail == c3n) ? 500 : 39500);
-  }
-}
-
-static void
-_stun_resolve_dns_cb(uv_timer_t* tim_u)
-{
-  u3_ames* sam_u = (u3_ames*)(tim_u->data);
-  c3_i sas_i;
-
-  c3_y imp_y = sam_u->sun_u.dad_y;
-  sam_u->sun_u.lan_u.por_s = _ames_czar_port(imp_y);
-
-  if ( !sam_u->sun_u.dns_c ) {
-    sam_u->sun_u.dns_c = _ames_czar_dns(imp_y, sam_u->dns_c);
+    u3_king_bail();
   }
 
-  {
-    uv_getaddrinfo_t* adr_u = c3_malloc(sizeof(*adr_u));
-    adr_u->data = sam_u;
-
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET; // only IPv4 addresses
-
-    if (0 != (sas_i = uv_getaddrinfo(u3L, adr_u, _stun_czar_cb,
-                                     sam_u->sun_u.dns_c, 0, &hints)))
-    {
-      u3l_log("stun: uv_getaddrinfo failed %s %s", uv_strerror(sas_i), sam_u->sun_u.dns_c);
-      _ames_czar_gone(sam_u, time(0), sam_u->sun_u.dad_y, sam_u->dns_c);
-      _stun_on_lost(sam_u);
-      return;
-    }
-  }
+  sam_u->sun_u.sat_y = STUN_KEEPALIVE;
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
 }
 
 static c3_o
@@ -1852,15 +1557,69 @@ _ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
   dad = u3h(daz);
   u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
 
+  //  if we are a galaxy, don't STUN
+  //
   if ( c3y == _ames_is_czar(dad) && c3n == _ames_is_czar(our)) {
-    // if we are a galaxy, don't STUN
-    sam_u->sun_u.dad_y = u3r_byte(0, dad);
-    sam_u->sun_u.wok_o = c3n;
-    _stun_stop(sam_u);
-    _stun_start(sam_u, c3n);
+    sam_u->sun_u.dad_y = (c3_y)dad;
+    _stun_start(sam_u, 0);
   }
 
   u3z(zad); u3z(daz); u3z(our);
+}
+
+/* _ames_send_lane(): resolve/decode lane. RETAIN
+*/
+static c3_o
+_ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
+{
+  u3_noun tag, val;
+
+  if ( c3n == u3r_cell(lan, &tag, &val) ) {
+    u3l_log("ames: bad lane; not a cell");
+    return c3n;
+  }
+
+  switch ( tag ) {
+    case c3y: {  //  galaxy
+      if ( val >= 256 ) {
+        u3l_log("ames: bad galaxy lane: 0x%x", val);
+        return c3n;
+      }
+      return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
+    }
+
+    case c3n: {  //  ip:port
+      u3_lane nal_u = u3_ames_decode_lane(u3k(val));
+
+      //  convert incoming localhost to outgoing localhost
+      //
+      //    XX this looks like en/de-coding problems ...
+      //
+      nal_u.pip_w = ( nal_u.pip_w ) ? nal_u.pip_w : 0x7f000001;
+
+      //  if in local-only mode, don't send remote packets
+      //
+      if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != nal_u.pip_w) ) {
+        return c3n;
+      }
+      //  if the lane is uninterpretable, silently drop the packet
+      //
+      else if ( !nal_u.por_s ) {
+        if ( u3C.wag_w & u3o_verbose ) {
+          u3l_log("ames: inscrutable lane");
+        }
+        return c3n;
+      }
+
+      *lan_u = nal_u;
+      return c3y;
+    }
+
+    default: {
+      u3l_log("ames: bad lane tag");
+      return c3n;
+    }
+  }
 }
 
 /* _ames_ef_send(): send packet to network (v4).
@@ -1874,60 +1633,23 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     return;
   }
 
-  u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
-  pac_u->sam_u = sam_u;
-  pac_u->len_w = u3r_met(3, pac);
-  pac_u->hun_y = c3_malloc(pac_u->len_w);
+  u3_lane lan_u;
 
-  u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
+  if ( c3y == _ames_send_lane(sam_u, lan, &lan_u) ) {
+    u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
+    pac_u->sam_u = sam_u;
+    pac_u->lan_u = lan_u;
+    pac_u->len_w = u3r_met(3, pac);
+    pac_u->hun_y = c3_malloc(pac_u->len_w);
 
-  _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
-  pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
+    u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
 
-  u3_noun tag, val;
-  u3x_cell(lan, &tag, &val);
-  u3_assert( (c3y == tag) || (c3n == tag) );
+    _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
+    pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
 
-  //  galaxy lane; do DNS lookup and send packet
-  //
-  if ( c3y == tag ) {
-    u3_assert( c3y == u3a_is_cat(val) );
-    u3_assert( val < 256 );
-
-    //u3l_log("_ames_ef_send imp %s %u", _str_typ(pac_u->typ_y), val);
-    pac_u->rut_u.imp_y = val;
-    _ames_czar(pac_u);
+    _ames_send(pac_u);
   }
-  //  non-galaxy lane
-  //
-  else {
-    u3_lane lan_u = u3_ames_decode_lane(u3k(val));
-    ////u3l_log("_ames_ef_send low %s %u", _str_typ(pac_u->typ_y),
-    //                                       lan_u.por_s);
 
-    //  convert incoming localhost to outgoing localhost
-    //
-    lan_u.pip_w = ( 0 == lan_u.pip_w )? 0x7f000001 : lan_u.pip_w;
-    //  if in local-only mode, don't send remote packets
-    //
-    if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != lan_u.pip_w) ) {
-      _ames_pact_free(pac_u);
-    }
-    //  if the lane is uninterpretable, silently drop the packet
-    //
-    else if ( 0 == lan_u.por_s ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("ames: inscrutable lane");
-      }
-      _ames_pact_free(pac_u);
-    }
-    //  otherwise, mutate destination and send packet
-    //
-    else {
-      pac_u->rut_u.lan_u = lan_u;
-      _ames_send(pac_u);
-    }
-  }
   u3z(lan); u3z(pac);
 }
 
@@ -1937,6 +1659,7 @@ static void
 _ames_cap_queue(u3_ames* sam_u)
 {
   u3_ovum* egg_u = sam_u->car_u.ext_u;
+  c3_d     old_d = sam_u->sat_u.dop_d;
 
   while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
     u3_ovum* nex_u = egg_u->nex_u;
@@ -1953,8 +1676,9 @@ _ames_cap_queue(u3_ames* sam_u)
     egg_u = nex_u;
   }
 
-  if (  (sam_u->sat_u.dop_d && (0 == (sam_u->sat_u.dop_d % 1000)))
-     && !(u3C.wag_w & u3o_verbose) )
+  if (  !(u3C.wag_w & u3o_verbose)
+     && (old_d != sam_u->sat_u.dop_d)
+     && !(sam_u->sat_u.dop_d % 1000) )
   {
     u3l_log("ames: packet dropped (%" PRIu64 " total)", sam_u->sat_u.dop_d);
   }
@@ -2046,13 +1770,13 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
       u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
       c3_c* sen_c = u3r_string(sen);
       c3_c* rec_c = u3r_string(rec);
-      c3_y* pip_y = (c3_y*)&pac_u->rut_u.lan_u.pip_w;
+      c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_w;
 
       //NOTE ip byte order assumes little-endian
       u3l_log("ames: forwarding for %s to %s from %d.%d.%d.%d:%d",
               sen_c, rec_c,
               pip_y[3], pip_y[2], pip_y[1], pip_y[0],
-              pac_u->rut_u.lan_u.por_s);
+              pac_u->lan_u.por_s);
 
       c3_free(sen_c); c3_free(rec_c);
       u3z(sen); u3z(rec);
@@ -2112,7 +1836,7 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
     }
     _ames_put_packet(sam_u,
                      _ames_pact_to_noun(pac_u),
-                     pac_u->rut_u.lan_u);
+                     pac_u->lan_u);
   }
   else {
     sam_u->sat_u.saw_d = 0;
@@ -2389,7 +2113,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     res_u = c3_calloc(sizeof(*res_u));
     res_u->sam_u = req_u->sam_u;
     res_u->typ_y = PACT_PURR;
-    res_u->rut_u.lan_u = req_u->rut_u.lan_u;
+    res_u->lan_u = req_u->lan_u;
 
     //  copy header, swapping sender and receiver
     //
@@ -2430,14 +2154,6 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     //  free incoming request
     //
     _ames_pact_free(req_u);
-  }
-
-  //  if receiver is a galaxy, note that in res_u
-  //
-  if ( res_u->pre_u.rec_d[0] < 256
-      && res_u->pre_u.rec_d[1] == 0 )
-  {
-     res_u->rut_u.imp_y = res_u->pre_u.rec_d[0];
   }
 
   //  look up request in scry cache
@@ -2508,7 +2224,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 {
   u3_noun wir = u3nc(c3__fine, u3_nul);
   u3_noun cad = u3nt(c3__hear,
-                     u3nc(c3n, u3_ames_encode_lane(pac_u->rut_u.lan_u)),
+                     u3nc(c3n, u3_ames_encode_lane(pac_u->lan_u)),
                      u3i_bytes(pac_u->len_w, pac_u->hun_y));
 
   u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
@@ -2531,7 +2247,7 @@ _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 
   {
     u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
-    _ames_put_packet(pac_u->sam_u, msg, pac_u->rut_u.lan_u);
+    _ames_put_packet(pac_u->sam_u, msg, pac_u->lan_u);
     _ames_pact_free(pac_u);
   }
 }
@@ -2551,7 +2267,7 @@ _ames_try_forward(u3_pact* pac_u)
     c3_w  old_w, cur_w;
 
     pac_u->hed_u.rel_o = c3y;
-    pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->rut_u.lan_u);
+    pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->lan_u);
 
     old_w = pac_u->len_w;
     old_y = pac_u->hun_y;
@@ -2618,7 +2334,7 @@ _ames_hear(u3_ames* sam_u,
   pac_u->sam_u = sam_u;
   pac_u->len_w = len_w;
   pac_u->hun_y = hun_y;
-  pac_u->rut_u.lan_u = *lan_u;
+  pac_u->lan_u = *lan_u;
   cur_w = 0;
 
   //  parse the header
@@ -2765,6 +2481,69 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   }
 }
 
+static void natpmp_init(uv_timer_t* handle);
+
+static void
+natpmp_cb(uv_poll_t* handle,
+          c3_i        status,
+          c3_i        events)
+{
+
+  if (status != 0) {
+    return;
+  }
+
+  u3_ames* sam_u = handle->data;
+
+  natpmpresp_t response;
+  c3_i err_i = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
+  if ( NATPMP_TRYAGAIN == err_i ) {
+    return;
+  }
+
+  uv_poll_stop(handle);
+
+  if ( 0 != err_i ) {
+    u3l_log("ames: natpmp error %i", err_i);
+    uv_poll_stop(&sam_u->nat_u.pol_u);
+    closenatpmp(&sam_u->nat_u.req_u);
+    return;
+  }
+
+  u3l_log("ames: mapped public port %hu to localport %hu lifetime %u",
+         response.pnu.newportmapping.mappedpublicport,
+         response.pnu.newportmapping.privateport,
+         response.pnu.newportmapping.lifetime);
+
+  closenatpmp(&sam_u->nat_u.req_u);
+  sam_u->nat_u.tim_u.data = sam_u;
+  uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 7200000, 0);
+}
+
+static void
+natpmp_init(uv_timer_t *handle)
+{
+  u3_ames* sam_u = handle->data;
+  c3_s por_s = sam_u->pir_u->por_s;
+
+  c3_i err_i = initnatpmp(&sam_u->nat_u.req_u, 0, 0);
+
+  if (err_i != 0) {
+    return;
+  }
+
+  err_i = uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
+
+  if (err_i != 0) {
+    return;
+  }
+
+  sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
+
+  sam_u->nat_u.pol_u.data = sam_u;
+  uv_poll_start(&sam_u->nat_u.pol_u, UV_READABLE, natpmp_cb);
+}
+
 static void
 _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 {
@@ -2885,6 +2664,11 @@ _ames_io_start(u3_ames* sam_u)
     u3z(our);
 
     mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
+
+    if ( c3n == sam_u->pir_u->fak_o ) {
+      uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
+    }
+
     c3_free(our_s);
   }
 
@@ -2894,34 +2678,178 @@ _ames_io_start(u3_ames* sam_u)
   u3z(who);
 }
 
+typedef struct _czar_resv {
+  uv_getaddrinfo_t adr_u;
+  u3_ames*         sam_u;
+  c3_y             imp_y;
+} _czar_resv;
+
+/* _ames_czar_gone(): galaxy address resolution failed.
+*/
+static void
+_ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
+{
+  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+
+  if ( !old_w ) {
+    sam_u->zar_u.pip_w[imp_y] = _CZAR_GONE;
+  }
+}
+
+/* _ames_czar_here(): galaxy address resolution succeeded.
+*/
+static void
+_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
+{
+  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+
+  if ( pip_w != old_w ) {
+    c3_c dns_c[256];
+    u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
+    u3l_log("ames: czar %s ip .%d.%d.%d.%d", dns_c,
+            (pip_w >> 24) & 0xff,
+            (pip_w >> 16) & 0xff,
+            (pip_w >>  8) & 0xff,
+            (pip_w >>  0) & 0xff);
+  }
+
+  sam_u->zar_u.pip_w[imp_y] = pip_w;
+
+  {
+    c3_w blk_w = imp_y >> 5;
+    c3_w bit_w = 1 << (imp_y & 31);
+
+    sam_u->zar_u.log_w[blk_w] &= ~bit_w;
+  }
+}
+
+/* _ames_czar_cb(): galaxy address resolution callback.
+*/
+static void
+_ames_czar_cb(uv_getaddrinfo_t* adr_u,
+               c3_i              sas_i,
+               struct addrinfo*  aif_u)
+{
+  struct addrinfo* rai_u = aif_u;
+  _czar_resv*      res_u = (_czar_resv*)adr_u;
+  u3_ames*         sam_u = res_u->sam_u;
+  c3_y             imp_y = res_u->imp_y;
+
+  while ( rai_u && (AF_INET != rai_u->ai_family) ) {
+    rai_u = rai_u->ai_next;
+  }
+
+  if ( rai_u && rai_u->ai_addr ) {
+    struct sockaddr_in* add_u = (void*)rai_u->ai_addr;
+    c3_w pip_w = ntohl(add_u->sin_addr.s_addr);
+    _ames_czar_here(sam_u, imp_y, pip_w);
+  }
+  else {
+    if ( !sas_i ) {
+      // XX unpossible
+      u3l_log("ames: czar: strange failure, no error");
+    }
+    else if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("ames: czar fail: %s", uv_strerror(sas_i));
+    }
+
+    _ames_czar_gone(sam_u, imp_y);
+  }
+
+  sam_u->zar_u.pen_s--;
+
+  uv_freeaddrinfo(aif_u);
+  c3_free(res_u);
+}
+
+/* _ames_czar(): single galaxy address resolution.
+*/
+static void
+_ames_czar(u3_ames* sam_u, const c3_c* dom_c, c3_y imp_y)
+{
+  struct addrinfo   hin_u = { .ai_family = AF_INET };
+  uv_getaddrinfo_t* adr_u;
+  _czar_resv*       res_u;
+  c3_c              dns_c[256];
+  c3_i              sas_i;
+
+  u3_assert ( !_ames_etch_czar(dns_c, dom_c, imp_y) );
+
+  res_u = c3_malloc(sizeof(*res_u));
+  res_u->sam_u = sam_u;
+  res_u->imp_y = imp_y;
+
+  adr_u = &(res_u->adr_u);
+  sas_i = uv_getaddrinfo(u3L, adr_u, _ames_czar_cb, dns_c, 0, &hin_u);
+
+  if ( sas_i ) {
+    _ames_czar_cb(adr_u, sas_i, NULL);
+  }
+}
+
+/* _ames_czar_all(): galaxy address resolution.
+*/
+static void
+_ames_czar_all(uv_timer_t* tim_u)
+{
+  u3_ames* sam_u = tim_u->data;
+
+  //  requests still pending
+  if ( sam_u->zar_u.pen_s ) {
+    uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 30*1000, 0);
+    return;
+  }
+
+  sam_u->zar_u.pen_s = 256;
+
+  for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
+    _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
+  }
+
+  uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 300*1000, 0);
+}
+
 /* _ames_ef_turf(): initialize ames I/O on domain(s).
 */
 static void
 _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
 {
   if ( u3_nul != tuf ) {
-    //  XX save all for fallback, not just first
-    //
-    u3_noun hot = u3k(u3h(tuf));
+    c3_c  dom_c[sizeof(sam_u->zar_u.dom_c)];
+    u3_noun hot = u3h(tuf);
     c3_w  len_w = u3_mcut_host(0, 0, u3k(hot));
 
-    sam_u->dns_c = c3_malloc(1 + len_w);
-    u3_mcut_host(sam_u->dns_c, 0, hot);
-    sam_u->dns_c[len_w] = 0;
-
-    if ( 250 <= len_w ) {
+    if ( len_w >= sizeof(dom_c) ) {  // >250
       //  3 char for the galaxy (e.g. zod) and two dots
-      u3l_log("ames: galaxy domain too big %s len=%u", sam_u->dns_c, len_w);
+      u3l_log("ames: galaxy domain too big (len=%u)", len_w);
+      u3m_p("hot", hot);
       u3_pier_bail(u3_king_stub());
     }
 
-    //  XX invalidate sam_u->imp_w &c ?
-    c3_free(sam_u->sun_u.dns_c);
-    sam_u->sun_u.dns_c = 0;
+    u3_mcut_host(dom_c, 0, u3k(hot));
+    memset(dom_c + len_w, 0, sizeof(dom_c) - len_w);
+
+    if ( 0 != memcmp(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c)) ) {
+      memcpy(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c));
+      memset(sam_u->zar_u.pip_w, 0, sizeof(sam_u->zar_u.pip_w));
+      sam_u->zar_u.dom_o = c3y;
+      _ames_czar_all(&(sam_u->zar_u.tim_u));
+    }
+
+    //  XX save all for fallback, not just first
+    //
+    if ( u3_nul != u3t(tuf) ) {
+      u3l_log("ames: turf: ignoring additional domains");
+      u3m_p("second", u3h(u3t(tuf)));
+
+      if ( u3_nul != u3t(u3t(tuf)) ) {
+        u3m_p("third", u3h(u3t(u3t(tuf))));
+      }
+    }
 
     u3z(tuf);
   }
-  else if ( (c3n == sam_u->pir_u->fak_o) && (0 == sam_u->dns_c) ) {
+  else if ( (c3n == sam_u->pir_u->fak_o) && (c3n == sam_u->zar_u.dom_o) ) {
     u3l_log("ames: turf: no domains");
   }
 
@@ -3124,8 +3052,13 @@ _ames_io_exit(u3_auto* car_u)
 {
   u3_ames* sam_u = (u3_ames*)car_u;
   uv_close(&sam_u->had_u, _ames_exit_cb);
-  uv_close((uv_handle_t*)&sam_u->sun_u.dns_u, 0);
   uv_close((uv_handle_t*)&sam_u->sun_u.tim_u, 0);
+  uv_close((uv_handle_t*)&sam_u->nat_u.tim_u, 0);
+
+  uv_handle_type handle = uv_handle_get_type((uv_handle_t *)&sam_u->nat_u.pol_u);
+  if ( UV_UNKNOWN_HANDLE !=  handle) {
+    uv_close((uv_handle_t*)&sam_u->nat_u.pol_u, 0);
+  }
 }
 
 /* _ames_io_info(): produce status info.
@@ -3146,6 +3079,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         sam_u->fig_u.net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
+    u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
     u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
     u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
     u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
@@ -3190,9 +3124,11 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("        filtering: %s", FLAG(sam_u->fig_u.fit_o));
   u3l_log("         can send: %s", FLAG(sam_u->fig_u.net_o));
   u3l_log("         can scry: %s", FLAG(sam_u->fig_u.see_o));
-  u3l_log("        caches:");
-  u3l_log("          cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("          cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("      stun:");
+  u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
+  u3l_log("      caches:");
+  u3l_log("        cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("        cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -3221,12 +3157,18 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->fig_u.net_o = c3y;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
+  sam_u->sun_u.wok_o = c3n;
+  sam_u->zar_u.dom_o = c3n;
 
-  //  initialize STUN timers
-  uv_timer_init(u3L, &sam_u->sun_u.dns_u);
+  uv_timer_init(u3L, &sam_u->zar_u.tim_u);
+  sam_u->zar_u.tim_u.data = sam_u;
+
   uv_timer_init(u3L, &sam_u->sun_u.tim_u);
   sam_u->sun_u.tim_u.data = sam_u;
-  sam_u->sun_u.dns_u.data = sam_u;
+
+  //  initialize libnatpmp
+  sam_u->nat_u.tim_u.data = sam_u;
+  uv_timer_init(u3L, &sam_u->nat_u.tim_u);
 
   //  enable forwarding on galaxies only
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);

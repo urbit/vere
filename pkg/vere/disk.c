@@ -31,15 +31,6 @@ struct _u3_disk_walk {
   c3_o          liv_o;
 };
 
-// for u3_lmdb_init() calls
-static const size_t siz_i =
-#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  0x7d00000000;
-#else
-  0x10000000000;
-#endif
-
 #undef VERBOSE_DISK
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
@@ -680,7 +671,7 @@ u3_disk_save_meta_meta(c3_c* log_c,
 {
   MDB_env* dbm_u;
 
-  if ( 0 == (dbm_u = u3_lmdb_init(log_c, siz_i)) ) {
+  if ( 0 == (dbm_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize meta-lmdb\r\n");
     return c3n;
   }
@@ -1240,7 +1231,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   log_u->mdb_u = 0;
 
   //  initialize db of new epoch
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database\r\n");
     c3_free(log_u);
     goto fail3;
@@ -1499,7 +1490,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     tmp_c);
     return c3n;
@@ -1533,7 +1524,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
                     strerror(errno));
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return c3n;
@@ -1736,7 +1727,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, lat_d);
 
   //  initialize latest epoch's db
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return _epoc_fail;
@@ -1880,7 +1871,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
     if ( c3y == exs_o ) {
       //  load the old data.mdb file
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize lmdb\r\n");
         c3_free(log_u);
         return 0;
