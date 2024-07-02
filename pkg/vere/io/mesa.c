@@ -1724,6 +1724,9 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
   //u3_noun pax = _mesa_path_with_fra(pac_u->pek_u.nam_u.pat_c, &fra_s);
 
   u3_weak hit = u3r_at(7, nun);
+  u3_noun proof = u3h(hit);
+  hit = u3t(hit);
+
   if ( u3_none == hit ) {
     // TODO: mark as dead
     //u3z(nun);
@@ -1754,7 +1757,21 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
       for (c3_w i=0; i < siz; i++) {
         // (cut 3 [wid 1] dat.byts))
-        u3_atom lin = u3qc_cut(13, i, 1, hit);
+        /* u3_atom lin = u3qc_cut(13, i, 1, hit); */
+        tac_u.pag_u.nam_u.fra_w = i;
+
+        u3_noun pair = u3h(proof);
+
+        if (pair == u3_nul) {
+          tac_u.pag_u.dat_u.aup_u.len_y = 0;
+        } else {
+          tac_u.pag_u.dat_u.aup_u.len_y = 2;
+          tac_u.pag_u.dat_u.aup_u.
+        }
+
+        c3_y* buf_y[PACT_SIZE];
+
+        c3_w len_w = mesa_etch_pact(buf_y, &tac_u);
 
         pac_u->pek_u.nam_u.fra_w = i;
 
