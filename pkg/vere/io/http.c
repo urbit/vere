@@ -696,8 +696,9 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] range header
 //  [x] u3qc_cut
 //  [x] better range header parsing
-//  [ ] better slicing
-//  [ ] 216
+//  [x] better slicing
+//  [ ] 206
+//  [ ] 200
 //  [ ] _http_range_respond?
 //  [ ] multipart ranges
 //
@@ -706,28 +707,62 @@ typedef struct _range_header {
   c3_z end_z;
 } range_header;
 
+static u3_noun
+_slice_mime(range_header rng, u3_noun octs)
+{
+  c3_w lent_w = u3h(octs);
+  c3_w oct_w = u3t(octs);
+  u3_noun out;
+
+  if ( rng.start_z == SIZE_MAX ) {
+    if ( rng.end_z == SIZE_MAX) {
+      // [~ ~]
+      out = u3_nul;
+    }
+    else {
+      // [~ @]
+      if ( rng.end_z > lent_w ) {
+        out = u3_nul;
+      }
+      else {
+        // slice last bytes
+        out = u3nc( rng.end_z,
+                     u3qc_cut(3, lent_w - rng.end_z, rng.end_z, oct_w));
+      }
+    }
+  }
+  else if ( rng.end_z == SIZE_MAX ) {
+    // [@ ~]
+    if ( rng.start_z > lent_w ) {
+      out = u3_nul;
+    }
+    else {
+      out = u3nc( lent_w - rng.start_z,
+                   u3qc_cut(3, rng.start_z, lent_w, oct_w));
+    }
+  }
+  else if (rng.end_z > lent_w) {
+    out = u3_nul;
+  }
+  else {
+    // [@ @]
+    out = u3nc( (rng.end_z - rng.start_z) + 1,
+               u3qc_cut(3, rng.start_z, (rng.end_z - rng.start_z) + 1, oct_w));
+  }
+  return out;
+}
+
 static range_header
 _get_range(c3_c* txt_c, c3_w len_w)
 {
   c3_c* hep_c = memchr(txt_c, '-', len_w);
-  c3_c* txt_two_c = txt_c;
   range_header slice;
   slice.start_z = SIZE_MAX;
   slice.end_z = SIZE_MAX;
 
-  // <range-start>-
-  // <range-start>-<range-end>
-  // <range-start>-<range-end>, <range-start>-<range-end>
-  // <range-start>-<range-end>, <range-start>-<range-end>, <range-start>-<range-end>
-  // -<suffix-length>
-
   if ( hep_c ) {
-    slice.start_z = h2o_strtosizefwd(&txt_two_c, hep_c - txt_c);
-    if ( slice.start_z != SIZE_MAX ) {
-      u3_assert(txt_two_c == hep_c);
-    }
-    txt_two_c = hep_c + 1;
-    slice.end_z = h2o_strtosizefwd(&txt_two_c, len_w - (txt_two_c - txt_c));
+    slice.start_z = h2o_strtosize(txt_c, hep_c - txt_c);
+    slice.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
   }
 
   return slice;
@@ -876,26 +911,32 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                           req_u->peq_u, _http_foo_cb);
           }
           else {
-            //  TODO range
             h2o_headers_t req_headers = req_u->rec_u->headers;
             c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
 
             if (idx != UINT32_MAX) {
-              if ( (req_headers.entries[idx].value.len > 6)  &&
+              if ( (req_headers.entries[idx].value.len >= 6)  &&
                    (memcmp("bytes=", req_headers.entries[idx].value.base, 6) == 0 )) {
                 c3_w rest_len = req_headers.entries[idx].value.len - 6;
+                if ( rest_len ==  0) {
+                  c3_c* msg_c = "Requested Range Not Satisfiable";
+                  h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                  return;
+                }
                 range_header rng_hed = _get_range(req_headers.entries[idx].value.base + 6, rest_len);
-                u3l_log("struct start %lu, end %lu", rng_hed.start_z, rng_hed.end_z);
                 u3_noun octs = u3r_at(127, nac);
                 if ( octs ==  u3_none) {
                   c3_c* msg_c = "Requested Range Not Satisfiable";
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
-                //  TODO check range vs size
-                u3_noun piece = u3qc_cut(3, rng_hed.start_z, rng_hed.end_z + 1, u3t(octs));
-                u3_noun result = u3nc(rng_hed.end_z + 1 - rng_hed.start_z, piece);
-                u3m_p("result", result);
+                u3_noun result = _slice_mime(rng_hed, octs);
+
+                if ( result ==  u3_nul) {
+                  c3_c* msg_c = "Requested Range Not Satisfiable";
+                  h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                  return;
+                }
                 u3_noun res = u3i_edit(nac, 127, result);
                 _http_cache_respond(req_u, res);
               }
