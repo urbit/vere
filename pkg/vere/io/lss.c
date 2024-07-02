@@ -142,14 +142,16 @@ static c3_o _lss_verifier_find_pair(lss_verifier* los_u, c3_w height, c3_b sel, 
   if (memcmp(los_u->pairs[height][sel], h, 32) == 0) {
     return c3y;
   }
-  // look for "irregular" pairs, which will always be on the right
-  c3_w max_height = _bits_len64(los_u->leaves);
-  for (height++; height < max_height; height++) {
-    if (memcmp(los_u->pairs[height][1], h, 32) == 0) {
-      return c3y;
-    }
-  }
-  return c3n;
+  // "Unbalanced" pairs have two children on the left and one on the right. This
+  // results in the right child being emplaced at a greater height than it
+  // "should" be, so the standard check (above) misses it.
+  //
+  // The locations of these single children are fully determined by the size of
+  // the tree. To find the adjusted height, we simply "climb up" however many
+  // unbalanced pairs are directly above us.
+  c3_w unbalanced = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
+  height += _bits_ctz64(~(mask >> height));
+  return _(memcmp(los_u->pairs[height][1], h, 32) == 0);
 }
 
 c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair) {
@@ -160,7 +162,6 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
     return c3n;
   }
   // check whether pair is expected
-  c3_w height = _bits_ctz64(los_u->counter) + 1;
   if ( (pair != NULL) != (c3y == _lss_expect_pair(los_u->leaves, los_u->counter)) ) {
     return c3n;
   } else if (pair == NULL) {
@@ -168,6 +169,7 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
     return c3y;
   }
   // verify and insert pair
+  c3_w height = _bits_ctz64(los_u->counter) + 1;
   c3_b sel = ~(los_u->counter >> height) & 1;
   lss_hash parent_hash;
   _parent_hash(parent_hash, (*pair)[0], (*pair)[1]);
