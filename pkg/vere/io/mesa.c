@@ -830,26 +830,23 @@ _try_resend(u3_pend_req* req_u)
   c3_o los_o = c3n;
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
-  u3_mesa_name *nam_u = &pac_u->pek_u.nam_u;
 
   for ( int i = req_u->lef_w; i < req_u->nex_w; i++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
-    if ( c3y == bitset_has(&req_u->was_u, i) ) {
-      nam_u->fra_w = i;
-      if ( ( req_u->wat_u[i].tie_y == 1 ) || // TODO wth?
-           ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) ) {
-        los_o = c3y;
-        c3_y* buf_y = c3_calloc(PACT_SIZE);
-        c3_w siz_w  = mesa_etch_pact(buf_y, pac_u);
-        if ( 0 == siz_w ) {
-          u3l_log("failed to etch");
-          u3_assert( 0 );
-        }
-        // TODO: better route management
-        _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
-        _mesa_req_pact_resent(req_u, nam_u);
+    if ( ( c3y == bitset_has(&req_u->was_u, i) ) &&
+       ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) ) {
+      pac_u->pek_u.nam_u.fra_w = i;
+      los_o = c3y;
+      c3_y* buf_y = c3_calloc(PACT_SIZE);
+      c3_w siz_w  = mesa_etch_pact(buf_y, pac_u);
+      if ( 0 == siz_w ) {
+        u3l_log("failed to etch");
+        u3_assert( 0 );
       }
+      // TODO: better route management
+      _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
+      _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
   }
 
