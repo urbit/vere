@@ -566,7 +566,7 @@ _czar_boot_data(c3_c* czar_c,
   c3_w  len_w;
   c3_y* hun_y = 0;
 
-  if (bone_w != NULL) {
+  if ( bone_w != NULL ) {
     sprintf(url, "https://%s.urbit.org/~/boot/%s/%d",
             czar_c+1, who_c, *bone_w + 1);
   } else {
@@ -574,7 +574,7 @@ _czar_boot_data(c3_c* czar_c,
   }
 
   c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
-  if (!ret_i) {
+  if ( !ret_i ) {
     u3_noun jamd = u3dc("slav", c3__uw, u3i_bytes(len_w, hun_y));
     u3_noun cued = u3qe_cue(jamd);
 
@@ -584,8 +584,8 @@ _czar_boot_data(c3_c* czar_c,
     *czar_glx_w = u3r_word(0, czar_glx);
     *czar_ryf_w = u3r_word(0, czar_ryf);
     *czar_lyf_w = u3r_word(0, czar_lyf);
-    if (czar_bon != 0) *czar_bon_w = u3r_word(0, u3t(czar_bon));
-    if (czar_ack != 0) *czar_ack_w = u3r_word(0, u3t(czar_ack));
+    if ( czar_bon != 0 ) *czar_bon_w = u3r_word(0, u3t(czar_bon));
+    if ( czar_ack != 0 ) *czar_ack_w = u3r_word(0, u3t(czar_ack));
 
     u3z(jamd);
     u3z(cued);
@@ -610,8 +610,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
   c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
 
-  if (c3y == u3r_qual(nun, 0, 0, 0, &rem) &&
-      c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) {
+  if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
+       (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
     /*
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
@@ -623,21 +623,21 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
     u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
 
-    if (c3n == _czar_boot_data(czar_c, who_c, &bon_w,
-                               &czar_glx_w, &czar_ryf_w,
-                               &czar_lyf_w, &czar_bon_w,
-                               &czar_ack_w)) {
+    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, &czar_bon_w,
+                                &czar_ack_w) ) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double boot");
       _pier_work(wok_u);
     } else {
-      if (czar_ryf_w == ryf_w) {
+      if ( czar_ryf_w == ryf_w ) {
         c3_w ack_w = cur_w - 1;
-        if (czar_ack_w == 0xFFFFFFFF) {
+        if ( czar_ack_w == 0xFFFFFFFF ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double boot");
           _pier_work(wok_u);
-        } else if (czar_ack_w == ack_w ||
-                   (nex_w > cur_w && czar_ack_w - 1 == ack_w)) {
+        } else if ( (czar_ack_w == ack_w) ||
+                    ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
@@ -654,7 +654,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
     u3z(czar);
     c3_free(czar_c);
-  } else if (c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0) {
+  } else if ( c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0 ) {
     /*
      * Data not available for boot scry. Check against sponsoring galaxy.
      * If peer state exists exit(1) unless ship has breached,
@@ -662,19 +662,19 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      */
     c3_c* czar_c = _resolve_czar(wok_u, who_c);
 
-    if (c3n == _czar_boot_data(czar_c, who_c, 0,
-                               &czar_glx_w, &czar_ryf_w,
-                               &czar_lyf_w, 0, 0)) {
+    if ( c3n == _czar_boot_data(czar_c, who_c, 0,
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, 0, 0) ) {
       c3_free(czar_c);
       _pier_work(wok_u);
     } else {
       // Peer state found under czar
       c3_free(czar_c);
       u3_weak kf_ryf = wok_u->pir_u->ryf;
-      if (kf_ryf == u3_none) {
+      if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double boot");
         _pier_work(wok_u);
-      } else if (kf_ryf > czar_ryf_w) {
+      } else if ( kf_ryf > czar_ryf_w ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
@@ -784,7 +784,7 @@ _pier_work_init(u3_pier* pir_u)
   c3_d pi_d = wok_u->pir_u->who_d[0];
   c3_d pt_d = wok_u->pir_u->who_d[1];
 
-  if ((pi_d < 256 && pt_d == 0) || c3n == u3_Host.ops_u.net) {
+  if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
     // Skip double boot protection for galaxies and local mode ships
     //
     _pier_work(wok_u);
