@@ -150,7 +150,7 @@ static c3_o _lss_verifier_find_pair(lss_verifier* los_u, c3_w height, c3_b sel, 
   // the tree. To find the adjusted height, we simply "climb up" however many
   // unbalanced pairs are directly above us.
   c3_w unbalanced = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
-  height += _bits_ctz64(~(mask >> height));
+  height += _bits_ctz64(~(unbalanced >> height));
   return _(memcmp(los_u->pairs[height][1], h, 32) == 0);
 }
 
