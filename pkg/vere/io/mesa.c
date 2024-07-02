@@ -148,6 +148,25 @@ typedef struct _u3_czar_info {
   u3_noun            pen;   // (list @) of pending packet
 } u3_czar_info;
 
+/*
+|%
++$  lane-state
+  $:  =lane
+      last-sent=@da
+      last-heard=@da
+      rtt=@
+      rttvar=@
+  ==
++$  full-state  (map ship peer-state)
++$  peer-state
+  $:  [direct=lane-state indirect=lane-state]
+      galaxy=@p
+      backpointer  ::  for callbacks
+      requests=(map [rift path] u3_pend_req)  ::  pend_req without lan_u
+  ==
+--
+*/
+
 /* _u3_mesa: next generation networking
  */
 typedef struct _u3_mesa {
