@@ -33,55 +33,22 @@ static void _parent_hash(lss_hash out, lss_hash left, lss_hash right)
   memcpy(out, block, 32);
 }
 
-static c3_y _bits_ctz64(c3_d val_d)
-{
-  if (val_d == 0 ) {
-    return 64;
-  }
-  c3_y ret_y = 0;
-  if ((val_d & 0x00000000FFFFFFFFULL) == 0) { ret_y += 32; val_d >>= 32; }
-  if ((val_d & 0x000000000000FFFFULL) == 0) { ret_y += 16; val_d >>= 16; }
-  if ((val_d & 0x00000000000000FFULL) == 0) { ret_y += 8; val_d >>= 8; }
-  if ((val_d & 0x000000000000000FULL) == 0) { ret_y += 4; val_d >>= 4; }
-  if ((val_d & 0x0000000000000003ULL) == 0) { ret_y += 2; val_d >>= 2; }
-  if ((val_d & 0x0000000000000001ULL) == 0) { ret_y += 1; val_d >>= 1; }
-  return ret_y;
-}
-
-static c3_y _bits_len64(c3_d val_d)
-{
-  if (val_d == 0) {
-    return 0;
-  }
-  c3_y ret_y = 64;
-  if ((val_d & 0xFFFFFFFF00000000ULL) == 0) { ret_y -= 32; val_d <<= 32; }
-  if ((val_d & 0xFFFF000000000000ULL) == 0) { ret_y -= 16; val_d <<= 16; }
-  if ((val_d & 0xFF00000000000000ULL) == 0) { ret_y -= 8; val_d <<= 8; }
-  if ((val_d & 0xF000000000000000ULL) == 0) { ret_y -= 4; val_d <<= 4; }
-  if ((val_d & 0xC000000000000000ULL) == 0) { ret_y -= 2; val_d <<= 2; }
-  if ((val_d & 0x8000000000000000ULL) == 0) { ret_y -= 1; val_d <<= 1; }
-  return ret_y;
-}
-
 c3_w lss_proof_size(c3_w leaves) {
-  return 1 + _bits_len64(leaves-1);
+  return 1 + c3_bits_word(leaves-1);
 }
 
 c3_o _lss_expect_pair(c3_w leaves, c3_w i) {
-  if ( ((i != 0) && (i + (1 << (1+_bits_ctz64(i))) < leaves)) ) {
-    return c3y;
-  }
-  return c3n;
+  return __((i != 0) && ((i + (1 << (1+c3_tz_w(i)))) < leaves));
 }
 
 static void _lss_builder_merge(lss_builder* bil_u, c3_w height, lss_hash l, lss_hash r) {
   // whenever two subtrees are merged, insert them into the pairs array;
   // if the merged tree is part of the left-side "spine" of the tree,
   // instead add the right subtree to the initial proof
-  if (height+1 < _bits_len64(bil_u->counter)) {
-    c3_w c = (bil_u->counter&~((1<<(height+1))-1)) - (1<<height);
-    memcpy(bil_u->pairs[c][0], l, sizeof(lss_hash));
-    memcpy(bil_u->pairs[c][1], r, sizeof(lss_hash));
+  if ( bil_u->counter >> (height+1) ) {
+    c3_w i = (bil_u->counter&~((1<<(height+1))-1)) - (1<<height);
+    memcpy(bil_u->pairs[i][0], l, sizeof(lss_hash));
+    memcpy(bil_u->pairs[i][1], r, sizeof(lss_hash));
   } else {
     if (height == 0) {
       memcpy(bil_u->proof[0], l, sizeof(lss_hash)); // proof always begins with [0, 1)
@@ -105,10 +72,10 @@ void lss_builder_ingest(lss_builder* bil_u, c3_y* leaf_y, c3_w leaf_w) {
 
 lss_hash* lss_builder_finalize(lss_builder* bil_u) {
   if ( bil_u->counter != 0 ) {
-    c3_w height = _bits_ctz64(bil_u->counter);
+    c3_w height = c3_tz_w(bil_u->counter);
     lss_hash h;
     memcpy(h, bil_u->trees[height], sizeof(lss_hash));
-    for (height++; height < 32; height++) {
+    for (height++; height < sizeof(bil_u->trees)/sizeof(lss_hash); height++) {
       if ( bil_u->counter&(1<<height) ) {
         _lss_builder_merge(bil_u, height, bil_u->trees[height], h);
         _parent_hash(h, bil_u->trees[height], h);
@@ -152,11 +119,11 @@ static c3_o _lss_verifier_check_hash(lss_verifier* los_u, c3_w i, c3_w height, l
   // it determines how many odd pairs are directly above us, and increments the
   // height accordingly. A mask is used to ensure that we only perform this
   // adjustment when necessary.
-  c3_w odd = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
-  c3_w mask = (1<<_bits_len64(i ^ (los_u->leaves-1))) - 1;
-  height += _bits_ctz64(~((odd&~mask) >> height));
+  c3_w odd = (1<<c3_bits_word(los_u->leaves-1)) - los_u->leaves;
+  c3_w mask = (1<<c3_bits_word(i ^ (los_u->leaves-1))) - 1;
+  height += c3_tz_w(~((odd&~mask) >> height));
   c3_b parity = (i >> height) & 1;
-  return _(memcmp(los_u->pairs[height][parity], h, sizeof(lss_hash)) == 0);
+  return __(memcmp(los_u->pairs[height][parity], h, sizeof(lss_hash)) == 0);
 }
 
 c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair) {
@@ -174,7 +141,7 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
     return c3y;
   }
   // verify and insert pair
-  c3_w height = _bits_ctz64(los_u->counter);
+  c3_w height = c3_tz_w(los_u->counter);
   c3_w start = los_u->counter + (1 << height); // first leaf "covered" by this pair
   lss_hash parent_hash;
   _parent_hash(parent_hash, (*pair)[0], (*pair)[1]);
@@ -187,9 +154,9 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   return c3y;
 }
 
-c3_o lss_verifier_init(lss_verifier* los_u, c3_w leaves, lss_hash* proof) {
+void lss_verifier_init(lss_verifier* los_u, c3_w leaves, lss_hash* proof) {
   c3_w proof_w = lss_proof_size(leaves);
-  c3_w pairs_w = _bits_len64(leaves);
+  c3_w pairs_w = c3_bits_word(leaves);
   los_u->leaves = leaves;
   los_u->counter = 0;
   los_u->pairs = c3_calloc(pairs_w * sizeof(lss_pair));
@@ -197,7 +164,6 @@ c3_o lss_verifier_init(lss_verifier* los_u, c3_w leaves, lss_hash* proof) {
   for (c3_w i = 1; i < proof_w; i++) {
     memcpy(los_u->pairs[i-1][1], proof[i], sizeof(lss_hash));
   }
-  return c3y;
 }
 
 void lss_verifier_free(lss_verifier* los_u) {
@@ -217,20 +183,6 @@ void lss_root(lss_hash root, lss_hash* proof, c3_w proof_w) {
 }
 
 #ifdef LSS_TEST
-
-static void _test__bits_ctz64()
-{
-  #define asrt(x,y) if ( x != y ) { fprintf(stderr, "failed at %s:%u: got %u, expected %u", __FILE__, __LINE__, x,y); exit(1); }
-  asrt(_bits_ctz64(0ULL), 64);
-  asrt(_bits_ctz64(0x0000000000000001ULL), 0);
-  asrt(_bits_ctz64(0x0000000000000002ULL), 1);
-  asrt(_bits_ctz64(0x0000000000000100ULL), 8);
-  asrt(_bits_ctz64(0x0000000080000000ULL), 31);
-  asrt(_bits_ctz64(0x0000000100000000ULL), 32);
-  asrt(_bits_ctz64(0x4000000000000000ULL), 62);
-  asrt(_bits_ctz64(0x8000000000000000ULL), 63);
-  #undef asrt
-}
 
 static lss_pair* _make_pair(lss_hash left, lss_hash right)
 {
@@ -279,7 +231,7 @@ static void _test_lss_manual_verify_8()
   // verify
   lss_verifier lss_u;
   memset(&lss_u, 0, sizeof(lss_verifier));
-  asrt_ok(lss_verifier_init(&lss_u, 8, proof))
+  lss_verifier_init(&lss_u, 8, proof);
   for ( c3_w i = 0; i < 8; i++ ) {
     asrt_ok(lss_verifier_ingest(&lss_u, leaves_y[i], leaves_w[i], pairs[i]))
   }
@@ -309,7 +261,7 @@ static void _test_lss_build_verify(c3_w dat_w)
 
   // verify
   lss_verifier lss_u;
-  asrt_ok(lss_verifier_init(&lss_u, leaves_w, proof))
+  lss_verifier_init(&lss_u, leaves_w, proof);
   for ( c3_w i = 0; i < leaves_w; i++ ) {
     c3_y* leaf_y = dat_y + (i*1024);
     c3_w leaf_w = (i < leaves_w - 1) ? 1024 : dat_w % 1024;
@@ -321,7 +273,6 @@ static void _test_lss_build_verify(c3_w dat_w)
 }
 
 int main() {
-  _test__bits_ctz64();
   _test_lss_manual_verify_8();
   _test_lss_build_verify(2 * 1024);
   _test_lss_build_verify(2 * 1024 + 2);

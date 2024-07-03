@@ -2017,9 +2017,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     // lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    if ( c3y != lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u) ) {
-      return NULL; // XX ???
-    }
+    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u);
     c3_free(pof_u);
     if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
       return NULL; // XX ???
