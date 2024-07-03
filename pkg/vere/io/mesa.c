@@ -85,10 +85,6 @@ typedef struct _u3_mesa_stat {
 #define safe_dec(num) (num == 0 ? num : num - 1)
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
 
-
-/** typedef u3_mesa_pack_stat u3_noun
- *  [last=@da tries=@ud]
- */
 struct _u3_mesa_pact;
 
 typedef struct _u3_pact_stat {
@@ -113,27 +109,6 @@ typedef struct _u3_mesa_pict {
   struct _u3_mesa*   sam_u;
   u3_mesa_pact       pac_u;
 } u3_mesa_pict;
-
-typedef struct _u3_pend_req {
-  c3_w                   nex_w; // number of the next fragment to be sent
-  c3_w                   tot_w; // total number of fragments expected
-  uv_timer_t             tim_u; // timehandler
-  c3_y*                  dat_y; // ((mop @ud *) lte)
-  c3_w                   len_w;
-  c3_w                   lef_w; // lowest fragment number currently in flight/pending
-  c3_w                   old_w; // frag num of oldest packet sent
-  c3_w                   ack_w; // highest acked fragment number
-  u3_lane                lan_u; // last lane heard
-  u3_gage*               gag_u; // congestion control
-  u3_vec(u3_buf)         mis_u; // misordered packets
-  lss_verifier*          los_u; // Lockstep verifier
-  u3_mesa_pict*          pic_u; // preallocated request packet
-  u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
-  u3_bitset              was_u; // ((mop @ud ?) lte)
-  c3_y                   pad_y[64];
-  //  stats TODO: use
-  c3_d                   beg_d; // date when request began
-} u3_pend_req;
 
 typedef struct _u3_czar_info {
   c3_w               pip_w; // IP of galaxy
@@ -182,6 +157,26 @@ typedef struct _u3_peer {
   u3_lane_state  ind_u;  //  indirect lane state
   u3p(u3h_root)  req_p;  //  (map [rift path] u3_pend_req)
 } u3_peer;
+
+typedef struct _u3_pend_req {
+  c3_w                   nex_w; // number of the next fragment to be sent
+  c3_w                   tot_w; // total number of fragments expected
+  uv_timer_t             tim_u; // timehandler
+  c3_y*                  dat_y; // ((mop @ud *) lte)
+  c3_w                   len_w;
+  c3_w                   lef_w; // lowest fragment number currently in flight/pending
+  c3_w                   old_w; // frag num of oldest packet sent
+  c3_w                   ack_w; // highest acked fragment number
+  u3_gage*               gag_u; // congestion control
+  u3_vec(u3_buf)         mis_u; // misordered packets
+  lss_verifier*          los_u; // Lockstep verifier
+  u3_mesa_pict*          pic_u; // preallocated request packet
+  u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
+  u3_bitset              was_u; // ((mop @ud ?) lte)
+  c3_y                   pad_y[64];
+  //  stats TODO: use
+  c3_d                   beg_d; // date when request began
+} u3_pend_req;
 
 typedef enum _u3_mesa_ctag {
   CACE_WAIT = 1,
@@ -486,8 +481,6 @@ _mesa_get_peer(u3_mesa* sam_u, c3_d her_d[2])
   return _mesa_get_peer_raw(sam_u, u3i_chubs(2, her_d));
 }
 
-/*
- */
 static void
 _mesa_put_peer_raw(u3_mesa* sam_u, u3_noun her, u3_peer* per_u)
 {
@@ -949,6 +942,8 @@ _try_resend(u3_pend_req* req_u)
         u3_assert( 0 );
       }
       // TODO: better route management
+      // it needs to be more ergonomic to access the u3_peer
+      //    could do a backpointer to the u3_peer from the u3_pend_req
       _mesa_send_buf(req_u->pic_u->sam_u, req_u->lan_u, buf_y, siz_w);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
@@ -1070,6 +1065,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     _init_gage(gag_u);
   }
 
+  //  TODO: fix this
   req_u->lan_u = *lan_u;
 
   c3_w siz_w = (1 << (nam_u->boq_y - 3));
@@ -1440,13 +1436,20 @@ _mesa_io_slog(u3_auto* car_u) {
 }
 
 static void
+_mesa_free_peer(u3_noun per)
+{
+  u3_peer* per_u = u3to(u3_peer, per);
+  u3h_free(per_u->req_p);
+}
+
+static void
 _mesa_exit_cb(uv_handle_t* had_u)
 {
   u3_mesa* sam_u = had_u->data;
 
   u3s_cue_xeno_done(sam_u->sil_u);
   ur_cue_test_done(sam_u->tes_u);
-  // TODO free each hashtable in sam_u->her_p first
+  u3h_walk(sam_u->her_p, _mesa_free_peer);
   u3h_free(sam_u->her_p);
 
   c3_free(sam_u);
