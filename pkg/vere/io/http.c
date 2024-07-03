@@ -697,9 +697,10 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] u3qc_cut
 //  [x] better range header parsing
 //  [x] better slicing
-//  [ ] 206
-//  [ ] 200
-//  [ ] _http_range_respond?
+//  [x] 206
+//  [x] 200
+//  [x] open range vs error
+//  [ ] test stream
 //  [ ] multipart ranges
 //
 typedef struct _range_header {
@@ -763,6 +764,12 @@ _get_range(c3_c* txt_c, c3_w len_w)
   if ( hep_c ) {
     slice.start_z = h2o_strtosize(txt_c, hep_c - txt_c);
     slice.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
+    // strange -> [SIZE_MAX SIZE_MAX] so we return u3_nul in _slice_mime
+    if ( ((hep_c != txt_c) && slice.start_z == SIZE_MAX ) ||
+          ( len_w - ((hep_c + 1) - txt_c) > 0 ) && slice.end_z == SIZE_MAX ) {
+      slice.start_z = SIZE_MAX;
+      slice.end_z = SIZE_MAX;
+    }
   }
 
   return slice;
@@ -937,8 +944,16 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
-                u3_noun res = u3i_edit(nac, 127, result);
-                _http_cache_respond(req_u, res);
+                if ( u3r_sing(result, octs) == c3y)  {
+                  //  200
+                  _http_cache_respond(req_u, nac);
+                }
+                else {
+                  //  206
+                  u3_noun tmp = u3i_edit(nac, 124, 206);
+                  u3_noun res = u3i_edit(tmp, 127, result);
+                  _http_cache_respond(req_u, res);
+                }
               }
             }
             else {
