@@ -99,12 +99,6 @@ typedef struct _u3_pact_stat {
 
 struct _u3_mesa;
 
-typedef struct _u3_peer_last {
-  c3_d her_d; // time we last heard from the direct route
-  c3_d dir_d; // time we last sent a packet on the direct route
-  c3_d ind_d; // time we last sent a packet on the indirect route
-} u3_peer_last;
-
 typedef struct _u3_misord_buf {
   c3_y*     fra_y;
   c3_w      len_w;
@@ -136,7 +130,9 @@ typedef struct _u3_pend_req {
   u3_mesa_pict*          pic_u; // preallocated request packet
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
   u3_bitset              was_u; // ((mop @ud ?) lte)
-  c3_y                  pad_y[64];
+  c3_y                   pad_y[64];
+  //  stats TODO: use
+  c3_d                   beg_d; // date when request began
 } u3_pend_req;
 
 typedef struct _u3_czar_info {
@@ -148,29 +144,11 @@ typedef struct _u3_czar_info {
   u3_noun            pen;   // (list @) of pending packet
 } u3_czar_info;
 
-/*
-|%
-+$  lane-state
-  $:  last-sent=@da
-      last-heard=@da
-      rtt=@
-      rttvar=@
-  ==
-+$  full-state  (map ship peer-state)
-+$  peer-state
-  $:  direct=[=lane lane-state]
-      indirect=[galaxy=@p lane-state]
-      backpointer  ::  for callbacks
-      requests=(map [rift path] u3_pend_req)  ::  pend_req without lan_u
-  ==
---
-*/
-
 typedef struct _u3_lane_state {
   c3_d  sen_d;  //  last sent date
   c3_d  her_d;  //  last heard date
-  c3_d  rtt_d;  //  round-trip time
-  c3_d  rtv_d;  //  round-trip time variance
+  c3_w  rtt_w;  //  round-trip time
+  c3_w  rtv_w;  //  round-trip time variance
 } u3_lane_state;
 
 /* _u3_mesa: next generation networking
@@ -182,27 +160,27 @@ typedef struct _u3_mesa {
     uv_udp_t         wax_u;
     uv_handle_t      had_u;
   };
-  u3_mesa_stat       sat_u;             // statistics
-  c3_l               sev_l;             // XX: ??
-  c3_o               for_o;             //  is forwarding
-  ur_cue_test_t*     tes_u;             //  cue-test handle
-  u3_cue_xeno*       sil_u;             //  cue handle
-  u3p(u3h_root)      her_p;             // (map ship u3_peer)
-  u3p(u3h_root)      pac_p;             // packet cache
-  u3p(u3h_root)      lan_p;             // lane cache
-  u3_czar_info       imp_u[256];       // galaxy information
-  u3p(u3h_root)      req_p;            // hashtable of u3_pend_req
-  c3_c*              dns_c;            // turf (urb.otrg)
-  c3_d              tim_d;            // XX: remove
+  u3_mesa_stat       sat_u;       //  statistics
+  c3_l               sev_l;       //  XX: ??
+  c3_o               for_o;       //  is forwarding
+  ur_cue_test_t*     tes_u;       //  cue-test handle
+  u3_cue_xeno*       sil_u;       //  cue handle
+  u3p(u3h_root)      her_p;       //  (map ship u3_peer)
+  u3p(u3h_root)      pac_p;       //  packet cache
+  u3p(u3h_root)      lan_p;       //  lane cache
+  u3_czar_info       imp_u[256];  //  galaxy information
+  c3_c*              dns_c;       //  turf (urb.otrg)
+  c3_d               tim_d;       //  XX: remove
 } u3_mesa;
 
 typedef struct _u3_peer {
-  u3_mesa*       sam_u; //  backpointer
-  u3_lane        dan_u; //  direct lane (nullable)
-  u3_lane_state  dir_u; //  direct lane state
-  c3_y           imp_y; //  galaxy @p
-  u3_lane_state  ind_u; //  indirect lane state
-  //  TODO HAMT for (map [rift path] u3_pend_req)
+  u3_mesa*       sam_u;  //  backpointer
+  c3_o           ful_o;  //  has this been initialized?
+  u3_lane        dan_u;  //  direct lane (nullable)
+  u3_lane_state  dir_u;  //  direct lane state
+  c3_y           imp_y;  //  galaxy @p
+  u3_lane_state  ind_u;  //  indirect lane state
+  u3p(u3h_root)  req_p;  //  (map [rift path] u3_pend_req)
 } u3_peer;
 
 typedef enum _u3_mesa_ctag {
@@ -281,10 +259,8 @@ static void _log_peer(u3_peer* per_u)
     return;
   }
   u3l_log("dir");
-  _log_lane(&per_u->dir_u);
-  u3l_log("ind");
-  _log_lane(&per_u->ind_u);
-  u3l_log("galaxy: %s", u3r_string(u3dc("scot", 'p', per_u->imp_s)));
+  _log_lane(&per_u->dan_u);
+  u3l_log("galaxy: %s", u3r_string(u3dc("scot", 'p', per_u->imp_y)));
 }
 
 static void
@@ -456,7 +432,7 @@ _dire_etch_ud(c3_d num_d)
 u3_noun _mesa_request_key(u3_mesa_name* nam_u)
 {
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun res = u3nt(u3i_chubs(2, nam_u->her_d), u3i_word(nam_u->rif_w), pax);
+  u3_noun res = u3nc(u3i_word(nam_u->rif_w), pax);
   return res;
 }
 
@@ -484,6 +460,199 @@ static u3_noun
 _mesa_lane_key(c3_d her_d[2], u3_lane* lan_u)
 {
   return u3nc(u3i_chubs(2,her_d), u3_mesa_encode_lane(*lan_u));
+}
+
+// TODO: all the her_p hashtable functions are not refcounted properly
+static u3_peer*
+_mesa_get_peer_raw(u3_mesa* sam_u, u3_noun her)
+{
+  u3_peer* ret_u = NULL;
+  u3_weak res = u3h_git(sam_u->her_p, her);
+
+  if ( res != u3_none && res != u3_nul ) {
+    ret_u = u3to(u3_peer, res);
+  }
+
+  u3z(her);
+  return ret_u;
+}
+
+/*
+ * RETAIN
+ */
+static u3_peer*
+_mesa_get_peer(u3_mesa* sam_u, c3_d her_d[2])
+{
+  return _mesa_get_peer_raw(sam_u, u3i_chubs(2, her_d));
+}
+
+/*
+ */
+static void
+_mesa_put_peer_raw(u3_mesa* sam_u, u3_noun her, u3_peer* per_u)
+{
+  u3_peer* old_u = _mesa_get_peer_raw(sam_u, u3k(her));
+  u3_peer* new_u = NULL;
+
+  if ( old_u == NULL ) {
+    new_u = u3a_calloc(sizeof(u3_peer),1);
+    memcpy(new_u, per_u, sizeof(u3_peer));
+  } else if ( new_u != old_u ) {
+    new_u = old_u;
+    memcpy(new_u, per_u, sizeof(u3_peer));
+  }
+
+  u3_noun val = u3of(u3_peer, new_u);
+  u3h_put(sam_u->her_p, her, val);
+  u3z(her);
+}
+
+static void
+_mesa_put_peer(u3_mesa* sam_u, c3_d her_d[2], u3_peer* per_u)
+{
+  _mesa_put_peer_raw(sam_u, u3i_chubs(2, her_d), per_u);
+}
+
+/* _mesa_get_request(): produce pending request state for nam_u
+ *
+ *   produces a NULL pointer if no pending request exists
+*/
+static u3_pend_req*
+_mesa_get_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
+  u3_pend_req* ret_u = NULL;
+
+  u3_peer* per_u = _mesa_get_peer(sam_u, nam_u->her_d);
+  if ( !per_u ) {
+    return ret_u;
+  }
+  u3_noun key = _mesa_request_key(nam_u);
+  u3_weak res = u3h_git(per_u->req_p, key);
+
+  if ( res != u3_none && res != u3_nul ) {
+    ret_u = u3to(u3_pend_req, res);
+  }
+
+  u3z(key);
+  return ret_u;
+}
+
+static void
+_mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
+  u3_peer* per_u = _mesa_get_peer(sam_u, nam_u->her_d);
+  if ( !per_u ) {
+    return;
+  }
+  u3_noun key = _mesa_request_key(nam_u);
+
+  u3_weak req = u3h_get(per_u->req_p, key);
+  if ( req == u3_none ) {
+    u3z(key);
+    return;
+  }
+  u3_pend_req* req_u = u3to(u3_pend_req, req);
+    // u3l_log("wat_u %p", req_u->wat_u);
+  // u3l_log("was_u buf %p", req_u->was_u.buf_y);
+  uv_timer_stop(&req_u->tim_u);
+  _mesa_free_pict(req_u->pic_u);
+  c3_free(req_u->wat_u);
+  vec_free(&req_u->mis_u);
+  c3_free(req_u->dat_y);
+  lss_verifier_free(req_u->los_u);
+  u3h_del(per_u->req_p, key);
+  u3a_free(req_u);
+  u3z(key);
+}
+
+/* _mesa_put_request(): save new pending request state for nam_u
+ *
+ *   the memory in the hashtable is allocated once in the lifecycle of the
+ *   request. req_u will be copied into the hashtable memory, and so can be
+ *   immediately freed
+ *
+*/
+static u3_pend_req*
+_mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
+  u3_peer* per_u = _mesa_get_peer(sam_u, nam_u->her_d);
+  if ( !per_u ) {
+    return NULL;
+  }
+  u3_noun key = _mesa_request_key(nam_u);
+
+  if ( req_u == NULL) {
+    u3h_put(per_u->req_p, key, u3_nul);
+    u3z(key);
+    return req_u;
+  }
+  u3_pend_req* old_u = _mesa_get_request(sam_u, nam_u);
+  u3_pend_req* new_u = req_u;
+  if ( old_u == NULL ) {
+    new_u = u3a_calloc(1, sizeof(u3_pend_req));
+    /* u3l_log("putting fresh req %p", new_u); */
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
+    uv_timer_init(u3L, &new_u->tim_u);
+  } else {
+    new_u = old_u;
+    memcpy(new_u, req_u, sizeof(u3_pend_req));
+  }
+
+  u3_noun val = u3of(u3_pend_req, new_u);
+  u3h_put(per_u->req_p, key, val);
+  u3z(key);
+  return new_u;
+}
+
+/* _ames_czar_port(): udp port for galaxy.
+  XX copied from io/ames.c
+*/
+static c3_s
+_ames_czar_port(c3_y imp_y)
+{
+  if ( c3n == u3_Host.ops_u.net ) {
+    return 31337 + imp_y;
+  }
+  else {
+    return 13337 + imp_y;
+  }
+}
+
+static u3_lane
+_mesa_get_direct_lane_raw(u3_mesa* sam_u, u3_noun her)
+{
+  if ( (c3y == u3a_is_cat(her)) && (her < 256) ) {
+    c3_s por_s = _ames_czar_port(her);
+    return (u3_lane){sam_u->imp_u[her].pip_w, por_s};
+  }
+  u3_peer* per_u = _mesa_get_peer_raw(sam_u, her);
+  if ( !per_u ) {
+    return (u3_lane){0,0};
+  }
+  return per_u->dan_u;
+}
+
+static u3_lane
+_mesa_get_direct_lane(u3_mesa* sam_u, c3_d her_d[2])
+{
+  return _mesa_get_direct_lane_raw(sam_u, u3i_chubs(2, her_d));
+}
+
+static u3_lane
+_mesa_get_czar_lane(u3_mesa* sam_u, c3_y imp_y)
+{
+  c3_s por_s = _ames_czar_port(imp_y);
+  return (u3_lane){sam_u->imp_u[imp_y].pip_w, por_s};
+}
+
+static u3_lane
+_mesa_get_indirect_lane(u3_mesa* sam_u, u3_noun her, u3_noun lan)
+{
+  if ( (c3y == u3a_is_cat(her)) && (her < 256) ) {
+    return _mesa_get_czar_lane(sam_u, her);
+  }
+  u3_peer* per_u = _mesa_get_peer_raw(sam_u, her);
+  if ( !per_u ) {
+    return (u3_lane){0,0};
+  }
+  return _mesa_get_czar_lane(sam_u, per_u->imp_y);
 }
 
 /* RETAIN
@@ -534,83 +703,6 @@ _mesa_put_lane(u3_mesa* sam_u, c3_d her_d[2], u3_lane* lan_u, u3_gage* gag_u)
   u3h_put(sam_u->lan_p, key, val);
   u3z(key);
 }
-
-/* _mesa_get_request(): produce pending request state for nam_u
- *
- *   produces a NULL pointer if no pending request exists
-*/
-static u3_pend_req*
-_mesa_get_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
-  u3_pend_req* ret_u = NULL;
-  u3_noun key = _mesa_request_key(nam_u);
-
-  u3_weak res = u3h_git(sam_u->req_p, key);
-  if ( res != u3_none && res != u3_nul ) {
-    ret_u = u3to(u3_pend_req, res);
-  }
-
-  u3z(key);
-  return ret_u;
-}
-
-static void
-_mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
-  u3_noun key = _mesa_request_key(nam_u);
-
-  u3_weak req = u3h_get(sam_u->req_p, key);
-  if ( req == u3_none ) {
-    u3z(key);
-    return;
-  }
-  u3_pend_req* req_u = u3to(u3_pend_req, req);
-    // u3l_log("wat_u %p", req_u->wat_u);
-  // u3l_log("was_u buf %p", req_u->was_u.buf_y);
-  uv_timer_stop(&req_u->tim_u);
-  _mesa_free_pict(req_u->pic_u);
-  c3_free(req_u->wat_u);
-  vec_free(&req_u->mis_u);
-  c3_free(req_u->dat_y);
-  lss_verifier_free(req_u->los_u);
-  u3h_del(sam_u->req_p, key);
-  u3a_free(req_u);
-  u3z(key);
-}
-
-/* _mesa_put_request(): save new pending request state for nam_u
- *
- *   the memory in the hashtable is allocated once in the lifecycle of the
- *   request. req_u will be copied into the hashtable memory, and so can be
- *   immediately freed
- *
-*/
-static u3_pend_req*
-_mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
-  u3_noun key = _mesa_request_key(nam_u);
-
-  if ( req_u == NULL) {
-    u3h_put(sam_u->req_p, key, u3_nul);
-    u3z(key);
-    return req_u;
-  }
-  u3_pend_req* old_u = _mesa_get_request(sam_u, nam_u);
-  u3_pend_req* new_u = req_u;
-  if ( old_u == NULL ) {
-    new_u = u3a_calloc(1, sizeof(u3_pend_req));
-    /* u3l_log("putting fresh req %p", new_u); */
-    memcpy(new_u, req_u, sizeof(u3_pend_req));
-    uv_timer_init(u3L, &new_u->tim_u);
-  } else {
-    new_u = old_u;
-    memcpy(new_u, req_u, sizeof(u3_pend_req));
-  }
-
-
-  u3_noun val = u3of(u3_pend_req, new_u);
-  u3h_put(sam_u->req_p, key, val);
-  u3z(key);
-  return new_u;
-}
-
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
@@ -709,19 +801,6 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
         break;
       }
     }
-  }
-}
-
-/* _ames_czar_port(): udp port for galaxy.
-*/
-static c3_s
-_ames_czar_port(c3_y imp_y)
-{
-  if ( c3n == u3_Host.ops_u.net ) {
-    return 31337 + imp_y;
-  }
-  else {
-    return 13337 + imp_y;
   }
 }
 
@@ -1367,8 +1446,8 @@ _mesa_exit_cb(uv_handle_t* had_u)
 
   u3s_cue_xeno_done(sam_u->sil_u);
   ur_cue_test_done(sam_u->tes_u);
+  // TODO free each hashtable in sam_u->her_p first
   u3h_free(sam_u->her_p);
-  u3h_free(sam_u->req_p);
 
   c3_free(sam_u);
 }
@@ -1380,101 +1459,27 @@ _mesa_io_exit(u3_auto* car_u)
   uv_close(&sam_u->had_u, _mesa_exit_cb);
 }
 
+static u3_lane_state
+_init_lane_state()
+{
+  u3_lane_state sat_u;
+  sat_u.sen_d = 0;
+  sat_u.her_d = 0;
+  sat_u.rtt_w = 1000000;
+  sat_u.rtv_w = 1000000;
+  return sat_u;
+}
+
 static void
 _init_peer(u3_mesa* sam_u, u3_peer* per_u)
 {
   per_u->sam_u = sam_u;
-
-  per_u->imp_s = 256;
-  per_u->dir_u = (u3_lane){0,0};
-  per_u->ind_u = (u3_lane){0,0};
-  per_u->las_u = (u3_peer_last){0,0};
-}
-
-// TODO: all the her_p hashtable functions are not refcounted properly
-static u3_peer*
-_mesa_get_peer_raw(u3_mesa* sam_u, u3_noun her)
-{
-  u3_peer* ret_u = NULL;
-  u3_weak res = u3h_git(sam_u->her_p, her);
-
-  if ( res != u3_none && res != u3_nul ) {
-    ret_u = u3to(u3_peer, res);
-  }
-
-  u3z(her);
-  return ret_u;
-
-}
-
-/*
- * RETAIN
- */
-static u3_peer*
-_mesa_get_peer(u3_mesa* sam_u, c3_d her_d[2])
-{
-  return _mesa_get_peer_raw(sam_u, u3i_chubs(2, her_d));
-}
-
-/*
- */
-static void
-_mesa_put_peer_raw(u3_mesa* sam_u, u3_noun her, u3_peer* per_u)
-{
-  u3_peer* old_u = _mesa_get_peer_raw(sam_u, u3k(her));
-  u3_peer* new_u = NULL;
-
-  if ( old_u == NULL ) {
-    new_u = u3a_calloc(sizeof(u3_peer),1);
-    memcpy(new_u, per_u, sizeof(u3_peer));
-  } else if ( new_u != old_u ) {
-    new_u = old_u;
-    memcpy(new_u, per_u, sizeof(u3_peer));
-  }
-
-  u3_noun val = u3of(u3_peer, new_u);
-  u3h_put(sam_u->her_p, her, val);
-  u3z(her);
-}
-
-static void
-_mesa_put_peer(u3_mesa* sam_u, c3_d her_d[2], u3_peer* per_u)
-{
-  _mesa_put_peer_raw(sam_u, u3i_chubs(2, her_d), per_u);
-}
-
-static u3_lane
-_mesa_get_direct_lane_raw(u3_mesa* sam_u, u3_noun her)
-{
-  if ( c3y == u3a_is_cat(her) && her < 256 ) {
-    c3_s por_s = _ames_czar_port(her);
-    return (u3_lane){sam_u->imp_u[her].pip_w, por_s};
-  }
-  u3_peer* per_u = _mesa_get_peer_raw(sam_u, her);
-  if ( NULL == per_u ) {
-    return (u3_lane){0,0};
-  }
-  return per_u->dir_u;
-}
-
-static u3_lane
-_mesa_get_direct_lane(u3_mesa* sam_u, c3_d her_d[2])
-{
-  return _mesa_get_direct_lane_raw(sam_u, u3i_chubs(2, her_d));
-}
-
-static u3_lane
-_mesa_get_indirect_lane(u3_mesa* sam_u, u3_noun her, u3_noun lan)
-{
-  if ( c3y == u3a_is_cat(her) && her < 256 ) {
-    c3_s por_s = _ames_czar_port(her);
-    return (u3_lane){sam_u->imp_u[her].pip_w, por_s};
-  }
-  u3_peer* per_u = _mesa_get_peer_raw(sam_u, her);
-  if ( NULL == per_u ) {
-    return (u3_lane){0,0};
-  }
-  return per_u->ind_u;
+  per_u->ful_o = c3n;
+  per_u->dan_u = (u3_lane){0,0};
+  per_u->dir_u = _init_lane_state();
+  per_u->imp_y = 0;
+  per_u->ind_u = _init_lane_state();
+  per_u->req_p = u3h_new();
 }
 
 /*
@@ -1807,7 +1812,8 @@ _saxo_cb(void* vod_p, u3_noun nun)
     u3_noun gal = u3do("rear", u3k(sax));
     u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
-    per_u->imp_s = gal;
+    per_u->ful_o = c3y;
+    per_u->imp_y = gal;
     _mesa_put_peer_raw(per_u->sam_u, her, per_u);
   }
 
@@ -1827,10 +1833,10 @@ static void
 _hear_peer(u3_mesa* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
 {
   if ( c3y == dir_o ) {
-    per_u->dir_u = lan_u;
-    per_u->las_u.her_d = _get_now_micros();
+    per_u->dan_u = lan_u;
+    per_u->dir_u.her_d = _get_now_micros();
   } else {
-    per_u->ind_u = lan_u;
+    per_u->ind_u.her_d = _get_now_micros();
   }
 }
 
@@ -2233,7 +2239,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       _mesa_free_pict(pic_u);
       return;
     }
-    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
+    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
 //#ifdef MESA_DEBUG
       u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
 //#endif
@@ -2347,12 +2353,12 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
       _mesa_free_pict(pic_u);
       return;
     }
-    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_s ) {
+    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
 //#ifdef MESA_DEBUG
       u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
 //#endif
-      //_update_hopcount(&pac_u->hed_u);
        u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
+      //_update_hopcount(&pac_u->hed_u);
       _mesa_send(pic_u, &lin_u);
     }
     _mesa_free_pict(pic_u);
@@ -2599,7 +2605,6 @@ u3_mesa_io_init(u3_pier* pir_u)
 
   //  XX config
   sam_u->her_p = u3h_new_cache(100000);
-  sam_u->req_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
   sam_u->pac_p = u3h_new_cache(100000);
 
