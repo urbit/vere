@@ -5,7 +5,6 @@
 
 #include "noun.h"
 #include "ur.h"
-#include "cubic.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
 #include <allocate.h>
@@ -28,6 +27,8 @@ c3_o dop_o = c3n;
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
 #define REORDER_THRESH  5
+
+#define DIRECT_ROUTE_TIMEOUT_MICROS 5000000
 
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
@@ -102,6 +103,18 @@ typedef struct _u3_misord_buf {
   lss_pair* par_u;
 } u3_misord_buf;
 
+typedef struct _u3_gage {
+  c3_w     rtt_w;  // rtt
+  c3_w     rto_w;  // rto
+  c3_w     rtv_w;  // rttvar
+  c3_w     wnd_w;  // cwnd
+  c3_w     wnf_w;  // cwnd fraction
+  c3_w     sst_w;  // ssthresh
+  c3_w     con_w;  // counter
+  //
+  uv_timer_t tim_u;
+} u3_gage;
+
 struct _u3_mesa;
 
 typedef struct _u3_mesa_pict {
@@ -159,6 +172,7 @@ typedef struct _u3_peer {
 } u3_peer;
 
 typedef struct _u3_pend_req {
+  u3_peer*               per_u; // backpointer
   c3_w                   nex_w; // number of the next fragment to be sent
   c3_w                   tot_w; // total number of fragments expected
   uv_timer_t             tim_u; // timehandler
@@ -321,6 +335,13 @@ static c3_d
 _clamp_rto(c3_d rto_d) {
   /* u3l_log("clamp rto %llu", rto_d); */
   return c3_min(c3_max(rto_d, 200000), 25000000);
+}
+
+static c3_o
+_mesa_is_direct_mode(u3_peer* per_u)
+{
+  c3_d now_d = _get_now_micros();
+  return __(per_u->dir_u.her_d + DIRECT_ROUTE_TIMEOUT_MICROS > now_d);
 }
 
 static inline void
@@ -582,6 +603,7 @@ _mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
     new_u = u3a_calloc(1, sizeof(u3_pend_req));
     /* u3l_log("putting fresh req %p", new_u); */
     memcpy(new_u, req_u, sizeof(u3_pend_req));
+    new_u->per_u = per_u;
     uv_timer_init(u3L, &new_u->tim_u);
   } else {
     new_u = old_u;
@@ -699,7 +721,6 @@ _mesa_put_lane(u3_mesa* sam_u, c3_d her_d[2], u3_lane* lan_u, u3_gage* gag_u)
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
-
   gag_u->con_w++;
 
   c3_d now_d = _get_now_micros();
@@ -944,7 +965,7 @@ _try_resend(u3_pend_req* req_u)
       // TODO: better route management
       // it needs to be more ergonomic to access the u3_peer
       //    could do a backpointer to the u3_peer from the u3_pend_req
-      _mesa_send_buf(req_u->pic_u->sam_u, req_u->lan_u, buf_y, siz_w);
+      _mesa_send_buf(req_u->pic_u->sam_u, req_u->per_u->dan_u, buf_y, siz_w);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
   }
@@ -960,7 +981,7 @@ static void
 _mesa_packet_timeout(uv_timer_t* tim_u);
 
 static void
-_update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
+_update_oldest_req(u3_pend_req *req_u)
 {
   if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
     /* u3l_log("bad condition"); */
@@ -988,7 +1009,8 @@ _update_oldest_req(u3_pend_req *req_u, u3_gage* gag_u)
   req_u->tim_u.data = req_u;
   c3_d gap_d = req_u->wat_u[idx_w].sen_d - now_d;
   /* u3l_log("timeout %llu", (gag_u->rto_w - gap_d) / 1000); */
-  uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, (gag_u->rto_w - gap_d) / 1000, 0);
+  c3_w dur_w = (req_u->gag_u->rto_w - gap_d) / 1000;
+  uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, dur_w, 0);
 }
 
 /* _mesa_packet_timeout(): callback for packet timeout
@@ -998,7 +1020,7 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
   /* u3l_log("%u packet timed out", req_u->old_w); */
   _try_resend(req_u);
-  _update_oldest_req(req_u, req_u->gag_u);
+  _update_oldest_req(req_u);
 }
 
 static void _mesa_free_misord_buf(u3_misord_buf* buf_u)
@@ -1044,7 +1066,11 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
 /* _mesa_req_pact_done(): mark packet as done, returning if we should continue
 */
 static u3_pend_req*
-_mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3_lane* lan_u)
+_mesa_req_pact_done(u3_mesa*      sam_u,
+                    u3_mesa_name* nam_u,
+                    u3_mesa_data* dat_u,
+                    c3_y          hop_y,
+                    u3_lane       lan_u)
 {
   u3_weak ret = u3_none;
   c3_d now_d = _get_now_micros();
@@ -1055,18 +1081,20 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     return NULL;
   }
 
-  u3_gage* gag_u = _mesa_get_lane(sam_u, nam_u->her_d, lan_u);
-  req_u->gag_u = gag_u;
-
-  // first we hear from lane
-  if ( gag_u == NULL ) {
-    gag_u = alloca(sizeof(u3_gage));
-    memset(gag_u, 0, sizeof(u3_gage));
-    _init_gage(gag_u);
+  //  TODO: if hop count is nonzero,
+  //  then write down the next hop as the candidate direct route.
+  //  We also need to branch on that to figure out which
+  //  congestion control state to update.
+  //  TODO: when we change candidate direct routes, zero out the
+  //  direct-route congestion control state.
+  u3_lane_state sat_u;
+  if ( 0 == hop_y ) {
+    req_u->per_u->dan_u = lan_u;
+    sat_u = req_u->per_u->dir_u;
   }
-
-  //  TODO: fix this
-  req_u->lan_u = *lan_u;
+  else {
+    sat_u = req_u->per_u->ind_u;
+  }
 
   c3_w siz_w = (1 << (nam_u->boq_y - 3));
   // First packet received, instantiate request fully
@@ -1144,14 +1172,14 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   }
 
   // handle gauge update
-  _mesa_handle_ack(gag_u, &req_u->wat_u[nam_u->fra_w]);
+  _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_w]);
 
 
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), dat_u->fra_y, dat_u->len_w);
 
   _try_resend(req_u);
 
-  _update_oldest_req(req_u, gag_u);
+  _update_oldest_req(req_u);
 
   // _mesa_put_request(sam_u, nam_u, req_u);
   // _mesa_put_lane(sam_u, nam_u->her_d, lan_u, gag_u);
@@ -1982,7 +2010,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   vec_init(&req_u->mis_u, 8);
 
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
-  _update_oldest_req(req_u, gag_u);
+  _update_oldest_req(req_u);
   return req_u;
 }
 
@@ -2116,7 +2144,19 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       return;
     }
   } else {
-    req_u = _mesa_req_pact_done(sam_u, &pac_u->pag_u.nam_u, &pac_u->pag_u.dat_u, &lan_u);
+    u3_lane lon_u;
+    if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
+      lon_u.pip_w = *(c3_w*)pac_u->pag_u.sot_u;
+      lon_u.por_s = *(c3_s*)&pac_u->pag_u.sot_u[4];
+    }
+    else {
+      lon_u = lan_u;
+    }
+    req_u = _mesa_req_pact_done(sam_u,
+                                &pac_u->pag_u.nam_u,
+                                &pac_u->pag_u.dat_u,
+                                pac_u->hed_u.hop_y,
+                                lon_u);
     if ( req_u == NULL ) {
       // cleanup
       /* u3l_log("wrong"); */
