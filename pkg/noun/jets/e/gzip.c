@@ -11,34 +11,6 @@
 #include "noun.h"
 #include "uv.h"
 
-static uv_buf_t
-_dawn_oct_to_buf(u3_noun oct)
-{
-  if ( c3n == u3a_is_cat(u3h(oct)) ) {
-    exit(1);
-  }
-
-  c3_w len_w  = u3h(oct);
-  c3_y* buf_y = u3a_malloc(1 + len_w);
-  buf_y[len_w] = 0;
-
-  u3r_bytes(0, len_w, buf_y, u3t(oct));
-
-  return uv_buf_init((void*)buf_y, len_w);
-}
-
-static u3_noun
-_dawn_buf_to_oct(uv_buf_t buf_u)
-{
-  u3_noun len = u3i_words(1, (c3_w*)&buf_u.len);
-
-  if ( c3n == u3a_is_cat(len) ) {
-    exit(1);
-  }
-
-  return u3nc(len, u3i_bytes(buf_u.len, (const c3_y*)buf_u.base));
-}
-
 static void*
 gzip_malloc(voidpf opaque, uInt items, uInt size)
 {
@@ -56,7 +28,26 @@ gzip_free(voidpf opaque, voidpf address)
 u3_noun
 u3qe_unzip_gzip(u3_noun zipped_octs)
 {
-  uv_buf_t zipped_buf = _dawn_oct_to_buf(zipped_octs);
+  u3_atom head = u3h(zipped_octs);
+  u3_atom tail = u3t(zipped_octs);
+  c3_w  tel_w = u3r_met(3, tail);
+  c3_w hed_w;
+  if ( c3n == u3r_safe_word(head, &hed_w) ) {
+    return u3m_bail(c3__fail);
+  }
+  c3_y* input;
+
+  if (c3y == u3a_is_cat(tail)) {
+    input = &tail;
+  }
+  else {
+    u3a_atom* vat_u = u3a_to_ptr(tail);
+    input = (c3_y*)vat_u->buf_w;
+  }
+
+  if ( tel_w > hed_w ) {
+    return u3m_error("subtract-underflow");
+  }
 
   int ret;
   z_stream strm;
@@ -64,8 +55,8 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
   strm.zalloc = gzip_malloc;
   strm.zfree = gzip_free;
   strm.opaque = Z_NULL;
-  strm.avail_in = zipped_buf.len;
-  strm.next_in = zipped_buf.base;
+  strm.avail_in = hed_w;
+  strm.next_in = input;
 
   ret = inflateInit2(&strm, 16);
   if (ret != 0) {
@@ -74,9 +65,9 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
     return u3m_bail(c3__exit);
   }
 
-  uint chunk = zipped_buf.len / 10;
-  strm.avail_out = zipped_buf.len + 16384;
-  strm.next_out = u3a_malloc(zipped_buf.len + 16384);
+  uint chunk = hed_w / 10;
+  strm.avail_out = hed_w + 16384;
+  strm.next_out = u3a_malloc(hed_w + 16384);
 
   void* this_address = strm.next_out;
   ret = inflate(&strm, Z_FINISH);
@@ -113,12 +104,7 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
     return u3m_bail(c3__exit);
   }
 
-  u3a_free(zipped_buf.base);
-  uv_buf_t unzipped_buf;
-  unzipped_buf.base = this_address;
-  unzipped_buf.len = strm.total_out;
-  u3_noun unzipped_octs = _dawn_buf_to_oct(unzipped_buf);
-  u3a_free(unzipped_buf.base);
+  u3_noun unzipped_octs = u3nc(strm.total_out, u3i_bytes(strm.total_out, this_address));
   ret = inflateEnd(&strm);
 
   if (ret < 0 || ret == 2) {
@@ -133,7 +119,6 @@ u3qe_unzip_gzip(u3_noun zipped_octs)
 u3_noun
 u3we_unzip_gzip(u3_noun cor)
 {
-  u3l_log("gzip JET");
   u3_noun a = u3r_at(u3x_sam, cor);
 
   if ( _(u3du(a)) ) {
