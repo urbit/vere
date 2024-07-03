@@ -137,20 +137,33 @@ void lss_builder_free(lss_builder* bil_u) {
   c3_free(bil_u);
 }
 
-static c3_o _lss_verifier_find_pair(lss_verifier* los_u, c3_w i, c3_w height, lss_hash h)
+static c3_o _lss_verifier_check_hash(lss_verifier* los_u, c3_w i, c3_w height, lss_hash h)
 {
+  // Binary numeral trees are composed of a set of perfect binary trees of
+  // unique heights. Unless the set consists of a single tree, there will be
+  // pairs that span two trees. We call these pairs "odd" because the heights of
+  // their children are uneven. Specifically, the left child of an odd pair has
+  // a greater height than the right child.
+  //
+  // When such a pair is inserted by lss_verifier_ingest, both children are
+  // inserted at the same height. This means that the right child will be in the
+  // "wrong" place. The abstruse bithacking below corrects for this. First, it
+  // calculates the positions of the odd pairs within a tree of this size. Then
+  // it determines how many odd pairs are directly above us, and increments the
+  // height accordingly. A mask is used to ensure that we only perform this
+  // adjustment when necessary.
   c3_w odd = (1<<_bits_len64(los_u->leaves-1)) - los_u->leaves;
   c3_w mask = (1<<_bits_len64(i ^ (los_u->leaves-1))) - 1;
   height += _bits_ctz64(~((odd&~mask) >> height));
   c3_b parity = (i >> height) & 1;
-  return _(memcmp(los_u->pairs[height][parity], h, 32) == 0);
+  return _(memcmp(los_u->pairs[height][parity], h, sizeof(lss_hash)) == 0);
 }
 
 c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair) {
   // verify leaf
   lss_hash h;
   _leaf_hash(h, leaf_y, leaf_w, los_u->counter);
-  if ( c3n == _lss_verifier_find_pair(los_u, los_u->counter, 0, h) ) {
+  if ( c3n == _lss_verifier_check_hash(los_u, los_u->counter, 0, h) ) {
     return c3n;
   }
   // check whether pair is expected
@@ -162,10 +175,10 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   }
   // verify and insert pair
   c3_w height = _bits_ctz64(los_u->counter);
-  c3_w pairStart = los_u->counter + (1 << height); // first leaf "covered" by this pair
+  c3_w start = los_u->counter + (1 << height); // first leaf "covered" by this pair
   lss_hash parent_hash;
   _parent_hash(parent_hash, (*pair)[0], (*pair)[1]);
-  if ( c3n == _lss_verifier_find_pair(los_u, pairStart, height+1, parent_hash) ) {
+  if ( c3n == _lss_verifier_check_hash(los_u, start, height+1, parent_hash) ) {
     return c3n;
   }
   memcpy(los_u->pairs[height][0], (*pair)[0], sizeof(lss_hash));
