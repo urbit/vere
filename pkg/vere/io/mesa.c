@@ -2003,18 +2003,21 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   if ( c3y == lin_o ) {
     // complete the proof by computing the first leaf hash
-    c3_w len_w = pac_u->pag_u.dat_u.aup_u.len_y + 1;
-    lss_hash* pof_u = c3_calloc(len_w * sizeof(lss_hash));
-    for ( int i = 1; i < len_w; i++ ) {
+    c3_w pof_w = pac_u->pag_u.dat_u.aup_u.len_y + 1;
+    if ( pof_w != lss_proof_size(req_u->tot_w) ) {
+      return NULL; // XX ???
+    }
+    lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
+    for ( int i = 1; i < pof_w; i++ ) {
       memcpy(pof_u[i], pac_u->pag_u.dat_u.aup_u.has_y[i-1], sizeof(lss_hash));
     }
     lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
     // TODO: authenticate root
-    // lss_root root;
-    // lss_root(root, pof_u, len_w);
+    // lss_hash root;
+    // lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    if ( c3y != lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, len_w) ) {
+    if ( c3y != lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u) ) {
       return NULL; // XX ???
     }
     c3_free(pof_u);
@@ -2023,17 +2026,20 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     }
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
+    if ( dat_u->len_w != lss_proof_size(req_u->tot_w) ) {
+      return NULL; // XX ???
+    }
     // TODO: cast directly instead of copying?
     lss_hash* pof_u = c3_calloc(dat_u->len_w * sizeof(lss_hash));
     for ( int i = 0; i < dat_u->len_w; i++ ) {
       memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
     }
     // TODO: authenticate root
-    // lss_root root;
+    // lss_hash root;
     // lss_root(root, pof_u, dat_u->len_w/32);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u, dat_u->len_w/32);
+    lss_verifier_init(req_u->los_u, req_u->tot_w, pof_u);
     c3_free(pof_u);
   }
   vec_init(&req_u->mis_u, 8);
