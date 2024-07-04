@@ -1123,18 +1123,26 @@ u3_disk_epoc_zero(u3_disk* log_u)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
-  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
+  FILE* epv_f = fopen(epi_c, "w");  // XX errors
   fprintf(epv_f, "%d", U3E_VERLAT);
   fclose(epv_f);
+  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
+  rename(epi_c, epv_c);
+  c3_unlink(epi_c);
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");  //  XX errors
   fprintf(biv_f, URBIT_VERSION);    //  XX append a sentinel for auto-rollover?
   fclose(biv_f);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  rename(bii_c, biv_c);
+  c3_unlink(bii_c);
 
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
@@ -1205,18 +1213,26 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
-  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
+  FILE* epv_f = fopen(epi_c, "w");  // XX errors
   fprintf(epv_f, "%d", U3E_VERLAT);
   fclose(epv_f);
+  snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
+  rename(epi_c, epv_c);
+  c3_unlink(epi_c);
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
-  fprintf(biv_f, URBIT_VERSION);
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");  //  XX errors
+  fprintf(biv_f, URBIT_VERSION);    //  XX append a sentinel for auto-rollover?
   fclose(biv_f);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  rename(bii_c, biv_c);
+  c3_unlink(bii_c);
 
   //  get metadata from old log
   c3_d     who_d[2];
