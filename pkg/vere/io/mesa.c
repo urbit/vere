@@ -1538,7 +1538,7 @@ _name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
 }
 
 static u3_noun
-_name_to_jumbo_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
+_name_to_jumbo_scry(u3_mesa_name* nam_u)
 {
   u3_noun rif = _dire_etch_ud(nam_u->rif_w);
   u3_noun boq = _dire_etch_ud(31);
@@ -1555,8 +1555,22 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
 }
 
 /*
- * RETAIN
- */
+ * RETAIN */
+static u3_weak
+_mesa_get_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  u3_noun pax = _name_to_jumbo_scry(nam_u);
+  u3_weak res = u3h_get(sam_u->pac_p, pax);
+  if ( u3_none == res ) {
+    //u3m_p("miss", u3k(pax));
+  } else {
+    //u3m_p("hit", u3nc(u3k(pax), u3k(res)));
+  }
+  return res;
+}
+
+/*
+ * RETAIN */
 static u3_weak
 _mesa_get_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
@@ -1574,6 +1588,14 @@ static void
 _mesa_put_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
+  u3h_put(sam_u->pac_p, pax, u3k(val));
+  u3z(pax); // TODO: fix refcount
+}
+
+static void
+_mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
+{
+  u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3h_put(sam_u->pac_p, pax, u3k(val));
   u3z(pax); // TODO: fix refcount
 }
@@ -1733,7 +1755,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
     u3l_log("unbound");
   } else {
     c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
-    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    u3_weak old = _mesa_get_jumbo_cache(sam_u, &pac_u->pag_u.nam_u);
     if ( old == u3_none ) {
       u3l_log("bad");
       MESA_LOG(APATHY);
@@ -1754,6 +1776,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
       mesa_sift_pact(&tac_u, puf_y, len_w);
 
+      _mesa_put_jumbo_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, 0));
       /* u3l_log("jumbo frame"); */
       /* _log_pact(&tac_u); */
 
@@ -1789,7 +1812,6 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
           u3r_bytes(0, 32, tac_u.pag_u.dat_u.aup_u.has_y[1], u3t(u3t(pair)));
         }
 
-        /* u3l_log("i %u", i); */
         /* _log_pact(&tac_u); */
         /* _log_buf(tac_u.pag_u.dat_u.fra_y, tac_u.pag_u.dat_u.len_w); */
 
@@ -1807,6 +1829,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
         /* mesa_sift_pact(&muna, out_y, lun_w); */
 
         /* _log_buf(out_y, tac_u.pag_u.dat_u.len_w); */
+
 
         _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
         proof = u3t(proof);
@@ -2253,7 +2276,7 @@ _mesa_add_lane_to_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun las, u3_lan
                      _mesa_get_now(),
                      u3_mesa_encode_lane(lan_u),
                      u3k(las));
-  _mesa_put_cache(sam_u, nam_u, hit);
+  _mesa_put_jumbo_cache(sam_u, nam_u, hit);
   u3z(las);
 }
 
@@ -2295,7 +2318,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   pac_u->pek_u.nam_u.fra_w = bat_w;
   /* _log_pact(pac_u); */
   /* u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c); */
-  u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
+  u3_weak hit = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
 
   /* u3l_log("peek fra %u hit %u", fra_w, hit != u3_none); */
   /* u3l_log("peek fra %u bat %u hit %u", fra_w, bat_w, hit != u3_none); */
@@ -2330,9 +2353,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
       //                                   bat_w,
       //                                   bat_w + MESA_HUNK);
 
-      u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u,
-                                        bat_w,
-                                        bat_w + MESA_HUNK);
+      u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
 
       pac_u->pek_u.nam_u.fra_w = fra_w;
 
@@ -2646,7 +2667,7 @@ u3_mesa_io_init(u3_pier* pir_u)
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->req_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
-  sam_u->pac_p = u3h_new_cache(100000);
+  sam_u->pac_p = u3h_new_cache(300000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
