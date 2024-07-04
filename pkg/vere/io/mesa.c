@@ -302,8 +302,7 @@ _log_mesa_data(u3_mesa_data dat_u)
 static inline c3_w
 _mesa_lop(c3_w fra_w)
 {
-  c3_w res_w = ((( fra_w ) / MESA_HUNK) * MESA_HUNK);
-  return res_w;
+  return 0;
 }
 
 static c3_d
@@ -1048,19 +1047,19 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
     buf_u->num_w = nam_u->fra_w;
     vec_append(&req_u->mis_u, buf_u);
   }
-  else if ( c3y != (ver_y = lss_verifier_ingest(req_u->los_u, buf_y, len_w, par_u)) ) {
-    c3_free(par_u);
-    // TODO: do we drop the whole request on the floor?
-    u3l_log("auth fail frag %u", nam_u->fra_w);
-    MESA_LOG(AUTH);
-    return req_u;
-  }
-  else if ( vec_len(&req_u->mis_u) != 0
-            && c3y != (ver_y = _mesa_burn_misorder_queue(req_u))) {
-    c3_free(par_u);
-    MESA_LOG(AUTH)
-    return req_u;
-  }
+  /* else if ( c3y != (ver_y = lss_verifier_ingest(req_u->los_u, buf_y, len_w, par_u)) ) { */
+  /*   c3_free(par_u); */
+  /*   // TODO: do we drop the whole request on the floor? */
+  /*   u3l_log("auth fail frag %u", nam_u->fra_w); */
+  /*   MESA_LOG(AUTH); */
+  /*   return req_u; */
+  /* } */
+  /* else if ( vec_len(&req_u->mis_u) != 0 */
+  /*           && c3y != (ver_y = _mesa_burn_misorder_queue(req_u))) { */
+  /*   c3_free(par_u); */
+  /*   MESA_LOG(AUTH) */
+  /*   return req_u; */
+  /* } */
   else {
     c3_free(par_u);
   }
@@ -1725,6 +1724,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
   u3_weak hit = u3r_at(7, nun);
   u3_noun proof = u3h(hit);
+  /* u3m_p("proof", proof); */
   hit = u3t(hit);
 
   if ( u3_none == hit ) {
@@ -1754,8 +1754,8 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
       mesa_sift_pact(&tac_u, puf_y, len_w);
 
-      u3l_log("jumbo frame");
-      _log_pact(&tac_u);
+      /* u3l_log("jumbo frame"); */
+      /* _log_pact(&tac_u); */
 
 
       u3_atom jumbo = u3i_bytes(len_w, tac_u.pag_u.dat_u.fra_y);
@@ -1789,9 +1789,9 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
           u3r_bytes(0, 32, tac_u.pag_u.dat_u.aup_u.has_y[1], u3t(u3t(pair)));
         }
 
-        u3l_log("i %u", i);
+        /* u3l_log("i %u", i); */
         /* _log_pact(&tac_u); */
-        _log_buf(tac_u.pag_u.dat_u.fra_y, tac_u.pag_u.dat_u.len_w);
+        /* _log_buf(tac_u.pag_u.dat_u.fra_y, tac_u.pag_u.dat_u.len_w); */
 
         c3_y buf_y[PACT_SIZE];
 
@@ -1801,14 +1801,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
         _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lan)));
 
-        c3_w lun_w = _mesa_respond(pic_u, &out_y, u3k(lan));
+        /* c3_w lun_w = _mesa_respond(pic_u, &out_y, u3k(lan)); */
 
-        u3l_log("out_y");
-        mesa_sift_pact(&muna, out_y, lun_w);
+        /* u3l_log("out_y"); */
+        /* mesa_sift_pact(&muna, out_y, lun_w); */
 
-        _log_buf(out_y, tac_u.pag_u.dat_u.len_w);
+        /* _log_buf(out_y, tac_u.pag_u.dat_u.len_w); */
 
-        _mesa_rout_bufs(sam_u, out_y, lun_w, u3k(u3t(dat)));
+        _mesa_rout_bufs(sam_u, buf_y, len_w, u3k(u3t(dat)));
         proof = u3t(proof);
 
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
@@ -2024,9 +2024,10 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-   u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+   /* u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
 #endif
-  _log_pact(&pic_u->pac_u);
+
+  /* _log_buf(pic_u->pac_u.pag_u.dat_u.fra_y, pic_u->pac_u.pag_u.dat_u.len_w); */
   u3_mesa* sam_u = pic_u->sam_u;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   c3_s fra_s;
@@ -2293,7 +2294,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   pac_u->pek_u.nam_u.fra_w = bat_w;
   /* _log_pact(pac_u); */
-  u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c);
+  /* u3l_log("_mesa_hear_peek %s", pac_u->pek_u.nam_u.pat_c); */
   u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pek_u.nam_u);
 
   /* u3l_log("peek fra %u hit %u", fra_w, hit != u3_none); */
