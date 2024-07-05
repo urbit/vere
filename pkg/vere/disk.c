@@ -1723,9 +1723,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_gone;
     }
 
-    if (  (1 != sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
-       && (0 < car_i)
-       && ('\0' == *(ver_c + car_i)) )
+    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+          && (0 < car_i)
+          && ('\0' == *(ver_c + car_i)) ) )
     {
       fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
       return _epoc_fail;
