@@ -234,6 +234,15 @@ versioned_http_file(
 )
 
 versioned_http_archive(
+    name = "libbacktrace",
+    build_file = "//bazel/third_party/libbacktrace:libbacktrace.BUILD",
+    sha256 = "609c17352ec38eaf5ff6618fcbfb38cd8fa0e94a15a0d9aa259df514bbf47fcd",
+    url = "https://github.com/ianlancetaylor/libbacktrace/archive/{version}.tar.gz",
+    strip_prefix = "libbacktrace-{version}",
+    version = "4ead348bb45f753121ca0bd44170ff8352d4c514",
+)
+
+versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
     patch_args = ["-p1"],

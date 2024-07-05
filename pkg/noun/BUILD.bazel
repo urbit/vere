@@ -34,6 +34,7 @@ vere_library(
         "//pkg/ent",
         "//pkg/ur",
         "@gmp",
+        "@libbacktrace",
         "@murmur3",
         "@openssl",
         "@pdjson",
