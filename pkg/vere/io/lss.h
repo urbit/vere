@@ -31,6 +31,7 @@ void lss_builder_init(lss_builder* bil_u, c3_w leaves);
 void lss_builder_free(lss_builder* bil_u);
 
 typedef struct _lss_verifier {
+  c3_w      steps;
   c3_w      leaves;
   c3_w      counter;
   lss_pair* pairs;
@@ -38,7 +39,7 @@ typedef struct _lss_verifier {
 
 c3_o lss_verifier_ingest(lss_verifier* ver_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair);
 
-void lss_verifier_init(lss_verifier* ver_u, c3_w leaves, lss_hash* proof);
+void lss_verifier_init(lss_verifier* ver_u, c3_w steps, c3_w leaves, lss_hash* proof);
 
 void lss_verifier_free(lss_verifier* ver_u);
 
