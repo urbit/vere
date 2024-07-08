@@ -210,7 +210,7 @@ void lss_verifier_free(lss_verifier* los_u) {
 }
 
 void lss_complete_inline_proof(lss_hash* proof, c3_y* leaf_y, c3_w leaf_w) {
-  _leaf_hash(proof[0], leaf_y, leaf_w, 0);
+  _subtree_root(proof[0], leaf_y, leaf_w, 0);
 }
 
 void lss_root(lss_hash root, lss_hash* proof, c3_w proof_w) {
