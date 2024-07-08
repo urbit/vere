@@ -15,12 +15,15 @@ typedef lss_hash lss_pair[2];
 
 typedef struct _lss_builder {
   lss_hash  trees[32];
+  c3_w      leaves;
   c3_w      counter;
   lss_hash  *proof;
   lss_pair  *pairs;
 } lss_builder;
 
 void lss_builder_ingest(lss_builder* bil_u, c3_y* leaf_y, c3_w leaf_w);
+
+c3_w lss_builder_transceive(lss_builder* bil_u, c3_w steps, c3_y* jumbo_y, c3_w jumbo_w, lss_pair* pair);
 
 lss_hash* lss_builder_finalize(lss_builder* bil_u);
 

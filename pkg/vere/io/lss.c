@@ -84,7 +84,7 @@ void lss_builder_ingest(lss_builder* bil_u, c3_y* leaf_y, c3_w leaf_w) {
   bil_u->counter++;
 }
 
-void lss_builder_transceive(lss_builder* bil_u, c3_w steps, c3_y* jumbo_y, c3_w jumbo_w, lss_pair* pair) {
+c3_w lss_builder_transceive(lss_builder* bil_u, c3_w steps, c3_y* jumbo_y, c3_w jumbo_w, lss_pair* pair) {
   if ( pair != NULL ) {
     c3_w i = bil_u->counter;
     memcpy(bil_u->pairs[i][0], (*pair)[0], sizeof(lss_hash));
@@ -96,6 +96,7 @@ void lss_builder_transceive(lss_builder* bil_u, c3_w steps, c3_y* jumbo_y, c3_w 
     jumbo_y += leaf_w;
     jumbo_w -= leaf_w;
   }
+  return c3_min(bil_u->counter - (1<<steps)/2, bil_u->leaves);
 }
 
 lss_hash* lss_builder_finalize(lss_builder* bil_u) {
@@ -114,13 +115,14 @@ lss_hash* lss_builder_finalize(lss_builder* bil_u) {
 }
 
 lss_pair* lss_builder_pair(lss_builder* bil_u, c3_w i) {
-  if ( c3y == _lss_expect_pair(bil_u->counter, i) ) {
+  if ( c3y == _lss_expect_pair(bil_u->leaves, i) ) {
     return &bil_u->pairs[i];
   }
   return NULL;
 }
 
 void lss_builder_init(lss_builder* bil_u, c3_w leaves) {
+  bil_u->leaves = leaves;
   bil_u->counter = 0;
   bil_u->proof = c3_calloc(lss_proof_size(leaves) * sizeof(lss_hash));
   bil_u->pairs = c3_calloc(leaves * sizeof(lss_pair));
@@ -351,7 +353,10 @@ static void _test_lss_build_verify_jumbo(c3_w steps, c3_w dat_w)
     c3_y* leaf_y = dat_y + (i*jumbo_leaf_w);
     c3_w leaf_w = c3_min(dat_w - (i*jumbo_leaf_w), jumbo_leaf_w);
     lss_pair* pair = lss_builder_pair(&bil_u, i<<steps);
-    lss_builder_transceive(&dil_u, steps, leaf_y, leaf_w, pair);
+    c3_w ready_w = lss_builder_transceive(&dil_u, steps, leaf_y, leaf_w, pair);
+    for ( c3_w j = 0; j < ready_w; j++ ) {
+      asrt_ok(__((lss_builder_pair(&dil_u, j) != NULL) || (c3n == _lss_expect_pair(leaves_w, j))));
+    }
   }
   proof = lss_builder_finalize(&dil_u);
 
