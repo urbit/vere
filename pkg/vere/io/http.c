@@ -700,8 +700,10 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] 206
 //  [x] 200
 //  [x] open range vs error
-//  [ ] test stream
-//  [ ] multipart ranges
+//  [x] test stream
+//  [x] content range function
+//  [ ] video controls
+//  [ ] multipart ranges?
 //
 typedef struct _range_header {
   c3_z start_z;
@@ -773,6 +775,64 @@ _get_range(c3_c* txt_c, c3_w len_w)
   }
 
   return slice;
+}
+static u3_noun
+_content_rng(range_header rng, c3_w lent_w)
+{
+  u3_noun out;
+  u3_atom start;
+  u3_atom end;
+
+  if ( rng.start_z == SIZE_MAX ) {
+    if ( rng.end_z == SIZE_MAX) {
+      // [~ ~]
+      out = u3_nul;
+    }
+    else {
+      // [~ @]
+      if ( rng.end_z > lent_w ) {
+        out = u3_nul;
+        return out;
+      }
+      else {
+        // last bytes
+        start = lent_w - rng.end_z;
+        end = rng.end_z;
+      }
+    }
+  }
+  else if ( rng.end_z == SIZE_MAX ) {
+    // [@ ~]
+    if ( rng.start_z > lent_w ) {
+      out = u3_nul;
+      return out;
+    }
+    else {
+      start = rng.start_z;
+      end = lent_w;
+    }
+  }
+  else if (rng.end_z > lent_w) {
+    out = u3_nul;
+    return out;
+  }
+  else {
+    // [@ @]
+    start = rng.start_z;
+    end = rng.end_z;
+  }
+
+  u3_noun lin = u3i_list(u3i_string("bytes "),
+                         u3do("crip", u3do("a-co:co", start)),
+                         c3_s1('-'),
+                         u3do("crip", u3do("a-co:co", end)),
+                         c3_s1('/'),
+                         //  XX ++?
+                         u3do("crip", u3do("a-co:co", lent_w)),
+                         u3_none);
+  u3_atom dat = u3qc_rap(3, lin);
+  out = u3nc(u3i_string("Content-Range"), dat);
+  return out;
 }
 
 /* _http_req_dispatch(): dispatch http request to %eyre
@@ -944,16 +1004,18 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
-                if ( u3r_sing(result, octs) == c3y)  {
-                  //  200
-                  _http_cache_respond(req_u, nac);
-                }
-                else {
+                // if ( u3r_sing(result, octs) == c3y)  {
+                //   //  200
+                //   _http_cache_respond(req_u, nac);
+                // }
+                // else {
                   //  206
-                  u3_noun tmp = u3i_edit(nac, 124, 206);
-                  u3_noun res = u3i_edit(tmp, 127, result);
+                  u3_noun con_rng_hed = _content_rng(rng_hed, u3h(octs));
+                  u3_noun res = u3i_edit(nac, 127, result);
+                  res = u3i_edit(res, 124, 206);
+                  res = u3i_edit(res, 125, u3nc(con_rng_hed, u3r_at(125, res)));
                   _http_cache_respond(req_u, res);
-                }
+                // }
               }
             }
             else {
