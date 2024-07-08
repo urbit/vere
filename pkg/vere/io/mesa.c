@@ -29,6 +29,7 @@ c3_o dop_o = c3n;
 #define REORDER_THRESH  5
 
 #define DIRECT_ROUTE_TIMEOUT_MICROS 5000000
+#define DIRECT_ROUTE_RETRY_MICROS   1000000
 
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
@@ -940,19 +941,18 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
   _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
 }
 
-//  TODO: check whether direct, decide what to send
 static void
-_try_resend(u3_pend_req* req_u)
+_try_resend(u3_pend_req* req_u, c3_w ack_w)
 {
   c3_o los_o = c3n;
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
-  for ( int i = req_u->lef_w; i < req_u->nex_w; i++ ) {
+  for ( int i = req_u->lef_w; i < ack_w; i++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
-    if ( ( c3y == bitset_has(&req_u->was_u, i) ) &&
-       ( (now_d - req_u->wat_u[i].sen_d) > req_u->gag_u->rto_w ) ) {
+    if ( (c3y == bitset_has(&req_u->was_u, i)) &&
+        (now_d - req_u->wat_u[i].sen_d > req_u->gag_u->rto_w) ) {
       los_o = c3y;
 
       pac_u->pek_u.nam_u.fra_w = i;
@@ -962,10 +962,23 @@ _try_resend(u3_pend_req* req_u)
         u3l_log("failed to etch");
         u3_assert( 0 );
       }
-      // TODO: better route management
-      // it needs to be more ergonomic to access the u3_peer
-      //    could do a backpointer to the u3_peer from the u3_pend_req
-      _mesa_send_buf(req_u->pic_u->sam_u, req_u->per_u->dan_u, buf_y, siz_w);
+
+      u3_peer* per_u = req_u->per_u;
+      u3_mesa* sam_u = per_u->sam_u;
+      if ( c3y == _mesa_is_direct_mode(per_u) ) {
+        _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+        per_u->dir_u.sen_d = now_d;
+      }
+      else {
+        u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
+        _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
+        per_u->ind_u.sen_d = now_d;
+
+        if ( per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d ) {
+          _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+          per_u->dir_u.sen_d = now_d;
+        }
+      }
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
   }
@@ -980,6 +993,7 @@ _try_resend(u3_pend_req* req_u)
 static void
 _mesa_packet_timeout(uv_timer_t* tim_u);
 
+//  TODO rename to indicate it sets a timer
 static void
 _update_oldest_req(u3_pend_req *req_u)
 {
@@ -1019,7 +1033,7 @@ static void
 _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
   /* u3l_log("%u packet timed out", req_u->old_w); */
-  _try_resend(req_u);
+  _try_resend(req_u, req_u->nex_w);
   _update_oldest_req(req_u);
 }
 
@@ -1063,6 +1077,8 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
   return res_y;
 }
 
+static void _init_lane_state(u3_lane_state*);
+
 /* _mesa_req_pact_done(): mark packet as done, returning if we should continue
 */
 static u3_pend_req*
@@ -1081,24 +1097,24 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
     return NULL;
   }
 
-  //  TODO: if hop count is nonzero,
-  //  then write down the next hop as the candidate direct route.
-  //  We also need to branch on that to figure out which
-  //  congestion control state to update.
-  //  TODO: when we change candidate direct routes, zero out the
-  //  direct-route congestion control state.
-  u3_lane_state sat_u;
+  u3_lane_state* sat_u;
   if ( 0 == hop_y ) {
+    c3_i new_i = (
+      (lan_u.pip_w != req_u->per_u->dan_u.pip_w) ||
+      (lan_u.por_s != req_u->per_u->dan_u.por_s)
+    );
     req_u->per_u->dan_u = lan_u;
-    sat_u = req_u->per_u->dir_u;
+    sat_u = &req_u->per_u->dir_u;
+    if ( new_i ) {
+      _init_lane_state(sat_u);
+    }
   }
   else {
-    sat_u = req_u->per_u->ind_u;
+    sat_u = &req_u->per_u->ind_u;
   }
+  sat_u->her_d = now_d;
 
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
-  // First packet received, instantiate request fully
-
+  // received past the end of the message
   if ( dat_u->tot_w <= nam_u->fra_w ) {
     MESA_LOG(STRANGE);
     //  XX: is this sufficient to drop whole request
@@ -1111,16 +1127,16 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
     return req_u;
   }
 
-  /* u3l_log("bitset_del %u", nam_u->fra_w); */
   bitset_del(&req_u->was_u, nam_u->fra_w);
   if ( nam_u->fra_w > req_u->ack_w ) {
     req_u->ack_w = nam_u->fra_w;
   }
-  if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
+
 #ifdef MESA_DEBUG
+  if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
     /* u3l_log("received retry %u", nam_u->fra_w); */
-#endif
   }
+#endif
 
   req_u->len_w++;
   /* u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w); */
@@ -1174,11 +1190,10 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
   // handle gauge update
   _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_w]);
 
-
+  c3_w siz_w = (1 << (nam_u->boq_y - 3));
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_w), dat_u->fra_y, dat_u->len_w);
 
-  _try_resend(req_u);
-
+  _try_resend(req_u, nam_u->fra_w);
   _update_oldest_req(req_u);
 
   // _mesa_put_request(sam_u, nam_u, req_u);
@@ -1243,7 +1258,7 @@ _mesa_rout_bufs(u3_mesa* sam_u, c3_y* buf_y, c3_w len_w, u3_noun las)
 static void
 _mesa_timer_cb(uv_timer_t* tim_u) {
   u3_pend_req* req_u = tim_u->data;
-  _try_resend(req_u);
+  _try_resend(req_u, req_u->nex_w);
 }
 
 static void
@@ -1490,15 +1505,13 @@ _mesa_io_exit(u3_auto* car_u)
   uv_close(&sam_u->had_u, _mesa_exit_cb);
 }
 
-static u3_lane_state
-_init_lane_state()
+static void
+_init_lane_state(u3_lane_state* sat_u)
 {
-  u3_lane_state sat_u;
-  sat_u.sen_d = 0;
-  sat_u.her_d = 0;
-  sat_u.rtt_w = 1000000;
-  sat_u.rtv_w = 1000000;
-  return sat_u;
+  sat_u->sen_d = 0;
+  sat_u->her_d = 0;
+  sat_u->rtt_w = 1000000;
+  sat_u->rtv_w = 1000000;
 }
 
 static void
@@ -1507,9 +1520,9 @@ _init_peer(u3_mesa* sam_u, u3_peer* per_u)
   per_u->sam_u = sam_u;
   per_u->ful_o = c3n;
   per_u->dan_u = (u3_lane){0,0};
-  per_u->dir_u = _init_lane_state();
+  _init_lane_state(&per_u->dir_u);
   per_u->imp_y = 0;
-  per_u->ind_u = _init_lane_state();
+  _init_lane_state(&per_u->ind_u);
   per_u->req_p = u3h_new();
 }
 
