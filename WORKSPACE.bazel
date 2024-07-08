@@ -357,7 +357,7 @@ versioned_http_archive(
 versioned_http_archive(
     name = "wasm3",
     build_file = "//bazel/third_party/wasm3:wasm3.BUILD",
-    # sha256 = "e64a8a5f5bc84569682683d36275763248a9132bc6d854bf06ebbcb9561fc3f3", # TODO update
+    sha256 = "dbcda284ddbf0a93c137d42c619e0073d4b862872b022c4026d644b6f3743d2b",
     strip_prefix = "wasm3-{version}",
     url = "https://github.com/Quodss/wasm3/archive/refs/heads/{version}.tar.gz",
     version = "urwasm",

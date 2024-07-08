@@ -669,6 +669,7 @@ u3wa_lia_main(u3_noun cor)
       return u3m_bail(c3__fail);
     }
     c3_y *serf_bytes = u3r_bytes_alloc(0, serf_len, u3t(serf_octs));
+    m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
     IM3Environment wasm3_env = m3_NewEnvironment();
     if (!wasm3_env) {
       fprintf(stderr, "env is null\r\n");
