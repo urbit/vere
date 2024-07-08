@@ -2056,8 +2056,8 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     }
     lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
     // TODO: authenticate root
-    // lss_hash root;
-    // lss_root(root, pof_u, pof_w);
+    lss_hash root;
+    lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
     lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
@@ -2068,19 +2068,18 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     }
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
-    /* if ( dat_u->len_w != lss_proof_size(req_u->tot_w) ) { */
-    /*   u3l_log("len real: %u expected %u", dat_u->len_w, lss_proof_size(req_u->tot_w)); */
-    /*   u3l_log("hello3"); */
-    /*   return NULL; // XX ??? */
-    /* } */
+    c3_w pof_w = lss_proof_size(req_u->tot_w);
+    if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+      return NULL; // XX ???
+    }
     // TODO: cast directly instead of copying?
-    lss_hash* pof_u = c3_calloc(dat_u->len_w * sizeof(lss_hash));
-    for ( int i = 0; i < dat_u->len_w; i++ ) {
+    lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
+    for ( int i = 0; i < pof_w; i++ ) {
       memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
     }
     // TODO: authenticate root
-    // lss_hash root;
-    // lss_root(root, pof_u, dat_u->len_w/32);
+    lss_hash root;
+    lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
     lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
