@@ -338,6 +338,12 @@ _clamp_rto(c3_d rto_d) {
   return c3_min(c3_max(rto_d, 200000), 25000000);
 }
 
+static inline c3_o
+_mesa_is_lane_zero(u3_lane* lan_u)
+{
+  return __(0 == lan_u->pip_w && 0 == lan_u->por_s);
+}
+
 static c3_o
 _mesa_is_direct_mode(u3_peer* per_u)
 {
@@ -803,7 +809,7 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     req_u->wat_u[nam_u->fra_w].sip_y = 0;
     req_u->wat_u[nam_u->fra_w].tie_y = 1;
 
-    /* u3l_log("bitset_put %u", nam_u->fra_w); */
+    u3l_log("bitset_put %u", nam_u->fra_w);
     bitset_put(&req_u->was_u, nam_u->fra_w);
   } else {
     u3l_log("mesa: no req for sent");
@@ -910,8 +916,8 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
   add_u.sin_port = htons(por_s);
 
 #ifdef MESA_DEBUG
-  /* c3_c* sip_c = inet_ntoa(add_u.sin_addr); */
-  /* u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s); */
+  c3_c* sip_c = inet_ntoa(add_u.sin_addr);
+  u3l_log("mesa: sending packet (%s,%u)", sip_c, por_s);
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -966,6 +972,7 @@ _try_resend(u3_pend_req* req_u, c3_w ack_w)
       u3_peer* per_u = req_u->per_u;
       u3_mesa* sam_u = per_u->sam_u;
       if ( c3y == _mesa_is_direct_mode(per_u) ) {
+        u3l_log("mesa: direct");
         _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
         per_u->dir_u.sen_d = now_d;
       }
@@ -973,8 +980,10 @@ _try_resend(u3_pend_req* req_u, c3_w ack_w)
         u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
         _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
         per_u->ind_u.sen_d = now_d;
+        u3l_log("mesa: indirect");
 
-        if ( per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d ) {
+        if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
+             (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
           _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
           per_u->dir_u.sen_d = now_d;
         }
@@ -998,7 +1007,7 @@ static void
 _update_oldest_req(u3_pend_req *req_u)
 {
   if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
-    /* u3l_log("bad condition"); */
+    u3l_log("bad condition");
     return;
   }
   // scan in flight packets, find oldest
@@ -1093,7 +1102,7 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
 
   if ( NULL == req_u ) {
-    /* MESA_LOG(APATHY); */
+    MESA_LOG(APATHY);
     return NULL;
   }
 
@@ -1123,7 +1132,7 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
 
   // received duplicate
   if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
-    /* MESA_LOG(DUPE); */
+    MESA_LOG(DUPE);
     return req_u;
   }
 
@@ -1134,12 +1143,12 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
 
 #ifdef MESA_DEBUG
   if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
-    /* u3l_log("received retry %u", nam_u->fra_w); */
+    u3l_log("received retry %u", nam_u->fra_w);
   }
 #endif
 
   req_u->len_w++;
-  /* u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w); */
+  u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w);
   if ( req_u->lef_w == nam_u->fra_w ) {
     req_u->lef_w++;
   }
@@ -2274,6 +2283,30 @@ _mesa_add_lane_to_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun las, u3_lan
   u3z(las);
 }
 
+//  XX forwarding wrong, need a PIT entry
+static void
+_mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u)
+{
+  u3_mesa_pact* pac_u = &pic_u->pac_u;
+  c3_d* her_d = pac_u->pek_u.nam_u.her_d;
+  u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
+  if ( per_u == NULL ) {
+    //  XX leaks
+    u3l_log("mesa: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
+    _mesa_free_pict(pic_u);
+    return;
+  }
+  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+//#ifdef MESA_DEBUG
+    u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
+//#endif
+    //_update_hopcount(&pac_u->hed_u);
+      u3l_log("sending peek %u", pic_u->pac_u.pek_u.nam_u.fra_w);
+    _mesa_send(pic_u, &lin_u);
+  }
+  _mesa_free_pict(pic_u);
+}
+
 static void
 _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
@@ -2286,24 +2319,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_d* her_d = pac_u->pek_u.nam_u.her_d;
   c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
 
-  //  XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
-    u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
-    if ( per_u == NULL ) {
-      //  XX leaks
-      u3l_log("mesa: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
-      _mesa_free_pict(pic_u);
-      return;
-    }
-    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
-//#ifdef MESA_DEBUG
-      u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
-//#endif
-      //_update_hopcount(&pac_u->hed_u);
-       u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
-      _mesa_send(pic_u, &lin_u);
-    }
-    _mesa_free_pict(pic_u);
+    _mesa_forward_request(sam_u, pic_u);
     return;
   }
   c3_w  fra_w = pac_u->pek_u.nam_u.fra_w;
@@ -2400,24 +2417,8 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   u3_assert(pac_u->hed_u.typ_y == PACT_POKE);
 #endif
 
-  //  XX forwarding wrong, need a PIT entry
   if ( c3n == our_o ) {
-    u3_peer* per_u = _mesa_get_peer(sam_u, her_d);
-    if ( per_u == NULL ) {
-      //  XX leaks
-      u3l_log("mesa: alien forward for %s", u3r_string(u3dc("scot", c3__p, u3i_chubs(2, her_d))));
-      _mesa_free_pict(pic_u);
-      return;
-    }
-    if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
-//#ifdef MESA_DEBUG
-      u3_lane lin_u = _mesa_get_direct_lane(sam_u, her_d);
-//#endif
-       u3l_log("sending peek %u", pac_u->pek_u.nam_u.fra_w);
-      //_update_hopcount(&pac_u->hed_u);
-      _mesa_send(pic_u, &lin_u);
-    }
-    _mesa_free_pict(pic_u);
+    _mesa_forward_request(sam_u, pic_u);
     return;
   }
 
@@ -2656,6 +2657,7 @@ _mesa_io_talk(u3_auto* car_u)
 u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
+  u3l_log("mesa: INIT");
   u3_mesa* sam_u  = c3_calloc(sizeof(*sam_u));
   sam_u->pir_u    = pir_u;
 
