@@ -7,9 +7,6 @@
 #include "openssl/err.h"
 #include "openssl/ssl.h"
 #include "version.h"
-#include <imprison.h>
-#include <log.h>
-#include <string.h>
 
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config
@@ -703,6 +700,7 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] test stream
 //  [x] content range function
 //  [x] video controls
+//  [ ] fix repeated 1 byte requests
 //  [ ] multipart ranges?
 //
 typedef struct _range_header {
@@ -710,47 +708,67 @@ typedef struct _range_header {
   c3_z end_z;
 } range_header;
 
-static u3_noun
+typedef struct _content {
+  c3_z    start_z;
+  c3_z    end_z;
+  u3_noun dat;
+} content;
+
+static content
 _slice_mime(range_header rng, u3_noun octs)
 {
   c3_w lent_w = u3h(octs);
   c3_w oct_w = u3t(octs);
-  u3_noun out;
+  content out;
 
   if ( rng.start_z == SIZE_MAX ) {
-    if ( rng.end_z == SIZE_MAX) {
+    if ( rng.end_z == SIZE_MAX ) {
       // [~ ~]
-      out = u3_nul;
+      out.start_z = SIZE_MAX;
+      out.end_z = SIZE_MAX;
+      out.dat = u3_nul;
     }
     else {
       // [~ @]
       if ( rng.end_z > lent_w ) {
-        out = u3_nul;
+        out.start_z = SIZE_MAX;
+        out.end_z = SIZE_MAX;
+        out.dat = u3_nul;
       }
       else {
         // slice last bytes
-        out = u3nc( rng.end_z,
-                     u3qc_cut(3, lent_w - rng.end_z, rng.end_z, oct_w));
+        out.start_z = lent_w - rng.end_z;
+        out.end_z = rng.end_z;
+        out.dat = u3nc(rng.end_z,
+                       u3qc_cut(3, out.start_z, out.end_z, oct_w));
       }
     }
   }
   else if ( rng.end_z == SIZE_MAX ) {
     // [@ ~]
     if ( rng.start_z > lent_w ) {
-      out = u3_nul;
+      out.start_z = SIZE_MAX;
+      out.end_z = SIZE_MAX;
+      out.dat = u3_nul;
     }
     else {
-      out = u3nc( lent_w - rng.start_z,
-                   u3qc_cut(3, rng.start_z, lent_w, oct_w));
+      out.start_z = rng.start_z;
+      out.end_z = lent_w;
+      out.dat = u3nc(lent_w - rng.start_z,
+                     u3qc_cut(3, rng.start_z, rng.end_z, oct_w));
     }
   }
   else if (rng.end_z > lent_w) {
-    out = u3_nul;
+    out.start_z = SIZE_MAX;
+    out.end_z = SIZE_MAX;
+    out.dat = u3_nul;
   }
   else {
     // [@ @]
-    out = u3nc( (rng.end_z - rng.start_z) + 1,
-               u3qc_cut(3, rng.start_z, (rng.end_z - rng.start_z) + 1, oct_w));
+    out.start_z = rng.start_z;
+    out.end_z = (rng.end_z - rng.start_z) + 1;
+    out.dat = u3nc((rng.end_z - rng.start_z) + 1,
+                   u3qc_cut(3, out.start_z, out.end_z, oct_w));
   }
   return out;
 }
@@ -767,65 +785,24 @@ _get_range(c3_c* txt_c, c3_w len_w)
     slice.start_z = h2o_strtosize(txt_c, hep_c - txt_c);
     slice.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
     // strange -> [SIZE_MAX SIZE_MAX] so we return u3_nul in _slice_mime
-    if ( ((hep_c != txt_c) && slice.start_z == SIZE_MAX ) ||
-          ( len_w - ((hep_c + 1) - txt_c) > 0 ) && slice.end_z == SIZE_MAX ) {
+    if ( ((hep_c != txt_c) && (slice.start_z == SIZE_MAX)) ||
+         ((len_w - ((hep_c + 1) - txt_c) > 0) && (slice.end_z == SIZE_MAX)) ) {
       slice.start_z = SIZE_MAX;
       slice.end_z = SIZE_MAX;
     }
   }
-
   return slice;
 }
+
 static u3_noun
-_content_rng(range_header rng, c3_w lent_w)
+_content_rng(c3_z start_z, c3_z end_z, c3_w lent_w)
 {
   u3_noun out;
-  u3_atom start;
-  u3_atom end;
-
-  if ( rng.start_z == SIZE_MAX ) {
-    if ( rng.end_z == SIZE_MAX) {
-      // [~ ~]
-      out = u3_nul;
-    }
-    else {
-      // [~ @]
-      if ( rng.end_z > lent_w ) {
-        out = u3_nul;
-        return out;
-      }
-      else {
-        // last bytes
-        start = lent_w - rng.end_z;
-        end = rng.end_z;
-      }
-    }
-  }
-  else if ( rng.end_z == SIZE_MAX ) {
-    // [@ ~]
-    if ( rng.start_z > lent_w ) {
-      out = u3_nul;
-      return out;
-    }
-    else {
-      start = rng.start_z;
-      end = lent_w;
-    }
-  }
-  else if (rng.end_z > lent_w) {
-    out = u3_nul;
-    return out;
-  }
-  else {
-    // [@ @]
-    start = rng.start_z;
-    end = rng.end_z;
-  }
 
   u3_noun lin = u3i_list(u3i_string("bytes "),
-                         u3do("crip", u3do("a-co:co", start)),
+                         u3do("crip", u3do("a-co:co", start_z)),
                          c3_s1('-'),
-                         u3do("crip", u3do("a-co:co", end)),
+                         u3do("crip", u3do("a-co:co", end_z)),
                          c3_s1('/'),
                          u3do("crip", u3do("a-co:co", ++lent_w )),
                          u3_none);
@@ -996,9 +973,9 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
-                u3_noun result = _slice_mime(rng_hed, octs);
+                content result = _slice_mime(rng_hed, octs);
 
-                if ( result ==  u3_nul) {
+                if ( result.dat ==  u3_nul) {
                   c3_c* msg_c = "Requested Range Not Satisfiable";
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
@@ -1009,8 +986,8 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                 // }
                 // else {
                   //  206
-                  u3_noun con_rng_hed = _content_rng(rng_hed, u3h(octs));
-                  u3_noun res = u3i_edit(nac, 127, result);
+                  u3_noun con_rng_hed = _content_rng(result.start_z, result.end_z, u3h(octs));
+                  u3_noun res = u3i_edit(nac, 127, result.dat);
                   res = u3i_edit(res, 124, 206);
                   res = u3i_edit(res, 125, u3nc(con_rng_hed, u3r_at(125, res)));
                   _http_cache_respond(req_u, res);
