@@ -151,8 +151,11 @@ typedef struct _u3_mesa_pact {
   };
 } u3_mesa_pact;
 
+c3_o mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u);
 c3_w mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w);
 c3_w mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u);
+
+void update_hopcount(u3_mesa_head*);
 
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
