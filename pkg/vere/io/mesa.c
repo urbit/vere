@@ -157,6 +157,7 @@ typedef struct _u3_mesa {
   u3p(u3h_root)      her_p;       //  (map ship u3_peer)
   u3p(u3h_root)      pac_p;       //  packet cache
   u3p(u3h_root)      lan_p;       //  lane cache
+  u3p(u3h_root)      pit_p;       //  (map path [our=? las=(set lane)])
   u3_czar_info       imp_u[256];  //  galaxy information
   c3_c*              dns_c;       //  turf (urb.otrg)
   c3_d               tim_d;       //  XX: remove
@@ -1638,35 +1639,42 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
   return res;
 }
 
-/*
- * RETAIN
- */
+static u3_weak
+_mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  return u3h_get(sam_u->pit_p, _name_to_scry((nam_u)));
+}
+
+//  RETAIN
+static void
+_mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
+{
+  u3_noun pax = _name_to_scry(nam_u);
+  u3h_put(sam_u->pit_p, pax, u3k(val));
+  u3z(pax);
+}
+
+static void
+_mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  u3_noun pax = _name_to_scry(nam_u);
+  u3h_del(sam_u->pit_p, pax);
+  u3z(pax);
+}
+
 static u3_weak
 _mesa_get_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
-  u3_noun pax = _name_to_scry(nam_u);
-  u3_weak res = u3h_get(sam_u->pac_p, pax);
-  if ( u3_none == res ) {
-    //u3m_p("miss", u3k(pax));
-  } else {
-    //u3m_p("hit", u3nc(u3k(pax), u3k(res)));
-  }
-  return res;
+  return u3h_get(sam_u->pac_p, _name_to_scry(nam_u));
 }
 
+//  RETAIN
 static void
 _mesa_put_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
   u3h_put(sam_u->pac_p, pax, u3k(val));
-  u3z(pax); // TODO: fix refcount
-}
-
-static void
-_mesa_try_forward(u3_mesa_pict* pic_u, u3_noun fra, u3_noun hit)
-{
-  u3l_log("");
-  u3l_log("stubbed forwarding");
+  u3z(pax);
 }
 
 static c3_w
@@ -1677,64 +1685,52 @@ _mesa_fill_buf(u3_mesa_pict* req_u, c3_y** buf_y, u3_noun hit)
   *buf_y = c3_calloc(len_w);
   u3r_bytes(0, len_w, *buf_y, hit);
 
-  //u3z(hit);
+  u3z(hit);
   return len_w;
 }
 
-/*
- */
 static void
-_mesa_page_scry_cb(void* vod_p, u3_noun nun)
+_mesa_page_scry_cb(void* vod_p, u3_noun res)
 {
   u3_mesa_pict* pic_u = vod_p;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
-  //u3_noun pax = _mesa_path_with_fra(pac_u->pek_u.nam_u.pat_c, &fra_s);
 
-  u3_weak hit = u3r_at(7, nun);
-  if ( u3_none == hit ) {
-    // TODO: mark as dead
-    //u3z(nun);
+  u3_weak pag = u3r_at(7, res);
+  if ( u3_none == pag ) {
     u3l_log("unbound");
-
+    _mesa_del_pit(sam_u, &pac_u->pag_u.nam_u);
   } else {
-    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
-    if ( old == u3_none ) {
-      u3l_log("bad");
+    u3_weak pit = _mesa_get_pit(sam_u, &pac_u->pag_u.nam_u);
+    if ( pit == u3_none ) {
+      u3l_log("no pit");
       MESA_LOG(APATHY);
     } else {
-      u3_noun tag;
-      u3_noun dat;
-      u3x_cell(old, &tag, &dat);
-      if ( MESA_WAIT == tag ) {
-        c3_y* buf_y;
-
-        c3_w len_w = _mesa_fill_buf(pic_u, &buf_y, u3k(hit));
-        _mesa_rout_bufs(sam_u, NULL, buf_y, len_w, u3k(u3t(dat)));
-      }
-      _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, u3k(hit)));
-      // u3z(old);
+      c3_y* buf_y;
+      c3_w  len_w = _mesa_fill_buf(pic_u, &buf_y, u3k(pag));
+      u3_noun our, las;
+      u3x_cell(pit, &our, &las);
+      _mesa_rout_bufs(sam_u, NULL, buf_y, len_w, u3k(las));
+      _mesa_put_cache(sam_u, &pac_u->pek_u.nam_u, u3k(pag));
     }
-    // u3z(hit);
+    u3z(pit);
   }
-  // u3z(pax);
+  u3z(res);
 }
 
 /*
  */
 static void
-_mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
+_mesa_page_scry_hunk_cb(void* vod_p, u3_noun res)
 {
   u3_mesa_pict* pic_u = vod_p;
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
-  //u3_noun pax = _mesa_path_with_fra(pac_u->pek_u.nam_u.pat_c, &fra_s);
 
-  u3_weak hit = u3r_at(7, nun);
-  if ( u3_none == hit ) {
-    // TODO: mark as dead
-    //u3z(nun);
-    u3l_log("unbound");
+  u3_weak pag = u3r_at(7, res);
+  if ( u3_none == pag ) {
+    u3l_log("unbound hunk");
+    _mesa_del_pit(sam_u, &pac_u->pag_u.nam_u);
   } else {
     c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
     c3_w  bat_w = _mesa_lop(fra_w);
@@ -1753,7 +1749,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       c3_w len_w = bat_w;
       /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
       c3_w i = 0;
-      while ( u3_nul != hit ) {
+      while ( u3_nul != pag ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
 
@@ -2675,18 +2671,17 @@ u3_mesa_io_init(u3_pier* pir_u)
   u3_mesa* sam_u  = c3_calloc(sizeof(*sam_u));
   sam_u->pir_u    = pir_u;
 
-  //  XX config
+  //  XX tune cache sizes
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
   sam_u->pac_p = u3h_new_cache(100000);
+  sam_u->pit_p = u3h_new_cache(10000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();
   sam_u->tes_u = ur_cue_test_init();
-
-
 
   //  Disable networking for fake ships
   //
