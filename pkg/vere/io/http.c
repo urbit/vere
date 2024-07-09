@@ -702,7 +702,7 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] open range vs error
 //  [x] test stream
 //  [x] content range function
-//  [ ] video controls
+//  [x] video controls
 //  [ ] multipart ranges?
 //
 typedef struct _range_header {
@@ -827,8 +827,7 @@ _content_rng(range_header rng, c3_w lent_w)
                          c3_s1('-'),
                          u3do("crip", u3do("a-co:co", end)),
                          c3_s1('/'),
-                         //  XX ++?
-                         u3do("crip", u3do("a-co:co", lent_w)),
+                         u3do("crip", u3do("a-co:co", ++lent_w )),
                          u3_none);
   u3_atom dat = u3qc_rap(3, lin);
   out = u3nc(u3i_string("Content-Range"), dat);
