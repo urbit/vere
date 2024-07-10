@@ -2662,6 +2662,20 @@ _ames_hear(u3_ames* sam_u,
   _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
   cur_w += pre_w;
 
+  //  if we are not the recipient, always print forwarding log
+  //
+  if (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
+     || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) )
+  {
+    u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
+    c3_c* rec_c = u3r_string(rec);
+
+    u3l_log("ames: saw packet for %s", rec_c);
+
+    c3_free(rec_c);
+    u3z(rec);
+  }
+
   //  if we can scry for lanes,
   //  and we are not the recipient,
   //  we might want to forward statelessly
