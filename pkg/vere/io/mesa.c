@@ -967,13 +967,12 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
 static u3_pend_req*
 _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3_lane* lan_u)
 {
-  u3l_log("rec_pact_done");
   u3_weak ret = u3_none;
   c3_d now_d = _get_now_micros();
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
 
   if ( NULL == req_u ) {
-    MESA_LOG(APATHY);
+    /* MESA_LOG(APATHY); */
     return NULL;
   }
 
@@ -1001,7 +1000,7 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
 
   // received duplicate
   if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
-    MESA_LOG(DUPE);
+    /* MESA_LOG(DUPE); */
     req_u->wat_u[nam_u->fra_w].dup_y++;
     return req_u;
   }
@@ -1018,7 +1017,6 @@ _mesa_req_pact_done(u3_mesa* sam_u, u3_mesa_name *nam_u, u3_mesa_data* dat_u, u3
   }
 
   req_u->len_w++;
-  u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w);
   if ( req_u->lef_w == nam_u->fra_w ) {
     req_u->lef_w++;
   }
@@ -1640,8 +1638,7 @@ _mesa_page_scry_cb(void* vod_p, u3_noun nun)
   } else {
     u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
     if ( old == u3_none ) {
-      u3l_log("bad");
-      MESA_LOG(APATHY);
+      /* MESA_LOG(APATHY); */
     } else {
       u3_noun tag;
       u3_noun dat;
@@ -1679,10 +1676,9 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
     c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
     c3_w  bat_w = _mesa_lop(fra_w);
     pac_u->pek_u.nam_u.fra_w = bat_w;
-    u3_weak old = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
+    u3_weak old = _mesa_get_jumbo_cache(sam_u, &pac_u->pag_u.nam_u);
     if ( old == u3_none ) {
-      u3l_log("bad");
-      MESA_LOG(APATHY);
+      /* MESA_LOG(APATHY); */
     } else {
       u3_noun tag;
       u3_noun dat;
@@ -1693,6 +1689,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
       c3_w len_w = bat_w;
       /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
       c3_w i = 0;
+      _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_ITEM, 0));
       while ( u3_nul != hit ) {
         // u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
         // u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
@@ -1700,7 +1697,15 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         pac_u->pek_u.nam_u.fra_w = len_w;
 
         if ( (bat_w == 0) && (i == 0) ) {
+          u3_mesa_pact tac_u = {0};
+
+          c3_w lun_w = u3r_met(3, u3h(hit));
+          c3_y* baf_y = c3_calloc(lun_w);
+
+          u3r_bytes(0, lun_w, baf_y, u3h(hit));
           pac_u->pek_u.nam_u.nit_o = c3y;
+          mesa_sift_pact(&tac_u, baf_y, lun_w);
+
           /* pac_u->pek_u.nam_u.aut_o = c3y; */
         } else {
           pac_u->pek_u.nam_u.nit_o = c3n;
@@ -1714,6 +1719,7 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun nun)
         /* } */
 
         c3_w lun_w = _mesa_respond(pic_u, &buf_y, u3k(u3h(hit)));
+
         _mesa_rout_bufs(sam_u, buf_y, lun_w, u3k(u3t(dat)));
 
         /* u3l_log("putting %u", pac_u->pek_u.nam_u.fra_w); */
@@ -1749,7 +1755,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
   u3_weak hit = u3r_at(7, nun);
   /* u3_noun proof = u3h(hit); */
   /* u3m_p("proof", proof); */
-  hit = u3t(hit);
+  /* hit = u3t(hit); */
 
   if ( u3_none == hit ) {
     // TODO: mark as dead
@@ -1759,44 +1765,55 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
     c3_w fra_w = pac_u->pek_u.nam_u.fra_w;
     u3_weak old = _mesa_get_jumbo_cache(sam_u, &pac_u->pag_u.nam_u);
     if ( old == u3_none ) {
-      u3l_log("bad");
-      MESA_LOG(APATHY);
+      /* MESA_LOG(APATHY); */
     } else {
       u3_noun tag;
       u3_noun dat;
       u3x_cell(u3k(old), &tag, &dat);
-      c3_y* out_y;
 
       /* u3l_log("path %s", pac_u->pek_u.nam_u.pat_c); */
       u3_mesa_pact tac_u = {0};
 
       c3_w len_w = u3r_met(3, hit);
       u3l_log("len_w %u", len_w);
+
       c3_y* puf_y = c3_calloc(len_w);
       u3r_bytes(0, len_w, puf_y, hit);
 
       mesa_sift_pact(&tac_u, puf_y, len_w);
 
       _mesa_put_jumbo_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, 0));
+
+      if (len_w <= 1024) {
+        tac_u.pag_u.nam_u.boq_y = 13;
+        c3_y baf_y[PACT_SIZE];
+        c3_w lon_w = mesa_etch_pact(baf_y, &tac_u);
+        u3_atom lon = u3i_bytes(lon_w, baf_y);
+        _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lon)));
+        _mesa_rout_bufs(sam_u, baf_y, lon_w, u3k(u3t(dat)));
+        return;
+      }
+
+
       /* u3l_log("jumbo frame"); */
       /* _log_pact(&tac_u); */
 
       u3_atom jumbo = u3i_bytes(len_w, tac_u.pag_u.dat_u.fra_y);
       c3_w siz_w = u3r_met(13, jumbo);
 
+
       c3_w leaves_w = siz_w;
       lss_builder bil_u;
       lss_builder_init(&bil_u, leaves_w);
 
       for ( c3_w i = 0; i < leaves_w; i++ ) {
-        c3_y* leaf_y = puf_y + (i*1024);
-        c3_w leaf_w = (i < leaves_w - 1) ? 1024 : len_w % 1024;
+        c3_y* leaf_y = tac_u.pag_u.dat_u.fra_y + (i*1024);
+        c3_w leaf_w = (i < leaves_w - 1) ? 1024 : tac_u.pag_u.dat_u.len_w % 1024;
         lss_builder_ingest(&bil_u, leaf_y, leaf_w);
       }
 
       lss_hash* proof = lss_builder_finalize(&bil_u);
       c3_w saz_w = lss_proof_size(leaves_w);
-
 
       tac_u.pag_u.nam_u.boq_y = 13;
       tac_u.pag_u.dat_u.tot_w = siz_w;
@@ -1804,19 +1821,18 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
       if ( c3y == tac_u.pag_u.nam_u.nit_o && leaves_w > 4) {
         memcpy(tac_u.pag_u.dat_u.fra_y, proof, saz_w*32);
         tac_u.pag_u.dat_u.len_w = saz_w*32;
-        /* c3_w off_w = 0; */
-
         c3_y baf_y[PACT_SIZE];
 
         c3_w lon_w = mesa_etch_pact(baf_y, &tac_u);
 
-        u3_atom lon = u3i_bytes(len_w, baf_y);
+        u3_atom lon = u3i_bytes(lon_w, baf_y);
 
         _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lon)));
 
         _mesa_rout_bufs(sam_u, baf_y, lon_w, u3k(u3t(dat)));
       }
 
+      tac_u.pag_u.nam_u.nit_o = c3n;
 
       for (c3_w i=0; i < siz_w; i++) {
         // (cut 3 [wid 1] dat.byts))
@@ -1854,10 +1870,6 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
         _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lan)));
 
-        /* c3_w lun_w = _mesa_respond(pic_u, &out_y, u3k(lan)); */
-
-        /* u3l_log("out_y"); */
-        /* mesa_sift_pact(&muna, out_y, lun_w); */
 
         /* _log_buf(out_y, tac_u.pag_u.dat_u.len_w); */
 
@@ -1951,7 +1963,7 @@ _mesa_forward(u3_mesa_pict* pic_u, u3_lane lan_u)
     //u3l_log("should update next hop");
     u3_weak hit = _mesa_get_cache(sam_u, &pac_u->pag_u.nam_u);
     if ( u3_none == hit ) {
-      MESA_LOG(APATHY);
+      /* MESA_LOG(APATHY); */
       return;
     }
     u3_noun tag, dat;
@@ -2085,7 +2097,7 @@ static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
 #ifdef MESA_DEBUG
-   u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w);
+   /* u3l_log("mesa hear page %u", pic_u->pac_u.pag_u.nam_u.fra_w); */
 #endif
 
   /* _log_buf(pic_u->pac_u.pag_u.dat_u.fra_y, pic_u->pac_u.pag_u.dat_u.len_w); */
@@ -2387,9 +2399,9 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   } else {
     _mesa_add_lane_to_cache(sam_u, &pac_u->pek_u.nam_u, u3_nul, lan_u); // TODO: retrieve from namespace
     if ( c3y == our_o ) {
-      // u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u,
-      //                                   bat_w,
-      //                                   bat_w + MESA_HUNK);
+      /* u3_noun sky = _name_to_batch_scry(&pac_u->pek_u.nam_u, */
+      /*                                   bat_w, */
+      /*                                   bat_w + MESA_HUNK); */
 
       u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
 
@@ -2575,8 +2587,7 @@ _mesa_hear(u3_mesa* sam_u,
   }
 }
 
-static void
-_mesa_recv_cb(uv_udp_t*        wax_u,
+static void _mesa_recv_cb(uv_udp_t*        wax_u,
               ssize_t          nrd_i,
               const uv_buf_t * buf_u,
               const struct sockaddr* adr_u,
