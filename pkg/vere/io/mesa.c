@@ -1786,10 +1786,10 @@ _mesa_page_scry_hunk_cb(void* vod_p, u3_noun res)
         if ( (bat_w == 0) && (i == 0) ) {
           u3_mesa_pact tac_u = {0};
 
-          c3_w lun_w = u3r_met(3, u3h(hit));
+          c3_w lun_w = u3r_met(3, u3h(pag));
           c3_y* baf_y = c3_calloc(lun_w);
 
-          u3r_bytes(0, lun_w, baf_y, u3h(hit));
+          u3r_bytes(0, lun_w, baf_y, u3h(pag));
           nam_u->nit_o = c3y;
           mesa_sift_pact(&tac_u, baf_y, lun_w);
 
@@ -1876,7 +1876,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
         c3_w lon_w = mesa_etch_pact(baf_y, &tac_u);
         u3_atom lon = u3i_bytes(lon_w, baf_y);
         _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lon)));
-        _mesa_rout_bufs(sam_u, baf_y, lon_w, u3k(u3t(dat)));
+        _mesa_rout_bufs(sam_u, NULL, baf_y, lon_w, u3k(u3t(dat)));
         return;
       }
 
@@ -1915,7 +1915,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun nun)
 
         _mesa_put_cache(sam_u, &tac_u.pag_u.nam_u, u3nc(MESA_ITEM, u3k(lon)));
 
-        _mesa_rout_bufs(sam_u, baf_y, lon_w, u3k(u3t(dat)));
+        _mesa_rout_bufs(sam_u, NULL, baf_y, lon_w, u3k(u3t(dat)));
       }
 
       tac_u.pag_u.nam_u.nit_o = c3n;
