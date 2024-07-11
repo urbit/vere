@@ -1801,11 +1801,9 @@ bt_cb(void* data,
   bdata->count++;
 
   if ( bdata->count <= 100 ) {
-    if ( filename != NULL ) {
-      c3_c* loc[128];
-      snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
-      u3l_log("%-3d %-35s %s", bdata->count - 1, function, (c3_c *)loc);
-    }
+    c3_c* loc[128];
+    snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
+    u3l_log("%-3d %-35s %s", bdata->count - 1, function, (c3_c *)loc);
     return 0;
   }
   else {
