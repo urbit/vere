@@ -211,8 +211,7 @@
     u3_noun u3qes_equ(u3_atom, u3_atom);
     u3_noun u3qes_gte(u3_atom, u3_atom);
     u3_noun u3qes_gth(u3_atom, u3_atom);
-
-    u3_noun u3qe_unzip_gzip(u3_noun);
+    u3_noun u3qe_gunzip(u3_noun);
 
   /** Tier 6.
   **/
