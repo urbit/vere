@@ -12,7 +12,7 @@ configure_make(
         "//conditions:default": ["--jobs=`nproc`"],
     }),
     configure_options = ["--static"],
-    copts = ["-O0"],
+    copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = ["libz.a"],
     visibility = ["//visibility:public"],
