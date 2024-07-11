@@ -645,6 +645,23 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun);
 static void
 _http_scry_respond(u3_hreq* req_u, u3_noun nun);
 
+static u3_noun
+_content_rng(c3_z start_z, c3_z end_z, c3_w total_w)
+{
+  u3_noun out;
+
+  u3_noun lin = u3i_list(u3i_string("bytes "),
+                         u3do("crip", u3do("a-co:co", start_z)),
+                         c3_s1('-'),
+                         u3do("crip", u3do("a-co:co", end_z)),
+                         c3_s1('/'),
+                         u3do("crip", u3do("a-co:co", total_w)),
+                         u3_none);
+  u3_atom dat = u3qc_rap(3, lin);
+  out = u3nc(u3i_string("Content-Range"), dat);
+  return out;
+}
+
 /* _http_foo_cb()
 */
 static void
@@ -654,11 +671,18 @@ _http_foo_cb(void* vod_p, u3_noun nun)
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
 
-  //  TODO range
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
-    _http_scry_respond(req_u, u3k(nun));
+    if ( u3_nul != nun ) {
+      u3_atom lent = u3r_at(254, nun);
+      u3_noun con_rng_hed = _content_rng(0, (lent - 1), lent);
+      u3_noun mun = u3i_edit(u3k(nun), 125, u3nc(con_rng_hed, u3r_at(125, nun)));
+      _http_scry_respond(req_u, u3k(mun));
+    }
+    else {
+      _http_scry_respond(req_u, u3k(nun));
+    }
   }
 
   if ( peq_u->las_o == c3n ) {
@@ -700,8 +724,12 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] test stream
 //  [x] content range function
 //  [x] video controls
-//  [ ] fix repeated 1 byte requests
-//  [ ] multipart ranges?
+//  [x] fix repeated 1 byte requests
+//  [ ] disappearing headers
+//  [ ] fix 200
+//  [ ] content-length
+//  [ ] mite
+//  [ ] don't crash, check multipart ranges
 //
 typedef struct _range_header {
   c3_z start_z;
@@ -721,19 +749,19 @@ _slice_mime(range_header rng, u3_noun octs)
   c3_w oct_w = u3t(octs);
   content out;
 
+  out.start_z = SIZE_MAX;
+  out.end_z = SIZE_MAX;
+  out.dat = u3_nul;
+
   if ( rng.start_z == SIZE_MAX ) {
     if ( rng.end_z == SIZE_MAX ) {
       // [~ ~]
-      out.start_z = SIZE_MAX;
-      out.end_z = SIZE_MAX;
-      out.dat = u3_nul;
+      return out;
     }
     else {
       // [~ @]
       if ( rng.end_z > lent_w ) {
-        out.start_z = SIZE_MAX;
-        out.end_z = SIZE_MAX;
-        out.dat = u3_nul;
+        return out;
       }
       else {
         // slice last bytes
@@ -747,28 +775,24 @@ _slice_mime(range_header rng, u3_noun octs)
   else if ( rng.end_z == SIZE_MAX ) {
     // [@ ~]
     if ( rng.start_z > lent_w ) {
-      out.start_z = SIZE_MAX;
-      out.end_z = SIZE_MAX;
-      out.dat = u3_nul;
+      return out;
     }
     else {
       out.start_z = rng.start_z;
-      out.end_z = lent_w;
-      out.dat = u3nc(lent_w - rng.start_z,
-                     u3qc_cut(3, rng.start_z, rng.end_z, oct_w));
+      out.end_z = lent_w - 1;
+      out.dat = u3nc((out.end_z - out.start_z) + 1,
+                     u3qc_cut(3, out.start_z, (out.end_z + 1) - out.start_z, oct_w));
     }
   }
   else if (rng.end_z > lent_w) {
-    out.start_z = SIZE_MAX;
-    out.end_z = SIZE_MAX;
-    out.dat = u3_nul;
+    return out;
   }
   else {
     // [@ @]
     out.start_z = rng.start_z;
-    out.end_z = (rng.end_z - rng.start_z) + 1;
-    out.dat = u3nc((rng.end_z - rng.start_z) + 1,
-                   u3qc_cut(3, out.start_z, out.end_z, oct_w));
+    out.end_z = rng.end_z;
+    out.dat = u3nc((out.end_z - out.start_z) + 1,
+                   u3qc_cut(3, out.start_z, (out.end_z + 1) - out.start_z, oct_w));
   }
   return out;
 }
@@ -792,23 +816,6 @@ _get_range(c3_c* txt_c, c3_w len_w)
     }
   }
   return slice;
-}
-
-static u3_noun
-_content_rng(c3_z start_z, c3_z end_z, c3_w lent_w)
-{
-  u3_noun out;
-
-  u3_noun lin = u3i_list(u3i_string("bytes "),
-                         u3do("crip", u3do("a-co:co", start_z)),
-                         c3_s1('-'),
-                         u3do("crip", u3do("a-co:co", end_z)),
-                         c3_s1('/'),
-                         u3do("crip", u3do("a-co:co", ++lent_w )),
-                         u3_none);
-  u3_atom dat = u3qc_rap(3, lin);
-  out = u3nc(u3i_string("Content-Range"), dat);
-  return out;
 }
 
 /* _http_req_dispatch(): dispatch http request to %eyre
@@ -980,12 +987,19 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
-                // if ( u3r_sing(result, octs) == c3y)  {
+
+                // if ( u3r_sing(result.dat, octs) == c3y)  {
                 //   //  200
-                //   _http_cache_respond(req_u, nac);
+                //   u3l_log("sending 200");
+                //   u3_atom lent = u3r_at(254, nac);
+                //   u3_noun con_rng_hed = _content_rng(0, lent, lent);
+                //   u3_noun mac = u3i_edit(nac, 125, u3nc(con_rng_hed, u3r_at(125, nac)));
+                //   _http_cache_respond(req_u, mac);
+                //   // _http_cache_respond(req_u, nac);
                 // }
                 // else {
                   //  206
+                  u3l_log("sending 206");
                   u3_noun con_rng_hed = _content_rng(result.start_z, result.end_z, u3h(octs));
                   u3_noun res = u3i_edit(nac, 127, result.dat);
                   res = u3i_edit(res, 124, 206);
@@ -1033,7 +1047,9 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun) {
   }
   else {
     u3_noun auth, response_header, data;
+    // XX check: looks good
     u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    // u3m_p("res-header", response_header);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
@@ -1255,6 +1271,7 @@ _http_start_respond(u3_hreq* req_u,
                     u3_noun data,
                     u3_noun complete)
 {
+  u3m_p("start_respond headers", headers);
   if ( u3_rsat_plan != req_u->sat_e ) {
     u3l_log("http: %%start not sane");
     u3z(status); u3z(headers); u3z(data); u3z(complete);
@@ -1280,6 +1297,7 @@ _http_start_respond(u3_hreq* req_u,
   c3_i has_len_i = 0;
 
   while ( 0 != hed_u ) {
+    // u3l_log("start_respond header: %s", hed_u->nam_c);
     if ( 0x200 <= rec_u->version ) {
       h2o_strtolower(hed_u->nam_c, hed_u->nam_w);
 
