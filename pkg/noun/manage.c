@@ -6,10 +6,12 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <execinfo.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
 #include "allocate.h"
+#include "backtrace.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -24,6 +26,7 @@
 #include "trace.h"
 #include "urcrypt.h"
 #include "vortex.h"
+#include "whereami.h"
 #include "xtract.h"
 
 //  XX stack-overflow recovery should be gated by -a
@@ -1770,8 +1773,63 @@ _cm_limits(void)
 # endif
 }
 
+struct bt_cb_data {
+  c3_y count;
+  c3_y fail;
+};
+
+void
+err_cb(void* data, const char* msg, int errnum)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  if ( bdata->count <= 1 ) {
+    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
+    bdata->fail = 1;
+  }
+}
+
+int
+bt_cb(void* data,
+      uintptr_t pc,
+      const char* filename,
+      int lineno,
+      const char* function)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  if ( bdata->count <= 100 ) {
+    if ( filename != NULL ) {
+      u3l_log("%s:%d %s", filename, lineno, function);
+    }
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+/* _main_self_path(): get binary self-path.
+ */
+c3_y
+_main_self_path(c3_c *pat_c)
+{
+  c3_i len_i = 0;
+  c3_i pat_i;
+
+  if ( 0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i)) ) {
+    wai_getExecutablePath(pat_c, len_i, &pat_i);
+    pat_c[len_i] = 0;
+    return 0;
+  }
+
+  return 1;
+}
+
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
-*/
+ */
 c3_i
 u3m_fault(void* adr_v, c3_i ser_i)
 {
@@ -1786,8 +1844,44 @@ u3m_fault(void* adr_v, c3_i ser_i)
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
-    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
-                    adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+    u3l_log("loom: external fault: %p (%p : %p)\r\n",
+            adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+
+    u3l_log("Stacktrace (%d):", ser_i);
+
+    void* bt_state;
+    c3_i  ret_i;
+    struct bt_cb_data data = { 0, 0 };
+
+    c3_c* self_path_c[4096] = {0};
+    if ( _main_self_path((c3_c*)self_path_c) == 0 ) {
+      bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+      ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
+      if (data.fail == 0) u3l_log("");
+    }
+    else {
+      data.fail = 1;
+    }
+
+    if ( data.fail == 1 ) {
+      void*  array[100];
+      c3_c** strings;
+      size_t size = backtrace(array, 100);
+
+      strings = backtrace_symbols(array, size);
+
+      if ( strings == NULL ) {
+        u3l_log("Backtrace failed");
+      }
+      else {
+        for ( c3_i i = 0; i < size; i++ )
+          u3l_log("%s", strings[i]);
+        u3l_log("");
+      }
+
+      free(strings);
+    }
+
     u3_assert(0);
     return 0;
   }
