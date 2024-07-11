@@ -766,9 +766,7 @@ _slice_mime(range_header rng, u3_noun octs)
       else {
         // slice last bytes
         out.start_z = lent_w - rng.end_z;
-        out.end_z = rng.end_z;
-        out.dat = u3nc(rng.end_z,
-                       u3qc_cut(3, out.start_z, out.end_z, oct_w));
+        out.end_z = lent_w - 1;
       }
     }
   }
@@ -780,8 +778,6 @@ _slice_mime(range_header rng, u3_noun octs)
     else {
       out.start_z = rng.start_z;
       out.end_z = lent_w - 1;
-      out.dat = u3nc((out.end_z - out.start_z) + 1,
-                     u3qc_cut(3, out.start_z, (out.end_z + 1) - out.start_z, oct_w));
     }
   }
   else if (rng.end_z > lent_w) {
@@ -791,6 +787,10 @@ _slice_mime(range_header rng, u3_noun octs)
     // [@ @]
     out.start_z = rng.start_z;
     out.end_z = rng.end_z;
+  }
+  if ( (out.start_z <= lent_w) &&
+       (out.end_z <= lent_w)   &&
+       (out.start_z <= out.end_z) ) {
     out.dat = u3nc((out.end_z - out.start_z) + 1,
                    u3qc_cut(3, out.start_z, (out.end_z + 1) - out.start_z, oct_w));
   }
