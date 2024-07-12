@@ -8,7 +8,6 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include "uv.h"
 
 static void*
 gzip_malloc(voidpf opaque, uInt items, uInt size)
