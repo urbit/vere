@@ -113,6 +113,17 @@ you can pass them with [`--per_file_copt`][per_file_copt] like so:
 bazel build --per_file_copt='pkg/.*@-DMACRO'
 ```
 
+## LSP Integration
+
+```console
+bazel run //bazel:refresh_compile_commands
+```
+
+Running this command will generate a `compile_commands.json` file in the root 
+of the repository, which `clangd` (or other language server processors) will 
+use automatically to provide modern editor features like syntax highlighting, 
+go-to definitions, call hierarchies, symbol manipulation, etc.
+
 ## Test Commands
 
 You can build and run unit tests only on native builds. If you have a native
