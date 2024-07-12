@@ -320,6 +320,7 @@
         u3_even* vex_u;                     //  --prop-*, boot enhancements
 
         c3_o    beb;                        //  --behn-allow-blocked
+        c3_z    siz_i;                      //  --lmdb-map-size
       } u3_opts;
 
     /* u3_host: entire host.
@@ -661,6 +662,7 @@
           u3_disk*         log_u;               //  event log
           u3_lord*         god_u;               //  computer
           u3_psat          sat_e;               //  type-tagged
+          u3_weak          ryf;                 //  rift
           union {                               //
             u3_boot*       bot_u;               //    bootstrap
             u3_play*       pay_u;               //    recompute
@@ -1563,6 +1565,16 @@
         void
         darwin_register_mach_exception_handler();
 #endif
+
+      /* king_curl_alloc(): allocate a response buffer for curl
+       */
+        size_t
+        king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v);
+
+      /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
+       */
+        c3_i
+        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t);
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */

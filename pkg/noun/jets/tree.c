@@ -2349,6 +2349,7 @@ static u3j_core _138_hex_d[] =
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
   { "loss",  63, _140_hex_loss_a, 0, no_hashes },
   { "lune", 127, _140_hex_lune_a, 0, no_hashes },
+// XX move me to 137 when it exists
   { "crc", 31, 0, _137_hex__crc_d, no_hashes },
   { "gzip", 31, 0, _139_hex__unzip_d, no_hashes },
 

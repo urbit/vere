@@ -96,6 +96,8 @@ vere_library(
             "*.h",
             "db/*.c",
             "io/*.c",
+            "io/*/*.h",
+            "io/*/*.c",
         ],
         exclude = [
             "main.c",
@@ -140,6 +142,7 @@ vere_library(
         "@lmdb",
         "@openssl",
         "@uv",
+        "@natpmp",
     ] + select({
         "@platforms//os:macos": [],
         "@platforms//os:linux": [
