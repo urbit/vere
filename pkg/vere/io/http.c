@@ -646,9 +646,11 @@ static void
 _http_scry_respond(u3_hreq* req_u, u3_noun nun);
 
 static u3_noun
-_content_rng(c3_z start_z, c3_z end_z, c3_w total_w)
+_content_headers(c3_z start_z, c3_z end_z, c3_w total_w)
 {
   u3_noun out;
+  u3_noun con_rng;
+  u3_noun con_len;
 
   u3_noun lin = u3i_list(u3i_string("bytes "),
                          u3do("crip", u3do("a-co:co", start_z)),
@@ -658,7 +660,11 @@ _content_rng(c3_z start_z, c3_z end_z, c3_w total_w)
                          u3do("crip", u3do("a-co:co", total_w)),
                          u3_none);
   u3_atom dat = u3qc_rap(3, lin);
-  out = u3nc(u3i_string("Content-Range"), dat);
+  con_rng = u3nc(u3i_string("Content-Range"), dat);
+  con_len = u3nc(u3i_string("Content-Length"),
+                 u3do("crip", u3do("a-co:co", (end_z - start_z) + 1)));
+
+  out = u3i_list(con_rng, con_len, u3_none);
   return out;
 }
 
@@ -676,8 +682,8 @@ _http_foo_cb(void* vod_p, u3_noun nun)
     req_u->peq_u = 0;
     if ( u3_nul != nun ) {
       u3_atom lent = u3r_at(254, nun);
-      u3_noun con_rng_hed = _content_rng(0, (lent - 1), lent);
-      u3_noun mun = u3i_edit(u3k(nun), 125, u3nc(con_rng_hed, u3r_at(125, nun)));
+      u3_noun cont_heds = _content_headers(0, (lent - 1), lent);
+      u3_noun mun = u3i_edit(u3k(nun), 125, u3qb_weld(cont_heds, u3r_at(125, nun)));
       _http_scry_respond(req_u, u3k(mun));
     }
     else {
@@ -725,9 +731,9 @@ _find_tis_fas(void* txt, c3_w len)
 //  [x] content range function
 //  [x] video controls
 //  [x] fix repeated 1 byte requests
-//  [ ] disappearing headers
-//  [ ] fix 200
-//  [ ] content-length
+//  [x] disappearing headers
+//  [x] fix 200
+//  [x] content-length
 //  [ ] mite
 //  [ ] don't crash, check multipart ranges
 //
@@ -988,24 +994,21 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                   return;
                 }
 
-                // if ( u3r_sing(result.dat, octs) == c3y)  {
-                //   //  200
-                //   u3l_log("sending 200");
-                //   u3_atom lent = u3r_at(254, nac);
-                //   u3_noun con_rng_hed = _content_rng(0, lent, lent);
-                //   u3_noun mac = u3i_edit(nac, 125, u3nc(con_rng_hed, u3r_at(125, nac)));
-                //   _http_cache_respond(req_u, mac);
-                //   // _http_cache_respond(req_u, nac);
-                // }
-                // else {
+                if ( u3r_sing(result.dat, octs) == c3y)  {
+                  //  200
+                  u3_atom lent = u3r_at(254, nac);
+                  u3_noun cont_heds = _content_headers(0, (lent - 1), lent);
+                  u3_noun mac = u3i_edit(nac, 125, u3qb_weld(cont_heds, u3r_at(125, nac)));
+                  _http_cache_respond(req_u, mac);
+                }
+                else {
                   //  206
-                  u3l_log("sending 206");
-                  u3_noun con_rng_hed = _content_rng(result.start_z, result.end_z, u3h(octs));
+                  u3_noun cont_heds = _content_headers(result.start_z, result.end_z, u3h(octs));
                   u3_noun res = u3i_edit(nac, 127, result.dat);
                   res = u3i_edit(res, 124, 206);
-                  res = u3i_edit(res, 125, u3nc(con_rng_hed, u3r_at(125, res)));
+                  res = u3i_edit(res, 125, u3qb_weld(cont_heds, u3r_at(125, res)));
                   _http_cache_respond(req_u, res);
-                // }
+                }
               }
             }
             else {
@@ -1271,7 +1274,6 @@ _http_start_respond(u3_hreq* req_u,
                     u3_noun data,
                     u3_noun complete)
 {
-  u3m_p("start_respond headers", headers);
   if ( u3_rsat_plan != req_u->sat_e ) {
     u3l_log("http: %%start not sane");
     u3z(status); u3z(headers); u3z(data); u3z(complete);
@@ -1297,7 +1299,6 @@ _http_start_respond(u3_hreq* req_u,
   c3_i has_len_i = 0;
 
   while ( 0 != hed_u ) {
-    // u3l_log("start_respond header: %s", hed_u->nam_c);
     if ( 0x200 <= rec_u->version ) {
       h2o_strtolower(hed_u->nam_c, hed_u->nam_w);
 
