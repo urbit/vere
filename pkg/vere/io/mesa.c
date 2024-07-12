@@ -17,7 +17,6 @@
 #include <retrieve.h>
 #include <types.h>
 #include <stdlib.h>
-#include "blake.h"
 #include "lss.h"
 
 c3_o dop_o = c3n;
@@ -100,7 +99,6 @@ struct _u3_mesa;
 typedef struct _u3_misord_buf {
   c3_y*     fra_y;
   c3_w      len_w;
-  c3_w      num_w;
   lss_pair* par_u;
 } u3_misord_buf;
 
@@ -184,7 +182,7 @@ typedef struct _u3_pend_req {
   c3_w                   old_w; // frag num of oldest packet sent
   c3_w                   ack_w; // highest acked fragment number
   u3_gage*               gag_u; // congestion control
-  u3_vec(u3_buf)         mis_u; // misordered packets
+  u3_misord_buf          mis_u[8]; // misordered packets
   lss_verifier*          los_u; // Lockstep verifier
   u3_mesa_pict*          pic_u; // preallocated request packet
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
@@ -576,7 +574,6 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
   uv_timer_stop(&req_u->tim_u);
   _mesa_free_pict(req_u->pic_u);
   c3_free(req_u->wat_u);
-  vec_free(&req_u->mis_u);
   c3_free(req_u->dat_y);
   lss_verifier_free(req_u->los_u);
   u3h_del(per_u->req_p, key);
@@ -1052,44 +1049,27 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
   _update_oldest_req(req_u);
 }
 
-static void _mesa_free_misord_buf(u3_misord_buf* buf_u)
-{
-  c3_free(buf_u->fra_y);
-  if ( buf_u->par_u != NULL ) {
-    c3_free(buf_u->par_u);
-  }
-  c3_free(buf_u);
-}
-
 static c3_o
 _mesa_burn_misorder_queue(u3_pend_req* req_u)
 {
-  c3_w wan_w = req_u->los_u->counter;
-  c3_w len_w;
-  c3_o fon_o;
-  c3_o res_y = c3y;
-  while ( (len_w = vec_len(&req_u->mis_u)) != 0 ) {
-    fon_o = c3n;
-    for (int i = 0; i < len_w; i++) {
-      u3_misord_buf* buf_u = (u3_misord_buf*)req_u->mis_u.vod_p[i];
-      if ( buf_u->num_w == wan_w ) {
-        fon_o = c3y;
-        if ( c3y != (res_y = lss_verifier_ingest(req_u->los_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u))) {
-          return res_y;
-        } else {
-          /* u3l_log("burn %u", buf_u->num_w); */
-          /* memcpy(req_u->dat_y + (1024 * buf_u->num_w), buf_u->fra_y, buf_u->len_w); */
-          _mesa_free_misord_buf((u3_misord_buf*)vec_pop(&req_u->mis_u, i));
-          break;
-        }
-      }
+  c3_w num_w;
+  c3_w max_w = sizeof(req_u->mis_u) / sizeof(u3_misord_buf);
+  c3_o res_o = c3y;
+  for ( num_w = 0; num_w < max_w; num_w++ ) {
+    u3_misord_buf* buf_u = &req_u->mis_u[num_w];
+    if ( buf_u->len_w == 0 ) {
+      break;
     }
-    wan_w++;
-    if ( c3n == fon_o ) {
+    if ( c3y != lss_verifier_ingest(req_u->los_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u) ) {
+      res_o = c3n;
       break;
     }
   }
-  return res_y;
+  // ratchet forward
+  num_w++; // account for the packet processed in _mesa_req_pact_done
+  memcpy(req_u->mis_u, req_u->mis_u + num_w, max_w - num_w);
+  memset(req_u->mis_u + max_w - num_w, 0, num_w * sizeof(u3_misord_buf));
+  return res_o;
 }
 
 static void _init_lane_state(u3_lane_state*);
@@ -1168,7 +1148,6 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
     memcpy((*par_u)[1], dat_u->aup_u.has_y[1], sizeof(lss_hash));
   }
 
-  c3_y ver_y;
   // TODO: move to bottom
 
   c3_y buf_y[1024];
@@ -1177,24 +1156,27 @@ _mesa_req_pact_done(u3_mesa*      sam_u,
   c3_w len_w = (nam_u->fra_w + 1 == dat_u->tot_w) ? dat_u->len_w : 1024;
 
   if ( req_u->los_u->counter != nam_u->fra_w ) {
-    // TODO: queue packet
-    u3_misord_buf* buf_u = c3_calloc(sizeof(u3_misord_buf));
-    buf_u->fra_y = c3_calloc(len_w);
-    buf_u->len_w = len_w;
-    memcpy(buf_u->fra_y, buf_y, len_w);
-    buf_u->par_u = par_u;
-    buf_u->num_w = nam_u->fra_w;
-    vec_append(&req_u->mis_u, buf_u);
+    if ( nam_u->fra_w < req_u->los_u->counter ) {
+      u3l_log("fragment number too low (%u)", nam_u->fra_w);
+    } else if ( nam_u->fra_w >= req_u->los_u->counter + (sizeof(req_u->mis_u)/sizeof(u3_misord_buf)) ) {
+      u3l_log("fragment number too high (%u)", nam_u->fra_w);
+    } else {
+      // insert into misordered queue
+      u3_misord_buf* buf_u = &req_u->mis_u[nam_u->fra_w - req_u->los_u->counter - 1];
+      buf_u->fra_y = c3_calloc(len_w);
+      buf_u->len_w = len_w;
+      memcpy(buf_u->fra_y, buf_y, len_w);
+      buf_u->par_u = par_u;
+    }
   }
-  else if ( c3y != (ver_y = lss_verifier_ingest(req_u->los_u, buf_y, len_w, par_u)) ) {
+  else if ( c3y != lss_verifier_ingest(req_u->los_u, buf_y, len_w, par_u) ) {
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
     u3l_log("auth fail frag %u", nam_u->fra_w);
     MESA_LOG(AUTH);
     return req_u;
   }
-  else if ( vec_len(&req_u->mis_u) != 0
-            && c3y != (ver_y = _mesa_burn_misorder_queue(req_u))) {
+  else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
     c3_free(par_u);
     MESA_LOG(AUTH)
     return req_u;
@@ -2131,8 +2113,8 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     }
     lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
     // TODO: authenticate root
-    // lss_hash root;
-    // lss_root(root, pof_u, pof_w);
+    lss_hash root;
+    lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
     lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
@@ -2143,25 +2125,24 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     }
     memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
   } else {
-    /* if ( dat_u->len_w != lss_proof_size(req_u->tot_w) ) { */
-    /*   u3l_log("len real: %u expected %u", dat_u->len_w, lss_proof_size(req_u->tot_w)); */
-    /*   u3l_log("hello3"); */
-    /*   return NULL; // XX ??? */
-    /* } */
+    c3_w pof_w = lss_proof_size(req_u->tot_w);
+    if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+      return NULL; // XX ???
+    }
     // TODO: cast directly instead of copying?
-    lss_hash* pof_u = c3_calloc(dat_u->len_w * sizeof(lss_hash));
-    for ( int i = 0; i < dat_u->len_w; i++ ) {
+    lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
+    for ( int i = 0; i < pof_w; i++ ) {
       memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
     }
     // TODO: authenticate root
-    // lss_hash root;
-    // lss_root(root, pof_u, dat_u->len_w/32);
+    lss_hash root;
+    lss_root(root, pof_u, pof_w);
 
     req_u->los_u = c3_calloc(sizeof(lss_verifier));
     lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
     c3_free(pof_u);
   }
-  vec_init(&req_u->mis_u, 8);
+  memset(req_u->mis_u, 0, sizeof(req_u->mis_u));
 
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
   _update_oldest_req(req_u);

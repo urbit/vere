@@ -114,6 +114,60 @@
         | (((w) >>  8) & 0xff) << 16 \
         | ( (w)        & 0xff) << 24 )
 
+      inline c3_s
+      c3_sift_short(c3_y buf_y[2])
+      {
+        return (buf_y[1] << 8 | buf_y[0]);
+      }
+
+      inline c3_w
+      c3_sift_word(c3_y buf_y[4])
+      {
+        return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
+      }
+
+      inline c3_d
+      c3_sift_chub(c3_y byt_y[8])
+      {
+        return (c3_d)byt_y[0]
+             | (c3_d)byt_y[1] << 8
+             | (c3_d)byt_y[2] << 16
+             | (c3_d)byt_y[3] << 24
+             | (c3_d)byt_y[4] << 32
+             | (c3_d)byt_y[5] << 40
+             | (c3_d)byt_y[6] << 48
+             | (c3_d)byt_y[7] << 56;
+      }
+
+      inline void
+      c3_etch_short(c3_y buf_y[2], c3_s sot_s)
+      {
+        buf_y[0] = sot_s         & 0xff;
+        buf_y[1] = (sot_s >>  8) & 0xff;
+      }
+
+      inline void
+      c3_etch_word(c3_y buf_y[4], c3_w wod_w)
+      {
+        buf_y[0] = wod_w         & 0xff;
+        buf_y[1] = (wod_w >>  8) & 0xff;
+        buf_y[2] = (wod_w >> 16) & 0xff;
+        buf_y[3] = (wod_w >> 24) & 0xff;
+      }
+
+      inline void
+      c3_etch_chub(c3_y byt_y[8], c3_d num_d)
+      {
+        byt_y[0] = num_d & 0xff;
+        byt_y[1] = (num_d >>  8) & 0xff;
+        byt_y[2] = (num_d >> 16) & 0xff;
+        byt_y[3] = (num_d >> 24) & 0xff;
+        byt_y[4] = (num_d >> 32) & 0xff;
+        byt_y[5] = (num_d >> 40) & 0xff;
+        byt_y[6] = (num_d >> 48) & 0xff;
+        byt_y[7] = (num_d >> 56) & 0xff;
+      }
+
     /* Asserting allocators.
     */
 #     define c3_free(s) free(s)
