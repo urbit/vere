@@ -159,6 +159,7 @@ void update_hopcount(u3_mesa_head*);
 
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
-void _log_pact(u3_mesa_pact* pac_u);
+void log_pact(u3_mesa_pact* pac_u);
+void log_name(u3_mesa_name* nam_u);
 
 #endif

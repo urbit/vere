@@ -39,8 +39,8 @@ _log_buf(c3_y* buf_y, c3_w len_w)
   fprintf(stderr, "\r\n");
 }
 
-static void
-_log_name(u3_mesa_name* nam_u)
+void
+log_name(u3_mesa_name* nam_u)
 {
   // u3l_log("meta");
   // u3l_log("rank: %u", nam_u->met_u.ran_y);
@@ -49,27 +49,28 @@ _log_name(u3_mesa_name* nam_u)
   // u3l_log("tau: %u", nam_u->met_u.tau_y);
   // u3l_log("frag num length: %u", nam_u->met_u.gaf_y);
 
+  c3_c* her_c;
   {
-    // u3_noun her = u3dc("scot", c3__p, u3i_chubs(2, nam_u->her_d));
-    // c3_c* her_c = u3r_string(her);
-    // u3l_log("publisher: %s", her_c);
-    // c3_free(her_c);
-    // u3z(her);
+    u3_noun her = u3dc("scot", c3__p, u3i_chubs(2, nam_u->her_d));
+    her_c = u3r_string(her);
+    u3z(her);
   }
 
-  u3l_log("rift: %u", nam_u->rif_w);
-  u3l_log("bloq: %u", nam_u->boq_y);
-  u3l_log("init: %s", (c3y == nam_u->nit_o) ? "&" : "|");
-  u3l_log("auth: %s", (c3y == nam_u->aut_o) ? "&" : "|");
-  u3l_log("frag: %u", nam_u->fra_w);
-  u3l_log("path len: %u", nam_u->pat_s);
-  u3l_log("path: %s", nam_u->pat_c);
+  u3l_log("%s: /%s", her_c, nam_u->pat_c);
+  u3l_log("  rift: %u  bloq: %u  init: %s  auth: %s  frag: %u",
+          nam_u->rif_w,
+          nam_u->boq_y,
+          (c3y == nam_u->nit_o) ? "&" : "|",
+          (c3y == nam_u->aut_o) ? "&" : "|",
+          nam_u->fra_w
+  );
+  c3_free(her_c);
 }
 
 static void
 _log_data(u3_mesa_data* dat_u)
 {
-  u3l_log("total fragments: %u", dat_u->tot_w);
+  fprintf(stderr, "tot_w: %u  len_w: %u  ", dat_u->tot_w, dat_u->len_w);
 
   switch ( dat_u->aum_u.typ_e ) {
     case AUTH_NONE: {
@@ -93,12 +94,12 @@ _log_data(u3_mesa_data* dat_u)
     } break;
 
     case AUTH_SIGN: {
-      u3l_log("signature:");
+      fprintf(stderr, "signature: ");
       _log_buf(dat_u->aum_u.sig_y, 64);
     } break;
 
     case AUTH_HMAC: {
-      u3l_log("hmac:");
+      fprintf(stderr, "hmac: ");
       _log_buf(dat_u->aum_u.mac_y, 32);
     } break;
   }
@@ -124,33 +125,33 @@ _log_data(u3_mesa_data* dat_u)
 
     default: break;
   }
-
-  u3l_log("frag len: %u", dat_u->len_w);
+  fprintf(stderr, "\r\n");
 }
+
 
 static void
 _log_peek_pact(u3_mesa_peek_pact* pac_u)
 {
-  _log_name(&pac_u->nam_u);
+  log_name(&pac_u->nam_u);
 }
 
 static void
 _log_page_pact(u3_mesa_page_pact *pac_u)
 {
-  _log_name(&pac_u->nam_u);
+  log_name(&pac_u->nam_u);
   _log_data(&pac_u->dat_u);
 }
 
 static void
 _log_poke_pact(u3_mesa_poke_pact *pac_u)
 {
-  _log_name(&pac_u->nam_u);
-  _log_name(&pac_u->pay_u);
+  log_name(&pac_u->nam_u);
+  log_name(&pac_u->pay_u);
   _log_data(&pac_u->dat_u);
 }
 
 void
-_log_pact(u3_mesa_pact* pac_u)
+log_pact(u3_mesa_pact* pac_u)
 {
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
@@ -205,6 +206,7 @@ _mesa_rank(c3_d who_d[2])
 */
 void mesa_free_pact(u3_mesa_pact* pac_u)
 {
+  //  TODO free pat_c in the name
   switch ( pac_u->hed_u.typ_y ) {
     default: {
       break;
@@ -1152,13 +1154,13 @@ _test_pact(u3_mesa_pact* pac_u)
 done:
   if ( ret_i ) {
     _log_head(&pac_u->hed_u);
-    _log_pact(pac_u);
+    log_pact(pac_u);
     _log_buf(buf_y, len_w);
 
     if ( bot_i ) {
       u3l_log(RED_TEXT);
       _log_head(&nex_u.hed_u);
-      _log_pact(&nex_u);
+      log_pact(&nex_u);
       u3l_log(DEF_TEXT);
     }
   }
