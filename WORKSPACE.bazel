@@ -243,6 +243,15 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "libexecinfo",
+    build_file = "//bazel/third_party/libexecinfo:libexecinfo.BUILD",
+    sha256 = "3f00073eac3322551e96d66a00ae46796bdb22f7ce13d3ad0fe1313fc57cd72c",
+    url = "https://github.com/resslinux/libexecinfo/archive/{version}.tar.gz",
+    strip_prefix = "libexecinfo-{version}",
+    version = "115624ccf81e731c2fa732595acf6547555f03be",
+)
+
+versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
     patch_args = ["-p1"],

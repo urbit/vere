@@ -44,7 +44,10 @@ vere_library(
         "@whereami",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
-        "@platforms//os:linux": ["//pkg/noun/platform/linux"],
+        "@platforms//os:linux": [
+            "//pkg/noun/platform/linux",
+            "@libexecinfo",
+        ],
         "//conditions:default": [],
     }),
 )
