@@ -2305,10 +2305,10 @@ _cj_mark_hank(u3_noun kev, void* dat)
 
 /* u3j_mark(): mark jet state for gc.
 */
-quac*
+u3m_quac*
 u3j_mark()
 {
-  quac** qua_u = c3_malloc(sizeof(*qua_u)*6);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*6);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
@@ -2325,18 +2325,18 @@ u3j_mark()
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
   qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p)*4;
-  
+
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w = qua_u[4]->siz_w*4;
-  
+
   c3_w sum_w = 0;
   for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
-  quac* tot_u = c3_calloc(sizeof(*tot_u));
+  u3m_quac* tot_u = c3_calloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total jet stuff");
 
   if ( u3R == &(u3H->rod_u) ) {

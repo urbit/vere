@@ -1688,9 +1688,9 @@ u3_king_grab(void* vod_p)
   }
 #endif
 
-  quac** all_u = c3_malloc(sizeof(*all_u)*6);
+  u3m_quac** all_u = c3_malloc(sizeof(*all_u)*6);
 
-  quac** var_u = u3m_mark();
+  u3m_quac** var_u = u3m_mark();
   all_u[0] = var_u[0];
   all_u[1] = var_u[1];
   all_u[2] = var_u[2];
@@ -1707,7 +1707,7 @@ u3_king_grab(void* vod_p)
   all_u[5] = c3_calloc(sizeof(*all_u[5]));
   all_u[5]->nam_c = "sweep";
   all_u[5]->siz_w = u3a_sweep();
-  
+
   for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);
     u3a_quac_free(all_u[i_w]);

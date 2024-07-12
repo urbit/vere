@@ -392,12 +392,12 @@ u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax)
 
 /* u3v_mark(): mark arvo kernel.
 */
-quac*
+u3m_quac*
 u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  quac** qua_u = c3_malloc(sizeof(*qua_u)*3);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*3);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
@@ -411,7 +411,7 @@ u3v_mark()
   qua_u[2]->nam_c = strdup("wish cache");
   qua_u[2]->siz_w = u3a_mark_noun(arv_u->yot)*4;
 
-  quac* tot_u = c3_malloc(sizeof(*tot_u));
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total arvo stuff");
   tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w + qua_u[2]->siz_w;
   tot_u->len_w = 3;
@@ -450,4 +450,3 @@ u3v_rewrite_compact()
   arv_u->now = u3a_rewritten_noun(arv_u->now);
   arv_u->yot = u3a_rewritten_noun(arv_u->yot);
 }
-

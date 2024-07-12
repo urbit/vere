@@ -606,7 +606,7 @@
 
         /* u3a_mark_road(): mark ad-hoc persistent road structures.
         */
-          quac*
+          u3m_quac*
           u3a_mark_road();
 
         /* u3a_reclaim(): clear ad-hoc persistent caches to reclaim memory.
@@ -705,7 +705,7 @@
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w den_w, quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount.
         */
@@ -713,13 +713,18 @@
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
-          quac*
+          u3m_quac*
           u3a_prof(FILE* fil_u, u3_noun mas);
 
         /* u3a_maid(): maybe print memory.
         */
           c3_w
           u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_quac_free(): free quac memory.
+        */
+          void
+          u3a_quac_free(u3m_quac* qua_u);
 
         /* u3a_uncap_print_memory(): un-captioned print memory amount.
         */

@@ -3047,10 +3047,10 @@ _n_bam(u3_noun kev, void* dat)
 
 /* u3n_mark(): mark the bytecode cache for gc.
  */
-quac*
+u3m_quac*
 u3n_mark()
 {
-  quac** qua_u = c3_malloc(sizeof(*qua_u)*2);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*2);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("bytecode programs");
@@ -3063,7 +3063,7 @@ u3n_mark()
   qua_u[1]->nam_c = strdup("bytecode cache");
   qua_u[1]->siz_w = u3h_mark(har_p)*4;
 
-  quac* tot_u = c3_malloc(sizeof(*tot_u));
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total nock stuff");
   tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
   tot_u->len_w = 2;

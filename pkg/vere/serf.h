@@ -59,10 +59,5 @@
       u3_noun
       u3_serf_grab(c3_o pri_o);
 
-    /* u3_quac_free(): free quac memory.
-    */
-      void
-      u3a_quac_free(quac* qua_u);
-
 
 #endif /* ifndef U3_VERE_SERF_H */

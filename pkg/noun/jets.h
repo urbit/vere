@@ -296,7 +296,7 @@
 
       /* u3j_mark(): mark jet state for gc.
       */
-        quac*
+        u3m_quac*
         u3j_mark();
 
       /* u3j_free(): free jet state.

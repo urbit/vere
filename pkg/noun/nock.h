@@ -123,7 +123,7 @@
 
     /* u3n_mark(): mark bytecode cache.
      */
-      quac*
+      u3m_quac*
       u3n_mark();
 
     /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.

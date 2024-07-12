@@ -75,7 +75,7 @@ enum {
 /* _serf_quac: convert a quac to a noun.
 */
 u3_noun
-_serf_quac(quac* mas_u)
+_serf_quac(u3m_quac* mas_u)
 {
   u3_noun list = u3_nul;
   for ( c3_w i_w = 0; i_w < mas_u->len_w; i_w++ ) {
@@ -84,7 +84,7 @@ _serf_quac(quac* mas_u)
   list = u3kb_flop(list);
 
   u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word(mas_u->siz_w), list);
-  
+
   c3_free(mas_u->nam_c);
   c3_free(mas_u->qua_u);
   c3_free(mas_u);
@@ -95,7 +95,7 @@ _serf_quac(quac* mas_u)
 /* _serf_quacs: convert an array of quacs to a noun list.
 */
 u3_noun
-_serf_quacs(c3_w len_w, quac** all_u)
+_serf_quacs(c3_w len_w, u3m_quac** all_u)
 {
   u3_noun list = u3_nul;
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
@@ -108,7 +108,7 @@ _serf_quacs(c3_w len_w, quac** all_u)
 /* _serf_print_quacs: print an array of quacs.
 */
 void
-_serf_print_quacs(FILE* fil_u, c3_w len_w, quac** all_u)
+_serf_print_quacs(FILE* fil_u, c3_w len_w, u3m_quac** all_u)
 {
   for ( c3_w i_w = 0; i_w < len_w; i_w++) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);
@@ -159,25 +159,25 @@ _serf_grab(u3_noun sac, c3_o pri_o)
 
     u3_assert( u3R == &(u3H->rod_u) );
 
-    quac* pro_u = u3a_prof(fil_u, sac);
+    u3m_quac* pro_u = u3a_prof(fil_u, sac);
     if ( NULL == pro_u ) {
       fflush(fil_u);
       u3z(sac);
       return u3_nul;
     } else {
-      quac** all_u = c3_malloc(sizeof(*all_u)*9);
+      u3m_quac** all_u = c3_malloc(sizeof(*all_u)*9);
       all_u[0] = pro_u;
 
-      quac** var_u = u3m_mark();
+      u3m_quac** var_u = u3m_mark();
       all_u[1] = var_u[0];
       all_u[2] = var_u[1];
       all_u[3] = var_u[2];
       all_u[4] = var_u[3];
       c3_free(var_u);
-         
+
       c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
                      + all_u[3]->siz_w + all_u[4]->siz_w;
-      
+
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
       all_u[5]->siz_w = u3a_mark_noun(sac)*4;
@@ -195,7 +195,7 @@ _serf_grab(u3_noun sac, c3_o pri_o)
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
       all_u[8]->siz_w = u3a_sweep()*4;
-      
+
       if ( c3y == pri_o ) {
         _serf_print_quacs(fil_u, 9, all_u);
       }
@@ -251,14 +251,14 @@ u3_serf_grab(c3_o pri_o)
 
     u3z(gon);
   }
-  
+
   fprintf(stderr, "serf: measuring memory:\r\n");
   if ( u3_nul != sac ) {
     res = _serf_grab(sac, pri_o);
   }
   else {
     fprintf(stderr, "sac is empty\r\n");
-    quac** var_u = u3m_mark();
+    u3m_quac** var_u = u3m_mark();
 
     c3_w tot_w;
     tot_w = var_u[0]->siz_w + var_u[1]->siz_w
@@ -274,9 +274,9 @@ u3_serf_grab(c3_o pri_o)
     u3a_print_memory(stderr, "sweep", u3a_sweep());
     fprintf(stderr, "\r\n");
   }
-  
+
   fflush(stderr);
-  
+
   return res;
 }
 
@@ -1120,7 +1120,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         u3z(wit);
         u3_noun res = u3_serf_grab(c3n);
         if ( u3_none == res ) {
-          ret_o = c3n;    
+          ret_o = c3n;
         } else {
           *pel = u3nt(c3__quiz, c3__quac, res);
           ret_o = c3y;

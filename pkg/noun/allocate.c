@@ -9,8 +9,6 @@
 #include "retrieve.h"
 #include "trace.h"
 #include "vortex.h"
-#include "noun.h"
-#include "defs.h"
 
 u3_road* u3a_Road;
 
@@ -2032,7 +2030,7 @@ _ca_print_memory(FILE* fil_u, c3_w byt_w)
 /* u3a_quac_free: free quac memory.
 */
 void
-u3a_quac_free(quac* qua_u)
+u3a_quac_free(u3m_quac* qua_u)
 {
   for ( c3_w i_w = 0; i_w < qua_u->len_w; i_w++ ) {
     u3a_quac_free(qua_u->qua_u[i_w]);
@@ -2044,11 +2042,11 @@ u3a_quac_free(quac* qua_u)
 
 /* u3a_prof(): mark/measure/print memory profile. RETAIN.
 */
-quac*
+u3m_quac*
 u3a_prof(FILE* fil_u, u3_noun mas)
 {
 //  c3_w tot_w = 0;
-  quac* pro_u = c3_calloc(sizeof(*pro_u));
+  u3m_quac* pro_u = c3_calloc(sizeof(*pro_u));
   u3_noun h_mas, t_mas;
 
   if ( c3n == u3r_cell(mas, &h_mas, &t_mas) ) {
@@ -2120,7 +2118,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
       c3_w i_w = 2;
       c3_t bad_t = 0;
       while ( c3y == u3du(tt_mas) ) {
-        quac* new_u = u3a_prof(fil_u, u3h(tt_mas));
+        u3m_quac* new_u = u3a_prof(fil_u, u3h(tt_mas));
         if ( NULL == new_u ) {
           c3_free(new_u);
           bad_t = 1;
@@ -2133,7 +2131,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
         tt_mas = u3t(tt_mas);
         i_w++;
       }
-      
+
       if ( bad_t ) {
         for ( i_w = 0; i_w < pro_u->len_w ; i_w++ ) {
           u3a_quac_free(pro_u->qua_u[i_w]);
@@ -2155,14 +2153,14 @@ u3a_prof(FILE* fil_u, u3_noun mas)
 }
 
 
-/* u3a_print_quac: print a quac memory report.
+/* u3a_print_quac: print a memory report.
 */
 
 void
-u3a_print_quac(FILE* fil_u, c3_w den_w, quac* mas_u)
+u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
-  
+
   if ( mas_u->siz_w ) {
     fprintf(fil_u, "%*s%s: ", den_w, "", mas_u->nam_c);
 
@@ -2182,10 +2180,10 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, quac* mas_u)
 
 /* u3a_mark_road(): mark ad-hoc persistent road structures.
 */
-quac*
+u3m_quac*
 u3a_mark_road()
 {
-  quac** qua_u = c3_malloc(sizeof(*qua_u)*8);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*8);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2224,7 +2222,7 @@ u3a_mark_road()
     sum_w += qua_u[i_w]->siz_w;
   }
 
-  quac* tot_u = c3_malloc(sizeof(*tot_u));
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total road stuff");
   tot_u->siz_w = sum_w;
   tot_u->len_w = 8;
