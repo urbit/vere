@@ -130,7 +130,7 @@
 
     /* u3v_mark(): mark arvo kernel.
     */
-      quac*
+      u3m_quac*
       u3v_mark();
 
     /* u3v_reclaim(): clear ad-hoc persistent caches to reclaim memory.
