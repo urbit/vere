@@ -1701,35 +1701,37 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
   #endif
   // parse packet
   u3_mesa_pact tac_u = {0};
-  c3_w jumbo_w = u3r_met(3, pag);
-  c3_y* jumbo_y = c3_calloc(jumbo_w);
-  u3r_bytes(0, jumbo_w, jumbo_y, pag);
-  u3z(pag);
-  mesa_sift_pact(&tac_u, jumbo_y, jumbo_w);
-
-  #ifdef MESA_DEBUG
-    log_pact(&tac_u);
-  #endif
-
-  u3_mesa_name* nam_u = &tac_u.pag_u.nam_u;
-  u3_mesa_data* dat_u = &tac_u.pag_u.dat_u;
-  nam_u->boq_y = 13;
-  dat_u->tot_w = (jumbo_w + 1023) / 1024;
+  {
+    c3_w jumbo_w = u3r_met(3, pag);
+    c3_y* jumbo_y = c3_calloc(jumbo_w);
+    u3r_bytes(0, jumbo_w, jumbo_y, pag);
+    u3z(pag);
+    mesa_sift_pact(&tac_u, jumbo_y, jumbo_w);
+  }
+  c3_w jumbo_pact_w = tac_u.pag_u.dat_u.len_w;
+  c3_y* jumbo_pact_y = tac_u.pag_u.dat_u.fra_y;
 
   // compute LSS data
   //
   // TODO: this assumes we have the entire message. Should be switched to use
   // lss_builder_transceive instead.
-  c3_w leaves_w = dat_u->tot_w;
+  c3_w leaves_w = (jumbo_pact_w + 1023) / 1024;
   lss_builder bil_u;
   lss_builder_init(&bil_u, leaves_w);
   for ( c3_w i = 0; i < leaves_w; i++ ) {
-    c3_y* leaf_y = tac_u.pag_u.dat_u.fra_y + (i*1024);
-    c3_w leaf_w = (i < leaves_w - 1) ? 1024 : jumbo_w % 1024;
+    c3_y* leaf_y = jumbo_pact_y + (i*1024);
+    c3_w leaf_w = (i < leaves_w - 1) ? 1024 : jumbo_pact_w % 1024;
     lss_builder_ingest(&bil_u, leaf_y, leaf_w);
   }
   lss_hash* proof = lss_builder_finalize(&bil_u);
   c3_w proof_len = lss_proof_size(leaves_w);
+
+
+  // send packets
+  u3_mesa_name* nam_u = &tac_u.pag_u.nam_u;
+  u3_mesa_data* dat_u = &tac_u.pag_u.dat_u;
+  nam_u->boq_y = 13;
+  dat_u->tot_w = leaves_w;
 
   if ( c3y == nam_u->nit_o && leaves_w > 4) {
     #ifdef MESA_DEBUG
@@ -1737,8 +1739,8 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
     #endif
     
     // send proof packet
-    tac_u.pag_u.dat_u.len_w = proof_len*sizeof(lss_hash);
-    memcpy(tac_u.pag_u.dat_u.fra_y, proof, tac_u.pag_u.dat_u.len_w);
+    dat_u->len_w = proof_len*sizeof(lss_hash);
+    memcpy(dat_u->fra_y, proof, dat_u->len_w);
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
@@ -1751,8 +1753,8 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
   for (c3_w i = 0; i < leaves_w; i++) {
     nam_u->nit_o = __((i == 0) && (leaves_w <= 4));
     nam_u->fra_w = i;
-    dat_u->fra_y = tac_u.pag_u.dat_u.fra_y + (i*1024);
-    dat_u->len_w = c3_min(jumbo_w - (i*1024), 1024);
+    dat_u->fra_y = jumbo_pact_y + (i*1024);
+    dat_u->len_w = c3_min(jumbo_pact_w - (i*1024), 1024);
 
     if ( c3y == nam_u->nit_o ) {
       // inline proof; omit first leaf
