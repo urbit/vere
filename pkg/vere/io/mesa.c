@@ -1749,12 +1749,12 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
 
   // send leaf packets
   for (c3_w i = 0; i < leaves_w; i++) {
-    tac_u.pag_u.nam_u.nit_o = __(i == 0);
+    nam_u->nit_o = __((i == 0) && (leaves_w <= 4));
     nam_u->fra_w = i;
     dat_u->fra_y = tac_u.pag_u.dat_u.fra_y + (i*1024);
     dat_u->len_w = c3_min(jumbo_w - (i*1024), 1024);
 
-    if ( (c3y == tac_u.pag_u.nam_u.nit_o) && (leaves_w <= 4) ) {
+    if ( c3y == nam_u->nit_o ) {
       // inline proof; omit first leaf
       proof_len--;
       proof++;
