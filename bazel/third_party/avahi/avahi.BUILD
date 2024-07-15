@@ -17,7 +17,7 @@ configure_make(
         "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
         "//conditions:default": ["--jobs=`nproc`"],
     }),
-    configure_options = ["--with-dbus-system-address='unix:path=/var/run/dbus/system_bus_socket' --with-xml=none --disable-libevent --disable-glib --disable-gobject --disable-gdbm --disable-qt3 --disable-qt4 --disable-qt5 --disable-gtk --disable-gtk3 --disable-mono --disable-monodoc --disable-python --disable-libdaemon --enable-compat-libdns_sd --disable-rpath"],
+    configure_options = ["--with-dbus-system-address='unix:path=/var/run/dbus/system_bus_socket' --with-xml=none --disable-libevent --disable-glib --disable-gobject --disable-gdbm --disable-qt3 --disable-qt4 --disable-qt5 --disable-gtk --disable-gtk3 --disable-mono --disable-monodoc --disable-python --disable-libdaemon --enable-compat-libdns_sd --disable-rpath --with-distro=none"],
     lib_source = ":all",
     # out_include_dir = "avahi-compat-libdns_sd",
     deps = ["@dbus"],
