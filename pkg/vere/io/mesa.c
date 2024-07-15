@@ -2338,9 +2338,6 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   }
   _mesa_put_peer(sam_u, pac_u->pok_u.pay_u.her_d, per_u);
 
-  //  XX could check cache for ack (completed duplicate)
-  _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, *lan_u);
-
   u3_ovum_peer nes_f;
   u3_ovum_bail bal_f;
   void*        ptr_v;
