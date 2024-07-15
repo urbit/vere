@@ -1734,15 +1734,15 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
   dat_u->tot_w = leaves_w;
 
   if ( c3y == nam_u->nit_o && leaves_w > 4) {
-    #ifdef MESA_DEBUG
-      u3l_log(" sending proof packet");
-    #endif
-    
-    // send proof packet
-    dat_u->len_w = proof_len*sizeof(lss_hash);
-    memcpy(dat_u->fra_y, proof, dat_u->len_w);
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
+        #ifdef MESA_DEBUG
+          u3l_log(" sending proof packet");
+        #endif
+        dat_u->len_w = proof_len*sizeof(lss_hash);
+        c3_y* proof_y = c3_malloc(dat_u->len_w);
+        memcpy(proof_y, proof, dat_u->len_w);
+        dat_u->fra_y = proof_y;
        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
        _mesa_del_pit(sam_u, nam_u);
        u3z(pin);
