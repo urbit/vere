@@ -352,7 +352,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
     }
     else if ( siz_z != _ce_len(pgs_z) ) {
       fprintf(stderr, "loom: %s corrupt size %zu\r\n", img_u->nam_c, siz_z);
-      return _ce_img_good;
+      return _ce_img_size;
     }
     else if ( pgs_z > UINT32_MAX ) {
       fprintf(stderr, "loom: %s overflow %zu\r\n", img_u->nam_c, siz_z);
