@@ -175,6 +175,7 @@ typedef struct _u3_pend_req {
   u3_peer*               per_u; // backpointer
   c3_w                   nex_w; // number of the next fragment to be sent
   c3_w                   tot_w; // total number of fragments expected
+  u3_auth_data           aum_u; // message authenticator
   uv_timer_t             tim_u; // timehandler
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_w                   len_w;
@@ -1904,6 +1905,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
   req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
+  req_u->aum_u = pac_u->pag_u.dat_u.aum_u;
 
   c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
   u3_assert( siz_w == 1024 ); // boq_y == 13
@@ -2134,10 +2136,12 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       // construct jumbo frame
       c3_w jumbo_len_w = (1024 * (req_u->tot_w - 1)) + pac_u->pag_u.dat_u.len_w;
       pac_u->pag_u.nam_u.boq_y = 31; // TODO: use actual jumbo bloq
+      pac_u->pag_u.dat_u.tot_w = 1;
+      pac_u->pag_u.nam_u.fra_w = 0;
       pac_u->pag_u.dat_u.len_w = jumbo_len_w;
       pac_u->pag_u.dat_u.fra_y = c3_realloc(pac_u->pag_u.dat_u.fra_y, jumbo_len_w);
       memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, jumbo_len_w);
-      pic_u->pac_u.pag_u.nam_u.fra_w = 0;
+      pac_u->pag_u.dat_u.aum_u = req_u->aum_u;
 
       u3_noun lan = u3_mesa_encode_lane(lan_u);
 
