@@ -1980,19 +1980,13 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
   u3_mesa_pict* nex_u = req_u->pic_u;
   c3_w nex_w = req_u->nex_w;
   for ( int i = 0; i < win_w; i++ ) {
-    c3_y* buf_y = c3_calloc(PACT_SIZE);
     c3_w fra_w = nex_w + i;
     if ( fra_w >= req_u->tot_w ) {
       break;
     }
     nex_u->pac_u.pek_u.nam_u.fra_w = nex_w + i;
-    c3_w siz_w  = mesa_etch_pact(buf_y, &nex_u->pac_u);
-    if ( siz_w == 0 ) {
-      u3l_log("failed to etch");
-      u3_assert( 0 );
-    }
-    // TODO: better route management
-    _mesa_send_buf(sam_u, lan_u, buf_y, siz_w);
+    _mesa_add_our_to_pit(sam_u, &nex_u->pac_u.pek_u.nam_u);
+    _mesa_send(nex_u, &lan_u);
     _mesa_req_pact_sent(req_u, &nex_u->pac_u.pek_u.nam_u);
   }
 }
