@@ -1725,12 +1725,12 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
   lss_hash* proof = lss_builder_finalize(&bil_u);
   c3_w proof_len = lss_proof_size(leaves_w);
 
-  u3_mesa_name nam_u = tac_u.pag_u.nam_u;
-  u3_mesa_data dat_u = tac_u.pag_u.dat_u;
-  nam_u.boq_y = 13;
-  dat_u.tot_w = leaves_w;
+  u3_mesa_name* nam_u = &tac_u.pag_u.nam_u;
+  u3_mesa_data* dat_u = &tac_u.pag_u.dat_u;
+  nam_u->boq_y = 13;
+  dat_u->tot_w = leaves_w;
 
-  if ( c3y == nam_u.nit_o && leaves_w > 4) {
+  if ( c3y == nam_u->nit_o && leaves_w > 4) {
     #ifdef MESA_DEBUG
       u3l_log(" sending proof packet");
     #endif
@@ -1738,42 +1738,46 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
     // send proof packet
     tac_u.pag_u.dat_u.len_w = proof_len*sizeof(lss_hash);
     memcpy(tac_u.pag_u.dat_u.fra_y, proof, tac_u.pag_u.dat_u.len_w);
-    u3_weak pin = _mesa_get_pit(sam_u, &nam_u);
+    u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
-       _mesa_del_pit(sam_u, &nam_u);
+       _mesa_del_pit(sam_u, nam_u);
        u3z(pin);
     }
   }
 
-  #ifdef MESA_DEBUG
-    u3l_log(" sending up to %u leaf packets", leaves_w);
-  #endif
   // send leaf packets
-  tac_u.pag_u.nam_u.nit_o = c3n;
-
   for (c3_w i = 0; i < leaves_w; i++) {
-    nam_u.fra_w = i;
-    dat_u.fra_y = jumbo_y + (i*1024);
-    dat_u.len_w = c3_min(jumbo_w - (i*1024), 1024);
+    tac_u.pag_u.nam_u.nit_o = __(i == 0);
+    nam_u->fra_w = i;
+    dat_u->fra_y = jumbo_y + (i*1024);
+    dat_u->len_w = c3_min(jumbo_w - (i*1024), 1024);
 
-    lss_pair* pair = lss_builder_pair(&bil_u, i);
-    if ( NULL == pair ) {
-      dat_u.aup_u.len_y = 0;
-      dat_u.aum_u.typ_e = AUTH_NONE;
+    if ( (c3y == tac_u.pag_u.nam_u.nit_o) && (leaves_w <= 4) ) {
+      // inline proof; omit first leaf
+      proof_len--;
+      proof++;
+      dat_u->aup_u.len_y = proof_len;
+      memcpy(dat_u->aup_u.has_y, proof, proof_len*sizeof(lss_hash));
     } else {
-      dat_u.aup_u.len_y = 2;
-      dat_u.aum_u.typ_e = AUTH_NEXT;
-      memcpy(dat_u.aup_u.has_y[0], (*pair)[0], sizeof(lss_hash));
-      memcpy(dat_u.aup_u.has_y[1], (*pair)[1], sizeof(lss_hash));
+      lss_pair* pair = lss_builder_pair(&bil_u, i);
+      if ( NULL == pair ) {
+        dat_u->aup_u.len_y = 0;
+        dat_u->aum_u.typ_e = AUTH_NONE;
+      } else {
+        dat_u->aup_u.len_y = 2;
+        dat_u->aum_u.typ_e = AUTH_NEXT;
+        memcpy(dat_u->aup_u.has_y[0], (*pair)[0], sizeof(lss_hash));
+        memcpy(dat_u->aup_u.has_y[1], (*pair)[1], sizeof(lss_hash));
+      }
     }
-    u3_weak pin = _mesa_get_pit(sam_u, &nam_u);
+    u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin) {
       #ifdef MESA_DEBUG
-        u3l_log(" sending leaf packet, fra_w: %u", nam_u.fra_w);
+        u3l_log(" sending leaf packet, fra_w: %u", nam_u->fra_w);
       #endif
       _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
-      _mesa_del_pit(sam_u, &nam_u);
+      _mesa_del_pit(sam_u, nam_u);
       u3k(pin);
     }
   }
