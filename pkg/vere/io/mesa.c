@@ -805,7 +805,9 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     req_u->wat_u[nam_u->fra_w].sip_y = 0;
     req_u->wat_u[nam_u->fra_w].tie_y = 1;
 
-    u3l_log("bitset_put %u", nam_u->fra_w);
+    #ifdef MESA_DEBUG
+      u3l_log("bitset_put %u", nam_u->fra_w);
+    #endif
     bitset_put(&req_u->was_u, nam_u->fra_w);
   } else {
     u3l_log("mesa: no req for sent");
@@ -1003,7 +1005,8 @@ static void
 _update_resend_timer(u3_pend_req *req_u)
 {
   if( req_u->tot_w == 0 || req_u->len_w == req_u->tot_w ) {
-    u3l_log("bad condition");
+    u3l_log("bad condition tot_w: %u  len_w: %u",
+            req_u->tot_w, req_u->len_w);
     return;
   }
   // scan in flight packets, find oldest
@@ -1115,14 +1118,17 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->ack_w = nam_u->fra_w;
   }
 
-#ifdef MESA_DEBUG
-  if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
-    u3l_log("received retry %u", nam_u->fra_w);
-  }
-#endif
+  #ifdef MESA_DEBUG
+    if ( nam_u->fra_w != 0 && req_u->wat_u[nam_u->fra_w].tie_y != 1 ) {
+      u3l_log("received retry %u", nam_u->fra_w);
+    }
+  #endif
 
   req_u->len_w++;
-  u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w);
+
+  #ifdef MESA_DEBUG
+    u3l_log("fragment %u len %u", nam_u->fra_w, req_u->len_w);
+  #endif
   if ( req_u->lef_w == nam_u->fra_w ) {
     req_u->lef_w++;
   }
@@ -1614,14 +1620,16 @@ _mesa_get_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3_weak res = u3h_get(sam_u->pac_p, pax);
-  if ( u3_none == res ) {
-    u3m_p("miss", pax);
-  } else {
-    u3_noun kev = u3nc(u3k(pax), u3k(res));
-    u3m_p("hit", kev);
-    u3z(kev);
-  }
-  u3z(pax);
+  #ifdef MESA_DEBUG
+    if ( u3_none == res ) {
+      u3m_p("miss", pax);
+    } else {
+      u3_noun kev = u3nc(u3k(pax), u3k(res));
+      u3m_p("hit", kev);
+      u3z(kev);
+    }
+    u3z(pax);
+  #endif
   return res;
 }
 
@@ -1650,10 +1658,12 @@ _mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 {
   u3_noun pax = _name_to_scry(nam_u);
   u3h_put(sam_u->pit_p, pax, u3k(val));
-  c3_c* our_c = (c3y == u3h(val))? "&" : "|";
-  c3_c* las_c = (u3_nul == u3t(val))? "~" : "...";
-  u3l_log("mesa: put_pit(our %s, las %s)", our_c, las_c);
-  log_name(nam_u);
+  #ifdef MESA_DEBUG
+    c3_c* our_c = (c3y == u3h(val))? "&" : "|";
+    c3_c* las_c = (u3_nul == u3t(val))? "~" : "...";
+    u3l_log("mesa: put_pit(our %s, las %s)", our_c, las_c);
+    log_name(nam_u);
+  #endif
   u3z(pax);
   u3z(val);
 }
