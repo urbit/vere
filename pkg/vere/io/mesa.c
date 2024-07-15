@@ -2239,20 +2239,22 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_forward_request(sam_u, pic_u);
     return;
   }
+  // record interest
+  _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
+
   c3_w  fra_w = pac_u->pek_u.nam_u.fra_w;
   c3_w  bat_w = _mesa_lop(fra_w);
 
   pac_u->pek_u.nam_u.fra_w = bat_w;
-  
-  // record interest
-  u3l_log(" adding lane to pit\r\n");
-  _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
+  // XX HACK: shouldn't be necessary to change data 0 to init, but
+  // for some reason it's changing the data returned by the scry
+  if ( pac_u->pek_u.nam_u.fra_w == 0 ) {
+    pac_u->pek_u.nam_u.nit_o = c3y;
+  }
 
-  u3l_log(" added\r\n");
   // if we have the page, send it
   u3_weak hit = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
   if ( u3_none != hit ) {
-    u3l_log(" hit\r\n");
     u3_noun tag, dat;
     u3x_cell(hit, &tag, &dat);
     if ( MESA_ITEM == tag ) {
@@ -2263,17 +2265,13 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
   // otherwise, scry
-  u3l_log(" got hit\r\n");
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_WAIT, 0));
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
-  pac_u->pek_u.nam_u.fra_w = fra_w;
   u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
   // NOTE: pic_u not freed
-  u3l_log(" about to peek\r\n");
   u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_jumbo_cb);
   u3z(hit);
-  u3l_log(" ran\r\n");
 }
 
 static void
