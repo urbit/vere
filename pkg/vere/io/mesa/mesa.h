@@ -10,14 +10,8 @@
 #define HEAD_SIZE         4             //  header size in bytes
 #define PACT_SIZE      1472
 
-#define HOP_NONE 0b0
-#define HOP_SHORT 0b1
-#define HOP_LONG 0b10
-#define HOP_MANY 0b11
-
 #define MESA_COOKIE_LEN   4
 static c3_y MESA_COOKIE[4] = { 0x5e, 0x1d, 0xad, 0x51 };
-
 
 typedef enum _u3_mesa_ptag {
   PACT_RESV = 0,
@@ -31,12 +25,12 @@ typedef enum _u3_mesa_rout_tag {
   ROUT_OTHER = 1
 } u3_mesa_rout_tag;
 
-typedef enum _u3_mesa_nexh {
-  NEXH_NONE = 0,
-  NEXH_SBYT = 1,
-  NEXH_ONLY = 2,
-  NEXH_MANY = 3
-} u3_mesa_nexh;
+typedef enum _u3_mesa_hop_type {
+  HOP_NONE  = 0,
+  HOP_SHORT = 1,
+  HOP_LONG  = 2,
+  HOP_MANY  = 3
+} u3_mesa_hop_type;
 
 typedef struct _u3_mesa_name_meta {
   c3_y         ran_y;  // rank (2 bits)
@@ -94,7 +88,7 @@ typedef struct _u3_mesa_data {
 
 
 typedef struct _u3_mesa_head {
-  u3_mesa_nexh     nex_y;  // next-hop
+  u3_mesa_hop_type nex_y;  // next-hop
   c3_y             pro_y;  // protocol version
   u3_mesa_ptag     typ_y;  // packet type
   c3_y             hop_y;  // hopcount
@@ -111,7 +105,7 @@ typedef struct _u3_mesa_peek_pact {
   u3_mesa_name     nam_u;
 } u3_mesa_peek_pact;
 
-typedef struct _u3_mesa_hop {
+typedef struct _u3_mesa_hop_once {
   c3_w  len_w;
   c3_y* dat_y;
 } u3_mesa_hop_once;

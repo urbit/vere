@@ -464,9 +464,42 @@ _mesa_sift_hop_long(u3_mesa_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
   hop_u->dat_y = c3_calloc(hop_u->len_w);
   memcpy(hop_u->dat_y, buf_y + cur_w, hop_u->len_w);
 
-  return cur_w;
+  return cur_w + hop_u->len_w;
 }
 
+static c3_w
+_mesa_sift_hops(u3_mesa_page_pact* pac_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
+{
+  switch ( nex_y ) {
+    default: {
+      u3_assert(!"mesa: sift invalid hop type");
+    }
+    case HOP_NONE: return 0;
+    case HOP_SHORT: {
+      CHECK_BOUNDS(6);
+      memcpy(pac_u->sot_u, buf_y, 6);
+      return 6;
+    }
+    case HOP_LONG: {
+      return _mesa_sift_hop_long(&pac_u->one_u, buf_y, len_w);
+    }
+    case HOP_MANY: {
+      c3_w siz_w = 0;
+      CHECK_BOUNDS(siz_w + 1);
+      pac_u->man_u.len_w = buf_y[0];
+      siz_w++;
+
+      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pac_u->man_u.len_w);
+
+      for( c3_w i = 0; i < pac_u->man_u.len_w; i++ ) {
+        siz_w += _mesa_sift_hop_long(&pac_u->man_u.dat_y[i],
+                                     buf_y + siz_w,
+                                     len_w - siz_w);
+      }
+      return siz_w;
+    }
+  }
+}
 
 static c3_w
 _mesa_sift_page_pact(u3_mesa_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
@@ -484,43 +517,10 @@ _mesa_sift_page_pact(u3_mesa_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
   }
   cur_w += nex_w;
 
-  switch ( nex_y ) {
-    default: {
-      return 0;
-    }
-    case HOP_NONE: break;
-    case HOP_SHORT: {
-      CHECK_BOUNDS(cur_w + 6);
-      memcpy(pac_u->sot_u, buf_y + cur_w, 6);
-      cur_w += 6;
-    } break;
-    case HOP_LONG: {
-      c3_w hop_w = _mesa_sift_hop_long(&pac_u->one_u, buf_y + cur_w, len_w - cur_w);
-      if( hop_w == 0 ) {
-        return 0;
-      }
-      cur_w += hop_w;
-    } break;
-    case HOP_MANY: {
-      CHECK_BOUNDS(cur_w + 1);
-      pac_u->man_u.len_w = buf_y[cur_w];
-      cur_w++;
-
-      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pac_u->man_u.len_w);
-
-      for( int i = 0; i < pac_u->man_u.len_w; i++ ) {
-        c3_w hop_w = _mesa_sift_hop_long(&pac_u->man_u.dat_y[i], buf_y + cur_w ,len_w - cur_w);
-        if ( hop_w == 0 ) {
-          return 0;
-        }
-        cur_w += hop_w;
-      }
-    }
-  }
+  cur_w += _mesa_sift_hops(pac_u, nex_y, buf_y + cur_w, len_w);
 
   return cur_w;
 }
-
 
 static c3_w
 _mesa_sift_peek_pact(u3_mesa_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
@@ -600,7 +600,6 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   {
     c3_w mug_w = u3r_mug_bytes(buf_y, res_w);
     mug_w &= 0xFFFFF;
-
 
     if ( mug_w != pac_u->hed_u.mug_w ) {
       /* u3l_log("mesa: failed mug"); */
@@ -875,6 +874,28 @@ _mesa_size_data(u3_mesa_data* dat_u)
 }
 
 static c3_w
+_mesa_size_hops(u3_mesa_pact* pac_u)
+{
+  if ( PACT_PAGE != pac_u->hed_u.typ_y ) {
+    return 0;
+  }
+
+  switch ( pac_u->hed_u.nex_y ) {
+    case HOP_NONE:  return 0;
+    case HOP_SHORT: return 6;
+    case HOP_LONG:  return 1 + pac_u->pag_u.one_u.len_w;
+    case HOP_MANY: {
+      c3_w siz_w = 0;
+      for( c3_w i = 0; i < pac_u->pag_u.man_u.len_w; i++ ) {
+        siz_w += 1 + pac_u->pag_u.man_u.dat_y[i].len_w;
+      }
+      return siz_w;
+    }
+    default: u3_assert(!"mesa: invalid hop type");
+  }
+}
+
+static c3_w
 _mesa_size_pact(u3_mesa_pact* pac_u)
 {
   c3_w siz_w = 8; // header + cookie;
@@ -887,7 +908,7 @@ _mesa_size_pact(u3_mesa_pact* pac_u)
     case PACT_PAGE: {
       siz_w += _mesa_size_name(&pac_u->pag_u.nam_u);
       siz_w += _mesa_size_data(&pac_u->pag_u.dat_u);
-      // XX hops
+      siz_w += _mesa_size_hops(pac_u);
     } break;
 
     case PACT_POKE: {
@@ -943,7 +964,6 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
       return 0;
     }
   }
-
 
   hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
   hed_u->mug_w &= 0xFFFFF;

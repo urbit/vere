@@ -1442,6 +1442,11 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__turf:
     case c3__saxo:
     case c3__nail: {
+      #ifdef MESA_DEBUG
+        c3_c* tag_c = u3r_string(tag);
+        u3l_log("mesa: send old %s", tag_c);
+        c3_free(tag_c);
+      #endif
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
   }
@@ -2058,7 +2063,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     #ifdef MESA_DEBUG
       u3l_log(" forwarding");
     #endif
-    // update_hopcount(&pac_u->hed_u); // TODO reinstate
+
+    update_hopcount(&pac_u->hed_u);
+    c3_etch_word(pac_u->pag_u.sot_u, lan_u.pip_w);
+    c3_etch_short(pac_u->pag_u.sot_u + 4, lan_u.por_s);
+
     //  TODO actually stick next hop in packet
     _mesa_send_pact(sam_u, u3k(las), per_u, pac_u);
     _mesa_del_pit(sam_u, nam_u);
@@ -2121,8 +2130,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     u3_lane lon_u;
     if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
-      lon_u.pip_w = *(c3_w*)pac_u->pag_u.sot_u;
-      lon_u.por_s = *(c3_s*)&pac_u->pag_u.sot_u[4];
+      lon_u.pip_w = c3_sift_word(pac_u->pag_u.sot_u);
+      lon_u.por_s = c3_sift_short(pac_u->pag_u.sot_u + 4);
     }
     else {
       lon_u = lan_u;
