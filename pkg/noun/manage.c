@@ -462,11 +462,12 @@ u3m_file(c3_c* pas_c)
 u3m_quac**
 u3m_mark()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*4);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
   qua_u[0] = u3v_mark();
   qua_u[1] = u3j_mark();
   qua_u[2] = u3n_mark();
   qua_u[3] = u3a_mark_road();
+  qua_u[4] = NULL;
 
   return qua_u;
 }

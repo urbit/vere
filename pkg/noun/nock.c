@@ -3050,23 +3050,24 @@ _n_bam(u3_noun kev, void* dat)
 u3m_quac*
 u3n_mark()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u)*2);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("bytecode programs");
 
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w*4;
+  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p)*4;
+  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+
+  qua_u[2] = NULL;
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total nock stuff");
   tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
-  tot_u->len_w = 2;
   tot_u->qua_u = qua_u;
 
   return tot_u;

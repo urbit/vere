@@ -1741,14 +1741,12 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__quac: {
           ret_o = c3y;
-          // construct and send writ here
-          u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
+          u3_writ* wit_u = u3_lord_writ_new(u3K.pir_u->god_u);
           wit_u->typ_e = u3_writ_quiz;
           wit_u->qui_u.ptr_v = car_u;
-          u3l_log("car_u: %p", car_u);
           wit_u->qui_u.quiz_f = _term_io_quiz;
 
-          lord_writ_plan(u3K.pir_u->god_u, wit_u);
+          u3_lord_writ_plan(u3K.pir_u->god_u, wit_u);
 
         } break;
       }

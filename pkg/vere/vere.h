@@ -770,10 +770,15 @@
          u3_atom
          u3_time_t_in_ts(time_t tim);
 #endif
-      /* lord_writ_plan(): enqueue a writ and send. 
+      /* u3_lord_writ_new(): allocate a new writ. 
+      */
+        u3_writ*
+        u3_lord_writ_new(u3_lord* god_u);
+
+      /* u3_lord_writ_plan(): enqueue a writ and send. 
       */
         void
-        lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);
+        u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);
     
       /* u3_time_out_ts(): struct timespec from urbit time.
       */

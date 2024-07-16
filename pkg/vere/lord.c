@@ -763,10 +763,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3z(jar);
 }
 
-/* _lord_writ_new(): allocate a new writ.
+/* u3_lord_writ_new(): allocate a new writ.
 */
-static u3_writ*
-_lord_writ_new(u3_lord* god_u)
+u3_writ*
+u3_lord_writ_new(u3_lord* god_u)
 {
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
   return wit_u;
@@ -869,10 +869,10 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
   }
 }
 
-/* lord_writ_plan(): enqueue a writ and send.
+/* u3_lord_writ_plan(): enqueue a writ and send.
 */
 void
-lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
+u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {
     u3_assert( !god_u->ext_u );
@@ -894,7 +894,7 @@ lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 void
 u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_peek;
   wit_u->pek_u = c3_calloc(sizeof(*wit_u->pek_u));
   wit_u->pek_u->ptr_v = pic_u->ptr_v;
@@ -925,7 +925,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 
   //  XX cache check, unless last
   //
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_play(): recompute batch.
@@ -933,7 +933,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 void
 u3_lord_play(u3_lord* god_u, u3_info fon_u)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_play;
   wit_u->fon_u = fon_u;
 
@@ -941,7 +941,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
   //
   // u3_assert( !pay_u.ent_u->nex_u );
 
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_work(): attempt work.
@@ -949,7 +949,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
 void
 u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_work;
   wit_u->wok_u.egg_u = egg_u;
   wit_u->wok_u.job = job;
@@ -963,7 +963,7 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
     god_u->pin_o = c3y;
   }
 
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_save(): save a snapshot.
@@ -975,9 +975,9 @@ u3_lord_save(u3_lord* god_u)
     return c3n;
   }
   else {
-    u3_writ* wit_u = _lord_writ_new(god_u);
+    u3_writ* wit_u = u3_lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_save;
-    lord_writ_plan(god_u, wit_u);
+    u3_lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -991,9 +991,9 @@ u3_lord_cram(u3_lord* god_u)
     return c3n;
   }
   else {
-    u3_writ* wit_u = _lord_writ_new(god_u);
+    u3_writ* wit_u = u3_lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_cram;
-    lord_writ_plan(god_u, wit_u);
+    u3_lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -1003,9 +1003,9 @@ u3_lord_cram(u3_lord* god_u)
 void
 u3_lord_meld(u3_lord* god_u)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_meld;
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_pack(): defragment persistent state.
@@ -1013,9 +1013,9 @@ u3_lord_meld(u3_lord* god_u)
 void
 u3_lord_pack(u3_lord* god_u)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_pack;
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_exit(): shutdown gracefully.
@@ -1023,9 +1023,9 @@ u3_lord_pack(u3_lord* god_u)
 void
 u3_lord_exit(u3_lord* god_u)
 {
-  u3_writ* wit_u = _lord_writ_new(god_u);
+  u3_writ* wit_u = u3_lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_exit;
-  lord_writ_plan(god_u, wit_u);
+  u3_lord_writ_plan(god_u, wit_u);
 
   //  XX set timer, then halt
 }

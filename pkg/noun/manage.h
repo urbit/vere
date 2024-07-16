@@ -154,7 +154,6 @@
         typedef struct _u3m_quac {
           c3_c* nam_c;
           c3_w  siz_w;
-          c3_w  len_w;
           struct _u3m_quac** qua_u;
         } u3m_quac;
 
