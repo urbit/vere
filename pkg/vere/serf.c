@@ -175,7 +175,7 @@ _serf_grab(u3_noun sac, c3_o pri_o)
       u3z(sac);
       return u3_nul;
     } else {
-      u3m_quac** all_u = c3_malloc(sizeof(*all_u) * 10);
+      u3m_quac** all_u = c3_malloc(sizeof(*all_u) * 11);
       all_u[0] = pro_u;
 
       u3m_quac** var_u = u3m_mark();
@@ -205,8 +205,12 @@ _serf_grab(u3_noun sac, c3_o pri_o)
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
       all_u[8]->siz_w = u3a_sweep() * 4;
+      
+      all_u[9] = c3_calloc(sizeof(*all_u[9]));
+      all_u[9]->nam_c = strdup("loom");
+      all_u[9]->siz_w = u3C.wor_i * 4;
 
-      all_u[9] = NULL;
+      all_u[10] = NULL;
 
       if ( c3y == pri_o ) {
         _serf_print_quacs(fil_u, all_u);
