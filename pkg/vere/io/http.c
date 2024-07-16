@@ -732,7 +732,9 @@ _slice_mime(range_request rng, u3_noun octs)
     else {
       // [~ @]
       if ( rng.end_z > len_w ) {
-        return out;
+        // -9000/42
+        out.beg_z = 0;
+        out.end_z = len_w - 1;
       }
       else {
         // slice last bytes
@@ -752,7 +754,9 @@ _slice_mime(range_request rng, u3_noun octs)
     }
   }
   else if (rng.end_z > len_w) {
-    return out;
+    // 12-9000/42
+    out.beg_z = rng.beg_z;
+    out.end_z = len_w - 1;
   }
   else {
     // [@ @]
@@ -944,6 +948,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
           u3_weak nac = u3h_get(htd_u->nax_p, bem);
 
           if ( u3_none == nac ) {
+            //  cache, then serve subsequent range requests from cache
             req_u->peq_u->las_o = c3n;
             req_u->peq_u->pax = u3k(bem);
             u3_pier_peek(htd_u->car_u.pir_u, gang, u3k(u3nt(0, c3__ex, bem)),
