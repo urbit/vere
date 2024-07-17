@@ -320,6 +320,7 @@
         u3_even* vex_u;                     //  --prop-*, boot enhancements
 
         c3_o    beb;                        //  --behn-allow-blocked
+        c3_z    siz_i;                      //  --lmdb-map-size
       } u3_opts;
 
     /* u3_host: entire host.

@@ -113,6 +113,17 @@ you can pass them with [`--per_file_copt`][per_file_copt] like so:
 bazel build --per_file_copt='pkg/.*@-DMACRO'
 ```
 
+## LSP Integration
+
+```console
+bazel run //bazel:refresh_compile_commands
+```
+
+Running this command will generate a `compile_commands.json` file in the root 
+of the repository, which `clangd` (or other language server processors) will 
+use automatically to provide modern editor features like syntax highlighting, 
+go-to definitions, call hierarchies, symbol manipulation, etc.
+
 ## Test Commands
 
 You can build and run unit tests only on native builds. If you have a native
@@ -149,6 +160,13 @@ error on macOS, the version of `clang` expected by the build system likely
 doesn't match the version of `clang` installed on your system. To address this,
 run `clang --version` and pass the version number via
 `--clang_version="<version_string>"` to the failing command.
+
+If build fails on nix/NixOS, you should pass `ACLOCAL_PATH` environment
+variable to bazel, using `--action_env=ACLOCAL_PATH=$ACLOCAL_PATH`, like so:
+
+```
+bazel build :urbit --action_env=ACLOCAL_PATH=$ACLOCAL_PATH
+```
 
 [^1]: If you're interested in digging into the details of the build system,
       check out [`WORKSPACE.bazel`](WORKSPACE.bazel),
