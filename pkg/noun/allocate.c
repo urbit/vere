@@ -174,7 +174,6 @@ _box_detach(u3a_box* box_u)
     c3_w sel_w = _box_slot(box_u->siz_w);
 
     if ( fre_p != u3R->all.fre_p[sel_w] ) {
-      u3l_log("sel_w %u", sel_w);
       u3_assert(!"loom: corrupt");
     }
     u3R->all.fre_p[sel_w] = nex_p;
@@ -429,11 +428,6 @@ _ca_reclaim_half(void)
 
 /* _ca_willoc(): u3a_walloc() internals.
 */
-static c3_d lel_d = 0;
-
-static void hello() {
-  u3l_log("hello");
-}
 
 static void*
 _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
@@ -441,15 +435,6 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
   c3_w siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
   c3_w sel_w = _box_slot(siz_w);
 
-  if ( u3R == &(u3H->rod_u) ) {
-    lel_d++;
-    if (lel_d % 1000000 == 0) {
-      u3l_log("-----------------------------");
-      u3a_idle(u3R);
-      u3l_log("siz_w %u, sel_w %u, pid %d", siz_w, sel_w, getpid());
-      u3l_log("-----------------------------");
-    }
-  }
   /*  XX: this logic is totally bizarre, but preserve it.
   **
   **  This means we use the next size bigger instead of the "correct"
@@ -467,8 +452,6 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
   /* } */
 
   // u3l_log("walloc %d: *pfr_p %x", len_w, u3R->all.fre_p[sel_w]);
-  c3_w lop_w = 0;
-  c3_w lin_w = 0;
   while ( 1 ) {
     u3p(u3a_fbox) *pfr_p = &u3R->all.fre_p[sel_w];
 
@@ -520,12 +503,6 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         if ( (des_w) > u3to(u3a_fbox, *pfr_p)->box_u.siz_w ) {
           /* This free block is too small.  Continue searching.
           */
-          if ((off_w == 0) && (ald_w == 1) && (siz_w != u3to(u3a_fbox, *pfr_p)->box_u.siz_w)) {
-          /* if (des_w == siz_w) { */
-            lop_w++;
-          } else {
-            lin_w++;
-          }
           pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
           continue;
         }
