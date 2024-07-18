@@ -6,9 +6,15 @@
 
 #include <ctype.h>
 #include <errno.h>
+#if defined(U3_OS_osx)
 #include <execinfo.h>
+#endif
 #include <fcntl.h>
 #include <sys/stat.h>
+#if defined(U3_OS_linux)
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+#endif
 
 #include "allocate.h"
 #include "backtrace.h"
@@ -1774,8 +1780,9 @@ _cm_limits(void)
 }
 
 struct bt_cb_data {
-  c3_y count;
-  c3_y fail;
+  c3_y  count;
+  c3_y  fail;
+  c3_c* pn_c;
 };
 
 void
@@ -1802,19 +1809,32 @@ bt_cb(void* data,
 
   if ( bdata->count <= 100 ) {
     c3_c* loc[128];
-    snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
-    u3l_log("%-3d %-35s %s", bdata->count - 1, function, (c3_c *)loc);
+    if (filename != 0)
+      snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
+    else
+      snprintf((c3_c *)loc, 128, "-");
+
+    c3_c* fn_c;
+    if (function != 0 || bdata->pn_c != 0)
+      fn_c = function != 0 ? function : bdata->pn_c;
+    else
+      fn_c = "-";
+
+    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c , (c3_c *)loc);
+
+    bdata->pn_c = 0;
     return 0;
   }
   else {
+    bdata->pn_c = 0;
     return 1;
   }
 }
 
-/* _main_self_path(): get binary self-path.
+/* _self_path(): get binary self-path.
  */
 c3_y
-_main_self_path(c3_c *pat_c)
+_self_path(c3_c *pat_c)
 {
   c3_i len_i = 0;
   c3_i pat_i;
@@ -1847,14 +1867,15 @@ u3m_fault(void* adr_v, c3_i ser_i)
     u3l_log("loom: external fault: %p (%p : %p)\r\n",
             adr_w, u3_Loom, u3_Loom + u3C.wor_i);
 
-    u3l_log("Stacktrace (%d):", ser_i);
-
     void* bt_state;
     c3_i  ret_i;
-    struct bt_cb_data data = { 0, 0 };
-
+    struct bt_cb_data data = { 0, 0, 0 };
     c3_c* self_path_c[4096] = {0};
-    if ( _main_self_path((c3_c*)self_path_c) == 0 ) {
+
+#if defined(U3_OS_osx)
+    u3l_log("Stacktrace:");
+
+    if ( _self_path((c3_c*)self_path_c) == 0 ) {
       bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
       ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
       if (data.fail == 0) u3l_log("");
@@ -1881,6 +1902,36 @@ u3m_fault(void* adr_v, c3_i ser_i)
 
       free(strings);
     }
+#elif defined(U3_OS_linux)
+    u3l_log("Stacktrace:");
+
+    if ( _self_path((c3_c*)self_path_c) == 0 ) {
+      bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+
+      unw_context_t context;
+      unw_cursor_t cursor;
+      unw_getcontext(&context);
+      unw_init_local(&cursor, &context);
+      unw_word_t pc, sp;
+
+      c3_c* pn_c[1024] = {0};
+      c3_w  offp_w = 0;
+
+      do {
+        unw_get_reg(&cursor, UNW_REG_IP, &pc);
+        unw_get_reg(&cursor, UNW_REG_SP, &sp);
+        if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
+          data.pn_c = pn_c;
+        ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
+      } while (unw_step(&cursor) > 0);
+
+      if ( (data.count > 0) ) u3l_log("");
+    }
+    else {
+      data.fail = 1;
+      u3l_log("Backtrace failed");
+    }
+#endif
 
     u3_assert(0);
     return 0;
