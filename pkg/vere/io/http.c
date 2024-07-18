@@ -731,41 +731,23 @@ _slice_mime(range_request rng, u3_noun octs)
     }
     else {
       // [~ @]
-      if ( rng.end_z > len_w ) {
-        // -9000/42
-        out.beg_z = 0;
-        out.end_z = len_w - 1;
-      }
-      else {
-        // slice last bytes
-        out.beg_z = len_w - rng.end_z;
-        out.end_z = len_w - 1;
-      }
+      out.beg_z = len_w - c3_min(rng.end_z, len_w);
+      out.end_z = len_w - 1;
     }
   }
   else if ( SIZE_MAX == rng.end_z ) {
     // [@ ~]
-    if ( rng.beg_z > len_w ) {
-      return out;
-    }
-    else {
-      out.beg_z = rng.beg_z;
-      out.end_z = len_w - 1;
-    }
-  }
-  else if (rng.end_z > len_w) {
-    // 12-9000/42
     out.beg_z = rng.beg_z;
     out.end_z = len_w - 1;
   }
   else {
     // [@ @]
     out.beg_z = rng.beg_z;
-    out.end_z = rng.end_z;
+    out.end_z = c3_min(rng.end_z, len_w - 1);
   }
-  if (    (out.beg_z < len_w)
-       && (out.end_z < len_w)
-       && (out.beg_z <= out.end_z) )
+  if (  (out.beg_z < len_w)
+     && (out.end_z < len_w)
+     && (out.beg_z <= out.end_z) )
   {
     out.dat = u3nc((out.end_z - out.beg_z) + 1,
                    u3qc_cut(3, out.beg_z, (out.end_z + 1) - out.beg_z, oct_w));
@@ -795,7 +777,7 @@ _parse_range(c3_c* txt_c, c3_w len_w)
   return cut;
 }
 
-/* _http_req_dispatch(): dispatch http request to %eyre
+/* _http_req_dispatch(): dispatch http request
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -823,6 +805,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             : u3nc(u3i_string("request"), dat);
     }
 
+    //  XX make _is_http_req function
     if (  (len_w >= 5)
        && ('_' == bas_c[1])
        && ('~' == bas_c[2])
@@ -955,6 +938,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                           req_u->peq_u, _http_foo_cb);
           }
           else {
+            //  XX gang / auth
             h2o_headers_t req_headers = req_u->rec_u->headers;
             c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
 
@@ -1008,6 +992,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     }
 
     else {
+      //  XX move to first branch
       // inject to arvo
       u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
     }
