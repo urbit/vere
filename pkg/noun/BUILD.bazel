@@ -47,6 +47,7 @@ vere_library(
         "@platforms//os:linux": [
             "//pkg/noun/platform/linux",
             "@libexecinfo",
+            "@libunwind",
         ],
         "//conditions:default": [],
     }),

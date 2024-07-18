@@ -252,6 +252,15 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "libunwind",
+    build_file = "//bazel/third_party/libunwind:libunwind.BUILD",
+    sha256 = "ddf0e32dd5fafe5283198d37e4bf9decf7ba1770b6e7e006c33e6df79e6a6157",
+    url = "https://github.com/libunwind/libunwind/releases/download/v1.8.1/libunwind-1.8.1.tar.gz",
+    strip_prefix = "libunwind-{version}",
+    version = "1.8.1",
+)
+
+versioned_http_archive(
     name = "lmdb",
     build_file = "//bazel/third_party/lmdb:lmdb.BUILD",
     patch_args = ["-p1"],
