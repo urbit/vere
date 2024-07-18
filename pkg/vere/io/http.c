@@ -694,8 +694,10 @@ _http_foo_cb(void* vod_p, u3_noun nun)
     }
   }
 
-  // cache only if peek was not at now
-  if ( c3n == peq_u->las_o ) {
+  // cache only if peek was not at now, and nun isn't u3_nul
+  if (  (c3n == peq_u->las_o)
+     && (u3_nul != nun) )
+  {
     u3h_put(htd_u->nax_p, peq_u->pax, nun);
   }
   u3z(peq_u->pax);
@@ -930,15 +932,18 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
           u3_noun bem = u3nq(our, des, cas, spur);
           u3_weak nac = u3h_get(htd_u->nax_p, bem);
 
-          if ( u3_none == nac ) {
-            //  cache, then serve subsequent range requests from cache
+          if (  (u3_none == nac)
+             || (u3_nul == nac)
+             || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
+          {
+            //  maybe cache, then serve subsequent range requests from cache
             req_u->peq_u->las_o = c3n;
             req_u->peq_u->pax = u3k(bem);
             u3_pier_peek(htd_u->car_u.pir_u, gang, u3k(u3nt(0, c3__ex, bem)),
                           req_u->peq_u, _http_foo_cb);
           }
           else {
-            //  XX gang / auth
+
             h2o_headers_t req_headers = req_u->rec_u->headers;
             c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
 
