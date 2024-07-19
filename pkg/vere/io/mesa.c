@@ -1071,6 +1071,19 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
 
 static void _init_lane_state(u3_lane_state*);
 
+static u3_ovum*
+_mesa_dear(u3_auto* car_u, u3_ship her_u, u3_lane lan_u)
+{
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  u3_noun cad;
+  {
+    u3_noun her = u3_ship_to_noun(her_u);
+    u3_noun lan = u3_mesa_encode_lane(lan_u);
+    cad = u3nt(c3__dear, her, lan);
+  }
+  return u3_auto_plan(car_u, u3_ovum_init(0, c3__ames, wir, cad));
+}
+
 /* _mesa_req_pact_done(): mark packet as done
 */
 static void
@@ -1081,24 +1094,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
                     u3_lane       lan_u)
 {
   u3_mesa* sam_u = req_u->per_u->sam_u; //  needed for the MESA_LOG macro
-  c3_d now_d = _get_now_micros();
-
-  u3_lane_state* sat_u;
-  if ( 0 == hop_y ) {
-    c3_i new_i = (
-      (lan_u.pip_w != req_u->per_u->dan_u.pip_w) ||
-      (lan_u.por_s != req_u->per_u->dan_u.por_s)
-    );
-    req_u->per_u->dan_u = lan_u;
-    sat_u = &req_u->per_u->dir_u;
-    if ( new_i ) {
-      _init_lane_state(sat_u);
-    }
-  }
-  else {
-    sat_u = &req_u->per_u->ind_u;
-  }
-  sat_u->her_d = now_d;
 
   // received past the end of the message
   if ( dat_u->tot_w <= nam_u->fra_w ) {
@@ -1171,6 +1166,19 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   else {
     c3_free(par_u);
   }
+
+  u3_lane_state* sat_u;
+  if ( 0 == hop_y && (c3n == _mesa_lanes_equal(&lan_u, &req_u->per_u->dan_u)) ) {
+    req_u->per_u->dan_u = lan_u;
+    sat_u = &req_u->per_u->dir_u;
+    _init_lane_state(sat_u);
+
+    _mesa_dear(&sam_u->car_u, nam_u->her_u, lan_u);
+  }
+  else {
+    sat_u = &req_u->per_u->ind_u;
+  }
+  sat_u->her_d = _get_now_micros();
 
   // handle gauge update
   _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_w]);
@@ -2029,14 +2037,7 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     c3_free(her_c);
   #endif
 
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  u3_noun cad;
-  {
-    u3_noun her = u3_ship_to_noun(dat_u->her_u);
-    u3_noun lan = u3_mesa_encode_lane(per_u->dan_u);
-    cad = u3nt(c3__dear, her, lan);
-  }
-  u3_auto_plan(&per_u->sam_u->car_u, u3_ovum_init(0, c3__ames, wir, cad));
+  _mesa_dear(&per_u->sam_u->car_u, dat_u->her_u, per_u->dan_u);
 
   c3_free(dat_u);
 }
