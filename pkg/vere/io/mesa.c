@@ -166,7 +166,6 @@ typedef struct _u3_peer {
   u3_mesa*       sam_u;  //  backpointer
   c3_o           ful_o;  //  has this been initialized?
   u3_lane        dan_u;  //  direct lane (nullable)
-  u3_lane        may_u;  //  provisional direct lane (nullable)
   u3_lane_state  dir_u;  //  direct lane state
   c3_y           imp_y;  //  galaxy @p
   u3_lane_state  ind_u;  //  indirect lane state
@@ -1533,7 +1532,6 @@ _init_peer(u3_mesa* sam_u, u3_peer* per_u)
   per_u->sam_u = sam_u;
   per_u->ful_o = c3n;
   per_u->dan_u = (u3_lane){0,0};
-  per_u->may_u = (u3_lane){0,0};
   _init_lane_state(&per_u->dir_u);
   per_u->imp_y = 0;
   _init_lane_state(&per_u->ind_u);
@@ -1652,11 +1650,11 @@ _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 /*
 ld: Undefined symbols:
   _log_name, referenced from:
-      __mesa_put_pit in 
-      _log_pact in 
-      _log_pact in 
-      _log_pact in 
-      _log_pact in 
+      __mesa_put_pit in
+      _log_pact in
+      _log_pact in
+      _log_pact in
+      _log_pact in
 clang: error: linker command failed with exit code 1 (use -v to see invocation)
 Target //pkg/vere:urbit failed to build
 */
@@ -2016,12 +2014,20 @@ static void
 _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 {
   if ( u3_ovum_done != new_e ) {
+    #ifdef MESA_DEBUG
+      u3l_log("mesa: arvo page event was not a success");
+    #endif
     return;
   }
   u3_mesa_lane_cb_data* dat_u = egg_u->ptr_v;
   u3_peer* per_u = dat_u->per_u;
-  per_u->dan_u.pip_w = per_u->may_u.pip_w;
-  per_u->dan_u.por_s = per_u->may_u.por_s;
+
+  #ifdef MESA_DEBUG
+    c3_c* her_c = u3_ship_to_string(dat_u->her_u);
+    u3l_log("mesa: %%dear %s", her_c);
+    _log_lane(&dat_u->lan_u);
+    c3_free(her_c);
+  #endif
 
   u3_noun wir = u3nc(c3__ames, u3_nul);
   u3_noun cad;
@@ -2031,6 +2037,8 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     cad = u3nt(c3__dear, her, lan);
   }
   u3_auto_plan(&per_u->sam_u->car_u, u3_ovum_init(0, c3__ames, wir, cad));
+
+  c3_free(dat_u);
 }
 
 static void
@@ -2039,6 +2047,7 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
   #ifdef MESA_DEBUG
     u3l_log("mesa: arvo page event failed");
   #endif
+  c3_free(egg_u->ptr_v);
 }
 
 static void
@@ -2073,10 +2082,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     _init_peer(sam_u, per_u);
     _meet_peer(sam_u, per_u, nam_u->her_u);
   }
-  if ( !pac_u->hed_u.hop_y && !_mesa_lanes_equal(&per_u->dan_u, &lan_u) ) {
-    per_u->may_u.pip_w = lan_u.pip_w;
-    per_u->may_u.por_s = lan_u.por_s;
-  }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
   if ( pac_u->hed_u.hop_y == 0 ) {
@@ -2094,7 +2099,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_weak pin = _mesa_get_pit(sam_u, nam_u);
 
   if ( u3_none == pin ) {
-    #ifdef MESA_DEBUG 
+    #ifdef MESA_DEBUG
       u3l_log(" no PIT entry");
     #endif
     return;
@@ -2140,11 +2145,22 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
-    //  XX should put in cache on success
-    u3_auto_peer(
-      u3_auto_plan(&sam_u->car_u,
-                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad)),
-      per_u, _mesa_page_news_cb, _mesa_page_bail_cb);
+    u3_noun wir = u3nc(c3__ames, u3_nul);
+
+    u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
+             ovo = u3_auto_plan(&sam_u->car_u, ovo);
+
+    if ( !pac_u->hed_u.hop_y && !_mesa_lanes_equal(&per_u->dan_u, &lan_u) ) {
+      //  XX should put in cache on success
+      u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
+      {
+        memcpy(dat_u->her_u, nam_u->her_u, 16);
+        dat_u->lan_u.pip_w = lan_u.pip_w;
+        dat_u->lan_u.por_s = lan_u.por_s;
+        dat_u->per_u = per_u;
+      }
+      u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
+    }
 
     _mesa_free_pict(pic_u);
     u3z(pin);
@@ -2421,7 +2437,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
            ovo = u3_auto_plan(&sam_u->car_u, ovo);
-                            
+
   if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
     _mesa_free_pict(pic_u);
   }
