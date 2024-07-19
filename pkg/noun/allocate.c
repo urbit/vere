@@ -78,10 +78,18 @@ _box_count(c3_ws siz_ws) { }
 static c3_w
 _box_slot(c3_w siz_w)
 {
-  if (siz_w > 64) {
+  if (siz_w > 121) {
     return 58;
   }
-  return (siz_w - u3a_minimum);
+  /* if (siz_w > 64) { */
+  /*   return 58; */
+  /* } */
+  c3_w n = siz_w - u3a_minimum;
+  /* return n; */
+
+  /* c3_w res = (n&~1) - (n/2); */
+  /* u3l_log("%u", res); */
+  return (n&~1) - (n/2);
 }
 
 /* _box_make(): construct a box.
@@ -435,7 +443,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
   c3_w siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
   c3_w sel_w = _box_slot(siz_w);
 
-  /*  XX: this logic is totally bizarre, but preserve it.
+  /*  XX: this logic isltotally bizarre, but preserve it.
   **
   **  This means we use the next size bigger instead of the "correct"
   **  size.  For example, a 20 word allocation will be freed into free
@@ -503,7 +511,12 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         if ( (des_w) > u3to(u3a_fbox, *pfr_p)->box_u.siz_w ) {
           /* This free block is too small.  Continue searching.
           */
-          pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
+          /* u3l_log("smol %u %u, %u", des_w, u3to(u3a_fbox, *pfr_p)->box_u.siz_w, ald_w); */
+          if (des_w < 122) {
+            pfr_p = &u3R->all.fre_p[_box_slot(des_w)];
+          } else {
+            pfr_p = &(u3to(u3a_fbox, *pfr_p)->nex_p);
+          }
           continue;
         }
         else {                  /* free block fits desired alloc size */
