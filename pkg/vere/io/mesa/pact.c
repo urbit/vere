@@ -4,6 +4,7 @@
 #include "vere.h"
 #include "ivory.h"
 #include "ur.h"
+#include "ship.h"
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
 // endif tests
@@ -12,7 +13,6 @@
 #define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
 #define safe_dec(num) (num == 0 ? num : num - 1)
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
-
 
 /* Logging functions
 */
@@ -51,7 +51,7 @@ log_name(u3_mesa_name* nam_u)
 
   c3_c* her_c;
   {
-    u3_noun her = u3dc("scot", c3__p, u3i_chubs(2, nam_u->her_d));
+    u3_noun her = u3dc("scot", c3__p, u3_ship_to_noun(nam_u->her_u));
     her_c = u3r_string(her);
     u3z(her);
   }
@@ -182,20 +182,16 @@ update_hopcount(u3_mesa_head* hed_u) //  TODO rename, _inc_hopcount()?
 }
 
 static c3_y
-_mesa_rank(c3_d who_d[2])
+_mesa_rank(u3_ship who_u)
 {
-  if ( who_d[1] ) {
-    return 3;
-  }
-  else if ( who_d[0] >> 32 ) {
-    return 2;
-  }
-  else if ( who_d[0] >> 16 ) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+  switch ( u3_ship_rank(who_u) ) {
+    case c3__pawn: return 3;
+    case c3__earl: return 2;
+    case c3__duke: return 1;
+    case c3__king: return 0;
+    case c3__czar: return 0;
+    default: u3_assert(!"unreachable");
+  };
 }
 
 /* lifecycle
@@ -237,63 +233,10 @@ _ames_etch_word(c3_y buf_y[4], c3_w wod_w)
   buf_y[3] = (wod_w >> 24) & 0xff;
 }
 
-
-
-/* _ames_chub_bytes(): c3_d to c3_y[8]
-** XX factor out, deduplicate with other conversions
-*/
-static inline void
-_ames_bytes_chub(c3_y byt_y[8], c3_d num_d)
-{
-  byt_y[0] = num_d & 0xff;
-  byt_y[1] = (num_d >>  8) & 0xff;
-  byt_y[2] = (num_d >> 16) & 0xff;
-  byt_y[3] = (num_d >> 24) & 0xff;
-  byt_y[4] = (num_d >> 32) & 0xff;
-  byt_y[5] = (num_d >> 40) & 0xff;
-  byt_y[6] = (num_d >> 48) & 0xff;
-  byt_y[7] = (num_d >> 56) & 0xff;
-}
-
-static inline void
-_ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
-{
-  c3_y sip_y[16] = {0};
-
-  _ames_bytes_chub(sip_y, sip_d[0]);
-  _ames_bytes_chub(sip_y + 8, sip_d[1]);
-
-  memcpy(buf_y, sip_y, c3_min(16, len_y));
-}
-
-static inline c3_d
-_ames_chub_bytes(c3_y byt_y[8])
-{
-  return (c3_d)byt_y[0]
-       | (c3_d)byt_y[1] << 8
-       | (c3_d)byt_y[2] << 16
-       | (c3_d)byt_y[3] << 24
-       | (c3_d)byt_y[4] << 32
-       | (c3_d)byt_y[5] << 40
-       | (c3_d)byt_y[6] << 48
-       | (c3_d)byt_y[7] << 56;
-}
-
 static inline c3_w
 _ames_sift_word(c3_y buf_y[4])
 {
   return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
-}
-
-
-static inline void
-_ames_ship_to_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
-{
-  c3_y sip_y[16] = {0};
-  memcpy(sip_y, buf_y, c3_min(16, len_y));
-
-  sip_d[0] = _ames_chub_bytes(sip_y);
-  sip_d[1] = _ames_chub_bytes(sip_y + 8);
 }
 
 c3_o
@@ -340,7 +283,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
 
   c3_y her_y = 2 << met_u.ran_y;
   CHECK_BOUNDS(cur_w + her_y)
-  _ames_ship_to_chubs(nam_u->her_d, her_y, buf_y + cur_w);
+  u3_ship_of_bytes(nam_u->her_u, her_y, buf_y + cur_w);
   cur_w += her_y;
 
   c3_y rif_y = met_u.rif_y + 1;
@@ -649,7 +592,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   c3_w cur_w = 0;
   u3_mesa_name_meta met_u;
 
-  met_u.ran_y = _mesa_rank(nam_u->her_d);
+  met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
   if ( c3y == nam_u->nit_o ) {
@@ -675,7 +618,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   //ship
   cur_w++;
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
-  _ames_ship_of_chubs(nam_u->her_d, her_y, buf_y + cur_w);
+  u3_ship_to_bytes(nam_u->her_u, her_y, buf_y + cur_w);
   cur_w += her_y;
 
   // rift
@@ -818,7 +761,7 @@ _mesa_size_name(u3_mesa_name* nam_u)
   c3_w siz_w = 1;
   u3_mesa_name_meta met_u;
 
-  met_u.ran_y = _mesa_rank(nam_u->her_d);
+  met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
   siz_w += 2 << met_u.ran_y;
@@ -1064,7 +1007,7 @@ _test_cmp_name(u3_mesa_name* hav_u, u3_mesa_name* ned_u)
 {
   c3_i ret_i = 0;
 
-  cmp_buffer(her_d, sizeof(ned_u->her_d), "name: ships differ");
+  cmp_buffer(her_d, sizeof(ned_u->her_u), "name: ships differ");
 
   cmp_scalar(rif_w, "name: rifts", "%u");
   cmp_scalar(boq_y, "name: bloqs", "%u");
@@ -1300,7 +1243,7 @@ _test_make_head(void* ptr_v, u3_mesa_head* hed_u)
 static void
 _test_make_name(void* ptr_v, c3_s pat_s, u3_mesa_name* nam_u)
 {
-  _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_d);
+  _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_u);
   nam_u->rif_w = _test_rand_word(ptr_v);
 
   nam_u->pat_s = _test_rand_gulf_w(ptr_v, pat_s);
@@ -1416,7 +1359,7 @@ _test_sift_page()
 
   {
     u3_noun her = u3v_wish("~hastuc-dibtux");
-    u3r_chubs(0, 2, nam_u->her_d, her);
+    u3r_chubs(0, 2, nam_u->her_u, her);
     u3z(her);
   }
   nam_u->rif_w = 15;

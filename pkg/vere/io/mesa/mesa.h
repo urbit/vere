@@ -2,6 +2,7 @@
 #define VERE_MESA_H
 
 #include "c3.h"
+#include "ship.h"
 
 #define MESA_VER       1
 #define FINE_PAGE      4096             //  packets per page
@@ -42,7 +43,7 @@ typedef struct _u3_mesa_name_meta {
 
 typedef struct _u3_mesa_name {
   // u3_mesa_name_meta  met_u;
-  c3_d               her_d[2];
+  u3_ship            her_u;
   c3_w               rif_w;
   c3_y               boq_y;
   c3_o               nit_o;
