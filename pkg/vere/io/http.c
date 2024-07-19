@@ -726,20 +726,21 @@ _slice_mime(range_request rng, u3_noun octs)
   out.end_z = SIZE_MAX;
   out.dat = u3_nul;
 
-  if ( SIZE_MAX == rng.beg_z ) {
-    if ( SIZE_MAX == rng.end_z ) {
-      // [~ ~]
-      return out;
-    }
-    else {
-      // [~ @]
-      out.beg_z = len_w - c3_min(rng.end_z, len_w);
-      out.end_z = len_w - 1;
-    }
+  if (  (SIZE_MAX == rng.beg_z)
+     && (SIZE_MAX == rng.end_z) )
+  {
+    // [~ ~]
+    return out;
   }
-  else if ( SIZE_MAX == rng.end_z ) {
+
+  if ( SIZE_MAX == rng.end_z ) {
     // [@ ~]
     out.beg_z = rng.beg_z;
+    out.end_z = len_w - 1;
+  }
+  else if ( SIZE_MAX == rng.beg_z ) {
+    // [~ @]
+    out.beg_z = len_w - c3_min(rng.end_z, len_w);
     out.end_z = len_w - 1;
   }
   else {
@@ -747,6 +748,7 @@ _slice_mime(range_request rng, u3_noun octs)
     out.beg_z = rng.beg_z;
     out.end_z = c3_min(rng.end_z, len_w - 1);
   }
+
   if (  (out.beg_z < len_w)
      && (out.end_z < len_w)
      && (out.beg_z <= out.end_z) )
