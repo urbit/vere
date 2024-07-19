@@ -809,13 +809,13 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             : u3nc(u3i_string("request"), dat);
     }
 
-    //  XX make _is_http_req function
-    if (  (len_w >= 5)
-       && ('_' == bas_c[1])
-       && ('~' == bas_c[2])
-       && ('_' == bas_c[3])
-       && ('/' == bas_c[4]) )
+    if (  (len_w < 6)
+       || (0 != memcmp("/_~_/", bas_c, 5)) )
     {
+      // inject to arvo
+      u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+    }
+    else {
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -949,7 +949,10 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             h2o_headers_t req_headers = req_u->rec_u->headers;
             c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
 
-            if (idx != UINT32_MAX) {
+            if (idx == UINT32_MAX) {
+              _http_cache_respond(req_u, nac);
+            }
+            else {
               if ( (req_headers.entries[idx].value.len >= 6)  &&
                    (0 == memcmp("bytes=", req_headers.entries[idx].value.base, 6)) ) {
                 c3_w rest_len = req_headers.entries[idx].value.len - 6;
@@ -990,18 +993,9 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                 }
               }
             }
-            else {
-              _http_cache_respond(req_u, nac);
-            }
           }
         }
       }
-    }
-
-    else {
-      //  XX move to first branch
-      // inject to arvo
-      u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
     }
   }
 }
