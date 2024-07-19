@@ -193,8 +193,8 @@
     u3_noun u3weo_raw(u3_noun);
 
     u3_noun u3wee_puck(u3_noun);
-    u3_noun u3wee_sign(u3_noun);
-    u3_noun u3wee_veri(u3_noun);
+    u3_noun u3wee_sign_octs(u3_noun);
+    u3_noun u3wee_veri_octs(u3_noun);
     u3_noun u3wee_shar(u3_noun);
     u3_noun u3wee_point_add(u3_noun);
     u3_noun u3wee_scalarmult(u3_noun);
