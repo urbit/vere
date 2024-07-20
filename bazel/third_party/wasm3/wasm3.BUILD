@@ -18,5 +18,6 @@ cc_library(
         # Add more compiler flags as needed
     ],
     visibility = ["//visibility:public"],
+    deps = ["@softfloat"]
 )
 
