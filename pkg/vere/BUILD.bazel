@@ -140,7 +140,7 @@ vere_library(
         "@lmdb",
         "@openssl",
         "@uv",
-        "@wasm3"
+        "@wasmer"
     ] + select({
         "@platforms//os:macos": [],
         "@platforms//os:linux": [
@@ -178,7 +178,7 @@ vere_binary(
         # TODO: remove dependency (only used to report version).
         "@sigsegv",
         "@whereami",
-        "@wasm3",
+        "@wasmer",
     ],
 )
 

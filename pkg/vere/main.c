@@ -24,7 +24,6 @@
 #include "version.h"
 #include "whereami.h"
 #include "mars.h"
-#include "wasm3.h"
 
 //  serf module state
 //
