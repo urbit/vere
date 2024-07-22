@@ -2669,8 +2669,10 @@ _ames_hear(u3_ames* sam_u,
   {
     u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
     c3_c* rec_c = u3r_string(rec);
+    u3_noun sen = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.sen_d));
+    c3_c* sen_c = u3r_string(sen);
 
-    u3l_log("ames: saw packet for %s", rec_c);
+    u3l_log("ames: saw packet for %s from %s", rec_c, sen_c);
 
     c3_free(rec_c);
     u3z(rec);
