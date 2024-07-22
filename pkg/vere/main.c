@@ -2382,6 +2382,7 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 */
 static void*
 _cw_play_fork_heed(void* arg) {
+  // XX
   c3_c buf[1];
   c3_zs red;
 
@@ -2395,6 +2396,19 @@ _cw_play_fork_heed(void* arg) {
   } while ( 0 < red );
 
   return NULL;
+}
+
+/* _cw_play_fork_exit(): exit callback for uv_spawn.
+*/
+void
+_cw_play_fork_exit(uv_process_t* req_u, c3_d sat_d, c3_i tem_i) {
+  // XX write better errors
+  if ( 0 != sat_d ) {
+    fprintf(stderr, "play: failed: %s\r\n", uv_strerror(tem_i));
+    uv_close((uv_handle_t*)req_u, NULL);
+    exit(1);
+  }
+  uv_close((uv_handle_t*)req_u, NULL);
 }
 
 /* _cw_play_fork(): spawn a subprocess for event replay.
@@ -2451,56 +2465,23 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     u3_assert( i_z < sizeof(argv) );
   }
 
-  //  prepare a pipe for ipc with the subprocess
+  //  use uv_spawn to fork a new serf process and call its play subcommand
   //
-  c3_i pipefd[2];
-  if ( 0 != pipe(pipefd) ) {
-    fprintf(stderr, "play: failed to open pipe\r\n");
+  uv_process_t child_req;
+  uv_process_options_t options = {0};
+  options.file = u3_Host.wrk_c;
+  options.args = argv;
+  options.exit_cb = (uv_exit_cb)_cw_play_fork_exit;
+
+  u3L = uv_default_loop();
+
+  c3_i sat_i;
+  if ( 0 != (sat_i = uv_spawn(u3L, &child_req, &options)) ) {
+    fprintf(stderr, "play: uv_spawn: %s\r\n", uv_strerror(sat_i));
     return 1;
   }
 
-  //  set the child process' stdin to read from the pipe
-  //
-  posix_spawn_file_actions_t action;
-  posix_spawn_file_actions_init(&action);
-  posix_spawn_file_actions_addclose(&action, pipefd[1]);
-  posix_spawn_file_actions_adddup2(&action, pipefd[0], STDIN_FILENO);
-
-  //  spawn a new serf process and call its play subcommand
-  //
-  pid_t pid_i;
-  c3_i  sat_i;
-  if ( 0 != (sat_i = posix_spawn(&pid_i, u3_Host.wrk_c, &action, 0, argv, 0)) ) {
-    fprintf(stderr, "play: posix_spawn: %s\r\n", strerror(sat_i));
-    return 1;
-  }
-
-  //  close the read end of the pipe in the parent
-  //
-  close(pipefd[0]);
-
-  //  wait for the child to exit
-  //
-  if ( -1 == waitpid(pid_i, &sat_i, 0) ) {
-    fprintf(stderr, "play: waitpid: %s\r\n", strerror(errno));
-    return 1;
-  }
-
-  if ( WIFEXITED(sat_i) ) {
-    ret_i = WEXITSTATUS(sat_i);
-    if ( 0 != ret_i ) {
-      fprintf(stderr, "play: exited with %d\r\n", ret_i);
-    }
-    return ret_i;
-  }
-  else if ( WIFSIGNALED(sat_i) ) {
-    fprintf(stderr, "play: terminated by signal %d\r\n", WTERMSIG(sat_i));
-    return 1;
-  }
-  else {
-    fprintf(stderr, "play: strange termination\r\n");
-    return 1;
-  }
+  return uv_run(u3L, UV_RUN_DEFAULT);
 }
 
 /* _cw_play(): replay events, but better.
@@ -2595,12 +2576,10 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  pthread_t ted;
-  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+  // uv_thread_t ted;
+  // uv_thread_create(&ted, (uv_thread_cb)_cw_play_fork_heed, NULL);
 
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
-
-  pthread_cancel(ted);
 }
 
 /* _cw_prep(): prepare for upgrade
