@@ -222,7 +222,7 @@ versioned_http_archive(
     build_file = "//bazel/third_party/natpmp:natpmp.BUILD",
     sha256 = "0684ed2c8406437e7519a1bd20ea83780db871b3a3a5d752311ba3e889dbfc70",
     strip_prefix = "libnatpmp-{version}",
-    url = "http://miniupnp.free.fr/files/libnatpmp-{version}.tar.gz",
+    url = "http://download.openpkg.org/components/cache/libnatpmp/libnatpmp-{version}.tar.gz",
     version = "20230423",
 )
 
