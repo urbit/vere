@@ -613,6 +613,7 @@
 #   define c3__is     c3_s2('i','s')
 #   define c3__item   c3_s4('i','t','e','m')
 #   define c3__ix     c3_s2('i','x')
+#   define c3__i754   c3_s4('i','7','5','4')
 #   define c3__j      c3_s1('j')
 #   define c3__jack   c3_s4('j','a','c','k')
 #   define c3__jam    c3_s3('j','a','m')
