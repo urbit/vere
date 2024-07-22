@@ -159,7 +159,7 @@
     u3_noun u3qe_json_de(u3_atom);
     u3_atom u3qe_json_en(u3_noun);
 
-    u3_noun u3qe_zlib_expand(u3_atom, u3_noun);
+    u3_noun u3qe_zlib_expand(u3_atom, u3_atom, u3_noun);
 
     u3_noun u3qe_stream_append_get_bytes(u3_atom n, u3_noun red, u3_noun sea);
     u3_noun u3qe_stream_append_read_bytes(u3_atom n, u3_noun red, u3_noun sea);

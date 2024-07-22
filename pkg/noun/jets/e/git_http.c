@@ -45,8 +45,8 @@ static c3_y _to_hex_dit(c3_w byt)
 }
 
 u3_noun u3qe_git_http_read_pkt_lines_on_band(
-  u3_noun sea, 
-  u3_atom band){
+  u3_atom band,
+  u3_noun sea) {
 
   if (c3n == u3a_is_cat(band)) {
     u3m_bail(c3__fail);
@@ -165,9 +165,9 @@ u3_noun u3qe_git_http_read_pkt_lines_on_band(
     sea_y += pkt_len_w;
     pos_w += pkt_len_w;
   }
+  fprintf(stderr, "Assembled %d bytes\r\n", total_w);
   u3_noun octs_red = u3nc(u3i_word(total_w), u3i_slab_mint(&sab_u));
-
-  return u3nc(u3nc(u3i_word(0), octs_red), u3k(sea));
+  return u3nc(octs_red, u3k(sea));
 }
 u3_noun u3we_git_http_read_pkt_lines_on_band(u3_noun cor) {
 
@@ -280,8 +280,8 @@ u3_noun u3we_git_http_write_pkt_lines_on_band(u3_noun cor) {
   u3_noun sea;
   u3_atom band;
 
-  u3x_mean(cor, u3x_sam_2, &sea,
-           u3x_sam_3, &band, 0);
+  u3x_mean(cor, u3x_sam_2, &band,
+           u3x_sam_3, &sea, 0);
 
-  return u3qe_git_http_write_pkt_lines_on_band(sea, band);
+  return u3qe_git_http_write_pkt_lines_on_band(band, sea);
 }

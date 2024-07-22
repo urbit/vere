@@ -102,7 +102,9 @@ static c3_w _read_size(c3_y* buf_y, c3_w* pos_wp, c3_w buf_len_w, c3_w len_w) {
 u3_noun u3qe_git_pack_expand_delta_object(u3_noun base, 
                                           u3_noun delta) {
 
-  /* +$  raw-object  [type=object-type size=@ud data=stream:libstream]
+  // +$  raw-object  [type=object-type size=@ud data=octs]
+
+  /* +$  raw-object  [type=object-type size=@ud data=octs]
      +$  pack-object  $%  raw-object
                            [%ofs-delta pos=@ud base-offset=@ud =octs]
                            [%ref-delta pos=@ud =hash =octs]
@@ -116,12 +118,11 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
   u3_atom base_size;
   u3_noun base_data;
 
-  u3_atom base_data_pos;
   u3_atom base_data_p_octs;
   u3_atom base_data_q_octs;
 
   u3x_trel(base, &base_type, &base_size, &base_data);
-  u3x_trel(base_data, &base_data_pos, &base_data_p_octs, &base_data_q_octs);
+  u3x_cell(base_data, &base_data_p_octs, &base_data_q_octs);
 
   // delta=pack-object
   //
@@ -165,7 +166,7 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
   c3_w  bas_len_w;
 
   bas_y = _unpack_octs(base_data_p_octs, &base_data_q_octs, &bas_buf_len_w);
-  // u3_assert(base_size == (base_data_p_octs - base_data_pos));
+  u3_assert(base_size == base_data_p_octs);
   bas_begin_y = bas_y;
   bas_len_w = base_data_p_octs;
 
@@ -180,11 +181,9 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
 
   // Base size mismatch
   //
-  if (biz_w != (base_data_p_octs - base_data_pos)) {
+  if (biz_w != base_data_p_octs) {
     fprintf(stderr, "bas_buf_len_w = %d, bas_len_w = %d\r\n", bas_buf_len_w, bas_len_w);
     fprintf(stderr, "sea_pos = %d, sea_buf_len = %d, sea_len = %d\r\n", sea_pos_w, sea_buf_len_w, sea_len_w);
-    fprintf(stderr, "u3qe_git_pack_expand_delta_object: base (pos = %d) object size mismatch!\r\n", base_data_pos);
-
     // u3_assert(false);
     // _free();
     return u3_none;
@@ -335,10 +334,8 @@ u3_noun u3qe_git_pack_expand_delta_object(u3_noun base,
     return u3_none;
   }
 
-  u3_noun data = u3nc(0, u3nc(u3i_chub(siz_w), u3i_slab_mint(&sab_u)));
+  u3_noun data = u3nc(u3i_chub(siz_w), u3i_slab_mint(&sab_u));
   u3_noun rob = u3nt(u3k(base_type), u3i_chub(siz_w), data);
-
-  // fprintf(stderr, "Resolved object of size %d, siz_w = %d\r\n", base_size, siz_w);
 
   return rob;
 }

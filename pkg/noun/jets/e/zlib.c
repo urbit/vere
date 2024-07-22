@@ -14,19 +14,23 @@
 
 #define OUTBUF_SZ 4096
 
-u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
+u3_noun u3qe_zlib_expand(u3_atom pos, u3_atom oft, u3_noun octs) {
 
   c3_d   pos_d;
+  c3_d   oft_d;
   c3_d   wid_d;
 
   u3_atom wid;
   u3_atom dat;
 
-  u3x_cell(byts, &wid, &dat);
+  u3x_cell(octs, &wid, &dat);
 
   size_t sad_i = u3r_met(3, dat);
 
   if (c3n == (u3r_safe_chub(pos, &pos_d))) {
+    return u3_none;
+  }
+  if (c3n == (u3r_safe_chub(oft, &oft_d))) {
     return u3_none;
   }
   if (c3n == (u3r_safe_chub(wid, &wid_d))) {
@@ -46,12 +50,13 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   z_stream zea;
   c3_w zas_w;
 
-  zea.next_in = byt_y + pos_d;
-  zea.avail_in = (wid_d - pos_d);
+  zea.next_in = byt_y + oft_d + pos_d;
+  zea.avail_in = (wid_d - oft_d - pos_d);
 
   zea.zalloc = Z_NULL;
   zea.zfree  = Z_NULL;
   zea.opaque = Z_NULL; 
+
 
   /* Allocate output buffer 
     */
@@ -95,6 +100,7 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
     }
   }
 
+
   size_t len_i = sob_i - zea.avail_out;
   pos_d += zea.total_in;
 
@@ -112,15 +118,18 @@ u3_noun u3qe_zlib_expand(u3_atom pos, u3_noun byts) {
   u3_atom buf_a = u3i_slab_mint(&sab_u);
 
   return u3nc(u3nc(len_a, buf_a),
-              u3nc(u3i_chub(pos_d), u3k(byts)));
+              u3nt(u3i_chub(pos_d), u3k(oft), u3k(octs)));
 }
 
-u3_noun u3we_zlib_expand(u3_noun sea) {
+u3_noun u3we_zlib_expand(u3_noun cor) {
 
   u3_atom pos;
-  u3_noun byts;
+  u3_atom oft;
+  u3_noun octs;
 
-  u3x_mean(sea, u3x_sam_2, &pos, u3x_sam_3, &byts, 0);
+  u3x_mean(cor, u3x_sam_2, &pos, 
+                u3x_sam_6, &oft, 
+                u3x_sam_7, &octs, 0);
 
-  return u3qe_zlib_expand(pos, byts);
+  return u3qe_zlib_expand(pos, oft, octs);
 }

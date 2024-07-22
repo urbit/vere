@@ -2120,53 +2120,6 @@ static u3j_core _139_hex_json_d[] =
     {}
   };
 
-/* 
- * Zlib
- */
-static u3j_harm _139_hex_zlib_expand_a[] = {{".2", u3we_zlib_expand, c3y}, {}};
-static u3j_core _139_hex_zlib_d[] =
-  {
-    { "expand", 7, _139_hex_zlib_expand_a, 0, no_hashes }, 
-    {}
-  };
-
-/* 
- *  Stream library
- */
-static u3j_harm _139_hex_stream_append_get_bytes_a[] = 
-  {{".2", u3we_stream_append_get_bytes, c3y},{}};
-
-static u3j_harm _139_hex_stream_append_read_bytes_a[] = 
-  {{".2", u3we_stream_append_read_bytes, c3y},{}};
-
-static u3j_core _139_hex_stream_d[] =
-  {
-    { "append-get-bytes", 7, _139_hex_stream_append_get_bytes_a, 0, no_hashes }, 
-    { "append-read-bytes", 7, _139_hex_stream_append_read_bytes_a, 0, no_hashes }, 
-    {}
-  };
-
-/*
- * Git HTTP protocol
- */
-static u3j_harm _139_hex_git_http_read_pkt_lines_on_band_a[] =
-  {{".2", u3we_git_http_read_pkt_lines_on_band, c3y}, {}};
-static u3j_harm _139_hex_git_http_write_pkt_lines_on_band_a[] =
-  {{".2", u3we_git_http_write_pkt_lines_on_band, c3y}, {}};
-
-static u3j_core _139_hex_git_http_d[] =
-  {
-    { "read-pkt-lines-on-band", 7, _139_hex_git_http_read_pkt_lines_on_band_a, 0, no_hashes},
-    { "write-pkt-lines-on-band", 7, _139_hex_git_http_write_pkt_lines_on_band_a, 0, no_hashes},
-    {}
-  };
-
-static u3j_harm _139_hex_git_pack_expand_delta_object_a[] = 
-  {{".2", u3we_git_pack_expand_delta_object, c3y}, {}};
-
-static u3j_core _139_hex_git_pack_d[] = 
-  {{"expand-delta-object", 7, _139_hex_git_pack_expand_delta_object_a, c3y}, {}};
-
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2185,10 +2138,6 @@ static u3j_core _139_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
-  { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
-  { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
-  { "git-pack", 31, 0, _139_hex_git_pack_d, no_hashes}, 
-  { "git-http", 31, 0, _139_hex_git_http_d, no_hashes},
   {}
 };
 
@@ -2391,6 +2340,52 @@ static u3j_core _138_hex_blake_d[] =
     { "blake3-impl", 7, 0, _138_hex_blake3_impl_d, no_hashes },
     {}
   };
+/* 
+ * Zlib
+ */
+static u3j_harm _138_hex_zlib_expand_a[] = {{".2", u3we_zlib_expand, c3y}, {}};
+static u3j_core _138_hex_zlib_d[] =
+  {
+    { "expand", 7, _138_hex_zlib_expand_a, 0, no_hashes }, 
+    {}
+  };
+
+/* 
+ *  Stream library
+ */
+static u3j_harm _138_hex_stream_append_get_bytes_a[] = 
+  {{".2", u3we_stream_append_get_bytes, c3y},{}};
+
+static u3j_harm _138_hex_stream_append_read_bytes_a[] = 
+  {{".2", u3we_stream_append_read_bytes, c3y},{}};
+
+static u3j_core _138_hex_stream_d[] =
+  {
+    { "append-get-bytes", 7, _138_hex_stream_append_get_bytes_a, 0, no_hashes }, 
+    { "append-read-bytes", 7, _138_hex_stream_append_read_bytes_a, 0, no_hashes }, 
+    {}
+  };
+
+/*
+ * Git HTTP protocol
+ */
+static u3j_harm _138_hex_git_http_read_pkt_lines_on_band_a[] =
+  {{".2", u3we_git_http_read_pkt_lines_on_band, c3y}, {}};
+static u3j_harm _138_hex_git_http_write_pkt_lines_on_band_a[] =
+  {{".2", u3we_git_http_write_pkt_lines_on_band, c3y}, {}};
+
+static u3j_core _138_hex_git_http_d[] =
+  {
+    { "read-pkt-lines-on-band", 7, _138_hex_git_http_read_pkt_lines_on_band_a, 0, no_hashes},
+    { "write-pkt-lines-on-band", 7, _138_hex_git_http_write_pkt_lines_on_band_a, 0, no_hashes},
+    {}
+  };
+
+static u3j_harm _138_hex_git_pack_expand_delta_object_a[] = 
+  {{".2", u3we_git_pack_expand_delta_object, c3y}, {}};
+
+static u3j_core _138_hex_git_pack_d[] = 
+  {{"expand-delta-object", 7, _138_hex_git_pack_expand_delta_object_a, c3y}, {}};
 
 static u3j_core _138_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
@@ -2411,10 +2406,10 @@ static u3j_core _138_hex_d[] =
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
   /* Git jets */
-  { "zlib",   31, 0, _139_hex_zlib_d,  no_hashes}, 
-  { "stream", 31, 0, _139_hex_stream_d,  no_hashes}, 
-  { "git-pack", 31, 0, _139_hex_git_pack_d, no_hashes}, 
-  { "git-http", 31, 0, _139_hex_git_http_d, no_hashes},
+  { "zlib",   31, 0, _138_hex_zlib_d,  no_hashes}, 
+  { "stream", 31, 0, _138_hex_stream_d,  no_hashes}, 
+  { "git-pack", 31, 0, _138_hex_git_pack_d, no_hashes}, 
+  { "git-http", 31, 0, _138_hex_git_http_d, no_hashes},
   {}
 };
 
