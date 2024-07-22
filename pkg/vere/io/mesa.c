@@ -2278,7 +2278,7 @@ _mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 
 //  XX forwarding wrong, need a PIT entry
 static void
-_mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u)
+_mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
 {
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pek_u.nam_u.her_u);
@@ -2293,11 +2293,17 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u)
   }
   if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
     u3_lane lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
+    u3_lane zer_u = {0, 0};
+    if ( _mesa_lanes_equal(&zer_u, &lin_u)) {
+      _mesa_free_pict(pic_u);
+      return;
+    }
     //_update_hopcount(&pac_u->hed_u); //  TODO reinstate
     #ifdef MESA_DEBUG
       u3l_log("mesa: forward_request()");
       log_pact(pac_u);
     #endif
+    _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
     _mesa_send(pic_u, &lin_u);
   }
   _mesa_free_pict(pic_u);
@@ -2317,7 +2323,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   if ( c3n == our_o ) {
     u3l_log(" forwarding\r\n");
-    _mesa_forward_request(sam_u, pic_u);
+    _mesa_forward_request(sam_u, pic_u, lan_u);
     return;
   }
   // record interest
@@ -2390,7 +2396,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, sam_u->pir_u->who_d);
 
   if ( c3n == our_o ) {
-    _mesa_forward_request(sam_u, pic_u);
+    _mesa_forward_request(sam_u, pic_u, *lan_u);
     return;
   }
 
