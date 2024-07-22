@@ -671,11 +671,12 @@ _content_headers(c3_z beg_z, c3_z end_z, c3_w tot_w)
   return out;
 }
 
-/* _http_foo_cb()
+/* _http_scry_cb()
 */
 static void
-_http_foo_cb(void* vod_p, u3_noun nun)
+_http_scry_cb(void* vod_p, u3_noun nun)
 {
+  //  XX slice here
   u3_preq* peq_u = vod_p;
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
@@ -684,8 +685,16 @@ _http_foo_cb(void* vod_p, u3_noun nun)
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
     if ( u3_nul != nun ) {
-      u3_atom len = u3r_at(254, nun);
-      u3_noun hez = _content_headers(0, (len - 1), len);
+      u3_noun len = u3r_at(254, nun);
+      c3_w len_w;
+      if ( c3n == u3r_safe_word(len, &len_w) ) {
+        u3z(nun);
+        _http_scry_respond(req_u, u3_nul);
+        u3z(peq_u->pax);
+        c3_free(peq_u);
+        return;
+      }
+      u3_noun hez = _content_headers(0, (len_w - 1), len_w);
       u3_noun res = u3i_edit(u3k(nun), 125, u3qb_weld(hez, u3r_at(125, nun)));
       _http_scry_respond(req_u, u3k(res));
     }
@@ -698,6 +707,8 @@ _http_foo_cb(void* vod_p, u3_noun nun)
   if (  (c3n == peq_u->las_o)
      && (u3_nul != nun) )
   {
+    // XX pair of auth & path for key
+    // check ~watter-parter's
     u3h_put(htd_u->nax_p, peq_u->pax, nun);
   }
   u3z(peq_u->pax);
@@ -712,19 +723,24 @@ typedef struct _range_request {
 typedef struct _content {
   c3_z    beg_z;
   c3_z    end_z;
-  u3_noun dat;
+  u3_noun dat;  //  XX free
 } content;
 
+/* _slice_mime: given a valid range, slice a section of octs
+*/
 static content
 _slice_mime(range_request rng, u3_noun octs)
 {
-  c3_w len_w = u3h(octs);
-  c3_w oct_w = u3t(octs);
   content out;
-
   out.beg_z = SIZE_MAX;
   out.end_z = SIZE_MAX;
   out.dat = u3_nul;
+
+  u3_noun len = u3h(octs);
+  c3_w len_w;
+  if ( c3n == u3r_safe_word(len, &len_w) ) {
+    return out;
+  }
 
   if (  (SIZE_MAX == rng.beg_z)
      && (SIZE_MAX == rng.end_z) )
@@ -754,11 +770,13 @@ _slice_mime(range_request rng, u3_noun octs)
      && (out.beg_z <= out.end_z) )
   {
     out.dat = u3nc((out.end_z - out.beg_z) + 1,
-                   u3qc_cut(3, out.beg_z, (out.end_z + 1) - out.beg_z, oct_w));
+                   u3qc_cut(3, out.beg_z, (out.end_z + 1) - out.beg_z, u3t(octs)));
   }
   return out;
 }
 
+/* _parse_range: get a range from '-' delimited text
+*/
 static range_request
 _parse_range(c3_c* txt_c, c3_w len_w)
 {
@@ -809,13 +827,15 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             : u3nc(u3i_string("request"), dat);
     }
 
+    // check if base url starts with '/_~_/'
     if (  (len_w < 6)
        || (0 != memcmp("/_~_/", bas_c, 5)) )
     {
-      // inject to arvo
+      // no: inject to arvo
       u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
     }
     else {
+      // '/_~_/' found
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -844,6 +864,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_noun des;
       u3_noun cas;
 
+      // XX move to function
       //  get beak from path
       //
       for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
@@ -907,17 +928,19 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
             return;
           }
           else {
-            c3_d len_d = nex_c - bas_c;
-            *wer = u3i_bytes(len_d, (const c3_y*)bas_c);
+            c3_w dif_w = (c3_p)(nex_c - bas_c);
+            *wer = u3i_bytes(dif_w, (const c3_y*)bas_c);
             bas_c = nex_c;
-            len_w = len_w - len_d;
+            len_w = len_w - dif_w;
           }
         }
       }
 
       u3_noun spur = u3dc("rush", u3i_bytes(len_w, (const c3_y*)bas_c), u3v_wish("stap"));
 
-      if ( (who != our) || (u3_nul == spur) ) {
+      if (  (u3_nul == spur)
+         || (c3n == u3r_sing(our, who)) )
+      {
         c3_c* msg_c = "bad scry path";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
         return;
@@ -927,7 +950,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         spur = u3nc(u3i_string("mime"), u3t(spur));
         if ( c3y == req_u->peq_u->las_o ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                             des, spur, req_u->peq_u, _http_foo_cb);
+                             des, spur, req_u->peq_u, _http_scry_cb);
         }
 
         else {
@@ -939,13 +962,13 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
              || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
           {
             //  maybe cache, then serve subsequent range requests from cache
-            req_u->peq_u->las_o = c3n;
-            req_u->peq_u->pax = u3k(bem);
-            u3_pier_peek(htd_u->car_u.pir_u, gang, u3k(u3nt(0, c3__ex, bem)),
-                          req_u->peq_u, _http_foo_cb);
+            req_u->peq_u->pax = bem;
+            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, u3k(bem)),
+                          req_u->peq_u, _http_scry_cb);
           }
           else {
 
+            //  XX function
             h2o_headers_t req_headers = req_u->rec_u->headers;
             c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
 
@@ -959,27 +982,35 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                 if ( 0 == rest_len ) {
                   c3_c* msg_c = "Requested Range Not Satisfiable";
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                  // XX leaks
                   return;
                 }
                 range_request rng_req = _parse_range(req_headers.entries[idx].value.base + 6, rest_len);
                 u3_noun octs = u3r_at(127, nac);
                 if ( u3_none == octs ) {
-                  c3_c* msg_c = "Requested Range Not Satisfiable";
-                  h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+                  h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
                   return;
                 }
                 content result = _slice_mime(rng_req, octs);
 
                 if ( u3_nul == result.dat ) {
                   c3_c* msg_c = "Requested Range Not Satisfiable";
+                  u3z(result.dat);
                   h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
                   return;
                 }
 
-                if ( u3r_sing(result.dat, octs) == c3y)  {
+                if ( c3y == u3r_sing(result.dat, octs) ) {
                   //  200
-                  u3_atom len = u3r_at(254, nac);
-                  u3_noun hez = _content_headers(0, (len - 1), len);
+                  u3z(result.dat);
+                  u3_noun len = u3r_at(254, nac);
+                  c3_w len_w;
+                  if ( c3n == u3r_safe_word(len, &len_w) ) {
+                    u3z(nac);
+                    _http_scry_respond(req_u, u3_nul);
+                    return;
+                  }
+                  u3_noun hez = _content_headers(0, (len_w - 1), len_w);
                   u3_noun res = u3i_edit(nac, 125, u3qb_weld(hez, u3r_at(125, nac)));
                   _http_cache_respond(req_u, res);
                 }
@@ -1102,6 +1133,7 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
     _http_cache_respond(req_u, u3k(nun));
   }
 
+  // XX pair of auth & path for key
   u3h_put(htd_u->nax_p, peq_u->pax, nun);
   u3z(peq_u->pax);
   c3_free(peq_u);
