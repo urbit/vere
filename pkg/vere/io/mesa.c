@@ -2143,7 +2143,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
       //  XX should just preserve input buffer
       c3_w cur_w  = mesa_etch_pact(sab_u.buf_y, pac_u);
-      cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
+      cad = u3nc(c3__heer, u3i_slab_mint(&sab_u));
     }
 
     u3_noun wir = u3nc(c3__ames, u3_nul);
@@ -2223,7 +2223,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
       c3_y* buf_y = c3_calloc((PACT_SIZE - 1024) + jumbo_len_w);
       c3_w res_w = mesa_etch_pact(buf_y, pac_u);
-      cad = u3nt(c3__heer, lan, u3i_bytes(res_w, buf_y));
+      cad = u3nc(c3__heer, u3i_bytes(res_w, buf_y));
       c3_free(buf_y);
     }
 
@@ -2439,7 +2439,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     //  XX should just preserve input buffer
     mesa_etch_pact(sab_u.buf_y, pac_u);
 
-    cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
+    cad = u3nc(c3__heer, u3i_slab_mint(&sab_u));
   }
 
   u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
