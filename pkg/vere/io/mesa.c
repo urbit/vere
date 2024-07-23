@@ -1886,112 +1886,6 @@ _hear_peer(u3_mesa* sam_u, u3_peer* per_u, u3_lane lan_u, c3_o dir_o)
   }
 }
 
-static u3_pend_req*
-_mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
-{
-  u3_mesa_pact* pac_u = &pic_u->pac_u;
-  u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
-  u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  c3_o lin_o = dat_u->tot_w <= 4 ? c3y : c3n;
-
-  u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
-  if ( NULL != req_u ) {
-    // duplicate
-    if ( req_u->tot_w <= 4 ) {
-      return NULL;
-    }
-    return NULL;
-  } else {
-    req_u = alloca(sizeof(u3_pend_req));
-    memset(req_u, 0, sizeof(u3_pend_req));
-  }
-
-  u3_gage* gag_u = _mesa_get_lane(sam_u, nam_u->her_u, lan_u);
-
-  if ( gag_u == NULL ) {
-    gag_u = alloca(sizeof(u3_gage));
-    _init_gage(gag_u);
-    // save and re-retrieve so we have persistent pointer
-    _mesa_put_lane(sam_u, nam_u->her_u, lan_u, gag_u);
-    gag_u = _mesa_get_lane(sam_u, nam_u->her_u, lan_u);
-    u3_assert( gag_u != NULL );
-  }
-
-  req_u->pic_u = c3_calloc(sizeof(u3_mesa_pict));
-  req_u->pic_u->sam_u = sam_u;
-  req_u->pic_u->pac_u.hed_u.typ_y = PACT_PEEK;
-  req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
-  memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));
-  req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
-  req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
-  req_u->aum_u = pac_u->pag_u.dat_u.aum_u;
-
-  c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
-  u3_assert( siz_w == 1024 ); // boq_y == 13
-  req_u->gag_u = gag_u;
-  req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
-  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w + 2 );
-  req_u->tot_w = dat_u->tot_w;
-  bitset_init(&req_u->was_u, dat_u->tot_w);
-
-  // TODO: handle restart
-  // u3_assert( nam_u->fra_w == 0 );
-
-  req_u->nex_w = (c3y == lin_o) ? 1 : 0;
-  req_u->len_w = (c3y == lin_o) ? 1 : 0;
-  req_u->lef_w = 0;
-  req_u->old_w = 0;
-  req_u->ack_w = 0;
-
-  if ( c3y == lin_o ) {
-    // complete the proof by computing the first leaf hash
-    c3_w pof_w = pac_u->pag_u.dat_u.aup_u.len_y + 1;
-    if ( pof_w != lss_proof_size(req_u->tot_w) ) {
-      u3l_log("hello");
-      return NULL; // XX ???
-    }
-    lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
-    for ( int i = 1; i < pof_w; i++ ) {
-      memcpy(pof_u[i], pac_u->pag_u.dat_u.aup_u.has_y[i-1], sizeof(lss_hash));
-    }
-    lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
-    // TODO: authenticate root
-    lss_hash root;
-    lss_root(root, pof_u, pof_w);
-
-    req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
-    c3_free(pof_u);
-    if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
-      u3l_log("hello2");
-      return NULL; // XX ???
-    }
-    memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
-  } else {
-    c3_w pof_w = lss_proof_size(req_u->tot_w);
-    if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
-      return NULL; // XX ???
-    }
-    // TODO: cast directly instead of copying?
-    lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
-    for ( int i = 0; i < pof_w; i++ ) {
-      memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
-    }
-    // TODO: authenticate root
-    lss_hash root;
-    lss_root(root, pof_u, pof_w);
-
-    req_u->los_u = c3_calloc(sizeof(lss_verifier));
-    lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
-    c3_free(pof_u);
-  }
-  memset(req_u->mis_u, 0, sizeof(req_u->mis_u));
-
-  req_u = _mesa_put_request(sam_u, nam_u, req_u);
-  _update_resend_timer(req_u);
-  return req_u;
-}
-
 static void
 _mesa_request_next_fragments(u3_mesa* sam_u,
                              u3_pend_req* req_u,
@@ -2010,6 +1904,140 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
     _mesa_send(nex_u, &lan_u);
     _mesa_req_pact_sent(req_u, &nex_u->pac_u.pek_u.nam_u);
   }
+}
+
+typedef struct _u3_mesa_veri_cb_data {
+  u3_mesa*     sam_u;
+  u3_mesa_name nam_u;
+  u3_lane      lan_u;
+} u3_mesa_veri_cb_data;
+
+static void
+_mesa_veri_scry_cb(void* vod_p, u3_noun nun)
+{
+  u3_mesa_veri_cb_data* ver_u = vod_p;
+  u3_pend_req* req_u = _mesa_get_request(ver_u->sam_u, &ver_u->nam_u);
+  if ( !req_u ) {
+    return;
+  }
+  else if ( c3y == nun ) {
+    // TODO: also call _mesa_dear?
+    _mesa_request_next_fragments(ver_u->sam_u, req_u, ver_u->lan_u);
+  }
+  else if ( c3n == nun ) {
+    u3l_log("mesa: packet auth failed verification");
+    // TODO: wipe request state? (If this was an imposter,
+    // we don't want to punish the real peer.)
+  }
+  else {
+    u3l_log("mesa: %%veri returned strange value");
+  }
+}
+
+static void
+_mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
+{
+  u3_mesa_pact* pac_u = &pic_u->pac_u;
+  u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
+  u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
+
+  u3_gage* gag_u = _mesa_get_lane(sam_u, nam_u->her_u, lan_u);
+  if ( gag_u == NULL ) {
+    gag_u = alloca(sizeof(u3_gage));
+    _init_gage(gag_u);
+    // save and re-retrieve so we have persistent pointer
+    _mesa_put_lane(sam_u, nam_u->her_u, lan_u, gag_u);
+    gag_u = _mesa_get_lane(sam_u, nam_u->her_u, lan_u);
+    u3_assert( gag_u != NULL );
+  }
+
+  u3_pend_req* req_u = alloca(sizeof(u3_pend_req));
+  memset(req_u, 0, sizeof(u3_pend_req));
+  req_u->pic_u = c3_calloc(sizeof(u3_mesa_pict));
+  req_u->pic_u->sam_u = sam_u;
+  req_u->pic_u->pac_u.hed_u.typ_y = PACT_PEEK;
+  req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
+  memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));
+  req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
+  req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
+  req_u->aum_u = dat_u->aum_u;
+
+  c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
+  u3_assert( siz_w == 1024 ); // boq_y == 13
+  req_u->gag_u = gag_u;
+  req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
+  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w + 2 );
+  req_u->tot_w = dat_u->tot_w;
+  bitset_init(&req_u->was_u, dat_u->tot_w);
+
+  // TODO: handle restart
+  // u3_assert( nam_u->fra_w == 0 );
+
+  c3_o lin_o = dat_u->tot_w <= 4 ? c3y : c3n;
+  req_u->nex_w = (c3y == lin_o) ? 1 : 0;
+  req_u->len_w = (c3y == lin_o) ? 1 : 0;
+  req_u->lef_w = 0;
+  req_u->old_w = 0;
+  req_u->ack_w = 0;
+
+  c3_w pof_w = lss_proof_size(req_u->tot_w);
+  lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
+  if ( c3y == lin_o ) {
+    if ( pof_w != (dat_u->aup_u.len_y + 1) ) {
+      return; // TODO: handle like other auth failures
+    }
+    for ( int i = 1; i < pof_w; i++ ) {
+      memcpy(pof_u[i], dat_u->aup_u.has_y[i-1], sizeof(lss_hash));
+    }
+    // complete the proof by computing the first leaf hash
+    lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
+  } else {
+    if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+      return; // TODO: handle like other auth failures
+    }
+    for ( int i = 0; i < pof_w; i++ ) {
+      memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
+    }
+  }
+  lss_hash root;
+  lss_root(root, pof_u, pof_w);
+  req_u->los_u = c3_calloc(sizeof(lss_verifier));
+  lss_verifier_init(req_u->los_u, 0, req_u->tot_w, pof_u);
+  c3_free(pof_u);
+
+  if ( c3y == lin_o ) {
+    if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
+      return; // TODO: handle like other auth failures
+    }
+    memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
+  }
+
+  req_u = _mesa_put_request(sam_u, nam_u, req_u);
+  _update_resend_timer(req_u);
+
+  // scry to verify auth
+  u3_noun typ, aut;
+  switch ( dat_u->aum_u.typ_e ) {
+  case AUTH_SIGN:
+    typ = c3__sign;
+    aut = u3dc("scot", c3__uv, u3i_bytes(64, dat_u->aum_u.sig_y));
+    break;
+  case AUTH_HMAC:
+    typ = c3__hmac;
+    aut = u3dc("scot", c3__uv, u3i_bytes(32, dat_u->aum_u.mac_y));
+    break;
+  default:
+    return; // TODO: handle like other auth failures
+  }
+  u3_noun her = u3dc("scot", c3__p, u3_ship_to_noun(nam_u->her_u));
+  u3_noun rut = u3dc("scot", c3__uv, u3i_bytes(32, root));
+  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+  u3_noun sky = u3i_list(typ, her, aut, rut, pax, u3_none);
+  u3_mesa_veri_cb_data* ver_u = c3_malloc(sizeof(u3_mesa_veri_cb_data));
+  ver_u->sam_u = sam_u;
+  memcpy(&ver_u->nam_u, nam_u, sizeof(u3_mesa_name));
+  ver_u->lan_u = *lan_u;
+  u3_pier_peek_last(sam_u->pir_u, u3_nul, c3__a, c3__veri, sky, ver_u, _mesa_veri_scry_cb);
 }
 
 typedef struct _u3_mesa_lane_cb_data {
@@ -2168,42 +2196,29 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
 
-  u3_pend_req* req_u;
-
-  if ( c3y == nam_u->nit_o ) {
-    #ifdef MESA_LOG
-      u3l_log(" NIT");
-    #endif
-    req_u = _mesa_req_pact_init(sam_u, pic_u, &lan_u);
-    if ( req_u == NULL ) {
-      #ifdef MESA_LOG
-        u3l_log(" init fail");
-      #endif
-      _mesa_free_pict(pic_u);
-      return;
+  u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
+  if ( !req_u ) {
+    if ( c3y == nam_u->nit_o ) {
+      _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     }
-  } else {
-    req_u = _mesa_get_request(sam_u, nam_u);
-    if ( !req_u ) {
-      _mesa_free_pict(pic_u);
-      // TODO free pin, other things too?
-      return;
-    }
-
-    u3_lane lon_u;
-    if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
-      lon_u.pip_w = c3_sift_word(pac_u->pag_u.sot_u);
-      lon_u.por_s = c3_sift_short(pac_u->pag_u.sot_u + 4);
-    }
-    else {
-      lon_u = lan_u;
-    }
-    _mesa_req_pact_done(req_u,
-                        nam_u,
-                        &pac_u->pag_u.dat_u,
-                        pac_u->hed_u.hop_y,
-                        lon_u);
+    _mesa_free_pict(pic_u);
+    // TODO free pin, other things too?
+    return;
   }
+
+  u3_lane lon_u;
+  if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
+    lon_u.pip_w = c3_sift_word(pac_u->pag_u.sot_u);
+    lon_u.por_s = c3_sift_short(pac_u->pag_u.sot_u + 4);
+  }
+  else {
+    lon_u = lan_u;
+  }
+  _mesa_req_pact_done(req_u,
+                      nam_u,
+                      &pac_u->pag_u.dat_u,
+                      pac_u->hed_u.hop_y,
+                      lon_u);
 
   c3_o done_with_jumbo_frame = __(req_u->len_w == req_u->tot_w); // TODO: fix for non-message-sized jumbo frames
   if ( c3y == done_with_jumbo_frame ) {
