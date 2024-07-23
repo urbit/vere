@@ -102,10 +102,11 @@ http_archive(
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
-
 rules_rust_dependencies()
+rust_register_toolchains(edition="2021")
 
-rust_register_toolchains()
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+crate_universe_dependencies()
 
 _ALL_CONTENT = """\
 filegroup(
@@ -387,6 +388,19 @@ versioned_http_archive(
     url = "https://github.com/wasmerio/wasmer/archive/refs/tags/v{version}.tar.gz",
     version = "4.3.5",
 )
+
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+crates_repository(
+    name = "crate_index",
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "@wasmer//:Cargo_lock",
+    manifests = ["@wasmer//lib/c-api:Cargo.toml"],
+    generate_binaries = False,
+    isolated = True,
+)
+
+load("@crate_index//:defs.bzl", "crate_repositories")
+crate_repositories()
 
 versioned_http_archive(
     name = "whereami",
