@@ -2294,7 +2294,7 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
     u3_lane lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     u3_lane zer_u = {0, 0};
-    if ( _mesa_lanes_equal(&zer_u, &lin_u)) {
+    if ( _mesa_lanes_equal(&zer_u, &lin_u) == c3y) {
       _mesa_free_pict(pic_u);
       return;
     }
