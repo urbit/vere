@@ -121,7 +121,6 @@
     if (bloq < 4 || bloq > 7) {
       return u3_none;
     }
-    fprintf(stderr, ">>> u3qi_la_add\n\r");
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     // len_x is length in base units
@@ -2134,7 +2133,6 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data,
             y_meta, y_data;
-    fprintf(stderr, ">   u3wi_la_add\n\r");
 
     if ( c3n == u3r_mean(cor,
                          u3x_sam_4, &x_meta,
@@ -2159,6 +2157,7 @@
       y_kind = u3h(u3t(u3t(y_meta))); // 14
       y_fxp = u3t(u3t(u3t(y_meta)));  // 15
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
+      fprintf(stderr, ">  u3wi_la_add\r\n");
       if ( c3n == u3ud(x_bloq) ||
            c3n == u3ud(y_bloq) ||
            c3n == u3ud(x_kind) ||
@@ -2171,15 +2170,15 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        fprintf(stderr, ">   u3wi_la_add\n\r");
+        fprintf(stderr, "x_bloq: %x\r\n", x_kind);
         switch (x_kind) {
           case c3__i754:
             _set_rounding(rnd);
-            fprintf(stderr, ">>  u3wi_la_add\n\r");
             u3_noun r_data = _soft_run(u3qi_la_add_i754(x_data, y_data, x_shape, x_bloq));
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
+            fprintf(stderr, "default\r\n");
             return u3_none;
         }
       }

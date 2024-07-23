@@ -2185,13 +2185,8 @@ static u3j_core _139_non__la_core_d[] =
     {}
   };
 
-static u3j_core _139_non__lagoon_d[] =
-  { { "la-core", 7, 0, _139_non__la_core_d, no_hashes },
-    {}
-  };
-
 static u3j_core _139_non_d[] =
-  { { "lagoon", 6, 0, _139_non__lagoon_d, no_hashes },
+  { { "lagoon", 7, 0, _139_non__la_core_d, no_hashes },
     {}
   };
 
