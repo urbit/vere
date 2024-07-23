@@ -7,6 +7,7 @@
 #include "openssl/err.h"
 #include "openssl/ssl.h"
 #include "version.h"
+#include <types.h>
 
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config
@@ -799,6 +800,97 @@ _parse_range(c3_c* txt_c, c3_w len_w)
   return cut;
 }
 
+typedef struct _beam {
+  u3_noun  who;
+  u3_noun  des;
+  u3_noun  cas;
+  u3_noun  pur;
+} beam;
+
+/* _get_beam: url to beam
+*/
+static beam
+_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
+{
+  beam bem;
+  u3_http* htp_u = req_u->hon_u->htp_u;
+  u3_httd* htd_u = htp_u->htd_u;
+  u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+  //  get beak from path
+  //
+  for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
+    u3_noun* wer;
+    if ( 0 == i_w ) {
+      wer = &bem.who;
+    }
+    else if ( 1 == i_w ) {
+      wer = &bem.des;
+    }
+    else {
+      wer = &bem.cas;
+    }
+
+    // find '//'
+    if (  (len_w >= 2)
+       && ('/' == txt_c[0])
+       && ('/' == txt_c[1]) )
+    {
+      *wer = u3_nul;
+      txt_c++;
+      len_w--;
+    }
+    // skip '/'
+    else if ( (len_w > 0) && ('/' == txt_c[0]) ) {
+      txt_c++;
+      len_w--;
+    }
+    // '='
+    if ( (len_w > 0) && ('=' == txt_c[0]) ) {
+      if ( 0 == i_w ) {
+        *wer = our;
+      }
+      else if ( 1 == i_w ) {
+        *wer = u3i_string("base");
+      }
+      else {
+        req_u->peq_u->las_o = c3y;
+      }
+      txt_c++;
+      len_w--;
+    }
+    // slice cord
+    else {
+      c3_c* nex_c;
+      c3_c* tis_c = memchr(txt_c, '=', len_w);
+      c3_c* fas_c = memchr(txt_c, '/', len_w);
+      if ( tis_c && fas_c ) {
+        nex_c = c3_min(tis_c, fas_c);
+      }
+      else if ( tis_c ) {
+        nex_c = tis_c;
+      }
+      else {
+        nex_c = fas_c;
+      }
+      if ( !nex_c ) {
+        c3_c* msg_c = "bad beam";
+        // h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+        // return;
+      }
+      else {
+        c3_w dif_w = (c3_p)(nex_c - txt_c);
+        *wer = u3i_bytes(dif_w, (const c3_y*)txt_c);
+        txt_c = nex_c;
+        len_w = len_w - dif_w;
+      }
+    }
+  }
+
+  bem.pur = u3dc("rush", u3i_bytes(len_w, (const c3_y*)txt_c), u3v_wish("stap"));
+
+  return bem;
+}
+
 /* _http_req_dispatch(): dispatch http request
 */
 static void
@@ -860,86 +952,11 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         gang = u3_nul;
       }
 
-      u3_noun who;
-      u3_noun des;
-      u3_noun cas;
+      beam bem = _get_beam(req_u, bas_c, len_w);
 
-      // XX move to function
-      //  get beak from path
-      //
-      for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
-        u3_noun* wer;
-        if ( 0 == i_w ) {
-          wer = &who;
-        }
-        else if ( 1 == i_w ) {
-          wer = &des;
-        }
-        else {
-          wer = &cas;
-        }
-
-        // find '//'
-        if (  (len_w >= 2)
-           && ('/' == bas_c[0])
-           && ('/' == bas_c[1]) )
-        {
-          *wer = u3_nul;
-          bas_c++;
-          len_w--;
-        }
-        // skip '/'
-        else if ( (len_w > 0) && ('/' == bas_c[0]) ) {
-          bas_c++;
-          len_w--;
-        }
-        // '='
-        if ( (len_w > 0) && ('=' == bas_c[0]) ) {
-          if ( 0 == i_w ) {
-            *wer = our;
-          }
-          else if ( 1 == i_w ) {
-            *wer = u3i_string("base");
-          }
-          else {
-            req_u->peq_u->las_o = c3y;
-          }
-          bas_c++;
-          len_w--;
-        }
-        // slice cord
-        else {
-          c3_c* nex_c;
-          c3_c* tis_c = memchr(bas_c, '=', len_w);
-          c3_c* fas_c = memchr(bas_c, '/', len_w);
-          if ( tis_c && fas_c ) {
-            nex_c = c3_min(tis_c, fas_c);
-          }
-          else if ( tis_c ) {
-            nex_c = tis_c;
-          }
-          else {
-            nex_c = fas_c;
-          }
-
-          if ( !nex_c ) {
-            c3_c* msg_c = "bad beam";
-            h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-            return;
-          }
-          else {
-            c3_w dif_w = (c3_p)(nex_c - bas_c);
-            *wer = u3i_bytes(dif_w, (const c3_y*)bas_c);
-            bas_c = nex_c;
-            len_w = len_w - dif_w;
-          }
-        }
-      }
-
-      u3_noun spur = u3dc("rush", u3i_bytes(len_w, (const c3_y*)bas_c), u3v_wish("stap"));
-
-      if (  (u3_nul == spur)
-         || (c3n == u3r_sing(our, who)) )
+      // XX necessary?
+      if (  (u3_nul == bem.pur)
+         || (c3n == u3r_sing(our, bem.who)) )
       {
         c3_c* msg_c = "bad scry path";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
@@ -947,23 +964,23 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       }
 
       else {
-        spur = u3nc(u3i_string("mime"), u3t(spur));
+        u3_noun spur = u3nc(u3i_string("mime"), u3t(bem.pur));
         if ( c3y == req_u->peq_u->las_o ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                             des, spur, req_u->peq_u, _http_scry_cb);
+                             bem.des, spur, req_u->peq_u, _http_scry_cb);
         }
 
         else {
-          u3_noun bem = u3nq(our, des, cas, spur);
-          u3_weak nac = u3h_get(htd_u->nax_p, bem);
+          u3_noun bam = u3nq(bem.who, bem.des, bem.cas, spur);
+          u3_weak nac = u3h_get(htd_u->nax_p, bam);
 
           if (  (u3_none == nac)
              || (u3_nul == nac)
              || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
           {
             //  maybe cache, then serve subsequent range requests from cache
-            req_u->peq_u->pax = bem;
-            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, u3k(bem)),
+            req_u->peq_u->pax = bam;
+            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, u3k(bam)),
                           req_u->peq_u, _http_scry_cb);
           }
           else {
