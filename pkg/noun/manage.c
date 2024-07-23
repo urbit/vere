@@ -5,6 +5,7 @@
 #include "pkg/noun/v3/manage.h"
 
 #include <ctype.h>
+#include <dlfcn.h>
 #include <errno.h>
 #if defined(U3_OS_osx)
 #include <execinfo.h>
@@ -1807,20 +1808,29 @@ bt_cb(void* data,
   struct bt_cb_data* bdata = (struct bt_cb_data *)data;
   bdata->count++;
 
+  Dl_info info = {};
+  c3_c*   fname_c = {0};
+
+  if ( dladdr((void *)pc, &info) ) {
+    for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
+      if ( info.dli_fname[i_w] == '/' )
+        fname_c = &info.dli_fname[i_w + 1];
+  }
+
   if ( bdata->count <= 100 ) {
     c3_c* loc[128];
     if (filename != 0)
       snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
     else
-      snprintf((c3_c *)loc, 128, "-");
+      snprintf((c3_c *)loc, 128, fname_c != 0 ? fname_c : "-");
 
     c3_c* fn_c;
     if (function != 0 || bdata->pn_c != 0)
       fn_c = function != 0 ? function : bdata->pn_c;
     else
-      fn_c = "-";
+      fn_c = info.dli_sname != 0 ? info.dli_sname : "-";
 
-    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c , (c3_c *)loc);
+    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c, (c3_c *)loc);
 
     bdata->pn_c = 0;
     return 0;
