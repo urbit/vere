@@ -2364,12 +2364,28 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 static void
 _mesa_poke_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 {
-  u3_mesa_pict* pic_u = egg_u->ptr_v;
 
-  if ( u3_ovum_done == new_e ) {
-    // XX success stuff here
-    /* u3l_log("mesa: poke success"); */
+  if ( u3_ovum_done != new_e ) {
+    #ifdef MESA_DEBUG
+      u3l_log("mesa: arvo poke event was not a success");
+    #endif
+    return;
   }
+
+  u3_mesa_lane_cb_data* dat_u = egg_u->ptr_v;
+  u3_peer* per_u = dat_u->per_u;
+
+  #ifdef MESA_DEBUG
+    c3_c* her_c = u3_ship_to_string(dat_u->her_u);
+    u3l_log("mesa: %%dear %s", her_c);
+    _log_lane(&dat_u->lan_u);
+    c3_free(her_c);
+  #endif
+
+   //  XX tame old routes, and then dear?
+  _mesa_dear(&per_u->sam_u->car_u, dat_u->her_u, per_u->dan_u);
+
+  c3_free(dat_u);
 }
 
 static void
@@ -2380,8 +2396,6 @@ _mesa_poke_bail_cb(u3_ovum* egg_u, u3_noun lud)
   u3l_log("mesa: poke failure");
 }
 
-// xx: should inject event directly, but vane does not work
-// so we just hack it to get
 static void
 _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
@@ -2445,14 +2459,24 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
            ovo = u3_auto_plan(&sam_u->car_u, ovo);
 
-  if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
-    _mesa_free_pict(pic_u);
-  }
-  else {
+  // if ( 1 == pac_u->pok_u.dat_u.tot_w ) {
+  //   u3l_log("free poke");
+  //   _mesa_free_pict(pic_u);
+  // }
+  // else {
+  //   u3l_log("inject poke");
+
     //  XX check request state for *payload* (in-progress duplicate)
     assert(pac_u->pok_u.dat_u.tot_w);
-    u3_auto_peer(ovo, pic_u, _mesa_poke_news_cb, _mesa_poke_bail_cb);
-  }
+    u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
+    {
+      memcpy(dat_u->her_u, pac_u->pok_u.pay_u.her_u, 16);
+      dat_u->lan_u.pip_w = lan_u->pip_w;
+      dat_u->lan_u.por_s = lan_u->por_s;
+      dat_u->per_u = per_u;
+    }
+    u3_auto_peer(ovo, dat_u, _mesa_poke_news_cb, _mesa_poke_bail_cb);
+  // }
 }
 
 void
