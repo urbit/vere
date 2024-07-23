@@ -2157,7 +2157,6 @@
       y_kind = u3h(u3t(u3t(y_meta))); // 14
       y_fxp = u3t(u3t(u3t(y_meta)));  // 15
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
-      fprintf(stderr, ">  u3wi_la_add\r\n");
       if ( c3n == u3ud(x_bloq) ||
            c3n == u3ud(y_bloq) ||
            c3n == u3ud(x_kind) ||
@@ -2170,7 +2169,7 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        fprintf(stderr, "x_bloq: %x\r\n", x_kind);
+        fprintf(stderr, "\r\nx_kind: %x\r\n", x_kind);
         switch (x_kind) {
           case c3__i754:
             _set_rounding(rnd);
@@ -2178,7 +2177,7 @@
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
-            fprintf(stderr, "default\r\n");
+            fprintf(stderr, "uint\r\n");
             return u3_none;
         }
       }
@@ -3234,15 +3233,16 @@
                 u3r_bytes(0, 8, (c3_y*)&d_, d);
                 n_ = f64_to_i64(f64_div(f64_sub((float64_t){b_}, (float64_t){a_}), (float64_t){d_}), softfloat_round_minMag, false);
                 break;
-              case 7:
-                u3r_bytes(0, 16, (c3_y*)&a_, a);
-                u3r_bytes(0, 16, (c3_y*)&b_, b);
-                u3r_bytes(0, 16, (c3_y*)&d_, d);
+              case 7: {
+                c3_d a__[2], b__[2], d__[2];
+                u3r_bytes(0, 16, (c3_y*)&a__, a);
+                u3r_bytes(0, 16, (c3_y*)&b__, b);
+                u3r_bytes(0, 16, (c3_y*)&d__, d);
                 float128_t tmp;
-                f128M_sub((float128_t*){&b_}, (float128_t*){&a_}, &tmp);
-                f128M_div(&tmp, (float128_t*){&d_}, &tmp);
+                f128M_sub((float128_t*){&b__}, (float128_t*){&a__}, &tmp);
+                f128M_div(&tmp, (float128_t*){&d__}, &tmp);
                 n_ = f128M_to_i64(&tmp, softfloat_round_minMag, false);
-                break;
+                break;}
             }
             u3_noun n = u3i_chub(n_+1);
             x_shape = u3nt(u3k(n), 0x1, u3_nul);
