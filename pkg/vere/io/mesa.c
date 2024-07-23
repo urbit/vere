@@ -2119,9 +2119,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     //  TODO actually stick next hop in packet
     _mesa_send_pact(sam_u, u3k(las), per_u, pac_u);
     _mesa_del_pit(sam_u, nam_u);
-    mesa_free_pact(pac_u);
     _mesa_free_pict(pic_u);
     u3z(pin);
+    return;
   }
   if ( c3n == our ) {
     // TODO: free pact and pict
