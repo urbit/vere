@@ -939,11 +939,22 @@ report(void)
 /* _stop_exit(): exit immediately.
 */
 static void
+_stop_exit_fore(c3_i int_i)
+{
+  //  explicit fprintf to avoid allocation in u3l_log
+  //
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 3 %d\r\n", getpid());
+  // raise(SIGTERM);
+}
+
+/* _stop_exit(): exit immediately.
+*/
+static void
 _stop_exit(c3_i int_i)
 {
   //  explicit fprintf to avoid allocation in u3l_log
   //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 1 %d\r\n", getpid());
   u3_king_bail();
 }
 
@@ -2304,7 +2315,7 @@ _cw_play_exit(c3_i int_i)
 {
   //  explicit fprintf to avoid allocation in u3l_log
   //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 2 %d\r\n", getpid());
   raise(SIGINT);
 }
 
@@ -2401,14 +2412,14 @@ _cw_play_fork_heed(void* arg) {
 /* _cw_play_fork_exit(): exit callback for uv_spawn.
 */
 void
-_cw_play_fork_exit(uv_process_t* req_u, c3_d sat_d, c3_i tem_i) {
-  // XX write better errors
-  if ( 0 != sat_d ) {
-    fprintf(stderr, "play: failed: %s\r\n", uv_strerror(tem_i));
-    uv_close((uv_handle_t*)req_u, NULL);
+_cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
+  if ( sat_d || tem_i ) {
+    fprintf(stderr, "play: failed: %" PRId64 " signal: %d\r\n", sat_d, tem_i);
     exit(1);
   }
+  fprintf(stderr, "play: fork exit\r\n");
   uv_close((uv_handle_t*)req_u, NULL);
+  fprintf(stderr, "play: fork exit2\r\n");
 }
 
 /* _cw_play_fork(): spawn a subprocess for event replay.
@@ -2467,19 +2478,33 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  use uv_spawn to fork a new serf process and call its play subcommand
   //
-  uv_process_t child_req;
+  u3L = uv_default_loop();
+
+  uv_pipe_t stdin_pipe;
+  uv_pipe_init(u3L, &stdin_pipe, 0);
+
+  uv_process_t child_req = {0};
   uv_process_options_t options = {0};
-  options.file = u3_Host.wrk_c;
+  uv_stdio_container_t stdio[3];
+  stdio[0].data.stream = (uv_stream_t*) &stdin_pipe;
+  stdio[1].data.fd = STDOUT_FILENO;
+  stdio[2].data.fd = STDERR_FILENO;
+  stdio[0].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;  //  stdin
+  stdio[1].flags = UV_INHERIT_FD;                      //  stdout
+  stdio[2].flags = UV_INHERIT_FD;                      //  stderr
+  options.stdio_count = 3;
+  options.stdio = stdio;
+  options.file = argv[0];
   options.args = argv;
   options.exit_cb = (uv_exit_cb)_cw_play_fork_exit;
-
-  u3L = uv_default_loop();
 
   c3_i sat_i;
   if ( 0 != (sat_i = uv_spawn(u3L, &child_req, &options)) ) {
     fprintf(stderr, "play: uv_spawn: %s\r\n", uv_strerror(sat_i));
     return 1;
   }
+
+  // signal(SIGINT, SIG_IGN);
 
   return uv_run(u3L, UV_RUN_DEFAULT);
 }
@@ -2576,10 +2601,21 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // uv_thread_t ted;
-  // uv_thread_create(&ted, (uv_thread_cb)_cw_play_fork_heed, NULL);
+  pthread_t ted;
+  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+
+  // sigset_t set;
+
+  // sigemptyset(&set);
+  // sigaddset(&set, SIGINT);
+  // if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
+  //   fprintf(stderr, "play: thread mask SIGINT: %s", strerror(errno));
+  //   exit(1);
+  // }
 
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+
+  pthread_cancel(ted);
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -3203,7 +3239,7 @@ main(c3_i   argc,
   //
   //    Configured here using signal() so as to be immediately available.
   //
-  signal(SIGTSTP, _stop_exit);
+  signal(SIGTSTP, _stop_exit_fore);
 
   printf("~\n");
   //  printf("welcome.\n");
