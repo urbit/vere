@@ -35,9 +35,9 @@ c3_o dop_o = c3n;
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
 #define MESA_SYM_FIELD(SYM) MESA_FIELD_ ## SYM
 #ifdef MESA_DEBUG
-  #define MESA_LOG(SYM, ...) { sam_u->sat_u.MESA_SYM_FIELD(SYM)++; u3l_log("mesa: (%u) %s", __LINE__, MESA_SYM_DESC(SYM)); }
+  #define MESA_LOG(SAM_U, SYM, ...) { SAM_U->sat_u.MESA_SYM_FIELD(SYM)++; u3l_log("mesa: (%u) %s", __LINE__, MESA_SYM_DESC(SYM)); }
 #else
-  #define MESA_LOG(SYM, ...) { sam_u->sat_u.MESA_SYM_FIELD(SYM)++; }
+  #define MESA_LOG(SAM_U, SYM, ...) { SAM_U->sat_u.MESA_SYM_FIELD(SYM)++; }
 #endif
 
 typedef struct _u3_mesa_stat {
@@ -1098,14 +1098,14 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   // received past the end of the message
   if ( dat_u->tot_w <= nam_u->fra_w ) {
     u3l_log("strange tot_w %u fra_w %u req_u %u", dat_u->tot_w, nam_u->fra_w, req_u->len_w);
-    MESA_LOG(STRANGE);
+    MESA_LOG(sam_u, STRANGE);
     //  XX: is this sufficient to drop whole request
     return;
   }
 
   // received duplicate
   if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_w) ) {
-    MESA_LOG(DUPE);
+    MESA_LOG(sam_u, DUPE);
     return;
   }
 
@@ -1155,12 +1155,12 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
     u3l_log("auth fail frag %u", nam_u->fra_w);
-    MESA_LOG(AUTH);
+    MESA_LOG(sam_u, AUTH);
     return;
   }
   else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
     c3_free(par_u);
-    MESA_LOG(AUTH)
+    MESA_LOG(sam_u, AUTH)
     return;
   }
   else {
@@ -2520,7 +2520,7 @@ _mesa_hear(u3_mesa* sam_u,
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
 
   if ( lin_w == 0 ) {
-    // MESA_LOG(SERIAL)
+    // MESA_LOG(sam_u, SERIAL)
     // c3_free(hun_y);
     mesa_free_pact(&pic_u->pac_u);
     _ames_hear(u3_Host.sam_u, lan_u, len_w, hun_y);

@@ -9,8 +9,7 @@
 #define DEF_TEXT    "\033[0m"
 // endif tests
 
-#define SIFT_VAR(dest, src, len) dest = 0; for(int i = 0; i < len; i++ ) { dest |= ((src + i) >> (8*i)); }
-#define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
+#define CHECK_BOUNDS(len_w, cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; };
 #define safe_dec(num) (num == 0 ? num : num - 1)
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
 
@@ -272,7 +271,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   c3_w cur_w = 0;
   u3_mesa_name_meta met_u;
 
-  CHECK_BOUNDS(cur_w + 1);
+  CHECK_BOUNDS(len_w, cur_w + 1);
   c3_y met_y = buf_y[cur_w];
   met_u.ran_y = (met_y >> 0) & 0x3;
   met_u.rif_y = (met_y >> 2) & 0x3;
@@ -282,19 +281,19 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   cur_w += 1;
 
   c3_y her_y = 2 << met_u.ran_y;
-  CHECK_BOUNDS(cur_w + her_y)
+  CHECK_BOUNDS(len_w, cur_w + her_y);
   u3_ship_of_bytes(nam_u->her_u, her_y, buf_y + cur_w);
   cur_w += her_y;
 
   c3_y rif_y = met_u.rif_y + 1;
   nam_u->rif_w = 0;
-  CHECK_BOUNDS(cur_w + rif_y)
+  CHECK_BOUNDS(len_w, cur_w + rif_y);
   for( int i = 0; i < rif_y; i++ ) {
     nam_u->rif_w |= (buf_y[cur_w] << (8*i));
     cur_w++;
   }
 
-  CHECK_BOUNDS(cur_w + 1);
+  CHECK_BOUNDS(len_w, cur_w + 1);
   nam_u->boq_y = buf_y[cur_w];
   cur_w++;
 
@@ -305,7 +304,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   }
   else {
     c3_y fag_y = met_u.gaf_y + 1;
-    CHECK_BOUNDS(cur_w + fag_y);
+    CHECK_BOUNDS(len_w, cur_w + fag_y);
     for ( int i = 0; i < fag_y; i++ ) {
       nam_u->fra_w |= (buf_y[cur_w] << (8*i));
       cur_w++;
@@ -316,13 +315,13 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   // XX ?:(=(1 tau.c) %auth %data)
   nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
 
-  CHECK_BOUNDS(cur_w + 2)
+  CHECK_BOUNDS(len_w, cur_w + 2);
   nam_u->pat_s = buf_y[cur_w]
                | (buf_y[cur_w + 1] << 8);
   cur_w += 2;
 
   nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); // unix string for ease of manipulation
-  CHECK_BOUNDS(cur_w + nam_u->pat_s);
+  CHECK_BOUNDS(len_w, cur_w + nam_u->pat_s);
   memcpy(nam_u->pat_c, buf_y + cur_w, nam_u->pat_s);
   nam_u->pat_c[nam_u->pat_s] = 0;
   cur_w += nam_u->pat_s;
@@ -340,7 +339,7 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   c3_w cur_w = 0;
   u3_mesa_data_meta met_u;
 
-  CHECK_BOUNDS(cur_w + 1);
+  CHECK_BOUNDS(len_w, cur_w + 1);
   c3_y met_y = buf_y[cur_w];
   met_u.bot_y = (met_y >> 0) & 0x3;
   met_u.aul_y = (met_y >> 2) & 0x3;
@@ -349,7 +348,7 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   cur_w += 1;
 
   c3_y tot_y = met_u.bot_y + 1;
-  CHECK_BOUNDS(cur_w + tot_y);
+  CHECK_BOUNDS(len_w, cur_w + tot_y);
   dat_u->tot_w = 0;
   for( int i = 0; i < tot_y; i++ ) {
     dat_u->tot_w |= (buf_y[cur_w] << (8*i));
@@ -358,7 +357,7 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 
   c3_y aum_y = ( 2 == met_u.aul_y ) ? 64 :
                ( 3 == met_u.aul_y ) ? 32 : 0;
-  CHECK_BOUNDS(cur_w + aum_y);
+  CHECK_BOUNDS(len_w, cur_w + aum_y);
   memcpy(dat_u->aum_u.sig_y, buf_y + cur_w, aum_y);
   cur_w += aum_y;
 
@@ -366,7 +365,7 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 
   assert( 3 > met_u.aur_y );
 
-  CHECK_BOUNDS(cur_w + (met_u.aur_y * 32));
+  CHECK_BOUNDS(len_w, cur_w + (met_u.aur_y * 32));
   dat_u->aup_u.len_y = met_u.aur_y;
   for( int i = 0; i < met_u.aur_y; i++ ) {
     memcpy(dat_u->aup_u.has_y[i], buf_y + cur_w, 32);
@@ -376,19 +375,19 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   c3_y nel_y = met_u.men_y;
 
   if ( 3 == nel_y ) {
-    CHECK_BOUNDS(cur_w + 1);
+    CHECK_BOUNDS(len_w, cur_w + 1);
     nel_y = buf_y[cur_w];
     cur_w++;
   }
 
-  CHECK_BOUNDS(cur_w + nel_y);
+  CHECK_BOUNDS(len_w, cur_w + nel_y);
   dat_u->len_w = 0;
   for ( int i = 0; i < nel_y; i++ ) {
     dat_u->len_w |= (buf_y[cur_w] << (8*i));
     cur_w++;
   }
 
-  CHECK_BOUNDS(cur_w + dat_u->len_w);
+  CHECK_BOUNDS(len_w, cur_w + dat_u->len_w);
   dat_u->fra_y = c3_calloc(dat_u->len_w);
   memcpy(dat_u->fra_y, buf_y + cur_w, dat_u->len_w);
   cur_w += dat_u->len_w;
@@ -400,10 +399,10 @@ static c3_w
 _mesa_sift_hop_long(u3_mesa_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0;
-  CHECK_BOUNDS(cur_w + 1);
+  CHECK_BOUNDS(len_w, cur_w + 1);
   hop_u->len_w = buf_y[cur_w];
   cur_w++;
-  CHECK_BOUNDS(cur_w + hop_u->len_w);
+  CHECK_BOUNDS(len_w, cur_w + hop_u->len_w);
   hop_u->dat_y = c3_calloc(hop_u->len_w);
   memcpy(hop_u->dat_y, buf_y + cur_w, hop_u->len_w);
 
@@ -419,7 +418,7 @@ _mesa_sift_hops(u3_mesa_page_pact* pac_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
     }
     case HOP_NONE: return 0;
     case HOP_SHORT: {
-      CHECK_BOUNDS(6);
+      CHECK_BOUNDS(len_w, 6);
       memcpy(pac_u->sot_u, buf_y, 6);
       return 6;
     }
@@ -428,7 +427,7 @@ _mesa_sift_hops(u3_mesa_page_pact* pac_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
     }
     case HOP_MANY: {
       c3_w siz_w = 0;
-      CHECK_BOUNDS(siz_w + 1);
+      CHECK_BOUNDS(len_w, siz_w + 1);
       pac_u->man_u.len_w = buf_y[0];
       siz_w++;
 
