@@ -936,15 +936,12 @@ report(void)
          LIBCURL_VERSION_PATCH);
 }
 
-/* _stop_exit(): exit immediately.
+/* _stop_exit_fore(): exit before.
 */
 static void
 _stop_exit_fore(c3_i int_i)
 {
-  //  explicit fprintf to avoid allocation in u3l_log
-  //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 3 %d\r\n", getpid());
-  // raise(SIGTERM);
+  raise(SIGTERM);
 }
 
 /* _stop_exit(): exit immediately.
@@ -954,7 +951,7 @@ _stop_exit(c3_i int_i)
 {
   //  explicit fprintf to avoid allocation in u3l_log
   //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 1 %d\r\n", getpid());
+  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
   u3_king_bail();
 }
 
@@ -2313,9 +2310,6 @@ _cw_play_snap(u3_disk* log_u)
 static void
 _cw_play_exit(c3_i int_i)
 {
-  //  explicit fprintf to avoid allocation in u3l_log
-  //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting] 2 %d\r\n", getpid());
   raise(SIGINT);
 }
 
@@ -2417,9 +2411,7 @@ _cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
     fprintf(stderr, "play: failed: %" PRId64 " signal: %d\r\n", sat_d, tem_i);
     exit(1);
   }
-  fprintf(stderr, "play: fork exit\r\n");
   uv_close((uv_handle_t*)req_u, NULL);
-  fprintf(stderr, "play: fork exit2\r\n");
 }
 
 /* _cw_play_fork(): spawn a subprocess for event replay.
@@ -2504,7 +2496,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     return 1;
   }
 
-  // signal(SIGINT, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
 
   return uv_run(u3L, UV_RUN_DEFAULT);
 }
