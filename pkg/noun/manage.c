@@ -738,6 +738,156 @@ u3m_dump(void)
 }
 #endif
 
+struct bt_cb_data {
+  c3_y  count;
+  c3_y  fail;
+  c3_c* pn_c;
+};
+
+static void
+err_cb(void* data, const char* msg, int errnum)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  if ( bdata->count <= 1 ) {
+    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
+    bdata->fail = 1;
+  }
+}
+
+static int
+bt_cb(void* data,
+      uintptr_t pc,
+      const char* filename,
+      int lineno,
+      const char* function)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  Dl_info info = {};
+  c3_c*   fname_c = {0};
+
+  if ( dladdr((void *)pc, &info) ) {
+    for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
+      if ( info.dli_fname[i_w] == '/' )
+        fname_c = &info.dli_fname[i_w + 1];
+  }
+
+  if ( bdata->count <= 100 ) {
+    c3_c* loc[128];
+    if (filename != 0)
+      snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
+    else
+      snprintf((c3_c *)loc, 128, fname_c != 0 ? fname_c : "-");
+
+    c3_c* fn_c;
+    if (function != 0 || bdata->pn_c != 0)
+      fn_c = function != 0 ? function : bdata->pn_c;
+    else
+      fn_c = info.dli_sname != 0 ? info.dli_sname : "-";
+
+    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c, (c3_c *)loc);
+
+    bdata->pn_c = 0;
+    return 0;
+  }
+  else {
+    bdata->pn_c = 0;
+    return 1;
+  }
+}
+
+/* _self_path(): get binary self-path.
+ */
+static c3_y
+_self_path(c3_c *pat_c)
+{
+  c3_i len_i = 0;
+  c3_i pat_i;
+
+  if ( 0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i)) ) {
+    wai_getExecutablePath(pat_c, len_i, &pat_i);
+    pat_c[len_i] = 0;
+    return 0;
+  }
+
+  return 1;
+}
+
+void
+u3m_stacktrace()
+{
+  void* bt_state;
+  c3_i  ret_i;
+  struct bt_cb_data data = { 0, 0, 0 };
+  c3_c* self_path_c[4096] = {0};
+
+#if defined(U3_OS_osx)
+  u3l_log("Stacktrace:");
+
+  if ( _self_path((c3_c*)self_path_c) == 0 ) {
+    bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+    ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
+    if (data.fail == 0) u3l_log("");
+  }
+  else {
+    data.fail = 1;
+  }
+
+  if ( data.fail == 1 ) {
+    void*  array[100];
+    c3_c** strings;
+    size_t size = backtrace(array, 100);
+
+    strings = backtrace_symbols(array, size);
+
+    if ( strings == NULL ) {
+      u3l_log("Backtrace failed");
+    }
+    else {
+      for ( c3_i i = 0; i < size; i++ )
+        u3l_log("%s", strings[i]);
+      u3l_log("");
+    }
+
+    free(strings);
+  }
+#elif defined(U3_OS_linux)
+  /* TODO: Fix unwind not getting past signal trampoline on linux aarch64
+   */
+  u3l_log("Stacktrace:");
+
+  if ( _self_path((c3_c*)self_path_c) == 0 ) {
+    bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+
+    unw_context_t context;
+    unw_cursor_t cursor;
+    unw_getcontext(&context);
+    unw_init_local(&cursor, &context);
+    unw_word_t pc, sp;
+
+    c3_c* pn_c[1024] = {0};
+    c3_w  offp_w = 0;
+
+    do {
+      unw_get_reg(&cursor, UNW_REG_IP, &pc);
+      unw_get_reg(&cursor, UNW_REG_SP, &sp);
+      if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
+        data.pn_c = pn_c;
+      ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
+    } while (unw_step(&cursor) > 0);
+
+    if ( (data.count > 0) ) u3l_log("");
+  }
+  else {
+    data.fail = 1;
+    u3l_log("Backtrace failed");
+  }
+#endif
+}
+
 /* u3m_bail(): bail out.  Does not return.
 **
 **  Bail motes:
@@ -790,7 +940,8 @@ u3m_bail(u3_noun how)
   if ( &(u3H->rod_u) == u3R ) {
     //  XX set exit code
     //
-    fprintf(stderr, "home: bailing out\r\n");
+    u3l_log("home: bailing out\r\n");
+    u3m_stacktrace();
     abort();
   }
 
@@ -801,7 +952,8 @@ u3m_bail(u3_noun how)
     case c3__oops: {
       //  XX set exit code
       //
-      fprintf(stderr, "bailing out\r\n");
+      u3l_log("bailing out\r\n");
+      u3m_stacktrace();
       abort();
     }
   }
@@ -1780,84 +1932,6 @@ _cm_limits(void)
 # endif
 }
 
-struct bt_cb_data {
-  c3_y  count;
-  c3_y  fail;
-  c3_c* pn_c;
-};
-
-void
-err_cb(void* data, const char* msg, int errnum)
-{
-  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
-  bdata->count++;
-
-  if ( bdata->count <= 1 ) {
-    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
-    bdata->fail = 1;
-  }
-}
-
-int
-bt_cb(void* data,
-      uintptr_t pc,
-      const char* filename,
-      int lineno,
-      const char* function)
-{
-  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
-  bdata->count++;
-
-  Dl_info info = {};
-  c3_c*   fname_c = {0};
-
-  if ( dladdr((void *)pc, &info) ) {
-    for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
-      if ( info.dli_fname[i_w] == '/' )
-        fname_c = &info.dli_fname[i_w + 1];
-  }
-
-  if ( bdata->count <= 100 ) {
-    c3_c* loc[128];
-    if (filename != 0)
-      snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
-    else
-      snprintf((c3_c *)loc, 128, fname_c != 0 ? fname_c : "-");
-
-    c3_c* fn_c;
-    if (function != 0 || bdata->pn_c != 0)
-      fn_c = function != 0 ? function : bdata->pn_c;
-    else
-      fn_c = info.dli_sname != 0 ? info.dli_sname : "-";
-
-    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c, (c3_c *)loc);
-
-    bdata->pn_c = 0;
-    return 0;
-  }
-  else {
-    bdata->pn_c = 0;
-    return 1;
-  }
-}
-
-/* _self_path(): get binary self-path.
- */
-c3_y
-_self_path(c3_c *pat_c)
-{
-  c3_i len_i = 0;
-  c3_i pat_i;
-
-  if ( 0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i)) ) {
-    wai_getExecutablePath(pat_c, len_i, &pat_i);
-    pat_c[len_i] = 0;
-    return 0;
-  }
-
-  return 1;
-}
-
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
  */
 c3_i
@@ -1876,72 +1950,6 @@ u3m_fault(void* adr_v, c3_i ser_i)
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     u3l_log("loom: external fault: %p (%p : %p)\r\n",
             adr_w, u3_Loom, u3_Loom + u3C.wor_i);
-
-    void* bt_state;
-    c3_i  ret_i;
-    struct bt_cb_data data = { 0, 0, 0 };
-    c3_c* self_path_c[4096] = {0};
-
-#if defined(U3_OS_osx)
-    u3l_log("Stacktrace:");
-
-    if ( _self_path((c3_c*)self_path_c) == 0 ) {
-      bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
-      ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
-      if (data.fail == 0) u3l_log("");
-    }
-    else {
-      data.fail = 1;
-    }
-
-    if ( data.fail == 1 ) {
-      void*  array[100];
-      c3_c** strings;
-      size_t size = backtrace(array, 100);
-
-      strings = backtrace_symbols(array, size);
-
-      if ( strings == NULL ) {
-        u3l_log("Backtrace failed");
-      }
-      else {
-        for ( c3_i i = 0; i < size; i++ )
-          u3l_log("%s", strings[i]);
-        u3l_log("");
-      }
-
-      free(strings);
-    }
-#elif defined(U3_OS_linux)
-    u3l_log("Stacktrace:");
-
-    if ( _self_path((c3_c*)self_path_c) == 0 ) {
-      bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
-
-      unw_context_t context;
-      unw_cursor_t cursor;
-      unw_getcontext(&context);
-      unw_init_local(&cursor, &context);
-      unw_word_t pc, sp;
-
-      c3_c* pn_c[1024] = {0};
-      c3_w  offp_w = 0;
-
-      do {
-        unw_get_reg(&cursor, UNW_REG_IP, &pc);
-        unw_get_reg(&cursor, UNW_REG_SP, &sp);
-        if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
-          data.pn_c = pn_c;
-        ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
-      } while (unw_step(&cursor) > 0);
-
-      if ( (data.count > 0) ) u3l_log("");
-    }
-    else {
-      data.fail = 1;
-      u3l_log("Backtrace failed");
-    }
-#endif
 
     u3_assert(0);
     return 0;
