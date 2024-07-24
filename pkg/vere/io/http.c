@@ -778,12 +778,52 @@ _slice_octs(range_request rng, u3_noun octs)
   return out;
 }
 
+static void
+_http_range_respond(u3_hreq* req_u, u3_noun nac, range_request rng_req)
+{
+  u3_noun octs = u3r_at(127, nac);
+  if ( u3_none == octs ) {
+    h2o_send_error_500(req_u->rec_u, "Internal Server Error", "scry failed", 0);
+    return;
+  }
+  content result = _slice_octs(rng_req, octs);
+
+  if ( u3_nul == result.dat ) {
+    c3_c* msg_c = "Requested Range Not Satisfiable";
+    u3z(result.dat);
+    h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+    return;
+  }
+
+  if ( c3y == u3r_sing(result.dat, octs) ) {
+    //  200
+    u3z(result.dat);
+    u3_noun len = u3r_at(254, nac);
+    c3_w len_w;
+    if ( c3n == u3r_safe_word(len, &len_w) ) {
+      u3z(nac);
+      _http_scry_respond(req_u, u3_nul);
+      return;
+    }
+    u3_noun hez = _content_headers(0, (len_w - 1), len_w);
+    u3_noun res = u3i_edit(nac, 125, u3qb_weld(hez, u3r_at(125, nac)));
+    _http_cache_respond(req_u, res);
+  }
+  else {
+    //  206
+    u3_noun hez = _content_headers(result.beg_z, result.end_z, u3h(octs));
+    u3_noun res = u3i_edit(nac, 127, result.dat);
+    res = u3i_edit(res, 124, 206);
+    res = u3i_edit(res, 125, u3qb_weld(hez, u3r_at(125, res)));
+    _http_cache_respond(req_u, res);
+  }
+}
+
 /* _http_scry_cb()
 */
 static void
 _http_scry_cb(void* vod_p, u3_noun nun)
 {
-  //  XX free
   u3_preq* peq_u = vod_p;
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
@@ -799,7 +839,10 @@ _http_scry_cb(void* vod_p, u3_noun nun)
       range_request rng_req;
       c3_o rng_o = _get_range(req_headers, &rng_req);
 
-      if (c3n == rng_o ) {
+      if (c3y == rng_o ) {
+        _http_range_respond(req_u, nun, rng_req);
+      }
+      else {
         //  XX review
         u3_noun len = u3r_at(254, nun);
         c3_w len_w;
@@ -813,25 +856,6 @@ _http_scry_cb(void* vod_p, u3_noun nun)
         u3_noun hez = _content_headers(0, (len_w - 1), len_w);
         u3_noun res = u3i_edit(u3k(nun), 125, u3qb_weld(hez, u3r_at(125, nun)));
         _http_scry_respond(req_u, u3k(res));
-      }
-      else {
-        u3_noun octs = u3r_at(127, nun);
-        if ( u3_none == octs ) {
-          h2o_send_error_500(req_u->rec_u, "Internal Server Error", "scry failed", 0);
-        }
-        content result = _slice_octs(rng_req, octs);
-        if ( u3_nul == result.dat ) {
-          c3_c* msg_c = "Requested Range Not Satisfiable";
-          u3z(result.dat);
-          h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
-        }
-        else {
-          u3_noun hez = _content_headers(result.beg_z, result.end_z, u3h(octs));
-          u3_noun res = u3i_edit(nun, 127, result.dat);
-          res = u3i_edit(res, 124, 206);
-          res = u3i_edit(res, 125, u3qb_weld(hez, u3r_at(125, res)));
-          _http_scry_respond(req_u, res);
-        }
       }
     }
   }
@@ -1032,51 +1056,15 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
                          req_u->peq_u, _http_scry_cb);
           }
           else {
-            //  XX function
             h2o_headers_t req_headers = req_u->rec_u->headers;
             range_request rng_req;
             c3_o rng_o = _get_range(req_headers, &rng_req);
 
-            if ( c3n == rng_o) {
-              _http_cache_respond(req_u, nac);
+            if ( c3y == rng_o) {
+              _http_range_respond(req_u, nac, rng_req);
             }
             else {
-              u3_noun octs = u3r_at(127, nac);
-              if ( u3_none == octs ) {
-                h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
-                return;
-              }
-              content result = _slice_octs(rng_req, octs);
-
-              if ( u3_nul == result.dat ) {
-                c3_c* msg_c = "Requested Range Not Satisfiable";
-                u3z(result.dat);
-                h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
-                return;
-              }
-
-              if ( c3y == u3r_sing(result.dat, octs) ) {
-                //  200
-                u3z(result.dat);
-                u3_noun len = u3r_at(254, nac);
-                c3_w len_w;
-                if ( c3n == u3r_safe_word(len, &len_w) ) {
-                  u3z(nac);
-                  _http_scry_respond(req_u, u3_nul);
-                  return;
-                }
-                u3_noun hez = _content_headers(0, (len_w - 1), len_w);
-                u3_noun res = u3i_edit(nac, 125, u3qb_weld(hez, u3r_at(125, nac)));
-                _http_cache_respond(req_u, res);
-              }
-              else {
-                //  206
-                u3_noun hez = _content_headers(result.beg_z, result.end_z, u3h(octs));
-                u3_noun res = u3i_edit(nac, 127, result.dat);
-                res = u3i_edit(res, 124, 206);
-                res = u3i_edit(res, 125, u3qb_weld(hez, u3r_at(125, res)));
-                _http_cache_respond(req_u, res);
-              }
+              _http_cache_respond(req_u, nac);
             }
           }
         }
@@ -1086,7 +1074,8 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 }
 
 static void
-_http_scry_respond(u3_hreq* req_u, u3_noun nun) {
+_http_scry_respond(u3_hreq* req_u, u3_noun nun)
+{
   h2o_req_t* rec_u = req_u->rec_u;
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
@@ -1130,7 +1119,8 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun) {
 /* _http_cache_respond(): respond with a simple-payload:http
 */
 static void
-_http_cache_respond(u3_hreq* req_u, u3_noun nun) {
+_http_cache_respond(u3_hreq* req_u, u3_noun nun)
+{
   h2o_req_t* rec_u = req_u->rec_u;
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
