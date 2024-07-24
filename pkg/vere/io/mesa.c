@@ -946,6 +946,33 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
   _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
 }
 
+/* _mesa_send_modal(): send packet on lanes based on direct vs. indirect mode
+*/
+static void
+_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w siz_w)
+{
+  u3_mesa* sam_u = per_u->sam_u;
+  c3_d now_d = _get_now_micros();
+
+  if ( c3y == _mesa_is_direct_mode(per_u) ) {
+    u3l_log("mesa: direct");
+    _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+    per_u->dir_u.sen_d = now_d;
+  }
+  else {
+    u3l_log("mesa: indirect");
+    u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
+    _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
+    per_u->ind_u.sen_d = now_d;
+
+    if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
+         (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
+      _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+      per_u->dir_u.sen_d = now_d;
+    }
+  }
+}
+
 static void
 _try_resend(u3_pend_req* req_u, c3_w ack_w)
 {
@@ -953,6 +980,7 @@ _try_resend(u3_pend_req* req_u, c3_w ack_w)
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
+  c3_y* buf_y = c3_calloc(PACT_SIZE);
   for ( int i = req_u->lef_w; i < ack_w; i++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
@@ -961,35 +989,14 @@ _try_resend(u3_pend_req* req_u, c3_w ack_w)
       los_o = c3y;
 
       pac_u->pek_u.nam_u.fra_w = i;
-      c3_y* buf_y = c3_calloc(PACT_SIZE);
       c3_w siz_w  = mesa_etch_pact(buf_y, pac_u);
       if ( 0 == siz_w ) {
-        u3l_log("failed to etch");
-        u3_assert( 0 );
+        u3_assert(!"failed to etch");
       }
-
-      u3_peer* per_u = req_u->per_u;
-      u3_mesa* sam_u = per_u->sam_u;
-      if ( c3y == _mesa_is_direct_mode(per_u) ) {
-        u3l_log("mesa: direct");
-        _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
-        per_u->dir_u.sen_d = now_d;
-      }
-      else {
-        u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-        _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
-        per_u->ind_u.sen_d = now_d;
-        u3l_log("mesa: indirect");
-
-        if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
-             (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
-          _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
-          per_u->dir_u.sen_d = now_d;
-        }
-      }
-      _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
+      _mesa_send_modal(req_u->per_u, buf_y, siz_w);
     }
   }
+  c3_free(buf_y);
 
   if ( c3y == los_o ) {
     req_u->gag_u->sst_w = (req_u->gag_u->wnd_w / 2) + 1;
@@ -1069,20 +1076,8 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
   return res_o;
 }
 
-static void _init_lane_state(u3_lane_state*);
-
-static u3_ovum*
-_mesa_dear(u3_auto* car_u, u3_ship her_u, u3_lane lan_u)
-{
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  u3_noun cad;
-  {
-    u3_noun her = u3_ship_to_noun(her_u);
-    u3_noun lan = u3_mesa_encode_lane(lan_u);
-    cad = u3nt(c3__dear, her, lan);
-  }
-  return u3_auto_plan(car_u, u3_ovum_init(0, c3__ames, wir, cad));
-}
+static void
+_init_lane_state(u3_lane_state* sat_u);
 
 /* _mesa_req_pact_done(): mark packet as done
 */
@@ -1172,8 +1167,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->per_u->dan_u = lan_u;
     sat_u = &req_u->per_u->dir_u;
     _init_lane_state(sat_u);
-
-    _mesa_dear(&sam_u->car_u, nam_u->her_u, lan_u);
   }
   else {
     sat_u = &req_u->per_u->ind_u;
@@ -1188,10 +1181,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   _try_resend(req_u, nam_u->fra_w);
   _update_resend_timer(req_u);
-
-  // _mesa_put_request(sam_u, nam_u, req_u);
-  // _mesa_put_lane(sam_u, nam_u->her_u, lan_u, gag_u);
-  return;
 }
 
 static u3_lane
@@ -1404,22 +1393,27 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3l_log("mesa: ef_send() %s", typ_c);
   #endif
 
-  u3_peer* per_u;
-  if ( (PACT_PEEK == hed_u.typ_y) || (PACT_POKE == hed_u.typ_y) ) {
-    u3_mesa_pact pac_u;
-    c3_w         res_w = mesa_sift_pact(&pac_u, buf_y, len_w);
+  u3_mesa_pact pac_u;
+  c3_w         res_w = mesa_sift_pact(&pac_u, buf_y, len_w);
+  u3_peer*     per_u;
+  {
     u3_ship her_u;
     _get_her(&pac_u, her_u);
     per_u = _mesa_get_peer(sam_u, her_u);
+  }
 
+  if ( (PACT_PEEK == hed_u.typ_y) || (PACT_POKE == hed_u.typ_y) ) {
     _mesa_add_our_to_pit(sam_u, &pac_u.pek_u.nam_u);
-  } else {  // treat PACT_RESV as an opaque response
-    per_u = NULL;
+  }
+
+  if ( per_u ) {
+    _mesa_send_modal(per_u, buf_y, len_w);
+  }
+  else {
+    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, u3k(las));
   }
 
   sam_u->tim_d = _get_now_micros();
-
-  _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
 
   c3_free(buf_y);
   u3z(pac);
@@ -1921,7 +1915,6 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
     return;
   }
   else if ( c3y == nun ) {
-    // TODO: also call _mesa_dear?
     _mesa_request_next_fragments(ver_u->sam_u, req_u, ver_u->lan_u);
   }
   else if ( c3n == nun ) {
@@ -2065,8 +2058,6 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     c3_free(her_c);
   #endif
 
-  _mesa_dear(&per_u->sam_u->car_u, dat_u->her_u, per_u->dan_u);
-
   c3_free(dat_u);
 }
 
@@ -2140,7 +2131,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3l_log(" forwarding");
     #endif
 
-    update_hopcount(&pac_u->hed_u);
+    inc_hopcount(&pac_u->hed_u);
     c3_etch_word(pac_u->pag_u.sot_u, lan_u.pip_w);
     c3_etch_short(pac_u->pag_u.sot_u + 4, lan_u.por_s);
 
@@ -2149,7 +2140,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_del_pit(sam_u, nam_u);
     _mesa_free_pict(pic_u);
     u3z(pin);
-    return;
   }
   if ( c3n == our ) {
     // TODO: free pact and pict
@@ -2158,7 +2148,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   }
 
   // process incoming response to ourselves
-  // TODO: use jumbo frames
   // TODO: memory management, maybe free pict and pact
 
   // if single-fragment message, inject directly into Arvo
@@ -2166,12 +2155,13 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_noun cad;
     {
       u3_noun lan = u3_mesa_encode_lane(lan_u);
-      u3i_slab sab_u;
-      u3i_slab_init(&sab_u, 3, PACT_SIZE);
 
       //  XX should just preserve input buffer
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, PACT_SIZE);
       c3_w cur_w  = mesa_etch_pact(sab_u.buf_y, pac_u);
-      cad = u3nc(c3__heer, u3i_slab_mint(&sab_u));
+
+      cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
     u3_noun wir = u3nc(c3__ames, u3_nul);
@@ -2219,26 +2209,26 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                       &pac_u->pag_u.dat_u,
                       pac_u->hed_u.hop_y,
                       lon_u);
+  //  TODO: check return value before continuing?
 
   c3_o done_with_jumbo_frame = __(req_u->len_w == req_u->tot_w); // TODO: fix for non-message-sized jumbo frames
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
     {
       // construct jumbo frame
-      c3_w jumbo_len_w = (1024 * (req_u->tot_w - 1)) + pac_u->pag_u.dat_u.len_w;
       pac_u->pag_u.nam_u.boq_y = 31; // TODO: use actual jumbo bloq
       pac_u->pag_u.dat_u.tot_w = 1;
       pac_u->pag_u.nam_u.fra_w = 0;
+      c3_w jumbo_len_w = (1024 * (req_u->tot_w - 1)) + pac_u->pag_u.dat_u.len_w;
       pac_u->pag_u.dat_u.len_w = jumbo_len_w;
-      pac_u->pag_u.dat_u.fra_y = c3_realloc(pac_u->pag_u.dat_u.fra_y, jumbo_len_w);
-      memcpy(pac_u->pag_u.dat_u.fra_y, req_u->dat_y, jumbo_len_w);
+      pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
       pac_u->pag_u.dat_u.aum_u = req_u->aum_u;
 
       u3_noun lan = u3_mesa_encode_lane(lan_u);
 
-      c3_y* buf_y = c3_calloc((PACT_SIZE - 1024) + jumbo_len_w);
+      c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
       c3_w res_w = mesa_etch_pact(buf_y, pac_u);
-      cad = u3nc(c3__heer, u3i_bytes(res_w, buf_y));
+      cad = u3nt(c3__heer, lan, u3i_bytes(res_w, buf_y));
       c3_free(buf_y);
     }
 
@@ -2291,7 +2281,6 @@ _mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   return;
 }
 
-//  XX forwarding wrong, need a PIT entry
 static void
 _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
 {
@@ -2313,7 +2302,7 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
       _mesa_free_pict(pic_u);
       return;
     }
-    //_update_hopcount(&pac_u->hed_u); //  TODO reinstate
+    inc_hopcount(&pac_u->hed_u);
     #ifdef MESA_DEBUG
       u3l_log("mesa: forward_request()");
       log_pact(pac_u);
@@ -2397,9 +2386,6 @@ _mesa_poke_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     c3_free(her_c);
   #endif
 
-   //  XX tame old routes, and then dear?
-  _mesa_dear(&per_u->sam_u->car_u, dat_u->her_u, per_u->dan_u);
-
   c3_free(dat_u);
 }
 
@@ -2468,7 +2454,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     //  XX should just preserve input buffer
     mesa_etch_pact(sab_u.buf_y, pac_u);
 
-    cad = u3nc(c3__heer, u3i_slab_mint(&sab_u));
+    cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
   }
 
   u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);

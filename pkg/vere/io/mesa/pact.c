@@ -175,7 +175,7 @@ log_pact(u3_mesa_pact* pac_u)
 /* Helper utilities
 */
 void
-update_hopcount(u3_mesa_head* hed_u) //  TODO rename, _inc_hopcount()?
+inc_hopcount(u3_mesa_head* hed_u)
 {
   hed_u->hop_y = c3_max(hed_u->hop_y+1, 7);
 }
@@ -837,8 +837,8 @@ _mesa_size_hops(u3_mesa_pact* pac_u)
   }
 }
 
-static c3_w
-_mesa_size_pact(u3_mesa_pact* pac_u)
+c3_w
+mesa_size_pact(u3_mesa_pact* pac_u)
 {
   c3_w siz_w = 8; // header + cookie;
 
@@ -871,12 +871,7 @@ _mesa_size_pact(u3_mesa_pact* pac_u)
 c3_w
 mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 {
-  c3_w siz_w = _mesa_size_pact(pac_u);
-
-  // if ( siz_w > PACT_SIZE ) {
-  //   fprintf(stderr, "etch: would overflow %u\r\n", siz_w);
-  //   return 0;
-  // }
+  c3_w siz_w = mesa_size_pact(pac_u);
 
   u3_mesa_head* hed_u = &pac_u->hed_u;
 
