@@ -64,7 +64,7 @@ jobs:
       - name: Set up build cache
         uses: actions/cache@v3
         with:
-          key: ${{ matrix.target }}-cache
+          key: ${{ matrix.target }}-cache-1
           path: |
             # # Cache bazel path on Linux.
             ~/.cache/bazel/_bazel_$(whoami)
