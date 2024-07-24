@@ -3,21 +3,6 @@
 
 #include "vere.h"
 
-
-#define u3_assert(x)                      \
-  do {                                    \
-    if (!(x)) {                           \
-      fflush(stderr);                     \
-      fprintf(stderr, "\rAssertion '%s' " \
-              "failed in %s:%d\r\n",      \
-              #x, __FILE__, __LINE__);    \
-      /*u3m_bail(c3__oops); */                \
-      /*abort(); */                            \
-    }                                     \
-  } while(0)
-
-
-
 void bitset_init(u3_bitset* bit_u, c3_w len_w)
 {
   bit_u->len_w = len_w;
