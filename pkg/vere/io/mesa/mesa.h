@@ -122,7 +122,6 @@ typedef union {
   u3_mesa_hop_more man_u;
 } u3_mesa_hop;
 
-
 typedef struct _u3_mesa_page_pact {
   u3_mesa_name            nam_u;
   u3_mesa_data            dat_u;

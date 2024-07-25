@@ -177,7 +177,7 @@ log_pact(u3_mesa_pact* pac_u)
 void
 inc_hopcount(u3_mesa_head* hed_u)
 {
-  hed_u->hop_y = c3_max(hed_u->hop_y+1, 7);
+  hed_u->hop_y = c3_min(hed_u->hop_y+1, 7);
 }
 
 static c3_y
@@ -708,6 +708,35 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 }
 
 static c3_w
+_mesa_etch_next(c3_y* buf_y, u3_mesa_hop_type nex_y, u3_mesa_page_pact* pac_u)
+{
+
+  switch ( nex_y ) {
+    case HOP_SHORT: {
+      memcpy(buf_y, pac_u->sot_u, 6);
+      return 6;
+    } break;
+    case HOP_MANY: {
+      // buf_y[0] = pac_u->man_u.len_w;  // XX
+      c3_w cur_w =0;
+      memcpy(buf_y + cur_w, &pac_u->man_u.len_w, 4);
+      for( c3_w i = 0; i < pac_u->man_u.len_w; i++ ) {
+        struct _u3_mesa_hop_once hop_u = pac_u->man_u.dat_y[i];
+        memcpy(buf_y + cur_w, &hop_u.len_w, 4);
+        cur_w += 4;
+        memcpy(buf_y + cur_w, hop_u.dat_y, hop_u.len_w);
+        cur_w += hop_u.len_w;
+      }
+      return cur_w;
+    } break;
+    default: {
+      return 0;
+    } break;
+  }
+
+}
+
+static c3_w
 _mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
 {
   c3_w cur_w = 0, nex_w;
@@ -722,7 +751,9 @@ _mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
   }
   cur_w += nex_w;
 
-  // XX hops
+  nex_w = _mesa_etch_next(buf_y + cur_w, hed_u->nex_y, pac_u);
+
+  cur_w += nex_w;
 
   return cur_w;
 }

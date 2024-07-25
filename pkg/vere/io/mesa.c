@@ -2071,6 +2071,32 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 }
 
 static void
+_mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, u3_lane lan_u)
+{
+  if ( 1 == hop_y ) {
+    c3_etch_word(pag_u->sot_u, lan_u.pip_w);
+    c3_etch_short(pag_u->sot_u + 4, lan_u.por_s);
+    hed_u->nex_y = HOP_SHORT;
+    return;
+  }
+
+  hed_u->nex_y = HOP_MANY;
+
+  u3_mesa_hop_once* lan_y = c3_calloc(sizeof(u3_mesa_hop_once));
+
+  c3_etch_word(lan_y->dat_y, lan_u.pip_w);
+  c3_etch_short(lan_y->dat_y, lan_u.por_s);
+
+  lan_y->len_w = 6;
+
+  c3_realloc(&pag_u->man_u, pag_u->man_u.len_w + 8);
+  pag_u->man_u.dat_y[pag_u->man_u.len_w] = *lan_y;
+
+  pag_u->man_u.len_w++;
+
+}
+
+static void
 _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 {
   #ifdef MESA_DEBUG
@@ -2135,7 +2161,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     c3_etch_word(pac_u->pag_u.sot_u, lan_u.pip_w);
     c3_etch_short(pac_u->pag_u.sot_u + 4, lan_u.por_s);
 
-    //  TODO actually stick next hop in packet
+    //  stick next hop in packet
+    _mesa_add_hop(pac_u->hed_u.hop_y, &pac_u->hed_u ,&pac_u->pag_u, lan_u);
+
     _mesa_send_pact(sam_u, u3k(las), per_u, pac_u);
     _mesa_del_pit(sam_u, nam_u);
     _mesa_free_pict(pic_u);
@@ -2169,7 +2197,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
              ovo = u3_auto_plan(&sam_u->car_u, ovo);
 
-    if ( !pac_u->hed_u.hop_y && !_mesa_lanes_equal(&per_u->dan_u, &lan_u) ) {
+    //  XX only inject dear if we hear a different, direct lane
+    if ( pac_u->hed_u.hop_y == 0 && _mesa_lanes_equal(&per_u->dan_u, &lan_u) == c3n) {
       //  XX should put in cache on success
       u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
       {
