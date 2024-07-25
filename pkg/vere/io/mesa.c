@@ -1375,6 +1375,86 @@ _mesa_queue_czar(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 
 static void _mesa_add_our_to_pit(u3_mesa*, u3_mesa_name*);
 
+static u3_noun
+_name_to_scry(u3_mesa_name* nam_u)
+{
+  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
+  u3_noun boq = _dire_etch_ud(nam_u->boq_y);
+  u3_noun fag = _dire_etch_ud(nam_u->fra_w);
+  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
+
+  u3_noun wer = nam_u->nit_o == c3y
+    ? u3nc(c3__init, pax)
+    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+
+  u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
+
+  return res;
+}
+
+/*
+ * RETAIN */
+static u3_weak
+_mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  return u3h_get(sam_u->pit_p, _name_to_scry((nam_u)));
+}
+
+static void
+_mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
+{
+  u3_noun pax = _name_to_scry(nam_u);
+  u3h_put(sam_u->pit_p, pax, u3k(val));
+  #ifdef MESA_DEBUG
+    c3_c* our_c = (c3y == u3h(val))? "&" : "|";
+    c3_c* las_c = (u3_nul == u3t(val))? "~" : "...";
+    u3l_log("mesa: put_pit(our %s, las %s)", our_c, las_c);
+    log_name(nam_u);
+  #endif
+  u3z(pax);
+  u3z(val);
+}
+
+static void
+_mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  u3_noun pax = _name_to_scry(nam_u);
+  u3h_del(sam_u->pit_p, pax);
+  u3z(pax);
+}
+
+static void
+_mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_lane lan_u)
+{
+  // TODO: prevent duplicate lane from being added
+  u3_noun lan = u3_mesa_encode_lane(lan_u);
+  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
+  if ( u3_none == pin ) {
+    pin = u3nt(c3n, u3k(lan), u3_nul);
+  }
+  else {
+    pin = u3nt(u3k(u3h(pin)), u3k(lan), u3k(u3t(pin)));
+  }
+  _mesa_put_pit(sam_u, nam_u, u3k(pin));
+  u3z(lan); u3z(pin);
+  return;
+}
+
+static void
+_mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
+{
+  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
+  if ( u3_none == pin ) {
+    pin = u3nc(c3y, u3_nul);
+  }
+  else {
+    pin = u3nc(c3y, u3k(u3t(pin)));
+  }
+  _mesa_put_pit(sam_u, nam_u, u3k(pin));
+  u3z(pin);
+  return;
+}
+
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
@@ -1584,45 +1664,6 @@ _mesa_add_galaxy_pend(u3_mesa* sam_u, u3_noun her, u3_noun pen)
 }
 
 static u3_noun
-_name_to_scry(u3_mesa_name* nam_u)
-{
-  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
-  u3_noun boq = _dire_etch_ud(nam_u->boq_y);
-  u3_noun fag = _dire_etch_ud(nam_u->fra_w);
-  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-
-  u3_noun wer = nam_u->nit_o == c3y
-    ? u3nc(c3__init, pax)
-    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
-
-  u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
-
-  return res;
-}
-
-static u3_noun
-_name_to_batch_scry(u3_mesa_name* nam_u, c3_w lop_w, c3_w len_w)
-{
-  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
-  u3_noun boq = _dire_etch_ud(nam_u->boq_y);
-  u3_noun fag = _dire_etch_ud(nam_u->fra_w);
-  u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-
-  u3_noun lop = _dire_etch_ud(lop_w);
-  u3_noun len = _dire_etch_ud(len_w);
-
-  u3_noun wer = nam_u->nit_o == c3y
-    ? u3nc(c3__init, pax)
-    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
-
-  u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
-  // [%hunk lop=@t len=@t pat=*]
-  u3_noun bat = u3nq(c3__hunk, lop, len, res);
-
-  return bat;
-}
-
-static u3_noun
 _name_to_jumbo_scry(u3_mesa_name* nam_u)
 {
   u3_noun rif = _dire_etch_ud(nam_u->rif_w);
@@ -1657,49 +1698,6 @@ _mesa_get_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
     u3z(pax);
   #endif
   return res;
-}
-
-/*
- * RETAIN */
-static u3_weak
-_mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
-{
-  return u3h_get(sam_u->pit_p, _name_to_scry((nam_u)));
-}
-
-/*
-ld: Undefined symbols:
-  _log_name, referenced from:
-      __mesa_put_pit in
-      _log_pact in
-      _log_pact in
-      _log_pact in
-      _log_pact in
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
-Target //pkg/vere:urbit failed to build
-*/
-
-static void
-_mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
-{
-  u3_noun pax = _name_to_scry(nam_u);
-  u3h_put(sam_u->pit_p, pax, u3k(val));
-  #ifdef MESA_DEBUG
-    c3_c* our_c = (c3y == u3h(val))? "&" : "|";
-    c3_c* las_c = (u3_nul == u3t(val))? "~" : "...";
-    u3l_log("mesa: put_pit(our %s, las %s)", our_c, las_c);
-    log_name(nam_u);
-  #endif
-  u3z(pax);
-  u3z(val);
-}
-
-static void
-_mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
-{
-  u3_noun pax = _name_to_scry(nam_u);
-  u3h_del(sam_u->pit_p, pax);
-  u3z(pax);
 }
 
 static void
@@ -2295,38 +2293,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     // clean up pend_req
     _mesa_free_pict(pic_u);
   }
-}
-
-static void
-_mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_lane lan_u)
-{
-  // TODO: prevent duplicate lane from being added
-  u3_noun lan = u3_mesa_encode_lane(lan_u);
-  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
-  if ( u3_none == pin ) {
-    pin = u3nt(c3n, u3k(lan), u3_nul);
-  }
-  else {
-    pin = u3nt(u3k(u3h(pin)), u3k(lan), u3k(u3t(pin)));
-  }
-  _mesa_put_pit(sam_u, nam_u, u3k(pin));
-  u3z(lan); u3z(pin);
-  return;
-}
-
-static void
-_mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
-{
-  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
-  if ( u3_none == pin ) {
-    pin = u3nc(c3y, u3_nul);
-  }
-  else {
-    pin = u3nc(c3y, u3k(u3t(pin)));
-  }
-  _mesa_put_pit(sam_u, nam_u, u3k(pin));
-  u3z(pin);
-  return;
 }
 
 static void
