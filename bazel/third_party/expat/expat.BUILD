@@ -11,6 +11,12 @@ configure_make(
         "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
         "//conditions:default": ["--jobs=`nproc`"],
     }),
+    configure_options = [
+    ] + select({
+        "@//:linux_aarch64": ["--host=aarch64-linux-musl"],
+        "@//:linux_x86_64": ["--host=x86_64-linux-musl"],
+        "//conditions:default": [],
+    }),
     copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = ["libexpat.a"],
