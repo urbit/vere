@@ -1406,7 +1406,25 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     _mesa_add_our_to_pit(sam_u, &pac_u.pek_u.nam_u);
   }
 
-  if ( per_u ) {
+  if ( PACT_PAGE == hed_u.typ_y ) {
+    u3_weak pin = _mesa_get_pit(sam_u, &pac_u.pek_u.nam_u);
+
+    if ( u3_none == pin ) {
+      #ifdef MESA_DEBUG
+        u3l_log(" no PIT entry");
+      #endif
+      return;
+    }
+
+    u3_noun our, las;
+    u3x_cell(pin, &our, &las);
+    u3m_p("lane", las);
+    if ( u3_nul != las ) {
+      _mesa_send_bufs(sam_u, NULL, buf_y, len_w, u3k(las));
+      _mesa_del_pit(sam_u, &pac_u.pek_u.nam_u);
+      u3z(pin);
+    }
+  }else if ( per_u ) {
     _mesa_send_modal(per_u, buf_y, len_w);
   }
   else {
@@ -2168,6 +2186,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_del_pit(sam_u, nam_u);
     _mesa_free_pict(pic_u);
     u3z(pin);
+    return;
   }
   if ( c3n == our ) {
     // TODO: free pact and pict
@@ -2443,6 +2462,8 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     _mesa_forward_request(sam_u, pic_u, *lan_u);
     return;
   }
+
+  _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, *lan_u);
 
   //  XX if this lane management stuff is necessary
   // it should be deferred to after successful event processing
