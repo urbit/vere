@@ -783,12 +783,15 @@ _http_range_respond(u3_hreq* req_u, u3_noun nac, range_request rng_req)
 {
   u3_noun octs = u3r_at(127, nac);
   if ( u3_none == octs ) {
-    h2o_send_error_500(req_u->rec_u, "Internal Server Error", "scry failed", 0);
+    // 400
+    c3_c* msg_c = "bad request";
+    h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
     return;
   }
   content result = _slice_octs(rng_req, octs);
 
   if ( u3_nul == result.dat ) {
+    // 416
     c3_c* msg_c = "Requested Range Not Satisfiable";
     u3z(result.dat);
     h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
@@ -796,7 +799,7 @@ _http_range_respond(u3_hreq* req_u, u3_noun nac, range_request rng_req)
   }
 
   if ( c3y == u3r_sing(result.dat, octs) ) {
-    //  200
+    // 200
     u3z(result.dat);
     u3_noun len = u3r_at(254, nac);
     c3_w len_w;
@@ -810,7 +813,7 @@ _http_range_respond(u3_hreq* req_u, u3_noun nac, range_request rng_req)
     _http_cache_respond(req_u, res);
   }
   else {
-    //  206
+    // 206
     u3_noun hez = _content_headers(result.beg_z, result.end_z, u3h(octs));
     u3_noun res = u3i_edit(nac, 127, result.dat);
     res = u3i_edit(res, 124, 206);
@@ -827,6 +830,8 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   u3_preq* peq_u = vod_p;
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
+  u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+  c3_o auth = _http_req_is_auth(fig_u, req_u->rec_u);
 
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
@@ -843,30 +848,18 @@ _http_scry_cb(void* vod_p, u3_noun nun)
         _http_range_respond(req_u, nun, rng_req);
       }
       else {
-        //  XX review
-        u3_noun len = u3r_at(254, nun);
-        c3_w len_w;
-        if ( c3n == u3r_safe_word(len, &len_w) ) {
-          u3z(nun);
-          _http_scry_respond(req_u, u3_nul);
-          u3z(peq_u->pax);
-          c3_free(peq_u);
-          return;
-        }
-        u3_noun hez = _content_headers(0, (len_w - 1), len_w);
-        u3_noun res = u3i_edit(u3k(nun), 125, u3qb_weld(hez, u3r_at(125, nun)));
-        _http_scry_respond(req_u, u3k(res));
+        _http_cache_respond(req_u, u3k(nun));
       }
     }
   }
 
   // cache only if peek was not at now, and nun isn't u3_nul
-  if (  (c3n == peq_u->las_o)
-     && (u3_nul != nun) )
-  {
+  if ( c3n == peq_u->las_o ) {
     // XX pair of auth & path for key
     // check ~watter-parter's
-    u3h_put(htd_u->nax_p, peq_u->pax, nun);
+    u3_noun key = u3nc(auth, u3k(peq_u->pax));
+    u3h_put(htd_u->nax_p, key, nun);
+    u3z(key);
   }
   u3z(peq_u->pax);
   c3_free(peq_u);
@@ -1044,15 +1037,17 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 
         else {
           u3_noun bam = u3nq(bem.who, bem.des, bem.cas, spur);
-          u3_weak nac = u3h_get(htd_u->nax_p, bam);
+          u3_noun key = u3nc(auth, u3k(bam));
+          u3_weak nac = u3h_get(htd_u->nax_p, key);
+          u3z(key);
 
           if (  (u3_none == nac)
              || (u3_nul == nac)
              || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
           {
-            //  maybe cache, then serve subsequent range requests from cache
-            req_u->peq_u->pax = bam;
-            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, u3k(bam)),
+            // cache, then serve subsequent range requests from cache
+            req_u->peq_u->pax = u3k(bam);
+            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
                          req_u->peq_u, _http_scry_cb);
           }
           else {
@@ -1177,7 +1172,6 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
     _http_cache_respond(req_u, u3k(nun));
   }
 
-  // XX pair of auth & path for key
   u3h_put(htd_u->nax_p, peq_u->pax, nun);
   u3z(peq_u->pax);
   c3_free(peq_u);
