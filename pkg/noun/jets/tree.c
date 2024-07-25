@@ -271,8 +271,12 @@ static c3_c* _140_hex_lune_ha[] = {
 };
 static u3j_harm _137_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
 static u3j_core _137_hex__crc_d[] = {{"crc32", 7, _137_hex__crc32_a, 0, no_hashes }, {}};
-static u3j_harm _139_hex__gunzip_a[] = {{".2", u3we_gunzip}, {}};
-static u3j_core _139_hex__unzip_d[] = {{"gunzip", 7, _139_hex__gunzip_a, 0, no_hashes }, {}};
+static u3j_harm _139_hex__decompress_zlib_a[] = {{".2", u3we_decompress_zlib}, {}};
+static u3j_harm _139_hex__decompress_gzip_a[] = {{".2", u3we_decompress_gzip}, {}};
+static u3j_core _139_hex__zlib_d[] = {
+  {"decompress-zlib", 7, _139_hex__decompress_zlib_a, 0, no_hashes },
+  {"decompress-gzip", 7, _139_hex__decompress_gzip_a, 0, no_hashes },
+  {}};
 static u3j_harm _140_hex_coed__ed_puck_a[] = {{".2", u3wee_puck}, {}};
 static c3_c* _140_hex_coed__ed_puck_ha[] = {
   "1bc694675842345c50b0e20a2193bb5bcbb42f163fc832431a3d1822a81e4c98",
@@ -2349,9 +2353,9 @@ static u3j_core _138_hex_d[] =
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
   { "loss",  63, _140_hex_loss_a, 0, no_hashes },
   { "lune", 127, _140_hex_lune_a, 0, no_hashes },
-// XX move me to 137 when it exists
+  // XX move me to 137 when it exists
   { "crc", 31, 0, _137_hex__crc_d, no_hashes },
-  { "gzip", 31, 0, _139_hex__unzip_d, no_hashes },
+  { "zlib", 31, 0, _139_hex__zlib_d, no_hashes },
 
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
