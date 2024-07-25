@@ -93,18 +93,6 @@ rules_foreign_cc_dependencies()
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-http_archive(
-    name = "rules_rust",
-    sha256 = "59e7afd6ecf6433b4194303cf095fa03537bd92b9c0f557c941b1a9623344d38",
-    url = "https://github.com/bazelbuild/rules_rust/releases/download/0.48.0/rules_rust-v0.48.0.tar.gz"
-)
-
-load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
-
-rules_rust_dependencies()
-
-rust_register_toolchains()
-
 _ALL_CONTENT = """\
 filegroup(
     name = "all_srcs",
@@ -368,22 +356,44 @@ versioned_http_archive(
     version = "1.44.2",
 )
 
-# versioned_http_archive(
-#     name = "wasm3",
-#     build_file = "//bazel/third_party/wasm3:wasm3.BUILD",
-#     sha256 = "edf7a2103f975b1a8bb1361851d9d314668aef81c294cea23370becf57c8c1c8",
-#     strip_prefix = "wasm3-{version}",
-#     url = "https://github.com/Quodss/wasm3/archive/refs/heads/{version}.tar.gz",
-#     version = "urwasm",
-# )
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    strip_prefix = "wasmer-{version}",
+    version = "4.3.5",
+    platform = "darwin-amd64",
+)
 
 versioned_http_archive(
-    name = "wasmer",
+    name = "wasmer-{platform}",
     build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
-    sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
     strip_prefix = "wasmer-{version}",
-    url = "https://github.com/wasmerio/wasmer/archive/refs/tags/v{version}.tar.gz",
     version = "4.3.5",
+    platform = "darwin-arm64",
+)
+
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    strip_prefix = "wasmer-{version}",
+    version = "4.3.5",
+    platform = "linux-aarch64",
+)
+
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    strip_prefix = "wasmer-{version}",
+    version = "4.3.5",
+    platform = "linux-amd64",
 )
 
 versioned_http_archive(

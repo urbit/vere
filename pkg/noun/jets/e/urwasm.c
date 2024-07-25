@@ -5,6 +5,7 @@
 #include "jets/w.h"
 
 #include "noun.h"
+#include "wasmer.h"
 #include <types.h>
 
 u3_weak

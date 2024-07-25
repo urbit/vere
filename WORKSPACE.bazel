@@ -93,21 +93,6 @@ rules_foreign_cc_dependencies()
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-# To find additional information on this release or newer ones visit:
-# https://github.com/bazelbuild/rules_rust/releases
-http_archive(
-    name = "rules_rust",
-    sha256 = "59e7afd6ecf6433b4194303cf095fa03537bd92b9c0f557c941b1a9623344d38",
-    url = "https://github.com/bazelbuild/rules_rust/releases/download/0.48.0/rules_rust-v0.48.0.tar.gz"
-)
-
-load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
-rules_rust_dependencies()
-rust_register_toolchains(edition="2021")
-
-load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
-crate_universe_dependencies()
-
 _ALL_CONTENT = """\
 filegroup(
     name = "all_srcs",
@@ -371,115 +356,41 @@ versioned_http_archive(
     version = "1.44.2",
 )
 
-# versioned_http_archive(
-#     name = "wasm3",
-#     build_file = "//bazel/third_party/wasm3:wasm3.BUILD",
-#     sha256 = "edf7a2103f975b1a8bb1361851d9d314668aef81c294cea23370becf57c8c1c8",
-#     strip_prefix = "wasm3-{version}",
-#     url = "https://github.com/Quodss/wasm3/archive/refs/heads/{version}.tar.gz",
-#     version = "urwasm",
-# )
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    version = "4.3.5",
+    platform = "darwin-amd64",
+)
 
 versioned_http_archive(
-    name = "wasmer",
+    name = "wasmer-{platform}",
     build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
-    sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
-    strip_prefix = "wasmer-{version}",
-    url = "https://github.com/wasmerio/wasmer/archive/refs/tags/v{version}.tar.gz",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
     version = "4.3.5",
-    patch_cmds = [
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > fuzz/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/api/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/compiler-singlepass/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/types/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/src/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/examples/wasmer-capi-examples-runner/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/Cargo.lock",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/api/macro-wasmer-universal-test/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/backend-api/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/cache/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/cli-compiler/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/cli/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/compiler-cranelift/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/compiler-llvm/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/compiler/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/config/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/derive/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/emscripten/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/journal/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/object/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/registry/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/sys-utils/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/virtual-fs/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/virtual-io/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/virtual-net/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/vm/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/wai-bindgen-wasmer/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/wasi-types/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/wasix/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/wasm-interface/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/integration/cli/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/integration/ios/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/lib/compiler-test-derive/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/lib/wast/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/wasi-wast/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > tests/wasmer-argus/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/examples/wasmer-capi-examples-runner/BUILD",
-        "echo 'exports_files(glob([\"**/*.rs\"]))' > lib/c-api/tests/wasmer-c-api-test-runner/BUILD",
-    ],
+    platform = "darwin-arm64",
 )
 
-load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
-crates_repository(
-    name = "crate_index",
-    cargo_lockfile = "//:Cargo.lock",
-    manifests = [
-        "@wasmer//:Cargo.toml",
-        "@wasmer//lib/c-api:Cargo.toml",
-        "@wasmer//fuzz:Cargo.toml",
-        "@wasmer//lib/api:Cargo.toml",
-        "@wasmer//lib/compiler-singlepass:Cargo.toml",
-        "@wasmer//lib/types:Cargo.toml",
-        "@wasmer//lib/backend-api:Cargo.toml",
-        "@wasmer//lib/cache:Cargo.toml",
-        "@wasmer//lib/cli-compiler:Cargo.toml",
-        "@wasmer//lib/cli:Cargo.toml",
-        "@wasmer//lib/compiler-cranelift:Cargo.toml",
-        "@wasmer//lib/compiler-llvm:Cargo.toml",
-        "@wasmer//lib/compiler:Cargo.toml",
-        "@wasmer//lib/config:Cargo.toml",
-        "@wasmer//lib/derive:Cargo.toml",
-        "@wasmer//lib/emscripten:Cargo.toml",
-        "@wasmer//lib/journal:Cargo.toml",
-        "@wasmer//lib/object:Cargo.toml",
-        "@wasmer//lib/registry:Cargo.toml",
-        "@wasmer//lib/sys-utils:Cargo.toml",
-        "@wasmer//lib/virtual-fs:Cargo.toml",
-        "@wasmer//lib/virtual-io:Cargo.toml",
-        "@wasmer//lib/virtual-net:Cargo.toml",
-        "@wasmer//lib/vm:Cargo.toml",
-        "@wasmer//lib/wai-bindgen-wasmer:Cargo.toml",
-        "@wasmer//lib/wasi-types:Cargo.toml",
-        "@wasmer//lib/wasix:Cargo.toml",
-        "@wasmer//lib/wasm-interface:Cargo.toml",
-        "@wasmer//tests/integration/cli:Cargo.toml",
-        "@wasmer//tests/integration/ios:Cargo.toml",
-        "@wasmer//tests/lib/compiler-test-derive:Cargo.toml",
-        "@wasmer//tests/lib/wast:Cargo.toml",
-        "@wasmer//tests/wasi-wast:Cargo.toml",
-        "@wasmer//tests/wasmer-argus:Cargo.toml",
-        "@wasmer//lib/api/macro-wasmer-universal-test:Cargo.toml",
-        "@wasmer//lib/c-api/examples/wasmer-capi-examples-runner:Cargo.toml",
-        "@wasmer//lib/c-api/tests/wasmer-c-api-test-runner:Cargo.toml",
-    ],
-    generate_binaries = False,
-    isolated = True,
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    version = "4.3.5",
+    platform = "linux-aarch64",
 )
 
-load("@crate_index//:defs.bzl", "crate_repositories")
-crate_repositories()
+versioned_http_archive(
+    name = "wasmer-{platform}",
+    build_file = "//bazel/third_party/wasmer:wasmer.BUILD",
+    # sha256 = "1663a14be85921bc587941e845ed87fa9423998d7481a3b546b77ec7851c79ce",
+    url = "https://github.com/wasmerio/wasmer/releases/download/v{version}/wasmer-{platform}.tar.gz",
+    version = "4.3.5",
+    platform = "linux-amd64",
+)
 
 versioned_http_archive(
     name = "whereami",

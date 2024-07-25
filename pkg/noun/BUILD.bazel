@@ -40,10 +40,16 @@ vere_library(
         "@sigsegv",
         "@softfloat",
         "@urcrypt",
-        "@wasmer"
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
+        "//conditions:default": [],
+    })
+    + select({
+        "@//:macos_aarch64": ["@wasmer-darwin-arm64"],
+        "@//:macos_x86_64": ["@wasmer-darwin-amd64"],
+        "@//:linux_aarch64": ["@wasmer-linux-aarch64"],
+        "@//:linux_x86_64": ["@wasmer-linux-amd64"],
         "//conditions:default": [],
     }),
 )

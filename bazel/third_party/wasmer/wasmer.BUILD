@@ -1,24 +1,41 @@
-load("@rules_rust//rust:defs.bzl", "rust_static_library")
-load("@crate_index//:defs.bzl", "all_crate_deps")
-
-rust_static_library(
-    name = "wasmer",
-    srcs = glob(
-        [
-            "**/*.rs",
-        ],
-    ),
-    # crate_type = "staticlib",
-    edition = "2021",
-    crate_features = ["singlepass"],
-    deps = all_crate_deps(),
-    proc_macro_deps = all_crate_deps(proc_macro = True),
+cc_library(
+    name = "wasmer-darwin-amd64",
+    hdrs = glob(["include/*.h"]),
+    srcs = ["lib/libwasmer.a"],
+    includes = ["include"],
     visibility = ["//visibility:public"],
 )
 
-exports_files(
-    glob([
-        "**/*.rs",
-        "*.rs",
-    ])
+cc_library(
+    name = "wasmer-darwin-arm64",
+    hdrs = glob(["include/*.h"]),
+    srcs = ["lib/libwasmer.a"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "wasmer-linux-amd64",
+    hdrs = glob(["include/*.h"]),
+    srcs = ["lib/libwasmer.a"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "wasmer-linux-aarch64",
+    hdrs = glob(["include/*.h"]),
+    srcs = ["lib/libwasmer.a"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "wasmer",
+    actual = select({
+        "@//:macos_aarch64": ":wasmer-darwin-arm64",
+        "@//:macos_x86_64": ":wasmer-darwin-amd64",
+        "@//:linux_aarch64": ":wasmer-linux-aarch64",
+        "@//:linux_x86_64": ":wasmer-linux-amd64",
+    }),
 )
