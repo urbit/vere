@@ -1513,7 +1513,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 
   sam_u->tim_d = _get_now_micros();
 
-  c3_free(buf_y);
+  // c3_free(buf_y);
   u3z(pac);
   u3z(las);
 }
