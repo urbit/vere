@@ -1614,7 +1614,7 @@ static void
 _mesa_free_peer(u3_noun per)
 {
   u3_peer* per_u = u3to(u3_peer, per);
-  u3h_free(per_u->req_p);
+  // u3h_free(per_u->req_p);  XX FIXME; refcounts wrong
 }
 
 static void
