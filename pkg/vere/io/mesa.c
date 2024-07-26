@@ -368,7 +368,7 @@ _get_her(u3_mesa_pact* pac_u, c3_d* our_d)
       break;
     }
     case PACT_POKE: {
-      memcpy(our_d, pac_u->pok_u.pay_u.her_u, 16);
+      memcpy(our_d, pac_u->pok_u.nam_u.her_u, 16);
       break;
     }
   }
