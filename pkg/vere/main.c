@@ -941,7 +941,7 @@ report(void)
 static void
 _stop_exit_fore(c3_i int_i)
 {
-  raise(SIGTERM);
+  kill(getpid(), SIGTERM);
 }
 
 /* _stop_exit(): exit immediately.
@@ -2310,7 +2310,7 @@ _cw_play_snap(u3_disk* log_u)
 static void
 _cw_play_exit(c3_i int_i)
 {
-  raise(SIGINT);
+  kill(getpid(), SIGINT);
 }
 
 /* _cw_play_impl(): replay events, but better.
@@ -2391,12 +2391,24 @@ _cw_play_fork_heed(void* arg) {
   c3_c buf[1];
   c3_zs red;
 
+  sigset_t set;
+
+  sigemptyset(&set);
+  sigaddset(&set, SIGINT);
+  sigaddset(&set, SIGTERM);
+  sigaddset(&set, SIGTSTP);
+  if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
+    fprintf(stderr, "play: watcher failed to block sigs: %s\r\n", strerror(errno));
+    exit(1);
+  }
+
   do {
     pthread_testcancel();
     red = read(STDIN_FILENO, buf, sizeof(buf));
     if ( 0 == red ) {
       fprintf(stderr, "play: god save the king! committing sudoku...\r\n");
-      exit(1);
+      kill(getpid(), SIGINT);
+      return NULL;
     }
   } while ( 0 < red );
 
@@ -2595,15 +2607,6 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   pthread_t ted;
   pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
-
-  // sigset_t set;
-
-  // sigemptyset(&set);
-  // sigaddset(&set, SIGINT);
-  // if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-  //   fprintf(stderr, "play: thread mask SIGINT: %s", strerror(errno));
-  //   exit(1);
-  // }
 
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 
