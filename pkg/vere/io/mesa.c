@@ -960,7 +960,14 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w siz_w)
     per_u->dir_u.sen_d = now_d;
   }
   else {
-    u3l_log("mesa: indirect");
+    u3l_log("mesa: indirect to %u", per_u->imp_y);
+    //  XX if we have lanes in arvo, send it also there?
+    //  otherwise after a peer turns indirect because we haven't contacted them,
+    //  we never achieve a direct route since we only send
+    //  to the sponsor, and all pages will come forwarded, and per_u->dir_u.her_d
+    //  only gets updated when pages come directly, or if it's the first time
+    //  after a restart of the driver
+    //
     u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
     _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
     per_u->ind_u.sen_d = now_d;
