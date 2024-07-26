@@ -1528,6 +1528,8 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 c3_o
 _ames_kick_newt(void* sam_u, u3_noun tag, u3_noun dat);
 
+static void _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u);
+
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
   c3_o ret_o;
@@ -1548,13 +1550,24 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     } break;
     case c3__send:
     case c3__turf:
-    case c3__saxo:
-    case c3__nail: {
+    case c3__saxo: {
       #ifdef MESA_DEBUG
         c3_c* tag_c = u3r_string(tag);
         u3l_log("mesa: send old %s", tag_c);
         c3_free(tag_c);
       #endif
+      ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
+    } break;
+    case c3__nail: {
+      u3m_p("data", dat);
+      u3_noun who = u3k(u3h(dat));
+      u3_peer* per_u = _mesa_get_peer_raw(sam_u, who);
+      c3_o new_o = c3n;
+
+      u3_ship who_u;
+      u3_ship_of_noun(who_u ,who);
+      _meet_peer(sam_u, per_u, who_u);
+
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
   }
