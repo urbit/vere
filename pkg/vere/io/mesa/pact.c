@@ -201,7 +201,7 @@ _mesa_rank(u3_ship who_u)
 */
 void mesa_free_pact(u3_mesa_pact* pac_u)
 {
-  //  TODO free pat_c in the name
+  c3_free(pac_u->pek_u.nam_u.pat_c);
   switch ( pac_u->hed_u.typ_y ) {
     default: {
       break;

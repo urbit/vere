@@ -946,17 +946,47 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
   _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
 }
 
-/* _mesa_send_modal(): send packet on lanes based on direct vs. indirect mode
-*/
+typedef struct _u3_mesa_request_data {
+  u3_mesa*      sam_u;
+  u3_ship       her_u;
+  u3_mesa_name* nam_u;
+  c3_y*         buf_y;
+  c3_w          len_w;
+  u3_noun       las;
+} u3_mesa_request_data;
+
+typedef struct _u3_mesa_resend_data {
+  uv_timer_t           tim_u;
+  u3_mesa_request_data dat_u;
+  c3_y                 ret_y;  //  number of remaining retries
+} u3_mesa_resend_data;
+
 static void
-_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w siz_w)
+_mesa_free_request_data(u3_mesa_request_data* dat_u)
+{
+  c3_free(dat_u->nam_u->pat_c);
+  c3_free(dat_u->nam_u);
+  c3_free(dat_u->buf_y);
+  u3z(dat_u->las);
+  c3_free(dat_u);
+}
+
+static void
+_mesa_send_bufs(u3_mesa* sam_u,
+                u3_peer* per_u,
+                c3_y* buf_y,
+                c3_w len_w,
+                u3_noun las);
+
+static void
+_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
 {
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
 
   if ( c3y == _mesa_is_direct_mode(per_u) ) {
     u3l_log("mesa: direct");
-    _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+    _mesa_send_buf(sam_u, per_u->dan_u, buf_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
   else {
@@ -969,15 +999,32 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w siz_w)
     //  after a restart of the driver
     //
     u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-    _mesa_send_buf(sam_u, imp_u, buf_y, siz_w);
+    _mesa_send_buf(sam_u, imp_u, buf_y, len_w);
     per_u->ind_u.sen_d = now_d;
 
     if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
-         (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
-      _mesa_send_buf(sam_u, per_u->dan_u, buf_y, siz_w);
+        (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
+      _mesa_send_buf(sam_u, per_u->dan_u, buf_y, len_w);
       per_u->dir_u.sen_d = now_d;
     }
   }
+}
+
+static void
+_mesa_send_request(u3_mesa_request_data* dat_u)
+{
+  u3_peer* per_u = _mesa_get_peer(dat_u->sam_u, dat_u->her_u);
+  if ( !per_u ) {
+    _mesa_send_bufs(dat_u->sam_u,
+                    NULL,
+                    dat_u->buf_y,
+                    dat_u->len_w,
+                    u3k(dat_u->las));
+  }
+  else {
+    _mesa_send_modal(per_u, dat_u->buf_y, dat_u->len_w);
+  }
+  u3z(dat_u->las);
 }
 
 static void
@@ -1461,6 +1508,45 @@ _mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3z(pin);
   return;
 }
+static void
+_mesa_free_resend_data(u3_mesa_resend_data* res_u)
+{
+  uv_timer_stop(&res_u->tim_u);
+  _mesa_free_request_data(&res_u->dat_u);
+}
+
+static void
+_mesa_set_resend_timer(u3_mesa_resend_data* dat_u);
+
+static void
+_mesa_resend_timer_cb(uv_timer_t* tim_u)
+{
+  u3_mesa_resend_data* res_u = (u3_mesa_resend_data*)tim_u;
+  u3_mesa_request_data* dat_u = &res_u->dat_u;
+  res_u->ret_y--;
+
+  u3_weak pit = _mesa_get_pit(dat_u->sam_u, dat_u->nam_u);
+  if ( u3_none == pit ) {
+    _mesa_free_resend_data(res_u);
+    return;
+  }
+  u3z(pit);
+  
+  _mesa_send_request(dat_u);
+
+  if ( res_u->ret_y ) {
+    _mesa_set_resend_timer(res_u);
+  }
+  else {
+    _mesa_free_resend_data(res_u);
+  }
+}
+
+static void
+_mesa_set_resend_timer(u3_mesa_resend_data* dat_u)
+{
+  uv_timer_start(&dat_u->tim_u, _mesa_resend_timer_cb, 1, 0);
+}
 
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
@@ -1482,16 +1568,6 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 
   u3_mesa_pact pac_u;
   c3_w         res_w = mesa_sift_pact(&pac_u, buf_y, len_w);
-  u3_peer*     per_u;
-  {
-    u3_ship her_u;
-    _get_her(&pac_u, her_u);
-    per_u = _mesa_get_peer(sam_u, her_u);
-  }
-
-  if ( (PACT_PEEK == hed_u.typ_y) || (PACT_POKE == hed_u.typ_y) ) {
-    _mesa_add_our_to_pit(sam_u, &pac_u.pek_u.nam_u);
-  }
 
   if ( PACT_PAGE == hed_u.typ_y ) {
     u3_weak pin = _mesa_get_pit(sam_u, &pac_u.pek_u.nam_u);
@@ -1511,11 +1587,23 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       _mesa_del_pit(sam_u, &pac_u.pek_u.nam_u);
       u3z(pin);
     }
-  }else if ( per_u ) {
-    _mesa_send_modal(per_u, buf_y, len_w);
   }
   else {
-    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, u3k(las));
+    u3_mesa_name* nam_u = &pac_u.pek_u.nam_u;
+    u3_mesa_resend_data* res_u = c3_malloc(sizeof(u3_mesa_resend_data));
+    u3_mesa_request_data* dat_u = &res_u->dat_u;
+    {
+      dat_u->sam_u = sam_u;
+      _get_her(&pac_u, dat_u->her_u);
+      dat_u->nam_u = nam_u;
+    }
+    {
+      res_u->ret_y = 4;
+      uv_timer_init(u3L, &res_u->tim_u);
+    }
+    _mesa_add_our_to_pit(sam_u, nam_u);
+    _mesa_send_request(dat_u);
+    _mesa_set_resend_timer(res_u);
   }
 
   sam_u->tim_d = _get_now_micros();
