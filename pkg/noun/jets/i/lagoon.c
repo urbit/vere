@@ -2169,7 +2169,6 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        fprintf(stderr, "\r\nx_kind: %x\r\n", x_kind);
         switch (x_kind) {
           case c3__i754:
             _set_rounding(rnd);
@@ -2177,7 +2176,6 @@
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
-            fprintf(stderr, "uint\r\n");
             return u3_none;
         }
       }
