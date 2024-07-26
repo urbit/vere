@@ -2302,17 +2302,16 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
-  }
-  if ( req_u->len_w < req_u->tot_w ) {
-    _mesa_request_next_fragments(sam_u, req_u, lan_u);
-  }
-  else {
+
     u3l_log(" received last packet, tot_w: %u", req_u->tot_w);
     c3_d now_d = _get_now_micros();
     u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
-    // clean up pend_req
-    _mesa_free_pict(pic_u);
   }
+
+  if ( req_u->len_w < req_u->tot_w ) {
+    _mesa_request_next_fragments(sam_u, req_u, lan_u);
+  }
+
 }
 
 static void
