@@ -936,6 +936,14 @@ report(void)
          LIBCURL_VERSION_PATCH);
 }
 
+/* _stop_exit_fore(): exit before.
+*/
+static void
+_stop_exit_fore(c3_i int_i)
+{
+  kill(getpid(), SIGTERM);
+}
+
 /* _stop_exit(): exit immediately.
 */
 static void
@@ -2302,10 +2310,7 @@ _cw_play_snap(u3_disk* log_u)
 static void
 _cw_play_exit(c3_i int_i)
 {
-  //  explicit fprintf to avoid allocation in u3l_log
-  //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
-  raise(SIGINT);
+  kill(getpid(), SIGINT);
 }
 
 /* _cw_play_impl(): replay events, but better.
@@ -2382,19 +2387,43 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 */
 static void*
 _cw_play_fork_heed(void* arg) {
+  // XX
   c3_c buf[1];
   c3_zs red;
+
+  sigset_t set;
+
+  sigemptyset(&set);
+  sigaddset(&set, SIGINT);
+  sigaddset(&set, SIGTERM);
+  sigaddset(&set, SIGTSTP);
+  if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
+    fprintf(stderr, "play: watcher failed to block sigs: %s\r\n", strerror(errno));
+    exit(1);
+  }
 
   do {
     pthread_testcancel();
     red = read(STDIN_FILENO, buf, sizeof(buf));
     if ( 0 == red ) {
       fprintf(stderr, "play: god save the king! committing sudoku...\r\n");
-      exit(1);
+      kill(getpid(), SIGINT);
+      return NULL;
     }
   } while ( 0 < red );
 
   return NULL;
+}
+
+/* _cw_play_fork_exit(): exit callback for uv_spawn.
+*/
+void
+_cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
+  if ( sat_d || tem_i ) {
+    fprintf(stderr, "play: failed: %" PRId64 " signal: %d\r\n", sat_d, tem_i);
+    exit(1);
+  }
+  uv_close((uv_handle_t*)req_u, NULL);
 }
 
 /* _cw_play_fork(): spawn a subprocess for event replay.
@@ -2451,56 +2480,37 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     u3_assert( i_z < sizeof(argv) );
   }
 
-  //  prepare a pipe for ipc with the subprocess
+  //  use uv_spawn to fork a new serf process and call its play subcommand
   //
-  c3_i pipefd[2];
-  if ( 0 != pipe(pipefd) ) {
-    fprintf(stderr, "play: failed to open pipe\r\n");
+  u3L = uv_default_loop();
+
+  uv_pipe_t stdin_pipe;
+  uv_pipe_init(u3L, &stdin_pipe, 0);
+
+  uv_process_t child_req = {0};
+  uv_process_options_t options = {0};
+  uv_stdio_container_t stdio[3];
+  stdio[0].data.stream = (uv_stream_t*) &stdin_pipe;
+  stdio[1].data.fd = STDOUT_FILENO;
+  stdio[2].data.fd = STDERR_FILENO;
+  stdio[0].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;  //  stdin
+  stdio[1].flags = UV_INHERIT_FD;                      //  stdout
+  stdio[2].flags = UV_INHERIT_FD;                      //  stderr
+  options.stdio_count = 3;
+  options.stdio = stdio;
+  options.file = argv[0];
+  options.args = argv;
+  options.exit_cb = (uv_exit_cb)_cw_play_fork_exit;
+
+  c3_i sat_i;
+  if ( 0 != (sat_i = uv_spawn(u3L, &child_req, &options)) ) {
+    fprintf(stderr, "play: uv_spawn: %s\r\n", uv_strerror(sat_i));
     return 1;
   }
 
-  //  set the child process' stdin to read from the pipe
-  //
-  posix_spawn_file_actions_t action;
-  posix_spawn_file_actions_init(&action);
-  posix_spawn_file_actions_addclose(&action, pipefd[1]);
-  posix_spawn_file_actions_adddup2(&action, pipefd[0], STDIN_FILENO);
+  signal(SIGINT, SIG_IGN);
 
-  //  spawn a new serf process and call its play subcommand
-  //
-  pid_t pid_i;
-  c3_i  sat_i;
-  if ( 0 != (sat_i = posix_spawn(&pid_i, u3_Host.wrk_c, &action, 0, argv, 0)) ) {
-    fprintf(stderr, "play: posix_spawn: %s\r\n", strerror(sat_i));
-    return 1;
-  }
-
-  //  close the read end of the pipe in the parent
-  //
-  close(pipefd[0]);
-
-  //  wait for the child to exit
-  //
-  if ( -1 == waitpid(pid_i, &sat_i, 0) ) {
-    fprintf(stderr, "play: waitpid: %s\r\n", strerror(errno));
-    return 1;
-  }
-
-  if ( WIFEXITED(sat_i) ) {
-    ret_i = WEXITSTATUS(sat_i);
-    if ( 0 != ret_i ) {
-      fprintf(stderr, "play: exited with %d\r\n", ret_i);
-    }
-    return ret_i;
-  }
-  else if ( WIFSIGNALED(sat_i) ) {
-    fprintf(stderr, "play: terminated by signal %d\r\n", WTERMSIG(sat_i));
-    return 1;
-  }
-  else {
-    fprintf(stderr, "play: strange termination\r\n");
-    return 1;
-  }
+  return uv_run(u3L, UV_RUN_DEFAULT);
 }
 
 /* _cw_play(): replay events, but better.
@@ -3224,7 +3234,7 @@ main(c3_i   argc,
   //
   //    Configured here using signal() so as to be immediately available.
   //
-  signal(SIGTSTP, _stop_exit);
+  signal(SIGTSTP, _stop_exit_fore);
 
   printf("~\n");
   //  printf("welcome.\n");
