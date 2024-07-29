@@ -902,6 +902,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 {
   u3_seal* sel_u = c3_calloc(sizeof(*sel_u));
   // this is wrong, need to calloc & memcpy
+  // XX calloc & memcpy done before the _mesa_send_buf callsite
   sel_u->buf_y = buf_y;
   sel_u->len_w = len_w;
   sel_u->sam_u = sam_u;
@@ -992,9 +993,12 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
 
+  c3_y* sen_y = c3_calloc(len_w);
+  memcpy(sen_y, buf_y, len_w);
+
   if ( c3y == _mesa_is_direct_mode(per_u) ) {
     u3l_log("mesa: direct");
-    _mesa_send_buf(sam_u, per_u->dan_u, buf_y, len_w);
+    _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
   else {
@@ -1007,12 +1011,12 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
     //  after a restart of the driver
     //
     u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-    _mesa_send_buf(sam_u, imp_u, buf_y, len_w);
+    _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
     per_u->ind_u.sen_d = now_d;
 
     if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
-        (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
-      _mesa_send_buf(sam_u, per_u->dan_u, buf_y, len_w);
+         (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
+      _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
       per_u->dir_u.sen_d = now_d;
     }
   }
