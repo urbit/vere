@@ -968,7 +968,15 @@ _mesa_free_request_data(u3_mesa_request_data* dat_u)
   c3_free(dat_u->nam_u);
   c3_free(dat_u->buf_y);
   u3z(dat_u->las);
-  c3_free(dat_u);
+  //  does not free dat_u itself, since it could be in a u3_mesa_resend_data
+}
+
+static void
+_mesa_free_resend_data(u3_mesa_resend_data* res_u)
+{
+  uv_timer_stop(&res_u->tim_u);
+  _mesa_free_request_data(&res_u->dat_u);
+  c3_free(res_u);
 }
 
 static void
@@ -1508,15 +1516,6 @@ _mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3z(pin);
   return;
 }
-static void
-_mesa_free_resend_data(u3_mesa_resend_data* res_u)
-{
-  uv_timer_stop(&res_u->tim_u);
-  _mesa_free_request_data(&res_u->dat_u);
-}
-
-static void
-_mesa_set_resend_timer(u3_mesa_resend_data* dat_u);
 
 static void
 _mesa_resend_timer_cb(uv_timer_t* tim_u)
@@ -1527,25 +1526,27 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
 
   u3_weak pit = _mesa_get_pit(dat_u->sam_u, dat_u->nam_u);
   if ( u3_none == pit ) {
+    #ifdef MESA_DEBUG
+      u3l_log("mesa: resend PIT entry gone %u", res_u->ret_y);
+    #endif
     _mesa_free_resend_data(res_u);
     return;
+  }
+  else {
+    #ifdef MESA_DEBUG
+      u3l_log("mesa: resend %u", res_u->ret_y);
+    #endif
   }
   u3z(pit);
   
   _mesa_send_request(dat_u);
 
   if ( res_u->ret_y ) {
-    _mesa_set_resend_timer(res_u);
+    uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
   else {
     _mesa_free_resend_data(res_u);
   }
-}
-
-static void
-_mesa_set_resend_timer(u3_mesa_resend_data* dat_u)
-{
-  uv_timer_start(&dat_u->tim_u, _mesa_resend_timer_cb, 1, 0);
 }
 
 static void
@@ -1589,7 +1590,8 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     }
   }
   else {
-    u3_mesa_name* nam_u = &pac_u.pek_u.nam_u;
+    u3_mesa_name* nam_u = c3_malloc(sizeof(u3_mesa_name));
+    memcpy(nam_u, &pac_u.pek_u.nam_u, sizeof(u3_mesa_name));
     u3_mesa_resend_data* res_u = c3_malloc(sizeof(u3_mesa_resend_data));
     u3_mesa_request_data* dat_u = &res_u->dat_u;
     {
@@ -1603,12 +1605,12 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     }
     _mesa_add_our_to_pit(sam_u, nam_u);
     _mesa_send_request(dat_u);
-    _mesa_set_resend_timer(res_u);
+    uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
 
   sam_u->tim_d = _get_now_micros();
 
-  // c3_free(buf_y);
+  //  TODO: free pac_u or any fields in pac_u?
   u3z(pac);
   u3z(las);
 }
