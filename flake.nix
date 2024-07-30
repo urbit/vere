@@ -104,12 +104,16 @@
         ]
         ++ (with pkgs; [
           autoconf
+          autoconf-archive
           automake
-          bazel_5
+          bazel_6
           binutils # for `nm`
           jdk11_headless
           libtool
           m4
+          pkg-config
+          git
+          perl
         ]);
         extraBuildCommands = ''
           chmod +w usr
