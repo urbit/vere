@@ -435,6 +435,13 @@ _mesa_encode_path(c3_w len_w, c3_y* buf_y)
 }
 
 static void
+_mesa_free_name(u3_mesa_name* nam_u)
+{
+  c3_free(nam_u->pat_c);
+  c3_free(nam_u);
+}
+
+static void
 _mesa_free_pict(u3_mesa_pict* pic_u)
 {
   mesa_free_pact(&pic_u->pac_u);
@@ -901,8 +908,6 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_w)
 {
   u3_seal* sel_u = c3_calloc(sizeof(*sel_u));
-  // this is wrong, need to calloc & memcpy
-  // XX calloc & memcpy done before the _mesa_send_buf callsite
   sel_u->buf_y = buf_y;
   sel_u->len_w = len_w;
   sel_u->sam_u = sam_u;
@@ -965,8 +970,7 @@ typedef struct _u3_mesa_resend_data {
 static void
 _mesa_free_request_data(u3_mesa_request_data* dat_u)
 {
-  c3_free(dat_u->nam_u->pat_c);
-  c3_free(dat_u->nam_u);
+  _mesa_free_name(dat_u->nam_u);
   c3_free(dat_u->buf_y);
   u3z(dat_u->las);
   //  does not free dat_u itself, since it could be in a u3_mesa_resend_data
@@ -1002,7 +1006,13 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
     per_u->dir_u.sen_d = now_d;
   }
   else {
-    u3l_log("mesa: indirect to %u", per_u->imp_y);
+    #ifdef MESA_DEBUG
+      u3_ship gal_u = {0};
+      gal_u[0] = per_u->imp_y;
+      c3_c* gal_c = u3_ship_to_string(gal_u);
+      u3l_log("mesa: sending to %s", gal_c);
+      c3_free(gal_c);
+    #endif
     //  XX if we have lanes in arvo, send it also there?
     //  otherwise after a peer turns indirect because we haven't contacted them,
     //  we never achieve a direct route since we only send
@@ -1022,11 +1032,13 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   }
 }
 
+//  RETAIN on dat_u->las
 static void
 _mesa_send_request(u3_mesa_request_data* dat_u)
 {
   u3_peer* per_u = _mesa_get_peer(dat_u->sam_u, dat_u->her_u);
   if ( !per_u ) {
+    u3l_log("mesa: send_bufs()");
     _mesa_send_bufs(dat_u->sam_u,
                     NULL,
                     dat_u->buf_y,
@@ -1034,9 +1046,9 @@ _mesa_send_request(u3_mesa_request_data* dat_u)
                     u3k(dat_u->las));
   }
   else {
+    u3l_log("mesa: send_modal()");
     _mesa_send_modal(per_u, dat_u->buf_y, dat_u->len_w);
   }
-  u3z(dat_u->las);
 }
 
 static void
@@ -1298,6 +1310,11 @@ _mesa_send_bufs(u3_mesa* sam_u,
         u3l_log("  direct send");
         per_u->dir_u.sen_d = _get_now_micros();
       }
+      else {
+        #ifdef MESA_DEBUG
+          u3l_log("mesa: send indirect");
+        #endif
+      }
     }
   }
   u3z(las);
@@ -1542,7 +1559,7 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #endif
   }
   u3z(pit);
-  
+
   _mesa_send_request(dat_u);
 
   if ( res_u->ret_y ) {
@@ -1594,14 +1611,20 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     }
   }
   else {
+    //  TODO this is too much allocation and copying
     u3_mesa_name* nam_u = c3_malloc(sizeof(u3_mesa_name));
     memcpy(nam_u, &pac_u.pek_u.nam_u, sizeof(u3_mesa_name));
+    nam_u->pat_c = c3_malloc(nam_u->pat_s);
+    memcpy(nam_u->pat_c, pac_u.pek_u.nam_u.pat_c, nam_u->pat_s);
     u3_mesa_resend_data* res_u = c3_malloc(sizeof(u3_mesa_resend_data));
     u3_mesa_request_data* dat_u = &res_u->dat_u;
     {
       dat_u->sam_u = sam_u;
       _get_her(&pac_u, dat_u->her_u);
       dat_u->nam_u = nam_u;
+      dat_u->las = u3k(las);
+      dat_u->buf_y = buf_y;
+      dat_u->len_w = len_w;
     }
     {
       res_u->ret_y = 4;
@@ -2164,31 +2187,49 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
 }
 
 typedef struct _u3_mesa_lane_cb_data {
-  u3_ship  her_u;
-  u3_lane  lan_u;
-  u3_peer* per_u;
+  u3_lane       lan_u;
+  u3_peer*      per_u;
+  u3_mesa_name* nam_u;
 } u3_mesa_lane_cb_data;
 
 static void
+_mesa_free_lane_cb_data(u3_mesa_lane_cb_data* dat_u)
+{
+  u3l_log("free_lane_cb_data %s", dat_u->nam_u? "non-null" : "null");
+  _mesa_free_name(dat_u->nam_u);
+  c3_free(dat_u);
+}
+
+//  TODO should put in cache on success
+static void
 _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 {
+  u3_mesa_lane_cb_data* dat_u = egg_u->ptr_v;
+
   if ( u3_ovum_done != new_e ) {
+    /*
     #ifdef MESA_DEBUG
-      u3l_log("mesa: arvo page event was not a success");
+      u3l_log("mesa: arvo page event was not a success, %s",
+        (u3_ovum_drop == new_e)? "DROP" :
+        (u3_ovum_work == new_e)? "WORK" : "WACK"
+      );
     #endif
+    */
     return;
   }
-  u3_mesa_lane_cb_data* dat_u = egg_u->ptr_v;
-  u3_peer* per_u = dat_u->per_u;
+
+  u3_assert(dat_u);  //  TODO remove
+  u3_assert(dat_u->nam_u);
+  u3_assert(dat_u->nam_u->pat_s);
+  u3_assert(dat_u->nam_u->pat_c);
 
   #ifdef MESA_DEBUG
-    c3_c* her_c = u3_ship_to_string(dat_u->her_u);
-    u3l_log("mesa: %%dear %s", her_c);
-    _log_lane(&dat_u->lan_u);
+    c3_c* her_c = u3_ship_to_string(dat_u->nam_u->her_u);
+    u3l_log("mesa: %%page %s", her_c);
     c3_free(her_c);
   #endif
 
-  c3_free(dat_u);
+  _mesa_free_lane_cb_data(dat_u);
 }
 
 static void
@@ -2197,7 +2238,7 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
   #ifdef MESA_DEBUG
     u3l_log("mesa: arvo page event failed");
   #endif
-  c3_free(egg_u->ptr_v);
+  _mesa_free_lane_cb_data((u3_mesa_lane_cb_data*)egg_u->ptr_v);
 }
 
 static void
@@ -2241,7 +2282,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_s fra_s;
 
   c3_d* her_d = nam_u->her_u;
-  c3_o  our_o = __( 0 == memcmp(her_d, sam_u->pir_u->who_d, sizeof(*her_d) * 2) );
+  c3_o our_o = u3_ships_equal(her_d, sam_u->pir_u->who_d);
 
   //  forwarding wrong, need a PIT entry
   // if ( c3n == our_o ) {
@@ -2328,18 +2369,17 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_ovum* ovo = u3_ovum_init(0, c3__ames, wir, cad);
              ovo = u3_auto_plan(&sam_u->car_u, ovo);
 
-    //  XX only inject dear if we hear a different, direct lane
-    if ( pac_u->hed_u.hop_y == 0 && _mesa_lanes_equal(&per_u->dan_u, &lan_u) == c3n) {
-      //  XX should put in cache on success
-      u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
-      {
-        memcpy(dat_u->her_u, nam_u->her_u, 16);
-        dat_u->lan_u.pip_w = lan_u.pip_w;
-        dat_u->lan_u.por_s = lan_u.por_s;
-        dat_u->per_u = per_u;
-      }
-      u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
+    u3_mesa_lane_cb_data* dat_u = c3_calloc(sizeof(u3_mesa_lane_cb_data));
+    {
+      dat_u->per_u = per_u;
+      dat_u->lan_u.pip_w = lan_u.pip_w;
+      dat_u->lan_u.por_s = lan_u.por_s;
+      dat_u->nam_u = c3_calloc(sizeof(u3_mesa_name));
+      memcpy(dat_u->nam_u, nam_u, sizeof(u3_mesa_name));
+      dat_u->nam_u->pat_c = c3_calloc(nam_u->pat_s);
+      memcpy(dat_u->nam_u->pat_c, nam_u->pat_c, nam_u->pat_s);
     }
+    u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
 
     _mesa_free_pict(pic_u);
     u3z(pin);
@@ -2495,11 +2535,12 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 static void
 _mesa_poke_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 {
-
   if ( u3_ovum_done != new_e ) {
+    /*
     #ifdef MESA_DEBUG
       u3l_log("mesa: arvo poke event was not a success");
     #endif
+    */
     return;
   }
 
@@ -2507,8 +2548,8 @@ _mesa_poke_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
   u3_peer* per_u = dat_u->per_u;
 
   #ifdef MESA_DEBUG
-    c3_c* her_c = u3_ship_to_string(dat_u->her_u);
-    u3l_log("mesa: %%dear %s", her_c);
+    c3_c* her_c = u3_ship_to_string(dat_u->nam_u->her_u);
+    u3l_log("mesa: %%poke processed from %s", her_c);
     _log_lane(&dat_u->lan_u);
     c3_free(her_c);
   #endif
@@ -2600,7 +2641,8 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     assert(pac_u->pok_u.dat_u.tot_w);
     u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
     {
-      memcpy(dat_u->her_u, pac_u->pok_u.pay_u.her_u, 16);
+      dat_u->nam_u = c3_malloc(sizeof(u3_mesa_name));
+      memcpy(dat_u->nam_u, &pac_u->pek_u.nam_u, sizeof(u3_mesa_name));
       dat_u->lan_u.pip_w = lan_u->pip_w;
       dat_u->lan_u.por_s = lan_u->por_s;
       dat_u->per_u = per_u;
@@ -2621,6 +2663,7 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
+  u3l_log("mesa_hear()");
   u3_mesa_pict* pic_u;
   c3_w pre_w;
   c3_y* cur_y = hun_y;
