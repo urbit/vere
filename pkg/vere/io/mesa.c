@@ -1646,6 +1646,7 @@ c3_o
 _ames_kick_newt(void* sam_u, u3_noun tag, u3_noun dat);
 
 static void _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u);
+static void _init_peer(u3_mesa* sam_u, u3_peer* per_u);
 
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
@@ -1679,8 +1680,11 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
       u3m_p("data", dat);
       u3_noun who = u3k(u3h(dat));
       u3_peer* per_u = _mesa_get_peer_raw(sam_u, who);
-      c3_o new_o = c3n;
 
+      if ( NULL == per_u ) {
+        per_u = c3_calloc(sizeof(u3_peer));
+        _init_peer(sam_u, per_u);
+      }
       u3_ship who_u;
       u3_ship_of_noun(who_u ,who);
       _meet_peer(sam_u, per_u, who_u);
