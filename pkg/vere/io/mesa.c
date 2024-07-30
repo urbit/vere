@@ -2195,7 +2195,6 @@ typedef struct _u3_mesa_lane_cb_data {
 static void
 _mesa_free_lane_cb_data(u3_mesa_lane_cb_data* dat_u)
 {
-  u3l_log("free_lane_cb_data %s", dat_u->nam_u? "non-null" : "null");
   _mesa_free_name(dat_u->nam_u);
   c3_free(dat_u);
 }
@@ -2218,17 +2217,13 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     return;
   }
 
-  u3_assert(dat_u);  //  TODO remove
-  u3_assert(dat_u->nam_u);
-  u3_assert(dat_u->nam_u->pat_s);
-  u3_assert(dat_u->nam_u->pat_c);
-
   #ifdef MESA_DEBUG
     c3_c* her_c = u3_ship_to_string(dat_u->nam_u->her_u);
-    u3l_log("mesa: %%page %s", her_c);
+    u3l_log("mesa: processed %%page from %s", her_c);
     c3_free(her_c);
   #endif
 
+  _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
   _mesa_free_lane_cb_data(dat_u);
 }
 
@@ -2663,7 +2658,6 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
-  u3l_log("mesa_hear()");
   u3_mesa_pict* pic_u;
   c3_w pre_w;
   c3_y* cur_y = hun_y;
