@@ -72,10 +72,6 @@ typedef struct _u3_mesa_stat {
 // XX
 #define MESA_HUNK  16384  //  184
 
-// pending interest sentinels
-#define MESA_ITEM         1  // cached item
-#define MESA_WAIT         2  // waiting on scry
-
 // routing table sentinels
 #define MESA_CZAR         1  // pending dns lookup
 #define MESA_ROUT         2  // have route
@@ -195,15 +191,26 @@ typedef struct _u3_pend_req {
 } u3_pend_req;
 
 typedef enum _u3_mesa_ctag {
-  CACE_WAIT = 1,
-  CACE_ITEM = 2,
+  CTAG_WAIT = 1,
+  CTAG_ITEM = 2,
 } u3_mesa_ctag;
+
+//  jumbo frame cache value
+//
+typedef struct _u3_mesa_line {
+  u3_mesa_ctag typ_y;  //  pending or present?
+  u3_mesa_name nam_u;  //  full name for data, ready to serialize
+  u3_auth_data aum_u;  //  message authenticator
+  c3_y*        tip_y;  //  initial Merkle spine, nullable
+  c3_y*        dat_y;  //  message data (1024 bytes per fragment)
+  c3_w         dat_w;  //  message data size in bytes
+  c3_y*        haz_y;  //  hash pairs     (64 bytes per fragment)
+} u3_mesa_line;
 
 /*
  *  typedef u3_mesa_req u3_noun
  *  [tot=@ waiting=(set @ud) missing=(set @ud) nex=@ud dat=(map @ud @)]
  */
-
 
 typedef struct _u3_cace_enty {
   u3_mesa_ctag      typ_y;
@@ -435,6 +442,22 @@ _mesa_encode_path(c3_w len_w, c3_y* buf_y)
 }
 
 static void
+_mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u)
+{
+  memcpy(des_u, src_u, sizeof(u3_mesa_name));
+  des_u->pat_c = c3_calloc(src_u->pat_s);
+  memcpy(des_u->pat_c, src_u->pat_c, src_u->pat_s);
+}
+
+static u3_mesa_name*
+_mesa_copy_name_alloc(u3_mesa_name* src_u)
+{
+  u3_mesa_name* des_u = c3_calloc(sizeof(u3_mesa_name));
+  _mesa_copy_name(des_u, src_u);
+  return des_u;
+}
+
+static void
 _mesa_free_name(u3_mesa_name* nam_u)
 {
   c3_free(nam_u->pat_c);
@@ -457,16 +480,29 @@ _dire_etch_ud(c3_d num_d)
   return u3i_bytes(26 - dif_w, buf_y); // XX known-non-null
 }
 
+static u3_mesa_line*
+_mesa_new_line(u3_mesa_name* nam_u)
+{
+  u3_mesa_line* lin_u = c3_calloc(sizeof(u3_mesa_line));
+  lin_u->typ_y = CTAG_ITEM;
+  lin_u->nam_u = *nam_u;
+  memcpy(lin_u->nam_u.pat_c, nam_u->pat_c, nam_u->pat_s);
+
+  return lin_u;
+}
+
 /* _mesa_request_key(): produce key for request hashtable sam_u->req_p from nam_u
 */
-u3_noun _mesa_request_key(u3_mesa_name* nam_u)
+u3_noun
+_mesa_request_key(u3_mesa_name* nam_u)
 {
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
   u3_noun res = u3nc(u3i_word(nam_u->rif_w), pax);
   return res;
 }
 
-static void _init_gage(u3_gage* gag_u)
+static void
+_init_gage(u3_gage* gag_u)
 {
   gag_u->rto_w = 1000000;
   gag_u->rtt_w = 1000000;
@@ -1612,10 +1648,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   }
   else {
     //  TODO this is too much allocation and copying
-    u3_mesa_name* nam_u = c3_malloc(sizeof(u3_mesa_name));
-    memcpy(nam_u, &pac_u.pek_u.nam_u, sizeof(u3_mesa_name));
-    nam_u->pat_c = c3_malloc(nam_u->pat_s);
-    memcpy(nam_u->pat_c, pac_u.pek_u.nam_u.pat_c, nam_u->pat_s);
+    u3_mesa_name* nam_u = _mesa_copy_name_alloc(&pac_u.pek_u.nam_u);
     u3_mesa_resend_data* res_u = c3_malloc(sizeof(u3_mesa_resend_data));
     u3_mesa_request_data* dat_u = &res_u->dat_u;
     {
@@ -2373,10 +2406,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       dat_u->per_u = per_u;
       dat_u->lan_u.pip_w = lan_u.pip_w;
       dat_u->lan_u.por_s = lan_u.por_s;
-      dat_u->nam_u = c3_calloc(sizeof(u3_mesa_name));
-      memcpy(dat_u->nam_u, nam_u, sizeof(u3_mesa_name));
-      dat_u->nam_u->pat_c = c3_calloc(nam_u->pat_s);
-      memcpy(dat_u->nam_u->pat_c, nam_u->pat_c, nam_u->pat_s);
+      dat_u->nam_u = _mesa_copy_name_alloc(nam_u);
     }
     u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
 
