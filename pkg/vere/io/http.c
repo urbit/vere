@@ -642,35 +642,6 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 static void
 _http_cache_respond(u3_hreq* req_u, u3_noun nun);
 
-static void
-_http_scry_respond(u3_hreq* req_u, u3_noun nun);
-
-/* _content_headers: create content headers for response
-*/
-static u3_noun
-_content_headers(c3_z beg_z, c3_z end_z, c3_w tot_w)
-{
-  u3_noun out;
-  u3_noun byz;
-  u3_noun rng;
-  u3_noun len;
-
-  u3_noun lin = u3i_list(u3i_string("bytes "),
-                         u3do("crip", u3do("a-co:co", beg_z)),
-                         c3_s1('-'),
-                         u3do("crip", u3do("a-co:co", end_z)),
-                         c3_s1('/'),
-                         u3do("crip", u3do("a-co:co", tot_w)),
-                         u3_none);
-  u3_atom dat = u3qc_rap(3, lin);
-  rng = u3nc(u3i_string("content-range"), dat);
-  len = u3nc(u3i_string("content-length"),
-             u3do("crip", u3do("a-co:co", (end_z - beg_z) + 1)));
-
-  out = u3i_list(rng, len, u3_none);
-  return out;
-}
-
 typedef struct _range_request {
   c3_z beg_z;
   c3_z end_z;
@@ -689,7 +660,7 @@ _parse_range(c3_c* txt_c, c3_w len_w)
   if ( hep_c ) {
     cut.beg_z = h2o_strtosize(txt_c, hep_c - txt_c);
     cut.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
-    // strange -> [SIZE_MAX SIZE_MAX] so we return u3_nul in _slice_octs
+    // strange -> [SIZE_MAX SIZE_MAX] so we return u3_nul
     if (  ((SIZE_MAX == cut.beg_z) && (hep_c != txt_c))
        || ((SIZE_MAX == cut.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0)) )
     {
@@ -723,105 +694,6 @@ _get_range(h2o_headers_t req_headers, range_request* rng_req)
   return c3y;
 }
 
-typedef struct _content {
-  c3_z    beg_z;
-  c3_z    end_z;
-  u3_noun dat;  //  XX free
-} content;
-
-/* _slice_octs: given a valid range, slice a section of octs
-*/
-static content
-_slice_octs(range_request rng, u3_noun octs)
-{
-  content out;
-  out.beg_z = SIZE_MAX;
-  out.end_z = SIZE_MAX;
-  out.dat = u3_nul;
-
-  u3_noun len = u3h(octs);
-  c3_w len_w;
-  if ( c3n == u3r_safe_word(len, &len_w) ) {
-    return out;
-  }
-
-  if (  (SIZE_MAX == rng.beg_z)
-     && (SIZE_MAX == rng.end_z) )
-  {
-    // [~ ~]
-    return out;
-  }
-
-  if ( SIZE_MAX == rng.end_z ) {
-    // [@ ~]
-    out.beg_z = rng.beg_z;
-    out.end_z = len_w - 1;
-  }
-  else if ( SIZE_MAX == rng.beg_z ) {
-    // [~ @]
-    out.beg_z = len_w - c3_min(rng.end_z, len_w);
-    out.end_z = len_w - 1;
-  }
-  else {
-    // [@ @]
-    out.beg_z = rng.beg_z;
-    out.end_z = c3_min(rng.end_z, len_w - 1);
-  }
-
-  if (  (out.beg_z < len_w)
-     && (out.end_z < len_w)
-     && (out.beg_z <= out.end_z) )
-  {
-    out.dat = u3nc((out.end_z - out.beg_z) + 1,
-                   u3qc_cut(3, out.beg_z, (out.end_z + 1) - out.beg_z, u3t(octs)));
-  }
-  return out;
-}
-
-static void
-_http_range_respond(u3_hreq* req_u, u3_noun nac, range_request rng_req)
-{
-  u3_noun octs = u3r_at(127, nac);
-  if ( u3_none == octs ) {
-    // 400
-    c3_c* msg_c = "bad request";
-    h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-    return;
-  }
-  content result = _slice_octs(rng_req, octs);
-
-  if ( u3_nul == result.dat ) {
-    // 416
-    c3_c* msg_c = "Requested Range Not Satisfiable";
-    u3z(result.dat);
-    h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
-    return;
-  }
-
-  if ( c3y == u3r_sing(result.dat, octs) ) {
-    // 200
-    u3z(result.dat);
-    u3_noun len = u3r_at(254, nac);
-    c3_w len_w;
-    if ( c3n == u3r_safe_word(len, &len_w) ) {
-      u3z(nac);
-      _http_scry_respond(req_u, u3_nul);
-      return;
-    }
-    u3_noun hez = _content_headers(0, (len_w - 1), len_w);
-    u3_noun res = u3i_edit(nac, 125, u3qb_weld(hez, u3r_at(125, nac)));
-    _http_cache_respond(req_u, res);
-  }
-  else {
-    // 206
-    u3_noun hez = _content_headers(result.beg_z, result.end_z, u3h(octs));
-    u3_noun res = u3i_edit(nac, 127, result.dat);
-    res = u3i_edit(res, 124, 206);
-    res = u3i_edit(res, 125, u3qb_weld(hez, u3r_at(125, res)));
-    _http_cache_respond(req_u, res);
-  }
-}
-
 /* _http_scry_cb()
 */
 static void
@@ -836,31 +708,18 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
-    if ( u3_nul == nun ) {
-      _http_scry_respond(req_u, u3k(nun));
-    }
-    else {
-      h2o_headers_t req_headers = req_u->rec_u->headers;
-      range_request rng_req;
-      c3_o rng_o = _get_range(req_headers, &rng_req);
-
-      if (c3y == rng_o ) {
-        _http_range_respond(req_u, nun, rng_req);
-      }
-      else {
-        _http_cache_respond(req_u, u3k(nun));
-      }
-    }
+    _http_cache_respond(req_u, u3k(nun));
   }
 
   // cache only if peek was not at now, and nun isn't u3_nul
-  if ( c3n == peq_u->las_o ) {
-    // XX pair of auth & path for key
-    // check ~watter-parter's
+  if (  (c3n == peq_u->las_o)
+     && (u3_nul != nun) )
+  {
     u3_noun key = u3nc(auth, u3k(peq_u->pax));
     u3h_put(htd_u->nax_p, key, nun);
     u3z(key);
   }
+
   u3z(peq_u->pax);
   c3_free(peq_u);
 }
@@ -1029,12 +888,27 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       }
 
       else {
-        u3_noun spur = u3nc(u3i_string("mime"), u3t(bem.pur));
+        h2o_headers_t req_headers = req_u->rec_u->headers;
+        range_request rng_req;
+        c3_o rng_o = _get_range(req_headers, &rng_req);
+
+        u3_noun spur;
+        if ( c3n == rng_o ) {
+          spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3t(bem.pur));
+        }
+        else {
+          u3_atom beg = ( SIZE_MAX == rng_req.beg_z) ?
+                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_req.beg_z));
+          u3_atom end = ( SIZE_MAX == rng_req.end_z) ?
+                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_req.end_z));
+
+          spur = u3nq(u3i_string("range"), beg, end, u3t(bem.pur));
+        }
+
         if ( c3y == req_u->peq_u->las_o ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                             bem.des, spur, req_u->peq_u, _http_scry_cb);
         }
-
         else {
           u3_noun bam = u3nq(bem.who, bem.des, bem.cas, spur);
           u3_noun key = u3nc(auth, u3k(bam));
@@ -1045,70 +919,18 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
              || (u3_nul == nac)
              || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
           {
-            // cache, then serve subsequent range requests from cache
+            // maybe cache, then serve subsequent range requests from cache
             req_u->peq_u->pax = u3k(bam);
             u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
                          req_u->peq_u, _http_scry_cb);
           }
           else {
-            h2o_headers_t req_headers = req_u->rec_u->headers;
-            range_request rng_req;
-            c3_o rng_o = _get_range(req_headers, &rng_req);
-
-            if ( c3y == rng_o) {
-              _http_range_respond(req_u, nac, rng_req);
-            }
-            else {
-              _http_cache_respond(req_u, nac);
-            }
+            _http_cache_respond(req_u, nac);
           }
         }
       }
     }
   }
-}
-
-static void
-_http_scry_respond(u3_hreq* req_u, u3_noun nun)
-{
-  h2o_req_t* rec_u = req_u->rec_u;
-  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
-
-  if ( u3_nul == nun ) {
-    u3_weak req = _http_rec_to_httq(rec_u);
-    if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
-        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
-                rec_u->method.base);
-      }
-      c3_c* msg_c = "bad request";
-      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
-    }
-    else {
-      h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
-    }
-  }
-  else if ( u3_none == u3r_at(15, nun) ) {
-    h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
-  }
-  else {
-    u3_noun auth, response_header, data;
-    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
-    u3_noun status, headers;
-    u3x_cell(response_header, &status, &headers);
-
-    // check auth
-    if ( (c3y == auth)
-      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
-    {
-      h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
-    }
-    else {
-      req_u->sat_e = u3_rsat_plan;
-      _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
-    }
-  }
-  u3z(nun);
 }
 
 /* _http_cache_respond(): respond with a simple-payload:http
