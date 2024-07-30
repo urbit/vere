@@ -96,6 +96,8 @@ vere_library(
             "*.h",
             "db/*.c",
             "io/*.c",
+            "io/*/*.h",
+            "io/*/*.c",
         ],
         exclude = [
             "main.c",
@@ -110,6 +112,7 @@ vere_library(
         "@platforms//os:macos": [
             "platform/darwin/daemon.c",
             "platform/darwin/ptty.c",
+            "platform/darwin/mach.c",
         ],
         "@platforms//os:linux": [
             "platform/linux/daemon.c",
@@ -139,6 +142,7 @@ vere_library(
         "@lmdb",
         "@openssl",
         "@uv",
+        "@natpmp",
     ] + select({
         "@platforms//os:macos": [],
         "@platforms//os:linux": [
@@ -183,6 +187,12 @@ vere_binary(
 # TESTS
 #
 
+
+cc_library(
+  name = "ames_src",
+  hdrs = ["io/ames.c"],
+)
+
 cc_test(
     name = "ames_tests",
     timeout = "short",
@@ -192,7 +202,7 @@ cc_test(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:private"],
-    deps = [":vere"],
+    deps = [":vere", ":ames_src"]
 )
 
 cc_test(

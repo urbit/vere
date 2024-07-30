@@ -6,6 +6,8 @@
 /.user.bazelrc
 /bazel-*
 /urbit
+MODULE.bazel
+MODULE.bazel.lock
 
 # Swap files.
 *.swo

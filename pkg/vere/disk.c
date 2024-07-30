@@ -31,15 +31,6 @@ struct _u3_disk_walk {
   c3_o          liv_o;
 };
 
-// for u3_lmdb_init() calls
-static const size_t siz_i =
-#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  0x7d00000000;
-#else
-  0x10000000000;
-#endif
-
 #undef VERBOSE_DISK
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
@@ -680,7 +671,7 @@ u3_disk_save_meta_meta(c3_c* log_c,
 {
   MDB_env* dbm_u;
 
-  if ( 0 == (dbm_u = u3_lmdb_init(log_c, siz_i)) ) {
+  if ( 0 == (dbm_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize meta-lmdb\r\n");
     return c3n;
   }
@@ -1132,18 +1123,39 @@ u3_disk_epoc_zero(u3_disk* log_u)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3E_VERLAT);
-  fclose(epv_f);
+  FILE* epv_f = fopen(epi_c, "w");  // XX errors
+
+  if (  !epv_f
+     || (0 > fprintf(epv_f, "%d", U3E_VERLAT))
+     || fflush(epv_f)
+     || (-1 == c3_sync(fileno(epv_f)))
+     || fclose(epv_f)
+     || (-1 == rename(epi_c, epv_c)) )
+  {
+    fprintf(stderr, "disk: write epoc.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
-  fprintf(biv_f, URBIT_VERSION);    //  XX append a sentinel for auto-rollover?
-  fclose(biv_f);
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");
+  if (  !biv_f
+     || (0 > fprintf(biv_f, URBIT_VERSION))
+     || fflush(biv_f)
+     || (-1 == c3_sync(fileno(biv_f)))
+     || fclose(biv_f)
+     || (-1 == rename(bii_c, biv_c)) )
+  {
+    fprintf(stderr, "disk: write vere.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
@@ -1214,18 +1226,44 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3E_VERLAT);
-  fclose(epv_f);
+  FILE* epv_f = fopen(epi_c, "w");
+
+  if (  !epv_f
+     || (0 > fprintf(epv_f, "%d", U3E_VERLAT))
+     || fflush(epv_f)
+     || (-1 == c3_sync(fileno(epv_f)))
+     || fclose(epv_f)
+     || (-1 == rename(epi_c, epv_c)) )
+  {
+    fprintf(stderr, "disk: write epoc.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
-  fprintf(biv_f, URBIT_VERSION);
-  fclose(biv_f);
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");
+  if (  !biv_f
+     || (0 > fprintf(biv_f, URBIT_VERSION))
+     || fflush(biv_f)
+     || (-1 == c3_sync(fileno(biv_f)))
+     || fclose(biv_f)
+     || (-1 == rename(bii_c, biv_c)) )
+  {
+    fprintf(stderr, "disk: write vere.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
+
+  if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
+    fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  get metadata from old log
   c3_d     who_d[2];
@@ -1240,7 +1278,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   log_u->mdb_u = 0;
 
   //  initialize db of new epoch
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database\r\n");
     c3_free(log_u);
     goto fail3;
@@ -1499,7 +1537,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     tmp_c);
     return c3n;
@@ -1533,7 +1571,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
                     strerror(errno));
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return c3n;
@@ -1632,7 +1670,9 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   u3_disk_epoc_list(log_u, sot_d);
 
   if ( len_z <= 2 ) {
-    fprintf(stderr, "chop: nothing to do, have a great day\r\n");
+    fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
+                    "chop: for more info see "
+                    "https://docs.urbit.org/manual/running/vere#chop\r\n");
     exit(0);  //  enjoy
   }
 
@@ -1714,9 +1754,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_gone;
     }
 
-    if (  (1 != sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
-       && (0 < car_i)
-       && ('\0' == *(ver_c + car_i)) )
+    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+          && (0 < car_i)
+          && ('\0' == *(ver_c + car_i)) ) )
     {
       fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
       return _epoc_fail;
@@ -1734,7 +1774,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, lat_d);
 
   //  initialize latest epoch's db
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return _epoc_fail;
@@ -1878,7 +1918,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
     if ( c3y == exs_o ) {
       //  load the old data.mdb file
-      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, siz_i)) ) {
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)) ) {
         fprintf(stderr, "disk: failed to initialize lmdb\r\n");
         c3_free(log_u);
         return 0;

@@ -52,6 +52,20 @@ This will take a few minutes.
 
 After installing `automake`, `autoconf-archive`, `pkg-config`, and `libtool`, you're ready to build Vere.
 
+#### Debugger
+
+macOS is curious operating system because the kernel is derived from from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
+
+`lldb` hijacks the Mach exception ports for the task when it attaches to the process. Mach exceptions get handled before POSIX signals which means that as soon as vere faults (this happens often) `lldb` stop with a `EXC_BAD_ACCESS`. It is impossible to continue debugging from this state without the workaround we implemented in https://github.com/urbit/vere/pull/611.
+
+There are more annoying warts with `lldb` currently. First, if you attach the debugger when booting the ship with `lldb -- your-ship/.run` you have to specify `-t`, otherwise the ship is unable to boot for mysterious reasons. The other option is to start the ship and attach afterwards with `lldb -p PID`. Afterwards you should do this dance:
+
+```
+p (void)darwin_register_mach_exception_handler()
+pro hand -p true -s false -n false SIGBUS
+pro hand -p true -s false -n false SIGSEGV
+```
+
 ## Build Commands
 
 Once you install the prerequisites, you're ready to build:
@@ -99,6 +113,17 @@ you can pass them with [`--per_file_copt`][per_file_copt] like so:
 bazel build --per_file_copt='pkg/.*@-DMACRO'
 ```
 
+## LSP Integration
+
+```console
+bazel run //bazel:refresh_compile_commands
+```
+
+Running this command will generate a `compile_commands.json` file in the root 
+of the repository, which `clangd` (or other language server processors) will 
+use automatically to provide modern editor features like syntax highlighting, 
+go-to definitions, call hierarchies, symbol manipulation, etc.
+
 ## Test Commands
 
 You can build and run unit tests only on native builds. If you have a native
@@ -135,6 +160,13 @@ error on macOS, the version of `clang` expected by the build system likely
 doesn't match the version of `clang` installed on your system. To address this,
 run `clang --version` and pass the version number via
 `--clang_version="<version_string>"` to the failing command.
+
+If build fails on nix/NixOS, you should pass `ACLOCAL_PATH` environment
+variable to bazel, using `--action_env=ACLOCAL_PATH=$ACLOCAL_PATH`, like so:
+
+```
+bazel build :urbit --action_env=ACLOCAL_PATH=$ACLOCAL_PATH
+```
 
 [^1]: If you're interested in digging into the details of the build system,
       check out [`WORKSPACE.bazel`](WORKSPACE.bazel),
