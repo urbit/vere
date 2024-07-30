@@ -788,7 +788,7 @@ bt_cb(void* data,
     else
       fn_c = info.dli_sname != 0 ? info.dli_sname : "-";
 
-    u3l_log("%-3d %-35s %s", bdata->count - 1, fn_c, (c3_c *)loc);
+    fprintf(stderr, "%-3d %-35s %s\r\n", bdata->count - 1, fn_c, (c3_c *)loc);
 
     bdata->pn_c = 0;
     return 0;
@@ -825,7 +825,7 @@ u3m_stacktrace()
   c3_c* self_path_c[4096] = {0};
 
 #if defined(U3_OS_osx)
-  u3l_log("Stacktrace:");
+  fprintf(stderr, "Stacktrace:\r\n");
 
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
@@ -844,11 +844,11 @@ u3m_stacktrace()
     strings = backtrace_symbols(array, size);
 
     if ( strings == NULL ) {
-      u3l_log("Backtrace failed");
+      fprintf(stderr, "Backtrace failed\r\n");
     }
     else {
       for ( c3_i i = 0; i < size; i++ )
-        u3l_log("%s", strings[i]);
+        fprintf(stderr, "%s\r\n", strings[i]);
       u3l_log("");
     }
 
@@ -857,7 +857,7 @@ u3m_stacktrace()
 #elif defined(U3_OS_linux)
   /* TODO: Fix unwind not getting past signal trampoline on linux aarch64
    */
-  u3l_log("Stacktrace:");
+  fprintf(stderr, "Stacktrace:\r\n");
 
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
@@ -883,7 +883,7 @@ u3m_stacktrace()
   }
   else {
     data.fail = 1;
-    u3l_log("Backtrace failed");
+    fprintf(stderr, "Backtrace failed\r\n");
   }
 #endif
 }
@@ -940,7 +940,7 @@ u3m_bail(u3_noun how)
   if ( &(u3H->rod_u) == u3R ) {
     //  XX set exit code
     //
-    u3l_log("home: bailing out\r\n");
+    fprintf(stderr, "home: bailing out\r\n\r\n");
     u3m_stacktrace();
     abort();
   }
@@ -952,7 +952,7 @@ u3m_bail(u3_noun how)
     case c3__oops: {
       //  XX set exit code
       //
-      u3l_log("bailing out\r\n");
+      fprintf(stderr, "bailing out\r\n\r\n");
       u3m_stacktrace();
       abort();
     }
@@ -1948,7 +1948,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
-    u3l_log("loom: external fault: %p (%p : %p)\r\n",
+    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
             adr_w, u3_Loom, u3_Loom + u3C.wor_i);
 
     u3_assert(0);
