@@ -585,11 +585,9 @@ _czar_boot_data(c3_c* czar_c,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
          (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
          (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
-         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) &&
-         (c3y == u3du(czar_bon)) &&
-         (c3y == u3r_safe_word(u3t(czar_bon), czar_bon_w)) &&
-         (c3y == u3du(czar_ack)) &&
-         (c3y == u3r_safe_word(u3t(czar_ack), czar_ack_w)) ) {
+         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) ) {
+      if ( c3y == u3du(czar_bon) ) u3r_safe_word(u3t(czar_bon), czar_bon_w);
+      if ( c3y == u3du(czar_ack) ) u3r_safe_word(u3t(czar_ack), czar_ack_w);
       ret_o = c3y;
     }
 
