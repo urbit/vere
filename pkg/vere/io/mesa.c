@@ -2071,7 +2071,7 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
   if ( !req_u ) {
     return;
   }
-  else if ( c3y == nun ) {
+  else if ( c3y == nun ) {  // XX
     _mesa_request_next_fragments(ver_u->sam_u, req_u, ver_u->lan_u);
   }
   else if ( c3n == nun ) {
@@ -2107,7 +2107,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->pic_u->sam_u = sam_u;
   req_u->pic_u->pac_u.hed_u.typ_y = PACT_PEEK;
   req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
-  memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));
+  memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));  // XX
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
   req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
   req_u->aum_u = dat_u->aum_u;
@@ -2390,7 +2390,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     if ( c3y == nam_u->nit_o ) {
       _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     }
-    _mesa_free_pict(pic_u);
+    // _mesa_free_pict(pic_u);  //  XX leaks packet
+
     // TODO free pin, other things too?
     return;
   }
