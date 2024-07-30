@@ -293,6 +293,7 @@
 
     u3_noun u3we_bytestream_rip_octs(u3_noun);
     u3_noun u3we_bytestream_cat_octs(u3_noun);
+    u3_noun u3we_bytestream_can_octs(u3_noun);
 
   /** Tier 6.
   **/
