@@ -246,8 +246,10 @@
     u3_noun u3qfp_nepo(u3_noun, u3_noun);
     u3_noun u3qfp_rake(u3_noun);
 
-    u3_noun u3qfo_get(u3_noun, u3_noun);
-    u3_noun u3qfo_put(u3_noun, u3_noun, u3_noun);
+    //u3_noun u3qfo_get(u3_noun, u3_noun);
+    //u3_noun u3qfo_put(u3_noun, u3_noun, u3_noun);
+    u3_noun u3qfa_get(u3_noun, u3_noun);
+    //u3_noun u3qfo_rep(u3_noun, u3_noun, u3_noun);
 
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58

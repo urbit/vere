@@ -2127,6 +2127,24 @@ static u3j_core _139_hex_json_d[] =
     {}
   };
 
+static u3j_harm _139_hex_neo_aon_get_d[] = {{".2", u3wfa_get}, {}};
+//static u3j_harm _139_hex_neo_of_put_d[] = {{".2", u3wfo_put}, {}};
+//static u3j_harm _139_hex_neo_of_rep_d[] = {{".2", u3wfo_rep}, {}};
+//static u3j_harm _139_hex_neo_of_dip_d[] = {{".2", u3wfo_dip}, {}};
+
+static u3j_core _139_hex_neo_aon_d[] = {
+  { "get", 7, _139_hex_neo_aon_get_d, 0, no_hashes },
+  //{ "put", 7, _139_hex_neo_of_put_d, 0, no_hashes },
+  //{ "rep", 7, _139_hex_neo_of_rep_d, 0, no_hashes },
+  //{ "dip", 7, _139_hex_neo_of_dip_d, 0, no_hashes },
+  {}
+};
+
+static u3j_core _139_hex_neo_d[] = {
+  { "aon", 7, 0, _139_hex_neo_aon_d, no_hashes },
+  {}
+};
+
 static u3j_core _139_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2145,6 +2163,7 @@ static u3j_core _139_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "neo",    31, 0, _139_hex_neo_d, no_hashes },
   {}
 };
 
@@ -2367,6 +2386,7 @@ static u3j_core _138_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "neo",    31, 0, _139_hex_neo_d, no_hashes },
   {}
 };
 
@@ -2599,7 +2619,7 @@ u3j_core _a50_d[] =
   { "cut", 7,  _140_two_cut_a, 0, _140_two_cut_ha },
   { "dis", 7,  _140_two_dis_a, 0, _140_two_dis_ha },
   { "dor", 7,  _140_two_dor_a, 0, _140_two_dor_ha },
-  { "dor", 7,  _140_two_aor_a, 0, _140_two_aor_ha },
+  { "aor", 7,  _140_two_aor_a, 0, _140_two_aor_ha },
   { "end", 7,  _140_two_end_a, 0, _140_two_end_ha },
   { "gor", 7,  _140_two_gor_a, 0, _140_two_gor_ha },
   { "lsh", 7,  _140_two_lsh_a, 0, _140_two_lsh_ha },
