@@ -1590,18 +1590,25 @@ u3_term_wall(u3_noun wol)
 static void
 _term_io_talk(u3_auto* car_u)
 {
+  //TODO  reevaluate wrt dill sessions
+  //
+  u3_noun wir = u3nt(c3__term, '1', u3_nul);
+  u3_noun cad;
+
+  //  send born event
+  {
+    cad = u3nc(c3__born, u3_nul);
+    _term_ovum_plan(car_u, u3k(wir), cad);
+  }
+
   if ( c3n == u3_Host.ops_u.tem ) {
+    u3z(wir);
     u3_utty* uty_u = _term_main();
 
     uv_read_start((uv_stream_t*)&(uty_u->pin_u),
                   _term_alloc,
                   _term_read_cb);
   }
-
-  //TODO  reevaluate wrt dill sessions
-  //
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
-  u3_noun cad;
 
   //  send terminal dimensions
   //
