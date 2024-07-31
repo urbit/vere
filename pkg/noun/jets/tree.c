@@ -2140,8 +2140,16 @@ static u3j_core _139_hex_neo_aon_d[] = {
   {}
 };
 
+static u3j_harm _139_hex_neo_of_dip_d[] = {{".2", u3wfo_dip}, {}};
+
+static u3j_core _139_hex_neo_of_d[] = {
+  { "dip", 7, _139_hex_neo_of_dip_d, 0, no_hashes },
+  {}
+};
+
 static u3j_core _139_hex_neo_d[] = {
   { "aon", 7, 0, _139_hex_neo_aon_d, no_hashes },
+  { "of", 7, 0, _139_hex_neo_of_d, no_hashes },
   {}
 };
 
