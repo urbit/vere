@@ -29,7 +29,7 @@ u3qfa_put(u3_noun a,
                     u3k(l_a),
                     u3k(r_a));
       }
-    } else if ( u3qf_lte_iota(b, keyn_a) ) {
+    } else if ( c3y == u3qf_lte_iota(b, keyn_a) ) {
       u3_noun d = u3qfa_put(l_a, b, c);
       if ( c3y == u3qc_mor(keyn_a, u3h(u3h(d))) ) {
         return u3nt(u3k(n_a),
@@ -57,8 +57,8 @@ u3qfa_put(u3_noun a,
         u3r_trel(d, &n_d, &l_d, &r_d);
         u3_noun e = u3nt(u3k(n_d),
                          u3nt(u3k(n_a),
-                              u3k(l_d),
-                              u3k(l_a)),
+                              u3k(l_a),
+                              u3k(l_d)),
                          u3k(r_d));
         u3z(d);
         return e;
@@ -71,10 +71,7 @@ u3_noun
 u3wfa_put(u3_noun cor)
 {
   u3_noun a, b, c;
-  u3x_mean(cor,
-           u3x_con_sam, &a,
-           u3x_sam_2, &b,
-           u3x_sam_3, &c, 0);
+  u3x_mean(cor, u3x_sam_2, &b, u3x_sam_3, &c, u3x_con_sam, &a, 0);
   return u3qfa_put(a, b, c);
 }
 
