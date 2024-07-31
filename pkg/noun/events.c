@@ -654,11 +654,12 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
        (ret_zs = pwrite(pat_u->mem_i, mem_w, _ce_page, _ce_len(pgc_w))) )
   {
     if ( 0 < ret_zs ) {
-      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs", check disk space\r\n", ret_zs);
+      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
-      fprintf(stderr, "loom: patch write: fail: %s, check disk space\r\n", strerror(errno));
+      fprintf(stderr, "loom: patch write: fail: %s\r\n", strerror(errno));
     }
+    fprintf(stderr, "info: you probably have insufficient disk space");
     u3_assert(0);
   }
 }
@@ -873,12 +874,13 @@ _ce_patch_apply(u3_ce_patch* pat_u)
            (ret_zs = pwrite(fid_i, buf_y, _ce_page, off_z)) )
       {
         if ( 0 < ret_zs ) {
-          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs", check disk space\r\n",
+          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs"\r\n",
                           ret_zs);
         }
         else {
-          fprintf(stderr, "loom: patch apply write: %s, check disk space\r\n", strerror(errno));
+          fprintf(stderr, "loom: patch apply write: %s\r\n", strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         u3_assert(0);
       }
     }
@@ -1325,13 +1327,14 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
       }
       if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
         if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image (%s) copy partial write: %zu, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy partial write: %zu\r\n",
                           tou_u->nam_c, (size_t)ret_i);
         }
         else {
-          fprintf(stderr, "loom: image (%s) copy write: %s, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy write: %s\r\n",
                           tou_u->nam_c, strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         return c3n;
       }
     }
