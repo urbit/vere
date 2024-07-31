@@ -2128,13 +2128,13 @@ static u3j_core _139_hex_json_d[] =
   };
 
 static u3j_harm _139_hex_neo_aon_get_d[] = {{".2", u3wfa_get}, {}};
-//static u3j_harm _139_hex_neo_of_put_d[] = {{".2", u3wfo_put}, {}};
+static u3j_harm _139_hex_neo_aon_put_d[] = {{".2", u3wfa_put}, {}};
 //static u3j_harm _139_hex_neo_of_rep_d[] = {{".2", u3wfo_rep}, {}};
 //static u3j_harm _139_hex_neo_of_dip_d[] = {{".2", u3wfo_dip}, {}};
 
 static u3j_core _139_hex_neo_aon_d[] = {
   { "get", 7, _139_hex_neo_aon_get_d, 0, no_hashes },
-  //{ "put", 7, _139_hex_neo_of_put_d, 0, no_hashes },
+  { "put", 7, _139_hex_neo_aon_put_d, 0, no_hashes },
   //{ "rep", 7, _139_hex_neo_of_rep_d, 0, no_hashes },
   //{ "dip", 7, _139_hex_neo_of_dip_d, 0, no_hashes },
   {}

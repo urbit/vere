@@ -246,8 +246,9 @@
     u3_noun u3qfp_nepo(u3_noun, u3_noun);
     u3_noun u3qfp_rake(u3_noun);
 
-    //u3_noun u3qfo_get(u3_noun, u3_noun);
-    //u3_noun u3qfo_put(u3_noun, u3_noun, u3_noun);
+    u3_noun u3qfo_dip(u3_noun, u3_noun);
+    u3_noun u3qfo_put(u3_noun, u3_noun, u3_noun);
+    u3_noun u3qfa_put(u3_noun, u3_noun, u3_noun);
     u3_noun u3qfa_get(u3_noun, u3_noun);
     //u3_noun u3qfo_rep(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_lte_dime(u3_noun, u3_noun);

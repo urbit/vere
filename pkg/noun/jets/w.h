@@ -336,7 +336,8 @@
     u3_noun u3wfu_repo(u3_noun);
     u3_noun u3wfu_rest(u3_noun);
 
-    //u3_noun u3wfo_get(u3_noun);
+    u3_noun u3wfo_dip(u3_noun);
+    u3_noun u3wfo_put(u3_noun);
     u3_noun u3wfa_get(u3_noun);
     //u3_noun u3wfo_rep(u3_noun);
     u3_noun u3wfa_put(u3_noun);
