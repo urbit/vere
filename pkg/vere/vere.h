@@ -321,6 +321,7 @@
 
         c3_o    beb;                        //  --behn-allow-blocked
         c3_z    siz_i;                      //  --lmdb-map-size
+        c3_y    jum_y;                      //  jumbo frame size, TODO parser
       } u3_opts;
 
     /* u3_host: entire host.
