@@ -25,16 +25,20 @@
           while ( (i_w < len_w_a) && (i_w < len_w_b) ) {
             c3_w a_w = a_words[i_w], b_w = b_words[i_w];
             c3_y a_y = a_w & 0xFF, b_y = b_w & 0xFF;
-            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            if (a_y != b_y) return __(a_y < b_y);
+
             a_y = a_w & 0xFF00;
             b_y = b_w & 0xFF00;
-            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            if (a_y != b_y) return __(a_y < b_y);
+
             a_y = a_w & 0xFF0000;
             b_y = b_w & 0xFF0000;
-            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            if (a_y != b_y) return __(a_y < b_y);
+
             a_y = a_w & 0xFF000000;
             b_y = b_w & 0xFF000000;
-            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            if (a_y != b_y) return __(a_y < b_y);
+
             i_w++;
           }
           return u3m_bail(c3__fail);
