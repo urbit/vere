@@ -16,9 +16,9 @@
     else {
       if ( c3y == u3ud(a) ) {
         if ( c3y == u3ud(b) ) {
-          c3_w len_a_w, len_b_w, i_w = 0;
+          c3_w len_a_w, len_b_w;
           c3_w *a_words, *b_words;
-          c3_w a_w, b_w;
+          c3_y a_y, b_y;
           if ( c3y == u3a_is_cat(a) ) {
             len_a_w = 1;
             a_words = &a;
@@ -37,21 +37,13 @@
             len_b_w = (b_u->len_w);
             b_words = b_u->buf_w;
           }
-          while ( (i_w < len_a_w) && (i_w < len_b_w) ) {
-            c3_y a_y, b_y;
-            a_w = a_words[i_w];
-            b_w = b_words[i_w];
+          c3_w len_min = c3_min(len_a_w, len_b_w);
+          for (c3_w i_w = 0; i_w < len_min; i_w++) {
             for (c3_w j = 0; j < 4; j++) {
-              a_y = a_w % (1 << 8);
-              b_y = b_w % (1 << 8);
+              a_y = (a_words[i_w] >> (8*j)) & 0xFF;
+              b_y = (b_words[i_w] >> (8*j)) & 0xFF;
               if ( a_y != b_y ) return __(a_y < b_y);
-              a_w = a_w >> 8;
-              b_w = b_w >> 8;
             }
-            i_w++;
-          }
-          if ( len_a_w == len_b_w) {
-            return u3m_bail(c3__fail); // impossible: nonequal atoms with equal payloads 
           }
           return __(len_a_w < len_b_w);
         }
