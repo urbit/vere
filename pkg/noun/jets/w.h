@@ -50,6 +50,7 @@
 
   /** Tier 3.
   **/
+    u3_noun u3wc_aor(u3_noun);
     u3_noun u3wc_bex(u3_noun);
     u3_noun u3wc_xeb(u3_noun);
     u3_noun u3wc_can(u3_noun);
@@ -334,6 +335,9 @@
     u3_noun u3wfu_play(u3_noun);
     u3_noun u3wfu_repo(u3_noun);
     u3_noun u3wfu_rest(u3_noun);
+
+    u3_noun u3wfo_get(u3_noun);
+    u3_noun u3wfo_put(u3_noun);
 
 #endif /* ifndef U3_JETS_W_H */
 

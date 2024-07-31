@@ -1613,6 +1613,12 @@ static c3_c* _140_two_dor_ha[] = {
   "277927a2e49e4d942e81ffc7740a71e68a7b732df886a9f84dc7d914be911879",
   0
 };
+static u3j_harm _140_two_aor_a[] = {{".2", u3wc_aor, c3y}, {}};
+static c3_c* _140_two_aor_ha[] = {
+  "277927a2e49e4d942e81ffc7740a71e68a7b732df886a9f84dc7d914be911879",
+  0
+};
+
 static u3j_harm _140_two_end_a[] = {{".2", u3wc_end, c3y}, {}};
 static c3_c* _140_two_end_ha[] = {
   "403c9f12f2481966ffb07842006713149960c67c6bcad8edd78cdf837bc0d854",
@@ -1959,6 +1965,7 @@ static u3j_core _140_two_d[] =
   { "cut",  7, _140_two_cut_a, 0, _140_two_cut_ha },
   { "dis",  7, _140_two_dis_a, 0, _140_two_dis_ha },
   { "dor",  7, _140_two_dor_a, 0, _140_two_dor_ha },
+  { "aor",  7, _140_two_aor_a, 0, _140_two_aor_ha },
   { "end",  7, _140_two_end_a, 0, _140_two_end_ha },
   { "gor",  7, _140_two_gor_a, 0, _140_two_gor_ha },
   { "jam",  7, _140_two_jam_a, 0, _140_two_jam_ha },
@@ -2268,6 +2275,7 @@ static u3j_core _139_two_d[] =
   { "cut",  7, _140_two_cut_a, 0, no_hashes },
   { "dis",  7, _140_two_dis_a, 0, no_hashes },
   { "dor",  7, _140_two_dor_a, 0, no_hashes },
+  { "aor",  7, _140_two_aor_a, 0, no_hashes },
   { "end",  7, _140_two_end_a, 0, no_hashes },
   { "gor",  7, _140_two_gor_a, 0, no_hashes },
   { "jam",  7, _140_two_jam_a, 0, no_hashes },
@@ -2497,6 +2505,7 @@ static u3j_core _138_two_d[] =
   { "cut",  7, _140_two_cut_a, 0, no_hashes },
   { "dis",  7, _140_two_dis_a, 0, no_hashes },
   { "dor",  7, _140_two_dor_a, 0, no_hashes },
+  { "aor",  7, _140_two_aor_a, 0, no_hashes },
   { "end",  7, _140_two_end_a, 0, no_hashes },
   { "gor",  7, _140_two_gor_a, 0, no_hashes },
   { "jam",  7, _140_two_jam_a, 0, no_hashes },
@@ -2590,6 +2599,7 @@ u3j_core _a50_d[] =
   { "cut", 7,  _140_two_cut_a, 0, _140_two_cut_ha },
   { "dis", 7,  _140_two_dis_a, 0, _140_two_dis_ha },
   { "dor", 7,  _140_two_dor_a, 0, _140_two_dor_ha },
+  { "dor", 7,  _140_two_aor_a, 0, _140_two_aor_ha },
   { "end", 7,  _140_two_end_a, 0, _140_two_end_ha },
   { "gor", 7,  _140_two_gor_a, 0, _140_two_gor_ha },
   { "lsh", 7,  _140_two_lsh_a, 0, _140_two_lsh_ha },
