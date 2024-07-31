@@ -18,7 +18,8 @@
         if ( c3y == u3ud(b) ) {
           u3a_atom* a_u = u3a_to_ptr(a);
           u3a_atom* b_u = u3a_to_ptr(b);
-          c3_w len_w_a, len_w_b, i_w = 0;
+          c3_w len_w_a = a_u->len_w, len_w_b = b_u->len_w;
+          c3_w i_w = 0;
           c3_w *a_words = a_u->buf_w;
           c3_w *b_words = b_u->buf_w;
           while ( (i_w < len_w_a) && (i_w < len_w_b) ) {
