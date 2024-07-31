@@ -16,15 +16,25 @@
     else {
       if ( c3y == u3ud(a) ) {
         if ( c3y == u3ud(b) ) {
-          c3_w len_a, len_b, i = 0;
-          c3_y *a_bytes = u3r_bytes_all(&len_a, a);
-          c3_y *b_bytes = u3r_bytes_all(&len_b, b);
-          while ( (i < len_a) && (i < len_b) ) {
-            c3_y a_slice=a_bytes[i], b_slice=b_bytes[i];
-            if (a_slice != b_slice) {
-              return u3qa_lth(a_slice, b_slice);
-            }
-            i++;
+          u3a_atom* a_u = u3a_to_ptr(a);
+          u3a_atom* b_u = u3a_to_ptr(b);
+          c3_w len_w_a, len_w_b, i_w = 0;
+          c3_w *a_words = a_u->buf_w;
+          c3_w *b_words = b_u->buf_w;
+          while ( (i_w < len_w_a) && (i_w < len_w_b) ) {
+            c3_w a_w = a_words[i_w], b_w = b_words[i_w];
+            c3_y a_y = a_w & 0xFF, b_y = b_w & 0xFF;
+            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            a_y = a_w & 0xFF00;
+            b_y = b_w & 0xFF00;
+            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            a_y = a_w & 0xFF0000;
+            b_y = b_w & 0xFF0000;
+            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            a_y = a_w & 0xFF000000;
+            b_y = b_w & 0xFF000000;
+            if (a_y != b_y) return u3qa_lth(a_y, b_y);
+            i_w++;
           }
           return u3m_bail(c3__fail);
         }
