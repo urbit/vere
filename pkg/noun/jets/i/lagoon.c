@@ -516,8 +516,8 @@
       case 4: {
         float16_t sum16[2];
         sum16[0] = (float16_t){SB_REAL16_ZERO};
-        for (c3_d i = 0; i < len_x; i++) {
-          sum16[0] = f16_add(sum16[0], ((float16_t*)x_bytes)[i]);
+        for (c3_d i = len_x; i > 0; i--) {
+          sum16[0] = f16_add(sum16[0], ((float16_t*)x_bytes)[i-1]);
         }
         sum16[1].v = 0x1;
         r_data = u3i_bytes((2+1)*sizeof(c3_y), (c3_y*)sum16);
@@ -526,8 +526,8 @@
       case 5: {
         float32_t sum32[2];
         sum32[0] = (float32_t){SB_REAL32_ZERO};
-        for (c3_d i = 0; i < len_x; i++) {
-          sum32[0] = f32_add(sum32[0], ((float32_t*)x_bytes)[i]);
+        for (c3_d i = len_x; i > 0; i--) {
+          sum32[0] = f32_add(sum32[0], ((float32_t*)x_bytes)[i-1]);
         }
         sum32[1].v = 0x1;
         r_data = u3i_bytes((4+1)*sizeof(c3_y), (c3_y*)sum32);
@@ -536,8 +536,8 @@
       case 6: {
         float64_t sum64[2];
         sum64[0] = (float64_t){SB_REAL64_ZERO};
-        for (c3_d i = 0; i < len_x; i++) {
-          sum64[0] = f64_add(sum64[0], ((float64_t*)x_bytes)[i]);
+        for (c3_d i = len_x; i > 0; i--) {
+          sum64[0] = f64_add(sum64[0], ((float64_t*)x_bytes)[i-1]);
         }
         sum64[1].v = 0x1;
         r_data = u3i_bytes((8+1)*sizeof(c3_y), (c3_y*)sum64);
@@ -546,8 +546,8 @@
       case 7: {
         float128_t sum128[2];
         sum128[0] = (float128_t){SB_REAL128L_ZERO, SB_REAL128U_ZERO};
-        for (c3_d i = 0; i < len_x; i++) {
-          f128M_add(&(sum128[0]), &(((float128_t*)x_bytes)[i]), &(sum128[0]));
+        for (c3_d i = len_x; i > 0; i--) {
+          f128M_add(&(sum128[0]), &(((float128_t*)x_bytes)[i-1]), &(sum128[0]));
         }
         sum128[1] = (float128_t){0x1, 0x0};
         r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)sum128);
@@ -1883,8 +1883,9 @@
         for (c3_d i = 1; i < n-1; i++) {
           ((float16_t*)x_bytes16)[i] = f16_add(a16, f16_mul(i32_to_f16(i), interval16));
         }
-        ((float16_t*)x_bytes16)[0] = a16;
+        //  Assign in reverse order so that n=1 case is correctly left-hand bound.
         ((float16_t*)x_bytes16)[n-1] = b16;
+        ((float16_t*)x_bytes16)[0] = a16;
         x_bytes16[n*2] = 0x1;  // pin head
         r_data = u3i_bytes((n*2+1)*sizeof(c3_y), x_bytes16);
         u3a_free(x_bytes16);
@@ -1900,8 +1901,8 @@
         for (c3_d i = 1; i < n-1; i++) {
           ((float32_t*)x_bytes32)[i] = f32_add(a32, f32_mul(i32_to_f32(i), interval32));
         }
-        ((float32_t*)x_bytes32)[0] = a32;
         ((float32_t*)x_bytes32)[n-1] = b32;
+        ((float32_t*)x_bytes32)[0] = a32;
         x_bytes32[n*4] = 0x1;  // pin head
         r_data = u3i_bytes((n*4+1)*sizeof(c3_y), x_bytes32);
         u3a_free(x_bytes32);
@@ -1917,8 +1918,8 @@
         for (c3_d i = 1; i < n-1; i++) {
           ((float64_t*)x_bytes64)[i] = f64_add(a64, f64_mul(i32_to_f64(i), interval64));
         }
-        ((float64_t*)x_bytes64)[0] = a64;
         ((float64_t*)x_bytes64)[n-1] = b64;
+        ((float64_t*)x_bytes64)[0] = a64;
         x_bytes64[n*8] = 0x1;  // pin head
         r_data = u3i_bytes((n*8+1)*sizeof(c3_y), x_bytes64);
         u3a_free(x_bytes64);
@@ -1941,8 +1942,8 @@
           f128M_mul(&i128, &interval128, &((float128_t*)x_bytes128)[i]);
           f128M_add(&a128, &((float128_t*)x_bytes128)[i], &((float128_t*)x_bytes128)[i]);
         }
-        ((float128_t*)x_bytes128)[0] = a128;
         ((float128_t*)x_bytes128)[n-1] = b128;
+        ((float128_t*)x_bytes128)[0] = a128;
         x_bytes128[n*16] = 0x1;  // pin head
         r_data = u3i_bytes((n*16+1)*sizeof(c3_y), x_bytes128);
         u3a_free(x_bytes128);
@@ -2460,7 +2461,7 @@
             _set_rounding(rnd);
             u3_noun r_data = _soft_run(u3qi_la_cumsum_i754(x_data, x_shape, x_bloq));
             if (r_data == u3_none) { return u3_none; }
-            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
+            return u3nc(u3nq(u3nc(0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_fxp)), r_data);
 
           default:
             return u3_none;
@@ -3208,7 +3209,9 @@
       x_fxp = u3t(u3t(u3t(x_meta)));  // 15
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       if ( c3n == u3ud(x_bloq) ||
-           c3n == u3ud(x_kind)
+           c3n == u3ud(x_kind) ||
+           c3n == u3ud(n) ||
+           (n < 1)                    // crash on zero size
          )
       {
         return u3m_bail(c3__exit);
