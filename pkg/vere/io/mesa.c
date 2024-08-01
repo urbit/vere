@@ -1878,6 +1878,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
     u3r_bytes(0, jumbo_w, jumbo_y, pag);
     u3z(pag);
     mesa_sift_pact(&tac_u, jumbo_y, jumbo_w);
+    c3_free(jumbo_y);
   }
   c3_w jumbo_pact_w = tac_u.pag_u.dat_u.len_w;
   c3_y* jumbo_pact_y = tac_u.pag_u.dat_u.fra_y;
