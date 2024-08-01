@@ -15,8 +15,11 @@
 */
 #define BIT_SET(a_w, b_w) ((a_w) & (1 << (b_w)))
 
-static c3_o
+static u3_weak
 _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w lef_w, c3_w rem_w);
+
+static u3_weak
+_ch_trim_root(u3h_root* har_u);
 
 c3_w
 _ch_skip_slot(c3_w mug_w, c3_w lef_w);
@@ -243,12 +246,12 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
   }
 }
 
-/* u3h_put(): insert in hashtable.
+/* u3h_put_get(): insert in caching hashtable, returning deleted key-value pair
 **
 ** `key` is RETAINED; `val` is transferred.
 */
-void
-u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
+u3_weak
+u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
 {
   u3h_root* har_u = u3to(u3h_root, har_p);
   u3_noun   kev   = u3nc(u3k(key), val);
@@ -266,8 +269,23 @@ u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
   }
 
   if ( har_u->max_w > 0 ) {
-    u3h_trim_to(har_p, har_u->max_w);
+    return _ch_trim_root(har_u);
   }
+  else {
+    return u3_none;
+  }
+
+}
+
+/* u3h_put(): insert in hashtable.
+**
+** `key` is RETAINED; `val` is transferred.
+*/
+void
+u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
+{
+  u3_weak del = u3h_put_get(har_p, key, val);
+  u3z(del);
 }
 
 /* _ch_buck_del(): delete from bucket
@@ -434,7 +452,7 @@ u3h_uni(u3p(u3h_root) har_p, u3p(u3h_root) rah_p)
 
 /* _ch_trim_node(): trim one entry from a node slot or its children
 */
-static c3_o
+static u3_weak
 _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
 {
   c3_w bit_w, map_w, inx_w;
@@ -454,15 +472,8 @@ _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
   inx_w = _ch_popcount(CUT_END(map_w, bit_w));
   tos_w = &(han_u->sot_w[inx_w]);
 
-  if ( c3n == _ch_trim_slot(har_u, tos_w, lef_w, rem_w) ) {
-    // nothing trimmed
-    return c3n;
-  }
-  else if ( 0 != *tos_w  ) {
-    // something trimmed, but slot still has value
-    return c3y;
-  }
-  else {
+  u3_weak ret = _ch_trim_slot(har_u, tos_w, lef_w, rem_w);
+  if ( (u3_none != ret) && (0 == *tos_w) ) {
     // shrink!
     c3_w i_w, ken_w, len_w = _ch_popcount(map_w);
     u3h_slot  kes_w;
@@ -484,30 +495,29 @@ _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
         han_u->sot_w[i_w] = han_u->sot_w[i_w + 1];
       }
     }
-    return c3y;
   }
+  return ret;
 }
 
 /* _ch_trim_kev(): trim a single entry slot
 */
-static c3_o
+static u3_weak
 _ch_trim_kev(u3h_slot *sot_w)
 {
   if ( _(u3h_slot_is_warm(*sot_w)) ) {
     *sot_w = u3h_noun_be_cold(*sot_w);
-    return c3n;
+    return u3_none;
   }
   else {
     u3_noun kev = u3h_slot_to_noun(*sot_w);
     *sot_w = 0;
-    u3z(kev);
-    return c3y;
+    return kev;
   }
 }
 
 /* _ch_trim_node(): trim one entry from a bucket slot
 */
-static c3_o
+static u3_weak
 _ch_trim_buck(u3h_root* har_u, u3h_slot* sot_w)
 {
   c3_w i_w, len_w;
@@ -517,7 +527,8 @@ _ch_trim_buck(u3h_root* har_u, u3h_slot* sot_w)
         har_u->arm_u.inx_w < len_w;
         har_u->arm_u.inx_w += 1 )
   {
-    if ( c3y == _ch_trim_kev(&(hab_u->sot_w[har_u->arm_u.inx_w])) ) {
+    u3_weak ret = _ch_trim_kev(&(hab_u->sot_w[har_u->arm_u.inx_w]));
+    if ( u3_none != ret ) {
       if ( 2 == len_w ) {
         // 2 things in bucket: debucketize to key-value pair, the next
         // run will point at this pair (same mug_w, no longer in bucket)
@@ -535,18 +546,18 @@ _ch_trim_buck(u3h_root* har_u, u3h_slot* sot_w)
         // leave the arm pointing at the next index in the bucket
         ++(har_u->arm_u.inx_w);
       }
-      return c3y;
+      return ret;
     }
   }
 
   har_u->arm_u.mug_w = (har_u->arm_u.mug_w + 1) & 0x7FFFFFFF; // modulo 2^31
   har_u->arm_u.inx_w = 0;
-  return c3n;
+  return u3_none;
 }
 
 /* _ch_trim_some(): trim one entry from a bucket or node slot
 */
-static c3_o
+static u3_weak
 _ch_trim_some(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
 {
   if ( 0 == lef_w ) {
@@ -569,7 +580,7 @@ _ch_skip_slot(c3_w mug_w, c3_w lef_w)
 
 /* _ch_trim_slot(): trim one entry from a non-bucket slot
 */
-static c3_o
+static u3_weak
 _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w lef_w, c3_w rem_w)
 {
   if ( c3y == u3h_slot_is_noun(*sot_w) ) {
@@ -583,7 +594,7 @@ _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w lef_w, c3_w rem_w)
 
 /* _ch_trim_root(): trim one entry from a hashtable
 */
-static c3_o
+static u3_weak
 _ch_trim_root(u3h_root* har_u)
 {
   c3_w      mug_w = har_u->arm_u.mug_w;
@@ -592,7 +603,7 @@ _ch_trim_root(u3h_root* har_u)
 
   if ( c3y == u3h_slot_is_null(*sot_w) ) {
     har_u->arm_u.mug_w = _ch_skip_slot(har_u->arm_u.mug_w, 25);
-    return c3n;
+    return u3_none;
   }
 
   return _ch_trim_slot(har_u, sot_w, 25, CUT_END(mug_w, 25));
@@ -606,7 +617,7 @@ u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w)
   u3h_root* har_u = u3to(u3h_root, har_p);
 
   while ( har_u->use_w > n_w ) {
-    if ( c3y == _ch_trim_root(har_u) ) {
+    if ( u3_none != _ch_trim_root(har_u) ) {
       har_u->use_w -= 1;
     }
   }
