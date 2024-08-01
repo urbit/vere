@@ -69,9 +69,6 @@ typedef struct _u3_mesa_stat {
 
 #define IN_FLIGHT  10
 
-// XX
-#define MESA_HUNK  16384  //  184
-
 // routing table sentinels
 #define MESA_CZAR         1  // pending dns lookup
 #define MESA_ROUT         2  // have route
@@ -86,9 +83,9 @@ typedef struct _u3_mesa_stat {
 struct _u3_mesa_pact;
 
 typedef struct _u3_pact_stat {
+  c3_y  tie_y; // tries
   c3_d  sen_d; // last sent
   c3_y  sip_y; // skips
-  c3_y  tie_y; // tries
 } u3_pact_stat;
 
 struct _u3_mesa;
@@ -200,11 +197,13 @@ typedef enum _u3_mesa_ctag {
 typedef struct _u3_mesa_line {
   u3_mesa_ctag typ_y;  //  pending or present?
   u3_mesa_name nam_u;  //  full name for data, ready to serialize
-  u3_auth_data aum_u;  //  message authenticator
+  u3_auth_data aum_u;  //  message authenticator, none if not initial frame
+  c3_w         tot_w;  //  number of fragments in message
+  c3_w         dat_w;  //  size in bytes of dat_y
+  c3_w         len_w;  //  total allocated size, in bytes
   c3_y*        tip_y;  //  initial Merkle spine, nullable
-  c3_y*        dat_y;  //  message data (1024 bytes per fragment)
-  c3_w         dat_w;  //  message data size in bytes
-  c3_y*        haz_y;  //  hash pairs     (64 bytes per fragment)
+  c3_y*        dat_y;  //  fragment data (1024 bytes per fragment)
+  c3_y*        haz_y;  //  hash pairs    (64 bytes per fragment)
 } u3_mesa_line;
 
 /*
@@ -1856,29 +1855,23 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
 
 /*
  * RETAIN */
-static u3_weak
+static u3_mesa_line*
 _mesa_get_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3_weak res = u3h_get(sam_u->pac_p, pax);
   #ifdef MESA_DEBUG
-    if ( u3_none == res ) {
-      u3m_p("miss", pax);
-    } else {
-      u3_noun kev = u3nc(u3k(pax), u3k(res));
-      u3m_p("hit", kev);
-      u3z(kev);
-    }
-    u3z(pax);
+    u3m_p((u3_none == res)? "mesa: cache miss" : "mesa: cache hit ", pax);
   #endif
-  return res;
+  u3z(pax);
+  return ( u3_none == res ) ? NULL : u3a_into(res);
 }
 
 static void
-_mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
+_mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
 {
   u3_noun pax = _name_to_jumbo_scry(nam_u);
-  u3h_put(sam_u->pac_p, pax, u3k(val));
+  u3h_put(sam_u->pac_p, pax, u3a_outa(lin_u));
   u3z(pax); // TODO: fix refcount
 }
 
@@ -1895,77 +1888,75 @@ _mesa_send_pact(u3_mesa*      sam_u,
 }
 
 static void
-_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
+_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
 {
   #ifdef MESA_DEBUG
     u3l_log("mesa: send_jumbo_pieces()");
   #endif
-  // parse packet
-  u3_mesa_pact tac_u = {0};
+
+  u3_mesa_pact pac_u = {0};
+
+  u3_mesa_head* hed_u = &pac_u.hed_u;
   {
-    c3_w jumbo_w = u3r_met(3, pag);
-    c3_y* jumbo_y = c3_calloc(jumbo_w);
-    u3r_bytes(0, jumbo_w, jumbo_y, pag);
-    u3z(pag);
-    mesa_sift_pact(&tac_u, jumbo_y, jumbo_w);
+    hed_u->nex_y = HOP_NONE;
+    hed_u->pro_y = 1;
+    hed_u->typ_y = PACT_PAGE;
+    hed_u->hop_y = 0;
+    //  mug_w varies by fragment
   }
-  c3_w jumbo_pact_w = tac_u.pag_u.dat_u.len_w;
-  c3_y* jumbo_pact_y = tac_u.pag_u.dat_u.fra_y;
 
-  // compute LSS data
-  //
-  // TODO: this assumes we have the entire message. Should be switched to use
-  // lss_builder_transceive instead.
-  c3_w leaves_w = (jumbo_pact_w + 1023) / 1024;
-  lss_builder bil_u;
-  lss_builder_init(&bil_u, leaves_w);
-  for ( c3_w i = 0; i < leaves_w; i++ ) {
-    c3_y* leaf_y = jumbo_pact_y + (i*1024);
-    c3_w leaf_w = (i < leaves_w - 1) ? 1024 : jumbo_pact_w % 1024;
-    lss_builder_ingest(&bil_u, leaf_y, leaf_w);
+  u3_mesa_name* nam_u = &pac_u.pag_u.nam_u;
+  {
+    _mesa_copy_name(nam_u, &lin_u->nam_u);
+    nam_u->boq_y = 13;
+    nam_u->fra_w *= (1 << u3_Host.ops_u.jum_y);
   }
-  lss_hash* proof = lss_builder_finalize(&bil_u);
-  c3_w proof_len = lss_proof_size(leaves_w);
 
-
-  // send packets
-  u3_mesa_name* nam_u = &tac_u.pag_u.nam_u;
-  u3_mesa_data* dat_u = &tac_u.pag_u.dat_u;
-  nam_u->boq_y = 13;
-  dat_u->tot_w = leaves_w;
-
-  if ( c3y == nam_u->nit_o && leaves_w > 4) {
+  u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
+  {
+    dat_u->tot_w = lin_u->tot_w;
+    dat_u->aum_u = lin_u->aum_u;
+    //  aup_u, len_w, and fra_y vary by fragment
+  }
+  c3_w pro_w = lss_proof_size(lin_u->tot_w);
+  
+  if ( c3y == nam_u->nit_o && lin_u->tot_w > 4) {
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
-        #ifdef MESA_DEBUG
-          u3l_log(" sending proof packet");
-        #endif
-        dat_u->len_w = proof_len*sizeof(lss_hash);
-        c3_y* proof_y = c3_malloc(dat_u->len_w);
-        memcpy(proof_y, proof, dat_u->len_w);
-        dat_u->fra_y = proof_y;
-       _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
-       _mesa_del_pit(sam_u, nam_u);
-       u3z(pin);
+      #ifdef MESA_DEBUG
+        u3l_log(" sending proof packet");
+      #endif
+      dat_u->len_w = pro_w * sizeof(lss_hash);
+      c3_y* pro_y = c3_malloc(dat_u->len_w);
+      memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
+      dat_u->fra_y = pro_y;
+      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
+      _mesa_del_pit(sam_u, nam_u);
+      u3z(pin);
     }
   }
 
   // send leaf packets
-  for (c3_w i = 0; i < leaves_w; i++) {
-    nam_u->nit_o = __((i == 0) && (leaves_w <= 4));
-    nam_u->fra_w = i;
-    dat_u->fra_y = jumbo_pact_y + (i*1024);
-    dat_u->len_w = c3_min(jumbo_pact_w - (i*1024), 1024);
+  c3_w lev_w = lin_u->tot_w - nam_u->fra_w;
+  c3_w fir_w = nam_u->fra_w;
+  c3_y* pro_y = lin_u->tip_y;
+  for (c3_w i_w = 0; i_w < lev_w; i_w++) {
+    c3_w fra_w = i_w + fir_w;
+    nam_u->nit_o = __((fra_w == 0) && (lev_w <= 4));
+    nam_u->fra_w = fra_w;
+    c3_w cur_w = i_w * 1024;
+    dat_u->fra_y = lin_u->dat_y + cur_w;
+    dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
     if ( c3y == nam_u->nit_o ) {
       // inline proof; omit first leaf
-      proof_len--;
-      proof++;
-      dat_u->aup_u.len_y = proof_len;
-      memcpy(dat_u->aup_u.has_y, proof, proof_len*sizeof(lss_hash));
+      pro_w--;
+      pro_y++;
+      dat_u->aup_u.len_y = pro_w;
+      memcpy(dat_u->aup_u.has_y, pro_y, pro_w * sizeof(lss_hash));
     } else {
-      lss_pair* pair = lss_builder_pair(&bil_u, i);
-      if ( NULL == pair ) {
+      lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_w;
+      if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
         dat_u->aup_u.len_y = 0;
         dat_u->aum_u.typ_e = AUTH_NONE;
       } else {
@@ -1980,7 +1971,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
       #ifdef MESA_DEBUG
         u3l_log(" sending leaf packet, fra_w: %u", nam_u->fra_w);
       #endif
-      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
+      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
       _mesa_del_pit(sam_u, nam_u);
       u3k(pin);
     }
@@ -2004,13 +1995,52 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     log_pact(pac_u);
     return;
   }
+  u3_noun pac, pas;
+  if ( c3n == u3r_cell(pag, &pac, &pas) ||
+       c3n == u3a_is_pug(pac) ) {
+    u3l_log("mesa: jumbo frame misshapen");
+    log_pact(pac_u);
+    u3z(res);
+    return;
+  }
+
   #ifdef MESA_DEBUG
     u3l_log("mesa: scry_jumbo_cb()");
     log_pact(pac_u);
   #endif
-  _mesa_put_jumbo_cache(sam_u, nam_u, u3nc(MESA_ITEM, u3k(pag)));
-  _mesa_send_jumbo_pieces(sam_u, u3k(pag));
-  u3z(pag);
+
+  u3_mesa_line* lin_u;
+  {
+    u3a_atom* pat_u = u3a_to_ptr(pac);
+    u3_mesa_pact jum_u;
+    mesa_sift_pact(&jum_u, (c3_y*)pat_u->buf_w, pat_u->len_w);
+    u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
+
+    c3_w tip_w = // bytes in Merkle spine
+      (c3n == jum_u.pag_u.nam_u.nit_o)? 0 : lss_proof_size(dat_u->tot_w);
+    c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
+    c3_w haz_w = (lin_u->len_w + 1023) / 1024 * 2 * 32; // bytes in hash pairs
+    c3_w len_w = tip_w + dat_w + haz_w;
+
+    lin_u = u3a_malloc(sizeof(u3_mesa_line));
+    lin_u->typ_y = CTAG_ITEM;
+    _mesa_copy_name(&lin_u->nam_u, &jum_u.pek_u.nam_u);
+    lin_u->aum_u = dat_u->aum_u;
+    lin_u->tot_w = dat_u->tot_w;
+    lin_u->dat_w = dat_w;
+    lin_u->len_w = len_w;
+    lin_u->tip_y = c3_malloc(len_w); // note: off-loom
+    lin_u->dat_y = lin_u->tip_y + tip_w;
+    lin_u->haz_y = lin_u->dat_y + haz_w;
+    memcpy(lin_u->tip_y, dat_u->fra_y, dat_u->len_w);
+    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+    mesa_free_pact(&jum_u);
+  }
+
+  _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
+  _mesa_send_jumbo_pieces(sam_u, lin_u);
+  u3z(res);
+  return;
 }
 
 static void
@@ -2146,7 +2176,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->aum_u = dat_u->aum_u;
 
   c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
-  u3_assert( siz_w == 1024 ); // boq_y == 13
+  u3_assert( 1024 == siz_w ); // boq_y == 13
   req_u->gag_u = gag_u;
   req_u->dat_y = c3_calloc(siz_w * dat_u->tot_w);
   req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_w + 2 );
@@ -2441,14 +2471,15 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                       lon_u);
   //  TODO: check return value before continuing?
 
-  c3_o done_with_jumbo_frame = __(req_u->len_w == req_u->tot_w); // TODO: fix for non-message-sized jumbo frames
+  c3_y boq_y = u3_Host.ops_u.jum_y;
+  c3_o done_with_jumbo_frame = __(0 == req_u->len_w % boq_y);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
     {
       // construct jumbo frame
-      pac_u->pag_u.nam_u.boq_y = 31; // TODO: use actual jumbo bloq
-      pac_u->pag_u.dat_u.tot_w = 1;
-      pac_u->pag_u.nam_u.fra_w = 0;
+      pac_u->pag_u.nam_u.boq_y = boq_y;
+      pac_u->pag_u.dat_u.tot_w = req_u->tot_w;
+      pac_u->pag_u.nam_u.fra_w = (req_u->len_w >> boq_y);
       c3_w jumbo_len_w = (1024 * (req_u->tot_w - 1)) + pac_u->pag_u.dat_u.len_w;
       pac_u->pag_u.dat_u.len_w = jumbo_len_w;
       pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
@@ -2541,25 +2572,23 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   }
 
   // if we have the page, send it
-  u3_weak hit = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
-  if ( u3_none != hit ) {
-    u3_noun tag, dat;
-    u3x_cell(hit, &tag, &dat);
-    if ( MESA_ITEM == tag ) {
-      _mesa_send_jumbo_pieces(sam_u, u3k(dat));
+  u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
+  if ( NULL != lin_u ) {
+    if ( CTAG_ITEM == lin_u->typ_y ) {
+      _mesa_send_jumbo_pieces(sam_u, lin_u);
       _mesa_free_pict(pic_u);
     }
-    u3z(hit);
     return;
   }
   // otherwise, scry
-  _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, u3nc(MESA_WAIT, 0));
+  lin_u = c3_calloc(sizeof(u3_mesa_line));
+  lin_u->typ_y = CTAG_WAIT;
+  _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
   u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
   // NOTE: pic_u not freed
   u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_jumbo_cb);
-  u3z(hit);
 }
 
 static void
@@ -2858,7 +2887,7 @@ u3_mesa_io_init(u3_pier* pir_u)
   //  XX tune cache sizes
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
-  sam_u->pac_p = u3h_new_cache(300000);
+  sam_u->pac_p = u3h_new_cache(10000);
   sam_u->pit_p = u3h_new_cache(10000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
