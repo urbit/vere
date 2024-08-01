@@ -642,53 +642,71 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 static void
 _http_cache_respond(u3_hreq* req_u, u3_noun nun);
 
-typedef struct _range_request {
+typedef struct _byte_range {
   c3_z beg_z;
   c3_z end_z;
-} range_request;
+} byte_range;
 
-/* _parse_range: get a range from '-' delimited text
+/* _chunk_align(): align range to a nearby chunk
 */
-static range_request
+static void
+_chunk_align(byte_range* rng_u)
+{
+  c3_z siz_z = 4194304;  // 4MiB
+
+  if ( SIZE_MAX != rng_u->beg_z ) {
+    c3_z tmp_z = rng_u->beg_z / siz_z;
+    rng_u->beg_z = tmp_z * siz_z;
+    rng_u->end_z = ((tmp_z + 1) * siz_z) - 1;
+  }
+  else if ( SIZE_MAX != rng_u->end_z ) {
+    // round to multiple of siz_z
+    rng_u->end_z = siz_z * ((rng_u->end_z / siz_z) + 1);
+  }
+}
+
+/* _parse_range(): get a range from '-' delimited text
+*/
+static byte_range
 _parse_range(c3_c* txt_c, c3_w len_w)
 {
   c3_c* hep_c = memchr(txt_c, '-', len_w);
-  range_request cut;
-  cut.beg_z = SIZE_MAX;
-  cut.end_z = SIZE_MAX;
+  byte_range rng_u;
+  rng_u.beg_z = SIZE_MAX;
+  rng_u.end_z = SIZE_MAX;
 
   if ( hep_c ) {
-    cut.beg_z = h2o_strtosize(txt_c, hep_c - txt_c);
-    cut.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
-    // strange -> [SIZE_MAX SIZE_MAX] so we return u3_nul
-    if (  ((SIZE_MAX == cut.beg_z) && (hep_c != txt_c))
-       || ((SIZE_MAX == cut.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0)) )
+    rng_u.beg_z = h2o_strtosize(txt_c, hep_c - txt_c);
+    rng_u.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
+    // strange -> [SIZE_MAX SIZE_MAX]
+    if (  ((SIZE_MAX == rng_u.beg_z) && (hep_c != txt_c))
+       || ((SIZE_MAX == rng_u.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0)) )
     {
-      cut.beg_z = SIZE_MAX;
-      cut.end_z = SIZE_MAX;
+      rng_u.beg_z = SIZE_MAX;
+      rng_u.end_z = SIZE_MAX;
     }
   }
-  return cut;
+  return rng_u;
 }
 
 static c3_o
-_get_range(h2o_headers_t req_headers, range_request* rng_req)
+_get_range(h2o_headers_t req_headers, byte_range* rng_u)
 {
-  rng_req->beg_z = SIZE_MAX;
-  rng_req->end_z = SIZE_MAX;
+  rng_u->beg_z = SIZE_MAX;
+  rng_u->end_z = SIZE_MAX;
 
-  c3_w idx = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
-  if (idx == UINT32_MAX) {
+  c3_w inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
+  if (inx_w == UINT32_MAX) {
     return c3n;
   }
 
-  if (  (req_headers.entries[idx].value.len >= 6)
-     && (0 == memcmp("bytes=", req_headers.entries[idx].value.base, 6)) )
+  if (  (req_headers.entries[inx_w].value.len >= 6)
+     && (0 == memcmp("bytes=", req_headers.entries[inx_w].value.base, 6)) )
   {
-    range_request tmp = _parse_range(req_headers.entries[idx].value.base + 6,
-                                     req_headers.entries[idx].value.len - 6);
-    rng_req->beg_z = tmp.beg_z;
-    rng_req->end_z = tmp.end_z;
+    byte_range tmp_u = _parse_range(req_headers.entries[inx_w].value.base + 6,
+                                    req_headers.entries[inx_w].value.len - 6);
+    rng_u->beg_z = tmp_u.beg_z;
+    rng_u->end_z = tmp_u.end_z;
   }
 
   return c3y;
@@ -797,9 +815,8 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
         nex_c = fas_c;
       }
       if ( !nex_c ) {
-        c3_c* msg_c = "bad beam";
-        // h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-        // return;
+        // XX bad beam
+        *wer = u3_nul;
       }
       else {
         c3_w dif_w = (c3_p)(nex_c - txt_c);
@@ -864,8 +881,6 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
       h2o_req_t* rec_u = req_u->rec_u;
 
-      u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
-
       //  set gang to [~ ~] or ~
       u3_noun gang;
       c3_o auth = _http_req_is_auth(fig_u, rec_u);
@@ -876,35 +891,51 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         gang = u3_nul;
       }
 
+      u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+      // XX weak beam?
       beam bem = _get_beam(req_u, bas_c, len_w);
 
-      // XX necessary?
       if (  (u3_nul == bem.pur)
          || (c3n == u3r_sing(our, bem.who)) )
       {
-        c3_c* msg_c = "bad scry path";
+        c3_c* msg_c = "bad request";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
         return;
       }
 
       else {
         h2o_headers_t req_headers = req_u->rec_u->headers;
-        range_request rng_req;
-        c3_o rng_o = _get_range(req_headers, &rng_req);
+        byte_range rng_u;
+        c3_o rng_o = _get_range(req_headers, &rng_u);
 
+        // prepare spur for eyre range scry
+        //
         u3_noun spur;
         if ( c3n == rng_o ) {
+          // full range: '/range/0//foo'
           spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3t(bem.pur));
         }
         else {
-          u3_atom beg = ( SIZE_MAX == rng_req.beg_z) ?
-                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_req.beg_z));
-          u3_atom end = ( SIZE_MAX == rng_req.end_z) ?
-                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_req.end_z));
+          if (  (SIZE_MAX == rng_u.beg_z)
+             && (SIZE_MAX == rng_u.end_z) )
+          {
+            c3_c* msg_c = "Requested Range Not Satisfiable";
+            h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
+            return;
+          }
+
+          _chunk_align(&rng_u);
+
+          u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
+                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
+          u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
+                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
 
           spur = u3nq(u3i_string("range"), beg, end, u3t(bem.pur));
         }
 
+        // peek or respond from cache
+        //
         if ( c3y == req_u->peq_u->las_o ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                             bem.des, spur, req_u->peq_u, _http_scry_cb);
