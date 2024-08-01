@@ -440,6 +440,14 @@ _mesa_encode_path(c3_w len_w, c3_y* buf_y)
   return pro;
 }
 
+//  does not free the line itself, only its contents
+static void
+_mesa_free_line(u3_mesa_line* lin_u)
+{
+  c3_free(lin_u->nam_u.pat_c);
+  c3_free(lin_u->tip_y);
+}
+
 static void
 _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u)
 {
@@ -1871,8 +1879,12 @@ static void
 _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
 {
   u3_noun pax = _name_to_jumbo_scry(nam_u);
-  u3h_put(sam_u->pac_p, pax, u3a_outa(lin_u));
-  u3z(pax); // TODO: fix refcount
+  u3_weak del = u3h_put_get(sam_u->pac_p, pax, u3a_outa(lin_u));
+  if ( u3_none != del ) {
+    _mesa_free_line(u3a_into(del));
+    u3z(del);
+  }
+  u3z(pax);
 }
 
 static void
