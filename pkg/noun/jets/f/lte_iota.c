@@ -11,12 +11,12 @@ u3_weak
 u3qf_lte_dime(u3_noun a, u3_noun b)
 {
   if ( c3n == u3r_sing(u3h(a), u3h(b)) ) {
-    return u3qc_aor(u3h(a), u3h(a));
+    return u3qc_aor(u3h(a), u3h(b));
   }
-  if ( u3h(a) == c3__rd || u3h(a) == c3__rs || u3h(a) == c3__rq || u3h(a) == c3__rh ) {
+  if ( (u3h(a) == c3__rd) || (u3h(a) == c3__rs) || (u3h(a) == c3__rq) || (u3h(a) == c3__rh) ) {
     return u3l_punt("lte-dime", u3_none);
   }
-  if ( u3h(a) == 't' || u3h(a) == c3__ta || u3h(a) == c3__tas ) {
+  if ( (u3h(a) == 't') || (u3h(a) == c3__ta) || (u3h(a) == c3__tas) ) {
     return u3qc_aor(u3t(a), u3t(b));
   }
   return u3qa_lte(u3t(a), u3t(b));
