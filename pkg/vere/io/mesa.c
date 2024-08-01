@@ -1888,16 +1888,16 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
   // TODO: this assumes we have the entire message. Should be switched to use
   // lss_builder_transceive instead.
   c3_w leaves_w = (jumbo_pact_w + 1023) / 1024;
-  lss_builder bil_u;
-  lss_builder_init(&bil_u, leaves_w);
+  lss_builder* bil_u = c3_calloc(sizeof(lss_builder));
+
+  lss_builder_init(bil_u, leaves_w);
   for ( c3_w i = 0; i < leaves_w; i++ ) {
     c3_y* leaf_y = jumbo_pact_y + (i*1024);
     c3_w leaf_w = (i < leaves_w - 1) ? 1024 : jumbo_pact_w % 1024;
-    lss_builder_ingest(&bil_u, leaf_y, leaf_w);
+    lss_builder_ingest(bil_u, leaf_y, leaf_w);
   }
-  lss_hash* proof = lss_builder_finalize(&bil_u);
+  lss_hash* proof = lss_builder_finalize(bil_u);
   c3_w proof_len = lss_proof_size(leaves_w);
-
 
   // send packets
   u3_mesa_name* nam_u = &tac_u.pag_u.nam_u;
@@ -1917,6 +1917,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
         dat_u->fra_y = proof_y;
        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
        _mesa_del_pit(sam_u, nam_u);
+       c3_free(proof_y);
        u3z(pin);
     }
   }
@@ -1935,7 +1936,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
       dat_u->aup_u.len_y = proof_len;
       memcpy(dat_u->aup_u.has_y, proof, proof_len*sizeof(lss_hash));
     } else {
-      lss_pair* pair = lss_builder_pair(&bil_u, i);
+      lss_pair* pair = lss_builder_pair(bil_u, i);
       if ( NULL == pair ) {
         dat_u->aup_u.len_y = 0;
         dat_u->aum_u.typ_e = AUTH_NONE;
@@ -1953,9 +1954,11 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
       #endif
       _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &tac_u);
       _mesa_del_pit(sam_u, nam_u);
-      u3k(pin);
+      u3z(pin);
     }
   }
+  // mesa_free_pact(&tac_u); // XX ??
+  lss_builder_free(bil_u);
 }
 
 static void
