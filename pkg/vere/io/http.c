@@ -642,6 +642,9 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
 static void
 _http_cache_respond(u3_hreq* req_u, u3_noun nun);
 
+static void
+_http_scry_respond(u3_hreq* req_u, u3_noun nun);
+
 typedef struct _byte_range {
   c3_z beg_z;
   c3_z end_z;
@@ -655,12 +658,11 @@ _chunk_align(byte_range* rng_u)
   c3_z siz_z = 4194304;  // 4MiB
 
   if ( SIZE_MAX != rng_u->beg_z ) {
-    c3_z tmp_z = rng_u->beg_z / siz_z;
-    rng_u->beg_z = tmp_z * siz_z;
-    rng_u->end_z = ((tmp_z + 1) * siz_z) - 1;
+    rng_u->beg_z = (rng_u->beg_z / siz_z) * siz_z;
+    rng_u->end_z = (rng_u->beg_z + siz_z) - 1;
   }
   else if ( SIZE_MAX != rng_u->end_z ) {
-    // round to multiple of siz_z
+    // round up to multiple of siz_z
     rng_u->end_z = siz_z * ((rng_u->end_z / siz_z) + 1);
   }
 }
@@ -696,7 +698,7 @@ _get_range(h2o_headers_t req_headers, byte_range* rng_u)
   rng_u->end_z = SIZE_MAX;
 
   c3_w inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
-  if (inx_w == UINT32_MAX) {
+  if ( UINT32_MAX == inx_w) {
     return c3n;
   }
 
@@ -726,7 +728,7 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
     req_u->peq_u = 0;
-    _http_cache_respond(req_u, u3k(nun));
+    _http_scry_respond(req_u, u3k(nun));
   }
 
   // cache only if peek was not at now, and nun isn't u3_nul
@@ -737,6 +739,9 @@ _http_scry_cb(void* vod_p, u3_noun nun)
     u3h_put(htd_u->nax_p, key, nun);
     u3z(key);
   }
+  else {
+    u3z(nun);
+  }
 
   u3z(peq_u->pax);
   c3_free(peq_u);
@@ -746,8 +751,17 @@ typedef struct _beam {
   u3_noun  who;
   u3_noun  des;
   u3_noun  cas;
-  u3_noun  pur;
+  u3_weak  pur;
 } beam;
+
+static void
+_free_beam(beam* bem)
+{
+  u3z(bem->who);
+  u3z(bem->des);
+  u3z(bem->cas);
+  u3z(bem->pur);
+}
 
 /* _get_beam: path to beam
 */
@@ -755,9 +769,7 @@ static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 {
   beam bem;
-  u3_http* htp_u = req_u->hon_u->htp_u;
-  u3_httd* htd_u = htp_u->htd_u;
-  u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+
   //  get beak from path
   //
   for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
@@ -789,10 +801,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
     // '='
     if ( (len_w > 0) && ('=' == txt_c[0]) ) {
       if ( 0 == i_w ) {
-        *wer = our;
+        u3_http* htp_u = req_u->hon_u->htp_u;
+        u3_httd* htd_u = htp_u->htd_u;
+        *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
       }
       else if ( 1 == i_w ) {
-        *wer = u3i_string("base");
+        *wer = c3__base;
       }
       else {
         req_u->peq_u->las_o = c3y;
@@ -805,15 +819,14 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       c3_c* nex_c;
       c3_c* tis_c = memchr(txt_c, '=', len_w);
       c3_c* fas_c = memchr(txt_c, '/', len_w);
+
       if ( tis_c && fas_c ) {
         nex_c = c3_min(tis_c, fas_c);
       }
-      else if ( tis_c ) {
-        nex_c = tis_c;
-      }
       else {
-        nex_c = fas_c;
+        nex_c = ( tis_c ) ? tis_c : fas_c;
       }
+
       if ( !nex_c ) {
         // XX bad beam
         *wer = u3_nul;
@@ -827,7 +840,9 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
     }
   }
 
-  bem.pur = u3dc("rush", u3i_bytes(len_w, (const c3_y*)txt_c), u3v_wish("stap"));
+  u3_noun tmp = u3dc("rush", u3i_bytes(len_w, (const c3_y*)txt_c), u3v_wish("stap"));
+  bem.pur = ( u3_nul == tmp ) ? u3_none : u3k(u3t(tmp));
+  u3z(tmp);
 
   return bem;
 }
@@ -843,13 +858,17 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   {
     u3_http* htp_u = req_u->hon_u->htp_u;
     u3_httd* htd_u = htp_u->htd_u;
-    u3_noun wir    = _http_req_to_duct(req_u);
-    u3_noun cad;
 
     c3_c* bas_c = req_u->rec_u->input.path.base;
     c3_w len_w = req_u->rec_u->input.path.len;
 
+    // check if base url starts with '/_~_/'
+    if (  (len_w < 6)
+       || (0 != memcmp("/_~_/", bas_c, 5)) )
     {
+      // no: inject to arvo
+      u3_noun wir    = _http_req_to_duct(req_u);
+      u3_noun cad;
       u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
       //
@@ -858,13 +877,6 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
             : u3nc(u3i_string("request"), dat);
-    }
-
-    // check if base url starts with '/_~_/'
-    if (  (len_w < 6)
-       || (0 != memcmp("/_~_/", bas_c, 5)) )
-    {
-      // no: inject to arvo
       u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
     }
     else {
@@ -891,75 +903,65 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         gang = u3_nul;
       }
 
-      u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
-      // XX weak beam?
       beam bem = _get_beam(req_u, bas_c, len_w);
-
-      if (  (u3_nul == bem.pur)
-         || (c3n == u3r_sing(our, bem.who)) )
-      {
+      if ( u3_none == bem.pur ) {
         c3_c* msg_c = "bad request";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+        u3z(gang);
+        _free_beam(&bem);
         return;
       }
 
+      h2o_headers_t req_headers = req_u->rec_u->headers;
+      byte_range rng_u;
+      c3_o rng_o = _get_range(req_headers, &rng_u);
+
+      // prepare spur for eyre range scry
+      //
+      u3_noun spur;
+      if ( c3n == rng_o ) {
+        // full range: '/range/0//foo'
+        spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3k(bem.pur));
+      }
       else {
-        h2o_headers_t req_headers = req_u->rec_u->headers;
-        byte_range rng_u;
-        c3_o rng_o = _get_range(req_headers, &rng_u);
+        _chunk_align(&rng_u);
 
-        // prepare spur for eyre range scry
-        //
-        u3_noun spur;
-        if ( c3n == rng_o ) {
-          // full range: '/range/0//foo'
-          spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3t(bem.pur));
+        u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
+                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
+        u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
+                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+
+        spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
+      }
+
+      // peek or respond from cache
+      //
+      if ( c3y == req_u->peq_u->las_o ) {
+        u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
+                          u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
+      }
+      else {
+        u3_noun bam = u3nq(u3k(bem.who), u3k(bem.des), u3k(bem.cas), spur);
+        u3_noun key = u3nc(auth, u3k(bam));
+        u3_weak nac = u3h_get(htd_u->nax_p, key);
+        u3z(key);
+
+        if (  (u3_none == nac)
+           || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
+        {
+          // maybe cache, then serve subsequent range requests from cache
+          req_u->peq_u->pax = u3k(bam);
+          u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
+                       req_u->peq_u, _http_scry_cb);
+          u3z(nac);
         }
         else {
-          if (  (SIZE_MAX == rng_u.beg_z)
-             && (SIZE_MAX == rng_u.end_z) )
-          {
-            c3_c* msg_c = "Requested Range Not Satisfiable";
-            h2o_send_error_generic(req_u->rec_u, 416, msg_c, msg_c, 0);
-            return;
-          }
-
-          _chunk_align(&rng_u);
-
-          u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
-                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
-          u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
-                        u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
-
-          spur = u3nq(u3i_string("range"), beg, end, u3t(bem.pur));
-        }
-
-        // peek or respond from cache
-        //
-        if ( c3y == req_u->peq_u->las_o ) {
-          u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                            bem.des, spur, req_u->peq_u, _http_scry_cb);
-        }
-        else {
-          u3_noun bam = u3nq(bem.who, bem.des, bem.cas, spur);
-          u3_noun key = u3nc(auth, u3k(bam));
-          u3_weak nac = u3h_get(htd_u->nax_p, key);
-          u3z(key);
-
-          if (  (u3_none == nac)
-             || (u3_nul == nac)
-             || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
-          {
-            // maybe cache, then serve subsequent range requests from cache
-            req_u->peq_u->pax = u3k(bam);
-            u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
-                         req_u->peq_u, _http_scry_cb);
-          }
-          else {
-            _http_cache_respond(req_u, nac);
-          }
+          _http_scry_respond(req_u, nac);
+          u3z(bam);
+          u3z(gang);
         }
       }
+     _free_beam(&bem);
     }
   }
 }
@@ -985,6 +987,49 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
     else {
       u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
       _http_req_dispatch(req_u, req);
+    }
+  }
+  else if ( u3_none == u3r_at(7, nun) ) {
+    h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
+  }
+  else {
+    u3_noun auth, response_header, data;
+    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    u3_noun status, headers;
+    u3x_cell(response_header, &status, &headers);
+
+    // check auth
+    if ( (c3y == auth)
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
+    {
+      h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
+    }
+    else {
+      req_u->sat_e = u3_rsat_plan;
+      _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+    }
+  }
+  u3z(nun);
+}
+
+static void
+_http_scry_respond(u3_hreq* req_u, u3_noun nun)
+{
+  h2o_req_t* rec_u = req_u->rec_u;
+  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
+
+  if ( u3_nul == nun ) {
+    u3_weak req = _http_rec_to_httq(rec_u);
+    if ( u3_none == req ) {
+      if ( (u3C.wag_w & u3o_verbose) ) {
+        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
+                rec_u->method.base);
+      }
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
+    }
+    else {
+      h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
     }
   }
   else if ( u3_none == u3r_at(7, nun) ) {
