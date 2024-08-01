@@ -144,6 +144,11 @@
         void
         u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w);
 
+      /* u3h_trim_with(): trim to n key-value pairs, with deletion callback
+      */
+        void
+        u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun));
+
       /* u3h_free(): free hashtable.
       */
         void

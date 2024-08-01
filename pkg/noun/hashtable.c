@@ -285,7 +285,9 @@ void
 u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
 {
   u3_weak del = u3h_put_get(har_p, key, val);
-  u3z(del);
+  if ( u3_none != del ) {
+    u3z(del);
+  }
 }
 
 /* _ch_buck_del(): delete from bucket
@@ -614,11 +616,21 @@ _ch_trim_root(u3h_root* har_u)
 void
 u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w)
 {
+  u3h_trim_with(har_p, n_w, NULL);
+}
+
+/* u3h_trim_to(): trim to n key-value pairs
+*/
+void
+u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun))
+{
   u3h_root* har_u = u3to(u3h_root, har_p);
 
   while ( har_u->use_w > n_w ) {
-    if ( u3_none != _ch_trim_root(har_u) ) {
+    u3_weak del = _ch_trim_root(har_u);
+    if ( u3_none != del ) {
       har_u->use_w -= 1;
+      if (del_cb) del_cb(del);
     }
   }
 }
