@@ -616,7 +616,7 @@ _ch_trim_root(u3h_root* har_u)
 void
 u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w)
 {
-  u3h_trim_with(har_p, n_w, NULL);
+  u3h_trim_with(har_p, n_w, u3a_lose);
 }
 
 /* u3h_trim_to(): trim to n key-value pairs
@@ -630,7 +630,7 @@ u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun))
     u3_weak del = _ch_trim_root(har_u);
     if ( u3_none != del ) {
       har_u->use_w -= 1;
-      if (del_cb) del_cb(del);
+      del_cb(del);
     }
   }
 }
