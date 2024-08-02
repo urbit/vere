@@ -15,4 +15,5 @@ configure_make(
     lib_source = ":all",
     out_static_libs = ["libexpat.a"],
     visibility = ["//visibility:public"],
+    configure_options = ["--without-docbook"],
 )
