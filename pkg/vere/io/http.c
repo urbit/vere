@@ -658,8 +658,19 @@ _chunk_align(byte_range* rng_u)
   c3_z siz_z = 4194304;  // 4MiB
 
   if ( SIZE_MAX != rng_u->beg_z ) {
-    rng_u->beg_z = (rng_u->beg_z / siz_z) * siz_z;
-    rng_u->end_z = (rng_u->beg_z + siz_z) - 1;
+    if ( rng_u->beg_z > rng_u->end_z ) {
+      rng_u->beg_z = SIZE_MAX;
+      rng_u->end_z = SIZE_MAX;
+    }
+    else {
+      // XX an out-of-bounds request could be aligned to in-bounds
+      // resulting in a 200 or 206 response instead of 416.
+      // browsers should have the total length from content-range,
+      // and send reasonable range requests.
+      //
+      rng_u->beg_z = (rng_u->beg_z / siz_z) * siz_z;
+      rng_u->end_z = (rng_u->beg_z + siz_z) - 1;
+    }
   }
   else if ( SIZE_MAX != rng_u->end_z ) {
     // round up to multiple of siz_z
@@ -682,7 +693,8 @@ _parse_range(c3_c* txt_c, c3_w len_w)
     rng_u.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
     // strange -> [SIZE_MAX SIZE_MAX]
     if (  ((SIZE_MAX == rng_u.beg_z) && (hep_c != txt_c))
-       || ((SIZE_MAX == rng_u.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0)) )
+       || ((SIZE_MAX == rng_u.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0))
+       || ((SIZE_MAX != rng_u.beg_z) && (rng_u.beg_z > rng_u.end_z)) )
     {
       rng_u.beg_z = SIZE_MAX;
       rng_u.end_z = SIZE_MAX;
@@ -691,6 +703,8 @@ _parse_range(c3_c* txt_c, c3_w len_w)
   return rng_u;
 }
 
+/* _get_range(): get a _byte_range from headers
+*/
 static c3_o
 _get_range(h2o_headers_t req_headers, byte_range* rng_u)
 {
@@ -714,7 +728,7 @@ _get_range(h2o_headers_t req_headers, byte_range* rng_u)
   return c3y;
 }
 
-/* _http_scry_cb()
+/* _http_scry_cb(): respond and maybe cache scry result
 */
 static void
 _http_scry_cb(void* vod_p, u3_noun nun)
@@ -747,13 +761,17 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   c3_free(peq_u);
 }
 
+/* _beam: ship desk case spur
+*/
 typedef struct _beam {
-  u3_noun  who;
-  u3_noun  des;
-  u3_noun  cas;
+  u3_weak  who;
+  u3_weak  des;
+  u3_weak  cas;
   u3_weak  pur;
 } beam;
 
+/* _free_beam(): free a beam
+*/
 static void
 _free_beam(beam* bem)
 {
@@ -763,14 +781,14 @@ _free_beam(beam* bem)
   u3z(bem->pur);
 }
 
-/* _get_beam: path to beam
+/* _get_beam(): get a _beam from url
 */
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 {
   beam bem;
 
-  //  get beak from path
+  //  get beak
   //
   for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
     u3_noun* wer;
@@ -798,6 +816,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       txt_c++;
       len_w--;
     }
+
     // '='
     if ( (len_w > 0) && ('=' == txt_c[0]) ) {
       if ( 0 == i_w ) {
@@ -828,8 +847,8 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       }
 
       if ( !nex_c ) {
-        // XX bad beam
-        *wer = u3_nul;
+        *wer = u3_none;
+        return bem;
       }
       else {
         c3_w dif_w = (c3_p)(nex_c - txt_c);
@@ -840,6 +859,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
     }
   }
 
+  // get spur
   u3_noun tmp = u3dc("rush", u3i_bytes(len_w, (const c3_y*)txt_c), u3v_wish("stap"));
   bem.pur = ( u3_nul == tmp ) ? u3_none : u3k(u3t(tmp));
   u3z(tmp);
@@ -867,7 +887,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
        || (0 != memcmp("/_~_/", bas_c, 5)) )
     {
       // no: inject to arvo
-      u3_noun wir    = _http_req_to_duct(req_u);
+      u3_noun wir = _http_req_to_duct(req_u);
       u3_noun cad;
       u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
@@ -904,7 +924,11 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       }
 
       beam bem = _get_beam(req_u, bas_c, len_w);
-      if ( u3_none == bem.pur ) {
+      if (  (u3_none == bem.who)
+         || (u3_none == bem.des)
+         || (u3_none == bem.cas)
+         || (u3_none == bem.pur) )
+      {
         c3_c* msg_c = "bad request";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
         u3z(gang);
@@ -1012,6 +1036,8 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   u3z(nun);
 }
 
+/* _http_scry_respond(): respond with a simple-payload:http
+*/
 static void
 _http_scry_respond(u3_hreq* req_u, u3_noun nun)
 {
