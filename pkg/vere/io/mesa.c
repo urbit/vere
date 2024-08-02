@@ -1326,8 +1326,9 @@ _realise_lane(u3_noun lan) {
     } else {
       u3l_log("mesa: inscrutable lane");
     }
-    u3z(lan);
+
   }
+  u3z(lan);
   return lan_u;
 }
 
@@ -1523,7 +1524,10 @@ _name_to_scry(u3_mesa_name* nam_u)
 static u3_weak
 _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
-  return u3h_get(sam_u->pit_p, _name_to_scry((nam_u)));
+  u3_noun pax = _name_to_scry(nam_u);
+  u3_weak res = u3h_get(sam_u->pit_p, pax);
+  u3z(pax);
+  return res;
 }
 
 static void
@@ -1544,9 +1548,16 @@ _mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
 static void
 _mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
+  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
   u3_noun pax = _name_to_scry(nam_u);
-  u3h_del(sam_u->pit_p, pax);
-  u3z(pax);
+  // u3m_p("_mesa_del_pit pax", pax);
+  if ( pin != u3_none ) {
+    u3h_del(sam_u->pit_p, pax);
+  } else {
+    u3l_log("deleting non existent key in PIT");
+  }
+
+  u3z(pin); u3z(pax);
 }
 
 static void
@@ -1931,7 +1942,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
     //  aup_u, len_w, and fra_y vary by fragment
   }
   c3_w pro_w = lss_proof_size(lin_u->tot_w);
-  
+
   if ( c3y == nam_u->nit_o && lin_u->tot_w > 4) {
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
@@ -1944,6 +1955,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
       dat_u->fra_y = pro_y;
       _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
       _mesa_del_pit(sam_u, nam_u);
+      c3_free(pro_y);
       u3z(pin);
     }
   }
@@ -1985,9 +1997,11 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
       #endif
       _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
       _mesa_del_pit(sam_u, nam_u);
-      u3k(pin);
+      u3z(pin);
     }
   }
+  // mesa_free_pact(&tac_u); // XX ??
+  lss_builder_free(bil_u);
 }
 
 static void
@@ -2302,7 +2316,8 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     c3_free(her_c);
   #endif
 
-  _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
+  //  XX do early delete instead, to avoid injecting retries
+  // _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
   _mesa_free_lane_cb_data(dat_u);
 }
 
@@ -2450,6 +2465,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       dat_u->lan_u.por_s = lan_u.por_s;
       dat_u->nam_u = _mesa_copy_name_alloc(nam_u);
     }
+    // early deletion, to avoid injecting retries,
+    //    (in case of failure, the retry timer will add it again to the PIT)
+    //
+    _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
     u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
 
     _mesa_free_pict(pic_u);
@@ -2463,7 +2482,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     }
     // _mesa_free_pict(pic_u);  //  XX leaks packet
-
+    _mesa_del_pit(sam_u, nam_u);
     // TODO free pin, other things too?
     return;
   }
@@ -2485,8 +2504,14 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   c3_y boq_y = u3_Host.ops_u.jum_y;
   c3_o done_with_jumbo_frame = __(0 == req_u->len_w % boq_y);
+  _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
+
+    u3l_log(" received last packet, tot_w: %u", req_u->tot_w);
+    c3_d now_d = _get_now_micros();
+    u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
+
     {
       // construct jumbo frame
       pac_u->pag_u.nam_u.boq_y = boq_y;
@@ -2509,13 +2534,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
-
-    u3l_log(" received last packet, tot_w: %u", req_u->tot_w);
-    c3_d now_d = _get_now_micros();
-    u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
-  }
-
-  if ( req_u->len_w < req_u->tot_w ) {
+  } else if ( req_u->len_w < req_u->tot_w ) {
     _mesa_request_next_fragments(sam_u, req_u, lan_u);
   }
 
