@@ -2440,9 +2440,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     c3_d now_d = _get_now_micros();
     u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
 
-
-    _mesa_del_request(sam_u, &pac_u->pag_u.nam_u, pac_u->pag_u.dat_u.tot_w);
-
     {
       // construct jumbo frame
       pac_u->pag_u.nam_u.boq_y = 31; // TODO: use actual jumbo bloq
@@ -2460,6 +2457,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       cad = u3nt(c3__heer, lan, u3i_bytes(res_w, buf_y));
       c3_free(buf_y);
     }
+
+    _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
