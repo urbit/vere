@@ -34,11 +34,11 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w len_w)
 
     fin_y = memmem(buf_y + i, len_w - i, ned_y, sizeof(ned_y));
     if ( fin_y != 0 ) {
-      c3_w len_w = fin_y - buf_y;
+      c3_w lin_w = fin_y - buf_y;
       // Skip attribute type and length
       c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
       c3_w init = crc32(0L, Z_NULL, 0);
-      c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
+      c3_w crc = htonl(crc32(init, buf_y, lin_w) ^ 0x5354554e);
       if ((fingerprint == crc) && (fin_y - buf_y + 8) == len_w) {
         return c3y;
       }
@@ -125,6 +125,8 @@ u3_stun_make_response(const c3_y req_y[20],
   //  XX hardcoded to match the requests we produce
   //
   memcpy(buf_y, req_y, cur_w);
+  buf_y[0] = 0x01; buf_y[1] = 0x01; // 0x0101 SUCCESS RESPONSE
+  buf_y[2] = 0x00; buf_y[3] = 0x14; // Length: 20 bytes
 
   memset(buf_y + cur_w, 0, cur_w);
 
