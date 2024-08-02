@@ -21,10 +21,10 @@ _stun_add_fingerprint(c3_y *message, c3_w index)
 }
 
 static c3_o
-_stun_has_fingerprint(c3_y* buf_y, c3_w len_w)
+_stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
 {
   c3_y ned_y[4] = {0x80, 0x28, 0x00, 0x04};
-  if ( len_w < 28 ) { // At least STUN header and FINGERPRINT
+  if ( buf_len_w < 28 ) { // At least STUN header and FINGERPRINT
     return c3n;
   }
 
@@ -32,14 +32,14 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w len_w)
     c3_y* fin_y = 0;
     c3_w i = 20; // start after the header
 
-    fin_y = memmem(buf_y + i, len_w - i, ned_y, sizeof(ned_y));
+    fin_y = memmem(buf_y + i, buf_len_w - i, ned_y, sizeof(ned_y));
     if ( fin_y != 0 ) {
       c3_w len_w = fin_y - buf_y;
       // Skip attribute type and length
       c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
       c3_w init = crc32(0L, Z_NULL, 0);
       c3_w crc = htonl(crc32(init, buf_y, len_w) ^ 0x5354554e);
-      if ((fingerprint == crc) && (fin_y - buf_y + 8) == len_w) {
+      if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len_w) {
         return c3y;
       }
     }
