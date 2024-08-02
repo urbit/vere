@@ -1283,8 +1283,9 @@ _realise_lane(u3_noun lan) {
     } else {
       u3l_log("mesa: inscrutable lane");
     }
-    u3z(lan);
+
   }
+  u3z(lan);
   return lan_u;
 }
 
