@@ -1966,7 +1966,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_noun pag)
       u3z(pin);
     }
   }
-  // mesa_free_pact(&tac_u); // XX ??
+  c3_free(jumbo_pact_y); // XX
   lss_builder_free(bil_u);
 }
 
