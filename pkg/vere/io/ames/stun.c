@@ -126,6 +126,9 @@ u3_stun_make_response(const c3_y req_y[20],
   //
   memcpy(buf_y, req_y, cur_w);
 
+  buf_y[0] = 0x01; buf_y[1] = 0x01; // 0x0101 SUCCESS RESPONSE
+  buf_y[2] = 0x00; buf_y[3] = 0x14; // Length: 20 bytes
+
   memset(buf_y + cur_w, 0, cur_w);
 
   // XOR-MAPPED-ADDRESS
