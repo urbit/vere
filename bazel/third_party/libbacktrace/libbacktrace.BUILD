@@ -6,8 +6,9 @@ filegroup(
 )
 
 configure_make(
-    name = "expat",
-    args = select({
+    name = "libbacktrace",
+    args = [
+    ] + select({
         "@platforms//os:macos": ["--jobs=`sysctl -n hw.logicalcpu`"],
         "//conditions:default": ["--jobs=`nproc`"],
     }),
@@ -19,6 +20,6 @@ configure_make(
     }),
     copts = ["-O3"],
     lib_source = ":all",
-    out_static_libs = ["libexpat.a"],
+    out_static_libs = ["libbacktrace.a"],
     visibility = ["//visibility:public"],
 )

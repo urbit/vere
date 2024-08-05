@@ -335,9 +335,9 @@ toolchain(
 # so introduces a circular dependency during Bazel C/C++ toolchain resolution.
 
 # musl-cross-make builds musl-libc-compatible gcc toolchains from source.
-_musl_cross_make_version = "fe915821b652a7fa37b34a596f47d8e20bc72338"
+_musl_cross_make_version = "99f2cbc7e230f72bde3394be3ebd50497cb53e89"
 
-_musl_cross_make_archive = "https://github.com/richfelker/musl-cross-make/archive/{}.tar.gz".format(_musl_cross_make_version)
+_musl_cross_make_archive = "https://github.com/ripperi/musl-cross-make/archive/{}.tar.gz".format(_musl_cross_make_version)
 
 genrule(
     name = "install-aarch64-linux-musl-gcc",
@@ -349,6 +349,8 @@ genrule(
     echo '    tar -xf {}.tar.gz'                                                    >> $@
     echo '    archive=musl-cross-make-{}'                                           >> $@
     echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    echo GCC_VER=11.4.0 >> $$archive/config.mak'                          >> $@
+    echo '    echo MUSL_VER=1.2.5 >> $$archive/config.mak'                          >> $@
     echo '    TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
     echo '    sudo TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
     echo '    sudo chown --recursive $$USER $$aarch64_linux_musl_install'           >> $@
@@ -382,6 +384,8 @@ genrule(
     echo '    tar -xf {}.tar.gz'                                                   >> $@
     echo '    archive=musl-cross-make-{}'                                          >> $@
     echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    echo GCC_VER=11.4.0 >> $$archive/config.mak'                         >> $@
+    echo '    echo MUSL_VER=1.2.5 >> $$archive/config.mak'                         >> $@
     echo '    TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
     echo '    sudo TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
     echo '    sudo chown --recursive $$USER $$x86_64_linux_musl_install'           >> $@
