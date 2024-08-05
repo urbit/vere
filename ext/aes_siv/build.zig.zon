@@ -1,0 +1,17 @@
+.{
+    .name = "aes_siv",
+    .version = "0.0.1",
+    .dependencies = .{
+        .aes_siv = .{
+            .url = "https://github.com/dfoxfranke/libaes_siv/archive/9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b.tar.gz",
+            .hash = "1220a898068525a4bda3be4139c68555ec3a9cef03ed94c63115dde4a5204126f69a",
+        },
+        .openssl = .{
+            .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
+            .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
