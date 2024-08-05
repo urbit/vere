@@ -18,5 +18,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(natpmp.artifact("natpmp"));
 
+    const softfloat = b.dependency("softfloat", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(softfloat.artifact("softfloat"));
+
     b.installArtifact(exe);
 }

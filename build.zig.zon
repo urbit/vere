@@ -5,6 +5,9 @@
         .natpmp = .{
             .path = "./ext/natpmp",
         },
+        .softfloat = .{
+            .path = "./ext/softfloat",
+        },
     },
     .paths = .{
         "",

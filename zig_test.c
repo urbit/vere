@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "natpmp.h"
+#include "softfloat.h"
 
 int main() {
   printf("Zig test");
