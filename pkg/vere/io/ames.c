@@ -1039,7 +1039,7 @@ _stun_on_request(u3_ames*    sam_u,
   u3_stun_make_response(req_y, &lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u,
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u,
                                &buf_u, 1, adr_u, _stun_send_cb);
 
   if ( sas_i ) {
@@ -1116,7 +1116,7 @@ _stun_send_request(u3_ames* sam_u)
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &sam_u->wax_u, &buf_u, 1,
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u, &buf_u, 1,
                                (const struct sockaddr*)&add_u, _stun_send_cb);
 
   if ( sas_i ) {
@@ -2013,7 +2013,7 @@ _ames_try_forward(u3_pact* pac_u)
 */
 void
 _ames_hear(u3_ames* sam_u,
-           u3_lane* lan_u,
+           const struct sockaddr* adr_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -2021,111 +2021,136 @@ _ames_hear(u3_ames* sam_u,
   c3_w     pre_w;
   c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
 
-  //  make sure packet is big enough to have a header
-  //
-  if ( HEAD_SIZE > len_w ) {
-    sam_u->sat_u.hed_d++;
-    if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped, failed to read header",
-              sam_u->sat_u.hed_d);
-    }
 
+  // XX reorg, check if a STUN req/resp can look like an ames packet
+  //  check the mug hash of the body of the packet, if not check if STUN
+  //  otherwise , invalid packet, log failure
+  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
+  //    for next protocol version, have an urbit cookie
+  //
+  if ( c3y == u3_stun_is_request(hun_y, len_w) ) {
+      _stun_on_request(sam_u, hun_y, adr_u);
+      c3_free(hun_y);
+  }
+  else if ( c3y == u3_stun_is_our_response(hun_y,
+                                           sam_u->sun_u.tid_y, len_w) )
+  {
+    _stun_on_response(sam_u, hun_y, len_w);
     c3_free(hun_y);
-    return;
-  }
-
-  pac_u = c3_calloc(sizeof(*pac_u));
-  pac_u->sam_u = sam_u;
-  pac_u->len_w = len_w;
-  pac_u->hun_y = hun_y;
-  pac_u->lan_u = *lan_u;
-  cur_w = 0;
-
-  //  parse the header
-  //
-  _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
-  cur_w += HEAD_SIZE;
-
-  pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
-
-  //  ensure the protocol version matches ours
-  //
-  //    XX rethink use of [fit_o] here and elsewhere
-  //
-  if (  (c3y == sam_u->fig_u.fit_o)
-     && (sam_u->ver_y != pac_u->hed_u.ver_y) )
-  {
-    sam_u->sat_u.vet_d++;
-    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
-              sam_u->sat_u.vet_d);
-    }
-    _ames_pact_free(pac_u);
-    return;
-  }
-
-  //  check contents match mug in header
-  //
-  if ( c3n == _ames_check_mug(pac_u) ) {
-    // _log_head(&pac_u->hed_u);
-    sam_u->sat_u.mut_d++;
-    if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped for invalid mug",
-              sam_u->sat_u.mut_d);
-    }
-    _ames_pact_free(pac_u);
-    return;
-  }
-
-  //  check that packet is big enough for prelude
-  //
-  pre_w = _ames_prel_size(&pac_u->hed_u);
-  if ( len_w < cur_w + pre_w ) {
-    sam_u->sat_u.pre_d++;
-    if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
-      u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
-              sam_u->sat_u.pre_d);
-    }
-    _ames_pact_free(pac_u);
-    return;
-  }
-
-  //  parse prelude
-  //
-  _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
-  cur_w += pre_w;
-
-  //  if we can scry for lanes,
-  //  and we are not the recipient,
-  //  we might want to forward statelessly
-  //
-  if ( (c3y == sam_u->fig_u.see_o)
-     && (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
-        || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) ) )
-  {
-    if ( c3y == sam_u->sat_u.for_o ) {
-      _ames_try_forward(pac_u);
-    }
   }
   else {
-    //  enter protocol-specific packet handling
+    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+    u3_lane             lan_u = {
+      .por_s = ntohs(add_u->sin_port),
+      .pip_w = ntohl(add_u->sin_addr.s_addr)
+    };
+
+    //  make sure packet is big enough to have a header
     //
-    switch ( pac_u->typ_y ) {
-      case PACT_WAIL: {
-        _fine_hear_request(pac_u, cur_w);
-      } break;
+    if ( HEAD_SIZE > len_w ) {
+      sam_u->sat_u.hed_d++;
+      if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
+        u3l_log("ames: %" PRIu64 " dropped, failed to read header",
+                sam_u->sat_u.hed_d);
+      }
 
-      case PACT_PURR: {
-        _fine_hear_response(pac_u, cur_w);
-      } break;
+      c3_free(hun_y);
+      return;
+    }
 
-      case PACT_AMES: {
-        _ames_hear_ames(pac_u, cur_w);
-      } break;
+    pac_u = c3_calloc(sizeof(*pac_u));
+    pac_u->sam_u = sam_u;
+    pac_u->len_w = len_w;
+    pac_u->hun_y = hun_y;
+    pac_u->lan_u = lan_u;
+    cur_w = 0;
 
-      default: {
-        u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
-        u3_pier_bail(u3_king_stub());
+    //  parse the header
+    //
+    _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
+    cur_w += HEAD_SIZE;
+
+    pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
+
+    //  ensure the protocol version matches ours
+    //
+    //    XX rethink use of [fit_o] here and elsewhere
+    //
+    if (  (c3y == sam_u->fig_u.fit_o)
+      && (sam_u->ver_y != pac_u->hed_u.ver_y) )
+    {
+      sam_u->sat_u.vet_d++;
+      if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
+        u3l_log("ames: %" PRIu64 " dropped for version mismatch",
+                sam_u->sat_u.vet_d);
+      }
+      _ames_pact_free(pac_u);
+      return;
+    }
+
+    //  check contents match mug in header
+    //
+    if ( c3n == _ames_check_mug(pac_u) ) {
+      // _log_head(&pac_u->hed_u);
+      sam_u->sat_u.mut_d++;
+      if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
+        u3l_log("ames: %" PRIu64 " dropped for invalid mug",
+                sam_u->sat_u.mut_d);
+      }
+      _ames_pact_free(pac_u);
+      return;
+    }
+
+    //  check that packet is big enough for prelude
+    //
+    pre_w = _ames_prel_size(&pac_u->hed_u);
+    if ( len_w < cur_w + pre_w ) {
+      sam_u->sat_u.pre_d++;
+      if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
+        u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
+                sam_u->sat_u.pre_d);
+      }
+      _ames_pact_free(pac_u);
+      return;
+    }
+
+    //  parse prelude
+    //
+    _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
+    cur_w += pre_w;
+
+    //  if we can scry for lanes,
+    //  and we are not the recipient,
+    //  we might want to forward statelessly
+    //
+    if ( (c3y == sam_u->fig_u.see_o)
+      && (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
+          || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) ) )
+    {
+      if ( c3y == sam_u->sat_u.for_o ) {
+        _ames_try_forward(pac_u);
+      }
+    }
+    else {
+      //  enter protocol-specific packet handling
+      //
+      switch ( pac_u->typ_y ) {
+        case PACT_WAIL: {
+          _fine_hear_request(pac_u, cur_w);
+        } break;
+
+        case PACT_PURR: {
+          _fine_hear_response(pac_u, cur_w);
+        } break;
+
+        case PACT_AMES: {
+          _ames_hear_ames(pac_u, cur_w);
+        } break;
+
+        default: {
+          u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
+          u3_pier_bail(u3_king_stub());
+        }
       }
     }
   }
@@ -2157,32 +2182,10 @@ _ames_recv_cb(uv_udp_t*        wax_u,
     }
     c3_free(buf_u->base);
   }
-  // XX reorg, check if a STUN req/resp can look like an ames packet
-  //  check the mug hash of the body of the packet, if not check if STUN
-  //  otherwise , invalid packet, log failure
-  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
-  //    for next protocol version, have an urbit cookie
-  //
-  else if ( c3y == u3_stun_is_request((c3_y*)buf_u->base, nrd_i) ) {
-      _stun_on_request(sam_u, (c3_y *)buf_u->base, adr_u);
-      c3_free(buf_u->base);
-  }
-  else if ( c3y == u3_stun_is_our_response((c3_y*)buf_u->base,
-                                           sam_u->sun_u.tid_y, nrd_i) )
-  {
-    _stun_on_response(sam_u, (c3_y*)buf_u->base, nrd_i);
-    c3_free(buf_u->base);
-  }
   else {
-    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-    u3_lane             lan_u = {
-      .por_s = ntohs(add_u->sin_port),
-      .pip_w = ntohl(add_u->sin_addr.s_addr)
-    };
-
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _ames_hear(sam_u, &lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    _ames_hear(sam_u, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
   }
 }
 

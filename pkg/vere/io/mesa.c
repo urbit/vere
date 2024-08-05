@@ -6,6 +6,7 @@
 #include "noun.h"
 #include "ur.h"
 #include "ship.h"
+#include "io/ames/stun.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
 #include <allocate.h>
@@ -1043,15 +1044,20 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   c3_y* sen_y = c3_calloc(len_w);
   memcpy(sen_y, buf_y, len_w);
 
-  if ( c3y == _mesa_is_direct_mode(per_u) ) {
+  u3_ship gal_u = {0};
+  gal_u[0] = per_u->imp_y;
+  c3_o our_o = u3_ships_equal(gal_u, sam_u->pir_u->who_d);
+
+  if ( ( c3y == _mesa_is_direct_mode(per_u) ) ||
+       // if we are the sponsor of the ship, don't send to ourselves
+       (our_o == c3y) )  {
     u3l_log("mesa: direct");
     _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
   else {
+
     #ifdef MESA_DEBUG
-      u3_ship gal_u = {0};
-      gal_u[0] = per_u->imp_y;
       c3_c* gal_c = u3_ship_to_string(gal_u);
       u3l_log("mesa: sending to %s", gal_c);
       c3_free(gal_c);
@@ -2000,7 +2006,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
       u3z(pin);
     }
   }
-  // mesa_free_pact(&tac_u); // XX ??
+  c3_free(jumbo_pact_y); // XX
   lss_builder_free(bil_u);
 }
 
@@ -2743,13 +2749,13 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
 void
 _ames_hear(void*    sam_u,
-           u3_lane* lan_u,
+           const struct sockaddr* adr_u,
            c3_w     len_w,
            c3_y*    hun_y);
 
 static void
 _mesa_hear(u3_mesa* sam_u,
-           u3_lane* lan_u,
+           const struct sockaddr* adr_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -2770,21 +2776,29 @@ _mesa_hear(u3_mesa* sam_u,
     // MESA_LOG(sam_u, SERIAL)
     // c3_free(hun_y);
     mesa_free_pact(&pic_u->pac_u);
-    _ames_hear(u3_Host.sam_u, lan_u, len_w, hun_y);
+    _ames_hear(u3_Host.sam_u, adr_u, len_w, hun_y);
     return;
   }
 
   c3_free(hun_y);
 
+  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+  u3_lane lan_u;
+
+  lan_u.por_s = ntohs(add_u->sin_port);
+  // u3l_log("port: %s", lan_u.por_s);
+  lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+
+
   switch ( pic_u->pac_u.hed_u.typ_y ) {
     case PACT_PEEK: {
-      _mesa_hear_peek(pic_u, *lan_u);
+      _mesa_hear_peek(pic_u, lan_u);
     } break;
     case PACT_PAGE: {
-      _mesa_hear_page(pic_u, *lan_u);
+      _mesa_hear_page(pic_u, lan_u);
     } break;
     default: {
-      _mesa_hear_poke(pic_u, lan_u);
+      _mesa_hear_poke(pic_u, &lan_u);
     } break;
   }
 }
@@ -2811,18 +2825,13 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     c3_free(buf_u->base);
   }
   else {
-    u3_mesa*            sam_u = wax_u->data;
-    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-    u3_lane             lan_u;
-
-
-    lan_u.por_s = ntohs(add_u->sin_port);
-   // u3l_log("port: %s", lan_u.por_s);
-    lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+    u3_mesa*            mes_u = wax_u->data;
   //  u3l_log("IP: %x", lan_u.pip_w);
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _mesa_hear(sam_u, &lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+
+  _mesa_hear(mes_u, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+
   }
 }
 
