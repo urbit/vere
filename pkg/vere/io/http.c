@@ -909,6 +909,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       req_u->peq_u->htd_u = htd_u;
       req_u->peq_u->las_o = c3n;
       req_u->sat_e = u3_rsat_peek;
+      req_u->peq_u->pax = u3_nul;
 
       u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
       h2o_req_t* rec_u = req_u->rec_u;
@@ -932,6 +933,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         c3_c* msg_c = "bad request";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
         u3z(gang);
+        u3z(req_u->peq_u->pax);
         _free_beam(&bem);
         return;
       }
@@ -974,6 +976,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
            || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
         {
           // maybe cache, then serve subsequent range requests from cache
+          u3z(req_u->peq_u->pax);
           req_u->peq_u->pax = u3k(bam);
           u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
                        req_u->peq_u, _http_scry_cb);
@@ -985,7 +988,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
           u3z(gang);
         }
       }
-     _free_beam(&bem);
+      _free_beam(&bem);
     }
   }
 }
