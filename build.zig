@@ -12,5 +12,11 @@ pub fn build(b: *std.Build) !void {
 
     exe.addCSourceFile(.{ .file = b.path("zig_test.c") });
 
+    const natpmp = b.dependency("natpmp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(natpmp.artifact("natpmp"));
+
     b.installArtifact(exe);
 }
