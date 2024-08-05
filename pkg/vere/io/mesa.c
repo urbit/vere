@@ -1001,15 +1001,20 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   c3_y* sen_y = c3_calloc(len_w);
   memcpy(sen_y, buf_y, len_w);
 
-  if ( c3y == _mesa_is_direct_mode(per_u) ) {
+  u3_ship gal_u = {0};
+  gal_u[0] = per_u->imp_y;
+  c3_o our_o = u3_ships_equal(gal_u, sam_u->pir_u->who_d);
+
+  if ( ( c3y == _mesa_is_direct_mode(per_u) ) ||
+       // if we are the sponsor of the ship, don't send to ourselves
+       (our_o == c3y) )  {
     u3l_log("mesa: direct");
     _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
   else {
+
     #ifdef MESA_DEBUG
-      u3_ship gal_u = {0};
-      gal_u[0] = per_u->imp_y;
       c3_c* gal_c = u3_ship_to_string(gal_u);
       u3l_log("mesa: sending to %s", gal_c);
       c3_free(gal_c);
