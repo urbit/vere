@@ -6,6 +6,7 @@
 #include "noun.h"
 #include "ur.h"
 #include "ship.h"
+#include "io/ames/stun.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
 #include <allocate.h>
@@ -2674,13 +2675,13 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
 void
 _ames_hear(void*    sam_u,
-           u3_lane* lan_u,
+           const struct sockaddr* adr_u,
            c3_w     len_w,
            c3_y*    hun_y);
 
 static void
 _mesa_hear(u3_mesa* sam_u,
-           u3_lane* lan_u,
+           const struct sockaddr* adr_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -2701,21 +2702,29 @@ _mesa_hear(u3_mesa* sam_u,
     // MESA_LOG(sam_u, SERIAL)
     // c3_free(hun_y);
     mesa_free_pact(&pic_u->pac_u);
-    _ames_hear(u3_Host.sam_u, lan_u, len_w, hun_y);
+    _ames_hear(u3_Host.sam_u, adr_u, len_w, hun_y);
     return;
   }
 
   c3_free(hun_y);
 
+  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
+  u3_lane lan_u;
+
+  lan_u.por_s = ntohs(add_u->sin_port);
+  // u3l_log("port: %s", lan_u.por_s);
+  lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+
+
   switch ( pic_u->pac_u.hed_u.typ_y ) {
     case PACT_PEEK: {
-      _mesa_hear_peek(pic_u, *lan_u);
+      _mesa_hear_peek(pic_u, lan_u);
     } break;
     case PACT_PAGE: {
-      _mesa_hear_page(pic_u, *lan_u);
+      _mesa_hear_page(pic_u, lan_u);
     } break;
     default: {
-      _mesa_hear_poke(pic_u, lan_u);
+      _mesa_hear_poke(pic_u, &lan_u);
     } break;
   }
 }
@@ -2742,18 +2751,13 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     c3_free(buf_u->base);
   }
   else {
-    u3_mesa*            sam_u = wax_u->data;
-    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-    u3_lane             lan_u;
-
-
-    lan_u.por_s = ntohs(add_u->sin_port);
-   // u3l_log("port: %s", lan_u.por_s);
-    lan_u.pip_w = ntohl(add_u->sin_addr.s_addr);
+    u3_mesa*            mes_u = wax_u->data;
   //  u3l_log("IP: %x", lan_u.pip_w);
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _mesa_hear(sam_u, &lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+
+  _mesa_hear(mes_u, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+
   }
 }
 
