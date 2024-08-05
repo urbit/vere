@@ -9,6 +9,9 @@
 MODULE.bazel
 MODULE.bazel.lock
 
+**/.zig-cache
+**/zig-out
+
 # Swap files.
 *.swo
 *.swp
