@@ -2006,8 +2006,8 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
       u3z(pin);
     }
   }
-  c3_free(jumbo_pact_y); // XX
-  lss_builder_free(bil_u);
+  // c3_free(jumbo_pact_y); // XX
+  // lss_builder_free(bil_u);
 }
 
 static void
