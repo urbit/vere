@@ -332,10 +332,6 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
 static c3_w
 _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 {
-// #ifdef MESA_DEBUG
-  // u3l_log("mesa: sifting data %i", len_w);
-// #endif
-
   c3_w cur_w = 0;
   u3_mesa_data_meta met_u;
 
