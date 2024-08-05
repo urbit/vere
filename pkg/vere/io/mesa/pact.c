@@ -56,12 +56,12 @@ log_name(u3_mesa_name* nam_u)
   }
 
   u3l_log("%s: /%s", her_c, nam_u->pat_c);
-  u3l_log("  rift: %u  bloq: %u  init: %s  auth: %s  frag: %u",
+  u3l_log("  rift: %u  bloq: %u  init: %s  auth: %s  frag: %"PRIu64,
           nam_u->rif_w,
           nam_u->boq_y,
           (c3y == nam_u->nit_o) ? "&" : "|",
           (c3y == nam_u->aut_o) ? "&" : "|",
-          nam_u->fra_w
+          nam_u->fra_d
   );
   c3_free(her_c);
 }
@@ -325,13 +325,13 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   if ( met_u.nit_y ) {
     assert( !met_u.tau_y );
     // XX init packet
-    nam_u->fra_w = 0;
+    nam_u->fra_d = 0;
   }
   else {
     c3_y fag_y = met_u.gaf_y + 1;
     CHECK_BOUNDS(len_w, cur_w + fag_y);
     for ( int i = 0; i < fag_y; i++ ) {
-      nam_u->fra_w |= (buf_y[cur_w] << (8*i));
+      nam_u->fra_d |= (buf_y[cur_w] << (8*i));
       cur_w++;
     }
   }
@@ -609,9 +609,6 @@ _mesa_etch_head(u3_mesa_head* hed_u, c3_y buf_y[8])
 static c3_w
 _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
 {
-#ifdef MESA_DEBUG
-
-#endif
   c3_w cur_w = 0;
   u3_mesa_name_meta met_u;
 
@@ -627,7 +624,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   else {
     met_u.nit_y = 0;
     met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
-    met_u.gaf_y = safe_dec(_mesa_met3_w(nam_u->fra_w));
+    met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
   }
 
   c3_y met_y = (met_u.ran_y & 0x3) << 0
@@ -656,7 +653,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
 
   c3_y fra_y = (c3y == nam_u->nit_o) ? 0 : met_u.gaf_y + 1;
   for( int i = 0; i < fra_y; i++ ) {
-    buf_y[cur_w] = (nam_u->fra_w >> (8*i)) & 0xff;
+    buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
     cur_w++;
   }
 
@@ -731,7 +728,6 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 static c3_w
 _mesa_etch_next(c3_y* buf_y, u3_mesa_hop_type nex_y, u3_mesa_page_pact* pac_u)
 {
-
   switch ( nex_y ) {
     case HOP_SHORT: {
       memcpy(buf_y, pac_u->sot_u, 6);
@@ -754,7 +750,6 @@ _mesa_etch_next(c3_y* buf_y, u3_mesa_hop_type nex_y, u3_mesa_page_pact* pac_u)
       return 0;
     } break;
   }
-
 }
 
 static c3_w
@@ -820,8 +815,8 @@ _mesa_size_name(u3_mesa_name* nam_u)
   siz_w++;  // bloq
 
   if (c3n == nam_u->nit_o ) {
-    met_u.gaf_y = safe_dec(_mesa_met3_w(nam_u->fra_w));
-    siz_w += met_u.gaf_y + 1;
+    met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
+    siz_w += _mesa_tot_bytes(met_u.gaf_y);
   }
 
   siz_w += 2;  // path-length
@@ -923,35 +918,28 @@ mesa_size_pact(u3_mesa_pact* pac_u)
 c3_w
 mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 {
-  c3_w siz_w = mesa_size_pact(pac_u);
-
+  c3_w cur_w = 8; // space for header + cookie
+  c3_w nex_w = 0;
   u3_mesa_head* hed_u = &pac_u->hed_u;
-
-  c3_w nex_w, cur_w = 8; // space for header + cookie
-
-  switch ( pac_u->hed_u.typ_y ) {
+  switch ( hed_u->typ_y ) {
     case PACT_POKE: {
-      if ( !(nex_w = _mesa_etch_poke_pact(buf_y + cur_w, &pac_u->pok_u, hed_u)) ) {
-        return 0;
-      }
+      nex_w = _mesa_etch_poke_pact(buf_y + cur_w, &pac_u->pok_u, hed_u);
     } break;
 
     case PACT_PEEK: {
-      if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u)) ) {
-        return 0;
-      }
+      nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u);
     } break;
 
     case PACT_PAGE: {
-      if ( !(nex_w = _mesa_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u)) ) {
-        return 0;
-      }
+      nex_w = _mesa_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u);
     } break;
 
     default: {
-      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);//u3m_bail(c3__bail);
-      return 0;
+      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);
     }
+  }
+  if ( 0 == nex_w ) {
+    return 0;
   }
 
   hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
@@ -961,10 +949,13 @@ mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
 
   cur_w += nex_w;
 
-  u3l_log("siz_w %u   cur_w %u", siz_w, cur_w);
-  assert( siz_w == cur_w );
-
-  return cur_w;
+  if ( mesa_size_pact(pac_u) == cur_w ) {
+    return cur_w;
+  }
+  else {
+    u3l_log("mesa: size %u   cur_w %u", mesa_size_pact(pac_u), cur_w);
+    return 0;
+  }
 }
 
 #ifdef PACT_TEST

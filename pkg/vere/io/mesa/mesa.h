@@ -48,7 +48,7 @@ typedef struct _u3_mesa_name {
   c3_y               boq_y;
   c3_o               nit_o;
   c3_o               aut_o;
-  c3_w               fra_w;
+  c3_d               fra_d;
   c3_s               pat_s;
   c3_c*              pat_c;
 } u3_mesa_name;
