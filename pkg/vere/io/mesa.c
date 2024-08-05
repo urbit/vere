@@ -2025,13 +2025,23 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   {
     u3a_atom* pat_u = u3a_to_ptr(pac);
     u3_mesa_pact jum_u;
-    mesa_sift_pact(&jum_u, (c3_y*)pat_u->buf_w, pat_u->len_w);
+    if ( 0 == mesa_sift_pact(&jum_u,
+                              (c3_y*)pat_u->buf_w,
+                              pat_u->len_w << 2) ) {
+      u3l_log("mesa: jumbo frame parse failure");
+      log_pact(pac_u);
+      u3z(res);
+      return;
+    }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
     c3_w tip_w = // bytes in Merkle spine
-      (c3n == jum_u.pag_u.nam_u.nit_o)? 0 : lss_proof_size(dat_u->tot_w);
+      (c3n == jum_u.pag_u.nam_u.nit_o)?
+      0 :
+      lss_proof_size(dat_u->tot_w);
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
-    c3_w haz_w = (lin_u->len_w + 1023) / 1024 * 2 * 32; // bytes in hash pairs
+    c3_w lev_w = (dat_w + 1023) / 1024; // number of leaves in this frame
+    c3_w haz_w = lev_w * sizeof(lss_pair); // bytes in hash pairs
     c3_w len_w = tip_w + dat_w + haz_w;
 
     lin_u = u3a_malloc(sizeof(u3_mesa_line));
