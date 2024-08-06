@@ -11,7 +11,7 @@ u3qc_sew(u3_atom a,
          u3_atom c,
          u3_atom d,
          u3_atom e
-          )
+        )
 {
   if (0 == c) return e;
   if ( !_(u3a_is_cat(b)) ||
@@ -69,10 +69,6 @@ u3wc_sew(u3_noun cor)
   {
     return u3m_bail(c3__fail);
   } else {
-    return u3qc_sew(u3x_atom(a),
-                    u3x_atom(b),
-                    u3x_atom(c),
-                    u3x_atom(d),
-                    u3x_atom(e));
+    return u3qc_sew(a, b, c, d, e);
   }
 }
