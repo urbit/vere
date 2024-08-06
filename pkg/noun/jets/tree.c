@@ -2462,6 +2462,7 @@ static u3j_core _138_two__by_d[] =
   };
 
 static u3j_harm _138_two_mate_a[] = {{".2", u3wb_mate, c3y}, {}};
+static u3j_harm _138_two_sew_a[]  = {{".2", u3wc_sew, c3y}, {}};
 
 static u3j_core _138_two_d[] =
 { { "tri", 3, 0, _138_tri_d, no_hashes, _140_tri_ho },
@@ -2515,6 +2516,7 @@ static u3j_core _138_two_d[] =
   { "swp",  7, _140_two_swp_a, 0, no_hashes },
   { "rub",  7, _140_two_rub_a, 0, no_hashes },
   { "pow",  7, _140_two_pow_a, 0, no_hashes },
+  { "sew",  7, _138_two_sew_a, 0, no_hashes },
   { "sqt",  7, _140_two_sqt_a, 0, no_hashes },
   { "xeb",  7, _140_two_xeb_a, 0, no_hashes },
 
