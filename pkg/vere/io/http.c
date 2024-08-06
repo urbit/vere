@@ -1021,7 +1021,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   }
   else {
     u3_noun auth, response_header, data;
-    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    u3x_qual(u3t(u3t(nun)), &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
@@ -1066,7 +1066,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   }
   else {
     u3_noun auth, response_header, data;
-    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    u3x_qual(u3t(u3t(nun)), &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
