@@ -1916,7 +1916,40 @@ _mesa_send_pact(u3_mesa*      sam_u,
 }
 
 static void
-_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
+_mesa_send_leaf(u3_mesa*      sam_u,
+                u3_mesa_line* lin_u,
+                u3_mesa_pact* pac_u,  //  scratchpad
+                c3_d          fra_d)
+{
+  u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
+  u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
+  nam_u->fra_d = fra_d;
+  c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
+  c3_w cur_w = i_d * 1024;
+  dat_u->fra_y = lin_u->dat_y + cur_w;
+  dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
+
+  lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
+  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+    dat_u->aut_u.typ_e = AUTH_NONE;
+  } else {
+    dat_u->aut_u.typ_e = AUTH_PAIR;
+    memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
+  }
+  u3_weak pin = _mesa_get_pit(sam_u, nam_u);
+  if ( u3_none != pin) {
+    #ifdef MESA_DEBUG
+      u3l_log(" sending leaf packet, fra_d: %"PRIu64, nam_u->fra_d);
+    #endif
+    log_pact(pac_u);
+    _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, pac_u);
+    _mesa_del_pit(sam_u, nam_u);
+    u3z(pin);
+  }
+}
+
+static void
+_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
 {
   #ifdef MESA_DEBUG
     u3l_log("mesa: send_jumbo_pieces()");
@@ -1969,34 +2002,16 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
   // send leaf packet(s)
   c3_d lev_d = mesa_num_leaves(lin_u->dat_w);
   c3_d fir_d = nam_u->fra_d;
-  c3_y* pro_y = lin_u->tip_y;
-  for (c3_d i_d = 0; i_d < lev_d; i_d++) {
-    c3_d fra_d = i_d + fir_d;
-    nam_u->fra_d = fra_d;
-    c3_w cur_w = i_d * 1024;
-    dat_u->fra_y = lin_u->dat_y + cur_w;
-    dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
-
-    lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-    if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
-      dat_u->aut_u.typ_e = AUTH_NONE;
-    } else {
-      dat_u->aut_u.typ_e = AUTH_PAIR;
-      memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
-    }
-    u3_weak pin = _mesa_get_pit(sam_u, nam_u);
-    if ( u3_none != pin) {
-      #ifdef MESA_DEBUG
-        u3l_log(" sending leaf packet, fra_d: %"PRIu64, nam_u->fra_d);
-      #endif
-      log_pact(&pac_u);
-      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
-      _mesa_del_pit(sam_u, nam_u);
-      u3z(pin);
+  c3_d las_d = fir_d + lev_d;
+  if ( NULL == fra_d ) {
+    for (c3_d fra_d = fir_d; fra_d < las_d; fra_d++) {
+      _mesa_send_leaf(sam_u, lin_u, &pac_u, fra_d);
     }
   }
-  // c3_free(jumbo_pact_y); // XX
-  // lss_builder_free(bil_u);
+  else {
+    _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_d);
+  }
+  mesa_free_pact(&pac_u);
 }
 
 static void
@@ -2070,7 +2085,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   }
 
   _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
-  _mesa_send_jumbo_pieces(sam_u, lin_u);
+  _mesa_send_jumbo_pieces(sam_u, lin_u, NULL);
   u3z(res);
   return;
 }
@@ -2589,8 +2604,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
   if ( NULL != lin_u ) {
     if ( CTAG_ITEM == lin_u->typ_y ) {
-      //  TODO only respond to this fragment, don't iterate
-      _mesa_send_jumbo_pieces(sam_u, lin_u);
+      _mesa_send_jumbo_pieces(sam_u, lin_u, &fra_d);
       _mesa_free_pict(pic_u);
     }
     return;
