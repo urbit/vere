@@ -5,6 +5,9 @@
         .aes_siv = .{
             .path = "./ext/aes_siv",
         },
+        .avahi = .{
+            .path = "./ext/avahi",
+        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },

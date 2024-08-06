@@ -18,6 +18,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(aes_siv.artifact("aes_siv"));
 
+    const avahi = b.dependency("avahi", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(avahi.artifact("dns-sd"));
+
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
