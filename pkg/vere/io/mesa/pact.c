@@ -56,11 +56,10 @@ log_name(u3_mesa_name* nam_u)
   }
 
   u3l_log("%s: /%s", her_c, nam_u->pat_c);
-  u3l_log("  rift: %u  bloq: %u  init: %s  auth: %s  frag: %"PRIu64,
+  u3l_log("  rift: %u  bloq: %u  auth/data: %s  frag: %"PRIu64,
           nam_u->rif_w,
           nam_u->boq_y,
-          (c3y == nam_u->nit_o) ? "&" : "|",
-          (c3y == nam_u->aut_o) ? "&" : "|",
+          (c3y == nam_u->aut_o) ? "auth" : "data",
           nam_u->fra_d
   );
   c3_free(her_c);
@@ -72,58 +71,26 @@ _log_data(u3_mesa_data* dat_u)
   fprintf(stderr, "tot_d: %" PRIu64 "  len_w: %u  ",
                   dat_u->tot_d, dat_u->len_w);
 
-  switch ( dat_u->aum_u.typ_e ) {
-    case AUTH_NONE: {
-      if ( dat_u->aup_u.len_y ) {
-        u3l_log("strange no auth");
-      }
-      else {
-        u3l_log("no auth");
-      }
-    } break;
-
-    case AUTH_NEXT: {
-      if ( 2 != dat_u->aup_u.len_y ) {
-        u3l_log("bad merkle traversal");
-      }
-      else {
-        u3l_log("merkle traversal:");
-        _log_buf(dat_u->aup_u.has_y[0], 32);
-        _log_buf(dat_u->aup_u.has_y[1], 32);
-      }
-    } break;
-
+  switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
       fprintf(stderr, "signature: ");
-      _log_buf(dat_u->aum_u.sig_y, 64);
+      _log_buf(dat_u->aut_u.sig_y, 64);
     } break;
 
     case AUTH_HMAC: {
       fprintf(stderr, "hmac: ");
-      _log_buf(dat_u->aum_u.mac_y, 32);
-    } break;
-  }
-
-  switch ( dat_u->aum_u.typ_e ) {
-    case AUTH_SIGN:
-    case AUTH_HMAC: {
-      if ( !dat_u->aup_u.len_y ) {
-        break;
-      }
-
-      if ( 4 < dat_u->tot_d ) {
-        u3l_log("strange inline proof");
-      }
-      else {
-        u3l_log("inline proof");
-      }
-
-      for ( int i = 0; i < dat_u->aup_u.len_y; i++ ) {
-        _log_buf(dat_u->aup_u.has_y[i], 32);
-      }
+      _log_buf(dat_u->aut_u.mac_y, 32);
     } break;
 
-    default: break;
+    case AUTH_NONE: {
+      u3l_log("merkle traversal: <skipped>");
+    } break;
+
+    case AUTH_PAIR: {
+      u3l_log("merkle traversal:");
+      _log_buf(dat_u->aut_u.has_y[0], 32);
+      _log_buf(dat_u->aut_u.has_y[1], 32);
+    } break;
   }
   fprintf(stderr, "\r\n");
 }
@@ -336,7 +303,6 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
     }
   }
 
-  nam_u->nit_o = ( met_u.nit_y ) ? c3y : c3n;
   // XX ?:(=(1 tau.c) %auth %data)
   nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
 
@@ -363,8 +329,8 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   CHECK_BOUNDS(len_w, cur_w + 1);
   c3_y met_y = buf_y[cur_w];
   met_u.bot_y = (met_y >> 0) & 0x3;
-  met_u.aul_y = (met_y >> 2) & 0x3;
-  met_u.aur_y = (met_y >> 4) & 0x3;
+  met_u.aut_o = (met_y >> 2) & 0x1;
+  met_u.auv_o = (met_y >> 3) & 0x1;
   met_u.men_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
@@ -376,21 +342,29 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
     cur_w++;
   }
 
-  c3_y aum_y = ( 2 == met_u.aul_y ) ? 64 :
-               ( 3 == met_u.aul_y ) ? 32 : 0;
-  CHECK_BOUNDS(len_w, cur_w + aum_y);
-  memcpy(dat_u->aum_u.sig_y, buf_y + cur_w, aum_y);
-  cur_w += aum_y;
-
-  dat_u->aum_u.typ_e = met_u.aul_y; // XX
-
-  assert( 3 > met_u.aur_y );
-
-  CHECK_BOUNDS(len_w, cur_w + (met_u.aur_y * 32));
-  dat_u->aup_u.len_y = met_u.aur_y;
-  for( int i = 0; i < met_u.aur_y; i++ ) {
-    memcpy(dat_u->aup_u.has_y[i], buf_y + cur_w, 32);
-    cur_w += 32;
+  if ( c3y == met_u.aut_o ) {
+    if ( c3y == met_u.auv_o ) {
+      CHECK_BOUNDS(len_w, cur_w + 64);
+      memcpy(dat_u->aut_u.sig_y, buf_y + cur_w, 64);
+      cur_w += 64;
+      dat_u->aut_u.typ_e = AUTH_SIGN;
+    }
+    else {
+      CHECK_BOUNDS(len_w, cur_w + 32);
+      memcpy(dat_u->aut_u.mac_y, buf_y + cur_w, 32);
+      cur_w += 32;
+      dat_u->aut_u.typ_e = AUTH_HMAC;
+    }
+  }
+  else {
+    if ( c3y == met_u.auv_o ) {
+      dat_u->aut_u.typ_e = AUTH_NONE;
+    } else {
+      CHECK_BOUNDS(len_w, cur_w + 64);
+      memcpy(dat_u->aut_u.has_y, buf_y + cur_w, 64);
+      cur_w += 64;
+      dat_u->aut_u.typ_e = AUTH_PAIR;
+    }
   }
 
   c3_y nel_y = met_u.men_y;
@@ -615,17 +589,9 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
-  if ( c3y == nam_u->nit_o ) {
-    assert( c3n == nam_u->aut_o ); // XX
-    met_u.nit_y = 1;
-    met_u.tau_y = 0;
-    met_u.gaf_y = 0;
-  }
-  else {
-    met_u.nit_y = 0;
-    met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
-    met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
-  }
+  met_u.nit_y = 0;
+  met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
+  met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
 
   c3_y met_y = (met_u.ran_y & 0x3) << 0
              ^ (met_u.rif_y & 0x3) << 2
@@ -651,7 +617,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   buf_y[cur_w] = nam_u->boq_y;
   cur_w++;
 
-  c3_y fra_y = (c3y == nam_u->nit_o) ? 0 : met_u.gaf_y + 1;
+  c3_y fra_y = met_u.gaf_y + 1;
   for( int i = 0; i < fra_y; i++ ) {
     buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
     cur_w++;
@@ -675,18 +641,20 @@ static c3_w
 _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 {
   c3_w cur_w = 0;
-  u3_mesa_data_meta met_u;
 
-  // XX
-  met_u.aul_y = dat_u->aum_u.typ_e;
-  met_u.aur_y = dat_u->aup_u.len_y;
+  c3_y aut_y = 0;
+  switch ( dat_u->aut_u.typ_e ) {
+    case AUTH_SIGN: aut_y = 0; break;
+    case AUTH_HMAC: aut_y = 1; break;
+    case AUTH_NONE: aut_y = 2; break;
+    case AUTH_PAIR: aut_y = 3; break;
+  }
+  c3_y bot_y = _mesa_met3_w(dat_u->tot_d);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
-  met_u.men_y = (3 >= nel_y) ? nel_y : 3;
-  c3_y met_y = (met_u.bot_y & 0x3) << 0
-             ^ (met_u.aul_y & 0x3) << 2
-             ^ (met_u.aur_y & 0x3) << 4
-             ^ (met_u.men_y & 0x3) << 6;
-  buf_y[cur_w] = met_y;
+  c3_y men_y = (3 >= nel_y) ? nel_y : 3;
+  buf_y[cur_w] = (bot_y & 0x3) << 0
+               | (aut_y & 0x3) << 2
+               | (men_y & 0x3) << 6;
   cur_w++;
 
   c3_y tot_y = _mesa_size_tot(dat_u->tot_d);
@@ -694,25 +662,27 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     buf_y[cur_w] = (dat_u->tot_d >> (8 * i)) & 0xFF;
     cur_w++;
   }
-  switch ( dat_u->aum_u.typ_e ) {
+  switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
-      memcpy(buf_y + cur_w, dat_u->aum_u.sig_y, 64);
+      memcpy(buf_y + cur_w, dat_u->aut_u.sig_y, 64);
       cur_w += 64;
     } break;
 
     case AUTH_HMAC: {
-      memcpy(buf_y + cur_w, dat_u->aum_u.mac_y, 32);
+      memcpy(buf_y + cur_w, dat_u->aut_u.mac_y, 32);
       cur_w += 32;
     } break;
 
-    default: break;
-  }
-  for ( int i = 0; i < dat_u->aup_u.len_y; i++ ) {
-    memcpy(buf_y + cur_w, dat_u->aup_u.has_y[i], 32);
-    cur_w += 32;
+    case AUTH_NONE: {
+    } break;
+
+    case AUTH_PAIR: {
+      memcpy(buf_y + cur_w, dat_u->aut_u.has_y, 64);
+      cur_w += 32;
+    } break;
   }
 
-  if ( 3 == met_u.men_y ) {
+  if ( 3 == men_y ) {
     buf_y[cur_w] = nel_y;
     cur_w++;
   }
@@ -814,10 +784,8 @@ _mesa_size_name(u3_mesa_name* nam_u)
   siz_w += met_u.rif_y + 1;
   siz_w++;  // bloq
 
-  if (c3n == nam_u->nit_o ) {
-    met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
-    siz_w += _mesa_tot_bytes(met_u.gaf_y);
-  }
+  met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
+  siz_w += _mesa_tot_bytes(met_u.gaf_y);
 
   siz_w += 2;  // path-length
   siz_w += nam_u->pat_s;
@@ -835,7 +803,7 @@ _mesa_size_data(u3_mesa_data* dat_u)
 
   siz_w += _mesa_tot_bytes(met_u.bot_y);
 
-  switch ( dat_u->aum_u.typ_e ) {
+  switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
       siz_w += 64;
     } break;
@@ -844,10 +812,13 @@ _mesa_size_data(u3_mesa_data* dat_u)
       siz_w += 32;
     } break;
 
-    default: break;
-  }
+    case AUTH_NONE: {
+    } break;
 
-  siz_w += 32 * dat_u->aup_u.len_y;
+    case AUTH_PAIR: {
+      siz_w += 64;
+    } break;
+  }
 
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
@@ -1066,11 +1037,11 @@ _test_cmp_data(u3_mesa_data* hav_u, u3_mesa_data* ned_u)
 
   cmp_scalar(tot_w, "data: total packets", "%u");
 
-  cmp_scalar(aum_u.typ_e, "data: auth-types", "%u");
-  cmp_buffer(aum_u.sig_y, 64, "data: sig|hmac|null");
+  cmp_scalar(aut_u.typ_e, "data: auth-types", "%u");
+  cmp_buffer(aut_u.sig_y, 64, "data: sig|hmac|null");
 
-  cmp_scalar(aup_u.len_y, "data: hash-lengths", "%u");
-  cmp_buffer(aup_u.has_y, ned_u->aup_u.len_y, "data: hashes");
+  cmp_scalar(aut_u.len_y, "data: hash-lengths", "%u");
+  cmp_buffer(aut_u.has_y, ned_u->aut_u.len_y, "data: hashes");
 
   cmp_scalar(len_w, "data: fragments-lengths", "%u");
   cmp_buffer(fra_y, ned_u->len_w, "data: fragments");
@@ -1307,30 +1278,30 @@ _test_make_data(void* ptr_v, u3_mesa_data* dat_u)
 {
   dat_u->tot_w = _test_rand_word(ptr_v);
 
-  memset(dat_u->aum_u.sig_y, 0, 64);
-  dat_u->aup_u.len_y = 0;
-  memset(dat_u->aup_u.has_y, 0, sizeof(dat_u->aup_u.has_y));
+  memset(dat_u->aut_u.sig_y, 0, 64);
+  dat_u->aut_u.len_y = 0;
+  memset(dat_u->aut_u.has_y, 0, sizeof(dat_u->aut_u.has_y));
 
-  switch ( dat_u->aum_u.typ_e = _test_rand_bits(ptr_v, 2) ) {
+  switch ( dat_u->aut_u.typ_e = _test_rand_bits(ptr_v, 2) ) {
     case AUTH_NEXT: {
-      dat_u->aup_u.len_y = 2;
+      dat_u->aut_u.len_y = 2;
     } break;
 
     case AUTH_SIGN: {
-      dat_u->aup_u.len_y = _test_rand_gulf_y(ptr_v, 3);
-      _test_rand_bytes(ptr_v, 64, dat_u->aum_u.sig_y);
+      dat_u->aut_u.len_y = _test_rand_gulf_y(ptr_v, 3);
+      _test_rand_bytes(ptr_v, 64, dat_u->aut_u.sig_y);
     } break;
 
     case AUTH_HMAC: {
-      dat_u->aup_u.len_y = _test_rand_gulf_y(ptr_v, 3);
-      _test_rand_bytes(ptr_v, 32, dat_u->aum_u.mac_y);
+      dat_u->aut_u.len_y = _test_rand_gulf_y(ptr_v, 3);
+      _test_rand_bytes(ptr_v, 32, dat_u->aut_u.mac_y);
     } break;
 
     default: break;
   }
 
-  for ( c3_w i_w = 0; i_w < dat_u->aup_u.len_y; i_w++ ) {
-    _test_rand_bytes(ptr_v, 32, dat_u->aup_u.has_y[i_w]);
+  for ( c3_w i_w = 0; i_w < dat_u->aut_u.len_y; i_w++ ) {
+    _test_rand_bytes(ptr_v, 32, dat_u->aut_u.has_y[i_w]);
   }
 
   dat_u->len_w = _test_rand_gulf_w(ptr_v, 1024);
@@ -1408,7 +1379,7 @@ _test_sift_page()
   nam_u->nit_o = c3n;
 
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
-  dat_u->aum_u.typ_e = AUTH_NONE;
+  dat_u->aut_u.typ_e = AUTH_NONE;
   dat_u->tot_w = 1000;
   dat_u->len_w = 1024;
   dat_u->fra_y = c3_calloc(1024);

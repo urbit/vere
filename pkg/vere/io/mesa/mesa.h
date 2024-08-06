@@ -46,7 +46,6 @@ typedef struct _u3_mesa_name {
   u3_ship            her_u;
   c3_w               rif_w;
   c3_y               boq_y;
-  c3_o               nit_o;
   c3_o               aut_o;
   c3_d               fra_d;
   c3_s               pat_s;
@@ -55,34 +54,30 @@ typedef struct _u3_mesa_name {
 
 typedef struct _u3_mesa_data_meta {
   c3_y         bot_y;  // total-fragments len (2 bits)
-  c3_y         aul_y;  // auth-left (message) type (2 bits)
-  c3_y         aur_y;  // auth-right (packet) type (2 bits)
+  c3_o         aut_o;  // auth tag (c3y for message, c3n for pair)
+  c3_o         auv_o;  // auth value (c3y for sig/no-pair, c3n for hmac/pair)
   c3_y         men_y;  // fragment length/type (2 bits)
 } u3_mesa_data_meta;
 
 typedef enum  {
-  AUTH_NONE = 0,
-  AUTH_NEXT = 1,  // %1, must be two hash
-  AUTH_SIGN = 2,  // %0, hashes are optional depending on num frag
-  AUTH_HMAC = 3
+  AUTH_SIGN = 0,
+  AUTH_HMAC = 1,
+  AUTH_NONE = 2,
+  AUTH_PAIR = 3,
 } u3_mesa_auth_type;
 
 typedef struct _u3_auth_data {
-  u3_mesa_auth_type typ_e;  // none, traversal (none), sig, or hmac
-  union {                   //
-    c3_y        sig_y[64];  // signature
-    c3_y        mac_y[32];  // hmac
+  u3_mesa_auth_type typ_e;     // none, traversal (none), sig, or hmac
+  union {                      //
+    c3_y        sig_y[64];     // signature
+    c3_y        mac_y[32];     // hmac
+    c3_y        has_y[2][32];  // hashes
   };
 } u3_auth_data;
 
 typedef struct _u3_mesa_data {
-  // u3_mesa_data_meta   met_u;
   c3_d                tot_d;  // total bytes in message
-  u3_auth_data        aum_u;
-  struct {
-    c3_y       len_y;         //  number of hashes (0, 1, or 2)
-    c3_y       has_y[2][32];  //  hashes
-  } aup_u;
+  u3_auth_data        aut_u;  // authentication
   c3_w                len_w;  // fragment length
   c3_y*               fra_y;  // fragment
 } u3_mesa_data;
