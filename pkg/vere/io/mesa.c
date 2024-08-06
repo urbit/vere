@@ -170,7 +170,7 @@ typedef struct _u3_pend_req {
   u3_peer*               per_u; // backpointer
   c3_d                   nex_d; // number of the next fragment to be sent
   c3_d                   tot_d; // total number of expected bytes
-  u3_auth_data           aum_u; // message authenticator
+  u3_auth_data           aut_u; // message authenticator
   uv_timer_t             tim_u; // timehandler
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_d                   hav_d; // how many fragments we've received
@@ -198,7 +198,7 @@ typedef enum _u3_mesa_ctag {
 typedef struct _u3_mesa_line {
   u3_mesa_ctag typ_y;  //  pending or present?
   u3_mesa_name nam_u;  //  full name for data, ready to serialize
-  u3_auth_data aum_u;  //  message authenticator, none if not initial frame
+  u3_auth_data aut_u;  //  message authenticator
   c3_w         tot_d;  //  number of bytes in whole message
   c3_w         dat_w;  //  size in bytes of dat_y
   c3_w         len_w;  //  total allocated size, in bytes
@@ -1255,11 +1255,11 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   }
 
   lss_pair* par_u = NULL;
-  if ( dat_u->aum_u.typ_e == AUTH_NEXT ) {
+  if ( dat_u->aut_u.typ_e == AUTH_PAIR ) {
     // needs to be heap allocated bc will be saved if misordered
     par_u = c3_calloc(sizeof(lss_pair));
-    memcpy((*par_u)[0], dat_u->aup_u.has_y[0], sizeof(lss_hash));
-    memcpy((*par_u)[1], dat_u->aup_u.has_y[1], sizeof(lss_hash));
+    memcpy((*par_u)[0], dat_u->aut_u.has_y[0], sizeof(lss_hash));
+    memcpy((*par_u)[1], dat_u->aut_u.has_y[1], sizeof(lss_hash));
   }
 
   if ( req_u->los_u->counter != nam_u->fra_d ) {
@@ -1519,9 +1519,7 @@ _name_to_scry(u3_mesa_name* nam_u)
   u3_noun fag = _dire_etch_ud(nam_u->fra_d);
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
 
-  u3_noun wer = nam_u->nit_o == c3y
-    ? u3nc(c3__init, pax)
-    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+  u3_noun wer = u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
 
@@ -1868,13 +1866,11 @@ static u3_noun
 _name_to_jumbo_scry(u3_mesa_name* nam_u)
 {
   u3_noun rif = _dire_etch_ud(nam_u->rif_w);
-  u3_noun boq = _dire_etch_ud(31);
+  u3_noun boq = _dire_etch_ud(31); // XX make configurable
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-
-  u3_noun wer = nam_u->nit_o == c3y
-    ? u3nc(c3__init, pax)
-    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+  // XX TODO: scry for %auth when necessary
+  u3_noun wer = u3nt(c3__data, fag, pax);
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
 
@@ -1947,13 +1943,13 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
   {
     dat_u->tot_d = lin_u->tot_d;
-    dat_u->aum_u = lin_u->aum_u;
-    //  aup_u, len_w, and fra_y vary by fragment
+    dat_u->aut_u = lin_u->aut_u;
+    //  aut_u, len_w, and fra_y vary by fragment
   }
   c3_d mev_d = mesa_num_leaves(dat_u->tot_d);
   c3_w pro_w = lss_proof_size(mev_d);
 
-  if ( c3y == nam_u->nit_o && mev_d > 4) {
+  if ( pro_w > 0 ) {
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
       #ifdef MESA_DEBUG
@@ -1970,35 +1966,23 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u)
     }
   }
 
-  // send leaf packets
+  // send leaf packet(s)
   c3_d lev_d = mesa_num_leaves(lin_u->dat_w);
   c3_d fir_d = nam_u->fra_d;
   c3_y* pro_y = lin_u->tip_y;
   for (c3_d i_d = 0; i_d < lev_d; i_d++) {
     c3_d fra_d = i_d + fir_d;
-    nam_u->nit_o = __((fra_d == 0) && (lev_d <= 4));
     nam_u->fra_d = fra_d;
     c3_w cur_w = i_d * 1024;
     dat_u->fra_y = lin_u->dat_y + cur_w;
     dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
-    if ( c3y == nam_u->nit_o ) {
-      // inline proof; omit first leaf
-      pro_w--;
-      pro_y++;
-      dat_u->aup_u.len_y = pro_w;
-      memcpy(dat_u->aup_u.has_y, pro_y, pro_w * sizeof(lss_hash));
+    lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
+    if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+      dat_u->aut_u.typ_e = AUTH_NONE;
     } else {
-      lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-      if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
-        dat_u->aup_u.len_y = 0;
-        dat_u->aum_u.typ_e = AUTH_NONE;
-      } else {
-        dat_u->aup_u.len_y = 2;
-        dat_u->aum_u.typ_e = AUTH_NEXT;
-        memcpy(dat_u->aup_u.has_y[0], (*pair)[0], sizeof(lss_hash));
-        memcpy(dat_u->aup_u.has_y[1], (*pair)[1], sizeof(lss_hash));
-      }
+      dat_u->aut_u.typ_e = AUTH_PAIR;
+      memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
     }
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin) {
@@ -2062,7 +2046,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
     c3_d mev_d = (dat_u->tot_d + 1023) / 1024; // leaves in message
     c3_w tip_w = // bytes in Merkle spine
-      (c3n == jum_u.pag_u.nam_u.nit_o)?
+      (0 == jum_u.pag_u.nam_u.fra_d)?
       0 :
       lss_proof_size(mev_d);
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
@@ -2073,7 +2057,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u = u3a_malloc(sizeof(u3_mesa_line));
     lin_u->typ_y = CTAG_ITEM;
     _mesa_copy_name(&lin_u->nam_u, &jum_u.pek_u.nam_u);
-    lin_u->aum_u = dat_u->aum_u;
+    lin_u->aut_u = dat_u->aut_u;
     lin_u->tot_d = dat_u->tot_d;
     lin_u->dat_w = dat_w;
     lin_u->len_w = len_w;
@@ -2220,8 +2204,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
   memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));  // XX
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
-  req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
-  req_u->aum_u = dat_u->aum_u;
+  req_u->aut_u = dat_u->aut_u;
 
   c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
   u3_assert( 1024 == siz_w ); // boq_y == 13
@@ -2234,31 +2217,19 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   // TODO: handle restart
   // u3_assert( nam_u->fra_w == 0 );
 
-  c3_o lin_o = req_u->tot_d <= 4 ? c3y : c3n;
-  req_u->nex_d = (c3y == lin_o) ? 1 : 0;
-  req_u->hav_d = (c3y == lin_o) ? 1 : 0;
+  req_u->nex_d = 0;
+  req_u->hav_d = 0;
   req_u->lef_d = 0;
   req_u->old_d = 0;
   req_u->ack_d = 0;
 
   c3_w pof_w = lss_proof_size(req_u->tot_d);
   lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
-  if ( c3y == lin_o ) {
-    if ( pof_w != (dat_u->aup_u.len_y + 1) ) {
-      return; // TODO: handle like other auth failures
-    }
-    for ( int i = 1; i < pof_w; i++ ) {
-      memcpy(pof_u[i], dat_u->aup_u.has_y[i-1], sizeof(lss_hash));
-    }
-    // complete the proof by computing the first leaf hash
-    lss_complete_inline_proof(pof_u, dat_u->fra_y, dat_u->len_w);
-  } else {
-    if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
-      return; // TODO: handle like other auth failures
-    }
-    for ( int i = 0; i < pof_w; i++ ) {
-      memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
-    }
+  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+    return; // TODO: handle like other auth failures
+  }
+  for ( int i = 0; i < pof_w; i++ ) {
+    memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
   }
   lss_hash root;
   lss_root(root, pof_u, pof_w);
@@ -2266,26 +2237,19 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   lss_verifier_init(req_u->los_u, 0, req_u->tot_d, pof_u);
   c3_free(pof_u);
 
-  if ( c3y == lin_o ) {
-    if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, NULL) ) {
-      return; // TODO: handle like other auth failures
-    }
-    memcpy(req_u->dat_y, dat_u->fra_y, dat_u->len_w);
-  }
-
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
   _update_resend_timer(req_u);
 
   // scry to verify auth
   u3_noun typ, aut;
-  switch ( dat_u->aum_u.typ_e ) {
+  switch ( dat_u->aut_u.typ_e ) {
   case AUTH_SIGN:
     typ = c3__sign;
-    aut = u3dc("scot", c3__uv, u3i_bytes(64, dat_u->aum_u.sig_y));
+    aut = u3dc("scot", c3__uv, u3i_bytes(64, dat_u->aut_u.sig_y));
     break;
   case AUTH_HMAC:
     typ = c3__hmac;
-    aut = u3dc("scot", c3__uv, u3i_bytes(32, dat_u->aum_u.mac_y));
+    aut = u3dc("scot", c3__uv, u3i_bytes(32, dat_u->aut_u.mac_y));
     break;
   default:
     return; // TODO: handle like other auth failures
@@ -2501,7 +2465,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
-    if ( c3y == nam_u->nit_o ) {
+    if ( 0 == nam_u->fra_d ) {
       _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     }
     // _mesa_free_pict(pic_u);  //  XX leaks packet
@@ -2545,7 +2509,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
         pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
         pac_u->pag_u.dat_u.len_w += (1024 * (lev_d - 1));
         pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
-        pac_u->pag_u.dat_u.aum_u = req_u->aum_u;
+        pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
         c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
         c3_w res_w = mesa_etch_pact(buf_y, pac_u);
@@ -2620,11 +2584,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_d  bat_d = _mesa_lop(fra_d);
 
   pac_u->pek_u.nam_u.fra_d = bat_d;
-  // XX HACK: shouldn't be necessary to change data 0 to init, but
-  // for some reason it's changing the data returned by the scry
-  if ( pac_u->pek_u.nam_u.fra_d == 0 ) {
-    pac_u->pek_u.nam_u.nit_o = c3y;
-  }
 
   // if we have the page, send it
   u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
@@ -2771,10 +2730,12 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
+  u3l_log("mesa_hear() len_w %u", len_w);
   u3_mesa_pict* pic_u;
   c3_w pre_w;
   c3_y* cur_y = hun_y;
   if ( HEAD_SIZE > len_w ) {
+    u3l_log("  HEAD_SIZE %u", len_w);
     c3_free(hun_y);
     return;
   }
@@ -2787,6 +2748,7 @@ _mesa_hear(u3_mesa* sam_u,
   if ( lin_w == 0 ) {
     // MESA_LOG(sam_u, SERIAL)
     // c3_free(hun_y);
+    u3l_log("  lin_w 0");
     mesa_free_pact(&pic_u->pac_u);
     _ames_hear(u3_Host.sam_u, adr_u, len_w, hun_y);
     return;
