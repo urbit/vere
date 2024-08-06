@@ -36,5 +36,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(softfloat.artifact("softfloat"));
 
+    const curl = b.dependency("curl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(curl.artifact("curl"));
+
     b.installArtifact(exe);
 }

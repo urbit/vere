@@ -1,0 +1,17 @@
+.{
+    .name = "curl",
+    .version = "0.0.1",
+    .dependencies = .{
+        .curl = .{
+            .url = "https://github.com/curl/curl/releases/download/curl-8_9_1/curl-8.9.1.tar.gz",
+            .hash = "1220f36375f7a423b8dc41b14612d685f48e030b25d0f6eb69011179e9b68e4584e0",
+        },
+        .openssl = .{
+            .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
+            .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
