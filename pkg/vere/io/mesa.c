@@ -2526,14 +2526,14 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   //  TODO: check return value before continuing?
 
   c3_y boq_y = u3_Host.ops_u.jum_y;
-  c3_o done_with_jumbo_frame = __(0 == req_u->len_w % boq_y);
+  c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
   _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
-    u3l_log(" received last packet, tot_w: %u", req_u->tot_w);
+    u3l_log(" received last packet, tot_d: %llu", req_u->tot_d);
     c3_d now_d = _get_now_micros();
-    u3l_log("%u kilobytes took %f ms", req_u->tot_w, (now_d - sam_u->tim_d)/1000.0);
+    u3l_log("%llu kilobytes took %f ms", req_u->tot_d, (now_d - sam_u->tim_d)/1000.0);
 
     {
       // construct jumbo frame
