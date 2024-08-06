@@ -48,7 +48,7 @@ typedef struct _u3_mesa_name {
   c3_y               boq_y;
   c3_o               nit_o;
   c3_o               aut_o;
-  c3_w               fra_w;
+  c3_d               fra_d;
   c3_s               pat_s;
   c3_c*              pat_c;
 } u3_mesa_name;
@@ -77,7 +77,7 @@ typedef struct _u3_auth_data {
 
 typedef struct _u3_mesa_data {
   // u3_mesa_data_meta   met_u;
-  c3_w                tot_w;  // total fragments
+  c3_d                tot_d;  // total bytes in message
   u3_auth_data        aum_u;
   struct {
     c3_y       len_y;         //  number of hashes (0, 1, or 2)
@@ -147,6 +147,7 @@ typedef struct _u3_mesa_pact {
   };
 } u3_mesa_pact;
 
+c3_d mesa_num_leaves(c3_d tot_d);
 c3_w mesa_size_pact(u3_mesa_pact* pac_u);
 c3_o mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u);
 c3_w mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w);

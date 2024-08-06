@@ -84,8 +84,8 @@ string_flag(
 # Version flag for gcc.
 string_flag(
     name = "gcc_version",
-    # musl-cross-make uses `gcc-9.4.0` by default.
-    build_setting_default = "9.4.0",
+    # musl-cross-make uses `gcc-11.4.0` by default.
+    build_setting_default = "11.4.0",
     visibility = ["//visibility:public"],
 )
 
