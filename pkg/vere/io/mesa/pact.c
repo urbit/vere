@@ -170,8 +170,11 @@ _mesa_rank(u3_ship who_u)
   };
 }
 
+/*
+** _mesa_make_chub_tag(): make a 2-bit tag for a chub length
+*/
 static c3_y
-_mesa_size_tot(c3_d tot_d)
+_mesa_make_chub_tag(c3_d tot_d)
 {
   return  (tot_d <= 0xff)?       0b00 :
           (tot_d <= 0xffff)?     0b01 :
@@ -179,8 +182,11 @@ _mesa_size_tot(c3_d tot_d)
                                  0b11;
 }
 
+/*
+** _mesa_bytes_of_chub_tag(): how many bytes does a chub tag mean
+*/
 static c3_y
-_mesa_tot_bytes(c3_y tot_y)
+_mesa_bytes_of_chub_tag(c3_y tot_y)
 {
   return 1 << tot_y;
 }
@@ -295,7 +301,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
     nam_u->fra_d = 0;
   }
   else {
-    c3_y fag_y = met_u.gaf_y + 1;
+    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
     CHECK_BOUNDS(len_w, cur_w + fag_y);
     for ( int i = 0; i < fag_y; i++ ) {
       nam_u->fra_d |= (buf_y[cur_w] << (8*i));
@@ -334,7 +340,7 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   met_u.men_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
-  c3_y tot_y = _mesa_tot_bytes(met_u.bot_y);
+  c3_y tot_y = _mesa_bytes_of_chub_tag(met_u.bot_y);
   CHECK_BOUNDS(len_w, cur_w + tot_y);
   dat_u->tot_d = 0;
   for( int i = 0; i < tot_y; i++ ) {
@@ -591,7 +597,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
 
   met_u.nit_y = 0;
   met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
-  met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
+  met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
 
   c3_y met_y = (met_u.ran_y & 0x3) << 0
              ^ (met_u.rif_y & 0x3) << 2
@@ -649,14 +655,14 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     case AUTH_NONE: aut_y = 2; break;
     case AUTH_PAIR: aut_y = 3; break;
   }
-  c3_y bot_y = _mesa_size_tot(dat_u->tot_d);
+  c3_y bot_y = _mesa_make_chub_tag(dat_u->tot_d);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   c3_y men_y = (3 >= nel_y) ? nel_y : 3;
   buf_y[cur_w] = (bot_y & 0x3) << 0
                | (aut_y & 0x3) << 2
                | (men_y & 0x3) << 6;
   cur_w++;
-  c3_y tot_y = _mesa_tot_bytes(bot_y);
+  c3_y tot_y = _mesa_bytes_of_chub_tag(bot_y);
 
   for (int i = 0; i < tot_y; i++ ) {
     buf_y[cur_w] = (dat_u->tot_d >> (8 * i)) & 0xFF;
@@ -784,8 +790,8 @@ _mesa_size_name(u3_mesa_name* nam_u)
   siz_w += met_u.rif_y + 1;
   siz_w++;  // bloq
 
-  met_u.gaf_y = _mesa_size_tot(nam_u->fra_d);
-  siz_w += _mesa_tot_bytes(met_u.gaf_y);
+  met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
+  siz_w += _mesa_bytes_of_chub_tag(met_u.gaf_y);
 
   siz_w += 2;  // path-length
   siz_w += nam_u->pat_s;
@@ -799,9 +805,8 @@ _mesa_size_data(u3_mesa_data* dat_u)
   c3_w siz_w = 1;
   u3_mesa_data_meta met_u;
 
-  met_u.bot_y = _mesa_size_tot(dat_u->tot_d);
-
-  siz_w += _mesa_tot_bytes(met_u.bot_y);
+  met_u.bot_y = _mesa_make_chub_tag(dat_u->tot_d);
+  siz_w += _mesa_bytes_of_chub_tag(met_u.bot_y);
 
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
