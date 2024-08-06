@@ -682,14 +682,16 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   met_u.aur_y = dat_u->aup_u.len_y;
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = (3 >= nel_y) ? nel_y : 3;
+  met_u.bot_y = _mesa_size_tot(dat_u->tot_d);
+
   c3_y met_y = (met_u.bot_y & 0x3) << 0
              ^ (met_u.aul_y & 0x3) << 2
              ^ (met_u.aur_y & 0x3) << 4
              ^ (met_u.men_y & 0x3) << 6;
   buf_y[cur_w] = met_y;
   cur_w++;
+  c3_y tot_y = _mesa_tot_bytes(met_u.bot_y);
 
-  c3_y tot_y = _mesa_size_tot(dat_u->tot_d);
   for (int i = 0; i < tot_y; i++ ) {
     buf_y[cur_w] = (dat_u->tot_d >> (8 * i)) & 0xFF;
     cur_w++;
