@@ -1,0 +1,21 @@
+.{
+    .name = "avahi",
+    .version = "0.0.1",
+    .dependencies = .{
+        .avahi = .{
+            .url = "https://github.com/lathiat/avahi/releases/download/v0.8/avahi-0.8.tar.gz",
+            .hash = "1220df62c88bd00f3a397a83b5fc8b4ab657884bbc452a653892790ce213aa6fd900",
+        },
+        .dbus = .{
+            .url = "https://src.fedoraproject.org/repo/pkgs/dbus/dbus-1.14.8.tar.xz/sha512/f3dfc73da28cbe20449d15bbe4166c3574f0e551dfd15fca7cce2b8c71e778360ed2dd391ee5c414a7a47ff4b958727b26ef4cabfee70564f8d0a34bf5ad2386/dbus-1.14.8.tar.xz",
+            .hash = "122083df329bed83b1383e11ff9d40038d643730f7d610f002608d9a48c4500719a3",
+        },
+        .expat = .{
+            .url = "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.xz",
+            .hash = "1220b1874d568d61688789eb2f1f2fe1ed06f66bb0480000df645c476472e31ae30f",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
