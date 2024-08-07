@@ -963,8 +963,19 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       // peek or respond from cache
       //
       if ( c3y == req_u->peq_u->las_o ) {
-        u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                          u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
+        u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+        if ( our == bem.who ) {
+          u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
+                            u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
+        }
+        else {
+          c3_c* msg_c = "bad request";
+          h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+          u3z(gang);
+          u3z(spur);
+          u3z(req_u->peq_u->pax);
+        }
+        u3z(our);
       }
       else {
         u3_noun bam = u3nq(u3k(bem.who), u3k(bem.des), u3k(bem.cas), spur);
