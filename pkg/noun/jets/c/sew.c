@@ -13,7 +13,7 @@ u3qc_sew(u3_atom a,
          u3_atom e
         )
 {
-  if (0 == c) return e;
+  if (0 == c) return u3k(e);
   if ( !_(u3a_is_cat(b)) ||
        !_(u3a_is_cat(c)) ) {
     return u3_none;
