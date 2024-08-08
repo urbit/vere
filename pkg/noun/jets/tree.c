@@ -2377,13 +2377,13 @@ static u3j_core _138_hex_bytestream_d[] =
     {"extract", 7, _138_hex_bytestream_extract_a, 0, no_hashes },
     {"fuse-extract", 7, _138_hex_bytestream_fuse_extract_a, 0, no_hashes },
     //+|  %bitstream
-    {"need-bits", 7, _138_hex_bytestream_need_bits_a, 0, no_hashes },
-    {"drop-bits", 7, _138_hex_bytestream_drop_bits_a, 0, no_hashes },
-    {"skip-bits", 7, _138_hex_bytestream_skip_bits_a, 0, no_hashes },
-    {"peek-bits", 7, _138_hex_bytestream_peek_bits_a, 0, no_hashes },
-    {"read-bits", 7, _138_hex_bytestream_read_bits_a, 0, no_hashes },
-    {"read-need-bits", 7, _138_hex_bytestream_read_need_bits_a, 0, no_hashes },
-    {"byte-bits", 7, _138_hex_bytestream_byte_bits_a, 0, no_hashes },
+    // {"need-bits", 7, _138_hex_bytestream_need_bits_a, 0, no_hashes },
+    // {"drop-bits", 7, _138_hex_bytestream_drop_bits_a, 0, no_hashes },
+    // {"skip-bits", 7, _138_hex_bytestream_skip_bits_a, 0, no_hashes },
+    // {"peek-bits", 7, _138_hex_bytestream_peek_bits_a, 0, no_hashes },
+    // {"read-bits", 7, _138_hex_bytestream_read_bits_a, 0, no_hashes },
+    // {"read-need-bits", 7, _138_hex_bytestream_read_need_bits_a, 0, no_hashes },
+    // {"byte-bits", 7, _138_hex_bytestream_byte_bits_a, 0, no_hashes },
 
   };
 

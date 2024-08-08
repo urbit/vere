@@ -719,20 +719,14 @@ u3_noun u3we_bytestream_fuse_extract(u3_noun cor)
   return _qe_bytestream_fuse_extract(sea, rac);
 }
 
-u3_noun _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
-{
-  return u3_none;
-}
+// +$  bits  $+  bits
+//           $:  num=@ud
+//               bit=@ub
+//               =bays
+//           ==
 u3_noun u3we_bytestream_need_bits(u3_noun cor)
 {
-
-  u3_noun n;
-  u3_noun bits;
-
-  u3x_mean(cor, u3x_sam_2, &n,
-                u3x_sam_3, &bits, 0);
-
-  return _qe_bytestream_need_bits(n, bits);
+  return u3_none;
 }
 u3_noun u3we_bytestream_drop_bits(u3_noun cor)
 {
