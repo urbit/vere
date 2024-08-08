@@ -2351,6 +2351,8 @@ static u3j_harm _138_hex_bytestream_find_byte_a[] = {{".2", u3we_bytestream_find
 static u3j_harm _138_hex_bytestream_seek_byte_a[] = {{".2", u3we_bytestream_seek_byte, c3y}, {}};
 //+|  %transformation
 static u3j_harm _138_hex_bytestream_chunk_a[] = {{".2", u3we_bytestream_chunk}, {}};
+static u3j_harm _138_hex_bytestream_extract_a[] = {{".2", u3we_bytestream_extract}, {}};
+static u3j_harm _138_hex_bytestream_fuse_extract_a[] = {{".2", u3we_bytestream_fuse_extract}, {}};
 
 static u3j_core _138_hex_bytestream_d[] =
   { 
@@ -2364,6 +2366,8 @@ static u3j_core _138_hex_bytestream_d[] =
     {"seek-byte", 7, _138_hex_bytestream_seek_byte_a, 0, no_hashes },
     //+|  %transformation
     {"chunk", 7, _138_hex_bytestream_chunk_a, 0, no_hashes },
+    {"extract", 7, _138_hex_bytestream_extract_a, 0, no_hashes },
+    {"fuse-extract", 7, _138_hex_bytestream_fuse_extract_a, 0, no_hashes },
     {}
   };
 

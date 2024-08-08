@@ -301,6 +301,8 @@
     u3_noun u3we_bytestream_seek_byte(u3_noun);
     //+|  %transformation
     u3_noun u3we_bytestream_chunk(u3_noun);
+    u3_noun u3we_bytestream_extract(u3_noun);
+    u3_noun u3we_bytestream_fuse_extract(u3_noun);
 
   /** Tier 6.
   **/

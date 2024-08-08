@@ -1,9 +1,10 @@
 #include <types.h>
 #include <imprison.h>
+#include <jets/k.h>
+#include <nock.h>
 #include <retrieve.h>
 #include <xtract.h>
 #include <log.h>
-#include <jets/k.h>
 
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
@@ -148,7 +149,7 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
   }
 
   if (u3_nul == u3t(octs_list)) {
-    u3k(u3h(octs_list));
+    return u3k(u3h(octs_list));
   }
 
   /* We can octs in two steps:
@@ -514,4 +515,189 @@ u3_noun u3we_bytestream_chunk(u3_noun cor)
                 u3x_sam_7, &octs, 0);
   
   return _qe_bytestream_chunk(size, pos, octs);
+}
+
+u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
+{
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(sea, 2, &pos, 3, &octs, 0);
+
+  c3_w pos_w;
+
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  u3_noun dal = u3_nul;
+
+  u3_noun new_sea = u3_none;
+
+  while (pos_w < p_octs_w) {
+    new_sea = u3nc(u3i_word(pos_w), u3k(octs));
+    u3_noun ext = u3x_good(u3n_slam_on(u3k(rac), new_sea));
+
+    u3_atom sip, ken;
+    c3_w sip_w, ken_w;
+
+    u3x_mean(ext, 2, &sip, 3, &ken, 0);
+
+    if (c3n == u3r_safe_word(sip, &sip_w)) {
+      // XX is u3z necessary here?
+      // does memory get freed on bail?
+      //
+      u3l_log("sip fail");
+      u3z(dal);
+      u3z(ext);
+      u3m_bail(c3__exit);
+    }
+    if (c3n == u3r_safe_word(ken, &ken_w)) {
+      u3l_log("ken fail");
+      u3z(dal);
+      u3z(ext);
+      u3m_bail(c3__exit);
+    }
+
+    u3z(ext);
+
+    if (sip_w == 0 && ken_w == 0) {
+      break;
+    }
+
+    if (pos_w + sip_w > p_octs_w) {
+      u3z(dal);
+      return u3_none;
+    }
+
+    pos_w += sip_w;
+
+    if (ken_w == 0) {
+      continue;
+    }
+
+    u3_noun octs = _qe_peek_octs(ken_w, pos_w, p_octs_w, sea_y, len_w);
+    pos_w += ken_w;
+    dal = u3nc(octs, dal);
+  }
+
+  new_sea = u3nc(u3i_word(pos_w), u3k(octs));
+
+  return u3nc(u3kb_flop(dal), new_sea);
+}
+u3_noun u3we_bytestream_extract(u3_noun cor)
+{
+  u3_noun sea;
+  u3_noun rac;
+
+  u3x_mean(cor, u3x_sam_2, &sea, 
+                u3x_sam_3, &rac, 0);
+  
+  return _qe_bytestream_extract(sea, rac);
+}
+
+u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
+{
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(sea, 2, &pos, 3, &octs, 0);
+
+  c3_w pos_w;
+
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  u3_noun dal = u3_nul;
+
+  u3_noun new_sea = u3_none;
+
+  while (pos_w < p_octs_w) {
+    new_sea = u3nc(u3i_word(pos_w), u3k(octs));
+    u3_noun ext = u3x_good(u3n_slam_on(u3k(rac), new_sea));
+
+    u3_atom sip, ken;
+    c3_w sip_w, ken_w;
+
+    u3x_mean(ext, 2, &sip, 3, &ken, 0);
+
+    if (c3n == u3r_safe_word(sip, &sip_w)) {
+      // XX is u3z necessary here?
+      // does memory get freed on bail?
+      //
+      u3l_log("sip fail");
+      u3z(dal);
+      u3z(ext);
+      u3m_bail(c3__exit);
+    }
+    if (c3n == u3r_safe_word(ken, &ken_w)) {
+      u3l_log("ken fail");
+      u3z(dal);
+      u3z(ext);
+      u3m_bail(c3__exit);
+    }
+
+    u3z(ext);
+
+    if (sip_w == 0 && ken_w == 0) {
+      break;
+    }
+
+    if (pos_w + sip_w > p_octs_w) {
+      u3z(dal);
+      return u3_none;
+    }
+
+    pos_w += sip_w;
+
+    if (ken_w == 0) {
+      continue;
+    }
+
+    u3_noun octs = _qe_peek_octs(ken_w, pos_w, p_octs_w, sea_y, len_w);
+    pos_w += ken_w;
+    dal = u3nc(octs, dal);
+  }
+
+  u3_noun lad = u3kb_flop(dal);
+  u3_noun data = _qe_bytestream_can_octs(lad);
+  u3z(lad);
+
+  new_sea = u3nc(u3i_word(pos_w), u3k(octs));
+
+  return u3nc(data, new_sea);
+}
+
+u3_noun u3we_bytestream_fuse_extract(u3_noun cor)
+{
+  u3_noun sea;
+  u3_noun rac;
+
+  u3x_mean(cor, u3x_sam_2, &sea, 
+                u3x_sam_3, &rac, 0);
+  
+  return _qe_bytestream_fuse_extract(sea, rac);
 }
