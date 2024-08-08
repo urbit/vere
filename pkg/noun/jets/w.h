@@ -303,6 +303,14 @@
     u3_noun u3we_bytestream_chunk(u3_noun);
     u3_noun u3we_bytestream_extract(u3_noun);
     u3_noun u3we_bytestream_fuse_extract(u3_noun);
+    //+|  %bitstream
+    u3_noun u3we_bytestream_need_bits(u3_noun);
+    u3_noun u3we_bytestream_drop_bits(u3_noun);
+    u3_noun u3we_bytestream_skip_bits(u3_noun);
+    u3_noun u3we_bytestream_peek_bits(u3_noun);
+    u3_noun u3we_bytestream_read_bits(u3_noun);
+    u3_noun u3we_bytestream_read_need_bits(u3_noun);
+    u3_noun u3we_bytestream_byte_bits(u3_noun);
 
   /** Tier 6.
   **/

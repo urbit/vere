@@ -115,18 +115,26 @@ _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
 
   c3_d p_octs_d = p_octs_a_w + p_octs_b_w;
 
-  u3i_slab sab_u;
+  u3_noun ret = u3_none;
 
-  u3i_slab_init(&sab_u, 3, (c3_d)p_octs_a_w + lem_w);
-  sab_u.buf_w[sab_u.len_w - 1] = 0;
+  //  Both a and b are 0.
+  //
+  if (len_w + lem_w == 0) {
+    ret = u3nc(u3i_chub(p_octs_d), u3i_word(0));
+  }
+  else {
+    u3i_slab sab_u;
 
-  memcpy(sab_u.buf_y, sea_y, len_w);
-  memset(sab_u.buf_y + len_w, 0, lead_w);
-  memcpy(sab_u.buf_y + p_octs_a_w, seb_y, lem_w);
+    u3i_slab_init(&sab_u, 3, (c3_d)p_octs_a_w + lem_w);
+    sab_u.buf_w[sab_u.len_w - 1] = 0;
 
-  u3_noun q_octs = u3i_slab_moot(&sab_u);
-  u3_noun ret = u3nc(u3i_chub(p_octs_d), q_octs);
+    memcpy(sab_u.buf_y, sea_y, len_w);
+    memset(sab_u.buf_y + len_w, 0, lead_w);
+    memcpy(sab_u.buf_y + p_octs_a_w, seb_y, lem_w);
 
+    u3_noun q_octs = u3i_slab_moot(&sab_u);
+    ret = u3nc(u3i_chub(p_octs_d), q_octs);
+  }
   return ret;
 }
 
@@ -165,6 +173,8 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
 
   u3_noun octs_list_start = octs_list;
   u3_noun octs = u3_none;
+  // Last non-zero octs
+  u3_noun last_octs = u3_none;
 
   while (octs_list != u3_nul) {
 
@@ -189,8 +199,7 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     octs_list = u3t(octs_list);
   }
 
-
-  //  Compute leading zeros of final octs -- the buffer
+  //  Compute leading zeros of last non-zero octs -- the buffer
   //  size is decreased by this much.
   //
   //  =leading-zeros (sub p.octs (met 3 q.octs))
@@ -198,8 +207,16 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
   //  p.octs fits into a word -- this has been verified 
   //  in the loop above.
   //
+  //  The resulting buf_len_w is correct only if the last 
+  //  octs is non-zero: but at the return u3i_slab_mint 
+  //  takes care of trimming.
+  //
   c3_w last_lead_w = (u3r_word(0, u3h(octs)) - u3r_met(3, u3t(octs)));
   c3_d buf_len_w = tot_d - last_lead_w;
+
+  if (buf_len_w == 0) {
+    return u3nc(u3i_word(tot_d), 0);
+  }
 
   u3i_slab sab_u;
   u3i_slab_bare(&sab_u, 3, buf_len_w);
@@ -700,4 +717,44 @@ u3_noun u3we_bytestream_fuse_extract(u3_noun cor)
                 u3x_sam_3, &rac, 0);
   
   return _qe_bytestream_fuse_extract(sea, rac);
+}
+
+u3_noun _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_need_bits(u3_noun cor)
+{
+
+  u3_noun n;
+  u3_noun bits;
+
+  u3x_mean(cor, u3x_sam_2, &n,
+                u3x_sam_3, &bits, 0);
+
+  return _qe_bytestream_need_bits(n, bits);
+}
+u3_noun u3we_bytestream_drop_bits(u3_noun cor)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_skip_bits(u3_noun cor)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_peek_bits(u3_noun cor)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_read_bits(u3_noun cor)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_read_need_bits(u3_noun cor)
+{
+  return u3_none;
+}
+u3_noun u3we_bytestream_byte_bits(u3_noun cor)
+{
+  return u3_none;
 }

@@ -2353,6 +2353,14 @@ static u3j_harm _138_hex_bytestream_seek_byte_a[] = {{".2", u3we_bytestream_seek
 static u3j_harm _138_hex_bytestream_chunk_a[] = {{".2", u3we_bytestream_chunk}, {}};
 static u3j_harm _138_hex_bytestream_extract_a[] = {{".2", u3we_bytestream_extract}, {}};
 static u3j_harm _138_hex_bytestream_fuse_extract_a[] = {{".2", u3we_bytestream_fuse_extract}, {}};
+//+|  %bitstream
+static u3j_harm _138_hex_bytestream_need_bits_a[] = {{".2", u3we_bytestream_need_bits}, {}};
+static u3j_harm _138_hex_bytestream_drop_bits_a[] = {{".2", u3we_bytestream_drop_bits}, {}};
+static u3j_harm _138_hex_bytestream_skip_bits_a[] = {{".2", u3we_bytestream_skip_bits}, {}};
+static u3j_harm _138_hex_bytestream_peek_bits_a[] = {{".2", u3we_bytestream_peek_bits}, {}};
+static u3j_harm _138_hex_bytestream_read_bits_a[] = {{".2", u3we_bytestream_read_bits}, {}};
+static u3j_harm _138_hex_bytestream_read_need_bits_a[] = {{".2", u3we_bytestream_read_need_bits}, {}};
+static u3j_harm _138_hex_bytestream_byte_bits_a[] = {{".2", u3we_bytestream_byte_bits}, {}};
 
 static u3j_core _138_hex_bytestream_d[] =
   { 
@@ -2368,7 +2376,15 @@ static u3j_core _138_hex_bytestream_d[] =
     {"chunk", 7, _138_hex_bytestream_chunk_a, 0, no_hashes },
     {"extract", 7, _138_hex_bytestream_extract_a, 0, no_hashes },
     {"fuse-extract", 7, _138_hex_bytestream_fuse_extract_a, 0, no_hashes },
-    {}
+    //+|  %bitstream
+    {"need-bits", 7, _138_hex_bytestream_need_bits_a, 0, no_hashes },
+    {"drop-bits", 7, _138_hex_bytestream_drop_bits_a, 0, no_hashes },
+    {"skip-bits", 7, _138_hex_bytestream_skip_bits_a, 0, no_hashes },
+    {"peek-bits", 7, _138_hex_bytestream_peek_bits_a, 0, no_hashes },
+    {"read-bits", 7, _138_hex_bytestream_read_bits_a, 0, no_hashes },
+    {"read-need-bits", 7, _138_hex_bytestream_read_need_bits_a, 0, no_hashes },
+    {"byte-bits", 7, _138_hex_bytestream_byte_bits_a, 0, no_hashes },
+
   };
 
 static u3j_core _138_hex_d[] =
