@@ -291,9 +291,16 @@
     u3_noun u3wes_gte(u3_noun);
     u3_noun u3wes_gth(u3_noun);
 
+    //+|  %utilities
     u3_noun u3we_bytestream_rip_octs(u3_noun);
     u3_noun u3we_bytestream_cat_octs(u3_noun);
     u3_noun u3we_bytestream_can_octs(u3_noun);
+    //+|  %navigation
+    u3_noun u3we_bytestream_skip_line(u3_noun);
+    u3_noun u3we_bytestream_find_byte(u3_noun);
+    u3_noun u3we_bytestream_seek_byte(u3_noun);
+    //+|  %transformation
+    u3_noun u3we_bytestream_chunk(u3_noun);
 
   /** Tier 6.
   **/

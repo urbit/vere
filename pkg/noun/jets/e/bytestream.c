@@ -3,6 +3,7 @@
 #include <retrieve.h>
 #include <xtract.h>
 #include <log.h>
+#include <jets/k.h>
 
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
@@ -249,11 +250,268 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
 }
 
 u3_noun
-u3we_bytestream_can_octs(u3_noun cor) {
+u3we_bytestream_can_octs(u3_noun cor)
+{
 
   u3_noun octs_list;
 
   u3x_mean(cor, u3x_sam_1, &octs_list, 0);
 
   return _qe_bytestream_can_octs(octs_list);
+}
+u3_noun _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
+{
+  c3_w pos_w;
+
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  while (pos_w < len_w) {
+    if (*(sea_y + pos_w) == '\n') {
+      break;
+    }
+    pos_w++;
+  }
+  // Newline not found, position at the end
+  if (*(sea_y + pos_w) != '\n') {
+    pos_w = p_octs;
+  }
+  else {
+    pos_w++;
+  }
+
+  return u3nc(u3i_word(pos_w), u3k(octs));
+}
+u3_noun u3we_bytestream_skip_line(u3_noun cor)
+{
+  
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(cor, u3x_sam_2, &pos, u3x_sam_3, &octs, 0);
+  
+  return _qe_bytestream_skip_line(pos, octs);
+
+}
+u3_noun _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
+{
+  c3_w bat_w, pos_w;
+
+  if (c3n == u3r_safe_word(bat, &bat_w) || bat_w > 0xff) {
+    return u3m_bail(c3__exit);
+  }
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  while (pos_w < len_w) {
+
+    if (*(sea_y + pos_w) == bat_w) {
+      return u3nc(u3_nul, u3i_word(pos_w));
+    }
+
+    pos_w++;
+  }
+  //  Here we are sure that:
+  //  (1) bat_w has not been found
+  //  (2) therefore pos_w == len_w
+  //  
+  //  If bat_w == 0, and there is still input 
+  //  in the stream, it means pos_w points at
+  //  the first leading zero.
+  //
+  if (pos_w < p_octs && bat_w == 0) {
+    return u3nc(u3_nul, u3i_word(pos_w));
+  }
+
+  return u3_nul;
+}
+u3_noun u3we_bytestream_find_byte(u3_noun cor)
+{
+  u3_atom bat;
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(cor, u3x_sam_2, &bat, 
+                u3x_sam_6, &pos, 
+                u3x_sam_7, &octs, 0);
+  
+  return _qe_bytestream_find_byte(bat, pos, octs);
+}
+u3_noun _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
+{
+  c3_w bat_w, pos_w;
+
+  if (c3n == u3r_safe_word(bat, &bat_w) || bat_w > 0xff) {
+    return u3m_bail(c3__exit);
+  }
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  while (pos_w < len_w) {
+
+    if (*(sea_y + pos_w) == bat_w) {
+      u3_noun idx = u3nc(u3_nul, u3i_word(pos_w));
+      u3_noun new_octs = u3nc(u3i_word(pos_w), u3k(octs));
+      return u3nc(idx, new_octs);
+    }
+
+    pos_w++;
+  }
+
+  // find leading zero: see comment in *_find_byte
+  //
+  if (pos_w < p_octs && bat_w == 0) {
+      u3_noun idx = u3nc(u3_nul, u3i_word(pos_w));
+      u3_noun new_octs = u3nc(u3i_word(pos_w), u3k(octs));
+      return u3nc(idx, new_octs);
+  }
+
+  return u3nc(u3_nul, u3nc(u3k(pos), u3k(octs)));
+
+}
+u3_noun u3we_bytestream_seek_byte(u3_noun cor)
+{
+  u3_atom bat;
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(cor, u3x_sam_2, &bat, 
+                u3x_sam_6, &pos, 
+                u3x_sam_7, &octs, 0);
+  
+  return _qe_bytestream_seek_byte(bat, pos, octs);
+}
+
+u3_noun _qe_peek_octs(c3_w n_w, c3_w pos_w, c3_w p_octs_w, c3_y* sea_y, 
+                      c3_w len_w)
+{
+  if (n_w == 0) {
+    return u3nc(0, 0);
+  }
+
+  if (pos_w + n_w > p_octs_w) {
+    return u3m_bail(c3__exit);
+  }
+
+  // Read leading zeros only
+  //
+  if (pos_w >= len_w) {
+    return u3nc(u3i_word(n_w), 0);
+  }
+  // Number of remaining buffer bytes
+  c3_w reb_w = len_w - pos_w;
+
+  u3i_slab sab_u;
+  c3_w my_len_w;
+
+  if (n_w < reb_w) {
+    my_len_w = n_w;
+  }
+  else {
+    my_len_w = reb_w;
+  }
+  u3i_slab_bare(&sab_u, 3, my_len_w);
+  sab_u.buf_w[sab_u.len_w - 1] = 0;
+  memcpy(sab_u.buf_y, sea_y + pos_w, my_len_w);
+
+  return u3nc(u3i_word(n_w), u3i_slab_moot(&sab_u));
+}
+u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
+{
+  c3_w size_w, pos_w;
+
+  if (c3n == u3r_safe_word(size, &size_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (size_w == 0) {
+    return u3_nul;
+  }
+
+  if (c3n == u3r_safe_word(pos, &pos_w)) {
+    return u3m_bail(c3__exit);
+  }
+
+  u3_atom p_octs, q_octs;
+
+  _x_octs(octs, &p_octs, &q_octs);
+
+  c3_w  p_octs_w;
+  c3_w  len_w, lead_w;
+
+  c3_y* sea_y;
+
+  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+
+  u3_noun hun = u3_nul;
+
+  while (pos_w < p_octs) {
+    // Remaining bytes
+    //
+    c3_w rem = (p_octs - pos_w);
+
+    if (rem < size) {
+      u3_noun octs = _qe_peek_octs(rem, pos_w, p_octs_w, sea_y,
+                                   len_w);
+      hun = u3nc(octs, hun);
+      pos_w += rem;
+    }
+    else {
+      u3_noun octs = _qe_peek_octs(size, pos_w, p_octs_w, sea_y, 
+                                   len_w);
+      hun = u3nc(octs, hun);
+      pos_w += size;
+    }
+  }
+
+  return u3kb_flop(hun);
+}
+
+u3_noun u3we_bytestream_chunk(u3_noun cor)
+{
+  u3_atom size;
+  u3_atom pos;
+  u3_noun octs;
+
+  u3x_mean(cor, u3x_sam_2, &size, 
+                u3x_sam_6, &pos, 
+                u3x_sam_7, &octs, 0);
+  
+  return _qe_bytestream_chunk(size, pos, octs);
 }
