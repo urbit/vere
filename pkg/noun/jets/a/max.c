@@ -13,6 +13,8 @@ u3qa_max(u3_atom a, u3_atom b)
     return u3k(c3_max(a, b));
   }
   else {
+    if ( a == 0 ) return b;
+    if ( b == 0 ) return a;
     c3_w a_w = u3r_met(0, a);
     c3_w b_w = u3r_met(0, b);
 
