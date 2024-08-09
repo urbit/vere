@@ -453,7 +453,7 @@ static void
 _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u)
 {
   memcpy(des_u, src_u, sizeof(u3_mesa_name));
-  des_u->pat_c = c3_calloc(src_u->pat_s);
+  des_u->pat_c = c3_calloc(src_u->pat_s + 1); // null-terminate
   memcpy(des_u->pat_c, src_u->pat_c, src_u->pat_s);
 }
 
@@ -493,9 +493,7 @@ _mesa_new_line(u3_mesa_name* nam_u)
 {
   u3_mesa_line* lin_u = c3_calloc(sizeof(u3_mesa_line));
   lin_u->typ_y = CTAG_ITEM;
-  lin_u->nam_u = *nam_u;
-  memcpy(lin_u->nam_u.pat_c, nam_u->pat_c, nam_u->pat_s);
-
+  _mesa_copy_name(&lin_u->nam_u, nam_u);
   return lin_u;
 }
 
