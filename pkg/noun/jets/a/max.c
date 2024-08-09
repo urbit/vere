@@ -10,7 +10,7 @@ u3_noun
 u3qa_max(u3_noun a, u3_noun b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    return u3k(c3_max(a, b));
+    return c3_max(a, b);
   }
   else {
     if ( a == 0 ) return u3k(b);
