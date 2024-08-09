@@ -546,15 +546,16 @@ c3_w
 mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
   c3_w cur_w = 0, res_w = len_w;
+  c3_w pre_w = (HEAD_SIZE + MESA_COOKIE_LEN); // prelude: header + cookie
 
-  if ( len_w < HEAD_SIZE ) {
+  if ( len_w < pre_w ) {
     u3l_log("mesa: attempted to parse overly short packet of size %u", len_w);
   }
 
   mesa_sift_head(buf_y, &pac_u->hed_u);
-  buf_y += HEAD_SIZE;
-  cur_w += HEAD_SIZE;
-  res_w -= HEAD_SIZE;
+  buf_y += pre_w;
+  // cur_w += pre_w;  //  XX add the prelude later
+  res_w -= pre_w;
 
   // u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
 
@@ -598,7 +599,7 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
     return 0;
   }
   else {
-    return cur_w;
+    return cur_w + pre_w;
   }
 }
 
