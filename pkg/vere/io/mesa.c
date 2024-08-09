@@ -1909,6 +1909,11 @@ _mesa_send_pact(u3_mesa*      sam_u,
 {
   c3_y buf_y[PACT_SIZE];
   c3_w len_w = mesa_etch_pact(buf_y, tac_u);
+  u3_mesa_pact paco;
+  //  XX siftting after etching fails
+  //
+  u3l_log("THE LENGTH %u", len_w);
+  mesa_sift_pact(&paco, buf_y, len_w);
   _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
   u3z(las);
 }
@@ -2009,7 +2014,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
   else {
     _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_d);
   }
-  mesa_free_pact(&pac_u);
+  // mesa_free_pact(&pac_u);
 }
 
 static void

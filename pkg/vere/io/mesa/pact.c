@@ -302,7 +302,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
     u3l_log("name: init");
   }
   else {
-    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
+    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y) << 3;
     CHECK_BOUNDS(len_w, cur_w + fag_y);
     for ( int i = 0; i < fag_y; i++ ) {
       nam_u->fra_d |= (buf_y[cur_w] << (8*i));
@@ -338,8 +338,8 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   CHECK_BOUNDS(len_w, cur_w + 1);
   c3_y met_y = buf_y[cur_w];
   met_u.bot_y = (met_y >> 0) & 0x3;
-  met_u.aut_o = (met_y >> 2) & 0x1;
-  met_u.auv_o = (met_y >> 3) & 0x1;
+  met_u.auv_o = (met_y >> 2) & 0x1;
+  met_u.aut_o = (met_y >> 3) & 0x1;
   met_u.men_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
@@ -554,7 +554,7 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
 
   mesa_sift_head(buf_y, &pac_u->hed_u);
   buf_y += pre_w;
-  // cur_w += pre_w;  //  XX add the prelude later
+  cur_w += pre_w;
   res_w -= pre_w;
 
   // u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
@@ -580,7 +580,7 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   }
 
   {
-    c3_w mug_w = u3r_mug_bytes(buf_y, cur_w);
+    c3_w mug_w = u3r_mug_bytes(buf_y, cur_w - pre_w); // XX
     mug_w &= 0xFFFFF;
 
     if ( mug_w != pac_u->hed_u.mug_w ) {
@@ -599,7 +599,7 @@ mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
     return 0;
   }
   else {
-    return cur_w + pre_w;
+    return cur_w;
   }
 }
 
@@ -666,7 +666,7 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   buf_y[cur_w] = nam_u->boq_y;
   cur_w++;
 
-  c3_y fra_y = met_u.gaf_y + 1;
+  c3_y fra_y = ( met_u.gaf_y + 1 ) << 3;
   for( int i = 0; i < fra_y; i++ ) {
     buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
     cur_w++;
