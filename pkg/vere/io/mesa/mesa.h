@@ -46,6 +46,7 @@ typedef struct _u3_mesa_name {
   u3_ship            her_u;
   c3_w               rif_w;
   c3_y               boq_y;
+  c3_o               nit_o;
   c3_o               aut_o;
   c3_d               fra_d;
   c3_s               pat_s;

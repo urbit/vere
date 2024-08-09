@@ -1652,7 +1652,9 @@ _name_to_scry(u3_mesa_name* nam_u)
   u3_noun fag = _dire_etch_ud(nam_u->fra_d);
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
 
-  u3_noun wer = u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+  u3_noun wer = nam_u->nit_o == c3y
+    ? u3nc(c3__init, pax)
+    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
 
@@ -2005,8 +2007,9 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
   u3_noun boq = _dire_etch_ud(31); // XX make configurable
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  // XX TODO: scry for %auth when necessary
-  u3_noun wer = u3nt(c3__data, fag, pax);
+  u3_noun wer = nam_u->nit_o == c3y
+    ? u3nc(c3__init, pax)
+    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
 
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
 
@@ -2063,6 +2066,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
+  nam_u->nit_o = __(fra_d == 0);
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -2122,7 +2126,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
   c3_d mev_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pro_w = lss_proof_size(mev_d);
 
-  if ( pro_w > 0 ) {
+  if ( c3y == nam_u->nit_o && pro_w > 0 ) {
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
       #ifdef MESA_DEBUG
@@ -2363,6 +2367,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
   memcpy(&req_u->pic_u->pac_u.pek_u.nam_u, nam_u, sizeof(u3_mesa_name));  // XX
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
+  req_u->pic_u->pac_u.pek_u.nam_u.nit_o = c3n;
   req_u->aut_u = dat_u->aut_u;
 
   u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );

@@ -639,10 +639,16 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
-  met_u.nit_y = 0;
-  met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
-  met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
-
+  if ( c3y == nam_u->nit_o ) {
+    met_u.nit_y = 1;
+    met_u.tau_y = 0;
+    met_u.gaf_y = 0;
+  }
+  else {
+    met_u.nit_y = 0;
+    met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
+    met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
+  }
   c3_y met_y = (met_u.ran_y & 0x3) << 0
              ^ (met_u.rif_y & 0x3) << 2
              ^ (met_u.nit_y & 0x1) << 4
