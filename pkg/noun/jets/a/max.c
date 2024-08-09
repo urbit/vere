@@ -17,7 +17,7 @@ u3qa_max(u3_noun a, u3_noun b)
     if ( b == 0 ) return u3k(a);
     if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
       if ( _(u3r_sing(a, b)) ) return u3k(a);
-      else return u3m_bail(c3__fail);
+      else return u3m_bail(c3__exit);
     }
     c3_w a_w = u3r_met(0, a);
     c3_w b_w = u3r_met(0, b);

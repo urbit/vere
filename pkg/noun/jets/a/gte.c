@@ -19,7 +19,7 @@ u3qa_gte(u3_noun a, u3_noun b)
   }
   else if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
     if ( _(u3r_sing(a, b)) ) return c3y;
-    else return u3m_bail(c3__fail);
+    else return u3m_bail(c3__exit);
   }
   else {
     c3_w a_w = u3r_met(0, a);
