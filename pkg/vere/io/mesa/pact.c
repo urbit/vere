@@ -1,4 +1,5 @@
 #include "mesa.h"
+#include <log.h>
 #include <stdio.h>
 // only need for tests, can remove
 #include "vere.h"
@@ -278,6 +279,9 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   met_u.gaf_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
+  // XX ?:(=(1 tau.c) %auth %data)
+  nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
+
   c3_y her_y = 2 << met_u.ran_y;
   CHECK_BOUNDS(len_w, cur_w + her_y);
   u3_ship_of_bytes(nam_u->her_u, her_y, buf_y + cur_w);
@@ -302,7 +306,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
     u3l_log("name: init");
   }
   else {
-    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y) << 3;
+    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
     CHECK_BOUNDS(len_w, cur_w + fag_y);
     for ( int i = 0; i < fag_y; i++ ) {
       nam_u->fra_d |= (buf_y[cur_w] << (8*i));
@@ -310,9 +314,6 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
     }
     u3l_log("name: fag_y: %u   nam_u->fra_d %"PRIu64, fag_y, nam_u->fra_d);
   }
-
-  // XX ?:(=(1 tau.c) %auth %data)
-  nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
 
   CHECK_BOUNDS(len_w, cur_w + 2);
   nam_u->pat_s = buf_y[cur_w]
@@ -666,10 +667,15 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
   buf_y[cur_w] = nam_u->boq_y;
   cur_w++;
 
-  c3_y fra_y = ( met_u.gaf_y + 1 ) << 3;
-  for( int i = 0; i < fra_y; i++ ) {
-    buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
-    cur_w++;
+  if ( met_u.nit_y ) {
+    // init packet
+  }
+  else {
+    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
+    for( int i = 0; i < fag_y; i++ ) {
+      buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
+      cur_w++;
+    }
   }
 
   // path length

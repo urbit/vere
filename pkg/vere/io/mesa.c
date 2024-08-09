@@ -13,10 +13,12 @@
 #include <defs.h>
 #include <error.h>
 #include <imprison.h>
+#include <inttypes.h>
 #include <jets/q.h>
 #include <manage.h>
 #include <motes.h>
 #include <retrieve.h>
+#include <stdio.h>
 #include <types.h>
 #include <stdlib.h>
 #include "lss.h"
@@ -24,6 +26,7 @@
 c3_o dop_o = c3n;
 
 #define MESA_DEBUG     c3y
+#define MESA_ROUNDTRIP c3y
 //#define MESA_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
@@ -240,6 +243,131 @@ get_millis() {
 	return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 	// Convert the seconds to milliseconds by multiplying by 1000
 	// Convert the microseconds to milliseconds by dividing by 1000
+}
+
+//  assertion helpers named by aura tag
+static void
+_assert_eq_f(c3_o a, c3_o b)
+{
+  if ( a != b ) {
+    u3l_log("%s != %s", __(a)? "&" : "|", __(b)? "&" : "|");
+    u3m_bail(c3__oops);
+  }
+}
+
+static void
+_assert_eq_udG(c3_d a, c3_d b)
+{
+  if ( a != b ) {
+    u3l_log("%"PRIu64" != %"PRIu64, a, b);
+    u3m_bail(c3__oops);
+  }
+}
+
+static void
+_assert_eq_uxF(c3_w a, c3_w b)
+{
+  if ( a != b ) {
+    u3l_log("0x%08x != 0x%08x", a, b);
+    u3m_bail(c3__oops);
+  }
+}
+
+static void
+_assert_eq_uxG(c3_d a, c3_d b)
+{
+  if ( a != b ) {
+    u3l_log("0x%016llx != 0x%016llx", a, b);
+    u3m_bail(c3__oops);
+  }
+}
+
+static void
+_mesa_check_heads_equal(u3_mesa_head* hed_u, u3_mesa_head* hod_u)
+{
+  _assert_eq_udG(hed_u->hop_y, hed_u->hop_y);
+  _assert_eq_uxF(hed_u->mug_w, hed_u->mug_w);
+  _assert_eq_udG(hed_u->nex_y, hed_u->nex_y);
+  _assert_eq_udG(hed_u->pro_y, hed_u->pro_y);
+  _assert_eq_udG(hed_u->typ_y, hed_u->typ_y);
+}
+
+static void
+_mesa_check_names_equal(u3_mesa_name* nam_u, u3_mesa_name* nom_u)
+{
+  u3_assert( u3_ships_equal(nam_u->her_u, nom_u->her_u) );
+  _assert_eq_udG(nam_u->rif_w, nom_u->rif_w);
+  _assert_eq_udG(nam_u->boq_y, nom_u->boq_y);
+  _assert_eq_f(nam_u->nit_o, nom_u->nit_o);
+  _assert_eq_f(nam_u->aut_o, nom_u->aut_o);
+  _assert_eq_udG(nam_u->fra_d, nom_u->fra_d);
+  _assert_eq_udG(nam_u->pat_s, nom_u->pat_s);
+  u3_assert( 0 == memcmp(nam_u->pat_c, nom_u->pat_c, nam_u->pat_s + 1) );
+}
+
+static void
+_mesa_check_auth_datas_equal(u3_auth_data* aut_u, u3_auth_data* aot_u)
+{
+  _assert_eq_udG(aut_u->typ_e, aot_u->typ_e);
+  switch ( aut_u->typ_e ) {
+    case AUTH_SIGN: {
+      u3_assert( 0 == memcmp(aut_u->sig_y, aot_u->sig_y, 64) );
+    } break;
+    case AUTH_HMAC: {
+      u3_assert( 0 == memcmp(aut_u->mac_y, aot_u->mac_y, 32) );
+    } break;
+    case AUTH_NONE: {} break;
+    case AUTH_PAIR: {
+      u3_assert( 0 == memcmp(aut_u->has_y, aot_u->has_y, 64) );
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+}
+
+static void
+_mesa_check_datas_equal(u3_mesa_data* dat_u, u3_mesa_data* dot_u)
+{
+  _assert_eq_udG(dat_u->tob_d, dot_u->tob_d);
+  _mesa_check_auth_datas_equal(&dat_u->aut_u, &dot_u->aut_u);
+  _assert_eq_udG(dat_u->len_w, dot_u->len_w);
+  u3_assert( 0 == memcmp(dat_u->fra_y, dot_u->fra_y, dat_u->len_w) );
+}
+
+static void
+_mesa_check_etch(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
+{
+  u3_mesa_pact poc_u;
+  c3_w lon_w = mesa_sift_pact(&poc_u, buf_y, len_w);
+  _assert_eq_udG(lon_w, len_w);
+
+  _mesa_check_heads_equal(&poc_u.hed_u, &pac_u->hed_u);
+
+  switch ( poc_u.hed_u.typ_y ) {
+    case PACT_PEEK: {
+      _mesa_check_names_equal(&poc_u.pek_u.nam_u, &pac_u->pek_u.nam_u);
+    } break;
+    case PACT_POKE: {
+      _mesa_check_names_equal(&poc_u.pok_u.nam_u, &pac_u->pok_u.nam_u);
+      _mesa_check_names_equal(&poc_u.pok_u.pay_u, &pac_u->pok_u.pay_u);
+      _mesa_check_datas_equal(&poc_u.pok_u.dat_u, &pac_u->pok_u.dat_u);
+    } break;
+    case PACT_PAGE: {
+      _mesa_check_names_equal(&poc_u.pag_u.nam_u, &pac_u->pag_u.nam_u);
+      _mesa_check_datas_equal(&poc_u.pag_u.dat_u, &pac_u->pag_u.dat_u);
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+  mesa_free_pact(&poc_u);
+}
+
+static void
+_mesa_check_sift(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
+{
+  c3_y* bof_y = c3_calloc(len_w);
+  c3_w lon_w = mesa_etch_pact(bof_y, pac_u);
+  _assert_eq_udG( lon_w, len_w );
+  u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
+  c3_free(bof_y);
 }
 
 static void
@@ -993,6 +1121,9 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   c3_y* buf_y = c3_calloc(PACT_SIZE);
   c3_w siz_w = mesa_etch_pact(buf_y, &pic_u->pac_u);
+  #ifdef MESA_ROUNDTRIP
+    _mesa_check_etch(&pic_u->pac_u, buf_y, siz_w);
+  #endif
 
   _mesa_send_buf(sam_u, *lan_u, buf_y, siz_w);
 }
@@ -1118,6 +1249,9 @@ _try_resend(u3_pend_req* req_u, c3_d ack_d)
 
       pac_u->pek_u.nam_u.fra_d = i_d;
       c3_w siz_w  = mesa_etch_pact(buf_y, pac_u);
+      #ifdef MESA_ROUNDTRIP
+        _mesa_check_etch(pac_u, buf_y, siz_w);
+      #endif
       if ( 0 == siz_w ) {
         u3_assert(!"failed to etch");
       }
@@ -1650,6 +1784,9 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 
   u3_mesa_pact pac_u;
   c3_w         res_w = mesa_sift_pact(&pac_u, buf_y, len_w);
+  #ifdef MESA_DEBUG
+    _mesa_check_sift(&pac_u, buf_y, res_w);
+  #endif
 
   if ( PACT_PAGE == hed_u.typ_y ) {
     u3_weak pin = _mesa_get_pit(sam_u, &pac_u.pek_u.nam_u);
@@ -1910,11 +2047,10 @@ _mesa_send_pact(u3_mesa*      sam_u,
 {
   c3_y buf_y[PACT_SIZE];
   c3_w len_w = mesa_etch_pact(buf_y, tac_u);
-  u3_mesa_pact paco;
-  //  XX siftting after etching fails
-  //
-  u3l_log("THE LENGTH %u", len_w);
-  mesa_sift_pact(&paco, buf_y, len_w);
+
+  #ifdef MESA_DEBUG
+    _mesa_check_etch(tac_u, buf_y, len_w);
+  #endif
   _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
   u3z(las);
 }
@@ -2053,14 +2189,18 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   {
     u3a_atom* pat_u = u3a_to_ptr(pac);
     u3_mesa_pact jum_u;
-    if ( 0 == mesa_sift_pact(&jum_u,
-                              (c3_y*)pat_u->buf_w,
-                              pat_u->len_w << 2) ) {
+    c3_w sif_w = mesa_sift_pact(&jum_u,
+                                (c3_y*)pat_u->buf_w,
+                                pat_u->len_w << 2);
+    if ( 0 == sif_w ) {
       u3l_log("mesa: jumbo frame parse failure");
       log_pact(pac_u);
       u3z(res);
       return;
     }
+    #ifdef MESA_ROUNDTRIP
+      _mesa_check_sift(&jum_u, (c3_y*)pat_u->buf_w, sif_w);
+    #endif
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
@@ -2455,7 +2595,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       //  XX should just preserve input buffer
       u3i_slab sab_u;
       u3i_slab_init(&sab_u, 3, PACT_SIZE);
-      c3_w cur_w  = mesa_etch_pact(sab_u.buf_y, pac_u);
+      c3_w res_w  = mesa_etch_pact(sab_u.buf_y, pac_u);
+      #ifdef MESA_ROUNDTRIP
+        _mesa_check_etch(pac_u, sab_u.buf_y, res_w);
+      #endif
 
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
@@ -2533,6 +2676,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
         c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
         c3_w res_w = mesa_etch_pact(buf_y, pac_u);
+        #ifdef MESA_ROUNDTRIP
+          _mesa_check_etch(pac_u, buf_y, res_w);
+        #endif
         pac = u3i_bytes(res_w, buf_y);
         c3_free(buf_y);
       }
@@ -2715,7 +2861,10 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     u3i_slab_init(&sab_u, 3, PACT_SIZE);
 
     //  XX should just preserve input buffer
-    mesa_etch_pact(sab_u.buf_y, pac_u);
+    c3_w res_w = mesa_etch_pact(sab_u.buf_y, pac_u);
+    #ifdef MESA_ROUNDTRIP
+      _mesa_check_etch(pac_u, sab_u.buf_y, res_w);
+    #endif
 
     cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
   }
@@ -2763,6 +2912,9 @@ _mesa_hear(u3_mesa* sam_u,
   pic_u->sam_u = sam_u;
 
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
+  #ifdef MESA_ROUNDTRIP
+    _mesa_check_sift(&pic_u->pac_u, hun_y, lin_w);
+  #endif
 
   if ( lin_w == 0 ) {
     // MESA_LOG(sam_u, SERIAL)
