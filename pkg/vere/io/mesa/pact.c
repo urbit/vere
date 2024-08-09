@@ -68,8 +68,8 @@ log_name(u3_mesa_name* nam_u)
 static void
 _log_data(u3_mesa_data* dat_u)
 {
-  fprintf(stderr, "tot_d: %" PRIu64 "  len_w: %u  ",
-                  dat_u->tot_d, dat_u->len_w);
+  fprintf(stderr, "tob_d: %" PRIu64 "  len_w: %u  ",
+                  dat_u->tob_d, dat_u->len_w);
 
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
@@ -345,12 +345,12 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
 
   c3_y tot_y = _mesa_bytes_of_chub_tag(met_u.bot_y);
   CHECK_BOUNDS(len_w, cur_w + tot_y);
-  dat_u->tot_d = 0;
+  dat_u->tob_d = 0;
   for( int i = 0; i < tot_y; i++ ) {
-    dat_u->tot_d |= (buf_y[cur_w] << (8*i));
+    dat_u->tob_d |= (buf_y[cur_w] << (8*i));
     cur_w++;
   }
-  u3l_log("dat_u->tot_d %"PRIu64, dat_u->tot_d);
+  u3l_log("dat_u->tob_d %"PRIu64, dat_u->tob_d);
 
   if ( c3y == met_u.aut_o ) {
     if ( c3y == met_u.auv_o ) {
@@ -698,7 +698,7 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     case AUTH_NONE: aut_y = 2; break;
     case AUTH_PAIR: aut_y = 3; break;
   }
-  c3_y bot_y = _mesa_make_chub_tag(dat_u->tot_d);
+  c3_y bot_y = _mesa_make_chub_tag(dat_u->tob_d);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   c3_y men_y = (3 >= nel_y) ? nel_y : 3;
   buf_y[cur_w] = (bot_y & 0x3) << 0
@@ -708,7 +708,7 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   c3_y tot_y = _mesa_bytes_of_chub_tag(bot_y);
 
   for (int i = 0; i < tot_y; i++ ) {
-    buf_y[cur_w] = (dat_u->tot_d >> (8 * i)) & 0xFF;
+    buf_y[cur_w] = (dat_u->tob_d >> (8 * i)) & 0xFF;
     cur_w++;
   }
   switch ( dat_u->aut_u.typ_e ) {
@@ -848,7 +848,7 @@ _mesa_size_data(u3_mesa_data* dat_u)
   c3_w siz_w = 1;
   u3_mesa_data_meta met_u;
 
-  met_u.bot_y = _mesa_make_chub_tag(dat_u->tot_d);
+  met_u.bot_y = _mesa_make_chub_tag(dat_u->tob_d);
   siz_w += _mesa_bytes_of_chub_tag(met_u.bot_y);
 
   switch ( dat_u->aut_u.typ_e ) {

@@ -169,7 +169,8 @@ typedef struct _u3_peer {
 typedef struct _u3_pend_req {
   u3_peer*               per_u; // backpointer
   c3_d                   nex_d; // number of the next fragment to be sent
-  c3_d                   tot_d; // total number of expected bytes
+  c3_d                   tof_d; // total number of expected fragments
+  c3_d                   tob_d; // total number of expected bytes
   u3_auth_data           aut_u; // message authenticator
   uv_timer_t             tim_u; // timehandler
   c3_y*                  dat_y; // ((mop @ud *) lte)
@@ -199,7 +200,7 @@ typedef struct _u3_mesa_line {
   u3_mesa_ctag typ_y;  //  pending or present?
   u3_mesa_name nam_u;  //  full name for data, ready to serialize
   u3_auth_data aut_u;  //  message authenticator
-  c3_w         tot_d;  //  number of bytes in whole message
+  c3_w         tob_d;  //  number of bytes in whole message
   c3_w         dat_w;  //  size in bytes of dat_y
   c3_w         len_w;  //  total allocated size, in bytes
   c3_y*        tip_y;  //  initial Merkle spine, nullable
@@ -304,7 +305,7 @@ _log_pend_req(u3_pend_req* req_u)
   }
   u3l_log("have: %"PRIu64, req_u->hav_d);
   u3l_log("next: %"PRIu64, req_u->nex_d);
-  u3l_log("total: %" PRIu64, req_u->tot_d);
+  u3l_log("total: %" PRIu64, req_u->tof_d);
   u3l_log("gage: %c", req_u->gag_u == NULL ? 'n' : 'y');
   //u3l_log("timer in: %" PRIu64 " ms", uv_timer_get_due_in(&req_u->tim_u));
 }
@@ -312,7 +313,7 @@ _log_pend_req(u3_pend_req* req_u)
 static void
 _log_mesa_data(u3_mesa_data dat_u)
 {
-  u3l_log("total frag: %" PRIu64, dat_u.tot_d);
+  u3l_log("total bytes: %" PRIu64, dat_u.tob_d);
   u3l_log("frag len: %u", dat_u.len_w);
   // u3l_log("frag: %xxx", dat_u.fra_y);
 }
@@ -805,7 +806,7 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 static inline c3_d
 _mesa_req_get_remaining(u3_pend_req* req_u)
 {
-  return req_u->tot_d - req_u->nex_d;
+  return req_u->tof_d - req_u->nex_d;
 }
 
 /*
@@ -866,7 +867,7 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
   }
 
   if ( req_u->lef_d != 0 && c3n == bitset_has(&req_u->was_u, req_u->lef_d) ) {
-    while (req_u->lef_d < mesa_num_leaves(req_u->tot_d)) {
+    while (req_u->lef_d < req_u->tof_d) {
       if ( c3y == bitset_has(&req_u->was_u, req_u->lef_d) ) {
         break;
       }
@@ -1139,9 +1140,9 @@ _mesa_packet_timeout(uv_timer_t* tim_u);
 static void
 _update_resend_timer(u3_pend_req *req_u)
 {
-  if( req_u->tot_d == 0 || req_u->hav_d == req_u->tot_d ) {
-    u3l_log("bad condition tot_d: %"PRIu64"  hav_d: %"PRIu64,
-            req_u->tot_d, req_u->hav_d);
+  if( req_u->tof_d == 0 || req_u->hav_d == req_u->tof_d ) {
+    u3l_log("bad condition tof_d: %"PRIu64"  hav_d: %"PRIu64,
+            req_u->tof_d, req_u->hav_d);
     return;
   }
   // scan in flight packets, find oldest
@@ -1218,9 +1219,9 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   u3_mesa* sam_u = req_u->per_u->sam_u; //  needed for the MESA_LOG macro
 
   // received past the end of the message
-  if ( dat_u->tot_d <= nam_u->fra_d ) {
-    u3l_log("strange tot_d %"PRIu64" fra_d %"PRIu64" req_u %"PRIu64,
-            dat_u->tot_d, nam_u->fra_d, req_u->hav_d);
+  if ( mesa_num_leaves(dat_u->tob_d) <= nam_u->fra_d ) {
+    u3l_log("strange tob_d %"PRIu64" fra_d %"PRIu64" req_u %"PRIu64,
+            dat_u->tob_d, nam_u->fra_d, req_u->hav_d);
     MESA_LOG(sam_u, STRANGE);
     //  XX: is this sufficient to drop whole request
     return;
@@ -1978,11 +1979,11 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
 
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
   {
-    dat_u->tot_d = lin_u->tot_d;
+    dat_u->tob_d = lin_u->tob_d;
     dat_u->aut_u = lin_u->aut_u;
     //  aut_u, len_w, and fra_y vary by fragment
   }
-  c3_d mev_d = mesa_num_leaves(dat_u->tot_d);
+  c3_d mev_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pro_w = lss_proof_size(mev_d);
 
   if ( pro_w > 0 ) {
@@ -2062,13 +2063,13 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
-    c3_d mev_d = (dat_u->tot_d + 1023) / 1024; // leaves in message
+    c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
-      (0 == jum_u.pag_u.nam_u.fra_d)?
-      0 :
-      lss_proof_size(mev_d);
+      (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?
+      lss_proof_size(mev_d) :
+      0;
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
-    c3_w lev_w = (dat_w + 1023) / 1024; // number of leaves in this frame
+    c3_w lev_w = mesa_num_leaves(dat_w); // number of leaves in this frame
     c3_w haz_w = lev_w * sizeof(lss_pair); // bytes in hash pairs
     c3_w len_w = tip_w + dat_w + haz_w;
 
@@ -2076,7 +2077,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->typ_y = CTAG_ITEM;
     _mesa_copy_name(&lin_u->nam_u, &jum_u.pek_u.nam_u);
     lin_u->aut_u = dat_u->aut_u;
-    lin_u->tot_d = dat_u->tot_d;
+    lin_u->tob_d = dat_u->tob_d;
     lin_u->dat_w = dat_w;
     lin_u->len_w = len_w;
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
@@ -2160,7 +2161,7 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
   c3_w nex_d = req_u->nex_d;
   for ( int i = 0; i < win_w; i++ ) {
     c3_w fra_w = nex_d + i;
-    if ( fra_w >= req_u->tot_d ) {
+    if ( fra_w >= req_u->tof_d ) {
       break;
     }
     nex_u->pac_u.pek_u.nam_u.fra_d = nex_d + i;
@@ -2224,13 +2225,14 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->pic_u->pac_u.pek_u.nam_u.aut_o = c3n;
   req_u->aut_u = dat_u->aut_u;
 
-  c3_w siz_w = 1 << (pac_u->pag_u.nam_u.boq_y - 3);
-  u3_assert( 1024 == siz_w ); // boq_y == 13
+  u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
   req_u->gag_u = gag_u;
-  req_u->dat_y = c3_calloc(siz_w * dat_u->tot_d);
-  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * dat_u->tot_d + 2 );
-  req_u->tot_d = mesa_num_leaves(dat_u->tot_d);
-  bitset_init(&req_u->was_u, req_u->tot_d);
+  req_u->tob_d = dat_u->tob_d;
+  req_u->tof_d = mesa_num_leaves(dat_u->tob_d); // NOTE: only correct for bloq 13!
+  assert( req_u->tof_d != 1 ); // these should be injected directly by _mesa_hear_page
+  req_u->dat_y = c3_calloc(dat_u->tob_d);
+  req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * req_u->tof_d + 2 );
+  bitset_init(&req_u->was_u, req_u->tof_d);
 
   // TODO: handle restart
   // u3_assert( nam_u->fra_w == 0 );
@@ -2241,7 +2243,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->old_d = 0;
   req_u->ack_d = 0;
 
-  c3_w pof_w = lss_proof_size(req_u->tot_d);
+  c3_w pof_w = lss_proof_size(req_u->tof_d);
   lss_hash* pof_u = c3_calloc(pof_w * sizeof(lss_hash));
   if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
     return; // TODO: handle like other auth failures
@@ -2252,7 +2254,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   lss_hash root;
   lss_root(root, pof_u, pof_w);
   req_u->los_u = c3_calloc(sizeof(lss_verifier));
-  lss_verifier_init(req_u->los_u, 0, req_u->tot_d, pof_u);
+  lss_verifier_init(req_u->los_u, 0, req_u->tof_d, pof_u);
   c3_free(pof_u);
 
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
@@ -2443,8 +2445,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   // process incoming response to ourselves
   // TODO: memory management, maybe free pict and pact
 
-  // if single-fragment message, inject directly into Arvo
-  c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tot_d);
+  // if single-leaf message, inject directly into Arvo
+  c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   if ( 1 == lev_d ) {
     u3_noun cad;
     {
@@ -2513,9 +2515,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
-    u3l_log(" received last packet, tot_d: %llu", req_u->tot_d);
+    u3l_log(" received last packet, tot_d: %llu", req_u->tof_d);
     c3_d now_d = _get_now_micros();
-    u3l_log("%llu kilobytes took %f ms", req_u->tot_d, (now_d - sam_u->tim_d)/1000.0);
+    u3l_log("%llu kilobytes took %f ms", req_u->tof_d, (now_d - sam_u->tim_d)/1000.0);
 
     {
       // construct jumbo frame
@@ -2523,7 +2525,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       u3_noun pac;
       {
         pac_u->pag_u.nam_u.boq_y = boq_y;
-        pac_u->pag_u.dat_u.tot_d = req_u->tot_d;
+        pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
         pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
         pac_u->pag_u.dat_u.len_w += (1024 * (lev_d - 1));
         pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
@@ -2722,7 +2724,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
            ovo = u3_auto_plan(&sam_u->car_u, ovo);
 
     //  XX check request state for *payload* (in-progress duplicate)
-    assert(pac_u->pok_u.dat_u.tot_d);
+    assert(pac_u->pok_u.dat_u.tob_d);
     u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
     {
       dat_u->nam_u = c3_malloc(sizeof(u3_mesa_name));

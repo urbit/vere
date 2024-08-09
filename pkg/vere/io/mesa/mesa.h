@@ -76,7 +76,7 @@ typedef struct _u3_auth_data {
 } u3_auth_data;
 
 typedef struct _u3_mesa_data {
-  c3_d                tot_d;  // total bytes in message
+  c3_d                tob_d;  // total bytes in message
   u3_auth_data        aut_u;  // authentication
   c3_w                len_w;  // fragment length
   c3_y*               fra_y;  // fragment
