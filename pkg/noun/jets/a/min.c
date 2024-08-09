@@ -13,6 +13,9 @@ u3qa_min(u3_atom a, u3_atom b)
     return u3k(c3_min(a, b));
   }
   else {
+    if ( (a == 0) || (b == 0) ) {
+      return 0;
+    }
     c3_w a_w = u3r_met(0, a);
     c3_w b_w = u3r_met(0, b);
 
