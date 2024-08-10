@@ -11,6 +11,9 @@
         .curl = .{
             .path = "./ext/curl",
         },
+        .gmp = .{
+            .path = "./ext/gmp",
+        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },
