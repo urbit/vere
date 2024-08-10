@@ -4,6 +4,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const openssl = b.dependency("openssl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const h2o_c = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
@@ -15,6 +20,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    h2o.linkLibrary(openssl.artifact("ssl"));
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
