@@ -1,0 +1,16 @@
+.{
+    .name = "gmp",
+    .version = "0.0.1",
+    .dependencies = .{
+        .gmp = .{
+            .url = "https://github.com/alisw/GMP/archive/refs/tags/v6.2.1.tar.gz",
+            .hash = "12209dd340fd48ad775604d2d4e95155dcf106b8f6c63dd054641d606e2007d806f4",
+        },
+        .gen_srcs = .{
+            .path = "./src",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
