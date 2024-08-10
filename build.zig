@@ -42,5 +42,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(curl.artifact("curl"));
 
+    const gmp = b.dependency("gmp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(gmp.artifact("gmp"));
+
     b.installArtifact(exe);
 }
