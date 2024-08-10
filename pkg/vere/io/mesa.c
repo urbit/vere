@@ -305,7 +305,7 @@ _mesa_check_auth_datas_equal(u3_auth_data* aut_u, u3_auth_data* aot_u)
       u3_assert( 0 == memcmp(aut_u->sig_y, aot_u->sig_y, 64) );
     } break;
     case AUTH_HMAC: {
-      u3_assert( 0 == memcmp(aut_u->mac_y, aot_u->mac_y, 32) );
+      u3_assert( 0 == memcmp(aut_u->mac_y, aot_u->mac_y, 16) );
     } break;
     case AUTH_NONE: {} break;
     case AUTH_PAIR: {
@@ -2418,7 +2418,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     break;
   case AUTH_HMAC:
     typ = c3__hmac;
-    aut = u3dc("scot", c3__uv, u3i_bytes(32, dat_u->aut_u.mac_y));
+    aut = u3dc("scot", c3__uv, u3i_bytes(16, dat_u->aut_u.mac_y));
     break;
   default:
     return; // TODO: handle like other auth failures

@@ -85,7 +85,7 @@ _log_data(u3_mesa_data* dat_u)
 
     case AUTH_HMAC: {
       fprintf(stderr, "hmac: ");
-      _log_buf(dat_u->aut_u.mac_y, 32);
+      _log_buf(dat_u->aut_u.mac_y, 16);
     } break;
 
     case AUTH_NONE: {
@@ -368,9 +368,9 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
       u3l_log("AUTH_SIGN");
     }
     else {
-      CHECK_BOUNDS(len_w, cur_w + 32);
-      memcpy(dat_u->aut_u.mac_y, buf_y + cur_w, 32);
-      cur_w += 32;
+      CHECK_BOUNDS(len_w, cur_w + 16);
+      memcpy(dat_u->aut_u.mac_y, buf_y + cur_w, 16);
+      cur_w += 16;
       dat_u->aut_u.typ_e = AUTH_HMAC;
       u3l_log("AUTH_HMAC");
     }
@@ -736,8 +736,8 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
     } break;
 
     case AUTH_HMAC: {
-      memcpy(buf_y + cur_w, dat_u->aut_u.mac_y, 32);
-      cur_w += 32;
+      memcpy(buf_y + cur_w, dat_u->aut_u.mac_y, 16);
+      cur_w += 16;
     } break;
 
     case AUTH_NONE: {
@@ -745,7 +745,7 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
 
     case AUTH_PAIR: {
       memcpy(buf_y + cur_w, dat_u->aut_u.has_y, 64);
-      cur_w += 32;
+      cur_w += 64;
     } break;
   }
 
@@ -875,7 +875,7 @@ _mesa_size_data(u3_mesa_data* dat_u)
     } break;
 
     case AUTH_HMAC: {
-      siz_w += 32;
+      siz_w += 16;
     } break;
 
     case AUTH_NONE: {

@@ -71,7 +71,7 @@ typedef struct _u3_auth_data {
   u3_mesa_auth_type typ_e;     // none, traversal (none), sig, or hmac
   union {                      //
     c3_y        sig_y[64];     // signature
-    c3_y        mac_y[32];     // hmac
+    c3_y        mac_y[16];     // hmac
     c3_y        has_y[2][32];  // hashes
   };
 } u3_auth_data;
