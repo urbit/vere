@@ -6,19 +6,15 @@
 
 #include "noun.h"
 
-u3_noun
-u3qa_max(u3_noun a, u3_noun b)
+u3_atom
+u3qa_max(u3_atom a, u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
     return c3_max(a, b);
   }
   else {
     if ( a == 0 ) return u3k(b);
-    if ( b == 0 ) return u3k(a);
-    if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
-      if ( _(u3r_sing(a, b)) ) return u3k(a);
-      else return u3m_bail(c3__exit);
-    }
+    if ( b == 0 ) return u3k(a); 
     c3_w a_w = u3r_met(0, a);
     c3_w b_w = u3r_met(0, b);
 
@@ -42,19 +38,22 @@ u3qa_max(u3_noun a, u3_noun b)
   }
 }
 
-u3_noun
+u3_weak
 u3wa_max(u3_noun cor)
 {
-  u3_noun a, b;
+  u3_atom a, b;
 
   u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
+    return u3_none;
+  }
   return u3qa_max(a, b);
 }
 
-u3_noun
-u3ka_max(u3_noun a, u3_noun b)
+u3_atom
+u3ka_max(u3_atom a, u3_atom b)
 {
-  u3_noun c = u3qa_max(a, b);
+  u3_atom c = u3qa_max(a, b);
   u3z(a); u3z(b);
   return c;
 }
