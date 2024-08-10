@@ -44,7 +44,7 @@ u3qa_gte(u3_atom a, u3_atom b)
 u3_weak
 u3wa_gte(u3_noun cor)
 {
-  u3_atom a, b;
+  u3_noun a, b;
 
   u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
   if ( !_(u3ud(a)) || !_(u3ud(b)) ) {

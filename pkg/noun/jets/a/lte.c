@@ -27,7 +27,7 @@ u3qa_lte(u3_atom a, u3_atom b)
     }
     else {
       mpz_t   a_mp, b_mp;
-      u3_noun cmp;
+      u3_atom cmp;
 
       u3r_mp(a_mp, a);
       u3r_mp(b_mp, b);
@@ -45,7 +45,7 @@ u3qa_lte(u3_atom a, u3_atom b)
 u3_weak
 u3wa_lte(u3_noun cor)
 {
-  u3_atom a, b;
+  u3_noun a, b;
 
   u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
   if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
