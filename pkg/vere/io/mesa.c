@@ -71,17 +71,12 @@ typedef struct _u3_mesa_stat {
 #define MESA_DESC_DUPE "dropped packet (duplicate)"
 #define MESA_FIELD_DUPE dup_w
 
-#define IN_FLIGHT  10
-
 // routing table sentinels
 #define MESA_CZAR         1  // pending dns lookup
 #define MESA_ROUT         2  // have route
 //
 // hop enum
 
-#define SIFT_VAR(dest, src, len) dest = 0; for(int i = 0; i < len; i++ ) { dest |= ((src + i) >> (8*i)); }
-#define CHECK_BOUNDS(cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; }
-#define safe_dec(num) (num == 0 ? num : num - 1)
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
 
 struct _u3_mesa_pact;
@@ -246,69 +241,65 @@ get_millis() {
 }
 
 //  assertion helpers named by aura tag
-static void
-_assert_eq_f(c3_o a, c3_o b)
-{
-  if ( a != b ) {
-    u3l_log("%s != %s", __(a)? "&" : "|", __(b)? "&" : "|");
-    u3m_bail(c3__oops);
+//
+#define _assert_eq_f(a, b)                                          \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %s != %s", __LINE__,                        \
+            __(a)? "&" : "|",                                       \
+            __(b)? "&" : "|");                                      \
+    u3m_bail(c3__oops);                                             \
   }
-}
+#define _assert_eq_udF(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %u != %u", __LINE__, a, b);                 \
+    u3m_bail(c3__oops);                                             \
+  }
 
-static void
-_assert_eq_udG(c3_d a, c3_d b)
-{
-  if ( a != b ) {
-    u3l_log("%"PRIu64" != %"PRIu64, a, b);
-    u3m_bail(c3__oops);
+#define _assert_eq_udG(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %"PRIu64" != %"PRIu64, __LINE__, a, b);     \
+    u3m_bail(c3__oops);                                             \
   }
-}
 
-static void
-_assert_eq_uxF(c3_w a, c3_w b)
-{
-  if ( a != b ) {
-    u3l_log("0x%08x != 0x%08x", a, b);
-    u3m_bail(c3__oops);
+#define _assert_eq_uxF(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c: %u  0x%08x != 0x%08x", __LINE__, a, b);        \
+    u3m_bail(c3__oops);                                             \
   }
-}
 
-static void
-_assert_eq_uxG(c3_d a, c3_d b)
-{
-  if ( a != b ) {
-    u3l_log("0x%016llx != 0x%016llx", a, b);
-    u3m_bail(c3__oops);
+#define _assert_eq_uxG(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c: %u  0x%016llx != 0x%016llx", __LINE__, a, b);  \
+    u3m_bail(c3__oops);                                             \
   }
-}
 
 static void
 _mesa_check_heads_equal(u3_mesa_head* hed_u, u3_mesa_head* hod_u)
 {
-  _assert_eq_udG(hed_u->hop_y, hed_u->hop_y);
+  _assert_eq_udF(hed_u->hop_y, hed_u->hop_y);
   _assert_eq_uxF(hed_u->mug_w, hed_u->mug_w);
-  _assert_eq_udG(hed_u->nex_y, hed_u->nex_y);
-  _assert_eq_udG(hed_u->pro_y, hed_u->pro_y);
-  _assert_eq_udG(hed_u->typ_y, hed_u->typ_y);
+  _assert_eq_udF(hed_u->nex_y, hed_u->nex_y);
+  _assert_eq_udF(hed_u->pro_y, hed_u->pro_y);
+  _assert_eq_udF(hed_u->typ_y, hed_u->typ_y);
 }
 
 static void
 _mesa_check_names_equal(u3_mesa_name* nam_u, u3_mesa_name* nom_u)
 {
-  u3_assert( u3_ships_equal(nam_u->her_u, nom_u->her_u) );
-  _assert_eq_udG(nam_u->rif_w, nom_u->rif_w);
-  _assert_eq_udG(nam_u->boq_y, nom_u->boq_y);
+  u3_assert( __(u3_ships_equal(nam_u->her_u, nom_u->her_u)) );
+  _assert_eq_udF(nam_u->rif_w, nom_u->rif_w);
+  _assert_eq_udF(nam_u->boq_y, nom_u->boq_y);
   _assert_eq_f(nam_u->nit_o, nom_u->nit_o);
   _assert_eq_f(nam_u->aut_o, nom_u->aut_o);
   _assert_eq_udG(nam_u->fra_d, nom_u->fra_d);
-  _assert_eq_udG(nam_u->pat_s, nom_u->pat_s);
+  _assert_eq_udF(nam_u->pat_s, nom_u->pat_s);
   u3_assert( 0 == memcmp(nam_u->pat_c, nom_u->pat_c, nam_u->pat_s + 1) );
 }
 
 static void
 _mesa_check_auth_datas_equal(u3_auth_data* aut_u, u3_auth_data* aot_u)
 {
-  _assert_eq_udG(aut_u->typ_e, aot_u->typ_e);
+  _assert_eq_udF(aut_u->typ_e, aot_u->typ_e);
   switch ( aut_u->typ_e ) {
     case AUTH_SIGN: {
       u3_assert( 0 == memcmp(aut_u->sig_y, aot_u->sig_y, 64) );
@@ -329,8 +320,30 @@ _mesa_check_datas_equal(u3_mesa_data* dat_u, u3_mesa_data* dot_u)
 {
   _assert_eq_udG(dat_u->tob_d, dot_u->tob_d);
   _mesa_check_auth_datas_equal(&dat_u->aut_u, &dot_u->aut_u);
-  _assert_eq_udG(dat_u->len_w, dot_u->len_w);
+  _assert_eq_udF(dat_u->len_w, dot_u->len_w);
   u3_assert( 0 == memcmp(dat_u->fra_y, dot_u->fra_y, dat_u->len_w) );
+}
+
+static void
+_mesa_check_pacts_equal(u3_mesa_pact* pac_u, u3_mesa_pact* poc_u)
+{
+  _mesa_check_heads_equal(&poc_u->hed_u, &pac_u->hed_u);
+
+  switch ( poc_u->hed_u.typ_y ) {
+    case PACT_PEEK: {
+      _mesa_check_names_equal(&poc_u->pek_u.nam_u, &pac_u->pek_u.nam_u);
+    } break;
+    case PACT_POKE: {
+      _mesa_check_names_equal(&poc_u->pok_u.nam_u, &pac_u->pok_u.nam_u);
+      _mesa_check_names_equal(&poc_u->pok_u.pay_u, &pac_u->pok_u.pay_u);
+      _mesa_check_datas_equal(&poc_u->pok_u.dat_u, &pac_u->pok_u.dat_u);
+    } break;
+    case PACT_PAGE: {
+      _mesa_check_names_equal(&poc_u->pag_u.nam_u, &pac_u->pag_u.nam_u);
+      _mesa_check_datas_equal(&poc_u->pag_u.dat_u, &pac_u->pag_u.dat_u);
+    } break;
+    default: u3_assert(!"unreachable");
+  }
 }
 
 static void
@@ -338,36 +351,27 @@ _mesa_check_etch(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
   u3_mesa_pact poc_u;
   c3_w lon_w = mesa_sift_pact(&poc_u, buf_y, len_w);
-  _assert_eq_udG(lon_w, len_w);
-
-  _mesa_check_heads_equal(&poc_u.hed_u, &pac_u->hed_u);
-
-  switch ( poc_u.hed_u.typ_y ) {
-    case PACT_PEEK: {
-      _mesa_check_names_equal(&poc_u.pek_u.nam_u, &pac_u->pek_u.nam_u);
-    } break;
-    case PACT_POKE: {
-      _mesa_check_names_equal(&poc_u.pok_u.nam_u, &pac_u->pok_u.nam_u);
-      _mesa_check_names_equal(&poc_u.pok_u.pay_u, &pac_u->pok_u.pay_u);
-      _mesa_check_datas_equal(&poc_u.pok_u.dat_u, &pac_u->pok_u.dat_u);
-    } break;
-    case PACT_PAGE: {
-      _mesa_check_names_equal(&poc_u.pag_u.nam_u, &pac_u->pag_u.nam_u);
-      _mesa_check_datas_equal(&poc_u.pag_u.dat_u, &pac_u->pag_u.dat_u);
-    } break;
-    default: u3_assert(!"unreachable");
-  }
+  _assert_eq_udF(lon_w, len_w);
+  _mesa_check_pacts_equal(&poc_u, pac_u);
   mesa_free_pact(&poc_u);
+  u3l_log("mesa: checked etch");
 }
 
 static void
 _mesa_check_sift(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
 {
+  u3l_log("checking sift");
   c3_y* bof_y = c3_calloc(len_w);
   c3_w lon_w = mesa_etch_pact(bof_y, pac_u);
-  _assert_eq_udG( lon_w, len_w );
+  //_assert_eq_udF( lon_w, len_w );
+  u3_mesa_pact poc_u;
+  u3l_log("re-sifting");
+  mesa_sift_pact(&poc_u, bof_y, PACT_SIZE); //  TODO jumbo frames
+  _mesa_check_pacts_equal(&poc_u, pac_u);
+
   u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
   c3_free(bof_y);
+  u3l_log("mesa: checked sift");
 }
 
 static void

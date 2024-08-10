@@ -39,16 +39,20 @@ _log_buf(c3_y* buf_y, c3_w len_w)
   fprintf(stderr, "\r\n");
 }
 
+static void
+_log_name_meta(u3_mesa_name_meta* met_u)
+{
+  u3l_log("meta");
+  u3l_log("rank: %u", met_u->ran_y);
+  u3l_log("rift length: %u", met_u->rif_y);
+  u3l_log("nit: %u", met_u->nit_y);
+  u3l_log("tau: %u", met_u->tau_y);
+  u3l_log("frag num length: %u", met_u->gaf_y);
+}
+
 void
 log_name(u3_mesa_name* nam_u)
 {
-  // u3l_log("meta");
-  // u3l_log("rank: %u", nam_u->met_u.ran_y);
-  // u3l_log("rift length: %u", nam_u->met_u.rif_y);
-  // u3l_log("nit: %u", nam_u->met_u.nit_y);
-  // u3l_log("tau: %u", nam_u->met_u.tau_y);
-  // u3l_log("frag num length: %u", nam_u->met_u.gaf_y);
-
   c3_c* her_c;
   {
     u3_noun her = u3dc("scot", c3__p, u3_ship_to_noun(nam_u->her_u));
@@ -64,6 +68,7 @@ log_name(u3_mesa_name* nam_u)
           nam_u->fra_d
   );
   c3_free(her_c);
+  fflush(stderr);
 }
 
 static void
@@ -94,6 +99,7 @@ _log_data(u3_mesa_data* dat_u)
     } break;
   }
   fprintf(stderr, "\r\n");
+  fflush(stderr);
 }
 
 
@@ -264,7 +270,7 @@ static c3_w
 _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
 {
 //#ifdef MESA_DEBUG
-  u3l_log("mesa: sifting name %i", len_w);
+  u3l_log("mesa: sifting name %u", len_w);
 //#endif
 
   c3_w cur_w = 0;
