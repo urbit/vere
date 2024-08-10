@@ -25,7 +25,11 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#if defined(URBIT_RUNTIME_CPU_AARCH64)
+#include "sse2neon.h"
+#else
 #include <emmintrin.h>
+#endif
 #include "ksw.h"
 
 #ifdef __GNUC__

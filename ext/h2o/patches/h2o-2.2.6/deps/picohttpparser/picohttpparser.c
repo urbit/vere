@@ -28,7 +28,9 @@
 #include <stddef.h>
 #include <string.h>
 #ifdef __SSE4_2__
-#ifdef _MSC_VER
+#if defined(URBIT_RUNTIME_CPU_AARCH64)
+#include "sse2neon.h"
+#elif defined(_MSC_VER)
 #include <nmmintrin.h>
 #else
 #include <x86intrin.h>
@@ -36,7 +38,7 @@
 #endif
 #include "picohttpparser.h"
 
-/* $Id: a707070d11d499609f99d09f97535642cec910a8 $ */
+/* $Id: 376b401445aeea5fc39b0d3f020fc2fa0c69b69b $ */
 
 #if __GNUC__ >= 3
 #define likely(x) __builtin_expect(!!(x), 1)

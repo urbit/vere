@@ -1,7 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#if defined(URBIT_RUNTIME_CPU_AARCH64)
+#include "sse2neon.h"
+#else
 #include <emmintrin.h>
+#endif
 #include "kbit.h"
 
 // from bowtie-0.9.8.1
