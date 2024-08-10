@@ -279,7 +279,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   met_u.gaf_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
-  // XX ?:(=(1 tau.c) %auth %data)
+  nam_u->nit_o = ( met_u.nit_y ) ? c3y : c3n;
   nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
 
   c3_y her_y = 2 << met_u.ran_y;
@@ -299,10 +299,10 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   nam_u->boq_y = buf_y[cur_w];
   cur_w++;
 
+  nam_u->fra_d = 0;
   if ( met_u.nit_y ) {
     assert( !met_u.tau_y );
     // XX init packet
-    nam_u->fra_d = 0;
     u3l_log("name: init");
   }
   else {
