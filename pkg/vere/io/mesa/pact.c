@@ -308,6 +308,7 @@ _mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
   nam_u->fra_d = 0;
   if ( met_u.nit_y ) {
     assert( !met_u.tau_y );
+    assert( !met_u.gaf_y );
     // XX init packet
     u3l_log("name: init");
   }
