@@ -366,7 +366,8 @@ _mesa_check_sift(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   //_assert_eq_udF( lon_w, len_w );
   u3_mesa_pact poc_u;
   u3l_log("re-sifting");
-  mesa_sift_pact(&poc_u, bof_y, PACT_SIZE); //  TODO jumbo frames
+  mesa_sift_pact(&poc_u, bof_y, lon_w); //  TODO jumbo frames
+  // mesa_sift_pact(&poc_u, bof_y, PACT_SIZE); //  TODO jumbo frames
   _mesa_check_pacts_equal(&poc_u, pac_u);
 
   u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
