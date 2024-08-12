@@ -1,4 +1,5 @@
 #include "mesa.h"
+#include <defs.h>
 #include <log.h>
 #include <stdio.h>
 // only need for tests, can remove
@@ -10,9 +11,114 @@
 #define DEF_TEXT    "\033[0m"
 // endif tests
 
-#define CHECK_BOUNDS(len_w, cur) if ( len_w < cur ) { u3l_log("mesa: failed parse (%u,%u) at line %i", len_w, cur, __LINE__); return 0; };
 #define safe_dec(num) (num == 0 ? num : num - 1)
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
+
+// assertions for roundtrip tests
+#define MESA_ROUNDTRIP c3y
+#define _assert_eq_f(a, b)                                          \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %s != %s", __LINE__,                        \
+            __(a)? "&" : "|",                                       \
+            __(b)? "&" : "|");                                      \
+    u3m_bail(c3__oops);                                             \
+  }
+#define _assert_eq_udF(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %u != %u", __LINE__, a, b);                 \
+    u3m_bail(c3__oops);                                             \
+  }
+
+#define _assert_eq_udG(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c:%u  %"PRIu64" != %"PRIu64, __LINE__, a, b);     \
+    u3m_bail(c3__oops);                                             \
+  }
+
+#define _assert_eq_uxF(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c: %u  0x%08x != 0x%08x", __LINE__, a, b);        \
+    u3m_bail(c3__oops);                                             \
+  }
+
+#define _assert_eq_uxG(a, b)                                        \
+  if ( a != b ) {                                                   \
+    u3l_log("mesa.c: %u  0x%016llx != 0x%016llx", __LINE__, a, b);  \
+    u3m_bail(c3__oops);                                             \
+  }
+
+static void
+_mesa_check_heads_equal(u3_mesa_head* hed_u, u3_mesa_head* hod_u)
+{
+  _assert_eq_udF(hed_u->hop_y, hed_u->hop_y);
+  _assert_eq_uxF(hed_u->mug_w, hed_u->mug_w);
+  _assert_eq_udF(hed_u->nex_y, hed_u->nex_y);
+  _assert_eq_udF(hed_u->pro_y, hed_u->pro_y);
+  _assert_eq_udF(hed_u->typ_y, hed_u->typ_y);
+}
+
+static void
+_mesa_check_names_equal(u3_mesa_name* nam_u, u3_mesa_name* nom_u)
+{
+  u3_assert( __(u3_ships_equal(nam_u->her_u, nom_u->her_u)) );
+  _assert_eq_udF(nam_u->rif_w, nom_u->rif_w);
+  _assert_eq_udF(nam_u->boq_y, nom_u->boq_y);
+  _assert_eq_f(nam_u->nit_o, nom_u->nit_o);
+  _assert_eq_f(nam_u->aut_o, nom_u->aut_o);
+  _assert_eq_udG(nam_u->fra_d, nom_u->fra_d);
+  _assert_eq_udF(nam_u->pat_s, nom_u->pat_s);
+  u3_assert( 0 == memcmp(nam_u->pat_c, nom_u->pat_c, nam_u->pat_s + 1) );
+}
+
+static void
+_mesa_check_auth_datas_equal(u3_auth_data* aut_u, u3_auth_data* aot_u)
+{
+  _assert_eq_udF(aut_u->typ_e, aot_u->typ_e);
+  switch ( aut_u->typ_e ) {
+    case AUTH_SIGN: {
+      u3_assert( 0 == memcmp(aut_u->sig_y, aot_u->sig_y, 64) );
+    } break;
+    case AUTH_HMAC: {
+      u3_assert( 0 == memcmp(aut_u->mac_y, aot_u->mac_y, 16) );
+    } break;
+    case AUTH_NONE: {} break;
+    case AUTH_PAIR: {
+      u3_assert( 0 == memcmp(aut_u->has_y, aot_u->has_y, 64) );
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+}
+
+static void
+_mesa_check_datas_equal(u3_mesa_data* dat_u, u3_mesa_data* dot_u)
+{
+  _assert_eq_udG(dat_u->tob_d, dot_u->tob_d);
+  _mesa_check_auth_datas_equal(&dat_u->aut_u, &dot_u->aut_u);
+  _assert_eq_udF(dat_u->len_w, dot_u->len_w);
+  u3_assert( 0 == memcmp(dat_u->fra_y, dot_u->fra_y, dat_u->len_w) );
+}
+
+static void
+_mesa_check_pacts_equal(u3_mesa_pact* pac_u, u3_mesa_pact* poc_u)
+{
+  _mesa_check_heads_equal(&poc_u->hed_u, &pac_u->hed_u);
+
+  switch ( poc_u->hed_u.typ_y ) {
+    case PACT_PEEK: {
+      _mesa_check_names_equal(&poc_u->pek_u.nam_u, &pac_u->pek_u.nam_u);
+    } break;
+    case PACT_POKE: {
+      _mesa_check_names_equal(&poc_u->pok_u.nam_u, &pac_u->pok_u.nam_u);
+      _mesa_check_names_equal(&poc_u->pok_u.pay_u, &pac_u->pok_u.pay_u);
+      _mesa_check_datas_equal(&poc_u->pok_u.dat_u, &pac_u->pok_u.dat_u);
+    } break;
+    case PACT_PAGE: {
+      _mesa_check_names_equal(&poc_u->pag_u.nam_u, &pac_u->pag_u.nam_u);
+      _mesa_check_datas_equal(&poc_u->pag_u.dat_u, &pac_u->pag_u.dat_u);
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+}
 
 /* Logging functions
 */
@@ -28,7 +134,6 @@ _log_head(u3_mesa_head* hed_u)
   u3l_log("hopcount: %u", hed_u->hop_y);
   u3l_log("");
 }
-
 
 static void
 _log_buf(c3_y* buf_y, c3_w len_w)
@@ -225,424 +330,250 @@ void mesa_free_pact(u3_mesa_pact* pac_u)
   }
 }
 
-/* deserialisation
-*/
-
-static void
-_ames_etch_word(c3_y buf_y[4], c3_w wod_w)
-{
-  buf_y[0] = wod_w         & 0xff;
-  buf_y[1] = (wod_w >>  8) & 0xff;
-  buf_y[2] = (wod_w >> 16) & 0xff;
-  buf_y[3] = (wod_w >> 24) & 0xff;
-}
-
-static inline c3_w
-_ames_sift_word(c3_y buf_y[4])
-{
-  return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
-}
-
-c3_o
-mesa_sift_head(c3_y buf_y[8], u3_mesa_head* hed_u)
-{
-  if ( memcmp(buf_y + 4, &MESA_COOKIE, MESA_COOKIE_LEN) ) {
-    return c3n;
-  }
-  c3_w hed_w = _ames_sift_word(buf_y);
-
-  hed_u->nex_y = (hed_w >> 2)  & 0x3;
-  hed_u->pro_y = (hed_w >> 4)  & 0x7;
-  hed_u->typ_y = (hed_w >> 7)  & 0x3;
-  hed_u->hop_y = (hed_w >> 9)  & 0x7;
-  hed_u->mug_w = (hed_w >> 12) & 0xFFFFF;
-
-  assert( 1 == hed_u->pro_y );
-
-  return c3y;
-
-  /*if(c3o((hed_u->typ_y == PACT_PEEK), (hed_u->typ_y == PACT_POKE))) {
-    hed_u->ran_y = (hed_w >> 30) & 0x3;
-  }*/
-}
-
-static c3_w
-_mesa_sift_name(u3_mesa_name* nam_u, c3_y* buf_y, c3_w len_w)
-{
-//#ifdef MESA_DEBUG
-  u3l_log("mesa: sifting name %u", len_w);
-//#endif
-
-  c3_w cur_w = 0;
-  u3_mesa_name_meta met_u;
-
-  CHECK_BOUNDS(len_w, cur_w + 1);
-  c3_y met_y = buf_y[cur_w];
-  met_u.ran_y = (met_y >> 0) & 0x3;
-  met_u.rif_y = (met_y >> 2) & 0x3;
-  met_u.nit_y = (met_y >> 4) & 0x1;
-  met_u.tau_y = (met_y >> 5) & 0x1;
-  met_u.gaf_y = (met_y >> 6) & 0x3;
-  cur_w += 1;
-
-  nam_u->nit_o = ( met_u.nit_y ) ? c3y : c3n;
-  nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
-
-  c3_y her_y = 2 << met_u.ran_y;
-  CHECK_BOUNDS(len_w, cur_w + her_y);
-  u3_ship_of_bytes(nam_u->her_u, her_y, buf_y + cur_w);
-  cur_w += her_y;
-
-  c3_y rif_y = met_u.rif_y + 1;
-  nam_u->rif_w = 0;
-  CHECK_BOUNDS(len_w, cur_w + rif_y);
-  for( int i = 0; i < rif_y; i++ ) {
-    nam_u->rif_w |= (buf_y[cur_w] << (8*i));
-    cur_w++;
-  }
-
-  CHECK_BOUNDS(len_w, cur_w + 1);
-  nam_u->boq_y = buf_y[cur_w];
-  cur_w++;
-
-  nam_u->fra_d = 0;
-  if ( met_u.nit_y ) {
-    assert( !met_u.tau_y );
-    assert( !met_u.gaf_y );
-    // XX init packet
-    u3l_log("name: init");
-  }
-  else {
-    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
-    CHECK_BOUNDS(len_w, cur_w + fag_y);
-    for ( int i = 0; i < fag_y; i++ ) {
-      nam_u->fra_d |= (buf_y[cur_w] << (8*i));
-      cur_w++;
-    }
-    u3l_log("name: fag_y: %u   nam_u->fra_d %"PRIu64, fag_y, nam_u->fra_d);
-  }
-
-  CHECK_BOUNDS(len_w, cur_w + 2);
-  nam_u->pat_s = buf_y[cur_w]
-               | (buf_y[cur_w + 1] << 8);
-  cur_w += 2;
-  u3l_log("nam_u->pat_s %u", nam_u->pat_s);
-
-  nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); // unix string for ease of manipulation
-  CHECK_BOUNDS(len_w, cur_w + nam_u->pat_s);
-  memcpy(nam_u->pat_c, buf_y + cur_w, nam_u->pat_s);
-  nam_u->pat_c[nam_u->pat_s] = 0;
-  cur_w += nam_u->pat_s;
-
-  return cur_w;
-}
-
-static c3_w
-_mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
-{
-  c3_w cur_w = 0;
-  u3_mesa_data_meta met_u;
-
-  CHECK_BOUNDS(len_w, cur_w + 1);
-  c3_y met_y = buf_y[cur_w];
-  met_u.bot_y = (met_y >> 0) & 0x3;
-  met_u.auv_o = (met_y >> 2) & 0x1;
-  met_u.aut_o = (met_y >> 3) & 0x1;
-  met_u.men_y = (met_y >> 6) & 0x3;
-  cur_w += 1;
-
-  c3_y tot_y = _mesa_bytes_of_chub_tag(met_u.bot_y);
-  CHECK_BOUNDS(len_w, cur_w + tot_y);
-  dat_u->tob_d = 0;
-  for( int i = 0; i < tot_y; i++ ) {
-    dat_u->tob_d |= (buf_y[cur_w] << (8*i));
-    cur_w++;
-  }
-  u3l_log("dat_u->tob_d %"PRIu64, dat_u->tob_d);
-
-  if ( c3y == met_u.aut_o ) {
-    if ( c3y == met_u.auv_o ) {
-      CHECK_BOUNDS(len_w, cur_w + 64);
-      memcpy(dat_u->aut_u.sig_y, buf_y + cur_w, 64);
-      cur_w += 64;
-      dat_u->aut_u.typ_e = AUTH_SIGN;
-      u3l_log("AUTH_SIGN");
-    }
-    else {
-      CHECK_BOUNDS(len_w, cur_w + 16);
-      memcpy(dat_u->aut_u.mac_y, buf_y + cur_w, 16);
-      cur_w += 16;
-      dat_u->aut_u.typ_e = AUTH_HMAC;
-      u3l_log("AUTH_HMAC");
-    }
-  }
-  else {
-    if ( c3y == met_u.auv_o ) {
-      dat_u->aut_u.typ_e = AUTH_NONE;
-      u3l_log("AUTH_NONE");
-    } else {
-      CHECK_BOUNDS(len_w, cur_w + 64);
-      memcpy(dat_u->aut_u.has_y, buf_y + cur_w, 64);
-      cur_w += 64;
-      dat_u->aut_u.typ_e = AUTH_PAIR;
-      u3l_log("AUTH_PAIR");
-    }
-  }
-
-  c3_y nel_y = met_u.men_y;
-
-  if ( 3 == nel_y ) {
-    CHECK_BOUNDS(len_w, cur_w + 1);
-    nel_y = buf_y[cur_w];
-    cur_w++;
-    u3l_log("nel 3");
-  }
-
-  CHECK_BOUNDS(len_w, cur_w + nel_y);
-  dat_u->len_w = 0;
-  u3l_log("nel_y %u", nel_y);
-  for ( int i = 0; i < nel_y; i++ ) {
-    dat_u->len_w |= (buf_y[cur_w] << (8*i));
-    cur_w++;
-  }
-
-  u3l_log("dat_u->len_w %u  cur_w %u", dat_u->len_w, cur_w);
-  CHECK_BOUNDS(len_w, cur_w + dat_u->len_w);
-  dat_u->fra_y = c3_calloc(dat_u->len_w);
-  memcpy(dat_u->fra_y, buf_y + cur_w, dat_u->len_w);
-  cur_w += dat_u->len_w;
-
-  return cur_w;
-}
-
-static c3_w
-_mesa_sift_hop_long(u3_mesa_hop_once* hop_u, c3_y* buf_y, c3_w len_w)
-{
-  c3_w cur_w = 0;
-  CHECK_BOUNDS(len_w, cur_w + 1);
-  hop_u->len_w = buf_y[cur_w];
-  cur_w++;
-  CHECK_BOUNDS(len_w, cur_w + hop_u->len_w);
-  hop_u->dat_y = c3_calloc(hop_u->len_w);
-  memcpy(hop_u->dat_y, buf_y + cur_w, hop_u->len_w);
-
-  return cur_w + hop_u->len_w;
-}
-
-static c3_w
-_mesa_sift_hops(u3_mesa_page_pact* pac_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
-{
-  switch ( nex_y ) {
-    default: {
-      u3_assert(!"mesa: sift invalid hop type");
-    }
-    case HOP_NONE: return 0;
-    case HOP_SHORT: {
-      CHECK_BOUNDS(len_w, 6);
-      memcpy(pac_u->sot_u, buf_y, 6);
-      return 6;
-    }
-    case HOP_LONG: {
-      return _mesa_sift_hop_long(&pac_u->one_u, buf_y, len_w);
-    }
-    case HOP_MANY: {
-      c3_w siz_w = 0;
-      CHECK_BOUNDS(len_w, siz_w + 1);
-      pac_u->man_u.len_w = buf_y[0];
-      siz_w++;
-
-      pac_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pac_u->man_u.len_w);
-
-      for( c3_w i = 0; i < pac_u->man_u.len_w; i++ ) {
-        siz_w += _mesa_sift_hop_long(&pac_u->man_u.dat_y[i],
-                                     buf_y + siz_w,
-                                     len_w - siz_w);
-      }
-      return siz_w;
-    }
-  }
-}
-
-static c3_w
-_mesa_sift_page_pact(u3_mesa_pact* pat_u, c3_y nex_y, c3_y* buf_y, c3_w len_w)
-{
-  u3l_log("mesa: sift page pact");
-  u3_mesa_page_pact* pac_u = &pat_u->pag_u;
-  c3_w cur_w = 0, res_w = len_w, nex_w;
-
-  if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, res_w)) ) {
-    u3l_log("name fail");
-    return 0;
-  }
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, res_w)) ) {
-    u3l_log("data fail");
-    return 0;
-  }
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  nex_w = _mesa_sift_hops(pac_u, nex_y, buf_y + cur_w, res_w);
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  if ( cur_w > len_w ) {
-    u3l_log("mesa: %%page too big");
-    return 0;
-  }
-  else {
-    return cur_w;
-  }
-}
-
-static c3_w
-_mesa_sift_peek_pact(u3_mesa_peek_pact* pac_u, c3_y* buf_y, c3_w len_w)
-{
-  u3l_log("mesa: sift peek pact");
-  c3_w siz_w = _mesa_sift_name(&pac_u->nam_u, buf_y, len_w);
-  if ( siz_w < len_w ) {
-    u3l_log("mesa: failed to consume entire packet");
-    _log_buf(buf_y + siz_w, len_w - siz_w);
-    return 0;
-  }
-
-  return siz_w;
-}
-
-static c3_w
-_mesa_sift_poke_pact(u3_mesa_poke_pact* pac_u, c3_y* buf_y, c3_w len_w)
-{
-  u3l_log("mesa: sift poke pact");
-  c3_w cur_w = 0, res_w = len_w, nex_w;
-  //  ack path
-  if ( !(nex_w = _mesa_sift_name(&pac_u->nam_u, buf_y + cur_w, res_w)) ) {
-    u3l_log("name fail");
-    // u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
-    return 0;
-  }
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  //  payload path
-  if ( !(nex_w = _mesa_sift_name(&pac_u->pay_u, buf_y + cur_w, res_w)) ) {
-    u3l_log("payload name fail");
-    return 0;
-  }
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  //  payload
-  if ( !(nex_w = _mesa_sift_data(&pac_u->dat_u, buf_y + cur_w, res_w)) ) {
-    u3l_log("data fail");
-    // u3l_log("_mesa_sift_poke_pact nex_w %u", nex_w);
-    return 0;
-  }
-  cur_w += nex_w;
-  res_w -= nex_w;
-
-  // u3l_log("_mesa_sift_poke_pact cur_w %u", cur_w);
-  if ( cur_w > len_w ) {
-    u3l_log("mesa: %%poke too big");
-    return 0;
-  }
-  return cur_w;
-}
-
-c3_w
-mesa_sift_pact(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
-{
-  c3_w cur_w = 0, res_w = len_w;
-  c3_w pre_w = (HEAD_SIZE + MESA_COOKIE_LEN); // prelude: header + cookie
-
-  if ( len_w < pre_w ) {
-    u3l_log("mesa: attempted to parse overly short packet of size %u", len_w);
-  }
-
-  mesa_sift_head(buf_y, &pac_u->hed_u);
-  buf_y += pre_w;
-  cur_w += pre_w;
-  res_w -= pre_w;
-
-  // u3l_log("pac_u->hed_u.typ_y typ_y %u", pac_u->hed_u.typ_y);
-
-  switch ( pac_u->hed_u.typ_y ) {
-    case PACT_PEEK: {
-      cur_w += _mesa_sift_peek_pact(&pac_u->pek_u, buf_y, res_w);
-    } break;
-    case PACT_PAGE: {
-      cur_w += _mesa_sift_page_pact(pac_u, pac_u->hed_u.nex_y, buf_y, res_w);
-    } break;
-    case PACT_POKE: {
-      cur_w += _mesa_sift_poke_pact(&pac_u->pok_u, buf_y, res_w);
-    } break;
-    default: {
-      /* u3l_log("mesa: received unknown packet type"); */
-      /* _log_buf(buf_y, len_w); */
-      break;
-    }
-  }
-  if ( 0 == cur_w ) {
-    return 0;
-  }
-
-  {
-    c3_w mug_w = u3r_mug_bytes(buf_y, cur_w - pre_w); // XX
-    mug_w &= 0xFFFFF;
-
-    if ( mug_w != pac_u->hed_u.mug_w ) {
-      u3l_log("mesa: failed mug, mug_w %u   "
-              "pac_u->hed_u.mug_w %u   "
-              "cur_w %u   "
-              "len_w %u",
-              mug_w, pac_u->hed_u.mug_w, cur_w, len_w);
-      /* _log_buf(buf_y, res_w); */
-      /* u3l_log("frag %u", pac_u->pag_u.nam_u.fra_w); */
-      return 0;
-    }
-  }
-
-  if ( cur_w > len_w ) {
-    return 0;
-  }
-  else {
-    return cur_w;
-  }
-}
-
 /* serialisation
 */
+
+void
+etcher_init(u3_etcher* ech_u, c3_y* buf_y)
+{
+  ech_u->buf_y = buf_y;
+  ech_u->len_w = 0;
+}
+
+void
+sifter_init(u3_sifter* sif_u, c3_y* buf_y, c3_w len_w)
+{
+  sif_u->buf_y = buf_y;
+  sif_u->rem_w = len_w;
+  sif_u->err_c = NULL;
+}
+
 static void
-_mesa_etch_head(u3_mesa_head* hed_u, c3_y buf_y[8])
+_sift_fail(u3_sifter* sif_u, c3_c* msg_c)
+{
+  if ( sif_u->err_c ) {
+    return;
+  }
+  sif_u->err_c = msg_c;
+  #ifdef MESA_ROUNDTRIP
+    u3l_log(RED_TEXT "sift fail: %s" DEF_TEXT, msg_c);
+    assert(!"sift fail");
+  #endif
+}
+
+static c3_y*
+_etch_next(u3_etcher* ech_u, c3_w len_w)
+{
+  c3_y *res_y = ech_u->buf_y + ech_u->len_w;
+  ech_u->len_w += len_w;
+  return res_y;
+}
+
+static c3_y*
+_sift_next(u3_sifter* sif_u, c3_w len_w)
+{
+  if ( sif_u->err_c ) {
+    return NULL;
+  }
+  else if ( len_w > sif_u->rem_w ) {
+    _sift_fail(sif_u, "unexpected eof");
+  }
+  c3_y *res_y = sif_u->buf_y;
+  sif_u->buf_y += len_w;
+  sif_u->rem_w -= len_w;
+  return res_y;
+}
+
+static void
+_etch_bytes(u3_etcher* ech_u, c3_y *buf_y, c3_w len_w)
+{
+  c3_y *res_y = _etch_next(ech_u, len_w);
+  memcpy(res_y, buf_y, len_w);
+}
+
+static void
+_sift_bytes(u3_sifter* sif_u, c3_y *buf_y, c3_w len_w)
+{
+  c3_y *res_y = _sift_next(sif_u, len_w);
+  if ( NULL == res_y ) {
+    memset(buf_y, 0, len_w);
+    return;
+  }
+  memcpy(buf_y, res_y, len_w);
+}
+
+static c3_y*
+_sift_bytes_alloc(u3_sifter* sif_u, c3_w len_w)
+{
+  c3_y *buf_y = c3_calloc(len_w);
+  _sift_bytes(sif_u, buf_y, len_w);
+  return buf_y;
+}
+
+static void
+_etch_byte(u3_etcher* ech_u, c3_y val_y)
+{
+  _etch_next(ech_u, 1)[0] = val_y;
+}
+
+static c3_y
+_sift_byte(u3_sifter* sif_u)
+{
+  c3_y *res_y = _sift_next(sif_u, 1);
+  return ( NULL == res_y ) ? 0 : res_y[0];
+}
+
+static void
+_etch_short(u3_etcher* ech_u, c3_s val_s)
+{
+  c3_etch_short(_etch_next(ech_u, 2), val_s);
+}
+
+static c3_y
+_sift_short(u3_sifter* sif_u)
+{
+  c3_y *res_y = _sift_next(sif_u, 2);
+  return ( NULL == res_y ) ? 0 : c3_sift_short(res_y);
+}
+
+static void
+_etch_word(u3_etcher* ech_u, c3_w val_w)
+{
+  c3_etch_word(_etch_next(ech_u, 4), val_w);
+}
+
+static c3_w
+_sift_word(u3_sifter* sif_u)
+{
+  c3_y *res_y = _sift_next(sif_u, 4);
+  return ( NULL == res_y ) ? 0 : c3_sift_word(res_y);
+}
+
+static void
+_etch_chub(u3_etcher* ech_u, c3_d val_d)
+{
+  c3_etch_chub(_etch_next(ech_u, 8), val_d);
+}
+
+static c3_d
+_sift_chub(u3_sifter* sif_u)
+{
+  c3_y *res_y = _sift_next(sif_u, 8);
+  return ( NULL == res_y ) ? 0 : c3_sift_chub(res_y);
+}
+
+static void
+_etch_var_word(u3_etcher* ech_u, c3_w val_w, c3_w len_w)
+{
+  assert ( len_w <= 4 );
+  c3_y *buf_y = _etch_next(ech_u, len_w);
+  for( int i = 0; i < len_w; i++ ) {
+    buf_y[i] |= (val_w >> (8*i)) & 0xFF;
+  }
+}
+
+static c3_w
+_sift_var_word(u3_sifter* sif_u, c3_w len_w)
+{
+  assert ( len_w <= 4 );
+  c3_y *res_y = _sift_next(sif_u, len_w);
+  if ( NULL == res_y ) {
+    return 0;
+  }
+  c3_w val_w = 0;
+  for( int i = 0; i < len_w; i++ ) {
+    val_w |= (res_y[i] << (8*i));
+  }
+  return val_w;
+}
+
+static void
+_etch_var_chub(u3_etcher* ech_u, c3_d val_d, c3_w len_w)
+{
+  assert ( len_w <= 8 );
+  c3_y *buf_y = _etch_next(ech_u, len_w);
+  for( int i = 0; i < len_w; i++ ) {
+    buf_y[i] |= (val_d >> (8*i)) & 0xFF;
+  }
+}
+
+static c3_d
+_sift_var_chub(u3_sifter* sif_u, c3_w len_w)
+{
+  assert ( len_w <= 8 );
+  c3_y *res_y = _sift_next(sif_u, len_w);
+  if ( NULL == res_y ) {
+    return 0;
+  }
+  c3_d val_d = 0;
+  for( int i = 0; i < len_w; i++ ) {
+    val_d |= (res_y[i] << (8*i));
+  }
+  return val_d;
+}
+
+static void
+_etch_ship(u3_etcher* ech_u, u3_ship who_u, c3_y len_y)
+{
+  assert ( len_y <= 16 );
+  u3_ship_to_bytes(who_u, len_y, _etch_next(ech_u, len_y));
+}
+
+static void
+_sift_ship(u3_sifter* sif_u, u3_ship who_u, c3_y len_y)
+{
+  assert ( len_y <= 16 );
+  c3_y *res_y = _sift_next(sif_u, len_y);
+  if ( NULL == res_y ) {
+    who_u[0] = who_u[1] = 0;
+    return;
+  }
+  u3_ship_of_bytes(who_u, len_y, res_y);
+}
+
+static void
+_mesa_etch_head(u3_etcher* ech_u, u3_mesa_head* hed_u)
 {
   if ( 1 != hed_u->pro_y ) {
     u3l_log("etching bad head");
   }
-
-  // c3_o req_o = c3o((hed_u->typ_y == PACT_PEEK), (hed_u->typ_y == PACT_POKE));
-  // c3_y siz_y = req_o ? 5 : 7;
   c3_w hed_w = (hed_u->nex_y & 0x3) << 2
              ^ (hed_u->pro_y & 0x7) << 4  // XX constant, 1
              ^ (hed_u->typ_y & 0x3) << 7
              ^ (hed_u->hop_y & 0x7) << 9
              ^ (hed_u->mug_w & 0xFFFFF) << 12;
              // XX: we don't expand hopcount if no request. Correct?
-      //
-  /*if ( c3y == req_o ) {
-    hed_w = hed_w ^ ((hed_u->ran_y & 0x3) << 30);
-  }*/
-
-  _ames_etch_word(buf_y, hed_w);
-  memcpy(buf_y + 4, MESA_COOKIE, MESA_COOKIE_LEN);
+  _etch_word(ech_u, hed_w);
+  _etch_word(ech_u, MESA_COOKIE);
 }
 
-static c3_w
-_mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
+c3_o
+mesa_is_new_pact(c3_y* buf_y, c3_w len_w)
 {
-  c3_w cur_w = 0;
-  u3_mesa_name_meta met_u;
+  return __((len_w >= 8) && c3_sift_word(buf_y + 4) == MESA_COOKIE);
+}
 
+void
+mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u)
+{
+  c3_w hed_w = _sift_word(sif_u);
+  hed_u->nex_y = (hed_w >> 2)  & 0x3;
+  hed_u->pro_y = (hed_w >> 4)  & 0x7;
+  hed_u->typ_y = (hed_w >> 7)  & 0x3;
+  hed_u->hop_y = (hed_w >> 9)  & 0x7;
+  hed_u->mug_w = (hed_w >> 12) & 0xFFFFF;
+  if ( 1 != hed_u->pro_y ) {
+    _sift_fail(sif_u, "bad protocol");
+  }
+  if ( _sift_word(sif_u) != MESA_COOKIE ) {
+    _sift_fail(sif_u, "bad cookie");
+  }
+}
+
+static void
+_mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
+{
+  u3_mesa_name_meta met_u;
   met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
@@ -662,54 +593,62 @@ _mesa_etch_name(c3_y* buf_y, u3_mesa_name* nam_u)
              ^ (met_u.tau_y & 0x1) << 5
              ^ (met_u.gaf_y & 0x3) << 6;
 
-  buf_y[cur_w] = met_y;
-
-  //ship
-  cur_w++;
+  _etch_byte(ech_u, met_y);
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
-  u3_ship_to_bytes(nam_u->her_u, her_y, buf_y + cur_w);
-  cur_w += her_y;
-
-  // rift
-  c3_y rif_y = met_u.rif_y + 1;
-  for ( int i = 0; i < rif_y; i++) {
-    buf_y[cur_w] = (nam_u->rif_w >> (8*i)) & 0xff;
-    cur_w++;
-  }
-
-  buf_y[cur_w] = nam_u->boq_y;
-  cur_w++;
+  _etch_ship(ech_u, nam_u->her_u, her_y);
+  _etch_var_word(ech_u, nam_u->rif_w, met_u.rif_y + 1);
+  _etch_byte(ech_u, nam_u->boq_y);
 
   if ( met_u.nit_y ) {
     // init packet
   }
   else {
-    c3_y fag_y = _mesa_bytes_of_chub_tag(met_u.gaf_y);
-    for( int i = 0; i < fag_y; i++ ) {
-      buf_y[cur_w] = (nam_u->fra_d >> (8*i)) & 0xff;
-      cur_w++;
-    }
+    _etch_var_word(ech_u, nam_u->fra_d, 1 << met_u.gaf_y);
   }
 
-  // path length
-  c3_y pat_y = 2;
-  for ( int i = 0; i < pat_y; i++ ) {
-    buf_y[cur_w] = (nam_u->pat_s >> (8*i)) & 0xff;
-    cur_w++;
-  }
-
-  // path
-  memcpy(buf_y + cur_w, nam_u->pat_c, nam_u->pat_s);
-  cur_w += nam_u->pat_s;
-
-  return cur_w;
+  _etch_short(ech_u, nam_u->pat_s);
+  _etch_bytes(ech_u, (c3_y*)nam_u->pat_c, nam_u->pat_s);
 }
 
-static c3_w
-_mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
+static void
+_mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 {
-  c3_w cur_w = 0;
+  u3_mesa_name_meta met_u;
 
+  c3_y met_y = _sift_byte(sif_u);
+  met_u.ran_y = (met_y >> 0) & 0x3;
+  met_u.rif_y = (met_y >> 2) & 0x3;
+  met_u.nit_y = (met_y >> 4) & 0x1;
+  met_u.tau_y = (met_y >> 5) & 0x1;
+  met_u.gaf_y = (met_y >> 6) & 0x3;
+
+  nam_u->nit_o = ( met_u.nit_y ) ? c3y : c3n;
+  nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
+
+  _sift_ship(sif_u, nam_u->her_u, 2 << met_u.ran_y);
+  nam_u->rif_w = _sift_var_word(sif_u, met_u.rif_y + 1);
+  nam_u->boq_y = _sift_byte(sif_u);
+
+  nam_u->fra_d = 0;
+  if ( met_u.nit_y ) {
+    assert( !met_u.tau_y );
+    assert( !met_u.gaf_y );
+    // XX init packet
+  }
+  else {
+    nam_u->fra_d = _sift_var_word(sif_u, 1 << met_u.gaf_y);
+  }
+
+  nam_u->pat_s = _sift_short(sif_u);
+
+  nam_u->pat_c = c3_calloc(nam_u->pat_s + 1);
+  _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s);
+  nam_u->pat_c[nam_u->pat_s] = 0;
+}
+
+static void
+_mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
+{
   c3_y aut_y = 0;
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: aut_y = 0; break;
@@ -720,122 +659,290 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   c3_y bot_y = _mesa_make_chub_tag(dat_u->tob_d);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   c3_y men_y = (3 >= nel_y) ? nel_y : 3;
-  buf_y[cur_w] = (bot_y & 0x3) << 0
-               | (aut_y & 0x3) << 2
-               | (men_y & 0x3) << 6;
-  cur_w++;
-  c3_y tot_y = _mesa_bytes_of_chub_tag(bot_y);
-
-  for (int i = 0; i < tot_y; i++ ) {
-    buf_y[cur_w] = (dat_u->tob_d >> (8 * i)) & 0xFF;
-    cur_w++;
-  }
+  _etch_byte(ech_u, (bot_y & 0x3) << 0
+                  | (aut_y & 0x3) << 2
+                  | (men_y & 0x3) << 6);
+  _etch_var_chub(ech_u, dat_u->tob_d, 1 << bot_y);
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
-      memcpy(buf_y + cur_w, dat_u->aut_u.sig_y, 64);
-      cur_w += 64;
+      _etch_bytes(ech_u, dat_u->aut_u.sig_y, 64);
     } break;
 
     case AUTH_HMAC: {
-      memcpy(buf_y + cur_w, dat_u->aut_u.mac_y, 16);
-      cur_w += 16;
+      _etch_bytes(ech_u, dat_u->aut_u.mac_y, 16);
     } break;
 
     case AUTH_NONE: {
     } break;
 
     case AUTH_PAIR: {
-      memcpy(buf_y + cur_w, dat_u->aut_u.has_y, 64);
-      cur_w += 64;
+      _etch_bytes(ech_u, dat_u->aut_u.has_y[0], 32);
+      _etch_bytes(ech_u, dat_u->aut_u.has_y[1], 32);
     } break;
   }
 
   if ( 3 == men_y ) {
-    buf_y[cur_w] = nel_y;
-    cur_w++;
+    _etch_byte(ech_u, nel_y);
   }
-  memcpy(buf_y + cur_w, (c3_y*)&dat_u->len_w, nel_y);
-  cur_w += nel_y;
-
-  memcpy(buf_y + cur_w, dat_u->fra_y, dat_u->len_w);
-  cur_w += dat_u->len_w;
-
-  return cur_w;
+  _etch_var_word(ech_u, dat_u->len_w, nel_y);
+  _etch_bytes(ech_u, dat_u->fra_y, dat_u->len_w);
 }
 
-static c3_w
-_mesa_etch_next(c3_y* buf_y, u3_mesa_hop_type nex_y, u3_mesa_page_pact* pac_u)
+static void
+_mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
 {
-  switch ( nex_y ) {
+  u3_mesa_data_meta met_u;
+
+  c3_y met_y = _sift_byte(sif_u);
+  met_u.bot_y = (met_y >> 0) & 0x3;
+  met_u.auv_o = (met_y >> 2) & 0x1;
+  met_u.aut_o = (met_y >> 3) & 0x1;
+  met_u.men_y = (met_y >> 6) & 0x3;
+
+  dat_u->tob_d = _sift_var_chub(sif_u, 1<<met_u.bot_y);
+
+  if ( c3y == met_u.aut_o ) {
+    if ( c3y == met_u.auv_o ) {
+      _sift_bytes(sif_u, dat_u->aut_u.sig_y, 64);
+      dat_u->aut_u.typ_e = AUTH_SIGN;
+    }
+    else {
+      _sift_bytes(sif_u, dat_u->aut_u.mac_y, 16);
+      dat_u->aut_u.typ_e = AUTH_HMAC;
+    }
+  }
+  else {
+    if ( c3y == met_u.auv_o ) {
+      dat_u->aut_u.typ_e = AUTH_NONE;
+    } else {
+      _sift_bytes(sif_u, dat_u->aut_u.has_y[0], 32);
+      _sift_bytes(sif_u, dat_u->aut_u.has_y[1], 32);
+      dat_u->aut_u.typ_e = AUTH_PAIR;
+    }
+  }
+
+  c3_y nel_y = (met_u.men_y < 3) ? met_u.men_y : _sift_byte(sif_u);
+  dat_u->len_w = _sift_var_word(sif_u, nel_y);
+  dat_u->fra_y = _sift_bytes_alloc(sif_u, dat_u->len_w);
+}
+
+static void
+_mesa_etch_hop_long(u3_etcher* ech_u, u3_mesa_hop_once* hop_u)
+{
+  _etch_byte(ech_u, hop_u->len_w);
+  _etch_bytes(ech_u, hop_u->dat_y, hop_u->len_w);
+}
+
+static void
+_mesa_sift_hop_long(u3_sifter* sif_u, u3_mesa_hop_once* hop_u)
+{
+  hop_u->len_w = _sift_byte(sif_u);
+  hop_u->dat_y = _sift_bytes_alloc(sif_u, hop_u->len_w);
+}
+
+static void
+_mesa_etch_page_pact(u3_etcher* ech_u, u3_mesa_page_pact* pag_u, u3_mesa_head* hed_u)
+{
+  _mesa_etch_name(ech_u, &pag_u->nam_u);
+  _mesa_etch_data(ech_u, &pag_u->dat_u);
+
+  switch ( hed_u->nex_y ) {
+    case HOP_NONE: {
+    } break;
     case HOP_SHORT: {
-      memcpy(buf_y, pac_u->sot_u, 6);
-      return 6;
+      _etch_bytes(ech_u, pag_u->sot_u, 6);
+    } break;
+    case HOP_LONG: {
+      _mesa_etch_hop_long(ech_u, &pag_u->one_u);
     } break;
     case HOP_MANY: {
-      // buf_y[0] = pac_u->man_u.len_w;  // XX
-      c3_w cur_w =0;
-      memcpy(buf_y + cur_w, &pac_u->man_u.len_w, 4);
-      for( c3_w i = 0; i < pac_u->man_u.len_w; i++ ) {
-        struct _u3_mesa_hop_once hop_u = pac_u->man_u.dat_y[i];
-        memcpy(buf_y + cur_w, &hop_u.len_w, 4);
-        cur_w += 4;
-        memcpy(buf_y + cur_w, hop_u.dat_y, hop_u.len_w);
-        cur_w += hop_u.len_w;
+      _etch_byte(ech_u, pag_u->man_u.len_w);
+      for( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
+        _mesa_etch_hop_long(ech_u, &pag_u->man_u.dat_y[i]);
       }
-      return cur_w;
     } break;
     default: {
-      return 0;
+      return;
     } break;
   }
 }
 
-static c3_w
-_mesa_etch_page_pact(c3_y* buf_y, u3_mesa_page_pact* pac_u, u3_mesa_head* hed_u)
+static void
+_mesa_sift_page_pact(u3_sifter* sif_u, u3_mesa_page_pact* pag_u, c3_y nex_y)
 {
-  c3_w cur_w = 0, nex_w;
+  _mesa_sift_name(sif_u, &pag_u->nam_u);
+  _mesa_sift_data(sif_u, &pag_u->dat_u);
 
-  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
-    return 0;
+  switch ( nex_y ) {
+    default: {
+      u3_assert(!"mesa: sift invalid hop type");
+    }
+    case HOP_NONE: return;
+    case HOP_SHORT: {
+      _sift_bytes(sif_u, pag_u->sot_u, 6);
+      return;
+    }
+    case HOP_LONG: {
+      _mesa_sift_hop_long(sif_u, &pag_u->one_u);
+      return;
+    }
+    case HOP_MANY: {
+      pag_u->man_u.len_w = _sift_byte(sif_u);
+      pag_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pag_u->man_u.len_w);
+      for( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
+        _mesa_sift_hop_long(sif_u, &pag_u->man_u.dat_y[i]);
+      }
+      return;
+    }
   }
-  cur_w += nex_w;
-
-  if ( !(nex_w = _mesa_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
-    return 0;
-  }
-  cur_w += nex_w;
-
-  nex_w = _mesa_etch_next(buf_y + cur_w, hed_u->nex_y, pac_u);
-
-  cur_w += nex_w;
-
-  return cur_w;
 }
 
-static c3_w
-_mesa_etch_poke_pact(c3_y* buf_y, u3_mesa_poke_pact* pac_u, u3_mesa_head* hed_u)
+static void
+_mesa_etch_peek_pact(u3_etcher* ech_u, u3_mesa_peek_pact* pac_u)
 {
-  c3_w cur_w = 0, nex_w;
-
-  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->nam_u)) ) {
-    return 0;
-  }
-  cur_w += nex_w;
-
-  if ( !(nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pay_u)) ) {
-    return 0;
-  }
-  cur_w += nex_w;
-
-  if ( !(nex_w = _mesa_etch_data(buf_y + cur_w, &pac_u->dat_u)) ) {
-    return 0;
-  }
-  cur_w += nex_w;
-
-  return cur_w;
+  _mesa_etch_name(ech_u, &pac_u->nam_u);
 }
 
+static void
+_mesa_sift_peek_pact(u3_sifter* sif_u, u3_mesa_peek_pact* pac_u)
+{
+  _mesa_sift_name(sif_u, &pac_u->nam_u);
+}
 
+static void
+_mesa_etch_poke_pact(u3_etcher* ech_u, u3_mesa_poke_pact* pac_u)
+{
+  _mesa_etch_name(ech_u, &pac_u->nam_u);
+  _mesa_etch_name(ech_u, &pac_u->pay_u);
+  _mesa_etch_data(ech_u, &pac_u->dat_u);
+}
+
+static void
+_mesa_sift_poke_pact(u3_sifter* sif_u, u3_mesa_poke_pact* pac_u)
+{
+  _mesa_sift_name(sif_u, &pac_u->nam_u);
+  _mesa_sift_name(sif_u, &pac_u->pay_u);
+  _mesa_sift_data(sif_u, &pac_u->dat_u);
+}
+
+void
+mesa_etch_pact(u3_etcher* ech_u, u3_mesa_pact* pac_u)
+{
+  // use a separate etcher to make computing the mug easier
+  u3_etcher pec_u;
+  etcher_init(&pec_u, ech_u->buf_y + ech_u->len_w + 8);
+
+  switch ( pac_u->hed_u.typ_y ) {
+    case PACT_POKE: {
+      _mesa_etch_poke_pact(&pec_u, &pac_u->pok_u);
+    } break;
+    case PACT_PAGE: {
+      _mesa_etch_page_pact(&pec_u, &pac_u->pag_u, &pac_u->hed_u);
+    } break;
+    case PACT_PEEK: {
+      _mesa_etch_peek_pact(&pec_u, &pac_u->pek_u);
+    } break;
+    default: {
+      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);
+    }
+  }
+  // now we can compute the mug and write the header
+  pac_u->hed_u.mug_w = u3r_mug_bytes(pec_u.buf_y, pec_u.len_w)
+                     & 0xFFFFF;
+  _mesa_etch_head(ech_u, &pac_u->hed_u);
+
+  // the payload is already written into the correct spot, so we just need to
+  // adjust the length
+  ech_u->len_w += pec_u.len_w;
+}
+
+void
+mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
+{
+  mesa_sift_head(sif_u, &pac_u->hed_u);
+
+  // for mug, later
+  c3_y *mug_y = sif_u->buf_y;
+  c3_w pre_w = sif_u->rem_w;
+
+  switch ( pac_u->hed_u.typ_y ) {
+    case PACT_PEEK: {
+      _mesa_sift_peek_pact(sif_u, &pac_u->pek_u);
+    } break;
+    case PACT_PAGE: {
+      _mesa_sift_page_pact(sif_u, &pac_u->pag_u, pac_u->hed_u.nex_y);
+    } break;
+    case PACT_POKE: {
+      _mesa_sift_poke_pact(sif_u, &pac_u->pok_u);
+    } break;
+    default: {
+      /* u3l_log("mesa: received unknown packet type"); */
+      break;
+    }
+  }
+
+  {
+    c3_w mug_w = u3r_mug_bytes(mug_y, pre_w - sif_u->rem_w)
+               & 0xFFFFF;
+    if ( mug_w != pac_u->hed_u.mug_w ) {
+      _sift_fail(sif_u, "bad mug");
+      return;
+    }
+  }
+}
+
+/* packet etch/sift, with roundtrip tests */
+
+c3_w
+mesa_etch_pact_to_buf(c3_y* buf_y, u3_mesa_pact *pac_u) {
+  u3_etcher ech_u;
+  etcher_init(&ech_u, buf_y);
+  mesa_etch_pact(&ech_u, pac_u);
+
+  #ifdef MESA_ROUNDTRIP
+    u3_mesa_pact poc_u;
+    u3_sifter sif_u;
+    sifter_init(&sif_u, ech_u.buf_y, ech_u.len_w);
+    mesa_sift_pact(&sif_u, &poc_u);
+    if ( sif_u.rem_w && !sif_u.err_c ) {
+      u3l_log("mesa: etch roundtrip failed: %u trailing bytes", sif_u.rem_w);
+      _sift_fail(&sif_u, "trailing bytes");
+    }
+    if ( sif_u.err_c ) {
+      u3l_log("mesa: roundtrip failed: %s", sif_u.err_c);
+      assert(!"roundtrip failed");
+    }
+    _mesa_check_pacts_equal(&poc_u, pac_u);
+    mesa_free_pact(&poc_u);
+  #endif
+
+  return ech_u.len_w;
+}
+
+c3_c*
+mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w) {
+  u3_sifter sif_u;
+  sifter_init(&sif_u, buf_y, len_w);
+  mesa_sift_pact(&sif_u, pac_u);
+  if ( sif_u.rem_w && !sif_u.err_c ) {
+      u3l_log("mesa: sift roundtrip failed: %u trailing bytes", sif_u.rem_w);
+    _sift_fail(&sif_u, "trailing bytes");
+  }
+
+  #ifdef MESA_ROUNDTRIP
+    c3_y* bof_y = c3_calloc(len_w);
+    u3_etcher ech_u;
+    etcher_init(&ech_u, bof_y);
+    mesa_etch_pact(&ech_u, pac_u);
+    if ( memcmp(bof_y, buf_y, len_w) ) {
+      u3l_log("mesa: roundtrip failed: len_w %u ech_u %u", len_w, ech_u.len_w);
+    }
+    u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
+    c3_free(bof_y);
+  #endif
+
+  return sif_u.err_c;
+}
 
 /* sizing
 */
@@ -953,49 +1060,6 @@ mesa_size_pact(u3_mesa_pact* pac_u)
   }
 
   return siz_w;
-}
-
-c3_w
-mesa_etch_pact(c3_y* buf_y, u3_mesa_pact* pac_u)
-{
-  c3_w cur_w = 8; // space for header + cookie
-  c3_w nex_w = 0;
-  u3_mesa_head* hed_u = &pac_u->hed_u;
-  switch ( hed_u->typ_y ) {
-    case PACT_POKE: {
-      nex_w = _mesa_etch_poke_pact(buf_y + cur_w, &pac_u->pok_u, hed_u);
-    } break;
-
-    case PACT_PEEK: {
-      nex_w = _mesa_etch_name(buf_y + cur_w, &pac_u->pek_u.nam_u);
-    } break;
-
-    case PACT_PAGE: {
-      nex_w = _mesa_etch_page_pact(buf_y + cur_w, &pac_u->pag_u, hed_u);
-    } break;
-
-    default: {
-      u3l_log("bad pact type %u", pac_u->hed_u.typ_y);
-    }
-  }
-  if ( 0 == nex_w ) {
-    return 0;
-  }
-
-  hed_u->mug_w  = u3r_mug_bytes(buf_y + cur_w, nex_w);
-  hed_u->mug_w &= 0xFFFFF;
-
-  _mesa_etch_head(hed_u, buf_y);
-
-  cur_w += nex_w;
-
-  if ( mesa_size_pact(pac_u) == cur_w ) {
-    return cur_w;
-  }
-  else {
-    u3l_log("mesa: size %u   cur_w %u", mesa_size_pact(pac_u), cur_w);
-    return 0;
-  }
 }
 
 #ifdef PACT_TEST
