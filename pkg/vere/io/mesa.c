@@ -1371,26 +1371,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     return;
   }
 
-  bitset_del(&req_u->was_u, nam_u->fra_d);
-  if ( nam_u->fra_d > req_u->ack_d ) {
-    req_u->ack_d = nam_u->fra_d;
-  }
-
-  #ifdef MESA_DEBUG
-    if ( nam_u->fra_d != 0 && req_u->wat_u[nam_u->fra_d].tie_y != 1 ) {
-      u3l_log("received retry %"PRIu64, nam_u->fra_d);
-    }
-  #endif
-
-  req_u->hav_d++;
-
-  #ifdef MESA_DEBUG
-    u3l_log("fragment %"PRIu64" len %"PRIu64, nam_u->fra_d, req_u->hav_d);
-  #endif
-  if ( req_u->lef_d == nam_u->fra_d ) {
-    req_u->lef_d++;
-  }
-
   lss_pair* par_u = NULL;
   if ( dat_u->aut_u.typ_e == AUTH_PAIR ) {
     // needs to be heap allocated bc will be saved if misordered
@@ -1427,6 +1407,26 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   }
   else {
     c3_free(par_u);
+  }
+
+  bitset_del(&req_u->was_u, nam_u->fra_d);
+  if ( nam_u->fra_d > req_u->ack_d ) {
+    req_u->ack_d = nam_u->fra_d;
+  }
+
+  #ifdef MESA_DEBUG
+    if ( nam_u->fra_d != 0 && req_u->wat_u[nam_u->fra_d].tie_y != 1 ) {
+      u3l_log("received retry %"PRIu64, nam_u->fra_d);
+    }
+  #endif
+
+  req_u->hav_d++;
+
+  #ifdef MESA_DEBUG
+    u3l_log("fragment %"PRIu64" len %"PRIu64, nam_u->fra_d, req_u->hav_d);
+  #endif
+  if ( req_u->lef_d == nam_u->fra_d ) {
+    req_u->lef_d++;
   }
 
   u3_lane_state* sat_u;
