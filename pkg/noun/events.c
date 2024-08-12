@@ -324,9 +324,15 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   return u3e_flaw_good;
 }
 
+typedef enum {
+  _ce_img_good = 0,
+  _ce_img_fail = 1,
+  _ce_img_size = 2
+} _ce_img_stat;
+
 /* _ce_image_stat(): measure image.
 */
-static c3_o
+static _ce_img_stat
 _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
 {
   struct stat buf_u;
@@ -334,7 +340,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   if ( -1 == fstat(img_u->fid_i, &buf_u) ) {
     fprintf(stderr, "loom: stat %s: %s\r\n", img_u->nam_c, strerror(errno));
     u3_assert(0);
-    return c3n;
+    return _ce_img_fail;
   }
   else {
     c3_z siz_z = buf_u.st_size;
@@ -342,19 +348,19 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
 
     if ( !siz_z ) {
       *pgs_w = 0;
-      return c3y;
+      return _ce_img_good;
     }
     else if ( siz_z != _ce_len(pgs_z) ) {
       fprintf(stderr, "loom: %s corrupt size %zu\r\n", img_u->nam_c, siz_z);
-      return c3n;
+      return _ce_img_size;
     }
     else if ( pgs_z > UINT32_MAX ) {
       fprintf(stderr, "loom: %s overflow %zu\r\n", img_u->nam_c, siz_z);
-      return c3n;
+      return _ce_img_fail;
     }
     else {
       *pgs_w = (c3_w)pgs_z;
-      return c3y;
+      return _ce_img_good;
     }
   }
 }
@@ -397,7 +403,7 @@ _ce_ephemeral_open(c3_i* eph_i)
 
 /* _ce_image_open(): open or create image.
 */
-static c3_o
+static _ce_img_stat
 _ce_image_open(u3e_image* img_u, c3_c* ful_c)
 {
   c3_i mod_i = O_RDWR | O_CREAT;
@@ -406,14 +412,10 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
   snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", pax_c, strerror(errno));
-    return c3n;
+    return _ce_img_fail;
   }
-  else if ( c3n == _ce_image_stat(img_u, &img_u->pgs_w) ) {
-    return c3n;
-  }
-  else {
-    return c3y;
-  }
+
+  return _ce_image_stat(img_u, &img_u->pgs_w);
 }
 
 /* _ce_patch_write_control(): write control block file.
@@ -652,11 +654,12 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
        (ret_zs = pwrite(pat_u->mem_i, mem_w, _ce_page, _ce_len(pgc_w))) )
   {
     if ( 0 < ret_zs ) {
-      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs", check disk space\r\n", ret_zs);
+      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
-      fprintf(stderr, "loom: patch write: fail: %s, check disk space\r\n", strerror(errno));
+      fprintf(stderr, "loom: patch write: fail: %s\r\n", strerror(errno));
     }
+    fprintf(stderr, "info: you probably have insufficient disk space");
     u3_assert(0);
   }
 }
@@ -871,12 +874,13 @@ _ce_patch_apply(u3_ce_patch* pat_u)
            (ret_zs = pwrite(fid_i, buf_y, _ce_page, off_z)) )
       {
         if ( 0 < ret_zs ) {
-          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs", check disk space\r\n",
+          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs"\r\n",
                           ret_zs);
         }
         else {
-          fprintf(stderr, "loom: patch apply write: %s, check disk space\r\n", strerror(errno));
+          fprintf(stderr, "loom: patch apply write: %s\r\n", strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         u3_assert(0);
       }
     }
@@ -1323,13 +1327,14 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
       }
       if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
         if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image (%s) copy partial write: %zu, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy partial write: %zu\r\n",
                           tou_u->nam_c, (size_t)ret_i);
         }
         else {
-          fprintf(stderr, "loom: image (%s) copy write: %s, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy write: %s\r\n",
                           tou_u->nam_c, strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         return c3n;
       }
     }
@@ -1371,13 +1376,18 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   //
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
-  if ( (0 != access(nux_c, F_OK)) || (c3n == _ce_image_open(&nux_u, pux_c)) ) {
+  if (  (0 != access(nux_c, F_OK))
+     || (_ce_img_good != _ce_image_open(&nux_u, pux_c)) )
+  {
     fprintf(stderr, "loom: couldn't open north image at %s\r\n", pux_c);
     return c3n;
   }
+
   c3_c sux_c[8193];
   snprintf(sux_c, 8192, "%s/%s.bin", pux_c, sux_u.nam_c);
-  if ( (0 != access(sux_c, F_OK)) || (c3n == _ce_image_open(&sux_u, pux_c)) ) {
+  if (  (0 != access(sux_c, F_OK))
+     || (_ce_img_good != _ce_image_open(&sux_u, pux_c)) )
+  {
     fprintf(stderr, "loom: couldn't open south image at %s\r\n", pux_c);
     return c3n;
   }
@@ -1487,9 +1497,9 @@ u3e_save(u3_post low_p, u3_post hig_p)
 #ifdef U3_SNAPSHOT_VALIDATION
   {
     c3_w pgs_w;
-    u3_assert( c3y   == _ce_image_stat(&u3P.nor_u, &pgs_w) );
+    u3_assert( _ce_img_good == _ce_image_stat(&u3P.nor_u, &pgs_w) );
     u3_assert( pgs_w == u3P.nor_u.pgs_w );
-    u3_assert( c3y   == _ce_image_stat(&u3P.sou_u, &pgs_w) );
+    u3_assert( _ce_img_good == _ce_image_stat(&u3P.sou_u, &pgs_w) );
     u3_assert( pgs_w == u3P.sou_u.pgs_w );
   }
 #endif
@@ -1590,9 +1600,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     //
     c3_c chk_c[8193];
     snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
-    if ( (c3n == _ce_image_open(&u3P.nor_u, chk_c)) ||
-         (c3n == _ce_image_open(&u3P.sou_u, chk_c)) )
-    {
+
+    _ce_img_stat nor_e = _ce_image_open(&u3P.nor_u, chk_c);
+    _ce_img_stat sou_e = _ce_image_open(&u3P.sou_u, chk_c);
+
+    if ( (_ce_img_fail == nor_e) || (_ce_img_fail == sou_e) ) {
       fprintf(stderr, "boot: image failed\r\n");
       exit(1);
     }
@@ -1608,6 +1620,10 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         u3_assert( c3y == _ce_image_sync(&u3P.sou_u) );
         _ce_patch_free(pat_u);
         _ce_patch_delete();
+      }
+      else if ( (_ce_img_size == nor_e) || (_ce_img_size == sou_e) ) {
+        fprintf(stderr, "boot: image failed (size)\r\n");
+        exit(1);
       }
 
       nor_w = u3P.nor_u.pgs_w;

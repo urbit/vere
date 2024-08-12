@@ -320,6 +320,7 @@
         u3_even* vex_u;                     //  --prop-*, boot enhancements
 
         c3_o    beb;                        //  --behn-allow-blocked
+        c3_z    siz_i;                      //  --lmdb-map-size
       } u3_opts;
 
     /* u3_host: entire host.
@@ -557,6 +558,7 @@
           u3_dire*         dir_u;               //  main pier directory
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
+          c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch

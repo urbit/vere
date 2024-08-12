@@ -39,11 +39,11 @@ _test_stun_addr_roundtrip(u3_lane* inn_u)
   c3_y    req_y[20] = {0};
   c3_i    ret_i     = 0;
 
-  _stun_make_response(req_y, inn_u, rep_y);
+  u3_stun_make_response(req_y, inn_u, rep_y);
 
   u3_lane lan_u;
 
-  if ( c3n == _stun_find_xor_mapped_address(rep_y, sizeof(rep_y), &lan_u) ) {
+  if ( c3n == u3_stun_find_xor_mapped_address(rep_y, sizeof(rep_y), &lan_u) ) {
     fprintf(stderr, "stun: failed to find addr in response\r\n");
     ret_i = 1;
   }
