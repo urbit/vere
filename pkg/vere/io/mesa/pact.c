@@ -853,8 +853,10 @@ _mesa_size_name(u3_mesa_name* nam_u)
   siz_w += met_u.rif_y + 1;
   siz_w++;  // bloq
 
-  met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
-  siz_w += _mesa_bytes_of_chub_tag(met_u.gaf_y);
+  if ( nam_u->nit_o == c3n ) {
+    met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
+    siz_w += _mesa_bytes_of_chub_tag(met_u.gaf_y);
+  }
 
   siz_w += 2;  // path-length
   siz_w += nam_u->pat_s;
