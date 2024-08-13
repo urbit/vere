@@ -689,8 +689,8 @@ _mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
   met_u.men_y = c3_min(nel_y, 3);
   _etch_bits(ech_u, 2, met_u.bot_y);
-  _etch_bits(ech_u, 1, met_u.auv_o);
   _etch_bits(ech_u, 1, met_u.aut_o);
+  _etch_bits(ech_u, 1, met_u.auv_o);
   _etch_bits(ech_u, 2, 0); // unused
   _etch_bits(ech_u, 2, met_u.men_y);
   _etch_var_chub(ech_u, dat_u->tob_d, 1 << met_u.bot_y);
@@ -721,8 +721,8 @@ _mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
 {
   u3_mesa_data_meta met_u;
   met_u.bot_y = _sift_bits(sif_u, 2);
-  met_u.auv_o = _sift_bits(sif_u, 1);
   met_u.aut_o = _sift_bits(sif_u, 1);
+  met_u.auv_o = _sift_bits(sif_u, 1);
                 _sift_bits(sif_u, 2); // unused
   met_u.men_y = _sift_bits(sif_u, 2);
 
