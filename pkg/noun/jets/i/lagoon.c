@@ -10,6 +10,11 @@
 #include <math.h>  // for pow()
 #include <stdio.h>
 
+#define f16_ceil(a) f16_roundToInt( a, softfloat_round_max, false )
+#define f32_ceil(a) f32_roundToInt( a, softfloat_round_max, false )
+#define f64_ceil(a) f64_roundToInt( a, softfloat_round_max, false )
+#define f128M_ceil(a, b) f128M_roundToInt( a, softfloat_round_max, false, b )
+
   union half {
     float16_t h;
     c3_w c;
@@ -1964,15 +1969,14 @@
         u3r_bytes(0, 2, (c3_y*)&(a16.v), a);
         u3r_bytes(0, 2, (c3_y*)&(b16.v), b);
         u3r_bytes(0, 2, (c3_y*)&(interval16.v), d);
-        c3_d n16 = f16_to_i64(f16_div(f16_sub(b16, a16), interval16), softfloat_round_minMag, false);
-        c3_y* x_bytes16 = (c3_y*)u3a_malloc(((n16+1)*2+1)*sizeof(c3_y));
-        for (c3_d i = 1; i <= n16; i++) {
-          ((float16_t*)x_bytes16)[n16-i] = f16_add(a16, f16_mul(i32_to_f16(i), interval16));
+        c3_d n16 = f16_to_i64(f16_ceil(f16_div(f16_sub(b16, a16), interval16)), softfloat_round_minMag, false);
+        c3_y* x_bytes16 = (c3_y*)u3a_malloc(((n16+1)*2)*sizeof(c3_y));
+        ((float16_t*)x_bytes16)[0] = a16;
+        for (c3_d i = 1; i < n16; i++) {
+          ((float16_t*)x_bytes16)[i] = f16_add(a16, f16_mul(i32_to_f16(i), interval16));
         }
-        ((float16_t*)x_bytes16)[n16] = a16;
-        // ((float16_t*)x_bytes16)[0] = b16;
-        x_bytes16[(n16+1)*2] = 0x1;  // pin head
-        r_data = u3i_bytes(((n16+1)*2+1)*sizeof(c3_y), x_bytes16);
+        ((float16_t*)x_bytes16)[n16].v = 0x1;  // pin head
+        r_data = u3i_bytes(((n16+1)*2)*sizeof(c3_y), x_bytes16);
         u3a_free(x_bytes16);
         break;}
       
@@ -1981,15 +1985,14 @@
         u3r_bytes(0, 4, (c3_y*)&(a32.v), a);
         u3r_bytes(0, 4, (c3_y*)&(b32.v), b);
         u3r_bytes(0, 4, (c3_y*)&(interval32.v), d);
-        c3_d n32 = f32_to_i64(f32_div(f32_sub(b32, a32), interval32), softfloat_round_minMag, false);
-        c3_y* x_bytes32 = (c3_y*)u3a_malloc(((n32+1)*4+1)*sizeof(c3_y));
-        for (c3_d i = 1; i <= n32; i++) {
-          ((float32_t*)x_bytes32)[n32-i] = f32_add(a32, f32_mul(i32_to_f32(i), interval32));
+        c3_d n32 = f32_to_i64(f32_ceil(f32_div(f32_sub(b32, a32), interval32)), softfloat_round_minMag, false);
+        c3_y* x_bytes32 = (c3_y*)u3a_malloc(((n32+1)*4)*sizeof(c3_y));
+        ((float32_t*)x_bytes32)[0] = a32;
+        for (c3_d i = 1; i < n32; i++) {
+          ((float32_t*)x_bytes32)[i] = f32_add(a32, f32_mul(i32_to_f32(i), interval32));
         }
-        ((float32_t*)x_bytes32)[n32] = a32;
-        // ((float32_t*)x_bytes32)[0] = b32;
-        x_bytes32[(n32+1)*4] = 0x1;  // pin head
-        r_data = u3i_bytes(((n32+1)*4+1)*sizeof(c3_y), x_bytes32);
+        ((float32_t*)x_bytes32)[n32].v = 0x1;  // pin head
+        r_data = u3i_bytes(((n32+1)*4)*sizeof(c3_y), x_bytes32);
         u3a_free(x_bytes32);
         break;}
 
@@ -1998,15 +2001,14 @@
         u3r_bytes(0, 8, (c3_y*)&(a64.v), a);
         u3r_bytes(0, 8, (c3_y*)&(b64.v), b);
         u3r_bytes(0, 8, (c3_y*)&(interval64.v), d);
-        c3_d n64 = f64_to_i64(f64_div(f64_sub(b64, a64), interval64), softfloat_round_minMag, false);
-        c3_y* x_bytes64 = (c3_y*)u3a_malloc(((n64+1)*8+1)*sizeof(c3_y));
+        c3_d n64 = f64_to_i64(f64_ceil(f64_div(f64_sub(b64, a64), interval64)), softfloat_round_minMag, false);
+        c3_y* x_bytes64 = (c3_y*)u3a_malloc(((n64+1)*8)*sizeof(c3_y));
+        ((float64_t*)x_bytes64)[0] = a64;
         for (c3_d i = 1; i < n64; i++) {
-          ((float64_t*)x_bytes64)[n64-i] = f64_add(a64, f64_mul(i32_to_f64(i), interval64));
+          ((float64_t*)x_bytes64)[i] = f64_add(a64, f64_mul(i32_to_f64(i), interval64));
         }
-        ((float64_t*)x_bytes64)[n64] = a64;
-        // ((float64_t*)x_bytes64)[0] = b64;
-        x_bytes64[(n64+1)*8] = 0x1;  // pin head
-        r_data = u3i_bytes(((n64+1)*8+1)*sizeof(c3_y), x_bytes64);
+        ((float64_t*)x_bytes64)[n64].v = 0x1;  // pin head
+        r_data = u3i_bytes(((n64+1)*8)*sizeof(c3_y), x_bytes64);
         u3a_free(x_bytes64);
         break;}
       
@@ -2014,22 +2016,23 @@
         float128_t a128, b128, interval128;
         u3r_bytes(0, 16, (c3_y*)&(a128.v[0]), a);
         u3r_bytes(0, 16, (c3_y*)&(b128.v[0]), b);
-        u3r_bytes(0, 16, (c3_y*)&(interval128.v), d);
+        u3r_bytes(0, 16, (c3_y*)&(interval128.v[0]), d);
         float128_t tmp;
         f128M_sub(&b128, &a128, &tmp);
-        f128M_div(&tmp, &interval128, &interval128);
+        f128M_div(&tmp, &interval128, &tmp);
+        f128M_ceil(&tmp, &tmp);
         c3_d n128 = f128M_to_i64(&tmp, softfloat_round_minMag, false);
-        c3_y* x_bytes128 = (c3_y*)u3a_malloc(((n128+1)*16+1)*sizeof(c3_y));
+        c3_y* x_bytes128 = (c3_y*)u3a_malloc(((n128+1)*16)*sizeof(c3_y));
         float128_t i128;
+        ((float128_t*)x_bytes128)[0] = a128;
         for (c3_d i = 1; i < n128; i++) {
           i32_to_f128M(i, &i128);
-          f128M_mul(&i128, &interval128, &((float128_t*)x_bytes128)[n128-i]);
-          f128M_add(&a128, &((float128_t*)x_bytes128)[n128-i], &((float128_t*)x_bytes128)[n128-i]);
+          f128M_mul(&i128, &interval128, &((float128_t*)x_bytes128)[i]);
+          f128M_add(&a128, &((float128_t*)x_bytes128)[i], &((float128_t*)x_bytes128)[i]);
         }
-        ((float128_t*)x_bytes128)[n128] = a128;
-        // ((float128_t*)x_bytes128)[0] = b128;
-        x_bytes128[(n128+1)*16] = 0x1;  // pin head
-        r_data = u3i_bytes(((n128+1)*16+1)*sizeof(c3_y), x_bytes128);
+        ((float128_t*)x_bytes128)[n128].v[0] = 0x1;  // pin head
+        ((float128_t*)x_bytes128)[n128].v[1] = 0x0;  // pin head
+        r_data = u3i_bytes(((n128+1)*16)*sizeof(c3_y), x_bytes128);
         u3a_free(x_bytes128);
         break;}
     }
@@ -3154,19 +3157,19 @@
                 u3r_bytes(0, 2, (c3_y*)&a_, a);
                 u3r_bytes(0, 2, (c3_y*)&b_, b);
                 u3r_bytes(0, 2, (c3_y*)&d_, d);
-                n_ = f16_to_i64(f16_div(f16_sub((float16_t){b_}, (float16_t){a_}), (float16_t){d_}), softfloat_round_minMag, false);
+                n_ = f16_to_i64(f16_ceil(f16_div(f16_sub((float16_t){b_}, (float16_t){a_}), (float16_t){d_})), softfloat_round_minMag, false) - 1;
                 break;
               case 5:
                 u3r_bytes(0, 4, (c3_y*)&a_, a);
                 u3r_bytes(0, 4, (c3_y*)&b_, b);
                 u3r_bytes(0, 4, (c3_y*)&d_, d);
-                n_ = f32_to_i64(f32_div(f32_sub((float32_t){b_}, (float32_t){a_}), (float32_t){d_}), softfloat_round_minMag, false);
+                n_ = f32_to_i64(f32_ceil(f32_div(f32_sub((float32_t){b_}, (float32_t){a_}), (float32_t){d_})), softfloat_round_minMag, false) - 1;
                 break;
               case 6:
                 u3r_bytes(0, 8, (c3_y*)&a_, a);
                 u3r_bytes(0, 8, (c3_y*)&b_, b);
                 u3r_bytes(0, 8, (c3_y*)&d_, d);
-                n_ = f64_to_i64(f64_div(f64_sub((float64_t){b_}, (float64_t){a_}), (float64_t){d_}), softfloat_round_minMag, false);
+                n_ = f64_to_i64(f64_ceil(f64_div(f64_sub((float64_t){b_}, (float64_t){a_}), (float64_t){d_})), softfloat_round_minMag, false) - 1;
                 break;
               case 7: {
                 c3_d a__[2], b__[2], d__[2];
@@ -3176,11 +3179,12 @@
                 float128_t tmp;
                 f128M_sub((float128_t*)&b__, (float128_t*)&a__, &tmp);
                 f128M_div(&tmp, (float128_t*)&d__, &tmp);
-                n_ = f128M_to_i64(&tmp, softfloat_round_minMag, false);
+                f128M_ceil(&tmp, &tmp);
+                n_ = f128M_to_i64(&tmp, softfloat_round_minMag, false) - 1;
                 break;}
             }
             u3_noun n = u3i_chub(n_+1);
-            x_shape = u3nt(u3k(n), 0x1, u3_nul);
+            x_shape = u3nc(u3k(n), u3_nul);
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
           default:
@@ -3268,7 +3272,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data,
             y_meta, y_data;
-    fprintf(stderr, "mmul 1\n");
+
     if ( c3n == u3r_mean(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
@@ -3297,7 +3301,6 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            fprintf(stderr, "mmul 2\n");
             _set_rounding(rnd);
             u3_noun r_data = u3qi_la_mmul_i754(x_data, y_data, x_shape, y_shape, x_bloq);
             // result is already [meta data]
