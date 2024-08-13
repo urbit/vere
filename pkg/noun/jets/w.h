@@ -211,6 +211,8 @@
     u3_noun u3we_blake3_chunk_output(u3_noun);
     u3_noun u3we_blake3_compress(u3_noun);
 
+    u3_noun u3we_adler32(u3_noun);
+
     u3_noun u3we_ripe(u3_noun);
 
     u3_noun u3we_make(u3_noun);
