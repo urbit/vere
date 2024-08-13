@@ -616,33 +616,38 @@ u3_noun
 u3i_tuple(u3_weak som, ...)
 {
   va_list ap;
-  va_start(ap, som);
   u3_weak cur = som;
 
-  va_arg(ap, u3_weak); // skip som
   c3_y num_y = 0;
-  while ( u3_none != cur ) {
-    num_y++;
-    cur = va_arg(ap, u3_weak);
-  }
-  if ( 0 == num_y ) {
-    return som;
+  {
+    va_start(ap, som);
+    while ( u3_none != cur ) {
+      num_y++;
+      cur = va_arg(ap, u3_weak);
+    }
+    va_end(ap);
   }
   if ( 1 == num_y ) {
+    return som;
+  }
+  if ( 2 == num_y ) {
     va_start(ap, som);
-    u3_noun ret = u3nc(num_y, va_arg(ap, u3_noun));
+    u3_noun ret = u3nc(som, va_arg(ap, u3_noun));
     va_end(ap);
     return ret;
   }
   u3_noun* ray_u = alloca(num_y * sizeof(u3_noun));
-  va_start(ap, som);
-  for ( c3_y i_y = num_y - 1; i_y != 0; i_y-- ) {
-    ray_u[i_y] = va_arg(ap, u3_noun);
+  {
+    va_start(ap, som);
+    ray_u[num_y - 1] = som;
+    for ( c3_y i_y = num_y - 1; i_y > 0; i_y-- ) {
+      ray_u[i_y - 1] = va_arg(ap, u3_noun);
+    }
+    va_end(ap);
   }
-  va_end(ap);
 
-  u3_noun ret = som;
-  for ( c3_y i_y = 0; i_y < num_y; i_y++ ) {
+  u3_noun ret = ray_u[0];
+  for ( c3_y i_y = 1; i_y < num_y; i_y++ ) {
     ret = u3nc(ray_u[i_y], ret);
   }
   return ret;
