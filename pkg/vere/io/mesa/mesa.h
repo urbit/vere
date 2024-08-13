@@ -145,11 +145,15 @@ typedef struct _u3_mesa_pact {
 typedef struct _u3_etcher {
   c3_y* buf_y;
   c3_w  len_w;
+  c3_d  bit_d; // for _etch_bits
+  c3_y  off_y; // for _etch_bits
 } u3_etcher;
 
 typedef struct _u3_sifter {
   c3_y* buf_y;
   c3_w  rem_w;
+  c3_d  bit_d; // for _etch_bits
+  c3_y  off_y; // for _etch_bits
   c3_c* err_c;
 } u3_sifter;
 

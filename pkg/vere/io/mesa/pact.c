@@ -338,6 +338,8 @@ etcher_init(u3_etcher* ech_u, c3_y* buf_y)
 {
   ech_u->buf_y = buf_y;
   ech_u->len_w = 0;
+  ech_u->bit_d = 0;
+  ech_u->off_y = 0;
 }
 
 void
@@ -345,6 +347,8 @@ sifter_init(u3_sifter* sif_u, c3_y* buf_y, c3_w len_w)
 {
   sif_u->buf_y = buf_y;
   sif_u->rem_w = len_w;
+  sif_u->bit_d = 0;
+  sif_u->off_y = 0;
   sif_u->err_c = NULL;
 }
 
@@ -364,6 +368,7 @@ _sift_fail(u3_sifter* sif_u, c3_c* msg_c)
 static c3_y*
 _etch_next(u3_etcher* ech_u, c3_w len_w)
 {
+  assert ( ech_u->off_y == 0 ); // ensure all bits were etched
   c3_y *res_y = ech_u->buf_y + ech_u->len_w;
   ech_u->len_w += len_w;
   return res_y;
@@ -372,6 +377,7 @@ _etch_next(u3_etcher* ech_u, c3_w len_w)
 static c3_y*
 _sift_next(u3_sifter* sif_u, c3_w len_w)
 {
+  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
   if ( sif_u->err_c ) {
     return NULL;
   }
@@ -513,6 +519,37 @@ _sift_var_chub(u3_sifter* sif_u, c3_w len_w)
 }
 
 static void
+_etch_bits(u3_etcher* ech_u, c3_w wid_w, c3_d val_d)
+{
+  assert ( ech_u->off_y + wid_w <= 64 );
+  ech_u->bit_d |= ((val_d&((1 << wid_w) - 1)) << ech_u->off_y);
+  ech_u->off_y += wid_w;
+  while ( ech_u->off_y >= 8 ) {
+    ech_u->buf_y[ech_u->len_w] = ech_u->bit_d & 0xFF;
+    ech_u->bit_d >>= 8;
+    ech_u->len_w += 1;
+    ech_u->off_y -= 8;
+  }
+}
+
+static c3_d
+_sift_bits(u3_sifter* sif_u, c3_w wid_w)
+{
+  assert ( wid_w <= 64 );
+  while ( sif_u->off_y < wid_w ) {
+    c3_d byt_d = (sif_u->rem_w > 0) ? sif_u->buf_y[0] : 0;
+    sif_u->buf_y += 1;
+    sif_u->rem_w -= 1;
+    sif_u->bit_d |= (byt_d << sif_u->off_y);
+    sif_u->off_y += 8;
+  }
+  c3_d res_d = sif_u->bit_d & ((1 << wid_w) - 1);
+  sif_u->bit_d >>= wid_w;
+  sif_u->off_y -= wid_w;
+  return res_d;
+}
+
+static void
 _etch_ship(u3_etcher* ech_u, u3_ship who_u, c3_y len_y)
 {
   assert ( len_y <= 16 );
@@ -537,13 +574,12 @@ _mesa_etch_head(u3_etcher* ech_u, u3_mesa_head* hed_u)
   if ( 1 != hed_u->pro_y ) {
     u3l_log("etching bad head");
   }
-  c3_w hed_w = (hed_u->nex_y & 0x3) << 2
-             ^ (hed_u->pro_y & 0x7) << 4  // XX constant, 1
-             ^ (hed_u->typ_y & 0x3) << 7
-             ^ (hed_u->hop_y & 0x7) << 9
-             ^ (hed_u->mug_w & 0xFFFFF) << 12;
-             // XX: we don't expand hopcount if no request. Correct?
-  _etch_word(ech_u, hed_w);
+  _etch_bits(ech_u, 2, 0); // unused
+  _etch_bits(ech_u, 2, hed_u->nex_y);
+  _etch_bits(ech_u, 3, hed_u->pro_y);
+  _etch_bits(ech_u, 2, hed_u->typ_y);
+  _etch_bits(ech_u, 3, hed_u->hop_y);
+  _etch_bits(ech_u, 20, hed_u->mug_w);
   _etch_word(ech_u, MESA_COOKIE);
 }
 
@@ -556,12 +592,12 @@ mesa_is_new_pact(c3_y* buf_y, c3_w len_w)
 void
 mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u)
 {
-  c3_w hed_w = _sift_word(sif_u);
-  hed_u->nex_y = (hed_w >> 2)  & 0x3;
-  hed_u->pro_y = (hed_w >> 4)  & 0x7;
-  hed_u->typ_y = (hed_w >> 7)  & 0x3;
-  hed_u->hop_y = (hed_w >> 9)  & 0x7;
-  hed_u->mug_w = (hed_w >> 12) & 0xFFFFF;
+                 _sift_bits(sif_u, 2); // unused
+  hed_u->nex_y = _sift_bits(sif_u, 2);
+  hed_u->pro_y = _sift_bits(sif_u, 3);
+  hed_u->typ_y = _sift_bits(sif_u, 2);
+  hed_u->hop_y = _sift_bits(sif_u, 3);
+  hed_u->mug_w = _sift_bits(sif_u, 20);
   if ( 1 != hed_u->pro_y ) {
     _sift_fail(sif_u, "bad protocol");
   }
@@ -587,13 +623,12 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
     met_u.tau_y = (c3y == nam_u->aut_o) ? 1 : 0;
     met_u.gaf_y = _mesa_make_chub_tag(nam_u->fra_d);
   }
-  c3_y met_y = (met_u.ran_y & 0x3) << 0
-             ^ (met_u.rif_y & 0x3) << 2
-             ^ (met_u.nit_y & 0x1) << 4
-             ^ (met_u.tau_y & 0x1) << 5
-             ^ (met_u.gaf_y & 0x3) << 6;
 
-  _etch_byte(ech_u, met_y);
+  _etch_bits(ech_u, 2, met_u.ran_y);
+  _etch_bits(ech_u, 2, met_u.rif_y);
+  _etch_bits(ech_u, 1, met_u.nit_y);
+  _etch_bits(ech_u, 1, met_u.tau_y);
+  _etch_bits(ech_u, 2, met_u.gaf_y);
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
   _etch_ship(ech_u, nam_u->her_u, her_y);
   _etch_var_word(ech_u, nam_u->rif_w, met_u.rif_y + 1);
@@ -614,13 +649,11 @@ static void
 _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 {
   u3_mesa_name_meta met_u;
-
-  c3_y met_y = _sift_byte(sif_u);
-  met_u.ran_y = (met_y >> 0) & 0x3;
-  met_u.rif_y = (met_y >> 2) & 0x3;
-  met_u.nit_y = (met_y >> 4) & 0x1;
-  met_u.tau_y = (met_y >> 5) & 0x1;
-  met_u.gaf_y = (met_y >> 6) & 0x3;
+  met_u.ran_y = _sift_bits(sif_u, 2);
+  met_u.rif_y = _sift_bits(sif_u, 2);
+  met_u.nit_y = _sift_bits(sif_u, 1);
+  met_u.tau_y = _sift_bits(sif_u, 1);
+  met_u.gaf_y = _sift_bits(sif_u, 2);
 
   nam_u->nit_o = ( met_u.nit_y ) ? c3y : c3n;
   nam_u->aut_o = ( met_u.tau_y ) ? c3y : c3n;
@@ -649,39 +682,34 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 static void
 _mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
 {
-  c3_y aut_y = 0;
-  switch ( dat_u->aut_u.typ_e ) {
-    case AUTH_SIGN: aut_y = 0; break;
-    case AUTH_HMAC: aut_y = 1; break;
-    case AUTH_NONE: aut_y = 2; break;
-    case AUTH_PAIR: aut_y = 3; break;
-  }
-  c3_y bot_y = _mesa_make_chub_tag(dat_u->tob_d);
+  u3_mesa_data_meta met_u;
+  met_u.bot_y = _mesa_make_chub_tag(dat_u->tob_d);
+  met_u.aut_o = __(dat_u->aut_u.typ_e == AUTH_SIGN || dat_u->aut_u.typ_e == AUTH_HMAC);
+  met_u.auv_o = __(dat_u->aut_u.typ_e == AUTH_SIGN || dat_u->aut_u.typ_e == AUTH_NONE);
   c3_y nel_y = _mesa_met3_w(dat_u->len_w);
-  c3_y men_y = (3 >= nel_y) ? nel_y : 3;
-  _etch_byte(ech_u, (bot_y & 0x3) << 0
-                  | (aut_y & 0x3) << 2
-                  | (men_y & 0x3) << 6);
-  _etch_var_chub(ech_u, dat_u->tob_d, 1 << bot_y);
+  met_u.men_y = c3_min(nel_y, 3);
+  _etch_bits(ech_u, 2, met_u.bot_y);
+  _etch_bits(ech_u, 1, met_u.auv_o);
+  _etch_bits(ech_u, 1, met_u.aut_o);
+  _etch_bits(ech_u, 2, 0); // unused
+  _etch_bits(ech_u, 2, met_u.men_y);
+  _etch_var_chub(ech_u, dat_u->tob_d, 1 << met_u.bot_y);
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: {
       _etch_bytes(ech_u, dat_u->aut_u.sig_y, 64);
     } break;
-
     case AUTH_HMAC: {
       _etch_bytes(ech_u, dat_u->aut_u.mac_y, 16);
     } break;
-
     case AUTH_NONE: {
     } break;
-
     case AUTH_PAIR: {
       _etch_bytes(ech_u, dat_u->aut_u.has_y[0], 32);
       _etch_bytes(ech_u, dat_u->aut_u.has_y[1], 32);
     } break;
   }
 
-  if ( 3 == men_y ) {
+  if ( 3 == met_u.men_y ) {
     _etch_byte(ech_u, nel_y);
   }
   _etch_var_word(ech_u, dat_u->len_w, nel_y);
@@ -692,12 +720,11 @@ static void
 _mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
 {
   u3_mesa_data_meta met_u;
-
-  c3_y met_y = _sift_byte(sif_u);
-  met_u.bot_y = (met_y >> 0) & 0x3;
-  met_u.auv_o = (met_y >> 2) & 0x1;
-  met_u.aut_o = (met_y >> 3) & 0x1;
-  met_u.men_y = (met_y >> 6) & 0x3;
+  met_u.bot_y = _sift_bits(sif_u, 2);
+  met_u.auv_o = _sift_bits(sif_u, 1);
+  met_u.aut_o = _sift_bits(sif_u, 1);
+                _sift_bits(sif_u, 2); // unused
+  met_u.men_y = _sift_bits(sif_u, 2);
 
   dat_u->tob_d = _sift_var_chub(sif_u, 1<<met_u.bot_y);
 
@@ -925,7 +952,6 @@ mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w) {
   sifter_init(&sif_u, buf_y, len_w);
   mesa_sift_pact(&sif_u, pac_u);
   if ( sif_u.rem_w && !sif_u.err_c ) {
-      u3l_log("mesa: sift roundtrip failed: %u trailing bytes", sif_u.rem_w);
     _sift_fail(&sif_u, "trailing bytes");
   }
 
@@ -934,9 +960,6 @@ mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w) {
     u3_etcher ech_u;
     etcher_init(&ech_u, bof_y);
     mesa_etch_pact(&ech_u, pac_u);
-    if ( memcmp(bof_y, buf_y, len_w) ) {
-      u3l_log("mesa: roundtrip failed: len_w %u ech_u %u", len_w, ech_u.len_w);
-    }
     u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
     c3_free(bof_y);
   #endif
