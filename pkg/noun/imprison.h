@@ -151,6 +151,11 @@
           u3i_list(u3_weak som, ...);
 #         define u3nl u3i_list
 
+        /* u3i_tuple(): tuple from `u3_none`-terminated varargs.
+        */
+          u3_noun
+          u3i_tuple(u3_weak som, ...);
+
         /* u3i_edit():
         **
         **   Mutate `big` at axis `axe` with new value `som`
