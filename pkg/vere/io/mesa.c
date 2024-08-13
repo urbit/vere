@@ -2008,7 +2008,7 @@ static u3_noun
 _name_to_jumbo_scry(u3_mesa_name* nam_u)
 {
   u3_noun rif = _dire_etch_ud(nam_u->rif_w);
-  u3_noun boq = _dire_etch_ud(31); // XX make configurable
+  u3_noun boq = _dire_etch_ud(u3_Host.ops_u.jum_y); // XX make configurable:  u3_Host.ops_u.jum_y;
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
   u3_noun wer = nam_u->nit_o == c3y
@@ -2213,7 +2213,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
-      (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?
+      (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?  // xx wrong? check nit_o...
       lss_proof_size(mev_d) :
       0;
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
@@ -2230,8 +2230,8 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->len_w = len_w;
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
-    lin_u->haz_y = lin_u->dat_y + haz_w;
-    memcpy(lin_u->tip_y, dat_u->fra_y, dat_u->len_w);
+    lin_u->haz_y = lin_u->dat_y + dat_w;  // XX
+    memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);  // XX
     u3r_bytes(0, haz_w, lin_u->haz_y, pas);
     mesa_free_pact(&jum_u);
   }
