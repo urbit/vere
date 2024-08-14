@@ -1393,18 +1393,18 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       buf_u->par_u = par_u;
     }
   }
-  else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
-    c3_free(par_u);
-    // TODO: do we drop the whole request on the floor?
-    u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
-    MESA_LOG(sam_u, AUTH);
-    return;
-  }
-  else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
-    c3_free(par_u);
-    MESA_LOG(sam_u, AUTH)
-    return;
-  }
+  // else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
+  //   c3_free(par_u);
+  //   // TODO: do we drop the whole request on the floor?
+  //   u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
+  //   MESA_LOG(sam_u, AUTH);
+  //   return;
+  // }
+  // else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
+  //   c3_free(par_u);
+  //   MESA_LOG(sam_u, AUTH)
+  //   return;
+  // }
   else {
     c3_free(par_u);
   }
@@ -1671,6 +1671,7 @@ static u3_weak
 _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   u3_noun pax = _name_to_scry(nam_u);
+  u3m_p("_mesa_get_pit: pax", pax);
   u3_weak res = u3h_get(sam_u->pit_p, pax);
   u3z(pax);
   return res;
@@ -1685,6 +1686,7 @@ _mesa_put_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_noun val)
     c3_c* our_c = (c3y == u3h(val))? "&" : "|";
     c3_c* las_c = (u3_nul == u3t(val))? "~" : "...";
     u3l_log("mesa: put_pit(our %s, las %s)", our_c, las_c);
+    u3m_p("_mesa_put_pit: pax", pax);
     log_name(nam_u);
   #endif
   u3z(pax);
@@ -1830,6 +1832,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       res_u->ret_y = 4;
       uv_timer_init(u3L, &res_u->tim_u);
     }
+    u3l_log("ef_send _mesa_add_our_to_pit");
     _mesa_add_our_to_pit(sam_u, nam_u);
     _mesa_send_request(dat_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
@@ -2058,6 +2061,8 @@ _mesa_send_pact(u3_mesa*      sam_u,
   #ifdef MESA_DEBUG
     _mesa_check_etch(tac_u, buf_y, len_w);
   #endif
+  u3l_log("_mesa_send_pact %u", len_w);
+  _log_buf(buf_y, len_w);
   _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
   u3z(las);
 }
@@ -2070,7 +2075,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  nam_u->nit_o = __(fra_d == 0);
+  // nam_u->nit_o = __(fra_d == 0);
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -2148,7 +2153,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
   }
 
   // send leaf packet(s)
-  c3_d lev_d = mesa_num_leaves(lin_u->dat_w);
+  c3_d lev_d = mesa_num_leaves(lin_u->dat_w) - 1;
   c3_d fir_d = nam_u->fra_d;
   c3_d las_d = fir_d + lev_d;
   if ( NULL == fra_d ) {
@@ -2179,8 +2184,8 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     log_pact(pac_u);
     return;
   }
-  u3_noun pac, pas;
-  if ( c3n == u3r_cell(pag, &pac, &pas) ||
+  u3_noun pac, pas, pof;
+  if ( c3n == u3r_trel(pag, &pac, &pas, &pof) ||
        c3n == u3a_is_pug(pac) ) {
     u3l_log("mesa: jumbo frame misshapen");
     log_pact(pac_u);
@@ -2214,12 +2219,13 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
       (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?
-      lss_proof_size(mev_d) :
+      lss_proof_size(mev_d) * sizeof(lss_hash):
       0;
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
     c3_w lev_w = mesa_num_leaves(dat_w); // number of leaves in this frame
     c3_w haz_w = lev_w * sizeof(lss_pair); // bytes in hash pairs
     c3_w len_w = tip_w + dat_w + haz_w;
+
 
     lin_u = u3a_malloc(sizeof(u3_mesa_line));
     lin_u->typ_y = CTAG_ITEM;
@@ -2231,8 +2237,12 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
     lin_u->haz_y = lin_u->dat_y + haz_w;
-    memcpy(lin_u->tip_y, dat_u->fra_y, dat_u->len_w);
-    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+    memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
+    // u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+    if ( tip_w > 0 ) {
+      u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    }
+
     mesa_free_pact(&jum_u);
   }
 
@@ -2661,8 +2671,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                       lon_u);
   //  TODO: check return value before continuing?
 
-  c3_y boq_y = u3_Host.ops_u.jum_y;
-  c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
+  c3_y boq_y = 31;
+  // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
+  c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
   _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
@@ -2921,6 +2932,10 @@ _mesa_hear(u3_mesa* sam_u,
   pic_u->sam_u = sam_u;
 
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
+  u3l_log("buf_len %u", len_w);
+  _log_buf(hun_y, len_w);
+  log_pact(&pic_u->pac_u);
+
   #ifdef MESA_ROUNDTRIP
     _mesa_check_sift(&pic_u->pac_u, hun_y, lin_w);
   #endif
