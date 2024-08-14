@@ -166,7 +166,7 @@ log_name(u3_mesa_name* nam_u)
   }
 
   u3l_log("%s: /%s", her_c, nam_u->pat_c);
-  u3l_log("  rift: %u  bloq: %u  auth/data: %s  init: %s  frag: %"PRIu64,
+  u3l_log("  rift: %u  bloq: %u  auth/data: %s init: %s frag: %"PRIu64,
           nam_u->rif_w,
           nam_u->boq_y,
           (c3y == nam_u->aut_o) ? "auth" : "data",

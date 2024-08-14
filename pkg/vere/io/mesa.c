@@ -1907,7 +1907,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  nam_u->nit_o = __(0 == fra_d);
+  // nam_u->nit_o = __(fra_d == 0);
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -2084,10 +2084,12 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
     lin_u->haz_y = lin_u->dat_y + haz_w;
-    u3r_bytes(0, tip_w, lin_u->tip_y, pof);
     memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
-    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
-    u3l_log("about to mesa_free_pact(&jum_u)");
+    // u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+    if ( tip_w > 0 ) {
+      u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    }
+
     mesa_free_pact(&jum_u);
   }
 
@@ -2517,8 +2519,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                       lon_u);
   //  TODO: check return value before continuing?
 
-  c3_y boq_y = u3_Host.ops_u.jum_y;
-  c3_o done_with_jumbo_frame = __(0 == (req_u->hav_d % (1 << (boq_y - 13))));
+  c3_y boq_y = 31;
+  // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
+  c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
   _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
