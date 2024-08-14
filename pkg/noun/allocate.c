@@ -2191,7 +2191,7 @@ u3a_mark_road()
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("trace stack");
-  qua_u[1]->siz_w = u3a_mark_noun(u3R->ski.gul) * 4;
+  qua_u[1]->siz_w = u3a_mark_noun(u3R->bug.tax) * 4;
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("trace buffer");
