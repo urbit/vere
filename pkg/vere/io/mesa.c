@@ -2239,9 +2239,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->haz_y = lin_u->dat_y + haz_w;
     memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
     // u3r_bytes(0, haz_w, lin_u->haz_y, pas);
-    if ( tip_w > 0 ) {
-      u3r_bytes(0, tip_w, lin_u->tip_y, pof);
-    }
+    u3r_bytes(0, tip_w, lin_u->tip_y, pof);
 
     mesa_free_pact(&jum_u);
   }
