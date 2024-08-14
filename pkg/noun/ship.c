@@ -79,6 +79,13 @@ u3_ships_equal(u3_ship sip_u, u3_ship sap_u)
   return __((sip_u[0] == sap_u[0]) && (sip_u[1] == sap_u[1]));
 }
 
+void
+u3_ship_copy(u3_ship des_u, u3_ship src_u)
+{
+  des_u[0] = src_u[0];
+  des_u[1] = src_u[1];
+}
+
 c3_l
 u3_ship_rank(u3_ship who_u)
 {

@@ -356,29 +356,6 @@ _mesa_is_direct_mode(u3_peer* per_u)
   return __(per_u->dir_u.her_d + DIRECT_ROUTE_TIMEOUT_MICROS > now_d);
 }
 
-static inline void
-_get_her(u3_mesa_pact* pac_u, c3_d* our_d)
-{
-  switch ( pac_u->hed_u.typ_y ) {
-    default: {
-      u3m_bail(c3__foul);
-      break;
-    }
-    case PACT_PAGE: {
-      memcpy(our_d, pac_u->pag_u.nam_u.her_u, 16);
-      break;
-    }
-    case PACT_PEEK: {
-      memcpy(our_d, pac_u->pek_u.nam_u.her_u, 16);
-      break;
-    }
-    case PACT_POKE: {
-      memcpy(our_d, pac_u->pok_u.nam_u.her_u, 16);
-      break;
-    }
-  }
-}
-
 static c3_c*
 _mesa_czar_dns(c3_y imp_y, c3_c* zar_c)
 {
@@ -391,6 +368,7 @@ _mesa_czar_dns(c3_y imp_y, c3_c* zar_c)
   c3_i sas_i = snprintf(dns_c, len_w, "%s.%s.", nam_c + 1, zar_c);
   u3_assert(sas_i <= 255);
 
+    u3l_log("about to free nam_c");
   c3_free(nam_c);
   u3z(nam);
 
@@ -448,9 +426,30 @@ _mesa_free_line(u3_mesa_line* lin_u)
 }
 
 static void
+_mesa_copy_auth_data(u3_auth_data* des_u, u3_auth_data* src_u)
+{
+  des_u->typ_e = src_u->typ_e;
+  switch ( des_u->typ_e ) {
+    case AUTH_HMAC: {
+      memcpy(des_u->mac_y, src_u->mac_y, 16);
+    } break;
+    case AUTH_SIGN: {
+      memcpy(des_u->sig_y, src_u->sig_y, 64);
+    } break;
+    case AUTH_PAIR: {
+      memcpy(des_u->has_y, src_u->has_y, 64);
+    } break;
+    case AUTH_NONE: {
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+}
+
+static void
 _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u)
 {
   memcpy(des_u, src_u, sizeof(u3_mesa_name));
+  u3_ship_copy(des_u->her_u, src_u->her_u);
   des_u->pat_c = c3_calloc(src_u->pat_s + 1); // null-terminate
   memcpy(des_u->pat_c, src_u->pat_c, src_u->pat_s);
 }
@@ -621,11 +620,15 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
     // u3l_log("wat_u %p", req_u->wat_u);
   // u3l_log("was_u buf %p", req_u->was_u.buf_y);
   uv_timer_stop(&req_u->tim_u);
+  u3l_log("about to free_pict in del_request");
   _mesa_free_pict(req_u->pic_u);
+  u3l_log("about to free wat_u in del_request");
   c3_free(req_u->wat_u);
+  u3l_log("about to free dat_y in del_request");
   c3_free(req_u->dat_y);
   lss_verifier_free(req_u->los_u);
   u3h_del(per_u->req_p, key);
+  u3l_log("about to free req_u in del_request");
   u3a_free(req_u);
   u3z(key);
 }
@@ -944,6 +947,7 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
     //sam_u->fig_u.net_o = c3y;
   }
 
+  u3l_log("about to free seal");
   _mesa_free_seal(sel_u);
 }
 
@@ -1247,18 +1251,20 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     }
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
+    u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
     c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
-    u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
     MESA_LOG(sam_u, AUTH);
     return;
   }
   else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
+    u3l_log("about to misorder free");
     c3_free(par_u);
     MESA_LOG(sam_u, AUTH)
     return;
   }
   else {
+    u3l_log("about to other free");
     c3_free(par_u);
   }
 
@@ -1419,6 +1425,7 @@ _mesa_czar_cb(uv_getaddrinfo_t* adr_u, c3_i sas_i, struct addrinfo* aif_u)
     _mesa_czar_gone(sam_u, sas_i, imp_y, now_t);
   }
 
+  u3l_log("about to free adr_u");
   c3_free(adr_u);
   uv_freeaddrinfo(aif_u);
 
@@ -1591,6 +1598,7 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #ifdef MESA_DEBUG
       u3l_log("mesa: resend PIT entry gone %u", res_u->ret_y);
     #endif
+  u3l_log("about to free resend data in resend-timer-cb");
     _mesa_free_resend_data(res_u);
     return;
   }
@@ -1607,6 +1615,7 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
   else {
+  u3l_log("about to free resend data in resend-timer-cb 2");
     _mesa_free_resend_data(res_u);
   }
 }
@@ -1651,7 +1660,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3_mesa_request_data* dat_u = &res_u->dat_u;
     {
       dat_u->sam_u = sam_u;
-      _get_her(&pac_u, dat_u->her_u);
+      u3_ship_copy(dat_u->her_u, nam_u->her_u);
       dat_u->nam_u = nam_u;
       dat_u->las = u3k(las);
       dat_u->buf_y = buf_y;
@@ -1871,6 +1880,7 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
   u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3_weak del = u3h_put_get(sam_u->pac_p, pax, u3a_outa(lin_u));
   if ( u3_none != del ) {
+  u3l_log("about to free line");
     _mesa_free_line(u3a_into(del));
     u3z(del);
   }
@@ -1892,12 +1902,12 @@ _mesa_send_pact(u3_mesa*      sam_u,
 static void
 _mesa_send_leaf(u3_mesa*      sam_u,
                 u3_mesa_line* lin_u,
-                u3_mesa_pact* pac_u,  //  scratchpad
+                u3_mesa_pact* pac_u, // scratchpad
                 c3_d          fra_d)
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  nam_u->nit_o = __(fra_d == 0);
+  nam_u->nit_o = __(0 == fra_d);
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -1905,7 +1915,10 @@ _mesa_send_leaf(u3_mesa*      sam_u,
   dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+  if ( 0 == nam_u->fra_d ) {
+    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
+  }
+  else if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
     dat_u->aut_u.typ_e = AUTH_NONE;
   } else {
     dat_u->aut_u.typ_e = AUTH_PAIR;
@@ -1924,7 +1937,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 }
 
 static void
-_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
+_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
 {
   #ifdef MESA_DEBUG
     u3l_log("mesa: send_jumbo_pieces()");
@@ -1957,36 +1970,52 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
   c3_d mev_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pro_w = lss_proof_size(mev_d);
 
-  if ( c3y == nam_u->nit_o && pro_w > 0 ) {
+  //  send response packet for %init request
+  if ( 0 == lin_u->nam_u.fra_d ) {
+    nam_u->nit_o = c3y;
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
-      #ifdef MESA_DEBUG
-        u3l_log(" sending proof packet");
-      #endif
-      dat_u->len_w = pro_w * sizeof(lss_hash);
-      c3_y* pro_y = c3_malloc(dat_u->len_w);
-      memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
-      dat_u->fra_y = pro_y;
-      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
-      _mesa_del_pit(sam_u, nam_u);
-      c3_free(pro_y);
-      u3z(pin);
+      //  if the initial Merkle proof is nonzero, this is a multifragment
+      //  message; send auth response to the %init request
+      if ( pro_w > 0 ) {
+        dat_u->len_w = pro_w * sizeof(lss_hash);
+        c3_y* pro_y = c3_malloc(dat_u->len_w);
+        memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
+        dat_u->fra_y = pro_y;
+        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
+        _mesa_del_pit(sam_u, nam_u);
+        u3l_log("about to free pro_y");
+        c3_free(pro_y);
+        u3z(pin);
+      }
+      //  single-fragment message; just send the one data fragment
+      else if ( ( NULL == fra_u) || (0 == *fra_u) ) {
+        _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_u);
+      }
+      else {
+        u3l_log("mesa: weird fragment number %"PRIu64, *fra_u);
+      }
     }
   }
+  //  Now send responses to non-%init requests.
+  //  note: we might re-send the first data fragment, but only if there is an
+  //  outstanding non-%init request for it, which would be strange but not
+  //  illegal
+  nam_u->nit_o = c3n;
 
   // send leaf packet(s)
   c3_d lev_d = mesa_num_leaves(lin_u->dat_w);
   c3_d fir_d = nam_u->fra_d;
   c3_d las_d = fir_d + lev_d;
-  if ( NULL == fra_d ) {
+  if ( NULL == fra_u ) {
     for (c3_d fra_d = fir_d; fra_d < las_d; fra_d++) {
       _mesa_send_leaf(sam_u, lin_u, &pac_u, fra_d);
     }
   }
   else {
-    _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_d);
+    _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_u);
   }
-  // mesa_free_pact(&pac_u);
+  // mesa_free_pact(&pac_u);  //  TODO reinstate
 }
 
 static void
@@ -2006,8 +2035,8 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     log_pact(pac_u);
     return;
   }
-  u3_noun pac, pas;
-  if ( c3n == u3r_cell(pag, &pac, &pas) ||
+  u3_noun pac, pas, pof;
+  if ( c3n == u3r_trel(pag, &pac, &pas, &pof) ||
        c3n == u3a_is_pug(pac) ) {
     u3l_log("mesa: jumbo frame misshapen");
     log_pact(pac_u);
@@ -2038,7 +2067,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
       (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?
-      lss_proof_size(mev_d) :
+      lss_proof_size(mev_d) * sizeof(lss_hash):
       0;
     c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
     c3_w lev_w = mesa_num_leaves(dat_w); // number of leaves in this frame
@@ -2055,13 +2084,16 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
     lin_u->haz_y = lin_u->dat_y + haz_w;
-    memcpy(lin_u->tip_y, dat_u->fra_y, dat_u->len_w);
+    u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
     u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+    u3l_log("about to mesa_free_pact(&jum_u)");
     mesa_free_pact(&jum_u);
   }
 
   _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
   _mesa_send_jumbo_pieces(sam_u, lin_u, NULL);
+
   u3z(res);
   return;
 }
@@ -2228,6 +2260,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   lss_root(root, pof_u, pof_w);
   req_u->los_u = c3_calloc(sizeof(lss_verifier));
   lss_verifier_init(req_u->los_u, 0, req_u->tof_d, pof_u);
+  u3l_log("about to c3_free(pof_u)");
   c3_free(pof_u);
 
   req_u = _mesa_put_request(sam_u, nam_u, req_u);
@@ -2297,6 +2330,7 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 
   //  XX do early delete instead, to avoid injecting retries
   // _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
+  u3l_log("about to free lane cb data");
   _mesa_free_lane_cb_data(dat_u);
 }
 
@@ -2306,6 +2340,7 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
   #ifdef MESA_DEBUG
     u3l_log("mesa: arvo page event failed");
   #endif
+  u3l_log("about to free lane cb data 2");
   _mesa_free_lane_cb_data((u3_mesa_lane_cb_data*)egg_u->ptr_v);
 }
 
@@ -2349,8 +2384,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_mesa_name* nam_u = &pac_u->pek_u.nam_u;
   c3_s fra_s;
 
-  c3_d* her_d = nam_u->her_u;
-  c3_o our_o = u3_ships_equal(her_d, sam_u->pir_u->who_d);
+  c3_o our_o = u3_ships_equal(nam_u->her_u, sam_u->pir_u->who_d);
 
   //  forwarding wrong, need a PIT entry
   // if ( c3n == our_o ) {
@@ -2405,6 +2439,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     _mesa_send_pact(sam_u, u3k(las), per_u, pac_u);
     _mesa_del_pit(sam_u, nam_u);
+    u3l_log("about to free_pict() in hear_page()");
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
@@ -2449,7 +2484,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     //
     _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
     u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
-
+ 
+    u3l_log("about to free_pict() 2 in hear_page()");
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
@@ -2482,7 +2518,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   //  TODO: check return value before continuing?
 
   c3_y boq_y = u3_Host.ops_u.jum_y;
-  c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
+  c3_o done_with_jumbo_frame = __(0 == (req_u->hav_d % (1 << (boq_y - 13))));
   _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
@@ -2531,6 +2567,7 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
       u3l_log("mesa: alien forward for %s", mes);
       c3_free(mes);
     #endif
+    u3l_log("about to free_pict() in forward_request()");
     _mesa_free_pict(pic_u);
     return;
   }
@@ -2538,6 +2575,7 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_lane lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     u3_lane zer_u = {0, 0};
     if ( _mesa_lanes_equal(&zer_u, &lin_u) == c3y) {
+    u3l_log("about to free_pict() in forward_request() lanes_equal");
       _mesa_free_pict(pic_u);
       return;
     }
@@ -2549,6 +2587,7 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
     _mesa_send(pic_u, &lin_u);
   }
+  u3l_log("about to free_pict() in forward_request() end");
   _mesa_free_pict(pic_u);
 }
 
@@ -2581,6 +2620,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( NULL != lin_u ) {
     if ( CTAG_ITEM == lin_u->typ_y ) {
       _mesa_send_jumbo_pieces(sam_u, lin_u, &fra_d);
+      u3l_log("about to free_pict after jumbo pieces");
       _mesa_free_pict(pic_u);
     }
     return;
@@ -2603,6 +2643,7 @@ _mesa_poke_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
     return;
   }
   u3_mesa_lane_cb_data* dat_u = egg_u->ptr_v;
+  u3l_log("free(dat_u) in poke_news_cb");
   c3_free(dat_u);
 }
 
@@ -2717,6 +2758,7 @@ _mesa_hear(u3_mesa* sam_u,
     mesa_free_pact(&pic_u->pac_u);
     return;
   }
+  u3l_log("about to free hun_y");
   c3_free(hun_y);
 
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
@@ -2752,12 +2794,14 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     c3_free(buf_u->base);
   }
   else if ( 0 == nrd_i ) {
+    u3l_log("about to free buf_u->base");
     c3_free(buf_u->base);
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: message truncated");
     }
+    u3l_log("about to free buf_u->base 2");
     c3_free(buf_u->base);
   }
   else {

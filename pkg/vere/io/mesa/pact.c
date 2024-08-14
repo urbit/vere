@@ -166,10 +166,11 @@ log_name(u3_mesa_name* nam_u)
   }
 
   u3l_log("%s: /%s", her_c, nam_u->pat_c);
-  u3l_log("  rift: %u  bloq: %u  auth/data: %s  frag: %"PRIu64,
+  u3l_log("  rift: %u  bloq: %u  auth/data: %s  init: %s  frag: %"PRIu64,
           nam_u->rif_w,
           nam_u->boq_y,
           (c3y == nam_u->aut_o) ? "auth" : "data",
+          (c3y == nam_u->nit_o) ? "init" : "nope",
           nam_u->fra_d
   );
   c3_free(her_c);
@@ -257,10 +258,13 @@ log_pact(u3_mesa_pact* pac_u)
 
 /* Helper utilities
 */
+
+/* mesa_num_leaves(): calculate how many leaves, given total bytes
+*/
 c3_d
-mesa_num_leaves(c3_d tot_d)
+mesa_num_leaves(c3_d tob_d)
 {
-  return (tot_d + 1023) / 1024;
+  return (tob_d + 1023) / 1024;
 }
 
 void
@@ -1450,7 +1454,7 @@ _test_make_data(void* ptr_v, u3_mesa_data* dat_u)
 
     case AUTH_HMAC: {
       dat_u->aut_u.len_y = _test_rand_gulf_y(ptr_v, 3);
-      _test_rand_bytes(ptr_v, 32, dat_u->aut_u.mac_y);
+      _test_rand_bytes(ptr_v, 16, dat_u->aut_u.mac_y);
     } break;
 
     default: break;

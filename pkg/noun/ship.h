@@ -27,6 +27,9 @@ u3_ships_equal(u3_ship sip_u, u3_ship sap_u);
 c3_l
 u3_ship_rank(u3_ship who_u);
 
+void
+u3_ship_copy(u3_ship des_u, u3_ship src_u);
+
 /**
 * Returns a ship's galaxy byte prefix.
 */
