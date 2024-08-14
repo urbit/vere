@@ -212,6 +212,7 @@
     u3_noun u3we_blake3_compress(u3_noun);
 
     u3_noun u3we_adler32(u3_noun);
+    u3_noun u3we_crc32(u3_noun);
 
     u3_noun u3we_ripe(u3_noun);
 
