@@ -460,7 +460,7 @@ u3m_file(c3_c* pas_c)
 /* u3m_mark(): mark all nouns in the road.
 */
 u3m_quac**
-u3m_mark()
+u3m_mark(void)
 {
   u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
   qua_u[0] = u3v_mark();
@@ -1368,7 +1368,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3m_mark(0);
+  u3m_mark();
   {
     va_list vap;
     u3_noun tur;
