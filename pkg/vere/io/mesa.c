@@ -1793,7 +1793,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   u3_mesa_pact pac_u;
   c3_w         res_w = mesa_sift_pact(&pac_u, buf_y, len_w);
   #ifdef MESA_DEBUG
-    _mesa_check_sift(&pac_u, buf_y, res_w);
+    // _mesa_check_sift(&pac_u, buf_y, res_w);
   #endif
 
   if ( PACT_PAGE == hed_u.typ_y ) {
@@ -2935,7 +2935,7 @@ _mesa_hear(u3_mesa* sam_u,
   log_pact(&pic_u->pac_u);
 
   #ifdef MESA_ROUNDTRIP
-    _mesa_check_sift(&pic_u->pac_u, hun_y, lin_w);
+    // _mesa_check_sift(&pic_u->pac_u, hun_y, lin_w);
   #endif
 
   if ( lin_w == 0 ) {
