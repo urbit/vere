@@ -2212,7 +2212,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       return;
     }
     #ifdef MESA_ROUNDTRIP
-      _mesa_check_sift(&jum_u, (c3_y*)pat_u->buf_w, sif_w);
+      // _mesa_check_sift(&jum_u, (c3_y*)pat_u->buf_w, sif_w);
     #endif
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
