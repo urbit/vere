@@ -363,10 +363,10 @@ _mesa_check_sift(u3_mesa_pact* pac_u, c3_y* buf_y, c3_w len_w)
   u3l_log("checking sift");
   c3_y* bof_y = c3_calloc(len_w);
   c3_w lon_w = mesa_etch_pact(bof_y, pac_u);
-  //_assert_eq_udF( lon_w, len_w );
+  _assert_eq_udF( lon_w, len_w );
   u3_mesa_pact poc_u;
   u3l_log("re-sifting");
-  mesa_sift_pact(&poc_u, bof_y, PACT_SIZE); //  TODO jumbo frames
+  mesa_sift_pact(&poc_u, bof_y, lon_w); //  TODO jumbo frames
   _mesa_check_pacts_equal(&poc_u, pac_u);
 
   u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
@@ -1413,18 +1413,19 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       buf_u->par_u = par_u;
     }
   }
-  // else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
-  //   c3_free(par_u);
-  //   // TODO: do we drop the whole request on the floor?
-  //   u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
-  //   MESA_LOG(sam_u, AUTH);
-  //   return;
-  // }
-  // else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
-  //   c3_free(par_u);
-  //   MESA_LOG(sam_u, AUTH)
-  //   return;
-  // }
+  else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
+    c3_free(par_u);
+    // TODO: do we drop the whole request on the floor?
+    u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
+    MESA_LOG(sam_u, AUTH);
+    return;
+  }
+  else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
+    c3_free(par_u);
+    u3l_log("missordered queue %"PRIu64, nam_u->fra_d);
+    MESA_LOG(sam_u, AUTH)
+    return;
+  }
   else {
     c3_free(par_u);
   }
@@ -2095,7 +2096,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  // nam_u->nit_o = __(fra_d == 0);
+
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -2103,12 +2104,12 @@ _mesa_send_leaf(u3_mesa*      sam_u,
   dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-  if ( 0 == nam_u->fra_d ) {
-    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
-  }
-  else if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+
+  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
     dat_u->aut_u.typ_e = AUTH_NONE;
-  } else {
+  } else if ( 0 == nam_u->fra_d ) {
+    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
+  }else {
     dat_u->aut_u.typ_e = AUTH_PAIR;
     memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
   }
@@ -2240,10 +2241,12 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   u3_mesa_line* lin_u;
   {
     u3a_atom* pat_u = u3a_to_ptr(pac);
+    u3_noun siz = u3r_met(3, pac);   // XX refcount
     u3_mesa_pact jum_u;
     c3_w sif_w = mesa_sift_pact(&jum_u,
                                 (c3_y*)pat_u->buf_w,
-                                pat_u->len_w << 2);
+                                // pat_u->len_w << 2);
+                                siz);
     if ( 0 == sif_w ) {
       u3l_log("mesa: jumbo frame parse failure");
       log_pact(pac_u);
@@ -2251,7 +2254,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       return;
     }
     #ifdef MESA_ROUNDTRIP
-      // _mesa_check_sift(&jum_u, (c3_y*)pat_u->buf_w, sif_w);
+      _mesa_check_sift(&jum_u, (c3_y*)pat_u->buf_w, sif_w);
     #endif
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
@@ -2275,10 +2278,11 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->len_w = len_w;
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
-    lin_u->haz_y = lin_u->dat_y + haz_w;
+    lin_u->haz_y = lin_u->dat_y + dat_w;
     memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
-    // u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+
     u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
 
     mesa_free_pact(&jum_u);
   }
@@ -2970,6 +2974,7 @@ _mesa_hear(u3_mesa* sam_u,
 
   c3_w lin_w = mesa_sift_pact(&pic_u->pac_u, hun_y, len_w);
   u3l_log("buf_len %u", len_w);
+  u3l_log("lin_w %u", lin_w);
   _log_buf(hun_y, len_w);
   log_pact(&pic_u->pac_u);
 
