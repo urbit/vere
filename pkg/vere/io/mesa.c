@@ -1907,7 +1907,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 {
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
-  // nam_u->nit_o = __(fra_d == 0);
+
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
   c3_w cur_w = i_d * 1024;
@@ -1915,12 +1915,12 @@ _mesa_send_leaf(u3_mesa*      sam_u,
   dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-  if ( 0 == nam_u->fra_d ) {
-    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
-  }
-  else if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+
+  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
     dat_u->aut_u.typ_e = AUTH_NONE;
-  } else {
+  } else if ( 0 == nam_u->fra_d ) {
+    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
+  }else {
     dat_u->aut_u.typ_e = AUTH_PAIR;
     memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
   }
@@ -2052,10 +2052,12 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   u3_mesa_line* lin_u;
   {
     u3a_atom* pat_u = u3a_to_ptr(pac);
+    u3_noun siz = u3r_met(3, pac);   // XX refcount
     u3_mesa_pact jum_u;
     c3_c* err_c = mesa_sift_pact_from_buf(&jum_u,
-                 (c3_y*)pat_u->buf_w,
-                 pat_u->len_w << 2);
+                                          (c3_y*)pat_u->buf_w,
+                                          // pat_u->len_w << 2);
+                                          siz);
     if ( err_c ) {
       u3l_log("mesa: jumbo frame parse failure: %s", err_c);
       log_pact(pac_u);
@@ -2083,10 +2085,11 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->len_w = len_w;
     lin_u->tip_y = c3_malloc(len_w); // note: off-loom
     lin_u->dat_y = lin_u->tip_y + tip_w;
-    lin_u->haz_y = lin_u->dat_y + haz_w;
+    lin_u->haz_y = lin_u->dat_y + dat_w;
     memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
-    // u3r_bytes(0, haz_w, lin_u->haz_y, pas);
+
     u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
 
     mesa_free_pact(&jum_u);
   }
