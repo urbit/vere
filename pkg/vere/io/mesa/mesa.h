@@ -142,33 +142,13 @@ typedef struct _u3_mesa_pact {
   };
 } u3_mesa_pact;
 
-typedef struct _u3_etcher {
-  c3_y* buf_y;
-  c3_w  len_w;
-  c3_d  bit_d; // for _etch_bits
-  c3_y  off_y; // for _etch_bits
-} u3_etcher;
-
-typedef struct _u3_sifter {
-  c3_y* buf_y;
-  c3_w  rem_w;
-  c3_d  bit_d; // for _etch_bits
-  c3_y  off_y; // for _etch_bits
-  c3_c* err_c;
-} u3_sifter;
-
 c3_d mesa_num_leaves(c3_d tot_d);
 c3_w mesa_size_pact(u3_mesa_pact* pac_u);
 c3_o mesa_is_new_pact(c3_y* buf_y, c3_w len_w);
 
-void etcher_init(u3_etcher* ech_u, c3_y* buf_y);
-void sifter_init(u3_sifter* sif_u, c3_y* buf_y, c3_w len_w);
-void mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u);
-void mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u);
-void mesa_etch_pact(u3_etcher* ech_u, u3_mesa_pact* pac_u);
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
-c3_w mesa_etch_pact_to_buf(c3_y* buf_y, u3_mesa_pact *pac_u);
+c3_w mesa_etch_pact_to_buf(c3_y* buf_y, c3_w cap_w, u3_mesa_pact *pac_u);
 c3_c* mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w);
 
 void inc_hopcount(u3_mesa_head*);

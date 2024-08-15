@@ -19,6 +19,7 @@
 #include <motes.h>
 #include <retrieve.h>
 #include <stdio.h>
+#include <string.h>
 #include <types.h>
 #include <stdlib.h>
 #include "lss.h"
@@ -368,7 +369,6 @@ _mesa_czar_dns(c3_y imp_y, c3_c* zar_c)
   c3_i sas_i = snprintf(dns_c, len_w, "%s.%s.", nam_c + 1, zar_c);
   u3_assert(sas_i <= 255);
 
-    u3l_log("about to free nam_c");
   c3_free(nam_c);
   u3z(nam);
 
@@ -620,15 +620,11 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
     // u3l_log("wat_u %p", req_u->wat_u);
   // u3l_log("was_u buf %p", req_u->was_u.buf_y);
   uv_timer_stop(&req_u->tim_u);
-  u3l_log("about to free_pict in del_request");
   _mesa_free_pict(req_u->pic_u);
-  u3l_log("about to free wat_u in del_request");
   c3_free(req_u->wat_u);
-  u3l_log("about to free dat_y in del_request");
   c3_free(req_u->dat_y);
   lss_verifier_free(req_u->los_u);
   u3h_del(per_u->req_p, key);
-  u3l_log("about to free req_u in del_request");
   u3a_free(req_u);
   u3z(key);
 }
@@ -947,7 +943,6 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
     //sam_u->fig_u.net_o = c3y;
   }
 
-  u3l_log("about to free seal");
   _mesa_free_seal(sel_u);
 }
 
@@ -992,7 +987,7 @@ static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
   u3_mesa* sam_u = pic_u->sam_u;
   c3_y buf_y[PACT_SIZE];
-  c3_w len_w = mesa_etch_pact_to_buf(buf_y, &pic_u->pac_u);
+  c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, &pic_u->pac_u);
   _mesa_send_buf(sam_u, *lan_u, buf_y, len_w);
 }
 
@@ -1116,7 +1111,7 @@ _try_resend(u3_pend_req* req_u, c3_d ack_d)
       los_o = c3y;
 
       pac_u->pek_u.nam_u.fra_d = i_d;
-      c3_w len_w = mesa_etch_pact_to_buf(buf_y, pac_u);
+      c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
       _mesa_send_modal(req_u->per_u, buf_y, len_w);
     }
   }
@@ -1425,7 +1420,6 @@ _mesa_czar_cb(uv_getaddrinfo_t* adr_u, c3_i sas_i, struct addrinfo* aif_u)
     _mesa_czar_gone(sam_u, sas_i, imp_y, now_t);
   }
 
-  u3l_log("about to free adr_u");
   c3_free(adr_u);
   uv_freeaddrinfo(aif_u);
 
@@ -1598,7 +1592,6 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #ifdef MESA_DEBUG
       u3l_log("mesa: resend PIT entry gone %u", res_u->ret_y);
     #endif
-  u3l_log("about to free resend data in resend-timer-cb");
     _mesa_free_resend_data(res_u);
     return;
   }
@@ -1615,7 +1608,6 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
   else {
-  u3l_log("about to free resend data in resend-timer-cb 2");
     _mesa_free_resend_data(res_u);
   }
 }
@@ -1629,6 +1621,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   u3r_bytes(0, len_w, buf_y, pac);
 
   u3_mesa_pact pac_u;
+  memset(&pac_u, 0x11, sizeof(pac_u));
   c3_c* err_c = mesa_sift_pact_from_buf(&pac_u, buf_y, len_w);
   if ( err_c ) {
     u3l_log("mesa: ef_send: sift failed: %u %s", len_w, err_c);
@@ -1880,7 +1873,6 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
   u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3_weak del = u3h_put_get(sam_u->pac_p, pax, u3a_outa(lin_u));
   if ( u3_none != del ) {
-  u3l_log("about to free line");
     _mesa_free_line(u3a_into(del));
     u3z(del);
   }
@@ -1894,7 +1886,7 @@ _mesa_send_pact(u3_mesa*      sam_u,
                 u3_mesa_pact* tac_u)
 {
   c3_y buf_y[PACT_SIZE];
-  c3_w len_w = mesa_etch_pact_to_buf(buf_y, tac_u);
+  c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, tac_u);
   _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
   u3z(las);
 }
@@ -1944,6 +1936,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
   #endif
 
   u3_mesa_pact pac_u = {0};
+  memset(&pac_u, 0x11, sizeof(pac_u));
 
   u3_mesa_head* hed_u = &pac_u.hed_u;
   {
@@ -1958,7 +1951,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
   {
     _mesa_copy_name(nam_u, &lin_u->nam_u);
     nam_u->boq_y = 13;
-    nam_u->fra_d *= (1 << u3_Host.ops_u.jum_y);
+    nam_u->fra_d *= (1 << u3_Host.ops_u.jum_y); // XX looks sus
   }
 
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
@@ -1984,7 +1977,6 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
         dat_u->fra_y = pro_y;
         _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
         _mesa_del_pit(sam_u, nam_u);
-        u3l_log("about to free pro_y");
         c3_free(pro_y);
         u3z(pin);
       }
@@ -2051,13 +2043,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    u3a_atom* pat_u = u3a_to_ptr(pac);
-    u3_noun siz = u3r_met(3, pac);   // XX refcount
+    c3_w jumbo_w = u3r_met(3, pac);
+    c3_y* jumbo_y = c3_calloc(jumbo_w);
+    u3r_bytes(0, jumbo_w, jumbo_y, pac);
+    u3z(pac);
+
+    u3l_log("sifting jumbo packet len=%u", jumbo_w);
     u3_mesa_pact jum_u;
-    c3_c* err_c = mesa_sift_pact_from_buf(&jum_u,
-                                          (c3_y*)pat_u->buf_w,
-                                          // pat_u->len_w << 2);
-                                          siz);
+    c3_c* err_c = mesa_sift_pact_from_buf(&jum_u, jumbo_y, jumbo_w);
     if ( err_c ) {
       u3l_log("mesa: jumbo frame parse failure: %s", err_c);
       log_pact(pac_u);
@@ -2065,6 +2058,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       return;
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
+
 
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
@@ -2333,7 +2327,6 @@ _mesa_page_news_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 
   //  XX do early delete instead, to avoid injecting retries
   // _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
-  u3l_log("about to free lane cb data");
   _mesa_free_lane_cb_data(dat_u);
 }
 
@@ -2343,7 +2336,6 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
   #ifdef MESA_DEBUG
     u3l_log("mesa: arvo page event failed");
   #endif
-  u3l_log("about to free lane cb data 2");
   _mesa_free_lane_cb_data((u3_mesa_lane_cb_data*)egg_u->ptr_v);
 }
 
@@ -2442,7 +2434,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
     _mesa_send_pact(sam_u, u3k(las), per_u, pac_u);
     _mesa_del_pit(sam_u, nam_u);
-    u3l_log("about to free_pict() in hear_page()");
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
@@ -2466,7 +2457,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
       //  XX should just preserve input buffer
       u3i_slab sab_u;
       u3i_slab_init(&sab_u, 3, PACT_SIZE);
-      mesa_etch_pact_to_buf(sab_u.buf_y, pac_u);
+      mesa_etch_pact_to_buf(sab_u.buf_y, PACT_SIZE, pac_u);
       cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
     }
 
@@ -2488,7 +2479,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
     u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
  
-    u3l_log("about to free_pict() 2 in hear_page()");
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
@@ -2544,7 +2534,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
         pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
         c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
-        c3_w res_w = mesa_etch_pact_to_buf(buf_y, pac_u);
+        c3_w res_w = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
         pac = u3i_bytes(res_w, buf_y);
         c3_free(buf_y);
       }
@@ -2571,7 +2561,6 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
       u3l_log("mesa: alien forward for %s", mes);
       c3_free(mes);
     #endif
-    u3l_log("about to free_pict() in forward_request()");
     _mesa_free_pict(pic_u);
     return;
   }
@@ -2579,7 +2568,6 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_lane lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     u3_lane zer_u = {0, 0};
     if ( _mesa_lanes_equal(&zer_u, &lin_u) == c3y) {
-    u3l_log("about to free_pict() in forward_request() lanes_equal");
       _mesa_free_pict(pic_u);
       return;
     }
@@ -2591,7 +2579,6 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
     _mesa_send(pic_u, &lin_u);
   }
-  u3l_log("about to free_pict() in forward_request() end");
   _mesa_free_pict(pic_u);
 }
 
@@ -2624,7 +2611,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( NULL != lin_u ) {
     if ( CTAG_ITEM == lin_u->typ_y ) {
       _mesa_send_jumbo_pieces(sam_u, lin_u, &fra_d);
-      u3l_log("about to free_pict after jumbo pieces");
       _mesa_free_pict(pic_u);
     }
     return;
@@ -2716,7 +2702,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     u3i_slab_init(&sab_u, 3, PACT_SIZE);
 
     //  XX should just preserve input buffer
-    mesa_etch_pact_to_buf(sab_u.buf_y, pac_u);
+    mesa_etch_pact_to_buf(sab_u.buf_y, PACT_SIZE, pac_u);
     cad = u3nt(c3__heer, lan, u3i_slab_mint(&sab_u));
   }
 
@@ -2762,7 +2748,6 @@ _mesa_hear(u3_mesa* sam_u,
     mesa_free_pact(&pic_u->pac_u);
     return;
   }
-  u3l_log("about to free hun_y");
   c3_free(hun_y);
 
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
@@ -2798,14 +2783,12 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     c3_free(buf_u->base);
   }
   else if ( 0 == nrd_i ) {
-    u3l_log("about to free buf_u->base");
     c3_free(buf_u->base);
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: message truncated");
     }
-    u3l_log("about to free buf_u->base 2");
     c3_free(buf_u->base);
   }
   else {
