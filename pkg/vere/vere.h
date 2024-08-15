@@ -457,7 +457,8 @@
           u3_writ_cram = 4,
           u3_writ_meld = 5,
           u3_writ_pack = 6,
-          u3_writ_exit = 7
+          u3_writ_exit = 7,
+          u3_writ_quiz = 8
         } u3_writ_type;
 
       /* u3_writ: ipc message from king to serf
@@ -473,6 +474,10 @@
             u3_peek*       pek_u;               //  peek
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
+            struct {                            //  serf query:
+              void*        ptr_v;               //    driver
+              void (*quiz_f)(void*, u3_noun);   //    callback
+            } qui_u;                            //
           };
         } u3_writ;
 
@@ -768,7 +773,16 @@
          u3_atom
          u3_time_t_in_ts(time_t tim);
 #endif
+      /* u3_lord_writ_new(): allocate a new writ. 
+      */
+        u3_writ*
+        u3_lord_writ_new(u3_lord* god_u);
 
+      /* u3_lord_writ_plan(): enqueue a writ and send. 
+      */
+        void
+        u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);
+    
       /* u3_time_out_ts(): struct timespec from urbit time.
       */
         void
