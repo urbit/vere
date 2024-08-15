@@ -347,8 +347,8 @@ _mesa_sift_data(u3_mesa_data* dat_u, c3_y* buf_y, c3_w len_w)
   CHECK_BOUNDS(len_w, cur_w + 1);
   c3_y met_y = buf_y[cur_w];
   met_u.bot_y = (met_y >> 0) & 0x3;
-  met_u.auv_o = (met_y >> 2) & 0x1;
-  met_u.aut_o = (met_y >> 3) & 0x1;
+  met_u.aut_o = (met_y >> 2) & 0x1;
+  met_u.auv_o = (met_y >> 3) & 0x1;
   met_u.men_y = (met_y >> 6) & 0x3;
   cur_w += 1;
 
@@ -714,8 +714,8 @@ _mesa_etch_data(c3_y* buf_y, u3_mesa_data* dat_u)
   c3_y aut_y = 0;
   switch ( dat_u->aut_u.typ_e ) {
     case AUTH_SIGN: aut_y = 0; break;
-    case AUTH_HMAC: aut_y = 1; break;
-    case AUTH_NONE: aut_y = 2; break;
+    case AUTH_NONE: aut_y = 1; break;
+    case AUTH_HMAC: aut_y = 2; break;
     case AUTH_PAIR: aut_y = 3; break;
   }
   c3_y bot_y = _mesa_make_chub_tag(dat_u->tob_d);
