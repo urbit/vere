@@ -583,6 +583,26 @@ _mesa_free_line(u3_mesa_line* lin_u)
 }
 
 static void
+_mesa_copy_auth_data(u3_auth_data* des_u, u3_auth_data* src_u)
+{
+  des_u->typ_e = src_u->typ_e;
+  switch ( des_u->typ_e ) {
+    case AUTH_HMAC: {
+      memcpy(des_u->mac_y, src_u->mac_y, 16);
+    } break;
+    case AUTH_SIGN: {
+      memcpy(des_u->sig_y, src_u->sig_y, 64);
+    } break;
+    case AUTH_PAIR: {
+      memcpy(des_u->has_y, src_u->has_y, 64);
+    } break;
+    case AUTH_NONE: {
+    } break;
+    default: u3_assert(!"unreachable");
+  }
+}
+
+static void
 _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u)
 {
   memcpy(des_u, src_u, sizeof(u3_mesa_name));
@@ -2083,7 +2103,10 @@ _mesa_send_leaf(u3_mesa*      sam_u,
   dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
-  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+  if ( 0 == nam_u->fra_d ) {
+    _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
+  }
+  else if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
     dat_u->aut_u.typ_e = AUTH_NONE;
   } else {
     dat_u->aut_u.typ_e = AUTH_PAIR;
@@ -2102,7 +2125,7 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 }
 
 static void
-_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
+_mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
 {
   #ifdef MESA_DEBUG
     u3l_log("mesa: send_jumbo_pieces()");
@@ -2135,36 +2158,52 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_d)
   c3_d mev_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pro_w = lss_proof_size(mev_d);
 
-  if ( c3y == nam_u->nit_o && pro_w > 0 ) {
+  //  send response packet for %init request
+  if ( 0 == lin_u->nam_u.fra_d ) {
+    nam_u->nit_o = c3y;
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
-      #ifdef MESA_DEBUG
-        u3l_log(" sending proof packet");
-      #endif
-      dat_u->len_w = pro_w * sizeof(lss_hash);
-      c3_y* pro_y = c3_malloc(dat_u->len_w);
-      memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
-      dat_u->fra_y = pro_y;
-      _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
-      _mesa_del_pit(sam_u, nam_u);
-      c3_free(pro_y);
-      u3z(pin);
+      //  if the initial Merkle proof is nonzero, this is a multifragment
+      //  message; send auth response to the %init request
+      if ( pro_w > 0 ) {
+        dat_u->len_w = pro_w * sizeof(lss_hash);
+        c3_y* pro_y = c3_malloc(dat_u->len_w);
+        memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
+        dat_u->fra_y = pro_y;
+        _mesa_send_pact(sam_u, u3k(u3t(pin)), NULL, &pac_u);
+        _mesa_del_pit(sam_u, nam_u);
+        u3l_log("about to free pro_y");
+        c3_free(pro_y);
+        u3z(pin);
+      }
+      //  single-fragment message; just send the one data fragment
+      else if ( ( NULL == fra_u) || (0 == *fra_u) ) {
+        _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_u);
+      }
+      else {
+        u3l_log("mesa: weird fragment number %"PRIu64, *fra_u);
+      }
     }
   }
+  //  Now send responses to non-%init requests.
+  //  note: we might re-send the first data fragment, but only if there is an
+  //  outstanding non-%init request for it, which would be strange but not
+  //  illegal
+  nam_u->nit_o = c3n;
 
   // send leaf packet(s)
   c3_d lev_d = mesa_num_leaves(lin_u->dat_w) - 1;
   c3_d fir_d = nam_u->fra_d;
   c3_d las_d = fir_d + lev_d;
-  if ( NULL == fra_d ) {
+  if ( NULL == fra_u ) {
     for (c3_d fra_d = fir_d; fra_d < las_d; fra_d++) {
       _mesa_send_leaf(sam_u, lin_u, &pac_u, fra_d);
     }
   }
   else {
-    _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_d);
+    _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_u);
   }
-  // mesa_free_pact(&pac_u);
+  // mesa_free_pact(&pac_u);  // TODO reinstate
 }
 
 static void
