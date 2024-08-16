@@ -986,7 +986,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 static void _mesa_send(u3_mesa_pict* pic_u, u3_lane* lan_u)
 {
   u3_mesa* sam_u = pic_u->sam_u;
-  c3_y buf_y[PACT_SIZE];
+  c3_y  *buf_y  = c3_calloc(PACT_SIZE);
   c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, &pic_u->pac_u);
   _mesa_send_buf(sam_u, *lan_u, buf_y, len_w);
 }
@@ -1885,7 +1885,7 @@ _mesa_send_pact(u3_mesa*      sam_u,
                 u3_peer*      per_u, // null for response packets
                 u3_mesa_pact* tac_u)
 {
-  c3_y buf_y[PACT_SIZE];
+  c3_y* buf_y = c3_calloc(PACT_SIZE);
   c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, tac_u);
   _mesa_send_bufs(sam_u, per_u, buf_y, len_w, u3k(las));
   u3z(las);
@@ -2046,7 +2046,6 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     c3_w jumbo_w = u3r_met(3, pac);
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     u3r_bytes(0, jumbo_w, jumbo_y, pac);
-    u3z(pac);
 
     u3l_log("sifting jumbo packet len=%u", jumbo_w);
     u3_mesa_pact jum_u;
@@ -2478,7 +2477,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     //
     _mesa_del_pit(dat_u->per_u->sam_u, dat_u->nam_u);
     u3_auto_peer(ovo, dat_u, _mesa_page_news_cb, _mesa_page_bail_cb);
- 
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
