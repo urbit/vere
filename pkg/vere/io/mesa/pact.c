@@ -631,7 +631,7 @@ mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u)
 static void
 _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
 {
-  u3_mesa_name_meta met_u;
+  u3_mesa_name_meta met_u = {0};
   met_u.ran_y = _mesa_rank(nam_u->her_u);
   met_u.rif_y = safe_dec(_mesa_met3_w(nam_u->rif_w));
 
@@ -670,7 +670,7 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
 static void
 _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 {
-  u3_mesa_name_meta met_u;
+  u3_mesa_name_meta met_u = {0};
   met_u.ran_y = _sift_bits(sif_u, 2);
   met_u.rif_y = _sift_bits(sif_u, 2);
   met_u.nit_y = _sift_bits(sif_u, 1);
@@ -704,7 +704,7 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 static void
 _mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
 {
-  u3_mesa_data_meta met_u;
+  u3_mesa_data_meta met_u = {0};
   met_u.bot_y = _mesa_make_chub_tag(dat_u->tob_d);
   met_u.aut_o = __(dat_u->aut_u.typ_e == AUTH_SIGN || dat_u->aut_u.typ_e == AUTH_HMAC);
   met_u.auv_o = __(dat_u->aut_u.typ_e == AUTH_SIGN || dat_u->aut_u.typ_e == AUTH_NONE);
@@ -741,7 +741,7 @@ _mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
 static void
 _mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
 {
-  u3_mesa_data_meta met_u;
+  u3_mesa_data_meta met_u = {0};
   met_u.bot_y = _sift_bits(sif_u, 2);
   met_u.aut_o = _sift_bits(sif_u, 1);
   met_u.auv_o = _sift_bits(sif_u, 1);
