@@ -2058,7 +2058,6 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
-
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_w tip_w = // bytes in Merkle spine
       (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?

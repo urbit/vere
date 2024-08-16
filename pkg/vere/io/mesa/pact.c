@@ -140,7 +140,7 @@ static void
 _log_buf(c3_y* buf_y, c3_w len_w)
 {
   c3_c *buf_c = c3_malloc(2 * len_w + 1);
-  for( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
     sprintf(buf_c + (i_w*2), "%02x", buf_y[i_w]);
   }
   u3l_log("%s", buf_c);
@@ -382,7 +382,6 @@ _sift_fail(u3_sifter* sif_u, c3_c* msg_c)
   sif_u->err_c = msg_c;
   #ifdef MESA_ROUNDTRIP
     u3l_log(RED_TEXT "sift fail: %s" DEF_TEXT, msg_c);
-    u3m_bail(c3__czar);
     assert(!"sift fail");
   #endif
 }
@@ -496,7 +495,7 @@ _etch_var_word(u3_etcher* ech_u, c3_w val_w, c3_w len_w)
 {
   assert ( len_w <= 4 );
   c3_y *buf_y = _etch_next(ech_u, len_w);
-  for( c3_w i = 0; i < len_w; i++ ) {
+  for ( c3_w i = 0; i < len_w; i++ ) {
     buf_y[i] |= (val_w >> (8*i)) & 0xFF;
   }
 }
@@ -510,7 +509,7 @@ _sift_var_word(u3_sifter* sif_u, c3_w len_w)
     return 0;
   }
   c3_w val_w = 0;
-  for( c3_w i = 0; i < len_w; i++ ) {
+  for ( c3_w i = 0; i < len_w; i++ ) {
     val_w |= (res_y[i] << (8*i));
   }
   return val_w;
@@ -521,7 +520,7 @@ _etch_var_chub(u3_etcher* ech_u, c3_d val_d, c3_w len_w)
 {
   assert ( len_w <= 8 );
   c3_y *buf_y = _etch_next(ech_u, len_w);
-  for( int i = 0; i < len_w; i++ ) {
+  for ( int i = 0; i < len_w; i++ ) {
     buf_y[i] |= (val_d >> (8*i)) & 0xFF;
   }
 }
@@ -535,7 +534,7 @@ _sift_var_chub(u3_sifter* sif_u, c3_w len_w)
     return 0;
   }
   c3_d val_d = 0;
-  for( int i = 0; i < len_w; i++ ) {
+  for ( int i = 0; i < len_w; i++ ) {
     val_d |= (res_y[i] << (8*i));
   }
   return val_d;
@@ -652,8 +651,6 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
   _etch_bits(ech_u, 1, met_u.nit_y);
   _etch_bits(ech_u, 1, met_u.tau_y);
   _etch_bits(ech_u, 2, met_u.gaf_y);
-
-
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
   _etch_ship(ech_u, nam_u->her_u, her_y);
   _etch_var_word(ech_u, nam_u->rif_w, met_u.rif_y + 1);
@@ -812,7 +809,7 @@ _mesa_etch_page_pact(u3_etcher* ech_u, u3_mesa_page_pact* pag_u, u3_mesa_head* h
     } break;
     case HOP_MANY: {
       _etch_byte(ech_u, pag_u->man_u.len_w);
-      for( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
+      for ( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
         _mesa_etch_hop_long(ech_u, &pag_u->man_u.dat_y[i]);
       }
     } break;
@@ -844,7 +841,7 @@ _mesa_sift_page_pact(u3_sifter* sif_u, u3_mesa_page_pact* pag_u, c3_y nex_y)
     case HOP_MANY: {
       pag_u->man_u.len_w = _sift_byte(sif_u);
       pag_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pag_u->man_u.len_w);
-      for( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
+      for ( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
         _mesa_sift_hop_long(sif_u, &pag_u->man_u.dat_y[i]);
       }
       return;
@@ -889,15 +886,12 @@ _mesa_etch_pact(u3_etcher* ech_u, u3_mesa_pact* pac_u)
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_POKE: {
-      u3l_log("etch PACT_POKE");
       _mesa_etch_poke_pact(&pec_u, &pac_u->pok_u);
     } break;
     case PACT_PAGE: {
-      u3l_log("etch PACT_PAGE");
       _mesa_etch_page_pact(&pec_u, &pac_u->pag_u, &pac_u->hed_u);
     } break;
     case PACT_PEEK: {
-      u3l_log("etch PACT_PEEK");
       _mesa_etch_peek_pact(&pec_u, &pac_u->pek_u);
     } break;
     default: {
@@ -925,15 +919,12 @@ _mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
-      u3l_log("sift PACT_PEEK");
       _mesa_sift_peek_pact(sif_u, &pac_u->pek_u);
     } break;
     case PACT_PAGE: {
-      u3l_log("sift PACT_PAGE");
       _mesa_sift_page_pact(sif_u, &pac_u->pag_u, pac_u->hed_u.nex_y);
     } break;
     case PACT_POKE: {
-      u3l_log("sift PACT_POKE");
       _mesa_sift_poke_pact(sif_u, &pac_u->pok_u);
     } break;
     default: {
@@ -960,12 +951,8 @@ mesa_etch_pact_to_buf(c3_y* buf_y, c3_w cap_w, u3_mesa_pact *pac_u) {
   etcher_init(&ech_u, buf_y, cap_w);
   _mesa_etch_pact(&ech_u, pac_u);
 
-  u3l_log("etched packet:");
-  _log_buf(ech_u.buf_y, ech_u.len_w);
-
   #ifdef MESA_ROUNDTRIP
     u3_mesa_pact poc_u;
-    memset(&poc_u, 0x11, sizeof(poc_u));
     u3_sifter sif_u;
     sifter_init(&sif_u, ech_u.buf_y, ech_u.len_w);
     _mesa_sift_pact(&sif_u, &poc_u);
@@ -977,9 +964,6 @@ mesa_etch_pact_to_buf(c3_y* buf_y, c3_w cap_w, u3_mesa_pact *pac_u) {
       u3l_log("mesa: roundtrip failed: %s", sif_u.err_c);
       assert(!"roundtrip failed");
     }
-    u3l_log("roundtrip:");
-    log_pact(pac_u);
-    log_pact(&poc_u);
     _mesa_check_pacts_equal(&poc_u, pac_u);
     mesa_free_pact(&poc_u);
   #endif
@@ -989,7 +973,6 @@ mesa_etch_pact_to_buf(c3_y* buf_y, c3_w cap_w, u3_mesa_pact *pac_u) {
 
 c3_c*
 mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w) {
-    memset(pac_u, 0x11, sizeof(*pac_u));
   u3_sifter sif_u;
   sifter_init(&sif_u, buf_y, len_w);
   _mesa_sift_pact(&sif_u, pac_u);
@@ -1087,7 +1070,7 @@ _mesa_size_hops(u3_mesa_pact* pac_u)
     case HOP_LONG:  return 1 + pac_u->pag_u.one_u.len_w;
     case HOP_MANY: {
       c3_w siz_w = 0;
-      for( c3_w i = 0; i < pac_u->pag_u.man_u.len_w; i++ ) {
+      for ( c3_w i = 0; i < pac_u->pag_u.man_u.len_w; i++ ) {
         siz_w += 1 + pac_u->pag_u.man_u.dat_y[i].len_w;
       }
       return siz_w;
