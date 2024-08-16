@@ -496,7 +496,7 @@ _etch_var_word(u3_etcher* ech_u, c3_w val_w, c3_w len_w)
   assert ( len_w <= 4 );
   c3_y *buf_y = _etch_next(ech_u, len_w);
   for ( c3_w i = 0; i < len_w; i++ ) {
-    buf_y[i] |= (val_w >> (8*i)) & 0xFF;
+    buf_y[i] = (val_w >> (8*i)) & 0xFF;
   }
 }
 
@@ -521,7 +521,7 @@ _etch_var_chub(u3_etcher* ech_u, c3_d val_d, c3_w len_w)
   assert ( len_w <= 8 );
   c3_y *buf_y = _etch_next(ech_u, len_w);
   for ( int i = 0; i < len_w; i++ ) {
-    buf_y[i] |= (val_d >> (8*i)) & 0xFF;
+    buf_y[i] = (val_d >> (8*i)) & 0xFF;
   }
 }
 
