@@ -2392,7 +2392,6 @@ static u3j_core _138_hex_bytestream_d[] =
     {"read-bits", 7, _138_hex_bytestream_read_bits_a, 0, no_hashes },
     // {"read-need-bits", 7, _138_hex_bytestream_read_need_bits_a, 0, no_hashes },
     {"byte-bits", 7, _138_hex_bytestream_byte_bits_a, 0, no_hashes },
-
   };
 
 static u3j_core _138_hex_d[] =
@@ -2413,7 +2412,7 @@ static u3j_core _138_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
-  { "bytestream", 3, 0, _138_hex_bytestream_d, no_hashes},
+  { "bytestream", 31, 0, _138_hex_bytestream_d, no_hashes},
   {}
 };
 

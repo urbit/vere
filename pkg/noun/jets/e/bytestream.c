@@ -6,11 +6,11 @@
 #include <xtract.h>
 #include <log.h>
 
-// XX formatting: function return singature should break the line
 // XX do not crash on indirect atoms, but default to Hoon
 // XX use u3i_word to imprison all indirect atoms
 //
-static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
+static void
+_x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
   if (c3n == u3r_mean(octs,
              2, p_octs,
@@ -23,14 +23,13 @@ static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
     u3m_bail(c3__exit);
   }
 }
-static void _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
+static c3_o
+_x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,
                            c3_w* len_w, c3_w* lead_w)
 {
-  // XX gracefully handle p.octs exceeding a word
-  //
   if (c3n == u3r_safe_word(*p_octs, p_octs_w)) {
-    u3m_bail(c3__exit);
+    return c3n;
   }
 
   *len_w = u3r_met(3, *q_octs);
@@ -52,33 +51,40 @@ static void _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
     *len_w = *p_octs_w;
   }
 
+  return c3y;
 }
 
-u3_noun _qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
+u3_noun
+_qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
 
   c3_w p_octs_w, len_w, lead_w;
   c3_y* buf_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &buf_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &buf_y,
+                            &len_w, &lead_w)){
+    return u3_none;
+  }
 
   if (p_octs_w == 0) {
     return u3_nul;
   }
 
-  buf_y += len_w;
-
   u3_noun rip = u3_nul;
 
   while (lead_w--) {
-    rip = u3nc(u3i_word(0x0), rip);
+    rip = u3nc(0x0, rip);
   }
 
+  buf_y += len_w - 1;
+
   while (len_w--) {
-    rip = u3nc(*(--buf_y), rip);
+    rip = u3nc(*(buf_y--), rip);
   }
 
   return rip;
 }
+
 u3_noun
 u3we_bytestream_rip_octs(u3_noun cor){
 
@@ -107,29 +113,39 @@ _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
   c3_y* sea_y;
   c3_y* seb_y;
 
-  _x_octs_buffer(&p_octs_a, &q_octs_a, &p_octs_a_w, &sea_y, &len_w, &lead_w);
-  _x_octs_buffer(&p_octs_b, &q_octs_b, &p_octs_b_w, &seb_y, &lem_w, &leaf_w);
+  if (c3n == _x_octs_buffer(&p_octs_a, &q_octs_a,
+                            &p_octs_a_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
+
+  if (c3n == _x_octs_buffer(&p_octs_b, &q_octs_b,
+                            &p_octs_b_w, &seb_y,
+                            &lem_w, &leaf_w)) {
+    return u3_none;
+  }
 
   if (p_octs_a_w == 0) {
     return u3k(octs_b);
   }
+
   if (p_octs_b_w == 0) {
     return u3k(octs_a);
   }
 
   c3_d p_octs_d = p_octs_a_w + p_octs_b_w;
 
-  u3_noun ret = u3_none;
+  u3_noun ret;
 
   //  Both a and b are 0.
   //
-  if (len_w + lem_w == 0) {
+  if (len_w == 0 && lem_w == 0) {
     ret = u3nc(u3i_chub(p_octs_d), u3i_word(0));
   }
   else {
     u3i_slab sab_u;
 
-    u3i_slab_init(&sab_u, 3, (c3_d)p_octs_a_w + lem_w);
+    u3i_slab_bare(&sab_u, 3, (c3_d)p_octs_a_w + lem_w);
     sab_u.buf_w[sab_u.len_w - 1] = 0;
 
     memcpy(sab_u.buf_y, sea_y, len_w);
@@ -191,12 +207,13 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     c3_w p_octs_w;
 
     if (c3n == u3r_safe_word(u3h(octs), &p_octs_w)) {
+      u3z(octs_list);
       return u3_none;
     }
     // Check for overflow
     //
     if ( p_octs_w > (UINT64_MAX - tot_d)){
-      u3m_bail(c3__exit);
+      return u3_none;
     }
     tot_d += p_octs_w;
 
@@ -244,7 +261,11 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     octs = u3h(octs_list);
 
     _x_octs(octs, &p_octs, &q_octs);
-    _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+    if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                              &p_octs_w, &sea_y,
+                              &len_w, &lead_w)){
+      return u3_none;
+    }
 
     if (p_octs_w == 0) {
       octs_list = u3t(octs_list);
@@ -274,19 +295,19 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
 u3_noun
 u3we_bytestream_can_octs(u3_noun cor)
 {
-
   u3_noun octs_list;
 
   u3x_mean(cor, u3x_sam_1, &octs_list, 0);
 
   return _qe_bytestream_can_octs(octs_list);
 }
-u3_noun _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
+u3_noun
+_qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 {
   c3_w pos_w;
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -298,7 +319,11 @@ u3_noun _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   while (pos_w < len_w) {
     if (*(sea_y + pos_w) == '\n') {
@@ -316,7 +341,8 @@ u3_noun _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 
   return u3nc(u3i_word(pos_w), u3k(octs));
 }
-u3_noun u3we_bytestream_skip_line(u3_noun cor)
+u3_noun
+u3we_bytestream_skip_line(u3_noun cor)
 {
 
   u3_atom pos;
@@ -327,15 +353,16 @@ u3_noun u3we_bytestream_skip_line(u3_noun cor)
   return _qe_bytestream_skip_line(pos, octs);
 
 }
-u3_noun _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
+u3_noun
+_qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 {
   c3_w bat_w, pos_w;
 
   if (c3n == u3r_safe_word(bat, &bat_w) || bat_w > 0xff) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -347,7 +374,11 @@ u3_noun _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   while (pos_w < len_w) {
 
@@ -371,7 +402,8 @@ u3_noun _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   return u3_nul;
 }
-u3_noun u3we_bytestream_find_byte(u3_noun cor)
+u3_noun
+u3we_bytestream_find_byte(u3_noun cor)
 {
   u3_atom bat;
   u3_atom pos;
@@ -383,15 +415,16 @@ u3_noun u3we_bytestream_find_byte(u3_noun cor)
 
   return _qe_bytestream_find_byte(bat, pos, octs);
 }
-u3_noun _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
+u3_noun
+_qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 {
   c3_w bat_w, pos_w;
 
   if (c3n == u3r_safe_word(bat, &bat_w) || bat_w > 0xff) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -403,7 +436,11 @@ u3_noun _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   while (pos_w < len_w) {
 
@@ -427,7 +464,8 @@ u3_noun _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
   return u3nc(u3_nul, u3nc(u3k(pos), u3k(octs)));
 
 }
-u3_noun u3we_bytestream_seek_byte(u3_noun cor)
+u3_noun
+u3we_bytestream_seek_byte(u3_noun cor)
 {
   u3_atom bat;
   u3_atom pos;
@@ -446,7 +484,7 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
   c3_w pos_w;
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -458,7 +496,11 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   if (pos_w + 1 > p_octs_w) {
     u3m_bail(c3__exit);
@@ -466,11 +508,11 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
 
   c3_y bat_y;
 
-  if (pos_w >= len_w) {
-    bat_y = 0;
+  if (pos_w < len_w) {
+    bat_y = *(sea_y + pos_w);
   }
   else {
-    bat_y = *(sea_y + pos_w);
+    bat_y = 0;
   }
 
   u3_noun new_bays = u3nc(u3i_word(pos_w + 1), u3k(octs));
@@ -496,11 +538,11 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
   c3_w n_w, pos_w;
 
   if (c3n == u3r_safe_word(n, &n_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   if (n_w == 0) {
@@ -516,7 +558,11 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   if (pos_w + n_w > p_octs_w) {
     u3m_bail(c3__exit);
@@ -530,6 +576,8 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
     if (pos_w < len_w) {
       red_w = len_w - pos_w;
     }
+    // leading zeros - nothing to read
+    //
     else {
       red_w = 0;
     }
@@ -574,7 +622,8 @@ u3we_bytestream_read_octs(u3_noun cor)
 }
 
 
-u3_noun _qe_peek_octs(c3_w n_w, c3_w pos_w, c3_w p_octs_w, c3_y* sea_y,
+u3_noun
+_qe_peek_octs(c3_w n_w, c3_w pos_w, c3_w p_octs_w, c3_y* sea_y,
                       c3_w len_w)
 {
   if (n_w == 0) {
@@ -613,7 +662,7 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
   c3_w size_w, pos_w;
 
   if (c3n == u3r_safe_word(size, &size_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   if (size_w == 0) {
@@ -621,7 +670,7 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
   }
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -633,7 +682,11 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   u3_noun hun = u3_nul;
 
@@ -659,7 +712,8 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
   return u3kb_flop(hun);
 }
 
-u3_noun u3we_bytestream_chunk(u3_noun cor)
+u3_noun
+u3we_bytestream_chunk(u3_noun cor)
 {
   u3_atom size;
   u3_atom pos;
@@ -672,7 +726,8 @@ u3_noun u3we_bytestream_chunk(u3_noun cor)
   return _qe_bytestream_chunk(size, pos, octs);
 }
 
-u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
+u3_noun
+_qe_bytestream_extract(u3_noun sea, u3_noun rac)
 {
   u3_atom pos;
   u3_noun octs;
@@ -682,7 +737,7 @@ u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
   c3_w pos_w;
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -694,7 +749,11 @@ u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   u3_noun dal = u3_nul;
 
@@ -713,16 +772,17 @@ u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
       // XX is u3z necessary here?
       // does memory get freed on bail?
       //
-      u3l_log("sip fail");
+      u3l_log("bytestream: sip fail");
       u3z(dal);
       u3z(ext);
-      u3m_bail(c3__exit);
+      return u3_none;
     }
+
     if (c3n == u3r_safe_word(ken, &ken_w)) {
-      u3l_log("ken fail");
+      u3l_log("bytestream: ken fail");
       u3z(dal);
       u3z(ext);
-      u3m_bail(c3__exit);
+      return u3_none;
     }
 
     u3z(ext);
@@ -751,7 +811,8 @@ u3_noun _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   return u3nc(u3kb_flop(dal), new_sea);
 }
-u3_noun u3we_bytestream_extract(u3_noun cor)
+u3_noun
+u3we_bytestream_extract(u3_noun cor)
 {
   u3_noun sea;
   u3_noun rac;
@@ -762,7 +823,8 @@ u3_noun u3we_bytestream_extract(u3_noun cor)
   return _qe_bytestream_extract(sea, rac);
 }
 
-u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
+u3_noun
+_qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 {
   u3_atom pos;
   u3_noun octs;
@@ -772,7 +834,7 @@ u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   c3_w pos_w;
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
-    return u3m_bail(c3__exit);
+    return u3_none;
   }
 
   u3_atom p_octs, q_octs;
@@ -784,7 +846,11 @@ u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   u3_noun dal = u3_nul;
 
@@ -803,16 +869,16 @@ u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
       // XX is u3z necessary here?
       // does memory get freed on bail?
       //
-      u3l_log("sip fail");
+      u3l_log("bytestream: sip fail");
       u3z(dal);
       u3z(ext);
-      u3m_bail(c3__exit);
+      return u3_none;
     }
     if (c3n == u3r_safe_word(ken, &ken_w)) {
-      u3l_log("ken fail");
+      u3l_log("bytestream: ken fail");
       u3z(dal);
       u3z(ext);
-      u3m_bail(c3__exit);
+      return u3_none;
     }
 
     u3z(ext);
@@ -846,7 +912,8 @@ u3_noun _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   return u3nc(data, new_sea);
 }
 
-u3_noun u3we_bytestream_fuse_extract(u3_noun cor)
+u3_noun
+u3we_bytestream_fuse_extract(u3_noun cor)
 {
   u3_noun sea;
   u3_noun rac;
@@ -857,6 +924,8 @@ u3_noun u3we_bytestream_fuse_extract(u3_noun cor)
   return _qe_bytestream_fuse_extract(sea, rac);
 }
 
+#define BITS_D (sizeof(c3_d)*8)
+
 u3_noun
 _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 {
@@ -866,6 +935,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   u3x_mean(bits, 2, &num,
                  6, &bit,
                  7, &bays, 0);
+
 
   c3_w n_w, num_w;
   c3_d bit_d;
@@ -890,7 +960,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 
   // Requires indirect atom, drop to Hoon
   //
-  if (need_bits_w > sizeof(bit_d)*8) {
+  if (need_bits_w > BITS_D) {
     return u3_none;
   }
 
@@ -903,6 +973,8 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   c3_w pos_w;
   u3_atom pos;
   u3_noun octs;
+
+
   u3x_mean(bays, 2, &pos, 3, &octs, 0);
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
@@ -918,7 +990,11 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 
   c3_y* sea_y;
 
-  _x_octs_buffer(&p_octs, &q_octs, &p_octs_w, &sea_y, &len_w, &lead_w);
+  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
+                            &p_octs_w, &sea_y,
+                            &len_w, &lead_w)) {
+    return u3_none;
+  }
 
   if (pos_w + need_bytes_w > p_octs_w) {
     u3m_bail(c3__exit);
@@ -932,7 +1008,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
     num_w += 8;
     pos_w++;
 
-    u3_assert(num_w <= 64);
+    u3_assert(num_w <= BITS_D);
   }
 
   u3_noun new_bays = u3nc(u3i_word(pos_w), u3k(octs));
@@ -944,7 +1020,8 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 //               bit=@ub
 //               =bays
 //           ==
-u3_noun u3we_bytestream_need_bits(u3_noun cor)
+u3_noun
+u3we_bytestream_need_bits(u3_noun cor)
 {
   u3_atom n;
   u3_noun bits;
@@ -954,6 +1031,7 @@ u3_noun u3we_bytestream_need_bits(u3_noun cor)
 
   return _qe_bytestream_need_bits(n, bits);
 }
+
 u3_noun
 _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
 {
@@ -978,6 +1056,10 @@ _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
     return u3_none;
   }
 
+  if(n_w == 0) {
+    return u3k(bits);
+  }
+
   c3_w dop_w = n_w;
 
   if (dop_w > num_w) {
@@ -989,7 +1071,8 @@ _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
 
   return u3nt(u3i_word(num_w), u3i_chub(bit_d), u3k(bays));
 }
-u3_noun u3we_bytestream_drop_bits(u3_noun cor)
+u3_noun
+u3we_bytestream_drop_bits(u3_noun cor)
 {
   u3_atom n;
   u3_noun bits;
@@ -1024,15 +1107,19 @@ _qe_bytestream_peek_bits(u3_atom n, u3_noun bits)
     return u3_none;
   }
 
+  if (n_w == 0) {
+    return u3i_word(0);
+  }
+
   if (n_w > num_w) {
     u3m_bail(c3__exit);
   }
 
-  if (n_w > 64) {
+  if (n_w > BITS_D) {
     return u3_none;
   }
 
-  if (n_w == 64) {
+  if (n_w == BITS_D) {
     return u3i_chub(bit_d);
   }
   else {
@@ -1041,7 +1128,8 @@ _qe_bytestream_peek_bits(u3_atom n, u3_noun bits)
     return u3i_chub(bit_d & mak_d);
   }
 }
-u3_noun u3we_bytestream_peek_bits(u3_noun cor)
+u3_noun
+u3we_bytestream_peek_bits(u3_noun cor)
 {
   u3_atom n;
   u3_noun bits;
@@ -1080,13 +1168,13 @@ _qe_bytestream_read_bits(u3_atom n, u3_noun bits)
     u3m_bail(c3__exit);
   }
 
-  if (n_w > 64) {
+  if (n_w > BITS_D) {
     return u3_none;
   }
 
   c3_d bet_d = 0;
 
-  if (n_w == 64) {
+  if (n_w == BITS_D) {
     bet_d = bit_d;
   }
   else {
@@ -1094,21 +1182,16 @@ _qe_bytestream_read_bits(u3_atom n, u3_noun bits)
     bet_d = bit_d & mak_d;
   }
 
-  c3_w dop_w = n_w;
-
-  if (dop_w > num_w) {
-    dop_w = num_w;
-  }
-
-  bit_d >>= dop_w;
-  num_w -= dop_w;
+  bit_d >>= n_w;
+  num_w -= n_w;
 
   u3_noun new_bits = u3nt(u3i_word(num_w), u3i_chub(bit_d), u3k(bays));
 
   return u3nc(u3i_chub(bet_d), new_bits);
 }
 
-u3_noun u3we_bytestream_read_bits(u3_noun cor)
+u3_noun
+u3we_bytestream_read_bits(u3_noun cor)
 {
   u3_atom n;
   u3_noun bits;
@@ -1142,6 +1225,10 @@ _qe_bytestream_byte_bits(u3_noun bits)
 
   c3_y rem_y = num_w & 0x7;
 
+  if (rem_y == 0) {
+    return u3k(bits);
+  }
+
   u3_noun new_bits = u3nt(u3i_word(num_w - rem_y),
                           u3i_chub(bit_d >> rem_y),
                           u3k(bays));
@@ -1149,7 +1236,8 @@ _qe_bytestream_byte_bits(u3_noun bits)
   return new_bits;
 }
 
-u3_noun u3we_bytestream_byte_bits(u3_noun cor)
+u3_noun
+u3we_bytestream_byte_bits(u3_noun cor)
 {
   u3_noun bits;
 
