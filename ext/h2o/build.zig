@@ -175,6 +175,40 @@ pub fn build(b: *std.Build) !void {
     });
     libgkc.installHeader(h2o_c.path("deps/libgkc/gkc.h"), "gkc.h");
 
+    const libyrmcds = b.addStaticLibrary(.{
+        .name = "libyrmcds",
+        .target = target,
+        .optimize = optimize,
+    });
+    libyrmcds.linkLibC();
+    libyrmcds.addIncludePath(h2o_c.path("deps/libyrmcds"));
+    libyrmcds.addCSourceFiles(.{
+        .root = h2o_c.path("deps/libyrmcds"),
+        .files = &.{
+            "close.c",
+            "connect.c",
+            "counter.c",
+            "recv.c",
+            "send.c",
+            "send_text.c",
+            "set_compression.c",
+            "socket.c",
+            "strerror.c",
+            "text_mode.c",
+            // "yc-cnt.c",
+            // "yc.c",
+        },
+        .flags = &.{
+            "-Wall",
+            "-Wconversion",
+            "-gdwarf-3",
+            "-O2",
+        },
+    });
+    libyrmcds.installHeadersDirectory(h2o_c.path("deps/libyrmcds"), "", .{
+        .include_extensions = &.{".h"},
+    });
+
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
         .target = target,
@@ -186,6 +220,7 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(cloexec);
     h2o.linkLibrary(klib);
     h2o.linkLibrary(libgkc);
+    h2o.linkLibrary(libyrmcds);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
