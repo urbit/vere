@@ -103,34 +103,41 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const sse2neon_c = b.dependency("sse2neon", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const cloexec = b.addStaticLibrary(.{
         .name = "cloexec",
         .target = target,
         .optimize = optimize,
     });
+
     cloexec.linkLibC();
+
     cloexec.addIncludePath(h2o_c.path("deps/cloexec"));
+
     cloexec.addCSourceFiles(.{
         .root = h2o_c.path("deps/cloexec"),
         .files = &.{"cloexec.c"},
     });
-    cloexec.installHeader(h2o_c.path("deps/cloexec/cloexec.h"), "cloexec.h");
 
-    const sse2neon_c = b.dependency("sse2neon", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    cloexec.installHeader(h2o_c.path("deps/cloexec/cloexec.h"), "cloexec.h");
 
     const klib = b.addStaticLibrary(.{
         .name = "klib",
         .target = target,
         .optimize = optimize,
     });
+
     klib.linkLibC();
+
     klib.addIncludePath(h2o_c.path("deps/klib"));
     if (t.cpu.arch == .aarch64) {
         klib.addIncludePath(sse2neon_c.path("."));
     }
+
     klib.addCSourceFiles(.{
         .root = h2o_c.path("deps/klib"),
         .files = &.{
@@ -158,6 +165,7 @@ pub fn build(b: *std.Build) !void {
                 "",
         },
     });
+
     klib.installHeadersDirectory(h2o_c.path("deps/klib"), "", .{
         .include_extensions = &.{".h"},
     });
@@ -167,12 +175,16 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     libgkc.linkLibC();
+
     libgkc.addIncludePath(h2o_c.path("deps/libgkc"));
+
     libgkc.addCSourceFiles(.{
         .root = h2o_c.path("deps/libgkc"),
         .files = &.{"gkc.c"},
     });
+
     libgkc.installHeader(h2o_c.path("deps/libgkc/gkc.h"), "gkc.h");
 
     const libyrmcds = b.addStaticLibrary(.{
@@ -180,8 +192,11 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     libyrmcds.linkLibC();
+
     libyrmcds.addIncludePath(h2o_c.path("deps/libyrmcds"));
+
     libyrmcds.addCSourceFiles(.{
         .root = h2o_c.path("deps/libyrmcds"),
         .files = &.{
@@ -205,6 +220,7 @@ pub fn build(b: *std.Build) !void {
             "-O2",
         },
     });
+
     libyrmcds.installHeadersDirectory(h2o_c.path("deps/libyrmcds"), "", .{
         .include_extensions = &.{".h"},
     });
@@ -214,11 +230,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     picohttpparser.linkLibC();
+
     picohttpparser.addIncludePath(h2o_c.path("deps/picohttpparser"));
     if (t.cpu.arch == .aarch64) {
         picohttpparser.addIncludePath(sse2neon_c.path("."));
     }
+
     picohttpparser.addCSourceFiles(.{
         .root = patches.path("h2o-2.2.6/deps/picohttpparser"),
         .files = &.{"picohttpparser.c"},
@@ -229,6 +248,7 @@ pub fn build(b: *std.Build) !void {
                 "",
         },
     });
+
     picohttpparser.installHeadersDirectory(h2o_c.path("deps/picohttpparser"), "", .{
         .include_extensions = &.{".h"},
     });
@@ -238,9 +258,12 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     cifra.linkLibC();
+
     cifra.addIncludePath(h2o_c.path("deps/picotls/deps/cifra/src"));
     cifra.addIncludePath(h2o_c.path("deps/picotls/deps/cifra/src/ext"));
+
     cifra.addCSourceFiles(.{
         .root = h2o_c.path("deps/picotls/deps/cifra/src"),
         .files = &.{
@@ -270,6 +293,7 @@ pub fn build(b: *std.Build) !void {
             "ocb.c",
         },
     });
+
     cifra.installHeadersDirectory(h2o_c.path("deps/picotls/deps/cifra/src"), "", .{
         .include_extensions = &.{ ".h", "curve25519.tweetnacl.c" },
     });
@@ -279,12 +303,16 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     micro_ecc.linkLibC();
+
     micro_ecc.addIncludePath(h2o_c.path("deps/picotls/deps/micro-ecc"));
+
     micro_ecc.addCSourceFiles(.{
         .root = h2o_c.path("deps/picotls/deps/micro-ecc"),
         .files = &.{"uECC.c"},
     });
+
     micro_ecc.installHeadersDirectory(h2o_c.path("deps/picotls/deps/micro-ecc"), "", .{
         .include_extensions = &.{ ".h", ".inc" },
     });
@@ -294,14 +322,17 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     picotls.linkLibrary(openssl.artifact("ssl"));
     picotls.linkLibrary(cifra);
     picotls.linkLibrary(micro_ecc);
     picotls.linkLibC();
+
     picotls.addIncludePath(h2o_c.path("deps/picotls/include"));
     if (t.cpu.arch == .aarch64) {
         picotls.addIncludePath(sse2neon_c.path("."));
     }
+
     picotls.addCSourceFiles(.{
         .root = h2o_c.path("deps/picotls/lib"),
         .files = &.{
@@ -319,6 +350,7 @@ pub fn build(b: *std.Build) !void {
             "-O2",
         },
     });
+
     picotls.installHeadersDirectory(h2o_c.path("deps/picotls/include"), "", .{
         .include_extensions = &.{".h"},
     });
@@ -328,13 +360,17 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     ssl_conservatory.linkLibrary(openssl.artifact("ssl"));
     ssl_conservatory.linkLibC();
+
     ssl_conservatory.addIncludePath(h2o_c.path("deps/ssl-conservatory/openssl"));
+
     ssl_conservatory.addCSourceFiles(.{
         .root = h2o_c.path("deps/ssl-conservatory/openssl"),
         .files = &.{"openssl_hostname_validation.c"},
     });
+
     ssl_conservatory.installHeader(h2o_c.path("deps/ssl-conservatory/openssl/openssl_hostname_validation.h"), "openssl_hostname_validation.h");
 
     const h2o = b.addStaticLibrary(.{
@@ -354,12 +390,12 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(ssl_conservatory);
     h2o.linkLibC();
 
+    h2o.addIncludePath(h2o_c.path("deps/golombset"));
+    h2o.addIncludePath(h2o_c.path("deps/yoml"));
+
     h2o.addIncludePath(h2o_c.path("include"));
     h2o.addIncludePath(h2o_c.path("include/h2o"));
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
-
-    h2o.addIncludePath(h2o_c.path("deps/golombset"));
-    h2o.addIncludePath(h2o_c.path("deps/yoml"));
 
     h2o.addCSourceFiles(.{
         .root = h2o_c.path("lib"),
