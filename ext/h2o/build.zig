@@ -126,6 +126,8 @@ pub fn build(b: *std.Build) !void {
     h2o.addIncludePath(h2o_c.path("include/h2o"));
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
 
+    h2o.addIncludePath(h2o_c.path("deps/golombset"));
+
     h2o.addCSourceFiles(.{
         .root = h2o_c.path("lib"),
         .files = &.{
