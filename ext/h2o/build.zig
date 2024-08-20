@@ -162,6 +162,19 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
+    const libgkc = b.addStaticLibrary(.{
+        .name = "libgkc",
+        .target = target,
+        .optimize = optimize,
+    });
+    libgkc.linkLibC();
+    libgkc.addIncludePath(h2o_c.path("deps/libgkc"));
+    libgkc.addCSourceFiles(.{
+        .root = h2o_c.path("deps/libgkc"),
+        .files = &.{"gkc.c"},
+    });
+    libgkc.installHeader(h2o_c.path("deps/libgkc/gkc.h"), "gkc.h");
+
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
         .target = target,
@@ -172,6 +185,7 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(uv);
     h2o.linkLibrary(cloexec);
     h2o.linkLibrary(klib);
+    h2o.linkLibrary(libgkc);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
