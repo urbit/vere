@@ -209,6 +209,30 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
+    const picohttpparser = b.addStaticLibrary(.{
+        .name = "picohttpparser",
+        .target = target,
+        .optimize = optimize,
+    });
+    picohttpparser.linkLibC();
+    picohttpparser.addIncludePath(h2o_c.path("deps/picohttpparser"));
+    if (t.cpu.arch == .aarch64) {
+        picohttpparser.addIncludePath(sse2neon_c.path("."));
+    }
+    picohttpparser.addCSourceFiles(.{
+        .root = patches.path("h2o-2.2.6/deps/picohttpparser"),
+        .files = &.{"picohttpparser.c"},
+        .flags = &.{
+            if (t.cpu.arch == .aarch64)
+                "-DURBIT_RUNTIME_CPU_AARCH64"
+            else
+                "",
+        },
+    });
+    picohttpparser.installHeadersDirectory(h2o_c.path("deps/picohttpparser"), "", .{
+        .include_extensions = &.{".h"},
+    });
+
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
         .target = target,
@@ -221,6 +245,7 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(klib);
     h2o.linkLibrary(libgkc);
     h2o.linkLibrary(libyrmcds);
+    h2o.linkLibrary(picohttpparser);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
