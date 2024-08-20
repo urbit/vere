@@ -2080,8 +2080,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     lin_u->haz_y = lin_u->dat_y + dat_w;
     memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
 
+    c3_y* haz_y = lin_u->haz_y;
+    while ( pas != u3_nul ) {
+      u3r_bytes(0, 64, haz_y, u3h(pas));
+      haz_y += 64;
+      pas = u3t(pas);
+    }
+
     u3r_bytes(0, tip_w, lin_u->tip_y, pof);
-    u3r_bytes(0, haz_w, lin_u->haz_y, pas);
 
     mesa_free_pact(&jum_u);
   }
