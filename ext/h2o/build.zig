@@ -98,6 +98,19 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const cloexec = b.addStaticLibrary(.{
+        .name = "cloexec",
+        .target = target,
+        .optimize = optimize,
+    });
+    cloexec.linkLibC();
+    cloexec.addIncludePath(h2o_c.path("deps/cloexec"));
+    cloexec.addCSourceFiles(.{
+        .root = h2o_c.path("deps/cloexec"),
+        .files = &.{"cloexec.c"},
+    });
+    cloexec.installHeader(h2o_c.path("deps/cloexec/cloexec.h"), "cloexec.h");
+
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
         .target = target,
@@ -106,6 +119,7 @@ pub fn build(b: *std.Build) !void {
 
     h2o.linkLibrary(openssl.artifact("ssl"));
     h2o.linkLibrary(uv);
+    h2o.linkLibrary(cloexec);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
