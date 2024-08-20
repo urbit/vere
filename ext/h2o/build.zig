@@ -5,6 +5,11 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
+    const patches = b.dependency("patches", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
@@ -111,6 +116,52 @@ pub fn build(b: *std.Build) !void {
     });
     cloexec.installHeader(h2o_c.path("deps/cloexec/cloexec.h"), "cloexec.h");
 
+    const sse2neon_c = b.dependency("sse2neon", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const klib = b.addStaticLibrary(.{
+        .name = "klib",
+        .target = target,
+        .optimize = optimize,
+    });
+    klib.linkLibC();
+    klib.addIncludePath(h2o_c.path("deps/klib"));
+    if (t.cpu.arch == .aarch64) {
+        klib.addIncludePath(sse2neon_c.path("."));
+    }
+    klib.addCSourceFiles(.{
+        .root = h2o_c.path("deps/klib"),
+        .files = &.{
+            "bgzf.c",
+            "khmm.c",
+            "kmath.c",
+            "knetfile.c",
+            "knhx.c",
+            "kopen.c",
+            "ksa.c",
+            "kson.c",
+            "kstring.c",
+            // "ksw.c",
+            "kthread.c",
+            "kurl.c",
+        },
+    });
+    klib.addCSourceFiles(.{
+        .root = patches.path("h2o-2.2.6/deps/klib"),
+        .files = &.{"ksw.c"},
+        .flags = &.{
+            if (t.cpu.arch == .aarch64)
+                "-DURBIT_RUNTIME_CPU_AARCH64"
+            else
+                "",
+        },
+    });
+    klib.installHeadersDirectory(h2o_c.path("deps/klib"), "", .{
+        .include_extensions = &.{".h"},
+    });
+
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
         .target = target,
@@ -120,6 +171,7 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(openssl.artifact("ssl"));
     h2o.linkLibrary(uv);
     h2o.linkLibrary(cloexec);
+    h2o.linkLibrary(klib);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
