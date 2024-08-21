@@ -693,55 +693,79 @@ _conn_init_sock(u3_shan* san_u)
   u3l_log("conn: listening on %s", pip_c);
 
 #else   //  _WIN32
-  //  the full socket path is limited to about 108 characters,
-  //  and we want it to be relative to the pier. save our current
-  //  path, chdir to the pier, open the socket at the desired
-  //  path, then chdir back. hopefully there aren't any threads.
-  //
-  c3_c pax_c[2048];
-  c3_i err_i;
+  c3_c  tad_c[U3_SOCK_MAX];
+  c3_w  len_w;
+  c3_i  err_i, fid_i;
+  c3_c* ven_c;
 
-  if ( NULL == getcwd(pax_c, sizeof(pax_c)) ) {
-    u3l_log("conn: getcwd: %s", uv_strerror(errno));
+  if ( (ven_c = getenv("TMPDIR")) ) {
+    if ( !(len_w = strlen(ven_c)) ) {
+      ven_c = 0;
+    } else {
+      if ( ven_c[len_w - 1] == '/' ) {
+        --len_w;
+      }
+      if ( len_w >= U3_SOCK_MAX - sizeof("/urbit-XXXXXX/conn.sock") ) {
+        u3l_log("conn: TMPDIR too long");
+        ven_c = 0;
+      }
+    }
+  }
+  if ( !ven_c ) {
+    ven_c = "/tmp";
+    len_w = 4;
+  }
+  memcpy(tad_c, ven_c, len_w);
+  memcpy(tad_c + len_w, "/urbit-XXXXXX", sizeof("/urbit-XXXXXX"));
+  if ( !mkdtemp(tad_c) ) {
+    u3l_log("conn: mkdtemp: %s", strerror(errno));
     u3_king_bail();
   }
-  if ( 0 != chdir(u3_Host.dir_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
-    u3_king_bail();
-  }
-  if ( 0 != unlink(URB_SOCK_PATH) && errno != ENOENT ) {
-    u3l_log("conn: unlink: %s", uv_strerror(errno));
-    goto _conn_sock_err_chdir;
-  }
+  memcpy(tad_c + len_w + sizeof("/urbit-XXXXXX") - 1, "/conn.sock",
+         sizeof("/conn.sock"));
   if ( 0 != (err_i = uv_pipe_init(u3L, &san_u->pyp_u, 0)) ) {
     u3l_log("conn: uv_pipe_init: %s", uv_strerror(err_i));
-    goto _conn_sock_err_chdir;
+    goto _conn_sock_err_rmdir;
   }
-  if ( 0 != (err_i = uv_pipe_bind(&san_u->pyp_u, URB_SOCK_PATH)) ) {
+  if ( 0 != (err_i = uv_pipe_bind(&san_u->pyp_u, tad_c)) ) {
     u3l_log("conn: uv_pipe_bind: %s", uv_strerror(err_i));
-    goto _conn_sock_err_chdir;
+    goto _conn_sock_err_rmdir;
+  }
+  if ( -1 == (fid_i = open(u3_Host.dir_c, O_DIRECTORY)) ) {
+    u3l_log("conn: open: %s", strerror(errno));
+    goto _conn_sock_err_unlink;
+  }
+  if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && ENOENT != errno ) {
+    u3l_log("conn: unlinkat: %s", strerror(errno));
+    goto _conn_sock_err_close;
+  }
+  if ( 0 != symlinkat(tad_c, fid_i, URB_SOCK_PATH) ) {
+    u3l_log("conn: symlinkat: %s", strerror(errno));
+    goto _conn_sock_err_close;
+  }
+  if ( 0 != close(fid_i) ) {
+    u3l_log("conn: close: %s", strerror(errno));
   }
   if ( 0 != (err_i = uv_listen((uv_stream_t*)&san_u->pyp_u, 0,
                                _conn_sock_cb)) ) {
     u3l_log("conn: uv_listen: %s", uv_strerror(err_i));
     goto _conn_sock_err_unlink;
   }
-  if ( 0 != chdir(pax_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
-    goto _conn_sock_err_close;
-  }
-  u3l_log("conn: listening on %s/%s", u3_Host.dir_c, URB_SOCK_PATH);
+  u3l_log("conn: listening on %s", tad_c);
   return;
 
 _conn_sock_err_close:
-  uv_close((uv_handle_t*)&san_u->pyp_u, _conn_close_cb);
-_conn_sock_err_unlink:
-  if ( 0 != unlink(URB_SOCK_PATH) ) {
-    u3l_log("conn: unlink: %s", uv_strerror(errno));
+  if ( 0 != close(fid_i) ) {
+    u3l_log("conn: close: %s", strerror(errno));
   }
-_conn_sock_err_chdir:
-  if ( 0 != chdir(pax_c) ) {
-    u3l_log("conn: chdir: %s", uv_strerror(errno));
+_conn_sock_err_unlink:
+  if ( 0 != unlink(tad_c) ) {
+    u3l_log("conn: unlink: %s", strerror(errno));
+  }
+_conn_sock_err_rmdir:
+  *strrchr(tad_c, '/') = 0;
+  if ( 0 != rmdir(tad_c) ) {
+    u3l_log("conn: rmdir: %s", strerror(errno));
   }
   u3_king_bail();
 #endif  //  _WIN32
@@ -855,24 +879,34 @@ static void
 _conn_io_exit(u3_auto* car_u)
 {
   u3_conn*          con_u = (u3_conn*)car_u;
-  c3_c*             pax_c = u3_Host.dir_c;
-  c3_w              len_w = strlen(pax_c) + 1 + sizeof(URB_SOCK_PATH);
-  c3_c*             paf_c = c3_malloc(len_w);
-  c3_i              wit_i;
+  c3_c*             fas_c;
+  c3_c              tad_c[U3_SOCK_MAX];
+  c3_i              fid_i, got_i;
 
-  wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, URB_SOCK_PATH);
-  u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
-
-  if ( 0 != unlink(paf_c) ) {
-    if ( ENOENT != errno ) {
-      u3l_log("conn: failed to unlink socket: %s", uv_strerror(errno));
+  if ( -1 == (fid_i = open(u3_Host.dir_c, O_DIRECTORY)) ) {
+    u3l_log("conn: open: %s", strerror(errno));
+  } else if ( -1 == (got_i = readlinkat(fid_i, URB_SOCK_PATH, tad_c,
+                                        sizeof(tad_c) - 1)) ) {
+    u3l_log("conn: readlinkat: %s", strerror(errno));
+  } else {
+    tad_c[got_i] = 0;
+    if ( 0 != unlinkat(fid_i, URB_SOCK_PATH, 0) && ENOENT != errno ) {
+      u3l_log("conn: unlinkat: %s", strerror(errno));
+    }
+    if ( 0 != unlink(tad_c) && ENOENT != errno ) {
+      u3l_log("conn: unlink: %s", strerror(errno));
+    } else if ( !(fas_c = strrchr(tad_c, '/')) ) {
+      u3l_log("conn: strange conn.sock: %s", tad_c);
+    } else {
+      *fas_c = 0;
+      if ( 0 != rmdir(tad_c) && ENOENT != errno ) {
+        u3l_log("conn: rmdir: %s", strerror(errno));
+      }
     }
   }
-  else {
-    // u3l_log("conn: unlinked %s", paf_c);
+  if ( -1 != fid_i && 0 != close(fid_i) ) {
+    u3l_log("conn: close: %s", strerror(errno));
   }
-  c3_free(paf_c);
 
   {
     u3_shan*        san_u = con_u->san_u;
