@@ -11,21 +11,10 @@ u3qfo_put(u3_noun a,
           u3_noun b,
           u3_noun c)
 {
-//  fprintf(stderr, "put:of\r\n");
   u3_noun fil, kid;
   u3x_cell(a, &fil, &kid);                 
   if ( u3_nul == b ) {
     return u3nc(u3nc(u3_nul, u3k(c)), u3k(kid));
-    /*if ( u3_nul == fil ) {
-        return u3nc(u3nc(u3_nul, c),
-                    u3k(kid));
-    } else if ( c3y == u3r_sing(u3t(fil), c) ) {
-        return u3k(a);
-
-    } else {
-        return u3nc(u3nc(u3_nul, c),
-                    u3k(kid));
-    }*/
   }
   u3_noun hed, tal;
   u3x_cell(b, &hed, &tal);
