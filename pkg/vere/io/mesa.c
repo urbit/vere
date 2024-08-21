@@ -2516,7 +2516,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_y boq_y = 31;
   // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
   c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
-  _mesa_del_pit(sam_u, nam_u);
+  // _mesa_del_pit(sam_u, nam_u);  XX
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
