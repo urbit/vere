@@ -253,6 +253,7 @@
     //u3_noun u3qfo_rep(u3_noun, u3_noun, u3_noun);
     u3_noun u3qf_lte_dime(u3_noun, u3_noun);
     u3_noun u3qf_lte_iota(u3_noun, u3_noun);
+    u3_noun u3qfa_tap(u3_noun);
 
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58
