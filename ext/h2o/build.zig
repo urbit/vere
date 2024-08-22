@@ -146,7 +146,7 @@ pub fn build(b: *std.Build) !void {
             "kmath.c",
             "knetfile.c",
             "knhx.c",
-            "kopen.c",
+            // "kopen.c",
             "ksa.c",
             "kson.c",
             "kstring.c",
@@ -157,7 +157,10 @@ pub fn build(b: *std.Build) !void {
     });
     klib.addCSourceFiles(.{
         .root = patches.path("h2o-2.2.6/deps/klib"),
-        .files = &.{"ksw.c"},
+        .files = &.{
+            "ksw.c",
+            "kopen.c",
+        },
         .flags = &.{
             if (t.cpu.arch == .aarch64)
                 "-DURBIT_RUNTIME_CPU_AARCH64"
