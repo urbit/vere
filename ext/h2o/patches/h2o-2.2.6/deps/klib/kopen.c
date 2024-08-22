@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #ifndef _WIN32
 #include <netdb.h>
 #include <arpa/inet.h>
