@@ -15,6 +15,50 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const curl = b.dependency("curl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const zlib_c = b.dependency("zlib", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const zlib = b.addStaticLibrary(.{
+        .name = "zlib",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    zlib.linkLibC();
+
+    zlib.addCSourceFiles(.{
+        .root = zlib_c.path("."),
+        .files = &.{
+            "adler32.c",
+            "crc32.c",
+            "deflate.c",
+            "infback.c",
+            "inffast.c",
+            "inflate.c",
+            "inftrees.c",
+            "trees.c",
+            "zutil.c",
+            "compress.c",
+            "uncompr.c",
+            "gzclose.c",
+            "gzlib.c",
+            "gzread.c",
+            "gzwrite.c",
+        },
+        .flags = &.{"-std=c89"},
+    });
+
+    zlib.installHeader(zlib_c.path("zconf.h"), "zconf.h");
+
+    zlib.installHeader(zlib_c.path("zlib.h"), "zlib.h");
+
     const uv_c = b.dependency("uv", .{
         .target = target,
         .optimize = optimize,
@@ -131,6 +175,8 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    klib.linkLibrary(curl.artifact("curl"));
+    klib.linkLibrary(zlib);
     klib.linkLibC();
 
     klib.addIncludePath(h2o_c.path("deps/klib"));
@@ -383,6 +429,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     h2o.linkLibrary(openssl.artifact("ssl"));
+    h2o.linkLibrary(zlib);
     h2o.linkLibrary(uv);
     h2o.linkLibrary(cloexec);
     h2o.linkLibrary(klib);
