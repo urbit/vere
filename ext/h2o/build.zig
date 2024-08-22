@@ -70,17 +70,17 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    if (t.os.tag == .windows) {
-        uv.linkSystemLibrary("psapi");
-        uv.linkSystemLibrary("user32");
-        uv.linkSystemLibrary("advapi32");
-        uv.linkSystemLibrary("iphlpapi");
-        uv.linkSystemLibrary("userenv");
-        uv.linkSystemLibrary("ws2_32");
-    }
-    if (t.os.tag == .linux) {
-        uv.linkSystemLibrary("pthread");
-    }
+    // if (t.os.tag == .windows) {
+    //     uv.linkSystemLibrary("psapi");
+    //     uv.linkSystemLibrary("user32");
+    //     uv.linkSystemLibrary("advapi32");
+    //     uv.linkSystemLibrary("iphlpapi");
+    //     uv.linkSystemLibrary("userenv");
+    //     uv.linkSystemLibrary("ws2_32");
+    // }
+    // if (t.os.tag == .linux) {
+    //     uv.linkSystemLibrary("pthread");
+    // }
     uv.linkLibC();
 
     uv.addIncludePath(uv_c.path("src"));
@@ -518,6 +518,15 @@ pub fn build(b: *std.Build) !void {
             "http2/scheduler.c",
             "http2/stream.c",
             "tunnel.c",
+        },
+        .flags = &.{
+            "-std=c99",
+            "-g3",
+            "-O2",
+            "-pthread",
+            "-DH2O_USE_LIBUV",
+            "-DH2O_USE_PICOTLS",
+            if (t.os.tag == .linux) "-D_GNU_SOURCE" else "",
         },
     });
 
