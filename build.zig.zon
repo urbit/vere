@@ -23,6 +23,9 @@
         .lmdb = .{
             .path = "./ext/lmdb",
         },
+        .murmur3 = .{
+            .path = "./ext/murmur3",
+        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },

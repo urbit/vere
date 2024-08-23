@@ -66,6 +66,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(lmdb.artifact("lmdb"));
 
+    const murmur3 = b.dependency("murmur3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(murmur3.artifact("murmur3"));
+
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
