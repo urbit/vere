@@ -5,7 +5,7 @@
 
 #include "noun.h"
 
-STATIC_ASSERT( (UINT32_MAX > u3a_cells),
+STATIC_ASSERT( (UINT64_MAX > u3a_cells),
                "width precision" );
 
 static c3_w

@@ -47,7 +47,7 @@
 
     /* Size in words.
     */
-#     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
+#     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
 
     /* Bit counting.
     */
@@ -226,7 +226,6 @@
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w     : c3_align_w,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)

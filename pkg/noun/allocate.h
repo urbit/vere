@@ -16,7 +16,7 @@
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
-#     define u3a_walign  (1 << u3a_vits)
+#     define u3a_walign  (4 << u3a_vits)
 
     /* u3a_balign: u3a_walign in bytes
     */

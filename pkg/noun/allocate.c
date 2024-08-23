@@ -16,23 +16,6 @@ u3_road* u3a_Road;
 c3_w u3_Code;
 #endif
 
-// XX 64-bit vere
-//
-// todo:
-// - [ ] loom migration
-// - [ ] helpers to convert c3_w to c3_d
-// - [ ] expand page size?
-// - [ ] modify free lists length?
-// - [ ] new type for mugs (c3_l -> ?)
-// - [ ] modules: allocate, retrieve, vortex, imprison, noun types
-//
-// approach:
-// - huge change
-// - small, incremental updates
-// - widen pointers first, fill rest with zeroes
-// - start using them
-// - rather, rinse, repeat
-
 c3_w u3a_to_pug(c3_w off);
 c3_w u3a_to_pom(c3_w off);
 

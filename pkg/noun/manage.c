@@ -533,6 +533,8 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
   c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
   c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
   c3_w* cap_w = mat_w;
+  fprintf(stderr, "mat_w: %p, rut_w: %p, cap_w: %p, siz_w: %llu\r\n",
+                   mat_w, rut_w, cap_w, siz_w);
 
   if ( c3y == kid_o ) {
     u3e_ward(u3of(c3_w, rut_w) - 1, u3of(c3_w, cap_w));
@@ -586,7 +588,7 @@ _pave_home(void)
   _pave_parts();
 }
 
-STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
+STATIC_ASSERT( ((c3_wiseof(u3v_home) * 8) == sizeof(u3v_home)),
                "home road alignment" );
 
 /* _find_home(): in restored image, point to home road.
@@ -2074,7 +2076,7 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
-    u3C.wor_i = len_i >> 2;
+    u3C.wor_i = len_i >> 3;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }
