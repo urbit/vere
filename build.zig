@@ -48,5 +48,23 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(gmp.artifact("gmp"));
 
+    const h2o = b.dependency("h2o", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(h2o.artifact("h2o"));
+
+    const libuv = b.dependency("libuv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(libuv.artifact("libuv"));
+
+    const openssl = b.dependency("openssl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(openssl.artifact("ssl"));
+
     b.installArtifact(exe);
 }
