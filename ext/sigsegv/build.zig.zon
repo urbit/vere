@@ -1,0 +1,13 @@
+.{
+    .name = "sigsegv",
+    .version = "0.0.1",
+    .dependencies = .{
+        .sigsegv = .{
+            .url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.14.tar.gz",
+            .hash = "122082332294b5084ed0032c635f36227fb0408c175617a73aa9798036ead4c22c79",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

@@ -9,6 +9,7 @@
 #include "natpmp.h"
 #include "openssl/ssl.h"
 #include "pdjson.h"
+#include "sigsegv.h"
 #include "softfloat.h"
 #include "uv.h"
 

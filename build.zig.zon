@@ -36,6 +36,9 @@
         .pdjson = .{
             .path = "./ext/pdjson",
         },
+        .sigsegv = .{
+            .path = "./ext/sigsegv",
+        },
         .softfloat = .{
             .path = "./ext/softfloat",
         },
