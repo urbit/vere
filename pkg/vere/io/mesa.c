@@ -1305,7 +1305,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   c3_w siz_w = (1 << (nam_u->boq_y - 3));
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
 
-  _try_resend(req_u, nam_u->fra_d);
+  _try_resend(req_u, req_u->nex_d);  // _try_resend(req_u, nam_u->fra_d);
   _update_resend_timer(req_u);
 }
 
