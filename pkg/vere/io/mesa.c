@@ -1268,7 +1268,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     c3_free(par_u);
   }
 
-  bitset_del(&req_u->was_u, nam_u->fra_d);
   if ( nam_u->fra_d > req_u->ack_d ) {
     req_u->ack_d = nam_u->fra_d;
   }
@@ -1282,9 +1281,10 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   req_u->hav_d++;
 
   #ifdef MESA_DEBUG
-    u3l_log("fragment %"PRIu64" len %"PRIu64, nam_u->fra_d, req_u->hav_d);
+    u3l_log("fragment %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
   #endif
   if ( req_u->lef_d == nam_u->fra_d ) {
+    bitset_del(&req_u->was_u, nam_u->fra_d);
     req_u->lef_d++;
   }
 
