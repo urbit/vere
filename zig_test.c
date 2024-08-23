@@ -8,6 +8,7 @@
 #include "murmur3.h"
 #include "natpmp.h"
 #include "openssl/ssl.h"
+#include "pdjson.h"
 #include "softfloat.h"
 #include "uv.h"
 
