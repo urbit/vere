@@ -78,5 +78,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(openssl.artifact("ssl"));
 
+    const pdjson = b.dependency("pdjson", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(pdjson.artifact("pdjson"));
+
     b.installArtifact(exe);
 }
