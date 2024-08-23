@@ -84,5 +84,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(pdjson.artifact("pdjson"));
 
+    const sigsegv = b.dependency("sigsegv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(sigsegv.artifact("sigsegv"));
+
     b.installArtifact(exe);
 }
