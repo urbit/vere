@@ -5,6 +5,7 @@
 #include "gmp.h"
 #include "h2o.h"
 #include "lmdb/lmdb.h"
+#include "murmur3.h"
 #include "natpmp.h"
 #include "openssl/ssl.h"
 #include "softfloat.h"
