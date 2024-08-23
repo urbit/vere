@@ -816,6 +816,7 @@ u3j_boot(c3_o nuu_o)
     u3h_free(u3R->jed.hot_p);
   }
   u3R->jed.hot_p = u3h_new();
+  fprintf(stderr, "jets: hot state init done\r\n");
 
   return _cj_install(u3D.ray_u, 1,
                      (c3_l) (long long) u3D.dev_u[0].par_u,

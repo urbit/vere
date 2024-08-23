@@ -16,7 +16,11 @@
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
+#ifdef VERE_64
 #     define u3a_walign  (4 << u3a_vits)
+#else
+#     define u3a_walign  (1 << u3a_vits)
+#endif
 
     /* u3a_balign: u3a_walign in bytes
     */
@@ -28,7 +32,7 @@
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
-#     define u3a_page    12ULL
+#     define u3a_page    13ULL
 
     /* u3a_pages: maximum number of pages in memory.
     */

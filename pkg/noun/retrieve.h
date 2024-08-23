@@ -123,7 +123,7 @@
       /* u3r_mug_both(): Join two mugs.
       */
         c3_l
-        u3r_mug_both(c3_w lef_w, c3_w rit_w);
+        u3r_mug_both(c3_l lef_w, c3_l rit_w);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */

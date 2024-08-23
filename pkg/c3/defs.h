@@ -47,7 +47,12 @@
 
     /* Size in words.
     */
+#ifdef VERE_64
 #     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
+#else
+#     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
+#endif
+
 
     /* Bit counting.
     */
@@ -224,11 +229,20 @@
 
    unless effective type of x is c3_w or c3_d, assumes x is a pointer.
 */
+#ifdef VERE_64
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
+#else
+#define c3_align(x, al, hilo)                   \
+  _Generic((x),                                 \
+           c3_w     : c3_align_w,               \
+           c3_d     : c3_align_d,               \
+           default  : c3_align_p)               \
+       (x, al, hilo)
+#endif
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
 inline c3_w
 c3_align_w(c3_w x, c3_w al, align_dir hilo) {
