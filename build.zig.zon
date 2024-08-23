@@ -42,6 +42,9 @@
         .softfloat = .{
             .path = "./ext/softfloat",
         },
+        .whereami = .{
+            .path = "./ext/whereami",
+        },
     },
     .paths = .{
         "",

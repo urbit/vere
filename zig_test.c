@@ -12,6 +12,7 @@
 #include "sigsegv.h"
 #include "softfloat.h"
 #include "uv.h"
+#include "whereami.h"
 
 int main() {
   printf("Zig test");

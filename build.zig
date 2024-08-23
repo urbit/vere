@@ -90,5 +90,11 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(sigsegv.artifact("sigsegv"));
 
+    const whereami = b.dependency("whereami", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(whereami.artifact("whereami"));
+
     b.installArtifact(exe);
 }
