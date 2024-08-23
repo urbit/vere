@@ -20,6 +20,9 @@
         .libuv = .{
             .path = "./ext/libuv",
         },
+        .lmdb = .{
+            .path = "./ext/lmdb",
+        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },
