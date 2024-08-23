@@ -4,6 +4,7 @@
 #include "dns_sd.h"
 #include "gmp.h"
 #include "h2o.h"
+#include "lmdb/lmdb.h"
 #include "natpmp.h"
 #include "openssl/ssl.h"
 #include "softfloat.h"

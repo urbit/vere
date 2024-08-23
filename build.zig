@@ -60,6 +60,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(libuv.artifact("libuv"));
 
+    const lmdb = b.dependency("lmdb", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(lmdb.artifact("lmdb"));
+
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
