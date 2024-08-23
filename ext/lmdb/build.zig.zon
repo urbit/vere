@@ -1,0 +1,13 @@
+.{
+    .name = "lmdb",
+    .version = "0.0.1",
+    .dependencies = .{
+        .lmdb = .{
+            .url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_0.9.29.tar.gz",
+            .hash = "122008e42c2b9e46f8251038a22f7968dddc17ad2ec9c278d9032014073c0f584fac",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
