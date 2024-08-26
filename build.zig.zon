@@ -42,6 +42,9 @@
         .softfloat = .{
             .path = "./ext/softfloat",
         },
+        .urcrypt = .{
+            .path = "./ext/urcrypt",
+        },
         .whereami = .{
             .path = "./ext/whereami",
         },
