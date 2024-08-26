@@ -11,6 +11,7 @@
 #include "pdjson.h"
 #include "sigsegv.h"
 #include "softfloat.h"
+#include "urcrypt.h"
 #include "uv.h"
 #include "whereami.h"
 

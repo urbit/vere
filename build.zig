@@ -90,6 +90,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(sigsegv.artifact("sigsegv"));
 
+    const urcrypt = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(urcrypt.artifact("urcrypt"));
+
     const whereami = b.dependency("whereami", .{
         .target = target,
         .optimize = optimize,
