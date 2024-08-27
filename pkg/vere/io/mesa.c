@@ -2633,6 +2633,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   // otherwise, scry
   lin_u = c3_calloc(sizeof(u3_mesa_line));
   lin_u->typ_y = CTAG_WAIT;
+  _mesa_copy_name(&lin_u->nam_u, &pac_u->pek_u.nam_u);  // XX
+
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
   u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
