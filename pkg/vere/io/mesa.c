@@ -1188,9 +1188,15 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
     }
   }
   // ratchet forward
-  num_w++; // account for the packet processed in _mesa_req_pact_done
-  memcpy(req_u->mis_u, req_u->mis_u + num_w, max_w - num_w);
-  memset(req_u->mis_u + max_w - num_w, 0, num_w * sizeof(u3_misord_buf));
+  u3l_log("updating lef_d %u", req_u->lef_d);
+  req_u->lef_d += num_w;  //  XX could we be skipping some lef_d's that we have not received?
+  u3l_log("updated lef_d %u num_w: %u", req_u->lef_d, num_w);
+
+  memset(req_u->mis_u, 0, num_w * sizeof(u3_misord_buf));
+  memcpy(req_u->mis_u,
+         (c3_y*)req_u->mis_u + (num_w * sizeof(u3_misord_buf)),
+         (max_w - num_w) * sizeof(u3_misord_buf));
+
   return res_o;
 }
 
