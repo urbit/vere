@@ -1254,6 +1254,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
       buf_u->par_u = par_u;
       u3l_log("insert into misordered queue fra: %llu",  nam_u->fra_d );
+      bitset_del(&req_u->was_u, nam_u->fra_d);
     }
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1285,12 +1286,12 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   #endif
 
   req_u->hav_d++;
-  bitset_del(&req_u->was_u, nam_u->fra_d);
 
   #ifdef MESA_DEBUG
     u3l_log("fragment %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
   #endif
   if ( req_u->lef_d == nam_u->fra_d ) {
+    bitset_del(&req_u->was_u, nam_u->fra_d);
     req_u->lef_d++;
   }
 
