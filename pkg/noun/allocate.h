@@ -395,7 +395,11 @@
 
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
+#ifdef VERE_64
+#   define u3a_to_off(som)  (((som) & 0xffffffff3fffffffULL) << u3a_vits)
+#else
 #   define u3a_to_off(som)  (((som) & 0x3fffffff) << u3a_vits)
+#endif
 
   /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
    */

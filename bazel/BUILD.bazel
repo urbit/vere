@@ -7,12 +7,12 @@ refresh_compile_commands(
 
     # Specify the targets of interest.
     # For example, specify a dict of targets and any flags required to build.
-    targets = [
-        "//pkg/ent",
-        "//pkg/noun",
-        "//pkg/ur",
-        "//pkg/vere:urbit",
-    ],
+    targets = {
+        "//pkg/ent": "--copt=-DVERE_64",
+        "//pkg/noun": "--copt=-DVERE_64",
+        "//pkg/ur": "--copt=-DVERE_64",
+        "//pkg/vere:urbit": "--copt=-DVERE_64",
+    },
     # No need to add flags already in .bazelrc. They're automatically picked up.
     # If you don't need flags, a list of targets is also okay, as is a single target string.
     # Wildcard patterns, like //... for everything, *are* allowed here, just like a build.
