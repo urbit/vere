@@ -1234,12 +1234,12 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   if ( req_u->los_u->counter != nam_u->fra_d ) {
     if ( nam_u->fra_d < req_u->los_u->counter ) {
       u3l_log("fragment number too low: %"PRIu64, nam_u->fra_d);
-      c3_free(par_u);
-      return;
+      // c3_free(par_u);
+      // return;
     } else if ( nam_u->fra_d >= req_u->los_u->counter + (sizeof(req_u->mis_u)/sizeof(u3_misord_buf)) ) {
       u3l_log("fragment number too high: %"PRIu64, nam_u->fra_d);
-      c3_free(par_u);
-      return;
+      // c3_free(par_u);
+      // return;
     } else {
       // insert into misordered queue
       u3_misord_buf* buf_u = &req_u->mis_u[nam_u->fra_d - req_u->los_u->counter - 1];
