@@ -802,7 +802,7 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 static inline c3_d
 _mesa_req_get_remaining(u3_pend_req* req_u)
 {
-  return req_u->tof_d - req_u->nex_d;
+  return req_u->tof_d - req_u->hav_d;
 }
 
 /*
