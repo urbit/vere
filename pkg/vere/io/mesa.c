@@ -1109,7 +1109,7 @@ _try_resend(u3_pend_req* req_u, c3_d ack_d)
     if ( (c3y == bitset_has(&req_u->was_u, i_d)) &&
         (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
       los_o = c3y;
-
+      _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
       pac_u->pek_u.nam_u.fra_d = i_d;
       c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
       _mesa_send_modal(req_u->per_u, buf_y, len_w);
