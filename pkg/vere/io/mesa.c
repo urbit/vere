@@ -505,11 +505,11 @@ _mesa_request_key(u3_mesa_name* nam_u)
 }
 
 static void
-_init_gage(u3_gage* gag_u)
+_init_gage(u3_gage* gag_u)  //  microseconds
 {
-  gag_u->rto_w = 1000000;
-  gag_u->rtt_w = 1000000;
-  gag_u->rtv_w = 1000000;
+  gag_u->rto_w = 1000 * 1000 * 1000;  // ~s1
+  gag_u->rtt_w = 1000 * 1000 * 1000;  // ~s1
+  gag_u->rtv_w = 1000 * 1000 * 1000;  // ~s1
   gag_u->con_w = 0;
   gag_u->wnd_w = 1;
   gag_u->sst_w = 10000;
