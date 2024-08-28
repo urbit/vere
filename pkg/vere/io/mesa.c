@@ -1246,6 +1246,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       return;
     } else if ( nam_u->fra_d >= req_u->los_u->counter + (sizeof(req_u->mis_u)/sizeof(u3_misord_buf)) ) {
       u3l_log("fragment number too high: %"PRIu64, nam_u->fra_d);
+      _mesa_burn_misorder_queue(req_u);
       c3_free(par_u);
       return;
     } else {
