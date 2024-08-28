@@ -1249,16 +1249,17 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       _mesa_burn_misorder_queue(req_u);
       c3_free(par_u);
       return;
-    } else {
-      // insert into misordered queue
-      u3_misord_buf* buf_u = &req_u->mis_u[nam_u->fra_d - req_u->los_u->counter - 1];
-      buf_u->fra_y = c3_calloc(dat_u->len_w);
-      buf_u->len_w = dat_u->len_w;
-      memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
-      buf_u->par_u = par_u;
-      u3l_log("insert into misordered queue fra: %llu",  nam_u->fra_d );
-      bitset_del(&req_u->was_u, nam_u->fra_d);
-    }
+    } //else { // XXXX
+    //   // insert into misordered queue
+    //                                       //  (4 - 3) - 1
+    //   u3_misord_buf* buf_u = &req_u->mis_u[nam_u->fra_d - req_u->los_u->counter - 1];
+    //   buf_u->fra_y = c3_calloc(dat_u->len_w);
+    //   buf_u->len_w = dat_u->len_w;
+    //   memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
+    //   buf_u->par_u = par_u;
+    //   u3l_log("insert into misordered queue fra: %llu",  nam_u->fra_d );
+    //   bitset_del(&req_u->was_u, nam_u->fra_d);
+    // }
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
     u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
