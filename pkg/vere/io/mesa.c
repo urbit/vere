@@ -2548,7 +2548,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
         pac_u->pag_u.nam_u.boq_y = boq_y;
         pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
         pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
-        pac_u->pag_u.dat_u.len_w += (1024 * (lev_d - 1));
+        pac_u->pag_u.dat_u.len_w = req_u->tob_d;
         pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
         pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
