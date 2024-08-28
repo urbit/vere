@@ -23,6 +23,7 @@
               [%meld ~]
               [%pack ~]
       ==  ==
+      [%cash cax=(list [k=[s=* f=*] v=*])]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       [%work mil=@ job=(pair @da ovum)]
@@ -966,6 +967,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
     ret_o = c3n;
   }
   else {
+    u3m_p("tag", tag);
     switch ( tag ) {
       default: {
         ret_o = c3n;
@@ -1022,6 +1024,37 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         else {
           *pel = u3_serf_work(sef_u, mil_w, u3k(job));
           ret_o = c3y;
+        }
+      } break;
+
+      case c3__cash: {
+        u3l_log("serf_writ got cache here");
+        ret_o = c3y;
+        *pel = u3nc(c3__live, u3_nul);
+        // c3_o lev = u3qb_levy(com, u3v_wish("|=(a=* ?=([^ *] a)"));
+        // u3l_log("past lev");
+        // u3_noun lev = u3dc("levy", com, u3v_wish("|=(* ?=([^ *] +<)"));
+        c3_o one = u3a_is_cell(com);
+        u3m_p("one", one);
+        c3_o dos = u3a_is_cell(u3t(com));
+        u3m_p("dos", dos);
+        c3_o tre = u3a_is_cell(u3t(u3t(com)));
+        u3m_p("tre", tre);
+        c3_o qua = u3a_is_cell(u3t(u3t(u3t(com))));
+        u3m_p("qua", qua);
+        c3_o lev = c3y;
+        if ( c3n == lev ) {
+          u3l_log("serf got bad cache");
+        }
+        else {
+          u3l_log("serf got good cache");
+          while ( u3_nul != com ) {
+            u3l_log("saving 1");
+            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(com)), u3t(u3h(com)));
+            u3_weak foo = u3z_find_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(com)));
+            u3l_log("foo %x", foo);
+            com = u3t(com);
+          }
         }
       } break;
     }

@@ -13,6 +13,9 @@
 
 #undef VERBOSE_PIER
 
+// XX
+u3_noun my_cache = u3_nul;
+
 /* _pier_peek_plan(): add a u3_pico to the peek queue
 */
 static void
@@ -1764,7 +1767,7 @@ _pier_pill_parse(u3_noun pil)
       u3_noun typ;
       c3_c* typ_c;
 
-      if ( c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) ) {
+      if ( c3n == u3r_quil(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use, &bot_u.cax) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
         u3_king_bail();
         exit(1);
@@ -1777,7 +1780,7 @@ _pier_pill_parse(u3_noun pil)
       }
     }
 
-    u3k(bot_u.bot); u3k(bot_u.mod); u3k(bot_u.use);
+    u3k(bot_u.bot); u3k(bot_u.mod); u3k(bot_u.use); u3k(bot_u.cax);
     u3z(pro);
   }
 
@@ -2008,6 +2011,8 @@ _pier_boot_plan(u3_pier* pir_u,
 
   u3_disk_boot_save(pir_u->log_u);
 
+  my_cache = u3k(bot_u.cax);
+
   u3z(bot_u.bot);
   u3z(bot_u.mod);
   u3z(bot_u.use);
@@ -2046,6 +2051,13 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
 
   u3z(pax);
 
+
+  u3_writ* wit_u = _lord_writ_new(pir_u->god_u);
+  wit_u->typ_e = u3_writ_cash;
+  wit_u->cas = u3k(my_cache);
+  _lord_writ_plan(pir_u->god_u, wit_u);
+
+  u3l_log("finished lord_writ_plan");
   return pir_u;
 }
 

@@ -475,6 +475,7 @@ u3m_mark(FILE* fil_u)
 static void
 _pave_parts(void)
 {
+  // u3l_log("cache initialized");
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
   u3R->jed.war_p = u3h_new();

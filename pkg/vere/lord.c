@@ -20,6 +20,7 @@
               [%meld ~]
               [%pack ~]
       ==  ==
+      [%cash cax=(list [k=[s=* f=*] v=*])]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       [%work mil=@ job=(pair @da ovum)]
@@ -103,7 +104,8 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit: {
+    case u3_writ_exit:
+    case u3_writ_cash: {
     } break;
   }
 
@@ -201,6 +203,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
+    case u3_writ_cash: return "cash";  // required?
   }
 }
 
@@ -269,6 +272,10 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
       //  XX wire into cb
       //
       u3l_log("pier: meld complete");
+    } break;
+
+    case u3_writ_cash: {
+      u3l_log("pier: cash complete");
     } break;
 
     case u3_writ_pack: {
@@ -707,6 +714,7 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
     return _lord_plea_foul(god_u, 0, u3_blip);
   }
   else if ( c3n == u3r_cell(jar, &tag, &dat) ) {
+    u3l_log("XXXXXX");
     return _lord_plea_foul(god_u, 0, jar);
   }
 
@@ -749,7 +757,7 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
 /* _lord_writ_new(): allocate a new writ.
 */
-static u3_writ*
+u3_writ*
 _lord_writ_new(u3_lord* god_u)
 {
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
@@ -812,6 +820,10 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       //
       msg = u3nt(c3__live, c3__exit, 0);
     } break;
+
+    case u3_writ_cash: {
+      msg = u3nc(c3__cash, u3k(wit_u->cas));
+    } break;
   }
 
   return msg;
@@ -819,7 +831,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
 
 /* _lord_writ_send(): send writ to serf.
 */
-static void
+void
 _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
 {
   //  exit expected
@@ -844,6 +856,9 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3t_event_trace("king ipc jam", 'E');
 #endif
 
+    if ( wit_u->typ_e == u3_writ_cash ) {
+      u3l_log("sending cash writ");
+    }
     u3_newt_send(&god_u->inn_u, len_d, byt_y);
     u3z(jar);
   }
@@ -851,7 +866,7 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
 
 /* _lord_writ_plan(): enqueue a writ and send.
 */
-static void
+void
 _lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {

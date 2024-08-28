@@ -457,7 +457,8 @@
           u3_writ_cram = 4,
           u3_writ_meld = 5,
           u3_writ_pack = 6,
-          u3_writ_exit = 7
+          u3_writ_exit = 7,
+          u3_writ_cash = 9
         } u3_writ_type;
 
       /* u3_writ: ipc message from king to serf
@@ -473,6 +474,7 @@
             u3_peek*       pek_u;               //  peek
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
+            u3_noun          cas;               //  cache
           };
         } u3_writ;
 
@@ -591,6 +593,7 @@
           u3_noun bot;                          //  boot formulas
           u3_noun mod;                          //  module ova
           u3_noun use;                          //  userpace ova
+          u3_noun cax;                          //  cache
         } u3_boot;
 
       /* u3_play: replay control.
@@ -1575,3 +1578,12 @@
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
 #endif /* ifndef U3_VERE_H */
+
+       /* _lord_writ_new(): allocate a new writ.
+      */
+        u3_writ*
+        _lord_writ_new(u3_lord* god_u);
+      /* u3_lord_writ_plan(): enqueue a writ and send.
+      */
+        void
+        _lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);

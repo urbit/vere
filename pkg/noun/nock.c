@@ -2621,8 +2621,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       if ( u3_none == o ) {
         _n_push(mov, off, u3nc(mem_u->cid, x));
         _n_push(mov, off, u3k(u3h(x)));
+        if ( mem_u->cid == u3z_memo_keep ) {
+          fprintf(stderr, "\r\nnock: miss\r\n");
+        }
       }
       else {
+        if ( mem_u->cid == u3z_memo_keep ) {
+          fprintf(stderr, "\r\nnock: hit\r\n");
+        }
         ip_w += mem_u->sip_l;
         _n_push(mov, off, o);
         u3z(x);
