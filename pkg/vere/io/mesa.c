@@ -1155,18 +1155,12 @@ _update_resend_timer(u3_pend_req *req_u)
   }
   req_u->old_d = idx_d;
   req_u->tim_u.data = req_u;
-  c3_d gap_d = req_u->wat_u[idx_d].sen_d == 0 ?
-                0 :
-                now_d - req_u->wat_u[idx_d].sen_d;
-  // if ( gap_d > req_u->gag_u->rto_w ) {
-  //   u3l_log("OMG %llu", gap_d);
-  // }
-  // u3l_log("timeout %llu", (req_u->gag_u->rto_w - gap_d) / 1000);
-  // c3_w dur_w = (req_u->gag_u->rto_w - gap_d) / 1000;
-
-  c3_d next_expiry = (gap_d + req_u->gag_u->rto_w) / 1000;
-    // now_d == gap_d ? req_u->gag_u->rto_w  : req_u->gag_u->rto_w - gap_d / 1000;
-  uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry, 0);
+  // c3_d gap_d = req_u->wat_u[idx_d].sen_d == 0 ?
+  //               0 :
+  //               now_d - req_u->wat_u[idx_d].sen_d;
+  c3_d next_expiry = req_u->gag_u->rto_w;
+  u3l_log("next_expiry %llu", next_expiry / 1000);
+  uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry / 1000, 0);
 }
 
 /* _mesa_packet_timeout(): callback for packet timeout
