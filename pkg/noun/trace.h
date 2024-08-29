@@ -108,13 +108,13 @@
     /* u3t_trace_close(): closes the trace file. optional.
     */
       void
-      u3t_trace_close();
+      u3t_trace_close(void);
 
     /* u3t_trace_time(): returns current time since system epoc,
      * whatever it is per system, in microseconds.
     */
       c3_d
-      u3t_trace_time();
+      u3t_trace_time(void);
 
     /* u3t_nock_trace_push(): pushes a frame onto the trace stack;
     *  return yes if active push.
@@ -125,7 +125,7 @@
     /* u3t_nock_trace_pop(): pop off trace stack.
     */
       void
-      u3t_nock_trace_pop();
+      u3t_nock_trace_pop(void);
 
     /* u3t_event_trace(): record a lifecycle event.
     */

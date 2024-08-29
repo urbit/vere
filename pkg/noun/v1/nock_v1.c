@@ -61,7 +61,7 @@ _n_v1_feb(u3_noun kev)
 /* u3n_v1_free(): free bytecode cache
  */
 void
-u3n_v1_free()
+u3n_v1_free(void)
 {
   u3p(u3h_v1_root) har_p = u3R_v1->byc.har_p;
   u3h_v1_walk(har_p, _n_v1_feb);

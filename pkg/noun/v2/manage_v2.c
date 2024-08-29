@@ -24,7 +24,7 @@ _cm_pack_rewrite(void)
 }
 
 static void
-_migrate_reclaim()
+_migrate_reclaim(void)
 {
   //  XX update this and similar printfs
   fprintf(stderr, "loom: migration reclaim\r\n");
@@ -62,7 +62,7 @@ _migrate_seek(const u3a_v2_road *rod_u)
 }
 
 static void
-_migrate_rewrite()
+_migrate_rewrite(void)
 {
   fprintf(stderr, "loom: migration rewrite\r\n");
 
@@ -143,7 +143,7 @@ _migrate_move(u3a_v2_road *rod_u)
 /* u3m_v2_migrate: perform loom migration if necessary.
 */
 void
-u3m_v2_migrate()
+u3m_v2_migrate(void)
 {
   c3_w len_w = u3C_v2.wor_i - 1;
   c3_w ver_w = *(u3_Loom + len_w);

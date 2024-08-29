@@ -37,7 +37,7 @@ u3j_v2_reclaim(void)
  * history at e8a307a.
 */
 void
-u3j_v2_mig_rewrite_compact()
+u3j_v2_mig_rewrite_compact(void)
 {
   u3h_v2_rewrite(u3R_v2->jed.war_p);
   u3h_v2_rewrite(u3R_v2->jed.cod_p);

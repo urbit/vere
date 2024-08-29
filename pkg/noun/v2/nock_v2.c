@@ -64,7 +64,7 @@ _n_v2_feb(u3_noun kev)
 /* u3n_v2_free(): free bytecode cache
  */
 void
-u3n_v2_free()
+u3n_v2_free(void)
 {
   u3p(u3h_v2_root) har_p = u3R_v2->byc.har_p;
   u3h_v2_walk(har_p, _n_v2_feb);
@@ -85,7 +85,7 @@ u3n_v2_free()
  * many more words (plus one?).
  */
 void
-u3n_v2_mig_rewrite_compact()
+u3n_v2_mig_rewrite_compact(void)
 {
   u3h_v2_rewrite(u3R_v2->byc.har_p);
   u3R_v2->byc.har_p = u3a_v2_rewritten(u3R_v2->byc.har_p);

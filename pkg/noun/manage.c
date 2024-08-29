@@ -398,7 +398,7 @@ _cm_signal_deep(c3_w mil_w)
 /* _cm_signal_done():
 */
 static void
-_cm_signal_done()
+_cm_signal_done(void)
 {
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
