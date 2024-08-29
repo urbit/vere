@@ -2041,7 +2041,7 @@ u3m_save(void)
   }
 #endif
 
-  return u3e_save(low_p, hig_p);
+  u3e_save(low_p, hig_p);
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2094,7 +2094,7 @@ u3m_ward(void)
   }
 #endif
 
-  return u3e_ward(low_p, hig_p);
+  u3e_ward(low_p, hig_p);
 }
 
 /* _cm_signals(): set up interrupts, etc.
@@ -2158,7 +2158,7 @@ _cm_free_ssl(void* tox_v
 #endif
              )
 {
-  return u3a_free(tox_v);
+  u3a_free(tox_v);
 }
 
 extern void u3je_secp_init(void);
@@ -2192,7 +2192,7 @@ _cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
 static void
 _cm_free2(void* tox_v, size_t siz_i)
 {
-  return u3a_free(tox_v);
+  free(tox_v);
 }
 
 /* u3m_init(): start the environment.
