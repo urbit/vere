@@ -801,7 +801,7 @@ u3h_walk_with(u3p(u3h_root) har_p,
 static void
 _ch_walk_plain(u3_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = wit;
+  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
   fun_f(kev);
 }
 
@@ -810,7 +810,7 @@ _ch_walk_plain(u3_noun kev, void* wit)
 void
 u3h_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun))
 {
-  u3h_walk_with(har_p, _ch_walk_plain, fun_f);
+  u3h_walk_with(har_p, _ch_walk_plain, (void *)fun_f);
 }
 
 /* _ch_take_noun(): take key and call [fun_f] on val.
