@@ -6,7 +6,7 @@
 #define u3h_v3_root          u3h_root
 #define u3h_v3_walk          u3h_walk
 
-#include "pkg/noun/hashtable.h"
+#include "hashtable.h"
 
   /**  Functions.
   **/

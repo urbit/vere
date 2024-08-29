@@ -13,9 +13,9 @@
 #define u3h_v2_walk          u3h_walk
 #define u3h_v2_walk_with     u3h_walk_with
 
-#include "pkg/noun/hashtable.h"
+#include "hashtable.h"
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 
   /**  Data structures.

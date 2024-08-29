@@ -1,13 +1,13 @@
 /// @file
 
-#include "pkg/noun/vortex.h"
+#include "vortex.h"
 
-#include "pkg/noun/jets.h"
-#include "pkg/noun/v1/jets.h"
-#include "pkg/noun/v2/jets.h"
+#include "jets.h"
+#include "jets_v1.h"
+#include "jets_v2.h"
 
-#include "pkg/noun/v1/allocate.h"
-#include "pkg/noun/v1/hashtable.h"
+#include "allocate_v1.h"
+#include "hashtable_v1.h"
 
 
 /* _cj_fink_free(): lose and free everything in a u3j_v1_fink.

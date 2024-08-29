@@ -4,7 +4,7 @@
 #define U3_VORTEX_H
 
 #include "allocate.h"
-#include "c3.h"
+#include "c3/c3.h"
 #include "imprison.h"
 #include "version.h"
 

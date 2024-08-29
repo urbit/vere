@@ -69,7 +69,7 @@
       typedef struct {
         c3_w mug_w;
         c3_w len_w;
-        c3_w buf_w[0];
+        c3_w buf_w[];
       } u3a_atom;
 
       typedef struct {
