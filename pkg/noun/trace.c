@@ -359,7 +359,7 @@ u3t_trace_open(const c3_c* dir_c)
 /*  u3t_trace_close(): closes a trace file. optional.
 */
 void
-u3t_trace_close()
+u3t_trace_close(void)
 {
   if ( !_file_u )
     return;
@@ -408,7 +408,7 @@ u3t_nock_trace_push(u3_noun lab)
  * calls. If it is, we write it out to the tracefile.
  */
 void
-u3t_nock_trace_pop()
+u3t_nock_trace_pop(void)
 {
   if ( !_file_u )
     return;
