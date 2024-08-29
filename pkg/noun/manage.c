@@ -1002,7 +1002,7 @@ u3m_bail(u3_noun how)
   _longjmp(u3R->esc.buf, how);
 }
 
-int c3_cooked() { return u3m_bail(c3__oops); }
+int c3_cooked(void) { return u3m_bail(c3__oops); }
 
 /* u3m_error(): bail out with %exit, ct_pushing error.
 */

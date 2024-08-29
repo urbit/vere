@@ -372,7 +372,7 @@ u3t_trace_close()
 
 /*  u3t_trace_time(): microsecond clock
 */
-c3_d u3t_trace_time()
+c3_d u3t_trace_time(void)
 {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
