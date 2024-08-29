@@ -36,7 +36,7 @@
       */
         typedef struct {
           c3_w     map_w;     // bitmap for [sot_w]
-          u3h_slot sot_w[0];  // filled slots
+          u3h_slot sot_w[];   // filled slots
         } u3h_node;
 
       /* u3h_root: hash root table
@@ -56,7 +56,7 @@
       */
         typedef struct {
           c3_w     len_w;     // length of [sot_w]
-          u3h_slot sot_w[0];  // filled slots
+          u3h_slot sot_w[];   // filled slots
         } u3h_buck;
 
     /**  HAMT macros.
