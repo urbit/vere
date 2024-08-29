@@ -666,7 +666,11 @@ u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
 {
   //  frame size, in words
   //
+#ifdef VERE_64
+  c3_d wor_w = (len_w + 7) >> 3;
+#else
   c3_w wor_w = (len_w + 3) >> 2;
+#endif
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;

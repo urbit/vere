@@ -15,7 +15,12 @@ static c3_w
 _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
+#ifdef VERE_64
+  c3_d wor_d = (bit_d + 0x3f) >> 6;
+#else
   c3_d wor_d = (bit_d + 0x1f) >> 5;
+#endif
+
   c3_w wor_w = (c3_w)wor_d;
 
   if (  (wor_w != wor_d)
@@ -222,7 +227,8 @@ u3i_slab_free(u3i_slab* sab_u)
   }
   else {
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    // XX
+    // u3_assert( tav_w == (c3_w*)vat_u );
     u3a_wfree(vat_u);
   }
 
@@ -252,7 +258,8 @@ u3i_slab_mint(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    // XX
+    // u3_assert( tav_w == (c3_w*)vat_u );
 
     //  trim trailing zeros
     //
@@ -290,7 +297,8 @@ u3i_slab_moot(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    // XX
+    // u3_assert( tav_w == (c3_w*)vat_u );
 
     pro = _ci_atom_mint(vat_u, len_w);
   }

@@ -32,7 +32,12 @@
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
-#     define u3a_page    13ULL
+#ifdef VERE_64
+    #     define u3a_page    13ULL
+#else
+    #     define u3a_page    12ULL
+#endif
+
 
     /* u3a_pages: maximum number of pages in memory.
     */
@@ -67,17 +72,17 @@
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
       typedef struct {
-        c3_w mug_w;
+        c3_l mug_w;
       } u3a_noun;
 
       typedef struct {
-        c3_w mug_w;
+        c3_l mug_w;
         c3_w len_w;
         c3_w buf_w[0];
       } u3a_atom;
 
       typedef struct {
-        c3_w    mug_w;
+        c3_l    mug_w;
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
@@ -218,6 +223,23 @@
     /* Inside a noun.
     */
 
+#ifdef VERE_64
+    /* u3a_is_cat(): yes if noun [som] is direct atom.
+    */
+#     define u3a_is_cat(som)    (((som) >> 63) ? c3n : c3y)
+
+    /* u3a_is_dog(): yes if noun [som] is indirect noun.
+    */
+#     define u3a_is_dog(som)    (((som) >> 63) ? c3y : c3n)
+
+    /* u3a_is_pug(): yes if noun [som] is indirect atom.
+    */
+#     define u3a_is_pug(som)    ((0b10 == ((som) >> 62)) ? c3y : c3n)
+
+    /* u3a_is_pom(): yes if noun [som] is indirect cell.
+    */
+#     define u3a_is_pom(som)    ((0b11 == ((som) >> 62)) ? c3y : c3n)
+#else
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
 #     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
@@ -233,6 +255,7 @@
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
 #     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
+#endif
 
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
@@ -393,11 +416,13 @@
    */
 #   define u3a_outa(p)  ((c3_w *)(void *)(p) - u3_Loom)
 
+#ifdef VERE_64
+  /* u3a_to_off(): mask off bits 62 and 63 from noun [som].
+   */
+#   define u3a_to_off(som)  (((som) & 0x3fffffffffffffffULL) << u3a_vits)
+#else
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
-#ifdef VERE_64
-#   define u3a_to_off(som)  (((som) & 0xffffffff3fffffffULL) << u3a_vits)
-#else
 #   define u3a_to_off(som)  (((som) & 0x3fffffff) << u3a_vits)
 #endif
 
@@ -415,14 +440,22 @@
    */
   inline c3_w u3a_to_pug(c3_w off) {
     c3_dessert((off & u3a_walign-1) == 0);
+#ifdef VERE_64
+    return (off >> u3a_vits) | 0x8000000000000000;
+#else
     return (off >> u3a_vits) | 0x80000000;
+#endif
   }
 
   /* u3a_to_pom(): set bits 30 and 31 of [off].
    */
   inline c3_w u3a_to_pom(c3_w off) {
     c3_dessert((off & u3a_walign-1) == 0);
+#ifdef VERE_64
+    return (off >> u3a_vits) | 0xc000000000000000;
+#else
     return (off >> u3a_vits) | 0xc0000000;
+#endif
   }
 
     /**  road stack.

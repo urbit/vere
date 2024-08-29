@@ -952,6 +952,8 @@ u3_king_commence()
   u3C.wag_w |= u3o_hashless;
   u3C.wag_w &= ~u3o_debug_cpu;
 
+  fprintf(stderr, "king: wag_w: %x\r\n", u3C.wag_w);
+
   //  wire up signal controls
   //
   u3C.sign_hold_f = _king_sign_hold;
@@ -967,7 +969,9 @@ u3_king_commence()
 
   //  boot the ivory pill
   //
+  fprintf(stderr, "king: booting ivory pill\r\n");
   _king_boot_ivory();
+  fprintf(stderr, "king: booted ivory pill\r\n");
 
   //  disable core dumps (due to lmdb size)
   //
@@ -986,9 +990,13 @@ u3_king_commence()
   //  run the loop
   //
   _king_loop_init();
+  fprintf(stderr, "king: running event loop\r\n");
   uv_run(u3L, UV_RUN_DEFAULT);
+  fprintf(stderr, "king: started event loop\r\n");
   _king_loop_exit();
+  fprintf(stderr, "king: exited event loop\r\n");
   u3m_stop();
+  fprintf(stderr, "king: stopped\r\n");
 }
 
 /* u3_king_stub(): get the One Pier for unreconstructed code.

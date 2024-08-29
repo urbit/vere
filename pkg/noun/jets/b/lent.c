@@ -8,10 +8,10 @@
 
 #ifdef VERE_64
 STATIC_ASSERT( (UINT64_MAX > u3a_cells),
-               "list index precision" );
+               "length precision" );
 #else
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
-               "list index precision" );
+               "length precision" );
 #endif
 
 u3_noun

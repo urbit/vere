@@ -74,6 +74,18 @@
       ** u3h_noun_be_warm(): warm mutant
       ** u3h_noun_be_cold(): cold mutant
       */
+#ifdef VERE_64
+#     define  u3h_slot_is_null(sot)  ((0 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 63)) ? c3y : c3n)
+#     define  u3h_slot_is_warm(sot)  (((sot) & 0x4000000000000000) ? c3y : c3n)
+#     define  u3h_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffffffffffff) << u3a_vits))
+#     define  u3h_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3a_vits) | 0x4000000000000000)
+#     define  u3h_noun_be_warm(sot)  ((sot) | 0x4000000000000000)
+#     define  u3h_noun_be_cold(sot)  ((sot) & ~0x4000000000000000)
+#     define  u3h_slot_to_noun(sot)  (0x4000000000000000 | (sot))
+#     define  u3h_noun_to_slot(som)  (u3h_noun_be_warm(som))
+#else
 #     define  u3h_slot_is_null(sot)  ((0 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
@@ -84,6 +96,7 @@
 #     define  u3h_noun_be_cold(sot)  ((sot) & ~0x40000000)
 #     define  u3h_slot_to_noun(sot)  (0x40000000 | (sot))
 #     define  u3h_noun_to_slot(som)  (u3h_noun_be_warm(som))
+#endif
 
     /**  Functions.
     ***

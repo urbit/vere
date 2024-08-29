@@ -57,7 +57,7 @@
     /* Bit counting.
     */
 #ifdef VERE_64
-#     define c3_bits_word(w) ((w) ? (64 - __builtin_clz(w)) : 0)
+#     define c3_bits_word(w) ((w) ? (64 - __builtin_clzl(w)) : 0)
 #else
 #     define c3_bits_word(w) ((w) ? (32 - __builtin_clz(w)) : 0)
 #endif

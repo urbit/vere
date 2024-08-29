@@ -590,6 +590,7 @@ _pave_home(void)
   _pave_parts();
 }
 
+// XX
 #ifdef VERE_64
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * 8) == sizeof(u3v_home)),
                "home road alignment" );
@@ -772,6 +773,7 @@ u3m_bail(u3_noun how)
       if ( _(u3ud(how)) ) {
         c3_c str_c[5];
 
+        // XX
         str_c[0] = ((how >>  0) & 0xff);
         str_c[1] = ((how >>  8) & 0xff);
         str_c[2] = ((how >> 16) & 0xff);

@@ -33,6 +33,8 @@
 
       /* u3m_bail(): bail out.  Does not return.
       **
+      **  XX
+      **
       **  Bail motes:
       **
       **    %exit               ::  semantic failure

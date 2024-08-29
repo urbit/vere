@@ -25,9 +25,11 @@ _test_mug(void)
 
   {
     u3_noun a = u3i_string("Hello, world!");
+    uint32_t gud = 0x4d441035;
+    uint32_t res = u3r_mug(a);
 
-    if ( 0x4d441035 != u3r_mug(a) ) {
-      fprintf(stderr, "fail (b)\r\n");
+    if ( gud != res ) {
+      fprintf(stderr, "fail (b) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -37,35 +39,52 @@ _test_mug(void)
   {
     c3_y byt_y[1];
 
-    if ( 0x79ff04e8 != u3r_mug_bytes(0, 0) ) {
-      fprintf(stderr, "fail (c) (0)\r\n");
+    c3_l gud = 0x79ff04e8;
+    c3_l res = u3r_mug_bytes(0, 0);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (0) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
     byt_y[0] = 1;
 
-    if ( 0x715c2a60 != u3r_mug_bytes(byt_y, 1) ) {
-      fprintf(stderr, "fail (c) (1)\r\n");
+    gud = 0x715c2a60;
+    res = u3r_mug_bytes(byt_y, 1);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
     byt_y[0] = 2;
 
-    if ( 0x718b9468 != u3r_mug_bytes(byt_y, 1) ) {
-      fprintf(stderr, "fail (c) (2)\r\n");
+    gud = 0x718b9468;
+    res = u3r_mug_bytes(byt_y, 1);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (2) %x %x\r\n", gud, res);
       ret_i = 0;
     }
   }
 
-  if ( 0x3a811aec != u3r_mug_both(0x715c2a60, u3r_mug_cell(2, 3)) ) {
-    fprintf(stderr, "fail (d)\r\n");
+  c3_l gud = 0xbae48a7;
+  c3_l res = u3r_mug_cell(2, 3);
+  if ( gud != res ) {
+    fprintf(stderr, "fail (d) (1) %x %x\r\n", gud, res);
+    ret_i = 0;
+  }
+
+  gud = 0x3a811aec;
+  res = u3r_mug_both(0x715c2a60, u3r_mug_cell(2, 3));
+  if ( gud != res ) {
+    fprintf(stderr, "fail (d) (2) %x %x\r\n", gud, res);
     ret_i = 0;
   }
 
 
   {
-    if ( 0x192f5588 != u3r_mug_cell(0, 0) ) {
-      fprintf(stderr, "fail (e) (1)\r\n");
+    gud = 0x192f5588;
+    res = u3r_mug_cell(0, 0);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (e) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -80,6 +99,7 @@ _test_mug(void)
     }
   }
 
+  fprintf(stderr, "f\r\n");
   {
     u3_noun a = u3i_string("xxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
@@ -90,6 +110,7 @@ _test_mug(void)
 
     u3z(a);
   }
+  fprintf(stderr, "g\r\n");
 
   {
     u3_noun a = u3qc_bex(32);
@@ -101,6 +122,7 @@ _test_mug(void)
 
     u3z(a);
   }
+  fprintf(stderr, "h\r\n");
 
   {
     u3_noun a = u3ka_dec(u3qc_bex(128));
@@ -112,6 +134,7 @@ _test_mug(void)
 
     u3z(a);
   }
+  fprintf(stderr, "i\r\n");
 
   {
     //  stick some zero bytes in a string
@@ -153,6 +176,7 @@ _test_mug(void)
     c3_free(str_w);
     u3z(str);
   }
+  fprintf(stderr, "j\r\n");
 
   {
     c3_w  som_w[4] = { 0, 0, 0, 1 };
@@ -170,6 +194,7 @@ _test_mug(void)
 
     u3z(som);
   }
+  fprintf(stderr, "k\r\n");
 
   {
     c3_w  som_w[4] = { 0, 1, 0, 1 };
