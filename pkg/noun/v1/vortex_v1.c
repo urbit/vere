@@ -1,9 +1,9 @@
 /// @file
 
-#include "pkg/noun/vortex.h"
-#include "pkg/noun/v1/vortex.h"
+#include "vortex.h"
+#include "vortex_v1.h"
 
-#include "pkg/noun/v1/allocate.h"
+#include "allocate_v1.h"
 
 /* u3v_v1_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */

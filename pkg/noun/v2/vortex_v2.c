@@ -1,9 +1,9 @@
 /// @file
 
-#include "pkg/noun/vortex.h"
-#include "pkg/noun/v2/vortex.h"
+#include "vortex.h"
+#include "vortex_v2.h"
 
-#include "pkg/noun/v2/allocate.h"
+#include "allocate_v2.h"
 
 u3v_v2_home* u3v_v2_Home;
 

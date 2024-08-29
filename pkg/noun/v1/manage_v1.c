@@ -1,12 +1,12 @@
 /// @file
 
-#include "pkg/noun/v1/manage.h"
+#include "manage_v1.h"
 
-#include "pkg/noun/v1/allocate.h"
-#include "pkg/noun/v1/hashtable.h"
-#include "pkg/noun/v1/jets.h"
-#include "pkg/noun/v1/nock.h"
-#include "pkg/noun/v1/vortex.h"
+#include "allocate_v1.h"
+#include "hashtable_v1.h"
+#include "jets_v1.h"
+#include "nock_v1.h"
+#include "vortex_v1.h"
 
 /* u3m_v1_reclaim: clear persistent caches to reclaim memory
 */
