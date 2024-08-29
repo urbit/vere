@@ -496,8 +496,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         }
       }
       else {                    /* we got a non-null freelist */
-        u3_post box_p, all_p;
-        box_p = all_p = *pfr_p;
+        u3_post all_p = *pfr_p;
         all_p += c3_wiseof(u3a_box) + off_w;
         c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
         c3_w des_w = c3_align(siz_w + pad_w, u3a_walign, C3_ALGHI);
