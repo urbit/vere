@@ -59,6 +59,6 @@
     /* u3n_v2_mig_rewrite_compact(): rewrite bytecode cache for compaction.
      */
       void
-      u3n_v2_mig_rewrite_compact();
+      u3n_v2_mig_rewrite_compact(void);
 
 #endif /* ifndef U3_NOCK_V2_H */
