@@ -1102,7 +1102,7 @@ _print_diff(c3_c* cap_c, c3_w a, c3_w b)
 /* u3m_fall(): in u3R, return an inner road to its parent.
 */
 void
-u3m_fall()
+u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
@@ -2166,7 +2166,7 @@ extern void u3je_secp_init(void);
 /* _cm_crypto(): initialize openssl and crypto jets.
 */
 static void
-_cm_crypto()
+_cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
@@ -2255,7 +2255,7 @@ extern void u3je_secp_stop(void);
 /* u3m_stop(): graceful shutdown cleanup.
 */
 void
-u3m_stop()
+u3m_stop(void)
 {
   u3e_stop();
   u3je_secp_stop();

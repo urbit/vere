@@ -15,7 +15,7 @@
 /* u3m_v3_migrate: perform loom migration if necessary.
 */
 void
-u3m_v3_migrate()
+u3m_v3_migrate(void)
 {
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
