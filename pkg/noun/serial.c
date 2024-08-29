@@ -913,7 +913,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   c3_y*   buf_y = hun_y + (len_i - 1);
   mpz_t   b_mp;
   c3_w     b_w;
-  size_t dif_i;
 
   mpz_init2(b_mp, 10);
 

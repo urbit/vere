@@ -1039,14 +1039,8 @@ u3t_etch_meme(c3_l mod_l)
   c3_w imu_w = top_w-ful_w;
   c3_w hep_w = hap_w-fre_w;
 
-  c3_w inc_w = 0;
-  c3_w max_w = 0;
-  float max_f = 0.0;
-  c3_d cel_d = 0;
-  c3_d nox_d = 0;
 
-  float imu_f = _ct_meme_percent(imu_w, top_w),
-        hep_f = _ct_meme_percent(hep_w, top_w),
+  float hep_f = _ct_meme_percent(hep_w, top_w),
         fre_f = _ct_meme_percent(fre_w, top_w),
         pen_f = _ct_meme_percent(pen_w, top_w),
         tak_f = _ct_meme_percent(tak_w, top_w);
