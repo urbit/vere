@@ -1547,14 +1547,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
   //  jam input and return on stdout
   //
   else if ( c3y == jam_o ) {
-    c3_d    bits = 0;
     c3_d    len_d = 0;
     c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
     c3_y*   byt_y;
     u3_noun sam = u3i_string(evl_c);
     u3_noun res = u3m_soft(0, u3v_wish_n, sam);
     if ( 0 == u3h(res) ) {                //  successful execution, print output
-      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      u3s_jam_xeno(u3t(res), &len_d, &byt_y);
       if ( c3y == new_o ) {
         u3_newt_send(&std_u, len_d, byt_y);
       } else {
