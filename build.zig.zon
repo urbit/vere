@@ -48,6 +48,10 @@
         .whereami = .{
             .path = "./ext/whereami",
         },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
+            .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+        },
     },
     .paths = .{
         "",
