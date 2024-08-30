@@ -5,12 +5,12 @@
 #include "io/ames/stun.h"
 
 #include "noun.h"
-#include "ur.h"
+#include "ur/ur.h"
 
 #include "zlib.h"
 #include "natpmp.h"
 
-#include <ent.h>
+#include <ent/ent.h>
 
 #include <arpa/inet.h>
 

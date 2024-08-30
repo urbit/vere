@@ -3,7 +3,7 @@
 #include "vere.h"
 
 #include "noun.h"
-#include "ur.h"
+#include "ur/ur.h"
 
 #undef LORD_TRACE_JAM
 #undef LORD_TRACE_CUE
