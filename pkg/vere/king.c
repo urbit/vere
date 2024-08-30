@@ -153,7 +153,8 @@ _king_boot(u3_noun bul)
       break;
     }
     default:
-      return _king_defy_fate();
+      _king_defy_fate();
+      return;
   }
 
   next(u3k(u3t(boot)), u3k(pill), u3k(path));
