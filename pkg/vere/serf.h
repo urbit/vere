@@ -1,5 +1,7 @@
 #ifndef U3_VERE_SERF_H
 #define U3_VERE_SERF_H
+#include "c3/c3.h"
+#include "noun.h"
 
   /** Data types.
   **/

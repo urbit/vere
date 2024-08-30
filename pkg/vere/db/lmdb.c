@@ -4,7 +4,7 @@
 
 #include <sys/stat.h>
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "noun.h"
 
 /* mdb_logerror(): writes an error message and lmdb error code to f.
