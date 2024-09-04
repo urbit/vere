@@ -49,17 +49,17 @@ fn libcrypto(
     lib.addIncludePath(b.path("gen/include/openssl"));
 
     // lib.defineCMacro("OPENSSL_NO_DEPRECATED", null);
-    lib.defineCMacro("OPENSSL_NO_ENGINE", null);
-    lib.defineCMacro("OPENSSL_NO_SRP", null);
-    lib.defineCMacro("OPENSSL_NO_UI_CONSOLE", null);
+    // lib.defineCMacro("OPENSSL_NO_ENGINE", null);
+    // lib.defineCMacro("OPENSSL_NO_SRP", null);
+    // lib.defineCMacro("OPENSSL_NO_UI_CONSOLE", null);
     lib.defineCMacro("OPENSSL_NO_ASAN", null);
     lib.defineCMacro("OPENSSL_NO_UBSAN", null);
-    lib.defineCMacro("OPENSSL_NO_ASM", null);
-    lib.defineCMacro("OPENSSL_NO_KTLS", null);
-    lib.defineCMacro("OPENSSL_NO_QUIC", null);
-    lib.defineCMacro("OPENSSL_NO_THREAD_POOL", null);
-    lib.defineCMacro("OPENSSL_NO_STDIO", null);
-    lib.defineCMacro("OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ", "1");
+    // lib.defineCMacro("OPENSSL_NO_ASM", null);
+    // lib.defineCMacro("OPENSSL_NO_KTLS", null);
+    // lib.defineCMacro("OPENSSL_NO_QUIC", null);
+    // lib.defineCMacro("OPENSSL_NO_THREAD_POOL", null);
+    // lib.defineCMacro("OPENSSL_NO_STDIO", null);
+    // lib.defineCMacro("OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ", "1");
 
     if (t.isMinGW())
         lib.defineCMacro("NOCRYPT", "1");
@@ -388,28 +388,28 @@ fn libcrypto(
             "crypto/ec/ecp_oct.c",
             "crypto/ec/ecp_smpl.c",
             "crypto/ec/ecx_meth.c",
-            // "crypto/engine/eng_all.c",
-            // "crypto/engine/eng_cnf.c",
-            // "crypto/engine/eng_ctrl.c",
-            // "crypto/engine/eng_dyn.c",
-            // "crypto/engine/eng_err.c",
-            // "crypto/engine/eng_fat.c",
-            // "crypto/engine/eng_init.c",
-            // "crypto/engine/eng_lib.c",
-            // "crypto/engine/eng_list.c",
-            // "crypto/engine/eng_openssl.c",
-            // "crypto/engine/eng_pkey.c",
-            // "crypto/engine/eng_rdrand.c",
-            // "crypto/engine/eng_table.c",
-            // "crypto/engine/tb_asnmth.c",
-            // "crypto/engine/tb_cipher.c",
-            // "crypto/engine/tb_dh.c",
-            // "crypto/engine/tb_digest.c",
-            // "crypto/engine/tb_dsa.c",
-            // "crypto/engine/tb_eckey.c",
-            // "crypto/engine/tb_pkmeth.c",
-            // "crypto/engine/tb_rand.c",
-            // "crypto/engine/tb_rsa.c",
+            "crypto/engine/eng_all.c",
+            "crypto/engine/eng_cnf.c",
+            "crypto/engine/eng_ctrl.c",
+            "crypto/engine/eng_dyn.c",
+            "crypto/engine/eng_err.c",
+            "crypto/engine/eng_fat.c",
+            "crypto/engine/eng_init.c",
+            "crypto/engine/eng_lib.c",
+            "crypto/engine/eng_list.c",
+            "crypto/engine/eng_openssl.c",
+            "crypto/engine/eng_pkey.c",
+            "crypto/engine/eng_rdrand.c",
+            "crypto/engine/eng_table.c",
+            "crypto/engine/tb_asnmth.c",
+            "crypto/engine/tb_cipher.c",
+            "crypto/engine/tb_dh.c",
+            "crypto/engine/tb_digest.c",
+            "crypto/engine/tb_dsa.c",
+            "crypto/engine/tb_eckey.c",
+            "crypto/engine/tb_pkmeth.c",
+            "crypto/engine/tb_rand.c",
+            "crypto/engine/tb_rsa.c",
             "crypto/err/err.c",
             "crypto/err/err_all.c",
             "crypto/err/err_prn.c",
@@ -735,8 +735,20 @@ fn libcrypto(
             "crypto/x509v3/v3err.c",
         },
         .flags = &(cflags ++ .{
-            "-DOPENSSLDIR=\"\"",
+            "-DL_ENDIAN",
+            "-DOPENSSL_PIC",
             "-DOPENSSL_CPUID_OBJ",
+            "-DOPENSSL_BN_ASM_MONT",
+            "-DSHA1_ASM",
+            "-DSHA256_ASM",
+            "-DSHA512_ASM",
+            "-DKECCAK1600_ASM",
+            "-DVPAES_ASM",
+            "-DECP_NISTZ256_ASM",
+            "-DPOLY1305_ASM",
+            "-DOPENSSLDIR=\"\"",
+            "-DENGINESDIR=\"\"",
+            // "-arch arm64",
         }),
     });
 
