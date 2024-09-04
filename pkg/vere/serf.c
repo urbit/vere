@@ -1031,23 +1031,21 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         u3l_log("serf_writ got cache here");
         ret_o = c3y;
         *pel = u3nc(c3__live, u3_nul);
-        // c3_o lev = u3qb_levy(com, u3v_wish("|=(a=* ?=([^ *] a)"));
-        // u3l_log("past lev");
-        // u3_noun lev = u3dc("levy", com, u3v_wish("|=(* ?=([^ *] +<)"));
-        c3_o one = u3a_is_cell(com);
-        u3m_p("one", one);
-        c3_o dos = u3a_is_cell(u3t(com));
-        u3m_p("dos", dos);
-        c3_o tre = u3a_is_cell(u3t(u3t(com)));
-        u3m_p("tre", tre);
-        c3_o qua = u3a_is_cell(u3t(u3t(u3t(com))));
-        u3m_p("qua", qua);
-        c3_o lev = c3y;
-        if ( c3n == lev ) {
-          u3l_log("serf got bad cache");
+
+        u3_noun tmp = com;
+        c3_o gud_o = c3y;
+        while ( u3_nul != tmp ) {
+          if ( c3n == u3a_is_cell(u3h(tmp)) || c3n == u3a_is_cell(u3h(u3h(tmp))) ) {
+            gud_o = c3n;
+          }
+          tmp = u3t(tmp);
+        }
+
+        if ( c3n == gud_o ) {
+          u3l_log("serf: got bad cache");
         }
         else {
-          u3l_log("serf got good cache");
+          u3l_log("serf: got good cache");
           while ( u3_nul != com ) {
             u3l_log("saving 1");
             u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(com)), u3t(u3h(com)));
