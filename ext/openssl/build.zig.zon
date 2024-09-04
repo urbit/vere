@@ -1,0 +1,17 @@
+.{
+    .name = "openssl",
+    .version = "0.0.1",
+    .dependencies = .{
+        // .openssl = .{
+        //     .url = "https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz",
+        //     .hash = "122036841d37585c881aa56891a05e16e32115c71c09eb831ab1225938603702f08d",
+        // },
+        .openssl = .{
+            .url = "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz",
+            .hash = "122042b0a69fc3deee3c603b11046f15693046e5cfcf56858e028b9ea4dc4b78b81a",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

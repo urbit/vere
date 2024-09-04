@@ -317,6 +317,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     h2o.linkLibrary(openssl.artifact("ssl"));
+    h2o.linkLibrary(openssl.artifact("crypto"));
     h2o.linkLibrary(zlib.artifact("z"));
     h2o.linkLibrary(libuv.artifact("libuv"));
     h2o.linkLibrary(cloexec);
