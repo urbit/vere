@@ -21,11 +21,12 @@ pub fn build(b: *std.Build) void {
     });
 
     lib.linkLibrary(openssl.artifact("ssl"));
+    lib.linkLibrary(openssl.artifact("crypto"));
 
-    const config_h = b.addConfigHeader(
-        .{.style = .blank, .include_path = "config.h",},
-        .{}
-    );
+    const config_h = b.addConfigHeader(.{
+        .style = .blank,
+        .include_path = "config.h",
+    }, .{});
     lib.addConfigHeader(config_h);
     lib.addIncludePath(dep_c.path(""));
     lib.addCSourceFiles(.{

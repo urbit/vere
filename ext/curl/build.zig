@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
 
     curl.linkLibC();
     curl.linkLibrary(openssl.artifact("ssl"));
-    // curl.linkLibrary(openssl.artifact("crypto"));
+    curl.linkLibrary(openssl.artifact("crypto"));
 
     curl.root_module.addCMacro("BUILDING_LIBCURL", "");
     curl.root_module.addCMacro("CURL_STATICLIB", "1");

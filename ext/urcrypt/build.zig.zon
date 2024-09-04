@@ -6,8 +6,10 @@
             .path = "../aes_siv",
         },
         .openssl = .{
-            .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
-            .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
+            .path = "../openssl",
+            // .path = "../../../../Github/openssl-zig",
+            // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
+            // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
         },
         .secp256k1 = .{
             .url = "https://github.com/bitcoin-core/secp256k1/archive/694ce8fb2d1fd8a3d641d7c33705691d41a2a860.tar.gz",

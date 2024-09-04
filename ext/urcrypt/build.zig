@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) void {
 
     urcrypt.linkLibrary(aes_siv.artifact("aes_siv"));
     urcrypt.linkLibrary(openssl.artifact("ssl"));
+    urcrypt.linkLibrary(openssl.artifact("crypto"));
     urcrypt.linkLibrary(secp256k1);
     urcrypt.linkLibC();
 
