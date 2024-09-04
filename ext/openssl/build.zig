@@ -44,9 +44,9 @@ fn libcrypto(
     // lib.addIncludePath(dep.path("include/crypto"));
     // lib.addIncludePath(dep.path("include/internal"));
     // lib.addIncludePath(dep.path("include/openssl"));
-    lib.addIncludePath(b.path("include_gen"));
-    lib.addIncludePath(b.path("include_gen/crypto"));
-    lib.addIncludePath(b.path("include_gen/openssl"));
+    lib.addIncludePath(b.path("gen/include"));
+    lib.addIncludePath(b.path("gen/include/crypto"));
+    lib.addIncludePath(b.path("gen/include/openssl"));
 
     // lib.defineCMacro("OPENSSL_NO_DEPRECATED", null);
     lib.defineCMacro("OPENSSL_NO_ENGINE", null);
@@ -790,8 +790,8 @@ fn libssl(
     lib.addIncludePath(dep.path("include"));
     lib.addIncludePath(dep.path("include/internal"));
     lib.addIncludePath(dep.path("include/openssl"));
-    lib.addIncludePath(b.path("include_gen"));
-    lib.addIncludePath(b.path("include_gen/openssl"));
+    lib.addIncludePath(b.path("gen/include"));
+    lib.addIncludePath(b.path("gen/include/openssl"));
 
     lib.addCSourceFiles(.{
         .root = dep.path(""),
@@ -845,7 +845,7 @@ fn libssl(
     });
 
     lib.installHeadersDirectory(dep.path("include/openssl"), "openssl", .{});
-    lib.installHeadersDirectory(b.path("include_gen/openssl"), "openssl", .{});
+    lib.installHeadersDirectory(b.path("gen/include/openssl"), "openssl", .{});
 
     return lib;
 }
