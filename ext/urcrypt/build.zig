@@ -29,17 +29,12 @@ pub fn build(b: *std.Build) void {
 
     secp256k1.addIncludePath(secp256k1_c.path("src"));
 
-    const config_h = b.addConfigHeader(.{
-        .style = .blank,
-        .include_path = "libsecp256k1-config.h",
-    }, .{});
-
-    secp256k1.addConfigHeader(config_h);
-
     secp256k1.addCSourceFiles(.{
         .root = secp256k1_c.path("src"),
         .files = &.{
             "secp256k1.c",
+            "precomputed_ecmult.c",
+            "precomputed_ecmult_gen.c",
         },
         .flags = &.{"-O3"},
     });
