@@ -12,8 +12,8 @@
             // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
         },
         .secp256k1 = .{
-            .url = "https://github.com/bitcoin-core/secp256k1/archive/694ce8fb2d1fd8a3d641d7c33705691d41a2a860.tar.gz",
-            .hash = "1220230faadcac0cfc8122012635286957915e9e9a09d79bd952bd4d0a52f3f9fdde",
+            .url = "https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.5.1.tar.gz",
+            .hash = "1220bb683a6df744e618f58a008eaae3eb62b70a78334cec676bd82b1b9e8e944eeb",
         },
         .urcrypt = .{
             .url = "https://github.com/urbit/urcrypt/archive/9ae5d604528bc54ae48430f55ebbb17b1ad7956c.tar.gz",
