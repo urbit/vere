@@ -1414,8 +1414,13 @@ u3r_chop_bits(c3_g  bif_g,
               c3_w* dst_w,
         const c3_w* src_w)
 {
+#ifdef VERE_64
+  c3_y fib_y = 64 - bif_g;
+  c3_y tib_y = 64 - bit_g;
+#else
   c3_y fib_y = 32 - bif_g;
   c3_y tib_y = 32 - bit_g;
+#endif
 
   //  we need to chop words
   //
@@ -1433,13 +1438,23 @@ u3r_chop_bits(c3_g  bif_g,
 
       wid_d -= tib_y;
       bif_g += tib_y;
+#ifdef VERE_64
+      src_w += !!(bif_g >> 6);
+      bif_g &= 63;
+      fib_y  = 64 - bif_g;
+#else
       src_w += !!(bif_g >> 5);
       bif_g &= 31;
       fib_y  = 32 - bif_g;
+#endif
     }
 
     {
+#ifdef VERE_64
+      size_t i_i, byt_i = wid_d >> 6;
+#else
       size_t i_i, byt_i = wid_d >> 5;
+#endif
 
       if ( !bif_g ) {
         for ( i_i = 0; i_i < byt_i; i_i++ ) {
@@ -1454,7 +1469,11 @@ u3r_chop_bits(c3_g  bif_g,
 
       src_w += byt_i;
       dst_w += byt_i;
+#ifdef VERE_64
+      wid_d &= 63;
+#else
       wid_d &= 31;
+#endif
       bit_g  = 0;
     }
   }
@@ -1491,11 +1510,19 @@ u3r_chop_words(c3_g  met_g,
 {
   //  operate on words
   //
+#ifdef VERE_64
+  if ( met_g >= 6 ) {
+#else
   if ( met_g >= 5 ) {
+#endif
     size_t i_i, wid_i;
 
     {
+#ifdef VERE_64
+      c3_g   hut_g = met_g - 6;
+#else
       c3_g   hut_g = met_g - 5;
+#endif
       size_t fum_i = (size_t)fum_w << hut_g;
       size_t tou_i = (size_t)tou_w << hut_g;
       size_t tot_i;
@@ -1533,7 +1560,11 @@ u3r_chop_words(c3_g  met_g,
     c3_g bif_g, bit_g;
 
     {
+#ifdef VERE_64
+      c3_d len_d = (c3_d)len_w << 6;
+#else
       c3_d len_d = (c3_d)len_w << 5;
+#endif
       c3_d fum_d = (c3_d)fum_w << met_g;
       c3_d tou_d = (c3_d)tou_w << met_g;
       c3_d tot_d = fum_d + wid_d;
@@ -1552,10 +1583,17 @@ u3r_chop_words(c3_g  met_g,
         wid_d -= tot_d - len_d;
       }
 
+#ifdef VERE_64
+      src_w += fum_d >> 6;
+      dst_w += tou_d >> 6;
+      bif_g  = fum_d & 63;
+      bit_g  = tou_d & 63;
+#else
       src_w += fum_d >> 5;
       dst_w += tou_d >> 5;
       bif_g  = fum_d & 31;
       bit_g  = tou_d & 31;
+#endif
     }
 
     u3r_chop_bits(bif_g, wid_d, bit_g, dst_w, src_w);

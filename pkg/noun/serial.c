@@ -118,11 +118,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       {
         c3_d dat_d = (c3_d)1 << b_w;
         src_w[0]   = (c3_w)dat_d;
-#ifdef VERE_64
-        src_w[1]   = dat_d >> 64;
-#else
         src_w[1]   = dat_d >> 32;
-#endif
 
         u3r_chop_words(0, 0, b_w + 1, bit_w, buf_w, 2, src_w);
         bit_w += b_w + 1;
@@ -503,7 +499,11 @@ typedef struct _cue_frame_s {
 static inline ur_cue_res_e
 _cs_cue_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
+#ifdef VERE_64
+                  ur_dict64_t* dic_u,
+#else
                   ur_dict32_t* dic_u,
+#endif
                   u3_noun*       out)
 {
   ur_root_t* rot_u = 0;
@@ -539,7 +539,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           c3_d bak_d = ur_bsr64_any(red_u, len_d);
           c3_w bak_w;
 
+#ifdef VERE_64
+          if ( !ur_dict64_get(rot_u, dic_u, bak_d, &bak_w) ) {
+#else
           if ( !ur_dict32_get(rot_u, dic_u, bak_d, &bak_w) ) {
+#endif
             return ur_cue_back;
           }
 
@@ -560,7 +564,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           c3_d     byt_d = (len_d + 0x7) >> 3;
           u3i_slab sab_u;
 
+#ifdef VERE_64
+          if ( 0xffffffffffffffffULL < byt_d) {
+#else
           if ( 0xffffffffULL < byt_d) {
+#endif
             return ur_cue_meme;
           }
           else {
@@ -570,7 +578,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           }
         }
 
+#ifdef VERE_64
+        ur_dict64_put(rot_u, dic_u, bit_d, *out);
+#else
         ur_dict32_put(rot_u, dic_u, bit_d, *out);
+#endif
         return ur_cue_good;
       }
     }

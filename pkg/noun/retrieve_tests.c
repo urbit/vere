@@ -99,7 +99,6 @@ _test_mug(void)
     }
   }
 
-  fprintf(stderr, "f\r\n");
   {
     u3_noun a = u3i_string("xxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
@@ -110,19 +109,19 @@ _test_mug(void)
 
     u3z(a);
   }
-  fprintf(stderr, "g\r\n");
 
   {
     u3_noun a = u3qc_bex(32);
 
-    if ( 0x7cefb7f != u3r_mug_cell(0, a) ) {
-      fprintf(stderr, "fail (g)\r\n");
+    gud = 0x7cefb7f;
+    res = u3r_mug_cell(0, a);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (g) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
     u3z(a);
   }
-  fprintf(stderr, "h\r\n");
 
   {
     u3_noun a = u3ka_dec(u3qc_bex(128));
@@ -134,19 +133,26 @@ _test_mug(void)
 
     u3z(a);
   }
-  fprintf(stderr, "i\r\n");
 
   {
     //  stick some zero bytes in a string
     //
+    u3m_p("(bex 212)", u3qc_bex(212));
+    u3m_p("u3i_string", u3i_string("abcdefjhijklmnopqrstuvwxyz"));
     u3_noun str = u3kc_lsh(3, 1,
                            u3kc_mix(u3qc_bex(212),
                            u3i_string("abcdefjhijklmnopqrstuvwxyz")));
+    u3m_p("lsh", str);
 
     c3_w  byt_w = u3r_met(3, str);
+#ifdef VERE_64
+    c3_w  wor_w = u3r_met(6, str);
+    c3_w* str_w = c3_malloc(8 * wor_w);
+#else
     c3_w  wor_w = u3r_met(5, str);
-    c3_y* str_y = c3_malloc(byt_w);
     c3_w* str_w = c3_malloc(4 * wor_w);
+#endif
+    c3_y* str_y = c3_malloc(byt_w);
     c3_d  str_d = 0;
 
     u3r_bytes(0, byt_w, str_y, str);
@@ -155,8 +161,10 @@ _test_mug(void)
     str_d |= str_w[0];
     str_d |= ((c3_d)str_w[1] << 32ULL);
 
-    if ( 0x34d08717 != u3r_mug(str) ) {
-      fprintf(stderr, "fail (i) (1) \r\n");
+    gud = 0x34d08717;
+    res = u3r_mug(str);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (i) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
     if ( 0x34d08717 != u3r_mug_bytes(str_y, byt_w) ) {
@@ -176,7 +184,6 @@ _test_mug(void)
     c3_free(str_w);
     u3z(str);
   }
-  fprintf(stderr, "j\r\n");
 
   {
     c3_w  som_w[4] = { 0, 0, 0, 1 };
@@ -194,7 +201,6 @@ _test_mug(void)
 
     u3z(som);
   }
-  fprintf(stderr, "k\r\n");
 
   {
     c3_w  som_w[4] = { 0, 1, 0, 1 };

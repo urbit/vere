@@ -115,7 +115,7 @@ u3i_slab_init(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
   u3i_slab_bare(sab_u, met_g, len_d);
 
   u3t_on(mal_o);
-  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * 4);
+  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * sizeof(c3_w));
   u3t_off(mal_o);
 }
 
@@ -227,8 +227,7 @@ u3i_slab_free(u3i_slab* sab_u)
   }
   else {
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    // XX
-    // u3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert( tav_w == (c3_w*)vat_u );
     u3a_wfree(vat_u);
   }
 
@@ -258,8 +257,7 @@ u3i_slab_mint(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    // XX
-    // u3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert( tav_w == (c3_w*)vat_u );
 
     //  trim trailing zeros
     //
@@ -297,8 +295,7 @@ u3i_slab_moot(u3i_slab* sab_u)
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
     c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    // XX
-    // u3_assert( tav_w == (c3_w*)vat_u );
+    u3_assert( tav_w == (c3_w*)vat_u );
 
     pro = _ci_atom_mint(vat_u, len_w);
   }

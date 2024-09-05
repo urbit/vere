@@ -11,8 +11,13 @@
   u3qc_mix(u3_atom a,
            u3_atom b)
   {
+  #ifdef VERE_64
+    c3_w lna_w = u3r_met(6, a);
+    c3_w lnb_w = u3r_met(6, b);
+  #else
     c3_w lna_w = u3r_met(5, a);
     c3_w lnb_w = u3r_met(5, b);
+  #endif
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;
