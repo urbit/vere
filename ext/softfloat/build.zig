@@ -18,9 +18,14 @@ pub fn build(b: *std.Build) void {
 
     lib.addIncludePath(dep_c.path("source/include"));
 
+    const flags = .{
+        "-g",
+        "-O2",
+    };
+
     if (t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(dep_c.path("build/Linux-ARM-VFPv2-GCC"));
         lib.addIncludePath(dep_c.path("source/ARM-VFPv2"));
+        lib.addIncludePath(dep_c.path("build/Linux-ARM-VFPv2-GCC"));
         lib.addCSourceFiles(.{
             .root = dep_c.path(""),
             .files = &.{
@@ -262,7 +267,9 @@ pub fn build(b: *std.Build) void {
                 "source/f128M_le_quiet.c",
                 "source/f128M_lt_quiet.c",
             },
+            .flags = &flags,
         });
+        lib.installHeader(dep_c.path("build/Linux-ARM-VFPv2-GCC/platform.h"), "platform.h");
     }
     if (t.cpu.arch.isX86()) {
         lib.addIncludePath(dep_c.path("source/8086-SSE"));
@@ -577,14 +584,32 @@ pub fn build(b: *std.Build) void {
                 "source/f128M_eq_signaling.c",
                 "source/f128M_le_quiet.c",
                 "source/f128M_lt_quiet.c",
-            } });
+            },
+            .flags = &flags,
+        });
+        lib.installHeader(dep_c.path("build/Linux-x86_64-GCC/platform.h"), "platform.h");
     }
 
     lib.root_module.addCMacro("SOFTFLOAT_ROUND_ODD", "");
     lib.root_module.addCMacro("INLINE_LEVEL", "5");
-    lib.installHeader(dep_c.path("source/include/softfloat.h"), "softfloat.h");
-    lib.installHeader(dep_c.path("source/include/softfloat_types.h"), "softfloat_types.h");
+
+    if (t.cpu.arch.isX86()) {
+        lib.root_module.addCMacro("SOFTFLOAT_FAST_INT64", "");
+        lib.root_module.addCMacro("SOFTFLOAT_FAST_DIV32TO16", "");
+        lib.root_module.addCMacro("SOFTFLOAT_FAST_DIV64TO32", "");
+    }
+
+    if (t.os.tag.isDarwin()) {
+        lib.root_module.addCMacro("LITTLEENDIAN", "1");
+        lib.root_module.addCMacro("INLINE", "inline");
+        lib.root_module.addCMacro("THREAD_LOCAL", "_Thread_local");
+    }
+
+    lib.installHeadersDirectory(dep_c.path("source/include"), "", .{
+        .include_extensions = &.{".h"},
+    });
 
     lib.linkLibC();
+
     b.installArtifact(lib);
 }
