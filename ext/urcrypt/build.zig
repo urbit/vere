@@ -14,23 +14,84 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const secp256k1_c = b.dependency("secp256k1", .{
+    const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const secp256k1 = b.addStaticLibrary(.{
+    const lib = b.addStaticLibrary(.{
+        .name = "urcrypt",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.linkLibrary(libsecp256k1(b, target, optimize));
+    lib.linkLibrary(libargon2(b, target, optimize));
+    lib.linkLibrary(libblake3(b, target, optimize));
+    lib.linkLibrary(libed25519(b, target, optimize));
+    lib.linkLibrary(libge_additions(b, target, optimize));
+    lib.linkLibrary(libkeccak_tiny(b, target, optimize));
+    lib.linkLibrary(libscrypt(b, target, optimize));
+
+    lib.linkLibrary(aes_siv.artifact("aes_siv"));
+    lib.linkLibrary(openssl.artifact("ssl"));
+    lib.linkLibrary(openssl.artifact("crypto"));
+
+    lib.addIncludePath(dep_c.path("urcrypt"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("urcrypt"),
+        .files = &.{
+            "aes_cbc.c",
+            "aes_ecb.c",
+            "aes_siv.c",
+            "argon.c",
+            "blake3.c",
+            "ed25519.c",
+            "ge_additions.c",
+            "keccak.c",
+            "ripemd.c",
+            "scrypt.c",
+            "secp256k1.c",
+            "sha.c",
+            "util.c",
+        },
+        .flags = &.{
+            "-g",
+            "-O3",
+            "-Wall",
+        },
+    });
+
+    lib.installHeader(dep_c.path("urcrypt/urcrypt.h"), "urcrypt.h");
+
+    b.installArtifact(lib);
+}
+
+fn libsecp256k1(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("secp256k1", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
         .name = "secp256k1",
         .target = target,
         .optimize = optimize,
     });
 
-    secp256k1.linkLibC();
+    lib.linkLibC();
 
-    secp256k1.addIncludePath(secp256k1_c.path("src"));
+    lib.addIncludePath(dep_c.path("src"));
 
-    secp256k1.addCSourceFiles(.{
-        .root = secp256k1_c.path("src"),
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("src"),
         .files = &.{
             "precomputed_ecmult.c",
             "precomputed_ecmult_gen.c",
@@ -54,6 +115,11 @@ pub fn build(b: *std.Build) void {
             "-Wconditional-uninitialized",
             "-fvisibility=hidden",
 
+            // "-DHAVE_CONFIG_H",
+            // "-dexhaustive_test_ORDER=7",
+            "-DECMULT_WINDOW_SIZE=15",
+            "-DCOMB_BLOCKS=43",
+            "-DCOMB_TEETH=6",
             "-DENABLE_MODULE_ELLSWIFT=1",
             "-DENABLE_MODULE_SCHNORRSIG=1",
             "-DENABLE_MODULE_EXTRAKEYS=1",
@@ -62,60 +128,273 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    secp256k1.installHeadersDirectory(secp256k1_c.path("include"), "", .{});
+    lib.installHeadersDirectory(dep_c.path("include"), "", .{});
 
-    const urcrypt_c = b.dependency("urcrypt", .{
+    return lib;
+}
+
+fn libargon2(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const urcrypt = b.addStaticLibrary(.{
-        .name = "urcrypt",
+    const lib = b.addStaticLibrary(.{
+        .name = "argon2",
         .target = target,
         .optimize = optimize,
     });
 
-    urcrypt.linkLibC();
-    urcrypt.linkLibrary(secp256k1);
-    urcrypt.linkLibrary(aes_siv.artifact("aes_siv"));
-    urcrypt.linkLibrary(openssl.artifact("ssl"));
-    urcrypt.linkLibrary(openssl.artifact("crypto"));
+    lib.linkLibC();
 
-    urcrypt.addIncludePath(urcrypt_c.path("argon2/include"));
-    urcrypt.addIncludePath(urcrypt_c.path("argon2/src"));
-    urcrypt.addIncludePath(urcrypt_c.path("argon2/src/blake2"));
-    urcrypt.addIncludePath(urcrypt_c.path("blake3"));
-    urcrypt.addIncludePath(urcrypt_c.path("ed25519/src"));
-    urcrypt.addIncludePath(urcrypt_c.path("ge-additions"));
-    urcrypt.addIncludePath(urcrypt_c.path("keccak-tiny"));
-    urcrypt.addIncludePath(urcrypt_c.path("scrypt"));
-    urcrypt.addIncludePath(urcrypt_c.path("urcrypt"));
+    const flags = .{
+        "-Wno-unused-value",
+        "-Wno-unused-function",
+    };
 
-    urcrypt.addCSourceFiles(.{
-        .root = urcrypt_c.path("urcrypt"),
+    const common_files = .{
+        "src/argon2.c",
+        "src/core.c",
+        "src/blake2/blake2b.c",
+        "src/encoding.c",
+        "src/thread.c",
+    };
+
+    lib.addIncludePath(dep_c.path("argon2/include"));
+    lib.addIncludePath(dep_c.path("argon2/src"));
+    lib.addIncludePath(dep_c.path("argon2/src/blake2"));
+
+    if (target.result.cpu.arch == .x86_64) {
+        lib.addCSourceFiles(.{
+            .root = dep_c.path("argon2"),
+            .files = &(common_files ++ .{"src/opt.c"}),
+            .flags = &flags,
+        });
+    } else {
+        lib.addCSourceFiles(.{
+            .root = dep_c.path("argon2"),
+            .files = &(common_files ++ .{"src/ref.c"}),
+            .flags = &flags,
+        });
+    }
+
+    lib.installHeader(dep_c.path("argon2/include/argon2.h"), "argon2.h");
+    lib.installHeader(dep_c.path("argon2/src/blake2/blake2.h"), "blake2.h");
+
+    return lib;
+}
+
+fn libblake3(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "blake3",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    const common_files = .{
+        "blake3.c",
+        "blake3_dispatch.c",
+        "blake3_portable.c",
+    };
+
+    lib.addIncludePath(dep_c.path("blake3"));
+
+    if (target.result.cpu.arch == .x86_64) {
+        lib.addCSourceFiles(.{
+            .root = dep_c.path("blake3"),
+            .files = &(common_files ++ .{
+                "blake3_sse2_x86-64_unix.S",
+                "blake3_sse41_x86-64_unix.S",
+                "blake3_avx2_x86-64_unix.S",
+                "blake3_avx512_x86-64_unix.S",
+            }),
+        });
+    } else {
+        lib.addCSourceFiles(.{
+            .root = dep_c.path("blake3"),
+            .files = &(common_files ++ .{"blake3_neon.c"}),
+            .flags = &.{"-DBLAKE3_USE_NEON=1"},
+        });
+    }
+
+    lib.installHeader(dep_c.path("blake3/blake3.h"), "blake3.h");
+    lib.installHeader(dep_c.path("blake3/blake3_impl.h"), "blake3_impl.h");
+
+    return lib;
+}
+
+fn libed25519(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "ed25519",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("ed25519/src"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("ed25519"),
         .files = &.{
-            "aes_cbc.c",
-            "aes_ecb.c",
-            "aes_siv.c",
-            "argon.c",
-            "blake3.c",
-            "ed25519.c",
-            "ge_additions.c",
-            "ripemd.c",
-            "scrypt.c",
-            "keccak.c",
-            "secp256k1.c",
-            "sha.c",
-            "util.c",
+            "src/add_scalar.c",
+            "src/fe.c",
+            "src/ge.c",
+            "src/keypair.c",
+            "src/key_exchange.c",
+            "src/sc.c",
+            "src/seed.c",
+            "src/sha512.c",
+            "src/sign.c",
+            "src/verify.c",
         },
         .flags = &.{
-            "-Wall",
-            "-g",
-            "-O3",
+            "-Wno-unused-result",
         },
     });
 
-    urcrypt.installHeader(urcrypt_c.path("urcrypt/urcrypt.h"), "urcrypt.h");
+    lib.installHeadersDirectory(dep_c.path("ed25519/src"), "", .{
+        .include_extensions = &.{".h"},
+    });
 
-    b.installArtifact(urcrypt);
+    return lib;
+}
+
+fn libge_additions(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "ge_additions",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("ed25519/src"));
+    lib.addIncludePath(dep_c.path("ge-additions"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("ge-additions"),
+        .files = &.{"ge-additions.c"},
+        .flags = &.{
+            "-Werror",
+            "-pedantic",
+            "-std=gnu99",
+        },
+    });
+
+    lib.installHeader(dep_c.path("ge-additions/ge-additions.h"), "ge-additions.h");
+
+    return lib;
+}
+
+fn libkeccak_tiny(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "keccak_tiny",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("keccak-tiny"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("keccak-tiny"),
+        .files = &.{"keccak-tiny.c"},
+        .flags = &.{
+            "-std=c11",
+            "-Wextra",
+            "-Wpedantic",
+            "-Wall",
+        },
+    });
+
+    lib.installHeader(dep_c.path("keccak-tiny/keccak-tiny.h"), "keccak-tiny.h");
+
+    return lib;
+}
+
+fn libscrypt(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "scrypt",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("scrypt"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("scrypt"),
+        .files = &.{
+            "b64.c",
+            "crypto-mcf.c",
+            "crypto-scrypt-saltgen.c",
+            "crypto_scrypt-check.c",
+            "crypto_scrypt-hash.c",
+            "crypto_scrypt-hexconvert.c",
+            "crypto_scrypt-nosse.c",
+            "main.c",
+            "sha256.c",
+            "slowequals.c",
+        },
+        .flags = &.{"-D_FORTIFY_SOURCE=2"},
+    });
+
+    lib.installHeader(dep_c.path("scrypt/libscrypt.h"), "libscrypt.h");
+    lib.installHeader(dep_c.path("scrypt/sha256.h"), "sha256.h");
+
+    return lib;
 }
