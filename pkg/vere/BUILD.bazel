@@ -306,6 +306,18 @@ cc_test(
 )
 
 cc_test(
+    name = "hamt_test",
+    timeout = "short",
+    srcs = ["hamt_test.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
     name = "benchmarks",
     timeout = "short",
     srcs = ["benchmarks.c"],
