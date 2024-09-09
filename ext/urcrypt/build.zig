@@ -32,11 +32,34 @@ pub fn build(b: *std.Build) void {
     secp256k1.addCSourceFiles(.{
         .root = secp256k1_c.path("src"),
         .files = &.{
-            "secp256k1.c",
             "precomputed_ecmult.c",
             "precomputed_ecmult_gen.c",
+            "secp256k1.c",
         },
-        .flags = &.{"-O3"},
+        .flags = &.{
+            "-g",
+            "-O2",
+            "-std=c89",
+            "-pedantic",
+            "-Wno-long-long",
+            "-Wnested-externs",
+            "-Wshadow",
+            "-Wstrict-prototypes",
+            "-Wundef",
+            "-Wno-overlength-strings",
+            "-Wall",
+            "-Wno-unused-function",
+            "-Wextra",
+            "-Wcast-align",
+            "-Wconditional-uninitialized",
+            "-fvisibility=hidden",
+
+            "-DENABLE_MODULE_ELLSWIFT=1",
+            "-DENABLE_MODULE_SCHNORRSIG=1",
+            "-DENABLE_MODULE_EXTRAKEYS=1",
+            "-DENABLE_MODULE_RECOVERY=1",
+            "-DENABLE_MODULE_ECDH=1",
+        },
     });
 
     secp256k1.installHeadersDirectory(secp256k1_c.path("include"), "", .{});
@@ -52,11 +75,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    urcrypt.linkLibC();
+    urcrypt.linkLibrary(secp256k1);
     urcrypt.linkLibrary(aes_siv.artifact("aes_siv"));
     urcrypt.linkLibrary(openssl.artifact("ssl"));
     urcrypt.linkLibrary(openssl.artifact("crypto"));
-    urcrypt.linkLibrary(secp256k1);
-    urcrypt.linkLibC();
 
     urcrypt.addIncludePath(urcrypt_c.path("argon2/include"));
     urcrypt.addIncludePath(urcrypt_c.path("argon2/src"));
