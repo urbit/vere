@@ -2,9 +2,6 @@
     .name = "urbit",
     .version = "0.0.1",
     .dependencies = .{
-        .aes_siv = .{
-            .path = "./ext/aes_siv",
-        },
         .avahi = .{
             .path = "./ext/avahi",
         },

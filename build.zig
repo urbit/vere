@@ -9,22 +9,7 @@ pub fn build(b: *std.Build) !void {
     // DEPENDENCIES
     //
 
-    // const aes_siv = b.dependency("aes_siv", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-
     const avahi = b.dependency("avahi", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const natpmp = b.dependency("natpmp", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
     });
@@ -59,6 +44,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const natpmp = b.dependency("natpmp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
@@ -70,6 +60,11 @@ pub fn build(b: *std.Build) !void {
     });
 
     const sigsegv = b.dependency("sigsegv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
     });
@@ -139,8 +134,6 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    // pkg_c3.installHeader(b.path("pkg/c3/c3.h"), "c3.h");
-
     b.installArtifact(pkg_c3);
 
     //
@@ -166,8 +159,6 @@ pub fn build(b: *std.Build) !void {
             "-Werror",
             "-pedantic",
             "-std=gnu99",
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
             // TODO: support fallback to other options if `getrandom()` isn't
             // available in `unistd.h`. Preferred order (from most preferred
             // to least preferred) is:
@@ -185,8 +176,6 @@ pub fn build(b: *std.Build) !void {
     pkg_ent.installHeadersDirectory(b.path("pkg/ent"), "ent", .{
         .include_extensions = &.{".h"},
     });
-
-    // pkg_ent.installHeader(b.path("pkg/ent/ent.h"), "ent.h");
 
     b.installArtifact(pkg_ent);
 
@@ -218,8 +207,6 @@ pub fn build(b: *std.Build) !void {
     pkg_ur.installHeadersDirectory(b.path("pkg/ur"), "ur", .{
         .include_extensions = &.{".h"},
     });
-
-    // pkg_ur.installHeader(b.path("pkg/ur/ur.h"), "ur.h");
 
     b.installArtifact(pkg_ur);
 
@@ -255,6 +242,52 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.addIncludePath(b.path("pkg/noun/v1"));
     pkg_noun.addIncludePath(b.path("pkg/noun/v2"));
     pkg_noun.addIncludePath(b.path("pkg/noun/v3"));
+
+    var noun_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer noun_flags.deinit();
+
+    try noun_flags.appendSlice(&.{
+        "-O3",
+        "-g",
+
+        "-Wall",
+        "-Werror",
+        "-pedantic",
+        "-std=gnu23",
+
+        "-Wno-deprecated-non-prototype",
+        "-Wno-gnu-binary-literal",
+        "-Wno-gnu-empty-initializer",
+        "-Wno-gnu-statement-expression",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+        "-Wno-gnu",
+        "-fms-extensions",
+
+        "-DU3_GUARD_PAGE",
+        "-DU3_OS_ENDIAN_little=1", // pkg_c3
+        "-DU3_OS_PROF=1", // pkg_c3
+    });
+
+    if (t.cpu.arch == .aarch64) {
+        try noun_flags.appendSlice(&.{
+            "-DU3_CPU_aarch64=1",
+        });
+    }
+
+    if (t.os.tag == .macos) {
+        try noun_flags.appendSlice(&.{
+            "-DU3_OS_osx=1",
+            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
+        });
+    }
+
+    if (t.os.tag == .linux) {
+        try noun_flags.appendSlice(&.{
+            "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
 
     pkg_noun.addCSourceFiles(.{
         .root = b.path("pkg/noun"),
@@ -454,38 +487,11 @@ pub fn build(b: *std.Build) !void {
             "xtract.c",
             "zave.c",
         },
-        .flags = &.{
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
-            "-DU3_CPU_aarch64=1",
-            "-DU3_OS_linux=1",
-            "-O3",
-            "-Wall",
-            "-Werror",
-            "-pedantic",
-            "-std=gnu23",
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
-            "-DENT_GETENTROPY_UNISTD",
-            "-O3",
-            "-g",
-            "-DU3_GUARD_PAGE",
-            "-Wno-deprecated-non-prototype",
-            "-Wno-gnu-binary-literal",
-            "-Wno-gnu-empty-initializer",
-            "-Wno-gnu-statement-expression",
-            "-Wno-unused-variable",
-            "-Wno-unused-function",
-            "-Wno-gnu",
-            "-fms-extensions",
-        },
+        .flags = noun_flags.items,
     });
 
     pkg_noun.installHeadersDirectory(b.path("pkg/noun"), "", .{
         .include_extensions = &.{".h"},
-        // .exclude_extensions = &.{
-        //     "jets/k.h", "jets/q.h", "jets/w.h", "events.h",
-        // },
     });
 
     pkg_noun.installHeadersDirectory(b.path(switch (t.os.tag) {
@@ -548,7 +554,9 @@ pub fn build(b: *std.Build) !void {
     vere.addIncludePath(b.path("pkg/vere/ivory"));
     vere.addIncludePath(b.path("pkg/vere/ca_bundle"));
 
-    vere.linkLibrary(avahi.artifact("dns-sd")); // LINUX ONLY
+    if (t.os.tag == .linux) {
+        vere.linkLibrary(avahi.artifact("dns-sd"));
+    }
     vere.linkLibrary(natpmp.artifact("natpmp"));
     vere.linkLibrary(curl.artifact("curl"));
     vere.linkLibrary(gmp.artifact("gmp"));
@@ -563,75 +571,116 @@ pub fn build(b: *std.Build) !void {
     vere.linkLibrary(pkg_ur);
     vere.linkLibC();
 
-    vere.addCSourceFiles(.{
-        .root = b.path("pkg/vere"),
-        .files = &.{
-            "auto.c",
-            "ca_bundle/ca_bundle.c",
-            "dawn.c",
-            "db/lmdb.c",
-            "disk.c",
-            "foil.c",
-            "io/ames.c",
-            "io/ames/stun.c",
-            "io/behn.c",
-            "io/conn.c",
-            "io/cttp.c",
-            "io/fore.c",
-            "io/hind.c",
-            "io/http.c",
-            "io/lick.c",
-            "io/term.c",
-            "io/unix.c",
-            "ivory/ivory.c",
-            "king.c",
-            "lord.c",
-            "mars.c",
-            "mdns.c",
-            "newt.c",
-            "pier.c",
-            // "platform/darwin/daemon.c",
-            // "platform/darwin/ptty.c",
-            // "platform/darwin/mach.c",
+    var vere_srcs = std.ArrayList([]const u8).init(b.allocator);
+    defer vere_srcs.deinit();
+
+    try vere_srcs.appendSlice(&.{
+        "auto.c",
+        "ca_bundle/ca_bundle.c",
+        "dawn.c",
+        "db/lmdb.c",
+        "disk.c",
+        "foil.c",
+        "io/ames.c",
+        "io/ames/stun.c",
+        "io/behn.c",
+        "io/conn.c",
+        "io/cttp.c",
+        "io/fore.c",
+        "io/hind.c",
+        "io/http.c",
+        "io/lick.c",
+        "io/term.c",
+        "io/unix.c",
+        "ivory/ivory.c",
+        "king.c",
+        "lord.c",
+        "mars.c",
+        "mdns.c",
+        "newt.c",
+        "pier.c",
+        "save.c",
+        "serf.c",
+        "time.c",
+        "ward.c",
+    });
+
+    if (t.os.tag == .macos) {
+        try vere_srcs.appendSlice(&.{
+            "platform/darwin/daemon.c",
+            "platform/darwin/ptty.c",
+            "platform/darwin/mach.c",
+        });
+    }
+
+    if (t.os.tag == .linux) {
+        try vere_srcs.appendSlice(&.{
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",
-            "save.c",
-            "serf.c",
-            "time.c",
-            "ward.c",
-        },
-        .flags = &.{
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
+        });
+    }
+
+    var vere_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer vere_flags.deinit();
+
+    try vere_flags.appendSlice(&.{
+        "-O3",
+        "-g",
+
+        "-Wall",
+        "-Werror",
+        // "-pedantic",
+        "-std=gnu23",
+
+        "-Wno-deprecated-non-prototype",
+        "-Wno-gnu-binary-literal",
+        "-Wno-gnu-empty-initializer",
+        "-Wno-gnu-statement-expression",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+        "-Wno-gnu",
+        "-fms-extensions",
+
+        "-DU3_GUARD_PAGE",
+        "-DU3_OS_ENDIAN_little=1", // pkg_c3
+        "-DU3_OS_PROF=1", // pkg_c3
+    });
+
+    if (t.cpu.arch == .aarch64) {
+        try vere_flags.appendSlice(&.{
             "-DU3_CPU_aarch64=1",
+        });
+    }
+
+    if (t.os.tag == .macos) {
+        try vere_flags.appendSlice(&.{
+            "-DU3_OS_osx=1",
+            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
+        });
+    }
+
+    if (t.os.tag == .linux) {
+        try vere_flags.appendSlice(&.{
             "-DU3_OS_linux=1",
-            "-O3",
-            "-Wall",
-            "-Werror",
-            // "-pedantic",
-            "-std=gnu23",
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
-            "-DENT_GETENTROPY_UNISTD",
-            "-O3",
-            "-g",
-            "-DU3_GUARD_PAGE",
-            "-Wno-deprecated-non-prototype",
-            "-Wno-gnu-binary-literal",
-            "-Wno-gnu-empty-initializer",
-            "-Wno-gnu-statement-expression",
-            "-Wno-unused-variable",
-            "-Wno-unused-function",
-            "-Wno-gnu",
-            "-fms-extensions",
-            // "-Wuninitialized",
-            // "-Wpedantic", // suppress extra semicolon
-        },
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    vere.addCSourceFiles(.{
+        .root = b.path("pkg/vere"),
+        .files = vere_srcs.items,
+        .flags = vere_flags.items,
     });
 
     vere.installHeadersDirectory(b.path("pkg/vere"), "", .{
         .include_extensions = &.{".h"},
+        .exclude_extensions = &.{ "ivory.h", "ca_bundle.h" },
     });
+
+    vere.installHeader(b.path("pkg/vere/ivory/ivory.h"), "ivory.h");
+    vere.installHeader(b.path("pkg/vere/ca_bundle/ca_bundle.h"), "ca_bundle.h");
+    vere.installHeader(pace_h.getDirectory().path(b, "pace.h"), "pace.h");
+    vere.installHeader(version_h.getDirectory().path(b, "version.h"), "version.h");
 
     b.installArtifact(vere);
 
@@ -645,64 +694,74 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    urbit.addIncludePath(pace_h.getDirectory());
-    urbit.addIncludePath(version_h.getDirectory());
-    urbit.addIncludePath(b.path("pkg/vere/ca_bundle"));
-    urbit.addIncludePath(b.path("pkg/vere/ivory"));
+    urbit.linkLibC();
 
-    // urbit.linkLibrary(aes_siv.artifact("aes_siv"));
-    // urbit.linkLibrary(avahi.artifact("dns-sd")); // LINUX ONLY
+    urbit.linkLibrary(vere);
+    urbit.linkLibrary(pkg_noun);
+    urbit.linkLibrary(pkg_c3);
+    urbit.linkLibrary(pkg_ur);
+
     urbit.linkLibrary(gmp.artifact("gmp"));
     urbit.linkLibrary(h2o.artifact("h2o"));
     urbit.linkLibrary(curl.artifact("curl"));
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
-    // urbit.linkLibrary(natpmp.artifact("natpmp"));
     urbit.linkLibrary(openssl.artifact("ssl"));
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
-    // urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
-    // urbit.linkLibrary(zlib.artifact("z"));
-    urbit.linkLibrary(pkg_c3);
-    urbit.linkLibrary(pkg_noun);
-    urbit.linkLibrary(pkg_ur);
-    urbit.linkLibrary(vere);
-    urbit.linkLibC();
+
+    var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer urbit_flags.deinit();
+
+    try urbit_flags.appendSlice(&.{
+        "-O3",
+        "-g",
+
+        "-Wall",
+        "-Werror",
+        // "-pedantic",
+        "-std=gnu23",
+
+        "-Wno-deprecated-non-prototype",
+        "-Wno-gnu-binary-literal",
+        "-Wno-gnu-empty-initializer",
+        "-Wno-gnu-statement-expression",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+        "-Wno-gnu",
+        "-fms-extensions",
+
+        "-DU3_GUARD_PAGE",
+        "-DU3_OS_ENDIAN_little=1", // pkg_c3
+        "-DU3_OS_PROF=1", // pkg_c3
+    });
+
+    if (t.cpu.arch == .aarch64) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_CPU_aarch64=1",
+        });
+    }
+
+    if (t.os.tag == .macos) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_osx=1",
+            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
+        });
+    }
+
+    if (t.os.tag == .linux) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
 
     urbit.addCSourceFiles(.{
         .root = b.path("pkg/vere"),
         .files = &.{
-            "ca_bundle/ca_bundle.c",
-            "ivory/ivory.c",
             "main.c",
         },
-        .flags = &.{
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
-            "-DU3_CPU_aarch64=1",
-            "-DU3_OS_linux=1",
-            "-O3",
-            "-Wall",
-            "-Werror",
-            // "-pedantic",
-            "-std=gnu23",
-            "-DU3_OS_ENDIAN_little=1",
-            "-DU3_OS_PROF=1",
-            "-DENT_GETENTROPY_UNISTD",
-            "-O3",
-            "-g",
-            "-DU3_GUARD_PAGE",
-            "-Wno-deprecated-non-prototype",
-            "-Wno-gnu-binary-literal",
-            "-Wno-gnu-empty-initializer",
-            "-Wno-gnu-statement-expression",
-            "-Wno-unused-variable",
-            "-Wno-unused-function",
-            "-Wno-gnu",
-            "-fms-extensions",
-            // "-Wuninitialized",
-            // "-Wpedantic", // suppress extra semicolon
-        },
+        .flags = urbit_flags.items,
     });
 
     b.installArtifact(urbit);
