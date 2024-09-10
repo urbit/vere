@@ -126,7 +126,9 @@ pub fn build(b: *std.Build) void {
             "stackvma.c",
             "version.c",
         },
-        .flags = &.{},
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     lib.installConfigHeader(sigsegv_h);

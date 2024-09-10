@@ -401,6 +401,7 @@ pub fn build(b: *std.Build) void {
             "curl_fnmatch.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-std=gnu89",
             "-Wno-unknown-warning-option",
             "-Wswitch-default",

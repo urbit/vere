@@ -34,6 +34,9 @@ pub fn build(b: *std.Build) void {
         .files = &.{
             "aes_siv.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     lib.installHeader(dep_c.path("aes_siv.h"), "aes_siv.h");

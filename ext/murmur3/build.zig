@@ -20,7 +20,11 @@ pub fn build(b: *std.Build) void {
 
     murmur3.addIncludePath(murmur3_c.path("."));
 
-    const common_flags = [_][]const u8{ "-O3", "-Wall" };
+    const common_flags = [_][]const u8{
+        "-fno-sanitize=all",
+        "-O3",
+        "-Wall",
+    };
 
     const mac_flags = common_flags ++ [_][]const u8{
         "-fPIC",

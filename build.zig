@@ -102,6 +102,7 @@ pub fn build(b: *std.Build) !void {
     defer c3_flags.deinit();
 
     try c3_flags.appendSlice(&.{
+        "-fno-sanitize=all",
         "-DU3_OS_ENDIAN_little=1",
         "-DU3_OS_PROF=1",
     });
@@ -154,6 +155,7 @@ pub fn build(b: *std.Build) !void {
         .root = b.path("pkg/ent"),
         .files = &.{"ent.c"},
         .flags = &.{
+            "-fno-sanitize=all",
             "-O3",
             "-Wall",
             "-Werror",
@@ -201,7 +203,9 @@ pub fn build(b: *std.Build) !void {
             "hashcons.c",
             "serial.c",
         },
-        .flags = &.{},
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     pkg_ur.installHeadersDirectory(b.path("pkg/ur"), "ur", .{
@@ -247,6 +251,8 @@ pub fn build(b: *std.Build) !void {
     defer noun_flags.deinit();
 
     try noun_flags.appendSlice(&.{
+        "-fno-sanitize=all",
+
         "-O3",
         "-g",
 
@@ -624,6 +630,8 @@ pub fn build(b: *std.Build) !void {
     defer vere_flags.deinit();
 
     try vere_flags.appendSlice(&.{
+        "-fno-sanitize=all",
+
         "-O3",
         "-g",
 

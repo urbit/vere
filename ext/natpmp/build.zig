@@ -23,6 +23,9 @@ pub fn build(b: *std.Build) void {
             "natpmp.c",
             "getgateway.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     lib.installHeader(dep_c.path("natpmp.h"), "natpmp.h");

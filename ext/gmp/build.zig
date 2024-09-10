@@ -408,7 +408,9 @@ pub fn build(b: *std.Build) void {
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
             },
-            .flags = &.{},
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
         });
     } else if (t.cpu.arch.isX86()) {
         lib.addCSourceFiles(.{
@@ -417,7 +419,9 @@ pub fn build(b: *std.Build) void {
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
             },
-            .flags = &.{},
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
         });
     }
 
@@ -425,7 +429,9 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &generic_c_sources,
-        .flags = &.{},
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     // These files need to be compiles twice with different macros
@@ -437,6 +443,7 @@ pub fn build(b: *std.Build) void {
             "mpn/generic/sec_aors_1.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-DOPERATION_sec_div_qr", // sec_div.c
             "-DOPERATION_sec_pi1_div_qr", // sec_pi1_div.c
             "-DOPERATION_sec_add_1", // sec_aors_1.c
@@ -450,6 +457,7 @@ pub fn build(b: *std.Build) void {
             "mpn/generic/sec_aors_1.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-DOPERATION_sec_div_r", // sec_div.c
             "-DOPERATION_sec_pi1_div_r", // sec_pi1_div.c
             "-DOPERATION_sec_sub_1", // sec_aors_1.c

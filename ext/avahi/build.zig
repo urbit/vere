@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
             .cmake = expat_c.path("expat_config.h.cmake"),
         },
         .include_path = "expat_config.h",
-        }, .{
+    }, .{
         .PACKAGE_BUGREPORT = "https://github.com/libexpat/libexpat/issues",
         .PACKAGE_NAME = "expat",
         .PACKAGE_STRING = "expat 2.6.0",
@@ -99,10 +99,8 @@ pub fn build(b: *std.Build) void {
     dbus.root_module.addCMacro("DBUS_DAEMON_NAME", "\"dbus\"");
     dbus.root_module.addCMacro("DBUS_COMPILATION", "");
     dbus.root_module.addCMacro("DBUS_VA_COPY", "va_copy");
-    dbus.root_module.addCMacro("DBUS_SESSION_BUS_CONNECT_ADDRESS",
-                               "\"autolaunch:\"");
-    dbus.root_module.addCMacro("DBUS_SYSTEM_BUS_DEFAULT_ADDRESS",
-                               "\"unix:tmpdir=/tmp\"");
+    dbus.root_module.addCMacro("DBUS_SESSION_BUS_CONNECT_ADDRESS", "\"autolaunch:\"");
+    dbus.root_module.addCMacro("DBUS_SYSTEM_BUS_DEFAULT_ADDRESS", "\"unix:tmpdir=/tmp\"");
     dbus.root_module.addCMacro("DBUS_ENABLE_CHECKS", "");
     dbus.root_module.addCMacro("DBUS_ENABLE_ASSERT", "");
     dbus.root_module.addCMacro("HAVE_ALLOCA_H", "");
@@ -130,10 +128,7 @@ pub fn build(b: *std.Build) void {
     //   "DBUS_DATADIR",
     //   b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "usr/share")})
     // );
-    dbus.root_module.addCMacro(
-        "DBUS_MACHINE_UUID_FILE",
-        b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "lib/dbus/machine-id")})
-    );
+    dbus.root_module.addCMacro("DBUS_MACHINE_UUID_FILE", b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "lib/dbus/machine-id")}));
     // dbus.root_module.addCMacro(
     //   "DBUS_SYSTEM_CONFIG_FILE",
     //   b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "usr/share/dbus-1/system.conf")})
@@ -283,14 +278,9 @@ pub fn build(b: *std.Build) void {
     // );
     // b.getInstallStep().dependOn(&dbus_install_cmake_config.step);
 
-    const dbus_config_h = b.addConfigHeader(.{
-        .style = .blank, .include_path = "config.h"
-        }, .{});
+    const dbus_config_h = b.addConfigHeader(.{ .style = .blank, .include_path = "config.h" }, .{});
 
-    const dbus_arch_deps_h = b.addConfigHeader(.{
-        .style = .{ .cmake = dbus_c.path("dbus/dbus-arch-deps.h.in") },
-        .include_path = "dbus/dbus-arch-deps.h"
-        }, .{
+    const dbus_arch_deps_h = b.addConfigHeader(.{ .style = .{ .cmake = dbus_c.path("dbus/dbus-arch-deps.h.in") }, .include_path = "dbus/dbus-arch-deps.h" }, .{
         .DBUS_VERSION = "1.14.10",
         .DBUS_MAJOR_VERSION = "1",
         .DBUS_MINOR_VERSION = "14",
@@ -301,8 +291,7 @@ pub fn build(b: *std.Build) void {
         .DBUS_SIZEOF_VOID_P = "sizeof (void*)",
         .DBUS_INT64_CONSTANT = "(val##LL)",
         .DBUS_UINT64_CONSTANT = "(val##ULL)",
-        }
-                                               );
+    });
     // const dbus_install_arch_deps_h = b.addInstallFile(
     //   dbus_arch_deps_h.getOutput(),
     //   "include/dbus/dbus-arch-deps.h"
@@ -413,6 +402,9 @@ pub fn build(b: *std.Build) void {
             "dbus-sysdeps.c",
             "dbus-pipe.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     // Platform specific sources
@@ -430,6 +422,9 @@ pub fn build(b: *std.Build) void {
                 "dbus-pipe-win.c",
                 "dbus-sysdeps-thread-win.c",
             },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
         });
     } else {
         dbus.addCSourceFiles(.{
@@ -445,6 +440,9 @@ pub fn build(b: *std.Build) void {
                 "dbus-sysdeps-unix.c",
                 "dbus-sysdeps-pthread.c",
                 "dbus-userdb.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
             },
         });
     }
@@ -515,24 +513,19 @@ pub fn build(b: *std.Build) void {
     });
 
     // Platform specific headers
-    if ( target.result.os.tag == .windows ) {
-        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{
-            .include_extensions = &.{
-                "dbus-transport-win.h",
-                "dbus-sockets-win.h",
-                "dbus-sysdeps-win.h",
-            }
-        });
-    }
-    else {
-        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{
-            .include_extensions = &.{
-                "dbus-transport-unix.h",
-                "dbus-server-unix.h",
-                "dbus-sysdeps-unix.h",
-                "dbus-userdb.h",
-            }
-        });
+    if (target.result.os.tag == .windows) {
+        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{ .include_extensions = &.{
+            "dbus-transport-win.h",
+            "dbus-sockets-win.h",
+            "dbus-sysdeps-win.h",
+        } });
+    } else {
+        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{ .include_extensions = &.{
+            "dbus-transport-unix.h",
+            "dbus-server-unix.h",
+            "dbus-sysdeps-unix.h",
+            "dbus-userdb.h",
+        } });
     }
 
     // b.installArtifact(dbus);
@@ -562,10 +555,7 @@ pub fn build(b: *std.Build) void {
     avahi.root_module.addCMacro("HAVE_CONFIG_H", "1");
     avahi.root_module.addCMacro("HAVE_STRLCPY", "1");
 
-    const avahi_config_h = b.addConfigHeader(
-        .{.style = .blank, .include_path = "config.h"},
-        .{}
-    );
+    const avahi_config_h = b.addConfigHeader(.{ .style = .blank, .include_path = "config.h" }, .{});
 
     // const avahi_config_h = b.addConfigHeader(.{
     //   .style = .{ .autoconf = avahi_c.path("config.h.in") },
@@ -765,12 +755,12 @@ pub fn build(b: *std.Build) void {
             "avahi-compat-libdns_sd/warn.c",
             "avahi-compat-libdns_sd/unsupported.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
-    avahi.installHeader(
-        avahi_c.path("avahi-compat-libdns_sd/dns_sd.h"),
-        "dns_sd.h"
-    );
+    avahi.installHeader(avahi_c.path("avahi-compat-libdns_sd/dns_sd.h"), "dns_sd.h");
 
     b.installArtifact(avahi);
 }

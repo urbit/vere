@@ -25,6 +25,7 @@ pub fn build(b: *std.Build) !void {
     defer uv_flags.deinit();
 
     try uv_flags.appendSlice(&.{
+        "-fno-sanitize=all",
         "-DHAVE_STDIO_H=1",
         "-DHAVE_STDLIB_H=1",
         "-DHAVE_STRING_H=1",
