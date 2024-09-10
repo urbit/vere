@@ -2192,7 +2192,7 @@ _cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
 static void
 _cm_free2(void* tox_v, size_t siz_i)
 {
-  free(tox_v);
+  u3a_free(tox_v);
 }
 
 /* u3m_init(): start the environment.
