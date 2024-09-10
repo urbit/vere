@@ -1347,7 +1347,8 @@ _mesa_send_bufs(u3_mesa* sam_u,
                 c3_w len_w,
                 u3_noun las)
 {
-  u3_noun lan, t = las;
+  u3_noun lan, t = u3qdi_tap(las);
+
   while ( t != u3_nul ) {
     u3x_cell(t, &lan, &t);
     u3_lane lan_u = _realise_lane(u3k(lan));
@@ -1363,7 +1364,7 @@ _mesa_send_bufs(u3_mesa* sam_u,
       }
     }
   }
-  u3z(las);
+  u3z(las); u3z(lan);
 }
 
 static void
@@ -1488,13 +1489,13 @@ _mesa_queue_czar(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       u3_czar_info* imp_u = &sam_u->imp_u[lan];
 
       if ( 0 != imp_u->pip_w ) {
-        res = u3nc(u3nt(c3__if, u3i_word(imp_u->pip_w), _ames_czar_port(lan)), res);
+        res = u3qdi_put(res, u3nt(c3__if, u3i_word(imp_u->pip_w), _ames_czar_port(lan)));
       }
       if ( c3y == u3_Host.ops_u.net ) {
         _mesa_resolve_czar(sam_u, lan, u3k(pac));
       }
     } else {
-      res = u3nc(u3k(lan), res);
+      res = u3qdi_put(res, u3k(lan));
     }
   }
   u3z(las);
@@ -1563,10 +1564,11 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_lane lan_u)
   u3_noun lan = u3_mesa_encode_lane(lan_u);
   u3_weak pin = _mesa_get_pit(sam_u, nam_u);
   if ( u3_none == pin ) {
-    pin = u3nt(c3n, u3k(lan), u3_nul);
+    pin = u3nc(c3n, u3nt(u3k(lan), u3_nul, u3_nul));
   }
   else {
-    pin = u3nt(u3k(u3h(pin)), u3k(lan), u3k(u3t(pin)));
+    pin = //u3qdi_put(pin, u3nt(u3k(u3h(pin)), u3k(lan), u3k(u3t(pin))));
+          u3nc(u3h(pin), u3qdi_put(u3t(pin), u3k(lan)));
   }
   _mesa_put_pit(sam_u, nam_u, u3k(pin));
   u3z(lan); u3z(pin);
