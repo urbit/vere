@@ -48,13 +48,29 @@ fn libcrypto(
     lib.addIncludePath(b.path("gen/include/crypto"));
     lib.addIncludePath(b.path("gen/include/openssl"));
 
+    lib.defineCMacro("_REENTRANT", null);
+    lib.defineCMacro("NDEBUG", null);
+    lib.defineCMacro("L_ENDIAN", null);
+    lib.defineCMacro("OPENSSL_PIC", null);
+    // lib.defineCMacro("OPENSSL_CPUID_OBJ", null);
+    // lib.defineCMacro("OPENSSL_BN_ASM_MONT", null);
+    // lib.defineCMacro("SHA1_ASM", null);
+    // lib.defineCMacro("SHA256_ASM", null);
+    // lib.defineCMacro("SHA512_ASM", null);
+    // lib.defineCMacro("KECCAK1600_ASM", null);
+    // lib.defineCMacro("VPAES_ASM", null);
+    // lib.defineCMacro("ECP_NISTZ256_ASM", null);
+    // lib.defineCMacro("POLY1305_ASM", null);
+    lib.defineCMacro("OPENSSLDIR", "\"/usr/local/lib/engines-1.1\"");
+    lib.defineCMacro("ENGINESDIR", "\"/usr/local/ssl\"");
+
     // lib.defineCMacro("OPENSSL_NO_DEPRECATED", null);
     // lib.defineCMacro("OPENSSL_NO_ENGINE", null);
     // lib.defineCMacro("OPENSSL_NO_SRP", null);
     // lib.defineCMacro("OPENSSL_NO_UI_CONSOLE", null);
     lib.defineCMacro("OPENSSL_NO_ASAN", null);
     lib.defineCMacro("OPENSSL_NO_UBSAN", null);
-    // lib.defineCMacro("OPENSSL_NO_ASM", null);
+    lib.defineCMacro("OPENSSL_NO_ASM", null);
     // lib.defineCMacro("OPENSSL_NO_KTLS", null);
     // lib.defineCMacro("OPENSSL_NO_QUIC", null);
     // lib.defineCMacro("OPENSSL_NO_THREAD_POOL", null);
@@ -64,8 +80,8 @@ fn libcrypto(
     if (t.isMinGW())
         lib.defineCMacro("NOCRYPT", "1");
 
-    if (t.os.tag.isDarwin())
-        lib.linkFramework("CoreServices");
+    // if (t.os.tag.isDarwin())
+    //     lib.linkFramework("CoreServices");
 
     // lib.addCSourceFiles(.{
     //     .root = dep.path(""),
@@ -499,6 +515,7 @@ fn libcrypto(
             "crypto/mdc2/mdc2dgst.c",
             "crypto/mem.c",
             "crypto/mem_dbg.c",
+            "crypto/mem_clr.c",
             "crypto/mem_sec.c",
             "crypto/modes/cbc128.c",
             "crypto/modes/ccm128.c",
@@ -618,6 +635,7 @@ fn libcrypto(
             "crypto/sha/sha1dgst.c",
             "crypto/sha/sha256.c",
             "crypto/sha/sha512.c",
+            "crypto/sha/keccak1600.c",
             "crypto/siphash/siphash.c",
             "crypto/siphash/siphash_ameth.c",
             "crypto/siphash/siphash_pmeth.c",
@@ -733,43 +751,30 @@ fn libcrypto(
             "crypto/x509v3/v3_tlsf.c",
             "crypto/x509v3/v3_utl.c",
             "crypto/x509v3/v3err.c",
-        },
-        .flags = &(cflags ++ .{
-            "-DL_ENDIAN",
-            "-DOPENSSL_PIC",
-            "-DOPENSSL_CPUID_OBJ",
-            "-DOPENSSL_BN_ASM_MONT",
-            "-DSHA1_ASM",
-            "-DSHA256_ASM",
-            "-DSHA512_ASM",
-            "-DKECCAK1600_ASM",
-            "-DVPAES_ASM",
-            "-DECP_NISTZ256_ASM",
-            "-DPOLY1305_ASM",
-            "-DOPENSSLDIR=\"\"",
-            "-DENGINESDIR=\"\"",
-            // "-arch arm64",
-        }),
-    });
 
-    lib.addCSourceFiles(.{
-        .root = b.path("gen"),
-        .files = &.{
-            "crypto/aes/aesv8-armx.S",
-            "crypto/aes/vpaes-armv8.S",
-            "crypto/arm64cpuid.S",
-            "crypto/bn/armv8-mont.S",
-            "crypto/chacha/chacha-armv8.S",
-            "crypto/ec/ecp_nistz256-armv8.S",
-            "crypto/modes/ghashv8-armx.S",
-            "crypto/poly1305/poly1305-armv8.S",
-            "crypto/sha/keccak1600-armv8.S",
-            "crypto/sha/sha1-armv8.S",
-            "crypto/sha/sha256-armv8.S",
-            "crypto/sha/sha512-armv8.S",
+            "crypto/chacha/chacha_enc.c",
         },
         .flags = &(cflags ++ .{}),
     });
+
+    // lib.addCSourceFiles(.{
+    //     .root = b.path("gen"),
+    //     .files = &.{
+    //         "crypto/aes/aesv8-armx.S",
+    //         "crypto/aes/vpaes-armv8.S",
+    //         "crypto/arm64cpuid.S",
+    //         "crypto/bn/armv8-mont.S",
+    //         "crypto/chacha/chacha-armv8.S",
+    //         "crypto/ec/ecp_nistz256-armv8.S",
+    //         "crypto/modes/ghashv8-armx.S",
+    //         "crypto/poly1305/poly1305-armv8.S",
+    //         "crypto/sha/keccak1600-armv8.S",
+    //         "crypto/sha/sha1-armv8.S",
+    //         "crypto/sha/sha256-armv8.S",
+    //         "crypto/sha/sha512-armv8.S",
+    //     },
+    //     .flags = &(cflags ++ .{}),
+    // });
 
     lib.installHeadersDirectory(dep.path("include/crypto"), "crypto", .{});
     lib.installHeadersDirectory(dep.path("include/internal"), "internal", .{});
@@ -811,6 +816,23 @@ fn libssl(
     lib.addIncludePath(dep.path("include/openssl"));
     lib.addIncludePath(b.path("gen/include"));
     lib.addIncludePath(b.path("gen/include/openssl"));
+
+    lib.defineCMacro("OPENSSL_NO_ASM", null);
+    lib.defineCMacro("_REENTRANT", null);
+    lib.defineCMacro("NDEBUG", null);
+    lib.defineCMacro("L_ENDIAN", null);
+    lib.defineCMacro("OPENSSL_PIC", null);
+    // lib.defineCMacro("OPENSSL_CPUID_OBJ", null);
+    // lib.defineCMacro("OPENSSL_BN_ASM_MONT", null);
+    // lib.defineCMacro("SHA1_ASM", null);
+    // lib.defineCMacro("SHA256_ASM", null);
+    // lib.defineCMacro("SHA512_ASM", null);
+    // lib.defineCMacro("KECCAK1600_ASM", null);
+    // lib.defineCMacro("VPAES_ASM", null);
+    // lib.defineCMacro("ECP_NISTZ256_ASM", null);
+    // lib.defineCMacro("POLY1305_ASM", null);
+    lib.defineCMacro("OPENSSLDIR", "\"/usr/local/lib/engines-1.1\"");
+    lib.defineCMacro("ENGINESDIR", "\"/usr/local/ssl\"");
 
     lib.addCSourceFiles(.{
         .root = dep.path(""),
@@ -870,15 +892,17 @@ fn libssl(
 }
 
 const cflags = .{
-    "-fno-sanitize=all",
-    "-std=gnu89",
-    "-Wno-unknown-warning-option",
-    "-Wswitch-default",
-    "-Wno-parentheses-equality",
-    "-Wno-language-extension-token",
-    "-Wno-extended-offsetof",
-    "-Wconditional-uninitialized",
-    "-Wincompatible-pointer-types-discards-qualifiers",
-    "-Wmissing-variable-declarations",
-    "-Wno-int-conversion",
+    // "-fno-sanitize=all",
+    // "-std=gnu89",
+    // "-Wno-unknown-warning-option",
+    // "-Wswitch-default",
+    // "-Wno-parentheses-equality",
+    // "-Wno-language-extension-token",
+    // "-Wno-extended-offsetof",
+    // "-Wconditional-uninitialized",
+    // "-Wincompatible-pointer-types-discards-qualifiers",
+    // "-Wmissing-variable-declarations",
+    // "-Wno-int-conversion",
+    "-arch",
+    "arm64",
 };
