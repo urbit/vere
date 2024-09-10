@@ -26,7 +26,11 @@
       c3_w     len_w = c3_max(lna_w, lnb_w);
       c3_w       i_w;
       u3i_slab sab_u;
+#ifdef VERE_64
+      u3i_slab_from(&sab_u, a, 6, len_w);
+#else
       u3i_slab_from(&sab_u, a, 5, len_w);
+#endif
 
       //  XX use u3r_chop for XOR?
       //

@@ -1294,10 +1294,14 @@ c3_d
 u3r_chub(c3_w  a_w,
            u3_atom b)
 {
+#ifdef VERE_64
+  return u3r_word(a_w, b);
+#else
   c3_w wlo_w = u3r_word(a_w * 2, b);
   c3_w whi_w = u3r_word(1 + (a_w * 2), b);
 
   return (((uint64_t)whi_w) << 32ULL) | ((uint64_t)wlo_w);
+#endif
 }
 
 /* u3r_words():
@@ -1319,23 +1323,41 @@ u3r_words(c3_w    a_w,
   if ( _(u3a_is_cat(d)) ) {
     if ( a_w == 0 ) {
       *c_w = d;
+#ifdef VERE_64
+      memset((c3_y*)(c_w + 1), 0, (b_w - 1) << 3);
+#else
       memset((c3_y*)(c_w + 1), 0, (b_w - 1) << 2);
+#endif
     }
     else {
+#ifdef VERE_64
+      memset((c3_y*)c_w, 0, b_w << 3);
+#else
       memset((c3_y*)c_w, 0, b_w << 2);
+#endif
     }
   }
   else {
     u3a_atom* d_u = u3a_to_ptr(d);
     if ( a_w >= d_u->len_w ) {
+#ifdef VERE_64
+      memset((c3_y*)c_w, 0, b_w << 3);
+#else
       memset((c3_y*)c_w, 0, b_w << 2);
+#endif
     }
     else {
       c3_w z_w = c3_min(b_w, d_u->len_w - a_w);
       c3_w* x_w = d_u->buf_w + a_w;
+#ifdef VERE_64
+      memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 3);
+      if ( b_w > d_u->len_w - a_w ) {
+        memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 3);
+#else
       memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 2);
       if ( b_w > d_u->len_w - a_w ) {
         memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 2);
+#endif
       }
     }
   }
@@ -1487,7 +1509,7 @@ u3r_chop_bits(c3_g  bif_g,
       hig_w   ^= src_w[1] << fib_y;
     }
 
-    *dst_w    ^= (hig_w & ((1 << wid_d) - 1)) << bit_g;
+    *dst_w    ^= (hig_w & ((1ULL << wid_d) - 1)) << bit_g;
   }
 }
 
@@ -1760,12 +1782,16 @@ u3r_mug_cell(u3_noun hed,
 c3_l
 u3r_mug_chub(c3_d num_d)
 {
+#ifdef VERE_64
+  return u3r_mug_words((c3_w*)&num_d, 1);
+#else
   c3_w buf_w[2];
 
   buf_w[0] = (c3_w)(num_d & 0xffffffffULL);
   buf_w[1] = (c3_w)(num_d >> 32);
 
   return u3r_mug_words(buf_w, 2);
+#endif
 }
 
 /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
