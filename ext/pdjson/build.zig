@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
         .root = dep_c.path("."),
         .files = &.{"pdjson.c"},
         .flags = &.{
+            "-fno-sanitize=all",
             "-std=c99",
             "-pedantic",
             "-Wall",

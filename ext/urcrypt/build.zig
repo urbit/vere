@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) void {
             "util.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-g",
             "-O3",
             "-Wall",
@@ -98,6 +99,7 @@ fn libsecp256k1(
             "secp256k1.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-g",
             "-O2",
             "-std=c89",
@@ -152,6 +154,7 @@ fn libargon2(
     lib.linkLibC();
 
     const flags = .{
+        "-fno-sanitize=all",
         "-Wno-unused-value",
         "-Wno-unused-function",
     };
@@ -228,7 +231,10 @@ fn libblake3(
         lib.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
             .files = &(common_files ++ .{"blake3_neon.c"}),
-            .flags = &.{"-DBLAKE3_USE_NEON=1"},
+            .flags = &.{
+                "-fno-sanitize=all",
+                "-DBLAKE3_USE_NEON=1",
+            },
         });
     }
 
@@ -273,6 +279,7 @@ fn libed25519(
             "src/verify.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-Wno-unused-result",
         },
     });
@@ -309,6 +316,7 @@ fn libge_additions(
         .root = dep_c.path("ge-additions"),
         .files = &.{"ge-additions.c"},
         .flags = &.{
+            "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
             "-std=gnu99",
@@ -344,6 +352,7 @@ fn libkeccak_tiny(
         .root = dep_c.path("keccak-tiny"),
         .files = &.{"keccak-tiny.c"},
         .flags = &.{
+            "-fno-sanitize=all",
             "-std=c11",
             "-Wextra",
             "-Wpedantic",
@@ -390,7 +399,10 @@ fn libscrypt(
             "sha256.c",
             "slowequals.c",
         },
-        .flags = &.{"-D_FORTIFY_SOURCE=2"},
+        .flags = &.{
+            "-fno-sanitize=all",
+            "-D_FORTIFY_SOURCE=2",
+        },
     });
 
     lib.installHeader(dep_c.path("scrypt/libscrypt.h"), "libscrypt.h");

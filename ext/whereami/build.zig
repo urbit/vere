@@ -22,7 +22,10 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFiles(.{
         .root = dep_c.path("src"),
         .files = &.{"whereami.c"},
-        .flags = &.{"-O3"},
+        .flags = &.{
+            "-fno-sanitize=all",
+            "-O3",
+        },
     });
 
     lib.installHeader(dep_c.path("src/whereami.h"), "whereami.h");

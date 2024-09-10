@@ -53,6 +53,9 @@ pub fn build(b: *std.Build) !void {
     cloexec.addCSourceFiles(.{
         .root = h2o_c.path("deps/cloexec"),
         .files = &.{"cloexec.c"},
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     cloexec.installHeader(h2o_c.path("deps/cloexec/cloexec.h"), "cloexec.h");
@@ -88,6 +91,9 @@ pub fn build(b: *std.Build) !void {
             "kthread.c",
             "kurl.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
     klib.addCSourceFiles(.{
         .root = patches.path("h2o-2.2.6/deps/klib"),
@@ -96,6 +102,7 @@ pub fn build(b: *std.Build) !void {
             "kopen.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             if (t.cpu.arch == .aarch64)
                 "-DURBIT_RUNTIME_CPU_AARCH64"
             else
@@ -120,6 +127,9 @@ pub fn build(b: *std.Build) !void {
     libgkc.addCSourceFiles(.{
         .root = h2o_c.path("deps/libgkc"),
         .files = &.{"gkc.c"},
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     libgkc.installHeader(h2o_c.path("deps/libgkc/gkc.h"), "gkc.h");
@@ -151,6 +161,7 @@ pub fn build(b: *std.Build) !void {
             // "yc.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-Wall",
             "-Wconversion",
             "-gdwarf-3",
@@ -229,6 +240,9 @@ pub fn build(b: *std.Build) !void {
             "drbg.c",
             "ocb.c",
         },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
     });
 
     cifra.installHeadersDirectory(h2o_c.path("deps/picotls/deps/cifra/src"), "", .{
@@ -282,6 +296,7 @@ pub fn build(b: *std.Build) !void {
             "uecc.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-std=c99",
             "-Wall",
             "-O2",
@@ -409,6 +424,7 @@ pub fn build(b: *std.Build) !void {
             "tunnel.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-std=c99",
             "-g3",
             "-O2",

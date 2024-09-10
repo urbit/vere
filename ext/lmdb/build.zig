@@ -26,6 +26,7 @@ pub fn build(b: *std.Build) void {
             "midl.c",
         },
         .flags = &.{
+            "-fno-sanitize=all",
             "-pthread",
             "-O2",
             "-g",

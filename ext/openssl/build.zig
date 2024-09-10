@@ -870,6 +870,7 @@ fn libssl(
 }
 
 const cflags = .{
+    "-fno-sanitize=all",
     "-std=gnu89",
     "-Wno-unknown-warning-option",
     "-Wswitch-default",

@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(dep_c.path("source/include"));
 
     const flags = .{
+        "-fno-sanitize=all",
         "-g",
         "-O2",
     };
