@@ -15,7 +15,6 @@ c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);
 static void
 _setup(void)
 {
-
   c3_d          len_d = u3_Ivory_pill_len;
   c3_y*         byt_y = u3_Ivory_pill;
   u3_cue_xeno*  sil_u;
@@ -33,11 +32,6 @@ _setup(void)
     printf("*** fail _setup 2\n");
     exit(1);
   }
-
-
-  // u3m_init(1 << 26);
-  // u3m_pave(c3y);
-
 }
 
 
@@ -70,6 +64,7 @@ main(int argc, char* argv[])
                                           )
                                       ))))))));
   u3h_put(pit_p, init, u3nc(c3y, u3_nul));
+  u3z(init);
 
   for ( c3_w fra_w = 0; fra_w < 100000; fra_w++ ) {
     u3_noun data = u3nc(u3i_string("mess"),
@@ -97,6 +92,7 @@ main(int argc, char* argv[])
                       );
 
     u3h_put(pit_p, data, u3nc(c3y, u3_nul));
+    u3z(data);
   }
 
   for ( c3_w fra_w = 0; fra_w < 100000; fra_w++ ) {
@@ -123,12 +119,17 @@ main(int argc, char* argv[])
                           )
                         )
                       );
-     u3_weak res = u3h_get(pit_p, data);
+     u3_weak res = u3h_git(pit_p, data);
      if (res == u3_none) {
         fprintf(stderr, "key gone from hamt %u: not ok\r\n", fra_w);
         exit(1);
      }
+     u3z(data);
   }
+
+  u3h_free(pit_p);
+
+  u3m_grab(u3_none);
 
   fprintf(stderr, "test unix: ok\r\n");
   return 0;
