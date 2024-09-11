@@ -718,6 +718,8 @@ pub fn build(b: *std.Build) !void {
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(whereami.artifact("whereami"));
 
+    urbit.stack_size = 0;
+
     var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
     defer urbit_flags.deinit();
 
