@@ -753,6 +753,8 @@ fn libcrypto(
             "crypto/x509v3/v3err.c",
 
             "crypto/chacha/chacha_enc.c",
+            "engines/e_capi.c",
+            "engines/e_padlock.c",
         },
         .flags = &(cflags ++ .{}),
     });
