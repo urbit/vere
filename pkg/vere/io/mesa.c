@@ -1918,10 +1918,10 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
 
-  if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
-    dat_u->aut_u.typ_e = AUTH_NONE;
-  } else if ( 0 == nam_u->fra_d ) {
+  if ( 0 == nam_u->fra_d ) {  // XX
     _mesa_copy_auth_data(&dat_u->aut_u, &lin_u->aut_u);
+  } else if ( 0 == memcmp(pair, &(lss_pair){0}, sizeof(lss_pair)) ) {
+    dat_u->aut_u.typ_e = AUTH_NONE;
   }else {
     dat_u->aut_u.typ_e = AUTH_PAIR;
     memcpy(dat_u->aut_u.has_y, pair, sizeof(lss_pair));
@@ -1978,9 +1978,10 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
     nam_u->nit_o = c3y;
     u3_weak pin = _mesa_get_pit(sam_u, nam_u);
     if ( u3_none != pin ) {
+      //  XX lss_proof_size always returns >= 1
       //  if the initial Merkle proof is nonzero, this is a multifragment
       //  message; send auth response to the %init request
-      if ( pro_w > 0 ) {
+      if ( pro_w > 1 ) {
         dat_u->len_w = pro_w * sizeof(lss_hash);
         c3_y* pro_y = c3_malloc(dat_u->len_w);
         memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
