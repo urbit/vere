@@ -1631,8 +1631,9 @@ u3a_wed(u3_noun* a, u3_noun* b)
     //    cause a very slow boot process as the compiler compiles
     //    itself, constantly running into duplicates.
     //
-    while ( (rod_u != &u3H->rod_u) &&
-            (c3n == _ca_wed_who(rod_u, a, b)) )
+    // while ( (rod_u != &u3H->rod_u) &&
+    while ( (c3n == _ca_wed_who(rod_u, a, b))  // XX temporarily enable home road unification
+          && rod_u->par_p )
     {
 #ifdef U3_MEMORY_DEBUG
       break;

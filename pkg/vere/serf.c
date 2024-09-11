@@ -967,7 +967,6 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
     ret_o = c3n;
   }
   else {
-    u3m_p("tag", tag);
     switch ( tag ) {
       default: {
         ret_o = c3n;
