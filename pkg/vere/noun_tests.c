@@ -167,7 +167,12 @@ _test_u3r_chop()
 
     c3_w dst_w[2] = {0};
     u3r_chop(0, 0, 63, 0, dst_w, src);
+#ifdef VERE_64
+    c3_w gud_w = 0x706050403020100;
+    if ( gud_w != dst_w[0] ) {
+#else
     if ( (0x3020100 != dst_w[0]) || (0x7060504 != dst_w[1]) ) {
+#endif
       fprintf(stderr, "test: u3r_chop: indirect 4\r\n");
       ret_i = 0;
     }
@@ -192,6 +197,7 @@ _test_u3r_chop()
     u3z(src);
   }
 
+  fprintf(stderr, "u3r_chop: %s\r\n", (ret_i) ? "ok" : "bad");
   return ret_i;
 }
 
@@ -282,22 +288,23 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
             c3_w max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w >> sif_g) + !!(wid_w & mas_w);
 
-            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
-                            cap_c, val_y,
-                            met_g, fum_w, wid_w, tou_w);
+            // fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
+            //                 cap_c, val_y,
+            //                 met_g, fum_w, wid_w, tou_w);
 
 
-            fprintf(stderr, "%u-%u: ", out_w, max_w - 1);
-            for ( ; out_w < max_w; out_w++ ) {
-              fprintf(stderr, "[0x%x 0x%x] ", a_w[out_w], b_w[out_w]);
-            }
-            fprintf(stderr, "\r\n");
+            // fprintf(stderr, "%u-%u: ", out_w, max_w - 1);
+            // for ( ; out_w < max_w; out_w++ ) {
+              // fprintf(stderr, "[0x%x 0x%x] ", a_w[out_w], b_w[out_w]);
+            // }
+            // fprintf(stderr, "\r\n");
           }
         }
       }
     }
   }
 
+  fprintf(stderr, "chop_smol %s: %s\r\n", cap_c, (ret_i) ? "ok" : "bad");
   return ret_i;
 }
 
@@ -332,22 +339,23 @@ _test_chop_huge(c3_c* cap_c, c3_y val_y)
             c3_w max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w << sif_g) + !!(wid_w & mas_w);
 
-            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
-                            cap_c, val_y,
-                            met_g, fum_w, wid_w, tou_w);
+            // fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
+            //                 cap_c, val_y,
+            //                 met_g, fum_w, wid_w, tou_w);
 
 
-            fprintf(stderr, "%u-%u: ", out_w, max_w - 1);
-            for ( ; out_w < max_w; out_w++ ) {
-              fprintf(stderr, "[0x%x 0x%x] ", a_w[out_w], b_w[out_w]);
-            }
-            fprintf(stderr, "\r\n");
+            // fprintf(stderr, "%u-%u: ", out_w, max_w - 1);
+            // for ( ; out_w < max_w; out_w++ ) {
+            //   fprintf(stderr, "[0x%x 0x%x] ", a_w[out_w], b_w[out_w]);
+            // }
+            // fprintf(stderr, "\r\n");
           }
         }
       }
     }
   }
 
+  fprintf(stderr, "chop_huge %s: %s\r\n", cap_c, (ret_i) ? "ok" : "bad");
   return ret_i;
 }
 
@@ -430,7 +438,11 @@ _test_noun_bits_set()
   u3_noun a = 1;
 
   // flip indirect bit on
+#ifdef VERE_64
+  a |= (1ULL << 63);
+#else
   a |= (1 << 31);
+#endif
   if ( c3n == u3a_is_dog(a) ) {
     printf("*** fail-5a turn indirect bit on\r\n");
   }

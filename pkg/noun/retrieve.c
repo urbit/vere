@@ -1375,7 +1375,11 @@ u3r_chubs(c3_w    a_w,
 {
   /* XX: assumes little-endian
   */
+#ifdef VERE_64
+  u3r_words(a_w, b_w, (c3_w *)c_d, d);
+#else
   u3r_words(a_w * 2, b_w * 2, (c3_w *)c_d, d);
+#endif
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
