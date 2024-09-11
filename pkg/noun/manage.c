@@ -1556,7 +1556,11 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_c buf_c[6];
       c3_w len_w;
 
+#ifdef VERE_64
+      snprintf(buf_c, 6, "%lu", som);
+#else
       snprintf(buf_c, 6, "%d", som);
+#endif
       len_w = strlen(buf_c);
 
       if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
