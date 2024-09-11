@@ -370,11 +370,11 @@ _serialize(json_buffer *buf_u, u3_noun a)
 
     switch ( s ) {
       default: u3_assert(0);
-      case c3__a: _serialize_array(buf_u, p);
-      case c3__o: _serialize_object(buf_u, p);
-      case c3__b: _serialize_loobean(buf_u, p);
-      case c3__n: _serialize_number(buf_u, p);
-      case c3__s: _serialize_string(buf_u, p);
+      case c3__a: _serialize_array(buf_u, p);   break;
+      case c3__o: _serialize_object(buf_u, p);  break;
+      case c3__b: _serialize_loobean(buf_u, p); break;
+      case c3__n: _serialize_number(buf_u, p);  break;
+      case c3__s: _serialize_string(buf_u, p);  break;
     }
   }
 }
