@@ -268,13 +268,19 @@ u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
     _ch_slot_put(sot_w, kev, 25, rem_w, &(har_u->use_w));
   }
 
-  if ( har_u->max_w > 0 ) {
-    return _ch_trim_root(har_u);
-  }
-  else {
-    return u3_none;
-  }
+  {
+    u3_weak ret = u3_none;
 
+    if ( har_u->max_w && (har_u->use_w > har_u->max_w) ) {
+      do {
+        ret = _ch_trim_root(har_u);
+      }
+      while ( u3_none == ret );
+      har_u->use_w -= 1;
+    }
+
+    return ret;
+  }
 }
 
 /* u3h_put(): insert in hashtable.
