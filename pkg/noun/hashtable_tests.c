@@ -11,7 +11,7 @@ c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);
 static void
 _setup(void)
 {
-  u3m_init(1 << 26);
+  u3m_init(1 << 27);
   u3m_pave(c3y);
 }
 
@@ -30,7 +30,7 @@ _test_put_del()
     u3h_put(har_p, key, val);
     u3z(key);
   }
-  fprintf(stderr, "inserted");
+  // fprintf(stderr, "inserted\r\n");
 
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
@@ -42,15 +42,15 @@ _test_put_del()
     u3z(key);
     u3z(val);
   }
-  fprintf(stderr, "presence");
-   c3_w del_w[4] = {30, 82, 4921, 535};
+  // fprintf(stderr, "presence\r\n");
+  c3_w del_w[4] = {30, 82, 4921, 535};
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
     u3_noun key = u3i_word(del_w[i_w]);
     u3h_del(har_p, key);
     u3z(key);
   }
-  fprintf(stderr, "deleted");
+  // fprintf(stderr, "deleted\r\n");
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
     u3_noun key = u3i_word(del_w[i_w]);
@@ -61,9 +61,9 @@ _test_put_del()
       break;
     }
   }
-  fprintf(stderr, "presence two");
+  // fprintf(stderr, "presence two\r\n");
   u3h_free(har_p);
-  fprintf(stderr, "freed");
+  // fprintf(stderr, "freed\r\n");
 
   return ret_i;
 }
