@@ -250,11 +250,13 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
 
   if( u3_nul != dat ) {
     _lord_plea_foul(god_u, c3__live, dat);
+    return;
   }
 
   switch ( wit_u->typ_e ) {
     default: {
       _lord_plea_foul(god_u, c3__live, dat);
+      return;
     } break;
 
     case u3_writ_save: {
@@ -359,6 +361,7 @@ _lord_plea_flog(u3_lord* god_u, u3_noun dat)
 
   if ( c3n == u3a_is_atom(dat) ) {
     _lord_plea_foul(god_u, c3__flog, dat);
+    return;
   }
 
   c3_c* tan_c = u3r_string(dat);
@@ -425,11 +428,13 @@ _lord_plea_peek(u3_lord* god_u, u3_noun dat)
 
   if ( c3n == u3a_is_cell(dat) ) {
     _lord_plea_foul(god_u, c3__peek, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
     default: {
       _lord_plea_foul(god_u, c3__peek, dat);
+      return;
     }
 
     case c3__done: {
@@ -481,6 +486,7 @@ _lord_plea_play_done(u3_lord* god_u, u3_info fon_u, u3_noun dat)
   if ( c3n == u3r_safe_word(dat, &mug_l) ) {
     fprintf(stderr, "lord: invalid %%play\r\n");
     _lord_plea_foul(god_u, c3__done, dat);
+    return;
   }
 
   god_u->eve_d = fon_u.ent_u->eve_d;
@@ -505,11 +511,13 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
 
   if ( c3n == u3a_is_cell(dat) ) {
     _lord_plea_foul(god_u, c3__play, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
     default: {
       _lord_plea_foul(god_u, c3__play, dat);
+      return;
     }
 
     case c3__done: {
@@ -605,6 +613,7 @@ _lord_plea_work_swap(u3_lord* god_u, u3_ovum* egg_u, u3_noun dat)
     u3_ovum_free(egg_u);
     fprintf(stderr, "lord: invalid %%work\r\n");
     _lord_plea_foul(god_u, c3__swap, dat);
+    return;
   }
   else {
     u3k(job); u3k(act);
@@ -633,6 +642,7 @@ _lord_plea_work_done(u3_lord* god_u,
     u3_ovum_free(egg_u);
     fprintf(stderr, "lord: invalid %%work\r\n");
     _lord_plea_foul(god_u, c3__done, dat);
+    return;
   }
   else {
     u3k(act);
@@ -660,6 +670,7 @@ _lord_plea_work(u3_lord* god_u, u3_noun dat)
     u3z(job);
     u3_ovum_free(egg_u);
     _lord_plea_foul(god_u, c3__work, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
@@ -667,6 +678,7 @@ _lord_plea_work(u3_lord* god_u, u3_noun dat)
       u3z(job);
       u3_ovum_free(egg_u);
       _lord_plea_foul(god_u, c3__work, dat);
+      return;
     } break;
 
     case c3__done: {
@@ -718,6 +730,7 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   switch ( tag ) {
     default: {
       _lord_plea_foul(god_u, 0, jar);
+      return;
     }
 
     case c3__work: {
