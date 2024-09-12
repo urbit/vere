@@ -24,7 +24,6 @@ pub fn build(b: *std.Build) void {
         .files = &.{"whereami.c"},
         .flags = &.{
             "-fno-sanitize=all",
-            "-O3",
         },
     });
 

@@ -127,6 +127,7 @@ pub fn build(b: *std.Build) void {
             "version.c",
         },
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
         },
     });
