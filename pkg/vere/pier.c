@@ -13,9 +13,6 @@
 
 #undef VERBOSE_PIER
 
-// XX
-u3_noun my_cache = u3_nul;
-
 /* _pier_peek_plan(): add a u3_pico to the peek queue
 */
 static void
@@ -970,7 +967,14 @@ _pier_play_send(u3_play* pay_u)
     fprintf(stderr, "pier: play send %" PRIu64 "-%" PRIu64 "\r\n", fon_u.ext_u->eve_d, fon_u.ent_u->eve_d);
 #endif
 
-    u3_lord_play(pir_u->god_u, fon_u);
+    // %play or %boot
+    //
+    if ( pir_u->god_u->eve_d ) {
+      u3_lord_play(pir_u->god_u, fon_u);
+    }
+    else {
+      u3_lord_boot(pir_u->god_u, pir_u->cax, fon_u);
+    }
   }
 }
 
@@ -1944,6 +1948,7 @@ _pier_boot_plan(u3_pier* pir_u,
 
     bot_u = _pier_boot_make(who, _pier_wyrd_card(pir_u), ven, pil, fed, mor);
     pir_u->lif_w = u3qb_lent(bot_u.bot);
+    pir_u->cax = u3k(bot_u.cax);
   }
 
   if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,
@@ -2011,7 +2016,6 @@ _pier_boot_plan(u3_pier* pir_u,
 
   u3_disk_boot_save(pir_u->log_u);
 
-  my_cache = u3k(bot_u.cax);
 
   u3z(bot_u.bot);
   u3z(bot_u.mod);
@@ -2051,13 +2055,6 @@ u3_pier_boot(c3_w  wag_w,                   //  config flags
 
   u3z(pax);
 
-
-  u3_writ* wit_u = _lord_writ_new(pir_u->god_u);
-  wit_u->typ_e = u3_writ_cash;
-  wit_u->cas = u3k(my_cache);
-  _lord_writ_plan(pir_u->god_u, wit_u);
-
-  u3l_log("finished lord_writ_plan");
   return pir_u;
 }
 

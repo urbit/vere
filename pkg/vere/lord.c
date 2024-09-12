@@ -20,7 +20,7 @@
               [%meld ~]
               [%pack ~]
       ==  ==
-      [%cash cax=(list [k=[s=* f=*] v=*])]
+      [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       [%work mil=@ job=(pair @da ovum)]
@@ -105,7 +105,7 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_meld:
     case u3_writ_pack:
     case u3_writ_exit:
-    case u3_writ_cash: {
+    case u3_writ_boot: {
     } break;
   }
 
@@ -203,7 +203,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
-    case u3_writ_cash: return "cash";  // required?
+    case u3_writ_boot: return "boot";  // required?
   }
 }
 
@@ -274,8 +274,8 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
       u3l_log("pier: meld complete");
     } break;
 
-    case u3_writ_cash: {
-      u3l_log("pier: cash complete");
+    case u3_writ_boot: {
+      u3l_log("pier: boot complete");  // XX
     } break;
 
     case u3_writ_pack: {
@@ -821,8 +821,16 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       msg = u3nt(c3__live, c3__exit, 0);
     } break;
 
-    case u3_writ_cash: {
-      msg = u3nc(c3__cash, u3k(wit_u->cas));
+    case u3_writ_boot: {
+      u3_fact* tac_u = wit_u->bot_u.fon_u.ext_u;
+      u3_noun    lit = u3_nul;
+
+      while ( tac_u ) {
+        lit   = u3nc(u3k(tac_u->job), lit);
+        tac_u = tac_u->nex_u;
+      }
+
+      msg = u3nt(c3__boot, wit_u->bot_u.cax, u3kb_flop(lit));
     } break;
   }
 
@@ -856,9 +864,6 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3t_event_trace("king ipc jam", 'E');
 #endif
 
-    if ( wit_u->typ_e == u3_writ_cash ) {
-      u3l_log("sending cash writ");
-    }
     u3_newt_send(&god_u->inn_u, len_d, byt_y);
     u3z(jar);
   }
@@ -920,6 +925,19 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 
   //  XX cache check, unless last
   //
+  _lord_writ_plan(god_u, wit_u);
+}
+
+/* u3_lord_boot(): boot.
+*/
+void
+u3_lord_boot(u3_lord* god_u, u3_noun cax, u3_info fon_u)
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_boot;
+  wit_u->bot_u.cax = cax;
+  wit_u->bot_u.fon_u = fon_u;
+
   _lord_writ_plan(god_u, wit_u);
 }
 

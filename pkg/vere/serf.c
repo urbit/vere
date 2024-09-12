@@ -23,9 +23,9 @@
               [%meld ~]
               [%pack ~]
       ==  ==
-      [%cash cax=(list [k=[s=* f=*] v=*])]
+      [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
-      [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      [%play eve=@ lit=(list (pair @da ovum))]
       [%work mil=@ job=(pair @da ovum)]
   ==
 ::  +plea: from serf to king
@@ -1026,12 +1026,14 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
       } break;
 
-      case c3__cash: {
-        u3l_log("serf_writ got cache here");
-        ret_o = c3y;
-        *pel = u3nc(c3__live, u3_nul);
+      case c3__boot: {
+        u3l_log("serf_writ got boot");
+        u3_assert( 0 == sef_u->dun_d );
 
-        u3_noun tmp = com;
+        // cache
+        //
+        u3_noun cax = u3h(com);
+        u3_noun tmp = cax;
         c3_o gud_o = c3y;
         while ( u3_nul != tmp ) {
           if ( c3n == u3a_is_cell(u3h(tmp)) || c3n == u3a_is_cell(u3h(u3h(tmp))) ) {
@@ -1045,13 +1047,25 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
         else {
           u3l_log("serf: got good cache");
-          while ( u3_nul != com ) {
+          while ( u3_nul != cax ) {
             u3l_log("saving 1");
-            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(com)), u3t(u3h(com)));
-            u3_weak foo = u3z_find_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(com)));
-            u3l_log("foo %x", foo);
-            com = u3t(com);
+            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)), u3t(u3h(cax)));
+            u3_weak foo = u3z_find_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)));
+            u3l_log("cache found %x", foo);
+            cax = u3t(cax);
           }
+        }
+
+        // play
+        //
+        u3_noun lit = u3t(com);
+
+        if (c3n == u3a_is_cell(lit)) {
+          ret_o = c3n;
+        }
+        else {
+          *pel = u3nc(c3__boot, _serf_play_life(sef_u, u3k(lit)));
+          ret_o = c3y;
         }
       } break;
     }

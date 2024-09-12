@@ -458,7 +458,7 @@
           u3_writ_meld = 5,
           u3_writ_pack = 6,
           u3_writ_exit = 7,
-          u3_writ_cash = 9
+          u3_writ_boot = 9
         } u3_writ_type;
 
       /* u3_writ: ipc message from king to serf
@@ -474,7 +474,10 @@
             u3_peek*       pek_u;               //  peek
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
-            u3_noun          cas;               //  cache
+            struct {
+              u3_noun        cax;               //  cache
+              u3_info      fon_u;               //  events
+            } bot_u;
           };
         } u3_writ;
 
@@ -685,6 +688,7 @@
           u3_save*         sav_u;               //  autosave
           //  XX end remove
           struct _u3_pier* nex_u;               //  next in list
+          u3_noun            cax;               //  cache
         } u3_pier;
 
       /* u3_king: all executing piers.
@@ -1143,6 +1147,11 @@
       */
         void
         u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job);
+
+      /* u3_lord_boot(): boot.
+      */
+        void
+        u3_lord_boot(u3_lord* god_u, u3_noun cax, u3_info fon_u);
 
       /* u3_lord_play(): recompute batch.
       */
