@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
 
     lib.linkLibC();
 
-    lib.addIncludePath(dep_c.path("src"));
+    lib.defineCMacro("HAVE_CONFIG_H", null);
 
     const config_h = b.addConfigHeader(.{
         .style = .{
@@ -99,8 +99,6 @@ pub fn build(b: *std.Build) void {
         });
     }
 
-    lib.addConfigHeader(config_h);
-
     const sigsegv_h = b.addConfigHeader(.{
         .style = .{
             .cmake = dep_c.path("src/sigsegv.h.in"),
@@ -115,6 +113,9 @@ pub fn build(b: *std.Build) void {
         .HAVE_SIGSEGV_RECOVERY = 1,
         .HAVE_STACK_OVERFLOW_RECOVERY = 1,
     });
+
+    lib.addIncludePath(dep_c.path("src"));
+    lib.addConfigHeader(config_h);
     lib.addConfigHeader(sigsegv_h);
 
     lib.addCSourceFiles(.{
