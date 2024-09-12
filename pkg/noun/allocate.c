@@ -901,6 +901,7 @@ u3a_cfree(c3_w* cel_w)
 
   if ( u3R == &(u3H->rod_u) ) {
     u3a_wfree(cel_w);
+    return;
   }
   else {
     u3a_box*      box_u = u3a_botox(cel_w);
