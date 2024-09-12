@@ -600,12 +600,6 @@ pub fn build(b: *std.Build) void {
         lib.root_module.addCMacro("SOFTFLOAT_FAST_DIV64TO32", "");
     }
 
-    if (t.os.tag.isDarwin()) {
-        lib.root_module.addCMacro("LITTLEENDIAN", "1");
-        lib.root_module.addCMacro("INLINE", "inline");
-        lib.root_module.addCMacro("THREAD_LOCAL", "_Thread_local");
-    }
-
     lib.installHeadersDirectory(dep_c.path("source/include"), "", .{
         .include_extensions = &.{".h"},
     });
