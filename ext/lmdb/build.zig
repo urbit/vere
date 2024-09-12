@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -19,23 +19,35 @@ pub fn build(b: *std.Build) void {
 
     lmdb.addIncludePath(lmdb_c.path("libraries/liblmdb"));
 
+    var flags = std.ArrayList([]const u8).init(b.allocator);
+    defer flags.deinit();
+
+    try flags.appendSlice(&.{
+        "-fno-sanitize=all",
+        "-pthread",
+        "-O2",
+        "-g",
+        "-W",
+        "-Wall",
+        "-Wno-unused-parameter",
+        "-Wbad-function-cast",
+        "-Wuninitialized",
+    });
+
+    if (target.result.os.tag.isDarwin()) {
+        try flags.appendSlice(&.{"-DURBIT_RUNTIME_OS_DARWIN"});
+    }
+
     lmdb.addCSourceFiles(.{
         .root = lmdb_c.path("libraries/liblmdb"),
-        .files = &.{
-            "mdb.c",
-            "midl.c",
-        },
-        .flags = &.{
-            "-fno-sanitize=all",
-            "-pthread",
-            "-O2",
-            "-g",
-            "-W",
-            "-Wall",
-            "-Wno-unused-parameter",
-            "-Wbad-function-cast",
-            "-Wuninitialized",
-        },
+        .files = &.{"midl.c"},
+        .flags = flags.items,
+    });
+
+    lmdb.addCSourceFiles(.{
+        .root = b.path("patches/lmdb-0.9.29"),
+        .files = &.{"mdb.c"},
+        .flags = flags.items,
     });
 
     lmdb.installHeader(lmdb_c.path("libraries/liblmdb/lmdb.h"), "lmdb/lmdb.h");
