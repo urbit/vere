@@ -156,7 +156,6 @@ pub fn build(b: *std.Build) !void {
         .files = &.{"ent.c"},
         .flags = &.{
             "-fno-sanitize=all",
-            "-O3",
             "-Wall",
             "-Werror",
             "-pedantic",
@@ -253,7 +252,6 @@ pub fn build(b: *std.Build) !void {
     try noun_flags.appendSlice(&.{
         "-fno-sanitize=all",
 
-        "-O3",
         "-g",
 
         "-Wall",
@@ -632,7 +630,6 @@ pub fn build(b: *std.Build) !void {
     try vere_flags.appendSlice(&.{
         "-fno-sanitize=all",
 
-        "-O3",
         "-g",
 
         "-Wall",
@@ -724,7 +721,6 @@ pub fn build(b: *std.Build) !void {
     defer urbit_flags.deinit();
 
     try urbit_flags.appendSlice(&.{
-        "-O3",
         "-g",
 
         "-Wall",

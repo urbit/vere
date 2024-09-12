@@ -61,7 +61,6 @@ pub fn build(b: *std.Build) void {
         .flags = &.{
             "-fno-sanitize=all",
             "-g",
-            "-O3",
             "-Wall",
         },
     });
@@ -400,6 +399,7 @@ fn libscrypt(
             "slowequals.c",
         },
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
             "-D_FORTIFY_SOURCE=2",
         },
