@@ -363,7 +363,10 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
-  stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ);
+  if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
+    u3l_log("unable to install stack overflow handler");
+    abort();
+  }
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
