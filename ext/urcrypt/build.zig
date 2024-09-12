@@ -4,11 +4,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const aes_siv = b.dependency("aes_siv", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
@@ -35,7 +30,7 @@ pub fn build(b: *std.Build) void {
     lib.linkLibrary(libkeccak_tiny(b, target, optimize));
     lib.linkLibrary(libscrypt(b, target, optimize));
 
-    lib.linkLibrary(aes_siv.artifact("aes_siv"));
+    lib.linkLibrary(libaes_siv(b, target, optimize));
     lib.linkLibrary(openssl.artifact("ssl"));
     lib.linkLibrary(openssl.artifact("crypto"));
 
@@ -68,6 +63,53 @@ pub fn build(b: *std.Build) void {
     lib.installHeader(dep_c.path("urcrypt/urcrypt.h"), "urcrypt.h");
 
     b.installArtifact(lib);
+}
+
+fn libaes_siv(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const openssl = b.dependency("openssl", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const dep_c = b.dependency("aes_siv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "aes_siv",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibrary(openssl.artifact("ssl"));
+    lib.linkLibrary(openssl.artifact("crypto"));
+
+    const config_h = b.addConfigHeader(.{
+        .style = .blank,
+        .include_path = "config.h",
+    }, .{});
+    lib.addConfigHeader(config_h);
+    lib.addIncludePath(dep_c.path(""));
+    lib.addCSourceFiles(.{
+        .root = dep_c.path(""),
+        .files = &.{
+            "aes_siv.c",
+        },
+        .flags = &.{
+            "-fno-sanitize=all",
+        },
+    });
+
+    lib.installHeader(dep_c.path("aes_siv.h"), "aes_siv.h");
+
+    lib.linkLibC();
+
+    return lib;
 }
 
 fn libsecp256k1(
