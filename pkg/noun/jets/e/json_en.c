@@ -103,8 +103,8 @@ _serialize_loobean(json_buffer *buf_u, u3_noun a)
 {
   switch ( a ) {
     default: u3_assert(0);
-    case c3y: _append_text(buf_u, _JSON_TRUE, sizeof(_JSON_TRUE) - 1);
-    case c3n: _append_text(buf_u, _JSON_FALSE, sizeof(_JSON_FALSE) - 1);
+    case c3y: _append_text(buf_u, _JSON_TRUE, sizeof(_JSON_TRUE) - 1);   break;
+    case c3n: _append_text(buf_u, _JSON_FALSE, sizeof(_JSON_FALSE) - 1); break;
   }
 }
 
