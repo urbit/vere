@@ -6,6 +6,65 @@ pub fn build(b: *std.Build) !void {
     const t = target.result;
 
     //
+    // CFLAGS for both dependencies and build
+    //
+
+    var global_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer global_flags.deinit();
+
+    try global_flags.appendSlice(&.{
+        "-fno-sanitize=all",
+        "-g",
+        "-Wall",
+        "-Werror",
+    });
+
+    //
+    // CFLAGS for Urbit Libs and Binaries
+    //
+
+    var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer urbit_flags.deinit();
+
+    try urbit_flags.appendSlice(global_flags.items);
+    try urbit_flags.appendSlice(&.{
+        "-Wno-deprecated-non-prototype",
+        "-Wno-gnu-binary-literal",
+        "-Wno-gnu-empty-initializer",
+        "-Wno-gnu-statement-expression",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+        "-Wno-gnu",
+        "-fms-extensions",
+        "-DU3_GUARD_PAGE", // pkg_noun
+        "-DU3_OS_ENDIAN_little=1", // pkg_c3
+        "-DU3_OS_PROF=1", // pkg_c3
+    });
+
+    if (t.cpu.arch == .aarch64) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_CPU_aarch64=1",
+        });
+    }
+
+    if (t.os.tag == .macos) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_osx=1",
+            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
+        });
+    } else {
+        try urbit_flags.appendSlice(&.{
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    if (t.os.tag == .linux) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_linux=1",
+        });
+    }
+
+    //
     // DEPENDENCIES
     //
 
@@ -98,37 +157,10 @@ pub fn build(b: *std.Build) !void {
 
     pkg_c3.addIncludePath(b.path("pkg/c3"));
 
-    var c3_flags = std.ArrayList([]const u8).init(b.allocator);
-    defer c3_flags.deinit();
-
-    try c3_flags.appendSlice(&.{
-        "-fno-sanitize=all",
-        "-DU3_OS_ENDIAN_little=1",
-        "-DU3_OS_PROF=1",
-    });
-
-    if (t.cpu.arch == .aarch64) {
-        try c3_flags.appendSlice(&.{
-            "-DU3_CPU_aarch64=1",
-        });
-    }
-
-    if (t.os.tag == .linux) {
-        try c3_flags.appendSlice(&.{
-            "-DU3_OS_linux=1",
-        });
-    }
-
-    if (t.os.tag == .macos) {
-        try c3_flags.appendSlice(&.{
-            "-DU3_OS_osx=1",
-        });
-    }
-
     pkg_c3.addCSourceFiles(.{
         .root = b.path("pkg/c3"),
         .files = &.{"defs.c"},
-        .flags = c3_flags.items,
+        .flags = urbit_flags.items,
     });
 
     pkg_c3.installHeadersDirectory(b.path("pkg/c3"), "c3", .{
@@ -151,27 +183,19 @@ pub fn build(b: *std.Build) !void {
 
     pkg_ent.addIncludePath(b.path("pkg/ent"));
 
+    var ent_flags = std.ArrayList([]const u8).init(b.allocator);
+    defer ent_flags.deinit();
+
+    try ent_flags.appendSlice(&.{
+        "-pedantic",
+        "-std=gnu99",
+    });
+    try ent_flags.appendSlice(urbit_flags.items);
+
     pkg_ent.addCSourceFiles(.{
         .root = b.path("pkg/ent"),
         .files = &.{"ent.c"},
-        .flags = &.{
-            "-fno-sanitize=all",
-            "-Wall",
-            "-Werror",
-            "-pedantic",
-            "-std=gnu99",
-            // TODO: support fallback to other options if `getrandom()` isn't
-            // available in `unistd.h`. Preferred order (from most preferred
-            // to least preferred) is:
-            // - ENT_GETENTROPY_UNISTD
-            // - ENT_GETENTROPY_SYSRANDOM
-            // - ENT_GETRANDOM_SYSCALL
-            // - ENT_DEV_URANDOM
-            if (t.os.tag == .macos)
-                "-DENT_GETENTROPY_SYSRANDOM"
-            else
-                "-DENT_GETENTROPY_UNISTD",
-        },
+        .flags = ent_flags.items,
     });
 
     pkg_ent.installHeadersDirectory(b.path("pkg/ent"), "ent", .{
@@ -202,9 +226,7 @@ pub fn build(b: *std.Build) !void {
             "hashcons.c",
             "serial.c",
         },
-        .flags = &.{
-            "-fno-sanitize=all",
-        },
+        .flags = urbit_flags.items,
     });
 
     pkg_ur.installHeadersDirectory(b.path("pkg/ur"), "ur", .{
@@ -250,48 +272,10 @@ pub fn build(b: *std.Build) !void {
     defer noun_flags.deinit();
 
     try noun_flags.appendSlice(&.{
-        "-fno-sanitize=all",
-
-        "-g",
-
-        "-Wall",
-        "-Werror",
         "-pedantic",
         "-std=gnu23",
-
-        "-Wno-deprecated-non-prototype",
-        "-Wno-gnu-binary-literal",
-        "-Wno-gnu-empty-initializer",
-        "-Wno-gnu-statement-expression",
-        "-Wno-unused-variable",
-        "-Wno-unused-function",
-        "-Wno-gnu",
-        "-fms-extensions",
-
-        "-DU3_GUARD_PAGE",
-        "-DU3_OS_ENDIAN_little=1", // pkg_c3
-        "-DU3_OS_PROF=1", // pkg_c3
     });
-
-    if (t.cpu.arch == .aarch64) {
-        try noun_flags.appendSlice(&.{
-            "-DU3_CPU_aarch64=1",
-        });
-    }
-
-    if (t.os.tag == .macos) {
-        try noun_flags.appendSlice(&.{
-            "-DU3_OS_osx=1",
-            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
-        });
-    }
-
-    if (t.os.tag == .linux) {
-        try noun_flags.appendSlice(&.{
-            "-DU3_OS_linux=1",
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
-    }
+    try noun_flags.appendSlice(urbit_flags.items);
 
     pkg_noun.addCSourceFiles(.{
         .root = b.path("pkg/noun"),
@@ -628,48 +612,9 @@ pub fn build(b: *std.Build) !void {
     defer vere_flags.deinit();
 
     try vere_flags.appendSlice(&.{
-        "-fno-sanitize=all",
-
-        "-g",
-
-        "-Wall",
-        "-Werror",
-        // "-pedantic",
         "-std=gnu23",
-
-        "-Wno-deprecated-non-prototype",
-        "-Wno-gnu-binary-literal",
-        "-Wno-gnu-empty-initializer",
-        "-Wno-gnu-statement-expression",
-        "-Wno-unused-variable",
-        "-Wno-unused-function",
-        "-Wno-gnu",
-        "-fms-extensions",
-
-        "-DU3_GUARD_PAGE",
-        "-DU3_OS_ENDIAN_little=1", // pkg_c3
-        "-DU3_OS_PROF=1", // pkg_c3
     });
-
-    if (t.cpu.arch == .aarch64) {
-        try vere_flags.appendSlice(&.{
-            "-DU3_CPU_aarch64=1",
-        });
-    }
-
-    if (t.os.tag == .macos) {
-        try vere_flags.appendSlice(&.{
-            "-DU3_OS_osx=1",
-            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
-        });
-    }
-
-    if (t.os.tag == .linux) {
-        try vere_flags.appendSlice(&.{
-            "-DU3_OS_linux=1",
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
-    }
+    try vere_flags.appendSlice(urbit_flags.items);
 
     vere.addCSourceFiles(.{
         .root = b.path("pkg/vere"),
@@ -699,6 +644,8 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    urbit.stack_size = 0;
+
     urbit.linkLibC();
 
     urbit.linkLibrary(vere);
@@ -714,53 +661,6 @@ pub fn build(b: *std.Build) !void {
     urbit.linkLibrary(openssl.artifact("ssl"));
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(whereami.artifact("whereami"));
-
-    urbit.stack_size = 0;
-
-    var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
-    defer urbit_flags.deinit();
-
-    try urbit_flags.appendSlice(&.{
-        "-g",
-
-        "-Wall",
-        "-Werror",
-        // "-pedantic",
-        "-std=gnu23",
-
-        "-Wno-deprecated-non-prototype",
-        "-Wno-gnu-binary-literal",
-        "-Wno-gnu-empty-initializer",
-        "-Wno-gnu-statement-expression",
-        "-Wno-unused-variable",
-        "-Wno-unused-function",
-        "-Wno-gnu",
-        "-fms-extensions",
-
-        "-DU3_GUARD_PAGE",
-        "-DU3_OS_ENDIAN_little=1", // pkg_c3
-        "-DU3_OS_PROF=1", // pkg_c3
-    });
-
-    if (t.cpu.arch == .aarch64) {
-        try urbit_flags.appendSlice(&.{
-            "-DU3_CPU_aarch64=1",
-        });
-    }
-
-    if (t.os.tag == .macos) {
-        try urbit_flags.appendSlice(&.{
-            "-DU3_OS_osx=1",
-            "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
-        });
-    }
-
-    if (t.os.tag == .linux) {
-        try urbit_flags.appendSlice(&.{
-            "-DU3_OS_linux=1",
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
-    }
 
     urbit.addCSourceFiles(.{
         .root = b.path("pkg/vere"),
