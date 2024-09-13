@@ -1,7 +1,14 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{});
+    const target = b.standardTargetOptions(.{
+        .whitelist = &.{
+            .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
+            .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
+            .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
+            .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+        },
+    });
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
