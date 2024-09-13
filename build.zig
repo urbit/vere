@@ -12,6 +12,37 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
+    const VERSION = "3.1";
+
+    //
+    // Additional Project-Specific Options
+    //
+
+    const release = b.option(bool, "release", "") orelse false;
+
+    const git_cmd = try std.process.Child.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = &.{
+            "git",
+            "rev-parse",
+            "--short",
+            "HEAD",
+        },
+        .max_output_bytes = 1024,
+    });
+    const git_rev = git_cmd.stdout[0..9];
+    const version = if (!release)
+        VERSION ++ "-" ++ git_rev
+    else
+        VERSION;
+
+    const Pace = enum { once, live, soon, edge };
+    const pace = @tagName(b.option(
+        Pace,
+        "pace",
+        "Defaults to once",
+    ) orelse Pace.once);
+
     //
     // CFLAGS for both dependencies and build
     //
@@ -515,13 +546,13 @@ pub fn build(b: *std.Build) !void {
         var output = std.ArrayList(u8).init(b.allocator);
         defer output.deinit();
 
-        try output.appendSlice(
+        try output.appendSlice(b.fmt(
             \\#ifndef URBIT_PACE_H
             \\#define URBIT_PACE_H
-            \\#define U3_VERE_PACE "once"
+            \\#define U3_VERE_PACE "{s}"
             \\#endif
             \\
-        );
+        , .{pace}));
 
         break :blk try output.toOwnedSlice();
     });
@@ -530,13 +561,13 @@ pub fn build(b: *std.Build) !void {
         var output = std.ArrayList(u8).init(b.allocator);
         defer output.deinit();
 
-        try output.appendSlice(
+        try output.appendSlice(b.fmt(
             \\#ifndef URBIT_VERSION_H
             \\#define URBIT_VERSION_H
-            \\#define URBIT_VERSION "3.1-zigidi"
+            \\#define URBIT_VERSION "{s}"
             \\#endif
             \\
-        );
+        , .{version}));
 
         break :blk try output.toOwnedSlice();
     });
