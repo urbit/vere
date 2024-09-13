@@ -305,12 +305,12 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-  if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
 
-  u3P.dit_w[blk_w] |= (1 << bit_w);
+  u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
 
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
@@ -947,7 +947,7 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~(1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
   }
 
   max_w += dif_w;
@@ -969,7 +969,7 @@ _ce_loom_track_south(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~(1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
   }
 
   max_w -= dif_w;
