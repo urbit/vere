@@ -43,6 +43,18 @@ pub fn build(b: *std.Build) !void {
         "Defaults to once",
     ) orelse Pace.once);
 
+    const cflags_opt = b.option([]const u8, "cflags", "");
+
+    var cflags = std.ArrayList([]const u8).init(b.allocator);
+    defer cflags.deinit();
+
+    var iter_flags = std.mem.splitSequence(u8, cflags_opt orelse "", " ");
+    while (iter_flags.next()) |flag| {
+        if (flag.len != 0) {
+            try cflags.appendSlice(&.{flag});
+        }
+    }
+
     //
     // CFLAGS for both dependencies and build
     //
@@ -50,6 +62,7 @@ pub fn build(b: *std.Build) !void {
     var global_flags = std.ArrayList([]const u8).init(b.allocator);
     defer global_flags.deinit();
 
+    try global_flags.appendSlice(cflags.items);
     try global_flags.appendSlice(&.{
         "-fno-sanitize=all",
         "-g",
