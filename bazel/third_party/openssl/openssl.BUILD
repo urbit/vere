@@ -17,8 +17,6 @@ configure_make(
     }),
     configure_options = [
         "no-shared",
-        "no-threads",
-        "-static",
     ] + select({
         "@//:linux_aarch64": [
             "linux-aarch64",
@@ -31,7 +29,7 @@ configure_make(
         ],
         "//conditions:default": [],
     }),
-    copts = ["-O0", "-g"],
+    copts = ["-O3"],
     lib_source = ":all",
     out_static_libs = [
         "libssl.a",

@@ -2129,23 +2129,21 @@ _cm_signals(void)
 */
 static void*
 _cm_malloc_ssl(size_t len_i
-/* #if OPENSSL_VERSION_NUMBER >= 0x10100000L */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
                , const char* file, int line
-/* #endif */
+#endif
                )
 {
-  void* ret = u3a_malloc(len_i);
-  u3l_log("alloc %p", ret);
-  return ret;
+  return u3a_malloc(len_i);
 }
 
 /* _cm_realloc_ssl(): openssl-shaped realloc.
 */
 static void*
 _cm_realloc_ssl(void* lag_v, size_t len_i
-/* #if OPENSSL_VERSION_NUMBER >= 0x10100000L */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
                 , const char* file, int line
-/* #endif */
+#endif
                 )
 {
   return u3a_realloc(lag_v, len_i);
@@ -2155,14 +2153,12 @@ _cm_realloc_ssl(void* lag_v, size_t len_i
 */
 static void
 _cm_free_ssl(void* tox_v
-/* #if OPENSSL_VERSION_NUMBER >= 0x10100000L */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
              , const char* file, int line
-/* #endif */
+#endif
              )
 {
-  u3l_log("free %p", tox_v);
-  u3a_free(tox_v);
-  return;
+  return u3a_free(tox_v);
 }
 
 extern void u3je_secp_init(void);
