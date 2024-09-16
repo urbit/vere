@@ -13,20 +13,14 @@ string_flag = rule(
 
 def vere_library(copts = [], linkopts = [], **kwargs):
   native.cc_library(
-    copts = copts + select({
+    copts = copts + [
+        "-fno-omit-frame-pointer",
+    ] + select({
         "//:debug": ["-O0", "-g3", "-DC3DBG", "-fdebug-compilation-dir=."],
-        "//conditions:default": ["-O3"]
+        "//conditions:default": ["-O3", "-g"]
     }) + select({
         "//:lto": ['-flto'],
-        "//:thinlto": ['-flto=thin'],
         "//conditions:default": []
-    }) + select({
-        # Don't include source level debug info on macOS. See
-        # https://github.com/urbit/urbit/issues/5561 and
-        # https://github.com/urbit/vere/issues/131.
-        "//:debug": [],
-        "@platforms//os:linux": ["-g"],
-        "//conditions:default": [],
     }),
     linkopts = linkopts + ['-g'] + select({
         "//:lto": ['-flto'],
@@ -38,17 +32,14 @@ def vere_library(copts = [], linkopts = [], **kwargs):
 
 def vere_binary(copts = [], linkopts = [], **kwargs):
   native.cc_binary(
-    copts = copts + select({
+    copts = copts + [
+        "-fno-omit-frame-pointer",
+    ] + select({
         "//:debug": ["-O0", "-g3", "-DC3DBG", "-fdebug-compilation-dir=."],
-        "//conditions:default": ["-O3"]
+        "//conditions:default": ["-O3", "-g"]
     }) + select({
         "//:lto": ['-flto'],
-        "//:thinlto": ['-flto=thin'],
         "//conditions:default": []
-    }) + select({
-        "//:debug": [],
-        "@platforms//os:linux": ["-g"],
-        "//conditions:default": [],
     }),
     linkopts = linkopts + ['-g'] + select({
         "//:lto": ['-flto'],
