@@ -771,22 +771,27 @@ bt_cb(void* data,
 
   if ( dladdr((void *)pc, &info) ) {
     for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
-      if ( info.dli_fname[i_w] == '/' )
-        fname_c = &info.dli_fname[i_w + 1];
+      if ( info.dli_fname[i_w] == '/' ) {
+        fname_c = (c3_c*)&info.dli_fname[i_w + 1];
+      }
   }
 
   if ( bdata->count <= 100 ) {
     c3_c* loc[128];
-    if (filename != 0)
-      snprintf((c3_c *)loc, 128, "%s:%d", filename, lineno);
-    else
-      snprintf((c3_c *)loc, 128, fname_c != 0 ? fname_c : "-");
+    if (filename != 0) {
+      snprintf((c3_c*)loc, 128, "%s:%d", filename, lineno);
+    }
+    else {
+      snprintf((c3_c*)loc, 128, "%s", fname_c != 0 ? fname_c : "-");
+    }
 
     c3_c* fn_c;
-    if (function != 0 || bdata->pn_c != 0)
-      fn_c = function != 0 ? function : bdata->pn_c;
-    else
-      fn_c = info.dli_sname != 0 ? info.dli_sname : "-";
+    if (function != 0 || bdata->pn_c != 0) {
+      fn_c = (c3_c*)(function != 0 ? function : bdata->pn_c);
+    }
+    else {
+      fn_c = (c3_c*)(info.dli_sname != 0 ? info.dli_sname : "-");
+    }
 
     fprintf(stderr, "%-3d %-35s %s\r\n", bdata->count - 1, fn_c, (c3_c *)loc);
 
@@ -847,8 +852,9 @@ u3m_stacktrace()
       fprintf(stderr, "Backtrace failed\r\n");
     }
     else {
-      for ( c3_i i = 0; i < size; i++ )
+      for ( c3_i i = 0; i < size; i++ ) {
         fprintf(stderr, "%s\r\n", strings[i]);
+      }
       u3l_log("");
     }
 
@@ -879,7 +885,9 @@ u3m_stacktrace()
       ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
     } while (unw_step(&cursor) > 0);
 
-    if ( (data.count > 0) ) u3l_log("");
+    if ( (data.count > 0) ) {
+      u3l_log("");
+    }
   }
   else {
     data.fail = 1;
