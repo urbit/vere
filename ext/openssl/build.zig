@@ -4,7 +4,23 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const crypto = libcrypto(b, target, optimize);
+    const cflags = .{
+        // "-fno-sanitize=all",
+        // "-std=gnu89",
+        // "-Wno-unknown-warning-option",
+        // "-Wswitch-default",
+        // "-Wno-parentheses-equality",
+        // "-Wno-language-extension-token",
+        // "-Wno-extended-offsetof",
+        // "-Wconditional-uninitialized",
+        // "-Wincompatible-pointer-types-discards-qualifiers",
+        // "-Wmissing-variable-declarations",
+        // "-Wno-int-conversion",
+        "-arch",
+        @tagName(target.result.cpu.arch),
+    };
+
+    const crypto = libcrypto(b, target, optimize, &cflags);
     if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.dependency("macos_sdk", .{
             .target = target,
@@ -16,13 +32,14 @@ pub fn build(b: *std.Build) void {
     }
 
     b.installArtifact(crypto);
-    b.installArtifact(libssl(b, target, optimize));
+    b.installArtifact(libssl(b, target, optimize, &cflags));
 }
 
 fn libcrypto(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    cflags: []const []const u8,
 ) *std.Build.Step.Compile {
     const t = target.result;
 
@@ -766,7 +783,7 @@ fn libcrypto(
             "engines/e_capi.c",
             "engines/e_padlock.c",
         },
-        .flags = &(cflags ++ .{}),
+        .flags = cflags,
     });
 
     // lib.addCSourceFiles(.{
@@ -785,7 +802,7 @@ fn libcrypto(
     //         "crypto/sha/sha256-armv8.S",
     //         "crypto/sha/sha512-armv8.S",
     //     },
-    //     .flags = &(cflags ++ .{}),
+    //     .flags = cflags,
     // });
 
     lib.installHeadersDirectory(dep.path("include/crypto"), "crypto", .{});
@@ -798,6 +815,7 @@ fn libssl(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    cflags: []const []const u8,
 ) *std.Build.Step.Compile {
     const dep = b.dependency("openssl", .{
         .target = target,
@@ -892,7 +910,7 @@ fn libssl(
             "ssl/tls13_enc.c",
             "ssl/tls_srp.c",
         },
-        .flags = &(cflags ++ .{}),
+        .flags = cflags,
     });
 
     lib.installHeadersDirectory(dep.path("include/openssl"), "openssl", .{});
@@ -900,19 +918,3 @@ fn libssl(
 
     return lib;
 }
-
-const cflags = .{
-    // "-fno-sanitize=all",
-    // "-std=gnu89",
-    // "-Wno-unknown-warning-option",
-    // "-Wswitch-default",
-    // "-Wno-parentheses-equality",
-    // "-Wno-language-extension-token",
-    // "-Wno-extended-offsetof",
-    // "-Wconditional-uninitialized",
-    // "-Wincompatible-pointer-types-discards-qualifiers",
-    // "-Wmissing-variable-declarations",
-    // "-Wno-int-conversion",
-    "-arch",
-    "arm64",
-};
