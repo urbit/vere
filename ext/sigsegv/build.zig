@@ -16,6 +16,16 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    if (target.result.isDarwin() and !target.query.isNative()) {
+        const macos_sdk = b.lazyDependency("macos_sdk", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        lib.addSystemIncludePath(macos_sdk.path("usr/include"));
+        lib.addLibraryPath(macos_sdk.path("usr/lib"));
+        lib.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+    }
+
     lib.linkLibC();
 
     lib.defineCMacro("HAVE_CONFIG_H", null);

@@ -195,7 +195,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     //
-    // PKG C3
+    // Build outputs
     //
 
     const pkg_c3 = b.addStaticLibrary(.{
@@ -203,6 +203,60 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
+    const pkg_ent = b.addStaticLibrary(.{
+        .name = "ent",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const pkg_ur = b.addStaticLibrary(.{
+        .name = "ur",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const pkg_noun = b.addStaticLibrary(.{
+        .name = "noun",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const vere = b.addStaticLibrary(.{
+        .name = "vere",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const urbit = b.addExecutable(.{
+        .name = "urbit",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    if (target.result.isDarwin() and !target.query.isNative()) {
+        const macos_sdk = b.dependency("macos_sdk", .{
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const steps = [_]*std.Build.Step.Compile{
+            pkg_c3,
+            pkg_noun,
+            vere,
+            urbit,
+        };
+
+        for (steps) |step| {
+            step.addSystemIncludePath(macos_sdk.path("usr/include"));
+            step.addLibraryPath(macos_sdk.path("usr/lib"));
+            step.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+        }
+    }
+
+    //
+    // PKG C3
+    //
 
     pkg_c3.linkLibC();
 
@@ -223,12 +277,6 @@ pub fn build(b: *std.Build) !void {
     //
     // PKG ENT
     //
-
-    const pkg_ent = b.addStaticLibrary(.{
-        .name = "ent",
-        .target = target,
-        .optimize = optimize,
-    });
 
     pkg_ent.linkLibC();
 
@@ -259,12 +307,6 @@ pub fn build(b: *std.Build) !void {
     // PKG UR
     //
 
-    const pkg_ur = b.addStaticLibrary(.{
-        .name = "ur",
-        .target = target,
-        .optimize = optimize,
-    });
-
     pkg_ur.linkLibrary(murmur3.artifact("murmur3"));
     pkg_ur.linkLibC();
 
@@ -289,12 +331,6 @@ pub fn build(b: *std.Build) !void {
     //
     // PKG NOUN
     //
-
-    const pkg_noun = b.addStaticLibrary(.{
-        .name = "noun",
-        .target = target,
-        .optimize = optimize,
-    });
 
     pkg_noun.linkLibrary(pkg_c3);
     pkg_noun.linkLibrary(pkg_ent);
@@ -549,12 +585,6 @@ pub fn build(b: *std.Build) !void {
     // VERE LIBRARY
     //
 
-    const vere = b.addStaticLibrary(.{
-        .name = "vere",
-        .target = target,
-        .optimize = optimize,
-    });
-
     const pace_h = b.addWriteFile("pace.h", blk: {
         var output = std.ArrayList(u8).init(b.allocator);
         defer output.deinit();
@@ -688,12 +718,6 @@ pub fn build(b: *std.Build) !void {
     //
     // URBIT BINARY
     //
-
-    const urbit = b.addExecutable(.{
-        .name = "urbit",
-        .target = target,
-        .optimize = optimize,
-    });
 
     urbit.stack_size = 0;
 
