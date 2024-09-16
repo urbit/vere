@@ -1950,7 +1950,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
             adr_w, u3_Loom, u3_Loom + u3C.wor_i);
-
+    u3m_stacktrace();
     u3_assert(0);
     return 0;
   }
