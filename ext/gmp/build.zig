@@ -10,11 +10,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const gen_srcs = b.dependency("gen_srcs", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const lib = b.addStaticLibrary(.{
         .name = "gmp",
         .target = target,
@@ -367,11 +362,11 @@ pub fn build(b: *std.Build) void {
 
     // Generated headers
     if (t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(gen_srcs.path("aarch64"));
-        lib.addIncludePath(gen_srcs.path("aarch64/mpn"));
+        lib.addIncludePath(b.path("gen/aarch64"));
+        lib.addIncludePath(b.path("gen/aarch64/mpn"));
     } else if (t.cpu.arch.isX86()) {
-        lib.addIncludePath(gen_srcs.path("x86_64"));
-        lib.addIncludePath(gen_srcs.path("x86_64/mpn"));
+        lib.addIncludePath(b.path("gen/x86_64"));
+        lib.addIncludePath(b.path("gen/x86_64/mpn"));
     }
 
     // Static headers
@@ -392,18 +387,18 @@ pub fn build(b: *std.Build) void {
     // Translated ASM Sources
     if (t.cpu.arch.isAARCH64()) {
         for (aarch64_asm_sources) |rel_path| {
-            lib.addAssemblyFile(gen_srcs.path(rel_path));
+            lib.addAssemblyFile(b.path(rel_path));
         }
     } else if (t.cpu.arch.isX86()) {
         for (x86_64_asm_sources) |rel_path| {
-            lib.addAssemblyFile(gen_srcs.path(rel_path));
+            lib.addAssemblyFile(b.path(rel_path));
         }
     }
 
     // Generated C Sources
     if (t.cpu.arch.isAARCH64()) {
         lib.addCSourceFiles(.{
-            .root = gen_srcs.path("aarch64"),
+            .root = b.path("gen/aarch64"),
             .files = &.{
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
@@ -414,7 +409,7 @@ pub fn build(b: *std.Build) void {
         });
     } else if (t.cpu.arch.isX86()) {
         lib.addCSourceFiles(.{
-            .root = gen_srcs.path("x86_64"),
+            .root = b.path("gen/x86_64"),
             .files = &.{
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
@@ -470,113 +465,113 @@ pub fn build(b: *std.Build) void {
 }
 
 const aarch64_asm_sources = [_][]const u8{
-    "aarch64/mpn/add_n.s",
-    "aarch64/mpn/addlsh1_n.s",
-    "aarch64/mpn/addlsh2_n.s",
-    "aarch64/mpn/addmul_1.s",
-    "aarch64/mpn/and_n.s",
-    "aarch64/mpn/andn_n.s",
-    "aarch64/mpn/bdiv_dbm1c.s",
-    "aarch64/mpn/bdiv_q_1.s",
-    "aarch64/mpn/cnd_add_n.s",
-    "aarch64/mpn/cnd_sub_n.s",
-    "aarch64/mpn/com.s",
-    "aarch64/mpn/copyd.s",
-    "aarch64/mpn/copyi.s",
-    "aarch64/mpn/gcd_11.s",
-    "aarch64/mpn/gcd_22.s",
-    "aarch64/mpn/hamdist.s",
-    "aarch64/mpn/invert_limb.s",
-    "aarch64/mpn/ior_n.s",
-    "aarch64/mpn/iorn_n.s",
-    "aarch64/mpn/lshift.s",
-    "aarch64/mpn/lshiftc.s",
-    "aarch64/mpn/mod_34lsub1.s",
-    "aarch64/mpn/mul_1.s",
-    "aarch64/mpn/nand_n.s",
-    "aarch64/mpn/nior_n.s",
-    "aarch64/mpn/popcount.s",
-    "aarch64/mpn/rsblsh1_n.s",
-    "aarch64/mpn/rsblsh2_n.s",
-    "aarch64/mpn/rsh1add_n.s",
-    "aarch64/mpn/rsh1sub_n.s",
-    "aarch64/mpn/rshift.s",
-    "aarch64/mpn/sec_tabselect.s",
-    "aarch64/mpn/sqr_diag_addlsh1.s",
-    "aarch64/mpn/sub_n.s",
-    "aarch64/mpn/sublsh1_n.s",
-    "aarch64/mpn/sublsh2_n.s",
-    "aarch64/mpn/submul_1.s",
-    "aarch64/mpn/xnor_n.s",
-    "aarch64/mpn/xor_n.s",
+    "gen/aarch64/mpn/add_n.s",
+    "gen/aarch64/mpn/addlsh1_n.s",
+    "gen/aarch64/mpn/addlsh2_n.s",
+    "gen/aarch64/mpn/addmul_1.s",
+    "gen/aarch64/mpn/and_n.s",
+    "gen/aarch64/mpn/andn_n.s",
+    "gen/aarch64/mpn/bdiv_dbm1c.s",
+    "gen/aarch64/mpn/bdiv_q_1.s",
+    "gen/aarch64/mpn/cnd_add_n.s",
+    "gen/aarch64/mpn/cnd_sub_n.s",
+    "gen/aarch64/mpn/com.s",
+    "gen/aarch64/mpn/copyd.s",
+    "gen/aarch64/mpn/copyi.s",
+    "gen/aarch64/mpn/gcd_11.s",
+    "gen/aarch64/mpn/gcd_22.s",
+    "gen/aarch64/mpn/hamdist.s",
+    "gen/aarch64/mpn/invert_limb.s",
+    "gen/aarch64/mpn/ior_n.s",
+    "gen/aarch64/mpn/iorn_n.s",
+    "gen/aarch64/mpn/lshift.s",
+    "gen/aarch64/mpn/lshiftc.s",
+    "gen/aarch64/mpn/mod_34lsub1.s",
+    "gen/aarch64/mpn/mul_1.s",
+    "gen/aarch64/mpn/nand_n.s",
+    "gen/aarch64/mpn/nior_n.s",
+    "gen/aarch64/mpn/popcount.s",
+    "gen/aarch64/mpn/rsblsh1_n.s",
+    "gen/aarch64/mpn/rsblsh2_n.s",
+    "gen/aarch64/mpn/rsh1add_n.s",
+    "gen/aarch64/mpn/rsh1sub_n.s",
+    "gen/aarch64/mpn/rshift.s",
+    "gen/aarch64/mpn/sec_tabselect.s",
+    "gen/aarch64/mpn/sqr_diag_addlsh1.s",
+    "gen/aarch64/mpn/sub_n.s",
+    "gen/aarch64/mpn/sublsh1_n.s",
+    "gen/aarch64/mpn/sublsh2_n.s",
+    "gen/aarch64/mpn/submul_1.s",
+    "gen/aarch64/mpn/xnor_n.s",
+    "gen/aarch64/mpn/xor_n.s",
 };
 
 const x86_64_asm_sources = [_][]const u8{
-    "x86_64/mpn/add_err1_n.s",
-    "x86_64/mpn/add_err2_n.s",
-    "x86_64/mpn/add_err3_n.s",
-    "x86_64/mpn/add_n.s",
-    "x86_64/mpn/addaddmul_1msb0.s",
-    "x86_64/mpn/addlsh1_n.s",
-    "x86_64/mpn/addlsh2_n.s",
-    "x86_64/mpn/addlsh_n.s",
-    "x86_64/mpn/addmul_1.s",
-    "x86_64/mpn/addmul_2.s",
-    "x86_64/mpn/and_n.s",
-    "x86_64/mpn/andn_n.s",
-    "x86_64/mpn/bdiv_dbm1c.s",
-    "x86_64/mpn/bdiv_q_1.s",
-    "x86_64/mpn/cnd_add_n.s",
-    "x86_64/mpn/cnd_sub_n.s",
-    "x86_64/mpn/com.s",
-    "x86_64/mpn/copyd.s",
-    "x86_64/mpn/copyi.s",
-    "x86_64/mpn/div_qr_1n_pi1.s",
-    "x86_64/mpn/div_qr_2n_pi1.s",
-    "x86_64/mpn/div_qr_2u_pi1.s",
-    "x86_64/mpn/dive_1.s",
-    "x86_64/mpn/divrem_1.s",
-    "x86_64/mpn/divrem_2.s",
-    "x86_64/mpn/gcd_11.s",
-    "x86_64/mpn/gcd_22.s",
-    "x86_64/mpn/hamdist.s",
-    "x86_64/mpn/invert_limb.s",
-    "x86_64/mpn/invert_limb_table.s",
-    "x86_64/mpn/ior_n.s",
-    "x86_64/mpn/iorn_n.s",
-    "x86_64/mpn/lshift.s",
-    "x86_64/mpn/lshiftc.s",
-    "x86_64/mpn/mod_1_1.s",
-    "x86_64/mpn/mod_1_2.s",
-    "x86_64/mpn/mod_1_4.s",
-    "x86_64/mpn/mod_34lsub1.s",
-    "x86_64/mpn/mode1o.s",
-    "x86_64/mpn/mul_1.s",
-    "x86_64/mpn/mul_2.s",
-    "x86_64/mpn/mul_basecase.s",
-    "x86_64/mpn/mullo_basecase.s",
-    "x86_64/mpn/nand_n.s",
-    "x86_64/mpn/nior_n.s",
-    "x86_64/mpn/popcount.s",
-    "x86_64/mpn/redc_1.s",
-    "x86_64/mpn/rsblsh1_n.s",
-    "x86_64/mpn/rsblsh2_n.s",
-    "x86_64/mpn/rsblsh_n.s",
-    "x86_64/mpn/rsh1add_n.s",
-    "x86_64/mpn/rsh1sub_n.s",
-    "x86_64/mpn/rshift.s",
-    "x86_64/mpn/sec_tabselect.s",
-    "x86_64/mpn/sqr_basecase.s",
-    "x86_64/mpn/sqr_diag_addlsh1.s",
-    "x86_64/mpn/sub_err1_n.s",
-    "x86_64/mpn/sub_err2_n.s",
-    "x86_64/mpn/sub_err3_n.s",
-    "x86_64/mpn/sub_n.s",
-    "x86_64/mpn/sublsh1_n.s",
-    "x86_64/mpn/sublsh2_n.s",
-    "x86_64/mpn/submul_1.s",
-    "x86_64/mpn/xnor_n.s",
-    "x86_64/mpn/xor_n.s",
+    "gen/x86_64/mpn/add_err1_n.s",
+    "gen/x86_64/mpn/add_err2_n.s",
+    "gen/x86_64/mpn/add_err3_n.s",
+    "gen/x86_64/mpn/add_n.s",
+    "gen/x86_64/mpn/addaddmul_1msb0.s",
+    "gen/x86_64/mpn/addlsh1_n.s",
+    "gen/x86_64/mpn/addlsh2_n.s",
+    "gen/x86_64/mpn/addlsh_n.s",
+    "gen/x86_64/mpn/addmul_1.s",
+    "gen/x86_64/mpn/addmul_2.s",
+    "gen/x86_64/mpn/and_n.s",
+    "gen/x86_64/mpn/andn_n.s",
+    "gen/x86_64/mpn/bdiv_dbm1c.s",
+    "gen/x86_64/mpn/bdiv_q_1.s",
+    "gen/x86_64/mpn/cnd_add_n.s",
+    "gen/x86_64/mpn/cnd_sub_n.s",
+    "gen/x86_64/mpn/com.s",
+    "gen/x86_64/mpn/copyd.s",
+    "gen/x86_64/mpn/copyi.s",
+    "gen/x86_64/mpn/div_qr_1n_pi1.s",
+    "gen/x86_64/mpn/div_qr_2n_pi1.s",
+    "gen/x86_64/mpn/div_qr_2u_pi1.s",
+    "gen/x86_64/mpn/dive_1.s",
+    "gen/x86_64/mpn/divrem_1.s",
+    "gen/x86_64/mpn/divrem_2.s",
+    "gen/x86_64/mpn/gcd_11.s",
+    "gen/x86_64/mpn/gcd_22.s",
+    "gen/x86_64/mpn/hamdist.s",
+    "gen/x86_64/mpn/invert_limb.s",
+    "gen/x86_64/mpn/invert_limb_table.s",
+    "gen/x86_64/mpn/ior_n.s",
+    "gen/x86_64/mpn/iorn_n.s",
+    "gen/x86_64/mpn/lshift.s",
+    "gen/x86_64/mpn/lshiftc.s",
+    "gen/x86_64/mpn/mod_1_1.s",
+    "gen/x86_64/mpn/mod_1_2.s",
+    "gen/x86_64/mpn/mod_1_4.s",
+    "gen/x86_64/mpn/mod_34lsub1.s",
+    "gen/x86_64/mpn/mode1o.s",
+    "gen/x86_64/mpn/mul_1.s",
+    "gen/x86_64/mpn/mul_2.s",
+    "gen/x86_64/mpn/mul_basecase.s",
+    "gen/x86_64/mpn/mullo_basecase.s",
+    "gen/x86_64/mpn/nand_n.s",
+    "gen/x86_64/mpn/nior_n.s",
+    "gen/x86_64/mpn/popcount.s",
+    "gen/x86_64/mpn/redc_1.s",
+    "gen/x86_64/mpn/rsblsh1_n.s",
+    "gen/x86_64/mpn/rsblsh2_n.s",
+    "gen/x86_64/mpn/rsblsh_n.s",
+    "gen/x86_64/mpn/rsh1add_n.s",
+    "gen/x86_64/mpn/rsh1sub_n.s",
+    "gen/x86_64/mpn/rshift.s",
+    "gen/x86_64/mpn/sec_tabselect.s",
+    "gen/x86_64/mpn/sqr_basecase.s",
+    "gen/x86_64/mpn/sqr_diag_addlsh1.s",
+    "gen/x86_64/mpn/sub_err1_n.s",
+    "gen/x86_64/mpn/sub_err2_n.s",
+    "gen/x86_64/mpn/sub_err3_n.s",
+    "gen/x86_64/mpn/sub_n.s",
+    "gen/x86_64/mpn/sublsh1_n.s",
+    "gen/x86_64/mpn/sublsh2_n.s",
+    "gen/x86_64/mpn/submul_1.s",
+    "gen/x86_64/mpn/xnor_n.s",
+    "gen/x86_64/mpn/xor_n.s",
 };
 
 const generic_c_sources = [_][]const u8{
