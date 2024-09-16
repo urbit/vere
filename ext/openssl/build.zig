@@ -4,23 +4,16 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cflags = .{
-        // "-fno-sanitize=all",
-        // "-std=gnu89",
-        // "-Wno-unknown-warning-option",
-        // "-Wswitch-default",
-        // "-Wno-parentheses-equality",
-        // "-Wno-language-extension-token",
-        // "-Wno-extended-offsetof",
-        // "-Wconditional-uninitialized",
-        // "-Wincompatible-pointer-types-discards-qualifiers",
-        // "-Wmissing-variable-declarations",
-        // "-Wno-int-conversion",
-        "-arch",
-        @tagName(target.result.cpu.arch),
-    };
+    const macos_cflags = .{ "-arch", @tagName(target.result.cpu.arch) };
 
-    const crypto = libcrypto(b, target, optimize, &cflags);
+    const linux_cflags = .{};
+
+    const crypto = libcrypto(
+        b,
+        target,
+        optimize,
+        if (target.result.isDarwin()) &macos_cflags else &linux_cflags,
+    );
     if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.dependency("macos_sdk", .{
             .target = target,
@@ -32,7 +25,12 @@ pub fn build(b: *std.Build) void {
     }
 
     b.installArtifact(crypto);
-    b.installArtifact(libssl(b, target, optimize, &cflags));
+    b.installArtifact(libssl(
+        b,
+        target,
+        optimize,
+        if (target.result.isDarwin()) &macos_cflags else &linux_cflags,
+    ));
 }
 
 fn libcrypto(
