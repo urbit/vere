@@ -848,7 +848,7 @@ u3m_stacktrace()
 
     strings = backtrace_symbols(array, size);
 
-    if ( strings == NULL ) {
+    if ( strings[0] == NULL ) {
       fprintf(stderr, "Backtrace failed\r\n");
     }
     else {
