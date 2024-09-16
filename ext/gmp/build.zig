@@ -360,15 +360,6 @@ pub fn build(b: *std.Build) void {
     lib.addConfigHeader(config_h);
     lib.addConfigHeader(gmp_h);
 
-    // Generated headers
-    if (t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/aarch64"));
-        lib.addIncludePath(b.path("gen/aarch64/mpn"));
-    } else if (t.cpu.arch.isX86()) {
-        lib.addIncludePath(b.path("gen/x86_64"));
-        lib.addIncludePath(b.path("gen/x86_64/mpn"));
-    }
-
     // Static headers
     lib.addIncludePath(dep_c.path("."));
     lib.addIncludePath(dep_c.path("mpf"));
@@ -384,21 +375,15 @@ pub fn build(b: *std.Build) void {
         lib.addIncludePath(dep_c.path("mpn/x86_64"));
     }
 
-    // Translated ASM Sources
-    if (t.cpu.arch.isAARCH64()) {
-        for (aarch64_asm_sources) |rel_path| {
+    // Generated Sources
+    if (t.os.tag == .macos and t.cpu.arch == .aarch64) {
+        lib.addIncludePath(b.path("gen/aarch64-macos"));
+        lib.addIncludePath(b.path("gen/aarch64-macos/mpn"));
+        for (aarch64_macos_asm_sources) |rel_path| {
             lib.addAssemblyFile(b.path(rel_path));
         }
-    } else if (t.cpu.arch.isX86()) {
-        for (x86_64_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
-        }
-    }
-
-    // Generated C Sources
-    if (t.cpu.arch.isAARCH64()) {
         lib.addCSourceFiles(.{
-            .root = b.path("gen/aarch64"),
+            .root = b.path("gen/aarch64-macos"),
             .files = &.{
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
@@ -407,9 +392,49 @@ pub fn build(b: *std.Build) void {
                 "-fno-sanitize=all",
             },
         });
-    } else if (t.cpu.arch.isX86()) {
+    }
+    if (t.os.tag == .macos and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path("gen/x86_64-macos"));
+        lib.addIncludePath(b.path("gen/x86_64-macos/mpn"));
+        for (x86_64_macos_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
         lib.addCSourceFiles(.{
-            .root = b.path("gen/x86_64"),
+            .root = b.path("gen/x86_64-macos"),
+            .files = &.{
+                "mpn/mp_bases.c",
+                "mpn/fib_table.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
+        });
+    }
+    if (t.os.tag == .linux and t.cpu.arch == .aarch64) {
+        lib.addIncludePath(b.path("gen/aarch64-linux"));
+        lib.addIncludePath(b.path("gen/aarch64-linux/mpn"));
+        for (aarch64_linux_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
+        lib.addCSourceFiles(.{
+            .root = b.path("gen/aarch64-linux"),
+            .files = &.{
+                "mpn/mp_bases.c",
+                "mpn/fib_table.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
+        });
+    }
+    if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path("gen/x86_64-linux"));
+        lib.addIncludePath(b.path("gen/x86_64-linux/mpn"));
+        for (x86_64_linux_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
+        lib.addCSourceFiles(.{
+            .root = b.path("gen/x86_64-linux"),
             .files = &.{
                 "mpn/mp_bases.c",
                 "mpn/fib_table.c",
@@ -464,114 +489,224 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 }
 
-const aarch64_asm_sources = [_][]const u8{
-    "gen/aarch64/mpn/add_n.s",
-    "gen/aarch64/mpn/addlsh1_n.s",
-    "gen/aarch64/mpn/addlsh2_n.s",
-    "gen/aarch64/mpn/addmul_1.s",
-    "gen/aarch64/mpn/and_n.s",
-    "gen/aarch64/mpn/andn_n.s",
-    "gen/aarch64/mpn/bdiv_dbm1c.s",
-    "gen/aarch64/mpn/bdiv_q_1.s",
-    "gen/aarch64/mpn/cnd_add_n.s",
-    "gen/aarch64/mpn/cnd_sub_n.s",
-    "gen/aarch64/mpn/com.s",
-    "gen/aarch64/mpn/copyd.s",
-    "gen/aarch64/mpn/copyi.s",
-    "gen/aarch64/mpn/gcd_11.s",
-    "gen/aarch64/mpn/gcd_22.s",
-    "gen/aarch64/mpn/hamdist.s",
-    "gen/aarch64/mpn/invert_limb.s",
-    "gen/aarch64/mpn/ior_n.s",
-    "gen/aarch64/mpn/iorn_n.s",
-    "gen/aarch64/mpn/lshift.s",
-    "gen/aarch64/mpn/lshiftc.s",
-    "gen/aarch64/mpn/mod_34lsub1.s",
-    "gen/aarch64/mpn/mul_1.s",
-    "gen/aarch64/mpn/nand_n.s",
-    "gen/aarch64/mpn/nior_n.s",
-    "gen/aarch64/mpn/popcount.s",
-    "gen/aarch64/mpn/rsblsh1_n.s",
-    "gen/aarch64/mpn/rsblsh2_n.s",
-    "gen/aarch64/mpn/rsh1add_n.s",
-    "gen/aarch64/mpn/rsh1sub_n.s",
-    "gen/aarch64/mpn/rshift.s",
-    "gen/aarch64/mpn/sec_tabselect.s",
-    "gen/aarch64/mpn/sqr_diag_addlsh1.s",
-    "gen/aarch64/mpn/sub_n.s",
-    "gen/aarch64/mpn/sublsh1_n.s",
-    "gen/aarch64/mpn/sublsh2_n.s",
-    "gen/aarch64/mpn/submul_1.s",
-    "gen/aarch64/mpn/xnor_n.s",
-    "gen/aarch64/mpn/xor_n.s",
+const aarch64_macos_asm_sources = [_][]const u8{
+    "gen/aarch64-macos/mpn/add_n.s",
+    "gen/aarch64-macos/mpn/addlsh1_n.s",
+    "gen/aarch64-macos/mpn/addlsh2_n.s",
+    "gen/aarch64-macos/mpn/addmul_1.s",
+    "gen/aarch64-macos/mpn/and_n.s",
+    "gen/aarch64-macos/mpn/andn_n.s",
+    "gen/aarch64-macos/mpn/bdiv_dbm1c.s",
+    "gen/aarch64-macos/mpn/bdiv_q_1.s",
+    "gen/aarch64-macos/mpn/cnd_add_n.s",
+    "gen/aarch64-macos/mpn/cnd_sub_n.s",
+    "gen/aarch64-macos/mpn/com.s",
+    "gen/aarch64-macos/mpn/copyd.s",
+    "gen/aarch64-macos/mpn/copyi.s",
+    "gen/aarch64-macos/mpn/gcd_11.s",
+    "gen/aarch64-macos/mpn/gcd_22.s",
+    "gen/aarch64-macos/mpn/hamdist.s",
+    "gen/aarch64-macos/mpn/invert_limb.s",
+    "gen/aarch64-macos/mpn/ior_n.s",
+    "gen/aarch64-macos/mpn/iorn_n.s",
+    "gen/aarch64-macos/mpn/lshift.s",
+    "gen/aarch64-macos/mpn/lshiftc.s",
+    "gen/aarch64-macos/mpn/mod_34lsub1.s",
+    "gen/aarch64-macos/mpn/mul_1.s",
+    "gen/aarch64-macos/mpn/nand_n.s",
+    "gen/aarch64-macos/mpn/nior_n.s",
+    "gen/aarch64-macos/mpn/popcount.s",
+    "gen/aarch64-macos/mpn/rsblsh1_n.s",
+    "gen/aarch64-macos/mpn/rsblsh2_n.s",
+    "gen/aarch64-macos/mpn/rsh1add_n.s",
+    "gen/aarch64-macos/mpn/rsh1sub_n.s",
+    "gen/aarch64-macos/mpn/rshift.s",
+    "gen/aarch64-macos/mpn/sec_tabselect.s",
+    "gen/aarch64-macos/mpn/sqr_diag_addlsh1.s",
+    "gen/aarch64-macos/mpn/sub_n.s",
+    "gen/aarch64-macos/mpn/sublsh1_n.s",
+    "gen/aarch64-macos/mpn/sublsh2_n.s",
+    "gen/aarch64-macos/mpn/submul_1.s",
+    "gen/aarch64-macos/mpn/xnor_n.s",
+    "gen/aarch64-macos/mpn/xor_n.s",
 };
 
-const x86_64_asm_sources = [_][]const u8{
-    "gen/x86_64/mpn/add_err1_n.s",
-    "gen/x86_64/mpn/add_err2_n.s",
-    "gen/x86_64/mpn/add_err3_n.s",
-    "gen/x86_64/mpn/add_n.s",
-    "gen/x86_64/mpn/addaddmul_1msb0.s",
-    "gen/x86_64/mpn/addlsh1_n.s",
-    "gen/x86_64/mpn/addlsh2_n.s",
-    "gen/x86_64/mpn/addlsh_n.s",
-    "gen/x86_64/mpn/addmul_1.s",
-    "gen/x86_64/mpn/addmul_2.s",
-    "gen/x86_64/mpn/and_n.s",
-    "gen/x86_64/mpn/andn_n.s",
-    "gen/x86_64/mpn/bdiv_dbm1c.s",
-    "gen/x86_64/mpn/bdiv_q_1.s",
-    "gen/x86_64/mpn/cnd_add_n.s",
-    "gen/x86_64/mpn/cnd_sub_n.s",
-    "gen/x86_64/mpn/com.s",
-    "gen/x86_64/mpn/copyd.s",
-    "gen/x86_64/mpn/copyi.s",
-    "gen/x86_64/mpn/div_qr_1n_pi1.s",
-    "gen/x86_64/mpn/div_qr_2n_pi1.s",
-    "gen/x86_64/mpn/div_qr_2u_pi1.s",
-    "gen/x86_64/mpn/dive_1.s",
-    "gen/x86_64/mpn/divrem_1.s",
-    "gen/x86_64/mpn/divrem_2.s",
-    "gen/x86_64/mpn/gcd_11.s",
-    "gen/x86_64/mpn/gcd_22.s",
-    "gen/x86_64/mpn/hamdist.s",
-    "gen/x86_64/mpn/invert_limb.s",
-    "gen/x86_64/mpn/invert_limb_table.s",
-    "gen/x86_64/mpn/ior_n.s",
-    "gen/x86_64/mpn/iorn_n.s",
-    "gen/x86_64/mpn/lshift.s",
-    "gen/x86_64/mpn/lshiftc.s",
-    "gen/x86_64/mpn/mod_1_1.s",
-    "gen/x86_64/mpn/mod_1_2.s",
-    "gen/x86_64/mpn/mod_1_4.s",
-    "gen/x86_64/mpn/mod_34lsub1.s",
-    "gen/x86_64/mpn/mode1o.s",
-    "gen/x86_64/mpn/mul_1.s",
-    "gen/x86_64/mpn/mul_2.s",
-    "gen/x86_64/mpn/mul_basecase.s",
-    "gen/x86_64/mpn/mullo_basecase.s",
-    "gen/x86_64/mpn/nand_n.s",
-    "gen/x86_64/mpn/nior_n.s",
-    "gen/x86_64/mpn/popcount.s",
-    "gen/x86_64/mpn/redc_1.s",
-    "gen/x86_64/mpn/rsblsh1_n.s",
-    "gen/x86_64/mpn/rsblsh2_n.s",
-    "gen/x86_64/mpn/rsblsh_n.s",
-    "gen/x86_64/mpn/rsh1add_n.s",
-    "gen/x86_64/mpn/rsh1sub_n.s",
-    "gen/x86_64/mpn/rshift.s",
-    "gen/x86_64/mpn/sec_tabselect.s",
-    "gen/x86_64/mpn/sqr_basecase.s",
-    "gen/x86_64/mpn/sqr_diag_addlsh1.s",
-    "gen/x86_64/mpn/sub_err1_n.s",
-    "gen/x86_64/mpn/sub_err2_n.s",
-    "gen/x86_64/mpn/sub_err3_n.s",
-    "gen/x86_64/mpn/sub_n.s",
-    "gen/x86_64/mpn/sublsh1_n.s",
-    "gen/x86_64/mpn/sublsh2_n.s",
-    "gen/x86_64/mpn/submul_1.s",
-    "gen/x86_64/mpn/xnor_n.s",
-    "gen/x86_64/mpn/xor_n.s",
+const x86_64_macos_asm_sources = [_][]const u8{
+    "gen/x86_64-macos/mpn/add_err1_n.s",
+    "gen/x86_64-macos/mpn/add_err2_n.s",
+    "gen/x86_64-macos/mpn/add_err3_n.s",
+    "gen/x86_64-macos/mpn/add_n.s",
+    "gen/x86_64-macos/mpn/addaddmul_1msb0.s",
+    "gen/x86_64-macos/mpn/addlsh1_n.s",
+    "gen/x86_64-macos/mpn/addlsh2_n.s",
+    "gen/x86_64-macos/mpn/addlsh_n.s",
+    "gen/x86_64-macos/mpn/addmul_1.s",
+    "gen/x86_64-macos/mpn/addmul_2.s",
+    "gen/x86_64-macos/mpn/and_n.s",
+    "gen/x86_64-macos/mpn/andn_n.s",
+    "gen/x86_64-macos/mpn/bdiv_dbm1c.s",
+    "gen/x86_64-macos/mpn/bdiv_q_1.s",
+    "gen/x86_64-macos/mpn/cnd_add_n.s",
+    "gen/x86_64-macos/mpn/cnd_sub_n.s",
+    "gen/x86_64-macos/mpn/com.s",
+    "gen/x86_64-macos/mpn/copyd.s",
+    "gen/x86_64-macos/mpn/copyi.s",
+    "gen/x86_64-macos/mpn/div_qr_1n_pi1.s",
+    "gen/x86_64-macos/mpn/div_qr_2n_pi1.s",
+    "gen/x86_64-macos/mpn/div_qr_2u_pi1.s",
+    "gen/x86_64-macos/mpn/dive_1.s",
+    "gen/x86_64-macos/mpn/divrem_1.s",
+    "gen/x86_64-macos/mpn/divrem_2.s",
+    "gen/x86_64-macos/mpn/gcd_11.s",
+    "gen/x86_64-macos/mpn/gcd_22.s",
+    "gen/x86_64-macos/mpn/hamdist.s",
+    "gen/x86_64-macos/mpn/invert_limb.s",
+    "gen/x86_64-macos/mpn/invert_limb_table.s",
+    "gen/x86_64-macos/mpn/ior_n.s",
+    "gen/x86_64-macos/mpn/iorn_n.s",
+    "gen/x86_64-macos/mpn/lshift.s",
+    "gen/x86_64-macos/mpn/lshiftc.s",
+    "gen/x86_64-macos/mpn/mod_1_1.s",
+    "gen/x86_64-macos/mpn/mod_1_2.s",
+    "gen/x86_64-macos/mpn/mod_1_4.s",
+    "gen/x86_64-macos/mpn/mod_34lsub1.s",
+    "gen/x86_64-macos/mpn/mode1o.s",
+    "gen/x86_64-macos/mpn/mul_1.s",
+    "gen/x86_64-macos/mpn/mul_2.s",
+    "gen/x86_64-macos/mpn/mul_basecase.s",
+    "gen/x86_64-macos/mpn/mullo_basecase.s",
+    "gen/x86_64-macos/mpn/nand_n.s",
+    "gen/x86_64-macos/mpn/nior_n.s",
+    "gen/x86_64-macos/mpn/popcount.s",
+    "gen/x86_64-macos/mpn/redc_1.s",
+    "gen/x86_64-macos/mpn/rsblsh1_n.s",
+    "gen/x86_64-macos/mpn/rsblsh2_n.s",
+    "gen/x86_64-macos/mpn/rsblsh_n.s",
+    "gen/x86_64-macos/mpn/rsh1add_n.s",
+    "gen/x86_64-macos/mpn/rsh1sub_n.s",
+    "gen/x86_64-macos/mpn/rshift.s",
+    "gen/x86_64-macos/mpn/sec_tabselect.s",
+    "gen/x86_64-macos/mpn/sqr_basecase.s",
+    "gen/x86_64-macos/mpn/sqr_diag_addlsh1.s",
+    "gen/x86_64-macos/mpn/sub_err1_n.s",
+    "gen/x86_64-macos/mpn/sub_err2_n.s",
+    "gen/x86_64-macos/mpn/sub_err3_n.s",
+    "gen/x86_64-macos/mpn/sub_n.s",
+    "gen/x86_64-macos/mpn/sublsh1_n.s",
+    "gen/x86_64-macos/mpn/sublsh2_n.s",
+    "gen/x86_64-macos/mpn/submul_1.s",
+    "gen/x86_64-macos/mpn/xnor_n.s",
+    "gen/x86_64-macos/mpn/xor_n.s",
+};
+
+const aarch64_linux_asm_sources = [_][]const u8{
+    "gen/aarch64-linux/mpn/add_n.s",
+    "gen/aarch64-linux/mpn/addlsh1_n.s",
+    "gen/aarch64-linux/mpn/addlsh2_n.s",
+    "gen/aarch64-linux/mpn/addmul_1.s",
+    "gen/aarch64-linux/mpn/and_n.s",
+    "gen/aarch64-linux/mpn/andn_n.s",
+    "gen/aarch64-linux/mpn/bdiv_dbm1c.s",
+    "gen/aarch64-linux/mpn/bdiv_q_1.s",
+    "gen/aarch64-linux/mpn/cnd_add_n.s",
+    "gen/aarch64-linux/mpn/cnd_sub_n.s",
+    "gen/aarch64-linux/mpn/com.s",
+    "gen/aarch64-linux/mpn/copyd.s",
+    "gen/aarch64-linux/mpn/copyi.s",
+    "gen/aarch64-linux/mpn/gcd_11.s",
+    "gen/aarch64-linux/mpn/gcd_22.s",
+    "gen/aarch64-linux/mpn/hamdist.s",
+    "gen/aarch64-linux/mpn/invert_limb.s",
+    "gen/aarch64-linux/mpn/ior_n.s",
+    "gen/aarch64-linux/mpn/iorn_n.s",
+    "gen/aarch64-linux/mpn/lshift.s",
+    "gen/aarch64-linux/mpn/lshiftc.s",
+    "gen/aarch64-linux/mpn/mod_34lsub1.s",
+    "gen/aarch64-linux/mpn/mul_1.s",
+    "gen/aarch64-linux/mpn/nand_n.s",
+    "gen/aarch64-linux/mpn/nior_n.s",
+    "gen/aarch64-linux/mpn/popcount.s",
+    "gen/aarch64-linux/mpn/rsblsh1_n.s",
+    "gen/aarch64-linux/mpn/rsblsh2_n.s",
+    "gen/aarch64-linux/mpn/rsh1add_n.s",
+    "gen/aarch64-linux/mpn/rsh1sub_n.s",
+    "gen/aarch64-linux/mpn/rshift.s",
+    "gen/aarch64-linux/mpn/sec_tabselect.s",
+    "gen/aarch64-linux/mpn/sqr_diag_addlsh1.s",
+    "gen/aarch64-linux/mpn/sub_n.s",
+    "gen/aarch64-linux/mpn/sublsh1_n.s",
+    "gen/aarch64-linux/mpn/sublsh2_n.s",
+    "gen/aarch64-linux/mpn/submul_1.s",
+    "gen/aarch64-linux/mpn/xnor_n.s",
+    "gen/aarch64-linux/mpn/xor_n.s",
+};
+
+const x86_64_linux_asm_sources = [_][]const u8{
+    "gen/x86_64-linux/mpn/add_err1_n.s",
+    "gen/x86_64-linux/mpn/add_err2_n.s",
+    "gen/x86_64-linux/mpn/add_err3_n.s",
+    "gen/x86_64-linux/mpn/add_n.s",
+    "gen/x86_64-linux/mpn/addaddmul_1msb0.s",
+    "gen/x86_64-linux/mpn/addlsh1_n.s",
+    "gen/x86_64-linux/mpn/addlsh2_n.s",
+    "gen/x86_64-linux/mpn/addlsh_n.s",
+    "gen/x86_64-linux/mpn/addmul_1.s",
+    "gen/x86_64-linux/mpn/addmul_2.s",
+    "gen/x86_64-linux/mpn/and_n.s",
+    "gen/x86_64-linux/mpn/andn_n.s",
+    "gen/x86_64-linux/mpn/bdiv_dbm1c.s",
+    "gen/x86_64-linux/mpn/bdiv_q_1.s",
+    "gen/x86_64-linux/mpn/cnd_add_n.s",
+    "gen/x86_64-linux/mpn/cnd_sub_n.s",
+    "gen/x86_64-linux/mpn/com.s",
+    "gen/x86_64-linux/mpn/copyd.s",
+    "gen/x86_64-linux/mpn/copyi.s",
+    "gen/x86_64-linux/mpn/div_qr_1n_pi1.s",
+    "gen/x86_64-linux/mpn/div_qr_2n_pi1.s",
+    "gen/x86_64-linux/mpn/div_qr_2u_pi1.s",
+    "gen/x86_64-linux/mpn/dive_1.s",
+    "gen/x86_64-linux/mpn/divrem_1.s",
+    "gen/x86_64-linux/mpn/divrem_2.s",
+    "gen/x86_64-linux/mpn/gcd_11.s",
+    "gen/x86_64-linux/mpn/gcd_22.s",
+    "gen/x86_64-linux/mpn/hamdist.s",
+    "gen/x86_64-linux/mpn/invert_limb.s",
+    "gen/x86_64-linux/mpn/invert_limb_table.s",
+    "gen/x86_64-linux/mpn/ior_n.s",
+    "gen/x86_64-linux/mpn/iorn_n.s",
+    "gen/x86_64-linux/mpn/lshift.s",
+    "gen/x86_64-linux/mpn/lshiftc.s",
+    "gen/x86_64-linux/mpn/mod_1_1.s",
+    "gen/x86_64-linux/mpn/mod_1_2.s",
+    "gen/x86_64-linux/mpn/mod_1_4.s",
+    "gen/x86_64-linux/mpn/mod_34lsub1.s",
+    "gen/x86_64-linux/mpn/mode1o.s",
+    "gen/x86_64-linux/mpn/mul_1.s",
+    "gen/x86_64-linux/mpn/mul_2.s",
+    "gen/x86_64-linux/mpn/mul_basecase.s",
+    "gen/x86_64-linux/mpn/mullo_basecase.s",
+    "gen/x86_64-linux/mpn/nand_n.s",
+    "gen/x86_64-linux/mpn/nior_n.s",
+    "gen/x86_64-linux/mpn/popcount.s",
+    "gen/x86_64-linux/mpn/redc_1.s",
+    "gen/x86_64-linux/mpn/rsblsh1_n.s",
+    "gen/x86_64-linux/mpn/rsblsh2_n.s",
+    "gen/x86_64-linux/mpn/rsblsh_n.s",
+    "gen/x86_64-linux/mpn/rsh1add_n.s",
+    "gen/x86_64-linux/mpn/rsh1sub_n.s",
+    "gen/x86_64-linux/mpn/rshift.s",
+    "gen/x86_64-linux/mpn/sec_tabselect.s",
+    "gen/x86_64-linux/mpn/sqr_basecase.s",
+    "gen/x86_64-linux/mpn/sqr_diag_addlsh1.s",
+    "gen/x86_64-linux/mpn/sub_err1_n.s",
+    "gen/x86_64-linux/mpn/sub_err2_n.s",
+    "gen/x86_64-linux/mpn/sub_err3_n.s",
+    "gen/x86_64-linux/mpn/sub_n.s",
+    "gen/x86_64-linux/mpn/sublsh1_n.s",
+    "gen/x86_64-linux/mpn/sublsh2_n.s",
+    "gen/x86_64-linux/mpn/submul_1.s",
+    "gen/x86_64-linux/mpn/xnor_n.s",
+    "gen/x86_64-linux/mpn/xor_n.s",
 };
 
 const generic_c_sources = [_][]const u8{

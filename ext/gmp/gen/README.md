@@ -14,7 +14,7 @@ done
 ```
 
 Next, copy the generated `mpn/*.s` files under the appropriate path, e.g.,
-`aarch64/mpn/.`
+`aarch64-macos/mpn/.`
 
 Now, under the GMP root dir run `make` and copy these files as well:
 
@@ -23,7 +23,15 @@ Now, under the GMP root dir run `make` and copy these files as well:
 - `fib_table.h`
 - `trialdivtab.h`
 - `mpn/fib_table.c`
+- `mpn/jacobitab.h`
 - `mpn/mp_bases.c`
+- `mpn/perfsqr.h`
+
+e.g.
+```bash
+cp {mp_bases.h,fac_table.h,fib_table.h,trialdivtab.h} aarch64-macos/.
+cp {mpn/fib_table.c,mpn/jacobitab.h,mpn/mp_bases.c,mpn/perfsqr.h} aarch64-macos/mpn/.
+```
 
 ## Some additional snippets
 
