@@ -4,7 +4,18 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    b.installArtifact(libcrypto(b, target, optimize));
+    const crypto = libcrypto(b, target, optimize);
+    if (target.result.isDarwin() and !target.query.isNative()) {
+        const macos_sdk = b.dependency("macos_sdk", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        crypto.addSystemIncludePath(macos_sdk.path("usr/include"));
+        crypto.addLibraryPath(macos_sdk.path("usr/lib"));
+        crypto.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+    }
+
+    b.installArtifact(crypto);
     b.installArtifact(libssl(b, target, optimize));
 }
 
