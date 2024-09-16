@@ -72,8 +72,8 @@ fn libcrypto(
     // lib.defineCMacro("VPAES_ASM", null);
     // lib.defineCMacro("ECP_NISTZ256_ASM", null);
     // lib.defineCMacro("POLY1305_ASM", null);
-    lib.defineCMacro("OPENSSLDIR", "\"/usr/local/lib/engines-1.1\"");
-    lib.defineCMacro("ENGINESDIR", "\"/usr/local/ssl\"");
+    lib.defineCMacro("OPENSSLDIR", "\"\"");
+    lib.defineCMacro("ENGINESDIR", "\"\"");
 
     // lib.defineCMacro("OPENSSL_NO_DEPRECATED", null);
     // lib.defineCMacro("OPENSSL_NO_ENGINE", null);
@@ -133,7 +133,7 @@ fn libcrypto(
             "crypto/aes/aes_ofb.c",
             "crypto/aes/aes_wrap.c",
             "crypto/aria/aria.c",
-            "crypto/armcap.c",
+            // "crypto/armcap.c",
             "crypto/asn1/a_bitstr.c",
             "crypto/asn1/a_d2i_fp.c",
             "crypto/asn1/a_digest.c",
@@ -281,6 +281,7 @@ fn libcrypto(
             "crypto/cast/c_enc.c",
             "crypto/cast/c_ofb64.c",
             "crypto/cast/c_skey.c",
+            "crypto/chacha/chacha_enc.c",
             "crypto/cmac/cm_ameth.c",
             "crypto/cmac/cm_pmeth.c",
             "crypto/cmac/cmac.c",
@@ -411,7 +412,7 @@ fn libcrypto(
             "crypto/ec/ecp_nistp256.c",
             "crypto/ec/ecp_nistp521.c",
             "crypto/ec/ecp_nistputil.c",
-            "crypto/ec/ecp_nistz256.c",
+            // "crypto/ec/ecp_nistz256.c",
             "crypto/ec/ecp_oct.c",
             "crypto/ec/ecp_smpl.c",
             "crypto/ec/ecx_meth.c",
@@ -525,8 +526,8 @@ fn libcrypto(
             "crypto/mdc2/mdc2_one.c",
             "crypto/mdc2/mdc2dgst.c",
             "crypto/mem.c",
-            "crypto/mem_dbg.c",
             "crypto/mem_clr.c",
+            "crypto/mem_dbg.c",
             "crypto/mem_sec.c",
             "crypto/modes/cbc128.c",
             "crypto/modes/ccm128.c",
@@ -642,11 +643,11 @@ fn libcrypto(
             "crypto/seed/seed_cfb.c",
             "crypto/seed/seed_ecb.c",
             "crypto/seed/seed_ofb.c",
+            "crypto/sha/keccak1600.c",
             "crypto/sha/sha1_one.c",
             "crypto/sha/sha1dgst.c",
             "crypto/sha/sha256.c",
             "crypto/sha/sha512.c",
-            "crypto/sha/keccak1600.c",
             "crypto/siphash/siphash.c",
             "crypto/siphash/siphash_ameth.c",
             "crypto/siphash/siphash_pmeth.c",
@@ -762,8 +763,6 @@ fn libcrypto(
             "crypto/x509v3/v3_tlsf.c",
             "crypto/x509v3/v3_utl.c",
             "crypto/x509v3/v3err.c",
-
-            "crypto/chacha/chacha_enc.c",
             "engines/e_capi.c",
             "engines/e_padlock.c",
         },
@@ -800,8 +799,6 @@ fn libssl(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step.Compile {
-    // const t = target.result;
-
     const dep = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
@@ -844,8 +841,8 @@ fn libssl(
     // lib.defineCMacro("VPAES_ASM", null);
     // lib.defineCMacro("ECP_NISTZ256_ASM", null);
     // lib.defineCMacro("POLY1305_ASM", null);
-    lib.defineCMacro("OPENSSLDIR", "\"/usr/local/lib/engines-1.1\"");
-    lib.defineCMacro("ENGINESDIR", "\"/usr/local/ssl\"");
+    lib.defineCMacro("OPENSSLDIR", "\"\"");
+    lib.defineCMacro("ENGINESDIR", "\"\"");
 
     lib.addCSourceFiles(.{
         .root = dep.path(""),
