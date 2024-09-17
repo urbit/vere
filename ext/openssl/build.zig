@@ -21,13 +21,15 @@ pub fn build(b: *std.Build) void {
         if (target.result.isDarwin()) &macos_cflags else &linux_cflags,
     );
     if (target.result.isDarwin() and !target.query.isNative()) {
-        const macos_sdk = b.dependency("macos_sdk", .{
+        const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
         });
-        crypto.addSystemIncludePath(macos_sdk.path("usr/include"));
-        crypto.addLibraryPath(macos_sdk.path("usr/lib"));
-        crypto.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+        if (macos_sdk != null) {
+            crypto.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            crypto.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            crypto.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+        }
     }
 
     b.installArtifact(crypto);
