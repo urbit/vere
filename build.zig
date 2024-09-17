@@ -1,24 +1,21 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{
-        .whitelist = &.{
-            .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
-            .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
-            .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-            .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-        },
-    });
-    const optimize = b.standardOptimizeOption(.{});
-    const t = target.result;
+const VERSION = "3.1";
 
-    const VERSION = "3.1";
+const targets: []const std.Target.Query = &.{
+    .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+};
+
+pub fn build(b: *std.Build) !void {
+    const release = b.option(bool, "release", "") orelse false;
+    const optimize = if (release) .ReleaseFast else b.standardOptimizeOption(.{});
 
     //
     // Additional Project-Specific Options
     //
-
-    const release = b.option(bool, "release", "") orelse false;
 
     const git_cmd = try std.process.Child.run(.{
         .allocator = std.heap.page_allocator,
@@ -41,7 +38,7 @@ pub fn build(b: *std.Build) !void {
         Pace,
         "pace",
         "Defaults to once",
-    ) orelse Pace.once);
+    ) orelse if (release) Pace.live else Pace.once);
 
     const cflags_opt = b.option([]const u8, "cflags", "");
 
@@ -56,13 +53,50 @@ pub fn build(b: *std.Build) !void {
     }
 
     //
+    // BUILD
+    //
+
+    if (release) {
+        for (targets) |t| {
+            try build_single(
+                b,
+                b.resolveTargetQuery(t),
+                optimize,
+                version,
+                pace,
+                cflags.items,
+            );
+        }
+    } else {
+        try build_single(
+            b,
+            b.standardTargetOptions(.{ .whitelist = targets }),
+            optimize,
+            version,
+            pace,
+            cflags.items,
+        );
+    }
+}
+
+fn build_single(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    version: []const u8,
+    pace: []const u8,
+    cflags: []const []const u8,
+) !void {
+    const t = target.result;
+
+    //
     // CFLAGS for both dependencies and build
     //
 
     var global_flags = std.ArrayList([]const u8).init(b.allocator);
     defer global_flags.deinit();
 
-    try global_flags.appendSlice(cflags.items);
+    try global_flags.appendSlice(cflags);
     try global_flags.appendSlice(&.{
         "-fno-sanitize=all",
         "-g",
@@ -195,7 +229,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     //
-    // Build outputs
+    // Install artifacts
     //
 
     const pkg_c3 = b.addStaticLibrary(.{
@@ -233,6 +267,26 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
+    const artifacts = [_]*std.Build.Step.Compile{
+        pkg_c3,
+        pkg_ent,
+        pkg_ur,
+        pkg_noun,
+        vere,
+        urbit,
+    };
+
+    for (artifacts) |artifact| {
+        const target_output = b.addInstallArtifact(artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = try t.zigTriple(b.allocator),
+                },
+            },
+        });
+        b.getInstallStep().dependOn(&target_output.step);
+    }
 
     if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.dependency("macos_sdk", .{
@@ -272,7 +326,7 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    b.installArtifact(pkg_c3);
+    // b.installArtifact(pkg_c3);
 
     //
     // PKG ENT
@@ -301,7 +355,7 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    b.installArtifact(pkg_ent);
+    // b.installArtifact(pkg_ent);
 
     //
     // PKG UR
@@ -326,7 +380,7 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    b.installArtifact(pkg_ur);
+    // b.installArtifact(pkg_ur);
 
     //
     // PKG NOUN
@@ -579,7 +633,7 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    b.installArtifact(pkg_noun);
+    // b.installArtifact(pkg_noun);
 
     //
     // VERE LIBRARY
@@ -713,7 +767,7 @@ pub fn build(b: *std.Build) !void {
     vere.installHeader(pace_h.getDirectory().path(b, "pace.h"), "pace.h");
     vere.installHeader(version_h.getDirectory().path(b, "version.h"), "version.h");
 
-    b.installArtifact(vere);
+    // b.installArtifact(vere);
 
     //
     // URBIT BINARY
@@ -745,5 +799,5 @@ pub fn build(b: *std.Build) !void {
         .flags = urbit_flags.items,
     });
 
-    b.installArtifact(urbit);
+    // b.installArtifact(urbit);
 }
