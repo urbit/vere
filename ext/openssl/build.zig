@@ -4,7 +4,13 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const macos_cflags = .{ "-arch", @tagName(target.result.cpu.arch) };
+    const macos_cflags = .{
+        "-arch",
+        if (target.result.cpu.arch.isAARCH64())
+            "arm64"
+        else
+            "x86_64",
+    };
 
     const linux_cflags = .{};
 
