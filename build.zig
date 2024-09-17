@@ -167,6 +167,11 @@ fn build_single(
         .optimize = optimize,
     });
 
+    const backtrace = b.dependency("backtrace", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const curl = b.dependency("curl", .{
         .target = target,
         .optimize = optimize,
@@ -400,6 +405,7 @@ fn build_single(
     pkg_noun.linkLibrary(pkg_c3);
     pkg_noun.linkLibrary(pkg_ent);
     pkg_noun.linkLibrary(pkg_ur);
+    pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
@@ -407,6 +413,7 @@ fn build_single(
     pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
+    pkg_noun.linkLibrary(whereami.artifact("whereami"));
     pkg_noun.linkLibC();
 
     pkg_noun.addIncludePath(b.path("pkg/noun"));

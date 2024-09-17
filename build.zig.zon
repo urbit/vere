@@ -10,6 +10,9 @@
         .avahi = .{
             .path = "./ext/avahi",
         },
+        .backtrace = .{
+            .path = "./ext/backtrace",
+        },
         .curl = .{
             .path = "./ext/curl",
         },
