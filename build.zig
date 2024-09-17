@@ -298,7 +298,7 @@ fn build_single(
     }
 
     if (target.result.isDarwin() and !target.query.isNative()) {
-        const macos_sdk = b.dependency("macos_sdk", .{
+        const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
         });
@@ -311,9 +311,11 @@ fn build_single(
         };
 
         for (steps) |step| {
-            step.addSystemIncludePath(macos_sdk.path("usr/include"));
-            step.addLibraryPath(macos_sdk.path("usr/lib"));
-            step.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+            if (macos_sdk != null) {
+                step.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+                step.addLibraryPath(macos_sdk.?.path("usr/lib"));
+                step.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            }
         }
     }
 

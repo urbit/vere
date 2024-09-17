@@ -21,9 +21,11 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
-        lib.addSystemIncludePath(macos_sdk.path("usr/include"));
-        lib.addLibraryPath(macos_sdk.path("usr/lib"));
-        lib.addFrameworkPath(macos_sdk.path("System/Library/Frameworks"));
+        if (macos_sdk != null) {
+            lib.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            lib.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            lib.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+        }
     }
 
     lib.linkLibC();

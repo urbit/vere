@@ -5,6 +5,7 @@
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
             .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
+            .lazy = true,
         },
         .sigsegv = .{
             .url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.14.tar.gz",
