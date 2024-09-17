@@ -436,7 +436,7 @@ fn libscrypt(
             "crypto_scrypt-hash.c",
             "crypto_scrypt-hexconvert.c",
             "crypto_scrypt-nosse.c",
-            "main.c",
+            // "main.c",
             "sha256.c",
             "slowequals.c",
         },
