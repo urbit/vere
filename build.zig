@@ -68,9 +68,18 @@ pub fn build(b: *std.Build) !void {
             );
         }
     } else {
+        const target = b.standardTargetOptions(.{ .whitelist = targets });
+        const t = target.result;
         try build_single(
             b,
-            b.standardTargetOptions(.{ .whitelist = targets }),
+            if (target.query.isNative())
+                b.resolveTargetQuery(.{
+                    .cpu_arch = t.cpu.arch,
+                    .os_tag = t.os.tag,
+                    .abi = .musl,
+                })
+            else
+                target,
             optimize,
             version,
             pace,
