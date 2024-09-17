@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
         .HAVE_PAGESIZE = null,
         .HAVE_SETRLIMIT = 1,
         .HAVE_SIGALTSTACK = 1,
-        .HAVE_STACKVMA = 1,
+        .HAVE_STACKVMA = @intFromBool(!(t.os.tag == .linux)),
         .HAVE_STDINT_H = 1,
         .HAVE_STDIO_H = 1,
         .HAVE_STDLIB_H = 1,
