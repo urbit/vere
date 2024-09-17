@@ -107,6 +107,7 @@ const uv_srcs_unix = uv_srcs ++ [_][]const u8{
     "unix/pipe.c",
     "unix/poll.c",
     "unix/process.c",
+    "unix/proctitle.c",
     "unix/random-devurandom.c",
     "unix/signal.c",
     "unix/stream.c",
@@ -127,7 +128,6 @@ const uv_srcs_linux = uv_srcs_unix ++ [_][]const u8{
 };
 
 const uv_srcs_macos = uv_srcs_unix ++ [_][]const u8{
-    "unix/proctitle.c",
     "unix/bsd-ifaddrs.c",
     "unix/kqueue.c",
     "unix/random-getentropy.c",
