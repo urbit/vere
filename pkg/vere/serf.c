@@ -24,7 +24,7 @@
               [%pack ~]
       ==  ==
       [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
-      [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
+      [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list (pair @da ovum))]
       [%work mil=@ job=(pair @da ovum)]
   ==
@@ -39,7 +39,7 @@
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
       ==  ==
-      $:  %play
+      $:  ?(%play %boot)
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
       ==  ==

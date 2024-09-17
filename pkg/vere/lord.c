@@ -22,7 +22,7 @@
       ==  ==
       [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
-      [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      [%play eve=@ lit=(list (pair @da ovum))]
       [%work mil=@ job=(pair @da ovum)]
   ==
 ::  +plea: from serf to king
@@ -36,7 +36,7 @@
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
       ==  ==
-      $:  %play
+      $:  ?(%play %boot)
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
       ==  ==
@@ -100,12 +100,24 @@ _lord_writ_free(u3_writ* wit_u)
       }
     } break;
 
+    case u3_writ_boot: {
+      u3_fact* tac_u = wit_u->bot_u.fon_u.ext_u;
+      u3_fact* nex_u;
+
+      u3z(wit_u->bot_u.cax);
+
+      while ( tac_u ) {
+        nex_u = tac_u->nex_u;
+        u3_fact_free(tac_u);
+        tac_u = nex_u;
+      }
+    } break;
+
     case u3_writ_save:
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit:
-    case u3_writ_boot: {
+    case u3_writ_exit: {
     } break;
   }
 
@@ -203,7 +215,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
-    case u3_writ_boot: return "boot";  // required?
+    case u3_writ_boot: return "boot";
   }
 }
 
@@ -272,10 +284,6 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
       //  XX wire into cb
       //
       u3l_log("pier: meld complete");
-    } break;
-
-    case u3_writ_boot: {
-      u3l_log("pier: boot complete");  // XX
     } break;
 
     case u3_writ_pack: {
@@ -491,6 +499,39 @@ _lord_plea_play_done(u3_lord* god_u, u3_info fon_u, u3_noun dat)
   god_u->mug_l = mug_l;
 
   god_u->cb_u.play_done_f(god_u->cb_u.ptr_v, fon_u, mug_l);
+
+  u3z(dat);
+}
+
+/* _lord_plea_boot(): hear serf %boot response
+*/
+static void
+_lord_plea_boot(u3_lord* god_u, u3_noun dat)
+{
+  u3_info fon_u;
+  {
+    u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_boot);
+    fon_u = wit_u->bot_u.fon_u;
+    c3_free(wit_u);
+  }
+
+  if ( c3n == u3a_is_cell(dat) ) {
+    return _lord_plea_foul(god_u, c3__boot, dat);
+  }
+
+  switch ( u3h(dat) ) {
+    default: {
+      return _lord_plea_foul(god_u, c3__boot, dat);
+    }
+
+    case c3__done: {
+      _lord_plea_play_done(god_u, fon_u, u3k(u3t(dat)));
+    } break;
+
+    case c3__bail: {
+      _lord_plea_play_bail(god_u, fon_u, u3k(u3t(dat)));
+    } break;
+  }
 
   u3z(dat);
 }
@@ -737,6 +778,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case  c3__flog: {
       _lord_plea_flog(god_u, u3k(dat));
+    } break;
+
+    case c3__boot: {
+      _lord_plea_boot(god_u, u3k(dat));
     } break;
 
     case c3__play: {
