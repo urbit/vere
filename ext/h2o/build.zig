@@ -307,23 +307,23 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{".h"},
     });
 
-    const ssl_conservatory = b.addStaticLibrary(.{
-        .name = "ssl_conservatory",
-        .target = target,
-        .optimize = optimize,
-    });
+    // const ssl_conservatory = b.addStaticLibrary(.{
+    //     .name = "ssl_conservatory",
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
 
-    ssl_conservatory.linkLibrary(openssl.artifact("ssl"));
-    ssl_conservatory.linkLibC();
+    // ssl_conservatory.linkLibrary(openssl.artifact("ssl"));
+    // ssl_conservatory.linkLibC();
 
-    ssl_conservatory.addIncludePath(h2o_c.path("deps/ssl-conservatory/openssl"));
+    // ssl_conservatory.addIncludePath(h2o_c.path("deps/ssl-conservatory/openssl"));
 
-    ssl_conservatory.addCSourceFiles(.{
-        .root = h2o_c.path("deps/ssl-conservatory/openssl"),
-        .files = &.{"openssl_hostname_validation.c"},
-    });
+    // ssl_conservatory.addCSourceFiles(.{
+    //     .root = h2o_c.path("deps/ssl-conservatory/openssl"),
+    //     .files = &.{"openssl_hostname_validation.c"},
+    // });
 
-    ssl_conservatory.installHeader(h2o_c.path("deps/ssl-conservatory/openssl/openssl_hostname_validation.h"), "openssl_hostname_validation.h");
+    // ssl_conservatory.installHeader(h2o_c.path("deps/ssl-conservatory/openssl/openssl_hostname_validation.h"), "openssl_hostname_validation.h");
 
     const h2o = b.addStaticLibrary(.{
         .name = "h2o",
@@ -341,7 +341,7 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(libyrmcds);
     h2o.linkLibrary(picohttpparser);
     h2o.linkLibrary(picotls);
-    h2o.linkLibrary(ssl_conservatory);
+    // h2o.linkLibrary(ssl_conservatory);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("deps/golombset"));
