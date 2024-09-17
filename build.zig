@@ -72,7 +72,7 @@ pub fn build(b: *std.Build) !void {
         const t = target.result;
         try build_single(
             b,
-            if (target.query.isNative())
+            if (t.os.tag == .linux and target.query.isNative())
                 b.resolveTargetQuery(.{
                     .cpu_arch = t.cpu.arch,
                     .os_tag = t.os.tag,
