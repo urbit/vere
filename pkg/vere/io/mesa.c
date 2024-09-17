@@ -1530,7 +1530,12 @@ _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3_noun pax = _name_to_scry(nam_u);
   u3_weak res = u3h_get(sam_u->pit_p, pax);
   u3z(pax);
-  return res;
+  if (c3__sent == res) {
+    return u3_none;
+  }
+  else {
+   return res;
+  }
 }
 
 static void
@@ -1549,7 +1554,8 @@ _mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3_noun pax = _name_to_scry(nam_u);
   // u3m_p("_mesa_del_pit pax", pax);
   if ( pin != u3_none ) {
-    u3h_del(sam_u->pit_p, pax);
+    // u3h_del(sam_u->pit_p, pax);  // XX restore me
+    u3h_put(sam_u->pit_p, pax, c3__sent);
   } else {
     u3l_log("deleting non existent key in PIT");
   }
