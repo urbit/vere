@@ -828,7 +828,6 @@ void
 u3m_stacktrace()
 {
   void* bt_state;
-  c3_i  ret_i;
   struct bt_cb_data data = { 0, 0, 0 };
   c3_c* self_path_c[4096] = {0};
 
@@ -837,7 +836,7 @@ u3m_stacktrace()
 
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
-    ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
+    backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
     if (data.fail == 0) u3l_log("");
   }
   else {
@@ -885,7 +884,7 @@ u3m_stacktrace()
       unw_get_reg(&cursor, UNW_REG_SP, &sp);
       if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
         data.pn_c = pn_c;
-      ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
+      backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
     } while (unw_step(&cursor) > 0);
 
     if ( (data.count > 0) ) {
