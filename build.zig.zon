@@ -49,6 +49,9 @@
         .softfloat = .{
             .path = "./ext/softfloat",
         },
+        .unwind = .{
+            .path = "./ext/unwind",
+        },
         .urcrypt = .{
             .path = "./ext/urcrypt",
         },
