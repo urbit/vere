@@ -227,6 +227,11 @@ fn build_single(
         .optimize = optimize,
     });
 
+    const unwind = b.dependency("unwind", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const urcrypt = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
@@ -412,6 +417,8 @@ fn build_single(
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
     pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
+    if (t.os.tag == .linux)
+        pkg_noun.linkLibrary(unwind.artifact("unwind"));
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
     pkg_noun.linkLibC();
