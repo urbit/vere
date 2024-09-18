@@ -882,8 +882,8 @@ u3m_stacktrace()
     do {
       unw_get_reg(&cursor, UNW_REG_IP, &pc);
       unw_get_reg(&cursor, UNW_REG_SP, &sp);
-      if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
-        data.pn_c = pn_c;
+      if ( 0 == unw_get_proc_name(&cursor, (c3_c*)pn_c, 1024, (unw_word_t *)&offp_w) )
+        data.pn_c = (c3_c*)pn_c;
       backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
     } while (unw_step(&cursor) > 0);
 
