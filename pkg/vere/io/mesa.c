@@ -1070,7 +1070,9 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
 
     if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
          (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
-      _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
+      c3_y* san_y = c3_calloc(len_w);
+      memcpy(san_y, buf_y, len_w);
+      _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
       per_u->dir_u.sen_d = now_d;
     }
   }
