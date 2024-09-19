@@ -1533,6 +1533,7 @@ _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3_weak res = u3h_get(sam_u->pit_p, pax);
   u3z(pax);
   if (c3__sent == res) {
+    u3z(res);
     return u3_none;
   }
   else {
