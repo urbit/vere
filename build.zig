@@ -832,7 +832,7 @@ fn build_single(
 
     // pkg_ur
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -844,7 +844,7 @@ fn build_single(
 
     // pkg_ent
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -856,7 +856,7 @@ fn build_single(
 
     // pkg_noun
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -866,7 +866,7 @@ fn build_single(
         noun_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -876,7 +876,7 @@ fn build_single(
         noun_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -886,7 +886,7 @@ fn build_single(
         noun_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -896,7 +896,7 @@ fn build_single(
         noun_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -908,7 +908,7 @@ fn build_single(
 
     // vere
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -928,7 +928,7 @@ fn build_single(
         vere_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -948,7 +948,7 @@ fn build_single(
         vere_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -968,7 +968,7 @@ fn build_single(
         vere_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -988,7 +988,7 @@ fn build_single(
         vere_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -1008,7 +1008,7 @@ fn build_single(
         vere_flags.items,
     );
 
-    try build_test(
+    add_test(
         b,
         target,
         optimize,
@@ -1029,7 +1029,7 @@ fn build_single(
     );
 }
 
-fn build_test(
+fn add_test(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -1037,8 +1037,8 @@ fn build_test(
     file: []const u8,
     deps: []const *std.Build.Step.Compile,
     cflags: []const []const u8,
-) !void {
-    const test_step = b.step(name, "");
+) void {
+    const test_step = b.step(name, b.fmt("Build & run: {s}", .{file}));
 
     const test_exe = b.addExecutable(.{
         .name = name,
