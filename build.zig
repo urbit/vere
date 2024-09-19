@@ -825,4 +825,258 @@ fn build_single(
     });
 
     // b.installArtifact(urbit);
+
+    //
+    // Tests
+    //
+
+    // pkg_ur
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "ur-test",
+        "pkg/ur/tests.c",
+        &.{pkg_ur},
+        urbit_flags.items,
+    );
+
+    // pkg_ent
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "ent-test",
+        "pkg/ent/tests.c",
+        &.{pkg_ent},
+        urbit_flags.items,
+    );
+
+    // pkg_noun
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "hashtable-test",
+        "pkg/noun/hashtable_tests.c",
+        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+        noun_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "jets-test",
+        "pkg/noun/jets_tests.c",
+        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+        noun_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "nock-test",
+        "pkg/noun/nock_tests.c",
+        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+        noun_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "retrieve-test",
+        "pkg/noun/retrieve_tests.c",
+        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+        noun_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "serial-test",
+        "pkg/noun/serial_tests.c",
+        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+        noun_flags.items,
+    );
+
+    // vere
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "ames-test",
+        "pkg/vere/ames_tests.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "boot-test",
+        "pkg/vere/boot_tests.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "newt-test",
+        "pkg/vere/newt_tests.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "vere-noun-test",
+        "pkg/vere/noun_tests.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "unix-test",
+        "pkg/vere/unix_tests.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+
+    try build_test(
+        b,
+        target,
+        optimize,
+        "benchmarks",
+        "pkg/vere/benchmarks.c",
+        &.{
+            vere,
+            pkg_noun,
+            pkg_ur,
+            pkg_ent,
+            pkg_c3,
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+        },
+        vere_flags.items,
+    );
+}
+
+fn build_test(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    name: []const u8,
+    file: []const u8,
+    deps: []const *std.Build.Step.Compile,
+    cflags: []const []const u8,
+) !void {
+    const test_step = b.step(name, "");
+
+    const test_exe = b.addExecutable(.{
+        .name = name,
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // const target_output = b.addInstallArtifact(test_exe, .{
+    //     .dest_dir = .{
+    //         .override = .{
+    //             .custom = try target.result.zigTriple(b.allocator),
+    //         },
+    //     },
+    // });
+    // b.getInstallStep().dependOn(&target_output.step);
+
+    if (target.result.isDarwin() and !target.query.isNative()) {
+        const macos_sdk = b.lazyDependency("macos_sdk", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        if (macos_sdk != null) {
+            test_exe.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            test_exe.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            test_exe.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+        }
+    }
+
+    test_exe.stack_size = 0;
+
+    test_exe.linkLibC();
+    for (deps) |dep| {
+        test_exe.linkLibrary(dep);
+    }
+
+    test_exe.addCSourceFiles(.{ .files = &.{file}, .flags = cflags });
+
+    const run_unit_tests = b.addRunArtifact(test_exe);
+    run_unit_tests.skip_foreign_checks = true;
+    test_step.dependOn(&run_unit_tests.step);
 }
