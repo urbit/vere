@@ -1176,7 +1176,7 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
 }
 
 static c3_o
-_mesa_burn_misorder_queue(u3_pend_req* req_u)
+_mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w lef_d)
 {
   c3_w num_w;
   c3_w max_w = sizeof(req_u->mis_u) / sizeof(u3_misord_buf);
@@ -1188,20 +1188,21 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u)
     }
     if ( c3y != lss_verifier_ingest(req_u->los_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u) ) {
       res_o = c3n;
-      memset(req_u->mis_u, 0, (num_w + 1) * sizeof(u3_misord_buf));
+      u3l_log("fail to burn %u", num_w);
       break;
     }
+    c3_w siz_w = (1 << (boq_y - 3));  // XX
+    // u3l_log("size %u counter %u num %u fra %u inx %u lef_d %u", siz_w, req_u->los_u->counter , num_w, fra_d, (req_u->los_u->counter + num_w + 1), lef_d);
+    memcpy(req_u->dat_y + (siz_w * (lef_d + num_w + 1)), buf_u->fra_y, buf_u->len_w);
   }
-  if (res_o == c3y) {
-    // ratchet forward
-    num_w++; // account for the in-ordered packet processed in _mesa_req_pact_done
-    req_u->lef_d += num_w;
-    req_u->hav_d += num_w;
-    memset(req_u->mis_u, 0, num_w * sizeof(u3_misord_buf));
-    memcpy(req_u->mis_u,
-          (c3_y*)req_u->mis_u + (num_w * sizeof(u3_misord_buf)),
-          (max_w - num_w) * sizeof(u3_misord_buf));
-  }
+  // ratchet forward
+  num_w++; // account for the in-ordered packet processed in _mesa_req_pact_done
+  req_u->lef_d += num_w;
+  req_u->hav_d += num_w;
+  memset(req_u->mis_u, 0, num_w * sizeof(u3_misord_buf));
+  memcpy(req_u->mis_u,
+        (c3_y*)req_u->mis_u + (num_w * sizeof(u3_misord_buf)),
+        (max_w - num_w) * sizeof(u3_misord_buf));
   return res_o;
 }
 
@@ -1258,7 +1259,9 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       buf_u->len_w = dat_u->len_w;
       memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
       buf_u->par_u = par_u;
-      u3l_log("insert into misordered queue fra: [%llu] = %llu",  nam_u->fra_d - req_u->los_u->counter - 1, nam_u->fra_d );
+      u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",  nam_u->fra_d - req_u->los_u->counter - 1, nam_u->fra_d , req_u->los_u->counter);
+      _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
+      return;
     }
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1268,7 +1271,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     MESA_LOG(sam_u, AUTH);
     return;
   }
-  else if ( c3y != _mesa_burn_misorder_queue(req_u) ) {
+  else if ( c3y != _mesa_burn_misorder_queue(req_u, nam_u->boq_y, req_u->lef_d) ) {
     u3l_log("about to misorder free");
     c3_free(par_u);
     MESA_LOG(sam_u, AUTH)
@@ -1286,12 +1289,8 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   bitset_del(&req_u->was_u, nam_u->fra_d);
 
   #ifdef MESA_DEBUG
-    u3l_log("fragment %llu counter %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
+    // u3l_log("fragment %llu counter %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
   #endif
-  if ( req_u->lef_d == nam_u->fra_d ) {
-    req_u->hav_d++;
-    req_u->lef_d++;
-  }
 
   u3_lane_state* sat_u;
   if ( 0 == hop_y && (c3n == _mesa_lanes_equal(&lan_u, &req_u->per_u->dan_u)) ) {
