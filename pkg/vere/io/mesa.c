@@ -1195,14 +1195,17 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w lef_d)
     // u3l_log("size %u counter %u num %u fra %u inx %u lef_d %u", siz_w, req_u->los_u->counter , num_w, fra_d, (req_u->los_u->counter + num_w + 1), lef_d);
     memcpy(req_u->dat_y + (siz_w * (lef_d + num_w + 1)), buf_u->fra_y, buf_u->len_w);
   }
+
   // ratchet forward
   num_w++; // account for the in-ordered packet processed in _mesa_req_pact_done
   req_u->lef_d += num_w;
   req_u->hav_d += num_w;
-  memset(req_u->mis_u, 0, num_w * sizeof(u3_misord_buf));
+
   memcpy(req_u->mis_u,
         (c3_y*)req_u->mis_u + (num_w * sizeof(u3_misord_buf)),
         (max_w - num_w) * sizeof(u3_misord_buf));
+  memset((c3_y*)req_u->mis_u + ((max_w - (num_w)) * sizeof(u3_misord_buf)), 0, (num_w) * sizeof(u3_misord_buf));
+
   return res_o;
 }
 
@@ -1286,7 +1289,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->ack_d = nam_u->fra_d;
   }
 
-  bitset_del(&req_u->was_u, nam_u->fra_d);
+  bitset_del(&req_u->was_u, nam_u->fra_d);  // XX also for out of order frags?
 
   #ifdef MESA_DEBUG
     // u3l_log("fragment %llu counter %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
