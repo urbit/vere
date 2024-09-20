@@ -2623,9 +2623,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         _n_push(mov, off, u3k(u3h(x)));
       }
       else {
-        if ( mem_u->cid == u3z_memo_keep ) {
-          fprintf(stderr, "\r\nnock: hit\r\n");
-        }
         ip_w += mem_u->sip_l;
         _n_push(mov, off, o);
         u3z(x);
@@ -2638,7 +2635,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       o   = *top;
       if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
-         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
+         // : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
+         : ( 1 ) ) {  //  prevents userspace from persistence  // XX
         u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       else if ( u3z_memo_keep == u3h(o) ) {
