@@ -2561,6 +2561,115 @@ u3j_core _k138_d[] =
 };
 
 
+static u3j_harm _137_lull_plot_fax_a[] = {{".2", u3wg_plot_fax, c3y}, {}};
+static u3j_harm _137_lull_plot_met_a[] = {{".2", u3wg_plot_met, c3y}, {}};
+
+static u3j_core _137_lull_plot_d[] =
+  { { "fax", 7, _137_lull_plot_fax_a, 0, no_hashes },
+    { "met", 7, _137_lull_plot_met_a, 0, no_hashes },
+    {}
+  };
+
+static u3j_core _137_lull_d[] =
+  { { "plot", 31, 0, _137_lull_plot_d, no_hashes },
+    {}
+  };
+
+static u3j_core _137_hex_d[] =
+{ { "lull",   3, 0, _137_lull_d, no_hashes },
+
+  { "lore",  63, _140_hex_lore_a, 0, no_hashes },
+  { "leer",  63, _140_hex_leer_a, 0, no_hashes },
+  { "loss",  63, _140_hex_loss_a, 0, no_hashes },
+  { "lune", 127, _140_hex_lune_a, 0, no_hashes },
+
+  { "coed", 63, 0, _140_hex_coed_d, no_hashes },
+  { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
+
+  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
+  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
+  { "blake",  31, 0, _138_hex_blake_d, no_hashes },
+  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
+  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
+  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
+  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
+  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
+  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  {}
+};
+
+static u3j_core _137_pen_d[] =
+{ { "hex", 7, 0, _137_hex_d, no_hashes },
+
+  { "cell", 7, _140_pen_cell_a, 0, no_hashes },
+  { "comb", 7, _140_pen_comb_a, 0, no_hashes },
+  { "cons", 7, _140_pen_cons_a, 0, no_hashes },
+  { "core", 7, _140_pen_core_a, 0, no_hashes },
+  { "face", 7, _140_pen_face_a, 0, no_hashes },
+  { "fitz", 7, _140_pen_fitz_a, 0, no_hashes },
+  { "fork", 7, _140_pen_fork_a, 0, no_hashes },
+  { "look", 7, _140_pen_look_a, 0, no_hashes },
+  { "loot", 7, _140_pen_loot_a, 0, no_hashes },
+  { "ut", 15, 0, _140_pen__ut_d, no_hashes, _140_pen__ut_ho },
+  {}
+};
+
+static u3j_core _137_qua_d[] =
+{ { "pen", 3, 0, _137_pen_d, no_hashes, _140_pen_ho },
+
+  { "po", 7, 0, _140_qua__po_d, no_hashes },
+
+  { "trip", 7, _140_qua_trip_a, 0, no_hashes },
+
+  { "bend", 7, 0, _140_qua__bend_d, no_hashes },
+  { "cold", 7, 0, _140_qua__cold_d, no_hashes },
+  { "comp", 7, 0, _140_qua__comp_d, no_hashes },
+  { "cook", 7, 0, _140_qua__cook_d, no_hashes },
+  { "easy", 7, 0, _140_qua__easy_d, no_hashes },
+  { "glue", 7, 0, _140_qua__glue_d, no_hashes },
+  { "here", 7, 0, _140_qua__here_d, no_hashes },
+  { "just", 7, 0, _140_qua__just_d, no_hashes },
+  { "mask", 7, 0, _140_qua__mask_d, no_hashes },
+  { "shim", 7, 0, _140_qua__shim_d, no_hashes },
+  { "stag", 7, 0, _140_qua__stag_d, no_hashes },
+  { "stew", 7, 0, _140_qua__stew_d, no_hashes },
+  { "stir", 7, 0, _140_qua__stir_d, no_hashes },
+
+  { "pfix", 7, _140_qua_pfix_a, 0, no_hashes },
+  { "plug", 7, _140_qua_plug_a, 0, no_hashes },
+  { "pose", 7, _140_qua_pose_a, 0, no_hashes },
+  { "sfix", 7, _140_qua_sfix_a, 0, no_hashes },
+
+  { "mink", 7, _140_qua_mink_a, 0, no_hashes },
+  { "mole", 7, _140_qua_mole_a, 0, no_hashes },
+  { "mule", 7, _140_qua_mule_a, 0, no_hashes },
+
+  { "scot", 7, _140_qua_scot_a, 0, no_hashes },
+  { "scow", 7, _140_qua_scow_a, 0, no_hashes },
+  { "slaw", 7, _140_qua_slaw_a, 0, no_hashes },
+  {}
+};
+
+static u3j_core _137_tri_d[] =
+{ { "qua", 3, 0, _137_qua_d, no_hashes, _140_qua_ho },
+
+  { "cofl", 7, 0, _140_tri__cofl_d, no_hashes },
+  { "rd",   7, 0, _140_tri__rd_d,   no_hashes },
+  { "rs",   7, 0, _140_tri__rs_d,   no_hashes },
+  { "rq",   7, 0, _140_tri__rq_d,   no_hashes },
+  { "rh",   7, 0, _140_tri__rh_d,   no_hashes },
+  { "og",   7, 0, _140_tri__og_d,   no_hashes },
+
+  { "sha",  7, 0,               _140_tri__sha_d, no_hashes },
+  { "shax", 7, _140_tri_shax_a, 0,               no_hashes },
+  { "shay", 7, _140_tri_shay_a, 0,               no_hashes },
+  { "shas", 7, _140_tri_shas_a, 0,               no_hashes },
+  { "shal", 7, _140_tri_shal_a, 0,               no_hashes },
+
+  { "ob", 3, 0, _140_ob_d, no_hashes, _140_ob_ho },
+  {}
+};
+
 static u3j_harm _137_two_clz_a[] = {{".2", u3wc_clz, c3n}, {}};
 static u3j_harm _137_two_ctz_a[] = {{".2", u3wc_ctz, c3n}, {}};
 static u3j_harm _137_two_ham_a[] = {{".2", u3wc_ham, c3n}, {}};
@@ -2574,7 +2683,7 @@ static u3j_core _137_two__hew_d[] =
 static u3j_harm _137_two_rig_a[] = {{".2", u3wc_rig, c3n}, {}};
 
 static u3j_core _137_two_d[] =
-{ { "tri", 3, 0, _138_tri_d, no_hashes, _140_tri_ho },
+{ { "tri", 3, 0, _137_tri_d, no_hashes, _140_tri_ho },
 
   { "find", 7, _140_two_find_a, 0, no_hashes },
   { "flop", 7, _140_two_flop_a, 0, no_hashes },
