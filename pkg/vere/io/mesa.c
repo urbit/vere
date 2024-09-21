@@ -1895,7 +1895,7 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
   u3_noun pax = _name_to_jumbo_scry(nam_u);
   u3_weak del = u3h_put_get(sam_u->pac_p, pax, u3a_outa(lin_u));
   if ( u3_none != del ) {
-    _mesa_free_line(u3a_into(del));
+    _mesa_free_line(u3a_into(u3t(del)));
     u3z(del);
   }
   u3z(pax);
