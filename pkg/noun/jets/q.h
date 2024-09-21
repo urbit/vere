@@ -53,13 +53,17 @@
     u3_noun u3qc_can(u3_atom, u3_noun);
     u3_noun u3qc_cap(u3_atom);
     u3_noun u3qc_cat(u3_atom, u3_atom, u3_atom);
+    u3_noun u3qc_clz(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_con(u3_atom, u3_atom);
+    u3_noun u3qc_ctz(u3_atom);
     u3_noun u3qc_cut(u3_atom, u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_dis(u3_atom, u3_atom);
     u3_noun u3qc_dor(u3_atom, u3_atom);
     u3_noun u3qc_dvr(u3_atom, u3_atom);
     u3_noun u3qc_end(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_gor(u3_atom, u3_atom);
+    u3_noun u3qc_ham(u3_atom);
+    u3_noun u3qc_hew(u3_atom, u3_atom, u3_atom, u3_noun);
     u3_noun u3qc_lsh(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_mas(u3_atom);
     u3_noun u3qc_met(u3_atom, u3_atom);
@@ -71,10 +75,13 @@
     u3_noun u3qc_rap(u3_atom, u3_noun);
     u3_noun u3qc_rep(u3_atom, u3_atom, u3_noun);
     u3_noun u3qc_rev(u3_atom, u3_atom, u3_atom);
+    u3_noun u3qc_rig(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rip(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rsh(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_swp(u3_atom, u3_atom);
     u3_noun u3qc_sqt(u3_atom);
+
+    c3_d u3qc_rig_s(c3_g, c3_w, c3_g);
 
     u3_noun u3_po_find_prefix(c3_y one, c3_y two, c3_y three);
     u3_noun u3_po_find_suffix(c3_y one, c3_y two, c3_y three);

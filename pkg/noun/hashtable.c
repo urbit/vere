@@ -54,7 +54,7 @@ u3h_new(void)
 static c3_w
 _ch_popcount(c3_w num_w)
 {
-  return __builtin_popcount(num_w);
+  return c3_pc_w(num_w);
 }
 
 /* _ch_buck_new(): create new bucket.
