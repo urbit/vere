@@ -837,203 +837,192 @@ fn build_single(
     // Tests
     //
 
-    // pkg_ur
+    if (target.query.isNative()) {
+        // pkg_ur
+        add_test(
+            b,
+            target,
+            optimize,
+            "ur-test",
+            "pkg/ur/tests.c",
+            &.{pkg_ur},
+            urbit_flags.items,
+        );
 
-    add_test(
-        b,
-        target,
-        optimize,
-        "ur-test",
-        "pkg/ur/tests.c",
-        &.{pkg_ur},
-        urbit_flags.items,
-    );
+        // pkg_ent
+        add_test(
+            b,
+            target,
+            optimize,
+            "ent-test",
+            "pkg/ent/tests.c",
+            &.{pkg_ent},
+            urbit_flags.items,
+        );
 
-    // pkg_ent
+        // pkg_noun
+        add_test(
+            b,
+            target,
+            optimize,
+            "hashtable-test",
+            "pkg/noun/hashtable_tests.c",
+            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            noun_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "jets-test",
+            "pkg/noun/jets_tests.c",
+            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            noun_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "nock-test",
+            "pkg/noun/nock_tests.c",
+            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            noun_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "retrieve-test",
+            "pkg/noun/retrieve_tests.c",
+            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            noun_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "serial-test",
+            "pkg/noun/serial_tests.c",
+            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            noun_flags.items,
+        );
 
-    add_test(
-        b,
-        target,
-        optimize,
-        "ent-test",
-        "pkg/ent/tests.c",
-        &.{pkg_ent},
-        urbit_flags.items,
-    );
-
-    // pkg_noun
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "hashtable-test",
-        "pkg/noun/hashtable_tests.c",
-        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
-        noun_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "jets-test",
-        "pkg/noun/jets_tests.c",
-        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
-        noun_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "nock-test",
-        "pkg/noun/nock_tests.c",
-        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
-        noun_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "retrieve-test",
-        "pkg/noun/retrieve_tests.c",
-        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
-        noun_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "serial-test",
-        "pkg/noun/serial_tests.c",
-        &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
-        noun_flags.items,
-    );
-
-    // vere
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "ames-test",
-        "pkg/vere/ames_tests.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "boot-test",
-        "pkg/vere/boot_tests.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "newt-test",
-        "pkg/vere/newt_tests.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "vere-noun-test",
-        "pkg/vere/noun_tests.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "unix-test",
-        "pkg/vere/unix_tests.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
-
-    add_test(
-        b,
-        target,
-        optimize,
-        "benchmarks",
-        "pkg/vere/benchmarks.c",
-        &.{
-            vere,
-            pkg_noun,
-            pkg_ur,
-            pkg_ent,
-            pkg_c3,
-            gmp.artifact("gmp"),
-            libuv.artifact("libuv"),
-            lmdb.artifact("lmdb"),
-            natpmp.artifact("natpmp"),
-        },
-        vere_flags.items,
-    );
+        // vere
+        add_test(
+            b,
+            target,
+            optimize,
+            "ames-test",
+            "pkg/vere/ames_tests.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "boot-test",
+            "pkg/vere/boot_tests.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "newt-test",
+            "pkg/vere/newt_tests.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "vere-noun-test",
+            "pkg/vere/noun_tests.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "unix-test",
+            "pkg/vere/unix_tests.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+        add_test(
+            b,
+            target,
+            optimize,
+            "benchmarks",
+            "pkg/vere/benchmarks.c",
+            &.{
+                vere,
+                pkg_noun,
+                pkg_ur,
+                pkg_ent,
+                pkg_c3,
+                gmp.artifact("gmp"),
+                libuv.artifact("libuv"),
+                lmdb.artifact("lmdb"),
+                natpmp.artifact("natpmp"),
+            },
+            vere_flags.items,
+        );
+    }
 }
 
 fn add_test(
