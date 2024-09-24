@@ -13,25 +13,27 @@ pub fn build(b: *std.Build) !void {
     const release = b.option(bool, "release", "") orelse false;
     const optimize = if (release) .ReleaseFast else b.standardOptimizeOption(.{});
 
-    //
-    // Additional Project-Specific Options
-    //
+    // Parse short git rev
+    var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
+    defer file.close();
+    var buf_reader = std.io.bufferedReader(file.reader());
+    var in_stream = buf_reader.reader();
+    var buf: [1024]u8 = undefined;
+    var last_line: [1024]u8 = undefined;
+    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        if (line.len > 0)
+            last_line = buf;
+    }
+    const git_rev = buf[41..51];
 
-    const git_cmd = try std.process.Child.run(.{
-        .allocator = std.heap.page_allocator,
-        .argv = &.{
-            "git",
-            "rev-parse",
-            "--short",
-            "HEAD",
-        },
-        .max_output_bytes = 1024,
-    });
-    const git_rev = git_cmd.stdout[0..9];
     const version = if (!release)
         VERSION ++ "-" ++ git_rev
     else
         VERSION;
+
+    //
+    // Additional Project-Specific Options
+    //
 
     const Pace = enum { once, live, soon, edge };
     const pace = @tagName(b.option(
