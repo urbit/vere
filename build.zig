@@ -297,10 +297,17 @@ fn build_single(
     };
 
     for (artifacts) |artifact| {
+        const target_query: std.Target.Query = .{
+            .cpu_arch = t.cpu.arch,
+            .os_tag = t.os.tag,
+            .abi = t.abi,
+            .os_version_min = .none,
+            .os_version_max = .none,
+        };
         const target_output = b.addInstallArtifact(artifact, .{
             .dest_dir = .{
                 .override = .{
-                    .custom = try t.zigTriple(b.allocator),
+                    .custom = try target_query.zigTriple(b.allocator),
                 },
             },
         });
