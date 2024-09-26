@@ -921,6 +921,7 @@ fn build_single(
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
+                zlib.artifact("z"),
             },
             vere_flags.items,
         );
