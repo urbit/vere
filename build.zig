@@ -34,6 +34,11 @@ pub fn build(b: *std.Build) !void {
     //
     // Additional Project-Specific Options
     //
+    const all = b.option(
+        bool,
+        "all",
+        "Build for all targets",
+    ) orelse false;
 
     const Pace = enum { once, live, soon, edge };
     const pace = @tagName(b.option(
@@ -58,7 +63,7 @@ pub fn build(b: *std.Build) !void {
     // BUILD
     //
 
-    if (release) {
+    if (release or all) {
         for (targets) |t| {
             try build_single(
                 b,
