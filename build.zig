@@ -438,15 +438,10 @@ fn build_single(
     pkg_noun.linkLibC();
 
     pkg_noun.addIncludePath(b.path("pkg/noun"));
-    pkg_noun.addIncludePath(b.path("pkg/noun/jets"));
-    pkg_noun.addIncludePath(b.path(switch (t.os.tag) {
-        .macos => "pkg/noun/platform/darwin",
-        .linux => "pkg/noun/platform/linux",
-        else => "",
-    }));
-    pkg_noun.addIncludePath(b.path("pkg/noun/v1"));
-    pkg_noun.addIncludePath(b.path("pkg/noun/v2"));
-    pkg_noun.addIncludePath(b.path("pkg/noun/v3"));
+    if (t.os.tag.isDarwin())
+        pkg_noun.addIncludePath(b.path("pkg/noun/platform/darwin"));
+    if (t.os.tag == .linux)
+        pkg_noun.addIncludePath(b.path("pkg/noun/platform/linux"));
 
     var noun_flags = std.ArrayList([]const u8).init(b.allocator);
     defer noun_flags.deinit();
@@ -712,8 +707,6 @@ fn build_single(
     vere.addIncludePath(pace_h.getDirectory());
     vere.addIncludePath(version_h.getDirectory());
     vere.addIncludePath(b.path("pkg/vere"));
-    vere.addIncludePath(b.path("pkg/vere/db"));
-    vere.addIncludePath(b.path("pkg/vere/io/ames"));
     vere.addIncludePath(b.path("pkg/vere/ivory"));
     vere.addIncludePath(b.path("pkg/vere/ca_bundle"));
 
