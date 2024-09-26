@@ -110,7 +110,7 @@
       inline c3_w
       c3_sift_word(c3_y buf_y[4])
       {
-        return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
+        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
       }
 
       inline c3_d

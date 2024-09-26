@@ -188,7 +188,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w lef_w, c3_w ham_w, c3_w mad_w)
       // fragments collide: store in a child node.
       u3h_node* han_u = _ch_node_new(1);
       ret             = han_u;
-      han_u->map_w    = 1 << hop_w;
+      han_u->map_w    = (c3_w)1 << hop_w;
       ham_w           = CUT_END(ham_w, lef_w);
       mad_w           = CUT_END(mad_w, lef_w);
       han_u->sot_w[0] = _ch_two(had_w, add_w, lef_w, ham_w, mad_w);
