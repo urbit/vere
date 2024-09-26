@@ -834,7 +834,7 @@ fn build_single(
     // Tests
     //
 
-    if (target.query.isNative()) {
+    if (target.query.isNativeCpu() and target.query.isNativeOs()) {
         // pkg_ur
         add_test(
             b,
