@@ -501,6 +501,7 @@ fn build_single(
             "jets/b/turn.c",
             "jets/b/weld.c",
             "jets/b/zing.c",
+            "jets/c/aor.c",
             "jets/c/bex.c",
             "jets/c/c0n.c",
             "jets/c/can.c",
