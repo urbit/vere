@@ -701,6 +701,7 @@ fn build_single(
             "vortex_v2.c",
             "hashtable_v3.c",
             "manage_v3.c",
+            "manage_v4.c",
             "vortex.c",
             "xtract.c",
             "zave.c",
