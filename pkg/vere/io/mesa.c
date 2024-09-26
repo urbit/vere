@@ -329,7 +329,7 @@ _get_now_micros()
 {
   struct timeval tim_u;
   gettimeofday(&tim_u, NULL);
-  return (tim_u.tv_sec * 1000000) + tim_u.tv_usec;
+  return (tim_u.tv_sec * 1000 * 1000) + tim_u.tv_usec;
 }
 
 static c3_d
@@ -340,8 +340,7 @@ _abs_dif(c3_d ayy_d, c3_d bee_d)
 
 static c3_d
 _clamp_rto(c3_d rto_d) {
-  /* u3l_log("clamp rto %llu", rto_d); */
-  return c3_min(c3_max(rto_d, 200000), 25000000);
+  return c3_min(c3_max(rto_d, 200 * 1000), 25000 * 1000); // ~s25 max backoff
 }
 
 static inline c3_o
@@ -1313,7 +1312,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
 
   //  XX FIXME?
-  // _try_resend(req_u, req_u->nex_d); // XX _try_resend(req_u, nam_u->fra_d);
+  _try_resend(req_u, nam_u->fra_d);  // _try_resend(req_u, req_u->nex_d);
   _update_resend_timer(req_u);
 }
 
@@ -2916,7 +2915,7 @@ u3_mesa_io_init(u3_pier* pir_u)
   sam_u->her_p = u3h_new_cache(100000);
   sam_u->lan_p = u3h_new_cache(100000);
   sam_u->pac_p = u3h_new_cache(10000);
-  sam_u->pit_p = u3h_new_cache(10000);
+  sam_u->pit_p = u3h_new_cache(1000000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   sam_u->wax_u.data = sam_u;
