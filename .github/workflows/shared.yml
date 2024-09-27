@@ -72,27 +72,9 @@ jobs:
           swapon --show
           echo
 
-      - name: Set up build cache
-        uses: actions/cache@v3
+      - uses: mlugg/setup-zig@v1
         with:
-          key: linux-x86_64-zig-cache
-          path: |
-            ~/.zig
-            ~/.cache/zig
-            ${{ github.workspace }}/.zig-cache
-
-      - name: Install Zig
-        run: |
-          if [ ! -d "$HOME/.zig" ]; then
-            url="https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz"
-            # download zig
-            curl -L -o $HOME/zig.tar.xz "${url}"
-            # unpack to ./zig
-            mkdir $HOME/.zig
-            tar -xf $HOME/zig.tar.xz -C $HOME/.zig --strip-components=1
-          fi
-          # add zig to path
-          echo $HOME/.zig >> $GITHUB_PATH
+          version: 0.13.0
 
       - name: Build binaries
         run: |
