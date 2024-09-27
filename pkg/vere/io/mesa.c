@@ -779,6 +779,7 @@ _mesa_put_lane(u3_mesa* sam_u, u3_ship her_u, u3_lane* lan_u, u3_gage* gag_u)
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
+  /* _log_gage(gag_u); */
   gag_u->con_w++;
 
   c3_d now_d = _get_now_micros();
@@ -853,7 +854,7 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     req_u->wat_u[nam_u->fra_d].tie_y = 1;
 
     #ifdef MESA_DEBUG
-      u3l_log("bitset_put %"PRIu64, nam_u->fra_d);
+      /* u3l_log("bitset_put %"PRIu64, nam_u->fra_d); */
     #endif
     bitset_put(&req_u->was_u, nam_u->fra_d);
   } else {
@@ -962,7 +963,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 
 #ifdef MESA_DEBUG
   c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
+  /* u3l_log("mesa: sending packet to %s:%u", sip_c, por_s); */
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -1725,7 +1726,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__saxo: {
       #ifdef MESA_DEBUG
         c3_c* tag_c = u3r_string(tag);
-        u3l_log("mesa: send old %s", tag_c);
+        /* u3l_log("mesa: send old %s", tag_c); */
         c3_free(tag_c);
       #endif
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
