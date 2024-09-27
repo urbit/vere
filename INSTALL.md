@@ -42,7 +42,6 @@ A quick overview of the more useful build options.
 See `zig build --help` for more.
 
 #### `-Dtarget=[string]`
-
 Cross-compilation target. See [supported targets](#supported-targets).
 
 #### `-Doptimize=[enum]`
@@ -54,10 +53,15 @@ Supported values:
 - ReleaseSmall => optimize for binary size
 - ReleaseFast => optimize for speed
 
-#### `-Dcflags=[string]`
-Pass additional cflags to the compiler. These propagate to all build artifacts and dependencies.
+#### `-Dall`
+Build for all [supported targets](#supported-targets).
+
+#### `-Drelease`
+Release flag. Builds with `-Doptimize=ReleaseFast` and `-Dpace=live`, and omits
+git rev from binary version.
 
 #### `-Dpace=[enum]`
+Release train.
 
 Supported values:
 - once (default)
@@ -65,9 +69,9 @@ Supported values:
 - soon
 - edge
 
-#### `-Drelease`
-
-Release flag. Builds for all [supported targets](#supported-targets) with `-Doptimize=ReleaseFast` and `-Dpace=live`
+#### `-Dflags=[string]`
+Provide additional compiler flags. These propagate to all build artifacts and
+dependencies.
 
 <!-- ## LSP Integration -->
 
