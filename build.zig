@@ -12,6 +12,7 @@ const targets: []const std.Target.Query = &.{
 const BuildCfg = struct {
     version: []const u8,
     pace: []const u8,
+    binary_name: []const u8,
     flags: []const []const u8 = &.{},
     cpu_dbg: bool = false,
     mem_dbg: bool = false,
@@ -69,6 +70,12 @@ pub fn build(b: *std.Build) !void {
         }
     }
 
+    const binary_name = b.option(
+        []const u8,
+        "binary-name",
+        "Binary name, defaults to \"urbit\"",
+    ) orelse "urbit";
+
     const cpu_dbg = b.option(
         bool,
         "cpu-dbg",
@@ -101,6 +108,7 @@ pub fn build(b: *std.Build) !void {
         .version = version,
         .pace = pace,
         .flags = flags.items,
+        .binary_name = binary_name,
         .cpu_dbg = cpu_dbg,
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
@@ -330,7 +338,7 @@ fn build_single(
     });
 
     const urbit = b.addExecutable(.{
-        .name = "urbit",
+        .name = cfg.binary_name,
         .target = target,
         .optimize = optimize,
     });
