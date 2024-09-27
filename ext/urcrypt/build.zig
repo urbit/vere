@@ -201,6 +201,7 @@ fn libargon2(
         "-fno-sanitize=all",
         "-Wno-unused-value",
         "-Wno-unused-function",
+        "-DARGON2_NO_THREADS",
     };
 
     const common_files = .{
