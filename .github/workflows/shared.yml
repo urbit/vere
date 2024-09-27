@@ -136,8 +136,8 @@ jobs:
           solid_pill=${{ github.workspace }}/solid.pill
 
 
-          curl -LJ -o $solid_pill https://github.com/urbit/urbit/raw/255fb1ca8206072f1d09425f0db61ecfe7ff5b17/bin/solid.pill
-          curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/ea8fee3aa0434d4bdf1bf785e5ec346c7ecba7fd.tar.gz
+          curl -LJ -o $solid_pill https://github.com/urbit/urbit/raw/84ebb321314b3fbc08253de5213f19450ffbfb3e/bin/solid.pill
+          curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/84ebb321314b3fbc08253de5213f19450ffbfb3e.tar.gz
 
           mkdir ./urbit
           tar xfz urbit.tar.gz -C ./urbit --strip-components=1
