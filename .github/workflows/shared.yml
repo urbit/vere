@@ -121,14 +121,9 @@ jobs:
       #     # See https://github.com/urbit/vere/issues/40.
       #     bazel build //pkg/vere:test-fake-ship
 
-
       #
       # UPLOAD TO GCP
       #
-      - name: Prepare binary for upload to GCP
-        if: ${{ inputs.upload }}
-        run: |
-          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
 
       - uses: google-github-actions/auth@v1
         if: ${{ inputs.upload }}
@@ -143,30 +138,37 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          bazel build :version_str
-          sha_version=$(cat ./bazel-bin/version)
-          if ${{ inputs.next != null }}; then
-            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
-            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
-          else
-            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
-          fi
+          sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
+          declare -a targets=(
+            "aarch64-linux-musl"
+            "aarch64-macos-none"
+            "x86_64-linux-musl"
+            "x86_64-macos-none"
+          )
+          for target in "${targets[@]}"
+          do
+            urbit_static=$GITHUB_WORKSPACE/zig-out/${target}/urbit
+            if ${{ inputs.next != null }}; then
+              next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
+            else
+              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
+            fi
 
-          args=""
-          # We never overwrite a binary deployed to the "live" train, but we do
-          # overwrite same-versioned binaries deployed to the "soon" and "edge"
-          # trains.
-          if [[ "${{ inputs.pace }}" == "live" ]]; then
-            gsutil cp -n "${{ env.urbit_static }}" "$target"
-          else
-            gsutil cp "${{ env.urbit_static }}" "$target"
-          fi
-          exitcode=$?
+            args=""
+            # We never overwrite a binary deployed to the "live" train, but we do
+            # overwrite same-versioned binaries deployed to the "soon" and "edge"
+            # trains.
+            if [[ "${{ inputs.pace }}" == "live" ]]; then
+              gsutil cp -n "${urbit_static}" "$dest"
+            else
+              gsutil cp "${urbit_static}" "$dest"
+            fi
+            exitcode=$?
 
-          [ $exitcode -eq 0 ] &&
-            echo "upload to $target complete." ||
-            echo "upload to $target failed.";
-          exit $exitcode
+            ([ $exitcode -eq 0 ] && echo "upload to $dest complete.") ||
+            (echo "upload to $dest failed." && exit $exitcode);
+          done
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
@@ -187,6 +189,8 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
+          echo $(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h) > ./VERSION
+
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
             target="gs://${UPLOAD_BASE}/next/kelvin/${next}/last"
@@ -194,10 +198,9 @@ jobs:
             target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
           fi
 
-          bazel build :version_str
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp ./bazel-bin/version "$target"
+          gsutil cp ./VERSION "$target"
           exitcode=$?
 
           [ $exitcode -eq 0 ] &&
