@@ -21,10 +21,71 @@ const BuildCfg = struct {
 };
 
 pub fn build(b: *std.Build) !void {
-    const release = b.option(bool, "release", "") orelse false;
-    const optimize = if (release) .ReleaseFast else b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{ .whitelist = targets });
+    var optimize = b.standardOptimizeOption(.{});
+
+    //
+    // Additional Project-Specific Options
+    //
+
+    const all = b.option(bool, "all", "Build all targets") orelse false;
+
+    const release = b.option(bool, "release", "Build for release") orelse false;
+    if (release) optimize = .ReleaseFast;
+
+    const Pace = enum { once, live, soon, edge };
+    const pace = @tagName(b.option(
+        Pace,
+        "pace",
+        "Release train (Default: once)",
+    ) orelse if (release) Pace.live else Pace.once);
+
+    const flags_opt = b.option(
+        []const u8,
+        "flags",
+        "Provide additional compiler flags",
+    );
+    var flags = std.ArrayList([]const u8).init(b.allocator);
+    defer flags.deinit();
+    var iter_flags = std.mem.splitSequence(u8, flags_opt orelse "", " ");
+    while (iter_flags.next()) |flag| {
+        if (flag.len != 0) {
+            try flags.appendSlice(&.{flag});
+        }
+    }
+
+    const cpu_dbg = b.option(
+        bool,
+        "cpu-dbg",
+        "Enable cpu debug mode (-DU3_CPU_DEBUG)",
+    ) orelse false;
+
+    const mem_dbg = b.option(
+        bool,
+        "mem-dbg",
+        "Enable memory debug mode (-DU3_MEMORY_DEBUG)",
+    ) orelse false;
+
+    const c3dbg = b.option(
+        bool,
+        "c3dbg",
+        "Enable debug assertions (-DC3DBG)",
+    ) orelse false;
+
+    const snapshot_validation = b.option(
+        bool,
+        "snapshot-validation",
+        "Enable snapshot validation (-DU3_SNAPSHOT_VALIDATION)",
+    ) orelse false;
+
+    const binary_name = b.option(
+        []const u8,
+        "binary-name",
+        "Binary name (Default: urbit)",
+    ) orelse "urbit";
 
     // Parse short git rev
+    //
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
     var buf_reader = std.io.bufferedReader(file.reader());
@@ -37,68 +98,11 @@ pub fn build(b: *std.Build) !void {
     }
     const git_rev = buf[41..51];
 
+    // Binary version
     const version = if (!release)
         VERSION ++ "-" ++ git_rev
     else
         VERSION;
-
-    //
-    // Additional Project-Specific Options
-    //
-    const all = b.option(
-        bool,
-        "all",
-        "Build for all targets",
-    ) orelse false;
-
-    const Pace = enum { once, live, soon, edge };
-    const pace = @tagName(b.option(
-        Pace,
-        "pace",
-        "Defaults to once",
-    ) orelse if (release) Pace.live else Pace.once);
-
-    const flags_opt = b.option([]const u8, "cflags", "");
-
-    var flags = std.ArrayList([]const u8).init(b.allocator);
-    defer flags.deinit();
-
-    var iter_flags = std.mem.splitSequence(u8, flags_opt orelse "", " ");
-    while (iter_flags.next()) |flag| {
-        if (flag.len != 0) {
-            try flags.appendSlice(&.{flag});
-        }
-    }
-
-    const binary_name = b.option(
-        []const u8,
-        "binary-name",
-        "Binary name, defaults to \"urbit\"",
-    ) orelse "urbit";
-
-    const cpu_dbg = b.option(
-        bool,
-        "cpu-dbg",
-        "Enable cpu debug, -DU3_CPU_DEBUG",
-    ) orelse false;
-
-    const mem_dbg = b.option(
-        bool,
-        "mem-dbg",
-        "Enable memory debug, -DU3_MEMORY_DEBUG",
-    ) orelse false;
-
-    const c3dbg = b.option(
-        bool,
-        "c3dbg",
-        "Enable debug assertions, -DC3DBG",
-    ) orelse false;
-
-    const snapshot_validation = b.option(
-        bool,
-        "snapshot-validation",
-        "Enable snapshot validation, -DU3_SNAPSHOT_VALIDATION",
-    ) orelse false;
 
     //
     // BUILD
@@ -120,7 +124,6 @@ pub fn build(b: *std.Build) !void {
             try build_single(b, b.resolveTargetQuery(t), optimize, build_cfg);
         }
     } else {
-        const target = b.standardTargetOptions(.{ .whitelist = targets });
         const t = target.result;
         try build_single(
             b,
