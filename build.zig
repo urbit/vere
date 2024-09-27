@@ -14,6 +14,7 @@ const BuildCfg = struct {
     pace: []const u8,
     binary_name: []const u8,
     flags: []const []const u8 = &.{},
+    include_test_steps: bool = true,
     cpu_dbg: bool = false,
     mem_dbg: bool = false,
     c3dbg: bool = false,
@@ -117,9 +118,10 @@ pub fn build(b: *std.Build) !void {
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
+        .include_test_steps = !all,
     };
 
-    if (release or all) {
+    if (all) {
         for (targets) |t| {
             try build_single(b, b.resolveTargetQuery(t), optimize, build_cfg);
         }
@@ -890,7 +892,7 @@ fn build_single(
     // Tests
     //
 
-    if (target.query.isNativeCpu() and target.query.isNativeOs()) {
+    if (cfg.include_test_steps) {
         // pkg_ur
         add_test(
             b,
