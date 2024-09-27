@@ -1050,13 +1050,13 @@ u3t_etch_meme(c3_l mod_l)
   **  cel_d: max cells allocated in current road (inc closed kids, but not parents)
   **  nox_d: nock steps performed in current road
   */
-  max_w = (u3R->all.max_w*4)+imu_w;
-  max_f = _ct_meme_percent(max_w, top_w);
-  cel_d = u3R->pro.cel_d;
-  nox_d = u3R->pro.nox_d;
+  c3_w max_w = (u3R->all.max_w*4)+imu_w;
+  float max_f = _ct_meme_percent(max_w, top_w);
+  c3_d cel_d = u3R->pro.cel_d;
+  c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
+  c3_w inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed
