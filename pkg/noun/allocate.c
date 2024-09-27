@@ -2236,7 +2236,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_w eus_w, c3_w use_w)
 {
   fprintf(stderr, "%s: %p mug=%x (marked=%u swept=%u)\r\n",
                   cap_c,
-                  box_u,
+                  (void *)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
                   eus_w,
                   use_w);
