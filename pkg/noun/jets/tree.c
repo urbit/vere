@@ -270,6 +270,12 @@ static c3_c* _140_hex_lune_ha[] = {
   0
 };
 
+
+static u3j_harm _137_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
+
+static u3j_core _137_hex__crc_d[] = {{"crc32", 7, _137_hex__crc32_a, 0, no_hashes }, {}};
+
+
 static u3j_harm _140_hex_coed__ed_puck_a[] = {{".2", u3wee_puck}, {}};
 static c3_c* _140_hex_coed__ed_puck_ha[] = {
   "1bc694675842345c50b0e20a2193bb5bcbb42f163fc832431a3d1822a81e4c98",
@@ -2120,8 +2126,77 @@ static u3j_core _139_hex_json_d[] =
     {}
   };
 
+/* /lib jets in non core
+*/
+static u3j_harm _139_non__lagoon_add_a[]  = {{".2", u3wi_la_add}, {}};
+static u3j_harm _139_non__lagoon_sub_a[]  = {{".2", u3wi_la_sub}, {}};
+static u3j_harm _139_non__lagoon_mul_a[]  = {{".2", u3wi_la_mul}, {}};
+static u3j_harm _139_non__lagoon_div_a[]  = {{".2", u3wi_la_div}, {}};
+static u3j_harm _139_non__lagoon_mod_a[]  = {{".2", u3wi_la_mod}, {}};
+static u3j_harm _139_non__lagoon_adds_a[] = {{".2", u3wi_la_adds}, {}};
+static u3j_harm _139_non__lagoon_subs_a[] = {{".2", u3wi_la_subs}, {}};
+static u3j_harm _139_non__lagoon_muls_a[] = {{".2", u3wi_la_muls}, {}};
+static u3j_harm _139_non__lagoon_divs_a[] = {{".2", u3wi_la_divs}, {}};
+static u3j_harm _139_non__lagoon_mods_a[] = {{".2", u3wi_la_mods}, {}};
+static u3j_harm _139_non__lagoon_dot_a[]  = {{".2", u3wi_la_dot}, {}};
+static u3j_harm _139_non__lagoon_trans_a[] ={{".2", u3wi_la_transpose}, {}};
+static u3j_harm _139_non__lagoon_cumsum_a[]={{".2", u3wi_la_cumsum}, {}};
+static u3j_harm _139_non__lagoon_argmin_a[]={{".2", u3wi_la_argmin}, {}};
+static u3j_harm _139_non__lagoon_argmax_a[]={{".2", u3wi_la_argmax}, {}};
+static u3j_harm _139_non__lagoon_ravel_a[]={{".2", u3wi_la_ravel}, {}};
+static u3j_harm _139_non__lagoon_min_a[]  = {{".2", u3wi_la_min}, {}};
+static u3j_harm _139_non__lagoon_max_a[]  = {{".2", u3wi_la_max}, {}};
+static u3j_harm _139_non__lagoon_linspace_a[]={{".2", u3wi_la_linspace}, {}};
+static u3j_harm _139_non__lagoon_range_a[]= {{".2", u3wi_la_range}, {}};
+static u3j_harm _139_non__lagoon_abs_a[]  = {{".2", u3wi_la_abs}, {}};
+static u3j_harm _139_non__lagoon_gth_a[]  = {{".2", u3wi_la_gth}, {}};
+static u3j_harm _139_non__lagoon_gte_a[]  = {{".2", u3wi_la_gte}, {}};
+static u3j_harm _139_non__lagoon_lth_a[]  = {{".2", u3wi_la_lth}, {}};
+static u3j_harm _139_non__lagoon_lte_a[]  = {{".2", u3wi_la_lte}, {}};
+static u3j_harm _139_non__lagoon_diag_a[] = {{".2", u3wi_la_diag}, {}};
+static u3j_harm _139_non__lagoon_trace_a[]= {{".2", u3wi_la_trace}, {}};
+static u3j_harm _139_non__lagoon_mmul_a[] = {{".2", u3wi_la_mmul}, {}};
+static u3j_core _139_non__la_core_d[] =
+  { { "add-rays", 7, _139_non__lagoon_add_a,  0, no_hashes },
+    { "sub-rays", 7, _139_non__lagoon_sub_a,  0, no_hashes },
+    { "mul-rays", 7, _139_non__lagoon_mul_a,  0, no_hashes },
+    { "div-rays", 7, _139_non__lagoon_div_a,  0, no_hashes },
+    { "mod-rays", 7, _139_non__lagoon_mod_a,  0, no_hashes },
+    { "add-scal", 7, _139_non__lagoon_adds_a, 0, no_hashes },
+    { "sub-scal", 7, _139_non__lagoon_subs_a, 0, no_hashes },
+    { "mul-scal", 7, _139_non__lagoon_muls_a, 0, no_hashes },
+    { "div-scal", 7, _139_non__lagoon_divs_a, 0, no_hashes },
+    { "mod-scal", 7, _139_non__lagoon_mods_a, 0, no_hashes },
+    { "dot",      7, _139_non__lagoon_dot_a,  0, no_hashes },
+    { "transpose",7, _139_non__lagoon_trans_a, 0, no_hashes },
+    { "cumsum",   7, _139_non__lagoon_cumsum_a, 0, no_hashes },
+    { "argmin",   7, _139_non__lagoon_argmin_a, 0, no_hashes },
+    { "argmax",   7, _139_non__lagoon_argmax_a, 0, no_hashes },
+    { "ravel",    7, _139_non__lagoon_ravel_a, 0, no_hashes },
+    { "min",      7, _139_non__lagoon_min_a, 0, no_hashes },
+    { "max",      7, _139_non__lagoon_max_a, 0, no_hashes },
+    { "linspace", 7, _139_non__lagoon_linspace_a, 0, no_hashes },
+    { "range",    7, _139_non__lagoon_range_a, 0, no_hashes },
+    { "abs",      7, _139_non__lagoon_abs_a, 0, no_hashes },
+    { "gth",      7, _139_non__lagoon_gth_a, 0, no_hashes },
+    { "gte",      7, _139_non__lagoon_gte_a, 0, no_hashes },
+    { "lth",      7, _139_non__lagoon_lth_a, 0, no_hashes },
+    { "lte",      7, _139_non__lagoon_lte_a, 0, no_hashes },
+    { "diag",     7, _139_non__lagoon_diag_a, 0, no_hashes },
+    { "trace",    7, _139_non__lagoon_trace_a,0, no_hashes },
+    { "mmul",     7, _139_non__lagoon_mmul_a, 0, no_hashes },
+    {}
+  };
+
+static u3j_core _139_non_d[] =
+  { { "lagoon", 7, 0, _139_non__la_core_d, no_hashes },
+    {}
+  };
+
 static u3j_core _139_hex_d[] =
-{ { "lore",  63, _140_hex_lore_a, 0, no_hashes },
+{ { "non", 7, 0, _139_non_d, no_hashes },
+
+  { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
   { "loss",  63, _140_hex_loss_a, 0, no_hashes },
   { "lune", 127, _140_hex_lune_a, 0, no_hashes },
@@ -2138,6 +2213,7 @@ static u3j_core _139_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
   { "json",   31, 0, _139_hex_json_d,  no_hashes },
+
   {}
 };
 
@@ -2346,6 +2422,8 @@ static u3j_core _138_hex_d[] =
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
   { "loss",  63, _140_hex_loss_a, 0, no_hashes },
   { "lune", 127, _140_hex_lune_a, 0, no_hashes },
+// XX move me to 137 when it exists
+  { "crc", 31, 0, _137_hex__crc_d, no_hashes },
 
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
@@ -2624,6 +2702,7 @@ static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
   { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
   { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
+  { "k137", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 137,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };
