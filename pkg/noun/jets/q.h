@@ -48,6 +48,7 @@
 
   /** Tier 3.
   **/
+    u3_noun u3qc_aor(u3_atom, u3_atom);
     u3_noun u3qc_bex(u3_atom);
     u3_noun u3qc_xeb(u3_atom);
     u3_noun u3qc_can(u3_atom, u3_noun);

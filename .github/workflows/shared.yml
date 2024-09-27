@@ -56,6 +56,33 @@ jobs:
       #
       - uses: actions/checkout@v3
 
+      - name: Set swap space
+        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
+        run: |
+          echo "Memory and swap:"
+          free -h
+          echo
+          swapon --show
+          echo
+
+          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+          if test -z "${SWAP_FILE}"; then
+              export SWAP_FILE=/swapfile
+          else
+              sudo swapoff -a
+              sudo rm "${SWAP_FILE}"
+          fi
+          sudo fallocate -l 10G "${SWAP_FILE}"
+          sudo chmod 600 "${SWAP_FILE}"
+          sudo mkswap "${SWAP_FILE}"
+          sudo swapon "${SWAP_FILE}"
+
+          echo "Memory and swap:"
+          free -h
+          echo
+          swapon --show
+          echo
+
       - name: chown /usr/local
         if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
         run: |
@@ -64,7 +91,7 @@ jobs:
       - name: Set up build cache
         uses: actions/cache@v3
         with:
-          key: ${{ matrix.target }}-cache
+          key: ${{ matrix.target }}-cache-1
           path: |
             # # Cache bazel path on Linux.
             ~/.cache/bazel/_bazel_$(whoami)

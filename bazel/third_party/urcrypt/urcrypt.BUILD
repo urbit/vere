@@ -15,7 +15,7 @@ configure_make(
     copts = [
         "-Wall",
         "-g",
-        "-O3",
+        "-O2",
     ],
     deps = [
         "@aes_siv",

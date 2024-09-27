@@ -1441,7 +1441,7 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       do {
         //  XX fallback on any errors?
         //
-        if ( 0 > (sen_i = sendfile64(dst_i, src_i, &off_i, len_i)) ) {
+        if ( 0 > (sen_i = sendfile(dst_i, src_i, &off_i, len_i)) ) {
           err_i = errno;
           ret_i = -1;
           goto done3;

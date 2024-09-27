@@ -153,3 +153,21 @@ jump to definition, cross-references, hovering, symbol renaming, etc.):
 ```console
 bazel run //bazel:refresh_compile_commands
 ```
+
+### Debugging
+
+Prefer GDB for interactive debugging.  You need to compile with the symbol table:
+
+```bash
+bazel build :urbit --compilation_mode=dbg
+gdb --args ./bazel-bin/pkg/vere/urbit zod
+```
+
+In GDB, set the following, and any breakpoints (e.g. `break u3m_bail`):
+
+```gdb
+set follow-fork-mode child
+handle SIGSEGV nostop noprint
+```
+
+Then run the Urbit program as usual with `r`.
