@@ -9,6 +9,16 @@ const targets: []const std.Target.Query = &.{
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
 };
 
+const BuildCfg = struct {
+    version: []const u8,
+    pace: []const u8,
+    flags: []const []const u8 = &.{},
+    cpu_dbg: bool = false,
+    mem_dbg: bool = false,
+    c3dbg: bool = false,
+    snapshot_validation: bool = false,
+};
+
 pub fn build(b: *std.Build) !void {
     const release = b.option(bool, "release", "") orelse false;
     const optimize = if (release) .ReleaseFast else b.standardOptimizeOption(.{});
@@ -47,32 +57,59 @@ pub fn build(b: *std.Build) !void {
         "Defaults to once",
     ) orelse if (release) Pace.live else Pace.once);
 
-    const cflags_opt = b.option([]const u8, "cflags", "");
+    const flags_opt = b.option([]const u8, "cflags", "");
 
-    var cflags = std.ArrayList([]const u8).init(b.allocator);
-    defer cflags.deinit();
+    var flags = std.ArrayList([]const u8).init(b.allocator);
+    defer flags.deinit();
 
-    var iter_flags = std.mem.splitSequence(u8, cflags_opt orelse "", " ");
+    var iter_flags = std.mem.splitSequence(u8, flags_opt orelse "", " ");
     while (iter_flags.next()) |flag| {
         if (flag.len != 0) {
-            try cflags.appendSlice(&.{flag});
+            try flags.appendSlice(&.{flag});
         }
     }
+
+    const cpu_dbg = b.option(
+        bool,
+        "cpu-dbg",
+        "Enable cpu debug, -DU3_CPU_DEBUG",
+    ) orelse false;
+
+    const mem_dbg = b.option(
+        bool,
+        "mem-dbg",
+        "Enable memory debug, -DU3_MEMORY_DEBUG",
+    ) orelse false;
+
+    const c3dbg = b.option(
+        bool,
+        "c3dbg",
+        "Enable debug assertions, -DC3DBG",
+    ) orelse false;
+
+    const snapshot_validation = b.option(
+        bool,
+        "snapshot-validation",
+        "Enable snapshot validation, -DU3_SNAPSHOT_VALIDATION",
+    ) orelse false;
 
     //
     // BUILD
     //
 
+    const build_cfg: BuildCfg = .{
+        .version = version,
+        .pace = pace,
+        .flags = flags.items,
+        .cpu_dbg = cpu_dbg,
+        .mem_dbg = mem_dbg,
+        .c3dbg = c3dbg,
+        .snapshot_validation = snapshot_validation,
+    };
+
     if (release or all) {
         for (targets) |t| {
-            try build_single(
-                b,
-                b.resolveTargetQuery(t),
-                optimize,
-                version,
-                pace,
-                cflags.items,
-            );
+            try build_single(b, b.resolveTargetQuery(t), optimize, build_cfg);
         }
     } else {
         const target = b.standardTargetOptions(.{ .whitelist = targets });
@@ -84,9 +121,7 @@ pub fn build(b: *std.Build) !void {
             else
                 target,
             optimize,
-            version,
-            pace,
-            cflags.items,
+            build_cfg,
         );
     }
 }
@@ -95,9 +130,7 @@ fn build_single(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    version: []const u8,
-    pace: []const u8,
-    cflags: []const []const u8,
+    cfg: BuildCfg,
 ) !void {
     const t = target.result;
 
@@ -108,7 +141,7 @@ fn build_single(
     var global_flags = std.ArrayList([]const u8).init(b.allocator);
     defer global_flags.deinit();
 
-    try global_flags.appendSlice(cflags);
+    try global_flags.appendSlice(cfg.flags);
     try global_flags.appendSlice(&.{
         "-fno-sanitize=all",
         "-g",
@@ -137,6 +170,18 @@ fn build_single(
         "-DU3_OS_ENDIAN_little=1", // pkg_c3
         "-DU3_OS_PROF=1", // pkg_c3
     });
+
+    if (cfg.cpu_dbg)
+        try urbit_flags.appendSlice(&.{"-DU3_CPU_DEBUG"});
+
+    if (cfg.mem_dbg)
+        try urbit_flags.appendSlice(&.{"-DU3_MEMORY_DEBUG"});
+
+    if (cfg.c3dbg)
+        try urbit_flags.appendSlice(&.{"-DC3DBG"});
+
+    if (cfg.snapshot_validation)
+        try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
 
     if (t.cpu.arch == .aarch64) {
         try urbit_flags.appendSlice(&.{
@@ -680,7 +725,7 @@ fn build_single(
             \\#define U3_VERE_PACE "{s}"
             \\#endif
             \\
-        , .{pace}));
+        , .{cfg.pace}));
 
         break :blk try output.toOwnedSlice();
     });
@@ -695,7 +740,7 @@ fn build_single(
             \\#define URBIT_VERSION "{s}"
             \\#endif
             \\
-        , .{version}));
+        , .{cfg.version}));
 
         break :blk try output.toOwnedSlice();
     });
