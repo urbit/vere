@@ -895,7 +895,8 @@ u3a_cfree(c3_w* cel_w)
 {
 #ifdef U3_MEMORY_DEBUG
   if ( u3C.wag_w & u3o_debug_ram ) {
-    return u3a_wfree(cel_w);
+    u3a_wfree(cel_w);
+    return;
   }
 #endif
 
