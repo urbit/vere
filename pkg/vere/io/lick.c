@@ -472,10 +472,8 @@ _lick_ef_spin(u3_lick* lic_u, u3_noun nam)
   gen_u->liv_o        = c3y;
 
   _lick_init_sock(gen_u->san_u);
-  if ( NULL == las_u) {
-    lic_u->gen_u = gen_u;
-  }
-  else las_u->nex_u = gen_u;
+  gen_u ->nex_u = lic_u->gen_u;
+  lic_u->gen_u = gen_u;
 }
 
 /* _lick_ef_spit(): spit effects to port
