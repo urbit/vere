@@ -116,17 +116,25 @@ jobs:
             -Dpace=${{inputs.pace}}    \
             --summary all
 
-      - name: Run fake ship tests
+      - name: Build test binary
         if: ${{ inputs.fake_tests }}
         run: |
-          #
-          # Init Fake Ship
-          #
+          zig build                    \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            -Dbinary-name=urbit-test   \
+            -Dcpu-dbg                  \
+            -Dmem-dbg                  \
+            -Dc3dbg                    \
+            -Dsnapshot-validation      \
+            --summary all
 
-          set -xeuo pipefail
-
-          urbit_binary=${{ github.workspace }}/zig-out/x86_64-linux-musl/urbit
+      - name: Boot fake ship
+        if: ${{ inputs.fake_tests }}
+        run: |
+          urbit_binary=${{ github.workspace }}/zig-out/x86_64-linux-musl/urbit-test
           solid_pill=${{ github.workspace }}/solid.pill
+
 
           curl -LJ -o $solid_pill https://github.com/urbit/urbit/raw/255fb1ca8206072f1d09425f0db61ecfe7ff5b17/bin/solid.pill
           curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/ea8fee3aa0434d4bdf1bf785e5ec346c7ecba7fd.tar.gz
@@ -134,6 +142,8 @@ jobs:
           mkdir ./urbit
           tar xfz urbit.tar.gz -C ./urbit --strip-components=1
           cp -RL ./urbit/tests ./urbit/pkg/arvo/tests
+
+          set -xeuo pipefail
 
           $urbit_binary --lite-boot --daemon --fake bus \
             --bootstrap $solid_pill                     \
@@ -182,13 +192,28 @@ jobs:
             exit 1
           fi
 
-          #
-          # Run Tests
-          #
+      - name: Run fake ship tests
+        if: ${{ inputs.fake_tests }}
+        run: |
+          urbit_binary=${{ github.workspace }}/zig-out/x86_64-linux-musl/urbit-test
+
+          set -x
 
           $urbit_binary --lite-boot --daemon --gc ./pier 2> urbit-output
 
           port=$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $1}')
+
+          lensd() {
+            curl -s                                                              \
+              --data "{\"source\":{\"dojo\":\"$1\"},\"sink\":{\"stdout\":null}}" \
+              "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
+          }
+
+          lensa() {
+            curl -s                                                             \
+              --data "{\"source\":{\"dojo\":\"$2\"},\"sink\":{\"app\":\"$1\"}}" \
+              "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
+          }
 
           tail -F urbit-output >&2 &
 
