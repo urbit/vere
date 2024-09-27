@@ -99,7 +99,8 @@ jobs:
           zig build                    \
             -Dall                      \
             -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}
+            -Dpace=${{inputs.pace}}    \
+            --summary all
 
       - name: Run unit tests
         run: |
