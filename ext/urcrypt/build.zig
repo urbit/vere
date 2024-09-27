@@ -54,6 +54,7 @@ pub fn build(b: *std.Build) void {
             "util.c",
         },
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
             "-g",
             "-Wall",
@@ -101,6 +102,7 @@ fn libaes_siv(
             "aes_siv.c",
         },
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
         },
     });
@@ -195,6 +197,7 @@ fn libargon2(
     lib.linkLibC();
 
     const flags = .{
+        "-O2",
         "-fno-sanitize=all",
         "-Wno-unused-value",
         "-Wno-unused-function",
@@ -267,12 +270,17 @@ fn libblake3(
                 "blake3_avx2_x86-64_unix.S",
                 "blake3_avx512_x86-64_unix.S",
             }),
+            .flags = &.{
+                "-O2",
+                "-fno-sanitize=all",
+            },
         });
     } else {
         lib.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
             .files = &(common_files ++ .{"blake3_neon.c"}),
             .flags = &.{
+                "-O2",
                 "-fno-sanitize=all",
                 "-DBLAKE3_USE_NEON=1",
             },
@@ -320,6 +328,7 @@ fn libed25519(
             "src/verify.c",
         },
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
             "-Wno-unused-result",
         },
@@ -357,6 +366,7 @@ fn libge_additions(
         .root = dep_c.path("ge-additions"),
         .files = &.{"ge-additions.c"},
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
@@ -393,6 +403,7 @@ fn libkeccak_tiny(
         .root = dep_c.path("keccak-tiny"),
         .files = &.{"keccak-tiny.c"},
         .flags = &.{
+            "-O2",
             "-fno-sanitize=all",
             "-std=c11",
             "-Wextra",
