@@ -6,13 +6,16 @@
 
 #include "noun.h"
 
-u3_noun
+u3_atom
 u3qa_min(u3_atom a, u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    return u3k(c3_min(a, b));
+    return c3_min(a, b);
   }
   else {
+    if ( (a == 0) || (b == 0) ) {
+      return 0;
+    }
     c3_w a_w = u3r_met(0, a);
     c3_w b_w = u3r_met(0, b);
 
@@ -21,7 +24,7 @@ u3qa_min(u3_atom a, u3_atom b)
     }
     else {
       mpz_t   a_mp, b_mp;
-      u3_noun min;
+      u3_atom min;
 
       u3r_mp(a_mp, a);
       u3r_mp(b_mp, b);
@@ -36,26 +39,22 @@ u3qa_min(u3_atom a, u3_atom b)
   }
 }
 
-u3_noun
+u3_weak
 u3wa_min(u3_noun cor)
 {
   u3_noun a, b;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
-     || (c3n == u3ud(b) && 0 != a)
-     || (c3n == u3ud(a) && 0 != b) )
-  {
-    return u3m_bail(c3__exit);
+  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  if ( !_(u3ud(a)) || !_(u3ud(b)) ) {
+    return u3_none;
   }
-  else {
-    return u3qa_min(a, b);
-  }
+  return u3qa_min(a, b);
 }
 
-u3_noun
-u3ka_min(u3_noun a, u3_noun b)
+u3_atom
+u3ka_min(u3_atom a, u3_atom b)
 {
-  u3_noun c = u3qa_min(a, b);
+  u3_atom c = u3qa_min(a, b);
   u3z(a); u3z(b);
   return c;
 }
