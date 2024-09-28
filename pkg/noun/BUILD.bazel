@@ -39,9 +39,11 @@ vere_library(
         "@openssl",
         "@pdjson",
         "@sigsegv",
+        "@softblas",
         "@softfloat",
         "@urcrypt",
         "@whereami",
+        "@zlib",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": [

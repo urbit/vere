@@ -319,6 +319,15 @@ versioned_http_archive(
 )
 
 versioned_http_archive(
+    name = "softblas",
+    build_file = "//bazel/third_party/softblas:softblas.BUILD",
+    strip_prefix = "SoftBLAS-{version}",
+    # sha256 = "",
+    url = "https://github.com/urbit/SoftBLAS/archive/{version}.tar.gz",
+    version = "cbffb33f19ea02f9ffbd184d445123c57929ec53",
+)
+
+versioned_http_archive(
     name = "softfloat",
     build_file = "//bazel/third_party/softfloat:softfloat.BUILD",
     patch_args = ["-p1"],

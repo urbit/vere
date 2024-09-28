@@ -469,15 +469,17 @@ u3m_file(c3_c* pas_c)
 
 /* u3m_mark(): mark all nouns in the road.
 */
-c3_w
-u3m_mark(FILE* fil_u)
+u3m_quac**
+u3m_mark(void)
 {
-  c3_w tot_w = 0;
-  tot_w += u3v_mark(fil_u);
-  tot_w += u3j_mark(fil_u);
-  tot_w += u3n_mark(fil_u);
-  tot_w += u3a_mark_road(fil_u);
-  return tot_w;
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
+  qua_u[0] = u3v_mark();
+  qua_u[1] = u3j_mark();
+  qua_u[2] = u3n_mark();
+  qua_u[3] = u3a_mark_road();
+  qua_u[4] = NULL;
+
+  return qua_u;
 }
 
 /* _pave_parts(): build internal tables.
@@ -1536,7 +1538,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3m_mark(0);
+  u3m_mark();
   {
     va_list vap;
     u3_noun tur;
