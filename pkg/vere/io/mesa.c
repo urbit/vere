@@ -1016,11 +1016,19 @@ _mesa_free_request_data(u3_mesa_request_data* dat_u)
 }
 
 static void
+_mesa_free_cb(uv_handle_t *han_u)
+{
+  u3_mesa_resend_data* res_u = han_u->data;
+  _mesa_free_request_data(&res_u->dat_u);
+  c3_free(res_u);
+}
+
+static void
 _mesa_free_resend_data(u3_mesa_resend_data* res_u)
 {
   uv_timer_stop(&res_u->tim_u);
-  _mesa_free_request_data(&res_u->dat_u);
-  c3_free(res_u);
+  res_u->tim_u.data = res_u;
+  uv_close((uv_handle_t*)&res_u->tim_u, _mesa_free_cb);
 }
 
 static void
