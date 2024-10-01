@@ -30,6 +30,10 @@
 //
 #undef NO_OVERFLOW
 
+/** Global variables.
+**/
+  static timer_stack *stk_u;
+
       /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
       */
 #if 0
@@ -376,14 +380,51 @@ _cm_signal_deep(c3_w mil_w)
   u3t_boot();
 }
 
-/* u3m_timer_set
+// Function to add an `itimerval` to a `timeval`
+struct timeval __add_itimer(struct timeval base_time, struct itimerval timer) {
+    struct timeval result;
+
+    // Add seconds
+    result.tv_sec = base_time.tv_sec + timer.it_value.tv_sec;
+
+    // Add microseconds
+    result.tv_usec = base_time.tv_usec + timer.it_value.tv_usec;
+
+    // Handle microsecond overflow
+    if (result.tv_usec >= 1000000) {
+        result.tv_sec += 1;
+        result.tv_usec -= 1000000;
+    }
+
+    return result;
+}
+
+// Function to calculate the interval between two `timeval` structs
+struct itimerval __get_interval(struct timeval start, struct timeval end) {
+    struct itimerval interval;
+
+    // Calculate the difference in seconds and microseconds
+    interval.it_value.tv_sec = end.tv_sec - start.tv_sec;
+    interval.it_value.tv_usec = end.tv_usec - start.tv_usec;
+
+    // Handle underflow of microseconds (i.e., if end's microseconds < start's microseconds)
+    if (interval.it_value.tv_usec < 0) {
+        interval.it_value.tv_sec -= 1;
+        interval.it_value.tv_usec += 1000000;
+    }
+
+    timerclear(&interval.it_interval);
+
+    return interval;
+}
+
+/* u3m_timer_set: set interval timer for mil_w milliseconds
 */
 void
 u3m_timer_set(c3_w mil_w)
 {
   if ( mil_w ) {
     struct itimerval itm_u;
-
     timerclear(&itm_u.it_interval);
     itm_u.it_value.tv_sec  = (mil_w / 1000);
     itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
@@ -402,11 +443,122 @@ u3m_timer_set(c3_w mil_w)
 void
 u3m_timer_clear()
 {
-  struct itimerval itm_u;
-
-  timerclear(&itm_u.it_interval);
-
   rsignal_deinstall_handler(SIGVTALRM);
+}
+
+/* u3m_timer_push: set interval timer against walltime
+*/
+void
+u3m_timer_push(c3_w mil_w)
+{
+  fprintf(stderr, "pushing timer %d\n", mil_w);
+  // get the request timer interval
+  struct itimerval itm_u;
+  timerclear(&itm_u.it_interval);
+  itm_u.it_value.tv_sec  = (mil_w / 1000);
+  itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
+  fprintf(stderr, "interval: %d s %d us\n", itm_u.it_value.tv_sec, itm_u.it_value.tv_usec);
+
+  // does the stack have anything on it?  if it's clean, this is easy:
+  fprintf(stderr, "checking stack\n");
+  fprintf(stderr, "checking stack %x\n", stk_u->top);
+  if (stk_u->top == NULL) {
+    fprintf(stderr, "no timer on stack\n");
+    // if not, set the timer and return
+    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+      u3l_log("loom: push timer failed %s", strerror(errno));
+    }
+    else {
+      // keep the expiry walltime in the stack
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+
+      // debugging, TODO remove
+      c3_d tim_d = 1000000ULL * tim_u.tv_sec + tim_u.tv_usec;
+      fprintf(stderr, "expiry: %lx us\n", tim_d);
+
+      struct timer* new_u = (timer*)u3a_malloc(sizeof(timer));
+      new_u->wal_u = tim_u;
+      new_u->nex_u = stk_u->top;
+      stk_u->top = new_u;
+
+      rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
+    }
+    return;
+  }
+
+  // check that it is less than the current remaining interval
+  struct itimerval cur_u;
+
+  rsignal_getitimer(ITIMER_VIRTUAL, &cur_u);
+  // zero if no timer is set
+  fprintf(stderr, "current interval: %d s %d us\n", cur_u.it_value.tv_sec, cur_u.it_value.tv_usec);
+
+  if (timercmp(&cur_u.it_value, &itm_u.it_value, <)) {
+    u3l_log("loom: nest timer failed, too large for remaining time %s",
+            strerror(errno));
+  }
+
+  // otherwise set the timer
+  struct itimerval rem_u;
+
+  timersub(&cur_u.it_value, &itm_u.it_value, &rem_u.it_value);
+
+  if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+    u3l_log("loom: nest timer failed %s", strerror(errno));
+  }
+  else {
+    // keep the expiry walltime in the stack
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+
+    // debugging, TODO remove
+    c3_d tim_d = 1000000ULL * tim_u.tv_sec + tim_u.tv_usec;
+    fprintf(stderr, "expiry: %lx us\n", tim_d);
+    c3_d cur_d = cur_u.it_value.tv_sec * 1000 + cur_u.it_value.tv_usec / 1000;
+    fprintf(stderr, "remaining: %lx ms\n", cur_d);
+
+    struct timer* new_u = (timer*)u3a_malloc(sizeof(timer));
+    new_u->wal_u = __add_itimer(tim_u, cur_u);
+    new_u->nex_u = stk_u->top;
+    stk_u->top = new_u;
+
+    rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
+  }
+}
+
+/* u3m_timer_pop
+*/
+void
+u3m_timer_pop()
+{
+  if (stk_u->top == NULL) {
+    u3l_log("loom: no \%jinx timer to pop");
+  }
+  else {
+    timer *old_u = stk_u->top;
+    stk_u->top = stk_u->top->nex_u;
+
+    if (stk_u->top == NULL) {
+      u3m_timer_clear();
+      return;
+    }
+
+    struct timeval nex_u = stk_u->top->wal_u;
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+    struct itimerval itm_u;
+    itm_u = __get_interval(tim_u, nex_u);
+
+    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+      u3l_log("loom: pop timer failed %s", strerror(errno));
+    }
+    else {
+      rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
+    }
+
+    free(old_u);
+  }
 }
 
 /* _cm_signal_done():
@@ -2101,6 +2253,11 @@ u3m_init(size_t len_i)
     u3C.wor_i = len_i >> 2;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
+
+  //  start %jinx timer stack
+  //
+  fprintf(stderr, "jinx: start\r\n");
+  // stk_u->top = (timer*)NULL;
 }
 
 extern void u3je_secp_stop(void);
@@ -2207,6 +2364,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
     memset(u3A, 0, sizeof(*u3A));
     return 0;
   }
+
 }
 
 /* u3m_boot_lite(): start without checkpointing.

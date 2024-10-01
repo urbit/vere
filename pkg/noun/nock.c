@@ -1930,18 +1930,12 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__jinx: {
       if (c3y == u3a_is_atom(*clu)) {
         // clu is in Urbit time, but we need Unix time
-        mpz_t clu_mp;
-        u3r_mp(clu_mp, *clu);
-        mpz_t urs_mp, tim_mp;
-        mpz_init(urs_mp);
-        mpz_init(tim_mp);
-        mpz_tdiv_q_2exp(tim_mp, clu_mp, 48);
-        mpz_mul_ui(tim_mp, tim_mp, 1000);
-        mpz_tdiv_q_2exp(urs_mp, tim_mp, 16);
-        c3_w mil_w = u3i_mp(urs_mp);
-        u3m_timer_set(mil_w); // set ITIMER (mil_w is in microseconds)
-        mpz_clear(clu_mp);
-        mpz_clear(tim_mp);
+        c3_d tim_d;
+        if ( c3y == u3r_safe_chub(*clu, &tim_d) ) {
+          c3_w mil_w = u3_time_msc_out(tim_d);
+          fprintf(stderr, "u3t_jinx_time 2: %lld -> %u\n", tim_d, mil_w);
+          // u3m_timer_push(mil_w);
+        }
       }
       u3z(*clu);
       *clu = c3__jinx;
@@ -2009,7 +2003,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if (c3__jinx == tok) {
-    u3m_timer_clear();
+    u3m_timer_pop();
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed

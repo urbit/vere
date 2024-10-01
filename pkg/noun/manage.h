@@ -208,4 +208,23 @@
         void
         u3m_timer_clear(void);
 
+      /* u3m_timer_push: push a timer on the stack.
+      */
+        void
+        u3m_timer_push(c3_w mil_w);
+      
+      /* u3m_timer_pop: pop a timer from the stack.
+      */
+        void
+        u3m_timer_pop(void);
+
+      typedef struct timer {
+        struct timeval wal_u;
+        struct timer* nex_u;
+      } timer;
+
+      typedef struct timer_stack {
+        timer* top;
+      } timer_stack;
+
 #endif /* ifndef U3_MANAGE_H */
