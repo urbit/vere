@@ -601,6 +601,15 @@ _mesa_get_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
   u3z(key);
   return ret_u;
 }
+static void
+_mesa_del_request_cb(uv_handle_t* han_u) {
+  u3_pend_req* req_u = han_u->data;
+  _mesa_free_pict(req_u->pic_u);
+  c3_free(req_u->wat_u);
+  c3_free(req_u->dat_y);
+  lss_verifier_free(req_u->los_u);
+  u3a_free(req_u);
+}
 
 static void
 _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
@@ -619,13 +628,11 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
     // u3l_log("wat_u %p", req_u->wat_u);
   // u3l_log("was_u buf %p", req_u->was_u.buf_y);
   uv_timer_stop(&req_u->tim_u);
-  _mesa_free_pict(req_u->pic_u);
-  c3_free(req_u->wat_u);
-  c3_free(req_u->dat_y);
-  lss_verifier_free(req_u->los_u);
+
   u3h_del(per_u->req_p, key);
-  u3a_free(req_u);
   u3z(key);
+  req_u->tim_u.data = req_u;
+  uv_close((uv_handle_t*)&req_u->tim_u, _mesa_del_request_cb);
 }
 
 /* _mesa_put_request(): save new pending request state for nam_u
