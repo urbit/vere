@@ -142,14 +142,17 @@ jobs:
         run: |
           sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
           declare -a targets=(
-            "aarch64-linux-musl"
-            "aarch64-macos-none"
-            "x86_64-linux-musl"
-            "x86_64-macos-none"
+            "aarch64-linux-musl linux-aarch64"
+            "aarch64-macos-none macos-aarch64"
+            "x86_64-linux-musl linux-x86_64"
+            "x86_64-macos-none macos-x86_64"
           )
           for target in "${targets[@]}"
           do
-            urbit_static=$GITHUB_WORKSPACE/zig-out/${target}/urbit
+            read -a strarr <<< "$elem"
+            zig_target=strarr[0]
+            target=strarr[1]
+            urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
               dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
