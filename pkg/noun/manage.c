@@ -202,6 +202,7 @@ static void
 _cm_signal_handle_alrm(int x)
 {
   stk_u->top = (timer*)NULL;  // clear the timer stack
+  u3l_log("\%jinx timer expired\r\n");
   _cm_signal_handle(c3__alrm);
 }
 
@@ -458,7 +459,7 @@ u3m_timer_push(c3_w mil_w)
   itm_u.it_value.tv_sec  = (mil_w / 1000);
   itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
 
-  fprintf(stderr, "pushing timer for %u ms at %lx\r\n", mil_w, (c3_d)stk_u->top);
+  fprintf(stderr, "\r\npushing timer for %lu ms at 0x%lx\r\n", mil_w, (c3_d)stk_u->top);
 
   // does the stack have anything on it?  if it's clean, this is easy:
   if (stk_u->top == NULL) {
@@ -475,6 +476,7 @@ u3m_timer_push(c3_w mil_w)
       new_u->wal_u = tim_u;
       new_u->nex_u = stk_u->top;
       stk_u->top = new_u;
+      fprintf(stderr, "\r\npushed timer for %lu ms at 0x%lx\r\n", tim_u.tv_sec*1000+tim_u.tv_usec, (c3_d)stk_u->top);
 
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
     }
@@ -484,13 +486,14 @@ u3m_timer_push(c3_w mil_w)
   // check that it is less than the current remaining interval
   struct itimerval cur_u;
 
+  // if no timer is set this is zero but we shouldn't be here if that's the case
   rsignal_getitimer(ITIMER_VIRTUAL, &cur_u);
-  // zero if no timer is set
   fprintf(stderr, "current interval: %d s %d us\r\n", cur_u.it_value.tv_sec, cur_u.it_value.tv_usec);
 
   if (timercmp(&cur_u.it_value, &itm_u.it_value, <)) {
     u3l_log("loom: nest timer failed, too large for remaining time %s",
             strerror(errno));
+    return;
   }
 
   // otherwise set the timer
@@ -507,9 +510,9 @@ u3m_timer_push(c3_w mil_w)
 
     // debugging, TODO remove
     c3_d tim_d = 1000000ULL * tim_u.tv_sec + tim_u.tv_usec;
-    fprintf(stderr, "expiry: %lx us\r\n", tim_d);
+    fprintf(stderr, "expiry: %lu us\r\n", tim_d);
     c3_d cur_d = cur_u.it_value.tv_sec * 1000 + cur_u.it_value.tv_usec / 1000;
-    fprintf(stderr, "remaining: %lx ms\r\n", cur_d);
+    fprintf(stderr, "remaining: %lu ms\r\n", cur_d);
 
     struct timer* new_u = (timer*)u3a_malloc(sizeof(timer));
     new_u->wal_u = __add_itimer(tim_u, cur_u);
@@ -525,24 +528,28 @@ u3m_timer_push(c3_w mil_w)
 void
 u3m_timer_pop()
 {
-  fprintf(stderr, "popping timer at %lx\r\n", (c3_d)stk_u->top);
+  fprintf(stderr, "popping timer at 0x%lx\r\n", (c3_d)stk_u->top);
   if (stk_u->top == NULL) {
     u3m_timer_clear();
     return;
   }
-
-  // if (stk_u->top == NULL) {
-  //   u3l_log("loom: no \%jinx timer to pop");
-  // }
   else {
     timer *old_u = stk_u->top;
     stk_u->top = old_u->nex_u;
 
+    if (stk_u->top == NULL) {
+      // if the stack is empty, simply clear the timer
+      fprintf(stderr, "no more timers to pop\r\n");
+      u3m_timer_clear();
+      c3_free(old_u);
+      return;
+    }
     struct timeval nex_u = stk_u->top->wal_u;
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
     struct itimerval itm_u;
-    itm_u = __get_interval(tim_u, nex_u);
+    itm_u = __get_interval(nex_u,  tim_u);
+    fprintf(stderr, "remaining interval: %d s %d us\r\n", itm_u.it_value.tv_sec, itm_u.it_value.tv_usec);
 
     if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
       u3l_log("loom: pop timer failed %s", strerror(errno));
@@ -551,7 +558,7 @@ u3m_timer_pop()
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
     }
 
-    free(old_u);
+    c3_free(old_u);
   }
 }
 
