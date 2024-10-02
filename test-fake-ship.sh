@@ -111,19 +111,31 @@ cp urbit-output test-output-agents
 cp urbit-output test-output-generators
 cp urbit-output test-output-marks
 
-# TODO: when re-enabling fake ship tests on macOS, use `sed -i ''`
-# instead of `sed -i`.
-sed -i '0,/test-unit-start/d'        test-output-unit
-sed -i '/test-unit-end/,$d'         test-output-unit
+if [[ $URBIT_BINARY == *"macos"* ]]; then
+    sed -i '' '0,/test-unit-start/d'       test-output-unit
+    sed -i '' '/test-unit-end/,$d'         test-output-unit
 
-sed -i '0,/test-agents-start/d'      test-output-agents
-sed -i '/test-agents-end/,$d'       test-output-agents
+    sed -i '' '0,/test-agents-start/d'     test-output-agents
+    sed -i '' '/test-agents-end/,$d'       test-output-agents
 
-sed -i '0,/test-generators-start/d'  test-output-generators
-sed -i '/test-generators-end/,$d'   test-output-generators
+    sed -i '' '0,/test-generators-start/d' test-output-generators
+    sed -i '' '/test-generators-end/,$d'   test-output-generators
 
-sed -i '0,/test-marks-start/d'       test-output-marks
-sed -i '/test-marks-end/,$d'        test-output-marks
+    sed -i '' '0,/test-marks-start/d'      test-output-marks
+    sed -i '' '/test-marks-end/,$d'        test-output-marks
+else
+    sed -i '0,/test-unit-start/d'          test-output-unit
+    sed -i '/test-unit-end/,$d'            test-output-unit
+
+    sed -i '0,/test-agents-start/d'        test-output-agents
+    sed -i '/test-agents-end/,$d'          test-output-agents
+
+    sed -i '0,/test-generators-start/d'    test-output-generators
+    sed -i '/test-generators-end/,$d'      test-output-generators
+
+    sed -i '0,/test-marks-start/d'         test-output-marks
+    sed -i '/test-marks-end/,$d'           test-output-marks
+fi
 
 OUTDIR="$(pwd)/test-fake-ship-output"
 mkdir -p $OUTDIR
