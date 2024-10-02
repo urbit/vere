@@ -78,11 +78,18 @@ jobs:
 
       - name: Build binaries
         run: |
-          zig build                    \
-            -Dall                      \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
-            --summary all
+          if [[ "${{ inputs.pace }}" == "live" ]]; then
+            zig build                  \
+              -Dall                    \
+              -Drelease                \
+              --summary all
+          else
+            zig build                  \
+              -Dall                    \
+              -Doptimize=ReleaseFast   \
+              -Dpace=${{inputs.pace}}  \
+              --summary all
+          fi
 
       - name: Run unit tests
         run: |
