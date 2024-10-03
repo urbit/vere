@@ -456,6 +456,10 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
     len_w = (c3_w) buf_u.st_size;
   }
 
+  if (0 == len_w) {
+    return c3n;
+  }
+  
   pat_u->con_u = c3_malloc(len_w);
   if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
         (len_w != sizeof(u3e_control) +
