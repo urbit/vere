@@ -712,15 +712,11 @@ fn build_single(
         .include_extensions = &.{".h"},
     });
 
-    pkg_noun.installHeadersDirectory(b.path(switch (t.os.tag) {
-        .macos => "pkg/noun/platform/darwin",
-        .linux => "pkg/noun/platform/linux",
+    pkg_noun.installHeader(b.path(switch (t.os.tag) {
+        .macos => "pkg/noun/platform/darwin/rsignal.h",
+        .linux => "pkg/noun/platform/linux/rsignal.h",
         else => "",
-    }), "", .{});
-
-    pkg_noun.installHeadersDirectory(b.path("pkg/noun/jets"), "", .{
-        .include_extensions = &.{".h"},
-    });
+    }), "platform/rsignal.h");
 
     // b.installArtifact(pkg_noun);
 

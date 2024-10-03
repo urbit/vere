@@ -3,7 +3,7 @@
 #ifndef U3_XTRACT_H
 #define U3_XTRACT_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 #include "allocate.h"
 #include "manage.h"

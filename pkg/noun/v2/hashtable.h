@@ -15,7 +15,7 @@
 
 #include "../hashtable.h"
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 
   /**  Data structures.

@@ -17,7 +17,7 @@
   ```
 */
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "jets.h"
 #include "jets/w.h"
 
