@@ -1,7 +1,7 @@
 /// @file
 
 #include "db/lmdb.h"
-#include "ent/ent.h"
+#include "ent.h"
 #include "noun.h"
 #include "pace.h"
 #include "vere.h"
