@@ -28,7 +28,7 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "platform/rsignal.h"
+#include "rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"
