@@ -3,8 +3,8 @@
 #ifndef U3_JETS_V2_H
 #define U3_JETS_V2_H
 
-#include "allocate.h"
-#include "jets.h"
+#include "pkg/noun/allocate.h"
+#include "pkg/noun/jets.h"
 
 
   /**  Aliases.

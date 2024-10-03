@@ -1,8 +1,8 @@
 /// @file
 
-#include "manage.h"
-#include "manage_v2.h"
-#include "manage_v3.h"
+#include "pkg/noun/manage.h"
+#include "pkg/noun/v2/manage.h"
+#include "pkg/noun/v3/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
@@ -28,7 +28,7 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "rsignal.h"
+#include "platform/rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"

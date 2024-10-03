@@ -1,16 +1,16 @@
 /// @file
 
-#include "manage_v2.h"
+#include "pkg/noun/v2/manage.h"
 
-#include "allocate_v1.h"
-#include "allocate_v2.h"
-#include "hashtable_v2.h"
-#include "jets_v2.h"
-#include "nock_v2.h"
-#include "options_v2.h"
-#include "vortex.h"
-#include "vortex_v1.h"
-#include "vortex_v2.h"
+#include "pkg/noun/v1/allocate.h"
+#include "pkg/noun/v2/allocate.h"
+#include "pkg/noun/v2/hashtable.h"
+#include "pkg/noun/v2/jets.h"
+#include "pkg/noun/v2/nock.h"
+#include "pkg/noun/v2/options.h"
+#include "pkg/noun/vortex.h"
+#include "pkg/noun/v1/vortex.h"
+#include "pkg/noun/v2/vortex.h"
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
 */

@@ -3,7 +3,7 @@
 #ifndef U3_NOCK_V1_H
 #define U3_NOCK_V1_H
 
-#include "nock_v2.h"
+#include "pkg/noun/v2/nock.h"
 
   /**  Aliases.
   **/

@@ -3,7 +3,7 @@
 #ifndef U3_NOCK_V3_H
 #define U3_NOCK_V3_H
 
-#include "nock.h"
+#include "pkg/noun/nock.h"
 
 #include "types.h"
 

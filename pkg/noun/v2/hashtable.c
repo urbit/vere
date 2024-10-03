@@ -1,12 +1,12 @@
 /// @file
 
-#include "hashtable.h"
-#include "hashtable_v1.h"
-#include "hashtable_v2.h"
+#include "pkg/noun/hashtable.h"
+#include "pkg/noun/v1/hashtable.h"
+#include "pkg/noun/v2/hashtable.h"
 
-#include "allocate.h"
-#include "allocate_v1.h"
-#include "allocate_v2.h"
+#include "pkg/noun/allocate.h"
+#include "pkg/noun/v1/allocate.h"
+#include "pkg/noun/v2/allocate.h"
 
 /* _ch_v2_popcount(): number of bits set in word.  A standard intrinsic.
 **             NB: copy of _ch_v2_popcount in pkg/noun/hashtable.c
