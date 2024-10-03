@@ -3,9 +3,9 @@
 #ifndef U3_NOCK_V2_H
 #define U3_NOCK_V2_H
 
-#include "nock_v3.h"
+#include "pkg/noun/v3/nock.h"
 
-#include "jets_v2.h"
+#include "pkg/noun/v2/jets.h"
 
 #include "types.h"
 

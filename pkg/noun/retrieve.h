@@ -3,7 +3,7 @@
 #ifndef U3_RETRIEVE_H
 #define U3_RETRIEVE_H
 
-#include "c3/c3.h"
+#include "c3.h"
 #include "allocate.h"
 #include "error.h"
 #include "gmp.h"

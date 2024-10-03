@@ -1,16 +1,16 @@
 /// @file
 
-#include "vortex.h"
+#include "pkg/noun/vortex.h"
 
-#include "jets.h"
-#include "jets_v2.h"
+#include "pkg/noun/jets.h"
+#include "pkg/noun/v2/jets.h"
 
-#include "allocate_v2.h"
-#include "hashtable_v2.h"
-#include "vortex_v2.h"
+#include "pkg/noun/v2/allocate.h"
+#include "pkg/noun/v2/hashtable.h"
+#include "pkg/noun/v2/vortex.h"
 
-#include "hashtable_v3.h"
-#include "jets_v3.h"
+#include "pkg/noun/v3/hashtable.h"
+#include "pkg/noun/v3/jets.h"
 
 /* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */

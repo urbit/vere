@@ -4,7 +4,7 @@
 #define U3_IMPRISON_H
 
 #include "allocate.h"
-#include "c3/c3.h"
+#include "c3.h"
 #include "gmp.h"
 #include "types.h"
 

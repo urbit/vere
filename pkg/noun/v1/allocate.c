@@ -1,9 +1,9 @@
 /// @file
 
-#include "allocate.h"
-#include "allocate_v1.h"
+#include "pkg/noun/allocate.h"
+#include "pkg/noun/v1/allocate.h"
 
-#include "hashtable_v1.h"
+#include "pkg/noun/v1/hashtable.h"
 
 /* _box_v1_slot(): select the right free list to search for a block.
 */

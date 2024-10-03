@@ -4,7 +4,7 @@
 #define U3_JETS_H
 
 #include "allocate.h"
-#include "c3/c3.h"
+#include "c3.h"
 #include "types.h"
 
   /** Noun semantics.

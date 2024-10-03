@@ -3,7 +3,7 @@
 #ifndef U3_ZAVE_H
 #define U3_ZAVE_H
 
-#include "c3/c3.h"
+#include "c3.h"
 #include "types.h"
 
   /**  Memoization.
