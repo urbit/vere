@@ -1,14 +1,14 @@
 /// @file
 
-#include "pkg/noun/v2/nock.h"
+#include "v2/nock.h"
 
-#include "pkg/noun/vortex.h"
+#include "../vortex.h"
 
-#include "pkg/noun/v2/allocate.h"
-#include "pkg/noun/v2/hashtable.h"
-#include "pkg/noun/v2/vortex.h"
+#include "v2/allocate.h"
+#include "v2/hashtable.h"
+#include "v2/vortex.h"
 
-#include "pkg/noun/v3/hashtable.h"
+#include "v3/hashtable.h"
 
 /* u3n_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */

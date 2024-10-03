@@ -1,8 +1,8 @@
 /// @file
 
-#include "pkg/noun/manage.h"
-#include "pkg/noun/v2/manage.h"
-#include "pkg/noun/v3/manage.h"
+#include "manage.h"
+#include "v2/manage.h"
+#include "v3/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
