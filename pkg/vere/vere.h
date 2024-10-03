@@ -3,7 +3,9 @@
 #ifndef U3_VERE_H
 #define U3_VERE_H
 
+#include "c3.h"
 #include "db/lmdb.h"
+#include "noun.h"
 #include "serf.h"
 #include "uv.h"
 #include <types.h>

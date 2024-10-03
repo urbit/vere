@@ -2,7 +2,7 @@
 
 #include "noun.h"
 #include "ivory.h"
-#include "ur/ur.h"
+#include "ur.h"
 #include "vere.h"
 
 #define TRUE 1
