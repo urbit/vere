@@ -1,12 +1,12 @@
 /// @file
 
-#include "pkg/noun/allocate.h"
-#include "pkg/noun/v1/allocate.h"
-#include "pkg/noun/v2/allocate.h"
+#include "../allocate.h"
+#include "v1/allocate.h"
+#include "v2/allocate.h"
 
-#include "pkg/noun/v2/hashtable.h"
+#include "v2/hashtable.h"
 #include "log.h"
-#include "pkg/noun/v2/manage.h"
+#include "v2/manage.h"
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"

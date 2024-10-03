@@ -3,8 +3,8 @@
 #ifndef U3_JETS_V1_H
 #define U3_JETS_V1_H
 
-#include "pkg/noun/jets.h"
-#include "pkg/noun/v2/jets.h"
+#include "../jets.h"
+#include "v2/jets.h"
 
   /**  Aliases.
   **/

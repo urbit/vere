@@ -3,10 +3,10 @@
 #ifndef U3_VORTEX_V3_H
 #define U3_VORTEX_V3_H
 
-#include "pkg/noun/vortex.h"
+#include "../vortex.h"
 
-#include "pkg/noun/v3/allocate.h"
-#include "pkg/noun/version.h"
+#include "v3/allocate.h"
+#include "../version.h"
 
   /**  Aliases.
   **/

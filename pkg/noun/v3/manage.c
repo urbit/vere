@@ -1,16 +1,16 @@
 /// @file
 
-#include "pkg/noun/v3/manage.h"
+#include "v3/manage.h"
 
-#include "pkg/noun/v2/jets.h"
-#include "pkg/noun/v2/nock.h"
-#include "pkg/noun/v2/vortex.h"
+#include "v2/jets.h"
+#include "v2/nock.h"
+#include "v2/vortex.h"
 
-#include "pkg/noun/v3/allocate.h"
-#include "pkg/noun/v3/hashtable.h"
-#include "pkg/noun/version.h"
-#include "pkg/noun/v3/vortex.h"
-#include <v2/allocate.h>
+#include "v3/allocate.h"
+#include "v3/hashtable.h"
+#include "../version.h"
+#include "v3/vortex.h"
+#include "v2/allocate.h"
 
 /* u3m_v3_migrate: perform loom migration if necessary.
 */
