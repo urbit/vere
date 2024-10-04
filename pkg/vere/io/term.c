@@ -339,8 +339,8 @@ _term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w num_w, ...)
   //  allocate for escape sequence (2), command char (1),
   //  argument digits (5 per arg) and separators (1 per arg, minus 1).
   //  freed via _term_it_write.
-  //
-  c3_c* pas_c = c3_malloc( 2 + num_w * 6 );
+  c3_w pas_c_size = 2 + num_w * 6;
+  c3_c* pas_c = c3_malloc(pas_c_size);
   c3_y  len_y = 0;
 
   pas_c[len_y++] = '\033';
@@ -348,7 +348,7 @@ _term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w num_w, ...)
 
   while ( num_w-- ) {
     c3_w par_w = va_arg(ap, c3_w);
-    len_y += sprintf(pas_c+len_y, "%d", par_w);
+    len_y += snprintf(pas_c+len_y, pas_c_size - len_y, "%d", par_w);
 
     if ( num_w ) {
       pas_c[len_y++] = ';';
