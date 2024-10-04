@@ -2061,6 +2061,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   if ( u3_none == pag ) {
     // TODO: mark as dead
     u3z(res);
+    _mesa_free_pict(pic_u);
     u3l_log("mesa: jumbo frame missing");
     log_pact(pac_u);
     return;
@@ -2069,6 +2070,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   if ( c3n == u3r_trel(pag, &pac, &pas, &pof) ||
        c3n == u3a_is_pug(pac) ) {
     u3l_log("mesa: jumbo frame misshapen");
+    _mesa_free_pict(pic_u);
     log_pact(pac_u);
     u3z(res);
     return;
@@ -2132,6 +2134,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
   _mesa_send_jumbo_pieces(sam_u, lin_u, NULL);
 
+  _mesa_free_pict(pic_u);
   u3z(res);
   return;
 }
@@ -2259,7 +2262,8 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   u3_pend_req* req_u = alloca(sizeof(u3_pend_req));
   memset(req_u, 0, sizeof(u3_pend_req));
-  req_u->pic_u = c3_calloc(sizeof(u3_mesa_pict));
+  /* req_u->pic_u = c3_calloc(sizeof(u3_mesa_pict)); */
+  req_u->pic_u = pic_u;
   req_u->pic_u->sam_u = sam_u;
   req_u->pic_u->pac_u.hed_u.typ_y = PACT_PEEK;
   req_u->pic_u->pac_u.hed_u.pro_y = MESA_VER;
@@ -2587,7 +2591,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
   } else if ( req_u->hav_d < lev_d ) {
     _mesa_request_next_fragments(sam_u, req_u, lan_u);
+    _mesa_free_pict(pic_u);
+  } else {
+    _mesa_free_pict(pic_u);
   }
+
 }
 
 static void
