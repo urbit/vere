@@ -10,9 +10,9 @@
 #include "types.h"
 #include "zave.h"
 
-  /** Data structures.
-  ***
-  **/
+/** Data structures.
+***
+**/
 
   /* u3n_memo: %memo hint space
    */
@@ -134,7 +134,7 @@
     /* u3n_rewrite_compact(): rewrite bytecode cache for compaction.
      */
       void
-      u3n_rewrite_compact();
+      u3n_rewrite_compact(void);
 
     /* u3n_free(): free bytecode cache.
      */

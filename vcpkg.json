@@ -1,0 +1,7 @@
+{
+  "name": "vere",
+  "version-string": "2.1.2",
+  "dependencies": [
+    "argon2", "openssl", "libb2"
+  ]
+}

@@ -279,3 +279,6 @@ GTAGS
 /nel
 /nev
 /fes
+
+# Build dirs
+*build*
