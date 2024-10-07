@@ -489,6 +489,9 @@ fn build_single(
         pkg_noun.linkLibrary(unwind.artifact("unwind"));
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
+    if (t.os.tag == .linux)
+        pkg_noun.linkLibrary(zlib.artifact("z"));
+
     pkg_noun.linkLibC();
 
     pkg_noun.addIncludePath(b.path("pkg/noun"));
@@ -556,12 +559,16 @@ fn build_single(
             "jets/c/can.c",
             "jets/c/cap.c",
             "jets/c/cat.c",
+            "jets/c/clz.c",
+            "jets/c/ctz.c",
             "jets/c/cut.c",
             "jets/c/dis.c",
             "jets/c/dor.c",
             "jets/c/dvr.c",
             "jets/c/end.c",
             "jets/c/gor.c",
+            "jets/c/ham.c",
+            "jets/c/hew.c",
             "jets/c/lsh.c",
             "jets/c/mas.c",
             "jets/c/met.c",
@@ -575,6 +582,7 @@ fn build_single(
             "jets/c/rap.c",
             "jets/c/rep.c",
             "jets/c/rev.c",
+            "jets/c/rig.c",
             "jets/c/rip.c",
             "jets/c/rsh.c",
             "jets/c/sqt.c",
@@ -615,6 +623,8 @@ fn build_single(
             "jets/e/argon2.c",
             "jets/e/base.c",
             "jets/e/blake.c",
+            "jets/e/chacha.c",
+            "jets/e/crc32.c",
             "jets/e/cue.c",
             "jets/e/ed_add_double_scalarmult.c",
             "jets/e/ed_add_scalarmult_scalarmult_base.c",
@@ -678,12 +688,14 @@ fn build_single(
             "jets/f/ut_mull.c",
             "jets/f/ut_nest.c",
             "jets/f/ut_rest.c",
+            "jets/g/plot.c",
             "jets/tree.c",
             "log.c",
             "manage.c",
             "nock.c",
             "options.c",
             "retrieve.c",
+            "ship.c",
             "serial.c",
             "trace.c",
             "urth.c",
@@ -771,6 +783,7 @@ fn build_single(
     vere.linkLibrary(libuv.artifact("libuv"));
     vere.linkLibrary(lmdb.artifact("lmdb"));
     vere.linkLibrary(openssl.artifact("ssl"));
+    vere.linkLibrary(urcrypt.artifact("urcrypt"));
     vere.linkLibrary(zlib.artifact("z"));
     vere.linkLibrary(pkg_c3);
     vere.linkLibrary(pkg_ent);
@@ -797,6 +810,10 @@ fn build_single(
         "io/hind.c",
         "io/http.c",
         "io/lick.c",
+        "io/lss.c",
+        "io/mesa.c",
+        "io/mesa/bitset.c",
+        "io/mesa/pact.c",
         "io/term.c",
         "io/unix.c",
         "ivory/ivory.c",
@@ -873,6 +890,7 @@ fn build_single(
     urbit.linkLibrary(lmdb.artifact("lmdb"));
     urbit.linkLibrary(openssl.artifact("ssl"));
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
+    urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
 
     urbit.addCSourceFiles(.{
