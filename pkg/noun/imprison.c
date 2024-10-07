@@ -15,7 +15,12 @@ static c3_w
 _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
+#ifdef VERE_64
+  c3_d wor_d = (bit_d + 0x3f) >> 6;
+#else
   c3_d wor_d = (bit_d + 0x1f) >> 5;
+#endif
+
   c3_w wor_w = (c3_w)wor_d;
 
   if (  (wor_w != wor_d)
@@ -110,7 +115,7 @@ u3i_slab_init(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
   u3i_slab_bare(sab_u, met_g, len_d);
 
   u3t_on(mal_o);
-  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * 4);
+  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * sizeof(c3_w));
   u3t_off(mal_o);
 }
 
@@ -153,12 +158,21 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
   //  if necessary, mask off extra most-significant bits
   //  from most-significant word
   //
+#ifdef VERE_64
+  if ( (6 > met_g) && (u3r_met(6, a) >= sab_u->len_w) ) {
+#else
   if ( (5 > met_g) && (u3r_met(5, a) >= sab_u->len_w) ) {
+#endif
     //  NB: overflow already checked in _ci_slab_size()
     //
     c3_d bit_d = len_d << met_g;
+#ifdef VERE_64
+    c3_w wor_w = bit_d >> 6;
+    c3_w bit_w = bit_d & 0x3f;
+#else
     c3_w wor_w = bit_d >> 5;
     c3_w bit_w = bit_d & 0x1f;
+#endif
 
     if ( bit_w ) {
       sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
@@ -333,6 +347,9 @@ u3i_word(c3_w dat_w)
 u3_atom
 u3i_chub(c3_d dat_d)
 {
+#ifdef VERE_64
+  return u3i_word(dat_d);
+#else
   if ( c3y == u3a_is_cat(dat_d) ) {
     return (u3_atom)dat_d;
   }
@@ -344,6 +361,7 @@ u3i_chub(c3_d dat_d)
 
     return u3i_words(2, dat_w);
   }
+#endif
 }
 
 /* u3i_bytes(): Copy [a] bytes from [b] to an LSB first atom.
@@ -396,10 +414,18 @@ u3i_words(c3_w        a_w,
   }
   else {
     u3i_slab sab_u;
+#ifdef VERE_64
+    u3i_slab_bare(&sab_u, 6, a_w);
+#else
     u3i_slab_bare(&sab_u, 5, a_w);
+#endif
 
     u3t_on(mal_o);
+#ifdef VERE_64
+    memcpy(sab_u.buf_w, b_w, (size_t)8 * a_w);
+#else
     memcpy(sab_u.buf_w, b_w, (size_t)4 * a_w);
+#endif
     u3t_off(mal_o);
 
     return u3i_slab_moot(&sab_u);

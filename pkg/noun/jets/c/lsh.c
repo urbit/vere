@@ -11,7 +11,11 @@ u3qc_lsh(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
+#ifdef VERE_64
+  if ( !_(u3a_is_cat(a)) || (a >= 64) ) {
+#else
   if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+#endif
     return u3m_bail(c3__fail);
   }
   else if ( !_(u3a_is_cat(b)) ) {

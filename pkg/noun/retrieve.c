@@ -980,10 +980,24 @@ u3r_met(c3_y  a_y,
     daz_w = b_u->buf_w[gal_w];
   }
 
-  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
+  /* 6 because 1<<3 bytes in c3_w, 1<<3 bits in byte.
      aka log2(CHAR_BIT * sizeof gal_w)
-     a_y < 5 informs whether we shift return left or right
+     a_y < 6 informs whether we shift return left or right
      */
+#ifdef VERE_64
+  if (a_y < 6) {
+    c3_y max_y = (1 << a_y) - 1;
+    c3_y gow_y = 6 - a_y;
+
+    if (gal_w > ((UINT64_MAX - (64 + max_y)) >> gow_y))
+      return u3m_bail(c3__fail);
+
+    return (gal_w << gow_y)
+      + ((c3_bits_word(daz_w) + max_y)
+         >> a_y);
+  }
+  c3_y gow_y = (a_y - 6);
+#else
   if (a_y < 5) {
     c3_y max_y = (1 << a_y) - 1;
     c3_y gow_y = 5 - a_y;
@@ -996,6 +1010,7 @@ u3r_met(c3_y  a_y,
          >> a_y);
   }
   c3_y gow_y = (a_y - 5);
+#endif
   return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
 }
 
@@ -1044,15 +1059,24 @@ u3r_byte(c3_w    a_w,
   u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
+#ifdef VERE_64
+    if ( a_w > 7 ) {
+#else
     if ( a_w > 3 ) {
+#endif
       return 0;
     }
     else return (255 & (b >> (a_w << 3)));
   }
   else {
     u3a_atom* b_u   = u3a_to_ptr(b);
+#ifdef VERE_64
+    c3_y      vut_y = (a_w & 7);
+    c3_w      pix_w = (a_w >> 3);
+#else
     c3_y      vut_y = (a_w & 3);
     c3_w      pix_w = (a_w >> 2);
+#endif
 
     if ( pix_w >= b_u->len_w ) {
       return 0;
@@ -1079,16 +1103,24 @@ u3r_bytes(c3_w    a_w,
   u3_assert(_(u3a_is_atom(d)));
 
   if ( _(u3a_is_cat(d)) ) {
+#ifdef VERE_64
+    c3_d e_d = d >> (c3_min(a_w, 8) << 3);
+    c3_w m_w = c3_min(b_w, 8);
+    memcpy(c_y, (c3_y*)&e_d, m_w);
+    if ( b_w > 8 ) {
+      memset(c_y + 8, 0, b_w - 8);
+#else
     c3_w e_w = d >> (c3_min(a_w, 4) << 3);
     c3_w m_w = c3_min(b_w, 4);
     memcpy(c_y, (c3_y*)&e_w, m_w);
     if ( b_w > 4 ) {
       memset(c_y + 4, 0, b_w - 4);
+#endif
     }
   }
   else {
     u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_w n_w = d_u->len_w << 2;
+    c3_w n_w = d_u->len_w << 3;
     c3_y* x_y = (c3_y*)d_u->buf_w + a_w;
 
     if ( a_w >= n_w ) {
@@ -1168,7 +1200,11 @@ u3r_mp(mpz_t   a_mp,
 
     //  avoid reallocation on import, if possible
     //
+#ifdef VERE_64
+    mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT64_MAX));
+#else
     mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
+#endif
     mpz_import(a_mp, len_w, -1, sizeof(c3_w), 0, 0, b_u->buf_w);
   }
 }
@@ -1252,15 +1288,20 @@ u3r_word_fit(c3_w *out_w, u3_atom a)
 /* u3r_chub():
 **
 **   Return double-word (a_w) of (b).
+**   XX
 */
 c3_d
 u3r_chub(c3_w  a_w,
            u3_atom b)
 {
+#ifdef VERE_64
+  return u3r_word(a_w, b);
+#else
   c3_w wlo_w = u3r_word(a_w * 2, b);
   c3_w whi_w = u3r_word(1 + (a_w * 2), b);
 
   return (((uint64_t)whi_w) << 32ULL) | ((uint64_t)wlo_w);
+#endif
 }
 
 /* u3r_words():
@@ -1282,23 +1323,41 @@ u3r_words(c3_w    a_w,
   if ( _(u3a_is_cat(d)) ) {
     if ( a_w == 0 ) {
       *c_w = d;
+#ifdef VERE_64
+      memset((c3_y*)(c_w + 1), 0, (b_w - 1) << 3);
+#else
       memset((c3_y*)(c_w + 1), 0, (b_w - 1) << 2);
+#endif
     }
     else {
+#ifdef VERE_64
+      memset((c3_y*)c_w, 0, b_w << 3);
+#else
       memset((c3_y*)c_w, 0, b_w << 2);
+#endif
     }
   }
   else {
     u3a_atom* d_u = u3a_to_ptr(d);
     if ( a_w >= d_u->len_w ) {
+#ifdef VERE_64
+      memset((c3_y*)c_w, 0, b_w << 3);
+#else
       memset((c3_y*)c_w, 0, b_w << 2);
+#endif
     }
     else {
       c3_w z_w = c3_min(b_w, d_u->len_w - a_w);
       c3_w* x_w = d_u->buf_w + a_w;
+#ifdef VERE_64
+      memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 3);
+      if ( b_w > d_u->len_w - a_w ) {
+        memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 3);
+#else
       memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 2);
       if ( b_w > d_u->len_w - a_w ) {
         memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 2);
+#endif
       }
     }
   }
@@ -1316,7 +1375,11 @@ u3r_chubs(c3_w    a_w,
 {
   /* XX: assumes little-endian
   */
+#ifdef VERE_64
+  u3r_words(a_w, b_w, (c3_w *)c_d, d);
+#else
   u3r_words(a_w * 2, b_w * 2, (c3_w *)c_d, d);
+#endif
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
@@ -1377,8 +1440,13 @@ u3r_chop_bits(c3_g  bif_g,
               c3_w* dst_w,
         const c3_w* src_w)
 {
+#ifdef VERE_64
+  c3_y fib_y = 64 - bif_g;
+  c3_y tib_y = 64 - bit_g;
+#else
   c3_y fib_y = 32 - bif_g;
   c3_y tib_y = 32 - bit_g;
+#endif
 
   //  we need to chop words
   //
@@ -1396,13 +1464,23 @@ u3r_chop_bits(c3_g  bif_g,
 
       wid_d -= tib_y;
       bif_g += tib_y;
+#ifdef VERE_64
+      src_w += !!(bif_g >> 6);
+      bif_g &= 63;
+      fib_y  = 64 - bif_g;
+#else
       src_w += !!(bif_g >> 5);
       bif_g &= 31;
       fib_y  = 32 - bif_g;
+#endif
     }
 
     {
+#ifdef VERE_64
+      size_t i_i, byt_i = wid_d >> 6;
+#else
       size_t i_i, byt_i = wid_d >> 5;
+#endif
 
       if ( !bif_g ) {
         for ( i_i = 0; i_i < byt_i; i_i++ ) {
@@ -1417,7 +1495,11 @@ u3r_chop_bits(c3_g  bif_g,
 
       src_w += byt_i;
       dst_w += byt_i;
+#ifdef VERE_64
+      wid_d &= 63;
+#else
       wid_d &= 31;
+#endif
       bit_g  = 0;
     }
   }
@@ -1431,7 +1513,7 @@ u3r_chop_bits(c3_g  bif_g,
       hig_w   ^= src_w[1] << fib_y;
     }
 
-    *dst_w    ^= (hig_w & ((1 << wid_d) - 1)) << bit_g;
+    *dst_w    ^= (hig_w & ((1ULL << wid_d) - 1)) << bit_g;
   }
 }
 
@@ -1454,11 +1536,19 @@ u3r_chop_words(c3_g  met_g,
 {
   //  operate on words
   //
+#ifdef VERE_64
+  if ( met_g >= 6 ) {
+#else
   if ( met_g >= 5 ) {
+#endif
     size_t i_i, wid_i;
 
     {
+#ifdef VERE_64
+      c3_g   hut_g = met_g - 6;
+#else
       c3_g   hut_g = met_g - 5;
+#endif
       size_t fum_i = (size_t)fum_w << hut_g;
       size_t tou_i = (size_t)tou_w << hut_g;
       size_t tot_i;
@@ -1496,7 +1586,11 @@ u3r_chop_words(c3_g  met_g,
     c3_g bif_g, bit_g;
 
     {
+#ifdef VERE_64
+      c3_d len_d = (c3_d)len_w << 6;
+#else
       c3_d len_d = (c3_d)len_w << 5;
+#endif
       c3_d fum_d = (c3_d)fum_w << met_g;
       c3_d tou_d = (c3_d)tou_w << met_g;
       c3_d tot_d = fum_d + wid_d;
@@ -1515,10 +1609,17 @@ u3r_chop_words(c3_g  met_g,
         wid_d -= tot_d - len_d;
       }
 
+#ifdef VERE_64
+      src_w += fum_d >> 6;
+      dst_w += tou_d >> 6;
+      bif_g  = fum_d & 63;
+      bit_g  = tou_d & 63;
+#else
       src_w += fum_d >> 5;
       dst_w += tou_d >> 5;
       bif_g  = fum_d & 31;
       bit_g  = tou_d & 31;
+#endif
     }
 
     u3r_chop_bits(bif_g, wid_d, bit_g, dst_w, src_w);
@@ -1601,7 +1702,7 @@ c3_l
 u3r_mug_both(c3_l lef_l, c3_l rit_l)
 {
   c3_y len_y = 4 + ((c3_bits_word(rit_l) + 0x7) >> 3);
-  c3_w syd_w = 0xdeadbeef;
+  uint32_t syd_w = 0xdeadbeef;
   c3_w   i_w = 0;
   c3_y buf_y[8];
 
@@ -1615,7 +1716,7 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
   buf_y[7] = (rit_l >> 24) & 0xff;
 
   while ( i_w < 8 ) {
-    c3_w haz_w;
+    uint32_t haz_w;
     c3_l ham_l;
 
     MurmurHash3_x86_32(buf_y, len_y, syd_w, &haz_w);
@@ -1633,16 +1734,17 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
 }
 
 /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
+** XX
 */
 c3_l
 u3r_mug_bytes(const c3_y *buf_y,
               c3_w        len_w)
 {
-  c3_w syd_w = 0xcafebabe;
+  uint32_t syd_w = 0xcafebabe;
   c3_w   i_w = 0;
 
   while ( i_w < 8 ) {
-    c3_w haz_w;
+    uint32_t haz_w;
     c3_l ham_l;
 
     MurmurHash3_x86_32(buf_y, len_w, syd_w, &haz_w);
@@ -1684,12 +1786,16 @@ u3r_mug_cell(u3_noun hed,
 c3_l
 u3r_mug_chub(c3_d num_d)
 {
+#ifdef VERE_64
+  return u3r_mug_words((c3_w*)&num_d, 1);
+#else
   c3_w buf_w[2];
 
   buf_w[0] = (c3_w)(num_d & 0xffffffffULL);
   buf_w[1] = (c3_w)(num_d >> 32);
 
   return u3r_mug_words(buf_w, 2);
+#endif
 }
 
 /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
@@ -1714,7 +1820,11 @@ u3r_mug_words(const c3_w* key_w, c3_w len_w)
     c3_w gal_w = len_w - 1;
     c3_w daz_w = key_w[gal_w];
 
+#ifdef VERE_64
+    byt_w = (gal_w << 3) + ((c3_bits_word(daz_w) + 7) >> 3);
+#else
     byt_w = (gal_w << 2) + ((c3_bits_word(daz_w) + 7) >> 3);
+#endif
   }
 
   //  XX: assumes little-endian

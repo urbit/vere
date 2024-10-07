@@ -5,8 +5,13 @@
 
 #include "noun.h"
 
+#ifdef VERE_64
+STATIC_ASSERT( (UINT64_MAX > u3a_cells),
+               "width precision" );
+#else
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "width precision" );
+#endif
 
 static c3_w
 _wyt_in(u3_noun a)

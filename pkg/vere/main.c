@@ -1486,6 +1486,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
     u3s_cue_xeno_done(sil_u);
+    fprintf(stderr, "boot: booting with ivory pill\r\n");
     if ( c3n == u3v_boot_lite(pil) ) {
       u3l_log("lite: boot failed");
       exit(1);
@@ -3345,6 +3346,7 @@ main(c3_i   argc,
       SSL_library_init();
       SSL_load_error_strings();
     }
+    fprintf(stderr, "boot: openssl initialized\n");
 
     //  initialize curl
     //
@@ -3356,6 +3358,8 @@ main(c3_i   argc,
     _setup_cert_store();
     u3K.ssl_curl_f = _setup_ssl_curl;
     u3K.ssl_x509_f = _setup_ssl_x509;
+
+    fprintf(stderr, "boot: curl initialized\r\n");
 
     u3_king_commence();
 

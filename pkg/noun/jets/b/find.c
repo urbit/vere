@@ -5,8 +5,13 @@
 
 #include "noun.h"
 
+#ifdef VERE_64
+STATIC_ASSERT( (UINT64_MAX > u3a_cells),
+               "list index precision" );
+#else
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "list index precision" );
+#endif
 
 u3_noun
 u3qb_find(u3_noun nedl, u3_noun hstk)

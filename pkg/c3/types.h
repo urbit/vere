@@ -13,8 +13,13 @@
       typedef ssize_t c3_zs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
+#ifdef VERE_64
+      typedef uint64_t c3_w;
+      typedef int64_t c3_ws;
+#else
       typedef uint32_t c3_w;
       typedef int32_t c3_ws;
+#endif
       typedef uint16_t c3_s;
       typedef int16_t c3_ss;
       typedef uint8_t c3_y;   // byte

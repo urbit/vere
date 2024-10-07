@@ -47,5 +47,8 @@ build:mem_dbg --per_file_copt='pkg/.*@-DU3_MEMORY_DEBUG'
 build:cpu_dbg --per_file_copt='pkg/.*@-DU3_CPU_DEBUG'
 build:snp_dbg --per_file_copt='pkg/.*@-DU3_SNAPSHOT_VALIDATION'
 
+# Enable 64-bit mode for Vere by default.
+build --copt='-DVERE_64'
+
 # Any personal configuration should go in .user.bazelrc.
 try-import %workspace%/.user.bazelrc

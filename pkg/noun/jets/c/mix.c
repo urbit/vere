@@ -11,8 +11,13 @@
   u3qc_mix(u3_atom a,
            u3_atom b)
   {
+  #ifdef VERE_64
+    c3_w lna_w = u3r_met(6, a);
+    c3_w lnb_w = u3r_met(6, b);
+  #else
     c3_w lna_w = u3r_met(5, a);
     c3_w lnb_w = u3r_met(5, b);
+  #endif
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;
@@ -21,7 +26,11 @@
       c3_w     len_w = c3_max(lna_w, lnb_w);
       c3_w       i_w;
       u3i_slab sab_u;
+#ifdef VERE_64
+      u3i_slab_from(&sab_u, a, 6, len_w);
+#else
       u3i_slab_from(&sab_u, a, 5, len_w);
+#endif
 
       //  XX use u3r_chop for XOR?
       //

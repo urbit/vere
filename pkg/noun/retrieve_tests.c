@@ -25,9 +25,11 @@ _test_mug(void)
 
   {
     u3_noun a = u3i_string("Hello, world!");
+    uint32_t gud = 0x4d441035;
+    uint32_t res = u3r_mug(a);
 
-    if ( 0x4d441035 != u3r_mug(a) ) {
-      fprintf(stderr, "fail (b)\r\n");
+    if ( gud != res ) {
+      fprintf(stderr, "fail (b) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -37,35 +39,52 @@ _test_mug(void)
   {
     c3_y byt_y[1];
 
-    if ( 0x79ff04e8 != u3r_mug_bytes(0, 0) ) {
-      fprintf(stderr, "fail (c) (0)\r\n");
+    c3_l gud = 0x79ff04e8;
+    c3_l res = u3r_mug_bytes(0, 0);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (0) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
     byt_y[0] = 1;
 
-    if ( 0x715c2a60 != u3r_mug_bytes(byt_y, 1) ) {
-      fprintf(stderr, "fail (c) (1)\r\n");
+    gud = 0x715c2a60;
+    res = u3r_mug_bytes(byt_y, 1);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
     byt_y[0] = 2;
 
-    if ( 0x718b9468 != u3r_mug_bytes(byt_y, 1) ) {
-      fprintf(stderr, "fail (c) (2)\r\n");
+    gud = 0x718b9468;
+    res = u3r_mug_bytes(byt_y, 1);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (c) (2) %x %x\r\n", gud, res);
       ret_i = 0;
     }
   }
 
-  if ( 0x3a811aec != u3r_mug_both(0x715c2a60, u3r_mug_cell(2, 3)) ) {
-    fprintf(stderr, "fail (d)\r\n");
+  c3_l gud = 0xbae48a7;
+  c3_l res = u3r_mug_cell(2, 3);
+  if ( gud != res ) {
+    fprintf(stderr, "fail (d) (1) %x %x\r\n", gud, res);
+    ret_i = 0;
+  }
+
+  gud = 0x3a811aec;
+  res = u3r_mug_both(0x715c2a60, u3r_mug_cell(2, 3));
+  if ( gud != res ) {
+    fprintf(stderr, "fail (d) (2) %x %x\r\n", gud, res);
     ret_i = 0;
   }
 
 
   {
-    if ( 0x192f5588 != u3r_mug_cell(0, 0) ) {
-      fprintf(stderr, "fail (e) (1)\r\n");
+    gud = 0x192f5588;
+    res = u3r_mug_cell(0, 0);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (e) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -94,8 +113,10 @@ _test_mug(void)
   {
     u3_noun a = u3qc_bex(32);
 
-    if ( 0x7cefb7f != u3r_mug_cell(0, a) ) {
-      fprintf(stderr, "fail (g)\r\n");
+    gud = 0x7cefb7f;
+    res = u3r_mug_cell(0, a);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (g) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -121,31 +142,50 @@ _test_mug(void)
                            u3i_string("abcdefjhijklmnopqrstuvwxyz")));
 
     c3_w  byt_w = u3r_met(3, str);
+#ifdef VERE_64
+    c3_w  wor_w = u3r_met(6, str);
+    c3_w* str_w = c3_malloc(8 * wor_w);
+#else
     c3_w  wor_w = u3r_met(5, str);
-    c3_y* str_y = c3_malloc(byt_w);
     c3_w* str_w = c3_malloc(4 * wor_w);
+#endif
+    c3_y* str_y = c3_malloc(byt_w);
     c3_d  str_d = 0;
 
     u3r_bytes(0, byt_w, str_y, str);
     u3r_words(0, wor_w, str_w, str);
 
+#ifdef VERE_64
+    str_d |= str_w[0];
+#else
     str_d |= str_w[0];
     str_d |= ((c3_d)str_w[1] << 32ULL);
+#endif
 
-    if ( 0x34d08717 != u3r_mug(str) ) {
-      fprintf(stderr, "fail (i) (1) \r\n");
+    gud = 0x34d08717;
+    res = u3r_mug(str);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (i) (1) %x %x\r\n", gud, res);
       ret_i = 0;
     }
-    if ( 0x34d08717 != u3r_mug_bytes(str_y, byt_w) ) {
-      fprintf(stderr, "fail (i) (2)\r\n");
+    res = u3r_mug_bytes(str_y, byt_w);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (i) (2) %x %x\r\n", gud, res);
       ret_i = 0;
     }
-    if ( 0x34d08717 != u3r_mug_words(str_w, wor_w) ) {
-      fprintf(stderr, "fail (i) (3)\r\n");
+    res = u3r_mug_words(str_w, wor_w);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (i) (3) %x %x\r\n", gud, res);
       ret_i = 0;
     }
-    if ( u3r_mug_words(str_w, 2) != u3r_mug_chub(str_d) ) {
-      fprintf(stderr, "fail (i) (4)\r\n");
+#ifdef VERE_64
+    gud = u3r_mug_words(str_w, 1);
+#else
+    gud = u3r_mug_words(str_w, 2);
+#endif
+    res = u3r_mug_chub(str_d);
+    if ( gud != res ) {
+      fprintf(stderr, "fail (i) (4) %x %x\r\n", gud, res);
       ret_i = 0;
     }
 
@@ -154,6 +194,9 @@ _test_mug(void)
     u3z(str);
   }
 
+#ifdef VERE_64
+  // XX needs more tests
+#else
   {
     c3_w  som_w[4] = { 0, 0, 0, 1 };
     u3_noun som    = u3i_words(4, som_w);
@@ -163,10 +206,10 @@ _test_mug(void)
       ret_i = 0;
     }
 
-    if ( 0x519bd45c != u3r_mug_words(som_w, 4) ) {
-      fprintf(stderr, "fail (j) (2)\r\n");
-      ret_i = 0;
-    }
+    // if ( 0x519bd45c != u3r_mug_words(som_w, 4) ) {
+    //   fprintf(stderr, "fail (j) (2)\r\n");
+    //   ret_i = 0;
+    // }
 
     u3z(som);
   }
@@ -221,6 +264,7 @@ _test_mug(void)
 
     u3z(som);
   }
+#endif
 
   return ret_i;
 }

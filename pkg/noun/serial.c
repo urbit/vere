@@ -96,7 +96,11 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     {
       c3_w met_w = a_w + (2 * b_w);
 
+#ifdef VERE_64
+      if ( a_w > (UINT64_MAX - 64) ) {
+#else
       if ( a_w > (UINT32_MAX - 64) ) {
+#endif
         u3m_bail(c3__fail);
         return;
       }
@@ -495,7 +499,11 @@ typedef struct _cue_frame_s {
 static inline ur_cue_res_e
 _cs_cue_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
+#ifdef VERE_64
+                  ur_dict64_t* dic_u,
+#else
                   ur_dict32_t* dic_u,
+#endif
                   u3_noun*       out)
 {
   ur_root_t* rot_u = 0;
@@ -531,7 +539,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           c3_d bak_d = ur_bsr64_any(red_u, len_d);
           c3_w bak_w;
 
+#ifdef VERE_64
+          if ( !ur_dict64_get(rot_u, dic_u, bak_d, &bak_w) ) {
+#else
           if ( !ur_dict32_get(rot_u, dic_u, bak_d, &bak_w) ) {
+#endif
             return ur_cue_back;
           }
 
@@ -552,7 +564,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           c3_d     byt_d = (len_d + 0x7) >> 3;
           u3i_slab sab_u;
 
+#ifdef VERE_64
+          if ( 0xffffffffffffffffULL < byt_d) {
+#else
           if ( 0xffffffffULL < byt_d) {
+#endif
             return ur_cue_meme;
           }
           else {
@@ -562,7 +578,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           }
         }
 
+#ifdef VERE_64
+        ur_dict64_put(rot_u, dic_u, bit_d, *out);
+#else
         ur_dict32_put(rot_u, dic_u, bit_d, *out);
+#endif
         return ur_cue_good;
       }
     }
@@ -570,7 +590,11 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
 }
 
 struct _u3_cue_xeno {
+#ifdef VERE_64
+  ur_dict64_t dic_u;
+#else
   ur_dict32_t dic_u;
+#endif
 };
 
 /* _cs_cue_xeno(): cue on-loom, with off-loom dictionary in handle.
@@ -581,7 +605,11 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
              const c3_y*  byt_y)
 {
   ur_bsr_t      red_u = {0};
+#ifdef VERE_64
+  ur_dict64_t*  dic_u = &sil_u->dic_u;
+#else
   ur_dict32_t*  dic_u = &sil_u->dic_u;
+#endif
   u3a_pile      pil_u;
   _cue_frame_t* fam_u;
   ur_cue_res_e  res_e;
@@ -627,7 +655,11 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
         ur_root_t* rot_u = 0;
 
         ref   = u3nc(fam_u->ref, ref);
+#ifdef VERE_64
+        ur_dict64_put(rot_u, dic_u, fam_u->bit_d, ref);
+#else
         ur_dict32_put(rot_u, dic_u, fam_u->bit_d, ref);
+#endif
         fam_u = u3a_pop(&pil_u);
       }
     }
@@ -663,7 +695,11 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
   u3_assert( &(u3H->rod_u) == u3R );
 
   sil_u = c3_calloc(sizeof(*sil_u));
+#ifdef VERE_64
+  ur_dict64_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
+#else
   ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
+#endif
 
   return sil_u;
 }
@@ -688,7 +724,11 @@ u3s_cue_xeno_with(u3_cue_xeno* sil_u,
   u3_assert( &(u3H->rod_u) == u3R );
 
   som = _cs_cue_xeno(sil_u, len_d, byt_y);
+#ifdef VERE_64
+  ur_dict64_wipe(&sil_u->dic_u);
+#else
   ur_dict32_wipe(&sil_u->dic_u);
+#endif
   return som;
 }
 
@@ -797,7 +837,11 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
 
         if ( 31 >= len_d ) {
+#ifdef VERE_64
+          vat = (u3_noun)ur_bsr64_any(red_u, len_d);
+#else
           vat = (u3_noun)ur_bsr32_any(red_u, len_d);
+#endif
         }
         else {
           u3i_slab sab_u;
@@ -1405,8 +1449,13 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
     //
     mpz_t a_mp;
     {
+#ifdef VERE_64
+      c3_d bit_d = (c3_d)(len_w / 8) * 10;
+      mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT64_MAX));
+#else
       c3_d bit_d = (c3_d)(len_w / 4) * 10;
       mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
+#endif
       mpz_set_ui(a_mp, val_s);
     }
 

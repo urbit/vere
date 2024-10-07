@@ -12,8 +12,13 @@ u3qc_bex(u3_atom a)
   c3_d a_d;
   u3i_slab sab_u;
 
+#ifdef VERE_64
+  if ( a < 63 ) {
+    return 1ULL << a;
+#else
   if ( a < 31 ) {
     return 1 << a;
+#endif
   }
 
   if ( c3y == u3a_is_cat(a) ) {
@@ -24,6 +29,7 @@ u3qc_bex(u3_atom a)
       return u3m_bail(c3__fail);
     }
 
+    // XX
     // We don't currently support atoms 2GB or larger (fails while
     // mugging).  The extra term of 16 is experimentally determined.
     if ( a_d >= ((c3_d)1 << (c3_d)34) - 16 ) {
@@ -34,7 +40,11 @@ u3qc_bex(u3_atom a)
 
   u3i_slab_init(&sab_u, 0, a_d + 1);
 
+#ifdef VERE_64
+  sab_u.buf_w[a_d >> 6] = 1 << (a_d & 63);
+#else
   sab_u.buf_w[a_d >> 5] = 1 << (a_d & 31);
+#endif
 
   return u3i_slab_moot(&sab_u);
 }

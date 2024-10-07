@@ -542,7 +542,11 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
   //
   c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
   c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
+  c3_w* end_w = mat_w + siz_w;
   c3_w* cap_w = mat_w;
+  fprintf(stderr, "loom: mat_w: %p, rut_w: %p\r\n"
+                  "      cap_w: %p, end_w: %p\r\n",
+                   mat_w, rut_w, cap_w, end_w);
 
   if ( c3y == kid_o ) {
     u3e_ward(u3of(c3_w, rut_w) - 1, u3of(c3_w, cap_w));
@@ -596,8 +600,14 @@ _pave_home(void)
   _pave_parts();
 }
 
+// XX
+#ifdef VERE_64
+STATIC_ASSERT( ((c3_wiseof(u3v_home) * 8) == sizeof(u3v_home)),
+               "home road alignment" );
+#else
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
                "home road alignment" );
+#endif
 
 /* _find_home(): in restored image, point to home road.
 */
@@ -931,6 +941,7 @@ u3m_bail(u3_noun how)
       if ( _(u3ud(how)) ) {
         c3_c str_c[5];
 
+        // XX
         str_c[0] = ((how >>  0) & 0xff);
         str_c[1] = ((how >>  8) & 0xff);
         str_c[2] = ((how >> 16) & 0xff);
@@ -1715,7 +1726,11 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_c buf_c[6];
       c3_w len_w;
 
+#ifdef VERE_64
+      snprintf(buf_c, 6, "%lu", som);
+#else
       snprintf(buf_c, 6, "%d", som);
+#endif
       len_w = strlen(buf_c);
 
       if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
@@ -2245,7 +2260,11 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
+#ifdef VERE_64
+    u3C.wor_i = len_i >> 3;
+#else
     u3C.wor_i = len_i >> 2;
+#endif
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }
@@ -2309,6 +2328,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   /* Activate the loom.
   */
   u3m_init(len_i);
+  fprintf(stderr, "loom: init done\n");
 
   /* Activate the storage system.
   */
@@ -2324,6 +2344,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   /* Construct or activate the allocator.
   */
   u3m_pave(nuu_o);
+  fprintf(stderr, "loom: pave done\n");
 
   /* GC immediately if requested
   */
@@ -2364,6 +2385,7 @@ u3m_boot_lite(size_t len_i)
   /* Activate the loom.
   */
   u3m_init(len_i);
+  fprintf(stderr, "lite: loom init done\r\n");
 
   /* Activate tracing.
   */
@@ -2371,22 +2393,27 @@ u3m_boot_lite(size_t len_i)
   u3C.sign_hold_f = 0;
   u3C.sign_move_f = 0;
   u3t_init();
+  fprintf(stderr, "lite: tracing init done\r\n");
 
   /* Construct or activate the allocator.
   */
   u3m_pave(c3y);
+  fprintf(stderr, "lite: pave done\r\n");
 
   /* Place the guard page.
   */
   u3e_init();
+  fprintf(stderr, "lite: guard done\r\n");
 
   /* Initialize the jet system.
   */
   u3j_boot(c3y);
+  fprintf(stderr, "lite: jets done\r\n");
 
   /* Basic initialization.
   */
   memset(u3A, 0, sizeof(*u3A));
+  fprintf(stderr, "lite: memset done\r\n");
   return 0;
 }
 
