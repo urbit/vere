@@ -1866,7 +1866,7 @@ _mesa_add_galaxy_pend(u3_mesa* sam_u, u3_noun her, u3_noun pen)
 {
   u3_weak old = u3h_get(sam_u->her_p, her);
   u3_noun pes = u3_nul;
-  u3_noun wat;
+  u3_noun wat = {0};
   if ( u3_none != old ) {
     if ( u3h(old) == MESA_CZAR ) {
       u3x_cell(u3t(old), &pes, &wat);
