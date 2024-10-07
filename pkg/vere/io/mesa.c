@@ -1280,7 +1280,14 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       buf_u->len_w = dat_u->len_w;
       memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
       buf_u->par_u = par_u;
-      u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",  nam_u->fra_d - req_u->los_u->counter - 1, nam_u->fra_d , req_u->los_u->counter);
+#ifdef U3_OS_osx
+      u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",
+#else
+      u3l_log("insert into misordered queue fra: [%lu] = %lu [counter %u]",
+#endif
+              nam_u->fra_d - req_u->los_u->counter - 1,
+              nam_u->fra_d,
+              req_u->los_u->counter);
       _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
       return;
     }
@@ -2578,9 +2585,21 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
-    u3l_log(" received last packet, tof_d: %llu tob_d: %llu", req_u->tof_d, req_u->tob_d);
+#ifdef U3_OS_osx
+    u3l_log(" received last packet, tof_d: %llu tob_d: %llu",
+#else
+    u3l_log(" received last packet, tof_d: %lu tob_d: %lu",
+#endif
+            req_u->tof_d,
+            req_u->tob_d);
     c3_d now_d = _get_now_micros();
-    u3l_log("%llu kilobytes took %f ms", req_u->tof_d, (now_d - sam_u->tim_d)/1000.0);
+#ifdef U3_OS_osx
+    u3l_log("%llu kilobytes took %f ms",
+#else
+    u3l_log("%lu kilobytes took %f ms",
+#endif
+            req_u->tof_d,
+            (now_d - sam_u->tim_d)/1000.0);
 
     {
       // construct jumbo frame
