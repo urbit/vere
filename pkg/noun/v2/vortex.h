@@ -3,10 +3,10 @@
 #ifndef U3_VORTEX_V2_H
 #define U3_VORTEX_V2_H
 
-#include "pkg/noun/vortex.h"
+#include "../vortex.h"
 
-#include "pkg/noun/v2/allocate.h"
-#include "pkg/noun/version.h"
+#include "v2/allocate.h"
+#include "../version.h"
 
   /**  Aliases.
   **/
@@ -35,6 +35,6 @@
     /* u3v_v2_mig_rewrite_compact(): rewrite arvo kernel for compaction.
     */
       void
-      u3v_v2_mig_rewrite_compact();
+      u3v_v2_mig_rewrite_compact(void);
 
 #endif /* ifndef U3_VORTEX_V2_H */

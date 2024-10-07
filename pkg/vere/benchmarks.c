@@ -2,7 +2,7 @@
 
 #include "noun.h"
 #include "jets/q.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "vere.h"
 
 /* _setup(): prepare for tests.

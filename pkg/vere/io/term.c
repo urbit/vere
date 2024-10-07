@@ -1275,7 +1275,7 @@ _term_it_send_stub(u3_utty* uty_u,
 
       //  write the text itself
       //
-      for ( i_w = i_w; u3_nul != nib; i_w++, nib = u3t(nib) ) {
+      for ( ; u3_nul != nib; i_w++, nib = u3t(nib) ) {
         lin_w[i_w] = u3r_word(0, u3h(nib));
       }
 

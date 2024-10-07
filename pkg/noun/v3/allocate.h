@@ -1,9 +1,9 @@
 #ifndef U3_ALLOCATE_V3_H
 #define U3_ALLOCATE_V3_H
 
-#include "pkg/noun/allocate.h"
+#include "../allocate.h"
 
-#include "pkg/noun/v3/manage.h"
+#include "v3/manage.h"
 #include "options.h"
 
   /**  Aliases.

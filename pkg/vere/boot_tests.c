@@ -2,7 +2,7 @@
 
 #include "ivory.h"
 #include "noun.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "vere.h"
 
 /* _setup(): prepare for tests.

@@ -1,12 +1,12 @@
 /// @file
 
-#include "pkg/noun/nock.h"
-#include "pkg/noun/v1/nock.h"
+#include "../nock.h"
+#include "v1/nock.h"
 
-#include "pkg/noun/v1/allocate.h"
-#include "pkg/noun/v1/hashtable.h"
-#include "pkg/noun/jets.h"
-#include "pkg/noun/v1/jets.h"
+#include "v1/allocate.h"
+#include "v1/hashtable.h"
+#include "../jets.h"
+#include "v1/jets.h"
 
 /* u3n_v1_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */
@@ -61,7 +61,7 @@ _n_v1_feb(u3_noun kev)
 /* u3n_v1_free(): free bytecode cache
  */
 void
-u3n_v1_free()
+u3n_v1_free(void)
 {
   u3p(u3h_v1_root) har_p = u3R_v1->byc.har_p;
   u3h_v1_walk(har_p, _n_v1_feb);

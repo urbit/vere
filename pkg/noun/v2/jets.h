@@ -3,8 +3,8 @@
 #ifndef U3_JETS_V2_H
 #define U3_JETS_V2_H
 
-#include "pkg/noun/allocate.h"
-#include "pkg/noun/jets.h"
+#include "../allocate.h"
+#include "../jets.h"
 
 
   /**  Aliases.
@@ -30,6 +30,6 @@
     /* u3j_v2_mig_rewrite_compact(): rewrite jet state for compaction.
     */
       void
-      u3j_v2_mig_rewrite_compact();
+      u3j_v2_mig_rewrite_compact(void);
 
 #endif /* ifndef U3_JETS_V2_H */

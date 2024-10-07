@@ -3,9 +3,9 @@
 #ifndef U3_NOCK_V2_H
 #define U3_NOCK_V2_H
 
-#include "pkg/noun/v3/nock.h"
+#include "v3/nock.h"
 
-#include "pkg/noun/v2/jets.h"
+#include "v2/jets.h"
 
 #include "types.h"
 
@@ -59,6 +59,6 @@
     /* u3n_v2_mig_rewrite_compact(): rewrite bytecode cache for compaction.
      */
       void
-      u3n_v2_mig_rewrite_compact();
+      u3n_v2_mig_rewrite_compact(void);
 
 #endif /* ifndef U3_NOCK_V2_H */

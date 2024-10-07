@@ -1,26 +1,25 @@
 /// @file
 
-#include "pkg/noun/v3/manage.h"
+#include "v3/manage.h"
 
-#include "pkg/noun/v2/jets.h"
-#include "pkg/noun/v2/nock.h"
-#include "pkg/noun/v2/vortex.h"
+#include "v2/jets.h"
+#include "v2/nock.h"
+#include "v2/vortex.h"
 
-#include "pkg/noun/v3/allocate.h"
-#include "pkg/noun/v3/hashtable.h"
-#include "pkg/noun/version.h"
-#include "pkg/noun/v3/vortex.h"
-#include <v2/allocate.h>
+#include "v3/allocate.h"
+#include "v3/hashtable.h"
+#include "../version.h"
+#include "v3/vortex.h"
+#include "v2/allocate.h"
 
 /* u3m_v3_migrate: perform loom migration if necessary.
 */
 void
-u3m_v3_migrate()
+u3m_v3_migrate(void)
 {
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
 
-  c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
   c3_w *mem_w = u3_Loom + u3a_v3_walign;
   c3_w  len_w = u3C.wor_i - u3a_v3_walign;
   c3_w  suz_w = c3_wiseof(u3v_v2_home);
@@ -29,7 +28,6 @@ u3m_v3_migrate()
   //  old road
   u3v_v2_home* hum_u = (u3v_v2_home*)mut_w;
   u3a_v2_road* rud_u = &hum_u->rod_u;
-  size_t ruz_t = sizeof(u3a_v2_road);
 
   //  set v2 globals
   u3H_v2 = (void *)mut_w;

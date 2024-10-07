@@ -1,10 +1,10 @@
 /// @file
 
-#include "pkg/noun/hashtable.h"
-#include "pkg/noun/v1/hashtable.h"
+#include "../hashtable.h"
+#include "v1/hashtable.h"
 
-#include "pkg/noun/allocate.h"
-#include "pkg/noun/v1/allocate.h"
+#include "../allocate.h"
+#include "v1/allocate.h"
 
 
 /* _ch_v1_popcount(): number of bits set in word.  A standard intrinsic.
@@ -160,14 +160,14 @@ u3h_v1_walk_with(u3p(u3h_v1_root) har_p,
 static void
 _ch_v1_walk_plain(u3_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = wit;
+  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
   fun_f(kev);
 }
 
 /* u3h_v1_walk(): u3h_v1_walk_with, but with no data argument
-*/
+ */
 void
 u3h_v1_walk(u3p(u3h_v1_root) har_p, void (*fun_f)(u3_noun))
 {
-  u3h_v1_walk_with(har_p, _ch_v1_walk_plain, fun_f);
+  u3h_v1_walk_with(har_p, _ch_v1_walk_plain, (void *)fun_f);
 }

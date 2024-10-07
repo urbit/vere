@@ -4,7 +4,7 @@
 #define U3_JETS_H
 
 #include "allocate.h"
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 
   /** Noun semantics.
@@ -98,7 +98,7 @@
       typedef struct {
         c3_w    len_w;                //  number of fists
         u3_noun sat;                  //  static noun at end of check
-        u3j_fist fis_u[0];            //  fists
+        u3j_fist fis_u[];             //  fists
       } u3j_fink;
 
     /* u3j_rite: site of a %fast, used to skip re-mining.
@@ -317,6 +317,6 @@
       /* u3j_rewrite_compact(): rewrite jet state for compaction.
       */
         void
-        u3j_rewrite_compact();
+        u3j_rewrite_compact(void);
 
 #endif /* ifndef U3_JETS_H */

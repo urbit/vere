@@ -1,0 +1,36 @@
+.{
+    .name = "h2o",
+    .version = "0.0.1",
+    .dependencies = .{
+        .h2o = .{
+            .url = "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz",
+            .hash = "12206fb50c715a131282752c7cd92abe3f5647f3ac28ae5c56fdd231896c44fdb86d",
+        },
+        .libuv = .{
+            .path = "../libuv",
+        },
+        .openssl = .{
+            .path = "../openssl",
+            // .path = "../../../../Github/openssl-zig",
+            // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
+            // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
+        },
+        .curl = .{
+            .path = "../curl",
+        },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
+            .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+        },
+        .sse2neon = .{
+            .url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v1.5.1.tar.gz",
+            .hash = "1220ced40ef8af4a4565aa1a7de678d43478df9b26483c062db2dbdc58b42c822268",
+        },
+        .patches = .{
+            .path = "./patches",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

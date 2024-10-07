@@ -4,7 +4,7 @@
 #define U3_VORTEX_H
 
 #include "allocate.h"
-#include "c3.h"
+#include "c3/c3.h"
 #include "imprison.h"
 #include "version.h"
 
@@ -141,6 +141,6 @@
     /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
     */
       void
-      u3v_rewrite_compact();
+      u3v_rewrite_compact(void);
 
 #endif /* ifndef U3_VORTEX_H */

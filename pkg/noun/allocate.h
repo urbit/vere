@@ -741,6 +741,6 @@
         /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
         */
           void
-          u3a_loom_sane();
+          u3a_loom_sane(void);
 
 #endif /* ifndef U3_ALLOCATE_H */

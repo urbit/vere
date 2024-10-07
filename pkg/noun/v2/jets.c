@@ -1,16 +1,16 @@
 /// @file
 
-#include "pkg/noun/vortex.h"
+#include "../vortex.h"
 
-#include "pkg/noun/jets.h"
-#include "pkg/noun/v2/jets.h"
+#include "../jets.h"
+#include "v2/jets.h"
 
-#include "pkg/noun/v2/allocate.h"
-#include "pkg/noun/v2/hashtable.h"
-#include "pkg/noun/v2/vortex.h"
+#include "v2/allocate.h"
+#include "v2/hashtable.h"
+#include "v2/vortex.h"
 
-#include "pkg/noun/v3/hashtable.h"
-#include "pkg/noun/v3/jets.h"
+#include "v3/hashtable.h"
+#include "v3/jets.h"
 
 /* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */
@@ -37,7 +37,7 @@ u3j_v2_reclaim(void)
  * history at e8a307a.
 */
 void
-u3j_v2_mig_rewrite_compact()
+u3j_v2_mig_rewrite_compact(void)
 {
   u3h_v2_rewrite(u3R_v2->jed.war_p);
   u3h_v2_rewrite(u3R_v2->jed.cod_p);
