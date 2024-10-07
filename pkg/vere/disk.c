@@ -833,86 +833,134 @@ _disk_lock(c3_c* pax_c)
   return paf_c;
 }
 
-/* u3_disk_acquire(): acquire a lockfile, killing anything that holds it.
+/* _disk_acquire(): acquire a lockfile, killing anything that holds it.
 */
-static void
-u3_disk_acquire(c3_c* pax_c)
+static c3_i
+_disk_acquire(c3_c* pax_c)
 {
-  c3_c* paf_c = _disk_lock(pax_c);
-  c3_w  pid_w;
-  FILE* loq_u;
+  c3_c* paf_c    = _disk_lock(pax_c);
+  c3_y  dat_y[12] = {0};
+  c3_w  pid_w    = 0;
+  c3_i  fid_i, ret_i;
 
-  if ( NULL != (loq_u = c3_fopen(paf_c, "r")) ) {
-    if ( 1 != fscanf(loq_u, "%" SCNu32, &pid_w) ) {
-      u3l_log("lockfile %s is corrupt!", paf_c);
-      kill(getpid(), SIGTERM);
-      sleep(1); u3_assert(0);
-    }
-    else if (pid_w != getpid()) {
-      c3_w i_w;
-
-      int ret = kill(pid_w, SIGTERM);
-
-      if ( -1 == ret && errno == EPERM ) {
-        u3l_log("disk: permission denied when trying to kill process %d!", pid_w);
-        kill(getpid(), SIGTERM);
-        sleep(1); u3_assert(0);
-      }
-
-      if ( -1 != ret ) {
-        u3l_log("disk: stopping process %d, live in %s...",
-                pid_w, pax_c);
-
-        for ( i_w = 0; i_w < 16; i_w++ ) {
-          sleep(1);
-          if ( -1 == kill(pid_w, SIGTERM) ) {
-            break;
-          }
-        }
-        if ( 16 == i_w ) {
-          for ( i_w = 0; i_w < 16; i_w++ ) {
-            if ( -1 == kill(pid_w, SIGKILL) ) {
-              break;
-            }
-            sleep(1);
-          }
-        }
-        if ( 16 == i_w ) {
-          u3l_log("disk: process %d seems unkillable!", pid_w);
-          u3_assert(0);
-        }
-        u3l_log("disk: stopped old process %u", pid_w);
-      }
-    }
-    fclose(loq_u);
-    c3_unlink(paf_c);
+  if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
+    fprintf(stderr, "disk: failed to open/create lock file\r\n");
+    goto fail;
   }
-
-  if ( NULL == (loq_u = c3_fopen(paf_c, "w")) ) {
-    u3l_log("disk: unable to open %s: %s", paf_c, strerror(errno));
-    u3_assert(0);
-  }
-
-  fprintf(loq_u, "%u\n", getpid());
 
   {
-    c3_i fid_i = fileno(loq_u);
-    c3_sync(fid_i);
+    c3_y  len_y = 0;
+    c3_y* buf_y = dat_y;
+
+    do {
+      c3_zs ret_zs;
+
+      if ( -1 == (ret_zs = read(fid_i, buf_y, 1)) ) {
+        if ( EINTR == errno ) continue;
+
+        fprintf(stderr, "disk: failed to read lockfile: %s\r\n",
+                        strerror(errno));
+        goto fail;
+      }
+
+      if ( !ret_zs ) break;
+      else if ( 1 != ret_zs ) {
+        fprintf(stderr, "disk: strange lockfile read %zd\r\n", ret_zs);
+        goto fail;
+      }
+
+      len_y++;
+      buf_y++;
+    }
+    while ( len_y < sizeof(dat_y) );
+
+
+    if ( len_y ) {
+      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_w, &ret_i))
+         || (0 >= ret_i)
+         || ('\n' != *(dat_y + ret_i)) )
+      {
+        fprintf(stderr, "disk: lockfile is corrupt\r\n");
+      }
+    }
   }
 
-  fclose(loq_u);
+  {
+    struct flock lok_u;
+    memset((void *)&lok_u, 0, sizeof(lok_u));
+    lok_u.l_type = F_WRLCK;
+    lok_u.l_whence = SEEK_SET;
+    lok_u.l_start = 0;
+    lok_u.l_len = 1;
+
+    while (  (ret_i = fcntl(fid_i, F_SETLK, &lok_u))
+          && (EINTR == (ret_i = errno)) );
+
+    if ( ret_i ) {
+      if ( pid_w ) {
+        fprintf(stderr, "pier: locked by PID %u\r\n", pid_w);
+      }
+      else {
+        fprintf(stderr, "pier: strange: locked by empty lockfile\r\n");
+      }
+
+      goto fail;
+    }
+  }
+
+  ret_i = snprintf((c3_c*)dat_y, sizeof(dat_y), "%u\n", getpid());
+
+  if ( 0 >= ret_i ) {
+    fprintf(stderr, "disk: failed to write lockfile\r\n");
+    goto fail;
+  }
+
+  {
+    c3_y  len_y = (c3_y)ret_i;
+    c3_y* buf_y = dat_y;
+
+    do {
+      c3_zs ret_zs;
+
+      if (  (-1 == (ret_zs = write(fid_i, buf_y, len_y)))
+         && (EINTR != errno) )
+      {
+        fprintf(stderr, "disk: lockfile write failed %s\r\n",
+                        strerror(errno));
+        goto fail;
+      }
+
+      if ( 0 < ret_zs ) {
+        len_y -= ret_zs;
+        buf_y += ret_zs;
+      }
+    }
+    while ( len_y );
+  }
+
+  if ( -1 == c3_sync(fid_i) ) {
+    fprintf(stderr, "disk: failed to sync lockfile: %s\r\n",
+                    strerror(errno));
+    goto fail;
+  }
+
   c3_free(paf_c);
+  return fid_i;
+
+fail:
+  kill(getpid(), SIGTERM);
+  sleep(1); u3_assert(0);
 }
 
-/* u3_disk_release(): release a lockfile.
+/* _disk_release(): release a lockfile.
 */
 static void
-u3_disk_release(c3_c* pax_c)
+_disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-
   c3_unlink(paf_c);
   c3_free(paf_c);
+  close(fid_i);
 }
 
 /* u3_disk_exit(): close the log.
@@ -959,7 +1007,7 @@ u3_disk_exit(u3_disk* log_u)
     }
   }
 
-  u3_disk_release(log_u->dir_u->pax_c);
+  _disk_release(log_u->dir_u->pax_c, log_u->lok_i);
 
   u3_dire_free(log_u->dir_u);
   u3_dire_free(log_u->urb_u);
@@ -1123,18 +1171,39 @@ u3_disk_epoc_zero(u3_disk* log_u)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3E_VERLAT);
-  fclose(epv_f);
+  FILE* epv_f = fopen(epi_c, "w");  // XX errors
+
+  if (  !epv_f
+     || (0 > fprintf(epv_f, "%d", U3E_VERLAT))
+     || fflush(epv_f)
+     || (-1 == c3_sync(fileno(epv_f)))
+     || fclose(epv_f)
+     || (-1 == rename(epi_c, epv_c)) )
+  {
+    fprintf(stderr, "disk: write epoc.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
-  fprintf(biv_f, URBIT_VERSION);    //  XX append a sentinel for auto-rollover?
-  fclose(biv_f);
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");
+  if (  !biv_f
+     || (0 > fprintf(biv_f, URBIT_VERSION))
+     || fflush(biv_f)
+     || (-1 == c3_sync(fileno(biv_f)))
+     || fclose(biv_f)
+     || (-1 == rename(bii_c, biv_c)) )
+  {
+    fprintf(stderr, "disk: write vere.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
@@ -1205,18 +1274,44 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   //  create epoch version file, overwriting any existing file
+  c3_c epi_c[8193];
   c3_c epv_c[8193];
+  snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
-  FILE* epv_f = fopen(epv_c, "w");  // XX errors
-  fprintf(epv_f, "%d", U3E_VERLAT);
-  fclose(epv_f);
+  FILE* epv_f = fopen(epi_c, "w");
+
+  if (  !epv_f
+     || (0 > fprintf(epv_f, "%d", U3E_VERLAT))
+     || fflush(epv_f)
+     || (-1 == c3_sync(fileno(epv_f)))
+     || fclose(epv_f)
+     || (-1 == rename(epi_c, epv_c)) )
+  {
+    fprintf(stderr, "disk: write epoc.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  create binary version file, overwriting any existing file
+  c3_c bii_c[8193];
   c3_c biv_c[8193];
-  snprintf(biv_c, sizeof(biv_c), "%s/vere.txt", epo_c);
-  FILE* biv_f = fopen(biv_c, "w");  //  XX errors
-  fprintf(biv_f, URBIT_VERSION);
-  fclose(biv_f);
+  snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
+  snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
+  FILE* biv_f = fopen(bii_c, "w");
+  if (  !biv_f
+     || (0 > fprintf(biv_f, URBIT_VERSION))
+     || fflush(biv_f)
+     || (-1 == c3_sync(fileno(biv_f)))
+     || fclose(biv_f)
+     || (-1 == rename(bii_c, biv_c)) )
+  {
+    fprintf(stderr, "disk: write vere.txt failed %s\r\n", strerror(errno));
+    goto fail3;
+  }
+
+  if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
+    fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
+    goto fail3;
+  }
 
   //  get metadata from old log
   c3_d     who_d[2];
@@ -1707,9 +1802,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_gone;
     }
 
-    if (  (1 != sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
-       && (0 < car_i)
-       && ('\0' == *(ver_c + car_i)) )
+    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+          && (0 < car_i)
+          && ('\0' == *(ver_c + car_i)) ) )
     {
       fprintf(stderr, "disk: failed to parse epoch version: '%s'\r\n", ver_c);
       return _epoc_fail;
@@ -1770,6 +1865,7 @@ u3_disk*
 u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
+  log_u->lok_i = -1;
   log_u->liv_o = c3n;
   log_u->ted_o = c3n;
   log_u->cb_u  = cb_u;
@@ -1788,7 +1884,7 @@ u3_disk_init(c3_c* pax_c, u3_disk_cb cb_u)
 
   //  acquire lockfile.
   //
-  u3_disk_acquire(pax_c);
+  log_u->lok_i = _disk_acquire(pax_c);
 
   //  create/load $pier/.urb
   //

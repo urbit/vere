@@ -26,7 +26,7 @@ brew install automake libtool
 
 ### Linux
 
-After installing `automake` and `libtool`, you need to install the [musl libc] toolchain.  We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us to generate statically linked binaries. As a prerequisite, you need to install the [musl libc][musl libc] toolchain appropriate for your target platform.
+After installing `automake`, `autoconf-archive`, and `libtool`, you need to install the [musl libc] toolchain.  We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us to generate statically linked binaries. As a prerequisite, you need to install the [musl libc][musl libc] toolchain appropriate for your target platform.
 
 #### x86_64
 
@@ -119,9 +119,9 @@ bazel build --per_file_copt='pkg/.*@-DMACRO'
 bazel run //bazel:refresh_compile_commands
 ```
 
-Running this command will generate a `compile_commands.json` file in the root 
-of the repository, which `clangd` (or other language server processors) will 
-use automatically to provide modern editor features like syntax highlighting, 
+Running this command will generate a `compile_commands.json` file in the root
+of the repository, which `clangd` (or other language server processors) will
+use automatically to provide modern editor features like syntax highlighting,
 go-to definitions, call hierarchies, symbol manipulation, etc.
 
 ## Test Commands
