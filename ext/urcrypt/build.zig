@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
     lib.linkLibrary(libed25519(b, target, optimize));
     lib.linkLibrary(libge_additions(b, target, optimize));
     lib.linkLibrary(libkeccak_tiny(b, target, optimize));
+    lib.linkLibrary(libmonocypher(b, target, optimize));
     lib.linkLibrary(libscrypt(b, target, optimize));
 
     lib.linkLibrary(libaes_siv(b, target, optimize));
@@ -44,6 +45,7 @@ pub fn build(b: *std.Build) void {
             "aes_siv.c",
             "argon.c",
             "blake3.c",
+            "chacha.c",
             "ed25519.c",
             "ge_additions.c",
             "keccak.c",
@@ -414,6 +416,40 @@ fn libkeccak_tiny(
     });
 
     lib.installHeader(dep_c.path("keccak-tiny/keccak-tiny.h"), "keccak-tiny.h");
+
+    return lib;
+}
+
+fn libmonocypher(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "monocypher",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("monocypher"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("monocypher"),
+        .files = &.{"monocypher.c"},
+        .flags = &.{
+            "-O2",
+            "-fno-sanitize=all",
+        },
+    });
+
+    lib.installHeader(dep_c.path("monocypher/monocypher.h"), "monocypher.h");
 
     return lib;
 }
