@@ -1,7 +1,7 @@
 #ifndef U3_SHIP_H
 #define U3_SHIP_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 
 typedef c3_d u3_ship[2];

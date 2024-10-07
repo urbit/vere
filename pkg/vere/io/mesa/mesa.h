@@ -1,7 +1,7 @@
 #ifndef VERE_MESA_H
 #define VERE_MESA_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "ship.h"
 
 #define MESA_VER       1

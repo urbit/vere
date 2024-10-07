@@ -4,19 +4,18 @@
 #include "ivory.h"
 
 #include "noun.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "ship.h"
 #include "io/ames/stun.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
 #include <allocate.h>
-#include <defs.h>
 #include <error.h>
 #include <imprison.h>
 #include <inttypes.h>
 #include <jets/q.h>
 #include <manage.h>
-#include <motes.h>
+#include <c3/motes.h>
 #include <retrieve.h>
 #include <stdio.h>
 #include <string.h>
