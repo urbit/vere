@@ -328,6 +328,8 @@ void mesa_free_pact(u3_mesa_pact* pac_u)
       break;
     };
     case PACT_POKE: {
+      /* c3_free(pac_u->pok_u.nam_u.pat_c); */
+      c3_free(pac_u->pok_u.pay_u.pat_c);
       c3_free(pac_u->pok_u.dat_u.fra_y);
       break;
     };
