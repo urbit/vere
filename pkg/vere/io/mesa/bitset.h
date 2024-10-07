@@ -1,7 +1,7 @@
 #ifndef VERE_BITSET_H
 #define VERE_BITSET_H
 
-#include "c3.h"
+#include "c3/c3.h"
 
 typedef struct _u3_bitset {
   c3_w  len_w;

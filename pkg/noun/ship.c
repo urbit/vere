@@ -1,4 +1,4 @@
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 #include "imprison.h"
 #include "retrieve.h"
