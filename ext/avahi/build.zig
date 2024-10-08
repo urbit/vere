@@ -3,6 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const t = target.result;
 
     const expat_c = b.dependency("expat", .{
         .target = target,
@@ -19,17 +20,6 @@ pub fn build(b: *std.Build) void {
         },
     });
     expat.linkLibC();
-
-    // const expat_cmake_config = b.addConfigHeader(
-    //     .{ .style = .{ .cmake = expat_c.path("expat_config.h.in") } },
-    //     .{}
-    // );
-    // expat.addConfigHeader(expat_cmake_config);
-    // const expat_install_cmake_config = b.addInstallFile(
-    //     expat_cmake_config.getOutput(),
-    //     "expat_config.h"
-    // );
-    // b.getInstallStep().dependOn(&expat_install_cmake_config.step);
 
     const expat_cmake_config = b.addConfigHeader(.{
         .style = .{
@@ -74,8 +64,6 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // b.installArtifact(expat);
-
     const dbus_c = b.dependency("dbus", .{
         .target = target,
         .optimize = optimize,
@@ -94,7 +82,7 @@ pub fn build(b: *std.Build) void {
     dbus.linkLibrary(expat);
 
     dbus.root_module.addCMacro("HAVE_ERRNO_H", "");
-    dbus.root_module.addCMacro("VERSION", "1.14.10");
+    dbus.root_module.addCMacro("VERSION", "1.14.8");
     dbus.root_module.addCMacro("SOVERSION", "3.38.0");
     dbus.root_module.addCMacro("DBUS_DAEMON_NAME", "\"dbus\"");
     dbus.root_module.addCMacro("DBUS_COMPILATION", "");
@@ -116,246 +104,243 @@ pub fn build(b: *std.Build) void {
     dbus.root_module.addCMacro("HAVE_SIGNAL_H", "");
     dbus.root_module.addCMacro("HAVE_GETPEEREID", "");
 
-    // dbus.root_module.addCMacro(
-    //   "DBUS_PREFIX",
-    //   b.fmt("\"{s}\"", .{b.install_prefix})
-    // );
-    // dbus.root_module.addCMacro(
-    //   "DBUS_BINDIR",
-    //   b.fmt("\"{s}\"", .{b.getInstallPath(.bin, "")})
-    // );
-    // dbus.root_module.addCMacro(
-    //   "DBUS_DATADIR",
-    //   b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "usr/share")})
-    // );
-    dbus.root_module.addCMacro("DBUS_MACHINE_UUID_FILE", b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "lib/dbus/machine-id")}));
-    // dbus.root_module.addCMacro(
-    //   "DBUS_SYSTEM_CONFIG_FILE",
-    //   b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "usr/share/dbus-1/system.conf")})
-    // );
-    // dbus.root_module.addCMacro(
-    //   "DBUS_SESSION_CONFIG_FILE",
-    //   b.fmt("\"{s}\"", .{b.getInstallPath(.prefix, "usr/share/dbus-1/session.conf")})
-    // );
+    if (t.os.tag == .linux) {
+        dbus.root_module.addCMacro("HAVE_APPARMOR", "");
+        dbus.root_module.addCMacro("HAVE_APPARMOR_2_10", "");
+        dbus.root_module.addCMacro("HAVE_LIBAUDIT", "");
+        dbus.root_module.addCMacro("HAVE_SELINUX", "");
+        dbus.root_module.addCMacro("DBUS_HAVE_LINUX_EPOLL", "");
+    }
 
-    // const dbus_config_header = b.addWriteFile("config.h", blk: {
-    //   var output = std.ArrayList(u8).init(b.allocator);
-    //   defer output.deinit();
+    // dbus.root_module.addCMacro("DBUS_PREFIX", b.fmt("\"{s}\"", .{
+    //     b.install_prefix,
+    // }));
+    // dbus.root_module.addCMacro("DBUS_BINDIR", b.fmt("\"{s}\"", .{
+    //     b.getInstallPath(.bin, ""),
+    // }));
+    // dbus.root_module.addCMacro("DBUS_DATADIR", b.fmt("\"{s}\"", .{
+    //     b.getInstallPath(.prefix, "usr/share"),
+    // }));
+    dbus.root_module.addCMacro("DBUS_MACHINE_UUID_FILE", b.fmt("\"{s}\"", .{
+        b.getInstallPath(.prefix, "lib/dbus/machine-id"),
+    }));
+    // dbus.root_module.addCMacro("DBUS_SYSTEM_CONFIG_FILE", b.fmt("\"{s}\"", .{
+    //     b.getInstallPath(.prefix, "usr/share/dbus-1/system.conf"),
+    // }));
+    // dbus.root_module.addCMacro("DBUS_SESSION_CONFIG_FILE", b.fmt("\"{s}\"", .{
+    //     b.getInstallPath(.prefix, "usr/share/dbus-1/session.conf"),
+    // }));
 
-    //   try output.appendSlice(
-    //     \\#pragma once
-    //     \\
-    //     \\#define HAVE_ERRNO_H
-    //     \\#include <stdarg.h>
-    //     \\#include <stdint.h>
-    //     \\#include <unistd.h>
-    //     \\
-    //     \\#define VERSION "1.14.10"
-    //     \\#define SOVERSION "3.38.0"
-    //     \\#define DBUS_DAEMON_NAME "\"dbus\""
-    //     \\#define DBUS_COMPILATION
-    //     \\#define DBUS_VA_COPY va_copy
-    //     \\#define DBUS_SESSION_BUS_CONNECT_ADDRESS "\"autolaunch:\""
-    //     \\#define DBUS_SYSTEM_BUS_DEFAULT_ADDRESS "\"unix:tmpdir=/tmp\""
-    //     \\#define DBUS_ENABLE_CHECKS
-    //     \\#define DBUS_ENABLE_ASSERT
-    //     \\#define HAVE_ALLOCA_H
-    //     \\
-    //   );
-
-    //   if (target.result.abi == .gnu) {
-    //     try output.appendSlice(
-    //       \\#define __USE_GNU
-    //       \\
-    //     );
-    //   }
-
-    //   if (target.result.os.tag == .windows) {
-    //     try output.appendSlice(
-    //       \\#define DBUS_WIN
-    //       \\
-    //     );
-    //   } else {
-    //     try output.appendSlice(b.fmt(
-    //       \\#define _GNU_SOURCE
-    //       \\#define HAVE_SYSLOG_H
-    //       \\#define HAVE_SOCKLEN_T
-    //       \\#define HAVE_SYS_RANDOM_H
-    //       \\
-    //       \\#include <signal.h>
-    //       \\#include <sys/types.h>
-    //       \\
-    //       \\#define DBUS_UNIX
-    //       \\#define HAVE_GETPWNAM_R
-    //       \\#define DBUS_PREFIX "{s}"
-    //       \\#define DBUS_BINDIR "{s}"
-    //       \\#define DBUS_DATADIR "{s}"
-    //       \\#define DBUS_MACHINE_UUID_FILE "{s}"
-    //       \\#define DBUS_SYSTEM_CONFIG_FILE "{s}"
-    //       \\#define DBUS_SESSION_CONFIG_FILE "{s}"
-    //       \\
-    //       , .{
-    //         b.install_prefix,
-    //         b.getInstallPath(.bin, ""),
-    //         b.getInstallPath(.prefix, "usr/share"),
-    //         b.getInstallPath(.prefix, "var/lib/dbus/machine-id"),
-    //         b.getInstallPath(.prefix, "usr/share/dbus-1/system.conf"),
-    //         b.getInstallPath(.prefix, "usr/share/dbus-1/session.conf"),
-    //     }));
-    //   }
-
-    //   if (target.result.os.tag == .linux) {
-    //     try output.appendSlice(
-    //       \\#define HAVE_APPARMOR
-    //       \\#define HAVE_APPARMOR_2_10
-    //       \\#define HAVE_LIBAUDIT
-    //       \\#define HAVE_SELINUX
-    //       \\#define DBUS_HAVE_LINUX_EPOLL
-    //       \\
-    //     );
-    //   }
-
-    //   break :blk try output.toOwnedSlice();
+    // dbus.root_module.addCMacro("HAVE_CONFIG_H", "");
+    // const dbus_config_h = b.addConfigHeader(.{
+    //     .style = .{ .autoconf = dbus_c.path("config.h.in") },
+    //     .include_path = "config.h",
+    // }, .{
+    //     .HAVE_ERRNO_H = "",
+    //     .VERSION = "1.14.8",
+    //     .DBUS_DAEMON_NAME = "\"dbus\"",
+    //     .DBUS_VA_COPY = "va_copy",
+    //     .DBUS_SESSION_BUS_CONNECT_ADDRESS = "\"autolaunch:\"",
+    //     .DBUS_SYSTEM_BUS_DEFAULT_ADDRESS = "\"unix:tmpdir=/tmp\"",
+    //     .HAVE_ALLOCA_H = "",
+    //     ._GNU_SOURCE = "",
+    //     .HAVE_SYSLOG_H = "",
+    //     .HAVE_SOCKLEN_T = "",
+    //     .HAVE_SYS_RANDOM_H = "",
+    //     .DBUS_UNIX = "",
+    //     .HAVE_GETPWNAM_R = "",
+    //     .HAVE_STDINT_H = "",
+    //     .HAVE_SIGNAL_H = "",
+    //     .HAVE_GETPEEREID = "",
+    //     .@"inline" = null,
+    //     .AC_APPLE_UNIVERSAL_BUILD = null,
+    //     .DBUS_BINDIR = null,
+    //     .DBUS_BUILD_X11 = null,
+    //     .DBUS_BUILT_R_DYNAMIC = null,
+    //     .DBUS_BUS_ENABLE_INOTIFY = null,
+    //     .DBUS_BUS_ENABLE_KQUEUE = null,
+    //     .DBUS_CONSOLE_AUTH_DIR = null,
+    //     .DBUS_CONSOLE_OWNER_FILE = null,
+    //     .DBUS_CYGWIN = null,
+    //     .DBUS_DAEMONDIR = null,
+    //     .DBUS_DATADIR = null,
+    //     .DBUS_DISABLE_ASSERT = null,
+    //     .DBUS_DISABLE_CHECKS = null,
+    //     .DBUS_ENABLE_EMBEDDED_TESTS = null,
+    //     .DBUS_ENABLE_LAUNCHD = null,
+    //     .DBUS_ENABLE_MODULAR_TESTS = null,
+    //     .DBUS_ENABLE_STATS = null,
+    //     .DBUS_ENABLE_VERBOSE_MODE = null,
+    //     .DBUS_ENABLE_X11_AUTOLAUNCH = null,
+    //     .DBUS_EXEEXT = null,
+    //     .DBUS_GCOV_ENABLED = null,
+    //     .DBUS_HAVE_LINUX_EPOLL = null,
+    //     .DBUS_LIBEXECDIR = null,
+    //     .DBUS_PREFIX = null,
+    //     .DBUS_SESSION_SOCKET_DIR = null,
+    //     .DBUS_SYSTEM_SOCKET = null,
+    //     .DBUS_TEST_LAUNCH_HELPER_BINARY = null,
+    //     .DBUS_TEST_SOCKET_DIR = null,
+    //     .DBUS_TEST_USER = null,
+    //     .DBUS_USER = null,
+    //     .DBUS_USE_SYNC = null,
+    //     .DBUS_WIN = null,
+    //     .DBUS_WINCE = null,
+    //     .DBUS_WITH_GLIB = null,
+    //     .ENABLE_TRADITIONAL_ACTIVATION = null,
+    //     .FD_SETSIZE = null,
+    //     .GETTEXT_PACKAGE = null,
+    //     .GLIB_VERSION_MAX_ALLOWED = null,
+    //     .GLIB_VERSION_MIN_REQUIRED = null,
+    //     .G_DISABLE_CHECKS = null,
+    //     .HAVE_ACCEPT4 = null,
+    //     .HAVE_ADT = null,
+    //     .HAVE_APPARMOR = null,
+    //     .HAVE_APPARMOR_2_10 = null,
+    //     .HAVE_BACKTRACE = null,
+    //     .HAVE_BYTESWAP_H = null,
+    //     .HAVE_CLEARENV = null,
+    //     .HAVE_CMSGCRED = null,
+    //     .HAVE_CONSOLE_OWNER_FILE = null,
+    //     .HAVE_CRT_EXTERNS_H = null,
+    //     .HAVE_DDFD = null,
+    //     .HAVE_DECL_ENVIRON = null,
+    //     .HAVE_DECL_LOG_PERROR = null,
+    //     .HAVE_DECL_MSG_NOSIGNAL = null,
+    //     .HAVE_DIRENT_H = null,
+    //     .HAVE_DIRFD = null,
+    //     .HAVE_DLFCN_H = null,
+    //     .HAVE_EXECINFO_H = null,
+    //     .HAVE_FPATHCONF = null,
+    //     .HAVE_GETGROUPLIST = null,
+    //     .HAVE_GETPEERUCRED = null,
+    //     .HAVE_GETRANDOM = null,
+    //     .HAVE_GETRESUID = null,
+    //     .HAVE_GETRLIMIT = null,
+    //     .HAVE_GIO_UNIX = null,
+    //     .HAVE_INOTIFY_INIT1 = null,
+    //     .HAVE_INTTYPES_H = null,
+    //     .HAVE_ISSETUGID = null,
+    //     .HAVE_LIBAUDIT = null,
+    //     .HAVE_LIBNSL = null,
+    //     .HAVE_LOCALECONV = null,
+    //     .HAVE_LOCALE_H = null,
+    //     .HAVE_MINIX_CONFIG_H = null,
+    //     .HAVE_MONOTONIC_CLOCK = null,
+    //     .HAVE_NANOSLEEP = null,
+    //     .HAVE_NSGETENVIRON = null,
+    //     .HAVE_PIPE2 = null,
+    //     .HAVE_POLL = null,
+    //     .HAVE_PRCTL = null,
+    //     .HAVE_PRLIMIT = null,
+    //     .HAVE_RAISE = null,
+    //     .HAVE_SELINUX = null,
+    //     .HAVE_SETENV = null,
+    //     .HAVE_SETLOCALE = null,
+    //     .HAVE_SETRESUID = null,
+    //     .HAVE_SETRLIMIT = null,
+    //     .HAVE_SOCKETPAIR = null,
+    //     .HAVE_STDIO_H = null,
+    //     .HAVE_STDLIB_H = null,
+    //     .HAVE_STRINGS_H = null,
+    //     .HAVE_STRING_H = null,
+    //     .HAVE_STRTOLL = null,
+    //     .HAVE_STRTOULL = null,
+    //     .HAVE_SYSTEMD = null,
+    //     .HAVE_SYS_INOTIFY_H = null,
+    //     .HAVE_SYS_PRCTL_H = null,
+    //     .HAVE_SYS_RESOURCE_H = null,
+    //     .HAVE_SYS_STAT_H = null,
+    //     .HAVE_SYS_TIME_H = null,
+    //     .HAVE_SYS_TYPES_H = null,
+    //     .HAVE_SYS_UIO_H = null,
+    //     .HAVE_UNISTD_H = null,
+    //     .HAVE_UNIX_FD_PASSING = null,
+    //     .HAVE_UNPCBID = null,
+    //     .HAVE_UNSETENV = null,
+    //     .HAVE_USLEEP = null,
+    //     .HAVE_VISIBILITY = null,
+    //     .HAVE_WCHAR_H = null,
+    //     .HAVE_WRITEV = null,
+    //     .HAVE_WS2TCPIP_H = null,
+    //     .HAVE_X11 = null,
+    //     .HAVE_XML_SETHASHSALT = null,
+    //     .LT_OBJDIR = null,
+    //     .NDEBUG = null,
+    //     .PACKAGE = null,
+    //     .PACKAGE_BUGREPORT = null,
+    //     .PACKAGE_NAME = null,
+    //     .PACKAGE_STRING = null,
+    //     .PACKAGE_TARNAME = null,
+    //     .PACKAGE_URL = null,
+    //     .PACKAGE_VERSION = null,
+    //     .SIZEOF_CHAR = null,
+    //     .SIZEOF_INT = null,
+    //     .SIZEOF_LONG = null,
+    //     .SIZEOF_LONG_LONG = null,
+    //     .SIZEOF_SHORT = null,
+    //     .SIZEOF_VOID_P = null,
+    //     .SIZEOF___INT64 = null,
+    //     .STDC_HEADERS = null,
+    //     .TEST_LISTEN = null,
+    //     .WITH_VALGRIND = null,
+    //     .WORDS_BIGENDIAN = null,
+    //     ._ALL_SOURCE = null,
+    //     ._BSD_SOURCE = null,
+    //     ._DARWIN_C_SOURCE = null,
+    //     ._FILE_OFFSET_BITS = null,
+    //     ._HPUX_ALT_XOPEN_SOCKET_API = null,
+    //     ._LARGE_FILES = null,
+    //     ._MINIX = null,
+    //     ._NETBSD_SOURCE = null,
+    //     ._OPENBSD_SOURCE = null,
+    //     ._POSIX_1_SOURCE = null,
+    //     ._POSIX_C_SOURCE = null,
+    //     ._POSIX_PTHREAD_SEMANTICS = null,
+    //     ._POSIX_SOURCE = null,
+    //     ._TANDEM_SOURCE = null,
+    //     ._WIN32_WCE = null,
+    //     ._WIN32_WINNT = null,
+    //     ._XOPEN_SOURCE = null,
+    //     .__EXTENSIONS__ = null,
+    //     .__STDC_WANT_IEC_60559_ATTRIBS_EXT__ = null,
+    //     .__STDC_WANT_IEC_60559_BFP_EXT__ = null,
+    //     .__STDC_WANT_IEC_60559_DFP_EXT__ = null,
+    //     .__STDC_WANT_IEC_60559_FUNCS_EXT__ = null,
+    //     .__STDC_WANT_IEC_60559_TYPES_EXT__ = null,
+    //     .__STDC_WANT_LIB_EXT2__ = null,
+    //     .__STDC_WANT_MATH_SPEC_FUNCS__ = null,
     // });
 
-    // const dbus_cmake_config = b.addConfigHeader(.{
-    //     .style = .{ .cmake = dbus_c.path("cmake/config.h.cmake") },
-    //     .include_path = "config.h"
-    //   }, .{
-    //   // .HAVE_ERRNO_H = "",
-    //   // .VERSION = "1.14.10",
-    //   // .SOVERSION = "3.38.0",
-    //   // .DBUS_DAEMON_NAME = "\"dbus\"",
-    //   // .DBUS_COMPILATION = 1,
-    //   // .DBUS_VA_COPY = "va_copy",
-    //   // .DBUS_SESSION_BUS_CONNECT_ADDRESS = "autolaunch:",
-    //   // .DBUS_SYSTEM_BUS_DEFAULT_ADDRESS = "unix:tmpdir=/tmp",
-    //   // // .DBUS_ENABLE_CHECKS = "",
-    //   // // .DBUS_ENABLE_ASSERT = "",
-    //   // .HAVE_ALLOCA_H = "",
-    //   // ._GNU_SOURCE = "",
-    //   // .HAVE_SYSLOG_H = "",
-    //   // .HAVE_SOCKLEN_T = "",
-    //   // .HAVE_SYS_RANDOM_H = "",
-    //   // .DBUS_UNIX = "",
-    //   // .HAVE_GETPWNAM_R = "",
-    //   // //
-    //   // // EXTRA
-    //   // //
-    //   // .ENOMEM = "ERROR_NOT_ENOUGH_MEMORY",
-    //   // ---------------------------------------------------------------
-    //   // CMAKE MISSING VALUE
-    //   //
-    //   .AUTOPACKAGE_CONFIG_H_TEMPLATE = "",
-    //   .DBUS_CONSOLE_AUTH_DIR = 0,
-    //   .DBUS_DATADIR = 0,
-    //   .DBUS_BINDIR = 0,
-    //   .DBUS_PREFIX = 0,
-    //   .DBUS_SYSTEM_CONFIG_FILE = 0,
-    //   .DBUS_SESSION_CONFIG_FILE = 0,
-    //   .DBUS_SESSION_SOCKET_DIR = 0,
-    //   .DBUS_DAEMON_NAME = "\"dbus\"",
-    //   .DBUS_SYSTEM_BUS_DEFAULT_ADDRESS = "unix:tmpdir=/tmp",
-    //   .DBUS_SESSION_BUS_CONNECT_ADDRESS = "autolaunch:",
-    //   .DBUS_MACHINE_UUID_FILE = 0,
-    //   .DBUS_DAEMONDIR = 0,
-    //   .DBUS_RUNSTATEDIR = 0,
-    //   .TEST_LISTEN = 0,
-    //   .EXEEXT = 0,
-    //   .DBUS_CONSOLE_OWNER_FILE = 0,
-    //   .DBUS_VA_COPY = "va_copy",
-    //   .GLIB_VERSION_MIN_REQUIRED = 0,
-    //   .GLIB_VERSION_MAX_ALLOWED = 0,
-    //   .FD_SETSIZE = 0,
-    //   .DBUS_USER = 0,
-    //   .DBUS_TEST_USER = 0,
-    //   .DBUS_TEST_EXEC = 0,
-    // });
-    // dbus.addConfigHeader(dbus_cmake_config);
-    // const dbus_install_cmake_config = b.addInstallFile(
-    //     dbus_cmake_config.getOutput(),
-    //     "dbus/config.h"
-    // );
-    // b.getInstallStep().dependOn(&dbus_install_cmake_config.step);
+    const dbus_config_h = b.addConfigHeader(.{
+        .style = .blank,
+        .include_path = "config.h",
+    }, .{});
 
-    const dbus_config_h = b.addConfigHeader(.{ .style = .blank, .include_path = "config.h" }, .{});
-
-    const dbus_arch_deps_h = b.addConfigHeader(.{ .style = .{ .cmake = dbus_c.path("dbus/dbus-arch-deps.h.in") }, .include_path = "dbus/dbus-arch-deps.h" }, .{
-        .DBUS_VERSION = "1.14.10",
-        .DBUS_MAJOR_VERSION = "1",
-        .DBUS_MINOR_VERSION = "14",
-        .DBUS_MICRO_VERSION = "10",
-        .DBUS_INT64_TYPE = "long long",
-        .DBUS_INT32_TYPE = "int",
-        .DBUS_INT16_TYPE = "short",
-        .DBUS_SIZEOF_VOID_P = "sizeof (void*)",
-        .DBUS_INT64_CONSTANT = "(val##LL)",
-        .DBUS_UINT64_CONSTANT = "(val##ULL)",
-    });
-    // const dbus_install_arch_deps_h = b.addInstallFile(
-    //   dbus_arch_deps_h.getOutput(),
-    //   "include/dbus/dbus-arch-deps.h"
-    // );
-    // b.getInstallStep().dependOn(&dbus_install_arch_deps_h.step);
+    const dbus_arch_deps_h = b.addConfigHeader(
+        .{
+            .style = .{ .cmake = dbus_c.path("dbus/dbus-arch-deps.h.in") },
+            .include_path = "dbus/dbus-arch-deps.h",
+        },
+        .{
+            .DBUS_VERSION = "1.14.10",
+            .DBUS_MAJOR_VERSION = "1",
+            .DBUS_MINOR_VERSION = "14",
+            .DBUS_MICRO_VERSION = "10",
+            .DBUS_INT64_TYPE = "long long",
+            .DBUS_INT32_TYPE = "int",
+            .DBUS_INT16_TYPE = "short",
+            .DBUS_SIZEOF_VOID_P = "sizeof (void*)",
+            .DBUS_INT64_CONSTANT = "(val##LL)",
+            .DBUS_UINT64_CONSTANT = "(val##ULL)",
+        },
+    );
 
     dbus.addConfigHeader(dbus_config_h);
     dbus.addConfigHeader(dbus_arch_deps_h);
 
-    // const dbus_install_cmake_arch_deps = b.addInstallFile(
-    //     dbus_cmake_config.getOutput(),
-    //     "dbus/dbus-arch-deps.h"
-    // );
-    // b.getInstallStep().dependOn(&dbus_install_cmake_arch_deps.step);
-
     dbus.addIncludePath(dbus_c.path(""));
     dbus.addIncludePath(dbus_c.path("dbus"));
-    // dbus.addIncludePath(dbus_config_header.getDirectory());
-
-    // var dbus_prefix_buf: [4096]u8 = undefined;
-    // var dbus_bindir_buf: [4096]u8 = undefined;
-    // var dbus_datadir_buf: [4096]u8 = undefined;
-    // var dbus_machine_uuid_file_buf: [4096]u8 = undefined;
-    // var dbus_system_config_file_buf: [4096]u8 = undefined;
-    // var dbus_session_config_file_buf: [4096]u8 = undefined;
-
-    // const dbus_prefix = try std.fmt.bufPrint(
-    //   &dbus_prefix_buf,
-    //   "-DDBUS_PREFIX={s}",
-    //   .{b.install_prefix}
-    // );
-    // const dbus_bindir = try std.fmt.bufPrint(
-    //   &dbus_bindir_buf,
-    //   "-DDBUS_BINDIR={s}",
-    //   b.getInstallPath(.bin, "")
-    // );
-    // const dbus_datadir = try std.fmt.bufPrint(
-    //   &dbus_datadir_buf,
-    //   "-DDBUS_DATADIR={s}",
-    //   b.getInstallPath(.prefix, "usr/share")
-    // );
-    // const dbus_machine_uuid_file = try std.fmt.bufPrint(
-    //   &dbus_machine_uuid_file_buf,
-    //   "-DDBUS_MACHINE_UUID_FILE={s}",
-    //   b.getInstallPath(.prefix, "var/lib/dbus/machine-id")
-    // );
-    // const dbus_system_config_file = try std.fmt.bufPrint(
-    //   &dbus_system_config_file_buf,
-    //   "-DDBUS_SYSTEM_CONFIG_FILE={s}",
-    //   b.getInstallPath(.prefix, "usr/share/dbus-1/system.conf")
-    // );
-    // const dbus_session_config_file = try std.fmt.bufPrint(
-    //   &dbus_session_config_file_buf,
-    //   "-DDBUS_SESSION_CONFIG_FILE={s}",
-    //   b.getInstallPath(.prefix, "usr/share/dbus-1/session.conf")
-    // );
-    // .flags = &.{
-    //   dbus_prefix,
-    //   dbus_bindir,
-    //   dbus_datadir,
-    //   dbus_machine_uuid_file,
-    //   dbus_system_config_file,
-    //   dbus_session_config_file,
-    // },
 
     dbus.addCSourceFiles(.{
         .root = dbus_c.path("dbus"),
@@ -514,21 +499,23 @@ pub fn build(b: *std.Build) void {
 
     // Platform specific headers
     if (target.result.os.tag == .windows) {
-        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{ .include_extensions = &.{
-            "dbus-transport-win.h",
-            "dbus-sockets-win.h",
-            "dbus-sysdeps-win.h",
-        } });
+        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{
+            .include_extensions = &.{
+                "dbus-transport-win.h",
+                "dbus-sockets-win.h",
+                "dbus-sysdeps-win.h",
+            },
+        });
     } else {
-        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{ .include_extensions = &.{
-            "dbus-transport-unix.h",
-            "dbus-server-unix.h",
-            "dbus-sysdeps-unix.h",
-            "dbus-userdb.h",
-        } });
+        dbus.installHeadersDirectory(dbus_c.path("dbus"), "dbus", .{
+            .include_extensions = &.{
+                "dbus-transport-unix.h",
+                "dbus-server-unix.h",
+                "dbus-sysdeps-unix.h",
+                "dbus-userdb.h",
+            },
+        });
     }
-
-    // b.installArtifact(dbus);
 
     const avahi_c = b.dependency("avahi", .{
         .target = target,
@@ -544,8 +531,6 @@ pub fn build(b: *std.Build) void {
     avahi.linkLibC();
     avahi.linkLibrary(dbus);
 
-    // avahi.root_module.addCMacro("__GNUC__", "4");
-    // avahi.root_module.addCMacro("__GNUC_MINOR__", "3");
     avahi.root_module.addCMacro("GETTEXT_PACKAGE", "\"avahi\"");
 
     avahi.root_module.addCMacro("HAVE_DBUS", "");
@@ -555,60 +540,146 @@ pub fn build(b: *std.Build) void {
     avahi.root_module.addCMacro("HAVE_CONFIG_H", "1");
     avahi.root_module.addCMacro("HAVE_STRLCPY", "1");
 
-    const avahi_config_h = b.addConfigHeader(.{ .style = .blank, .include_path = "config.h" }, .{});
+    const avahi_config_h = b.addConfigHeader(.{
+        .style = .blank,
+        .include_path = "config.h",
+    }, .{});
 
+    // avahi.root_module.addCMacro("HAVE_CONFIG_H", "1");
     // const avahi_config_h = b.addConfigHeader(.{
-    //   .style = .{ .autoconf = avahi_c.path("config.h.in") },
-    //   .include_path = "config.h"
-    //   },
-    //   .{
-    //     .GETTEXT_PACKAGE = "\"UTF-8\"",
-    //   }
-    // );
+    //     .style = .{ .autoconf = avahi_c.path("config.h.in") },
+    //     .include_path = "config.h",
+    // }, .{
+    //     .AVAHI_AUTOIPD_GROUP = null,
+    //     .AVAHI_AUTOIPD_USER = null,
+    //     .AVAHI_GROUP = null,
+    //     .AVAHI_PRIV_ACCESS_GROUP = null,
+    //     .AVAHI_USER = null,
+    //     .ENABLE_CHROOT = null,
+    //     .ENABLE_NLS = null,
+    //     .ENABLE_SSP_CC = null,
+    //     .ENABLE_SSP_CXX = null,
+    //     .GETTEXT_PACKAGE = "\"avahi\"",
+    //     .HAVE_ARPA_INET_H = null,
+    //     .HAVE_BSDXML_H = null,
+    //     .HAVE_CFLOCALECOPYCURRENT = null,
+    //     .HAVE_CFPREFERENCESCOPYAPPVALUE = null,
+    //     .HAVE_CHOWN = null,
+    //     .HAVE_CHROOT = null,
+    //     .HAVE_DBM = null,
+    //     .HAVE_DBUS = "1",
+    //     .HAVE_DBUS_BUS_GET_PRIVATE = "0",
+    //     .HAVE_DBUS_CONNECTION_CLOSE = "0",
+    //     .HAVE_DCGETTEXT = null,
+    //     .HAVE_DECL_ENVIRON = null,
+    //     .HAVE_DLFCN_H = null,
+    //     .HAVE_DLOPEN = null,
+    //     .HAVE_EXPAT_H = "1",
+    //     .HAVE_FCNTL_H = null,
+    //     .HAVE_GCC_VISIBILITY = null,
+    //     .HAVE_GDBM = null,
+    //     .HAVE_GDBM_H = null,
+    //     .HAVE_GETHOSTBYNAME = null,
+    //     .HAVE_GETHOSTNAME = null,
+    //     .HAVE_GETPROGNAME = null,
+    //     .HAVE_GETTEXT = null,
+    //     .HAVE_GETTIMEOFDAY = null,
+    //     .HAVE_ICONV = null,
+    //     .HAVE_INOTIFY = null,
+    //     .HAVE_INTTYPES_H = null,
+    //     .HAVE_KQUEUE = null,
+    //     .HAVE_LIMITS_H = null,
+    //     .HAVE_MEMCHR = null,
+    //     .HAVE_MEMMOVE = null,
+    //     .HAVE_MEMORY_H = null,
+    //     .HAVE_MEMSET = null,
+    //     .HAVE_MKDIR = null,
+    //     .HAVE_NDBM_H = null,
+    //     .HAVE_NETDB_H = null,
+    //     .HAVE_NETINET_IN_H = null,
+    //     .HAVE_NETLINK = null,
+    //     .HAVE_PF_ROUTE = null,
+    //     .HAVE_PTHREAD = null,
+    //     .HAVE_PUTENV = null,
+    //     .HAVE_SELECT = null,
+    //     .HAVE_SETEGID = null,
+    //     .HAVE_SETEUID = null,
+    //     .HAVE_SETPROCTITLE = null,
+    //     .HAVE_SETREGID = null,
+    //     .HAVE_SETRESGID = null,
+    //     .HAVE_SETRESUID = null,
+    //     .HAVE_SETREUID = null,
+    //     .HAVE_SOCKET = null,
+    //     .HAVE_STAT_EMPTY_STRING_BUG = null,
+    //     .HAVE_STDBOOL_H = null,
+    //     .HAVE_STDINT_H = null,
+    //     .HAVE_STDLIB_H = null,
+    //     .HAVE_STRCASECMP = null,
+    //     .HAVE_STRCHR = null,
+    //     .HAVE_STRCSPN = null,
+    //     .HAVE_STRDUP = null,
+    //     .HAVE_STRERROR = null,
+    //     .HAVE_STRINGS_H = null,
+    //     .HAVE_STRING_H = null,
+    //     .HAVE_STRLCPY = "1",
+    //     .HAVE_STRNCASECMP = null,
+    //     .HAVE_STRRCHR = null,
+    //     .HAVE_STRSPN = null,
+    //     .HAVE_STRSTR = null,
+    //     .HAVE_STRUCT_IP_MREQ = null,
+    //     .HAVE_STRUCT_IP_MREQN = null,
+    //     .HAVE_STRUCT_LIFCONF = null,
+    //     .HAVE_SYSLOG_H = null,
+    //     .HAVE_SYS_CAPABILITY_H = null,
+    //     .HAVE_SYS_FILIO_H = null,
+    //     .HAVE_SYS_INOTIFY_H = null,
+    //     .HAVE_SYS_IOCTL_H = null,
+    //     .HAVE_SYS_PRCTL_H = null,
+    //     .HAVE_SYS_SELECT_H = null,
+    //     .HAVE_SYS_SOCKET_H = null,
+    //     .HAVE_SYS_STAT_H = null,
+    //     .HAVE_SYS_SYSCTL_H = null,
+    //     .HAVE_SYS_TIME_H = null,
+    //     .HAVE_SYS_TYPES_H = null,
+    //     .HAVE_SYS_WAIT_H = null,
+    //     .HAVE_UNAME = null,
+    //     .HAVE_UNISTD_H = null,
+    //     .HAVE_VISIBILITY_HIDDEN = null,
+    //     .HAVE__BOOL = null,
+    //     .LSTAT_FOLLOWS_SLASHED_SYMLINK = null,
+    //     .LT_OBJDIR = null,
+    //     .PACKAGE = null,
+    //     .PACKAGE_BUGREPORT = null,
+    //     .PACKAGE_NAME = null,
+    //     .PACKAGE_STRING = null,
+    //     .PACKAGE_TARNAME = null,
+    //     .PACKAGE_URL = null,
+    //     .PACKAGE_VERSION = null,
+    //     .PTHREAD_CREATE_JOINABLE = null,
+    //     .SELECT_TYPE_ARG1 = null,
+    //     .SELECT_TYPE_ARG234 = null,
+    //     .SELECT_TYPE_ARG5 = null,
+    //     .STDC_HEADERS = null,
+    //     .TIME_WITH_SYS_TIME = null,
+    //     ._ALL_SOURCE = null,
+    //     ._GNU_SOURCE = null,
+    //     ._POSIX_PTHREAD_SEMANTICS = null,
+    //     ._TANDEM_SOURCE = null,
+    //     .__EXTENSIONS__ = null,
+    //     .VERSION = null,
+    //     ._MINIX = null,
+    //     ._POSIX_1_SOURCE = null,
+    //     ._POSIX_SOURCE = null,
+    //     .@"const" = null,
+    //     .gid_t = null,
+    //     .mode_t = null,
+    //     .pid_t = null,
+    //     .size_t = null,
+    //     .uid_t = null,
+    // });
 
     avahi.addConfigHeader(avahi_config_h);
-
-    // avahi-dnsconfd
-    // avahi-autoipd
-    // avahi-utils
-    // avahi-daemon
-    // avahi-libevent
-    // avahi-compat-howl
-    // avahi-gobject
-    // avahi-common
-    // avahi-client
-    // avahi-discover-standalone
-    // avahi-sharp
-    // avahi-python
-    // avahi-python/avahi-discover
-    // avahi-ui-sharp
-    // avahi-ui
-    // avahi-glib
-    // avahi-core
-    // avahi-compat-libdns_sd
-    // avahi-qt
-
-    // avahi.addIncludePath(b.getInstallPath(.header, ""));
     avahi.addIncludePath(avahi_c.path(""));
-    // avahi.addIncludePath(avahi_c.path("avahi-dnsconfd"));
-    // avahi.addIncludePath(avahi_c.path("avahi-autoipd"));
-    // avahi.addIncludePath(avahi_c.path("avahi-utils"));
-    // avahi.addIncludePath(avahi_c.path("avahi-daemon"));
-    // avahi.addIncludePath(avahi_c.path("avahi-libevent"));
-    // avahi.addIncludePath(avahi_c.path("avahi-compat-howl"));
-    // avahi.addIncludePath(avahi_c.path("avahi-gobject"));
-    // avahi.addIncludePath(avahi_c.path("avahi-common"));
-    // avahi.addIncludePath(avahi_c.path("avahi-client"));
-    // avahi.addIncludePath(avahi_c.path("avahi-discover-standalone"));
-    // avahi.addIncludePath(avahi_c.path("avahi-sharp"));
-    // avahi.addIncludePath(avahi_c.path("avahi-python"));
-    // avahi.addIncludePath(avahi_c.path("avahi-python/avahi-discover"));
-    // avahi.addIncludePath(avahi_c.path("avahi-ui-sharp"));
-    // avahi.addIncludePath(avahi_c.path("avahi-ui"));
-    // avahi.addIncludePath(avahi_c.path("avahi-glib"));
-    // avahi.addIncludePath(avahi_c.path("avahi-core"));
-    // avahi.addIncludePath(avahi_c.path("avahi-compat-libdns_sd"));
-    // avahi.addIncludePath(avahi_c.path("avahi-qt"));
 
     avahi.addCSourceFiles(.{
         .root = avahi_c.path(""),
