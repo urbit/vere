@@ -16,6 +16,8 @@
 #include "xtract.h"
 #include "zave.h"
 
+#include <stdio.h>
+
 // define to have each opcode printed as it executes,
 // along with some other debugging info
 #        undef VERBOSE_BYTECODE
@@ -1060,6 +1062,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__meme:
           case c3__nara:
           case c3__hela:
+          case c3__jinx:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1924,6 +1927,19 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
+    case c3__jinx: {
+      if (c3y == u3a_is_atom(*clu)) {
+        // clu is in Urbit time, but we need Unix time
+        c3_d tim_d[2];
+        u3r_chubs(0, 2, &tim_d, *clu);
+        c3_w sec_w = tim_d[1];
+        c3_w mil_w = u3_time_msc_out(tim_d[0]);
+        u3m_timer_push(sec_w * 1000 + mil_w);
+      }
+      u3z(*clu);
+      *clu = c3__jinx;
+    } break;
+
     case c3__nara: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
@@ -1985,7 +2001,10 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
+  if (c3__jinx == tok) {
+    u3m_timer_pop();
+  }
+  else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(r_tok));
 
