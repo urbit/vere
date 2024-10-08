@@ -65,7 +65,7 @@ jobs:
           tags: tloncorp/vere:${{ steps.build.outputs.version }},tloncorp/vere:${{ inputs.pace }}
 
       - name: Build and push live
-        if: ${{ inputs.pace = 'live' }}
+        if: ${{ inputs.pace == 'live' }}
         uses: docker/build-push-action@v6
         with:
           push: true
