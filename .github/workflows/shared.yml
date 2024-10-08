@@ -154,11 +154,9 @@ jobs:
             "x86_64-linux-musl linux-x86_64"
             "x86_64-macos-none macos-x86_64"
           )
-          for target in "${targets[@]}"
+          for t in "${targets[@]}"
           do
-            read -a strarr <<< "$elem"
-            zig_target=strarr[0]
-            target=strarr[1]
+            IFS=' ' read zig_target target <<< "${t}"
             urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
