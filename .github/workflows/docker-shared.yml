@@ -59,15 +59,15 @@ jobs:
       - name: Build and push
         if: ${{ inputs.pace != 'live' }}
         uses: docker/build-push-action@v6
+        working-directory: ./docker
         with:
           push: true
-          file: ./docker/Dockerfile
           tags: tloncorp/vere:${{ steps.build.outputs.version }},tloncorp/vere:${{ inputs.pace }}
 
       - name: Build and push live
         if: ${{ inputs.pace == 'live' }}
         uses: docker/build-push-action@v6
+        working-directory: ./docker
         with:
           push: true
-          file: ./docker/Dockerfile
           tags: tloncorp/vere:latest
