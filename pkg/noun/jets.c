@@ -280,7 +280,7 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
 
         if ( (1 != sscanf(jet_u->fcs_c+1, "%" SCNu64, &axe_d)) ||
              axe_d >> 32ULL ||
-             ((1 << 31) & (axe_l = (c3_w)axe_d)) ||
+             (((c3_w)1 << 31) & (axe_l = (c3_w)axe_d)) ||
              (axe_l < 2) )
         {
           u3l_log("jets: activate: bad fcs %s", jet_u->fcs_c);
@@ -2384,7 +2384,7 @@ u3j_reclaim(void)
  * history at e8a307a.
 */
 void
-u3j_rewrite_compact()
+u3j_rewrite_compact(void)
 {
   u3h_rewrite(u3R->jed.war_p);
   u3h_rewrite(u3R->jed.cod_p);

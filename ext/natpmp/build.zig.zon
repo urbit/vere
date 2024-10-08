@@ -1,0 +1,13 @@
+.{
+    .name = "natpmp",
+    .version = "0.0.1",
+    .dependencies = .{
+        .natpmp = .{
+            .url = "http://www.miniupnp.tuxfamily.org/files/libnatpmp-20230423.tar.gz",
+            .hash = "12203f777796f1df1db24c4194bcc6060d2a7bee2eea88527c2336bbf455d4108239",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

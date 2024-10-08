@@ -1,8 +1,9 @@
 /// @file
 
-#include "pkg/noun/manage.h"
-#include "pkg/noun/v2/manage.h"
-#include "pkg/noun/v3/manage.h"
+#include "manage.h"
+#include "v2/manage.h"
+#include "v3/manage.h"
+#include "v4/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
@@ -28,7 +29,7 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "platform/rsignal.h"
+#include "rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"
@@ -363,7 +364,10 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
-  stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ);
+  if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
+    u3l_log("unable to install stack overflow handler");
+    abort();
+  }
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -398,7 +402,7 @@ _cm_signal_deep(c3_w mil_w)
 /* _cm_signal_done():
 */
 static void
-_cm_signal_done()
+_cm_signal_done(void)
 {
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
@@ -610,7 +614,8 @@ _find_home(void)
   switch ( ver_w ) {
     case U3V_VER1: u3m_v2_migrate();
     case U3V_VER2: u3m_v3_migrate();
-    case U3V_VER3: {
+    case U3V_VER3: u3m_v4_migrate();
+    case U3V_VER4: {
       mig_o = c3n;
       break;
     }
@@ -825,7 +830,6 @@ void
 u3m_stacktrace()
 {
   void* bt_state;
-  c3_i  ret_i;
   struct bt_cb_data data = { 0, 0, 0 };
   c3_c* self_path_c[4096] = {0};
 
@@ -834,7 +838,7 @@ u3m_stacktrace()
 
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
-    ret_i = backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
+    backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
     if (data.fail == 0) u3l_log("");
   }
   else {
@@ -880,9 +884,9 @@ u3m_stacktrace()
     do {
       unw_get_reg(&cursor, UNW_REG_IP, &pc);
       unw_get_reg(&cursor, UNW_REG_SP, &sp);
-      if ( 0 == unw_get_proc_name(&cursor, pn_c, 1024, &offp_w) )
-        data.pn_c = pn_c;
-      ret_i = backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
+      if ( 0 == unw_get_proc_name(&cursor, (c3_c*)pn_c, 1024, (unw_word_t *)&offp_w) )
+        data.pn_c = (c3_c*)pn_c;
+      backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
     } while (unw_step(&cursor) > 0);
 
     if ( (data.count > 0) ) {
@@ -1002,7 +1006,7 @@ u3m_bail(u3_noun how)
   _longjmp(u3R->esc.buf, how);
 }
 
-int c3_cooked() { return u3m_bail(c3__oops); }
+int c3_cooked(void) { return u3m_bail(c3__oops); }
 
 /* u3m_error(): bail out with %exit, ct_pushing error.
 */
@@ -1102,7 +1106,7 @@ _print_diff(c3_c* cap_c, c3_w a, c3_w b)
 /* u3m_fall(): in u3R, return an inner road to its parent.
 */
 void
-u3m_fall()
+u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
@@ -1957,7 +1961,7 @@ u3m_fault(void* adr_v, c3_i ser_i)
   //
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
-            adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
     u3m_stacktrace();
     u3_assert(0);
     return 0;
@@ -2041,7 +2045,7 @@ u3m_save(void)
   }
 #endif
 
-  return u3e_save(low_p, hig_p);
+  u3e_save(low_p, hig_p);
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2094,7 +2098,7 @@ u3m_ward(void)
   }
 #endif
 
-  return u3e_ward(low_p, hig_p);
+  u3e_ward(low_p, hig_p);
 }
 
 /* _cm_signals(): set up interrupts, etc.
@@ -2158,7 +2162,7 @@ _cm_free_ssl(void* tox_v
 #endif
              )
 {
-  return u3a_free(tox_v);
+  u3a_free(tox_v);
 }
 
 extern void u3je_secp_init(void);
@@ -2166,7 +2170,7 @@ extern void u3je_secp_init(void);
 /* _cm_crypto(): initialize openssl and crypto jets.
 */
 static void
-_cm_crypto()
+_cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
@@ -2192,7 +2196,7 @@ _cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
 static void
 _cm_free2(void* tox_v, size_t siz_i)
 {
-  return u3a_free(tox_v);
+  u3a_free(tox_v);
 }
 
 /* u3m_init(): start the environment.
@@ -2255,7 +2259,7 @@ extern void u3je_secp_stop(void);
 /* u3m_stop(): graceful shutdown cleanup.
 */
 void
-u3m_stop()
+u3m_stop(void)
 {
   u3e_stop();
   u3je_secp_stop();

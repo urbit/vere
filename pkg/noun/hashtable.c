@@ -9,11 +9,11 @@
 
 /* CUT_END(): extract [b_w] low bits from [a_w]
 */
-#define CUT_END(a_w, b_w) ((a_w) & ((1 << (b_w)) - 1))
+#define CUT_END(a_w, b_w) ((a_w) & (((c3_w)1 << (b_w)) - 1))
 
 /* BIT_SET(): [1] if bit [b_w] is set in [a_w]
 */
-#define BIT_SET(a_w, b_w) ((a_w) & (1 << (b_w)))
+#define BIT_SET(a_w, b_w) ((a_w) & ((c3_w)1 << (b_w)))
 
 static c3_o
 _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w lef_w, c3_w rem_w);
@@ -104,7 +104,7 @@ _ch_node_add(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun kev, c3_w *use_w)
     //
     c3_w      len_w = _ch_popcount(map_w);
     u3h_node* nah_u = _ch_node_new(1 + len_w);
-    nah_u->map_w    = han_u->map_w | (1 << bit_w);
+    nah_u->map_w    = han_u->map_w | ((c3_w)1 << bit_w);
 
     for ( i_w = 0; i_w < inx_w; i_w++ ) {
       nah_u->sot_w[i_w] = han_u->sot_w[i_w];
@@ -188,7 +188,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w lef_w, c3_w ham_w, c3_w mad_w)
       // fragments collide: store in a child node.
       u3h_node* han_u = _ch_node_new(1);
       ret             = han_u;
-      han_u->map_w    = 1 << hop_w;
+      han_u->map_w    = (c3_w)1 << hop_w;
       ham_w           = CUT_END(ham_w, lef_w);
       mad_w           = CUT_END(mad_w, lef_w);
       han_u->sot_w[0] = _ch_two(had_w, add_w, lef_w, ham_w, mad_w);
@@ -196,7 +196,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w lef_w, c3_w ham_w, c3_w mad_w)
     else {
       u3h_node* han_u = _ch_node_new(2);
       ret             = han_u;
-      han_u->map_w    = (1 << hop_w) | (1 << tad_w);
+      han_u->map_w    = ((c3_w)1 << hop_w) | ((c3_w)1 << tad_w);
       // smaller mug fragments go in earlier slots
       if ( hop_w < tad_w ) {
         han_u->sot_w[0] = had_w;
@@ -801,7 +801,7 @@ u3h_walk_with(u3p(u3h_root) har_p,
 static void
 _ch_walk_plain(u3_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = wit;
+  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
   fun_f(kev);
 }
 
@@ -810,7 +810,7 @@ _ch_walk_plain(u3_noun kev, void* wit)
 void
 u3h_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun))
 {
-  u3h_walk_with(har_p, _ch_walk_plain, fun_f);
+  u3h_walk_with(har_p, _ch_walk_plain, (void *)fun_f);
 }
 
 /* _ch_take_noun(): take key and call [fun_f] on val.
