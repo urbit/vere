@@ -3,6 +3,7 @@
 #include "manage.h"
 #include "v2/manage.h"
 #include "v3/manage.h"
+#include "v4/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
@@ -613,7 +614,8 @@ _find_home(void)
   switch ( ver_w ) {
     case U3V_VER1: u3m_v2_migrate();
     case U3V_VER2: u3m_v3_migrate();
-    case U3V_VER3: {
+    case U3V_VER3: u3m_v4_migrate();
+    case U3V_VER4: {
       mig_o = c3n;
       break;
     }
