@@ -3,8 +3,8 @@
 #ifndef U3_MANAGE_H
 #define U3_MANAGE_H
 
-#include "manage_v1.h"
-#include "manage_v2.h"
+#include "v1/manage.h"
+#include "v2/manage.h"
 
 #include "c3/c3.h"
 #include "types.h"

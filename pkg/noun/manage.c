@@ -1,9 +1,9 @@
 /// @file
 
 #include "manage.h"
-#include "manage_v2.h"
-#include "manage_v3.h"
-#include "manage_v4.h"
+#include "v2/manage.h"
+#include "v3/manage.h"
+#include "v4/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>

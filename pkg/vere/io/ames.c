@@ -10,7 +10,7 @@
 #include "zlib.h"
 #include "natpmp.h"
 
-#include <ent/ent.h>
+#include "ent/ent.h"
 
 #include <arpa/inet.h>
 

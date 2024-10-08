@@ -687,21 +687,21 @@ fn build_single(
             "serial.c",
             "trace.c",
             "urth.c",
-            "allocate_v1.c",
-            "hashtable_v1.c",
-            "jets_v1.c",
-            "manage_v1.c",
-            "nock_v1.c",
-            "vortex_v1.c",
-            "allocate_v2.c",
-            "hashtable_v2.c",
-            "jets_v2.c",
-            "manage_v2.c",
-            "nock_v2.c",
-            "vortex_v2.c",
-            "hashtable_v3.c",
-            "manage_v3.c",
-            "manage_v4.c",
+            "v1/allocate.c",
+            "v1/hashtable.c",
+            "v1/jets.c",
+            "v1/manage.c",
+            "v1/nock.c",
+            "v1/vortex.c",
+            "v2/allocate.c",
+            "v2/hashtable.c",
+            "v2/jets.c",
+            "v2/manage.c",
+            "v2/nock.c",
+            "v2/vortex.c",
+            "v3/hashtable.c",
+            "v3/manage.c",
+            "v4/manage.c",
             "vortex.c",
             "xtract.c",
             "zave.c",
@@ -713,15 +713,11 @@ fn build_single(
         .include_extensions = &.{".h"},
     });
 
-    pkg_noun.installHeadersDirectory(b.path(switch (t.os.tag) {
-        .macos => "pkg/noun/platform/darwin",
-        .linux => "pkg/noun/platform/linux",
+    pkg_noun.installHeader(b.path(switch (t.os.tag) {
+        .macos => "pkg/noun/platform/darwin/rsignal.h",
+        .linux => "pkg/noun/platform/linux/rsignal.h",
         else => "",
-    }), "", .{});
-
-    pkg_noun.installHeadersDirectory(b.path("pkg/noun/jets"), "", .{
-        .include_extensions = &.{".h"},
-    });
+    }), "platform/rsignal.h");
 
     // b.installArtifact(pkg_noun);
 

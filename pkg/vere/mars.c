@@ -2,8 +2,10 @@
 **
 **  the main loop of a mars process.
 */
+#include "c3/c3.h"
 #include "noun.h"
 #include "types.h"
+#include "vere.h"
 #include "ivory.h"
 #include "ur/ur.h"
 #include "db/lmdb.h"

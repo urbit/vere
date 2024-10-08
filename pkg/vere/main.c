@@ -6,7 +6,7 @@
 #include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
 #include "ur/ur.h"
-#include "rsignal.h"
+#include "platform/rsignal.h"
 #include "vere.h"
 #include "sigsegv.h"
 #include "openssl/conf.h"

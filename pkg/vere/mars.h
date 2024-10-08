@@ -1,7 +1,5 @@
 #ifndef U3_VERE_MARS_H
 #define U3_VERE_MARS_H
-#include "c3/c3.h"
-#include "vere.h"
 
   /** Data types.
   **/

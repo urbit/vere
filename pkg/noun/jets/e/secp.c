@@ -5,7 +5,7 @@
 
 #include "noun.h"
 #include "urcrypt.h"
-#include <ent/ent.h>
+#include "ent/ent.h"
 
 static urcrypt_secp_context* sec_u;
 
