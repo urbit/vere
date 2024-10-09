@@ -1,0 +1,27 @@
+.{
+    .name = "urcrypt",
+    .version = "0.0.1",
+    .dependencies = .{
+        .aes_siv = .{
+            .url = "https://github.com/dfoxfranke/libaes_siv/archive/9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b.tar.gz",
+            .hash = "1220a898068525a4bda3be4139c68555ec3a9cef03ed94c63115dde4a5204126f69a",
+        },
+        .openssl = .{
+            .path = "../openssl",
+            // .path = "../../../../Github/openssl-zig",
+            // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
+            // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
+        },
+        .secp256k1 = .{
+            .url = "https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.5.1.tar.gz",
+            .hash = "1220bb683a6df744e618f58a008eaae3eb62b70a78334cec676bd82b1b9e8e944eeb",
+        },
+        .urcrypt = .{
+            .url = "https://github.com/urbit/urcrypt/archive/9ae5d604528bc54ae48430f55ebbb17b1ad7956c.tar.gz",
+            .hash = "1220b2847be5292d9f625b4e238794fcd0d9f944b2165deaf48e68d17d606e2f4205",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

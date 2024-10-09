@@ -3,7 +3,7 @@
 #ifndef U3_VERE_H
 #define U3_VERE_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "db/lmdb.h"
 #include "noun.h"
 #include "serf.h"
@@ -556,6 +556,7 @@
           u3_dire*         dir_u;               //  main pier directory
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
+          c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch

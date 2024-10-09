@@ -6,7 +6,7 @@
 #include "v1/manage.h"
 #include "v2/manage.h"
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 #include "version.h"
 

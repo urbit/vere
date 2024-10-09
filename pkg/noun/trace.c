@@ -213,14 +213,10 @@ u3t_samp(void)
   u3C.wag_w &= ~u3o_debug_cpu;
   u3C.wag_w &= ~u3o_trace;
 
-  static int home = 0;
-  static int away = 0;
-
   //  Profile sampling, because it allocates on the home road,
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    home++;
     c3_l      mot_l;
     u3a_road* rod_u;
 
@@ -261,10 +257,6 @@ u3t_samp(void)
       u3R->pro.day = u3dt("pi-noon", mot_l, lab, u3R->pro.day);
     }
     u3R = rod_u;
-  }
-  else {
-    away++;
-    // fprintf(stderr,"home: %06d away: %06d\r\n", home, away);
   }
   u3C.wag_w = old_wag;
 }
@@ -359,7 +351,7 @@ u3t_trace_open(const c3_c* dir_c)
 /*  u3t_trace_close(): closes a trace file. optional.
 */
 void
-u3t_trace_close()
+u3t_trace_close(void)
 {
   if ( !_file_u )
     return;
@@ -372,7 +364,7 @@ u3t_trace_close()
 
 /*  u3t_trace_time(): microsecond clock
 */
-c3_d u3t_trace_time()
+c3_d u3t_trace_time(void)
 {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
@@ -408,7 +400,7 @@ u3t_nock_trace_push(u3_noun lab)
  * calls. If it is, we write it out to the tracefile.
  */
 void
-u3t_nock_trace_pop()
+u3t_nock_trace_pop(void)
 {
   if ( !_file_u )
     return;
@@ -1039,14 +1031,8 @@ u3t_etch_meme(c3_l mod_l)
   c3_w imu_w = top_w-ful_w;
   c3_w hep_w = hap_w-fre_w;
 
-  c3_w inc_w = 0;
-  c3_w max_w = 0;
-  float max_f = 0.0;
-  c3_d cel_d = 0;
-  c3_d nox_d = 0;
 
-  float imu_f = _ct_meme_percent(imu_w, top_w),
-        hep_f = _ct_meme_percent(hep_w, top_w),
+  float hep_f = _ct_meme_percent(hep_w, top_w),
         fre_f = _ct_meme_percent(fre_w, top_w),
         pen_f = _ct_meme_percent(pen_w, top_w),
         tak_f = _ct_meme_percent(tak_w, top_w);
@@ -1064,13 +1050,13 @@ u3t_etch_meme(c3_l mod_l)
   **  cel_d: max cells allocated in current road (inc closed kids, but not parents)
   **  nox_d: nock steps performed in current road
   */
-  max_w = (u3R->all.max_w*4)+imu_w;
-  max_f = _ct_meme_percent(max_w, top_w);
-  cel_d = u3R->pro.cel_d;
-  nox_d = u3R->pro.nox_d;
+  c3_w max_w = (u3R->all.max_w*4)+imu_w;
+  float max_f = _ct_meme_percent(max_w, top_w);
+  c3_d cel_d = u3R->pro.cel_d;
+  c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
+  c3_w inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed

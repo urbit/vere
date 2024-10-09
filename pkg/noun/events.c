@@ -292,7 +292,7 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       return fal_e;
     }
 
-    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
       fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
       return u3e_flaw_sham;
     }
@@ -305,12 +305,12 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-  if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
 
-  u3P.dit_w[blk_w] |= (1 << bit_w);
+  u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
 
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
@@ -456,6 +456,10 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
     len_w = (c3_w) buf_u.st_size;
   }
 
+  if (0 == len_w) {
+    return c3n;
+  }
+  
   pat_u->con_u = c3_malloc(len_w);
   if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
         (len_w != sizeof(u3e_control) +
@@ -654,11 +658,12 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
        (ret_zs = pwrite(pat_u->mem_i, mem_w, _ce_page, _ce_len(pgc_w))) )
   {
     if ( 0 < ret_zs ) {
-      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs", check disk space\r\n", ret_zs);
+      fprintf(stderr, "loom: patch partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
-      fprintf(stderr, "loom: patch write: fail: %s, check disk space\r\n", strerror(errno));
+      fprintf(stderr, "loom: patch write: fail: %s\r\n", strerror(errno));
     }
+    fprintf(stderr, "info: you probably have insufficient disk space");
     u3_assert(0);
   }
 }
@@ -672,7 +677,7 @@ _ce_patch_count_page(c3_w pag_w,
   c3_w blk_w = (pag_w >> 5);
   c3_w bit_w = (pag_w & 31);
 
-  if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
     pgc_w += 1;
   }
   return pgc_w;
@@ -688,7 +693,7 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   c3_w  blk_w = (pag_w >> 5);
   c3_w  bit_w = (pag_w & 31);
 
-  if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
     c3_w* mem_w = _ce_ptr(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
@@ -873,12 +878,13 @@ _ce_patch_apply(u3_ce_patch* pat_u)
            (ret_zs = pwrite(fid_i, buf_y, _ce_page, off_z)) )
       {
         if ( 0 < ret_zs ) {
-          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs", check disk space\r\n",
+          fprintf(stderr, "loom: patch apply partial write: %"PRIc3_zs"\r\n",
                           ret_zs);
         }
         else {
-          fprintf(stderr, "loom: patch apply write: %s, check disk space\r\n", strerror(errno));
+          fprintf(stderr, "loom: patch apply write: %s\r\n", strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         u3_assert(0);
       }
     }
@@ -902,7 +908,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
       fprintf(stderr, "loom: insane north %u\r\n", i_w);
       san_o = c3n;
     }
@@ -914,7 +920,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
       fprintf(stderr, "loom: insane open %u\r\n", i_w);
       san_o = c3n;
     }
@@ -926,7 +932,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( u3P.dit_w[blk_w] & (1 << bit_w) ) {
+    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
       fprintf(stderr, "loom: insane south %u\r\n", i_w);
       san_o = c3n;
     }
@@ -945,7 +951,7 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~(1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
   }
 
   max_w += dif_w;
@@ -953,7 +959,7 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= (1 << bit_w);
+    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
   }
 }
 
@@ -967,7 +973,7 @@ _ce_loom_track_south(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~(1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
   }
 
   max_w -= dif_w;
@@ -975,7 +981,7 @@ _ce_loom_track_south(c3_w pgs_w, c3_w dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= (1 << bit_w);
+    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
   }
 }
 
@@ -1070,7 +1076,7 @@ _ce_loom_protect_south(c3_w pgs_w, c3_w old_w)
 /* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
 */
 static void
-_ce_loom_mapf_ephemeral()
+_ce_loom_mapf_ephemeral(void)
 {
   if ( MAP_FAILED == mmap(_ce_ptr(0),
                           _ce_len(u3P.pag_w),
@@ -1258,7 +1264,7 @@ _ce_loom_fine(void)
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
       fin_o = c3a(fin_o, _ce_page_fine(&u3P.nor_u, pag_w, _ce_len(pag_w)));
     }
   }
@@ -1268,7 +1274,7 @@ _ce_loom_fine(void)
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & (1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
       fin_o = c3a(fin_o, _ce_page_fine(&u3P.sou_u, pag_w, _ce_len(i_w)));
     }
   }
@@ -1325,13 +1331,14 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
       }
       if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
         if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image (%s) copy partial write: %zu, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy partial write: %zu\r\n",
                           tou_u->nam_c, (size_t)ret_i);
         }
         else {
-          fprintf(stderr, "loom: image (%s) copy write: %s, check disk space\r\n",
+          fprintf(stderr, "loom: image (%s) copy write: %s\r\n",
                           tou_u->nam_c, strerror(errno));
         }
+        fprintf(stderr, "info: you probably have insufficient disk space");
         return c3n;
       }
     }
@@ -1753,7 +1760,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < sop_w)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
     u3_assert( !_ce_flaw_mprotect(pag_w) );
-    u3_assert( u3P.dit_w[pag_w >> 5] & (1 << (pag_w & 31)) );
+    u3_assert( u3P.dit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)) );
   }
 #endif
 }

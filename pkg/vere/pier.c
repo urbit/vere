@@ -1,7 +1,7 @@
 /// @file
 
 #include "db/lmdb.h"
-#include "ent.h"
+#include "ent/ent.h"
 #include "noun.h"
 #include "pace.h"
 #include "vere.h"
@@ -2463,7 +2463,7 @@ u3_pier_exit(u3_pier* pir_u)
 
     case u3_psat_done: return;
 
-    case u3_psat_work: return _pier_work_exit(pir_u);
+    case u3_psat_work: _pier_work_exit(pir_u); return;
 
     case u3_psat_init: break;
 

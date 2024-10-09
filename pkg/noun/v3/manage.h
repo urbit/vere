@@ -8,6 +8,6 @@
       /* u3m_v3_migrate: perform memoization loom migration if necessary.
       */
         void
-        u3m_v3_migrate();
+        u3m_v3_migrate(void);
 
 #endif /* ifndef U3_MANAGE_V3_H */

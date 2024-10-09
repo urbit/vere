@@ -1,58 +1,20 @@
 # Building Vere
 
-We use [`bazel`][bazel][^1] to build Vere, which is packaged as a single binary,
-`urbit`. We support the following `(host, target)` pairs, where the host platform
-is where [`bazel`][bazel] runs and the target platform is where `urbit` will
-run:
+We use [`zig`][zig] to build Vere, which is packaged as a single binary,
+`urbit`.
 
-| Host Platform  | Target Platform |
-|----------------|-----------------|
-| `linux-aarch64`| `linux-aarch64` |
-| `linux-x86_64` | `linux-x86_64`  |
-| `macos-aarch64`| `macos-aarch64` |
-| `macos-x86_64` | `macos-x86_64`  |
+## Supported Targets
+
+- `aarch64-linux-musl`
+- `x86_64-linux-musl`
+- `aarch64-macos`
+- `x86_64-macos`
 
 ## Prerequisites
 
-The first step is to install `bazel` using the instructions found on the [`bazel`][bazel-install][^1] site.
+Install version 0.13.0 of `zig` with the package manager of your choosing, e.g., `brew install zig`, or download the binary from [here][zig-download].
 
-All platforms require the `automake` and `libtool` suite of tools installed in
-order to build Vere. Before going any further, install them using your package
-manager. For example, on macOS:
-
-```console
-brew install automake libtool
-```
-
-### Linux
-
-After installing `automake` and `libtool`, you need to install the [musl libc] toolchain.  We use [musl libc][musl libc] instead of [glibc][glibc] on Linux, which enables us to generate statically linked binaries. As a prerequisite, you need to install the [musl libc][musl libc] toolchain appropriate for your target platform.
-
-#### x86_64
-
-To install the `x86_64-linux-musl-gcc` toolchain at
-`/usr/local/x86_64-linux-musl-gcc`, run:
-```console
-bazel run //bazel/toolchain:x86_64-linux-musl-gcc
-```
-
-This will take a few minutes.
-
-#### aarch64
-
-To install the `aarch64-linux-musl-gcc` toolchain at
-`/usr/local/aarch64-linux-musl-gcc`, run:
-```console
-bazel run //bazel/toolchain:aarch64-linux-musl-gcc
-```
-
-This will take a few minutes.
-
-### macOS
-
-After installing `automake`, `autoconf-archive`, `pkg-config`, and `libtool`, you're ready to build Vere.
-
-#### Debugger
+### macOS debugger
 
 macOS is curious operating system because the kernel is derived from from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
 
@@ -66,118 +28,71 @@ pro hand -p true -s false -n false SIGBUS
 pro hand -p true -s false -n false SIGSEGV
 ```
 
-## Build Commands
+## Build
 
-Once you install the prerequisites, you're ready to build:
+Once you install `zig`, you're ready to build:
 ```console
-bazel build :urbit
+zig build
 ```
+This builds a native debug binary.
 
-If you want a debug build, which changes the optimization level from `-O3` to
-`-O0` and includes more debugging information, specify `dbg` as the
-`compilation_mode`:
+### Build options
+
+A quick overview of the more useful build options.
+See `zig build --help` for more.
+
+#### `-Dtarget=[string]`
+Cross-compilation target. See [supported targets](#supported-targets).
+
+#### `-Doptimize=[enum]`
+Optimization mode.
+
+Supported values:
+- Debug (default) => enable debugging information and runtime safety checks
+- ReleaseSafe => optimize for memory safety
+- ReleaseSmall => optimize for binary size
+- ReleaseFast => optimize for speed
+
+#### `-Dall`
+Build for all [supported targets](#supported-targets).
+
+#### `-Drelease`
+Release flag. Builds with `-Doptimize=ReleaseFast` and `-Dpace=live`, and omits
+git rev from binary version.
+
+#### `-Dpace=[enum]`
+Release train.
+
+Supported values:
+- once (default)
+- live
+- soon
+- edge
+
+#### `-Dflags=[string]`
+Provide additional compiler flags. These propagate to all build artifacts and
+dependencies.
+
+<!-- ## LSP Integration -->
+
+<!-- ```console -->
+<!-- bazel run //bazel:refresh_compile_commands -->
+<!-- ``` -->
+
+<!-- Running this command will generate a `compile_commands.json` file in the root -->
+<!-- of the repository, which `clangd` (or other language server processors) will -->
+<!-- use automatically to provide modern editor features like syntax highlighting, -->
+<!-- go-to definitions, call hierarchies, symbol manipulation, etc. -->
+
+## Test
+
+Run tests by giving `zig bulid` the test names as arguments, e.g.:
+
 ```console
-bazel build --compilation_mode=dbg :urbit
-```
-Note that you cannot change the optimization level for third party
-dependencies--those targets specified in `bazel/third_party`--from the command
-line.
-
-You can turn on CPU and memory debugging by specifying the `cpu_dbg` and/or the
-`mem_dbg` build config.
-```console
-bazel build --config=cpu_dbg --config=mem_dbg :urbit
+zig build nock-test ames-test --summary all
 ```
 
-Note that ships booted from builds with one or both of these configs specified
-are incompatible with builds of vere without them and vice versa.
+See `zig build --help` for all available tests.
 
-If you need to specify arbitrary C compiler or linker options, use
-[`--copt`][copt] or [`--linkopt`][linkopt], respectively:
-```console
-bazel build --copt='-Wall' :urbit
-```
-
-Note [`--copt`][copt] can be used to specify arbitrary C compiler
-optimizations. They're passed directly to the compiler commands generated by
-bazel.
-
-Additionally, [`--copt`][copt] is propagated to _all dependencies_. This has the
-undesirable side effect of considerably slowing down build times when you're
-switching between different copts (say the inclusion or exclusion of some macro
-define with `--copt='-DMACRO'`) since all dependencies will be rebuilt. If you
-want only to pass the copt to the compiler commands invoked to build `:urbit`,
-you can pass them with [`--per_file_copt`][per_file_copt] like so:
-
-```console
-bazel build --per_file_copt='pkg/.*@-DMACRO'
-```
-
-## LSP Integration
-
-```console
-bazel run //bazel:refresh_compile_commands
-```
-
-Running this command will generate a `compile_commands.json` file in the root 
-of the repository, which `clangd` (or other language server processors) will 
-use automatically to provide modern editor features like syntax highlighting, 
-go-to definitions, call hierarchies, symbol manipulation, etc.
-
-## Test Commands
-
-You can build and run unit tests only on native builds. If you have a native
-build and want to run all unit tests, run:
-```console
-bazel test --build_tests_only ...
-```
-
-If you want to run a specific test, say
-[`pkg/noun/hashtable_tests.c`](pkg/noun/hashtable_tests.c), run:
-```console
-bazel test //pkg/noun:hashtable_tests
-```
-
-## Build Configuration File
-
-Any options you specify at the command line can instead be specified in
-`.user.bazelrc` if you find yourself using the same options over and over. This
-file is not tracked by `git`, so whatever you add to it will not affect anyone
-else. As an example, if you want to change the optimization level but don't want
-type `--copt='-O0'` each time, you can do the following:
-```console
-echo "build --copt='-O0'" >> .user.bazelrc
-bazel build :urbit
-```
-
-For more information on Bazel configuration files, consult the
-[Bazel docs][bazel-config].
-
-## Common Issues
-
-If `bazel build` or `bazel test` generates an `undeclared inclusion(s) in rule`
-error on macOS, the version of `clang` expected by the build system likely
-doesn't match the version of `clang` installed on your system. To address this,
-run `clang --version` and pass the version number via
-`--clang_version="<version_string>"` to the failing command.
-
-If build fails on nix/NixOS, you should pass `ACLOCAL_PATH` environment
-variable to bazel, using `--action_env=ACLOCAL_PATH=$ACLOCAL_PATH`, like so:
-
-```
-bazel build :urbit --action_env=ACLOCAL_PATH=$ACLOCAL_PATH
-```
-
-[^1]: If you're interested in digging into the details of the build system,
-      check out [`WORKSPACE.bazel`](WORKSPACE.bazel),
-      [`BUILD.bazel`](BUILD.bazel), [`bazel/`](bazel), and the multiple
-      `BUILD.bazel` files in [`pkg/`](pkg).
-
-[bazel]: https://bazel.build
-[bazel-config]: https://bazel.build/run/bazelrc
-[bazel-install]: https://bazel.build/install
-[copt]: https://bazel.build/docs/user-manual#copt
-[per_file_copt]: https://bazel.build/docs/user-manual#per-file-copt
-[glibc]: https://www.gnu.org/software/libc
-[linkopt]: https://bazel.build/docs/user-manual#linkopt
-[musl libc]: https://musl.libc.org
+[zig]: https://ziglang.org
+[zig-download]: https://ziglang.org/download/
