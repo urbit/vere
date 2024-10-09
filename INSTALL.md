@@ -33,6 +33,22 @@ pro hand -p true -s false -n false SIGBUS
 pro hand -p true -s false -n false SIGSEGV
 ```
 
+### Sanitizers
+
+Musl does not have proper sanitizer support, so until we support native (GNU) linux builds, these are limited to mac only.
+
+In order to use address sanitizer (`-Dasan`) and undefined behavior sanitizer (`-Dubsan`), you need to have version 18 of llvm installed on your machine. You also have to build natively, since cross-compilation is not supported.
+
+macOS:
+```terminal
+brew install llvm@18
+```
+
+<!-- linux: -->
+<!-- ```terminal -->
+<!-- apt-get install llvm-18 clang-18 -->
+<!-- ``` -->
+
 ## Build
 
 Once you install `zig`, you're ready to build:
@@ -78,6 +94,12 @@ Supported values:
 Provide additional compiler flags. These propagate to all build artifacts.
 
 Example: `zig build -Dcopt="-g" -Dcopt="-fno-sanitize=all"`
+
+#### `-Dasan`
+Enable address sanitizer. Only supported in native macos builds. Requires llvm 18, see [prerequisites](#sanitizers).
+
+#### `-Dubsan`
+Enable undefined behavior sanitizer. Only supported in native macos builds. Requires llvm 18, see [prerequisites](#sanitizers).
 
 <!-- ## LSP Integration -->
 
