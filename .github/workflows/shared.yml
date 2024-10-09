@@ -199,7 +199,7 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          echo $(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h) > ./VERSION
+          printf $(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.10s $(git rev-parse HEAD) > ./VERSION
 
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
