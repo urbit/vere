@@ -189,20 +189,20 @@ __gmpn_add_err1_n:
 
 	.align	32, 0x90
 .Lloop:
-	mov	(%rsi,%r9,8), %r14
 	shr	$1, %al		   
 	mov	-8(%r8), %r10
 	mov	$0, %r13d
+	mov	(%rsi,%r9,8), %r14
+	mov	8(%rsi,%r9,8), %r15
 	adc	(%rdx,%r9,8), %r14
 	cmovnc	%r13, %r10
-	mov	%r14, (%rdi,%r9,8)
-	mov	8(%rsi,%r9,8), %r15
-	mov	16(%rsi,%r9,8), %r14
 	adc	8(%rdx,%r9,8), %r15
 	mov	-16(%r8), %r11
+	mov	%r14, (%rdi,%r9,8)
+	mov	16(%rsi,%r9,8), %r14
+	mov	%r15, 8(%rdi,%r9,8)
 	cmovnc	%r13, %r11
 	mov	-24(%r8), %r12
-	mov	%r15, 8(%rdi,%r9,8)
 	adc	16(%rdx,%r9,8), %r14
 	cmovnc	%r13, %r12
 	mov	24(%rsi,%r9,8), %r15
@@ -215,12 +215,12 @@ __gmpn_add_err1_n:
 	adc	$0, %rbp
 	add	%r12, %rbx
 	adc	$0, %rbp
-	lea	-32(%r8), %r8
 	mov	%r14, 16(%rdi,%r9,8)
 	add	%r13, %rbx
+	lea	-32(%r8), %r8
 	adc	$0, %rbp
+	mov	%r15, 24(%rdi,%r9,8)
 	add	$4, %r9
-	mov	%r15, -8(%rdi,%r9,8)
 	jnz	.Lloop
 
 .Lend:

@@ -66,20 +66,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 		
 
 
@@ -347,4 +333,3 @@ __gmpn_divrem_1:
 	
 	ret
 	.size	__gmpn_divrem_1,.-__gmpn_divrem_1
-
