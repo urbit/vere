@@ -75,6 +75,276 @@
 
 
 
+		.section	.rodata
+	.align	64, 0x90
+ctz_table:
+
+	.byte	8
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	5
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	6
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	5
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	7
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	5
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	6
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	5
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	4
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	3
+	.byte	0
+	.byte	1
+	.byte	0
+	.byte	2
+	.byte	0
+	.byte	1
+	.byte	0
+
+	.size	ctz_table,.-ctz_table
+
+
+
+
+
+
+
+
 
 
 
@@ -92,32 +362,40 @@
 __gmpn_gcd_22:
 
 	
+	mov	%rcx, %rax
+
+	mov	ctz_table@GOTPCREL(%rip), %r10
+
+
 
 	.align	16, 0x90
-.Ltop:	mov	%rcx, %r10
-	sub	%rsi, %r10
+.Ltop:	mov	%rax, %rcx
+	sub	%rsi, %rcx
 	jz	.Llowz		
 	mov	%rdx, %r11
 	sbb	%rdi, %r11
 
-	rep;bsf	%r10, %rax		
-
 	mov	%rsi, %r8
-	sub	%rcx, %rsi
 	mov	%rdi, %r9
+
+	sub	%rax, %rsi
 	sbb	%rdx, %rdi
 
-.Lbck:	cmovc	%r10, %rsi		
+.Lbck:	cmovc	%rcx, %rsi		
 	cmovc	%r11, %rdi		
-	cmovc	%r8, %rcx		
+	cmovc	%r8, %rax		
 	cmovc	%r9, %rdx		
 
-	xor	%r10d, %r10d
-	sub	%rax, %r10
-	.byte	0xc4,98,169,0xf7,207
-	.byte	0xc4,226,251,0xf7,246
-	.byte	0xc4,226,251,0xf7,255
-	or	%r9, %rsi
+	and	$255, %ecx
+	movzbl	(%r10,%rcx), %ecx
+	jz	.Lcount_better
+
+.Lshr:	shr	%cl, %rsi
+	mov	%rdi, %r11
+	shr	%cl, %rdi
+	neg	%rcx
+	shl	%cl, %r11
+	or	%r11, %rsi
 
 	test	%rdx, %rdx
 	jnz	.Ltop
@@ -125,29 +403,32 @@ __gmpn_gcd_22:
 	jnz	.Ltop
 
 .Lgcd_11:
-	mov	%rcx, %rdi
+	mov	%rax, %rdi
 
 	jmp	__gmpn_gcd_11@PLT
 
 
+.Lcount_better:
+	rep;bsf	%rsi, %rcx		
+	jmp	.Lshr
+
 .Llowz:
 	
 	
-	mov	%rdx, %r10
-	sub	%rdi, %r10
+	mov	%rdx, %rcx
+	sub	%rdi, %rcx
 	je	.Lend
 
 	xor	%r11, %r11
 	mov	%rsi, %r8
 	mov	%rdi, %r9
-	rep;bsf	%r10, %rax		
 	mov	%rdi, %rsi
 	xor	%rdi, %rdi
 	sub	%rdx, %rsi
 	jmp	.Lbck
 
-.Lend:	mov	%rcx, %rax
+.Lend:	
 	
-.Lret:	
+	
 	ret
 	.size	__gmpn_gcd_22,.-__gmpn_gcd_22

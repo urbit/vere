@@ -145,63 +145,46 @@ __gmpn_pi1_bdiv_q_1:
 	dec	%r10
 	jz	.Lone
 
-	lea	8(%rsi,%r10,8), %rsi	
+	mov	8(%rsi), %rdx		
+	lea	(%rsi,%r10,8), %rsi		
 	lea	(%rdi,%r10,8), %rdi		
 	neg	%r10			
 
-	test	%ecx, %ecx
-	jnz	.Lunorm		
+	shrd	%cl, %rdx, %rax
+
 	xor	%ebx, %ebx
-	jmp	.Lnent
+	jmp	.Lent
 
 	.align	8, 0x90
-.Lntop:mul	%r11			
-	mov	-8(%rsi,%r10,8), %rax	
+.Ltop:
+	
+	
+	
+	
+	
+	
+
+	mul	%r11			
+	mov	(%rsi,%r10,8), %rax
+	mov	8(%rsi,%r10,8), %r9
+	shrd	%cl, %r9, %rax
+	nop
 	sub	%rbx, %rax		
-	setc	%bl		
+	setc	%bl
 	sub	%rdx, %rax		
-	adc	$0, %ebx		
-.Lnent:imul	%r8, %rax		
-	mov	%rax, (%rdi,%r10,8)	
-	inc	%r10			
-	jnz	.Lntop
+	adc	$0, %ebx
+.Lent:	imul	%r8, %rax
+	mov	%rax, (%rdi,%r10,8)
+	inc	%r10
+	jnz	.Ltop
 
-	mov	-8(%rsi), %r9		
-	jmp	.Lcom
-
-.Lunorm:
-	mov	(%rsi,%r10,8), %r9	
-	shr	%cl, %rax		
-	neg	%ecx
-	shl	%cl, %r9		
-	neg	%ecx
-	or	%r9, %rax
-	xor	%ebx, %ebx
-	jmp	.Luent
-
-	.align	8, 0x90
-.Lutop:mul	%r11			
-	mov	(%rsi,%r10,8), %rax	
-	shl	%cl, %rax		
-	neg	%ecx
-	or	%r9, %rax
+	mul	%r11			
+	mov	(%rsi), %rax		
+	shr	%cl, %rax
 	sub	%rbx, %rax		
-	setc	%bl		
 	sub	%rdx, %rax		
-	adc	$0, %ebx		
-.Luent:imul	%r8, %rax		
-	mov	(%rsi,%r10,8), %r9	
-	shr	%cl, %r9		
-	neg	%ecx
-	mov	%rax, (%rdi,%r10,8)	
-	inc	%r10			
-	jnz	.Lutop
-
-.Lcom:	mul	%r11			
-	sub	%rbx, %r9		
-	sub	%rdx, %r9		
-	imul	%r8, %r9
-	mov	%r9, (%rdi)
+	imul	%r8, %rax
+	mov	%rax, (%rdi)
 	pop	%rbx
 	
 	ret
