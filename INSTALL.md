@@ -28,6 +28,20 @@ pro hand -p true -s false -n false SIGBUS
 pro hand -p true -s false -n false SIGSEGV
 ```
 
+### Sanitizers
+
+In order to use address sanitizer (`-Dasan`) and undefined behavior sanitizer (`-Dubsan`), you need to have version 18 of llvm and clang installed on your machine. You also have to build natively, since cross-compilation is not supported.
+
+macOS:
+```terminal
+brew install llvm@18
+```
+
+linux:
+```terminal
+apt-get install llvm-18 clang-18
+```
+
 ## Build
 
 Once you install `zig`, you're ready to build:
@@ -72,6 +86,12 @@ Supported values:
 #### `-Dflags=[string]`
 Provide additional compiler flags. These propagate to all build artifacts and
 dependencies.
+
+#### `-Dasan`
+Enable address sanitizer. Supported in native builds only. Requires llvm and clang 18, see [prerequisites](#sanitizers).
+
+#### `-Dubsan`
+Enable undefined behavior sanitizer. Supported in native builds only. Requires llvm and clang 18, see [prerequisites](#sanitizers).
 
 <!-- ## LSP Integration -->
 
