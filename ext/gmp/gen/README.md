@@ -1,8 +1,23 @@
 # Generated architecture specific `.c`, `.s`, and `.h` files
 
-To generate these, first run the `./configure` script under the unpacked GMP
-dependency directory. Afterwards, navigate under `mpn/` and run the the
-following to generate the assembly files:
+To generate these, first run the `./configure` script under the unpacked GMP dependency directory with the following options:
+
+macOS:
+```terminal
+./configure --with-pic --disable-shared
+```
+
+linux-x86_64:
+```terminal
+./configure --with-pic --disable-shared --host=x86_64-linux-musl
+```
+
+linux-aarch64:
+```terminal
+./configure --with-pic --disable-shared --host=aarch64-linux-musl
+```
+
+Next, navigate under `mpn/` and run the following to generate the assembly files:
 
 ```bash
 for file in $(find . -maxdepth 1 -print | grep "\.asm$"); do
