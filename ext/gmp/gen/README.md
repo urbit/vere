@@ -2,7 +2,7 @@
 
 To generate these, first run the `./configure` script under the unpacked GMP dependency directory with the following options:
 
-maoOS:
+macOS:
 ```terminal
 ./configure --with-pic --disable-shared
 ```
