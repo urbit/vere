@@ -618,6 +618,7 @@
 #   define c3__jato   c3_s4('j','a','t','o')
 #   define c3__jet    c3_s3('j','e','t')
 #   define c3__jetd   c3_s4('j','e','t','d')
+#   define c3__jinx   c3_s4('j','i','n','x')
 #   define c3__just   c3_s4('j','u','s','t')
 #   define c3__k      c3_s1('k')
 #   define c3__khan   c3_s4('k','h','a','n')

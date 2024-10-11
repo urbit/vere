@@ -9,5 +9,6 @@
 #define rsignal_install_handler        signal
 #define rsignal_deinstall_handler(sig) signal((sig), SIG_IGN)
 #define rsignal_setitimer              setitimer
+#define rsignal_getitimer              getitimer
 
 #endif /* ifndef NOUN_PLATFORM_DARWIN_RSIGNAL_H */
