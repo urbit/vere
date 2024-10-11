@@ -2036,7 +2036,7 @@ _mesa_send_jumbo_pieces(u3_mesa* sam_u, u3_mesa_line* lin_u, c3_d* fra_u)
       }
       //  single-fragment message; just send the one data fragment
       else if ( ( NULL == fra_u) || (0 == *fra_u) ) {
-        _mesa_send_leaf(sam_u, lin_u, &pac_u, *fra_u);
+        _mesa_send_leaf(sam_u, lin_u, &pac_u, 0);
       }
       else {
         u3l_log("mesa: weird fragment number %"PRIu64, *fra_u);
