@@ -2696,11 +2696,9 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   // if we have the page, send it
   u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
-  if ( NULL != lin_u ) {
-    if ( CTAG_ITEM == lin_u->typ_y ) {
-      _mesa_send_jumbo_pieces(sam_u, lin_u, &fra_d);
-      _mesa_free_pict(pic_u);
-    }
+  if ( ( NULL != lin_u ) && ( CTAG_ITEM == lin_u->typ_y )) {
+    _mesa_send_jumbo_pieces(sam_u, lin_u, &fra_d);
+    _mesa_free_pict(pic_u);
     return;
   }
   // otherwise, scry
