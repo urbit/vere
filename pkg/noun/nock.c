@@ -706,11 +706,7 @@ _n_prog_new(c3_w byc_w, c3_w cal_w,
        reb_w = (sizeof(u3j_rite) * reg_w),
        lib_w = (sizeof(u3_noun) * lit_w),
        meb_w = (sizeof(u3n_memo) * mem_w),
-       pad_w = (8 - byc_w % 8) % 8,
-       pod_w = lit_w % 2,
-       ped_w = mem_w % 2,
-       dat_w = byc_w + cab_w + reb_w + lib_w + meb_w + pad_w +
-               (pod_w * sizeof(u3_noun)) + (ped_w * sizeof(u3n_memo));
+       dat_w = byc_w + cab_w + reb_w + lib_w + meb_w;
 
   u3n_prog* pog_u     = u3a_malloc(sizeof(u3n_prog) + dat_w);
   pog_u->byc_u.own_o = c3y;
@@ -718,13 +714,13 @@ _n_prog_new(c3_w byc_w, c3_w cal_w,
   pog_u->byc_u.ops_y = (c3_y*) _n_prog_dat(pog_u);
 
   pog_u->lit_u.len_w = lit_w;
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
+  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
 
   pog_u->mem_u.len_w = mem_w;
-  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
+  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w);
 
   pog_u->cal_u.len_w = cal_w;
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
 
   pog_u->reg_u.len_w = reg_w;
   pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
@@ -742,10 +738,7 @@ _n_prog_old(u3n_prog* sep_u)
        reb_w = sizeof(u3j_rite) * sep_u->reg_u.len_w,
        lib_w = sizeof(u3_noun) * sep_u->lit_u.len_w,
        meb_w = sizeof(u3n_memo) * sep_u->mem_u.len_w,
-       pod_w = sep_u->lit_u.len_w % 2,
-       ped_w = sep_u->mem_u.len_w % 2,
-       dat_w = cab_w + reb_w + lib_w + meb_w +
-               (pod_w * sizeof(u3_noun)) + (ped_w * sizeof(u3n_memo));
+       dat_w = cab_w + reb_w + lib_w + meb_w;
 
   u3n_prog* pog_u     = u3a_malloc(sizeof(u3n_prog) + dat_w);
   pog_u->byc_u.own_o = c3n;
@@ -756,10 +749,10 @@ _n_prog_old(u3n_prog* sep_u)
   pog_u->lit_u.non   = (u3_noun*) _n_prog_dat(pog_u);
 
   pog_u->mem_u.len_w = sep_u->mem_u.len_w;
-  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
+  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w);
 
   pog_u->cal_u.len_w = sep_u->cal_u.len_w;
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
 
   pog_u->reg_u.len_w = sep_u->reg_u.len_w;
   pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
@@ -2043,7 +2036,7 @@ _n_kale(u3_noun a)
   return a;
 }
 
-typedef struct __attribute__((__packed__)) {
+typedef struct {
   u3n_prog* pog_u;
   c3_w     ip_w;
 } burnframe;
@@ -2895,13 +2888,12 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
   u3n_prog* gop_u;
 
   if ( c3y == pog_u->byc_u.own_o ) {
-    c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
     gop_u = _n_prog_new(pog_u->byc_u.len_w,
                         pog_u->cal_u.len_w,
                         pog_u->reg_u.len_w,
                         pog_u->lit_u.len_w,
                         pog_u->mem_u.len_w);
-    memcpy(gop_u->byc_u.ops_y, pog_u->byc_u.ops_y, pog_u->byc_u.len_w + pad_w);
+    memcpy(gop_u->byc_u.ops_y, pog_u->byc_u.ops_y, pog_u->byc_u.len_w);
   }
   else {
     gop_u = _n_prog_old(pog_u);
@@ -2996,14 +2988,11 @@ _n_ream(u3_noun kev)
   c3_w i_w;
   u3n_prog* pog_u = u3to(u3n_prog, u3t(kev));
 
-  c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
-  c3_w pod_w = pog_u->lit_u.len_w % 2;
-  c3_w ped_w = pog_u->mem_u.len_w % 2;
   // fix up pointers for loom portability
   pog_u->byc_u.ops_y = (c3_y*) _n_prog_dat(pog_u);
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
-  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
+  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w);
+  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
   pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
   for ( i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
