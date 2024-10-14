@@ -1,0 +1,39 @@
+#
+# LIBRARIES
+#
+
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
+    name = "ur",
+    srcs = [
+        "bitstream.c",
+        "bitstream.h",
+        "defs.h",
+        "hashcons.c",
+        "hashcons.h",
+        "serial.c",
+        "serial.h",
+    ],
+    hdrs = ["ur.h"],
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = ["@murmur3"],
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "tests",
+    timeout = "short",
+    srcs = ["tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":ur"],
+)

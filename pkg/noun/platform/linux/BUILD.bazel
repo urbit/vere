@@ -1,0 +1,8 @@
+cc_library(
+    name = "linux",
+    hdrs = ["rsignal.h"],
+    include_prefix = "platform",
+    includes = ["."],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//pkg:__subpackages__"],
+)

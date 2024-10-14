@@ -1,0 +1,27 @@
+diff --git a/build/template-FAST_INT64/platform.h b/build/template-FAST_INT64/platform.h
+index 2094658..f8147a0 100644
+--- a/build/template-FAST_INT64/platform.h
++++ b/build/template-FAST_INT64/platform.h
+@@ -38,13 +38,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ /*----------------------------------------------------------------------------
+ *----------------------------------------------------------------------------*/
+-==> #define LITTLEENDIAN 1
++#if defined(URBIT_RUNTIME_OS_DARWIN) || defined(URBIT_RUNTIME_OS_BSD)
++#define LITTLEENDIAN 1
++#endif
+ 
+ /*----------------------------------------------------------------------------
+ *----------------------------------------------------------------------------*/
+-==> #define INLINE inline
++#if defined(URBIT_RUNTIME_OS_DARWIN) || defined(URBIT_RUNTIME_OS_BSD)
++#define INLINE inline
++#endif
+ 
+ /*----------------------------------------------------------------------------
+ *----------------------------------------------------------------------------*/
+-==> #define THREAD_LOCAL _Thread_local
++#if defined(URBIT_RUNTIME_OS_DARWIN) || defined(URBIT_RUNTIME_OS_BSD)
++#define THREAD_LOCAL _Thread_local
++#endif
+ 

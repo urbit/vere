@@ -1,0 +1,117 @@
+#
+# LIBRARIES
+#
+
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
+    name = "noun",
+    srcs = glob(
+        [
+            "**/*.c",
+            "**/*.h",
+            "jets/*.h",
+            "jets/**/*.c",
+        ],
+        exclude = [
+            "noun.h",
+            "*_tests.c",
+        ],
+    ),
+    hdrs = ["noun.h"],
+    includes = ["."],
+    linkopts = select({
+        # NOTE: macOS builds fail to link the `u3o_Config` symbol (and maybe
+        # others) without this. We should figure out why, and remove this.
+        "@platforms//os:macos": ["-force_load $(GENDIR)/pkg/noun/libnoun.a"],
+        "//conditions:default": [],
+    }),
+    linkstatic = True,
+    local_defines = ["U3_GUARD_PAGE"],
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/ent",
+        "//pkg/ur",
+        "@gmp",
+        "@libbacktrace",
+        "@murmur3",
+        "@openssl",
+        "@pdjson",
+        "@sigsegv",
+        "@softfloat",
+        "@urcrypt",
+        "@whereami",
+    ] + select({
+        "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
+        "@platforms//os:linux": [
+            "//pkg/noun/platform/linux",
+            "@libunwind",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "hashtable_tests",
+    timeout = "short",
+    srcs = ["hashtable_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "jets_tests",
+    timeout = "short",
+    srcs = ["jets_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "nock_tests",
+    timeout = "short",
+    srcs = ["nock_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "retrieve_tests",
+    timeout = "short",
+    srcs = ["retrieve_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)
+
+cc_test(
+    name = "serial_tests",
+    timeout = "short",
+    srcs = ["serial_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":noun"],
+)

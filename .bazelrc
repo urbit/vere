@@ -1,0 +1,51 @@
+# Enable configurations specific to the host platform.
+common --enable_platform_specific_config
+
+# Disallow empty `glob()`s.
+build --incompatible_disallow_empty_glob
+
+# Don't auto-detect the C/C++ toolchain.
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+
+# Use platforms to select toolchains.
+# See https://bazel.build/concepts/platforms#cxx and
+# https://github.com/bazelbuild/bazel/issues/7260.
+build --incompatible_enable_cc_toolchain_resolution
+
+# Disable transitions.
+# See https://github.com/bazelbuild/rules_docker/issues/2052.
+build --@io_bazel_rules_docker//transitions:enable=false
+
+# Add aliases for compiler version build settings.
+build --flag_alias=clang_version=//:clang_version
+build --flag_alias=gcc_version=//:gcc_version
+
+# Use optimized build by default. According to the bazel documentation, this
+# corresponds to -O2 -DNDEBUG, but these are overriden in
+# //bazel/common_settings.bzl:vere_library.
+# https://bazel.build/docs/user-manual#build-semantics
+build --compilation_mode=opt
+
+# Don't include source level debug info on macOS. See
+# https://github.com/urbit/urbit/issues/5561 and
+# https://github.com/urbit/vere/issues/131.
+build:linux --host_copt='-g'
+build --strip=never
+
+# Turn on optimization, CPU and memory debug for exec config, which we only use
+# to run the fake ship tests.  Also turn on extra snapshot validation.
+build --host_copt='-O3'
+build --host_copt='-DU3_CPU_DEBUG'
+build --host_copt='-DU3_MEMORY_DEBUG'
+build --host_copt='-DC3DBG'
+build --host_copt='-DU3_SNAPSHOT_VALIDATION'
+
+# Set as per-file copts as a plain --copt gets passed to third party
+# dependencies which forces recompilation (slow) if you are switching between
+# including/excluding a symbol define.
+build:mem_dbg --per_file_copt='pkg/.*@-DU3_MEMORY_DEBUG'
+build:cpu_dbg --per_file_copt='pkg/.*@-DU3_CPU_DEBUG'
+build:snp_dbg --per_file_copt='pkg/.*@-DU3_SNAPSHOT_VALIDATION'
+
+# Any personal configuration should go in .user.bazelrc.
+try-import %workspace%/.user.bazelrc

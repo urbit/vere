@@ -1,0 +1,49 @@
+#
+# LIBRARIES
+#
+
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
+    name = "ent",
+    srcs = ["ent.c"],
+    hdrs = ["ent.h"],
+    copts = [
+        "-O3",
+        "-Wall",
+        "-Werror",
+        "-pedantic",
+        "-std=gnu99",
+    ],
+    include_prefix = "ent",
+    includes = ["."],
+    linkstatic = True,
+    local_defines = select({
+        "@platforms//os:macos": ["ENT_GETENTROPY_SYSRANDOM"],
+        # TODO: support fallback to other options if `getrandom()` isn't
+        # available in `unistd.h`. Preferred order (from most preferred to least
+        # preferred) is:
+        # - ENT_GETENTROPY_UNISTD
+        # - ENT_GETENTROPY_SYSRANDOM
+        # - ENT_GETRANDOM_SYSCALL
+        # - ENT_DEV_URANDOM
+        "//conditions:default": ["ENT_GETENTROPY_UNISTD"],
+    }),
+    visibility = ["//:__subpackages__"],
+)
+
+#
+# TESTS
+#
+
+cc_test(
+    name = "tests",
+    timeout = "short",
+    srcs = ["tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":ent"],
+)

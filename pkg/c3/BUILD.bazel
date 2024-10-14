@@ -1,0 +1,42 @@
+#
+# LIBRARIES
+#
+
+load("//bazel:common_settings.bzl", "vere_library")
+
+vere_library(
+    name = "c3",
+    srcs = glob(
+        [
+            "*.h",
+            "*.c",
+        ],
+        exclude = [
+            "c3.h",
+            "*_tests.c",
+        ],
+    ),
+    hdrs = ["c3.h"],
+    # We define platform-specific macros here to avoid the need for a
+    # configuration header file.
+    defines = [
+        # We don't build on any big endian CPUs.
+        "U3_OS_ENDIAN_little=1",
+        "U3_OS_PROF=1",
+    ] + select({
+        "@platforms//cpu:aarch64": ["U3_CPU_aarch64=1"],
+        "//conditions:default": [],
+    }) + select({
+        "@platforms//os:linux": ["U3_OS_linux=1"],
+        "@platforms//os:macos": ["U3_OS_osx=1"],
+        "//conditions:default": [],
+    }),
+    include_prefix = "c3",
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+)
+
+#
+# TESTS
+#
