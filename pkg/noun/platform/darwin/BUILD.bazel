@@ -1,0 +1,8 @@
+cc_library(
+    name = "darwin",
+    hdrs = ["rsignal.h"],
+    include_prefix = "platform",
+    includes = ["."],
+    target_compatible_with = ["@platforms//os:macos"],
+    visibility = ["//pkg:__subpackages__"],
+)

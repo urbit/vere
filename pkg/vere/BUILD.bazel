@@ -1,0 +1,522 @@
+#
+# GENERATED FILES
+#
+
+load("//bazel:common_settings.bzl", "vere_library", "vere_binary")
+
+# An approximation of `xxd -i` that runs on all platforms where Bash is
+# present. Generates a `.h` file that declares the array and array length as
+# `extern` global variables and a `.c` file containing the array and array
+# length definitions that includes the `.h` file.
+#
+# Referencing a shell variable requires `$$`, not `$`. See
+# https://bazel.build/reference/be/general#general-advice.
+XXD_I = """
+function xxd_i() {
+    var=$$1
+    src_file=$$2
+    dst_h_file=$$3
+    dst_c_file=$$4
+
+    # Generate `.h` file.
+    echo "#ifndef $${var}_H" > $$dst_h_file
+    echo "#define $${var}_H" >> $$dst_h_file
+    echo "extern unsigned char $$var[];" >> $$dst_h_file
+    echo "extern unsigned int $${var}_len;" >> $$dst_h_file
+    echo '#endif' >> $$dst_h_file
+
+    # Generate `.c` file.
+    printf '#include "%s"\n' $$dst_h_file > $$dst_c_file
+    echo "unsigned char $$var[] = {" >> $$dst_c_file
+    cnt=0
+    while IFS='' read line
+    do
+        for byte in $$line
+        do
+            echo -n " 0x$$byte," >> $$dst_c_file
+            cnt=$$((cnt+1))
+        done
+    # <() is syntax for Bash process substitution.
+    done < <(od -An -v -tx1 $$src_file)
+    echo "};" >> $$dst_c_file
+    echo "unsigned int $${var}_len = $$cnt;" >> $$dst_c_file
+}
+"""
+
+# Produce a certificate authority bundle as a byte array.
+genrule(
+    name = "ca_bundle",
+    srcs = ["@ca_bundle//file"],
+    outs = [
+        "ca_bundle.h",
+        "ca_bundle.c",
+    ],
+    cmd_bash = """
+    # Defines the function `xxd_i()`.
+    {}
+
+    src_file=$(execpath @ca_bundle//file)
+    dst_h_file=$(execpath ca_bundle.h)
+    dst_c_file=$(execpath ca_bundle.c)
+    xxd_i include_ca_bundle_crt $$src_file $$dst_h_file $$dst_c_file
+    """.format(XXD_I),
+    visibility = ["//visibility:private"],
+)
+
+# Produce an `ivory.pill` as a byte array.
+genrule(
+    name = "ivory",
+    srcs = ["@ivory_pill//file"],
+    outs = [
+        "ivory.h",
+        "ivory.c",
+    ],
+    cmd_bash = """
+    # Defines the function `xxd_i()`.
+    {}
+
+    # Create ivory.h.
+    src_file=$(execpath @ivory_pill//file)
+    dst_h_file=$(execpath ivory.h)
+    dst_c_file=$(execpath ivory.c)
+    xxd_i u3_Ivory_pill $$src_file $$dst_h_file $$dst_c_file
+    """.format(XXD_I),
+    visibility = ["//visibility:private"],
+)
+
+#
+# LIBRARIES
+#
+
+vere_library(
+    name = "vere",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+            "db/*.c",
+            "io/*.c",
+            "io/*/*.h",
+            "io/*/*.c",
+        ],
+        exclude = [
+            "main.c",
+            "vere.h",
+            "*_tests.c",
+        ],
+    ) + [
+        ":ivory",
+        "//:pace_hdr",
+        "//:version_hdr",
+    ] + select({
+        "@platforms//os:macos": [
+            "platform/darwin/daemon.c",
+            "platform/darwin/ptty.c",
+            "platform/darwin/mach.c",
+        ],
+        "@platforms//os:linux": [
+            "platform/linux/daemon.c",
+            "platform/linux/ptty.c",
+        ],
+    }),
+    hdrs = [
+        "db/lmdb.h",
+        "vere.h",
+        "mdns.h",
+    ] + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [
+            "dns_sd.h",
+        ],
+        }),
+    includes = ["."],
+    linkstatic = True,
+    visibility = ["//pkg:__subpackages__"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/ent",
+        "//pkg/noun",
+        "//pkg/ur",
+        "@curl",
+        "@h2o",
+        "@lmdb",
+        "@openssl",
+        "@uv",
+        "@natpmp",
+    ] + select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [
+            "@avahi",
+        ],
+        })
+)
+
+#
+# BINARIES
+#
+
+vere_binary(
+    name = "urbit",
+    srcs = [
+        "main.c",
+        ":ca_bundle",
+        ":ivory",
+        "//:pace_hdr",
+        "//:version_hdr",
+    ],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/c3",
+        "//pkg/noun",
+        "//pkg/ur",
+        ":vere",
+        # TODO: remove dependency (only used to report version).
+        "@h2o",
+        "@openssl",
+        # TODO: remove dependency (only used to report version).
+        "@sigsegv",
+        "@whereami",
+    ],
+)
+
+#
+# TESTS
+#
+
+
+cc_library(
+  name = "ames_src",
+  hdrs = ["io/ames.c"],
+)
+
+cc_test(
+    name = "ames_tests",
+    timeout = "short",
+    srcs = ["ames_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere", ":ames_src"]
+)
+
+cc_test(
+    name = "boot_tests",
+    timeout = "short",
+    srcs = ["boot_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "newt_tests",
+    timeout = "short",
+    srcs = ["newt_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "noun_tests",
+    timeout = "short",
+    srcs = ["noun_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "unix_tests",
+    timeout = "short",
+    srcs = ["unix_tests.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [":vere"],
+)
+
+cc_test(
+    name = "benchmarks",
+    timeout = "short",
+    srcs = ["benchmarks.c"],
+    features = select({
+        "@platforms//os:linux": ["fully_static_link"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = [
+        ":vere",
+        "//pkg/noun",
+        "//pkg/ur",
+    ],
+)
+
+#
+# FAKE SHIP TESTS
+#
+
+genrule(
+    name = "boot-fake-ship",
+    srcs = [
+        "@solid_pill//file",
+        "@urbit//file",
+    ],
+    outs = ["fakebus.zip"],
+    cmd = """
+    set -xeuo pipefail
+
+    mkdir ./urbit
+    tar xfz $(execpath @urbit//file) -C ./urbit --strip-components=1
+    cp -RL ./urbit/tests ./urbit/pkg/arvo/tests
+
+    $(execpath :urbit) --lite-boot --daemon --fake bus \
+      --bootstrap $(execpath @solid_pill//file)        \
+      --arvo ./urbit/pkg/arvo                          \
+      --pier ./pier
+
+    cleanup() {
+      if [ -f ./pier/.vere.lock ]; then
+        kill $$(< ./pier/.vere.lock) || true
+      fi
+      set +x
+    }
+
+    trap cleanup EXIT
+    port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
+
+    lensd() {
+      curl -s                                                                         \
+        --data "{\\"source\\":{\\"dojo\\":\\"$$1\\"},\\"sink\\":{\\"stdout\\":null}}" \
+        "http://localhost:$$port" | xargs printf %s | sed 's/\\\\n/\\n/g'
+    }
+
+    lensa() {
+      curl -s                                                                           \
+        --data "{\\"source\\":{\\"dojo\\":\\"$$2\\"},\\"sink\\":{\\"app\\":\\"$$1\\"}}" \
+        "http://localhost:$$port" | xargs printf %s | sed 's/\\\\n/\\n/g'
+    }
+
+    check() {
+      [ 3 -eq $$(lensd 3) ]
+    }
+
+    lensd '+vat %base'
+
+    if check && sleep 10 && check; then
+      echo "boot success"
+      lensa hood '+hood/exit'
+      while [ -f ./pier/.vere.lock ]; do
+        echo "waiting for pier to shut down"
+        sleep 5
+      done
+    else
+      echo "boot failure"
+      kill $$(< ./pier/.vere.lock) || true
+      set +x
+      exit 1
+    fi
+
+    set +x
+    ls
+    ls -a ./pier
+    zip -q -r $@ ./pier
+    """,
+    tools = [":urbit"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "test-fake-ship",
+    srcs = [
+        ":boot-fake-ship",
+        "//pkg/vere:VERSION",
+    ],
+    outs = ["test-fake-ship-output.zip"],
+    cmd = """
+    cp $(execpath :boot-fake-ship) pier.zip
+    unzip -qq pier.zip
+    chmod -R u+rw pier
+
+    set -x
+
+    $(execpath :urbit) --lite-boot --daemon --gc ./pier 2> urbit-output
+
+    port=$$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $$1}')
+
+    lensd() {
+      curl -s                                                                         \
+        --data "{\\"source\\":{\\"dojo\\":\\"$$1\\"},\\"sink\\":{\\"stdout\\":null}}" \
+        "http://localhost:$$port" | xargs printf %s | sed 's/\\\\n/\\n/g'
+    }
+
+    lensa() {
+      curl -s                                                                           \
+        --data "{\\"source\\":{\\"dojo\\":\\"$$2\\"},\\"sink\\":{\\"app\\":\\"$$1\\"}}" \
+        "http://localhost:$$port" | xargs printf %s | sed 's/\\\\n/\\n/g'
+    }
+
+    tail -F urbit-output >&2 &
+
+    tailproc=$$!
+
+    cleanup () {
+      kill $$(cat ./pier/.vere.lock) || true
+      kill "$$tailproc" 2>/dev/null || true
+
+      set +x
+    }
+
+    trap cleanup EXIT
+
+    #  print the arvo version
+    #
+    lensd '+vat %base'
+
+    #  measure initial memory usage
+    #
+    lensd '~&  ~  ~&  %init-mass-start  ~'
+    lensa hood '+hood/mass'
+    lensd '~&  ~  ~&  %init-mass-end  ~'
+
+    #  run the unit tests
+    #
+    lensd '~&  ~  ~&  %test-unit-start  ~'
+    lensd '-test %/tests ~'
+    lensd '~&  ~  ~&  %test-unit-end  ~'
+
+    #  use the :test app to build all agents, generators, and marks
+    #
+    lensa hood '+hood/start %test'
+
+    lensd '~&  ~  ~&  %test-agents-start  ~'
+    lensa test '%agents'
+    lensd '~&  ~  ~&  %test-agents-end  ~'
+
+    lensd '~&  ~  ~&  %test-generators-start  ~'
+    lensa test '%generators'
+    lensd '~&  ~  ~&  %test-generators-end  ~'
+
+    lensd '~&  ~  ~&  %test-marks-start  ~'
+    lensa test '%marks'
+    lensd '~&  ~  ~&  %test-marks-end  ~'
+
+    #  measure memory usage post tests
+    #
+    lensd '~&  ~  ~&  %test-mass-start  ~'
+    lensa hood '+hood/mass'
+    lensd '~&  ~  ~&  %test-mass-end  ~'
+
+    #  defragment the loom
+    #
+    lensd '~&  ~  ~&  %pack-start  ~'
+    lensa hood '+hood/pack'
+    lensd '~&  ~  ~&  %pack-end  ~'
+
+    #  reclaim space within arvo
+    #
+    lensd '~&  ~  ~&  %trim-start  ~'
+    lensa hood '+hood/trim'
+    lensd '~&  ~  ~&  %trim-end  ~'
+
+    #  measure memory usage pre |meld
+    #
+    lensd '~&  ~  ~&  %trim-mass-start  ~'
+    lensa hood '+hood/mass'
+    lensd '~&  ~  ~&  %trim-mass-end  ~'
+
+    #  globally deduplicate
+    #
+    lensd '~&  ~  ~&  %meld-start  ~'
+    lensa hood '+hood/meld'
+    lensd '~&  ~  ~&  %meld-end  ~'
+
+    #  measure memory usage post |meld
+    #
+    lensd '~&  ~  ~&  %meld-mass-start  ~'
+    lensa hood '+hood/mass'
+    lensd '~&  ~  ~&  %meld-mass-end  ~'
+
+    lensa hood '+hood/exit'
+
+    cleanup
+
+    # Collect output
+    cp urbit-output test-output-unit
+    cp urbit-output test-output-agents
+    cp urbit-output test-output-generators
+    cp urbit-output test-output-marks
+
+    # TODO: when re-enabling fake ship tests on macOS, use `sed -i ''`
+    # instead of `sed -i`.
+    sed -i '0,/test-unit-start/d'        test-output-unit
+    sed -i '/test-unit-end/,$$d'         test-output-unit
+
+    sed -i '0,/test-agents-start/d'      test-output-agents
+    sed -i '/test-agents-end/,$$d'       test-output-agents
+
+    sed -i '0,/test-generators-start/d'  test-output-generators
+    sed -i '/test-generators-end/,$$d'   test-output-generators
+
+    sed -i '0,/test-marks-start/d'       test-output-marks
+    sed -i '/test-marks-end/,$$d'        test-output-marks
+
+    OUTDIR="$$(pwd)/test-fake-ship-output"
+    mkdir -p $$OUTDIR
+    cp test-output-* $$OUTDIR
+
+    set +x
+
+    hdr () {
+      echo =====$$(sed 's/./=/g' <<< "$$1")=====
+      echo ==== $$1 ====
+      echo =====$$(sed 's/./=/g' <<< "$$1")=====
+    }
+
+    for f in $$(find "$$OUTDIR" -type f); do
+      hdr "$$(basename $$f)"
+      cat "$$f"
+    done
+
+    fail=0
+
+    for f in $$(find "$$OUTDIR" -type f); do
+      if egrep "((FAILED|CRASHED)|warn:) " $$f >/dev/null; then
+        if [[ $$fail -eq 0 ]]; then
+          hdr "Test Failures"
+        fi
+
+        echo "ERROR Test failure in $$(basename $$f)"
+
+        ((fail++))
+      fi
+    done
+
+    if [[ $$fail -eq 0 ]]; then
+      hdr "Success"
+    fi
+
+    zip -q -r $@ $$OUTDIR
+
+    exit "$$fail"
+    """,
+    tools = [":urbit"],
+    visibility = ["//visibility:public"],
+)

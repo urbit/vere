@@ -1,0 +1,410 @@
+# ADDING A NEW TOOLCHAIN
+#
+# The general process for adding a new toolchain is as follows:
+#
+# (1) Define a `cc_toolchaing_config()` rule target with a `name` attribute of
+#     the form `<compiler>-<os>-<cpu>-config` and a `toolchain_identifier` of
+#     the form `toolchain-<compiler>-<os>-<cpu>`. The `cc_toolchain_config()`
+#     definition in `//bazel/toolchain:cfg.bzl` lists the mandatory attributes
+#     for the `cc_toolchain_config()` rule. If any of the toolchain's include
+#     paths require a compiler version number, simply replace the version number
+#     with `{compiler_version}`, which is replaced with the value of the label
+#     indicated by the `compiler_version` attribute when the rule is resolved.
+# (2) Define a `cc_toolchain()` rule target with a `name` attribute of the form
+#     `<compiler>-<os>-<cpu>` and a `toolchain_config` attribute that references
+#     the `cc_toolchain_config()` target from (1).
+# (3) Define a `toolchain()` rule target with a `name` attribute of the form
+#     `<compiler>-<os>-<cpu>-toolchain` and specify the platform the toolchain
+#     runs on via the `exec_compatible_with` attribute and the platform the
+#     toolchain targets (i.e. compiles for) via the `target_compatible_with`
+#     attribute. Use the `cc_toolchain()` target from (2) as the value of the
+#     `toolchain` attribute and `:toolchain_type` for the `toolchain_type`
+#     attribute.
+# (4) Register the new toolchain in `//:WORKSPACE.bazel` by adding the
+#     toolchain's label (i.e.
+#     `//bazel/toolchain:<compiler>-<os>-<cpu>-toolchain`) to the
+#     `register_toolchains()` function.
+#
+# For more information on configuring toolchains, see
+# https://bazel.build/tutorials/ccp-toolchain-config
+# and https://bazel.build/extending/toolchains.
+
+load(":cfg.bzl", "cc_toolchain_config")
+
+# The prefix for installed external toolchains.
+_install_prefix = "/usr/local"
+
+filegroup(name = "empty")
+
+alias(
+    name = "toolchain_type",
+    actual = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+#
+# gcc-linux-aarch64
+#
+
+# Toolchain identifier.
+_aarch64_gcc = "toolchain-gcc-linux-aarch64"
+
+cc_toolchain_config(
+    name = "gcc-linux-aarch64-config",
+    ar = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-gcc-ar".format(_install_prefix),
+    cc = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-gcc".format(_install_prefix),
+    cc_flags = [
+        "-static",
+        "--sysroot={}/aarch64-linux-musl".format(_install_prefix),
+    ],
+    compiler = "aarch64-linux-musl-gcc",
+    compiler_version = "//:gcc_version",
+    ld = "{}/aarch64-linux-musl/bin/aarch64-linux-musl-ld".format(_install_prefix),
+    ld_flags = ["--sysroot={}/aarch64-linux-musl".format(_install_prefix)],
+    sys_includes = [
+        "{}/aarch64-linux-musl/aarch64-linux-musl/include".format(_install_prefix),
+        "{}/aarch64-linux-musl/lib/gcc/aarch64-linux-musl/{{compiler_version}}/include".format(_install_prefix),
+    ],
+    target_cpu = "aarch64",
+    toolchain_identifier = _aarch64_gcc,
+)
+
+cc_toolchain(
+    name = "gcc-linux-aarch64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":gcc-linux-aarch64-config",
+    toolchain_identifier = _aarch64_gcc,
+)
+
+toolchain(
+    name = "gcc-linux-aarch64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    toolchain = ":gcc-linux-aarch64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# gcc-linux-x86_64
+#
+
+# Toolchain identifier.
+_x86_64_gcc = "toolchain-gcc-linux-x86_64"
+
+cc_toolchain_config(
+    name = "gcc-linux-x86_64-config",
+    ar = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-gcc-ar".format(_install_prefix),
+    cc = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-gcc".format(_install_prefix),
+    cc_flags = [
+        "-static",
+        "--sysroot={}/x86_64-linux-musl".format(_install_prefix),
+    ],
+    compiler = "x86_64-linux-musl-gcc",
+    compiler_version = "//:gcc_version",
+    ld = "{}/x86_64-linux-musl/bin/x86_64-linux-musl-ld".format(_install_prefix),
+    ld_flags = ["--sysroot={}/x86_64-linux-musl".format(_install_prefix)],
+    sys_includes = [
+        "{}/x86_64-linux-musl/x86_64-linux-musl/include".format(_install_prefix),
+        "{}/x86_64-linux-musl/lib/gcc/x86_64-linux-musl/{{compiler_version}}/include".format(_install_prefix),
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _x86_64_gcc,
+)
+
+cc_toolchain(
+    name = "gcc-linux-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":gcc-linux-x86_64-config",
+    toolchain_identifier = _x86_64_gcc,
+)
+
+toolchain(
+    name = "gcc-linux-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":gcc-linux-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# clang-macos-aarch64
+#
+
+# Toolchain identifier.
+_macos_aarch64_clang = "toolchain-clang-macos-aarch64"
+
+cc_toolchain_config(
+    name = "clang-macos-aarch64-config",
+    # NOTE: building with `libtool` does not work on macOS due to lack of
+    # support in the `configure_make` rule provided by `rules_foreign_cc`.
+    # Therefore, we require setting `ar` as the archiver tool on macOS.
+    ar = "/usr/bin/ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    ar_flags = "rcs",
+    cc = "/usr/bin/clang",
+    compiler = "clang",
+    compiler_version = "//:clang_version",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
+        "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
+    ],
+    target_cpu = "aarch64",
+    toolchain_identifier = _macos_aarch64_clang,
+)
+
+cc_toolchain(
+    name = "clang-macos-aarch64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":clang-macos-aarch64-config",
+    toolchain_identifier = _macos_aarch64_clang,
+)
+
+toolchain(
+    name = "clang-macos-aarch64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:aarch64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:aarch64",
+    ],
+    toolchain = ":clang-macos-aarch64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# clang-macos-x86_64
+#
+
+# Toolchain identifier.
+_macos_x86_64_clang = "toolchain-clang-macos-x86_64"
+
+cc_toolchain_config(
+    name = "clang-macos-x86_64-config",
+    # NOTE: building with `libtool` does not work on macOS due to lack of
+    # support in the `configure_make` rule provided by `rules_foreign_cc`.
+    # Therefore, we require setting `ar` as the archiver tool on macOS.
+    ar = "/usr/bin/ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    ar_flags = "rcs",
+    cc = "/usr/bin/clang",
+    compiler = "clang",
+    compiler_version = "//:clang_version",
+    ld = "/usr/bin/ld",
+    sys_includes = [
+        "/Library/Developer/CommandLineTools/usr/lib/clang/{compiler_version}/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/{compiler_version}/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _macos_x86_64_clang,
+)
+
+cc_toolchain(
+    name = "clang-macos-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":clang-macos-x86_64-config",
+    toolchain_identifier = _macos_x86_64_clang,
+)
+
+toolchain(
+    name = "clang-macos-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":clang-macos-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# brew-clang-macos-x86_64
+#
+
+# Toolchain identifier.
+_macos_x86_64_brew_clang = "toolchain-brew-clang-macos-x86_64"
+
+cc_toolchain_config(
+    name = "brew-clang-macos-x86_64-config",
+    # NOTE: building with `libtool` does not work on macOS due to lack of
+    # support in the `configure_make` rule provided by `rules_foreign_cc`.
+    # Therefore, we require setting `ar` as the archiver tool on macOS.
+    ar = "/usr/local/opt/llvm@15/bin/llvm-ar",
+    # By default, Bazel passes the `rcsD` flags to `ar`, but macOS's `ar`
+    # implementation doesn't support `D`. We remove it with this attribute
+    # and corresponding `ar_flags_feature` in `cfg.bzl`.
+    # See https://github.com/bazelbuild/bazel/issues/15875.
+    ar_flags = "rcs",
+    cc = "/usr/local/opt/llvm@15/bin/clang",
+    compiler = "clang",
+    compiler_version = "//:clang_version",
+    ld = "/usr/local/opt/llvm@15/bin/llvm-lld",
+    nm = "/usr/local/opt/llvm@15/bin/llvm-nm",
+    sys_includes = [
+        "/usr/local/Cellar/llvm@15/15.0.7/lib/clang/15.0.7/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include",
+    ],
+    target_cpu = "x86_64",
+    toolchain_identifier = _macos_x86_64_brew_clang,
+)
+
+cc_toolchain(
+    name = "brew-clang-macos-x86_64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":brew-clang-macos-x86_64-config",
+    toolchain_identifier = _macos_x86_64_brew_clang,
+)
+
+toolchain(
+    name = "brew-clang-macos-x86_64-toolchain",
+    exec_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":brew-clang-macos-x86_64",
+    toolchain_type = ":toolchain_type",
+)
+
+#
+# BOOTSTRAPPING
+#
+
+# We can't build some artifacts, like musl libc and its toolchain, in Bazel
+# itself (i.e. by adding a remote repository to `WORKSPACE.bazel` and a
+# corresponding `BUILD` file in `bazel/third_party/<dependency>`) because doing
+# so introduces a circular dependency during Bazel C/C++ toolchain resolution.
+
+# musl-cross-make builds musl-libc-compatible gcc toolchains from source.
+_musl_cross_make_version = "99f2cbc7e230f72bde3394be3ebd50497cb53e89"
+
+_musl_cross_make_archive = "https://github.com/ripperi/musl-cross-make/archive/{}.tar.gz".format(_musl_cross_make_version)
+
+genrule(
+    name = "install-aarch64-linux-musl-gcc",
+    outs = ["install-aarch64-linux-musl-gcc.sh"],
+    cmd = """
+    echo 'aarch64_linux_musl_install={}/aarch64-linux-musl'                         >  $@
+    echo 'if [ ! -d $$aarch64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -c {}'                                                           >> $@
+    echo '    tar -xf {}.tar.gz'                                                    >> $@
+    echo '    archive=musl-cross-make-{}'                                           >> $@
+    echo '    echo OUTPUT=$$aarch64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    echo GCC_VER=11.4.0 >> $$archive/config.mak'                          >> $@
+    echo '    echo MUSL_VER=1.2.5 >> $$archive/config.mak'                          >> $@
+    echo '    TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=aarch64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo '    sudo chown --recursive $$USER $$aarch64_linux_musl_install'           >> $@
+    echo 'fi'                                                                       >> $@
+    """.format(
+        _install_prefix,
+        _musl_cross_make_archive,
+        _musl_cross_make_version,
+        _musl_cross_make_version,
+    ),
+    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "aarch64-linux-musl-gcc",
+    srcs = ["install-aarch64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "install-x86_64-linux-musl-gcc",
+    outs = ["install-x86_64-linux-musl-gcc.sh"],
+    cmd = """
+    echo 'x86_64_linux_musl_install={}/x86_64-linux-musl'                          >  $@
+    echo 'if [ ! -d $$x86_64_linux_musl_install ]; then'                           >> $@
+    echo '    wget -c {}'                                                          >> $@
+    echo '    tar -xf {}.tar.gz'                                                   >> $@
+    echo '    archive=musl-cross-make-{}'                                          >> $@
+    echo '    echo OUTPUT=$$x86_64_linux_musl_install > $$archive/config.mak'      >> $@
+    echo '    echo GCC_VER=11.4.0 >> $$archive/config.mak'                         >> $@
+    echo '    echo MUSL_VER=1.2.5 >> $$archive/config.mak'                         >> $@
+    echo '    TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc`'              >> $@
+    echo '    sudo TARGET=x86_64-linux-musl make -s -C$$archive -j`nproc` install' >> $@
+    echo '    sudo chown --recursive $$USER $$x86_64_linux_musl_install'           >> $@
+    echo 'fi'                                                                      >> $@
+    """.format(
+        _install_prefix,
+        _musl_cross_make_archive,
+        _musl_cross_make_version,
+        _musl_cross_make_version,
+    ),
+    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "x86_64-linux-musl-gcc",
+    srcs = ["install-x86_64-linux-musl-gcc"],
+    exec_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)

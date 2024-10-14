@@ -1,0 +1,116 @@
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer")
+
+#
+# IMAGE CREATION
+#
+
+sh_binary(
+    name = "start-urbit",
+    srcs = ["start_urbit.sh"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "get-urbit-code",
+    srcs = ["get_urbit_code.sh"],
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "reset-urbit-code",
+    srcs = ["reset_urbit_code.sh"],
+    visibility = ["//visibility:private"],
+)
+
+container_run_and_commit_layer(
+    name = "install_pkgs",
+    commands = [
+        "apk update",
+        "apk add bash curl",
+    ],
+    docker_run_flags = ["--network=host"],
+    image = "@alpine_linux_x86_64//image",
+    visibility = ["//visibility:private"],
+)
+
+container_image(
+    name = "image_x86_64",
+    base = "@alpine_linux_x86_64//image",
+    cmd = ["start-urbit"],
+    directory = "/bin",
+    # `/bin` is probably on the default path, but append it just to be safe.
+    env = {
+        "PATH": "$$PATH:/bin",
+    },
+    files = [
+        ":get-urbit-code",
+        ":reset-urbit-code",
+        ":start-urbit",
+        "//pkg/vere:urbit",
+    ],
+    layers = [":install_pkgs"],
+    ports = [
+        "80/tcp",
+        "34343/udp",
+    ],
+    volumes = ["/urbit"],
+    workdir = "/urbit",
+    visibility = ["//visibility:public"],
+)
+
+#
+# IMAGE UPLOAD
+#
+
+_docker_repository = "tloncorp/vere"
+
+genrule(
+    name = "version_tag",
+    srcs = ["//:version"],
+    outs = ["docker_version_tag"],
+    cmd = """
+    echo -n v$$(cat $<) > $@
+    """,
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "pace_tag",
+    srcs = ["//:PACE"],
+    outs = ["docker_pace_tag"],
+    cmd = """
+    tr -d '\n' < $< > $@
+    """,
+    visibility = ["//visibility:private"],
+)
+
+container_push(
+    name = "push_latest_x86_64",
+    format = "Docker",
+    image = ":image_x86_64",
+    registry = "docker.io",
+    repository = _docker_repository,
+    tag = "latest",
+    visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push_version_x86_64",
+    format = "Docker",
+    image = ":image_x86_64",
+    registry = "docker.io",
+    repository = _docker_repository,
+    tag_file = ":version_tag",
+    visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push_pace_x86_64",
+    format = "Docker",
+    image = ":image_x86_64",
+    registry = "docker.io",
+    repository = _docker_repository,
+    tag_file = ":pace_tag",
+    visibility = ["//visibility:public"],
+)

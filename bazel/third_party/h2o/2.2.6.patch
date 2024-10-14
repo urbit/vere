@@ -1,0 +1,47 @@
+diff --git a/deps/klib/ksw.c b/deps/klib/ksw.c
+index 742fec90b..9a11a21bd 100644
+--- a/deps/klib/ksw.c
++++ b/deps/klib/ksw.c
+@@ -25,7 +25,11 @@
+ 
+ #include <stdlib.h>
+ #include <stdint.h>
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
++#include "sse2neon.h"
++#else
+ #include <emmintrin.h>
++#endif
+ #include "ksw.h"
+
+ #ifdef __GNUC__
+diff --git a/deps/klib/test/kbit_test.c b/deps/klib/test/kbit_test.c
+index 3ae3bd309..7db05a186 100644
+--- a/deps/klib/test/kbit_test.c
++++ b/deps/klib/test/kbit_test.c
+@@ -1,7 +1,11 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <time.h>
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
++#include "sse2neon.h"
++#else
+ #include <emmintrin.h>
++#endif
+ #include "kbit.h"
+
+ // from bowtie-0.9.8.1
+diff --git a/deps/picohttpparser/picohttpparser.c b/deps/picohttpparser/picohttpparser.c
+index a707070d1..714850f64 100644
+--- a/deps/picohttpparser/picohttpparser.c
++++ b/deps/picohttpparser/picohttpparser.c
+@@ -28,7 +28,9 @@
+ #include <stddef.h>
+ #include <string.h>
+ #ifdef __SSE4_2__
+-#ifdef _MSC_VER
++#if defined(URBIT_RUNTIME_CPU_AARCH64)
++#include "sse2neon.h"
++#elif defined(_MSC_VER)
+ #include <nmmintrin.h>
+ #else
+ #include <x86intrin.h>
