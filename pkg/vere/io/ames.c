@@ -5,7 +5,7 @@
 #include "io/ames/stun.h"
 
 #include "noun.h"
-#include "ur/ur.h"
+#include "ur.h"
 
 #include "zlib.h"
 #include "natpmp.h"

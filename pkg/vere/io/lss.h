@@ -5,7 +5,7 @@
 #include "ivory.h"
 
 #include "noun.h"
-#include "ur/ur.h"
+#include "ur.h"
 
 c3_w lss_proof_size(c3_w leaves);
 

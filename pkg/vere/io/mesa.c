@@ -4,7 +4,7 @@
 #include "ivory.h"
 
 #include "noun.h"
-#include "ur/ur.h"
+#include "ur.h"
 #include "ship.h"
 #include "io/ames/stun.h"
 #include "mesa/mesa.h"
@@ -15,7 +15,7 @@
 #include <inttypes.h>
 #include <jets/q.h>
 #include <manage.h>
-#include <c3/motes.h>
+#include <motes.h>
 #include <retrieve.h>
 #include <stdio.h>
 #include <string.h>

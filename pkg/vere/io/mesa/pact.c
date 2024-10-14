@@ -5,7 +5,7 @@
 // only need for tests, can remove
 #include "vere.h"
 #include "ivory.h"
-#include "ur/ur.h"
+#include "ur.h"
 #include "ship.h"
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
