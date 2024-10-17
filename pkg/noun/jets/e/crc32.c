@@ -21,7 +21,7 @@ u3qe_crc32(u3_noun input_octs)
   c3_y* input;
 
   if (c3y == u3a_is_cat(tail)) {
-    input = &tail;
+    input = (c3_y*)&tail;
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(tail);

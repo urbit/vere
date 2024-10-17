@@ -198,14 +198,6 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
   return pro;
 }
 
-/* _cv_scot(): print atom.
-*/
-static u3_noun
-_cv_scot(u3_noun dim)
-{
-  return u3do("scot", dim);
-}
-
 /* u3v_time(): set the reck time.
 */
 void
@@ -439,7 +431,7 @@ u3v_reclaim(void)
 /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
-u3v_rewrite_compact()
+u3v_rewrite_compact(void)
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 

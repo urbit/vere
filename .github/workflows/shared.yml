@@ -37,18 +37,8 @@ jobs:
   urbit:
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # GitHub doesn't provide AArch64 Linux machines, so we self-host a
-          # runner with BuildJet instead.
-          - { target: linux-aarch64, runner: buildjet-2vcpu-ubuntu-2204-arm	}
-          - { target: linux-x86_64, runner: ubuntu-22.04 }
-          # GitHub doesn't provide macOS machines with Apple Silicon, so we
-          # self-host a runner with MacStadium instead.
-          - { target: macos-aarch64, runner: [self-hosted, macos, ARM64] }
-          - { target: macos-x86_64, runner: macos-12 }
 
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-22.04
 
     steps:
       #
@@ -57,7 +47,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Set swap space
-        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
         run: |
           echo "Memory and swap:"
           free -h
@@ -83,125 +72,66 @@ jobs:
           swapon --show
           echo
 
-      - name: chown /usr/local
-        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
-        run: |
-          sudo chown $(whoami) /usr/local
-
-      - name: Set up build cache
-        uses: actions/cache@v3
+      - uses: mlugg/setup-zig@v1
         with:
-          key: ${{ matrix.target }}-cache-1
-          path: |
-            # # Cache bazel path on Linux.
-            ~/.cache/bazel/_bazel_$(whoami)
-            # # Cache bazel path on macOS.
-            /private/var/tmp/_bazel_$(whoami)
-            # Cache musl libc toolchains.
-            /usr/local/*-musl
+          version: 0.13.0
 
-      - name: chown /usr/local/*-musl
-        if: ${{ matrix.target == 'linux-x86_64' || matrix.target == 'linux-aarch64'}}
+      - name: Build binaries
         run: |
-          chown -R $USER /usr/local/*-musl || true
-
-      - name: Install bazel
-        if: ${{ matrix.target == 'linux-aarch64' }}
-        run: |
-          version="6.2.0"
-          platform="linux-arm64"
-          base_url="https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-${platform}"
-          # download bazel from github releases
-          curl -L -O "${base_url}"
-          # make bazel executable
-          chmod +x bazel-${version}-${platform}
-          # verify the binary has a good checksum
-          curl -L -O "${base_url}.sha256"
-          if [[ "$(sha256sum bazel-${version}-${platform})" == "$(cat bazel-${version}-${platform}.sha256)" ]]; then
-            echo "Checksum matches"
+          if [[ "${{ inputs.pace }}" == "live" ]]; then
+            zig build                  \
+              -Dall                    \
+              -Drelease                \
+              --summary all
           else
-            echo "Checksum does not match"
-            exit 1
+            zig build                  \
+              -Dall                    \
+              -Doptimize=ReleaseFast   \
+              -Dpace=${{inputs.pace}}  \
+              --summary all
           fi
-          # download and import the public key
-          curl -L -O https://bazel.build/bazel-release.pub.gpg
-          gpg --import bazel-release.pub.gpg
-          # verify the binary has a good signature
-          curl -L -O "${base_url}.sig"
-          if [[ `gpg --verify bazel-${version}-${platform}.sig` -eq 0 ]]; then
-            echo "Good signature from bazel"
-            sudo mv bazel-${version}-${platform} /usr/local/bin/bazel
-          else
-            echo "Bad signature from bazel"
-            exit 1
-          fi
-
-      - name: Install toolchains
-        run: |
-          case "${{ matrix.target }}" in
-            "linux-aarch64")
-              sudo apt-get -y install autoconf-archive pkg-config
-              bazel run //bazel/toolchain:aarch64-linux-musl-gcc
-              ;;
-            "linux-x86_64")
-              sudo apt-get -y install autoconf-archive
-              bazel run //bazel/toolchain:x86_64-linux-musl-gcc
-              ;;
-            "macos-aarch64")
-              brew install pkg-config autoconf-archive
-              ;;
-            "macos-x86_64")
-              # Switch Xcode path to match the path specified in our bazel toolchain.
-              sudo xcode-select --switch /Library/Developer/CommandLineTools
-              brew install automake autoconf-archive libtool llvm@15
-              ;;
-            *)
-              echo "Unsupported target: ${{ matrix.target }}"
-              exit 1
-              ;;
-          esac
-
-
-      - name: Build binary
-        run: |
-          echo "${{ inputs.pace }}" > ./PACE
-          case "${{ matrix.target }}" in
-            "linux-aarch64")
-              bazel build :urbit
-              ;;
-            "linux-x86_64")
-              bazel build :urbit
-              ;;
-            "macos-aarch64")
-              bazel build :urbit
-              ;;
-            "macos-x86_64")
-              bazel build --clang_version=15.0.7 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain :urbit
-              ;;
-          esac
-
       - name: Run unit tests
         run: |
-          if [[ "${{ matrix.target }}" == "macos-x86_64" ]]; then
-            bazel test --build_tests_only --clang_version=15.0.7 --extra_toolchains=//bazel/toolchain:brew-clang-macos-x86_64-toolchain  ...
-          else
-            bazel test --build_tests_only ...
-          fi
+          zig build                    \
+            ur-test ent-test           \
+            hashtable-test jets-test   \
+            nock-test retrieve-test    \
+            serial-test ames-test      \
+            boot-test newt-test        \
+            vere-noun-test unix-test   \
+            benchmarks                 \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            --summary all
+
+      - name: Build test binary
+        if: ${{ inputs.fake_tests }}
+        run: |
+          zig build                    \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            -Dbinary-name=urbit-test   \
+            -Dcpu-dbg                  \
+            -Dmem-dbg                  \
+            -Dc3dbg                    \
+            -Dsnapshot-validation      \
+            --summary all
+
+      - name: Boot fake ship
+        if: ${{ inputs.fake_tests }}
+        env:
+          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
+        run: ./boot-fake-ship.sh
 
       - name: Run fake ship tests
-        if: ${{ matrix.target == 'linux-x86_64' && inputs.fake_tests }}
-        run: |
-          # See https://github.com/urbit/vere/issues/40.
-          bazel build //pkg/vere:test-fake-ship
-
+        if: ${{ inputs.fake_tests }}
+        env:
+          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
+        run: ./test-fake-ship.sh
 
       #
       # UPLOAD TO GCP
       #
-      - name: Prepare binary for upload to GCP
-        if: ${{ inputs.upload }}
-        run: |
-          echo "urbit_static=$GITHUB_WORKSPACE/bazel-bin/pkg/vere/urbit" | tee -a $GITHUB_ENV
 
       - uses: google-github-actions/auth@v1
         if: ${{ inputs.upload }}
@@ -216,30 +146,38 @@ jobs:
       - name: Upload binary to bootstrap.urbit.org
         if: ${{ inputs.upload }}
         run: |
-          bazel build :version_str
-          sha_version=$(cat ./bazel-bin/version)
-          if ${{ inputs.next != null }}; then
-            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
-            target="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
-          else
-            target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${{ matrix.target }}"
-          fi
+          sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
+          declare -a targets=(
+            "aarch64-linux-musl linux-aarch64"
+            "aarch64-macos-none macos-aarch64"
+            "x86_64-linux-musl linux-x86_64"
+            "x86_64-macos-none macos-x86_64"
+          )
+          for t in "${targets[@]}"
+          do
+            IFS=' ' read zig_target target <<< "${t}"
+            urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+            if ${{ inputs.next != null }}; then
+              next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
+            else
+              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
+            fi
 
-          args=""
-          # We never overwrite a binary deployed to the "live" train, but we do
-          # overwrite same-versioned binaries deployed to the "soon" and "edge"
-          # trains.
-          if [[ "${{ inputs.pace }}" == "live" ]]; then
-            gsutil cp -n "${{ env.urbit_static }}" "$target"
-          else
-            gsutil cp "${{ env.urbit_static }}" "$target"
-          fi
-          exitcode=$?
+            args=""
+            # We never overwrite a binary deployed to the "live" train, but we do
+            # overwrite same-versioned binaries deployed to the "soon" and "edge"
+            # trains.
+            if [[ "${{ inputs.pace }}" == "live" ]]; then
+              gsutil cp -n "${urbit_static}" "$dest"
+            else
+              gsutil cp "${urbit_static}" "$dest"
+            fi
+            exitcode=$?
 
-          [ $exitcode -eq 0 ] &&
-            echo "upload to $target complete." ||
-            echo "upload to $target failed.";
-          exit $exitcode
+            ([ $exitcode -eq 0 ] && echo "upload to $dest complete.") ||
+            (echo "upload to $dest failed." && exit $exitcode);
+          done
 
   upload-version-string:
     name: Upload latest deployed version string to GCP
@@ -260,6 +198,8 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
+          printf $(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.10s $(git rev-parse HEAD) > ./VERSION
+
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
             target="gs://${UPLOAD_BASE}/next/kelvin/${next}/last"
@@ -267,10 +207,9 @@ jobs:
             target="gs://${UPLOAD_BASE}/${{ inputs.pace }}/last"
           fi
 
-          bazel build :version_str
           # We don't use -n here because we want to overwrite the version
           # string.
-          gsutil cp ./bazel-bin/version "$target"
+          gsutil cp ./VERSION "$target"
           exitcode=$?
 
           [ $exitcode -eq 0 ] &&

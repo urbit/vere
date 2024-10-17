@@ -1,0 +1,13 @@
+.{
+    .name = "whereami",
+    .version = "0.0.1",
+    .dependencies = .{
+        .whereami = .{
+            .url = "https://github.com/gpakosz/whereami/archive/ba364cd54fd431c76c045393b6522b4bff547f50.tar.gz",
+            .hash = "122044406f3ffcdba6c41cdcbf8c2cfe3197db3560c6f1baa7a82c651a8a20dac35b",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

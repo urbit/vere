@@ -3,6 +3,8 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "c3/motes.h"
+
 #include "noun.h"
 #include "softfloat.h"
 #include "softblas.h"
@@ -1628,7 +1630,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           float32_t x_val32 = ((float32_t*)x_bytes)[i];
           // Perform division x/n
-          float32_t div_result32 = f32_mul((float32_t)in32, (float32_t)x_val32);
+          float32_t div_result32 = f32_mul(in32, x_val32);
           // Compute floor of the division result
           c3_ds floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t floor_float32 = i64_to_f32(floor_result32);
@@ -3284,13 +3286,12 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      u3_noun x_shape, x_bloq, x_kind, x_tail,
+      u3_noun x_shape, x_bloq, x_kind,
               y_shape,
               rnd;
       x_shape = u3h(x_meta);          //  2
       x_bloq = u3h(u3t(x_meta));      //  6
       x_kind = u3h(u3t(u3t(x_meta))); // 14
-      x_tail = u3t(u3t(u3t(x_meta))); // 15
       y_shape = u3h(y_meta);          //  2
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       if ( c3n == _check(u3nc(x_meta, x_data)) ||

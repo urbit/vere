@@ -1431,7 +1431,7 @@ u3r_chop_bits(c3_g  bif_g,
       hig_w   ^= src_w[1] << fib_y;
     }
 
-    *dst_w    ^= (hig_w & ((1 << wid_d) - 1)) << bit_g;
+    *dst_w    ^= (hig_w & (((c3_d)1 << wid_d) - 1)) << bit_g;
   }
 }
 

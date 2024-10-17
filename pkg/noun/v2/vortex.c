@@ -1,16 +1,16 @@
 /// @file
 
-#include "pkg/noun/vortex.h"
-#include "pkg/noun/v2/vortex.h"
+#include "../vortex.h"
+#include "v2/vortex.h"
 
-#include "pkg/noun/v2/allocate.h"
+#include "v2/allocate.h"
 
 u3v_v2_home* u3v_v2_Home;
 
 /* u3v_v2_mig_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
-u3v_v2_mig_rewrite_compact()
+u3v_v2_mig_rewrite_compact(void)
 {
   u3v_v2_arvo* arv_u = &(u3H_v2->arv_u);
 
