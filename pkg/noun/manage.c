@@ -2081,7 +2081,7 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
-      u3l_log("see urbit.org/using/install/#about-swap-space"
+      u3l_log("see https://docs.urbit.org/manual/getting-started/self-hosted/cloud-hosting"
               " for adding swap space");
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",

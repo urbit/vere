@@ -258,6 +258,14 @@
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
 
+    /* u3_even: boot event specifier
+    */
+      typedef struct _u3_even {
+       c3_i             kin_i;
+       c3_c*            loc_c;
+       struct _u3_even* pre_u;
+     } u3_even;
+
     /* u3_opts: command line configuration.
     */
       typedef struct _u3_opts {
@@ -309,6 +317,10 @@
         c3_o    map;                        //  --no-demand (reversed)
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
+        u3_even* vex_u;                     //  --prop-*, boot enhancements
+
+        c3_o    beb;                        //  --behn-allow-blocked
+        c3_z    siz_i;                      //  --lmdb-map-size
       } u3_opts;
 
     /* u3_host: entire host.
@@ -541,6 +553,7 @@
           u3_dire*         dir_u;               //  main pier directory
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
+          c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch
@@ -1428,7 +1441,8 @@
                      u3_noun ven,                   //  boot event
                      u3_noun pil,                   //  type-of/path-to pill
                      u3_noun pax,                   //  path to pier
-                     u3_weak fed);                  //  extra private keys
+                     u3_weak fed,                   //  extra private keys
+                     u3_noun mor);                  //  extra boot seq props
 
       /* u3_pier_stay(): restart the pier.
       */
@@ -1544,6 +1558,13 @@
       */
         void
         u3_daemon_init();
+
+#if defined(U3_OS_osx)
+      /* darwin_register_mach_exception_handler(): make lldb work
+       */
+        void
+        darwin_register_mach_exception_handler();
+#endif
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */

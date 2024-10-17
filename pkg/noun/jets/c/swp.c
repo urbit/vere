@@ -10,9 +10,15 @@ u3_noun
 u3qc_swp(u3_atom a,
          u3_atom b)
 {
-  //XX write a proper c-style swp, maybe
-  //
-  return u3kc_rep(u3k(a), 1, u3kb_flop(u3qc_rip(a, 1, b)));
+  c3_w len_w = u3r_met(a, b);
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, a, len_w);
+
+  for (c3_w i = 0; i < len_w; i++) {
+    u3r_chop(a, i, 1, len_w - i - 1, sab_u.buf_w, b);
+  }
+         
+  return u3i_slab_mint(&sab_u);
 }
 
 u3_noun
