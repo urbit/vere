@@ -72,7 +72,7 @@
 ___gmpn_rshift:
 	mov	x16, x0
 	sub	x8, xzr, x3
-	lsr	x18, x2, #2
+	lsr	x17, x2, #2
 	tbz	x2, #0, Lbx0
 
 Lbx1:	ldr	x5, [x1]
@@ -80,7 +80,7 @@ Lbx1:	ldr	x5, [x1]
 
 Lb01:	lsl	x0, x5, x8
 	lsr	x2, x5, x3
-	cbnz	x18, Lgt1
+	cbnz	x17, Lgt1
 	str	x2, [x16]
 	ret
 Lgt1:	ldp	x4, x5, [x1,#8]
@@ -101,7 +101,7 @@ Lb10:	lsl	x0, x4, x8
 	lsr	x13, x4, x3
 	lsl	x10, x5, x8
 	lsr	x2, x5, x3
-	cbnz	x18, Lgt2
+	cbnz	x17, Lgt2
 	orr	x10, x10, x13
 	stp	x10, x2, [x16]
 	ret
@@ -133,11 +133,11 @@ Llo2:	lsl	x10, x5, x8
 	orr	x11, x12, x2
 	stp	x11, x10, [x16,#32]!
 	lsr	x2, x5, x3
-Llo0:	sub	x18, x18, #1
+Llo0:	sub	x17, x17, #1
 Llo3:	lsl	x10, x7, x8
 	lsl	x12, x6, x8
 	lsr	x13, x6, x3
-	cbnz	x18, Ltop
+	cbnz	x17, Ltop
 
 Lend:	orr	x10, x10, x13
 	orr	x11, x12, x2
