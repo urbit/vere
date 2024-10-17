@@ -37,6 +37,7 @@ Now, under the GMP root dir run `make` and copy these files as well:
 - `fac_table.h`
 - `fib_table.h`
 - `trialdivtab.h`
+- `sieve_table.h`
 - `mpn/fib_table.c`
 - `mpn/jacobitab.h`
 - `mpn/mp_bases.c`
