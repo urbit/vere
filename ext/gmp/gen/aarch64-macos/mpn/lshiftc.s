@@ -73,7 +73,7 @@ ___gmpn_lshiftc:
 	add	x16, x0, x2, lsl #3
 	add	x1, x1, x2, lsl #3
 	sub	x8, xzr, x3
-	lsr	x18, x2, #2
+	lsr	x17, x2, #2
 	tbz	x2, #0, Lbx0
 
 Lbx1:	ldr	x4, [x1,#-8]
@@ -81,7 +81,7 @@ Lbx1:	ldr	x4, [x1,#-8]
 
 Lb01:	lsr	x0, x4, x8
 	lsl	x2, x4, x3
-	cbnz	x18, Lgt1
+	cbnz	x17, Lgt1
 	mvn	x2, x2
 	str	x2, [x16,#-8]
 	ret
@@ -102,7 +102,7 @@ Lb10:	lsr	x0, x5, x8
 	lsl	x13, x5, x3
 	lsr	x10, x4, x8
 	lsl	x2, x4, x3
-	cbnz	x18, Lgt2
+	cbnz	x17, Lgt2
 	eon	x10, x10, x13
 	mvn	x2, x2
 	stp	x2, x10, [x16,#-16]
@@ -137,11 +137,11 @@ Llo2:	lsr	x10, x4, x8
 	eon	x11, x12, x2
 	stp	x10, x11, [x16,#-32]!
 	lsl	x2, x4, x3
-Llo0:	sub	x18, x18, #1
+Llo0:	sub	x17, x17, #1
 Llo3:	lsr	x10, x6, x8
 	lsl	x13, x7, x3
 	lsr	x12, x7, x8
-	cbnz	x18, Ltop
+	cbnz	x17, Ltop
 
 Lend:	eon	x10, x10, x13
 	eon	x11, x12, x2

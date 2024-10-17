@@ -3,7 +3,7 @@
 
 /*
 
-Copyright 1996-2020 Free Software Foundation, Inc.
+Copyright 1996-2022 Free Software Foundation, Inc.
 
 This file is part of the GNU MP Library.
 
@@ -187,6 +187,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_HOST_CPU_skylake */
 /* #undef HAVE_HOST_CPU_silvermont */
 /* #undef HAVE_HOST_CPU_goldmont */
+/* #undef HAVE_HOST_CPU_tremont */
 /* #undef HAVE_HOST_CPU_k8 */
 /* #undef HAVE_HOST_CPU_k10 */
 /* #undef HAVE_HOST_CPU_bulldozer */
@@ -201,6 +202,9 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_HOST_CPU_s390_z9 */
 /* #undef HAVE_HOST_CPU_s390_z10 */
 /* #undef HAVE_HOST_CPU_s390_z196 */
+/* #undef HAVE_HOST_CPU_s390_z13 */
+/* #undef HAVE_HOST_CPU_s390_z14 */
+/* #undef HAVE_HOST_CPU_s390_z15 */
 
 /* Define to 1 iff we have a s390 with 64-bit registers.  */
 /* #undef HAVE_HOST_CPU_s390_zarch */
@@ -258,7 +262,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_add_n 1
 /* #undef HAVE_NATIVE_mpn_add_n_sub_n */
 #define HAVE_NATIVE_mpn_add_nc 1
-#define HAVE_NATIVE_mpn_addaddmul_1msb0 1
+/* #undef HAVE_NATIVE_mpn_addaddmul_1msb0 */
 #define HAVE_NATIVE_mpn_addlsh1_n 1
 #define HAVE_NATIVE_mpn_addlsh2_n 1
 #define HAVE_NATIVE_mpn_addlsh_n 1
@@ -348,7 +352,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_rsh1sub_n 1
 #define HAVE_NATIVE_mpn_rsh1sub_nc 1
 #define HAVE_NATIVE_mpn_rshift 1
-/* #undef HAVE_NATIVE_mpn_sbpi1_bdiv_r */
+#define HAVE_NATIVE_mpn_sbpi1_bdiv_r 1
 #define HAVE_NATIVE_mpn_sqr_basecase 1
 /* #undef HAVE_NATIVE_mpn_sqr_diagonal */
 #define HAVE_NATIVE_mpn_sqr_diag_addlsh1 1
@@ -542,13 +546,13 @@ see https://www.gnu.org/licenses/.
 #define PACKAGE "gmp"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "gmp-bugs@gmplib.org, see https://gmplib.org/manual/Reporting-Bugs.html"
+#define PACKAGE_BUGREPORT "gmp-bugs@gmplib.org (see https://gmplib.org/manual/Reporting-Bugs.html)"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "GNU MP"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU MP 6.2.1"
+#define PACKAGE_STRING "GNU MP 6.3.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gmp"
@@ -557,7 +561,7 @@ see https://www.gnu.org/licenses/.
 #define PACKAGE_URL "http://www.gnu.org/software/gmp/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "6.2.1"
+#define PACKAGE_VERSION "6.3.0"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -590,7 +594,7 @@ see https://www.gnu.org/licenses/.
 /* #undef TUNE_SQR_TOOM2_MAX */
 
 /* Version number of package */
-#define VERSION "6.2.1"
+#define VERSION "6.3.0"
 
 /* Define to 1 to enable ASSERT checking, per --enable-assert */
 /* #undef WANT_ASSERT */

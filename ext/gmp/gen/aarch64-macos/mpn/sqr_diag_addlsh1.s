@@ -58,7 +58,7 @@
 	
 ___gmpn_sqr_diag_addlsh1:
 	ldr	x15, [x2],#8
-	lsr	x18, x3, #1
+	lsr	x14, x3, #1
 	tbz	x3, #0, Lbx0
 
 Lbx1:	adds	x7, xzr, xzr
@@ -73,8 +73,8 @@ Lbx0:	adds	x5, xzr, xzr
 	ldr	x17, [x2],#16
 	ldp	x6, x7, [x1],#32
 	umulh	x11, x15, x15
-	sub	x18, x18, #1
-	cbz	x18, Lend
+	sub	x14, x14, #1
+	cbz	x14, Lend
 
 	.align	4
 Ltop:	extr	x9, x6, x5, #63
@@ -95,8 +95,8 @@ Lmid:	extr	x9, x4, x7, #63
 	extr	x8, x5, x4, #63
 	stp	x12, x13, [x0],#16
 	adcs	x12, x8, x10
-	sub	x18, x18, #1
-	cbnz	x18, Ltop
+	sub	x14, x14, #1
+	cbnz	x14, Ltop
 
 Lend:	extr	x9, x6, x5, #63
 	mul	x10, x17, x17
