@@ -26,12 +26,14 @@
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       [%work mil=@ job=(pair @da ovum)]
+      [%quiz $%([%quac ~])]
   ==
 ::  +plea: from serf to king
 ::
 +$  plea
   $%  [%live ~]
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
+      [%quiz $%([%quac p=*])]
       [%slog pri=@ tank]
       [%flog cord]
       $:  %peek
@@ -70,18 +72,70 @@ enum {
   _serf_fag_vega = 1 << 4   //  kernel reset
 };
 
+/* _serf_quac: convert a quac to a noun.
+*/
+u3_noun
+_serf_quac(u3m_quac* mas_u)
+{
+  u3_noun list = u3_nul;
+  c3_w i_w = 0;
+  if ( mas_u->qua_u != NULL ) {
+    while ( mas_u->qua_u[i_w] != NULL ) {
+      list = u3nc(_serf_quac(mas_u->qua_u[i_w]), list);
+      i_w++;
+    }
+  }
+  list = u3kb_flop(list);
+
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word(mas_u->siz_w), list);
+
+  c3_free(mas_u->nam_c);
+  c3_free(mas_u->qua_u);
+  c3_free(mas_u);
+
+  return mas;
+}
+
+/* _serf_quacs: convert an array of quacs to a noun list.
+*/
+u3_noun
+_serf_quacs(u3m_quac** all_u)
+{
+  u3_noun list = u3_nul;
+  c3_w i_w = 0;
+  while ( all_u[i_w] != NULL ) {
+    list = u3nc(_serf_quac(all_u[i_w]), list);
+    i_w++;
+  }
+  c3_free(all_u);
+  return u3kb_flop(list);
+}
+
+/* _serf_print_quacs: print an array of quacs.
+*/
+void
+_serf_print_quacs(FILE* fil_u, u3m_quac** all_u)
+{
+  fprintf(fil_u, "\r\n");
+  c3_w i_w = 0;
+  while ( all_u[i_w] != NULL ) {
+    u3a_print_quac(fil_u, 0, all_u[i_w]);
+    i_w++;
+  }
+}
+
 /* _serf_grab(): garbage collect, checking for profiling. RETAIN.
 */
-static void
-_serf_grab(u3_noun sac)
+static u3_noun
+_serf_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
     if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
     }
+    return u3_nul;
   }
   else {
-    c3_w tot_w = 0;
     FILE* fil_u;
 
 #ifdef U3_MEMORY_LOG
@@ -113,36 +167,77 @@ _serf_grab(u3_noun sac)
 #endif
 
     u3_assert( u3R == &(u3H->rod_u) );
-    fprintf(fil_u, "\r\n");
 
-    tot_w += u3a_maid(fil_u, "total userspace", u3a_prof(fil_u, 0, sac));
-    tot_w += u3m_mark(fil_u);
-    tot_w += u3a_maid(fil_u, "space profile", u3a_mark_noun(sac));
+    u3m_quac* pro_u = u3a_prof(fil_u, sac);
 
-    u3a_print_memory(fil_u, "total marked", tot_w);
-    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
-    u3a_print_memory(fil_u, "sweep", u3a_sweep());
+    if ( NULL == pro_u ) {
+      fflush(fil_u);
+      u3z(sac);
+      return u3_nul;
+    } else {
+      u3m_quac** all_u = c3_malloc(sizeof(*all_u) * 11);
+      all_u[0] = pro_u;
 
-    fflush(fil_u);
+      u3m_quac** var_u = u3m_mark();
+      all_u[1] = var_u[0];
+      all_u[2] = var_u[1];
+      all_u[3] = var_u[2];
+      all_u[4] = var_u[3];
+      c3_free(var_u);
+
+      c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
+                     + all_u[3]->siz_w + all_u[4]->siz_w;
+
+      all_u[5] = c3_calloc(sizeof(*all_u[5]));
+      all_u[5]->nam_c = strdup("space profile");
+      all_u[5]->siz_w = u3a_mark_noun(sac) * 4;
+
+      tot_w += all_u[5]->siz_w;
+
+      all_u[6] = c3_calloc(sizeof(*all_u[6]));
+      all_u[6]->nam_c = strdup("total marked");
+      all_u[6]->siz_w = tot_w;
+
+      all_u[7] = c3_calloc(sizeof(*all_u[7]));
+      all_u[7]->nam_c = strdup("free lists");
+      all_u[7]->siz_w = u3a_idle(u3R) * 4;
+
+      all_u[8] = c3_calloc(sizeof(*all_u[8]));
+      all_u[8]->nam_c = strdup("sweep");
+      all_u[8]->siz_w = u3a_sweep() * 4;
+      
+      all_u[9] = c3_calloc(sizeof(*all_u[9]));
+      all_u[9]->nam_c = strdup("loom");
+      all_u[9]->siz_w = u3C.wor_i * 4;
+
+      all_u[10] = NULL;
+
+      if ( c3y == pri_o ) {
+        _serf_print_quacs(fil_u, all_u);
+      }
+      fflush(fil_u);
 
 #ifdef U3_MEMORY_LOG
-    {
-      fclose(fil_u);
-    }
+      {
+        fclose(fil_u);
+      }
 #endif
 
-    u3z(sac);
+      u3_noun mas = _serf_quacs( all_u);
+      u3z(sac);
 
-    u3l_log("");
+      return mas;
+    }
   }
 }
 
 /* u3_serf_grab(): garbage collect.
 */
-void
-u3_serf_grab(void)
+u3_noun
+u3_serf_grab(c3_o pri_o)
 {
   u3_noun sac = u3_nul;
+  u3_noun res = u3_nul;
 
   u3_assert( u3R == &(u3H->rod_u) );
 
@@ -173,19 +268,31 @@ u3_serf_grab(void)
     u3z(gon);
   }
 
-  fprintf(stderr, "serf: measuring memory:\r\n");
-
   if ( u3_nul != sac ) {
-    _serf_grab(sac);
+    res = _serf_grab(sac, pri_o);
   }
   else {
-    u3a_print_memory(stderr, "total marked", u3m_mark(stderr));
+    fprintf(stderr, "sac is empty\r\n");
+    u3m_quac** var_u = u3m_mark();
+
+    c3_w tot_w = 0;
+    c3_w i_w = 0;
+    while ( var_u[i_w] != NULL ) {
+      tot_w += var_u[i_w]->siz_w;
+      u3a_quac_free(var_u[i_w]);
+      i_w++;
+    }
+    c3_free(var_u);
+
+    u3a_print_memory(stderr, "total marked", tot_w / 4);
     u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
     u3a_print_memory(stderr, "sweep", u3a_sweep());
     fprintf(stderr, "\r\n");
   }
 
   fflush(stderr);
+
+  return res;
 }
 
 /* u3_serf_post(): update serf state post-writ.
@@ -213,7 +320,7 @@ u3_serf_post(u3_serf* sef_u)
   //  XX this runs on replay too, |mass s/b elsewhere
   //
   if ( sef_u->fag_w & _serf_fag_mute ) {
-    _serf_grab(sef_u->sac);
+    u3z(_serf_grab(sef_u->sac, c3y));
     sef_u->sac   = u3_nul;
   }
 
@@ -906,7 +1013,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
 
       u3m_save();
-      u3_serf_grab();
+      u3_serf_grab(c3y);
 
       *ret = u3nc(c3__live, u3_nul);
       return c3y;
@@ -1024,10 +1131,22 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
           ret_o = c3y;
         }
       } break;
+      case c3__quiz: {
+        u3z(wit);
+        u3_noun res = u3_serf_grab(c3n);
+        if ( u3_none == res ) {
+          ret_o = c3n;
+        } else {
+          *pel = u3nt(c3__quiz, c3__quac, res);
+          ret_o = c3y;
+        }
+      } break;
     }
   }
 
-  u3z(wit);
+  if ( tag != c3__quiz ) {
+    u3z(wit);
+  }
   return ret_o;
 }
 
