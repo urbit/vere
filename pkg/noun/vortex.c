@@ -384,16 +384,33 @@ u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax)
 
 /* u3v_mark(): mark arvo kernel.
 */
-c3_w
-u3v_mark(FILE* fil_u)
+u3m_quac*
+u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
-  c3_w tot_w = 0;
 
-  tot_w += u3a_maid(fil_u, "  kernel", u3a_mark_noun(arv_u->roc));
-  tot_w += u3a_maid(fil_u, "  date", u3a_mark_noun(arv_u->now));
-  tot_w += u3a_maid(fil_u, "  wish cache", u3a_mark_noun(arv_u->yot));
-  return   u3a_maid(fil_u, "total arvo stuff", tot_w);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 4);
+
+  qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
+  qua_u[0]->nam_c = strdup("kernel");
+  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
+
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
+  qua_u[1]->nam_c = strdup("date");
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->now) * 4;
+
+  qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[2]->nam_c = strdup("wish cache");
+  qua_u[2]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
+
+  qua_u[3] = NULL;
+
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
+  tot_u->nam_c = strdup("total arvo stuff");
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w + qua_u[2]->siz_w;
+  tot_u->qua_u = qua_u;
+
+  return tot_u;
 }
 
 /* u3v_reclaim(): clear ad-hoc persistent caches to reclaim memory.
@@ -426,4 +443,3 @@ u3v_rewrite_compact(void)
   arv_u->now = u3a_rewritten_noun(arv_u->now);
   arv_u->yot = u3a_rewritten_noun(arv_u->yot);
 }
-

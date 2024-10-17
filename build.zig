@@ -283,6 +283,11 @@ fn build_single(
         .optimize = optimize,
     });
 
+    const softblas = b.dependency("softblas", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
@@ -485,10 +490,12 @@ fn build_single(
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
     pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
+    pkg_noun.linkLibrary(softblas.artifact("softblas"));
     if (t.os.tag == .linux)
         pkg_noun.linkLibrary(unwind.artifact("unwind"));
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
+    pkg_noun.linkLibrary(zlib.artifact("z"));
     pkg_noun.linkLibC();
 
     pkg_noun.addIncludePath(b.path("pkg/noun"));
@@ -615,6 +622,7 @@ fn build_single(
             "jets/e/argon2.c",
             "jets/e/base.c",
             "jets/e/blake.c",
+            "jets/e/crc32.c",
             "jets/e/cue.c",
             "jets/e/ed_add_double_scalarmult.c",
             "jets/e/ed_add_scalarmult_scalarmult_base.c",
@@ -678,6 +686,7 @@ fn build_single(
             "jets/f/ut_mull.c",
             "jets/f/ut_nest.c",
             "jets/f/ut_rest.c",
+            "jets/i/lagoon.c",
             "jets/tree.c",
             "log.c",
             "manage.c",
