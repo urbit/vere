@@ -31,7 +31,7 @@ u3qe_crc32(u3_noun input_octs)
   if ( tel_w > hed_w ) {
     return u3m_error("subtract-underflow");
   }
-  
+
   c3_w led_w = hed_w - tel_w;
   c3_w crc_w = 0;
 
