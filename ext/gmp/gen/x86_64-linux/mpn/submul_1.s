@@ -69,6 +69,7 @@
 
 
 
+
    
    
    
@@ -78,10 +79,8 @@
 
 
 
-
-  
-  
-  
+      
+      
 
 
 
@@ -89,6 +88,7 @@
 
 
 
+      
 
 	.text
 	.align	16, 0x90
@@ -97,115 +97,100 @@
 	
 __gmpn_submul_1:
 
-	
+
+
+
+
+
+	mov	(%rsi), %rax		
 	push	%rbx
-	push	%rbp
-	push	%r12
-	push	%r13
+	mov	%rdx, %rbx   	
 
-	mov	%rdx, %rbp
-	mov	%rcx, %rdx
+	mul	%rcx
+	mov	%rbx, %r11         
 
-	test	$1, %bpl
-	jnz	.Lbx1
+	and	$3, %ebx
+	jz	.Lb0
+	cmp	$2, %ebx
+	jz	.Lb2
+	jg	.Lb3
 
-.Lbx0:	shr	$2, %rbp
-	jc	.Lb10
-
-.Lb00:	.byte	0xc4,98,147,0xf6,38
-	.byte	0xc4,226,227,0xf6,70,8
-	add	%r12, %rbx
-	adc	$0, %rax
-	mov	(%rdi), %r12
-	mov	8(%rdi), %rcx
-	.byte	0xc4,98,179,0xf6,70,16
-	lea	-16(%rdi), %rdi
-	lea	16(%rsi), %rsi
-	sub	%r13, %r12
-	jmp	.Llo0
-
-.Lbx1:	shr	$2, %rbp
-	jc	.Lb11
-
-.Lb01:	.byte	0xc4,98,163,0xf6,22
-	jnz	.Lgt1
-.Ln1:	sub	%r11, (%rdi)
-	mov	$0, %eax
-	adc	%r10, %rax
+.Lb1:	dec	%r11
+	jne	.Lgt1
+	sub	%rax, (%rdi)
 	jmp	.Lret
+.Lgt1:	lea	8(%rsi,%r11,8), %rsi
+	lea	-8(%rdi,%r11,8), %rdi
+	neg	%r11
+	xor	%r10, %r10
+	xor	%ebx, %ebx
+	mov	%rax, %r9
+	mov	(%rsi,%r11,8), %rax
+	mov	%rdx, %r8
+	jmp	.LL1
 
-.Lgt1:	.byte	0xc4,98,147,0xf6,102,8
-	.byte	0xc4,226,227,0xf6,70,16
-	lea	24(%rsi), %rsi
-	add	%r10, %r13
-	adc	%r12, %rbx
-	adc	$0, %rax
-	mov	(%rdi), %r10
-	mov	8(%rdi), %r12
-	mov	16(%rdi), %rcx
-	lea	-8(%rdi), %rdi
-	sub	%r11, %r10
-	jmp	.Llo1
+.Lb0:	lea	(%rsi,%r11,8), %rsi
+	lea	-16(%rdi,%r11,8), %rdi
+	neg	%r11
+	xor	%r10, %r10
+	mov	%rax, %r8
+	mov	%rdx, %rbx
+	jmp	 .LL0
 
-.Lb11:	.byte	0xc4,226,227,0xf6,6
-	mov	(%rdi), %rcx
-	.byte	0xc4,98,179,0xf6,70,8
-	lea	8(%rsi), %rsi
-	lea	-24(%rdi), %rdi
-	inc	%rbp			
-	sub	%rbx, %rcx
-	jmp	.Llo3
+.Lb3:	lea	-8(%rsi,%r11,8), %rsi
+	lea	-24(%rdi,%r11,8), %rdi
+	neg	%r11
+	mov	%rax, %rbx
+	mov	%rdx, %r10
+	jmp	.LL3
 
-.Lb10:	.byte	0xc4,98,179,0xf6,6
-	.byte	0xc4,98,163,0xf6,86,8
-	lea	-32(%rdi), %rdi
-	mov	$0, %eax
-	clc				
-	jz	.Lend			
+.Lb2:	lea	-16(%rsi,%r11,8), %rsi
+	lea	-32(%rdi,%r11,8), %rdi
+	neg	%r11
+	xor	%r8, %r8
+	xor	%ebx, %ebx
+	mov	%rax, %r10
+	mov	24(%rsi,%r11,8), %rax
+	mov	%rdx, %r9
+	jmp	.LL2
 
 	.align	16, 0x90
-.Ltop:	adc	%rax, %r9
-	lea	32(%rdi), %rdi
-	adc	%r8, %r11
-	.byte	0xc4,98,147,0xf6,102,16
-	mov	(%rdi), %r8
-	.byte	0xc4,226,227,0xf6,70,24
-	lea	32(%rsi), %rsi
-	adc	%r10, %r13
-	adc	%r12, %rbx
-	adc	$0, %rax
-	mov	8(%rdi), %r10
-	mov	16(%rdi), %r12
-	sub	%r9, %r8
-	mov	24(%rdi), %rcx
-	mov	%r8, (%rdi)
-	sbb	%r11, %r10
-.Llo1:	.byte	0xc4,98,179,0xf6,6
-	mov	%r10, 8(%rdi)
-	sbb	%r13, %r12
-.Llo0:	mov	%r12, 16(%rdi)
-	sbb	%rbx, %rcx
-.Llo3:	.byte	0xc4,98,163,0xf6,86,8
-	mov	%rcx, 24(%rdi)
-	dec	%rbp
-	jnz	.Ltop
+.Ltop:	sub	%r10, (%rdi,%r11,8)
+	adc	%rax, %r9
+	mov	(%rsi,%r11,8), %rax
+	adc	%rdx, %r8
+	mov	$0, %r10d
+.LL1:	mul	%rcx
+	sub	%r9, 8(%rdi,%r11,8)
+	adc	%rax, %r8
+	adc	%rdx, %rbx
+.LL0:	mov	8(%rsi,%r11,8), %rax
+	mul	%rcx
+	sub	%r8, 16(%rdi,%r11,8)
+	adc	%rax, %rbx
+	adc	%rdx, %r10
+.LL3:	mov	16(%rsi,%r11,8), %rax
+	mul	%rcx
+	sub	%rbx, 24(%rdi,%r11,8)
+	mov	$0, %r8d		
+	mov	%r8, %rbx		
+	adc	%rax, %r10
+	mov	24(%rsi,%r11,8), %rax
+	mov	%r8, %r9		
+	adc	%rdx, %r9
+.LL2:	mul	%rcx
+	add	$4, %r11
+	js	 .Ltop
 
-.Lend:	adc	%rax, %r9
-	adc	%r8, %r11
-	mov	32(%rdi), %r8
-	mov	%r10, %rax
-	adc	$0, %rax
-	mov	40(%rdi), %r10
-	sub	%r9, %r8
-	mov	%r8, 32(%rdi)
-	sbb	%r11, %r10
-	mov	%r10, 40(%rdi)
-	adc	$0, %rax
+	sub	%r10, (%rdi,%r11,8)
+	adc	%rax, %r9
+	adc	%r8, %rdx
+	sub	%r9, 8(%rdi,%r11,8)
+.Lret:	adc	$0, %rdx
+	mov	%rdx, %rax
 
-.Lret:	pop	%r13
-	pop	%r12
-	pop	%rbp
 	pop	%rbx
-	
+
+
 	ret
 	.size	__gmpn_submul_1,.-__gmpn_submul_1

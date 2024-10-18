@@ -158,17 +158,18 @@ __gmpn_div_qr_1n_pi1:
 	dec	%r8
 	mov	%rcx, %rax
 	jz	.Lfinal
+	mov	$0, %r14d
 
 	.align	16, 0x90
 
 	
 	
+	
 .Lloop:
 	
 	
-	mov	%r9, %r14
+	cmovc	%r9, %r14
 	mov	%r12, %r15
-	and	%r12, %r14
 	neg	%r15
 	mul	%r9
 	add	%rdx, %r14
@@ -195,6 +196,7 @@ __gmpn_div_qr_1n_pi1:
 	mov	%r10, %rax
 	adc	%rdx, %rax
 	mov	%r14, (%rdi, %r8, 8)
+	mov	$0, %r14d
 	sbb	%r12, %r12
 	dec	%r8
 	mov	%rax, %rcx

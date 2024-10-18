@@ -56,7 +56,8 @@
 
     /* u3_serf_grab(): garbage collect.
     */
-      void
-      u3_serf_grab(void);
+      u3_noun
+      u3_serf_grab(c3_o pri_o);
+
 
 #endif /* ifndef U3_VERE_SERF_H */

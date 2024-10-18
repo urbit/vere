@@ -311,8 +311,7 @@ Ldone:
 	
 	ret
 
-Lf2:
-	.byte	0xc4,98,171,0xf6,94,248
+Lf2:	.byte	0xc4,98,171,0xf6,94,248
 	lea	8(%rdi,%rbx,8), %rdi
 	.byte	0xc4,98,155,0xf6,14
 

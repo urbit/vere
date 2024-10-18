@@ -585,11 +585,9 @@ _czar_boot_data(c3_c* czar_c,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
          (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
          (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
-         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) &&
-         (c3y == u3du(czar_bon)) &&
-         (c3y == u3r_safe_word(u3t(czar_bon), czar_bon_w)) &&
-         (c3y == u3du(czar_ack)) &&
-         (c3y == u3r_safe_word(u3t(czar_ack), czar_ack_w)) ) {
+         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) ) {
+      if ( c3y == u3du(czar_bon) ) u3r_safe_word(u3t(czar_bon), czar_bon_w);
+      if ( c3y == u3du(czar_ack) ) u3r_safe_word(u3t(czar_ack), czar_ack_w);
       ret_o = c3y;
     }
 
@@ -631,27 +629,32 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
                                 &czar_glx_w, &czar_ryf_w,
                                 &czar_lyf_w, &czar_bon_w,
                                 &czar_ack_w) ) {
-      u3l_log("boot: peer-state unvailable on czar, cannot protect from double boot");
+      u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
       _pier_work(wok_u);
     } else {
       if ( czar_ryf_w == ryf_w ) {
         c3_w ack_w = cur_w - 1;
         if ( czar_ack_w == 0xFFFFFFFF ) {
           // This codepath should never be hit
-          u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double boot");
+          u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
         } else if ( (czar_ack_w == ack_w) ||
                     ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
           _pier_work(wok_u);
         } else {
-          u3l_log("boot: failed: czar last ack: %d, ship last ack: %d",
-                  czar_ack_w, ack_w);
+          u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                  "this pier is an old copy, boot the latest pier or breach\r\n"
+                  "read more: https://docs.urbit.org/glossary/double-boot",
+                  who_c);
           u3_king_bail();
         }
       } else {
         // Trying to boot old ship after breach
-        u3l_log("boot: failed: rift in czar peer-state: %d, current rift: %d",
-                czar_ryf_w, ryf_w);
+        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                "this ship has been breached since its initialization, "
+                "boot the latest pier or breach again\r\n"
+                "read more: https://docs.urbit.org/glossary/double-boot",
+                who_c);
         u3_king_bail();
       }
     }
@@ -676,14 +679,17 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       c3_free(czar_c);
       u3_weak kf_ryf = wok_u->pir_u->ryf;
       if ( kf_ryf == u3_none ) {
-        u3l_log("boot: keyfile rift unavailable, cannot protect from double boot");
+        u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
       } else if ( kf_ryf > czar_ryf_w ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
-        u3l_log("boot: failed: rift in czar peer state: %d, keyfile rift: %d",
-                czar_ryf_w, kf_ryf);
+        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                "this ship has already been booted elsewere, "
+                "boot the existing pier or breach\r\n"
+                "read more: https://docs.urbit.org/glossary/double-boot",
+                who_c);
         u3_king_bail();
       }
     }
@@ -692,7 +698,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Boot scry endpoint doesn't exists. Most likely old arvo.
      * Continue boot and hope for the best.
      */
-    u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double boot");
+    u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double-boot");
     _pier_work(wok_u);
   }
   u3z(nun); u3z(who);

@@ -350,6 +350,35 @@
   **/
     u3_noun u3wg_plot_fax(u3_noun);
     u3_noun u3wg_plot_met(u3_noun);
+    u3_noun u3wi_la_add(u3_noun);
+    u3_noun u3wi_la_sub(u3_noun);
+    u3_noun u3wi_la_mul(u3_noun);
+    u3_noun u3wi_la_div(u3_noun);
+    u3_noun u3wi_la_mod(u3_noun);
+    u3_noun u3wi_la_adds(u3_noun);
+    u3_noun u3wi_la_subs(u3_noun);
+    u3_noun u3wi_la_muls(u3_noun);
+    u3_noun u3wi_la_divs(u3_noun);
+    u3_noun u3wi_la_mods(u3_noun);
+    u3_noun u3wi_la_dot(u3_noun);
+    u3_noun u3wi_la_diag(u3_noun);
+    u3_noun u3wi_la_transpose(u3_noun);
+    u3_noun u3wi_la_cumsum(u3_noun);
+    u3_noun u3wi_la_argmin(u3_noun);
+    u3_noun u3wi_la_argmax(u3_noun);
+    u3_noun u3wi_la_ravel(u3_noun);
+    u3_noun u3wi_la_min(u3_noun);
+    u3_noun u3wi_la_max(u3_noun);
+    u3_noun u3wi_la_linspace(u3_noun);
+    u3_noun u3wi_la_range(u3_noun);
+    u3_noun u3wi_la_abs(u3_noun);
+    u3_noun u3wi_la_gth(u3_noun);
+    u3_noun u3wi_la_gte(u3_noun);
+    u3_noun u3wi_la_lth(u3_noun);
+    u3_noun u3wi_la_lte(u3_noun);
+
+    u3_noun u3wi_la_trace(u3_noun);
+    u3_noun u3wi_la_mmul(u3_noun);
 
 #endif /* ifndef U3_JETS_W_H */
 

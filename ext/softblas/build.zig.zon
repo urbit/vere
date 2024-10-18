@@ -1,0 +1,16 @@
+.{
+    .name = "softblas",
+    .version = "0.0.1",
+    .dependencies = .{
+        .softfloat = .{
+            .path = "../softfloat",
+        },
+        .softblas = .{
+            .url = "https://github.com/urbit/SoftBLAS/archive/cbffb33f19ea02f9ffbd184d445123c57929ec53.tar.gz",
+            .hash = "1220617c11d869ef2316571a430f51f93470e2d714141deb3bdfaa6b578cf151f258",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
