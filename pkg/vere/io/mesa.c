@@ -189,6 +189,7 @@ typedef struct _u3_pend_req {
 typedef enum _u3_mesa_ctag {
   CTAG_WAIT = 1,
   CTAG_ITEM = 2,
+  CTAG_BLOCK = 3,
 } u3_mesa_ctag;
 
 //  jumbo frame cache value
@@ -2078,6 +2079,12 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     // TODO: mark as dead
     u3z(res);
     _mesa_free_pict(pic_u);
+    u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, nam_u);
+    if ( NULL == lin_u ) {
+      return;
+    }
+    lin_u->typ_y = CTAG_BLOCK;
+    _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
     u3l_log("mesa: jumbo frame missing");
     log_pact(pac_u);
     return;
@@ -2701,7 +2708,16 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_free_pict(pic_u);
     return;
   }
-  // otherwise, scry
+
+  // if we are waiting, no-op
+  if ( ( NULL != lin_u ) && ( CTAG_WAIT == lin_u->typ_y )) {
+    _mesa_free_pict(pic_u);
+    return;
+  }
+
+  if ( NULL == lin_u ) {  u3l_log("lin_u NULL"); }
+
+  // otherwise, if blocked or NULL scry
   lin_u = c3_calloc(sizeof(u3_mesa_line));
   lin_u->typ_y = CTAG_WAIT;
   _mesa_copy_name(&lin_u->nam_u, &pac_u->pek_u.nam_u);  // XX
@@ -2710,7 +2726,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
   u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
-  // NOTE: pic_u not freed
+
   u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), pic_u, _mesa_page_scry_jumbo_cb);
 }
 
