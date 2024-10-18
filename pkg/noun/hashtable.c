@@ -270,6 +270,148 @@ u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
   }
 }
 
+/* _ch_buck_del(): delete from bucket
+*/
+static c3_o
+_ch_buck_del(u3h_slot* sot_w, u3_noun key)
+{
+  u3h_buck* hab_u = u3h_slot_to_node(*sot_w);
+  c3_w fin_w = hab_u->len_w;
+  c3_w i_w;
+  //
+  //  find index of key to be deleted
+  //
+  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+    u3_noun kov = u3h_slot_to_noun(hab_u->sot_w[i_w]);
+    if ( c3y == u3r_sing(key, u3h(kov)) ) {
+      fin_w = i_w;
+      u3z(kov);
+      break;
+    }
+  }
+
+  // no key found, no-op
+  if ( fin_w == hab_u->len_w ) {
+    return c3n;
+  }
+
+  {
+    hab_u->len_w--;
+    // u3_assert(c3y == u3h_slot_is_noun(hab_u->sot_w[fin_w]));
+    for ( i_w = fin_w;  i_w < hab_u->len_w; i_w++ ) {
+      hab_u->sot_w[i_w] = hab_u->sot_w[i_w + 1];
+    }
+
+    return c3y;
+  }
+}
+
+static c3_o _ch_some_del(u3h_slot*, u3_noun, c3_w, c3_w);
+
+/* _ch_slot_del(): delete from slot
+*/
+static c3_o
+_ch_slot_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
+{
+  if ( c3y == u3h_slot_is_noun(*sot_w) ) {
+    u3_noun kev = u3h_slot_to_noun(*sot_w);
+    *sot_w = 0;
+    u3z(kev);
+    return c3y;
+  }
+  else {
+    return _ch_some_del(sot_w, key, lef_w, rem_w);
+  }
+}
+
+/* _ch_slot_del(): delete from node
+*/
+static c3_o
+_ch_node_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
+{
+  u3h_node* han_u = (u3h_node*) u3h_slot_to_node(*sot_w);
+  u3h_slot* tos_w;
+
+  c3_w bit_w, inx_w, map_w, i_w;
+
+  lef_w -= 5;
+  bit_w = (rem_w >> lef_w);
+  rem_w = CUT_END(rem_w, lef_w);
+  map_w = han_u->map_w;
+  inx_w = _ch_popcount(CUT_END(map_w, bit_w));
+
+  tos_w = &(han_u->sot_w[inx_w]);
+
+  // nothing at slot, no-op
+  if ( !BIT_SET(map_w, bit_w) ) {
+    return c3n;
+  }
+
+  if ( c3n == _ch_slot_del(tos_w, key, lef_w, rem_w) ) {
+    // nothing deleted
+    return c3n;
+  }
+  else if ( 0 != *tos_w  ) {
+    // something deleted, but slot still has value
+    return c3y;
+  }
+  else {
+    // shrink!
+    c3_w i_w, ken_w, len_w = _ch_popcount(map_w);
+    u3h_slot  kes_w;
+
+    if ( 2 == len_w && ((ken_w = (0 == inx_w) ? 1 : 0),
+                        (kes_w = han_u->sot_w[ken_w]),
+                        (c3y == u3h_slot_is_noun(kes_w))) )
+    {
+      // only one side left, and the other is a noun. debucketize.
+      *sot_w = kes_w;
+      u3a_wfree(han_u);
+    }
+    else {
+      // shrink node in place; don't reallocate, we could be low on memory
+      //
+      han_u->map_w &= ~(1 << bit_w);
+      --len_w;
+
+      for ( i_w = inx_w; i_w < len_w; i_w++ ) {
+        han_u->sot_w[i_w] = han_u->sot_w[i_w + 1];
+      }
+    }
+    return c3y;
+  }
+}
+
+/* _ch_some_del(): delete from node or buck
+*/
+static c3_o
+_ch_some_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
+{
+  if ( 0 == lef_w ) {
+    return _ch_buck_del(sot_w, key);
+  }
+
+  return _ch_node_del(sot_w, key, lef_w, rem_w);
+}
+
+/* u3h_del(); delete from hashtable.
+*/
+void
+u3h_del(u3p(u3h_root) har_p, u3_noun key)
+{
+  u3h_root* har_u = u3to(u3h_root, har_p);
+  c3_w      mug_w = u3r_mug(key);
+  c3_w      inx_w = (mug_w >> 25);
+  c3_w      rem_w = CUT_END(mug_w, 25);
+  u3h_slot* sot_w = &(har_u->sot_w[inx_w]);
+
+  if (  (c3n == u3h_slot_is_null(*sot_w))
+     && (c3y == _ch_slot_del(sot_w, key, 25, rem_w)) )
+  {
+    har_u->use_w--;
+  }
+}
+
 /* _ch_uni_with(): key/value callback, put into [*wit]
 */
 static void
@@ -667,6 +809,7 @@ u3h_get(u3p(u3h_root) har_p, u3_noun key)
 static void
 _ch_free_buck(u3h_buck* hab_u)
 {
+  //fprintf(stderr, "free buck\r\n");
   c3_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
@@ -678,7 +821,7 @@ _ch_free_buck(u3h_buck* hab_u)
 /* _ch_free_node(): free node.
 */
 static void
-_ch_free_node(u3h_node* han_u, c3_w lef_w)
+_ch_free_node(u3h_node* han_u, c3_w lef_w, c3_o pin_o)
 {
   c3_w len_w = _ch_popcount(han_u->map_w);
   c3_w i_w;
@@ -687,17 +830,16 @@ _ch_free_node(u3h_node* han_u, c3_w lef_w)
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
     c3_w sot_w = han_u->sot_w[i_w];
-
-    if ( _(u3h_slot_is_noun(sot_w)) ) {
+    if ( _(u3h_slot_is_null(sot_w))) {
+    }  else if ( _(u3h_slot_is_noun(sot_w)) ) {
       u3z(u3h_slot_to_noun(sot_w));
-    }
-    else {
+    } else {
       void* hav_v = u3h_slot_to_node(sot_w);
 
       if ( 0 == lef_w ) {
         _ch_free_buck(hav_v);
       } else {
-        _ch_free_node(hav_v, lef_w);
+        _ch_free_node(hav_v, lef_w, pin_o);
       }
     }
   }
@@ -721,7 +863,7 @@ u3h_free(u3p(u3h_root) har_p)
     else if ( _(u3h_slot_is_node(sot_w)) ) {
       u3h_node* han_u = u3h_slot_to_node(sot_w);
 
-      _ch_free_node(han_u, 25);
+      _ch_free_node(han_u, 25, i_w == 57);
     }
   }
   u3a_wfree(har_u);
