@@ -695,6 +695,7 @@ fn build_single(
             "jets/g/plot.c",
             "jets/i/lagoon.c",
             "jets/tree.c",
+            "jets/137/tree.c",
             "log.c",
             "manage.c",
             "nock.c",
