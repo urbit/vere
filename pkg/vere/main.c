@@ -194,6 +194,7 @@ _main_init(void)
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
+  u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
   u3_Host.ops_u.siz_i =
 #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
@@ -269,6 +270,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "import",              required_argument, NULL, 'i' },
     { "ivory-pill",          required_argument, NULL, 'J' },
     { "json-trace",          no_argument,       NULL, 'j' },
+    { "jumbo-bloq",          required_argument, NULL, c3__bloq },
     { "kernel-stage",        required_argument, NULL, 'K' },
     { "key-file",            required_argument, NULL, 'k' },
     { "loom",                required_argument, NULL, c3__loom },
@@ -365,6 +367,15 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       //  special args
       //
+      case c3__bloq: {
+        if (_main_readw(optarg, 30, &arg_w)) {
+          return c3n;
+        } else u3_Host.ops_u.jum_y = arg_w;
+        if ( 13 > u3_Host.ops_u.jum_y ) {
+          return c3n;
+        }
+        break;
+      }
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           return c3n;
@@ -844,10 +855,11 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-i, --import FILE             Import pier state from jamfile\n",
     "-J, --ivory-pill PILL         Use custom ivory pill\n",
     "-j, --json-trace              Create json trace file in .urb/put/trace\n",
+    "    --jumbo-bloq BLOQ         Set Ames jumbo frame bloq size\n",
     "-K, --kernel-stage STAGE      Start at Hoon kernel version stage\n",
     "-k, --key-file KEYS           Private key file (see also -G)\n",
     "-L, --local                   Local networking only\n",
-    "    --loom                    Set loom to binary exponent (31 == 2GB)\n"
+    "    --loom EXPO               Set loom to binary exponent (31 == 2GB)\n"
     "-l, --lite-boot               Most-minimal startup\n",
     "-M, --keep-cache-limit LIMIT  Set persistent memo cache max size; 0 means default\n",
     "-n, --replay-to NUMBER        Replay up to event\n",
@@ -1769,7 +1781,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_serf_grab();
+  u3z(u3_serf_grab(c3y));
   u3m_stop();
 }
 

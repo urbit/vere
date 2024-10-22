@@ -106,6 +106,13 @@
         void
         u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val);
 
+      /* u3h_put_get(): insert in caching hashtable, returning deleted entry
+      **
+      ** `key` is RETAINED; `val` is transferred.
+      */
+      u3_weak
+      u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val);
+
       /* u3h_uni(): unify hashtables, copying [rah_p] into [har_p]
       */
         void
@@ -125,10 +132,22 @@
         u3_weak
         u3h_git(u3p(u3h_root) har_p, u3_noun key);
 
+      /* u3h_del(); delete from hashtable.
+      **
+      ** `key` is RETAINED
+      */
+       void
+       u3h_del(u3p(u3h_root) har_p, u3_noun key);
+
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
         u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w);
+
+      /* u3h_trim_with(): trim to n key-value pairs, with deletion callback
+      */
+        void
+        u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun));
 
       /* u3h_free(): free hashtable.
       */

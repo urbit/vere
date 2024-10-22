@@ -321,6 +321,7 @@
 
         c3_o    beb;                        //  --behn-allow-blocked
         c3_z    siz_i;                      //  --lmdb-map-size
+        c3_y    jum_y;                      //  jumbo frame size, TODO parser
       } u3_opts;
 
     /* u3_host: entire host.
@@ -341,6 +342,8 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
+        void*      sam_u;                   //  XX
+        uv_udp_t   wax_u;                   //  XX
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.
@@ -457,7 +460,8 @@
           u3_writ_cram = 4,
           u3_writ_meld = 5,
           u3_writ_pack = 6,
-          u3_writ_exit = 7
+          u3_writ_exit = 7,
+          u3_writ_quiz = 8
         } u3_writ_type;
 
       /* u3_writ: ipc message from king to serf
@@ -473,6 +477,10 @@
             u3_peek*       pek_u;               //  peek
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
+            struct {                            //  serf query:
+              void*        ptr_v;               //    driver
+              void (*quiz_f)(void*, u3_noun);   //    callback
+            } qui_u;                            //
           };
         } u3_writ;
 
@@ -663,6 +671,7 @@
           u3_disk*         log_u;               //  event log
           u3_lord*         god_u;               //  computer
           u3_psat          sat_e;               //  type-tagged
+          u3_weak          ryf;                 //  rift
           union {                               //
             u3_boot*       bot_u;               //    bootstrap
             u3_play*       pay_u;               //    recompute
@@ -767,7 +776,16 @@
          u3_atom
          u3_time_t_in_ts(time_t tim);
 #endif
+      /* u3_lord_writ_new(): allocate a new writ. 
+      */
+        u3_writ*
+        u3_lord_writ_new(u3_lord* god_u);
 
+      /* u3_lord_writ_plan(): enqueue a writ and send. 
+      */
+        void
+        u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);
+    
       /* u3_time_out_ts(): struct timespec from urbit time.
       */
         void
@@ -1238,6 +1256,10 @@
         u3_noun
         u3_ames_encode_lane(u3_lane);
 
+    /**  mesa
+    **/
+        u3_auto*
+        u3_mesa_io_init(u3_pier* pir_u);
     /**  Autosave.
     **/
       /* u3_save_ef_chld(): report SIGCHLD.
@@ -1565,6 +1587,16 @@
         void
         darwin_register_mach_exception_handler();
 #endif
+
+      /* king_curl_alloc(): allocate a response buffer for curl
+       */
+        size_t
+        king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v);
+
+      /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
+       */
+        c3_i
+        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t);
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */
