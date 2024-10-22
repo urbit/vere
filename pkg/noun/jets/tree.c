@@ -274,11 +274,17 @@ static c3_c* _140_hex_coed__ed_puck_ha[] = {
   "1bc694675842345c50b0e20a2193bb5bcbb42f163fc832431a3d1822a81e4c98",
   0
 };
+
+static u3j_harm _140_hex_coed__ed_sign_a[] = {{".2", u3wee_sign}, {}};
+
 static u3j_harm _140_hex_coed__ed_sign_octs_a[] = {{".2", u3wee_sign_octs}, {}};
 static c3_c* _140_hex_coed__ed_sign_octs_ha[] = {
   "34ad749bf8443611cbf1f7de90a066318bd12be36f2f7f6f55281f6f7ed79754",
   0
 };
+
+static u3j_harm _140_hex_coed__ed_veri_a[] = {{".2", u3wee_veri}, {}};
+
 static u3j_harm _140_hex_coed__ed_veri_octs_a[] = {{".2", u3wee_veri_octs}, {}};
 static c3_c* _140_hex_coed__ed_veri_octs_ha[] = {
   "047a7eeccb2e68aeeee631b6db86e11a5a3aa9e179660553eca6304327612dcf",
@@ -322,8 +328,10 @@ static c3_c* _140_hex_coed__ed_shar_ha[] = {
   };
 
 static u3j_core _140_hex_coed__ed_d[] =
-  { { "sign-octs", 7, _140_hex_coed__ed_sign_octs_a, 0, _140_hex_coed__ed_sign_octs_ha },
+  { { "sign", 7, _140_hex_coed__ed_sign_a, 0, no_hashes },
+    { "sign-octs", 7, _140_hex_coed__ed_sign_octs_a, 0, _140_hex_coed__ed_sign_octs_ha },
     { "puck", 7, _140_hex_coed__ed_puck_a, 0, _140_hex_coed__ed_puck_ha },
+    { "veri", 7, _140_hex_coed__ed_veri_a, 0, no_hashes },
     { "veri-octs", 7, _140_hex_coed__ed_veri_octs_a, 0, _140_hex_coed__ed_veri_octs_ha },
     { "shar", 7, _140_hex_coed__ed_shar_a, 0, _140_hex_coed__ed_shar_ha },
     { "point-add", 7, _140_hex_coed__ed_point_add_a, 0, 0 },
