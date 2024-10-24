@@ -88,6 +88,11 @@
         void
         u3m_pave(c3_o nuu_o);
 
+      /* u3m_pave_jets(): re-initialize jet dashboard hashtables.
+      */
+        void
+        u3m_pave_jets();
+
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
