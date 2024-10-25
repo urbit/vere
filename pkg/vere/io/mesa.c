@@ -1733,6 +1733,12 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 c3_o
 _ames_kick_newt(void* sam_u, u3_noun tag, u3_noun dat);
 
+u3_atom
+u3_ames_encode_lane(u3_lane lan);
+
+u3_lane
+u3_ames_decode_lane(u3_atom lan);
+
 static void _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u);
 static void _init_peer(u3_mesa* sam_u, u3_peer* per_u);
 
@@ -1775,6 +1781,31 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
       }
       u3_ship who_u;
       u3_ship_of_noun(who_u ,who);
+
+      // XX the format of the lane %nail gives is (list (each @p address))
+      //
+      u3_noun las = u3do("tail", u3k(dat));
+      u3m_p("las nail", las);
+
+      if ( las == u3_nul ) {
+        per_u->dan_u = (u3_lane){0,0};  // delete lane
+      }
+      else {
+        u3_noun lan;
+        while ( las != u3_nul ) {
+          u3x_cell(las, &lan, &las);
+          if ( c3n == u3h(lan) ) {
+            u3_lane lan_u = u3_ames_decode_lane(u3t(lan));
+            per_u->dan_u = lan_u;
+          } else {
+            // delete direct lane if galaxy
+            per_u->dan_u = (u3_lane){0,0};
+          }
+          break;  // we either have a direct route, and a galaxy, or just one lane
+        }
+        // u3z(lan);
+      }
+
       _meet_peer(sam_u, per_u, who_u);
 
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
@@ -2862,6 +2893,8 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
     // u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
     // _log_lane(lan_u);
   }
+  //  XX _meet_peer, in the _saxo_cb, is already putting the peer in her_p
+  //
   _mesa_put_peer(sam_u, pac_u->pok_u.pay_u.her_u, per_u);
 
   u3_ovum_peer nes_f;
