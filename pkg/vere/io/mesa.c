@@ -155,6 +155,7 @@ typedef struct _u3_mesa {
 
 typedef struct _u3_peer {
   u3_mesa*       sam_u;  //  backpointer
+  u3_ship        her_u;  //  who is this peer
   c3_o           ful_o;  //  has this been initialized?
   u3_lane        dan_u;  //  direct lane (nullable)
   u3_lane_state  dir_u;  //  direct lane state
@@ -970,7 +971,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 
 #ifdef MESA_DEBUG
   c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  /* u3l_log("mesa: sending packet to %s:%u", sip_c, por_s); */
+  u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -1061,7 +1062,7 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   if ( ( c3y == _mesa_is_direct_mode(per_u) ) ||
        // if we are the sponsor of the ship, don't send to ourselves
        (our_o == c3y) )  {
-    // u3l_log("mesa: direct");
+    u3l_log("mesa: direct");
     _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
@@ -1352,7 +1353,7 @@ _realise_lane(u3_noun lan) {
   if ( c3y == u3a_is_cat(lan)  ) {
     // u3_assert( lan < 256 );
     if ( (c3n == u3_Host.ops_u.net) ) {
-      lan_u.pip_w =  0x7f000001 ;
+      lan_u.pip_w =  0x7f000001 ;           // XX get the reap galaxy IP
       lan_u.por_s = _ames_czar_port(lan);
     }
   } else {
@@ -2201,12 +2202,69 @@ _saxo_cb(void* vod_p, u3_noun nun)
 }
 
 static void
+_forward_lanes_cb(void* vod_p, u3_noun nun)
+{
+  u3_peer* per_u = vod_p;
+  u3_mesa* sam_u = per_u->sam_u;
+
+  u3_weak las    = u3r_at(7, nun);
+  u3m_p("_forward_lanes_cb", las);
+  if ( las != u3_none ) {
+    u3_peer* new_u = _mesa_get_peer(per_u->sam_u, per_u->her_u);
+    if ( new_u != NULL ) {
+      per_u = new_u;
+    }
+    u3_noun gal = u3do("head", u3k(las));
+    u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
+    // // both atoms guaranteed to be cats, bc we don't call unless forwarding
+    per_u->ful_o = c3y;
+    per_u->imp_y = gal;
+    u3l_log("putting ship");
+    u3_noun sal = u3do("tail", u3k(las));
+    u3_noun lan;
+    u3_lane zer_u = {0, 0};
+    while ( sal != u3_nul ) {
+      u3x_cell(sal, &lan, &sal);
+
+      if ( c3n == u3a_is_cat(lan) ) {
+        // there should be only one lane that is not a direct atom
+        //
+        u3_lane lan_u = _realise_lane(u3k(lan));
+        per_u->dan_u = lan_u;
+      }
+    }
+    u3z(lan);
+    _mesa_put_peer(per_u->sam_u, per_u->her_u, per_u);
+  }
+
+  u3z(nun);
+}
+
+static void
 _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u)
 {
   u3_noun her = u3_ship_to_noun(her_u);
   u3_noun gan = u3nc(u3_nul, u3_nul);
+
+  per_u->her_u[0] = her_u[0];
+  per_u->her_u[1] = her_u[1];
+
   u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
+
+}
+
+static void
+_get_peer_lanes(u3_mesa* sam_u, u3_peer* per_u)
+{
+  u3_noun her = u3_ship_to_noun(per_u->her_u);
+  u3_noun gan = u3nc(u3_nul, u3_nul);
+  u3_noun pax = u3nq(u3i_string("chums"),
+                  u3dc("scot", 'p', her),
+                  u3i_string("lanes"),
+                  u3_nul);
+  u3m_p("pax", pax);
+  u3_pier_peek_last(sam_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
 }
 
 static void
@@ -2472,10 +2530,12 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
   if ( pac_u->hed_u.hop_y == 0 ) {
-    _hear_peer(sam_u, per_u, lan_u, dir_o);
+    u3l_log(" received direct page");
   } else {
     u3l_log(" received forwarded page");
   }
+  _hear_peer(sam_u, per_u, lan_u, dir_o);
+
   if ( new_o == c3y ) {
     //u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
     //_log_lane(&lan_u);
@@ -2653,24 +2713,33 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( !per_u ) {
     #ifdef MESA_DEBUG
       c3_c* mes = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
-      u3l_log("mesa: alien forward for %s", mes);
+      u3l_log("mesa: alien forward for %s; meeting ship", mes);
       c3_free(mes);
     #endif
+    per_u = c3_calloc(sizeof(u3_peer));
+    _init_peer(sam_u, per_u);
+    per_u->her_u[0] = pac_u->pek_u.nam_u.her_u[0];
+    per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
+
+    _get_peer_lanes(sam_u, per_u); // forward-lanes
     _mesa_free_pict(pic_u);
     return;
   }
   if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  // if ( c3y == sam_u->for_o ) {
     u3_lane lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     u3_lane zer_u = {0, 0};
     if ( _mesa_lanes_equal(&zer_u, &lin_u) == c3y) {
+      u3l_log("zero lanes ip: %u port: %u", lin_u.pip_w , lin_u.por_s );
       _mesa_free_pict(pic_u);
       return;
     }
     inc_hopcount(&pac_u->hed_u);
     #ifdef MESA_DEBUG
       u3l_log("mesa: forward_request()");
-      log_pact(pac_u);
+      _log_lane(&lan_u);
     #endif
+
     _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
     _mesa_send(pic_u, &lin_u);
   }
