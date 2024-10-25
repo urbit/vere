@@ -1084,8 +1084,11 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
     _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
     per_u->ind_u.sen_d = now_d;
 
-    if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u)) &&
-         (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)) {
+    if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u))
+        //  &&  (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)  // XX same check as _mesa_is_direct_mode
+       ) {
+      u3l_log("mesa: sending also direct to %s", gal_c);
+
       c3_y* san_y = c3_calloc(len_w);
       memcpy(san_y, buf_y, len_w);
       _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
@@ -1791,19 +1794,16 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         per_u->dan_u = (u3_lane){0,0};  // delete lane
       }
       else {
-        u3_noun lan;
-        while ( las != u3_nul ) {
-          u3x_cell(las, &lan, &las);
-          if ( c3n == u3h(lan) ) {
-            u3_lane lan_u = u3_ames_decode_lane(u3t(lan));
-            per_u->dan_u = lan_u;
-          } else {
-            // delete direct lane if galaxy
-            per_u->dan_u = (u3_lane){0,0};
-          }
-          break;  // we either have a direct route, and a galaxy, or just one lane
+        u3_noun lan = u3h(las);
+        // we either have a direct route, and a galaxy, or just one lane
+        if ( c3n == u3h(lan) ) {
+          u3_lane lan_u = u3_ames_decode_lane(u3k(u3t(lan)));
+          _log_lane(&lan_u);
+          per_u->dan_u = lan_u;
+        } else {
+          // delete direct lane if galaxy
+          per_u->dan_u = (u3_lane){0,0};
         }
-        // u3z(lan);
       }
 
       _meet_peer(sam_u, per_u, who_u);
