@@ -9,4 +9,4 @@ EXPOSE 80/tcp
 EXPOSE 34343/udp
 VOLUME /urbit
 WORKDIR /urbit
-CMD start-urbit
+CMD /bin/start-urbit

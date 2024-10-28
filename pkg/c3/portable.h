@@ -3,6 +3,7 @@
 #ifndef C3_PORTABLE_H
 #define C3_PORTABLE_H
 
+
 #   ifndef __GNUC__
 #     error "port me"
 #   endif
