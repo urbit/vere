@@ -429,14 +429,54 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   }
 }
 
+typedef struct _async_peel {
+  u3_chan* can_u;
+  u3_atom    rid;
+} _async_peel;
+
+static void
+_conn_peel_quiz_cb(c3_m mot_m, void* ptr_v, u3_noun res)
+{
+  _async_peel* pel_u = ptr_v;
+  _conn_send_noun(pel_u->can_u, u3nc(pel_u->rid, res));
+  c3_free(pel_u);
+}
+
+static void
+_conn_async_peel(u3_conn* con_u,
+                 u3_chan* can_u,
+                 u3_atom    rid,
+                 u3_noun    dat)
+{
+  u3_pier* pir_u = con_u->car_u.pir_u;
+  c3_m     mot_m = u3h(dat);
+
+  _async_peel* pel_u = c3_malloc(sizeof(*pel_u));
+  pel_u->can_u = can_u;
+  pel_u->rid   = rid;
+
+  switch ( mot_m ) {
+    case c3__quic:
+    case c3__mass: {
+      u3_lord_quiz(pir_u->god_u,
+                   (c3__quiz == mot_m) ? c3__quiz : c3__quac,
+                   pel_u, _conn_peel_quiz_cb);
+    } break;
+
+    default: u3_assert(0);
+  }
+
+  u3z(dat);
+}
+
 /* _conn_read_peel(): response to a %peel request, sans rid.
 */
-static u3_noun
+static u3_weak
 _conn_read_peel(u3_conn* con_u, u3_noun dat)
 {
-  u3_pier*  pir_u = con_u->car_u.pir_u;
-  u3_noun   i_dat, t_dat, it_dat, tt_dat;
-  u3_noun   res;
+  u3_pier* pir_u = con_u->car_u.pir_u;
+  u3_noun  i_dat, t_dat, it_dat, tt_dat;
+  u3_weak  res;
 
   if ( c3n == u3r_cell(dat, &i_dat, &t_dat) ) {
     res = u3_nul;
@@ -473,10 +513,9 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       } break;
       //  |mass output
       //
+      case c3__quic:
       case c3__mass: {
-        //  TODO  |mass
-        //
-        res = u3_nul;
+        res = u3_none;
       } break;
       //  runtime metrics.
       //
@@ -602,8 +641,14 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     } break;
 
     case c3__peel: {
-      _conn_send_noun(
-        can_u, u3nc(u3k(rid), _conn_read_peel(con_u, u3k(dat))));
+      u3_weak out;
+
+      if ( u3_none != (out = _conn_read_peel(con_u, u3k(dat))) ) {
+        _conn_send_noun(can_u, u3nc(u3k(rid), out));
+      }
+      else {
+        _conn_async_peel(con_u, can_u, u3k(rid), u3k(dat));
+      }
     } break;
 
     case c3__ovum: {
