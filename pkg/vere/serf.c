@@ -26,15 +26,16 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
-      [%quiz $%([%quac ~])]
   ==
 ::  +plea: from serf to king
 ::
 +$  plea
   $%  [%live ~]
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
-      [%quiz $%([%quac p=*])]
       [%slog pri=@ tank]
       [%flog cord]
       $:  %peek
@@ -44,6 +45,9 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -1156,13 +1160,21 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
       } break;
       case c3__quiz: {
-        u3z(wit);
-        u3_noun res = u3_serf_grab(c3n);
-        if ( u3_none == res ) {
-          ret_o = c3n;
-        } else {
-          *pel = u3nt(c3__quiz, c3__quac, res);
-          ret_o = c3y;
+        switch ( com ) {
+          case c3__quac: {
+            u3z(wit);
+            u3_noun res = u3_serf_grab(c3n);
+            if ( u3_none == res ) {
+              ret_o = c3n;
+            } else {
+              *pel = u3nt(c3__quiz, c3__quac, res);
+              ret_o = c3y;
+            }
+          } break;
+
+          default: {
+            ret_o = c3n;
+          }
         }
       } break;
     }
