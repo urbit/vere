@@ -24,6 +24,7 @@
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
       $:  %quiz
           $%  [%quac ~]
+              [%quic ~]
       ==  ==
       [%work mil=@ job=(pair @da ovum)]
   ==
@@ -44,6 +45,7 @@
       ==  ==
       $:  %quiz
           $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
