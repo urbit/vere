@@ -117,7 +117,7 @@
       inline c3_s
       c3_sift_short(c3_y buf_y[2])
       {
-        return (buf_y[1] << 8 | buf_y[0]);
+        return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
       inline c3_w
