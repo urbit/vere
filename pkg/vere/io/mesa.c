@@ -1073,12 +1073,6 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
       u3l_log("mesa: sending to %s", gal_c);
       c3_free(gal_c);
     #endif
-    //  XX if we have lanes in arvo, send it also there?
-    //  otherwise after a peer turns indirect because we haven't contacted them,
-    //  we never achieve a direct route since we only send
-    //  to the sponsor, and all pages will come forwarded, and per_u->dir_u.her_d
-    //  only gets updated when pages come directly, or if it's the first time
-    //  after a restart of the driver
     //
     u3_lane imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
     _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
@@ -1087,8 +1081,6 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
     if ( (c3n == _mesa_is_lane_zero(&per_u->dan_u))
         //  &&  (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)  // XX same check as _mesa_is_direct_mode
        ) {
-      u3l_log("mesa: sending also direct to %s", gal_c);
-
       c3_y* san_y = c3_calloc(len_w);
       memcpy(san_y, buf_y, len_w);
       _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
@@ -1356,7 +1348,7 @@ _realise_lane(u3_noun lan) {
   if ( c3y == u3a_is_cat(lan)  ) {
     // u3_assert( lan < 256 );
     if ( (c3n == u3_Host.ops_u.net) ) {
-      lan_u.pip_w =  0x7f000001 ;           // XX get the reap galaxy IP
+      lan_u.pip_w =  0x7f000001 ;           // XX get the real galaxy IP
       lan_u.por_s = _ames_czar_port(lan);
     }
   } else {
