@@ -5,10 +5,15 @@ We use [`zig`][zig] to build Vere, which is packaged as a single binary,
 
 ## Supported Targets
 
+Main (`-Dall`) targets:
 - `aarch64-linux-musl`
 - `x86_64-linux-musl`
 - `aarch64-macos`
 - `x86_64-macos`
+
+Additional targets:
+- `aarch64-linux-gnu`
+- `x86_64-linux-gnu`
 
 ## Prerequisites
 
