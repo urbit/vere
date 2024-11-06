@@ -111,7 +111,8 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit: {
+    case u3_writ_exit:
+    case u3_writ_quiz: {
     } break;
   }
 
@@ -209,6 +210,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
+    case u3_writ_quiz: return "quiz";
   }
 }
 
