@@ -429,17 +429,35 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   }
 }
 
-typedef struct _async_peel {
-  u3_chan* can_u;
-  u3_atom    rid;
-} _async_peel;
+/* _conn_make_cran(): alloc/init new request.
+*/
+static u3_cran*
+_conn_make_cran(u3_chan* can_u, u3_atom rid)
+{
+  u3_cran*  ran_u = c3_calloc(sizeof(*ran_u));
+
+  ran_u->rid = rid;
+  ran_u->can_u = can_u;
+  ran_u->nex_u = can_u->ran_u;
+  can_u->ran_u = ran_u;
+  return ran_u;
+}
 
 static void
 _conn_peel_quiz_cb(c3_m mot_m, void* ptr_v, u3_noun res)
 {
-  _async_peel* pel_u = ptr_v;
-  _conn_send_noun(pel_u->can_u, u3nc(pel_u->rid, res));
-  c3_free(pel_u);
+  u3_cran* ran_u = ptr_v;
+  u3_chan* can_u = ran_u->can_u;
+
+  if ( !can_u ) {
+    //  chan was closed; noop.
+    //
+    u3z(ran_u->rid); c3_free(ran_u);
+    u3z(res); return;
+  }
+
+  _conn_send_noun(can_u, u3nt(ran_u->rid, c3__peel, res));
+  _conn_drop_cran(can_u, ran_u);
 }
 
 static void
@@ -451,16 +469,12 @@ _conn_async_peel(u3_conn* con_u,
   u3_pier* pir_u = con_u->car_u.pir_u;
   c3_m     mot_m = u3h(dat);
 
-  _async_peel* pel_u = c3_malloc(sizeof(*pel_u));
-  pel_u->can_u = can_u;
-  pel_u->rid   = rid;
-
   switch ( mot_m ) {
     case c3__quic:
     case c3__mass: {
       u3_lord_quiz(pir_u->god_u,
-                   (c3__quiz == mot_m) ? c3__quiz : c3__quac,
-                   pel_u, _conn_peel_quiz_cb);
+                   (c3__quic == mot_m) ? c3__quic : c3__quac,
+                   _conn_make_cran(can_u, rid), _conn_peel_quiz_cb);
     } break;
 
     default: u3_assert(0);
@@ -496,6 +510,7 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
           u3i_list(u3nc(c3__help, u3_nul), u3nc(c3__info, u3_nul),
                    u3nc(c3__khan, u3_nul), u3nc(c3__live, u3_nul),
                    u3nc(c3__mass, u3_nul),
+                   u3nc(c3__quic, u3_nul),
                    u3nc(c3__port,
                         u3i_list(c3__ames, c3__htls, c3__http, u3_none)),
                    u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul),
@@ -566,20 +581,6 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
     res = u3_nul;
   }
   u3z(dat); return res;
-}
-
-/* _conn_make_cran(): alloc/init new request.
-*/
-static u3_cran*
-_conn_make_cran(u3_chan* can_u, u3_atom rid)
-{
-  u3_cran*  ran_u = c3_calloc(sizeof(*ran_u));
-
-  ran_u->rid = rid;
-  ran_u->can_u = can_u;
-  ran_u->nex_u = can_u->ran_u;
-  can_u->ran_u = ran_u;
-  return ran_u;
 }
 
 /* _conn_moor_poke(): called on message read from u3_moor.

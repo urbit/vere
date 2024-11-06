@@ -855,7 +855,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     } break;
 
     case u3_writ_quiz: {
-      msg = u3nt(c3__quiz, c3__quac, u3_nul);
+      msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
     } break;
   }
 
