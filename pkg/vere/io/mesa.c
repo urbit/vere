@@ -971,7 +971,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, u3_lane lan_u, c3_y* buf_y, c3_w len_
 
 #ifdef MESA_DEBUG
   c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
+  // u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -1062,7 +1062,7 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
   if ( ( c3y == _mesa_is_direct_mode(per_u) ) ||
        // if we are the sponsor of the ship, don't send to ourselves
        (our_o == c3y) )  {
-    u3l_log("mesa: direct");
+    // u3l_log("mesa: direct");
     _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
@@ -1070,7 +1070,7 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
 
     #ifdef MESA_DEBUG
       c3_c* gal_c = u3_ship_to_string(gal_u);
-      u3l_log("mesa: sending to %s", gal_c);
+      // u3l_log("mesa: sending to %s", gal_c);
       c3_free(gal_c);
     #endif
     //
@@ -1095,7 +1095,7 @@ _mesa_send_request(u3_mesa_request_data* dat_u)
 {
   u3_peer* per_u = _mesa_get_peer(dat_u->sam_u, dat_u->her_u);
   if ( !per_u ) {
-    u3l_log("mesa: send_bufs()");
+    // u3l_log("mesa: send_bufs()");
     _mesa_send_bufs(dat_u->sam_u,
                     NULL,
                     dat_u->buf_y,
@@ -1109,23 +1109,25 @@ _mesa_send_request(u3_mesa_request_data* dat_u)
 }
 
 static void
-_try_resend(u3_pend_req* req_u, c3_d ack_d)
+_try_resend(u3_pend_req* req_u, c3_d nex_d)
 {
   c3_o los_o = c3n;
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
   c3_y buf_y[PACT_SIZE];
-  for ( c3_d i_d = req_u->lef_d; i_d < ack_d; i_d++ ) {
+  for ( c3_d i_d = req_u->lef_d; i_d < nex_d; i_d++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
     if ( (c3y == bitset_has(&req_u->was_u, i_d)) &&
         (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
       los_o = c3y;
-      _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
       pac_u->pek_u.nam_u.fra_d = i_d;
+      // u3l_log("resend fra_w: %llu", i_d);
+
       c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
       _mesa_send_modal(req_u->per_u, buf_y, len_w);
+      _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
   }
 
@@ -1155,8 +1157,8 @@ _update_resend_timer(u3_pend_req *req_u)
   for ( c3_d i = req_u->lef_d; i < req_u->nex_d; i++ ) {
     // u3l_log("fra %u (%u)", i, __LINE__);
     if ( c3y == bitset_has(&req_u->was_u, i) &&
-	 wen_d > req_u->wat_u[i].sen_d
-    ) {
+	       wen_d > req_u->wat_u[i].sen_d
+       ) {
       wen_d = req_u->wat_u[i].sen_d;
       idx_d = i;
     }
@@ -1173,6 +1175,7 @@ _update_resend_timer(u3_pend_req *req_u)
   //               now_d - req_u->wat_u[idx_d].sen_d;
   c3_d next_expiry = req_u->gag_u->rto_w;
   // u3l_log("next_expiry %llu", next_expiry / 1000);
+  // u3l_log("DUE %llu", uv_timer_get_due_in(&req_u->tim_u));
   uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry / 1000, 0);
 }
 
@@ -1181,7 +1184,7 @@ _update_resend_timer(u3_pend_req *req_u)
 static void
 _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
-  /* u3l_log("%"PRIu64" packet timed out", req_u->old_d); */
+  // u3l_log("old %llu nex %llu packet timed out", req_u->old_d, req_u->nex_d);
   _try_resend(req_u, req_u->nex_d);
   _update_resend_timer(req_u);
 }
@@ -1250,6 +1253,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   // received duplicate
   if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
     // MESA_LOG(sam_u, DUPE);
+    _update_resend_timer(req_u);
     return;
   }
 
@@ -1267,7 +1271,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       c3_free(par_u);
       return;
     } else if ( nam_u->fra_d >= req_u->los_u->counter + (sizeof(req_u->mis_u)/sizeof(u3_misord_buf)) ) {
-      // u3l_log("fragment number too high: %"PRIu64, nam_u->fra_d);
+      // u3l_log("fragment number too high: %llu counter %u", nam_u->fra_d, req_u->los_u->counter );
       c3_free(par_u);
       return;
     } else {
@@ -1277,15 +1281,15 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
       buf_u->len_w = dat_u->len_w;
       memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
       buf_u->par_u = par_u;
-#ifdef U3_OS_osx
-      u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",
-#else
-      u3l_log("insert into misordered queue fra: [%lu] = %lu [counter %u]",
-#endif
-              nam_u->fra_d - req_u->los_u->counter - 1,
-              nam_u->fra_d,
-              req_u->los_u->counter);
+      // u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",
+      //         nam_u->fra_d - (c3_d)req_u->los_u->counter - 1,
+      //         nam_u->fra_d,
+      //         req_u->los_u->counter);
+      bitset_del(&req_u->was_u, nam_u->fra_d);
+
       _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
+      _try_resend(req_u, nam_u->fra_d);
+      _update_resend_timer(req_u);
       return;
     }
   }
@@ -1311,10 +1315,10 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->ack_d = nam_u->fra_d;
   }
 
-  bitset_del(&req_u->was_u, nam_u->fra_d);  // XX also for out of order frags?
+  bitset_del(&req_u->was_u, nam_u->fra_d);
 
   #ifdef MESA_DEBUG
-    // u3l_log("fragment %llu counter %llu hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
+    // u3l_log("fragment %llu counter %u hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
   #endif
 
   u3_lane_state* sat_u;
@@ -1335,7 +1339,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
 
   //  XX FIXME?
-  _try_resend(req_u, nam_u->fra_d);  // _try_resend(req_u, req_u->nex_d);
+  _try_resend(req_u, nam_u->fra_d);
   _update_resend_timer(req_u);
 }
 
@@ -1922,10 +1926,12 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
   u3_noun boq = _dire_etch_ud(31); // XX make configurable
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun wer = nam_u->nit_o == c3y
-    ? u3nc(c3__init, pax)
-    : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
+  // u3_noun wer = nam_u->nit_o == c3y
+  //   ? u3nc(c3__init, pax)
+  //   : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
 
+  //  XX only boq_y of MAX JUMBO allowed
+  u3_noun wer = u3nt(c3__data, fag, pax);
   u3_noun res = u3nc(c3__mess, u3nq(rif, c3__pact, boq, u3nc(c3__etch, wer)));
 
   return res;
@@ -1954,6 +1960,8 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
     _mesa_free_line(u3a_into(u3t(del)));
     u3z(del);
   }
+  u3_weak res = u3h_get(sam_u->pac_p, pax);
+  u3_mesa_line* mesa_line = u3a_into(res);
   u3z(pax);
 }
 
@@ -2124,7 +2132,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
   }
 
   #ifdef MESA_DEBUG
-    // u3l_log("mesa: scry_jumbo_cb()");
+    u3l_log("mesa: scry_jumbo_cb()");
     // log_pact(pac_u);
   #endif
 
@@ -2314,6 +2322,7 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
     if ( fra_w >= req_u->tof_d ) {
       break;
     }
+    // u3l_log("next fra_w: %u", fra_w);
     nex_u->pac_u.pek_u.nam_u.fra_d = nex_d + i;
     _mesa_add_our_to_pit(sam_u, &nex_u->pac_u.pek_u.nam_u);
     _mesa_send(nex_u, &lan_u);
@@ -2532,6 +2541,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa_name* nam_u = &pac_u->pek_u.nam_u;
   c3_s fra_s;
+  // u3l_log("heard fra %llu", pac_u->pag_u.nam_u.fra_d);
+
 
   c3_o our_o = u3_ships_equal(nam_u->her_u, sam_u->pir_u->who_d);
 
@@ -2552,11 +2563,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
-  if ( pac_u->hed_u.hop_y == 0 ) {
-    u3l_log(" received direct page");
-  } else {
-    u3l_log(" received forwarded page");
-  }
+  // if ( pac_u->hed_u.hop_y == 0 ) {
+  //   u3l_log(" received direct page");
+  // } else {
+  //   u3l_log(" received forwarded page");
+  // }
   _hear_peer(sam_u, per_u, lan_u, dir_o);
 
   if ( new_o == c3y ) {
@@ -2597,6 +2608,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
   if ( c3n == our ) {
+      u3l_log(" not our");
     // TODO: free pact and pict
     _mesa_free_pict(pic_u);
     u3z(pin);
@@ -2647,6 +2659,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     if ( 0 == nam_u->fra_d ) {
       _mesa_req_pact_init(sam_u, pic_u, &lan_u);
     }
+    u3l_log(" _mesa_req_pact_init");
+
     _mesa_del_pit(sam_u, nam_u);
     _mesa_free_pict(pic_u);  //  XX leaks packet
     u3z(pin);
@@ -2718,6 +2732,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
   } else if ( req_u->hav_d < lev_d ) {
+
     _mesa_request_next_fragments(sam_u, req_u, lan_u);
     _mesa_free_pict(pic_u);
     u3z(pin);
@@ -2785,6 +2800,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     _mesa_forward_request(sam_u, pic_u, lan_u);
     return;
   }
+
   // record interest
   _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
 
@@ -2792,6 +2808,8 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_d  bat_d = _mesa_lop(fra_d);
 
   pac_u->pek_u.nam_u.fra_d = bat_d;
+
+  // u3l_log("hear peek fra %llu", fra_d);
 
   // if we have the page, send it
   u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
@@ -2801,7 +2819,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
 
-  // if we are waiting, no-op
+  // // if we are waiting, no-op
   if ( ( NULL != lin_u ) && ( CTAG_WAIT == lin_u->typ_y )) {
     _mesa_free_pict(pic_u);
     return;
@@ -2810,7 +2828,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( NULL == lin_u ) {  u3l_log("lin_u NULL"); }
 
   // otherwise, if blocked or NULL scry
-  lin_u = c3_calloc(sizeof(u3_mesa_line));
+  lin_u = u3a_malloc(sizeof(u3_mesa_line));
   lin_u->typ_y = CTAG_WAIT;
   _mesa_copy_name(&lin_u->nam_u, &pac_u->pek_u.nam_u);  // XX
 
@@ -2889,6 +2907,13 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
   //
   _mesa_put_peer(sam_u, pac_u->pok_u.pay_u.her_u, per_u);
 
+  u3_pend_req* req_u = _mesa_get_request(sam_u, &pac_u->pok_u.pay_u);
+  if ( req_u != NULL) {
+    // u3l_log("req pending");
+    _mesa_free_pict(pic_u);
+    return;
+  }
+
   u3_ovum_peer nes_f;
   u3_ovum_bail bal_f;
   void*        ptr_v;
@@ -2910,6 +2935,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, u3_lane* lan_u)
 
   //  XX check request state for *payload* (in-progress duplicate)
   assert(pac_u->pok_u.dat_u.tob_d);
+
   u3_mesa_lane_cb_data* dat_u = c3_malloc(sizeof(u3_mesa_lane_cb_data));
   {
     dat_u->nam_u = c3_malloc(sizeof(u3_mesa_name));
