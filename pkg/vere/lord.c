@@ -549,7 +549,6 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 {
   u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
   wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
-  u3z(dat);
 }
 
 /* _lord_work_spin(): update spinner if more work is in progress.

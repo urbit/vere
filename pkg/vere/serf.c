@@ -1162,7 +1162,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
       } break;
       case c3__quiz: {
-        switch ( com ) {
+        switch ( u3h(com) ) {
           case c3__quac: {
             u3z(wit);
             u3_noun res = u3_serf_grab(c3n);
