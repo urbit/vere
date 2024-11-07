@@ -7,10 +7,6 @@
             .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
             .lazy = true,
         },
-        // .openssl = .{
-        //     .url = "https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz",
-        //     .hash = "122036841d37585c881aa56891a05e16e32115c71c09eb831ab1225938603702f08d",
-        // },
         .openssl = .{
             .url = "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz",
             .hash = "122042b0a69fc3deee3c603b11046f15693046e5cfcf56858e028b9ea4dc4b78b81a",

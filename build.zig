@@ -86,7 +86,6 @@ pub fn build(b: *std.Build) !void {
     ) orelse "urbit";
 
     // Parse short git rev
-    //
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
     var buf_reader = std.io.bufferedReader(file.reader());
@@ -106,7 +105,7 @@ pub fn build(b: *std.Build) !void {
         VERSION;
 
     //
-    // BUILD
+    // Build
     //
 
     const build_cfg: BuildCfg = .{
@@ -123,11 +122,11 @@ pub fn build(b: *std.Build) !void {
 
     if (all) {
         for (targets) |t| {
-            try build_single(b, b.resolveTargetQuery(t), optimize, build_cfg);
+            try buildBinary(b, b.resolveTargetQuery(t), optimize, build_cfg);
         }
     } else {
         const t = target.result;
-        try build_single(
+        try buildBinary(
             b,
             if (t.os.tag == .linux and target.query.isNative())
                 b.resolveTargetQuery(.{ .abi = .musl })
@@ -139,7 +138,7 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-fn build_single(
+fn buildBinary(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -148,7 +147,8 @@ fn build_single(
     const t = target.result;
 
     //
-    // CFLAGS for both dependencies and build
+    // Global C Opts
+    // TODO: Propagate these to all 3rd party dependencies
     //
 
     var global_flags = std.ArrayList([]const u8).init(b.allocator);
@@ -163,7 +163,7 @@ fn build_single(
     });
 
     //
-    // CFLAGS for Urbit Libs and Binaries
+    //  C Opts for Urbit PKGs And Binary
     //
 
     var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
@@ -220,8 +220,9 @@ fn build_single(
     }
 
     //
-    // DEPENDENCIES
+    // Dependencies
     //
+
     const copts: []const []const u8 = urbit_flags.items;
 
     const pkg_c3 = b.dependency("pkg_c3", .{
@@ -312,7 +313,7 @@ fn build_single(
     });
 
     //
-    // Install artifact
+    // Build Artifact
     //
 
     const urbit = b.addExecutable(.{
@@ -320,6 +321,8 @@ fn build_single(
         .target = target,
         .optimize = optimize,
     });
+    urbit.stack_size = 0;
+
     const target_query: std.Target.Query = .{
         .cpu_arch = t.cpu.arch,
         .os_tag = t.os.tag,
@@ -348,12 +351,6 @@ fn build_single(
         }
     }
 
-    //
-    // Binary build
-    //
-
-    urbit.stack_size = 0;
-
     urbit.linkLibC();
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
@@ -379,15 +376,13 @@ fn build_single(
         .flags = urbit_flags.items,
     });
 
-    // b.installArtifact(urbit);
-
     //
     // Tests
     //
 
     if (cfg.include_test_steps) {
         // pkg_ur
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -398,7 +393,7 @@ fn build_single(
         );
 
         // pkg_ent
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -409,7 +404,7 @@ fn build_single(
         );
 
         // pkg_noun
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -422,7 +417,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -435,7 +430,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -448,7 +443,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -461,7 +456,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -476,7 +471,7 @@ fn build_single(
         );
 
         // vere
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -496,7 +491,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -515,7 +510,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -534,7 +529,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -553,7 +548,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -572,7 +567,7 @@ fn build_single(
             },
             urbit_flags.items,
         );
-        add_test(
+        addTest(
             b,
             target,
             optimize,
@@ -594,7 +589,7 @@ fn build_single(
     }
 }
 
-fn add_test(
+fn addTest(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -610,15 +605,6 @@ fn add_test(
         .target = target,
         .optimize = optimize,
     });
-
-    // const target_output = b.addInstallArtifact(test_exe, .{
-    //     .dest_dir = .{
-    //         .override = .{
-    //             .custom = try target.result.zigTriple(b.allocator),
-    //         },
-    //     },
-    // });
-    // b.getInstallStep().dependOn(&target_output.step);
 
     if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
