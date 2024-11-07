@@ -230,6 +230,12 @@ fn build_single(
         .copt = copts,
     });
 
+    const pkg_ent = b.dependency("pkg_ent", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
+
     const avahi = b.dependency("avahi", .{
         .target = target,
         .optimize = optimize,
@@ -324,12 +330,6 @@ fn build_single(
     // Install artifacts
     //
 
-    const pkg_ent = b.addStaticLibrary(.{
-        .name = "ent",
-        .target = target,
-        .optimize = optimize,
-    });
-
     const pkg_ur = b.addStaticLibrary(.{
         .name = "ur",
         .target = target,
@@ -355,7 +355,6 @@ fn build_single(
     });
 
     const artifacts = [_]*std.Build.Step.Compile{
-        pkg_ent,
         pkg_ur,
         pkg_noun,
         vere,
@@ -402,35 +401,6 @@ fn build_single(
     }
 
     //
-    // PKG ENT
-    //
-
-    pkg_ent.linkLibC();
-
-    pkg_ent.addIncludePath(b.path("pkg/ent"));
-
-    var ent_flags = std.ArrayList([]const u8).init(b.allocator);
-    defer ent_flags.deinit();
-
-    try ent_flags.appendSlice(&.{
-        "-pedantic",
-        "-std=gnu99",
-    });
-    try ent_flags.appendSlice(urbit_flags.items);
-
-    pkg_ent.addCSourceFiles(.{
-        .root = b.path("pkg/ent"),
-        .files = &.{"ent.c"},
-        .flags = ent_flags.items,
-    });
-
-    pkg_ent.installHeadersDirectory(b.path("pkg/ent"), "ent", .{
-        .include_extensions = &.{".h"},
-    });
-
-    // b.installArtifact(pkg_ent);
-
-    //
     // PKG UR
     //
 
@@ -460,7 +430,7 @@ fn build_single(
     //
 
     pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
-    pkg_noun.linkLibrary(pkg_ent);
+    pkg_noun.linkLibrary(pkg_ent.artifact("ent"));
     pkg_noun.linkLibrary(pkg_ur);
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
@@ -771,7 +741,7 @@ fn build_single(
     vere.linkLibrary(urcrypt.artifact("urcrypt"));
     vere.linkLibrary(zlib.artifact("z"));
     vere.linkLibrary(pkg_c3.artifact("c3"));
-    vere.linkLibrary(pkg_ent);
+    vere.linkLibrary(pkg_ent.artifact("ent"));
     vere.linkLibrary(pkg_noun);
     vere.linkLibrary(pkg_ur);
     vere.linkLibC();
@@ -911,7 +881,7 @@ fn build_single(
             optimize,
             "ent-test",
             "pkg/ent/tests.c",
-            &.{pkg_ent},
+            &.{pkg_ent.artifact("ent")},
             urbit_flags.items,
         );
 
@@ -973,7 +943,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
@@ -993,7 +963,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
@@ -1012,7 +982,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
@@ -1031,7 +1001,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
@@ -1050,7 +1020,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
@@ -1069,7 +1039,7 @@ fn build_single(
                 vere,
                 pkg_noun,
                 pkg_ur,
-                pkg_ent,
+                pkg_ent.artifact("ent"),
                 pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),

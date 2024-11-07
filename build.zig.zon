@@ -10,6 +10,9 @@
         .pkg_c3 = .{
             .path = "./pkg/c3",
         },
+        .pkg_ent = .{
+            .path = "./pkg/ent",
+        },
         .avahi = .{
             .path = "./ext/avahi",
         },
