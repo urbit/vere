@@ -13,6 +13,9 @@
         .pkg_ent = .{
             .path = "./pkg/ent",
         },
+        .pkg_ur = .{
+            .path = "./pkg/ur",
+        },
         .avahi = .{
             .path = "./ext/avahi",
         },
