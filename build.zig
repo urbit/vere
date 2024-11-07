@@ -248,9 +248,12 @@ fn build_single(
         .copt = copts,
     });
 
-    const avahi = b.dependency("avahi", .{
+    const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
+        .copt = copts,
+        .pace = cfg.pace,
+        .version = cfg.version,
     });
 
     const curl = b.dependency("curl", .{
@@ -309,210 +312,51 @@ fn build_single(
     });
 
     //
-    // Install artifacts
+    // Install artifact
     //
-
-    const vere = b.addStaticLibrary(.{
-        .name = "vere",
-        .target = target,
-        .optimize = optimize,
-    });
 
     const urbit = b.addExecutable(.{
         .name = cfg.binary_name,
         .target = target,
         .optimize = optimize,
     });
-
-    const artifacts = [_]*std.Build.Step.Compile{
-        vere,
-        urbit,
+    const target_query: std.Target.Query = .{
+        .cpu_arch = t.cpu.arch,
+        .os_tag = t.os.tag,
+        .abi = t.abi,
+        .os_version_min = .none,
+        .os_version_max = .none,
     };
-
-    for (artifacts) |artifact| {
-        const target_query: std.Target.Query = .{
-            .cpu_arch = t.cpu.arch,
-            .os_tag = t.os.tag,
-            .abi = t.abi,
-            .os_version_min = .none,
-            .os_version_max = .none,
-        };
-        const target_output = b.addInstallArtifact(artifact, .{
-            .dest_dir = .{
-                .override = .{
-                    .custom = try target_query.zigTriple(b.allocator),
-                },
+    const target_output = b.addInstallArtifact(urbit, .{
+        .dest_dir = .{
+            .override = .{
+                .custom = try target_query.zigTriple(b.allocator),
             },
-        });
-        b.getInstallStep().dependOn(&target_output.step);
-    }
+        },
+    });
+    b.getInstallStep().dependOn(&target_output.step);
 
     if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
         });
-
-        const steps = [_]*std.Build.Step.Compile{
-            vere,
-            urbit,
-        };
-
-        for (steps) |step| {
-            if (macos_sdk != null) {
-                step.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-                step.addLibraryPath(macos_sdk.?.path("usr/lib"));
-                step.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
-            }
+        if (macos_sdk != null) {
+            urbit.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            urbit.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            urbit.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
     //
-    // VERE LIBRARY
-    //
-
-    const pace_h = b.addWriteFile("pace.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
-        defer output.deinit();
-
-        try output.appendSlice(b.fmt(
-            \\#ifndef URBIT_PACE_H
-            \\#define URBIT_PACE_H
-            \\#define U3_VERE_PACE "{s}"
-            \\#endif
-            \\
-        , .{cfg.pace}));
-
-        break :blk try output.toOwnedSlice();
-    });
-
-    const version_h = b.addWriteFile("version.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
-        defer output.deinit();
-
-        try output.appendSlice(b.fmt(
-            \\#ifndef URBIT_VERSION_H
-            \\#define URBIT_VERSION_H
-            \\#define URBIT_VERSION "{s}"
-            \\#endif
-            \\
-        , .{cfg.version}));
-
-        break :blk try output.toOwnedSlice();
-    });
-
-    vere.addIncludePath(pace_h.getDirectory());
-    vere.addIncludePath(version_h.getDirectory());
-    vere.addIncludePath(b.path("pkg/vere"));
-    vere.addIncludePath(b.path("pkg/vere/ivory"));
-    vere.addIncludePath(b.path("pkg/vere/ca_bundle"));
-
-    if (t.os.tag == .linux) {
-        vere.linkLibrary(avahi.artifact("dns-sd"));
-    }
-    vere.linkLibrary(natpmp.artifact("natpmp"));
-    vere.linkLibrary(curl.artifact("curl"));
-    vere.linkLibrary(gmp.artifact("gmp"));
-    vere.linkLibrary(h2o.artifact("h2o"));
-    vere.linkLibrary(libuv.artifact("libuv"));
-    vere.linkLibrary(lmdb.artifact("lmdb"));
-    vere.linkLibrary(openssl.artifact("ssl"));
-    vere.linkLibrary(urcrypt.artifact("urcrypt"));
-    vere.linkLibrary(zlib.artifact("z"));
-    vere.linkLibrary(pkg_c3.artifact("c3"));
-    vere.linkLibrary(pkg_ent.artifact("ent"));
-    vere.linkLibrary(pkg_ur.artifact("ur"));
-    vere.linkLibrary(pkg_noun.artifact("noun"));
-    vere.linkLibC();
-
-    var vere_srcs = std.ArrayList([]const u8).init(b.allocator);
-    defer vere_srcs.deinit();
-
-    try vere_srcs.appendSlice(&.{
-        "auto.c",
-        "ca_bundle/ca_bundle.c",
-        "dawn.c",
-        "db/lmdb.c",
-        "disk.c",
-        "foil.c",
-        "io/ames.c",
-        "io/ames/stun.c",
-        "io/behn.c",
-        "io/conn.c",
-        "io/cttp.c",
-        "io/fore.c",
-        "io/hind.c",
-        "io/http.c",
-        "io/lick.c",
-        "io/lss.c",
-        "io/mesa.c",
-        "io/mesa/bitset.c",
-        "io/mesa/pact.c",
-        "io/term.c",
-        "io/unix.c",
-        "ivory/ivory.c",
-        "king.c",
-        "lord.c",
-        "mars.c",
-        "mdns.c",
-        "newt.c",
-        "pier.c",
-        "save.c",
-        "serf.c",
-        "time.c",
-        "ward.c",
-    });
-
-    if (t.os.tag == .macos) {
-        try vere_srcs.appendSlice(&.{
-            "platform/darwin/daemon.c",
-            "platform/darwin/ptty.c",
-            "platform/darwin/mach.c",
-        });
-    }
-
-    if (t.os.tag == .linux) {
-        try vere_srcs.appendSlice(&.{
-            "platform/linux/daemon.c",
-            "platform/linux/ptty.c",
-        });
-    }
-
-    var vere_flags = std.ArrayList([]const u8).init(b.allocator);
-    defer vere_flags.deinit();
-
-    try vere_flags.appendSlice(&.{
-        "-std=gnu23",
-    });
-    try vere_flags.appendSlice(urbit_flags.items);
-
-    vere.addCSourceFiles(.{
-        .root = b.path("pkg/vere"),
-        .files = vere_srcs.items,
-        .flags = vere_flags.items,
-    });
-
-    vere.installHeadersDirectory(b.path("pkg/vere"), "", .{
-        .include_extensions = &.{".h"},
-        .exclude_extensions = &.{ "ivory.h", "ca_bundle.h" },
-    });
-
-    vere.installHeader(b.path("pkg/vere/ivory/ivory.h"), "ivory.h");
-    vere.installHeader(b.path("pkg/vere/ca_bundle/ca_bundle.h"), "ca_bundle.h");
-    vere.installHeader(pace_h.getDirectory().path(b, "pace.h"), "pace.h");
-    vere.installHeader(version_h.getDirectory().path(b, "version.h"), "version.h");
-
-    // b.installArtifact(vere);
-
-    //
-    // URBIT BINARY
+    // Binary build
     //
 
     urbit.stack_size = 0;
 
     urbit.linkLibC();
 
-    urbit.linkLibrary(vere);
+    urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
@@ -639,7 +483,7 @@ fn build_single(
             "ames-test",
             "pkg/vere/ames_tests.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -650,7 +494,7 @@ fn build_single(
                 natpmp.artifact("natpmp"),
                 zlib.artifact("z"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
         add_test(
             b,
@@ -659,7 +503,7 @@ fn build_single(
             "boot-test",
             "pkg/vere/boot_tests.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -669,7 +513,7 @@ fn build_single(
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
         add_test(
             b,
@@ -678,7 +522,7 @@ fn build_single(
             "newt-test",
             "pkg/vere/newt_tests.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -688,7 +532,7 @@ fn build_single(
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
         add_test(
             b,
@@ -697,7 +541,7 @@ fn build_single(
             "vere-noun-test",
             "pkg/vere/noun_tests.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -707,7 +551,7 @@ fn build_single(
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
         add_test(
             b,
@@ -716,7 +560,7 @@ fn build_single(
             "unix-test",
             "pkg/vere/unix_tests.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -726,7 +570,7 @@ fn build_single(
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
         add_test(
             b,
@@ -735,7 +579,7 @@ fn build_single(
             "benchmarks",
             "pkg/vere/benchmarks.c",
             &.{
-                vere,
+                pkg_vere.artifact("vere"),
                 pkg_noun.artifact("noun"),
                 pkg_ur.artifact("ur"),
                 pkg_ent.artifact("ent"),
@@ -745,7 +589,7 @@ fn build_single(
                 lmdb.artifact("lmdb"),
                 natpmp.artifact("natpmp"),
             },
-            vere_flags.items,
+            urbit_flags.items,
         );
     }
 }

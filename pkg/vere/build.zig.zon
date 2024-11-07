@@ -1,5 +1,5 @@
 .{
-    .name = "urbit",
+    .name = "vere",
     .version = "0.0.1",
     .dependencies = .{
         .macos_sdk = .{
@@ -8,52 +8,43 @@
             .lazy = true,
         },
         .pkg_c3 = .{
-            .path = "./pkg/c3",
+            .path = "../c3",
         },
         .pkg_ent = .{
-            .path = "./pkg/ent",
+            .path = "../ent",
         },
         .pkg_ur = .{
-            .path = "./pkg/ur",
+            .path = "../ur",
         },
         .pkg_noun = .{
-            .path = "./pkg/noun",
+            .path = "../noun",
         },
-        .pkg_vere = .{
-            .path = "./pkg/vere",
+        .avahi = .{
+            .path = "../../ext/avahi",
         },
         .curl = .{
-            .path = "./ext/curl",
+            .path = "../../ext/curl",
         },
         .gmp = .{
-            .path = "./ext/gmp",
+            .path = "../../ext/gmp",
         },
         .h2o = .{
-            .path = "./ext/h2o",
+            .path = "../../ext/h2o",
         },
         .libuv = .{
-            .path = "./ext/libuv",
+            .path = "../../ext/libuv",
         },
         .lmdb = .{
-            .path = "./ext/lmdb",
+            .path = "../../ext/lmdb",
         },
         .natpmp = .{
-            .path = "./ext/natpmp",
+            .path = "../../ext/natpmp",
         },
         .openssl = .{
-            .path = "./ext/openssl",
-            // .path = "../../Github/openssl-zig",
-            // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
-            // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
-        },
-        .sigsegv = .{
-            .path = "./ext/sigsegv",
+            .path = "../../ext/openssl",
         },
         .urcrypt = .{
-            .path = "./ext/urcrypt",
-        },
-        .whereami = .{
-            .path = "./ext/whereami",
+            .path = "../../ext/urcrypt",
         },
         .zlib = .{
             .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
