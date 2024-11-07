@@ -7,6 +7,9 @@
             .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
             .lazy = true,
         },
+        .pkg_c3 = .{
+            .path = "./pkg/c3",
+        },
         .avahi = .{
             .path = "./ext/avahi",
         },

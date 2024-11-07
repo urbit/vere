@@ -222,6 +222,13 @@ fn build_single(
     //
     // DEPENDENCIES
     //
+    const copts: []const []const u8 = urbit_flags.items;
+
+    const pkg_c3 = b.dependency("pkg_c3", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
 
     const avahi = b.dependency("avahi", .{
         .target = target,
@@ -317,12 +324,6 @@ fn build_single(
     // Install artifacts
     //
 
-    const pkg_c3 = b.addStaticLibrary(.{
-        .name = "c3",
-        .target = target,
-        .optimize = optimize,
-    });
-
     const pkg_ent = b.addStaticLibrary(.{
         .name = "ent",
         .target = target,
@@ -354,7 +355,6 @@ fn build_single(
     });
 
     const artifacts = [_]*std.Build.Step.Compile{
-        pkg_c3,
         pkg_ent,
         pkg_ur,
         pkg_noun,
@@ -387,7 +387,6 @@ fn build_single(
         });
 
         const steps = [_]*std.Build.Step.Compile{
-            pkg_c3,
             pkg_noun,
             vere,
             urbit,
@@ -401,26 +400,6 @@ fn build_single(
             }
         }
     }
-
-    //
-    // PKG C3
-    //
-
-    pkg_c3.linkLibC();
-
-    pkg_c3.addIncludePath(b.path("pkg/c3"));
-
-    pkg_c3.addCSourceFiles(.{
-        .root = b.path("pkg/c3"),
-        .files = &.{"defs.c"},
-        .flags = urbit_flags.items,
-    });
-
-    pkg_c3.installHeadersDirectory(b.path("pkg/c3"), "c3", .{
-        .include_extensions = &.{".h"},
-    });
-
-    // b.installArtifact(pkg_c3);
 
     //
     // PKG ENT
@@ -480,7 +459,7 @@ fn build_single(
     // PKG NOUN
     //
 
-    pkg_noun.linkLibrary(pkg_c3);
+    pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
     pkg_noun.linkLibrary(pkg_ent);
     pkg_noun.linkLibrary(pkg_ur);
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
@@ -791,7 +770,7 @@ fn build_single(
     vere.linkLibrary(openssl.artifact("ssl"));
     vere.linkLibrary(urcrypt.artifact("urcrypt"));
     vere.linkLibrary(zlib.artifact("z"));
-    vere.linkLibrary(pkg_c3);
+    vere.linkLibrary(pkg_c3.artifact("c3"));
     vere.linkLibrary(pkg_ent);
     vere.linkLibrary(pkg_noun);
     vere.linkLibrary(pkg_ur);
@@ -886,7 +865,7 @@ fn build_single(
 
     urbit.linkLibrary(vere);
     urbit.linkLibrary(pkg_noun);
-    urbit.linkLibrary(pkg_c3);
+    urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur);
 
     urbit.linkLibrary(gmp.artifact("gmp"));
@@ -943,7 +922,7 @@ fn build_single(
             optimize,
             "hashtable-test",
             "pkg/noun/hashtable_tests.c",
-            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            &.{ pkg_noun, pkg_c3.artifact("c3"), gmp.artifact("gmp") },
             noun_flags.items,
         );
         add_test(
@@ -952,7 +931,7 @@ fn build_single(
             optimize,
             "jets-test",
             "pkg/noun/jets_tests.c",
-            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            &.{ pkg_noun, pkg_c3.artifact("c3"), gmp.artifact("gmp") },
             noun_flags.items,
         );
         add_test(
@@ -961,7 +940,7 @@ fn build_single(
             optimize,
             "nock-test",
             "pkg/noun/nock_tests.c",
-            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            &.{ pkg_noun, pkg_c3.artifact("c3"), gmp.artifact("gmp") },
             noun_flags.items,
         );
         add_test(
@@ -970,7 +949,7 @@ fn build_single(
             optimize,
             "retrieve-test",
             "pkg/noun/retrieve_tests.c",
-            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            &.{ pkg_noun, pkg_c3.artifact("c3"), gmp.artifact("gmp") },
             noun_flags.items,
         );
         add_test(
@@ -979,7 +958,7 @@ fn build_single(
             optimize,
             "serial-test",
             "pkg/noun/serial_tests.c",
-            &.{ pkg_noun, pkg_c3, gmp.artifact("gmp") },
+            &.{ pkg_noun, pkg_c3.artifact("c3"), gmp.artifact("gmp") },
             noun_flags.items,
         );
 
@@ -995,7 +974,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
@@ -1015,7 +994,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
@@ -1034,7 +1013,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
@@ -1053,7 +1032,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
@@ -1072,7 +1051,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
@@ -1091,7 +1070,7 @@ fn build_single(
                 pkg_noun,
                 pkg_ur,
                 pkg_ent,
-                pkg_c3,
+                pkg_c3.artifact("c3"),
                 gmp.artifact("gmp"),
                 libuv.artifact("libuv"),
                 lmdb.artifact("lmdb"),
