@@ -16,11 +16,11 @@
         .pkg_ur = .{
             .path = "./pkg/ur",
         },
+        .pkg_noun = .{
+            .path = "./pkg/noun",
+        },
         .avahi = .{
             .path = "./ext/avahi",
-        },
-        .backtrace = .{
-            .path = "./ext/backtrace",
         },
         .curl = .{
             .path = "./ext/curl",
@@ -37,9 +37,6 @@
         .lmdb = .{
             .path = "./ext/lmdb",
         },
-        .murmur3 = .{
-            .path = "./ext/murmur3",
-        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },
@@ -49,20 +46,8 @@
             // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
             // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
         },
-        .pdjson = .{
-            .path = "./ext/pdjson",
-        },
         .sigsegv = .{
             .path = "./ext/sigsegv",
-        },
-        .softfloat = .{
-            .path = "./ext/softfloat",
-        },
-        .softblas = .{
-            .path = "./ext/softblas",
-        },
-        .unwind = .{
-            .path = "./ext/unwind",
         },
         .urcrypt = .{
             .path = "./ext/urcrypt",
