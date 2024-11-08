@@ -69,9 +69,10 @@ Supported values:
 - soon
 - edge
 
-#### `-Dflags=[string]`
-Provide additional compiler flags. These propagate to all build artifacts and
-dependencies.
+#### `-Dcopt=[list]`
+Provide additional compiler flags. These propagate to all build artifacts.
+
+Example: `zig build -Dcopt="-g" -Dcopt="-fno-sanitize=all"`
 
 <!-- ## LSP Integration -->
 

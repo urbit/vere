@@ -41,19 +41,11 @@ pub fn build(b: *std.Build) !void {
         "Release train (Default: once)",
     ) orelse if (release) Pace.live else Pace.once);
 
-    const flags_opt = b.option(
-        []const u8,
-        "flags",
+    const copts: []const []const u8 = b.option(
+        []const []const u8,
+        "copt",
         "Provide additional compiler flags",
-    );
-    var flags = std.ArrayList([]const u8).init(b.allocator);
-    defer flags.deinit();
-    var iter_flags = std.mem.splitSequence(u8, flags_opt orelse "", " ");
-    while (iter_flags.next()) |flag| {
-        if (flag.len != 0) {
-            try flags.appendSlice(&.{flag});
-        }
-    }
+    ) orelse &.{};
 
     const cpu_dbg = b.option(
         bool,
@@ -111,7 +103,7 @@ pub fn build(b: *std.Build) !void {
     const build_cfg: BuildCfg = .{
         .version = version,
         .pace = pace,
-        .flags = flags.items,
+        .flags = copts,
         .binary_name = binary_name,
         .cpu_dbg = cpu_dbg,
         .mem_dbg = mem_dbg,
