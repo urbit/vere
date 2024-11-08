@@ -373,253 +373,132 @@ fn buildBinary(
     //
 
     if (cfg.include_test_steps) {
-        // pkg_ur
-        addTest(
-            b,
-            target,
-            optimize,
-            "ur-test",
-            "pkg/ur/tests.c",
-            &.{pkg_ur.artifact("ur")},
-            urbit_flags.items,
-        );
+        const noun_test_deps = &.{
+            pkg_noun.artifact("noun"),
+            pkg_c3.artifact("c3"),
+            gmp.artifact("gmp"),
+        };
+        const vere_test_deps = &.{
+            pkg_vere.artifact("vere"),
+            pkg_noun.artifact("noun"),
+            pkg_ur.artifact("ur"),
+            pkg_ent.artifact("ent"),
+            pkg_c3.artifact("c3"),
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            natpmp.artifact("natpmp"),
+            zlib.artifact("z"),
+        };
+        const tests = [_]struct {
+            name: []const u8,
+            file: []const u8,
+            deps: []const *std.Build.Step.Compile,
+        }{
+            // pkg_ur
+            .{
+                .name = "ur-test",
+                .file = "pkg/ur/tests.c",
+                .deps = &.{pkg_ur.artifact("ur")},
+            },
+            // pkg_ent
+            .{
+                .name = "ent-test",
+                .file = "pkg/ent/tests.c",
+                .deps = &.{pkg_ent.artifact("ent")},
+            },
+            // pkg_noun
+            .{
+                .name = "hashtable-test",
+                .file = "pkg/noun/hashtable_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
+                .name = "jets-test",
+                .file = "pkg/noun/jets_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
+                .name = "nock-test",
+                .file = "pkg/noun/nock_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
+                .name = "retrieve-test",
+                .file = "pkg/noun/retrieve_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
+                .name = "serial-test",
+                .file = "pkg/noun/serial_tests.c",
+                .deps = noun_test_deps,
+            },
+            // pkg_vere
+            .{
+                .name = "ames-test",
+                .file = "pkg/vere/ames_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "boot-test",
+                .file = "pkg/vere/boot_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "newt-test",
+                .file = "pkg/vere/newt_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "vere-noun-test",
+                .file = "pkg/vere/noun_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "unix-test",
+                .file = "pkg/vere/unix_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "benchmarks",
+                .file = "pkg/vere/benchmarks.c",
+                .deps = vere_test_deps,
+            },
+        };
 
-        // pkg_ent
-        addTest(
-            b,
-            target,
-            optimize,
-            "ent-test",
-            "pkg/ent/tests.c",
-            &.{pkg_ent.artifact("ent")},
-            urbit_flags.items,
-        );
+        for (tests) |tst| {
+            const test_step =
+                b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
+            const test_exe = b.addExecutable(.{
+                .name = tst.name,
+                .target = target,
+                .optimize = optimize,
+            });
 
-        // pkg_noun
-        addTest(
-            b,
-            target,
-            optimize,
-            "hashtable-test",
-            "pkg/noun/hashtable_tests.c",
-            &.{
-                pkg_noun.artifact("noun"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "jets-test",
-            "pkg/noun/jets_tests.c",
-            &.{
-                pkg_noun.artifact("noun"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "nock-test",
-            "pkg/noun/nock_tests.c",
-            &.{
-                pkg_noun.artifact("noun"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "retrieve-test",
-            "pkg/noun/retrieve_tests.c",
-            &.{
-                pkg_noun.artifact("noun"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "serial-test",
-            "pkg/noun/serial_tests.c",
-            &.{
-                pkg_noun.artifact("noun"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-            },
-            urbit_flags.items,
-        );
+            if (t.isDarwin() and !target.query.isNative()) {
+                const macos_sdk = b.lazyDependency("macos_sdk", .{
+                    .target = target,
+                    .optimize = optimize,
+                });
+                if (macos_sdk != null) {
+                    test_exe.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+                    test_exe.addLibraryPath(macos_sdk.?.path("usr/lib"));
+                    test_exe.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+                }
+            }
 
-        // vere
-        addTest(
-            b,
-            target,
-            optimize,
-            "ames-test",
-            "pkg/vere/ames_tests.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-                zlib.artifact("z"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "boot-test",
-            "pkg/vere/boot_tests.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "newt-test",
-            "pkg/vere/newt_tests.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "vere-noun-test",
-            "pkg/vere/noun_tests.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "unix-test",
-            "pkg/vere/unix_tests.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-            },
-            urbit_flags.items,
-        );
-        addTest(
-            b,
-            target,
-            optimize,
-            "benchmarks",
-            "pkg/vere/benchmarks.c",
-            &.{
-                pkg_vere.artifact("vere"),
-                pkg_noun.artifact("noun"),
-                pkg_ur.artifact("ur"),
-                pkg_ent.artifact("ent"),
-                pkg_c3.artifact("c3"),
-                gmp.artifact("gmp"),
-                libuv.artifact("libuv"),
-                lmdb.artifact("lmdb"),
-                natpmp.artifact("natpmp"),
-            },
-            urbit_flags.items,
-        );
-    }
-}
-
-fn addTest(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    name: []const u8,
-    file: []const u8,
-    deps: []const *std.Build.Step.Compile,
-    cflags: []const []const u8,
-) void {
-    const test_step = b.step(name, b.fmt("Build & run: {s}", .{file}));
-
-    const test_exe = b.addExecutable(.{
-        .name = name,
-        .target = target,
-        .optimize = optimize,
-    });
-
-    if (target.result.isDarwin() and !target.query.isNative()) {
-        const macos_sdk = b.lazyDependency("macos_sdk", .{
-            .target = target,
-            .optimize = optimize,
-        });
-        if (macos_sdk != null) {
-            test_exe.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            test_exe.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            test_exe.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            test_exe.stack_size = 0;
+            test_exe.linkLibC();
+            for (tst.deps) |dep| {
+                test_exe.linkLibrary(dep);
+            }
+            test_exe.addCSourceFiles(.{
+                .files = &.{tst.file},
+                .flags = urbit_flags.items,
+            });
+            const run_unit_tests = b.addRunArtifact(test_exe);
+            run_unit_tests.skip_foreign_checks = true;
+            test_step.dependOn(&run_unit_tests.step);
         }
     }
-
-    test_exe.stack_size = 0;
-
-    test_exe.linkLibC();
-    for (deps) |dep| {
-        test_exe.linkLibrary(dep);
-    }
-
-    test_exe.addCSourceFiles(.{ .files = &.{file}, .flags = cflags });
-
-    const run_unit_tests = b.addRunArtifact(test_exe);
-    run_unit_tests.skip_foreign_checks = true;
-    test_step.dependOn(&run_unit_tests.step);
 }
