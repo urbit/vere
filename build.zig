@@ -368,6 +368,10 @@ fn buildBinary(
         .flags = urbit_flags.items,
     });
 
+    // CI needs generated version.h so we install libvere as a quick fix
+    const vere_install = b.addInstallArtifact(pkg_vere.artifact("vere"), .{});
+    b.getInstallStep().dependOn(&vere_install.step);
+
     //
     // Tests
     //
