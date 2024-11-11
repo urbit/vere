@@ -2,12 +2,19 @@ const std = @import("std");
 
 const VERSION = "3.2";
 
-const targets: []const std.Target.Query = &.{
+const main_targets = .{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
 };
+
+const supported_targets: []const std.Target.Query = &(main_targets ++ .{
+    .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+});
+
+const targets: []const std.Target.Query = &main_targets;
 
 const BuildCfg = struct {
     version: []const u8,
@@ -22,7 +29,7 @@ const BuildCfg = struct {
 };
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{ .whitelist = targets });
+    const target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     var optimize = b.standardOptimizeOption(.{});
 
     //
