@@ -1586,7 +1586,10 @@ u3_term_wall(u3_noun wol)
 }
 
 static void
-_born_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e) {}
+_born_bail_cb(u3_ovum *egg_u, u3_noun stacktraces) {
+  u3z(stacktraces);
+  u3_ovum_free(egg_u);
+}
 
 /* _term_io_talk():
 */
@@ -1610,7 +1613,7 @@ _term_io_talk(u3_auto* car_u)
   //
   {
     cad = u3nc(c3__born, u3_nul);
-    u3_ovum* egg_u = u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
+    u3_ovum* egg_u = u3_auto_plan(car_u, u3_ovum_init(0, c3__d, u3k(wir), cad));
     u3z(egg_u->pin_u.lab);
     egg_u->pin_u.lab = u3_blip;
 
