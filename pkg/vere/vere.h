@@ -478,9 +478,10 @@
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
             struct {                            //  serf query:
+              c3_m         qiz_m;               //  %quiz
               void*        ptr_v;               //    driver
-              void (*quiz_f)(void*, u3_noun);   //    callback
-            } qui_u;                            //
+              void (*qiz_f)(c3_m, void*, u3_noun);  //  callback
+            } qiz_u;                                //
           };
         } u3_writ;
 
@@ -776,16 +777,7 @@
          u3_atom
          u3_time_t_in_ts(time_t tim);
 #endif
-      /* u3_lord_writ_new(): allocate a new writ. 
-      */
-        u3_writ*
-        u3_lord_writ_new(u3_lord* god_u);
 
-      /* u3_lord_writ_plan(): enqueue a writ and send. 
-      */
-        void
-        u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);
-    
       /* u3_time_out_ts(): struct timespec from urbit time.
       */
         void
@@ -1153,6 +1145,14 @@
       */
         void
         u3_lord_pack(u3_lord* god_u);
+
+      /* u3_lord_quiz(): query the serf.
+      */
+        void
+        u3_lord_quiz(u3_lord* god_u,
+                     c3_m     qiz_m,
+                     void*    ptr_v,
+                     void (*qiz_f)(c3_m, void*, u3_noun));
 
       /* u3_lord_work(): attempt work.
       */

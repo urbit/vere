@@ -26,15 +26,17 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
-      [%quiz $%([%quac ~])]
   ==
 ::  +plea: from serf to king
 ::
 +$  plea
   $%  [%live ~]
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
-      [%quiz $%([%quac p=*])]
       [%slog pri=@ tank]
       [%flog cord]
       $:  %peek
@@ -44,6 +46,10 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -1156,13 +1162,36 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
       } break;
       case c3__quiz: {
-        u3z(wit);
-        u3_noun res = u3_serf_grab(c3n);
-        if ( u3_none == res ) {
-          ret_o = c3n;
-        } else {
-          *pel = u3nt(c3__quiz, c3__quac, res);
-          ret_o = c3y;
+        switch ( u3h(com) ) {
+          case c3__quac: {
+            u3z(wit);
+            u3_noun res = u3_serf_grab(c3n);
+            if ( u3_none == res ) {
+              ret_o = c3n;
+            } else {
+              *pel = u3nt(c3__quiz, c3__quac, res);
+              ret_o = c3y;
+            }
+          } break;
+
+          case c3__quic: {
+            u3z(wit);
+            c3_d pen_d = 4ULL * u3a_open(u3R);
+            c3_d dil_d = 4ULL * u3a_idle(u3R);
+            fprintf(stderr, "open: %" PRIu64 "\r\n", pen_d);
+            fprintf(stderr, "idle: %" PRIu64 "\r\n", dil_d);
+
+            *pel = u3nt(c3__quiz, c3__quic,
+                        u3nt(u3nc(c3__open, u3i_chub(pen_d)),
+                             u3nc(c3__idle, u3i_chub(dil_d)),
+                             u3_nul));
+            ret_o = c3y;
+          } break;
+
+          default: {
+            u3z(wit);
+            ret_o = c3n;
+          }
         }
       } break;
     }

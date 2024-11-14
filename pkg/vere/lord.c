@@ -22,8 +22,11 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
-      [%quiz $%([%quac ~])]
   ==
 ::  +plea: from serf to king
 ::
@@ -32,7 +35,6 @@
       [%ripe [pro=%1 hon=@ nok=@] eve=@ mug=@]
       [%slog pri=@ tank]
       [%flog cord]
-      [%quiz $%([%quac p=*])]
       $:  %peek
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
@@ -40,6 +42,10 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -105,7 +111,8 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit: {
+    case u3_writ_exit:
+    case u3_writ_quiz: {
     } break;
   }
 
@@ -203,6 +210,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
+    case u3_writ_quiz: return "quiz";
   }
 }
 
@@ -540,8 +548,7 @@ static void
 _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 {
   u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
-  wit_u->qui_u.quiz_f(wit_u->qui_u.ptr_v, dat);
-  u3z(dat);
+  wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
 }
 
 /* _lord_work_spin(): update spinner if more work is in progress.
@@ -781,10 +788,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3z(jar);
 }
 
-/* u3_lord_writ_new(): allocate a new writ.
+/* _lord_writ_new(): allocate a new writ.
 */
-u3_writ*
-u3_lord_writ_new(u3_lord* god_u)
+static u3_writ*
+_lord_writ_new(u3_lord* god_u)
 {
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
   return wit_u;
@@ -848,7 +855,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     } break;
 
     case u3_writ_quiz: {
-      msg = u3nt(c3__quiz, c3__quac, u3_nul);
+      msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
     } break;
   }
 
@@ -887,10 +894,10 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
   }
 }
 
-/* u3_lord_writ_plan(): enqueue a writ and send.
+/* _lord_writ_plan(): enqueue a writ and send.
 */
-void
-u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
+static void
+_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {
     u3_assert( !god_u->ext_u );
@@ -912,7 +919,7 @@ u3_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 void
 u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_peek;
   wit_u->pek_u = c3_calloc(sizeof(*wit_u->pek_u));
   wit_u->pek_u->ptr_v = pic_u->ptr_v;
@@ -943,7 +950,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 
   //  XX cache check, unless last
   //
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_play(): recompute batch.
@@ -951,7 +958,7 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 void
 u3_lord_play(u3_lord* god_u, u3_info fon_u)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_play;
   wit_u->fon_u = fon_u;
 
@@ -959,7 +966,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
   //
   // u3_assert( !pay_u.ent_u->nex_u );
 
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_work(): attempt work.
@@ -967,7 +974,7 @@ u3_lord_play(u3_lord* god_u, u3_info fon_u)
 void
 u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_work;
   wit_u->wok_u.egg_u = egg_u;
   wit_u->wok_u.job = job;
@@ -981,7 +988,7 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
     god_u->pin_o = c3y;
   }
 
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_save(): save a snapshot.
@@ -993,9 +1000,9 @@ u3_lord_save(u3_lord* god_u)
     return c3n;
   }
   else {
-    u3_writ* wit_u = u3_lord_writ_new(god_u);
+    u3_writ* wit_u = _lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_save;
-    u3_lord_writ_plan(god_u, wit_u);
+    _lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -1009,9 +1016,9 @@ u3_lord_cram(u3_lord* god_u)
     return c3n;
   }
   else {
-    u3_writ* wit_u = u3_lord_writ_new(god_u);
+    u3_writ* wit_u = _lord_writ_new(god_u);
     wit_u->typ_e = u3_writ_cram;
-    u3_lord_writ_plan(god_u, wit_u);
+    _lord_writ_plan(god_u, wit_u);
     return c3y;
   }
 }
@@ -1021,9 +1028,9 @@ u3_lord_cram(u3_lord* god_u)
 void
 u3_lord_meld(u3_lord* god_u)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_meld;
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_pack(): defragment persistent state.
@@ -1031,9 +1038,25 @@ u3_lord_meld(u3_lord* god_u)
 void
 u3_lord_pack(u3_lord* god_u)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_pack;
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
+}
+
+/* u3_lord_quiz(): query the serf.
+*/
+void
+u3_lord_quiz(u3_lord* god_u,
+             c3_m     qiz_m,
+             void*    ptr_v,
+             void (*qiz_f)(c3_m, void*, u3_noun))
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_quiz;
+  wit_u->qiz_u.qiz_m = qiz_m;
+  wit_u->qiz_u.ptr_v = ptr_v;
+  wit_u->qiz_u.qiz_f = qiz_f;
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_exit(): shutdown gracefully.
@@ -1041,9 +1064,9 @@ u3_lord_pack(u3_lord* god_u)
 void
 u3_lord_exit(u3_lord* god_u)
 {
-  u3_writ* wit_u = u3_lord_writ_new(god_u);
+  u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_exit;
-  u3_lord_writ_plan(god_u, wit_u);
+  _lord_writ_plan(god_u, wit_u);
 
   //  XX set timer, then halt
 }

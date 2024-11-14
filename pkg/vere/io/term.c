@@ -1659,7 +1659,7 @@ _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
 /* _term_io_quiz(): handle quiz (query to serf).
 */
 static void
-_term_io_quiz(void* vod_p, u3_noun res)
+_term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
 {
   u3_auto* car_u = (u3_auto*)vod_p;
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
@@ -1758,13 +1758,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__quac: {
           ret_o = c3y;
-          u3_writ* wit_u = u3_lord_writ_new(u3K.pir_u->god_u);
-          wit_u->typ_e = u3_writ_quiz;
-          wit_u->qui_u.ptr_v = car_u;
-          wit_u->qui_u.quiz_f = _term_io_quiz;
-
-          u3_lord_writ_plan(u3K.pir_u->god_u, wit_u);
-
+          u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
         } break;
       }
     }
