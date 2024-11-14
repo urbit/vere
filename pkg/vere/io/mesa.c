@@ -1770,7 +1770,6 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
     case c3__nail: {
-      u3m_p("data", dat);
       u3_noun who = u3k(u3h(dat));
       u3_peer* per_u = _mesa_get_peer_raw(sam_u, who);
 
@@ -2963,7 +2962,6 @@ _mesa_hear(u3_mesa* sam_u,
            c3_y*    hun_y)
 {
   if ( c3n == mesa_is_new_pact(hun_y, len_w) ) {
-    u3l_log("mesa: old hear");
     _ames_hear(u3_Host.sam_u, adr_u, len_w, hun_y);
     return;
   }
