@@ -129,11 +129,7 @@
 #       define U3_OS_LoomBits 30
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
-#       ifdef ASAN_ENABLED
-#         define U3_OS_LoomBase 0x728000000000
-#       else
-#         define U3_OS_LoomBase 0x28000000000
-#       endif
+#       define U3_OS_LoomBase 0x28000000000
 #     else
 #       define U3_OS_LoomBase 0x4000000
 #     endif
