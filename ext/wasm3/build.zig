@@ -34,6 +34,7 @@ pub fn build(b: *std.Build) void {
         "-Wpointer-arith",
         "-Wstrict-aliasing=2",
         "-Werror=implicit-function-declaration",
+        "-fno-sanitize=all",
     };
 
     const mac_flags = common_flags ++ [_][]const u8{
