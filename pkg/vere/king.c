@@ -299,7 +299,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
   CURL    *cul_u;
   CURLcode res_i;
   long     cod_i;
-  c3_y     try_y = 0;
+  c3_y     try_y = 4;
   uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
 
   if ( !(cul_u = curl_easy_init()) ) {
