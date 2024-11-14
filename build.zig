@@ -86,9 +86,7 @@ pub fn build(b: *std.Build) !void {
         "Binary name (Default: urbit)",
     ) orelse "urbit";
 
-    // Sanitizers are not properly supported in musl => mac only
-
-    const asan = if (target.query.isNative() and target.result.isDarwin())
+    const asan = if (target.query.isNative())
         b.option(
             bool,
             "asan",
@@ -97,7 +95,7 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
-    const ubsan = if (target.query.isNative() and target.result.isDarwin())
+    const ubsan = if (target.query.isNative())
         b.option(
             bool,
             "ubsan",
