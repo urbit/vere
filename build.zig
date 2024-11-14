@@ -149,7 +149,9 @@ pub fn build(b: *std.Build) !void {
         const t = target.result;
         try buildBinary(
             b,
-            if (t.os.tag == .linux and target.query.isNative())
+            if (t.os.tag == .linux and
+                target.query.isNative() and
+                !asan and !ubsan)
                 b.resolveTargetQuery(.{ .abi = .musl })
             else
                 target,
