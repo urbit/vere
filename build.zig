@@ -26,6 +26,8 @@ const BuildCfg = struct {
     mem_dbg: bool = false,
     c3dbg: bool = false,
     snapshot_validation: bool = false,
+    ubsan: bool = false,
+    asan: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -84,6 +86,24 @@ pub fn build(b: *std.Build) !void {
         "Binary name (Default: urbit)",
     ) orelse "urbit";
 
+    const asan = if (target.query.isNative())
+        b.option(
+            bool,
+            "asan",
+            "Enable address sanitizer (native only, requires llvm@18)",
+        ) orelse false
+    else
+        false;
+
+    const ubsan = if (target.query.isNative())
+        b.option(
+            bool,
+            "ubsan",
+            "Enable undefined behavior sanitizer (native only, requires llvm@18)",
+        ) orelse false
+    else
+        false;
+
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
@@ -116,6 +136,8 @@ pub fn build(b: *std.Build) !void {
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
+        .asan = asan,
+        .ubsan = ubsan,
         .include_test_steps = !all,
     };
 
@@ -127,7 +149,9 @@ pub fn build(b: *std.Build) !void {
         const t = target.result;
         try buildBinary(
             b,
-            if (t.os.tag == .linux and target.query.isNative())
+            if (t.os.tag == .linux and
+                target.query.isNative() and
+                !asan and !ubsan)
                 b.resolveTargetQuery(.{ .abi = .musl })
             else
                 target,
@@ -155,11 +179,37 @@ fn buildBinary(
 
     try global_flags.appendSlice(cfg.flags);
     try global_flags.appendSlice(&.{
-        "-fno-sanitize=all",
         "-g",
         "-Wall",
         "-Werror",
     });
+
+    if (!cfg.asan and !cfg.ubsan)
+        try global_flags.appendSlice(&.{
+            "-fno-sanitize=all",
+        });
+
+    if (cfg.asan and !cfg.ubsan)
+        try global_flags.appendSlice(&.{
+            "-Wno-deprecated",
+            "-fsanitize=address",
+            "-fno-sanitize=undefined",
+            "-fno-sanitize-trap=undefined",
+        });
+
+    if (!cfg.asan and cfg.ubsan)
+        try global_flags.appendSlice(&.{
+            "-fsanitize=undefined",
+            "-fno-sanitize-trap=undefined",
+        });
+
+    if (cfg.asan and cfg.ubsan)
+        try global_flags.appendSlice(&.{
+            "-Wno-deprecated",
+            "-fsanitize=address",
+            "-fsanitize=undefined",
+            "-fno-sanitize-trap=undefined",
+        });
 
     //
     //  C Opts for Urbit PKGs And Binary
@@ -366,6 +416,34 @@ fn buildBinary(
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
+
+    if (t.isDarwin()) {
+        // Requires llvm@18 homebrew installation
+        if (cfg.asan or cfg.ubsan)
+            urbit.addLibraryPath(.{
+                .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
+            });
+        if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+        if (cfg.ubsan) urbit.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+    }
+
+    if (t.os.tag == .linux) {
+        // Requires llvm-18 and clang-18 installation
+        if (cfg.asan or cfg.ubsan)
+            urbit.addLibraryPath(.{
+                .cwd_relative = "/usr/lib/clang/18/lib/linux",
+            });
+        if (t.cpu.arch == .x86_64) {
+            if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan-x86_64");
+            if (cfg.ubsan)
+                urbit.linkSystemLibrary("clang_rt.ubsan_standalone-x86_64");
+        }
+        if (t.cpu.arch == .aarch64) {
+            if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan-aarch64");
+            if (cfg.ubsan)
+                urbit.linkSystemLibrary("clang_rt.ubsan_standalone-aarch64");
+        }
+    }
 
     urbit.addCSourceFiles(.{
         .root = b.path("pkg/vere"),
