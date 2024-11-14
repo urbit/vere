@@ -35,19 +35,19 @@ pro hand -p true -s false -n false SIGSEGV
 
 ### Sanitizers
 
-Musl does not have proper sanitizer support, so until we support native (GNU) linux builds, these are limited to mac only.
+Sanitizers are supported for native builds only and you need to have `llvm-18` (and `clang-18` on linux) installed on your machine.
 
-In order to use address sanitizer (`-Dasan`) and undefined behavior sanitizer (`-Dubsan`), you need to have version 18 of llvm installed on your machine. You also have to build natively, since cross-compilation is not supported.
+For native linux builds this is the only situation where we actually build against the native abi. Normally we build agains musl even on native gnu machines.
 
 macOS:
 ```terminal
 brew install llvm@18
 ```
 
-<!-- linux: -->
-<!-- ```terminal -->
-<!-- apt-get install llvm-18 clang-18 -->
-<!-- ``` -->
+Debian/Ubuntu:
+```terminal
+apt-get install llvm-18 clang-18
+```
 
 ## Build
 
@@ -96,10 +96,10 @@ Provide additional compiler flags. These propagate to all build artifacts.
 Example: `zig build -Dcopt="-g" -Dcopt="-fno-sanitize=all"`
 
 #### `-Dasan`
-Enable address sanitizer. Only supported in native macos builds. Requires llvm 18, see [prerequisites](#sanitizers).
+Enable address sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
 
 #### `-Dubsan`
-Enable undefined behavior sanitizer. Only supported in native macos builds. Requires llvm 18, see [prerequisites](#sanitizers).
+Enable undefined behavior sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
 
 <!-- ## LSP Integration -->
 
