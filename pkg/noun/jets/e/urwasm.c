@@ -10,10 +10,10 @@
 #include "m3_env.h"
 
 
-const c3_w TAS_I32  = c3_s3('i','3','2');
-const c3_w TAS_I64  = c3_s3('i','6','4');
-const c3_w TAS_F32  = c3_s3('f','3','2');
-const c3_w TAS_F64  = c3_s3('f','6','4');
+const c3_w c3__i32  = c3_s3('i','3','2');
+const c3_w c3__i64  = c3_s3('i','6','4');
+const c3_w c3__f32  = c3_s3('f','3','2');
+const c3_w c3__f64  = c3_s3('f','6','4');
 
 const M3Result m3Lia_Arrow = "non-zero yield from import arrow";
 
@@ -47,30 +47,22 @@ _atoms_from_stack(const void** valptrs, c3_w n, c3_y* types) {
     switch (types[n]) {  // TODO 64 bit vere
       case c_m3Type_i32: {
         out = u3nc(
-          u3i_word(*(c3_w*)valptrs[n]),
-          out
-        );
+          u3i_word(*(c3_w*)valptrs[n]), out);
         break;
       }
       case c_m3Type_i64: {
         out = u3nc(
-          u3i_chub(*(c3_d*)valptrs[n]),
-          out
-        );
+          u3i_chub(*(c3_d*)valptrs[n]), out);
         break;
       }
       case c_m3Type_f32: {
         out = u3nc(
-          u3i_word(*(c3_w*)valptrs[n]),
-          out
-        );
+          u3i_word(*(c3_w*)valptrs[n]), out);
         break;
       }
       case c_m3Type_f64: {
         out = u3nc(
-          u3i_chub(*(c3_d*)valptrs[n]),
-          out
-        );
+          u3i_chub(*(c3_d*)valptrs[n]), out);
         break;
       }
       default: return u3m_bail(c3__fail);
@@ -92,7 +84,10 @@ _atoms_to_stack(
       u3m_bail(c3__fail);
     }
     u3_noun atom;
-    u3r_cell(atoms, &atom, &atoms);
+    u3x_cell(atoms, &atom, &atoms);
+    if (c3n == u3ud(atom)) {
+      u3m_bail(c3__fail);
+    }
     switch (types[i]) {
       case c_m3Type_i32: {
         *(c3_w*)valptrs[i] = u3r_word(0, atom);
@@ -124,31 +119,19 @@ _coins_from_stack(const void** valptrs, c3_w n, c3_y* types) {
     n--;
     switch (types[n]) {  // TODO 64 bit vere
       case c_m3Type_i32: {
-        out = u3nc(
-          u3nc(TAS_I32, u3i_word(*(c3_w*)valptrs[n])),
-          out
-        );
+        out = u3nc(u3nc(c3__i32, u3i_word(*(c3_w*)valptrs[n])), out);
         break;
       }
       case c_m3Type_i64: {
-        out = u3nc(
-          u3nc(TAS_I64, u3i_chub(*(c3_d*)valptrs[n])),
-          out
-        );
+        out = u3nc(u3nc(c3__i64, u3i_chub(*(c3_d*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f32: {
-        out = u3nc(
-          u3nc(TAS_F32, u3i_word(*(c3_w*)valptrs[n])),
-          out
-        );
+        out = u3nc(u3nc(c3__f32, u3i_word(*(c3_w*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f64: {
-        out = u3nc(
-          u3nc(TAS_F64, u3i_chub(*(c3_d*)valptrs[n])),
-          out
-        );
+        out = u3nc(u3nc(c3__f64, u3i_chub(*(c3_d*)valptrs[n])), out);
         break;
       }
       default: return u3m_bail(c3__fail);
@@ -170,39 +153,40 @@ _coins_to_stack(
       u3m_bail(c3__fail);
     }
     u3_noun coin;
-    u3r_cell(coins, &coin, &coins);
+    u3x_cell(coins, &coin, &coins);
     if (c3y == u3ud(coin)) {
       u3m_bail(c3__fail);
     }
     u3_noun tag, value;
-    u3r_cell(coin, &tag, &value);
+    u3x_cell(coin, &tag, &value);
     if (c3n == u3ud(value)) {
       u3m_bail(c3__fail);
     }
     switch (types[i]) {
       case c_m3Type_i32: {
-        if (TAS_I32 != tag) u3m_bail(c3__fail);
+        if (c3__i32 != tag) u3m_bail(c3__fail);
         *(c3_w*)valptrs[i] = u3r_word(0, value);
         break;
       }
       case c_m3Type_i64: {
-        if (TAS_I64 != tag) u3m_bail(c3__fail);
+        if (c3__i64 != tag) u3m_bail(c3__fail);
         *(c3_d*)valptrs[i] = u3r_chub(0, value);
         break;
       }
       case c_m3Type_f32: {
-        if (TAS_F32 != tag) u3m_bail(c3__fail);
+        if (c3__f32 != tag) u3m_bail(c3__fail);
         *(c3_w*)valptrs[i] = u3r_word(0, value);
         break;
       }
       case c_m3Type_f64: {
-        if (TAS_F64 != tag) u3m_bail(c3__fail);
+        if (c3__f64 != tag) u3m_bail(c3__fail);
         *(c3_d*)valptrs[i] = u3r_chub(0, value);
         break;
       }
       default: u3m_bail(c3__fail);
     }
   }
+  if (u3_nul != coins) u3m_bail(c3__fail);
 }
 
 //  RETAIN args, TRANSFER result
@@ -216,6 +200,7 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     //  call
     u3_noun name = u3at(124, monad);
     u3_noun args = u3at(125, monad);
+
     c3_c* name_c = u3r_string(name);
     M3Result result;
 
@@ -227,11 +212,22 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     c3_w n_in  = f->funcType->numArgs;
     c3_w n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
+
+    const c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));  //  TO FREE
     const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));  //  TO FREE
+    for (c3_w i = 0; i < n_in; i++) valptrs_in[i] = &vals_in[i];
+
+    const c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));  //  TO FREE
     const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));  //  TO FREE
+    for (c3_w i = 0; i < n_out; i++) valptrs_out[i] = &vals_out[i];
 
     _atoms_to_stack(args, valptrs_in, n_in, (types+n_out));
-    result = m3_Call(f, n_in, valptrs_in);
+    
+    fprintf(stderr, "\r\nprepared call: %s\r\n", name_c);
+
+    result = m3_Call(f, n_in, valptrs_in);  //  break pkg/noun/jets/e/urwasm.c:228
+
+    fprintf(stderr, "\r\ncall ended\r\n");
 
     if (result == m3Lia_Arrow) {
       u3_noun yil = sat->arrow_yil;
@@ -239,10 +235,15 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
       if (yil == 0) return u3m_bail(c3__fail);
       return yil;
     }
-    else if (result) return u3m_bail(c3__fail);
+    else if (result) {
+      fprintf(stderr, "\r\ncall failed: %s \r\n", name_c);
+      return u3m_bail(c3__fail);
+    }
 
     result = m3_GetResults(f, n_out, valptrs_out);
     if (result) return u3m_bail(c3__fail);
+
+    fprintf(stderr, "\r\ngetting results\r\n");
 
     u3_noun out = _atoms_from_stack(valptrs_out, n_out, types);
     c3_free(name_c);
@@ -258,12 +259,15 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     u3_noun ptr = u3at(124, monad);
     u3_noun len = u3at(125, monad);
 
+    u3m_p("read ptr", ptr);
+    u3m_p("len", len);
+
     c3_l ptr_l = (c3y == u3a_is_cat(ptr))
-                 ? ptr
-                 : u3m_bail(c3__fail);
+                ? ptr
+                : u3m_bail(c3__fail);
     c3_l len_l = (c3y == u3a_is_cat(len))
-                 ? len
-                 : u3m_bail(c3__fail);
+                ? len
+                : u3m_bail(c3__fail);
     c3_w len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
 
@@ -284,11 +288,11 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     u3_noun src = u3at(251, monad);
 
     c3_l ptr_l = (c3y == u3a_is_cat(ptr))
-                 ? ptr
-                 : u3m_bail(c3__fail);
+                ? ptr
+                : u3m_bail(c3__fail);
     c3_l len_l = (c3y == u3a_is_cat(len))
-                 ? len
-                 : u3m_bail(c3__fail);
+                ? len
+                : u3m_bail(c3__fail);
     c3_w len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
 
@@ -296,7 +300,7 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
       return u3m_bail(c3__fail);
     }
 
-    u3r_bytes(0, len_l, (buf_y + ptr_l), src);
+    u3r_bytes(0, len_l, (buf_y + ptr_l), u3x_atom(src));
     
     return u3nc(0, 0);
   }
@@ -318,20 +322,12 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     u3_noun monad_b = u3at(60, monad);
     u3_noun cont = u3at(61, monad);
     
-    while (1) {
-      u3_noun yil = _reduce_monad(monad_b, sat);  //  TO LOSE
-      if (0 != u3h(yil)) {
-        return yil;
-      }
-      u3_noun monad_c = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
-      if (c3y == u3r_sing(u3h(monad_c), sat->match->try_bat)) {
-        monad_b = u3at(60, monad_c);
-        cont = u3at(61, monad_c);
-      }
-      else {
-        return _reduce_monad(monad_c, sat);
-      }
+    u3_noun yil = _reduce_monad(monad_b, sat);  //  TO LOSE
+    if (0 != u3h(yil)) {
+      return yil;
     }
+    u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+    return _reduce_monad(monad_cont, sat);
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->catch_bat)) {
     //  catch
@@ -339,37 +335,21 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     u3_noun monad_catch = u3at(121, monad);
     u3_noun cont = u3at(61, monad);
 
-    while (1) {
-      u3_noun yil_try = _reduce_monad(monad_try, sat);  //  TO LOSE
-      if (0 == u3h(yil_try)) {
-        u3_noun monad_c = u3n_slam_on(u3k(cont), u3k(u3t(yil_try)));
-        if (c3y == u3r_sing(u3h(monad_c), sat->match->catch_bat)) {
-          monad_try = u3at(120, monad_c);
-          monad_catch = u3at(121, monad_c);
-          cont = u3at(61, monad_c);
-        }
-        else {
-          return _reduce_monad(monad_c, sat);
-        }
+    u3_noun yil_try = _reduce_monad(monad_try, sat);  //  TO LOSE
+    if (0 == u3h(yil_try)) {
+      u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil_try)));
+      return _reduce_monad(monad_cont, sat);
+    }
+    else if (1 == u3h(yil_try)) {
+      return yil_try;
+    }
+    else {
+      u3_noun yil_catch = _reduce_monad(monad_catch, sat);
+      if (0 != u3h(yil_catch)) {
+        return yil_catch;
       }
-      else if (1 == u3h(yil_try)) {
-        return yil_try;
-      }
-      else {
-        u3_noun yil_catch = _reduce_monad(monad_catch, sat);
-        if (0 != u3h(yil_catch)) {
-          return yil_catch;
-        }
-        u3_noun monad_c = u3n_slam_on(u3k(cont), u3k(u3t(yil_catch)));
-        if (c3y == u3r_sing(u3h(monad_c), sat->match->catch_bat)) {
-          monad_try = u3at(120, monad_c);
-          monad_catch = u3at(121, monad_c);
-          cont = u3at(61, monad_c);
-        }
-        else {
-          _reduce_monad(monad_c, sat);
-        }
-      }
+      u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil_catch)));
+      return _reduce_monad(monad_cont, sat);
     }
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->return_bat)) {
@@ -395,7 +375,7 @@ _link_wasm_with_arrow_map(
   M3Result result;
 
   u3_noun key = u3nc(u3i_string(mod), u3i_string(name));
-  u3_noun arrow = u3kdb_got(sat->import, key);
+  u3_noun arrow = u3kdb_got(u3k(sat->import), key);
   c3_w n_in  = _ctx->function->funcType->numArgs;
   c3_w n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
@@ -424,9 +404,14 @@ _link_wasm_with_arrow_map(
 u3_weak
 u3we_lia_run(u3_noun cor)
 {
+  fprintf(stderr, "\r\njet entry\r\n");
+
   if (c3__none == u3x_at(u3x_sam_7, cor)) {
     return u3_none;
   }
+
+  //  enter subroad, 4MB safety buffer
+  // u3m_hate(1 << 20);
     
   u3_noun input = u3x_at(u3x_sam_2, cor);
   u3_noun seed = u3x_at(u3x_sam_6, cor);
@@ -435,15 +420,13 @@ u3we_lia_run(u3_noun cor)
   u3_noun try_gate = u3j_kink(u3k(runnable), 21);
 
   u3_noun seed_new;  //  TO RETURN
-  u3_noun input_tag = u3h(input);
+  u3_noun input_tag, p_input;
+  u3x_cell(input, &input_tag, &p_input);
+
   if (input_tag == c3y) {
-    u3_noun tar_mold = u3nt(
-    u3nq(8, u3nc(0, 6), 8, u3nt(u3nq(5, u3nc(0, 14), 0, 2), 0, 6)),
-      0, 0
-    );  // *:~
-    u3_noun p_input_gate = u3nt(u3nc(0, 7), 0, u3k(u3t(input)));  //  =>(p.input |=(* +>))
+    u3_noun p_input_gate = u3nt(u3nc(0, 7), 0, u3k(p_input));  //  =>(p.input |=(* +>))
     u3_noun past_new = u3n_slam_on(
-      u3n_slam_on(u3k(try_gate), tar_mold),
+      u3j_kink(u3k(try_gate), 2),
       u3nc(
         u3k(u3x_at(6, seed)),
         p_input_gate
@@ -462,7 +445,7 @@ u3we_lia_run(u3_noun cor)
       u3x_at(6, seed),
       u3kb_weld(
         u3k(u3x_at(14, seed)),
-        u3nc(u3k(u3t(input)), u3_nul)
+        u3nc(u3k(p_input), u3_nul)
       ),
       u3k(u3x_at(15, seed))
     );
@@ -471,13 +454,13 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  u3_noun call_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 20), 2);  //  TO LOSE // sample @ 62
-  u3_noun memread_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 374), 2);  //  TO LOSE // sample @ 62
-  u3_noun memwrite_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 92), 2);  //  TO LOSE // sample @ 62
-  u3_noun call_ext_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 2986), 2);  //  TO LOSE // sample @ 62
-  u3_noun try_script = u3j_kink(u3j_kink(try_gate, 2), 2);  //  TO LOSE // sample @ 30
-  u3_noun catch_script = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), 4), 2), 2);  //  TO LOSE // sample @ 30
-  u3_noun return_script = u3j_kink(u3j_kink(runnable, 20), 2);  //  TO LOSE // sample @ 30
+  u3_noun call_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 20), 2);  //  TO LOSE
+  u3_noun memread_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 374), 2);  //  TO LOSE
+  u3_noun memwrite_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 92), 2);  //  TO LOSE
+  u3_noun call_ext_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 2986), 2);  //  TO LOSE
+  u3_noun try_script = u3j_kink(u3j_kink(try_gate, 2), 2);  //  TO LOSE
+  u3_noun catch_script = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), 4), 2), 2);  //  TO LOSE
+  u3_noun return_script = u3j_kink(u3j_kink(runnable, 20), 2);  //  TO LOSE
   
   u3_noun call_bat = u3h(call_script);
   u3_noun memread_bat = u3h(memread_script);
@@ -504,7 +487,7 @@ u3we_lia_run(u3_noun cor)
     memwrite_ctx
   };
 
-  u3_noun octs = u3x_at(2, seed);
+  u3_noun octs = u3x_at(2, seed_new);
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
@@ -519,8 +502,10 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
   M3Result result;
-
-  IM3Runtime wasm3_runtime = m3_NewRuntime(wasm3_env, 2097152, NULL);
+  
+  fprintf(stderr, "\r\nstart initialization\r\n");
+  
+  IM3Runtime wasm3_runtime = m3_NewRuntime(wasm3_env, 1 << 13, NULL);
   if (!wasm3_runtime) {
     fprintf(stderr, "runtime is null\r\n");
     return u3m_bail(c3__fail);
@@ -535,7 +520,9 @@ u3we_lia_run(u3_noun cor)
     fprintf(stderr, "parse binary error: %s\r\n", result);
     return u3m_bail(c3__fail);
   }
+
   //  TODO validate
+
   result = m3_LoadModule(wasm3_runtime, wasm3_module);
   if (result) {
     fprintf(stderr, "load module error: %s\r\n", result);
@@ -543,9 +530,9 @@ u3we_lia_run(u3_noun cor)
   }
 
   c3_w n_imports = wasm3_module->numFuncImports;
-  u3_noun monad = u3x_at(6, seed);
-  u3_noun lia_shop = u3x_at(14, seed);
-  u3_noun import = u3x_at(15, seed);
+  u3_noun monad = u3x_at(6, seed_new);
+  u3_noun lia_shop = u3x_at(14, seed_new);
+  u3_noun import = u3x_at(15, seed_new);
 
   lia_state sat = {wasm3_module, lia_shop, import, &match, 0};
 
@@ -562,8 +549,14 @@ u3we_lia_run(u3_noun cor)
       return u3m_bail(c3__fail);
     }
   }
+  fprintf(stderr, "\r\ninitialized state\r\n");
 
-  u3_noun yil;
-  yil = _reduce_monad(monad, &sat);
-  return u3nc(yil, seed_new);
+  u3_noun yil = _reduce_monad(monad, &sat);
+
+  
+  // //  exit subroad, copying the result
+  // u3_noun pro = u3m_love(u3nc(yil, seed_new));
+  u3_noun pro = u3nc(yil, seed_new);
+
+  return pro;
 }
