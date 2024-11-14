@@ -222,12 +222,8 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     for (c3_w i = 0; i < n_out; i++) valptrs_out[i] = &vals_out[i];
 
     _atoms_to_stack(args, valptrs_in, n_in, (types+n_out));
-    
-    fprintf(stderr, "\r\nprepared call: %s\r\n", name_c);
 
     result = m3_Call(f, n_in, valptrs_in);  //  break pkg/noun/jets/e/urwasm.c:228
-
-    fprintf(stderr, "\r\ncall ended\r\n");
 
     if (result == m3Lia_Arrow) {
       u3_noun yil = sat->arrow_yil;
@@ -243,8 +239,6 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     result = m3_GetResults(f, n_out, valptrs_out);
     if (result) return u3m_bail(c3__fail);
 
-    fprintf(stderr, "\r\ngetting results\r\n");
-
     u3_noun out = _atoms_from_stack(valptrs_out, n_out, types);
     c3_free(name_c);
 
@@ -258,9 +252,6 @@ _reduce_monad(u3_noun monad, lia_state* sat) {
     //  memread
     u3_noun ptr = u3at(124, monad);
     u3_noun len = u3at(125, monad);
-
-    u3m_p("read ptr", ptr);
-    u3m_p("len", len);
 
     c3_l ptr_l = (c3y == u3a_is_cat(ptr))
                 ? ptr
@@ -404,8 +395,6 @@ _link_wasm_with_arrow_map(
 u3_weak
 u3we_lia_run(u3_noun cor)
 {
-  fprintf(stderr, "\r\njet entry\r\n");
-
   if (c3__none == u3x_at(u3x_sam_7, cor)) {
     return u3_none;
   }
@@ -503,8 +492,6 @@ u3we_lia_run(u3_noun cor)
   }
   M3Result result;
   
-  fprintf(stderr, "\r\nstart initialization\r\n");
-  
   IM3Runtime wasm3_runtime = m3_NewRuntime(wasm3_env, 1 << 13, NULL);
   if (!wasm3_runtime) {
     fprintf(stderr, "runtime is null\r\n");
@@ -549,7 +536,6 @@ u3we_lia_run(u3_noun cor)
       return u3m_bail(c3__fail);
     }
   }
-  fprintf(stderr, "\r\ninitialized state\r\n");
 
   u3_noun yil = _reduce_monad(monad, &sat);
 

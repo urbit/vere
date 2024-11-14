@@ -6,7 +6,7 @@
             .path = "../softfloat",
         },
         .wasm3 = .{
-            .url = "https://github.com/Quodss/wasm3/archive/refs/heads/urwasm.tar.gz",
+            .url = "https://github.com/Quodss/wasm3/archive/004f1f654c9384074f79c5e0f8a7717aa0829289.tar.gz",
             .hash = "122051e4183102eb4653556d0bcbf0908203ebdaa2c105df181e63a569f05f702baa",
         },
     },
