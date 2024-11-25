@@ -1151,10 +1151,10 @@ _cw_init_io(uv_loop_t* lup_u)
   //  Ignore SIGPIPE signals.
   //
   {
-    struct sigaction sig_s = {{0}};
-    sigemptyset(&(sig_s.sa_mask));
-    sig_s.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sig_s, 0);
+    sigset_t set_s;
+    sigemptyset(&set_s);
+    sigaddset(&set_s, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
 
   //  configure pipe to daemon process

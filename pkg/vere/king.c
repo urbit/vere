@@ -964,10 +964,10 @@ u3_king_commence()
 
   //  Ignore SIGPIPE signals.
   {
-    struct sigaction sig_s = {{0}};
-    sigemptyset(&(sig_s.sa_mask));
-    sig_s.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sig_s, 0);
+    sigset_t set_s;
+    sigemptyset(&set_s);
+    sigaddset(&set_s, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
 
   //  boot the ivory pill
