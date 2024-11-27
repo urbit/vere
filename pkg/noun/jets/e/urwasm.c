@@ -8,6 +8,7 @@
 
 #include "wasm3.h"
 #include "m3_env.h"
+#include "m3_validate.h"
 
 static const M3Result m3Lia_Arrow = "non-zero yield from import arrow";
 
@@ -34,29 +35,20 @@ typedef struct {
 
 //  TRANSFER result
 static u3_noun
-_atoms_from_stack(const void** valptrs, c3_w n, c3_y* types)
+_atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 {
   u3_noun out = u3_nul;
-  while (n)
+  while (n--)
   {
-    n--;
     switch (types[n])
     {  // TODO 64 bit vere
       case c_m3Type_i32:
-      {
-        out = u3nc(u3i_word(*(c3_w*)valptrs[n]), out);
-        break;
-      }
-      case c_m3Type_i64:
-      {
-        out = u3nc(u3i_chub(*(c3_d*)valptrs[n]), out);
-        break;
-      }
       case c_m3Type_f32:
       {
         out = u3nc(u3i_word(*(c3_w*)valptrs[n]), out);
         break;
       }
+      case c_m3Type_i64:
       case c_m3Type_f64:
       {
         out = u3nc(u3i_chub(*(c3_d*)valptrs[n]), out);
@@ -73,7 +65,7 @@ _atoms_from_stack(const void** valptrs, c3_w n, c3_y* types)
 
 //  RETAIN coins
 static void
-_atoms_to_stack(u3_noun atoms, const void** valptrs, c3_w n, c3_y* types)
+_atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 {
   for (c3_w i = 0; i < n; i++)
   {
@@ -90,20 +82,12 @@ _atoms_to_stack(u3_noun atoms, const void** valptrs, c3_w n, c3_y* types)
     switch (types[i])
     {
       case c_m3Type_i32:
-      {
-        *(c3_w*)valptrs[i] = u3r_word(0, atom);
-        break;
-      }
-      case c_m3Type_i64:
-      {
-        *(c3_d*)valptrs[i] = u3r_chub(0, atom);
-        break;
-      }
       case c_m3Type_f32:
       {
         *(c3_w*)valptrs[i] = u3r_word(0, atom);
         break;
       }
+      case c_m3Type_i64:
       case c_m3Type_f64:
       {
         *(c3_d*)valptrs[i] = u3r_chub(0, atom);
@@ -123,12 +107,11 @@ _atoms_to_stack(u3_noun atoms, const void** valptrs, c3_w n, c3_y* types)
 
 //  TRANSFER result
 static u3_noun
-_coins_from_stack(const void** valptrs, c3_w n, c3_y* types)
+_coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 {
   u3_noun out = u3_nul;
-  while (n)
+  while (n--)
   {
-    n--;
     switch (types[n])
     {  // TODO 64 bit vere
       case c_m3Type_i32:
@@ -162,7 +145,7 @@ _coins_from_stack(const void** valptrs, c3_w n, c3_y* types)
 
 //  RETAIN coins
 static void
-_coins_to_stack(u3_noun coins, const void** valptrs, c3_w n, c3_y* types)
+_coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
 {
   for (c3_w i = 0; i < n; i++)
   {
@@ -266,15 +249,15 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     c3_w n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
 
-    const c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));  
-    const void **valptrs_in = u3a_calloc(n_in, sizeof(void*));  
+    c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));  
+    void **valptrs_in = u3a_calloc(n_in, sizeof(void*));  
     for (c3_w i = 0; i < n_in; i++)
     {
       valptrs_in[i] = &vals_in[i];
     }
 
-    const c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));  
-    const void **valptrs_out = u3a_calloc(n_out, sizeof(void*));  
+    c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));  
+    void **valptrs_out = u3a_calloc(n_out, sizeof(void*));  
     for (c3_w i = 0; i < n_out; i++)
     {
       valptrs_out[i] = &vals_out[i];
@@ -282,7 +265,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     _atoms_to_stack(args, valptrs_in, n_in, (types+n_out));
 
-    result = m3_Call(f, n_in, valptrs_in);
+    result = m3_Call(f, n_in, (const void**)valptrs_in);
 
     if (result == m3Lia_Arrow)
     {
@@ -299,7 +282,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       fprintf(stderr, "\r\ncall failed: %s \r\n", name_c);
       return u3m_bail(c3__fail);
     }
-    result = m3_GetResults(f, n_out, valptrs_out);
+    result = m3_GetResults(f, n_out, (const void**)valptrs_out);
     if (result)
     {
       return u3m_bail(c3__fail);
@@ -426,7 +409,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
 static const void *
 _link_wasm_with_arrow_map(
-  IM3Runtime king_runtime,
+  IM3Runtime runtime,
   IM3ImportContext _ctx,
   uint64_t * _sp,
   void * _mem
@@ -443,12 +426,12 @@ _link_wasm_with_arrow_map(
   c3_w n_in  = _ctx->function->funcType->numArgs;
   c3_w n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
-  const void **valptrs_in = u3a_calloc(n_in, sizeof(void*)); 
+  void **valptrs_in = u3a_calloc(n_in, sizeof(void*)); 
   for (c3_w i = 0; i < n_in; i++)
   {
     valptrs_in[i] = &_sp[i+n_out];
   }
-  const void **valptrs_out = u3a_calloc(n_out, sizeof(void*)); 
+  void **valptrs_out = u3a_calloc(n_out, sizeof(void*)); 
   for (c3_w i = 0; i < n_out; i++)
   {
     valptrs_out[i] = &_sp[i];
@@ -592,8 +575,6 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  //  TODO validate
-
   result = m3_LoadModule(wasm3_runtime, wasm3_module);
   if (result)
   {
@@ -601,6 +582,13 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
+  result = m3_ValidateModule(wasm3_module);
+  if (result)
+  {
+    fprintf(stderr, "validation error: %s\r\n", result); 
+    return u3m_bail(c3__fail);
+  }
+  
   c3_w n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(6, seed_new);
   u3_noun lia_shop = u3at(14, seed_new);
