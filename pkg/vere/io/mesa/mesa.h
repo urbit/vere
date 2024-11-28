@@ -11,7 +11,7 @@
 #define HEAD_SIZE         4             //  header size in bytes
 #define PACT_SIZE      1472
 
-static c3_w MESA_COOKIE = 0x51ad1d5e;
+static c3_w MESA_COOKIE = 0x67e00200;
 
 typedef enum _u3_mesa_ptag {
   PACT_RESV = 0,

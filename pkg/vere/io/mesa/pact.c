@@ -458,7 +458,7 @@ _etch_short(u3_etcher* ech_u, c3_s val_s)
   c3_etch_short(_etch_next(ech_u, 2), val_s);
 }
 
-static c3_y
+static c3_s
 _sift_short(u3_sifter* sif_u)
 {
   c3_y *res_y = _sift_next(sif_u, 2);
