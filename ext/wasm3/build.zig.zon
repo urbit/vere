@@ -6,8 +6,8 @@
             .path = "../softfloat",
         },
         .wasm3 = .{
-            .url = "https://github.com/Quodss/wasm3/archive/79d3e166304c475e0a6774b6f3d65870f08b2056.tar.gz",
-            .hash = "1220021f7b4dff3fd9e64e852033c0b161a51b60736e0c78ace457b3d7c7d2c65d00",
+            .url = "https://github.com/Quodss/wasm3/archive/fbcfd07accb1814243e29be9ff40b138271a32fb.tar.gz",
+            .hash = "12201af1a0dafe0a16c03c51cc6bcc362f0e2fd0208eccaf21f98e7e3003782bc765",
         },
     },
     .paths = .{
