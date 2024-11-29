@@ -2363,48 +2363,43 @@ static u3j_core _138_hex_chacha_d[] =
 //
 static u3j_harm _138_hex_lia_run_a[] = {{".2", u3we_lia_run, c3y}, {}};
 
-static u3j_core _138_hex_lia_core_d[] = {
-  { "run", 7, _138_hex_lia_run_a, 0, no_hashes },
-  {}
-};
-
 static u3j_core _138_hex_lia_monad_d[] = {
-  { "core", 3, 0, _138_hex_lia_core_d, no_hashes },
+  { "run-v0", 7, _138_hex_lia_run_a, 0, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_engine_d[] = {
-  { "monad", 3, 0, _138_hex_lia_monad_d, no_hashes },
+  { "monad-v0", 3, 0, _138_hex_lia_monad_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_op_def_d[] = {
-  { "wasm-engine", 3, 0, _138_hex_wasm_engine_d, no_hashes },
+  { "wasm-engine-v0", 3, 0, _138_hex_wasm_engine_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_validator_d[] = {
-  { "wasm-op-def", 3, 0, _138_hex_wasm_op_def_d, no_hashes },
+  { "wasm-op-def-v0", 3, 0, _138_hex_wasm_op_def_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_parser_d[] = {
-  { "validator", 3, 0, _138_hex_wasm_validator_d, no_hashes },
+  { "validator-v0", 3, 0, _138_hex_wasm_validator_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_lia_sur_d[] = {
-  { "wasm-parser", 3, 0, _138_hex_wasm_parser_d, no_hashes },
+  { "wasm-parser-v0", 3, 0, _138_hex_wasm_parser_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_engine_sur_d[] = {
-  { "monad-sur", 3, 0, _138_hex_lia_sur_d, no_hashes },
+  { "monad-sur-v0", 3, 0, _138_hex_lia_sur_d, no_hashes },
   {}
 };
 
 static u3j_core _138_hex_wasm_sur_d[] = {
-  { "engine-sur", 3, 0, _138_hex_wasm_engine_sur_d, no_hashes },
+  { "engine-sur-v0", 3, 0, _138_hex_wasm_engine_sur_d, no_hashes },
   {}
 };
 
@@ -2427,7 +2422,7 @@ static u3j_core _138_hex_d[] =
   { "secp",    6, 0, _140_hex_secp_d,   no_hashes },
   { "mimes",  31, 0, _140_hex_mimes_d,  no_hashes },
   { "json",   31, 0, _139_hex_json_d,   no_hashes },
-  { "wasm-sur", 3, 0, _138_hex_wasm_sur_d, no_hashes },
+  { "wasm-sur-v0", 3, 0, _138_hex_wasm_sur_d, no_hashes },
   {}
 };
 
