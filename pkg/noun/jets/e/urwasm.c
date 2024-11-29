@@ -615,7 +615,27 @@ u3we_lia_run(u3_noun cor)
     }
   }
 
-  u3_noun yil = _reduce_monad(monad, &sat);
+  u3_noun yil;
+
+  result = m3_RunStart(wasm3_module);
+
+  if (result == m3Lia_Arrow)
+  {
+    yil = sat.arrow_yil;
+    sat.arrow_yil = 0;
+    if (yil == 0)
+    {
+      return u3m_bail(c3__fail);
+    }
+  }
+  else if (result)
+  {
+    return u3m_bail(c3__fail);
+  }
+  else
+  {
+    yil = _reduce_monad(monad, &sat);
+  }
 
   //  exit subroad, copying the result
   u3_noun pro = u3m_love(u3nc(yil, seed_new));
