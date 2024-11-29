@@ -1783,7 +1783,6 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
       // XX the format of the lane %nail gives is (list (each @p address))
       //
       u3_noun las = u3do("tail", u3k(dat));
-      u3m_p("las nail", las);
 
       if ( las == u3_nul ) {
         per_u->dan_u = (u3_lane){0,0};  // delete lane
@@ -1793,7 +1792,6 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         // we either have a direct route, and a galaxy, or just one lane
         if ( c3n == u3h(lan) ) {
           u3_lane lan_u = u3_ames_decode_lane(u3k(u3t(lan)));
-          _log_lane(&lan_u);
           per_u->dan_u = lan_u;
         } else {
           // delete direct lane if galaxy
