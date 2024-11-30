@@ -7,8 +7,8 @@
         },
         .wasm3 = .{
             // .path = "../../../../wasm3"
-            .url = "https://github.com/Quodss/wasm3/archive/8db7a4427af5fe669e55543d183dfdc7ac070057.tar.gz",
-            .hash = "12209700c64ff2aa65b506cf12c8d0975919855467f9c3c2524b77df927221766ad4",
+            .url = "https://github.com/Quodss/wasm3/archive/0733e3299ded55e3f61c6a3d34b03f52a007a97c.tar.gz",
+            .hash = "12209a3f38cac8dc5d84983a599ae288cd0cdba31ea765043b31470a84f99e12a4f8",
         },
     },
     .paths = .{
