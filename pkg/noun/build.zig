@@ -274,6 +274,7 @@ const c_source_files = [_][]const u8{
     "jets/e/ed_add_scalarmult_scalarmult_base.c",
     "jets/e/ed_point_add.c",
     "jets/e/ed_puck.c",
+    "jets/e/ed_luck.c",
     "jets/e/ed_scalarmult.c",
     "jets/e/ed_scalarmult_base.c",
     "jets/e/ed_shar.c",
