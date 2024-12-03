@@ -31,7 +31,7 @@ function xxd_i() {
     echo "unsigned int ${var}_len = $cnt;" >> $dst_c_file
 }
 
-version=721fa05
+version=ac87d8bbb3915d5e7c880b97c102ffe22112335f
 src_remote=https://github.com/urbit/urbit/raw/$version/bin/ivory.pill
 src_file=ivory.pill
 dst_h_file=ivory.h
