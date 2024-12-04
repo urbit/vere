@@ -2363,8 +2363,16 @@ static u3j_core _138_hex_chacha_d[] =
 //
 static u3j_harm _138_hex_lia_run_a[] = {{".2", u3we_lia_run, c3y}, {}};
 
+static u3j_harm _138_hex_lia_run_once_inner_a[] = {{".2", u3we_lia_run_once, c3y}, {}};
+
+static u3j_core _138_hex_lia_run_once_d[] = {
+  { "run-once-inner-v0", 15, _138_hex_lia_run_once_inner_a, 0, no_hashes },
+  {}
+};
+
 static u3j_core _138_hex_lia_monad_d[] = {
   { "run-v0", 7, _138_hex_lia_run_a, 0, no_hashes },
+  { "run-once-v0", 7, 0, _138_hex_lia_run_once_d, no_hashes },
   {}
 };
 
