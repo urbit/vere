@@ -14,8 +14,8 @@
             .hash = "1220bb683a6df744e618f58a008eaae3eb62b70a78334cec676bd82b1b9e8e944eeb",
         },
         .urcrypt = .{
-            .url = "https://github.com/urbit/urcrypt/archive/9599acb4e12002ddb1c39591bb9477621f848470.tar.gz",
-            .hash = "12203c3694e5871a0a6b70cef76cc0fab15a8eb1dabbb4d1fe14f454a738db41a53f",
+            .url = "https://github.com/urbit/urcrypt/archive/a2fce2dc89f41b92c5968d0f1957a32ad2bc1b18.tar.gz",
+            .hash = "12202d26b62e20533073012985d869607c88a5718f71e7be6b459ba1508e251dfdbd",
         },
     },
     .paths = .{

@@ -37,7 +37,11 @@
     if ( c3n == u3r_mean(cor,
                          u3x_sam_2, &sig, u3x_sam_6, &msg,
                          u3x_sam_7, &pub, 0) ||
-         c3n == u3r_cell(msg, &len, &dat) ){
+         c3n == u3r_cell(msg, &len, &dat) ||
+         (c3n == u3ud(sig)) ||
+         (c3n == u3ud(pub)) ||
+         (c3n == u3ud(len)) ||
+         (c3n == u3ud(dat)) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3l_punt("veri-octs", _cqee_veri_octs(sig, len, dat, pub));
@@ -70,9 +74,12 @@
   u3wee_veri(u3_noun cor)
   {
     u3_noun a, b, c;
-    if ( c3n == u3r_mean(cor,
+    if ( (c3n == u3r_mean(cor,
                          u3x_sam_2, &a, u3x_sam_6, &b,
-                         u3x_sam_7, &c, 0) ) {
+                         u3x_sam_7, &c, 0)) ||
+         (c3n == u3ud(a)) ||
+         (c3n == u3ud(b)) ||
+         (c3n == u3ud(c)) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3l_punt("veri", _cqee_veri(a, b, c));
