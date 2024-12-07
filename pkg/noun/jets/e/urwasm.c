@@ -10,6 +10,8 @@
 #include "m3_env.h"
 #include "m3_validate.h"
 
+// #define URWASM_SUBROAD
+
 static const M3Result m3Lia_Arrow = "non-zero yield from import arrow";
 
 typedef struct {
@@ -33,7 +35,6 @@ typedef struct {
   u3_noun arrow_yil;
 } lia_state;
 
-//  TRANSFER result
 static u3_noun
 _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 {
@@ -63,7 +64,7 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
   return out;
 }
 
-//  RETAIN coins
+//  RETAIN argument
 static void
 _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 {
@@ -105,7 +106,6 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
   }
 }
 
-//  TRANSFER result
 static u3_noun
 _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 {
@@ -143,7 +143,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
   return out;
 }
 
-//  RETAIN coins
+//  RETAIN argument
 static void
 _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
 {
@@ -215,7 +215,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
   }
 }
 
-//  RETAIN args, TRANSFER result
+
 static u3_noun
 _reduce_monad(u3_noun monad, lia_state* sat)
 {
@@ -249,15 +249,15 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     c3_w n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
 
-    c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));  
-    void **valptrs_in = u3a_calloc(n_in, sizeof(void*));  
+    c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));
+    void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
     for (c3_w i = 0; i < n_in; i++)
     {
       valptrs_in[i] = &vals_in[i];
     }
 
-    c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));  
-    void **valptrs_out = u3a_calloc(n_out, sizeof(void*));  
+    c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));
+    void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
     for (c3_w i = 0; i < n_out; i++)
     {
       valptrs_out[i] = &vals_out[i];
@@ -267,29 +267,40 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     result = m3_Call(f, n_in, (const void**)valptrs_in);
 
+    u3_noun yil;
+
     if (result == m3Lia_Arrow)
     {
-      u3_noun yil = sat->arrow_yil;
+      yil = sat->arrow_yil;
       sat->arrow_yil = 0;
       if (yil == 0)
       {
         return u3m_bail(c3__fail);
       }
-      return yil;
     }
     else if (result)
     {
       fprintf(stderr, "\r\ncall failed: %s \r\n", name_c);
       return u3m_bail(c3__fail);
     }
-    result = m3_GetResults(f, n_out, (const void**)valptrs_out);
-    if (result)
+    else
     {
-      return u3m_bail(c3__fail);
+      result = m3_GetResults(f, n_out, (const void**)valptrs_out);
+      if (result)
+      {
+        return u3m_bail(c3__fail);
+      }
+      yil = u3nc(0, _atoms_from_stack(valptrs_out, n_out, types));
     }
 
-    u3_noun out = _atoms_from_stack(valptrs_out, n_out, types);
-    return u3nc(0, out);
+    u3a_free(name_c);
+    u3a_free(vals_in);
+    u3a_free(valptrs_in);
+    u3a_free(vals_out);
+    u3a_free(valptrs_out);
+    u3z(monad);
+
+    return yil;
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->memread_bat))
   {
@@ -310,6 +321,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     {
       return u3m_bail(c3__fail);
     }
+
+    u3z(monad);
     return u3nt(0, len_l, u3i_bytes(len_l, (buf_y + ptr_l)));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->memwrite_bat))
@@ -336,6 +349,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     u3r_bytes(0, len_l, (buf_y + ptr_l), u3x_atom(src));
     
+    u3z(monad);
     return u3nc(0, 0);
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->call_ext_bat))
@@ -345,12 +359,15 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun args = u3at(125, monad);
     if (u3_nul == sat->lia_shop)
     {
-      return u3nt(1, u3k(name), u3k(args));
+      u3_noun yil = u3nt(1, u3k(name), u3k(args));
+      u3z(monad);
+      return yil;
     }
     else
     {
       u3_noun lia_buy;
       u3x_cell(sat->lia_shop, &lia_buy, &sat->lia_shop);
+      u3z(monad);
       return u3nc(0, u3k(lia_buy));
     }
   }
@@ -360,12 +377,15 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun monad_b = u3at(60, monad);
     u3_noun cont = u3at(61, monad);
     
-    u3_noun yil = _reduce_monad(monad_b, sat);  
+    u3_noun yil = _reduce_monad(u3k(monad_b), sat);  
     if (0 != u3h(yil))
     {
+      u3z(monad);
       return yil;
     }
     u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+    u3z(yil);
+    u3z(monad);
     return _reduce_monad(monad_cont, sat);
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->catch_bat))
@@ -375,31 +395,40 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun monad_catch = u3at(121, monad);
     u3_noun cont = u3at(61, monad);
 
-    u3_noun yil_try = _reduce_monad(monad_try, sat);  
+    u3_noun yil_try = _reduce_monad(u3k(monad_try), sat);  
     if (0 == u3h(yil_try))
     {
       u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil_try)));
+      u3z(yil_try);
+      u3z(monad);
       return _reduce_monad(monad_cont, sat);
     }
     else if (1 == u3h(yil_try))
     {
+      u3z(monad);
       return yil_try;
     }
     else
     {
-      u3_noun yil_catch = _reduce_monad(monad_catch, sat);
+      u3z(yil_try);
+      u3_noun yil_catch = _reduce_monad(u3k(monad_catch), sat);
       if (0 != u3h(yil_catch))
       {
+        u3z(monad);
         return yil_catch;
       }
       u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil_catch)));
+      u3z(yil_catch);
+      u3z(monad);
       return _reduce_monad(monad_cont, sat);
     }
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->return_bat))
   {
     //  return
-    return u3nc(0, u3at(30, monad));
+    u3_noun yil = u3nc(0, u3k(u3at(30, monad)));
+    u3z(monad);
+    return yil;
   }
   else
   {
@@ -407,6 +436,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
   }
 }
 
+//  TRANSFERS sat->arrow_yil if m3Lia_Arrow is thrown
 static const void *
 _link_wasm_with_arrow_map(
   IM3Runtime runtime,
@@ -426,12 +456,12 @@ _link_wasm_with_arrow_map(
   c3_w n_in  = _ctx->function->funcType->numArgs;
   c3_w n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
-  void **valptrs_in = u3a_calloc(n_in, sizeof(void*)); 
+  void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
   for (c3_w i = 0; i < n_in; i++)
   {
     valptrs_in[i] = &_sp[i+n_out];
   }
-  void **valptrs_out = u3a_calloc(n_out, sizeof(void*)); 
+  void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
   for (c3_w i = 0; i < n_out; i++)
   {
     valptrs_out[i] = &_sp[i];
@@ -444,11 +474,16 @@ _link_wasm_with_arrow_map(
   if (0 != u3h(yil))
   {
     sat->arrow_yil = yil;
+    u3a_free(valptrs_in);
+    u3a_free(valptrs_out);
     return m3Lia_Arrow;
   }
   else
   {
     _coins_to_stack(u3t(yil), valptrs_out, n_out, types);
+    u3z(yil);
+    u3a_free(valptrs_in);
+    u3a_free(valptrs_out);
     return m3Err_none;
   }
 }
@@ -461,8 +496,14 @@ u3we_lia_run(u3_noun cor)
     return u3_none;
   }
 
+  #ifdef URWASM_SUBROAD
+
   //  enter subroad, 4MB safety buffer
   u3m_hate(1 << 20);
+
+  #endif
+
+  u3r_mug(cor);
     
   u3_noun input = u3at(u3x_sam_2, cor);
   u3_noun seed = u3at(u3x_sam_6, cor);
@@ -509,25 +550,34 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  u3_noun call_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 20), 2);  
-  u3_noun memread_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 374), 2);  
-  u3_noun memwrite_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 92), 2);  
-  u3_noun call_ext_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 2986), 2);  
-  u3_noun try_script = u3j_kink(try_gate_inner, 2);  
-  u3_noun catch_script = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), 4), 2), 2);  
-  u3_noun return_script = u3j_kink(u3j_kink(runnable, 20), 2);  
+  u3_noun call_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 20), 2);
+  u3_noun memread_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 374), 2);
+  u3_noun memwrite_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 92), 2);
+  u3_noun call_ext_script = u3j_kink(u3j_kink(u3k(u3at(7, cor)), 2986), 2);
+  u3_noun try_script = u3j_kink(try_gate_inner, 2);
+  u3_noun catch_script = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), 4), 2), 2);
+  u3_noun return_script = u3j_kink(u3j_kink(runnable, 20), 2);
   
-  u3_noun call_bat = u3h(call_script);
-  u3_noun memread_bat = u3h(memread_script);
-  u3_noun memwrite_bat = u3h(memwrite_script);
-  u3_noun call_ext_bat = u3h(call_ext_script);
-  u3_noun try_bat = u3h(try_script);
-  u3_noun catch_bat = u3h(catch_script);
-  u3_noun return_bat = u3h(return_script);
+  u3_noun call_bat = u3k(u3h(call_script));
+  u3_noun memread_bat = u3k(u3h(memread_script));
+  u3_noun memwrite_bat = u3k(u3h(memwrite_script));
+  u3_noun call_ext_bat = u3k(u3h(call_ext_script));
+  u3_noun try_bat = u3k(u3h(try_script));
+  u3_noun catch_bat = u3k(u3h(catch_script));
+  u3_noun return_bat = u3k(u3h(return_script));
 
-  u3_noun call_ctx = u3at(63, call_script);
-  u3_noun memread_ctx = u3at(63, memread_script);
-  u3_noun memwrite_ctx = u3at(63, memwrite_script);
+  u3_noun call_ctx = u3k(u3at(63, call_script));
+  u3_noun memread_ctx = u3k(u3at(63, memread_script));
+  u3_noun memwrite_ctx = u3k(u3at(63, memwrite_script));
+
+  u3z(call_script);
+  u3z(memread_script);
+  u3z(memwrite_script);
+  u3z(call_ext_script);
+  u3z(try_script);
+  u3z(catch_script);
+  u3z(return_script);
+
 
   match_data_struct match = {
     call_bat,
@@ -539,7 +589,7 @@ u3we_lia_run(u3_noun cor)
     return_bat,
     call_ctx,
     memread_ctx,
-    memwrite_ctx
+    memwrite_ctx,
   };
 
   u3_noun octs = u3at(2, seed_new);
@@ -634,11 +684,31 @@ u3we_lia_run(u3_noun cor)
   }
   else
   {
-    yil = _reduce_monad(monad, &sat);
+    yil = _reduce_monad(u3k(monad), &sat);
   }
 
+  m3_FreeRuntime(wasm3_runtime);
+  m3_FreeEnvironment(wasm3_env);
+
+  u3a_free(bin_y);
+
+  u3z(match.call_bat);
+  u3z(match.memread_bat);
+  u3z(match.memwrite_bat);
+  u3z(match.call_ext_bat);
+  u3z(match.try_bat);
+  u3z(match.catch_bat);
+  u3z(match.return_bat);
+  u3z(match.call_ctx);
+  u3z(match.memread_ctx);
+  u3z(match.memwrite_ctx);
+
+  #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
   u3_noun pro = u3m_love(u3nc(yil, seed_new));
+  #else
+  u3_noun pro = u3nc(yil, seed_new);
+  #endif
 
   return pro;
 }
@@ -651,8 +721,12 @@ u3we_lia_run_once(u3_noun cor)
     return u3_none;
   }
 
+  #ifdef URWASM_SUBROAD
   //  enter subroad, 4MB safety buffer
   u3m_hate(1 << 20);
+  #endif
+
+  u3r_mug(cor);
 
   u3_noun runnable = u3j_kink(u3k(u3at(63, cor)), 372);
   u3_noun try_gate = u3j_kink(u3k(runnable), 21);
@@ -666,18 +740,26 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun catch_script = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), 4), 2), 2);  
   u3_noun return_script = u3j_kink(u3j_kink(runnable, 20), 2);  
   
-  u3_noun call_bat = u3h(call_script);
-  u3_noun memread_bat = u3h(memread_script);
-  u3_noun memwrite_bat = u3h(memwrite_script);
-  u3_noun call_ext_bat = u3h(call_ext_script);
-  u3_noun try_bat = u3h(try_script);
-  u3_noun catch_bat = u3h(catch_script);
-  u3_noun return_bat = u3h(return_script);
+  u3_noun call_bat = u3k(u3h(call_script));
+  u3_noun memread_bat = u3k(u3h(memread_script));
+  u3_noun memwrite_bat = u3k(u3h(memwrite_script));
+  u3_noun call_ext_bat = u3k(u3h(call_ext_script));
+  u3_noun try_bat = u3k(u3h(try_script));
+  u3_noun catch_bat = u3k(u3h(catch_script));
+  u3_noun return_bat = u3k(u3h(return_script));
 
-  u3_noun call_ctx = u3at(63, call_script);
-  u3_noun memread_ctx = u3at(63, memread_script);
-  u3_noun memwrite_ctx = u3at(63, memwrite_script);
+  u3_noun call_ctx = u3k(u3at(63, call_script));
+  u3_noun memread_ctx = u3k(u3at(63, memread_script));
+  u3_noun memwrite_ctx = u3k(u3at(63, memwrite_script));
 
+  u3z(call_script);
+  u3z(memread_script);
+  u3z(memwrite_script);
+  u3z(call_ext_script);
+  u3z(try_script);
+  u3z(catch_script);
+  u3z(return_script);
+  
   match_data_struct match = {
     call_bat,
     memread_bat,
@@ -688,7 +770,7 @@ u3we_lia_run_once(u3_noun cor)
     return_bat,
     call_ctx,
     memread_ctx,
-    memwrite_ctx
+    memwrite_ctx,
   };
 
   u3_noun octs = u3at(u3x_sam_4, cor);
@@ -783,11 +865,31 @@ u3we_lia_run_once(u3_noun cor)
   }
   else
   {
-    yil = _reduce_monad(monad, &sat);
+    yil = _reduce_monad(u3k(monad), &sat);
   }
 
+  m3_FreeRuntime(wasm3_runtime);
+  m3_FreeEnvironment(wasm3_env);
+
+  u3a_free(bin_y);
+
+  u3z(match.call_bat);
+  u3z(match.memread_bat);
+  u3z(match.memwrite_bat);
+  u3z(match.call_ext_bat);
+  u3z(match.try_bat);
+  u3z(match.catch_bat);
+  u3z(match.return_bat);
+  u3z(match.call_ctx);
+  u3z(match.memread_ctx);
+  u3z(match.memwrite_ctx);
+  
+  #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
   u3_noun pro = u3m_love(yil);
+  #else
+  u3_noun pro = yil;
+  #endif
 
   return pro;
 }
