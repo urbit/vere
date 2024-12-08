@@ -17,7 +17,7 @@
     met_w = u3r_met(3, a);
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
-           (127 < u3r_byte(a, 31)) )
+           (127 < u3r_byte(31, a)) )
         ) {
       u3_noun a_recs = u3qee_recs(a);
       u3r_bytes(0, 32, a_y, a_recs);
@@ -29,7 +29,7 @@
     met_w = u3r_met(3, b);
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
-           (127 < u3r_byte(b, 31)) )
+           (127 < u3r_byte(31, b)) )
         ) {
       u3_noun b_recs = u3qee_recs(b);
       u3r_bytes(0, 32, b_y, b_recs);

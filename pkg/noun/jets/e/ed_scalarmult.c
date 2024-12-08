@@ -19,7 +19,7 @@
     // scalarmult expects a_y[31] <= 127
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
-           (127 < u3r_byte(a, 31)) )
+           (127 < u3r_byte(31, a)) )
         ) {
       u3_noun a_recs = u3qee_recs(a);
       u3r_bytes(0, 32, a_y, a_recs);
