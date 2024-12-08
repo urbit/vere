@@ -8,16 +8,39 @@
 
   static u3_atom
   _cqee_add_scalarmult_scalarmult_base(u3_atom a,
-                                      u3_atom b,
-                                      u3_atom c)
+                                      u3_atom a_point,
+                                      u3_atom b)
   {
-    c3_y a_y[32], b_y[32], c_y[32], out_y[32];
+    c3_y a_y[32], a_point_y[32], b_y[32], out_y[32];
+    c3_w met_w;
 
-    if ( (0 != u3r_bytes_fit(32, a_y, a)) ||
-         (0 != u3r_bytes_fit(32, b_y, b)) ||
-         (0 != u3r_bytes_fit(32, c_y, c)) ||
-         (0 != urcrypt_ed_add_scalarmult_scalarmult_base(a_y, b_y, c_y, out_y)) ) {
-      return u3_none;
+    met_w = u3r_met(3, a);
+    if ( (32 < met_w) ||
+         ( (32 == met_w) &&
+           (127 < u3r_byte(a, 31)) )
+        ) {
+      u3_noun a_recs = u3qee_recs(a);
+      u3r_bytes(0, 32, a_y, a_recs);
+      u3z(a_recs);
+    } else {
+      u3r_bytes(0, 32, a_y, a);
+    }
+
+    met_w = u3r_met(3, b);
+    if ( (32 < met_w) ||
+         ( (32 == met_w) &&
+           (127 < u3r_byte(b, 31)) )
+        ) {
+      u3_noun b_recs = u3qee_recs(b);
+      u3r_bytes(0, 32, b_y, b_recs);
+      u3z(b_recs);
+    } else {
+      u3r_bytes(0, 32, b_y, b);
+    }
+
+    if ( (0 != u3r_bytes_fit(32, a_point_y, a_point)) ||
+         (0 != urcrypt_ed_add_scalarmult_scalarmult_base(a_y, a_point_y, b_y, out_y)) ) {
+      return u3m_bail(c3__exit);
     }
     else {
       return u3i_bytes(32, out_y);

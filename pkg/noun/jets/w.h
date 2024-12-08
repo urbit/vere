@@ -206,6 +206,7 @@
     u3_noun u3wee_sign_octs_raw(u3_noun);
     u3_noun u3wee_veri_octs(u3_noun);
     u3_noun u3wee_shar(u3_noun);
+    u3_noun u3wee_slar(u3_noun);
     u3_noun u3wee_recs(u3_noun);
     u3_noun u3wee_smac(u3_noun);
     u3_noun u3wee_point_neg(u3_noun);

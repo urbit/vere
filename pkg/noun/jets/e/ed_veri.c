@@ -17,8 +17,7 @@
     if ( (0 != u3r_bytes_fit(64, sig_y, sig)) ||
          (0 != u3r_bytes_fit(32, pub_y, pub)) ||
          !u3r_word_fit(&len_w, len) ) {
-      // hoon checks sizes, but weirdly and without crashes
-      return u3_none;
+      return c3n;
     }
     else {
       c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
@@ -44,7 +43,7 @@
          (c3n == u3ud(dat)) ) {
       return u3m_bail(c3__fail);
     } else {
-      return u3l_punt("veri-octs", _cqee_veri_octs(sig, len, dat, pub));
+      return _cqee_veri_octs(sig, len, dat, pub);
     }
   }
 
@@ -57,8 +56,7 @@
 
     if ( (0 != u3r_bytes_fit(64, sig_y, s)) ||
          (0 != u3r_bytes_fit(32, pub_y, pk)) ) {
-      // hoon checks sizes, but weirdly and without crashes
-      return u3_none;
+      return c3n;
     }
     else {
       c3_w  met_w;
@@ -82,6 +80,6 @@
          (c3n == u3ud(c)) ) {
       return u3m_bail(c3__fail);
     } else {
-      return u3l_punt("veri", _cqee_veri(a, b, c));
+      return _cqee_veri(a, b, c);
     }
   }

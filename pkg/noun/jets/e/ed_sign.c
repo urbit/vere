@@ -36,7 +36,6 @@
     u3_noun len, dat;
     if ( c3n == u3r_mean(cor, u3x_sam_2, &msg, u3x_sam_3, &sed, 0) ||
          c3n == u3r_cell(msg, &len, &dat) ||
-         c3n == u3ud(msg) ||
          c3n == u3ud(sed) ||
          c3n == u3ud(len) ||
          c3n == u3ud(dat) ) {
@@ -78,7 +77,6 @@
     u3_noun len, dat;
     if ( c3n == u3r_mean(cor, u3x_sam_2, &msg, u3x_sam_6, &pub, u3x_sam_7, &sek, 0) ||
          c3n == u3r_cell(msg, &len, &dat) ||
-         c3n == u3ud(msg) ||
          c3n == u3ud(pub) ||
          c3n == u3ud(sek) ||
          c3n == u3ud(len) ||

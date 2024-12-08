@@ -125,6 +125,7 @@ static u3j_harm _137_hex_coed__ed_sign_octs_raw_a[] = {{".2", u3wee_sign_octs_ra
 static u3j_harm _137_hex_coed__ed_veri_octs_a[] = {{".2", u3wee_veri_octs}, {}};
 static u3j_harm _137_hex_coed__ed_veri_a[] = {{".2", u3wee_veri}, {}};
 static u3j_harm _137_hex_coed__ed_shar_a[] = {{".2", u3wee_shar}, {}};
+static u3j_harm _137_hex_coed__ed_slar_a[] = {{".2", u3wee_slar}, {}};
 
 static u3j_harm _137_hex_coed__ed_smac_a[] =
   {{".2", u3wee_smac}, {}};
@@ -163,6 +164,7 @@ static u3j_core _137_hex_coed__ed_d[] =
     { "veri-octs", 7, _137_hex_coed__ed_veri_octs_a, 0, no_hashes },
     { "veri", 7, _137_hex_coed__ed_veri_a, 0, no_hashes },
     { "shar", 7, _137_hex_coed__ed_shar_a, 0, no_hashes },
+    { "slar", 7, _137_hex_coed__ed_slar_a, 0, no_hashes },
     { "point-add", 7, _137_hex_coed__ed_point_add_a, 0, 0 },
     { "point-neg", 7, _137_hex_coed__ed_point_neg_a, 0, 0 },
     { "recs", 7, _137_hex_coed__ed_recs_a, 0, 0 },

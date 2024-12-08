@@ -32,6 +32,6 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("point-neg", _cqee_point_neg(a));
+      return _cqee_point_neg(a);
     }
   }

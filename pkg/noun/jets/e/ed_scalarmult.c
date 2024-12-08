@@ -10,7 +10,7 @@
   _cqee_scalarmult(u3_atom a,
                   u3_atom b)
   {
-    c3_y b_y[32];
+    c3_y a_y[32], b_y[32], out_y[32];
     if (0 != u3r_bytes_fit(32, b_y, b)) {
       return u3m_bail(c3__exit);
     }
@@ -21,11 +21,12 @@
          ( (32 == met_w) &&
            (127 < u3r_byte(a, 31)) )
         ) {
-      a = u3qee_recs(a);
+      u3_noun a_recs = u3qee_recs(a);
+      u3r_bytes(0, 32, a_y, a_recs);
+      u3z(a_recs);
+    } else {
+      u3r_bytes(0, 32, a_y, a);
     }
-
-    c3_y a_y[32], out_y[32];
-    u3r_bytes(0, 32, a_y, a);
 
     if ( (0 != urcrypt_ed_scalarmult(a_y, b_y, out_y)) ) {
       // at this point, will only fail if b is bad point

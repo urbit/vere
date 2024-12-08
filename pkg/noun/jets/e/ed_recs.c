@@ -26,11 +26,11 @@
       return pro;
     }
 
-    c3_y a_y[64], out_y[32];
+    c3_y a_y[64];
 
     u3r_bytes(0, 64, a_y, a);
     urcrypt_ed_scalar_reduce(a_y);
-    return u3i_bytes(32, out_y);
+    return u3i_bytes(32, a_y);
   }
 
   u3_noun

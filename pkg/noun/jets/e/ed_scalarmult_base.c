@@ -9,20 +9,21 @@
   static u3_atom
   _cqee_scalarmult_base(u3_atom a)
   {
+    c3_y a_y[32], out_y[32];
     c3_w met_w = u3r_met(3, a);
     // scalarmult_base expects a_y[31] <= 127
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
            (127 < u3r_byte(a, 31)) )
         ) {
-      a = u3qee_recs(a);
+      u3_noun a_recs = u3qee_recs(a);
+      u3r_bytes(0, 32, a_y, a_recs);
+      u3z(a_recs);
+    } else {
+      u3r_bytes(0, 32, a_y, a);
     }
 
-    c3_y a_y[32], out_y[32];
-    u3r_bytes(0, 32, a_y, a);
-
-    if ( (0 != u3r_bytes_fit(32, a_y, a)) ||
-         (0 != urcrypt_ed_scalarmult_base(a_y, out_y)) )  {
+    if (0 != urcrypt_ed_scalarmult_base(a_y, out_y))  {
       return u3m_bail(c3__exit);
     }
     else {
