@@ -3,7 +3,7 @@
 #include "vere.h"
 
 #include "noun.h"
-#include "ur.h"
+#include "ur/ur.h"
 
 #undef LORD_TRACE_JAM
 #undef LORD_TRACE_CUE
@@ -22,6 +22,10 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
   ==
 ::  +plea: from serf to king
@@ -38,6 +42,10 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -103,7 +111,8 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit: {
+    case u3_writ_exit:
+    case u3_writ_quiz: {
     } break;
   }
 
@@ -201,6 +210,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
+    case u3_writ_quiz: return "quiz";
   }
 }
 
@@ -249,12 +259,14 @@ _lord_plea_live(u3_lord* god_u, u3_noun dat)
   u3_writ* wit_u = _lord_writ_pop(god_u);
 
   if( u3_nul != dat ) {
-    return _lord_plea_foul(god_u, c3__live, dat);
+    _lord_plea_foul(god_u, c3__live, dat);
+    return;
   }
 
   switch ( wit_u->typ_e ) {
     default: {
-      return _lord_plea_foul(god_u, c3__live, dat);
+      _lord_plea_foul(god_u, c3__live, dat);
+      return;
     } break;
 
     case u3_writ_save: {
@@ -306,7 +318,8 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
        || (c3n == u3r_safe_chub(eve, &eve_d))
        || (c3n == u3r_safe_word(mug, &mug_l)) )
     {
-      return _lord_plea_foul(god_u, c3__ripe, dat);
+      _lord_plea_foul(god_u, c3__ripe, dat);
+      return;
     }
 
     if ( 1 != pro_y ) {
@@ -338,7 +351,8 @@ _lord_plea_slog(u3_lord* god_u, u3_noun dat)
   if (  (c3n == u3r_cell(dat, &pri, &tan))
      || (c3n == u3r_safe_word(pri, &pri_w)) )
   {
-    return _lord_plea_foul(god_u, c3__slog, dat);
+    _lord_plea_foul(god_u, c3__slog, dat);
+    return;
   }
 
   //  XX per-writ slog_f?
@@ -356,7 +370,8 @@ _lord_plea_flog(u3_lord* god_u, u3_noun dat)
   u3_pier* pir_u = god_u->cb_u.ptr_v;
 
   if ( c3n == u3a_is_atom(dat) ) {
-    return _lord_plea_foul(god_u, c3__flog, dat);
+    _lord_plea_foul(god_u, c3__flog, dat);
+    return;
   }
 
   c3_c* tan_c = u3r_string(dat);
@@ -422,12 +437,14 @@ _lord_plea_peek(u3_lord* god_u, u3_noun dat)
   }
 
   if ( c3n == u3a_is_cell(dat) ) {
-    return _lord_plea_foul(god_u, c3__peek, dat);
+    _lord_plea_foul(god_u, c3__peek, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
     default: {
-      return _lord_plea_foul(god_u, c3__peek, dat);
+      _lord_plea_foul(god_u, c3__peek, dat);
+      return;
     }
 
     case c3__done: {
@@ -457,7 +474,8 @@ _lord_plea_play_bail(u3_lord* god_u, u3_info fon_u, u3_noun dat)
      || (c3n == u3a_is_cell(dud)) )
   {
     fprintf(stderr, "lord: invalid %%play\r\n");
-    return _lord_plea_foul(god_u, c3__bail, dat);
+    _lord_plea_foul(god_u, c3__bail, dat);
+    return;
   }
 
   god_u->eve_d = (eve_d - 1ULL);
@@ -477,7 +495,8 @@ _lord_plea_play_done(u3_lord* god_u, u3_info fon_u, u3_noun dat)
 
   if ( c3n == u3r_safe_word(dat, &mug_l) ) {
     fprintf(stderr, "lord: invalid %%play\r\n");
-    return _lord_plea_foul(god_u, c3__done, dat);
+    _lord_plea_foul(god_u, c3__done, dat);
+    return;
   }
 
   god_u->eve_d = fon_u.ent_u->eve_d;
@@ -501,12 +520,14 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
   }
 
   if ( c3n == u3a_is_cell(dat) ) {
-    return _lord_plea_foul(god_u, c3__play, dat);
+    _lord_plea_foul(god_u, c3__play, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
     default: {
-      return _lord_plea_foul(god_u, c3__play, dat);
+      _lord_plea_foul(god_u, c3__play, dat);
+      return;
     }
 
     case c3__done: {
@@ -519,6 +540,15 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
   }
 
   u3z(dat);
+}
+
+/* _lord_plea_quiz(): handle quiz (query to serf).
+ */
+static void
+_lord_plea_quiz(u3_lord* god_u, u3_noun dat)
+{
+  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
+  wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
 }
 
 /* _lord_work_spin(): update spinner if more work is in progress.
@@ -601,7 +631,8 @@ _lord_plea_work_swap(u3_lord* god_u, u3_ovum* egg_u, u3_noun dat)
     u3z(job);
     u3_ovum_free(egg_u);
     fprintf(stderr, "lord: invalid %%work\r\n");
-    return _lord_plea_foul(god_u, c3__swap, dat);
+    _lord_plea_foul(god_u, c3__swap, dat);
+    return;
   }
   else {
     u3k(job); u3k(act);
@@ -629,7 +660,8 @@ _lord_plea_work_done(u3_lord* god_u,
     u3z(job);
     u3_ovum_free(egg_u);
     fprintf(stderr, "lord: invalid %%work\r\n");
-    return _lord_plea_foul(god_u, c3__done, dat);
+    _lord_plea_foul(god_u, c3__done, dat);
+    return;
   }
   else {
     u3k(act);
@@ -656,14 +688,16 @@ _lord_plea_work(u3_lord* god_u, u3_noun dat)
   if ( c3n == u3a_is_cell(dat) ) {
     u3z(job);
     u3_ovum_free(egg_u);
-    return _lord_plea_foul(god_u, c3__work, dat);
+    _lord_plea_foul(god_u, c3__work, dat);
+    return;
   }
 
   switch ( u3h(dat) ) {
     default: {
       u3z(job);
       u3_ovum_free(egg_u);
-      return _lord_plea_foul(god_u, c3__work, dat);
+      _lord_plea_foul(god_u, c3__work, dat);
+      return;
     } break;
 
     case c3__done: {
@@ -704,15 +738,18 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 #endif
 
   if ( u3_none == jar ) {
-    return _lord_plea_foul(god_u, 0, u3_blip);
+    _lord_plea_foul(god_u, 0, u3_blip);
+    return;
   }
   else if ( c3n == u3r_cell(jar, &tag, &dat) ) {
-    return _lord_plea_foul(god_u, 0, jar);
+    _lord_plea_foul(god_u, 0, jar);
+    return;
   }
 
   switch ( tag ) {
     default: {
-      return _lord_plea_foul(god_u, 0, jar);
+      _lord_plea_foul(god_u, 0, jar);
+      return;
     }
 
     case c3__work: {
@@ -741,6 +778,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case c3__ripe: {
       _lord_plea_ripe(god_u, u3k(dat));
+    } break;
+
+    case c3__quiz: {
+      _lord_plea_quiz(god_u, u3k(dat));
     } break;
   }
 
@@ -811,6 +852,10 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       //  requested exit code is always 0
       //
       msg = u3nt(c3__live, c3__exit, 0);
+    } break;
+
+    case u3_writ_quiz: {
+      msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
     } break;
   }
 
@@ -995,6 +1040,22 @@ u3_lord_pack(u3_lord* god_u)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_pack;
+  _lord_writ_plan(god_u, wit_u);
+}
+
+/* u3_lord_quiz(): query the serf.
+*/
+void
+u3_lord_quiz(u3_lord* god_u,
+             c3_m     qiz_m,
+             void*    ptr_v,
+             void (*qiz_f)(c3_m, void*, u3_noun))
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_quiz;
+  wit_u->qiz_u.qiz_m = qiz_m;
+  wit_u->qiz_u.ptr_v = ptr_v;
+  wit_u->qiz_u.qiz_f = qiz_f;
   _lord_writ_plan(god_u, wit_u);
 }
 

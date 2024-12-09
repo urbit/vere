@@ -8,7 +8,7 @@
 #include "ivory.h"
 #include "noun.h"
 #include "pace.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "uv.h"
 #include "version.h"
 
@@ -90,6 +90,8 @@ void _king_doom(u3_noun doom);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
+static u3_noun _king_get_atom(c3_c* url_c);
+
 /* _king_defy_fate(): invalid fate
 */
 void
@@ -151,11 +153,55 @@ _king_boot(u3_noun bul)
       break;
     }
     default:
-      return _king_defy_fate();
+      _king_defy_fate();
+      return;
   }
 
   next(u3k(u3t(boot)), u3k(pill), u3k(path));
   u3z(bul);
+}
+
+/* _king_prop(): events from prop arguments
+*/
+u3_noun
+_king_prop()
+{
+  u3_noun mor = u3_nul;
+  while ( 0 != u3_Host.ops_u.vex_u ) {
+    u3_even* vex_u = u3_Host.ops_u.vex_u;
+    switch ( vex_u->kin_i ) {
+      case 1: {  //  file
+        u3_atom jam = u3m_file(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 2: {  //  url
+        u3l_log("boot: downloading prop %s", vex_u->loc_c);
+        u3_atom jam = _king_get_atom(vex_u->loc_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      case 3: {  //  name
+        //NOTE  this implementation limits us to max 213 char prop names
+        c3_c url_c[256];
+        snprintf(url_c, 255,
+                 //TODO  should maybe respect ops_u.url_c
+                 "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
+                 vex_u->loc_c);
+        u3l_log("boot: downloading prop %s", url_c);
+        u3_atom jam = _king_get_atom(url_c);
+        mor = u3nc(u3ke_cue(jam), mor);
+      } break;
+
+      default: {
+        u3l_log("invalid prop source %d", vex_u->kin_i);
+        exit(1);
+      }
+    }
+
+    u3_Host.ops_u.vex_u = vex_u->pre_u;
+  }
+  return mor;
 }
 
 /* _king_fake(): boot with fake keys
@@ -166,7 +212,8 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
   //  XX link properly
   //
   u3_noun vent = u3nc(c3__fake, u3k(ship));
-  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path, u3_none);
+  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path,
+                              u3_none, _king_prop());
 }
 
 /* _king_come(): mine a comet under star (unit)
@@ -201,7 +248,8 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed));
   //  XX link properly
   //
-  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path, feed);
+  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path,
+                              feed, _king_prop());
 
   // disable ivory slog printfs
   //
@@ -223,11 +271,11 @@ _king_pier(u3_noun pier)
   u3z(pier);
 }
 
-/* _king_curl_alloc(): allocate a response buffer for curl
+/* king_curl_alloc(): allocate a response buffer for curl
 **  XX deduplicate with dawn.c
 */
-static size_t
-_king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
+size_t
+king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 {
   uv_buf_t* buf_u = buf_v;
 
@@ -241,16 +289,17 @@ _king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
   return siz_t;
 }
 
-/* _king_curl_bytes(): HTTP GET url_c, produce response body bytes.
+/* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
 **  XX deduplicate with dawn.c
 */
-static c3_i
-_king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
+c3_i
+king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
 {
   c3_i     ret_i = 0;
   CURL    *cul_u;
   CURLcode res_i;
   long     cod_i;
+  c3_y     try_y = 0;
   uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
 
   if ( !(cul_u = curl_easy_init()) ) {
@@ -260,31 +309,40 @@ _king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
 
   u3K.ssl_curl_f(cul_u);
   curl_easy_setopt(cul_u, CURLOPT_URL, url_c);
-  curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, _king_curl_alloc);
+  curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(cul_u, CURLOPT_WRITEDATA, (void*)&buf_u);
+  curl_easy_setopt(cul_u, CURLOPT_SERVER_RESPONSE_TIMEOUT, 30);
 
-  res_i = curl_easy_perform(cul_u);
-  curl_easy_getinfo(cul_u, CURLINFO_RESPONSE_CODE, &cod_i);
+  while ( 5 > try_y ) {
+    sleep(try_y++);
+    res_i = curl_easy_perform(cul_u);
+    curl_easy_getinfo(cul_u, CURLINFO_RESPONSE_CODE, &cod_i);
 
-  //  XX retry?
-  //
-  if ( CURLE_OK != res_i ) {
-    if ( veb_t ) {
-      u3l_log("curl: failed %s: %s", url_c, curl_easy_strerror(res_i));
+    if ( CURLE_OK != res_i ) {
+      if ( veb_t ) {
+        u3l_log("curl: failed to fetch %s: %s",
+                url_c, curl_easy_strerror(res_i));
+      }
+      ret_i = -1;
     }
-    ret_i = -1;
-  }
-  if ( 300 <= cod_i ) {
-    if ( veb_t ) {
-      u3l_log("curl: error %s: HTTP %ld", url_c, cod_i);
+    else if ( 300 <= cod_i ) {
+      if ( veb_t ) {
+        u3l_log("curl: error fetching %s: HTTP %ld", url_c, cod_i);
+      }
+      ret_i = -2;
+      if ( 400 <= cod_i && cod_i < 500 ) {
+        break;
+      }
     }
-    ret_i = -2;
+    else {
+      *len_w = buf_u.len;
+      *hun_y = (c3_y*)buf_u.base;
+      ret_i = 0;
+      break;
+    }
   }
 
   curl_easy_cleanup(cul_u);
-
-  *len_w = buf_u.len;
-  *hun_y = (c3_y*)buf_u.base;
 
   return ret_i;
 }
@@ -298,7 +356,7 @@ _king_get_atom(c3_c* url_c)
   c3_y* hun_y;
   u3_noun pro;
 
-  if ( _king_curl_bytes(url_c, &len_w, &hun_y, 1) ) {
+  if ( king_curl_bytes(url_c, &len_w, &hun_y, 1) ) {
     u3_king_bail();
     exit(1);
   }
@@ -376,8 +434,9 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   }
 
   //  skip printfs on failed requests (/next is usually not present)
+  //REVIEW  new retry logic means this case will take longer. make retries optional?
   //
-  if ( _king_curl_bytes(url_c, &len_w, &hun_y, 0) ) {
+  if ( king_curl_bytes(url_c, &len_w, &hun_y, 0) ) {
     c3_free(url_c);
 
     ret_i = asprintf(&url_c, "%s/%s/last", ver_hos_c, pac_c);
@@ -386,7 +445,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
     //  enable printfs on failed requests (/last must be present)
     //  XX support channel redirections
     //
-    if ( _king_curl_bytes(url_c, &len_w, &hun_y, 1) )
+    if ( king_curl_bytes(url_c, &len_w, &hun_y, 1) )
     {
       c3_free(url_c);
       return -2;
@@ -905,10 +964,10 @@ u3_king_commence()
 
   //  Ignore SIGPIPE signals.
   {
-    struct sigaction sig_s = {{0}};
-    sigemptyset(&(sig_s.sa_mask));
-    sig_s.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sig_s, 0);
+    sigset_t set_s;
+    sigemptyset(&set_s);
+    sigaddset(&set_s, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
 
   //  boot the ivory pill
@@ -1383,7 +1442,7 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       do {
         //  XX fallback on any errors?
         //
-        if ( 0 > (sen_i = sendfile64(dst_i, src_i, &off_i, len_i)) ) {
+        if ( 0 > (sen_i = sendfile(dst_i, src_i, &off_i, len_i)) ) {
           err_i = errno;
           ret_i = -1;
           goto done3;
@@ -1444,7 +1503,7 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
 
   if ( ret_i ) {
     fprintf(stderr, "vere: copy %s -> %s failed: %s\r\n",
-                    bin_c, u3_Host.dem_c, strerror(errno));
+                    u3_Host.dem_c, bin_c, strerror(errno));
     c3_free(bin_c);
     return -1;
   }
@@ -1599,7 +1658,6 @@ u3_king_bail(void)
 void
 u3_king_grab(void* vod_p)
 {
-  c3_w tot_w = 0;
   FILE* fil_u;
 
   u3_assert( u3R == &(u3H->rod_u) );
@@ -1635,11 +1693,32 @@ u3_king_grab(void* vod_p)
   }
 #endif
 
-  tot_w += u3m_mark(fil_u);
-  tot_w += u3_pier_mark(fil_u);
+  u3m_quac** all_u = c3_malloc(sizeof(*all_u)*6);
 
-  u3a_print_memory(fil_u, "total marked", tot_w);
-  u3a_print_memory(fil_u, "sweep", u3a_sweep());
+  u3m_quac** var_u = u3m_mark();
+  all_u[0] = var_u[0];
+  all_u[1] = var_u[1];
+  all_u[2] = var_u[2];
+  all_u[3] = var_u[3];
+  c3_free(var_u);
+
+  c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w
+                 + all_u[2]->siz_w + all_u[3]->siz_w;
+
+  all_u[4] = c3_calloc(sizeof(*all_u[4]));
+  all_u[4]->nam_c = "total marked";
+  all_u[4]->siz_w = tot_w;
+
+  all_u[5] = c3_calloc(sizeof(*all_u[5]));
+  all_u[5]->nam_c = "sweep";
+  all_u[5]->siz_w = u3a_sweep();
+
+  for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+    u3a_print_quac(fil_u, 0, all_u[i_w]);
+    u3a_quac_free(all_u[i_w]);
+  }
+
+  c3_free(all_u);
 
 #ifdef U3_MEMORY_LOG
   {

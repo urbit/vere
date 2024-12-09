@@ -5,7 +5,7 @@
 #include "noun.h"
 #include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
 #include "sigsegv.h"
@@ -18,6 +18,8 @@
 #include "db/lmdb.h"
 #include "getopt.h"
 #include "libgen.h"
+#include "pthread.h"
+#include "spawn.h"
 
 #include "ca_bundle.h"
 #include "pace.h"
@@ -177,6 +179,7 @@ _main_init(void)
   u3_Host.ops_u.rep = c3n;
   u3_Host.ops_u.eph = c3n;
   u3_Host.ops_u.tos = c3n;
+  u3_Host.ops_u.beb = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
   u3_Host.ops_u.tra = c3n;
@@ -191,6 +194,15 @@ _main_init(void)
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
+  u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
+
+  u3_Host.ops_u.siz_i =
+#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+  // 500 GiB is as large as musl on aarch64 wants to allow
+  0x7d00000000;
+#else
+  0x10000000000;
+#endif
 
   u3C.eph_c = 0;
   u3C.tos_w = 0;
@@ -216,6 +228,19 @@ _main_pier_run(c3_c* bin_c)
   }
 
   return dir_c;
+}
+
+/* _main_add_prop(): add a boot prop to u3_Host.ops_u.vex_u.
+*/
+u3_even*
+_main_add_prop(c3_i kin_i, c3_c* loc_c)
+{
+  u3_even* nex_u = c3_calloc(sizeof(*nex_u));
+  nex_u->kin_i = kin_i;
+  nex_u->loc_c = loc_c;
+  nex_u->pre_u = u3_Host.ops_u.vex_u;
+  u3_Host.ops_u.vex_u = nex_u;
+  return nex_u;
 }
 
 /* _main_getopt(): extract option map from command line.
@@ -245,6 +270,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "import",              required_argument, NULL, 'i' },
     { "ivory-pill",          required_argument, NULL, 'J' },
     { "json-trace",          no_argument,       NULL, 'j' },
+    { "jumbo-bloq",          required_argument, NULL, c3__bloq },
     { "kernel-stage",        required_argument, NULL, 'K' },
     { "key-file",            required_argument, NULL, 'k' },
     { "loom",                required_argument, NULL, c3__loom },
@@ -273,11 +299,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "scry-into",           required_argument, NULL, 'Y' },
     { "scry-format",         required_argument, NULL, 'Z' },
     //
-    { "urth-loom",           required_argument, NULL, 5 },
-    { "no-demand",           no_argument,       NULL, 6 },
-    { "swap",                no_argument,       NULL, 7 },
-    { "swap-to",             required_argument, NULL, 8 },
-    { "toss",                required_argument, NULL, 9 },
+    { "prop-file",           required_argument, NULL, 1 },
+    { "prop-url",            required_argument, NULL, 2 },
+    { "prop-name",           required_argument, NULL, 3 },
+    //
+    { "urth-loom",           required_argument, NULL,  5 },
+    { "no-demand",           no_argument,       NULL,  6 },
+    { "swap",                no_argument,       NULL,  7 },
+    { "swap-to",             required_argument, NULL,  8 },
+    { "toss",                required_argument, NULL,  9 },
+    { "behn-allow-blocked",  no_argument,       NULL, 10 },
+    { "serf-bin",            required_argument, NULL, 11 },
+    { "lmdb-map-size",       required_argument, NULL, 12 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -287,6 +320,10 @@ _main_getopt(c3_i argc, c3_c** argv)
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
+      case 1: case 2: case 3: {  //  prop-*
+        _main_add_prop(ch_i, strdup(optarg));
+        break;
+      }
       case 5: {  //  urth-loom
         if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
           return c3n;
@@ -313,8 +350,32 @@ _main_getopt(c3_i argc, c3_c** argv)
         }
         break;
       }
+      case 10: { //  behn-allow-blocked
+        u3_Host.ops_u.beb = c3y;
+        break;
+      }
+      case 11: {  // serf-bin
+        u3_Host.wrk_c = strdup(optarg);
+        break;
+      }
+      case 12: { //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          return c3n;
+        }
+
+        break;
+      }
       //  special args
       //
+      case c3__bloq: {
+        if (_main_readw(optarg, 30, &arg_w)) {
+          return c3n;
+        } else u3_Host.ops_u.jum_y = arg_w;
+        if ( 13 > u3_Host.ops_u.jum_y ) {
+          return c3n;
+        }
+        break;
+      }
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           return c3n;
@@ -603,6 +664,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     if ( hyphen_c ) {
       *hyphen_c = '\0';
     }
+    //TODO  use brass pill from b.u.org/props/etc eventually
     c3_i res_i = asprintf(&u3_Host.ops_u.url_c,
                           "https://bootstrap.urbit.org/urbit-v%s.pill",
                           version_c);
@@ -628,6 +690,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     }
   }
 
+  if ( u3_Host.ops_u.vex_u != 0 ) {
+    struct stat s;
+    u3_even* vex_u = u3_Host.ops_u.vex_u;
+    while ( vex_u != 0 ) {
+      if ( vex_u->kin_i == 1 && stat(vex_u->loc_c, &s) != 0 ) {
+        fprintf(stderr, "events file %s not found\n", vex_u->loc_c);
+        return c3n;
+      }
+      vex_u = vex_u->pre_u;
+    }
+  }
+
   struct sockaddr_in t;
   if ( u3_Host.ops_u.bin_c != 0 && inet_pton(AF_INET, u3_Host.ops_u.bin_c, &t.sin_addr) == 0 ) {
     fprintf(stderr, "-b invalid IP address\n");
@@ -641,6 +715,15 @@ _main_getopt(c3_i argc, c3_c** argv)
       return c3n;
     }
   }
+
+  //TODO  split up "default distribution" packages eventually
+  // //  if we're not in lite mode, include the default props
+  // //
+  // if ( u3_Host.ops_u.lit == c3n ) {
+  //   _main_add_prop(3, "landscape");
+  //   _main_add_prop(3, "webterm");
+  //   _main_add_prop(3, "groups");
+  // }
 
   return c3y;
 }
@@ -773,10 +856,11 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-i, --import FILE             Import pier state from jamfile\n",
     "-J, --ivory-pill PILL         Use custom ivory pill\n",
     "-j, --json-trace              Create json trace file in .urb/put/trace\n",
+    "    --jumbo-bloq BLOQ         Set Ames jumbo frame bloq size\n",
     "-K, --kernel-stage STAGE      Start at Hoon kernel version stage\n",
     "-k, --key-file KEYS           Private key file (see also -G)\n",
     "-L, --local                   Local networking only\n",
-    "    --loom                    Set loom to binary exponent (31 == 2GB)\n"
+    "    --loom EXPO               Set loom to binary exponent (31 == 2GB)\n"
     "-l, --lite-boot               Most-minimal startup\n",
     "-M, --keep-cache-limit LIMIT  Set persistent memo cache max size; 0 means default\n",
     "-n, --replay-to NUMBER        Replay up to event\n",
@@ -804,6 +888,9 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --no-dock                 Skip binary \"docking\" on boot\n",
     "    --swap                    Use an explicit ephemeral (swap-like) file\n",
     "    --swap-to FILE            Specify ephemeral file location\n",
+    "    --prop-file FILE          Add a prop into the boot sequence\n"
+    "    --prop-url URL            Download a prop into the boot sequence\n",
+    "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -860,6 +947,14 @@ report(void)
          LIBCURL_VERSION_MAJOR,
          LIBCURL_VERSION_MINOR,
          LIBCURL_VERSION_PATCH);
+}
+
+/* _stop_exit_fore(): exit before.
+*/
+static void
+_stop_exit_fore(c3_i int_i)
+{
+  kill(getpid(), SIGTERM);
 }
 
 /* _stop_exit(): exit immediately.
@@ -1057,10 +1152,10 @@ _cw_init_io(uv_loop_t* lup_u)
   //  Ignore SIGPIPE signals.
   //
   {
-    struct sigaction sig_s = {{0}};
-    sigemptyset(&(sig_s.sa_mask));
-    sig_s.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sig_s, 0);
+    sigset_t set_s;
+    sigemptyset(&set_s);
+    sigaddset(&set_s, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
 
   //  configure pipe to daemon process
@@ -1089,7 +1184,6 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     fprintf(stderr, "serf: missing args\n");
     exit(1);
   }
-
   //  XX use named arguments and getopt
 
   c3_d       eve_d = 0;
@@ -1466,14 +1560,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
   //  jam input and return on stdout
   //
   else if ( c3y == jam_o ) {
-    c3_d    bits = 0;
     c3_d    len_d = 0;
     c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
     c3_y*   byt_y;
     u3_noun sam = u3i_string(evl_c);
     u3_noun res = u3m_soft(0, u3v_wish_n, sam);
     if ( 0 == u3h(res) ) {                //  successful execution, print output
-      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      u3s_jam_xeno(u3t(res), &len_d, &byt_y);
       if ( c3y == new_o ) {
         u3_newt_send(&std_u, len_d, byt_y);
       } else {
@@ -1519,10 +1612,11 @@ _cw_info(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1550,6 +1644,13 @@ _cw_info(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1681,7 +1782,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_serf_grab();
+  u3z(u3_serf_grab(c3y));
   u3m_stop();
 }
 
@@ -1694,10 +1795,11 @@ _cw_cram(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1725,6 +1827,13 @@ _cw_cram(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1790,11 +1899,12 @@ _cw_queu(c3_i argc, c3_c* argv[])
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
-    { "loom",        required_argument, NULL, c3__loom },
-    { "no-demand",   no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "replay-from", required_argument, NULL, 'r' },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
+    { "replay-from",   required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1822,6 +1932,13 @@ _cw_queu(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -1898,11 +2015,12 @@ _cw_meld(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "gc-early",  no_argument,       NULL, 9 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "gc-early",      no_argument,       NULL, 9 },
+    { "lmdb-map-size", required_argument, NULL, 10 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1935,6 +2053,13 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
       case 9: {  //  gc-early
         u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
+
+      case 10: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2155,11 +2280,12 @@ _cw_pack(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
-    { "gc-early",  no_argument,       NULL, 9 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "gc-early",      no_argument,       NULL, 9 },
+    { "lmdb-map-size", required_argument, NULL, 10 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2192,6 +2318,13 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
       case 9: {  //  gc-early
         u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
+
+      case 10: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2278,10 +2411,7 @@ _cw_play_snap(u3_disk* log_u)
 static void
 _cw_play_exit(c3_i int_i)
 {
-  //  explicit fprintf to avoid allocation in u3l_log
-  //
-  fprintf(stderr, "\r\n[received keyboard stop signal, exiting]\r\n");
-  raise(SIGINT);
+  kill(getpid(), SIGINT);
 }
 
 /* _cw_play_impl(): replay events, but better.
@@ -2352,6 +2482,136 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   u3m_stop();
 
   return pay_d;
+}
+
+/* _cw_play_fork_heed(): wait for EOF on STDIN or until canceled.
+*/
+static void*
+_cw_play_fork_heed(void* arg) {
+  // XX
+  c3_c buf[1];
+  c3_zs red;
+
+  sigset_t set;
+
+  sigemptyset(&set);
+  sigaddset(&set, SIGINT);
+  sigaddset(&set, SIGTERM);
+  sigaddset(&set, SIGTSTP);
+  if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
+    fprintf(stderr, "play: watcher failed to block sigs: %s\r\n", strerror(errno));
+    exit(1);
+  }
+
+  do {
+    pthread_testcancel();
+    red = read(STDIN_FILENO, buf, sizeof(buf));
+    if ( 0 == red ) {
+      fprintf(stderr, "play: god save the king! committing sudoku...\r\n");
+      kill(getpid(), SIGINT);
+      return NULL;
+    }
+  } while ( 0 < red );
+
+  return NULL;
+}
+
+/* _cw_play_fork_exit(): exit callback for uv_spawn.
+*/
+void
+_cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
+  if ( sat_d || tem_i ) {
+    fprintf(stderr, "play: failed: %" PRId64 " signal: %d\r\n", sat_d, tem_i);
+    exit(1);
+  }
+  uv_close((uv_handle_t*)req_u, NULL);
+}
+
+/* _cw_play_fork(): spawn a subprocess for event replay.
+*/
+static c3_i
+_cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
+{
+  c3_c *argv[12] = {0};
+  c3_c eve_c[21] = {0};
+  c3_c sap_c[21] = {0};
+  c3_c lom_c[3]  = {0};
+  c3_i ret_i;
+
+  ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
+  u3_assert( ret_i && ret_i < sizeof(eve_c) );
+  ret_i = snprintf(sap_c, sizeof(sap_c), "%" PRIu64, sap_d);
+  u3_assert( ret_i && ret_i < sizeof(sap_c) );
+  ret_i = snprintf(lom_c, sizeof(lom_c), "%u", u3_Host.ops_u.lom_y);
+  u3_assert( ret_i && ret_i < sizeof(lom_c) );
+
+  {
+    c3_z    i_z = 0;
+    c3_i  run_i = 0;
+
+    c3_c* run_c = _main_pier_run(u3_Host.wrk_c);
+    if ( run_c ) {
+      c3_free(run_c);
+      run_i = 1;
+    }
+
+    argv[i_z++] = u3_Host.wrk_c;
+    argv[i_z++] = "play";
+    argv[i_z++] = "--loom";
+    argv[i_z++] = lom_c;
+    argv[i_z++] = "--replay-to";
+    argv[i_z++] = eve_c;
+    argv[i_z++] = "--snap-at";
+    argv[i_z++] = sap_c;
+
+    if _(mel_o) {
+      argv[i_z++] = "--auto-meld";
+    }
+    if _(sof_o) {
+      argv[i_z++] = "--soft-mugs";
+    }
+    if _(ful_o) {
+      argv[i_z++] = "--full";
+    }
+    if ( !run_i ) {
+      argv[i_z++] = u3_Host.dir_c;
+    }
+
+    argv[i_z] = NULL;
+    u3_assert( i_z < sizeof(argv) );
+  }
+
+  //  use uv_spawn to fork a new serf process and call its play subcommand
+  //
+  u3L = uv_default_loop();
+
+  uv_pipe_t stdin_pipe;
+  uv_pipe_init(u3L, &stdin_pipe, 0);
+
+  uv_process_t child_req = {0};
+  uv_process_options_t options = {0};
+  uv_stdio_container_t stdio[3];
+  stdio[0].data.stream = (uv_stream_t*) &stdin_pipe;
+  stdio[1].data.fd = STDOUT_FILENO;
+  stdio[2].data.fd = STDERR_FILENO;
+  stdio[0].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;  //  stdin
+  stdio[1].flags = UV_INHERIT_FD;                      //  stdout
+  stdio[2].flags = UV_INHERIT_FD;                      //  stderr
+  options.stdio_count = 3;
+  options.stdio = stdio;
+  options.file = argv[0];
+  options.args = argv;
+  options.exit_cb = (uv_exit_cb)_cw_play_fork_exit;
+
+  c3_i sat_i;
+  if ( 0 != (sat_i = uv_spawn(u3L, &child_req, &options)) ) {
+    fprintf(stderr, "play: uv_spawn: %s\r\n", uv_strerror(sat_i));
+    return 1;
+  }
+
+  signal(SIGINT, SIG_IGN);
+
+  return uv_run(u3L, UV_RUN_DEFAULT);
 }
 
 /* _cw_play(): replay events, but better.
@@ -2446,9 +2706,12 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( !_cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o) ) {
-    fprintf(stderr, "mars: nothing to do!\r\n");
-  }
+  pthread_t ted;
+  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+
+  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+
+  pthread_cancel(ted);
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2536,10 +2799,11 @@ _cw_chop(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "swap",      no_argument,       NULL, 7 },
-    { "swap-to",   required_argument, NULL, 8 },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "no-demand",     no_argument,       NULL, 6 },
+    { "swap",          no_argument,       NULL, 7 },
+    { "swap-to",       required_argument, NULL, 8 },
+    { "lmdb-map-size", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2567,6 +2831,13 @@ _cw_chop(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
         break;
       }
 
@@ -2617,7 +2888,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",          required_argument, NULL, c3__loom },
+    { "lmdb-map-size", required_argument, NULL, 6 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2625,6 +2897,13 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 6: {  //  lmdb-map-size
+        if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+          exit(1);
+        }
+        break;
+      }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -2974,6 +3253,10 @@ main(c3_i   argc,
 
   _main_init();
 
+#if defined(U3_OS_osx)
+  darwin_register_mach_exception_handler();
+#endif
+
   c3_c* bin_c = strdup(argv[0]);
 
   //  parse for subcommands
@@ -3002,8 +3285,6 @@ main(c3_i   argc,
 
   _main_self_path();
 
-  //  XX add argument
-  //
   if ( !u3_Host.wrk_c ) {
     u3_Host.wrk_c = bin_c;
   }
@@ -3055,7 +3336,7 @@ main(c3_i   argc,
   //
   //    Configured here using signal() so as to be immediately available.
   //
-  signal(SIGTSTP, _stop_exit);
+  signal(SIGTSTP, _stop_exit_fore);
 
   printf("~\n");
   //  printf("welcome.\n");
@@ -3146,7 +3427,12 @@ main(c3_i   argc,
     //  we need the current snapshot's latest event number to
     //  validate whether we can execute disk migration
     if ( u3_Host.ops_u.nuu == c3n ) {
-      _cw_play_impl(0, 0, c3n, c3n, c3n);
+      c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3n);
+      if ( sat_i ) {
+        fprintf(stderr, "play: replay failed\r\n");
+        exit(sat_i);
+      }
+      signal(SIGTSTP, _stop_exit);
       //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
 

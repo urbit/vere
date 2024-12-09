@@ -3,7 +3,7 @@
 #ifndef U3_VERE_H
 #define U3_VERE_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "db/lmdb.h"
 #include "noun.h"
 #include "serf.h"
@@ -258,6 +258,14 @@
         struct _u3_auto* car_u;             //  driver hack
       } u3_utty;
 
+    /* u3_even: boot event specifier
+    */
+      typedef struct _u3_even {
+       c3_i             kin_i;
+       c3_c*            loc_c;
+       struct _u3_even* pre_u;
+     } u3_even;
+
     /* u3_opts: command line configuration.
     */
       typedef struct _u3_opts {
@@ -309,6 +317,11 @@
         c3_o    map;                        //  --no-demand (reversed)
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
+        u3_even* vex_u;                     //  --prop-*, boot enhancements
+
+        c3_o    beb;                        //  --behn-allow-blocked
+        c3_z    siz_i;                      //  --lmdb-map-size
+        c3_y    jum_y;                      //  jumbo frame size, TODO parser
       } u3_opts;
 
     /* u3_host: entire host.
@@ -329,6 +342,8 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
+        void*      sam_u;                   //  XX
+        uv_udp_t   wax_u;                   //  XX
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.
@@ -445,7 +460,8 @@
           u3_writ_cram = 4,
           u3_writ_meld = 5,
           u3_writ_pack = 6,
-          u3_writ_exit = 7
+          u3_writ_exit = 7,
+          u3_writ_quiz = 8
         } u3_writ_type;
 
       /* u3_writ: ipc message from king to serf
@@ -461,6 +477,11 @@
             u3_peek*       pek_u;               //  peek
             u3_info        fon_u;               //  recompute
             c3_d           eve_d;               //  save/pack at
+            struct {                            //  serf query:
+              c3_m         qiz_m;               //  %quiz
+              void*        ptr_v;               //    driver
+              void (*qiz_f)(c3_m, void*, u3_noun);  //  callback
+            } qiz_u;                                //
           };
         } u3_writ;
 
@@ -541,6 +562,7 @@
           u3_dire*         dir_u;               //  main pier directory
           u3_dire*         urb_u;               //  urbit system data
           u3_dire*         com_u;               //  log directory
+          c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch
@@ -650,6 +672,7 @@
           u3_disk*         log_u;               //  event log
           u3_lord*         god_u;               //  computer
           u3_psat          sat_e;               //  type-tagged
+          u3_weak          ryf;                 //  rift
           union {                               //
             u3_boot*       bot_u;               //    bootstrap
             u3_play*       pay_u;               //    recompute
@@ -1123,6 +1146,14 @@
         void
         u3_lord_pack(u3_lord* god_u);
 
+      /* u3_lord_quiz(): query the serf.
+      */
+        void
+        u3_lord_quiz(u3_lord* god_u,
+                     c3_m     qiz_m,
+                     void*    ptr_v,
+                     void (*qiz_f)(c3_m, void*, u3_noun));
+
       /* u3_lord_work(): attempt work.
       */
         void
@@ -1225,6 +1256,10 @@
         u3_noun
         u3_ames_encode_lane(u3_lane);
 
+    /**  mesa
+    **/
+        u3_auto*
+        u3_mesa_io_init(u3_pier* pir_u);
     /**  Autosave.
     **/
       /* u3_save_ef_chld(): report SIGCHLD.
@@ -1428,7 +1463,8 @@
                      u3_noun ven,                   //  boot event
                      u3_noun pil,                   //  type-of/path-to pill
                      u3_noun pax,                   //  path to pier
-                     u3_weak fed);                  //  extra private keys
+                     u3_weak fed,                   //  extra private keys
+                     u3_noun mor);                  //  extra boot seq props
 
       /* u3_pier_stay(): restart the pier.
       */
@@ -1544,6 +1580,23 @@
       */
         void
         u3_daemon_init();
+
+#if defined(U3_OS_osx)
+      /* darwin_register_mach_exception_handler(): make lldb work
+       */
+        void
+        darwin_register_mach_exception_handler();
+#endif
+
+      /* king_curl_alloc(): allocate a response buffer for curl
+       */
+        size_t
+        king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v);
+
+      /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
+       */
+        c3_i
+        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t);
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */

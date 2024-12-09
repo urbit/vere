@@ -1,0 +1,13 @@
+.{
+    .name = "softfloat",
+    .version = "0.0.1",
+    .dependencies = .{
+        .softfloat = .{
+            .url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/5c06db33fc1e2130f67c045327b0ec949032df1d.tar.gz",
+            .hash = "1220a4d2ebf2da3f160133eb6caf4a99b9e7b9879820de8f3bd9e56b2448c5688a07",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

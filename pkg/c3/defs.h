@@ -5,6 +5,7 @@
 
 #include "portable.h"
 #include "types.h"
+#include <limits.h>
 
 #include <errno.h>
 
@@ -51,7 +52,19 @@
 
     /* Bit counting.
     */
-#     define c3_bits_word(w) ((w) ? (32 - __builtin_clz(w)) : 0)
+#if   (32 == (CHAR_BIT * __SIZEOF_INT__))
+#     define c3_lz_w __builtin_clz
+#     define c3_tz_w __builtin_ctz
+#     define c3_pc_w __builtin_popcount
+#elif (32 == (CHAR_BIT * __SIZEOF_LONG__))
+#     define c3_lz_w __builtin_clzl
+#     define c3_tz_w __builtin_ctzl
+#     define c3_pc_w __builtin_popcountl
+#else
+#     error  "port me"
+#endif
+
+#     define c3_bits_word(w) ((w) ? (32 - c3_lz_w(w)) : 0)
 
     /* Min and max.
     */
@@ -100,6 +113,60 @@
         | (((w) >> 16) & 0xff) << 8 \
         | (((w) >>  8) & 0xff) << 16 \
         | ( (w)        & 0xff) << 24 )
+
+      inline c3_s
+      c3_sift_short(c3_y buf_y[2])
+      {
+        return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
+      }
+
+      inline c3_w
+      c3_sift_word(c3_y buf_y[4])
+      {
+        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
+      }
+
+      inline c3_d
+      c3_sift_chub(c3_y byt_y[8])
+      {
+        return (c3_d)byt_y[0]
+             | (c3_d)byt_y[1] << 8
+             | (c3_d)byt_y[2] << 16
+             | (c3_d)byt_y[3] << 24
+             | (c3_d)byt_y[4] << 32
+             | (c3_d)byt_y[5] << 40
+             | (c3_d)byt_y[6] << 48
+             | (c3_d)byt_y[7] << 56;
+      }
+
+      inline void
+      c3_etch_short(c3_y buf_y[2], c3_s sot_s)
+      {
+        buf_y[0] = sot_s         & 0xff;
+        buf_y[1] = (sot_s >>  8) & 0xff;
+      }
+
+      inline void
+      c3_etch_word(c3_y buf_y[4], c3_w wod_w)
+      {
+        buf_y[0] = wod_w         & 0xff;
+        buf_y[1] = (wod_w >>  8) & 0xff;
+        buf_y[2] = (wod_w >> 16) & 0xff;
+        buf_y[3] = (wod_w >> 24) & 0xff;
+      }
+
+      inline void
+      c3_etch_chub(c3_y byt_y[8], c3_d num_d)
+      {
+        byt_y[0] = num_d & 0xff;
+        byt_y[1] = (num_d >>  8) & 0xff;
+        byt_y[2] = (num_d >> 16) & 0xff;
+        byt_y[3] = (num_d >> 24) & 0xff;
+        byt_y[4] = (num_d >> 32) & 0xff;
+        byt_y[5] = (num_d >> 40) & 0xff;
+        byt_y[6] = (num_d >> 48) & 0xff;
+        byt_y[7] = (num_d >> 56) & 0xff;
+      }
 
     /* Asserting allocators.
     */

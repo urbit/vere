@@ -6,6 +6,11 @@
 /.user.bazelrc
 /bazel-*
 /urbit
+MODULE.bazel
+MODULE.bazel.lock
+
+**/.zig-cache
+**/zig-out
 
 # Swap files.
 *.swo

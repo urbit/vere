@@ -1,12 +1,12 @@
 /// @file
 
-#include "pkg/noun/v3/hashtable.h"
+#include "v3/hashtable.h"
 
-#include "pkg/noun/allocate.h"
-#include "pkg/noun/vortex.h"
+#include "../allocate.h"
+#include "../vortex.h"
 
-#include "pkg/noun/v3/allocate.h"
-#include "pkg/noun/v3/vortex.h"
+#include "v3/allocate.h"
+#include "v3/vortex.h"
 
 /* u3h_v3_new_cache(): create hashtable with bounded size.
 */
