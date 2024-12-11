@@ -296,3 +296,35 @@ u3we_sove(u3_noun cor)
     return _cqes_sove(pub, mes, sig);
   }
 }
+
+static u3_atom
+_cqes_priv_to_pub(u3_atom sek) {
+  c3_y scalar[32], point[65];
+
+  if (0 != u3r_bytes_fit(32, scalar, sek)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != urcrypt_secp_point_from_scalar(sec_u, scalar, point)) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3nc(
+      u3i_bytes(32, point + 1),
+      u3i_bytes(32, point + 33)
+    );
+}
+
+u3_noun
+u3we_priv_to_pub(u3_noun cor)
+{
+
+  u3_noun a = u3r_at(u3x_sam, cor);
+
+  if ( (u3_none == a) || (c3n == u3ud(a)) ) {
+    return u3m_bail(c3__exit);
+  }
+  else {
+    return _cqes_priv_to_pub(a);
+  }
+}
