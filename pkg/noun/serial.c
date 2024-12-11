@@ -11,7 +11,7 @@
 #include "jets/q.h"
 #include "retrieve.h"
 #include "serial.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "vortex.h"
 #include "xtract.h"
 
@@ -660,8 +660,6 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
 {
   u3_cue_xeno* sil_u;
 
-  u3_assert( &(u3H->rod_u) == u3R );
-
   sil_u = c3_calloc(sizeof(*sil_u));
   ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
 
@@ -913,7 +911,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   c3_y*   buf_y = hun_y + (len_i - 1);
   mpz_t   b_mp;
   c3_w     b_w;
-  size_t dif_i;
 
   mpz_init2(b_mp, 10);
 

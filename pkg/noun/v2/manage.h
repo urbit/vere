@@ -8,6 +8,6 @@
       /* u3m_v2_migrate: perform pointer compression loom migration if necessary.
       */
         void
-        u3m_v2_migrate();
+        u3m_v2_migrate(void);
 
 #endif /* ifndef U3_MANAGE_V2_H */

@@ -1,0 +1,63 @@
+.{
+    .name = "urbit",
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
+            .lazy = true,
+        },
+        .pkg_c3 = .{
+            .path = "./pkg/c3",
+        },
+        .pkg_ent = .{
+            .path = "./pkg/ent",
+        },
+        .pkg_ur = .{
+            .path = "./pkg/ur",
+        },
+        .pkg_noun = .{
+            .path = "./pkg/noun",
+        },
+        .pkg_vere = .{
+            .path = "./pkg/vere",
+        },
+        .curl = .{
+            .path = "./ext/curl",
+        },
+        .gmp = .{
+            .path = "./ext/gmp",
+        },
+        .h2o = .{
+            .path = "./ext/h2o",
+        },
+        .libuv = .{
+            .path = "./ext/libuv",
+        },
+        .lmdb = .{
+            .path = "./ext/lmdb",
+        },
+        .natpmp = .{
+            .path = "./ext/natpmp",
+        },
+        .openssl = .{
+            .path = "./ext/openssl",
+        },
+        .sigsegv = .{
+            .path = "./ext/sigsegv",
+        },
+        .urcrypt = .{
+            .path = "./ext/urcrypt",
+        },
+        .whereami = .{
+            .path = "./ext/whereami",
+        },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
+            .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

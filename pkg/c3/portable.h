@@ -10,7 +10,6 @@
 #   define _GNU_SOURCE
 #   endif
 
-
   /** System include files.
   ***
   *** Do not put include files that are only used in the
@@ -129,7 +128,11 @@
 #       define U3_OS_LoomBits 30
 #   elif defined(U3_OS_osx)
 #     ifdef __LP64__
-#       define U3_OS_LoomBase 0x28000000000
+#       ifdef ASAN_ENABLED
+#         define U3_OS_LoomBase 0x728000000000
+#       else
+#         define U3_OS_LoomBase 0x28000000000
+#       endif
 #     else
 #       define U3_OS_LoomBase 0x4000000
 #     endif
@@ -232,6 +235,6 @@
 #     define ASSERT_CONCAT_(a, b) a##b
 #     define ASSERT_CONCAT(a, b) ASSERT_CONCAT_(a, b)
 #     define STATIC_ASSERT(e,m) \
-        ;enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(int)(!!(e)) }
+        enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(int)(!!(e)) }
 
 #endif /* ifndef C3_PORTABLE_H */

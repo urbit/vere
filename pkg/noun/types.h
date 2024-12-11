@@ -5,7 +5,7 @@
 #ifndef U3_TYPES_H
 #define U3_TYPES_H
 
-#include "c3.h"
+#include "c3/c3.h"
 
 /// Sentinel value for u3_noun types that aren't actually nouns.
 #define u3_none (u3_noun)0xffffffff

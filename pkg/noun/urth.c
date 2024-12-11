@@ -15,7 +15,7 @@
 #include "options.h"
 #include "retrieve.h"
 #include "serial.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "vortex.h"
 
 /* _cu_atom_to_ref(): allocate indirect atom off-loom.
