@@ -14,7 +14,7 @@
 
     if ( (0 != u3r_bytes_fit(32, a_y, a)) ||
          (0 != urcrypt_ed_point_neg(a_y)) ) {
-      return u3_none;
+      return u3m_bail(c3__exit);
     }
     else {
       return u3i_bytes(32, a_y);

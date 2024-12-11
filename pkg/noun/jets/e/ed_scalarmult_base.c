@@ -24,6 +24,7 @@
     }
 
     if (0 != urcrypt_ed_scalarmult_base(a_y, out_y))  {
+      // should be unreachable, as scalar already reduced
       return u3m_bail(c3__exit);
     }
     else {

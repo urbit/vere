@@ -14,7 +14,7 @@
     c3_y sed_y[32];
     c3_w len_w;
     if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
     else if ( !u3r_word_fit(&len_w, len) ) {
@@ -51,11 +51,11 @@
     c3_y pub_y[32], sek_y[64];
     c3_w len_w;
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon asserts size
       return u3m_bail(c3__exit);
     }
     if ( 0 != u3r_bytes_fit(64, sek_y, sek) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon asserts size
       return u3m_bail(c3__exit);
     }
     else if ( !u3r_word_fit(&len_w, len) ) {
@@ -94,7 +94,7 @@
     c3_y sed_y[32];
 
     if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
     else {
@@ -131,11 +131,11 @@
     c3_y pub_y[32], sek_y[64];
 
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon asserts size
       return u3m_bail(c3__exit);
     }
     if ( 0 != u3r_bytes_fit(64, sek_y, sek) ) {
-      // hoon calls suck, which calls luck, which crashes
+      // hoon asserts size
       return u3m_bail(c3__exit);
     }
     else {

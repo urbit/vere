@@ -12,11 +12,10 @@
     c3_y pub_y[32], sed_y[32];
 
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
-      // pub is not size checked in the hoon
-      return u3_none;
+      return u3m_bail(c3__exit);
     }
     else if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
-      // sed explicitly bails through suck
+      // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
     else {
@@ -37,7 +36,7 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("shar", _cqee_shar(pub, sed));
+      return _cqee_shar(pub, sed);
     }
   }
 
@@ -47,11 +46,9 @@
     c3_y pub_y[32], sek_y[64];
 
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
-      // pub is not size checked in the hoon
-      return u3_none;
+      return u3m_bail(c3__exit);
     }
     else if ( 0 != u3r_bytes_fit(64, sek_y, sek) ) {
-      // sek explicitly bails through suck
       return u3m_bail(c3__exit);
     }
     else {
@@ -72,6 +69,6 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("slar", _cqee_slar(pub, sek));
+      return _cqee_slar(pub, sek);
     }
   }
