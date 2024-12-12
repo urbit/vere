@@ -843,6 +843,56 @@ static u3j_core _137_non_d[] =
   };
 
 
+static u3j_harm _137_hex_lia_run_a[] = {{".2", u3we_lia_run, c3y}, {}};
+
+static u3j_harm _137_hex_lia_run_once_inner_a[] = {{".2", u3we_lia_run_once, c3y}, {}};
+
+static u3j_core _137_hex_lia_run_once_d[] = {
+  { "run-once-inner-v0", 15, _137_hex_lia_run_once_inner_a, 0, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_lia_monad_d[] = {
+  { "run-v0", 7, _137_hex_lia_run_a, 0, no_hashes },
+  { "run-once-v0", 7, 0, _137_hex_lia_run_once_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_engine_d[] = {
+  { "monad-v0", 3, 0, _137_hex_lia_monad_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_op_def_d[] = {
+  { "wasm-engine-v0", 3, 0, _137_hex_wasm_engine_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_validator_d[] = {
+  { "wasm-op-def-v0", 3, 0, _137_hex_wasm_op_def_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_parser_d[] = {
+  { "validator-v0", 3, 0, _137_hex_wasm_validator_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_lia_sur_d[] = {
+  { "wasm-parser-v0", 3, 0, _137_hex_wasm_parser_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_engine_sur_d[] = {
+  { "monad-sur-v0", 3, 0, _137_hex_lia_sur_d, no_hashes },
+  {}
+};
+
+static u3j_core _137_hex_wasm_sur_d[] = {
+  { "engine-sur-v0", 3, 0, _137_hex_wasm_engine_sur_d, no_hashes },
+  {}
+};
+
 static u3j_core _137_hex_d[] =
   { { "non", 7, 0, _137_non_d, no_hashes },
 
@@ -869,6 +919,7 @@ static u3j_core _137_hex_d[] =
     { "secp",    6, 0, _137_hex_secp_d,   no_hashes },
     { "mimes",  31, 0, _137_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _137_hex_json_d,   no_hashes },
+    { "wasm-sur-v0", 3, 0, _137_hex_wasm_sur_d, no_hashes },
     {}
   };
 
