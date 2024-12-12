@@ -1078,7 +1078,7 @@ u3we_lia_run_once(u3_noun cor)
 
   u3_noun try_script    = KICK2(u3j_kink(u3k(runnable), AX_TRY));  
   u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(u3j_kink(u3k(runnable), AX_RETURN));
+  u3_noun return_script = KICK1(u3j_kink(runnable, AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
