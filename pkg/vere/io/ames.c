@@ -732,6 +732,14 @@ _lane_scry_path(u3_noun who)
               u3_nul);
 }
 
+static void
+_ames_send_cb_2(uv_udp_send_t* req_u, c3_i sas_i)
+{
+  c3_y* buf_y = (c3_y*)req_u->data;
+  c3_free(buf_y);
+  c3_free(req_u);
+}
+
 /* _ames_send_cb(): send callback.
 */
 static void
@@ -1948,7 +1956,6 @@ _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
     return;
   }
 #endif
-
   {
     u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
     _ames_put_packet(pac_u->sam_u, msg, pac_u->lan_u);
@@ -1961,6 +1968,25 @@ _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 static void
 _ames_try_forward(u3_pact* pac_u)
 {
+
+  {
+    struct sockaddr_in sdr_u;
+    memset(&sdr_u, 0, sizeof(sdr_u));
+    sdr_u.sin_family = AF_INET;
+    sdr_u.sin_port = htons(20000);
+    sdr_u.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // 127.0.0.1
+    c3_c* buf_c = c3_malloc(pac_u->len_w);
+    memcpy(buf_c, pac_u->hun_y, pac_u->len_w);
+
+    uv_udp_send_t* snd_u = c3_malloc(sizeof(*snd_u));
+    uv_buf_t buf_u = uv_buf_init(buf_c, pac_u->len_w);
+    snd_u->data = buf_c;
+    uv_udp_send(snd_u,
+                &u3_Host.wax_u,
+                &buf_u, 1,
+                (const struct sockaddr*)&sdr_u, _ames_send_cb_2);
+  }
+
   //  insert origin lane if needed
   //
   if ( c3n == pac_u->hed_u.rel_o
@@ -2118,6 +2144,20 @@ _ames_hear(u3_ames* sam_u,
     //
     _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
     cur_w += pre_w;
+
+    if (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
+          || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) )
+      {
+        u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
+        c3_c* rec_c = u3r_string(rec);
+        u3_noun sen = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.sen_d));
+        c3_c* sen_c = u3r_string(sen);
+
+        u3l_log("ames: saw packet for %s from %s", rec_c, sen_c);
+
+        c3_free(rec_c);
+        u3z(rec);
+      }
 
     //  if we can scry for lanes,
     //  and we are not the recipient,
