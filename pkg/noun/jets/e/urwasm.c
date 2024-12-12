@@ -1059,22 +1059,26 @@ u3we_lia_run_once(u3_noun cor)
   u3m_hate(1 << 20);
   #endif
 
-  u3r_mug(cor);
+  u3_noun ctx = u3at(ONCE_CTX, cor);
+  u3r_mug(ctx);
 
   u3_noun runnable = u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_RUNNABLE);
-  
-  u3_noun call_script       = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_CALL), 2);  
-  u3_noun memread_script    = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_MEMREAD), 2);  
-  u3_noun memwrite_script   = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_MEMWRITE), 2);  
-  u3_noun call_ext_script   = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_CALL_EXT), 2);
-  u3_noun global_set_script = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_GLOBAL_SET), 2);
-  u3_noun global_get_script = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_GLOBAL_GET), 2);
-  u3_noun mem_grow_script   = u3j_kink(u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_MEM_GROW), 2);
-  u3_noun mem_size_script   =          u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_MEM_SIZE);
 
-  u3_noun try_script    = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), AX_TRY), 2), 2);  
-  u3_noun catch_script  = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), AX_CATCH), 2), 2);
-  u3_noun return_script =          u3j_kink(u3j_kink(runnable,      AX_RETURN), 2);
+  #define KICK1(TRAP)  u3j_kink(TRAP, 2)
+  #define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
+
+  u3_noun call_script       = KICK1(u3j_kink(u3k(ctx), AX_CALL));  
+  u3_noun memread_script    = KICK1(u3j_kink(u3k(ctx), AX_MEMREAD));  
+  u3_noun memwrite_script   = KICK1(u3j_kink(u3k(ctx), AX_MEMWRITE));  
+  u3_noun call_ext_script   = KICK1(u3j_kink(u3k(ctx), AX_CALL_EXT));
+  u3_noun global_set_script = KICK1(u3j_kink(u3k(ctx), AX_GLOBAL_SET));
+  u3_noun global_get_script = KICK1(u3j_kink(u3k(ctx), AX_GLOBAL_GET));
+  u3_noun mem_grow_script   = KICK1(u3j_kink(u3k(ctx), AX_MEM_GROW));
+  u3_noun mem_size_script   =       u3j_kink(u3k(ctx), AX_MEM_SIZE);
+
+  u3_noun try_script    = KICK2(u3j_kink(u3k(runnable), AX_TRY));  
+  u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
+  u3_noun return_script = KICK1(u3j_kink(u3k(runnable), AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -1094,7 +1098,7 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun global_set_ctx = u3k(u3at(ARROW_CTX, global_set_script));
   u3_noun global_get_ctx = u3k(u3at(ARROW_CTX, global_get_script));
   u3_noun mem_grow_ctx = u3k(u3at(ARROW_CTX, mem_grow_script));
-  u3_noun mem_size_ctx = u3k(u3at(MONAD_CTX, mem_grow_script));
+  u3_noun mem_size_ctx = u3k(u3at(MONAD_CTX, mem_size_script));
 
   u3z(call_script);
   u3z(memread_script);
