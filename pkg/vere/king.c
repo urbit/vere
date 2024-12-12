@@ -290,7 +290,6 @@ king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 }
 
 /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
-**  XX deduplicate with dawn.c
 */
 c3_i
 king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
@@ -330,9 +329,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t)
         u3l_log("curl: error fetching %s: HTTP %ld", url_c, cod_i);
       }
       ret_i = -2;
-      if ( 400 <= cod_i && cod_i < 500 ) {
-        break;
-      }
+      break;
     }
     else {
       *len_w = buf_u.len;
