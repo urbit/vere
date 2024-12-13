@@ -2106,16 +2106,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   if ( u3_none == pag ) {
     // TODO: mark as dead
-    u3z(res);
-    _mesa_free_pict(pic_u);
     u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, nam_u);
+    _mesa_free_pict(pic_u);
+    u3z(res);
     if ( NULL == lin_u ) {
       return;
     }
     lin_u->typ_y = CTAG_BLOCK;
     _mesa_put_jumbo_cache(sam_u, nam_u, lin_u);
-    u3l_log("mesa: jumbo frame missing");
-    log_pact(pac_u);
     return;
   }
   u3_noun pac, pas, pof;
