@@ -841,7 +841,9 @@ u3m_stacktrace()
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
     backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
-    if (data.fail == 0) u3l_log("");
+    if (data.fail == 0) {
+      fprintf(stderr, "\r\n");
+    }
   }
   else {
     data.fail = 1;
@@ -861,7 +863,7 @@ u3m_stacktrace()
       for ( c3_i i = 0; i < size; i++ ) {
         fprintf(stderr, "%s\r\n", strings[i]);
       }
-      u3l_log("");
+      fprintf(stderr, "\r\n");
     }
 
     free(strings);
@@ -892,7 +894,7 @@ u3m_stacktrace()
     } while (unw_step(&cursor) > 0);
 
     if ( (data.count > 0) ) {
-      u3l_log("");
+      fprintf(stderr, "\r\n");
     }
   }
   else {
