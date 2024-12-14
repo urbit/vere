@@ -336,6 +336,10 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       fprintf(stderr, WUT("%s call trapped: %s"), name_c, result);
       yil = u3nc(2, 0);
     }
+    else if (result == m3Err_functionImportMissing)
+    {
+      return u3m_bail(c3__exit);
+    }
     else if (result)
     {
       fprintf(stderr, ERR("%s call failed: %s"), name_c, result);
@@ -741,31 +745,26 @@ _link_wasm_with_arrow_map(
   
   u3_noun yil = _reduce_monad(u3n_slam_on(arrow, coin_wasm_list), sat); 
 
+  M3Result result = m3Err_none;
+
   if (0 != u3h(yil))
   {
     sat->arrow_yil = yil;
-    u3a_free(valptrs_in);
-    u3a_free(valptrs_out);
-    return m3Lia_Arrow;
+    result = m3Lia_Arrow;
   }
   else
   {
-    if (c3n == _coins_to_stack(u3t(yil), valptrs_out, n_out, types))
+    c3_o pushed = _coins_to_stack(u3t(yil), valptrs_out, n_out, types);
+    u3z(yil);
+    if (c3n == pushed)
     {
-      u3z(yil);
-      u3a_free(valptrs_in);
-      u3a_free(valptrs_out);
       fprintf(stderr, ERR("import result type mismatch: %s/%s"), mod, name);
-      return "import result type mismatch";  
-    }
-    else
-    {
-      u3z(yil);
-      u3a_free(valptrs_in);
-      u3a_free(valptrs_out);
-      return m3Err_none;
+      result = "import result type mismatch";
     }
   }
+  u3a_free(valptrs_in);
+  u3a_free(valptrs_out);
+  return result;
 }
 
 u3_weak
@@ -1232,6 +1231,10 @@ u3we_lia_run_once(u3_noun cor)
     fprintf(stderr, WUT("start function call trapped: %s"), result);
     yil = u3nc(2, 0);
   }
+  else if (result == m3Err_functionImportMissing)
+    {
+      return u3m_bail(c3__exit);
+    }
   else if (result)
   {
     fprintf(stderr, ERR("start function failed: %s"), result);
