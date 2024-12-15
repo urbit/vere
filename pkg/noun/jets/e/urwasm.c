@@ -545,6 +545,12 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
 
+    if (!glob->isMutable)
+    {
+      fprintf(stderr, ERR("global %s not mutable"), name_c);
+      return u3m_bail(c3__fail);
+    }
+
     M3TaggedValue glob_value;
     M3Result result = m3_GetGlobal(glob, &glob_value);
     if (result)
@@ -570,12 +576,12 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_f32:
       {
-        glob_value.value.i32 = u3r_word(0, value);
+        glob_value.value.f32 = u3r_word(0, value);
         break;
       }
       case c_m3Type_f64:
       {
-        glob_value.value.i64 = u3r_chub(0, value);
+        glob_value.value.f64 = u3r_chub(0, value);
         break;
       }
     }
