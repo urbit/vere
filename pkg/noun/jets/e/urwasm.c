@@ -15,20 +15,27 @@
 
 #define ONCE_CTX        63
 #define RUN_CTX         7
-#define AX_RUNNABLE     3004
+
+#define AX_RUNNABLE     92
+#define AX_ARROWS       750
+
 #define AX_CALL         20
-#define AX_MEMREAD      3006
-#define AX_MEMWRITE     750
-#define AX_CALL_EXT     1498
-#define AX_GLOBAL_SET   92
-#define AX_GLOBAL_GET   186
-#define AX_MEM_GROW     12021
-#define AX_MEM_SIZE     748
-#define AX_TRY          21
+#define AX_MEMREAD      383
+#define AX_MEMWRITE     94
+#define AX_CALL_EXT     375
+#define AX_GLOBAL_SET   4
+#define AX_GLOBAL_GET   22
+#define AX_MEM_SIZE     186
+#define AX_MEM_GROW     190
+#define AX_GET_ACC      374
+#define AX_SET_ACC      92
+
+#define AX_TRY          43
 #define AX_CATCH        4
 #define AX_RETURN       20
-#define ARROW_CTX       63
-#define MONAD_CTX       15
+
+#define ARROW_CTX       511
+#define MONAD_CTX       127
 
 #define arr_sam         62
 #define arr_sam_2       124
@@ -53,6 +60,8 @@ typedef struct {
   u3_noun global_get_bat;
   u3_noun mem_grow_bat;
   u3_noun mem_size_bat;
+  u3_noun get_acc_bat;
+  u3_noun set_acc_bat;
 //
   u3_noun call_ctx;
   u3_noun memread_ctx;
@@ -64,9 +73,10 @@ typedef struct {
 } match_data_struct;
 
 typedef struct {
-  IM3Module wasm_module; // p
-  u3_noun lia_shop;      // r
-  u3_noun import;        // q
+  IM3Module wasm_module;  // p
+  u3_noun lia_shop;       // q
+  u3_noun acc;            // p.r, transferred
+  u3_noun map;            // q.r, retained
   match_data_struct* match;
   u3_noun arrow_yil;
 } lia_state;
@@ -705,7 +715,19 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     u3z(monad);
     return u3nc(0, u3i_word(n_pages));
-
+  }
+  else if (c3y == u3r_sing(monad_bat, sat->match->get_acc_bat))
+  {
+    u3z(monad);
+    return u3nc(0, u3k(sat->acc));
+  }
+  else if (c3y == u3r_sing(monad_bat, sat->match->set_acc_bat))
+  {
+    u3_noun new = u3k(u3at(arr_sam, monad));
+    u3z(monad);
+    u3z(sat->acc);
+    sat->acc = new;
+    return u3nc(0, 0);
   }
   else
   {
@@ -727,7 +749,7 @@ _link_wasm_with_arrow_map(
   lia_state* sat = _ctx->userdata;
 
   u3_noun key = u3nc(u3i_string(mod), u3i_string(name));
-  u3_weak arrow = u3kdb_get(u3k(sat->import), key);
+  u3_weak arrow = u3kdb_get(u3k(sat->map), key);
   if (u3_none == arrow)
   {
     fprintf(stderr, ERR("import not found: %s/%s"), mod, name);
@@ -1067,23 +1089,26 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun ctx = u3at(ONCE_CTX, cor);
   u3r_mug(ctx);
 
-  u3_noun runnable = u3j_kink(u3k(u3at(ONCE_CTX, cor)), AX_RUNNABLE);
-
   #define KICK1(TRAP)  u3j_kink(TRAP, 2)
   #define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
 
-  u3_noun call_script       = KICK1(u3j_kink(u3k(ctx), AX_CALL));  
-  u3_noun memread_script    = KICK1(u3j_kink(u3k(ctx), AX_MEMREAD));  
-  u3_noun memwrite_script   = KICK1(u3j_kink(u3k(ctx), AX_MEMWRITE));  
-  u3_noun call_ext_script   = KICK1(u3j_kink(u3k(ctx), AX_CALL_EXT));
-  u3_noun global_set_script = KICK1(u3j_kink(u3k(ctx), AX_GLOBAL_SET));
-  u3_noun global_get_script = KICK1(u3j_kink(u3k(ctx), AX_GLOBAL_GET));
-  u3_noun mem_grow_script   = KICK1(u3j_kink(u3k(ctx), AX_MEM_GROW));
-  u3_noun mem_size_script   =       u3j_kink(u3k(ctx), AX_MEM_SIZE);
+  u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
+  u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
+
+  u3_noun call_script       = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
+  u3_noun memread_script    = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
+  u3_noun memwrite_script   = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
+  u3_noun call_ext_script   = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
+  u3_noun global_set_script = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
+  u3_noun global_get_script = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
+  u3_noun mem_grow_script   = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
+  u3_noun mem_size_script   =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
+  u3_noun get_acc_script    =       u3j_kink(u3k(arrows), AX_GET_ACC);
+  u3_noun set_acc_script    = KICK1(u3j_kink(    arrows,  AX_SET_ACC));
 
   u3_noun try_script    = KICK2(u3j_kink(u3k(runnable), AX_TRY));  
   u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(u3j_kink(runnable, AX_RETURN));
+  u3_noun return_script = KICK1(u3j_kink(    runnable,  AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -1096,6 +1121,8 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun global_get_bat = u3k(u3h(global_get_script));
   u3_noun mem_grow_bat = u3k(u3h(mem_grow_script));
   u3_noun mem_size_bat = u3k(u3h(mem_size_script));
+  u3_noun get_acc_bat = u3k(u3h(get_acc_script));
+  u3_noun set_acc_bat = u3k(u3h(set_acc_script));
 
   u3_noun call_ctx = u3k(u3at(ARROW_CTX, call_script));
   u3_noun memread_ctx = u3k(u3at(ARROW_CTX, memread_script));
@@ -1116,6 +1143,8 @@ u3we_lia_run_once(u3_noun cor)
   u3z(global_get_script);
   u3z(mem_grow_script);
   u3z(mem_size_script);
+  u3z(get_acc_script);
+  u3z(set_acc_script);
   
   match_data_struct match = {
     call_bat,
@@ -1129,6 +1158,8 @@ u3we_lia_run_once(u3_noun cor)
     global_get_bat,
     mem_grow_bat,
     mem_size_bat,
+    get_acc_bat,
+    set_acc_bat,
   //
     call_ctx,
     memread_ctx,
@@ -1198,7 +1229,10 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun lia_shop = u3_nul;
   u3_noun import = u3at(u3x_sam_5, cor);
 
-  lia_state sat = {wasm3_module, lia_shop, import, &match, 0};
+  u3_noun acc, map;
+  u3x_cell(import, &acc, &map);
+
+  lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, 0};
 
   for (c3_w i = 0; i < n_imports; i++)
   {
@@ -1267,6 +1301,8 @@ u3we_lia_run_once(u3_noun cor)
   u3z(match.global_get_bat);
   u3z(match.mem_grow_bat);
   u3z(match.mem_size_bat);
+  u3z(match.get_acc_bat);
+  u3z(match.set_acc_bat);
 
   u3z(match.call_ctx);
   u3z(match.memread_ctx);
@@ -1278,9 +1314,9 @@ u3we_lia_run_once(u3_noun cor)
   
   #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
-  u3_noun pro = u3m_love(yil);
+  u3_noun pro = u3m_love(u3nc(yil, sat.acc));
   #else
-  u3_noun pro = yil;
+  u3_noun pro = u3nc(yil, sat.acc);
   #endif
 
   return pro;
