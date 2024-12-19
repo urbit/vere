@@ -14,6 +14,8 @@
 
 #include <arpa/inet.h>
 
+static c3_y pac_y[4096];
+
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
@@ -252,7 +254,6 @@ _ames_pact_free(u3_pact* pac_u)
       u3_pier_bail(u3_king_stub());
   }
 
-  c3_free(pac_u->hun_y);
   c3_free(pac_u);
 }
 
@@ -696,7 +697,7 @@ _fine_etch_response(u3_pact* pac_u)
   pre_w = _ames_prel_size(&pac_u->hed_u);
   pur_w = _fine_purr_size(&pac_u->pur_u);
   pac_u->len_w = HEAD_SIZE + pre_w + pur_w;
-  pac_u->hun_y = c3_calloc(pac_u->len_w);
+  pac_u->hun_y = pac_y;
 
   //  skip the header until we know what the mug should be
   //
@@ -1344,7 +1345,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
     pac_u->len_w = u3r_met(3, pac);
-    pac_u->hun_y = c3_malloc(pac_u->len_w);
+    pac_u->hun_y = pac_y;
 
     u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
 
@@ -1977,7 +1978,7 @@ _ames_try_forward(u3_pact* pac_u)
     old_y = pac_u->hun_y;
 
     pac_u->len_w += 6;
-    pac_u->hun_y = c3_calloc(pac_u->len_w);
+    pac_u->hun_y = pac_y;
 
     cur_w = 0;
 
@@ -2030,13 +2031,11 @@ _ames_hear(u3_ames* sam_u,
   //
   if ( c3y == u3_stun_is_request(hun_y, len_w) ) {
       _stun_on_request(sam_u, hun_y, adr_u);
-      c3_free(hun_y);
   }
   else if ( c3y == u3_stun_is_our_response(hun_y,
                                            sam_u->sun_u.tid_y, len_w) )
   {
     _stun_on_response(sam_u, hun_y, len_w);
-    c3_free(hun_y);
   }
   else {
     struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
@@ -2054,7 +2053,6 @@ _ames_hear(u3_ames* sam_u,
                 sam_u->sat_u.hed_d);
       }
 
-      c3_free(hun_y);
       return;
     }
 

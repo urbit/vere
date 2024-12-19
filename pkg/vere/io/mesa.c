@@ -23,7 +23,9 @@
 #include <stdlib.h>
 #include "lss.h"
 
-c3_o dop_o = c3n;
+static c3_o dop_o = c3n;
+
+static c3_c pac_c[4096];
 
 #define MESA_DEBUG     c3y
 //#define MESA_TEST
@@ -177,7 +179,7 @@ typedef struct _u3_pend_req {
   c3_d                   old_d; // frag num of oldest packet sent
   c3_d                   ack_d; // highest acked fragment number
   u3_gage*               gag_u; // congestion control
-  u3_misord_buf          mis_u[8]; // misordered packets
+  lss_pair*              mis_u; // misordered packets
   lss_verifier*          los_u; // Lockstep verifier
   u3_mesa_pict*          pic_u; // preallocated request packet
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
@@ -510,6 +512,9 @@ _init_gage(u3_gage* gag_u)  //  microseconds
   gag_u->rto_w = 1000 * 1000 * 1000;  // ~s1
   gag_u->rtt_w = 1000 * 1000 * 1000;  // ~s1
   gag_u->rtv_w = 1000 * 1000 * 1000;  // ~s1
+  /* gag_u->rto_w = 200 * 1000;  // ~s1 */
+  /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
+  /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
   gag_u->con_w = 0;
   gag_u->wnd_w = 1;
   gag_u->sst_w = 10000;
@@ -608,6 +613,7 @@ _mesa_del_request_cb(uv_handle_t* han_u) {
   bitset_free(&req_u->was_u);
   _mesa_free_pict(req_u->pic_u);
   c3_free(req_u->wat_u);
+  c3_free(req_u->mis_u);
   lss_verifier_free(req_u->los_u);
   u3a_free(req_u);
 }
@@ -822,9 +828,10 @@ _mesa_req_get_remaining(u3_pend_req* req_u)
 static c3_w
 _mesa_req_get_cwnd(u3_pend_req* req_u)
 {
-  c3_w liv_w = bitset_wyt(&req_u->was_u);
+  /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
-  return c3_min(rem_w, req_u->gag_u->wnd_w - liv_w);
+  /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
+  return c3_min(rem_w, req_u->gag_u->wnd_w);
 }
 
 /* _mesa_req_pact_sent(): mark packet as sent
@@ -864,15 +871,15 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     #ifdef MESA_DEBUG
       /* u3l_log("bitset_put %"PRIu64, nam_u->fra_d); */
     #endif
-    bitset_put(&req_u->was_u, nam_u->fra_d);
+    /* bitset_put(&req_u->was_u, nam_u->fra_d); */
   } else {
     u3l_log("mesa: no req for sent");
     return;
   }
 
-  if ( req_u->lef_d != 0 && c3n == bitset_has(&req_u->was_u, req_u->lef_d) ) {
+  if ( req_u->lef_d != 0 && c3y == bitset_has(&req_u->was_u, req_u->lef_d) ) {
     while (req_u->lef_d < req_u->tof_d) {
-      if ( c3y == bitset_has(&req_u->was_u, req_u->lef_d) ) {
+      if ( c3n == bitset_has(&req_u->was_u, req_u->lef_d) ) {
         break;
       }
       req_u->lef_d++;
@@ -888,11 +895,7 @@ _ames_alloc(uv_handle_t* had_u,
             uv_buf_t* buf
             )
 {
-  //  we allocate 2K, which gives us plenty of space
-  //  for a single ames packet (max size 1060 bytes)
-  //
-  void* ptr_v = c3_malloc(4096);
-  *buf = uv_buf_init(ptr_v, 4096);
+  *buf = uv_buf_init(pac_c, 4096);
 }
 
 /* u3_mesa_decode_lane(): deserialize noun to lane; 0.0.0.0:0 if invalid
@@ -1119,11 +1122,11 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   for ( c3_d i_d = req_u->lef_d; i_d < nex_d; i_d++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
-    if ( (c3y == bitset_has(&req_u->was_u, i_d)) &&
+    if ( (c3n == bitset_has(&req_u->was_u, i_d)) &&
         (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
       los_o = c3y;
       pac_u->pek_u.nam_u.fra_d = i_d;
-      // u3l_log("resend fra_w: %llu", i_d);
+      /* u3l_log("resend fra_w: %llu", i_d); */
 
       c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
       _mesa_send_modal(req_u->per_u, buf_y, len_w);
@@ -1156,7 +1159,7 @@ _update_resend_timer(u3_pend_req *req_u)
   c3_d wen_d = now_d;
   for ( c3_d i = req_u->lef_d; i < req_u->nex_d; i++ ) {
     // u3l_log("fra %u (%u)", i, __LINE__);
-    if ( c3y == bitset_has(&req_u->was_u, i) &&
+    if ( c3n == bitset_has(&req_u->was_u, i) &&
 	       wen_d > req_u->wat_u[i].sen_d
        ) {
       wen_d = req_u->wat_u[i].sen_d;
@@ -1190,39 +1193,33 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
 }
 
 static c3_o
-_mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w lef_d)
+_mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w ack_w)
 {
-  c3_w num_w;
-  c3_w max_w = sizeof(req_u->mis_u) / sizeof(u3_misord_buf);
+  c3_d num_d;
+  c3_d max_d = req_u->tof_d;
   c3_o res_o = c3y;
-  for ( num_w = 0; num_w < max_w; num_w++ ) {
-    u3_misord_buf* buf_u = &req_u->mis_u[num_w];
-    if ( buf_u->len_w == 0 ) {
-      break;
-    }
-    if ( c3y != lss_verifier_ingest(req_u->los_u, buf_u->fra_y, buf_u->len_w, buf_u->par_u) ) {
-      res_o = c3n;
-      u3l_log("fail to burn %u", num_w);
-      c3_free(buf_u->fra_y);
-      c3_free(buf_u->par_u);
-      break;
-    }
+  for ( num_d = 0; (num_d + ack_w) < max_d; num_d++ ) {
     c3_w siz_w = (1 << (boq_y - 3));  // XX
+    c3_y* fra_y = req_u->dat_y + (siz_w * (ack_w + num_d));
+    c3_w len_w = (num_d + ack_w) == (max_d - 1) ? req_u->tob_d % 1024 : 1024;
+    lss_pair* pur_u =  &req_u->mis_u[ack_w + num_d];
+    lss_pair* par_u = (0 == memcmp(pur_u, &(lss_pair){0}, sizeof(lss_pair))) ? NULL : &req_u->mis_u[ack_w + num_d];
+    if ( c3n == bitset_has(&req_u->was_u, (num_d + ack_w)) ) {
+      break;
+    }
+    if ( c3y != lss_verifier_ingest(req_u->los_u, fra_y, len_w, par_u) ) {
+      res_o = c3n;
+      u3l_log("fail to burn %llu %llu", num_d + ack_w, req_u->tof_d);
+      break;
+    }
     // u3l_log("size %u counter %u num %u fra %u inx %u lef_d %u", siz_w, req_u->los_u->counter , num_w, fra_d, (req_u->los_u->counter + num_w + 1), lef_d);
-    memcpy(req_u->dat_y + (siz_w * (lef_d + num_w + 1)), buf_u->fra_y, buf_u->len_w);
-    c3_free(buf_u->fra_y);
-    c3_free(buf_u->par_u);
   }
 
   // ratchet forward
-  num_w++; // account for the in-ordered packet processed in _mesa_req_pact_done
-  req_u->lef_d += num_w;
-  req_u->hav_d += num_w;
-
-  memmove(req_u->mis_u,
-          (c3_y*)req_u->mis_u + (num_w * sizeof(u3_misord_buf)),
-          (max_w - num_w) * sizeof(u3_misord_buf));
-  memset((c3_y*)req_u->mis_u + ((max_w - (num_w)) * sizeof(u3_misord_buf)), 0, (num_w) * sizeof(u3_misord_buf));
+  /* u3l_log("burned %llu", num_d); */
+  num_d++; // account for the in-ordered packet processed in _mesa_req_pact_done
+  req_u->lef_d += num_d;
+  req_u->hav_d += num_d;
 
   return res_o;
 }
@@ -1251,71 +1248,54 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   }
 
   // received duplicate
-  if ( c3n == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
+  if ( c3y == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
     // MESA_LOG(sam_u, DUPE);
     _update_resend_timer(req_u);
     return;
   }
 
   lss_pair* par_u = NULL;
+
+  c3_w siz_w = (1 << (nam_u->boq_y - 3));
+  memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
+
   if ( dat_u->aut_u.typ_e == AUTH_PAIR ) {
-    // needs to be heap allocated bc will be saved if misordered
-    par_u = c3_calloc(sizeof(lss_pair));
+    par_u = &req_u->mis_u[nam_u->fra_d];
     memcpy((*par_u)[0], dat_u->aut_u.has_y[0], sizeof(lss_hash));
     memcpy((*par_u)[1], dat_u->aut_u.has_y[1], sizeof(lss_hash));
   }
 
   if ( req_u->los_u->counter != nam_u->fra_d ) {
-    if ( nam_u->fra_d < req_u->los_u->counter ) {
-      // u3l_log("fragment number too low: %"PRIu64, nam_u->fra_d);
-      c3_free(par_u);
-      return;
-    } else if ( nam_u->fra_d >= req_u->los_u->counter + (sizeof(req_u->mis_u)/sizeof(u3_misord_buf)) ) {
-      // u3l_log("fragment number too high: %llu counter %u", nam_u->fra_d, req_u->los_u->counter );
-      c3_free(par_u);
-      return;
-    } else {
-      // insert into misordered queue
-      u3_misord_buf* buf_u = &req_u->mis_u[nam_u->fra_d - req_u->los_u->counter - 1];
-      buf_u->fra_y = c3_calloc(dat_u->len_w);
-      buf_u->len_w = dat_u->len_w;
-      memcpy(buf_u->fra_y, dat_u->fra_y, dat_u->len_w);
-      buf_u->par_u = par_u;
-      // u3l_log("insert into misordered queue fra: [%llu] = %llu [counter %u]",
-      //         nam_u->fra_d - (c3_d)req_u->los_u->counter - 1,
-      //         nam_u->fra_d,
-      //         req_u->los_u->counter);
-      bitset_del(&req_u->was_u, nam_u->fra_d);
+    // insert into misordered queue
+    /* u3l_log("insert into misordered queue fra: %llu [counter %u]", */
+    /*         nam_u->fra_d, */
+    /*         req_u->los_u->counter); */
+    bitset_put(&req_u->was_u, nam_u->fra_d);
 
-      _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
-      _try_resend(req_u, nam_u->fra_d);
-      _update_resend_timer(req_u);
-      return;
-    }
+    _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
+    _try_resend(req_u, nam_u->fra_d);
+    _update_resend_timer(req_u);
+    return;
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
     u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
-    c3_free(par_u);
     // TODO: do we drop the whole request on the floor?
     MESA_LOG(sam_u, AUTH);
     return;
   }
-  else if ( c3y != _mesa_burn_misorder_queue(req_u, nam_u->boq_y, req_u->lef_d) ) {
-    u3l_log("about to misorder free");
-    c3_free(par_u);
+  else if ( c3y != _mesa_burn_misorder_queue(req_u, nam_u->boq_y, req_u->los_u->counter) ) {
     MESA_LOG(sam_u, AUTH)
     return;
   }
   else {
     // u3l_log("about to other free");
-    c3_free(par_u);
   }
 
   if ( nam_u->fra_d > req_u->ack_d ) {
     req_u->ack_d = nam_u->fra_d;
   }
 
-  bitset_del(&req_u->was_u, nam_u->fra_d);
+  bitset_put(&req_u->was_u, nam_u->fra_d);
 
   #ifdef MESA_DEBUG
     // u3l_log("fragment %llu counter %u hav_d %llu nex_d %llu ack_d %llu lef_d %llu old_d %llu", nam_u->fra_d, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
@@ -1334,9 +1314,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   // handle gauge update
   _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
-
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
-  memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
 
   //  XX FIXME?
   _try_resend(req_u, nam_u->fra_d);
@@ -1561,13 +1538,14 @@ _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3_noun pax = _name_to_scry(nam_u);
   u3_weak res = u3h_get(sam_u->pit_p, pax);
   u3z(pax);
-  if (c3__sent == res) {
-    u3z(res);
-    return u3_none;
-  }
-  else {
-   return res;
-  }
+  return res;
+  /* if (c3__sent == res) { */
+  /*   u3z(res); */
+  /*   return u3_none; */
+  /* } */
+  /* else { */
+  /*  return res; */
+  /* } */
 }
 
 static void
@@ -1586,8 +1564,8 @@ _mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
   u3_noun pax = _name_to_scry(nam_u);
   // u3m_p("_mesa_del_pit pax", pax);
   if ( pin != u3_none ) {
-    // u3h_del(sam_u->pit_p, pax);  // XX restore me
-    u3h_put(sam_u->pit_p, pax, c3__sent);
+    u3h_del(sam_u->pit_p, pax);  // XX restore me
+    /* u3h_put(sam_u->pit_p, pax, c3__sent); */
   } else {
     u3l_log("deleting non existent key in PIT");
   }
@@ -2371,6 +2349,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
     u3_assert( gag_u != NULL );
   }
 
+  _log_gage(gag_u);
   u3_pend_req* req_u = alloca(sizeof(u3_pend_req));
   memset(req_u, 0, sizeof(u3_pend_req));
   req_u->pic_u = c3_calloc(sizeof(u3_mesa_pict));
@@ -2390,6 +2369,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, u3_lane* lan_u)
   req_u->tof_d = mesa_num_leaves(dat_u->tob_d); // NOTE: only correct for bloq 13!
   assert( req_u->tof_d != 1 ); // these should be injected directly by _mesa_hear_page
   req_u->dat_y = c3_calloc(dat_u->tob_d);
+  req_u->mis_u = c3_calloc(req_u->tof_d * sizeof(lss_pair));
   req_u->wat_u = c3_calloc(sizeof(u3_pact_stat) * req_u->tof_d + 2 );
   bitset_init(&req_u->was_u, req_u->tof_d);
 
@@ -2521,6 +2501,18 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, u3_lane
 
   pag_u->man_u.len_w++;
 
+}
+
+static void
+_log_bitset(u3_bitset* bit_u)
+{
+  c3_w cur_w = 0;
+  while( cur_w < bit_u->len_w ) {
+    if ( c3y == bitset_has(bit_u, cur_w) ) {
+      u3l_log("%u", cur_w);
+    }
+    cur_w++;
+  }
 }
 
 static void
@@ -2680,7 +2672,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   c3_y boq_y = 31;
   // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
   c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
-  // _mesa_del_pit(sam_u, nam_u);  XX
+  _mesa_del_pit(sam_u, nam_u);
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
@@ -2970,7 +2962,6 @@ _mesa_hear(u3_mesa* sam_u,
     _mesa_free_pict(pic_u);
     return;
   }
-  c3_free(hun_y);
 
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
   u3_lane lan_u;
@@ -3002,16 +2993,13 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
     }
-    c3_free(buf_u->base);
   }
   else if ( 0 == nrd_i ) {
-    c3_free(buf_u->base);
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: message truncated");
     }
-    c3_free(buf_u->base);
   }
   else {
     _mesa_hear(wax_u->data, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
@@ -3093,6 +3081,10 @@ _mesa_io_talk(u3_auto* car_u)
 
   u3_Host.wax_u.data = sam_u;
   uv_udp_recv_start(&u3_Host.wax_u, _ames_alloc, _mesa_recv_cb);
+
+  c3_i muna = 78194304;
+  uv_recv_buffer_size((uv_handle_t*)&u3_Host.wax_u, &muna);
+  u3l_log("mesa: recv buffer size %i", muna);
 
   sam_u->car_u.liv_o = c3y;
   //u3z(rac); u3z(who);
