@@ -3075,10 +3075,6 @@ _mesa_io_talk(u3_auto* car_u)
   u3_Host.wax_u.data = sam_u;
   uv_udp_recv_start(&u3_Host.wax_u, _ames_alloc, _mesa_recv_cb);
 
-  c3_i muna = 78194304;
-  uv_recv_buffer_size((uv_handle_t*)&u3_Host.wax_u, &muna);
-  u3l_log("mesa: recv buffer size %i", muna);
-
   sam_u->car_u.liv_o = c3y;
   //u3z(rac); u3z(who);
 }
