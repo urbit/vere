@@ -14,8 +14,6 @@
 
 #include <arpa/inet.h>
 
-static c3_y pac_y[4096];
-
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
 #define FINE_PATH_MAX   384             //  longest allowed scry path
@@ -254,6 +252,7 @@ _ames_pact_free(u3_pact* pac_u)
       u3_pier_bail(u3_king_stub());
   }
 
+  c3_free(pac_u->hun_y);
   c3_free(pac_u);
 }
 
@@ -697,7 +696,7 @@ _fine_etch_response(u3_pact* pac_u)
   pre_w = _ames_prel_size(&pac_u->hed_u);
   pur_w = _fine_purr_size(&pac_u->pur_u);
   pac_u->len_w = HEAD_SIZE + pre_w + pur_w;
-  pac_u->hun_y = pac_y;
+  pac_u->hun_y = c3_calloc(pac_u->len_w);
 
   //  skip the header until we know what the mug should be
   //
@@ -736,14 +735,14 @@ _lane_scry_path(u3_noun who)
 /* _ames_send_cb(): send callback.
 */
 static void
-_ames_send_cb(u3_pact* pac_u, c3_i sas_i)
+_ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 {
+  u3_pact* pac_u = (u3_pact*)req_u;
   u3_ames* sam_u = pac_u->sam_u;
 
-  if ( sas_i >= 0 ) {
+  if ( !sas_i ) {
     net_o = c3y;
   }
-
   else if ( c3y == net_o ) {
     u3l_log("ames: send fail: %s", uv_strerror(sas_i));
     net_o = c3n;
@@ -777,11 +776,15 @@ _ames_send(u3_pact* pac_u)
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
-      c3_i     sas_i = uv_udp_try_send(&u3_Host.wax_u,
-                                       &buf_u, 1,
-                                       (const struct sockaddr*)&add_u);
+      c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
+                                   &u3_Host.wax_u,
+                                   &buf_u, 1,
+                                   (const struct sockaddr*)&add_u,
+                                   _ames_send_cb);
 
-      _ames_send_cb(pac_u, sas_i);
+      if ( sas_i ) {
+        _ames_send_cb(&pac_u->snd_u, sas_i);
+      }
     }
   }
 }
@@ -1341,7 +1344,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
     pac_u->len_w = u3r_met(3, pac);
-    pac_u->hun_y = pac_y;
+    pac_u->hun_y = c3_malloc(pac_u->len_w);
 
     u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
 
@@ -1974,7 +1977,7 @@ _ames_try_forward(u3_pact* pac_u)
     old_y = pac_u->hun_y;
 
     pac_u->len_w += 6;
-    pac_u->hun_y = pac_y;
+    pac_u->hun_y = c3_calloc(pac_u->len_w);
 
     cur_w = 0;
 
@@ -2032,6 +2035,7 @@ _ames_hear(u3_ames* sam_u,
                                            sam_u->sun_u.tid_y, len_w) )
   {
     _stun_on_response(sam_u, hun_y, len_w);
+    c3_free(hun_y);
   }
   else {
     struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
@@ -2049,6 +2053,7 @@ _ames_hear(u3_ames* sam_u,
                 sam_u->sat_u.hed_d);
       }
 
+      c3_free(hun_y);
       return;
     }
 

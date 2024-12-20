@@ -889,7 +889,8 @@ _ames_alloc(uv_handle_t* had_u,
             uv_buf_t* buf
             )
 {
-  *buf = uv_buf_init(pac_c, 4096);
+  void* ptr_v = c3_malloc(4096);
+  *buf = uv_buf_init(ptr_v, 4096);
 }
 
 /* u3_mesa_decode_lane(): deserialize noun to lane; 0.0.0.0:0 if invalid
@@ -2934,8 +2935,10 @@ _mesa_hear(u3_mesa* sam_u,
   if ( err_c ) {
     u3l_log("mesa: hear: sift failed: %s", err_c);
     _mesa_free_pict(pic_u);
+    c3_free(hun_y);
     return;
   }
+  c3_free(hun_y);
 
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
   u3_lane lan_u;
@@ -2967,13 +2970,16 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
     }
+    c3_free(buf_u->base);
   }
   else if ( 0 == nrd_i ) {
+    c3_free(buf_u->base);
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: message truncated");
     }
+    c3_free(buf_u->base);
   }
   else {
     _mesa_hear(wax_u->data, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
