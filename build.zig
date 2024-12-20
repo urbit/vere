@@ -503,6 +503,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "hamt-test",
+                .file = "pkg/vere/hamt_test.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "jets-test",
                 .file = "pkg/noun/jets_tests.c",
                 .deps = noun_test_deps,
