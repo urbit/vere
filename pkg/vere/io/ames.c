@@ -736,14 +736,14 @@ _lane_scry_path(u3_noun who)
 /* _ames_send_cb(): send callback.
 */
 static void
-_ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
+_ames_send_cb(u3_pact* pac_u, c3_i sas_i)
 {
-  u3_pact* pac_u = (u3_pact*)req_u;
   u3_ames* sam_u = pac_u->sam_u;
 
-  if ( !sas_i ) {
+  if ( sas_i >= 0 ) {
     net_o = c3y;
   }
+
   else if ( c3y == net_o ) {
     u3l_log("ames: send fail: %s", uv_strerror(sas_i));
     net_o = c3n;
@@ -777,15 +777,11 @@ _ames_send(u3_pact* pac_u)
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
-      c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
-                                   &u3_Host.wax_u,
-                                   &buf_u, 1,
-                                   (const struct sockaddr*)&add_u,
-                                   _ames_send_cb);
+      c3_i     sas_i = uv_udp_try_send(&u3_Host.wax_u,
+                                       &buf_u, 1,
+                                       (const struct sockaddr*)&add_u);
 
-      if ( sas_i ) {
-        _ames_send_cb(&pac_u->snd_u, sas_i);
-      }
+      _ames_send_cb(pac_u, sas_i);
     }
   }
 }
