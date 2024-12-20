@@ -2577,8 +2577,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
     return;
   }
   if ( c3n == our ) {
-      u3l_log(" not our");
-    // TODO: free pact and pict
+    u3l_log(" not our");
     _mesa_free_pict(pic_u);
     u3z(pin);
     return;
