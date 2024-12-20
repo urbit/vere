@@ -1209,7 +1209,7 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w ack_w)
     }
     if ( c3y != lss_verifier_ingest(req_u->los_u, fra_y, len_w, par_u) ) {
       res_o = c3n;
-      u3l_log("fail to burn %llu %llu", num_d + ack_w, req_u->tof_d);
+      u3l_log("fail to burn %" PRIu64 " %" PRIu64, num_d + ack_w, req_u->tof_d);
       break;
     }
     // u3l_log("size %u counter %u num %u fra %u inx %u lef_d %u", siz_w, req_u->los_u->counter , num_w, fra_d, (req_u->los_u->counter + num_w + 1), lef_d);
@@ -2676,19 +2676,12 @@ _mesa_hear_page(u3_mesa_pict* pic_u, u3_lane lan_u)
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
-#ifdef U3_OS_osx
-    u3l_log(" received last packet, tof_d: %llu tob_d: %llu",
-#else
-    u3l_log(" received last packet, tof_d: %lu tob_d: %lu",
-#endif
+    u3l_log(" received last packet, tof_d: %" PRIu64 " tob_d: %" PRIu64,
             req_u->tof_d,
             req_u->tob_d);
+
     c3_d now_d = _get_now_micros();
-#ifdef U3_OS_osx
-    u3l_log("%llu kilobytes took %f ms",
-#else
-    u3l_log("%lu kilobytes took %f ms",
-#endif
+    u3l_log("%" PRIu64 " kilobytes took %f ms",
             req_u->tof_d,
             (now_d - sam_u->tim_d)/1000.0);
 
