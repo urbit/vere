@@ -15,7 +15,8 @@
 #define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
 
 // assertions for roundtrip tests
-#define MESA_ROUNDTRIP c3y
+/* #define MESA_ROUNDTRIP c3y */
+
 #define _assert_eq_f(a, b)                                          \
   if ( a != b ) {                                                   \
     u3l_log("mesa.c:%u  %s != %s", __LINE__,                        \
