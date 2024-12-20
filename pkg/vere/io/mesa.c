@@ -170,6 +170,7 @@ typedef struct _u3_pend_req {
   c3_y*                  dat_y; // ((mop @ud *) lte)
   c3_d                   hav_d; // how many fragments we've received
   c3_d                   lef_d; // lowest fragment number currently in flight/pending
+  c3_d                   out_d; // outstanding fragments in flight
   c3_d                   old_d; // frag num of oldest packet sent
   c3_d                   ack_d; // highest acked fragment number
   u3_gage*               gag_u; // congestion control
@@ -825,7 +826,7 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
   /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
-  return c3_min(rem_w, req_u->gag_u->wnd_w);
+  return c3_min(rem_w, req_u->gag_u->wnd_w - req_u->out_d);
 }
 
 /* _mesa_req_pact_sent(): mark packet as sent
@@ -856,6 +857,7 @@ _mesa_req_pact_sent(u3_pend_req* req_u, u3_mesa_name* nam_u)
     if( req_u->nex_d == nam_u->fra_d ) {
       req_u->nex_d++;
     }
+    req_u->out_d++;
     // TODO: optional assertions?
     /* req_u->wat_u[nam_u->fra_w] = (u3_pact_stat){now_d, 0, 1, 0 }; */
     req_u->wat_u[nam_u->fra_d].sen_d = now_d;
@@ -1265,6 +1267,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     /* u3l_log("insert into misordered queue fra: %llu [counter %u]", */
     /*         nam_u->fra_d, */
     /*         req_u->los_u->counter); */
+    req_u->out_d--;
     bitset_put(&req_u->was_u, nam_u->fra_d);
 
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
@@ -1290,6 +1293,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->ack_d = nam_u->fra_d;
   }
 
+  req_u->out_d--;
   bitset_put(&req_u->was_u, nam_u->fra_d);
 
   #ifdef MESA_DEBUG
