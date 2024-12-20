@@ -90,12 +90,6 @@ typedef struct _u3_pact_stat {
 
 struct _u3_mesa;
 
-typedef struct _u3_misord_buf {
-  c3_y*     fra_y;
-  c3_w      len_w;
-  lss_pair* par_u;
-} u3_misord_buf;
-
 typedef struct _u3_gage {
   c3_w     rtt_w;  // rtt
   c3_w     rto_w;  // rto
@@ -2501,18 +2495,6 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, u3_lane
 
   pag_u->man_u.len_w++;
 
-}
-
-static void
-_log_bitset(u3_bitset* bit_u)
-{
-  c3_w cur_w = 0;
-  while( cur_w < bit_u->len_w ) {
-    if ( c3y == bitset_has(bit_u, cur_w) ) {
-      u3l_log("%u", cur_w);
-    }
-    cur_w++;
-  }
 }
 
 static void
