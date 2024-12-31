@@ -16,8 +16,8 @@
 #define ONCE_CTX        63
 #define RUN_CTX         7
 
-#define AX_RUNNABLE     92
-#define AX_ARROWS       750
+#define AX_RUNNABLE     374
+#define AX_ARROWS       1502
 
 #define AX_CALL         20
 #define AX_MEMREAD      383
@@ -26,9 +26,11 @@
 #define AX_GLOBAL_SET   4
 #define AX_GLOBAL_GET   22
 #define AX_MEM_SIZE     186
-#define AX_MEM_GROW     190
+#define AX_MEM_GROW     381
 #define AX_GET_ACC      374
 #define AX_SET_ACC      92
+#define AX_GET_ALL_GLOB 43
+#define AX_SET_ALL_GLOB 380
 
 #define AX_TRY          43
 #define AX_CATCH        4
@@ -62,6 +64,8 @@ typedef struct {
   u3_noun mem_size_bat;
   u3_noun get_acc_bat;
   u3_noun set_acc_bat;
+  u3_noun get_all_glob_bat;
+  u3_noun set_all_glob_bat;
 //
   u3_noun call_ctx;
   u3_noun memread_ctx;
@@ -70,6 +74,8 @@ typedef struct {
   u3_noun global_get_ctx;
   u3_noun mem_grow_ctx;
   u3_noun mem_size_ctx;
+  u3_noun get_all_glob_ctx;
+  u3_noun set_all_glob_ctx;
 } match_data_struct;
 
 typedef struct {
@@ -729,6 +735,92 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     sat->acc = new;
     return u3nc(0, 0);
   }
+  else if (c3y == u3r_sing(monad_bat, sat->match->get_all_glob_bat))
+  {
+    if (c3n == u3r_sing(u3at(MONAD_CTX, monad), sat->match->get_all_glob_ctx))
+    {
+      return u3m_bail(c3__fail);
+    }
+    u3z(monad);
+    u3_noun atoms = u3_nul;
+    c3_w n_globals = sat->wasm_module->numGlobals;
+    c3_w n_globals_import = sat->wasm_module->numGlobImports;
+    while (n_globals-- > n_globals_import)
+    {
+      M3Global glob = sat->wasm_module->globals[n_globals];
+      switch (glob.type)
+      {
+        default:
+        {
+          return u3m_bail(c3__fail);
+        }
+        case c_m3Type_i32:
+        {
+          atoms = u3nc(u3i_word(glob.intValue), atoms);
+        }
+        case c_m3Type_i64:
+        {
+          atoms = u3nc(u3i_chub(glob.intValue), atoms);
+        }
+        case c_m3Type_f32:
+        {
+          atoms = u3nc(u3i_word(glob.f32Value), atoms);
+        }
+        case c_m3Type_f64:
+        {
+          atoms = u3nc(u3i_chub(glob.f64Value), atoms);
+        }
+      }
+    }
+    return u3nc(0, atoms);
+  }
+  else if (c3y == u3r_sing(monad_bat, sat->match->set_all_glob_bat))
+  {
+    if (c3n == u3r_sing(u3at(ARROW_CTX, monad), sat->match->set_all_glob_ctx))
+    {
+      return u3m_bail(c3__fail);
+    }
+    u3_noun atoms = u3at(arr_sam, monad);
+    c3_w n_globals = sat->wasm_module->numGlobals;
+    c3_w n_globals_import = sat->wasm_module->numGlobImports;
+    for (c3_w i = n_globals_import; i < n_globals; i++)
+    {
+      IM3Global glob = &sat->wasm_module->globals[i];
+      u3_noun atom;
+      u3x_cell(atoms, &atom, &atoms);
+      u3x_atom(atom);
+      switch (glob->type)
+      {
+        default:
+        {
+          return u3m_bail(c3__fail);
+        }
+        case c_m3Type_i32:
+        {
+          glob->intValue = u3r_word(0, atom);
+        }
+        case c_m3Type_i64:
+        {
+          glob->intValue = u3r_chub(0, atom);
+        }
+        case c_m3Type_f32:
+        {
+          glob->f32Value = u3r_word(0, atom);
+        }
+        case c_m3Type_f64:
+        {
+          glob->f64Value = u3r_chub(0, atom);
+        }
+      }
+    }
+    if (u3_nul != atoms)
+    {
+      fprintf(stderr, WUT("glob list too long"));
+      return u3m_bail(c3__exit);
+    }
+    u3z(monad);
+    return u3nc(0, 0);
+  }
   else
   {
     return u3m_bail(c3__fail);
@@ -1095,16 +1187,18 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
   u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
 
-  u3_noun call_script       = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
-  u3_noun memread_script    = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
-  u3_noun memwrite_script   = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
-  u3_noun call_ext_script   = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
-  u3_noun global_set_script = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
-  u3_noun global_get_script = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
-  u3_noun mem_grow_script   = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
-  u3_noun mem_size_script   =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
-  u3_noun get_acc_script    =       u3j_kink(u3k(arrows), AX_GET_ACC);
-  u3_noun set_acc_script    = KICK1(u3j_kink(    arrows,  AX_SET_ACC));
+  u3_noun call_script         = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
+  u3_noun memread_script      = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
+  u3_noun memwrite_script     = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
+  u3_noun call_ext_script     = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
+  u3_noun global_set_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
+  u3_noun global_get_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
+  u3_noun mem_grow_script     = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
+  u3_noun mem_size_script     =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
+  u3_noun get_acc_script      =       u3j_kink(u3k(arrows), AX_GET_ACC);
+  u3_noun set_acc_script      = KICK1(u3j_kink(u3k(arrows), AX_SET_ACC));
+  u3_noun get_all_glob_script =       u3j_kink(u3k(arrows), AX_GET_ALL_GLOB);
+  u3_noun set_all_glob_script = KICK1(u3j_kink(    arrows,  AX_SET_ALL_GLOB));
 
   u3_noun try_script    = KICK2(u3j_kink(u3k(runnable), AX_TRY));  
   u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
@@ -1123,6 +1217,8 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun mem_size_bat = u3k(u3h(mem_size_script));
   u3_noun get_acc_bat = u3k(u3h(get_acc_script));
   u3_noun set_acc_bat = u3k(u3h(set_acc_script));
+  u3_noun get_all_glob_bat = u3k(u3h(get_all_glob_script));
+  u3_noun set_all_glob_bat = u3k(u3h(set_all_glob_script));
 
   u3_noun call_ctx = u3k(u3at(ARROW_CTX, call_script));
   u3_noun memread_ctx = u3k(u3at(ARROW_CTX, memread_script));
@@ -1131,6 +1227,8 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun global_get_ctx = u3k(u3at(ARROW_CTX, global_get_script));
   u3_noun mem_grow_ctx = u3k(u3at(ARROW_CTX, mem_grow_script));
   u3_noun mem_size_ctx = u3k(u3at(MONAD_CTX, mem_size_script));
+  u3_noun get_all_glob_ctx = u3k(u3at(MONAD_CTX, get_all_glob_script));
+  u3_noun set_all_glob_ctx = u3k(u3at(ARROW_CTX, set_all_glob_script));
 
   u3z(call_script);
   u3z(memread_script);
@@ -1145,6 +1243,9 @@ u3we_lia_run_once(u3_noun cor)
   u3z(mem_size_script);
   u3z(get_acc_script);
   u3z(set_acc_script);
+  u3z(get_all_glob_script);
+  u3z(set_all_glob_script);
+  
   
   match_data_struct match = {
     call_bat,
@@ -1160,6 +1261,8 @@ u3we_lia_run_once(u3_noun cor)
     mem_size_bat,
     get_acc_bat,
     set_acc_bat,
+    get_all_glob_bat,
+    set_all_glob_bat,
   //
     call_ctx,
     memread_ctx,
@@ -1168,6 +1271,8 @@ u3we_lia_run_once(u3_noun cor)
     global_get_ctx,
     mem_grow_ctx,
     mem_size_ctx,
+    get_all_glob_ctx,
+    set_all_glob_ctx,
   };
 
   u3_noun octs = u3at(u3x_sam_4, cor);
@@ -1303,6 +1408,8 @@ u3we_lia_run_once(u3_noun cor)
   u3z(match.mem_size_bat);
   u3z(match.get_acc_bat);
   u3z(match.set_acc_bat);
+  u3z(match.get_all_glob_bat);
+  u3z(match.set_all_glob_bat);
 
   u3z(match.call_ctx);
   u3z(match.memread_ctx);
@@ -1311,6 +1418,8 @@ u3we_lia_run_once(u3_noun cor)
   u3z(global_get_ctx);
   u3z(mem_grow_ctx);
   u3z(mem_size_ctx);
+  u3z(get_all_glob_ctx);
+  u3z(set_all_glob_ctx);
   
   #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
