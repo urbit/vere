@@ -757,18 +757,22 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         case c_m3Type_i32:
         {
           atoms = u3nc(u3i_word(glob.intValue), atoms);
+          break;
         }
         case c_m3Type_i64:
         {
           atoms = u3nc(u3i_chub(glob.intValue), atoms);
+          break;
         }
         case c_m3Type_f32:
         {
           atoms = u3nc(u3i_word(glob.f32Value), atoms);
+          break;
         }
         case c_m3Type_f64:
         {
           atoms = u3nc(u3i_chub(glob.f64Value), atoms);
+          break;
         }
       }
     }
@@ -798,18 +802,22 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         case c_m3Type_i32:
         {
           glob->intValue = u3r_word(0, atom);
+          break;
         }
         case c_m3Type_i64:
         {
           glob->intValue = u3r_chub(0, atom);
+          break;
         }
         case c_m3Type_f32:
         {
           glob->f32Value = u3r_word(0, atom);
+          break;
         }
         case c_m3Type_f64:
         {
           glob->f64Value = u3r_chub(0, atom);
+          break;
         }
       }
     }
