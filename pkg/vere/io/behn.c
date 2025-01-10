@@ -55,7 +55,6 @@ _behn_wake_bail(u3_ovum* egg_u, u3_noun lud)
     }
     else {
       u3l_log("vere: warning: continuing without timers");
-      u3z(lud);
     }
   }
 }
