@@ -2030,6 +2030,7 @@ _ames_hear(u3_ames* sam_u,
   //
   if ( c3y == u3_stun_is_request(hun_y, len_w) ) {
       _stun_on_request(sam_u, hun_y, adr_u);
+      c3_free(hun_y);
   }
   else if ( c3y == u3_stun_is_our_response(hun_y,
                                            sam_u->sun_u.tid_y, len_w) )
