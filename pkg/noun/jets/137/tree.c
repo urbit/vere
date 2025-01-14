@@ -184,6 +184,8 @@ static u3j_harm _137_hex_secp_secp256k1_make_a[] = {{".2", u3we_make, c3y}, {}};
 static u3j_harm _137_hex_secp_secp256k1_sign_a[] = {{".2", u3we_sign, c3y}, {}};
 static u3j_harm _137_hex_secp_secp256k1_reco_a[] = {{".2", u3we_reco, c3y}, {}};
 static u3j_harm _137_hex_secp_secp256k1_priv_to_pub_a[] = {{".2", u3we_priv_to_pub, c3n}, {}};
+static u3j_harm _137_hex_secp_secp256k1_tweak_sec_a[] = {{".2", u3we_tweak_sec, c3n}, {}};
+static u3j_harm _137_hex_secp_secp256k1_tweak_pub_a[] = {{".2", u3we_tweak_pub, c3n}, {}};
 
 static u3j_harm _137_hex_secp_secp256k1_schnorr_sosi_a[] =
   {{".2", u3we_sosi}, {}};
@@ -204,6 +206,8 @@ static u3j_core _137_hex_secp_secp256k1_d[] =
     { "sign", 7, _137_hex_secp_secp256k1_sign_a, 0, no_hashes },
     { "reco", 7, _137_hex_secp_secp256k1_reco_a, 0, no_hashes },
     { "priv-to-pub", 7, _137_hex_secp_secp256k1_priv_to_pub_a, 0, no_hashes },
+    { "tweak-sec", 7, _137_hex_secp_secp256k1_tweak_sec_a, 0, no_hashes },
+    { "tweak-pub", 7, _137_hex_secp_secp256k1_tweak_pub_a, 0, no_hashes },
     { "schnorr", 7, 0,
       _137_hex_secp_secp256k1_schnorr_d,
       no_hashes },
