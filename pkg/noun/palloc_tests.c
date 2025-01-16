@@ -12,6 +12,30 @@ _setup(void)
 }
 
 static void
+_print_chunks(c3_g bit_g)  // 0-9, inclusive
+{
+  c3_s    log_s = bit_g + LOG_MINIMUM;
+  c3_s    len_s = 1U << log_s;
+  c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
+  c3_s    siz_s = c3_wiseof(struct pginfo);
+
+  siz_s += tot_s >> 5;
+  siz_s += !!(tot_s & 31);
+  siz_s--;
+
+  if ( len_s <= (siz_s << 1) ) {
+    fprintf(stderr, "chunks: inline pginfo: bit=%u log=%u len=%u tot=%u, siz=%u, chunks=%u\n",
+                    bit_g, log_s, len_s, tot_s, siz_s, (siz_s / len_s + !!(siz_s % len_s)));
+
+
+  }
+  else {
+    fprintf(stderr, "chunks: malloc pginfo: bit=%u log=%u len=%u tot=%u, siz=%u chunks=%u\n",
+                    bit_g, log_s, len_s, tot_s, siz_s, (siz_s / len_s + !!(siz_s % len_s)));
+  }
+}
+
+static void
 _test_palloc(void)
 {
   _init();
@@ -42,6 +66,10 @@ int
 main(int argc, char* argv[])
 {
   _setup();
+
+  for ( c3_w i_w = 0; i_w < 10; i_w++ ) {
+    _print_chunks(i_w);
+  }
 
   _test_palloc();
 
