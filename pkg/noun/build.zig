@@ -338,6 +338,7 @@ const c_source_files = [_][]const u8{
     "jets/137/tree.c",
     "log.c",
     "manage.c",
+    "palloc.c",
     "nock.c",
     "options.c",
     "retrieve.c",
