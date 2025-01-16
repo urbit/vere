@@ -6,10 +6,10 @@
 #define MINIMUM (1U << LOG_MINIMUM)
 #define MAXIMUM (1U << (u3a_page - 1))
 
-#define FREE    0
-#define FIRST   1
-#define FOLLOW  2
-#define MAGIC   3
+#define FREE    (u3p(struct pginfo))0
+#define FIRST   (u3p(struct pginfo))1
+#define FOLLOW  (u3p(struct pginfo))2
+#define MAGIC   (u3p(struct pginfo))3
 
 struct pginfo {
   u3p(struct pginfo) nex_p;  /* next on the free list */
@@ -72,7 +72,7 @@ _init(void)
 
   dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   dir_u[0] = FIRST;
-  hep_u.cac_p = _imalloc(sizeof(struct pgfree));
+  hep_u.cac_p = _imalloc(c3_wiseof(struct pgfree));
 }
 
 static void
@@ -201,6 +201,10 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   siz_s += !!(tot_s & 31);
   siz_s--;
 
+  //  metacircular base case
+  //
+  //    trivially deducible from exhaustive enumeration
+  //
   if ( len_s <= (siz_s << 1) ) {
     pag_u = u3to(struct pginfo, pag_p);
   }
@@ -227,10 +231,18 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
       *map_w = (c3_w)~0 >> (32 - len_w);
     }
 
-    //  XX double check
+
+    //  reserve chunks stolen for pginfo
+    //
     if ( len_s <= (siz_s << 1) ) {
-      len_w = ( siz_s > len_s ) ? 2 : 1;
-      pag_u->map_w[0] &= ~((1U << len_w) - 1); // ~1 or ~3
+      len_w = 1U + ((siz_s - 1) / len_s);
+
+      //  XX pag_u->map_w[0] &= ~0 << len_w
+
+      for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+        pag_u->map_w[i_w >> 5] &= ~(1U << (i_w & 31));
+      }
+
       pag_u->fre_s -= len_w;
       pag_u->tot_s -= len_w;
     }
@@ -274,7 +286,7 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
   // fprintf(stderr, "page: 2 map=%p map[0]=%x\n", (void*)map_w, *map_w);
 
   pos_g   = c3_tz_w(*map_w);
-  *map_w ^= 1U << pos_g;
+  *map_w &= ~(1U << pos_g);
 
   // fprintf(stderr, "page: 3 map=%p map[0]=%x\n", (void*)map_w, *map_w);
 
@@ -361,6 +373,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     hep_u.cac_p = 0;
   }
   else {
+    //  XX road direction
     while ( (fre_u->end_p < som_p) && fre_u->nex_p ) {
       fre_u = u3to(struct pgfree, fre_u->nex_p);
     }
@@ -437,7 +450,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     //  XX double free
   }
 
-  pag_u->map_w[pos_w >> 5] ^= (1U << (pos_w & 31));
+  pag_u->map_w[pos_w >> 5] |= (1U << (pos_w & 31));
   pag_u->fre_s++;
 
   {
@@ -454,6 +467,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
         nex_u = u3to(struct pginfo, bit_u->nex_p);
 
+        //  XX road direction?
         if ( nex_u->pag_p > pag_u->pag_p ) break;
 
         bit_p = &(bit_u->nex_p);
