@@ -498,6 +498,11 @@ fn buildBinary(
             },
             // pkg_noun
             .{
+                .name = "palloc-test",
+                .file = "pkg/noun/palloc_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
