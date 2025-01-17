@@ -32,47 +32,83 @@ struct pgfree {
 struct heap {
   u3p(struct pgfree)  fre_p;  //  free list
   u3p(struct pgfree)  cac_p;  //  cached pgfree struct
+  u3_post             bot_p;  //  XX s/b rut_p
+  c3_ws               dir_ws; //  1 || -1 (multiplicand for local offsets)
+  c3_ws               off_ws; //  0 || -1 (word-offset for hat && rut)
   c3_w                siz_w;  //  directory size
   c3_w                len_w;  //  directory entries
-  u3p(struct pginfo*) pag_p;  //  directory       //  WRONG XX reserve pages
+  u3p(struct pginfo*) pag_p;  //  directory
   u3p(struct pginfo)  wee_p[u3a_page - LOG_MINIMUM];  // chunk lists
 };
 
-//  WRONG: XX offset post-values in pag_p to account for FREE|FIRST|FOLLOW
-//
-//  XX sign-invert south pages
-//  XX offset global page index to road-scoped heap
-//
-
-#define page_to_post(pag_w)  ((pag_w) << u3a_page)
-#define post_to_page(som_p)  ((som_p) >> u3a_page)
+#define page_to_post(pag_w)  (hep_u.bot_p + (((hep_u.dir_ws * (pag_w)) + hep_u.off_ws) << u3a_page))
+#define post_to_page(som_p)  (_abs_dif(som_p, hep_u.bot_p + hep_u.off_ws) >> u3a_page)
 
 struct heap hep_u;
 
 static u3_post _imalloc(c3_w);
 static void  _ifree(u3_post);
 
+static __inline__ c3_w
+_abs_dif(c3_w a_w, c3_w b_w)
+{
+  // c3_ds dif_ds = a_w - b_w;
+  // c3_d  mas_d  = dif_ds >> 63;
+  // return (dif_ds + mas_d) ^ mas_d;
+  return (a_w > b_w ) ? a_w - b_w : b_w - a_w;
+}
+
 static void
 _init(void)
 {
+  memset(&hep_u, 0x0, sizeof(hep_u)); //  XX s/b unnecessary
   u3p(struct pginfo) *dir_u;
 
   //  align hat
-  if ( u3R->hat_p & ((1U << u3a_page) - 1) ) {
-    u3R->hat_p += (1U << u3a_page) - (u3R->hat_p & ((1U << u3a_page) - 1));
+  //
+  //   XX s/b done elsewhere, along with rut_p
+  //
+  if ( c3y == u3a_is_north(u3R) ) {
+    // fprintf(stderr, "palloc: init north: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
+    u3R->hat_p += (1U << u3a_page) - 1;
+    hep_u.dir_ws = 1;
+    hep_u.off_ws = 0;
+  }
+  else {
+    // fprintf(stderr, "palloc: init south: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
+    hep_u.dir_ws = -1;
+    hep_u.off_ws = -1;
   }
 
+  u3R->hat_p &= ~((1U << u3a_page) - 1);
+  hep_u.bot_p = u3R->hat_p;
+
+  // fprintf(stderr, "palloc: init1 hat=0x%x cap=0x%x bot=0x%x\n", u3R->hat_p, u3R->cap_p, hep_u.bot_p);
+
   //  XX assert hat >= MAGIC
+  //  XX check for overflow
 
-  hep_u.pag_p = u3R->hat_p;  //  XX offset
-  hep_u.siz_w = 1;
-  hep_u.len_w = 1;
+  hep_u.pag_p  = u3R->hat_p;
+  hep_u.pag_p += hep_u.off_ws * (1U << u3a_page);
+  hep_u.siz_w  = 1;
+  hep_u.len_w  = 1;
 
-  u3R->hat_p += 1U << u3a_page;  // XX direction, overflow
+  u3R->hat_p += hep_u.dir_ws * (1U << u3a_page);
+
+  // fprintf(stderr, "palloc: init2 hat=0x%x cap=0x%x bot=0x%x pag=0x%x\n", u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p);
 
   dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   dir_u[0] = FIRST;
+
+  assert( 0 == post_to_page(hep_u.pag_p) );
+
+  // fprintf(stderr, "palloc: init3 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p out-adir=%x\n",
+  //                 u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p, (void*)dir_u, (c3_w)u3a_outa(dir_u));
+
   hep_u.cac_p = _imalloc(c3_wiseof(struct pgfree));
+
+  // fprintf(stderr, "palloc: init4 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p cac=0x%x\n",
+  //                 u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p, (void*)dir_u, hep_u.cac_p);
 }
 
 static void
@@ -85,9 +121,10 @@ _extend_directory(c3_w siz_w)  // num pages
   old_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   nex_w = ((siz_w + hep_u.len_w) >> u3a_page) - hep_u.siz_w;
 
-  hep_u.pag_p = u3R->hat_p;  //  XX offset
+  hep_u.pag_p = u3R->hat_p;
+  hep_u.pag_p += hep_u.off_ws * (1U << u3a_page);
 
-  u3R->hat_p += nex_w << u3a_page;  //  XX direction, overflow
+  u3R->hat_p += hep_u.dir_ws * (nex_w << u3a_page); //  XX overflow
 
   dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
 
@@ -112,9 +149,10 @@ _extend_heap(c3_w siz_w)  // num pages
     _extend_directory(siz_w);
   }
 
-  pag_p = u3R->hat_p;  //  XX offset
+  pag_p = u3R->hat_p;
+  pag_p += hep_u.off_ws * (1U << u3a_page);
 
-  u3R->hat_p += siz_w << u3a_page;  //  XX direction overflow
+  u3R->hat_p += hep_u.dir_ws * (siz_w << u3a_page);  //  XX overflow
 
   return pag_p;
 }
@@ -217,6 +255,8 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
     pag_u = u3to(struct pginfo, _imalloc(siz_s));
   }
 
+  // fprintf(stderr, "make chunks: pag_p: %x, pag_w %u\n", pag_p, pag_w);
+
   pag_u->pag_p = pag_p;
   pag_u->log_s = log_s;
   pag_u->len_s = len_s;
@@ -306,7 +346,8 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
     off_w  += pos_g;
     off_w <<= pag_u->log_s;
 
-    // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n", pos_g, pag_p, off_w, pag_u->log_s);
+    // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n",
+    //                 pos_g, pag_p, off_w, pag_u->log_s);
     return pag_p + off_w;
   }
 }
