@@ -130,11 +130,16 @@ _alloc_pages(c3_w len_w)
   struct pgfree* fre_u = ( hep_u.fre_p )
                        ? u3to(struct pgfree, hep_u.fre_p)
                        : NULL;
+                       //  XX u3tn
 
   while ( fre_u ) {
     //  XX sanity
 
     if ( fre_u->siz_w < siz_w ) {
+      fre_u = ( fre_u->nex_p )
+              ? u3to(struct pgfree, fre_u->nex_p)
+              : NULL;
+              // XX u3tn
       continue;
     }
     else if ( fre_u->siz_w == siz_w ) {
@@ -328,26 +333,39 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   struct pgfree* fre_u = ( hep_u.fre_p )
                        ? u3to(struct pgfree, hep_u.fre_p)
                        : NULL;
+                       // XX u3tn
 
   u3_post tal_p;
   c3_w    siz_w;
 
   if ( FREE == dir_p ) {
     //  XX double free
+    fprintf(stderr, "\033[31m"
+                    "palloc: double free page som_p=0x%x\n"
+                    "\033[0m",
+                    som_p);
     return;
   }
 
   if ( FIRST != dir_p ) {
     //  XX pointer to wrong page
+    fprintf(stderr, "\033[31m"
+                    "palloc: wrong page som_p=0x%x\n"
+                    "\033[0m",
+                    som_p);
   }
 
   if ( som_p & ((1U << u3a_page) - 1) ) {
     //  XX pointer not aligned to page
+    fprintf(stderr, "\033[31m"
+                    "palloc: bad page alignment som_p=0x%x\n"
+                    "\033[0m",
+                    som_p);
   }
 
   dir_u[pag_w] = FREE;
 
-  for ( siz_w = 0; dir_u[pag_w + siz_w] == FOLLOW; siz_w++ ) {
+  for ( siz_w = 1; dir_u[pag_w + siz_w] == FOLLOW; siz_w++ ) {
     dir_u[pag_w + siz_w] = FREE;
   }
 
@@ -382,9 +400,11 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       cac_u->nex_p = u3of(struct pgfree, fre_u);
       cac_u->pre_p = fre_u->pre_p;
 
+      fre_u->pre_p = hep_u.cac_p;
+
       //  XX sanity
-      if ( fre_u->pre_p ) {
-        u3to(struct pgfree, fre_u->pre_p)->nex_p = u3of(struct pgfree, cac_u);
+      if ( cac_u->pre_p ) {
+        u3to(struct pgfree, cac_u->pre_p)->nex_p = hep_u.cac_p;
       }
 
       fre_u = cac_u;
@@ -417,7 +437,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( !fre_u->nex_p ) {          //  insert after
       cac_u->nex_p = 0;
       cac_u->pre_p = u3of(struct pgfree, fre_u);
-      fre_u->nex_p = u3of(struct pgfree, cac_u);
+      fre_u->nex_p = hep_u.cac_p;
       fre_u = cac_u;
       hep_u.cac_p = 0;
     }
@@ -442,12 +462,20 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   c3_g bit_g = pag_u->log_s - LOG_MINIMUM;
   c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
-  if ( som_p & pag_u->len_s ) {  //  XX just 1U << log_s and remove?
+  if ( som_p & (pag_u->len_s - 1) ) {  //  XX just 1U << log_s and remove?
     //  XX  bad alignment
+    fprintf(stderr, "\033[31m"
+                    "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n"
+                    "\033[0m",
+                    som_p, dir_p, pag_u->len_s);
   }
 
   if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
     //  XX double free
+    fprintf(stderr, "\033[31m"
+                    "palloc: double free som_p=0x%x pag=0x%x\n"
+                    "\033[0m",
+                    som_p, dir_p);
   }
 
   pag_u->map_w[pos_w >> 5] |= (1U << (pos_w & 31));
