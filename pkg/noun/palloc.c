@@ -585,6 +585,93 @@ _ifree(u3_post som_p)
   }
 }
 
+static u3_post
+_irealloc(u3_post som_p, c3_w len_w)
+{
+  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  c3_w pag_w = post_to_page(som_p);
+  c3_w old_w;
+
+  //  XX sanity: in page dir
+
+  u3_post dir_p = dir_u[pag_w];
+
+  if ( FIRST == dir_p ) {
+    if ( som_p & ((1U << u3a_page) - 1) ) {
+      //  XX pointer not aligned to page
+      fprintf(stderr, "\033[31m"
+                      "palloc: bad page alignment som_p=0x%x\n"
+                      "\033[0m",
+                      som_p);
+    }
+
+    for ( old_w = 1; dir_u[pag_w + old_w] == FOLLOW; old_w++ ) {}
+
+    {
+      c3_w wor_w = old_w << u3a_page;
+
+      if ( len_w <= wor_w ) {
+        wor_w  -= len_w;
+        wor_w >>= u3a_page;
+
+        // XX junk
+
+        while ( wor_w-- ) {
+          dir_u[pag_w + wor_w] = FREE;
+        }
+
+        return som_p;
+      }
+
+      //  XX also grow in place if sufficient adjacent pages are free?
+    }
+  }
+  else if ( MAGIC > dir_p ) {
+    //  XX pointer to wrong page
+    fprintf(stderr, "\033[31m"
+                    "palloc: wrong page som_p=0x%x\n"
+                    "\033[0m",
+                    som_p);
+    old_w = 0;
+  }
+  else {
+    struct pginfo *pag_u = u3to(struct pginfo, dir_p);
+    c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+
+    if ( som_p & (pag_u->len_s - 1) ) {  //  XX just 1U << log_s and remove?
+      //  XX  bad alignment
+      fprintf(stderr, "\033[31m"
+                      "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n"
+                      "\033[0m",
+                      som_p, dir_p, pag_u->len_s);
+    }
+
+    if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+      //  XX double free
+      fprintf(stderr, "\033[31m"
+                      "palloc: realloc free som_p=0x%x pag=0x%x\n"
+                      "\033[0m",
+                      som_p, dir_p);
+    }
+
+    old_w = pag_u->len_s;
+
+    if ( (old_w > len_w) && (len_w > (old_w >> 1)) ) {
+      //  XX junk
+      return som_p;
+    }
+  }
+
+  {
+    u3_post new_p = _imalloc(len_w);
+
+    memcpy(u3a_into(new_p), u3a_into(som_p), c3_min(len_w, old_w));
+    _ifree(som_p);
+
+    return new_p;
+  }
+}
+
 // static void
 // _ifree_ptr(void* som_v)
 // {
