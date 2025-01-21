@@ -657,7 +657,7 @@ _irealloc(u3_post som_p, c3_w len_w)
 
     old_w = pag_u->len_s;
 
-    if ( (old_w > len_w) && (len_w > (old_w >> 1)) ) {
+    if ( (old_w >= len_w) && (len_w > (old_w >> 1)) ) {
       //  XX junk
       return som_p;
     }
@@ -666,7 +666,7 @@ _irealloc(u3_post som_p, c3_w len_w)
   {
     u3_post new_p = _imalloc(len_w);
 
-    memcpy(u3a_into(new_p), u3a_into(som_p), c3_min(len_w, old_w));
+    memcpy(u3a_into(new_p), u3a_into(som_p), (c3_z)c3_min(len_w, old_w) << 2);
     _ifree(som_p);
 
     return new_p;
