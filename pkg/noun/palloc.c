@@ -342,7 +342,7 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 
     // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n",
     //                 pos_g, pag_p, off_w, pag_u->log_s);
-    return pag_p + off_w;
+    return pag_u->pag_p + off_w;
   }
 }
 
