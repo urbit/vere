@@ -182,6 +182,9 @@ _alloc_pages(c3_w len_w)
       if ( fre_u->pre_p ) {
         u3to(struct pgfree, fre_u->pre_p)->nex_p = fre_u->nex_p;
       }
+      else {
+        hep_u.fre_p = fre_u->nex_p;
+      }
       del_u = fre_u;
     }
     else {
@@ -419,7 +422,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     cac_u->nex_p = 0;
     cac_u->pre_p = 0;
     fre_u = cac_u;
-    hep_u.fre_p = u3of(struct pgfree, fre_u);
+    hep_u.fre_p = hep_u.cac_p;
     hep_u.cac_p = 0;
   }
   else {
@@ -437,6 +440,9 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       //  XX sanity
       if ( cac_u->pre_p ) {
         u3to(struct pgfree, cac_u->pre_p)->nex_p = hep_u.cac_p;
+      }
+      else {
+        hep_u.fre_p = hep_u.cac_p;
       }
 
       fre_u = cac_u;
@@ -475,6 +481,10 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     }
     else {
       // XX hosed
+      fprintf(stderr, "\033[31m"
+                    "palloc: free list hosed at som_p=0x%x pag=0x%x len=%u\n"
+                    "\033[0m",
+                    (u3_post)u3of(struct pgfree, fre_u), fre_u->pag_p, fre_u->siz_w);
     }
   }
 
