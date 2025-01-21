@@ -165,19 +165,13 @@ _alloc_pages(c3_w len_w)
   u3_post pag_p = 0;
   c3_w    siz_w = (len_w + (1U << u3a_page) - 1) >> u3a_page;
   struct pgfree* del_u = NULL;
-  struct pgfree* fre_u = ( hep_u.fre_p )
-                       ? u3to(struct pgfree, hep_u.fre_p)
-                       : NULL;
-                       //  XX u3tn
+  struct pgfree* fre_u = u3tn(struct pgfree, hep_u.fre_p);
 
   while ( fre_u ) {
     //  XX sanity
 
     if ( fre_u->siz_w < siz_w ) {
-      fre_u = ( fre_u->nex_p )
-              ? u3to(struct pgfree, fre_u->nex_p)
-              : NULL;
-              // XX u3tn
+      fre_u = u3tn(struct pgfree, fre_u->nex_p);
       continue;
     }
     else if ( fre_u->siz_w == siz_w ) {
@@ -371,10 +365,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   struct pgfree* cac_u;
   struct pgfree *del_u = NULL;
-  struct pgfree* fre_u = ( hep_u.fre_p )
-                       ? u3to(struct pgfree, hep_u.fre_p)
-                       : NULL;
-                       // XX u3tn
+  struct pgfree* fre_u = u3tn(struct pgfree, hep_u.fre_p);
 
   u3_post tal_p;
   c3_w    siz_w;
