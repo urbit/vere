@@ -1297,6 +1297,9 @@ _realise_lane(u3_noun lan) {
     if ( (c3n == u3_Host.ops_u.net) ) {
       lan_u.sin_addr.s_addr = htonl(0x7f000001);
       lan_u.sin_port = htons(_ames_czar_port(lan));
+    } else {
+      lan_u.sin_addr.s_addr = htonl(u3_Host.imp_u[lan]);
+      lan_u.sin_port = htons(_ames_czar_port(lan));
     }
   } else {
     u3_noun tag, pip, por;
