@@ -45,6 +45,34 @@ _print_chunks(void)
   }
 }
 
+static void
+_print_pages(c3_w max_w)
+{
+  u3_post pot_p;
+  c3_w i_w;
+
+  hep_u.dir_ws = 1;
+  hep_u.off_ws = 0;
+  hep_u.bot_p  = 0x1000;
+
+  for ( i_w = 0; i_w < max_w; i_w++ ) {
+    pot_p = page_to_post(i_w);
+    fprintf(stderr, "north at bot=0x%x pag=%u == 0x%x == pag=%u\n",
+                    hep_u.bot_p, i_w, pot_p, post_to_page(pot_p));
+  }
+
+
+  hep_u.dir_ws = -1;
+  hep_u.off_ws = -1;
+  hep_u.bot_p += max_w << u3a_page;
+
+  for ( i_w = 0; i_w < max_w; i_w++ ) {
+    pot_p = page_to_post(i_w);
+    fprintf(stderr, "south at bot=0x%x pag=%u == 0x%x == pag=%u\n",
+                    hep_u.bot_p, i_w, pot_p, post_to_page(pot_p));
+  }
+}
+
 void
 u3m_fall(void);
 void
@@ -138,6 +166,7 @@ main(int argc, char* argv[])
   _setup();
 
   _print_chunks();
+  _print_pages(10);
 
   _test_palloc();
 
