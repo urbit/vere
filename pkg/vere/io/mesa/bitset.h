@@ -2,13 +2,14 @@
 #define VERE_BITSET_H
 
 #include "c3/c3.h"
+#include "arena.h"
 
 typedef struct _u3_bitset {
   c3_w  len_w;
   c3_y* buf_y;
 } u3_bitset;
 
-void bitset_init(u3_bitset* bit_u, c3_w len_w);
+void bitset_init(u3_bitset* bit_u, c3_w len_w, arena* are_u);
 
 void bitset_free(u3_bitset* bit_u);
 

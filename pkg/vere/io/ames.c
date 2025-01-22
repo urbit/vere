@@ -2950,5 +2950,6 @@ u3_ames_io_init(u3_pier* pir_u)
 
   // XX declare void pointer to u3_host and add sam_u in it
   u3_Host.sam_u = sam_u;
+  u3_Host.imp_u = sam_u->zar_u.pip_w;
   return car_u;
 }
