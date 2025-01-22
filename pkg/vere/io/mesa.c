@@ -885,7 +885,7 @@ u3_mesa_decode_lane(u3_atom lan) {
   //  convert incoming localhost to outgoing localhost
   //
 
-  adr_u.sin_addr.s_addr = u3_Host.ops_u.net ? (c3_w)lan_d : htonl(0x7f000001);
+  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? (c3_w)lan_d : htonl(0x7f000001);
   adr_u.sin_port = htons((c3_s)(lan_d >> 32));
 
   return adr_u;
@@ -931,7 +931,7 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w len_w)
 {
 
-  add_u.sin_addr.s_addr = u3_Host.ops_u.net ? add_u.sin_addr.s_addr : htonl(0x7f000001);
+  add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
   /* add_u.sin_family = AF_INET; */
 
   if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) {
