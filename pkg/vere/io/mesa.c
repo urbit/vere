@@ -1110,6 +1110,10 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
   c3_y buf_y[PACT_SIZE];
+  //  XX Retransmit (only) the earliest segment that has not been acknowledged
+  //  by the TCP receiver?
+  //  XX we are retransmitting from the earliest until nex_d
+  //
   for ( c3_d i_d = req_u->lef_d; i_d < nex_d; i_d++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
@@ -1126,6 +1130,11 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   }
 
   if ( c3y == los_o ) {
+    // XX TODO If the timer expires awaiting the ACK of a SYN segment and the
+    // TCP implementation is using an RTO less than 3 seconds, the RTO
+    // MUST be re-initialized to 3 seconds when data transmission
+    // begins (i.e., after the three-way handshake completes)
+    //
     req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
     req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
     req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
@@ -1164,6 +1173,11 @@ _update_resend_timer(u3_pend_req *req_u)
   // c3_d gap_d = req_u->wat_u[idx_d].sen_d == 0 ?
   //               0 :
   //               now_d - req_u->wat_u[idx_d].sen_d;
+  //
+  //  When an ACK is received that acknowledges new data, restart the
+  //  retransmission timer so that it will expire after RTO seconds
+  //  (for the current value of RTO)
+  //
   c3_d next_expiry = req_u->gag_u->rto_w;
   // u3l_log("next_expiry %llu", next_expiry / 1000);
   // u3l_log("DUE %llu", uv_timer_get_due_in(&req_u->tim_u));
