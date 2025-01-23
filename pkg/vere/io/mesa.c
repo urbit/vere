@@ -1190,6 +1190,16 @@ static void
 _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
   // u3l_log("old %llu nex %llu packet timed out", req_u->old_d, req_u->nex_d);
+  //
+  //  Note that a TCP implementation MAY clear SRTT and RTTVAR after
+  //  backing off the timer multiple times as it is likely that the current
+  //  SRTT and RTTVAR are bogus in this situation.  Once SRTT and RTTVAR
+  //  are cleared, they should be initialized with the next RTT sample
+  //  taken per (2.2) rather than using (2.3).
+  //
+  //  XX "multiple times" instead of "the first time"?
+  req_u->gag_u->con_w = 0;  // this will re-initialized srt_w and rtv_w
+  //
   _try_resend(req_u, req_u->nex_d);
   _update_resend_timer(req_u);
 }
