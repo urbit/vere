@@ -13,7 +13,7 @@
 
 struct pginfo {
   u3p(struct pginfo) nex_p;  /* next on the free list */
-  u3_post            pag_p;  //  post to page start
+  c3_w               pag_w;  //  page index
   c3_s               len_s;  /* word-size of this page's chunks */
   c3_s               log_s;  /* How far to shift for this size chunks */
   c3_s               fre_s;  /* How many free chunks */
@@ -238,6 +238,7 @@ _alloc_pages(c3_w siz_w)  // num pages
 static u3_post
 _make_chunks(c3_g bit_g)  // 0-9, inclusive
 {
+  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   struct pginfo *pag_u;
   u3_post pag_p = _alloc_pages(1);
   c3_w    pag_w = post_to_page(pag_p);
@@ -245,6 +246,7 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   c3_s    len_s = 1U << log_s;
   c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
   c3_s    siz_s = c3_wiseof(struct pginfo);
+  u3_post hun_p;
 
   siz_s += tot_s >> 5;
   siz_s += !!(tot_s & 31);
@@ -255,15 +257,16 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   //    trivially deducible from exhaustive enumeration
   //
   if ( len_s <= (siz_s << 1) ) {
-    pag_u = u3to(struct pginfo, pag_p);
+    hun_p = pag_p;
   }
   else {
-    pag_u = u3to(struct pginfo, _imalloc(siz_s));
+    hun_p = _imalloc(siz_s);
   }
 
   // fprintf(stderr, "make chunks: pag_p: %x, pag_w %u\n", pag_p, pag_w);
 
-  pag_u->pag_p = pag_p;
+  pag_u = u3to(struct pginfo, hun_p);
+  pag_u->pag_w = pag_w;
   pag_u->log_s = log_s;
   pag_u->len_s = len_s;
   pag_u->tot_s = pag_u->fre_s = tot_s;
@@ -299,18 +302,13 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
     }
   }
 
-  {
-    u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-    u3_post hun_p = u3a_outa(pag_u);
+  dir_u[pag_w] = hun_p;
+  pag_u->nex_p = hep_u.wee_p[bit_g];
 
-    dir_u[pag_w] = hun_p;
-    pag_u->nex_p = hep_u.wee_p[bit_g];
+  fprintf(stderr, "store wee_p %u 0x%x\n", bit_g, hun_p);
+  hep_u.wee_p[bit_g] = hun_p;
 
-    fprintf(stderr, "store wee_p %u 0x%x\n", bit_g, hun_p);
-    hep_u.wee_p[bit_g] = hun_p;
-
-    return hun_p;
-  }
+  return hun_p;
 }
 
 static u3_post
@@ -331,8 +329,8 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
   pag_u = u3to(struct pginfo, pag_p);
   map_w = pag_u->map_w;
 
-  fprintf(stderr, "page: 0x%x bit=%u pag=%x len=%u log=%u fre=%u tot=%u\n",
-                  pag_p, bit_g, pag_u->pag_p, pag_u->len_s, pag_u->log_s, pag_u->fre_s, pag_u->tot_s);
+  fprintf(stderr, "page: 0x%x bit=%u pag=%u len=%u log=%u fre=%u tot=%u\n",
+                  pag_p, bit_g, pag_u->pag_w, pag_u->len_s, pag_u->log_s, pag_u->fre_s, pag_u->tot_s);
   fprintf(stderr, "page: 1 map=%p map[0]=%x\n", (void*)map_w, *map_w);
 
   while ( !*map_w ) { map_w++; }
@@ -357,7 +355,7 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 
     // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n",
     //                 pos_g, pag_p, off_w, pag_u->log_s);
-    return pag_u->pag_p + off_w;
+    return page_to_post(pag_u->pag_w) + off_w;
   }
 }
 
@@ -554,15 +552,14 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
       //
       while ( *bit_p ) {
         bit_u = u3to(struct pginfo, *bit_p);
+        nex_u = u3tn(struct pginfo, bit_u->nex_p);
 
-        if ( !bit_u->nex_p ) break;
+        if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
+          bit_p = &(bit_u->nex_p);
+          continue;
+        }
 
-        nex_u = u3to(struct pginfo, bit_u->nex_p);
-
-        //  XX road direction?
-        if ( nex_u->pag_p > pag_u->pag_p ) break;
-
-        bit_p = &(bit_u->nex_p);
+        break;
       }
 
       pag_u->nex_p = *bit_p;
@@ -575,13 +572,13 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
         bit_u = u3to(struct pginfo, *bit_p);
         bit_p = &(bit_u->nex_p);
 
-        //  XX sanity
+        //  XX sanity: must be in list
       }
 
       *bit_p = pag_u->nex_p;
 
-      dir_u[post_to_page(pag_u->pag_p)] = FIRST;
-      som_p = pag_u->pag_p; // NB: clobbers
+      dir_u[pag_u->pag_w] = FIRST;
+      som_p = page_to_post(pag_u->pag_w); // NB: clobbers
       if ( som_p != dir_p ) {
         _ifree(dir_p);
       }
