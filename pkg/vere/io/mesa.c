@@ -92,7 +92,8 @@ struct _u3_mesa;
 typedef struct _u3_gage {
   c3_w     rtt_w;  // rtt
   c3_w     rto_w;  // rto
-  c3_w     rtv_w;  // rttvar
+  c3_w     rtv_w;  // rttvar: round-trip time variation
+  c3_w     srt_w;  // srtt: smoothed round-trip time
   c3_w     wnd_w;  // cwnd
   c3_w     wnf_w;  // cwnd fraction
   c3_w     sst_w;  // ssthresh
@@ -364,6 +365,7 @@ _log_gage(u3_gage* gag_u)
 {
   u3l_log("gauge");
   u3l_log("rtt: %f", ((double)gag_u->rtt_w / 1000));
+  u3l_log("srtt: %f", ((double)gag_u->srt_w / 1000));
   u3l_log("rto: %f", ((double)gag_u->rto_w / 1000));
   u3l_log("rttvar: %f", ((double)gag_u->rtv_w / 1000));
   u3l_log("cwnd: %u", gag_u->wnd_w);
@@ -762,17 +764,39 @@ _mesa_put_gage(u3_mesa* sam_u, u3_ship her_u, u3_gage* gag_u)
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
-  /* _log_gage(gag_u); */
-  gag_u->con_w++;
+  // _log_gage(gag_u);
 
   c3_d now_d = _get_now_micros();
   c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
 
-  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
+  c3_w max_g = 1000 * 1000 * 1000;  // 1s.
+  c3_w min_g = 100 * 1000 * 1000;   // clock granularity of G = 100ms.
 
-  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
-  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
-  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
+  // first RTT measurement
+  if ( gag_u->con_w == 0 ) {
+    //   SRTT <- R
+    gag_u->srt_w = rtt_d;
+    //   RTTVAR <- R/2
+    gag_u->rtv_w = rtt_d / 2;
+  } else {
+    // subsequent RTT measurement
+    // RTTVAR <- (1 - beta) * RTTVAR + beta * |SRTT - R'|
+    c3_d err_d = _abs_dif(rtt_d, gag_u->srt_w);
+    gag_u->rtv_w  = (7 / 8) * gag_u->rtv_w + err_d / 8;
+    // SRTT <- (1 - alpha) * SRTT + alpha * R'
+    gag_u->srt_w = (3 / 4) * gag_u->srt_w + rtt_d / 4;
+  }
+
+  gag_u->con_w++;
+  //   RTO <- SRTT + max (G, 4*RTTVAR)
+  gag_u->rto_w = gag_u->srt_w + c3_max(min_g , (4*gag_u->rtv_w));
+
+  //  if less max_g, round up rto to ~s1
+  gag_u->rto_w = c3_min(gag_u->rto_w, max_g);
+
+  // gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
+  // gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
+  // gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
 
   if ( gag_u->wnd_w < gag_u->sst_w ) {
     gag_u->wnd_w++;
