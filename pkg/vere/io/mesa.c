@@ -438,7 +438,7 @@ _abs_dif(c3_d ayy_d, c3_d bee_d)
 
 static c3_d
 _clamp_rto(c3_d rto_d) {
-  return c3_min(c3_max(rto_d, 200 * 1000), 25000 * 1000); // ~s25 max backoff
+  return c3_min(c3_max(rto_d, 200 * 1000 ), 25 * 1000 * 1000 ); // ~s25 max backoff
 }
 
 static inline c3_o
@@ -556,9 +556,9 @@ _mesa_request_key(u3_mesa_name* nam_u)
 static void
 _init_gage(u3_gage* gag_u)  //  microseconds
 {
-  gag_u->rto_w = 1000 * 1000 * 1000;  // ~s1
-  gag_u->rtt_w = 1000 * 1000 * 1000;  // ~s1
-  gag_u->rtv_w = 1000 * 1000 * 1000;  // ~s1
+  gag_u->rto_w = 1 * 1000 * 1000;  // ~s1
+  gag_u->rtt_w = 1 * 1000 * 1000;  // ~s1
+  gag_u->rtv_w = 1 * 1000 * 1000;  // ~s1
   /* gag_u->rto_w = 200 * 1000;  // ~s1 */
   /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
   /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
@@ -769,34 +769,36 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   c3_d now_d = _get_now_micros();
   c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
 
-  c3_w max_g = 1000 * 1000 * 1000;  // 1s.
-  c3_w min_g = 100 * 1000 * 1000;   // clock granularity of G = 100ms.
+  // c3_w max_g = 1000 * 1000 * 1000;  // 1s.
+  // c3_w min_g = 100 * 1000 * 1000;   // clock granularity of G = 100ms.
+
+  c3_d err_d = _abs_dif(rtt_d, gag_u->srt_w);
+
 
   // first RTT measurement
-  if ( gag_u->con_w == 0 ) {
-    //   SRTT <- R
-    gag_u->srt_w = rtt_d;
-    //   RTTVAR <- R/2
-    gag_u->rtv_w = rtt_d / 2;
-  } else {
-    // subsequent RTT measurement
-    // RTTVAR <- (1 - beta) * RTTVAR + beta * |SRTT - R'|
-    c3_d err_d = _abs_dif(rtt_d, gag_u->srt_w);
-    gag_u->rtv_w  = (7 / 8) * gag_u->rtv_w + err_d / 8;
-    // SRTT <- (1 - alpha) * SRTT + alpha * R'
-    gag_u->srt_w = (3 / 4) * gag_u->srt_w + rtt_d / 4;
-  }
+  // if ( gag_u->con_w == 0 ) {
+  //   //   SRTT <- R
+  //   gag_u->srt_w = rtt_d;
+  //   //   RTTVAR <- R/2
+  //   gag_u->rtv_w = rtt_d / 2;
+  // } else {
+  //   // subsequent RTT measurement
+  //   // RTTVAR <- (1 - beta) * RTTVAR + beta * |SRTT - R'|
+  //   gag_u->rtv_w  = (7 / 8) * gag_u->rtv_w + err_d / 8;
+  //   // SRTT <- (1 - alpha) * SRTT + alpha * R'
+  //   gag_u->srt_w = (3 / 4) * gag_u->srt_w + rtt_d / 4;
+  // }
 
   gag_u->con_w++;
   //   RTO <- SRTT + max (G, 4*RTTVAR)
-  gag_u->rto_w = gag_u->srt_w + c3_max(min_g , (4*gag_u->rtv_w));
-
+  // gag_u->rto_w = gag_u->srt_w + c3_max(min_g , (4*gag_u->rtv_w));
+//
   //  if less max_g, round up rto to ~s1
-  gag_u->rto_w = c3_min(gag_u->rto_w, max_g);
+  // gag_u->rto_w = c3_min(gag_u->rto_w, max_g);
 
-  // gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
-  // gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
-  // gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
+  gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
+  gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
+  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
 
   if ( gag_u->wnd_w < gag_u->sst_w ) {
     gag_u->wnd_w++;
@@ -1191,7 +1193,7 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
   // u3l_log("old %llu nex %llu packet timed out", req_u->old_d, req_u->nex_d);
   //
-  //  Note that a TCP implementation MAY clear SRTT and RTTVAR after
+  //  Note that a TCP implementation MAY cleafr SRTT and RTTVAR after
   //  backing off the timer multiple times as it is likely that the current
   //  SRTT and RTTVAR are bogus in this situation.  Once SRTT and RTTVAR
   //  are cleared, they should be initialized with the next RTT sample
