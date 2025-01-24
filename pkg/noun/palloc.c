@@ -467,13 +467,13 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   else {
     c3_w fex_w;
 
-    while (  ((fex_w = fre_u->pag_w + fre_u->siz_w) > pag_w)
+    while (  ((fex_w = fre_u->pag_w + fre_u->siz_w) < pag_w)
           && fre_u->nex_p )
     {
       fre_u = u3to(struct pgfree, fre_u->nex_p);
     }
 
-    if ( fre_u->pag_w > pag_w ) {        //  insert before
+    if ( fre_u->pag_w > nex_w ) {        //  insert before
       // fprintf(stderr, "free pages before 0x%x (%u) via 0x%x\n", som_p, siz_w, hep_u.cac_p);
 
       cac_u->nex_p = u3of(struct pgfree, fre_u);
