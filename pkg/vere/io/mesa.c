@@ -814,6 +814,12 @@ _mesa_req_get_remaining(u3_pend_req* req_u)
   return req_u->tof_d - req_u->hav_d;
 }
 
+
+static c3_d
+_safe_sub(c3_d a, c3_d b) {
+  return a < b ? 0 : a - b;
+}
+
 /*
  * _mesa_req_get_cwnd(): produce packets to send
  *
@@ -826,7 +832,8 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
   /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
-  return c3_min(rem_w, req_u->gag_u->wnd_w - req_u->out_d);
+  //return c3_min(rem_w, req_u->gag_u->wnd_w - req_u->out_d);
+  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
 }
 
 /* _mesa_req_pact_resent(): mark packet as resent
@@ -1200,7 +1207,7 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
   //  taken per (2.2) rather than using (2.3).
   //
   //  XX "multiple times" instead of "the first time"?
-  req_u->gag_u->con_w = 0;  // this will re-initialized srt_w and rtv_w
+  //req_u->gag_u->con_w = 0;  // this will re-initialized srt_w and rtv_w
   //
   _try_resend(req_u, req_u->nex_d);
   _update_resend_timer(req_u);
@@ -1289,7 +1296,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
     /* _try_resend(req_u, nam_u->fra_d); */
-    //_update_resend_timer(req_u);
+    _update_resend_timer(req_u);
     return;
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1595,7 +1602,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
 
-  // sam_u->tim_d = _get_now_micros();
+  //sam_u->tim_d = _get_now_micros();
 
   u3z(pac);
   u3z(las);
@@ -2145,7 +2152,7 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
   c3_w win_w = _mesa_req_get_cwnd(req_u);
   u3_mesa_pict* nex_u = req_u->pic_u;
   c3_w nex_d = req_u->nex_d;
-  for ( int i = 0; i < win_w; i++ ) {
+  for ( c3_w i = 0; i < win_w; i++ ) {
     c3_w fra_w = nex_d + i;
     if ( fra_w >= req_u->tof_d ) {
       break;
@@ -2196,6 +2203,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_put_gage(sam_u, nam_u->her_u, gag_u);
     u3_assert( gag_u != NULL );
   }
+
   _log_gage(gag_u);
   c3_d tof_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pof_w = lss_proof_size(tof_d);
