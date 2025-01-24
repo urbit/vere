@@ -1289,7 +1289,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
     /* _try_resend(req_u, nam_u->fra_d); */
-    _update_resend_timer(req_u);
+    //_update_resend_timer(req_u);
     return;
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1595,7 +1595,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
 
-  sam_u->tim_d = _get_now_micros();
+  // sam_u->tim_d = _get_now_micros();
 
   u3z(pac);
   u3z(las);
@@ -2183,6 +2183,8 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
 static void
 _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
+  sam_u->tim_d = _get_now_micros();
+
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
@@ -2194,7 +2196,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_put_gage(sam_u, nam_u->her_u, gag_u);
     u3_assert( gag_u != NULL );
   }
-
   _log_gage(gag_u);
   c3_d tof_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pof_w = lss_proof_size(tof_d);
