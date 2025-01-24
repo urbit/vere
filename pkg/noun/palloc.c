@@ -239,6 +239,7 @@ _alloc_pages(c3_w siz_w)  // num pages
   else {
     pag_p = _extend_heap(siz_w);
     pag_w = post_to_page(pag_p);
+    dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
     // fprintf(stderr, "alloc pages grow 0x%x\n", pag_p);
   }
 
@@ -265,14 +266,14 @@ _alloc_pages(c3_w siz_w)  // num pages
 static u3_post
 _make_chunks(c3_g bit_g)  // 0-9, inclusive
 {
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  struct pginfo *pag_u;
   u3_post pag_p = _alloc_pages(1);
   c3_w    pag_w = post_to_page(pag_p);
   c3_s    log_s = bit_g + LOG_MINIMUM;
   c3_s    len_s = 1U << log_s;
   c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
   c3_s    siz_s = c3_wiseof(struct pginfo);
+  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  struct pginfo *pag_u;
   u3_post hun_p;
 
   siz_s += tot_s >> 5;
@@ -382,9 +383,12 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
     off_w  += pos_g;                    //  chunk index
     off_w <<= pag_u->log_s;             //    (in words)
 
+    u3_post out_p = page_to_post(pag_u->pag_w) + off_w;
+
     // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n",
     //                 pos_g, pag_p, off_w, pag_u->log_s);
-    return page_to_post(pag_u->pag_w) + off_w;
+
+    return out_p;
   }
 }
 
