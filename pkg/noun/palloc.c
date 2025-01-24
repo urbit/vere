@@ -385,18 +385,19 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   if ( FREE == dir_p ) {
     //  XX double free
     fprintf(stderr, "\033[31m"
-                    "palloc: double free page som_p=0x%x\n"
+                    "palloc: double free page som_p=0x%x pag_w=%u\n"
                     "\033[0m",
-                    som_p);
-    return;
+                    som_p, pag_w);
+    return; // XX bail
   }
 
   if ( FIRST != dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
-                    "palloc: wrong page som_p=0x%x\n"
+                    "palloc: wrong page som_p=0x%x dir_p=0x%x\n"
                     "\033[0m",
-                    som_p);
+                    som_p, dir_p);
+    return; // XX bail
   }
 
   if ( som_p & ((1U << u3a_page) - 1) ) {
@@ -405,6 +406,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: bad page alignment som_p=0x%x\n"
                     "\033[0m",
                     som_p);
+    return; // XX bail
   }
 
   dir_u[pag_w] = FREE;
@@ -505,6 +507,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: free list hosed at som_p=0x%x pag=%u len=%u\n"
                     "\033[0m",
                     (u3_post)u3of(struct pgfree, fre_u), fre_u->pag_w, fre_u->siz_w);
+      abort();
     }
   }
 
@@ -530,6 +533,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n"
                     "\033[0m",
                     som_p, dir_p, pag_u->len_s);
+    return; // XX bail
   }
 
   if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
@@ -538,6 +542,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: double free som_p=0x%x pag=0x%x\n"
                     "\033[0m",
                     som_p, dir_p);
+    return; // XX bail
   }
 
   pag_u->map_w[pos_w >> 5] |= (1U << (pos_w & 31));
@@ -593,7 +598,13 @@ _ifree(u3_post som_p)
   u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   c3_w    pag_w = post_to_page(som_p);
 
-  //  XX sanity: in page dir
+  if ( pag_w >= hep_u.len_w ) {
+    fprintf(stderr, "\033[31m"
+                    "palloc: page out of heap som_p=0x%x pag_w=%u\n"
+                    "\033[0m",
+                    som_p, pag_w);
+    return; // XX bail
+  }
 
   u3_post dir_p = dir_u[pag_w];
 
@@ -612,7 +623,13 @@ _irealloc(u3_post som_p, c3_w len_w)
   c3_w pag_w = post_to_page(som_p);
   c3_w old_w;
 
-  //  XX sanity: in page dir
+    if ( pag_w >= hep_u.len_w ) {
+    fprintf(stderr, "\033[31m"
+                    "palloc: realloc page out of heap som_p=0x%x pag_w=%u\n"
+                    "\033[0m",
+                    som_p, pag_w);
+    return 0; // XX bail
+  }
 
   u3_post dir_p = dir_u[pag_w];
 
@@ -620,9 +637,10 @@ _irealloc(u3_post som_p, c3_w len_w)
     if ( som_p & ((1U << u3a_page) - 1) ) {
       //  XX pointer not aligned to page
       fprintf(stderr, "\033[31m"
-                      "palloc: bad page alignment som_p=0x%x\n"
+                      "palloc: realloc bad page alignment som_p=0x%x\n"
                       "\033[0m",
                       som_p);
+      return 0; // XX bail
     }
 
     for ( old_w = 1; dir_u[pag_w + old_w] == FOLLOW; old_w++ ) {}
@@ -649,10 +667,10 @@ _irealloc(u3_post som_p, c3_w len_w)
   else if ( MAGIC > dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
-                    "palloc: wrong page som_p=0x%x\n"
+                    "palloc: realloc wrong page som_p=0x%x\n"
                     "\033[0m",
                     som_p);
-    old_w = 0;
+    return 0; // XX bail
   }
   else {
     struct pginfo *pag_u = u3to(struct pginfo, dir_p);
@@ -661,9 +679,10 @@ _irealloc(u3_post som_p, c3_w len_w)
     if ( som_p & (pag_u->len_s - 1) ) {  //  XX just 1U << log_s and remove?
       //  XX  bad alignment
       fprintf(stderr, "\033[31m"
-                      "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n"
+                      "palloc: realloc bad alignment som_p=0x%x pag=0x%x len_s=%u\n"
                       "\033[0m",
                       som_p, dir_p, pag_u->len_s);
+      return 0; // XX bail
     }
 
     if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
@@ -672,6 +691,7 @@ _irealloc(u3_post som_p, c3_w len_w)
                       "palloc: realloc free som_p=0x%x pag=0x%x\n"
                       "\033[0m",
                       som_p, dir_p);
+      return 0; // XX bail
     }
 
     old_w = pag_u->len_s;
