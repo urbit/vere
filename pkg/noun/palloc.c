@@ -89,7 +89,7 @@ _init(void)
 
   hep_u.pag_p  = u3R->hat_p;
   hep_u.pag_p += hep_u.off_ws * (1U << u3a_page);
-  hep_u.siz_w  = 1;
+  hep_u.siz_w  = 1U << u3a_page;
   hep_u.len_w  = 1;
 
   u3R->hat_p += hep_u.dir_ws * (1U << u3a_page);
@@ -115,18 +115,16 @@ static void
 _extend_directory(c3_w siz_w)  // num pages
 {
   u3p(struct pginfo) *dir_u, *old_u;
-  c3_w pag_w, nex_w;
   u3_post old_p = hep_u.pag_p;
+  c3_w nex_w, pag_w;
 
-  old_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  nex_w = ((siz_w + hep_u.len_w) >> u3a_page) - hep_u.siz_w;
+  old_u  = u3to(u3p(struct pginfo), hep_u.pag_p);
+  nex_w  = hep_u.len_w + siz_w + (1U << u3a_page) - 1;
+  nex_w &= ~((1U << u3a_page) - 1);
 
-  hep_u.pag_p = u3R->hat_p;
+  hep_u.pag_p  = u3R->hat_p;
   hep_u.pag_p += hep_u.off_ws * (1U << u3a_page);
-
-  u3R->hat_p += hep_u.dir_ws * (nex_w << u3a_page); //  XX overflow
-
-  dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  u3R->hat_p  += hep_u.dir_ws * nex_w; //  XX overflow
 
   if ( 1 == hep_u.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
@@ -141,15 +139,23 @@ _extend_directory(c3_w siz_w)  // num pages
     }
   }
 
+  dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
   pag_w = post_to_page(hep_u.pag_p);
 
   dir_u[pag_w] = FIRST;
 
-  for ( c3_w i_w = 1; i_w < nex_w; i_w++ ) {
-    dir_u[pag_w + i_w] = FOLLOW;
+  {
+    c3_w max_w = nex_w >> u3a_page;
+    for ( c3_w i_w = 1; i_w < max_w; i_w++ ) {
+      dir_u[pag_w + i_w] = FOLLOW;
+    }
   }
 
-  memcpy(dir_u, old_u, siz_w << (u3a_page + 2));
+  memcpy(dir_u, old_u, (c3_z)hep_u.len_w << 2);
+
+  hep_u.len_w += (nex_w >> u3a_page);
+  hep_u.siz_w  = nex_w;
+
   _ifree(old_p);
 }
 
@@ -158,11 +164,13 @@ _extend_heap(c3_w siz_w)  // num pages
 {
   u3_post pag_p;
 
-  if ( (siz_w + hep_u.len_w) > (hep_u.siz_w << u3a_page) ) {
+  assert( hep_u.siz_w >= hep_u.len_w );
+
+  if ( (hep_u.siz_w - hep_u.len_w) < siz_w ) {
     _extend_directory(siz_w);
   }
 
-  pag_p = u3R->hat_p;
+  pag_p  = u3R->hat_p;
   pag_p += hep_u.off_ws * (1U << u3a_page);
 
   u3R->hat_p += hep_u.dir_ws * (siz_w << u3a_page);
@@ -180,6 +188,8 @@ _extend_heap(c3_w siz_w)  // num pages
       abort();
     }
   }
+
+  hep_u.len_w += siz_w;
 
   return pag_p;
 }
