@@ -128,6 +128,19 @@ _extend_directory(c3_w siz_w)  // num pages
 
   dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
 
+  if ( 1 == hep_u.dir_ws ) {
+    if ( u3R->hat_p >= u3R->cap_p ) {
+      fprintf(stderr, "\033[31mpalloc: directory overflow\n\033[0m");
+      abort();
+    }
+  }
+  else {
+    if ( u3R->hat_p <= u3R->cap_p ) {
+      fprintf(stderr, "\033[31mpalloc: directory overflow\n\033[0m");
+      abort();
+    }
+  }
+
   pag_w = post_to_page(hep_u.pag_p);
 
   dir_u[pag_w] = FIRST;
@@ -152,7 +165,21 @@ _extend_heap(c3_w siz_w)  // num pages
   pag_p = u3R->hat_p;
   pag_p += hep_u.off_ws * (1U << u3a_page);
 
-  u3R->hat_p += hep_u.dir_ws * (siz_w << u3a_page);  //  XX overflow
+  u3R->hat_p += hep_u.dir_ws * (siz_w << u3a_page);
+
+  //  XX bail, optimize
+  if ( 1 == hep_u.dir_ws ) {
+    if ( u3R->hat_p >= u3R->cap_p ) {
+      fprintf(stderr, "\033[31mpalloc: heap overflow\n\033[0m");
+      abort();
+    }
+  }
+  else {
+    if ( u3R->hat_p <= u3R->cap_p ) {
+      fprintf(stderr, "\033[31mpalloc: heap overflow\n\033[0m");
+      abort();
+    }
+  }
 
   return pag_p;
 }
@@ -328,6 +355,8 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 
   pag_u = u3to(struct pginfo, pag_p);
   map_w = pag_u->map_w;
+
+  assert( pag_u->log_s < u3a_page );
 
   // fprintf(stderr, "page: 0x%x bit=%u pag=%u len=%u log=%u fre=%u tot=%u\n",
   //                 pag_p, bit_g, pag_u->pag_w, pag_u->len_s, pag_u->log_s, pag_u->fre_s, pag_u->tot_s);
@@ -523,6 +552,9 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
   struct pginfo *pag_u = u3to(struct pginfo, dir_p);
   u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+
+  assert( page_to_post(pag_u->pag_w) == (som_p & ~((1U << u3a_page) - 1)) );
+  assert( pag_u->log_s < u3a_page );
 
   c3_g bit_g = pag_u->log_s - LOG_MINIMUM;
   c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
