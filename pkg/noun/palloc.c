@@ -2,42 +2,44 @@
 #include "c3/c3.h"
 #include "allocate.h"
 
-#define LOG_MINIMUM  2
-#define MINIMUM (1U << LOG_MINIMUM)
-#define MAXIMUM (1U << (u3a_page - 1))
+#define u3a_min_log  2
 
-#define FREE    (u3p(struct pginfo))0
-#define FIRST   (u3p(struct pginfo))1
-#define FOLLOW  (u3p(struct pginfo))2
-#define MAGIC   (u3p(struct pginfo))3
+STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
+               "log2 minimum allocation" );
 
-struct pginfo {
-  u3p(struct pginfo) nex_p;  /* next on the free list */
-  c3_w               pag_w;  //  page index
-  c3_s               len_s;  /* word-size of this page's chunks */
-  c3_s               log_s;  /* How far to shift for this size chunks */
-  c3_s               fre_s;  /* How many free chunks */
-  c3_s               tot_s;  /* How many chunk */
-  c3_w               map_w[1]; /* Which chunks are free */
-};
+#define u3a_free_pg  (u3p(u3a_crag))0
+#define u3a_head_pg  (u3p(u3a_crag))1
+#define u3a_rest_pg  (u3p(u3a_crag))2
 
-struct pgfree {
-  u3p(struct pgfree) nex_p;  /* next run of free pages */
-  u3p(struct pgfree) pre_p;  /* prev run of free pages */
-  c3_w               pag_w;  //  starting page index
-  c3_w               siz_w;  //  number of pages free
-};
+#define u3a_crag_no  (u3a_page - u3a_min_log)
+
+typedef struct _u3a_crag {
+  u3p(struct _u3a_crag) nex_p;     //  next
+  c3_w                  pag_w;     //  page index
+  c3_s                  len_s;     //  chunk word-size
+  c3_s                  log_s;     //  size log2
+  c3_s                  fre_s;     //  free chunks
+  c3_s                  tot_s;     //  total chunks
+  c3_w                  map_w[1];  //  free-chunk bitmap
+} u3a_crag;
+
+typedef struct _u3a_dell {
+  u3p(struct _u3a_dell) nex_p;     //  next
+  u3p(struct _u3a_dell) pre_p;     //  prev
+  c3_w                  pag_w;     //  page index
+  c3_w                  siz_w;     //  number of pages
+} u3a_dell;
 
 struct heap {
-  u3p(struct pgfree)  fre_p;  //  free list
-  u3p(struct pgfree)  cac_p;  //  cached pgfree struct
-  u3_post             bot_p;  //  XX s/b rut_p
-  c3_ws               dir_ws; //  1 || -1 (multiplicand for local offsets)
-  c3_ws               off_ws; //  0 || -1 (word-offset for hat && rut)
-  c3_w                siz_w;  //  directory size
-  c3_w                len_w;  //  directory entries
-  u3p(struct pginfo*) pag_p;  //  directory
-  u3p(struct pginfo)  wee_p[u3a_page - LOG_MINIMUM];  // chunk lists
+  u3p(u3a_dell)  fre_p;               //  free list
+  u3p(u3a_dell)  cac_p;               //  cached pgfree struct
+  u3_post        bot_p;               //  XX s/b rut_p
+  c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
+  c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
+  c3_w           siz_w;               //  directory size
+  c3_w           len_w;               //  directory entries
+  u3p(u3a_crag*) pag_p;               //  directory
+  u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
 };
 
 #define page_to_post(pag_w)  (hep_u.bot_p + (((hep_u.dir_ws * (pag_w)) + hep_u.off_ws) << u3a_page))
@@ -61,7 +63,7 @@ static void
 _init(void)
 {
   memset(&hep_u, 0x0, sizeof(hep_u)); //  XX s/b unnecessary
-  u3p(struct pginfo) *dir_u;
+  u3p(u3a_crag) *dir_u;
 
   //  align hat
   //
@@ -84,7 +86,8 @@ _init(void)
 
   // fprintf(stderr, "palloc: init1 hat=0x%x cap=0x%x bot=0x%x\n", u3R->hat_p, u3R->cap_p, hep_u.bot_p);
 
-  //  XX assert hat >= MAGIC
+  assert( u3R->hat_p > u3a_rest_pg );
+
   //  XX check for overflow
 
   hep_u.pag_p  = u3R->hat_p;
@@ -96,8 +99,8 @@ _init(void)
 
   // fprintf(stderr, "palloc: init2 hat=0x%x cap=0x%x bot=0x%x pag=0x%x\n", u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p);
 
-  dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  dir_u[0] = FIRST;
+  dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
+  dir_u[0] = u3a_head_pg;
 
   assert( 0 == post_to_page(hep_u.pag_p) );
   assert( hep_u.pag_p == page_to_post(0) );
@@ -105,7 +108,7 @@ _init(void)
   // fprintf(stderr, "palloc: init3 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p out-adir=%x\n",
   //                 u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p, (void*)dir_u, (c3_w)u3a_outa(dir_u));
 
-  hep_u.cac_p = _imalloc(c3_wiseof(struct pgfree));
+  hep_u.cac_p = _imalloc(c3_wiseof(u3a_dell));
 
   // fprintf(stderr, "palloc: init4 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p cac=0x%x\n",
   //                 u3R->hat_p, u3R->cap_p, hep_u.bot_p, hep_u.pag_p, (void*)dir_u, hep_u.cac_p);
@@ -114,11 +117,11 @@ _init(void)
 static void
 _extend_directory(c3_w siz_w)  // num pages
 {
-  u3p(struct pginfo) *dir_u, *old_u;
+  u3p(u3a_crag) *dir_u, *old_u;
   u3_post old_p = hep_u.pag_p;
   c3_w nex_w, pag_w;
 
-  old_u  = u3to(u3p(struct pginfo), hep_u.pag_p);
+  old_u  = u3to(u3p(u3a_crag), hep_u.pag_p);
   nex_w  = hep_u.len_w + siz_w + (1U << u3a_page) - 1;
   nex_w &= ~((1U << u3a_page) - 1);
 
@@ -139,15 +142,15 @@ _extend_directory(c3_w siz_w)  // num pages
     }
   }
 
-  dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
   pag_w = post_to_page(hep_u.pag_p);
 
-  dir_u[pag_w] = FIRST;
+  dir_u[pag_w] = u3a_head_pg;
 
   {
     c3_w max_w = nex_w >> u3a_page;
     for ( c3_w i_w = 1; i_w < max_w; i_w++ ) {
-      dir_u[pag_w + i_w] = FOLLOW;
+      dir_u[pag_w + i_w] = u3a_rest_pg;
     }
   }
 
@@ -197,32 +200,32 @@ _extend_heap(c3_w siz_w)  // num pages
 static u3_post
 _alloc_pages(c3_w siz_w)  // num pages
 {
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  struct pgfree*      fre_u = u3tn(struct pgfree, hep_u.fre_p);
-  struct pgfree*      del_u = NULL;
-  c3_w                pag_w = 0;
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
+  u3a_dell*      fre_u = u3tn(u3a_dell, hep_u.fre_p);
+  u3a_dell*      del_u = NULL;
+  c3_w           pag_w = 0;
 
   while ( fre_u ) {
     //  XX sanity
 
     if ( fre_u->siz_w < siz_w ) {
-      fre_u = u3tn(struct pgfree, fre_u->nex_p);
+      fre_u = u3tn(u3a_dell, fre_u->nex_p);
       continue;
     }
     else if ( fre_u->siz_w == siz_w ) {
       pag_w = fre_u->pag_w;
       if ( fre_u->nex_p ) {
-        u3to(struct pgfree, fre_u->nex_p)->pre_p = fre_u->pre_p;
+        u3to(u3a_dell, fre_u->nex_p)->pre_p = fre_u->pre_p;
       }
       if ( fre_u->pre_p ) {
-        u3to(struct pgfree, fre_u->pre_p)->nex_p = fre_u->nex_p;
+        u3to(u3a_dell, fre_u->pre_p)->nex_p = fre_u->nex_p;
       }
       else {
         hep_u.fre_p = fre_u->nex_p;
       }
       del_u = fre_u;
       // fprintf(stderr, "alloc pages take %u at %u from 0x%x\n", siz_w,
-      //                 pag_w, (c3_w)u3of(struct pgfree, fre_u));
+      //                 pag_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     else {
       pag_w = fre_u->pag_w;
@@ -230,7 +233,7 @@ _alloc_pages(c3_w siz_w)  // num pages
       fre_u->siz_w -= siz_w;
 
       // fprintf(stderr, "alloc pages split %u at %u (%u remaining) from 0x%x\n",
-      //                 siz_w, pag_w, fre_u->siz_w, (c3_w)u3of(struct pgfree, fre_u));
+      //                 siz_w, pag_w, fre_u->siz_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     break;
   }
@@ -239,9 +242,9 @@ _alloc_pages(c3_w siz_w)  // num pages
 
   if ( pag_w ) {
     //  XX sanity
-    assert( FREE == dir_u[pag_w] );
+    assert( u3a_free_pg == dir_u[pag_w] );
     for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
-      assert( FREE == dir_u[pag_w + i_w] );
+      assert( u3a_free_pg == dir_u[pag_w + i_w] );
     }
 
     pag_p = page_to_post(pag_w);
@@ -249,24 +252,24 @@ _alloc_pages(c3_w siz_w)  // num pages
   else {
     pag_p = _extend_heap(siz_w);
     pag_w = post_to_page(pag_p);
-    dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+    dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
     // fprintf(stderr, "alloc pages grow 0x%x\n", pag_p);
   }
 
-  dir_u[pag_w] = FIRST;
+  dir_u[pag_w] = u3a_head_pg;
 
   for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
-    dir_u[pag_w + i_w] = FOLLOW;
+    dir_u[pag_w + i_w] = u3a_rest_pg;
   }
 
   //  XX junk
 
   if ( del_u ) {
     if ( !hep_u.cac_p ) {
-      hep_u.cac_p = u3of(struct pgfree, del_u);
+      hep_u.cac_p = u3of(u3a_dell, del_u);
     }
     else {
-      _ifree(u3of(struct pgfree, del_u));
+      _ifree(u3of(u3a_dell, del_u));
     }
   }
 
@@ -278,12 +281,12 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 {
   u3_post pag_p = _alloc_pages(1);
   c3_w    pag_w = post_to_page(pag_p);
-  c3_s    log_s = bit_g + LOG_MINIMUM;
+  c3_s    log_s = bit_g + u3a_min_log;
   c3_s    len_s = 1U << log_s;
   c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-  c3_s    siz_s = c3_wiseof(struct pginfo);
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  struct pginfo *pag_u;
+  c3_s    siz_s = c3_wiseof(u3a_crag);
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
+  u3a_crag *pag_u;
   u3_post hun_p;
 
   siz_s += tot_s >> 5;
@@ -303,7 +306,7 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 
   // fprintf(stderr, "make chunks: pag_p: %x, pag_w %u\n", pag_p, pag_w);
 
-  pag_u = u3to(struct pginfo, hun_p);
+  pag_u = u3to(u3a_crag, hun_p);
   pag_u->pag_w = pag_w;
   pag_u->log_s = log_s;
   pag_u->len_s = len_s;
@@ -352,10 +355,11 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 static u3_post
 _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 {
-  struct pginfo *pag_u;
-  c3_w          *map_w;
-  c3_g    pos_g, bit_g = (c3_g)c3_bits_word(len_w - 1) - LOG_MINIMUM;  // 0-9, inclusive
-  u3_post        pag_p = hep_u.wee_p[bit_g];
+  c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
+  u3_post   pag_p = hep_u.wee_p[bit_g];
+  u3a_crag *pag_u;
+  c3_w     *map_w;
+  c3_g      pos_g;
 
   if ( !pag_p ) {
     pag_p = _make_chunks(bit_g);
@@ -364,7 +368,7 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
     //  XX sanity
   }
 
-  pag_u = u3to(struct pginfo, pag_p);
+  pag_u = u3to(u3a_crag, pag_p);
   map_w = pag_u->map_w;
 
   assert( pag_u->log_s < u3a_page );
@@ -405,27 +409,24 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 static u3_post
 _imalloc(c3_w len_w)
 {
-  if ( len_w > MAXIMUM ) {
+  if ( len_w > (1U << (u3a_page - 1)) ) {
     len_w  += (1U << u3a_page) - 1;
     len_w >>= u3a_page;
     return _alloc_pages(len_w);
   }
-  else if ( len_w < MINIMUM ) {
-    len_w = MINIMUM;
-  }
 
-  return _alloc_words(len_w);
+  return _alloc_words(c3_max(len_w, u3a_minimum));
 }
 
 static void
 _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  struct pgfree *fre_u = u3tn(struct pgfree, hep_u.fre_p);
-  struct pgfree *cac_u, *del_u = NULL;
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
+  u3a_dell *fre_u = u3tn(u3a_dell, hep_u.fre_p);
+  u3a_dell *cac_u, *del_u = NULL;
   c3_w siz_w, nex_w;
 
-  if ( FREE == dir_p ) {
+  if ( u3a_free_pg == dir_p ) {
     //  XX double free
     fprintf(stderr, "\033[31m"
                     "palloc: double free page som_p=0x%x pag_w=%u\n"
@@ -434,7 +435,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     return; // XX bail
   }
 
-  if ( FIRST != dir_p ) {
+  if ( u3a_head_pg != dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: wrong page som_p=0x%x dir_p=0x%x\n"
@@ -452,10 +453,10 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     return; // XX bail
   }
 
-  dir_u[pag_w] = FREE;
+  dir_u[pag_w] = u3a_free_pg;
 
-  for ( siz_w = 1; dir_u[pag_w + siz_w] == FOLLOW; siz_w++ ) {
-    dir_u[pag_w + siz_w] = FREE;
+  for ( siz_w = 1; dir_u[pag_w + siz_w] == u3a_rest_pg; siz_w++ ) {
+    dir_u[pag_w + siz_w] = u3a_free_pg;
   }
 
   nex_w = pag_w + siz_w;
@@ -466,7 +467,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     hep_u.cac_p = _imalloc(c3_wiseof(*cac_u));
   }
 
-  cac_u = u3to(struct pgfree, hep_u.cac_p);
+  cac_u = u3to(u3a_dell, hep_u.cac_p);
   cac_u->pag_w = pag_w;
   cac_u->siz_w = siz_w;
 
@@ -484,20 +485,20 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     while (  ((fex_w = fre_u->pag_w + fre_u->siz_w) < pag_w)
           && fre_u->nex_p )
     {
-      fre_u = u3to(struct pgfree, fre_u->nex_p);
+      fre_u = u3to(u3a_dell, fre_u->nex_p);
     }
 
     if ( fre_u->pag_w > nex_w ) {        //  insert before
       // fprintf(stderr, "free pages before 0x%x (%u) via 0x%x\n", som_p, siz_w, hep_u.cac_p);
 
-      cac_u->nex_p = u3of(struct pgfree, fre_u);
+      cac_u->nex_p = u3of(u3a_dell, fre_u);
       cac_u->pre_p = fre_u->pre_p;
 
       fre_u->pre_p = hep_u.cac_p;
 
       //  XX sanity
       if ( cac_u->pre_p ) {
-        u3to(struct pgfree, cac_u->pre_p)->nex_p = hep_u.cac_p;
+        u3to(u3a_dell, cac_u->pre_p)->nex_p = hep_u.cac_p;
       }
       else {
         hep_u.fre_p = hep_u.cac_p;
@@ -510,21 +511,21 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       fre_u->siz_w += siz_w;
 
       // fprintf(stderr, "free pages append %u at %u to 0x%x\n",
-      //                 siz_w, pag_w, (c3_w)u3of(struct pgfree, fre_u));
+      //                 siz_w, pag_w, (c3_w)u3of(u3a_dell, fre_u));
 
       //  coalesce with next entry
       //
       if (  fre_u->nex_p
-         && (fex_w == u3to(struct pgfree, fre_u->nex_p)->pag_w) )
+         && (fex_w == u3to(u3a_dell, fre_u->nex_p)->pag_w) )
       {
         // fprintf(stderr, "free pages coalesce %u\n", del_u->siz_w);
-        del_u = u3to(struct pgfree, fre_u->nex_p);
+        del_u = u3to(u3a_dell, fre_u->nex_p);
         fre_u->siz_w += del_u->siz_w;
         fre_u->nex_p  = del_u->nex_p;
 
         //  XX sanity
         if ( del_u->nex_p ) {
-          u3to(struct pgfree, del_u->nex_p)->pre_p = u3of(struct pgfree, fre_u);
+          u3to(u3a_dell, del_u->nex_p)->pre_p = u3of(u3a_dell, fre_u);
         }
       }
     }
@@ -533,13 +534,13 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       fre_u->pag_w  = pag_w;
 
       // fprintf(stderr, "free pages prepend %u at %u to 0x%x\n",
-      //                 siz_w, pag_w, (c3_w)u3of(struct pgfree, fre_u));
+      //                 siz_w, pag_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     else if ( !fre_u->nex_p ) {          //  insert after
       // fprintf(stderr, "free pages before %u at %u via 0x%x\n",
       //                 siz_w, pag_w, hep_u.cac_p);
       cac_u->nex_p = 0;
-      cac_u->pre_p = u3of(struct pgfree, fre_u);
+      cac_u->pre_p = u3of(u3a_dell, fre_u);
       fre_u->nex_p = hep_u.cac_p;
       fre_u = cac_u;
       hep_u.cac_p = 0;
@@ -549,7 +550,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       fprintf(stderr, "\033[31m"
                     "palloc: free list hosed at som_p=0x%x pag=%u len=%u\n"
                     "\033[0m",
-                    (u3_post)u3of(struct pgfree, fre_u), fre_u->pag_w, fre_u->siz_w);
+                    (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
       abort();
     }
   }
@@ -557,20 +558,20 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   //  XX shrink heap
 
   if ( del_u ) {
-    _ifree(u3of(struct pgfree, del_u));
+    _ifree(u3of(u3a_dell, del_u));
   }
 }
 
 static void
 _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
-  struct pginfo *pag_u = u3to(struct pginfo, dir_p);
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
 
   assert( page_to_post(pag_u->pag_w) == (som_p & ~((1U << u3a_page) - 1)) );
   assert( pag_u->log_s < u3a_page );
 
-  c3_g bit_g = pag_u->log_s - LOG_MINIMUM;
+  c3_g bit_g = pag_u->log_s - u3a_min_log;
   c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
   if ( som_p & (pag_u->len_s - 1) ) {  //  XX just 1U << log_s and remove?
@@ -596,14 +597,14 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
   {
     u3_post *bit_p = &(hep_u.wee_p[bit_g]);
-    struct pginfo *bit_u, *nex_u;
+    u3a_crag *bit_u, *nex_u;
 
     if ( 1 == pag_u->fre_s ) {
       //  page newly non-full, link
       //
       while ( *bit_p ) {
-        bit_u = u3to(struct pginfo, *bit_p);
-        nex_u = u3tn(struct pginfo, bit_u->nex_p);
+        bit_u = u3to(u3a_crag, *bit_p);
+        nex_u = u3tn(u3a_crag, bit_u->nex_p);
 
         if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
           bit_p = &(bit_u->nex_p);
@@ -620,7 +621,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
       //  page now free
       //
       while ( *bit_p != dir_p ) {
-        bit_u = u3to(struct pginfo, *bit_p);
+        bit_u = u3to(u3a_crag, *bit_p);
         bit_p = &(bit_u->nex_p);
 
         //  XX sanity: must be in list
@@ -628,7 +629,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
       *bit_p = pag_u->nex_p;
 
-      dir_u[pag_u->pag_w] = FIRST;
+      dir_u[pag_u->pag_w] = u3a_head_pg;
       som_p = page_to_post(pag_u->pag_w); // NB: clobbers
       if ( som_p != dir_p ) {
         _ifree(dir_p);
@@ -641,8 +642,8 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 static void
 _ifree(u3_post som_p)
 {
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
-  c3_w    pag_w = post_to_page(som_p);
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
+  c3_w pag_w = post_to_page(som_p);
 
   if ( pag_w >= hep_u.len_w ) {
     fprintf(stderr, "\033[31m"
@@ -654,7 +655,7 @@ _ifree(u3_post som_p)
 
   u3_post dir_p = dir_u[pag_w];
 
-  if ( dir_p < MAGIC ) {
+  if ( dir_p <= u3a_rest_pg ) {
     _free_pages(som_p, pag_w, dir_p);
   }
   else {
@@ -665,7 +666,7 @@ _ifree(u3_post som_p)
 static u3_post
 _irealloc(u3_post som_p, c3_w len_w)
 {
-  u3p(struct pginfo) *dir_u = u3to(u3p(struct pginfo), hep_u.pag_p);
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), hep_u.pag_p);
   c3_w pag_w = post_to_page(som_p);
   c3_w old_w;
 
@@ -679,7 +680,7 @@ _irealloc(u3_post som_p, c3_w len_w)
 
   u3_post dir_p = dir_u[pag_w];
 
-  if ( FIRST == dir_p ) {
+  if ( u3a_head_pg == dir_p ) {
     if ( som_p & ((1U << u3a_page) - 1) ) {
       //  XX pointer not aligned to page
       fprintf(stderr, "\033[31m"
@@ -689,7 +690,7 @@ _irealloc(u3_post som_p, c3_w len_w)
       return 0; // XX bail
     }
 
-    for ( old_w = 1; dir_u[pag_w + old_w] == FOLLOW; old_w++ ) {}
+    for ( old_w = 1; dir_u[pag_w + old_w] == u3a_rest_pg; old_w++ ) {}
 
     {
       c3_w wor_w = old_w << u3a_page;
@@ -701,7 +702,7 @@ _irealloc(u3_post som_p, c3_w len_w)
         // XX junk
 
         while ( wor_w-- ) {
-          dir_u[pag_w + wor_w] = FREE;
+          dir_u[pag_w + wor_w] = u3a_free_pg;
         }
 
         return som_p;
@@ -710,7 +711,7 @@ _irealloc(u3_post som_p, c3_w len_w)
       //  XX also grow in place if sufficient adjacent pages are free?
     }
   }
-  else if ( MAGIC > dir_p ) {
+  else if ( u3a_rest_pg >= dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: realloc wrong page som_p=0x%x\n"
@@ -719,7 +720,7 @@ _irealloc(u3_post som_p, c3_w len_w)
     return 0; // XX bail
   }
   else {
-    struct pginfo *pag_u = u3to(struct pginfo, dir_p);
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
     c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
     if ( som_p & (pag_u->len_s - 1) ) {  //  XX just 1U << log_s and remove?
