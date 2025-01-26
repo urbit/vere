@@ -806,10 +806,11 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   c3_w rem_w = _mesa_req_get_remaining(req_u);
   /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
 
-  u3l_log("rem_w %u", rem_w);
-  u3l_log("wnd_w %u", req_u->gag_u->wnd_w);
-  u3l_log("out_d %"PRIu64, req_u->out_d);
-  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
+  /* u3l_log("rem_w %u", rem_w); */
+  /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
+  /* u3l_log("out_d %"PRIu64, req_u->out_d); */
+  return c3_min(rem_w, _safe_sub(500, req_u->out_d));
+  /* return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d)); */
   /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 
@@ -1096,6 +1097,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
   c3_y buf_y[PACT_SIZE];
+  c3_w muna = 0;
   for ( c3_d i_d = req_u->lef_d; i_d < nex_d; i_d++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
@@ -1108,6 +1110,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
       c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
       _mesa_send_modal(req_u->per_u, buf_y, len_w);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
+      muna++;
     }
   }
 
@@ -1115,7 +1118,9 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
     req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
     req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
     req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
+    /* req_u->out_d = 0; */
     u3l_log("loss");
+    u3l_log("resent %u", muna);
     u3l_log("counter %u hav_d %"PRIu64 " nex_d %"PRIu64 " ack_d %"PRIu64 " lef_d %"PRIu64 " old_d %"PRIu64, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
     _log_gage(req_u->gag_u);
   }
@@ -1225,7 +1230,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   // received duplicate
   if ( c3y == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
     // MESA_LOG(sam_u, DUPE);
-    _update_resend_timer(req_u);
+    /* _update_resend_timer(req_u); */
     return;
   }
 
