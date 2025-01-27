@@ -1,5 +1,9 @@
 /// @file
 
+struct heap hep_u;
+
+#define HEAP  (hep_u)
+
 #include "./palloc.c"
 #include "events.h"
 
@@ -16,10 +20,10 @@ _setup(void)
 static void
 _print_chunk(c3_g bit_g)  // 0-9, inclusive
 {
-  c3_s    log_s = bit_g + LOG_MINIMUM;
+  c3_s    log_s = bit_g + u3a_min_log;
   c3_s    len_s = 1U << log_s;
   c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-  c3_s    siz_s = c3_wiseof(struct pginfo);
+  c3_s    siz_s = c3_wiseof(u3a_crag);
 
   siz_s += tot_s >> 5;
   siz_s += !!(tot_s & 31);
