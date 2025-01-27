@@ -60,8 +60,7 @@ _cu_atom_to_ref(ur_root_t* rot_u, u3a_atom* vat_u)
 static inline c3_o
 _cu_box_check(u3a_noun* som_u, ur_nref* ref)
 {
-  u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w*    box_w = (void*)som_u;
 
   if ( 0xffffffff == box_w[0] ) {
     *ref = ( ((c3_d)box_w[2]) << 32
@@ -77,8 +76,7 @@ _cu_box_check(u3a_noun* som_u, ur_nref* ref)
 static inline void
 _cu_box_stash(u3a_noun* som_u, ur_nref ref)
 {
-  u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w*    box_w = (void*)som_u;
 
   //  overwrite u3a_atom with reallocated reference
   //

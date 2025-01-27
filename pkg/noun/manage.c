@@ -491,6 +491,7 @@ u3m_mark(void)
 static void
 _pave_parts(void)
 {
+  u3a_init_heap();
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
   u3R->jed.war_p = u3h_new();
@@ -670,7 +671,7 @@ _find_home(void)
 
     //  XX move me
     //
-    u3a_ream();
+    // u3a_ream();
   }
 
   /* As a further guard against any sneaky loom corruption */
@@ -1040,24 +1041,60 @@ u3m_leap(c3_w pad_w)
       pad_w -= u3R->all.fre_w;
     }
 #endif
-    if ( (pad_w + c3_wiseof(u3a_road)) >= u3a_open(u3R) ) {
-      /* not enough storage to leap */
-      u3m_bail(c3__meme);
-    }
-    pad_w += c3_wiseof(u3a_road);
-    len_w = u3a_open(u3R) - pad_w;
-    c3_align(len_w, u3a_walign, C3_ALGHI);
+    // if ( (pad_w + c3_wiseof(u3a_road)) >= u3a_open(u3R) ) {
+    //   /* not enough storage to leap */
+    //   u3m_bail(c3__meme);
+    // }
+    // pad_w += c3_wiseof(u3a_road);
+    // len_w = u3a_open(u3R) - pad_w;
+    // c3_align(len_w, u3a_walign, C3_ALGHI);
   }
 
   /* Allocate a region on the cap.
   */
   {
-    u3p(c3_w) bot_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
+    u3p(c3_w) rod_p, bot_p, top_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
 
     if ( c3y == u3a_is_north(u3R) ) {
-      bot_p = u3R->hat_p + pad_w;
+      bot_p  = u3R->hat_p + pad_w + (1U << u3a_page) - 1;
+      bot_p &= ~((1U << u3a_page) - 1);
+      rod_p  = (u3R->cap_p - 1);
 
-      rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
+      //  XX s/b more
+      if ( (bot_p + c3_wiseof(u3a_road)) >= rod_p ) {
+        u3m_bail(c3__meme);
+      }
+
+      rod_p -= c3_wiseof(u3a_road);
+      len_w  = rod_p - bot_p;
+      len_w &= ~((1U << u3a_page) - 1);
+      top_p  = bot_p + len_w;
+
+      u3e_ward(bot_p - 1, top_p);
+
+
+      //  in a south road, the heap is high and the stack is low
+      //
+      //    the heap starts at the end of the memory segment;
+      //    the stack starts at the base memory pointer [mem_w],
+      //    and ends after the space for the road structure [siz_w]
+      //
+      //    00~~~|M|+++|C|######|H|---|R|~~~FFF
+      //         ^---u3R which _pave_road returns
+      //
+      //    XX obsolete?
+
+      rod_u = u3to(u3a_road, rod_p);
+
+      //  enable in case of corruption
+      //
+      // memset(mem_w, 0, 4 * len_w); // XX wrong
+      memset(rod_u, 0, c3_wiseof(u3a_road));
+
+      rod_u->mat_p = rod_u->cap_p = bot_p;
+      rod_u->rut_p = rod_u->hat_p = top_p - 1;
+
+      _rod_vaal(rod_u);
 #if 0
       fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -1065,9 +1102,45 @@ u3m_leap(c3_w pad_w)
 #endif
     }
     else {
-      bot_p = u3R->cap_p;
+      rod_p  = u3R->cap_p;
+      bot_p  = rod_p + c3_wiseof(u3a_road) + (1U << u3a_page) - 1;
+      bot_p &= (1U << u3a_page) - 1;
 
-      rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w, c3y);
+      //  XX moar
+      if ( bot_p >= (u3R->hat_p - 1) ) {
+        u3m_bail(c3__meme);
+      }
+
+      len_w  = u3R->hat_p - pad_w - 1;
+      len_w &= (1U << u3a_page) - 1;
+      top_p  = bot_p + len_w;
+
+      u3e_ward(bot_p - 1, top_p);
+
+
+      //  in a north road, the heap is low and the stack is high
+      //
+      //    the heap starts at the base memory pointer [mem_w];
+      //    the stack starts at the end of the memory segment,
+      //    minus space for the road structure [siz_w]
+      //
+      //    00~~~|R|---|H|######|C|+++|M|~~~FF
+      //                                ^--u3R which _pave_road returns (u3H for home road)
+      //
+      //    XX obsolete?
+
+      rod_u = u3to(u3a_road, rod_p);
+
+      //  enable in case of corruption
+      //
+      // memset(mem_w, 0, 4 * len_w); // XX wrong
+      memset(rod_u, 0, c3_wiseof(u3a_road));
+
+      rod_u->rut_p = rod_u->hat_p = bot_p;
+      rod_u->mat_p = rod_u->cap_p = top_p - 1;
+
+      _rod_vaal(rod_u);
+
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),

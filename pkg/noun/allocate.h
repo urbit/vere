@@ -48,66 +48,38 @@
 
     /* u3a_maximum: maximum loom object size (largest possible atom).
     */
-#     define u3a_maximum ( u3a_words - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom) + 1))
+#     define u3a_maximum (u3a_words - c3_wiseof(u3a_atom))
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum ((c3_w)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
-
-    /* u3a_fbox_no: number of free lists per size.
-    */
-#     define u3a_fbox_no 27
+#     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
 
   /**  Structures.
   **/
+      typedef struct {
+        c3_w use_w;
+        c3_w buf_w[0];
+      } u3a_rate;
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
       typedef struct {
+        c3_w use_w;
         c3_w mug_w;
       } u3a_noun;
 
       typedef struct {
+        c3_w use_w;
         c3_w mug_w;
         c3_w len_w;
         c3_w buf_w[0];
       } u3a_atom;
 
       typedef struct {
-        c3_w    mug_w;
+        c3_w  use_w;
+        c3_w  mug_w;
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
-
-    /* u3a_box: classic allocation box.
-    **
-    ** The box size is also stored at the end of the box in classic
-    ** bad ass malloc style.  Hence a box is:
-    **
-    **    ---
-    **    siz_w
-    **    use_w
-    **      user data
-    **    siz_w
-    **    ---
-    **
-    ** Do not attempt to adjust this structure!
-    */
-      typedef struct _u3a_box {
-        c3_w   siz_w;                       // size of this box
-        c3_w   use_w;                       // reference count; free if 0
-#       ifdef U3_MEMORY_DEBUG
-          c3_w   eus_w;                     // recomputed refcount
-          c3_w   cod_w;                     // tracing code
-#       endif
-      } u3a_box;
-
-    /* u3a_fbox: free node in heap.  Sets minimum node size.
-    */
-      typedef struct _u3a_fbox {
-        u3a_box               box_u;
-        u3p(struct _u3a_fbox) pre_p;
-        u3p(struct _u3a_fbox) nex_p;
-      } u3a_fbox;
 
     /* u3a_jets: jet dashboard
     */
@@ -146,11 +118,26 @@
         } how;                                //
 
         struct {                              //  allocation pools
-          u3p(u3a_fbox) fre_p[u3a_fbox_no];   //  heap by node size log
-          u3p(u3a_fbox) cel_p;                //  custom cell allocator
           c3_w fre_w;                         //  number of free words
           c3_w max_w;                         //  maximum allocated
         } all;
+
+        struct {
+          u3_post fre_p;
+          u3_post cac_p;
+          // u3p(u3a_dell)  fre_p;               //  free list
+          // u3p(u3a_dell)  cac_p;               //  cached pgfree struct
+          u3_post        bot_p;               //  XX s/b rut_p
+          c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
+          c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
+          c3_w           siz_w;               //  directory size
+          c3_w           len_w;               //  directory entries
+          u3_post pag_p;
+#define u3a_crag_no  10
+          u3_post wee_p[u3a_crag_no];
+          // u3p(u3a_crag*) pag_p;               //  directory
+          // u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+        } hep;
 
         u3a_jets jed;                         //  jet dashboard
 
@@ -201,19 +188,6 @@
 
   /**  Macros.  Should be better commented.
   **/
-    /* In and out of the box.
-       u3a_boxed -> sizeof u3a_box + allocation size (len_w) + 1 (for storing the redundant size)
-       u3a_boxto -> the region of memory adjacent to the box.
-       u3a_botox -> the box adjacent to the region of memory
-    */
-#     define u3a_boxed(len_w)  (len_w + c3_wiseof(u3a_box) + 1)
-#     define u3a_boxto(box_v)  ( (void *) \
-                                   ( (u3a_box *)(void *)(box_v) + 1 ) )
-#     define u3a_botox(tox_v)  ( (u3a_box *)(void *)(tox_v) - 1 )
-
-    /* Inside a noun.
-    */
-
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
 #     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
@@ -340,7 +314,7 @@
                   ? c3n \
                   : _(u3a_is_junior(r, som)) \
                   ? c3n \
-                  : (u3a_botox(u3a_to_ptr(som))->use_w == 1) \
+                  : (((u3a_rate*)u3a_to_ptr(som))->use_w == 1) \
                   ? c3y : c3n )
 
 /* like _box_vaal but for rods. Again, probably want to prefix validation
@@ -489,6 +463,10 @@
 
   /**  Functions.
   **/
+
+void
+u3a_init_heap(void);
+
     /**  Allocation.
     **/
       /* Word-aligned allocation.
