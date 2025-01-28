@@ -772,7 +772,7 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   // c3_w max_g = 1000 * 1000 * 1000;  // 1s.
   // c3_w min_g = 100 * 1000 * 1000;   // clock granularity of G = 100ms.
 
-  c3_d err_d = _abs_dif(rtt_d, gag_u->srt_w);
+  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
 
 
   // first RTT measurement
@@ -2208,7 +2208,17 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
   c3_d tof_d = mesa_num_leaves(dat_u->tob_d);
   c3_w pof_w = lss_proof_size(tof_d);
   c3_w pairs_w = c3_bits_word(pof_w);
-  arena are_u = arena_create(sizeof(u3_pend_req) + sizeof(u3_mesa_pict) + dat_u->tob_d + (tof_d * sizeof(lss_pair)) + (sizeof(u3_pact_stat) * tof_d + 2) + (pof_w * sizeof(lss_hash)) + ((dat_u->tob_d >> 3) + 1) + sizeof(lss_verifier) + (pairs_w * sizeof(lss_pair)));
+  arena are_u = arena_create(sizeof(u3_pend_req) +
+                             sizeof(u3_mesa_pict) +
+                             sizeof(u3_mesa_name) + nam_u->str_u.len_w +
+                             dat_u->tob_d +
+                             (tof_d * sizeof(lss_pair)) +
+                             (sizeof(u3_pact_stat) * (tof_d + 2)) +
+                             (pof_w * sizeof(lss_hash)) +
+                             ((tof_d >> 3) + 1) +
+                             sizeof(lss_verifier) +
+                             (pairs_w * sizeof(lss_pair)) +
+                             14); // XX alignment is fragile
   u3_pend_req* req_u = new(&are_u, u3_pend_req, 1);
   req_u->are_u = are_u;
   req_u->pic_u = new(&req_u->are_u, u3_mesa_pict, 1);
