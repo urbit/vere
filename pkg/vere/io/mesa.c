@@ -918,7 +918,8 @@ u3_mesa_decode_lane(u3_atom lan) {
   //  convert incoming localhost to outgoing localhost
   //
 
-  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? (c3_w)lan_d : htonl(0x7f000001);
+  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ?
+                          htonl((c3_w)lan_d) : htonl(0x7f000001);
   adr_u.sin_port = htons((c3_s)(lan_d >> 32));
 
   return adr_u;
@@ -965,7 +966,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 {
 
   add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
-  /* add_u.sin_family = AF_INET; */
+  add_u.sin_family = AF_INET;
 
   if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) {
     c3_free(buf_y);
@@ -1050,7 +1051,7 @@ _mesa_send_bufs(u3_mesa* sam_u,
                 u3_pit_addr* las_u);
 
 static void
-_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
+_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w, u3_pit_addr* las_u)
 {
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
@@ -1089,6 +1090,12 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
       _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
       per_u->dir_u.sen_d = now_d;
     }
+
+    //  XX this could replace the two previous sends
+    if ( las_u != NULL ) {
+      _mesa_send_bufs(sam_u, per_u, buf_y, len_w, las_u);
+    }
+
   }
 }
 
@@ -1107,7 +1114,7 @@ _mesa_send_request(u3_mesa_request_data* dat_u)
   }
   else {
     u3l_log("mesa: send_modal()");
-    _mesa_send_modal(per_u, dat_u->buf_y, dat_u->len_w);
+    _mesa_send_modal(per_u, dat_u->buf_y, dat_u->len_w, dat_u->las_u);
   }
 }
 
@@ -1133,7 +1140,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
       /* u3l_log("resend fra_w: %llu", i_d); */
 
       c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
-      _mesa_send_modal(req_u->per_u, buf_y, len_w);
+      _mesa_send_modal(req_u->per_u, buf_y, len_w, NULL);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u);
     }
   }
