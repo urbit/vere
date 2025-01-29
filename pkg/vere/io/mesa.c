@@ -438,7 +438,7 @@ _abs_dif(c3_d ayy_d, c3_d bee_d)
 
 static c3_d
 _clamp_rto(c3_d rto_d) {
-  return c3_min(c3_max(rto_d, 1000 * 1000), 25 * 1000 * 1000); // ~s25 max backoff
+  return c3_min(c3_max(rto_d, 200 * 1000), 25 * 1000 * 1000); // ~s25 max backoff
 }
 
 static inline c3_o
@@ -831,13 +831,8 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
   /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
+  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
 
-  /* u3l_log("rem_w %u", rem_w); */
-  /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
-  /* u3l_log("out_d %"PRIu64, req_u->out_d); */
-  return c3_min(rem_w, _safe_sub(500, req_u->out_d));
-  /* return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d)); */
-  /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 
 /* _mesa_req_pact_resent(): mark packet as resent
