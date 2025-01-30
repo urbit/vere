@@ -343,6 +343,8 @@ _ca_take_atom(u3a_atom* old_u)
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
+  new_u->use_w = 1;
+
 #ifdef VERBOSE_TAKE
   u3l_log("%s: atom %p to %p", ( c3y == u3a_is_north(u3R) )
                                    ? "north"
