@@ -965,7 +965,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 {
 
   add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
-  /* add_u.sin_family = AF_INET; */
+  add_u.sin_family = AF_INET;
 
   if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) {
     c3_free(buf_y);
