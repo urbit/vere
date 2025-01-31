@@ -89,6 +89,7 @@ _test_palloc(void)
   u3_post pos_p, sop_p;
   struct heap tmp_u;
 
+  memset(&(HEAP), 0x0, sizeof(HEAP));
   _init();
 
   pos_p = _imalloc(4);
@@ -116,6 +117,7 @@ _test_palloc(void)
 
   fprintf(stderr, "palloc_tests: post-leap: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
 
+  memset(&(HEAP), 0x0, sizeof(HEAP));
   _init();
 
   pos_p = _imalloc(4);

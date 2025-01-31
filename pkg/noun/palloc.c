@@ -42,7 +42,7 @@ struct heap {
   u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
 };
 
-#define page_to_post(pag_w)  (HEAP.bot_p + (((HEAP.dir_ws * (pag_w)) + HEAP.off_ws) << u3a_page))
+#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * ((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
 #define post_to_page(som_p)  (_abs_dif(som_p, HEAP.bot_p + HEAP.off_ws) >> u3a_page)
 
 
@@ -65,16 +65,10 @@ _abs_dif(c3_w a_w, c3_w b_w)
 static void
 _init(void)
 {
-  memset(&(HEAP), 0x0, sizeof(HEAP)); //  XX s/b unnecessary
   u3p(u3a_crag) *dir_u;
 
-  //  align hat
-  //
-  //   XX s/b done elsewhere, along with rut_p
-  //
   if ( c3y == u3a_is_north(u3R) ) {
     // fprintf(stderr, "palloc: init north: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
-    u3R->hat_p += (1U << u3a_page) - 1;
     HEAP.dir_ws = 1;
     HEAP.off_ws = 0;
   }
@@ -84,7 +78,10 @@ _init(void)
     HEAP.off_ws = -1;
   }
 
-  u3R->hat_p &= ~((1U << u3a_page) - 1);
+  // XX and rut
+  //
+  assert ( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
+
   HEAP.bot_p = u3R->hat_p;
 
   // fprintf(stderr, "palloc: init1 hat=0x%x cap=0x%x bot=0x%x\n", u3R->hat_p, u3R->cap_p, HEAP.bot_p);
@@ -122,15 +119,23 @@ _extend_directory(c3_w siz_w)  // num pages
 {
   u3p(u3a_crag) *dir_u, *old_u;
   u3_post old_p = HEAP.pag_p;
-  c3_w nex_w, pag_w;
+  c3_w nex_w, dif_w, pag_w;
+
+  // fprintf(stderr, "extend directory by %u, from %u,%u (hat=0x%x) ",
+  //                 siz_w, HEAP.len_w, HEAP.siz_w, u3R->hat_p);
 
   old_u  = u3to(u3p(u3a_crag), HEAP.pag_p);
-  nex_w  = HEAP.len_w + siz_w + (1U << u3a_page) - 1;
+  nex_w  = HEAP.len_w + siz_w;       // num words
+  nex_w +=   (1U << u3a_page) - 1;
   nex_w &= ~((1U << u3a_page) - 1);
+  dif_w  = nex_w >> u3a_page;        //  new pages
 
   HEAP.pag_p  = u3R->hat_p;
-  HEAP.pag_p += HEAP.off_ws * (1U << u3a_page);
-  u3R->hat_p  += HEAP.dir_ws * nex_w; //  XX overflow
+  HEAP.pag_p += HEAP.off_ws * nex_w;
+  u3R->hat_p += HEAP.dir_ws * nex_w; //  XX overflow
+
+  // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
+  //                 HEAP.len_w + dif_w, nex_w, u3R->hat_p, HEAP.pag_p);
 
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
@@ -148,6 +153,8 @@ _extend_directory(c3_w siz_w)  // num pages
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   pag_w = post_to_page(HEAP.pag_p);
 
+  assert( pag_w == HEAP.len_w );
+
   dir_u[pag_w] = u3a_head_pg;
 
   {
@@ -159,7 +166,7 @@ _extend_directory(c3_w siz_w)  // num pages
 
   memcpy(dir_u, old_u, (c3_z)HEAP.len_w << 2);
 
-  HEAP.len_w += (nex_w >> u3a_page);
+  HEAP.len_w += dif_w;
   HEAP.siz_w  = nex_w;
 
   _ifree(old_p);
@@ -176,10 +183,17 @@ _extend_heap(c3_w siz_w)  // num pages
     _extend_directory(siz_w);
   }
 
+  // fprintf(stderr, "extend heap by %u, from %u,%u (hat=0x%x) ",
+  //                 siz_w, HEAP.len_w, HEAP.siz_w, u3R->hat_p);
+
   pag_p  = u3R->hat_p;
-  pag_p += HEAP.off_ws * (1U << u3a_page);
+  pag_p += HEAP.off_ws * (siz_w << u3a_page);
 
   u3R->hat_p += HEAP.dir_ws * (siz_w << u3a_page);
+
+
+  // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
+  //                 HEAP.len_w + siz_w, HEAP.siz_w, u3R->hat_p, pag_p);
 
   //  XX bail, optimize
   if ( 1 == HEAP.dir_ws ) {
@@ -256,7 +270,11 @@ _alloc_pages(c3_w siz_w)  // num pages
     pag_p = _extend_heap(siz_w);
     pag_w = post_to_page(pag_p);
     dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-    // fprintf(stderr, "alloc pages grow 0x%x\n", pag_p);
+    // fprintf(stderr, "alloc pages grow %u (0x%x, hat=0x%x) pag=%u len=%u\n",
+    //                 siz_w, pag_p, u3R->hat_p, pag_w, HEAP.len_w);
+    assert( pag_w < HEAP.len_w );
+    //  XX wrong in south roads
+    // assert( pag_w + siz_w == HEAP.len_w );
   }
 
   dir_u[pag_w] = u3a_head_pg;
@@ -650,9 +668,9 @@ _ifree(u3_post som_p)
 
   if ( pag_w >= HEAP.len_w ) {
     fprintf(stderr, "\033[31m"
-                    "palloc: page out of heap som_p=0x%x pag_w=%u\n"
+                    "palloc: page out of heap som_p=0x%x pag_w=%u len_w=%u\n"
                     "\033[0m",
-                    som_p, pag_w);
+                    som_p, pag_w, HEAP.len_w);
     return; // XX bail
   }
 
