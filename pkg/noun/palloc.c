@@ -762,6 +762,62 @@ _irealloc(u3_post som_p, c3_w len_w)
   }
 }
 
+static void
+_post_status(u3_post som_p)
+{
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_w pag_w = post_to_page(som_p);
+
+  if ( pag_w >= HEAP.len_w ) {
+    fprintf(stderr, "palloc: out of heap: post som_p=0x%x pag_w=%u len_w=%u\n",
+                    som_p, pag_w, HEAP.len_w);
+    return;
+  }
+
+  u3_post dir_p = dir_u[pag_w];
+
+  if ( dir_p <= u3a_rest_pg ) {
+    if ( u3a_free_pg == dir_p ) {
+      fprintf(stderr, "palloc: free page som_p=0x%x pag_w=%u\n",
+                      som_p, pag_w);
+    }
+    else if ( u3a_head_pg != dir_p ) {
+      fprintf(stderr, "palloc: wrong page som_p=0x%x dir_p=0x%x\n",
+                      som_p, dir_p);
+    }
+    else if ( som_p & ((1U << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: bad page alignment som_p=0x%x\n",
+                      som_p);
+    }
+    else {
+      fprintf(stderr, "palloc: page in-use som_p=0x%x\n",
+                      som_p);
+    }
+  }
+  else {
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+
+    assert( page_to_post(pag_u->pag_w) == (som_p & ~((1U << u3a_page) - 1)) );
+    assert( pag_u->log_s < u3a_page );
+
+    c3_g bit_g = pag_u->log_s - u3a_min_log;
+    c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+
+    if ( som_p & (pag_u->len_s - 1) ) {
+      fprintf(stderr, "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n",
+                      som_p, dir_p, pag_u->len_s);
+    }
+    else if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+      fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
+                      som_p, dir_p, pag_u->len_s);
+    }
+    else {
+      fprintf(stderr, "palloc: words in-use som_p=0x%x pag=0x%x, len=%u\n",
+                      som_p, dir_p, pag_u->len_s);
+    }
+  }
+}
+
 // static void
 // _ifree_ptr(void* som_v)
 // {
