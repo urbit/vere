@@ -48,6 +48,15 @@
     } reg_u;                          // registration site data
   } u3n_prog;
 
+      typedef struct slow {
+        u3_noun nam;
+        struct slow* nex_u;
+      } slow;
+
+      typedef struct slow_stack {
+        slow* top;
+      } slow_stack;
+
   /**  Functions.
   **/
     /* u3n_nock_on(): produce .*(bus fol).
@@ -145,5 +154,20 @@
     */
       void
       u3n_ream(void);
+
+    /* u3n_sstack_init: initalize a root node on the slow stack 
+     */
+      void
+      u3n_sstack_init();
+
+    /* u3n_sstack_push: push a noun on the slow stack.
+    */
+      void
+      u3n_sstack_push(u3_noun nam);
+
+    /* u3n_sstack_pop: pop a noun from the slow stack.
+    */
+      void
+      u3n_sstack_pop(void);
 
 #endif /* ifndef U3_NOCK_H */

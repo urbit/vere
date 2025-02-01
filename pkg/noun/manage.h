@@ -198,28 +198,4 @@
         c3_w
         u3m_pack(void);
 
-      /* u3m_sstack_init: initalize a root node on the slow stack 
-       */
-        void
-        u3m_sstack_init();
-
-      /* u3m_sstack_push: push a noun on the slow stack.
-      */
-        void
-        u3m_sstack_push(u3_noun nam);
-
-      /* u3m_sstack_pop: pop a noun from the slow stack.
-      */
-        void
-        u3m_sstack_pop(void);
-
-      typedef struct slow {
-        u3_noun nam;
-        struct slow* nex_u;
-      } slow;
-
-      typedef struct slow_stack {
-        slow* top;
-      } slow_stack;
-
 #endif /* ifndef U3_MANAGE_H */
