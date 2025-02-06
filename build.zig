@@ -12,6 +12,7 @@ const main_targets = .{
 const supported_targets: []const std.Target.Query = &(main_targets ++ .{
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
 });
 
 const targets: []const std.Target.Query = &main_targets;
@@ -179,7 +180,7 @@ fn buildBinary(
 
     try global_flags.appendSlice(cfg.flags);
     try global_flags.appendSlice(&.{
-        "-g",
+        "-g3",
         "-Wall",
         "-Werror",
     });
@@ -227,6 +228,7 @@ fn buildBinary(
         "-Wno-unused-variable",
         "-Wno-unused-function",
         "-Wno-gnu",
+        "-fno-omit-frame-pointer",
         "-fms-extensions",
         "-DU3_GUARD_PAGE", // pkg_noun
         "-DU3_OS_ENDIAN_little=1", // pkg_c3

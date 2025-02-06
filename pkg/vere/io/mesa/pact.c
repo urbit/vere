@@ -499,8 +499,8 @@ _sift_var_chub(u3_sifter* sif_u, c3_w len_w)
     return 0;
   }
   c3_d val_d = 0;
-  for ( int i = 0; i < len_w; i++ ) {
-    val_d |= (res_y[i] << (8*i));
+  for ( c3_d i = 0; i < len_w; i++ ) {
+    val_d |= ((c3_d)res_y[i] << (8*i));
   }
   return val_d;
 }
