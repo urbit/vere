@@ -762,8 +762,6 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
   gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
   gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
-  gag_u->wnd_w++;
-
 
   if ( gag_u->wnd_w < gag_u->sst_w ) {
     gag_u->wnd_w++;
