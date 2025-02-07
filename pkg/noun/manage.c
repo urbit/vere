@@ -1005,7 +1005,7 @@ u3m_leap(c3_w pad_w)
       top_p &= ~((1U << u3a_page) - 1);
 
       //  XX moar
-      if ( (u3R->hat_p > pad_w) || (bot_p >= top_p) ) {
+      if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
         u3m_bail(c3__meme);
       }
 
