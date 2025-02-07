@@ -780,7 +780,7 @@ _irealloc(u3_post som_p, c3_w len_w)
   }
 }
 
-static void
+void
 _post_status(u3_post som_p)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -795,20 +795,21 @@ _post_status(u3_post som_p)
   u3_post dir_p = dir_u[pag_w];
 
   if ( dir_p <= u3a_rest_pg ) {
+    if ( som_p & ((1U << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: page not aligned som_p=0x%x (0x%x)\n",
+                      som_p, som_p & ~(((1U << u3a_page) - 1)));
+    }
+
     if ( u3a_free_pg == dir_p ) {
       fprintf(stderr, "palloc: free page som_p=0x%x pag_w=%u\n",
                       som_p, pag_w);
     }
     else if ( u3a_head_pg != dir_p ) {
-      fprintf(stderr, "palloc: wrong page som_p=0x%x dir_p=0x%x\n",
+      fprintf(stderr, "palloc: rest page som_p=0x%x dir_p=0x%x\n",
                       som_p, dir_p);
     }
-    else if ( som_p & ((1U << u3a_page) - 1) ) {
-      fprintf(stderr, "palloc: bad page alignment som_p=0x%x\n",
-                      som_p);
-    }
     else {
-      fprintf(stderr, "palloc: page in-use som_p=0x%x\n",
+      fprintf(stderr, "palloc: head page in-use som_p=0x%x\n",
                       som_p);
     }
   }
@@ -822,10 +823,12 @@ _post_status(u3_post som_p)
     c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
     if ( som_p & (pag_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: bad alignment som_p=0x%x pag=0x%x len_s=%u\n",
-                      som_p, dir_p, pag_u->len_s);
+      fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
+                      som_p, som_p & ~((1U << u3a_page) - 1),
+                      dir_p, pag_u->len_s);
     }
-    else if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+
+    if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
       fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
                       som_p, dir_p, pag_u->len_s);
     }
