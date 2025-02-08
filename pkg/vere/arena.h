@@ -24,7 +24,8 @@ static void* arena_alloc(arena* a, ptrdiff_t size, ptrdiff_t align, ptrdiff_t co
     }
     void *p = a->beg + padding;
     a->beg += padding + count*size;
-    return memset(p, 0, count*size);
+    return p;
+    // return memset(p, 0, count*size);
 }
 
 static arena arena_create(ptrdiff_t cap)
