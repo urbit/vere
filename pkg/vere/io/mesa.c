@@ -1349,6 +1349,39 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w ack_w)
 }
 
 static void
+_mesa_give_rate(u3_mesa* sam_u, u3_pend_req* req_u, u3_mesa_name* nam_u){
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  u3_noun cad;
+  // u3l_log("tof_d: %llu mod: %llu hav_d: %llu", req_u->tof_d, (req_u->hav_d % 100), req_u->hav_d);
+  if ( ( (req_u->hav_d % 100) == 0)  &&      //  XX every 50 fragments (50  Kb); make this better  shows: 5     Mb/s
+                                            //                         (10  Kb)                    shows: 1     Mb/s
+                                            //                         (100 Kb)                    shows: 30-50 Mb/s
+                                            //     bandwith is correlated with how often %rate is injected
+       ( req_u->tof_d != req_u->hav_d ) ) {
+    {
+  u3l_log("tof_d: %llu tob_d: %llu hav_d: %llu", req_u->tof_d, req_u->tob_d, req_u->hav_d);
+
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, 3, PACT_SIZE);
+      u3_noun pax = _mesa_encode_path(nam_u->pat_s,
+                              (c3_y*)(nam_u->pat_c));
+      u3_noun par = u3nc(u3i_chubs(2, nam_u->her_u), pax);
+      u3_noun boq = u3i_word(13);
+      u3_noun fag = u3nc(u3_nul, u3i_word(req_u->hav_d));
+      u3_noun tot = u3i_word(req_u->tof_d);
+      // u3l_log("req_u->len_w %u", req_u->len_w);
+      // u3l_log("req_u->tot_w %u", req_u->tot_w);
+      //  [%rate spar fragment num-fragments]
+      u3_noun ban = u3i_word(req_u->tof_d);
+      // cad = u3nc(c3__rate, u3nq(par, boq, fag, u3nc(tot), ban));
+      cad = u3nc(c3__rate, u3nq(par, boq, fag, tot));
+    }
+    u3_auto_plan(&sam_u->car_u,
+                  u3_ovum_init(0, c3__ames, wir, cad));
+  }
+}
+
+static void
 _init_lane_state(u3_lane_state* sat_u);
 
 /* _mesa_req_pact_done(): mark packet as done
@@ -1400,6 +1433,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
     /* _try_resend(req_u, nam_u->fra_d); */
     /* _update_resend_timer(req_u); */
+    _mesa_give_rate(sam_u, req_u, nam_u);
     return;
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1445,6 +1479,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   //  XX FIXME?
   /* _try_resend(req_u, nam_u->fra_d); */
   _update_resend_timer(req_u);
+  _mesa_give_rate(sam_u, req_u, nam_u);
 }
 
 static sockaddr_in
