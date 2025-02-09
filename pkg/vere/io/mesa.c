@@ -27,9 +27,11 @@
 static c3_o dop_o = c3n;
 
 static c3_y are_y[524288];
-static c3_d tim_y[200000] = {0};
-static c3_w tidx = 0;
-static c3_o done = c3n;
+
+/* FILE* packs; */
+// static c3_d tim_y[200000] = {0};
+// static c3_w tidx = 0;
+// static c3_o done = c3n;
 
 #define MESA_DEBUG     c3y
 //#define MESA_TEST
@@ -798,8 +800,8 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   /* u3l_log("rem_w %u", rem_w); */
   /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
   /* u3l_log("out_d %"PRIu64, req_u->out_d); */
-  /* return c3_min(rem_w, _safe_sub(2500, req_u->out_d)); */
-  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
+  return c3_min(rem_w, _safe_sub(4000, req_u->out_d));
+  // return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
   /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 
@@ -1625,13 +1627,52 @@ _mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
   return adr_u;
 }
 
+static void
+_mesa_hear(u3_mesa* sam_u,
+           const struct sockaddr* adr_u,
+           c3_w     len_w,
+           c3_y*    hun_y);
+
+static void
+page_test(u3_mesa* sam_u) {
+  FILE* fd = fopen("/home/ec2-user/muna.packs", "rb");
+  fseek(fd, 0L, SEEK_END);
+  c3_d sz = ftell(fd);
+  c3_y* packets = c3_malloc(sz);
+  fseek(fd, 0L, SEEK_SET);
+
+  const struct sockaddr adr_u = {
+    .sa_family = AF_INET,
+    .sa_data = {
+      0x00, 0x50,             // Port 80 in network byte order
+      0xa7, 0xac, 0xa8, 0x17, // IP 167.172.168.23
+      0x00, 0x00, 0x00, 0x00, // Padding
+      0x00, 0x00, 0x00, 0x00  // Padding
+    }
+  };
+
+  fread(packets, 1, sz, fd);
+  fclose(fd);
+
+  c3_d now_d = _get_now_micros();
+  for (c3_d i = 0; i < sz;) {
+    c3_w len_w = *(c3_w*)(packets+i);
+    /* u3l_log("len_w %u i %"PRIu64, len_w, i); */
+    i += 4;
+    _mesa_hear(sam_u, &adr_u, len_w, packets + i);
+    sam_u->are_u.beg = (char*)are_y;
+    i += len_w;
+  }
+  u3l_log("page_test took %"PRIu64, _get_now_micros() - now_d);
+  c3_free(packets);
+}
 
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  /* las = _mesa_queue_czar(sam_u, las, u3k(pac)); */
   c3_w len_w = u3r_met(3, pac);
-  c3_y* buf_y = c3_calloc(len_w);
+  arena are_u = arena_create(len_w + 16384);
+  c3_y* buf_y = new(&are_u, c3_y, len_w);
   u3r_bytes(0, len_w, buf_y, pac);
 
   u3_mesa_pact pac_u;
@@ -1641,6 +1682,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3l_log("mesa: ef_send: sift failed: %u %s", len_w, err_c);
     u3z(pac);
     u3z(las);
+    arena_free(&are_u);
     return;
   }
 
@@ -1651,6 +1693,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       #ifdef MESA_DEBUG
         u3l_log(" no PIT entry");
       #endif
+        arena_free(&are_u);
         u3z(pac);
         u3z(las);
       return;
@@ -1659,11 +1702,10 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     if ( u3_nul != las ) {
       _mesa_send_bufs(sam_u, NULL, buf_y, len_w, pin_u->adr_u);
       _mesa_del_pit(sam_u, &pac_u.pek_u.nam_u);
-      c3_free(buf_y);
+      arena_free(&are_u);
     }
   }
   else {
-    arena are_u = arena_create(16384);
     u3_mesa_resend_data* res_u = new(&are_u, u3_mesa_resend_data, 1);
     res_u->are_u = are_u;
     u3_mesa_name* nam_u = _mesa_copy_name_alloc(&pac_u.pek_u.nam_u, &res_u->are_u);
@@ -1682,9 +1724,10 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     }
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     /* _mesa_add_our_to_pit(sam_u, nam_u); */
-    _mesa_send_request(dat_u);
+    /* _mesa_send_request(dat_u); */
     res_u->tim_u.data = res_u;
-    uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
+    /* uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0); */
+    page_test(sam_u);
   }
 
   u3z(pac);
@@ -2277,21 +2320,21 @@ static void
 _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_mesa_cb_data* ver_u = vod_p;
-  u3_pend_req* req_u = _mesa_get_request(ver_u->sam_u, &ver_u->nam_u);
-  if ( !req_u ) {
-    return;
-  }
-  else if ( c3y == nun ) {  // XX
-    _mesa_request_next_fragments(ver_u->sam_u, req_u, ver_u->lan_u);
-  }
-  else if ( c3n == nun ) {
-    u3l_log("mesa: packet auth failed verification");
-    // TODO: wipe request state? (If this was an imposter,
-    // we don't want to punish the real peer.)
-  }
-  else {
-    u3l_log("mesa: %%veri returned strange value");
-  }
+  /* u3_pend_req* req_u = _mesa_get_request(ver_u->sam_u, &ver_u->nam_u); */
+  /* if ( !req_u ) { */
+  /*   return; */
+  /* } */
+  /* else if ( c3y == nun ) {  // XX */
+  /*   _mesa_request_next_fragments(ver_u->sam_u, req_u, ver_u->lan_u); */
+  /* } */
+  /* else if ( c3n == nun ) { */
+  /*   u3l_log("mesa: packet auth failed verification"); */
+  /*   // TODO: wipe request state? (If this was an imposter, */
+  /*   // we don't want to punish the real peer.) */
+  /* } */
+  /* else { */
+  /*   u3l_log("mesa: %%veri returned strange value"); */
+  /* } */
   c3_free(ver_u);
 }
 
@@ -2340,7 +2383,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
   req_u->gag_u = gag_u;
   req_u->tob_d = dat_u->tob_d;
-  req_u->out_d = 0;
+  req_u->out_d = 4000;
   req_u->tof_d = mesa_num_leaves(dat_u->tob_d); // NOTE: only correct for bloq 13!
   assert( req_u->tof_d != 1 ); // these should be injected directly by _mesa_hear_page
   req_u->dat_y = new(&req_u->are_u, c3_y, dat_u->tob_d);
@@ -2441,16 +2484,16 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
 
 }
 
-static c3_d avg_time() {
-  c3_d sum = 0;
-  c3_w i;
-  for (i = 0; tim_y[i] != 0; i++) {
-    if (tim_y[i] > 1000) {
-      u3l_log("dingding fra %u time %"PRIu64, i, tim_y[i]);
-    }
-    sum += tim_y[i];
-  }
-  return sum / i;
+static void avg_time() {
+  // c3_d sum = 0;
+  // c3_w i;
+  // for (i = 0; tim_y[i] != 0; i++) {
+    // if (tim_y[i] > 1000) {
+      // u3l_log("dingding fra %u time %"PRIu64, i, tim_y[i]);
+    // }
+    // sum += tim_y[i];
+  // }
+//  return sum / i;
 }
 
 static void
@@ -2590,8 +2633,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     u3l_log("%" PRIu64 " kilobytes took %f ms",
             req_u->tof_d,
             (now_d - sam_u->tim_d)/1000.0);
-    u3l_log("page handling took %"PRIu64, avg_time());
-    done = c3y;
+    // u3l_log("page handling took %"PRIu64, avg_time());
+    //done = c3y;
 
     {
       // construct jumbo frame
@@ -2821,7 +2864,11 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
-  c3_d now_d = _get_now_micros();
+  /* c3_d muna = fwrite(&len_w, 4, 1, packs); */
+  /* c3_d muna2 = fwrite(hun_y, 1, len_w, packs); */
+  /* u3l_log("wrote %"PRIu64, muna); */
+  /* u3l_log("wrote %"PRIu64, muna2); */
+  // c3_d now_d = _get_now_micros();
   if ( c3n == mesa_is_new_pact(hun_y, len_w) ) {
     c3_y* han_y = c3_malloc(len_w);
     memcpy(han_y, hun_y, len_w);
@@ -2850,18 +2897,18 @@ _mesa_hear(u3_mesa* sam_u,
       _mesa_hear_poke(pic_u, sdr_u);
     } break;
   }
-  if (done == c3n) {
-    if (tidx < 200000) {
-      tim_y[tidx] = _get_now_micros() - now_d;
-      tidx++;
-    } else {
-      u3l_log("peek handling took %"PRIu64, avg_time());
-      tidx = 0;
-    }
-  } else {
-    tidx = 0;
-    done = c3n;
-  }
+  // if (done == c3n) {
+    // if (tidx < 200000) {
+      // tim_y[tidx] = _get_now_micros() - now_d;
+      // tidx++;
+    // } else {
+      // u3l_log("peek handling took %"PRIu64, avg_time());
+      // tidx = 0;
+    // }
+  // } else {
+    // tidx = 0;
+    // done = c3n;
+  // }
 }
 
 static void _mesa_recv_cb(uv_udp_t*        wax_u,
@@ -2984,6 +3031,7 @@ u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
   u3l_log("mesa: INIT");
+  /* packs = fopen("/home/ec2-user/muna.packs", "wb"); */
   arena par_u     = arena_create(67108864);
   u3_mesa* sam_u  = new(&par_u, u3_mesa, 1);
   sam_u->par_u    = par_u;
