@@ -264,18 +264,18 @@ _alloc_pages(c3_w siz_w)  // num pages
   u3_post pag_p;
 
   if ( pag_w ) {
-    //  XX sanity
-    assert( u3a_free_pg == dir_u[pag_w] );
-    for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
-      assert( u3a_free_pg == dir_u[pag_w + i_w] );
-    }
-
     //  XX groace
     //
     pag_w -= HEAP.off_ws * (siz_w - 1);
     pag_p  = page_to_post(pag_w);
 
     assert( pag_w < HEAP.len_w );
+
+    //  XX sanity
+    assert( u3a_free_pg == dir_u[pag_w] );
+    for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
+      assert( u3a_free_pg == dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] );
+    }
   }
   else {
     pag_p = _extend_heap(siz_w);
@@ -290,7 +290,7 @@ _alloc_pages(c3_w siz_w)  // num pages
   dir_u[pag_w] = u3a_head_pg;
 
   for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
-    dir_u[pag_w + i_w] = u3a_rest_pg;
+    dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] = u3a_rest_pg;
   }
 
   //  XX junk
