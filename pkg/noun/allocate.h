@@ -467,6 +467,19 @@
 void
 u3a_init_heap(void);
 
+void*
+u3a_into_fn(u3_post);
+u3_post
+u3a_outa_fn(void*);
+u3_post
+u3a_to_off_fn(u3_noun);
+u3a_noun*
+u3a_to_ptr_fn(u3_noun);
+u3_noun
+u3a_head(u3_noun);
+u3_noun
+u3a_tail(u3_noun);
+
     /**  Allocation.
     **/
       /* Word-aligned allocation.

@@ -32,6 +32,42 @@ u3a_push(const u3a_pile* pil_u);
 c3_o
 u3a_pile_done(const u3a_pile* pil_u);
 
+void*
+u3a_into_fn(u3_post som_p)
+{
+  return u3a_into(som_p);
+}
+
+u3_post
+u3a_outa_fn(void* som_v)
+{
+  return u3a_outa(som_v);
+}
+
+u3_post
+u3a_to_off_fn(u3_noun som)
+{
+  return u3a_to_off(som);
+}
+
+u3a_noun*
+u3a_to_ptr_fn(u3_noun som)
+{
+  return u3a_to_ptr(som);
+}
+
+u3_noun
+u3a_head(u3_noun som)
+{
+  return u3h(som);
+}
+
+u3_noun
+u3a_tail(u3_noun som)
+{
+  return u3t(som);
+}
+
 void
 u3a_init_heap(void)
 {
