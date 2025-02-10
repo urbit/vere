@@ -1268,6 +1268,8 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     }
   }
 
+  u3a_print_memory(stderr, "loom: init: idle", u3a_idle(u3R));
+
   //  set up logging
   //
   //    XX must be after u3m_boot due to u3l_log
