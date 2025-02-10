@@ -869,13 +869,44 @@ _post_status(u3_post som_p)
   }
 }
 
-// static void
-// _ifree_ptr(void* som_v)
-// {
-//   if ( !som_v ) {
-//     return;
-//   }
+static c3_w
+_idle_pages(void)
+{
+  u3a_dell* fre_u = u3tn(u3a_dell, HEAP.fre_p);
+  c3_w      tot_w = 0;
 
-//   //  XX sanity: in loom
-//   _ifree(u3a_outa(som_v));
-// }
+  while ( fre_u ) {
+    tot_w += fre_u->siz_w;
+    fre_u = u3tn(u3a_dell, fre_u->nex_p);
+  }
+
+  return tot_w;
+}
+
+static c3_w
+_idle_words(void)
+{
+  u3a_crag *pag_u;
+  u3_post   pag_p;
+  c3_w len_w, pag_w, siz_w, tot_w = 0;
+
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+    pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
+    siz_w = 0;
+    pag_w = 0;
+
+    while ( pag_u ) {
+      len_w  = pag_u->len_s; // XX assert?
+      siz_w += pag_u->fre_s;
+      pag_u  = u3tn(u3a_crag, pag_u->nex_p);
+      pag_w++;
+    }
+
+    fprintf(stderr, "idle words: class=%u (%u words) blocks=%u (in %u pages)\r\n",
+                    i_w, len_w, siz_w, pag_w);
+
+    tot_w += siz_w * len_w;
+  }
+
+  return tot_w;
+}

@@ -1514,7 +1514,10 @@ u3a_rewrite_compact(void)
 c3_w
 u3a_idle(u3a_road* rod_u)
 {
-  return 0;
+  //  XX ignores argument
+  c3_w pag_w = _idle_pages();
+  fprintf(stderr, "loom: idle %u complete pages\r\n", pag_w);
+  return (pag_w << u3a_page) + _idle_words();
 }
 
 /* u3a_sweep(): sweep a fully marked road.
