@@ -509,9 +509,10 @@ _pave_home(void)
   u3_post bot_p, top_p;
 
   bot_p = 1U << u3a_page;
-  top_p = u3C.wor_i - bot_p - c3_wiseof(u3v_home);
+  top_p = u3C.wor_i - c3_wiseof(u3v_home);
+  u3H   = u3to(u3v_home, top_p);
+  top_p = u3C.wor_i - bot_p;
 
-  u3H = u3to(u3v_home, top_p);
   u3H->ver_w = U3V_VERLAT;
   u3R = &u3H->rod_u;
 
@@ -521,6 +522,9 @@ _pave_home(void)
 
   _pave_parts();
 }
+
+STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
+               "home road size" );
 
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
                "home road alignment" );
