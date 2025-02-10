@@ -507,6 +507,12 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
   assert( pag_w < HEAP.len_w );
 
+  if ( nex_w == HEAP.len_w ) {
+    u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
+    HEAP.len_w -= siz_w;
+    return;
+  }
+
   //  XX madv_free
 
   if ( !HEAP.cac_p ) {
@@ -600,8 +606,6 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       abort();
     }
   }
-
-  //  XX shrink heap
 
   if ( del_u ) {
     _ifree(u3of(u3a_dell, del_u));
