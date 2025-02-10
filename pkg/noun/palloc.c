@@ -711,19 +711,20 @@ _irealloc(u3_post som_p, c3_w len_w)
       return 0; // XX bail
     }
 
-    for ( old_w = 1; dir_u[pag_w + old_w] == u3a_rest_pg; old_w++ ) {}
-
     {
-      c3_w wor_w = old_w << u3a_page;
+      c3_w siz_w, dif_w;
 
-      if ( len_w <= wor_w ) {
-        wor_w  -= len_w;
-        wor_w >>= u3a_page;
+      for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+
+      old_w = siz_w << u3a_page;
+
+      if ( len_w <= old_w ) {
+        dif_w = (old_w - len_w) >> u3a_page;
 
         // XX junk
 
-        while ( wor_w-- ) {
-          dir_u[pag_w + wor_w] = u3a_free_pg;
+        while ( dif_w-- ) {
+          dir_u[pag_w + (HEAP.dir_ws * (old_w - dif_w - 1))] = u3a_free_pg;
         }
 
         return som_p;
