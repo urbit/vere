@@ -1080,9 +1080,9 @@ u3m_fall(void)
   */
   fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%x, was 0x%x)\r\n",
           _(u3a_is_north(u3R)) ? "north" : "south",
-          u3R,
+          (void*)u3R,
           _(u3a_is_north(u3to(u3_road, u3R->par_p))) ? "north" : "south",
-          u3to(u3_road, u3R->par_p),
+          u3to(void, u3R->par_p),
           u3R->hat_p,
           u3R->rut_p);
   _print_diff("unused free", u3R->hat_p, u3R->cap_p);
@@ -1984,30 +1984,6 @@ u3m_save(void)
   u3m_water(&low_p, &hig_p);
 
   u3_assert(u3R == &u3H->rod_u);
-
-#if 1  // XX redundant
-  {
-    c3_w low_w = u3a_heap(u3R);  // old u3m_water()
-    c3_w hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
-
-    c3_w nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
-
-    c3_w nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sop_w = hig_p >> u3a_page;
-    c3_w sor_w = u3P.pag_w - sop_w;
-
-    if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
-      fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
-                      nox_w, nor_w, sox_w, sor_w);
-    }
-    else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
-      fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
-                      nox_w, nor_w, sox_w, sor_w);
-      u3_assert(!"busted");
-    }
-  }
-#endif
 
   u3e_save(low_p, hig_p);
 }
