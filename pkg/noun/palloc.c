@@ -42,8 +42,8 @@ struct heap {
   u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
 };
 
-#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * ((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
-#define post_to_page(som_p)  (_abs_dif(som_p, HEAP.bot_p + HEAP.off_ws) >> u3a_page)
+#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
+#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
 
 
 #ifndef HEAP
@@ -91,11 +91,11 @@ _init(void)
   //  XX check for overflow
 
   HEAP.pag_p  = u3R->hat_p;
-  HEAP.pag_p += HEAP.off_ws * (1U << u3a_page);
+  HEAP.pag_p += HEAP.off_ws * (c3_ws)(1U << u3a_page);
   HEAP.siz_w  = 1U << u3a_page;
   HEAP.len_w  = 1;
 
-  u3R->hat_p += HEAP.dir_ws * (1U << u3a_page);
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)(1U << u3a_page);
 
   // fprintf(stderr, "palloc: init2 hat=0x%x cap=0x%x bot=0x%x pag=0x%x\n", u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p);
 
@@ -133,8 +133,8 @@ _extend_directory(c3_w siz_w)  // num pages
   dif_w  = nex_w >> u3a_page;        //  new pages
 
   HEAP.pag_p  = u3R->hat_p;
-  HEAP.pag_p += HEAP.off_ws * nex_w;
-  u3R->hat_p += HEAP.dir_ws * nex_w; //  XX overflow
+  HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
 
   // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
   //                 HEAP.len_w + dif_w, nex_w, u3R->hat_p, HEAP.pag_p);
@@ -193,9 +193,9 @@ _extend_heap(c3_w siz_w)  // num pages
   //                 siz_w, HEAP.len_w, HEAP.siz_w, u3R->hat_p);
 
   pag_p  = u3R->hat_p;
-  pag_p += HEAP.off_ws * (siz_w << u3a_page);
+  pag_p += HEAP.off_ws * (c3_ws)(siz_w << u3a_page);
 
-  u3R->hat_p += HEAP.dir_ws * (siz_w << u3a_page);
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
 
 
   // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
