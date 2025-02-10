@@ -100,6 +100,8 @@ _init(void)
   // fprintf(stderr, "palloc: init2 hat=0x%x cap=0x%x bot=0x%x pag=0x%x\n", u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p);
 
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+  memset(dir_u, 0, 1U << (u3a_page + 2));
   dir_u[0] = u3a_head_pg;
 
   assert( 0 == post_to_page(HEAP.pag_p) );
@@ -155,16 +157,20 @@ _extend_directory(c3_w siz_w)  // num pages
 
   assert( pag_w == (HEAP.len_w - (HEAP.off_ws * (dif_w - 1))) );
 
-  dir_u[pag_w] = u3a_head_pg;
-
   {
-    c3_w max_w = nex_w >> u3a_page;
-    for ( c3_w i_w = 1; i_w < max_w; i_w++ ) {
-      dir_u[pag_w + i_w] = u3a_rest_pg;
-    }
-  }
+    c3_z len_z = (c3_z)HEAP.len_w << 2;
+    c3_z dif_z = (c3_z)dif_w << 2;
 
-  memcpy(dir_u, old_u, (c3_z)HEAP.len_w << 2);
+    memcpy(dir_u, old_u, len_z);
+
+    dir_u[pag_w] = u3a_head_pg;
+
+    for ( c3_w i_w = 1; i_w < dif_w; i_w++ ) {
+      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] = u3a_rest_pg;
+    }
+
+    memset((c3_y*)dir_u + len_z + dif_z, 0, ((c3_z)nex_w << 2) - len_z - dif_z);
+  }
 
   HEAP.len_w += dif_w;
   HEAP.siz_w  = nex_w;
