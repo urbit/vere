@@ -476,8 +476,13 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
   dir_u[pag_w] = u3a_free_pg;
 
-  for ( siz_w = 1; dir_u[pag_w + siz_w] == u3a_rest_pg; siz_w++ ) {
-    dir_u[pag_w + siz_w] = u3a_free_pg;
+  if ( pag_w || !HEAP.off_ws ) {
+    for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {
+      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
+    }
+  }
+  else {
+    siz_w = 1;
   }
 
   nex_w = pag_w + siz_w;
