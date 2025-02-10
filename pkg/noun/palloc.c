@@ -153,7 +153,7 @@ _extend_directory(c3_w siz_w)  // num pages
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   pag_w = post_to_page(HEAP.pag_p);
 
-  assert( pag_w == HEAP.len_w );
+  assert( pag_w == (HEAP.len_w - (HEAP.off_ws * (dif_w - 1))) );
 
   dir_u[pag_w] = u3a_head_pg;
 
@@ -264,7 +264,12 @@ _alloc_pages(c3_w siz_w)  // num pages
       assert( u3a_free_pg == dir_u[pag_w + i_w] );
     }
 
-    pag_p = page_to_post(pag_w);
+    //  XX groace
+    //
+    pag_w -= HEAP.off_ws * (siz_w - 1);
+    pag_p  = page_to_post(pag_w);
+
+    assert( pag_w < HEAP.len_w );
   }
   else {
     pag_p = _extend_heap(siz_w);
@@ -273,8 +278,7 @@ _alloc_pages(c3_w siz_w)  // num pages
     // fprintf(stderr, "alloc pages grow %u (0x%x, hat=0x%x) pag=%u len=%u\n",
     //                 siz_w, pag_p, u3R->hat_p, pag_w, HEAP.len_w);
     assert( pag_w < HEAP.len_w );
-    //  XX wrong in south roads
-    // assert( pag_w + siz_w == HEAP.len_w );
+    assert( (pag_w + ((HEAP.off_ws + 1) * siz_w) - HEAP.off_ws) == HEAP.len_w );
   }
 
   dir_u[pag_w] = u3a_head_pg;
@@ -485,7 +489,17 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     siz_w = 1;
   }
 
-  nex_w = pag_w + siz_w;
+  //  XX groace
+  //
+  if ( HEAP.off_ws ) {
+    nex_w = pag_w + 1;
+    pag_w = nex_w - siz_w;
+  }
+  else {
+    nex_w = pag_w + siz_w;
+  }
+
+  assert( pag_w < HEAP.len_w );
 
   //  XX madv_free
 
