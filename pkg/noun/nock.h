@@ -4,11 +4,16 @@
 #define U3_NOCK_H
 
 #include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "c3/c3.h"
 #include "jets.h"
 #include "types.h"
 #include "zave.h"
+
+#define SLOW_STACK_NAME  "/spin_stack_page"
+#define PSIZE (1U << (u3a_page +2))
 
   /** Data structures.
   ***
@@ -48,14 +53,12 @@
     } reg_u;                          // registration site data
   } u3n_prog;
 
-      typedef struct slow {
-        u3_noun nam;
-        struct slow* nex_u;
-      } slow;
-
-      typedef struct slow_stack {
-        slow* top;
-      } slow_stack;
+/* u3n_spin: %spin hint stack
+ */
+  typedef struct {
+    c3_w off_w;
+    c3_y dat_y[PSIZE - sizeof(c3_w)];
+  } u3n_spin;
 
   /**  Functions.
   **/
@@ -158,7 +161,7 @@
     /* u3n_sstack_init: initalize a root node on the slow stack 
      */
       void
-      u3n_sstack_init();
+      u3n_sstack_init(void);
 
     /* u3n_sstack_push: push a noun on the slow stack.
     */
