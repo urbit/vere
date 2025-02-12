@@ -3010,14 +3010,9 @@ _mesa_io_talk(u3_auto* car_u)
   uv_udp_recv_start(&u3_Host.wax_u, _mesa_alloc, _mesa_recv_cb);
 
   c3_i rec_i = 2 * 1024 * 1024;
-  c3_i lel_i = 0;
-  c3_i err_i = uv_recv_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
-  err_i = uv_recv_buffer_size((uv_handle_t*)&u3_Host.wax_u, &lel_i);
-  /* u3l_log("ames: recv buffer size %i %i %s", err_i, lel_i, uv_strerror(err_i)); */
+  uv_recv_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
 
-  err_i = uv_send_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
-  err_i = uv_send_buffer_size((uv_handle_t*)&u3_Host.wax_u, &lel_i);
-  /* u3l_log("ames: send buffer size %i %i %s", err_i, lel_i, uv_strerror(err_i)); */
+  uv_send_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
 
   sam_u->car_u.liv_o = c3y;
   //u3z(rac); u3z(who);
