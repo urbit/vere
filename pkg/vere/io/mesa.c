@@ -2222,7 +2222,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
 static void
 _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u)
 {
-  u3l_log("meet_peer");
   u3_noun her = u3_ship_to_noun(her_u);
   u3_noun gan = u3nc(u3_nul, u3_nul);
 
