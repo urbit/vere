@@ -1071,7 +1071,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__meme:
           case c3__nara:
           case c3__hela:
-          case c3__slow:
+          case c3__spin:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1936,12 +1936,12 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
-    case c3__slow: {
+    case c3__spin: {
 
-      //u3t_slog_cap(1, u3i_string("slow"), hin);
+      //u3t_slog_cap(1, u3i_string("spin"), hin);
       u3z(*clu);
       u3n_sstack_push(*clu);
-      *clu = c3__slow;
+      *clu = c3__spin;
     } break;
 
     case c3__nara: {
@@ -2005,7 +2005,7 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if (c3__slow == tok) {
+  if (c3__spin == tok) {
     u3t_slog_nara(0);
     u3n_sstack_pop();
   }
@@ -3195,7 +3195,7 @@ u3n_nock_an(u3_noun bus, u3_noun fol)
   return u3n_nock_et(gul, bus, fol);
 }
 
-/* u3n_sstack_init: initalize a root node on the slow stack 
+/* u3n_sstack_init: initalize a root node on the spin stack 
 */
 void
 u3n_sstack_init()
@@ -3222,7 +3222,7 @@ u3n_sstack_init()
   u3n_sstack_push(c3__root);
 }
 
-/* u3n_sstack_push: push a noun on the slow stack.
+/* u3n_sstack_push: push a noun on the spin stack.
 */
 void
 u3n_sstack_push(u3_noun nam)
@@ -3242,7 +3242,7 @@ u3n_sstack_push(u3_noun nam)
 
 }
 
-/* u3n_sstack_pop: pop a noun from the slow stack.
+/* u3n_sstack_pop: pop a noun from the spin stack.
 */
 void
 u3n_sstack_pop()

@@ -1076,7 +1076,6 @@
 #   define c3__slon   c3_s4('s','l','o','n')
 #   define c3__slop   c3_s4('s','l','o','p')
 #   define c3__slos   c3_s4('s','l','o','s')
-#   define c3__slow   c3_s4('s','l','o','w')
 #   define c3__slur   c3_s4('s','l','u','r')
 #   define c3__slux   c3_s4('s','l','u','x')
 #   define c3__sm     c3_s2('s','m')

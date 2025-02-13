@@ -158,17 +158,17 @@
       void
       u3n_ream(void);
 
-    /* u3n_sstack_init: initalize a root node on the slow stack 
+    /* u3n_sstack_init: initalize a root node on the spin stack 
      */
       void
       u3n_sstack_init(void);
 
-    /* u3n_sstack_push: push a noun on the slow stack.
+    /* u3n_sstack_push: push a noun on the spin stack.
     */
       void
       u3n_sstack_push(u3_noun nam);
 
-    /* u3n_sstack_pop: pop a noun from the slow stack.
+    /* u3n_sstack_pop: pop a noun from the spin stack.
     */
       void
       u3n_sstack_pop(void);
