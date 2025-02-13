@@ -3235,7 +3235,6 @@ u3n_sstack_push(u3_noun nam)
   }
 
   u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
-  //stk_u->dat[met_w] = 0;
   stk_u->off_w += met_w;
 
   memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
@@ -3248,9 +3247,7 @@ u3n_sstack_push(u3_noun nam)
 void
 u3n_sstack_pop()
 {
-  c3_w len_w = 0;
-  
-  memcpy(&stk_u->dat_y[stk_u->off_w - sizeof(c3_w)], &len_w, sizeof(c3_w));
+  c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
   stk_u->off_w -= (len_w+sizeof(c3_w));
 }
 
