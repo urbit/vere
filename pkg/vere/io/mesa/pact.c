@@ -167,7 +167,7 @@ log_name(u3_mesa_name* nam_u)
     u3z(her);
   }
 
-  u3l_log("%s: /%s", her_c, nam_u->pat_c);
+  u3l_log("%s: /%.*s", her_c, nam_u->pat_s, nam_u->pat_c);
   u3l_log("  rift: %u  bloq: %u  auth/data: %s init: %s frag: %"PRIu64,
           nam_u->rif_w,
           nam_u->boq_y,
@@ -307,45 +307,8 @@ _mesa_bytes_of_chub_tag(c3_y tot_y)
   return 1 << tot_y;
 }
 
-/* lifecycle
-*/
-
-/* mesa_free_pact(): free contents of packet.
-*    Does *not* free pac_u itself
-*/
-void mesa_free_pact(u3_mesa_pact* pac_u)
-{
-  c3_free(pac_u->pek_u.nam_u.pat_c);
-  switch ( pac_u->hed_u.typ_y ) {
-    default: {
-      break;
-    };
-    case PACT_PEEK: {
-      break;
-    };
-    case PACT_PAGE: {
-      c3_free(pac_u->pag_u.dat_u.fra_y);
-      break;
-    };
-    case PACT_POKE: {
-      /* c3_free(pac_u->pok_u.nam_u.pat_c); */
-      c3_free(pac_u->pok_u.pay_u.pat_c);
-      c3_free(pac_u->pok_u.dat_u.fra_y);
-      break;
-    };
-  }
-}
-
 /* serialisation
 */
-
-typedef struct _u3_etcher {
-  c3_y* buf_y;
-  c3_w  len_w;
-  c3_w  cap_w;
-  c3_d  bit_d; // for _etch_bits
-  c3_y  off_y; // for _etch_bits
-} u3_etcher;
 
 typedef struct _u3_sifter {
   c3_y* buf_y;
@@ -355,7 +318,7 @@ typedef struct _u3_sifter {
   c3_c* err_c;
 } u3_sifter;
 
-static void
+void
 etcher_init(u3_etcher* ech_u, c3_y* buf_y, c3_w cap_w)
 {
   ech_u->buf_y = buf_y;
@@ -536,8 +499,8 @@ _sift_var_chub(u3_sifter* sif_u, c3_w len_w)
     return 0;
   }
   c3_d val_d = 0;
-  for ( int i = 0; i < len_w; i++ ) {
-    val_d |= (res_y[i] << (8*i));
+  for ( c3_d i = 0; i < len_w; i++ ) {
+    val_d |= ((c3_d)res_y[i] << (8*i));
   }
   return val_d;
 }
@@ -630,7 +593,7 @@ mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u)
   }
 }
 
-static void
+void
 _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
 {
   u3_mesa_name_meta met_u = {0};
@@ -672,6 +635,9 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
 static void
 _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 {
+  nam_u->str_u.str_c = (c3_c*)sif_u->buf_y;
+  c3_w rem_w = sif_u->rem_w;
+
   u3_mesa_name_meta met_u = {0};
   met_u.ran_y = _sift_bits(sif_u, 2);
   met_u.rif_y = _sift_bits(sif_u, 2);
@@ -698,9 +664,16 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 
   nam_u->pat_s = _sift_short(sif_u);
 
-  nam_u->pat_c = c3_calloc(nam_u->pat_s + 1);
-  _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s);
-  nam_u->pat_c[nam_u->pat_s] = 0;
+  nam_u->pat_c = (c3_c*)sif_u->buf_y;
+  /* nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); */
+  /* _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s); */
+
+  sif_u->buf_y += nam_u->pat_s;
+  sif_u->rem_w -= nam_u->pat_s;
+
+  nam_u->str_u.len_w = rem_w - sif_u->rem_w;
+
+  /* nam_u->pat_c[nam_u->pat_s] = 0; */
 }
 
 static void
@@ -777,7 +750,7 @@ _mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
     nel_y = _sift_byte(sif_u);
   }
   dat_u->len_w = _sift_var_word(sif_u, nel_y);
-  dat_u->fra_y = _sift_bytes_alloc(sif_u, dat_u->len_w);
+  dat_u->fra_y = _sift_next(sif_u, dat_u->len_w);
 }
 
 static void
