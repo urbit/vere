@@ -342,8 +342,9 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
-        void*      sam_u;                   //  XX
-        uv_udp_t   wax_u;                   //  XX
+        void*      sam_u;                   //  old ames, "unified driver" hack
+        uv_udp_t   wax_u;                   //  "unified driver" udp send handle
+        c3_w*      imp_u;                   //  "unified driver" galaxy IP:s
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.

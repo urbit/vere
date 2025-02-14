@@ -2915,7 +2915,7 @@ u3_ames_io_init(u3_pier* pir_u)
   sam_u->lax_p = u3h_new_cache(500000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
-  uv_udp_init(u3L, &u3_Host.wax_u);
+  u3_assert( !uv_udp_init_ex(u3L, &u3_Host.wax_u, UV_UDP_RECVMMSG) );
   sam_u->wax_u.data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();
@@ -2950,5 +2950,6 @@ u3_ames_io_init(u3_pier* pir_u)
 
   // XX declare void pointer to u3_host and add sam_u in it
   u3_Host.sam_u = sam_u;
+  u3_Host.imp_u = sam_u->zar_u.pip_w;
   return car_u;
 }

@@ -964,7 +964,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       //
       if ( c3y == req_u->peq_u->las_o ) {
         u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
-        if ( our == bem.who ) {
+        if ( c3y == u3r_sing(our, bem.who) ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                             u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
         }

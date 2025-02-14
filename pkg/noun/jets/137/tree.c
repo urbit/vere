@@ -112,10 +112,29 @@ static u3j_harm _137_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
 static u3j_core _137_hex__crc_d[] = {{"crc32", 7, _137_hex__crc32_a, 0, no_hashes }, {}};
 
 
+static u3j_harm _137_hex_coed__ed_scad_a[] = {{".2", u3wee_scad}, {}};
+static u3j_harm _137_hex_coed__ed_scas_a[] = {{".2", u3wee_scas}, {}};
+static u3j_harm _137_hex_coed__ed_scap_a[] = {{".2", u3wee_scap}, {}};
+
 static u3j_harm _137_hex_coed__ed_puck_a[] = {{".2", u3wee_puck}, {}};
+static u3j_harm _137_hex_coed__ed_luck_a[] = {{".2", u3wee_luck}, {}};
+static u3j_harm _137_hex_coed__ed_sign_a[] = {{".2", u3wee_sign}, {}};
+static u3j_harm _137_hex_coed__ed_sign_raw_a[] = {{".2", u3wee_sign_raw}, {}};
 static u3j_harm _137_hex_coed__ed_sign_octs_a[] = {{".2", u3wee_sign_octs}, {}};
+static u3j_harm _137_hex_coed__ed_sign_octs_raw_a[] = {{".2", u3wee_sign_octs_raw}, {}};
 static u3j_harm _137_hex_coed__ed_veri_octs_a[] = {{".2", u3wee_veri_octs}, {}};
+static u3j_harm _137_hex_coed__ed_veri_a[] = {{".2", u3wee_veri}, {}};
 static u3j_harm _137_hex_coed__ed_shar_a[] = {{".2", u3wee_shar}, {}};
+static u3j_harm _137_hex_coed__ed_slar_a[] = {{".2", u3wee_slar}, {}};
+
+static u3j_harm _137_hex_coed__ed_smac_a[] =
+  {{".2", u3wee_smac}, {}};
+
+static u3j_harm _137_hex_coed__ed_recs_a[] =
+  {{".2", u3wee_recs}, {}};
+
+static u3j_harm _137_hex_coed__ed_point_neg_a[] =
+  {{".2", u3wee_point_neg}, {}};
 
 static u3j_harm _137_hex_coed__ed_point_add_a[] =
   {{".2", u3wee_point_add}, {}};
@@ -133,11 +152,23 @@ static u3j_harm _137_hex_coed__ed_add_double_scalarmult_a[] =
   {{".2", u3wee_add_double_scalarmult}, {}};
 
 static u3j_core _137_hex_coed__ed_d[] =
-  { { "sign-octs", 7, _137_hex_coed__ed_sign_octs_a, 0, no_hashes },
+  { { "sign", 7, _137_hex_coed__ed_sign_a, 0, no_hashes },
+    { "sign-raw", 7, _137_hex_coed__ed_sign_raw_a, 0, no_hashes },
+    { "sign-octs", 7, _137_hex_coed__ed_sign_octs_a, 0, no_hashes },
+    { "sign-octs-raw", 7, _137_hex_coed__ed_sign_octs_raw_a, 0, no_hashes },
     { "puck", 7, _137_hex_coed__ed_puck_a, 0, no_hashes },
+    { "luck", 7, _137_hex_coed__ed_luck_a, 0, no_hashes },
+    { "scad", 7, _137_hex_coed__ed_scad_a, 0, no_hashes },
+    { "scas", 7, _137_hex_coed__ed_scas_a, 0, no_hashes },
+    { "scap", 7, _137_hex_coed__ed_scap_a, 0, no_hashes },
     { "veri-octs", 7, _137_hex_coed__ed_veri_octs_a, 0, no_hashes },
+    { "veri", 7, _137_hex_coed__ed_veri_a, 0, no_hashes },
     { "shar", 7, _137_hex_coed__ed_shar_a, 0, no_hashes },
+    { "slar", 7, _137_hex_coed__ed_slar_a, 0, no_hashes },
     { "point-add", 7, _137_hex_coed__ed_point_add_a, 0, 0 },
+    { "point-neg", 7, _137_hex_coed__ed_point_neg_a, 0, 0 },
+    { "recs", 7, _137_hex_coed__ed_recs_a, 0, 0 },
+    { "smac", 7, _137_hex_coed__ed_smac_a, 0, 0 },
     { "scalarmult", 7, _137_hex_coed__ed_scalarmult_a, 0,
       no_hashes },
     { "scalarmult-base", 7, _137_hex_coed__ed_scalarmult_base_a, 0,

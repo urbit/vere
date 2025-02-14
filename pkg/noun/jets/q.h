@@ -157,6 +157,8 @@
     u3_noun u3qea_de(u3_atom, u3_atom);
     u3_noun u3qea_en(u3_atom, u3_atom);
 
+    u3_noun u3qee_recs(u3_atom);
+
     u3_atom u3qe_fein_ob(u3_atom pyn);
     u3_atom u3qe_fynd_ob(u3_atom pyn);
 
