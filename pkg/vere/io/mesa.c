@@ -43,6 +43,8 @@ static c3_y are_y[524288];
 #define DIRECT_ROUTE_TIMEOUT_MICROS 5000000
 #define DIRECT_ROUTE_RETRY_MICROS   1000000
 
+#define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
+
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
 #define MESA_SYM_FIELD(SYM) MESA_FIELD_ ## SYM
@@ -214,9 +216,6 @@ typedef struct _u3_pend_req u3_pend_req;
 #define VAL_TY u3_gage*
 #include "verstable.h"
 
-typedef struct _u3_mesa_line u3_mesa_line;
-
-
 typedef enum _u3_mesa_ctag {
   CTAG_WAIT = 1,
   CTAG_BLOCK = 2,
@@ -242,9 +241,19 @@ typedef struct _u3_mesa_line {
   arena        are_u;
 } u3_mesa_line;
 
+
+static void u3_free_line( u3_mesa_line* lin_u )
+{
+  // CTAG_WAIT, CTAG_BLOCK
+  if ( lin_u > (u3_mesa_line*)2 ) {
+    arena_free(&lin_u->are_u);
+  }
+}
+
 #define NAME jum_map
 #define KEY_TY u3_str
 #define KEY_DTOR_FN u3_free_str
+#define VAL_DTOR_FN u3_free_line
 #define HASH_FN u3_hash_str
 #define CMPR_FN u3_cmpr_str
 #define VAL_TY u3_mesa_line*
@@ -270,6 +279,7 @@ typedef struct _u3_mesa {
   c3_l               sev_l;       //  XX: ??
   c3_o               for_o;       //  is forwarding
   per_map            per_u;       //  (map ship u3_peer)
+  c3_d               jum_d;       //  bytes in jumbo cache
   jum_map            jum_u;       //  jumbo cache
   gag_map            gag_u;       //  lane cache
   pit_map            pit_u;       //  (map path [our=? las=(set lane)])
@@ -1914,6 +1924,16 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
   c3_w len_w = _name_to_jumbo_str(nam_u, buf_y);
   u3_str str_u = {(c3_c*)buf_y, len_w};
 
+  // CTAG_BLOCK, CTAG_WAIT
+  if ( lin_u > (u3_mesa_line*)2 ) {
+    if (sam_u->jum_d > JUMBO_CACHE_MAX_SIZE) {
+      vt_cleanup(&sam_u->jum_u);
+      sam_u->jum_d = 0;
+    }
+
+    sam_u->jum_d += lin_u->tob_d;
+  }
+
   jum_map_itr itr_u = vt_insert(&sam_u->jum_u, str_u, lin_u);
 
   if ( vt_is_end(itr_u) ) {
@@ -3024,6 +3044,8 @@ u3_mesa_io_init(u3_pier* pir_u)
   are_u.beg = (char*)are_y;
   are_u.end = (char*)(are_y + 524288);
   sam_u->are_u = are_u;
+
+  sam_u->jum_d = 0;
 
   vt_init(&sam_u->pit_u);
   vt_init(&sam_u->per_u);
