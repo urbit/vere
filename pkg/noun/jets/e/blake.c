@@ -59,20 +59,21 @@
 
   static u3_atom
   _cqe_blake3_hash(u3_atom wid, u3_atom dat,
-             u3_atom key, u3_atom out)
+             u3_atom key, u3_atom flags, u3_atom out)
   {
     c3_w wid_w, out_w;
     if ( !u3r_word_fit(&wid_w, wid) || !u3r_word_fit(&out_w, out) ) {
       return u3m_bail(c3__fail);
     }
     else {
-      c3_y  key_y[32];
+      c3_y key_y[32];
       u3r_bytes(0, 32, key_y, key);
+      c3_y flags_y = u3r_byte(0, flags);
       c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
       u3i_slab sab_u;
       u3i_slab_bare(&sab_u, 3, out_w);
       c3_y* out_y = sab_u.buf_y;
-      urcrypt_blake3_hash(wid_w, dat_y, key_y, out, out_y);
+      urcrypt_blake3_hash(wid_w, dat_y, key_y, flags_y, out, out_y);
       u3a_free(dat_y);
       return u3i_slab_mint(&sab_u);
     }
@@ -81,20 +82,20 @@
   u3_noun
   u3we_blake3_hash(u3_noun cor)
   {
-    u3_noun out, msg,      // arguments
-            wid, dat,      // destructured msg
-            key;           // context
+    u3_noun out, msg,        // arguments
+            wid, dat,        // destructured msg
+            sam, key, flags; // context
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &out,
                               u3x_sam_3, &msg,
-                              u3x_con_sam_2, &key, 0) ||
+                              u3x_con_sam, &sam, 0) ||
                 u3ud(out) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
-                u3ud(key))
+                u3r_cell(sam, &key, &flags) || u3ud(key) || u3ud(flags) )
     {
       return u3m_bail(c3__exit);
     } else {
-      return u3l_punt("blake3_hash", _cqe_blake3_hash(wid, dat, key, out));
+      return u3l_punt("blake3_hash", _cqe_blake3_hash(wid, dat, key, flags, out));
     }
   }
 

@@ -4,7 +4,7 @@
 #define U3_VORTEX_H
 
 #include "allocate.h"
-#include "c3.h"
+#include "c3/c3.h"
 #include "imprison.h"
 #include "version.h"
 
@@ -130,8 +130,8 @@
 
     /* u3v_mark(): mark arvo kernel.
     */
-      c3_w
-      u3v_mark(FILE* fil_u);
+      u3m_quac*
+      u3v_mark();
 
     /* u3v_reclaim(): clear ad-hoc persistent caches to reclaim memory.
     */
@@ -141,6 +141,6 @@
     /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
     */
       void
-      u3v_rewrite_compact();
+      u3v_rewrite_compact(void);
 
 #endif /* ifndef U3_VORTEX_H */

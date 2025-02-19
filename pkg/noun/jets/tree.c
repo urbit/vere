@@ -17,10 +17,9 @@
   ```
 */
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "jets.h"
 #include "jets/w.h"
-
 
 static c3_c* no_hashes[] = { 0 };
 
@@ -275,13 +274,19 @@ static c3_c* _140_hex_coed__ed_puck_ha[] = {
   "1bc694675842345c50b0e20a2193bb5bcbb42f163fc832431a3d1822a81e4c98",
   0
 };
+
 static u3j_harm _140_hex_coed__ed_sign_a[] = {{".2", u3wee_sign}, {}};
-static c3_c* _140_hex_coed__ed_sign_ha[] = {
+
+static u3j_harm _140_hex_coed__ed_sign_octs_a[] = {{".2", u3wee_sign_octs}, {}};
+static c3_c* _140_hex_coed__ed_sign_octs_ha[] = {
   "34ad749bf8443611cbf1f7de90a066318bd12be36f2f7f6f55281f6f7ed79754",
   0
 };
+
 static u3j_harm _140_hex_coed__ed_veri_a[] = {{".2", u3wee_veri}, {}};
-static c3_c* _140_hex_coed__ed_veri_ha[] = {
+
+static u3j_harm _140_hex_coed__ed_veri_octs_a[] = {{".2", u3wee_veri_octs}, {}};
+static c3_c* _140_hex_coed__ed_veri_octs_ha[] = {
   "047a7eeccb2e68aeeee631b6db86e11a5a3aa9e179660553eca6304327612dcf",
   0
 };
@@ -323,9 +328,11 @@ static c3_c* _140_hex_coed__ed_shar_ha[] = {
   };
 
 static u3j_core _140_hex_coed__ed_d[] =
-  { { "sign", 7, _140_hex_coed__ed_sign_a, 0, _140_hex_coed__ed_sign_ha },
+  { { "sign", 7, _140_hex_coed__ed_sign_a, 0, no_hashes },
+    { "sign-octs", 7, _140_hex_coed__ed_sign_octs_a, 0, _140_hex_coed__ed_sign_octs_ha },
     { "puck", 7, _140_hex_coed__ed_puck_a, 0, _140_hex_coed__ed_puck_ha },
-    { "veri", 7, _140_hex_coed__ed_veri_a, 0, _140_hex_coed__ed_veri_ha },
+    { "veri", 7, _140_hex_coed__ed_veri_a, 0, no_hashes },
+    { "veri-octs", 7, _140_hex_coed__ed_veri_octs_a, 0, _140_hex_coed__ed_veri_octs_ha },
     { "shar", 7, _140_hex_coed__ed_shar_a, 0, _140_hex_coed__ed_shar_ha },
     { "point-add", 7, _140_hex_coed__ed_point_add_a, 0, 0 },
     { "scalarmult", 7, _140_hex_coed__ed_scalarmult_a, 0,
@@ -495,14 +502,14 @@ static u3j_core _140_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, _140_hex_coed_ha },
   { "aes",  31, 0, _140_hex_aes_d,  _140_hex_aes_ha  },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  _140_hex_hmac_ha  },
-  { "argon",  31, 0, _140_hex_argon_d, _140_hex_argon_ha },
-  { "blake",  31, 0, _140_hex_blake_d, _140_hex_blake_ha },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes         },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  _140_hex_ripe_ha  },
-  { "scr",    31, 0, _140_hex_scr_d,   _140_hex_scr_ha   },
-  { "secp",    6, 0, _140_hex_secp_d,  _140_hex_secp_ha  },
-  { "mimes",  31, 0, _140_hex_mimes_d, _140_hex_mimes_ha },
+  { "hmac",   63, 0, _140_hex_hmac_d,   _140_hex_hmac_ha   },
+  { "argon",  31, 0, _140_hex_argon_d,  _140_hex_argon_ha  },
+  { "blake",  31, 0, _140_hex_blake_d,  _140_hex_blake_ha  },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes          },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   _140_hex_ripe_ha   },
+  { "scr",    31, 0, _140_hex_scr_d,    _140_hex_scr_ha    },
+  { "secp",    6, 0, _140_hex_secp_d,   _140_hex_secp_ha   },
+  { "mimes",  31, 0, _140_hex_mimes_d,  _140_hex_mimes_ha  },
   {}
 };
 static c3_c* _140_hex_ha[] = {
@@ -2120,8 +2127,11 @@ static u3j_core _139_hex_json_d[] =
     {}
   };
 
+
+
 static u3j_core _139_hex_d[] =
-{ { "lore",  63, _140_hex_lore_a, 0, no_hashes },
+{
+  { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
   { "loss",  63, _140_hex_loss_a, 0, no_hashes },
   { "lune", 127, _140_hex_lune_a, 0, no_hashes },
@@ -2129,15 +2139,15 @@ static u3j_core _139_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
-  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
-  { "blake",  31, 0, _140_hex_blake_d, no_hashes },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
-  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
-  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
-  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
-  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "hmac",   63, 0, _140_hex_hmac_d,   no_hashes  },
+  { "argon",  31, 0, _140_hex_argon_d,  no_hashes  },
+  { "blake",  31, 0, _140_hex_blake_d,  no_hashes  },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes  },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   no_hashes  },
+  { "scr",    31, 0, _140_hex_scr_d,    no_hashes  },
+  { "secp",    6, 0, _140_hex_secp_d,   no_hashes  },
+  { "mimes",  31, 0, _140_hex_mimes_d,  no_hashes  },
+  { "json",   31, 0, _139_hex_json_d,   no_hashes  },
   {}
 };
 
@@ -2341,6 +2351,14 @@ static u3j_core _138_hex_blake_d[] =
     {}
   };
 
+  static u3j_harm _138_hex_chacha_crypt_a[] = {{".2", u3we_chacha_crypt, c3y}, {}};
+  static u3j_harm _138_hex_chacha_xchacha_a[] = {{".2", u3we_chacha_xchacha, c3y}, {}};
+static u3j_core _138_hex_chacha_d[] =
+  { { "crypt",   7, _138_hex_chacha_crypt_a,   0, no_hashes },
+    { "xchacha", 7, _138_hex_chacha_xchacha_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _138_hex_d[] =
 { { "lore",  63, _140_hex_lore_a, 0, no_hashes },
   { "leer",  63, _140_hex_leer_a, 0, no_hashes },
@@ -2350,15 +2368,16 @@ static u3j_core _138_hex_d[] =
   { "coed", 63, 0, _140_hex_coed_d, no_hashes },
   { "aes",  31, 0, _140_hex_aes_d,  no_hashes },
 
-  { "hmac",   63, 0, _140_hex_hmac_d,  no_hashes },
-  { "argon",  31, 0, _140_hex_argon_d, no_hashes },
-  { "blake",  31, 0, _138_hex_blake_d, no_hashes },
-  { "kecc",   31, 0, _140_hex_kecc_d,  no_hashes },
-  { "ripemd", 31, 0, _140_hex_ripe_d,  no_hashes },
-  { "scr",    31, 0, _140_hex_scr_d,   no_hashes },
-  { "secp",    6, 0, _140_hex_secp_d,  no_hashes },
-  { "mimes",  31, 0, _140_hex_mimes_d, no_hashes },
-  { "json",   31, 0, _139_hex_json_d,  no_hashes },
+  { "hmac",   63, 0, _140_hex_hmac_d,   no_hashes },
+  { "argon",  31, 0, _140_hex_argon_d,  no_hashes },
+  { "blake",  31, 0, _138_hex_blake_d,  no_hashes },
+  { "chacha", 31, 0, _138_hex_chacha_d, no_hashes },
+  { "kecc",   31, 0, _140_hex_kecc_d,   no_hashes },
+  { "ripemd", 31, 0, _140_hex_ripe_d,   no_hashes },
+  { "scr",    31, 0, _140_hex_scr_d,    no_hashes },
+  { "secp",    6, 0, _140_hex_secp_d,   no_hashes },
+  { "mimes",  31, 0, _140_hex_mimes_d,  no_hashes },
+  { "json",   31, 0, _139_hex_json_d,   no_hashes },
   {}
 };
 
@@ -2463,6 +2482,8 @@ static u3j_core _138_two__by_d[] =
 
 static u3j_harm _138_two_mate_a[] = {{".2", u3wb_mate, c3y}, {}};
 
+static u3j_harm _138_two_aor_a[] = {{".2", u3wc_aor, c3y}, {}};
+
 static u3j_core _138_two_d[] =
 { { "tri", 3, 0, _138_tri_d, no_hashes, _140_tri_ho },
 
@@ -2489,6 +2510,7 @@ static u3j_core _138_two_d[] =
   { "welp", 7, _140_two_welp_a, 0, no_hashes },
   { "zing", 7, _140_two_zing_a, 0, no_hashes },
 
+  { "aor",  7, _138_two_aor_a, 0, no_hashes },
   { "bex",  7, _140_two_bex_a, 0, no_hashes },
   { "cat",  7, _140_two_cat_a, 0, no_hashes },
   { "can",  7, _140_two_can_a, 0, no_hashes },
@@ -2546,13 +2568,11 @@ static u3j_core _138_one_d[] =
   {}
 };
 
-u3j_core _k138_d[] =
+static u3j_core _k138_d[] =
 { { "one", 3, 0, _138_one_d, no_hashes },
   {}
 };
 
-
-//  TODO: probably need different ha hashes
 
 static u3j_core _a50_two__by_d[] =
   { { "apt", 7, _140_two__by_apt_a, 0, _140_two__by_apt_ha },
@@ -2617,10 +2637,13 @@ u3j_core _a50_d[] =
   {}
 };
 
+extern u3j_core _k137_d[];
+
 static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
   { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
   { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
+  { "k137", 0, 0, _k137_d, no_hashes, 0, (u3j_core*) 137,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };

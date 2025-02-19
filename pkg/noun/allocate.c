@@ -496,8 +496,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         }
       }
       else {                    /* we got a non-null freelist */
-        u3_post box_p, all_p;
-        box_p = all_p = *pfr_p;
+        u3_post all_p = *pfr_p;
         all_p += c3_wiseof(u3a_box) + off_w;
         c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
         c3_w des_w = c3_align(siz_w + pad_w, u3a_walign, C3_ALGHI);
@@ -896,12 +895,14 @@ u3a_cfree(c3_w* cel_w)
 {
 #ifdef U3_MEMORY_DEBUG
   if ( u3C.wag_w & u3o_debug_ram ) {
-    return u3a_wfree(cel_w);
+    u3a_wfree(cel_w);
+    return;
   }
 #endif
 
   if ( u3R == &(u3H->rod_u) ) {
-    return u3a_wfree(cel_w);
+    u3a_wfree(cel_w);
+    return;
   }
   else {
     u3a_box*      box_u = u3a_botox(cel_w);
@@ -2005,9 +2006,8 @@ u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
 /* _ca_print_memory(): un-captioned u3a_print_memory().
 */
 static void
-_ca_print_memory(FILE* fil_u, c3_w wor_w)
+_ca_print_memory(FILE* fil_u, c3_w byt_w)
 {
-  c3_w byt_w = (wor_w * 4);
   c3_w gib_w = (byt_w / 1000000000);
   c3_w mib_w = (byt_w % 1000000000) / 1000000;
   c3_w kib_w = (byt_w % 1000000) / 1000;
@@ -2028,43 +2028,55 @@ _ca_print_memory(FILE* fil_u, c3_w wor_w)
   }
 }
 
+/* u3a_quac_free: free quac memory.
+*/
+void
+u3a_quac_free(u3m_quac* qua_u)
+{
+  c3_w i_w = 0;
+  while ( qua_u->qua_u[i_w] != NULL ) {
+    u3a_quac_free(qua_u->qua_u[i_w]);
+    i_w++;
+  }
+  c3_free(qua_u->nam_c);
+  c3_free(qua_u->qua_u);
+  c3_free(qua_u);
+}
+
 /* u3a_prof(): mark/measure/print memory profile. RETAIN.
 */
-c3_w
-u3a_prof(FILE* fil_u, c3_w den_w, u3_noun mas)
+u3m_quac*
+u3a_prof(FILE* fil_u, u3_noun mas)
 {
-  c3_w tot_w = 0;
+  u3m_quac* pro_u = c3_calloc(sizeof(*pro_u));
   u3_noun h_mas, t_mas;
 
   if ( c3n == u3r_cell(mas, &h_mas, &t_mas) ) {
-    fprintf(fil_u, "%.*smistyped mass\r\n", den_w, "");
-    return tot_w;
+    fprintf(fil_u, "mistyped mass\r\n");
+    c3_free(pro_u);
+    return NULL;
   }
-  else if ( _(u3du(h_mas)) ) {
-    fprintf(fil_u, "%.*smistyped mass head\r\n", den_w, "");
+  else if ( c3y == u3du(h_mas) ) {
+    fprintf(fil_u, "mistyped mass head\r\n");
     {
       c3_c* lab_c = u3m_pretty(h_mas);
       fprintf(fil_u, "h_mas: %s", lab_c);
       c3_free(lab_c);
     }
-    return tot_w;
+    c3_free(pro_u);
+    return NULL;
   }
   else {
-    {
-      c3_c* lab_c = u3m_pretty(h_mas);
-      fprintf(fil_u, "%*s%s: ", den_w, "", lab_c);
-      c3_free(lab_c);
-    }
 
     u3_noun it_mas, tt_mas;
 
     if ( c3n == u3r_cell(t_mas, &it_mas, &tt_mas) ) {
-      fprintf(fil_u, "%*smistyped mass tail\r\n", den_w, "");
-      return tot_w;
+      fprintf(fil_u, "mistyped mass tail\r\n");
+      c3_free(pro_u);
+      return NULL;
     }
     else if ( c3y == it_mas ) {
-      tot_w += u3a_mark_noun(tt_mas);
-      _ca_print_memory(fil_u, tot_w);
+      c3_w siz_w = u3a_mark_noun(tt_mas);
 
 #if 1
       /* The basic issue here is that tt_mas is included in .sac
@@ -2075,7 +2087,7 @@ u3a_prof(FILE* fil_u, c3_w den_w, u3_noun mas)
        *
        * see u3a_mark_ptr().
       */
-      if ( _(u3a_is_dog(tt_mas)) ) {
+      if ( c3y == u3a_is_dog(tt_mas) ) {
         u3a_box* box_u = u3a_botox(u3a_to_ptr(tt_mas));
 #ifdef U3_MEMORY_DEBUG
         if ( 1 == box_u->eus_w ) {
@@ -2094,45 +2106,131 @@ u3a_prof(FILE* fil_u, c3_w den_w, u3_noun mas)
 #endif
       }
 #endif
+      pro_u->nam_c = u3r_string(h_mas);
+      pro_u->siz_w = siz_w*4;
+      pro_u->qua_u = NULL;
+      return pro_u;
 
-      return tot_w;
     }
     else if ( c3n == it_mas ) {
-      fprintf(fil_u, "\r\n");
-
-      while ( _(u3du(tt_mas)) ) {
-        tot_w += u3a_prof(fil_u, den_w+2, u3h(tt_mas));
+      pro_u->qua_u = c3_malloc(sizeof(pro_u->qua_u));
+      c3_w i_w = 0;
+      c3_t bad_t = 0;
+      while ( c3y == u3du(tt_mas) ) {
+        u3m_quac* new_u = u3a_prof(fil_u, u3h(tt_mas));
+        if ( NULL == new_u ) {
+          bad_t = 1;
+        } else {
+          pro_u->qua_u = c3_realloc(pro_u->qua_u, (i_w + 2) * sizeof(pro_u->qua_u));
+          pro_u->siz_w += new_u->siz_w;
+          pro_u->qua_u[i_w] = new_u;
+        }
         tt_mas = u3t(tt_mas);
+        i_w++;
       }
+      pro_u->qua_u[i_w] = NULL;
 
-      fprintf(fil_u, "%*s--", den_w, "");
-      _ca_print_memory(fil_u, tot_w);
-
-      return tot_w;
-
+      if ( bad_t ) {
+        i_w = 0;
+        while ( pro_u->qua_u[i_w] != NULL ) {
+          u3a_quac_free(pro_u->qua_u[i_w]);
+          i_w++;
+        }
+        c3_free(pro_u->qua_u);
+        c3_free(pro_u);
+        return NULL;
+      } else {
+        pro_u->nam_c = u3r_string(h_mas);
+        return pro_u;
+      }
     }
     else {
-      fprintf(fil_u, "%*smistyped (strange) mass tail\r\n", den_w, "");
-      return tot_w;
+      fprintf(fil_u, "mistyped (strange) mass tail\r\n");
+      c3_free(pro_u);
+      return NULL;
+    }
+  }
+}
+
+
+/* u3a_print_quac: print a memory report.
+*/
+
+void
+u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
+{
+  u3_assert( 0 != fil_u );
+
+  if ( mas_u->siz_w ) {
+    fprintf(fil_u, "%*s%s: ", den_w, "", mas_u->nam_c);
+
+    if ( mas_u->qua_u == NULL ) {
+      _ca_print_memory(fil_u, mas_u->siz_w);
+    } else {
+      fprintf(fil_u, "\r\n");
+      c3_w i_w = 0;
+      while ( mas_u->qua_u[i_w] != NULL ) {
+        u3a_print_quac(fil_u, den_w+2, mas_u->qua_u[i_w]);
+        i_w++;
+      }
+      fprintf(fil_u, "%*s--", den_w, "");
+      _ca_print_memory(fil_u, mas_u->siz_w);
     }
   }
 }
 
 /* u3a_mark_road(): mark ad-hoc persistent road structures.
 */
-c3_w
-u3a_mark_road(FILE* fil_u)
+u3m_quac*
+u3a_mark_road()
 {
-  c3_w tot_w = 0;
-  tot_w += u3a_maid(fil_u, "  namespace", u3a_mark_noun(u3R->ski.gul));
-  tot_w += u3a_maid(fil_u, "  trace stack", u3a_mark_noun(u3R->bug.tax));
-  tot_w += u3a_maid(fil_u, "  trace buffer", u3a_mark_noun(u3R->bug.mer));
-  tot_w += u3a_maid(fil_u, "  profile batteries", u3a_mark_noun(u3R->pro.don));
-  tot_w += u3a_maid(fil_u, "  profile doss", u3a_mark_noun(u3R->pro.day));
-  tot_w += u3a_maid(fil_u, "  new profile trace", u3a_mark_noun(u3R->pro.trace));
-  tot_w += u3a_maid(fil_u, "  transient memoization cache", u3h_mark(u3R->cax.har_p));
-  tot_w += u3a_maid(fil_u, "  persistent memoization cache", u3h_mark(u3R->cax.per_p));
-  return   u3a_maid(fil_u, "total road stuff", tot_w);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 9);
+
+  qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
+  qua_u[0]->nam_c = strdup("namespace");
+  qua_u[0]->siz_w = u3a_mark_noun(u3R->ski.gul) * 4;
+
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
+  qua_u[1]->nam_c = strdup("trace stack");
+  qua_u[1]->siz_w = u3a_mark_noun(u3R->bug.tax) * 4;
+
+  qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[2]->nam_c = strdup("trace buffer");
+  qua_u[2]->siz_w = u3a_mark_noun(u3R->bug.mer) * 4;
+
+  qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
+  qua_u[3]->nam_c = strdup("profile batteries");
+  qua_u[3]->siz_w = u3a_mark_noun(u3R->pro.don) * 4;
+
+  qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
+  qua_u[4]->nam_c = strdup("profile doss");
+  qua_u[4]->siz_w = u3a_mark_noun(u3R->pro.day) * 4;
+
+  qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+  qua_u[5]->nam_c = strdup("new profile trace");
+  qua_u[5]->siz_w = u3a_mark_noun(u3R->pro.trace) * 4;
+
+  qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
+  qua_u[6]->nam_c = strdup("transient memoization cache");
+  qua_u[6]->siz_w = u3h_mark(u3R->cax.har_p) * 4;
+
+  qua_u[7] = c3_calloc(sizeof(*qua_u[7]));
+  qua_u[7]->nam_c = strdup("persistent memoization cache");
+  qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * 4;
+
+  qua_u[8] = NULL;
+
+  c3_w sum_w = 0;
+  for (c3_w i_w = 0; i_w < 8; i_w++) {
+    sum_w += qua_u[i_w]->siz_w;
+  }
+
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
+  tot_u->nam_c = strdup("total road stuff");
+  tot_u->siz_w = sum_w;
+  tot_u->qua_u = qua_u;
+
+  return tot_u;
 }
 
 /* u3a_reclaim(): clear ad-hoc persistent caches to reclaim memory.
@@ -2235,7 +2333,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_w eus_w, c3_w use_w)
 {
   fprintf(stderr, "%s: %p mug=%x (marked=%u swept=%u)\r\n",
                   cap_c,
-                  box_u,
+                  (void *)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
                   eus_w,
                   use_w);
@@ -2262,7 +2360,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ws use_ws)
 {
   fprintf(stderr, "%s: %p mug=%x swept=%d\r\n",
                   cap_c,
-                  box_u,
+                  (void *)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
                   use_ws);
 
@@ -2875,7 +2973,7 @@ u3a_string(u3_atom a)
 /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
  */
 void
-u3a_loom_sane()
+u3a_loom_sane(void)
 {
   /*
     Only checking validity of freelists for now. Other checks could be added,
