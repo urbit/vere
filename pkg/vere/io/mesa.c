@@ -1454,8 +1454,6 @@ _mesa_send_bufs(u3_mesa* sam_u,
   }
 }
 
-static void _mesa_add_our_to_pit(u3_mesa*, u3_mesa_name*);
-
 static u3_pit_entry*
 _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
@@ -1521,33 +1519,6 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
     adr_u->nex_p = tmp_u;
     ent_u->adr_u = adr_u;
   }
-  return;
-}
-
-static void
-_mesa_add_our_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
-{
-  c3_y buf_y[PACT_SIZE];
-  sockaddr_in adr_u = {0};
-  u3_mesa_name tmp_u = *nam_u;
-  /* u3l_log("putting %llu", tmp_u.fra_d); */
-  /* log_name(&tmp_u); */
-  u3_etcher ech_u;
-
-  etcher_init(&ech_u, buf_y, PACT_SIZE);
-  _mesa_etch_name(&ech_u, &tmp_u);
-
-  /* int i; */
-  /* for (i = 0; i < ech_u.len_w; i++) */
-  /*   { */
-  /*     if (i > 0) fprintf(stderr, ":"); */
-  /*     fprintf(stderr, "%02X", buf_y[i]); */
-  /*   } */
-  /* fprintf(stderr, "\n"); */
-
-  tmp_u.str_u.str_c = (c3_c*)buf_y;
-  tmp_u.str_u.len_w = ech_u.len_w;
-  _mesa_add_lane_to_pit(sam_u, &tmp_u, adr_u);
   return;
 }
 
@@ -1709,7 +1680,6 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       uv_timer_init(u3L, &res_u->tim_u);
     }
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
-    /* _mesa_add_our_to_pit(sam_u, nam_u); */
     res_u->tim_u.data = res_u;
     #ifdef PACKET_TEST
     packet_test(sam_u, "pages.packs");
@@ -2295,7 +2265,6 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
         u3l_log("peek overflow, dying, fragment %u", nex_d+i);
         abort();
     }
-    /* _mesa_add_our_to_pit(sam_u, &nex_u->pac_u.pek_u.nam_u); */
     mesa_etch_pact_to_buf((c3_y*)buf_u.base, buf_u.len, &nex_u->pac_u);
     /* bfs_u[i] = buf_u; */
     /* bus_u[i] = &bfs_u[i]; */
