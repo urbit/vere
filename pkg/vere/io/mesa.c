@@ -3031,9 +3031,6 @@ u3_mesa_io_init(u3_pier* pir_u)
   vt_init(&sam_u->jum_u);
   vt_init(&sam_u->req_u);
 
-  u3_assert( !uv_udp_init_ex(u3L, &sam_u->wax_u, UV_UDP_RECVMMSG) );
-  sam_u->wax_u.data = sam_u;
-
   //  Disable networking for fake ships
   //
   if ( c3y == sam_u->pir_u->fak_o ) {
