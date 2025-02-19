@@ -108,7 +108,6 @@ typedef struct _u3_gage {
   c3_w     sst_w;  // ssthresh
   c3_w     con_w;  // counter
   //
-  uv_timer_t tim_u;
 } u3_gage;
 
 struct _u3_mesa;
