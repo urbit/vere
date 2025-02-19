@@ -269,8 +269,6 @@ typedef struct _u3_mesa {
   u3_mesa_stat       sat_u;       //  statistics
   c3_l               sev_l;       //  XX: ??
   c3_o               for_o;       //  is forwarding
-  ur_cue_test_t*     tes_u;       //  cue-test handle
-  u3_cue_xeno*       sil_u;       //  cue handle
   per_map            per_u;       //  (map ship u3_peer)
   jum_map            jum_u;       //  jumbo cache
   gag_map            gag_u;       //  lane cache
@@ -1836,9 +1834,6 @@ _mesa_exit_cb(uv_handle_t* had_u)
 {
   u3_mesa* sam_u = had_u->data;
 
-  u3s_cue_xeno_done(sam_u->sil_u);
-  ur_cue_test_done(sam_u->tes_u);
-
   arena_free(&sam_u->par_u);
 }
 
@@ -3044,8 +3039,6 @@ u3_mesa_io_init(u3_pier* pir_u)
   u3_assert( !uv_udp_init_ex(u3L, &sam_u->wax_u, UV_UDP_RECVMMSG) );
   sam_u->wax_u.data = sam_u;
 
-  sam_u->sil_u = u3s_cue_xeno_init();
-  sam_u->tes_u = ur_cue_test_init();
 
   //  Disable networking for fake ships
   //
