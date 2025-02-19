@@ -948,7 +948,7 @@ static c3_i _mesa_send_buf2(struct sockaddr** ads_u, uv_buf_t** bfs_u, c3_w* int
 //    }
 //  }
 }
-static void _mesa_send_buf3(sockaddr_in add_u, uv_buf_t buf_u, u3_pend_req* req_u, c3_d fra_d)
+static void _mesa_send_buf3(sockaddr_in add_u, uv_buf_t buf_u)
 {
 
   add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
@@ -1069,13 +1069,10 @@ _mesa_send_bufs(u3_mesa* sam_u,
                 u3_pit_addr* las_u);
 
 static void
-_mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
+_mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
 {
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
-
-  c3_y* sen_y = c3_calloc(len_w);
-  memcpy(sen_y, buf_y, len_w);
 
   u3_ship gal_u = {0};
   gal_u[0] = per_u->imp_y;
@@ -1085,7 +1082,7 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
        // if we are the sponsor of the ship, don't send to ourselves
        (our_o == c3y) )  {
     // u3l_log("mesa: direct");
-    _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
+    _mesa_send_buf3(per_u->dan_u, buf_u);
     per_u->dir_u.sen_d = now_d;
   }
   else {
@@ -1097,15 +1094,11 @@ _mesa_send_modal(u3_peer* per_u, c3_y* buf_y, c3_w len_w)
     #endif
     //
     sockaddr_in imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-    _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
+    _mesa_send_buf3(imp_u, buf_u);
     per_u->ind_u.sen_d = now_d;
 
-    if ( (c3n == _mesa_is_lane_zero(per_u->dan_u))
-        //  &&  (per_u->dir_u.sen_d + DIRECT_ROUTE_RETRY_MICROS > now_d)  // XX same check as _mesa_is_direct_mode
-       ) {
-      c3_y* san_y = c3_calloc(len_w);
-      memcpy(san_y, buf_y, len_w);
-      _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
+    if ( c3n == _mesa_is_lane_zero(per_u->dan_u) ) {
+      _mesa_send_buf3(per_u->dan_u, buf_u);
       per_u->dir_u.sen_d = now_d;
     }
   }
@@ -1124,8 +1117,9 @@ _mesa_send_request(u3_mesa_request_data* dat_u)
                     dat_u->las_u);
   }
   else {
-    u3l_log("mesa: send_modal()");
-    _mesa_send_modal(per_u, dat_u->buf_y, dat_u->len_w);
+    /* u3l_log("mesa: send_modal()"); */
+    uv_buf_t buf_u = uv_buf_init((c3_c*)dat_u->buf_y, dat_u->len_w);
+    _mesa_send_modal(per_u, buf_u);
   }
 }
 
@@ -1189,8 +1183,8 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
       /* new(&scr_u, uv_buf_t, 1); */
       /* bfs_u[i_w] = buf_u; */
       /* c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u); */
-      _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, i_d);
-      // _mesa_send_modal(req_u->per_u, (c3_y*)buf_u.base, buf_u.len);
+      /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, i_d); */
+      _mesa_send_modal(req_u->per_u, buf_u);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u, now_d);
       i_w++;
     }
@@ -2290,8 +2284,8 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
     /* int_u[i] = 1; */
     _mesa_req_pact_sent(req_u, fra_w, now_d);
 
-    _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, fra_w);
-    // _mesa_send_modal(req_u->per_u, (c3_y*)buf_u.base, buf_u.len);
+    /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, fra_w); */
+    _mesa_send_modal(req_u->per_u, buf_u);
     /* _mesa_send(nex_u, lan_u); */
   }
   /* if ( i > 0 ) { */
@@ -3039,7 +3033,6 @@ u3_mesa_io_init(u3_pier* pir_u)
 
   u3_assert( !uv_udp_init_ex(u3L, &sam_u->wax_u, UV_UDP_RECVMMSG) );
   sam_u->wax_u.data = sam_u;
-
 
   //  Disable networking for fake ships
   //
