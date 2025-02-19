@@ -1352,12 +1352,13 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
     u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
     u3l_log("nit_o %u", nam_u->nit_o);
-    // TODO: do we drop the whole request on the floor?
+    _mesa_del_request(sam_u, nam_u);
     MESA_LOG(sam_u, AUTH);
     return;
   }
   else if ( c3y != _mesa_burn_misorder_queue(req_u, nam_u->boq_y, req_u->los_u->counter) ) {
     MESA_LOG(sam_u, AUTH)
+    _mesa_del_request(sam_u, nam_u);
     return;
   }
   else {
