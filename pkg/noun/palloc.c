@@ -902,8 +902,9 @@ _idle_words(void)
       pag_w++;
     }
 
-    fprintf(stderr, "idle words: class=%u (%u words) blocks=%u (in %u pages)\r\n",
+    fprintf(stderr, "idle words: class=%u (%u words) blocks=%u (in %u pages) ",
                     i_w, len_w, siz_w, pag_w);
+    u3a_print_memory(stderr, "total", siz_w * len_w);
 
     tot_w += siz_w * len_w;
   }
