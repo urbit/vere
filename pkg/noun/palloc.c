@@ -1,6 +1,7 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
+#include "vortex.h"
 
 #define u3a_min_log  2
 
@@ -668,16 +669,19 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     if ( 1 == pag_u->fre_s ) {
       //  page newly non-full, link
       //
-      while ( *bit_p ) {
-        bit_u = u3to(u3a_crag, *bit_p);
-        nex_u = u3tn(u3a_crag, bit_u->nex_p);
 
-        if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
-          bit_p = &(bit_u->nex_p);
-          continue;
+      if ( &(u3H->rod_u) == u3R ) {
+        while ( *bit_p ) {
+          bit_u = u3to(u3a_crag, *bit_p);
+          nex_u = u3tn(u3a_crag, bit_u->nex_p);
+
+          if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
+            bit_p = &(bit_u->nex_p);
+            continue;
+          }
+
+          break;
         }
-
-        break;
       }
 
       pag_u->nex_p = *bit_p;
