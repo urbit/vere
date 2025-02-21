@@ -319,6 +319,74 @@ _alloc_pages(c3_w siz_w)  // num pages
 }
 
 static u3_post
+_take_chunks(c3_w len_w, c3_s* hun_s, c3_s* max_s)  // 0-9, inclusive
+{
+  c3_g    bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
+  u3_post pag_p = _alloc_pages(1);
+  c3_w    pag_w = post_to_page(pag_p);
+  c3_s    log_s = bit_g + u3a_min_log;
+  c3_s    len_s = 1U << log_s;
+  c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
+  c3_s    siz_s = c3_wiseof(u3a_crag);
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3a_crag *pag_u;
+  u3_post hun_p;
+
+  siz_s += tot_s >> 5;
+  siz_s += !!(tot_s & 31);
+  siz_s--;
+
+  //  metacircular base case
+  //
+  //    trivially deducible from exhaustive enumeration
+  //
+  if ( len_s <= (siz_s << 1) ) {
+    hun_p = pag_p;
+  }
+  else {
+    hun_p = _imalloc(siz_s);
+  }
+
+  pag_u = u3to(u3a_crag, hun_p);
+  pag_u->pag_w = pag_w;
+  pag_u->log_s = log_s;
+  pag_u->len_s = len_s;
+  pag_u->fre_s = 0;
+  pag_u->nex_p = 0;
+
+  dir_u[pag_w] = hun_p;
+
+  {
+    c3_w *map_w = pag_u->map_w;
+    c3_w  len_w = tot_s >> 5;
+
+    while ( len_w-- ) {
+      *map_w++ = 0;
+    }
+
+    if ( tot_s & 31 ) {
+      *map_w = 0;
+    }
+
+    //  offset by chunks stolen for pginfo
+    //
+    if ( len_s <= (siz_s << 1) ) {
+      len_w  = 1U + ((siz_s - 1) / len_s);
+      hun_p += len_w << log_s;
+
+      tot_s -= len_w;
+    }
+  }
+
+  pag_u->tot_s = tot_s;
+
+  *hun_s = len_s;
+  *max_s = tot_s;
+
+  return hun_p;
+}
+
+static u3_post
 _make_chunks(c3_g bit_g)  // 0-9, inclusive
 {
   u3_post pag_p = _alloc_pages(1);

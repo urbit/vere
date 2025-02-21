@@ -217,7 +217,28 @@ u3a_malloc(size_t len_i)
 c3_w*
 u3a_celloc(void)
 {
-  u3a_cell* cel_u =  u3a_walloc(c3_wiseof(*cel_u));
+  u3a_cell* cel_u;
+
+  if ( &(u3H->rod_u) != u3R ) {
+    u3_post* cel_p = u3to(u3_post, u3R->hep.cel_p);
+
+    if ( !u3R->hep.cel_w ) {
+      c3_s len_s, tot_s;
+      u3_post bas_p = _take_chunks(c3_wiseof(*cel_u), &len_s, &tot_s);
+
+      for ( c3_s i_s = 0; i_s < tot_s; i_s++ ) {
+        cel_p[i_s] = bas_p + ((c3_w)len_s * i_s);
+      }
+
+      u3R->hep.cel_w = tot_s;
+    }
+
+    cel_u = u3to(u3a_cell, cel_p[--u3R->hep.cel_w]);
+  }
+  else {
+    cel_u = u3a_walloc(c3_wiseof(*cel_u));
+  }
+
   cel_u->use_w = 1;
   cel_u->mug_w = 0; // XX maybe not
 
@@ -234,6 +255,14 @@ u3a_celloc(void)
 void
 u3a_cfree(c3_w* cel_w)
 {
+  if ( &(u3H->rod_u) != u3R ) {
+    if ( u3R->hep.cel_w < (1U << u3a_page) ) {
+      u3_post* cel_p = u3to(u3_post, u3R->hep.cel_p);
+      cel_p[u3R->hep.cel_w++] = u3a_outa(cel_w);
+      return;
+    }
+  }
+
   u3a_wfree(cel_w);
 }
 

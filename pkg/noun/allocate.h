@@ -137,6 +137,8 @@
           u3_post wee_p[u3a_crag_no];
           // u3p(u3a_crag*) pag_p;               //  directory
           // u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+          u3_post        cel_p;
+          c3_w           cel_w;
         } hep;
 
         u3a_jets jed;                         //  jet dashboard
