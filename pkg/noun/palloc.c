@@ -104,8 +104,10 @@ _init(void)
   memset(dir_u, 0, 1U << (u3a_page + 2));
   dir_u[0] = u3a_head_pg;
 
+#ifdef SANITY
   assert( 0 == post_to_page(HEAP.pag_p) );
   assert( HEAP.pag_p == page_to_post(0) );
+#endif
 
   // fprintf(stderr, "palloc: init3 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p out-adir=%x\n",
   //                 u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p, (void*)dir_u, (c3_w)u3a_outa(dir_u));
@@ -155,7 +157,9 @@ _extend_directory(c3_w siz_w)  // num pages
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   pag_w = post_to_page(HEAP.pag_p);
 
+#ifdef SANITY
   assert( pag_w == (HEAP.len_w - (HEAP.off_ws * (dif_w - 1))) );
+#endif
 
   {
     c3_z len_z = (c3_z)HEAP.len_w << 2;
@@ -183,7 +187,9 @@ _extend_heap(c3_w siz_w)  // num pages
 {
   u3_post pag_p;
 
+#ifdef SANITY
   assert( HEAP.siz_w >= HEAP.len_w );
+#endif
 
   if ( (HEAP.siz_w - HEAP.len_w) < siz_w ) {
     _extend_directory(siz_w);
@@ -269,6 +275,7 @@ _alloc_pages(c3_w siz_w)  // num pages
     pag_w -= HEAP.off_ws * (siz_w - 1);
     pag_p  = page_to_post(pag_w);
 
+#ifdef SANITY
     assert( pag_w < HEAP.len_w );
 
     //  XX sanity
@@ -276,6 +283,7 @@ _alloc_pages(c3_w siz_w)  // num pages
     for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
       assert( u3a_free_pg == dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] );
     }
+#endif
   }
   else {
     pag_p = _extend_heap(siz_w);
@@ -283,8 +291,10 @@ _alloc_pages(c3_w siz_w)  // num pages
     dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
     // fprintf(stderr, "alloc pages grow %u (0x%x, hat=0x%x) pag=%u len=%u\n",
     //                 siz_w, pag_p, u3R->hat_p, pag_w, HEAP.len_w);
+#ifdef SANITY
     assert( pag_w < HEAP.len_w );
     assert( (pag_w + ((HEAP.off_ws + 1) * siz_w) - HEAP.off_ws) == HEAP.len_w );
+#endif
   }
 
   dir_u[pag_w] = u3a_head_pg;
@@ -402,7 +412,9 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
   pag_u = u3to(u3a_crag, pag_p);
   map_w = pag_u->map_w;
 
+#ifdef SANITY
   assert( pag_u->log_s < u3a_page );
+#endif
 
   // fprintf(stderr, "page: 0x%x bit=%u pag=%u len=%u log=%u fre=%u tot=%u\n",
   //                 pag_p, bit_g, pag_u->pag_w, pag_u->len_s, pag_u->log_s, pag_u->fre_s, pag_u->tot_s);
@@ -505,7 +517,9 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     nex_w = pag_w + siz_w;
   }
 
+#ifdef SANITY
   assert( pag_w < HEAP.len_w );
+#endif
 
   if ( nex_w == HEAP.len_w ) {
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
@@ -618,8 +632,10 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   u3a_crag *pag_u = u3to(u3a_crag, dir_p);
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
+#ifdef SANITY
   assert( page_to_post(pag_u->pag_w) == (som_p & ~((1U << u3a_page) - 1)) );
   assert( pag_u->log_s < u3a_page );
+#endif
 
   c3_g bit_g = pag_u->log_s - u3a_min_log;
   c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
@@ -846,8 +862,10 @@ _post_status(u3_post som_p)
   else {
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
 
+#ifdef SANITY
     assert( page_to_post(pag_u->pag_w) == (som_p & ~((1U << u3a_page) - 1)) );
     assert( pag_u->log_s < u3a_page );
+#endif
 
     c3_g bit_g = pag_u->log_s - u3a_min_log;
     c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
