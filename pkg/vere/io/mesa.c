@@ -2923,9 +2923,7 @@ _mesa_io_talk(u3_auto* car_u)
   {
     //  XX remove [sev_l]
     //
-    u3_noun wir = u3nt(c3__ames,
-                       u3dc("scot", c3__uv, sam_u->sev_l),
-                       u3_nul);
+    u3_noun wir = u3nc(c3__ames, u3_nul);
     u3_noun cad = u3nc(c3__born, u3_nul);
 
     u3_auto_plan(car_u, u3_ovum_init(0, c3__a, wir, cad));
@@ -3067,6 +3065,7 @@ u3_mesa_io_init(u3_pier* pir_u)
 
 
   u3_auto* car_u = &sam_u->car_u;
+  memset(car_u, 0, sizeof(*car_u));
   car_u->nam_m = c3__ames;
   car_u->liv_o = c3y;
   car_u->io.talk_f = _mesa_io_talk;
