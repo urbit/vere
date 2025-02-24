@@ -1,8 +1,8 @@
 #ifndef U3_ALLOCATE_V1_H
 #define U3_ALLOCATE_V1_H
 
-#include "pkg/noun/allocate.h"
-#include "pkg/noun/v2/allocate.h"
+#include "../allocate.h"
+#include "v2/allocate.h"
 
   /**  Aliases.
   **/

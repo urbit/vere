@@ -606,8 +606,8 @@
 
         /* u3a_mark_road(): mark ad-hoc persistent road structures.
         */
-          c3_w
-          u3a_mark_road(FILE* fil_u);
+          u3m_quac*
+          u3a_mark_road();
 
         /* u3a_reclaim(): clear ad-hoc persistent caches to reclaim memory.
         */
@@ -702,20 +702,34 @@
           void
           u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d);
 
+        /* u3a_print_quac: print a quac memory report.
+        */
+          void
+          u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
+
         /* u3a_print_memory(): print memory amount.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
-
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
-          c3_w
-          u3a_prof(FILE* fil_u, c3_w den_w, u3_noun mas);
+          u3m_quac*
+          u3a_prof(FILE* fil_u, u3_noun mas);
 
         /* u3a_maid(): maybe print memory.
         */
           c3_w
           u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_quac_free(): free quac memory.
+        */
+          void
+          u3a_quac_free(u3m_quac* qua_u);
+
+        /* u3a_uncap_print_memory(): un-captioned print memory amount.
+        */
+          void
+          u3a_uncap_print_memory(FILE* fil_u, c3_w byt_w);
 
         /* u3a_deadbeef(): write 0xdeadbeef from hat to cap.
         */
@@ -741,6 +755,6 @@
         /* u3a_loom_sane(): sanity checks the state of the loom for obvious corruption
         */
           void
-          u3a_loom_sane();
+          u3a_loom_sane(void);
 
 #endif /* ifndef U3_ALLOCATE_H */
