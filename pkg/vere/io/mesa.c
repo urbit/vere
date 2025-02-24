@@ -3067,6 +3067,7 @@ u3_mesa_io_init(u3_pier* pir_u)
 
 
   u3_auto* car_u = &sam_u->car_u;
+  memset(car_u, 0, sizeof(*car_u));
   car_u->nam_m = c3__ames;
   car_u->liv_o = c3y;
   car_u->io.talk_f = _mesa_io_talk;
