@@ -104,6 +104,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const wasm3 = b.dependency("wasm3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     pkg_noun.linkLibC();
 
     pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
@@ -123,6 +128,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
     pkg_noun.linkLibrary(zlib.artifact("z"));
+    pkg_noun.linkLibrary(wasm3.artifact("wasm3"));
 
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
@@ -315,6 +321,7 @@ const c_source_files = [_][]const u8{
     "jets/e/slaw.c",
     "jets/e/tape.c",
     "jets/e/trip.c",
+    "jets/e/urwasm.c",
     "jets/f/cell.c",
     "jets/f/comb.c",
     "jets/f/cons.c",

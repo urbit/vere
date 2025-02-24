@@ -363,6 +363,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const wasm3 = b.dependency("wasm3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     //
     // Build Artifact
     //
@@ -418,6 +423,7 @@ fn buildBinary(
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
+    urbit.linkLibrary(wasm3.artifact("wasm3"));
 
     if (t.isDarwin()) {
         // Requires llvm@18 homebrew installation
