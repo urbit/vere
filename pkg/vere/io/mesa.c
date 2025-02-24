@@ -42,6 +42,7 @@ static c3_y are_y[524288];
 
 #define DIRECT_ROUTE_TIMEOUT_MICROS 5000000
 #define DIRECT_ROUTE_RETRY_MICROS   1000000
+#define PIT_EXPIRE_MICROS           20000000
 
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
 
@@ -139,6 +140,7 @@ typedef struct _u3_pit_addr {
 
 typedef struct _u3_pit_entry {
   u3_pit_addr* adr_u;
+  c3_d         tim_d;
   arena        are_u;
 } u3_pit_entry;
 
@@ -157,6 +159,11 @@ static void u3_shap_to_ship( u3_ship ship, u3_shap shap )
 {
   ship[0] = shap.hed_d;
   ship[1] = shap.tel_d;
+}
+
+static void u3_free_pit( u3_pit_entry* pit_u )
+{
+  arena_free(&pit_u->are_u);
 }
 
 static void u3_free_str( u3_str key )
@@ -206,6 +213,7 @@ typedef struct _u3_pend_req u3_pend_req;
 #define HASH_FN u3_hash_str
 #define CMPR_FN u3_cmpr_str
 #define VAL_TY u3_pit_entry*
+#define VAL_DTOR_FN u3_free_pit
 #include "verstable.h"
 
 #define NAME gag_map
@@ -287,6 +295,7 @@ typedef struct _u3_mesa {
   c3_d               tim_d;       //  XX: remove
   arena              are_u;       //  per packet arena
   arena              par_u;       //  permanent arena
+  uv_timer_t         tim_u;       //  pit clear timer
 } u3_mesa;
 
 typedef struct _u3_peer {
@@ -1175,7 +1184,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
 
-  c3_y buf_y[PACT_SIZE];
+  /* c3_y buf_y[PACT_SIZE]; */
   /* arena scr_u = req_u->are_u; */
   /* uv_buf_t* bfs_u = new(&scr_u, uv_buf_t, 1); */
   c3_w i_w = 0;
@@ -1474,13 +1483,7 @@ static void
 _mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   /* u3l_log("deleting %llu", nam_u->fra_d); */
-  u3_pit_entry* pin_u = _mesa_get_pit(sam_u, nam_u);
-  if ( pin_u == NULL) {
-    u3l_log("deleting non existent key in PIT");
-    return;
-  }
   vt_erase(&sam_u->pit_u, nam_u->str_u);
-  arena_free(&pin_u->are_u);
 }
 
 static void
@@ -1488,10 +1491,13 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
 {
   pit_map_itr itr_u = vt_get(&sam_u->pit_u, nam_u->str_u);
 
+  c3_d now_d = _get_now_micros();
+
   if ( vt_is_end(itr_u) ) {
     arena are_u = arena_create(16384);
     u3_pit_entry* ent_u = new(&are_u, u3_pit_entry, 1);
     ent_u->are_u = are_u;
+    ent_u->tim_d = now_d;
     u3_pit_addr* adr_u = new(&ent_u->are_u, u3_pit_addr, 1);
     adr_u->nex_p = 0;
     adr_u->sdr_u = lan_u;
@@ -1511,6 +1517,7 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
   }
   else {
     u3_pit_entry* ent_u = itr_u.data->val;
+    ent_u->tim_d = now_d;
     u3_pit_addr* old_u = ent_u->adr_u;
     while (old_u) {
       if ( c3y == _mesa_lanes_equal(lan_u, old_u->sdr_u) ) {
@@ -1771,7 +1778,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     } break;
   }
 
-  // technically losing tag is unncessary as it always should
+  // technically losing tag is unnecessary as it always should
   // be a direct atom, but better to be strict
   u3z(dat); u3z(tag);
   return ret_o;
@@ -1810,18 +1817,10 @@ _mesa_io_slog(u3_auto* car_u) {
 }
 
 static void
-_mesa_exit_cb(uv_handle_t* had_u)
-{
-  u3_mesa* sam_u = had_u->data;
-
-  arena_free(&sam_u->par_u);
-}
-
-static void
 _mesa_io_exit(u3_auto* car_u)
 {
   u3_mesa* sam_u = (u3_mesa*)car_u;
-  uv_close(&sam_u->had_u, _mesa_exit_cb);
+  arena_free(&sam_u->par_u);
 }
 
 static void
@@ -3001,6 +3000,23 @@ _mesa_io_talk(u3_auto* car_u)
   //u3z(rac); u3z(who);
 }
 
+static void _mesa_clear_pit(uv_timer_t *tim_u)
+{
+  u3_mesa* sam_u = (u3_mesa*)tim_u->data;
+  pit_map_itr itr_u = vt_first( &sam_u->pit_u );
+
+  c3_d now_d = _get_now_micros();
+
+  while (!vt_is_end(itr_u)) {
+    u3_pit_entry* pit_u = itr_u.data->val;
+    if ( (now_d - pit_u->tim_d) > PIT_EXPIRE_MICROS) {
+      itr_u = vt_erase_itr(&sam_u->pit_u, itr_u);
+    } else {
+      itr_u = vt_next(itr_u);
+    }
+  }
+}
+
 /* _mesa_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -3020,6 +3036,12 @@ u3_mesa_io_init(u3_pier* pir_u)
   sam_u->are_u = are_u;
 
   sam_u->jum_d = 0;
+
+  uv_timer_init(u3L, &sam_u->tim_u);
+
+  // clear pit every 30 seconds
+  sam_u->tim_u.data = sam_u;
+  uv_timer_start(&sam_u->tim_u, _mesa_clear_pit, 30000, 30000);
 
   vt_init(&sam_u->pit_u);
   vt_init(&sam_u->per_u);
