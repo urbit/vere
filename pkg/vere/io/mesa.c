@@ -1083,6 +1083,10 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
 
+  c3_w len_w = buf_u.len;
+  c3_y* sen_y = c3_calloc(len_w);
+  memcpy(sen_y, buf_u.base, len_w);
+
   u3_ship gal_u = {0};
   gal_u[0] = per_u->imp_y;
   c3_o our_o = u3_ships_equal(gal_u, sam_u->pir_u->who_d);
@@ -1091,7 +1095,7 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
        // if we are the sponsor of the ship, don't send to ourselves
        (our_o == c3y) )  {
     // u3l_log("mesa: direct");
-    _mesa_send_buf3(per_u->dan_u, buf_u);
+    _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
   else {
@@ -1103,11 +1107,13 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
     #endif
     //
     sockaddr_in imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-    _mesa_send_buf3(imp_u, buf_u);
+    _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
     per_u->ind_u.sen_d = now_d;
 
     if ( c3n == _mesa_is_lane_zero(per_u->dan_u) ) {
-      _mesa_send_buf3(per_u->dan_u, buf_u);
+      c3_y* san_y = c3_calloc(len_w);
+      memcpy(san_y, buf_u.base, len_w);
+      _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
       per_u->dir_u.sen_d = now_d;
     }
   }
