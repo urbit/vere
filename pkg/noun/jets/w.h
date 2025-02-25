@@ -82,6 +82,7 @@
     u3_noun u3wc_rig(u3_noun);
     u3_noun u3wc_rip(u3_noun);
     u3_noun u3wc_rsh(u3_noun);
+    u3_noun u3wc_sew(u3_noun);
     u3_noun u3wc_swp(u3_noun);
     u3_noun u3wc_sqt(u3_noun);
 
@@ -314,6 +315,9 @@
     u3_noun u3wes_gth(u3_noun);
 
     u3_noun u3we_crc32(u3_noun);
+
+    u3_noun u3we_lia_run(u3_noun);
+    u3_noun u3we_lia_run_once(u3_noun);
 
   /** Tier 6.
   **/
