@@ -1817,10 +1817,18 @@ _mesa_io_slog(u3_auto* car_u) {
 }
 
 static void
+_mesa_exit_cb(uv_handle_t* han_u) {
+  u3_mesa* sam_u = (u3_mesa*)han_u->data;
+  arena_free(&sam_u->par_u);
+}
+
+static void
 _mesa_io_exit(u3_auto* car_u)
 {
   u3_mesa* sam_u = (u3_mesa*)car_u;
-  arena_free(&sam_u->par_u);
+  uv_timer_stop(&sam_u->tim_u);
+  sam_u->tim_u.data = sam_u;
+  uv_close((uv_handle_t*)&sam_u->tim_u, _mesa_exit_cb);
 }
 
 static void
