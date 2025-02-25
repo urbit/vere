@@ -223,14 +223,7 @@ u3a_celloc(void)
     u3_post* cel_p = u3to(u3_post, u3R->hep.cel_p);
 
     if ( !u3R->hep.cel_w ) {
-      c3_s len_s, tot_s;
-      u3_post bas_p = _take_chunks(c3_wiseof(*cel_u), &len_s, &tot_s);
-
-      for ( c3_s i_s = 0; i_s < tot_s; i_s++ ) {
-        cel_p[i_s] = bas_p + ((c3_w)len_s * i_s);
-      }
-
-      u3R->hep.cel_w = tot_s;
+      _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page), (u3R->hep.bat_w++ & 1), &u3R->hep.cel_w, cel_p);
     }
 
     cel_u = u3to(u3a_cell, cel_p[--u3R->hep.cel_w]);

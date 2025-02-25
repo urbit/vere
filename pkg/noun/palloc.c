@@ -318,72 +318,150 @@ _alloc_pages(c3_w siz_w)  // num pages
   return pag_p;
 }
 
-static u3_post
-_take_chunks(c3_w len_w, c3_s* hun_s, c3_s* max_s)  // 0-9, inclusive
+static void
+_rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 {
-  c3_g    bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
-  u3_post pag_p = _alloc_pages(1);
-  c3_w    pag_w = post_to_page(pag_p);
-  c3_s    log_s = bit_g + u3a_min_log;
-  c3_s    len_s = 1U << log_s;
-  c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-  c3_s    siz_s = c3_wiseof(u3a_crag);
-  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
+  u3_post   pag_p = HEAP.wee_p[bit_g];
   u3a_crag *pag_u;
-  u3_post hun_p;
+  c3_w      hav_w = *out_w;
 
-  siz_s += tot_s >> 5;
-  siz_s += !!(tot_s & 31);
-  siz_s--;
+  if ( rak_t ) {
+    c3_w    *map_w;
+    c3_g    pos_g;
+    u3_post bas_p;
+    c3_w    off_w;
 
-  //  metacircular base case
-  //
-  //    trivially deducible from exhaustive enumeration
-  //
-  if ( len_s <= (siz_s << 1) ) {
-    hun_p = pag_p;
+    while ( pag_p ) {
+      pag_u = u3to(u3a_crag, pag_p);
+      bas_p = page_to_post(pag_u->pag_w);
+      map_w = pag_u->map_w;
+
+      while ( !*map_w ) { map_w++; }
+      off_w = (map_w - pag_u->map_w) << 5;
+
+      if ( (max_w - hav_w) < pag_u->fre_s ) {
+        while ( hav_w < max_w ) {
+          pos_g   = c3_tz_w(*map_w);
+          *map_w &= ~(1U << pos_g);
+
+          out_p[hav_w++] = bas_p + ((off_w + pos_g) << pag_u->log_s);
+          pag_u->fre_s--;
+
+          if ( !*map_w ) {
+            do { map_w++; } while ( !*map_w );
+            off_w = (map_w - pag_u->map_w) << 5;
+          }
+        }
+
+        HEAP.wee_p[bit_g] = pag_p;
+        *out_w = hav_w;
+        return;
+      }
+
+      while ( 1 ) {
+        pos_g   = c3_tz_w(*map_w);
+        *map_w &= ~(1U << pos_g);
+
+        out_p[hav_w++] = bas_p + ((off_w + pos_g) << pag_u->log_s);
+
+        if ( !--pag_u->fre_s ) {
+          break;
+        }
+
+        if ( !*map_w ) {
+          do { map_w++; } while ( !*map_w );
+          off_w = (map_w - pag_u->map_w) << 5;
+        }
+      }
+
+      pag_p = pag_u->nex_p;
+      pag_u->nex_p = 0;
+
+      if ( hav_w == max_w ) {
+        HEAP.wee_p[bit_g] = pag_p;
+        *out_w = hav_w;
+        return;
+      }
+    }
+
+    HEAP.wee_p[bit_g] = 0;
   }
-  else {
-    hun_p = _imalloc(siz_s);
-  }
-
-  pag_u = u3to(u3a_crag, hun_p);
-  pag_u->pag_w = pag_w;
-  pag_u->log_s = log_s;
-  pag_u->len_s = len_s;
-  pag_u->fre_s = 0;
-  pag_u->nex_p = 0;
-
-  dir_u[pag_w] = hun_p;
 
   {
-    c3_w *map_w = pag_u->map_w;
-    c3_w  len_w = tot_s >> 5;
+    c3_s    log_s = bit_g + u3a_min_log;
+    c3_s    len_s = 1U << log_s;
+    c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
+    c3_s    siz_s = c3_wiseof(u3a_crag);
+    u3_post hun_p;
 
-    while ( len_w-- ) {
-      *map_w++ = 0;
+    if ( tot_s > (max_w - hav_w) ) {
+      *out_w = hav_w;
+      return;
     }
 
-    if ( tot_s & 31 ) {
-      *map_w = 0;
-    }
+    pag_p = _alloc_pages(1);
+    c3_w    pag_w = post_to_page(pag_p);
+    u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
-    //  offset by chunks stolen for pginfo
+    siz_s += tot_s >> 5;
+    siz_s += !!(tot_s & 31);
+    siz_s--;
+
+    //  metacircular base case
+    //
+    //    trivially deducible from exhaustive enumeration
     //
     if ( len_s <= (siz_s << 1) ) {
-      len_w  = 1U + ((siz_s - 1) / len_s);
-      hun_p += len_w << log_s;
-
-      tot_s -= len_w;
+      hun_p = pag_p;
     }
+    else {
+      hun_p = _imalloc(siz_s);
+    }
+
+    pag_u = u3to(u3a_crag, hun_p);
+    pag_u->pag_w = pag_w;
+    pag_u->log_s = log_s;
+    pag_u->len_s = len_s;
+    pag_u->fre_s = 0;
+    pag_u->nex_p = 0;
+
+    dir_u[pag_w] = hun_p;
+
+    {
+      c3_w *map_w = pag_u->map_w;
+      c3_w  len_w = tot_s >> 5;
+
+      while ( len_w-- ) {
+        *map_w++ = 0;
+      }
+
+      if ( tot_s & 31 ) {
+        *map_w = 0;
+      }
+
+      //  offset by chunks stolen for pginfo
+      //
+      if ( len_s <= (siz_s << 1) ) {
+        len_w  = 1U + ((siz_s - 1) / len_s);
+        hun_p += len_w << log_s;
+
+        tot_s -= len_w;
+      }
+      else {
+        hun_p  = pag_p;
+      }
+    }
+
+    pag_u->tot_s = tot_s;
+
+    while ( tot_s-- ) {
+      out_p[hav_w++] = hun_p;
+      hun_p += len_s;
+    }
+
+    *out_w = hav_w;
   }
-
-  pag_u->tot_s = tot_s;
-
-  *hun_s = len_s;
-  *max_s = tot_s;
-
-  return hun_p;
 }
 
 static u3_post
