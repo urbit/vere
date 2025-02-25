@@ -1143,7 +1143,7 @@ static u3j_core _137_two_d[] =
     { "swp",  7, _137_two_swp_a, 0, no_hashes },
     { "rub",  7, _137_two_rub_a, 0, no_hashes },
     { "pow",  7, _137_two_pow_a, 0, no_hashes },
-    { "sew",  7, _138_two_sew_a, 0, no_hashes },
+    { "sew",  7, _137_two_sew_a, 0, no_hashes },
     { "sqt",  7, _137_two_sqt_a, 0, no_hashes },
     { "xeb",  7, _137_two_xeb_a, 0, no_hashes },
 
