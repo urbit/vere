@@ -1,15 +1,25 @@
 /// @file
 
-#include "pkg/noun/manage.h"
-#include "pkg/noun/v2/manage.h"
-#include "pkg/noun/v3/manage.h"
+#include "manage.h"
+#include "v2/manage.h"
+#include "v3/manage.h"
+#include "v4/manage.h"
 
 #include <ctype.h>
+#include <dlfcn.h>
 #include <errno.h>
+#if defined(U3_OS_osx)
+#include <execinfo.h>
+#endif
 #include <fcntl.h>
 #include <sys/stat.h>
+#if defined(U3_OS_linux)
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+#endif
 
 #include "allocate.h"
+#include "backtrace.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -20,11 +30,12 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "platform/rsignal.h"
+#include "rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"
 #include "vortex.h"
+#include "whereami.h"
 #include "xtract.h"
 
 //  XX stack-overflow recovery should be gated by -a
@@ -354,7 +365,10 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
-  stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ);
+  if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
+    u3l_log("unable to install stack overflow handler");
+    abort();
+  }
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -389,7 +403,7 @@ _cm_signal_deep(c3_w mil_w)
 /* _cm_signal_done():
 */
 static void
-_cm_signal_done()
+_cm_signal_done(void)
 {
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
@@ -460,15 +474,17 @@ u3m_file(c3_c* pas_c)
 
 /* u3m_mark(): mark all nouns in the road.
 */
-c3_w
-u3m_mark(FILE* fil_u)
+u3m_quac**
+u3m_mark(void)
 {
-  c3_w tot_w = 0;
-  tot_w += u3v_mark(fil_u);
-  tot_w += u3j_mark(fil_u);
-  tot_w += u3n_mark(fil_u);
-  tot_w += u3a_mark_road(fil_u);
-  return tot_w;
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
+  qua_u[0] = u3v_mark();
+  qua_u[1] = u3j_mark();
+  qua_u[2] = u3n_mark();
+  qua_u[3] = u3a_mark_road();
+  qua_u[4] = NULL;
+
+  return qua_u;
 }
 
 /* _pave_parts(): build internal tables.
@@ -601,7 +617,8 @@ _find_home(void)
   switch ( ver_w ) {
     case U3V_VER1: u3m_v2_migrate();
     case U3V_VER2: u3m_v3_migrate();
-    case U3V_VER3: {
+    case U3V_VER3: u3m_v4_migrate();
+    case U3V_VER4: {
       mig_o = c3n;
       break;
     }
@@ -729,6 +746,165 @@ u3m_dump(void)
 }
 #endif
 
+struct bt_cb_data {
+  c3_y  count;
+  c3_y  fail;
+  c3_c* pn_c;
+};
+
+static void
+err_cb(void* data, const char* msg, int errnum)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  if ( bdata->count <= 1 ) {
+    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
+    bdata->fail = 1;
+  }
+}
+
+static int
+bt_cb(void* data,
+      uintptr_t pc,
+      const char* filename,
+      int lineno,
+      const char* function)
+{
+  struct bt_cb_data* bdata = (struct bt_cb_data *)data;
+  bdata->count++;
+
+  Dl_info info = {};
+  c3_c*   fname_c = {0};
+
+  if ( dladdr((void *)pc, &info) ) {
+    for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
+      if ( info.dli_fname[i_w] == '/' ) {
+        fname_c = (c3_c*)&info.dli_fname[i_w + 1];
+      }
+  }
+
+  if ( bdata->count <= 100 ) {
+    c3_c* loc[128];
+    if (filename != 0) {
+      snprintf((c3_c*)loc, 128, "%s:%d", filename, lineno);
+    }
+    else {
+      snprintf((c3_c*)loc, 128, "%s", fname_c != 0 ? fname_c : "-");
+    }
+
+    c3_c* fn_c;
+    if (function != 0 || bdata->pn_c != 0) {
+      fn_c = (c3_c*)(function != 0 ? function : bdata->pn_c);
+    }
+    else {
+      fn_c = (c3_c*)(info.dli_sname != 0 ? info.dli_sname : "-");
+    }
+
+    fprintf(stderr, "%-3d %-35s %s\r\n", bdata->count - 1, fn_c, (c3_c *)loc);
+
+    bdata->pn_c = 0;
+    return 0;
+  }
+  else {
+    bdata->pn_c = 0;
+    return 1;
+  }
+}
+
+/* _self_path(): get binary self-path.
+ */
+static c3_y
+_self_path(c3_c *pat_c)
+{
+  c3_i len_i = 0;
+  c3_i pat_i;
+
+  if ( 0 < (len_i = wai_getExecutablePath(NULL, 0, &pat_i)) ) {
+    wai_getExecutablePath(pat_c, len_i, &pat_i);
+    pat_c[len_i] = 0;
+    return 0;
+  }
+
+  return 1;
+}
+
+void
+u3m_stacktrace()
+{
+  void* bt_state;
+  struct bt_cb_data data = { 0, 0, 0 };
+  c3_c* self_path_c[4096] = {0};
+
+#if defined(U3_OS_osx)
+  fprintf(stderr, "Stacktrace:\r\n");
+
+  if ( _self_path((c3_c*)self_path_c) == 0 ) {
+    bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+    backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
+    if (data.fail == 0) {
+      fprintf(stderr, "\r\n");
+    }
+  }
+  else {
+    data.fail = 1;
+  }
+
+  if ( data.fail == 1 ) {
+    void*  array[100];
+    c3_c** strings;
+    size_t size = backtrace(array, 100);
+
+    strings = backtrace_symbols(array, size);
+
+    if ( strings[0] == NULL ) {
+      fprintf(stderr, "Backtrace failed\r\n");
+    }
+    else {
+      for ( c3_i i = 0; i < size; i++ ) {
+        fprintf(stderr, "%s\r\n", strings[i]);
+      }
+      fprintf(stderr, "\r\n");
+    }
+
+    free(strings);
+  }
+#elif defined(U3_OS_linux)
+  /* TODO: Fix unwind not getting past signal trampoline on linux aarch64
+   */
+  fprintf(stderr, "Stacktrace:\r\n");
+
+  if ( _self_path((c3_c*)self_path_c) == 0 ) {
+    bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
+
+    unw_context_t context;
+    unw_cursor_t cursor;
+    unw_getcontext(&context);
+    unw_init_local(&cursor, &context);
+    unw_word_t pc, sp;
+
+    c3_c* pn_c[1024] = {0};
+    c3_w  offp_w = 0;
+
+    do {
+      unw_get_reg(&cursor, UNW_REG_IP, &pc);
+      unw_get_reg(&cursor, UNW_REG_SP, &sp);
+      if ( 0 == unw_get_proc_name(&cursor, (c3_c*)pn_c, 1024, (unw_word_t *)&offp_w) )
+        data.pn_c = (c3_c*)pn_c;
+      backtrace_pcinfo(bt_state, pc - 1, bt_cb, err_cb, &data);
+    } while (unw_step(&cursor) > 0);
+
+    if ( (data.count > 0) ) {
+      fprintf(stderr, "\r\n");
+    }
+  }
+  else {
+    data.fail = 1;
+    fprintf(stderr, "Backtrace failed\r\n");
+  }
+#endif
+}
+
 /* u3m_bail(): bail out.  Does not return.
 **
 **  Bail motes:
@@ -781,7 +957,8 @@ u3m_bail(u3_noun how)
   if ( &(u3H->rod_u) == u3R ) {
     //  XX set exit code
     //
-    fprintf(stderr, "home: bailing out\r\n");
+    fprintf(stderr, "home: bailing out\r\n\r\n");
+    u3m_stacktrace();
     abort();
   }
 
@@ -792,7 +969,8 @@ u3m_bail(u3_noun how)
     case c3__oops: {
       //  XX set exit code
       //
-      fprintf(stderr, "bailing out\r\n");
+      fprintf(stderr, "bailing out\r\n\r\n");
+      u3m_stacktrace();
       abort();
     }
   }
@@ -833,7 +1011,7 @@ u3m_bail(u3_noun how)
   _longjmp(u3R->esc.buf, how);
 }
 
-int c3_cooked() { return u3m_bail(c3__oops); }
+int c3_cooked(void) { return u3m_bail(c3__oops); }
 
 /* u3m_error(): bail out with %exit, ct_pushing error.
 */
@@ -933,7 +1111,7 @@ _print_diff(c3_c* cap_c, c3_w a, c3_w b)
 /* u3m_fall(): in u3R, return an inner road to its parent.
 */
 void
-u3m_fall()
+u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
@@ -1478,7 +1656,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3m_mark(0);
+  u3m_mark();
   {
     va_list vap;
     u3_noun tur;
@@ -1883,7 +2061,7 @@ _cm_limits(void)
 }
 
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
-*/
+ */
 c3_i
 u3m_fault(void* adr_v, c3_i ser_i)
 {
@@ -1899,7 +2077,8 @@ u3m_fault(void* adr_v, c3_i ser_i)
   //
   else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
-                    adr_w, u3_Loom, u3_Loom + u3C.wor_i);
+            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
+    u3m_stacktrace();
     u3_assert(0);
     return 0;
   }
@@ -1982,7 +2161,7 @@ u3m_save(void)
   }
 #endif
 
-  return u3e_save(low_p, hig_p);
+  u3e_save(low_p, hig_p);
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2035,7 +2214,7 @@ u3m_ward(void)
   }
 #endif
 
-  return u3e_ward(low_p, hig_p);
+  u3e_ward(low_p, hig_p);
 }
 
 /* _cm_signals(): set up interrupts, etc.
@@ -2099,7 +2278,7 @@ _cm_free_ssl(void* tox_v
 #endif
              )
 {
-  return u3a_free(tox_v);
+  u3a_free(tox_v);
 }
 
 extern void u3je_secp_init(void);
@@ -2107,7 +2286,7 @@ extern void u3je_secp_init(void);
 /* _cm_crypto(): initialize openssl and crypto jets.
 */
 static void
-_cm_crypto()
+_cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
@@ -2133,7 +2312,7 @@ _cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
 static void
 _cm_free2(void* tox_v, size_t siz_i)
 {
-  return u3a_free(tox_v);
+  u3a_free(tox_v);
 }
 
 /* u3m_init(): start the environment.
@@ -2196,7 +2375,7 @@ extern void u3je_secp_stop(void);
 /* u3m_stop(): graceful shutdown cleanup.
 */
 void
-u3m_stop()
+u3m_stop(void)
 {
   u3e_stop();
   u3je_secp_stop();

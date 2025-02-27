@@ -1,8 +1,8 @@
 #ifndef U3_HASHTABLE_V1_H
 #define U3_HASHTABLE_V1_H
 
-#include "pkg/noun/hashtable.h"
-#include "pkg/noun/v2/hashtable.h"
+#include "../hashtable.h"
+#include "v2/hashtable.h"
 
   /**  Aliases.
   **/

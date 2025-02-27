@@ -1,0 +1,24 @@
+.{
+    .name = "urcrypt",
+    .version = "0.0.1",
+    .dependencies = .{
+        .aes_siv = .{
+            .url = "https://github.com/dfoxfranke/libaes_siv/archive/9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b.tar.gz",
+            .hash = "1220a898068525a4bda3be4139c68555ec3a9cef03ed94c63115dde4a5204126f69a",
+        },
+        .openssl = .{
+            .path = "../openssl",
+        },
+        .secp256k1 = .{
+            .url = "https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.5.1.tar.gz",
+            .hash = "1220bb683a6df744e618f58a008eaae3eb62b70a78334cec676bd82b1b9e8e944eeb",
+        },
+        .urcrypt = .{
+            .url = "https://github.com/urbit/urcrypt/archive/465aad6262f2710f76f75adfe74effb5751c5ab3.tar.gz",
+            .hash = "1220c0f7141ab0aeb4164c5c2ae42848035e5b2fdff52c66c57d5744e3e3751e12c8",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
