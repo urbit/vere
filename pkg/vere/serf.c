@@ -1187,6 +1187,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
           while ( u3_nul != cax ) {
             u3l_log("saving 1");
             u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)), u3t(u3h(cax)));
+            fprintf(stderr, "boot k: %x\r\n", u3r_mug(u3h(u3h(cax))));
             u3_weak foo = u3z_find_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)));
             u3l_log("cache found %x", foo);
             cax = u3t(cax);

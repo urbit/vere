@@ -2623,7 +2623,9 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x     = _n_pep(mov, off);
     skim_out:
       o     = u3k(mem_u->key);
+      // fprintf(stderr, "x: %x o: %o\r\n", u3r_mug(x), u3r_mug(o));
       x     = u3nc(x, o);
+      // fprintf(stderr, "k: %x\r\n", u3r_mug(x));
       o     = u3z_find_m(mem_u->cid, 144 + c3__nock, x);
       if ( u3_none == o ) {
         _n_push(mov, off, u3nc(mem_u->cid, x));
@@ -2631,6 +2633,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       }
       else {
         ip_w += mem_u->sip_l;
+        // fprintf(stderr, "v: %x\r\n", u3r_mug(o));
         _n_push(mov, off, o);
         u3z(x);
       }

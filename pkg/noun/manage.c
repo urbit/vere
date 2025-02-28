@@ -1450,6 +1450,7 @@ u3m_soft_cax(u3_funq fun_f,
     */
     {
       u3_assert(_(u3du(why)));
+      fprintf(stderr, "soft_cax why: %u", u3h(why));
       switch ( u3h(why) ) {
         default: u3_assert(0); return 0;
 
@@ -1461,9 +1462,9 @@ u3m_soft_cax(u3_funq fun_f,
         //   pro = u3m_love(why);
         // } break;
 
-        // case 2: {                             //  true exit
-        //   pro = u3m_love(why);
-        // } break;
+        case 2: {                             //  true exit
+          pro = u3nc(u3m_love(why), u3_nul);
+        } break;
 
         // case 3: {                             //  failure; rebail w/trace
         //   u3_noun yod = u3m_love(u3t(why));
