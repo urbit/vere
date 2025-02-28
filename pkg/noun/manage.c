@@ -560,18 +560,21 @@ _find_home(void)
 
   //  NB: the home road is always north
   //
-  c3_w* mem_w = u3_Loom + u3a_walign;
-  c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3a_walign;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  {
+    u3_post bot_p, top_p;
 
-  u3H = (void *)mat_w;
-  u3R = &u3H->rod_u;
+    bot_p = 1U << u3a_page;
+    top_p = u3C.wor_i - c3_wiseof(u3v_home);
+    u3H   = u3to(u3v_home, top_p);
+    top_p = u3C.wor_i - bot_p;
 
-  //  this looks risky, but there are no legitimate scenarios
-  //  where it's wrong
-  //
-  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
+    u3R = &u3H->rod_u;
+
+    //  this looks risky, but there are no legitimate scenarios
+    //  where it's wrong
+    //
+    u3R->mat_p = u3R->cap_p = top_p;
+  }
 
   //  check for obvious corruption
   //
