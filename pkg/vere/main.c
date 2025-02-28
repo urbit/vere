@@ -190,6 +190,7 @@ _main_init(void)
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_w = DefaultKernel;
+  u3_Host.ops_u.wat_o = c3n;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
@@ -311,6 +312,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
+    { "watch-replay",        no_argument,       NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -363,6 +365,10 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         }
 
+        break;
+      }
+      case 13: {  // watch-replay
+        u3_Host.ops_u.wat_o = c3y;
         break;
       }
       //  special args
@@ -2467,6 +2473,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     argv[i_z++] = u3_Host.wrk_c;
     argv[i_z++] = "play";
+    argv[i_z++] = "--watch-replay";
     argv[i_z++] = "--loom";
     argv[i_z++] = lom_c;
     argv[i_z++] = "--replay-to";
@@ -2486,6 +2493,11 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     if ( !run_i ) {
       argv[i_z++] = u3_Host.dir_c;
     }
+    // make the pthread opt-in and only opt-in when we spawn
+    // the play subprocess via _cw_play_fork; use a flag to 
+    // toggle the thread creation
+    // this will ensure no thread is ever created when replaying
+    // events in the foreground via the play subcommand
 
     argv[i_z] = NULL;
     u3_assert( i_z < sizeof(argv) );
@@ -2534,17 +2546,19 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
+  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "auto-meld", no_argument,       NULL, 7 },
-    { "soft-mugs", no_argument,       NULL, 8 },
-    { "full",      no_argument,       NULL, 'f' },
-    { "replay-to", required_argument, NULL, 'n' },
-    { "snap-at",   required_argument, NULL, 's' },
+    { "loom",         required_argument, NULL, c3__loom },
+    { "no-demand",    no_argument,       NULL, 6 },
+    { "auto-meld",    no_argument,       NULL, 7 },
+    { "soft-mugs",    no_argument,       NULL, 8 },
+    { "watch-replay", no_argument,       NULL, 9 },
+    { "full",         no_argument,       NULL, 'f' },
+    { "replay-to",    required_argument, NULL, 'n' },
+    { "snap-at",      required_argument, NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2569,6 +2583,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 8: {  //  soft-mugs
         sof_o = c3y;
+      } break;
+
+      case 9: {  //  watch-replay
+        wat_o = c3y;
       } break;
 
       case 'f': {
@@ -2616,12 +2634,17 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  pthread_t ted;
-  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+  if ( _(wat_o) ) {
+    pthread_t ted;
+    pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 
-  pthread_cancel(ted);
+    pthread_cancel(ted);
+  }
+  else {
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  }
 }
 
 /* _cw_prep(): prepare for upgrade
