@@ -12,6 +12,10 @@ MODULE.bazel.lock
 **/.zig-cache
 **/zig-out
 
+# clangd
+.cache
+compile_commands.json
+
 # Swap files.
 *.swo
 *.swp
