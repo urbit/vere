@@ -492,16 +492,9 @@ static c3_c* _140_hex_ripe_ha[] = {
   "b0cb16bf206c0496bb480e5759ea1afa7dee1748b64e5243c23fddb09720ebd0",
   0
 };
-static u3j_harm _140_non__mice_a[]  = {{".2", u3we_mice}, {}};
-static u3j_core _140_non_d[] =
-  { { "mice", 7, _140_non__mice_a, 0, no_hashes },
-    {}
-  };
-
 
 static u3j_core _140_hex_d[] =
-{ { "non", 7, 0, _140_non_d, no_hashes },
-  { "lore",  63, _140_hex_lore_a, 0, _140_hex_lore_ha },
+{ { "lore",  63, _140_hex_lore_a, 0, _140_hex_lore_ha },
   { "leer",  63, _140_hex_leer_a, 0, _140_hex_leer_ha },
   { "loss",  63, _140_hex_loss_a, 0, _140_hex_loss_ha },
   { "lune", 127, _140_hex_lune_a, 0, _140_hex_lune_ha },

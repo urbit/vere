@@ -835,6 +835,7 @@ static u3j_harm _137_non__lagoon_lte_a[]  = {{".2", u3wi_la_lte}, {}};
 static u3j_harm _137_non__lagoon_diag_a[] = {{".2", u3wi_la_diag}, {}};
 static u3j_harm _137_non__lagoon_trace_a[]= {{".2", u3wi_la_trace}, {}};
 static u3j_harm _137_non__lagoon_mmul_a[] = {{".2", u3wi_la_mmul}, {}};
+static u3j_harm _137_non__mice_a[] = {{".2", u3we_mice}, {}};
 
 static u3j_core _137_non__la_core_d[] =
   { { "add-rays", 7, _137_non__lagoon_add_a,  0, no_hashes },
@@ -870,6 +871,7 @@ static u3j_core _137_non__la_core_d[] =
 
 static u3j_core _137_non_d[] =
   { { "lagoon", 7, 0, _137_non__la_core_d, no_hashes },
+    { "mice", 7, _137_non__mice_a, 0, no_hashes },
     {}
   };
 
