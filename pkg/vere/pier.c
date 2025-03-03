@@ -423,7 +423,7 @@ _czar_boot_data(c3_c* czar_c,
 
   if ( bone_w != NULL ) {
     sprintf(url, "https://%s.urbit.org/~/boot/%s/%d",
-            czar_c+1, who_c, *bone_w + 1);
+            czar_c+1, who_c, *bone_w );
   } else {
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
   }
