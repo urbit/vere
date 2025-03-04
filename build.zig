@@ -581,6 +581,16 @@ fn buildBinary(
                 }
             }
 
+            if (t.isDarwin()) {
+                // Requires llvm@18 homebrew installation
+                if (cfg.asan or cfg.ubsan)
+                    test_exe.addLibraryPath(.{
+                        .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
+                    });
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+            }
+
             test_exe.stack_size = 0;
             test_exe.linkLibC();
             for (tst.deps) |dep| {
