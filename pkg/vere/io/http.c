@@ -101,7 +101,9 @@ typedef struct _u3_h2o_serv {
     c3_c*            key_c;             //  auth token key
     u3_noun          ses;               //  valid session tokens
     struct _u3_hreq* seq_u;             //  open slog requests
-    uv_timer_t*      sit_u;             //  slog stream heartbeat
+    struct _u3_hreq* siq_u;             //  open spin requests
+    uv_timer_t*      sit_u;             //  stream heartbeat
+    uv_timer_t*      sin_u;             //  spinner stream timer
   } u3_hfig;
 
 /* u3_httd: general http device
@@ -130,6 +132,7 @@ static void _http_start_respond(u3_hreq* req_u,
 
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
+static const c3_w SPIN_TIMER = 100; // XX make this a command line arguement
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -456,12 +459,12 @@ _http_spin_link(u3_hcon* hon_u, u3_hreq* req_u)
   u3_hfig* fig_u = &hon_u->htp_u->htd_u->fig_u;
   req_u->hon_u = hon_u;
   req_u->seq_l = hon_u->seq_l++;
-  req_u->nex_u = fig_u->seq_u;
+  req_u->nex_u = fig_u->siq_u;
 
   if ( 0 != req_u->nex_u ) {
     req_u->nex_u->pre_u = req_u;
   }
-  fig_u->seq_u = req_u;
+  fig_u->siq_u = req_u;
 }
 
 /* _http_seq_link(): store slog stream request in state
@@ -478,6 +481,34 @@ _http_seq_link(u3_hcon* hon_u, u3_hreq* req_u)
     req_u->nex_u->pre_u = req_u;
   }
   fig_u->seq_u = req_u;
+}
+
+/* _http_spin_unlink(): remove spin stack request from state
+*/
+static void
+_http_spin_unlink(u3_hreq* req_u)
+{
+  u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+  if ( 0 != req_u->pre_u ) {
+    req_u->pre_u->nex_u = req_u->nex_u;
+
+    if ( 0 != req_u->nex_u ) {
+      req_u->nex_u->pre_u = req_u->pre_u;
+    }
+  }
+  else {
+    fig_u->siq_u = req_u->nex_u;
+
+    if ( 0 != req_u->nex_u ) {
+      req_u->nex_u->pre_u = 0;
+    }
+  }
+
+  //  unlink from async scry request if present
+  //
+  if ( req_u->peq_u ) {
+    req_u->peq_u->req_u = 0;
+  }
 }
 
 /* _http_seq_unlink(): remove slog stream request from state
@@ -578,9 +609,9 @@ _http_req_done(void* ptr_v)
 static void
 _http_spin_done(void* ptr_v)
 {
-  u3_hreq* seq_u = (u3_hreq*)ptr_v;
-  _http_req_close(seq_u);
-  _http_seq_unlink(seq_u);
+  u3_hreq* siq_u = (u3_hreq*)ptr_v;
+  _http_req_close(siq_u);
+  _http_spin_unlink(siq_u);
 }
 
 /* _http_seq_done(): slog stream request finished, deallocation callback
@@ -1543,7 +1574,6 @@ _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
     //      slogstream when that happens, we need to store the token that
     //      was used alongside it...
   }
-
   return 0;
 }
 
@@ -2785,6 +2815,71 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
   u3z(tan);
 }
 
+/* _http_spin_timer_cb(): send heartbeat to slog streams and restart timer
+*/
+static void
+_http_spin_timer_cb(uv_timer_t* tim_u)
+{ // XX make this similar to stream_slog but with siq_u and continue_respond
+  u3_httd* htd_u = tim_u->data;
+  u3_hreq* siq_u = htd_u->fig_u.siq_u;
+
+  if ( 0 != siq_u ) {
+    c3_c* buf_c     = c3_malloc(1025);
+    u3n_spin* stk_u = htd_u->stk_u;
+    c3_w pos_w      = stk_u->off_w;
+    c3_w out_w      = 0;
+    c3_t fis_t      = 1;
+
+    while (pos_w > 0) {
+      c3_w  len_w;
+      pos_w -=4;
+
+      if ( sizeof(buf_c) < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+      }
+
+      memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
+      pos_w -= len_w;
+
+      if ( !fis_t) {
+        if ( sizeof(buf_c) < out_w + 4 ) {
+           buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+        }
+        memcpy(buf_c + out_w, ",",1);
+        out_w +=1;
+      }
+
+      fis_t = 0;
+
+      if ( sizeof(buf_c) < out_w + len_w ) {
+         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+      }
+
+      memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
+      out_w += len_w;
+    }
+    buf_c[out_w] = '\0';
+
+    if ( 0 != stk_u->off_w ) {
+      u3_noun tan = u3i_string(buf_c);
+      u3_noun lin = u3i_list(u3i_string("data:"),
+                             tan,
+                             c3_s2('\n', '\n'),
+                             u3_none);
+      u3_atom txt = u3qc_rap(3, lin);
+      u3_noun data = u3nt(u3_nul, u3r_met(3, txt), txt);
+
+      while ( 0 != siq_u ) {
+        _http_continue_respond(siq_u, data, c3n);
+        siq_u = siq_u->nex_u;
+      }
+    }
+  }
+  uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
+                 SPIN_TIMER, 0);
+}
+
+
 /* _http_seq_heartbeat_cb(): send heartbeat to slog streams and restart timer
 */
 static void
@@ -2792,12 +2887,24 @@ _http_seq_heartbeat_cb(uv_timer_t* tim_u)
 {
   u3_httd* htd_u = tim_u->data;
   u3_hreq* seq_u = htd_u->fig_u.seq_u;
+  u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
+  // slog endpoints
   if ( 0 != seq_u ) {
     u3_noun dat = u3nt(u3_nul, 1, c3_s1('\n'));
     while ( 0 != seq_u ) {
       _http_continue_respond(seq_u, u3k(dat), c3n);
       seq_u = seq_u->nex_u;
+    }
+    u3z(dat);
+  }
+
+  // spin endpoints
+  if ( 0 != siq_u ) {
+    u3_noun dat = u3nt(u3_nul, 1, c3_s1('\n'));
+    while ( 0 != seq_u ) {
+      _http_continue_respond(siq_u, u3k(dat), c3n);
+      siq_u = siq_u->nex_u;
     }
     u3z(dat);
   }
@@ -2995,6 +3102,12 @@ u3_http_io_init(u3_pier* pir_u)
   uv_timer_start(sit_u, _http_seq_heartbeat_cb, HEARTBEAT_TIMEOUT, 0);
   htd_u->fig_u.sit_u = sit_u;
 
+  uv_timer_t* sin_u = c3_malloc(sizeof(*sin_u));
+  sin_u->data = htd_u;
+  uv_timer_init(u3L, sin_u);
+  uv_timer_start(sin_u, _http_spin_timer_cb, SPIN_TIMER, 0);
+  htd_u->fig_u.sin_u = sin_u;
+
   {
     u3_noun now;
     struct timeval tim_u;
@@ -3006,7 +3119,7 @@ u3_http_io_init(u3_pier* pir_u)
   }
 
   //Setup spin stack
-  int shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0);
+  c3_w shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     u3_pier_bail(car_u->pir_u);

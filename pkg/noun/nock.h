@@ -53,8 +53,8 @@
     } reg_u;                          // registration site data
   } u3n_prog;
 
-/* u3n_spin: %spin hint stack
- */
+ /* u3n_spin: %spin hint stack
+  */
   typedef struct {
     c3_w off_w;
     c3_y dat_y[PSIZE - sizeof(c3_w)];

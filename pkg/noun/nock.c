@@ -2006,7 +2006,6 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if (c3__spin == tok) {
-    u3t_slog_nara(0);
     u3n_sstack_pop();
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
@@ -3214,7 +3213,7 @@ u3n_nock_an(u3_noun bus, u3_noun fol)
 void
 u3n_sstack_init()
 {
-  int shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0666);
+  c3_w shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;
@@ -3233,7 +3232,7 @@ u3n_sstack_init()
   }
 
   stk_u->off_w = 0;
-  u3n_sstack_push(c3__root);
+  //u3n_sstack_push(c3__root);
 }
 
 /* u3n_sstack_push: push a noun on the spin stack.
