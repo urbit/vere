@@ -2828,7 +2828,6 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     u3n_spin* stk_u = htd_u->stk_u;
     c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
-    c3_t fis_t      = 1;
 
     while (pos_w > 0) {
       c3_w  len_w;
@@ -2841,15 +2840,11 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
       pos_w -= len_w;
 
-      if ( !fis_t) {
-        if ( sizeof(buf_c) < out_w + 4 ) {
-           buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
-        }
-        memcpy(buf_c + out_w, ",",1);
-        out_w +=1;
+      if ( sizeof(buf_c) < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
       }
-
-      fis_t = 0;
+      memcpy(buf_c + out_w, "/", 1);
+      out_w +=1;
 
       if ( sizeof(buf_c) < out_w + len_w ) {
          buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);

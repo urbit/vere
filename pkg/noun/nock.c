@@ -3240,6 +3240,10 @@ u3n_sstack_init()
 void
 u3n_sstack_push(u3_noun nam)
 {
+  if ( c3n == u3ud(nam) ) {
+    return;
+  }
+
   c3_w  met_w = u3r_met(3, nam);
   
   // Exit if full
@@ -3252,7 +3256,6 @@ u3n_sstack_push(u3_noun nam)
 
   memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
   stk_u->off_w += sizeof(c3_w);
-
 }
 
 /* u3n_sstack_pop: pop a noun from the spin stack.
