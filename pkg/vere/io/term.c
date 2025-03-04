@@ -1585,6 +1585,12 @@ u3_term_wall(u3_noun wol)
   u3z(wol);
 }
 
+static void
+_born_bail_cb(u3_ovum *egg_u, u3_noun stacktraces) {
+  u3z(stacktraces);
+  u3_ovum_free(egg_u);
+}
+
 /* _term_io_talk():
 */
 static void
@@ -1602,6 +1608,17 @@ _term_io_talk(u3_auto* car_u)
   //
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
   u3_noun cad;
+
+  //  send born event
+  //
+  {
+    cad = u3nc(c3__born, u3_nul);
+    u3_ovum* egg_u = u3_auto_plan(car_u, u3_ovum_init(0, c3__d, u3k(wir), cad));
+    u3z(egg_u->pin_u.lab);
+    egg_u->pin_u.lab = u3_blip;
+
+    u3_auto_peer(egg_u, 0, 0, _born_bail_cb);
+  }
 
   //  send terminal dimensions
   //
@@ -1637,6 +1654,17 @@ _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
 
     return c3y;
   }
+}
+
+/* _term_io_quiz(): handle quiz (query to serf).
+*/
+static void
+_term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
+{
+  u3_auto* car_u = (u3_auto*)vod_p;
+  u3_noun wir = u3nt(c3__term, '1', u3_nul);
+  u3_noun cad = u3k(res);
+  u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
 }
 
 /* _term_io_kick(): apply effects.
@@ -1726,6 +1754,11 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         case c3__pack: {
           ret_o = c3y;
           u3_pier_pack(car_u->pir_u);
+        } break;
+
+        case c3__quac: {
+          ret_o = c3y;
+          u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
         } break;
       }
     }

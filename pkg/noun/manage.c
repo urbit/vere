@@ -473,15 +473,17 @@ u3m_file(c3_c* pas_c)
 
 /* u3m_mark(): mark all nouns in the road.
 */
-c3_w
-u3m_mark(FILE* fil_u)
+u3m_quac**
+u3m_mark(void)
 {
-  c3_w tot_w = 0;
-  tot_w += u3v_mark(fil_u);
-  tot_w += u3j_mark(fil_u);
-  tot_w += u3n_mark(fil_u);
-  tot_w += u3a_mark_road(fil_u);
-  return tot_w;
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
+  qua_u[0] = u3v_mark();
+  qua_u[1] = u3j_mark();
+  qua_u[2] = u3n_mark();
+  qua_u[3] = u3a_mark_road();
+  qua_u[4] = NULL;
+
+  return qua_u;
 }
 
 /* _pave_parts(): build internal tables.
@@ -839,7 +841,9 @@ u3m_stacktrace()
   if ( _self_path((c3_c*)self_path_c) == 0 ) {
     bt_state = backtrace_create_state((const c3_c*)self_path_c, 0, err_cb, 0);
     backtrace_full(bt_state, 0, bt_cb, err_cb, &data);
-    if (data.fail == 0) u3l_log("");
+    if (data.fail == 0) {
+      fprintf(stderr, "\r\n");
+    }
   }
   else {
     data.fail = 1;
@@ -859,7 +863,7 @@ u3m_stacktrace()
       for ( c3_i i = 0; i < size; i++ ) {
         fprintf(stderr, "%s\r\n", strings[i]);
       }
-      u3l_log("");
+      fprintf(stderr, "\r\n");
     }
 
     free(strings);
@@ -890,7 +894,7 @@ u3m_stacktrace()
     } while (unw_step(&cursor) > 0);
 
     if ( (data.count > 0) ) {
-      u3l_log("");
+      fprintf(stderr, "\r\n");
     }
   }
   else {
@@ -1540,7 +1544,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3m_mark(0);
+  u3m_mark();
   {
     va_list vap;
     u3_noun tur;

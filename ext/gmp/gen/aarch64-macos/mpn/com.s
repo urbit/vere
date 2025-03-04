@@ -50,6 +50,10 @@
 
 
 
+
+
+
+
 	.text
 	.align	3
 	.globl	___gmpn_com 
@@ -60,37 +64,41 @@ ___gmpn_com:
 
 
 	tbz	x0, #3, Lal2
-	ld1	{v22.1d}, [x1], #8
+	ldr	x4, [x1],#8
 	sub	x2, x2, #1
-	mvn	v22.8b, v22.8b
-	st1	{v22.1d}, [x0], #8
+	mvn	x4, x4
+	str	x4, [x0],#8
 
-Lal2:	ld1	{v26.2d}, [x1], #16
-	subs	x2, x2, #6
-	b.lt	Lend
+Lal2:	ldp	x4,x5, [x1],#16
+	sub	x2, x2, #6
+	tbnz	x2, #63, Lend
 
 	.align	4
-Ltop:	ld1	{v22.2d}, [x1], #16
-	mvn	v26.16b, v26.16b
-	st1	{v26.2d}, [x0], #16
-	ld1	{v26.2d}, [x1], #16
-	mvn	v22.16b, v22.16b
-	st1	{v22.2d}, [x0], #16
-	subs	x2, x2, #4
-	b.ge	Ltop
+Ltop:	ldp	x6,x7, [x1],#32
+	mvn	x4, x4
+	mvn	x5, x5
+	stp	x4,x5, [x0],#32
+	ldp	x4,x5, [x1,#-16]
+	mvn	x6, x6
+	mvn	x7, x7
+	stp	x6,x7, [x0,#-16]
+	sub	x2, x2, #4
+	tbz	x2, #63, Ltop
 
-Lend:	mvn	v26.16b, v26.16b
-	st1	{v26.2d}, [x0], #16
+Lend:	mvn	x4, x4
+	mvn	x5, x5
+	stp	x4,x5, [x0],#16
 
 
 
 Lbc:	tbz	x2, #1, Ltl1
-	ld1	{v22.2d}, [x1], #16
-	mvn	v22.16b, v22.16b
-	st1	{v22.2d}, [x0], #16
+	ldp	x4,x5, [x1],#16
+	mvn	x4, x4
+	mvn	x5, x5
+	stp	x4,x5, [x0],#16
 Ltl1:	tbz	x2, #0, Ltl2
-	ld1	{v22.1d}, [x1]
-	mvn	v22.8b, v22.8b
-	st1	{v22.1d}, [x0]
+	ldr	x4, [x1]
+	mvn	x4, x4
+	str	x4, [x0]
 Ltl2:	ret
 	

@@ -5,6 +5,7 @@
 #include "vere.h"
 #include "ivory.h"
 #include "ur/ur.h"
+#include <manage.h>
 
 /*
 |%
@@ -25,6 +26,10 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
   ==
 ::  +plea: from serf to king
@@ -41,6 +46,10 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -70,18 +79,70 @@ enum {
   _serf_fag_vega = 1 << 4   //  kernel reset
 };
 
+/* _serf_quac: convert a quac to a noun.
+*/
+u3_noun
+_serf_quac(u3m_quac* mas_u)
+{
+  u3_noun list = u3_nul;
+  c3_w i_w = 0;
+  if ( mas_u->qua_u != NULL ) {
+    while ( mas_u->qua_u[i_w] != NULL ) {
+      list = u3nc(_serf_quac(mas_u->qua_u[i_w]), list);
+      i_w++;
+    }
+  }
+  list = u3kb_flop(list);
+
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word(mas_u->siz_w), list);
+
+  c3_free(mas_u->nam_c);
+  c3_free(mas_u->qua_u);
+  c3_free(mas_u);
+
+  return mas;
+}
+
+/* _serf_quacs: convert an array of quacs to a noun list.
+*/
+u3_noun
+_serf_quacs(u3m_quac** all_u)
+{
+  u3_noun list = u3_nul;
+  c3_w i_w = 0;
+  while ( all_u[i_w] != NULL ) {
+    list = u3nc(_serf_quac(all_u[i_w]), list);
+    i_w++;
+  }
+  c3_free(all_u);
+  return u3kb_flop(list);
+}
+
+/* _serf_print_quacs: print an array of quacs.
+*/
+void
+_serf_print_quacs(FILE* fil_u, u3m_quac** all_u)
+{
+  fprintf(fil_u, "\r\n");
+  c3_w i_w = 0;
+  while ( all_u[i_w] != NULL ) {
+    u3a_print_quac(fil_u, 0, all_u[i_w]);
+    i_w++;
+  }
+}
+
 /* _serf_grab(): garbage collect, checking for profiling. RETAIN.
 */
-static void
-_serf_grab(u3_noun sac)
+static u3_noun
+_serf_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
     if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
     }
+    return u3_nul;
   }
   else {
-    c3_w tot_w = 0;
     FILE* fil_u;
 
 #ifdef U3_MEMORY_LOG
@@ -113,36 +174,77 @@ _serf_grab(u3_noun sac)
 #endif
 
     u3_assert( u3R == &(u3H->rod_u) );
-    fprintf(fil_u, "\r\n");
 
-    tot_w += u3a_maid(fil_u, "total userspace", u3a_prof(fil_u, 0, sac));
-    tot_w += u3m_mark(fil_u);
-    tot_w += u3a_maid(fil_u, "space profile", u3a_mark_noun(sac));
+    u3m_quac* pro_u = u3a_prof(fil_u, sac);
 
-    u3a_print_memory(fil_u, "total marked", tot_w);
-    u3a_print_memory(fil_u, "free lists", u3a_idle(u3R));
-    u3a_print_memory(fil_u, "sweep", u3a_sweep());
+    if ( NULL == pro_u ) {
+      fflush(fil_u);
+      u3z(sac);
+      return u3_nul;
+    } else {
+      u3m_quac** all_u = c3_malloc(sizeof(*all_u) * 11);
+      all_u[0] = pro_u;
 
-    fflush(fil_u);
+      u3m_quac** var_u = u3m_mark();
+      all_u[1] = var_u[0];
+      all_u[2] = var_u[1];
+      all_u[3] = var_u[2];
+      all_u[4] = var_u[3];
+      c3_free(var_u);
+
+      c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
+                     + all_u[3]->siz_w + all_u[4]->siz_w;
+
+      all_u[5] = c3_calloc(sizeof(*all_u[5]));
+      all_u[5]->nam_c = strdup("space profile");
+      all_u[5]->siz_w = u3a_mark_noun(sac) * 4;
+
+      tot_w += all_u[5]->siz_w;
+
+      all_u[6] = c3_calloc(sizeof(*all_u[6]));
+      all_u[6]->nam_c = strdup("total marked");
+      all_u[6]->siz_w = tot_w;
+
+      all_u[7] = c3_calloc(sizeof(*all_u[7]));
+      all_u[7]->nam_c = strdup("free lists");
+      all_u[7]->siz_w = u3a_idle(u3R) * 4;
+
+      all_u[8] = c3_calloc(sizeof(*all_u[8]));
+      all_u[8]->nam_c = strdup("sweep");
+      all_u[8]->siz_w = u3a_sweep() * 4;
+      
+      all_u[9] = c3_calloc(sizeof(*all_u[9]));
+      all_u[9]->nam_c = strdup("loom");
+      all_u[9]->siz_w = u3C.wor_i * 4;
+
+      all_u[10] = NULL;
+
+      if ( c3y == pri_o ) {
+        _serf_print_quacs(fil_u, all_u);
+      }
+      fflush(fil_u);
 
 #ifdef U3_MEMORY_LOG
-    {
-      fclose(fil_u);
-    }
+      {
+        fclose(fil_u);
+      }
 #endif
 
-    u3z(sac);
+      u3_noun mas = _serf_quacs( all_u);
+      u3z(sac);
 
-    u3l_log("");
+      return mas;
+    }
   }
 }
 
 /* u3_serf_grab(): garbage collect.
 */
-void
-u3_serf_grab(void)
+u3_noun
+u3_serf_grab(c3_o pri_o)
 {
   u3_noun sac = u3_nul;
+  u3_noun res = u3_nul;
 
   u3_assert( u3R == &(u3H->rod_u) );
 
@@ -173,19 +275,31 @@ u3_serf_grab(void)
     u3z(gon);
   }
 
-  fprintf(stderr, "serf: measuring memory:\r\n");
-
   if ( u3_nul != sac ) {
-    _serf_grab(sac);
+    res = _serf_grab(sac, pri_o);
   }
   else {
-    u3a_print_memory(stderr, "total marked", u3m_mark(stderr));
+    fprintf(stderr, "sac is empty\r\n");
+    u3m_quac** var_u = u3m_mark();
+
+    c3_w tot_w = 0;
+    c3_w i_w = 0;
+    while ( var_u[i_w] != NULL ) {
+      tot_w += var_u[i_w]->siz_w;
+      u3a_quac_free(var_u[i_w]);
+      i_w++;
+    }
+    c3_free(var_u);
+
+    u3a_print_memory(stderr, "total marked", tot_w / 4);
     u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
     u3a_print_memory(stderr, "sweep", u3a_sweep());
     fprintf(stderr, "\r\n");
   }
 
   fflush(stderr);
+
+  return res;
 }
 
 /* u3_serf_post(): update serf state post-writ.
@@ -213,7 +327,7 @@ u3_serf_post(u3_serf* sef_u)
   //  XX this runs on replay too, |mass s/b elsewhere
   //
   if ( sef_u->fag_w & _serf_fag_mute ) {
-    _serf_grab(sef_u->sac);
+    u3z(_serf_grab(sef_u->sac, c3y));
     sef_u->sac   = u3_nul;
   }
 
@@ -603,24 +717,24 @@ _serf_play_life(u3_serf* sef_u, u3_noun eve)
   //
   //    XX support -J
   //
-  {
-    c3_d  len_d = u3_Ivory_pill_len;
-    c3_y* byt_y = u3_Ivory_pill;
-    u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
-    u3_weak pil;
-
-    if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      u3l_log("lite: unable to cue ivory pill");
-      exit(1);
-    }
-
-    u3s_cue_xeno_done(sil_u);
-
-    if ( c3n == u3v_boot_lite(pil)) {
-      u3l_log("lite: boot failed");
-      exit(1);
-    }
-  }
+//  {
+//    c3_d  len_d = u3_Ivory_pill_len;
+//    c3_y* byt_y = u3_Ivory_pill;
+//    u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
+//    u3_weak pil;
+//
+//    if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
+//      u3l_log("lite: unable to cue ivory pill");
+//      exit(1);
+//    }
+//
+//    u3s_cue_xeno_done(sil_u);
+//
+//    if ( c3n == u3v_boot_lite(pil)) {
+//      u3l_log("lite: boot failed");
+//      exit(1);
+//    }
+//  }
 
   gon = u3m_soft(0, u3v_life, eve);
 
@@ -752,8 +866,31 @@ u3_serf_play(u3_serf* sef_u, c3_d eve_d, u3_noun lit)
 u3_noun
 u3_serf_peek(u3_serf* sef_u, c3_w mil_w, u3_noun sam)
 {
+  c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
+  c3_c  lab_c[2056];
+
+  // XX refactor tracing
+  //
+  if ( tac_t ) {
+    c3_c* foo_c = u3m_pretty(u3t(sam));
+
+    {
+      snprintf(lab_c, 2056, "peek %s", foo_c);
+      c3_free(foo_c);
+    }
+
+    u3t_event_trace(lab_c, 'B');
+  }
+
+
   u3_noun gon = u3m_soft(mil_w, u3v_peek, sam);
   u3_noun pro;
+
+  if ( tac_t ) {
+    u3t_event_trace(lab_c, 'E');
+  }
+
+
 
   {
     u3_noun tag, dat;
@@ -906,7 +1043,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
 
       u3m_save();
-      u3_serf_grab();
+      u3_serf_grab(c3y);
 
       *ret = u3nc(c3__live, u3_nul);
       return c3y;
@@ -1024,10 +1161,45 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
           ret_o = c3y;
         }
       } break;
+      case c3__quiz: {
+        switch ( u3h(com) ) {
+          case c3__quac: {
+            u3z(wit);
+            u3_noun res = u3_serf_grab(c3n);
+            if ( u3_none == res ) {
+              ret_o = c3n;
+            } else {
+              *pel = u3nt(c3__quiz, c3__quac, res);
+              ret_o = c3y;
+            }
+          } break;
+
+          case c3__quic: {
+            u3z(wit);
+            c3_d pen_d = 4ULL * u3a_open(u3R);
+            c3_d dil_d = 4ULL * u3a_idle(u3R);
+            fprintf(stderr, "open: %" PRIu64 "\r\n", pen_d);
+            fprintf(stderr, "idle: %" PRIu64 "\r\n", dil_d);
+
+            *pel = u3nt(c3__quiz, c3__quic,
+                        u3nt(u3nc(c3__open, u3i_chub(pen_d)),
+                             u3nc(c3__idle, u3i_chub(dil_d)),
+                             u3_nul));
+            ret_o = c3y;
+          } break;
+
+          default: {
+            u3z(wit);
+            ret_o = c3n;
+          }
+        }
+      } break;
     }
   }
 
-  u3z(wit);
+  if ( tag != c3__quiz ) {
+    u3z(wit);
+  }
   return ret_o;
 }
 
@@ -1054,7 +1226,7 @@ u3_serf_init(u3_serf* sef_u)
 
   {
     c3_w  pro_w = 1;
-    c3_y  hon_y = 139;
+    c3_y  hon_y = 138;
     c3_y  noc_y = 4;
     u3_noun ver = u3nt(pro_w, hon_y, noc_y);
 

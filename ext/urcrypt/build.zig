@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
     lib.linkLibrary(libed25519(b, target, optimize));
     lib.linkLibrary(libge_additions(b, target, optimize));
     lib.linkLibrary(libkeccak_tiny(b, target, optimize));
+    lib.linkLibrary(libmonocypher(b, target, optimize));
     lib.linkLibrary(libscrypt(b, target, optimize));
 
     lib.linkLibrary(libaes_siv(b, target, optimize));
@@ -44,6 +45,7 @@ pub fn build(b: *std.Build) void {
             "aes_siv.c",
             "argon.c",
             "blake3.c",
+            "chacha.c",
             "ed25519.c",
             "ge_additions.c",
             "keccak.c",
@@ -55,6 +57,7 @@ pub fn build(b: *std.Build) void {
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-g",
             "-Wall",
@@ -103,6 +106,7 @@ fn libaes_siv(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
         },
     });
@@ -145,6 +149,7 @@ fn libsecp256k1(
             "-fno-sanitize=all",
             "-g",
             "-O2",
+            "-fno-omit-frame-pointer",
             "-std=c89",
             "-pedantic",
             "-Wno-long-long",
@@ -198,6 +203,7 @@ fn libargon2(
 
     const flags = .{
         "-O2",
+        "-fno-omit-frame-pointer",
         "-fno-sanitize=all",
         "-Wno-unused-value",
         "-Wno-unused-function",
@@ -273,6 +279,7 @@ fn libblake3(
             }),
             .flags = &.{
                 "-O2",
+                "-fno-omit-frame-pointer",
                 "-fno-sanitize=all",
             },
         });
@@ -282,6 +289,7 @@ fn libblake3(
             .files = &(common_files ++ .{"blake3_neon.c"}),
             .flags = &.{
                 "-O2",
+                "-fno-omit-frame-pointer",
                 "-fno-sanitize=all",
                 "-DBLAKE3_USE_NEON=1",
             },
@@ -330,6 +338,7 @@ fn libed25519(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-Wno-unused-result",
         },
@@ -368,6 +377,7 @@ fn libge_additions(
         .files = &.{"ge-additions.c"},
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
@@ -405,6 +415,7 @@ fn libkeccak_tiny(
         .files = &.{"keccak-tiny.c"},
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-std=c11",
             "-Wextra",
@@ -414,6 +425,41 @@ fn libkeccak_tiny(
     });
 
     lib.installHeader(dep_c.path("keccak-tiny/keccak-tiny.h"), "keccak-tiny.h");
+
+    return lib;
+}
+
+fn libmonocypher(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    const dep_c = b.dependency("urcrypt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib = b.addStaticLibrary(.{
+        .name = "monocypher",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    lib.linkLibC();
+
+    lib.addIncludePath(dep_c.path("monocypher"));
+
+    lib.addCSourceFiles(.{
+        .root = dep_c.path("monocypher"),
+        .files = &.{"monocypher.c"},
+        .flags = &.{
+            "-O2",
+            "-fno-omit-frame-pointer",
+            "-fno-sanitize=all",
+        },
+    });
+
+    lib.installHeader(dep_c.path("monocypher/monocypher.h"), "monocypher.h");
 
     return lib;
 }
@@ -454,6 +500,7 @@ fn libscrypt(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-D_FORTIFY_SOURCE=2",
         },

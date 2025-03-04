@@ -5,13 +5,13 @@ on:
     branches:
       - 'next/kelvin/*'
     paths:
-      - '*.bazel'
-      - '.bazelrc'
-      - '.github/workflows/**.yml'
-      - 'PACE'
-      - 'VERSION'
-      - 'bazel/**'
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'ext/**'
+      - '!ext/**.md'
       - 'pkg/**'
+      - '.github/workflows/**.yml'
+      - '*.sh'
 
 jobs:
   urbit:

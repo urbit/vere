@@ -49,6 +49,11 @@
 
 
 
+
+
+
+
+
 	.text
 	.align	3
 	.globl	___gmpn_copyd 
@@ -62,44 +67,31 @@ ___gmpn_copyd:
 
 
 	tbz	x0, #3, Lal2
-	sub	x1, x1, #8
-	ld1	{v22.1d}, [x1]
+	ldr	x4, [x1,#-8]!
 	sub	x2, x2, #1
-	sub	x0, x0, #8
-	st1	{v22.1d}, [x0]
+	str	x4, [x0,#-8]!
 
-Lal2:	sub	x1, x1, #16
-	ld1	{v26.2d}, [x1]
+Lal2:	ldp	x4,x5, [x1,#-16]!
 	sub	x2, x2, #6
-	sub	x0, x0, #16			
 	tbnz	x2, #63, Lend
 
-	sub	x1, x1, #16			
-	mov	x12, #-16
-
 	.align	4
-Ltop:	ld1	{v22.2d}, [x1], x12
-	st1	{v26.2d}, [x0], x12
-	ld1	{v26.2d}, [x1], x12
-	st1	{v22.2d}, [x0], x12
+Ltop:	ldp	x6,x7, [x1,#-16]
+	stp	x4,x5, [x0,#-16]
+	ldp	x4,x5, [x1,#-32]!
+	stp	x6,x7, [x0,#-32]!
 	sub	x2, x2, #4
 	tbz	x2, #63, Ltop
 
-	add	x1, x1, #16			
-
-Lend:	st1	{v26.2d}, [x0]
+Lend:	stp	x4,x5, [x0,#-16]!
 
 
 
 Lbc:	tbz	x2, #1, Ltl1
-	sub	x1, x1, #16
-	ld1	{v22.2d}, [x1]
-	sub	x0, x0, #16
-	st1	{v22.2d}, [x0]
+	ldp	x4,x5, [x1,#-16]!
+	stp	x4,x5, [x0,#-16]!
 Ltl1:	tbz	x2, #0, Ltl2
-	sub	x1, x1, #8
-	ld1	{v22.1d}, [x1]
-	sub	x0, x0, #8
-	st1	{v22.1d}, [x0]
+	ldr	x4, [x1,#-8]
+	str	x4, [x0,#-8]
 Ltl2:	ret
 	

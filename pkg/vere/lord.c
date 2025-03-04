@@ -22,6 +22,10 @@
       ==  ==
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
       [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%work mil=@ job=(pair @da ovum)]
   ==
 ::  +plea: from serf to king
@@ -38,6 +42,10 @@
       $:  %play
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
+      ==  ==
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
       ==  ==
       $:  %work
           $%  [%done eve=@ mug=@ fec=(list ovum)]
@@ -103,7 +111,8 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_cram:
     case u3_writ_meld:
     case u3_writ_pack:
-    case u3_writ_exit: {
+    case u3_writ_exit:
+    case u3_writ_quiz: {
     } break;
   }
 
@@ -201,6 +210,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_meld: return "meld";
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
+    case u3_writ_quiz: return "quiz";
   }
 }
 
@@ -532,6 +542,15 @@ _lord_plea_play(u3_lord* god_u, u3_noun dat)
   u3z(dat);
 }
 
+/* _lord_plea_quiz(): handle quiz (query to serf).
+ */
+static void
+_lord_plea_quiz(u3_lord* god_u, u3_noun dat)
+{
+  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
+  wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
+}
+
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
  static void
@@ -760,6 +779,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
     case c3__ripe: {
       _lord_plea_ripe(god_u, u3k(dat));
     } break;
+
+    case c3__quiz: {
+      _lord_plea_quiz(god_u, u3k(dat));
+    } break;
   }
 
   u3z(jar);
@@ -829,6 +852,10 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       //  requested exit code is always 0
       //
       msg = u3nt(c3__live, c3__exit, 0);
+    } break;
+
+    case u3_writ_quiz: {
+      msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
     } break;
   }
 
@@ -1013,6 +1040,22 @@ u3_lord_pack(u3_lord* god_u)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_pack;
+  _lord_writ_plan(god_u, wit_u);
+}
+
+/* u3_lord_quiz(): query the serf.
+*/
+void
+u3_lord_quiz(u3_lord* god_u,
+             c3_m     qiz_m,
+             void*    ptr_v,
+             void (*qiz_f)(c3_m, void*, u3_noun))
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_quiz;
+  wit_u->qiz_u.qiz_m = qiz_m;
+  wit_u->qiz_u.ptr_v = ptr_v;
+  wit_u->qiz_u.qiz_f = qiz_f;
   _lord_writ_plan(god_u, wit_u);
 }
 

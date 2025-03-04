@@ -3075,16 +3075,30 @@ _n_bam(u3_noun kev, void* dat)
 
 /* u3n_mark(): mark the bytecode cache for gc.
  */
-c3_w
-u3n_mark(FILE* fil_u)
+u3m_quac*
+u3n_mark()
 {
-  c3_w bam_w = 0, har_w = 0;
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk_with(har_p, _n_bam, &bam_w);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
 
-  bam_w = u3a_maid(fil_u, "  bytecode programs", bam_w);
-  har_w = u3a_maid(fil_u, "  bytecode cache", u3h_mark(har_p));
-  return  u3a_maid(fil_u, "total nock stuff", bam_w + har_w);
+  qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
+  qua_u[0]->nam_c = strdup("bytecode programs");
+
+  u3p(u3h_root) har_p = u3R->byc.har_p;
+  u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
+  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
+
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
+  qua_u[1]->nam_c = strdup("bytecode cache");
+  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+
+  qua_u[2] = NULL;
+
+  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
+  tot_u->nam_c = strdup("total nock stuff");
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
+  tot_u->qua_u = qua_u;
+
+  return tot_u;
 }
 
 /* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.

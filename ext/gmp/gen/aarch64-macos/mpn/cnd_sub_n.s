@@ -72,7 +72,7 @@ ___gmpn_cnd_sub_n:
 
 	cmp	xzr, xzr
 
-	lsr	x18, x4, #2
+	lsr	x17, x4, #2
 	tbz	x4, #0, Lbx0
 
 Lbx1:	ldr	x13, [x3]
@@ -82,7 +82,7 @@ Lbx1:	ldr	x13, [x3]
 	str	x9, [x1]
 	tbnz	x4, #1, Lb11
 
-Lb01:	cbz	x18, Lrt
+Lb01:	cbz	x17, Lrt
 	ldp	x12, x13, [x3,#8]
 	ldp	x10, x11, [x2,#8]
 	sub	x2, x2, #8
@@ -93,7 +93,7 @@ Lb01:	cbz	x18, Lrt
 Lb11:	ldp	x12, x13, [x3,#8]!
 	ldp	x10, x11, [x2,#8]!
 	sub	x1, x1, #8
-	cbz	x18, Lend
+	cbz	x17, Lend
 	b	Ltop
 
 Lbx0:	ldp	x12, x13, [x3]
@@ -106,7 +106,7 @@ Lb00:	sub	x2, x2, #16
 	b	Lmid
 
 Lb10:	sub	x1, x1, #16
-	cbz	x18, Lend
+	cbz	x17, Lend
 
 	.align	4
 Ltop:	bic	x6, x12, x0
@@ -123,8 +123,8 @@ Lmid:	bic	x6, x12, x0
 	sbcs	x9, x11, x7
 	ldp	x10, x11, [x2,#32]!
 	stp	x8, x9, [x1,#32]!
-	sub	x18, x18, #1
-	cbnz	x18, Ltop
+	sub	x17, x17, #1
+	cbnz	x17, Ltop
 
 Lend:	bic	x6, x12, x0
 	bic	x7, x13, x0

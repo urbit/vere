@@ -5,10 +5,15 @@ We use [`zig`][zig] to build Vere, which is packaged as a single binary,
 
 ## Supported Targets
 
+Main (`-Dall`) targets:
 - `aarch64-linux-musl`
 - `x86_64-linux-musl`
 - `aarch64-macos`
 - `x86_64-macos`
+
+Additional targets:
+- `aarch64-linux-gnu`
+- `x86_64-linux-gnu`
 
 ## Prerequisites
 
@@ -26,6 +31,22 @@ There are more annoying warts with `lldb` currently. First, if you attach the de
 p (void)darwin_register_mach_exception_handler()
 pro hand -p true -s false -n false SIGBUS
 pro hand -p true -s false -n false SIGSEGV
+```
+
+### Sanitizers
+
+Sanitizers are supported for native builds only and you need to have `llvm-18` (and `clang-18` on linux) installed on your machine.
+
+For native linux builds this is the only situation where we actually build against the native abi. Normally we build agains musl even on native gnu machines.
+
+macOS:
+```terminal
+brew install llvm@18
+```
+
+Debian/Ubuntu:
+```terminal
+apt-get install llvm-18 clang-18
 ```
 
 ## Build
@@ -69,9 +90,16 @@ Supported values:
 - soon
 - edge
 
-#### `-Dflags=[string]`
-Provide additional compiler flags. These propagate to all build artifacts and
-dependencies.
+#### `-Dcopt=[list]`
+Provide additional compiler flags. These propagate to all build artifacts.
+
+Example: `zig build -Dcopt="-g" -Dcopt="-fno-sanitize=all"`
+
+#### `-Dasan`
+Enable address sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
+
+#### `-Dubsan`
+Enable undefined behavior sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
 
 <!-- ## LSP Integration -->
 

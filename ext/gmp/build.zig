@@ -563,6 +563,7 @@ const generic_c_sources = [_][]const u8{
     "mpn/generic/mulmid_basecase.c",
     "mpn/generic/mulmid_n.c",
     "mpn/generic/mulmod_bnm1.c",
+    "mpn/generic/mulmod_bknp1.c",
     "mpn/generic/neg.c",
     "mpn/generic/nussbaumer_mul.c",
     "mpn/generic/perfpow.c",

@@ -7,11 +7,20 @@
             .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
             .lazy = true,
         },
-        .avahi = .{
-            .path = "./ext/avahi",
+        .pkg_c3 = .{
+            .path = "./pkg/c3",
         },
-        .backtrace = .{
-            .path = "./ext/backtrace",
+        .pkg_ent = .{
+            .path = "./pkg/ent",
+        },
+        .pkg_ur = .{
+            .path = "./pkg/ur",
+        },
+        .pkg_noun = .{
+            .path = "./pkg/noun",
+        },
+        .pkg_vere = .{
+            .path = "./pkg/vere",
         },
         .curl = .{
             .path = "./ext/curl",
@@ -28,29 +37,14 @@
         .lmdb = .{
             .path = "./ext/lmdb",
         },
-        .murmur3 = .{
-            .path = "./ext/murmur3",
-        },
         .natpmp = .{
             .path = "./ext/natpmp",
         },
         .openssl = .{
             .path = "./ext/openssl",
-            // .path = "../../Github/openssl-zig",
-            // .url = "https://github.com/kassane/openssl-zig/archive/724d6ed89b5b80a04161290d1f72995b7415fe8e.tar.gz",
-            // .hash = "1220a3f6278247c16e9b4876e2df2361d2a0d45f42ccd21d85066a22a65235394e7b",
-        },
-        .pdjson = .{
-            .path = "./ext/pdjson",
         },
         .sigsegv = .{
             .path = "./ext/sigsegv",
-        },
-        .softfloat = .{
-            .path = "./ext/softfloat",
-        },
-        .unwind = .{
-            .path = "./ext/unwind",
         },
         .urcrypt = .{
             .path = "./ext/urcrypt",
@@ -61,6 +55,9 @@
         .zlib = .{
             .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
             .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+        },
+        .wasm3 = .{
+            .path = "./ext/wasm3",
         },
     },
     .paths = .{
