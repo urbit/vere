@@ -643,7 +643,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                  "this pier is an old copy, boot the latest pier or breach\r\n"
+                  "this ship is an old copy, resume the latest version of the ship or breach\r\n"
                   "read more: https://docs.urbit.org/glossary/double-boot",
                   who_c);
           u3_king_bail();
@@ -651,8 +651,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       } else {
         // Trying to boot old ship after breach
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "this ship has been breached since its initialization, "
-                "boot the latest pier or breach again\r\n"
+                "you are trying to boot an existing ship from a keyfile,"
+                "resume the latest version of the ship or breach\r\n"
                 "read more: https://docs.urbit.org/glossary/double-boot",
                 who_c);
         u3_king_bail();
