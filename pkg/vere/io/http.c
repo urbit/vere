@@ -8,6 +8,10 @@
 #include "openssl/ssl.h"
 #include "version.h"
 
+/** Global variables.
+**/
+static u3n_spin *stk_u;
+
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config
   h2o_context_t    ctx_u;             //  h2o ctx
@@ -109,6 +113,7 @@ typedef struct _u3_httd {
   SSL_CTX*           tls_u;             //  server SSL_CTX*
   u3p(u3h_root)      sax_p;             //  url->scry cache
   u3p(u3h_root)      nax_p;             //  scry->noun cache
+  u3n_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
 static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
@@ -442,6 +447,22 @@ _http_req_unlink(u3_hreq* req_u)
   }
 }
 
+/* _http_spin_link(): store spin stack request in state
+*/
+static void
+_http_spin_link(u3_hcon* hon_u, u3_hreq* req_u)
+{
+  u3_hfig* fig_u = &hon_u->htp_u->htd_u->fig_u;
+  req_u->hon_u = hon_u;
+  req_u->seq_l = hon_u->seq_l++;
+  req_u->nex_u = fig_u->seq_u;
+
+  if ( 0 != req_u->nex_u ) {
+    req_u->nex_u->pre_u = req_u;
+  }
+  fig_u->seq_u = req_u;
+}
+
 /* _http_seq_link(): store slog stream request in state
 */
 static void
@@ -551,6 +572,16 @@ _http_req_done(void* ptr_v)
   _http_req_unlink(req_u);
 }
 
+/* _http_spin_done(): spin stackrequest finished, deallocation callback
+*/
+static void
+_http_spin_done(void* ptr_v)
+{
+  u3_hreq* seq_u = (u3_hreq*)ptr_v;
+  _http_req_close(seq_u);
+  _http_seq_unlink(seq_u);
+}
+
 /* _http_seq_done(): slog stream request finished, deallocation callback
 */
 static void
@@ -618,6 +649,23 @@ _http_req_new(u3_hcon* hon_u, h2o_req_t* rec_u)
   req_u->sat_e = u3_rsat_init;
 
   _http_req_link(hon_u, req_u);
+
+  return req_u;
+}
+
+/* _http_spin_new(): receive spin stack http request.
+*/
+static u3_hreq*
+_http_spin_new(u3_hcon* hon_u, h2o_req_t* rec_u)
+{
+  // XX change to be for spin
+  u3_hreq* req_u = h2o_mem_alloc_shared(&rec_u->pool, sizeof(*req_u),
+                                        _http_spin_done);
+  memset(req_u, 0, sizeof(*req_u));
+  req_u->rec_u = rec_u;
+  req_u->sat_e = u3_rsat_plan;
+
+  _http_spin_link(hon_u, req_u);
 
   return req_u;
 }
@@ -1077,6 +1125,43 @@ _http_req_prepare(h2o_req_t* rec_u,
   uv_timer_start(seq_u->tim_u, _http_req_timer_cb, 600 * 1000, 0);
 
   return seq_u;
+}
+
+/* _http_spin_accept(): handle incoming http request on spin stack endpoint
+*/
+static c3_i
+_http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
+{
+  u3_hcon* hon_u = _http_rec_sock(rec_u);
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+
+  //  if the request is not authenticated, reject it
+  //
+  if ( c3n == aut_o ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
+  }
+  //  if it is authenticated, send slogstream/sse headers
+  //
+  else {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_spin_new);
+    u3_noun  hed   = u3nl(u3nc(u3i_string("Content-Type"),
+                               u3i_string("text/event-stream")),
+                          u3nc(u3i_string("Cache-Control"),
+                               u3i_string("no-cache")),
+                          u3nc(u3i_string("Connection"),
+                               u3i_string("keep-alive")),
+                          u3_none);
+
+    _http_start_respond(req_u, 200, hed, u3_nul, c3n);
+
+    //TODO  auth token may expire at some point. if we want to close the
+    //      slogstream when that happens, we need to store the token that
+    //      was used alongside it...
+  }
+
+  return 0;
 }
 
 /* _http_seq_accept(): handle incoming http request on slogstream endpoint
@@ -1654,6 +1739,11 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     h2o_pathconf_t* pac_u;
     h2o_handler_t*  han_u;
 
+    //  spin stream
+    //
+    pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/spin", 0);
+    han_u = h2o_create_handler(pac_u, sizeof(*han_u));
+    han_u->on_req = _http_spin_accept;
     //  slog stream
     //
     pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/slog", 0);
@@ -2530,6 +2620,26 @@ u3_http_io_init(u3_pier* pir_u)
     now = u3_time_in_tv(&tim_u);
     htd_u->sev_l = u3r_mug(now);
     u3z(now);
+  }
+
+  //Setup spin stack
+  int shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0);
+  if ( -1 == shm_fd) {
+    perror("shm_open failed");
+    u3_pier_bail(car_u->pir_u);
+  }
+
+  if ( -1 == ftruncate(shm_fd, PSIZE)) {
+    perror("truncate failed");
+    u3_pier_bail(car_u->pir_u);
+  }
+
+  htd_u->stk_u = mmap(NULL, PSIZE, 
+                      PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  
+  if ( MAP_FAILED == stk_u ) {
+    perror("mmap failed");
+    u3_pier_bail(car_u->pir_u);
   }
 
   //  XX retry up to N?
