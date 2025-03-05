@@ -1695,6 +1695,8 @@ u3_king_grab(void* vod_p)
 
   u3m_quac** all_u = c3_malloc(sizeof(*all_u)*6);
 
+  u3a_init_mark();
+
   u3m_quac** var_u = u3m_mark();
   all_u[0] = var_u[0];
   all_u[1] = var_u[1];

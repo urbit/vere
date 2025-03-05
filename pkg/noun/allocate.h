@@ -343,6 +343,13 @@
              } while(0)
 
 
+typedef struct _u3a_mark {
+  u3_post hat_p;
+  c3_w    wee_w[u3a_crag_no];
+  c3_w*   bit_w;
+} u3a_mark;
+
+      extern u3a_mark u3a_Mark;
 
   /**  Globals.
   **/
@@ -469,6 +476,8 @@
 
 void
 u3a_init_heap(void);
+void
+u3a_init_mark(void);
 
 void*
 u3a_into_fn(u3_post);

@@ -175,6 +175,8 @@ _serf_grab(u3_noun sac, c3_o pri_o)
 
     u3_assert( u3R == &(u3H->rod_u) );
 
+    u3a_init_mark();
+
     u3m_quac* pro_u = u3a_prof(fil_u, sac);
 
     if ( NULL == pro_u ) {
@@ -279,6 +281,8 @@ u3_serf_grab(c3_o pri_o)
     res = _serf_grab(sac, pri_o);
   }
   else {
+
+    u3a_init_mark();
     fprintf(stderr, "sac is empty\r\n");
     u3m_quac** var_u = u3m_mark();
 

@@ -13,6 +13,7 @@
 #include "palloc.c"
 
 u3_road* u3a_Road;
+u3a_mark u3a_Mark;
 
 #ifdef U3_MEMORY_DEBUG
 c3_w u3_Code;
@@ -72,6 +73,17 @@ void
 u3a_init_heap(void)
 {
   _init();
+}
+
+void
+u3a_init_mark(void)
+{
+  c3_w bit_w = (u3R->hep.len_w + 31) >> 5;
+
+  u3a_Mark.hat_p = u3R->hat_p;
+  u3a_Mark.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
+
+  memset(u3a_Mark.wee_w, 0, sizeof(c3_w) * u3a_crag_no);
 }
 
 /* _box_count(): adjust memory count.
@@ -980,7 +992,7 @@ u3a_luse(u3_noun som)
 c3_w
 u3a_mark_ptr(void* ptr_v)
 {
-  return 0;
+  return _mark_post(u3a_outa(ptr_v));
 }
 
 u3_post
@@ -1017,7 +1029,6 @@ u3a_mark_mptr(void* ptr_v)
 c3_w
 u3a_mark_noun(u3_noun som)
 {
-#if 0
   c3_w siz_w = 0;
 
   while ( 1 ) {
@@ -1041,8 +1052,6 @@ u3a_mark_noun(u3_noun som)
       }
     }
   }
-#endif
-  return 0;
 }
 
 /* u3a_count_noun(): count size of pointer.
@@ -1341,7 +1350,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
     else if ( c3y == it_mas ) {
       c3_w siz_w = u3a_mark_noun(tt_mas);
 
-#if 1
+#if 0
       /* The basic issue here is that tt_mas is included in .sac
        * (the whole profile), so they can't both be roots in the
        * normal sense. When we mark .sac later on, we want tt_mas
@@ -1449,6 +1458,9 @@ u3a_mark_road()
 {
   u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 9);
 
+  // XX track
+  fprintf(stderr, "road: mark xx heap %u\r\n", _mark_heap());
+
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
   qua_u[0]->siz_w = u3a_mark_noun(u3R->ski.gul) * 4;
@@ -1549,7 +1561,7 @@ u3a_idle(u3a_road* rod_u)
 c3_w
 u3a_sweep(void)
 {
-  return 0;
+  return _sweep_directory();
 }
 
 /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
