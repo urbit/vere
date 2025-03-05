@@ -68,7 +68,6 @@ _pop_list(u3_noun *lit)
   return hed;
 }
 
-// static const M3Result m3Lia_Arrow = "non-zero yield from import arrow";
 static const M3Result UrwasmArrowExit = "An imported arrow returned %2";
 
 typedef struct {
@@ -107,6 +106,7 @@ typedef struct {
   match_data_struct* match;
   u3_noun arrow_yil;
   u3_noun susp_list;
+  u3_noun resolution; // resolved %1 block
 } lia_state;
 
 typedef enum {
@@ -115,14 +115,15 @@ typedef enum {
   west_try,
   west_catch_try,
   west_catch_err,
+  west_link_wasm,
 } wasm3_ext_suspend_tag;
 
 typedef enum {
   lst_call = 0,
-  lst_call_ext = 1,
-  lst_try = 2,
-  lst_catch_try = 3,
-  lst_catch_err = 4,
+  lst_try = 1,
+  lst_catch_try = 2,
+  lst_catch_err = 3,
+  lst_link_wasm = 4,
 } lia_suspend_tag;
 
 static u3_noun
@@ -384,7 +385,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     M3Result result_call = m3_Call(f, n_in, (const void**)valptrs_in);
     // printf("\r\n done %s\r\n", name_c);
 
-    if (result_call != m3Err_ComputationBlock)
+    if (result_call != m3Err_ComputationBlock
+      && result_call != m3Err_SuspensionError)
     { // pop suspend stacks
       m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
       c3_d tag;
@@ -407,8 +409,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     if (result_call == m3Err_ComputationBlock)
     {
       yil = sat->arrow_yil;
-      sat->arrow_yil = 0;
-      if (yil == 0)
+      sat->arrow_yil = u3_none;
+      if (yil == u3_none)
       {
         return u3m_bail(c3__fail);
       }
@@ -530,10 +532,15 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       // There is no useful info to be saved here, name/args are not enough
       // to qualify the external call, which can and will be nondeterministic
       // (like all IO in urbit)
+      //
       // On wasm3 side op_CallRaw will store the information about the
       // called function. It shall be the top frame of the suspension stack,
       // since only Lia can block, so wasm3 has to call Lia to get blocked.
       //
+      // A frame is pushed to trigger the callback
+      //
+      m3_SuspendStackPush64(sat->wasm_module->runtime, west_call_ext);
+      m3_SuspendStackPushExtTag(sat->wasm_module->runtime);
       u3_noun yil = u3nt(1, u3k(name), u3k(args));
       u3z(monad);
       return yil;
@@ -1000,6 +1007,263 @@ _reduce_monad(u3_noun monad, lia_state* sat)
   }
 }
 
+static const M3Result
+_resume_callback(M3Result result_m3, IM3Runtime runtime)
+{
+  if (result_m3 == m3Err_ComputationBlock
+    || result_m3 == m3Err_SuspensionError)
+  {
+    return result_m3;
+  }
+  result = m3Err_none;
+  lia_state* sat = runtime->userdata_resume;
+  m3_SuspendStackPopExtTag(runtime);
+  c3_d tag_d;
+  m3_SuspendStackPop64(runtime, &tag);
+  switch (tag_d)
+  {
+    default:
+    {
+      u3m_bail(c3__fail);
+    }
+    case west_call:
+    {
+      u3_noun frame = _pop_list(sat->susp_list);
+      if (lst_call != u3h(frame))
+      {
+        printf(ERR("wrong frame: call"));
+        u3m_bail(c3__fail);
+      }
+      u3_noun yil;
+      if (_deterministic_trap(result_m3))
+      {
+        fprintf(stderr, WUT("TODO_funcname call trapped: %s"), result_m3);
+        yil = u3nc(2, 0);
+      }
+      else if (result_m3)
+      {
+        fprintf(stderr, ERR("TODO_funcname call failed: %s"), result_m3);
+        u3m_bail(c3__fail);
+      }
+      else
+      {
+        c3_w func_idx = u3r_word(0, u3h(u3t(frame)));
+        c3_w n_out = u3r_word(0, u3t(u3t(frame)));
+        IM3Function f = runtime->modules->functions + func_idx;
+        c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));
+        void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
+        for (c3_w i = 0; i < n_out; i++)
+        {
+          valptrs_out[i] = &vals_out[i];
+        }
+        M3Result result_tmp = m3_GetResults(f,
+          n_out,
+          (const void**)valptrs_out
+        );
+        if (result_tmp)
+        {
+          fprintf(stderr, ERR("function TODO_funcname failed to get results"));
+          return u3m_bail(c3__fail);
+        }
+        yil = u3nc(0,
+          _atoms_from_stack(valptrs_out, n_out, f->funcType->types)
+        );
+        u3a_free(valptrs_out);
+        u3a_free(vals_out);
+      }
+      if (u3_none != sat->resolution)
+      {
+        u3m_bail(c3__fail);
+      }
+      sat->resolution = yil;
+      break;
+    }
+
+    case west_call_ext:
+    {
+      // do nothing, sat->resolution already has the resolved yield
+      break;
+    }
+
+    case west_try:
+    {
+      if (1 != u3h(sat->resolution))
+      {
+        u3_noun frame = _pop_list(sat->susp_list);
+        if (lst_try != u3h(frame))
+        {
+          printf(ERR("wrong frame: try"));
+          u3m_bail(c3__fail);
+        }
+        if (0 == u3h(sat->resolution))
+        {
+          u3_noun cont = u3t(frame);
+          u3_noun p_res = u3t(sat->resolution);
+          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3z(sat->resolution);
+          sat->resolution = _reduce_monad(monad_cont, sat);
+        }
+        // if %2 then nothing to do, sat->resolution already holds %2 result
+        //
+        u3z(frame);
+      }
+      else
+      {
+        // still blocked: push back
+        //
+        m3_SuspendStackPush64(runtime, tag);
+        m3_SuspendStackPopExtTag(runtime);
+        result = m3Err_ComputationBlock;
+      }
+      break;
+    }
+
+    case west_catch_try:
+    {
+      if (1 != u3h(sat->resolution))
+      {
+        u3_noun frame = _pop_list(sat->susp_list);
+        if (lst_catch_try != u3h(frame))
+        {
+          printf(ERR("wrong frame: catch-try"));
+          u3m_bail(c3__fail);
+        }
+        if (0 == u3h(sat->resolution))
+        {
+          u3_noun cont = u3t(u3t(frame));
+          u3_noun p_res = u3t(sat->resolution);
+          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3z(sat->resolution);
+          sat->resolution = _reduce_monad(monad_cont, sat);
+        }
+        // %2
+        //
+        else
+        {
+          u3_noun cont = u3t(u3t(frame));
+          u3_noun monad_catch = u3h(u3t(frame));
+          { // push on suspend stacks
+            m3_SuspendStackPush64(sat->wasm_module->runtime, west_catch_err);
+            m3_SuspendStackPushExtTag(runtime);
+            _push_list(
+              u3nc(lst_catch_err, u3k(cont)),
+              &sat->susp_list
+            );
+          }
+
+          u3_noun yil = _reduce_monad(u3k(monad_catch), sat);
+
+          if (1 != u3h(yil))
+          { // pop suspend stacks
+            m3_SuspendStackPopExtTag(runtime);
+            c3_d tag;
+            m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
+            if (tag != west_catch_err)
+            {
+              printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
+              return u3m_bail(c3__fail);
+            }
+            u3_noun frame1 = _pop_list(&sat->susp_list);
+            if (lst_catch_err != u3h(frame1))
+            {
+              printf(ERR("wrong frame: catch-err"));
+              return u3m_bail(c3__fail);
+            }
+            u3z(frame1);
+          }
+
+          if (2 == u3h(yil))
+          {
+            // sat->resolution already has %2, do nothing
+            u3z(yil);
+          }
+          else if (1 == u3h(yil))
+          {
+            u3z(sat->resolution);
+            sat->resolution = yil;
+          }
+          else  // %0
+          {
+            u3_noun p_res = u3t(yil);
+            u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+            u3z(sat->resolution), u3z(yil);
+            sat->resolution = _reduce_monad(monad_cont, sat);
+          }
+        }
+        u3z(frame);
+      }
+      else
+      {
+        // still blocked: push back
+        //
+        m3_SuspendStackPush64(runtime, tag);
+        m3_SuspendStackPopExtTag(runtime);
+        result = m3Err_ComputationBlock;
+      }
+      break;
+    }
+    case west_catch_err:
+    {
+      if (1 != u3h(sat->resolution))
+      {
+        u3_noun frame = _pop_list(sat->susp_list);
+        if (lst_catch_err != u3h(frame))
+        {
+          printf(ERR("wrong frame: catch-err"));
+          u3m_bail(c3__fail);
+        }
+        if (0 == u3h(sat->resolution))
+        {
+          u3_noun cont = u3t(frame);
+          u3_noun p_res = u3t(sat->resolution);
+          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3z(sat->resolution);
+          sat->resolution = _reduce_monad(monad_cont, sat);
+        }
+        // if %2 then nothing to do, sat->resolution already holds %2 result
+        //
+        u3z(frame);
+      }
+      else
+      {
+        // still blocked: push back
+        //
+        m3_SuspendStackPush64(runtime, tag);
+        m3_SuspendStackPopExtTag(runtime);
+        result = m3Err_ComputationBlock;
+      }
+      break;
+    }
+    case west_link_wasm:
+    {
+      if (1 != u3h(sat->resolution))
+      {
+        if (2 == u3h(sat->resolution))
+        {
+          u3z(sat->resolution);
+          sat->resolution = u3_none;
+          result = UrwasmArrowExit;
+        }
+        else  // %0
+        {
+          // STUB: TODO add _sp offset to the frame
+        }
+      }
+      else
+      {
+        // still blocked: push back
+        //
+        m3_SuspendStackPush64(runtime, tag);
+        m3_SuspendStackPopExtTag(runtime);
+        result = m3Err_ComputationBlock;
+      }
+      break;
+    }
+  }
+  
+  return result;
+}
+
 //  TRANSFERS sat->arrow_yil if m3Err_ComputationBlock is thrown
 static const void *
 _link_wasm_with_arrow_map(
@@ -1036,14 +1300,51 @@ _link_wasm_with_arrow_map(
   
   u3_noun coin_wasm_list = _coins_from_stack(valptrs_in, n_in, (types+n_out));
   
+  { // push on suspend stacks
+    m3_SuspendStackPush64(sat->wasm_module->runtime, west_link_wasm);
+    m3_SuspendStackPushExtTag(sat->wasm_module->runtime);
+    c3_w func_idx = _ctx->function - runtime->modules->functions;
+    _push_list(
+      u3nt(lst_link_wasm, u3i_word(func_idx), u3i_word(n_out)),
+      &sat->susp_list
+    );
+  }
+
   u3_noun yil = _reduce_monad(u3n_slam_on(arrow, coin_wasm_list), sat); 
 
   M3Result result = m3Err_none;
 
+  if (1 != u3h(yil))
+  { // pop suspend stacks
+    m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
+    c3_d tag;
+    m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
+    if (tag != west_link_wasm)
+    {
+      printf(ERR("west_link tag mismatch: %"PRIc3_d), tag);
+      u3m_bail(c3__fail);
+    }
+    u3_noun frame = _pop_list(&sat->susp_list);
+    if (lst_link_wasm != u3h(frame))
+    {
+      printf(ERR("wrong frame: west_link"));
+      u3m_bail(c3__fail);
+    }
+    u3z(frame);
+  }
+
   if (1 == u3h(yil))
   {
-    sat->arrow_yil = yil;
-    result = m3Err_ComputationBlock;  // start suspending if not yet suspending
+    if (sat->arrow_yil != u3_none)
+    {
+      u3z(yil);
+      result = "non-empty sat->arrow_yil on block";
+    }
+    else
+    {
+      sat->arrow_yil = yil;
+      result = m3Err_ComputationBlock;  // start suspending if not yet suspending
+    }
   }
   else if (2 == u3h(yil))
   {
@@ -1523,7 +1824,7 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun acc, map;
   u3x_cell(import, &acc, &map);
 
-  lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, 0, u3_nul};
+  lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, u3_none, u3_nul, u3_none};
 
   for (c3_w i = 0; i < n_imports; i++)
   {
@@ -1558,8 +1859,8 @@ u3we_lia_run_once(u3_noun cor)
   if (result == m3Err_ComputationBlock)
   {
     yil = sat.arrow_yil;
-    sat.arrow_yil = 0;
-    if (yil == 0)
+    sat.arrow_yil = u3_none;
+    if (yil == u3_none)
     {
       return u3m_bail(c3__fail);
     }
