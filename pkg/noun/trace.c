@@ -791,7 +791,7 @@ _ct_boost_small(float num_f)
  *                          values should be 100. This function reports how far from
  *                          the ideal bar_u is.
 */
-static c3_ws
+static c3_ws_tmp
 _ct_global_difference(struct bar_info bar_u)
 {
   c3_w_tmp low_w = 0;
@@ -853,7 +853,7 @@ _ct_sort_by_index(struct bar_info bar_u)
  *                     and undersized things a bit bigger
 */
 static struct bar_info
-_ct_reduce_error(struct bar_info bar_u, c3_ws dif_s)
+_ct_reduce_error(struct bar_info bar_u, c3_ws_tmp dif_s)
 {
   for (c3_w_tmp i=0; i < 6; i++) {
     if (bar_u.s[i].low_w == 0) continue;
@@ -894,7 +894,7 @@ _ct_report_bargraph(
 
   // repeatedly adjust for roundoff error
   // until it is elemenated or we go 100 cycles
-  c3_ws dif_s = 0;
+  c3_ws_tmp dif_s = 0;
   for (c3_w_tmp x=0; x<100; x++) {
     bar_u = _ct_compute_roundoff_error(bar_u);
     dif_s = _ct_global_difference(bar_u);

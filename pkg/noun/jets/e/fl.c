@@ -25,7 +25,7 @@
                u3_atom b)
   {
     if ( _(u3a_is_cat(b)) ) {
-      c3_ws c = (b + 1) >> 1;
+      c3_ws_tmp c = (b + 1) >> 1;
       if ( (b & 1) ) {
         c = -c;
       }
@@ -45,7 +45,7 @@
   static u3_noun
   _mp_to_satom(mpz_t a_mp)
   {
-    c3_ws b = mpz_sgn(a_mp);
+    c3_ws_tmp b = mpz_sgn(a_mp);
     switch ( b ) {
       default: return u3m_bail(c3__fail);
       case  0: {
@@ -235,7 +235,7 @@
     }
     _xpd(&c, &d);
     switch ( i ) {
-      c3_ws x;
+      c3_ws_tmp x;
       default:
         mpz_clear(v); mpz_clear(h); mpz_clear(g);
         mpz_clear(d.minExp); mpz_clear(d.expWidth);

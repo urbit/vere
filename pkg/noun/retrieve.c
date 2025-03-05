@@ -210,7 +210,7 @@ u3r_vmean(u3_noun som, va_list ap)
   len_w = 0;
 
   while ( 1 ) {
-    if ( 0 == va_arg(aq, c3_w) ) {
+    if ( 0 == va_arg(aq, c3_w_tmp) ) {
       break;
     }
     va_arg(aq, u3_noun*);
@@ -228,7 +228,7 @@ u3r_vmean(u3_noun som, va_list ap)
     c3_w_tmp i_w;
 
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      prs_m[i_w].axe_w = va_arg(ap, c3_w);
+      prs_m[i_w].axe_w = va_arg(ap, c3_w_tmp);
       prs_m[i_w].som = va_arg(ap, u3_noun*);
     }
 

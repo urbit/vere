@@ -332,7 +332,7 @@ _ch_buck_del(u3h_slot* sot_w, u3_noun key)
   }
 }
 
-static c3_o _ch_some_del(u3h_slot*, u3_noun, c3_w_tmp, c3_w);
+static c3_o _ch_some_del(u3h_slot*, u3_noun, c3_w_tmp, c3_w_tmp);
 
 /* _ch_slot_del(): delete from slot
 */

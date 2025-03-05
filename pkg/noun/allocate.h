@@ -12,7 +12,36 @@
 
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
+#ifndef VERE64
 #     define u3a_vits    1
+#else
+#     define u3a_vits    0
+#endif
+
+#     define u3a_word_bytes  (sizeof(c3_n))
+
+#     define u3a_32_word_bex  2
+#     define u3a_32_indirect_mask  0x3fffffff
+#     define u3a_32_direct_max  0x7fffffff
+#     define u3a_32_indirect_flag  0x80000000
+
+#     define u3a_64_word_bex  3
+#     define u3a_64_indirect_mask  0x3fffffffffffffffULL
+#     define u3a_64_direct_max  0x7fffffffffffffffULL
+#     define u3a_64_indirect_flag  0x8000000000000000ULL
+
+#ifndef VERE64
+#     define u3a_word_bex  u3a_32_word_bex 
+#     define u3a_indirect_mask  u3a_32_indirect_mask 
+#     define u3a_direct_max  u3a_32_direct_max 
+#     define u3a_indirect_flag  u3a_32_indirect_flag
+#else
+#     define u3a_word_bex  u3a_64_word_bex 
+#     define u3a_indirect_mask  u3a_64_indirect_mask 
+#     define u3a_direct_max  u3a_64_direct_max 
+#     define u3a_indirect_flag  u3a_64_indirect_flag
+#endif
+
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
@@ -20,15 +49,19 @@
 
     /* u3a_balign: u3a_walign in bytes
     */
-#     define u3a_balign  (sizeof(c3_w_tmp)*u3a_walign)
+#     define u3a_balign  (sizeof(c3_n)*u3a_walign)
 
      /* u3a_bits_max: max loom bex
      */
-#    define u3a_bits_max (8 * sizeof(c3_w_tmp) + u3a_vits)
+#    define u3a_bits_max (8 * sizeof(c3_n) + u3a_vits)
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
+#ifndef VERE64
 #     define u3a_page    12ULL
+#else
+#     define u3a_page    11ULL
+#endif
 
     /* u3a_pages: maximum number of pages in memory.
     */
@@ -40,7 +73,7 @@
 
     /* u3a_bytes: maximum number of bytes in memory.
     */
-#     define u3a_bytes   ((sizeof(c3_w_tmp) * u3a_words))
+#     define u3a_bytes   ((sizeof(c3_n) * u3a_words))
 
     /* u3a_cells: number of representable cells.
     */
@@ -52,7 +85,7 @@
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum ((c3_w_tmp)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
+#     define u3a_minimum ((c3_n)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
 
     /* u3a_fbox_no: number of free lists per size.
     */
@@ -62,18 +95,27 @@
   **/
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
-      typedef struct {
-        c3_w_tmp mug_w;
+      typedef struct __attribute__((aligned(4))) {
+        c3_w_new mug_w;
+        #ifdef VERE64
+          c3_w_new fut_w;
+        #endif
       } u3a_noun;
 
-      typedef struct {
-        c3_w_tmp mug_w;
-        c3_w_tmp len_w;
-        c3_w_tmp buf_w[0];
+      typedef struct __attribute__((aligned(4))) {
+        c3_w_new mug_w;
+        #ifdef VERE64
+          c3_w_new fut_w;
+          c3_n len_w;
+          c3_n buf_w[0];
+        #endif
       } u3a_atom;
 
-      typedef struct {
-        c3_w_tmp    mug_w;
+      typedef struct __attribute__((aligned(4))) {
+        c3_w_new mug_w;
+        #ifdef VERE64
+          c3_w_new fut_w;
+        #endif
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
@@ -93,11 +135,11 @@
     ** Do not attempt to adjust this structure!
     */
       typedef struct _u3a_box {
-        c3_w_tmp   siz_w;                       // size of this box
-        c3_w_tmp   use_w;                       // reference count; free if 0
+        c3_n   siz_w;                          // size of this box
+        c3_n   use_w;                          // reference count; free if 0
 #       ifdef U3_MEMORY_DEBUG
-          c3_w_tmp   eus_w;                     // recomputed refcount
-          c3_w_tmp   cod_w;                     // tracing code
+          c3_n  eus_w;                         // recomputed refcount
+          c3_n   cod_w;                         // tracing code
 #       endif
       } u3a_box;
 
@@ -126,30 +168,30 @@
         u3p(struct _u3a_road) kid_p;          //  child road list
         u3p(struct _u3a_road) nex_p;          //  sibling road
 
-        u3p(c3_w_tmp) cap_p;                      //  top of transient region
-        u3p(c3_w_tmp) hat_p;                      //  top of durable region
-        u3p(c3_w_tmp) mat_p;                      //  bottom of transient region
-        u3p(c3_w_tmp) rut_p;                      //  bottom of durable region
-        u3p(c3_w_tmp) ear_p;                      //  original cap if kid is live
+        u3p(c3_n) cap_p;                      //  top of transient region
+        u3p(c3_n) hat_p;                      //  top of durable region
+        u3p(c3_n) mat_p;                      //  bottom of transient region
+        u3p(c3_n) rut_p;                      //  bottom of durable region
+        u3p(c3_n) ear_p;                      //  original cap if kid is live
 
-        c3_w_tmp fut_w[32];                       //  futureproof buffer
+        c3_n fut_w[32];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
             jmp_buf buf;
-            c3_w_tmp buf_w[256];                  //  futureproofing
+            c3_n buf_w[256];                  //  futureproofing
           };
         } esc;
 
         struct {                              //  miscellaneous config
-          c3_w_tmp fag_w;                         //  flag bits
+          c3_n fag_w;                         //  flag bits
         } how;                                //
 
         struct {                              //  allocation pools
           u3p(u3a_fbox) fre_p[u3a_fbox_no];   //  heap by node size log
           u3p(u3a_fbox) cel_p;                //  custom cell allocator
-          c3_w_tmp fre_w;                         //  number of free words
-          c3_w_tmp max_w;                         //  maximum allocated
+          c3_n fre_w;                        //  number of free words
+          c3_n max_w;                        //  maximum allocated
         } all;
 
         u3a_jets jed;                         //  jet dashboard
@@ -191,8 +233,8 @@
     /* u3a_pile: stack control, abstracted over road direction.
     */
       typedef struct _u3a_pile {
-        c3_ws    mov_ws;
-        c3_ws    off_ws;
+        c3_ns    mov_ws;
+        c3_ns    off_ws;
         u3_post   top_p;
 #ifdef U3_MEMORY_DEBUG
         u3a_road* rod_u;
@@ -273,27 +315,27 @@
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w_tmp)((r)->cap_p - (r)->hat_p) \
-                             : (c3_w_tmp)((r)->hat_p - (r)->cap_p) )
+                             ? (c3_n)((r)->cap_p - (r)->hat_p) \
+                             : (c3_n)((r)->hat_p - (r)->cap_p) )
 
     /* u3a_full(): total words in road [r];
     ** u3a_full(r) == u3a_heap(r) + u3a_temp(r) + u3a_open(r)
     */
 #     define  u3a_full(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w_tmp)((r)->mat_p - (r)->rut_p) \
-                             : (c3_w_tmp)((r)->rut_p - (r)->mat_p) )
+                             ? (c3_n)((r)->mat_p - (r)->rut_p) \
+                             : (c3_n)((r)->rut_p - (r)->mat_p) )
 
     /* u3a_heap(): words of heap in road [r]
     */
 #     define  u3a_heap(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w_tmp)((r)->hat_p - (r)->rut_p) \
-                             : (c3_w_tmp)((r)->rut_p - (r)->hat_p) )
+                             ? (c3_n)((r)->hat_p - (r)->rut_p) \
+                             : (c3_n)((r)->rut_p - (r)->hat_p) )
 
     /* u3a_temp(): words of stack in road [r]
     */
 #     define  u3a_temp(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w_tmp)((r)->mat_p - (r)->cap_p) \
-                             : (c3_w_tmp)((r)->cap_p - (r)->mat_p) )
+                             ? (c3_n)((r)->mat_p - (r)->cap_p) \
+                             : (c3_n)((r)->cap_p - (r)->mat_p) )
 
 #     define  u3a_north_is_senior(r, dog) \
                 __((u3a_to_off(dog) < (r)->rut_p) ||  \
@@ -379,7 +421,7 @@
       extern c3_w_tmp u3_Code;
 #endif
 
-#   define u3_Loom      ((c3_w_tmp *)(void *)U3_OS_LoomBase)
+#   define u3_Loom      ((c3_n *)(void *)U3_OS_LoomBase)
 
   /* u3a_into(): convert loom offset [x] into generic pointer.
    */
@@ -387,11 +429,11 @@
 
   /* u3a_outa(): convert pointer [p] into word offset into loom.
    */
-#   define u3a_outa(p)  ((c3_w_tmp *)(void *)(p) - u3_Loom)
+#   define u3a_outa(p)  ((c3_n *)(void *)(p) - u3_Loom)
 
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
-#   define u3a_to_off(som)  (((som) & 0x3fffffff) << u3a_vits)
+#   define u3a_to_off(som)  (((som) & u3a_indirect_mask) << u3a_vits)
 
   /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
    */
@@ -399,20 +441,20 @@
 
   /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
    */
-#   define u3a_to_wtr(som)  ((c3_w_tmp *)u3a_to_ptr(som))
+#   define u3a_to_wtr(som)  ((c3_n *)u3a_to_ptr(som))
 
   /**  Inline functions.
   **/
   /* u3a_to_pug(): set bit 31 of [off].
    */
-  inline c3_w_tmp u3a_to_pug(c3_w_tmp off) {
+  inline c3_n u3a_to_pug(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | 0x80000000;
   }
 
   /* u3a_to_pom(): set bits 30 and 31 of [off].
    */
-  inline c3_w_tmp u3a_to_pom(c3_w_tmp off) {
+  inline c3_n u3a_to_pom(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | 0xc0000000;
   }
@@ -496,11 +538,11 @@
         /* u3a_walloc(): allocate storage measured in words.
         */
           void*
-          u3a_walloc(c3_w_tmp len_w);
+          u3a_walloc(c3_n len_w);
 
         /* u3a_celloc(): allocate a cell.  Faster, sometimes.
         */
-          c3_w_tmp*
+          c3_n*
           u3a_celloc(void);
 
         /* u3a_wfree(): free storage.
@@ -511,17 +553,17 @@
         /* u3a_wtrim(): trim storage.
         */
           void
-          u3a_wtrim(void* tox_v, c3_w_tmp old_w, c3_w_tmp len_w);
+          u3a_wtrim(void* tox_v, c3_n old_w, c3_n len_w);
 
         /* u3a_wealloc(): word realloc.
         */
           void*
-          u3a_wealloc(void* lag_v, c3_w_tmp len_w);
+          u3a_wealloc(void* lag_v, c3_n len_w);
 
         /* u3a_pile_prep(): initialize stack control.
         */
           void
-          u3a_pile_prep(u3a_pile* pil_u, c3_w_tmp len_w);
+          u3a_pile_prep(u3a_pile* pil_u, c3_n len_w);
 
       /* C-style aligned allocation - *not* compatible with above.
       */
@@ -576,7 +618,7 @@
 
         /* u3a_use(): reference count.
         */
-          c3_w_tmp
+          c3_n
           u3a_use(u3_noun som);
 
         /* u3a_wed(): unify noun references.
@@ -591,17 +633,17 @@
 
         /* u3a_mark_ptr(): mark a pointer for gc.  Produce size.
         */
-          c3_w_tmp
+          c3_n
           u3a_mark_ptr(void* ptr_v);
 
         /* u3a_mark_mptr(): mark a u3_malloc-allocated ptr for gc.
         */
-          c3_w_tmp
+          c3_n
           u3a_mark_mptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
-          c3_w_tmp
+          c3_n
           u3a_mark_noun(u3_noun som);
 
         /* u3a_mark_road(): mark ad-hoc persistent road structures.
@@ -641,25 +683,25 @@
 
         /* u3a_count_noun(): count size of noun.
         */
-          c3_w_tmp
+          c3_n
           u3a_count_noun(u3_noun som);
 
         /* u3a_discount_noun(): clean up after counting a noun.
         */
-          c3_w_tmp
+          c3_n
           u3a_discount_noun(u3_noun som);
 
         /* u3a_count_ptr(): count a pointer for gc.  Produce size.  */
-          c3_w_tmp
+          c3_n
           u3a_count_ptr(void* ptr_v);
 
         /* u3a_discount_ptr(): discount a pointer for gc.  Produce size.  */
-          c3_w_tmp
+          c3_n
           u3a_discount_ptr(void* ptr_v);
 
         /* u3a_idle(): measure free-lists in [rod_u]
         */
-          c3_w_tmp
+          c3_n
           u3a_idle(u3a_road* rod_u);
 
         /* u3a_ream(): ream free-lists.
@@ -669,7 +711,7 @@
 
         /* u3a_sweep(): sweep a fully marked road.
         */
-          c3_w_tmp
+          c3_n
           u3a_sweep(void);
 
         /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
@@ -689,13 +731,13 @@
 
         /* u3a_lush(): leak push.
         */
-          c3_w_tmp
-          u3a_lush(c3_w_tmp lab_w);
+          c3_n
+          u3a_lush(c3_n lab_w);
 
         /* u3a_lop(): leak pop.
         */
           void
-          u3a_lop(c3_w_tmp lab_w);
+          u3a_lop(c3_n lab_w);
 
         /* u3a_print_time: print microsecond time.
         */
@@ -705,12 +747,12 @@
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w_tmp den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_n den_w, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount.
         */
           void
-          u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w);
+          u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_n wor_w);
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*
@@ -718,8 +760,8 @@
 
         /* u3a_maid(): maybe print memory.
         */
-          c3_w_tmp
-          u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w);
+          c3_n
+          u3a_maid(FILE* fil_u, c3_c* cap_c, c3_n wor_w);
 
         /* u3a_quac_free(): free quac memory.
         */
@@ -729,7 +771,7 @@
         /* u3a_uncap_print_memory(): un-captioned print memory amount.
         */
           void
-          u3a_uncap_print_memory(FILE* fil_u, c3_w_tmp byt_w);
+          u3a_uncap_print_memory(FILE* fil_u, c3_n byt_w);
 
         /* u3a_deadbeef(): write 0xdeadbeef from hat to cap.
         */

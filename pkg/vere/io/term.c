@@ -347,7 +347,7 @@ _term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w_tmp num_w, ...)
   pas_c[len_y++] = '[';
 
   while ( num_w-- ) {
-    c3_w_tmp par_w = va_arg(ap, c3_w);
+    c3_w_tmp par_w = va_arg(ap, c3_w_tmp);
     len_y += sprintf(pas_c+len_y, "%d", par_w);
 
     if ( num_w ) {

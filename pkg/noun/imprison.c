@@ -735,7 +735,7 @@ u3i_molt(u3_noun som, ...)
   {
     va_start(ap, som);
     while ( 1 ) {
-      if ( 0 == va_arg(ap, c3_w) ) {
+      if ( 0 == va_arg(ap, c3_w_tmp) ) {
         break;
       }
       va_arg(ap, u3_weak*);
@@ -754,7 +754,7 @@ u3i_molt(u3_noun som, ...)
 
     va_start(ap, som);
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      pms_m[i_w].axe_w = va_arg(ap, c3_w);
+      pms_m[i_w].axe_w = va_arg(ap, c3_w_tmp);
       pms_m[i_w].som = va_arg(ap, u3_noun);
     }
     va_end(ap);

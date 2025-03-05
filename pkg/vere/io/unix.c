@@ -474,7 +474,7 @@ _unix_write_file_soft(u3_ufil* fil_u, u3_noun mim)
 {
   struct stat buf_u;
   c3_i  fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
-  c3_ws len_ws, red_ws;
+  c3_ws_tmp len_ws, red_ws;
   c3_w_tmp  old_w;
   c3_y* old_y;
 
@@ -897,7 +897,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   struct stat buf_u;
   c3_i  fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
-  c3_ws len_ws, red_ws;
+  c3_ws_tmp len_ws, red_ws;
   c3_y* dat_y;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
@@ -1163,7 +1163,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
 {
   struct stat buf_u;
   c3_i  fid_i = c3_open(pax_c, O_RDONLY, 0644);
-  c3_ws len_ws, red_ws;
+  c3_ws_tmp len_ws, red_ws;
   c3_y* dat_y;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {

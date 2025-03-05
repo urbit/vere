@@ -14,7 +14,9 @@
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
       typedef uint32_t c3_w_tmp;
-      typedef int32_t c3_ws;
+      typedef uint32_t c3_w_new;
+      typedef int32_t c3_ws_tmp;
+      typedef int32_t c3_ws_new;
       typedef uint16_t c3_s;
       typedef int16_t c3_ss;
       typedef uint8_t c3_y;   // byte
@@ -26,6 +28,17 @@
       typedef uint8_t c3_g;   // 32-bit log - 0-31 bits
       typedef uint32_t c3_l;  // little; 31-bit unsigned integer
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
+      #ifdef VERE_64
+        typedef uint64_t c3_n;  // note: noun-sized integer
+        typedef int64_t c3_ns;
+        typedef uint64_t c3_nz;  // note: noun-sized integer
+        typedef int64_t c3_nzs;
+      #else
+        typedef uint32_t c3_n;  // note: noun-sized integer
+        typedef int32_t c3_ns;
+        typedef uint32_t c3_nz;  // note: noun-sized integer
+        typedef int32_t c3_nzs;
+      #endif
 
     /* Deprecated integers.
     */
@@ -51,7 +64,7 @@
 
       /* c3_w_tmp */
       #define PRIc3_w_tmp  PRIu32
-      #define PRIc3_ws PRIi32
+      #define PRIc3_ws_tmp PRIi32
       #define PRIxc3_w_tmp PRIx32
       #define PRIXc3_w_tmp PRIX32
 

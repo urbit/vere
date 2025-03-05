@@ -529,7 +529,7 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   c3_o  sou_o = c3n;  // south seen
 
   if ( U3P_VERLAT != pat_u->con_u->ver_w ) {
-    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %u\r\n",
+    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w_tmp", need %u\r\n",
                     pat_u->con_u->ver_w,
                     U3P_VERLAT);
     return c3n;
@@ -562,7 +562,7 @@ _ce_patch_verify(u3_ce_patch* pat_u)
 
       if ( mug_w != nug_w ) {
         fprintf(stderr, "loom: patch mug mismatch"
-                        " %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
+                        " %"PRIc3_w_tmp"/%"PRIc3_z"; (%"PRIxc3_w_tmp", %"PRIxc3_w_tmp")\r\n",
                         pag_w, i_z, mug_w, nug_w);
         return c3n;
       }

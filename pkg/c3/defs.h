@@ -267,4 +267,10 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   return (void*)x;
 }
 
+#ifndef VERE64
+#define c3_n_max  0xffffffff
+#else
+#define c3_n_max  0xffffffffffffffffULL
+#endif
+
 #endif /* ifndef C3_DEFS_H */
