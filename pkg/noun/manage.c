@@ -72,7 +72,7 @@
 
       /* u3m_golf(): record cap length for u3m_flog().
       */
-        c3_w
+        c3_w_tmp
         u3m_golf(void);
 
       /* u3m_flog(): pop the cap.
@@ -1208,7 +1208,7 @@ u3m_love(u3_noun pro)
 
 /* u3m_golf(): record cap_p length for u3m_flog().
 */
-c3_w
+c3_w_tmp
 u3m_golf(void)
 {
   if ( c3y == u3a_is_north(u3R) ) {
@@ -1692,7 +1692,7 @@ c3_y _cm_hex(c3_y c_y)
 
 /* _cm_in_pretty: measure/cut prettyprint.
 */
-static c3_w
+static c3_w_tmp
 _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
 {
   if ( _(u3du(som)) ) {
@@ -1800,7 +1800,7 @@ u3m_pretty(u3_noun som)
  *  Modeled after _cm_in_pretty(), the backend to u3m_p(), but with the
  *  assumption that we're always displaying a path.
  */
-static c3_w
+static c3_w_tmp
 _cm_in_pretty_path(u3_noun som, c3_c* str_c)
 {
   if ( _(u3du(som)) ) {
@@ -2429,7 +2429,7 @@ _cm_pack_rewrite(void)
 
 /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
 */
-c3_w
+c3_w_tmp
 u3m_pack(void)
 {
   c3_w_tmp pre_w = u3a_open(u3R);

@@ -37,7 +37,7 @@ _newt_encode(u3_atom mat, c3_w_tmp* len_w)
   return buf_y;
 }
 
-static c3_w
+static c3_w_tmp
 _moat_length(u3_moat* mot_u)
 {
   u3_meat* met_u = mot_u->ext_u;

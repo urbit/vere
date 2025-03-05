@@ -45,7 +45,7 @@ u3_ship_king(u3_ship who_u);
 /**
 * Returns a ship's planet prefix.
 */
-c3_w
+c3_w_tmp
 u3_ship_duke(u3_ship who_u);
 
 /**

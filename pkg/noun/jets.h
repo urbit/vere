@@ -144,7 +144,7 @@
     **/
       /* u3j_boot(): initialize jet system.
       */
-        c3_w
+        c3_w_tmp
         u3j_boot(c3_o nuu_o);
 
       /* u3j_clear(): clear jet table to re-register.
@@ -276,7 +276,7 @@
 
       /* u3j_rite_mark(): mark u3j_rite for gc.
       */
-        c3_w
+        c3_w_tmp
         u3j_rite_mark(u3j_rite* rit_u);
 
       /* u3j_rite_lose(): lose references of u3j_rite (but do not free).
@@ -291,7 +291,7 @@
 
       /* u3j_site_mark(): mark u3j_site for gc.
       */
-        c3_w
+        c3_w_tmp
         u3j_site_mark(u3j_site* sit_u);
 
       /* u3j_mark(): mark jet state for gc.

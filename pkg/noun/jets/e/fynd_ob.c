@@ -19,7 +19,7 @@ static const c3_w_tmp kar_w[4] = { 0x4b387af7, 0x85bcae01, 0xee281300, 0xb76d5ee
 /* _fen_ob(): +fen:ob, with constant parameters factored out.
 **           correct over the domain [0x0 ... 0xfffe.ffff]
 */
-static c3_w
+static c3_w_tmp
 _fen_ob(c3_w_tmp m_w)
 {
   c3_w_tmp l_w = m_w / a_w;
@@ -54,7 +54,7 @@ _fen_ob(c3_w_tmp m_w)
 /* _tail_ob(): +feis:ob, also offsetting by 0x1.000 (as in +fynd:ob).
 **             correct over the domain [0x1.0000, 0xffff.ffff]
 */
-static c3_w
+static c3_w_tmp
 _tail_ob(c3_w_tmp m_w)
 {
   c3_w_tmp c_w = _fen_ob(m_w - b_w);

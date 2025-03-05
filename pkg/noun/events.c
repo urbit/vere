@@ -670,7 +670,7 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
 
 /* _ce_patch_count_page(): count a page, producing new counter.
 */
-static c3_w
+static c3_w_tmp
 _ce_patch_count_page(c3_w_tmp pag_w,
                      c3_w_tmp pgc_w)
 {
@@ -685,7 +685,7 @@ _ce_patch_count_page(c3_w_tmp pag_w,
 
 /* _ce_patch_save_page(): save a page, producing new page counter.
 */
-static c3_w
+static c3_w_tmp
 _ce_patch_save_page(u3_ce_patch* pat_u,
                     c3_w_tmp         pag_w,
                     c3_w_tmp         pgc_w)

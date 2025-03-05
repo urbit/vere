@@ -154,7 +154,7 @@ _unix_sane_ta(u3_unix* unx_u, u3_atom pat)
 
 /* u3_readdir_r():
 */
-c3_w
+c3_w_tmp
 u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 {
   errno = 0;
@@ -427,7 +427,7 @@ _unix_mkdir(c3_c* pax_c)
 
 /* _unix_write_file_hard(): write to a file, overwriting what's there
 */
-static c3_w
+static c3_w_tmp
 _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
 {
   c3_i  fid_i = c3_open(pax_c, O_WRONLY | O_CREAT | O_TRUNC, 0666);

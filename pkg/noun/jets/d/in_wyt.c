@@ -8,7 +8,7 @@
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "width precision" );
 
-static c3_w
+static c3_w_tmp
 _wyt_in(u3_noun a)
 {
   if ( u3_nul == a ) {

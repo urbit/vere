@@ -53,11 +53,11 @@
       u3t_init(void);
 
       /// @return  Number of entries written to the JSON trace file.
-      c3_w
+      c3_w_tmp
       u3t_trace_cnt(void);
 
       /// @return  Number of times u3t_trace_close() has been called.
-      c3_w
+      c3_w_tmp
       u3t_file_cnt(void);
 
     /* u3t_push(): push on trace stack.

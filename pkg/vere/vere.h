@@ -745,7 +745,7 @@
       **
       ** Adjust (externally) for future leap secs!
       */
-        c3_w
+        c3_w_tmp
         u3_time_sec_out(c3_d urs_d);
 
       /* u3_time_fsc_in(): urbit fracto-seconds from unix microseconds.
@@ -755,7 +755,7 @@
 
       /* u3_time_fsc_out: unix microseconds from urbit fracto-seconds.
       */
-        c3_w
+        c3_w_tmp
         u3_time_fsc_out(c3_d ufc_d);
 
       /* u3_time_in_tv(): urbit time from struct timeval.
@@ -856,22 +856,22 @@
 
       /* u3_mcut_char(): measure/cut character.
       */
-        c3_w
+        c3_w_tmp
         u3_mcut_char(c3_c* buf_c, c3_w_tmp len_w, c3_c chr_c);
 
       /* u3_mcut_cord(): measure/cut cord.
       */
-        c3_w
+        c3_w_tmp
         u3_mcut_cord(c3_c* buf_c, c3_w_tmp len_w, u3_noun san);
 
       /* u3_mcut_path(): measure/cut cord list.
       */
-        c3_w
+        c3_w_tmp
         u3_mcut_path(c3_c* buf_c, c3_w_tmp len_w, c3_c sep_c, u3_noun pax);
 
       /* u3_mcut_host(): measure/cut host.
       */
-        c3_w
+        c3_w_tmp
         u3_mcut_host(c3_c* buf_c, c3_w_tmp len_w, u3_noun hot);
 
     /**  IO drivers.
@@ -1499,7 +1499,7 @@
 
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
-        c3_w
+        c3_w_tmp
         u3_pier_mark(FILE* fil_u);
 
       /* u3_pier_mase(): construct a $mass leaf.
@@ -1604,7 +1604,7 @@
         void
         u3_write_fd(c3_i fid_i, const void* buf_v, size_t len_i);
 
-        c3_w
+        c3_w_tmp
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
 #endif /* ifndef U3_VERE_H */

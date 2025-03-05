@@ -28,7 +28,7 @@ _log_bitset(u3_bitset* bit_u)
   }
 }
 
-c3_w
+c3_w_tmp
 bitset_wyt(u3_bitset* bit_u)
 {
   c3_w_tmp ret_w = 0;

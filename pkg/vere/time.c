@@ -17,7 +17,7 @@ u3_time_sec_in(c3_w_tmp unx_w)
 **
 ** Adjust for future leap secs!
 */
-c3_w
+c3_w_tmp
 u3_time_sec_out(c3_d urs_d)
 {
   c3_d adj_d = (urs_d - 0x8000000cce9e0d80ULL);
@@ -41,7 +41,7 @@ u3_time_fsc_in(c3_w_tmp usc_w)
 
 /* u3_time_fsc_out: unix microseconds from urbit fracto-seconds.
 */
-c3_w
+c3_w_tmp
 u3_time_fsc_out(c3_d ufc_d)
 {
   return (c3_w) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
@@ -49,7 +49,7 @@ u3_time_fsc_out(c3_d ufc_d)
 
 /* u3_time_msc_out: unix microseconds from urbit fracto-seconds.
 */
-c3_w
+c3_w_tmp
 u3_time_msc_out(c3_d ufc_d)
 {
   return (c3_w) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);

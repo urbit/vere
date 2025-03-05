@@ -338,7 +338,7 @@
       **   For example, (a_y == 3) returns the size in bytes.
       **   NB: (a_y) must be < 37.
       */
-        c3_w
+        c3_w_tmp
         u3r_met(c3_y    a_y,
                 u3_atom b);
 
@@ -372,7 +372,7 @@
       **
       **   Copy (len_w) bytes of (a) into (buf_y) if it fits, returning overage.
       */
-        c3_w
+        c3_w_tmp
         u3r_bytes_fit(c3_w_tmp    len_w,
                       c3_y*   buf_y,
                       u3_atom a);
@@ -461,7 +461,7 @@
       **
       **   Return word (a_w) of (b).
       */
-        c3_w
+        c3_w_tmp
         u3r_word(c3_w_tmp    a_w,
                  u3_atom b);
 

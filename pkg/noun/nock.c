@@ -1012,7 +1012,7 @@ static c3_w_tmp _n_comp(u3_noun*, u3_noun, c3_o, c3_o);
  *            hif: hint-formula (first part of 11). RETAIN.
  *            nef: next-formula (second part of 11). RETAIN.
  */
-static c3_w
+static c3_w_tmp
 _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
 {
   c3_w_tmp tot_w = 0;
@@ -1220,7 +1220,7 @@ _n_formulaic(u3_noun fol)
  *            tel_o is yes if this formula is in tail position
  *            return: number of instructions added to the opcode list
  */
-static c3_w
+static c3_w_tmp
 _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
 {
   c3_y op_y;
@@ -1559,7 +1559,7 @@ _n_resh(c3_y* buf, c3_w_tmp* ip_w)
 
 /* _n_rewo(): read a c3_w_tmp from the bytecode stream.
  */
-static inline c3_w
+static inline c3_w_tmp
 _n_rewo(c3_y* buf, c3_w_tmp* ip_w)
 {
   c3_y one = buf[(*ip_w)++],
@@ -1725,7 +1725,7 @@ _cn_prog_free(u3n_prog* pog_u)
 /* _cn_intlen(): find the number of characters num_w would take to print.
 **        num_w: an int we want to later serialize to a string
 */
-c3_w
+c3_w_tmp
 _cn_intlen(c3_w_tmp num_w)
 {
   c3_w_tmp len_w=0;
@@ -3022,7 +3022,7 @@ u3n_ream()
 
 /* _n_prog_mark(): mark program for gc.
 */
-static c3_w
+static c3_w_tmp
 _n_prog_mark(u3n_prog* pog_u)
 {
   c3_w_tmp i_w, tot_w = u3a_mark_mptr(pog_u);

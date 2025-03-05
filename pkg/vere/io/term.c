@@ -1096,7 +1096,7 @@ u3_term_ef_ctlc(void)
 
 /*  _term_it_put_value(): put numeric color value on lin_w.
 */
-static c3_w
+static c3_w_tmp
 _term_it_put_value(c3_w_tmp*   lin_w,
                    u3_atom val)
 {
@@ -1111,7 +1111,7 @@ _term_it_put_value(c3_w_tmp*   lin_w,
 
 /* _term_it_put_tint(): put ansi color id on lin_w. RETAINS col.
 */
-static c3_w
+static c3_w_tmp
 _term_it_put_tint(c3_w_tmp*   lin_w,
                   u3_noun col)
 {

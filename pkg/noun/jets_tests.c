@@ -710,7 +710,7 @@ _test_base16(void)
   return ret_i;
 }
 
-static c3_w
+static c3_w_tmp
 _fein_ob_w(c3_w_tmp inp_w)
 {
   u3_atom inp = u3i_word(inp_w);
@@ -755,7 +755,7 @@ _test_fein_ob(void)
   return ret_i;
 }
 
-static c3_w
+static c3_w_tmp
 _fynd_ob_w(c3_w_tmp inp_w)
 {
   u3_atom inp = u3i_word(inp_w);

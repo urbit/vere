@@ -7,7 +7,7 @@
 
 // XX optimize
 //
-static c3_w
+static c3_w_tmp
 _met_plat_m(c3_g a_g, c3_w_tmp fum_w, c3_w_tmp met_w, u3_atom vat)
 {
   c3_w_tmp len_w, wor_w;
@@ -59,12 +59,12 @@ _met_plat_m(c3_g a_g, c3_w_tmp fum_w, c3_w_tmp met_w, u3_atom vat)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _met_list(c3_g    a_g,
           c3_w_tmp  sep_w,
           u3_noun b_p);
 
-static c3_w
+static c3_w_tmp
 _met_pair(c3_g* las_g,
           c3_w_tmp  sep_w,
           u3_noun a_p,
@@ -94,7 +94,7 @@ _met_pair(c3_g* las_g,
   return _met_list(a_g, sep_w, b_p);
 }
 
-static c3_w
+static c3_w_tmp
 _met_list(c3_g    a_g,
           c3_w_tmp  sep_w,
           u3_noun b_p)
@@ -180,13 +180,13 @@ _met_list(c3_g    a_g,
   return sep_w;
 }
 
-static c3_w
+static c3_w_tmp
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
           c3_w_tmp      sep_w,
           u3_noun     b_p);
 
-static c3_w
+static c3_w_tmp
 _fax_pair(u3i_slab* sab_u,
           c3_g*     las_g,
           c3_w_tmp      sep_w,
@@ -217,7 +217,7 @@ _fax_pair(u3i_slab* sab_u,
   return _fax_list(sab_u, a_g, sep_w, b_p);
 }
 
-static c3_w
+static c3_w_tmp
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
           c3_w_tmp      sep_w,

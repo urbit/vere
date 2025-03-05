@@ -65,7 +65,7 @@ const c3_y *_JSON_UNICODES[] = {
 ** forward declarations
 */
 
-static c3_w
+static c3_w_tmp
 _measure(u3_noun a);
 
 static void
@@ -88,7 +88,7 @@ _append_text(json_buffer *buf_u, const c3_y *buf_y, c3_w_tmp len_w)
   buf_u->len_w += len_w;
 }
 
-static c3_w
+static c3_w_tmp
 _measure_loobean(u3_noun a)
 {
   switch ( a ) {
@@ -108,7 +108,7 @@ _serialize_loobean(json_buffer *buf_u, u3_noun a)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _measure_number(u3_noun a)
 {
   if ( _(u3du(a)) ) {
@@ -136,7 +136,7 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
   _append_text(buf_u, byt_y, u3r_met(3, a));
 }
 
-static c3_w
+static c3_w_tmp
 _measure_string(u3_noun a)
 {
   if ( _(u3du(a)) ) {
@@ -220,7 +220,7 @@ _serialize_string(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, '"');
 }
 
-static c3_w
+static c3_w_tmp
 _measure_array(u3_noun a)
 {
   if ( u3_nul != a ) {
@@ -264,7 +264,7 @@ _serialize_array(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, ']');
 }
 
-static c3_w
+static c3_w_tmp
 _measure_object_helper(u3_noun a)
 {
   c3_w_tmp siz_w = 0;
@@ -309,7 +309,7 @@ _serialize_object_helper(json_buffer *buf_u, u3_noun a)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _measure_object(u3_noun a)
 {
   if ( u3_nul != a ) {
@@ -337,7 +337,7 @@ _serialize_object(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, '}');
 }
 
-static c3_w
+static c3_w_tmp
 _measure(u3_noun a)
 {
   if ( u3_nul == a ) {

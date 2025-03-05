@@ -150,7 +150,7 @@ u3r_at(u3_atom a, u3_noun b)
     u3_noun* som;
   };
 
-  static c3_w
+  static c3_w_tmp
   _mean_cut(c3_w_tmp               len_w,
             struct _mean_pair* prs_m)
   {
@@ -953,7 +953,7 @@ u3r_pqrs(u3_noun  a,
 **   For example, (a_y == 3) returns the size in bytes.
 **   NB: (a_y) must be < 37.
 */
-c3_w
+c3_w_tmp
 u3r_met(c3_y  a_y,
         u3_atom b)
 {
@@ -1108,7 +1108,7 @@ u3r_bytes(c3_w_tmp    a_w,
 **
 **  Copy (len_w) bytes of (a) into (buf_y) if it fits, returning overage
 */
-c3_w
+c3_w_tmp
 u3r_bytes_fit(c3_w_tmp len_w, c3_y *buf_y, u3_atom a)
 {
   c3_w_tmp met_w = u3r_met(3, a);
@@ -1210,7 +1210,7 @@ u3r_short(c3_w_tmp  a_w,
 **
 **   Return word (a_w) of (b).
 */
-c3_w
+c3_w_tmp
 u3r_word(c3_w_tmp    a_w,
            u3_atom b)
 {

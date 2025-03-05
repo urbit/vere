@@ -198,7 +198,7 @@ _cs_jam_fib_cell_cb(u3_noun a, void* ptr_v)
 **   returns atom-suitable words, and *bit_w will have
 **   the length (in bits). return should be freed with u3a_wfree().
 */
-c3_w
+c3_w_tmp
 u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
 {
   struct _cs_jam_fib fib_u;

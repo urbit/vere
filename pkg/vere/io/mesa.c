@@ -807,7 +807,7 @@ _safe_sub(c3_d a, c3_d b) {
  * saves next fragment number and preallocated pact into the passed pointers.
  * Will not do so if returning 0
 */
-static c3_w
+static c3_w_tmp
 _mesa_req_get_cwnd(u3_pend_req* req_u)
 {
   /* c3_w_tmp liv_w = bitset_wyt(&req_u->was_u); */
@@ -1870,7 +1870,7 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
 }
 
 
-static c3_w
+static c3_w_tmp
 _name_to_jumbo_str(u3_mesa_name* nam_u, c3_y* buf_y)
 {
   u3_mesa_name tmp_u = *nam_u;

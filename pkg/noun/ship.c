@@ -102,7 +102,7 @@ u3_ship_czar(u3_ship who_u) { return who_u[0] & 0xFF; }
 c3_s
 u3_ship_king(u3_ship who_u) { return who_u[0] & 0xffff; }
 
-c3_w
+c3_w_tmp
 u3_ship_duke(u3_ship who_u) { return who_u[0] & 0xffffffff; }
 
 c3_d

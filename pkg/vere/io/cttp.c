@@ -336,7 +336,7 @@ _cttp_cres_fire_body(u3_cres* res_u, u3_hbod* bod_u)
 
 /* _cttp_mcut_pork(): measure/cut path/extension.
 */
-static c3_w
+static c3_w_tmp
 _cttp_mcut_pork(c3_c* buf_c, c3_w_tmp len_w, u3_noun pok)
 {
   u3_noun h_pok = u3h(pok);
@@ -353,7 +353,7 @@ _cttp_mcut_pork(c3_c* buf_c, c3_w_tmp len_w, u3_noun pok)
 
 /* _cttp_mcut_quay(): measure/cut query.
 */
-static c3_w
+static c3_w_tmp
 _cttp_mcut_quay(c3_c* buf_c, c3_w_tmp len_w, u3_noun quy)
 {
   u3_noun yuq = quy;
@@ -388,7 +388,7 @@ _cttp_mcut_quay(c3_c* buf_c, c3_w_tmp len_w, u3_noun quy)
 
 /* _cttp_mcut_url(): measure/cut purl, producing relative URL.
 */
-static c3_w
+static c3_w_tmp
 _cttp_mcut_url(c3_c* buf_c, c3_w_tmp len_w, u3_noun pul)
 {
   u3_noun q_pul = u3h(u3t(pul));

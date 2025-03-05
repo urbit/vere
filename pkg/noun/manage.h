@@ -204,7 +204,7 @@
 
       /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
-        c3_w
+        c3_w_tmp
         u3m_pack(void);
 
 #endif /* ifndef U3_MANAGE_H */

@@ -7,7 +7,7 @@
 
 /* _box_v1_slot(): select the right free list to search for a block.
 */
-static c3_w
+static c3_w_tmp
 _box_v1_slot(c3_w_tmp siz_w)
 {
   if ( siz_w < u3a_v1_minimum ) {

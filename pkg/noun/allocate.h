@@ -576,7 +576,7 @@
 
         /* u3a_use(): reference count.
         */
-          c3_w
+          c3_w_tmp
           u3a_use(u3_noun som);
 
         /* u3a_wed(): unify noun references.
@@ -591,17 +591,17 @@
 
         /* u3a_mark_ptr(): mark a pointer for gc.  Produce size.
         */
-          c3_w
+          c3_w_tmp
           u3a_mark_ptr(void* ptr_v);
 
         /* u3a_mark_mptr(): mark a u3_malloc-allocated ptr for gc.
         */
-          c3_w
+          c3_w_tmp
           u3a_mark_mptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
-          c3_w
+          c3_w_tmp
           u3a_mark_noun(u3_noun som);
 
         /* u3a_mark_road(): mark ad-hoc persistent road structures.
@@ -641,25 +641,25 @@
 
         /* u3a_count_noun(): count size of noun.
         */
-          c3_w
+          c3_w_tmp
           u3a_count_noun(u3_noun som);
 
         /* u3a_discount_noun(): clean up after counting a noun.
         */
-          c3_w
+          c3_w_tmp
           u3a_discount_noun(u3_noun som);
 
         /* u3a_count_ptr(): count a pointer for gc.  Produce size.  */
-          c3_w
+          c3_w_tmp
           u3a_count_ptr(void* ptr_v);
 
         /* u3a_discount_ptr(): discount a pointer for gc.  Produce size.  */
-          c3_w
+          c3_w_tmp
           u3a_discount_ptr(void* ptr_v);
 
         /* u3a_idle(): measure free-lists in [rod_u]
         */
-          c3_w
+          c3_w_tmp
           u3a_idle(u3a_road* rod_u);
 
         /* u3a_ream(): ream free-lists.
@@ -669,7 +669,7 @@
 
         /* u3a_sweep(): sweep a fully marked road.
         */
-          c3_w
+          c3_w_tmp
           u3a_sweep(void);
 
         /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
@@ -689,7 +689,7 @@
 
         /* u3a_lush(): leak push.
         */
-          c3_w
+          c3_w_tmp
           u3a_lush(c3_w_tmp lab_w);
 
         /* u3a_lop(): leak pop.
@@ -718,7 +718,7 @@
 
         /* u3a_maid(): maybe print memory.
         */
-          c3_w
+          c3_w_tmp
           u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w);
 
         /* u3a_quac_free(): free quac memory.

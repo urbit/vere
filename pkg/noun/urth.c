@@ -434,14 +434,14 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 /* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
 */
 #ifdef U3_MEMORY_DEBUG
-c3_w
+c3_w_tmp
 u3u_meld(void)
 {
   fprintf(stderr, "u3: unable to meld under U3_MEMORY_DEBUG\r\n");
   return 0;
 }
 #else
-c3_w
+c3_w_tmp
 u3u_meld(void)
 {
   c3_w_tmp       pre_w = u3a_open(u3R);

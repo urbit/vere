@@ -11,7 +11,7 @@
 
 /* _ci_slab_size(): calculate slab bloq-size, checking for overflow.
 */
-static c3_w
+static c3_w_tmp
 _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
@@ -676,7 +676,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     u3_noun som;
   };
 
-  static c3_w
+  static c3_w_tmp
   _molt_cut(c3_w_tmp               len_w,
             struct _molt_pair* pms_m)
   {

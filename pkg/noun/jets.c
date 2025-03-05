@@ -24,7 +24,7 @@
 
 /* _cj_count(): count and link dashboard entries.
 */
-static c3_w
+static c3_w_tmp
 _cj_count(u3j_core* par_u, u3j_core* dev_u)
 {
   c3_w_tmp len_l = 0;
@@ -308,7 +308,7 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
 
 /* _cj_install(): install dashboard entries.
 */
-static c3_w
+static c3_w_tmp
 _cj_install(u3j_core* ray_u, c3_w_tmp jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
 {
   c3_w_tmp i_w;
@@ -801,7 +801,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
 
 /* u3j_boot(): initialize jet system.
 */
-c3_w
+c3_w_tmp
 u3j_boot(c3_o nuu_o)
 {
   u3_assert(u3R == &(u3H->rod_u));
@@ -2209,7 +2209,7 @@ u3j_load(u3_noun rel)
 
 /* _cj_fink_mark(): mark a u3j_fink for gc.
 */
-static c3_w
+static c3_w_tmp
 _cj_fink_mark(u3j_fink* fin_u)
 {
   c3_w_tmp i_w, tot_w = u3a_mark_noun(fin_u->sat);
@@ -2256,7 +2256,7 @@ u3j_rite_lose(u3j_rite* rit_u)
 
 /* u3j_rite_mark(): mark u3j_rite for gc.
 */
-c3_w
+c3_w_tmp
 u3j_rite_mark(u3j_rite* rit_u)
 {
   c3_w_tmp tot_w = 0;
@@ -2269,7 +2269,7 @@ u3j_rite_mark(u3j_rite* rit_u)
 
 /* u3j_site_mark(): mark u3j_site for gc.
 */
-c3_w
+c3_w_tmp
 u3j_site_mark(u3j_site* sit_u)
 {
   c3_w_tmp tot_w = u3a_mark_noun(sit_u->axe);

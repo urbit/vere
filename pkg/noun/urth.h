@@ -9,7 +9,7 @@
     **/
       /* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
       */
-        c3_w
+        c3_w_tmp
         u3u_meld(void);
 
       /* u3u_cram(): globably deduplicate memory, and write a rock to disk.

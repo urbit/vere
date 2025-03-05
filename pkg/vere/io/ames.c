@@ -1685,7 +1685,7 @@ _ames_skip(u3_prel* pre_u)
 
 /* _fine_lop(): find beginning of page containing fra_w
 */
-static inline c3_w
+static inline c3_w_tmp
 _fine_lop(c3_w_tmp fra_w)
 {
   return 1 + (((fra_w - 1) / FINE_PAGE) * FINE_PAGE);

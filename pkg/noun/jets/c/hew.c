@@ -5,7 +5,7 @@
 
 #include "noun.h"
 
-static c3_w
+static c3_w_tmp
 _hew_in(c3_g     a_g,
         c3_w_tmp   pos_w,
         u3_atom  vat,

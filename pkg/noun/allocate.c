@@ -75,7 +75,7 @@ _box_count(c3_ws siz_ws) { }
 **   ...
 **   siz_w >=  2GB     then [26]
 */
-static c3_w
+static c3_w_tmp
 _box_slot(c3_w_tmp siz_w)
 {
   if ( u3a_minimum == siz_w ) {
@@ -282,7 +282,7 @@ _box_free(u3a_box* box_u)
 static u3a_box*
 _ca_box_make_hat(c3_w_tmp len_w, c3_w_tmp ald_w, c3_w_tmp off_w, c3_w_tmp use_w)
 {
-  c3_w
+  c3_w_tmp
     pad_w,                      /* padding between returned pointer and box */
     siz_w;                      /* total size of allocation */
   u3_post
@@ -1533,7 +1533,7 @@ u3a_lose(u3_noun som)
 
 /* u3a_use(): reference count.
 */
-c3_w
+c3_w_tmp
 u3a_use(u3_noun som)
 {
   if ( _(u3a_is_cat(som)) ) {
@@ -1661,7 +1661,7 @@ u3a_luse(u3_noun som)
 
 /* u3a_mark_ptr(): mark a pointer for gc.  Produce size if first mark.
 */
-c3_w
+c3_w_tmp
 u3a_mark_ptr(void* ptr_v)
 {
   if ( _(u3a_is_north(u3R)) ) {
@@ -1748,7 +1748,7 @@ u3a_rewritten_noun(u3_noun som)
 
 /* u3a_mark_mptr(): mark a malloc-allocated ptr for gc.
 */
-c3_w
+c3_w_tmp
 u3a_mark_mptr(void* ptr_v)
 {
   c3_w_tmp* ptr_w = ptr_v;
@@ -1760,7 +1760,7 @@ u3a_mark_mptr(void* ptr_v)
 
 /* u3a_mark_noun(): mark a noun for gc.  Produce size.
 */
-c3_w
+c3_w_tmp
 u3a_mark_noun(u3_noun som)
 {
   c3_w_tmp siz_w = 0;
@@ -1790,7 +1790,7 @@ u3a_mark_noun(u3_noun som)
 
 /* u3a_count_noun(): count size of pointer.
 */
-c3_w
+c3_w_tmp
 u3a_count_ptr(void* ptr_v)
 {
   if ( _(u3a_is_north(u3R)) ) {
@@ -1835,7 +1835,7 @@ u3a_count_ptr(void* ptr_v)
 
 /* u3a_count_noun(): count size of noun.
 */
-c3_w
+c3_w_tmp
 u3a_count_noun(u3_noun som)
 {
   c3_w_tmp siz_w = 0;
@@ -1865,7 +1865,7 @@ u3a_count_noun(u3_noun som)
 
 /* u3a_discount_ptr(): clean up after counting a pointer.
 */
-c3_w
+c3_w_tmp
 u3a_discount_ptr(void* ptr_v)
 {
   if ( _(u3a_is_north(u3R)) ) {
@@ -1909,7 +1909,7 @@ u3a_discount_ptr(void* ptr_v)
 
 /* u3a_discount_noun(): clean up after counting a noun.
 */
-c3_w
+c3_w_tmp
 u3a_discount_noun(u3_noun som)
 {
   c3_w_tmp siz_w = 0;
@@ -1994,7 +1994,7 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w)
 
 /* u3a_maid(): maybe print memory.
 */
-c3_w
+c3_w_tmp
 u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w)
 {
   if ( 0 != fil_u ) {
@@ -2377,7 +2377,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ws use_ws)
 
 /* u3a_idle(): measure free-lists in [rod_u]
 */
-c3_w
+c3_w_tmp
 u3a_idle(u3a_road* rod_u)
 {
   c3_w_tmp i_w, fre_w = 0;
@@ -2461,7 +2461,7 @@ u3a_ream(void)
 
 /* u3a_sweep(): sweep a fully marked road.
 */
-c3_w
+c3_w_tmp
 u3a_sweep(void)
 {
   c3_w_tmp neg_w, pos_w, leq_w, weq_w;
@@ -2880,7 +2880,7 @@ u3a_detect(u3_noun fum, u3_noun som)
 #ifdef U3_MEMORY_DEBUG
 /* u3a_lush(): leak push.
 */
-c3_w
+c3_w_tmp
 u3a_lush(c3_w_tmp lab_w)
 {
   c3_w_tmp cod_w = u3_Code;
@@ -2899,7 +2899,7 @@ u3a_lop(c3_w_tmp lab_w)
 #else
 /* u3a_lush(): leak push.
 */
-c3_w
+c3_w_tmp
 u3a_lush(c3_w_tmp lab_w)
 {
   return 0;

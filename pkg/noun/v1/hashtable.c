@@ -10,7 +10,7 @@
 /* _ch_v1_popcount(): number of bits set in word.  A standard intrinsic.
 **             NB: copy of _ch_v1_popcount in pkg/noun/hashtable.c
 */
-static c3_w
+static c3_w_tmp
 _ch_v1_popcount(c3_w_tmp num_w)
 {
   return __builtin_popcount(num_w);

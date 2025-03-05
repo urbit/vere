@@ -435,7 +435,7 @@ _etch_word(u3_etcher* ech_u, c3_w_tmp val_w)
   c3_etch_word(_etch_next(ech_u, 4), val_w);
 }
 
-static c3_w
+static c3_w_tmp
 _sift_word(u3_sifter* sif_u)
 {
   c3_y *res_y = _sift_next(sif_u, 4);
@@ -465,7 +465,7 @@ _etch_var_word(u3_etcher* ech_u, c3_w_tmp val_w, c3_w_tmp len_w)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _sift_var_word(u3_sifter* sif_u, c3_w_tmp len_w)
 {
   assert ( len_w <= 4 );
@@ -920,7 +920,7 @@ _mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
 
 /* packet etch/sift, with roundtrip tests */
 
-c3_w
+c3_w_tmp
 mesa_etch_pact_to_buf(c3_y* buf_y, c3_w_tmp cap_w, u3_mesa_pact *pac_u) {
   u3_etcher ech_u;
   etcher_init(&ech_u, buf_y, cap_w);
@@ -969,7 +969,7 @@ mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w_tmp len_w) {
 
 /* sizing
 */
-static c3_w
+static c3_w_tmp
 _mesa_size_name(u3_mesa_name* nam_u)
 {
   c3_w_tmp siz_w = 1;
@@ -993,7 +993,7 @@ _mesa_size_name(u3_mesa_name* nam_u)
   return siz_w;
 }
 
-static c3_w
+static c3_w_tmp
 _mesa_size_data(u3_mesa_data* dat_u)
 {
   c3_w_tmp siz_w = 1;
@@ -1032,7 +1032,7 @@ _mesa_size_data(u3_mesa_data* dat_u)
   return siz_w;
 }
 
-static c3_w
+static c3_w_tmp
 _mesa_size_hops(u3_mesa_pact* pac_u)
 {
   if ( PACT_PAGE != pac_u->hed_u.typ_y ) {
@@ -1054,7 +1054,7 @@ _mesa_size_hops(u3_mesa_pact* pac_u)
   }
 }
 
-c3_w
+c3_w_tmp
 mesa_size_pact(u3_mesa_pact* pac_u)
 {
   c3_w_tmp siz_w = 8; // header + cookie;
@@ -1311,7 +1311,7 @@ _test_rand_bits(void* ptr_v, c3_y len_y)
   return rand() & ((1 << len_y) - 1);
 }
 
-static c3_w
+static c3_w_tmp
 _test_rand_word(void* ptr_v)
 {
   c3_w_tmp low_w = rand();
@@ -1336,7 +1336,7 @@ _test_rand_gulf_y(void* ptr_v, c3_y top_y)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _test_rand_gulf_w(void* ptr_v, c3_w_tmp top_w)
 {
   c3_w_tmp bit_w = c3_bits_word(top_w);

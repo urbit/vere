@@ -21,7 +21,7 @@ _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w_tmp lef_w, c3_w_tmp rem_w);
 static u3_weak
 _ch_trim_root(u3h_root* har_u);
 
-c3_w
+c3_w_tmp
 _ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w);
 
 /* u3h_new_cache(): create hashtable with bounded size.
@@ -54,7 +54,7 @@ u3h_new(void)
 
 /* _ch_popcount(): number of bits set in word.  A standard intrinsic.
 */
-static c3_w
+static c3_w_tmp
 _ch_popcount(c3_w_tmp num_w)
 {
   return c3_pc_w(num_w);
@@ -578,7 +578,7 @@ _ch_trim_some(u3h_root* har_u, u3h_slot* sot_w, c3_w_tmp lef_w, c3_w_tmp rem_w)
 
 /* _ch_skip_slot(): increment arm over hash prefix.
 */
-c3_w
+c3_w_tmp
 _ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w)
 {
   c3_w_tmp hig_w = mug_w >> lef_w;
@@ -1071,7 +1071,7 @@ u3h_take(u3p(u3h_root) har_p)
 
 /* _ch_mark_buck(): mark bucket for gc.
 */
-c3_w
+c3_w_tmp
 _ch_mark_buck(u3h_buck* hab_u)
 {
   c3_w_tmp tot_w = 0;
@@ -1087,7 +1087,7 @@ _ch_mark_buck(u3h_buck* hab_u)
 
 /* _ch_mark_node(): mark node for gc.
 */
-c3_w
+c3_w_tmp
 _ch_mark_node(u3h_node* han_u, c3_w_tmp lef_w)
 {
   c3_w_tmp tot_w = 0;
@@ -1122,7 +1122,7 @@ _ch_mark_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_mark(): mark hashtable for gc.
 */
-c3_w
+c3_w_tmp
 u3h_mark(u3p(u3h_root) har_p)
 {
   c3_w_tmp tot_w = 0;
@@ -1230,7 +1230,7 @@ u3h_rewrite(u3p(u3h_root) har_p)
 
 /* _ch_count_buck(): count bucket for gc.
 */
-c3_w
+c3_w_tmp
 _ch_count_buck(u3h_buck* hab_u)
 {
   c3_w_tmp tot_w = 0;
@@ -1246,7 +1246,7 @@ _ch_count_buck(u3h_buck* hab_u)
 
 /* _ch_count_node(): count node for gc.
 */
-c3_w
+c3_w_tmp
 _ch_count_node(u3h_node* han_u, c3_w_tmp lef_w)
 {
   c3_w_tmp tot_w = 0;
@@ -1281,7 +1281,7 @@ _ch_count_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_count(): count hashtable for gc.
 */
-c3_w
+c3_w_tmp
 u3h_count(u3p(u3h_root) har_p)
 {
   c3_w_tmp tot_w = 0;
@@ -1310,7 +1310,7 @@ u3h_count(u3p(u3h_root) har_p)
 
 /* _ch_discount_buck(): discount bucket for gc.
 */
-c3_w
+c3_w_tmp
 _ch_discount_buck(u3h_buck* hab_u)
 {
   c3_w_tmp tot_w = 0;
@@ -1326,7 +1326,7 @@ _ch_discount_buck(u3h_buck* hab_u)
 
 /* _ch_discount_node(): discount node for gc.
 */
-c3_w
+c3_w_tmp
 _ch_discount_node(u3h_node* han_u, c3_w_tmp lef_w)
 {
   c3_w_tmp tot_w = 0;
@@ -1361,7 +1361,7 @@ _ch_discount_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_discount(): discount hashtable for gc.
 */
-c3_w
+c3_w_tmp
 u3h_discount(u3p(u3h_root) har_p)
 {
   c3_w_tmp tot_w = 0;
@@ -1390,7 +1390,7 @@ u3h_discount(u3p(u3h_root) har_p)
 
 /* u3h_wyt(): number of entries
 */
-c3_w
+c3_w_tmp
 u3h_wyt(u3p(u3h_root) har_p)
 {
   u3h_root* har_u = u3to(u3h_root, har_p);

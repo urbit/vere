@@ -541,13 +541,13 @@ u3t_init(void)
   u3T.euq_o = c3n;
 }
 
-c3_w
+c3_w_tmp
 u3t_trace_cnt(void)
 {
   return _trace_cnt_w;
 }
 
-c3_w
+c3_w_tmp
 u3t_file_cnt(void)
 {
   return _file_cnt_w;
@@ -742,7 +742,7 @@ _ct_meme_percent(c3_w_tmp lit_w, c3_w_tmp big_w)
 /* _ct_all_heap_size(): return the size in bytes of ALL space on the Loom
 **                      over all roads, currently in use as heap.
 */
-static c3_w
+static c3_w_tmp
 _ct_all_heap_size(u3_road* r) {
   if (r == &(u3H->rod_u)) {
     return u3a_heap(r)*4;
