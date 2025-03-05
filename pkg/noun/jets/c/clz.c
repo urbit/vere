@@ -17,23 +17,23 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
   }
 
   c3_g boq_g = boq;
-  c3_w sep_w = sep;
-  c3_w tot_w = sep_w << boq_g;
+  c3_w_tmp sep_w = sep;
+  c3_w_tmp tot_w = sep_w << boq_g;
 
   if ( (tot_w >> boq_g) != sep_w ) {
     return u3m_bail(c3__fail);
   }
 
-  c3_w met_w = u3r_met(0, a);
+  c3_w_tmp met_w = u3r_met(0, a);
 
   if ( met_w <= tot_w ) {
     tot_w -= met_w;
     return u3i_word(tot_w);
   }
   else {
-    c3_w wid_w = tot_w >>  5;
-    c3_w bit_w = tot_w  & 31;
-    c3_w wor_w;
+    c3_w_tmp wid_w = tot_w >>  5;
+    c3_w_tmp bit_w = tot_w  & 31;
+    c3_w_tmp wor_w;
 
     if ( bit_w ) {
       wor_w  = u3r_word(wid_w, a);

@@ -88,7 +88,7 @@ typedef struct {
 } lia_state;
 
 static u3_noun
-_atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
+_atoms_from_stack(void** valptrs, c3_w_tmp n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -98,7 +98,7 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        out = u3nc(u3i_word(*(c3_w*)valptrs[n]), out);
+        out = u3nc(u3i_word(*(c3_w_tmp*)valptrs[n]), out);
         break;
       }
       case c_m3Type_i64:
@@ -118,9 +118,9 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 
 //  RETAIN argument
 static c3_o
-_atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
+_atoms_to_stack(u3_noun atoms, void** valptrs, c3_w_tmp n, c3_y* types)
 {
-  for (c3_w i = 0; i < n; i++)
+  for (c3_w_tmp i = 0; i < n; i++)
   {
     if (c3y == u3ud(atoms))
     {
@@ -137,7 +137,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        *(c3_w*)valptrs[i] = u3r_word(0, atom);
+        *(c3_w_tmp*)valptrs[i] = u3r_word(0, atom);
         break;
       }
       case c_m3Type_i64:
@@ -156,7 +156,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 }
 
 static u3_noun
-_coins_from_stack(void** valptrs, c3_w n, c3_y* types)
+_coins_from_stack(void** valptrs, c3_w_tmp n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -165,7 +165,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
     {  // TODO 64 bit vere
       case c_m3Type_i32:
       {
-        out = u3nc(u3nc(c3__i32, u3i_word(*(c3_w*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__i32, u3i_word(*(c3_w_tmp*)valptrs[n])), out);
         break;
       }
       case c_m3Type_i64:
@@ -175,7 +175,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
       }
       case c_m3Type_f32:
       {
-        out = u3nc(u3nc(c3__f32, u3i_word(*(c3_w*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__f32, u3i_word(*(c3_w_tmp*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f64:
@@ -194,9 +194,9 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 
 //  RETAIN argument
 static c3_o
-_coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
+_coins_to_stack(u3_noun coins, void** valptrs, c3_w_tmp n, c3_y* types)
 {
-  for (c3_w i = 0; i < n; i++)
+  for (c3_w_tmp i = 0; i < n; i++)
   {
     if (c3y == u3ud(coins))
     {
@@ -222,7 +222,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w*)valptrs[i] = u3r_word(0, value);
+        *(c3_w_tmp*)valptrs[i] = u3r_word(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -240,7 +240,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w*)valptrs[i] = u3r_word(0, value);
+        *(c3_w_tmp*)valptrs[i] = u3r_word(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -294,7 +294,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun args = u3at(arr_sam_3, monad);
 
-    c3_w met_w = u3r_met(3, name);
+    c3_w_tmp met_w = u3r_met(3, name);
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -310,20 +310,20 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
 
-    c3_w n_in  = f->funcType->numArgs;
-    c3_w n_out = f->funcType->numRets;
+    c3_w_tmp n_in  = f->funcType->numArgs;
+    c3_w_tmp n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
 
     c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));
     void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-    for (c3_w i = 0; i < n_in; i++)
+    for (c3_w_tmp i = 0; i < n_in; i++)
     {
       valptrs_in[i] = &vals_in[i];
     }
 
     c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));
     void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-    for (c3_w i = 0; i < n_out; i++)
+    for (c3_w_tmp i = 0; i < n_out; i++)
     {
       valptrs_out[i] = &vals_out[i];
     }
@@ -391,9 +391,9 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom ptr = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun len = u3at(arr_sam_3, monad);
 
-    c3_w ptr_w = u3r_word(0, ptr);
+    c3_w_tmp ptr_w = u3r_word(0, ptr);
     c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
-    c3_w len_buf_w;
+    c3_w_tmp len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
 
     if (buf_y == NULL)
@@ -422,10 +422,10 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun len = u3at(arr_sam_6, monad);
     u3_noun src = u3at(arr_sam_7, monad);
 
-    c3_w ptr_w = u3r_word(0, ptr);
+    c3_w_tmp ptr_w = u3r_word(0, ptr);
     c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
 
-    c3_w len_buf_w;
+    c3_w_tmp len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
 
     if (buf_y == NULL)
@@ -548,7 +548,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_atom value = u3x_atom(u3at(arr_sam_3, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_w_tmp met_w = u3r_met(3, name);
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -620,7 +620,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     //  global-get
     u3_atom name = u3x_atom(u3at(arr_sam, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_w_tmp met_w = u3r_met(3, name);
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -686,7 +686,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       fprintf(stderr, ERR("memsize no memory"));
       return u3m_bail(c3__fail);
     }
-    c3_w num_pages = sat->wasm_module->runtime->memory.numPages;
+    c3_w_tmp num_pages = sat->wasm_module->runtime->memory.numPages;
 
     u3z(monad);
     return u3nc(0, u3i_word(num_pages));
@@ -708,8 +708,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     c3_l delta_l = (c3y == u3a_is_cat(delta)) ? delta : u3m_bail(c3__fail);
 
-    c3_w n_pages = sat->wasm_module->runtime->memory.numPages;
-    c3_w required_pages = n_pages + delta_l;
+    c3_w_tmp n_pages = sat->wasm_module->runtime->memory.numPages;
+    c3_w_tmp required_pages = n_pages + delta_l;
 
     M3Result result = ResizeMemory(sat->wasm_module->runtime, required_pages);
 
@@ -743,8 +743,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     }
     u3z(monad);
     u3_noun atoms = u3_nul;
-    c3_w n_globals = sat->wasm_module->numGlobals;
-    c3_w n_globals_import = sat->wasm_module->numGlobImports;
+    c3_w_tmp n_globals = sat->wasm_module->numGlobals;
+    c3_w_tmp n_globals_import = sat->wasm_module->numGlobImports;
     while (n_globals-- > n_globals_import)
     {
       M3Global glob = sat->wasm_module->globals[n_globals];
@@ -785,9 +785,9 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
     u3_noun atoms = u3at(arr_sam, monad);
-    c3_w n_globals = sat->wasm_module->numGlobals;
-    c3_w n_globals_import = sat->wasm_module->numGlobImports;
-    for (c3_w i = n_globals_import; i < n_globals; i++)
+    c3_w_tmp n_globals = sat->wasm_module->numGlobals;
+    c3_w_tmp n_globals_import = sat->wasm_module->numGlobImports;
+    for (c3_w_tmp i = n_globals_import; i < n_globals; i++)
     {
       IM3Global glob = &sat->wasm_module->globals[i];
       u3_noun atom;
@@ -855,16 +855,16 @@ _link_wasm_with_arrow_map(
     fprintf(stderr, ERR("import not found: %s/%s"), mod, name);
     return m3Err_functionImportMissing;
   }
-  c3_w n_in  = _ctx->function->funcType->numArgs;
-  c3_w n_out = _ctx->function->funcType->numRets;
+  c3_w_tmp n_in  = _ctx->function->funcType->numArgs;
+  c3_w_tmp n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
   void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-  for (c3_w i = 0; i < n_in; i++)
+  for (c3_w_tmp i = 0; i < n_in; i++)
   {
     valptrs_in[i] = &_sp[i+n_out];
   }
   void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-  for (c3_w i = 0; i < n_out; i++)
+  for (c3_w_tmp i = 0; i < n_out; i++)
   {
     valptrs_out[i] = &_sp[i];
   }
@@ -1032,7 +1032,7 @@ u3we_lia_run(u3_noun cor)
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
-  c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
+  c3_w_tmp bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
   c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
 
   M3Result result;
@@ -1082,14 +1082,14 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
   
-  c3_w n_imports = wasm3_module->numFuncImports;
+  c3_w_tmp n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(6, seed_new);
   u3_noun lia_shop = u3at(14, seed_new);
   u3_noun import = u3at(15, seed_new);
 
   lia_state sat = {wasm3_module, lia_shop, import, &match, 0};
 
-  for (c3_w i = 0; i < n_imports; i++)
+  for (c3_w_tmp i = 0; i < n_imports; i++)
   {
     M3Function f = wasm3_module->functions[i];
     const char * mod  = f.import.moduleUtf8;
@@ -1287,7 +1287,7 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
-  c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
+  c3_w_tmp bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
   c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
 
   M3Result result;
@@ -1337,7 +1337,7 @@ u3we_lia_run_once(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  c3_w n_imports = wasm3_module->numFuncImports;
+  c3_w_tmp n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(u3x_sam_7, cor);
   u3_noun lia_shop = u3_nul;
   u3_noun import = u3at(u3x_sam_5, cor);
@@ -1347,7 +1347,7 @@ u3we_lia_run_once(u3_noun cor)
 
   lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, 0};
 
-  for (c3_w i = 0; i < n_imports; i++)
+  for (c3_w_tmp i = 0; i < n_imports; i++)
   {
     M3Function f = wasm3_module->functions[i];
     const char * mod  = f.import.moduleUtf8;

@@ -9,7 +9,7 @@
   static u3_noun
   _cqe_sha1(u3_atom wid, u3_atom dat)
   {
-    c3_w len_w;
+    c3_w_tmp len_w;
     if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }

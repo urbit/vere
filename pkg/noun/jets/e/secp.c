@@ -38,7 +38,7 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-  static const c3_w now_w[8] = {
+  static const c3_w_tmp now_w[8] = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
@@ -51,7 +51,7 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w len_w = a_u->len_w;
+    c3_w_tmp len_w = a_u->len_w;
 
     if ( len_w < 8 ) {
       return 1;
@@ -61,10 +61,10 @@ _cqes_in_order(u3_atom a)
     }
     else {
       c3_y i_y;
-      c3_w *buf_w = a_u->buf_w;
+      c3_w_tmp *buf_w = a_u->buf_w;
       // loop from most to least significant words
       for ( i_y = 8; i_y > 0; ) {
-        c3_w b_w = buf_w[i_y],
+        c3_w_tmp b_w = buf_w[i_y],
              o_w = now_w[--i_y];
         if ( b_w < o_w ) {
           return 1;

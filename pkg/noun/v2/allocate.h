@@ -51,24 +51,24 @@
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_w_tmp fut_w[32];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
             jmp_buf buf;
-            c3_w buf_w[256];                  //  futureproofing
+            c3_w_tmp buf_w[256];                  //  futureproofing
           };
         } esc;
 
         struct {                              //  miscellaneous config
-          c3_w fag_w;                         //  flag bits
+          c3_w_tmp fag_w;                         //  flag bits
         } how;                                //
 
         struct {                                   //  allocation pools
           u3p(u3a_v2_fbox) fre_p[u3a_v2_fbox_no];  //  heap by node size log
           u3p(u3a_fbox) cel_p;                //  custom cell allocator
-          c3_w fre_w;                         //  number of free words
-          c3_w max_w;                         //  maximum allocated
+          c3_w_tmp fre_w;                         //  number of free words
+          c3_w_tmp max_w;                         //  maximum allocated
         } all;
 
         u3a_jets jed;                         //  jet dashboard

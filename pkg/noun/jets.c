@@ -27,8 +27,8 @@
 static c3_w
 _cj_count(u3j_core* par_u, u3j_core* dev_u)
 {
-  c3_w len_l = 0;
-  c3_w i_w;
+  c3_w_tmp len_l = 0;
+  c3_w_tmp i_w;
 
   if ( dev_u ) {
     for ( i_w = 0; 0 != dev_u[i_w].cos_c; i_w++ ) {
@@ -48,7 +48,7 @@ _cj_count(u3j_core* par_u, u3j_core* dev_u)
 static u3_noun
 _cj_core_loc(u3_noun pel, u3j_core* cop_u)
 {
-  c3_w    i_w;
+  c3_w_tmp    i_w;
   u3_noun nam = u3i_string(cop_u->cos_c),
           huc = u3_nul,
           pat;
@@ -78,7 +78,7 @@ _cj_core_loc(u3_noun pel, u3j_core* cop_u)
 static u3_noun
 _cj_hash(c3_c* has_c)
 {
-  c3_w i_w, len_w = strlen(has_c);
+  c3_w_tmp i_w, len_w = strlen(has_c);
   if ( 64 != len_w ) {
     u3l_log("bash not 64 characters: %s", has_c);
     u3_assert(0);
@@ -97,7 +97,7 @@ _cj_hash(c3_c* has_c)
 }
 
 // in the jam jet file
-c3_w* u3qe_jam_buf(u3_noun, c3_w* bit_w);
+c3_w_tmp* u3qe_jam_buf(u3_noun, c3_w_tmp* bit_w);
 
 /* _cj_bash(): battery hash. RETAIN.
  */
@@ -122,8 +122,8 @@ _cj_bash(u3_noun bat)
     }
     else {
       u3i_slab sab_u;
-      c3_w     bit_w = u3s_jam_fib(&sab_u, bat);
-      c3_w     met_w = (bit_w + 0x7) >> 3;
+      c3_w_tmp     bit_w = u3s_jam_fib(&sab_u, bat);
+      c3_w_tmp     met_w = (bit_w + 0x7) >> 3;
       //  XX assumes little-endian
       //
       c3_y*    fat_y = sab_u.buf_y;
@@ -309,9 +309,9 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
 /* _cj_install(): install dashboard entries.
 */
 static c3_w
-_cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
+_cj_install(u3j_core* ray_u, c3_w_tmp jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
   u3_assert(u3R == &(u3H->rod_u));
 
   if ( dev_u ) {
@@ -324,7 +324,7 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
       ray_u[jax_l] = *kid_u;
 
       if ( kid_u->bas_u ) {
-        c3_w j_w;
+        c3_w_tmp j_w;
         for ( j_w = 0; 0 != kid_u->bas_u[j_w]; j_w++ ) {
           u3_noun key = _cj_hash(kid_u->bas_u[j_w]),
                   hot = u3h_get(u3R->jed.hot_p, key),
@@ -671,7 +671,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
 static u3p(u3j_fink)
 _cj_cast(u3_noun cor, u3_noun loc)
 {
-  c3_w     i_w = 0;
+  c3_w_tmp     i_w = 0;
   u3_noun  j, par, bat, dyn, pax,
            rev = u3_nul,
            pat = u3h(loc);
@@ -711,7 +711,7 @@ static c3_o
 _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
 {
   u3j_fink* fin_u = u3to(u3j_fink, fin_p);
-  c3_w i_w;
+  c3_w_tmp i_w;
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_fist* fis_u = &(fin_u->fis_u[i_w]);
     if ( c3n == u3r_sing(fis_u->bat, u3h(cor)) ) {
@@ -780,7 +780,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
   }
 
   {
-    c3_w i_l = 0;
+    c3_w_tmp i_l = 0;
     u3j_core* cop_u;
 
     while ( (cop_u = &dev_u[i_l])->cos_c ) {
@@ -855,7 +855,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
   }
   else {
 #ifdef U3_MEMORY_DEBUG
-    c3_w cod_w;
+    c3_w_tmp cod_w;
 
     {
       char soc_c[5];
@@ -1324,7 +1324,7 @@ u3j_kick(u3_noun cor, u3_noun axe)
 static u3j_fink*
 _cj_fink_take(u3j_fink* jun_u)
 {
-  c3_w     i_w, len_w = jun_u->len_w;
+  c3_w_tmp     i_w, len_w = jun_u->len_w;
   u3j_fink* fin_u = u3a_walloc(c3_wiseof(u3j_fink) +
                    (len_w * c3_wiseof(u3j_fist)));
 
@@ -1344,7 +1344,7 @@ _cj_fink_take(u3j_fink* jun_u)
 static void
 _cj_fink_free(u3p(u3j_fink) fin_p)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
   u3j_fink* fin_u = u3to(u3j_fink, fin_p);
   u3z(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
@@ -1784,7 +1784,7 @@ _cj_minx(u3_noun cey, u3_noun cor)
 static void
 _cj_print_tas(u3_noun tas)
 {
-  c3_w  met_w = u3r_met(3, tas);
+  c3_w_tmp  met_w = u3r_met(3, tas);
   c3_c* str_c = alloca(met_w + 1);
   u3r_bytes(0, met_w, (c3_y*)str_c, tas);
   str_c[met_w] = 0;
@@ -1833,7 +1833,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     if ( !(u3C.wag_w & u3o_hashless) ) {
       if ( jax_l ) {
         c3_y dig_y[32];
-        c3_w i_w;
+        c3_w_tmp i_w;
         u3_noun i = bal;
         u3l_log("hot jet: ");
         while ( i != u3_nul ) {
@@ -2212,7 +2212,7 @@ u3j_load(u3_noun rel)
 static c3_w
 _cj_fink_mark(u3j_fink* fin_u)
 {
-  c3_w i_w, tot_w = u3a_mark_noun(fin_u->sat);
+  c3_w_tmp i_w, tot_w = u3a_mark_noun(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_fist* fis_u = &(fin_u->fis_u[i_w]);
     tot_w += u3a_mark_noun(fis_u->bat);
@@ -2259,7 +2259,7 @@ u3j_rite_lose(u3j_rite* rit_u)
 c3_w
 u3j_rite_mark(u3j_rite* rit_u)
 {
-  c3_w tot_w = 0;
+  c3_w_tmp tot_w = 0;
   if ( (c3y == rit_u->own_o) && u3_none != rit_u->clu ) {
     tot_w += u3a_mark_noun(rit_u->clu);
     tot_w += _cj_fink_mark(u3to(u3j_fink, rit_u->fin_p));
@@ -2272,7 +2272,7 @@ u3j_rite_mark(u3j_rite* rit_u)
 c3_w
 u3j_site_mark(u3j_site* sit_u)
 {
-  c3_w tot_w = u3a_mark_noun(sit_u->axe);
+  c3_w_tmp tot_w = u3a_mark_noun(sit_u->axe);
   if ( u3_none != sit_u->bat ) {
     tot_w += u3a_mark_noun(sit_u->bat);
   }
@@ -2294,7 +2294,7 @@ u3j_site_mark(u3j_site* sit_u)
 static void
 _cj_mark_hank(u3_noun kev, void* dat)
 {
-  c3_w* tot_w = (c3_w*) dat;
+  c3_w_tmp* tot_w = (c3_w_tmp*) dat;
   u3j_hank* han_u = u3to(u3j_hank, u3t(kev));
   *tot_w += u3a_mark_ptr(han_u);
   if ( u3_none != han_u->hax ) {
@@ -2331,8 +2331,8 @@ u3j_mark()
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w *= 4;
 
-  c3_w sum_w = 0;
-  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
+  c3_w_tmp sum_w = 0;
+  for ( c3_w_tmp i_w = 0; i_w < 5; i_w++ ) {
     sum_w += qua_u[i_w]->siz_w;
   }
 

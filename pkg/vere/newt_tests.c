@@ -15,9 +15,9 @@ _setup(void)
 /* _newt_encode(): synchronous serialization into a single buffer, for test purposes
 */
 static c3_y*
-_newt_encode(u3_atom mat, c3_w* len_w)
+_newt_encode(u3_atom mat, c3_w_tmp* len_w)
 {
-  c3_w  met_w = u3r_met(3, mat);
+  c3_w_tmp  met_w = u3r_met(3, mat);
   c3_y* buf_y;
 
   *len_w = 5 + met_w;
@@ -41,7 +41,7 @@ static c3_w
 _moat_length(u3_moat* mot_u)
 {
   u3_meat* met_u = mot_u->ext_u;
-  c3_w     len_w = 0;
+  c3_w_tmp     len_w = 0;
 
   while ( met_u ) {
     met_u = met_u->nex_u;
@@ -60,7 +60,7 @@ _test_newt_smol(void)
   //
   u3_atom     a = u3ke_jam(0);
   u3_moat mot_u;
-  c3_w    len_w;
+  c3_w_tmp    len_w;
   c3_y*   buf_y;
 
   memset(&mot_u, 0, sizeof(u3_moat));
@@ -129,7 +129,7 @@ _test_newt_smol(void)
   //
   {
     c3_y* haf_y;
-    c3_w  haf_w, dub_w;
+    c3_w_tmp  haf_w, dub_w;
 
     mot_u.ent_u = mot_u.ext_u = 0;
 
@@ -175,7 +175,7 @@ _test_newt_vast(void)
   //
   u3_atom     a = u3ke_jam(u3i_tape("abcdefghijklmnopqrstuvwxyz"));
   u3_moat mot_u;
-  c3_w    len_w;
+  c3_w_tmp    len_w;
   c3_y*   buf_y;
 
   memset(&mot_u, 0, sizeof(u3_moat));
@@ -222,7 +222,7 @@ _test_newt_vast(void)
 
     {
       c3_y* cop_y = c3_malloc(len_w);
-      c3_w  haf_w = len_w / 2;
+      c3_w_tmp  haf_w = len_w / 2;
       memcpy(cop_y, buf_y, len_w);
 
       u3_newt_decode(&mot_u, buf_y, haf_w);
@@ -253,7 +253,7 @@ _test_newt_vast(void)
   //
   {
     c3_y* haf_y;
-    c3_w  haf_w, dub_w;
+    c3_w_tmp  haf_w, dub_w;
 
     mot_u.ent_u = mot_u.ext_u = 0;
 
@@ -290,7 +290,7 @@ _test_newt_vast(void)
   //  two messages many buffers
   //
   {
-    c3_w dub_w;
+    c3_w_tmp dub_w;
 
     mot_u.ent_u = mot_u.ext_u = 0;
 
@@ -305,7 +305,7 @@ _test_newt_vast(void)
 
     {
       c3_y* cop_y = c3_malloc(dub_w);
-      c3_w  haf_w = len_w + 1;
+      c3_w_tmp  haf_w = len_w + 1;
       memcpy(cop_y, buf_y, dub_w);
 
       u3_newt_decode(&mot_u, buf_y, haf_w);

@@ -41,8 +41,8 @@ _migrate_seek(const u3a_v2_road *rod_u)
     - odd sized boxes will be padded by one word to achieve an even size
     - rut will be moved from one word ahead of u3_Loom to two words ahead
   */
-  c3_w *    box_w = u3a_v2_into(rod_u->rut_p);
-  c3_w *    end_w = u3a_v2_into(rod_u->hat_p);
+  c3_w_tmp *    box_w = u3a_v2_into(rod_u->rut_p);
+  c3_w_tmp *    end_w = u3a_v2_into(rod_u->hat_p);
   u3_post   new_p = (rod_u->rut_p + 1 + c3_wiseof(u3a_v2_box));
   u3a_v2_box * box_u = (void *)box_w;
 
@@ -77,10 +77,10 @@ _migrate_move(u3a_v2_road *rod_u)
   c3_z hiz_z = u3a_v2_heap(rod_u) * sizeof(c3_w);
 
   /* calculate required shift distance to prevent write head overlapping read head */
-  c3_w  off_w = 1;  /* at least 1 word because u3R_v1->rut_p migrates from 1 to 2 */
+  c3_w_tmp  off_w = 1;  /* at least 1 word because u3R_v1->rut_p migrates from 1 to 2 */
   for (u3a_v2_box *box_u = u3a_v2_into(rod_u->rut_p)
          ; (void *)box_u < u3a_v2_into(rod_u->hat_p)
-         ; box_u = (void *)((c3_w *)box_u + box_u->siz_w))
+         ; box_u = (void *)((c3_w_tmp *)box_u + box_u->siz_w))
     off_w += box_u->siz_w & 1; /* odd-sized boxes are padded by one word */
 
   /* shift */
@@ -88,15 +88,15 @@ _migrate_move(u3a_v2_road *rod_u)
           u3a_v2_into(u3H_v2->rod_u.rut_p),
           hiz_z);
   /* manually zero the former rut */
-  *(c3_w *)u3a_v2_into(rod_u->rut_p) = 0;
+  *(c3_w_tmp *)u3a_v2_into(rod_u->rut_p) = 0;
 
   /* relocate boxes to DWORD-aligned addresses stored in trailing size word */
-  c3_w *box_w = u3a_v2_into(rod_u->rut_p + off_w);
-  c3_w *end_w = u3a_v2_into(rod_u->hat_p + off_w);
+  c3_w_tmp *box_w = u3a_v2_into(rod_u->rut_p + off_w);
+  c3_w_tmp *end_w = u3a_v2_into(rod_u->hat_p + off_w);
   u3a_v2_box *old_u = (void *)box_w;
-  c3_w siz_w = old_u->siz_w;
+  c3_w_tmp siz_w = old_u->siz_w;
   u3p(c3_w) new_p = rod_u->rut_p + 1 + c3_wiseof(u3a_v2_box);
-  c3_w *new_w;
+  c3_w_tmp *new_w;
 
   for (; box_w < end_w
          ; box_w += siz_w
@@ -111,7 +111,7 @@ _migrate_move(u3a_v2_road *rod_u)
     u3_assert(box_w[siz_w - 1] == new_p);
     u3_assert(new_w <= box_w);
 
-    c3_w i_w;
+    c3_w_tmp i_w;
     for (i_w = 0; i_w < siz_w - 1; i_w++)
       new_w[i_w] = box_w[i_w];
 
@@ -132,7 +132,7 @@ _migrate_move(u3a_v2_road *rod_u)
   rod_u->hat_p = new_p - c3_wiseof(u3a_v2_box);
 
   /* like |pack, clear the free lists and cell allocator */
-  for (c3_w i_w = 0; i_w < u3a_v2_fbox_no; i_w++)
+  for (c3_w_tmp i_w = 0; i_w < u3a_v2_fbox_no; i_w++)
     u3R_v1->all.fre_p[i_w] = 0;
 
   u3R_v1->all.fre_w = 0;
@@ -145,14 +145,14 @@ _migrate_move(u3a_v2_road *rod_u)
 void
 u3m_v2_migrate(void)
 {
-  c3_w len_w = u3C_v2.wor_i - 1;
-  c3_w ver_w = *(u3_Loom + len_w);
+  c3_w_tmp len_w = u3C_v2.wor_i - 1;
+  c3_w_tmp ver_w = *(u3_Loom + len_w);
 
   u3_assert( U3V_VER1 == ver_w );
 
-  c3_w* mem_w = u3_Loom + 1;
-  c3_w  siz_w = c3_wiseof(u3v_v1_home);
-  c3_w* mat_w = (mem_w + len_w) - siz_w;
+  c3_w_tmp* mem_w = u3_Loom + 1;
+  c3_w_tmp  siz_w = c3_wiseof(u3v_v1_home);
+  c3_w_tmp* mat_w = (mem_w + len_w) - siz_w;
 
   u3H_v1 = (void *)mat_w;
   u3R_v1 = &u3H_v1->rod_u;

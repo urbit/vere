@@ -13,7 +13,7 @@
              u3_noun pub)
   {
     c3_y sig_y[64], pub_y[32];
-    c3_w len_w;
+    c3_w_tmp len_w;
     if ( (0 != u3r_bytes_fit(64, sig_y, sig)) ||
          (0 != u3r_bytes_fit(32, pub_y, pub)) ||
          !u3r_word_fit(&len_w, len) ) {
@@ -59,7 +59,7 @@
       return c3n;
     }
     else {
-      c3_w  met_w;
+      c3_w_tmp  met_w;
       c3_y* mes_y = u3r_bytes_all(&met_w, m);
       c3_t  val_t = urcrypt_ed_veri(mes_y, met_w, pub_y, sig_y);
       u3a_free(mes_y);

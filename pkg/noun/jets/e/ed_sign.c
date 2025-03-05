@@ -12,7 +12,7 @@
   _cqee_sign_octs(u3_noun len, u3_noun dat, u3_noun sed)
   {
     c3_y sed_y[32];
-    c3_w len_w;
+    c3_w_tmp len_w;
     if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
       // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
@@ -49,7 +49,7 @@
   _cqee_sign_octs_raw(u3_noun len, u3_noun dat, u3_noun pub, u3_noun sek)
   {
     c3_y pub_y[32], sek_y[64];
-    c3_w len_w;
+    c3_w_tmp len_w;
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
       // hoon asserts size
       return u3m_bail(c3__exit);
@@ -99,7 +99,7 @@
     }
     else {
       c3_y  sig_y[64];
-      c3_w  met_w;
+      c3_w_tmp  met_w;
       c3_y* msg_y = u3r_bytes_all(&met_w, msg);
 
       urcrypt_ed_sign(msg_y, met_w, sed_y, sig_y);
@@ -140,7 +140,7 @@
     }
     else {
       c3_y  sig_y[64];
-      c3_w  met_w;
+      c3_w_tmp  met_w;
       c3_y* msg_y = u3r_bytes_all(&met_w, msg);
 
       urcrypt_ed_sign_raw(msg_y, met_w, pub_y, sek_y, sig_y);

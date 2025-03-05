@@ -127,7 +127,7 @@
       /* u3s_sift_ud_bytes: parse @ud.
       */
         u3_weak
-        u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y);
+        u3s_sift_ud_bytes(c3_w_tmp len_w, c3_y* byt_y);
 
       /* u3s_sift_ud: parse @ud.
       */

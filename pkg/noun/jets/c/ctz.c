@@ -8,7 +8,7 @@
 u3_atom
 u3qc_ctz(u3_atom a)
 {
-  c3_w wor_w, i_w = 0;
+  c3_w_tmp wor_w, i_w = 0;
 
   if ( 0 == a ) {
     return 0;
@@ -20,7 +20,7 @@ u3qc_ctz(u3_atom a)
   while ( !wor_w );
 
   {
-    c3_w bit_d = i_w - 1;
+    c3_w_tmp bit_d = i_w - 1;
     bit_d *= 32;
     bit_d += c3_tz_w(wor_w);
     return u3i_chub(bit_d);

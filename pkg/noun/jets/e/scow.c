@@ -21,7 +21,7 @@ c3_y to_digit(c3_y tig)
 // gives the characters for a four 'digit' small hex atom.
 static
 void
-_x_co_four(c3_w src, c3_y* a, c3_y* b, c3_y* c, c3_y* d)
+_x_co_four(c3_w_tmp src, c3_y* a, c3_y* b, c3_y* c, c3_y* d)
 {
   *d = to_digit(src & 0xF);
   src >>= 4;
@@ -35,7 +35,7 @@ _x_co_four(c3_w src, c3_y* a, c3_y* b, c3_y* c, c3_y* d)
 // The parser always prints two digits on 0 in y-co.
 static
 void
-_y_co_two(c3_w src, c3_y* a, c3_y* b)
+_y_co_two(c3_w_tmp src, c3_y* a, c3_y* b)
 {
   *b = to_digit(src % 10);
   *a = to_digit(src / 10);
@@ -44,7 +44,7 @@ _y_co_two(c3_w src, c3_y* a, c3_y* b)
 //
 static
 u3_noun
-_add_year(c3_w year, u3_noun out)
+_add_year(c3_w_tmp year, u3_noun out)
 {
   while (year > 0) {
     out = u3nc(to_digit(year % 10), out);
@@ -192,10 +192,10 @@ _print_p(u3_atom cor, u3_atom p)
   }
 
   u3_noun list = 0;
-  for (c3_w imp = 0; imp != dyy; ++imp) {
-    c3_w log = u3qc_end(4, 1, sxz);
-    c3_w prefix = u3qc_rsh(3, 1, log);
-    c3_w suffix = u3qc_end(3, 1, log);
+  for (c3_w_tmp imp = 0; imp != dyy; ++imp) {
+    c3_w_tmp log = u3qc_end(4, 1, sxz);
+    c3_w_tmp prefix = u3qc_rsh(3, 1, log);
+    c3_w_tmp suffix = u3qc_end(3, 1, log);
 
     c3_y a, b, c, d, e, f;
     u3_po_to_prefix(prefix, &a, &b, &c);

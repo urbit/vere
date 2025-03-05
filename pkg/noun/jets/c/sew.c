@@ -23,11 +23,11 @@ u3qc_sew(u3_atom a,
   }
 
   c3_g a_g = a;
-  c3_w b_w = b, c_w = c;
-  c3_w len_e_w = u3r_met(a_g, e);
+  c3_w_tmp b_w = b, c_w = c;
+  c3_w_tmp len_e_w = u3r_met(a_g, e);
   u3i_slab sab_u;
-  c3_w* src_w;
-  c3_w len_src_w;
+  c3_w_tmp* src_w;
+  c3_w_tmp len_src_w;
   if ( _(u3a_is_cat(e)) ) {
     len_src_w = e ? 1 : 0;
     src_w = &e;

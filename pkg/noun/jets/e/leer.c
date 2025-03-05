@@ -7,7 +7,7 @@
 #include "noun.h"
 
 static u3_atom
-_leer_cut(c3_w pos_w, c3_w len_w, u3_atom src)
+_leer_cut(c3_w_tmp pos_w, c3_w_tmp len_w, u3_atom src)
 {
   if ( 0 == len_w ) {
     return 0;
@@ -29,12 +29,12 @@ _leer_cut(c3_w pos_w, c3_w len_w, u3_atom src)
 u3_noun
 u3qe_lore(u3_atom lub)
 {
-  c3_w    len_w = u3r_met(3, lub);
-  c3_w    pos_w = 0;
+  c3_w_tmp    len_w = u3r_met(3, lub);
+  c3_w_tmp    pos_w = 0;
   u3_noun tez = u3_nul;
 
   while ( 1 ) {
-    c3_w meg_w = 0;
+    c3_w_tmp meg_w = 0;
     c3_y end_y;
 
     c3_y byt_y;
@@ -90,7 +90,7 @@ u3qe_leer(u3_atom txt)
   u3_noun* lit = &pro;
 
   {
-    c3_w pos_w, i_w = 0, len_w = u3r_met(3, txt);
+    c3_w_tmp pos_w, i_w = 0, len_w = u3r_met(3, txt);
     u3_noun* hed;
     u3_noun* tel;
 

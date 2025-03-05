@@ -9,7 +9,7 @@
   u3_noun
   u3qc_xeb(u3_atom a)
   {
-    c3_w met_w = u3r_met(0, a);
+    c3_w_tmp met_w = u3r_met(0, a);
 
     if ( !_(u3a_is_cat(met_w)) ) {
       return u3i_words(1, &met_w);

@@ -15,7 +15,7 @@
     }
     else {
       c3_g       a_g = a;
-      c3_w     tot_w = 0;
+      c3_w_tmp     tot_w = 0;
       u3i_slab sab_u;
 
       /* Measure and validate the slab required.
@@ -25,7 +25,7 @@
 
         while ( 1 ) {
           u3_noun h_cab;
-          c3_w    len_w;
+          c3_w_tmp    len_w;
 
           if ( 0 == cab ) {
             break;
@@ -54,11 +54,11 @@
       */
       {
         u3_noun cab = b;
-        c3_w  pos_w = 0;
+        c3_w_tmp  pos_w = 0;
 
         while ( 0 != cab ) {
           u3_noun h_cab = u3h(cab);
-          c3_w    len_w = u3r_met(a_g, h_cab);
+          c3_w_tmp    len_w = u3r_met(a_g, h_cab);
 
           u3r_chop(a_g, 0, len_w, pos_w, sab_u.buf_w, h_cab);
           pos_w += len_w;

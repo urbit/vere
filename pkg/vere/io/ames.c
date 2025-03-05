@@ -63,8 +63,8 @@ typedef enum u3_stun_state {
       c3_o       dom_o;                 //    have domain
       uv_timer_t tim_u;                 //    resolve timer
       c3_s       pen_s;                 //    pending
-      c3_w       pip_w[256];            //    ipv4
-      c3_w       log_w[256 >> 5];       //    log error
+      c3_w_tmp       pip_w[256];            //    ipv4
+      c3_w_tmp       log_w[256 >> 5];       //    log error
     } zar_u;                            //
     struct {                            //    stun client state:
       u3_stun_state  sat_y;             //  formal state
@@ -129,7 +129,7 @@ typedef enum u3_stun_state {
 /* u3_peep: unsigned fine request body
 */
   typedef struct _u3_peep {
-    c3_w    fra_w;                      //  fragment number
+    c3_w_tmp    fra_w;                      //  fragment number
     c3_s    len_s;                      //  path length
     c3_c*   pat_c;                      //  path as ascii
   } u3_peep;
@@ -147,7 +147,7 @@ typedef enum u3_stun_state {
 */
   typedef struct _u3_meow {
     c3_y    sig_y[64];                  //  host signature
-    c3_w    num_w;                      //  number of fragments
+    c3_w_tmp    num_w;                      //  number of fragments
     c3_s    siz_s;                      //  datum size (actual)
     c3_y*   dat_y;                      //  datum (0 if null response)
   } u3_meow;
@@ -182,7 +182,7 @@ typedef enum u3_stun_state {
   typedef struct _u3_pact {
     uv_udp_send_t    snd_u;             //  udp send request
     struct _u3_ames* sam_u;             //  ames backpointer
-    c3_w             len_w;             //  length in bytes
+    c3_w_tmp             len_w;             //  length in bytes
     c3_y*            hun_y;             //  packet buffer
     u3_lane          lan_u;             //  destination/origin lane
     u3_head          hed_u;             //  head of packet
@@ -317,7 +317,7 @@ _fine_peep_size(u3_peep* pep_u)
 }
 
 static inline c3_y
-_fine_bytes_word(c3_w num_w)
+_fine_bytes_word(c3_w_tmp num_w)
 {
   return (c3_bits_word(num_w) + 7) >> 3;
 }
@@ -349,7 +349,7 @@ _fine_purr_size(u3_purr* pur_u)
 static c3_o
 _ames_check_mug(u3_pact* pac_u)
 {
-  c3_w rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
+  c3_w_tmp rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
   c3_l mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
                              pac_u->len_w - rog_w);
   //  u3l_log("len_w: %u, rog_w: %u, bod_l 0x%05x, hed_l 0x%05x",
@@ -391,7 +391,7 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 static void
 _ames_sift_head(u3_head* hed_u, c3_y buf_y[4])
 {
-  c3_w hed_w = c3_sift_word(buf_y);
+  c3_w_tmp hed_w = c3_sift_word(buf_y);
 
   //  first two bits are reserved
   //
@@ -412,7 +412,7 @@ _ames_sift_prel(u3_head* hed_u,
                 c3_y*    buf_y)
 {
   c3_y sen_y, rec_y;
-  c3_w cur_w = 0;
+  c3_w_tmp cur_w = 0;
 
   //  if packet is relayed, parse 6-byte origin field
   //
@@ -448,11 +448,11 @@ _ames_sift_prel(u3_head* hed_u,
 /* _fine_sift_wail(): parse request body, returning success
 */
 static c3_o
-_fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
+_fine_sift_wail(u3_pact* pac_u, c3_w_tmp cur_w)
 {
-  c3_w fra_w = sizeof(pac_u->wal_u.pep_u.fra_w);
-  c3_w len_w = sizeof(pac_u->wal_u.pep_u.len_s);
-  c3_w exp_w = fra_w + len_w;
+  c3_w_tmp fra_w = sizeof(pac_u->wal_u.pep_u.fra_w);
+  c3_w_tmp len_w = sizeof(pac_u->wal_u.pep_u.len_s);
+  c3_w_tmp exp_w = fra_w + len_w;
   c3_s len_s;
 
   if ( cur_w + exp_w > pac_u->len_w ) {
@@ -487,7 +487,7 @@ _fine_sift_wail(u3_pact* pac_u, c3_w cur_w)
   }
 
   {
-    c3_w tot_w = cur_w + len_s;
+    c3_w_tmp tot_w = cur_w + len_s;
     if ( tot_w != pac_u->len_w ) {
       u3l_log("fine: wail expected total len: %u, actual %u",
               tot_w, pac_u->len_w);
@@ -509,18 +509,18 @@ static c3_o
 _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 {
   c3_o ret_o;
-  c3_w len_w = u3r_met(3, mew);
-  c3_w sig_w = sizeof(mew_u->sig_y);
-  c3_w num_w = sizeof(mew_u->num_w);
-  c3_w min_w = sig_w + 1;
-  c3_w max_w = sig_w + num_w + FINE_FRAG;
+  c3_w_tmp len_w = u3r_met(3, mew);
+  c3_w_tmp sig_w = sizeof(mew_u->sig_y);
+  c3_w_tmp num_w = sizeof(mew_u->num_w);
+  c3_w_tmp min_w = sig_w + 1;
+  c3_w_tmp max_w = sig_w + num_w + FINE_FRAG;
 
   if ( (len_w < min_w) || (len_w > max_w) ) {
     u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_w, min_w, max_w);
     ret_o = c3n;
   }
   else {
-    c3_w cur_w = 0;
+    c3_w_tmp cur_w = 0;
 
     //  parse signature
     //
@@ -562,7 +562,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_w hed_w = ((hed_u->req_o &     0x1) <<  2)
+  c3_w_tmp hed_w = ((hed_u->req_o &     0x1) <<  2)
              ^ ((hed_u->sim_o &     0x1) <<  3)
              ^ ((hed_u->ver_y &     0x7) <<  4)
              ^ ((hed_u->sac_y &     0x3) <<  7)
@@ -586,7 +586,7 @@ _ames_etch_origin(c3_d rog_d, c3_y* buf_y)
 static void
 _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
 {
-  c3_w cur_w = 0;
+  c3_w_tmp cur_w = 0;
 
   //  if packet is relayed, write the 6-byte origin field
   //
@@ -618,7 +618,7 @@ _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
 static void
 _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 {
-  c3_w cur_w = 0;
+  c3_w_tmp cur_w = 0;
 
   //  write fragment number
   //
@@ -640,11 +640,11 @@ _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 static void
 _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 {
-  c3_w cur_w = 0;
+  c3_w_tmp cur_w = 0;
 
   //  write signature
   //
-  c3_w sig_w = sizeof(mew_u->sig_y);
+  c3_w_tmp sig_w = sizeof(mew_u->sig_y);
   memcpy(buf_y + cur_w, mew_u->sig_y, sig_w);
   cur_w += sig_w;
 
@@ -675,7 +675,7 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 static void
 _fine_etch_purr(u3_purr* pur_u, c3_y* buf_y)
 {
-  c3_w cur_w = 0;
+  c3_w_tmp cur_w = 0;
 
   //  write unsigned scry request
   //
@@ -691,7 +691,7 @@ _fine_etch_purr(u3_purr* pur_u, c3_y* buf_y)
 static void
 _fine_etch_response(u3_pact* pac_u)
 {
-  c3_w pre_w, pur_w, cur_w, rog_w;
+  c3_w_tmp pre_w, pur_w, cur_w, rog_w;
 
   pre_w = _ames_prel_size(&pac_u->hed_u);
   pur_w = _fine_purr_size(&pac_u->pur_u);
@@ -903,7 +903,7 @@ static c3_i
 _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
 {
   c3_c* bas_c = dns_c;
-  c3_w  len_w = strlen(dom_c);
+  c3_w_tmp  len_w = strlen(dom_c);
 
   //  name 3, '.' 2, trailing null
   //
@@ -930,7 +930,7 @@ static c3_o
 _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 {
   c3_s por_s = _ames_czar_port(imp_y);
-  c3_w pip_w;
+  c3_w_tmp pip_w;
 
   if ( c3n == u3_Host.ops_u.net ) {
     pip_w = 0x7f000001;
@@ -947,8 +947,8 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
     else if ( _CZAR_GONE == pip_w ) {
       //  print only on first send failure
       //
-      c3_w blk_w = imp_y >> 5;
-      c3_w bit_w = 1 << (imp_y & 31);
+      c3_w_tmp blk_w = imp_y >> 5;
+      c3_w_tmp bit_w = 1 << (imp_y & 31);
 
       if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
         c3_c dns_c[256];
@@ -969,7 +969,7 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 /* _fine_get_cache(): get packet list or status from cache. RETAIN
  */
 static u3_weak
-_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
+_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w_tmp fra_w)
 {
   u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
   u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
@@ -980,7 +980,7 @@ _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
 /* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
-_fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
+_fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w_tmp lop_w, u3_noun lis)
 {
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
     u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
@@ -1048,12 +1048,12 @@ _stun_on_request(u3_ames*    sam_u,
 }
 
 static void
-_stun_start(u3_ames* sam_u, c3_w tim_w);
+_stun_start(u3_ames* sam_u, c3_w_tmp tim_w);
 
 /* _stun_on_response(): hear stun response from galaxy.
  */
 static void
-_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w buf_len)
+_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w_tmp buf_len)
 {
   u3_lane lan_u;
 
@@ -1173,7 +1173,7 @@ static void
 _stun_timer_cb(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
-  c3_w     rto_w = 500;
+  c3_w_tmp     rto_w = 500;
 
   switch ( sam_u->sun_u.sat_y ) {
     case STUN_OFF: {
@@ -1208,7 +1208,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
         //
         //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
-        c3_w tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+        c3_w_tmp tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
 
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
         _stun_send_request(sam_u);
@@ -1222,7 +1222,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
 /* _stun_start(): begin/restart STUN state machine.
 */
 static void
-_stun_start(u3_ames* sam_u, c3_w tim_w)
+_stun_start(u3_ames* sam_u, c3_w_tmp tim_w)
 {
   if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
     u3l_log("stun: getentropy fail: %s", strerror(errno));
@@ -1394,7 +1394,7 @@ static void
 _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3_ames* sam_u = (u3_ames*)egg_u->car_u;
-  c3_w     len_w = u3qb_lent(lud);
+  c3_w_tmp     len_w = u3qb_lent(lud);
 
   if ( (1 == len_w) && c3__evil == u3h(u3h(lud)) ) {
     sam_u->sat_u.vil_d++;
@@ -1686,7 +1686,7 @@ _ames_skip(u3_prel* pre_u)
 /* _fine_lop(): find beginning of page containing fra_w
 */
 static inline c3_w
-_fine_lop(c3_w fra_w)
+_fine_lop(c3_w_tmp fra_w)
 {
   return 1 + (((fra_w - 1) / FINE_PAGE) * FINE_PAGE);
 }
@@ -1726,7 +1726,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   {
     //  XX virtualize
     u3_noun pax = u3dc("rash", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
-    c3_w  lop_w = _fine_lop(pep_u->fra_w);
+    c3_w_tmp  lop_w = _fine_lop(pep_u->fra_w);
     u3_weak pas = u3r_at(7, nun);
 
     //  if not [~ ~ fragments], mark as dead
@@ -1779,7 +1779,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 /* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
-_fine_hear_request(u3_pact* req_u, c3_w cur_w)
+_fine_hear_request(u3_pact* req_u, c3_w_tmp cur_w)
 {
   u3_ames* sam_u = req_u->sam_u;
   u3_pact* res_u;
@@ -1862,8 +1862,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 
   //  look up request in scry cache
   //
-  c3_w  fra_w = res_u->pur_u.pep_u.fra_w;
-  c3_w  lop_w = _fine_lop(fra_w);
+  c3_w_tmp  fra_w = res_u->pur_u.pep_u.fra_w;
+  c3_w_tmp  lop_w = _fine_lop(fra_w);
   u3_weak pec = _fine_get_cache(sam_u, key, lop_w);
 
   //  already pending; drop
@@ -1924,7 +1924,7 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
 /* _fine_hear_response(): hear purr (fine response packet).
 */
 static void
-_fine_hear_response(u3_pact* pac_u, c3_w cur_w)
+_fine_hear_response(u3_pact* pac_u, c3_w_tmp cur_w)
 {
   u3_noun wir = u3nc(c3__fine, u3_nul);
   u3_noun cad = u3nt(c3__hear,
@@ -1940,7 +1940,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 /* _ames_hear_ames(): hear ames packet.
 */
 static void
-_ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
+_ames_hear_ames(u3_pact* pac_u, c3_w_tmp cur_w)
 {
 #ifdef AMES_SKIP
   if ( c3_y == _ames_skip(&pac_u->pre_u) ) {
@@ -1968,7 +1968,7 @@ _ames_try_forward(u3_pact* pac_u)
           && ( 0  == pac_u->pre_u.sen_d[1] ) ) )
   {
     c3_y* old_y;
-    c3_w  old_w, cur_w;
+    c3_w_tmp  old_w, cur_w;
 
     pac_u->hed_u.rel_o = c3y;
     pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->lan_u);
@@ -2014,12 +2014,12 @@ _ames_try_forward(u3_pact* pac_u)
 void
 _ames_hear(u3_ames* sam_u,
            const struct sockaddr* adr_u,
-           c3_w     len_w,
+           c3_w_tmp     len_w,
            c3_y*    hun_y)
 {
   u3_pact* pac_u;
-  c3_w     pre_w;
-  c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
+  c3_w_tmp     pre_w;
+  c3_w_tmp     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
 
 
   // XX reorg, check if a STUN req/resp can look like an ames packet
@@ -2262,7 +2262,7 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
+_ames_put_dear(c3_c* ship, bool fake, c3_w_tmp s_addr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
 
@@ -2403,7 +2403,7 @@ typedef struct _czar_resv {
 static void
 _ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
 {
-  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_w_tmp old_w = sam_u->zar_u.pip_w[imp_y];
 
   if ( !old_w ) {
     sam_u->zar_u.pip_w[imp_y] = _CZAR_GONE;
@@ -2413,9 +2413,9 @@ _ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
 /* _ames_czar_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
+_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w_tmp pip_w)
 {
-  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_w_tmp old_w = sam_u->zar_u.pip_w[imp_y];
 
   if ( pip_w != old_w ) {
     c3_c dns_c[256];
@@ -2430,8 +2430,8 @@ _ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
   sam_u->zar_u.pip_w[imp_y] = pip_w;
 
   {
-    c3_w blk_w = imp_y >> 5;
-    c3_w bit_w = 1 << (imp_y & 31);
+    c3_w_tmp blk_w = imp_y >> 5;
+    c3_w_tmp bit_w = 1 << (imp_y & 31);
 
     sam_u->zar_u.log_w[blk_w] &= ~bit_w;
   }
@@ -2455,7 +2455,7 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
 
   if ( rai_u && rai_u->ai_addr ) {
     struct sockaddr_in* add_u = (void*)rai_u->ai_addr;
-    c3_w pip_w = ntohl(add_u->sin_addr.s_addr);
+    c3_w_tmp pip_w = ntohl(add_u->sin_addr.s_addr);
     _ames_czar_here(sam_u, imp_y, pip_w);
   }
   else {
@@ -2516,7 +2516,7 @@ _ames_czar_all(uv_timer_t* tim_u)
 
   sam_u->zar_u.pen_s = 256;
 
-  for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
+  for ( c3_w_tmp i_w = 0; i_w < 256; i_w++ ) {
     _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
   }
 
@@ -2531,7 +2531,7 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
   if ( u3_nul != tuf ) {
     c3_c  dom_c[sizeof(sam_u->zar_u.dom_c)];
     u3_noun hot = u3h(tuf);
-    c3_w  len_w = u3_mcut_host(0, 0, u3k(hot));
+    c3_w_tmp  len_w = u3_mcut_host(0, 0, u3k(hot));
 
     if ( len_w >= sizeof(dom_c) ) {  // >250
       //  3 char for the galaxy (e.g. zod) and two dots
@@ -2784,7 +2784,7 @@ static u3_noun
 _ames_io_info(u3_auto* car_u)
 {
   u3_ames*    sam_u = (u3_ames*)car_u;
-  c3_w sac_w, lax_w;
+  c3_w_tmp sac_w, lax_w;
 
   sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);
@@ -2824,7 +2824,7 @@ static void
 _ames_io_slog(u3_auto* car_u)
 {
   u3_ames*    sam_u = (u3_ames*)car_u;
-  c3_w sac_w, lax_w;
+  c3_w_tmp sac_w, lax_w;
 
   sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);

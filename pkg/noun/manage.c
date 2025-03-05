@@ -68,7 +68,7 @@
       /* u3m_leap(): in u3R, create a new road within the existing one.
       */
         void
-        u3m_leap(c3_w pad_w);
+        u3m_leap(c3_w_tmp pad_w);
 
       /* u3m_golf(): record cap length for u3m_flog().
       */
@@ -79,7 +79,7 @@
       **
       **    A common sequence for inner allocation is:
       **
-      **    c3_w gof_w = u3m_golf();
+      **    c3_w_tmp gof_w = u3m_golf();
       **    u3m_leap();
       **    //  allocate some inner stuff...
       **    u3m_fall();
@@ -89,13 +89,13 @@
       ** u3m_flog(0) simply clears the cap.
       */
         void
-        u3m_flog(c3_w gof_w);
+        u3m_flog(c3_w_tmp gof_w);
 
       /* u3m_soft_top(): top-level safety wrapper.
       */
         u3_noun
-        u3m_soft_top(c3_w    mil_w,                     //  timer ms
-                     c3_w    pad_w,                     //  base memory pad
+        u3m_soft_top(c3_w_tmp    mil_w,                     //  timer ms
+                     c3_w_tmp    pad_w,                     //  base memory pad
                      u3_funk fun_f,
                      u3_noun   arg);
 
@@ -228,7 +228,7 @@ _cm_signal_reset(void)
 static u3_noun
 _cm_stack_recover(u3a_road* rod_u)
 {
-  c3_w len_w;
+  c3_w_tmp len_w;
 
   len_w = 0;
   {
@@ -244,7 +244,7 @@ _cm_stack_recover(u3a_road* rod_u)
     }
     else {
       u3_noun beg, fin;
-      c3_w i_w;
+      c3_w_tmp i_w;
 
       tax = rod_u->bug.tax;
       beg = u3_nul;
@@ -355,7 +355,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 /* _cm_signal_deep(): start deep processing; set timer for [mil_w] or 0.
 */
 static void
-_cm_signal_deep(c3_w mil_w)
+_cm_signal_deep(c3_w_tmp mil_w)
 {
   //  disable outer system signal handling
   //
@@ -446,7 +446,7 @@ u3m_file(c3_c* pas_c)
 {
   struct stat buf_b;
   c3_i        fid_i = c3_open(pas_c, O_RDONLY, 0644);
-  c3_w        fln_w, red_w;
+  c3_w_tmp        fln_w, red_w;
   c3_y*       pad_y;
 
   if ( (fid_i < 0) || (fstat(fid_i, &buf_b) < 0) ) {
@@ -503,7 +503,7 @@ _pave_parts(void)
 /* _pave_road(): writes road boundaries to loom mem (stored at mat_w)
 */
 static u3_road*
-_pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
+_pave_road(c3_w_tmp* rut_w, c3_w_tmp* mat_w, c3_w_tmp* cap_w, c3_w_tmp siz_w)
 {
   c3_dessert(((uintptr_t)rut_w & u3a_balign-1) == 0);
   u3_road* rod_u = (void*) mat_w;
@@ -515,12 +515,12 @@ _pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
 
   //  the top and bottom of the heap are initially the same
   //
-  rod_u->rut_p = u3of(c3_w, rut_w);
-  rod_u->hat_p = u3of(c3_w, rut_w);
+  rod_u->rut_p = u3of(c3_w_tmp, rut_w);
+  rod_u->hat_p = u3of(c3_w_tmp, rut_w);
 
 
-  rod_u->mat_p = u3of(c3_w, mat_w);  //  stack bottom
-  rod_u->cap_p = u3of(c3_w, cap_w);  //  stack top
+  rod_u->mat_p = u3of(c3_w_tmp, mat_w);  //  stack bottom
+  rod_u->cap_p = u3of(c3_w_tmp, cap_w);  //  stack top
 
   _rod_vaal(rod_u);
   return rod_u;
@@ -535,7 +535,7 @@ _pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
    len_w - size of your loom in words
 */
 static u3_road*
-_pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
+_pave_north(c3_w_tmp* mem_w, c3_w_tmp siz_w, c3_w_tmp len_w, c3_o kid_o)
 {
   //  in a north road, the heap is low and the stack is high
   //
@@ -546,12 +546,12 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
   //    00~~~|R|---|H|######|C|+++|M|~~~FF
   //                                ^--u3R which _pave_road returns (u3H for home road)
   //
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
-  c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
-  c3_w* cap_w = mat_w;
+  c3_w_tmp* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  c3_w_tmp* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
+  c3_w_tmp* cap_w = mat_w;
 
   if ( c3y == kid_o ) {
-    u3e_ward(u3of(c3_w, rut_w) - 1, u3of(c3_w, cap_w));
+    u3e_ward(u3of(c3_w_tmp, rut_w) - 1, u3of(c3_w_tmp, cap_w));
   }
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
@@ -566,7 +566,7 @@ _pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
    len_w - size of your loom in words
 */
 static u3_road*
-_pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
+_pave_south(c3_w_tmp* mem_w, c3_w_tmp siz_w, c3_w_tmp len_w)
 {
   //  in a south road, the heap is high and the stack is low
   //
@@ -577,11 +577,11 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
   //    00~~~|M|+++|C|######|H|---|R|~~~FFF
   //         ^---u3R which _pave_road returns
   //
-  c3_w* mat_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
-  c3_w* rut_w = c3_align(mem_w + len_w, u3a_balign, C3_ALGLO);
-  c3_w* cap_w = mat_w + siz_w;
+  c3_w_tmp* mat_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
+  c3_w_tmp* rut_w = c3_align(mem_w + len_w, u3a_balign, C3_ALGLO);
+  c3_w_tmp* cap_w = mat_w + siz_w;
 
-  u3e_ward(u3of(c3_w, cap_w) - 1, u3of(c3_w, rut_w));
+  u3e_ward(u3of(c3_w_tmp, cap_w) - 1, u3of(c3_w_tmp, rut_w));
 
   return _pave_road(rut_w, mat_w, cap_w, siz_w);
 }
@@ -591,9 +591,9 @@ _pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
 static void
 _pave_home(void)
 {
-  c3_w* mem_w = u3_Loom + u3a_walign;
-  c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3a_walign;
+  c3_w_tmp* mem_w = u3_Loom + u3a_walign;
+  c3_w_tmp  siz_w = c3_wiseof(u3v_home);
+  c3_w_tmp  len_w = u3C.wor_i - u3a_walign;
 
   u3H = (void *)_pave_north(mem_w, siz_w, len_w, c3n);
   u3H->ver_w = U3V_VERLAT;
@@ -610,7 +610,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
 static void
 _find_home(void)
 {
-  c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
+  c3_w_tmp ver_w = *(u3_Loom + u3C.wor_i - 1);
   c3_o mig_o = c3y;  //  did we migrate?
 
   switch ( ver_w ) {
@@ -631,10 +631,10 @@ _find_home(void)
 
   //  NB: the home road is always north
   //
-  c3_w* mem_w = u3_Loom + u3a_walign;
-  c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3a_walign;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  c3_w_tmp* mem_w = u3_Loom + u3a_walign;
+  c3_w_tmp  siz_w = c3_wiseof(u3v_home);
+  c3_w_tmp  len_w = u3C.wor_i - u3a_walign;
+  c3_w_tmp* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
 
   u3H = (void *)mat_w;
   u3R = &u3H->rod_u;
@@ -647,7 +647,7 @@ _find_home(void)
   //  check for obvious corruption
   //
   if ( c3n == mig_o ) {
-    c3_w    nor_w, sou_w;
+    c3_w_tmp    nor_w, sou_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
 
@@ -706,9 +706,9 @@ u3m_clear(void)
 void
 u3m_dump(void)
 {
-  c3_w hat_w;
-  c3_w fre_w = 0;
-  c3_w i_w;
+  c3_w_tmp hat_w;
+  c3_w_tmp fre_w = 0;
+  c3_w_tmp i_w;
 
   hat_w = _(u3a_is_north(u3R)) ? u3R->hat_w - u3R->rut_w
                                 : u3R->rut_w - u3R->hat_w;
@@ -725,8 +725,8 @@ u3m_dump(void)
           hat_w, fre_w, (hat_w - fre_w));
 
   if ( 0 != (hat_w - fre_w) ) {
-    c3_w* box_w = _(u3a_is_north(u3R)) ? u3R->rut_w : u3R->hat_w;
-    c3_w  mem_w = 0;
+    c3_w_tmp* box_w = _(u3a_is_north(u3R)) ? u3R->rut_w : u3R->hat_w;
+    c3_w_tmp  mem_w = 0;
 
     while ( box_w < (_(u3a_is_north(u3R)) ? u3R->hat_w : u3R->rut_w) ) {
       u3a_box* box_u = (void *)box_w;
@@ -777,7 +777,7 @@ bt_cb(void* data,
   c3_c*   fname_c = {0};
 
   if ( dladdr((void *)pc, &info) ) {
-    for ( c3_w i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
+    for ( c3_w_tmp i_w = 0; info.dli_fname[i_w] != 0; i_w++ )
       if ( info.dli_fname[i_w] == '/' ) {
         fname_c = (c3_c*)&info.dli_fname[i_w + 1];
       }
@@ -883,7 +883,7 @@ u3m_stacktrace()
     unw_word_t pc, sp;
 
     c3_c* pn_c[1024] = {0};
-    c3_w  offp_w = 0;
+    c3_w_tmp  offp_w = 0;
 
     do {
       unw_get_reg(&cursor, UNW_REG_IP, &pc);
@@ -1024,9 +1024,9 @@ u3m_error(c3_c* str_c)
 /* u3m_leap(): in u3R, create a new road within the existing one.
 */
 void
-u3m_leap(c3_w pad_w)
+u3m_leap(c3_w_tmp pad_w)
 {
-  c3_w     len_w; /* the length of the new road (avail - (pad + wiseof(u3a_road))) */
+  c3_w_tmp     len_w; /* the length of the new road (avail - (pad + wiseof(u3a_road))) */
   u3_road* rod_u;
 
   _rod_vaal(u3R);
@@ -1101,9 +1101,9 @@ u3m_leap(c3_w pad_w)
 }
 
 void
-_print_diff(c3_c* cap_c, c3_w a, c3_w b)
+_print_diff(c3_c* cap_c, c3_w_tmp a, c3_w_tmp b)
 {
-  c3_w diff = a<b ? b-a : a-b;
+  c3_w_tmp diff = a<b ? b-a : a-b;
   u3a_print_memory(stderr, cap_c, diff);
 }
 
@@ -1128,7 +1128,7 @@ u3m_fall(void)
   _print_diff("unused free", u3R->hat_p, u3R->cap_p);
   _print_diff("freeing", u3R->rut_p, u3R->hat_p);
   _print_diff("stack", u3R->cap_p, u3R->mat_p);
-  static c3_w wat_w = 500000000;
+  static c3_w_tmp wat_w = 500000000;
   if (u3to(u3_road, u3R->par_p) == &u3H->rod_u) {
     wat_w = 500000000;
   }
@@ -1158,7 +1158,7 @@ u3m_fall(void)
 /* u3m_hate(): new, integrated leap mechanism (enter).
 */
 void
-u3m_hate(c3_w pad_w)
+u3m_hate(c3_w_tmp pad_w)
 {
   u3_assert(0 == u3R->ear_p);
 
@@ -1222,20 +1222,20 @@ u3m_golf(void)
 /* u3m_flog(): reset cap_p.
 */
 void
-u3m_flog(c3_w gof_w)
+u3m_flog(c3_w_tmp gof_w)
 {
   //  Enable memsets in case of memory corruption.
   //
   if ( c3y == u3a_is_north(u3R) ) {
     u3_post bot_p = (u3R->mat_p - gof_w);
-    // c3_w  len_w = (bot_w - u3R->cap_w);
+    // c3_w_tmp  len_w = (bot_w - u3R->cap_w);
 
     // memset(u3R->cap_w, 0, 4 * len_w);
     u3R->cap_p = bot_p;
   }
   else {
     u3_post bot_p = u3R->mat_p + gof_w;
-    // c3_w  len_w = (u3R->cap_w - bot_w);
+    // c3_w_tmp  len_w = (u3R->cap_w - bot_w);
 
     // memset(bot_w, 0, 4 * len_w);   //
     u3R->cap_p = bot_p;
@@ -1275,8 +1275,8 @@ u3m_water(u3_post* low_p, u3_post* hig_p)
 /* u3m_soft_top(): top-level safety wrapper.
 */
 u3_noun
-u3m_soft_top(c3_w    mil_w,                     //  timer ms
-             c3_w    pad_w,                     //  base memory pad
+u3m_soft_top(c3_w_tmp    mil_w,                     //  timer ms
+             c3_w_tmp    pad_w,                     //  base memory pad
              u3_funk fun_f,
              u3_noun   arg)
 {
@@ -1568,7 +1568,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
 ** Produces [0 product] or [%error (list tank)], top last.
 */
 u3_noun
-u3m_soft(c3_w    mil_w,
+u3m_soft(c3_w_tmp    mil_w,
          u3_funk fun_f,
          u3_noun   arg)
 {
@@ -1646,9 +1646,9 @@ u3m_soft(c3_w    mil_w,
 /* _cm_is_tas(): yes iff som (RETAIN) is @tas.
 */
 static c3_o
-_cm_is_tas(u3_atom som, c3_w len_w)
+_cm_is_tas(u3_atom som, c3_w_tmp len_w)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
     c3_c c_c = u3r_byte(i_w, som);
@@ -1667,9 +1667,9 @@ _cm_is_tas(u3_atom som, c3_w len_w)
 /* _cm_is_ta(): yes iff som (RETAIN) is @ta.
 */
 static c3_o
-_cm_is_ta(u3_noun som, c3_w len_w)
+_cm_is_ta(u3_noun som, c3_w_tmp len_w)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
     c3_c c_c = u3r_byte(i_w, som);
@@ -1696,7 +1696,7 @@ static c3_w
 _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
 {
   if ( _(u3du(som)) ) {
-    c3_w sel_w, one_w, two_w;
+    c3_w_tmp sel_w, one_w, two_w;
 
     sel_w = 0;
     if ( _(sel_o) ) {
@@ -1721,7 +1721,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
   else {
     if ( som < 65536 ) {
       c3_c buf_c[6];
-      c3_w len_w;
+      c3_w_tmp len_w;
 
       snprintf(buf_c, 6, "%d", som);
       len_w = strlen(buf_c);
@@ -1730,10 +1730,10 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       return len_w;
     }
     else {
-      c3_w len_w = u3r_met(3, som);
+      c3_w_tmp len_w = u3r_met(3, som);
 
       if ( _(_cm_is_tas(som, len_w)) ) {
-        c3_w len_w = u3r_met(3, som);
+        c3_w_tmp len_w = u3r_met(3, som);
 
         if ( str_c ) {
           *(str_c++) = '%';
@@ -1752,10 +1752,10 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         return len_w + 2;
       }
       else {
-        c3_w len_w = u3r_met(3, som);
+        c3_w_tmp len_w = u3r_met(3, som);
         c3_c *buf_c = c3_malloc(2 + (2 * len_w) + 1);
-        c3_w i_w = 0;
-        c3_w a_w = 0;
+        c3_w_tmp i_w = 0;
+        c3_w_tmp a_w = 0;
 
         buf_c[a_w++] = '0';
         buf_c[a_w++] = 'x';
@@ -1787,7 +1787,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
 c3_c*
 u3m_pretty(u3_noun som)
 {
-  c3_w len_w = _cm_in_pretty(som, c3y, 0);
+  c3_w_tmp len_w = _cm_in_pretty(som, c3y, 0);
   c3_c* pre_c = c3_malloc(len_w + 1);
 
   _cm_in_pretty(som, c3y, pre_c);
@@ -1804,7 +1804,7 @@ static c3_w
 _cm_in_pretty_path(u3_noun som, c3_c* str_c)
 {
   if ( _(u3du(som)) ) {
-    c3_w sel_w, one_w, two_w;
+    c3_w_tmp sel_w, one_w, two_w;
     if ( str_c ) {
       *(str_c++) = '/';
     }
@@ -1823,7 +1823,7 @@ _cm_in_pretty_path(u3_noun som, c3_c* str_c)
     return sel_w + one_w + two_w;
   }
   else {
-    c3_w len_w = u3r_met(3, som);
+    c3_w_tmp len_w = u3r_met(3, som);
     if ( str_c && len_w ) {
       u3r_bytes(0, len_w, (c3_y *)str_c, som);
       str_c += len_w;
@@ -1837,7 +1837,7 @@ _cm_in_pretty_path(u3_noun som, c3_c* str_c)
 c3_c*
 u3m_pretty_path(u3_noun som)
 {
-  c3_w len_w = _cm_in_pretty_path(som, NULL);
+  c3_w_tmp len_w = _cm_in_pretty_path(som, NULL);
   c3_c* pre_c = c3_malloc(len_w + 1);
 
   _cm_in_pretty_path(som, pre_c);
@@ -1953,7 +1953,7 @@ _cm_limits(void)
 c3_i
 u3m_fault(void* adr_v, c3_i ser_i)
 {
-  c3_w*   adr_w = (c3_w*)adr_v;
+  c3_w_tmp*   adr_w = (c3_w_tmp*)adr_v;
   u3_post low_p, hig_p;
 
   //  let the stack overflow handler run.
@@ -2027,15 +2027,15 @@ u3m_save(void)
 
 #if 1  // XX redundant
   {
-    c3_w low_w = u3a_heap(u3R);  // old u3m_water()
-    c3_w hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
+    c3_w_tmp low_w = u3a_heap(u3R);  // old u3m_water()
+    c3_w_tmp hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
 
-    c3_w nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w_tmp nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w_tmp sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
 
-    c3_w nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sop_w = hig_p >> u3a_page;
-    c3_w sor_w = u3P.pag_w - sop_w;
+    c3_w_tmp nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
+    c3_w_tmp sop_w = hig_p >> u3a_page;
+    c3_w_tmp sor_w = u3P.pag_w - sop_w;
 
     if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
       fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
@@ -2082,7 +2082,7 @@ u3m_ward(void)
 
 #if 1  // XX redundant
   {
-    c3_w low_w, hig_w;
+    c3_w_tmp low_w, hig_w;
 
     if ( c3y == u3a_is_north(u3R) ) {
       low_w = u3R->hat_p;
@@ -2345,7 +2345,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   /* Initialize the jet system.
   */
   {
-    c3_w len_w = u3j_boot(nuu_o);
+    c3_w_tmp len_w = u3j_boot(nuu_o);
     u3l_log("boot: installed %d jets", len_w);
   }
 
@@ -2432,7 +2432,7 @@ _cm_pack_rewrite(void)
 c3_w
 u3m_pack(void)
 {
-  c3_w pre_w = u3a_open(u3R);
+  c3_w_tmp pre_w = u3a_open(u3R);
 
   //  reclaim first, to free space, and discard anything we can't/don't rewrite
   //

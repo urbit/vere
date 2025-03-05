@@ -8,11 +8,11 @@
 /* structures
 */
   typedef struct _flOptions {
-    c3_w precision;
+    c3_w_tmp precision;
     mpz_t minExp;
     mpz_t expWidth;
-    c3_w rMode;
-    c3_w eMode;
+    c3_w_tmp rMode;
+    c3_w_tmp eMode;
   } flOptions;
 
   typedef struct _ea {
@@ -127,7 +127,7 @@
   {
     size_t z = mpz_sizeinbase(a->a, 2);
     if ( z >= b->precision ) return;
-    c3_w c = b->precision - z;
+    c3_w_tmp c = b->precision - z;
 
     if ( b->eMode != c3__i ) {
       mpz_t i;
@@ -138,7 +138,7 @@
       }
       else if ( mpz_fits_uint_p(i) )
       {
-        c3_w d = mpz_get_ui(i);
+        c3_w_tmp d = mpz_get_ui(i);
         c = c3_min(c, d);
       }
       mpz_clear(i);
@@ -171,8 +171,8 @@
       mpz_clear(c.a); mpz_clear(c.e);
       return u3m_bail(c3__exit);
     }
-    c3_w q = 0;
-    c3_w f = (m > d.precision) ? m - d.precision : 0;
+    c3_w_tmp q = 0;
+    c3_w_tmp f = (m > d.precision) ? m - d.precision : 0;
     mpz_init(g);
     if ( (d.eMode != c3__i) &&
          (mpz_cmp(c.e, d.minExp) < 0) ) {
@@ -358,7 +358,7 @@
     mpz_init_set_ui(mn, 1);
     mpz_init(i);
     mpz_init(j);
-    c3_w se = mpz_sgn(c.e);
+    c3_w_tmp se = mpz_sgn(c.e);
     if ( se == 1 ) {
       mpz_mul_2exp(r, r, mpz_get_ui(c.e));
       mpz_mul_2exp(mn, mn, mpz_get_ui(c.e));

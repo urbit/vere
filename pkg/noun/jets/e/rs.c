@@ -10,7 +10,7 @@
 
   union sing {
     float32_t s;
-    c3_w c;
+    c3_w_tmp c;
   };
 
   static inline c3_t
@@ -24,13 +24,13 @@
   {
     if ( _nan_test(a) )
     {
-      *(c3_w*)(&a) = SINGNAN;
+      *(c3_w_tmp*)(&a) = SINGNAN;
     }
     return a;
   }
 
   static inline void
-  _set_rounding(c3_w a)
+  _set_rounding(c3_w_tmp a)
   {
     switch ( a )
     {

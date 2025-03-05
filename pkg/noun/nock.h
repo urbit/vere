@@ -27,23 +27,23 @@
   typedef struct _u3n_prog {
     struct {
       c3_o      own_o;                // program owns ops_y?
-      c3_w      len_w;                // length of bytecode (bytes)
+      c3_w_tmp      len_w;                // length of bytecode (bytes)
       c3_y*     ops_y;                // actual array of bytes
     } byc_u;                          // bytecode
     struct {
-      c3_w      len_w;                // number of literals
+      c3_w_tmp      len_w;                // number of literals
       u3_noun*  non;                  // array of literals
     } lit_u;                          // literals
     struct {
-      c3_w      len_w;                // number of memo slots
+      c3_w_tmp      len_w;                // number of memo slots
       u3n_memo* sot_u;                // array of memo slots
     } mem_u;                          // memo slot data
     struct {
-      c3_w      len_w;                // number of calls sites
+      c3_w_tmp      len_w;                // number of calls sites
       u3j_site* sit_u;                // array of sites
     } cal_u;                          // call site data
     struct {
-      c3_w      len_w;                // number of registration sites
+      c3_w_tmp      len_w;                // number of registration sites
       u3j_rite* rit_u;                // array of sites
     } reg_u;                          // registration site data
   } u3n_prog;

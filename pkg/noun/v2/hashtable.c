@@ -12,7 +12,7 @@
 **             NB: copy of _ch_v2_popcount in pkg/noun/hashtable.c
 */
 static c3_w
-_ch_v2_popcount(c3_w num_w)
+_ch_v2_popcount(c3_w_tmp num_w)
 {
   return __builtin_popcount(num_w);
 }
@@ -23,7 +23,7 @@ _ch_v2_popcount(c3_w num_w)
 static void
 _ch_v2_free_buck(u3h_v2_buck* hab_u)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3z(u3h_v2_slot_to_noun(hab_u->sot_w[i_w]));
@@ -34,15 +34,15 @@ _ch_v2_free_buck(u3h_v2_buck* hab_u)
 /* _ch_v2_free_node(): free node.
 */
 static void
-_ch_v2_free_node(u3h_v2_node* han_u, c3_w lef_w)
+_ch_v2_free_node(u3h_v2_node* han_u, c3_w_tmp lef_w)
 {
-  c3_w len_w = _ch_v2_popcount(han_u->map_w);
-  c3_w i_w;
+  c3_w_tmp len_w = _ch_v2_popcount(han_u->map_w);
+  c3_w_tmp i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_w_tmp sot_w = han_u->sot_w[i_w];
 
     if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
       u3z(u3h_v2_slot_to_noun(sot_w));
@@ -67,7 +67,7 @@ void
 _ch_v2_rewrite_buck(u3h_v2_buck* hab_u)
 {
   if ( c3n == u3a_v2_rewrite_ptr(hab_u) ) return;
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun som = u3h_v2_slot_to_noun(hab_u->sot_w[i_w]);
@@ -79,17 +79,17 @@ _ch_v2_rewrite_buck(u3h_v2_buck* hab_u)
 /* _ch_v2_rewrite_node(): rewrite node for compaction.
 */
 void
-_ch_v2_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
+_ch_v2_rewrite_node(u3h_v2_node* han_u, c3_w_tmp lef_w)
 {
   if ( c3n == u3a_v2_rewrite_ptr(han_u) ) return;
 
-  c3_w len_w = _ch_v2_popcount(han_u->map_w);
-  c3_w i_w;
+  c3_w_tmp len_w = _ch_v2_popcount(han_u->map_w);
+  c3_w_tmp i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_w_tmp sot_w = han_u->sot_w[i_w];
 
     if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_v2_slot_to_noun(sot_w);
@@ -118,12 +118,12 @@ void
 u3h_v2_rewrite(u3p(u3h_v2_root) har_p)
 {
   u3h_v2_root* har_u = u3to(u3h_v2_root, har_p);
-  c3_w        i_w;
+  c3_w_tmp        i_w;
 
   if ( c3n == u3a_v2_rewrite_ptr(har_u) ) return;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    c3_w_tmp sot_w = har_u->sot_w[i_w];
 
     if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_v2_slot_to_noun(sot_w);

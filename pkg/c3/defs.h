@@ -88,7 +88,7 @@
     /* Fill 16 words (64 bytes) with high-quality entropy.
     */
       void
-      c3_rand(c3_w* rad_w);
+      c3_rand(c3_w_tmp* rad_w);
 
     /* Short integers.
     */
@@ -120,10 +120,10 @@
         return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
-      inline c3_w
+      inline c3_w_tmp
       c3_sift_word(c3_y buf_y[4])
       {
-        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
+        return ((c3_w_tmp)buf_y[3] << 24 | (c3_w_tmp)buf_y[2] << 16 | (c3_w_tmp)buf_y[1] << 8 | (c3_w_tmp)buf_y[0]);
       }
 
       inline c3_d
@@ -147,7 +147,7 @@
       }
 
       inline void
-      c3_etch_word(c3_y buf_y[4], c3_w wod_w)
+      c3_etch_word(c3_y buf_y[4], c3_w_tmp wod_w)
       {
         buf_y[0] = wod_w         & 0xff;
         buf_y[1] = (wod_w >>  8) & 0xff;
@@ -235,17 +235,17 @@
 
    hi or lo align x to al
 
-   unless effective type of x is c3_w or c3_d, assumes x is a pointer.
+   unless effective type of x is c3_w_tmp or c3_d, assumes x is a pointer.
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w     : c3_align_w,               \
+           c3_w_tmp     : c3_align_w,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
-inline c3_w
-c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+inline c3_w_tmp
+c3_align_w(c3_w_tmp x, c3_w_tmp al, align_dir hilo) {
   c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);

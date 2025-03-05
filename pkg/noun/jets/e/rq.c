@@ -10,7 +10,7 @@
 
   union quad {
     float128_t* q;
-    c3_w* c;
+    c3_w_tmp* c;
   };
 
   static inline c3_t
@@ -30,7 +30,7 @@
   }
 
   static inline void
-  _set_rounding(c3_w a)
+  _set_rounding(c3_w_tmp a)
   {
     switch ( a )
     {

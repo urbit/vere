@@ -123,13 +123,13 @@
       /* u3r_mug_both(): Join two mugs.
       */
         c3_l
-        u3r_mug_both(c3_w lef_w, c3_w rit_w);
+        u3r_mug_both(c3_w_tmp lef_w, c3_w_tmp rit_w);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */
         c3_l
         u3r_mug_bytes(const c3_y *buf_y,
-                      c3_w        len_w);
+                      c3_w_tmp        len_w);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */
@@ -150,7 +150,7 @@
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
         c3_l
-        u3r_mug_words(const c3_w* key_w, c3_w len_w);
+        u3r_mug_words(const c3_w_tmp* key_w, c3_w_tmp len_w);
 
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
@@ -347,7 +347,7 @@
       **   Return bit (a_w) of (b).
       */
         c3_b
-        u3r_bit(c3_w    a_w,
+        u3r_bit(c3_w_tmp    a_w,
                 u3_atom b);
 
       /* u3r_byte():
@@ -355,7 +355,7 @@
       **   Return byte (a_w) of (b).
       */
         c3_y
-        u3r_byte(c3_w    a_w,
+        u3r_byte(c3_w_tmp    a_w,
                  u3_atom b);
 
       /* u3r_bytes():
@@ -363,8 +363,8 @@
       **   Copy bytes (a_w) through (a_w + b_w - 1) from (d) to (c).
       */
         void
-        u3r_bytes(c3_w    a_w,
-                  c3_w    b_w,
+        u3r_bytes(c3_w_tmp    a_w,
+                  c3_w_tmp    b_w,
                   c3_y*   c_y,
                   u3_atom d);
 
@@ -373,7 +373,7 @@
       **   Copy (len_w) bytes of (a) into (buf_y) if it fits, returning overage.
       */
         c3_w
-        u3r_bytes_fit(c3_w    len_w,
+        u3r_bytes_fit(c3_w_tmp    len_w,
                       c3_y*   buf_y,
                       u3_atom a);
 
@@ -382,8 +382,8 @@
       **  Copy (len_w) bytes starting at (a_w) from (b) into a fresh allocation.
       */
         c3_y*
-        u3r_bytes_alloc(c3_w    a_w,
-                        c3_w    len_w,
+        u3r_bytes_alloc(c3_w_tmp    a_w,
+                        c3_w_tmp    len_w,
                         u3_atom b);
 
       /* u3r_bytes_all():
@@ -392,7 +392,7 @@
       **  storing the length in (len_w).
       */
         c3_y*
-        u3r_bytes_all(c3_w*   len_w,
+        u3r_bytes_all(c3_w_tmp*   len_w,
                       u3_atom a);
 
       /* u3r_chop_bits():
@@ -405,8 +405,8 @@
         u3r_chop_bits(c3_g  bif_g,
                       c3_d  wid_d,
                       c3_g  bit_g,
-                      c3_w* dst_w,
-                const c3_w* src_w);
+                      c3_w_tmp* dst_w,
+                const c3_w_tmp* src_w);
 
       /* u3r_chop_words():
       **
@@ -418,12 +418,12 @@
       */
         void
         u3r_chop_words(c3_g  met_g,
-                       c3_w  fum_w,
-                       c3_w  wid_w,
-                       c3_w  tou_w,
-                       c3_w* dst_w,
-                       c3_w  len_w,
-                 const c3_w* src_w);
+                       c3_w_tmp  fum_w,
+                       c3_w_tmp  wid_w,
+                       c3_w_tmp  tou_w,
+                       c3_w_tmp* dst_w,
+                       c3_w_tmp  len_w,
+                 const c3_w_tmp* src_w);
 
       /* u3r_chop():
       **
@@ -435,10 +435,10 @@
       */
         void
         u3r_chop(c3_g  met_g,
-                 c3_w  fum_w,
-                 c3_w  wid_w,
-                 c3_w  tou_w,
-                 c3_w* dst_w,
+                 c3_w_tmp  fum_w,
+                 c3_w_tmp  wid_w,
+                 c3_w_tmp  tou_w,
+                 c3_w_tmp* dst_w,
                  u3_atom src);
 
       /* u3r_mp():
@@ -454,7 +454,7 @@
       **   Return short (a_w) of (b).
       */
         c3_s
-        u3r_short(c3_w  a_w,
+        u3r_short(c3_w_tmp  a_w,
                   u3_atom b);
 
       /* u3r_word():
@@ -462,7 +462,7 @@
       **   Return word (a_w) of (b).
       */
         c3_w
-        u3r_word(c3_w    a_w,
+        u3r_word(c3_w_tmp    a_w,
                  u3_atom b);
 
 
@@ -471,7 +471,7 @@
       **   Fill (out_w) with (a) if it fits, returning success.
       */
         c3_t
-        u3r_word_fit(c3_w*   out_w,
+        u3r_word_fit(c3_w_tmp*   out_w,
                      u3_atom a);
 
       /* u3r_chub():
@@ -479,7 +479,7 @@
       **   Return double-word (a_w) of (b).
       */
         c3_d
-        u3r_chub(c3_w    a_w,
+        u3r_chub(c3_w_tmp    a_w,
                  u3_atom b);
 
       /* u3r_words():
@@ -487,9 +487,9 @@
       **  Copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
       */
         void
-        u3r_words(c3_w    a_w,
-                  c3_w    b_w,
-                  c3_w*   c_w,
+        u3r_words(c3_w_tmp    a_w,
+                  c3_w_tmp    b_w,
+                  c3_w_tmp*   c_w,
                   u3_atom d);
 
       /* u3r_chubs():
@@ -497,8 +497,8 @@
       **  Copy double-words (a_w) through (a_w + b_w - 1) from (d) to (c).
       */
         void
-        u3r_chubs(c3_w    a_w,
-                  c3_w    b_w,
+        u3r_chubs(c3_w_tmp    a_w,
+                  c3_w_tmp    b_w,
                   c3_d*   c_d,
                   u3_atom d);
 
@@ -510,7 +510,7 @@
       /* u3r_safe_word(): validate and retrieve word.
       */
         c3_o
-        u3r_safe_word(u3_noun dat, c3_w* out_w);
+        u3r_safe_word(u3_noun dat, c3_w_tmp* out_w);
 
       /* u3r_safe_chub(): validate and retrieve chub.
       */

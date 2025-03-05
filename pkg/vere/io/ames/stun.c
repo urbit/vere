@@ -2,13 +2,13 @@
 #include "zlib.h"
 
 static c3_y*
-_stun_add_fingerprint(c3_y *message, c3_w index)
+_stun_add_fingerprint(c3_y *message, c3_w_tmp index)
 {
   // Compute FINGERPRINT value as CRC-32 of the STUN message
   // up to (but excluding) the FINGERPRINT attribute itself,
   // XOR'ed with the 32-bit value 0x5354554e
-  c3_w init = crc32(0L, Z_NULL, 0);
-  c3_w crc = htonl(crc32(init, message, index) ^ 0x5354554e);
+  c3_w_tmp init = crc32(0L, Z_NULL, 0);
+  c3_w_tmp crc = htonl(crc32(init, message, index) ^ 0x5354554e);
 
   // STUN attribute type: "FINGERPRINT"
   message[index] = 0x80;  message[index + 1] = 0x28;
@@ -21,7 +21,7 @@ _stun_add_fingerprint(c3_y *message, c3_w index)
 }
 
 static c3_o
-_stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
+_stun_has_fingerprint(c3_y* buf_y, c3_w_tmp buf_len_w)
 {
   c3_y ned_y[4] = {0x80, 0x28, 0x00, 0x04};
   if ( buf_len_w < 28 ) { // At least STUN header and FINGERPRINT
@@ -30,15 +30,15 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
 
   {
     c3_y* fin_y = 0;
-    c3_w i = 20; // start after the header
+    c3_w_tmp i = 20; // start after the header
 
     fin_y = memmem(buf_y + i, buf_len_w - i, ned_y, sizeof(ned_y));
     if ( fin_y != 0 ) {
-      c3_w lin_w = fin_y - buf_y;
+      c3_w_tmp lin_w = fin_y - buf_y;
       // Skip attribute type and length
-      c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
-      c3_w init = crc32(0L, Z_NULL, 0);
-      c3_w crc = htonl(crc32(init, buf_y, lin_w) ^ 0x5354554e);
+      c3_w_tmp fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
+      c3_w_tmp init = crc32(0L, Z_NULL, 0);
+      c3_w_tmp crc = htonl(crc32(init, buf_y, lin_w) ^ 0x5354554e);
       if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len_w) {
         return c3y;
       }
@@ -51,9 +51,9 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
 /* u3_stun_is_request(): buffer is a stun request.
 */
 c3_o
-u3_stun_is_request(c3_y* buf_y, c3_w len_w)
+u3_stun_is_request(c3_y* buf_y, c3_w_tmp len_w)
 {
-  c3_w cookie = htonl(0x2112A442);
+  c3_w_tmp cookie = htonl(0x2112A442);
 
   // Expects at least:
   //   STUN header and 8 byte FINGERPRINT
@@ -70,9 +70,9 @@ u3_stun_is_request(c3_y* buf_y, c3_w len_w)
 /* u3_stun_is_our_response(): buffer is a response to our request.
 */
 c3_o
-u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w len_w)
+u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w_tmp len_w)
 {
-  c3_w cookie = htonl(0x2112A442);
+  c3_w_tmp cookie = htonl(0x2112A442);
 
   // Expects at least:
   //   STUN header, 12 byte XOR-MAPPED-ADDRESS and 8 byte FINGERPRINT
@@ -119,8 +119,8 @@ u3_stun_make_response(const c3_y req_y[20],
                       u3_lane*   lan_u,
                       c3_y       buf_y[40])
 {
-  c3_w cok_w = 0x2112A442;
-  c3_w cur_w = 20;
+  c3_w_tmp cok_w = 0x2112A442;
+  c3_w_tmp cur_w = 20;
 
   //  XX hardcoded to match the requests we produce
   //
@@ -142,7 +142,7 @@ u3_stun_make_response(const c3_y req_y[20],
   buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
 
   c3_s por_s = htons(lan_u->por_s ^ (cok_w >> 16));
-  c3_w pip_w = htonl(lan_u->pip_w ^ cok_w);
+  c3_w_tmp pip_w = htonl(lan_u->pip_w ^ cok_w);
 
   memcpy(buf_y + cur_w + 6, &por_s, 2);  // X-Port
   memcpy(buf_y + cur_w + 8, &pip_w, 4);  // X-IP Addres
@@ -155,21 +155,21 @@ u3_stun_make_response(const c3_y req_y[20],
 */
 c3_o
 u3_stun_find_xor_mapped_address(c3_y*    buf_y,
-                                c3_w     len_w,
+                                c3_w_tmp     len_w,
                                 u3_lane* lan_u)
 {
   c3_y xor_y[4] = {0x00, 0x20, 0x00, 0x08};
-  c3_w cookie = 0x2112A442;
+  c3_w_tmp cookie = 0x2112A442;
 
   if ( len_w < 40 ) { // At least STUN header, XOR-MAPPED-ADDRESS & FINGERPRINT
     return c3n;
   }
 
-  c3_w i = 20;  // start after header
+  c3_w_tmp i = 20;  // start after header
 
   c3_y* fin_y = memmem(buf_y + i, len_w - i, xor_y, sizeof(xor_y));
   if ( fin_y != 0 ) {
-    c3_w cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
+    c3_w_tmp cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
 
     if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
       return c3n;
@@ -181,7 +181,7 @@ u3_stun_find_xor_mapped_address(c3_y*    buf_y,
     lan_u->pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
 
     if ( u3C.wag_w & u3o_verbose ) {
-      c3_w nip_w = htonl(lan_u->pip_w);
+      c3_w_tmp nip_w = htonl(lan_u->pip_w);
       c3_c nip_c[INET_ADDRSTRLEN];
       inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
       u3l_log("stun: hear ip:port %s:%u", nip_c, lan_u->por_s);

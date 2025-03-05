@@ -16,9 +16,9 @@
     }
     else {
       c3_g   a_g = a;
-      c3_w   lew_w = u3r_met(a_g, b);
-      c3_w   ler_w = u3r_met(a_g, c);
-      c3_w   all_w = (lew_w + ler_w);
+      c3_w_tmp   lew_w = u3r_met(a_g, b);
+      c3_w_tmp   ler_w = u3r_met(a_g, c);
+      c3_w_tmp   all_w = (lew_w + ler_w);
 
       if ( 0 == all_w ) {
         return 0;

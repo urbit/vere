@@ -4,7 +4,7 @@
 #define TEST_SIZE 100000
 
 // defined in noun/hashtable.c
-c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);
+c3_w_tmp _ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w);
 
 /* _setup(): prepare for tests.
 */
@@ -23,7 +23,7 @@ _test_put_del()
   u3p(u3h_root) har_p = u3h_new();
   c3_i ret_i = 1;
 
-  c3_w i_w;
+  c3_w_tmp i_w;
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
     u3_noun key = u3i_word(i_w);
     u3_noun val = u3nc(u3_nul, u3k(key));
@@ -43,7 +43,7 @@ _test_put_del()
     u3z(val);
   }
   // fprintf(stderr, "presence\r\n");
-  c3_w del_w[4] = {30, 82, 4921, 535};
+  c3_w_tmp del_w[4] = {30, 82, 4921, 535};
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
     u3_noun key = u3i_word(del_w[i_w]);
@@ -113,8 +113,8 @@ static c3_i
 _test_no_cache(void)
 {
   c3_i ret_i = 1;
-  c3_w max_w = 1000;
-  c3_w   i_w;
+  c3_w_tmp max_w = 1000;
+  c3_w_tmp   i_w;
 
   u3p(u3h_root) har_p = u3h_new();
 
@@ -142,8 +142,8 @@ _test_skip_slot(void)
 
   //  root table
   {
-    c3_w mug_w = 0x17 << 25;
-    c3_w res_w = _ch_skip_slot(mug_w, 25);
+    c3_w_tmp mug_w = 0x17 << 25;
+    c3_w_tmp res_w = _ch_skip_slot(mug_w, 25);
 
     if ( (0x18 << 25) != res_w ) {
       fprintf(stderr, "bit skip_slot (a): failed\r\n");
@@ -152,8 +152,8 @@ _test_skip_slot(void)
   }
 
   {
-    c3_w mug_w = 63 << 25; //  6 bits, all ones
-    c3_w res_w = _ch_skip_slot(mug_w, 25);
+    c3_w_tmp mug_w = 63 << 25; //  6 bits, all ones
+    c3_w_tmp res_w = _ch_skip_slot(mug_w, 25);
 
     if ( 0 != res_w ) {
       fprintf(stderr, "bit skip_slot (b): failed\r\n");
@@ -163,8 +163,8 @@ _test_skip_slot(void)
 
   //  child nodes
   {
-    c3_w mug_w = 17 << 20;
-    c3_w res_w = _ch_skip_slot(mug_w, 20);
+    c3_w_tmp mug_w = 17 << 20;
+    c3_w_tmp res_w = _ch_skip_slot(mug_w, 20);
 
     if ( (18 << 20) != res_w ) {
       fprintf(stderr, "bit skip_slot (c): failed\r\n");
@@ -173,8 +173,8 @@ _test_skip_slot(void)
   }
 
   {
-    c3_w mug_w = 31 << 20; //  5 bits, all ones
-    c3_w res_w = _ch_skip_slot(mug_w, 20);
+    c3_w_tmp mug_w = 31 << 20; //  5 bits, all ones
+    c3_w_tmp res_w = _ch_skip_slot(mug_w, 20);
     u3_assert((1 << 25) == res_w);
 
     if ( (1 << 25) != res_w ) {
@@ -192,9 +192,9 @@ static c3_i
 _test_cache_trimming(void)
 {
   c3_i ret_i = 1;
-  c3_w max_w = 2000000; // big number
-  //c3_w max_w = 348000; // caused a leak before
-  c3_w i_w, fil_w = max_w / 10;
+  c3_w_tmp max_w = 2000000; // big number
+  //c3_w_tmp max_w = 348000; // caused a leak before
+  c3_w_tmp i_w, fil_w = max_w / 10;
 
   u3p(u3h_root) har_p = u3h_new_cache(fil_w);
   u3h_root*     har_u = u3to(u3h_root, har_p);
@@ -206,7 +206,7 @@ _test_cache_trimming(void)
 
   {
     // last thing we put in is still there
-    c3_w  las_w = max_w - 1;
+    c3_w_tmp  las_w = max_w - 1;
     u3_noun key = u3nc(las_w, las_w);
     u3_noun val = u3h_get(har_p, key);
     u3z(key);
@@ -235,8 +235,8 @@ static c3_i
 _test_cache_replace_value(void)
 {
   c3_i ret_i = 1;
-  c3_w max_w = 100;
-  c3_w   i_w;
+  c3_w_tmp max_w = 100;
+  c3_w_tmp   i_w;
 
   u3p(u3h_root) har_p = u3h_new_cache(max_w);
   u3h_root*     har_u = u3to(u3h_root, har_p);

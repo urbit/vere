@@ -12,7 +12,7 @@ u3_noun
 u3qb_find(u3_noun nedl, u3_noun hstk)
 {
   if ( u3_nul != nedl ) {
-    c3_w  i_w = 0;
+    c3_w_tmp  i_w = 0;
 
     while ( u3_nul != hstk ) {
       u3_noun i_h, t_h = hstk;

@@ -361,7 +361,7 @@ u3_noun
 u3_newt_moat_info(u3_moat* mot_u)
 {
   u3_meat*  met_u = mot_u->ext_u;
-  c3_w      len_w = 0;
+  c3_w_tmp      len_w = 0;
 
   while ( met_u ) {
     len_w++;
@@ -379,7 +379,7 @@ void
 u3_newt_moat_slog(u3_moat* mot_u)
 {
   u3_meat* met_u = mot_u->ext_u;
-  c3_w     len_w = 0;
+  c3_w_tmp     len_w = 0;
 
     while ( met_u ) {
       len_w++;

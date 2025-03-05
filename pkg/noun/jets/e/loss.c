@@ -9,11 +9,11 @@
 
   typedef struct _u3_loss {                 //  loss problem
     u3_noun hel;                            //  a as a list
-    c3_w lel_w;                             //  length of a
-    c3_w lev_w;                             //  length of b
+    c3_w_tmp lel_w;                             //  length of a
+    c3_w_tmp lev_w;                             //  length of b
     u3_noun* hev;                           //  b as an array
     u3_noun sev;                            //  b as a set of lists
-    c3_w kct_w;                             //  candidate count
+    c3_w_tmp kct_w;                             //  candidate count
     u3_noun* kad;                           //  candidate array
   } u3_loss;
 
@@ -24,7 +24,7 @@
   {
     u3z(loc_u->sev);
     {
-      c3_w i_w;
+      c3_w_tmp i_w;
 
       for ( i_w = 0; i_w < loc_u->kct_w; i_w++ ) {
         u3z(loc_u->kad[i_w]);
@@ -70,7 +70,7 @@
 
     //  Read hev into array.
     {
-      c3_w i_w;
+      c3_w_tmp i_w;
 
       loc_u->hev = u3a_malloc(u3kb_lent(u3k(hev)) * sizeof(u3_noun));
 
@@ -88,7 +88,7 @@
     //
     loc_u->sev = u3_nul;
     {
-      c3_w i_w;
+      c3_w_tmp i_w;
 
       for ( i_w = 0; i_w < loc_u->lev_w; i_w++ ) {
         u3_noun how = loc_u->hev[i_w];
@@ -107,8 +107,8 @@
   //
   static void
   _lune(u3_loss* loc_u,
-        c3_w     inx_w,
-        c3_w     goy_w)
+        c3_w_tmp     inx_w,
+        c3_w_tmp     goy_w)
   {
     u3_noun kad;
 
@@ -128,8 +128,8 @@
   //
   static u3_noun
   _hink(u3_loss* loc_u,
-        c3_w     inx_w,
-        c3_w     goy_w)
+        c3_w_tmp     inx_w,
+        c3_w_tmp     goy_w)
   {
     return __
          ( (loc_u->kct_w == inx_w) ||
@@ -140,8 +140,8 @@
   //
   static u3_noun
   _lonk(u3_loss* loc_u,
-        c3_w     inx_w,
-        c3_w     goy_w)
+        c3_w_tmp     inx_w,
+        c3_w_tmp     goy_w)
   {
     return __
       ( (0 == inx_w) ||
@@ -154,9 +154,9 @@
   //
   static u3_noun
   _binka(u3_loss* loc_u,
-         c3_w*    inx_w,
-         c3_w     max_w,
-         c3_w     goy_w)
+         c3_w_tmp*    inx_w,
+         c3_w_tmp     max_w,
+         c3_w_tmp     goy_w)
   {
     while ( *inx_w <= max_w ) {
       if ( c3n == _lonk(loc_u, *inx_w, goy_w) ) {
@@ -177,9 +177,9 @@
   //
   static u3_noun
   _bink(u3_loss* loc_u,
-        c3_w*    inx_w,
-        c3_w     max_w,
-        c3_w     goy_w)
+        c3_w_tmp*    inx_w,
+        c3_w_tmp     max_w,
+        c3_w_tmp     goy_w)
   {
     u3_assert(max_w >= *inx_w);
 
@@ -196,7 +196,7 @@
       }
     }
     else {
-      c3_w mid_w = *inx_w + ((max_w - *inx_w) / 2);
+      c3_w_tmp mid_w = *inx_w + ((max_w - *inx_w) / 2);
 
       if ( (c3n == _lonk(loc_u, mid_w, goy_w)) ||
            (c3y == _hink(loc_u, mid_w, goy_w)) )
@@ -212,7 +212,7 @@
 
   static void
   _merg(u3_loss* loc_u,
-        c3_w     inx_w,
+        c3_w_tmp     inx_w,
         u3_noun  gay)
   {
     if ( (u3_nul == gay) || (inx_w > loc_u->kct_w) ) {
@@ -220,7 +220,7 @@
     }
     else {
       u3_noun i_gay = u3h(gay);
-      c3_w    goy_w = u3r_word(0, i_gay);
+      c3_w_tmp    goy_w = u3r_word(0, i_gay);
       u3_noun bik;
 
       bik = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);

@@ -4,7 +4,7 @@
 /* VORTEX
  */
 
-typedef c3_w       u3v_version;
+typedef c3_w_tmp       u3v_version;
 
 #define U3V_VER1   1
 #define U3V_VER2   2
@@ -15,7 +15,7 @@ typedef c3_w       u3v_version;
 /* PATCHES
  */
 
-typedef c3_w       u3e_version;
+typedef c3_w_tmp       u3e_version;
 
 #define U3P_VER1   1
 #define U3P_VERLAT U3P_VER1

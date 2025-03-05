@@ -8,7 +8,7 @@
 ** Adjust for future leap secs!
 */
 c3_d
-u3_time_sec_in(c3_w unx_w)
+u3_time_sec_in(c3_w_tmp unx_w)
 {
   return 0x8000000cce9e0d80ULL + (c3_d)unx_w;
 }
@@ -32,7 +32,7 @@ u3_time_sec_out(c3_d urs_d)
 /* u3_time_fsc_in(): urbit fracto-seconds from unix microseconds.
 */
 c3_d
-u3_time_fsc_in(c3_w usc_w)
+u3_time_fsc_in(c3_w_tmp usc_w)
 {
   c3_d usc_d = usc_w;
 
@@ -60,8 +60,8 @@ u3_time_msc_out(c3_d ufc_d)
 u3_atom
 u3_time_in_tv(struct timeval* tim_tv)
 {
-  c3_w unx_w = tim_tv->tv_sec;
-  c3_w usc_w = tim_tv->tv_usec;
+  c3_w_tmp unx_w = tim_tv->tv_sec;
+  c3_w_tmp usc_w = tim_tv->tv_usec;
   c3_d cub_d[2];
 
   cub_d[0] = u3_time_fsc_in(usc_w);

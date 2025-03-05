@@ -12,17 +12,17 @@
     /* u3e_line: control line.
     */
       typedef struct _u3e_line {
-        c3_w pag_w;
-        c3_w mug_w;
+        c3_w_tmp pag_w;
+        c3_w_tmp mug_w;
       } u3e_line;
 
     /* u3e_control: memory change, control file.
     */
       typedef struct _u3e_control {
         u3e_version ver_w;                  //  version number
-        c3_w        nor_w;                  //  new page count north
-        c3_w        sou_w;                  //  new page count south
-        c3_w        pgs_w;                  //  number of changed pages
+        c3_w_tmp        nor_w;                  //  new page count north
+        c3_w_tmp        sou_w;                  //  new page count south
+        c3_w_tmp        pgs_w;                  //  number of changed pages
         u3e_line    mem_u[];                //  per page
       } u3e_control;
 
@@ -39,7 +39,7 @@
       typedef struct _u3e_image {
         c3_c* nam_c;                        //  segment name
         c3_i  fid_i;                        //  open file, or 0
-        c3_w  pgs_w;                        //  length in pages
+        c3_w_tmp  pgs_w;                        //  length in pages
       } u3e_image;
 
     /* u3e_pool: entire memory system.
@@ -47,9 +47,9 @@
       typedef struct _u3e_pool {
         c3_c*     dir_c;                     //  path to
         c3_i      eph_i;                     //  ephemeral file descriptor
-        c3_w      dit_w[u3a_pages >> 5];     //  touched since last save
-        c3_w      pag_w;                     //  number of pages (<= u3a_pages)
-        c3_w      gar_w;                     //  guard page
+        c3_w_tmp      dit_w[u3a_pages >> 5];     //  touched since last save
+        c3_w_tmp      pag_w;                     //  number of pages (<= u3a_pages)
+        c3_w_tmp      gar_w;                     //  guard page
         u3e_image nor_u;                     //  north segment
         u3e_image sou_u;                     //  south segment
       } u3e_pool;

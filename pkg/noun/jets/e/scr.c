@@ -8,15 +8,15 @@
 #include "urcrypt.h"
 
   static u3_weak
-  _cqes_hs(u3_atom p, c3_w pwd_w,
-           u3_atom s, c3_w sal_w,
+  _cqes_hs(u3_atom p, c3_w_tmp pwd_w,
+           u3_atom s, c3_w_tmp sal_w,
            u3_atom n,
            u3_atom r,
            u3_atom z,
            u3_atom d)
   {
     u3_noun chk;
-    c3_w out_w;
+    c3_w_tmp out_w;
 
     if ( !u3r_word_fit(&out_w, d) ) {
       return u3m_bail(c3__fail);
@@ -49,7 +49,7 @@
     else {
       u3_noun pro;
       c3_d    n_d = u3r_chub(0, n);
-      c3_w    r_w = u3r_word(0, r),
+      c3_w_tmp    r_w = u3r_word(0, r),
               z_w = u3r_word(0, z);
       c3_y   *pwd_y = u3a_malloc(pwd_w),
              *sal_y = u3a_malloc(sal_w),
@@ -77,7 +77,7 @@
             u3_atom z,
             u3_atom d)
   {
-    c3_w pwd_w, sal_w;
+    c3_w_tmp pwd_w, sal_w;
     if ( !(u3r_word_fit(&pwd_w, pl) &&
            u3r_word_fit(&sal_w, sl)) ) {
       return u3m_bail(c3__fail);
@@ -140,8 +140,8 @@
   }
 
   static u3_atom
-  _cqes_pb(u3_atom p, c3_w pwd_w,
-           u3_atom s, c3_w sal_w,
+  _cqes_pb(u3_atom p, c3_w_tmp pwd_w,
+           u3_atom s, c3_w_tmp sal_w,
            u3_atom c,
            u3_atom d)
   {
@@ -173,7 +173,7 @@
             u3_atom c,
             u3_atom d)
   {
-    c3_w pwd_w, sal_w;
+    c3_w_tmp pwd_w, sal_w;
     if ( !(u3r_word_fit(&pwd_w, pl) &&
            u3r_word_fit(&sal_w, sl)) ) {
       return u3m_bail(c3__fail);

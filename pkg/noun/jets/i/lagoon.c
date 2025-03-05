@@ -19,12 +19,12 @@
 
   union half {
     float16_t h;
-    c3_w c;
+    c3_w_tmp c;
   };
 
   union sing {
     float32_t s;
-    c3_w c;
+    c3_w_tmp c;
   };
 
   union doub {
@@ -39,7 +39,7 @@
 
   //  $?(%n %u %d %z %a)
   static inline void
-  _set_rounding(c3_w a)
+  _set_rounding(c3_w_tmp a)
   {
     // We could use SoftBLAS set_rounding() to set the SoftFloat
     // mode as well, but it's more explicit to do it here since
@@ -580,7 +580,7 @@
     c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
     u3r_bytes(0, syz_x, x_bytes, x_data);
 
-    c3_w min_idx = 0;
+    c3_w_tmp min_idx = 0;
 
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {
@@ -653,7 +653,7 @@
     c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
     u3r_bytes(0, syz_x, x_bytes, x_data);
 
-    c3_w max_idx = 0;
+    c3_w_tmp max_idx = 0;
 
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {

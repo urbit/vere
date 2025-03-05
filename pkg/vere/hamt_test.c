@@ -8,7 +8,7 @@
 
 
 // defined in noun/hashtable.c
-c3_w _ch_skip_slot(c3_w mug_w, c3_w lef_w);
+c3_w_tmp _ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w);
 
 /* _setup(): prepare for tests.
 */
@@ -66,7 +66,7 @@ main(int argc, char* argv[])
   u3h_put(pit_p, init, u3nc(c3y, u3_nul));
   u3z(init);
 
-  for ( c3_w fra_w = 0; fra_w < 100000; fra_w++ ) {
+  for ( c3_w_tmp fra_w = 0; fra_w < 100000; fra_w++ ) {
     u3_noun data = u3nc(u3i_string("mess"),
                           u3nc(48,
                             u3nc(c3__pact,
@@ -95,7 +95,7 @@ main(int argc, char* argv[])
     u3z(data);
   }
 
-  for ( c3_w fra_w = 0; fra_w < 100000; fra_w++ ) {
+  for ( c3_w_tmp fra_w = 0; fra_w < 100000; fra_w++ ) {
     u3_noun data = u3nc(u3i_string("mess"),
                           u3nc(48,
                             u3nc(c3__pact,

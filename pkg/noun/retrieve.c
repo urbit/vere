@@ -41,12 +41,12 @@ u3r_hext(u3_noun  a,
 /* _frag_word(): fast fragment/branch prediction for top word.
 */
 static u3_weak
-_frag_word(c3_w a_w, u3_noun b)
+_frag_word(c3_w_tmp a_w, u3_noun b)
 {
   u3_assert(0 != a_w);
 
   {
-    c3_w dep_w = u3x_dep(a_w);
+    c3_w_tmp dep_w = u3x_dep(a_w);
 
     while ( dep_w ) {
       if ( c3n == u3a_is_cell(b) ) {
@@ -66,9 +66,9 @@ _frag_word(c3_w a_w, u3_noun b)
 /* _frag_deep(): fast fragment/branch for deep words.
 */
 static u3_weak
-_frag_deep(c3_w a_w, u3_noun b)
+_frag_deep(c3_w_tmp a_w, u3_noun b)
 {
-  c3_w dep_w = 32;
+  c3_w_tmp dep_w = 32;
 
   while ( dep_w ) {
     if ( c3n == u3a_is_cell(b) ) {
@@ -112,7 +112,7 @@ u3r_at(u3_atom a, u3_noun b)
     }
     else {
       u3a_atom* a_u = u3a_to_ptr(a);
-      c3_w len_w      = a_u->len_w;
+      c3_w_tmp len_w      = a_u->len_w;
 
       b = _frag_word(a_u->buf_w[len_w - 1], b);
       len_w -= 1;
@@ -146,20 +146,20 @@ u3r_at(u3_atom a, u3_noun b)
 **   Axes must be sorted in tree order.
 */
   struct _mean_pair {
-    c3_w    axe_w;
+    c3_w_tmp    axe_w;
     u3_noun* som;
   };
 
   static c3_w
-  _mean_cut(c3_w               len_w,
+  _mean_cut(c3_w_tmp               len_w,
             struct _mean_pair* prs_m)
   {
-    c3_w i_w, cut_t, cut_w;
+    c3_w_tmp i_w, cut_t, cut_w;
 
     cut_t = 0;
     cut_w = 0;
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      c3_w axe_w = prs_m[i_w].axe_w;
+      c3_w_tmp axe_w = prs_m[i_w].axe_w;
 
       if ( (cut_t == 0) && (3 == u3x_cap(axe_w)) ) {
         cut_t = 1;
@@ -172,7 +172,7 @@ u3r_at(u3_atom a, u3_noun b)
 
   static c3_o
   _mean_extract(u3_noun            som,
-                c3_w               len_w,
+                c3_w_tmp               len_w,
                 struct _mean_pair* prs_m)
   {
     if ( len_w == 0 ) {
@@ -186,7 +186,7 @@ u3r_at(u3_atom a, u3_noun b)
       if ( c3n == u3a_is_cell(som) ) {
         return c3n;
       } else {
-        c3_w cut_w = _mean_cut(len_w, prs_m);
+        c3_w_tmp cut_w = _mean_cut(len_w, prs_m);
 
         return c3a
           (_mean_extract(u3a_h(som), cut_w, prs_m),
@@ -199,7 +199,7 @@ c3_o
 u3r_vmean(u3_noun som, va_list ap)
 {
   va_list            aq;
-  c3_w               len_w;
+  c3_w_tmp               len_w;
   struct _mean_pair* prs_m;
 
   u3_assert(u3_none != som);
@@ -225,7 +225,7 @@ u3r_vmean(u3_noun som, va_list ap)
   //  traverse va_list and extract args
   //
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
 
     for ( i_w = 0; i_w < len_w; i_w++ ) {
       prs_m[i_w].axe_w = va_arg(ap, c3_w);
@@ -329,8 +329,8 @@ _cr_sing_atom(u3_atom a, u3_noun b)
       return c3n;
     }
     else {
-      c3_w a_w = a_u->len_w;
-      c3_w b_w = b_u->len_w;
+      c3_w_tmp a_w = a_u->len_w;
+      c3_w_tmp b_w = b_u->len_w;
 
       //  [a] and [b] are not equal if their lengths are not equal
       //
@@ -338,7 +338,7 @@ _cr_sing_atom(u3_atom a, u3_noun b)
         return c3n;
       }
       else {
-        c3_w i_w;
+        c3_w_tmp i_w;
 
         //  XX memcmp
         //
@@ -748,18 +748,18 @@ u3r_nord(u3_noun a,
           u3a_atom* a_u = u3a_to_ptr(a);
           u3a_atom* b_u = u3a_to_ptr(b);
 
-          c3_w w_rez = a_u->len_w;
-          c3_w w_mox = b_u->len_w;
+          c3_w_tmp w_rez = a_u->len_w;
+          c3_w_tmp w_mox = b_u->len_w;
 
           if ( w_rez != w_mox ) {
             return (w_rez < w_mox) ? 0 : 2;
           }
           else {
-            c3_w i_w;
+            c3_w_tmp i_w;
 
             for ( i_w = 0; i_w < w_rez; i_w++ ) {
-              c3_w ai_w = a_u->buf_w[i_w];
-              c3_w bi_w = b_u->buf_w[i_w];
+              c3_w_tmp ai_w = a_u->buf_w[i_w];
+              c3_w_tmp bi_w = b_u->buf_w[i_w];
 
               if ( ai_w != bi_w ) {
                 return (ai_w < bi_w) ? 0 : 2;
@@ -797,8 +797,8 @@ u3r_sing_c(const c3_c* a_c,
     return c3n;
   }
   else {
-    c3_w w_sof = strlen(a_c);
-    c3_w i_w;
+    c3_w_tmp w_sof = strlen(a_c);
+    c3_w_tmp i_w;
 
     if ( w_sof != u3r_met(3, b) ) {
       return c3n;
@@ -966,8 +966,8 @@ u3r_met(c3_y  a_y,
   /* gal_w: number of words besides (daz_w) in (b).
   ** daz_w: top word in (b).
   */
-  c3_w gal_w;
-  c3_w daz_w;
+  c3_w_tmp gal_w;
+  c3_w_tmp daz_w;
 
   if ( _(u3a_is_cat(b)) ) {
     gal_w = 0;
@@ -980,7 +980,7 @@ u3r_met(c3_y  a_y,
     daz_w = b_u->buf_w[gal_w];
   }
 
-  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
+  /* 5 because 1<<2 bytes in c3_w_tmp, 1<<3 bits in byte.
      aka log2(CHAR_BIT * sizeof gal_w)
      a_y < 5 informs whether we shift return left or right
      */
@@ -1004,7 +1004,7 @@ u3r_met(c3_y  a_y,
 **   Return bit (a_w) of (b).
 */
 c3_b
-u3r_bit(c3_w    a_w,
+u3r_bit(c3_w_tmp    a_w,
           u3_atom b)
 {
   u3_assert(u3_none != b);
@@ -1019,13 +1019,13 @@ u3r_bit(c3_w    a_w,
   else {
     u3a_atom* b_u   = u3a_to_ptr(b);
     c3_y        vut_y = (a_w & 31);
-    c3_w        pix_w = (a_w >> 5);
+    c3_w_tmp        pix_w = (a_w >> 5);
 
     if ( pix_w >= b_u->len_w ) {
       return 0;
     }
     else {
-      c3_w nys_w = b_u->buf_w[pix_w];
+      c3_w_tmp nys_w = b_u->buf_w[pix_w];
 
       return (1 & (nys_w >> vut_y));
     }
@@ -1037,7 +1037,7 @@ u3r_bit(c3_w    a_w,
 **   Return byte (a_w) of (b).
 */
 c3_y
-u3r_byte(c3_w    a_w,
+u3r_byte(c3_w_tmp    a_w,
            u3_atom b)
 {
   u3_assert(u3_none != b);
@@ -1052,13 +1052,13 @@ u3r_byte(c3_w    a_w,
   else {
     u3a_atom* b_u   = u3a_to_ptr(b);
     c3_y      vut_y = (a_w & 3);
-    c3_w      pix_w = (a_w >> 2);
+    c3_w_tmp      pix_w = (a_w >> 2);
 
     if ( pix_w >= b_u->len_w ) {
       return 0;
     }
     else {
-      c3_w nys_w = b_u->buf_w[pix_w];
+      c3_w_tmp nys_w = b_u->buf_w[pix_w];
 
       return (255 & (nys_w >> (vut_y << 3)));
     }
@@ -1070,8 +1070,8 @@ u3r_byte(c3_w    a_w,
 **  Copy bytes (a_w) through (a_w + b_w - 1) from (d) to (c).
 */
 void
-u3r_bytes(c3_w    a_w,
-            c3_w    b_w,
+u3r_bytes(c3_w_tmp    a_w,
+            c3_w_tmp    b_w,
             c3_y*   c_y,
             u3_atom d)
 {
@@ -1079,8 +1079,8 @@ u3r_bytes(c3_w    a_w,
   u3_assert(_(u3a_is_atom(d)));
 
   if ( _(u3a_is_cat(d)) ) {
-    c3_w e_w = d >> (c3_min(a_w, 4) << 3);
-    c3_w m_w = c3_min(b_w, 4);
+    c3_w_tmp e_w = d >> (c3_min(a_w, 4) << 3);
+    c3_w_tmp m_w = c3_min(b_w, 4);
     memcpy(c_y, (c3_y*)&e_w, m_w);
     if ( b_w > 4 ) {
       memset(c_y + 4, 0, b_w - 4);
@@ -1088,14 +1088,14 @@ u3r_bytes(c3_w    a_w,
   }
   else {
     u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_w n_w = d_u->len_w << 2;
+    c3_w_tmp n_w = d_u->len_w << 2;
     c3_y* x_y = (c3_y*)d_u->buf_w + a_w;
 
     if ( a_w >= n_w ) {
       memset(c_y, 0, b_w);
     }
     else {
-      c3_w z_w = c3_min(b_w, n_w - a_w);
+      c3_w_tmp z_w = c3_min(b_w, n_w - a_w);
       memcpy(c_y, x_y, z_w);
       if ( b_w > n_w - a_w ) {
         memset(c_y + z_w, 0, b_w + a_w - n_w);
@@ -1109,9 +1109,9 @@ u3r_bytes(c3_w    a_w,
 **  Copy (len_w) bytes of (a) into (buf_y) if it fits, returning overage
 */
 c3_w
-u3r_bytes_fit(c3_w len_w, c3_y *buf_y, u3_atom a)
+u3r_bytes_fit(c3_w_tmp len_w, c3_y *buf_y, u3_atom a)
 {
-  c3_w met_w = u3r_met(3, a);
+  c3_w_tmp met_w = u3r_met(3, a);
   if ( met_w <= len_w ) {
     u3r_bytes(0, len_w, buf_y, a);
     return 0;
@@ -1126,8 +1126,8 @@ u3r_bytes_fit(c3_w len_w, c3_y *buf_y, u3_atom a)
 **  Copy (len_w) bytes starting at (a_w) from (b) into a fresh allocation.
 */
 c3_y*
-u3r_bytes_alloc(c3_w    a_w,
-                c3_w    len_w,
+u3r_bytes_alloc(c3_w_tmp    a_w,
+                c3_w_tmp    len_w,
                 u3_atom b)
 {
   c3_y* b_y = u3a_malloc(len_w);
@@ -1141,9 +1141,9 @@ u3r_bytes_alloc(c3_w    a_w,
 **  storing the length in (len_w).
 */
 c3_y*
-u3r_bytes_all(c3_w* len_w, u3_atom a)
+u3r_bytes_all(c3_w_tmp* len_w, u3_atom a)
 {
-  c3_w met_w = *len_w = u3r_met(3, a);
+  c3_w_tmp met_w = *len_w = u3r_met(3, a);
   return u3r_bytes_alloc(0, met_w, a);
 }
 
@@ -1163,7 +1163,7 @@ u3r_mp(mpz_t   a_mp,
   }
   else {
     u3a_atom* b_u = u3a_to_ptr(b);
-    c3_w    len_w = b_u->len_w;
+    c3_w_tmp    len_w = b_u->len_w;
     c3_d    bit_d = (c3_d)len_w << 5;
 
     //  avoid reallocation on import, if possible
@@ -1178,7 +1178,7 @@ u3r_mp(mpz_t   a_mp,
 **   Return short (a_w) of (b).
 */
 c3_s
-u3r_short(c3_w  a_w,
+u3r_short(c3_w_tmp  a_w,
           u3_atom b)
 {
   u3_assert( u3_none != b );
@@ -1193,13 +1193,13 @@ u3r_short(c3_w  a_w,
   }
   else {
     u3a_atom* b_u = u3a_to_ptr(b);
-    c3_w    nix_w = a_w >> 1;
+    c3_w_tmp    nix_w = a_w >> 1;
 
     if ( nix_w >= b_u->len_w ) {
       return 0;
     }
     else {
-      c3_w wor_w = b_u->buf_w[nix_w];
+      c3_w_tmp wor_w = b_u->buf_w[nix_w];
 
       return ( a_w & 1 ) ? (wor_w >> 16) : (wor_w & 0xffff);
     }
@@ -1211,7 +1211,7 @@ u3r_short(c3_w  a_w,
 **   Return word (a_w) of (b).
 */
 c3_w
-u3r_word(c3_w    a_w,
+u3r_word(c3_w_tmp    a_w,
            u3_atom b)
 {
   u3_assert(u3_none != b);
@@ -1238,7 +1238,7 @@ u3r_word(c3_w    a_w,
 **   Fill (out_w) with (a) if it fits, returning success.
 */
 c3_t
-u3r_word_fit(c3_w *out_w, u3_atom a)
+u3r_word_fit(c3_w_tmp *out_w, u3_atom a)
 {
   if ( u3r_met(5, a) > 1 ) {
     return 0;
@@ -1254,11 +1254,11 @@ u3r_word_fit(c3_w *out_w, u3_atom a)
 **   Return double-word (a_w) of (b).
 */
 c3_d
-u3r_chub(c3_w  a_w,
+u3r_chub(c3_w_tmp  a_w,
            u3_atom b)
 {
-  c3_w wlo_w = u3r_word(a_w * 2, b);
-  c3_w whi_w = u3r_word(1 + (a_w * 2), b);
+  c3_w_tmp wlo_w = u3r_word(a_w * 2, b);
+  c3_w_tmp whi_w = u3r_word(1 + (a_w * 2), b);
 
   return (((uint64_t)whi_w) << 32ULL) | ((uint64_t)wlo_w);
 }
@@ -1268,9 +1268,9 @@ u3r_chub(c3_w  a_w,
 **  Copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
 */
 void
-u3r_words(c3_w    a_w,
-          c3_w    b_w,
-          c3_w*   c_w,
+u3r_words(c3_w_tmp    a_w,
+          c3_w_tmp    b_w,
+          c3_w_tmp*   c_w,
           u3_atom d)
 {
   u3_assert(u3_none != d);
@@ -1294,8 +1294,8 @@ u3r_words(c3_w    a_w,
       memset((c3_y*)c_w, 0, b_w << 2);
     }
     else {
-      c3_w z_w = c3_min(b_w, d_u->len_w - a_w);
-      c3_w* x_w = d_u->buf_w + a_w;
+      c3_w_tmp z_w = c3_min(b_w, d_u->len_w - a_w);
+      c3_w_tmp* x_w = d_u->buf_w + a_w;
       memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 2);
       if ( b_w > d_u->len_w - a_w ) {
         memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 2);
@@ -1309,14 +1309,14 @@ u3r_words(c3_w    a_w,
 **  Copy double-words (a_w) through (a_w + b_w - 1) from (d) to (c).
 */
 void
-u3r_chubs(c3_w    a_w,
-          c3_w    b_w,
+u3r_chubs(c3_w_tmp    a_w,
+          c3_w_tmp    b_w,
           c3_d*   c_d,
           u3_atom d)
 {
   /* XX: assumes little-endian
   */
-  u3r_words(a_w * 2, b_w * 2, (c3_w *)c_d, d);
+  u3r_words(a_w * 2, b_w * 2, (c3_w_tmp *)c_d, d);
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
@@ -1337,7 +1337,7 @@ u3r_safe_byte(u3_noun dat, c3_y* out_y)
 /* u3r_safe_word(): validate and retrieve word.
 */
 c3_o
-u3r_safe_word(u3_noun dat, c3_w* out_w)
+u3r_safe_word(u3_noun dat, c3_w_tmp* out_w)
 {
   if (  (c3n == u3a_is_atom(dat))
      || (1 < u3r_met(5, dat)) )
@@ -1374,8 +1374,8 @@ void
 u3r_chop_bits(c3_g  bif_g,
               c3_d  wid_d,
               c3_g  bit_g,
-              c3_w* dst_w,
-        const c3_w* src_w)
+              c3_w_tmp* dst_w,
+        const c3_w_tmp* src_w)
 {
   c3_y fib_y = 32 - bif_g;
   c3_y tib_y = 32 - bit_g;
@@ -1386,7 +1386,7 @@ u3r_chop_bits(c3_g  bif_g,
     //  align *dst_w
     //
     if ( bit_g ) {
-      c3_w low_w = src_w[0] >> bif_g;
+      c3_w_tmp low_w = src_w[0] >> bif_g;
 
       if ( bif_g > bit_g ) {
         low_w   ^= src_w[1] << fib_y;
@@ -1425,7 +1425,7 @@ u3r_chop_bits(c3_g  bif_g,
   //  we need to chop (more) bits
   //
   if ( wid_d ) {
-    c3_w hig_w = src_w[0] >> bif_g;
+    c3_w_tmp hig_w = src_w[0] >> bif_g;
 
     if ( wid_d > fib_y ) {
       hig_w   ^= src_w[1] << fib_y;
@@ -1445,12 +1445,12 @@ u3r_chop_bits(c3_g  bif_g,
 */
 void
 u3r_chop_words(c3_g  met_g,
-               c3_w  fum_w,
-               c3_w  wid_w,
-               c3_w  tou_w,
-               c3_w* dst_w,
-               c3_w  len_w,
-         const c3_w* src_w)
+               c3_w_tmp  fum_w,
+               c3_w_tmp  wid_w,
+               c3_w_tmp  tou_w,
+               c3_w_tmp* dst_w,
+               c3_w_tmp  len_w,
+         const c3_w_tmp* src_w)
 {
   //  operate on words
   //
@@ -1535,14 +1535,14 @@ u3r_chop_words(c3_g  met_g,
 */
 void
 u3r_chop(c3_g  met_g,
-         c3_w  fum_w,
-         c3_w  wid_w,
-         c3_w  tou_w,
-         c3_w* dst_w,
+         c3_w_tmp  fum_w,
+         c3_w_tmp  wid_w,
+         c3_w_tmp  tou_w,
+         c3_w_tmp* dst_w,
          u3_atom src)
 {
-  c3_w* src_w;
-  c3_w  len_w;
+  c3_w_tmp* src_w;
+  c3_w_tmp  len_w;
 
   if ( _(u3a_is_cat(src)) ) {
     len_w = src ? 1 : 0;
@@ -1566,7 +1566,7 @@ u3r_chop(c3_g  met_g,
 c3_c*
 u3r_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_w_tmp  met_w = u3r_met(3, a);
   c3_c* str_c = c3_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);
@@ -1580,7 +1580,7 @@ c3_y*
 u3r_tape(u3_noun a)
 {
   u3_noun b;
-  c3_w    i_w;
+  c3_w_tmp    i_w;
   c3_y    *a_y;
 
   for ( i_w = 0, b=a; c3y == u3a_is_cell(b); i_w++, b=u3a_t(b) )
@@ -1601,8 +1601,8 @@ c3_l
 u3r_mug_both(c3_l lef_l, c3_l rit_l)
 {
   c3_y len_y = 4 + ((c3_bits_word(rit_l) + 0x7) >> 3);
-  c3_w syd_w = 0xdeadbeef;
-  c3_w   i_w = 0;
+  c3_w_tmp syd_w = 0xdeadbeef;
+  c3_w_tmp   i_w = 0;
   c3_y buf_y[8];
 
   buf_y[0] = lef_l         & 0xff;
@@ -1615,7 +1615,7 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
   buf_y[7] = (rit_l >> 24) & 0xff;
 
   while ( i_w < 8 ) {
-    c3_w haz_w;
+    c3_w_tmp haz_w;
     c3_l ham_l;
 
     MurmurHash3_x86_32(buf_y, len_y, syd_w, &haz_w);
@@ -1636,13 +1636,13 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
 */
 c3_l
 u3r_mug_bytes(const c3_y *buf_y,
-              c3_w        len_w)
+              c3_w_tmp        len_w)
 {
-  c3_w syd_w = 0xcafebabe;
-  c3_w   i_w = 0;
+  c3_w_tmp syd_w = 0xcafebabe;
+  c3_w_tmp   i_w = 0;
 
   while ( i_w < 8 ) {
-    c3_w haz_w;
+    c3_w_tmp haz_w;
     c3_l ham_l;
 
     MurmurHash3_x86_32(buf_y, len_w, syd_w, &haz_w);
@@ -1673,8 +1673,8 @@ c3_l
 u3r_mug_cell(u3_noun hed,
              u3_noun tel)
 {
-  c3_w lus_w = u3r_mug(hed);
-  c3_w biq_w = u3r_mug(tel);
+  c3_w_tmp lus_w = u3r_mug(hed);
+  c3_w_tmp biq_w = u3r_mug(tel);
 
   return u3r_mug_both(lus_w, biq_w);
 }
@@ -1684,7 +1684,7 @@ u3r_mug_cell(u3_noun hed,
 c3_l
 u3r_mug_chub(c3_d num_d)
 {
-  c3_w buf_w[2];
+  c3_w_tmp buf_w[2];
 
   buf_w[0] = (c3_w)(num_d & 0xffffffffULL);
   buf_w[1] = (c3_w)(num_d >> 32);
@@ -1695,9 +1695,9 @@ u3r_mug_chub(c3_d num_d)
 /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
 */
 c3_l
-u3r_mug_words(const c3_w* key_w, c3_w len_w)
+u3r_mug_words(const c3_w_tmp* key_w, c3_w_tmp len_w)
 {
-  c3_w byt_w;
+  c3_w_tmp byt_w;
 
   //  ignore trailing zeros
   //
@@ -1711,8 +1711,8 @@ u3r_mug_words(const c3_w* key_w, c3_w len_w)
     byt_w = 0;
   }
   else {
-    c3_w gal_w = len_w - 1;
-    c3_w daz_w = key_w[gal_w];
+    c3_w_tmp gal_w = len_w - 1;
+    c3_w_tmp daz_w = key_w[gal_w];
 
     byt_w = (gal_w << 2) + ((c3_bits_word(daz_w) + 7) >> 3);
   }

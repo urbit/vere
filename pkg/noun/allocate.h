@@ -63,17 +63,17 @@
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
       typedef struct {
-        c3_w mug_w;
+        c3_w_tmp mug_w;
       } u3a_noun;
 
       typedef struct {
-        c3_w mug_w;
-        c3_w len_w;
-        c3_w buf_w[0];
+        c3_w_tmp mug_w;
+        c3_w_tmp len_w;
+        c3_w_tmp buf_w[0];
       } u3a_atom;
 
       typedef struct {
-        c3_w    mug_w;
+        c3_w_tmp    mug_w;
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
@@ -93,11 +93,11 @@
     ** Do not attempt to adjust this structure!
     */
       typedef struct _u3a_box {
-        c3_w   siz_w;                       // size of this box
-        c3_w   use_w;                       // reference count; free if 0
+        c3_w_tmp   siz_w;                       // size of this box
+        c3_w_tmp   use_w;                       // reference count; free if 0
 #       ifdef U3_MEMORY_DEBUG
-          c3_w   eus_w;                     // recomputed refcount
-          c3_w   cod_w;                     // tracing code
+          c3_w_tmp   eus_w;                     // recomputed refcount
+          c3_w_tmp   cod_w;                     // tracing code
 #       endif
       } u3a_box;
 
@@ -132,24 +132,24 @@
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_w_tmp fut_w[32];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
             jmp_buf buf;
-            c3_w buf_w[256];                  //  futureproofing
+            c3_w_tmp buf_w[256];                  //  futureproofing
           };
         } esc;
 
         struct {                              //  miscellaneous config
-          c3_w fag_w;                         //  flag bits
+          c3_w_tmp fag_w;                         //  flag bits
         } how;                                //
 
         struct {                              //  allocation pools
           u3p(u3a_fbox) fre_p[u3a_fbox_no];   //  heap by node size log
           u3p(u3a_fbox) cel_p;                //  custom cell allocator
-          c3_w fre_w;                         //  number of free words
-          c3_w max_w;                         //  maximum allocated
+          c3_w_tmp fre_w;                         //  number of free words
+          c3_w_tmp max_w;                         //  maximum allocated
         } all;
 
         u3a_jets jed;                         //  jet dashboard
@@ -376,10 +376,10 @@
     /* u3_Code: memory code.
     */
 #ifdef U3_MEMORY_DEBUG
-      extern c3_w u3_Code;
+      extern c3_w_tmp u3_Code;
 #endif
 
-#   define u3_Loom      ((c3_w *)(void *)U3_OS_LoomBase)
+#   define u3_Loom      ((c3_w_tmp *)(void *)U3_OS_LoomBase)
 
   /* u3a_into(): convert loom offset [x] into generic pointer.
    */
@@ -387,7 +387,7 @@
 
   /* u3a_outa(): convert pointer [p] into word offset into loom.
    */
-#   define u3a_outa(p)  ((c3_w *)(void *)(p) - u3_Loom)
+#   define u3a_outa(p)  ((c3_w_tmp *)(void *)(p) - u3_Loom)
 
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
@@ -399,20 +399,20 @@
 
   /* u3a_to_wtr(): convert noun [som] into word pointer into loom.
    */
-#   define u3a_to_wtr(som)  ((c3_w *)u3a_to_ptr(som))
+#   define u3a_to_wtr(som)  ((c3_w_tmp *)u3a_to_ptr(som))
 
   /**  Inline functions.
   **/
   /* u3a_to_pug(): set bit 31 of [off].
    */
-  inline c3_w u3a_to_pug(c3_w off) {
+  inline c3_w_tmp u3a_to_pug(c3_w_tmp off) {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | 0x80000000;
   }
 
   /* u3a_to_pom(): set bits 30 and 31 of [off].
    */
-  inline c3_w u3a_to_pom(c3_w off) {
+  inline c3_w_tmp u3a_to_pom(c3_w_tmp off) {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | 0xc0000000;
   }
@@ -496,11 +496,11 @@
         /* u3a_walloc(): allocate storage measured in words.
         */
           void*
-          u3a_walloc(c3_w len_w);
+          u3a_walloc(c3_w_tmp len_w);
 
         /* u3a_celloc(): allocate a cell.  Faster, sometimes.
         */
-          c3_w*
+          c3_w_tmp*
           u3a_celloc(void);
 
         /* u3a_wfree(): free storage.
@@ -511,17 +511,17 @@
         /* u3a_wtrim(): trim storage.
         */
           void
-          u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w);
+          u3a_wtrim(void* tox_v, c3_w_tmp old_w, c3_w_tmp len_w);
 
         /* u3a_wealloc(): word realloc.
         */
           void*
-          u3a_wealloc(void* lag_v, c3_w len_w);
+          u3a_wealloc(void* lag_v, c3_w_tmp len_w);
 
         /* u3a_pile_prep(): initialize stack control.
         */
           void
-          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w);
+          u3a_pile_prep(u3a_pile* pil_u, c3_w_tmp len_w);
 
       /* C-style aligned allocation - *not* compatible with above.
       */
@@ -690,12 +690,12 @@
         /* u3a_lush(): leak push.
         */
           c3_w
-          u3a_lush(c3_w lab_w);
+          u3a_lush(c3_w_tmp lab_w);
 
         /* u3a_lop(): leak pop.
         */
           void
-          u3a_lop(c3_w lab_w);
+          u3a_lop(c3_w_tmp lab_w);
 
         /* u3a_print_time: print microsecond time.
         */
@@ -705,12 +705,12 @@
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_w_tmp den_w, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount.
         */
           void
-          u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+          u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w);
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*
@@ -719,7 +719,7 @@
         /* u3a_maid(): maybe print memory.
         */
           c3_w
-          u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+          u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w);
 
         /* u3a_quac_free(): free quac memory.
         */
@@ -729,7 +729,7 @@
         /* u3a_uncap_print_memory(): un-captioned print memory amount.
         */
           void
-          u3a_uncap_print_memory(FILE* fil_u, c3_w byt_w);
+          u3a_uncap_print_memory(FILE* fil_u, c3_w_tmp byt_w);
 
         /* u3a_deadbeef(): write 0xdeadbeef from hat to cap.
         */

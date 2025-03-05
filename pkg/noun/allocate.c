@@ -13,11 +13,11 @@
 u3_road* u3a_Road;
 
 #ifdef U3_MEMORY_DEBUG
-c3_w u3_Code;
+c3_w_tmp u3_Code;
 #endif
 
-c3_w u3a_to_pug(c3_w off);
-c3_w u3a_to_pom(c3_w off);
+c3_w_tmp u3a_to_pug(c3_w_tmp off);
+c3_w_tmp u3a_to_pom(c3_w_tmp off);
 
 void
 u3a_drop(const u3a_pile* pil_u);
@@ -39,8 +39,8 @@ _box_count(c3_ws siz_ws)
   u3R->all.fre_w += siz_ws;
 
   {
-    c3_w end_w = u3a_heap(u3R);
-    c3_w all_w = (end_w - u3R->all.fre_w);
+    c3_w_tmp end_w = u3a_heap(u3R);
+    c3_w_tmp all_w = (end_w - u3R->all.fre_w);
 
     if ( all_w > u3R->all.max_w ) {
       u3R->all.max_w = all_w;
@@ -76,7 +76,7 @@ _box_count(c3_ws siz_ws) { }
 **   siz_w >=  2GB     then [26]
 */
 static c3_w
-_box_slot(c3_w siz_w)
+_box_slot(c3_w_tmp siz_w)
 {
   if ( u3a_minimum == siz_w ) {
     return 0;
@@ -86,8 +86,8 @@ _box_slot(c3_w siz_w)
     return 1;
   }
   else {
-    c3_w bit_w = c3_bits_word(siz_w) - 3;
-    c3_w max_w = u3a_fbox_no - 1;
+    c3_w_tmp bit_w = c3_bits_word(siz_w) - 3;
+    c3_w_tmp max_w = u3a_fbox_no - 1;
     return c3_min(bit_w, max_w);
   }
 }
@@ -98,10 +98,10 @@ _box_slot(c3_w siz_w)
    use_w - box's refcount
 */
 static u3a_box*
-_box_make(void* box_v, c3_w siz_w, c3_w use_w)
+_box_make(void* box_v, c3_w_tmp siz_w, c3_w_tmp use_w)
 {
   u3a_box* box_u = box_v;
-  c3_w*    box_w = box_v;
+  c3_w_tmp*    box_w = box_v;
 
   u3_assert(siz_w >= u3a_minimum);
 
@@ -130,8 +130,8 @@ _box_attach(u3a_box* box_u)
 #if 0
   //  For debugging, fill the box with beef.
   {
-    c3_w* box_w = (void *)box_u;
-    c3_w  i_w;
+    c3_w_tmp* box_w = (void *)box_u;
+    c3_w_tmp  i_w;
 
     for ( i_w = c3_wiseof(u3a_box); (i_w + 1) < box_u->siz_w; i_w++ ) {
       box_w[i_w] = 0xdeadbeef;
@@ -141,7 +141,7 @@ _box_attach(u3a_box* box_u)
 
   _box_count(box_u->siz_w);
   {
-    c3_w           sel_w = _box_slot(box_u->siz_w);
+    c3_w_tmp           sel_w = _box_slot(box_u->siz_w);
     u3p(u3a_fbox)  fre_p = u3of(u3a_fbox, box_u);
     u3p(u3a_fbox)* pfr_p = &u3R->all.fre_p[sel_w];
     u3p(u3a_fbox)  nex_p = *pfr_p;
@@ -179,7 +179,7 @@ _box_detach(u3a_box* box_u)
     u3to(u3a_fbox, pre_p)->nex_p = nex_p;
   }
   else {
-    c3_w sel_w = _box_slot(box_u->siz_w);
+    c3_w_tmp sel_w = _box_slot(box_u->siz_w);
 
     if ( fre_p != u3R->all.fre_p[sel_w] ) {
       u3_assert(!"loom: corrupt");
@@ -193,7 +193,7 @@ _box_detach(u3a_box* box_u)
 static void
 _box_free(u3a_box* box_u)
 {
-  c3_w* box_w = (c3_w *)(void *)box_u;
+  c3_w_tmp* box_w = (c3_w_tmp *)(void *)box_u;
 
   u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
@@ -207,7 +207,7 @@ _box_free(u3a_box* box_u)
   /* Clear the contents of the block, for debugging.
   */
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
 
     for ( i_w = c3_wiseof(u3a_box); (i_w + 1) < box_u->siz_w; i_w++ ) {
       box_w[i_w] = 0xdeadbeef;
@@ -219,7 +219,7 @@ _box_free(u3a_box* box_u)
     /* Try to coalesce with the block below.
     */
     if ( box_w != u3a_into(u3R->rut_p) ) {
-      c3_w       laz_w = *(box_w - 1); /* the size of a box stored at the end of its allocation */
+      c3_w_tmp       laz_w = *(box_w - 1); /* the size of a box stored at the end of its allocation */
       u3a_box* pox_u = (u3a_box*)(void *)(box_w - laz_w); /* the head of the adjacent box below */
 
       if ( 0 == pox_u->use_w ) {
@@ -227,7 +227,7 @@ _box_free(u3a_box* box_u)
         _box_make(pox_u, (laz_w + box_u->siz_w), 0);
 
         box_u = pox_u;
-        box_w = (c3_w*)(void *)pox_u;
+        box_w = (c3_w_tmp*)(void *)pox_u;
       }
     }
 
@@ -264,7 +264,7 @@ _box_free(u3a_box* box_u)
       u3R->hat_p = u3a_outa(box_w + box_u->siz_w);
     }
     else {
-      c3_w laz_w = box_w[-1];
+      c3_w_tmp laz_w = box_w[-1];
       u3a_box* pox_u = (u3a_box*)(void *)(box_w - laz_w);
 
       if ( 0 == pox_u->use_w ) {
@@ -280,7 +280,7 @@ _box_free(u3a_box* box_u)
 /* _ca_box_make_hat(): in u3R, allocate directly on the hat.
 */
 static u3a_box*
-_ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
+_ca_box_make_hat(c3_w_tmp len_w, c3_w_tmp ald_w, c3_w_tmp off_w, c3_w_tmp use_w)
 {
   c3_w
     pad_w,                      /* padding between returned pointer and box */
@@ -327,7 +327,7 @@ _ca_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
 /* _me_road_all_hat(): in u3R, allocate directly on the hat.
 */
 static u3a_box*
-_ca_box_make_hat(c3_w len_w, c3_w alm_w, c3_w use_w)
+_ca_box_make_hat(c3_w_tmp len_w, c3_w_tmp alm_w, c3_w_tmp use_w)
 {
   return _box_make(_me_road_all_hat(len_w), len_w, use_w);
 }
@@ -336,8 +336,8 @@ _ca_box_make_hat(c3_w len_w, c3_w alm_w, c3_w use_w)
 #if 0  // not yet used
 /* _me_road_all_cap(): in u3R, allocate directly on the cap.
 */
-static c3_w*
-_me_road_all_cap(c3_w len_w)
+static c3_w_tmp*
+_me_road_all_cap(c3_w_tmp len_w)
 {
   if ( len_w > u3a_open(u3R) ) {
     u3m_bail(c3__meme); return 0;
@@ -363,7 +363,7 @@ _me_road_all_cap(c3_w len_w)
 void
 u3a_sane(void)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
     u3a_fbox* fre_u = u3R->all.fre_u[i_w];
@@ -390,7 +390,7 @@ u3a_sane(void)
 void
 u3a_reflux(void)
 {
-  c3_w i_w;
+  c3_w_tmp i_w;
 
   for ( i_w = 0; u3R->all.cel_p && (i_w < 1024); i_w++ ) {
     u3_post  cel_p = u3R->all.cel_p;
@@ -437,10 +437,10 @@ _ca_reclaim_half(void)
 /* _ca_willoc(): u3a_walloc() internals.
 */
 static void*
-_ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
+_ca_willoc(c3_w_tmp len_w, c3_w_tmp ald_w, c3_w_tmp off_w)
 {
-  c3_w siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
-  c3_w sel_w = _box_slot(siz_w);
+  c3_w_tmp siz_w = c3_max(u3a_minimum, u3a_boxed(len_w));
+  c3_w_tmp sel_w = _box_slot(siz_w);
 
   /*  XX: this logic is totally bizarre, but preserve it.
   **
@@ -498,8 +498,8 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
       else {                    /* we got a non-null freelist */
         u3_post all_p = *pfr_p;
         all_p += c3_wiseof(u3a_box) + off_w;
-        c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
-        c3_w des_w = c3_align(siz_w + pad_w, u3a_walign, C3_ALGHI);
+        c3_w_tmp pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
+        c3_w_tmp des_w = c3_align(siz_w + pad_w, u3a_walign, C3_ALGHI);
 
         /* calls maximally requesting DWORD alignment of returned pointer
            shouldn't require padding. */
@@ -558,9 +558,9 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
                already on the loom /are/ aligned. A debug break here implies
                that you broke those conditions, not that this needs to handle
                alignment. abandon hope. */
-            c3_w* box_w = ((c3_w *)(void *)box_u);
-            c3_w* end_w = box_w + des_w;
-            c3_w  lef_w = (box_u->siz_w - des_w);
+            c3_w_tmp* box_w = ((c3_w_tmp *)(void *)box_u);
+            c3_w_tmp* end_w = box_w + des_w;
+            c3_w_tmp  lef_w = (box_u->siz_w - des_w);
 
             _box_attach(_box_make(end_w, lef_w, 0));
             return u3a_boxto(_box_make(box_w, des_w, 1));
@@ -591,7 +591,7 @@ _ca_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
    void * returned guaranteed to be DWORD (8-byte) aligned.
 */
 static void*
-_ca_walloc(c3_w len_w, c3_w ald_w, c3_w off_w)
+_ca_walloc(c3_w_tmp len_w, c3_w_tmp ald_w, c3_w_tmp off_w)
 {
   void* ptr_v;
 
@@ -609,7 +609,7 @@ _ca_walloc(c3_w len_w, c3_w ald_w, c3_w off_w)
 /* u3a_walloc(): allocate storage words on hat heap.
 */
 void*
-u3a_walloc(c3_w len_w)
+u3a_walloc(c3_w_tmp len_w)
 {
   void* ptr_v;
 
@@ -636,18 +636,18 @@ u3a_walloc(c3_w len_w)
 /* u3a_wealloc(): realloc in words.
 */
 void*
-u3a_wealloc(void* lag_v, c3_w len_w)
+u3a_wealloc(void* lag_v, c3_w_tmp len_w)
 {
   if ( !lag_v ) {
     return u3a_walloc(len_w);
   }
   else {
     u3a_box* box_u = u3a_botox(lag_v);
-    c3_w*    old_w = lag_v;
-    c3_w     tiz_w = c3_min(box_u->siz_w, len_w);
+    c3_w_tmp*    old_w = lag_v;
+    c3_w_tmp     tiz_w = c3_min(box_u->siz_w, len_w);
     {
-      c3_w* new_w = u3a_walloc(len_w);
-      c3_w  i_w;
+      c3_w_tmp* new_w = u3a_walloc(len_w);
+      c3_w_tmp  i_w;
 
       for ( i_w = 0; i_w < tiz_w; i_w++ ) {
         new_w[i_w] = old_w[i_w];
@@ -661,11 +661,11 @@ u3a_wealloc(void* lag_v, c3_w len_w)
 /* u3a_pile_prep(): initialize stack control.
 */
 void
-u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
+u3a_pile_prep(u3a_pile* pil_u, c3_w_tmp len_w)
 {
   //  frame size, in words
   //
-  c3_w wor_w = (len_w + 3) >> 2;
+  c3_w_tmp wor_w = (len_w + 3) >> 2;
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
@@ -691,23 +691,23 @@ u3a_wfree(void* tox_v)
    len_w - new length
 */
 void
-u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w)
+u3a_wtrim(void* tox_v, c3_w_tmp old_w, c3_w_tmp len_w)
 {
-  c3_w* nov_w = tox_v;
+  c3_w_tmp* nov_w = tox_v;
 
   if ( (old_w > len_w)
        && ((old_w - len_w) >= u3a_minimum) )
     {
     u3a_box* box_u = u3a_botox(nov_w);
-    c3_w*    box_w = (void*)u3a_botox(nov_w);
+    c3_w_tmp*    box_w = (void*)u3a_botox(nov_w);
 
-    c3_w* end_w = c3_align(nov_w + len_w + 1, /* +1 for trailing allocation size */
+    c3_w_tmp* end_w = c3_align(nov_w + len_w + 1, /* +1 for trailing allocation size */
                            u3a_balign,
                            C3_ALGHI);
 
-    c3_w  asz_w = (end_w - box_w);      /* total size in words of new allocation */
+    c3_w_tmp  asz_w = (end_w - box_w);      /* total size in words of new allocation */
     if (box_u->siz_w <= asz_w) return;
-    c3_w  bsz_w = box_u->siz_w - asz_w; /* size diff in words between old and new */
+    c3_w_tmp  bsz_w = box_u->siz_w - asz_w; /* size diff in words between old and new */
 
     c3_dessert(asz_w && ((asz_w & u3a_walign-1) == 0)); /* new allocation size must be non-zero and DWORD multiple */
     c3_dessert(end_w < (box_w + box_u->siz_w));         /* desired alloc end must not exceed existing boundaries */
@@ -727,7 +727,7 @@ void*
 u3a_calloc(size_t num_i, size_t len_i)
 {
   size_t byt_i = num_i * len_i;
-  c3_w* out_w;
+  c3_w_tmp* out_w;
 
   u3_assert(byt_i / len_i == num_i);
   out_w = u3a_malloc(byt_i);
@@ -745,15 +745,15 @@ u3a_calloc(size_t num_i, size_t len_i)
 void*
 u3a_malloc(size_t len_i)
 {
-  c3_w  len_w = (c3_w)((len_i + 3) >> 2);
-  c3_w *ptr_w = _ca_walloc(len_w +1, 4, 1); /* +1 for word storing pad size */
-  c3_w *out_w = c3_align(ptr_w + 1, 16, C3_ALGHI);
-  c3_w  pad_w = u3a_outa(out_w) - u3a_outa(ptr_w);
+  c3_w_tmp  len_w = (c3_w)((len_i + 3) >> 2);
+  c3_w_tmp *ptr_w = _ca_walloc(len_w +1, 4, 1); /* +1 for word storing pad size */
+  c3_w_tmp *out_w = c3_align(ptr_w + 1, 16, C3_ALGHI);
+  c3_w_tmp  pad_w = u3a_outa(out_w) - u3a_outa(ptr_w);
 
   out_w[-1] = pad_w - 1; /* the size of the pad doesn't include the word storing the size (-1) */
 
   c3_dessert(&out_w[len_w] /* alloced space after alignment is sufficient */
-             <= &((c3_w*)u3a_botox(ptr_w))[u3a_botox(ptr_w)->siz_w]);
+             <= &((c3_w_tmp*)u3a_botox(ptr_w))[u3a_botox(ptr_w)->siz_w]);
   c3_dessert(pad_w <= 4 && pad_w > 0);
   c3_dessert(&out_w[-1] > ptr_w);
 
@@ -766,10 +766,10 @@ u3a_malloc(size_t len_i)
    not guaranteed to be preserved after a call.
 */
 static c3_o
-u3a_cellblock(c3_w num_w)
+u3a_cellblock(c3_w_tmp num_w)
 {
   u3p(u3a_fbox) fre_p;
-  c3_w          i_w;
+  c3_w_tmp          i_w;
 
   if ( c3y == u3a_is_north(u3R) ) {
     if ( u3R->cap_p <= (u3R->hat_p + (num_w * u3a_minimum) + (1 << u3a_page)) ) {
@@ -784,7 +784,7 @@ u3a_cellblock(c3_w num_w)
         u3_post  all_p = hat_p;
         void*    box_v = u3a_into(all_p);
         u3a_box* box_u = box_v;
-        c3_w*    box_w = box_v;
+        c3_w_tmp*    box_w = box_v;
 
         //  hand inline of _box_make(u3a_into(all_p), u3a_minimum, 1)
         {
@@ -819,7 +819,7 @@ u3a_cellblock(c3_w num_w)
         u3_post  all_p = (hat_p -= u3a_minimum);
         void*    box_v = u3a_into(all_p);
         u3a_box* box_u = box_v;
-        c3_w*    box_w = box_v;
+        c3_w_tmp*    box_w = box_v;
 
         //  hand inline of _box_make(u3a_into(all_p), u3a_minimum, 1);
         {
@@ -846,7 +846,7 @@ u3a_cellblock(c3_w num_w)
 /* u3a_celloc(): allocate a cell.
    XXX beware when we stop boxing cells and QWORD align references
 */
-c3_w*
+c3_w_tmp*
 u3a_celloc(void)
 {
 #ifdef U3_CPU_DEBUG
@@ -891,7 +891,7 @@ u3a_celloc(void)
 /* u3a_cfree(): free a cell.
 */
 void
-u3a_cfree(c3_w* cel_w)
+u3a_cfree(c3_w_tmp* cel_w)
 {
 #ifdef U3_MEMORY_DEBUG
   if ( u3C.wag_w & u3o_debug_ram ) {
@@ -924,16 +924,16 @@ u3a_realloc(void* lag_v, size_t len_i)
     return u3a_malloc(len_i);
   }
   else {
-    c3_w     len_w = (c3_w)((len_i + 3) >> 2);
-    c3_w*    lag_w = lag_v;
-    c3_w     pad_w = lag_w[-1];
-    c3_w*    org_w = lag_w - (pad_w + 1);
+    c3_w_tmp     len_w = (c3_w)((len_i + 3) >> 2);
+    c3_w_tmp*    lag_w = lag_v;
+    c3_w_tmp     pad_w = lag_w[-1];
+    c3_w_tmp*    org_w = lag_w - (pad_w + 1);
     u3a_box* box_u = u3a_botox((void *)org_w);
-    c3_w*    old_w = lag_v;
-    c3_w     tiz_w = c3_min(box_u->siz_w, len_w);
+    c3_w_tmp*    old_w = lag_v;
+    c3_w_tmp     tiz_w = c3_min(box_u->siz_w, len_w);
     {
-      c3_w* new_w = u3a_malloc(len_i);
-      c3_w  i_w;
+      c3_w_tmp* new_w = u3a_malloc(len_i);
+      c3_w_tmp  i_w;
 
       for ( i_w = 0; i_w < tiz_w; i_w++ ) {
         new_w[i_w] = old_w[i_w];
@@ -952,9 +952,9 @@ u3a_free(void* tox_v)
   if (NULL == tox_v)
     return;
 
-  c3_w* tox_w = tox_v;
-  c3_w  pad_w = tox_w[-1];
-  c3_w* org_w = tox_w - (pad_w + 1);
+  c3_w_tmp* tox_w = tox_v;
+  c3_w_tmp  pad_w = tox_w[-1];
+  c3_w_tmp* org_w = tox_w - (pad_w + 1);
 
   // u3l_log("free %p %p", org_w, tox_w);
   u3a_wfree(org_w);
@@ -1051,7 +1051,7 @@ u3a_wash(u3_noun som)
 static void
 _me_gain_use(u3_noun dog)
 {
-  c3_w*    dog_w = u3a_to_ptr(dog);
+  c3_w_tmp*    dog_w = u3a_to_ptr(dog);
   u3a_box* box_u = u3a_botox(dog_w);
 
   if ( 0x7fffffff == box_u->use_w ) {
@@ -1079,7 +1079,7 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  c3_w*     new_w = u3a_walloc(old_u->len_w + c3_wiseof(u3a_atom));
+  c3_w_tmp*     new_w = u3a_walloc(old_u->len_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
@@ -1096,7 +1096,7 @@ _ca_take_atom(u3a_atom* old_u)
   new_u->mug_w = old_u->mug_w;
   new_u->len_w = old_u->len_w;
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
 
     for ( i_w=0; i_w < old_u->len_w; i_w++ ) {
       new_u->buf_w[i_w] = old_u->buf_w[i_w];
@@ -1115,7 +1115,7 @@ _ca_take_atom(u3a_atom* old_u)
 static inline u3_cell
 _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
 {
-  c3_w*     new_w = u3a_celloc();
+  c3_w_tmp*     new_w = u3a_celloc();
   u3a_cell* new_u = (u3a_cell*)(void *)new_w;
   u3_cell     new = u3a_to_pom(u3a_outa(new_u));
 
@@ -1424,7 +1424,7 @@ _me_lose_north(u3_noun dog)
 {
 top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
-    c3_w* dog_w      = u3a_to_ptr(dog);
+    c3_w_tmp* dog_w      = u3a_to_ptr(dog);
     u3a_box* box_u = u3a_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {
@@ -1464,7 +1464,7 @@ _me_lose_south(u3_noun dog)
 {
 top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
-    c3_w* dog_w      = u3a_to_ptr(dog);
+    c3_w_tmp* dog_w      = u3a_to_ptr(dog);
     u3a_box* box_u = u3a_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {
@@ -1540,7 +1540,7 @@ u3a_use(u3_noun som)
     return 1;
   }
   else {
-    c3_w*    dog_w = u3a_to_ptr(som);
+    c3_w_tmp*    dog_w = u3a_to_ptr(som);
     u3a_box* box_u = u3a_botox(dog_w);
 
     return box_u->use_w;
@@ -1680,7 +1680,7 @@ u3a_mark_ptr(void* ptr_v)
   }
   {
     u3a_box* box_u  = u3a_botox(ptr_v);
-    c3_w       siz_w;
+    c3_w_tmp       siz_w;
 
 #ifdef U3_MEMORY_DEBUG
     if ( 0 == box_u->eus_w ) {
@@ -1727,7 +1727,7 @@ u3_post
 u3a_rewritten(u3_post ptr_v)
 {
   u3a_box* box_u = u3a_botox(u3a_into(ptr_v));
-  c3_w* box_w = (c3_w*) box_u;
+  c3_w_tmp* box_w = (c3_w_tmp*) box_u;
   return (u3_post)box_w[box_u->siz_w - 1];
 }
 
@@ -1751,9 +1751,9 @@ u3a_rewritten_noun(u3_noun som)
 c3_w
 u3a_mark_mptr(void* ptr_v)
 {
-  c3_w* ptr_w = ptr_v;
-  c3_w  pad_w = ptr_w[-1];
-  c3_w* org_w = ptr_w - (pad_w + 1);
+  c3_w_tmp* ptr_w = ptr_v;
+  c3_w_tmp  pad_w = ptr_w[-1];
+  c3_w_tmp* org_w = ptr_w - (pad_w + 1);
 
   return u3a_mark_ptr(org_w);
 }
@@ -1763,15 +1763,15 @@ u3a_mark_mptr(void* ptr_v)
 c3_w
 u3a_mark_noun(u3_noun som)
 {
-  c3_w siz_w = 0;
+  c3_w_tmp siz_w = 0;
 
   while ( 1 ) {
     if ( _(u3a_is_senior(u3R, som)) ) {
       return siz_w;
     }
     else {
-      c3_w* dog_w = u3a_to_ptr(som);
-      c3_w  new_w = u3a_mark_ptr(dog_w);
+      c3_w_tmp* dog_w = u3a_to_ptr(som);
+      c3_w_tmp  new_w = u3a_mark_ptr(dog_w);
 
       if ( 0 == new_w || 0xffffffff == new_w ) {      //  see u3a_mark_ptr()
         return siz_w;
@@ -1809,7 +1809,7 @@ u3a_count_ptr(void* ptr_v)
   }
   {
     u3a_box* box_u  = u3a_botox(ptr_v);
-    c3_w     siz_w;
+    c3_w_tmp     siz_w;
 
     c3_ws use_ws = (c3_ws)box_u->use_w;
 
@@ -1838,15 +1838,15 @@ u3a_count_ptr(void* ptr_v)
 c3_w
 u3a_count_noun(u3_noun som)
 {
-  c3_w siz_w = 0;
+  c3_w_tmp siz_w = 0;
 
   while ( 1 ) {
     if ( _(u3a_is_senior(u3R, som)) ) {
       return siz_w;
     }
     else {
-      c3_w* dog_w = u3a_to_ptr(som);
-      c3_w  new_w = u3a_count_ptr(dog_w);
+      c3_w_tmp* dog_w = u3a_to_ptr(som);
+      c3_w_tmp  new_w = u3a_count_ptr(dog_w);
 
       if ( 0 == new_w ) {
         return siz_w;
@@ -1883,7 +1883,7 @@ u3a_discount_ptr(void* ptr_v)
     }
   }
   u3a_box* box_u  = u3a_botox(ptr_v);
-  c3_w     siz_w;
+  c3_w_tmp     siz_w;
 
   c3_ws use_ws = (c3_ws)box_u->use_w;
 
@@ -1912,15 +1912,15 @@ u3a_discount_ptr(void* ptr_v)
 c3_w
 u3a_discount_noun(u3_noun som)
 {
-  c3_w siz_w = 0;
+  c3_w_tmp siz_w = 0;
 
   while ( 1 ) {
     if ( _(u3a_is_senior(u3R, som)) ) {
       return siz_w;
     }
     else {
-      c3_w* dog_w = u3a_to_ptr(som);
-      c3_w  new_w = u3a_discount_ptr(dog_w);
+      c3_w_tmp* dog_w = u3a_to_ptr(som);
+      c3_w_tmp  new_w = u3a_discount_ptr(dog_w);
 
       if ( 0 == new_w ) {
         return siz_w;
@@ -1944,9 +1944,9 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
 {
   u3_assert( 0 != str_c );
 
-  c3_w sec_w = (mic_d / 1000000);
-  c3_w mec_w = (mic_d % 1000000) / 1000;
-  c3_w mic_w = (mic_d % 1000);
+  c3_w_tmp sec_w = (mic_d / 1000000);
+  c3_w_tmp mec_w = (mic_d % 1000000) / 1000;
+  c3_w_tmp mic_w = (mic_d % 1000);
 
   if ( sec_w ) {
     sprintf(str_c, "%s s/%d.%03d.%03d", cap_c, sec_w, mec_w, mic_w);
@@ -1962,7 +1962,7 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
 /* u3a_print_memory: print memory amount.
 */
 void
-u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
+u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w)
 {
   u3_assert( 0 != fil_u );
 
@@ -1995,7 +1995,7 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
 /* u3a_maid(): maybe print memory.
 */
 c3_w
-u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
+u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w_tmp wor_w)
 {
   if ( 0 != fil_u ) {
     u3a_print_memory(fil_u, cap_c, wor_w);
@@ -2006,12 +2006,12 @@ u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
 /* _ca_print_memory(): un-captioned u3a_print_memory().
 */
 static void
-_ca_print_memory(FILE* fil_u, c3_w byt_w)
+_ca_print_memory(FILE* fil_u, c3_w_tmp byt_w)
 {
-  c3_w gib_w = (byt_w / 1000000000);
-  c3_w mib_w = (byt_w % 1000000000) / 1000000;
-  c3_w kib_w = (byt_w % 1000000) / 1000;
-  c3_w bib_w = (byt_w % 1000);
+  c3_w_tmp gib_w = (byt_w / 1000000000);
+  c3_w_tmp mib_w = (byt_w % 1000000000) / 1000000;
+  c3_w_tmp kib_w = (byt_w % 1000000) / 1000;
+  c3_w_tmp bib_w = (byt_w % 1000);
 
   if ( gib_w ) {
     fprintf(fil_u, "GB/%d.%03d.%03d.%03d\r\n",
@@ -2033,7 +2033,7 @@ _ca_print_memory(FILE* fil_u, c3_w byt_w)
 void
 u3a_quac_free(u3m_quac* qua_u)
 {
-  c3_w i_w = 0;
+  c3_w_tmp i_w = 0;
   while ( qua_u->qua_u[i_w] != NULL ) {
     u3a_quac_free(qua_u->qua_u[i_w]);
     i_w++;
@@ -2076,7 +2076,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
       return NULL;
     }
     else if ( c3y == it_mas ) {
-      c3_w siz_w = u3a_mark_noun(tt_mas);
+      c3_w_tmp siz_w = u3a_mark_noun(tt_mas);
 
 #if 1
       /* The basic issue here is that tt_mas is included in .sac
@@ -2114,7 +2114,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
     }
     else if ( c3n == it_mas ) {
       pro_u->qua_u = c3_malloc(sizeof(pro_u->qua_u));
-      c3_w i_w = 0;
+      c3_w_tmp i_w = 0;
       c3_t bad_t = 0;
       while ( c3y == u3du(tt_mas) ) {
         u3m_quac* new_u = u3a_prof(fil_u, u3h(tt_mas));
@@ -2157,7 +2157,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
 */
 
 void
-u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
+u3a_print_quac(FILE* fil_u, c3_w_tmp den_w, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
 
@@ -2168,7 +2168,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
       _ca_print_memory(fil_u, mas_u->siz_w);
     } else {
       fprintf(fil_u, "\r\n");
-      c3_w i_w = 0;
+      c3_w_tmp i_w = 0;
       while ( mas_u->qua_u[i_w] != NULL ) {
         u3a_print_quac(fil_u, den_w+2, mas_u->qua_u[i_w]);
         i_w++;
@@ -2220,8 +2220,8 @@ u3a_mark_road()
 
   qua_u[8] = NULL;
 
-  c3_w sum_w = 0;
-  for (c3_w i_w = 0; i_w < 8; i_w++) {
+  c3_w_tmp sum_w = 0;
+  for (c3_w_tmp i_w = 0; i_w < 8; i_w++) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
@@ -2275,7 +2275,7 @@ _ca_print_box(u3a_box* box_u)
 {
   //  the loom offset pointing to the contents of box_u
   //
-  c3_w box_w = u3a_outa(u3a_boxto(box_u));
+  c3_w_tmp box_w = u3a_outa(u3a_boxto(box_u));
   //  box_u might not be a cell, we use the struct to inspect further
   //
   u3a_cell* cel_u = (u3a_cell*)box_u;
@@ -2307,7 +2307,7 @@ _ca_print_box(u3a_box* box_u)
       {
         int i;
         for ( i = 0; i < box_u->siz_w; i++ ) {
-          fprintf(stderr, "%08x ", (unsigned int)(((c3_w*)box_u)[i]));
+          fprintf(stderr, "%08x ", (unsigned int)(((c3_w_tmp*)box_u)[i]));
         }
         fprintf(stderr, "\r\n");
       }
@@ -2329,7 +2329,7 @@ _ca_print_box(u3a_box* box_u)
 #ifdef U3_MEMORY_DEBUG
 
 static void
-_ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_w eus_w, c3_w use_w)
+_ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_w_tmp eus_w, c3_w_tmp use_w)
 {
   fprintf(stderr, "%s: %p mug=%x (marked=%u swept=%u)\r\n",
                   cap_c,
@@ -2380,7 +2380,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ws use_ws)
 c3_w
 u3a_idle(u3a_road* rod_u)
 {
-  c3_w i_w, fre_w = 0;
+  c3_w_tmp i_w, fre_w = 0;
 
   for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
     u3p(u3a_fbox) fre_p = rod_u->all.fre_p[i_w];
@@ -2403,7 +2403,7 @@ u3a_ream(void)
 {
   u3p(u3a_fbox) lit_p;
   u3a_fbox*     fox_u;
-  c3_w     sel_w, i_w;
+  c3_w_tmp     sel_w, i_w;
 
   for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
     lit_p = u3R->all.fre_p[i_w];
@@ -2464,13 +2464,13 @@ u3a_ream(void)
 c3_w
 u3a_sweep(void)
 {
-  c3_w neg_w, pos_w, leq_w, weq_w;
+  c3_w_tmp neg_w, pos_w, leq_w, weq_w;
 
   /* Measure allocated memory by counting the free list.
   */
   {
-    c3_w end_w = u3a_heap(u3R);
-    c3_w fre_w = u3a_idle(u3R);
+    c3_w_tmp end_w = u3a_heap(u3R);
+    c3_w_tmp fre_w = u3a_idle(u3R);
 
 #ifdef U3_CPU_DEBUG
     if ( fre_w != u3R->all.fre_w ) {
@@ -2487,8 +2487,8 @@ u3a_sweep(void)
   {
     u3_post box_p = _(u3a_is_north(u3R)) ? u3R->rut_p : u3R->hat_p;
     u3_post end_p = _(u3a_is_north(u3R)) ? u3R->hat_p : u3R->rut_p;
-    c3_w*   box_w = u3a_into(box_p);
-    c3_w*   end_w = u3a_into(end_p);
+    c3_w_tmp*   box_w = u3a_into(box_p);
+    c3_w_tmp*   end_w = u3a_into(end_p);
 
     while ( box_w < end_w ) {
       u3a_box* box_u = (void *)box_w;
@@ -2552,8 +2552,8 @@ u3a_sweep(void)
 
 #ifdef U3_MEMORY_DEBUG
   {
-    c3_w tot_w = u3a_full(u3R);
-    c3_w caf_w = u3a_temp(u3R);
+    c3_w_tmp tot_w = u3a_full(u3R);
+    c3_w_tmp caf_w = u3a_temp(u3R);
 
 #ifdef U3_CPU_DEBUG
     if ( (0 != u3R->par_p) && (u3R->all.max_w > 1000000) ) {
@@ -2596,11 +2596,11 @@ u3a_pack_seek(u3a_road* rod_u)
   //  end_w: back of the heap
   //  new_p: initial new location (data of first box)
   //
-  c3_w*    box_w = u3a_into(rod_u->rut_p);
-  c3_w*    end_w = u3a_into(rod_u->hat_p);
+  c3_w_tmp*    box_w = u3a_into(rod_u->rut_p);
+  c3_w_tmp*    end_w = u3a_into(rod_u->hat_p);
   u3_post  new_p = (rod_u->rut_p + c3_wiseof(u3a_box));
   u3a_box* box_u;
-  c3_w     siz_w;
+  c3_w_tmp     siz_w;
 
   if ( c3y == u3a_is_north(rod_u) ) {
     //  north roads are swept low to high
@@ -2647,10 +2647,10 @@ u3a_pack_seek(u3a_road* rod_u)
   }
 }
 static u3_post
-_ca_pack_move_north(c3_w* box_w, c3_w* end_w, u3_post new_p)
+_ca_pack_move_north(c3_w_tmp* box_w, c3_w_tmp* end_w, u3_post new_p)
 {
   u3a_box* old_u;
-  c3_w     siz_w;
+  c3_w_tmp     siz_w;
 
   //  relocate allocation boxes
   //
@@ -2664,14 +2664,14 @@ _ca_pack_move_north(c3_w* box_w, c3_w* end_w, u3_post new_p)
     old_u->use_w &= 0x7fffffff;
 
     if ( old_u->use_w ) {
-      c3_w* new_w = (void*)u3a_botox(u3a_into(new_p));
+      c3_w_tmp* new_w = (void*)u3a_botox(u3a_into(new_p));
 
       u3_assert( box_w[siz_w - 1] == new_p );
 
       //  note: includes leading size
       //
       if ( new_w < box_w ) {
-        c3_w i_w;
+        c3_w_tmp i_w;
 
         for ( i_w = 0; i_w < siz_w - 1; i_w++ ) {
           new_w[i_w] = box_w[i_w];
@@ -2697,10 +2697,10 @@ _ca_pack_move_north(c3_w* box_w, c3_w* end_w, u3_post new_p)
 //  XX untested!
 //
 static u3_post
-_ca_pack_move_south(c3_w* box_w, c3_w* end_w, u3_post new_p)
+_ca_pack_move_south(c3_w_tmp* box_w, c3_w_tmp* end_w, u3_post new_p)
 {
   u3a_box* old_u;
-  c3_w     siz_w;
+  c3_w_tmp     siz_w;
   c3_o     yuz_o;
 
   //  offset initial addresses (point to the head of the first box)
@@ -2720,14 +2720,14 @@ _ca_pack_move_south(c3_w* box_w, c3_w* end_w, u3_post new_p)
     old_u->use_w &= 0x7fffffff;
 
     if ( old_u->use_w ) {
-      c3_w* new_w = (void*)u3a_botox(u3a_into(new_p));
+      c3_w_tmp* new_w = (void*)u3a_botox(u3a_into(new_p));
 
       u3_assert( old_u->siz_w == new_p );
 
       //  note: includes trailing size
       //
       if ( new_w > box_w ) {
-        c3_w i_w;
+        c3_w_tmp i_w;
 
         for ( i_w = 1; i_w < siz_w; i_w++ ) {
           new_w[i_w] = box_w[i_w];
@@ -2776,8 +2776,8 @@ u3a_pack_move(u3a_road* rod_u)
   //  new_p: initial new location (data of first box)
   //  las_p: newly calculated last location
   //
-  c3_w*   box_w = u3a_into(rod_u->rut_p);
-  c3_w*   end_w = u3a_into(rod_u->hat_p);
+  c3_w_tmp*   box_w = u3a_into(rod_u->rut_p);
+  c3_w_tmp*   end_w = u3a_into(rod_u->hat_p);
   u3_post new_p = (rod_u->rut_p + c3_wiseof(u3a_box));
   u3_post las_p = ( c3y == u3a_is_north(rod_u) )
                   ? _ca_pack_move_north(box_w, end_w, new_p)
@@ -2788,7 +2788,7 @@ u3a_pack_move(u3a_road* rod_u)
   //  clear free lists and cell allocator
   //
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
     for ( i_w = 0; i_w < u3a_fbox_no; i_w++ ) {
       u3R->all.fre_p[i_w] = 0;
     }
@@ -2881,9 +2881,9 @@ u3a_detect(u3_noun fum, u3_noun som)
 /* u3a_lush(): leak push.
 */
 c3_w
-u3a_lush(c3_w lab_w)
+u3a_lush(c3_w_tmp lab_w)
 {
-  c3_w cod_w = u3_Code;
+  c3_w_tmp cod_w = u3_Code;
 
   u3_Code = lab_w;
   return cod_w;
@@ -2892,7 +2892,7 @@ u3a_lush(c3_w lab_w)
 /* u3a_lop(): leak pop.
 */
 void
-u3a_lop(c3_w lab_w)
+u3a_lop(c3_w_tmp lab_w)
 {
   u3_Code = lab_w;
 }
@@ -2900,7 +2900,7 @@ u3a_lop(c3_w lab_w)
 /* u3a_lush(): leak push.
 */
 c3_w
-u3a_lush(c3_w lab_w)
+u3a_lush(c3_w_tmp lab_w)
 {
   return 0;
 }
@@ -2908,7 +2908,7 @@ u3a_lush(c3_w lab_w)
 /* u3a_lop(): leak pop.
 */
 void
-u3a_lop(c3_w lab_w)
+u3a_lop(c3_w_tmp lab_w)
 {
 }
 #endif
@@ -2962,7 +2962,7 @@ u3a_walk_fore(u3_noun    a,
 c3_c*
 u3a_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_w_tmp  met_w = u3r_met(3, a);
   c3_c* str_c = u3a_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);
@@ -2981,7 +2981,7 @@ u3a_loom_sane(void)
     `use_w`s, no empty space, etc. If added, some of that may need to be guarded
     behind C3DBG flags. Freelist traversal is probably fine to always do though.
   */
-  for (c3_w i_w = 0; i_w < u3a_fbox_no; i_w++) {
+  for (c3_w_tmp i_w = 0; i_w < u3a_fbox_no; i_w++) {
     u3p(u3a_fbox) this_p = u3R->all.fre_p[i_w];
     u3a_fbox     *this_u = u3to(u3a_fbox, this_p);
     for (; this_p

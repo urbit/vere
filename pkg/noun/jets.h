@@ -96,7 +96,7 @@
     /* u3j_fink: (fine check) enough data to verify a located core.
     */
       typedef struct {
-        c3_w    len_w;                //  number of fists
+        c3_w_tmp    len_w;                //  number of fists
         u3_noun sat;                  //  static noun at end of check
         u3j_fist fis_u[];             //  fists
       } u3j_fink;

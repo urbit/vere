@@ -26,7 +26,7 @@ u3_write_fd(c3_i fid_i, const void* buf_v, size_t len_i)
   ssize_t ret_i;
 
   while ( len_i > 0 ) {
-    c3_w lop_w = 0;
+    c3_w_tmp lop_w = 0;
     //  retry interrupt/async errors
     //
     do {
@@ -305,7 +305,7 @@ _term_it_dump_buf(u3_utty*  uty_u,
 */
 static void
 _term_it_dump(u3_utty*    uty_u,
-              c3_w        len_w,
+              c3_w_tmp        len_w,
               const c3_y* hun_y)
 {
   uv_buf_t buf_u = uv_buf_init((c3_c*)hun_y, len_w);
@@ -316,7 +316,7 @@ _term_it_dump(u3_utty*    uty_u,
 */
 static void
 _term_it_send(u3_utty* uty_u,
-              c3_w     len_w,
+              c3_w_tmp     len_w,
               c3_y*    hun_y)
 {
   if ( len_w ) {
@@ -331,7 +331,7 @@ _term_it_send(u3_utty* uty_u,
 /* _term_it_send_csi(): send csi escape sequence
 */
 static void
-_term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w num_w, ...)
+_term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w_tmp num_w, ...)
 {
   va_list ap;
   va_start(ap, num_w);
@@ -347,7 +347,7 @@ _term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w num_w, ...)
   pas_c[len_y++] = '[';
 
   while ( num_w-- ) {
-    c3_w par_w = va_arg(ap, c3_w);
+    c3_w_tmp par_w = va_arg(ap, c3_w);
     len_y += sprintf(pas_c+len_y, "%d", par_w);
 
     if ( num_w ) {
@@ -403,7 +403,7 @@ _term_it_show_blank(u3_utty* uty_u)
  *    it is clipped to stay within the window.
  */
 static void
-_term_it_move_cursor(u3_utty* uty_u, c3_w col_w, c3_w row_w)
+_term_it_move_cursor(u3_utty* uty_u, c3_w_tmp col_w, c3_w_tmp row_w)
 {
   c3_l row_l = uty_u->tat_u.siz.row_l;
   c3_l col_l = uty_u->tat_u.siz.col_l;
@@ -420,11 +420,11 @@ _term_it_move_cursor(u3_utty* uty_u, c3_w col_w, c3_w row_w)
 /* _term_it_show_line(): print at cursor
 */
 static void
-_term_it_show_line(u3_utty* uty_u, c3_w* lin_w, c3_w wor_w)
+_term_it_show_line(u3_utty* uty_u, c3_w_tmp* lin_w, c3_w_tmp wor_w)
 {
   u3_utat* tat_u = &uty_u->tat_u;
   c3_y*    hun_y = (c3_y*)lin_w;
-  c3_w     byt_w = 0;
+  c3_w_tmp     byt_w = 0;
 
   //  convert lin_w in-place from utf-32 to utf-8
   //
@@ -432,7 +432,7 @@ _term_it_show_line(u3_utty* uty_u, c3_w* lin_w, c3_w wor_w)
   //    XX refactor for use here and in a jet
   //
   {
-    c3_w car_w, i_w;
+    c3_w_tmp car_w, i_w;
 
     for ( i_w = 0; i_w < wor_w; i_w++ ) {
       car_w = lin_w[i_w];
@@ -527,7 +527,7 @@ _term_it_show_nel(u3_utty* uty_u)
 static c3_c*
 _term_it_path(u3_noun pax)
 {
-  c3_w len_w = 0;
+  c3_w_tmp len_w = 0;
   c3_c *pas_c;
 
   //  measure
@@ -550,7 +550,7 @@ _term_it_path(u3_noun pax)
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_w tis_w = u3r_met(3, u3h(wiz));
+      c3_w_tmp tis_w = u3r_met(3, u3h(wiz));
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '.';
@@ -841,12 +841,12 @@ static void
 _term_spin_step(u3_utty* uty_u)
 {
   u3_utat* tat_u = &uty_u->tat_u;
-  c3_w     bac_w;
+  c3_w_tmp     bac_w;
 
   //  calculate backoff from end of line, or bail out
   //
   {
-    c3_w cus_w = tat_u->mir.cus_w;
+    c3_w_tmp cus_w = tat_u->mir.cus_w;
     c3_l col_l = tat_u->siz.col_l;
 
     if ( cus_w >= col_l ) {  //  shenanigans!
@@ -861,7 +861,7 @@ _term_spin_step(u3_utty* uty_u)
   //               | + « + why + » + \0
   c3_c       buf_c[1 + 2 +  4  + 2 + 1];
   c3_c*      cur_c   = buf_c;
-  c3_w       sol_w   = 1;  //  spinner length (utf-32)
+  c3_w_tmp       sol_w   = 1;  //  spinner length (utf-32)
 
   //  set spinner char
   //
@@ -910,7 +910,7 @@ _term_spin_step(u3_utty* uty_u)
         _term_it_send_csi(uty_u, 'H', 2, tat_u->siz.row_l, 1);
       }
 
-      c3_w i_w;
+      c3_w_tmp i_w;
       for ( i_w = bac_w; i_w < sol_w; i_w++ ) {
         if ( lef_u.len != write(fid_i, lef_u.base, lef_u.len) ) {
           return;
@@ -921,7 +921,7 @@ _term_spin_step(u3_utty* uty_u)
     }
 
     {
-      c3_w len_w = cur_c - buf_c;
+      c3_w_tmp len_w = cur_c - buf_c;
       if ( len_w != write(fid_i, buf_c, len_w) ) {
         return;
       }
@@ -1097,12 +1097,12 @@ u3_term_ef_ctlc(void)
 /*  _term_it_put_value(): put numeric color value on lin_w.
 */
 static c3_w
-_term_it_put_value(c3_w*   lin_w,
+_term_it_put_value(c3_w_tmp*   lin_w,
                    u3_atom val)
 {
   c3_c str_c[4];
-  c3_w len = snprintf(str_c, 4, "%d", val % 256);
-  for ( c3_w i_w = 0; i_w < len; i_w++ ) {
+  c3_w_tmp len = snprintf(str_c, 4, "%d", val % 256);
+  for ( c3_w_tmp i_w = 0; i_w < len; i_w++ ) {
     lin_w[i_w] = str_c[i_w];
   }
   u3z(val);
@@ -1112,7 +1112,7 @@ _term_it_put_value(c3_w*   lin_w,
 /* _term_it_put_tint(): put ansi color id on lin_w. RETAINS col.
 */
 static c3_w
-_term_it_put_tint(c3_w*   lin_w,
+_term_it_put_tint(c3_w_tmp*   lin_w,
                   u3_noun col)
 {
   u3_noun red, gre, blu;
@@ -1121,14 +1121,14 @@ _term_it_put_tint(c3_w*   lin_w,
   //  24-bit color
   //
   if ( c3y == tru ) {
-    c3_w n = 0;
+    c3_w_tmp n = 0;
 
     *lin_w++ = '8';
     *lin_w++ = ';';
     *lin_w++ = '2';
     *lin_w++ = ';';
 
-    c3_w m = _term_it_put_value(lin_w, red);
+    c3_w_tmp m = _term_it_put_value(lin_w, red);
     n     += m;
     lin_w += m;
 
@@ -1166,7 +1166,7 @@ _term_it_put_tint(c3_w*   lin_w,
 /* _term_it_put_deco(): put ansi sgr code on lin_w. RETAINS dec.
 */
 static void
-_term_it_put_deco(c3_w* lin_w,
+_term_it_put_deco(c3_w_tmp* lin_w,
                   u3_noun dec)
 {
   switch ( dec ) {
@@ -1184,11 +1184,11 @@ static void
 _term_it_send_stub(u3_utty* uty_u,
                    u3_noun    tub)
 {
-  c3_w tuc_w = u3qb_lent(tub);
+  c3_w_tmp tuc_w = u3qb_lent(tub);
 
   //  count the amount of characters across all stubs
   //
-  c3_w lec_w = 0;
+  c3_w_tmp lec_w = 0;
   {
     u3_noun nub = tub;
     while ( u3_nul != nub ) {
@@ -1204,12 +1204,12 @@ _term_it_send_stub(u3_utty* uty_u,
   //      2 for opening, 7 for decorations, 2x16 for colors, 4 for closing,
   //      and 3 as separators between decorations and colors.
   //
-  c3_w* lin_w = c3_malloc(  sizeof(c3_w) * (lec_w + (48 * tuc_w))  );
+  c3_w_tmp* lin_w = c3_malloc(  sizeof(c3_w) * (lec_w + (48 * tuc_w))  );
 
   //  write the contents to the buffer,
   //  tracking total and escape characters written
   //
-  c3_w   i_w = 0;
+  c3_w_tmp   i_w = 0;
   {
     u3_noun nub = tub;
     while ( u3_nul != nub ) {
@@ -1253,7 +1253,7 @@ _term_it_send_stub(u3_utty* uty_u,
             lin_w[i_w++] = ';';
           }
           lin_w[i_w++] = '4';
-          c3_w put_w = _term_it_put_tint(&lin_w[i_w], bag);
+          c3_w_tmp put_w = _term_it_put_tint(&lin_w[i_w], bag);
           i_w += put_w;
           mor_o = c3y;
         }
@@ -1265,7 +1265,7 @@ _term_it_send_stub(u3_utty* uty_u,
             lin_w[i_w++] = ';';
           }
           lin_w[i_w++] = '3';
-          c3_w put_w = _term_it_put_tint(&lin_w[i_w], fog);
+          c3_w_tmp put_w = _term_it_put_tint(&lin_w[i_w], fog);
           i_w += put_w;
           mor_o = c3y;
         }
@@ -1313,11 +1313,11 @@ static void
 _term_it_show_tour(u3_utty* uty_u,
                    u3_noun    lin)
 {
-  c3_w  len_w = u3qb_lent(lin);
-  c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
+  c3_w_tmp  len_w = u3qb_lent(lin);
+  c3_w_tmp* lin_w = c3_malloc( sizeof(c3_w) * len_w );
 
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
 
     for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
       lin_w[i_w] = u3r_word(0, u3h(lin));

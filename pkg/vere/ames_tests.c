@@ -66,7 +66,7 @@ static c3_i
 _test_stun(void)
 {
   u3_lane inn_u = { .pip_w = 0x7f000001, .por_s = 13337 };
-  c3_w    len_w = 256;
+  c3_w_tmp    len_w = 256;
 
   while ( len_w-- ) {
     if ( _test_stun_addr_roundtrip(&inn_u) ) {

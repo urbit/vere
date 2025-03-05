@@ -11,15 +11,15 @@
   u3qc_con(u3_atom a,
            u3_atom b)
   {
-    c3_w lna_w = u3r_met(5, a);
-    c3_w lnb_w = u3r_met(5, b);
+    c3_w_tmp lna_w = u3r_met(5, a);
+    c3_w_tmp lnb_w = u3r_met(5, b);
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;
     }
     else {
-      c3_w     len_w = c3_max(lna_w, lnb_w);
-      c3_w       i_w;
+      c3_w_tmp     len_w = c3_max(lna_w, lnb_w);
+      c3_w_tmp       i_w;
       u3i_slab sab_u;
       u3i_slab_from(&sab_u, a, 5, len_w);
 

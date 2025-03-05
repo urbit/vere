@@ -95,7 +95,7 @@ _parse(u3_atom txt)
 
   const c3_y *byt_y;
   c3_z        cnt_z;
-  c3_w        len_w = u3r_met(3, txt);
+  c3_w_tmp        len_w = u3r_met(3, txt);
 
   //
   // initialization

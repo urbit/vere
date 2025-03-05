@@ -11,7 +11,7 @@
              u3_atom wik, u3_atom dak,
              u3_atom out)
   {
-    c3_w wid_w;
+    c3_w_tmp wid_w;
     if ( !u3r_word_fit(&wid_w, wid) ) {
       // impossible to represent an atom this large
       return u3m_bail(c3__fail);
@@ -20,7 +20,7 @@
       // the hoon adjusts these widths to its liking
       int err;
       c3_y  out_y[64], dak_y[64];
-      c3_w  wik_w = c3_min(wik, 64),
+      c3_w_tmp  wik_w = c3_min(wik, 64),
             out_w = c3_max(1, c3_min(out, 64));
       c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
 
@@ -61,7 +61,7 @@
   _cqe_blake3_hash(u3_atom wid, u3_atom dat,
              u3_atom key, u3_atom flags, u3_atom out)
   {
-    c3_w wid_w, out_w;
+    c3_w_tmp wid_w, out_w;
     if ( !u3r_word_fit(&wid_w, wid) || !u3r_word_fit(&out_w, out) ) {
       return u3m_bail(c3__fail);
     }
@@ -102,7 +102,7 @@
   static u3_noun
   _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
   {
-    c3_w wid_w;
+    c3_w_tmp wid_w;
     if ( !u3r_word_fit(&wid_w, wid) ) {
       return u3m_bail(c3__fail);
     } else {

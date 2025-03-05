@@ -7,7 +7,7 @@
 
 c3_d
 u3qc_rig_s(c3_g foq_g,
-           c3_w sep_w,
+           c3_w_tmp sep_w,
            c3_g toq_g)
 {
   c3_d sep_d = sep_w;

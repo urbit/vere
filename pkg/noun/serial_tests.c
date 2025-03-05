@@ -13,7 +13,7 @@ _setup(void)
 static void
 _byte_print(c3_d        out_d,
             c3_y*       out_y,
-            c3_w        len_w,
+            c3_w_tmp        len_w,
             const c3_y* byt_y)
 {
   c3_d i_d;
@@ -33,7 +33,7 @@ _byte_print(c3_d        out_d,
 static c3_i
 _test_jam_spec(const c3_c* cap_c,
                u3_noun       ref,
-               c3_w        len_w,
+               c3_w_tmp        len_w,
                const c3_y* byt_y)
 {
   c3_i  ret_i = 1;
@@ -54,7 +54,7 @@ _test_jam_spec(const c3_c* cap_c,
 
   {
     u3i_slab sab_u;
-    c3_w     bit_w = u3s_jam_fib(&sab_u, ref);
+    c3_w_tmp     bit_w = u3s_jam_fib(&sab_u, ref);
 
     out_d = ((c3_d)bit_w + 0x7) >> 3;
     //  XX assumes little-endian
@@ -76,7 +76,7 @@ _test_jam_spec(const c3_c* cap_c,
 static c3_i
 _test_cue_spec(const c3_c* cap_c,
                u3_noun       ref,
-               c3_w        len_w,
+               c3_w_tmp        len_w,
                const c3_y* byt_y)
 {
   c3_i ret_i = 1;

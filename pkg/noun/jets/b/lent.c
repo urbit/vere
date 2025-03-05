@@ -12,7 +12,7 @@ STATIC_ASSERT( (UINT32_MAX > u3a_cells),
 u3_noun
 u3qb_lent(u3_noun a)
 {
-  c3_w len_w = 0;
+  c3_w_tmp len_w = 0;
 
   while ( u3_nul != a ) {
     a = u3t(a);

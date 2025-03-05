@@ -31,9 +31,9 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //
   //  Calculate input and output size.
   //
-  c3_w num_blox_w = u3qb_lent(blox);
-  c3_w bit_widt_w = num_blox_w * bits;
-  c3_w wor_widt_w = DIVCEIL(bit_widt_w, 32);
+  c3_w_tmp num_blox_w = u3qb_lent(blox);
+  c3_w_tmp bit_widt_w = num_blox_w * bits;
+  c3_w_tmp wor_widt_w = DIVCEIL(bit_widt_w, 32);
   u3i_slab  sab_u;
   u3i_slab_bare(&sab_u, 5, wor_widt_w);
 
@@ -48,12 +48,12 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //  cur_w  next buffer word to flush into.
   //
   {
-    c3_w acc_w=0, use_w=0, *cur_w=sab_u.buf_w;
+    c3_w_tmp acc_w=0, use_w=0, *cur_w=sab_u.buf_w;
 
 #   define FLUSH() *cur_w++=acc_w; acc_w=use_w=0
 #   define SLICE(sz,off,val) TAKEBITS(sz, val) << off
 
-    for (c3_w i=0; i<num_blox_w; i++) {
+    for (c3_w_tmp i=0; i<num_blox_w; i++) {
       u3_noun blok_n = u3h(blox);
       blox = u3t(blox);
 
@@ -61,10 +61,10 @@ _bit_rep(u3_atom bits, u3_noun blox)
         return u3m_bail(c3__fail);
       }
 
-      c3_w blok_w = blok_n;
+      c3_w_tmp blok_w = blok_n;
 
-      for (c3_w rem_in_blok_w=bits; rem_in_blok_w;) {
-        c3_w rem_in_acc_w = 32 - use_w;
+      for (c3_w_tmp rem_in_blok_w=bits; rem_in_blok_w;) {
+        c3_w_tmp rem_in_acc_w = 32 - use_w;
         if (rem_in_blok_w == rem_in_acc_w) {              //  EQ
           acc_w |= SLICE(rem_in_blok_w, use_w, blok_w);
           FLUSH();
@@ -105,7 +105,7 @@ _block_rep(u3_atom a,
   }
   else {
     c3_g       a_g = a;
-    c3_w     tot_w = 0;
+    c3_w_tmp     tot_w = 0;
     u3i_slab sab_u;
 
     /* Measure and validate the slab required.
@@ -115,7 +115,7 @@ _block_rep(u3_atom a,
 
       while ( 1 ) {
         u3_noun h_cab;
-        c3_w    len_w;
+        c3_w_tmp    len_w;
 
         if ( 0 == cab ) {
           break;
@@ -144,7 +144,7 @@ _block_rep(u3_atom a,
     */
     {
       u3_noun cab = b;
-      c3_w  pos_w = 0;
+      c3_w_tmp  pos_w = 0;
 
       while ( 0 != cab ) {
         u3_noun h_cab = u3h(cab);

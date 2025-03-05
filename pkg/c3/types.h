@@ -13,7 +13,7 @@
       typedef ssize_t c3_zs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
-      typedef uint32_t c3_w;
+      typedef uint32_t c3_w_tmp;
       typedef int32_t c3_ws;
       typedef uint16_t c3_s;
       typedef int16_t c3_ss;
@@ -49,11 +49,11 @@
       #define PRIxc3_d PRIx64
       #define PRIXc3_d PRIX64
 
-      /* c3_w */
-      #define PRIc3_w  PRIu32
+      /* c3_w_tmp */
+      #define PRIc3_w_tmp  PRIu32
       #define PRIc3_ws PRIi32
-      #define PRIxc3_w PRIx32
-      #define PRIXc3_w PRIX32
+      #define PRIxc3_w_tmp PRIx32
+      #define PRIXc3_w_tmp PRIX32
 
       /* c3_s */
       #define PRIc3_s  PRIu16

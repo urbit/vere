@@ -120,10 +120,10 @@ _test_mug(void)
                            u3kc_mix(u3qc_bex(212),
                            u3i_string("abcdefjhijklmnopqrstuvwxyz")));
 
-    c3_w  byt_w = u3r_met(3, str);
-    c3_w  wor_w = u3r_met(5, str);
+    c3_w_tmp  byt_w = u3r_met(3, str);
+    c3_w_tmp  wor_w = u3r_met(5, str);
     c3_y* str_y = c3_malloc(byt_w);
-    c3_w* str_w = c3_malloc(4 * wor_w);
+    c3_w_tmp* str_w = c3_malloc(4 * wor_w);
     c3_d  str_d = 0;
 
     u3r_bytes(0, byt_w, str_y, str);
@@ -155,7 +155,7 @@ _test_mug(void)
   }
 
   {
-    c3_w  som_w[4] = { 0, 0, 0, 1 };
+    c3_w_tmp  som_w[4] = { 0, 0, 0, 1 };
     u3_noun som    = u3i_words(4, som_w);
 
     if ( 0x519bd45c != u3r_mug(som) ) {
@@ -172,7 +172,7 @@ _test_mug(void)
   }
 
   {
-    c3_w  som_w[4] = { 0, 1, 0, 1 };
+    c3_w_tmp  som_w[4] = { 0, 1, 0, 1 };
     u3_noun som    = u3i_words(4, som_w);
 
     if ( 0x540eb8a9 != u3r_mug(som) ) {
@@ -189,7 +189,7 @@ _test_mug(void)
   }
 
   {
-    c3_w  som_w[4] = { 1, 1, 0, 1 };
+    c3_w_tmp  som_w[4] = { 1, 1, 0, 1 };
     u3_noun som    = u3i_words(4, som_w);
 
     if ( 0x319d28f9 != u3r_mug(som) ) {
@@ -206,7 +206,7 @@ _test_mug(void)
   }
 
   {
-    c3_w  som_w[4] = { 0, 0, 0, 0xffff };
+    c3_w_tmp  som_w[4] = { 0, 0, 0, 0xffff };
     u3_noun som    = u3i_words(4, som_w);
 
     if ( 0x5230a260 != u3r_mug(som) ) {

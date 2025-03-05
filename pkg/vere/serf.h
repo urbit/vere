@@ -11,8 +11,8 @@
         c3_d    sen_d;             //  last event requested
         c3_d    dun_d;             //  last event processed
         c3_l    mug_l;             //  hash of state
-        c3_w    mas_w;             //  memory threshold state
-        c3_w    fag_w;             //  post-op flags
+        c3_w_tmp    mas_w;             //  memory threshold state
+        c3_w_tmp    fag_w;             //  post-op flags
         u3_noun sac;               //  space measurementl
         void  (*xit_f)(void);      //  exit callback
       } u3_serf;
@@ -37,7 +37,7 @@
     /* u3_serf_peek(): read namespace.
     */
       u3_noun
-      u3_serf_peek(u3_serf* sef_u, c3_w mil_w, u3_noun sam);
+      u3_serf_peek(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun sam);
 
     /* u3_serf_play(): apply event list, producing status.
     */
@@ -47,7 +47,7 @@
     /* u3_serf_work(): apply event, producing effects.
     */
       u3_noun
-      u3_serf_work(u3_serf* sef_u, c3_w mil_w, u3_noun job);
+      u3_serf_work(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun job);
 
     /* u3_serf_post(): update serf state post-writ.
     */

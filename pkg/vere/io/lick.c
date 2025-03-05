@@ -86,7 +86,7 @@ _lick_string_to_path(c3_c* pax_c)
 static c3_c*
 _lick_it_path(u3_noun pax)
 {
-  c3_w len_w = 0;
+  c3_w_tmp len_w = 0;
   c3_c *pas_c;
 
   //  measure
@@ -109,7 +109,7 @@ _lick_it_path(u3_noun pax)
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_w tis_w = u3r_met(3, u3h(wiz));
+      c3_w_tmp tis_w = u3r_met(3, u3h(wiz));
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '/';
@@ -307,7 +307,7 @@ _lick_close_sock(u3_shan* san_u)
     _lick_close_chan(san_u->can_u);
   }
 
-  c3_w len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
+  c3_w_tmp len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
   wit_i = snprintf(paf_c, len_w, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);

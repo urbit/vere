@@ -19,8 +19,8 @@ u3qa_lte(u3_atom a, u3_atom b)
     return c3n;
   }
   else {
-    c3_w a_w = u3r_met(0, a);
-    c3_w b_w = u3r_met(0, b);
+    c3_w_tmp a_w = u3r_met(0, a);
+    c3_w_tmp b_w = u3r_met(0, b);
 
     if ( a_w != b_w ) {
       return __(a_w <= b_w);

@@ -15,10 +15,10 @@ typedef int (*urcrypt_siv)(c3_y*, size_t,
 // mat_w = size in bytes of assoc array
 // dat_w = size of allocation (array + atom storage)
 static void
-_cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
+_cqea_measure_ads(u3_noun ads, c3_w_tmp* soc_w, c3_w_tmp *mat_w, c3_w_tmp *dat_w)
 {
   u3_noun i, t;
-  c3_w a_w, b_w, tmp_w;
+  c3_w_tmp a_w, b_w, tmp_w;
 
   for ( a_w = b_w = 0, t = ads; u3_nul != t; ++a_w ) {
     u3x_cell(t, &i, &t);
@@ -53,10 +53,10 @@ _cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
 // assumes ads is a valid (list @) because it's already been measured
 static void
 _cqea_encode_ads(u3_noun ads,
-                 c3_w mat_w,
+                 c3_w_tmp mat_w,
                  urcrypt_aes_siv_data *dat_u)
 {
-  c3_w met_w;
+  c3_w_tmp met_w;
   u3_noun i, t;
   urcrypt_aes_siv_data *cur_u;
   c3_y *dat_y = ((c3_y*) dat_u) + mat_w;
@@ -80,14 +80,14 @@ _cqea_ads_free(urcrypt_aes_siv_data *dat_u)
 }
 
 static urcrypt_aes_siv_data*
-_cqea_ads_alloc(u3_noun ads, c3_w *soc_w)
+_cqea_ads_alloc(u3_noun ads, c3_w_tmp *soc_w)
 {
   if ( !ads ) {
     *soc_w = 0;
     return NULL;
   }
   else {
-    c3_w mat_w, dat_w;
+    c3_w_tmp mat_w, dat_w;
     urcrypt_aes_siv_data *dat_u;
 
     _cqea_measure_ads(ads, soc_w, &mat_w, &dat_w);
@@ -99,13 +99,13 @@ _cqea_ads_alloc(u3_noun ads, c3_w *soc_w)
 
 static u3_noun
 _cqea_siv_en(c3_y*   key_y,
-             c3_w    key_w,
+             c3_w_tmp    key_w,
              u3_noun ads,
              u3_atom txt,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w txt_w, soc_w;
+  c3_w_tmp txt_w, soc_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
@@ -127,20 +127,20 @@ _cqea_siv_en(c3_y*   key_y,
 
 static u3_noun
 _cqea_siv_de(c3_y*   key_y,
-             c3_w    key_w,
+             c3_w_tmp    key_w,
              u3_noun ads,
              u3_atom iv,
              u3_atom len,
              u3_atom txt,
              urcrypt_siv low_f)
 {
-  c3_w txt_w;
+  c3_w_tmp txt_w;
   if ( !u3r_word_fit(&txt_w, len) ) {
     return u3m_bail(c3__fail);
   }
   else {
     u3_noun ret;
-    c3_w soc_w;
+    c3_w_tmp soc_w;
     c3_y *txt_y, *out_y, iv_y[16];
     urcrypt_aes_siv_data *dat_u;
 

@@ -60,7 +60,7 @@ static c3_c*
 _foil_path(u3_dire*    dir_u,
            const c3_c* nam_c)
 {
-  c3_w  len_w = strlen(dir_u->pax_c);
+  c3_w_tmp  len_w = strlen(dir_u->pax_c);
   c3_c* pax_c;
 
   pax_c = c3_malloc(1 + len_w + 1 + strlen(nam_c));

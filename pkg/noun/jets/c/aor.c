@@ -25,8 +25,8 @@
       else {
         if ( c3n == u3ud(b) ) return c3y;
         {
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);;
+          c3_w_tmp len_a_w = u3r_met(3, a);
+          c3_w_tmp len_b_w = u3r_met(3, b);;
           c3_y *buf_a_y, *buf_b_y;
           c3_y cut_a_y, cut_b_y;
           if ( c3y == u3a_is_cat(a) ) {
@@ -43,8 +43,8 @@
             u3a_atom* b_u = u3a_to_ptr(b);
             buf_b_y = (c3_y*)(b_u->buf_w);
           }
-          c3_w len_min_w = c3_min(len_a_w, len_b_w);
-          for (c3_w i_w = 0; i_w < len_min_w; i_w++) {
+          c3_w_tmp len_min_w = c3_min(len_a_w, len_b_w);
+          for (c3_w_tmp i_w = 0; i_w < len_min_w; i_w++) {
             cut_a_y = buf_a_y[i_w];
             cut_b_y = buf_b_y[i_w];
             if ( cut_a_y != cut_b_y ) return __(cut_a_y < cut_b_y);

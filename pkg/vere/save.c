@@ -20,7 +20,7 @@ u3_save_ef_chld(u3_pier *pir_u)
 {
   u3_save* sav_u = pir_u->sav_u;
   c3_i     loc_i;
-  c3_w     pid_w;
+  c3_w_tmp     pid_w;
 
   /* modified for cases with no pid_w
   */

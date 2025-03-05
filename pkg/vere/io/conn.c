@@ -902,7 +902,7 @@ _conn_io_exit(u3_auto* car_u)
 {
   u3_conn*          con_u = (u3_conn*)car_u;
   c3_c*             pax_c = u3_Host.dir_c;
-  c3_w              len_w = strlen(pax_c) + 1 + sizeof(URB_SOCK_PATH);
+  c3_w_tmp              len_w = strlen(pax_c) + 1 + sizeof(URB_SOCK_PATH);
   c3_c*             paf_c = c3_malloc(len_w);
   c3_i              wit_i;
 

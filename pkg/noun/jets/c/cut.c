@@ -24,9 +24,9 @@
 
     {
       c3_g a_g   = a;
-      c3_w b_w   = b;
-      c3_w c_w   = c;
-      c3_w len_w = u3r_met(a_g, d);
+      c3_w_tmp b_w   = b;
+      c3_w_tmp c_w   = c;
+      c3_w_tmp len_w = u3r_met(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {
         return 0;

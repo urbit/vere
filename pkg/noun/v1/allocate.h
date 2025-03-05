@@ -35,7 +35,7 @@
 
     /* u3a_v1_to_wtr(): convert noun [som] into word pointer into loom.
     */
-#     define u3a_v1_to_wtr(som)    ((c3_w *)u3a_v1_to_ptr(som))
+#     define u3a_v1_to_wtr(som)    ((c3_w_tmp *)u3a_v1_to_ptr(som))
 
     /* u3a_v1_to_pug(): set bit 31 of [off].
     */

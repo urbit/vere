@@ -19,8 +19,8 @@ u3qc_rsh(u3_atom a,
   }
   else {
     c3_g a_g   = a;
-    c3_w b_w   = b;
-    c3_w len_w = u3r_met(a_g, c);
+    c3_w_tmp b_w   = b;
+    c3_w_tmp len_w = u3r_met(a_g, c);
 
     if ( b_w >= len_w ) {
       return 0;

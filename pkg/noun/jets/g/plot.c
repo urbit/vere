@@ -8,9 +8,9 @@
 // XX optimize
 //
 static c3_w
-_met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
+_met_plat_m(c3_g a_g, c3_w_tmp fum_w, c3_w_tmp met_w, u3_atom vat)
 {
-  c3_w len_w, wor_w;
+  c3_w_tmp len_w, wor_w;
 
   {
     u3i_slab sab_u;
@@ -34,8 +34,8 @@ _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
   }
 
   {
-    c3_w gal_w = len_w - 1;
-    c3_w daz_w = wor_w;
+    c3_w_tmp gal_w = len_w - 1;
+    c3_w_tmp daz_w = wor_w;
     c3_y   a_y = a_g;
 
     //  inlined from u3r_met
@@ -61,12 +61,12 @@ _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
 
 static c3_w
 _met_list(c3_g    a_g,
-          c3_w  sep_w,
+          c3_w_tmp  sep_w,
           u3_noun b_p);
 
 static c3_w
 _met_pair(c3_g* las_g,
-          c3_w  sep_w,
+          c3_w_tmp  sep_w,
           u3_noun a_p,
           u3_noun b_p,
           c3_g* new_g)
@@ -96,11 +96,11 @@ _met_pair(c3_g* las_g,
 
 static c3_w
 _met_list(c3_g    a_g,
-          c3_w  sep_w,
+          c3_w_tmp  sep_w,
           u3_noun b_p)
 {
   if ( u3_nul != b_p ) {
-    c3_w met_w;
+    c3_w_tmp met_w;
     u3_noun  i, t = b_p;
 
     do {
@@ -183,13 +183,13 @@ _met_list(c3_g    a_g,
 static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
-          c3_w      sep_w,
+          c3_w_tmp      sep_w,
           u3_noun     b_p);
 
 static c3_w
 _fax_pair(u3i_slab* sab_u,
           c3_g*     las_g,
-          c3_w      sep_w,
+          c3_w_tmp      sep_w,
           u3_noun     a_p,
           u3_noun     b_p,
           c3_g*     new_g)
@@ -220,11 +220,11 @@ _fax_pair(u3i_slab* sab_u,
 static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
-          c3_w      sep_w,
+          c3_w_tmp      sep_w,
           u3_noun     b_p)
 {
   if ( u3_nul != b_p ) {
-    c3_w met_w;
+    c3_w_tmp met_w;
     u3_noun  i, t = b_p;
 
     do {
@@ -320,7 +320,7 @@ u3_noun
 u3qg_plot_met(u3_noun a_p, u3_noun b_p)
 {
   c3_g out_g;
-  c3_w sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
+  c3_w_tmp sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
 
   return u3nc(out_g, u3i_word(sep_w));
 }
@@ -341,7 +341,7 @@ u3_noun
 u3qg_plot_fax(u3_noun a_p, u3_noun b_p)
 {
   c3_g     out_g;
-  c3_w     sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
+  c3_w_tmp     sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
   u3i_slab sab_u;
 
   u3i_slab_init(&sab_u, out_g, sep_w);

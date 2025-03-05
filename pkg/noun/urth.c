@@ -61,7 +61,7 @@ static inline c3_o
 _cu_box_check(u3a_noun* som_u, ur_nref* ref)
 {
   u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w_tmp*    box_w = (void*)box_u;
 
   if ( 0xffffffff == box_w[0] ) {
     *ref = ( ((c3_d)box_w[2]) << 32
@@ -78,7 +78,7 @@ static inline void
 _cu_box_stash(u3a_noun* som_u, ur_nref ref)
 {
   u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w_tmp*    box_w = (void*)box_u;
 
   //  overwrite u3a_atom with reallocated reference
   //
@@ -104,9 +104,9 @@ typedef struct _cu_frame_s
 
 typedef struct _cu_stack_s
 {
-  c3_w       pre_w;
-  c3_w       siz_w;
-  c3_w       fil_w;
+  c3_w_tmp       pre_w;
+  c3_w_tmp       siz_w;
+  c3_w_tmp       fil_w;
   _cu_frame* fam_u;
 } _cu_stack;
 
@@ -143,7 +143,7 @@ _cu_from_loom_next(_cu_stack* tac_u, ur_root_t* rot_u, u3_noun a)
         //  reallocate the stack if full
         //
         if ( tac_u->fil_w == tac_u->siz_w ) {
-          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w;
+          c3_w_tmp nex_w   = tac_u->pre_w + tac_u->siz_w;
           tac_u->fam_u = c3_realloc(tac_u->fam_u, nex_w * sizeof(*tac_u->fam_u));
           tac_u->pre_w = tac_u->siz_w;
           tac_u->siz_w = nex_w;
@@ -232,7 +232,7 @@ static ur_nref
 _cu_all_from_loom(ur_root_t* rot_u, ur_nvec_t* cod_u)
 {
   ur_nref   ken = _cu_from_loom(rot_u, u3A->roc);
-  c3_w    cod_w = u3h_wyt(u3R->jed.cod_p);
+  c3_w_tmp    cod_w = u3h_wyt(u3R->jed.cod_p);
   _cu_vec dat_u = { .vec_u = cod_u, .rot_u = rot_u };
 
   ur_nvec_init(cod_u, cod_w);
@@ -274,12 +274,12 @@ _cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
       if ( 0x7fffffffULL >= ref ) {
         return (u3_atom)ref;
       }
-      else if ( ur_dict32_get(rot_u, &lom_u->map_u, ref, (c3_w*)&vat) ) {
+      else if ( ur_dict32_get(rot_u, &lom_u->map_u, ref, (c3_w_tmp*)&vat) ) {
         return vat;
       }
       else {
         {
-          c3_w wor_w[2] = { ref & 0xffffffff, ref >> 32 };
+          c3_w_tmp wor_w[2] = { ref & 0xffffffff, ref >> 32 };
           vat = (c3_w)u3i_words(2, wor_w);
         }
 
@@ -444,7 +444,7 @@ u3u_meld(void)
 c3_w
 u3u_meld(void)
 {
-  c3_w       pre_w = u3a_open(u3R);
+  c3_w_tmp       pre_w = u3a_open(u3R);
   ur_root_t* rot_u;
   ur_nvec_t  cod_u;
 
@@ -465,7 +465,7 @@ u3u_meld(void)
 static c3_o
 _cu_rock_path(c3_c* dir_c, c3_d eve_d, c3_c** out_c)
 {
-  c3_w  nam_w = 1 + snprintf(0, 0, "%s/.urb/roc/%" PRIu64 ".jam", dir_c, eve_d);
+  c3_w_tmp  nam_w = 1 + snprintf(0, 0, "%s/.urb/roc/%" PRIu64 ".jam", dir_c, eve_d);
   c3_c* nam_c = c3_malloc(nam_w);
   c3_i ret_i;
 
@@ -493,7 +493,7 @@ _cu_rock_path(c3_c* dir_c, c3_d eve_d, c3_c** out_c)
 static c3_o
 _cu_rock_path_make(c3_c* dir_c, c3_d eve_d, c3_c** out_c)
 {
-  c3_w  nam_w = 1 + snprintf(0, 0, "%s/.urb/roc/%" PRIu64 ".jam", dir_c, eve_d);
+  c3_w_tmp  nam_w = 1 + snprintf(0, 0, "%s/.urb/roc/%" PRIu64 ".jam", dir_c, eve_d);
   c3_c* nam_c = c3_malloc(nam_w);
   c3_i ret_i;
 
@@ -578,7 +578,7 @@ _cu_rock_save(c3_c* dir_c, c3_d eve_d, c3_d len_d, c3_y* byt_y)
     ssize_t ret_i;
 
     while ( len_d > 0 ) {
-      c3_w lop_w = 0;
+      c3_w_tmp lop_w = 0;
       //  retry interrupt/async errors
       //
       do {

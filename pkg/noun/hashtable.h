@@ -30,23 +30,23 @@
       **     02 - entry, stale
       **     03 - entry, fresh
       */
-        typedef c3_w u3h_slot;
+        typedef c3_w_tmp u3h_slot;
 
       /* u3h_node: map node.
       */
         typedef struct {
-          c3_w     map_w;     // bitmap for [sot_w]
+          c3_w_tmp     map_w;     // bitmap for [sot_w]
           u3h_slot sot_w[];   // filled slots
         } u3h_node;
 
       /* u3h_root: hash root table
       */
         typedef struct {
-          c3_w     max_w;     // number of cache lines (0 for no trimming)
-          c3_w     use_w;     // number of lines currently filled
+          c3_w_tmp     max_w;     // number of cache lines (0 for no trimming)
+          c3_w_tmp     use_w;     // number of lines currently filled
           struct {
-            c3_w  mug_w;      // current hash
-            c3_w  inx_w;      // index into current hash bucket
+            c3_w_tmp  mug_w;      // current hash
+            c3_w_tmp  inx_w;      // index into current hash bucket
             c3_o  buc_o;      // XX remove
           } arm_u;            // clock arm
           u3h_slot sot_w[64]; // slots
@@ -55,7 +55,7 @@
       /* u3h_buck: bottom bucket.
       */
         typedef struct {
-          c3_w     len_w;     // length of [sot_w]
+          c3_w_tmp     len_w;     // length of [sot_w]
           u3h_slot sot_w[];   // filled slots
         } u3h_buck;
 
@@ -92,7 +92,7 @@
       /* u3h_new_cache(): create hashtable with bounded size.
       */
         u3p(u3h_root)
-        u3h_new_cache(c3_w clk_w);
+        u3h_new_cache(c3_w_tmp clk_w);
 
       /* u3h_new(): create hashtable.
       */
@@ -142,12 +142,12 @@
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
-        u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w);
+        u3h_trim_to(u3p(u3h_root) har_p, c3_w_tmp n_w);
 
       /* u3h_trim_with(): trim to n key-value pairs, with deletion callback
       */
         void
-        u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun));
+        u3h_trim_with(u3p(u3h_root) har_p, c3_w_tmp n_w, void (*del_cb)(u3_noun));
 
       /* u3h_free(): free hashtable.
       */

@@ -15,7 +15,7 @@
     }
     else {
       c3_g       a_g = a;
-      c3_w     tot_w = 0;
+      c3_w_tmp     tot_w = 0;
       u3i_slab sab_u;
 
       /* Measure and validate the slab required.
@@ -53,7 +53,7 @@
       */
       {
         u3_noun cab = b;
-        c3_w    pos_w = 0;
+        c3_w_tmp    pos_w = 0;
 
         while ( 0 != cab ) {
           u3_noun i_cab = u3h(cab);

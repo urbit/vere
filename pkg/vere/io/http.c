@@ -29,7 +29,7 @@ typedef struct _u3_h2o_serv {
 */
   typedef struct _u3_hreq {
     h2o_req_t*       rec_u;             //  h2o request
-    c3_w             seq_l;             //  sequence within connection
+    c3_w_tmp             seq_l;             //  sequence within connection
     u3_rsat          sat_e;             //  request state
     uv_timer_t*      tim_u;             //  timeout
     void*            gen_u;             //  response generator
@@ -54,9 +54,9 @@ typedef struct _u3_h2o_serv {
     uv_tcp_t         wax_u;             //  client stream handler
     h2o_conn_t*      con_u;             //  h2o connection
     h2o_socket_t*    sok_u;             //  h2o connection socket
-    c3_w             ipf_w;             //  client ipv4
-    c3_w             coq_l;             //  connection number
-    c3_w             seq_l;             //  next request number
+    c3_w_tmp             ipf_w;             //  client ipv4
+    c3_w_tmp             coq_l;             //  connection number
+    c3_w_tmp             seq_l;             //  next request number
     struct _u3_http* htp_u;             //  server backlink
     struct _u3_hreq* req_u;             //  request list
     struct _u3_hcon* nex_u;             //  next in server's list
@@ -68,8 +68,8 @@ typedef struct _u3_h2o_serv {
   typedef struct _u3_http {
     uv_tcp_t         wax_u;             //  server stream handler
     void*            h2o_u;             //  libh2o configuration
-    c3_w             sev_l;             //  server number
-    c3_w             coq_l;             //  next connection number
+    c3_w_tmp             sev_l;             //  server number
+    c3_w_tmp             coq_l;             //  next connection number
     c3_s             por_s;             //  running port
     c3_o             dis;               //  manually-configured port
     c3_o             sec;               //  logically secure
@@ -124,7 +124,7 @@ static void _http_start_respond(u3_hreq* req_u,
                     u3_noun complete);
 
 static const c3_i TCP_BACKLOG = 16;
-static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
+static const c3_w_tmp HEARTBEAT_TIMEOUT = 20 * 1000;
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -192,7 +192,7 @@ _cttp_bods_free(u3_hbod* bod_u)
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
 {
-  c3_w len_w;
+  c3_w_tmp len_w;
 
   if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
     u3m_bail(c3__fail); return 0;
@@ -215,10 +215,10 @@ _cttp_bod_from_octs(u3_noun oct)
 /* _cttp_bods_to_vec(): translate body buffers to array of h2o_iovec_t
 */
 static h2o_iovec_t*
-_cttp_bods_to_vec(u3_hbod* bod_u, c3_w* tot_w)
+_cttp_bods_to_vec(u3_hbod* bod_u, c3_w_tmp* tot_w)
 {
   h2o_iovec_t* vec_u;
-  c3_w len_w;
+  c3_w_tmp len_w;
 
   {
     u3_hbod* bid_u = bod_u;
@@ -283,8 +283,8 @@ _http_heds_free(u3_hhed* hed_u)
 static u3_hhed*
 _http_hed_new(u3_atom nam, u3_atom val)
 {
-  c3_w     nam_w = u3r_met(3, nam);
-  c3_w     val_w = u3r_met(3, val);
+  c3_w_tmp     nam_w = u3r_met(3, nam);
+  c3_w_tmp     val_w = u3r_met(3, val);
   u3_hhed* hed_u = c3_malloc(sizeof(*hed_u));
 
   hed_u->nam_c = c3_malloc(1 + nam_w);
@@ -392,7 +392,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 /* _http_req_find(): find http request in connection by sequence.
 */
 static u3_hreq*
-_http_req_find(u3_hcon* hon_u, c3_w seq_l)
+_http_req_find(u3_hcon* hon_u, c3_w_tmp seq_l)
 {
   u3_hreq* req_u = hon_u->req_u;
 
@@ -681,7 +681,7 @@ _chunk_align(byte_range* rng_u)
 /* _parse_range(): get a range from '-' delimited text
 */
 static byte_range
-_parse_range(c3_c* txt_c, c3_w len_w)
+_parse_range(c3_c* txt_c, c3_w_tmp len_w)
 {
   c3_c* hep_c = memchr(txt_c, '-', len_w);
   byte_range rng_u;
@@ -711,7 +711,7 @@ _get_range(h2o_headers_t req_headers, byte_range* rng_u)
   rng_u->beg_z = SIZE_MAX;
   rng_u->end_z = SIZE_MAX;
 
-  c3_w inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
+  c3_w_tmp inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
   if ( UINT32_MAX == inx_w) {
     return c3n;
   }
@@ -784,13 +784,13 @@ _free_beam(beam* bem)
 /* _get_beam(): get a _beam from url
 */
 static beam
-_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
+_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w_tmp len_w)
 {
   beam bem;
 
   //  get beak
   //
-  for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
+  for ( c3_w_tmp i_w = 0; i_w < 3; ++i_w ) {
     u3_noun* wer;
     if ( 0 == i_w ) {
       wer = &bem.who;
@@ -851,7 +851,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
         return bem;
       }
       else {
-        c3_w dif_w = (c3_p)(nex_c - txt_c);
+        c3_w_tmp dif_w = (c3_p)(nex_c - txt_c);
         *wer = u3i_bytes(dif_w, (const c3_y*)txt_c);
         txt_c = nex_c;
         len_w = len_w - dif_w;
@@ -880,7 +880,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     u3_httd* htd_u = htp_u->htd_u;
 
     c3_c* bas_c = req_u->rec_u->input.path.base;
-    c3_w len_w = req_u->rec_u->input.path.len;
+    c3_w_tmp len_w = req_u->rec_u->input.path.len;
 
     // check if base url starts with '/_~_/'
     if (  (len_w < 6)
@@ -1173,7 +1173,7 @@ _http_hgen_send(u3_hgen* gen_u)
 {
   u3_hreq*     req_u = gen_u->req_u;
   h2o_req_t*   rec_u = req_u->rec_u;
-  c3_w         len_w;
+  c3_w_tmp         len_w;
   h2o_iovec_t* vec_u = _cttp_bods_to_vec(gen_u->bod_u, &len_w);
 
   //  not ready again until _proceed
@@ -1555,7 +1555,7 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 /* _http_conn_find(): find http connection in server by sequence.
 */
 static u3_hcon*
-_http_conn_find(u3_http *htp_u, c3_w coq_l)
+_http_conn_find(u3_http *htp_u, c3_w_tmp coq_l)
 {
   u3_hcon* hon_u = htp_u->hon_u;
 
@@ -1619,7 +1619,7 @@ _http_conn_free(uv_handle_t* han_t)
 
 #if 0
   {
-    c3_w len_w = 0;
+    c3_w_tmp len_w = 0;
 
     u3_hcon* noh_u = htp_u->hon_u;
 
@@ -1636,7 +1636,7 @@ _http_conn_free(uv_handle_t* han_t)
 
 #if 0
   {
-    c3_w len_w = 0;
+    c3_w_tmp len_w = 0;
 
     u3_hcon* noh_u = htp_u->hon_u;
 
@@ -2057,7 +2057,7 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
-    c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
+    c3_w_tmp len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
 
     c3_c* paf_c = c3_malloc(len_w);
     snprintf(paf_c, len_w, "%s/%s%s", pax_c, now_c, nam_c);
@@ -2162,7 +2162,7 @@ _http_serv_start(u3_http* htp_u)
 static uv_buf_t
 _http_wain_to_buf(u3_noun wan)
 {
-  c3_w len_w = u3_mcut_path(0, 0, (c3_c)10, u3k(wan));
+  c3_w_tmp len_w = u3_mcut_path(0, 0, (c3_c)10, u3k(wan));
   c3_c* buf_c = c3_malloc(1 + len_w);
 
   u3_mcut_path(buf_c, 0, (c3_c)10, wan);
@@ -2256,7 +2256,7 @@ static void
 _http_write_ports_file(u3_httd* htd_u, c3_c *pax_c)
 {
   c3_c* nam_c = ".http.ports";
-  c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(nam_c);
+  c3_w_tmp len_w = 1 + strlen(pax_c) + 1 + strlen(nam_c);
 
   c3_c* paf_c = c3_malloc(len_w);
   snprintf(paf_c, len_w, "%s/%s", pax_c, nam_c);
@@ -2288,7 +2288,7 @@ static void
 _http_release_ports_file(c3_c *pax_c)
 {
   c3_c* nam_c = ".http.ports";
-  c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(nam_c);
+  c3_w_tmp len_w = 1 + strlen(pax_c) + 1 + strlen(nam_c);
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
 
@@ -2309,7 +2309,7 @@ _http_search_req(u3_httd* htd_u,
   u3_http* htp_u;
   u3_hcon* hon_u;
   u3_hreq* req_u;
-  c3_w bug_w = u3C.wag_w & u3o_verbose;
+  c3_w_tmp bug_w = u3C.wag_w & u3o_verbose;
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
@@ -2626,7 +2626,7 @@ _http_ef_http_server(u3_httd* htd_u,
 /* _http_stream_slog(): emit slog to open connections
 */
 static void
-_http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
+_http_stream_slog(void* vop_p, c3_w_tmp pri_w, u3_noun tan)
 {
   u3_httd* htd_u = (u3_httd*)vop_p;
   u3_hreq* seq_u = htd_u->fig_u.seq_u;
@@ -2822,7 +2822,7 @@ _http_io_info(u3_auto* car_u)
 {
   u3_httd*  htd_u = (u3_httd*)car_u;
   u3_http*  htp_u = htd_u->htp_u;
-  c3_w      sec_w = 0;
+  c3_w_tmp      sec_w = 0;
   u3_hreq*  seq_u = htd_u->fig_u.seq_u;
   u3_noun   res;
 

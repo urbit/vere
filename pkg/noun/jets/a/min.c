@@ -13,8 +13,8 @@ u3qa_min(u3_atom a, u3_atom b)
     return u3k(c3_min(a, b));
   }
   else {
-    c3_w a_w = u3r_met(0, a);
-    c3_w b_w = u3r_met(0, b);
+    c3_w_tmp a_w = u3r_met(0, a);
+    c3_w_tmp b_w = u3r_met(0, b);
 
     if ( a_w != b_w ) {
       return u3k((a_w < b_w) ? a : b);

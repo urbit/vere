@@ -9,7 +9,7 @@
   static u3_atom
   _cqe_chacha_crypt(u3_atom rounds, u3_atom key, u3_atom nonce, u3_atom counter, u3_atom wid, u3_atom dat)
   {
-    c3_w rounds_w, wid_w;
+    c3_w_tmp rounds_w, wid_w;
     c3_d counter_d;
     if ( !u3r_word_fit(&rounds_w, rounds) || !u3r_word_fit(&wid_w, wid) || c3n == u3r_safe_chub(counter, &counter_d) ) {
       return u3m_bail(c3__fail);
@@ -46,7 +46,7 @@
   static u3_noun
   _cqe_chacha_xchacha(u3_atom rounds, u3_atom key, u3_atom nonce)
   {
-    c3_w rounds_w;
+    c3_w_tmp rounds_w;
     if ( !u3r_word_fit(&rounds_w, rounds) ) {
       return u3m_bail(c3__fail);
     }

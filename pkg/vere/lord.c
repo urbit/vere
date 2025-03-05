@@ -346,7 +346,7 @@ static void
 _lord_plea_slog(u3_lord* god_u, u3_noun dat)
 {
   u3_noun pri, tan;
-  c3_w pri_w;
+  c3_w_tmp pri_w;
 
   if (  (c3n == u3r_cell(dat, &pri, &tan))
      || (c3n == u3r_safe_word(pri, &pri_w)) )
@@ -1203,7 +1203,7 @@ u3_lord_slog(u3_lord* god_u)
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*
-u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
+u3_lord_init(c3_c* pax_c, c3_w_tmp wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 {
   u3_lord* god_u = c3_calloc(sizeof *god_u);
   god_u->liv_o = c3n;

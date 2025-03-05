@@ -14,7 +14,7 @@ u3qc_peg(u3_atom a, u3_atom b)
   }
 
   c3_d a_d, b_d;
-  c3_w c_w;
+  c3_w_tmp c_w;
 
   if ( (c3y == u3a_is_cat(a)) && (c3y == u3a_is_cat(b)) ) {
     c_w = c3_bits_word(b) - 1;
@@ -22,7 +22,7 @@ u3qc_peg(u3_atom a, u3_atom b)
     b_d = b;
   }
   else {
-    c3_w d_w = u3r_met(0, a);
+    c3_w_tmp d_w = u3r_met(0, a);
     c3_d e_d;
 
     c_w = u3r_met(0, b) - 1;

@@ -22,7 +22,7 @@ static c3_i
 _term_tcsetattr(c3_i fil_i, c3_i act_i, const struct termios* tms_u)
 {
   c3_i ret_i = 0;
-  c3_w len_w = 0;
+  c3_w_tmp len_w = 0;
 
   do {
     //  abort pathological retry loop

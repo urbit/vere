@@ -58,7 +58,7 @@ _pier_work_send(u3_work* wok_u)
   u3_auto* car_u = wok_u->car_u;
   u3_pier* pir_u = wok_u->pir_u;
   u3_lord* god_u = pir_u->god_u;
-  c3_w     len_w = 0;
+  c3_w_tmp     len_w = 0;
 
   //  calculate work batch size
   {
@@ -537,7 +537,7 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
   c3_c* czar_c = u3r_string(czar);
 
   c3_c url[256];
-  c3_w  len_w;
+  c3_w_tmp  len_w;
   c3_y* hun_y;
 
   sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
@@ -555,15 +555,15 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
 static c3_o
 _czar_boot_data(c3_c* czar_c,
                 c3_c* who_c,
-                c3_w* bone_w,
-                c3_w* czar_glx_w,
-                c3_w* czar_ryf_w,
-                c3_w* czar_lyf_w,
-                c3_w* czar_bon_w,
-                c3_w* czar_ack_w)
+                c3_w_tmp* bone_w,
+                c3_w_tmp* czar_glx_w,
+                c3_w_tmp* czar_ryf_w,
+                c3_w_tmp* czar_lyf_w,
+                c3_w_tmp* czar_bon_w,
+                c3_w_tmp* czar_ack_w)
 {
   c3_c url[256];
-  c3_w  len_w;
+  c3_w_tmp  len_w;
   c3_y* hun_y = 0;
 
   if ( bone_w != NULL ) {
@@ -608,9 +608,9 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   c3_c*   who_c = u3r_string(who);
 
   u3_noun rem, glx, ryf, bon, cur, nex;
-  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
+  c3_w_tmp    glx_w, ryf_w, bon_w, cur_w, nex_w;
 
-  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
+  c3_w_tmp czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
@@ -633,7 +633,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       _pier_work(wok_u);
     } else {
       if ( czar_ryf_w == ryf_w ) {
-        c3_w ack_w = cur_w - 1;
+        c3_w_tmp ack_w = cur_w - 1;
         if ( czar_ack_w == 0xFFFFFFFF ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
@@ -1084,7 +1084,7 @@ _pier_play_plan(u3_play* pay_u, u3_info fon_u)
 /* _pier_play_send(): detach a batch of up to [len_w] events from queue.
 */
 static u3_info
-_pier_play_next(u3_play* pay_u, c3_w len_w)
+_pier_play_next(u3_play* pay_u, c3_w_tmp len_w)
 {
   u3_fact* tac_u = pay_u->ext_u;
   u3_info  fon_u;
@@ -1123,7 +1123,7 @@ static void
 _pier_play_send(u3_play* pay_u)
 {
   u3_pier* pir_u = pay_u->pir_u;
-  c3_w     len_w;
+  c3_w_tmp     len_w;
 
   //  awaiting read
   //
@@ -1476,7 +1476,7 @@ _pier_on_disk_write_bail(void* ptr_v, c3_d eve_d)
 /* _pier_on_lord_slog(): debug printf from worker.
 */
 static void
-_pier_on_lord_slog(void* ptr_v, c3_w pri_w, u3_noun tan)
+_pier_on_lord_slog(void* ptr_v, c3_w_tmp pri_w, u3_noun tan)
 {
   u3_pier* pir_u = ptr_v;
 
@@ -1798,7 +1798,7 @@ u3_pier_slog(u3_pier* pir_u)
 /* _pier_init(): create a pier, loading existing.
 */
 static u3_pier*
-_pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
+_pier_init(c3_w_tmp wag_w, c3_c* pax_c, u3_weak ryf)
 {
   //  create pier
   //
@@ -1878,7 +1878,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
 /* u3_pier_stay(): restart an existing pier.
 */
 u3_pier*
-u3_pier_stay(c3_w wag_w, u3_noun pax)
+u3_pier_stay(c3_w_tmp wag_w, u3_noun pax)
 {
   u3_pier* pir_u;
   u3_weak  rift = u3_none;
@@ -1975,7 +1975,7 @@ _pier_pill_parse(u3_noun pil)
   //  optionally replace filesystem in userspace
   //
   if ( u3_nul != pil_q ) {
-    c3_w len_w = 0;
+    c3_w_tmp len_w = 0;
     u3_noun ova = bot_u.use;
     u3_noun new = u3_nul;
     u3_noun ovo;
@@ -2021,7 +2021,7 @@ _pier_boot_make(u3_noun who,
   //
   {
     u3_noun cad, wir = u3nt(u3_blip, c3__arvo, u3_nul);
-    c3_w    eny_w[16];
+    c3_w_tmp    eny_w[16];
     c3_rand(eny_w);
 
     cad = u3nt(c3__verb, u3_nul, ( c3y == u3_Host.ops_u.veb ) ? c3n : c3y);
@@ -2209,7 +2209,7 @@ _pier_boot_plan(u3_pier* pir_u,
 /* u3_pier_boot(): start a new pier.
 */
 u3_pier*
-u3_pier_boot(c3_w  wag_w,                   //  config flags
+u3_pier_boot(c3_w_tmp  wag_w,                   //  config flags
              u3_noun who,                   //  identity
              u3_noun ven,                   //  boot event
              u3_noun pil,                   //  type-of/path-to pill
@@ -2531,7 +2531,7 @@ u3_pier_bail(u3_pier* pir_u)
 /* c3_rand(): fill a 512-bit (16-word) buffer.
 */
 void
-c3_rand(c3_w* rad_w)
+c3_rand(c3_w_tmp* rad_w)
 {
   if ( 0 != ent_getentropy(rad_w, 64) ) {
     fprintf(stderr, "c3_rand getentropy: %s\n", strerror(errno));
@@ -2591,7 +2591,7 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 /* u3_pier_tank(): dump single tank.
 */
 void
-u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
+u3_pier_tank(c3_l tab_l, c3_w_tmp pri_w, u3_noun tac)
 {
   u3_noun blu = u3_term_get_blew(0);
   c3_l  col_l = u3h(blu);

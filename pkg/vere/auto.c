@@ -89,7 +89,7 @@ u3_auto_bail_slog(u3_ovum* egg_u, u3_noun lud)
 {
   c3_c* car_c = u3r_string(egg_u->car_u->nam_m);
   u3_noun dul = lud;
-  c3_w  len_w = 1;
+  c3_w_tmp  len_w = 1;
 
   while ( u3_nul != dul ) {
     u3l_log("%s: bail %u", car_c, len_w++);

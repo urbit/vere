@@ -6,7 +6,7 @@
 u3_noun
 u3qc_mas(u3_atom a)
 {
-  c3_w b_w;
+  c3_w_tmp b_w;
 
   if ( c3y == u3a_is_cat(a) ) {
     b_w = c3_bits_word(a);

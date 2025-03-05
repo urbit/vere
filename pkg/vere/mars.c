@@ -18,7 +18,7 @@ static void
 _mars_step_trace(const c3_c* dir_c)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    c3_w trace_cnt_w = u3t_trace_cnt();
+    c3_w_tmp trace_cnt_w = u3t_trace_cnt();
     if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(dir_c);
     }
@@ -92,7 +92,7 @@ typedef enum {
 static _mars_play_e
 _mars_play_batch(u3_mars* mar_u,
                  c3_o     mug_o,
-                 c3_w     bat_w,
+                 c3_w_tmp     bat_w,
                  c3_c**   wen_c)
 {
   u3_disk*      log_u = mar_u->log_u;
@@ -251,7 +251,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   pay_d = eve_d - mar_u->dun_d;
 
   if ( !mar_u->dun_d ) {
-    c3_w lif_w;
+    c3_w_tmp lif_w;
 
     if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, 0, 0, &lif_w) ) {
       fprintf(stderr, "mars: disk read meta fail\r\n");
@@ -291,7 +291,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   {
     c3_d  pas_d = mar_u->dun_d;  // last snapshot
     c3_d  mem_d = 0;             // last event to meme
-    c3_w  try_w = 0;             // [mem_d] retry count
+    c3_w_tmp  try_w = 0;             // [mem_d] retry count
     c3_c* wen_c;
 
     while ( mar_u->dun_d < eve_d ) {

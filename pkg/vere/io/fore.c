@@ -103,7 +103,7 @@ _fore_io_talk(u3_auto* car_u)
   //  inject fresh entropy
   //
   {
-    c3_w    eny_w[16];
+    c3_w_tmp    eny_w[16];
     c3_rand(eny_w);
 
     wir = u3nc(c3__arvo, u3_nul);

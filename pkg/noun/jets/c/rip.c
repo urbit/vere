@@ -58,29 +58,29 @@ _bit_rip(u3_atom bits, u3_atom atom)
     return u3m_bail(c3__fail);
   }
 
-  c3_w bit_width  = u3r_met(0, atom);
-  c3_w num_blocks = DIVCEIL(bit_width, bits);
+  c3_w_tmp bit_width  = u3r_met(0, atom);
+  c3_w_tmp num_blocks = DIVCEIL(bit_width, bits);
 
   u3_noun res = u3_nul;
 
-  for ( c3_w blk = 0; blk < num_blocks; blk++ ) {
-    c3_w next_blk = blk + 1;
-    c3_w blks_rem = num_blocks - next_blk;
-    c3_w bits_rem = blks_rem * bits;
-    c3_w ins_idx  = bits_rem / 32;
-    c3_w sig_idx  = ins_idx + 1;
+  for ( c3_w_tmp blk = 0; blk < num_blocks; blk++ ) {
+    c3_w_tmp next_blk = blk + 1;
+    c3_w_tmp blks_rem = num_blocks - next_blk;
+    c3_w_tmp bits_rem = blks_rem * bits;
+    c3_w_tmp ins_idx  = bits_rem / 32;
+    c3_w_tmp sig_idx  = ins_idx + 1;
 
-    c3_w bits_rem_in_ins_word = bits_rem % 32;
+    c3_w_tmp bits_rem_in_ins_word = bits_rem % 32;
 
-    c3_w ins_word  = u3r_word(ins_idx, atom);
-    c3_w sig_word  = u3r_word(sig_idx, atom);
-    c3_w nbits_ins = c3_min(bits, 32 - bits_rem_in_ins_word);
-    c3_w nbits_sig = bits - nbits_ins;
+    c3_w_tmp ins_word  = u3r_word(ins_idx, atom);
+    c3_w_tmp sig_word  = u3r_word(sig_idx, atom);
+    c3_w_tmp nbits_ins = c3_min(bits, 32 - bits_rem_in_ins_word);
+    c3_w_tmp nbits_sig = bits - nbits_ins;
 
-    c3_w ins_word_bits = TAKEBITS(nbits_ins, ins_word >> bits_rem_in_ins_word);
-    c3_w sig_word_bits = TAKEBITS(nbits_sig, sig_word);
+    c3_w_tmp ins_word_bits = TAKEBITS(nbits_ins, ins_word >> bits_rem_in_ins_word);
+    c3_w_tmp sig_word_bits = TAKEBITS(nbits_sig, sig_word);
 
-    c3_w item = ins_word_bits | (sig_word_bits << nbits_ins);
+    c3_w_tmp item = ins_word_bits | (sig_word_bits << nbits_ins);
 
     res = u3nc(item, res);
   }
@@ -104,18 +104,18 @@ _block_rip(u3_atom bloq, u3_atom b)
   if ( bloq_g < 5 ) {                                   //  produce direct atoms
     u3_noun acc     = u3_nul;
 
-    c3_w met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
-    c3_w nbits_w = 1 << bloq_g;                         //  block size in bits
-    c3_w bmask_w = (1 << nbits_w) - 1;                  //  result mask
+    c3_w_tmp met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
+    c3_w_tmp nbits_w = 1 << bloq_g;                         //  block size in bits
+    c3_w_tmp bmask_w = (1 << nbits_w) - 1;                  //  result mask
 
-    for ( c3_w i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
-      c3_w nex_w = i_w + 1;                             //  next block
-      c3_w pat_w = met_w - nex_w;                       //  blks left after this
-      c3_w bit_w = pat_w << bloq_g;                     //  bits left after this
-      c3_w wor_w = bit_w >> 5;                          //  wrds left after this
-      c3_w sif_w = bit_w & 31;                          //  bits left in word
-      c3_w src_w = u3r_word(wor_w, b);                  //  find word by index
-      c3_w rip_w = (src_w >> sif_w) & bmask_w;          //  get item from word
+    for ( c3_w_tmp i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
+      c3_w_tmp nex_w = i_w + 1;                             //  next block
+      c3_w_tmp pat_w = met_w - nex_w;                       //  blks left after this
+      c3_w_tmp bit_w = pat_w << bloq_g;                     //  bits left after this
+      c3_w_tmp wor_w = bit_w >> 5;                          //  wrds left after this
+      c3_w_tmp sif_w = bit_w & 31;                          //  bits left in word
+      c3_w_tmp src_w = u3r_word(wor_w, b);                  //  find word by index
+      c3_w_tmp rip_w = (src_w >> sif_w) & bmask_w;          //  get item from word
 
       acc = u3nc(rip_w, acc);
     }
@@ -124,18 +124,18 @@ _block_rip(u3_atom bloq, u3_atom b)
   }
 
   u3_noun acc   = u3_nul;
-  c3_w    met_w = u3r_met(bloq_g, b);
-  c3_w    len_w = u3r_met(5, b);
+  c3_w_tmp    met_w = u3r_met(bloq_g, b);
+  c3_w_tmp    len_w = u3r_met(5, b);
   c3_g    san_g = (bloq_g - 5);
-  c3_w    san_w = 1 << san_g;
-  c3_w    dif_w = (met_w << san_g) - len_w;
-  c3_w    tub_w = ((dif_w == 0) ? san_w : (san_w - dif_w));
+  c3_w_tmp    san_w = 1 << san_g;
+  c3_w_tmp    dif_w = (met_w << san_g) - len_w;
+  c3_w_tmp    tub_w = ((dif_w == 0) ? san_w : (san_w - dif_w));
 
-  for ( c3_w i_w = 0; i_w < met_w; i_w++ ) {
-    c3_w     pat_w = (met_w - (i_w + 1));
-    c3_w     wut_w = (pat_w << san_g);
-    c3_w     sap_w = ((0 == i_w) ? tub_w : san_w);
-    c3_w       j_w;
+  for ( c3_w_tmp i_w = 0; i_w < met_w; i_w++ ) {
+    c3_w_tmp     pat_w = (met_w - (i_w + 1));
+    c3_w_tmp     wut_w = (pat_w << san_g);
+    c3_w_tmp     sap_w = ((0 == i_w) ? tub_w : san_w);
+    c3_w_tmp       j_w;
     u3_atom    rip;
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 5, sap_w);

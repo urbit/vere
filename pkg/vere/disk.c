@@ -177,7 +177,7 @@ u3_disk_etch(u3_disk* log_u,
   //
   {
     u3_atom mat = u3qe_jam(eve);
-    c3_w  len_w = u3r_met(3, mat);
+    c3_w_tmp  len_w = u3r_met(3, mat);
 
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);
@@ -624,7 +624,7 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w_tmp len_w, c3_y* byt_y)
 {
   //  strip trailing zeroes.
   //
@@ -639,10 +639,10 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 */
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u,
-                  c3_w     ver_w,
+                  c3_w_tmp     ver_w,
                   c3_d     who_d[2],
                   c3_o     fak_o,
-                  c3_w     lif_w)
+                  c3_w_tmp     lif_w)
 {
   u3_assert( c3y == u3a_is_cat(ver_w) );
   u3_assert( c3y == u3a_is_cat(lif_w) );
@@ -667,7 +667,7 @@ c3_o
 u3_disk_save_meta_meta(c3_c* log_c,
                        c3_d  who_d[2],
                        c3_o  fak_o,
-                       c3_w  lif_w)
+                       c3_w_tmp  lif_w)
 {
   MDB_env* dbm_u;
 
@@ -713,10 +713,10 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 */
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u,
-                  c3_w*    ver_w,
+                  c3_w_tmp*    ver_w,
                   c3_d*    who_d,
                   c3_o*    fak_o,
-                  c3_w*    lif_w)
+                  c3_w_tmp*    lif_w)
 {
   _mdb_val val_u;
 
@@ -824,7 +824,7 @@ u3_disk_read_meta(MDB_env* mdb_u,
 static c3_c*
 _disk_lock(c3_c* pax_c)
 {
-  c3_w  len_w = strlen(pax_c) + sizeof("/.vere.lock");
+  c3_w_tmp  len_w = strlen(pax_c) + sizeof("/.vere.lock");
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
 
@@ -840,7 +840,7 @@ _disk_acquire(c3_c* pax_c)
 {
   c3_c* paf_c    = _disk_lock(pax_c);
   c3_y  dat_y[13] = {0};
-  c3_w  pid_w    = 0;
+  c3_w_tmp  pid_w    = 0;
   c3_i  fid_i, ret_i;
 
   if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
@@ -1096,11 +1096,11 @@ static c3_o
 _disk_epoc_meta(u3_disk*    log_u,
                 c3_d        epo_d,
                 const c3_c* met_c,
-                c3_w        max_w,
+                c3_w_tmp        max_w,
                 c3_c*       buf_c)
 {
   struct stat buf_u;
-  c3_w red_w, len_w;
+  c3_w_tmp red_w, len_w;
   c3_i ret_i, fid_i;
   c3_c*       pat_c;
 
@@ -1316,7 +1316,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   //  get metadata from old log
   c3_d     who_d[2];
   c3_o     fak_o;
-  c3_w     lif_w;
+  c3_w_tmp     lif_w;
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
@@ -1509,7 +1509,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  get metadata from old log
   c3_d who_d[2];
   c3_o fak_o;
-  c3_w lif_w;
+  c3_w_tmp lif_w;
 
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
@@ -1671,7 +1671,7 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
   switch ( log_u->ver_w ) {
     case U3D_VER1: {
       //  set version to 2 (migration in progress)
-      c3_w ver_w = U3D_VER2;
+      c3_w_tmp ver_w = U3D_VER2;
       if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
@@ -1790,7 +1790,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   //
   {
     c3_c ver_c[8];
-    c3_w ver_w;
+    c3_w_tmp ver_w;
     c3_i car_i;
 
     if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
@@ -2057,7 +2057,7 @@ try_init:
             //  read metadata from epoch's log
             c3_d who_d[2];
             c3_o fak_o;
-            c3_w lif_w;
+            c3_w_tmp lif_w;
             if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) )
             {
               fprintf(stderr, "disk: failed to read metadata\r\n");

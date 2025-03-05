@@ -14,7 +14,7 @@
       return u3m_bail(c3__fail);
     }
     else {
-      c3_w len_w = a;
+      c3_w_tmp len_w = a;
 
       while ( len_w ) {
         if ( c3n == u3du(b) ) {

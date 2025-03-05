@@ -17,7 +17,7 @@
       return 1;
     }
     else {
-      c3_w met_w = u3r_met(a, b);
+      c3_w_tmp met_w = u3r_met(a, b);
 
       if ( !_(u3a_is_cat(met_w)) ) {
         return u3i_words(1, &met_w);
