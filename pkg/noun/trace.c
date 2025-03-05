@@ -723,7 +723,7 @@ _ct_roundf(float per_f)
   // to account for rounding without using round or roundf
   float big_f = (per_f*10000)+0.5;
   // truncate to int
-  c3_w_tmp big_w = (c3_w) big_f;
+  c3_w_tmp big_w = (c3_w_tmp) big_f;
   // convert to float and scale down such that
   // our last two digits are right of the decimal
   float tuc_f = (float) big_w/100.0;
@@ -889,7 +889,7 @@ _ct_report_bargraph(
   for (c3_w_tmp i=0; i < 6; i++) {
     bar_u.s[i].dex_w = i;
     bar_u.s[i].ori_f = in[i];
-    bar_u.s[i].low_w = (c3_w) bar_u.s[i].ori_f;
+    bar_u.s[i].low_w = (c3_w_tmp) bar_u.s[i].ori_f;
   }
 
   // repeatedly adjust for roundoff error
@@ -992,7 +992,7 @@ _ct_etch_memory(c3_c rep_c[32], float per_f, c3_w_tmp num_w)
 
   // add the space-percentage into the report
   rep_c[2] = '0', rep_c[3] = '.', rep_c[4] = '0', rep_c[5] = '0';
-  c3_w_tmp per_i = (c3_w) (per_f*100);
+  c3_w_tmp per_i = (c3_w_tmp) (per_f*100);
   c3_w_tmp i = 0;
   while (per_i > 0 && i < 6) {
     if (i != 2) {
@@ -1056,7 +1056,7 @@ u3t_etch_meme(c3_l mod_l)
   c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  c3_w_tmp inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
+  c3_w_tmp inc_w = (max_f > hip_f+1.0) ? (c3_w_tmp) max_f+0.5 : (c3_w_tmp) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed
@@ -1069,7 +1069,7 @@ u3t_etch_meme(c3_l mod_l)
   bar_c[0] = 0;
   _ct_report_bargraph(bar_c, hip_f, hep_f, fre_f, pen_f, tak_f, tik_f);
 
-  c3_w_tmp dol = (c3_w) _ct_roundf(hip_f/100);
+  c3_w_tmp dol = (c3_w_tmp) _ct_roundf(hip_f/100);
   bar_c[dol] = '$';
 #ifdef U3_CPU_DEBUG
   if (max_f > 0.0) {

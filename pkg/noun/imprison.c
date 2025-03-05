@@ -16,12 +16,12 @@ _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
   c3_d wor_d = (bit_d + 0x1f) >> 5;
-  c3_w_tmp wor_w = (c3_w)wor_d;
+  c3_w_tmp wor_w = (c3_w_tmp)wor_d;
 
   if (  (wor_w != wor_d)
      || (len_d != (bit_d >> met_g)) )
   {
-    return (c3_w)u3m_bail(c3__fail);
+    return (c3_w_tmp)u3m_bail(c3__fail);
   }
 
   return wor_w;
@@ -161,7 +161,7 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
     c3_w_tmp bit_w = bit_d & 0x1f;
 
     if ( bit_w ) {
-      sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
+      sab_u->buf_w[wor_w] &= ((c3_w_tmp)1 << bit_w) - 1;
     }
   }
 }
@@ -455,7 +455,7 @@ u3i_mp(mpz_t a_mp)
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, 0, siz_i);
 
-  mpz_export(sab_u.buf_w, 0, -1, sizeof(c3_w), 0, 0, a_mp);
+  mpz_export(sab_u.buf_w, 0, -1, sizeof(c3_w_tmp), 0, 0, a_mp);
   mpz_clear(a_mp);
 
   //  per the mpz_export() docs:

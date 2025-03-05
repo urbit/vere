@@ -74,7 +74,7 @@ _migrate_move(u3a_v2_road *rod_u)
 {
   fprintf(stderr, "loom: migration move\r\n");
 
-  c3_z hiz_z = u3a_v2_heap(rod_u) * sizeof(c3_w);
+  c3_z hiz_z = u3a_v2_heap(rod_u) * sizeof(c3_w_tmp);
 
   /* calculate required shift distance to prevent write head overlapping read head */
   c3_w_tmp  off_w = 1;  /* at least 1 word because u3R_v1->rut_p migrates from 1 to 2 */
@@ -95,7 +95,7 @@ _migrate_move(u3a_v2_road *rod_u)
   c3_w_tmp *end_w = u3a_v2_into(rod_u->hat_p + off_w);
   u3a_v2_box *old_u = (void *)box_w;
   c3_w_tmp siz_w = old_u->siz_w;
-  u3p(c3_w) new_p = rod_u->rut_p + 1 + c3_wiseof(u3a_v2_box);
+  u3p(c3_w_tmp) new_p = rod_u->rut_p + 1 + c3_wiseof(u3a_v2_box);
   c3_w_tmp *new_w;
 
   for (; box_w < end_w

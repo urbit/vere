@@ -810,10 +810,10 @@ u3_disk_read_meta(MDB_env* mdb_u,
 
   if ( lif_w ) {
     c3_y* byt_y = val_u.buf_y;
-    *lif_w = (c3_w)byt_y[0]
-           | (c3_w)byt_y[1] << 8
-           | (c3_w)byt_y[2] << 16
-           | (c3_w)byt_y[3] << 24;
+    *lif_w = (c3_w_tmp)byt_y[0]
+           | (c3_w_tmp)byt_y[1] << 8
+           | (c3_w_tmp)byt_y[2] << 16
+           | (c3_w_tmp)byt_y[3] << 24;
   }
 
   return c3y;

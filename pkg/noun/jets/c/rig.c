@@ -36,7 +36,7 @@ u3qc_rig(u3_atom foq,
      && (c3y == u3a_is_cat(toq)) && (toq < 32)
      && (c3y == u3a_is_cat(sep)) )
   {
-    c3_d sep_d = u3qc_rig_s((c3_g)foq, (c3_w)sep, (c3_g)toq);
+    c3_d sep_d = u3qc_rig_s((c3_g)foq, (c3_w_tmp)sep, (c3_g)toq);
     return u3i_chub(sep_d);
   }
 

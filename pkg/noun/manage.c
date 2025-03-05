@@ -511,7 +511,7 @@ _pave_road(c3_w_tmp* rut_w, c3_w_tmp* mat_w, c3_w_tmp* cap_w, c3_w_tmp siz_w)
   //  enable in case of corruption
   //
   // memset(mem_w, 0, 4 * len_w);
-  memset(rod_u, 0, sizeof(c3_w) * siz_w);
+  memset(rod_u, 0, sizeof(c3_w_tmp) * siz_w);
 
   //  the top and bottom of the heap are initially the same
   //
@@ -1054,7 +1054,7 @@ u3m_leap(c3_w_tmp pad_w)
   /* Allocate a region on the cap.
   */
   {
-    u3p(c3_w) bot_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
+    u3p(c3_w_tmp) bot_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
 
     if ( c3y == u3a_is_north(u3R) ) {
       bot_p = u3R->hat_p + pad_w;

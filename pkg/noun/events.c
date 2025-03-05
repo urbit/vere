@@ -292,7 +292,7 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       return fal_e;
     }
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w)) ) {
       fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
       return u3e_flaw_sham;
     }
@@ -305,12 +305,12 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
 
-  u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+  u3P.dit_w[blk_w] |= ((c3_w_tmp)1 << bit_w);
 
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
@@ -359,7 +359,7 @@ _ce_image_stat(u3e_image* img_u, c3_w_tmp* pgs_w)
       return _ce_img_fail;
     }
     else {
-      *pgs_w = (c3_w)pgs_z;
+      *pgs_w = (c3_w_tmp)pgs_z;
       return _ce_img_good;
     }
   }
@@ -453,7 +453,7 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
       u3_assert(0);
       return c3n;
     }
-    len_w = (c3_w) buf_u.st_size;
+    len_w = (c3_w_tmp) buf_u.st_size;
   }
 
   if (0 == len_w) {
@@ -677,7 +677,7 @@ _ce_patch_count_page(c3_w_tmp pag_w,
   c3_w_tmp blk_w = (pag_w >> 5);
   c3_w_tmp bit_w = (pag_w & 31);
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w) ) {
     pgc_w += 1;
   }
   return pgc_w;
@@ -693,7 +693,7 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   c3_w_tmp  blk_w = (pag_w >> 5);
   c3_w_tmp  bit_w = (pag_w & 31);
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if ( u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w) ) {
     c3_w_tmp* mem_w = _ce_ptr(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
@@ -908,7 +908,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+    if ( u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w) ) {
       fprintf(stderr, "loom: insane north %u\r\n", i_w);
       san_o = c3n;
     }
@@ -920,7 +920,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w)) ) {
       fprintf(stderr, "loom: insane open %u\r\n", i_w);
       san_o = c3n;
     }
@@ -932,7 +932,7 @@ _ce_loom_track_sane(void)
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
 
-    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+    if ( u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w) ) {
       fprintf(stderr, "loom: insane south %u\r\n", i_w);
       san_o = c3n;
     }
@@ -951,7 +951,7 @@ _ce_loom_track_north(c3_w_tmp pgs_w, c3_w_tmp dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w_tmp)1 << bit_w);
   }
 
   max_w += dif_w;
@@ -959,7 +959,7 @@ _ce_loom_track_north(c3_w_tmp pgs_w, c3_w_tmp dif_w)
   for ( ; i_w < max_w; i_w++ ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+    u3P.dit_w[blk_w] |= ((c3_w_tmp)1 << bit_w);
   }
 }
 
@@ -973,7 +973,7 @@ _ce_loom_track_south(c3_w_tmp pgs_w, c3_w_tmp dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
+    u3P.dit_w[blk_w] &= ~((c3_w_tmp)1 << bit_w);
   }
 
   max_w -= dif_w;
@@ -981,7 +981,7 @@ _ce_loom_track_south(c3_w_tmp pgs_w, c3_w_tmp dif_w)
   for ( ; i_w >= max_w; i_w-- ) {
     blk_w = i_w >> 5;
     bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+    u3P.dit_w[blk_w] |= ((c3_w_tmp)1 << bit_w);
   }
 }
 
@@ -1264,7 +1264,7 @@ _ce_loom_fine(void)
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w)) ) {
       fin_o = c3a(fin_o, _ce_page_fine(&u3P.nor_u, pag_w, _ce_len(pag_w)));
     }
   }
@@ -1274,7 +1274,7 @@ _ce_loom_fine(void)
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w_tmp)1 << bit_w)) ) {
       fin_o = c3a(fin_o, _ce_page_fine(&u3P.sou_u, pag_w, _ce_len(i_w)));
     }
   }
@@ -1760,7 +1760,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < sop_w)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
     u3_assert( !_ce_flaw_mprotect(pag_w) );
-    u3_assert( u3P.dit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)) );
+    u3_assert( u3P.dit_w[pag_w >> 5] & ((c3_w_tmp)1 << (pag_w & 31)) );
   }
 #endif
 }

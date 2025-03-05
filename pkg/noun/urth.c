@@ -280,10 +280,10 @@ _cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
       else {
         {
           c3_w_tmp wor_w[2] = { ref & 0xffffffff, ref >> 32 };
-          vat = (c3_w)u3i_words(2, wor_w);
+          vat = (c3_w_tmp)u3i_words(2, wor_w);
         }
 
-        ur_dict32_put(0, &lom_u->map_u, ref, (c3_w)vat);
+        ur_dict32_put(0, &lom_u->map_u, ref, (c3_w_tmp)vat);
         return vat;
       }
     } break;

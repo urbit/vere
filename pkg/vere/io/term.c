@@ -1204,7 +1204,7 @@ _term_it_send_stub(u3_utty* uty_u,
   //      2 for opening, 7 for decorations, 2x16 for colors, 4 for closing,
   //      and 3 as separators between decorations and colors.
   //
-  c3_w_tmp* lin_w = c3_malloc(  sizeof(c3_w) * (lec_w + (48 * tuc_w))  );
+  c3_w_tmp* lin_w = c3_malloc(  sizeof(c3_w_tmp) * (lec_w + (48 * tuc_w))  );
 
   //  write the contents to the buffer,
   //  tracking total and escape characters written
@@ -1314,7 +1314,7 @@ _term_it_show_tour(u3_utty* uty_u,
                    u3_noun    lin)
 {
   c3_w_tmp  len_w = u3qb_lent(lin);
-  c3_w_tmp* lin_w = c3_malloc( sizeof(c3_w) * len_w );
+  c3_w_tmp* lin_w = c3_malloc( sizeof(c3_w_tmp) * len_w );
 
   {
     c3_w_tmp i_w;

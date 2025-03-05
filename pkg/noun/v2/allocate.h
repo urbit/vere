@@ -45,11 +45,11 @@
         u3p(struct _u3a_v2_road) kid_p;          //  child road list
         u3p(struct _u3a_v2_road) nex_p;          //  sibling road
 
-        u3p(c3_w) cap_p;                      //  top of transient region
-        u3p(c3_w) hat_p;                      //  top of durable region
-        u3p(c3_w) mat_p;                      //  bottom of transient region
-        u3p(c3_w) rut_p;                      //  bottom of durable region
-        u3p(c3_w) ear_p;                      //  original cap if kid is live
+        u3p(c3_w_tmp) cap_p;                      //  top of transient region
+        u3p(c3_w_tmp) hat_p;                      //  top of durable region
+        u3p(c3_w_tmp) mat_p;                      //  bottom of transient region
+        u3p(c3_w_tmp) rut_p;                      //  bottom of durable region
+        u3p(c3_w_tmp) ear_p;                      //  original cap if kid is live
 
         c3_w_tmp fut_w[32];                       //  futureproof buffer
 

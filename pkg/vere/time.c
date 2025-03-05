@@ -26,7 +26,7 @@ u3_time_sec_out(c3_d urs_d)
     fprintf(stderr, "Agh! It's 2106! And no one's fixed this shite!\n");
     exit(1);
   }
-  return (c3_w)adj_d;
+  return (c3_w_tmp)adj_d;
 }
 
 /* u3_time_fsc_in(): urbit fracto-seconds from unix microseconds.
@@ -44,7 +44,7 @@ u3_time_fsc_in(c3_w_tmp usc_w)
 c3_w_tmp
 u3_time_fsc_out(c3_d ufc_d)
 {
-  return (c3_w) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
+  return (c3_w_tmp) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
 }
 
 /* u3_time_msc_out: unix microseconds from urbit fracto-seconds.
@@ -52,7 +52,7 @@ u3_time_fsc_out(c3_d ufc_d)
 c3_w_tmp
 u3_time_msc_out(c3_d ufc_d)
 {
-  return (c3_w) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);
+  return (c3_w_tmp) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);
 }
 
 /* u3_time_in_tv(): urbit time from struct timeval.

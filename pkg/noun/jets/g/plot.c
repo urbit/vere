@@ -121,7 +121,7 @@ _met_list(c3_g    a_g,
             return u3m_bail(c3__fail);
           }
 
-          met_w  = (c3_w)i_i;
+          met_w  = (c3_w_tmp)i_i;
           sep_w += met_w; // XX overflow
         }
         else {
@@ -141,7 +141,7 @@ _met_list(c3_g    a_g,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = (c3_w)q_p_t_i;
+            met_w  = (c3_w_tmp)q_p_t_i;
             sep_w += met_w; // XX overflow
           }
           //  ?=([%m ~] -.i.b.p)
@@ -157,7 +157,7 @@ _met_list(c3_g    a_g,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = _met_plat_m(a_g, (c3_w)p_p_t_i, (c3_w)q_p_t_i, q_t_i);
+            met_w  = _met_plat_m(a_g, (c3_w_tmp)p_p_t_i, (c3_w_tmp)q_p_t_i, q_t_i);
             sep_w += met_w; // XX overflow
           }
           //  ?=([%s ~] -.i.b.p) (assumed)
@@ -248,7 +248,7 @@ _fax_list(u3i_slab* sab_u,
             return u3m_bail(c3__fail);
           }
 
-          met_w  = (c3_w)i_i;
+          met_w  = (c3_w_tmp)i_i;
 
           u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_w, u3x_atom(t_i));
 
@@ -271,9 +271,9 @@ _fax_list(u3i_slab* sab_u,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = (c3_w)q_p_t_i;
+            met_w  = (c3_w_tmp)q_p_t_i;
 
-            u3r_chop(a_g, (c3_w)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
+            u3r_chop(a_g, (c3_w_tmp)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
 
             sep_w += met_w; // XX overflow
           }
@@ -290,9 +290,9 @@ _fax_list(u3i_slab* sab_u,
               return u3m_bail(c3__fail);
             }
 
-            met_w = _met_plat_m(a_g, (c3_w)p_p_t_i, (c3_w)q_p_t_i, q_t_i);
+            met_w = _met_plat_m(a_g, (c3_w_tmp)p_p_t_i, (c3_w_tmp)q_p_t_i, q_t_i);
 
-            u3r_chop(a_g, (c3_w)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
+            u3r_chop(a_g, (c3_w_tmp)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
 
             sep_w += met_w; // XX overflow
           }

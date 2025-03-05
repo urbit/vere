@@ -19,7 +19,7 @@ u3qb_scag(u3_atom a, u3_noun b)
     u3_noun* lit = &pro;
 
     {
-      c3_w_tmp   len_w = (c3_w)a;
+      c3_w_tmp   len_w = (c3_w_tmp)a;
       u3_noun* hed;
       u3_noun* tel;
       u3_noun i, t = b;

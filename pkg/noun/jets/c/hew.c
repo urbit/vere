@@ -30,7 +30,7 @@ _hew_in(c3_g     a_g,
     return pos_w;
   }
   else {
-    c3_w_tmp     wid_w = (c3_w)sam;
+    c3_w_tmp     wid_w = (c3_w_tmp)sam;
     c3_w_tmp     new_w = pos_w + wid_w;
     u3i_slab sab_u;
 
@@ -61,7 +61,7 @@ u3qc_hew(u3_atom boq,
   }
 
   u3_noun pro;
-  c3_w_tmp  pos_w = _hew_in((c3_g)boq, (c3_w)sep, vat, sam, &pro);
+  c3_w_tmp  pos_w = _hew_in((c3_g)boq, (c3_w_tmp)sep, vat, sam, &pro);
   return u3nt(pro, boq, u3i_word(pos_w));
 }
 

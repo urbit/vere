@@ -875,7 +875,7 @@ u3_mesa_decode_lane(u3_atom lan) {
   //  convert incoming localhost to outgoing localhost
   //
 
-  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? (c3_w)lan_d : htonl(0x7f000001);
+  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? (c3_w_tmp)lan_d : htonl(0x7f000001);
   adr_u.sin_port = htons((c3_s)(lan_d >> 32));
 
   return adr_u;
@@ -2919,7 +2919,7 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     }
   }
   else {
-    _mesa_hear(wax_u->data, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    _mesa_hear(wax_u->data, adr_u, (c3_w_tmp)nrd_i, (c3_y*)buf_u->base);
   }
 }
 

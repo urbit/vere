@@ -169,7 +169,7 @@ u3_stun_find_xor_mapped_address(c3_y*    buf_y,
 
   c3_y* fin_y = memmem(buf_y + i, len_w - i, xor_y, sizeof(xor_y));
   if ( fin_y != 0 ) {
-    c3_w_tmp cur = (c3_w)(fin_y - buf_y) + sizeof(xor_y);
+    c3_w_tmp cur = (c3_w_tmp)(fin_y - buf_y) + sizeof(xor_y);
 
     if ( (buf_y[cur] != 0x0) && (buf_y[cur+1] != 0x1) ) {
       return c3n;

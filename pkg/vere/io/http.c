@@ -2294,7 +2294,7 @@ _http_release_ports_file(c3_c *pax_c)
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, nam_c);
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(len_w == (c3_w_tmp)wit_i + 1);
 
   c3_unlink(paf_c);
   c3_free(paf_c);

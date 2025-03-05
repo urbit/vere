@@ -1168,8 +1168,8 @@ u3r_mp(mpz_t   a_mp,
 
     //  avoid reallocation on import, if possible
     //
-    mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
-    mpz_import(a_mp, len_w, -1, sizeof(c3_w), 0, 0, b_u->buf_w);
+    mpz_init2(a_mp, (c3_w_tmp)c3_min(bit_d, UINT32_MAX));
+    mpz_import(a_mp, len_w, -1, sizeof(c3_w_tmp), 0, 0, b_u->buf_w);
   }
 }
 
@@ -1686,8 +1686,8 @@ u3r_mug_chub(c3_d num_d)
 {
   c3_w_tmp buf_w[2];
 
-  buf_w[0] = (c3_w)(num_d & 0xffffffffULL);
-  buf_w[1] = (c3_w)(num_d >> 32);
+  buf_w[0] = (c3_w_tmp)(num_d & 0xffffffffULL);
+  buf_w[1] = (c3_w_tmp)(num_d >> 32);
 
   return u3r_mug_words(buf_w, 2);
 }

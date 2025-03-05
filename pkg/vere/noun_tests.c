@@ -380,7 +380,7 @@ _util_rand_string(c3_w_tmp len_w)
 
   c3_w_tmp i_w;
   for (i_w = 0; i_w < len_w; i_w ++){
-    out_y[i_w] = choice_c[ (c3_w) rand() % choice_len_w ];
+    out_y[i_w] = choice_c[ (c3_w_tmp) rand() % choice_len_w ];
   }
   out_y[i_w] = 0;
 
@@ -397,8 +397,8 @@ _test_noun_bits_helper(u3_noun a, int direct_o,
 {
 #if 0
   printf("=========== %u\n", a);
-  printf("    31 bit  %u\n", a & ( ((c3_w)1) << 31));
-  printf("    30 bit  %u\n", a & ( ((c3_w)1) << 30));
+  printf("    31 bit  %u\n", a & ( ((c3_w_tmp)1) << 31));
+  printf("    30 bit  %u\n", a & ( ((c3_w_tmp)1) << 30));
   printf("    dir     %x\n", c3y == u3a_is_cat(a));
   printf("    ind     %x\n", c3y == u3a_is_dog(a));
   printf("  i cell    %x\n", c3y == u3a_is_cell(a));
@@ -1013,7 +1013,7 @@ _test_imprison_complex()
     }
 
     c3_w_tmp out_w[10];
-    memset(out_w, 0, 10 * sizeof(c3_w));
+    memset(out_w, 0, 10 * sizeof(c3_w_tmp));
     u3r_words(0, 3, out_w, noun);
 
     if (10 != out_w[0] ||
@@ -1122,7 +1122,7 @@ _test_imprison_complex()
 
     // tape stores each byte in the string as one atom in the tree
     u3_noun lent = u3qb_lent(noun);
-    if ( (c3_w)lent != strlen(in_c) ){
+    if ( (c3_w_tmp)lent != strlen(in_c) ){
       printf("*** u3r_tape 2\n");
     }
   }
@@ -1547,7 +1547,7 @@ _test_u3r_at()
   a_w = u3x_dep(0b111);
   if (2 != a_w) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep( ((c3_w) (((c3_d) 1  << 32) - 1)) );
+  a_w = u3x_dep( ((c3_w_tmp) (((c3_d) 1  << 32) - 1)) );
   if (31 != a_w) {  printf("*** u3x_dep() \n"); }
 
 
@@ -1559,8 +1559,8 @@ _test_u3r_at()
   a_w = u3x_dep_d(0b10);
   a_w = u3x_dep_d(0b11);
   a_w = u3x_dep_d(0b100);
-  a_w = u3x_dep_d( ((c3_w) (((c3_d) 1  << 32) - 1)) );
-  a_w = u3x_dep_d( ((c3_w) (((c3_d) 1  << 33) - 1)) );
+  a_w = u3x_dep_d( ((c3_w_tmp) (((c3_d) 1  << 32) - 1)) );
+  a_w = u3x_dep_d( ((c3_w_tmp) (((c3_d) 1  << 33) - 1)) );
   a_w = u3x_dep_d( ((c3_d) (((c3_d) 1  << 64) - 1)) );
 #endif
 

@@ -313,7 +313,7 @@ _lick_close_sock(u3_shan* san_u)
   wit_i = snprintf(paf_c, len_w, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);
 
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(len_w == (c3_w_tmp)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {

@@ -9,11 +9,11 @@
 
 /* CUT_END(): extract [b_w] low bits from [a_w]
 */
-#define CUT_END(a_w, b_w) ((a_w) & (((c3_w)1 << (b_w)) - 1))
+#define CUT_END(a_w, b_w) ((a_w) & (((c3_w_tmp)1 << (b_w)) - 1))
 
 /* BIT_SET(): [1] if bit [b_w] is set in [a_w]
 */
-#define BIT_SET(a_w, b_w) ((a_w) & ((c3_w)1 << (b_w)))
+#define BIT_SET(a_w, b_w) ((a_w) & ((c3_w_tmp)1 << (b_w)))
 
 static u3_weak
 _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w_tmp lef_w, c3_w_tmp rem_w);
@@ -107,7 +107,7 @@ _ch_node_add(u3h_node* han_u, c3_w_tmp lef_w, c3_w_tmp rem_w, u3_noun kev, c3_w_
     //
     c3_w_tmp      len_w = _ch_popcount(map_w);
     u3h_node* nah_u = _ch_node_new(1 + len_w);
-    nah_u->map_w    = han_u->map_w | ((c3_w)1 << bit_w);
+    nah_u->map_w    = han_u->map_w | ((c3_w_tmp)1 << bit_w);
 
     for ( i_w = 0; i_w < inx_w; i_w++ ) {
       nah_u->sot_w[i_w] = han_u->sot_w[i_w];
@@ -191,7 +191,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w_tmp lef_w, c3_w_tmp ham_w, c3_w_tmp
       // fragments collide: store in a child node.
       u3h_node* han_u = _ch_node_new(1);
       ret             = han_u;
-      han_u->map_w    = (c3_w)1 << hop_w;
+      han_u->map_w    = (c3_w_tmp)1 << hop_w;
       ham_w           = CUT_END(ham_w, lef_w);
       mad_w           = CUT_END(mad_w, lef_w);
       han_u->sot_w[0] = _ch_two(had_w, add_w, lef_w, ham_w, mad_w);
@@ -199,7 +199,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w_tmp lef_w, c3_w_tmp ham_w, c3_w_tmp
     else {
       u3h_node* han_u = _ch_node_new(2);
       ret             = han_u;
-      han_u->map_w    = ((c3_w)1 << hop_w) | ((c3_w)1 << tad_w);
+      han_u->map_w    = ((c3_w_tmp)1 << hop_w) | ((c3_w_tmp)1 << tad_w);
       // smaller mug fragments go in earlier slots
       if ( hop_w < tad_w ) {
         han_u->sot_w[0] = had_w;

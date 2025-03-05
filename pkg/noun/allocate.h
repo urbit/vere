@@ -20,11 +20,11 @@
 
     /* u3a_balign: u3a_walign in bytes
     */
-#     define u3a_balign  (sizeof(c3_w)*u3a_walign)
+#     define u3a_balign  (sizeof(c3_w_tmp)*u3a_walign)
 
      /* u3a_bits_max: max loom bex
      */
-#    define u3a_bits_max (8 * sizeof(c3_w) + u3a_vits)
+#    define u3a_bits_max (8 * sizeof(c3_w_tmp) + u3a_vits)
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
@@ -40,7 +40,7 @@
 
     /* u3a_bytes: maximum number of bytes in memory.
     */
-#     define u3a_bytes   ((sizeof(c3_w) * u3a_words))
+#     define u3a_bytes   ((sizeof(c3_w_tmp) * u3a_words))
 
     /* u3a_cells: number of representable cells.
     */
@@ -52,7 +52,7 @@
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum ((c3_w)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
+#     define u3a_minimum ((c3_w_tmp)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
 
     /* u3a_fbox_no: number of free lists per size.
     */
@@ -126,11 +126,11 @@
         u3p(struct _u3a_road) kid_p;          //  child road list
         u3p(struct _u3a_road) nex_p;          //  sibling road
 
-        u3p(c3_w) cap_p;                      //  top of transient region
-        u3p(c3_w) hat_p;                      //  top of durable region
-        u3p(c3_w) mat_p;                      //  bottom of transient region
-        u3p(c3_w) rut_p;                      //  bottom of durable region
-        u3p(c3_w) ear_p;                      //  original cap if kid is live
+        u3p(c3_w_tmp) cap_p;                      //  top of transient region
+        u3p(c3_w_tmp) hat_p;                      //  top of durable region
+        u3p(c3_w_tmp) mat_p;                      //  bottom of transient region
+        u3p(c3_w_tmp) rut_p;                      //  bottom of durable region
+        u3p(c3_w_tmp) ear_p;                      //  original cap if kid is live
 
         c3_w_tmp fut_w[32];                       //  futureproof buffer
 
@@ -273,27 +273,27 @@
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)((r)->cap_p - (r)->hat_p) \
-                             : (c3_w)((r)->hat_p - (r)->cap_p) )
+                             ? (c3_w_tmp)((r)->cap_p - (r)->hat_p) \
+                             : (c3_w_tmp)((r)->hat_p - (r)->cap_p) )
 
     /* u3a_full(): total words in road [r];
     ** u3a_full(r) == u3a_heap(r) + u3a_temp(r) + u3a_open(r)
     */
 #     define  u3a_full(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)((r)->mat_p - (r)->rut_p) \
-                             : (c3_w)((r)->rut_p - (r)->mat_p) )
+                             ? (c3_w_tmp)((r)->mat_p - (r)->rut_p) \
+                             : (c3_w_tmp)((r)->rut_p - (r)->mat_p) )
 
     /* u3a_heap(): words of heap in road [r]
     */
 #     define  u3a_heap(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)((r)->hat_p - (r)->rut_p) \
-                             : (c3_w)((r)->rut_p - (r)->hat_p) )
+                             ? (c3_w_tmp)((r)->hat_p - (r)->rut_p) \
+                             : (c3_w_tmp)((r)->rut_p - (r)->hat_p) )
 
     /* u3a_temp(): words of stack in road [r]
     */
 #     define  u3a_temp(r)  ( (c3y == u3a_is_north(r)) \
-                             ? (c3_w)((r)->mat_p - (r)->cap_p) \
-                             : (c3_w)((r)->cap_p - (r)->mat_p) )
+                             ? (c3_w_tmp)((r)->mat_p - (r)->cap_p) \
+                             : (c3_w_tmp)((r)->cap_p - (r)->mat_p) )
 
 #     define  u3a_north_is_senior(r, dog) \
                 __((u3a_to_off(dog) < (r)->rut_p) ||  \

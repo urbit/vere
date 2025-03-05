@@ -745,7 +745,7 @@ u3a_calloc(size_t num_i, size_t len_i)
 void*
 u3a_malloc(size_t len_i)
 {
-  c3_w_tmp  len_w = (c3_w)((len_i + 3) >> 2);
+  c3_w_tmp  len_w = (c3_w_tmp)((len_i + 3) >> 2);
   c3_w_tmp *ptr_w = _ca_walloc(len_w +1, 4, 1); /* +1 for word storing pad size */
   c3_w_tmp *out_w = c3_align(ptr_w + 1, 16, C3_ALGHI);
   c3_w_tmp  pad_w = u3a_outa(out_w) - u3a_outa(ptr_w);
@@ -924,7 +924,7 @@ u3a_realloc(void* lag_v, size_t len_i)
     return u3a_malloc(len_i);
   }
   else {
-    c3_w_tmp     len_w = (c3_w)((len_i + 3) >> 2);
+    c3_w_tmp     len_w = (c3_w_tmp)((len_i + 3) >> 2);
     c3_w_tmp*    lag_w = lag_v;
     c3_w_tmp     pad_w = lag_w[-1];
     c3_w_tmp*    org_w = lag_w - (pad_w + 1);
@@ -1704,7 +1704,7 @@ u3a_mark_ptr(void* ptr_v)
     else {
       u3_assert(use_ws != 0);
 
-      if ( 0x80000000 == (c3_w)use_ws ) {    // see u3a_prof()
+      if ( 0x80000000 == (c3_w_tmp)use_ws ) {    // see u3a_prof()
         use_ws = -1;
         siz_w = 0xffffffff;
       }
@@ -1716,7 +1716,7 @@ u3a_mark_ptr(void* ptr_v)
         use_ws = -1;
         siz_w = box_u->siz_w;
       }
-      box_u->use_w = (c3_w)use_ws;
+      box_u->use_w = (c3_w_tmp)use_ws;
     }
 #endif
     return siz_w;
@@ -1827,7 +1827,7 @@ u3a_count_ptr(void* ptr_v)
         use_ws = -use_ws;
         siz_w = box_u->siz_w;
       }
-      box_u->use_w = (c3_w)use_ws;
+      box_u->use_w = (c3_w_tmp)use_ws;
     }
     return siz_w;
   }
@@ -1901,7 +1901,7 @@ u3a_discount_ptr(void* ptr_v)
     else {
       siz_w = 0;
     }
-    box_u->use_w = (c3_w)use_ws;
+    box_u->use_w = (c3_w_tmp)use_ws;
   }
 
   return siz_w;
@@ -2097,7 +2097,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
           box_u->eus_w -= 1;
         }
 #else
-        if ( -1 == (c3_w)box_u->use_w ) {
+        if ( -1 == (c3_w_tmp)box_u->use_w ) {
           box_u->use_w = 0x80000000;
         }
         else {
@@ -2287,8 +2287,8 @@ _ca_print_box(u3a_box* box_u)
         //  box_u containing an indirect atom of only one word.
         //  if the condition is false, we know box_u contains a cell.
         //
-        ( (1 == (c3_w)cel_u->hed) &&
-          (0x80000000 & (c3_w)cel_u->tel) ) )
+        ( (1 == (c3_w_tmp)cel_u->hed) &&
+          (0x80000000 & (c3_w_tmp)cel_u->tel) ) )
   {
     //  box_u might not be an indirect atom,
     //  but it's always safe to print it as if it is one
@@ -2543,7 +2543,7 @@ u3a_sweep(void)
       }
       else if ( use_ws < 0 ) {
         pos_w += box_u->siz_w;
-        box_u->use_w = (c3_w)(0 - use_ws);
+        box_u->use_w = (c3_w_tmp)(0 - use_ws);
       }
 #endif
       box_w += box_u->siz_w;

@@ -15,7 +15,7 @@ u3qc_muk(u3_atom sed,
     return u3m_bail(c3__fail);
   }
   else {
-    c3_w_tmp len_w = (c3_w)len;
+    c3_w_tmp len_w = (c3_w_tmp)len;
     c3_w_tmp key_w = u3r_met(3, key);
 
     //  NB: this condition is implicit in the pad subtraction

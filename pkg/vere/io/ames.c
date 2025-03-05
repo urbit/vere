@@ -802,7 +802,7 @@ u3_ames_decode_lane(u3_atom lan) {
 
   u3z(lan);
 
-  lan_u.pip_w = (c3_w)lan_d;
+  lan_u.pip_w = (c3_w_tmp)lan_d;
   lan_u.por_s = (c3_s)(lan_d >> 32);
   return lan_u;
 }
@@ -2185,7 +2185,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   else {
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _ames_hear(sam_u, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    _ames_hear(sam_u, adr_u, (c3_w_tmp)nrd_i, (c3_y*)buf_u->base);
   }
 }
 

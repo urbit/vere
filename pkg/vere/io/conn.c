@@ -908,7 +908,7 @@ _conn_io_exit(u3_auto* car_u)
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, URB_SOCK_PATH);
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(len_w == (c3_w_tmp)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {

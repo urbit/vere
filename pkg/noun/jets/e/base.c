@@ -12,7 +12,7 @@ u3qe_en_base16(u3_atom len, u3_atom dat)
     return u3m_bail(c3__fail);
   }
   else {
-    c3_w_tmp     len_w = (c3_w)len;
+    c3_w_tmp     len_w = (c3_w_tmp)len;
     u3i_slab sab_u;
 
     u3i_slab_bare(&sab_u, 4, len_w);

@@ -800,7 +800,7 @@ _cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
     return 0;
   }
 
-  _cttp_cres_new(ceq_u, (c3_w)sas_i);
+  _cttp_cres_new(ceq_u, (c3_w_tmp)sas_i);
   ceq_u->res_u->hed = _cttp_heds_to_noun(hed_u, hed_t);
 
   if ( h2o_http1client_error_is_eos == err_c ) {

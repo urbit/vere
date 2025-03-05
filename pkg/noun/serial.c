@@ -113,7 +113,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       //
       {
         c3_d dat_d = (c3_d)1 << b_w;
-        src_w[0]   = (c3_w)dat_d;
+        src_w[0]   = (c3_w_tmp)dat_d;
         src_w[1]   = dat_d >> 32;
 
         u3r_chop_words(0, 0, b_w + 1, bit_w, buf_w, 2, src_w);
@@ -1403,7 +1403,7 @@ u3s_sift_ud_bytes(c3_w_tmp len_w, c3_y* byt_y)
     mpz_t a_mp;
     {
       c3_d bit_d = (c3_d)(len_w / 4) * 10;
-      mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
+      mpz_init2(a_mp, (c3_w_tmp)c3_min(bit_d, UINT32_MAX));
       mpz_set_ui(a_mp, val_s);
     }
 
