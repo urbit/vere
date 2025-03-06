@@ -873,7 +873,8 @@ u3_mesa_decode_lane(u3_atom lan) {
   //  convert incoming localhost to outgoing localhost
   //
 
-  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? (c3_w)lan_d : htonl(0x7f000001);
+  adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ?
+                          htonl((c3_w)lan_d) : htonl(0x7f000001);
   adr_u.sin_port = htons((c3_s)(lan_d >> 32));
 
   return adr_u;
@@ -1000,7 +1001,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 {
 
   add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
-  /* add_u.sin_family = AF_INET; */
+  add_u.sin_family = AF_INET;
 
   if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) {
     c3_free(buf_y);
@@ -1085,7 +1086,7 @@ _mesa_send_bufs(u3_mesa* sam_u,
                 u3_pit_addr* las_u);
 
 static void
-_mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
+_mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
 {
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
@@ -1105,8 +1106,9 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
     _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
     per_u->dir_u.sen_d = now_d;
   }
-  else {
-
+  else if ( las_u != NULL ) {
+    _mesa_send_bufs(sam_u, per_u, sen_y, len_w, las_u);
+  } else {
     #ifdef MESA_DEBUG
       /* c3_c* gal_c = u3_ship_to_string(gal_u); */
       // u3l_log("mesa: sending to %s", gal_c);
@@ -1126,24 +1128,6 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u)
   }
 }
 
-static void
-_mesa_send_request(u3_mesa_request_data* dat_u)
-{
-  u3_peer* per_u = _mesa_get_peer(dat_u->sam_u, dat_u->her_u);
-  if ( !per_u ) {
-    // u3l_log("mesa: send_bufs()");
-    _mesa_send_bufs(dat_u->sam_u,
-                    NULL,
-                    dat_u->buf_y,
-                    dat_u->len_w,
-                    dat_u->las_u);
-  }
-  else {
-    /* u3l_log("mesa: send_modal()"); */
-    uv_buf_t buf_u = uv_buf_init((c3_c*)dat_u->buf_y, dat_u->len_w);
-    _mesa_send_modal(per_u, buf_u);
-  }
-}
 
 static uv_buf_t
 _mesa_peek_buf(c3_c* pek_c, c3_d fra_d, c3_w pek_w)
@@ -1206,7 +1190,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
       /* bfs_u[i_w] = buf_u; */
       /* c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u); */
       /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, i_d); */
-      _mesa_send_modal(req_u->per_u, buf_u);
+      _mesa_send_modal(req_u->per_u, buf_u, NULL);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u, now_d);
       // i_w++;
     }
@@ -1554,7 +1538,11 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #endif
   }
 
-  _mesa_send_request(dat_u);
+  _mesa_send_bufs(dat_u->sam_u,
+                  NULL,
+                  dat_u->buf_y,
+                  dat_u->len_w,
+                  dat_u->las_u);
 
   if ( res_u->ret_y ) {
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
@@ -1692,7 +1680,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     #ifdef PACKET_TEST
     packet_test(sam_u, "pages.packs");
     #else
-    _mesa_send_request(dat_u);
+    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, dat_u->las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
     #endif
   }
@@ -2275,7 +2263,7 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
     _mesa_req_pact_sent(req_u, fra_w, now_d);
 
     /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, fra_w); */
-    _mesa_send_modal(req_u->per_u, buf_u);
+    _mesa_send_modal(req_u->per_u, buf_u, NULL);
     /* _mesa_send(nex_u, lan_u); */
   }
   /* if ( i > 0 ) { */
