@@ -392,7 +392,7 @@ _parse_da(u3_noun cor, u3_noun txt) {
     PARSE_HEX_DIGIT(four);
 
     c3_w_tmp current = (one << 12) + (two << 8) + (three << 4) + four;
-    list = u3nc(u3i_words(1, &current), list);
+    list = u3nc(u3i_words_tmp(1, &current), list);
 
     if (cur[0] == 0) {
       u3a_free(c);

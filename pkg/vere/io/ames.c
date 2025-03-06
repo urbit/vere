@@ -971,7 +971,7 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 static u3_weak
 _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w_tmp fra_w)
 {
-  u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
+  u3_noun key = u3nc(u3k(pax), u3i_word_tmp(fra_w));
   u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
   u3z(key);
   return pro;
@@ -983,13 +983,13 @@ static void
 _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w_tmp lop_w, u3_noun lis)
 {
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
-    u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
+    u3_noun key = u3nc(u3k(pax), u3i_word_tmp(lop_w));
     u3h_put(sam_u->fin_s.sac_p, key, lis);
     u3z(key);
   }
   else {
     while ( u3_nul != lis ) {
-      u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
+      u3_noun key = u3nc(u3k(pax), u3i_word_tmp(lop_w));
       u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
       u3z(key);
 
@@ -1889,7 +1889,7 @@ _fine_hear_request(u3_pact* req_u, c3_w_tmp cur_w)
       u3_noun pax =
         u3nc(c3__fine,
         u3nq(c3__hunk,
-             u3dc("scot", c3__ud, u3i_word(lop_w)),
+             u3dc("scot", c3__ud, u3i_word_tmp(lop_w)),
              u3dc("scot", c3__ud, FINE_PAGE),
              u3k(key)));
 
@@ -2797,10 +2797,10 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("can-send",         net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
     u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
-    u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
-    u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
-    u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
-    u3_pier_mase("lane-cache-size",  u3i_word(lax_w)),
+    u3_pier_mase("scry-cache",       u3i_word_tmp(u3h_wyt(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache-size",  u3i_word_tmp(sac_w)),
+    u3_pier_mase("lane-cache",       u3i_word_tmp(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("lane-cache-size",  u3i_word_tmp(lax_w)),
     u3_pier_mase("dropped",          u3i_chub(sam_u->sat_u.dop_d)),
     u3_pier_mase("forwards-dropped", u3i_chub(sam_u->sat_u.fod_d)),
     u3_pier_mase("forwards-pending", u3i_chub(sam_u->sat_u.foq_d)),
@@ -2814,7 +2814,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
     u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
     u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
-    u3_pier_mase("cached-lanes",     u3i_word(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("cached-lanes",     u3i_word_tmp(u3h_wyt(sam_u->lax_p))),
     u3_none);
 }
 

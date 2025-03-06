@@ -98,7 +98,7 @@ _atoms_from_stack(void** valptrs, c3_w_tmp n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        out = u3nc(u3i_word(*(c3_w_tmp*)valptrs[n]), out);
+        out = u3nc(u3i_word_tmp(*(c3_w_tmp*)valptrs[n]), out);
         break;
       }
       case c_m3Type_i64:
@@ -165,7 +165,7 @@ _coins_from_stack(void** valptrs, c3_w_tmp n, c3_y* types)
     {  // TODO 64 bit vere
       case c_m3Type_i32:
       {
-        out = u3nc(u3nc(c3__i32, u3i_word(*(c3_w_tmp*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__i32, u3i_word_tmp(*(c3_w_tmp*)valptrs[n])), out);
         break;
       }
       case c_m3Type_i64:
@@ -175,7 +175,7 @@ _coins_from_stack(void** valptrs, c3_w_tmp n, c3_y* types)
       }
       case c_m3Type_f32:
       {
-        out = u3nc(u3nc(c3__f32, u3i_word(*(c3_w_tmp*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__f32, u3i_word_tmp(*(c3_w_tmp*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f64:
@@ -649,7 +649,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_i32:
       {
-        out = u3i_word(glob_value.value.i32);
+        out = u3i_word_tmp(glob_value.value.i32);
         break;
       }
       case c_m3Type_i64:
@@ -659,7 +659,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_f32:
       {
-        out = u3i_word(glob_value.value.f32);
+        out = u3i_word_tmp(glob_value.value.f32);
         break;
       }
       case c_m3Type_f64:
@@ -689,7 +689,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     c3_w_tmp num_pages = sat->wasm_module->runtime->memory.numPages;
 
     u3z(monad);
-    return u3nc(0, u3i_word(num_pages));
+    return u3nc(0, u3i_word_tmp(num_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->mem_grow_bat))
   {
@@ -720,7 +720,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     }
 
     u3z(monad);
-    return u3nc(0, u3i_word(n_pages));
+    return u3nc(0, u3i_word_tmp(n_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->get_acc_bat))
   {
@@ -756,7 +756,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_i32:
         {
-          atoms = u3nc(u3i_word(glob.intValue), atoms);
+          atoms = u3nc(u3i_word_tmp(glob.intValue), atoms);
           break;
         }
         case c_m3Type_i64:
@@ -766,7 +766,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_f32:
         {
-          atoms = u3nc(u3i_word(glob.f32Value), atoms);
+          atoms = u3nc(u3i_word_tmp(glob.f32Value), atoms);
           break;
         }
         case c_m3Type_f64:

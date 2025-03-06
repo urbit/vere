@@ -2027,7 +2027,7 @@ _pier_boot_make(u3_noun who,
     cad = u3nt(c3__verb, u3_nul, ( c3y == u3_Host.ops_u.veb ) ? c3n : c3y);
     bot_u.mod = u3nc(u3nc(u3k(wir), cad), bot_u.mod);
 
-    cad = u3nc(c3__wack, u3i_words(16, eny_w));
+    cad = u3nc(c3__wack, u3i_words_tmp(16, eny_w));
     bot_u.mod = u3nc(u3nc(u3k(wir), cad), bot_u.mod);
 
     cad = u3nc(c3__whom, who);                    // transfer [who]

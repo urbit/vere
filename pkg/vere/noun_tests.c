@@ -994,7 +994,7 @@ _test_imprison_complex()
   // words
   {
     c3_w_tmp in_w[10] = {10, 20, 0xffffffff};
-    u3_noun noun = u3i_words(3, in_w);
+    u3_noun noun = u3i_words_tmp(3, in_w);
 
 
     c3_w_tmp out_a = u3r_word(0, noun);
@@ -1468,7 +1468,7 @@ _test_met()
   //
   {
     c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
-    atom = u3i_words(4, data_w);
+    atom = u3i_words_tmp(4, data_w);
 
     ret_w = u3r_met(0, atom);
     if (128 != ret_w){
@@ -1495,7 +1495,7 @@ _test_met()
   //
   {
     c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
-    atom = u3i_words(4, data_w);
+    atom = u3i_words_tmp(4, data_w);
 
     ret_w = u3r_met(0, atom);
     if (97 != ret_w){
@@ -1593,7 +1593,7 @@ _test_u3r_at()
 
   // simple tree [ 1 <BIGNUM>]
   c3_w_tmp in_w[10] = {10, 20, 0xffffffff};
-  u3_noun bignum = u3i_words(3, in_w);
+  u3_noun bignum = u3i_words_tmp(3, in_w);
 
   tree = u3i_cell(99, bignum);
   ret = u3r_at( 2, tree);

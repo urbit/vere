@@ -402,7 +402,7 @@ _log_gage(u3_gage* gag_u)
 static void
 _log_lane(u3_lane* lan_u)
 {
-  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word(lan_u->pip_w))), lan_u->por_s);
+  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word_tmp(lan_u->pip_w))), lan_u->por_s);
 }
 
 static void _log_peer(u3_peer* per_u)
@@ -573,7 +573,7 @@ u3_noun
 _mesa_request_key(u3_mesa_name* nam_u)
 {
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun res = u3nc(u3i_word(nam_u->rif_w), pax);
+  u3_noun res = u3nc(u3i_word_tmp(nam_u->rif_w), pax);
   return res;
 }
 
@@ -598,7 +598,7 @@ u3_mesa_encode_lane(sockaddr_in lan_u) {
   // [%if ip=@ port=@]
   c3_w_tmp pip_w = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
-  return u3nt(c3__if, u3i_word(pip_w), por_s);
+  return u3nt(c3__if, u3i_word_tmp(pip_w), por_s);
 }
 
 static u3_peer*

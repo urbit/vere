@@ -94,7 +94,7 @@ _serf_quac(u3m_quac* mas_u)
   }
   list = u3kb_flop(list);
 
-  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word(mas_u->siz_w), list);
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word_tmp(mas_u->siz_w), list);
 
   c3_free(mas_u->nam_c);
   c3_free(mas_u->qua_u);

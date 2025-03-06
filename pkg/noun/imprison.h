@@ -73,10 +73,10 @@
 
       /* General constructors.
       */
-        /* u3i_word(): construct u3_atom from c3_w.
+        /* u3i_word_tmp(): construct u3_atom from c3_w.
         */
           u3_atom
-          u3i_word(c3_w_tmp dat_w);
+          u3i_word_tmp(c3_w_tmp dat_w);
 
         /* u3i_chub(): construct u3_atom from c3_d.
         */
@@ -89,10 +89,10 @@
           u3i_bytes(c3_w_tmp        a_w,
                     const c3_y* b_y);
 
-        /* u3i_words(): Copy [a] words from [b] into an atom.
+        /* u3i_words_tmp(): Copy [a] words from [b] into an atom.
         */
           u3_atom
-          u3i_words(c3_w_tmp        a_w,
+          u3i_words_tmp(c3_w_tmp        a_w,
                     const c3_w_tmp* b_w);
 
         /* u3i_chubs(): Copy [a] chubs from [b] into an atom.

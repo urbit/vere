@@ -13,7 +13,7 @@ u3qa_add(u3_atom a,
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
     c3_w_tmp c = a + b;
 
-    return u3i_words(1, &c);
+    return u3i_words_tmp(1, &c);
   }
   else if ( 0 == a ) {
     return u3k(b);

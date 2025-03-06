@@ -51,7 +51,7 @@ u3qc_muk(u3_atom sed,
         u3a_free(key_y);
       }
 
-      return u3i_words(1, &out_w);
+      return u3i_words_tmp(1, &out_w);
     }
   }
 }

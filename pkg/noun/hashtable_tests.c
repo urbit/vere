@@ -25,7 +25,7 @@ _test_put_del()
 
   c3_w_tmp i_w;
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
-    u3_noun key = u3i_word(i_w);
+    u3_noun key = u3i_word_tmp(i_w);
     u3_noun val = u3nc(u3_nul, u3k(key));
     u3h_put(har_p, key, val);
     u3z(key);
@@ -33,7 +33,7 @@ _test_put_del()
   // fprintf(stderr, "inserted\r\n");
 
   for ( i_w = 0; i_w < TEST_SIZE; i_w++ ) {
-    u3_noun key = u3i_word(i_w);
+    u3_noun key = u3i_word_tmp(i_w);
     u3_weak val = u3h_get(har_p, key);
     if ( val == u3_none ) {
       fprintf(stderr, "failed insert\r\n");
@@ -46,14 +46,14 @@ _test_put_del()
   c3_w_tmp del_w[4] = {30, 82, 4921, 535};
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
-    u3_noun key = u3i_word(del_w[i_w]);
+    u3_noun key = u3i_word_tmp(del_w[i_w]);
     u3h_del(har_p, key);
     u3z(key);
   }
   // fprintf(stderr, "deleted\r\n");
 
   for ( i_w = 0; i_w < 4; i_w++ ) {
-    u3_noun key = u3i_word(del_w[i_w]);
+    u3_noun key = u3i_word_tmp(del_w[i_w]);
     u3_weak val = u3h_get(har_p, key);
     if ( u3_none != val ) {
       fprintf(stderr, "failed delete\r\n");

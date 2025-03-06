@@ -70,7 +70,7 @@
     f128M_add(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words_tmp(4, e.c);
     return f;
   }
 
@@ -108,7 +108,7 @@
     f128M_sub(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words_tmp(4, e.c);
     return f;
   }
 
@@ -146,7 +146,7 @@
     f128M_mul(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words_tmp(4, e.c);
     return f;
   }
 
@@ -184,7 +184,7 @@
     f128M_div(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words_tmp(4, e.c);
     return f;
   }
 
@@ -219,7 +219,7 @@
     f128M_sqrt(c.q, d.q);
     _nan_unify(d.q);
 
-    u3_atom e = u3i_words(4, d.c);
+    u3_atom e = u3i_words_tmp(4, d.c);
     return e;
   }
 
@@ -259,7 +259,7 @@
     f128M_mulAdd(d.q, e.q, f.q, g.q);
     _nan_unify(g.q);
 
-    u3_atom h = u3i_words(4, g.c);
+    u3_atom h = u3i_words_tmp(4, g.c);
     return h;
   }
 

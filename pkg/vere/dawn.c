@@ -32,7 +32,7 @@ _dawn_oct_to_buf(u3_noun oct)
 static u3_noun
 _dawn_buf_to_oct(uv_buf_t buf_u)
 {
-  u3_noun len = u3i_words(1, (c3_w_tmp*)&buf_u.len);
+  u3_noun len = u3i_words_tmp(1, (c3_w_tmp*)&buf_u.len);
 
   if ( c3n == u3a_is_cat(len) ) {
     exit(1);
@@ -417,7 +417,7 @@ _dawn_come(u3_noun stars)
     u3_noun eny;
 
     c3_rand(eny_w);
-    eny = u3i_words(16, eny_w);
+    eny = u3i_words_tmp(16, eny_w);
 
     u3l_log("boot: mining a comet. May take up to an hour.");
     u3l_log("If you want to boot faster, get an Urbit identity.");

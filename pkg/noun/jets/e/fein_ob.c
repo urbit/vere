@@ -67,7 +67,7 @@ u3qe_fein_ob(u3_atom pyn)
   }
 
   if ( 2 == sor_w ) {
-    return u3i_word(_feis_ob(u3r_word(0, pyn)));
+    return u3i_word_tmp(_feis_ob(u3r_word(0, pyn)));
   }
   else {
     c3_w_tmp pyn_w[2];
@@ -78,7 +78,7 @@ u3qe_fein_ob(u3_atom pyn)
     }
     else {
       pyn_w[0] = _feis_ob(pyn_w[0]);
-      return u3i_words(2, pyn_w);
+      return u3i_words_tmp(2, pyn_w);
     }
   }
 }

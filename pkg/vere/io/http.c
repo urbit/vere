@@ -889,7 +889,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       // no: inject to arvo
       u3_noun wir = _http_req_to_duct(req_u);
       u3_noun cad;
-      u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
+      u3_noun adr = u3nc(c3__ipv4, u3i_words_tmp(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
       //
       u3_noun dat = u3nt(htp_u->sec, adr, req);
@@ -2834,7 +2834,7 @@ _http_io_info(u3_auto* car_u)
   }
   res = u3i_list(
     u3_pier_mase("instance", htd_u->sev_l),
-    u3_pier_mase("open-slogstreams", u3i_word(sec_w)),
+    u3_pier_mase("open-slogstreams", u3i_word_tmp(sec_w)),
     u3_none);
 
   while ( 0 != htp_u ) {

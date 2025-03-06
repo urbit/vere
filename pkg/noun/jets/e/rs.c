@@ -65,7 +65,7 @@
     d.c = u3r_word(0, b);
     e.s = _nan_unify(f32_add(c.s, d.s));
 
-    return u3i_words(1, &e.c);
+    return u3i_words_tmp(1, &e.c);
   }
 
   u3_noun
@@ -97,7 +97,7 @@
     d.c = u3r_word(0, b);
     e.s = _nan_unify(f32_sub(c.s, d.s));
 
-    return u3i_words(1, &e.c);
+    return u3i_words_tmp(1, &e.c);
   }
 
   u3_noun
@@ -129,7 +129,7 @@
     d.c = u3r_word(0, b);
     e.s = _nan_unify(f32_mul(c.s, d.s));
 
-    return u3i_words(1, &e.c);
+    return u3i_words_tmp(1, &e.c);
   }
 
   u3_noun
@@ -161,7 +161,7 @@
     d.c = u3r_word(0, b);
     e.s = _nan_unify(f32_div(c.s, d.s));
 
-    return u3i_words(1, &e.c);
+    return u3i_words_tmp(1, &e.c);
   }
 
   u3_noun
@@ -191,7 +191,7 @@
     c.c = u3r_word(0, a);
     d.s = _nan_unify(f32_sqrt(c.s));
 
-    return u3i_words(1, &d.c);
+    return u3i_words_tmp(1, &d.c);
   }
 
   u3_noun
@@ -224,7 +224,7 @@
     f.c = u3r_word(0, c);
     g.s = _nan_unify(f32_mulAdd(d.s, e.s, f.s));
 
-    return u3i_words(1, &g.c);
+    return u3i_words_tmp(1, &g.c);
   }
 
   u3_noun

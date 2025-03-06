@@ -43,7 +43,7 @@ u3qe_crc32(u3_noun input_octs)
     led_w--;
   }
 
-  return u3i_word(crc_w);
+  return u3i_word_tmp(crc_w);
 }
 
 u3_noun

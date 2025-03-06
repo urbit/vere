@@ -22,7 +22,7 @@ u3qb_find(u3_noun nedl, u3_noun hstk)
 
       while ( c3y == u3r_sing(i_n, i_h) ) {
         if ( u3_nul == t_n ) {
-          return u3nc(u3_nul, u3i_word(i_w));
+          return u3nc(u3_nul, u3i_word_tmp(i_w));
         }
         else if ( u3_nul == t_h ) {
           break;

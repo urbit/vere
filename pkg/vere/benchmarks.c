@@ -401,7 +401,7 @@ _edit_bench_impl(c3_w_tmp max_w)
   axe_w[0] = bit_w = 2;
 
   do {
-    axe = u3i_words((bit_w + 31) >> 5, axe_w);
+    axe = u3i_words_tmp((bit_w + 31) >> 5, axe_w);
     lit = u3i_edit(lit, axe, 2);
     u3z(axe);
 

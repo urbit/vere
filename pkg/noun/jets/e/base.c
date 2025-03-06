@@ -131,7 +131,7 @@ u3qe_de_base16(u3_atom inp)
     }
     else {
       u3_noun dat = u3i_slab_mint_bytes(&sab_u);
-      return u3nt(u3_nul, u3i_word(len_w), dat);
+      return u3nt(u3_nul, u3i_word_tmp(len_w), dat);
     }
   }
 }

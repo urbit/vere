@@ -19,7 +19,7 @@ u3qb_lent(u3_noun a)
     len_w++;
   }
 
-  return u3i_word(len_w);
+  return u3i_word_tmp(len_w);
 }
 
 u3_noun

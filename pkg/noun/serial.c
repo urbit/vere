@@ -146,7 +146,7 @@ _cs_jam_fib_atom_cb(u3_atom a, void* ptr_v)
   //  if [a] has no backref, encode atom and put cursor into [har_p]
   //
   if ( u3_none == b ) {
-    u3h_put(fib_u->har_p, a, u3i_words(1, &(fib_u->bit_w)));
+    u3h_put(fib_u->har_p, a, u3i_words_tmp(1, &(fib_u->bit_w)));
     _cs_jam_fib_chop(fib_u, 1, 0);
     _cs_jam_fib_mat(fib_u, a);
   }
@@ -180,7 +180,7 @@ _cs_jam_fib_cell_cb(u3_noun a, void* ptr_v)
   //  if [a] has no backref, encode cell and put cursor into [har_p]
   //
   if ( u3_none == b ) {
-    u3h_put(fib_u->har_p, a, u3i_words(1, &(fib_u->bit_w)));
+    u3h_put(fib_u->har_p, a, u3i_words_tmp(1, &(fib_u->bit_w)));
     _cs_jam_fib_chop(fib_u, 2, 1);
     return c3y;
   }

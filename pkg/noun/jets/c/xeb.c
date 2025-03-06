@@ -12,7 +12,7 @@
     c3_w_tmp met_w = u3r_met(0, a);
 
     if ( !_(u3a_is_cat(met_w)) ) {
-      return u3i_words(1, &met_w);
+      return u3i_words_tmp(1, &met_w);
     }
     else return met_w;
   }

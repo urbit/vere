@@ -713,7 +713,7 @@ _test_base16(void)
 static c3_w_tmp
 _fein_ob_w(c3_w_tmp inp_w)
 {
-  u3_atom inp = u3i_word(inp_w);
+  u3_atom inp = u3i_word_tmp(inp_w);
   u3_atom act = u3qe_fein_ob(inp);
   c3_w_tmp  act_w = u3r_word(0, act);
   u3z(inp); u3z(act);
@@ -758,7 +758,7 @@ _test_fein_ob(void)
 static c3_w_tmp
 _fynd_ob_w(c3_w_tmp inp_w)
 {
-  u3_atom inp = u3i_word(inp_w);
+  u3_atom inp = u3i_word_tmp(inp_w);
   u3_atom act = u3qe_fynd_ob(inp);
   c3_w_tmp  act_w = u3r_word(0, act);
   u3z(inp); u3z(act);

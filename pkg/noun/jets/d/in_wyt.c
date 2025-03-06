@@ -25,7 +25,7 @@ _wyt_in(u3_noun a)
 u3_noun
 u3qdi_wyt(u3_noun a)
 {
-  return u3i_word(_wyt_in(a));
+  return u3i_word_tmp(_wyt_in(a));
 }
 
 u3_noun

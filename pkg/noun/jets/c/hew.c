@@ -62,7 +62,7 @@ u3qc_hew(u3_atom boq,
 
   u3_noun pro;
   c3_w_tmp  pos_w = _hew_in((c3_g)boq, (c3_w_tmp)sep, vat, sam, &pro);
-  return u3nt(pro, boq, u3i_word(pos_w));
+  return u3nt(pro, boq, u3i_word_tmp(pos_w));
 }
 
 u3_noun

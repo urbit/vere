@@ -28,7 +28,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
 
   if ( met_w <= tot_w ) {
     tot_w -= met_w;
-    return u3i_word(tot_w);
+    return u3i_word_tmp(tot_w);
   }
   else {
     c3_w_tmp wid_w = tot_w >>  5;
@@ -55,7 +55,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
       bit_w += 32;
     }
 
-    return u3i_word(bit_w);
+    return u3i_word_tmp(bit_w);
   }
 }
 

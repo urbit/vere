@@ -246,7 +246,7 @@ u3i_slab_mint(u3i_slab* sab_u)
     u3_assert( !vat_u );
 
     u3t_off(mal_o);
-    pro = u3i_word(dat_w);
+    pro = u3i_word_tmp(dat_w);
     u3t_on(mal_o);
   }
   else {
@@ -284,7 +284,7 @@ u3i_slab_moot(u3i_slab* sab_u)
     u3_assert( !sab_u->_._vat_u );
 
     u3t_off(mal_o);
-    pro = u3i_word(dat_w);
+    pro = u3i_word_tmp(dat_w);
     u3t_on(mal_o);
   }
   else {
@@ -300,10 +300,10 @@ u3i_slab_moot(u3i_slab* sab_u)
   return pro;
 }
 
-/* u3i_word(): construct u3_atom from c3_w.
+/* u3i_word_tmp(): construct u3_atom from c3_w.
 */
 u3_atom
-u3i_word(c3_w_tmp dat_w)
+u3i_word_tmp(c3_w_tmp dat_w)
 {
   u3_atom pro;
 
@@ -342,7 +342,7 @@ u3i_chub(c3_d dat_d)
       dat_d >> 32
     };
 
-    return u3i_words(2, dat_w);
+    return u3i_words_tmp(2, dat_w);
   }
 }
 
@@ -379,10 +379,10 @@ u3i_bytes(c3_w_tmp        a_w,
   }
 }
 
-/* u3i_words(): Copy [a] words from [b] into an atom.
+/* u3i_words_tmp(): Copy [a] words from [b] into an atom.
 */
 u3_atom
-u3i_words(c3_w_tmp        a_w,
+u3i_words_tmp(c3_w_tmp        a_w,
           const c3_w_tmp* b_w)
 {
   //  strip trailing zeroes.
@@ -474,7 +474,7 @@ u3i_vint(u3_noun a)
   u3_assert(u3_none != a);
 
   if ( _(u3a_is_cat(a)) ) {
-    return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
+    return ( a == 0x7fffffff ) ? u3i_word_tmp(a + 1) : (a + 1);
   }
   else if ( _(u3a_is_cell(a)) ) {
     return u3m_bail(c3__exit);

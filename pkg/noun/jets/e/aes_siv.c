@@ -116,7 +116,7 @@ _cqea_siv_en(c3_y*   key_y,
   ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
-             u3i_words(1, &txt_w),
+             u3i_words_tmp(1, &txt_w),
              u3i_bytes(txt_w, out_y));
 
   u3a_free(txt_y);

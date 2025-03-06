@@ -808,7 +808,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     default: u3_assert(0);
 
     case u3_writ_work: {
-      u3_noun mil = u3i_words(1, &wit_u->wok_u.egg_u->mil_w);
+      u3_noun mil = u3i_words_tmp(1, &wit_u->wok_u.egg_u->mil_w);
       msg = u3nt(c3__work, mil, u3k(wit_u->wok_u.job));
     } break;
 
@@ -1182,7 +1182,7 @@ u3_lord_info(u3_lord* god_u)
       u3_pier_mase("live",  god_u->liv_o),
       u3_pier_mase("event", u3i_chub(god_u->eve_d)),
       u3_pier_mase("mug",   god_u->mug_l),
-      u3_pier_mase("queue", u3i_word(god_u->dep_w)),
+      u3_pier_mase("queue", u3i_word_tmp(god_u->dep_w)),
       u3_newt_moat_info(&god_u->out_u),
       u3_none));
 }
