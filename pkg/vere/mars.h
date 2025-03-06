@@ -62,11 +62,6 @@
       c3_o
       u3_mars_boot(c3_c* dir_c, u3_noun com);
 
-    /* u3_mars_grab(): garbage collect.
-    */
-      void
-      u3_mars_grab(void);
-
     /* u3_mars_init(): restart an existing ship.
     */
       u3_mars*
@@ -82,8 +77,8 @@
 
     /* u3_mars_grab(): garbage collect.
     */
-      void
-      u3_mars_grab(void);
+      u3_noun
+      u3_mars_grab(c3_o pri_o);
 
     /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
     ** TODO: replace?

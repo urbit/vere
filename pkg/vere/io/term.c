@@ -1758,7 +1758,8 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__quac: {
           ret_o = c3y;
-          u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
+          // XX what do after mars/urth split?
+          // u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
         } break;
       }
     }

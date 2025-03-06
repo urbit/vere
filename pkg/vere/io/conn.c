@@ -476,9 +476,10 @@ _conn_async_peel(u3_conn* con_u,
   switch ( mot_m ) {
     case c3__quic:
     case c3__mass: {
-      u3_lord_quiz(pir_u->god_u,
-                   (c3__quic == mot_m) ? c3__quic : c3__quac,
-                   _conn_make_cran(can_u, rid), _conn_peel_quiz_cb);
+      // XX what do after mars/urth split?
+      // u3_lord_quiz(pir_u->god_u,
+      //              (c3__quic == mot_m) ? c3__quic : c3__quac,
+      //              _conn_make_cran(can_u, rid), _conn_peel_quiz_cb);
     } break;
 
     default: u3_assert(0);
