@@ -26,14 +26,15 @@
       typedef uint8_t c3_t;   // boolean
       typedef uint8_t c3_o;   // loobean
       typedef uint8_t c3_g;   // 32-bit log - 0-31 bits
-      typedef uint32_t c3_l;  // little; 31-bit unsigned integer
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
-      #ifdef VERE_64
+      #ifdef VERE64
+        typedef uint64_t c3_l;  // little; 31-bit unsigned integer
         typedef uint64_t c3_n;  // note: noun-sized integer
         typedef int64_t c3_ns;
         typedef uint64_t c3_nz;  // note: noun-sized integer
         typedef int64_t c3_nzs;
       #else
+        typedef uint32_t c3_l;  // little; 31-bit unsigned integer
         typedef uint32_t c3_n;  // note: noun-sized integer
         typedef int32_t c3_ns;
         typedef uint32_t c3_nz;  // note: noun-sized integer
@@ -84,5 +85,34 @@
       #define PRIc3_b  PRIu8
       #define PRIxc3_b PRIx8
       #define PRIXc3_b PRIX8
+
+      #ifdef VERE64
+      #define PRIc3_n  PRIu64
+      #define PRIc3_ns PRIi64
+      #define PRIxc3_n PRIx64
+      #define PRIXc3_n PRIX64
+      #else
+      #define PRIc3_n  PRIu32
+      #define PRIc3_ns PRIi32
+      #define PRIxc3_n PRIx32
+      #define PRIXc3_n PRIX32
+      #endif
+
+      #ifdef VERE64
+      #define PRIc3_l  PRIu64
+      #define PRIc3_ls PRIi64
+      #define PRIxc3_l PRIx64
+      #define PRIXc3_l PRIX64
+      #else
+      #define PRIc3_l  PRIu32
+      #define PRIc3_ls PRIi32
+      #define PRIxc3_l PRIx32
+      #define PRIXc3_l PRIX32
+      #endif
+
+      #define PRIc3_m  PRIu32
+      #define PRIc3_ms PRIi32
+      #define PRIxc3_m PRIx32
+      #define PRIXc3_m PRIX32
 
 #endif /* ifndef C3_TYPES_H */

@@ -122,39 +122,39 @@
 
       /* u3r_mug_both(): Join two mugs.
       */
-        c3_l
+        c3_m
         u3r_mug_both(c3_w_tmp lef_w, c3_w_tmp rit_w);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */
-        c3_l
+        c3_m
         u3r_mug_bytes(const c3_y *buf_y,
                       c3_w_tmp        len_w);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */
-        c3_l
+        c3_m
         u3r_mug_c(const c3_c *a_c);
 
       /* u3r_mug_cell(): Compute the mug of the cell `[hed tel]`.
       */
-        c3_l
+        c3_m
         u3r_mug_cell(u3_noun hed,
                      u3_noun tel);
 
       /* u3r_mug_chub(): Compute the mug of `num`, LSW first.
       */
-        c3_l
+        c3_m
         u3r_mug_chub(c3_d num_d);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
-        c3_l
+        c3_m
         u3r_mug_words(const c3_w_tmp* key_w, c3_w_tmp len_w);
 
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
-        c3_l
+        c3_w_new
         u3r_mug(u3_noun veb);
 
       /* u3r_fing():

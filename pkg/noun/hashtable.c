@@ -2,10 +2,20 @@
 
 #include "hashtable.h"
 
+#ifdef VERE64
+#define _VERE64
+#undef VERE64
+#endif
+
 #include "allocate.h"
 #include "imprison.h"
 #include "retrieve.h"
 #include "xtract.h"
+
+#ifdef _VERE64
+#define VERE64
+#undef _VERE64
+#endif
 
 /* CUT_END(): extract [b_w] low bits from [a_w]
 */

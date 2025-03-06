@@ -396,7 +396,7 @@ _cj_chum(u3_noun chu)
       c3_c  buf[33];
 
       memset(buf, 0, 33);
-      snprintf(buf, 32, "%s%d", h_chu_c, t_chu);
+      snprintf(buf, 32, "%s%"PRIc3_n, h_chu_c, t_chu);
 
       c3_free(h_chu_c);
       return strdup(buf);
@@ -786,7 +786,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
     while ( (cop_u = &dev_u[i_l])->cos_c ) {
       if ( _(u3r_sing_c(cop_u->cos_c, nam)) ) {
 #if 0
-        u3l_log("hot: bound jet %d/%s/%s/",
+        u3l_log("hot: bound jet %"PRIc3_n"/%s/%s/",
                         cop_u->jax_l,
                         cop_u->cos_c,
                         par_u ? par_u->cos_c : "~");
@@ -1768,7 +1768,7 @@ _cj_minx(u3_noun cey, u3_noun cor)
     }
     pel = _cj_spot(par, NULL);
     if ( u3_none == pel ) {
-      u3l_log("fund: in %s, parent %x not found at %d",
+      u3l_log("fund: in %s, parent %x not found at %"PRIc3_n,
                       u3r_string(nam),
                       u3r_mug(u3h(par)),
                       axe);
@@ -1827,7 +1827,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     jax_l = _cj_hot_mean(par_l, nam);
 #if 0
     u3m_p("new jet", bal);
-    u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+    u3l_log("  bat %x, jax %"PRIc3_n, u3r_mug(bat), jax_l);
 #endif
 
     if ( !(u3C.wag_w & u3o_hashless) ) {
@@ -1840,7 +1840,8 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
           _cj_print_tas(u3h(i));
           i = u3t(i);
         }
-        u3l_log("\r\n  axe %d, jax %d,\r\n  bash ", axe, jax_l);
+        // XX: this should be PRIc3_n right...right?
+        u3l_log("\r\n  axe %"PRIc3_n", jax %"PRIc3_n",\r\n  bash ", axe, jax_l);
         u3r_bytes(0, 32, dig_y, bas);
         for ( i_w = 32; i_w > 0; ) {
           u3l_log("%02x", dig_y[--i_w]);
@@ -1875,7 +1876,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 
     if ( c3n == hav_o ) {
       u3m_p("unregistered battery", bal);
-      u3l_log("hash: %x", bas);
+      u3l_log("hash: %"PRIxc3_n, bas);
     }
     u3z(bas);
   }
@@ -2098,7 +2099,7 @@ _cj_ream(u3_noun all)
       act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
       u3m_p("old jet", bal);
-      u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+      u3l_log("  bat %"PRIxc3_n", jax %"PRIc3_n, u3r_mug(bat), jax_l);
 #endif
       u3h_put(u3R->jed.war_p, loc, act);
     }
@@ -2137,7 +2138,7 @@ _cj_ream(u3_noun all)
         act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
         u3m_p("old jet", bal);
-        u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+        u3l_log("  bat %"PRIxc3_n", jax %"PRIc3_n, u3r_mug(bat), jax_l);
 #endif
         u3h_put(u3R->jed.war_p, loc, act);
       }

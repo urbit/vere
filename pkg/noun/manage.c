@@ -436,7 +436,12 @@ _cm_signal_done(void)
 void
 u3m_signal(u3_noun sig_l)
 {
+#ifndef VERE64
   rsignal_longjmp(u3_Signal, sig_l);
+#else
+  u3R->esc.sig_w = sig_l;
+  rsignal_longjmp(u3_Signal, 1);
+#endif
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -623,7 +628,7 @@ _find_home(void)
     }
     default: {
       fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have %u, need %u\r\n",
+                      "have $"PRIc3_n", need $"PRIc3_n"\r\n",
                       ver_w, U3V_VERLAT);
       abort();
     }
@@ -655,7 +660,7 @@ _find_home(void)
     sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
     if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
-      fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
+      fprintf(stderr, "loom: corrupt size north ($"PRIc3_n", $"PRIc3_n") south ($"PRIc3_n", $"PRIc3_n")\r\n",
                       nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
@@ -664,7 +669,7 @@ _find_home(void)
     //  doesn't necessarily indicate corruption.
     //
     if ( nor_w < u3P.nor_u.pgs_w ) {
-      fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
+      fprintf(stderr, "loom: strange size north ($"PRIc3_n", $"PRIc3_n")\r\n",
                       nor_w, u3P.nor_u.pgs_w);
     }
 
@@ -721,7 +726,7 @@ u3m_dump(void)
       fre_u = fre_u->nex_u;
     }
   }
-  u3l_log("dump: hat_w %x, fre_w %x, allocated %x",
+  u3l_log("dump: hat_w %"PRIxc3_n", fre_w %"PRIxc3_n", allocated %"PRIxc3_n,
           hat_w, fre_w, (hat_w - fre_w));
 
   if ( 0 != (hat_w - fre_w) ) {
@@ -733,14 +738,14 @@ u3m_dump(void)
 
       if ( 0 != box_u->use_w ) {
 #ifdef U3_MEMORY_DEBUG
-        // u3l_log("live %d words, code %x", box_u->siz_w, box_u->cod_w);
+        // u3l_log("live %d words, code %"PRIxc3_n, box_u->siz_w, box_u->cod_w);
 #endif
         mem_w += box_u->siz_w;
       }
       box_w += box_u->siz_w;
     }
 
-    u3l_log("second count: %x", mem_w);
+    u3l_log("second count: %"PRIxc3_n, mem_w);
   }
 }
 #endif
@@ -1007,7 +1012,12 @@ u3m_bail(u3_noun how)
 
   /* Longjmp, with an underscore.
   */
+#ifndef VERE64
   _longjmp(u3R->esc.buf, how);
+#else
+  u3R->esc.why_w = how;
+  _longjmp(u3R->esc.buf, 1);
+#endif
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1061,7 +1071,7 @@ u3m_leap(c3_n pad_w)
 
       rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
 #if 0
-      fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
+      fprintf(stderr, "NPAR.hat_p: 0x%"PRIxc3_n" %p, SKID.hat_p: 0x%"PRIxc3_n" %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
               rod_u->hat_p, u3a_into(rod_u->hat_p));
 #endif
@@ -1071,7 +1081,7 @@ u3m_leap(c3_n pad_w)
 
       rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w, c3y);
 #if 0
-      fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
+      fprintf(stderr, "SPAR.hat_p: 0x%"PRIxc3_n" %p, NKID.hat_p: 0x%"PRIxc3_n" %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
               rod_u->hat_p, u3a_into(rod_u->hat_p));
 
@@ -1118,7 +1128,7 @@ u3m_fall(void)
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
   */
-  fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%x, was 0x%x)\r\n",
+  fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%"PRIxc3_n", was 0x%"PRIxc3_n")\r\n",
           _(u3a_is_north(u3R)) ? "north" : "south",
           u3R,
           _(u3a_is_north(u3to(u3_road, u3R->par_p))) ? "north" : "south",
@@ -1280,14 +1290,22 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
              u3_funk fun_f,
              u3_noun   arg)
 {
-  u3_noun why, pro;
-  c3_l    sig_l;
+  u3_noun pro;
+#ifndef VERE64
+  c3_n    sig_l = 0;
+  u3_noun why = 0;
+#endif
 
   /* Enter internal signal regime.
   */
   _cm_signal_deep(mil_w);
 
+#ifndef VERE64
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
+#else
+  if ( 0 != rsignal_setjmp(u3_Signal) ) {
+    c3_n sig_l = u3R->esc.sig_w;
+#endif
     //  reinitialize trace state
     //
     u3t_init();
@@ -1307,7 +1325,11 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
+#ifndef VERE64
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  if ( 0 == _setjmp(u3R->esc.buf) ) {
+#endif
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1330,6 +1352,9 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
     pro = u3nc(0, u3m_love(pro));
   }
   else {
+#ifdef VERE64
+    u3_noun why = u3R->esc.why_w;
+#endif
     /* Overload the error result.
     */
     pro = u3m_love(why);
@@ -1388,7 +1413,10 @@ u3m_soft_run(u3_noun gul,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun why = 0, pro;
+  u3_noun pro;
+#ifndef VERE64 
+  u3_noun why = 0;
+#endif
 
   /* Record the cap, and leap.
   */
@@ -1406,7 +1434,11 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
+#ifndef VERE64
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  if ( 0 == _setjmp(u3R->esc.buf) ) {
+#endif
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1430,6 +1462,9 @@ u3m_soft_run(u3_noun gul,
     pro = u3nc(0, u3m_love(pro));
   }
   else {
+#ifdef VERE64
+    u3_noun why = u3R->esc.why_w;
+#endif
     u3t_init();
 
     /* Produce - or fall again.
@@ -1485,7 +1520,10 @@ u3m_soft_run(u3_noun gul,
 u3_noun
 u3m_soft_esc(u3_noun ref, u3_noun sam)
 {
-  u3_noun why, gul, pro;
+  u3_noun gul, pro;
+#ifndef VERE64 
+  u3_noun why = 0;
+#endif
 
   /* Assert preconditions.
   */
@@ -1509,7 +1547,11 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
+#ifndef VERE64
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  if ( 0 == _setjmp(u3R->esc.buf) ) {
+#endif
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -1517,6 +1559,9 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     pro = u3m_love(pro);
   }
   else {
+#ifdef VERE64
+    u3_noun why = u3R->esc.why_w;
+#endif
     u3t_init();
 
     /* Push the error back up to the calling context - not the run we
@@ -2038,11 +2083,11 @@ u3m_save(void)
     c3_n sor_w = u3P.pag_w - sop_w;
 
     if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
-      fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
+      fprintf(stderr, "loom: save strange nox $"PRIc3_n" nor $"PRIc3_n" sox $"PRIc3_n" sor $"PRIc3_n"\r\n",
                       nox_w, nor_w, sox_w, sor_w);
     }
     else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
-      fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
+      fprintf(stderr, "loom: save wrong nox $"PRIc3_n" nor $"PRIc3_n" sox $"PRIc3_n" sor $"PRIc3_n"\r\n",
                       nox_w, nor_w, sox_w, sor_w);
       u3_assert(!"busted");
     }

@@ -422,7 +422,8 @@ _ca_reclaim_half(void)
   }
 
 #if 1
-  fprintf(stderr, "allocate: reclaim: half of %d entries\r\n",
+  // XX should this be PRIc3_ns or PRIc3_n?
+  fprintf(stderr, "allocate: reclaim: half of %"PRIc3_n" entries\r\n",
           u3to(u3h_root, u3R->cax.har_p)->use_w);
 
   u3h_trim_to(u3R->cax.har_p, u3to(u3h_root, u3R->cax.har_p)->use_w / 2);
@@ -458,7 +459,7 @@ _ca_willoc(c3_n len_w, c3_n ald_w, c3_n off_w)
     sel_w += 1;
   }
 
-  // u3l_log("walloc %d: *pfr_p %x", len_w, u3R->all.fre_p[sel_w]);
+  // u3l_log("walloc %"PRIc3_n": *pfr_p %"PRIxc3_n"", len_w, u3R->all.fre_p[sel_w]);
   while ( 1 ) {
     u3p(u3a_fbox) *pfr_p = &u3R->all.fre_p[sel_w];
 
@@ -1674,7 +1675,7 @@ void
 u3a_luse(u3_noun som)
 {
   if ( 0 == u3a_use(som) ) {
-    fprintf(stderr, "loom: insane %d 0x%x\r\n", som, som);
+    fprintf(stderr, "loom: insane %"PRIc3_ns" 0x%"PRIxc3_n"\r\n", som, som);
     abort();
   }
   if ( _(u3du(som)) ) {
@@ -1973,13 +1974,13 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
   c3_n mic_w = (mic_d % 1000);
 
   if ( sec_w ) {
-    sprintf(str_c, "%s s/%d.%03d.%03d", cap_c, sec_w, mec_w, mic_w);
+    sprintf(str_c, "%s s/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"", cap_c, sec_w, mec_w, mic_w);
   }
   else if ( mec_w ) {
-    sprintf(str_c, "%s ms/%d.%03d", cap_c, mec_w, mic_w);
+    sprintf(str_c, "%s ms/%"PRIc3_n".%03"PRIc3_n"", cap_c, mec_w, mic_w);
   }
   else {
-    sprintf(str_c, "%s \xc2\xb5s/%d", cap_c, mic_w);
+    sprintf(str_c, "%s \xc2\xb5s/%"PRIc3_n"", cap_c, mic_w);
   }
 }
 
@@ -2038,17 +2039,17 @@ _ca_print_memory(FILE* fil_u, c3_n byt_w)
   c3_n bib_w = (byt_w % 1000);
 
   if ( gib_w ) {
-    fprintf(fil_u, "GB/%d.%03d.%03d.%03d\r\n",
+    fprintf(fil_u, "GB/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n",
             gib_w, mib_w, kib_w, bib_w);
   }
   else if ( mib_w ) {
-    fprintf(fil_u, "MB/%d.%03d.%03d\r\n", mib_w, kib_w, bib_w);
+    fprintf(fil_u, "MB/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n", mib_w, kib_w, bib_w);
   }
   else if ( kib_w ) {
-    fprintf(fil_u, "KB/%d.%03d\r\n", kib_w, bib_w);
+    fprintf(fil_u, "KB/%"PRIc3_n".%03"PRIc3_n"\r\n", kib_w, bib_w);
   }
   else {
-    fprintf(fil_u, "B/%d\r\n", bib_w);
+    fprintf(fil_u, "B/%"PRIc3_n"\r\n", bib_w);
   }
 }
 
@@ -2181,7 +2182,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
 */
 
 void
-u3a_print_quac(FILE* fil_u, c3_n den_w, u3m_quac* mas_u)
+u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
 
@@ -2355,7 +2356,7 @@ _ca_print_box(u3a_box* box_u)
 static void
 _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_n eus_w, c3_n use_w)
 {
-  fprintf(stderr, "%s: %p mug=%x (marked=%u swept=%u)\r\n",
+  fprintf(stderr, "%s: %p mug=%"PRIxc3_n" (marked=%"PRIc3_n" swept=%"PRIc3_n")\r\n",
                   cap_c,
                   (void *)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
@@ -2382,7 +2383,7 @@ _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_n eus_w, c3_n use_w)
 static void
 _ca_print_leak(c3_c* cap_c, u3a_box* box_u, c3_ns use_ws)
 {
-  fprintf(stderr, "%s: %p mug=%x swept=%d\r\n",
+  fprintf(stderr, "%s: %p mug=%"PRIxc3_m" swept=%"PRIc3_ns"\r\n",
                   cap_c,
                   (void *)box_u,
                   ((u3a_noun *)(u3a_boxto(box_u)))->mug_w,
@@ -2498,7 +2499,7 @@ u3a_sweep(void)
 
 #ifdef U3_CPU_DEBUG
     if ( fre_w != u3R->all.fre_w ) {
-      fprintf(stderr, "fre discrepancy (%x): %x, %x, %x\r\n", u3R->par_p,
+      fprintf(stderr, "fre discrepancy (%"PRIxc3_n"): %"PRIxc3_n", %"PRIxc3_n", %"PRIxc3_n"\r\n", u3R->par_p,
                       fre_w, u3R->all.fre_w, (u3R->all.fre_w - fre_w));
     }
 #endif

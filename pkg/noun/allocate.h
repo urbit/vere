@@ -24,22 +24,28 @@
 #     define u3a_32_indirect_mask  0x3fffffff
 #     define u3a_32_direct_max  0x7fffffff
 #     define u3a_32_indirect_flag  0x80000000
+#     define u3a_32_cell_flag  0xc0000000
 
 #     define u3a_64_word_bex  3
 #     define u3a_64_indirect_mask  0x3fffffffffffffffULL
 #     define u3a_64_direct_max  0x7fffffffffffffffULL
 #     define u3a_64_indirect_flag  0x8000000000000000ULL
+#     define u3a_64_cell_flag  0xc000000000000000ULL
 
 #ifndef VERE64
+#     define u3a_word_bits  32
 #     define u3a_word_bex  u3a_32_word_bex 
 #     define u3a_indirect_mask  u3a_32_indirect_mask 
 #     define u3a_direct_max  u3a_32_direct_max 
 #     define u3a_indirect_flag  u3a_32_indirect_flag
+#     define u3a_cell_flag  u3a_32_cell_flag
 #else
+#     define u3a_word_bits  64
 #     define u3a_word_bex  u3a_64_word_bex 
 #     define u3a_indirect_mask  u3a_64_indirect_mask 
 #     define u3a_direct_max  u3a_64_direct_max 
 #     define u3a_indirect_flag  u3a_64_indirect_flag
+#     define u3a_cell_flag  u3a_64_cell_flag
 #endif
 
 
@@ -106,9 +112,9 @@
         c3_w_new mug_w;
         #ifdef VERE64
           c3_w_new fut_w;
-          c3_n len_w;
-          c3_n buf_w[0];
         #endif
+        c3_n len_w;
+        c3_n buf_w[0];
       } u3a_atom;
 
       typedef struct __attribute__((aligned(4))) {
@@ -178,7 +184,15 @@
 
         struct {                              //  escape buffer
           union {
+            #ifndef VERE64
             jmp_buf buf;
+            #else
+            struct {
+              jmp_buf buf;
+              c3_n why_w;                     //  how
+              c3_n sig_w;                     //  sig how
+            };
+            #endif
             c3_n buf_w[256];                  //  futureproofing
           };
         } esc;
@@ -258,19 +272,19 @@
 
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
-#     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
+#     define u3a_is_cat(som)    (((som) >> (u3a_word_bits - 1)) ? c3n : c3y)
 
     /* u3a_is_dog(): yes if noun [som] is indirect noun.
     */
-#     define u3a_is_dog(som)    (((som) >> 31) ? c3y : c3n)
+#     define u3a_is_dog(som)    (((som) >> (u3a_word_bits - 1)) ? c3y : c3n)
 
     /* u3a_is_pug(): yes if noun [som] is indirect atom.
     */
-#     define u3a_is_pug(som)    ((0b10 == ((som) >> 30)) ? c3y : c3n)
+#     define u3a_is_pug(som)    ((0b10 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
-#     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
+#     define u3a_is_pom(som)    ((0b11 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
@@ -449,14 +463,14 @@
    */
   inline c3_n u3a_to_pug(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
-    return (off >> u3a_vits) | 0x80000000;
+    return (off >> u3a_vits) | u3a_indirect_flag;
   }
 
   /* u3a_to_pom(): set bits 30 and 31 of [off].
    */
   inline c3_n u3a_to_pom(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
-    return (off >> u3a_vits) | 0xc0000000;
+    return (off >> u3a_vits) | u3a_cell_flag;
   }
 
     /**  road stack.
@@ -747,7 +761,7 @@
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_n den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount.
         */

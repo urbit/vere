@@ -1,8 +1,18 @@
 #ifndef U3_HASHTABLE_H
 #define U3_HASHTABLE_H
 
+#ifdef VERE64
+#define _VERE64
+#undef VERE64
+#endif
+
 #include "c3/c3.h"
 #include "types.h"
+
+#ifdef _VERE64
+#define VERE64
+#undef _VERE64
+#endif
 
   /**  Data structures.
   **/
@@ -43,7 +53,7 @@
       */
         typedef struct {
           c3_w_tmp     max_w;     // number of cache lines (0 for no trimming)
-          c3_w_tmp     use_w;     // number of lines currently filled
+          c3_n         use_w;     // number of lines currently filled
           struct {
             c3_w_tmp  mug_w;      // current hash
             c3_w_tmp  inx_w;      // index into current hash bucket

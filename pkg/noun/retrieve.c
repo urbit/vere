@@ -1597,8 +1597,8 @@ u3r_tape(u3_noun a)
 
 /* u3r_mug_both(): Join two mugs.
 */
-c3_l
-u3r_mug_both(c3_l lef_l, c3_l rit_l)
+c3_m
+u3r_mug_both(c3_m lef_l, c3_m rit_l)
 {
   c3_y len_y = 4 + ((c3_bits_word(rit_l) + 0x7) >> 3);
   c3_w_tmp syd_w = 0xdeadbeef;
@@ -1616,7 +1616,7 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
 
   while ( i_w < 8 ) {
     c3_w_tmp haz_w;
-    c3_l ham_l;
+    c3_m ham_l;
 
     MurmurHash3_x86_32(buf_y, len_y, syd_w, &haz_w);
     ham_l = (haz_w >> 31) ^ (haz_w & 0x7fffffff);
@@ -1634,7 +1634,7 @@ u3r_mug_both(c3_l lef_l, c3_l rit_l)
 
 /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
 */
-c3_l
+c3_m
 u3r_mug_bytes(const c3_y *buf_y,
               c3_w_tmp        len_w)
 {
@@ -1643,7 +1643,7 @@ u3r_mug_bytes(const c3_y *buf_y,
 
   while ( i_w < 8 ) {
     c3_w_tmp haz_w;
-    c3_l ham_l;
+    c3_m ham_l;
 
     MurmurHash3_x86_32(buf_y, len_w, syd_w, &haz_w);
     ham_l = (haz_w >> 31) ^ (haz_w & 0x7fffffff);
@@ -1661,7 +1661,7 @@ u3r_mug_bytes(const c3_y *buf_y,
 
 /* u3r_mug_c(): Compute the mug of `a`, LSB first.
 */
-c3_l
+c3_m
 u3r_mug_c(const c3_c* a_c)
 {
   return u3r_mug_bytes((c3_y*)a_c, strlen(a_c));
@@ -1669,7 +1669,7 @@ u3r_mug_c(const c3_c* a_c)
 
 /* u3r_mug_cell(): Compute the mug of the cell `[hed tel]`.
 */
-c3_l
+c3_m
 u3r_mug_cell(u3_noun hed,
              u3_noun tel)
 {
@@ -1681,7 +1681,7 @@ u3r_mug_cell(u3_noun hed,
 
 /* u3r_mug_chub(): Compute the mug of `num`, LSW first.
 */
-c3_l
+c3_m
 u3r_mug_chub(c3_d num_d)
 {
   c3_w_tmp buf_w[2];
@@ -1694,7 +1694,7 @@ u3r_mug_chub(c3_d num_d)
 
 /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
 */
-c3_l
+c3_m
 u3r_mug_words(const c3_w_tmp* key_w, c3_w_tmp len_w)
 {
   c3_w_tmp byt_w;
@@ -1726,20 +1726,20 @@ u3r_mug_words(const c3_w_tmp* key_w, c3_w_tmp len_w)
 **          !mug == head-frame
 */
 typedef struct {
-  c3_l  mug_l;
+  c3_m  mug_l;
   u3_cell cel;
 } _cr_mugf;
 
 /* _cr_mug_next(): advance mug calculation, pushing cells onto the stack.
 */
-static inline c3_l
+static inline c3_m
 _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
 {
   while ( 1 ) {
     //  veb is a direct atom, mug is not memoized
     //
     if ( c3y == u3a_is_cat(veb) ) {
-      return (c3_l)u3r_mug_words(&veb, 1);
+      return (c3_m)u3r_mug_words(&veb, 1);
     }
     //  veb is indirect, a pointer into the loom
     //
@@ -1751,13 +1751,13 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
       //    XX add debug assertion that mug is 31-bit?
       //
       if ( veb_u->mug_w ) {
-        return (c3_l)veb_u->mug_w;
+        return (c3_m)veb_u->mug_w;
       }
       //  veb is an indirect atom, mug its bytes and memoize
       //
       else if ( c3y == u3a_is_atom(veb) ) {
         u3a_atom* vat_u = (u3a_atom*)veb_u;
-        c3_l      mug_l = u3r_mug_words(vat_u->buf_w, vat_u->len_w);
+        c3_m      mug_l = u3r_mug_words(vat_u->buf_w, vat_u->len_w);
         vat_u->mug_w = mug_l;
         return mug_l;
       }
@@ -1780,12 +1780,12 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
 
 /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
 */
-c3_l
+c3_m
 u3r_mug(u3_noun veb)
 {
   u3a_pile  pil_u;
   _cr_mugf* fam_u;
-  c3_l      mug_l;
+  c3_m      mug_l;
 
   //  sanity check
   //
