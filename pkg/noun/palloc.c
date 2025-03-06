@@ -1088,18 +1088,9 @@ typedef struct _ca_mrag {
   c3_w    bit_w[0];
 } ca_mrag;
 
-static u3_post
-_mark_bump(c3_w len_w)
-{
-  u3_post som_p;
-
-  som_p  = u3R->hat_p;
-  som_p += HEAP.off_ws * (c3_ws)len_w;
-
-  u3R->hat_p += HEAP.dir_ws * (c3_ws)len_w;
-
-  return som_p;
-}
+#define _mark_offset (u3a_rest_pg + 1)
+#define _to_mark_post(type, x) ((type*)(void*)(u3a_Mark.buf_w + (x - _mark_offset)))
+#define _of_mark_post(type, x) (((c3_w*)(type*)x - u3a_Mark.buf_w) + _mark_offset)
 
 static c3_w
 _mark_post(u3_post som_p)
@@ -1123,7 +1114,7 @@ _mark_post(u3_post som_p)
       return 0;
     }
     else {
-      ca_mrag  *mag_u = u3to(ca_mrag, dir_p);
+      ca_mrag  *mag_u = _to_mark_post(ca_mrag, dir_p);
       u3a_crag *pag_u = u3to(u3a_crag, mag_u->dir_p);
       c3_w      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
@@ -1154,8 +1145,8 @@ _mark_post(u3_post som_p)
       c3_g      bit_g = pag_u->log_s - u3a_min_log;
       c3_w      bit_w = (tot_s + 31) >> 5;
 
-      u3_post   mag_p = _mark_bump(c3_wiseof(ca_mrag) + bit_w);
-      ca_mrag*  mag_u = u3to(ca_mrag, mag_p);
+      ca_mrag*  mag_u = u3a_mark_alloc(c3_wiseof(ca_mrag) + bit_w);
+      u3_post   mag_p = _of_mark_post(ca_mrag, mag_u);
 
       for ( c3_w i_w = 0; i_w < bit_w; i_w++ ) {
         mag_u->bit_w[i_w] = ~0;
@@ -1274,7 +1265,7 @@ _sweep_directory(void)
                           i_w);
         }
         else {
-          ca_mrag  *mag_u = u3to(ca_mrag, dir_p);
+          ca_mrag  *mag_u = _to_mark_post(ca_mrag, dir_p);
 
           pag_u = u3to(u3a_crag, mag_u->dir_p);
           c3_w max_w = (pag_u->tot_s + 31) >> 5;
@@ -1342,8 +1333,10 @@ _sweep_directory(void)
     // u3_assert(0);
   }
 
+  u3a_print_memory(stderr, "palloc: off-heap", u3a_Mark.siz_w);
+
   c3_free(u3a_Mark.bit_w);
-  u3R->hat_p = u3a_Mark.hat_p;
+  c3_free(u3a_Mark.buf_w);
   memset(&u3a_Mark, 0, sizeof(u3a_Mark));
 
   return tot_w;

@@ -80,10 +80,32 @@ u3a_init_mark(void)
 {
   c3_w bit_w = (u3R->hep.len_w + 31) >> 5;
 
-  u3a_Mark.hat_p = u3R->hat_p;
   u3a_Mark.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
+  u3a_Mark.siz_w = u3R->hep.siz_w * 2;
+  u3a_Mark.len_w = 0;
+  u3a_Mark.buf_w = c3_malloc(sizeof(c3_w) * u3a_Mark.siz_w);
 
   memset(u3a_Mark.wee_w, 0, sizeof(c3_w) * u3a_crag_no);
+}
+
+void*
+u3a_mark_alloc(c3_w len_w) // words
+{
+  void* ptr_v;
+
+  if ( len_w > u3a_Mark.siz_w ) {
+    u3a_Mark.siz_w += len_w;
+    u3a_Mark.buf_w  = c3_realloc(u3a_Mark.buf_w, sizeof(c3_w) * u3a_Mark.siz_w);
+  }
+  else if ( (u3a_Mark.siz_w - len_w) < u3a_Mark.len_w ) {
+    u3a_Mark.siz_w *= 2;
+    u3a_Mark.buf_w  = c3_realloc(u3a_Mark.buf_w, sizeof(c3_w) * u3a_Mark.siz_w);
+  }
+
+  ptr_v = &(u3a_Mark.buf_w[u3a_Mark.len_w]);
+  u3a_Mark.len_w += len_w;
+
+  return ptr_v;
 }
 
 /* _box_count(): adjust memory count.
