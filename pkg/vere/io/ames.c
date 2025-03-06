@@ -2149,7 +2149,8 @@ _ames_hear(u3_ames* sam_u,
 
         default: {
           u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
-          u3_pier_bail(u3_king_stub());
+          u3_king_bail();
+          exit(1);
         }
       }
     }
