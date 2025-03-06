@@ -1098,90 +1098,141 @@ _mark_post(u3_post som_p)
   c3_w pag_w = post_to_page(som_p);
   c3_w blk_w = pag_w >> 5;
   c3_w bit_w = pag_w & 31;
-  c3_w siz_w = 0;
+  c3_w siz_w;
 
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   u3_post dir_p = dir_u[pag_w];
 
-  //  page is marked
+  //  som_p is a one-or-more page allocation
   //
-  if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
-    // som_p is a page allocation
-    if ( dir_p <= u3a_rest_pg ) {
-      if ( u3a_head_pg != dir_p ) {
-        // XX print error
-      }
+  if ( dir_p <= u3a_rest_pg ) {
+    if ( som_p & ((1U << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%x (0x%x)\n",
+                      som_p, som_p & ~(((1U << u3a_page) - 1)));
       return 0;
     }
-    else {
-      ca_mrag  *mag_u = _to_mark_post(ca_mrag, dir_p);
-      u3a_crag *pag_u = u3to(u3a_crag, mag_u->dir_p);
-      c3_w      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+
+    if ( u3a_free_pg == dir_p ) {
+      fprintf(stderr, "palloc: mark: free page som_p=0x%x pag_w=%u\n",
+                      som_p, pag_w);
+      return 0;
+    }
+    else if ( u3a_head_pg != dir_p ) {
+      fprintf(stderr, "palloc: mark: rest page som_p=0x%x dir_p=0x%x\n",
+                      som_p, dir_p);
+      return 0;
+    }
+
+    //  page(s) already marked
+    //
+    if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
+      return 0;
+   }
+
+    u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
+
+    for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+    siz_w <<= u3a_page;
+
+    return siz_w;
+  }
+  //  som_p is a chunk allocation
+  //
+  else {
+    u3a_crag *pag_u;
+    ca_mrag  *mag_u;
+    c3_w      pos_w;
+
+    //  page is marked, already converted to [ca_mrag]
+    //
+    if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
+      mag_u = _to_mark_post(ca_mrag, dir_p);
+      pag_u = u3to(u3a_crag, mag_u->dir_p);
+      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+
+      if ( som_p & (pag_u->len_s - 1) ) {
+        fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
+                        som_p, som_p & ~((1U << u3a_page) - 1),
+                        dir_p, pag_u->len_s);
+        return 0;
+      }
+
+      if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+        fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
+                        som_p, dir_p, pag_u->len_s);
+        return 0;
+      }
 
       if ( !(mag_u->bit_w[pos_w >> 5] & (1U << (pos_w & 31))) ) {
         return 0;
       }
-
-      mag_u->bit_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
-      siz_w = pag_u->len_s;
     }
-  }
-  else {
-    // som_p is a page allocation
-    if ( dir_p <= u3a_rest_pg ) {
-      if ( u3a_head_pg != dir_p ) {
-        // XX print error
+    //  convert directory entry to [ca_mrag]
+    //
+    else {
+      pag_u = u3to(u3a_crag, dir_p);
+      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+
+      if ( som_p & (pag_u->len_s - 1) ) {
+        fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
+                        som_p, som_p & ~((1U << u3a_page) - 1),
+                        dir_p, pag_u->len_s);
         return 0;
       }
 
-      for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
-      siz_w <<= u3a_page;
-    }
-    //  som_p is a chunk allocation
-    else {
-      u3a_crag *pag_u = u3to(u3a_crag, dir_p);
-      c3_w      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
-      c3_s      tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
-      c3_g      bit_g = pag_u->log_s - u3a_min_log;
-      c3_w      bit_w = (tot_s + 31) >> 5;
-
-      ca_mrag*  mag_u = u3a_mark_alloc(c3_wiseof(ca_mrag) + bit_w);
-      u3_post   mag_p = _of_mark_post(ca_mrag, mag_u);
-
-      for ( c3_w i_w = 0; i_w < bit_w; i_w++ ) {
-        mag_u->bit_w[i_w] = ~0;
+      if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+        fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
+                        som_p, dir_p, pag_u->len_s);
+        return 0;
       }
 
-      if ( page_to_post(pag_u->pag_w) == dir_p ) {
-        c3_s siz_s = c3_wiseof(u3a_crag);
-        siz_s += tot_s >> 5;
-        siz_s += !!(tot_s & 31);
-        siz_s--;
+      //  initialize mark-bitmap
+      //
+      {
+        c3_s    tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
+        c3_g    bit_g = pag_u->log_s - u3a_min_log;
+        c3_w    map_w = (tot_s + 31) >> 5;
+        u3_post mag_p;
 
-        c3_w len_w = 1U + ((siz_s - 1) / pag_u->len_s);
+        mag_u = u3a_mark_alloc(c3_wiseof(ca_mrag) + map_w);
+        mag_p = _of_mark_post(ca_mrag, mag_u);
 
-        for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-          mag_u->bit_w[i_w >> 5] &= ~(1U << (i_w & 31));
+        for ( c3_w i_w = 0; i_w < map_w; i_w++ ) {
+          mag_u->bit_w[i_w] = ~0;
         }
 
-        u3a_Mark.wee_w[bit_g] += len_w * pag_u->len_s;
+        //  mark page metadata
+        //
+        if ( page_to_post(pag_u->pag_w) != dir_p ) {
+          u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
+        }
+        else {
+          c3_s siz_s = c3_wiseof(u3a_crag);
+          siz_s += tot_s >> 5;
+          siz_s += !!(tot_s & 31);
+          siz_s--;
+
+          c3_w len_w = 1U + ((siz_s - 1) / pag_u->len_s);
+
+          for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+            mag_u->bit_w[i_w >> 5] &= ~(1U << (i_w & 31));
+          }
+
+          u3a_Mark.wee_w[bit_g] += len_w * pag_u->len_s;
+        }
+
+        mag_u->dir_p = dir_p;
+        dir_u[pag_w] = mag_p;
+
+        u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
       }
-      else {
-        u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
-      }
-
-      mag_u->dir_p = dir_p;
-      mag_u->bit_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
-
-      dir_u[pag_w] = mag_p;
-
-      siz_w = pag_u->len_s;
     }
 
-    u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
-  }
+    mag_u->bit_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
+    siz_w = pag_u->len_s;
 
-  return siz_w;
+    return siz_w;
+  }
 }
 
 static c3_w
@@ -1222,21 +1273,8 @@ _sweep_directory(void)
     bit_w = i_w & 31;
 
     switch ( dir_p = dir_u[i_w] ) {
-      case u3a_free_pg: {
-        if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
-          //  XX bogus: marked free page
-          fprintf(stderr, "palloc: bogus free page %u\r\n",
-                          i_w);
-        }
-      } break;
-
-      case u3a_rest_pg: {
-        if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
-          //  XX bogus: marked free page
-          fprintf(stderr, "palloc: bogus rest page %u\r\n",
-                          i_w);
-        }
-      } break;
+      case u3a_free_pg: break;
+      case u3a_rest_pg: break;
 
       case u3a_head_pg: {
         for ( siz_w = 1; dir_u[i_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
@@ -1260,6 +1298,7 @@ _sweep_directory(void)
         if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
           //  XX leaked chunk page
           pag_u = u3to(u3a_crag, dir_p);
+          //  XX also leaked metadata?
           leq_w += pag_u->len_s * (pag_u->tot_s - pag_u->fre_s);
           fprintf(stderr, "palloc: leaked chunk page %u\r\n",
                           i_w);
@@ -1278,15 +1317,11 @@ _sweep_directory(void)
               blk_w = i_s >> 5;
               bit_w = i_s & 31;
 
-              if ( pag_u->map_w[blk_w] & (1U << bit_w) ) {
+              if ( !(pag_u->map_w[blk_w] & (1U << bit_w)) ) {
                 if ( !(mag_u->bit_w[blk_w] & (1U << bit_w)) ) {
-                  //  XX bogus, marked free
-                  fprintf(stderr, "palloc: bogus chunk %u in page %u\r\n",
-                                  i_s, i_w);
+                  tot_w += pag_u->len_s;
                 }
-              }
-              else {
-                if ( mag_u->bit_w[blk_w] & (1U << bit_w) ) {
+                else {
                   //  XX free chunk?
                   fprintf(stderr, "palloc: leaked chunk %u (%u) in page %u\r\n",
                                   i_s, pag_u->len_s, i_w);
@@ -1303,9 +1338,6 @@ _sweep_directory(void)
                   fprintf(stderr, "}\r\n");;
 
                   leq_w += pag_u->len_s;
-                }
-                else {
-                  tot_w += pag_u->len_s;
                 }
               }
             }
