@@ -1282,8 +1282,6 @@ u3_mars_init(c3_c*    dir_c,
              u3_mojo* out_u,
              c3_d     eve_d)
 {
-  u3_post low_p, hig_p;
-
   u3_mars* mar_u = c3_malloc(sizeof(*mar_u));
   mar_u->dir_c = dir_c;
   mar_u->inn_u = inn_u;
@@ -1334,8 +1332,7 @@ u3_mars_init(c3_c*    dir_c,
     }
 
     mar_u->sen_d = mar_u->dun_d = mar_u->met_u.lif_w;
-    u3m_water(&low_p, &hig_p);
-    u3e_save(low_p, hig_p);
+    u3m_save();
   }
 
   if ( eve_d && (eve_d <= mar_u->dun_d) ) {
@@ -1349,8 +1346,7 @@ u3_mars_init(c3_c*    dir_c,
 
   if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
     u3_mars_play(mar_u, eve_d, 0);
-    u3m_water(&low_p, &hig_p);
-    u3e_save(low_p, hig_p);
+    u3m_save();
   }
 
   //  XX do something better
@@ -1408,14 +1404,14 @@ _mars_wyrd_card(c3_m nam_m, c3_w ver_w, c3_l sev_l)
 
   //  special case versions requiring the full stack
   //
-  if (  ((c3__zuse == nam_m) && (418 == ver_w))
-     || ((c3__lull == nam_m) && (329 == ver_w))
-     || ((c3__arvo == nam_m) && (240 == ver_w)) )
+  if (  ((c3__zuse == nam_m) && (410 == ver_w))
+     || ((c3__lull == nam_m) && (322 == ver_w))
+     || ((c3__arvo == nam_m) && (236 == ver_w)) )
   {
-    kel = u3nl(u3nc(c3__zuse, 418),
-               u3nc(c3__lull, 329),
-               u3nc(c3__arvo, 240),
-               u3nc(c3__hoon, 140),
+    kel = u3nl(u3nc(c3__zuse, 410),
+               u3nc(c3__lull, 322),
+               u3nc(c3__arvo, 236),
+               u3nc(c3__hoon, 137),
                u3nc(c3__nock, 4),
                u3_none);
   }
@@ -1728,7 +1724,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
   //  XX source kelvin from args?
   //
   inp_u.ver_u.nam_m = c3__zuse;
-  inp_u.ver_u.ver_w = 418;
+  inp_u.ver_u.ver_w = 410;
 
   gettimeofday(&inp_u.tim_u, 0);
   c3_rand(inp_u.eny_w);
@@ -1746,6 +1742,8 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
 
   u3_disk* log_u;
 
+  //  XX
+  u3_Host.ops_u.nuu = c3y;
   if ( !(log_u = u3_disk_init(dir_c)) ) {
     fprintf(stderr, "boot: disk init fail\r\n");
     return c3n;
