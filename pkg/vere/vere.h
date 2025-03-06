@@ -440,6 +440,7 @@
           u3_writ_peek = 1,
           u3_writ_live = 2,
           u3_writ_exit = 3,
+          u3_writ_quiz = 4
         } u3_writ_type;
 
       /* u3_writ: ipc message from urth to mars

@@ -1044,16 +1044,11 @@ u3_noun
 u3_term_get_blew(c3_l tid_l)
 {
   u3_utty*       uty_u = _term_ef_get(tid_l);
-  c3_l           col_l, row_l;
+  c3_l           col_l = 80, row_l = 24;
 
-  if ( (c3y == u3_Host.ops_u.tem) || !uty_u ||
-       (c3y != uty_u->wsz_f(uty_u, &col_l, &row_l)) )
+  if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
+       (c3y == uty_u->wsz_f(uty_u, &col_l, &row_l)) )
   {
-    col_l = 80;
-    row_l = 24;
-  }
-
-  if ( uty_u ) {
     uty_u->tat_u.siz.col_l = col_l;
     uty_u->tat_u.siz.row_l = row_l;
   }
@@ -1758,8 +1753,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__quac: {
           ret_o = c3y;
-          // XX what do after mars/urth split?
-          // u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
+          u3_lord_quiz(u3K.pir_u->god_u, c3__quac, car_u, _term_io_quiz);
         } break;
       }
     }

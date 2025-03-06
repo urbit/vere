@@ -609,6 +609,58 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
   return msg;
 }
 
+/* _lord_writ_send(): send writ to serf.
+*/
+static void
+_lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
+{
+  //  exit expected
+  //
+  if ( u3_writ_exit == wit_u->typ_e ) {
+    god_u->out_u.bal_f = _lord_bail_noop;
+    god_u->inn_u.bal_f = _lord_bail_noop;
+  }
+
+  {
+    u3_noun jar = _lord_writ_make(god_u, wit_u);
+    c3_d  len_d;
+    c3_y* byt_y;
+
+#ifdef LORD_TRACE_JAM
+    u3t_event_trace("king ipc jam", 'B');
+#endif
+
+    u3s_jam_xeno(jar, &len_d, &byt_y);
+
+#ifdef LORD_TRACE_JAM
+    u3t_event_trace("king ipc jam", 'E');
+#endif
+
+    u3_newt_send(&god_u->inn_u, len_d, byt_y);
+    u3z(jar);
+  }
+}
+
+/* _lord_writ_plan(): enqueue a writ and send.
+*/
+static void
+_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
+{
+  if ( !god_u->ent_u ) {
+    u3_assert( !god_u->ext_u );
+    u3_assert( !god_u->dep_w );
+    god_u->dep_w = 1;
+    god_u->ent_u = god_u->ext_u = wit_u;
+  }
+  else {
+    god_u->dep_w++;
+    god_u->ent_u->nex_u = wit_u;
+    god_u->ent_u = wit_u;
+  }
+
+  _lord_writ_send(god_u, wit_u);
+}
+
 /* _lord_send(): send writ to serf.
 */
 static void
@@ -725,6 +777,22 @@ u3_lord_pack(u3_lord* god_u)
   //  XX set callback
   //
   _lord_send(god_u, u3nt(c3__live, c3__pack, u3_nul));
+}
+
+/* u3_lord_quiz(): query the serf.
+*/
+void
+u3_lord_quiz(u3_lord* god_u,
+             c3_m     qiz_m,
+             void*    ptr_v,
+             void (*qiz_f)(c3_m, void*, u3_noun))
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_quiz;
+  wit_u->qiz_u.qiz_m = qiz_m;
+  wit_u->qiz_u.ptr_v = ptr_v;
+  wit_u->qiz_u.qiz_f = qiz_f;
+  _lord_writ_plan(god_u, wit_u);
 }
 
 /* u3_lord_exit(): shutdown gracefully.
