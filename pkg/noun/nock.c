@@ -3213,7 +3213,9 @@ u3n_nock_an(u3_noun bus, u3_noun fol)
 void
 u3n_sstack_init()
 {
-  c3_w shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0666);
+  c3_c shm_name[256];
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;

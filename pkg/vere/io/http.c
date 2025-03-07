@@ -10,8 +10,6 @@
 
 /** Global variables.
 **/
-static u3n_spin *stk_u;
-
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config
   h2o_context_t    ctx_u;             //  h2o ctx
@@ -2865,7 +2863,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
 
       while ( 0 != siq_u ) {
-        _http_continue_respond(siq_u, u3k(dat), c3n);
+        _http_continue_respond(siq_u, dat, c3n);
         siq_u = siq_u->nex_u;
       }
     }
@@ -3116,21 +3114,18 @@ u3_http_io_init(u3_pier* pir_u)
   }
 
   //Setup spin stack
-  c3_w shm_fd = shm_open(SLOW_STACK_NAME, O_CREAT | O_RDWR, 0);
+  c3_c shm_name[256];
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
-    u3_pier_bail(car_u->pir_u);
-  }
-
-  if ( -1 == ftruncate(shm_fd, PSIZE)) {
-    perror("truncate failed");
     u3_pier_bail(car_u->pir_u);
   }
 
   htd_u->stk_u = mmap(NULL, PSIZE, 
                       PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   
-  if ( MAP_FAILED == stk_u ) {
+  if ( MAP_FAILED == htd_u->stk_u ) {
     perror("mmap failed");
     u3_pier_bail(car_u->pir_u);
   }

@@ -12,7 +12,7 @@
 #include "types.h"
 #include "zave.h"
 
-#define SLOW_STACK_NAME  "/spin_stack_page"
+#define SLOW_STACK_NAME  "/spin_stack_page_%d"
 #define PSIZE (1U << (u3a_page +2))
 
   /** Data structures.
