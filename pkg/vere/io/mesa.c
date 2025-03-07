@@ -412,7 +412,6 @@ static void _log_peer(u3_peer* per_u)
     return;
   }
   u3l_log("dir");
-  /* _log_lane(&per_u->dan_u); */
   u3l_log("galaxy: %s", u3r_string(u3dc("scot", 'p', per_u->imp_y)));
 }
 
@@ -976,7 +975,7 @@ static void _mesa_send_buf3(sockaddr_in add_u, uv_buf_t buf_u)
   }
 
 #ifdef MESA_DEBUG
-  /* c3_c* sip_c = inet_ntoa(add_u.sin_addr); */
+  // c3_c* sip_c = inet_ntoa(add_u.sin_addr);
   // u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
 #endif
 
@@ -1016,8 +1015,8 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 
 
 #ifdef MESA_DEBUG
-  /* c3_c* sip_c = inet_ntoa(add_u.sin_addr); */
-  // u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
+  c3_c* sip_c = inet_ntoa(add_u.sin_addr);
+  u3l_log("mesa: sending packet to %s:%u", sip_c, ntohs(add_u.sin_port));
 #endif
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
@@ -1680,6 +1679,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     #ifdef PACKET_TEST
     packet_test(sam_u, "pages.packs");
     #else
+
     _mesa_send_bufs(sam_u, NULL, buf_y, len_w, dat_u->las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
     #endif
@@ -2158,18 +2158,19 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
   u3_mesa* sam_u = per_u->sam_u;
 
   u3_weak las    = u3r_at(7, nun);
-  u3m_p("_forward_lanes_cb", las);
+  // u3m_p("_forward_lanes_cb", las);
+
   if ( las != u3_none ) {
     u3_peer* new_u = _mesa_get_peer(per_u->sam_u, per_u->her_u);
     if ( new_u != NULL ) {
       per_u = new_u;
     }
-    u3_noun gal = u3do("head", u3k(las));
+    u3_noun gal = u3h(las);
     u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
-    // // both atoms guaranteed to be cats, bc we don't call unless forwarding
+    // both atoms guaranteed to be cats, bc we don't call unless forwarding
     per_u->ful_o = c3y;
     per_u->imp_y = gal;
-    u3_noun sal = u3do("tail", u3k(las));
+    u3_noun sal = u3k(u3t(las));
     u3_noun lan;
     while ( sal != u3_nul ) {
       u3x_cell(sal, &lan, &sal);
@@ -2181,11 +2182,12 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
         per_u->dan_u = lan_u;
       }
     }
-    u3z(lan);
+    u3z(sal);
     _mesa_put_peer(per_u->sam_u, per_u->her_u, per_u);
   }
 
   u3z(nun);
+
 }
 
 static void
@@ -2460,10 +2462,54 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
 /* } */
 
 static void
+_mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
+{
+  u3_mesa_pact* pac_u = &pic_u->pac_u;
+  u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pek_u.nam_u.her_u);
+  if ( !per_u ) {
+    #ifdef MESA_DEBUG
+      c3_c* mes = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
+      u3l_log("mesa: alien forward for %s; meeting ship", mes);
+      c3_free(mes);
+    #endif
+    per_u = new(&sam_u->par_u, u3_peer, 1);
+    _init_peer(sam_u, per_u);
+    per_u->her_u[0] = pac_u->pek_u.nam_u.her_u[0];
+    per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
+
+    _get_peer_lanes(sam_u, per_u); // forward-lanes
+    return;
+  }
+  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  // if ( c3y == sam_u->for_o ) {
+    sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
+    if ( _mesa_is_lane_zero(lin_u) == c3y) {
+      c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
+      u3l_log("zero lane for %s", shp_c);
+      c3_free(shp_c);
+      return;
+    }
+    inc_hopcount(&pac_u->hed_u);
+    #ifdef MESA_DEBUG
+      u3l_log("mesa: forward_request()");
+      // _log_lane(&lan_u);
+    #endif
+
+    #ifdef MESA_DEBUG
+      c3_c* sip_c = inet_ntoa(lin_u.sin_addr);
+      u3l_log("mesa: sending packet to %s:%u", sip_c, ntohs(lin_u.sin_port));
+    #endif
+
+    _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
+    _mesa_send(pic_u, lin_u);
+  }
+}
+
+static void
 _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
   #ifdef MESA_DEBUG
-    /* u3l_log("mesa: hear_page()"); */
+    u3l_log("mesa: hear_page()");
     // log_pact(&pic_u->pac_u);
     u3_assert( PACT_PAGE == pic_u->pac_u.hed_u.typ_y );
   #endif
@@ -2484,11 +2530,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
-  // if ( pac_u->hed_u.hop_y == 0 ) {
-  //   u3l_log(" received direct page");
-  // } else {
-  //   u3l_log(" received forwarded page");
-  // }
+  if ( pac_u->hed_u.hop_y == 0 ) {
+    u3l_log(" received direct page");
+  } else {
+    u3l_log(" received forwarded page");
+  }
   _hear_peer(sam_u, per_u, lan_u, dir_o);
 
   if ( new_o == c3y ) {
@@ -2521,6 +2567,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
+    u3l_log("bye");
     return;
   }
   if ( ( (u3_pend_req*)CTAG_WAIT == req_u ) && (0 == nam_u->fra_d) ) {
@@ -2631,45 +2678,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 }
 
 static void
-_mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
-{
-  u3_mesa_pact* pac_u = &pic_u->pac_u;
-  u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pek_u.nam_u.her_u);
-  if ( !per_u ) {
-    #ifdef MESA_DEBUG
-      c3_c* mes = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
-      u3l_log("mesa: alien forward for %s; meeting ship", mes);
-      c3_free(mes);
-    #endif
-    per_u = new(&sam_u->par_u, u3_peer, 1);
-    _init_peer(sam_u, per_u);
-    per_u->her_u[0] = pac_u->pek_u.nam_u.her_u[0];
-    per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
-
-    _get_peer_lanes(sam_u, per_u); // forward-lanes
-    return;
-  }
-  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
-  // if ( c3y == sam_u->for_o ) {
-    sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
-    if ( _mesa_is_lane_zero(lin_u) == c3y) {
-      c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
-      u3l_log("zero lane for %s", shp_c);
-      c3_free(shp_c);
-      return;
-    }
-    inc_hopcount(&pac_u->hed_u);
-    #ifdef MESA_DEBUG
-      u3l_log("mesa: forward_request()");
-      /* _log_lane(&lan_u); */
-    #endif
-
-    _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
-    _mesa_send(pic_u, lin_u);
-  }
-}
-
-static void
 _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
   #ifdef MESA_DEBUG
@@ -2743,7 +2751,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   u3_mesa* sam_u = pic_u->sam_u;
 
   #ifdef MESA_DEBUG
-    // u3l_log("mesa: hear_poke()");
+    u3l_log("mesa: hear_poke()");
     u3_assert( PACT_POKE == pac_u->hed_u.typ_y );
   #endif
 
