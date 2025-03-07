@@ -61,6 +61,7 @@
     c3_y dat_y[PSIZE - 2*sizeof(c3_w)];
   } u3n_spin;
 
+  extern u3n_spin* stk_u;
   /**  Functions.
   **/
     /* u3n_nock_on(): produce .*(bus fol).

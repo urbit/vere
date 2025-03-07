@@ -18,7 +18,7 @@
 
 /** Global variables.
 **/
-static u3n_spin *stk_u;
+u3n_spin *stk_u;
 
 // define to have each opcode printed as it executes,
 // along with some other debugging info

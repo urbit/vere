@@ -1252,7 +1252,5 @@ u3_serf_init(u3_serf* sef_u)
   sef_u->fag_w = _serf_fag_none;
   sef_u->sac   = u3_nul;
 
-  u3n_sstack_init();
-
   return rip;
 }

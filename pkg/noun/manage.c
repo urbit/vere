@@ -37,6 +37,8 @@
 #include "whereami.h"
 #include "xtract.h"
 
+//extern u3n_spin *stk_u;
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -1005,6 +1007,10 @@ u3m_bail(u3_noun how)
     }
   }
 
+  // Reset the spin stack pointer
+  stk_u->off_w = u3R->off_w;
+  stk_u->fow_w = u3R->fow_w;
+
   /* Longjmp, with an underscore.
   */
   _longjmp(u3R->esc.buf, how);
@@ -1086,6 +1092,10 @@ u3m_leap(c3_w pad_w)
     rod_u->par_p = u3of(u3_road, u3R);
     u3R->kid_p = u3of(u3_road, rod_u);
   }
+
+  // Add slow stack pointer to rod_u
+  rod_u->off_w = stk_u->off_w;
+  rod_u->fow_w = stk_u->fow_w;
 
   /* Set up the new road.
   */
