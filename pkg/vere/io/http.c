@@ -2866,7 +2866,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
 
       while ( 0 != siq_u ) {
-        _http_continue_respond(siq_u, dat, c3n);
+        _http_continue_respond(siq_u, u3k(dat), c3n);
         siq_u = siq_u->nex_u;
       }
     }
