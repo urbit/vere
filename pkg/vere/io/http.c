@@ -2980,6 +2980,7 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
+  munmap(htd_u->stk_u, u3a_page);
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
@@ -3003,6 +3004,7 @@ _http_io_exit(u3_auto* car_u)
     }
     u3z(dat);
   }
+
 
   _http_release_ports_file(u3_Host.dir_c);
 }

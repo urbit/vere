@@ -3233,7 +3233,14 @@ u3n_sstack_init()
 
   stk_u->off_w = 0;
   stk_u->fow_w = 0;
-  //u3n_sstack_push(c3__root);
+}
+
+/* u3n_sstack_exit: shutdown the shared memory for thespin stack 
+*/
+void
+u3n_sstack_exit()
+{
+  munmap(stk_u, u3a_page);
 }
 
 /* u3n_sstack_push: push a noun on the spin stack.
