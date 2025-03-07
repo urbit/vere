@@ -190,7 +190,6 @@ _main_init(void)
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_w = DefaultKernel;
-  u3_Host.ops_u.wat_o = c3y;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
@@ -312,7 +311,6 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
-    { "no-replay-watcher",   no_argument,       NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -365,10 +363,6 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         }
 
-        break;
-      }
-      case 13: {  // no-replay-watcher
-        u3_Host.ops_u.wat_o = c3n;
         break;
       }
       //  special args
@@ -2473,6 +2467,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     argv[i_z++] = u3_Host.wrk_c;
     argv[i_z++] = "play";
+    argv[i_z++] = "--watch-replay";
     argv[i_z++] = "--loom";
     argv[i_z++] = lom_c;
     argv[i_z++] = "--replay-to";
@@ -2491,9 +2486,6 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     }
     if ( !run_i ) {
       argv[i_z++] = u3_Host.dir_c;
-    }
-    if ( !_(u3_Host.ops_u.wat_o) ) {
-      argv[i_z++] = "--no-replay-watcher";
     }
 
     argv[i_z] = NULL;
@@ -2543,7 +2535,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
-  c3_o wat_o = c3y;
+  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
@@ -2552,7 +2544,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "no-demand",         no_argument,       NULL, 6 },
     { "auto-meld",         no_argument,       NULL, 7 },
     { "soft-mugs",         no_argument,       NULL, 8 },
-    { "no-replay-watcher", no_argument,       NULL, 9 },
+    { "watch-replay",      no_argument,       NULL, 9 },
     { "full",              no_argument,       NULL, 'f' },
     { "replay-to",         required_argument, NULL, 'n' },
     { "snap-at",           required_argument, NULL, 's' },
@@ -2582,8 +2574,8 @@ _cw_play(c3_i argc, c3_c* argv[])
         sof_o = c3y;
       } break;
 
-      case 9: {  //  no-replay-watcher
-        wat_o = c3n;
+      case 9: {  //  watch-replay
+        wat_o = c3y;
       } break;
 
       case 'f': {
