@@ -34,7 +34,7 @@ static c3_y are_y[524288];
 
 /* #define PACKET_TEST c3y */
 
-#define MESA_DEBUG     c3y
+// #define MESA_DEBUG     c3y
 //#define MESA_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
@@ -1533,7 +1533,7 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
   }
   else {
     #ifdef MESA_DEBUG
-      // u3l_log("mesa: resend %u", res_u->ret_y);
+      u3l_log("mesa: resend %u", res_u->ret_y);
     #endif
   }
 
@@ -2530,11 +2530,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
-  if ( pac_u->hed_u.hop_y == 0 ) {
-    u3l_log(" received direct page");
-  } else {
-    u3l_log(" received forwarded page");
-  }
+  // if ( pac_u->hed_u.hop_y == 0 ) {
+  //   u3l_log(" received direct page");
+  // } else {
+  //   u3l_log(" received forwarded page");
+  // }
   _hear_peer(sam_u, per_u, lan_u, dir_o);
 
   if ( new_o == c3y ) {
@@ -2567,7 +2567,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
-    u3l_log("bye");
     return;
   }
   if ( ( (u3_pend_req*)CTAG_WAIT == req_u ) && (0 == nam_u->fra_d) ) {
@@ -2681,7 +2680,7 @@ static void
 _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
   #ifdef MESA_DEBUG
-    /* u3l_log("mesa: hear_peek()"); */
+    u3l_log("mesa: hear_peek()");
     u3_assert( PACT_PEEK == pic_u->pac_u.hed_u.typ_y );
   #endif
 
