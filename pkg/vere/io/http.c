@@ -127,6 +127,7 @@ static void _http_start_respond(u3_hreq* req_u,
                     u3_noun headers,
                     u3_noun data,
                     u3_noun complete);
+static void _http_spin_timer_cb(uv_timer_t* tim_u);
 
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
@@ -461,6 +462,8 @@ _http_spin_link(u3_hcon* hon_u, u3_hreq* req_u)
 
   if ( 0 != req_u->nex_u ) {
     req_u->nex_u->pre_u = req_u;
+  } else {
+    uv_timer_start(fig_u->sin_u, _http_spin_timer_cb, SPIN_TIMER, 0);
   }
   fig_u->siq_u = req_u;
 }
@@ -2867,9 +2870,9 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
         siq_u = siq_u->nex_u;
       }
     }
+    uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
+                   SPIN_TIMER, 0);
   }
-  uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
-                 SPIN_TIMER, 0);
 }
 
 
@@ -3100,7 +3103,6 @@ u3_http_io_init(u3_pier* pir_u)
   uv_timer_t* sin_u = c3_malloc(sizeof(*sin_u));
   sin_u->data = htd_u;
   uv_timer_init(u3L, sin_u);
-  uv_timer_start(sin_u, _http_spin_timer_cb, SPIN_TIMER, 0);
   htd_u->fig_u.sin_u = sin_u;
 
   {
