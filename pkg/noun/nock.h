@@ -57,7 +57,8 @@
   */
   typedef struct {
     c3_w off_w;
-    c3_y dat_y[PSIZE - sizeof(c3_w)];
+    c3_w fow_w;
+    c3_y dat_y[PSIZE - 2*sizeof(c3_w)];
   } u3n_spin;
 
   /**  Functions.

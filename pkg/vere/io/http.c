@@ -2862,10 +2862,10 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
                              c3_s2('\n', '\n'),
                              u3_none);
       u3_atom txt = u3qc_rap(3, lin);
-      u3_noun data = u3nt(u3_nul, u3r_met(3, txt), txt);
+      u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
 
       while ( 0 != siq_u ) {
-        _http_continue_respond(siq_u, data, c3n);
+        _http_continue_respond(siq_u, u3k(dat), c3n);
         siq_u = siq_u->nex_u;
       }
     }
@@ -2897,7 +2897,7 @@ _http_seq_heartbeat_cb(uv_timer_t* tim_u)
   // spin endpoints
   if ( 0 != siq_u ) {
     u3_noun dat = u3nt(u3_nul, 1, c3_s1('\n'));
-    while ( 0 != seq_u ) {
+    while ( 0 != siq_u ) {
       _http_continue_respond(siq_u, u3k(dat), c3n);
       siq_u = siq_u->nex_u;
     }

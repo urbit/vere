@@ -3232,6 +3232,7 @@ u3n_sstack_init()
   }
 
   stk_u->off_w = 0;
+  stk_u->fow_w = 0;
   //u3n_sstack_push(c3__root);
 }
 
@@ -3247,7 +3248,9 @@ u3n_sstack_push(u3_noun nam)
   c3_w  met_w = u3r_met(3, nam);
   
   // Exit if full
-  if ( sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
+  if ( 0 < stk_u->fow_w || 
+       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
+    stk_u->fow_w++;
     return;
   }
 
@@ -3263,8 +3266,12 @@ u3n_sstack_push(u3_noun nam)
 void
 u3n_sstack_pop()
 {
-  c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
-  stk_u->off_w -= (len_w+sizeof(c3_w));
+  if ( 0 < stk_u->fow_w ) {
+    stk_u->fow_w--;
+  } else {
+    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
+    stk_u->off_w -= (len_w+sizeof(c3_w));
+  }
 }
 
 
