@@ -321,7 +321,7 @@
 
         c3_o    beb;                        //  --behn-allow-blocked
         c3_z    siz_i;                      //  --lmdb-map-size
-        c3_o    wat_o;                      //  --watch-replay
+        c3_o    wat_o;                      //  --no-replay-watcher
         c3_y    jum_y;                      //  jumbo frame size, TODO parser
       } u3_opts;
 
