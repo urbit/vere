@@ -2498,6 +2498,26 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   _mesa_put_peer(sam_u, nam_u->her_u, per_u);
 
+  u3_pit_entry* pin_u = _mesa_get_pit(sam_u, nam_u);
+
+  if ( NULL != pin_u ) {
+    #ifdef MESA_DEBUG
+      u3l_log(" forwarding page");
+    #endif
+
+    inc_hopcount(&pac_u->hed_u);
+    c3_etch_word(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
+    c3_etch_short(pac_u->pag_u.sot_u + 4, ntohs(lan_u.sin_port));
+
+    //  stick next hop in packet
+
+    _mesa_add_hop(pac_u->hed_u.hop_y, &pac_u->hed_u, &pac_u->pag_u, lan_u);
+
+    _mesa_send_pact(sam_u, pin_u->adr_u, per_u, pac_u);
+    _mesa_del_pit(sam_u, nam_u);
+    return;
+  }
+
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
@@ -2537,26 +2557,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_req_pact_init(sam_u, pic_u, lan_u, per_u);
     return;
   }
-
-  u3_pit_entry* pin_u = _mesa_get_pit(sam_u, nam_u);
-
-  if ( NULL != pin_u ) {
-    #ifdef MESA_DEBUG
-      u3l_log(" forwarding");
-    #endif
-
-    inc_hopcount(&pac_u->hed_u);
-    c3_etch_word(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
-    c3_etch_short(pac_u->pag_u.sot_u + 4, ntohs(lan_u.sin_port));
-
-    //  stick next hop in packet
-
-    _mesa_add_hop(pac_u->hed_u.hop_y, &pac_u->hed_u, &pac_u->pag_u, lan_u);
-
-    _mesa_send_pact(sam_u, pin_u->adr_u, per_u, pac_u);
-    _mesa_del_pit(sam_u, nam_u);
-  }
-
 
   if ( c3y == nam_u->nit_o ) {
     u3l_log("dupe init");
