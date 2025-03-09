@@ -126,6 +126,147 @@ typedef enum {
   lst_link_wasm = 4,
 } lia_suspend_tag;
 
+typedef struct {
+  c3_w      siz_w;  // size in 4K pages, (1 << 12)
+  c3_w      pre_w;  // previous size
+  c3_y*     buf_y;  // allocated buffer
+  c3_y*     nex_y;  // next allocation
+  u3i_slab  sab_u;  // associated slab
+  jmp_buf   esc_u;  // escape buffer
+} uw_arena;
+
+// Code page allocation: simple bump allocator for non-growing objects,
+// i.e. code pages
+//
+static uw_arena CodeArena;
+
+static void*
+_calloc_code(size_t num_i, size_t len_i)
+{
+  
+  void* lag_v = CodeArena.nex_y;
+  
+  size_t byt_i = num_i * len_i;
+  if (byt_i / len_i != num_i)
+  {
+    u3m_bail(c3__fail);
+  }
+
+  c3_y* nex_y = CodeArena.nex_y + byt_i;
+  nex_y = c3_align(nex_y, 16, C3_ALGHI);
+  
+  if (nex_y - CodeArena.buf_y >= (CodeArena.siz_w << 12))
+  { // OOM, jump out to increase the arena size and try again
+    _longjmp(CodeArena.esc_u, 1);
+  }
+
+  CodeArena.nex_y = nex_y;
+  return lag_v;
+}
+
+static void*
+_realloc_code(void* lag_v, size_t len_i)
+{
+  return _calloc_code(len_i, 1);
+}
+
+static void
+_free_code(void* lag_v)
+{
+  // noop
+}
+
+// Struct/array allocation: bump allocator of boxes with capacity,
+// on realloc: try to stay in the box, else allocate a bigger box
+// box: [len_d cap_d data]
+//
+static uw_arena BoxArena;
+
+static void*
+_calloc_box_cap(size_t num_i, size_t len_i, c3_d cap_d)
+{
+  void* lag_v = BoxArena.nex_y;
+
+  size_t byt_i = num_i * len_i;
+  if ((byt_i / len_i != num_i) || (byt_i >= UINT64_MAX - 16))
+  {
+    u3m_bail(c3__fail);
+  }
+
+  c3_d byt_d = byt_i + 16;  // size of box
+
+  byt_d = c3_min(byt_d, cap_d + 16); // allocate at least cap_d + 16 bytes
+
+  c3_y* nex_y = BoxArena.nex_y + byt_d;
+  nex_y = c3_align(nex_y, 16, C3_ALGHI);
+
+  if (nex_y - BoxArena.buf_y >= (BoxArena.siz_w << 12))
+  { // OOM, jump out to increase the arena size and try again
+    _longjmp(BoxArena.esc_u, 1);
+  }
+
+  BoxArena.nex_y = nex_y;
+
+  *(c3_d*)lag_v = (c3_d)(byt_i);
+  *((c3_d*)lag_v + 1) = (byt_d - 16);
+
+  return (void*)((c3_d*)lag_v + 2);
+}
+
+static void*
+_calloc_box(size_t num_i, size_t len_i)
+{
+  return _calloc_box_cap(num_i, len_i, 512);
+}
+
+static void*
+_realloc_box(void* lag_v, size_t len_i)
+{
+  if (len_i > UINT64_MAX)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_d len_d = len_i;
+  c3_d pre_d = *((c3_d*)lag_v - 2);
+  if (len_d <= pre_d)
+  {
+    *((c3_d*)lag_v - 2) = len_d;
+    return lag_v;
+  }
+  else
+  {
+    c3_d cap_d = *((c3_d*)lag_v - 1);
+    if (cap_d < len_d)
+    {
+      // while (cap_d < len_d) {cap_d <<= 1;}
+      //
+      c3_d cap_bits_d = c3_bits_dabl(cap_d);
+      c3_d len_bits_d = c3_bits_dabl(len_d);
+      if (cap_bits_d < len_bits_d)
+      {
+        cap_d <<= len_bits_d - cap_bits_d;
+      }
+      if (cap_d < len_d)
+      {
+        cap_d <<= 1;
+      }
+      return _calloc_box_cap(len_i, 1, cap_d);
+    }
+    else
+    {
+      *((c3_d*)lag_v - 2) = len_d;
+      return lag_v;
+    }
+  }
+}
+
+static void
+_free_box(void* lag_v)
+{
+  // noop
+}
+
+
 static u3_noun
 _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 {
