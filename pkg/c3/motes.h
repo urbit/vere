@@ -850,6 +850,7 @@
 #   define c3__ogre   c3_s4('o','g','r','e')
 #   define c3__old    c3_s3('o','l','d')
 #   define c3__omen   c3_s4('o','m','e','n')
+#   define c3__omit   c3_s4('o','m','i','t')
 #   define c3__on     c3_s2('o','n')
 #   define c3__onan   c3_s4('o','n','a','n')
 #   define c3__once   c3_s4('o','n','c','e')
