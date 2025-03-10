@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) !void {
         .files = &.{"cloexec.c"},
         .flags = &.{
             "-fno-sanitize=all",
-            if (t.isGnuLibC())
+            if (t.isGnu())
                 "-D_GNU_SOURCE"
             else
                 "",
