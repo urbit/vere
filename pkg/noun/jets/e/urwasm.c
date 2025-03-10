@@ -9,8 +9,9 @@
 #include "wasm3.h"
 #include "m3_env.h"
 #include "m3_validate.h"
+#include "m3_rewrite.h"
 
-// #define URWASM_SUBROAD
+#define URWASM_SUBROAD  // enabled for tests, XX remove
 // #define URWASM_STATEFUL
 
 #define ONCE_CTX        63
@@ -45,18 +46,37 @@
 #define arr_sam_6       250
 #define arr_sam_7       251
 
+#define seed_module     2
+#define seed_past       6
+#define seed_shop       14
+#define seed_import     15
+
 #define ERR(string) ("\r\n\033[31m>>> " string "\033[0m\r\n")
 #define WUT(string) ("\r\n\033[33m>>  " string "\033[0m\r\n")
+
+#define KICK1(TRAP)  u3j_kink(TRAP, 2)
+#define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
 
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
 {
-  *lit = u3nc(som, *lit);
+  if (u3_none == *lit)
+  {
+    u3z(som);
+  }
+  else
+  {
+    *lit = u3nc(som, *lit);
+  }
 }
 
-static inline u3_noun
-_pop_list(u3_noun *lit)
+static inline u3_weak
+_pop_list(u3_weak *lit)
 {
+  if (u3_none == *lit)
+  {
+    return u3_none;
+  }
   u3_noun hed, tel;
   if (c3n == u3r_cell(*lit, &hed, &tel))
   {
@@ -135,6 +155,15 @@ typedef struct {
   jmp_buf   esc_u;  // escape buffer
 } uw_arena;
 
+// XX remove
+static const void *
+_link_wasm_with_arrow_map(
+  IM3Runtime runtime,
+  IM3ImportContext _ctx,
+  uint64_t * _sp,
+  void * _mem
+);
+
 // Code page allocation: simple bump allocator for non-growing objects,
 // i.e. code pages
 //
@@ -143,7 +172,6 @@ static uw_arena CodeArena;
 static void*
 _calloc_code(size_t num_i, size_t len_i)
 {
-  
   void* lag_v = CodeArena.nex_y;
   
   size_t byt_i = num_i * len_i;
@@ -177,7 +205,7 @@ _free_code(void* lag_v)
 }
 
 // Struct/array allocation: bump allocator of boxes with capacity,
-// on realloc: try to stay in the box, else allocate a bigger box
+// on realloc: update len_d if len_d <= cap_d, else allocate a bigger box
 // box: [len_d cap_d data]
 //
 static uw_arena BoxArena;
@@ -195,7 +223,7 @@ _calloc_box_cap(size_t num_i, size_t len_i, c3_d cap_d)
 
   c3_d byt_d = byt_i + 16;  // size of box
 
-  byt_d = c3_min(byt_d, cap_d + 16); // allocate at least cap_d + 16 bytes
+  byt_d = c3_max(byt_d, cap_d + 16); // allocate at least cap_d + 16 bytes
 
   c3_y* nex_y = BoxArena.nex_y + byt_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
@@ -207,16 +235,19 @@ _calloc_box_cap(size_t num_i, size_t len_i, c3_d cap_d)
 
   BoxArena.nex_y = nex_y;
 
-  *(c3_d*)lag_v = (c3_d)(byt_i);
-  *((c3_d*)lag_v + 1) = (byt_d - 16);
+  *(c3_d*)lag_v = (c3_d)(byt_i);      // current length
+  *((c3_d*)lag_v + 1) = (byt_d - 16); // allocation box capacity
 
-  return (void*)((c3_d*)lag_v + 2);
+  void* out_v = ((c3_d*)lag_v + 2);
+  c3_dessert((c3_p)out_v & 15 == 0);
+
+  return out_v;
 }
 
 static void*
 _calloc_box(size_t num_i, size_t len_i)
 {
-  return _calloc_box_cap(num_i, len_i, 512);
+  return _calloc_box_cap(num_i, len_i, 512 - 16);
 }
 
 static void*
@@ -240,16 +271,8 @@ _realloc_box(void* lag_v, size_t len_i)
     {
       // while (cap_d < len_d) {cap_d <<= 1;}
       //
-      c3_d cap_bits_d = c3_bits_dabl(cap_d);
-      c3_d len_bits_d = c3_bits_dabl(len_d);
-      if (cap_bits_d < len_bits_d)
-      {
-        cap_d <<= len_bits_d - cap_bits_d;
-      }
-      if (cap_d < len_d)
-      {
-        cap_d <<= 1;
-      }
+      cap_d <<= c3_bits_dabl(len_d) - c3_bits_dabl(cap_d);
+      cap_d <<= (cap_d < len_d);
       return _calloc_box_cap(len_i, 1, cap_d);
     }
     else
@@ -533,14 +556,14 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
       c3_d tag;
       m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
-      if (tag != west_call)
+      if (tag != -1 && tag != west_call)
       {
         printf(ERR("call tag mismatch: %"PRIc3_d), tag);
         return u3m_bail(c3__fail);
       }
       m3_SuspendStackPop64(sat->wasm_module->runtime, NULL);
       u3_noun frame = _pop_list(&sat->susp_list);
-      if (lst_call != u3h(frame))
+      if (u3_none != frame && lst_call != u3h(frame))
       {
         printf(ERR("wrong frame: call"));
         return u3m_bail(c3__fail);
@@ -596,6 +619,38 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3a_free(vals_out);
     u3a_free(valptrs_out);
     u3z(monad);
+
+    {// test, XX remove
+      u8* base = (void*)U3_OS_LoomBase;
+      IM3Runtime r = sat->wasm_module->runtime;
+      m3_RewritePointersRuntime(r, base, 1);
+      m3_RewritePointersRuntime(r, base, 0);
+      result = m3_CompileModule(sat->wasm_module);
+      if (result)
+      {
+        fprintf(stderr, ERR("compilation error: %s"), result);
+        return u3m_bail(c3__fail);
+      }
+      c3_w n_imports = sat->wasm_module->numFuncImports;
+      for (c3_w i = 0; i < n_imports; i++)
+      {
+        M3Function f = sat->wasm_module->functions[i];
+        const char * mod  = f.import.moduleUtf8;
+        const char * name = f.import.fieldUtf8;
+
+        result = m3_LinkRawFunctionEx(
+          sat->wasm_module, mod, name,
+          NULL, &_link_wasm_with_arrow_map,
+          sat
+        );
+
+        if (result)
+        {
+          fprintf(stderr, ERR("link error: %s"), result);
+          return u3m_bail(c3__fail);
+        }
+      }
+    }
 
     return yil;
   }
@@ -716,13 +771,13 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
         c3_d tag;
         m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
-        if (tag != west_try)
+        if (tag != -1 && tag != west_try)
         {
           printf(ERR("try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
         u3_noun frame = _pop_list(&sat->susp_list);
-        if (lst_try != u3h(frame))
+        if (u3_none != frame && lst_try != u3h(frame))
         {
           printf(ERR("wrong frame: try"));
           return u3m_bail(c3__fail);
@@ -773,13 +828,13 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
         c3_d tag;
         m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
-        if (tag != west_catch_try)
+        if (tag != -1 && tag != west_catch_try)
         {
           printf(ERR("catch-try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
         u3_noun frame = _pop_list(&sat->susp_list);
-        if (lst_catch_try != u3h(frame))
+        if (u3_none != frame && lst_catch_try != u3h(frame))
         {
           printf(ERR("wrong frame: catch-try"));
           return u3m_bail(c3__fail);
@@ -813,13 +868,13 @@ _reduce_monad(u3_noun monad, lia_state* sat)
           m3_SuspendStackPopExtTag(sat->wasm_module->runtime);
           c3_d tag;
           m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
-          if (tag != west_catch_err)
+          if (tag != -1 && tag != west_catch_err)
           {
             printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
             return u3m_bail(c3__fail);
           }
           u3_noun frame = _pop_list(&sat->susp_list);
-          if (lst_catch_err != u3h(frame))
+          if (u3_none != frame && lst_catch_err != u3h(frame))
           {
             printf(ERR("wrong frame: catch-err"));
             return u3m_bail(c3__fail);
@@ -1318,7 +1373,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             m3_SuspendStackPopExtTag(runtime);
             c3_d tag;
             m3_SuspendStackPop64(sat->wasm_module->runtime, &tag);
-            if (tag != west_catch_err)
+            if (tag != -1 && tag != west_catch_err)
             {
               printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
               u3m_bail(c3__fail);
@@ -1502,7 +1557,7 @@ _link_wasm_with_arrow_map(
     m3_SuspendStackPopExtTag(runtime);
     c3_d tag;
     m3_SuspendStackPop64(runtime, &tag);
-    if (tag != west_link_wasm)
+    if (tag != -1 && tag != west_link_wasm)
     {
       printf(ERR("west_link tag mismatch: %"PRIc3_d), tag);
       u3m_bail(c3__fail);
@@ -1552,10 +1607,14 @@ u3we_lia_run(u3_noun cor)
   return u3_none;
 }
 #else
-  if (c3__none == u3at(u3x_sam_7, cor))
+
+  u3_noun hint = u3at(u3x_sam_7, cor);
+  if (c3__none == hint)
   {
     return u3_none;
   }
+
+  c3_t to_omit = (c3__omit == hint);
 
   #ifdef URWASM_SUBROAD
 
@@ -1564,14 +1623,17 @@ u3we_lia_run(u3_noun cor)
 
   #endif
 
-  u3r_mug(cor);
+  u3_noun ctx = u3at(RUN_CTX, cor);
+  u3r_mug(ctx);
     
   u3_noun input = u3at(u3x_sam_2, cor);
   u3_noun seed = u3at(u3x_sam_6, cor);
   
-  u3_noun runnable = u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_RUNNABLE);
+  u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
+  u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
+
   u3_noun try_gate = u3j_kink(u3k(runnable), AX_TRY);
-  u3_noun try_gate_inner = u3j_kink(try_gate, 2);
+  u3_noun try_gate_inner = KICK1(try_gate);
 
   u3_noun seed_new;  
   u3_noun input_tag, p_input;
@@ -1583,27 +1645,27 @@ u3we_lia_run(u3_noun cor)
     u3_noun past_new = u3n_slam_on(
       u3k(try_gate_inner),
       u3nc(
-        u3k(u3at(6, seed)),
+        u3k(u3at(seed_past, seed)),
         p_input_gate
       )
     );
     seed_new = u3nq(
-      u3k(u3at(2, seed)),
+      u3k(u3at(seed_module, seed)),
       past_new,
-      u3k(u3at(14, seed)),
-      u3k(u3at(15, seed))
+      u3k(u3at(seed_shop, seed)),
+      u3k(u3at(seed_import, seed))
     );
   }
   else if (input_tag == c3n)
   {
     seed_new = u3nq(
-      u3k(u3at(2, seed)),
-      u3k(u3at(6, seed)),
+      u3k(u3at(seed_module, seed)),
+      u3k(u3at(seed_past, seed)),
       u3kb_weld(
-        u3k(u3at(14, seed)),
+        u3k(u3at(seed_shop, seed)),
         u3nc(u3k(p_input), u3_nul)
       ),
-      u3k(u3at(15, seed))
+      u3k(u3at(seed_import, seed))
     );
   }
   else
@@ -1611,18 +1673,22 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  u3_noun call_script       = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_CALL), 2);  
-  u3_noun memread_script    = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_MEMREAD), 2);  
-  u3_noun memwrite_script   = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_MEMWRITE), 2);  
-  u3_noun call_ext_script   = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_CALL_EXT), 2);
-  u3_noun global_set_script = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_GLOBAL_SET), 2);
-  u3_noun global_get_script = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_GLOBAL_GET), 2);
-  u3_noun mem_grow_script   = u3j_kink(u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_MEM_GROW), 2);
-  u3_noun mem_size_script   =          u3j_kink(u3k(u3at(RUN_CTX, cor)), AX_MEM_SIZE);
+  u3_noun call_script         = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
+  u3_noun memread_script      = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
+  u3_noun memwrite_script     = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
+  u3_noun call_ext_script     = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
+  u3_noun global_set_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
+  u3_noun global_get_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
+  u3_noun mem_grow_script     = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
+  u3_noun mem_size_script     =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
+  u3_noun get_acc_script      =       u3j_kink(u3k(arrows), AX_GET_ACC);
+  u3_noun set_acc_script      = KICK1(u3j_kink(u3k(arrows), AX_SET_ACC));
+  u3_noun get_all_glob_script =       u3j_kink(u3k(arrows), AX_GET_ALL_GLOB);
+  u3_noun set_all_glob_script = KICK1(u3j_kink(    arrows,  AX_SET_ALL_GLOB));
 
-  u3_noun try_script = u3j_kink(try_gate_inner, 2);
-  u3_noun catch_script  = u3j_kink(u3j_kink(u3j_kink(u3k(runnable), AX_CATCH), 2), 2);  
-  u3_noun return_script =          u3j_kink(u3j_kink(runnable,      AX_RETURN), 2);  
+  u3_noun try_script    = KICK1(try_gate_inner);
+  u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
+  u3_noun return_script = KICK1(u3j_kink(    runnable,  AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -1635,6 +1701,10 @@ u3we_lia_run(u3_noun cor)
   u3_noun global_get_bat = u3k(u3h(global_get_script));
   u3_noun mem_grow_bat = u3k(u3h(mem_grow_script));
   u3_noun mem_size_bat = u3k(u3h(mem_size_script));
+  u3_noun get_acc_bat = u3k(u3h(get_acc_script));
+  u3_noun set_acc_bat = u3k(u3h(set_acc_script));
+  u3_noun get_all_glob_bat = u3k(u3h(get_all_glob_script));
+  u3_noun set_all_glob_bat = u3k(u3h(set_all_glob_script));
 
   u3_noun call_ctx = u3k(u3at(ARROW_CTX, call_script));
   u3_noun memread_ctx = u3k(u3at(ARROW_CTX, memread_script));
@@ -1642,7 +1712,9 @@ u3we_lia_run(u3_noun cor)
   u3_noun global_set_ctx = u3k(u3at(ARROW_CTX, global_set_script));
   u3_noun global_get_ctx = u3k(u3at(ARROW_CTX, global_get_script));
   u3_noun mem_grow_ctx = u3k(u3at(ARROW_CTX, mem_grow_script));
-  u3_noun mem_size_ctx = u3k(u3at(MONAD_CTX, mem_grow_script));
+  u3_noun mem_size_ctx = u3k(u3at(MONAD_CTX, mem_size_script));
+  u3_noun get_all_glob_ctx = u3k(u3at(MONAD_CTX, get_all_glob_script));
+  u3_noun set_all_glob_ctx = u3k(u3at(ARROW_CTX, set_all_glob_script));
 
   u3z(call_script);
   u3z(memread_script);
@@ -1655,6 +1727,10 @@ u3we_lia_run(u3_noun cor)
   u3z(global_get_script);
   u3z(mem_grow_script);
   u3z(mem_size_script);
+  u3z(get_acc_script);
+  u3z(set_acc_script);
+  u3z(get_all_glob_script);
+  u3z(set_all_glob_script);
   
   match_data_struct match = {
     call_bat,
@@ -1668,6 +1744,10 @@ u3we_lia_run(u3_noun cor)
     global_get_bat,
     mem_grow_bat,
     mem_size_bat,
+    get_acc_bat,
+    set_acc_bat,
+    get_all_glob_bat,
+    set_all_glob_bat,
   //
     call_ctx,
     memread_ctx,
@@ -1676,9 +1756,11 @@ u3we_lia_run(u3_noun cor)
     global_get_ctx,
     mem_grow_ctx,
     mem_size_ctx,
+    get_all_glob_ctx,
+    set_all_glob_ctx,
   };
 
-  u3_noun octs = u3at(2, seed_new);
+  u3_noun octs = u3at(seed_module, seed_new);
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
@@ -1839,9 +1921,6 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun ctx = u3at(ONCE_CTX, cor);
   u3r_mug(ctx);
 
-  #define KICK1(TRAP)  u3j_kink(TRAP, 2)
-  #define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
-
   u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
   u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
 
@@ -1966,7 +2045,12 @@ u3we_lia_run_once(u3_noun cor)
   }
   
   // 2MB stack
-  IM3Runtime wasm3_runtime = m3_NewRuntime(wasm3_env, 1 << 21, NULL, 1);
+  IM3Runtime wasm3_runtime = m3_NewRuntime(
+    wasm3_env,
+    1 << 21,
+    NULL,
+    0 /* suspend */
+  );
   if (!wasm3_runtime)
   {
     fprintf(stderr, ERR("runtime is null"));
@@ -2003,7 +2087,16 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun acc, map;
   u3x_cell(import, &acc, &map);
 
-  lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, u3_none, u3_nul, u3_none};
+  lia_state sat = {
+    wasm3_module,
+    lia_shop,
+    u3k(acc),
+    map,
+    &match,
+    u3_none,
+    u3_none,
+    u3_none
+  };
 
   for (c3_w i = 0; i < n_imports; i++)
   {
