@@ -1924,6 +1924,7 @@ static u3_boot
 _pier_pill_parse(u3_noun pil)
 {
   u3_boot bot_u;
+  bot_u.cax = u3_nul;
   u3_noun pil_p, pil_q;
 
   u3_assert( c3y == u3du(pil) );
@@ -1949,7 +1950,7 @@ _pier_pill_parse(u3_noun pil)
       u3_king_bail();
       exit(1);
     }
-    else if ( c3__pill != tag ) {
+    else if ( (c3__pill != tag) && (c3__cash != tag) ) {
       if ( c3y == u3a_is_atom(tag) ) {
         u3m_p("pill", tag);
       }
@@ -1962,7 +1963,12 @@ _pier_pill_parse(u3_noun pil)
       u3_noun typ;
       c3_c* typ_c;
 
-      if ( c3n == u3r_quil(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use, &bot_u.cax) ) {
+      // XX cleanup
+      if (  ( c3__pill == tag &&
+              c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) )
+         || ( c3__cash == tag &&
+              c3n == u3r_quil(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use,
+                              &bot_u.cax) ) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
         u3_king_bail();
         exit(1);
