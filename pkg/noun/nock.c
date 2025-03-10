@@ -16,9 +16,6 @@
 #include "xtract.h"
 #include "zave.h"
 
-/** Global variables.
-**/
-u3n_spin *stk_u;
 
 // define to have each opcode printed as it executes,
 // along with some other debugging info
@@ -1937,10 +1934,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     } break;
 
     case c3__spin: {
-
-      //u3t_slog_cap(1, u3i_string("spin"), hin);
-      u3n_sstack_push(*clu);
-      u3z(*clu);
+      u3t_sstack_push(*clu);
       *clu = c3__spin;
     } break;
 
@@ -2006,7 +2000,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if ( c3__spin == tok ) {
-    u3n_sstack_pop();
+    u3t_sstack_pop();
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
@@ -3206,81 +3200,6 @@ u3n_nock_an(u3_noun bus, u3_noun fol)
   u3_noun gul = u3nt(u3nt(1, 0, 0), 0, 0);  //  |=(a/{* *} ~)
 
   return u3n_nock_et(gul, bus, fol);
-}
-
-/* u3n_sstack_init: initalize a root node on the spin stack 
-*/
-void
-u3n_sstack_init()
-{
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
-  if ( -1 == shm_fd) {
-    perror("shm_open failed");
-    return;
-  }
-
-  if ( -1 == ftruncate(shm_fd, PSIZE)) {
-    perror("truncate failed");
-    return;
-  }
-
-  stk_u = mmap(NULL, PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
-  if ( MAP_FAILED == stk_u ) {
-    perror("mmap failed");
-    return;
-  }
-
-  stk_u->off_w = 0;
-  stk_u->fow_w = 0;
-}
-
-/* u3n_sstack_exit: shutdown the shared memory for thespin stack 
-*/
-void
-u3n_sstack_exit()
-{
-  munmap(stk_u, u3a_page);
-}
-
-/* u3n_sstack_push: push a noun on the spin stack.
-*/
-void
-u3n_sstack_push(u3_noun nam)
-{
-  if ( c3n == u3ud(nam) ) {
-    return;
-  }
-
-  c3_w  met_w = u3r_met(3, nam);
-  
-  // Exit if full
-  if ( 0 < stk_u->fow_w || 
-       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
-    stk_u->fow_w++;
-    return;
-  }
-
-  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
-  stk_u->off_w += met_w;
-
-  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
-  stk_u->off_w += sizeof(c3_w);
-}
-
-/* u3n_sstack_pop: pop a noun from the spin stack.
-*/
-void
-u3n_sstack_pop()
-{
-  if ( 0 < stk_u->fow_w ) {
-    stk_u->fow_w--;
-  } else {
-    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
-    stk_u->off_w -= (len_w+sizeof(c3_w));
-  }
 }
 
 

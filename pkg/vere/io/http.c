@@ -114,7 +114,7 @@ typedef struct _u3_httd {
   SSL_CTX*           tls_u;             //  server SSL_CTX*
   u3p(u3h_root)      sax_p;             //  url->scry cache
   u3p(u3h_root)      nax_p;             //  scry->noun cache
-  u3n_spin*          stk_u;             //  spin stack 
+  u3t_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
 static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
@@ -2826,11 +2826,11 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
 
   if ( 0 != siq_u ) {
     c3_c* buf_c     = c3_malloc(1025);
-    u3n_spin* stk_u = htd_u->stk_u;
+    u3t_spin* stk_u = htd_u->stk_u;
     c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
 
-    while (pos_w > 0) {
+    while (pos_w > 4) {
       c3_w  len_w;
       pos_w -=4;
 
@@ -3116,19 +3116,10 @@ u3_http_io_init(u3_pier* pir_u)
   }
 
   //Setup spin stack
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
-  if ( -1 == shm_fd) {
-    perror("shm_open failed");
-    u3_pier_bail(car_u->pir_u);
-  }
-
-  htd_u->stk_u = mmap(NULL, PSIZE, 
-                      PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  htd_u->stk_u = u3t_sstack_open();
   
-  if ( MAP_FAILED == htd_u->stk_u ) {
-    perror("mmap failed");
+  if ( NULL == htd_u->stk_u ) {
+    u3l_log("failed to open spin stack");
     u3_pier_bail(car_u->pir_u);
   }
 

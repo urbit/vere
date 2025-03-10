@@ -2261,7 +2261,7 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
-    u3n_sstack_init();
+    u3t_sstack_init();
 
     u3C.wor_i = len_i >> 2;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
@@ -2275,6 +2275,8 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  u3t_sstack_exit();
+
   u3e_stop();
   u3je_secp_stop();
 }
