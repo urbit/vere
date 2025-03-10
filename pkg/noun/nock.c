@@ -1939,8 +1939,8 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__spin: {
 
       //u3t_slog_cap(1, u3i_string("spin"), hin);
-      u3z(*clu);
       u3n_sstack_push(*clu);
+      u3z(*clu);
       *clu = c3__spin;
     } break;
 
@@ -2005,7 +2005,7 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if (c3__spin == tok) {
+  if ( c3__spin == tok ) {
     u3n_sstack_pop();
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
