@@ -1017,7 +1017,6 @@ _post_status(u3_post som_p)
     assert( pag_u->log_s < u3a_page );
 #endif
 
-    c3_g bit_g = pag_u->log_s - u3a_min_log;
     c3_w pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
 
     if ( som_p & (pag_u->len_s - 1) ) {
