@@ -37,8 +37,6 @@
 #include "whereami.h"
 #include "xtract.h"
 
-//extern u3n_spin *stk_u;
-
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
