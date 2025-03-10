@@ -1266,98 +1266,104 @@ _sweep_directory(void)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   u3_post dir_p;
-  c3_w blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
+  c3_w pag_w, blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
 
-  for ( c3_w i_w = 0; i_w < HEAP.len_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
+  for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+    blk_w = pag_w >> 5;
+    bit_w = pag_w & 31;
+    dir_p = dir_u[pag_w];
 
-    switch ( dir_p = dir_u[i_w] ) {
-      case u3a_free_pg: break;
-      case u3a_rest_pg: break;
+    if ( u3a_head_pg == dir_p ) {
+      for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+      siz_w <<= u3a_page;
 
-      case u3a_head_pg: {
-        for ( siz_w = 1; dir_u[i_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
-        siz_w <<= u3a_page;
+      if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
+        //  XX free page(s)?
+        leq_w += siz_w;
+        fprintf(stderr, "palloc: leaked page %u\r\n",
+                        pag_w);
+      }
+      else {
+        tot_w += siz_w;
+      }
+    }
+    else if ( u3a_rest_pg < dir_p ) {
+      u3a_crag *pag_u;
+      c3_s      tot_s;  //  NB: not pag_u->tot_s
 
-        if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
-          //  XX free page(s)?
-          leq_w += siz_w;
-          fprintf(stderr, "palloc: leaked page %u\r\n",
-                          i_w);
+      //  entire chunk page is unmarked
+      //
+      if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
+        fprintf(stderr, "palloc: leaked chunk page %u\r\n",
+                        pag_w);
+        pag_u  = u3to(u3a_crag, dir_p);
+        tot_s  = 1U << (u3a_page - pag_u->log_s);
+        leq_w += pag_u->len_s * (tot_s - pag_u->fre_s);
+      }
+      else {
+        ca_mrag *mag_u = _to_mark_post(ca_mrag, dir_p);
+        c3_w     max_w;
+
+        pag_u = u3to(u3a_crag, mag_u->dir_p);
+        tot_s = 1U << (u3a_page - pag_u->log_s);
+        max_w = (tot_s + 31) >> 5;
+
+        if ( 0 == memcmp(mag_u->bit_w, pag_u->map_w, max_w << 2) ) {
+          tot_w += pag_u->len_s * (tot_s - pag_u->fre_s);
         }
         else {
-          tot_w += siz_w;
-        }
-      } break;
+          for ( c3_s i_s = 0; i_s < tot_s; i_s++ ) {
+            blk_w = i_s >> 5;
+            bit_w = i_s & 31;
 
+            if ( !(pag_u->map_w[blk_w] & (1U << bit_w)) ) {
+              if ( !(mag_u->bit_w[blk_w] & (1U << bit_w)) ) {
+                tot_w += pag_u->len_s;
+              }
+              else {
+                //  XX free chunk?
+                fprintf(stderr, "palloc: leaked chunk %u (%u) in page %u\r\n",
+                                i_s, pag_u->len_s, pag_w);
 
-      default: {
-        u3a_crag *pag_u;
+                u3_post som_p = page_to_post(pag_u->pag_w);
+                som_p += (c3_w)i_s << pag_u->log_s;
 
-        if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
-          //  XX leaked chunk page
-          pag_u = u3to(u3a_crag, dir_p);
-          //  XX also leaked metadata?
-          leq_w += pag_u->len_s * (pag_u->tot_s - pag_u->fre_s);
-          fprintf(stderr, "palloc: leaked chunk page %u\r\n",
-                          i_w);
-        }
-        else {
-          ca_mrag  *mag_u = _to_mark_post(ca_mrag, dir_p);
+                c3_w*   ptr_w = u3to(c3_w, som_p);
 
-          pag_u = u3to(u3a_crag, mag_u->dir_p);
-          c3_w max_w = (pag_u->tot_s + 31) >> 5;
-
-          if ( 0 == memcmp(mag_u->bit_w, pag_u->map_w, max_w << 2) ) {
-            tot_w += pag_u->len_s * (pag_u->tot_s - pag_u->fre_s);
-          }
-          else {
-            for ( c3_s i_s = 0; i_s < pag_u->tot_s; i_s++ ) {
-              blk_w = i_s >> 5;
-              bit_w = i_s & 31;
-
-              if ( !(pag_u->map_w[blk_w] & (1U << bit_w)) ) {
-                if ( !(mag_u->bit_w[blk_w] & (1U << bit_w)) ) {
-                  tot_w += pag_u->len_s;
+                fprintf(stderr, "{ ");
+                for ( c3_w j_w = 0; j_w < 4; j_w++ ) {
+                  fprintf(stderr, "0x%x, ", ptr_w[j_w]);
                 }
-                else {
-                  //  XX free chunk?
-                  fprintf(stderr, "palloc: leaked chunk %u (%u) in page %u\r\n",
-                                  i_s, pag_u->len_s, i_w);
 
-                  u3_post som_p = page_to_post(pag_u->pag_w);
-                  som_p += (c3_w)i_s << pag_u->log_s;
-
-                  c3_w*   ptr_w = u3to(c3_w, som_p);
-
-                  fprintf(stderr, "{ ");
-                  for ( c3_w j_w = 0; j_w < pag_u->len_s; j_w++ ) {
-                    fprintf(stderr, "0x%x, ", ptr_w[j_w]);
-                  }
-                  fprintf(stderr, "}\r\n");;
-
-                  leq_w += pag_u->len_s;
+                if ( pag_u->len_s > 4 ) {
+                  fprintf(stderr, "... ");
                 }
+
+                fprintf(stderr, "}\r\n");
+
+                leq_w += pag_u->len_s;
               }
             }
           }
-
-          dir_u[i_w] = mag_u->dir_p;
         }
 
-      } break;
+        dir_u[pag_w] = mag_u->dir_p;
+      }
     }
   }
 
-  c3_w wee_w = 0;
+  //  XX s/b captured at the end of the mark phase
+  //
+  {
+    c3_w wee_w = 0;
 
-  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
-    wee_w += u3a_Mark.wee_w[i_w];
-  }
+    for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+      wee_w += u3a_Mark.wee_w[i_w];
+    }
 
-  if ( wee_w ) {
-    u3a_print_memory(stderr, "palloc: sweep: wee_w", wee_w);
+    if ( wee_w ) {
+      u3a_print_memory(stderr, "palloc: sweep: wee_w", wee_w);
+    }
   }
 
   if ( leq_w ) {
