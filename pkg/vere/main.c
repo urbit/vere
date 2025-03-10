@@ -207,7 +207,7 @@ _main_init(void)
   u3C.eph_c = 0;
   u3C.tos_w = 0;
 
-  u3n_sstack_init();
+  //u3n_sstack_init();
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
