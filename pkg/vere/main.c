@@ -2175,13 +2175,13 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_d sap_d = 0;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "auto-meld", no_argument,       NULL, 7 },
-    { "soft-mugs", no_argument,       NULL, 8 },
-    { "full",      no_argument,       NULL, 'f' },
-    { "replay-to", required_argument, NULL, 'n' },
-    { "snap-at",   required_argument, NULL, 's' },
+    { "loom",              required_argument, NULL, c3__loom },
+    { "no-demand",         no_argument,       NULL, 6 },
+    { "auto-meld",         no_argument,       NULL, 7 },
+    { "soft-mugs",         no_argument,       NULL, 8 },
+    { "full",              no_argument,       NULL, 'f' },
+    { "replay-to",         required_argument, NULL, 'n' },
+    { "snap-at",           required_argument, NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
 
