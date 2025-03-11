@@ -726,9 +726,9 @@ _fine_etch_response(u3_pact* pac_u)
 static inline u3_noun
 _lane_scry_path(u3_noun who)
 {
-  return u3nq(u3i_string("peers"),
+  return u3nq(u3i_string("chums"),
               u3dc("scot", 'p', who),
-              u3i_string("forward-lane"),
+              u3i_string("lanes"),
               u3_nul);
 }
 
