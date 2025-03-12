@@ -1174,6 +1174,7 @@ u3m_love(u3_noun pro)
 
   //  pop the stack
   //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
 

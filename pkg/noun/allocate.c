@@ -76,6 +76,22 @@ u3a_init_heap(void)
 }
 
 void
+u3a_drop_heap(u3_post cap_p, u3_post ear_p)
+{
+#ifdef ASAN_ENABLED
+  if ( cap_p > ear_p ) {  // in north, drop inner south
+    _drop(ear_p, cap_p - ear_p);
+  }
+  else {                  // in south, drop inner north
+    _drop(cap_p, ear_p - cap_p);
+  }
+#else
+  (void)cap_p;
+  (void)ear_p;
+#endif
+}
+
+void
 u3a_init_mark(void)
 {
   c3_w bit_w = (u3R->hep.len_w + 31) >> 5;
