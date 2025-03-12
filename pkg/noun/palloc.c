@@ -69,12 +69,10 @@ _init(void)
   u3p(u3a_crag) *dir_u;
 
   if ( c3y == u3a_is_north(u3R) ) {
-    // fprintf(stderr, "palloc: init north: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
     HEAP.dir_ws = 1;
     HEAP.off_ws = 0;
   }
   else {
-    // fprintf(stderr, "palloc: init south: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
     HEAP.dir_ws = -1;
     HEAP.off_ws = -1;
   }
@@ -84,8 +82,6 @@ _init(void)
   assert ( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
 
   HEAP.bot_p = u3R->hat_p;
-
-  // fprintf(stderr, "palloc: init1 hat=0x%x cap=0x%x bot=0x%x\n", u3R->hat_p, u3R->cap_p, HEAP.bot_p);
 
   assert( u3R->hat_p > u3a_rest_pg );
 
@@ -98,8 +94,6 @@ _init(void)
 
   u3R->hat_p += HEAP.dir_ws * (c3_ws)(1U << u3a_page);
 
-  // fprintf(stderr, "palloc: init2 hat=0x%x cap=0x%x bot=0x%x pag=0x%x\n", u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p);
-
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
   memset(dir_u, 0, 1U << (u3a_page + 2));
@@ -110,13 +104,7 @@ _init(void)
   assert( HEAP.pag_p == page_to_post(0) );
 #endif
 
-  // fprintf(stderr, "palloc: init3 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p out-adir=%x\n",
-  //                 u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p, (void*)dir_u, (c3_w)u3a_outa(dir_u));
-
   HEAP.cac_p = _imalloc(c3_wiseof(u3a_dell));
-
-  // fprintf(stderr, "palloc: init4 hat=0x%x cap=0x%x bot=0x%x pag=0x%x dir=%p cac=0x%x\n",
-  //                 u3R->hat_p, u3R->cap_p, HEAP.bot_p, HEAP.pag_p, (void*)dir_u, HEAP.cac_p);
 }
 
 static void
@@ -125,9 +113,6 @@ _extend_directory(c3_w siz_w)  // num pages
   u3p(u3a_crag) *dir_u, *old_u;
   u3_post old_p = HEAP.pag_p;
   c3_w nex_w, dif_w, pag_w;
-
-  // fprintf(stderr, "extend directory by %u, from %u,%u (hat=0x%x) ",
-  //                 siz_w, HEAP.len_w, HEAP.siz_w, u3R->hat_p);
 
   old_u  = u3to(u3p(u3a_crag), HEAP.pag_p);
   nex_w  = HEAP.len_w + siz_w;       // num words
@@ -138,9 +123,6 @@ _extend_directory(c3_w siz_w)  // num pages
   HEAP.pag_p  = u3R->hat_p;
   HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
   u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
-
-  // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
-  //                 HEAP.len_w + dif_w, nex_w, u3R->hat_p, HEAP.pag_p);
 
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
@@ -196,17 +178,10 @@ _extend_heap(c3_w siz_w)  // num pages
     _extend_directory(siz_w);
   }
 
-  // fprintf(stderr, "extend heap by %u, from %u,%u (hat=0x%x) ",
-  //                 siz_w, HEAP.len_w, HEAP.siz_w, u3R->hat_p);
-
   pag_p  = u3R->hat_p;
   pag_p += HEAP.off_ws * (c3_ws)(siz_w << u3a_page);
 
   u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
-
-
-  // fprintf(stderr, "to %u,%u (hat=0x%x, pag=0x%x)\n",
-  //                 HEAP.len_w + siz_w, HEAP.siz_w, u3R->hat_p, pag_p);
 
   //  XX bail, optimize
   if ( 1 == HEAP.dir_ws ) {
@@ -254,16 +229,11 @@ _alloc_pages(c3_w siz_w)  // num pages
         HEAP.fre_p = fre_u->nex_p;
       }
       del_u = fre_u;
-      // fprintf(stderr, "alloc pages take %u at %u from 0x%x\n", siz_w,
-      //                 pag_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     else {
       pag_w = fre_u->pag_w;
       fre_u->pag_w += siz_w;
       fre_u->siz_w -= siz_w;
-
-      // fprintf(stderr, "alloc pages split %u at %u (%u remaining) from 0x%x\n",
-      //                 siz_w, pag_w, fre_u->siz_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     break;
   }
@@ -290,8 +260,7 @@ _alloc_pages(c3_w siz_w)  // num pages
     pag_p = _extend_heap(siz_w);
     pag_w = post_to_page(pag_p);
     dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-    // fprintf(stderr, "alloc pages grow %u (0x%x, hat=0x%x) pag=%u len=%u\n",
-    //                 siz_w, pag_p, u3R->hat_p, pag_w, HEAP.len_w);
+
 #ifdef SANITY
     assert( pag_w < HEAP.len_w );
     assert( (pag_w + ((HEAP.off_ws + 1) * siz_w) - HEAP.off_ws) == HEAP.len_w );
@@ -492,8 +461,6 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
     hun_p = _imalloc(siz_s);
   }
 
-  // fprintf(stderr, "make chunks: pag_p: %x, pag_w %u\n", pag_p, pag_w);
-
   pag_u = u3to(u3a_crag, hun_p);
   pag_u->pag_w = pag_w;
   pag_u->log_s = log_s;
@@ -534,7 +501,6 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   dir_u[pag_w] = hun_p;
   pag_u->nex_p = HEAP.wee_p[bit_g];
 
-  // fprintf(stderr, "store wee_p %u 0x%x\n", bit_g, hun_p);
   HEAP.wee_p[bit_g] = hun_p;
 
   return hun_p;
@@ -563,20 +529,12 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
   assert( pag_u->log_s < u3a_page );
 #endif
 
-  // fprintf(stderr, "page: 0x%x bit=%u pag=%u len=%u log=%u fre=%u tot=%u\n",
-  //                 pag_p, bit_g, pag_u->pag_w, pag_u->len_s, pag_u->log_s, pag_u->fre_s, pag_u->tot_s);
-  // fprintf(stderr, "page: 1 map=%p map[0]=%x\n", (void*)map_w, *map_w);
-
   while ( !*map_w ) { map_w++; }
-  // fprintf(stderr, "page: 2 map=%p map[0]=%x\n", (void*)map_w, *map_w);
 
   pos_g   = c3_tz_w(*map_w);
   *map_w &= ~(1U << pos_g);
 
-  // fprintf(stderr, "page: 3 map=%p map[0]=%x\n", (void*)map_w, *map_w);
-
   if ( !--pag_u->fre_s ) {
-    // fprintf(stderr, "store wee_p %u 0x%x\n", bit_g, pag_u->nex_p);
     HEAP.wee_p[bit_g] = pag_u->nex_p;
     pag_u->nex_p = 0;
   }
@@ -588,9 +546,6 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
     off_w <<= pag_u->log_s;             //    (in words)
 
     u3_post out_p = page_to_post(pag_u->pag_w) + off_w;
-
-    // fprintf(stderr, "alloc_bytes: pos_g: %u, pag_p: %x, off_w %x, log %u\n",
-    //                 pos_g, pag_p, off_w, pag_u->log_s);
 
     return out_p;
   }
@@ -702,8 +657,6 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     }
 
     if ( fre_u->pag_w > nex_w ) {        //  insert before
-      // fprintf(stderr, "free pages before 0x%x (%u) via 0x%x\n", som_p, siz_w, HEAP.cac_p);
-
       cac_u->nex_p = u3of(u3a_dell, fre_u);
       cac_u->pre_p = fre_u->pre_p;
 
@@ -731,7 +684,6 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       if (  fre_u->nex_p
          && (fex_w == u3to(u3a_dell, fre_u->nex_p)->pag_w) )
       {
-        // fprintf(stderr, "free pages coalesce %u\n", del_u->siz_w);
         del_u = u3to(u3a_dell, fre_u->nex_p);
         fre_u->siz_w += del_u->siz_w;
         fre_u->nex_p  = del_u->nex_p;
@@ -745,13 +697,8 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( fre_u->pag_w == nex_w ) {  //  prepend to entry
       fre_u->siz_w += siz_w;
       fre_u->pag_w  = pag_w;
-
-      // fprintf(stderr, "free pages prepend %u at %u to 0x%x\n",
-      //                 siz_w, pag_w, (c3_w)u3of(u3a_dell, fre_u));
     }
     else if ( !fre_u->nex_p ) {          //  insert after
-      // fprintf(stderr, "free pages before %u at %u via 0x%x\n",
-      //                 siz_w, pag_w, HEAP.cac_p);
       cac_u->nex_p = 0;
       cac_u->pre_p = u3of(u3a_dell, fre_u);
       fre_u->nex_p = HEAP.cac_p;
