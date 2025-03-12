@@ -51,6 +51,8 @@
 #define seed_shop       14
 #define seed_import     15
 
+#define uw__lia c3_s3('l', 'i', 'a')
+
 #define ERR(string) ("\r\n\033[31m>>> " string "\033[0m\r\n")
 #define WUT(string) ("\r\n\033[33m>>  " string "\033[0m\r\n")
 
@@ -153,18 +155,24 @@ typedef struct {
   u3i_slab  sab_u;  // associated slab
   c3_y*     buf_y;  // allocated buffer
   c3_y*     nex_y;  // next allocation
-  jmp_buf   esc_u;  // escape buffer
+  jmp_buf*  esc_u;  // escape buffer
 } uw_arena;
+
+static void
+_uw_arena_init_size(uw_arena* ren_u, c3_w pre_w, c3_w siz_w)
+{
+  ren_u->siz_w = siz_w;
+  ren_u->pre_w = pre_w;
+  
+  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1); // extra page to ensure full siz_w pages
+  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->nex_y = ren_u->buf_y;
+}
 
 static void
 _uw_arena_init(uw_arena* ren_u)
 {
-  ren_u->siz_w = 1;
-  ren_u->pre_w = 1;
-  
-  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w);
-  ren_u->buf_y = ren_u->sab_u.buf_y;
-  ren_u->nex_y = c3_align(ren_u->buf_y, 16, C3_ALGHI);
+  _uw_arena_init_size(ren_u, 1, 1);
   // esc_u to be filled later
 }
 
@@ -178,9 +186,17 @@ _uw_arena_grow(uw_arena* ren_u)
   // we start over, no need to keep old memory
   u3i_slab_free(&ren_u->sab_u);
 
-  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w);
-  ren_u->buf_y = ren_u->sab_u.buf_y;
-  ren_u->nex_y = c3_align(ren_u->buf_y, 16, C3_ALGHI);
+  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1);
+  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->nex_y = ren_u->buf_y;
+}
+
+static void
+_uw_arena_reset(uw_arena* ren_u)
+{
+  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->nex_y = ren_u->buf_y;
+  memset(ren_u->buf_y, 0, (size_t)ren_u->sab_u.len_w * 4);
 }
 
 static void
@@ -211,7 +227,7 @@ _calloc_code(size_t num_i, size_t len_i)
   
   if (nex_y - CodeArena.buf_y >= (CodeArena.siz_w << 12))
   { // OOM, jump out to increase the arena size and try again
-    _longjmp(CodeArena.esc_u, 1);
+    _longjmp(*CodeArena.esc_u, c3__code);
   }
 
   CodeArena.nex_y = nex_y;
@@ -257,7 +273,7 @@ _calloc_box_cap(size_t num_i, size_t len_i, c3_d cap_d)
 
   if (nex_y - BoxArena.buf_y >= (BoxArena.siz_w << 12))
   { // OOM, jump out to increase the arena size and try again
-    _longjmp(BoxArena.esc_u, 1);
+    _longjmp(*BoxArena.esc_u, c3__box);
   }
 
   BoxArena.nex_y = nex_y;
@@ -314,6 +330,24 @@ static void
 _free_box(void* lag_v)
 {
   // noop
+}
+
+static void*
+_calloc_bail(size_t num_i, size_t len_i)
+{
+  u3m_bail(c3__fail);
+}
+
+static void*
+_realloc_bail(void* lag_v, size_t len_i)
+{
+  u3m_bail(c3__fail);
+}
+
+static void
+_free_bail(void* lag_v)
+{
+  u3m_bail(c3__fail);
 }
 
 
@@ -1595,19 +1629,170 @@ _link_wasm_with_arrow_map(
   return result;
 }
 
-// TODO define
-static u3_weak
-_get_cache(u3_noun hint, u3_noun seed)
+//  key: [version seed hint]
+//  stored nouns:
+//    $@  ~             ::  sentinel value
+//    $:  box_arena=octs
+//        memory=[buffer=octs max_stack_offset=@]
+//        runtime_offset=@
+//        lia_shop=(list)
+//        acc=*
+//        susp_list=(list)
+//    ==
+static c3_t
+_get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 {
-  return u3_none;
+  c3_m fun_m = uw__lia + c3__run + 1;
+  c3_dessert(c3y == u3a_is_cat(fun_m));
+
+  u3_noun key = u3z_key_2(fun_m, seed, hint);
+  u3_weak get = u3z_find(u3z_memo_keep, key);
+  
+  if (u3_none == get || u3_nul == get)
+  {
+    u3z(key);
+    return 0;
+  }
+  else
+  {
+    u3z_save(u3z_memo_keep, key, u3_nul);
+
+    u3_noun p_box, q_box, p_buffer, q_buffer, stack_offset, runtime_offset,
+    lia_shop, acc, susp_list;
+    if ( c3n == u3r_mean(get,
+        4,  &p_box,
+        5,  &q_box,
+        24, &p_buffer,
+        25, &q_buffer,
+        13, &stack_offset,
+        14, &runtime_offset,
+        30, &lia_shop,
+        62, &acc,
+        63, &susp_list,
+        0) 
+    )
+    {
+      return u3m_bail(c3__fail);
+    }
+    c3_w box_len_w = (c3y == u3a_is_cat(p_box))
+      ? p_box
+      : u3m_bail(c3__fail);
+    
+    c3_w off_w = (c3y == u3a_is_cat(runtime_offset))
+      ? runtime_offset
+      : u3m_bail(c3__fail);
+    
+    c3_w box_pag_w = (box_len_w + (1U << 12) - 1) >> 12;
+    c3_w tmp_w, pre_w = 1, siz_w = 1;
+    while (siz_w < box_pag_w)
+    {
+      tmp_w = pre_w;
+      pre_w = siz_w;
+      siz_w += tmp_w;
+    }
+    _uw_arena_init_size(&BoxArena, pre_w, siz_w);
+    u3r_bytes(0, box_len_w, BoxArena.buf_y, q_box);
+    _uw_arena_init(&CodeArena);
+
+    M3Result result;
+    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena.buf_y + off_w);
+    m3_RewritePointersRuntime(wasm3_runtime, BoxArena.buf_y, 0 /*is_store*/);
+    wasm3_runtime->base = BoxArena.buf_y;
+    IM3Module wasm3_module = wasm3_runtime->modules;
+    c3_w n_imports = wasm3_module->numFuncImports;
+
+    // make sure to not touch BoxArena
+    m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
+    m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
+    m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+
+    jmp_buf esc;
+    CodeArena.esc_u = &esc;
+    c3_i jmp_i;
+
+    while (1)
+    {
+      wasm3_runtime->base_transient = CodeArena.buf_y;
+      
+      if (0 == (jmp_i = _setjmp(esc)))
+      {
+        for (c3_w i = 0; i < n_imports; i++)
+        {
+          M3Function f = wasm3_module->functions[i];
+          const char* mod  = f.import.moduleUtf8;
+          const char* name = f.import.fieldUtf8;
+
+          result = m3_LinkRawFunctionEx(
+            wasm3_module, mod, name,
+            NULL, &_link_wasm_with_arrow_map,
+            sat_u
+          );
+
+          if (result)
+          {
+            fprintf(stderr, ERR("link error: %s"), result);
+            return u3m_bail(c3__fail);
+          }
+
+          result = m3_CompileModule(wasm3_module);
+          if (result)
+          {
+            fprintf(stderr, ERR("compilation error: %s"), result);
+            return u3m_bail(c3__fail);
+          }
+        }
+        break;
+      }
+      else
+      {
+        if (jmp_i == c3__code)
+        {
+          _uw_arena_grow(&CodeArena);
+        }
+        else
+        {
+          return u3m_bail(c3__fail);
+        }
+        continue;
+      }
+    }
+
+    {
+      sat_u->wasm_module = wasm3_module;
+      sat_u->lia_shop = u3k(lia_shop);  // XX TODO transfer lia_shop elsewhere
+      sat_u->acc = u3k(acc);
+      // sat_u->map to be filled afterwards
+      // sat_u->match same
+      sat_u->arrow_yil = u3_none;
+      sat_u->susp_list = u3k(susp_list); // XX TODO transfer susp_list elsewhere
+      // XX TODO restore wasm3_runtime->memory.mallocated
+    }
+
+    u3z(get);
+
+    return 1;
+  }
+}
+
+// TODO define; return yield
+static u3_noun
+_apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
+{
+  return 0;
+}
+
+// try to save new state, replacing old state with a sentinel value
+static void
+_move_state(lia_state* sat_u, u3_noun seed_old, u3_noun seed_new, u3_noun hint)
+{
+  return;
 }
 
 u3_weak
-u3we_lia_run(u3_noun cor)
+u3we_lia_run_v1(u3_noun cor)
 {
 #ifndef URWASM_STATEFUL
   return u3_none;
-}
 #else
 
   u3_noun hint = u3at(u3x_sam_7, cor);
@@ -1621,8 +1806,11 @@ u3we_lia_run(u3_noun cor)
   
   // always save, the tail is app descriptor to be included in the key
   c3_t gent_t = ( _(u3du(hint)) && (c3__gent == u3h(hint)) );
+
+  // load agent state, don't save
+  c3_t oust_t = ( _(u3du(hint)) && (c3__oust == u3h(hint)) );
   
-  c3_t omit_t = !(rand_t || gent_t);
+  c3_t omit_t = !(rand_t || gent_t || oust_t);
 
   #ifdef URWASM_SUBROAD
 
@@ -1768,21 +1956,201 @@ u3we_lia_run(u3_noun cor)
     set_all_glob_ctx,
   };
 
-  u3_noun octs = u3at(seed_module, seed_new);
-  u3_noun p_octs, q_octs;
-  u3x_cell(octs, &p_octs, &q_octs);
-
-  c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
-  c3_y* bin_y;
-  M3Result result;
-  IM3Environment wasm3_env;
-  IM3Runtime wasm3_runtime = NULL;
-  IM3Module wasm3_module;
   lia_state sat;
-
-  if (omit_t)
+  u3_noun yil;
+  if (!omit_t)
   {
-    bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
+    if (_get_state(seed, hint, &sat))  // on success sets wasm3 allocators
+    {
+      yil = _apply_diff(input_tag, p_input, &sat);
+    }
+    else
+    { // instantiate state with retries
+      u3_noun octs = u3at(seed_module, seed_new);
+      u3_noun p_octs, q_octs;
+      u3x_cell(octs, &p_octs, &q_octs);
+      c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs
+                                                   : u3m_bail(c3__fail);
+      c3_y* bin_y;
+      M3Result result;
+      IM3Environment wasm3_env;
+      IM3Runtime wasm3_runtime = NULL;
+      IM3Module wasm3_module;
+
+      _uw_arena_init(&CodeArena);
+      _uw_arena_init(&BoxArena);
+
+      m3_SetAllocators(_calloc_box, _free_box, _realloc_box);
+      m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
+      m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+      jmp_buf esc;
+      CodeArena.esc_u = BoxArena.esc_u = &esc;
+      c3_i jmp_i;
+
+      while (1)
+      {
+        if (0 == (jmp_i = _setjmp(esc)))
+        {
+          bin_y = _calloc_box(bin_len_w, 1);
+          u3r_bytes(0, bin_len_w, bin_y, u3x_atom(q_octs));
+
+          wasm3_env = m3_NewEnvironment();
+          if (!wasm3_env)
+          {
+            fprintf(stderr, ERR("env is null"));
+            return u3m_bail(c3__fail);
+          }
+
+          wasm3_runtime = m3_NewRuntime(
+            wasm3_env,
+            1 << 21,
+            NULL,
+            1 /* suspend */
+          );
+          if (!wasm3_runtime)
+          {
+            fprintf(stderr, ERR("runtime is null"));
+            return u3m_bail(c3__fail);
+          }
+
+          result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_w);
+          if (result)
+          {
+            fprintf(stderr, ERR("parse binary error: %s"), result);
+            return u3m_bail(c3__fail);
+          }
+
+          result = m3_LoadModule(wasm3_runtime, wasm3_module);
+          if (result)
+          {
+            fprintf(stderr, ERR("load module error: %s"), result);
+            return u3m_bail(c3__fail);
+          }
+
+          result = m3_ValidateModule(wasm3_module);
+          if (result)
+          {
+            fprintf(stderr, ERR("validation error: %s"), result); 
+            return u3m_bail(c3__fail);
+          }
+
+          c3_w n_imports = wasm3_module->numFuncImports;
+          u3_noun lia_shop = u3at(seed_shop, seed_new);
+          u3_noun import = u3at(seed_import, seed_new);
+          
+          u3_noun acc, map;
+          u3x_cell(import, &acc, &map);
+          {
+            sat.wasm_module = wasm3_module;
+            sat.lia_shop = lia_shop;
+            sat.acc = u3k(acc);
+            sat.map = map;
+            sat.match = &match;
+            sat.arrow_yil = u3_none;
+            sat.susp_list = u3_nul;
+            sat.resolution = u3_none;
+          }
+
+          for (c3_w i = 0; i < n_imports; i++)
+          {
+            M3Function f = wasm3_module->functions[i];
+            const char* mod  = f.import.moduleUtf8;
+            const char* name = f.import.fieldUtf8;
+
+            result = m3_LinkRawFunctionEx(
+              wasm3_module, mod, name,
+              NULL, &_link_wasm_with_arrow_map,
+              &sat
+            );
+
+            if (result)
+            {
+              fprintf(stderr, ERR("link error: %s"), result);
+              return u3m_bail(c3__fail);
+            }
+          }
+
+          result = m3_CompileModule(wasm3_module);
+          if (result)
+          {
+            fprintf(stderr, ERR("compilation error: %s"), result);
+            return u3m_bail(c3__fail);
+          }
+
+          break;
+        }
+        else
+        {
+          // escaped, grow arena and retry
+          if (wasm3_runtime)
+          {
+            u3a_free(wasm3_runtime->memory.mallocated);
+          }
+
+          if (jmp_i == c3__box)
+          {
+            _uw_arena_grow(&BoxArena);
+            _uw_arena_reset(&CodeArena);
+          }
+          else if (jmp_i == c3__code)
+          {
+            _uw_arena_grow(&CodeArena);
+            _uw_arena_reset(&BoxArena);
+          }
+          else
+          {
+            return u3m_bail(c3__fail);
+          }
+
+          continue;
+        }
+      }
+      result = m3_RunStart(wasm3_module);
+      if (result == m3Err_ComputationBlock)
+      {
+        yil = sat.arrow_yil;
+        sat.arrow_yil = u3_none;
+        if (yil == u3_none)
+        {
+          return u3m_bail(c3__fail);
+        }
+      }
+      else if (_deterministic_trap(result))
+      {
+        fprintf(stderr, WUT("start function call trapped: %s"), result);
+        yil = u3nc(2, 0);
+      }
+      else if (result == m3Err_functionImportMissing)
+      {
+        return u3m_bail(c3__exit);
+      }
+      else if (result)
+      {
+        fprintf(stderr, ERR("start function failed: %s"), result);
+        return u3m_bail(c3__fail);
+      }
+      else
+      {
+        u3_noun monad = u3at(seed_past, seed_new);
+        yil = _reduce_monad(u3k(monad), &sat);
+      }
+    }
+
+    _move_state(&sat, seed, seed_new, hint);
+  }
+  else
+  {
+    M3Result result;
+    IM3Environment wasm3_env;
+    IM3Runtime wasm3_runtime = NULL;
+    IM3Module wasm3_module;
+    u3_noun p_octs, q_octs;
+
+    u3_noun octs = u3at(seed_module, seed_new);
+    u3x_cell(octs, &p_octs, &q_octs);
+    c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs
+                                                 : u3m_bail(c3__fail);
+    c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
 
     m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
     m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
@@ -1864,151 +2232,41 @@ u3we_lia_run(u3_noun cor)
     // of code pages when we don't suspend, the functions will
     // get compiled on call
     //
-  }
-  else
-  {
-    _uw_arena_init(&CodeArena);
-    _uw_arena_init(&BoxArena);
 
-    m3_SetAllocators(_calloc_box, _free_box, _realloc_box);
-    m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
-    m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+    result = m3_RunStart(wasm3_module);
 
-    while (1)
+    if (result == m3Err_ComputationBlock)
     {
-      c3_i jmp_box = _setjmp(BoxArena.esc_u);
-      c3_i jmp_code = _setjmp(CodeArena.esc_u);
-
-      if (0 == jmp_box && 0 == jmp_code)
+      yil = sat.arrow_yil;
+      sat.arrow_yil = u3_none;
+      if (yil == u3_none)
       {
-        bin_y = _calloc_box(bin_len_w, 1);
-        u3r_bytes(0, bin_len_w, bin_y, u3x_atom(q_octs));
-
-        wasm3_env = m3_NewEnvironment();
-        if (!wasm3_env)
-        {
-          fprintf(stderr, ERR("env is null"));
-          return u3m_bail(c3__fail);
-        }
-
-        wasm3_runtime = m3_NewRuntime(
-          wasm3_env,
-          1 << 21,
-          NULL,
-          1 /* suspend */
-        );
-        if (!wasm3_runtime)
-        {
-          fprintf(stderr, ERR("runtime is null"));
-          return u3m_bail(c3__fail);
-        }
-
-        result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_w);
-        if (result)
-        {
-          fprintf(stderr, ERR("parse binary error: %s"), result);
-          return u3m_bail(c3__fail);
-        }
-
-        result = m3_LoadModule(wasm3_runtime, wasm3_module);
-        if (result)
-        {
-          fprintf(stderr, ERR("load module error: %s"), result);
-          return u3m_bail(c3__fail);
-        }
-
-        result = m3_ValidateModule(wasm3_module);
-        if (result)
-        {
-          fprintf(stderr, ERR("validation error: %s"), result); 
-          return u3m_bail(c3__fail);
-        }
-
-        c3_w n_imports = wasm3_module->numFuncImports;
-        u3_noun lia_shop = u3at(seed_shop, seed_new);
-        u3_noun import = u3at(seed_import, seed_new);
-        
-        u3_noun acc, map;
-        u3x_cell(import, &acc, &map);
-        {
-          sat.wasm_module = wasm3_module;
-          sat.lia_shop = lia_shop;
-          sat.acc = u3k(acc);
-          sat.map = map;
-          sat.match = &match;
-          sat.arrow_yil = u3_none;
-          sat.susp_list = u3_nul;
-          sat.resolution = u3_none;
-        }
-
-        for (c3_w i = 0; i < n_imports; i++)
-        {
-          M3Function f = wasm3_module->functions[i];
-          const char* mod  = f.import.moduleUtf8;
-          const char* name = f.import.fieldUtf8;
-
-          result = m3_LinkRawFunctionEx(
-            wasm3_module, mod, name,
-            NULL, &_link_wasm_with_arrow_map,
-            &sat
-          );
-
-          if (result)
-          {
-            fprintf(stderr, ERR("link error: %s"), result);
-            return u3m_bail(c3__fail);
-          }
-        }
-
-        break;
-      }
-      else
-      {
-        // escaped, grow arena and retry
-        if (wasm3_runtime)
-        {
-          u3a_free(wasm3_runtime->memory.mallocated);
-        }
-
-        if (jmp_box)
-        {
-          u3_assert(!jmp_code); // simultaneous escape from two arenas
-          _uw_arena_grow(&BoxArena);
-        }
-
-        if (jmp_code)
-        {
-          u3_assert(!jmp_box);  // simultaneous escape from two arenas
-          _uw_arena_grow(&CodeArena);
-        }
-
-        continue;
+        return u3m_bail(c3__fail);
       }
     }
-  }
-  
-
-  u3_noun yil = u3_none; // X remove bogus initialization
-  if (!omit_t)
-  {
-    u3_weak cache = _get_cache(hint, seed);
-    if (u3_none == cache)
+    else if (_deterministic_trap(result))
     {
-      // STUB: run from scratch
+      fprintf(stderr, WUT("start function call trapped: %s"), result);
+      yil = u3nc(2, 0);
+    }
+    else if (result == m3Err_functionImportMissing)
+    {
+      return u3m_bail(c3__exit);
+    }
+    else if (result)
+    {
+      fprintf(stderr, ERR("start function failed: %s"), result);
+      return u3m_bail(c3__fail);
     }
     else
     {
-      // STUB: apply diff to state
-      // save state
+      u3_noun monad = u3at(seed_past, seed_new);
+      yil = _reduce_monad(u3k(monad), &sat);
     }
-  }
-  else
-  {
-    // STUB:
-    // run from scratch
-    // m3_FreeRuntime(wasm3_runtime);
-    // m3_FreeEnvironment(wasm3_env);
-    // u3a_free(bin_y);
+
+    m3_FreeRuntime(wasm3_runtime);
+    m3_FreeEnvironment(wasm3_env);
+    u3a_free(bin_y);
   }
 
   u3z(match.call_bat);
@@ -2039,9 +2297,10 @@ u3we_lia_run(u3_noun cor)
   #endif
 
   return pro;
-}
 
 #endif // URWASM_STATEFUL
+}
+
 
 u3_weak
 u3we_lia_run_once(u3_noun cor)
@@ -2159,21 +2418,9 @@ u3we_lia_run_once(u3_noun cor)
 
   M3Result result;
 
-  result = m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
-
-  if (result)
-  {
-    fprintf(stderr, ERR("set allocators fail: %s"), result);
-    return u3m_bail(c3__fail);
-  }
-
-  result = m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
-
-  if (result)
-  {
-    fprintf(stderr, ERR("set allocators fail: %s"), result);
-    return u3m_bail(c3__fail);
-  }
+  m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
+  m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
+  m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
 
   IM3Environment wasm3_env = m3_NewEnvironment();
   if (!wasm3_env)
@@ -2255,13 +2502,6 @@ u3we_lia_run_once(u3_noun cor)
     }
   }
 
-  result = m3_CompileModule(wasm3_module);
-  if (result)
-  {
-    fprintf(stderr, ERR("compilation error: %s"), result);
-    return u3m_bail(c3__fail);
-  }
-
   u3_noun yil;
 
   result = m3_RunStart(wasm3_module);
@@ -2281,9 +2521,9 @@ u3we_lia_run_once(u3_noun cor)
     yil = u3nc(2, 0);
   }
   else if (result == m3Err_functionImportMissing)
-    {
-      return u3m_bail(c3__exit);
-    }
+  {
+    return u3m_bail(c3__exit);
+  }
   else if (result)
   {
     fprintf(stderr, ERR("start function failed: %s"), result);

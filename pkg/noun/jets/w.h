@@ -317,7 +317,7 @@
 
     u3_noun u3we_crc32(u3_noun);
 
-    u3_noun u3we_lia_run(u3_noun);
+    u3_noun u3we_lia_run_v1(u3_noun);
     u3_noun u3we_lia_run_once(u3_noun);
 
   /** Tier 6.
