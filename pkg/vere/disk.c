@@ -534,33 +534,33 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_p)
 /* _disk_read_meta(): read metadata at [key_c], deserialize.
 */
 static u3_weak
-_disk_read_meta(u3_disk* log_u, const c3_c* key_c)
+_disk_read_meta(MDB_env* mdb_u, const c3_c* key_c)
 {
   u3_weak dat = u3_none;
-  u3_lmdb_read_meta(log_u->mdb_u, &dat, key_c, _disk_meta_read_cb);
+  u3_lmdb_read_meta(mdb_u, &dat, key_c, _disk_meta_read_cb);
   return dat;
 }
 
 /* u3_disk_read_meta(): read metadata.
 */
 c3_o
-u3_disk_read_meta(u3_disk* log_u, u3_meta* met_u)
+u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
   u3_weak ver, who, fak, lif;
 
-  if ( u3_none == (ver = _disk_read_meta(log_u, "version")) ) {
+  if ( u3_none == (ver = _disk_read_meta(mdb_u, "version")) ) {
     fprintf(stderr, "disk: read meta: no version\r\n");
     return c3n;
   }
-  if ( u3_none == (who = _disk_read_meta(log_u, "who")) ) {
-    fprintf(stderr, "disk: read meta: no indentity\r\n");
+  if ( u3_none == (who = _disk_read_meta(mdb_u, "who")) ) {
+    fprintf(stderr, "disk: read meta: no identity\r\n");
     return c3n;
   }
-  if ( u3_none == (fak = _disk_read_meta(log_u, "fake")) ) {
+  if ( u3_none == (fak = _disk_read_meta(mdb_u, "fake")) ) {
     fprintf(stderr, "disk: read meta: no fake bit\r\n");
     return c3n;
   }
-  if ( u3_none == (lif = _disk_read_meta(log_u, "life")) ) {
+  if ( u3_none == (lif = _disk_read_meta(mdb_u, "life")) ) {
     fprintf(stderr, "disk: read meta: no lifecycle length\r\n");
     return c3n;
   }
@@ -568,7 +568,7 @@ u3_disk_read_meta(u3_disk* log_u, u3_meta* met_u)
   {
     c3_o val_o = c3y;
 
-    if ( 1 != ver ) {
+    if ( U3D_VERLAT < ver ) {
       fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver);
       val_o = c3n;
     }
@@ -587,9 +587,12 @@ u3_disk_read_meta(u3_disk* log_u, u3_meta* met_u)
     }
   }
 
-  u3r_chubs(0, 2, met_u->who_d, who);
-  met_u->fak_o = fak;
-  met_u->lif_w = lif;
+  if ( met_u ) {
+    met_u->ver_w = ver;
+    u3r_chubs(0, 2, met_u->who_d, who);
+    met_u->fak_o = fak;
+    met_u->lif_w = lif;
+  }
 
   u3z(who);
   return c3y;

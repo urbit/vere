@@ -1316,7 +1316,7 @@ u3_mars_init(c3_c*    dir_c,
     return 0;
   }
 
-  if ( c3n == u3_disk_read_meta(mar_u->log_u, &(mar_u->met_u)) ) {
+  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
     u3_disk_exit(mar_u->log_u);
     c3_free(mar_u);
@@ -1528,6 +1528,10 @@ _mars_boot_make(u3_boot_opts* inp_u,
                 u3_noun*        ova,
                 u3_meta*      met_u)
 {
+  //  set the disk version
+  //
+  met_u->ver_w = U3D_VERLAT;
+
   u3_noun pil, ven, mor, who;
 
   //  parse boot command

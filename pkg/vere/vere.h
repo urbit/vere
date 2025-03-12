@@ -915,7 +915,7 @@
       /* u3_disk_read_meta(): read metadata.
       */
         c3_o
-        u3_disk_read_meta(u3_disk* log_u, u3_meta* met_u);
+        u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u);
 
       /* u3_disk_save_meta(): save metadata.
       */
