@@ -357,25 +357,27 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
     HEAP.wee_p[bit_g] = 0;
   }
 
+  //  manually inlined _make_chunks(), storing each chunk-post to [*out_p]
+  //
   {
-    c3_s    log_s = bit_g + u3a_min_log;
-    c3_s    len_s = 1U << log_s;
-    c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-    c3_s    siz_s = c3_wiseof(u3a_crag);
+    u3p(u3a_crag) *dir_u;
+    c3_s    log_s, len_s, tot_s, siz_s;
+    c3_w    pag_w, hun_w;
     u3_post hun_p;
+
+    log_s = bit_g + u3a_min_log;
+    len_s = 1U << log_s;
+    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
 
     if ( tot_s > (max_w - hav_w) ) {
       *out_w = hav_w;
       return;
     }
 
-    pag_p = _alloc_pages(1);
-    c3_w    pag_w = post_to_page(pag_p);
-    u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-
-    siz_s += tot_s >> 5;
-    siz_s += !!(tot_s & 31);
-    siz_s--;
+    pag_p  = _alloc_pages(1);
+    pag_w  = post_to_page(pag_p);
+    siz_s  = c3_wiseof(u3a_crag) - 1;
+    siz_s += (tot_s + 31) >> 5;
 
     //  metacircular base case
     //
@@ -383,9 +385,11 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
     //
     if ( len_s <= (siz_s << 1) ) {
       hun_p = pag_p;
+      hun_w = 1U + ((siz_s - 1) >> log_s);
     }
     else {
       hun_p = _imalloc(siz_s);
+      hun_w = 0;
     }
 
     pag_u = u3to(u3a_crag, hun_p);
@@ -395,32 +399,24 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
     pag_u->fre_s = 0;
     pag_u->nex_p = 0;
 
+    dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
     dir_u[pag_w] = hun_p;
 
+    //  initialize bitmap (zeros, none free)
+    //
     {
       c3_w *map_w = pag_u->map_w;
-      c3_w  len_w = tot_s >> 5;
+      c3_w  len_w = (tot_s + 31) >> 5;
 
       while ( len_w-- ) {
         *map_w++ = 0;
       }
-
-      if ( tot_s & 31 ) {
-        *map_w = 0;
-      }
-
-      //  offset by chunks stolen for pginfo
-      //
-      if ( len_s <= (siz_s << 1) ) {
-        len_w  = 1U + ((siz_s - 1) / len_s);
-        hun_p += len_w << log_s;
-
-        tot_s -= len_w;
-      }
-      else {
-        hun_p  = pag_p;
-      }
     }
+
+    //  reserve chunks stolen for pginfo
+    //
+    hun_p  = pag_p + (hun_w << log_s);
+    tot_s -= hun_w;
 
     pag_u->tot_s = tot_s;
 
@@ -436,19 +432,20 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 static u3_post
 _make_chunks(c3_g bit_g)  // 0-9, inclusive
 {
-  u3_post pag_p = _alloc_pages(1);
-  c3_w    pag_w = post_to_page(pag_p);
-  c3_s    log_s = bit_g + u3a_min_log;
-  c3_s    len_s = 1U << log_s;
-  c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-  c3_s    siz_s = c3_wiseof(u3a_crag);
-  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  u3a_crag *pag_u;
-  u3_post hun_p;
+  u3p(u3a_crag) *dir_u;
+  u3a_crag      *pag_u;
+  u3_post pag_p, hun_p;
+  c3_w    pag_w, hun_w;
+  c3_s    log_s, len_s, tot_s, siz_s;
 
-  siz_s += tot_s >> 5;
-  siz_s += !!(tot_s & 31);
-  siz_s--;
+  pag_p = _alloc_pages(1);
+  pag_w = post_to_page(pag_p);
+  log_s = bit_g + u3a_min_log;
+  len_s = 1U << log_s;
+  tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
+
+  siz_s  = c3_wiseof(u3a_crag) - 1;
+  siz_s += (tot_s + 31) >> 5;
 
   //  metacircular base case
   //
@@ -456,17 +453,20 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   //
   if ( len_s <= (siz_s << 1) ) {
     hun_p = pag_p;
+    hun_w = 1U + ((siz_s - 1) >> log_s);
   }
   else {
     hun_p = _imalloc(siz_s);
+    hun_w = 0;
   }
 
   pag_u = u3to(u3a_crag, hun_p);
   pag_u->pag_w = pag_w;
   pag_u->log_s = log_s;
   pag_u->len_s = len_s;
-  pag_u->tot_s = pag_u->fre_s = tot_s;
 
+  //  initialize bitmap (ones, all free)
+  //
   {
     c3_w *map_w = pag_u->map_w;
     c3_w  len_w = tot_s >> 5;
@@ -480,24 +480,22 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
     if ( len_w ) {
       *map_w = (c3_w)~0 >> (32 - len_w);
     }
-
-
-    //  reserve chunks stolen for pginfo
-    //
-    if ( len_s <= (siz_s << 1) ) {
-      len_w = 1U + ((siz_s - 1) / len_s);
-
-      //  XX pag_u->map_w[0] &= ~0 << len_w
-
-      for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-        pag_u->map_w[i_w >> 5] &= ~(1U << (i_w & 31));
-      }
-
-      pag_u->fre_s -= len_w;
-      pag_u->tot_s -= len_w;
-    }
   }
 
+  //  reserve chunks stolen for pginfo
+  //
+  //    XX need static assert that max(hun_w) < 32
+  //    pag_u->map_w[0] &= ~0 << hun_w
+  //
+  for ( c3_w i_w = 0; i_w < hun_w; i_w++ ) {
+    pag_u->map_w[i_w >> 5] &= ~(1U << (i_w & 31));
+  }
+
+  tot_s -= hun_w;
+
+  pag_u->tot_s = pag_u->fre_s = tot_s;
+
+  dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   dir_u[pag_w] = hun_p;
   pag_u->nex_p = HEAP.wee_p[bit_g];
 
@@ -1153,18 +1151,21 @@ _mark_post(u3_post som_p)
           u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
         }
         else {
-          c3_s siz_s = c3_wiseof(u3a_crag);
-          siz_s += tot_s >> 5;
-          siz_s += !!(tot_s & 31);
-          siz_s--;
+          c3_s siz_s;
+          c3_w hun_w;
 
-          c3_w len_w = 1U + ((siz_s - 1) / pag_u->len_s);
+          siz_s  = c3_wiseof(u3a_crag) - 1;
+          siz_s += (tot_s + 31) >> 5;
+          hun_w  = 1U + ((siz_s - 1) >> pag_u->log_s);
 
-          for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+          //  XX need static assert that max(hun_w) < 32
+          //  mag_u->bit_w[0] &= ~0 << hun_w
+          //
+          for ( c3_w i_w = 0; i_w < hun_w; i_w++ ) {
             mag_u->bit_w[i_w >> 5] &= ~(1U << (i_w & 31));
           }
 
-          u3a_Mark.wee_w[bit_g] += len_w * pag_u->len_s;
+          u3a_Mark.wee_w[bit_g] += hun_w << pag_u->log_s;
         }
 
         mag_u->dir_p = dir_p;
