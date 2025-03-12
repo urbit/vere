@@ -1651,11 +1651,9 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       return;
     }
 
-    if ( u3_nul != las ) {
-      _mesa_send_bufs(sam_u, NULL, buf_y, len_w, pin_u->adr_u);
-      _mesa_del_pit(sam_u, &pac_u.pek_u.nam_u);
-      arena_free(&are_u);
-    }
+    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, pin_u->adr_u);
+    _mesa_del_pit(sam_u, &pac_u.pek_u.nam_u);
+    arena_free(&are_u);
   }
   else {
     u3_mesa_resend_data* res_u = new(&are_u, u3_mesa_resend_data, 1);
