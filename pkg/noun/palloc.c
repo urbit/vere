@@ -3,6 +3,21 @@
 #include "allocate.h"
 #include "vortex.h"
 
+
+#ifdef ASAN_ENABLED
+  //  XX build problems importing <sanitizers/asan_interface.h>
+  //
+  void __asan_poison_memory_region(void const volatile *addr, size_t size);
+  void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#  define ASAN_POISON_MEMORY_REGION(addr, size) \
+     __asan_poison_memory_region((addr), (size))
+#  define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
+     __asan_unpoison_memory_region((addr), (size))
+#else
+#  define ASAN_POISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
+#  define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
+#endif
+
 #define u3a_min_log  2
 
 STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
@@ -61,6 +76,12 @@ _abs_dif(c3_w a_w, c3_w b_w)
   // c3_d  mas_d  = dif_ds >> 63;
   // return (dif_ds + mas_d) ^ mas_d;
   return (a_w > b_w ) ? a_w - b_w : b_w - a_w;
+}
+
+static void
+_drop(u3_post som_p, c3_w len_w)
+{
+  ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)len_w << 2);
 }
 
 static void
@@ -148,6 +169,8 @@ _extend_directory(c3_w siz_w)  // num pages
     c3_z len_z = (c3_z)HEAP.len_w << 2;
     c3_z dif_z = (c3_z)dif_w << 2;
 
+    ASAN_UNPOISON_MEMORY_REGION(dir_u, (c3_z)nex_w << 2);
+
     memcpy(dir_u, old_u, len_z);
 
     dir_u[pag_w] = u3a_head_pg;
@@ -198,6 +221,8 @@ _extend_heap(c3_w siz_w)  // num pages
   }
 
   HEAP.len_w += siz_w;
+
+  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + 2));
 
   return pag_p;
 }
@@ -275,6 +300,8 @@ _alloc_pages(c3_w siz_w)  // num pages
 
   //  XX junk
 
+  ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + 2));
+
   if ( del_u ) {
     if ( !HEAP.cac_p ) {
       HEAP.cac_p = u3of(u3a_dell, del_u);
@@ -317,6 +344,8 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
           out_p[hav_w++] = bas_p + ((off_w + pos_g) << pag_u->log_s);
           pag_u->fre_s--;
 
+          ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p[hav_w - 1]), pag_u->len_s << 2);
+
           if ( !*map_w ) {
             do { map_w++; } while ( !*map_w );
             off_w = (map_w - pag_u->map_w) << 5;
@@ -327,6 +356,8 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
         *out_w = hav_w;
         return;
       }
+
+      ASAN_UNPOISON_MEMORY_REGION(u3a_into(bas_p), 1U << (u3a_page + 2));
 
       while ( 1 ) {
         pos_g   = c3_tz_w(*map_w);
@@ -447,6 +478,8 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   siz_s  = c3_wiseof(u3a_crag) - 1;
   siz_s += (tot_s + 31) >> 5;
 
+  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), 1U << (u3a_page + 2));
+
   //  metacircular base case
   //
   //    trivially deducible from exhaustive enumeration
@@ -454,6 +487,7 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   if ( len_s <= (siz_s << 1) ) {
     hun_p = pag_p;
     hun_w = 1U + ((siz_s - 1) >> log_s);
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), hun_w << (log_s + 2));
   }
   else {
     hun_p = _imalloc(siz_s);
@@ -545,6 +579,9 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 
     u3_post out_p = page_to_post(pag_u->pag_w) + off_w;
 
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), pag_u->len_s << 2);
+    //  XX poison suffix
+
     return out_p;
   }
 }
@@ -555,6 +592,7 @@ _imalloc(c3_w len_w)
   if ( len_w > (1U << (u3a_page - 1)) ) {
     len_w  += (1U << u3a_page) - 1;
     len_w >>= u3a_page;
+    //  XX poison suffix
     return _alloc_pages(len_w);
   }
 
@@ -622,12 +660,15 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 #endif
 
   if ( nex_w == HEAP.len_w ) {
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + 2));
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
     return;
   }
 
   //  XX madv_free
+
+  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + 2));
 
   if ( !HEAP.cac_p ) {
     HEAP.cac_p = _imalloc(c3_wiseof(*cac_u));
@@ -753,6 +794,8 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   pag_u->map_w[pos_w >> 5] |= (1U << (pos_w & 31));
   pag_u->fre_s++;
 
+  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), pag_u->len_s << 2);
+
   {
     u3_post *bit_p = &(HEAP.wee_p[bit_g]);
     u3a_crag *bit_u, *nex_u;
@@ -862,6 +905,7 @@ _irealloc(u3_post som_p, c3_w len_w)
         dif_w = (old_w - len_w) >> u3a_page;
 
         // XX junk
+        //  XX unpoison prefix, poison suffix
 
         while ( dif_w-- ) {
           dir_u[pag_w + (HEAP.dir_ws * (old_w - dif_w - 1))] = u3a_free_pg;
@@ -907,6 +951,7 @@ _irealloc(u3_post som_p, c3_w len_w)
 
     if ( (old_w >= len_w) && (len_w > (old_w >> 1)) ) {
       //  XX junk
+      //  XX unpoison prefix, poison suffix
       return som_p;
     }
   }

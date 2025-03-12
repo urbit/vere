@@ -602,6 +602,10 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
+            if ( t.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+                //  disable libmalloc warnings
+                run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
+            }
             run_unit_tests.skip_foreign_checks = true;
             test_step.dependOn(&run_unit_tests.step);
             test_step.dependOn(&exe_install.step);
