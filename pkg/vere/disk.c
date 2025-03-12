@@ -1014,12 +1014,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail3;
   }
 
-  //  get metadata from old log
+  //  get metadata from old log, update version
   u3_meta old_u;
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
+  old_u.ver_w = U3D_VERLAT;
   
   u3_lmdb_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
@@ -1205,13 +1206,13 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  NB: requires that log_u->mdb_u is initialized to log/data.mdb
   //  XX: put old log in separate pointer (old_u?)?
 
-  //  get metadata from old log
-  u3_meta old_u;
-
-  if ( c3y != u3_disk_read_meta(log_u->mdb_u, &old_u) ) {
+  //  get metadata from old log, update version
+  u3_meta olm_u;
+  if ( c3y != u3_disk_read_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
   }
+  olm_u.ver_w = U3D_VERLAT;
 
   //  finish with old log
   u3_lmdb_exit(log_u->mdb_u);
@@ -1288,7 +1289,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
+  if ( c3n == u3_disk_save_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
