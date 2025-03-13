@@ -60,6 +60,7 @@ pub fn build(b: *std.Build) void {
           "m3_parse.c",
           "m3_validate.c",
           "m3_rewrite.c",
+          "m3_resume.c",
         },
         .flags = if (t.os.tag == .macos) &mac_flags else &common_flags,
     });
@@ -82,6 +83,7 @@ pub fn build(b: *std.Build) void {
     wasm3.installHeader(wasm3_c.path("source/wasm3_defs.h"), "wasm3_defs.h");
     wasm3.installHeader(wasm3_c.path("source/m3_validate.h"), "m3_validate.h");
     wasm3.installHeader(wasm3_c.path("source/m3_rewrite.h"), "m3_rewrite.h");
+    wasm3.installHeader(wasm3_c.path("source/m3_resume.h"), "m3_resume.h");
 
     wasm3.linkLibrary(softfloat.artifact("softfloat"));
 
