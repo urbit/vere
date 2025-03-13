@@ -8,8 +8,6 @@
 
 #include "wasm3.h"
 #include "m3_env.h"
-#include "m3_validate.h"
-#include "m3_rewrite.h"
 
 // #define URWASM_SUBROAD
 #define URWASM_STATEFUL
@@ -51,13 +49,21 @@
 #define seed_shop       14
 #define seed_import     15
 
-#define uw__lia c3_s3('l', 'i', 'a')
+#define uw__lia         c3_s3('l', 'i', 'a')
+
+#define uw_lia_run_version  1
 
 #define ERR(string) ("\r\n\033[31m>>> " string "\033[0m\r\n")
 #define WUT(string) ("\r\n\033[33m>>  " string "\033[0m\r\n")
 
 #define KICK1(TRAP)  u3j_kink(TRAP, 2)
 #define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
+
+static inline u3_noun
+uw_heks(u3_noun a, u3_noun b, u3_noun c, u3_noun d, u3_noun e, u3_noun f)
+{
+  return u3nq(a, b, c, u3nt(d, e, f));
+}
 
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
@@ -84,7 +90,8 @@ _pop_list(u3_weak *lit)
   {
     return u3m_bail(c3__fail);
   }
-  u3k(hed), u3k(tel);
+  u3k(hed);
+  u3k(tel);
   u3z(*lit);
   *lit = tel;
   return hed;
@@ -122,13 +129,13 @@ typedef struct {
 
 typedef struct {
   IM3Module wasm_module;  // p
-  u3_noun lia_shop;       // q
+  u3_noun lia_shop;       // q,   transferred
   u3_noun acc;            // p.r, transferred
   u3_noun map;            // q.r, retained
   match_data_struct* match;
-  u3_noun arrow_yil;
-  u3_noun susp_list;
-  u3_noun resolution; // resolved %1 block
+  u3_noun arrow_yil;  // transferred
+  u3_noun susp_list;  // transferred
+  u3_noun resolution; // resolved %1 block, transferred
 } lia_state;
 
 typedef enum {
@@ -141,17 +148,19 @@ typedef enum {
 } wasm3_ext_suspend_tag;
 
 typedef enum {
-  lst_call = 0,
-  lst_try = 1,
-  lst_catch_try = 2,
-  lst_catch_err = 3,
-  lst_link_wasm = 4,
+  lst_call      = 0,
+  // lst_call_ext  = 1,  // not necessary?
+  lst_try       = 2,
+  lst_catch_try = 3,
+  lst_catch_err = 4,
+  lst_link_wasm = 5,
 } lia_suspend_tag;
 
 // memory arena with fibonacci growth
 typedef struct {
   c3_w      siz_w;  // size in 4K pages, (1 << 15) bits, (1 << 12) bytes
   c3_w      pre_w;  // previous size
+  c3_w      off_w;  // alignment offset
   u3i_slab  sab_u;  // associated slab
   c3_y*     buf_y;  // allocated buffer
   c3_y*     nex_y;  // next allocation
@@ -166,6 +175,7 @@ _uw_arena_init_size(uw_arena* ren_u, c3_w pre_w, c3_w siz_w)
   
   u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1); // extra page to ensure full siz_w pages
   ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->off_w = ren_u->buf_y - ren_u->sab_u.buf_y;
   ren_u->nex_y = ren_u->buf_y;
 }
 
@@ -188,6 +198,7 @@ _uw_arena_grow(uw_arena* ren_u)
 
   u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1);
   ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->off_w = ren_u->buf_y - ren_u->sab_u.buf_y;
   ren_u->nex_y = ren_u->buf_y;
 }
 
@@ -750,8 +761,6 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
   else if (c3y == u3r_sing(monad_bat, sat_u->match->call_ext_bat))
   {
     //  call-ext
-    u3_noun name = u3at(arr_sam_2, monad);
-    u3_noun args = u3at(arr_sam_3, monad);
     if (u3_nul == sat_u->lia_shop)
     {
       // Suspended computation will have exactly one blocking point, which
@@ -764,20 +773,30 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       // called function. It shall be the top frame of the suspension stack,
       // since only Lia can block, so wasm3 has to call Lia to get blocked.
       //
-      // A frame is pushed to trigger the callback
+      // A frame is pushed in wasm3 to trigger the callback and signal to
+      // _apply_diff that the computation is blocked
       //
       m3_SuspendStackPush64(sat_u->wasm_module->runtime, west_call_ext);
       m3_SuspendStackPushExtTag(sat_u->wasm_module->runtime);
+
+      u3_noun name = u3at(arr_sam_2, monad);
+      u3_noun args = u3at(arr_sam_3, monad);
+
       u3_noun yil = u3nt(1, u3k(name), u3k(args));
       u3z(monad);
       return yil;
     }
     else
     {
-      u3_noun lia_buy;
-      u3x_cell(sat_u->lia_shop, &lia_buy, &sat_u->lia_shop);
       u3z(monad);
-      return u3nc(0, u3k(lia_buy));
+
+      u3_noun lia_buy, tel;
+      u3x_cell(sat_u->lia_shop, &lia_buy, &tel);
+      u3_noun yil = u3nc(0, u3k(lia_buy));
+      u3k(tel);
+      u3z(sat_u->lia_shop);
+      sat_u->lia_shop = tel;
+      return yil;
     }
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->try_bat))
@@ -1632,36 +1651,36 @@ _link_wasm_with_arrow_map(
 //  key: [version seed hint]
 //  stored nouns:
 //    $@  ~             ::  sentinel value
-//    $:  box_arena=octs
+//    $:  box_arena=[buffer=octs offset=@]  :: alignment offset
 //        memory=[buffer=octs max_stack_offset=@]
 //        runtime_offset=@
 //        lia_shop=(list)
 //        acc=*
 //        susp_list=(list)
 //    ==
+// arguments RETAINED
 static c3_t
 _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 {
-  c3_m fun_m = uw__lia + c3__run + 1;
+  c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
   c3_dessert(c3y == u3a_is_cat(fun_m));
 
   u3_noun key = u3z_key_2(fun_m, seed, hint);
   u3_weak get = u3z_find(u3z_memo_keep, key);
+  u3z(key);
   
   if (u3_none == get || u3_nul == get)
   {
-    u3z(key);
     return 0;
   }
   else
   {
-    u3z_save(u3z_memo_keep, key, u3_nul);
-
-    u3_noun p_box, q_box, p_buffer, q_buffer, stack_offset, runtime_offset,
-    lia_shop, acc, susp_list;
+    u3_noun p_box, q_box, p_buffer, q_buffer, alg_off, stack_offset,
+    runtime_offset, lia_shop, acc, susp_list;
     if ( c3n == u3r_mean(get,
-        4,  &p_box,
-        5,  &q_box,
+        8,  &p_box,
+        9,  &q_box,
+        5,  &alg_off,
         24, &p_buffer,
         25, &q_buffer,
         13, &stack_offset,
@@ -1678,8 +1697,20 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       ? p_box
       : u3m_bail(c3__fail);
     
-    c3_w off_w = (c3y == u3a_is_cat(runtime_offset))
+    c3_w run_off_w = (c3y == u3a_is_cat(runtime_offset))
       ? runtime_offset
+      : u3m_bail(c3__fail);
+    
+    c3_w len_buf_w = (c3y == u3a_is_cat(p_buffer))
+      ? p_buffer
+      : u3m_bail(c3__fail);
+
+    c3_w stk_off_w = (c3y == u3a_is_cat(stack_offset))
+      ? stack_offset
+      : u3m_bail(c3__fail);
+
+    c3_w alg_off_w = (c3y == u3a_is_cat(alg_off))
+      ? alg_off
       : u3m_bail(c3__fail);
     
     c3_w box_pag_w = (box_len_w + (1U << 12) - 1) >> 12;
@@ -1691,13 +1722,14 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       siz_w += tmp_w;
     }
     _uw_arena_init_size(&BoxArena, pre_w, siz_w);
-    u3r_bytes(0, box_len_w, BoxArena.buf_y, q_box);
+    u3r_bytes(alg_off_w, box_len_w, BoxArena.buf_y, q_box);
     _uw_arena_init(&CodeArena);
 
     M3Result result;
-    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena.buf_y + off_w);
-    m3_RewritePointersRuntime(wasm3_runtime, BoxArena.buf_y, 0 /*is_store*/);
+    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena.buf_y + run_off_w);
     wasm3_runtime->base = BoxArena.buf_y;
+    wasm3_runtime->base_transient = CodeArena.buf_y;
+    m3_RewritePointersRuntime(wasm3_runtime, BoxArena.buf_y, 0 /*is_store*/);
     IM3Module wasm3_module = wasm3_runtime->modules;
     c3_w n_imports = wasm3_module->numFuncImports;
 
@@ -1759,13 +1791,18 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 
     {
       sat_u->wasm_module = wasm3_module;
-      sat_u->lia_shop = u3k(lia_shop);  // XX TODO transfer lia_shop elsewhere
+      sat_u->lia_shop = u3k(lia_shop);
       sat_u->acc = u3k(acc);
       // sat_u->map to be filled afterwards
       // sat_u->match same
       sat_u->arrow_yil = u3_none;
-      sat_u->susp_list = u3k(susp_list); // XX TODO transfer susp_list elsewhere
-      // XX TODO restore wasm3_runtime->memory.mallocated
+      sat_u->susp_list = u3k(susp_list);
+      M3MemoryHeader* mem = u3a_malloc(len_buf_w + sizeof(M3MemoryHeader));
+      mem->runtime = wasm3_runtime;
+      mem->maxStack = BoxArena.buf_y + stk_off_w;
+      mem->length = len_buf_w;
+      u3r_bytes(0, len_buf_w, (u8*)(mem + 1), q_buffer);
+      wasm3_runtime->memory.mallocated = mem;
     }
 
     u3z(get);
@@ -1774,18 +1811,154 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
   }
 }
 
-// TODO define; return yield
+// arguments RETAINED, returned yield transfered
 static u3_noun
 _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 {
-  return 0;
+  m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
+  m3_SetTransientAllocators(_calloc_bail, _free_bail, _realloc_bail);
+  m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+
+  if (input_tag == c3y)
+  {
+    if (sat_u->wasm_module->runtime->edge_suspend)
+    {
+      printf(ERR("appending script when blocked, not implemented"));
+      return u3m_bail(c3__fail);
+    }
+    return _reduce_monad(u3k(p_input), sat_u);
+  }
+  else
+  {
+    if (!sat_u->wasm_module->runtime->edge_suspend)
+    {
+      printf(ERR("resolving nonexistent block, not implemented"));
+      return u3m_bail(c3__fail);
+    }
+    IM3Runtime run_u = sat_u->wasm_module->runtime;
+    run_u->resume_external = _resume_callback;
+    run_u->userdata_resume = sat_u;
+    if (sat_u->resolution != u3_none)
+    {
+      return u3m_bail(c3__fail);
+    }
+    sat_u->resolution = u3nc(0, u3k(p_input));
+    M3Result result = m3_Resume(run_u);
+    u3_noun yil;
+    if (result == m3Err_ComputationBlock)
+    {
+      yil = sat_u->resolution;
+      sat_u->resolution = u3_none;
+      if (yil == u3_none)
+      {
+        return u3m_bail(c3__fail);
+      }
+    }
+    else if (_deterministic_trap(result))
+    {
+      fprintf(stderr, WUT("function call trapped: %s"), result);  // XX get name of entry function?
+      yil = u3nc(2, 0);
+    }
+    else if (result == m3Err_functionImportMissing)
+    {
+      return u3m_bail(c3__exit);
+    }
+    else if (result)
+    {
+      fprintf(stderr, ERR("resumption failed: %s"), result);
+      return u3m_bail(c3__fail);
+    }
+    else
+    {
+      yil = sat_u->resolution;
+      sat_u->resolution = u3_none;
+      if (yil == u3_none)
+      {
+        return u3m_bail(c3__fail);
+      }
+    }
+
+    return yil;
+  }
 }
 
 // try to save new state, replacing old state with a sentinel value
 static void
-_move_state(lia_state* sat_u, u3_noun seed_old, u3_noun seed_new, u3_noun hint)
+_move_state(
+  lia_state* sat_u,
+  u3_noun seed_old,
+  u3_noun seed_new,
+  u3_noun hint,
+  u3_noun yil)
 {
-  return;
+  c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
+  c3_dessert(c3y == u3a_is_cat(fun_m));
+
+  if ( (_(u3du(hint)) && (c3__oust == u3h(hint)))
+      || (c3__rand == hint || 1 != u3h(yil))
+  )
+  {
+    u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
+    u3z_save(u3z_memo_keep, key_old, u3_nul);
+    return;
+  }
+
+  IM3Runtime run_u = sat_u->wasm_module->runtime;
+  M3MemoryHeader* mem_u = run_u->memory.mallocated;
+  c3_w stk_off_w = (u8*)mem_u->maxStack - BoxArena.buf_y;
+  if (c3n == u3a_is_cat(stk_off_w))
+  {
+    u3m_bail(c3__fail);
+  }
+
+  c3_w len_buf_w = mem_u->length;
+  if (c3n == u3a_is_cat(len_buf_w))
+  {
+    u3m_bail(c3__fail);
+  }
+
+  u3_atom q_buf = u3i_bytes(len_buf_w, (c3_y*)(mem_u + 1));
+
+  m3_RewritePointersRuntime(run_u, BoxArena.buf_y, 1 /*is_store*/);
+  c3_w run_off_w = (c3_y*)run_u - BoxArena.buf_y;
+  if (c3n == u3a_is_cat(run_off_w))
+  {
+    u3m_bail(c3__fail);
+  }
+  
+  _uw_arena_free(&CodeArena);
+
+  c3_w box_len_w = BoxArena.nex_y - BoxArena.buf_y;
+  if (c3n == u3a_is_cat(box_len_w))
+  {
+    u3m_bail(c3__fail);
+  }
+  // u3_atom q_box = u3i_bytes(box_len_w, BoxArena.buf_y);
+  c3_w alg_off_w = BoxArena.off_w;
+  if (c3n == u3a_is_cat(alg_off_w))
+  {
+    u3m_bail(c3__fail);
+  }
+
+  u3_atom q_box = u3i_slab_mint(&BoxArena.sab_u);
+
+  u3_noun stash = uw_heks(
+    u3nc(u3nc(box_len_w, q_box), alg_off_w),
+    u3nc(u3nc(len_buf_w, q_buf), stk_off_w),
+    run_off_w,
+    sat_u->lia_shop,
+    u3k(sat_u->acc), // accumulator will also be returned
+    sat_u->susp_list
+  );
+  sat_u->lia_shop = u3_none;
+  
+  sat_u->susp_list = u3_none;
+
+  u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
+  u3z_save(u3z_memo_keep, key_old, u3_nul);
+
+  u3_noun key_new = u3z_key_2(fun_m, seed_new, hint);
+  u3z_save(u3z_memo_keep, key_new, stash);
 }
 
 u3_weak
@@ -1960,8 +2133,10 @@ u3we_lia_run_v1(u3_noun cor)
   u3_noun yil;
   if (!omit_t)
   {
-    if (_get_state(seed, hint, &sat))  // on success sets wasm3 allocators
+    if (_get_state(seed, hint, &sat))
     {
+      sat.map = u3t(u3at(seed_import, seed));
+      sat.match = &match;
       yil = _apply_diff(input_tag, p_input, &sat);
     }
     else
@@ -2042,7 +2217,7 @@ u3we_lia_run_v1(u3_noun cor)
           u3x_cell(import, &acc, &map);
           {
             sat.wasm_module = wasm3_module;
-            sat.lia_shop = lia_shop;
+            sat.lia_shop = u3k(lia_shop);
             sat.acc = u3k(acc);
             sat.map = map;
             sat.match = &match;
@@ -2105,6 +2280,10 @@ u3we_lia_run_v1(u3_noun cor)
           continue;
         }
       }
+      //  sanity check: struct and code allocators should not be used
+      //  when running wasm
+      m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
+      m3_SetTransientAllocators(_calloc_bail, _free_bail, _realloc_bail);
       result = m3_RunStart(wasm3_module);
       if (result == m3Err_ComputationBlock)
       {
@@ -2136,7 +2315,7 @@ u3we_lia_run_v1(u3_noun cor)
       }
     }
 
-    _move_state(&sat, seed, seed_new, hint);
+    _move_state(&sat, seed, seed_new, hint, yil);
   }
   else
   {
@@ -2200,7 +2379,7 @@ u3we_lia_run_v1(u3_noun cor)
     u3x_cell(import, &acc, &map);
     {
       sat.wasm_module = wasm3_module;
-      sat.lia_shop = lia_shop;
+      sat.lia_shop = u3k(lia_shop);
       sat.acc = u3k(acc);
       sat.map = map;
       sat.match = &match;
@@ -2267,6 +2446,16 @@ u3we_lia_run_v1(u3_noun cor)
     m3_FreeRuntime(wasm3_runtime);
     m3_FreeEnvironment(wasm3_env);
     u3a_free(bin_y);
+  }
+
+  if (u3_none != sat.lia_shop)
+  {
+    u3z(sat.lia_shop);
+  }
+
+  if (u3_none != sat.susp_list)
+  {
+    u3z(sat.susp_list);
   }
 
   u3z(match.call_bat);
@@ -2466,7 +2655,6 @@ u3we_lia_run_once(u3_noun cor)
 
   c3_w n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(u3x_sam_7, cor);
-  u3_noun lia_shop = u3_nul;
   u3_noun import = u3at(u3x_sam_5, cor);
 
   u3_noun acc, map;
@@ -2474,7 +2662,7 @@ u3we_lia_run_once(u3_noun cor)
 
   lia_state sat = {
     wasm3_module,
-    lia_shop,
+    u3_nul,
     u3k(acc),
     map,
     &match,
