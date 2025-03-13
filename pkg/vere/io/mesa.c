@@ -670,19 +670,12 @@ _mesa_del_request(u3_mesa* sam_u, u3_mesa_name* nam_u) {
 */
 static void
 _mesa_put_request(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_pend_req* req_u) {
-  u3_pend_req* old_u = _mesa_get_request(sam_u, nam_u);
-  if ( old_u == NULL || old_u == (u3_pend_req*)CTAG_WAIT ) {
-    if ( req_u == old_u ) {
-      return;
-    }
-    /* u3l_log("putting fresh req %p", new_u); */
-    u3_str key_u = {nam_u->pat_c, nam_u->pat_s};
-    req_map_itr itr_u = vt_insert(&sam_u->req_u, key_u, req_u);
+  u3_str key_u = {nam_u->pat_c, nam_u->pat_s};
+  req_map_itr itr_u = vt_insert(&sam_u->req_u, key_u, req_u);
 
-    if ( vt_is_end(itr_u) ) {
-      fprintf(stderr, "mesa: cannot allocate memory for request, dying");
-      u3_king_bail();
-    }
+  if ( vt_is_end(itr_u) ) {
+    fprintf(stderr, "mesa: cannot allocate memory for request, dying");
+    u3_king_bail();
   }
 }
 
@@ -1641,6 +1634,15 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     return;
   }
 
+  u3_pend_req* old_u = _mesa_get_request(sam_u, &pac_u.pek_u.nam_u);
+
+  if (old_u) {
+    u3z(pac);
+    u3z(las);
+    arena_free(&are_u);
+    return;
+  }
+
   if ( PACT_PAGE == pac_u.hed_u.typ_y ) {
     u3_pit_entry* pin_u = _mesa_get_pit(sam_u, &pac_u.pek_u.nam_u);
 
@@ -2567,7 +2569,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   if ( !req_u ) {
     return;
   }
-  if ( ( (u3_pend_req*)CTAG_WAIT == req_u ) && (0 == nam_u->fra_d) ) {
+  if ( (u3_pend_req*)CTAG_WAIT == req_u ) {
+    if (0 != nam_u->fra_d) {
+      return;
+    }
     // process incoming response to ourselves
     // if single-leaf message, inject directly into Arvo
     c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
