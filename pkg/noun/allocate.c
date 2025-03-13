@@ -1594,6 +1594,25 @@ u3a_idle(u3a_road* rod_u)
   return (pag_w << u3a_page) + _idle_words();
 }
 
+void
+u3a_ream(void)
+{
+  _poison_pages();
+  _poison_words();
+}
+
+void
+u3a_wait(void)
+{
+  _unpoison_words();
+}
+
+void
+u3a_dash(void)
+{
+  _poison_words();
+}
+
 /* u3a_sweep(): sweep a fully marked road.
 */
 c3_w

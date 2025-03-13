@@ -676,6 +676,12 @@ u3a_tail(u3_noun);
           void
           u3a_ream(void);
 
+void
+u3a_wait(void);
+
+void
+u3a_dash(void);
+
         /* u3a_sweep(): sweep a fully marked road.
         */
           c3_w
