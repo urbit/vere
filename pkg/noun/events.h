@@ -31,6 +31,7 @@
       typedef struct _u3_cs_patch {
         c3_i         ctl_i;
         c3_i         mem_i;
+        c3_w         sip_w;
         u3e_control* con_u;
       } u3_ce_patch;
 
