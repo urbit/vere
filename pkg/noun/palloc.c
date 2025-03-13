@@ -1072,6 +1072,76 @@ _idle_words(void)
   return tot_w;
 }
 
+static void
+_poison_pages(void)
+{
+  u3a_dell *fre_u = u3tn(u3a_dell, HEAP.fre_p);
+  u3_post   pag_p;
+
+  while ( fre_u ) {
+    pag_p = page_to_post(fre_u->pag_w);
+    ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), fre_u->siz_w << (u3a_page + 2));
+    fre_u = u3tn(u3a_dell, fre_u->nex_p);
+  }
+}
+
+static void
+_poison_words(void)
+{
+  u3a_crag   *pag_u;
+  u3_post     pag_p, hun_p;
+  c3_w off_w, wor_w, len_w, *map_w;
+  c3_g pos_g;
+  c3_s fre_s;
+
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+    pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
+
+    while ( pag_u ) {
+      pag_p = page_to_post(pag_u->pag_w);
+      map_w = pag_u->map_w;
+      len_w = pag_u->len_s << 2;
+      fre_s = pag_u->fre_s;
+
+      do {
+        while ( !*map_w ) { map_w++; }
+        wor_w = *map_w;
+        off_w = (map_w - pag_u->map_w) << 5;
+
+        do {
+          pos_g  = c3_tz_w(wor_w);
+          wor_w &= ~(1U << pos_g);
+          hun_p  = pag_p + ((off_w + pos_g) << pag_u->log_s);
+
+          ASAN_POISON_MEMORY_REGION(u3a_into(hun_p), len_w);
+
+        } while ( --fre_s && wor_w );
+
+        map_w++;
+      } while ( fre_s );
+
+      pag_u = u3tn(u3a_crag, pag_u->nex_p);
+    }
+  }
+}
+
+static void
+_unpoison_words(void)
+{
+  u3a_crag   *pag_u;
+  u3_post     pag_p;
+
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+    pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
+
+    while ( pag_u ) {
+      pag_p = page_to_post(pag_u->pag_w);
+      ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), 1U << (u3a_page + 2));
+      pag_u = u3tn(u3a_crag, pag_u->nex_p);
+    }
+  }
+}
+
 typedef struct _ca_mrag {
   u3_post dir_p;
   c3_w    bit_w[0];

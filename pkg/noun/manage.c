@@ -602,7 +602,7 @@ _find_home(void)
 
     //  XX move me
     //
-    // u3a_ream();
+    u3a_ream();
   }
 
   /* As a further guard against any sneaky loom corruption */
@@ -2007,9 +2007,13 @@ u3m_save(void)
 
   u3a_print_memory(stderr, "loom: save: idle", u3a_idle(u3R));
 
+  u3a_wait();
+
   u3_assert(u3R == &u3H->rod_u);
 
   u3e_save(low_p, hig_p);
+
+  u3a_dash();
 }
 
 /* u3m_toss(): discard ephemeral memory.
