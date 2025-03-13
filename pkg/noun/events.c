@@ -668,16 +668,24 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
   }
 }
 
+//  XX remove
+#define u3a_free_pg  (u3_post)0
+
 /* _ce_patch_count_page(): count a page, producing new counter.
 */
 static c3_w
 _ce_patch_count_page(c3_w pag_w,
+                     c3_w off_w,
                      c3_w pgc_w)
 {
   c3_w blk_w = (pag_w >> 5);
   c3_w bit_w = (pag_w & 31);
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if (  (u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+     && (  (u3R->hep.len_w <= pag_w)
+        || (pag_w < off_w)
+        || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
+  {
     pgc_w += 1;
   }
   return pgc_w;
@@ -688,12 +696,21 @@ _ce_patch_count_page(c3_w pag_w,
 static c3_w
 _ce_patch_save_page(u3_ce_patch* pat_u,
                     c3_w         pag_w,
+                    c3_w         off_w,
                     c3_w         pgc_w)
 {
   c3_w  blk_w = (pag_w >> 5);
   c3_w  bit_w = (pag_w & 31);
 
   if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+    if (  (u3R->hep.len_w > pag_w)
+       && (pag_w > off_w)
+       && (u3a_free_pg == (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) )
+    {
+      pat_u->sip_w++;
+      return pgc_w;
+    }
+
     c3_w* mem_w = _ce_ptr(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
@@ -710,12 +727,15 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   return pgc_w;
 }
 
+#undef u3a_free_pg
+
 /* _ce_patch_compose(): make and write current patch.
 */
 static u3_ce_patch*
 _ce_patch_compose(c3_w nor_w, c3_w sou_w)
 {
   c3_w pgs_w = 0;
+  c3_w off_w = u3R->hep.bot_p >> u3a_page;
 
 #ifdef U3_SNAPSHOT_VALIDATION
   u3K.nor_w = nor_w;
@@ -728,10 +748,10 @@ _ce_patch_compose(c3_w nor_w, c3_w sou_w)
     c3_w i_w;
 
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
-      pgs_w = _ce_patch_count_page(i_w, pgs_w);
+      pgs_w = _ce_patch_count_page(i_w, off_w, pgs_w);
     }
     for ( i_w = 0; i_w < sou_w; i_w++ ) {
-      pgs_w = _ce_patch_count_page((u3P.pag_w - (i_w + 1)), pgs_w);
+      pgs_w = _ce_patch_count_page((u3P.pag_w - (i_w + 1)), off_w, pgs_w);
     }
   }
 
@@ -742,16 +762,18 @@ _ce_patch_compose(c3_w nor_w, c3_w sou_w)
     u3_ce_patch* pat_u = c3_malloc(sizeof(u3_ce_patch));
     c3_w i_w, pgc_w;
 
+    pat_u->sip_w = 0;
+
     _ce_patch_create(pat_u);
     pat_u->con_u = c3_malloc(sizeof(u3e_control) + (pgs_w * sizeof(u3e_line)));
     pat_u->con_u->ver_w = U3P_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
-      pgc_w = _ce_patch_save_page(pat_u, i_w, pgc_w);
+      pgc_w = _ce_patch_save_page(pat_u, i_w, off_w, pgc_w);
     }
     for ( i_w = 0; i_w < sou_w; i_w++ ) {
-      pgc_w = _ce_patch_save_page(pat_u, (u3P.pag_w - (i_w + 1)), pgc_w);
+      pgc_w = _ce_patch_save_page(pat_u, (u3P.pag_w - (i_w + 1)), off_w, pgc_w);
     }
 
     u3_assert( pgc_w == pgs_w );
@@ -1469,6 +1491,11 @@ u3e_save(u3_post low_p, u3_post hig_p)
       return;
     }
   }
+
+  // if ( u3C.wag_w & u3o_verbose ) {
+    fprintf(stderr, "sync: skipped %u free", pat_u->sip_w);
+    u3a_print_memory(stderr, " pages", pat_u->sip_w << u3a_page);
+  // }
 
   //  attempt to avoid propagating anything insane to disk
   //
