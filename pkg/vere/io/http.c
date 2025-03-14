@@ -2825,7 +2825,8 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
   u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
   if ( 0 != siq_u ) {
-    c3_c* buf_c     = c3_malloc(1025);
+    c3_w siz_w      = 1024;
+    c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
@@ -2834,25 +2835,27 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       c3_w  len_w;
       pos_w -=4;
 
-      if ( sizeof(buf_c) < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+      if ( siz_w < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
+         siz_w *= 2;
       }
 
       memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
       pos_w -= len_w;
 
-      if ( sizeof(buf_c) < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+      if ( siz_w < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
       }
       memcpy(buf_c + out_w, "/", 1);
       out_w +=1;
 
-      if ( sizeof(buf_c) < out_w + len_w ) {
-         buf_c = c3_realloc(buf_c, sizeof(buf_c)*2);
+      if ( siz_w < out_w + len_w ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
       }
 
       memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
       out_w += len_w;
+      buf_c[out_w] = '\0';
     }
     buf_c[out_w] = '\0';
 
