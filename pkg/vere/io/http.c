@@ -2820,7 +2820,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
 */
 static void
 _http_spin_timer_cb(uv_timer_t* tim_u)
-{ // XX make this similar to stream_slog but with siq_u and continue_respond
+{ 
   u3_httd* htd_u = tim_u->data;
   u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
