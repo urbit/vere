@@ -8,7 +8,7 @@
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "width precision" );
 
-static c3_w_tmp
+static c3_n
 _wyt_in(u3_noun a)
 {
   if ( u3_nul == a ) {
@@ -25,7 +25,7 @@ _wyt_in(u3_noun a)
 u3_noun
 u3qdi_wyt(u3_noun a)
 {
-  return u3i_word_tmp(_wyt_in(a));
+  return u3i_note(_wyt_in(a));
 }
 
 u3_noun

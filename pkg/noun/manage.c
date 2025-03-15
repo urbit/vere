@@ -1,9 +1,9 @@
 /// @file
 
 #include "manage.h"
-#include "v2/manage.h"
-#include "v3/manage.h"
-#include "v4/manage.h"
+//#include "v2/manage.h"
+//#include "v3/manage.h"
+//#include "v4/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
@@ -334,7 +334,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 
       while ( rod_u->kid_p ) {
 #if 0
-        u3l_log("collecting %d frames",
+        u3l_log("collecting %"PRIc3_n" frames",
               u3kb_lent((u3to(u3_road, rod_u->kid_p)->bug.tax));
 #endif
         tax = u3kb_weld(_cm_stack_recover(u3to(u3_road, rod_u->kid_p)), tax);
@@ -607,7 +607,7 @@ _pave_home(void)
   _pave_parts();
 }
 
-STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
+STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_n)) == sizeof(u3v_home)),
                "home road alignment" );
 
 /* _find_home(): in restored image, point to home road.
@@ -619,16 +619,16 @@ _find_home(void)
   c3_o mig_o = c3y;  //  did we migrate?
 
   switch ( ver_w ) {
-    case U3V_VER1: u3m_v2_migrate();
-    case U3V_VER2: u3m_v3_migrate();
-    case U3V_VER3: u3m_v4_migrate();
+    //case U3V_VER1: u3m_v2_migrate();
+    //case U3V_VER2: u3m_v3_migrate();
+    //case U3V_VER3: u3m_v4_migrate();
     case U3V_VER4: {
       mig_o = c3n;
       break;
     }
     default: {
       fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have $"PRIc3_n", need $"PRIc3_n"\r\n",
+                      "have %"PRIc3_n", need %d\r\n",
                       ver_w, U3V_VERLAT);
       abort();
     }
@@ -660,7 +660,7 @@ _find_home(void)
     sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
     if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
-      fprintf(stderr, "loom: corrupt size north ($"PRIc3_n", $"PRIc3_n") south ($"PRIc3_n", $"PRIc3_n")\r\n",
+      fprintf(stderr, "loom: corrupt size north (%"PRIc3_n", %"PRIc3_n") south (%"PRIc3_n", %"PRIc3_n")\r\n",
                       nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
@@ -669,7 +669,7 @@ _find_home(void)
     //  doesn't necessarily indicate corruption.
     //
     if ( nor_w < u3P.nor_u.pgs_w ) {
-      fprintf(stderr, "loom: strange size north ($"PRIc3_n", $"PRIc3_n")\r\n",
+      fprintf(stderr, "loom: strange size north (%"PRIc3_n", %"PRIc3_n")\r\n",
                       nor_w, u3P.nor_u.pgs_w);
     }
 
@@ -738,7 +738,7 @@ u3m_dump(void)
 
       if ( 0 != box_u->use_w ) {
 #ifdef U3_MEMORY_DEBUG
-        // u3l_log("live %d words, code %"PRIxc3_n, box_u->siz_w, box_u->cod_w);
+        // u3l_log("live %"PRIc3_n" words, code %"PRIxc3_n, box_u->siz_w, box_u->cod_w);
 #endif
         mem_w += box_u->siz_w;
       }
@@ -763,7 +763,7 @@ err_cb(void* data, const char* msg, int errnum)
   bdata->count++;
 
   if ( bdata->count <= 1 ) {
-    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
+    /* u3l_log("Backtrace error %"PRIc3_n": %s", errnum, msg); */
     bdata->fail = 1;
   }
 }
@@ -953,7 +953,7 @@ u3m_bail(u3_noun how)
       }
       else if ( 1 != u3h(how) ) {
         u3_assert(_(u3ud(u3h(how))));
-        fprintf(stderr, "\r\nbail: %d\r\n", u3h(how));
+        fprintf(stderr, "\r\nbail: %"PRIc3_n"\r\n", u3h(how));
       }
     }
   }
@@ -1768,7 +1768,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_c buf_c[6];
       c3_n len_w;
 
-      snprintf(buf_c, 6, "%d", som);
+      snprintf(buf_c, 6, "%"PRIc3_n"", som);
       len_w = strlen(buf_c);
 
       if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
@@ -2083,11 +2083,11 @@ u3m_save(void)
     c3_n sor_w = u3P.pag_w - sop_w;
 
     if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
-      fprintf(stderr, "loom: save strange nox $"PRIc3_n" nor $"PRIc3_n" sox $"PRIc3_n" sor $"PRIc3_n"\r\n",
+      fprintf(stderr, "loom: save strange nox %"PRIc3_n" nor %"PRIc3_n" sox %"PRIc3_n" sor %"PRIc3_n"\r\n",
                       nox_w, nor_w, sox_w, sor_w);
     }
     else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
-      fprintf(stderr, "loom: save wrong nox $"PRIc3_n" nor $"PRIc3_n" sox $"PRIc3_n" sor $"PRIc3_n"\r\n",
+      fprintf(stderr, "loom: save wrong nox %"PRIc3_n" nor %"PRIc3_n" sox %"PRIc3_n" sor %"PRIc3_n"\r\n",
                       nox_w, nor_w, sox_w, sor_w);
       u3_assert(!"busted");
     }
@@ -2298,7 +2298,7 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
-    u3C.wor_i = len_i >> 2;
+    u3C.wor_i = len_i >> u3a_note_bytes_log;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }
@@ -2391,7 +2391,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   {
     c3_n len_w = u3j_boot(nuu_o);
-    u3l_log("boot: installed %d jets", len_w);
+    u3l_log("boot: installed %"PRIc3_n" jets", len_w);
   }
 
   /* Reactivate jets on old kernel.

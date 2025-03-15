@@ -16,9 +16,9 @@
            u3_atom d)
   {
     u3_noun chk;
-    c3_w_tmp out_w;
+    c3_n out_w;
 
-    if ( !u3r_word_fit(&out_w, d) ) {
+    if ( !u3r_note_fit(&out_w, d) ) {
       return u3m_bail(c3__fail);
     }
     if ( 0 == r || 0 == z ) {
@@ -49,8 +49,8 @@
     else {
       u3_noun pro;
       c3_d    n_d = u3r_chub(0, n);
-      c3_w_tmp    r_w = u3r_word(0, r),
-              z_w = u3r_word(0, z);
+      c3_w_tmp    r_w = u3r_word_tmp(0, r),
+              z_w = u3r_word_tmp(0, z);
       c3_y   *pwd_y = u3a_malloc(pwd_w),
              *sal_y = u3a_malloc(sal_w),
              *out_y = u3a_malloc(d);
@@ -77,9 +77,9 @@
             u3_atom z,
             u3_atom d)
   {
-    c3_w_tmp pwd_w, sal_w;
-    if ( !(u3r_word_fit(&pwd_w, pl) &&
-           u3r_word_fit(&sal_w, sl)) ) {
+    c3_n pwd_w, sal_w;
+    if ( !(u3r_note_fit(&pwd_w, pl) &&
+           u3r_note_fit(&sal_w, sl)) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -140,8 +140,8 @@
   }
 
   static u3_atom
-  _cqes_pb(u3_atom p, c3_w_tmp pwd_w,
-           u3_atom s, c3_w_tmp sal_w,
+  _cqes_pb(u3_atom p, c3_n pwd_w,
+           u3_atom s, c3_n sal_w,
            u3_atom c,
            u3_atom d)
   {
@@ -173,9 +173,9 @@
             u3_atom c,
             u3_atom d)
   {
-    c3_w_tmp pwd_w, sal_w;
-    if ( !(u3r_word_fit(&pwd_w, pl) &&
-           u3r_word_fit(&sal_w, sl)) ) {
+    c3_n pwd_w, sal_w;
+    if ( !(u3r_note_fit(&pwd_w, pl) &&
+           u3r_note_fit(&sal_w, sl)) ) {
       return u3m_bail(c3__fail);
     }
     else {

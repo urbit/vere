@@ -34,14 +34,14 @@
           }
           else {
             u3a_atom* a_u = u3a_to_ptr(a);
-            buf_a_y = (c3_y*)(a_u->buf_w);
+            buf_a_y = (c3_y*)(a_u->buf_n);
           }
           if ( c3y == u3a_is_cat(b) ) {
             buf_b_y = (c3_y*)&b;
           }
           else {
             u3a_atom* b_u = u3a_to_ptr(b);
-            buf_b_y = (c3_y*)(b_u->buf_w);
+            buf_b_y = (c3_y*)(b_u->buf_n);
           }
           c3_w_tmp len_min_w = c3_min(len_a_w, len_b_w);
           for (c3_w_tmp i_w = 0; i_w < len_min_w; i_w++) {

@@ -12,7 +12,7 @@
              u3_atom out)
   {
     c3_w_tmp wid_w;
-    if ( !u3r_word_fit(&wid_w, wid) ) {
+    if ( !u3r_word_tmp_fit(&wid_w, wid) ) {
       // impossible to represent an atom this large
       return u3m_bail(c3__fail);
     }
@@ -62,7 +62,7 @@
              u3_atom key, u3_atom flags, u3_atom out)
   {
     c3_w_tmp wid_w, out_w;
-    if ( !u3r_word_fit(&wid_w, wid) || !u3r_word_fit(&out_w, out) ) {
+    if ( !u3r_word_tmp_fit(&wid_w, wid) || !u3r_word_tmp_fit(&out_w, out) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -103,7 +103,7 @@
   _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
   {
     c3_w_tmp wid_w;
-    if ( !u3r_word_fit(&wid_w, wid) ) {
+    if ( !u3r_word_tmp_fit(&wid_w, wid) ) {
       return u3m_bail(c3__fail);
     } else {
       c3_y  cv_y[32], block_y[64], block_len;

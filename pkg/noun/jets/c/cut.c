@@ -12,21 +12,24 @@
            u3_atom c,
            u3_atom d)
   {
-    if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
       return u3m_bail(c3__fail);
     }
     if ( !_(u3a_is_cat(b)) ) {
       return 0;
     }
     if ( !_(u3a_is_cat(c)) ) {
-      c = 0x7fffffff;
+      // XX: in 32 bit case, its imaginable
+      // with a subword bloq that we could cut
+      // with an indirect atom step size
+      c = u3a_direct_max;
     }
 
     {
       c3_g a_g   = a;
-      c3_w_tmp b_w   = b;
-      c3_w_tmp c_w   = c;
-      c3_w_tmp len_w = u3r_met(a_g, d);
+      c3_n b_w   = b;
+      c3_n c_w   = c;
+      c3_n len_w = u3r_met(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {
         return 0;
@@ -41,7 +44,7 @@
         u3i_slab sab_u;
         u3i_slab_init(&sab_u, a_g, c_w);
 
-        u3r_chop(a_g, b_w, c_w, 0, sab_u.buf_w, d);
+        u3r_chop(a_g, b_w, c_w, 0, sab_u.buf_n, d);
 
         return u3i_slab_mint(&sab_u);
       }

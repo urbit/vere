@@ -8,12 +8,12 @@
 u3_atom
 u3qc_ham(u3_atom a)
 {
-  c3_w_tmp len_w = u3r_met(5, a);
+  c3_n len_w = u3r_met(u3a_note_bits_log, a);
   c3_d pop_d = 0;
-  c3_w_tmp wor_w;
+  c3_n wor_w;
 
-  for ( c3_w_tmp i_w = 0; i_w < len_w; i_w++ ) {
-    wor_w  = u3r_word(i_w, a);
+  for ( c3_n i_w = 0; i_w < len_w; i_w++ ) {
+    wor_w  = u3r_note(i_w, a);
     pop_d += c3_pc_w(wor_w);
   }
 

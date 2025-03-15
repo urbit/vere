@@ -55,19 +55,19 @@
     c3_y typ_u;
     c3_w_tmp out_w, wik_w, wix_w, wid_w, wis_w, ver_w, ted_w, mem_w, tim_w;
 
-    if ( !(u3r_word_fit(&out_w, out) &&
-           u3r_word_fit(&wik_w, wik) &&
-           u3r_word_fit(&wix_w, wix) &&
-           u3r_word_fit(&wid_w, wid) &&
-           u3r_word_fit(&wis_w, wis)) ) {
+    if ( !(u3r_word_tmp_fit(&out_w, out) &&
+           u3r_word_tmp_fit(&wik_w, wik) &&
+           u3r_word_tmp_fit(&wix_w, wix) &&
+           u3r_word_tmp_fit(&wid_w, wid) &&
+           u3r_word_tmp_fit(&wis_w, wis)) ) {
       // too big to allocate
       return u3m_bail(c3__fail);
     }
     else if ( !(_cqear_unpack_type(&typ_u, type) &&
-                u3r_word_fit(&ver_w, version) &&
-                u3r_word_fit(&ted_w, threads) &&
-                u3r_word_fit(&mem_w, mem_cost) &&
-                u3r_word_fit(&tim_w, time_cost)) ) {
+                u3r_word_tmp_fit(&ver_w, version) &&
+                u3r_word_tmp_fit(&ted_w, threads) &&
+                u3r_word_tmp_fit(&mem_w, mem_cost) &&
+                u3r_word_tmp_fit(&tim_w, time_cost)) ) {
       return u3_none;
     }
     else {

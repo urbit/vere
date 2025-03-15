@@ -8,23 +8,23 @@
 
 //  +feis:ob constant parameters to +fe:ob
 //
-static const c3_w_tmp a_w =     0xffff;
-static const c3_w_tmp b_w =    0x10000;
-static const c3_w_tmp k_w = 0xffff0000;
+static const c3_w_new a_w =     0xffff;
+static const c3_w_new b_w =    0x10000;
+static const c3_w_new k_w = 0xffff0000;
 
 //  +raku:ob
 //
-static const c3_w_tmp rak_w[4] = { 0xb76d5eed, 0xee281300, 0x85bcae01, 0x4b387af7 };
+static const c3_w_new rak_w[4] = { 0xb76d5eed, 0xee281300, 0x85bcae01, 0x4b387af7 };
 
 /* _fe_ob(): +fe:ob, with constant parameters factored out.
 **           correct over the domain [0x0, 0xfffe.ffff]
 */
-static c3_w_tmp
-_fe_ob(c3_w_tmp m_w)
+static c3_w_new
+_fe_ob(c3_w_new m_w)
 {
-  c3_w_tmp l_w = m_w % a_w;
-  c3_w_tmp r_w = m_w / a_w;
-  c3_w_tmp f_w, t_w;
+  c3_w_new l_w = m_w % a_w;
+  c3_w_new r_w = m_w / a_w;
+  c3_w_new f_w, t_w;
   c3_y j_y, k_y[2];
 
   for ( j_y = 0; j_y < 4; j_y++ ) {
@@ -33,7 +33,7 @@ _fe_ob(c3_w_tmp m_w)
 
     MurmurHash3_x86_32(k_y, 2, rak_w[j_y], &f_w);
 
-    //  NB: this addition can overflow a c3_w_tmp (before mod)
+    //  NB: this addition can overflow a c3_w_new (before mod)
     //
     t_w = ((c3_d)f_w + l_w) % (!(j_y & 1) ? a_w : b_w);
     l_w = r_w;
@@ -50,35 +50,35 @@ _fe_ob(c3_w_tmp m_w)
 /* _feis_ob(): +feis:ob, also offsetting by 0x1.000 (as in +fein:ob).
 **             correct over the domain [0x1.0000, 0xffff.ffff]
 */
-static c3_w_tmp
-_feis_ob(c3_w_tmp m_w)
+static c3_w_new
+_feis_ob(c3_w_new m_w)
 {
-  c3_w_tmp c_w = _fe_ob(m_w - b_w);
+  c3_w_new c_w = _fe_ob(m_w - b_w);
   return b_w + (( c_w < k_w ) ? c_w : _fe_ob(c_w));
 }
 
 u3_atom
 u3qe_fein_ob(u3_atom pyn)
 {
-  c3_w_tmp sor_w = u3r_met(4, pyn);
+  c3_w_new sor_w = u3r_met(4, pyn);
 
   if ( (sor_w < 2) || (sor_w > 4) ) {
     return u3k(pyn);
   }
 
   if ( 2 == sor_w ) {
-    return u3i_word_tmp(_feis_ob(u3r_word(0, pyn)));
+    return u3i_word_new(_feis_ob(u3r_word_new(0, pyn)));
   }
   else {
-    c3_w_tmp pyn_w[2];
-    u3r_words(0, 2, pyn_w, pyn);
+    c3_w_new pyn_w[2];
+    u3r_words_new(0, 2, pyn_w, pyn);
 
     if ( pyn_w[0] < b_w ) {
       return u3k(pyn);
     }
     else {
       pyn_w[0] = _feis_ob(pyn_w[0]);
-      return u3i_words_tmp(2, pyn_w);
+      return u3i_words_new(2, pyn_w);
     }
   }
 }

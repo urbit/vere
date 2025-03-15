@@ -11,9 +11,9 @@ u3qa_add(u3_atom a,
          u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    c3_w_tmp c = a + b;
+    c3_n c = a + b;
 
-    return u3i_words_tmp(1, &c);
+    return u3i_note(c);
   }
   else if ( 0 == a ) {
     return u3k(b);

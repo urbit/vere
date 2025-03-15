@@ -9,12 +9,12 @@
   u3_noun
   u3qc_xeb(u3_atom a)
   {
-    c3_w_tmp met_w = u3r_met(0, a);
+    c3_n met_n = u3r_met(0, a);
 
-    if ( !_(u3a_is_cat(met_w)) ) {
-      return u3i_words_tmp(1, &met_w);
+    if ( !_(u3a_is_cat(met_n)) ) {
+      return u3i_note(met_n);
     }
-    else return met_w;
+    else return met_n;
   }
   u3_noun
   u3wc_xeb(u3_noun cor)

@@ -18,34 +18,43 @@
 #     define u3a_vits    0
 #endif
 
-#     define u3a_word_bytes  (sizeof(c3_n))
+// XX: change to note_bytes
+#     define u3a_note_bytes  (sizeof(c3_n))
 
-#     define u3a_32_word_bex  2
+#     define u3a_word_bits  32
+#     define u3a_word_bytes_log  2
 #     define u3a_32_indirect_mask  0x3fffffff
 #     define u3a_32_direct_max  0x7fffffff
 #     define u3a_32_indirect_flag  0x80000000
 #     define u3a_32_cell_flag  0xc0000000
+#     define u3a_word_bits_log 5
 
-#     define u3a_64_word_bex  3
+#     define u3a_chub_bits  64
+#     define u3a_chub_bytes_log  3
+#     define u3a_chub_bits_log 6
 #     define u3a_64_indirect_mask  0x3fffffffffffffffULL
 #     define u3a_64_direct_max  0x7fffffffffffffffULL
 #     define u3a_64_indirect_flag  0x8000000000000000ULL
 #     define u3a_64_cell_flag  0xc000000000000000ULL
 
 #ifndef VERE64
-#     define u3a_word_bits  32
-#     define u3a_word_bex  u3a_32_word_bex 
+#     define u3a_note_bits  u3a_word_bits
+#     define u3a_note_bytes_log  u3a_word_bytes_log 
+#     define u3a_note_bits_log u3a_word_bits_log
 #     define u3a_indirect_mask  u3a_32_indirect_mask 
 #     define u3a_direct_max  u3a_32_direct_max 
 #     define u3a_indirect_flag  u3a_32_indirect_flag
 #     define u3a_cell_flag  u3a_32_cell_flag
+#     define u3a_note_words 1
 #else
-#     define u3a_word_bits  64
-#     define u3a_word_bex  u3a_64_word_bex 
+#     define u3a_note_bits  u3a_chub_bits
+#     define u3a_note_bytes_log  u3a_chub_bytes_log 
+#     define u3a_note_bits_log u3a_chub_bits_log
 #     define u3a_indirect_mask  u3a_64_indirect_mask 
 #     define u3a_direct_max  u3a_64_direct_max 
 #     define u3a_indirect_flag  u3a_64_indirect_flag
 #     define u3a_cell_flag  u3a_64_cell_flag
+#     define u3a_note_words 2
 #endif
 
 
@@ -73,21 +82,21 @@
     */
 #     define u3a_pages   (1ULL << (u3a_bits + u3a_vits - u3a_page) )
 
-    /* u3a_words: maximum number of words in memory.
+    /* u3a_notes: maximum number of words in memory.
     */
-#     define u3a_words   ( 1ULL << (u3a_bits + u3a_vits))
+#     define u3a_notes   ( 1ULL << (u3a_bits + u3a_vits))
 
     /* u3a_bytes: maximum number of bytes in memory.
     */
-#     define u3a_bytes   ((sizeof(c3_n) * u3a_words))
+#     define u3a_bytes   ((sizeof(c3_n) * u3a_notes))
 
     /* u3a_cells: number of representable cells.
     */
-#     define u3a_cells   (( u3a_words / u3a_minimum ))
+#     define u3a_cells   (( u3a_notes / u3a_minimum ))
 
     /* u3a_maximum: maximum loom object size (largest possible atom).
     */
-#     define u3a_maximum ( u3a_words - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom) + 1))
+#     define u3a_maximum ( u3a_notes - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom) + 1))
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
@@ -113,8 +122,12 @@
         #ifdef VERE64
           c3_w_new fut_w;
         #endif
-        c3_n len_w;
-        c3_n buf_w[0];
+        c3_n len_n;
+        union {
+          c3_n buf_n[0];
+          c3_w_new buf_w[0];
+          c3_d buf_d[0];
+        };
       } u3a_atom;
 
       typedef struct __attribute__((aligned(4))) {
@@ -272,19 +285,19 @@
 
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
-#     define u3a_is_cat(som)    (((som) >> (u3a_word_bits - 1)) ? c3n : c3y)
+#     define u3a_is_cat(som)    (((som) >> (u3a_note_bits - 1)) ? c3n : c3y)
 
     /* u3a_is_dog(): yes if noun [som] is indirect noun.
     */
-#     define u3a_is_dog(som)    (((som) >> (u3a_word_bits - 1)) ? c3y : c3n)
+#     define u3a_is_dog(som)    (((som) >> (u3a_note_bits - 1)) ? c3y : c3n)
 
     /* u3a_is_pug(): yes if noun [som] is indirect atom.
     */
-#     define u3a_is_pug(som)    ((0b10 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
+#     define u3a_is_pug(som)    ((0b10 == ((som) >> (u3a_note_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
-#     define u3a_is_pom(som)    ((0b11 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
+#     define u3a_is_pom(som)    ((0b11 == ((som) >> (u3a_note_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */

@@ -20,7 +20,7 @@ u3m_v3_migrate(void)
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
 
-  c3_w_tmp *mem_w = u3_Loom + u3a_v3_walign;
+  c3_w_tmp* mem_w = ((c3_w_tmp*)(void*)u3_Loom) + u3a_v3_walign;
   c3_w_tmp  len_w = u3C.wor_i - u3a_v3_walign;
   c3_w_tmp  suz_w = c3_wiseof(u3v_v2_home);
   c3_w_tmp *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v3_balign, C3_ALGLO);

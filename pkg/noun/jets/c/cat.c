@@ -16,9 +16,9 @@
     }
     else {
       c3_g   a_g = a;
-      c3_w_tmp   lew_w = u3r_met(a_g, b);
-      c3_w_tmp   ler_w = u3r_met(a_g, c);
-      c3_w_tmp   all_w = (lew_w + ler_w);
+      c3_n   lew_w = u3r_met(a_g, b);
+      c3_n   ler_w = u3r_met(a_g, c);
+      c3_n   all_w = (lew_w + ler_w);
 
       if ( 0 == all_w ) {
         return 0;
@@ -27,7 +27,7 @@
         u3i_slab sab_u;
         u3i_slab_from(&sab_u, b, a_g, all_w);
 
-        u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_w, c);
+        u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_n, c);
 
         return u3i_slab_mint(&sab_u);
       }

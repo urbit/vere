@@ -14,15 +14,15 @@ u3qc_peg(u3_atom a, u3_atom b)
   }
 
   c3_d a_d, b_d;
-  c3_w_tmp c_w;
+  c3_n c_w;
 
   if ( (c3y == u3a_is_cat(a)) && (c3y == u3a_is_cat(b)) ) {
-    c_w = c3_bits_word(b) - 1;
+    c_w = c3_bits_note(b) - 1;
     a_d = a;
     b_d = b;
   }
   else {
-    c3_w_tmp d_w = u3r_met(0, a);
+    c3_n d_w = u3r_met(0, a);
     c3_d e_d;
 
     c_w = u3r_met(0, b) - 1;
@@ -32,8 +32,8 @@ u3qc_peg(u3_atom a, u3_atom b)
       u3i_slab sab_u;
       u3i_slab_init(&sab_u, 0, e_d);
 
-      u3r_chop(0, 0, c_w,   0, sab_u.buf_w, b);
-      u3r_chop(0, 0, d_w, c_w, sab_u.buf_w, a);
+      u3r_chop(0, 0, c_w,   0, sab_u.buf_n, b);
+      u3r_chop(0, 0, d_w, c_w, sab_u.buf_n, a);
 
       return u3i_slab_moot(&sab_u);
     }

@@ -12,14 +12,14 @@ STATIC_ASSERT( (UINT32_MAX > u3a_cells),
 u3_noun
 u3qb_lent(u3_noun a)
 {
-  c3_w_tmp len_w = 0;
+  c3_n len_w = 0;
 
   while ( u3_nul != a ) {
     a = u3t(a);
     len_w++;
   }
 
-  return u3i_word_tmp(len_w);
+  return u3i_note(len_w);
 }
 
 u3_noun

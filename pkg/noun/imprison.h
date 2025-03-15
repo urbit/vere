@@ -15,13 +15,15 @@
       typedef struct _u3i_slab {
         struct {                              //  internals
           u3a_atom* _vat_u;                   //  heap atom (nullable)
-          c3_w_tmp      _sat_w;                   //  static storage
+          c3_n      _sat_n;                   //  static storage
         } _;                                  //
         union {                               //
           c3_y*      buf_y;                   //  bytes
-          c3_w_tmp*      buf_w;                   //  words
+          c3_w_new*      buf_w;                   //  words
+          c3_d*      buf_d;                   //  words
+          c3_n*      buf_n;                   //  words
         };                                    //
-        c3_w_tmp         len_w;                   //  word length
+        c3_n         len_n;                   //  word length
       } u3i_slab;
 
       /* staged atom-building api
@@ -73,7 +75,12 @@
 
       /* General constructors.
       */
-        /* u3i_word_tmp(): construct u3_atom from c3_w.
+        /* u3i_word(): construct u3_atom from c3_w.
+        */
+          u3_atom
+          u3i_word_new(c3_w_tmp dat_w);
+
+        /* u3i_word(): construct u3_atom from c3_w.
         */
           u3_atom
           u3i_word_tmp(c3_w_tmp dat_w);
@@ -83,23 +90,40 @@
           u3_atom
           u3i_chub(c3_d dat_d);
 
+        /* u3i_note(): construct u3_atom from c3_d.
+        */
+          u3_atom
+          u3i_note(c3_n dat_n);
+
         /* u3i_bytes(): Copy [a] bytes from [b] to an LSB first atom.
         */
           u3_atom
-          u3i_bytes(c3_w_tmp        a_w,
+          u3i_bytes(c3_n        a_w,
                     const c3_y* b_y);
 
-        /* u3i_words_tmp(): Copy [a] words from [b] into an atom.
+        /* u3i_words(): Copy [a] words from [b] into an atom.
         */
           u3_atom
-          u3i_words_tmp(c3_w_tmp        a_w,
-                    const c3_w_tmp* b_w);
+          u3i_words_new(c3_n        a_w,
+                    const c3_w_new* b_w);
+
+        /* u3i_words(): Copy [a] words from [b] into an atom.
+        */
+          u3_atom
+          u3i_words_tmp(c3_n        a_w,
+                    const c3_w_new* b_w);
 
         /* u3i_chubs(): Copy [a] chubs from [b] into an atom.
         */
           u3_atom
-          u3i_chubs(c3_w_tmp        a_w,
+          u3i_chubs(c3_n        a_w,
                     const c3_d* b_d);
+
+        /* u3i_notes(): Copy [a] notes from [b] into an atom.
+        */
+          u3_atom
+          u3i_notes(c3_n        a_w,
+                    const c3_n* b_n);
 
         /* u3i_mp(): Copy the GMP integer [a] into an atom, and clear it.
         */

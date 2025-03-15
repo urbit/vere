@@ -150,7 +150,7 @@ u3m_v2_migrate(void)
 
   u3_assert( U3V_VER1 == ver_w );
 
-  c3_w_tmp* mem_w = u3_Loom + 1;
+  c3_w_tmp* mem_w = ((c3_w_tmp*)(void*)u3_Loom) + 1;
   c3_w_tmp  siz_w = c3_wiseof(u3v_v1_home);
   c3_w_tmp* mat_w = (mem_w + len_w) - siz_w;
 

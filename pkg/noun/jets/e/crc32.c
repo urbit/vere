@@ -15,7 +15,7 @@ u3qe_crc32(u3_noun input_octs)
   u3_atom tail = u3t(input_octs);
   c3_w_tmp  tel_w = u3r_met(3, tail);
   c3_w_tmp hed_w;
-  if ( c3n == u3r_safe_word(head, &hed_w) ) {
+  if ( c3n == u3r_safe_word_tmp(head, &hed_w) ) {
     return u3m_bail(c3__fail);
   }
   c3_y* input;
@@ -25,6 +25,7 @@ u3qe_crc32(u3_noun input_octs)
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(tail);
+    // XX: little endian
     input = (c3_y*)vat_u->buf_w;
   }
 

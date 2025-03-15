@@ -105,13 +105,21 @@ _cqea_siv_en(c3_y*   key_y,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w_tmp txt_w, soc_w;
+  c3_n txt_n;
+  c3_w_tmp soc_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
   dat_u = _cqea_ads_alloc(ads, &soc_w);
-  txt_y = u3r_bytes_all(&txt_w, txt);
-  out_y = u3a_malloc(txt_w);
+  txt_y = u3r_bytes_all(&txt_n, txt);
+  out_y = u3a_malloc(txt_n);
+  
+#ifdef VERE64
+  if (c3_w_max < txt_n) {
+    return u3m_bail(c3__fail);
+  }
+#endif
+  c3_w_new txt_w = (c3_w_new)txt_n;
 
   ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
@@ -135,7 +143,7 @@ _cqea_siv_de(c3_y*   key_y,
              urcrypt_siv low_f)
 {
   c3_w_tmp txt_w;
-  if ( !u3r_word_fit(&txt_w, len) ) {
+  if ( !u3r_word_tmp_fit(&txt_w, len) ) {
     return u3m_bail(c3__fail);
   }
   else {

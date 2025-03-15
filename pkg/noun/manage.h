@@ -46,7 +46,8 @@
       **    %oops               ::  assertion failure
       */
         c3_i
-        u3m_bail(c3_m how_m) __attribute__((noreturn));
+        //u3m_bail(c3_m how_m) __attribute__((noreturn));
+        u3m_bail(u3_noun how_m) __attribute__((noreturn));
 
       /* u3m_fault(): handle a memory event with libsigsegv protocol.
       */

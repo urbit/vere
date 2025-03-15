@@ -15,7 +15,8 @@ _leer_cut(c3_w_tmp pos_w, c3_w_tmp len_w, u3_atom src)
   else {
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 3, len_w);
-    sab_u.buf_w[sab_u.len_w - 1] = 0;
+    // XX: 64 what?
+    sab_u.buf_w[(sab_u.len_n * u3a_note_bytes)- 1] = 0;
 
     u3r_bytes(pos_w, len_w, sab_u.buf_y, src);
 

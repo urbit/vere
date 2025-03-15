@@ -104,12 +104,12 @@
 #include "types.h"
 
 /* _ce_len:       byte length of pages
-** _ce_len_words: word length of pages
+** _ce_len_notes: word length of pages
 ** _ce_page:      byte length of a single page
 ** _ce_ptr:       void pointer to a page
 */
-#define _ce_len(i)        ((size_t)(i) << (u3a_page + 2))
-#define _ce_len_words(i)  ((size_t)(i) << u3a_page)
+#define _ce_len(i)        ((size_t)(i) << (u3a_page + u3a_note_bytes_log))
+#define _ce_len_notes(i)  ((size_t)(i) << u3a_page)
 #define _ce_page          _ce_len(1)
 #define _ce_ptr(i)        ((void *)((c3_c*)u3_Loom + _ce_len(i)))
 
@@ -121,7 +121,7 @@ _ce_mug_page(void* ptr_v)
 {
   //  XX trailing zeros
   // return u3r_mug_bytes(ptr_v, _ce_page);
-  return u3r_mug_words(ptr_v, _ce_len_words(1));
+  return u3r_mug_notes(ptr_v, _ce_len_notes(1));
 }
 
 #ifdef U3_SNAPSHOT_VALIDATION
@@ -145,7 +145,7 @@ u3e_check(c3_c* cap_c)
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
 
-    nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+    nor_w = (low_p + (_ce_len_notes(1) - 1)) >> u3a_page;
     sou_w = u3P.pag_w - (hig_p >> u3a_page);
   }
 
@@ -1461,7 +1461,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
   {
     c3_n nop_w = (low_p >> u3a_page);
-    c3_n nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+    c3_n nor_w = (low_p + (_ce_len_notes(1) - 1)) >> u3a_page;
     c3_n sop_w = hig_p >> u3a_page;
 
     u3_assert( (u3P.gar_w > nop_w) && (u3P.gar_w < sop_w) );
@@ -1555,7 +1555,7 @@ _ce_toss_pages(c3_n nor_w, c3_n sou_w)
 void
 u3e_toss(u3_post low_p, u3_post hig_p)
 {
-  c3_n nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+  c3_n nor_w = (low_p + (_ce_len_notes(1) - 1)) >> u3a_page;
   c3_n sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
   _ce_toss_pages(nor_w, sou_w);
@@ -1671,7 +1671,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         nuu_o = c3y;
       }
       else if ( u3C.wag_w & u3o_no_demand ) {
-        u3a_print_memory(stderr, "live: loaded", _ce_len_words(nor_w + sou_w));
+        u3a_print_memory(stderr, "live: loaded", _ce_len_notes(nor_w + sou_w));
       }
       else {
         u3a_print_memory(stderr, "live: mapped", nor_w << u3a_page);

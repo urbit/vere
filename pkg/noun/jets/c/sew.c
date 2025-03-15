@@ -18,34 +18,34 @@ u3qc_sew(u3_atom a,
        !_(u3a_is_cat(c)) ) {
     return u3_none;
   }
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
     return u3m_bail(c3__fail);
   }
 
   c3_g a_g = a;
-  c3_w_tmp b_w = b, c_w = c;
-  c3_w_tmp len_e_w = u3r_met(a_g, e);
+  c3_n b_w = b, c_w = c;
+  c3_n len_e_w = u3r_met(a_g, e);
   u3i_slab sab_u;
-  c3_w_tmp* src_w;
-  c3_w_tmp len_src_w;
+  c3_n* src_w;
+  c3_n len_src_w;
   if ( _(u3a_is_cat(e)) ) {
     len_src_w = e ? 1 : 0;
     src_w = &e;
   }
   else {
     u3a_atom* src_u = u3a_to_ptr(e);
-    len_src_w = src_u->len_w;
-    src_w = src_u->buf_w;
+    len_src_w = src_u->len_n;
+    src_w = src_u->buf_n;
   }
   u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
-  u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);
-  u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_w, d);
+  u3r_chop_notes(a_g, 0, b_w, 0, sab_u.buf_n, len_src_w, src_w);
+  u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_n, d);
   if (len_e_w > b_w + c_w) {
-    u3r_chop_words(a_g,
+    u3r_chop_notes(a_g,
              b_w + c_w,
              len_e_w - (b_w + c_w),
              b_w + c_w,
-             sab_u.buf_w,
+             sab_u.buf_n,
              len_src_w,
              src_w);
   }

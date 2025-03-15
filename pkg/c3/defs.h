@@ -48,7 +48,13 @@
 
     /* Size in words.
     */
+// XX: 64 square with allocate.h
+// (probably some of that belongs here)
+#ifndef VERE64
 #     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
+#else
+#     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
+#endif
 
     /* Bit counting.
     */
@@ -64,7 +70,29 @@
 #     error  "port me"
 #endif
 
-#     define c3_bits_word(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#if   (64 == (CHAR_BIT * __SIZEOF_LONG_LONG__))
+#     define c3_lz_d __builtin_clzll
+#     define c3_tz_d __builtin_ctzll
+#     define c3_pc_d __builtin_popcountll
+#else
+#     error  "port me"
+#endif
+
+#     define c3_bits_word_tmp(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#     define c3_bits_word_new(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
+
+#ifndef VERE64
+#     define c3_bits_note(n)  c3_bits_word_new(n)
+#     define c3_lz_n  c3_lz_w
+#     define c3_tz_n  c3_tz_w
+#     define c3_pc_n  c3_pc_w
+#else
+#     define c3_bits_note(n)  c3_bits_chub(n)
+#     define c3_lz_n  c3_lz_d
+#     define c3_tz_n  c3_tz_d
+#     define c3_pc_n  c3_pc_d
+#endif
 
     /* Min and max.
     */
@@ -258,6 +286,15 @@ c3_align_d(c3_d x, c3_d al, align_dir hilo) {
   x &= ~(al - 1);
   return x;
 }
+inline c3_n
+c3_align_n(c3_n x, c3_n al, align_dir hilo) {
+#ifndef VERE64
+  return c3_align_w(x, al, hilo);
+#else
+  return c3_align_d(x, al, hilo);
+#endif
+}
+
 inline void*
 c3_align_p(void const * p, size_t al, align_dir hilo) {
   uintptr_t x = (uintptr_t)p;
@@ -267,10 +304,13 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   return (void*)x;
 }
 
+#define c3_w_max  0xffffffff
+#define c3_d_max  0xffffffffffffffffULL
+
 #ifndef VERE64
-#define c3_n_max  0xffffffff
+#define c3_n_max  c3_w_max
 #else
-#define c3_n_max  0xffffffffffffffffULL
+#define c3_n_max  c3_d_max
 #endif
 
 #endif /* ifndef C3_DEFS_H */

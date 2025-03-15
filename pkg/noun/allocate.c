@@ -86,7 +86,7 @@ _box_slot(c3_n siz_w)
     return 1;
   }
   else {
-    c3_n bit_w = c3_bits_word(siz_w) - 3;
+    c3_n bit_w = c3_bits_note(siz_w) - 3;
     c3_n max_w = u3a_fbox_no - 1;
     return c3_min(bit_w, max_w);
   }
@@ -667,7 +667,7 @@ u3a_pile_prep(u3a_pile* pil_u, c3_n len_w)
   //  frame size, in words
   //
   c3_n wor_w =
-    (len_w + u3a_word_bytes - 1) >> u3a_word_bex;
+    (len_w + u3a_note_bytes - 1) >> u3a_note_bytes_log;
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
@@ -747,8 +747,9 @@ u3a_calloc(size_t num_i, size_t len_i)
 void*
 u3a_malloc(size_t len_i)
 {
-  c3_n  len_w = (c3_n)((len_i + 3) >> 2);
-  c3_n *ptr_w = _ca_walloc(len_w +1, 4, 1); /* +1 for word storing pad size */
+  c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_log);
+  c3_n *ptr_w = _ca_walloc(len_w +1, u3a_note_bytes, 1); /* +1 for word storing pad size */
+  // XX: hmm?
   c3_n *out_w = c3_align(ptr_w + 1, 16, C3_ALGHI);
   c3_n  pad_w = u3a_outa(out_w) - u3a_outa(ptr_w);
 
@@ -1081,7 +1082,7 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  c3_n*     new_w = u3a_walloc(old_u->len_w + c3_wiseof(u3a_atom));
+  c3_n*     new_w = u3a_walloc(old_u->len_n + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
@@ -1099,12 +1100,12 @@ _ca_take_atom(u3a_atom* old_u)
 #ifdef VERE64
   new_u->fut_w = old_u->fut_w;
 #endif
-  new_u->len_w = old_u->len_w;
+  new_u->len_n = old_u->len_n;
   {
     c3_n i_w;
 
-    for ( i_w=0; i_w < old_u->len_w; i_w++ ) {
-      new_u->buf_w[i_w] = old_u->buf_w[i_w];
+    for ( i_w=0; i_w < old_u->len_n; i_w++ ) {
+      new_u->buf_n[i_w] = old_u->buf_n[i_w];
     }
   }
 
@@ -1114,7 +1115,7 @@ _ca_take_atom(u3a_atom* old_u)
   old_u->mug_w = new;
 #else
   old_u->mug_w = new >> 32; // we need dog bit on mug_w
-  old_u->fut_w = new & UINT32_MAX; // we need dog bit on mug_w
+  old_u->fut_w = new & c3_w_max; // we need dog bit on mug_w
 #endif
 
   return new;
@@ -1149,7 +1150,7 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
   old_u->mug_w = new;
 #else
   old_u->mug_w = new >> 32; // we need dog bit on mug_w
-  old_u->fut_w = new & UINT32_MAX; // we need dog bit on mug_w
+  old_u->fut_w = new & c3_w_max; // we need dog bit on mug_w
 #endif
 
   return new;
@@ -1194,7 +1195,9 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
 #ifndef VERE64
         u3_noun nov = (u3_noun)veb_u->mug_w;
 #else
-        u3_noun nov = (u3_noun)(((c3_n)veb_u->mug_w << 32) | (c3_n)veb_u->fut_w);
+        u3_noun nov =
+          (u3_noun)
+            (((c3_n)veb_u->mug_w << 32) | (c3_n)veb_u->fut_w);
 #endif
 
         u3_assert( c3y == u3a_north_is_normal(u3R, nov) );
@@ -1253,7 +1256,9 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
 #ifndef VERE64
         u3_noun nov = (u3_noun)veb_u->mug_w;
 #else
-        u3_noun nov = (u3_noun)(((c3_n)veb_u->mug_w << 32) | (c3_n)veb_u->fut_w);
+        u3_noun nov =
+          (u3_noun)
+            (((c3_n)veb_u->mug_w << 32) | (c3_n)veb_u->fut_w);
 #endif
 
         u3_assert( c3y == u3a_south_is_normal(u3R, nov) );
@@ -2324,7 +2329,7 @@ _ca_print_box(u3a_box* box_u)
     //  skip atoms larger than 10 words
     //  XX print mugs or something
     //
-    if ( 10 > vat_u->len_w ) {
+    if ( 10 > vat_u->len_n ) {
 #if 0
       /*  For those times when you've really just got to crack open
        *  the box and see what's inside

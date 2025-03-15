@@ -51,7 +51,7 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w_tmp len_w = a_u->len_w;
+    c3_w_tmp len_w = a_u->len_n * 2;
 
     if ( len_w < 8 ) {
       return 1;
@@ -61,6 +61,7 @@ _cqes_in_order(u3_atom a)
     }
     else {
       c3_y i_y;
+      // assumes little endian in 64 bit
       c3_w_tmp *buf_w = a_u->buf_w;
       // loop from most to least significant words
       for ( i_y = 8; i_y > 0; ) {

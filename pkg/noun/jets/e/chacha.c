@@ -11,7 +11,7 @@
   {
     c3_w_tmp rounds_w, wid_w;
     c3_d counter_d;
-    if ( !u3r_word_fit(&rounds_w, rounds) || !u3r_word_fit(&wid_w, wid) || c3n == u3r_safe_chub(counter, &counter_d) ) {
+    if ( !u3r_word_tmp_fit(&rounds_w, rounds) || !u3r_word_tmp_fit(&wid_w, wid) || c3n == u3r_safe_chub(counter, &counter_d) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -47,7 +47,7 @@
   _cqe_chacha_xchacha(u3_atom rounds, u3_atom key, u3_atom nonce)
   {
     c3_w_tmp rounds_w;
-    if ( !u3r_word_fit(&rounds_w, rounds) ) {
+    if ( !u3r_word_tmp_fit(&rounds_w, rounds) ) {
       return u3m_bail(c3__fail);
     }
     c3_y key_y[32], nonce_y[64], xkey_y[32], xnonce_y[8];

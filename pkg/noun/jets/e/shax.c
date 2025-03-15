@@ -12,8 +12,8 @@
   _cqe_shay(u3_atom wid,
             u3_atom dat)
   {
-    c3_w_tmp len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_n len_w;
+    if ( !u3r_note_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -28,7 +28,7 @@
   static u3_atom
   _cqe_shax(u3_atom a)
   {
-    c3_w_tmp  len_w;
+    c3_n  len_w;
     c3_y  out_y[32];
     c3_y* dat_y = u3r_bytes_all(&len_w, a);
     urcrypt_shay(dat_y, len_w, out_y);
@@ -40,8 +40,8 @@
   _cqe_shal(u3_atom wid,
             u3_atom dat)
   {
-    c3_w_tmp len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_n len_w;
+    if ( !u3r_note_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -57,7 +57,7 @@
   _cqe_shas(u3_atom sal,
             u3_atom ruz)
   {
-    c3_w_tmp sal_w, ruz_w;
+    c3_n sal_w, ruz_w;
     c3_y *sal_y, *ruz_y, out_y[32];
 
     sal_y = u3r_bytes_all(&sal_w, sal);

@@ -6,17 +6,19 @@
 #include "noun.h"
 #include "murmur3.h"
 
+// XX: murmur3 only 32 bit lengths...
 u3_noun
 u3qc_muk(u3_atom sed,
          u3_atom len,
          u3_atom key)
 {
-  if ( c3n == u3a_is_cat(len) ) {
+  //if ( c3n == u3a_is_cat(len) ) {
+  if ( len > u3a_32_direct_max ) {
     return u3m_bail(c3__fail);
   }
   else {
-    c3_w_tmp len_w = (c3_w_tmp)len;
-    c3_w_tmp key_w = u3r_met(3, key);
+    c3_w_new len_w = (c3_w_new)len;
+    c3_w_new key_w = u3r_met(3, key);
 
     //  NB: this condition is implicit in the pad subtraction
     //
@@ -24,10 +26,10 @@ u3qc_muk(u3_atom sed,
       return u3m_bail(c3__exit);
     }
     else {
-      c3_w_tmp  sed_w = u3r_word(0, sed);
+      c3_w_new  sed_w = u3r_word_new(0, sed);
       c3_o  loc_o = c3n;
       c3_y* key_y = 0;
-      c3_w_tmp  out_w;
+      c3_w_new  out_w;
 
       //  if we're hashing more bytes than we have, allocate and copy
       //  to ensure trailing null bytes
@@ -42,7 +44,7 @@ u3qc_muk(u3_atom sed,
         //
         key_y = ( c3y == u3a_is_cat(key) )
                 ? (c3_y*)&key
-                : (c3_y*)((u3a_atom*)u3a_to_ptr(key))->buf_w;
+                : (c3_y*)((u3a_atom*)u3a_to_ptr(key))->buf_n;
       }
 
       MurmurHash3_x86_32(key_y, len_w, sed_w, &out_w);
@@ -51,7 +53,7 @@ u3qc_muk(u3_atom sed,
         u3a_free(key_y);
       }
 
-      return u3i_words_tmp(1, &out_w);
+      return u3i_words_new(1, &out_w);
     }
   }
 }

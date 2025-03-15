@@ -12,7 +12,7 @@ u3_noun
 u3qb_find(u3_noun nedl, u3_noun hstk)
 {
   if ( u3_nul != nedl ) {
-    c3_w_tmp  i_w = 0;
+    c3_n  i_w = 0;
 
     while ( u3_nul != hstk ) {
       u3_noun i_h, t_h = hstk;
@@ -22,7 +22,7 @@ u3qb_find(u3_noun nedl, u3_noun hstk)
 
       while ( c3y == u3r_sing(i_n, i_h) ) {
         if ( u3_nul == t_n ) {
-          return u3nc(u3_nul, u3i_word_tmp(i_w));
+          return u3nc(u3_nul, u3i_note(i_w));
         }
         else if ( u3_nul == t_h ) {
           break;

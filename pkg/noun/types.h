@@ -8,7 +8,7 @@
 #include "c3/c3.h"
 
 /// Sentinel value for u3_noun types that aren't actually nouns.
-#define u3_none (u3_noun)0xffffffff
+#define u3_none (u3_noun)c3_n_max
 
 /// 0, or `~` in Hoon.
 #define u3_nul 0

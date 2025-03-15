@@ -137,7 +137,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w_tmp n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        *(c3_w_tmp*)valptrs[i] = u3r_word(0, atom);
+        *(c3_w_tmp*)valptrs[i] = u3r_word_tmp(0, atom);
         break;
       }
       case c_m3Type_i64:
@@ -222,7 +222,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w_tmp n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w_tmp*)valptrs[i] = u3r_word(0, value);
+        *(c3_w_tmp*)valptrs[i] = u3r_word_tmp(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -240,7 +240,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w_tmp n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w_tmp*)valptrs[i] = u3r_word(0, value);
+        *(c3_w_tmp*)valptrs[i] = u3r_word_tmp(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -391,7 +391,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom ptr = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun len = u3at(arr_sam_3, monad);
 
-    c3_w_tmp ptr_w = u3r_word(0, ptr);
+    c3_w_tmp ptr_w = u3r_word_tmp(0, ptr);
     c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
     c3_w_tmp len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
@@ -422,7 +422,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun len = u3at(arr_sam_6, monad);
     u3_noun src = u3at(arr_sam_7, monad);
 
-    c3_w_tmp ptr_w = u3r_word(0, ptr);
+    c3_w_tmp ptr_w = u3r_word_tmp(0, ptr);
     c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
 
     c3_w_tmp len_buf_w;
@@ -582,7 +582,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_i32:
       {
-        glob_value.value.i32 = u3r_word(0, value);
+        glob_value.value.i32 = u3r_word_tmp(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -592,7 +592,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_f32:
       {
-        glob_value.value.f32 = u3r_word(0, value);
+        glob_value.value.f32 = u3r_word_tmp(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -801,7 +801,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_i32:
         {
-          glob->intValue = u3r_word(0, atom);
+          glob->intValue = u3r_word_tmp(0, atom);
           break;
         }
         case c_m3Type_i64:
@@ -811,7 +811,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_f32:
         {
-          glob->f32Value = u3r_word(0, atom);
+          glob->f32Value = u3r_word_tmp(0, atom);
           break;
         }
         case c_m3Type_f64:
