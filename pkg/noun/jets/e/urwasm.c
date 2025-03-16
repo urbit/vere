@@ -59,6 +59,7 @@
 #define KICK1(TRAP)  u3j_kink(TRAP, 2)
 #define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
 
+// [a b c d e f]
 static inline u3_noun
 uw_heks(u3_noun a, u3_noun b, u3_noun c, u3_noun d, u3_noun e, u3_noun f)
 {
@@ -156,68 +157,96 @@ typedef enum {
   lst_link_wasm = 5,
 } lia_suspend_tag;
 
-// memory arena with fibonacci growth
+// memory arena with exponential growth
 typedef struct {
-  c3_w      siz_w;  // size in 4K pages, (1 << 15) bits, (1 << 12) bytes
-  c3_w      pre_w;  // previous size
-  c3_w      off_w;  // alignment offset
-  u3i_slab  sab_u;  // associated slab
+  c3_w      siz_w;  // size in bytes
   c3_y*     buf_y;  // allocated buffer
   c3_y*     nex_y;  // next allocation
+  c3_y*     end_y;  // end of arena
   jmp_buf*  esc_u;  // escape buffer
+  c3_t      ini_t;  // already initialized, XX urwasm within urwasm?
 } uw_arena;
 
 static void
-_uw_arena_init_size(uw_arena* ren_u, c3_w pre_w, c3_w siz_w)
+_uw_arena_init_size(uw_arena* ren_u, c3_w siz_w)
 {
   ren_u->siz_w = siz_w;
-  ren_u->pre_w = pre_w;
-  
-  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1); // extra page to ensure full siz_w pages
-  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
-  ren_u->off_w = ren_u->buf_y - ren_u->sab_u.buf_y;
-  ren_u->nex_y = ren_u->buf_y;
+  c3_w pad_w = 256;
+  ren_u->nex_y = ren_u->buf_y = u3a_calloc(ren_u->siz_w+pad_w, 1);
+  ren_u->end_y = ren_u->buf_y + ren_u->siz_w;
+  ren_u->ini_t = 1;
+  memset(ren_u->end_y, (c3_y)0xaa, (size_t)pad_w);
 }
 
 static void
 _uw_arena_init(uw_arena* ren_u)
 {
-  _uw_arena_init_size(ren_u, 1, 1);
-  // esc_u to be filled later
+  _uw_arena_init_size(ren_u, (c3_w)1 << 23);
 }
 
 static void
 _uw_arena_grow(uw_arena* ren_u)
 {
-  c3_w pre_w = ren_u->pre_w;
-  ren_u->pre_w = ren_u->siz_w;
-  ren_u->siz_w += pre_w;
+  c3_w pad_w = 256;
+  for (c3_y* ptr_y = ren_u->end_y; ptr_y < ren_u->end_y + pad_w; ptr_y++)
+  {
+    if (*ptr_y != 0xaa)
+    {
+      u3m_bail(c3__fail);
+    }
+  }
 
-  // we start over, no need to keep old memory
-  u3i_slab_free(&ren_u->sab_u);
+  if (!ren_u->ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_w new_w = ren_u->siz_w * 2;
+  if (new_w / 2 != ren_u->siz_w)
+  {
+    u3m_bail(c3__fail);
+  }
+  ren_u->siz_w = new_w;
 
-  u3i_slab_init(&ren_u->sab_u, 15, ren_u->siz_w + 1);
-  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
-  ren_u->off_w = ren_u->buf_y - ren_u->sab_u.buf_y;
-  ren_u->nex_y = ren_u->buf_y;
+  u3a_free(ren_u->buf_y);
+  ren_u->nex_y = ren_u->buf_y = u3a_calloc(ren_u->siz_w + pad_w, 1);
+  ren_u->end_y = ren_u->buf_y + ren_u->siz_w;
+  memset(ren_u->end_y, (c3_y)0xaa, (size_t)pad_w);
 }
 
 static void
 _uw_arena_reset(uw_arena* ren_u)
 {
-  ren_u->buf_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  c3_w pad_w = 256;
+  for (c3_y* ptr_y = ren_u->end_y; ptr_y < ren_u->end_y + pad_w; ptr_y++)
+  {
+    if (*ptr_y != 0xaa)
+    {
+      u3m_bail(c3__fail);
+    }
+  }
+
+  if (!ren_u->ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
   ren_u->nex_y = ren_u->buf_y;
-  memset(ren_u->buf_y, 0, (size_t)ren_u->sab_u.len_w * 4);
+  memset(ren_u->buf_y, 0, (size_t)ren_u->siz_w);
 }
 
 static void
 _uw_arena_free(uw_arena* ren_u)
 {
-  u3i_slab_free(&ren_u->sab_u);
+  if (!ren_u->ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
+  u3a_free(ren_u->buf_y);
+  ren_u->ini_t = 0;
 }
 
 // Code page allocation: simple bump allocator for non-growing objects,
 // i.e. code pages
+// save allocation length for realloc
 // CodeArena.esc_u MUST be initialized by the caller to handle OOM
 //
 static uw_arena CodeArena;
@@ -225,6 +254,11 @@ static uw_arena CodeArena;
 static void*
 _calloc_code(size_t num_i, size_t len_i)
 {
+  if (!CodeArena.ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
+
   void* lag_v = CodeArena.nex_y;
   
   size_t byt_i = num_i * len_i;
@@ -233,115 +267,147 @@ _calloc_code(size_t num_i, size_t len_i)
     u3m_bail(c3__fail);
   }
 
-  c3_y* nex_y = CodeArena.nex_y + byt_i;
+  if (byt_i >= UINT64_MAX - 16)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_d byt_d = byt_i + 16; // c3_d for length + alignment padding
+
+  c3_y* nex_y = CodeArena.nex_y + byt_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
   
-  if (nex_y - CodeArena.buf_y >= (CodeArena.siz_w << 12))
+  if (nex_y >= CodeArena.end_y)
   { // OOM, jump out to increase the arena size and try again
     _longjmp(*CodeArena.esc_u, c3__code);
   }
 
+  *((c3_d*)lag_v) = byt_d - 16;  // corruption check
+  *((c3_d*)lag_v + 1) = byt_d - 16;
+
   CodeArena.nex_y = nex_y;
-  return lag_v;
+  return ((c3_d*)lag_v + 2);
 }
 
 static void*
 _realloc_code(void* lag_v, size_t len_i)
 {
-  return _calloc_code(len_i, 1);
+  if (!CodeArena.ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
+  if (!lag_v)
+  {
+    return _calloc_code(len_i, 1);
+  }
+  c3_d old1_d = *((c3_d*)lag_v - 1);
+  c3_d old2_d = *((c3_d*)lag_v - 2);
+  if (old1_d != old2_d)
+  {
+    u3m_bail(c3__fail);
+  }
+  if (len_i >= UINT64_MAX)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_d len_d = len_i;
+  void* new_v = _calloc_code(len_d, 1);
+  memcpy(new_v, lag_v, c3_min(len_d, old1_d));
+
+  return new_v;
 }
 
 static void
 _free_code(void* lag_v)
 {
+  if (!CodeArena.ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
   // noop
 }
 
-// Struct/array allocation: bump allocator of boxes with capacity,
-// on realloc: update len_d if len_d <= cap_d, else allocate a bigger box
-// box: [len_d cap_d data]
+// Struct/array allocation: for now again just a bump allocator
+// XX TODO sainer reallocs (wasm3 often reallocs dynamic arrays)
 // BoxArena.esc_u MUST be initialized by the caller to handle OOM
 //
 static uw_arena BoxArena;
 
 static void*
-_calloc_box_cap(size_t num_i, size_t len_i, c3_d cap_d)
+_calloc_box(size_t num_i, size_t len_i)
 {
-  void* lag_v = BoxArena.nex_y;
-
-  size_t byt_i = num_i * len_i;
-  if ((byt_i / len_i != num_i) || (byt_i >= UINT64_MAX - 16))
+  if (!BoxArena.ini_t)
   {
     u3m_bail(c3__fail);
   }
 
-  c3_d byt_d = byt_i + 16;  // size of box
+  void* lag_v = BoxArena.nex_y;
+  
+  size_t byt_i = num_i * len_i;
+  if (byt_i / len_i != num_i)
+  {
+    u3m_bail(c3__fail);
+  }
 
-  byt_d = c3_max(byt_d, cap_d + 16); // allocate at least cap_d + 16 bytes
+  if (byt_i >= UINT64_MAX - 16)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_d byt_d = byt_i + 16; // c3_d for length + alignment padding
 
   c3_y* nex_y = BoxArena.nex_y + byt_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
-
-  if (nex_y - BoxArena.buf_y >= (BoxArena.siz_w << 12))
+  
+  if (nex_y >= BoxArena.end_y)
   { // OOM, jump out to increase the arena size and try again
     _longjmp(*BoxArena.esc_u, c3__box);
   }
 
+  *((c3_d*)lag_v) = byt_d - 16;  // corruption check
+  *((c3_d*)lag_v + 1) = byt_d - 16;
+
   BoxArena.nex_y = nex_y;
-
-  *(c3_d*)lag_v = (c3_d)(byt_i);      // current length
-  *((c3_d*)lag_v + 1) = (byt_d - 16); // allocation box capacity
-
-  void* out_v = ((c3_d*)lag_v + 2);
-  c3_dessert(((c3_p)out_v & 15) == 0);
-
-  return out_v;
-}
-
-static void*
-_calloc_box(size_t num_i, size_t len_i)
-{
-  return _calloc_box_cap(num_i, len_i, 512 - 16);
+  return ((c3_d*)lag_v + 2);
 }
 
 static void*
 _realloc_box(void* lag_v, size_t len_i)
 {
-  if (len_i > UINT64_MAX)
+  if (!BoxArena.ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
+  if (!lag_v)
+  {
+    return _calloc_box(len_i, 1);
+  }
+  c3_d old1_d = *((c3_d*)lag_v - 1);
+  c3_d old2_d = *((c3_d*)lag_v - 2);
+  if (old1_d != old2_d)
+  {
+    u3m_bail(c3__fail);
+  }
+  if (len_i >= UINT64_MAX)
   {
     u3m_bail(c3__fail);
   }
   c3_d len_d = len_i;
-  c3_d pre_d = *((c3_d*)lag_v - 2);
-  if (len_d <= pre_d)
-  {
-    *((c3_d*)lag_v - 2) = len_d;
-    return lag_v;
-  }
-  else
-  {
-    c3_d cap_d = *((c3_d*)lag_v - 1);
-    if (cap_d < len_d)
-    {
-      // do {cap_d *= 2;} while (cap_d < len_d);
-      //
-      cap_d <<= c3_bits_dabl(len_d) - c3_bits_dabl(cap_d);
-      cap_d <<= (cap_d < len_d);
-      return _calloc_box_cap(len_i, 1, cap_d);
-    }
-    else
-    {
-      *((c3_d*)lag_v - 2) = len_d;
-      return lag_v;
-    }
-  }
+  void* new_v = _calloc_box(len_d, 1);
+  memcpy(new_v, lag_v, c3_min(len_d, old1_d));
+
+  return new_v;
 }
 
 static void
 _free_box(void* lag_v)
 {
+  if (!BoxArena.ini_t)
+  {
+    u3m_bail(c3__fail);
+  }
   // noop
 }
+
+// bailing allocators to prevent wasm3 from touching the arenas
 
 static void*
 _calloc_bail(size_t num_i, size_t len_i)
@@ -1651,7 +1717,7 @@ _link_wasm_with_arrow_map(
 //  key: [version seed hint]
 //  stored nouns:
 //    $@  ~             ::  sentinel value
-//    $:  box_arena=[buffer=octs offset=@]  :: alignment offset
+//    $:  box_arena=octs
 //        memory=[buffer=octs max_stack_offset=@]
 //        runtime_offset=@
 //        lia_shop=(list)
@@ -1659,6 +1725,8 @@ _link_wasm_with_arrow_map(
 //        susp_list=(list)
 //    ==
 // arguments RETAINED
+// on success allocates sat_u->wasm_module->runtime->memory.mallocated
+// and initializes the arenas
 static c3_t
 _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 {
@@ -1675,12 +1743,11 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
   }
   else
   {
-    u3_noun p_box, q_box, p_buffer, q_buffer, alg_off, stack_offset,
+    u3_noun p_box, q_box, p_buffer, q_buffer, stack_offset,
     runtime_offset, lia_shop, acc, susp_list;
     if ( c3n == u3r_mean(get,
-        8,  &p_box,
-        9,  &q_box,
-        5,  &alg_off,
+        4,  &p_box,
+        5,  &q_box,
         24, &p_buffer,
         25, &q_buffer,
         13, &stack_offset,
@@ -1708,21 +1775,10 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     c3_w stk_off_w = (c3y == u3a_is_cat(stack_offset))
       ? stack_offset
       : u3m_bail(c3__fail);
-
-    c3_w alg_off_w = (c3y == u3a_is_cat(alg_off))
-      ? alg_off
-      : u3m_bail(c3__fail);
     
-    c3_w box_pag_w = (box_len_w + (1U << 12) - 1) >> 12;
-    c3_w tmp_w, pre_w = 1, siz_w = 1;
-    while (siz_w < box_pag_w)
-    {
-      tmp_w = pre_w;
-      pre_w = siz_w;
-      siz_w += tmp_w;
-    }
-    _uw_arena_init_size(&BoxArena, pre_w, siz_w);
-    u3r_bytes(alg_off_w, box_len_w, BoxArena.buf_y, q_box);
+    
+    _uw_arena_init_size(&BoxArena, box_len_w);
+    u3r_bytes(0, box_len_w, BoxArena.buf_y, q_box);
     _uw_arena_init(&CodeArena);
 
     M3Result result;
@@ -1736,7 +1792,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     // make sure to not touch BoxArena
     m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
     m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
-    m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+    m3_SetMemoryAllocators(_calloc_bail, _free_bail, _realloc_bail);
 
     jmp_buf esc;
     CodeArena.esc_u = &esc;
@@ -1765,14 +1821,15 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
             fprintf(stderr, ERR("link error: %s"), result);
             return u3m_bail(c3__fail);
           }
-
-          result = m3_CompileModule(wasm3_module);
-          if (result)
-          {
-            fprintf(stderr, ERR("compilation error: %s"), result);
-            return u3m_bail(c3__fail);
-          }
         }
+
+        result = m3_CompileModule(wasm3_module);
+        if (result)
+        {
+          fprintf(stderr, ERR("compilation error: %s"), result);
+          return u3m_bail(c3__fail);
+        }
+
         break;
       }
       else
@@ -1883,6 +1940,9 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 }
 
 // try to save new state, replacing old state with a sentinel value
+// frees wasm3 memory buffer, releases arenas
+// RETAINS arguments, transfers sat_u->lia_shop/susp_list and
+// replaces them with u3_none if save is succesful
 static void
 _move_state(
   lia_state* sat_u,
@@ -1895,11 +1955,16 @@ _move_state(
   c3_dessert(c3y == u3a_is_cat(fun_m));
 
   if ( (_(u3du(hint)) && (c3__oust == u3h(hint)))
-      || (c3__rand == hint || 1 != u3h(yil))
+      || (c3__rand == hint && 1 != u3h(yil))
   )
   {
     u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
     u3z_save(u3z_memo_keep, key_old, u3_nul);
+    IM3Runtime run_u = sat_u->wasm_module->runtime;
+    M3MemoryHeader* mem_u = run_u->memory.mallocated;
+    u3a_free(mem_u);
+    _uw_arena_free(&CodeArena);
+    _uw_arena_free(&BoxArena);
     return;
   }
 
@@ -1919,6 +1984,8 @@ _move_state(
 
   u3_atom q_buf = u3i_bytes(len_buf_w, (c3_y*)(mem_u + 1));
 
+  u3a_free(mem_u);
+
   m3_RewritePointersRuntime(run_u, BoxArena.buf_y, 1 /*is_store*/);
   c3_w run_off_w = (c3_y*)run_u - BoxArena.buf_y;
   if (c3n == u3a_is_cat(run_off_w))
@@ -1928,26 +1995,22 @@ _move_state(
   
   _uw_arena_free(&CodeArena);
 
-  c3_w box_len_w = BoxArena.nex_y - BoxArena.buf_y;
+  c3_w box_len_w = BoxArena.siz_w;
   if (c3n == u3a_is_cat(box_len_w))
   {
     u3m_bail(c3__fail);
   }
-  // u3_atom q_box = u3i_bytes(box_len_w, BoxArena.buf_y);
-  c3_w alg_off_w = BoxArena.off_w;
-  if (c3n == u3a_is_cat(alg_off_w))
-  {
-    u3m_bail(c3__fail);
-  }
 
-  u3_atom q_box = u3i_slab_mint(&BoxArena.sab_u);
+
+  u3_atom q_box = u3i_bytes(box_len_w, BoxArena.buf_y);
+  _uw_arena_free(&BoxArena);
 
   u3_noun stash = uw_heks(
-    u3nc(u3nc(box_len_w, q_box), alg_off_w),
+    u3nc(box_len_w, q_box),
     u3nc(u3nc(len_buf_w, q_buf), stk_off_w),
     run_off_w,
     sat_u->lia_shop,
-    u3k(sat_u->acc), // accumulator will also be returned
+    u3k(sat_u->acc), // accumulator will be returned
     sat_u->susp_list
   );
   sat_u->lia_shop = u3_none;
@@ -1957,8 +2020,9 @@ _move_state(
   u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
   u3z_save(u3z_memo_keep, key_old, u3_nul);
 
+  u3r_mug(stash);  // XX debugging; remove
   u3_noun key_new = u3z_key_2(fun_m, seed_new, hint);
-  u3z_save(u3z_memo_keep, key_new, stash);
+  u3z(u3z_save(u3z_memo_keep, key_new, stash));
 }
 
 u3_weak
@@ -2133,7 +2197,7 @@ u3we_lia_run_v1(u3_noun cor)
   u3_noun yil;
   if (!omit_t)
   {
-    if (_get_state(seed, hint, &sat))
+    if (_get_state(hint, seed, &sat))
     {
       sat.map = u3t(u3at(seed_import, seed));
       sat.match = &match;
