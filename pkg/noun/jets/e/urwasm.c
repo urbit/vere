@@ -12,52 +12,52 @@
 // #define URWASM_SUBROAD
 #define URWASM_STATEFUL
 
-#define ONCE_CTX        63
-#define RUN_CTX         7
+#define ONCE_CTX            63
+#define RUN_CTX             7
 
-#define AX_RUNNABLE     374
-#define AX_ARROWS       1502
+#define AX_RUNNABLE         374
+#define AX_ARROWS           1502
 
-#define AX_CALL         20
-#define AX_MEMREAD      383
-#define AX_MEMWRITE     94
-#define AX_CALL_EXT     375
-#define AX_GLOBAL_SET   4
-#define AX_GLOBAL_GET   22
-#define AX_MEM_SIZE     186
-#define AX_MEM_GROW     381
-#define AX_GET_ACC      374
-#define AX_SET_ACC      92
-#define AX_GET_ALL_GLOB 43
-#define AX_SET_ALL_GLOB 380
+#define AX_CALL             20
+#define AX_MEMREAD          383
+#define AX_MEMWRITE         94
+#define AX_CALL_EXT         375
+#define AX_GLOBAL_SET       4
+#define AX_GLOBAL_GET       22
+#define AX_MEM_SIZE         186
+#define AX_MEM_GROW         381
+#define AX_GET_ACC          374
+#define AX_SET_ACC          92
+#define AX_GET_ALL_GLOB     43
+#define AX_SET_ALL_GLOB     380
 
-#define AX_TRY          43
-#define AX_CATCH        4
-#define AX_RETURN       20
+#define AX_TRY              43
+#define AX_CATCH            4
+#define AX_RETURN           20
 
-#define ARROW_CTX       511
-#define MONAD_CTX       127
+#define ARROW_CTX           511
+#define MONAD_CTX           127
 
-#define arr_sam         62
-#define arr_sam_2       124
-#define arr_sam_3       125
-#define arr_sam_6       250
-#define arr_sam_7       251
+#define arr_sam             62
+#define arr_sam_2           124
+#define arr_sam_3           125
+#define arr_sam_6           250
+#define arr_sam_7           251
 
-#define seed_module     2
-#define seed_past       6
-#define seed_shop       14
-#define seed_import     15
+#define seed_module         2
+#define seed_past           6
+#define seed_shop           14
+#define seed_import         15
 
-#define uw__lia         c3_s3('l', 'i', 'a')
+#define uw__lia             c3_s3('l', 'i', 'a')
 
 #define uw_lia_run_version  1
 
-#define ERR(string) ("\r\n\033[31m>>> " string "\033[0m\r\n")
-#define WUT(string) ("\r\n\033[33m>>  " string "\033[0m\r\n")
+#define ERR(string)         ("\r\n\033[31m>>> " string "\033[0m\r\n")
+#define WUT(string)         ("\r\n\033[33m>>  " string "\033[0m\r\n")
 
-#define KICK1(TRAP)  u3j_kink(TRAP, 2)
-#define KICK2(TRAP)  u3j_kink(KICK1(TRAP), 2)
+#define KICK1(TRAP)         u3j_kink(TRAP, 2)
+#define KICK2(TRAP)         u3j_kink(KICK1(TRAP), 2)
 
 // [a b c d e f]
 static inline u3_noun
@@ -128,6 +128,16 @@ typedef struct {
   u3_noun set_all_glob_ctx;
 } match_data_struct;
 
+// memory arena with exponential growth
+typedef struct {
+  c3_w      siz_w;  // size in bytes
+  c3_y*     buf_y;  // allocated buffer
+  c3_y*     nex_y;  // next allocation
+  c3_y*     end_y;  // end of arena
+  jmp_buf*  esc_u;  // escape buffer
+  c3_t      ini_t;  // already initialized, XX urwasm within urwasm?
+} uw_arena;
+
 typedef struct {
   IM3Module wasm_module;  // p
   u3_noun lia_shop;       // q,   transferred
@@ -137,6 +147,8 @@ typedef struct {
   u3_noun arrow_yil;  // transferred
   u3_noun susp_list;  // transferred
   u3_noun resolution; // resolved %1 block, transferred
+  uw_arena box_arena;
+  uw_arena code_arena;
 } lia_state;
 
 typedef enum {
@@ -156,16 +168,6 @@ typedef enum {
   lst_catch_err = 4,
   lst_link_wasm = 5,
 } lia_suspend_tag;
-
-// memory arena with exponential growth
-typedef struct {
-  c3_w      siz_w;  // size in bytes
-  c3_y*     buf_y;  // allocated buffer
-  c3_y*     nex_y;  // next allocation
-  c3_y*     end_y;  // end of arena
-  jmp_buf*  esc_u;  // escape buffer
-  c3_t      ini_t;  // already initialized, XX urwasm within urwasm?
-} uw_arena;
 
 static void
 _uw_arena_init_size(uw_arena* ren_u, c3_w siz_w)
@@ -247,19 +249,19 @@ _uw_arena_free(uw_arena* ren_u)
 // Code page allocation: simple bump allocator for non-growing objects,
 // i.e. code pages
 // save allocation length for realloc
-// CodeArena.esc_u MUST be initialized by the caller to handle OOM
+// CodeArena->esc_u MUST be initialized by the caller to handle OOM
 //
-static uw_arena CodeArena;
+static uw_arena* CodeArena;
 
 static void*
 _calloc_code(size_t num_i, size_t len_i)
 {
-  if (!CodeArena.ini_t)
+  if (!CodeArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
 
-  void* lag_v = CodeArena.nex_y;
+  void* lag_v = CodeArena->nex_y;
   
   size_t byt_i = num_i * len_i;
   if (byt_i / len_i != num_i)
@@ -273,25 +275,25 @@ _calloc_code(size_t num_i, size_t len_i)
   }
   c3_d byt_d = byt_i + 16; // c3_d for length + alignment padding
 
-  c3_y* nex_y = CodeArena.nex_y + byt_d;
+  c3_y* nex_y = CodeArena->nex_y + byt_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
   
-  if (nex_y >= CodeArena.end_y)
+  if (nex_y >= CodeArena->end_y)
   { // OOM, jump out to increase the arena size and try again
-    _longjmp(*CodeArena.esc_u, c3__code);
+    _longjmp(*CodeArena->esc_u, c3__code);
   }
 
   *((c3_d*)lag_v) = byt_d - 16;  // corruption check
   *((c3_d*)lag_v + 1) = byt_d - 16;
 
-  CodeArena.nex_y = nex_y;
+  CodeArena->nex_y = nex_y;
   return ((c3_d*)lag_v + 2);
 }
 
 static void*
 _realloc_code(void* lag_v, size_t len_i)
 {
-  if (!CodeArena.ini_t)
+  if (!CodeArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
@@ -319,7 +321,7 @@ _realloc_code(void* lag_v, size_t len_i)
 static void
 _free_code(void* lag_v)
 {
-  if (!CodeArena.ini_t)
+  if (!CodeArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
@@ -328,19 +330,19 @@ _free_code(void* lag_v)
 
 // Struct/array allocation: for now again just a bump allocator
 // XX TODO sainer reallocs (wasm3 often reallocs dynamic arrays)
-// BoxArena.esc_u MUST be initialized by the caller to handle OOM
+// BoxArena->esc_u MUST be initialized by the caller to handle OOM
 //
-static uw_arena BoxArena;
+static uw_arena* BoxArena;
 
 static void*
 _calloc_box(size_t num_i, size_t len_i)
 {
-  if (!BoxArena.ini_t)
+  if (!BoxArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
 
-  void* lag_v = BoxArena.nex_y;
+  void* lag_v = BoxArena->nex_y;
   
   size_t byt_i = num_i * len_i;
   if (byt_i / len_i != num_i)
@@ -354,25 +356,25 @@ _calloc_box(size_t num_i, size_t len_i)
   }
   c3_d byt_d = byt_i + 16; // c3_d for length + alignment padding
 
-  c3_y* nex_y = BoxArena.nex_y + byt_d;
+  c3_y* nex_y = BoxArena->nex_y + byt_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
   
-  if (nex_y >= BoxArena.end_y)
+  if (nex_y >= BoxArena->end_y)
   { // OOM, jump out to increase the arena size and try again
-    _longjmp(*BoxArena.esc_u, c3__box);
+    _longjmp(*BoxArena->esc_u, c3__box);
   }
 
   *((c3_d*)lag_v) = byt_d - 16;  // corruption check
   *((c3_d*)lag_v + 1) = byt_d - 16;
 
-  BoxArena.nex_y = nex_y;
+  BoxArena->nex_y = nex_y;
   return ((c3_d*)lag_v + 2);
 }
 
 static void*
 _realloc_box(void* lag_v, size_t len_i)
 {
-  if (!BoxArena.ini_t)
+  if (!BoxArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
@@ -400,7 +402,7 @@ _realloc_box(void* lag_v, size_t len_i)
 static void
 _free_box(void* lag_v)
 {
-  if (!BoxArena.ini_t)
+  if (!BoxArena->ini_t)
   {
     u3m_bail(c3__fail);
   }
@@ -901,7 +903,13 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
+        //  any unconstrained nock computation is a potential urwasm reentry:
+        //  save the pointers before that, restore after
+        uw_arena* box_arena_frame = BoxArena;
+        uw_arena* code_arena_frame = CodeArena;
         monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+        BoxArena = box_arena_frame;
+        CodeArena = code_arena_frame;
         u3z(yil);
         yil = u3_none;
       }
@@ -958,7 +966,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
+        uw_arena* box_arena_frame = BoxArena;
+        uw_arena* code_arena_frame = CodeArena;
         monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+        BoxArena = box_arena_frame;
+        CodeArena = code_arena_frame;
         u3z(yil);
         yil = u3_none;
       }
@@ -998,7 +1010,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
         if (0 == u3h(yil))
         {
+          uw_arena* box_arena_frame = BoxArena;
+          uw_arena* code_arena_frame = CodeArena;
           monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+          BoxArena = box_arena_frame;
+          CodeArena = code_arena_frame;
           u3z(yil);
           yil = u3_none;
         }
@@ -1382,7 +1398,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         );
         if (result_tmp)
         {
-          fprintf(stderr, ERR("function %s failed to get results"), name_c);
+          fprintf(stderr,
+            ERR("function %s failed to get results: %s"), name_c, result_tmp
+          );
           u3m_bail(c3__fail);
         }
         yil = u3nc(0,
@@ -1430,7 +1448,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(frame);
           u3_noun p_res = u3t(sat_u->resolution);
+          uw_arena* box_arena_frame = BoxArena;
+          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          BoxArena = box_arena_frame;
+          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1461,7 +1483,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(u3t(frame));
           u3_noun p_res = u3t(sat_u->resolution);
+          uw_arena* box_arena_frame = BoxArena;
+          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          BoxArena = box_arena_frame;
+          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1514,7 +1540,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           else  // %0
           {
             u3_noun p_res = u3t(yil);
+            uw_arena* box_arena_frame = BoxArena;
+            uw_arena* code_arena_frame = CodeArena;
             u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+            BoxArena = box_arena_frame;
+            CodeArena = code_arena_frame;
             u3z(sat_u->resolution);
             u3z(yil);
             sat_u->resolution = _reduce_monad(monad_cont, sat_u);
@@ -1544,7 +1574,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(frame);
           u3_noun p_res = u3t(sat_u->resolution);
+          uw_arena* box_arena_frame = BoxArena;
+          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          BoxArena = box_arena_frame;
+          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1661,7 +1695,11 @@ _link_wasm_with_arrow_map(
     m3_SuspendStackPushExtTag(runtime);
   }
 
+  uw_arena* box_arena_frame = BoxArena;
+  uw_arena* code_arena_frame = CodeArena;
   u3_noun script = u3n_slam_on(arrow, coin_wasm_list);
+  BoxArena = box_arena_frame;
+  CodeArena = code_arena_frame;
   u3_noun yil = _reduce_monad(script, sat_u); 
 
   M3Result result = m3Err_none;
@@ -1733,7 +1771,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
   c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
   c3_dessert(c3y == u3a_is_cat(fun_m));
 
-  u3_noun key = u3z_key_2(fun_m, seed, hint);
+  u3_noun key = u3z_key(fun_m, seed);
   u3_weak get = u3z_find(u3z_memo_keep, key);
   u3z(key);
   
@@ -1776,16 +1814,15 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       ? stack_offset
       : u3m_bail(c3__fail);
     
-    
-    _uw_arena_init_size(&BoxArena, box_len_w);
-    u3r_bytes(0, box_len_w, BoxArena.buf_y, q_box);
-    _uw_arena_init(&CodeArena);
+    _uw_arena_init_size(BoxArena, box_len_w);
+    u3r_bytes(0, box_len_w, BoxArena->buf_y, q_box);
+    _uw_arena_init(CodeArena);
 
     M3Result result;
-    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena.buf_y + run_off_w);
-    wasm3_runtime->base = BoxArena.buf_y;
-    wasm3_runtime->base_transient = CodeArena.buf_y;
-    m3_RewritePointersRuntime(wasm3_runtime, BoxArena.buf_y, 0 /*is_store*/);
+    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena->buf_y + run_off_w);
+    wasm3_runtime->base = BoxArena->buf_y;
+    wasm3_runtime->base_transient = CodeArena->buf_y;
+    m3_RewritePointersRuntime(wasm3_runtime, BoxArena->buf_y, 0 /*is_store*/);
     IM3Module wasm3_module = wasm3_runtime->modules;
     c3_w n_imports = wasm3_module->numFuncImports;
 
@@ -1795,12 +1832,12 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     m3_SetMemoryAllocators(_calloc_bail, _free_bail, _realloc_bail);
 
     jmp_buf esc;
-    CodeArena.esc_u = &esc;
+    CodeArena->esc_u = &esc;
     c3_i jmp_i;
 
     while (1)
     {
-      wasm3_runtime->base_transient = CodeArena.buf_y;
+      wasm3_runtime->base_transient = CodeArena->buf_y;
       
       if (0 == (jmp_i = _setjmp(esc)))
       {
@@ -1836,7 +1873,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       {
         if (jmp_i == c3__code)
         {
-          _uw_arena_grow(&CodeArena);
+          _uw_arena_grow(CodeArena);
         }
         else
         {
@@ -1852,11 +1889,12 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       sat_u->acc = u3k(acc);
       // sat_u->map to be filled afterwards
       // sat_u->match same
+      // sat_u->resolution same
       sat_u->arrow_yil = u3_none;
       sat_u->susp_list = u3k(susp_list);
       M3MemoryHeader* mem = u3a_malloc(len_buf_w + sizeof(M3MemoryHeader));
       mem->runtime = wasm3_runtime;
-      mem->maxStack = BoxArena.buf_y + stk_off_w;
+      mem->maxStack = BoxArena->buf_y + stk_off_w;
       mem->length = len_buf_w;
       u3r_bytes(0, len_buf_w, (u8*)(mem + 1), q_buffer);
       wasm3_runtime->memory.mallocated = mem;
@@ -1958,19 +1996,19 @@ _move_state(
       || (c3__rand == hint && 1 != u3h(yil))
   )
   {
-    u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
+    u3_noun key_old = u3z_key(fun_m, seed_old);
     u3z_save(u3z_memo_keep, key_old, u3_nul);
     IM3Runtime run_u = sat_u->wasm_module->runtime;
     M3MemoryHeader* mem_u = run_u->memory.mallocated;
     u3a_free(mem_u);
-    _uw_arena_free(&CodeArena);
-    _uw_arena_free(&BoxArena);
+    _uw_arena_free(CodeArena);
+    _uw_arena_free(BoxArena);
     return;
   }
 
   IM3Runtime run_u = sat_u->wasm_module->runtime;
   M3MemoryHeader* mem_u = run_u->memory.mallocated;
-  c3_w stk_off_w = (u8*)mem_u->maxStack - BoxArena.buf_y;
+  c3_w stk_off_w = (u8*)mem_u->maxStack - BoxArena->buf_y;
   if (c3n == u3a_is_cat(stk_off_w))
   {
     u3m_bail(c3__fail);
@@ -1986,24 +2024,24 @@ _move_state(
 
   u3a_free(mem_u);
 
-  m3_RewritePointersRuntime(run_u, BoxArena.buf_y, 1 /*is_store*/);
-  c3_w run_off_w = (c3_y*)run_u - BoxArena.buf_y;
+  m3_RewritePointersRuntime(run_u, BoxArena->buf_y, 1 /*is_store*/);
+  c3_w run_off_w = (c3_y*)run_u - BoxArena->buf_y;
   if (c3n == u3a_is_cat(run_off_w))
   {
     u3m_bail(c3__fail);
   }
   
-  _uw_arena_free(&CodeArena);
+  _uw_arena_free(CodeArena);
 
-  c3_w box_len_w = BoxArena.siz_w;
+  c3_w box_len_w = BoxArena->siz_w;
   if (c3n == u3a_is_cat(box_len_w))
   {
     u3m_bail(c3__fail);
   }
 
 
-  u3_atom q_box = u3i_bytes(box_len_w, BoxArena.buf_y);
-  _uw_arena_free(&BoxArena);
+  u3_atom q_box = u3i_bytes(box_len_w, BoxArena->buf_y);
+  _uw_arena_free(BoxArena);
 
   u3_noun stash = uw_heks(
     u3nc(box_len_w, q_box),
@@ -2017,11 +2055,10 @@ _move_state(
   
   sat_u->susp_list = u3_none;
 
-  u3_noun key_old = u3z_key_2(fun_m, seed_old, hint);
+  u3_noun key_old = u3z_key(fun_m, seed_old);
   u3z_save(u3z_memo_keep, key_old, u3_nul);
 
-  u3r_mug(stash);  // XX debugging; remove
-  u3_noun key_new = u3z_key_2(fun_m, seed_new, hint);
+  u3_noun key_new = u3z_key(fun_m, seed_new);
   u3z(u3z_save(u3z_memo_keep, key_new, stash));
 }
 
@@ -2194,6 +2231,10 @@ u3we_lia_run_v1(u3_noun cor)
   };
 
   lia_state sat;
+
+  BoxArena = &sat.box_arena;
+  CodeArena = &sat.code_arena;
+
   u3_noun yil;
   if (!omit_t)
   {
@@ -2201,6 +2242,7 @@ u3we_lia_run_v1(u3_noun cor)
     {
       sat.map = u3t(u3at(seed_import, seed));
       sat.match = &match;
+      sat.resolution = u3_none;
       yil = _apply_diff(input_tag, p_input, &sat);
     }
     else
@@ -2216,14 +2258,14 @@ u3we_lia_run_v1(u3_noun cor)
       IM3Runtime wasm3_runtime = NULL;
       IM3Module wasm3_module;
 
-      _uw_arena_init(&CodeArena);
-      _uw_arena_init(&BoxArena);
+      _uw_arena_init(CodeArena);
+      _uw_arena_init(BoxArena);
 
       m3_SetAllocators(_calloc_box, _free_box, _realloc_box);
       m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
       m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
       jmp_buf esc;
-      CodeArena.esc_u = BoxArena.esc_u = &esc;
+      CodeArena->esc_u = BoxArena->esc_u = &esc;
       c3_i jmp_i;
 
       while (1)
@@ -2328,13 +2370,13 @@ u3we_lia_run_v1(u3_noun cor)
 
           if (jmp_i == c3__box)
           {
-            _uw_arena_grow(&BoxArena);
-            _uw_arena_reset(&CodeArena);
+            _uw_arena_grow(BoxArena);
+            _uw_arena_reset(CodeArena);
           }
           else if (jmp_i == c3__code)
           {
-            _uw_arena_grow(&CodeArena);
-            _uw_arena_reset(&BoxArena);
+            _uw_arena_grow(CodeArena);
+            _uw_arena_reset(BoxArena);
           }
           else
           {
@@ -2344,6 +2386,9 @@ u3we_lia_run_v1(u3_noun cor)
           continue;
         }
       }
+
+      wasm3_runtime->base = BoxArena->buf_y;
+      wasm3_runtime->base_transient = CodeArena->buf_y;
       //  sanity check: struct and code allocators should not be used
       //  when running wasm
       m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
