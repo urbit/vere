@@ -1396,7 +1396,7 @@ u3wcp_tos(u3_noun cor)
 {
   u3_noun a;
 
-  if ( (c3n == u3r_baad(cor, u3x_sam, &a, 0)) ||
+  if ( (c3n == u3r_mean(cor, u3x_sam, &a, u3_nul)) ||
        (c3n == u3ud(a)) ||
        (a >= 256) )
   {
@@ -1414,7 +1414,7 @@ u3wcp_tod(u3_noun cor)
 {
   u3_noun a;
 
-  if ( (c3n == u3r_baad(cor, u3x_sam, &a, 0)) ||
+  if ( (c3n == u3r_mean(cor, u3x_sam, &a, u3_nul)) ||
        (c3n == u3ud(a)) ||
        (a >= 256) )
   {

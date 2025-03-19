@@ -110,7 +110,7 @@
         u3_weak
         u3r_at(u3_atom a, u3_weak b);
 
-      /* u3r_baad():
+      /* u3r_mean():
       **
       **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
       **   Axes must be sorted in tree order.
@@ -118,7 +118,7 @@
         c3_o
         u3r_vmean(u3_noun a, va_list ap);
         c3_o
-        u3r_baad(u3_noun a, ...);
+        u3r_mean(u3_noun a, ...);
 
       /* u3r_mug_both(): Join two mugs.
       */

@@ -10,7 +10,7 @@ u3wfu_fish(u3_noun cor)
 {
   u3_noun bat, sut, axe, van;
 
-  if (  (c3n == u3r_baad(cor, u3x_sam, &axe, u3x_con, &van, 0))
+  if (  (c3n == u3r_mean(cor, u3x_sam, &axe, u3x_con, &van, u3_nul))
      || (c3n == u3ud(axe))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
