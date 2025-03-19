@@ -7,18 +7,18 @@
 #include "noun.h"
 
 static u3_atom
-_leer_cut(c3_w_tmp pos_w, c3_w_tmp len_w, u3_atom src)
+_leer_cut(c3_n pos_n, c3_n len_n, u3_atom src)
 {
-  if ( 0 == len_w ) {
+  if ( 0 == len_n ) {
     return 0;
   }
   else {
     u3i_slab sab_u;
-    u3i_slab_bare(&sab_u, 3, len_w);
+    u3i_slab_bare(&sab_u, 3, len_n);
     // XX: 64 what?
-    sab_u.buf_w[(sab_u.len_n * u3a_note_bytes)- 1] = 0;
+    sab_u.buf_n[sab_u.len_n - 1] = 0;
 
-    u3r_bytes(pos_w, len_w, sab_u.buf_y, src);
+    u3r_bytes(pos_n, len_n, sab_u.buf_y, src);
 
     return u3i_slab_mint_bytes(&sab_u);
   }
@@ -30,42 +30,42 @@ _leer_cut(c3_w_tmp pos_w, c3_w_tmp len_w, u3_atom src)
 u3_noun
 u3qe_lore(u3_atom lub)
 {
-  c3_w_tmp    len_w = u3r_met(3, lub);
-  c3_w_tmp    pos_w = 0;
+  c3_n    len_n = u3r_met(3, lub);
+  c3_n    pos_n = 0;
   u3_noun tez = u3_nul;
 
   while ( 1 ) {
-    c3_w_tmp meg_w = 0;
+    c3_n meg_n = 0;
     c3_y end_y;
 
     c3_y byt_y;
     while ( 1 ) {
-      if ( pos_w >= len_w ) {
+      if ( pos_n >= len_n ) {
         byt_y = 0;
         end_y = c3y;
         break;
       }
-      byt_y = u3r_byte(pos_w + meg_w, lub);
+      byt_y = u3r_byte(pos_n + meg_n, lub);
 
       if ( (10 == byt_y) || (0 == byt_y) ) {
         end_y = __(byt_y == 0);
         break;
-      } else meg_w++;
+      } else meg_n++;
     }
 
-    if ((byt_y == 0) && ((pos_w + meg_w + 1) < len_w)) {
+    if ((byt_y == 0) && ((pos_n + meg_n + 1) < len_n)) {
       return u3m_bail(c3__exit);
     }
 
-    if ( !_(end_y) && pos_w >= len_w ) {
+    if ( !_(end_y) && pos_n >= len_n ) {
       return u3kb_flop(tez);
     }
     else {
-      tez = u3nc(_leer_cut(pos_w, meg_w, lub), tez);
+      tez = u3nc(_leer_cut(pos_n, meg_n, lub), tez);
       if ( _(end_y) ) {
         return u3kb_flop(tez);
       }
-      pos_w += (meg_w + 1);
+      pos_n += (meg_n + 1);
     }
   }
 }
@@ -91,15 +91,15 @@ u3qe_leer(u3_atom txt)
   u3_noun* lit = &pro;
 
   {
-    c3_w_tmp pos_w, i_w = 0, len_w = u3r_met(3, txt);
+    c3_n pos_n, i_n = 0, len_n = u3r_met(3, txt);
     u3_noun* hed;
     u3_noun* tel;
 
-    while ( i_w < len_w ) {
+    while ( i_n < len_n ) {
       //  scan till end or newline
       //
-      for ( pos_w = i_w; i_w < len_w; ++i_w ) {
-        if ( 10 == u3r_byte(i_w, txt) ) {
+      for ( pos_n = i_n; i_n < len_n; ++i_n ) {
+        if ( 10 == u3r_byte(i_n, txt) ) {
           break;
         }
       }
@@ -107,10 +107,10 @@ u3qe_leer(u3_atom txt)
       //  append to list
       //
       *lit = u3i_defcons(&hed, &tel);
-      *hed = _leer_cut(pos_w, i_w - pos_w, txt);
+      *hed = _leer_cut(pos_n, i_n - pos_n, txt);
       lit  = tel;
 
-      i_w++;
+      i_n++;
     }
   }
 

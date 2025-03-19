@@ -214,7 +214,7 @@ _test_chop_slow(c3_g    met_g,
     c3_w_tmp baf_w = (fum_w << met_g);
     c3_w_tmp bat_w = (tou_w << met_g);
 
-    // XX: efficiency: poor.  Iterate by words.
+    // XX: efficiency: poor.  Iterate by words_new.
     //
     for ( i_w = 0; i_w < wid_w; i_w++ ) {
       c3_w_tmp waf_w = (baf_w >> 5);
@@ -272,7 +272,7 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
         for ( tou_w = 0; tou_w <= len_w; tou_w++ ) {
           memset(a_w, 0, len_w << 2);
           memset(b_w, 0, len_w << 2);
-          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          u3r_chop_words_new(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
           if ( 0 != memcmp(a_w, b_w, len_w << 2) ) {
@@ -322,7 +322,7 @@ _test_chop_huge(c3_c* cap_c, c3_y val_y)
         for ( tou_w = 0; tou_w <= 1; tou_w++ ) {
           memset(a_w, 0, len_w << 2);
           memset(b_w, 0, len_w << 2);
-          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          u3r_chop_words_new(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
           if ( 0 != memcmp(a_w, b_w, len_w << 2) ) {
@@ -991,30 +991,30 @@ _test_imprison_complex()
     }
   }
 
-  // words
+  // words_new
   {
     c3_w_tmp in_w[10] = {10, 20, 0xffffffff};
     u3_noun noun = u3i_words_tmp(3, in_w);
 
 
-    c3_w_tmp out_a = u3r_word(0, noun);
+    c3_w_tmp out_a = u3r_word_tmp(0, noun);
     if (10 != out_a ){
       printf("*** u3r_word 1\n");
     }
 
-    c3_w_tmp out_b = u3r_word(1, noun);
+    c3_w_tmp out_b = u3r_word_tmp(1, noun);
     if (20 != out_b ){
       printf("*** u3r_word 2\n");
     }
 
-    c3_w_tmp out_c = u3r_word(2, noun);
+    c3_w_tmp out_c = u3r_word_tmp(2, noun);
     if (0xffffffff != out_c ){
       printf("*** u3r_word 3\n");
     }
 
     c3_w_tmp out_w[10];
     memset(out_w, 0, 10 * sizeof(c3_w_tmp));
-    u3r_words(0, 3, out_w, noun);
+    u3r_words_new(0, 3, out_w, noun);
 
     if (10 != out_w[0] ||
         20 != out_w[1] ||
@@ -1464,7 +1464,7 @@ _test_met()
   }
 #endif
 
-  // 4 words x 32 bits each = 128 bits = 16 bytes = 4 words = 2 doubles
+  // 4 words_new x 32 bits each = 128 bits = 16 bytes = 4 words_new = 2 doubles
   //
   {
     c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
@@ -1491,7 +1491,7 @@ _test_met()
     }
   }
 
-  // 4 words (top word is '1' )
+  // 4 words_new (top word is '1' )
   //
   {
     c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };

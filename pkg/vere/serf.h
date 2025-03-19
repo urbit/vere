@@ -10,7 +10,7 @@
         c3_c*   dir_c;             //  execution directory (pier)
         c3_d    sen_d;             //  last event requested
         c3_d    dun_d;             //  last event processed
-        c3_l    mug_l;             //  hash of state
+        c3_l_tmp    mug_l;             //  hash of state
         c3_w_tmp    mas_w;             //  memory threshold state
         c3_w_tmp    fag_w;             //  post-op flags
         u3_noun sac;               //  space measurementl

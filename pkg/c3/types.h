@@ -28,12 +28,14 @@
       typedef uint8_t c3_g;   // 32-bit log - 0-31 bits
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
       #ifdef VERE64
+        typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint64_t c3_l;  // little; 31-bit unsigned integer
         typedef uint64_t c3_n;  // note: noun-sized integer
         typedef int64_t c3_ns;
         typedef uint64_t c3_nz;  // note: noun-sized integer
         typedef int64_t c3_nzs;
       #else
+        typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint32_t c3_l;  // little; 31-bit unsigned integer
         typedef uint32_t c3_n;  // note: noun-sized integer
         typedef int32_t c3_ns;
@@ -103,6 +105,10 @@
       #define PRIc3_ls PRIi64
       #define PRIxc3_l PRIx64
       #define PRIXc3_l PRIX64
+      #define PRIc3_l_tmp PRIu32
+      #define PRIc3_ls_tmp PRIi32
+      #define PRIxc3_l_tmp PRIx32
+      #define PRIXc3_l_tmp PRIX32
       #else
       #define PRIc3_l  PRIu32
       #define PRIc3_ls PRIi32

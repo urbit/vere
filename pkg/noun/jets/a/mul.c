@@ -10,15 +10,24 @@ u3_noun
 u3qa_mul(u3_atom a,
          u3_atom b)
 {
+#ifndef VERE64
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
+#else
+  c3_g bit_g = c3_bits_chub(a) + c3_bits_chub(b);
+  if (bit_g <= 64) {
+#endif
     c3_d c = ((c3_d) a) * ((c3_d) b);
-
-    return u3i_chubs(1, &c);
+#ifdef VERE64
+    bit_g = bit_g - c3_bits_chub(c);
+    if (1 < bit_g) goto gmp_mul;
+#endif
+    return u3i_chub(c);
   }
   else if ( 0 == a ) {
     return 0;
   }
   else {
+    gmp_mul:
     mpz_t a_mp, b_mp;
 
     u3r_mp(a_mp, a);

@@ -927,7 +927,7 @@ u3a_realloc(void* lag_v, size_t len_i)
     return u3a_malloc(len_i);
   }
   else {
-    c3_n     len_w = (c3_n)((len_i + 3) >> 2);
+    c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_log);
     c3_n*    lag_w = lag_v;
     c3_n     pad_w = lag_w[-1];
     c3_n*    org_w = lag_w - (pad_w + 1);
@@ -1996,7 +1996,7 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_n wor_w)
 {
   u3_assert( 0 != fil_u );
 
-  c3_z byt_z = ((c3_z)wor_w * 4);
+  c3_z byt_z = ((c3_z)wor_w * sizeof(c3_n));
   c3_z gib_z = (byt_z / 1000000000);
   c3_z mib_z = (byt_z % 1000000000) / 1000000;
   c3_z kib_z = (byt_z % 1000000) / 1000;

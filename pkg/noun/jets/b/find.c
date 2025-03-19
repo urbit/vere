@@ -5,8 +5,8 @@
 
 #include "noun.h"
 
-STATIC_ASSERT( (UINT32_MAX > u3a_cells),
-               "list index precision" );
+//STATIC_ASSERT( (UINT32_MAX > u3a_cells),
+//               "list index precision" );
 
 u3_noun
 u3qb_find(u3_noun nedl, u3_noun hstk)

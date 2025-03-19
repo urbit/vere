@@ -383,7 +383,7 @@ u3_auto_slog(u3_auto* car_u)
     nex_u = car_u->nex_u;
 
     u3l_log("    %.*s: live=%s, queue=%u",
-            u3r_met(3, car_u->nam_m),
+            (c3_w_tmp)u3r_met(3, car_u->nam_m),
             (c3_c*)&car_u->nam_m,
             ( c3y == car_u->liv_o ) ? "&" : "|",
             car_u->dep_w);

@@ -1367,15 +1367,16 @@ u3r_words_new(c3_n    a_w,
           c3_w_new*   c_w,
           u3_atom d)
 {
+
   u3_assert(u3_none != d);
   u3_assert(_(u3a_is_atom(d)));
 
   if ( b_w == 0 ) {
     return;
   }
-  if ( _(u3a_is_cat(d)) ) {
+  if ( d < u3a_32_direct_max ) {
     if ( a_w == 0 ) {
-      *c_w = d;
+      *c_w = (c3_w_new)d;
       memset((c3_y*)(c_w + 1), 0, (b_w - 1) << u3a_word_bytes_log);
     }
     else {
@@ -1383,14 +1384,28 @@ u3r_words_new(c3_n    a_w,
     }
   }
   else {
-    u3a_atom* d_u = u3a_to_ptr(d);
-    c3_n len_n = d_u->len_n * u3a_note_words;
+    c3_n len_n;
+    c3_w_new* buf_w;
+    // XX: 64 little endian. very ugly!
+#ifdef VERE64
+    if (c3y == u3a_is_cat(d)) {
+      len_n = d == c3_w_max ? 1 : 2;
+      buf_w = (c3_w_new*)&d;
+    }
+    else
+#endif
+    {
+      u3a_atom* d_u = u3a_to_ptr(d);
+      len_n = d_u->len_n * u3a_note_words;
+      buf_w = d_u->buf_w;
+    }
     if ( a_w >= len_n ) {
       memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_log);
     }
     else {
       c3_n z_w = c3_min(b_w, len_n - a_w);
-      c3_w_new* x_w = d_u->buf_w + a_w;
+      // XX: 64 little endian
+      c3_w_new* x_w = buf_w + a_w;
       memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << u3a_word_bytes_log);
       if ( b_w > len_n - a_w ) {
         memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - len_n) << u3a_word_bytes_log);

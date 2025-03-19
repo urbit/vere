@@ -60,7 +60,7 @@
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
-#     define u3a_walign  (1 << u3a_vits)
+#     define u3a_walign  ((c3_n)1 << u3a_vits)
 
     /* u3a_balign: u3a_walign in bytes
     */
@@ -68,7 +68,7 @@
 
      /* u3a_bits_max: max loom bex
      */
-#    define u3a_bits_max (8 * sizeof(c3_n) + u3a_vits)
+#    define u3a_bits_max ((c3_n)8 * sizeof(c3_n) + u3a_vits)
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
@@ -100,7 +100,7 @@
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum ((c3_n)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
+#     define u3a_minimum ((c3_n)( (c3_n)1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
 
     /* u3a_fbox_no: number of free lists per size.
     */

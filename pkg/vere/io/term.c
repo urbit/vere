@@ -348,7 +348,7 @@ _term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w_tmp num_w, ...)
 
   while ( num_w-- ) {
     c3_w_tmp par_w = va_arg(ap, c3_w_tmp);
-    len_y += sprintf(pas_c+len_y, "%d", par_w);
+    len_y += sprintf(pas_c+len_y, "%"PRIc3_w_tmp, par_w);
 
     if ( num_w ) {
       pas_c[len_y++] = ';';
@@ -405,8 +405,8 @@ _term_it_show_blank(u3_utty* uty_u)
 static void
 _term_it_move_cursor(u3_utty* uty_u, c3_w_tmp col_w, c3_w_tmp row_w)
 {
-  c3_l row_l = uty_u->tat_u.siz.row_l;
-  c3_l col_l = uty_u->tat_u.siz.col_l;
+  c3_l_tmp row_l = uty_u->tat_u.siz.row_l;
+  c3_l_tmp col_l = uty_u->tat_u.siz.col_l;
   if ( row_w >= row_l ) { row_w = row_l - 1; }
   if ( col_w >= col_l ) { col_w = col_l - 1; }
 
@@ -810,7 +810,7 @@ _term_suck(u3_utty* uty_u, const c3_y* buf, ssize_t siz_i)
       u3_pier_bail(u3_king_stub());
     }
     else if ( siz_i < 0 ) {
-      u3l_log("term %d: read: %s", uty_u->tid_l, uv_strerror(siz_i));
+      u3l_log("term %"PRIc3_w_tmp": read: %s", uty_u->tid_l, uv_strerror(siz_i));
     }
     else {
       c3_i i;
@@ -847,7 +847,7 @@ _term_spin_step(u3_utty* uty_u)
   //
   {
     c3_w_tmp cus_w = tat_u->mir.cus_w;
-    c3_l col_l = tat_u->siz.col_l;
+    c3_l_tmp col_l = tat_u->siz.col_l;
 
     if ( cus_w >= col_l ) {  //  shenanigans!
       return;
@@ -1024,7 +1024,7 @@ _term_main()
 /* _term_ef_get(): terminal by id.
 */
 static u3_utty*
-_term_ef_get(c3_l tid_l)
+_term_ef_get(c3_l_tmp tid_l)
 {
   if ( 0 != tid_l ) {
     u3_utty* uty_u;
@@ -1041,10 +1041,10 @@ _term_ef_get(c3_l tid_l)
 /* u3_term_get_blew(): return window size [columns rows].
 */
 u3_noun
-u3_term_get_blew(c3_l tid_l)
+u3_term_get_blew(c3_l_tmp tid_l)
 {
   u3_utty*       uty_u = _term_ef_get(tid_l);
-  c3_l           col_l, row_l;
+  c3_l_tmp           col_l, row_l;
 
   if ( (c3y == u3_Host.ops_u.tem) || !uty_u ||
        (c3y != uty_u->wsz_f(uty_u, &col_l, &row_l)) )
@@ -1101,8 +1101,8 @@ _term_it_put_value(c3_w_tmp*   lin_w,
                    u3_atom val)
 {
   c3_c str_c[4];
-  c3_w_tmp len = snprintf(str_c, 4, "%d", val % 256);
-  for ( c3_w_tmp i_w = 0; i_w < len; i_w++ ) {
+  c3_w_tmp len = snprintf(str_c, 4, "%"PRIc3_n, val % 256);
+  for ( c3_n i_w = 0; i_w < len; i_w++ ) {
     lin_w[i_w] = str_c[i_w];
   }
   u3z(val);
@@ -1276,7 +1276,7 @@ _term_it_send_stub(u3_utty* uty_u,
       //  write the text itself
       //
       for ( ; u3_nul != nib; i_w++, nib = u3t(nib) ) {
-        lin_w[i_w] = u3r_word(0, u3h(nib));
+        lin_w[i_w] = u3r_word_tmp(0, u3h(nib));
       }
 
       //  if we applied any styles, toggle them off
@@ -1320,7 +1320,7 @@ _term_it_show_tour(u3_utty* uty_u,
     c3_w_tmp i_w;
 
     for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
-      lin_w[i_w] = u3r_word(0, u3h(lin));
+      lin_w[i_w] = u3r_word_tmp(0, u3h(lin));
     }
   }
 
@@ -1641,7 +1641,7 @@ _term_io_talk(u3_auto* car_u)
  *    number is always '1'.
  */
 static u3_noun
-_reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
+_reck_orchid(u3_noun fot, u3_noun txt, c3_l_tmp* tid_l)
 {
   c3_c* str = u3r_string(txt);
   c3_d ato_d = strtol(str, NULL, 10);
@@ -1650,7 +1650,7 @@ _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
   if ( ato_d >= 0x80000000ULL ) {
     return c3n;
   } else {
-    *tid_l = (c3_l) ato_d;
+    *tid_l = (c3_l_tmp) ato_d;
 
     return c3y;
   }
@@ -1684,7 +1684,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   else {
     u3_noun pud = t_wir;
     u3_noun p_pud, q_pud;
-    c3_l    tid_l;
+    c3_l_tmp    tid_l;
 
     if (  (c3n == u3r_cell(pud, &p_pud, &q_pud))
        || (u3_nul != q_pud)
@@ -1705,7 +1705,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           {
             u3_utty* uty_u = _term_ef_get(tid_l);
             if ( 0 == uty_u ) {
-              // u3l_log("no terminal %d", tid_l);
+              // u3l_log("no terminal %"PRIc3_w_tmp, tid_l);
               // u3l_log("uty_u %p", u3_Host.uty_u);
             }
             else {

@@ -583,11 +583,11 @@ _czar_boot_data(c3_c* czar_c,
 
     if ( (c3y == u3r_hext(cued, 0, &czar_glx, &czar_ryf,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
-         (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
-         (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
-         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) ) {
-      if ( c3y == u3du(czar_bon) ) u3r_safe_word(u3t(czar_bon), czar_bon_w);
-      if ( c3y == u3du(czar_ack) ) u3r_safe_word(u3t(czar_ack), czar_ack_w);
+         (c3y == u3r_safe_word_tmp(czar_glx, czar_glx_w)) &&
+         (c3y == u3r_safe_word_tmp(czar_ryf, czar_ryf_w)) &&
+         (c3y == u3r_safe_word_tmp(czar_lyf, czar_lyf_w)) ) {
+      if ( c3y == u3du(czar_bon) ) u3r_safe_word_tmp(u3t(czar_bon), czar_bon_w);
+      if ( c3y == u3du(czar_ack) ) u3r_safe_word_tmp(u3t(czar_ack), czar_ack_w);
       ret_o = c3y;
     }
 
@@ -618,9 +618,9 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
      */
-    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
-    bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
-    nex_w = u3r_word(0, nex);
+    glx_w = u3r_word_tmp(0, glx); ryf_w = u3r_word_tmp(0, ryf);
+    bon_w = u3r_word_tmp(0, bon); cur_w = u3r_word_tmp(0, cur);
+    nex_w = u3r_word_tmp(0, nex);
 
     u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
@@ -1251,7 +1251,7 @@ _pier_play(u3_play* pay_u)
 /* _pier_on_lord_play_done(): log replay batch completion from worker.
 */
 static void
-_pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l mug_l)
+_pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l_tmp mug_l)
 {
   u3_pier* pir_u = ptr_v;
   u3_fact* tac_u = fon_u.ent_u;
@@ -1264,7 +1264,7 @@ _pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l mug_l)
   //  XX optional
   //
   if ( tac_u->mug_l && (tac_u->mug_l != mug_l) ) {
-    u3l_log("pier: (%" PRIu64 "): play: mug mismatch %x %x",
+    u3l_log("pier: (%" PRIu64 "): play: mug mismatch %"PRIc3_l_tmp" %"PRIc3_l_tmp"",
             tac_u->eve_d,
             tac_u->mug_l,
             mug_l);
@@ -1290,7 +1290,7 @@ _pier_on_lord_play_done(void* ptr_v, u3_info fon_u, c3_l mug_l)
 */
 static void
 _pier_on_lord_play_bail(void* ptr_v, u3_info fon_u,
-                        c3_l mug_l, c3_d eve_d, u3_noun dud)
+                        c3_l_tmp mug_l, c3_d eve_d, u3_noun dud)
 {
   u3_pier* pir_u = ptr_v;
 
@@ -1299,7 +1299,7 @@ _pier_on_lord_play_bail(void* ptr_v, u3_info fon_u,
   {
     u3_fact* tac_u = fon_u.ext_u;
     u3_fact* nex_u;
-    c3_l     las_l = 0;
+    c3_l_tmp     las_l = 0;
 
     //  dispose successful
     //
@@ -1313,7 +1313,7 @@ _pier_on_lord_play_bail(void* ptr_v, u3_info fon_u,
     //  XX optional
     //
     if ( las_l && (las_l != mug_l) ) {
-      u3l_log("pier: (%" PRIu64 "): play bail: mug mismatch %x %x",
+      u3l_log("pier: (%" PRIu64 "): play bail: mug mismatch %"PRIc3_l_tmp" %"PRIc3_l_tmp"",
              (c3_d)(eve_d - 1ULL),
              las_l,
              mug_l);
@@ -1578,7 +1578,7 @@ _pier_on_lord_live(void* ptr_v)
   u3_disk* log_u = pir_u->log_u;
 
 #ifdef VERBOSE_PIER
-  fprintf(stderr, "pier: (%" PRIu64 "): boot at mug %x\r\n", god_u->eve_d, god_u->mug_l);
+  fprintf(stderr, "pier: (%" PRIu64 "): boot at mug %"PRIc3_l_tmp"\r\n", god_u->eve_d, god_u->mug_l);
 #endif
 
   u3_assert( god_u->eve_d <= log_u->dun_d );

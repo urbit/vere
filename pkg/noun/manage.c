@@ -2265,7 +2265,7 @@ u3m_init(size_t len_i)
   //
   if (  !len_i
      || (len_i & (len_i - 1))
-     || (len_i < (1 << (u3a_page + 2)))
+     || (len_i < (1 << (u3a_page + u3a_note_bytes_log)))
      || (len_i > u3a_bytes) )
   {
     u3l_log("loom: bad size: %zu", len_i);

@@ -148,8 +148,8 @@
     */
       typedef struct {
         struct {
-          c3_l  col_l;                      //  columns
-          c3_l  row_l;                      //  rows
+          c3_l_tmp  col_l;                      //  columns
+          c3_l_tmp  row_l;                      //  rows
         } siz;
 
         struct {
@@ -249,8 +249,8 @@
         u3_ttyf          loj_f;             //  release tty from cooked print
         c3_o           (*wsz_f)
                        (struct _u3_utty* uty_u,
-                        c3_l* col_l,
-                        c3_l* row_l);       //  return tty window size
+                        c3_l_tmp* col_l,
+                        c3_l_tmp* row_l);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
         c3_w_tmp             tid_l;             //  terminal identity number
         u3_utfo          ufo_u;             //  escape sequences
@@ -351,7 +351,7 @@
     **/
       /* u3_ovum_news: u3_ovum lifecycle events
       */
-        typedef enum {
+        typedef enum: c3_n {
           u3_ovum_drop = 0,                 //  unplanned
           u3_ovum_work = 1,                 //  begun
           u3_ovum_done = 2                  //  complete
@@ -393,7 +393,7 @@
       */
         typedef struct _u3_fact {
           c3_d             eve_d;               //  event number
-          c3_l             mug_l;               //  kernel mug after
+          c3_l_tmp             mug_l;               //  kernel mug after
           u3_noun            job;               //  (pair date ovum)
           struct _u3_fact* nex_u;               //  next in queue
         } u3_fact;
@@ -494,8 +494,8 @@
           void (*slog_f)(void*, c3_w_tmp, u3_noun);
           void (*spin_f)(void*, u3_atom, c3_o);
           void (*spun_f)(void*);
-          void (*play_done_f)(void*, u3_info, c3_l mug_l);
-          void (*play_bail_f)(void*, u3_info, c3_l mug_l, c3_d eve_d, u3_noun dud);
+          void (*play_done_f)(void*, u3_info, c3_l_tmp mug_l);
+          void (*play_bail_f)(void*, u3_info, c3_l_tmp mug_l, c3_d eve_d, u3_noun dud);
           void (*work_done_f)(void*, u3_ovum*, u3_fact*, u3_gift*);
           void (*work_bail_f)(void*, u3_ovum*, u3_noun lud);
           void (*save_f)(void*);
@@ -523,7 +523,7 @@
           c3_y                 hon_y;           //  hoon kelvin
           c3_y                 noc_y;           //  nock kelvin
           c3_d                 eve_d;           //  last event completed
-          c3_l                 mug_l;           //  mug at eve_d
+          c3_l_tmp                 mug_l;           //  mug at eve_d
           u3_lord_cb            cb_u;           //  callbacks
           c3_o                 pin_o;           //  spinning
           c3_w_tmp                 dep_w;           //  queue depth
@@ -969,7 +969,7 @@
         size_t
         u3_disk_etch(u3_disk* log_u,
                      u3_noun    eve,
-                     c3_l     mug_l,
+                     c3_l_tmp     mug_l,
                      c3_y**   out_y);
 
       /* u3_disk_sift(): parse a persisted event buffer.
@@ -978,7 +978,7 @@
         u3_disk_sift(u3_disk* log_u,
                      size_t   len_i,
                      c3_y*    dat_y,
-                     c3_l*    mug_l,
+                     c3_l_tmp*    mug_l,
                      u3_noun*   job);
 
       /* u3_disk_info(): status info as $mass.
@@ -1070,7 +1070,7 @@
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
         u3_weak
-        u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l);
+        u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_tmp* mug_l);
 
       /* u3_disk_walk_init(): init iterator.
       */
@@ -1192,7 +1192,7 @@
       /* u3_term_get_blew(): return window size [columns rows].
       */
         u3_noun
-        u3_term_get_blew(c3_l tid_l);
+        u3_term_get_blew(c3_l_tmp tid_l);
 
       /* u3_term_ef_winc(): window change.
       */

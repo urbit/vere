@@ -12,7 +12,7 @@
 // endif tests
 
 #define safe_dec(num) (num == 0 ? num : num - 1)
-#define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
+#define _mesa_met3_w(a_w) ((c3_bits_word_tmp(a_w) + 0x7) >> 3)
 
 // assertions for roundtrip tests
 /* #define MESA_ROUNDTRIP c3y */
@@ -430,16 +430,16 @@ _sift_short(u3_sifter* sif_u)
 }
 
 static void
-_etch_word(u3_etcher* ech_u, c3_w_tmp val_w)
+_etch_word_tmp(u3_etcher* ech_u, c3_w_tmp val_w)
 {
-  c3_etch_word(_etch_next(ech_u, 4), val_w);
+  c3_etch_word_tmp(_etch_next(ech_u, 4), val_w);
 }
 
 static c3_w_tmp
-_sift_word(u3_sifter* sif_u)
+_sift_word_tmp(u3_sifter* sif_u)
 {
   c3_y *res_y = _sift_next(sif_u, 4);
-  return ( NULL == res_y ) ? 0 : c3_sift_word(res_y);
+  return ( NULL == res_y ) ? 0 : c3_sift_word_tmp(res_y);
 }
 
 static void
@@ -456,7 +456,7 @@ _sift_chub(u3_sifter* sif_u)
 }
 
 static void
-_etch_var_word(u3_etcher* ech_u, c3_w_tmp val_w, c3_w_tmp len_w)
+_etch_var_word_tmp(u3_etcher* ech_u, c3_w_tmp val_w, c3_w_tmp len_w)
 {
   assert ( len_w <= 4 );
   c3_y *buf_y = _etch_next(ech_u, len_w);
@@ -466,7 +466,7 @@ _etch_var_word(u3_etcher* ech_u, c3_w_tmp val_w, c3_w_tmp len_w)
 }
 
 static c3_w_tmp
-_sift_var_word(u3_sifter* sif_u, c3_w_tmp len_w)
+_sift_var_word_tmp(u3_sifter* sif_u, c3_w_tmp len_w)
 {
   assert ( len_w <= 4 );
   c3_y *res_y = _sift_next(sif_u, len_w);
@@ -567,13 +567,13 @@ _mesa_etch_head(u3_etcher* ech_u, u3_mesa_head* hed_u)
   _etch_bits(ech_u, 2, hed_u->typ_y);
   _etch_bits(ech_u, 3, hed_u->hop_y);
   _etch_bits(ech_u, 20, hed_u->mug_w);
-  _etch_word(ech_u, MESA_COOKIE);
+  _etch_word_tmp(ech_u, MESA_COOKIE);
 }
 
 c3_o
 mesa_is_new_pact(c3_y* buf_y, c3_w_tmp len_w)
 {
-  return __((len_w >= 8) && c3_sift_word(buf_y + 4) == MESA_COOKIE);
+  return __((len_w >= 8) && c3_sift_word_tmp(buf_y + 4) == MESA_COOKIE);
 }
 
 void
@@ -588,7 +588,7 @@ mesa_sift_head(u3_sifter* sif_u, u3_mesa_head* hed_u)
   if ( 1 != hed_u->pro_y ) {
     _sift_fail(sif_u, "bad protocol");
   }
-  if ( _sift_word(sif_u) != MESA_COOKIE ) {
+  if ( _sift_word_tmp(sif_u) != MESA_COOKIE ) {
     _sift_fail(sif_u, "bad cookie");
   }
 }
@@ -618,14 +618,14 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
   _etch_bits(ech_u, 2, met_u.gaf_y);
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
   _etch_ship(ech_u, nam_u->her_u, her_y);
-  _etch_var_word(ech_u, nam_u->rif_w, met_u.rif_y + 1);
+  _etch_var_word_tmp(ech_u, nam_u->rif_w, met_u.rif_y + 1);
   _etch_byte(ech_u, nam_u->boq_y);
 
   if ( met_u.nit_y ) {
     // init packet
   }
   else {
-    _etch_var_word(ech_u, nam_u->fra_d, 1 << met_u.gaf_y);
+    _etch_var_word_tmp(ech_u, nam_u->fra_d, 1 << met_u.gaf_y);
   }
 
   _etch_short(ech_u, nam_u->pat_s);
@@ -649,7 +649,7 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
   nam_u->aut_o = __( met_u.tau_y == 1 );
 
   _sift_ship(sif_u, nam_u->her_u, 2 << met_u.ran_y);
-  nam_u->rif_w = _sift_var_word(sif_u, met_u.rif_y + 1);
+  nam_u->rif_w = _sift_var_word_tmp(sif_u, met_u.rif_y + 1);
   nam_u->boq_y = _sift_byte(sif_u);
 
   if ( met_u.nit_y ) {
@@ -659,7 +659,7 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
     nam_u->fra_d = 0;
   }
   else {
-    nam_u->fra_d = _sift_var_word(sif_u, 1 << met_u.gaf_y);
+    nam_u->fra_d = _sift_var_word_tmp(sif_u, 1 << met_u.gaf_y);
   }
 
   nam_u->pat_s = _sift_short(sif_u);
@@ -709,7 +709,7 @@ _mesa_etch_data(u3_etcher* ech_u, u3_mesa_data* dat_u)
   if ( 3 == met_u.men_y ) {
     _etch_byte(ech_u, nel_y);
   }
-  _etch_var_word(ech_u, dat_u->len_w, nel_y);
+  _etch_var_word_tmp(ech_u, dat_u->len_w, nel_y);
   _etch_bytes(ech_u, dat_u->fra_y, dat_u->len_w);
 }
 
@@ -749,7 +749,7 @@ _mesa_sift_data(u3_sifter* sif_u, u3_mesa_data* dat_u)
   if ( 3 == met_u.men_y ) {
     nel_y = _sift_byte(sif_u);
   }
-  dat_u->len_w = _sift_var_word(sif_u, nel_y);
+  dat_u->len_w = _sift_var_word_tmp(sif_u, nel_y);
   dat_u->fra_y = _sift_next(sif_u, dat_u->len_w);
 }
 
@@ -1312,7 +1312,7 @@ _test_rand_bits(void* ptr_v, c3_y len_y)
 }
 
 static c3_w_tmp
-_test_rand_word(void* ptr_v)
+_test_rand_word_tmp(void* ptr_v)
 {
   c3_w_tmp low_w = rand();
   c3_w_tmp hig_w = rand();
@@ -1322,7 +1322,7 @@ _test_rand_word(void* ptr_v)
 static c3_y
 _test_rand_gulf_y(void* ptr_v, c3_y top_y)
 {
-  c3_y bit_y = c3_bits_word(top_y);
+  c3_y bit_y = c3_bits_word_tmp(top_y);
   c3_y res_y = 0;
 
   if ( !bit_y ) return res_y;
@@ -1339,13 +1339,13 @@ _test_rand_gulf_y(void* ptr_v, c3_y top_y)
 static c3_w_tmp
 _test_rand_gulf_w(void* ptr_v, c3_w_tmp top_w)
 {
-  c3_w_tmp bit_w = c3_bits_word(top_w);
+  c3_w_tmp bit_w = c3_bits_word_tmp(top_w);
   c3_w_tmp res_w = 0;
 
   if ( !bit_w ) return res_w;
 
   while ( 1 ) {
-    res_w  = _test_rand_word(ptr_v);
+    res_w  = _test_rand_word_tmp(ptr_v);
     res_w &= (1 << bit_w) - 1;
 
     if ( res_w < top_w ) {
@@ -1409,7 +1409,7 @@ static void
 _test_make_name(void* ptr_v, c3_s pat_s, u3_mesa_name* nam_u)
 {
   _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_u);
-  nam_u->rif_w = _test_rand_word(ptr_v);
+  nam_u->rif_w = _test_rand_word_tmp(ptr_v);
 
   nam_u->pat_s = _test_rand_gulf_w(ptr_v, pat_s);
   nam_u->pat_c = c3_malloc(nam_u->pat_s + 1);
@@ -1425,14 +1425,14 @@ _test_make_name(void* ptr_v, c3_s pat_s, u3_mesa_name* nam_u)
   }
   else {
     nam_u->aut_o = _test_rand_bits(ptr_v, 1);
-    nam_u->fra_w = _test_rand_word(ptr_v);
+    nam_u->fra_w = _test_rand_word_tmp(ptr_v);
   }
 }
 
 static void
 _test_make_data(void* ptr_v, u3_mesa_data* dat_u)
 {
-  dat_u->tot_w = _test_rand_word(ptr_v);
+  dat_u->tot_w = _test_rand_word_tmp(ptr_v);
 
   memset(dat_u->aut_u.sig_y, 0, 64);
   dat_u->aut_u.len_y = 0;

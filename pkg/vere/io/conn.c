@@ -866,7 +866,7 @@ _conn_ef_handle(u3_conn*  con_u,
     }
   }
   else {
-    u3l_log("conn: handle-no-coq %" PRIx32 " %" PRIu32,
+    u3l_log("conn: handle-no-coq %" PRIxc3_l " %" PRIc3_l,
             sev_l, coq_l);
   }
   u3z(rid); u3z(tag); u3z(dat);

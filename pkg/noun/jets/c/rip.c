@@ -99,7 +99,7 @@ _block_rip(u3_atom bloq, u3_atom b)
 
   /*
     This is a fast-path for the case where all the resulting blocks will
-    fit in direct atoms.
+    fit in (u3a_note_bits-1)-bit direct atoms.
   */
   if ( bloq_g < u3a_note_bits_log ) {                                   //  produce direct atoms
     u3_noun acc     = u3_nul;
@@ -113,7 +113,7 @@ _block_rip(u3_atom bloq, u3_atom b)
       c3_n pat_w = met_w - nex_w;                       //  blks left after this
       c3_n bit_w = pat_w << bloq_g;                     //  bits left after this
       c3_n wor_w = bit_w >> u3a_note_bits_log;                          //  wrds left after this
-      c3_n sif_w = bit_w & (u3a_note_bits - 1);                          //  bits left in note
+      c3_n sif_w = bit_w & (u3a_note_bits-1);                          //  bits left in note
       c3_n src_w = u3r_note(wor_w, b);                  //  find note by index
       c3_n rip_w = (src_w >> sif_w) & bmask_w;          //  get item from note
 
@@ -157,16 +157,48 @@ u3qc_rip(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
-  if ( 1 == b ) {
-    return _block_rip(a, c);
+  if ( c3n == u3a_is_cat(a) ) {
+    return u3m_bail(c3__fail);
   }
 
-  if ( 0 == a ) {
-    return _bit_rip(b, c);
+  if ( c3n == u3a_is_cat(b) ) {
+    return u3m_bail(c3__fail);
   }
 
-  u3l_log("rip: stub");
-  return u3_none;
+  if ( a >= u3a_note_bits ) {
+    return u3m_bail(c3__fail);
+  }
+
+  u3i_slab sab_u;
+  u3_noun pro = u3_nul;
+  //u3_noun *lit = &pro;
+  //u3_noun *hed;
+  //u3_noun *tal;
+  c3_n len_n = DIVCEIL(u3r_met(a, c), b);
+
+  //for (c3_n i_n = 0; i_n < len_n; i_n++) {
+  for (c3_n i_n = len_n; 0 < i_n; i_n--) {
+    u3i_slab_init(&sab_u, a, b);
+    u3r_chop(a, (i_n - 1) * b, b, 0, sab_u.buf_n, c);
+    //*lit = u3i_defcons(&hed, &tal);
+    //*hed = u3i_slab_mint(&sab_u);
+    //lit = tal;
+    pro = u3nc(u3i_slab_mint(&sab_u), pro);
+  }
+  //*lit = u3_nul;
+
+  return pro;
+
+  //if ( 1 == b ) {
+  //  return _block_rip(a, c);
+  //}
+
+  //if ( 0 == a ) {
+  //  return _bit_rip(b, c);
+  //}
+
+  //u3l_log("rip: stub");
+  //return u3_none;
 }
 
 u3_noun

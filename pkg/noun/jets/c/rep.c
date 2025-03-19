@@ -164,16 +164,46 @@ u3qc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
 {
-  if ( 1 == b ) {
-    return _block_rep(a, c);
+  if ( c3n == u3a_is_cat(a) ||
+       c3n == u3a_is_cat(b) ) {
+    return u3m_bail(c3__fail);
+  }
+  c3_n  len_w = u3qb_lent(c);
+
+  if ( c3n == u3a_is_cat(len_w) ) {
+    return u3m_bail(c3__fail);
   }
 
-  if ( 0 == a ) {
-    return _bit_rep(b, c);
+  if (a >= u3a_note_bits) {
+    return u3m_bail(c3__fail);
   }
 
-  u3l_log("rep: stub");
-  return u3_none;
+  c3_n sep_w = b * len_w;
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, a, sep_w);
+  c3_n    i_n = 0;
+  
+  while ( u3_nul != c ) {
+    u3_noun i_c = u3h(c);
+    if ( _(u3a_is_atom(i_c)) ) {
+      return u3m_bail(c3__exit);
+    }
+    u3r_chop(a, 0, b, b * i_n, sab_u.buf_n, i_c);
+    c = u3t(c);
+    i_n++;
+  }
+  
+  return u3i_slab_mint(&sab_u);
+  //if ( 1 == b ) {
+  //  return _block_rep(a, c);
+  //}
+
+  //if ( 0 == a ) {
+  //  return _bit_rep(b, c);
+  //}
+
+  //u3l_log("rep: stub");
+  //return u3_none;
 }
 
 u3_noun

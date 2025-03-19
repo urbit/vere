@@ -88,7 +88,7 @@ typedef struct _u3_mesa_stat {
 //
 // hop enum
 
-#define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
+#define _mesa_met3_w(a_w) ((c3_bits_word_tmp(a_w) + 0x7) >> 3)
 
 struct _u3_mesa_pact;
 
@@ -504,7 +504,7 @@ _mesa_encode_path(c3_w_tmp len_w, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_w[sab_u.len_w - 1] = 0;
+        sab_u.buf_n[sab_u.len_n - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);
@@ -1431,7 +1431,7 @@ _realise_lane(u3_noun lan) {
     u3_noun tag, pip, por;
     u3x_trel(lan, &tag, &pip, &por);
     if ( tag == c3__if ) {
-      lan_u.sin_addr.s_addr = htonl(u3r_word(0, pip));
+      lan_u.sin_addr.s_addr = htonl(u3r_word_tmp(0, pip));
       u3_assert( c3y == u3a_is_cat(por) && por <= 0xFFFF);
       lan_u.sin_port = htons(por);
     } else {
@@ -2348,7 +2348,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   c3_w_tmp pek_w = mesa_size_pact(&exa_u);
   c3_d tof_d = mesa_num_leaves(dat_u->tob_d);
   c3_w_tmp pof_w = lss_proof_size(tof_d);
-  c3_w_tmp pairs_w = c3_bits_word(pof_w);
+  c3_w_tmp pairs_w = c3_bits_word_tmp(pof_w);
   c3_d pek_d = dat_u->tob_d;
   arena are_u = arena_create(5*dat_u->tob_d);
   u3_pend_req* req_u = new(&are_u, u3_pend_req, 1);
@@ -2449,7 +2449,7 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
   c3_w_tmp pip_w = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
   if ( 1 == hop_y ) {
-    c3_etch_word(pag_u->sot_u, pip_w);
+    c3_etch_word_tmp(pag_u->sot_u, pip_w);
     c3_etch_short(pag_u->sot_u + 4, por_s);
     hed_u->nex_y = HOP_SHORT;
     return;
@@ -2458,7 +2458,7 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
 
   u3_mesa_hop_once* lan_y = c3_calloc(sizeof(u3_mesa_hop_once));
 
-  c3_etch_word(lan_y->dat_y, pip_w);
+  c3_etch_word_tmp(lan_y->dat_y, pip_w);
   c3_etch_short(lan_y->dat_y, por_s);
 
   lan_y->len_w = 6;
@@ -2572,7 +2572,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     #endif
 
     inc_hopcount(&pac_u->hed_u);
-    c3_etch_word(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
+    c3_etch_word_tmp(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
     c3_etch_short(pac_u->pag_u.sot_u + 4, ntohs(lan_u.sin_port));
 
     //  stick next hop in packet
@@ -2592,7 +2592,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   sockaddr_in lon_u = {0};
   if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
     lon_u.sin_family = AF_INET;
-    lon_u.sin_addr.s_addr = htonl(c3_sift_word(pac_u->pag_u.sot_u));
+    lon_u.sin_addr.s_addr = htonl(c3_sift_word_tmp(pac_u->pag_u.sot_u));
     lon_u.sin_port = htons(c3_sift_short(pac_u->pag_u.sot_u + 4));
   }
   else {

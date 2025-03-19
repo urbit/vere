@@ -317,9 +317,9 @@ _fine_peep_size(u3_peep* pep_u)
 }
 
 static inline c3_y
-_fine_bytes_word(c3_w_tmp num_w)
+_fine_bytes_word_tmp(c3_w_tmp num_w)
 {
-  return (c3_bits_word(num_w) + 7) >> 3;
+  return (c3_bits_word_tmp(num_w) + 7) >> 3;
 }
 
 static inline c3_s
@@ -330,7 +330,7 @@ _fine_meow_size(u3_meow* mew_u)
     cur_y = sizeof(mew_u->num_w);
   }
   else {
-    cur_y = _fine_bytes_word(mew_u->num_w);
+    cur_y = _fine_bytes_word_tmp(mew_u->num_w);
   }
   return (
     sizeof(mew_u->sig_y) +
@@ -391,7 +391,7 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 static void
 _ames_sift_head(u3_head* hed_u, c3_y buf_y[4])
 {
-  c3_w_tmp hed_w = c3_sift_word(buf_y);
+  c3_w_tmp hed_w = c3_sift_word_tmp(buf_y);
 
   //  first two bits are reserved
   //
@@ -472,7 +472,7 @@ _fine_sift_wail(u3_pact* pac_u, c3_w_tmp cur_w)
 
   //  parse fragment number
   //
-  pac_u->wal_u.pep_u.fra_w = c3_sift_word(pac_u->hun_y + cur_w);
+  pac_u->wal_u.pep_u.fra_w = c3_sift_word_tmp(pac_u->hun_y + cur_w);
   cur_w += fra_w;
 
   //  parse path length field
@@ -570,7 +570,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
              ^ ((hed_u->mug_l & 0xfffff) << 11)
              ^ ((hed_u->rel_o &     0x1) << 31);
 
-  c3_etch_word(buf_y, hed_w);
+  c3_etch_word_tmp(buf_y, hed_w);
 }
 
 static void
@@ -622,7 +622,7 @@ _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 
   //  write fragment number
   //
-  c3_etch_word(buf_y + cur_w, pep_u->fra_w);
+  c3_etch_word_tmp(buf_y + cur_w, pep_u->fra_w);
   cur_w += sizeof(pep_u->fra_w);
 
   //  write path length
@@ -650,11 +650,11 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 
   {
     c3_y num_y[4];
-    c3_y len_y = _fine_bytes_word(mew_u->num_w);
+    c3_y len_y = _fine_bytes_word_tmp(mew_u->num_w);
 
     //  write number of fragments
     //
-    c3_etch_word(num_y, mew_u->num_w);
+    c3_etch_word_tmp(num_y, mew_u->num_w);
     memcpy(buf_y + cur_w, num_y, len_y);
 
     if (mew_u->siz_s != 0) {
@@ -1286,7 +1286,7 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
   switch ( tag ) {
     case c3y: {  //  galaxy
       if ( val >= 256 ) {
-        u3l_log("ames: bad galaxy lane: 0x%x", val);
+        u3l_log("ames: bad galaxy lane: 0x%"PRIxc3_n, val);
         return c3n;
       }
       return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
@@ -2900,12 +2900,12 @@ u3_ames_io_init(u3_pier* pir_u)
   //NOTE  some numbers on memory usage for the lane cache
   //
   //    assuming we store:
-  //    a (list lane) with 1 item, 1+8 + 1 + (6*2) = 22 words
-  //    and a @da as timestamp,                       8 words
-  //    consed together,                              6 words
-  //    with worst-case (128-bit) @p keys,            8 words
-  //    and an additional cell for the k-v pair,      6 words
-  //    that makes for a per-entry memory use of     50 words => 200 bytes
+  //    a (list lane) with 1 item, 1+8 + 1 + (6*2) = 22 words_new
+  //    and a @da as timestamp,                       8 words_new
+  //    consed together,                              6 words_new
+  //    with worst-case (128-bit) @p keys,            8 words_new
+  //    and an additional cell for the k-v pair,      6 words_new
+  //    that makes for a per-entry memory use of     50 words_new => 200 bytes
   //
   //    the 500k entries below would take about 100mb (in the worst case, but
   //    not accounting for hashtable overhead).

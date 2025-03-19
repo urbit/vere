@@ -149,10 +149,11 @@
       }
 
       inline c3_w_tmp
-      c3_sift_word(c3_y buf_y[4])
+      c3_sift_word_new(c3_y buf_y[4])
       {
         return ((c3_w_tmp)buf_y[3] << 24 | (c3_w_tmp)buf_y[2] << 16 | (c3_w_tmp)buf_y[1] << 8 | (c3_w_tmp)buf_y[0]);
       }
+#define c3_sift_word_tmp c3_sift_word_new
 
       inline c3_d
       c3_sift_chub(c3_y byt_y[8])
@@ -175,13 +176,14 @@
       }
 
       inline void
-      c3_etch_word(c3_y buf_y[4], c3_w_tmp wod_w)
+      c3_etch_word_new(c3_y buf_y[4], c3_w_tmp wod_w)
       {
         buf_y[0] = wod_w         & 0xff;
         buf_y[1] = (wod_w >>  8) & 0xff;
         buf_y[2] = (wod_w >> 16) & 0xff;
         buf_y[3] = (wod_w >> 24) & 0xff;
       }
+#define c3_etch_word_tmp c3_etch_word_new
 
       inline void
       c3_etch_chub(c3_y byt_y[8], c3_d num_d)

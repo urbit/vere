@@ -48,11 +48,11 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //
   {
     u3_noun cor = u3t(dat);
-    c3_l  mug_l;
+    c3_l_tmp  mug_l;
 
     if ( tac_u->mug_l && (tac_u->mug_l != (mug_l = u3r_mug(cor))) ) {
       fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
-                      "expected %08x, actual %08x\r\n",
+                      "expected %08"PRIxc3_l_tmp", actual %08"PRIxc3_l_tmp"\r\n",
                       tac_u->eve_d, tac_u->mug_l, mug_l);
 
       if ( !(u3C.wag_w & u3o_soft_mugs) ) {
@@ -124,7 +124,7 @@ _mars_play_batch(u3_mars* mar_u,
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
 
-      u3_assert( c3y == u3r_safe_word(u3h(dud), &mot_m) );
+      u3_assert( c3y == u3r_safe_word_tmp(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
         case c3__meme: {
@@ -170,7 +170,7 @@ static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 {
   u3_weak eve;
-  c3_l  mug_l;
+  c3_l_tmp  mug_l;
 
   //  hack to recover structural sharing
   //
@@ -211,7 +211,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 
   u3l_log("--------------- bootstrap starting ----------------");
 
-  u3l_log("boot: 1-%u", u3qb_lent(eve));
+  u3l_log("boot: 1-%"PRIc3_n, u3qb_lent(eve));
 
   //  XX check mug if available
   //

@@ -90,7 +90,7 @@ _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
   c3_w_tmp lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_n"\r\n", arg_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -192,7 +192,7 @@ _main_init(void)
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
-  u3_Host.ops_u.lut_y = 31;     /* aka 2G */
+  u3_Host.ops_u.lut_y = 34;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 

@@ -18,6 +18,7 @@
 #include "vortex.h"
 #include "xtract.h"
 
+//static c3_d _calls_d = 0;
 
 /**  Functions.
 **/
@@ -837,6 +838,7 @@ _cj_soft(u3_noun cor, u3_noun axe)
   find_error(u3_noun cor,
              u3_noun old,
              u3_noun new);
+void _jbreak() {}
 
 /* _cj_kick_z(): try to kick by jet.  If no kick, produce u3_none.
 **
@@ -875,6 +877,17 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       u3a_lop(cod_w);
 #endif
       if ( u3_none != pro ) {
+        //u3l_log("%llx jet: %s %s: pro: %x",
+        //       _calls_d,
+        //       cop_u->cos_c,
+        //       (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
+        //       u3r_mug(pro));
+        //_calls_d++;
+        //u3l_log("jet: %s %s: cor: %x pro: %x",
+        //       cop_u->cos_c,
+        //       (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
+        //       u3r_mug(cor),
+        //       u3r_mug(pro));
         u3z(cor);
         return pro;
       }

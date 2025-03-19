@@ -36,7 +36,7 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w_tmp buf_len_w)
     if ( fin_y != 0 ) {
       c3_w_tmp lin_w = fin_y - buf_y;
       // Skip attribute type and length
-      c3_w_tmp fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
+      c3_w_tmp fingerprint = c3_sift_word_tmp(fin_y + sizeof(ned_y));
       c3_w_tmp init = crc32(0L, Z_NULL, 0);
       c3_w_tmp crc = htonl(crc32(init, buf_y, lin_w) ^ 0x5354554e);
       if ((fingerprint == crc) && (fin_y - buf_y + 8) == buf_len_w) {
@@ -178,7 +178,7 @@ u3_stun_find_xor_mapped_address(c3_y*    buf_y,
     cur += 2;
 
     lan_u->por_s = ntohs(c3_sift_short(buf_y + cur)) ^ (cookie >> 16);
-    lan_u->pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
+    lan_u->pip_w = ntohl(c3_sift_word_tmp(buf_y + cur + 2)) ^ cookie;
 
     if ( u3C.wag_w & u3o_verbose ) {
       c3_w_tmp nip_w = htonl(lan_u->pip_w);

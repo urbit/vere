@@ -163,7 +163,7 @@ _disk_commit_start(struct _cd_save* req_u)
 size_t
 u3_disk_etch(u3_disk* log_u,
              u3_noun    eve,
-             c3_l     mug_l,
+             c3_l_tmp     mug_l,
              c3_y**   out_y)
 {
   size_t len_i;
@@ -385,7 +385,7 @@ c3_o
 u3_disk_sift(u3_disk* log_u,
              size_t   len_i,
              c3_y*    dat_y,
-             c3_l*    mug_l,
+             c3_l_tmp*    mug_l,
              u3_noun*   job)
 {
   if ( 4 >= len_i ) {
@@ -425,7 +425,7 @@ _disk_read_one_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 
   {
     u3_noun job;
-    c3_l  mug_l;
+    c3_l_tmp  mug_l;
 
     if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
       return c3n;
@@ -504,7 +504,7 @@ u3_disk_read(u3_disk* log_u, c3_d eve_d, c3_d len_d)
 struct _cd_list {
   u3_disk* log_u;
   u3_noun    eve;
-  c3_l     mug_l;
+  c3_l_tmp     mug_l;
 };
 
 /* _disk_read_list_cb(): lmdb read callback, invoked for each event in order
@@ -517,7 +517,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 
   {
     u3_noun job;
-    c3_l  mug_l;
+    c3_l_tmp  mug_l;
 
     if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
       return c3n;
@@ -533,7 +533,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 /* u3_disk_read_list(): synchronously read a cons list of events.
 */
 u3_weak
-u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
+u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_tmp* mug_l)
 {
   struct _cd_list ven_u = { log_u, u3_nul, 0 };
 
@@ -644,8 +644,9 @@ u3_disk_save_meta(MDB_env* mdb_u,
                   c3_o     fak_o,
                   c3_w_tmp     lif_w)
 {
-  u3_assert( c3y == u3a_is_cat(ver_w) );
-  u3_assert( c3y == u3a_is_cat(lif_w) );
+  // XX 64
+  u3_assert( c3y == u3a_is_cat((c3_n)ver_w) );
+  u3_assert( c3y == u3a_is_cat((c3_n)lif_w) );
 
   //  XX assumes little-endian
   //

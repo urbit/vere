@@ -40,7 +40,7 @@ static void _subtree_root(lss_hash out, c3_y* leaf_y, c3_w_tmp leaf_w, c3_d coun
     return;
   }
   c3_w_tmp leaves_w = (leaf_w + 1023) / 1024;
-  c3_w_tmp mid_w = 1 << (c3_bits_word(leaves_w-1) - 1);
+  c3_w_tmp mid_w = 1 << (c3_bits_word_tmp(leaves_w-1) - 1);
   lss_hash l, r;
   _subtree_root(l, leaf_y, (mid_w * 1024), counter_d);
   _subtree_root(r, leaf_y + (mid_w * 1024), leaf_w - (mid_w * 1024), counter_d + mid_w);
@@ -48,7 +48,7 @@ static void _subtree_root(lss_hash out, c3_y* leaf_y, c3_w_tmp leaf_w, c3_d coun
 }
 
 c3_w_tmp lss_proof_size(c3_w_tmp leaves) {
-  return 1 + c3_bits_word(leaves-1);
+  return 1 + c3_bits_word_tmp(leaves-1);
 }
 
 c3_o _lss_expect_pair(c3_w_tmp leaves, c3_w_tmp i) {
@@ -156,8 +156,8 @@ static c3_o _lss_verifier_check_hash(lss_verifier* los_u, c3_w_tmp i, c3_w_tmp h
   // it determines how many odd pairs are directly above us, and increments the
   // height accordingly. A mask is used to ensure that we only perform this
   // adjustment when necessary.
-  c3_w_tmp odd = (1<<c3_bits_word(los_u->leaves-1)) - los_u->leaves;
-  c3_w_tmp mask = (1<<c3_bits_word(i ^ (los_u->leaves-1))) - 1;
+  c3_w_tmp odd = (1<<c3_bits_word_tmp(los_u->leaves-1)) - los_u->leaves;
+  c3_w_tmp mask = (1<<c3_bits_word_tmp(i ^ (los_u->leaves-1))) - 1;
   height += c3_tz_w(~((odd&~mask) >> height));
   c3_b parity = (i >> height) & 1;
   return __(memcmp(los_u->pairs[height][parity], h, sizeof(lss_hash)) == 0);
@@ -196,7 +196,7 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w_tmp leaf_w, lss
 
 void lss_verifier_init(lss_verifier* los_u, c3_w_tmp steps, c3_w_tmp leaves, lss_hash* proof, arena* are_u) {
   c3_w_tmp proof_w = lss_proof_size(leaves);
-  c3_w_tmp pairs_w = c3_bits_word(leaves);
+  c3_w_tmp pairs_w = c3_bits_word_tmp(leaves);
   los_u->steps = steps;
   los_u->leaves = leaves;
   los_u->counter = 0;

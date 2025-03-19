@@ -2313,19 +2313,19 @@ _http_search_req(u3_httd* htd_u,
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: server not found: %x", sev_l);
+      u3l_log("http: server not found: %"PRIxc3_l, sev_l);
     }
     return 0;
   }
   else if ( !(hon_u = _http_conn_find(htp_u, coq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: connection not found: %x/%d", sev_l, coq_l);
+      u3l_log("http: connection not found: %"PRIxc3_l"/%"PRIc3_l, sev_l, coq_l);
     }
     return 0;
   }
   else if ( !(req_u = _http_req_find(hon_u, seq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: request not found: %x/%d/%d",
+      u3l_log("http: request not found: %"PRIxc3_l"/%"PRIc3_l"/%"PRIc3_l,
               sev_l, coq_l, seq_l);
     }
     return 0;

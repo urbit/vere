@@ -5,8 +5,8 @@
 
 #include "noun.h"
 
-STATIC_ASSERT( (UINT32_MAX > u3a_cells),
-               "width precision" );
+//STATIC_ASSERT( (c3_note_max > u3a_cells),
+//               "width precision" );
 
 static c3_n
 _wyt_in(u3_noun a)

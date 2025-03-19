@@ -408,14 +408,14 @@ _serf_sure_feck(u3_serf* sef_u, c3_w_tmp pre_w, u3_noun vir)
   //    For future flexibility, the urgency of the notification is represented
   //    by a *decreasing* number: 0 is maximally urgent, 1 less so, &c.
   //
-  //    high-priority: 2^25 contiguous words remaining (~128 MB)
-  //    low-priority:  2^27 contiguous words remaining (~536 MB)
+  //    high-priority: 2^25 contiguous words_new remaining (~128 MB)
+  //    low-priority:  2^27 contiguous words_new remaining (~536 MB)
   //
   //    once a threshold is hit, it's not a candidate to be hit again
   //    until memory usage falls below:
   //
-  //    high-priority: 2^26 contiguous words remaining (~256 MB)
-  //    low-priority:  2^26 + 2^27 contiguous words remaining (~768 MB)
+  //    high-priority: 2^26 contiguous words_new remaining (~256 MB)
+  //    low-priority:  2^26 + 2^27 contiguous words_new remaining (~768 MB)
   //
   //    XX these thresholds should trigger notifications sent to the king
   //    instead of directly triggering these remedial actions.
@@ -1037,7 +1037,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
 
       if ( u3r_mug(u3A->roc) != sef_u->mug_l ) {
-        fprintf(stderr, "serf (%" PRIu64 "): mug mismatch 0x%08x 0x%08x\r\n",
+        fprintf(stderr, "serf (%" PRIu64 "): mug mismatch 0x%08"PRIxc3_l_tmp" 0x%08"PRIxc3_w_tmp"\r\n",
                         eve_d, sef_u->mug_l, u3r_mug(u3A->roc));
         return c3n;
       }
@@ -1121,7 +1121,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         c3_w_tmp  mil_w;
 
         if ( (c3n == u3r_cell(com, &tim, &sam)) ||
-             (c3n == u3r_safe_word(tim, &mil_w)) )
+             (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
         {
           ret_o = c3n;
         }
@@ -1152,7 +1152,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         c3_w_tmp  mil_w;
 
         if ( (c3n == u3r_cell(com, &tim, &job)) ||
-             (c3n == u3r_safe_word(tim, &mil_w)) )
+             (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
         {
           ret_o = c3n;
         }

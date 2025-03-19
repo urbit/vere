@@ -28,7 +28,7 @@
 /* u3_creq: outgoing http request.
 */
   typedef struct _u3_creq {             //  client request
-    c3_l               num_l;           //  request number
+    c3_l_tmp               num_l;           //  request number
     h2o_http1client_t* cli_u;           //  h2o client
     u3_csat            sat_e;           //  connection state
     c3_o               sec;             //  yes == https
@@ -54,7 +54,7 @@
 */
   typedef struct _u3_cttp {
     u3_auto          car_u;             //  driver
-    c3_l             sev_l;             //  instance number
+    c3_l_tmp             sev_l;             //  instance number
     u3_creq*         ceq_u;             //  request list
     uv_async_t       nop_u;             //  unused handle (async close)
     h2o_timeout_t    tim_u;             //  request timeout
@@ -458,7 +458,7 @@ _cttp_creq_ip(c3_w_tmp ipf_w)
 /* _cttp_creq_find(): find a request by number in the client
 */
 static u3_creq*
-_cttp_creq_find(u3_cttp* ctp_u, c3_l num_l)
+_cttp_creq_find(u3_cttp* ctp_u, c3_l_tmp num_l)
 {
   u3_creq* ceq_u = ctp_u->ceq_u;
 
@@ -542,7 +542,7 @@ _cttp_creq_free(u3_creq* ceq_u)
  *   We start with the (?? - JB)
  */
 static u3_creq*
-_cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
+_cttp_creq_new(u3_cttp* ctp_u, c3_l_tmp num_l, u3_noun hes)
 {
   u3_creq* ceq_u = c3_calloc(sizeof(*ceq_u));
 
@@ -578,7 +578,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
   if ( c3y == u3h(hot) ) {
     ceq_u->hot_c = _cttp_creq_host(u3k(u3t(hot)));
   } else {
-    ceq_u->ipf_w = u3r_word(0, u3t(hot));
+    ceq_u->ipf_w = u3r_word_tmp(0, u3t(hot));
     ceq_u->ipf_c = _cttp_creq_ip(ceq_u->ipf_w);
   }
 
@@ -998,10 +998,10 @@ _cttp_ef_http_client(u3_cttp* ctp_u, u3_noun tag, u3_noun dat)
 
   if ( c3y == u3r_sing_c("request", tag) ) {
     u3_noun num, req;
-    c3_l  num_l;
+    c3_l_tmp  num_l;
 
     if (  (c3n == u3r_cell(dat, &num, &req))
-       || (c3n == u3r_safe_word(num, &num_l)) )
+       || (c3n == u3r_safe_word_tmp(num, &num_l)) )
     {
       u3l_log("cttp: strange request");
       ret_o = c3n;
@@ -1015,9 +1015,9 @@ _cttp_ef_http_client(u3_cttp* ctp_u, u3_noun tag, u3_noun dat)
     }
   }
   else if ( c3y == u3r_sing_c("cancel-request", tag) ) {
-    c3_l num_l;
+    c3_l_tmp num_l;
 
-    if ( c3n == u3r_safe_word(dat, &num_l) ) {
+    if ( c3n == u3r_safe_word_tmp(dat, &num_l) ) {
       u3l_log("cttp: strange cancel-request");
       ret_o = c3n;
     }

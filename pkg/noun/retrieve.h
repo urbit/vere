@@ -127,6 +127,7 @@
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */
+        // XX: make 64 bit length
         c3_m
         u3r_mug_bytes(const c3_y *buf_y,
                       c3_m        len_w);

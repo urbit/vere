@@ -47,7 +47,8 @@
       typedef struct _u3e_pool {
         c3_c*     dir_c;                     //  path to
         c3_i      eph_i;                     //  ephemeral file descriptor
-        c3_w_tmp      dit_w[u3a_pages >> 5];     //  touched since last save
+        c3_n      *dit_w;
+        //[u3a_pages >> u3a_note_bits_log];     //  touched since last save
         c3_n      pag_w;                     //  number of pages (<= u3a_pages)
         c3_n      gar_w;                     //  guard page
         u3e_image nor_u;                     //  north segment

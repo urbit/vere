@@ -308,7 +308,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
     u3_noun ver, pro, hon, noc, eve, mug;
     c3_y pro_y, hon_y, noc_y;
     c3_d eve_d;
-    c3_l mug_l;
+    c3_l_tmp mug_l;
 
     if (  (c3n == u3r_trel(dat, &ver, &eve, &mug))
        || (c3n == u3r_trel(ver, &pro, &hon, &noc))
@@ -316,7 +316,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
        || (c3n == u3r_safe_byte(hon, &hon_y))
        || (c3n == u3r_safe_byte(noc, &noc_y))
        || (c3n == u3r_safe_chub(eve, &eve_d))
-       || (c3n == u3r_safe_word(mug, &mug_l)) )
+       || (c3n == u3r_safe_word_tmp(mug, &mug_l)) )
     {
       _lord_plea_foul(god_u, c3__ripe, dat);
       return;
@@ -349,7 +349,7 @@ _lord_plea_slog(u3_lord* god_u, u3_noun dat)
   c3_w_tmp pri_w;
 
   if (  (c3n == u3r_cell(dat, &pri, &tan))
-     || (c3n == u3r_safe_word(pri, &pri_w)) )
+     || (c3n == u3r_safe_word_tmp(pri, &pri_w)) )
   {
     _lord_plea_foul(god_u, c3__slog, dat);
     return;
@@ -466,11 +466,11 @@ _lord_plea_play_bail(u3_lord* god_u, u3_info fon_u, u3_noun dat)
 {
   u3_noun eve, mug, dud;
   c3_d eve_d;
-  c3_l mug_l;
+  c3_l_tmp mug_l;
 
   if (  (c3n == u3r_trel(dat, &eve, &mug, &dud))
      || (c3n == u3r_safe_chub(eve, &eve_d))
-     || (c3n == u3r_safe_word(mug, &mug_l))
+     || (c3n == u3r_safe_word_tmp(mug, &mug_l))
      || (c3n == u3a_is_cell(dud)) )
   {
     fprintf(stderr, "lord: invalid %%play\r\n");
@@ -491,9 +491,9 @@ _lord_plea_play_bail(u3_lord* god_u, u3_info fon_u, u3_noun dat)
 static void
 _lord_plea_play_done(u3_lord* god_u, u3_info fon_u, u3_noun dat)
 {
-  c3_l mug_l;
+  c3_l_tmp mug_l;
 
-  if ( c3n == u3r_safe_word(dat, &mug_l) ) {
+  if ( c3n == u3r_safe_word_tmp(dat, &mug_l) ) {
     fprintf(stderr, "lord: invalid %%play\r\n");
     _lord_plea_foul(god_u, c3__done, dat);
     return;
@@ -588,7 +588,7 @@ static void
 _lord_work_done(u3_lord* god_u,
                 u3_ovum* egg_u,
                 c3_d     eve_d,
-                c3_l     mug_l,
+                c3_l_tmp     mug_l,
                 u3_noun    job,
                 u3_noun    act)
 {
@@ -621,11 +621,11 @@ _lord_plea_work_swap(u3_lord* god_u, u3_ovum* egg_u, u3_noun dat)
 {
   u3_noun eve, mug, job, act;
   c3_d eve_d;
-  c3_l mug_l;
+  c3_l_tmp mug_l;
 
   if (  (c3n == u3r_qual(dat, &eve, &mug, &job, &act))
      || (c3n == u3r_safe_chub(eve, &eve_d))
-     || (c3n == u3r_safe_word(mug, &mug_l))
+     || (c3n == u3r_safe_word_tmp(mug, &mug_l))
      || (c3n == u3a_is_cell(job)) )
   {
     u3z(job);
@@ -651,11 +651,11 @@ _lord_plea_work_done(u3_lord* god_u,
 {
   u3_noun eve, mug, act;
   c3_d eve_d;
-  c3_l mug_l;
+  c3_l_tmp mug_l;
 
   if (  (c3n == u3r_trel(dat, &eve, &mug, &act))
      || (c3n == u3r_safe_chub(eve, &eve_d))
-     || (c3n == u3r_safe_word(mug, &mug_l)) )
+     || (c3n == u3r_safe_word_tmp(mug, &mug_l)) )
   {
     u3z(job);
     u3_ovum_free(egg_u);
