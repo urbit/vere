@@ -56,7 +56,7 @@ u3_weak
 u3wc_sew(u3_noun cor)
 {
   u3_noun a, b, c, d, e;
-  if ( (c3n == u3r_mean(cor, u3x_sam_2,  &a,
+  if ( (c3n == u3r_baad(cor, u3x_sam_2,  &a,
                              u3x_sam_12, &b,
                                     106, &c,
                                     107, &d,

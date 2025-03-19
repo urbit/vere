@@ -33,7 +33,7 @@ u3_noun
 u3wdi_tap(u3_noun cor)
 {
   u3_noun a;
-  u3x_mean(cor, u3x_con_sam, &a, 0);
+  u3x_baad(cor, u3x_con_sam, &a, 0);
   return u3qdi_tap(a);
 }
 

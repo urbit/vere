@@ -10,13 +10,13 @@ u3x_atom(u3_noun a);
 u3_noun
 u3x_good(u3_weak som);
 
-/* u3x_mean():
+/* u3x_baad():
 **
 **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
 **   Axes must be sorted in tree order.
 */
 void
-u3x_mean(u3_noun som, ...)
+u3x_baad(u3_noun som, ...)
 {
   c3_o    ret_o;
   va_list ap;

@@ -56,7 +56,7 @@
   {
     u3_noun a, b, c, d;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a,
+    if ( (c3n == u3r_baad(cor, u3x_sam_2, &a,
                                u3x_sam_6, &b,
                                u3x_sam_14, &c,
                                u3x_sam_15, &d, 0)) ||

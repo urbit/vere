@@ -10,7 +10,7 @@ u3wfu_mull(u3_noun cor)
 {
   u3_noun bat, sut, gol, dox, gen, van;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam_2, &gol,
+  if (  (c3n == u3r_baad(cor, u3x_sam_2, &gol,
                               u3x_sam_6, &dox,
                               u3x_sam_7, &gen,
                               u3x_con, &van, 0))

@@ -62,7 +62,7 @@ u3_noun
 u3wc_muk(u3_noun cor)
 {
   u3_noun sed, len, key;
-  u3x_mean(cor, u3x_sam_2, &sed,
+  u3x_baad(cor, u3x_sam_2, &sed,
                 u3x_sam_6, &len,
                 u3x_sam_7, &key, 0);
 

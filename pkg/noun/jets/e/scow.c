@@ -64,7 +64,7 @@ _print_da(u3_noun cor, u3_atom raw_da)
   u3_noun out = 0;
 
   u3_atom age, year, month, day, hour, min, sec, f;
-  if (c3n == u3r_mean(yod, 4, &age,
+  if (c3n == u3r_baad(yod, 4, &age,
                       5, &year,
                       6, &month,
                       14, &day,
@@ -246,6 +246,6 @@ u3_noun
 u3we_scow(u3_noun cor)
 {
   u3_atom a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  u3x_baad(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
   return u3qe_scow(u3x_atom(a), u3x_atom(b));
 }

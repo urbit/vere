@@ -85,7 +85,7 @@ u3_noun
 u3wdb_put(u3_noun cor)
 {
   u3_noun a, b, c;
-  u3x_mean(cor, u3x_sam_2,   &b,
+  u3x_baad(cor, u3x_sam_2,   &b,
                 u3x_sam_3,   &c,
                 u3x_con_sam, &a, 0);
   return u3qdb_put(a, b, c);

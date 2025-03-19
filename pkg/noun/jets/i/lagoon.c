@@ -2150,7 +2150,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2197,7 +2197,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2244,7 +2244,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2291,7 +2291,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2338,7 +2338,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2384,7 +2384,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2426,7 +2426,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2464,7 +2464,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2502,7 +2502,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2540,7 +2540,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2579,7 +2579,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2618,7 +2618,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -2657,7 +2657,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2699,7 +2699,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2741,7 +2741,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2783,7 +2783,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -2824,7 +2824,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data, n;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_3, &n,
@@ -2860,7 +2860,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data, n;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_3, &n,
@@ -2896,7 +2896,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data, n;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_3, &n,
@@ -2932,7 +2932,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data, n;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_3, &n,
@@ -2968,7 +2968,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data, n;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_3, &n,
@@ -3005,7 +3005,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,
@@ -3051,7 +3051,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -3083,7 +3083,7 @@
   {
     u3_noun x_meta, a, b, n, rnd;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_12, &a,
                          u3x_sam_13, &b,
@@ -3126,7 +3126,7 @@
   {
     u3_noun x_meta, a, b, d, rnd;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_12, &a,
                          u3x_sam_13, &b,
@@ -3202,7 +3202,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -3236,7 +3236,7 @@
     // Each argument is a ray, [=meta data=@ux]
     u3_noun x_meta, x_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_2, &x_meta,
                          u3x_sam_3, &x_data,
                          0) ||
@@ -3245,7 +3245,7 @@
       return u3m_bail(c3__exit);
     } else {
       u3_noun x_shape, x_bloq, x_kind, x_tail;
-      if ( c3n == u3r_mean(x_meta,
+      if ( c3n == u3r_baad(x_meta,
                             2, &x_shape,
                             6, &x_bloq,
                            14, &x_kind,
@@ -3275,7 +3275,7 @@
     u3_noun x_meta, x_data,
             y_meta, y_data;
 
-    if ( c3n == u3r_mean(cor,
+    if ( c3n == u3r_baad(cor,
                          u3x_sam_4, &x_meta,
                          u3x_sam_5, &x_data,
                          u3x_sam_6, &y_meta,

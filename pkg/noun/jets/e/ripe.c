@@ -32,7 +32,7 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid,
+    if ( (c3n == u3r_baad(cor, u3x_sam_2, &wid,
                                u3x_sam_3, &dat, 0) ||
                  u3ud(wid) || u3ud(dat))
        )

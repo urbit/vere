@@ -10,7 +10,7 @@
   {
     u3_noun bus, fol, gul;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_4, &bus,
+    if ( c3n == u3r_baad(cor, u3x_sam_4, &bus,
                               u3x_sam_5, &fol,
                               u3x_sam_3, &gul,
                               0) )

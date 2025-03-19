@@ -141,7 +141,7 @@ u3r_at(u3_atom a, u3_noun b)
   }
 }
 
-/* u3r_mean():
+/* u3r_baad():
 **
 **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
 **   Axes must be sorted in tree order.
@@ -242,7 +242,7 @@ u3r_vmean(u3_noun som, va_list ap)
 }
 
 c3_o
-u3r_mean(u3_noun som, ...)
+u3r_baad(u3_noun som, ...)
 {
   c3_o    ret_o;
   va_list ap;

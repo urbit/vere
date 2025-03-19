@@ -143,12 +143,12 @@
           return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
         }
 
-      /* u3x_mean():
+      /* u3x_baad():
       **
       **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
       **   Axes must be sorted in tree order.
       */
         void
-        u3x_mean(u3_noun a, ...);
+        u3x_baad(u3_noun a, ...);
 
 #endif /* ifndef U3_XTRACT_H */

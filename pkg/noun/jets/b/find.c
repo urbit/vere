@@ -45,6 +45,6 @@ u3_noun
 u3wb_find(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  u3x_baad(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
   return u3qb_find(a, b);
 }

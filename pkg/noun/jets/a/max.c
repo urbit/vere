@@ -41,7 +41,7 @@ u3wa_max(u3_noun cor)
 {
   u3_noun a, b;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
+  if (  (c3n == u3r_baad(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
      || (c3n == u3ud(b) && 0 != a)
      || (c3n == u3ud(a) && 0 != b) )
   {

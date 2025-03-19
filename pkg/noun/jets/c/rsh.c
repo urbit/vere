@@ -41,7 +41,7 @@ u3wc_rsh(u3_noun cor)
 {
   u3_atom bloq, step;
   u3_noun a, b;
-  u3x_mean(cor, u3x_sam_2, &a,
+  u3x_baad(cor, u3x_sam_2, &a,
                 u3x_sam_3, &b, 0);
   u3x_bite(a, &bloq, &step);
 
