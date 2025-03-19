@@ -1235,7 +1235,6 @@ _pier_play(u3_play* pay_u)
     }
     else if ( pay_u->eve_d == log_u->dun_d ) {
       u3_lord_save(pir_u->god_u);
-
       //  early exit, preparing for upgrade
       //
       //    XX check kelvins?
@@ -1963,7 +1962,6 @@ _pier_pill_parse(u3_noun pil)
       u3_noun typ;
       c3_c* typ_c;
 
-      // XX cleanup
       if (  ( c3__pill == tag &&
               c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) )
          || ( c3__cash == tag &&

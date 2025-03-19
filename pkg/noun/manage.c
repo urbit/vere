@@ -1387,7 +1387,7 @@ _hamt_map(u3_noun kev, void* cax_p)
   u3_noun* old = cax_p;
   u3_noun key, val, new;
   u3x_cell(kev, &key, &val);
-  new = u3qdb_put(*old, u3t(key), val);  // XX key
+  new = u3qdb_put(*old, u3t(key), val);
   u3z(*old);
   *old = new;
 }
@@ -1450,34 +1450,12 @@ u3m_soft_cax(u3_funq fun_f,
     */
     {
       u3_assert(_(u3du(why)));
-      fprintf(stderr, "soft_cax why: %u", u3h(why));
       switch ( u3h(why) ) {
         default: u3_assert(0); return 0;
-
-        // case 0: {                             //  unusual: bail with success.
-        //   pro = u3m_love(why);
-        // } break;
-
-        // case 1: {                             //  blocking request
-        //   pro = u3m_love(why);
-        // } break;
 
         case 2: {                             //  true exit
           pro = u3nc(u3m_love(why), u3_nul);
         } break;
-
-        // case 3: {                             //  failure; rebail w/trace
-        //   u3_noun yod = u3m_love(u3t(why));
-
-        //   u3m_bail
-        //     (u3nt(3,
-        //           u3a_take(u3h(yod)),
-        //           u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
-        // } break;
-
-        // case 4: {                             //  meta-bail
-        //   u3m_bail(u3m_love(u3t(why)));
-        // } break;
       }
     }
   }

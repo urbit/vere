@@ -4,14 +4,11 @@
 #include "jets/w.h"
 
 #include "noun.h"
-#include <nock.h>
-#include <stdio.h>
 
 /* variant of u3we_mink() / u3m_soft_run(). caching, no scry.
 */
 u3_noun
 u3we_mice(u3_noun cor) {
-  fprintf(stderr, "mice jet\r\n");
   u3_noun bus, fol;
 
   if ( c3n == u3r_mean(cor, u3x_sam_2, &bus,
