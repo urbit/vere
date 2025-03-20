@@ -25,9 +25,9 @@
   {
     u3_noun fuv, lup, mar;
 
-    if ( c3n == u3r_baad(cor, u3x_sam_2, &fuv,
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &fuv,
                               u3x_sam_6, &lup,
-                              u3x_sam_7, &mar, 0) ) {
+                              u3x_sam_7, &mar, u3_nul) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_fine(fuv, lup, mar);

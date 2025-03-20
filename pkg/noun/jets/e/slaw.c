@@ -451,8 +451,8 @@ u3we_slaw(u3_noun cor)
   u3_noun mod;
   u3_noun txt;
 
-  if (c3n == u3r_baad(cor, u3x_sam_2, &mod,
-                      u3x_sam_3, &txt, 0)) {
+  if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
+                      u3x_sam_3, &txt, u3_nul)) {
     return u3m_bail(c3__exit);
   }
 

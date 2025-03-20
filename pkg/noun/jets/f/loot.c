@@ -125,7 +125,7 @@
   {
     u3_noun cog, dom;
 
-    if ( c3n == u3r_baad(cor, u3x_sam_2, &cog, u3x_sam_3, &dom, 0) ) {
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &cog, u3x_sam_3, &dom, u3_nul) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_loot(cog, dom);

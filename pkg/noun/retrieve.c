@@ -141,7 +141,7 @@ u3r_at(u3_atom a, u3_noun b)
   }
 }
 
-/* u3r_baad():
+/* u3r_mean():
 **
 **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
 **   Axes must be sorted in tree order.
@@ -242,7 +242,7 @@ u3r_vmean(u3_noun som, va_list ap)
 }
 
 c3_o
-u3r_baad(u3_noun som, ...)
+u3r_mean(u3_noun som, ...)
 {
   c3_o    ret_o;
   va_list ap;
@@ -1268,7 +1268,7 @@ u3r_chub(c3_n  a_n,
   c3_n wlo_w = u3r_word_new(a_n * 2, b);
   c3_n whi_w = u3r_word_new(1 + (a_n * 2), b);
 
-  return (((uint64_t)whi_w) << 32ULL) | ((uint64_t)wlo_w);#
+  return (((uint64_t)whi_w) << 32ULL) | ((uint64_t)wlo_w);
 #else
   u3_assert(u3_none != b);
   u3_assert(_(u3a_is_atom(b)));

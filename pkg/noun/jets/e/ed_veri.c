@@ -33,9 +33,9 @@
   {
     u3_noun sig, msg, pub;
     u3_noun len, dat;
-    if ( c3n == u3r_baad(cor,
+    if ( c3n == u3r_mean(cor,
                          u3x_sam_2, &sig, u3x_sam_6, &msg,
-                         u3x_sam_7, &pub, 0) ||
+                         u3x_sam_7, &pub, u3_nul) ||
          c3n == u3r_cell(msg, &len, &dat) ||
          (c3n == u3ud(sig)) ||
          (c3n == u3ud(pub)) ||
@@ -72,9 +72,9 @@
   u3wee_veri(u3_noun cor)
   {
     u3_noun a, b, c;
-    if ( (c3n == u3r_baad(cor,
+    if ( (c3n == u3r_mean(cor,
                          u3x_sam_2, &a, u3x_sam_6, &b,
-                         u3x_sam_7, &c, 0)) ||
+                         u3x_sam_7, &c, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ) {

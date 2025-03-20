@@ -12,12 +12,12 @@ u3wfu_nest_dext(u3_noun dext_core)
   u3_noun bat, sut, ref, van, seg, reg, gil;
 
   if (  (u3_none == (nest_in_core = u3r_at(3, dext_core)))
-     || (c3n == u3r_baad(nest_in_core, u3x_sam_2, &seg,
+     || (c3n == u3r_mean(nest_in_core, u3x_sam_2, &seg,
                                        u3x_sam_6, &reg,
                                        u3x_sam_7, &gil,
-                                       u3x_con, &nest_core, 0))
-     || (c3n == u3r_baad(nest_core, u3x_sam_3, &ref,
-                                    u3x_con, &van, 0))
+                                       u3x_con, &nest_core, u3_nul))
+     || (c3n == u3r_mean(nest_core, u3x_sam_3, &ref,
+                                    u3x_con, &van, u3_nul))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {

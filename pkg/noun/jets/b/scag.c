@@ -43,7 +43,7 @@ u3_noun
 u3wb_scag(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_baad(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
 
   if ( (c3n == u3ud(a)) && (u3_nul != b) ) {
     return u3m_bail(c3__exit);

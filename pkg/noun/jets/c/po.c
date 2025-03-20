@@ -1360,7 +1360,7 @@ u3_noun
 u3wcp_ins(u3_noun cor)
 {
   u3_noun a;
-  u3x_baad(cor, u3x_sam, &a, 0);
+  u3x_mean(cor, u3x_sam, &a, u3_nul);
 
   if ( c3n == u3ud(a) ) {
     return u3m_bail(c3__fail);
@@ -1382,7 +1382,7 @@ u3_noun
 u3wcp_ind(u3_noun cor)
 {
   u3_noun a;
-  u3x_baad(cor, u3x_sam, &a, 0);
+  u3x_mean(cor, u3x_sam, &a, u3_nul);
 
   if ( c3n == u3ud(a) ) {
     return u3m_bail(c3__fail);

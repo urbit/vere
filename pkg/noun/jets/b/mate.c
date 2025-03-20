@@ -24,7 +24,7 @@
   u3wb_mate(u3_noun cor)
   {
     u3_noun a, b;
-    u3x_baad(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+    u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
     return u3qb_mate(a, b);
   }
 

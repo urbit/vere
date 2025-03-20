@@ -670,7 +670,7 @@ _test_cells()
     }
 
     a2 = 0;
-    u3r_baad(q, 2, &a2, 0);
+    u3r_mean(q, 2, &a2, u3_nul);
     if (a2 != a){
       printf("*** _test_cells: complicated (via u3r_baad) a\n");
     }
@@ -1152,7 +1152,7 @@ _test_imprison_complex()
     u3_noun hacked = u3i_edit(q, axis, newval);
 
     u3_noun read_1;
-    u3r_baad(hacked, axis, &read_1, 0);
+    u3r_mean(hacked, axis, &read_1, u3_nul);
 
     if (newval != read_1){
       printf("*** u3i_edit 1\n");
@@ -1189,7 +1189,7 @@ _test_imprison_complex()
 
     u3_noun read_1;
     u3_noun read_2;
-    u3r_baad(hacked, axis_1, &read_1, axis_2, &read_2, 0);
+    u3r_mean(hacked, axis_1, &read_1, axis_2, &read_2, u3_nul);
 
     if (newval_1 != read_1){
       printf("*** u3i_molt 1\n");

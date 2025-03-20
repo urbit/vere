@@ -117,10 +117,10 @@ u3we_sign(u3_noun cor)
 
   u3_noun has, prv;
 
-  if ( (c3n == u3r_baad(cor,
+  if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &has,
                         u3x_sam_3,  &prv,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv))) {
     return u3m_bail(c3__exit);
@@ -159,12 +159,12 @@ u3we_reco(u3_noun cor)
   u3_noun has,      /* hash */
     siv, sir, sis;  /* signature: v, r, s */
 
-  if ( (c3n == u3r_baad(cor,
+  if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,   &has,
                         u3x_sam_6,   &siv,
                         u3x_sam_14,  &sir,
                         u3x_sam_15,  &sis,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(siv)) ||
        (c3n == u3ud(sir)) ||
@@ -198,10 +198,10 @@ u3_noun
 u3we_make(u3_noun cor)
 {
   u3_noun has, prv;
-  if ( (c3n == u3r_baad(cor,
+  if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &has,
                         u3x_sam_3,  &prv,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv)) ) {
     return u3m_bail(c3__exit);
@@ -241,11 +241,11 @@ u3we_sosi(u3_noun cor)
 {
   u3_noun key, mes, aux;
 
-  if ( (c3n == u3r_baad(cor,
+  if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &key,
                         u3x_sam_6,  &mes,
                         u3x_sam_7,  &aux,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(key)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(aux)) )
@@ -282,11 +282,11 @@ u3we_sove(u3_noun cor)
 {
   u3_noun pub, mes, sig;
 
-  if ( (c3n == u3r_baad(cor,
+  if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &pub,
                         u3x_sam_6,  &mes,
                         u3x_sam_7,  &sig,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(pub)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(sig)) )

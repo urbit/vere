@@ -83,6 +83,6 @@ u3_noun
 u3wdi_del(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_baad(cor, u3x_sam, &b, u3x_con_sam, &a, 0);
+  u3x_mean(cor, u3x_sam, &b, u3x_con_sam, &a, u3_nul);
   return u3qdi_del(a, b);
 }

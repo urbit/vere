@@ -62,7 +62,7 @@
   {
     u3_noun yed;
 
-    if ( c3n == u3r_baad(cor, u3x_sam, &yed, 0) ) {
+    if ( c3n == u3r_mean(cor, u3x_sam, &yed, u3_nul) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_fork(yed);

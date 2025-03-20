@@ -27,9 +27,9 @@
   {
     u3_noun boz, len, dat;
 
-    if ( (c3n == u3r_baad(cor, u3x_sam_2, &boz,
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &boz,
                                u3x_sam_6, &len,
-                               u3x_sam_7, &dat, 0)) ||
+                               u3x_sam_7, &dat, u3_nul)) ||
          (c3n == u3ud(boz)) ||
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) )
