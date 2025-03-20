@@ -283,7 +283,7 @@ typedef struct _u3_mesa {
     uv_handle_t      had_u;
   };
   u3_mesa_stat       sat_u;       //  statistics
-  c3_l               sev_l;       //  XX: ??
+  c3_l_tmp               sev_l;       //  XX: ??
   c3_o               for_o;       //  is forwarding
   per_map            per_u;       //  (map ship u3_peer)
   c3_d               jum_d;       //  bytes in jumbo cache

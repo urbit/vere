@@ -112,7 +112,7 @@ u3_auto_bail(u3_ovum* egg_u, u3_noun lud)
   //  optional
   //
   if ( egg_u->cb_u.bail_f ) {
-    c3_l cod_l = u3a_lush(egg_u->car_u->nam_m);
+    c3_l_tmp cod_l = u3a_lush(egg_u->car_u->nam_m);
     egg_u->cb_u.bail_f(egg_u, lud);
     u3a_lop(cod_l);
   }
@@ -130,7 +130,7 @@ _auto_news(u3_ovum* egg_u, u3_ovum_news new_e)
   // optional
   //
   if ( egg_u->cb_u.news_f ) {
-    c3_l cod_l = u3a_lush(egg_u->car_u->nam_m);
+    c3_l_tmp cod_l = u3a_lush(egg_u->car_u->nam_m);
     egg_u->cb_u.news_f(egg_u, new_e);
     u3a_lop(cod_l);
   }
@@ -253,7 +253,7 @@ _auto_kick_lost(u3_noun pax, u3_noun fav)
 static c3_o
 _auto_kick(u3_auto* car_u, u3_noun pax, u3_noun fav)
 {
-  c3_l cod_l = u3a_lush(car_u->nam_m);
+  c3_l_tmp cod_l = u3a_lush(car_u->nam_m);
   c3_o kik_o = car_u->io.kick_f(car_u, pax, fav);
   u3a_lop(cod_l);
   return kik_o;
@@ -314,7 +314,7 @@ u3_auto_live(u3_auto* car_u)
 void
 u3_auto_talk(u3_auto* car_u)
 {
-  c3_l cod_l;
+  c3_l_tmp cod_l;
 
   while ( car_u ) {
     cod_l = u3a_lush(car_u->nam_m);
@@ -330,7 +330,7 @@ void
 u3_auto_exit(u3_auto* car_u)
 {
   u3_auto* nex_u;
-  c3_l     cod_l;
+  c3_l_tmp     cod_l;
 
   while ( car_u ) {
     nex_u = car_u->nex_u;
@@ -391,7 +391,7 @@ u3_auto_slog(u3_auto* car_u)
     //  XX details
     //
     if ( car_u->io.slog_f ) {
-      c3_l cod_l = u3a_lush(car_u->nam_m);
+      c3_l_tmp cod_l = u3a_lush(car_u->nam_m);
       car_u->io.slog_f(car_u);
       u3a_lop(cod_l);
     }

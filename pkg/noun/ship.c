@@ -86,7 +86,7 @@ u3_ship_copy(u3_ship des_u, u3_ship src_u)
   des_u[1] = src_u[1];
 }
 
-c3_l
+c3_l_tmp
 u3_ship_rank(u3_ship who_u)
 {
   if      ( who_u[1] )       return c3__pawn;

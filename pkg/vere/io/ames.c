@@ -52,7 +52,7 @@ typedef enum u3_stun_state {
       uv_udp_t       wax_u;             //
       uv_handle_t    had_u;             //
     };                                  //
-    c3_l             sev_l;             //  instance number
+    c3_l_tmp             sev_l;             //  instance number
     ur_cue_test_t*   tes_u;             //  cue-test handle
     u3_cue_xeno*     sil_u;             //  cue handle
     c3_y             ver_y;             //  protocol version
@@ -112,7 +112,7 @@ typedef enum u3_stun_state {
     c3_y ver_y;                         //  protocol version
     c3_y sac_y;                         //  sender class
     c3_y rac_y;                         //  receiver class
-    c3_l mug_l;                         //  truncated mug hash of u3_body
+    c3_l_tmp mug_l;                         //  truncated mug hash of u3_body
     c3_o rel_o;                         //  relayed?
   } u3_head;
 
@@ -164,7 +164,7 @@ typedef enum u3_stun_state {
   typedef struct _u3_body {
     c3_s    con_s;                      //  content size
     c3_y*   con_y;                      //  content
-    c3_l    mug_l;                      //  checksum
+    c3_l_tmp    mug_l;                      //  checksum
   } u3_body;
 
 /* u3_ptag: packet-type tag
@@ -350,7 +350,7 @@ static c3_o
 _ames_check_mug(u3_pact* pac_u)
 {
   c3_w_tmp rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
-  c3_l mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
+  c3_l_tmp mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
                              pac_u->len_w - rog_w);
   //  u3l_log("len_w: %u, rog_w: %u, bod_l 0x%05x, hed_l 0x%05x",
   //          pac_u->len_w, rog_w,

@@ -12,7 +12,7 @@
 #define TAKEBITS(n,w) \
   ((n)==u3a_note_bits) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_n)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -168,6 +168,15 @@ u3qc_rep(u3_atom a,
        c3n == u3a_is_cat(b) ) {
     return u3m_bail(c3__fail);
   }
+
+  if ( 1 == b ) {
+    return _block_rep(a, c);
+  }
+
+  if ( 0 == a ) {
+    return _bit_rep(b, c);
+  }
+
   c3_n  len_w = u3qb_lent(c);
 
   if ( c3n == u3a_is_cat(len_w) ) {
@@ -185,7 +194,7 @@ u3qc_rep(u3_atom a,
   
   while ( u3_nul != c ) {
     u3_noun i_c = u3h(c);
-    if ( _(u3a_is_atom(i_c)) ) {
+    if ( c3n == u3a_is_atom(i_c) ) {
       return u3m_bail(c3__exit);
     }
     u3r_chop(a, 0, b, b * i_n, sab_u.buf_n, i_c);
@@ -194,16 +203,6 @@ u3qc_rep(u3_atom a,
   }
   
   return u3i_slab_mint(&sab_u);
-  //if ( 1 == b ) {
-  //  return _block_rep(a, c);
-  //}
-
-  //if ( 0 == a ) {
-  //  return _bit_rep(b, c);
-  //}
-
-  //u3l_log("rep: stub");
-  //return u3_none;
 }
 
 u3_noun

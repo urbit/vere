@@ -534,6 +534,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
         if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
           return res_e;
         }
+        //  XX: not 63?
         else if ( 62 < len_d ) {
           return ur_cue_meme;
         }
@@ -608,6 +609,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
   }
   //  bit-cursor (and backreferences) must fit in 62-bit direct atoms
   //
+  //  XX: not 63?
   else if ( 0x7ffffffffffffffULL < len_d ) {
     return c3n;
   }
@@ -789,6 +791,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
       case ur_jam_back: {
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
 
+        //  XX: not 63?
         if ( 62 < len_d ) {
           return u3m_bail(c3__meme);
         }
@@ -845,7 +848,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
   _cs_cue_need(ur_bsr_init(&red_u, len_d, byt_y));
 
   //  bit-cursor (and backreferences) must fit in 62-bit direct atoms
-  //
+  //  XX: not 63?
   if ( 0x7ffffffffffffffULL < len_d ) {
     return u3m_bail(c3__meme);
   }
@@ -1414,7 +1417,7 @@ u3s_sift_ud_bytes(c3_n len_w, c3_y* byt_y)
     //
     mpz_t a_mp;
     {
-      c3_d bit_d = (c3_d)(len_w / (4 * u3a_note_words)) * 10;
+      c3_d bit_d = (c3_d)(len_w / sizeof(c3_n)) * 10;
       mpz_init2(a_mp, (c3_n)c3_min(bit_d, c3_n_max));
       mpz_set_ui(a_mp, val_s);
     }

@@ -88,7 +88,7 @@ struct _u3_ufil;
 */
   typedef struct _u3_unix {
     u3_auto     car_u;
-    c3_l        sev_l;                  //  instance number
+    c3_l_tmp        sev_l;                  //  instance number
     u3_umon*    mon_u;                  //  mount points
     c3_c*       pax_c;                  //  pier directory
     c3_o        alm;                    //  timer set

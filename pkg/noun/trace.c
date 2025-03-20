@@ -217,7 +217,7 @@ u3t_samp(void)
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    c3_l      mot_l;
+    c3_l_tmp      mot_l;
     u3a_road* rod_u;
 
     if ( _(u3T.mal_o) ) {
@@ -633,10 +633,10 @@ u3t_boff(void)
 
 
 /* u3t_slog_cap(): slog a tank with a caption with
-** a given priority c3_l (assumed 0-3).
+** a given priority c3_l_tmp (assumed 0-3).
 */
 void
-u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
+u3t_slog_cap(c3_l_tmp pri_l, u3_noun cap, u3_noun tan)
 {
   u3t_slog(
     u3nc(
@@ -651,12 +651,12 @@ u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
 }
 
 
-/* u3t_slog_trace(): given a c3_l priority pri and a raw stack tax
+/* u3t_slog_trace(): given a c3_l_tmp priority pri and a raw stack tax
 ** flop the order into start-to-end, render, and slog each item
 ** until done.
 */
 void
-u3t_slog_trace(c3_l pri_l, u3_noun tax)
+u3t_slog_trace(c3_l_tmp pri_l, u3_noun tax)
 {
   // render the stack
   // Note: ton is a reference to a data struct
@@ -682,10 +682,10 @@ u3t_slog_trace(c3_l pri_l, u3_noun tax)
 
 
 /* u3t_slog_nara(): slog only the deepest road's trace with
-** c3_l priority pri
+** c3_l_tmp priority pri
 */
 void
-u3t_slog_nara(c3_l pri_l)
+u3t_slog_nara(c3_l_tmp pri_l)
 {
   u3_noun tax = u3k(u3R->bug.tax);
   u3t_slog_trace(pri_l, tax);
@@ -693,10 +693,10 @@ u3t_slog_nara(c3_l pri_l)
 
 
 /* u3t_slog_hela(): join all roads' traces together into one tax
-** and pass it to slog_trace along with the given c3_l priority pri_l
+** and pass it to slog_trace along with the given c3_l_tmp priority pri_l
 */
 void
-u3t_slog_hela(c3_l pri_l)
+u3t_slog_hela(c3_l_tmp pri_l)
 {
   // rod_u protects us from mutating the global state
   u3_road* rod_u = u3R;
@@ -1016,7 +1016,7 @@ _ct_etch_steps(c3_c rep_c[32], c3_d sep_d)
 
 /* u3t_etch_meme(): report memory stats at call time */
 u3_noun
-u3t_etch_meme(c3_l mod_l)
+u3t_etch_meme(c3_l_tmp mod_l)
 {
   u3a_road* lum_r;
   lum_r = &(u3H->rod_u);

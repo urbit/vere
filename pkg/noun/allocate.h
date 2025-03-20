@@ -203,6 +203,7 @@
             struct {
               jmp_buf buf;
               c3_n why_w;                     //  how
+              // XX: signal how should be in home road
               c3_n sig_w;                     //  sig how
             };
             #endif

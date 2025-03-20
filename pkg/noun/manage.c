@@ -135,7 +135,7 @@ _cm_punt(u3_noun tax)
 /* _cm_emergency(): write emergency text to stderr, never failing.
 */
 static void
-_cm_emergency(c3_c* cap_c, c3_l sig_l)
+_cm_emergency(c3_c* cap_c, c3_l_tmp sig_l)
 {
   write(2, "\r\n", 2);
   write(2, cap_c, strlen(cap_c));
@@ -159,7 +159,7 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 /* _cm_signal_handle(): handle a signal in general.
 */
 static void
-_cm_signal_handle(c3_l sig_l)
+_cm_signal_handle(c3_l_tmp sig_l)
 {
   if ( c3__over == sig_l ) {
 #ifndef NO_OVERFLOW
@@ -286,7 +286,7 @@ _cm_stack_unwind(void)
 /* _cm_signal_recover(): recover from a deep signal, after longjmp.  Free arg.
 */
 static u3_noun
-_cm_signal_recover(c3_l sig_l, u3_noun arg)
+_cm_signal_recover(c3_l_tmp sig_l, u3_noun arg)
 {
   u3_noun tax;
 
@@ -1304,6 +1304,7 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
 #else
   if ( 0 != rsignal_setjmp(u3_Signal) ) {
+    // XX: put in home struct
     c3_n sig_l = u3R->esc.sig_w;
 #endif
     //  reinitialize trace state

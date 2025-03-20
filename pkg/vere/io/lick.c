@@ -9,7 +9,7 @@
 */
 typedef struct _u3_chan {
   struct _u3_moor   mor_u;            //  message handler
-  c3_l              coq_l;            //  connection number
+  c3_l_tmp              coq_l;            //  connection number
   c3_o              liv_o;            //  connection live
   struct _u3_shan*  san_u;            //  server backpointer
 } u3_chan;
@@ -18,7 +18,7 @@ typedef struct _u3_chan {
 */
 typedef struct _u3_shan {
   uv_pipe_t          pyp_u;           //  server stream handler
-  c3_l               nex_l;           //  next connection number
+  c3_l_tmp               nex_l;           //  next connection number
   struct _u3_port*   gen_u;           //  port backpointer
   struct _u3_chan*   can_u;           //  connection list
 } u3_shan;

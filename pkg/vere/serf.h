@@ -37,7 +37,7 @@
     /* u3_serf_peek(): read namespace.
     */
       u3_noun
-      u3_serf_peek(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun sam);
+      u3_serf_peek(u3_serf* sef_u, c3_n mil_w, u3_noun sam);
 
     /* u3_serf_play(): apply event list, producing status.
     */
@@ -47,7 +47,7 @@
     /* u3_serf_work(): apply event, producing effects.
     */
       u3_noun
-      u3_serf_work(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun job);
+      u3_serf_work(u3_serf* sef_u, c3_n mil_w, u3_noun job);
 
     /* u3_serf_post(): update serf state post-writ.
     */

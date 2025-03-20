@@ -80,7 +80,7 @@ u3_dire_free(u3_dire *dir_u)
 /* u3_fact_init(): initialize completed event.
 */
 u3_fact*
-u3_fact_init(c3_d eve_d, c3_l mug_l, u3_noun job)
+u3_fact_init(c3_d eve_d, c3_l_tmp mug_l, u3_noun job)
 {
   u3_fact *tac_u = c3_malloc(sizeof(*tac_u));
   tac_u->eve_d = eve_d;

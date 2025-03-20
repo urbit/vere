@@ -104,7 +104,7 @@ typedef struct _u3_h2o_serv {
 */
 typedef struct _u3_httd {
   u3_auto            car_u;             //  driver
-  c3_l               sev_l;             //  instance number
+  c3_l_tmp               sev_l;             //  instance number
   u3_hfig            fig_u;             //  http configuration
   u3_http*           htp_u;             //  http servers
   SSL_CTX*           tls_u;             //  server SSL_CTX*
@@ -1684,7 +1684,7 @@ _http_conn_new(u3_http* htp_u)
 /* _http_serv_find(): find http server by sequence.
 */
 static u3_http*
-_http_serv_find(u3_httd* htd_u, c3_l sev_l)
+_http_serv_find(u3_httd* htd_u, c3_l_tmp sev_l)
 {
   u3_http* htp_u = htd_u->htp_u;
 
@@ -2302,9 +2302,9 @@ _http_release_ports_file(c3_c *pax_c)
 
 static u3_hreq*
 _http_search_req(u3_httd* htd_u,
-                 c3_l     sev_l,
-                 c3_l     coq_l,
-                 c3_l     seq_l)
+                 c3_l_tmp     sev_l,
+                 c3_l_tmp     coq_l,
+                 c3_l_tmp     seq_l)
 {
   u3_http* htp_u;
   u3_hcon* hon_u;
@@ -2313,19 +2313,19 @@ _http_search_req(u3_httd* htd_u,
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: server not found: %"PRIxc3_l, sev_l);
+      u3l_log("http: server not found: %"PRIxc3_l_tmp, sev_l);
     }
     return 0;
   }
   else if ( !(hon_u = _http_conn_find(htp_u, coq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: connection not found: %"PRIxc3_l"/%"PRIc3_l, sev_l, coq_l);
+      u3l_log("http: connection not found: %"PRIxc3_l_tmp"/%"PRIc3_l_tmp, sev_l, coq_l);
     }
     return 0;
   }
   else if ( !(req_u = _http_req_find(hon_u, seq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: request not found: %"PRIxc3_l"/%"PRIc3_l"/%"PRIc3_l,
+      u3l_log("http: request not found: %"PRIxc3_l_tmp"/%"PRIc3_l_tmp"/%"PRIc3_l_tmp,
               sev_l, coq_l, seq_l);
     }
     return 0;
@@ -2558,9 +2558,9 @@ _http_io_talk(u3_auto* car_u)
 */
 void
 _http_ef_http_server(u3_httd* htd_u,
-                     c3_l     sev_l,
-                     c3_l     coq_l,
-                     c3_l     seq_l,
+                     c3_l_tmp     sev_l,
+                     c3_l_tmp     coq_l,
+                     c3_l_tmp     seq_l,
                      u3_noun    tag,
                      u3_noun    dat)
 {
@@ -2658,7 +2658,7 @@ _http_stream_slog(void* vop_p, c3_w_tmp pri_w, u3_noun tan)
       }
       else {
         u3_noun blu = u3_term_get_blew(0);
-        c3_l  col_l = u3h(blu);
+        c3_l_tmp  col_l = u3h(blu);
         wol = u3dc("wash", u3nc(0, col_l), u3k(tan));
         u3z(blu);
       }

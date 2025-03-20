@@ -14,7 +14,7 @@
     /* u3n_memo: %memo hint space
      */
     typedef struct {
-      c3_l    sip_l;
+      c3_l_tmp    sip_l;
       u3_noun key;
     } u3n_v2_memo;
 

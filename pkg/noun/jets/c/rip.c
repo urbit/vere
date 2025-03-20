@@ -12,7 +12,7 @@
 #define TAKEBITS(n,w) \
   ((n)==u3a_note_bits) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_n)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -54,7 +54,7 @@
 static u3_noun
 _bit_rip(u3_atom bits, u3_atom atom)
 {
-  if ( !_(u3a_is_cat(bits) || bits==0 || bits>(u3a_note_bits-1)) ) {
+  if ( bits==0 || bits>(u3a_note_bits-1)) {
     return u3m_bail(c3__fail);
   }
 
@@ -91,9 +91,6 @@ _bit_rip(u3_atom bits, u3_atom atom)
 static u3_noun
 _block_rip(u3_atom bloq, u3_atom b)
 {
-  if ( !_(u3a_is_cat(bloq)) || (bloq >= u3a_note_bits) ) {
-    return u3m_bail(c3__fail);
-  }
 
   c3_g bloq_g = bloq;
 
@@ -105,8 +102,8 @@ _block_rip(u3_atom bloq, u3_atom b)
     u3_noun acc     = u3_nul;
 
     c3_n met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
-    c3_n nbits_w = 1 << bloq_g;                         //  block size in bits
-    c3_n bmask_w = (1 << nbits_w) - 1;                  //  result mask
+    c3_n nbits_w = (c3_n)1 << bloq_g;                         //  block size in bits
+    c3_n bmask_w = ((c3_n)1 << nbits_w) - 1;                  //  result mask
 
     for ( c3_n i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
       c3_n nex_w = i_w + 1;                             //  next block
@@ -127,7 +124,7 @@ _block_rip(u3_atom bloq, u3_atom b)
   c3_n    met_w = u3r_met(bloq_g, b);
   c3_n    len_w = u3r_met(u3a_note_bits_log, b);
   c3_g    san_g = (bloq_g - u3a_note_bits_log);
-  c3_n    san_w = 1 << san_g;
+  c3_n    san_w = (c3_n)1 << san_g;
   c3_n    dif_w = (met_w << san_g) - len_w;
   c3_n    tub_w = ((dif_w == 0) ? san_w : (san_w - dif_w));
 
@@ -157,6 +154,7 @@ u3qc_rip(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
+
   if ( c3n == u3a_is_cat(a) ) {
     return u3m_bail(c3__fail);
   }
@@ -167,6 +165,14 @@ u3qc_rip(u3_atom a,
 
   if ( a >= u3a_note_bits ) {
     return u3m_bail(c3__fail);
+  }
+
+  if ( 1 == b ) {
+    return _block_rip(a, c);
+  }
+
+  if ( 0 == a ) {
+    return _bit_rip(b, c);
   }
 
   u3i_slab sab_u;
@@ -188,17 +194,6 @@ u3qc_rip(u3_atom a,
   //*lit = u3_nul;
 
   return pro;
-
-  //if ( 1 == b ) {
-  //  return _block_rip(a, c);
-  //}
-
-  //if ( 0 == a ) {
-  //  return _bit_rip(b, c);
-  //}
-
-  //u3l_log("rip: stub");
-  //return u3_none;
 }
 
 u3_noun

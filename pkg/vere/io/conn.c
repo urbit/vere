@@ -117,7 +117,7 @@
 */
   typedef struct _u3_chan {
     struct _u3_moor   mor_u;            //  message handler
-    c3_l              coq_l;            //  connection number
+    c3_l_tmp              coq_l;            //  connection number
     c3_o              liv_o;            //  connection live
     struct _u3_shan*  san_u;            //  server backpointer
     struct _u3_cran*  ran_u;            //  request list
@@ -127,7 +127,7 @@
 */
   typedef struct _u3_shan {
     uv_pipe_t         pyp_u;            //  server stream handler
-    c3_l              nex_l;            //  next connection number
+    c3_l_tmp              nex_l;            //  next connection number
     struct _u3_conn*  con_u;            //  device backpointer
     struct _u3_chan*  can_u;            //  connection list
   } u3_shan;
@@ -136,7 +136,7 @@
 */
   typedef struct _u3_conn {
     u3_auto           car_u;            //  driver
-    c3_l              sev_l;            //  instance number
+    c3_l_tmp              sev_l;            //  instance number
     struct _u3_shan*  san_u;            //  server reference
     u3_cue_xeno*      sil_u;            //  cue handle
     c3_o              kan_o;            //  %khan present?
@@ -176,7 +176,7 @@ _conn_send_noun(u3_chan* can_u, u3_noun nun)
 /* _conn_find_chan(): lookup channel by connection number.
 */
 static u3_chan*
-_conn_find_chan(u3_conn* con_u, c3_l sev_l, c3_l coq_l)
+_conn_find_chan(u3_conn* con_u, c3_l_tmp sev_l, c3_l_tmp coq_l)
 {
   u3_chan* ret_u;
 
@@ -848,8 +848,8 @@ _conn_io_talk(u3_auto* car_u)
 */
 static void
 _conn_ef_handle(u3_conn*  con_u,
-                c3_l      sev_l,
-                c3_l      coq_l,
+                c3_l_tmp      sev_l,
+                c3_l_tmp      coq_l,
                 u3_atom   rid,
                 u3_noun   tag,
                 u3_noun   dat)
@@ -866,7 +866,7 @@ _conn_ef_handle(u3_conn*  con_u,
     }
   }
   else {
-    u3l_log("conn: handle-no-coq %" PRIxc3_l " %" PRIc3_l,
+    u3l_log("conn: handle-no-coq %" PRIxc3_l_tmp " %" PRIc3_l_tmp,
             sev_l, coq_l);
   }
   u3z(rid); u3z(tag); u3z(dat);

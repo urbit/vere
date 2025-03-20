@@ -392,7 +392,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun len = u3at(arr_sam_3, monad);
 
     c3_w_tmp ptr_w = u3r_word_tmp(0, ptr);
-    c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
+    c3_l_tmp len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
     c3_w_tmp len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
 
@@ -423,7 +423,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun src = u3at(arr_sam_7, monad);
 
     c3_w_tmp ptr_w = u3r_word_tmp(0, ptr);
-    c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
+    c3_l_tmp len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
 
     c3_w_tmp len_buf_w;
     c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
@@ -706,7 +706,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     u3_noun delta = u3at(arr_sam, monad);
 
-    c3_l delta_l = (c3y == u3a_is_cat(delta)) ? delta : u3m_bail(c3__fail);
+    c3_l_tmp delta_l = (c3y == u3a_is_cat(delta)) ? delta : u3m_bail(c3__fail);
 
     c3_w_tmp n_pages = sat->wasm_module->runtime->memory.numPages;
     c3_w_tmp required_pages = n_pages + delta_l;

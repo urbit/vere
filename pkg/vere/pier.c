@@ -728,7 +728,7 @@ _pier_work_init(u3_pier* pir_u)
   //  XX moveme
   //
   {
-    c3_l cod_l = u3a_lush(c3__save);
+    c3_l_tmp cod_l = u3a_lush(c3__save);
     u3_save_io_init(pir_u);
     u3a_lop(cod_l);
   }
@@ -983,7 +983,7 @@ _pier_wyrd_card(u3_pier* pir_u)
   _pier_work_time(pir_u);
 
   {
-    c3_l  sev_l;
+    c3_l_tmp  sev_l;
     u3_noun now;
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
@@ -2448,7 +2448,7 @@ _pier_work_exit(u3_pier* pir_u)
   //  XX moveme, XX bails if not started
   //
   {
-    c3_l cod_l = u3a_lush(c3__save);
+    c3_l_tmp cod_l = u3a_lush(c3__save);
     u3_save_io_exit(pir_u);
     u3a_lop(cod_l);
   }
@@ -2591,10 +2591,10 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 /* u3_pier_tank(): dump single tank.
 */
 void
-u3_pier_tank(c3_l tab_l, c3_w_tmp pri_w, u3_noun tac)
+u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac)
 {
   u3_noun blu = u3_term_get_blew(0);
-  c3_l  col_l = u3h(blu);
+  c3_l_tmp  col_l = u3h(blu);
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
@@ -2651,7 +2651,7 @@ u3_pier_tank(c3_l tab_l, c3_w_tmp pri_w, u3_noun tac)
 /* u3_pier_punt(): dump tank list.
 */
 void
-u3_pier_punt(c3_l tab_l, u3_noun tac)
+u3_pier_punt(c3_l_tmp tab_l, u3_noun tac)
 {
   u3_noun cat = tac;
 
@@ -2704,7 +2704,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
 /* u3_pier_sway(): print trace.
 */
 void
-u3_pier_sway(c3_l tab_l, u3_noun tax)
+u3_pier_sway(c3_l_tmp tab_l, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 

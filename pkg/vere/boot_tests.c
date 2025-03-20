@@ -34,7 +34,7 @@ _setup(void)
 static void
 _test_lily()
 {
-  c3_l    lit_l;
+  c3_l_tmp    lit_l;
   c3_w_tmp    big_w[] = {0, 0, 1};
   u3_noun big = u3i_words_tmp(3, big_w);
   u3_noun cod = u3dc("scot", c3__uv, big);

@@ -85,7 +85,7 @@ u3_noun
 _serf_quac(u3m_quac* mas_u)
 {
   u3_noun list = u3_nul;
-  c3_w_tmp i_w = 0;
+  c3_n i_w = 0;
   if ( mas_u->qua_u != NULL ) {
     while ( mas_u->qua_u[i_w] != NULL ) {
       list = u3nc(_serf_quac(mas_u->qua_u[i_w]), list);
@@ -109,7 +109,7 @@ u3_noun
 _serf_quacs(u3m_quac** all_u)
 {
   u3_noun list = u3_nul;
-  c3_w_tmp i_w = 0;
+  c3_n i_w = 0;
   while ( all_u[i_w] != NULL ) {
     list = u3nc(_serf_quac(all_u[i_w]), list);
     i_w++;
@@ -124,7 +124,7 @@ void
 _serf_print_quacs(FILE* fil_u, u3m_quac** all_u)
 {
   fprintf(fil_u, "\r\n");
-  c3_w_tmp i_w = 0;
+  c3_n i_w = 0;
   while ( all_u[i_w] != NULL ) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);
     i_w++;
@@ -192,12 +192,12 @@ _serf_grab(u3_noun sac, c3_o pri_o)
       all_u[4] = var_u[3];
       c3_free(var_u);
 
-      c3_w_tmp tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
+      c3_n tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
                      + all_u[3]->siz_w + all_u[4]->siz_w;
 
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
-      all_u[5]->siz_w = u3a_mark_noun(sac) * 4;
+      all_u[5]->siz_w = u3a_mark_noun(sac) * sizeof(c3_n);
 
       tot_w += all_u[5]->siz_w;
 
@@ -207,15 +207,15 @@ _serf_grab(u3_noun sac, c3_o pri_o)
 
       all_u[7] = c3_calloc(sizeof(*all_u[7]));
       all_u[7]->nam_c = strdup("free lists");
-      all_u[7]->siz_w = u3a_idle(u3R) * 4;
+      all_u[7]->siz_w = u3a_idle(u3R) * sizeof(c3_n);
 
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
-      all_u[8]->siz_w = u3a_sweep() * 4;
+      all_u[8]->siz_w = u3a_sweep() * sizeof(c3_n);
       
       all_u[9] = c3_calloc(sizeof(*all_u[9]));
       all_u[9]->nam_c = strdup("loom");
-      all_u[9]->siz_w = u3C.wor_i * 4;
+      all_u[9]->siz_w = u3C.wor_i * sizeof(c3_n);
 
       all_u[10] = NULL;
 
@@ -282,8 +282,8 @@ u3_serf_grab(c3_o pri_o)
     fprintf(stderr, "sac is empty\r\n");
     u3m_quac** var_u = u3m_mark();
 
-    c3_w_tmp tot_w = 0;
-    c3_w_tmp i_w = 0;
+    c3_n tot_w = 0;
+    c3_n i_w = 0;
     while ( var_u[i_w] != NULL ) {
       tot_w += var_u[i_w]->siz_w;
       u3a_quac_free(var_u[i_w]);
@@ -291,7 +291,7 @@ u3_serf_grab(c3_o pri_o)
     }
     c3_free(var_u);
 
-    u3a_print_memory(stderr, "total marked", tot_w / 4);
+    u3a_print_memory(stderr, "total marked", tot_w / sizeof(c3_n));
     u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
     u3a_print_memory(stderr, "sweep", u3a_sweep());
     fprintf(stderr, "\r\n");
@@ -351,7 +351,7 @@ u3_serf_post(u3_serf* sef_u)
 /* _serf_curb(): check for memory threshold
 */
 static inline c3_t
-_serf_curb(c3_w_tmp pre_w, c3_w_tmp pos_w, c3_w_tmp hes_w)
+_serf_curb(c3_n pre_w, c3_n pos_w, c3_n hes_w)
 {
   return (pre_w > hes_w) && (pos_w <= hes_w);
 }
@@ -359,13 +359,13 @@ _serf_curb(c3_w_tmp pre_w, c3_w_tmp pos_w, c3_w_tmp hes_w)
 /* _serf_sure_feck(): event succeeded, send effects.
 */
 static u3_noun
-_serf_sure_feck(u3_serf* sef_u, c3_w_tmp pre_w, u3_noun vir)
+_serf_sure_feck(u3_serf* sef_u, c3_n pre_w, u3_noun vir)
 {
   //  intercept |mass, observe |reset
   //
   {
     u3_noun riv = vir;
-    c3_w_tmp    i_w = 0;
+    c3_n    i_w = 0;
 
     while ( u3_nul != riv ) {
       u3_noun fec = u3t(u3h(riv));
@@ -422,7 +422,7 @@ _serf_sure_feck(u3_serf* sef_u, c3_w_tmp pre_w, u3_noun vir)
   //
   {
     u3_noun pri = u3_none;
-    c3_w_tmp  pos_w = u3a_open(u3R);
+    c3_n  pos_w = u3a_open(u3R);
 
     //  if contiguous free space shrunk, check thresholds
     //  (and track state to avoid thrashing)
@@ -493,7 +493,7 @@ _serf_sure_core(u3_serf* sef_u, u3_noun cor)
 /* _serf_sure(): event succeeded, save state and process effects.
 */
 static u3_noun
-_serf_sure(u3_serf* sef_u, c3_w_tmp pre_w, u3_noun par)
+_serf_sure(u3_serf* sef_u, c3_n pre_w, u3_noun par)
 {
   //  vir/(list ovum)  list of effects
   //  cor/arvo         arvo core
@@ -527,7 +527,7 @@ _serf_make_crud(u3_noun job, u3_noun dud)
 /* _serf_poke(): RETAIN
 */
 static u3_noun
-_serf_poke(u3_serf* sef_u, c3_c* cap_c, c3_w_tmp mil_w, u3_noun job)
+_serf_poke(u3_serf* sef_u, c3_c* cap_c, c3_n mil_w, u3_noun job)
 {
   u3_noun now, ovo, wen, gon;
   u3x_cell(job, &now, &ovo);
@@ -591,10 +591,10 @@ _serf_poke(u3_serf* sef_u, c3_c* cap_c, c3_w_tmp mil_w, u3_noun job)
 /* _serf_work():  apply event, capture effects.
 */
 static u3_noun
-_serf_work(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun job)
+_serf_work(u3_serf* sef_u, c3_n mil_w, u3_noun job)
 {
   u3_noun gon;
-  c3_w_tmp  pre_w = u3a_open(u3R);
+  c3_n  pre_w = u3a_open(u3R);
 
   //  event numbers must be continuous
   //
@@ -662,7 +662,7 @@ _serf_work(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun job)
 /* u3_serf_work(): apply event, producing effects.
 */
 u3_noun
-u3_serf_work(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun job)
+u3_serf_work(u3_serf* sef_u, c3_n mil_w, u3_noun job)
 {
   c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
   c3_c  lab_c[2056];
@@ -787,7 +787,7 @@ _serf_play_poke(u3_noun job)
 static u3_noun
 _serf_play_list(u3_serf* sef_u, u3_noun eve)
 {
-  c3_w_tmp pre_w = u3a_open(u3R);
+  c3_n pre_w = u3a_open(u3R);
   u3_noun vev = eve;
   u3_noun job, gon;
 
@@ -864,7 +864,7 @@ u3_serf_play(u3_serf* sef_u, c3_d eve_d, u3_noun lit)
 /* u3_serf_peek(): dereference namespace.
 */
 u3_noun
-u3_serf_peek(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun sam)
+u3_serf_peek(u3_serf* sef_u, c3_n mil_w, u3_noun sam)
 {
   c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
   c3_c  lab_c[2056];
@@ -917,7 +917,7 @@ u3_serf_peek(u3_serf* sef_u, c3_w_tmp mil_w, u3_noun sam)
 /* _serf_writ_live_exit(): exit on command.
 */
 static void
-_serf_writ_live_exit(u3_serf* sef_u, c3_w_tmp cod_w)
+_serf_writ_live_exit(u3_serf* sef_u, c3_n cod_w)
 {
   if ( u3C.wag_w & u3o_debug_cpu ) {
     FILE* fil_u;
@@ -1118,10 +1118,10 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
 
       case c3__peek: {
         u3_noun tim, sam;
-        c3_w_tmp  mil_w;
+        c3_n  mil_w;
 
         if ( (c3n == u3r_cell(com, &tim, &sam)) ||
-             (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
+             (c3n == u3r_safe_note(tim, &mil_w)) )
         {
           ret_o = c3n;
         }
@@ -1149,10 +1149,10 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
 
       case c3__work: {
         u3_noun tim, job;
-        c3_w_tmp  mil_w;
+        c3_n  mil_w;
 
         if ( (c3n == u3r_cell(com, &tim, &job)) ||
-             (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
+             (c3n == u3r_safe_note(tim, &mil_w)) )
         {
           ret_o = c3n;
         }
@@ -1225,7 +1225,7 @@ u3_serf_init(u3_serf* sef_u)
   u3_noun rip;
 
   {
-    c3_w_tmp  pro_w = 1;
+    c3_n  pro_w = 1;
     c3_y  hon_y = 138;
     c3_y  noc_y = 4;
     u3_noun ver = u3nt(pro_w, hon_y, noc_y);
@@ -1238,7 +1238,7 @@ u3_serf_init(u3_serf* sef_u)
   //  measure/print static memory usage if < 1/2 of the loom is available
   //
   // {
-  //   c3_w_tmp pen_w = u3a_open(u3R);
+  //   c3_n pen_w = u3a_open(u3R);
 
   //   if ( !(pen_w > (1 << 28)) ) {
   //     fprintf(stderr, "\r\n");

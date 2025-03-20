@@ -814,7 +814,7 @@
       /* u3_fact_init(): initialize completed event.
       */
         u3_fact*
-        u3_fact_init(c3_d eve_d, c3_l mug_l, u3_noun job);
+        u3_fact_init(c3_d eve_d, c3_l_tmp mug_l, u3_noun job);
 
       /* u3_fact_free(): dispose completed event.
       */
@@ -1475,12 +1475,12 @@
       /* u3_pier_tank(): dump single tank.
       */
         void
-        u3_pier_tank(c3_l tab_l, c3_w_tmp pri_w, u3_noun tac);
+        u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac);
 
       /* u3_pier_punt(): dump tank list.
       */
         void
-        u3_pier_punt(c3_l tab_l, u3_noun tac);
+        u3_pier_punt(c3_l_tmp tab_l, u3_noun tac);
 
       /* u3_pier_punt_goof(): dump a [mote tang] crash report.
       */
@@ -1495,7 +1495,7 @@
       /* u3_pier_sway(): print trace.
       */
         void
-        u3_pier_sway(c3_l tab_l, u3_noun tax);
+        u3_pier_sway(c3_l_tmp tab_l, u3_noun tax);
 
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
