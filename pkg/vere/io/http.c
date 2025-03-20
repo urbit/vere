@@ -502,13 +502,10 @@ _http_spin_unlink(u3_hreq* req_u)
 
     if ( 0 != req_u->nex_u ) {
       req_u->nex_u->pre_u = 0;
+    } 
+    else {
+      uv_timer_stop(req_u->tim_u);
     }
-  }
-
-  //  unlink from async scry request if present
-  //
-  if ( req_u->peq_u ) {
-    req_u->peq_u->req_u = 0;
   }
 }
 
@@ -531,12 +528,6 @@ _http_seq_unlink(u3_hreq* req_u)
     if ( 0 != req_u->nex_u ) {
       req_u->nex_u->pre_u = 0;
     }
-  }
-
-  //  unlink from async scry request if present
-  //
-  if ( req_u->peq_u ) {
-    req_u->peq_u->req_u = 0;
   }
 }
 
@@ -2846,8 +2837,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       if ( siz_w < out_w + 4 ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
       }
-      memcpy(buf_c + out_w, "/", 1);
-      out_w +=1;
+      buf_c[out_w++] = '/';
 
       if ( siz_w < out_w + len_w ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
@@ -2855,7 +2845,6 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
 
       memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
       out_w += len_w;
-      buf_c[out_w] = '\0';
     }
     buf_c[out_w] = '\0';
 
@@ -2872,6 +2861,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
         _http_continue_respond(siq_u, u3k(dat), c3n);
         siq_u = siq_u->nex_u;
       }
+      u3z(dat); u3z(lin); 
     }
     uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
                    SPIN_TIMER, 0);

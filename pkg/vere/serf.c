@@ -949,7 +949,6 @@ _serf_writ_live_exit(u3_serf* sef_u, c3_w cod_w)
       fclose(fil_u);
     }
   }
-  
   //  XX move to jets.c
   //
   c3_free(u3D.ray_u);
