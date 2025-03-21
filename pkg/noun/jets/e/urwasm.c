@@ -1946,7 +1946,12 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       sat_u->resolution = u3_none;
       if (yil == u3_none)
       {
-        return u3m_bail(c3__fail);
+        yil = sat_u->arrow_yil;
+        sat_u->arrow_yil = u3_none;
+        if (yil == u3_none)
+        {
+          return u3m_bail(c3__fail);
+        }
       }
     }
     else if (_deterministic_trap(result))
