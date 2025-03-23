@@ -35,18 +35,18 @@ pro hand -p true -s false -n false SIGSEGV
 
 ### Sanitizers
 
-Sanitizers are supported for native builds only and you need to have `llvm-18` (and `clang-18` on linux) installed on your machine.
+Sanitizers are supported for native builds only and you need to have `llvm-19` (and `clang-19` on linux) installed on your machine.
 
 For native linux builds this is the only situation where we actually build against the native abi. Normally we build agains musl even on native gnu machines.
 
 macOS:
 ```terminal
-brew install llvm@18
+brew install llvm@19
 ```
 
 Debian/Ubuntu:
 ```terminal
-apt-get install llvm-18 clang-18
+apt-get install llvm-19 clang-19
 ```
 
 ## Build
@@ -96,10 +96,10 @@ Provide additional compiler flags. These propagate to all build artifacts.
 Example: `zig build -Dcopt="-g" -Dcopt="-fno-sanitize=all"`
 
 #### `-Dasan`
-Enable address sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
+Enable address sanitizer. Only supported natively. Requires `llvm@19`, see [prerequisites](#sanitizers).
 
 #### `-Dubsan`
-Enable undefined behavior sanitizer. Only supported nativelly. Requires `llvm@18`, see [prerequisites](#sanitizers).
+Enable undefined behavior sanitizer. Only supported natively. Requires `llvm@19`, see [prerequisites](#sanitizers).
 
 <!-- ## LSP Integration -->
 

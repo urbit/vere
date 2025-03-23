@@ -839,7 +839,7 @@ static c3_i
 _disk_acquire(c3_c* pax_c)
 {
   c3_c* paf_c    = _disk_lock(pax_c);
-  c3_y  dat_y[12] = {0};
+  c3_y  dat_y[13] = {0};
   c3_w  pid_w    = 0;
   c3_i  fid_i, ret_i;
 
@@ -872,7 +872,7 @@ _disk_acquire(c3_c* pax_c)
       len_y++;
       buf_y++;
     }
-    while ( len_y < sizeof(dat_y) );
+    while ( len_y < (sizeof(dat_y) - 1) ); // null terminate
 
 
     if ( len_y ) {

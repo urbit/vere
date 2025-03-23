@@ -427,7 +427,8 @@ _dawn_come(u3_noun stars)
   }
 
   {
-    u3_noun who = u3dc("scot", 'p', u3k(u3h(seed)));
+    /* [[%2 ~] who=ship ryf=rift kyz=(list [lyf=life key=ring])]  */
+    u3_noun who = u3dc("scot", 'p', u3k(u3h(u3t(seed))));
     c3_c* who_c = u3r_string(who);
 
     u3l_log("boot: found comet %s", who_c);
