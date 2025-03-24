@@ -1191,6 +1191,7 @@ void
 u3t_sstack_push(u3_noun nam)
 {
   if ( c3n == u3ud(nam) ) {
+    u3t_sstack_push(c3__cell);
     return;
   }
 
