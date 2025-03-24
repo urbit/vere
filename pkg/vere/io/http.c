@@ -584,7 +584,7 @@ _http_req_timer_cb(uv_timer_t* tim_u)
     } break;
 
     case u3_rsat_peek: {
-      req_u->peq_u = 0;
+      req_u->peq_u->req_u = 0;
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
