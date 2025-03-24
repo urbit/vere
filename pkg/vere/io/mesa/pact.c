@@ -292,10 +292,10 @@ _mesa_rank(u3_ship who_u)
 static c3_y
 _mesa_make_chub_tag(c3_d tot_d)
 {
-  return  (tot_d <= 0xff)?       0b00 :
-          (tot_d <= 0xffff)?     0b01 :
-          (tot_d <= 0xffffff)?   0b10 :
-                                 0b11;
+  return  (tot_d <= 0xff)?        0b00 :
+          (tot_d <= 0xffff)?      0b01 :
+          (tot_d <= 0xffffffff)?  0b10 :
+                                  0b11;
 }
 
 /*
