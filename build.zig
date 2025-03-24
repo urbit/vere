@@ -233,6 +233,7 @@ fn buildBinary(
         "-DU3_GUARD_PAGE", // pkg_noun
         "-DU3_OS_ENDIAN_little=1", // pkg_c3
         "-DU3_OS_PROF=1", // pkg_c3
+        "-DVERE64",
     });
 
     if (cfg.cpu_dbg)

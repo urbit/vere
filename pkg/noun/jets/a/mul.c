@@ -27,7 +27,9 @@ u3qa_mul(u3_atom a,
     return 0;
   }
   else {
+#ifdef VERE64
     gmp_mul:
+#endif
     mpz_t a_mp, b_mp;
 
     u3r_mp(a_mp, a);
