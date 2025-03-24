@@ -22,16 +22,16 @@
 #     define u3a_note_bytes  (sizeof(c3_n))
 
 #     define u3a_word_bits  32
-#     define u3a_word_bytes_log  2
+#     define u3a_word_bits_log 5
+#     define u3a_word_bytes_shift  (u3a_word_bits_log - 3)
 #     define u3a_32_indirect_mask  0x3fffffff
 #     define u3a_32_direct_max  0x7fffffff
 #     define u3a_32_indirect_flag  0x80000000
 #     define u3a_32_cell_flag  0xc0000000
-#     define u3a_word_bits_log 5
 
 #     define u3a_chub_bits  64
-#     define u3a_chub_bytes_log  3
 #     define u3a_chub_bits_log 6
+#     define u3a_chub_bytes_shift  (u3a_chub_bits_log - 3)
 #     define u3a_64_indirect_mask  0x3fffffffffffffffULL
 #     define u3a_64_direct_max  0x7fffffffffffffffULL
 #     define u3a_64_indirect_flag  0x8000000000000000ULL
@@ -39,7 +39,7 @@
 
 #ifndef VERE64
 #     define u3a_note_bits  u3a_word_bits
-#     define u3a_note_bytes_log  u3a_word_bytes_log 
+#     define u3a_note_bytes_shift  u3a_word_bytes_shift
 #     define u3a_note_bits_log u3a_word_bits_log
 #     define u3a_indirect_mask  u3a_32_indirect_mask 
 #     define u3a_direct_max  u3a_32_direct_max 
@@ -48,7 +48,7 @@
 #     define u3a_note_words 1
 #else
 #     define u3a_note_bits  u3a_chub_bits
-#     define u3a_note_bytes_log  u3a_chub_bytes_log 
+#     define u3a_note_bytes_shift  u3a_chub_bytes_shift
 #     define u3a_note_bits_log u3a_chub_bits_log
 #     define u3a_indirect_mask  u3a_64_indirect_mask 
 #     define u3a_direct_max  u3a_64_direct_max 

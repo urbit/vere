@@ -1054,7 +1054,7 @@ u3r_byte(c3_n    a_n,
   else {
     u3a_atom* b_u   = u3a_to_ptr(b);
     c3_y      vut_y = (a_n & (u3a_note_bytes - 1));
-    c3_n      pix_n = (a_n >> u3a_note_bytes_log);
+    c3_n      pix_n = (a_n >> u3a_note_bytes_shift);
 
     if ( pix_n >= b_u->len_n ) {
       return 0;
@@ -1090,7 +1090,7 @@ u3r_bytes(c3_n    a_w,
   }
   else {
     u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_n n_w = d_u->len_n << u3a_note_bytes_log;
+    c3_n n_w = d_u->len_n << u3a_note_bytes_shift;
     c3_y* x_y = (c3_y*)d_u->buf_n + a_w;
 
     if ( a_w >= n_w ) {
@@ -1377,10 +1377,10 @@ u3r_words_new(c3_n    a_w,
   if ( d < u3a_32_direct_max ) {
     if ( a_w == 0 ) {
       *c_w = (c3_w_new)d;
-      memset((c3_y*)(c_w + 1), 0, (b_w - 1) << u3a_word_bytes_log);
+      memset((c3_y*)(c_w + 1), 0, (b_w - 1) << u3a_word_bytes_shift);
     }
     else {
-      memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_log);
+      memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_shift);
     }
   }
   else {
@@ -1400,15 +1400,15 @@ u3r_words_new(c3_n    a_w,
       buf_w = d_u->buf_w;
     }
     if ( a_w >= len_n ) {
-      memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_log);
+      memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_shift);
     }
     else {
       c3_n z_w = c3_min(b_w, len_n - a_w);
       // XX: 64 little endian
       c3_w_new* x_w = buf_w + a_w;
-      memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << u3a_word_bytes_log);
+      memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << u3a_word_bytes_shift);
       if ( b_w > len_n - a_w ) {
-        memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - len_n) << u3a_word_bytes_log);
+        memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - len_n) << u3a_word_bytes_shift);
       }
     }
   }
@@ -1442,10 +1442,10 @@ u3r_chubs(c3_n    a_w,
   if ( _(u3a_is_cat(d)) ) {
     if ( a_w == 0 ) {
       *c_d = d;
-      memset((c3_y*)(c_d + 1), 0, (b_w - 1) << u3a_chub_bytes_log);
+      memset((c3_y*)(c_d + 1), 0, (b_w - 1) << u3a_chub_bytes_shift);
     }
     else {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_log);
+      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
     }
   }
   else {
@@ -1456,14 +1456,14 @@ u3r_chubs(c3_n    a_w,
     c3_n len_n = d_u->len_n;
 #endif
     if ( a_w >= len_n ) {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_log);
+      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
     }
     else {
       c3_n z_w = c3_min(b_w, len_n - a_w);
       c3_d* x_w = d_u->buf_d + a_w;
-      memcpy((c3_y*)c_d, (c3_y*)x_w, z_w << u3a_chub_bytes_log);
+      memcpy((c3_y*)c_d, (c3_y*)x_w, z_w << u3a_chub_bytes_shift);
       if ( b_w > len_n - a_w ) {
-        memset((c3_y*)(c_d + z_w), 0, (b_w + a_w - len_n) << u3a_chub_bytes_log);
+        memset((c3_y*)(c_d + z_w), 0, (b_w + a_w - len_n) << u3a_chub_bytes_shift);
       }
     }
   }

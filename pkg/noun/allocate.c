@@ -667,7 +667,7 @@ u3a_pile_prep(u3a_pile* pil_u, c3_n len_w)
   //  frame size, in words
   //
   c3_n wor_w =
-    (len_w + u3a_note_bytes - 1) >> u3a_note_bytes_log;
+    (len_w + u3a_note_bytes - 1) >> u3a_note_bytes_shift;
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
@@ -747,7 +747,7 @@ u3a_calloc(size_t num_i, size_t len_i)
 void*
 u3a_malloc(size_t len_i)
 {
-  c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_log);
+  c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_shift);
   c3_n *ptr_w = _ca_walloc(len_w +1, u3a_note_bytes, 1); /* +1 for word storing pad size */
   // XX: hmm?
   c3_n *out_w = c3_align(ptr_w + 1, 16, C3_ALGHI);
@@ -927,7 +927,7 @@ u3a_realloc(void* lag_v, size_t len_i)
     return u3a_malloc(len_i);
   }
   else {
-    c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_log);
+    c3_n  len_w = (c3_n)((len_i + (u3a_note_bytes - 1)) >> u3a_note_bytes_shift);
     c3_n*    lag_w = lag_v;
     c3_n     pad_w = lag_w[-1];
     c3_n*    org_w = lag_w - (pad_w + 1);

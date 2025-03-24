@@ -2266,7 +2266,7 @@ u3m_init(size_t len_i)
   //
   if (  !len_i
      || (len_i & (len_i - 1))
-     || (len_i < (1 << (u3a_page + u3a_note_bytes_log)))
+     || (len_i < (1 << (u3a_page + u3a_note_bytes_shift)))
      || (len_i > u3a_bytes) )
   {
     u3l_log("loom: bad size: %zu", len_i);
@@ -2299,7 +2299,7 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
-    u3C.wor_i = len_i >> u3a_note_bytes_log;
+    u3C.wor_i = len_i >> u3a_note_bytes_shift;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }

@@ -108,7 +108,7 @@
 ** _ce_page:      byte length of a single page
 ** _ce_ptr:       void pointer to a page
 */
-#define _ce_len(i)        ((size_t)(i) << (u3a_page + u3a_note_bytes_log))
+#define _ce_len(i)        ((size_t)(i) << (u3a_page + u3a_note_bytes_shift))
 #define _ce_len_notes(i)  ((size_t)(i) << u3a_page)
 #define _ce_page          _ce_len(1)
 #define _ce_ptr(i)        ((void *)((c3_c*)u3_Loom + _ce_len(i)))
@@ -344,7 +344,7 @@ _ce_image_stat(u3e_image* img_u, c3_n* pgs_w)
   }
   else {
     c3_z siz_z = buf_u.st_size;
-    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + u3a_note_bytes_log);
+    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + u3a_note_bytes_shift);
 
     if ( !siz_z ) {
       *pgs_w = 0;
