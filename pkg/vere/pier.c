@@ -1962,11 +1962,12 @@ _pier_pill_parse(u3_noun pil)
       u3_noun typ;
       c3_c* typ_c;
 
-      if (  ( c3__pill == tag &&
-              c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) )
-         || ( c3__cash == tag &&
-              c3n == u3r_quil(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use,
-                              &bot_u.cax) ) ) {
+      if ( c3__cash == tag && c3y == u3a_is_cell(dat) ) {
+        bot_u.cax = u3t(dat);
+        dat = u3h(dat);
+      }
+
+      if ( c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
         u3_king_bail();
         exit(1);
@@ -2210,7 +2211,6 @@ _pier_boot_plan(u3_pier* pir_u,
   }
 
   u3_disk_boot_save(pir_u->log_u);
-
 
   u3z(bot_u.bot);
   u3z(bot_u.mod);
