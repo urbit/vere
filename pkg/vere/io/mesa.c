@@ -16,6 +16,7 @@
 #include <jets/q.h>
 #include <manage.h>
 #include <c3/motes.h>
+#include <c3/defs.h>
 #include <retrieve.h>
 #include <stdio.h>
 #include <string.h>
@@ -271,7 +272,13 @@ typedef struct _u3_mesa {
   arena              are_u;       //  per packet arena
   arena              par_u;       //  permanent arena
   uv_timer_t         tim_u;       //  pit clear timer
+  u3_stun_client     sun_u;       //  stun client state
 } u3_mesa;
+
+STATIC_ASSERT(
+    ( ((void*)(u3_mesa*)(void*)0) ==
+      ((void*)(u3_mesa*)(void*)&(((u3_mesa*)(void*)0)->car_u)) ),
+    "u3_mesa struct alignment" );
 
 typedef struct _u3_pend_req {
   u3_peer*               per_u; // backpointer
@@ -1660,6 +1667,7 @@ u3_ames_encode_lane(u3_lane lan);
 
 static void _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u);
 static void _init_peer(u3_mesa* sam_u, u3_peer* per_u);
+static void _mesa_ef_saxo(u3_mesa* sam_u, u3_noun zad);
 
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
@@ -1679,9 +1687,13 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
         ret_o = c3y;
       }
     } break;
-    case c3__send:
-    case c3__turf:
     case c3__saxo: {
+      _mesa_ef_saxo(sam_u, u3k(dat));
+      ret_o = c3y;
+      break;
+    }
+    case c3__send:
+    case c3__turf: {
       #ifdef MESA_DEBUG
         c3_c* tag_c = u3r_string(tag);
         /* u3l_log("mesa: send old %s", tag_c); */
@@ -1752,13 +1764,21 @@ static c3_o _mesa_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 static u3_noun
 _mesa_io_info(u3_auto* car_u)
 {
-
-  return u3_nul;
+  u3_mesa*    sam_u = (u3_mesa*)car_u;
+  return u3i_list(
+    u3_pier_mase("stun-can-send",    sam_u->sun_u.net_o),
+    u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
+    u3_none);
 }
 
 static void
 _mesa_io_slog(u3_auto* car_u) {
+  u3_mesa*    sam_u = (u3_mesa*)car_u;
+# define FLAG(a) ( (c3y == a) ? "&" : "|" )
   u3l_log("mesa is online");
+  u3l_log("      stun:");
+  u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
+  u3l_log("        can send: %s", FLAG(sam_u->sun_u.net_o));
 }
 
 static void
@@ -1774,6 +1794,7 @@ _mesa_io_exit(u3_auto* car_u)
   uv_timer_stop(&sam_u->tim_u);
   sam_u->tim_u.data = sam_u;
   uv_close((uv_handle_t*)&sam_u->tim_u, _mesa_exit_cb);
+  uv_close((uv_handle_t*)&sam_u->sun_u.tim_u, 0);
 }
 
 static void
@@ -2964,6 +2985,32 @@ static void _mesa_clear_pit(uv_timer_t *tim_u)
   }
 }
 
+/* _mesa_ef_saxo(): handle sponsorship chain notification
+*/
+static void
+_mesa_ef_saxo(u3_mesa* sam_u, u3_noun zad)
+{
+  u3_noun daz;
+
+  daz = u3qb_flop(zad);
+  if ( u3_nul == daz ) {
+    u3l_log("ames: empty sponsorship chain");
+    u3z(zad); u3z(daz);
+    return;
+  }
+
+  u3_ship dad = u3_ship_of_noun(u3h(daz));
+
+  //  if we are a galaxy, don't STUN
+  //
+  if ( (c3__czar == u3_ship_rank(dad)) &&
+       (c3__czar != u3_ship_rank(sam_u->pir_u->who_u)) ) {
+    sam_u->sun_u.dad_y = (c3_y)dad.hed_d;
+    u3_stun_start(&sam_u->sun_u, 0);
+  }
+
+  u3z(zad); u3z(daz);
+}
 /* _mesa_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -3023,6 +3070,11 @@ u3_mesa_io_init(u3_pier* pir_u)
   car_u->io.kick_f = _mesa_io_kick;
   car_u->io.exit_f = _mesa_io_exit;
 
+  sam_u->sun_u.net_o = c3y;
+  sam_u->sun_u.wok_o = c3n;
+  uv_timer_init(u3L, &sam_u->sun_u.tim_u);
+  sam_u->sun_u.tim_u.data = sam_u;
+  u3_Host.sun_u = &sam_u->sun_u;
 
 
   /*{
