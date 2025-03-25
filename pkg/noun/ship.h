@@ -4,19 +4,22 @@
 #include "c3/c3.h"
 #include "types.h"
 
-typedef c3_d u3_ship[2];
+typedef struct _u3_ship {
+  c3_d hed_d;
+  c3_d tel_d;
+} u3_ship;
 
 void
-u3_ship_to_bytes(c3_d sip_d[2], c3_y len_y, c3_y* buf_y);
+u3_ship_to_bytes(u3_ship who_u, c3_y len_y, c3_y* buf_y);
 
-void
-u3_ship_of_bytes(u3_ship who_u, c3_y len_y, c3_y* buf_y);
+u3_ship
+u3_ship_of_bytes(c3_y len_y, c3_y* buf_y);
 
 u3_atom
 u3_ship_to_noun(u3_ship who_u);
 
-void
-u3_ship_of_noun(u3_ship who_u, u3_noun who);
+u3_ship
+u3_ship_of_noun(u3_noun who);
 
 c3_c*
 u3_ship_to_string(u3_ship who_u);
@@ -26,9 +29,6 @@ u3_ships_equal(u3_ship sip_u, u3_ship sap_u);
 
 c3_l
 u3_ship_rank(u3_ship who_u);
-
-void
-u3_ship_copy(u3_ship des_u, u3_ship src_u);
 
 /**
 * Returns a ship's galaxy byte prefix.

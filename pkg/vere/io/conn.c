@@ -545,7 +545,7 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       //  current ship.
       //
       case c3__who: {
-        res = u3nc(u3_nul, u3i_chubs(2, pir_u->who_d));
+        res = u3nc(u3_nul, u3_ship_to_noun(pir_u->who_u));
       }
     }
   }
@@ -721,7 +721,7 @@ _conn_init_sock(u3_shan* san_u)
 {
 #ifdef _WIN32
   u3_pier*  pir_u = san_u->con_u->car_u.pir_u;
-  u3_atom   who = u3dc("scot", c3__p, u3i_chubs(2, pir_u->who_d));
+  u3_atom   who = u3dc("scot", c3__p, u3_ship_to_noun(pir_u->who_u));
   c3_c*     who_c = u3r_string(who);
   c3_c      pip_c[256];
   c3_i      ret_i;

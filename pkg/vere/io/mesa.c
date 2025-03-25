@@ -144,22 +144,7 @@ typedef struct _u3_pit_entry {
   arena        are_u;
 } u3_pit_entry;
 
-typedef struct _u3_shap {
-  c3_d hed_d;
-  c3_d tel_d;
-} u3_shap;
 
-
-static u3_shap u3_ship_to_shap( u3_ship ship )
-{
-  return (u3_shap){ship[0], ship[1]};
-}
-
-static void u3_shap_to_ship( u3_ship ship, u3_shap shap )
-{
-  ship[0] = shap.hed_d;
-  ship[1] = shap.tel_d;
-}
 
 static void u3_free_pit( u3_pit_entry* pit_u )
 {
@@ -185,12 +170,12 @@ static uint64_t u3_cmpr_str( u3_str key1, u3_str key2 )
   return key1.len_w == key2.len_w && memcmp( key1.str_c, key2.str_c, key1.len_w ) == 0;
 }
 
-static uint64_t u3_cmpr_shap( u3_shap ship1, u3_shap ship2 )
+static uint64_t u3_cmpr_ship( u3_ship ship1, u3_ship ship2 )
 {
   return ship1.hed_d == ship2.hed_d && ship1.tel_d == ship2.tel_d;
 }
 
-static uint64_t u3_hash_shap(u3_shap ship)
+static uint64_t u3_hash_ship(u3_ship ship)
 {
   uint64_t combined = ship.hed_d ^ (ship.tel_d * 0x9e3779b97f4a7c15ull);
   combined ^= combined >> 23;
@@ -217,9 +202,9 @@ typedef struct _u3_pend_req u3_pend_req;
 #include "verstable.h"
 
 #define NAME gag_map
-#define KEY_TY u3_shap
-#define HASH_FN u3_hash_shap
-#define CMPR_FN u3_cmpr_shap
+#define KEY_TY u3_ship
+#define HASH_FN u3_hash_ship
+#define CMPR_FN u3_cmpr_ship
 #define VAL_TY u3_gage*
 #include "verstable.h"
 
@@ -269,9 +254,9 @@ static void u3_free_line( u3_mesa_line* lin_u )
 typedef struct _u3_peer u3_peer;
 
 #define NAME per_map
-#define KEY_TY u3_shap
-#define HASH_FN u3_hash_shap
-#define CMPR_FN u3_cmpr_shap
+#define KEY_TY u3_ship
+#define HASH_FN u3_hash_ship
+#define CMPR_FN u3_cmpr_ship
 #define VAL_TY u3_peer*
 #include "verstable.h"
 
@@ -543,7 +528,6 @@ static void
 _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u, arena* are_u)
 {
   memcpy(des_u, src_u, sizeof(u3_mesa_name));
-  u3_ship_copy(des_u->her_u, src_u->her_u);
   des_u->str_u.str_c = new(are_u, c3_c, src_u->str_u.len_w);
   memcpy(des_u->str_u.str_c, src_u->str_u.str_c, src_u->str_u.len_w);
   des_u->pat_c = des_u->str_u.str_c + (src_u->pat_c - src_u->str_u.str_c);
@@ -603,7 +587,7 @@ u3_mesa_encode_lane(sockaddr_in lan_u) {
 static u3_peer*
 _mesa_get_peer(u3_mesa* sam_u, u3_ship her)
 {
-  per_map_itr itr_u = vt_get(&sam_u->per_u, u3_ship_to_shap(her));
+  per_map_itr itr_u = vt_get(&sam_u->per_u, her);
   if ( vt_is_end(itr_u) ) {
     return NULL;
   }
@@ -613,11 +597,10 @@ _mesa_get_peer(u3_mesa* sam_u, u3_ship her)
 static void
 _mesa_put_peer(u3_mesa* sam_u, u3_ship her_u, u3_peer* per_u)
 {
-  u3_shap him_u = u3_ship_to_shap(her_u);
-  per_map_itr itr_u = vt_get(&sam_u->per_u, him_u);
+  per_map_itr itr_u = vt_get(&sam_u->per_u, her_u);
 
   if ( vt_is_end(itr_u) ) {
-    itr_u = vt_insert(&sam_u->per_u, him_u, per_u);
+    itr_u = vt_insert(&sam_u->per_u, her_u, per_u);
 
     if ( vt_is_end(itr_u) ) {
       fprintf(stderr, "mesa: cannot allocate memory for peer, dying");
@@ -700,13 +683,13 @@ _mesa_get_direct_lane(u3_mesa* sam_u, u3_ship her_u)
   adr_u.sin_family = AF_INET;
 
   if ( c3__czar == u3_ship_rank(her_u) ) {
-    c3_s por_s = _ames_czar_port(her_u[0]);
-    adr_u.sin_addr.s_addr = htonl(u3_Host.imp_u[her_u[0]]);
+    c3_s por_s = _ames_czar_port(her_u.hed_d);
+    adr_u.sin_addr.s_addr = htonl(u3_Host.imp_u[her_u.hed_d]);
     adr_u.sin_port = htons(por_s);
     return adr_u;
   }
 
-  per_map_itr itr_u = vt_get(&sam_u->per_u, u3_ship_to_shap(her_u));
+  per_map_itr itr_u = vt_get(&sam_u->per_u, her_u);
   if ( vt_is_end(itr_u) ) {
     return adr_u;
   }
@@ -738,7 +721,7 @@ _mesa_get_czar_lane(u3_mesa* sam_u, c3_y imp_y)
 */
 static u3_gage*
 _mesa_get_gage(u3_mesa* sam_u, u3_ship her_u) {
-  gag_map_itr itr_u = vt_get(&sam_u->gag_u, u3_ship_to_shap(her_u));
+  gag_map_itr itr_u = vt_get(&sam_u->gag_u, her_u);
   if ( vt_is_end(itr_u) ) {
     return NULL;
   }
@@ -751,7 +734,7 @@ _mesa_get_gage(u3_mesa* sam_u, u3_ship her_u) {
 static void
 _mesa_put_gage(u3_mesa* sam_u, u3_ship her_u, u3_gage* gag_u)
 {
-  gag_map_itr itr_u = vt_insert(&sam_u->gag_u, u3_ship_to_shap(her_u), gag_u);
+  gag_map_itr itr_u = vt_insert(&sam_u->gag_u, her_u, gag_u);
   if ( vt_is_end(itr_u) ) {
     fprintf(stderr, "mesa: cannot allocate memory for gage, dying");
     u3_king_bail();
@@ -1088,8 +1071,8 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
   memcpy(sen_y, buf_u.base, len_w);
 
   u3_ship gal_u = {0};
-  gal_u[0] = per_u->imp_y;
-  c3_o our_o = u3_ships_equal(gal_u, sam_u->pir_u->who_d);
+  gal_u.hed_d = per_u->imp_y;
+  c3_o our_o = u3_ships_equal(gal_u, sam_u->pir_u->who_u);
 
   if ( ( c3y == _mesa_is_direct_mode(per_u) ) ||
        // if we are the sponsor of the ship, don't send to ourselves
@@ -1664,7 +1647,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3_mesa_request_data* dat_u = &res_u->dat_u;
     {
       dat_u->sam_u = sam_u;
-      u3_ship_copy(dat_u->her_u, nam_u->her_u);
+      dat_u->her_u = nam_u->her_u;
       dat_u->nam_u = nam_u;
       dat_u->las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
       dat_u->buf_y = buf_y;
@@ -1727,8 +1710,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
     } break;
     case c3__nail: {
-      u3_ship who_u;
-      u3_ship_of_noun(who_u, u3h(dat));
+      u3_ship who_u = u3_ship_of_noun(u3h(dat));
       u3_peer* per_u = _mesa_get_peer(sam_u, who_u);
 
       if ( NULL == per_u ) {
@@ -2132,8 +2114,7 @@ _saxo_cb(void* vod_p, u3_noun nun)
 
   if ( sax != u3_none ) {
     u3_noun her = u3h(sax);
-    u3_ship her_u;
-    u3_ship_of_noun(her_u, her);
+    u3_ship her_u = u3_ship_of_noun(her);
     u3_peer* new_u = _mesa_get_peer(per_u->sam_u, her_u);
     if ( new_u != NULL ) {
       per_u = new_u;
@@ -2196,8 +2177,7 @@ _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u)
   u3_noun her = u3_ship_to_noun(her_u);
   u3_noun gan = u3nc(u3_nul, u3_nul);
 
-  per_u->her_u[0] = her_u[0];
-  per_u->her_u[1] = her_u[1];
+  per_u->her_u = her_u;
 
   u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
@@ -2474,13 +2454,12 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     #endif
     per_u = new(&sam_u->par_u, u3_peer, 1);
     _init_peer(sam_u, per_u);
-    per_u->her_u[0] = pac_u->pek_u.nam_u.her_u[0];
-    per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
+    per_u->her_u = pac_u->pek_u.nam_u.her_u;
 
     _get_peer_lanes(sam_u, per_u); // forward-lanes
     return;
   }
-  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  if ( c3y == sam_u->for_o && sam_u->pir_u->who_u.hed_d == per_u->imp_y ) {
   // if ( c3y == sam_u->for_o ) {
     sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     if ( _mesa_is_lane_zero(lin_u) == c3y) {
@@ -2518,7 +2497,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
 
-  c3_o our_o = u3_ships_equal(nam_u->her_u, sam_u->pir_u->who_d);
+  c3_o our_o = u3_ships_equal(nam_u->her_u, sam_u->pir_u->who_u);
 
   u3_peer* per_u = _mesa_get_peer(sam_u, nam_u->her_u);
   c3_o new_o = c3n;
@@ -2689,7 +2668,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* sam_u = pic_u->sam_u;
-  c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, sam_u->pir_u->who_d);
+  c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, sam_u->pir_u->who_u);
 
   if ( c3n == our_o ) {
     _mesa_forward_request(sam_u, pic_u, lan_u);
@@ -2725,7 +2704,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
-  u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
+  u3_noun our = u3_ship_to_noun(sam_u->car_u.pir_u->who_u);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
 
   arena are_u = arena_create(sizeof(u3_mesa_cb_data) + 1024);
@@ -2757,7 +2736,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     u3_assert( PACT_POKE == pac_u->hed_u.typ_y );
   #endif
 
-  c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, sam_u->pir_u->who_d);
+  c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, sam_u->pir_u->who_u);
 
   if ( c3n == our_o ) {
     _mesa_forward_request(sam_u, pic_u, lan_u);
@@ -2918,12 +2897,12 @@ _mesa_io_talk(u3_auto* car_u)
 
     u3_auto_plan(car_u, u3_ovum_init(0, c3__a, wir, cad));
   }
-  u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun    who = u3_ship_to_noun(sam_u->pir_u->who_u);
   u3_noun    rac = u3do("clan:title", u3k(who));
   c3_s     por_s = sam_u->pir_u->por_s;
   c3_i     ret_i;
   if ( c3__czar == rac ) {
-    c3_y num_y = (c3_y)sam_u->pir_u->who_d[0];
+    c3_y num_y = (c3_y)sam_u->pir_u->who_u.hed_d;
     c3_s zar_s = _ames_czar_port(num_y);
 
     if ( 0 == por_s ) {
@@ -3045,7 +3024,7 @@ u3_mesa_io_init(u3_pier* pir_u)
 
   sam_u->for_o = c3n;
   {
-    u3_noun her = u3i_chubs(2, pir_u->who_d);
+    u3_noun her = u3_ship_to_noun(pir_u->who_u);
     if ( c3y == u3a_is_cat(her) && her < 256 ) {
       u3l_log("mesa: forwarding enabled");
       sam_u->for_o = c3y;

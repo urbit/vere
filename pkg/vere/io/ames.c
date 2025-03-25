@@ -119,11 +119,11 @@ typedef enum u3_stun_state {
 /* u3_prel: ames/fine packet prelude
 */
   typedef struct _u3_prel {
-    c3_y  sic_y;                        //  sender life tick
-    c3_y  ric_y;                        //  receiver life tick
-    c3_d  sen_d[2];                     //  sender/requester
-    c3_d  rec_d[2];                     //  receiver/responder
-    c3_d  rog_d;                        //  origin lane (optional)
+    c3_y     sic_y;                        //  sender life tick
+    c3_y     ric_y;                        //  receiver life tick
+    u3_ship  sen_u;                        //  sender/requester
+    u3_ship  rec_u;                        //  receiver/responder
+    c3_d     rog_d;                        //  origin lane (optional)
   } u3_prel;
 
 /* u3_peep: unsigned fine request body
@@ -361,31 +361,6 @@ _ames_check_mug(u3_pact* pac_u)
     ? c3y : c3n);
 }
 
-/* _ames_ship_to_chubs(): pack [len_y] bytes into c3_d[2]
-*/
-static inline void
-_ames_ship_to_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
-{
-  c3_y sip_y[16] = {0};
-  memcpy(sip_y, buf_y, c3_min(16, len_y));
-
-  sip_d[0] = c3_sift_chub(sip_y);
-  sip_d[1] = c3_sift_chub(sip_y + 8);
-}
-
-/* _ames_ship_of_chubs(): unpack c3_d[2] into [len_y] bytes.
-*/
-static inline void
-_ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
-{
-  c3_y sip_y[16] = {0};
-
-  c3_etch_chub(sip_y, sip_d[0]);
-  c3_etch_chub(sip_y + 8, sip_d[1]);
-
-  memcpy(buf_y, sip_y, c3_min(16, len_y));
-}
-
 /* _ames_sift_head(): parse packet header.
 */
 static void
@@ -435,13 +410,13 @@ _ames_sift_prel(u3_head* hed_u,
   //  parse sender ship
   //
   sen_y = 2 << hed_u->sac_y;
-  _ames_ship_to_chubs(pre_u->sen_d, sen_y, buf_y + cur_w);
+  u3_ship_to_bytes(pre_u->sen_u, sen_y, buf_y + cur_w);
   cur_w += sen_y;
 
   //  parse receiver ship
   //
   rec_y = 2 << hed_u->rac_y;
-  _ames_ship_to_chubs(pre_u->rec_d, rec_y, buf_y + cur_w);
+  u3_ship_to_bytes(pre_u->rec_u, rec_y, buf_y + cur_w);
   cur_w += rec_y;
 }
 
@@ -603,13 +578,13 @@ _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
   //  write sender ship
   //
   c3_y sen_y = 2 << hed_u->sac_y;
-  _ames_ship_of_chubs(pre_u->sen_d, sen_y, buf_y + cur_w);
+  pre_u->sen_u = u3_ship_of_bytes(sen_y, buf_y + cur_w);
   cur_w += sen_y;
 
   //  write receiver ship
   //
   c3_y rec_y = 2 << hed_u->rac_y;
-  _ames_ship_of_chubs(pre_u->rec_d, rec_y, buf_y + cur_w);
+  pre_u->rec_u = u3_ship_of_bytes(rec_y, buf_y + cur_w);
   cur_w += rec_y;
 }
 
@@ -1259,7 +1234,7 @@ _ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
   }
 
   dad = u3h(daz);
-  u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun our = u3_ship_to_noun(sam_u->pir_u->who_u);
 
   //  if we are a galaxy, don't STUN
   //
@@ -1470,8 +1445,8 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
     }
 
     if ( u3C.wag_w & u3o_verbose ) {
-      u3_noun sen = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.sen_d));
-      u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
+      u3_noun sen = u3dc("scot", 'p', u3_ship_to_noun(pac_u->pre_u.sen_u));
+      u3_noun rec = u3dc("scot", 'p', u3_ship_to_noun(pac_u->pre_u.rec_u));
       c3_c* sen_c = u3r_string(sen);
       c3_c* rec_c = u3r_string(rec);
       c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_w;
@@ -1497,13 +1472,11 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
     }
     else {
       c3_o sen_o = c3y;
-      c3_d who_d[2];
 
       if ( c3y == tag ) {
-        u3r_chubs(0, 2, who_d, dat);
+        u3_ship who_u = u3_ship_of_noun(dat);
 
-        if (  (who_d[0] == sam_u->pir_u->who_d[0])
-           && (who_d[1] == sam_u->pir_u->who_d[1]) )
+        if ( u3_ships_equal(who_u, sam_u->pir_u->who_u ) )
         {
           sen_o = c3n;
           if ( u3C.wag_w & u3o_verbose ) {
@@ -1548,7 +1521,7 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
     //  cache the scry result for later use
     //
     _ames_lane_into_cache(sam_u->lax_p,
-                          u3i_chubs(2, pac_u->pre_u.rec_d),
+                          u3_ship_to_noun(pac_u->pre_u.rec_u),
                           u3k(las));
 
     //  if there are lanes, send the packet on them; otherwise drop it
@@ -1584,15 +1557,14 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
 
   //  if the recipient is a galaxy, their lane is always &+~gax
   //
-  if (  (256 > pac_u->pre_u.rec_d[0])
-     && (0  == pac_u->pre_u.rec_d[1]) )
+  if ( c3__czar == u3_ship_rank(pac_u->pre_u.rec_u) )
   {
-    lac = u3nc(u3nc(c3y, (c3_y)pac_u->pre_u.rec_d[0]), u3_nul);
+    lac = u3nc(u3nc(c3y, (c3_y)pac_u->pre_u.rec_u.hed_d), u3_nul);
   }
   //  otherwise, try to get the lane from cache
   //
   else {
-    u3_noun key = u3i_chubs(2, pac_u->pre_u.rec_d);
+    u3_noun key = u3_ship_to_noun(pac_u->pre_u.rec_u);
     lac = _ames_lane_from_cache(sam_u->lax_p, key, sam_u->nal_o);
   }
 
@@ -1638,7 +1610,7 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
     pan_u->pac_u = pac_u;
     pan_u->for_o = for_o;
 
-    u3_noun pax = _lane_scry_path(u3i_chubs(2, pac_u->pre_u.rec_d));
+    u3_noun pax = _lane_scry_path(u3_ship_to_noun(pac_u->pre_u.rec_u));
 
     //  if forwarding, enqueue the packet and scry for the lane
     //
@@ -1670,10 +1642,10 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
 static c3_o
 _ames_skip(u3_prel* pre_u)
 {
-  if ( pre_u->sen_d[1] == 0 &&
-       ( pre_u->sen_d[0] == 0x743a17a6
-         || pre_u->sen_d[0] == 0xea99acb6
-         || pre_u->sen_d[0] == 0x10100
+  if ( pre_u->sen_u[1] == 0 &&
+       ( pre_u->sen_u[0] == 0x743a17a6
+         || pre_u->sen_u[0] == 0xea99acb6
+         || pre_u->sen_u[0] == 0x10100
      ) ) {
     return c3n;
   }
@@ -1836,8 +1808,8 @@ _fine_hear_request(u3_pact* req_u, c3_w cur_w)
     res_u->pre_u = (u3_prel) {
       .sic_y = req_u->pre_u.ric_y,
       .ric_y = req_u->pre_u.sic_y,
-      .sen_d = { req_u->pre_u.rec_d[0], req_u->pre_u.rec_d[1] },
-      .rec_d = { req_u->pre_u.sen_d[0], req_u->pre_u.sen_d[1] },
+      .sen_u = req_u->pre_u.rec_u,
+      .rec_u = req_u->pre_u.sen_u,
       .rog_d = 0
     };
 
@@ -1964,8 +1936,7 @@ _ames_try_forward(u3_pact* pac_u)
   //  insert origin lane if needed
   //
   if ( c3n == pac_u->hed_u.rel_o
-       && !( ( 256 > pac_u->pre_u.sen_d[0] )
-          && ( 0  == pac_u->pre_u.sen_d[1] ) ) )
+       && ( c3__czar == u3_ship_rank(pac_u->pre_u.sen_u) ) )
   {
     c3_y* old_y;
     c3_w  old_w, cur_w;
@@ -2124,8 +2095,7 @@ _ames_hear(u3_ames* sam_u,
     //  we might want to forward statelessly
     //
     if ( (c3y == sam_u->fig_u.see_o)
-      && (  (pac_u->pre_u.rec_d[0] != sam_u->pir_u->who_d[0])
-          || (pac_u->pre_u.rec_d[1] != sam_u->pir_u->who_d[1]) ) )
+      && ( u3_ships_equal(pac_u->pre_u.rec_u, sam_u->pir_u->who_u) ) )
     {
       if ( c3y == sam_u->sat_u.for_o ) {
         _ames_try_forward(pac_u);
@@ -2282,7 +2252,7 @@ _ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
     return;
   }
 
-  u3_noun our = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun our = u3_ship_to_noun(sam_u->pir_u->who_u);
   if (our == u3t(whu)) {
     u3z(whu);
     u3z(our);
@@ -2307,13 +2277,13 @@ static void
 _ames_io_start(u3_ames* sam_u)
 {
   c3_s     por_s = sam_u->pir_u->por_s;
-  u3_noun    who = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun    who = u3_ship_to_noun(sam_u->pir_u->who_u);
   c3_o     zar_o = _ames_is_czar(who);
   c3_i     ret_i;
 
 
   if ( c3y == zar_o ) {
-    c3_y num_y = (c3_y)sam_u->pir_u->who_d[0];
+    c3_y num_y = (c3_y)sam_u->pir_u->who_u.hed_d;
     c3_s zar_s = _ames_czar_port(num_y);
 
     if ( 0 == por_s ) {
@@ -2887,7 +2857,7 @@ u3_ames_io_init(u3_pier* pir_u)
   uv_timer_init(u3L, &sam_u->nat_u.tim_u);
 
   //  enable forwarding on galaxies only
-  u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
+  u3_noun who = u3_ship_to_noun(sam_u->pir_u->who_u);
   u3_noun rac = u3do("clan:title", who);
   sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
 

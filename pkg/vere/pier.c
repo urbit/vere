@@ -533,7 +533,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
 static c3_c*
 _resolve_czar(u3_work* wok_u, c3_c* who_c)
 {
-  u3_noun czar = u3dc("scot", 'p', wok_u->pir_u->who_d[0] & ((1 << 8) - 1));
+  u3_noun czar = u3dc("scot", 'p', wok_u->pir_u->who_u.hed_d & ((1 << 8) - 1));
   c3_c* czar_c = u3r_string(czar);
 
   c3_c url[256];
@@ -604,7 +604,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_work* wok_u = (u3_work*)vod_p;
 
-  u3_atom who = u3dc("scot", c3__p, u3i_chubs(2, wok_u->pir_u->who_d));
+  u3_atom who = u3dc("scot", c3__p, u3_ship_to_noun(wok_u->pir_u->who_u));
   c3_c*   who_c = u3r_string(who);
 
   u3_noun rem, glx, ryf, bon, cur, nex;
@@ -791,8 +791,8 @@ _pier_work_init(u3_pier* pir_u)
     u3_auto_talk(wok_u->car_u);
   }
 
-  c3_d pi_d = wok_u->pir_u->who_d[0];
-  c3_d pt_d = wok_u->pir_u->who_d[1];
+  c3_d pi_d = wok_u->pir_u->who_u.hed_d;
+  c3_d pt_d = wok_u->pir_u->who_u.tel_d;
 
   if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
     // Skip double boot protection for galaxies and local mode ships
@@ -1890,7 +1890,7 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
   }
 
   if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,
-                               &pir_u->log_u->ver_w,  pir_u->who_d,
+                               &pir_u->log_u->ver_w,  &pir_u->who_u.hed_d,
                                &pir_u->fak_o,        &pir_u->lif_w) )
   {
     fprintf(stderr, "pier: disk read meta fail\r\n");
@@ -2128,14 +2128,14 @@ _pier_boot_plan(u3_pier* pir_u,
   {
     pir_u->sat_e = u3_psat_boot;
     pir_u->fak_o = ( c3__fake == u3h(ven) ) ? c3y : c3n;
-    u3r_chubs(0, 2, pir_u->who_d, who);
+    pir_u->who_u = u3_ship_of_noun(who);
 
     bot_u = _pier_boot_make(who, _pier_wyrd_card(pir_u), ven, pil, fed, mor);
     pir_u->lif_w = u3qb_lent(bot_u.bot);
   }
 
   if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,
-                                pir_u->log_u->ver_w, pir_u->who_d,
+                                pir_u->log_u->ver_w, &pir_u->who_u.hed_d,
                                 pir_u->fak_o,        pir_u->lif_w) )
   {
     //  XX dispose bot_u
@@ -2144,7 +2144,7 @@ _pier_boot_plan(u3_pier* pir_u,
   }
 
   if ( c3n == u3_disk_save_meta_meta(pir_u->log_u->com_u->pax_c,
-                                     pir_u->who_d, pir_u->fak_o, pir_u->lif_w) )
+                                     &pir_u->who_u.hed_d, pir_u->fak_o, pir_u->lif_w) )
   {
     fprintf(stderr, "disk: failed to save top-level metadata\r\n");
     return c3n;

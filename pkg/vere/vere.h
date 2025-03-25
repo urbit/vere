@@ -667,7 +667,7 @@
         typedef struct _u3_pier {
           c3_c*            pax_c;               //  pier directory
           c3_w             lif_w;               //  lifecycle barrier
-          c3_d             who_d[2];            //  identity
+          u3_ship          who_u;               //  identity
           c3_o             fak_o;               //  yes iff fake security
           c3_o             liv_o;               //  fully live
           u3_disk*         log_u;               //  event log
