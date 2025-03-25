@@ -1002,7 +1002,7 @@
         c3_o
         u3_disk_read_meta(MDB_env* mdb_u,
                           c3_w*    ver_w,
-                          c3_d*    who_d,
+                          u3_ship* who_u,
                           c3_o*    fak_o,
                           c3_w*    lif_w);
 
@@ -1011,7 +1011,7 @@
         c3_o
         u3_disk_save_meta(MDB_env* mdb_u,
                           c3_w     ver_w,
-                          c3_d     who_d[2],
+                          u3_ship  who_u,
                           c3_o     fak_o,
                           c3_w     lif_w);
 
@@ -1019,7 +1019,7 @@
       */
         c3_o
         u3_disk_save_meta_meta(c3_c* log_c,
-                               c3_d  who_d[2],
+                               u3_ship who_d,
                                c3_o  fak_o,
                                c3_w  lif_w);
 

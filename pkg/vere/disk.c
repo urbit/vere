@@ -640,7 +640,7 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u,
                   c3_w     ver_w,
-                  c3_d     who_d[2],
+                  u3_ship  who_u,
                   c3_o     fak_o,
                   c3_w     lif_w)
 {
@@ -650,7 +650,7 @@ u3_disk_save_meta(MDB_env* mdb_u,
   //  XX assumes little-endian
   //
   if (  (c3n == _disk_save_meta(mdb_u, "version", 4, (c3_y*)&ver_w))
-     || (c3n == _disk_save_meta(mdb_u, "who",    16, (c3_y*)who_d))
+     || (c3n == _disk_save_meta(mdb_u, "who",    16, (c3_y*)&who_u))
      || (c3n == _disk_save_meta(mdb_u, "fake",    1, (c3_y*)&fak_o))
      || (c3n == _disk_save_meta(mdb_u, "life",    4, (c3_y*)&lif_w)) )
   {
@@ -665,7 +665,7 @@ u3_disk_save_meta(MDB_env* mdb_u,
 */
 c3_o
 u3_disk_save_meta_meta(c3_c* log_c,
-                       c3_d  who_d[2],
+                       u3_ship  who_u,
                        c3_o  fak_o,
                        c3_w  lif_w)
 {
@@ -676,7 +676,7 @@ u3_disk_save_meta_meta(c3_c* log_c,
     return c3n;
   }
 
-  if ( c3n == u3_disk_save_meta(dbm_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
+  if ( c3n == u3_disk_save_meta(dbm_u, U3D_VERLAT, who_u, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
@@ -712,11 +712,11 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 /* u3_disk_read_meta(): read metadata.
 */
 c3_o
-u3_disk_read_meta(MDB_env* mdb_u,
-                  c3_w*    ver_w,
-                  c3_d*    who_d,
-                  c3_o*    fak_o,
-                  c3_w*    lif_w)
+u3_disk_read_meta(MDB_env*    mdb_u,
+                  c3_w*       ver_w,
+                  u3_ship*    who_u,
+                  c3_o*       fak_o,
+                  c3_w*       lif_w)
 {
   _mdb_val val_u;
 
@@ -747,27 +747,9 @@ u3_disk_read_meta(MDB_env* mdb_u,
     fprintf(stderr, "disk: read meta: strange identity\r\n");
   }
 
-  if ( who_d ) {
-    c3_y* byt_y = val_u.buf_y;
 
-    who_d[0] = (c3_d)byt_y[0]
-             | (c3_d)byt_y[1] << 8
-             | (c3_d)byt_y[2] << 16
-             | (c3_d)byt_y[3] << 24
-             | (c3_d)byt_y[4] << 32
-             | (c3_d)byt_y[5] << 40
-             | (c3_d)byt_y[6] << 48
-             | (c3_d)byt_y[7] << 56;
-
-    byt_y += 8;
-    who_d[1] = (c3_d)byt_y[0]
-             | (c3_d)byt_y[1] << 8
-             | (c3_d)byt_y[2] << 16
-             | (c3_d)byt_y[3] << 24
-             | (c3_d)byt_y[4] << 32
-             | (c3_d)byt_y[5] << 40
-             | (c3_d)byt_y[6] << 48
-             | (c3_d)byt_y[7] << 56;
+  if ( who_u ) {
+    *who_u = u3_ship_of_bytes(16, val_u.buf_y);
   }
 
   //  fake bit
@@ -1314,10 +1296,10 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   //  get metadata from old log
-  c3_d     who_d[2];
+  u3_ship  who_u;
   c3_o     fak_o;
   c3_w     lif_w;
-  if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
+  if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, &who_u, &fak_o, &lif_w) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
@@ -1333,7 +1315,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   // write the metadata to the database
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
+  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_u, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     goto fail3;
   }
@@ -1507,11 +1489,11 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   //  XX: put old log in separate pointer (old_u?)?
 
   //  get metadata from old log
-  c3_d who_d[2];
+  u3_ship who_u;
   c3_o fak_o;
   c3_w lif_w;
 
-  if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) ) {
+  if ( c3y != u3_disk_read_meta(log_u->mdb_u, 0, &who_u, &fak_o, &lif_w) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
   }
@@ -1591,7 +1573,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_d, fak_o, lif_w) ) {
+  if ( c3n == u3_disk_save_meta(log_u->mdb_u, U3D_VERLAT, who_u, fak_o, lif_w) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
@@ -2055,17 +2037,17 @@ try_init:
             fprintf(stderr, "disk: repairing pre-release pier metadata\r\n");
 
             //  read metadata from epoch's log
-            c3_d who_d[2];
+            u3_ship who_u;
             c3_o fak_o;
             c3_w lif_w;
-            if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, who_d, &fak_o, &lif_w) )
+            if ( c3n == u3_disk_read_meta(log_u->mdb_u, 0, &who_u, &fak_o, &lif_w) )
             {
               fprintf(stderr, "disk: failed to read metadata\r\n");
               c3_free(log_u);
               return 0;
             }
 
-            if ( c3n == u3_disk_save_meta_meta(log_c, who_d, fak_o, lif_w) ) {
+            if ( c3n == u3_disk_save_meta_meta(log_c, who_u, fak_o, lif_w) ) {
               fprintf(stderr, "disk: failed to save top-level metadata\r\n");
               c3_free(log_u);
               return 0;

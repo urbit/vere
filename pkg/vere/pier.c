@@ -791,10 +791,8 @@ _pier_work_init(u3_pier* pir_u)
     u3_auto_talk(wok_u->car_u);
   }
 
-  c3_d pi_d = wok_u->pir_u->who_u.hed_d;
-  c3_d pt_d = wok_u->pir_u->who_u.tel_d;
-
-  if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
+  if ( (c3__czar == u3_ship_rank(wok_u->pir_u->who_u)) ||
+       (c3n == u3_Host.ops_u.net) ) {
     // Skip double boot protection for galaxies and local mode ships
     //
     _pier_work(wok_u);
@@ -1890,7 +1888,7 @@ u3_pier_stay(c3_w wag_w, u3_noun pax)
   }
 
   if ( c3n == u3_disk_read_meta(pir_u->log_u->mdb_u,
-                               &pir_u->log_u->ver_w,  &pir_u->who_u.hed_d,
+                               &pir_u->log_u->ver_w, &pir_u->who_u,
                                &pir_u->fak_o,        &pir_u->lif_w) )
   {
     fprintf(stderr, "pier: disk read meta fail\r\n");
@@ -2135,7 +2133,7 @@ _pier_boot_plan(u3_pier* pir_u,
   }
 
   if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,
-                                pir_u->log_u->ver_w, &pir_u->who_u.hed_d,
+                                pir_u->log_u->ver_w, pir_u->who_u,
                                 pir_u->fak_o,        pir_u->lif_w) )
   {
     //  XX dispose bot_u
@@ -2144,7 +2142,7 @@ _pier_boot_plan(u3_pier* pir_u,
   }
 
   if ( c3n == u3_disk_save_meta_meta(pir_u->log_u->com_u->pax_c,
-                                     &pir_u->who_u.hed_d, pir_u->fak_o, pir_u->lif_w) )
+                                     pir_u->who_u, pir_u->fak_o, pir_u->lif_w) )
   {
     fprintf(stderr, "disk: failed to save top-level metadata\r\n");
     return c3n;
