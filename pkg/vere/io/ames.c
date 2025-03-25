@@ -3,6 +3,7 @@
 #include "vere.h"
 #include "mdns.h"
 #include "io/ames/stun.h"
+#include "io/mesa/mesa.h"
 
 #include "noun.h"
 #include "ur/ur.h"

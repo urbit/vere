@@ -119,19 +119,10 @@ typedef struct _u3_mesa_pict {
   u3_mesa_pact       pac_u;
 } u3_mesa_pict;
 
-typedef struct _u3_lane_state {
-  c3_d  sen_d;  //  last sent date
-  c3_d  her_d;  //  last heard date
-  c3_w  rtt_w;  //  round-trip time
-  c3_w  rtv_w;  //  round-trip time variance
-} u3_lane_state;
-
 /* _u3_mesa: next generation networking
  */
 
 typedef struct _u3_pit_addr u3_pit_addr;
-
-typedef struct sockaddr_in sockaddr_in;
 
 typedef struct _u3_pit_addr {
   sockaddr_in sdr_u;
@@ -251,13 +242,12 @@ static void u3_free_line( u3_mesa_line* lin_u )
 #define VAL_TY u3_mesa_line*
 #include "verstable.h"
 
-typedef struct _u3_peer u3_peer;
-
 #define NAME per_map
 #define KEY_TY u3_ship
 #define HASH_FN u3_hash_ship
 #define CMPR_FN u3_cmpr_ship
 #define VAL_TY u3_peer*
+#define IMPLEMENTATION_MODE
 #include "verstable.h"
 
 typedef struct _u3_mesa {
@@ -282,16 +272,6 @@ typedef struct _u3_mesa {
   arena              par_u;       //  permanent arena
   uv_timer_t         tim_u;       //  pit clear timer
 } u3_mesa;
-
-typedef struct _u3_peer {
-  u3_mesa*       sam_u;  //  backpointer
-  u3_ship        her_u;  //  who is this peer
-  c3_o           ful_o;  //  has this been initialized?
-  sockaddr_in    dan_u;  //  direct lane (nullable)
-  u3_lane_state  dir_u;  //  direct lane state
-  c3_y           imp_y;  //  galaxy @p
-  u3_lane_state  ind_u;  //  indirect lane state
-} u3_peer;
 
 typedef struct _u3_pend_req {
   u3_peer*               per_u; // backpointer
