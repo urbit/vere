@@ -1142,15 +1142,6 @@ _unpoison_words(void)
   }
 }
 
-typedef struct _ca_mrag {
-  u3_post dir_p;
-  c3_w    bit_w[0];
-} ca_mrag;
-
-#define _mark_offset (u3a_rest_pg + 1)
-#define _to_mark_post(type, x) ((type*)(void*)(u3a_Mark.buf_w + (x - _mark_offset)))
-#define _of_mark_post(type, x) (((c3_w*)(type*)x - u3a_Mark.buf_w) + _mark_offset)
-
 static c3_w
 _mark_post(u3_post som_p)
 {
@@ -1198,66 +1189,45 @@ _mark_post(u3_post som_p)
   //  som_p is a chunk allocation
   //
   else {
-    u3a_crag *pag_u;
-    ca_mrag  *mag_u;
-    c3_w      pos_w;
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+    c3_w      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w     *mar_w;
 
-    //  page is marked, already converted to [ca_mrag]
+    if ( som_p & (pag_u->len_s - 1) ) {
+      fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
+                      som_p, som_p & ~((1U << u3a_page) - 1),
+                      dir_p, pag_u->len_s);
+      return 0;
+    }
+
+    if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+      fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
+                      som_p, dir_p, pag_u->len_s);
+      return 0;
+    }
+
+    //  page is marked
     //
     if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
-      mag_u = _to_mark_post(ca_mrag, dir_p);
-      pag_u = u3to(u3a_crag, mag_u->dir_p);
-      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+      mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
 
-      if ( som_p & (pag_u->len_s - 1) ) {
-        fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
-                        som_p, som_p & ~((1U << u3a_page) - 1),
-                        dir_p, pag_u->len_s);
-        return 0;
-      }
-
-      if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-        fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
-                        som_p, dir_p, pag_u->len_s);
-        return 0;
-      }
-
-      if ( !(mag_u->bit_w[pos_w >> 5] & (1U << (pos_w & 31))) ) {
+      if ( !(mar_w[pos_w >> 5] & (1U << (pos_w & 31))) ) {
         return 0;
       }
     }
-    //  convert directory entry to [ca_mrag]
+    //  page is unmarked, allocate and initialize mark-array
     //
     else {
-      pag_u = u3to(u3a_crag, dir_p);
-      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
-
-      if ( som_p & (pag_u->len_s - 1) ) {
-        fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
-                        som_p, som_p & ~((1U << u3a_page) - 1),
-                        dir_p, pag_u->len_s);
-        return 0;
-      }
-
-      if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-        fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
-                        som_p, dir_p, pag_u->len_s);
-        return 0;
-      }
-
-      //  initialize mark-bitmap
-      //
       {
-        c3_s    tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
-        c3_g    bit_g = pag_u->log_s - u3a_min_log;
-        c3_w    map_w = (tot_s + 31) >> 5;
-        u3_post mag_p;
+        c3_s tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
+        c3_g bit_g = pag_u->log_s - u3a_min_log;
+        c3_w map_w = (tot_s + 31) >> 5;
 
-        mag_u = u3a_mark_alloc(c3_wiseof(ca_mrag) + map_w);
-        mag_p = _of_mark_post(ca_mrag, mag_u);
+        mar_w = u3a_mark_alloc(map_w);
+        u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
 
         for ( c3_w i_w = 0; i_w < map_w; i_w++ ) {
-          mag_u->bit_w[i_w] = ~0;
+          mar_w[i_w] = ~0;
         }
 
         //  mark page metadata
@@ -1274,23 +1244,20 @@ _mark_post(u3_post som_p)
           hun_w  = 1U + ((siz_s - 1) >> pag_u->log_s);
 
           //  XX need static assert that max(hun_w) < 32
-          //  mag_u->bit_w[0] &= ~0 << hun_w
+          //  mar_w[0] &= ~0 << hun_w
           //
           for ( c3_w i_w = 0; i_w < hun_w; i_w++ ) {
-            mag_u->bit_w[i_w >> 5] &= ~(1U << (i_w & 31));
+            mar_w[i_w >> 5] &= ~(1U << (i_w & 31));
           }
 
           u3a_Mark.wee_w[bit_g] += hun_w << pag_u->log_s;
         }
 
-        mag_u->dir_p = dir_p;
-        dir_u[pag_w] = mag_p;
-
         u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
       }
     }
 
-    mag_u->bit_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
+    mar_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
     siz_w = pag_u->len_s;
 
     return siz_w;
@@ -1350,28 +1317,23 @@ _sweep_directory(void)
       }
     }
     else if ( u3a_rest_pg < dir_p ) {
-      u3a_crag *pag_u;
-      c3_s      tot_s;  //  NB: not pag_u->tot_s
+      u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+      c3_s      tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
+      c3_w      all_w = pag_u->len_s * (tot_s - pag_u->fre_s);
 
       //  entire chunk page is unmarked
       //
       if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
         fprintf(stderr, "palloc: leaked chunk page %u\r\n",
                         pag_w);
-        pag_u  = u3to(u3a_crag, dir_p);
-        tot_s  = 1U << (u3a_page - pag_u->log_s);
-        leq_w += pag_u->len_s * (tot_s - pag_u->fre_s);
+        leq_w += all_w;
       }
       else {
-        ca_mrag *mag_u = _to_mark_post(ca_mrag, dir_p);
-        c3_w     max_w;
+        c3_w *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
+        c3_w  max_w = (tot_s + 31) >> 5;
 
-        pag_u = u3to(u3a_crag, mag_u->dir_p);
-        tot_s = 1U << (u3a_page - pag_u->log_s);
-        max_w = (tot_s + 31) >> 5;
-
-        if ( 0 == memcmp(mag_u->bit_w, pag_u->map_w, max_w << 2) ) {
-          tot_w += pag_u->len_s * (tot_s - pag_u->fre_s);
+        if ( 0 == memcmp(mar_w, pag_u->map_w, max_w << 2) ) {
+          tot_w += all_w;
         }
         else {
           for ( c3_s i_s = 0; i_s < tot_s; i_s++ ) {
@@ -1379,7 +1341,7 @@ _sweep_directory(void)
             bit_w = i_s & 31;
 
             if ( !(pag_u->map_w[blk_w] & (1U << bit_w)) ) {
-              if ( !(mag_u->bit_w[blk_w] & (1U << bit_w)) ) {
+              if ( !(mar_w[blk_w] & (1U << bit_w)) ) {
                 tot_w += pag_u->len_s;
               }
               else {
@@ -1408,8 +1370,6 @@ _sweep_directory(void)
             }
           }
         }
-
-        dir_u[pag_w] = mag_u->dir_p;
       }
     }
   }
@@ -1433,7 +1393,8 @@ _sweep_directory(void)
     // u3_assert(0);
   }
 
-  u3a_print_memory(stderr, "palloc: off-heap", u3a_Mark.siz_w);
+  u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
+  u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
 
   c3_free(u3a_Mark.bit_w);
   c3_free(u3a_Mark.buf_w);
