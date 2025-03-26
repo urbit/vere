@@ -618,6 +618,7 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
   _etch_bits(ech_u, 2, met_u.gaf_y);
   c3_y her_y = 2 << met_u.ran_y; // XX confirm
   _etch_ship(ech_u, nam_u->her_u, her_y);
+  // log_name(nam_u);
   _etch_var_word(ech_u, nam_u->rif_w, met_u.rif_y + 1);
   _etch_byte(ech_u, nam_u->boq_y);
 
@@ -625,7 +626,8 @@ _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u)
     // init packet
   }
   else {
-    _etch_var_word(ech_u, nam_u->fra_d, 1 << met_u.gaf_y);
+    // log_name(nam_u);
+    _etch_var_chub(ech_u, nam_u->fra_d, 1 << met_u.gaf_y);
   }
 
   _etch_short(ech_u, nam_u->pat_s);
@@ -659,7 +661,7 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
     nam_u->fra_d = 0;
   }
   else {
-    nam_u->fra_d = _sift_var_word(sif_u, 1 << met_u.gaf_y);
+    nam_u->fra_d = _sift_var_chub(sif_u, 1 << met_u.gaf_y);
   }
 
   nam_u->pat_s = _sift_short(sif_u);
@@ -1231,7 +1233,7 @@ _test_pact(u3_mesa_pact* pac_u)
 
   u3_sifter sif_u;
   sifter_init(&sif_u, buf_y, len_w);
-  _mesa_sift_pact(&sif_u, pac_u);
+  _mesa_sift_pact(&sif_u, &nex_u);
 
   if ( sif_u.rem_w && !sif_u.err_c ) {
     fprintf(stderr, "pact: sift failed len=%u sif=%u\r\n", len_w, sif_u.rem_w);
@@ -1568,7 +1570,7 @@ _test_encode_path(c3_c* pat_c)
 {
   u3_noun wan = u3do("stab", u3dt("cat", 3, '/', u3i_string(pat_c)));
   u3_noun hav = _mesa_encode_path(strlen(pat_c), (c3_y*)pat_c);
-
+  // u3m_p("hav", hav);
   if ( c3n == u3r_sing(wan, hav) ) {
     u3l_log(RED_TEXT);
     u3l_log("path encoding mismatch");
