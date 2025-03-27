@@ -397,13 +397,13 @@ _ames_sift_prel(u3_head* hed_u,
   //  parse sender ship
   //
   sen_y = 2 << hed_u->sac_y;
-  u3_ship_to_bytes(pre_u->sen_u, sen_y, buf_y + cur_w);
+  pre_u->sen_u = u3_ship_of_bytes(sen_y, buf_y + cur_w);
   cur_w += sen_y;
 
   //  parse receiver ship
   //
   rec_y = 2 << hed_u->rac_y;
-  u3_ship_to_bytes(pre_u->rec_u, rec_y, buf_y + cur_w);
+  pre_u->rec_u = u3_ship_of_bytes(rec_y, buf_y + cur_w);
   cur_w += rec_y;
 }
 
@@ -565,13 +565,13 @@ _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
   //  write sender ship
   //
   c3_y sen_y = 2 << hed_u->sac_y;
-  pre_u->sen_u = u3_ship_of_bytes(sen_y, buf_y + cur_w);
+  u3_ship_to_bytes(pre_u->sen_u, sen_y, buf_y + cur_w);
   cur_w += sen_y;
 
   //  write receiver ship
   //
   c3_y rec_y = 2 << hed_u->rac_y;
-  pre_u->rec_u = u3_ship_of_bytes(rec_y, buf_y + cur_w);
+  u3_ship_to_bytes(pre_u->rec_u, sen_y, buf_y + cur_w);
   cur_w += rec_y;
 }
 
@@ -719,7 +719,6 @@ _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 static void
 _ames_send(u3_pact* pac_u)
 {
-
   u3_ames* sam_u = pac_u->sam_u;
 
   if ( !pac_u->hun_y
@@ -770,8 +769,8 @@ u3_ames_decode_lane(u3_atom lan) {
 */
 c3_d
 u3_ames_lane_to_chub(sockaddr_in lan) {
-  return ((c3_d)ntohs(lan.sin_addr.s_addr) << 32)
-    ^ (c3_d)ntohl(lan.sin_port);
+  return ((c3_d)ntohs(lan.sin_port) << 32)
+    ^ (c3_d)ntohl(lan.sin_addr.s_addr);
 }
 
 /* u3_ames_encode_lane(): serialize lane to noun
@@ -1033,7 +1032,6 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
 static void
 _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
 {
-
   if ( c3n == sam_u->car_u.liv_o ) {
     u3l_log("ames: not yet live, dropping outbound\r");
     u3z(lan); u3z(pac);
