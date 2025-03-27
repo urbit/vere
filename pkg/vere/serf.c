@@ -1184,7 +1184,6 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         else {
           while ( u3_nul != cax ) {
             u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)), u3t(u3h(cax)));
-            u3_weak foo = u3z_find_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)));
             cax = u3t(cax);
           }
         }
