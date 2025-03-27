@@ -599,13 +599,12 @@ _imalloc(c3_w len_w)
   return _alloc_words(c3_max(len_w, u3a_minimum));
 }
 
-static void
+static c3_w
 _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
-  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  u3a_dell *fre_u = u3tn(u3a_dell, HEAP.fre_p);
-  u3a_dell *cac_u, *del_u = NULL;
-  c3_w siz_w, nex_w;
+  u3p(u3a_crag)    *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3a_dell *cac_u, *del_u = NULL, *fre_u = u3tn(u3a_dell, HEAP.fre_p);
+  c3_w      nex_w,  siz_w = 1;
 
   if ( u3a_free_pg == dir_p ) {
     //  XX double free
@@ -613,7 +612,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: double free page som_p=0x%x pag_w=%u\n"
                     "\033[0m",
                     som_p, pag_w);
-    return; // XX bail
+    return 0; // XX bail
   }
 
   if ( u3a_head_pg != dir_p ) {
@@ -622,7 +621,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: wrong page som_p=0x%x dir_p=0x%x\n"
                     "\033[0m",
                     som_p, dir_p);
-    return; // XX bail
+    return 0; // XX bail
   }
 
   if ( som_p & ((1U << u3a_page) - 1) ) {
@@ -631,18 +630,18 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "palloc: bad page alignment som_p=0x%x\n"
                     "\033[0m",
                     som_p);
-    return; // XX bail
+    return 0; // XX bail
   }
 
   dir_u[pag_w] = u3a_free_pg;
 
+  //  head-page 0 in a south road can only have a size of 1
+  //
   if ( pag_w || !HEAP.off_ws ) {
-    for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {
+    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
       dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
+      siz_w++;
     }
-  }
-  else {
-    siz_w = 1;
   }
 
   //  XX groace
@@ -663,7 +662,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + 2));
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
-    return;
+    return siz_w;
   }
 
   //  XX madv_free
@@ -757,6 +756,8 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   if ( del_u ) {
     _ifree(u3of(u3a_dell, del_u));
   }
+
+  return siz_w;
 }
 
 static void
@@ -860,7 +861,7 @@ _ifree(u3_post som_p)
   u3_post dir_p = dir_u[pag_w];
 
   if ( dir_p <= u3a_rest_pg ) {
-    _free_pages(som_p, pag_w, dir_p);
+    (void)_free_pages(som_p, pag_w, dir_p);
   }
   else {
     _free_words(som_p, pag_w, dir_p);
