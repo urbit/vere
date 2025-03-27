@@ -50,10 +50,10 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
   }
 }
 
-/* u3_stun_is_request(): buffer is a stun request.
+/* _stun_is_request(): buffer is a stun request.
 */
 c3_o
-u3_stun_is_request(c3_y* buf_y, c3_w len_w)
+_stun_is_request(c3_y* buf_y, c3_w len_w)
 {
   c3_w cookie = htonl(0x2112A442);
 
@@ -69,10 +69,10 @@ u3_stun_is_request(c3_y* buf_y, c3_w len_w)
   return c3n;
 }
 
-/* u3_stun_is_our_response(): buffer is a response to our request.
+/* _stun_is_our_response(): buffer is a response to our request.
 */
 c3_o
-u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w len_w)
+_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w len_w)
 {
   c3_w cookie = htonl(0x2112A442);
 
@@ -89,10 +89,10 @@ u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w len_w)
   return c3n;
 }
 
-/* u3_stun_make_request(): serialize stun request.
+/* _stun_make_request(): serialize stun request.
 */
 void
-u3_stun_make_request(c3_y buf_y[28], c3_y tid_y[12])
+_stun_make_request(c3_y buf_y[28], c3_y tid_y[12])
 {
   // see STUN RFC 8489
   // https://datatracker.ietf.org/doc/html/rfc8489#section-5
@@ -114,12 +114,12 @@ u3_stun_make_request(c3_y buf_y[28], c3_y tid_y[12])
   _stun_add_fingerprint(buf_y, 20);
 }
 
-/* u3_stun_make_response(): serialize stun response from request.
+/* _stun_make_response(): serialize stun response from request.
 */
 void
-u3_stun_make_response(const c3_y req_y[20],
-                      u3_lane*   lan_u,
-                      c3_y       buf_y[40])
+_stun_make_response(const c3_y  req_y[20],
+                      const sockaddr_in* lan_u,
+                      c3_y        buf_y[40])
 {
   c3_w cok_w = 0x2112A442;
   c3_w cur_w = 20;
@@ -143,8 +143,10 @@ u3_stun_make_response(const c3_y req_y[20],
   buf_y[cur_w + 4] = 0x00;  // extra reserved 0x0 byte
   buf_y[cur_w + 5] = 0x01;  // family  0x01:IPv4
 
-  c3_s por_s = htons(lan_u->por_s ^ (cok_w >> 16));
-  c3_w pip_w = htonl(lan_u->pip_w ^ cok_w);
+  c3_s por_s = ntohs(lan_u->sin_port);
+  c3_w pip_w = ntohl(lan_u->sin_addr.s_addr);
+  por_s = htons(por_s ^ (cok_w >> 16));
+  pip_w = htonl(pip_w ^ cok_w);
 
   memcpy(buf_y + cur_w + 6, &por_s, 2);  // X-Port
   memcpy(buf_y + cur_w + 8, &pip_w, 4);  // X-IP Addres
@@ -153,12 +155,12 @@ u3_stun_make_response(const c3_y req_y[20],
   _stun_add_fingerprint(buf_y, cur_w + 12);
 }
 
-/* u3_stun_find_xor_mapped_address(): extract lane from response.
+/* _stun_find_xor_mapped_address(): extract lane from response.
 */
 c3_o
-u3_stun_find_xor_mapped_address(c3_y*    buf_y,
-                                c3_w     len_w,
-                                u3_lane* lan_u)
+_stun_find_xor_mapped_address(c3_y*        buf_y,
+                                c3_w         len_w,
+                                sockaddr_in* lan_u)
 {
   c3_y xor_y[4] = {0x00, 0x20, 0x00, 0x08};
   c3_w cookie = 0x2112A442;
@@ -179,14 +181,18 @@ u3_stun_find_xor_mapped_address(c3_y*    buf_y,
 
     cur += 2;
 
-    lan_u->por_s = ntohs(c3_sift_short(buf_y + cur)) ^ (cookie >> 16);
-    lan_u->pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
+    c3_s por_s = ntohs(c3_sift_short(buf_y + cur)) ^ (cookie >> 16);
+    c3_w pip_w = ntohl(c3_sift_word(buf_y + cur + 2)) ^ cookie;
+
+    lan_u->sin_family = AF_INET;
+    lan_u->sin_port = htons(por_s);
+    lan_u->sin_addr.s_addr = htonl(pip_w);
 
     if ( u3C.wag_w & u3o_verbose ) {
-      c3_w nip_w = htonl(lan_u->pip_w);
+      c3_w nip_w = lan_u->sin_addr.s_addr;
       c3_c nip_c[INET_ADDRSTRLEN];
       inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
-      u3l_log("stun: hear ip:port %s:%u", nip_c, lan_u->por_s);
+      u3l_log("stun: hear ip:port %s:%u", nip_c, ntohs(lan_u->sin_port));
     }
     return c3y;
   }
@@ -220,23 +226,18 @@ _stun_send_cb(uv_udp_send_t *rep_u, c3_i sas_i)
 /* _stun_on_request(): hear stun request, send response.
  */
 static void
-_stun_on_request(u3_stun_client*    sun_u,
-                const c3_y*  req_y,
-                const struct sockaddr* adr_u)
+_stun_on_request(u3_stun_client*   sun_u,
+                 const c3_y*        req_y,
+                 const sockaddr_in* lan_u)
 {
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 40);
   snd_u->sun_u = sun_u;
 
-  struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-  u3_lane lan_u = {
-    .por_s = ntohs(add_u->sin_port),
-    .pip_w = ntohl(add_u->sin_addr.s_addr)
-  };
-  u3_stun_make_response(req_y, &lan_u, snd_u->hun_y);
+  _stun_make_response(req_y, lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u,
-                               &buf_u, 1, adr_u, _stun_send_cb);
+                               &buf_u, 1, (const struct sockaddr*)lan_u, _stun_send_cb);
 
   if ( sas_i ) {
     _stun_send_cb(&snd_u->req_u, sas_i);
@@ -251,15 +252,15 @@ u3_stun_start(u3_stun_client* sun_u, c3_w tim_w);
 static void
 _stun_on_response(u3_stun_client* sun_u, c3_y* buf_y, c3_w buf_len)
 {
-  u3_lane lan_u;
+  sockaddr_in lan_u;
 
   //  Ignore STUN responses that dont' have the XOR-MAPPED-ADDRESS attribute
-  if ( c3n == u3_stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
+  if ( c3n == _stun_find_xor_mapped_address(buf_y, buf_len, &lan_u) ) {
     return;
   }
 
-  if ( (sun_u->sef_u.por_s != lan_u.por_s) ||
-       (sun_u->sef_u.pip_w != lan_u.pip_w) )
+  if ( (sun_u->sef_u.sin_addr.s_addr != lan_u.sin_addr.s_addr) ||
+       (sun_u->sef_u.sin_port != lan_u.sin_port) )
   {
     // lane changed
     u3_noun wir = u3nc(c3__ames, u3_nul);
@@ -304,17 +305,11 @@ _stun_send_request(u3_stun_client* sun_u)
   _stun_send* snd_u = c3_malloc(sizeof(*snd_u) + 28);
   snd_u->sun_u = sun_u;
 
-  u3_stun_make_request(snd_u->hun_y, sun_u->tid_y);
-
-  struct sockaddr_in add_u;
-  memset(&add_u, 0, sizeof(add_u));
-  add_u.sin_family = AF_INET;
-  add_u.sin_addr.s_addr = htonl(sun_u->lan_u.pip_w);
-  add_u.sin_port = htons(sun_u->lan_u.por_s);
+  _stun_make_request(snd_u->hun_y, sun_u->tid_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
   c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u, &buf_u, 1,
-                               (const struct sockaddr*)&add_u, _stun_send_cb);
+                               (const struct sockaddr*)&sun_u->lan_u, _stun_send_cb);
 
   if ( sas_i ) {
     _stun_send_cb(&snd_u->req_u, sas_i);
@@ -364,7 +359,7 @@ _stun_time_gap(struct timeval sar_tv)
   return u3_time_gap_ms(den, now);
 }
 
-c3_o _ames_czar_lane(u3_auto*, c3_y, u3_lane*);
+c3_o _ames_czar_lane(u3_auto*, c3_y, sockaddr_in*);
 
 /* _stun_timer_cb(): advance stun state machine.
  */
@@ -381,7 +376,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
     } break;
 
     case STUN_KEEPALIVE: {
-      u3_lane* lan_u = &(sun_u->lan_u);
+      sockaddr_in* lan_u = &(sun_u->lan_u);
       c3_y     imp_y = sun_u->dad_y;
 
       if ( c3n == _ames_czar_lane(sun_u->car_u, imp_y, lan_u) ) {
@@ -418,7 +413,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
   }
 }
 
-/* _stun_start(): begin/restart STUN state machine.
+/* u3_stun_start(): begin/restart STUN state machine.
 */
 void
 u3_stun_start(u3_stun_client* sun_u, c3_w tim_w)
@@ -432,9 +427,12 @@ u3_stun_start(u3_stun_client* sun_u, c3_w tim_w)
   uv_timer_start(&sun_u->tim_u, _stun_timer_cb, tim_w, 0);
 }
 
+
+/* u3_stun_hear(): maybe hear stun packet
+ */
 c3_o
 u3_stun_hear(u3_stun_client* sun_u,
-           const struct sockaddr* adr_u,
+           const struct sockaddr_in* lan_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -444,12 +442,12 @@ u3_stun_hear(u3_stun_client* sun_u,
   //    check ames first, assume that STUN could maybe (not likely) overlap with ames
   //    for next protocol version, have an urbit cookie
   //
-  if ( c3y == u3_stun_is_request(hun_y, len_w) ) {
-    _stun_on_request(sun_u, hun_y, adr_u);
+  if ( c3y == _stun_is_request(hun_y, len_w) ) {
+    _stun_on_request(sun_u, hun_y, lan_u);
     c3_free(hun_y);
     return c3y;
   }
-  else if ( c3y == u3_stun_is_our_response(hun_y,
+  else if ( c3y == _stun_is_our_response(hun_y,
                                            sun_u->tid_y, len_w) )
   {
     _stun_on_response(sun_u, hun_y, len_w);

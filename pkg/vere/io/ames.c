@@ -27,7 +27,9 @@
 
 #define QUEUE_MAX        30             //  max number of packets in queue
 
-#define _CZAR_GONE  UINT32_MAX
+#define _CZAR_GONE  (htonl(UINT32_MAX))
+
+#define NLOCALHOST (htonl(0x7f000001))
 
 /* u3_fine: fine networking
 */
@@ -169,7 +171,7 @@
     struct _u3_ames* sam_u;             //  ames backpointer
     c3_w             len_w;             //  length in bytes
     c3_y*            hun_y;             //  packet buffer
-    u3_lane          lan_u;             //  destination/origin lane
+    sockaddr_in      lan_u;             //  destination/origin lane
     u3_head          hed_u;             //  head of packet
     u3_prel          pre_u;             //  packet prelude
     u3_ptag          typ_y;             //  packet type tag
@@ -721,25 +723,20 @@ _ames_send(u3_pact* pac_u)
   if ( !pac_u->hun_y
     || !sam_u
     || !pac_u->len_w
-    || !pac_u->lan_u.por_s )
+    || !pac_u->lan_u.sin_port )
   {
     u3l_log("ames: _ames_send null");
     _ames_pact_free(pac_u);
   }
   else {
-    struct sockaddr_in add_u;
-
-    memset(&add_u, 0, sizeof(add_u));
-    add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = htonl(pac_u->lan_u.pip_w);
-    add_u.sin_port = htons(pac_u->lan_u.por_s);
+    struct sockaddr_in lan_u = pac_u->lan_u;
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &u3_Host.wax_u,
                                    &buf_u, 1,
-                                   (const struct sockaddr*)&add_u,
+                                   (const struct sockaddr*)&lan_u,
                                    _ames_send_cb);
 
       if ( sas_i ) {
@@ -751,33 +748,35 @@ _ames_send(u3_pact* pac_u)
 
 /* u3_ames_decode_lane(): deserialize noun to lane; 0.0.0.0:0 if invalid
 */
-u3_lane
+sockaddr_in
 u3_ames_decode_lane(u3_atom lan) {
-  u3_lane lan_u;
   c3_d lan_d;
 
   if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
-    return (u3_lane){0, 0};
+    return (sockaddr_in){0};
   }
 
   u3z(lan);
 
-  lan_u.pip_w = (c3_w)lan_d;
-  lan_u.por_s = (c3_s)(lan_d >> 32);
+  sockaddr_in lan_u;
+  lan_u.sin_family = AF_INET;
+  lan_u.sin_addr.s_addr = htonl((c3_w)lan_d);
+  lan_u.sin_port = htons((c3_s)(lan_d >> 32));
   return lan_u;
 }
 
 /* u3_ames_lane_to_chub(): serialize lane to double-word
 */
 c3_d
-u3_ames_lane_to_chub(u3_lane lan) {
-  return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_w;
+u3_ames_lane_to_chub(sockaddr_in lan) {
+  return ((c3_d)ntohs(lan.sin_addr.s_addr) << 32)
+    ^ (c3_d)ntohl(lan.sin_port);
 }
 
 /* u3_ames_encode_lane(): serialize lane to noun
 */
 u3_atom
-u3_ames_encode_lane(u3_lane lan) {
+u3_ames_encode_lane(sockaddr_in lan) {
   // [%| p=@]
   // [%& p=@pC]
   return u3i_chub(u3_ames_lane_to_chub(lan));
@@ -842,10 +841,10 @@ static c3_s
 _ames_czar_port(c3_y imp_y)
 {
   if ( c3n == u3_Host.ops_u.net ) {
-    return 31337 + imp_y;
+    return htons(31337 + imp_y);
   }
   else {
-    return 13337 + imp_y;
+    return htons(13337 + imp_y);
   }
 }
 
@@ -887,24 +886,25 @@ _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
 /* _ames_czar_lane: retrieve lane for galaxy if stored.
 */
 c3_o
-_ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
+_ames_czar_lane(u3_ames* sam_u, c3_y imp_y, sockaddr_in* lan_u)
 {
-  c3_s por_s = _ames_czar_port(imp_y);
-  c3_w pip_w;
+  lan_u->sin_family = AF_INET;
+  lan_u->sin_port = _ames_czar_port(imp_y);
 
   if ( c3n == u3_Host.ops_u.net ) {
-    pip_w = 0x7f000001;
+    lan_u->sin_addr.s_addr = NLOCALHOST;
   }
   else {
-    pip_w = sam_u->zar_u.pip_w[imp_y];
+    lan_u->sin_addr.s_addr =
+      sam_u->zar_u.pip_w[imp_y];
 
-    if ( !pip_w ) {
+    if ( !lan_u->sin_addr.s_addr ) {
       if ( u3C.wag_w & u3o_verbose ) {
         u3l_log("ames: czar not resolved");
       }
       return c3n;
     }
-    else if ( _CZAR_GONE == pip_w ) {
+    else if ( _CZAR_GONE == lan_u->sin_addr.s_addr ) {
       //  print only on first send failure
       //
       c3_w blk_w = imp_y >> 5;
@@ -921,8 +921,6 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
     }
   }
 
-  lan_u->por_s = por_s;
-  lan_u->pip_w = pip_w;
   return c3y;
 }
 
@@ -973,7 +971,7 @@ _ames_is_czar(u3_noun who)
 /* _ames_send_lane(): resolve/decode lane. RETAIN
 */
 static c3_o
-_ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
+_ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
 {
   u3_noun tag, val;
 
@@ -988,26 +986,29 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
         u3l_log("ames: bad galaxy lane: 0x%x", val);
         return c3n;
       }
-      return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
+      _ames_czar_lane(sam_u, (c3_y)val, lan_u);
+      //return (c3y == _mesa_is_lane_zero(*lan_u)) ? c3n : c3y;
+      return __((lan_u->sin_addr.s_addr == 0) && (lan_u->sin_port == 0));
     }
 
     case c3n: {  //  ip:port
-      u3_lane nal_u = u3_ames_decode_lane(u3k(val));
+      sockaddr_in nal_u = u3_ames_decode_lane(u3k(val));
 
       //  convert incoming localhost to outgoing localhost
       //
       //    XX this looks like en/de-coding problems ...
       //
-      nal_u.pip_w = ( nal_u.pip_w ) ? nal_u.pip_w : 0x7f000001;
+      if (!nal_u.sin_addr.s_addr)
+        nal_u.sin_addr.s_addr = NLOCALHOST;
 
       //  if in local-only mode, don't send remote packets
       //
-      if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != nal_u.pip_w) ) {
+      if ( (c3n == u3_Host.ops_u.net) && (NLOCALHOST != nal_u.sin_addr.s_addr) ) {
         return c3n;
       }
       //  if the lane is uninterpretable, silently drop the packet
       //
-      else if ( !nal_u.por_s ) {
+      else if ( !nal_u.sin_port ) {
         if ( u3C.wag_w & u3o_verbose ) {
           u3l_log("ames: inscrutable lane");
         }
@@ -1036,7 +1037,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     return;
   }
 
-  u3_lane lan_u;
+  sockaddr_in lan_u;
 
   if ( c3y == _ames_send_lane(sam_u, lan, &lan_u) ) {
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
@@ -1136,7 +1137,7 @@ _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
 static void
 _ames_put_packet(u3_ames* sam_u,
                  u3_noun  msg,
-                 u3_lane  lan_u)
+                 sockaddr_in  lan_u)
 {
   u3_noun wir = u3nc(c3__ames, u3_nul);
   u3_noun cad = u3nt(c3__hear, u3nc(c3n, u3_ames_encode_lane(lan_u)), msg);
@@ -1173,13 +1174,16 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
       u3_noun rec = u3dc("scot", 'p', u3_ship_to_noun(pac_u->pre_u.rec_u));
       c3_c* sen_c = u3r_string(sen);
       c3_c* rec_c = u3r_string(rec);
-      c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_w;
+
+      c3_w nip_w = pac_u->lan_u.sin_addr.s_addr;
+      c3_c nip_c[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
+
 
       //NOTE ip byte order assumes little-endian
-      u3l_log("ames: forwarding for %s to %s from %d.%d.%d.%d:%d",
-              sen_c, rec_c,
-              pip_y[3], pip_y[2], pip_y[1], pip_y[0],
-              pac_u->lan_u.por_s);
+      u3l_log("ames: forwarding for %s to %s from %s:%d",
+              sen_c, rec_c, nip_c,
+              ntohs(pac_u->lan_u.sin_port));
 
       c3_free(sen_c); c3_free(rec_c);
       u3z(sen); u3z(rec);
@@ -1708,7 +1712,7 @@ _ames_try_forward(u3_pact* pac_u)
 */
 void
 _ames_hear(u3_ames* sam_u,
-           const struct sockaddr* adr_u,
+           const struct sockaddr_in* lan_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -1716,127 +1720,110 @@ _ames_hear(u3_ames* sam_u,
   c3_w     pre_w;
   c3_w     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
 
-
-  // XX reorg, check if a STUN req/resp can look like an ames packet
-  //  check the mug hash of the body of the packet, if not check if STUN
-  //  otherwise , invalid packet, log failure
-  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
-  //    for next protocol version, have an urbit cookie
+  //  make sure packet is big enough to have a header
   //
-  if ( c3y == u3_stun_hear(u3_Host.sun_u, adr_u, len_w, hun_y) )
+  if ( HEAD_SIZE > len_w ) {
+    sam_u->sat_u.hed_d++;
+    if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped, failed to read header",
+              sam_u->sat_u.hed_d);
+    }
+
+    c3_free(hun_y);
     return;
+  }
+
+  pac_u = c3_calloc(sizeof(*pac_u));
+  pac_u->sam_u = sam_u;
+  pac_u->len_w = len_w;
+  pac_u->hun_y = hun_y;
+  pac_u->lan_u = *lan_u;
+  cur_w = 0;
+
+  //  parse the header
+  //
+  _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
+  cur_w += HEAD_SIZE;
+
+  pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
+
+  //  ensure the protocol version matches ours
+  //
+  //    XX rethink use of [fit_o] here and elsewhere
+  //
+  if (  (c3y == sam_u->fig_u.fit_o)
+    && (sam_u->ver_y != pac_u->hed_u.ver_y) )
+  {
+    sam_u->sat_u.vet_d++;
+    if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped for version mismatch",
+              sam_u->sat_u.vet_d);
+    }
+    _ames_pact_free(pac_u);
+    return;
+  }
+
+  //  check contents match mug in header
+  //
+  if ( c3n == _ames_check_mug(pac_u) ) {
+    // _log_head(&pac_u->hed_u);
+    sam_u->sat_u.mut_d++;
+    if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped for invalid mug",
+              sam_u->sat_u.mut_d);
+    }
+    _ames_pact_free(pac_u);
+    return;
+  }
+
+  //  check that packet is big enough for prelude
+  //
+  pre_w = _ames_prel_size(&pac_u->hed_u);
+  if ( len_w < cur_w + pre_w ) {
+    sam_u->sat_u.pre_d++;
+    if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
+      u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
+              sam_u->sat_u.pre_d);
+    }
+    _ames_pact_free(pac_u);
+    return;
+  }
+
+  //  parse prelude
+  //
+  _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
+  cur_w += pre_w;
+
+  //  if we can scry for lanes,
+  //  and we are not the recipient,
+  //  we might want to forward statelessly
+  //
+  if ( (c3y == sam_u->fig_u.see_o)
+    && ( u3_ships_equal(pac_u->pre_u.rec_u, sam_u->pir_u->who_u) ) )
+  {
+    if ( c3y == sam_u->sat_u.for_o ) {
+      _ames_try_forward(pac_u);
+    }
+  }
   else {
-    struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
-    u3_lane             lan_u = {
-      .por_s = ntohs(add_u->sin_port),
-      .pip_w = ntohl(add_u->sin_addr.s_addr)
-    };
-
-    //  make sure packet is big enough to have a header
+    //  enter protocol-specific packet handling
     //
-    if ( HEAD_SIZE > len_w ) {
-      sam_u->sat_u.hed_d++;
-      if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
-        u3l_log("ames: %" PRIu64 " dropped, failed to read header",
-                sam_u->sat_u.hed_d);
-      }
+    switch ( pac_u->typ_y ) {
+      case PACT_WAIL: {
+        _fine_hear_request(pac_u, cur_w);
+      } break;
 
-      c3_free(hun_y);
-      return;
-    }
+      case PACT_PURR: {
+        _fine_hear_response(pac_u, cur_w);
+      } break;
 
-    pac_u = c3_calloc(sizeof(*pac_u));
-    pac_u->sam_u = sam_u;
-    pac_u->len_w = len_w;
-    pac_u->hun_y = hun_y;
-    pac_u->lan_u = lan_u;
-    cur_w = 0;
+      case PACT_AMES: {
+        _ames_hear_ames(pac_u, cur_w);
+      } break;
 
-    //  parse the header
-    //
-    _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
-    cur_w += HEAD_SIZE;
-
-    pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
-
-    //  ensure the protocol version matches ours
-    //
-    //    XX rethink use of [fit_o] here and elsewhere
-    //
-    if (  (c3y == sam_u->fig_u.fit_o)
-      && (sam_u->ver_y != pac_u->hed_u.ver_y) )
-    {
-      sam_u->sat_u.vet_d++;
-      if ( 0 == (sam_u->sat_u.vet_d % 100000) ) {
-        u3l_log("ames: %" PRIu64 " dropped for version mismatch",
-                sam_u->sat_u.vet_d);
-      }
-      _ames_pact_free(pac_u);
-      return;
-    }
-
-    //  check contents match mug in header
-    //
-    if ( c3n == _ames_check_mug(pac_u) ) {
-      // _log_head(&pac_u->hed_u);
-      sam_u->sat_u.mut_d++;
-      if ( 0 == (sam_u->sat_u.mut_d % 100000) ) {
-        u3l_log("ames: %" PRIu64 " dropped for invalid mug",
-                sam_u->sat_u.mut_d);
-      }
-      _ames_pact_free(pac_u);
-      return;
-    }
-
-    //  check that packet is big enough for prelude
-    //
-    pre_w = _ames_prel_size(&pac_u->hed_u);
-    if ( len_w < cur_w + pre_w ) {
-      sam_u->sat_u.pre_d++;
-      if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
-        u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
-                sam_u->sat_u.pre_d);
-      }
-      _ames_pact_free(pac_u);
-      return;
-    }
-
-    //  parse prelude
-    //
-    _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
-    cur_w += pre_w;
-
-    //  if we can scry for lanes,
-    //  and we are not the recipient,
-    //  we might want to forward statelessly
-    //
-    if ( (c3y == sam_u->fig_u.see_o)
-      && ( u3_ships_equal(pac_u->pre_u.rec_u, sam_u->pir_u->who_u) ) )
-    {
-      if ( c3y == sam_u->sat_u.for_o ) {
-        _ames_try_forward(pac_u);
-      }
-    }
-    else {
-      //  enter protocol-specific packet handling
-      //
-      switch ( pac_u->typ_y ) {
-        case PACT_WAIL: {
-          _fine_hear_request(pac_u, cur_w);
-        } break;
-
-        case PACT_PURR: {
-          _fine_hear_response(pac_u, cur_w);
-        } break;
-
-        case PACT_AMES: {
-          _ames_hear_ames(pac_u, cur_w);
-        } break;
-
-        default: {
-          u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
-          u3_pier_bail(u3_king_stub());
-        }
+      default: {
+        u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
+        u3_pier_bail(u3_king_stub());
       }
     }
   }
@@ -1852,6 +1839,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
               unsigned         flg_i)
 {
   u3_ames* sam_u = u3_Host.sam_u; // wax_u->data;
+  const struct sockaddr_in* lan_u = (const struct sockaddr_in*)adr_u;
 
   if ( 0 > nrd_i ) {
     if ( u3C.wag_w & u3o_verbose ) {
@@ -1871,7 +1859,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   else {
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _ames_hear(sam_u, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    _ames_hear(sam_u, lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
   }
 }
 
@@ -1957,9 +1945,10 @@ _ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
     return;
   }
 
-  u3_lane lan;
-  lan.pip_w = ntohl(s_addr);
-  lan.por_s = ntohs(port);
+  sockaddr_in lan;
+  lan.sin_family = AF_INET;
+  lan.sin_addr.s_addr = s_addr;
+  lan.sin_port = port;
 
   u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
 
@@ -2010,22 +1999,19 @@ _ames_io_start(u3_ames* sam_u)
       u3l_log("ames: czar: WARNING: %d required for discoverability", zar_s);
     }
   }
+  struct sockaddr_in lan_u = {0};
+  lan_u.sin_family = AF_INET;
+  lan_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
+                            htonl(INADDR_ANY) :
+                            htonl(INADDR_LOOPBACK);
+  lan_u.sin_port = htons(por_s);
+  u3l_log("ames: skipping port: %u", por_s);
 
   //  Bind and stuff.
   {
-    struct sockaddr_in add_u;
-    c3_i               add_i = sizeof(add_u);
-
-    memset(&add_u, 0, sizeof(add_u));
-    add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
-                              htonl(INADDR_ANY) :
-                              htonl(INADDR_LOOPBACK);
-    add_u.sin_port = htons(por_s);
-    u3l_log("ames: skipping port: %u", por_s);
 
     /*if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
-                              (const struct sockaddr*)&add_u, 0)) != 0 )
+                              (const struct sockaddr*)&lan_u, 0)) != 0 )
     {
       u3l_log("ames: port: %u", por_s);
       u3l_log("ames: bind: %s", uv_strerror(ret_i));
@@ -2042,10 +2028,11 @@ _ames_io_start(u3_ames* sam_u)
     }*/
 
     /*
-    uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    u3_assert(add_u.sin_port);
+    c3_i               add_i = sizeof(lan_u);
+    uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&lan_u, &add_i);
+    u3_assert(lan_u.sin_port);
 
-    sam_u->pir_u->por_s = ntohs(add_u.sin_port);
+    sam_u->pir_u->por_s = ntohs(lan_u.sin_port);
     */
   }
 
@@ -2057,11 +2044,10 @@ _ames_io_start(u3_ames* sam_u)
   }
 
   {
-    u3_noun our = u3dc("scot", 'p', u3k(who));
-    char* our_s = u3r_string(our);
-    u3z(our);
 
-    mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
+    c3_c* our_s = u3_ship_to_string(sam_u->pir_u->who_u);
+
+    mdns_init(lan_u.sin_port, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
 
     if ( c3n == sam_u->pir_u->fak_o ) {
       uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
@@ -2099,21 +2085,21 @@ _ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
 /* _ames_czar_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w pip_w)
+_ames_czar_here(u3_ames* sam_u, c3_y imp_y, sockaddr_in lan_u)
 {
   c3_w old_w = sam_u->zar_u.pip_w[imp_y];
 
-  if ( pip_w != old_w ) {
+  if ( lan_u.sin_addr.s_addr != old_w ) {
     c3_c dns_c[256];
+    c3_w nip_w = lan_u.sin_addr.s_addr;
+    c3_c nip_c[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
+
     u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
-    u3l_log("ames: czar %s ip .%d.%d.%d.%d", dns_c,
-            (pip_w >> 24) & 0xff,
-            (pip_w >> 16) & 0xff,
-            (pip_w >>  8) & 0xff,
-            (pip_w >>  0) & 0xff);
+    u3l_log("ames: czar %s ip .%s", dns_c, nip_c);
   }
 
-  sam_u->zar_u.pip_w[imp_y] = pip_w;
+  sam_u->zar_u.pip_w[imp_y] = lan_u.sin_addr.s_addr;
 
   {
     c3_w blk_w = imp_y >> 5;
@@ -2140,9 +2126,8 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
   }
 
   if ( rai_u && rai_u->ai_addr ) {
-    struct sockaddr_in* add_u = (void*)rai_u->ai_addr;
-    c3_w pip_w = ntohl(add_u->sin_addr.s_addr);
-    _ames_czar_here(sam_u, imp_y, pip_w);
+    struct sockaddr_in* lan_u = (void*)rai_u->ai_addr;
+    _ames_czar_here(sam_u, imp_y, *lan_u);
   }
   else {
     if ( !sas_i ) {

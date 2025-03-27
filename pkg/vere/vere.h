@@ -40,10 +40,7 @@
 
     /* u3_lane: ames lane (IP address and port)
     */
-      typedef struct _u3_lane {
-        c3_w             pip_w;             //  target IPv4 address
-        c3_s             por_s;             //  target port
-      } u3_lane;
+      typedef struct sockaddr_in sockaddr_in;
 
     /* u3_moor_poke: poke callback function.
     */
@@ -343,7 +340,6 @@
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
         void*      sam_u;                   //  old ames, "unified driver" hack
-        void*      sun_u;                   //  old ames, "unified driver" hack
         uv_udp_t   wax_u;                   //  "unified driver" udp send handle
         c3_w*      imp_u;                   //  "unified driver" galaxy IP:s
       } u3_host;                            //  host == computer == process
@@ -1250,13 +1246,13 @@
 
       /* u3_ames_decode_lane(): destructure lane from noun
       */
-        u3_lane
+        sockaddr_in
         u3_ames_decode_lane(u3_noun);
 
       /* u3_ames_encode_lane(): encode lane as noun
       */
         u3_noun
-        u3_ames_encode_lane(u3_lane);
+        u3_ames_encode_lane(sockaddr_in);
 
     /**  mesa
     **/

@@ -197,7 +197,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
   }
 
   err = DNSServiceRegister(&sref, 0, 0, domain, "_ames._udp",
-                           NULL, NULL, htons(port), 0, NULL, register_cb, (void*)register_payload);
+                           NULL, NULL, port, 0, NULL, register_cb, (void*)register_payload);
 
   if (err != kDNSServiceErr_NoError) {
     if (err == kDNSServiceErr_Unknown) {

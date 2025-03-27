@@ -372,9 +372,9 @@ _log_gage(u3_gage* gag_u)
 }
 
 static void
-_log_lane(u3_lane* lan_u)
+_log_lane(sockaddr_in* lan_u)
 {
-  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word(lan_u->pip_w))), lan_u->por_s);
+  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word(ntohl(lan_u->sin_addr.s_addr)))), ntohs(lan_u->sin_port));
 }
 
 static void _log_peer(u3_peer* per_u)
@@ -1531,7 +1531,7 @@ _mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
 
 static void
 _mesa_hear(u3_mesa* sam_u,
-           const struct sockaddr* adr_u,
+           const struct sockaddr_in* adr_u,
            c3_w     len_w,
            c3_y*    hun_y);
 
@@ -1570,7 +1570,7 @@ packet_test(u3_mesa* sam_u, c3_c* fil_c) {
     c3_w len_w = *(c3_w*)(packets+i);
     /* u3l_log("len_w %u i %"PRIu64, len_w, i); */
     i += 4;
-    _mesa_hear(sam_u, &adr_u, len_w, packets + i);
+    _mesa_hear(sam_u, (const sockaddr_in*)&adr_u, len_w, packets + i);
     /* tim_y[tidx] = _get_now_micros(); */
     sam_u->are_u.beg = (char*)are_y;
     i += len_w;
@@ -1663,7 +1663,7 @@ c3_o
 _ames_kick_newt(void* sam_u, u3_noun tag, u3_noun dat);
 
 u3_atom
-u3_ames_encode_lane(u3_lane lan);
+u3_ames_encode_lane(sockaddr_in lan);
 
 static void _meet_peer(u3_mesa* sam_u, u3_peer* per_u, u3_ship her_u);
 static void _init_peer(u3_mesa* sam_u, u3_peer* per_u);
@@ -2393,7 +2393,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
 }
 
 typedef struct _u3_mesa_lane_cb_data {
-  u3_lane       lan_u;
+  sockaddr_in   lan_u;
   u3_peer*      per_u;
 } u3_mesa_lane_cb_data;
 
@@ -2806,13 +2806,13 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
 void
 _ames_hear(void*    sam_u,
-           const struct sockaddr* adr_u,
+           const struct sockaddr_in* adr_u,
            c3_w     len_w,
            c3_y*    hun_y);
 
 static void
 _mesa_hear(u3_mesa* sam_u,
-           const struct sockaddr* adr_u,
+           const struct sockaddr_in* lan_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
@@ -2820,9 +2820,18 @@ _mesa_hear(u3_mesa* sam_u,
   /* fwrite(hun_y, 1, len_w, packs); */
   // c3_d now_d = _get_now_micros();
   if ( c3n == mesa_is_new_pact(hun_y, len_w) ) {
+  // XX reorg, check if a STUN req/resp can look like an ames packet
+  //  check the mug hash of the body of the packet, if not check if STUN
+  //  otherwise , invalid packet, log failure
+  //    check ames first, assume that STUN could maybe (not likely) overlap with ames
+  //    for next protocol version, have an urbit cookie
+  //
+    if ( c3y == u3_stun_hear(&sam_u->sun_u, lan_u, len_w, hun_y) )
+      return;
+
     c3_y* han_y = c3_malloc(len_w);
     memcpy(han_y, hun_y, len_w);
-    _ames_hear(u3_Host.sam_u, adr_u, len_w, han_y);
+    _ames_hear(u3_Host.sam_u, lan_u, len_w, han_y);
     return;
   }
 
@@ -2834,7 +2843,7 @@ _mesa_hear(u3_mesa* sam_u,
     return;
   }
 
-  sockaddr_in sdr_u = *((sockaddr_in*)adr_u);
+  sockaddr_in sdr_u = *((sockaddr_in*)lan_u);
 
   switch ( pic_u->pac_u.hed_u.typ_y ) {
     case PACT_PEEK: {
@@ -2868,6 +2877,7 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
               unsigned         flg_i)
 {
   u3_mesa* sam_u = (u3_mesa*)wax_u->data;
+  const struct sockaddr_in* lan_u = (const struct sockaddr_in*)adr_u;
   if ( 0 > nrd_i ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
@@ -2881,7 +2891,7 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
     }
   }
   else {
-    _mesa_hear(wax_u->data, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    _mesa_hear(wax_u->data, lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
   }
 }
 
@@ -3070,11 +3080,11 @@ u3_mesa_io_init(u3_pier* pir_u)
   car_u->io.kick_f = _mesa_io_kick;
   car_u->io.exit_f = _mesa_io_exit;
 
+  sam_u->sun_u.car_u = car_u;
   sam_u->sun_u.net_o = c3y;
   sam_u->sun_u.wok_o = c3n;
   uv_timer_init(u3L, &sam_u->sun_u.tim_u);
-  sam_u->sun_u.tim_u.data = sam_u;
-  u3_Host.sun_u = &sam_u->sun_u;
+  sam_u->sun_u.tim_u.data = &sam_u->sun_u;
 
 
   /*{
