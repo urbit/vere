@@ -1026,6 +1026,7 @@ u3a_luse(u3_noun som)
 c3_w
 u3a_mark_ptr(void* ptr_v)
 {
+  //  XX restore loom-bounds check
   return _mark_post(u3a_outa(ptr_v));
 }
 
@@ -1490,10 +1491,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 9);
-
-  // XX track
-  fprintf(stderr, "road: mark xx heap %u\r\n", _mark_heap());
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 14);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -1527,10 +1525,65 @@ u3a_mark_road()
   qua_u[7]->nam_c = strdup("persistent memoization cache");
   qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * 4;
 
-  qua_u[8] = NULL;
+  qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
+  qua_u[8]->nam_c = strdup("page directory");
+  qua_u[8]->siz_w = u3a_mark_ptr(u3a_into(u3R->hep.pag_p)) * 4;
+
+  qua_u[9] = c3_calloc(sizeof(*qua_u[9]));
+  qua_u[9]->nam_c = strdup("cell pool");
+
+  {
+    c3_w cel_w = 0;
+
+    if ( u3R->hep.cel_p ) {
+      u3_post *cel_p = u3to(u3_post, u3R->hep.cel_p);
+
+      cel_w += u3a_mark_ptr(cel_p);
+
+      for ( c3_w i_w = 0; i_w < u3R->hep.cel_w; i_w++ ) {
+        cel_w += u3a_mark_ptr(u3a_into(cel_p[i_w]));
+      }
+    }
+
+    qua_u[9]->siz_w = cel_w * 4;
+  }
+
+  qua_u[10] = c3_calloc(sizeof(*qua_u[10]));
+  qua_u[10]->nam_c = strdup("free list");
+
+  {
+    u3a_dell *fre_u = u3tn(u3a_dell, u3R->hep.fre_p);
+    c3_w      fre_w = 0;
+
+    while ( fre_u ) {
+      fre_w += u3a_mark_ptr(fre_u);
+      fre_u  = u3tn(u3a_dell, fre_u->nex_p);
+    }
+
+    if ( u3R->hep.cac_p ) {
+      fre_w += u3a_mark_ptr(u3a_into(u3R->hep.cac_p));
+    }
+
+    qua_u[10]->siz_w = fre_w * 4;
+  }
+
+  qua_u[11] = c3_calloc(sizeof(*qua_u[11]));
+  qua_u[11]->nam_c = strdup("metadata");
+
+  {
+    c3_w wee_w = 0;
+
+    for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+      wee_w += u3a_Mark.wee_w[i_w];
+    }
+
+    qua_u[11]->siz_w = wee_w * 4;
+  }
+
+  qua_u[12] = NULL;
 
   c3_w sum_w = 0;
-  for (c3_w i_w = 0; i_w < 8; i_w++) {
+  for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
     sum_w += qua_u[i_w]->siz_w;
   }
 

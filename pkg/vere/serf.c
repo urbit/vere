@@ -178,6 +178,7 @@ _serf_grab(u3_noun sac, c3_o pri_o)
     u3a_init_mark();
 
     u3m_quac* pro_u = u3a_prof(fil_u, sac);
+    c3_w      sac_w = u3a_mark_noun(sac);
 
     if ( NULL == pro_u ) {
       fflush(fil_u);
@@ -199,7 +200,7 @@ _serf_grab(u3_noun sac, c3_o pri_o)
 
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
-      all_u[5]->siz_w = u3a_mark_noun(sac) * 4;
+      all_u[5]->siz_w = sac_w * 4;
 
       tot_w += all_u[5]->siz_w;
 

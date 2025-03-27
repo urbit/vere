@@ -1265,32 +1265,6 @@ _mark_post(u3_post som_p)
   }
 }
 
-static c3_w
-_mark_heap(void)
-{
-  u3_post fre_p;
-  c3_w tot_w = 0;
-
-  tot_w += _mark_post(HEAP.pag_p);
-  if ( HEAP.cel_p ) {
-    fprintf(stderr, "mark heap: warning, cel_p\r\n");
-    u3_assert(0);
-    tot_w += _mark_post(HEAP.cel_p);
-  }
-  if ( HEAP.cac_p ) {
-    tot_w += _mark_post(HEAP.cac_p);
-  }
-
-  fre_p = HEAP.fre_p;
-
-  while ( fre_p ) {
-    tot_w += _mark_post(fre_p);
-    fre_p  = u3to(u3a_dell, fre_p)->nex_p;
-  }
-
-  return tot_w;
-}
-
 static void
 _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
 {
@@ -1417,20 +1391,6 @@ _sweep_directory(void)
     }
 
     pag_w++;
-  }
-
-  //  XX s/b captured at the end of the mark phase
-  //
-  {
-    c3_w wee_w = 0;
-
-    for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
-      wee_w += u3a_Mark.wee_w[i_w];
-    }
-
-    if ( wee_w ) {
-      u3a_print_memory(stderr, "palloc: sweep: wee_w", wee_w);
-    }
   }
 
   if ( leq_w ) {
