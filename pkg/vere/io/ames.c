@@ -699,6 +699,7 @@ _lane_scry_path(u3_noun who)
 static void
 _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 {
+
   u3_pact* pac_u = (u3_pact*)req_u;
   u3_ames* sam_u = pac_u->sam_u;
 
@@ -718,6 +719,7 @@ _ames_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 static void
 _ames_send(u3_pact* pac_u)
 {
+
   u3_ames* sam_u = pac_u->sam_u;
 
   if ( !pac_u->hun_y
@@ -729,14 +731,13 @@ _ames_send(u3_pact* pac_u)
     _ames_pact_free(pac_u);
   }
   else {
-    struct sockaddr_in lan_u = pac_u->lan_u;
 
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &u3_Host.wax_u,
                                    &buf_u, 1,
-                                   (const struct sockaddr*)&lan_u,
+                                   (const struct sockaddr*)&pac_u->lan_u,
                                    _ames_send_cb);
 
       if ( sas_i ) {
@@ -798,6 +799,7 @@ _ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
 */
 static u3_weak
 _ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
+
   u3_weak lac = u3h_git(lax_p, who);
 
   if ( u3_none == lac ) {
@@ -888,6 +890,7 @@ _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
 c3_o
 _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, sockaddr_in* lan_u)
 {
+
   lan_u->sin_family = AF_INET;
   lan_u->sin_port = _ames_czar_port(imp_y);
 
@@ -973,6 +976,7 @@ _ames_is_czar(u3_noun who)
 static c3_o
 _ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
 {
+
   u3_noun tag, val;
 
   if ( c3n == u3r_cell(lan, &tag, &val) ) {
@@ -986,9 +990,7 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
         u3l_log("ames: bad galaxy lane: 0x%x", val);
         return c3n;
       }
-      _ames_czar_lane(sam_u, (c3_y)val, lan_u);
-      //return (c3y == _mesa_is_lane_zero(*lan_u)) ? c3n : c3y;
-      return __((lan_u->sin_addr.s_addr == 0) && (lan_u->sin_port == 0));
+      return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
     }
 
     case c3n: {  //  ip:port
@@ -1031,6 +1033,7 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
 static void
 _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
 {
+
   if ( c3n == sam_u->car_u.liv_o ) {
     u3l_log("ames: not yet live, dropping outbound\r");
     u3z(lan); u3z(pac);
@@ -1642,6 +1645,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
 static void
 _ames_hear_ames(u3_pact* pac_u, c3_w cur_w)
 {
+
 #ifdef AMES_SKIP
   if ( c3_y == _ames_skip(&pac_u->pre_u) ) {
     _ames_pact_free(pac_u);

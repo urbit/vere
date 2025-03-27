@@ -1671,6 +1671,7 @@ static void _mesa_ef_saxo(u3_mesa* sam_u, u3_noun zad);
 
 static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 {
+  u3l_log("%s", __func__);
   c3_o ret_o;
   switch ( tag ) {
     default: {

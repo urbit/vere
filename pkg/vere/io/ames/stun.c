@@ -201,8 +201,8 @@ _stun_find_xor_mapped_address(c3_y*        buf_y,
 
 typedef struct _stun_send {
   uv_udp_send_t   req_u;     //  uv udp request handle
-  c3_y            hun_y[0];  //  buffer
   u3_stun_client* sun_u;     //  backpointer
+  c3_y            hun_y[0];  //  buffer
 } _stun_send;
 
 /* _stun_send_cb(): stun udp send callback.
