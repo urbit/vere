@@ -480,7 +480,7 @@ u3m_mark(void)
   qua_u[0] = u3v_mark();
   qua_u[1] = u3j_mark();
   qua_u[2] = u3n_mark();
-  qua_u[3] = u3a_mark_road();
+  qua_u[3] = u3a_mark_road();  // NB: must be the last thing marked
   qua_u[4] = NULL;
 
   return qua_u;
@@ -1526,7 +1526,6 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3R->cax.har_p = u3h_new();
 
   u3a_init_mark();
-  u3m_mark();
   {
     va_list vap;
     u3_noun tur;
@@ -1542,6 +1541,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
     }
     va_end(vap);
   }
+  u3m_mark(); // XX leaks
   u3a_sweep();
 }
 
