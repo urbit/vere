@@ -1025,6 +1025,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       default: {
         return _n_comp(ops, nef, los_o, tel_o);
       }
+      case c3__cash:
       case c3__xray:
       case c3__meme:
       case c3__nara:
@@ -1854,6 +1855,14 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
+    case c3__cash: {
+      u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
+      u3h_discount(u3R->cax.har_p);
+      u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
+      u3h_discount(u3R->cax.per_p);
+      *out = u3i_cell(tag, u3i_cell(har, per));
+    } break;
+
     case c3__bout: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *out = u3i_cell(tag, now);
@@ -1895,13 +1904,34 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
-  u3_noun p_tok, q_tok;
+  u3_noun p_tok, q_tok, r_tok;
   if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
     u3t_slog(u3nc(0, u3i_string(str_c)));
     u3z(delta);
+  }
+  else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) &&
+            (c3__cash == p_tok) ) {
+    c3_c str_c[4096];
+
+    u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
+    u3h_discount(u3R->cax.har_p);
+    u3_atom har_delta = u3ka_sub(har, u3k(q_tok));
+    u3a_print_memory_str(str_c, "ephemeral cache",
+                     u3r_word(0, har_delta));
+    u3t_slog(u3nc(0, u3i_string(str_c)));
+
+    u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
+    u3h_discount(u3R->cax.per_p);
+    u3_atom per_delta = u3ka_sub(per, u3k(r_tok));
+    u3a_print_memory_str(str_c, "persistent cache",
+                     u3r_word(0, per_delta));
+    u3t_slog(u3nc(0, u3i_string(str_c)));
+
+    u3z(har_delta);
+    u3z(per_delta);
   }
   else {
     u3_assert( u3_nul == tok );
