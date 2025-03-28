@@ -956,7 +956,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  copy snapshot files (skip if first epoch)
   c3_c chk_c[8193];
-  snprintf(chk_c, 8192, "%s/.urb/chk", u3_Host.dir_c);
+  snprintf(chk_c, 8192, "%s/.urb/chk", log_u->dir_u->pax_c);
   if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
     fprintf(stderr, "disk: copy epoch snapshot failed\r\n");
     goto fail1;
@@ -1254,7 +1254,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
 
   //  delete backup snapshot
   c3_c bhk_c[8193], nop_c[8193], sop_c[8193];
-  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", u3_Host.dir_c);
+  snprintf(bhk_c, sizeof(bhk_c), "%s/.urb/bhk", log_u->dir_u->pax_c);
   snprintf(nop_c, sizeof(nop_c), "%s/north.bin", bhk_c);
   snprintf(sop_c, sizeof(sop_c), "%s/south.bin", bhk_c);
   if ( c3_unlink(nop_c) ) {

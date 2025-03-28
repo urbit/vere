@@ -1349,6 +1349,10 @@ u3_mars_init(c3_c*    dir_c,
     u3m_save();
   }
 
+  //  migrate or rollover as needed
+  //
+  u3_disk_kindly(mar_u->log_u, mar_u->dun_d);
+
   //  XX do something better
   //
   if ( mar_u->log_u->dun_d > mar_u->dun_d ) {

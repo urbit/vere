@@ -3150,12 +3150,6 @@ main(c3_i   argc,
       }
     }
 
-    //  we need the current snapshot's latest event number to
-    //  validate whether we can execute disk migration
-    if ( u3_Host.ops_u.nuu == c3n ) {
-      _cw_play_impl(0, 0, c3n, c3n, c3n);
-    }
-
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
     //
