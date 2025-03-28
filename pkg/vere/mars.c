@@ -630,7 +630,7 @@ _mars_post(u3_mars* mar_u)
   //  XX this runs on replay too, |mass s/b elsewhere
   //
   if ( c3y == mar_u->mut_o ) {
-    _mars_grab(mar_u->sac, c3y);
+    u3z(_mars_grab(mar_u->sac, c3y));
     mar_u->sac   = u3_nul;
     mar_u->mut_o = c3n;
   }
