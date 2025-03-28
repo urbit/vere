@@ -99,7 +99,7 @@ u3a_init_mark(void)
   u3a_Mark.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
   u3a_Mark.siz_w = u3R->hep.siz_w * 2;
   u3a_Mark.len_w = u3R->hep.len_w;
-  u3a_Mark.buf_w = c3_malloc(sizeof(c3_w) * u3a_Mark.siz_w);
+  u3a_Mark.buf_w = c3_calloc(sizeof(c3_w) * u3a_Mark.siz_w);
 
   memset(u3a_Mark.wee_w, 0, sizeof(c3_w) * u3a_crag_no);
 }
@@ -1027,7 +1027,12 @@ c3_w
 u3a_mark_ptr(void* ptr_v)
 {
   //  XX restore loom-bounds check
-  return _mark_post(u3a_outa(ptr_v));
+  u3_post som_p = u3a_outa(ptr_v);
+  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+                ? _mark_post(som_p)
+                : _count_post(som_p, 0);
+
+  return siz_w;
 }
 
 u3_post
@@ -1059,6 +1064,19 @@ u3a_mark_mptr(void* ptr_v)
   return u3a_mark_ptr(ptr_v);
 }
 
+/* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
+*/
+c3_w
+u3a_mark_rptr(void* ptr_v)
+{
+  u3_post som_p = u3a_outa(ptr_v);
+  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+                ? _mark_post(som_p)
+                : _count_post(som_p, 1);
+
+  return siz_w;
+}
+
 /* u3a_mark_noun(): mark a noun for gc.  Produce size.
 */
 c3_w
@@ -1072,7 +1090,7 @@ u3a_mark_noun(u3_noun som)
     }
     else {
       c3_w* dog_w = u3a_to_ptr(som);
-      c3_w  new_w = u3a_mark_ptr(dog_w);
+      c3_w  new_w = u3a_mark_rptr(dog_w);
 
       if ( 0 == new_w || 0xffffffff == new_w ) {      //  see u3a_mark_ptr()
         return siz_w;
@@ -1667,7 +1685,11 @@ u3a_dash(void)
 c3_w
 u3a_sweep(void)
 {
-  return _sweep_directory();
+  c3_w siz_w = !(u3C.wag_w & u3o_debug_ram)
+               ? _sweep_directory()
+               : _sweep_counts();
+
+  return siz_w;
 }
 
 /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
