@@ -1415,3 +1415,296 @@ _sweep_directory(void)
 
   return tot_w;
 }
+
+static c3_w
+_count_post(u3_post som_p, c3_t rat_t)
+{
+  c3_w pag_w = post_to_page(som_p);
+  c3_w blk_w = pag_w >> 5;
+  c3_w bit_w = pag_w & 31;
+  c3_w siz_w;
+
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3_post dir_p = dir_u[pag_w];
+
+  //  som_p is a one-or-more page allocation
+  //
+  if ( dir_p <= u3a_rest_pg ) {
+    if ( som_p & ((1U << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%x (0x%x)\n",
+                      som_p, som_p & ~(((1U << u3a_page) - 1)));
+      return 0;
+    }
+
+    if ( u3a_free_pg == dir_p ) {
+      fprintf(stderr, "palloc: mark: free page som_p=0x%x pag_w=%u\n",
+                      som_p, pag_w);
+      return 0;
+    }
+    else if ( u3a_head_pg != dir_p ) {
+      fprintf(stderr, "palloc: mark: rest page som_p=0x%x dir_p=0x%x\n",
+                      som_p, dir_p);
+      return 0;
+    }
+
+    if ( rat_t ) {
+      u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] >= 0 );
+      u3a_Mark.buf_w[pag_w] += 1;
+    }
+    else {
+      u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] <= 0 );
+      u3a_Mark.buf_w[pag_w] -= 1;
+    }
+
+    //  page(s) already marked
+    //
+    if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
+      return 0;
+   }
+
+    u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
+
+    siz_w   = _pages_size(pag_w);
+    siz_w <<= u3a_page;
+
+    return siz_w;
+  }
+  //  som_p is a chunk allocation
+  //
+  else {
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+    c3_w      pos_w = (som_p & ((1U << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w     *mar_w;
+
+    if ( som_p & (pag_u->len_s - 1) ) {
+      fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\n",
+                      som_p, som_p & ~((1U << u3a_page) - 1),
+                      dir_p, pag_u->len_s);
+      return 0;
+    }
+
+    if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
+      fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\n",
+                      som_p, dir_p, pag_u->len_s);
+      return 0;
+    }
+
+    //  page is marked
+    //
+    if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
+      mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
+      siz_w = mar_w[pos_w] ? 0 : pag_u->len_s;
+    }
+    //  page is unmarked, allocate and initialize mark-array
+    //
+    else {
+      {
+        c3_g bit_g = pag_u->log_s - u3a_min_log;
+        c3_s tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
+        c3_w map_w = tot_s;
+
+        siz_w = pag_u->len_s;
+
+        mar_w = u3a_mark_alloc(map_w);
+        u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
+
+        for ( c3_w i_w = 0; i_w < map_w; i_w++ ) {
+          mar_w[i_w] = 0;
+        }
+
+        //  mark page metadata
+        //
+        if ( page_to_post(pag_u->pag_w) != dir_p ) {
+          u3a_Mark.wee_w[bit_g] += _count_post(dir_p, 0);
+        }
+        else {
+          c3_s siz_s;
+          c3_w hun_w;
+
+          siz_s  = c3_wiseof(u3a_crag) - 1;
+          siz_s += (tot_s + 31) >> 5;
+          hun_w  = 1U + ((siz_s - 1) >> pag_u->log_s);
+
+          for ( c3_w i_w = 0; i_w < hun_w; i_w++ ) {
+            mar_w[i_w]--;
+          }
+
+          u3a_Mark.wee_w[bit_g] += hun_w << pag_u->log_s;
+        }
+
+        u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
+      }
+    }
+
+    if ( rat_t ) {
+      u3_assert( (c3_ws)mar_w[pos_w] >= 0 );
+      mar_w[pos_w]++;
+    }
+    else {
+      u3_assert( (c3_ws)mar_w[pos_w] <= 0 );
+      mar_w[pos_w]--;
+    }
+
+    return siz_w;
+  }
+}
+
+static c3_w
+_sweep_counts(void)
+{
+  u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_w pag_w, blk_w, bit_w, siz_w, weq_w = 0, leq_w = 0, tot_w = 0;
+  u3_post     dir_p, som_p;
+  c3_w       *use_w;
+
+  //  unlink leaked whole chunk-pages
+  //  (we do this first so we won't need to dereference the metadata)
+  //
+  {
+    u3a_crag *pag_u;
+    u3_post  *bit_p;
+    c3_g      bit_g;
+
+    for ( bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
+      bit_p = &(HEAP.wee_p[bit_g]);
+
+      while ( *bit_p ) {
+        pag_u = u3to(u3a_crag, *bit_p);
+        pag_w = pag_u->pag_w;
+        blk_w = pag_w >> 5;
+        bit_w = pag_w & 31;
+
+        if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
+          *bit_p = pag_u->nex_p;
+        }
+        else {
+          bit_p  = &(pag_u->nex_p);
+        }
+      }
+    }
+  }
+
+  pag_w = 0;
+  while ( pag_w < HEAP.len_w ) {
+    blk_w = pag_w >> 5;
+    bit_w = pag_w & 31;
+    dir_p = dir_u[pag_w];
+
+    if ( u3a_head_pg == dir_p ) {
+      som_p = page_to_post(pag_w);
+
+      if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
+        siz_w = _free_pages(som_p, pag_w, dir_p);
+        if ( 1 == siz_w ) {
+          fprintf(stderr, "palloc: leaked page %u\r\n", pag_w);
+        }
+        else {
+          fprintf(stderr, "palloc: leaked pages %u-%u\r\n",
+                          pag_w, pag_w + siz_w - 1);
+        }
+        leq_w += siz_w << u3a_page;
+      }
+      else {
+        siz_w = _pages_size(pag_w);
+
+        if ( (c3_ws)u3a_Mark.buf_w[pag_w] > 0 ) {
+          use_w = u3to(c3_w, som_p);
+
+          if ( *use_w !=  u3a_Mark.buf_w[pag_w] ) {
+            fprintf(stderr, "weak: 0x%x have %u need %u\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
+            *use_w = u3a_Mark.buf_w[pag_w];
+            weq_w += siz_w << u3a_page;;
+          }
+          else {
+            tot_w += siz_w << u3a_page;
+          }
+        }
+        else {
+          tot_w += siz_w << u3a_page;
+        }
+      }
+
+      pag_w += siz_w;
+      continue;
+    }
+    else if ( u3a_rest_pg < dir_p ) {
+      //  entire chunk page is unmarked
+      //
+      if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
+        fprintf(stderr, "palloc: leaked chunk page %u\r\n", pag_w);
+        (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
+        leq_w += 1U << u3a_page;
+      }
+      else {
+        u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+        c3_s      tot_s = 1U << (u3a_page - pag_u->log_s);  //  NB: not pag_u->tot_s
+        u3_post   bas_p = page_to_post(pag_u->pag_w);
+        c3_w     *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
+        c3_w pos_w;
+
+        siz_w = pag_u->len_s;
+
+        //  NB: since at least one chunk is marked,
+        //  _free_words() will never free [pag_u]
+        //
+        for ( c3_s i_s = 0; i_s < tot_s; i_s++ ) {
+          pos_w = i_s;
+          blk_w = i_s >> 5;
+          bit_w = i_s & 31;
+          som_p = bas_p + ((c3_w)i_s << pag_u->log_s);
+
+          if ( !(pag_u->map_w[blk_w] & (1U << bit_w)) ) {
+            if ( mar_w[pos_w] ) {
+              if ( (c3_ws)mar_w[pos_w] > 0 ) {
+                use_w = u3to(c3_w, som_p);
+
+                if ( *use_w != mar_w[pos_w] ) {
+                  fprintf(stderr, "weak: 0x%x have %u need %u\r\n", som_p, *use_w, mar_w[pos_w]);
+                  _print_chunk(stderr, som_p, siz_w);
+                  *use_w = u3a_Mark.buf_w[pag_w];
+                  weq_w += siz_w;
+                }
+                else {
+                  tot_w += siz_w;
+                }
+              }
+              else {
+                if ( (c3_ws)mar_w[pos_w] < -1 ) {
+                  fprintf(stderr, "alias: 0x%x count %d\r\n", som_p, (c3_ws)mar_w[pos_w]);
+                }
+                tot_w += siz_w;
+              }
+            }
+            else {
+              fprintf(stderr, "palloc: leak: 0x%x (chunk %u in page %u)\r\n", som_p, i_s, pag_w);
+
+              _print_chunk(stderr, som_p, siz_w);
+              _free_words(som_p, pag_w, dir_p);
+              leq_w += siz_w;
+            }
+          }
+        }
+      }
+    }
+
+    pag_w++;
+  }
+
+  if ( leq_w ) {
+    u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
+    // u3_assert(0);
+  }
+  if ( weq_w ) {
+    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    // u3_assert(0);
+  }
+
+  u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
+  u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+
+  c3_free(u3a_Mark.bit_w);
+  c3_free(u3a_Mark.buf_w);
+  memset(&u3a_Mark, 0, sizeof(u3a_Mark));
+
+  return tot_w;
+}
