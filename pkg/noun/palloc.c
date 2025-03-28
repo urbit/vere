@@ -599,6 +599,24 @@ _imalloc(c3_w len_w)
   return _alloc_words(c3_max(len_w, u3a_minimum));
 }
 
+static inline c3_w
+_pages_size(c3_w pag_w)
+{
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_w           siz_w = 1;
+
+  //  head-page 0 in a south road can only have a size of 1
+  //
+  if ( pag_w || !HEAP.off_ws ) {
+    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
+      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
+      siz_w++;
+    }
+  }
+
+  return siz_w;
+}
+
 static c3_w
 _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
@@ -634,15 +652,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   }
 
   dir_u[pag_w] = u3a_free_pg;
-
-  //  head-page 0 in a south road can only have a size of 1
-  //
-  if ( pag_w || !HEAP.off_ws ) {
-    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
-      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
-      siz_w++;
-    }
-  }
+  siz_w = _pages_size(pag_w);
 
   //  XX groace
   //
@@ -896,9 +906,7 @@ _irealloc(u3_post som_p, c3_w len_w)
     }
 
     {
-      c3_w siz_w, dif_w;
-
-      for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+      c3_w dif_w, siz_w = _pages_size(pag_w);
 
       old_w = siz_w << u3a_page;
 
@@ -1182,7 +1190,7 @@ _mark_post(u3_post som_p)
 
     u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
 
-    for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+    siz_w   = _pages_size(pag_w);
     siz_w <<= u3a_page;
 
     return siz_w;
@@ -1336,7 +1344,7 @@ _sweep_directory(void)
         leq_w += siz_w << u3a_page;
       }
       else {
-        for ( siz_w = 1; dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg; siz_w++ ) {}
+        siz_w  = _pages_size(pag_w);
         tot_w += siz_w << u3a_page;
       }
 
