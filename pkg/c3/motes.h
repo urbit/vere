@@ -989,6 +989,7 @@
 #   define c3__read   c3_s4('r','e','a','d')
 #   define c3__real   c3_s4('r','e','a','l')
 #   define c3__reck   c3_s4('r','e','c','k')
+#   define c3__redo   c3_s4('r','e','d','o')
 #   define c3__reef   c3_s4('r','e','e','f')
 #   define c3__resd   c3_s4('r','e','s','d')
 #   define c3__rest   c3_s4('r','e','s','t')

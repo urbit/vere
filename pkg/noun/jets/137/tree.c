@@ -253,6 +253,7 @@ static u3j_harm _137_pen_loot_a[] = {{".2", u3wf_loot}, {}};
 static u3j_harm _137_pen__ut_crop_a[] = {{".2", u3wfu_crop}, {}};
 static u3j_harm _137_pen__ut_fish_a[] = {{".2", u3wfu_fish}, {}};
 static u3j_harm _137_pen__ut_fuse_a[] = {{".2", u3wfu_fuse}, {}};
+static u3j_harm _137_pen__ut_redo_a[] = {{".2", u3wfu_redo}, {}};
 static u3j_harm _137_pen__ut_mint_a[] = {{".2", u3wfu_mint}, {}};
 static u3j_harm _137_pen__ut_mull_a[] = {{".2", u3wfu_mull}, {}};
 
@@ -275,6 +276,7 @@ static u3j_core _137_pen__ut_d[] =
     { "crop", 7, _137_pen__ut_crop_a, 0, no_hashes },
     { "fish", 7, _137_pen__ut_fish_a, 0, no_hashes },
     { "fuse", 7, _137_pen__ut_fuse_a, 0, no_hashes },
+    { "redo", 7, _137_pen__ut_redo_a, 0, no_hashes },
     { "mint", 7, _137_pen__ut_mint_a, 0, no_hashes },
     { "mull", 7, _137_pen__ut_mull_a, 0, no_hashes },
     { "nest", 7, 0, _137_pen__ut_nest_d, no_hashes },
