@@ -46,8 +46,8 @@
     u3_fine          fin_s;             //  fine networking
     u3_pier*         pir_u;             //  pier
     union {                             //  uv udp handle
-      uv_udp_t       wax_u;             //
-      uv_handle_t    had_u;             //
+      uv_udp_t*      wax_u;             //
+      uv_handle_t*   had_u;             //
     };                                  //
     c3_l             sev_l;             //  instance number
     ur_cue_test_t*   tes_u;             //  cue-test handle
@@ -89,7 +89,13 @@
       c3_d           vil_d;             //  encryption failures
       c3_d           saw_d;             //  successive scry failures
     } sat_u;                            //
+    u3_auto*         mes_u;             //  mesa pointer
   } u3_ames;
+
+STATIC_ASSERT(
+    ( ((void*)(u3_ames*)(void*)0) ==
+      ((void*)(u3_ames*)(void*)&(((u3_ames*)(void*)0)->car_u)) ),
+    "u3_ames struct alignment" );
 
 /* u3_head: ames or fine packet header
 */
@@ -201,20 +207,20 @@ const c3_c* PATH_PARSER =
 
 static c3_o net_o = c3y;  // online heuristic to limit verbosity
 
-/* _ames_alloc(): libuv buffer allocator.
-*/
-static void
-_ames_alloc(uv_handle_t* had_u,
-            size_t len_i,
-            uv_buf_t* buf
-            )
-{
-  //  we allocate 2K, which gives us plenty of space
-  //  for a single ames packet (max size 1060 bytes)
-  //
-  void* ptr_v = c3_malloc(2048);
-  *buf = uv_buf_init(ptr_v, 2048);
-}
+///* _ames_alloc(): libuv buffer allocator.
+//*/
+//static void
+//_ames_alloc(uv_handle_t* had_u,
+//            size_t len_i,
+//            uv_buf_t* buf
+//            )
+//{
+//  //  we allocate 2K, which gives us plenty of space
+//  //  for a single ames packet (max size 1060 bytes)
+//  //
+//  void* ptr_v = c3_malloc(2048);
+//  *buf = uv_buf_init(ptr_v, 2048);
+//}
 
 static void
 _ames_pact_free(u3_pact* pac_u)
@@ -734,7 +740,7 @@ _ames_send(u3_pact* pac_u)
     {
       uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
-                                   &u3_Host.wax_u,
+                                   sam_u->wax_u,
                                    &buf_u, 1,
                                    (const struct sockaddr*)&pac_u->lan_u,
                                    _ames_send_cb);
@@ -838,7 +844,7 @@ _ames_pact_to_noun(u3_pact* pac_u)
 
 /* _ames_czar_port(): udp port for galaxy.
 */
-static c3_s
+c3_s
 _ames_czar_port(c3_y imp_y)
 {
   if ( c3n == u3_Host.ops_u.net ) {
@@ -1831,39 +1837,39 @@ _ames_hear(u3_ames* sam_u,
   }
 }
 
-/* _ames_recv_cb(): udp message receive callback.
-*/
-static void
-_ames_recv_cb(uv_udp_t*        wax_u,
-              ssize_t          nrd_i,
-              const uv_buf_t * buf_u,
-              const struct sockaddr* adr_u,
-              unsigned         flg_i)
-{
-  u3_ames* sam_u = u3_Host.sam_u; // wax_u->data;
-  const struct sockaddr_in* lan_u = (const struct sockaddr_in*)adr_u;
-
-  if ( 0 > nrd_i ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("ames: recv: fail: %s", uv_strerror(nrd_i));
-    }
-    c3_free(buf_u->base);
-  }
-  else if ( 0 == nrd_i ) {
-    c3_free(buf_u->base);
-  }
-  else if ( flg_i & UV_UDP_PARTIAL ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("ames: recv: fail: message truncated");
-    }
-    c3_free(buf_u->base);
-  }
-  else {
-    //  NB: [nrd_i] will never exceed max length from _ames_alloc()
-    //
-    _ames_hear(sam_u, lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
-  }
-}
+///* _ames_recv_cb(): udp message receive callback.
+//*/
+//static void
+//_ames_recv_cb(uv_udp_t*        wax_u,
+//              ssize_t          nrd_i,
+//              const uv_buf_t * buf_u,
+//              const struct sockaddr* adr_u,
+//              unsigned         flg_i)
+//{
+//  u3_ames* sam_u = u3_Host.sam_u; // wax_u->data;
+//  const struct sockaddr_in* lan_u = (const struct sockaddr_in*)adr_u;
+//
+//  if ( 0 > nrd_i ) {
+//    if ( u3C.wag_w & u3o_verbose ) {
+//      u3l_log("ames: recv: fail: %s", uv_strerror(nrd_i));
+//    }
+//    c3_free(buf_u->base);
+//  }
+//  else if ( 0 == nrd_i ) {
+//    c3_free(buf_u->base);
+//  }
+//  else if ( flg_i & UV_UDP_PARTIAL ) {
+//    if ( u3C.wag_w & u3o_verbose ) {
+//      u3l_log("ames: recv: fail: message truncated");
+//    }
+//    c3_free(buf_u->base);
+//  }
+//  else {
+//    //  NB: [nrd_i] will never exceed max length from _ames_alloc()
+//    //
+//    _ames_hear(sam_u, lan_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+//  }
+//}
 
 static void natpmp_init(uv_timer_t* handle);
 
@@ -2410,11 +2416,9 @@ _ames_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
 /* _ames_exit_cb(): dispose resources aftr close.
 */
-static void
-_ames_exit_cb(uv_handle_t* had_u)
+void
+_ames_exit_cb(u3_ames* sam_u)
 {
-  u3_ames* sam_u = had_u->data;
-
   u3_panc* pan_u = sam_u->pan_u;
   while (0 != pan_u) {
     u3_panc* nex_u = pan_u->nex_u;
@@ -2436,7 +2440,6 @@ static void
 _ames_io_exit(u3_auto* car_u)
 {
   u3_ames* sam_u = (u3_ames*)car_u;
-  uv_close(&sam_u->had_u, _ames_exit_cb);
   uv_close((uv_handle_t*)&sam_u->nat_u.tim_u, 0);
 
   uv_handle_type handle = uv_handle_get_type((uv_handle_t *)&sam_u->nat_u.pol_u);
@@ -2530,9 +2533,14 @@ _ames_io_slog(u3_auto* car_u)
 /* u3_ames_io_init(): initialize ames I/O.
 */
 u3_auto*
-u3_ames_io_init(u3_pier* pir_u)
+u3_ames_io_init(u3_pier* pir_u,
+                uv_udp_t* wax_u,
+                u3_auto* mes_u,
+                c3_w**   imp_u)
 {
   u3_ames* sam_u  = c3_calloc(sizeof(*sam_u));
+  sam_u->wax_u    = wax_u;
+  sam_u->mes_u    = mes_u;
   sam_u->pir_u    = pir_u;
   sam_u->nal_o    = c3n;
   sam_u->fig_u.see_o = c3y;
@@ -2574,9 +2582,10 @@ u3_ames_io_init(u3_pier* pir_u)
   //
   sam_u->lax_p = u3h_new_cache(500000);
 
-  u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
-  u3_assert( !uv_udp_init_ex(u3L, &u3_Host.wax_u, UV_UDP_RECVMMSG) );
-  sam_u->wax_u.data = sam_u;
+  //XX: zif what?
+  //u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
+  //u3_assert( !uv_udp_init_ex(u3L, sam_u->wax_u, UV_UDP_RECVMMSG) );
+  //sam_u->wax_u->data = sam_u;
 
   sam_u->sil_u = u3s_cue_xeno_init();
   sam_u->tes_u = ur_cue_test_init();
@@ -2608,8 +2617,7 @@ u3_ames_io_init(u3_pier* pir_u)
     u3z(now);
   }
 
-  // XX declare void pointer to u3_host and add sam_u in it
-  u3_Host.sam_u = sam_u;
-  u3_Host.imp_u = sam_u->zar_u.pip_w;
+  *imp_u = sam_u->zar_u.pip_w;
+
   return car_u;
 }

@@ -204,7 +204,7 @@ const c_source_files = [_][]const u8{
     "db/lmdb.c",
     "disk.c",
     "foil.c",
-    "io/ames.c",
+    "io/ames/ames.c",
     "io/ames/stun.c",
     "io/behn.c",
     "io/conn.c",

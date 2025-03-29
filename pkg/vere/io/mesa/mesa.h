@@ -188,6 +188,7 @@ typedef struct _u3_peer {
   c3_o           ful_o;  //  has this been initialized?
   sockaddr_in    dan_u;  //  direct lane (nullable)
   u3_lane_state  dir_u;  //  direct lane state
+  c3_o           fef_o;
   c3_y           imp_y;  //  galaxy @p
   u3_lane_state  ind_u;  //  indirect lane state
 } u3_peer;

@@ -236,7 +236,7 @@ _stun_on_request(u3_stun_client*   sun_u,
   _stun_make_response(req_y, lan_u, snd_u->hun_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 40);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u,
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, sun_u->wax_u,
                                &buf_u, 1, (const struct sockaddr*)lan_u, _stun_send_cb);
 
   if ( sas_i ) {
@@ -308,7 +308,7 @@ _stun_send_request(u3_stun_client* sun_u)
   _stun_make_request(snd_u->hun_y, sun_u->tid_y);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
-  c3_i     sas_i = uv_udp_send(&snd_u->req_u, &u3_Host.wax_u, &buf_u, 1,
+  c3_i     sas_i = uv_udp_send(&snd_u->req_u, sun_u->wax_u, &buf_u, 1,
                                (const struct sockaddr*)&sun_u->lan_u, _stun_send_cb);
 
   if ( sas_i ) {

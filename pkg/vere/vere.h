@@ -339,9 +339,6 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
-        void*      sam_u;                   //  old ames, "unified driver" hack
-        uv_udp_t   wax_u;                   //  "unified driver" udp send handle
-        c3_w*      imp_u;                   //  "unified driver" galaxy IP:s
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.
@@ -883,6 +880,11 @@
         u3_noun
         u3_auto_info(u3_auto* car_u);
 
+      /* u3_auto_link(): validate and link initalized [car_u]
+      */
+        u3_auto*
+        u3_auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u);
+
       /* u3_auto_slog(): print status info.
       */
         void
@@ -1242,7 +1244,10 @@
       /* u3_ames_io_init(): initialize ames I/O.
       */
         u3_auto*
-        u3_ames_io_init(u3_pier* pir_u);
+        u3_ames_io_init(u3_pier* pir_u,
+                        uv_udp_t* wax_u,
+                        u3_auto* mes_u,
+                        c3_w**   imp_u);
 
       /* u3_ames_decode_lane(): destructure lane from noun
       */

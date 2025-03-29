@@ -12,6 +12,7 @@
         
         typedef struct _u3_stun_client {    //    stun client state:
           u3_auto*       car_u;             //  driver backpointer
+                                                    uv_udp_t*      wax_u;
           u3_stun_state  sat_y;             //  formal state
           c3_y           tid_y[12];         //  last transaction id
           c3_y           dad_y;             //  sponsoring galaxy
