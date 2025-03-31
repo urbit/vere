@@ -1402,6 +1402,11 @@ u3m_soft_cax(u3_funq fun_f,
   u3_noun why = 0, pro;
   u3_noun cax = u3_nul;
 
+  /* Save and set memo cache harvesting flag.
+  */
+  c3_w wag_w = u3C.wag_w;
+  u3C.wag_w |= u3o_cash;
+
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1421,6 +1426,7 @@ u3m_soft_cax(u3_funq fun_f,
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
+    u3C.wag_w = wag_w;
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
@@ -1445,6 +1451,7 @@ u3m_soft_cax(u3_funq fun_f,
   }
   else {
     u3t_init();
+    u3C.wag_w = wag_w;
 
     /* Produce - or fall again.
     */
@@ -1453,8 +1460,21 @@ u3m_soft_cax(u3_funq fun_f,
       switch ( u3h(why) ) {
         default: u3_assert(0); return 0;
 
+        case 1: {                             //  blocking request
+          pro = u3nc(u3nc(2, u3m_love(u3R->bug.tax)), u3_nul);
+        } break;
+
         case 2: {                             //  true exit
           pro = u3nc(u3m_love(why), u3_nul);
+        } break;
+
+        case 3: {                             //  failure; rebail w/trace
+          u3_noun yod = u3m_love(u3t(why));
+
+          u3m_bail
+            (u3nt(3,
+                  u3a_take(u3h(yod)),
+                  u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
         } break;
       }
     }
