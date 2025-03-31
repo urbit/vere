@@ -2608,7 +2608,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 
   if ( c3y == nam_u->nit_o ) {
-    u3l_log("dupe init");
+    /* u3l_log("dupe init"); */
     return;
   }
 
@@ -2638,10 +2638,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     //         req_u->tof_d,
     //         req_u->tob_d);
 
-    c3_d now_d = _get_now_micros();
-    u3l_log("%" PRIu64 " kilobytes took %f ms",
-            req_u->tof_d,
-            (now_d - sam_u->tim_d)/1000.0);
+    /* c3_d now_d = _get_now_micros(); */
+    /* u3l_log("%" PRIu64 " kilobytes took %f ms", */
+    /*         req_u->tof_d, */
+    /*         (now_d - sam_u->tim_d)/1000.0); */
     // u3l_log("page handling took %"PRIu64, avg_time());
     //done = c3y;
 
