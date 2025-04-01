@@ -1375,6 +1375,37 @@ u3a_quac_free(u3m_quac* qua_u)
   c3_free(qua_u);
 }
 
+static c3_w
+_ca_prof_mark(u3_noun som)
+{
+  if ( c3y == u3a_is_senior(u3R, som) ) {
+    return 0;
+  }
+
+  //  marking memory-profile entries under u3o_debug_ram
+  //  requires special care to avoid over-incrementing the refcount,
+  //  as the entries in the profile are not true roots:
+  //  they either belong to arvo or the profile itself.
+  //  we measure them here, but account for them elsewhere (subsequently)
+  //  from a refcounting standpoint
+  //
+  u3_post som_p = u3a_to_off(som);
+  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+                ? _mark_post(som_p)
+                : _count_post(som_p, 2);
+
+  if ( !siz_w ) {
+    return 0;
+  }
+
+  if ( c3y == u3a_is_cell(som) ) {
+    siz_w += u3a_mark_noun(u3h(som));
+    siz_w += u3a_mark_noun(u3t(som));
+  }
+
+  return siz_w;
+}
+
 /* u3a_prof(): mark/measure/print memory profile. RETAIN.
 */
 u3m_quac*
@@ -1408,36 +1439,8 @@ u3a_prof(FILE* fil_u, u3_noun mas)
       return NULL;
     }
     else if ( c3y == it_mas ) {
-      c3_w siz_w = u3a_mark_noun(tt_mas);
+      c3_w siz_w = _ca_prof_mark(tt_mas);
 
-#if 0
-      /* The basic issue here is that tt_mas is included in .sac
-       * (the whole profile), so they can't both be roots in the
-       * normal sense. When we mark .sac later on, we want tt_mas
-       * to appear unmarked, but its children should be already
-       * marked.
-       *
-       * see u3a_mark_ptr().
-      */
-      if ( c3y == u3a_is_dog(tt_mas) ) {
-        u3a_noun* box_u = u3a_to_ptr(tt_mas);
-#ifdef U3_MEMORY_DEBUG
-        if ( 1 == box_u->eus_w ) {
-          box_u->eus_w = 0xffffffff;
-        }
-        else {
-          box_u->eus_w -= 1;
-        }
-#else
-        if ( -1 == (c3_w)box_u->use_w ) {
-          box_u->use_w = 0x80000000;
-        }
-        else {
-          box_u->use_w += 1;
-        }
-#endif
-      }
-#endif
       pro_u->nam_c = u3r_string(h_mas);
       pro_u->siz_w = siz_w*4;
       pro_u->qua_u = NULL;

@@ -1417,7 +1417,7 @@ _sweep_directory(void)
 }
 
 static c3_w
-_count_post(u3_post som_p, c3_t rat_t)
+_count_post(u3_post som_p, c3_y rat_y)
 {
   c3_w pag_w = post_to_page(som_p);
   c3_w blk_w = pag_w >> 5;
@@ -1447,13 +1447,31 @@ _count_post(u3_post som_p, c3_t rat_t)
       return 0;
     }
 
-    if ( rat_t ) {
-      u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] >= 0 );
-      u3a_Mark.buf_w[pag_w] += 1;
-    }
-    else {
-      u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] <= 0 );
-      u3a_Mark.buf_w[pag_w] -= 1;
+    switch ( rat_y ) {
+      case 0: {  //  not refcounted
+        u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] <= 0 );
+        u3a_Mark.buf_w[pag_w] -= 1;
+      } break;
+
+      case 1: {  //  refcounted
+        //  NB: "premarked"
+        //
+        if ( 0x80000000 == u3a_Mark.buf_w[pag_w] ) {
+          u3a_Mark.buf_w[pag_w] = 1;
+        }
+        else {
+          u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] >= 0 );
+          u3a_Mark.buf_w[pag_w] += 1;
+        }
+      } break;
+
+      case 2: {  //  refcounted, pre-mark
+        if ( !u3a_Mark.buf_w[pag_w] ) {
+          u3a_Mark.buf_w[pag_w] = 0x80000000;
+        }
+      } break;
+
+      default: u3_assert(0);
     }
 
     //  page(s) already marked
@@ -1493,7 +1511,7 @@ _count_post(u3_post som_p, c3_t rat_t)
     //
     if ( u3a_Mark.bit_w[blk_w] & (1U << bit_w) ) {
       mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
-      siz_w = mar_w[pos_w] ? 0 : pag_u->len_s;
+      siz_w = (!mar_w[pos_w]) ? pag_u->len_s : 0;
     }
     //  page is unmarked, allocate and initialize mark-array
     //
@@ -1536,13 +1554,31 @@ _count_post(u3_post som_p, c3_t rat_t)
       }
     }
 
-    if ( rat_t ) {
-      u3_assert( (c3_ws)mar_w[pos_w] >= 0 );
-      mar_w[pos_w]++;
-    }
-    else {
-      u3_assert( (c3_ws)mar_w[pos_w] <= 0 );
-      mar_w[pos_w]--;
+    switch ( rat_y ) {
+      case 0: {  //  not refcounted
+        u3_assert( (c3_ws)mar_w[pos_w] <= 0 );
+        mar_w[pos_w] -= 1;
+      } break;
+
+      case 1: {  //  refcounted
+        //  NB: "premarked"
+        //
+        if ( 0x80000000 == mar_w[pos_w] ) {
+          mar_w[pos_w] = 1;
+        }
+        else {
+          u3_assert( (c3_ws)mar_w[pos_w] >= 0 );
+          mar_w[pos_w] += 1;
+        }
+      } break;
+
+      case 2: {  //  refcounted, pre-mark
+        if ( !mar_w[pos_w] ) {
+          mar_w[pos_w] = 0x80000000;
+        }
+      } break;
+
+      default: u3_assert(0);
     }
 
     return siz_w;
@@ -1619,6 +1655,11 @@ _sweep_counts(void)
             tot_w += siz_w << u3a_page;
           }
         }
+        else if ( 0x80000000 == u3a_Mark.buf_w[pag_w] ) {
+          fprintf(stderr, "sweep: error: premarked %u pages at 0x%x\r\n",
+                          siz_w, som_p);
+          u3_assert(0);
+        }
         else {
           tot_w += siz_w << u3a_page;
         }
@@ -1667,6 +1708,11 @@ _sweep_counts(void)
                 else {
                   tot_w += siz_w;
                 }
+              }
+              else if ( 0x80000000 == mar_w[pos_w] ) {
+                fprintf(stderr, "sweep: error: premarked 0x%x (chunk %u in page %u)\r\n",
+                                som_p, i_s, pag_w);
+                u3_assert(0);
               }
               else {
                 if ( (c3_ws)mar_w[pos_w] < -1 ) {
