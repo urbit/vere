@@ -474,7 +474,7 @@ static u3j_harm _137_qua_pose_a[] = {{".2", u3we_pose}, {}};
 
 static u3j_harm _137_qua_sfix_a[] = {{".2", u3we_sfix}, {}};
 
-static u3j_harm _137_qua_mink_a[] = {{".2", u3we_mink}, {}};
+static u3j_harm _137_qua_mink_a[] = {{".2", u3we_mink_137}, {}};
 static u3j_harm _137_qua_mole_a[] = {{".2", u3we_mole}, {}};
 static u3j_harm _137_qua_mule_a[] = {{".2", u3we_mule}, {}};
 

@@ -991,7 +991,7 @@ static c3_c* _140_qua_sfix_ha[] = {
   0
 };
 
-static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink}, {}};
+static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink_137}, {}};
 static c3_c* _140_qua_mink_ha[] = {
   "99b653da6a21fa3375424811af288f59164592ece4a072abc460df03e81abcaf",
   0
@@ -2638,12 +2638,14 @@ u3j_core _a50_d[] =
 };
 
 extern u3j_core _k137_d[];
+extern u3j_core _k136_d[];
 
 static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
   { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
   { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
   { "k137", 0, 0, _k137_d, no_hashes, 0, (u3j_core*) 137,     0 },
+  { "k136", 0, 0, _k136_d, no_hashes, 0, (u3j_core*) 136,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };
