@@ -1649,7 +1649,7 @@ _sweep_counts(void)
         if ( (c3_ws)u3a_Mark.buf_w[pag_w] > 0 ) {
           use_w = u3to(c3_w, som_p);
 
-          if ( *use_w !=  u3a_Mark.buf_w[pag_w] ) {
+          if ( *use_w != u3a_Mark.buf_w[pag_w] ) {
             fprintf(stderr, "weak: 0x%x have %u need %u\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
             *use_w = u3a_Mark.buf_w[pag_w];
             weq_w += siz_w << u3a_page;;
@@ -1705,7 +1705,7 @@ _sweep_counts(void)
                 if ( *use_w != mar_w[pos_w] ) {
                   fprintf(stderr, "weak: 0x%x have %u need %u\r\n", som_p, *use_w, mar_w[pos_w]);
                   _print_chunk(stderr, som_p, siz_w);
-                  *use_w = u3a_Mark.buf_w[pag_w];
+                  *use_w = mar_w[pos_w];
                   weq_w += siz_w;
                 }
                 else {
