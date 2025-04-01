@@ -614,13 +614,6 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
   rud = u3dc("scot", c3__uv, u3k(rid));
 
-  // {
-  //   tag_c = u3r_string(tag);
-  //   rid_c = u3r_string(rud);
-  //   u3l_log("conn: %s %s", tag_c, rid_c);
-  //   c3_free(tag_c); c3_free(rid_c);
-  // }
-
   switch (tag) {
     default: {
       err_i = -3; err_c = "tag-unknown";
@@ -875,7 +868,7 @@ _conn_ef_handle(u3_conn*  con_u,
     }
   }
   else {
-    u3l_log("conn: handle-no-coq %" PRIx32 " %" PRIu32 "",
+    u3l_log("conn: handle-no-coq %" PRIx32 " %" PRIu32,
             sev_l, coq_l);
   }
   u3z(rid); u3z(tag); u3z(dat);

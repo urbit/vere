@@ -286,7 +286,6 @@ u3v_poke(u3_noun ovo)
 }
 
 /* u3v_poke_raw(): u3v_poke w/out u3A->now XX replace
-** TODO: NOTE: replaces _cv_poke_eve from mars/urth split pr
 */
 u3_noun
 u3v_poke_raw(u3_noun sam)

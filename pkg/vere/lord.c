@@ -860,7 +860,7 @@ _lord_on_serf_err_cb(uv_stream_t* pyp_u,
     uv_read_stop(pyp_u);
 
     if ( siz_i != UV_EOF ) {
-      u3l_log("lord: serf stderr: %s\r\n", uv_strerror(siz_i));
+      u3l_log("lord: serf stderr: %s", uv_strerror(siz_i));
     }
   }
 
@@ -905,7 +905,7 @@ _lord_on_serf_bail(void*       ptr_v,
     u3l_log("pier: serf unexpectedly shut down\r\n");
   }
   else {
-    u3l_log("pier: serf error: %s\r\n", err_c);
+    u3l_log("pier: serf error: %s", err_c);
   }
 
   _lord_bail(god_u);
@@ -931,7 +931,7 @@ u3_lord_info(u3_lord* god_u)
 void
 u3_lord_slog(u3_lord* god_u)
 {
-  u3l_log("  lord: live=%s, event=%" PRIu64 ", queue=%u\n",
+  u3l_log("  lord: live=%s, event=%" PRIu64 ", queue=%u",
           ( c3y == god_u->liv_o ) ? "&" : "|",
           god_u->eve_d,
           god_u->dep_w);
@@ -966,7 +966,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  cev_c[11];
     c3_i  err_i;
 
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
+    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
                    god_u->key_d[0],
                    god_u->key_d[1],
                    god_u->key_d[2],
