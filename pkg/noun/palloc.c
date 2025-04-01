@@ -1,6 +1,7 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
+#include "options.h"
 #include "vortex.h"
 
 
@@ -1406,8 +1407,10 @@ _sweep_directory(void)
     // u3_assert(0);
   }
 
-  u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
-  u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  if ( u3C.wag_w & u3o_verbose ) {
+    u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
+    u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  }
 
   c3_free(u3a_Mark.bit_w);
   c3_free(u3a_Mark.buf_w);
@@ -1745,8 +1748,10 @@ _sweep_counts(void)
     // u3_assert(0);
   }
 
-  u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
-  u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  if ( u3C.wag_w & u3o_verbose ) {
+    u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
+    u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  }
 
   c3_free(u3a_Mark.bit_w);
   c3_free(u3a_Mark.buf_w);
