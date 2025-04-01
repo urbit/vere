@@ -12,6 +12,7 @@
 #include "imprison.h"
 #include "jets.h"
 #include "manage.h"
+#include "options.h"
 #include "retrieve.h"
 #include "serial.h"
 #include "ur/ur.h"
@@ -409,7 +410,10 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 
   //  establish correct refcounts via tracing
   //
+  c3_w wag_w = u3C.wag_w;
+  u3C.wag_w |= u3o_debug_ram;
   u3m_grab(u3_none);
+  u3C.wag_w  = wag_w;
 
   //  re-establish warm jet state
   //
