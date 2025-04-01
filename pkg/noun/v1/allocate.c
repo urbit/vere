@@ -7,14 +7,14 @@
 
 /* _box_v1_slot(): select the right free list to search for a block.
 */
-static c3_w_tmp
-_box_v1_slot(c3_w_tmp siz_w)
+static c3_w_new
+_box_v1_slot(c3_w_new siz_w)
 {
   if ( siz_w < u3a_v1_minimum ) {
     return 0;
   }
   else {
-    c3_w_tmp i_w = 1;
+    c3_w_new i_w = 1;
 
     while ( 1 ) {
       if ( i_w == u3a_v1_fbox_no ) {
@@ -32,10 +32,10 @@ _box_v1_slot(c3_w_tmp siz_w)
 /* _box_v1_make(): construct a box.
 */
 static u3a_v1_box*
-_box_v1_make(void* box_v, c3_w_tmp siz_w, c3_w_tmp use_w)
+_box_v1_make(void* box_v, c3_w_new siz_w, c3_w_new use_w)
 {
   u3a_v1_box* box_u = box_v;
-  c3_w_tmp*    box_w = box_v;
+  c3_w_new*    box_w = box_v;
 
   u3_assert(siz_w >= u3a_v1_minimum);
 
@@ -60,7 +60,7 @@ _box_v1_attach(u3a_v1_box* box_u)
   u3_assert(0 != u3of(u3a_v1_fbox, box_u));
 
   {
-    c3_w_tmp           sel_w = _box_v1_slot(box_u->siz_w);
+    c3_w_new           sel_w = _box_v1_slot(box_u->siz_w);
     u3p(u3a_v1_fbox)  fre_p = u3of(u3a_v1_fbox, box_u);
     u3p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_w];
     u3p(u3a_v1_fbox)  nex_p = *pfr_p;
@@ -97,7 +97,7 @@ _box_v1_detach(u3a_v1_box* box_u)
     u3to(u3a_v1_fbox, pre_p)->nex_p = nex_p;
   }
   else {
-    c3_w_tmp sel_w = _box_v1_slot(box_u->siz_w);
+    c3_w_new sel_w = _box_v1_slot(box_u->siz_w);
 
     if ( fre_p != u3R_v1->all.fre_p[sel_w] ) {
       u3_assert(!"loom: corrupt");
@@ -111,7 +111,7 @@ _box_v1_detach(u3a_v1_box* box_u)
 static void
 _box_v1_free(u3a_v1_box* box_u)
 {
-  c3_w_tmp* box_w = (c3_w_tmp *)(void *)box_u;
+  c3_w_new* box_w = (c3_w_new *)(void *)box_u;
 
   u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
@@ -124,7 +124,7 @@ _box_v1_free(u3a_v1_box* box_u)
     /* Try to coalesce with the block below.
     */
     if ( box_w != u3a_v1_into(u3R_v1->rut_p) ) {
-      c3_w_tmp       laz_w = *(box_w - 1);
+      c3_w_new       laz_w = *(box_w - 1);
       u3a_v1_box* pox_u = (u3a_v1_box*)(void *)(box_w - laz_w);
 
       if ( 0 == pox_u->use_w ) {
@@ -132,7 +132,7 @@ _box_v1_free(u3a_v1_box* box_u)
         _box_v1_make(pox_u, (laz_w + box_u->siz_w), 0);
 
         box_u = pox_u;
-        box_w = (c3_w_tmp*)(void *)pox_u;
+        box_w = (c3_w_new*)(void *)pox_u;
       }
     }
 
@@ -169,9 +169,9 @@ u3a_v1_free(void* tox_v)
   if (NULL == tox_v)
     return;
 
-  c3_w_tmp* tox_w = tox_v;
-  c3_w_tmp  pad_w = tox_w[-1];
-  c3_w_tmp* org_w = tox_w - (pad_w + 1);
+  c3_w_new* tox_w = tox_v;
+  c3_w_new  pad_w = tox_w[-1];
+  c3_w_new* org_w = tox_w - (pad_w + 1);
 
   // u3l_log("free %p %p", org_w, tox_w);
   u3a_v1_wfree(org_w);
@@ -194,7 +194,7 @@ _me_v1_lose_north(u3_noun dog)
 {
 top:
   {
-    c3_w_tmp* dog_w      = u3a_v1_to_ptr(dog);
+    c3_w_new* dog_w      = u3a_v1_to_ptr(dog);
     u3a_v1_box* box_u = u3a_v1_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {

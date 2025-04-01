@@ -11,7 +11,7 @@
 /* u3h_v3_new_cache(): create hashtable with bounded size.
 */
 u3p(u3h_v3_root)
-u3h_v3_new_cache(c3_w_tmp max_w)
+u3h_v3_new_cache(c3_w_new max_w)
 {
   //  set globals (required for aliased functions)
   u3H = (u3v_home*) u3H_v3;
@@ -19,7 +19,7 @@ u3h_v3_new_cache(c3_w_tmp max_w)
 
   u3h_v3_root*     har_u = u3a_v3_walloc(c3_wiseof(u3h_v3_root));
   u3p(u3h_v3_root) har_p = u3of(u3h_v3_root, har_u);
-  c3_w_tmp        i_w;
+  c3_w_new        i_w;
 
   har_u->max_w       = max_w;
   har_u->use_w       = 0;

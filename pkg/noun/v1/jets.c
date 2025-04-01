@@ -15,7 +15,7 @@
 static void
 _cj_v1_fink_free(u3p(u3j_v1_fink) fin_p)
 {
-  c3_w_tmp i_w;
+  c3_w_new i_w;
   u3j_v1_fink* fin_u = u3to(u3j_v1_fink, fin_p);
   u3a_v1_lose(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
