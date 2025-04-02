@@ -275,6 +275,7 @@ u3_mcut_hosts(c3_c* buf_c, c3_w len_w, u3_noun hot)
     u3_noun h_oth = u3h(oth);
 
     len_w = u3_mcut_path(buf_c, len_w, '.', u3kb_flop(u3k(h_oth)));
+    len_w = u3_mcut_char(buf_c, len_w, '.');
     len_w = u3_mcut_char(buf_c, len_w, '\0');
     oth = u3t(oth);
 
@@ -331,5 +332,4 @@ u3_mpef_turfs(c3_c* buf_c, c3_w len_w, c3_c* pef_c, c3_c** tuf_c)
   }
   return len_w;
 }
-
 

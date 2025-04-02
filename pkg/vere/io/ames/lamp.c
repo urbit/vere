@@ -36,8 +36,6 @@ _mesa_gut_peer(void* sam_u, u3_ship her_u);
 c3_o
 _ames_lamp_lane(u3_auto* car_u, u3_ship her_u, sockaddr_in* lan_u)
 {
-  c3_c* her_c = u3_ship_to_string(her_u);
-  c3_free(her_c);
   u3_peer* per_u = _mesa_get_peer(car_u, her_u);
   if (NULL == per_u) return c3n;
 
