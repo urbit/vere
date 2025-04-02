@@ -1525,7 +1525,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3a_init_mark();
+  u3a_mark_init();
   {
     va_list vap;
     u3_noun tur;
