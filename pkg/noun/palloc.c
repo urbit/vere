@@ -1412,9 +1412,7 @@ _sweep_directory(void)
     u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
   }
 
-  c3_free(u3a_Mark.bit_w);
-  c3_free(u3a_Mark.buf_w);
-  memset(&u3a_Mark, 0, sizeof(u3a_Mark));
+  u3a_mark_done(); // XX move
 
   return tot_w;
 }
@@ -1753,9 +1751,7 @@ _sweep_counts(void)
     u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
   }
 
-  c3_free(u3a_Mark.bit_w);
-  c3_free(u3a_Mark.buf_w);
-  memset(&u3a_Mark, 0, sizeof(u3a_Mark));
+  u3a_mark_done(); // XX move
 
   return tot_w;
 }

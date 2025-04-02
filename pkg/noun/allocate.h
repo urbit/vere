@@ -481,9 +481,11 @@ u3a_init_heap(void);
 void
 u3a_drop_heap(u3_post cap_p, u3_post ear_p);
 void
-u3a_init_mark(void);
+u3a_mark_init(void);
 void*
 u3a_mark_alloc(c3_w len_w);
+void
+u3a_mark_done(void);
 
 void*
 u3a_into_fn(u3_post);

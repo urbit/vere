@@ -92,7 +92,7 @@ u3a_drop_heap(u3_post cap_p, u3_post ear_p)
 }
 
 void
-u3a_init_mark(void)
+u3a_mark_init(void)
 {
   c3_w bit_w = (u3R->hep.len_w + 31) >> 5;
 
@@ -102,6 +102,14 @@ u3a_init_mark(void)
   u3a_Mark.buf_w = c3_calloc(sizeof(c3_w) * u3a_Mark.siz_w);
 
   memset(u3a_Mark.wee_w, 0, sizeof(c3_w) * u3a_crag_no);
+}
+
+void
+u3a_mark_done(void)
+{
+  c3_free(u3a_Mark.bit_w);
+  c3_free(u3a_Mark.buf_w);
+  memset(&u3a_Mark, 0, sizeof(u3a_Mark));
 }
 
 void*
