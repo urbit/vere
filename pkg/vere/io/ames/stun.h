@@ -15,7 +15,7 @@
                                                     uv_udp_t*      wax_u;
           u3_stun_state  sat_y;             //  formal state
           c3_y           tid_y[12];         //  last transaction id
-          c3_y           dad_y;             //  sponsoring galaxy
+          u3_ship        dad_u;             //  sponsoring galaxy
           sockaddr_in    lan_u;             //  sponsoring galaxy IP and port
           uv_timer_t     tim_u;             //  keepalive timer handle
           struct timeval sar_u;             //  date we started trying to send

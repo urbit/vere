@@ -456,13 +456,5 @@ u3_auto_init(u3_pier* pir_u)
   car_u = u3_auto_link(u3_fore_io_init(pir_u), pir_u, car_u);
   car_u = u3_auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
 
-  u3_auto* rac_u = car_u;
-  while (rac_u != NULL) {
-    c3_c* nam_c = u3r_string(rac_u->nam_m);
-    u3l_log("car %s", nam_c);
-    c3_free(nam_c);
-    rac_u = rac_u->nex_u;
-  }
-
   return car_u;
 }

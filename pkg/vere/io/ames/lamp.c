@@ -1,17 +1,12 @@
 #include "vere.h"
-#include "io/ames/lamp.h"
+#include "io/lamp.h"
 
-#define NAME tuf_map
-#define KEY_TY u3_ship
-#define HASH_FN u3_hash_ship
-#define CMPR_FN u3_cmpr_ship
-#define VAL_TY c3_y**
-#define IMPLEMENTATION_MODE
-#include "verstable.h"
+c3_o
+_mesa_is_lane_zero(sockaddr_in lan_u);
 
 /* _ames_czar_port(): udp port for galaxy.
 */
-static c3_s
+c3_s
 _ames_czar_port(c3_y imp_y)
 {
   if ( c3n == u3_Host.ops_u.net ) {
@@ -30,66 +25,46 @@ _ames_czar_str(c3_c zar_c[3], c3_y imp_y)
   u3_po_to_suffix(imp_y, (c3_y*)zar_c, (c3_y*)zar_c + 1, (c3_y*)zar_c + 2);
 }
 
-/* _ames_etch_czar: galaxy fqdn
-*/
-static c3_i
-_ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
-{
-  c3_c* bas_c = dns_c;
-  c3_w  len_w = strlen(dom_c);
+u3_peer*
+_mesa_get_peer(void* sam_u, u3_ship her_u);
 
-  //  name 3, '.' 2, trailing null
-  //
-  if ( 250 <= len_w ) {
-    return -1;
-  }
+u3_peer*
+_mesa_gut_peer(void* sam_u, u3_ship her_u);
 
-  _ames_czar_str(dns_c, imp_y);
-  dns_c   += 3;
-  *dns_c++ = '.';
-
-  memcpy(dns_c, dom_c, len_w);
-  dns_c   += len_w;
-  *dns_c++ = '.';
-
-  memset(dns_c, 0, 256 - (dns_c - bas_c));
-
-  return 0;
-}
-
-/* _ames_czar_lane: retrieve lane for galaxy if stored.
+/* _ames: retrieve lane for galaxy if stored.
 */
 c3_o
-_ames_czar_lane(u3_ames* sam_u, c3_y imp_y, sockaddr_in* lan_u)
+_ames_lamp_lane(u3_auto* car_u, u3_ship her_u, sockaddr_in* lan_u)
 {
+  c3_c* her_c = u3_ship_to_string(her_u);
+  c3_free(her_c);
+  u3_peer* per_u = _mesa_get_peer(car_u, her_u);
+  if (NULL == per_u) return c3n;
 
-  lan_u->sin_family = AF_INET;
-  lan_u->sin_port = _ames_czar_port(imp_y);
+  if (c3n == per_u->lam_o) {
+    u3l_log("fatal: peer is not lamp");
+    u3_king_bail();
+  }
 
   if ( c3n == u3_Host.ops_u.net ) {
     lan_u->sin_addr.s_addr = NLOCALHOST;
   }
   else {
-    lan_u->sin_addr.s_addr =
-      sam_u->zar_u.pip_w[imp_y];
-
-    if ( !lan_u->sin_addr.s_addr ) {
+    *lan_u = per_u->dan_u;
+    if ( c3y == _mesa_is_lane_zero(*lan_u) ) {
       if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("ames: czar not resolved");
+        u3l_log("ames: lamp not resolved");
       }
       return c3n;
     }
     else if ( _CZAR_GONE == lan_u->sin_addr.s_addr ) {
       //  print only on first send failure
       //
-      c3_w blk_w = imp_y >> 5;
-      c3_w bit_w = 1 << (imp_y & 31);
 
-      if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
-        c3_c dns_c[256];
-        u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
-        u3l_log("ames: czar at %s: not found (b)", dns_c);
-        sam_u->zar_u.log_w[blk_w] |= bit_w;
+      if ( c3n == per_u->log_o ) {
+        // XX
+        //u3l_log("ames: lamp at %s: not found (b)", *dns_c);
+        per_u->log_o = c3y;
       }
 
       return c3n;
@@ -99,62 +74,58 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, sockaddr_in* lan_u)
   return c3y;
 }
 
-typedef struct _czar_resv {
+typedef struct _lamp_resv {
   uv_getaddrinfo_t adr_u;
-  u3_ames*         sam_u;
-  c3_y             imp_y;
-} _czar_resv;
+  u3_ames_lamp_state*         lam_u;
+  u3_peer*         per_u;
+  c3_c**           dns_c;
+} _lamp_resv;
 
-/* _ames_czar_gone(): galaxy address resolution failed.
+/* _ames_lamp_gone(): galaxy address resolution failed.
 */
 static void
-_ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
+_ames_lamp_gone(u3_ames_lamp_state* lam_u, u3_peer* per_u)
 {
-  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_w old_w = per_u->dan_u.sin_addr.s_addr;
 
   if ( !old_w ) {
-    sam_u->zar_u.pip_w[imp_y] = _CZAR_GONE;
+    per_u->dan_u.sin_addr.s_addr = _CZAR_GONE;
   }
 }
 
-/* _ames_czar_here(): galaxy address resolution succeeded.
+/* _ames_lamp_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_czar_here(u3_ames* sam_u, c3_y imp_y, sockaddr_in lan_u)
+_ames_lamp_here(u3_ames_lamp_state* lam_u, u3_peer* per_u, sockaddr_in lan_u, c3_c* dns_c)
 {
-  c3_w old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_w old_w = per_u->dan_u.sin_addr.s_addr;
 
   if ( lan_u.sin_addr.s_addr != old_w ) {
-    c3_c dns_c[256];
     c3_w nip_w = lan_u.sin_addr.s_addr;
     c3_c nip_c[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
 
-    u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
-    u3l_log("ames: czar %s ip .%s", dns_c, nip_c);
+    u3l_log("ames: lamp %s ip .%s", dns_c, nip_c);
   }
 
-  sam_u->zar_u.pip_w[imp_y] = lan_u.sin_addr.s_addr;
-
-  {
-    c3_w blk_w = imp_y >> 5;
-    c3_w bit_w = 1 << (imp_y & 31);
-
-    sam_u->zar_u.log_w[blk_w] &= ~bit_w;
-  }
+  per_u->dan_u.sin_addr.s_addr = lan_u.sin_addr.s_addr;
+  per_u->log_o = c3n;
 }
 
-/* _ames_czar_cb(): galaxy address resolution callback.
+static void
+_ames_lamp(u3_ames_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c);
+
+/* _ames_lamp_cb(): galaxy address resolution callback.
 */
 static void
-_ames_czar_cb(uv_getaddrinfo_t* adr_u,
+_ames_lamp_cb(uv_getaddrinfo_t* adr_u,
                c3_i              sas_i,
                struct addrinfo*  aif_u)
 {
   struct addrinfo* rai_u = aif_u;
-  _czar_resv*      res_u = (_czar_resv*)adr_u;
-  u3_ames*         sam_u = res_u->sam_u;
-  c3_y             imp_y = res_u->imp_y;
+  _lamp_resv*      res_u = (_lamp_resv*)adr_u;
+  u3_ames_lamp_state*         lam_u = res_u->lam_u;
+  u3_peer*         per_u = res_u->per_u;
 
   while ( rai_u && (AF_INET != rai_u->ai_family) ) {
     rai_u = rai_u->ai_next;
@@ -162,121 +133,160 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
 
   if ( rai_u && rai_u->ai_addr ) {
     struct sockaddr_in* lan_u = (void*)rai_u->ai_addr;
-    _ames_czar_here(sam_u, imp_y, *lan_u);
+    _ames_lamp_here(lam_u, per_u, *lan_u, *res_u->dns_c);
+    lam_u->pen_s--;
+    uv_freeaddrinfo(aif_u);
+    c3_free(res_u);
   }
   else {
     if ( !sas_i ) {
       // XX unpossible
-      u3l_log("ames: czar: strange failure, no error");
+      u3l_log("ames: lamp: strange failure, no error");
+      _ames_lamp_gone(lam_u, per_u);
+      lam_u->pen_s--;
+      uv_freeaddrinfo(aif_u);
+      c3_free(res_u);
     }
-    else if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("ames: czar fail: %s", uv_strerror(sas_i));
+    else {
+      c3_c** dns_c = res_u->dns_c;
+      c3_o nex_o = (NULL != *(dns_c + 1)) ? c3y : c3n;
+      if ( u3C.wag_w & u3o_verbose ) {
+        u3l_log("ames: lamp fail: %s", uv_strerror(sas_i));
+        //if (nex_o) u3l_log("trying next");
+      }
+      if (c3y == nex_o)
+        _ames_lamp(lam_u, per_u, dns_c + 1);
+      else {
+        // XX: wait should we do this here?
+        _ames_lamp_gone(lam_u, per_u);
+        lam_u->pen_s--;
+        uv_freeaddrinfo(aif_u);
+        c3_free(res_u);
+      }
     }
-
-    _ames_czar_gone(sam_u, imp_y);
   }
-
-  sam_u->zar_u.pen_s--;
-
-  uv_freeaddrinfo(aif_u);
-  c3_free(res_u);
 }
 
-/* _ames_czar(): single galaxy address resolution.
+/* _ames_lamp(): single galaxy address resolution.
 */
 static void
-_ames_czar(u3_ames* sam_u, const c3_c* dom_c, c3_y imp_y)
+_ames_lamp(u3_ames_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c)
 {
   struct addrinfo   hin_u = { .ai_family = AF_INET };
   uv_getaddrinfo_t* adr_u;
-  _czar_resv*       res_u;
-  c3_c              dns_c[256];
+  _lamp_resv*       res_u;
   c3_i              sas_i;
 
-  u3_assert ( !_ames_etch_czar(dns_c, dom_c, imp_y) );
-
   res_u = c3_malloc(sizeof(*res_u));
-  res_u->sam_u = sam_u;
-  res_u->imp_y = imp_y;
+  res_u->lam_u = lam_u;
+  res_u->per_u = per_u;
+  res_u->dns_c = dns_c;
 
   adr_u = &(res_u->adr_u);
-  sas_i = uv_getaddrinfo(u3L, adr_u, _ames_czar_cb, dns_c, 0, &hin_u);
+  sas_i = uv_getaddrinfo(u3L, adr_u, _ames_lamp_cb, *dns_c, 0, &hin_u);
 
   if ( sas_i ) {
-    _ames_czar_cb(adr_u, sas_i, NULL);
+    _ames_lamp_cb(adr_u, sas_i, NULL);
   }
 }
 
-/* _ames_czar_all(): galaxy address resolution.
-*/
 static void
-_ames_czar_all(uv_timer_t* tim_u)
+_ames_etch_czars(u3_ames_lamp_state* lam_u) {
+  for (c3_w i = 0; i < 256; i++) {
+    u3_ship who_u = u3_ship_of_noun(i);
+    u3_peer* per_u = _mesa_gut_peer(lam_u->car_u, who_u);
+    per_u->lam_o = c3y;
+    per_u->dan_u.sin_family = AF_INET;
+    per_u->dan_u.sin_port = _ames_czar_port(i);
+    c3_c* who_c = u3_ship_to_string(who_u);
+    c3_w len_w = u3_mpef_turfs(NULL, 0, who_c + 1, lam_u->dns_c);
+    if (per_u->dns_c) c3_free(per_u->dns_c);
+    c3_c** dns_c = per_u->dns_c = c3_malloc(len_w);
+    u3_mpef_turfs((c3_c*)dns_c, 0, who_c + 1, lam_u->dns_c);
+    c3_free(who_c);
+  }
+}
+
+/* _ames_lamp_all(): galaxy address resolution.
+*/
+void
+_ames_lamp_all(uv_timer_t* tim_u)
 {
-  u3_ames* sam_u = tim_u->data;
+  u3_ames_lamp_state* lam_u = tim_u->data;
 
   //  requests still pending
-  if ( sam_u->zar_u.pen_s ) {
-    uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 30*1000, 0);
+  if ( lam_u->pen_s ) {
+    uv_timer_start(&lam_u->tim_u, _ames_lamp_all, 30*1000, 0);
     return;
   }
 
-  sam_u->zar_u.pen_s = 256;
-
-  for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
-    _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
+  lam_u->pen_s = 0;
+  //c3_w i = 0;
+  for(
+    per_map_itr itr =
+      per_map_first( lam_u->per_u );
+    !per_map_is_end( itr );
+    itr = per_map_next( itr ) ) {
+    u3_peer* per_u = itr.data->val;
+    //c3_c* who_c = u3_ship_to_string(per_u->her_u);
+    //u3l_log("czar %u %s", i, who_c);
+    //c3_free(who_c);
+    //i++;
+    if (per_u->dns_c) {
+      lam_u->pen_s++;
+      _ames_lamp(lam_u, per_u, per_u->dns_c);
+    }
   }
 
-  uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 300*1000, 0);
+  uv_timer_start(&lam_u->tim_u, _ames_lamp_all, 300*1000, 0);
+}
+
+static c3_o
+_ames_cmp_turfs(c3_c** a, c3_c** b) {
+  while (a != NULL || b != NULL) {
+    if (a == NULL) {
+      if (b == NULL) return c3y;
+      return c3n;
+    }
+    if (b == NULL) {
+      return c3n;
+    }
+    if (0 != strcmp(*a, *b)) return 0;
+    a++;
+    b++;
+  }
+  return c3y;
 }
 
 /* _ames_ef_turf(): initialize ames I/O on domain(s).
 */
-static void
-_ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
+void
+_ames_ef_turf(u3_ames_lamp_state* lam_u, u3_noun tuf)
 {
-  if ( u3_nul != tuf ) {
-    c3_c  dom_c[sizeof(sam_u->zar_u.dom_c)];
-    u3_noun hot = u3h(tuf);
-    c3_w  len_w = u3_mcut_host(0, 0, u3k(hot));
-
-    if ( len_w >= sizeof(dom_c) ) {  // >250
-      //  3 char for the galaxy (e.g. zod) and two dots
-      u3l_log("ames: galaxy domain too big (len=%u)", len_w);
-      u3m_p("hot", hot);
-      u3_pier_bail(u3_king_stub());
+  if ( u3_nul != tuf) {
+    c3_w len_w = u3_mcut_hosts(NULL, 0, u3k(tuf));
+    if (len_w == 0) {
+      // todo: clear?
+      return;
     }
-
-    u3_mcut_host(dom_c, 0, u3k(hot));
-    memset(dom_c + len_w, 0, sizeof(dom_c) - len_w);
-
-    if ( 0 != memcmp(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c)) ) {
-      memcpy(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c));
-      memset(sam_u->zar_u.pip_w, 0, sizeof(sam_u->zar_u.pip_w));
-      sam_u->zar_u.dom_o = c3y;
-      _ames_czar_all(&(sam_u->zar_u.tim_u));
+    c3_c** dns_c = c3_malloc(len_w);
+    u3_mcut_hosts((c3_c*)dns_c, 0, u3k(tuf));
+    _ames_cmp_turfs(dns_c, lam_u->dns_c);
+    if ( c3n == _ames_cmp_turfs(dns_c, lam_u->dns_c) ) {
+      c3_free(lam_u->dns_c);
+      lam_u->dns_c = dns_c;
+      lam_u->dom_o = c3y;
+      _ames_etch_czars(lam_u);
+      _ames_lamp_all(&(lam_u->tim_u));
     }
-
-    //  XX save all for fallback, not just first
-    //
-    if ( u3_nul != u3t(tuf) ) {
-      u3l_log("ames: turf: ignoring additional domains");
-      u3m_p("second", u3h(u3t(tuf)));
-
-      if ( u3_nul != u3t(u3t(tuf)) ) {
-        u3m_p("third", u3h(u3t(u3t(tuf))));
-      }
-    }
-
-    u3z(tuf);
   }
-  else if ( (c3n == sam_u->pir_u->fak_o) && (c3n == sam_u->zar_u.dom_o) ) {
+  else if ( (c3n == lam_u->car_u->pir_u->fak_o) && (c3n == lam_u->dom_o) ) {
     u3l_log("ames: turf: no domains");
   }
 
-  //  XX is this ever necessary?
-  //
-  if ( c3n == sam_u->car_u.liv_o ) {
-    _ames_io_start(sam_u);
-  }
+  ////  XX is this ever necessary?
+  ////
+  //if ( c3n == lam_u->car_u.liv_o ) {
+  //  _ames_io_start(lam_u);
+  //}
 }
-

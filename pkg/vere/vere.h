@@ -868,6 +868,16 @@
         c3_w
         u3_mcut_host(c3_c* buf_c, c3_w len_w, u3_noun hot);
 
+      /* u3_mcut_hosts(): measure/cut host list.
+      */
+        c3_w
+        u3_mcut_hosts(c3_c* buf_c, c3_w len_w, u3_noun hot);
+
+      /* u3_mpef_turf(): measure/cut string list, prefixing.
+      */
+        c3_w
+        u3_mpef_turfs(c3_c* buf_c, c3_w len_w, c3_c* pef_c, c3_c** tuf_c);
+
     /**  IO drivers.
     **/
       /* u3_auto_init(): initialize all drivers.
@@ -1246,8 +1256,7 @@
         u3_auto*
         u3_ames_io_init(u3_pier* pir_u,
                         uv_udp_t* wax_u,
-                        u3_auto* mes_u,
-                        c3_w**   imp_u);
+                        u3_auto* mes_u);
 
       /* u3_ames_decode_lane(): destructure lane from noun
       */

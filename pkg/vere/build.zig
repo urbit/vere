@@ -206,6 +206,7 @@ const c_source_files = [_][]const u8{
     "foil.c",
     "io/ames/ames.c",
     "io/ames/stun.c",
+    "io/ames/lamp.c",
     "io/behn.c",
     "io/conn.c",
     "io/cttp.c",

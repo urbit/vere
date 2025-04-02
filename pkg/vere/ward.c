@@ -252,3 +252,84 @@ u3_mcut_host(c3_c* buf_c, c3_w len_w, u3_noun hot)
   u3z(hot);
   return len_w;
 }
+
+/* u3_mcut_hosts(): measure/cut host list.
+*/
+c3_w
+u3_mcut_hosts(c3_c* buf_c, c3_w len_w, u3_noun hot)
+{
+  c3_c** dst_c = NULL;
+  hot = u3kdi_tap(u3kdb_gas(u3_nul, hot));
+  c3_w hots_w = u3qb_lent(hot);
+  if (hots_w == 0) return len_w;
+  if (buf_c) {
+    dst_c = (void*)(buf_c + len_w);
+    dst_c[hots_w] = 0;
+  }
+  len_w += (hots_w + 1) * sizeof(c3_c*);
+
+  u3_noun oth = hot;
+  c3_w i = 0;
+  while ( u3_nul != oth ) { 
+    if (dst_c) dst_c[i] = (void*)(buf_c + len_w);
+    u3_noun h_oth = u3h(oth);
+
+    len_w = u3_mcut_path(buf_c, len_w, '.', u3kb_flop(u3k(h_oth)));
+    len_w = u3_mcut_char(buf_c, len_w, '\0');
+    oth = u3t(oth);
+
+    i++;
+  }
+  u3z(hot);
+  return len_w;
+}
+
+/* u3_mcut_str(): measure/cut string.
+*/
+c3_w
+u3_mcut_str(c3_c* buf_c, c3_w len_w, c3_c* str)
+{
+  c3_w ten_w = strlen(str);
+
+  if ( buf_c ) {
+    memcpy((c3_y*)(buf_c + len_w), str, ten_w);
+  }
+  return (len_w + ten_w);
+}
+
+/* u3_mpef_turf(): measure/cut string list, prefixing.
+*/
+c3_w
+u3_mpef_turfs(c3_c* buf_c, c3_w len_w, c3_c* pef_c, c3_c** tuf_c)
+{
+  c3_c** dst_c = NULL;
+
+  c3_w tufs_w = 0;
+  {
+    c3_c** uft_c = tuf_c;
+    while (NULL != *uft_c) {
+      tufs_w++;
+      uft_c++;
+    }
+  }
+  
+  if (buf_c) {
+    dst_c = (void*)(buf_c + len_w);
+    dst_c[tufs_w] = 0;
+  }
+  len_w += (tufs_w + 1) * sizeof(c3_c*);
+
+  c3_w i = 0;
+  while ( NULL != tuf_c[i] ) { 
+    if (dst_c) dst_c[i] = (void*)(buf_c + len_w);
+    len_w = u3_mcut_str(buf_c, len_w, pef_c);
+    len_w = u3_mcut_char(buf_c, len_w, '.');
+    len_w = u3_mcut_str(buf_c, len_w, tuf_c[i]);
+    len_w = u3_mcut_char(buf_c, len_w, '\0');
+
+    i++;
+  }
+  return len_w;
+}
+
+

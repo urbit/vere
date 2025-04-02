@@ -188,9 +188,11 @@ typedef struct _u3_peer {
   c3_o           ful_o;  //  has this been initialized?
   sockaddr_in    dan_u;  //  direct lane (nullable)
   u3_lane_state  dir_u;  //  direct lane state
-  c3_o           fef_o;
-  c3_y           imp_y;  //  galaxy @p
+  c3_o           lam_o;
+  c3_o           log_o;  //  dns log
+  u3_ship        lam_u;  //  galaxy @p
   u3_lane_state  ind_u;  //  indirect lane state
+  c3_c**         dns_c;
 } u3_peer;
 
 #define NAME per_map
@@ -200,6 +202,5 @@ typedef struct _u3_peer {
 #define VAL_TY u3_peer*
 #define HEADER_MODE
 #include "verstable.h"
-
 
 #endif

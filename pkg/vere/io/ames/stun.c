@@ -264,7 +264,7 @@ _stun_on_response(u3_stun_client* sun_u, c3_y* buf_y, c3_w buf_len)
   {
     // lane changed
     u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__once, sun_u->dad_y,
+    u3_noun cad = u3nq(c3__stun, c3__once, u3_ship_to_noun(sun_u->dad_u),
                        u3nc(c3n, u3_ames_encode_lane(lan_u)));
     u3_auto_plan(sun_u->car_u,
                  u3_ovum_init(0, c3__ames, wir, cad));
@@ -272,7 +272,7 @@ _stun_on_response(u3_stun_client* sun_u, c3_y* buf_y, c3_w buf_len)
   else if ( c3n == sun_u->wok_o ) {
     // stop %ping app
     u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__stop, sun_u->dad_y,
+    u3_noun cad = u3nq(c3__stun, c3__stop, u3_ship_to_noun(sun_u->dad_u),
                        u3nc(c3n, u3_ames_encode_lane(lan_u)));
     u3_auto_plan(sun_u->car_u,
                  u3_ovum_init(0, c3__ames, wir, cad));
@@ -337,7 +337,7 @@ _stun_on_lost(u3_stun_client* sun_u)
   //
   if ( c3y == sun_u->wok_o ) {
     u3_noun wir = u3nc(c3__ames, u3_nul);
-    u3_noun cad = u3nq(c3__stun, c3__fail, sun_u->dad_y,
+    u3_noun cad = u3nq(c3__stun, c3__fail, u3_ship_to_noun(sun_u->dad_u),
                        u3nc(c3n, u3_ames_encode_lane(sun_u->sef_u)));
     u3_auto_plan(sun_u->car_u,
                  u3_ovum_init(0, c3__ames, wir, cad));
@@ -359,7 +359,7 @@ _stun_time_gap(struct timeval sar_tv)
   return u3_time_gap_ms(den, now);
 }
 
-c3_o _ames_czar_lane(u3_auto*, c3_y, sockaddr_in*);
+c3_o _ames_lamp_lane(u3_auto*, u3_ship, sockaddr_in*);
 
 /* _stun_timer_cb(): advance stun state machine.
  */
@@ -377,9 +377,9 @@ _stun_timer_cb(uv_timer_t* tim_u)
 
     case STUN_KEEPALIVE: {
       sockaddr_in* lan_u = &(sun_u->lan_u);
-      c3_y     imp_y = sun_u->dad_y;
+      u3_ship     lam_u = sun_u->dad_u;
 
-      if ( c3n == _ames_czar_lane(sun_u->car_u, imp_y, lan_u) ) {
+      if ( c3n == _ames_lamp_lane(sun_u->car_u, lam_u, lan_u) ) {
         uv_timer_start(&sun_u->tim_u, _stun_timer_cb, 25*1000, 0);
       }
       else {
