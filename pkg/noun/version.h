@@ -15,10 +15,7 @@ typedef c3_w_tmp       u3v_version;
 /* PATCHES
  */
 
-typedef c3_w_tmp       u3e_version;
-
-#define U3P_VER1   1
-#define U3P_VERLAT U3P_VER1
+typedef c3_w_new       u3e_version;
 
 /* DISK FORMAT
  *

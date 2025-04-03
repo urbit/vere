@@ -529,10 +529,10 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   c3_zs ret_zs;
   c3_o  sou_o = c3n;  // south seen
 
-  if ( U3P_VERLAT != pat_u->con_u->ver_w ) {
-    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w_tmp", need %"PRIc3_w_tmp"\r\n",
+  if ( U3D_VERLAT != pat_u->con_u->ver_w ) {
+    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w_new", need %"PRIc3_w_new"\r\n",
                     pat_u->con_u->ver_w,
-                    U3P_VERLAT);
+                    U3D_VERLAT);
     return c3n;
   }
 
@@ -745,7 +745,7 @@ _ce_patch_compose(c3_n nor_w, c3_n sou_w)
 
     _ce_patch_create(pat_u);
     pat_u->con_u = c3_malloc(sizeof(u3e_control) + (pgs_w * sizeof(u3e_line)));
-    pat_u->con_u->ver_w = U3P_VERLAT;
+    pat_u->con_u->ver_w = U3D_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
