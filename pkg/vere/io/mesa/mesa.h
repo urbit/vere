@@ -183,7 +183,7 @@ typedef struct _u3_lane_state {
 } u3_lane_state;
 
 typedef struct _u3_peer {
-  void*          sam_u;  //  backpointer
+  void*          mes_u;  //  backpointer
   u3_ship        her_u;  //  who is this peer
   c3_o           ful_o;  //  has this been initialized?
   sockaddr_in    dan_u;  //  direct lane (nullable)

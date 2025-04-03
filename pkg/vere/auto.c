@@ -400,10 +400,10 @@ u3_auto_slog(u3_auto* car_u)
   }
 }
 
-/* u3_auto_link(): validate and link initalized [car_u]
+/* _auto_link(): validate and link initalized [car_u]
 */
-u3_auto*
-u3_auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u)
+static u3_auto*
+_auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u)
 {
   //  skip null drivers
   //
@@ -418,23 +418,7 @@ u3_auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u)
   u3_assert( car_u->io.exit_f );
 
   car_u->pir_u = pir_u;
-  u3_auto* rac_u = car_u;
-  while (rac_u->nex_u != NULL) {
-    rac_u = rac_u->nex_u;
-    rac_u->pir_u = pir_u;
-    u3_assert( rac_u->io.talk_f );
-    u3_assert( rac_u->io.kick_f );
-    u3_assert( rac_u->io.exit_f );
-  }
-
-  if (nex_u) {
-    nex_u->pir_u = pir_u;
-    u3_assert( nex_u->io.talk_f );
-    u3_assert( nex_u->io.kick_f );
-    u3_assert( nex_u->io.exit_f );
-  }
-
-  rac_u->nex_u = nex_u;
+  car_u->nex_u = nex_u;
   return car_u;
 }
 
@@ -445,16 +429,16 @@ u3_auto_init(u3_pier* pir_u)
 {
   u3_auto* car_u = 0;
 
-  car_u = u3_auto_link(u3_hind_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_behn_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_conn_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_mesa_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_http_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_cttp_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_unix_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_term_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_fore_io_init(pir_u), pir_u, car_u);
-  car_u = u3_auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_hind_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_behn_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_conn_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_http_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_cttp_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_unix_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_term_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_fore_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
+  car_u = _auto_link(u3_mesa_io_init(pir_u), pir_u, car_u);
 
   return car_u;
 }

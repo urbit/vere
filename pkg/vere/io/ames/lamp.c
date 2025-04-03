@@ -1,5 +1,5 @@
 #include "vere.h"
-#include "io/lamp.h"
+#include "io/ames/lamp.h"
 
 c3_o
 _mesa_is_lane_zero(sockaddr_in lan_u);
