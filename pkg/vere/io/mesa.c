@@ -7,6 +7,7 @@
 #include "ur/ur.h"
 #include "ship.h"
 #include "io/ames/stun.h"
+#include "io/ames/nat.h"
 #include "io/ames/lamp.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
@@ -25,6 +26,7 @@
 #include <stdlib.h>
 #include "lss.h"
 #include "arena.h"
+#include "mdns.h"
 
 static c3_o dop_o = c3n;
 
@@ -272,7 +274,8 @@ typedef struct _u3_mesa {
   arena              par_u;       //  permanent arena
   uv_timer_t         tim_u;       //  pit clear timer
   u3_stun_client     sun_u;       //  stun client state
-  u3_ames_lamp_state lam_u;       //  stun client state
+  u3_lamp_state      lam_u;       //  lamp state
+  u3_natpmp_state    nat_u;       //  natpmp state
 } u3_mesa;
 
 STATIC_ASSERT(
@@ -1664,7 +1667,7 @@ u3_atom
 u3_ames_encode_lane(sockaddr_in lan);
 
 void
-_ames_ef_turf(u3_ames_lamp_state* lam_u, u3_noun tuf);
+_ames_ef_turf(u3_lamp_state* lam_u, u3_noun tuf);
 void
 _ames_lane_into_cache(void* mes_u, u3_noun who, u3_noun las);
 
@@ -1783,9 +1786,6 @@ _mesa_exit_cb(uv_handle_t* han_u) {
   _ames_exit_cb(mes_u->sam_u);
 }
 
-void
-_ames_io_exit(void* sam_u);
-
 static void
 _mesa_io_exit(u3_auto* car_u)
 {
@@ -1794,7 +1794,12 @@ _mesa_io_exit(u3_auto* car_u)
   mes_u->tim_u.data = mes_u;
   uv_close((uv_handle_t*)&mes_u->tim_u, _mesa_exit_cb);
   uv_close((uv_handle_t*)&mes_u->sun_u.tim_u, 0);
-  _ames_io_exit(mes_u->sam_u);
+
+  uv_close((uv_handle_t*)&mes_u->nat_u.tim_u, 0);
+  uv_handle_type handle = uv_handle_get_type((uv_handle_t *)&mes_u->nat_u.pol_u);
+  if ( UV_UNKNOWN_HANDLE !=  handle) {
+    uv_close((uv_handle_t*)&mes_u->nat_u.pol_u, 0);
+  }
 }
 
 static void
@@ -2895,6 +2900,56 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
   }
 }
 
+static void
+_mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3z(lud);
+  u3_ovum_free(egg_u);
+}
+
+/* _mesa_put_dear(): send lane to arvo after hearing mdns response
+*/
+static void
+_mesa_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
+{
+  u3_mesa* mes_u = (u3_mesa*)context;
+
+  // one is loobean one is boolean
+  if (fake == mes_u->pir_u->fak_o) {
+    return;
+  }
+
+  sockaddr_in lan;
+  lan.sin_family = AF_INET;
+  lan.sin_addr.s_addr = s_addr;
+  lan.sin_port = port;
+
+  u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
+
+  if (u3_nul == whu) {
+    u3l_log("ames: strange ship from mdns: %s", ship);
+    return;
+  }
+
+  u3_noun our = u3_ship_to_noun(mes_u->pir_u->who_u);
+  if (our == u3t(whu)) {
+    u3z(whu);
+    u3z(our);
+    return;
+  }
+
+  u3z(our);
+
+  u3_noun wir = u3nc(c3__ames, u3_nul);
+  u3_noun cad = u3nt(c3__dear, u3k(u3t(whu)), u3nc(c3n, u3_ames_encode_lane(lan)));
+
+  u3_auto_peer(
+               u3_auto_plan(&mes_u->car_u,
+                            u3_ovum_init(0, c3__a, wir, cad)),
+               0, 0, _mdns_dear_bail);
+  u3z(whu);
+}
+
 void
 _ames_io_talk(void* sam_u);
 
@@ -2932,18 +2987,18 @@ _mesa_io_talk(u3_auto* car_u)
 
   //  Bind and stuff.
   {
-    struct sockaddr_in add_u;
-    c3_i               add_i = sizeof(add_u);
+    struct sockaddr_in lan_u;
+    c3_i               add_i = sizeof(lan_u);
 
-    memset(&add_u, 0, sizeof(add_u));
-    add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
+    memset(&lan_u, 0, sizeof(lan_u));
+    lan_u.sin_family = AF_INET;
+    lan_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
                               htonl(INADDR_ANY) :
                               htonl(INADDR_LOOPBACK);
-    add_u.sin_port = htons(por_s);
+    lan_u.sin_port = htons(por_s);
 
     if ( (ret_i = uv_udp_bind(&mes_u->wax_u,
-                              (const struct sockaddr*)&add_u, 0)) != 0 )
+                              (const struct sockaddr*)&lan_u, 0)) != 0 )
     {
       u3l_log("mesa: bind: %s", uv_strerror(ret_i));
 
@@ -2958,16 +3013,23 @@ _mesa_io_talk(u3_auto* car_u)
       u3_pier_bail(u3_king_stub());
     }
 
-    uv_udp_getsockname(&mes_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    u3_assert(add_u.sin_port);
+    uv_udp_getsockname(&mes_u->wax_u, (struct sockaddr *)&lan_u, &add_i);
+    u3_assert(lan_u.sin_port);
 
-    mes_u->pir_u->por_s = ntohs(add_u.sin_port);
+    mes_u->pir_u->por_s = ntohs(lan_u.sin_port);
+    c3_c* our_s = u3_ship_to_string(mes_u->pir_u->who_u);
+    mdns_init(lan_u.sin_port, !mes_u->pir_u->fak_o, our_s, _mesa_put_dear, (void *)mes_u);
+    c3_free(our_s);
   }
   if ( c3y == u3_Host.ops_u.net ) {
     u3l_log("mesa: live on %d", mes_u->pir_u->por_s);
   }
   else {
     u3l_log("mesa: live on %d (localhost only)", mes_u->pir_u->por_s);
+  }
+
+  if ( c3n == mes_u->pir_u->fak_o ) {
+    uv_timer_start(&mes_u->nat_u.tim_u, natpmp_init, 0, 0);
   }
 
   mes_u->wax_u.data = mes_u;
@@ -3100,8 +3162,13 @@ u3_mesa_io_init(u3_pier* pir_u)
   uv_timer_init(u3L, &mes_u->lam_u.tim_u);
   mes_u->lam_u.tim_u.data = &mes_u->lam_u;
 
+  //  initialize libnatpmp
+  mes_u->nat_u.car_u = car_u;
+  mes_u->nat_u.tim_u.data = &mes_u->nat_u;
+  uv_timer_init(u3L, &mes_u->nat_u.tim_u);
 
   mes_u->sam_u = u3_ames_io_init(car_u);
+
   /*{
     u3_noun now;
     struct timeval tim_u;

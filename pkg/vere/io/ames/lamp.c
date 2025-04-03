@@ -74,7 +74,7 @@ _ames_lamp_lane(u3_auto* car_u, u3_ship her_u, sockaddr_in* lan_u)
 
 typedef struct _lamp_resv {
   uv_getaddrinfo_t adr_u;
-  u3_ames_lamp_state*         lam_u;
+  u3_lamp_state*         lam_u;
   u3_peer*         per_u;
   c3_c**           dns_c;
 } _lamp_resv;
@@ -82,7 +82,7 @@ typedef struct _lamp_resv {
 /* _ames_lamp_gone(): galaxy address resolution failed.
 */
 static void
-_ames_lamp_gone(u3_ames_lamp_state* lam_u, u3_peer* per_u)
+_ames_lamp_gone(u3_lamp_state* lam_u, u3_peer* per_u)
 {
   c3_w old_w = per_u->dan_u.sin_addr.s_addr;
 
@@ -94,7 +94,7 @@ _ames_lamp_gone(u3_ames_lamp_state* lam_u, u3_peer* per_u)
 /* _ames_lamp_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_lamp_here(u3_ames_lamp_state* lam_u, u3_peer* per_u, sockaddr_in lan_u, c3_c* dns_c)
+_ames_lamp_here(u3_lamp_state* lam_u, u3_peer* per_u, sockaddr_in lan_u, c3_c* dns_c)
 {
   c3_w old_w = per_u->dan_u.sin_addr.s_addr;
 
@@ -111,7 +111,7 @@ _ames_lamp_here(u3_ames_lamp_state* lam_u, u3_peer* per_u, sockaddr_in lan_u, c3
 }
 
 static void
-_ames_lamp(u3_ames_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c);
+_ames_lamp(u3_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c);
 
 /* _ames_lamp_cb(): galaxy address resolution callback.
 */
@@ -122,7 +122,7 @@ _ames_lamp_cb(uv_getaddrinfo_t* adr_u,
 {
   struct addrinfo* rai_u = aif_u;
   _lamp_resv*      res_u = (_lamp_resv*)adr_u;
-  u3_ames_lamp_state*         lam_u = res_u->lam_u;
+  u3_lamp_state*         lam_u = res_u->lam_u;
   u3_peer*         per_u = res_u->per_u;
 
   while ( rai_u && (AF_INET != rai_u->ai_family) ) {
@@ -168,7 +168,7 @@ _ames_lamp_cb(uv_getaddrinfo_t* adr_u,
 /* _ames_lamp(): single galaxy address resolution.
 */
 static void
-_ames_lamp(u3_ames_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c)
+_ames_lamp(u3_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c)
 {
   struct addrinfo   hin_u = { .ai_family = AF_INET };
   uv_getaddrinfo_t* adr_u;
@@ -189,7 +189,7 @@ _ames_lamp(u3_ames_lamp_state* lam_u, u3_peer* per_u, c3_c** dns_c)
 }
 
 static void
-_ames_etch_czars(u3_ames_lamp_state* lam_u) {
+_ames_etch_czars(u3_lamp_state* lam_u) {
   for (c3_w i = 0; i < 256; i++) {
     u3_ship who_u = u3_ship_of_noun(i);
     u3_peer* per_u = _mesa_gut_peer(lam_u->car_u, who_u);
@@ -210,7 +210,7 @@ _ames_etch_czars(u3_ames_lamp_state* lam_u) {
 void
 _ames_lamp_all(uv_timer_t* tim_u)
 {
-  u3_ames_lamp_state* lam_u = tim_u->data;
+  u3_lamp_state* lam_u = tim_u->data;
 
   //  requests still pending
   if ( lam_u->pen_s ) {
@@ -259,7 +259,7 @@ _ames_cmp_turfs(c3_c** a, c3_c** b) {
 /* _ames_ef_turf(): initialize ames I/O on domain(s).
 */
 void
-_ames_ef_turf(u3_ames_lamp_state* lam_u, u3_noun tuf)
+_ames_ef_turf(u3_lamp_state* lam_u, u3_noun tuf)
 {
   if ( u3_nul != tuf) {
     c3_w len_w = u3_mcut_hosts(NULL, 0, u3k(tuf));

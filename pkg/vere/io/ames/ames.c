@@ -1,7 +1,6 @@
 /// @file
 
 #include "vere.h"
-#include "mdns.h"
 #include "io/ames/stun.h"
 #include "io/ames/lamp.h"
 #include "io/mesa/mesa.h"
@@ -10,7 +9,6 @@
 #include "ur/ur.h"
 
 #include "zlib.h"
-#include "natpmp.h"
 
 #include "ent/ent.h"
 
@@ -63,11 +61,6 @@
     u3_cue_xeno*     sil_u;             //  cue handle
     c3_y             ver_y;             //  protocol version
     struct _u3_panc* pan_u;             //  outbound packet queue, backward
-    struct {
-      natpmp_t       req_u;             //  libnatpmp struct for mapping request
-      uv_poll_t      pol_u;             //  handle waits on libnatpmp socket
-      uv_timer_t     tim_u;             //  every two hours if mapping succeeds
-    } nat_u;                            //  libnatpmp stuff for port forwarding
     struct {                            //    config:
       c3_o           see_o;             //  can scry
       c3_o           fit_o;             //  filtering active
@@ -1780,119 +1773,6 @@ _ames_hear(u3_ames* sam_u,
   }
 }
 
-static void natpmp_init(uv_timer_t* handle);
-
-static void
-natpmp_cb(uv_poll_t* handle,
-          c3_i        status,
-          c3_i        events)
-{
-
-  if (status != 0) {
-    return;
-  }
-
-  u3_ames* sam_u = handle->data;
-
-  natpmpresp_t response;
-  c3_i err_i = readnatpmpresponseorretry(&sam_u->nat_u.req_u, &response);
-  if ( NATPMP_TRYAGAIN == err_i ) {
-    return;
-  }
-
-  uv_poll_stop(handle);
-
-  if ( 0 != err_i ) {
-    u3l_log("ames: natpmp error %i", err_i);
-    uv_poll_stop(&sam_u->nat_u.pol_u);
-    closenatpmp(&sam_u->nat_u.req_u);
-    return;
-  }
-
-  u3l_log("ames: mapped public port %hu to localport %hu lifetime %u",
-         response.pnu.newportmapping.mappedpublicport,
-         response.pnu.newportmapping.privateport,
-         response.pnu.newportmapping.lifetime);
-
-  closenatpmp(&sam_u->nat_u.req_u);
-  sam_u->nat_u.tim_u.data = sam_u;
-  uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 7200000, 0);
-}
-
-static void
-natpmp_init(uv_timer_t *handle)
-{
-  u3_ames* sam_u = handle->data;
-  c3_s por_s = sam_u->pir_u->por_s;
-
-  c3_i err_i = initnatpmp(&sam_u->nat_u.req_u, 0, 0);
-
-  if (err_i != 0) {
-    return;
-  }
-
-  err_i = uv_poll_init(u3L, &sam_u->nat_u.pol_u, sam_u->nat_u.req_u.s);
-
-  if (err_i != 0) {
-    return;
-  }
-
-  sendnewportmappingrequest(&sam_u->nat_u.req_u, NATPMP_PROTOCOL_UDP, por_s, por_s, 7200);
-
-  sam_u->nat_u.pol_u.data = sam_u;
-  uv_poll_start(&sam_u->nat_u.pol_u, UV_READABLE, natpmp_cb);
-}
-
-static void
-_mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
-{
-  u3z(lud);
-  u3_ovum_free(egg_u);
-}
-
-/* _ames_put_dear(): send lane to arvo after hearing mdns response
-*/
-static void
-_ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
-{
-  u3_ames* sam_u = (u3_ames*)context;
-
-  // one is loobean one is boolean
-  if (fake == sam_u->pir_u->fak_o) {
-    return;
-  }
-
-  sockaddr_in lan;
-  lan.sin_family = AF_INET;
-  lan.sin_addr.s_addr = s_addr;
-  lan.sin_port = port;
-
-  u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
-
-  if (u3_nul == whu) {
-    u3l_log("ames: strange ship from mdns: %s", ship);
-    return;
-  }
-
-  u3_noun our = u3_ship_to_noun(sam_u->pir_u->who_u);
-  if (our == u3t(whu)) {
-    u3z(whu);
-    u3z(our);
-    return;
-  }
-
-  u3z(our);
-
-  u3_noun wir = u3nc(c3__ames, u3_nul);
-  u3_noun cad = u3nt(c3__dear, u3k(u3t(whu)), u3nc(c3n, u3_ames_encode_lane(lan)));
-
-  u3_auto_peer(
-               u3_auto_plan(&sam_u->mes_u->car_u,
-                            u3_ovum_init(0, c3__a, wir, cad)),
-               0, 0, _mdns_dear_bail);
-  u3z(whu);
-}
-
 /* _ames_io_start(): initialize ames I/O.
 */
 static void
@@ -1934,13 +1814,6 @@ _ames_io_start(u3_ames* sam_u)
   {
 
     c3_c* our_s = u3_ship_to_string(sam_u->pir_u->who_u);
-
-    mdns_init(lan_u.sin_port, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
-
-    if ( c3n == sam_u->pir_u->fak_o ) {
-      uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
-    }
-
     c3_free(our_s);
   }
 
@@ -2116,19 +1989,6 @@ _ames_exit_cb(u3_ames* sam_u)
   c3_free(sam_u);
 }
 
-/* _ames_io_exit(): terminate ames I/O.
-*/
-void
-_ames_io_exit(u3_ames* sam_u)
-{
-  uv_close((uv_handle_t*)&sam_u->nat_u.tim_u, 0);
-
-  uv_handle_type handle = uv_handle_get_type((uv_handle_t *)&sam_u->nat_u.pol_u);
-  if ( UV_UNKNOWN_HANDLE !=  handle) {
-    uv_close((uv_handle_t*)&sam_u->nat_u.pol_u, 0);
-  }
-}
-
 /* _ames_io_info(): produce status info.
 */
 u3_noun
@@ -2209,10 +2069,6 @@ u3_ames_io_init(u3_mesa_auto* mes_u)
   sam_u->pir_u    = mes_u->pir_u;
   sam_u->fig_u.see_o = c3y;
   sam_u->fig_u.fit_o = c3n;
-
-  //  initialize libnatpmp
-  sam_u->nat_u.tim_u.data = sam_u;
-  uv_timer_init(u3L, &sam_u->nat_u.tim_u);
 
   //  enable forwarding on galaxies only
   u3_noun who = u3_ship_to_noun(sam_u->mes_u->pir_u->who_u);
