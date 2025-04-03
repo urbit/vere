@@ -2844,8 +2844,8 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("      stun:");
   u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
   u3l_log("      caches:");
-  u3l_log("        cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("        cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("        cached lanes: %"PRIc3_n", %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("        cached meows: %"PRIc3_n", %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2860,7 +2860,7 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
   u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
-  u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
+  u3l_log("            cached lanes: %"PRIc3_n, u3h_wyt(sam_u->lax_p));
 }
 
 /* u3_ames_io_init(): initialize ames I/O.

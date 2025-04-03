@@ -15,13 +15,13 @@
 #define BIT_SET(a_w, b_w) ((a_w) & ((c3_w_new)1 << (b_w)))
 
 static u3_weak
-_ch_trim_slot(u3h_root* har_u, u3h_slot *sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w);
+_ch_trim_slot(u3h_root* har_u, u3h_slot *sot_n, c3_w_new lef_w, c3_w_new rem_w);
 
 static u3_weak
 _ch_trim_root(u3h_root* har_u);
 
-c3_w_tmp
-_ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w);
+c3_w_new
+_ch_skip_slot(c3_w_new mug_w, c3_w_new lef_w);
 
 /* u3h_new_cache(): create hashtable with bounded size.
 */
@@ -86,7 +86,7 @@ static void _ch_slot_put(u3h_slot*, u3_noun, c3_w_tmp, c3_w_tmp, c3_n*);
 /* _ch_node_add(): add to node.
 */
 static u3h_node*
-_ch_node_add(u3h_node* han_u, c3_w_tmp lef_w, c3_w_tmp rem_w, u3_noun kev, c3_n *use_w)
+_ch_node_add(u3h_node* han_u, c3_w_new lef_w, c3_w_new rem_w, u3_noun kev, c3_n *use_w)
 {
   c3_w_new bit_w, inx_w, map_w, i_w;
 
@@ -160,7 +160,7 @@ _ch_buck_add(u3h_buck* hab_u, u3_noun kev, c3_n *use_w)
 /* _ch_some_add(): add to node or bucket.
 */
 static void*
-_ch_some_add(void* han_v, c3_w_tmp lef_w, c3_w_tmp rem_w, u3_noun kev, c3_n *use_w)
+_ch_some_add(void* han_v, c3_w_new lef_w, c3_w_new rem_w, u3_noun kev, c3_n *use_w)
 {
   if ( 0 == lef_w ) {
     return _ch_buck_add((u3h_buck*)han_v, kev, use_w);
@@ -171,7 +171,7 @@ _ch_some_add(void* han_v, c3_w_tmp lef_w, c3_w_tmp rem_w, u3_noun kev, c3_n *use
 /* _ch_two(): create a new node with two leaves underneath
 */
 u3h_slot
-_ch_two(u3h_slot had_w, u3h_slot add_w, c3_w_tmp lef_w, c3_w_tmp ham_w, c3_w_tmp mad_w)
+_ch_two(u3h_slot had_w, u3h_slot add_w, c3_w_new lef_w, c3_w_tmp ham_w, c3_w_tmp mad_w)
 {
   void* ret;
 
@@ -218,7 +218,7 @@ _ch_two(u3h_slot had_w, u3h_slot add_w, c3_w_tmp lef_w, c3_w_tmp ham_w, c3_w_tmp
 */
 void _hbreak() {}
 static void
-_ch_slot_put(u3h_slot* sot_n, u3_noun kev, c3_w_tmp lef_w, c3_w_tmp rem_w, c3_n* use_w)
+_ch_slot_put(u3h_slot* sot_n, u3_noun kev, c3_w_new lef_w, c3_w_new rem_w, c3_n* use_w)
 {
   if ( c3n == u3h_slot_is_noun(*sot_n) ) {
     void* hav_v = _ch_some_add(u3h_slot_to_node(*sot_n),
@@ -339,7 +339,7 @@ static c3_o _ch_some_del(u3h_slot*, u3_noun, c3_w_tmp, c3_w_tmp);
 /* _ch_slot_del(): delete from slot
 */
 static c3_o
-_ch_slot_del(u3h_slot* sot_n, u3_noun key, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_slot_del(u3h_slot* sot_n, u3_noun key, c3_w_new lef_w, c3_w_new rem_w)
 {
   if ( c3y == u3h_slot_is_noun(*sot_n) ) {
     u3_noun kev = u3h_slot_to_noun(*sot_n);
@@ -355,7 +355,7 @@ _ch_slot_del(u3h_slot* sot_n, u3_noun key, c3_w_tmp lef_w, c3_w_tmp rem_w)
 /* _ch_slot_del(): delete from node
 */
 static c3_o
-_ch_node_del(u3h_slot* sot_n, u3_noun key, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_node_del(u3h_slot* sot_n, u3_noun key, c3_w_new lef_w, c3_w_new rem_w)
 {
   u3h_node* han_u = (u3h_node*) u3h_slot_to_node(*sot_n);
   u3h_slot* tos_n;
@@ -413,7 +413,7 @@ _ch_node_del(u3h_slot* sot_n, u3_noun key, c3_w_tmp lef_w, c3_w_tmp rem_w)
 /* _ch_some_del(): delete from node or buck
 */
 static c3_o
-_ch_some_del(u3h_slot* sot_n, u3_noun key, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_some_del(u3h_slot* sot_n, u3_noun key, c3_w_new lef_w, c3_w_new rem_w)
 {
   if ( 0 == lef_w ) {
     return _ch_buck_del(sot_n, key);
@@ -463,7 +463,7 @@ u3h_uni(u3p(u3h_root) har_p, u3p(u3h_root) rah_p)
 /* _ch_trim_node(): trim one entry from a node slot or its children
 */
 static u3_weak
-_ch_trim_node(u3h_root* har_u, u3h_slot* sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_trim_node(u3h_root* har_u, u3h_slot* sot_n, c3_w_new lef_w, c3_w_new rem_w)
 {
   c3_w_new bit_w, map_w, inx_w;
   u3h_slot* tos_n;
@@ -568,7 +568,7 @@ _ch_trim_buck(u3h_root* har_u, u3h_slot* sot_n)
 /* _ch_trim_some(): trim one entry from a bucket or node slot
 */
 static u3_weak
-_ch_trim_some(u3h_root* har_u, u3h_slot* sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_trim_some(u3h_root* har_u, u3h_slot* sot_n, c3_w_new lef_w, c3_w_new rem_w)
 {
   if ( 0 == lef_w ) {
     return _ch_trim_buck(har_u, sot_n);
@@ -580,18 +580,18 @@ _ch_trim_some(u3h_root* har_u, u3h_slot* sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w)
 
 /* _ch_skip_slot(): increment arm over hash prefix.
 */
-c3_w_tmp
-_ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w)
+c3_w_new
+_ch_skip_slot(c3_w_new mug_w, c3_w_new lef_w)
 {
-  c3_w_tmp hig_w = mug_w >> lef_w;
-  c3_w_tmp new_w = CUT_END(hig_w + 1, (31 - lef_w)); // modulo 2^(31 - lef_w)
+  c3_w_new hig_w = mug_w >> lef_w;
+  c3_w_new new_w = CUT_END(hig_w + 1, (31 - lef_w)); // modulo 2^(31 - lef_w)
   return new_w << lef_w;
 }
 
 /* _ch_trim_slot(): trim one entry from a non-bucket slot
 */
 static u3_weak
-_ch_trim_slot(u3h_root* har_u, u3h_slot *sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w)
+_ch_trim_slot(u3h_root* har_u, u3h_slot *sot_n, c3_w_new lef_w, c3_w_new rem_w)
 {
   if ( c3y == u3h_slot_is_noun(*sot_n) ) {
     har_u->arm_u.mug_w = _ch_skip_slot(har_u->arm_u.mug_w, lef_w);
@@ -607,8 +607,8 @@ _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_n, c3_w_tmp lef_w, c3_w_tmp rem_w)
 static u3_weak
 _ch_trim_root(u3h_root* har_u)
 {
-  c3_w_tmp      mug_w = har_u->arm_u.mug_w;
-  c3_w_tmp      inx_w = mug_w >> 25; // 6 bits
+  c3_w_new      mug_w = har_u->arm_u.mug_w;
+  c3_w_new      inx_w = mug_w >> 25; // 6 bits
   u3h_slot* sot_n = &(har_u->sot_n[inx_w]);
 
   if ( c3y == u3h_slot_is_null(*sot_n) ) {
@@ -646,7 +646,7 @@ u3h_trim_with(u3p(u3h_root) har_p, c3_w_tmp n_w, void (*del_cb)(u3_noun))
 /* _ch_buck_hum(): read in bucket.
 */
 static c3_o
-_ch_buck_hum(u3h_buck* hab_u, c3_w_tmp mug_w)
+_ch_buck_hum(u3h_buck* hab_u, c3_w_new mug_w)
 {
   c3_w_tmp i_w;
 
@@ -661,7 +661,7 @@ _ch_buck_hum(u3h_buck* hab_u, c3_w_tmp mug_w)
 /* _ch_node_hum(): read in node.
 */
 static c3_o
-_ch_node_hum(u3h_node* han_u, c3_w_tmp lef_w, c3_w_tmp rem_w, c3_w_tmp mug_w)
+_ch_node_hum(u3h_node* han_u, c3_w_new lef_w, c3_w_new rem_w, c3_w_new mug_w)
 {
   c3_w_new bit_w, map_w;
 
@@ -703,7 +703,7 @@ _ch_node_hum(u3h_node* han_u, c3_w_tmp lef_w, c3_w_tmp rem_w, c3_w_tmp mug_w)
 ** `key` is RETAINED.
 */
 c3_o
-u3h_hum(u3p(u3h_root) har_p, c3_w_tmp mug_w)
+u3h_hum(u3p(u3h_root) har_p, c3_w_new mug_w)
 {
   u3h_root* har_u = u3to(u3h_root, har_p);
   c3_w_tmp      inx_w = (mug_w >> 25);
@@ -749,7 +749,7 @@ _ch_buck_git(u3h_buck* hab_u, u3_noun key)
 /* _ch_node_git(): read in node.
 */
 static u3_weak
-_ch_node_git(u3h_node* han_u, c3_w_tmp lef_w, c3_w_tmp rem_w, u3_noun key)
+_ch_node_git(u3h_node* han_u, c3_w_new lef_w, c3_w_new rem_w, u3_noun key)
 {
   c3_w_new bit_w, map_w;
 
@@ -852,7 +852,7 @@ _ch_free_buck(u3h_buck* hab_u)
 /* _ch_free_node(): free node.
 */
 static void
-_ch_free_node(u3h_node* han_u, c3_w_tmp lef_w, c3_o pin_o)
+_ch_free_node(u3h_node* han_u, c3_w_new lef_w, c3_o pin_o)
 {
   c3_w_new len_w = _ch_popcount(han_u->map_w);
   c3_w_new i_w;
@@ -915,7 +915,7 @@ _ch_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 /* _ch_walk_node(): walk node for gc.
 */
 static void
-_ch_walk_node(u3h_node* han_u, c3_w_tmp lef_w, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_walk_node(u3h_node* han_u, c3_w_new lef_w, void (*fun_f)(u3_noun, void*), void* wit)
 {
   c3_w_new len_w = _ch_popcount(han_u->map_w);
   c3_w_new i_w;
@@ -1017,7 +1017,7 @@ _ch_take_buck(u3h_slot sot_n, u3_funk fun_f)
 /* _ch_take_node(): take node and contents
 */
 static u3h_slot
-_ch_take_node(u3h_slot sot_n, c3_w_tmp lef_w, u3_funk fun_f)
+_ch_take_node(u3h_slot sot_n, c3_w_new lef_w, u3_funk fun_f)
 {
   u3h_node* han_u = u3h_slot_to_node(sot_n);
   c3_w_new      len_w = _ch_popcount(han_u->map_w);
@@ -1090,7 +1090,7 @@ _ch_mark_buck(u3h_buck* hab_u)
 /* _ch_mark_node(): mark node for gc.
 */
 c3_w_tmp
-_ch_mark_node(u3h_node* han_u, c3_w_tmp lef_w)
+_ch_mark_node(u3h_node* han_u, c3_w_new lef_w)
 {
   c3_w_new tot_w = 0;
   c3_w_new len_w = _ch_popcount(han_u->map_w);
@@ -1124,12 +1124,12 @@ _ch_mark_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_mark(): mark hashtable for gc.
 */
-c3_w_tmp
+c3_n
 u3h_mark(u3p(u3h_root) har_p)
 {
-  c3_w_tmp tot_w = 0;
+  c3_n tot_w = 0;
   u3h_root* har_u = u3to(u3h_root, har_p);
-  c3_w_tmp        i_w;
+  c3_w_new        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
     u3h_slot sot_n = har_u->sot_n[i_w];
@@ -1169,7 +1169,7 @@ _ch_rewrite_buck(u3h_buck* hab_u)
 /* _ch_rewrite_node(): rewrite node for compaction.
 */
 void
-_ch_rewrite_node(u3h_node* han_u, c3_w_tmp lef_w)
+_ch_rewrite_node(u3h_node* han_u, c3_w_new lef_w)
 {
   if ( c3n == u3a_rewrite_ptr(han_u) ) return;
 
@@ -1249,7 +1249,7 @@ _ch_count_buck(u3h_buck* hab_u)
 /* _ch_count_node(): count node for gc.
 */
 c3_w_tmp
-_ch_count_node(u3h_node* han_u, c3_w_tmp lef_w)
+_ch_count_node(u3h_node* han_u, c3_w_new lef_w)
 {
   c3_w_new tot_w = 0;
   c3_w_new len_w = _ch_popcount(han_u->map_w);
@@ -1283,12 +1283,12 @@ _ch_count_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_count(): count hashtable for gc.
 */
-c3_w_tmp
+c3_n
 u3h_count(u3p(u3h_root) har_p)
 {
-  c3_w_tmp tot_w = 0;
+  c3_n tot_w = 0;
   u3h_root* har_u = u3to(u3h_root, har_p);
-  c3_w_tmp        i_w;
+  c3_w_new        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
     u3h_slot sot_n = har_u->sot_n[i_w];
@@ -1329,7 +1329,7 @@ _ch_discount_buck(u3h_buck* hab_u)
 /* _ch_discount_node(): discount node for gc.
 */
 c3_w_tmp
-_ch_discount_node(u3h_node* han_u, c3_w_tmp lef_w)
+_ch_discount_node(u3h_node* han_u, c3_w_new lef_w)
 {
   c3_w_new tot_w = 0;
   c3_w_new len_w = _ch_popcount(han_u->map_w);
@@ -1363,12 +1363,12 @@ _ch_discount_node(u3h_node* han_u, c3_w_tmp lef_w)
 
 /* u3h_discount(): discount hashtable for gc.
 */
-c3_w_tmp
+c3_n
 u3h_discount(u3p(u3h_root) har_p)
 {
-  c3_w_tmp tot_w = 0;
+  c3_n tot_w = 0;
   u3h_root* har_u = u3to(u3h_root, har_p);
-  c3_w_tmp        i_w;
+  c3_w_new        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
     u3h_slot sot_n = har_u->sot_n[i_w];
@@ -1392,7 +1392,7 @@ u3h_discount(u3p(u3h_root) har_p)
 
 /* u3h_wyt(): number of entries
 */
-c3_w_tmp
+c3_n
 u3h_wyt(u3p(u3h_root) har_p)
 {
   u3h_root* har_u = u3to(u3h_root, har_p);

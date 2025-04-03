@@ -168,7 +168,7 @@
 
       /* u3h_mark(): mark hashtable for gc.
       */
-        c3_w_tmp
+        c3_n
         u3h_mark(u3p(u3h_root) har_p);
 
       /* u3h_rewrite(): rewrite hashtable for compaction.
@@ -178,12 +178,12 @@
 
       /* u3h_count(): count hashtable for gc.
       */
-        c3_w_tmp
+        c3_n
         u3h_count(u3p(u3h_root) har_p);
 
       /* u3h_discount(): discount hashtable for gc.
       */
-        c3_w_tmp
+        c3_n
         u3h_discount(u3p(u3h_root) har_p);
 
       /* u3h_walk_with(): traverse hashtable with key, value fn and data
@@ -212,7 +212,7 @@
 
       /* u3h_wyt(): number of entries
       */
-        c3_w_tmp
+        c3_n
         u3h_wyt(u3p(u3h_root) har_p);
 
 #endif /* ifndef U3_HASHTABLE_H */
