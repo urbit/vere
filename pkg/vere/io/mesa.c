@@ -3161,6 +3161,7 @@ u3_mesa_io_init(u3_pier* pir_u)
 
   uv_timer_init(u3L, &mes_u->lam_u.tim_u);
   mes_u->lam_u.tim_u.data = &mes_u->lam_u;
+  _ames_init_czars(&mes_u->lam_u);
 
   //  initialize libnatpmp
   mes_u->nat_u.car_u = car_u;

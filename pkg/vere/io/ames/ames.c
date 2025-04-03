@@ -27,6 +27,7 @@
 #define QUEUE_MAX        30             //  max number of packets in queue
 
 #define DIRECT_ROUTE_TIMEOUT_MICROS 120000000
+
   typedef struct _u3_ames u3_ames;
   typedef struct _u3_mesa_auto {
     u3_auto  car_u;
@@ -797,6 +798,7 @@ _ames_lane_into_cache(u3_ames* sam_u, u3_noun who, u3_noun las)
 {
   u3_ship who_u = u3_ship_of_noun(who);
   u3_peer* per_u = _mesa_gut_peer(sam_u->mes_u, who_u);
+  if ( c3y == per_u->lam_o ) return per_u;
 
   // XX the format of the lane %nail gives is (list (each @p address))
 
@@ -822,6 +824,7 @@ _ames_lane_into_cache(u3_ames* sam_u, u3_noun who, u3_noun las)
         per_u->dan_u = (sockaddr_in){0};
       } else {
         per_u->lam_o = c3y;
+        per_u->dan_u = u3_ames_decode_lane(u3k(u3t(lan)));
       }
       per_u->lam_u = who_u;
     }
@@ -1773,57 +1776,6 @@ _ames_hear(u3_ames* sam_u,
   }
 }
 
-/* _ames_io_start(): initialize ames I/O.
-*/
-static void
-_ames_io_start(u3_ames* sam_u)
-{
-  c3_s     por_s = sam_u->pir_u->por_s;
-  u3_noun    who = u3_ship_to_noun(sam_u->pir_u->who_u);
-  //c3_o     zar_o = _ames_is_czar(who);
-  c3_i     ret_i;
-
-
-  //if ( c3y == zar_o ) {
-  //  c3_y num_y = (c3_y)sam_u->pir_u->who_u.hed_d;
-  //  c3_s zar_s = _ames_czar_port(num_y);
-
-  //  if ( 0 == por_s ) {
-  //    por_s = zar_s;
-  //  }
-  //  else if ( por_s != zar_s ) {
-  //    u3l_log("ames: czar: overriding port %d with -p %d", zar_s, por_s);
-  //    u3l_log("ames: czar: WARNING: %d required for discoverability", zar_s);
-  //  }
-  //}
-  struct sockaddr_in lan_u = {0};
-  lan_u.sin_family = AF_INET;
-  lan_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
-                            htonl(INADDR_ANY) :
-                            htonl(INADDR_LOOPBACK);
-  lan_u.sin_port = htons(por_s);
-  u3l_log("ames: skipping port: %u", por_s);
-
-  if ( c3y == u3_Host.ops_u.net ) {
-    u3l_log("ames: live on %d", sam_u->pir_u->por_s);
-  }
-  else {
-    u3l_log("ames: live on %d (localhost only)", sam_u->pir_u->por_s);
-  }
-
-  {
-
-    c3_c* our_s = u3_ship_to_string(sam_u->pir_u->who_u);
-    c3_free(our_s);
-  }
-
-  /*
-  uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _ames_recv_cb);
-  */
-
-  u3z(who);
-}
-
 /* _ames_prot_scry_cb(): receive ames protocol version
 */
 static void
@@ -1861,8 +1813,6 @@ _ames_prot_scry_cb(void* vod_p, u3_noun nun)
 void
 _ames_io_talk(u3_ames* sam_u)
 {
-  _ames_io_start(sam_u);
-
   //  send born event
   //
   // {

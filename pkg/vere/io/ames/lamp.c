@@ -198,16 +198,18 @@ _ames_etch_czars(u3_lamp_state* lam_u) {
     per_u->dan_u.sin_port = _ames_czar_port(i);
     c3_c* who_c = u3_ship_to_string(who_u);
     c3_w len_w = u3_mpef_turfs(NULL, 0, who_c + 1, lam_u->dns_c);
-    if (per_u->dns_c) c3_free(per_u->dns_c);
-    c3_c** dns_c = per_u->dns_c = c3_malloc(len_w);
-    u3_mpef_turfs((c3_c*)dns_c, 0, who_c + 1, lam_u->dns_c);
+    if (0 != len_w) {
+      if (per_u->dns_c) c3_free(per_u->dns_c);
+      c3_c** dns_c = per_u->dns_c = c3_malloc(len_w);
+      u3_mpef_turfs((c3_c*)dns_c, 0, who_c + 1, lam_u->dns_c);
+    }
     c3_free(who_c);
   }
 }
 
 /* _ames_lamp_all(): galaxy address resolution.
 */
-void
+static void
 _ames_lamp_all(uv_timer_t* tim_u)
 {
   u3_lamp_state* lam_u = tim_u->data;
@@ -254,6 +256,17 @@ _ames_cmp_turfs(c3_c** a, c3_c** b) {
     b++;
   }
   return c3y;
+}
+
+void _ames_init_czars(u3_lamp_state* lam_u)
+{
+  for (c3_w i = 0; i < 256; i++) {
+    u3_ship who_u = u3_ship_of_noun(i);
+    u3_peer* per_u = _mesa_gut_peer(lam_u->car_u, who_u);
+    per_u->lam_o = c3y;
+    per_u->dan_u.sin_family = AF_INET;
+    per_u->dan_u.sin_port = _ames_czar_port(i);
+  }
 }
 
 /* _ames_ef_turf(): initialize ames I/O on domain(s).
