@@ -4,7 +4,7 @@
 #define TEST_SIZE 100000
 
 // defined in noun/hashtable.c
-c3_w_tmp _ch_skip_slot(c3_w_tmp mug_w, c3_w_tmp lef_w);
+c3_w_new _ch_skip_slot(c3_w_new mug_w, c3_w_new lef_w);
 
 /* _setup(): prepare for tests.
 */
@@ -142,8 +142,8 @@ _test_skip_slot(void)
 
   //  root table
   {
-    c3_w_tmp mug_w = 0x17 << 25;
-    c3_w_tmp res_w = _ch_skip_slot(mug_w, 25);
+    c3_w_new mug_w = 0x17 << 25;
+    c3_w_new res_w = _ch_skip_slot(mug_w, 25);
 
     if ( (0x18 << 25) != res_w ) {
       fprintf(stderr, "bit skip_slot (a): failed\r\n");
@@ -152,8 +152,8 @@ _test_skip_slot(void)
   }
 
   {
-    c3_w_tmp mug_w = 63 << 25; //  6 bits, all ones
-    c3_w_tmp res_w = _ch_skip_slot(mug_w, 25);
+    c3_w_new mug_w = 63 << 25; //  6 bits, all ones
+    c3_w_new res_w = _ch_skip_slot(mug_w, 25);
 
     if ( 0 != res_w ) {
       fprintf(stderr, "bit skip_slot (b): failed\r\n");
@@ -163,8 +163,8 @@ _test_skip_slot(void)
 
   //  child nodes
   {
-    c3_w_tmp mug_w = 17 << 20;
-    c3_w_tmp res_w = _ch_skip_slot(mug_w, 20);
+    c3_w_new mug_w = 17 << 20;
+    c3_w_new res_w = _ch_skip_slot(mug_w, 20);
 
     if ( (18 << 20) != res_w ) {
       fprintf(stderr, "bit skip_slot (c): failed\r\n");
@@ -173,8 +173,8 @@ _test_skip_slot(void)
   }
 
   {
-    c3_w_tmp mug_w = 31 << 20; //  5 bits, all ones
-    c3_w_tmp res_w = _ch_skip_slot(mug_w, 20);
+    c3_w_new mug_w = 31 << 20; //  5 bits, all ones
+    c3_w_new res_w = _ch_skip_slot(mug_w, 20);
     u3_assert((1 << 25) == res_w);
 
     if ( (1 << 25) != res_w ) {

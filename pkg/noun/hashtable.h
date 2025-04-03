@@ -104,7 +104,7 @@
       /* u3h_new_cache(): create hashtable with bounded size.
       */
         u3p(u3h_root)
-        u3h_new_cache(c3_w_new clk_w);
+        u3h_new_cache(c3_n clk_w);
 
       /* u3h_new(): create hashtable.
       */
