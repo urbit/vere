@@ -327,7 +327,10 @@ _ames_fief(u3_lamp_state* lam_u, u3_noun fef) {
       u3l_log("ames: inscrutable fief");
     } break;
     case c3__turf: {
-      u3_noun tuf = val;
+      u3_noun tuf, por;
+      u3x_cell(val, &tuf, &por);
+      per_u->dan_u.sin_family = AF_INET;
+      per_u->dan_u.sin_port = htons(por);
       if ( u3_nul == tuf ) break;
       c3_w len_w = u3_mcut_hosts(NULL, 0, u3k(tuf));
       if (len_w == 0) {
