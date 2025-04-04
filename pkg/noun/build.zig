@@ -141,6 +141,7 @@ pub fn build(b: *std.Build) !void {
     try flags.appendSlice(&.{
         "-pedantic",
         "-std=gnu23",
+        // "-Wconversion",         // ;;: todo: enable in a bit
     });
     try flags.appendSlice(copts);
 
@@ -358,6 +359,7 @@ const c_source_files = [_][]const u8{
     "serial.c",
     "trace.c",
     "urth.c",
+    // ;;: todo: fix bad references in migrations and uncomment
     //"v1/allocate.c",
     //"v1/hashtable.c",
     //"v1/jets.c",
