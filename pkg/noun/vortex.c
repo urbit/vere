@@ -254,7 +254,7 @@ u3v_peek(u3_noun sam)
 /* u3v_soft_peek(): softly query the reck namespace.
 */
 u3_noun
-u3v_soft_peek(c3_w_tmp mil_w, u3_noun sam)
+u3v_soft_peek(c3_n mil_w, u3_noun sam)
 {
   u3_noun gon = u3m_soft(mil_w, u3v_peek, sam);
   u3_noun tag, dat;
@@ -295,7 +295,7 @@ u3v_poke_raw(u3_noun sam)
 
   {
 # ifdef  U3_MEMORY_DEBUG
-    c3_w_tmp cod_w = u3a_lush(u3h(u3t(u3t(sam))));
+    c3_n cod_w = u3a_lush(u3h(u3t(u3t(sam))));
 # endif
 
     pro = u3n_slam_on(fun, sam);
@@ -311,7 +311,7 @@ u3v_poke_raw(u3_noun sam)
 /* u3v_poke_sure(): inject an event, saving new state if successful.
 */
 c3_o
-u3v_poke_sure(c3_w_tmp mil_w, u3_noun eve, u3_noun* pro)
+u3v_poke_sure(c3_n mil_w, u3_noun eve, u3_noun* pro)
 {
   u3_noun gon = u3m_soft(mil_w, u3v_poke_raw, eve);
   u3_noun tag, dat;
