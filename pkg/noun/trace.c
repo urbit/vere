@@ -27,10 +27,10 @@ static pid_t _nock_pid_i = 0;
 static FILE* _file_u = NULL;
 
 /// Trace counter. Tracks the number of entries written to the JSON trace file.
-static c3_w_tmp _trace_cnt_w = 0;
+static c3_n _trace_cnt_w = 0;
 
 /// File counter. Tracks the number of times u3t_trace_close() has been called.
-static c3_w_tmp _file_cnt_w = 0;
+static c3_n _file_cnt_w = 0;
 
 /* u3t_push(): push on trace stack.
 */
@@ -83,7 +83,7 @@ u3t_heck(u3_atom cog)
 #if 0
   u3R->pro.cel_d++;
 #else
-  c3_w_tmp len_w = u3r_met(3, cog);
+  c3_n len_w = u3r_met(3, cog);
   c3_c* str_c = alloca(1 + len_w);
 
   u3r_bytes(0, len_w, (c3_y *)str_c, cog);
@@ -128,7 +128,7 @@ _t_samp_process(u3_road* rod_u)
 {
   u3_noun pef   = u3_nul;           // (list (pair path (map path ,@ud)))
   u3_noun muf   = u3_nul;           // (map path ,@ud)
-  c3_w_tmp    len_w = 0;
+  c3_n    len_w = 0;
 
   //  Accumulate a label/map stack which collapses recursive segments.
   //
@@ -209,7 +209,7 @@ u3t_samp(void)
     return;
   }
 
-  c3_w_tmp old_wag = u3C.wag_w;
+  c3_w_new old_wag = u3C.wag_w;
   u3C.wag_w &= ~u3o_debug_cpu;
   u3C.wag_w &= ~u3o_trace;
 
@@ -217,7 +217,7 @@ u3t_samp(void)
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    c3_l_tmp      mot_l;
+    c3_w_new      mot_l;
     u3a_road* rod_u;
 
     if ( _(u3T.mal_o) ) {
@@ -310,7 +310,7 @@ u3t_trace_open(const c3_c* dir_c)
   }
 
   c3_c lif_c[2056];
-  snprintf(lif_c, 2056, "%s/%d.json", fil_c, _file_cnt_w);
+  snprintf(lif_c, 2056, "%s/%"PRIc3_n".json", fil_c, _file_cnt_w);
 
   _file_u = c3_fopen(lif_c, "w");
   _nock_pid_i = (int)getpid();
@@ -458,26 +458,26 @@ u3t_print_steps(FILE* fil_u, c3_c* cap_c, c3_d sep_d)
 {
   u3_assert( 0 != fil_u );
 
-  c3_w_tmp gib_w = (sep_d / 1000000000ULL);
-  c3_w_tmp mib_w = (sep_d % 1000000000ULL) / 1000000ULL;
-  c3_w_tmp kib_w = (sep_d % 1000000ULL) / 1000ULL;
-  c3_w_tmp bib_w = (sep_d % 1000ULL);
+  c3_n gib_w = (sep_d / 1000000000ULL);
+  c3_n mib_w = (sep_d % 1000000000ULL) / 1000000ULL;
+  c3_n kib_w = (sep_d % 1000000ULL) / 1000ULL;
+  c3_n bib_w = (sep_d % 1000ULL);
 
   //  XX prints to stderr since it's called on shutdown, daemon may be gone
   //
   if ( sep_d ) {
     if ( gib_w ) {
-      fprintf(fil_u, "%s: G/%d.%03d.%03d.%03d\r\n",
+      fprintf(fil_u, "%s: G/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n",
           cap_c, gib_w, mib_w, kib_w, bib_w);
     }
     else if ( mib_w ) {
-      fprintf(fil_u, "%s: M/%d.%03d.%03d\r\n", cap_c, mib_w, kib_w, bib_w);
+      fprintf(fil_u, "%s: M/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n", cap_c, mib_w, kib_w, bib_w);
     }
     else if ( kib_w ) {
-      fprintf(fil_u, "%s: K/%d.%03d\r\n", cap_c, kib_w, bib_w);
+      fprintf(fil_u, "%s: K/%"PRIc3_n".%03"PRIc3_n"\r\n", cap_c, kib_w, bib_w);
     }
     else if ( bib_w ) {
-      fprintf(fil_u, "%s: %d\r\n", cap_c, bib_w);
+      fprintf(fil_u, "%s: %"PRIc3_n"\r\n", cap_c, bib_w);
     }
   }
 }
@@ -541,13 +541,13 @@ u3t_init(void)
   u3T.euq_o = c3n;
 }
 
-c3_w_tmp
+c3_n
 u3t_trace_cnt(void)
 {
   return _trace_cnt_w;
 }
 
-c3_w_tmp
+c3_n
 u3t_file_cnt(void)
 {
   return _file_cnt_w;
@@ -633,10 +633,10 @@ u3t_boff(void)
 
 
 /* u3t_slog_cap(): slog a tank with a caption with
-** a given priority c3_l_tmp (assumed 0-3).
+** a given priority c3_l (assumed 0-3).
 */
 void
-u3t_slog_cap(c3_l_tmp pri_l, u3_noun cap, u3_noun tan)
+u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
 {
   u3t_slog(
     u3nc(
@@ -651,12 +651,12 @@ u3t_slog_cap(c3_l_tmp pri_l, u3_noun cap, u3_noun tan)
 }
 
 
-/* u3t_slog_trace(): given a c3_l_tmp priority pri and a raw stack tax
+/* u3t_slog_trace(): given a c3_l priority pri and a raw stack tax
 ** flop the order into start-to-end, render, and slog each item
 ** until done.
 */
 void
-u3t_slog_trace(c3_l_tmp pri_l, u3_noun tax)
+u3t_slog_trace(c3_l pri_l, u3_noun tax)
 {
   // render the stack
   // Note: ton is a reference to a data struct
@@ -682,10 +682,10 @@ u3t_slog_trace(c3_l_tmp pri_l, u3_noun tax)
 
 
 /* u3t_slog_nara(): slog only the deepest road's trace with
-** c3_l_tmp priority pri
+** c3_l priority pri
 */
 void
-u3t_slog_nara(c3_l_tmp pri_l)
+u3t_slog_nara(c3_l pri_l)
 {
   u3_noun tax = u3k(u3R->bug.tax);
   u3t_slog_trace(pri_l, tax);
@@ -693,10 +693,10 @@ u3t_slog_nara(c3_l_tmp pri_l)
 
 
 /* u3t_slog_hela(): join all roads' traces together into one tax
-** and pass it to slog_trace along with the given c3_l_tmp priority pri_l
+** and pass it to slog_trace along with the given c3_l priority pri_l
 */
 void
-u3t_slog_hela(c3_l_tmp pri_l)
+u3t_slog_hela(c3_l pri_l)
 {
   // rod_u protects us from mutating the global state
   u3_road* rod_u = u3R;
@@ -723,7 +723,7 @@ _ct_roundf(float per_f)
   // to account for rounding without using round or roundf
   float big_f = (per_f*10000)+0.5;
   // truncate to int
-  c3_w_tmp big_w = (c3_w_tmp) big_f;
+  c3_w_new big_w = (c3_w_new) big_f;
   // convert to float and scale down such that
   // our last two digits are right of the decimal
   float tuc_f = (float) big_w/100.0;
@@ -732,7 +732,8 @@ _ct_roundf(float per_f)
 
 /* _ct_meme_percent(): convert two ints into a percentage */
 static float
-_ct_meme_percent(c3_w_tmp lit_w, c3_w_tmp big_w)
+/* ;;: potential loss of precision with VERE64. Convert to double if it matters */
+_ct_meme_percent(c3_n lit_w, c3_n big_w)
 {
   // get the percentage of our inputs as a float
   float raw_f = (float) lit_w/big_w;
@@ -742,7 +743,7 @@ _ct_meme_percent(c3_w_tmp lit_w, c3_w_tmp big_w)
 /* _ct_all_heap_size(): return the size in bytes of ALL space on the Loom
 **                      over all roads, currently in use as heap.
 */
-static c3_w_tmp
+static c3_n
 _ct_all_heap_size(u3_road* r) {
   if (r == &(u3H->rod_u)) {
     return u3a_heap(r)*4;
@@ -759,9 +760,9 @@ _ct_all_heap_size(u3_road* r) {
 struct
 bar_item {
   // index
-  c3_w_tmp dex_w;
+  c3_w_new dex_w;
   // lower bound
-  c3_w_tmp low_w;
+  c3_w_new low_w;
   // original value
   float ori_f;
   // difference
@@ -791,11 +792,11 @@ _ct_boost_small(float num_f)
  *                          values should be 100. This function reports how far from
  *                          the ideal bar_u is.
 */
-static c3_ws_tmp
+static c3_ws_new
 _ct_global_difference(struct bar_info bar_u)
 {
-  c3_w_tmp low_w = 0;
-  for (c3_w_tmp i=0; i < 6; i++) {
+  c3_w_new low_w = 0;
+  for (c3_w_new i=0; i < 6; i++) {
     low_w += bar_u.s[i].low_w;
   }
   return 100 - low_w;
@@ -808,7 +809,7 @@ _ct_global_difference(struct bar_info bar_u)
 static struct bar_info
 _ct_compute_roundoff_error(struct bar_info bar_u)
 {
-  for (c3_w_tmp i=0; i < 6; i++) {
+  for (c3_w_new i=0; i < 6; i++) {
     bar_u.s[i].dif_f = bar_u.s[i].ori_f - bar_u.s[i].low_w;
   }
   return bar_u;
@@ -819,8 +820,8 @@ static struct bar_info
 _ct_sort_by_roundoff_error(struct bar_info bar_u)
 {
   struct bar_item tem_u;
-  for (c3_w_tmp i=1; i < 6; i++) {
-    for (c3_w_tmp j=0; j < 6-i; j++) {
+  for (c3_w_new i=1; i < 6; i++) {
+    for (c3_w_new j=0; j < 6-i; j++) {
       if (bar_u.s[j+1].dif_f > bar_u.s[j].dif_f) {
         tem_u = bar_u.s[j];
         bar_u.s[j] = bar_u.s[j+1];
@@ -836,8 +837,8 @@ static struct bar_info
 _ct_sort_by_index(struct bar_info bar_u)
 {
   struct bar_item tem_u;
-  for (c3_w_tmp i=1; i < 6; i++) {
-    for (c3_w_tmp j=0; j < 6-i; j++) {
+  for (c3_w_new i=1; i < 6; i++) {
+    for (c3_w_new j=0; j < 6-i; j++) {
       if (bar_u.s[j+1].dex_w < bar_u.s[j].dex_w) {
         tem_u = bar_u.s[j];
         bar_u.s[j] = bar_u.s[j+1];
@@ -853,9 +854,9 @@ _ct_sort_by_index(struct bar_info bar_u)
  *                     and undersized things a bit bigger
 */
 static struct bar_info
-_ct_reduce_error(struct bar_info bar_u, c3_ws_tmp dif_s)
+_ct_reduce_error(struct bar_info bar_u, c3_ws_new dif_s)
 {
-  for (c3_w_tmp i=0; i < 6; i++) {
+  for (c3_w_new i=0; i < 6; i++) {
     if (bar_u.s[i].low_w == 0) continue;
     if (bar_u.s[i].low_w == 1) continue;
     if (dif_s > 0) {
@@ -886,16 +887,16 @@ _ct_report_bargraph(
 
   // init the list of structs
   struct bar_info bar_u;
-  for (c3_w_tmp i=0; i < 6; i++) {
+  for (c3_w_new i=0; i < 6; i++) {
     bar_u.s[i].dex_w = i;
     bar_u.s[i].ori_f = in[i];
-    bar_u.s[i].low_w = (c3_w_tmp) bar_u.s[i].ori_f;
+    bar_u.s[i].low_w = (c3_w_new) bar_u.s[i].ori_f;
   }
 
   // repeatedly adjust for roundoff error
   // until it is elemenated or we go 100 cycles
-  c3_ws_tmp dif_s = 0;
-  for (c3_w_tmp x=0; x<100; x++) {
+  c3_ws_new dif_s = 0;
+  for (c3_w_new x=0; x<100; x++) {
     bar_u = _ct_compute_roundoff_error(bar_u);
     dif_s = _ct_global_difference(bar_u);
     if (dif_s == 0) break;
@@ -904,17 +905,17 @@ _ct_report_bargraph(
   }
   bar_u = _ct_sort_by_index(bar_u);
 
-  for (c3_w_tmp x=1; x<104; x++) {
+  for (c3_w_new x=1; x<104; x++) {
     bar_c[x] = ' ';
   }
   bar_c[0] = '[';
 
   // create our bar chart
   const c3_c sym_c[6] = "=-%#+~";
-  c3_w_tmp x = 0, y = 0;
-  for (c3_w_tmp i=0; i < 6; i++) {
+  c3_w_new x = 0, y = 0;
+  for (c3_w_new i=0; i < 6; i++) {
     x++;
-    for (c3_w_tmp j=0; j < bar_u.s[i].low_w; j++) {
+    for (c3_w_new j=0; j < bar_u.s[i].low_w; j++) {
       bar_c[x+j] = sym_c[i];
       y = x+j;
     }
@@ -1021,15 +1022,15 @@ u3t_etch_meme(c3_l_tmp mod_l)
   u3a_road* lum_r;
   lum_r = &(u3H->rod_u);
   // this will need to switch to c3_d when we go to a 64 loom
-  c3_w_tmp top_w = u3a_full(lum_r)*4,
+  c3_n top_w = u3a_full(lum_r)*4, /* ;;: u3a_full casts result to c3_n (uint64_t), odd that zig build does not complain above assignment to a smaller type (c3_w_tmp / uint32_t). As far as I can tell, -Wnarrowing should be enabled */
        ful_w = u3a_full(u3R)*4,
        fre_w = u3a_idle(u3R)*4,
        tak_w = u3a_temp(u3R)*4,
        hap_w = u3a_heap(u3R)*4,
        pen_w = u3a_open(u3R)*4;
 
-  c3_w_tmp imu_w = top_w-ful_w;
-  c3_w_tmp hep_w = hap_w-fre_w;
+  c3_n imu_w = top_w-ful_w;
+  c3_n hep_w = hap_w-fre_w;
 
 
   float hep_f = _ct_meme_percent(hep_w, top_w),
@@ -1038,8 +1039,8 @@ u3t_etch_meme(c3_l_tmp mod_l)
         tak_f = _ct_meme_percent(tak_w, top_w);
   float ful_f = hep_f + fre_f + pen_f + tak_f;
 
-  c3_w_tmp hip_w = _ct_all_heap_size(u3R) - hap_w;
-  c3_w_tmp tik_w = imu_w - hip_w;
+  c3_n hip_w = _ct_all_heap_size(u3R) - hap_w;
+  c3_n tik_w = imu_w - hip_w;
   float hip_f = _ct_meme_percent(hip_w, top_w),
         tik_f = _ct_meme_percent(tik_w, top_w);
 
