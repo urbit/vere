@@ -937,7 +937,7 @@ _ct_size_prefix(c3_d num_d)
     'X';
 }
 
-/* _ct_report_string(): convert a int into a string, adding a metric scale prefix letter*/
+/* _ct_report_string(): convert an int into a string, adding a metric scale prefix letter */
 static void
 _ct_report_string(c3_c rep_c[32], c3_d num_d)
 {
@@ -947,7 +947,7 @@ _ct_report_string(c3_c rep_c[32], c3_d num_d)
   rep_c[24] = _ct_size_prefix(num_d);
   // consume wor_w into a string one base-10 digit at a time
   // including dot formatting
-  c3_w_tmp i = 0, j = 0;
+  c3_w_new i = 0, j = 0;
   while (num_d > 0) {
     if (j == 3) {
       rep_c[22-i] = '.';
@@ -962,13 +962,13 @@ _ct_report_string(c3_c rep_c[32], c3_d num_d)
   }
 }
 
-/*  _ct_etch_road_depth(): return a the current road depth as a fixed size string */
+/*  _ct_etch_road_depth(): return the current road depth as a fixed size string */
 static void
- _ct_etch_road_depth(c3_c rep_c[32], u3_road* r, c3_w_tmp num_w) {
+ _ct_etch_road_depth(c3_c rep_c[32], u3_road* r, c3_w_new num_w) {
   if (r == &(u3H->rod_u)) {
     _ct_report_string(rep_c, num_w);
     // this will be incorrectly indented, so we fix that here
-    c3_w_tmp i = 14;
+    c3_w_new i = 14;
     while (i > 0) {
       rep_c[i] = rep_c[i+16];
       rep_c[i+16] = ' ';
@@ -984,7 +984,7 @@ static void
  *                    scaled by a metric scaling postfix (ie MB, GB, etc)
 */
 static void
-_ct_etch_memory(c3_c rep_c[32], float per_f, c3_w_tmp num_w)
+_ct_etch_memory(c3_c rep_c[32], float per_f, c3_w_new num_w)
 {
   // create the basic report string
   _ct_report_string(rep_c, num_w);
@@ -993,8 +993,8 @@ _ct_etch_memory(c3_c rep_c[32], float per_f, c3_w_tmp num_w)
 
   // add the space-percentage into the report
   rep_c[2] = '0', rep_c[3] = '.', rep_c[4] = '0', rep_c[5] = '0';
-  c3_w_tmp per_i = (c3_w_tmp) (per_f*100);
-  c3_w_tmp i = 0;
+  c3_w_new per_i = (c3_w_new) (per_f*100);
+  c3_w_new i = 0;
   while (per_i > 0 && i < 6) {
     if (i != 2) {
       rep_c[5-i] = (per_i%10)+'0';
@@ -1017,12 +1017,12 @@ _ct_etch_steps(c3_c rep_c[32], c3_d sep_d)
 
 /* u3t_etch_meme(): report memory stats at call time */
 u3_noun
-u3t_etch_meme(c3_l_tmp mod_l)
+u3t_etch_meme(c3_n mod_n)
 {
   u3a_road* lum_r;
   lum_r = &(u3H->rod_u);
   // this will need to switch to c3_d when we go to a 64 loom
-  c3_n top_w = u3a_full(lum_r)*4, /* ;;: u3a_full casts result to c3_n (uint64_t), odd that zig build does not complain above assignment to a smaller type (c3_w_tmp / uint32_t). As far as I can tell, -Wnarrowing should be enabled */
+  c3_n top_w = u3a_full(lum_r)*4,
        ful_w = u3a_full(u3R)*4,
        fre_w = u3a_idle(u3R)*4,
        tak_w = u3a_temp(u3R)*4,
@@ -1051,13 +1051,13 @@ u3t_etch_meme(c3_l_tmp mod_l)
   **  cel_d: max cells allocated in current road (inc closed kids, but not parents)
   **  nox_d: nock steps performed in current road
   */
-  c3_w_tmp max_w = (u3R->all.max_w*4)+imu_w;
+  c3_n max_w = (u3R->all.max_w*4)+imu_w;
   float max_f = _ct_meme_percent(max_w, top_w);
   c3_d cel_d = u3R->pro.cel_d;
   c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  c3_w_tmp inc_w = (max_f > hip_f+1.0) ? (c3_w_tmp) max_f+0.5 : (c3_w_tmp) hip_f+1.5;
+  c3_w_new inc_w = (max_f > hip_f+1.0) ? (c3_w_new) max_f+0.5 : (c3_w_new) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed
@@ -1070,7 +1070,7 @@ u3t_etch_meme(c3_l_tmp mod_l)
   bar_c[0] = 0;
   _ct_report_bargraph(bar_c, hip_f, hep_f, fre_f, pen_f, tak_f, tik_f);
 
-  c3_w_tmp dol = (c3_w_tmp) _ct_roundf(hip_f/100);
+  c3_w_new dol = (c3_w_new) _ct_roundf(hip_f/100);
   bar_c[dol] = '$';
 #ifdef U3_CPU_DEBUG
   if (max_f > 0.0) {
@@ -1086,7 +1086,7 @@ u3t_etch_meme(c3_l_tmp mod_l)
     strcat(dir_n, "  South");
   }
 
-  if (mod_l == 0) {
+  if (mod_n == 0) {
     return u3i_string(bar_c);
   }
   else {

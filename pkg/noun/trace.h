@@ -175,7 +175,7 @@
     /* u3t_etch_meme(): report memory stats at call time
     */
       u3_noun
-      u3t_etch_meme(c3_l_tmp mod_l);
+      u3t_etch_meme(c3_n mod_n);
 
   /** Globals.
   **/
