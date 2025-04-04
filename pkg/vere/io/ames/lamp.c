@@ -243,12 +243,19 @@ _ames_lamp_all(uv_timer_t* tim_u)
 
 static c3_o
 _ames_cmp_turfs(c3_c** a, c3_c** b) {
-  while (a != NULL || b != NULL) {
-    if (a == NULL) {
-      if (b == NULL) return c3y;
+  if (a == NULL) {
+    if (b == NULL) return c3y;
+    return c3n;
+  }
+  if (b == NULL) {
+    return c3n;
+  }
+  while (*a != NULL || *b != NULL) {
+    if (*a == NULL) {
+      if (*b == NULL) return c3y;
       return c3n;
     }
-    if (b == NULL) {
+    if (*b == NULL) {
       return c3n;
     }
     if (0 != strcmp(*a, *b)) return 0;
@@ -258,7 +265,8 @@ _ames_cmp_turfs(c3_c** a, c3_c** b) {
   return c3y;
 }
 
-void _ames_init_czars(u3_lamp_state* lam_u)
+void
+_ames_init_czars(u3_lamp_state* lam_u)
 {
   for (c3_w i = 0; i < 256; i++) {
     u3_ship who_u = u3_ship_of_noun(i);
@@ -278,11 +286,11 @@ _ames_ef_turf(u3_lamp_state* lam_u, u3_noun tuf)
     c3_w len_w = u3_mcut_hosts(NULL, 0, u3k(tuf));
     if (len_w == 0) {
       // todo: clear?
+      u3z(tuf);
       return;
     }
     c3_c** dns_c = c3_malloc(len_w);
     u3_mcut_hosts((c3_c*)dns_c, 0, u3k(tuf));
-    _ames_cmp_turfs(dns_c, lam_u->dns_c);
     if ( c3n == _ames_cmp_turfs(dns_c, lam_u->dns_c) ) {
       c3_free(lam_u->dns_c);
       lam_u->dns_c = dns_c;
@@ -300,4 +308,61 @@ _ames_ef_turf(u3_lamp_state* lam_u, u3_noun tuf)
   //if ( c3n == lam_u->car_u.liv_o ) {
   //  _ames_io_start(lam_u);
   //}
+  u3z(tuf);
 }
+
+void
+_ames_fief(u3_lamp_state* lam_u, u3_noun fef) {
+  u3_noun who, q_fef;
+  u3x_cell(fef, &who, &q_fef);
+  u3_ship who_u = u3_ship_of_noun(who);
+  u3_peer* per_u = _mesa_gut_peer(lam_u->car_u, who_u);
+  if ( u3_nul == q_fef ) {
+    per_u->lam_o = c3n;
+  }
+  u3_noun tag, val;
+  u3x_cell(u3t(q_fef), &tag, &val);
+  switch ( tag ) {
+    default: {
+      u3l_log("ames: inscrutable fief");
+    } break;
+    case c3__turf: {
+      u3_noun tuf = val;
+      if ( u3_nul == tuf ) break;
+      c3_w len_w = u3_mcut_hosts(NULL, 0, u3k(tuf));
+      if (len_w == 0) {
+        // todo: clear?
+        break;
+      }
+      c3_c** dns_c = c3_malloc(len_w);
+      u3_mcut_hosts((c3_c*)dns_c, 0, u3k(tuf));
+      if ( c3n == _ames_cmp_turfs(dns_c, per_u->dns_c) ) {
+        if ( NULL != per_u->dns_c )
+          c3_free(per_u->dns_c);
+        per_u->dns_c = dns_c;
+        lam_u->pen_s++;
+        _ames_lamp(lam_u, per_u, per_u->dns_c);
+      }
+    } break;
+    case c3__if: {
+      u3_noun pip, por;
+      u3x_cell(val, &pip, &por);
+      per_u->dan_u.sin_family = AF_INET;
+      per_u->dan_u.sin_addr.s_addr = htonl(u3r_word(0, pip));
+      per_u->dan_u.sin_port = htons(por);
+    } break;
+  }
+  u3z(fef);
+}
+
+void
+_ames_ef_fief(u3_lamp_state* lam_u, u3_noun fef)
+{
+  u3_noun _fef = fef = u3kdi_tap(fef);
+  while ( u3_nul != fef ) {
+    _ames_fief(lam_u, u3h(fef));
+    fef = u3t(fef);
+  }
+  u3z(_fef);
+}
+

@@ -419,6 +419,7 @@
 #   define c3__fent   c3_s4('f','e','n','t')
 #   define c3__ferd   c3_s4('f','e','r','d')
 #   define c3__fhex   c3_s4('f','h','e','x')
+#   define c3__fief   c3_s4('f','i','e','f')
 #   define c3__file   c3_s4('f','i','l','e')
 #   define c3__film   c3_s4('f','i','l','m')
 #   define c3__find   c3_s4('f','i','n','d')

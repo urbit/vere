@@ -1358,7 +1358,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 c3_s
 _ames_czar_port(c3_y imp_y);
 
-static sockaddr_in
+sockaddr_in
 _mesa_realise_lane(u3_mesa* mes_u, u3_noun lan) {
   sockaddr_in lan_u = {0};
   lan_u.sin_family = AF_INET;
@@ -1668,6 +1668,10 @@ u3_ames_encode_lane(sockaddr_in lan);
 
 void
 _ames_ef_turf(u3_lamp_state* lam_u, u3_noun tuf);
+
+void
+_ames_ef_fief(u3_lamp_state* lam_u, u3_noun fef);
+
 void
 _ames_lane_into_cache(void* mes_u, u3_noun who, u3_noun las);
 
@@ -1684,6 +1688,10 @@ static c3_o _mesa_kick(u3_mesa* mes_u, u3_noun tag, u3_noun dat)
     } break;
     case c3__turf: {
       _ames_ef_turf(&mes_u->lam_u, u3k(dat));
+      ret_o = c3y;
+    } break;
+    case c3__fief: {
+      _ames_ef_fief(&mes_u->lam_u, u3k(dat));
       ret_o = c3y;
     } break;
     case c3__push: {
@@ -3093,6 +3101,9 @@ _mesa_ef_saxo(u3_mesa* mes_u, u3_noun zad)
 */
 void*
 u3_ames_io_init(void* mes_u);
+
+void
+_ames_init_czars(u3_lamp_state* lam_u);
 
 /* _mesa_io_init(): initialize ames I/O.
 */
