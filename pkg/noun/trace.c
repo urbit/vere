@@ -1150,6 +1150,7 @@ u3t_sstack_init()
 
   stk_u->off_w = 0;
   stk_u->fow_w = 0;
+  u3t_sstack_push(c3__root);
 }
 
 /* u3t_sstack_open: initalize a root node on the spin stack 
