@@ -4,6 +4,10 @@
 c3_o
 _mesa_is_lane_zero(sockaddr_in lan_u);
 
+c3_o
+_mesa_lanes_equal(sockaddr_in lan_u, sockaddr_in lon_u);
+
+
 /* _ames_czar_port(): udp port for galaxy.
 */
 c3_s
@@ -96,17 +100,25 @@ _ames_lamp_gone(u3_lamp_state* lam_u, u3_peer* per_u)
 static void
 _ames_lamp_here(u3_lamp_state* lam_u, u3_peer* per_u, sockaddr_in lan_u, c3_c* dns_c)
 {
-  c3_w old_w = per_u->dan_u.sin_addr.s_addr;
-
-  if ( lan_u.sin_addr.s_addr != old_w ) {
+  if ( c3n == _mesa_lanes_equal(lan_u, per_u->dan_u) ) {
     c3_w nip_w = lan_u.sin_addr.s_addr;
     c3_c nip_c[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
 
-    u3l_log("ames: lamp %s ip .%s", dns_c, nip_c);
+    c3_c* who_c = u3_ship_to_string(per_u->her_u);
+    if ( dns_c )
+      u3l_log("ames: lamp %s domain %s ip .%s port %u",
+          who_c, dns_c,
+          nip_c, ntohs(lan_u.sin_port));
+    else 
+      u3l_log("ames: lamp %s static ip .%s port %u",
+          who_c,
+          nip_c, ntohs(lan_u.sin_port));
+
+    c3_free(who_c);
   }
 
-  per_u->dan_u.sin_addr.s_addr = lan_u.sin_addr.s_addr;
+  per_u->dan_u = lan_u;
   per_u->log_o = c3n;
 }
 
@@ -130,8 +142,12 @@ _ames_lamp_cb(uv_getaddrinfo_t* adr_u,
   }
 
   if ( rai_u && rai_u->ai_addr ) {
-    struct sockaddr_in* lan_u = (void*)rai_u->ai_addr;
-    _ames_lamp_here(lam_u, per_u, *lan_u, *res_u->dns_c);
+    struct sockaddr_in* adr_u = (void*)rai_u->ai_addr;
+    sockaddr_in lan_u = {0};
+    lan_u.sin_family = AF_INET;
+    lan_u.sin_port = per_u->dan_u.sin_port;
+    lan_u.sin_addr.s_addr = adr_u->sin_addr.s_addr;
+    _ames_lamp_here(lam_u, per_u, lan_u, *res_u->dns_c);
     lam_u->pen_s--;
     uv_freeaddrinfo(aif_u);
     c3_free(res_u);
@@ -350,9 +366,11 @@ _ames_fief(u3_lamp_state* lam_u, u3_noun fef) {
     case c3__if: {
       u3_noun pip, por;
       u3x_cell(val, &pip, &por);
-      per_u->dan_u.sin_family = AF_INET;
-      per_u->dan_u.sin_addr.s_addr = htonl(u3r_word(0, pip));
-      per_u->dan_u.sin_port = htons(por);
+      sockaddr_in lan_u;
+      lan_u.sin_family = AF_INET;
+      lan_u.sin_addr.s_addr = htonl(u3r_word(0, pip));
+      lan_u.sin_port = htons(por);
+      _ames_lamp_here(lam_u, per_u, lan_u, NULL);
     } break;
   }
   u3z(fef);
@@ -363,7 +381,7 @@ _ames_ef_fief(u3_lamp_state* lam_u, u3_noun fef)
 {
   u3_noun _fef = fef = u3kdi_tap(fef);
   while ( u3_nul != fef ) {
-    _ames_fief(lam_u, u3h(fef));
+    _ames_fief(lam_u, u3k(u3h(fef)));
     fef = u3t(fef);
   }
   u3z(_fef);

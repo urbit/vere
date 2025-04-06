@@ -694,7 +694,7 @@ _mesa_get_direct_lane(u3_mesa* mes_u, u3_ship her_u)
   return adr_u;
 }
 
-static c3_o
+c3_o
 _mesa_lanes_equal(sockaddr_in lan_u, sockaddr_in lon_u)
 {
   return __((lan_u.sin_addr.s_addr == lon_u.sin_addr.s_addr) && (lan_u.sin_port == lon_u.sin_port));
@@ -1827,7 +1827,7 @@ _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u)
   per_u->ful_o = c3n;
   per_u->dan_u = (sockaddr_in){0};
   _init_lane_state(&per_u->dir_u);
-  per_u->her_u = (u3_ship){0};
+  per_u->her_u = her_u;
   _init_lane_state(&per_u->ind_u);
 }
 
