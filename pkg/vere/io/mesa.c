@@ -1363,7 +1363,7 @@ _mesa_realise_lane(u3_mesa* mes_u, u3_noun lan) {
   sockaddr_in lan_u = {0};
   lan_u.sin_family = AF_INET;
 
-  if ( c3y == u3a_is_cat(lan)  ) {
+  if ( c3y == u3a_is_atom(lan)  ) {
     lan_u = _mesa_get_direct_lane(mes_u, u3_ship_of_noun(lan));
     // u3_assert( lan < 256 );
     if ( (c3n == u3_Host.ops_u.net) ) {
