@@ -567,7 +567,7 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
-                .name = "pact_test",
+                .name = "pact-test",
                 .file = "pkg/vere/io/mesa/pact_test.c",
                 .deps = vere_test_deps,
             },
