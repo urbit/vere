@@ -542,7 +542,7 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
 
   sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
 
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
   if (!ret_i) {
     c3_free(czar_c);
     czar_c = (c3_c*)hun_y;
@@ -574,7 +574,7 @@ _czar_boot_data(c3_c* czar_c,
   }
 
   c3_o ret_o = c3n;
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
   if ( !ret_i ) {
     u3_noun jamd = u3i_bytes(len_w, hun_y);
     u3_noun cued = u3qe_cue(jamd);
