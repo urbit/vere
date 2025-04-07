@@ -1368,9 +1368,6 @@ _mesa_realise_lane(u3_mesa* mes_u, u3_noun lan) {
     // u3_assert( lan < 256 );
     if ( (c3n == u3_Host.ops_u.net) ) {
       lan_u.sin_addr.s_addr = htonl(0x7f000001);
-    } else if (256 <= lan) {
-      u3l_log("local comet sponsors no!");
-      u3_king_bail();
     }
   } else {
     u3_noun tag, pip, por;
