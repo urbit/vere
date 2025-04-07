@@ -1822,6 +1822,7 @@ _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u)
   memset(per_u, 0, sizeof(*per_u));
   per_u->mes_u = mes_u;
   per_u->ful_o = c3n;
+  per_u->lam_o = c3n;
   per_u->dan_u = (sockaddr_in){0};
   _init_lane_state(&per_u->dir_u);
   per_u->her_u = her_u;
@@ -3087,8 +3088,14 @@ _mesa_ef_saxo(u3_mesa* mes_u, u3_noun zad)
   if ( c3n == u3_ships_equal(dad_u, mes_u->pir_u->who_u) ) {
     mes_u->sun_u.dad_u = dad_u;
     u3_stun_start(&mes_u->sun_u, 0);
+#ifdef MESA_DEBUG
+    u3l_log("mesa: starting stun");
+#endif
   } else {
     mes_u->for_o = c3y;
+#ifdef MESA_DEBUG
+    u3l_log("mesa: enabling forwarding");
+#endif
   }
 
   u3z(zad); u3z(daz);
