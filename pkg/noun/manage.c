@@ -1507,8 +1507,14 @@ u3m_soft_run(u3_noun gul,
 
   /* Configure the new road.
   */
+
   {
-    u3R->ski.gul = u3nc(gul, u3to(u3_road, u3R->par_p)->ski.gul);
+    if ( u3_nul == gul || (u3C.wag_w & u3o_cash) ) {
+      u3R->ski.gul = u3_nul;
+    }
+    else {
+      u3R->ski.gul = u3nc(gul, u3to(u3_road, u3R->par_p)->ski.gul);
+    }
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
@@ -1601,7 +1607,6 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Assert preconditions.
   */
   {
-    u3_assert(0 != u3R->ski.gul);
     gul = u3h(u3R->ski.gul);
   }
 
