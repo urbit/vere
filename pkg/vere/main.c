@@ -82,6 +82,21 @@ _main_readw(const c3_c* str_c, c3_w_tmp max_w, c3_w_tmp* out_w)
   else return c3n;
 }
 
+/* _main_readn(): parse a note from a string.
+*/
+static c3_o
+_main_readn(const c3_c* str_c, c3_n max_n, c3_n* out_n)
+{
+  c3_c* end_c;
+  c3_w_tmp  par_w = strtoull(str_c, &end_c, 0);
+
+  if ( *str_c != '\0' && *end_c == '\0' && par_w < max_n ) {
+    *out_n = par_w;
+    return c3y;
+  }
+  else return c3n;
+}
+
 /* _main_readw_loom(): parse loom pointer bit size from a string.
 */
 static c3_i
@@ -185,10 +200,10 @@ _main_init(void)
   u3_Host.ops_u.tra = c3n;
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
-  u3_Host.ops_u.hap_w = 50000;
-  u3C.hap_w = u3_Host.ops_u.hap_w;
-  u3_Host.ops_u.per_w = 50000;
-  u3C.per_w = u3_Host.ops_u.per_w;
+  u3_Host.ops_u.hap_n = 50000;
+  u3C.hap_n = u3_Host.ops_u.hap_n;
+  u3_Host.ops_u.per_n = 50000;
+  u3C.per_n = u3_Host.ops_u.per_n;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
@@ -205,7 +220,7 @@ _main_init(void)
 #endif
 
   u3C.eph_c = 0;
-  u3C.tos_w = 0;
+  u3C.tos_n = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -345,7 +360,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 9: {  //  toss
         u3_Host.ops_u.tos = c3y;
-        if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+        if ( 1 != sscanf(optarg, "%" PRIc3_n, &u3C.tos_n) ) {
           return c3n;
         }
         break;
@@ -427,10 +442,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'C': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.hap_n) ) {
           return c3n;
         }
-        u3C.hap_w = u3_Host.ops_u.hap_w;
+        u3C.hap_n = u3_Host.ops_u.hap_n;
         break;
       }
       case 'c': {
@@ -479,10 +494,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'M': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.per_w) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.per_n) ) {
           return c3n;
         }
-        u3C.per_w = u3_Host.ops_u.per_w;
+        u3C.per_n = u3_Host.ops_u.per_n;
         break;
       }
       case 'n': {
@@ -1197,7 +1212,7 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
   c3_c*      eph_c = argv[8];
   c3_c*      tos_c = argv[9];
   c3_c*      per_c = argv[10];
-  c3_w_tmp       tos_w;
+  c3_n       tos_n;
 
   _cw_init_io(lup_u);
 
@@ -1221,11 +1236,11 @@ _cw_serf_commence(c3_i argc, c3_c* argv[])
     //  XX check return
     //
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3C.hap_w);
-    sscanf(per_c, "%" SCNu32, &u3C.per_w);
+    sscanf(hap_c, "%" PRIc3_n, &u3C.hap_n);
+    sscanf(per_c, "%" PRIc3_n, &u3C.per_n);
     sscanf(lom_c, "%" SCNu32, &lom_w);
 
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+    if ( 1 != sscanf(tos_c, "%" PRIc3_n, &u3C.tos_n) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
 

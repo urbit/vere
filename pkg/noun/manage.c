@@ -496,8 +496,8 @@ u3m_mark(void)
 static void
 _pave_parts(void)
 {
-  u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
+  u3R->cax.har_p = u3h_new_cache(u3C.hap_n);  //  transient
+  u3R->cax.per_p = u3h_new_cache(u3C.per_n);  //  persistent
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
@@ -2106,11 +2106,11 @@ u3m_toss(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
-  if (  ((low_p + u3C.tos_w) < u3C.wor_i)
-     && (hig_p > u3C.tos_w) )
+  if (  ((low_p + u3C.tos_n) < u3C.wor_i)
+     && (hig_p > u3C.tos_n) )
   {
-    low_p += u3C.tos_w;
-    hig_p -= u3C.tos_w;
+    low_p += u3C.tos_n;
+    hig_p -= u3C.tos_n;
 
     if ( low_p < hig_p ) {
       u3e_toss(low_p, hig_p);

@@ -1239,13 +1239,13 @@ u3_lord_init(c3_c* pax_c, c3_w_tmp wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(wag_c, "%u", god_u->wag_w);
 
-    sprintf(hap_c, "%u", u3_Host.ops_u.hap_w);
+    sprintf(hap_c, "%"PRIc3_n, u3_Host.ops_u.hap_n);
 
-    sprintf(per_c, "%u", u3_Host.ops_u.per_w);
+    sprintf(per_c, "%"PRIc3_n, u3_Host.ops_u.per_n);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
-    sprintf(tos_c, "%u", u3C.tos_w);
+    sprintf(tos_c, "%"PRIc3_n, u3C.tos_n);
 
     arg_c[0] = god_u->bin_c;            //  executable
     arg_c[1] = "serf";                  //  protocol

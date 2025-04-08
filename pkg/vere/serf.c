@@ -336,7 +336,7 @@ u3_serf_post(u3_serf* sef_u)
       u3l_log("serf: threshold 0: per_p %"PRIc3_n, u3h_wyt(u3R->cax.per_p));
     }
     u3h_free(u3R->cax.per_p);
-    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_n);
     u3a_print_memory(stderr, "serf: pack: gained", u3m_pack());
     u3l_log("");
   }
