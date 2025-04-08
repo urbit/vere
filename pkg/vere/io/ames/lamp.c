@@ -335,6 +335,8 @@ _ames_fief(u3_lamp_state* lam_u, u3_noun fef) {
   u3_peer* per_u = _mesa_gut_peer(lam_u->car_u, who_u);
   if ( u3_nul == q_fef ) {
     per_u->lam_o = c3n;
+  } else {
+    per_u->lam_o = c3y;
   }
   u3_noun tag, val;
   u3x_cell(u3t(q_fef), &tag, &val);

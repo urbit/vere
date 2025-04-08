@@ -1787,8 +1787,8 @@ _ames_exit_cb(void* sam_u);
 static void
 _mesa_exit_cb(uv_handle_t* han_u) {
   u3_mesa* mes_u = (u3_mesa*)han_u->data;
-  arena_free(&mes_u->par_u);
   _ames_exit_cb(mes_u->sam_u);
+  arena_free(&mes_u->par_u);
 }
 
 static void
@@ -1797,7 +1797,6 @@ _mesa_io_exit(u3_auto* car_u)
   u3_mesa* mes_u = (u3_mesa*)car_u;
   uv_timer_stop(&mes_u->tim_u);
   mes_u->tim_u.data = mes_u;
-  uv_close((uv_handle_t*)&mes_u->tim_u, _mesa_exit_cb);
   uv_close((uv_handle_t*)&mes_u->sun_u.tim_u, 0);
 
   uv_close((uv_handle_t*)&mes_u->nat_u.tim_u, 0);
@@ -1805,6 +1804,7 @@ _mesa_io_exit(u3_auto* car_u)
   if ( UV_UNKNOWN_HANDLE !=  handle) {
     uv_close((uv_handle_t*)&mes_u->nat_u.pol_u, 0);
   }
+  uv_close((uv_handle_t*)&mes_u->tim_u, _mesa_exit_cb);
 }
 
 static void
