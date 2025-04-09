@@ -444,14 +444,14 @@ u3_stun_hear(u3_stun_client* sun_u,
   //
   if ( c3y == _stun_is_request(hun_y, len_w) ) {
     _stun_on_request(sun_u, hun_y, lan_u);
-    c3_free(hun_y);
+    //c3_free(hun_y);
     return c3y;
   }
   else if ( c3y == _stun_is_our_response(hun_y,
                                            sun_u->tid_y, len_w) )
   {
     _stun_on_response(sun_u, hun_y, len_w);
-    c3_free(hun_y);
+    //c3_free(hun_y);
     return c3y;
   }
   return c3n;

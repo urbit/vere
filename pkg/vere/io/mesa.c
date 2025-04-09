@@ -38,7 +38,7 @@ static c3_y are_y[524288];
 
 /* #define PACKET_TEST c3y */
 
-// #define MESA_DEBUG     c3y
+//#define MESA_DEBUG     c3y
 //#define MESA_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
@@ -449,9 +449,9 @@ _clamp_rto(c3_d rto_d) {
 c3_o
 _mesa_is_lane_zero(sockaddr_in lan_u)
 {
-  return __( ( (lan_u.sin_addr.s_addr == 0) ||
-               (lan_u.sin_addr.s_addr == _CZAR_GONE) )
-             && (lan_u.sin_port == 0) );
+  return __( (lan_u.sin_addr.s_addr == _CZAR_GONE) 
+             || ((lan_u.sin_addr.s_addr == 0)
+             && (lan_u.sin_port == 0)) );
 }
 
 c3_o
@@ -2525,6 +2525,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   // } else {
   //   u3l_log(" received forwarded page");
   // }
+  // XX: we haven't validated the packet yet
+  // maybe what we should do is move away from nails (joe says it's bad io overhead)
+  // and only scry lanes if peer is NULL, and do all of our updating in our callbacks
+  // (what the nail would be, by looking at peer state and the hops data)
   _hear_peer(mes_u, per_u, lan_u, dir_o);
 
   if ( new_o == c3y ) {
@@ -2837,12 +2841,10 @@ _mesa_hear(u3_mesa* mes_u,
   //    for next protocol version, have an urbit cookie
   //
 
-    c3_y* han_y = c3_malloc(len_w);
-    memcpy(han_y, hun_y, len_w);
-    if ( c3y == u3_stun_hear(&mes_u->sun_u, lan_u, len_w, han_y) )
+    if ( c3y == u3_stun_hear(&mes_u->sun_u, lan_u, len_w, hun_y) )
       return;
 
-    _ames_hear(mes_u->sam_u, lan_u, len_w, han_y);
+    _ames_hear(mes_u->sam_u, lan_u, len_w, hun_y);
     return;
   }
 
