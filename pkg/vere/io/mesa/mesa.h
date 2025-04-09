@@ -182,6 +182,17 @@ typedef struct _u3_lane_state {
   c3_w  rtv_w;  //  round-trip time variance
 } u3_lane_state;
 
+typedef struct _u3_gage {
+  c3_w     rtt_w;  // rtt
+  c3_w     rto_w;  // rto
+  c3_w     rtv_w;  // rttvar
+  c3_w     wnd_w;  // cwnd
+  c3_w     wnf_w;  // cwnd fraction
+  c3_w     sst_w;  // ssthresh
+  c3_w     con_w;  // counter
+  //
+} u3_gage;
+
 typedef struct _u3_peer {
   void*          mes_u;  //  backpointer
   u3_ship        her_u;  //  who is this peer
@@ -193,6 +204,7 @@ typedef struct _u3_peer {
   u3_ship        lam_u;  //  galaxy @p
   u3_lane_state  ind_u;  //  indirect lane state
   c3_c**         dns_c;
+  u3_gage        gag_u;
 } u3_peer;
 
 #define NAME per_map

@@ -238,7 +238,6 @@ _ames_ref_hun_new(c3_w len_w) {
   return hun_u;
 }
 
-
 static void
 _ames_pact_free(u3_pact* pac_u)
 {
@@ -1063,7 +1062,6 @@ _ames_hear_news(u3_ovum* egg_u, u3_ovum_news new_e)
   u3_ames* sam_u = pac_u->sam_u;
   if ( u3_ovum_exit == new_e ) {
     _ames_pact_free(pac_u);
-    return;
   }
   else if ( u3_ovum_done == new_e ) {
     if ( c3n == pac_u->for_o) {
@@ -1077,8 +1075,8 @@ _ames_hear_news(u3_ovum* egg_u, u3_ovum_news new_e)
         per_u->dir_u.her_d = pac_u->her_d;
       }
     }
+    _ames_pact_free(pac_u);
   }
-  _ames_pact_free(pac_u);
 }
 
 /* _ames_hear_bail(): handle packet failure.

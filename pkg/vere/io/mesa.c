@@ -104,18 +104,6 @@ typedef struct _u3_pact_stat {
   c3_y  sip_y; // skips
 } u3_pact_stat;
 
-
-typedef struct _u3_gage {
-  c3_w     rtt_w;  // rtt
-  c3_w     rto_w;  // rto
-  c3_w     rtv_w;  // rttvar
-  c3_w     wnd_w;  // cwnd
-  c3_w     wnf_w;  // cwnd fraction
-  c3_w     sst_w;  // ssthresh
-  c3_w     con_w;  // counter
-  //
-} u3_gage;
-
 typedef struct _u3_mesa_pict {
   uv_udp_send_t      snd_u;
   struct _u3_mesa*   mes_u;
@@ -193,13 +181,6 @@ typedef struct _u3_pend_req u3_pend_req;
 #define VAL_DTOR_FN u3_free_pit
 #include "verstable.h"
 
-#define NAME gag_map
-#define KEY_TY u3_ship
-#define HASH_FN u3_hash_ship
-#define CMPR_FN u3_cmpr_ship
-#define VAL_TY u3_gage*
-#include "verstable.h"
-
 typedef enum _u3_mesa_ctag {
   CTAG_WAIT = 1,
   CTAG_BLOCK = 2,
@@ -265,7 +246,6 @@ typedef struct _u3_mesa {
   per_map            per_u;       //  (map ship u3_peer)
   c3_d               jum_d;       //  bytes in jumbo cache
   jum_map            jum_u;       //  jumbo cache
-  gag_map            gag_u;       //  lane cache
   pit_map            pit_u;       //  (map path [our=? las=(set lane)])
   req_map            req_u;       //  (map [rift path] u3_pend_req)
   c3_c*              dns_c;       //  turf (urb.otrg)
@@ -296,7 +276,6 @@ typedef struct _u3_pend_req {
   c3_d                   out_d; // outstanding fragments in flight
   c3_d                   old_d; // frag num of oldest packet sent
   c3_d                   ack_d; // highest acked fragment number
-  u3_gage*               gag_u; // congestion control
   lss_pair*              mis_u; // misordered packets
   lss_verifier*          los_u; // Lockstep verifier
   u3_mesa_pict*          pic_u; // preallocated request packet
@@ -406,7 +385,7 @@ _log_pend_req(u3_pend_req* req_u)
   u3l_log("have: %"PRIu64, req_u->hav_d);
   u3l_log("next: %"PRIu64, req_u->nex_d);
   u3l_log("total: %" PRIu64, req_u->tof_d);
-  u3l_log("gage: %c", req_u->gag_u == NULL ? 'n' : 'y');
+  //u3l_log("gage: %c", req_u->gag_u == NULL ? 'n' : 'y');
   //u3l_log("timer in: %" PRIu64 " ms", uv_timer_get_due_in(&req_u->tim_u));
 }
 
@@ -560,20 +539,6 @@ _mesa_request_key(u3_mesa_name* nam_u)
   return res;
 }
 
-static void
-_init_gage(u3_gage* gag_u)  //  microseconds
-{
-  gag_u->rto_w = 200 * 1000;  // ~s1
-  gag_u->rtt_w = 1000 * 1000;  // ~s1
-  gag_u->rtv_w = 1000 * 1000;  // ~s1
-  /* gag_u->rto_w = 200 * 1000;  // ~s1 */
-  /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
-  /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
-  gag_u->con_w = 0;
-  gag_u->wnd_w = 1;
-  gag_u->sst_w = 10000;
-}
-
 /* u3_mesa_encode_lane(): serialize lane to noun
 */
 static u3_noun
@@ -700,29 +665,6 @@ _mesa_lanes_equal(sockaddr_in lan_u, sockaddr_in lon_u)
   return __((lan_u.sin_addr.s_addr == lon_u.sin_addr.s_addr) && (lan_u.sin_port == lon_u.sin_port));
 }
 
-/* _mesa_get_lane(): get lane
-*/
-static u3_gage*
-_mesa_get_gage(u3_mesa* mes_u, u3_ship her_u) {
-  gag_map_itr itr_u = vt_get(&mes_u->gag_u, her_u);
-  if ( vt_is_end(itr_u) ) {
-    return NULL;
-  }
-  return itr_u.data->val;
-}
-
-/* _mesa_put_gage(): put gage state in state
- *
-*/
-static void
-_mesa_put_gage(u3_mesa* mes_u, u3_ship her_u, u3_gage* gag_u)
-{
-  gag_map_itr itr_u = vt_insert(&mes_u->gag_u, her_u, gag_u);
-  if ( vt_is_end(itr_u) ) {
-    fprintf(stderr, "mesa: cannot allocate memory for gage, dying");
-    u3_king_bail();
-  }
-}
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
@@ -768,13 +710,13 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
 {
   /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
-  /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
+  /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->per_u->gag_u.wnd_w); */
 
   /* u3l_log("rem_w %u", rem_w); */
-  /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
+  /* u3l_log("wnd_w %u", req_u->per_u->gag_u.wnd_w); */
   /* u3l_log("out_d %"PRIu64, req_u->out_d); */
   /* return c3_min(rem_w, _safe_sub(3500, req_u->out_d)); */
-  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
+  return c3_min(rem_w, _safe_sub((c3_d)req_u->per_u->gag_u.wnd_w, req_u->out_d));
   /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 
@@ -1131,10 +1073,10 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
     if ( (c3n == bitset_has(&req_u->was_u, i_d)) &&
-        (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
+        (now_d - req_u->wat_u[i_d].sen_d > req_u->per_u->gag_u.rto_w) ) {
       // u3l_log("now_d %"PRIu64, now_d);
       // u3l_log("sen_d %"PRIu64, req_u->wat_u[i_d].sen_d);
-      // u3l_log("rto_w %u", req_u->gag_u->rto_w);
+      // u3l_log("rto_w %u", req_u->per_u->gag_u.rto_w);
       los_o = c3y;
       /* u3l_log("resend fra_w: %llu", i_d); */
 
@@ -1164,13 +1106,13 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   if ( c3y == los_o ) {
     /* _mesa_send_buf2(req_u->per_u->mes_u, ads_u, bus_u, int_u, i_w); */
     /* _mesa_send_buf2(req_u->per_u->mes_u, req_u->per_u->dan_u, bfs_u, i_w); */
-    req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
-    req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
-    req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
+    req_u->per_u->gag_u.sst_w = c3_max(1, req_u->per_u->gag_u.wnd_w / 2);
+    req_u->per_u->gag_u.wnd_w = req_u->per_u->gag_u.sst_w;
+    req_u->per_u->gag_u.rto_w = _clamp_rto(req_u->per_u->gag_u.rto_w * 2);
     // u3l_log("loss");
     // u3l_log("resent %u", i_w);
     // u3l_log("counter %u hav_d %"PRIu64 " nex_d %"PRIu64 " ack_d %"PRIu64 " lef_d %"PRIu64 " old_d %"PRIu64, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
-    // _log_gage(req_u->gag_u);
+    // _log_gage(&req_u->per_u->gag_u);
   }
 }
 
@@ -1204,7 +1146,7 @@ _update_resend_timer(u3_pend_req *req_u)
   // c3_d gap_d = req_u->wat_u[idx_d].sen_d == 0 ?
   //               0 :
   //               now_d - req_u->wat_u[idx_d].sen_d;
-  c3_d next_expiry = req_u->gag_u->rto_w;
+  c3_d next_expiry = req_u->per_u->gag_u.rto_w;
   // u3l_log("next_expiry %llu", next_expiry / 1000);
   // u3l_log("DUE %llu", uv_timer_get_due_in(&req_u->tim_u));
   uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry / 1000, 0);
@@ -1301,7 +1243,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     req_u->out_d--;
     bitset_put(&req_u->was_u, nam_u->fra_d);
 
-    _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
+    _mesa_handle_ack(&req_u->per_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
     /* _try_resend(req_u, nam_u->fra_d); */
     /* _update_resend_timer(req_u); */
     return;
@@ -1346,7 +1288,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   sat_u->her_d = _get_now_micros();
 
   // handle gauge update
-  _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
+  _mesa_handle_ack(&req_u->per_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
 
   //  XX FIXME?
   /* _try_resend(req_u, nam_u->fra_d); */
@@ -1818,6 +1760,19 @@ _init_lane_state(u3_lane_state* sat_u)
 }
 
 static void
+_init_gage(u3_gage* gag_u)  //  microseconds
+{
+  gag_u->rto_w = 200 * 1000;  // ~s1
+  gag_u->rtt_w = 1000 * 1000;  // ~s1
+  gag_u->rtv_w = 1000 * 1000;  // ~s1
+  /* gag_u->rto_w = 200 * 1000;  // ~s1 */
+  /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
+  /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
+  gag_u->con_w = 0;
+  gag_u->wnd_w = 1;
+  gag_u->sst_w = 10000;
+}
+static void
 _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u)
 {
   memset(per_u, 0, sizeof(*per_u));
@@ -1828,6 +1783,7 @@ _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u)
   _init_lane_state(&per_u->dir_u);
   per_u->her_u = her_u;
   _init_lane_state(&per_u->ind_u);
+  _init_gage(&per_u->gag_u);
 }
 
 static u3_noun
@@ -2301,14 +2257,6 @@ _mesa_req_pact_init(u3_mesa* mes_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
 
-  u3_gage* gag_u = _mesa_get_gage(mes_u, nam_u->her_u);
-  if ( gag_u == NULL ) {
-    gag_u = new(&mes_u->par_u, u3_gage, 1);
-    _init_gage(gag_u);
-    _mesa_put_gage(mes_u, nam_u->her_u, gag_u);
-    u3_assert( gag_u != NULL );
-  }
-
   // _log_gage(gag_u);
   u3_mesa_pact exa_u;
   exa_u.hed_u.typ_y = PACT_PEEK;
@@ -2336,7 +2284,6 @@ _mesa_req_pact_init(u3_mesa* mes_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   uv_timer_init(u3L, &req_u->tim_u);
 
   u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
-  req_u->gag_u = gag_u;
   req_u->tob_d = dat_u->tob_d;
   /* req_u->out_d = 4000; */
   req_u->out_d = 0;
@@ -3145,7 +3092,6 @@ u3_mesa_io_init(u3_pier* pir_u)
 
   vt_init(&mes_u->pit_u);
   vt_init(&mes_u->per_u);
-  vt_init(&mes_u->gag_u);
   vt_init(&mes_u->jum_u);
   vt_init(&mes_u->req_u);
 
