@@ -681,8 +681,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
-      } else if ( kf_ryf > czar_ryf_w ) {  // XX ( kf_ryf >= czar_ryf_w )
-                                           // XX check that bone = ~
+      } else if ( kf_ryf > czar_ryf_w ) {
         // Ship breached, galaxy has not heard about the breach; continue boot
         _pier_work(wok_u);
       } else if ( (     kf_ryf == czar_ryf_w ) &&
