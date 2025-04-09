@@ -671,7 +671,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
     if ( c3n == _czar_boot_data(czar_c, who_c, 0,
                                 &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, 0, 0) ) {
+                                &czar_lyf_w, &czar_bon_w, 0) ) {
       c3_free(czar_c);
       _pier_work(wok_u);
     } else {
@@ -681,12 +681,17 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
-      } else if ( kf_ryf > czar_ryf_w ) {
+      } else if ( kf_ryf > czar_ryf_w ) {  // XX ( kf_ryf >= czar_ryf_w )
+                                           // XX check that bone = ~
+        // Ship breached, galaxy has not heard about the breach; continue boot
+        _pier_work(wok_u);
+      } else if ( (     kf_ryf == czar_ryf_w ) &&
+                  ( czar_bon_w == u3_none ) ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "this ship has already been booted elsewere, "
+                "this ship has already been booted elsewhere, "
                 "boot the existing pier or breach\r\n"
                 "read more: https://docs.urbit.org/glossary/double-boot",
                 who_c);
