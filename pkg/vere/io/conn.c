@@ -413,10 +413,12 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   u3_chan*  can_u = ran_u->can_u;
 
   if ( u3_ovum_done == new_e ||
-       u3_ovum_drop == new_e )
+       u3_ovum_drop == new_e ||
+       u3_ovum_exit == new_e )
   {
     if ( can_u ) {
-      _conn_send_noun(can_u,
+      if ( u3_ovum_exit != new_e )
+        _conn_send_noun(can_u,
                       u3nt(ran_u->rid, c3__news,
                            ( u3_ovum_done == new_e
                              ? c3__done

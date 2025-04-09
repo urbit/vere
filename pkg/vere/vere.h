@@ -348,7 +348,8 @@
         typedef enum {
           u3_ovum_drop = 0,                 //  unplanned
           u3_ovum_work = 1,                 //  begun
-          u3_ovum_done = 2                  //  complete
+          u3_ovum_done = 2,                 //  complete
+          u3_ovum_exit = 3                  //  exit
         } u3_ovum_news;
 
       struct _u3_ovum;

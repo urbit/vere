@@ -341,7 +341,7 @@ typedef struct _u3_mesa_cb_data {
   sockaddr_in  lan_u;
 } u3_mesa_cb_data;
 
-static void _meet_peer(u3_mesa* mes_u, u3_peer* per_u);
+void _meet_peer(u3_mesa* mes_u, u3_peer* per_u);
 static void _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u);
 static void _mesa_ef_saxo(u3_mesa* mes_u, u3_noun zad);
 
@@ -1716,6 +1716,7 @@ static c3_o _mesa_kick(u3_mesa* mes_u, u3_noun tag, u3_noun dat)
       break;
     }
     case c3__nail: {
+      // TODO: remove? use callbacks
       u3_noun who = u3k(u3h(dat));
       u3_noun las = u3k(u3t(dat));
       _ames_lane_into_cache(mes_u->sam_u, who, las);
@@ -2140,6 +2141,7 @@ _saxo_cb(void* vod_p, u3_noun nun)
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
     per_u->ful_o = c3y;
     per_u->lam_u = u3_ship_of_noun(lam);
+    u3z(lam);
   }
 
   u3z(nun);
@@ -2407,7 +2409,7 @@ typedef struct _u3_mesa_lane_cb_data {
 } u3_mesa_lane_cb_data;
 
 static void
-_mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
+_mesa_page_bail_cb(u3_ovum* egg_u, u3_noun why)
 {
   u3l_log("mesa: arvo page event failed");
 }
@@ -2425,6 +2427,7 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
   }
 
 
+  // XX: leak
   u3_mesa_hop_once* lan_y = c3_calloc(sizeof(u3_mesa_hop_once));
 
   c3_etch_word(lan_y->dat_y, pip_w);

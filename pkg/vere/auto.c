@@ -341,6 +341,7 @@ u3_auto_exit(u3_auto* car_u)
 
       while ( egg_u ) {
         xen_u = egg_u->nex_u;
+        _auto_news(egg_u, u3_ovum_exit);
         u3_ovum_free(egg_u);
         egg_u = xen_u;
       }
