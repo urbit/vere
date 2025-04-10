@@ -610,7 +610,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   u3_noun rem, glx, ryf, bon, cur, nex;
   c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
 
-  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
+  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
+  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
@@ -634,7 +635,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
     } else {
       if ( czar_ryf_w == ryf_w ) {
         c3_w ack_w = cur_w - 1;
-        if ( czar_ack_w == 0xFFFFFFFF ) {
+        if ( czar_ack_w == u3_none ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
@@ -671,7 +672,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
 
     if ( c3n == _czar_boot_data(czar_c, who_c, 0,
                                 &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, 0, 0) ) {
+                                &czar_lyf_w, &czar_bon_w, 0) ) {
       c3_free(czar_c);
       _pier_work(wok_u);
     } else {
@@ -682,11 +683,15 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
       } else if ( kf_ryf > czar_ryf_w ) {
+        // Ship breached, galaxy has not heard about the breach; continue boot
+        _pier_work(wok_u);
+      } else if ( (     kf_ryf == czar_ryf_w ) &&
+                  ( czar_bon_w == u3_none ) ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "this ship has already been booted elsewere, "
+                "this ship has already been booted elsewhere, "
                 "boot the existing pier or breach\r\n"
                 "read more: https://docs.urbit.org/glossary/double-boot",
                 who_c);
