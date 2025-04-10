@@ -2645,6 +2645,10 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
          : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
         u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
       }
+      // XX can we still print?
+      // else if ( u3z_memo_keep == u3h(o) ) {
+      //   fprintf(stderr, "\r\nnock: userspace can't save to persistent cache\r\n");
+      // }
       *top = x;
       u3z(o);
       BURN();

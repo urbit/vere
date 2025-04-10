@@ -1962,7 +1962,7 @@ _pier_pill_parse(u3_noun pil)
       u3_noun typ;
       c3_c* typ_c;
 
-      if ( c3__cash == tag && c3y == u3a_is_cell(dat) ) {
+      if ( (c3__cash == tag) && (c3y == u3du(dat)) ) {
         bot_u.cax = u3t(dat);
         dat = u3h(dat);
       }

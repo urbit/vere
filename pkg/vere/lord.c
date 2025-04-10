@@ -534,7 +534,7 @@ _lord_plea_boot(u3_lord* god_u, u3_noun dat)
     c3_free(wit_u);
   }
 
-  if ( c3n == u3a_is_cell(dat) ) {
+  if ( c3n == u3du(dat) ) {
     return _lord_plea_foul(god_u, c3__boot, dat);
   }
 

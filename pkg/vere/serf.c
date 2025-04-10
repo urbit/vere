@@ -1172,7 +1172,8 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         u3_noun tmp = cax;
         c3_o gud_o = c3y;
         while ( u3_nul != tmp ) {
-          if ( c3n == u3a_is_cell(u3h(tmp)) || c3n == u3a_is_cell(u3h(u3h(tmp))) ) {
+          if ( (c3n == u3a_is_cell(u3h(tmp))) ||
+               (c3n == u3a_is_cell(u3h(u3h(tmp)))) ) {
             gud_o = c3n;
           }
           tmp = u3t(tmp);
@@ -1183,7 +1184,8 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         }
         else {
           while ( u3_nul != cax ) {
-            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)), u3t(u3h(cax)));
+            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+                       u3t(u3h(cax)));
             cax = u3t(cax);
           }
         }
@@ -1192,7 +1194,7 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
         //
         u3_noun lit = u3t(com);
 
-        if (c3n == u3a_is_cell(lit)) {
+        if ( c3n == u3a_is_cell(lit) ) {
           ret_o = c3n;
         }
         else {
