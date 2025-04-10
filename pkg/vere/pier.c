@@ -610,7 +610,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   u3_noun rem, glx, ryf, bon, cur, nex;
   c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
 
-  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
+  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
+  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = 0xFFFFFFFF;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
