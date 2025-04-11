@@ -49,7 +49,9 @@ _ames_lamp_lane(u3_auto* car_u, u3_ship her_u, sockaddr_in* lan_u)
   }
 
   if ( c3n == u3_Host.ops_u.net ) {
+    lan_u->sin_family = AF_INET;
     lan_u->sin_addr.s_addr = NLOCALHOST;
+    lan_u->sin_port = per_u->dan_u.sin_port;
   }
   else {
     *lan_u = per_u->dan_u;

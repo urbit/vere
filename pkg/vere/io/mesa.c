@@ -2931,14 +2931,14 @@ _mesa_io_talk(u3_auto* car_u)
   c3_i     ret_i;
   if ( c3__czar == rac ) {
     c3_y num_y = (c3_y)mes_u->pir_u->who_u.hed_d;
-    c3_s zar_s = _ames_czar_port(num_y);
+    c3_s zar_s = ntohs(_ames_czar_port(num_y));
 
     if ( 0 == por_s ) {
       por_s = zar_s;
     }
     else if ( por_s != zar_s ) {
-      u3l_log("ames: czar: overriding port %d with -p %d", zar_s, por_s);
-      u3l_log("ames: czar: WARNING: %d required for discoverability", zar_s);
+      u3l_log("ames: czar: overriding port %u with -p %u", zar_s, por_s);
+      u3l_log("ames: czar: WARNING: %u required for discoverability", zar_s);
     }
   }
 
@@ -2980,10 +2980,10 @@ _mesa_io_talk(u3_auto* car_u)
     c3_free(our_s);
   }
   if ( c3y == u3_Host.ops_u.net ) {
-    u3l_log("mesa: live on %d", mes_u->pir_u->por_s);
+    u3l_log("mesa: live on %u", mes_u->pir_u->por_s);
   }
   else {
-    u3l_log("mesa: live on %d (localhost only)", mes_u->pir_u->por_s);
+    u3l_log("mesa: live on %u (localhost only)", mes_u->pir_u->por_s);
   }
 
   if ( c3n == mes_u->pir_u->fak_o ) {
