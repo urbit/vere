@@ -1340,6 +1340,7 @@ _mesa_send_bufs(u3_mesa* mes_u,
     sockaddr_in lan_u = t->sdr_u;
 
     if ( !lan_u.sin_port ) {
+      // XX: noisy
       u3l_log("mesa: failed to realise lane");
     } else {
       c3_y* sen_y = c3_calloc(len_w);
@@ -1777,7 +1778,7 @@ _init_peer(u3_mesa* mes_u, u3_peer* per_u, u3_ship her_u)
 {
   memset(per_u, 0, sizeof(*per_u));
   per_u->mes_u = mes_u;
-  per_u->ful_o = c3n;
+  per_u->liv_e = 0;
   per_u->lam_o = c3n;
   per_u->dan_u = (sockaddr_in){0};
   _init_lane_state(&per_u->dir_u);
@@ -2095,8 +2096,8 @@ _saxo_cb(void* vod_p, u3_noun nun)
     u3_noun lam = u3do("rear", u3k(sax));
     //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
-    per_u->ful_o = c3y;
     per_u->lam_u = u3_ship_of_noun(lam);
+    per_u->liv_e |= u3_peer_lamp;
     u3z(lam);
   }
 
@@ -2120,7 +2121,7 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
     u3_noun gal = u3h(las);
     //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
-    per_u->ful_o = c3y;
+    per_u->liv_e |= u3_peer_lane;
     per_u->lam_u = u3_ship_of_noun(gal);
     u3_noun sal, tal;
 
@@ -2146,22 +2147,18 @@ _meet_peer(u3_mesa* mes_u, u3_peer* per_u)
   u3_noun her = u3_ship_to_noun(per_u->her_u);
   u3_noun gan = u3nc(u3_nul, u3_nul);
 
-  u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
-  u3_pier_peek_last(mes_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
+  if ( !(u3_peer_lamp & per_u->liv_e) ) {
+    u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
+    u3_pier_peek_last(mes_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
+  }
 
-}
-
-static void
-_get_peer_lanes(u3_mesa* mes_u, u3_peer* per_u)
-{
-  u3_noun her = u3_ship_to_noun(per_u->her_u);
-  u3_noun gan = u3nc(u3_nul, u3_nul);
-  u3_noun pax = u3nq(u3i_string("chums"),
-                  u3dc("scot", 'p', her),
-                  u3i_string("lanes"),
-                  u3_nul);
-  u3m_p("pax", pax);
-  u3_pier_peek_last(mes_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
+  if ( !(u3_peer_lane & per_u->liv_e) ) {
+    u3_noun pax = u3nq(u3i_string("chums"),
+                    u3dc("scot", 'p', her),
+                    u3i_string("lanes"),
+                    u3_nul);
+    u3_pier_peek_last(mes_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
+  }
 }
 
 static void
@@ -2416,9 +2413,13 @@ _mesa_forward_request(u3_mesa* mes_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _init_peer(mes_u, per_u, pac_u->pek_u.nam_u.her_u);
     per_u->her_u = pac_u->pek_u.nam_u.her_u;
 
-    _get_peer_lanes(mes_u, per_u); // forward-lanes
+    _meet_peer(mes_u, per_u);
     return;
+  } else if ( u3_peer_full != per_u->liv_e ) {
+   _meet_peer(mes_u, per_u);
+   return;
   }
+
   if ( c3y == mes_u->for_o &&
        c3y == u3_ships_equal(mes_u->pir_u->who_u, per_u->lam_u) ) {
   // if ( c3y == mes_u->for_o ) {
@@ -2467,6 +2468,10 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     per_u = new(&mes_u->par_u, u3_peer, 1);
     _init_peer(mes_u, per_u, nam_u->her_u);
     _meet_peer(mes_u, per_u);
+    return;
+  } else if ( u3_peer_full != per_u->liv_e ) {
+    _meet_peer(mes_u, per_u);
+    return;
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
@@ -2634,7 +2639,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   u3_mesa_pact* pac_u = &pic_u->pac_u;
   u3_mesa* mes_u = pic_u->mes_u;
   c3_o our_o = u3_ships_equal(pac_u->pek_u.nam_u.her_u, mes_u->pir_u->who_u);
-
   if ( c3n == our_o ) {
     _mesa_forward_request(mes_u, pic_u, lan_u);
     return;
@@ -2719,6 +2723,10 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     per_u = new(&mes_u->par_u, u3_peer, 1);
     _init_peer(mes_u, per_u, pac_u->pok_u.pay_u.her_u);
     _meet_peer(mes_u, per_u);
+    return;
+  } else if ( u3_peer_full != per_u->liv_e ) {
+    _meet_peer(mes_u, per_u);
+    return;
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);

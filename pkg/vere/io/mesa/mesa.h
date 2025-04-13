@@ -193,10 +193,16 @@ typedef struct _u3_gage {
   //
 } u3_gage;
 
+typedef enum _u3_peer_live {
+  u3_peer_lane = 1 << 0,
+  u3_peer_lamp = 1 << 1,
+  u3_peer_full = (1 << 0) | (1 << 1)
+} u3_peer_live;
+
 typedef struct _u3_peer {
   void*          mes_u;  //  backpointer
   u3_ship        her_u;  //  who is this peer
-  c3_o           ful_o;  //  has this been initialized?
+  u3_peer_live   liv_e;  //  has this been initialized?
   sockaddr_in    dan_u;  //  direct lane (nullable)
   u3_lane_state  dir_u;  //  direct lane state
   c3_o           lam_o;
