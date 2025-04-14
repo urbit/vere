@@ -2171,7 +2171,6 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
-  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
@@ -2207,10 +2206,6 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 8: {  //  soft-mugs
         sof_o = c3y;
-      } break;
-
-      case 9: {  //  watch-replay
-        wat_o = c3y;
       } break;
 
       case 'f': {
