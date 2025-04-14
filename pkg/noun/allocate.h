@@ -344,12 +344,31 @@
 
 
 typedef struct _u3a_mark {
-  c3_w    siz_w;
-  c3_w    len_w;
   c3_w    wee_w[u3a_crag_no];
   c3_w*   bit_w;
+  //  XX factor out?
+  c3_w    siz_w;
+  c3_w    len_w;
   c3_w*   buf_w;
 } u3a_mark;
+
+typedef struct _u3a_gack {
+  c3_w *bit_w;  //  mark bits
+  // struct {
+  //   c3_s log_s;
+  //   c3_s hun_s;
+  //   c3_s tot_s;
+  //   c3_s map_s;
+  // } wee_u[u3a_crag_no];
+  c3_w *pap_w;  //  global page bitmap
+  c3_w *pum_w;  //  global cumulative sums
+  //  XX factor out?
+  c3_w  siz_w;
+  c3_w  len_w;
+  c3_w *buf_w;
+} u3a_gack;
+
+      extern u3a_gack u3a_Gack;
 
       extern u3a_mark u3a_Mark;
 
@@ -486,6 +505,13 @@ void*
 u3a_mark_alloc(c3_w len_w);
 void
 u3a_mark_done(void);
+
+void
+u3a_pack_init(void);
+void*
+u3a_pack_alloc(c3_w len_w);
+void
+u3a_pack_done(void);
 
 void*
 u3a_into_fn(u3_post);

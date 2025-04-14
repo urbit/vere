@@ -14,6 +14,7 @@
 
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
+u3a_gack u3a_Gack;
 
 #ifdef U3_MEMORY_DEBUG
 c3_w u3_Code;
@@ -126,6 +127,43 @@ u3a_mark_alloc(c3_w len_w) // words
   u3a_Mark.len_w += len_w;
 
   return ptr_v;
+}
+
+void
+u3a_pack_init(void)
+{
+  c3_w bit_w = (u3R->hep.len_w + 31) >> 5;
+  u3a_Gack.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
+  u3a_Gack.pap_w = c3_calloc(sizeof(c3_w) * bit_w);
+  u3a_Gack.pum_w = c3_calloc(sizeof(c3_w) * bit_w);
+
+  u3a_Gack.siz_w = u3R->hep.siz_w * 2;
+  u3a_Gack.len_w = u3R->hep.len_w;
+  u3a_Gack.buf_w = c3_calloc(sizeof(c3_w) * u3a_Gack.siz_w);
+}
+
+void*
+u3a_pack_alloc(c3_w len_w) // words
+{
+  void* ptr_v;
+
+  if ( len_w > (u3a_Gack.siz_w - u3a_Gack.len_w) ) {
+    u3a_Gack.siz_w += c3_max(u3a_Gack.len_w, len_w);
+    u3a_Gack.buf_w  = c3_realloc(u3a_Gack.buf_w, sizeof(c3_w) * u3a_Gack.siz_w);
+  }
+
+  ptr_v = &(u3a_Gack.buf_w[u3a_Gack.len_w]);
+  u3a_Gack.len_w += len_w;
+
+  return ptr_v;
+}
+
+void
+u3a_pack_done(void)
+{
+  c3_free(u3a_Gack.pap_w);
+  c3_free(u3a_Gack.pum_w);
+  c3_free(u3a_Gack.buf_w);
 }
 
 /* _box_count(): adjust memory count.
