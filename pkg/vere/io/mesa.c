@@ -2551,7 +2551,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     #endif
 
     inc_hopcount(&pac_u->hed_u);
-    c3_etch_word(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
+    c3_etch_word_tmp(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
     c3_etch_short(pac_u->pag_u.sot_u + 4, ntohs(lan_u.sin_port));
 
     //  stick next hop in packet
