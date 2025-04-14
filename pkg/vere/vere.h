@@ -253,6 +253,8 @@
                         c3_l* row_l);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
         c3_w             tid_l;             //  terminal identity number
+        u3_noun          ses_u;             //  session name
+        u3_noun          app_u;             //  userspace app
         u3_utfo          ufo_u;             //  escape sequences
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
@@ -336,6 +338,8 @@
         uv_loop_t* lup_u;                   //  libuv event loop
         u3_usig*   sig_u;                   //  signal list
         u3_utty*   uty_u;                   //  linked terminal list
+        u3_utty*   act_u;                   //  active terminal
+        u3_utty*   def_u;                   //  default terminal
         c3_o       nex_o;                   //  upgrade requested
         c3_c*      arc_c;                   //  upgrade to arch
         u3_opts    ops_u;                   //  commandline options

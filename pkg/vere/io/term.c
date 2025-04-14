@@ -1,9 +1,12 @@
 /// @file
 
+
 #include "vere.h"
 
 #include "noun.h"
 
+#define DEFAULT_SESSION_ID_NUM 1
+#define DEFAULT_SESSION_ID_TEXT ((c3_c)('0' + DEFAULT_SESSION_ID_NUM))
 //  macros for string literal args/buffers
 //
 //    since (sizeof(s) - 1) is used for vector length, parameters
@@ -163,12 +166,16 @@ u3_term_log_init(void)
     }
   }
 
-  //  This is terminal 1, linked in host.
+  //  This is the default terminal, linked in host.
   //
   {
-    uty_u->tid_l = 1;
+    uty_u->tid_l = DEFAULT_SESSION_ID_NUM;
+    uty_u->ses_u = 0;
+    uty_u->app_u = c3__hood;
     uty_u->nex_u = 0;
     u3_Host.uty_u = uty_u;
+    u3_Host.act_u = uty_u;
+    u3_Host.def_u = uty_u;
   }
 
   //  Disable I/O buffering on terminal streams.
@@ -202,24 +209,32 @@ u3_term_log_init(void)
 
 /* u3_term_log_exit(): clean up terminal.
 */
-void
-u3_term_log_exit(void)
-{
-  if ( c3n == u3_Host.ops_u.tem ) {
-    u3_utty* uty_u;
+void u3_term_log_exit(void) {
 
-    for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
-      if ( uty_u->fid_i == -1 ) { continue; }
-      if ( c3n == uty_u->sto_f(uty_u) ) {
+  u3_utty* def_u = u3_Host.def_u;
+
+  if ( u3_Host.def_u ) {  // clean default session
+    if (c3n == u3_Host.ops_u.tem && def_u->fid_i != -1) {
+      if ( c3n == def_u->sto_f(def_u) ) {
         u3_assert(!"exit-tcsetattr");
       }
-      u3_write_fd(uty_u->fid_i, "\r\n", 2);
+      u3_write_fd(def_u->fid_i, "\r\n", 2);
     }
+    uv_close((uv_handle_t*)&u3_Host.def_u->pin_u, 0);
+    uv_close((uv_handle_t*)&u3_Host.def_u->pop_u, 0);
+    uv_close((uv_handle_t*)&u3_Host.def_u->tat_u.sun_u.tim_u, 0);
   }
 
-  if ( u3_Host.uty_u ) {
-    uv_close((uv_handle_t*)&u3_Host.uty_u->pin_u, 0);
-    uv_close((uv_handle_t*)&u3_Host.uty_u->pop_u, 0);
+  u3_utty* uty_u = u3_Host.uty_u;
+  u3_auto* car_u = uty_u->car_u;
+
+  while ( uty_u ) {  // clean all
+    u3_utty* next_u = uty_u->nex_u;
+    u3z(uty_u->tat_u.mir.lin);
+    u3z(uty_u->ses_u);
+    u3z(uty_u->app_u);
+    c3_free(uty_u);
+    uty_u = next_u;
   }
 }
 
@@ -481,6 +496,12 @@ _term_it_restore_line(u3_utty* uty_u)
 static void
 _term_it_save_stub(u3_utty* uty_u, u3_noun tub)
 {
+  if ( u3_Host.act_u
+    && (c3__hood != u3_Host.act_u->app_u)) {
+    u3z(tub);
+    return;
+  }
+
   u3_utat* tat_u = &uty_u->tat_u;
   u3_noun  lin   = tat_u->mir.lin;
 
@@ -598,22 +619,23 @@ _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
 static void
 _term_io_belt(u3_utty* uty_u, u3_noun blb)
 {
-  //  XX s/b u3dc("scot", c3__ud, uty_u->tid_l)
-  //
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
-  u3_noun cad = u3nc(c3__belt, blb);
+  u3_noun tid = u3i_word(uty_u->tid_l);
+  u3_noun wir = u3nt(c3__term, u3dc("scot", c3__ud, tid), u3_nul);
+  u3_noun cad;
 
-  u3_assert( 1 == uty_u->tid_l );
+  if (DEFAULT_SESSION_ID_NUM != uty_u->tid_l) {
+    cad = u3nt(c3__shot, u3k(uty_u->ses_u), u3nc(c3__belt, blb));
+  } else {
+    cad = u3nc(c3__belt, blb);
+  }
+
   u3_assert( uty_u->car_u );
+  u3_ovum* egg_u = _term_ovum_plan(uty_u->car_u, wir, u3k(cad));
 
-  {
-    u3_ovum* egg_u = _term_ovum_plan(uty_u->car_u, wir, cad);
-
-    //  no spinner delay on %ret
-    //
-    if ( c3__ret == u3h(blb) ) {
-      egg_u->pin_u.del_o = c3n;
-    }
+  // no spinner delay on %ret
+  //
+  if ( c3__ret == u3h(blb) ) {
+    egg_u->pin_u.del_o = c3n;
   }
 }
 
@@ -642,7 +664,6 @@ static void
 _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
 {
   u3_utat* tat_u = &uty_u->tat_u;
-
   //  escape sequences
   //
   if ( c3y == tat_u->esc.ape ) {
@@ -757,6 +778,39 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
     else if ( 10 == cay_y || 13 == cay_y ) {  //  newline & carriage return
       _term_io_spit(uty_u, u3nc(c3__ret, u3_nul));
     }
+    else if (cay_y == 15) {  // switch session (ctrl+o)
+
+      u3_utty* cur_u = u3_Host.act_u;
+      u3_utty* next_u = cur_u->nex_u;
+
+      if (!next_u) {
+        next_u = u3_Host.uty_u;
+      }
+
+      if (!next_u) {
+        _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
+        return;
+      }
+
+      if (next_u == cur_u) {
+        u3l_log("term: only one session available.");
+        return;
+      }
+
+      u3_Host.act_u = next_u;
+      uty_u = next_u;
+
+      _term_it_show_blank(next_u);
+      u3_term_ef_winc();
+      if ( c3__hood == next_u->app_u ) {
+        _term_it_restore_line(next_u);
+      }
+
+      u3l_log("term: switched session to ses=%s",
+             (next_u->ses_u == 0)
+             ? "default"
+             : u3r_string(next_u->ses_u));
+    }
     else if ( cay_y <= 26 ) {
       //  XX backwards compatibility [%ctl @c]
       //
@@ -830,8 +884,12 @@ _term_read_cb(uv_stream_t* tcp_u,
               ssize_t      siz_i,
               const uv_buf_t *     buf_u)
 {
-  u3_utty* uty_u = (u3_utty*)(void*)tcp_u;
-  _term_suck(uty_u, (const c3_y*)buf_u->base, siz_i);
+  if (!u3_Host.act_u) {
+    c3_free(buf_u->base);
+    return;
+  }
+
+  _term_suck(u3_Host.act_u, (const c3_y*)buf_u->base, siz_i);
   c3_free(buf_u->base);
 }
 
@@ -942,6 +1000,11 @@ _term_spin_step(u3_utty* uty_u)
 static void
 _term_spin_timer_cb(uv_timer_t* tim_u)
 {
+  if ( u3_Host.act_u
+     && (c3__hood != u3_Host.act_u->app_u) ) {
+    return;
+  }
+
   u3_utty* uty_u = tim_u->data;
   _term_spin_step(uty_u);
 }
@@ -958,7 +1021,7 @@ void
 u3_term_start_spinner(u3_atom say, c3_o del_o)
 {
   if ( c3n == u3_Host.ops_u.tem ) {
-    u3_utty* uty_u = _term_main();
+    u3_utty* uty_u = u3_Host.def_u;
     u3_utat* tat_u = &uty_u->tat_u;
 
     tat_u->sun_u.why_c[4] = 0;
@@ -988,7 +1051,8 @@ void
 u3_term_stop_spinner(void)
 {
   if ( c3n == u3_Host.ops_u.tem ) {
-    u3_utty* uty_u = _term_main();
+    u3_utty* uty_u = u3_Host.def_u;
+
     u3_utat* tat_u = &uty_u->tat_u;
 
     memset(tat_u->sun_u.why_c, 0, 5);
@@ -1035,7 +1099,8 @@ _term_ef_get(c3_l tid_l)
       }
     }
   }
-  return _term_main();
+
+  return NULL;
 }
 
 /* u3_term_get_blew(): return window size [columns rows].
@@ -1043,11 +1108,18 @@ _term_ef_get(c3_l tid_l)
 u3_noun
 u3_term_get_blew(c3_l tid_l)
 {
-  u3_utty*       uty_u = _term_ef_get(tid_l);
+  c3_l tid;
+  if ( u3_Host.act_u ) {
+    tid = u3_Host.act_u->tid_l;
+  } else {
+    tid = tid_l;
+  }
+
+  u3_utty*       uty_u = _term_ef_get(tid);
   c3_l           col_l, row_l;
 
   if ( (c3y == u3_Host.ops_u.tem) || !uty_u ||
-       (c3y != uty_u->wsz_f(uty_u, &col_l, &row_l)) )
+       (c3y != u3_Host.def_u->wsz_f(u3_Host.def_u, &col_l, &row_l)) )
   {
     col_l = 80;
     row_l = 24;
@@ -1069,12 +1141,20 @@ u3_term_ef_winc(void)
   //  XX groace, this should be a global handler sent to each pier
   //
   if ( u3_Host.uty_u->car_u ) {
-    u3_noun wir = u3nt(c3__term, '1', u3_nul);
-    u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
+    u3_noun tid = u3i_word(u3_Host.act_u->tid_l);
+    u3_noun wir = u3nt(c3__term, u3dc("scot", c3__ud, tid), u3_nul);
+    u3_noun cad;
 
-    u3_assert( 1 == u3_Host.uty_u->tid_l );
+    if (DEFAULT_SESSION_ID_NUM != u3_Host.act_u->tid_l) {
+      cad = u3nt( c3__shot,
+                  u3k(u3_Host.act_u->ses_u),
+                  u3nc(c3__blew, u3_term_get_blew(u3_Host.act_u->tid_l)));
+    }
+    else {
+      cad = u3nc(c3__blew, u3_term_get_blew(u3_Host.act_u->tid_l));
+    }
 
-    _term_ovum_plan(u3_Host.uty_u->car_u, wir, cad);
+    _term_ovum_plan(u3_Host.uty_u->car_u, wir, u3k(cad));
   }
 }
 
@@ -1083,13 +1163,13 @@ u3_term_ef_winc(void)
 void
 u3_term_ef_ctlc(void)
 {
-  u3_utty* uty_u = _term_main();
+  u3_utty* uty_u = u3_Host.act_u;
 
   if ( uty_u->car_u ) {
-    u3_noun wir = u3nt(c3__term, '1', u3_nul);
+    u3_noun tid = u3i_word(uty_u->tid_l);
+    u3_noun wir = u3nt(c3__term, u3dc("scot", c3__ud, tid), u3_nul);
     u3_noun cad = u3nq(c3__belt, c3__mod, c3__ctl, 'c');
 
-    u3_assert( 1 == uty_u->tid_l );
     _term_ovum_plan(uty_u->car_u, wir, cad);
   }
 }
@@ -1458,7 +1538,16 @@ _term_ef_blit_lame(u3_utty* uty_u,
 FILE*
 u3_term_io_hija(void)
 {
-  u3_utty* uty_u = _term_main();
+  if ( u3_Host.act_u && !(c3__hood == u3_Host.act_u->app_u) ) {
+    static FILE* sink_file = NULL;
+    sink_file = tmpfile();
+    if (!sink_file) {
+      return stdout;
+    }
+    return sink_file;
+  }
+
+  u3_utty* uty_u = u3_Host.act_u;
 
   if ( uty_u && uty_u->tat_u.siz.row_l ) {
     if ( uty_u->fid_i > 2 ) {
@@ -1469,10 +1558,9 @@ u3_term_io_hija(void)
     }
     else {
       if ( c3n == u3_Host.ops_u.tem ) {
-        if ( c3y != uty_u->hij_f(uty_u) ) {
+        if ( c3y != u3_Host.def_u->hij_f(u3_Host.def_u) ) {
           u3_assert(!"hija-tcsetattr");
         }
-
         //  move the cursor to the bottom left corner,
         //  and wipe that bottom line.
         //
@@ -1489,7 +1577,11 @@ u3_term_io_hija(void)
 void
 u3_term_io_loja(int x, FILE* f)
 {
-  u3_utty* uty_u = _term_main();
+  if (u3_Host.act_u && !(c3__hood == u3_Host.act_u->app_u) ) {
+    return;
+  }
+
+  u3_utty* uty_u = u3_Host.act_u;
 
   if ( uty_u && uty_u->tat_u.siz.row_l ) {
     if ( uty_u->fid_i > 2 ) {
@@ -1504,7 +1596,7 @@ u3_term_io_loja(int x, FILE* f)
         fflush(f);
       }
       else {
-        if ( c3y != uty_u->loj_f(uty_u) ) {
+        if ( c3y != u3_Host.def_u->loj_f(u3_Host.def_u) ) {
           u3_assert(!"loja-tcsetattr");
         }
 
@@ -1596,8 +1688,9 @@ _born_bail_cb(u3_ovum *egg_u, u3_noun stacktraces) {
 static void
 _term_io_talk(u3_auto* car_u)
 {
+  u3_utty* uty_u = u3_Host.def_u;
+
   if ( c3n == u3_Host.ops_u.tem ) {
-    u3_utty* uty_u = _term_main();
 
     uv_read_start((uv_stream_t*)&(uty_u->pin_u),
                   _term_alloc,
@@ -1606,7 +1699,7 @@ _term_io_talk(u3_auto* car_u)
 
   //TODO  reevaluate wrt dill sessions
   //
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
+  u3_noun wir = u3nt(c3__term, DEFAULT_SESSION_ID_TEXT, u3_nul);
   u3_noun cad;
 
   //  send born event
@@ -1623,22 +1716,22 @@ _term_io_talk(u3_auto* car_u)
   //  send terminal dimensions
   //
   {
-    cad = u3nc(c3__blew, u3_term_get_blew(1));
-    _term_ovum_plan(car_u, u3k(wir), cad);
+    cad = u3nc(c3__blew, u3_term_get_blew(DEFAULT_SESSION_ID_NUM));
+    _term_ovum_plan(uty_u->car_u, u3k(wir), u3k(cad));
   }
 
   //  refresh terminal state
   //
   {
     cad = u3nc(c3__hail, u3_nul);
-    _term_ovum_plan(car_u, wir, cad);
+    _term_ovum_plan(uty_u->car_u, wir, u3k(cad));
   }
 }
 
 /*  _reck_orchid(): parses only a number as text
  *
- *    Parses a text string which contains a decimal number. In practice, this
- *    number is always '1'.
+ *    Parses a text string which contains a decimal number.
+ *
  */
 static u3_noun
 _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
@@ -1662,13 +1755,86 @@ static void
 _term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
 {
   u3_auto* car_u = (u3_auto*)vod_p;
-  u3_noun wir = u3nt(c3__term, '1', u3_nul);
+  u3_noun wir = u3nt(c3__term, DEFAULT_SESSION_ID_TEXT, u3_nul);
   u3_noun cad = u3k(res);
   u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
 }
 
-/* _term_io_kick(): apply effects.
+/* _term_list_sessions(): prints all open sessions.
 */
+void
+_term_list_sessions(void)
+{
+  u3_utty* uty_u = u3_Host.uty_u;
+
+  if (!uty_u) {
+    u3l_log("Debug: No active terminal sessions found");
+    return;
+  }
+
+  u3l_log("===============================================");
+  u3l_log("             terminal sessions");
+
+  while (uty_u) {
+
+    u3l_log("    ses=%s, app=%s",
+            (uty_u->ses_u == 0) ?  "default" : u3r_string(uty_u->ses_u),
+            u3r_string(uty_u->app_u));
+
+    uty_u = uty_u->nex_u;
+  }
+
+  u3l_log("===============================================");
+}
+
+static void
+_term_timer_close_cb(uv_handle_t* handle) {
+  u3_utty* uty_u = (u3_utty*)handle->data;
+  if (uty_u) {
+      c3_free(uty_u);
+  }
+}
+
+/* _term_setup_session(): setup non default session.
+*/
+static u3_utty*
+_term_setup_session(c3_l tid_l, u3_noun ses, u3_noun app) {
+  u3_utty* new_u = c3_calloc(sizeof(u3_utty));
+
+  new_u->tid_l = tid_l;
+  new_u->ses_u = u3k(ses);
+  new_u->app_u = u3k(app);
+
+  new_u->ufo_u = u3_Host.def_u->ufo_u;
+
+  new_u->tat_u.mir.lin = u3_nul;
+  new_u->tat_u.mir.rus_w = 0;
+  new_u->tat_u.mir.cus_w = 0;
+  new_u->tat_u.esc.ape = c3n;
+  new_u->tat_u.esc.bra = c3n;
+  new_u->tat_u.esc.mou = c3n;
+  new_u->tat_u.esc.ton_y = 0;
+  new_u->tat_u.esc.col_y = 0;
+  new_u->tat_u.fut.len_w = 0;
+  new_u->tat_u.fut.wid_w = 0;
+  new_u->tat_u.fut.imp = u3_nul;
+  new_u->tat_u.siz.col_l = 80;
+  new_u->tat_u.siz.row_l = 0;
+  new_u->tat_u.sun_u.diz_o = c3n;
+  new_u->tat_u.sun_u.eve_d = 0;
+  new_u->tat_u.sun_u.end_d = 0;
+
+  //  use the same handlers
+  new_u->pin_u = u3_Host.def_u->pin_u;
+  new_u->pop_u = u3_Host.def_u->pop_u;
+  new_u->tat_u.sun_u.tim_u = u3_Host.def_u->tat_u.sun_u.tim_u;
+
+  new_u->car_u = u3_Host.uty_u->car_u;
+  new_u->nex_u = NULL;
+
+  return new_u;
+}
+
 static c3_o
 _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
@@ -1702,7 +1868,8 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         case c3__blit: {
           ret_o = c3y;
 
-          {
+          if (u3_Host.act_u && (tid_l == u3_Host.act_u->tid_l)) {
+
             u3_utty* uty_u = _term_ef_get(tid_l);
             if ( 0 == uty_u ) {
               // u3l_log("no terminal %d", tid_l);
@@ -1751,6 +1918,120 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           u3_pier_meld(car_u->pir_u);
         } break;
 
+        case c3__open: {
+          ret_o = c3y;
+
+          u3_noun ses, app;
+          if (c3n == u3r_cell(dat, &ses, &app)) {
+            u3l_log("term: invalid %%open data for tid_l=%d", tid_l);
+            u3z(wir); u3z(cad);
+            return c3n;
+          }
+
+          u3_utty* new_u = _term_setup_session(tid_l, ses, app);
+
+          if (new_u) {
+            new_u->nex_u = u3_Host.uty_u;
+            u3_Host.uty_u = new_u;
+            u3l_log("term: opened session tid_l=%d, ses=%s, app=%s\n",
+                   tid_l, u3r_string(ses), u3r_string(app));
+            _term_list_sessions();
+          } else {
+            u3l_log("term: failed to setup session for ses=%s", u3r_string(ses));
+            u3z(wir); u3z(cad);
+            return c3n;
+          }
+
+        } break;
+
+        case c3__shut: {
+          ret_o = c3y;
+
+          u3_utty* uty_u = u3_Host.uty_u;
+          u3_utty* prev_u = NULL;
+          u3_utty* found_u = NULL;
+
+          while (uty_u) {
+            if (uty_u->tid_l == tid_l) {
+              if (tid_l == DEFAULT_SESSION_ID_NUM) {
+                u3l_log("term: %%shut cannot close default session tid_l=%d\n", tid_l);
+                u3z(wir); u3z(cad);
+                return c3y;
+              }
+              if (prev_u) prev_u->nex_u = uty_u->nex_u;
+              else u3_Host.uty_u = uty_u->nex_u;
+              found_u = uty_u;
+              break;
+            }
+            prev_u = uty_u;
+            uty_u = uty_u->nex_u;
+          }
+
+          if (!found_u) {
+            u3l_log("term: %%shut no session found for tid_l=%d\n", tid_l);
+            u3z(wir); u3z(cad);
+            return c3y;
+          }
+
+          u3l_log("term: shutting down session ses=%s tid_l=%d",
+                  u3r_string(found_u->ses_u), tid_l);
+
+          if (found_u == u3_Host.act_u) {
+            u3_Host.act_u = u3_Host.def_u;
+            _term_it_show_blank(u3_Host.act_u);
+            _term_it_restore_line(u3_Host.act_u);
+            u3_term_ef_winc();
+            u3l_log("term: switched to new active session ses=%s tid_l=%d",
+                    u3r_string(found_u->ses_u), u3_Host.act_u->tid_l);
+          }
+
+          u3z(found_u->tat_u.mir.lin);
+          u3z(found_u->ses_u);
+          u3z(found_u->app_u);
+      } break;
+
+      case c3__sess: {
+          ret_o = c3y;
+
+          u3_utty* uty_u = u3_Host.uty_u;
+
+          while (uty_u) {  // keep default only
+            u3_utty* nex_u = uty_u->nex_u;
+            if (uty_u != u3_Host.def_u) {
+                u3z(uty_u->tat_u.mir.lin);
+                u3z(uty_u->ses_u);
+                u3z(uty_u->app_u);
+                c3_free(uty_u);
+            }
+            uty_u = nex_u;
+          }
+
+          u3_noun lst = dat;
+          u3_utty* last_u = u3_Host.uty_u;
+
+          while (u3_nul != lst) {  //  setup all sessions from dat
+            u3_noun ent = u3h(lst);
+            u3_noun num, ses, app;
+            u3x_trel(ent, &num, &ses, &app);
+            c3_l tid_l = u3r_word(0, num);
+
+            if (tid_l != u3_Host.def_u->tid_l) {
+              u3_utty* new_u = _term_setup_session(tid_l, ses, app);
+              if (new_u) {
+                  new_u->nex_u = NULL;
+                  last_u->nex_u = new_u;
+                  last_u = new_u;
+              }
+            }
+            lst = u3t(lst);
+          }
+
+          u3_Host.act_u = u3_Host.def_u;
+
+          _term_list_sessions();
+
+        } break;
+
         case c3__pack: {
           ret_o = c3y;
           u3_pier_pack(car_u->pir_u);
@@ -1780,7 +2061,7 @@ _term_io_exit_cb(uv_handle_t* han_u)
 static void
 _term_io_exit(u3_auto* car_u)
 {
-  u3_utty* uty_u = _term_main();
+  u3_utty* uty_u = u3_Host.def_u;
 
   if ( c3n == u3_Host.ops_u.tem ) {
     //  move cursor to the end
@@ -1790,11 +2071,6 @@ _term_io_exit(u3_auto* car_u)
     //  NB, closed in u3_term_log_exit()
     //
     uv_read_stop((uv_stream_t*)&(uty_u->pin_u));
-
-    uv_timer_t* han_u = &(uty_u->tat_u.sun_u.tim_u);
-    han_u->data       = car_u;
-
-    uv_close((uv_handle_t*)han_u, _term_io_exit_cb);
   }
   else {
     c3_free(car_u);
