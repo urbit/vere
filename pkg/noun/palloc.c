@@ -976,7 +976,8 @@ _irealloc(u3_post som_p, c3_w len_w)
   }
 }
 
-void
+//  XX declare wrapper in allocate.c for debugging
+static void
 _post_status(u3_post som_p)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -1054,13 +1055,11 @@ static c3_w
 _idle_words(void)
 {
   u3a_crag *pag_u;
-  u3_post   pag_p;
   c3_w len_w, pag_w, siz_w, tot_w = 0;
 
   for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
     pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
-    siz_w = 0;
-    pag_w = 0;
+    siz_w = pag_w = 0;
 
     while ( pag_u ) {
       len_w  = pag_u->len_s; // XX assert?
@@ -1068,7 +1067,6 @@ _idle_words(void)
       pag_u  = u3tn(u3a_crag, pag_u->nex_p);
       pag_w++;
     }
-
 
     if ( siz_w ) {
       fprintf(stderr, "idle words: class=%u (%u words) blocks=%u (in %u pages) ",
@@ -1349,6 +1347,7 @@ _sweep_directory(void)
         tot_w += siz_w << u3a_page;
       }
 
+      //  XX wrong in south roads?
       pag_w += siz_w;
       continue;
     }
@@ -1666,6 +1665,7 @@ _sweep_counts(void)
         }
       }
 
+      //  XX wrong in south roads?
       pag_w += siz_w;
       continue;
     }
