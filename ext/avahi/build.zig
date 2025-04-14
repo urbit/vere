@@ -538,7 +538,7 @@ pub fn build(b: *std.Build) void {
     avahi.root_module.addCMacro("HAVE_DBUS_CONNECTION_CLOSE", "0");
     avahi.root_module.addCMacro("HAVE_EXPAT_H", "1");
     avahi.root_module.addCMacro("HAVE_CONFIG_H", "1");
-    if (!t.isGnu())
+    if (!t.isGnuLibC())
         avahi.root_module.addCMacro("HAVE_STRLCPY", "1");
 
     const avahi_config_h = b.addConfigHeader(.{

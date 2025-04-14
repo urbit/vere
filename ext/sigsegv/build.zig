@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    if (target.result.isDarwin() and !target.query.isNative()) {
+    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -30,7 +30,7 @@ pub fn build(b: *std.Build) void {
 
     lib.linkLibC();
 
-    lib.defineCMacro("HAVE_CONFIG_H", null);
+    lib.root_module.addCMacro("HAVE_CONFIG_H", &[_]u8{});
 
     const config_h = b.addConfigHeader(.{
         .style = .{
