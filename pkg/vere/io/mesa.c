@@ -2086,12 +2086,6 @@ _saxo_cb(void* vod_p, u3_noun nun)
   if ( sax != u3_none ) {
     u3_noun her = u3h(sax);
     u3_ship her_u = u3_ship_of_noun(her);
-    u3_peer* new_u = _mesa_get_peer(per_u->mes_u, her_u);
-    if ( new_u != NULL ) {
-      per_u = new_u;
-    } else {
-      _mesa_put_peer(per_u->mes_u, her_u, per_u);
-    }
     u3_mesa* mes_u = per_u->mes_u;
     u3_noun lam = u3do("rear", u3k(sax));
     //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
@@ -2114,10 +2108,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
   // u3m_p("_forward_lanes_cb", las);
 
   if ( las != u3_none ) {
-    u3_peer* new_u = _mesa_get_peer(per_u->mes_u, per_u->her_u);
-    if ( new_u != NULL ) {
-      per_u = new_u;
-    }
     u3_noun gal = u3h(las);
     //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
@@ -2133,8 +2123,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
         per_u->dan_u = (sockaddr_in){0};
       }
     }
-
-    _mesa_put_peer(per_u->mes_u, per_u->her_u, per_u);
   }
 
   u3z(nun);
@@ -2148,17 +2136,18 @@ _meet_peer(u3_mesa* mes_u, u3_peer* per_u)
   u3_noun gan = u3nc(u3_nul, u3_nul);
 
   if ( !(u3_peer_lamp & per_u->liv_e) ) {
-    u3_noun pax = u3nc(u3dc("scot", c3__p, her), u3_nul);
-    u3_pier_peek_last(mes_u->pir_u, gan, c3__j, c3__saxo, pax, per_u, _saxo_cb);
+    u3_noun pax = u3nc(u3dc("scot", c3__p, u3k(her)), u3_nul);
+    u3_pier_peek_last(mes_u->pir_u, u3k(gan), c3__j, c3__saxo, pax, per_u, _saxo_cb);
   }
 
   if ( !(u3_peer_lane & per_u->liv_e) ) {
     u3_noun pax = u3nq(u3i_string("chums"),
-                    u3dc("scot", 'p', her),
+                    u3dc("scot", 'p', u3k(her)),
                     u3i_string("lanes"),
                     u3_nul);
-    u3_pier_peek_last(mes_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
+    u3_pier_peek_last(mes_u->pir_u, u3k(gan), c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
   }
+  u3z(her); u3z(gan);
 }
 
 static void
@@ -2402,20 +2391,8 @@ static void
 _mesa_forward_request(u3_mesa* mes_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
   u3_mesa_pact* pac_u = &pic_u->pac_u;
-  u3_peer* per_u = _mesa_get_peer(mes_u, pac_u->pek_u.nam_u.her_u);
-  if ( !per_u ) {
-    #ifdef MESA_DEBUG
-      c3_c* mes = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
-      u3l_log("mesa: alien forward for %s; meeting ship", mes);
-      c3_free(mes);
-    #endif
-    per_u = new(&mes_u->par_u, u3_peer, 1);
-    _init_peer(mes_u, per_u, pac_u->pek_u.nam_u.her_u);
-    per_u->her_u = pac_u->pek_u.nam_u.her_u;
-
-    _meet_peer(mes_u, per_u);
-    return;
-  } else if ( u3_peer_full != per_u->liv_e ) {
+  u3_peer* per_u = _mesa_gut_peer(mes_u, pac_u->pek_u.nam_u.her_u);
+  if ( u3_peer_full != per_u->liv_e ) {
    _meet_peer(mes_u, per_u);
    return;
   }
@@ -2461,15 +2438,9 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   c3_o our_o = u3_ships_equal(nam_u->her_u, mes_u->pir_u->who_u);
 
-  u3_peer* per_u = _mesa_get_peer(mes_u, nam_u->her_u);
+  u3_peer* per_u = _mesa_gut_peer(mes_u, nam_u->her_u);
   c3_o new_o = c3n;
-  if ( NULL == per_u ) {
-    new_o = c3y;
-    per_u = new(&mes_u->par_u, u3_peer, 1);
-    _init_peer(mes_u, per_u, nam_u->her_u);
-    _meet_peer(mes_u, per_u);
-    return;
-  } else if ( u3_peer_full != per_u->liv_e ) {
+  if ( u3_peer_full != per_u->liv_e ) {
     _meet_peer(mes_u, per_u);
     return;
   }
@@ -2716,15 +2687,9 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   //  XX if this lane management stuff is necessary
   // it should be deferred to after successful event processing
-  u3_peer* per_u = _mesa_get_peer(mes_u, pac_u->pok_u.pay_u.her_u);
+  u3_peer* per_u = _mesa_gut_peer(mes_u, pac_u->pok_u.pay_u.her_u);
   c3_o new_o = c3n;
-  if ( NULL == per_u ) {
-    new_o = c3y;
-    per_u = new(&mes_u->par_u, u3_peer, 1);
-    _init_peer(mes_u, per_u, pac_u->pok_u.pay_u.her_u);
-    _meet_peer(mes_u, per_u);
-    return;
-  } else if ( u3_peer_full != per_u->liv_e ) {
+  if ( u3_peer_full != per_u->liv_e ) {
     _meet_peer(mes_u, per_u);
     return;
   }

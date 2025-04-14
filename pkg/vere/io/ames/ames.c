@@ -748,6 +748,12 @@ _ames_send(u3_ames* sam_u, sockaddr_in lan_u, u3_ref_hun* hun_u)
     u3_send_handle* snd_u = c3_calloc(sizeof(*snd_u));
     snd_u->hun_u = hun_u;
     uv_buf_t buf_u = uv_buf_init((c3_c*)hun_u->hun_y, hun_u->len_w);
+    c3_w nip_w = lan_u.sin_addr.s_addr;
+    c3_c nip_c[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &nip_w, nip_c, INET_ADDRSTRLEN);
+      u3l_log("send ip .%s port %u",
+          nip_c, ntohs(lan_u.sin_port));
+
     c3_i     sas_i = uv_udp_send(&snd_u->snd_u,
                                  sam_u->wax_u,
                                  &buf_u, 1,
