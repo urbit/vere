@@ -1811,7 +1811,9 @@ _mesa_io_exit(u3_auto* car_u)
   u3_mesa* sam_u = (u3_mesa*)car_u;
   uv_timer_stop(&sam_u->tim_u);
   sam_u->tim_u.data = sam_u;
+  uv_udp_recv_stop(&u3_Host.wax_u);
   uv_close((uv_handle_t*)&sam_u->tim_u, _mesa_exit_cb);
+  uv_close((uv_handle_t*)&u3_Host.wax_u, 0);
 }
 
 static void
