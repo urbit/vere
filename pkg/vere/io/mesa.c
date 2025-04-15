@@ -2429,26 +2429,9 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
 {
   c3_w pip_w = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
-  if ( 1 == hop_y ) {
-    c3_etch_word(pag_u->sot_u, pip_w);
-    c3_etch_short(pag_u->sot_u + 4, por_s);
-    hed_u->nex_y = HOP_SHORT;
-    return;
-  }
-
-
-  u3_mesa_hop_once* lan_y = c3_calloc(sizeof(u3_mesa_hop_once));
-
-  c3_etch_word(lan_y->dat_y, pip_w);
-  c3_etch_short(lan_y->dat_y, por_s);
-
-  lan_y->len_w = 6;
-
-  c3_realloc(&pag_u->man_u, pag_u->man_u.len_w + 8);
-  pag_u->man_u.dat_y[pag_u->man_u.len_w] = *lan_y;
-
-  pag_u->man_u.len_w++;
-
+  c3_etch_word(pag_u->sot_u, pip_w);
+  c3_etch_short(pag_u->sot_u + 4, por_s);
+  hed_u->nex_y = HOP_SHORT;
 }
 
 /* static c3_d avg_time() { */
