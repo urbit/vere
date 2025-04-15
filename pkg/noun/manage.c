@@ -1510,7 +1510,7 @@ u3m_soft_run(u3_noun gul,
 
   {
     // XX review
-    if ( u3_nul == gul || (u3C.wag_w & u3o_cash) ) {
+    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
       u3R->ski.gul = u3_nul;
     }
     else {
