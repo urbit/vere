@@ -2546,7 +2546,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
     _mesa_send_pact(sam_u, pin_u->adr_u, NULL, pac_u);
     _mesa_del_pit(sam_u, nam_u);
-    return;
   }
 
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
