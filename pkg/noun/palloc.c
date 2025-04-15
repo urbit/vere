@@ -1912,6 +1912,64 @@ _pack_relocate(u3_post som_p)
   return out_p;
 }
 
+//  adapted from https://stackoverflow.com/a/27663998 and
+//  https://gist.github.com/ideasman42/5921b0edfc6aa41a9ce0
+//
+static u3p(u3a_crag)
+_sort_crag(u3p(u3a_crag) hed_p)
+{
+  c3_w bon_w, biz_w = 1; // block count, size
+  u3p(u3a_crag) s_p, l_p, r_p, *tal_p;
+  c3_w l_w, r_w;
+  c3_t l_t, r_t;
+
+  do {
+    l_p = r_p = hed_p;
+
+    hed_p = 0;
+    tal_p = &hed_p;
+    bon_w = 0;
+
+    while ( l_p ) {
+      r_w = biz_w;
+
+      bon_w++;
+      for ( l_w = 0; (l_w < biz_w) && r_p; l_w++) {
+        r_p = u3to(u3a_crag, r_p)->nex_p;
+      }
+
+      l_t = (0 == l_w);
+      r_t = (0 == r_w) || !r_p;
+
+      while ( !l_t || !r_t ) {
+        if ( r_t || (!l_t && (u3to(u3a_crag, l_p)->pag_w < u3to(u3a_crag, r_p)->pag_w)) ) {
+          s_p = l_p;
+          l_p = u3to(u3a_crag, l_p)->nex_p;
+          l_w--;
+          l_t = (0 == l_w);
+        }
+        else {
+          s_p = r_p;
+          r_p = u3to(u3a_crag, r_p)->nex_p;
+          r_w--;
+          r_t = (0 == r_w) || !r_p;
+        }
+
+        *tal_p = s_p;
+        tal_p  = &(u3to(u3a_crag, s_p)->nex_p);
+      }
+
+      l_p = r_p;
+    }
+
+    *tal_p  = 0;
+    biz_w <<= 1;
+  }
+  while ( bon_w > 1 );
+
+  return hed_p;
+}
+
 static void
 _pack_seek(void)
 {
@@ -1949,13 +2007,14 @@ _pack_seek(void)
     c3_g bit_g = u3a_crag_no;
 
     while ( --bit_g ) {
-      dir_p = HEAP.wee_p[bit_g];
-
-      if ( !dir_p ) {
+      if ( !HEAP.wee_p[bit_g] ) {
         continue;
       }
 
-      //  XX sort list if not at home
+      //  XX investigate, should only be required on inner roads
+      //
+      HEAP.wee_p[bit_g] = _sort_crag(HEAP.wee_p[bit_g]);
+      dir_p = HEAP.wee_p[bit_g];
 
       memset(&pre_u, 0, sizeof(pre_u));
       log_s = bit_g + u3a_min_log;
