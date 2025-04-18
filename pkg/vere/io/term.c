@@ -209,7 +209,8 @@ u3_term_log_init(void)
 
 /* u3_term_log_exit(): clean up terminal.
 */
-void u3_term_log_exit(void) {
+void
+u3_term_log_exit(void) {
 
   u3_utty* def_u = u3_Host.def_u;
 
