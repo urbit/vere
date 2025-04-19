@@ -631,7 +631,7 @@ _term_io_belt(u3_utty* uty_u, u3_noun blb)
   }
 
   u3_assert( uty_u->car_u );
-  u3_ovum* egg_u = _term_ovum_plan(uty_u->car_u, wir, u3k(cad));
+  u3_ovum* egg_u = _term_ovum_plan(uty_u->car_u, wir, cad);
 
   // no spinner delay on %ret
   //
@@ -1155,7 +1155,7 @@ u3_term_ef_winc(void)
       cad = u3nc(c3__blew, u3_term_get_blew(u3_Host.act_u->tid_l));
     }
 
-    _term_ovum_plan(u3_Host.uty_u->car_u, wir, u3k(cad));
+    _term_ovum_plan(u3_Host.uty_u->car_u, wir, cad);
   }
 }
 
@@ -1718,14 +1718,14 @@ _term_io_talk(u3_auto* car_u)
   //
   {
     cad = u3nc(c3__blew, u3_term_get_blew(DEFAULT_SESSION_ID_NUM));
-    _term_ovum_plan(uty_u->car_u, u3k(wir), u3k(cad));
+    _term_ovum_plan(uty_u->car_u, u3k(wir), cad);
   }
 
   //  refresh terminal state
   //
   {
     cad = u3nc(c3__hail, u3_nul);
-    _term_ovum_plan(uty_u->car_u, wir, u3k(cad));
+    _term_ovum_plan(uty_u->car_u, wir, cad);
   }
 }
 
@@ -1778,7 +1778,7 @@ _term_list_sessions(void)
 
   while (uty_u) {
 
-    u3l_log("    ses=%s, app=%s",
+    u3l_log("    ses=%s  app=%s",
             (uty_u->ses_u == 0) ?  "default" : u3r_string(uty_u->ses_u),
             u3r_string(uty_u->app_u));
 
@@ -1869,7 +1869,8 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
         case c3__blit: {
           ret_o = c3y;
 
-          if (u3_Host.act_u && (tid_l == u3_Host.act_u->tid_l)) {
+          if ( u3_Host.act_u
+             && (tid_l == u3_Host.act_u->tid_l) ) {
 
             u3_utty* uty_u = _term_ef_get(tid_l);
             if ( 0 == uty_u ) {
@@ -2012,9 +2013,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
           while (u3_nul != lst) {  //  setup all sessions from dat
             u3_noun ent = u3h(lst);
-            u3_noun num, ses, app;
-            u3x_trel(ent, &num, &ses, &app);
-            c3_l tid_l = u3r_word(0, num);
+            u3_noun tid, ses, app;
+            u3x_trel(ent, &tid, &ses, &app);
+            c3_l tid_l = u3r_word(0, tid);
 
             if (tid_l != u3_Host.def_u->tid_l) {
               u3_utty* new_u = _term_setup_session(tid_l, ses, app);
