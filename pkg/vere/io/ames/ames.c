@@ -865,14 +865,15 @@ static c3_o
 _ames_lane_from_peer(u3_ames* sam_u,
                      u3_peer* per_u,
                      sockaddr_in lan_u[2]) {
+  if ( NULL == per_u ) return c3n;
+  if ( u3_peer_full != per_u->liv_e ) return c3n;
   if ( c3y == u3_ships_equal(per_u->her_u, sam_u->pir_u->who_u) )
     return c3y;
-  if ( NULL == per_u ) return c3n;
   if ( c3y == _mesa_is_lane_zero(per_u->dan_u) ) {
     if ( c3y == u3_ships_equal(per_u->lam_u, sam_u->pir_u->who_u) )
       return c3y;
     u3_peer* lam_u = _mesa_get_peer(sam_u->mes_u, per_u->lam_u);
-    if ( NULL == lam_u ||
+    if ( (NULL == lam_u) ||
          (c3y == _mesa_is_lane_zero(lam_u->dan_u)) )
       return c3y;
     lan_u[0] = lam_u->dan_u;
@@ -885,7 +886,8 @@ _ames_lane_from_peer(u3_ames* sam_u,
     if ( c3y == u3_ships_equal(per_u->lam_u, sam_u->pir_u->who_u) )
       return c3y;
     u3_peer* lam_u = _mesa_get_peer(sam_u->mes_u, per_u->lam_u);
-    if ( NULL == lam_u || (c3y == _mesa_is_lane_zero(lam_u->dan_u)) )
+    if ( (NULL == lam_u) ||
+         (c3y == _mesa_is_lane_zero(lam_u->dan_u)) )
       return c3y;
     lan_u[1] = lam_u->dan_u;
     return c3y;
@@ -957,6 +959,92 @@ _ames_is_czar(u3_noun who)
 
 c3_o
 _ames_lamp_lane(u3_mesa_auto* mes_u, u3_ship her_u, sockaddr_in* lan_u);
+
+static void
+_saxo_cb(void* vod_p, u3_noun nun)
+{
+  u3_pact* pac_u = vod_p;
+  u3_ames* sam_u = pac_u->sam_u;
+
+  u3_weak sax    = u3r_at(7, nun);
+
+  u3_peer* per_u = NULL;
+  if ( sax != u3_none ) {
+    per_u = _mesa_gut_peer(sam_u->mes_u, pac_u->pre_u.rec_u);
+    u3_noun her = u3h(sax);
+    u3_ship her_u = u3_ship_of_noun(her);
+    u3_noun lam = u3do("rear", u3k(sax));
+    //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
+    // both atoms guaranteed to be cats, bc we don't call unless forwarding
+    per_u->lam_u = u3_ship_of_noun(lam);
+    per_u->liv_e |= u3_peer_lamp;
+    u3z(lam);
+  }
+
+  u3z(nun);
+}
+
+sockaddr_in
+_mesa_realise_lane(u3_mesa_auto* mes_u, u3_noun lan);
+
+static void
+_ames_lane_scry_cb(u3_pact* pac_u, u3_peer* per_u);
+
+static void
+_forward_lanes_cb(void* vod_p, u3_noun nun)
+{
+  u3_pact* pac_u = vod_p;
+  u3_ames* sam_u = pac_u->sam_u;
+
+  u3_weak las    = u3r_at(7, nun);
+  // u3m_p("_forward_lanes_cb", las);
+
+  u3_peer* per_u = NULL;
+  if ( las != u3_none ) {
+    per_u = _mesa_gut_peer(sam_u->mes_u, pac_u->pre_u.rec_u);
+    u3_noun gal = u3h(las);
+    //u3_assert( c3y == u3a_is_cat(gal) && gal < 256 );
+    // both atoms guaranteed to be cats, bc we don't call unless forwarding
+    per_u->liv_e |= u3_peer_lane;
+    per_u->lam_u = u3_ship_of_noun(gal);
+    u3_noun sal, tal;
+
+    if ( c3n == per_u->lam_o ) {
+      if ( (c3y == u3r_cell(u3t(las), &sal, &tal)) &&
+           (c3y == u3du(sal)) ) {
+        per_u->dan_u = _mesa_realise_lane(sam_u->mes_u, u3k(sal));
+      } else {
+        per_u->dan_u = (sockaddr_in){0};
+      }
+    }
+  }
+  _ames_lane_scry_cb(pac_u, per_u);
+
+  u3z(nun);
+
+}
+
+static void
+_meet_peer(u3_ames* sam_u, u3_pact* pac_u)
+{
+  u3_peer* per_u = _mesa_get_peer(sam_u->mes_u, pac_u->pre_u.rec_u);
+  u3_noun her = u3_ship_to_noun(pac_u->pre_u.rec_u);
+  u3_noun gan = u3nc(u3_nul, u3_nul);
+
+  if ( (NULL == per_u) || !(u3_peer_lamp & per_u->liv_e) ) {
+    u3_noun pax = u3nc(u3dc("scot", c3__p, u3k(her)), u3_nul);
+    u3_pier_peek_last(sam_u->mes_u->pir_u, u3k(gan), c3__j, c3__saxo, pax, pac_u, _saxo_cb);
+  }
+
+  if ( (NULL == per_u) || !(u3_peer_lane & per_u->liv_e) ) {
+    u3_noun pax = u3nq(u3i_string("chums"),
+                    u3dc("scot", 'p', u3k(her)),
+                    u3i_string("lanes"),
+                    u3_nul);
+    u3_pier_peek_last(sam_u->mes_u->pir_u, u3k(gan), c3__ax, u3_nul, pax, pac_u, _forward_lanes_cb);
+  }
+  u3z(her); u3z(gan);
+}
 
 /* _ames_send_lane(): resolve/decode lane. RETAIN
 */
@@ -1194,18 +1282,20 @@ _ames_send_many(u3_pact* pac_u, sockaddr_in lan_u[2], c3_o for_o)
   }
 }
 
+
 /*  _ames_lane_scry_cb(): learn lanes to send packet on
 */
 static void
-_ames_lane_scry_cb(void* vod_p, u3_noun nun)
+_ames_lane_scry_cb(u3_pact* pac_u, u3_peer* per_u)
 {
-  u3_pact* pac_u = vod_p;
   u3_ames* sam_u = pac_u->sam_u;
-  u3_weak    las = u3r_at(7, nun);
+
+  if ( c3y == pac_u->for_o )
+    sam_u->sat_u.foq_d--;
 
   //  if scry fails, remember we can't scry, and just inject the packet
   //
-  if ( u3_none == las ) {
+  if ( (NULL == per_u) || (u3_peer_full != per_u->liv_e) ) {
     if ( 5 < ++sam_u->sat_u.saw_d ) {
       u3l_log("ames: giving up scry");
       sam_u->fig_u.see_o = c3n;
@@ -1216,14 +1306,6 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
   }
   else {
     sam_u->sat_u.saw_d = 0;
-
-    u3_ship who_u = pac_u->pre_u.rec_u;
-    u3_noun who = u3_ship_to_noun(who_u);
-    //  cache the scry result for later use
-    //
-    u3_peer* per_u = _ames_lane_into_cache(sam_u,
-                          who,
-                          u3k(las));
     sockaddr_in lan_u[2];
     _ames_lane_from_peer(sam_u, per_u, lan_u);
     
@@ -1234,20 +1316,6 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
     }
     _ames_pact_free(pac_u);
   }
-  u3z(nun);
-}
-
-/*  _ames_lane_scry_forward_cb(): learn lanes to forward packet on
- */
-static void
-_ames_lane_scry_forward_cb(void *vod_p, u3_noun nun)
-{
-  u3_pact* pac_u = vod_p;
-  u3_ames *sam_u = pac_u->sam_u;
-
-  sam_u->sat_u.foq_d--;
-
-  _ames_lane_scry_cb(vod_p, nun);
 }
 
 /* _ames_try_send(): try to send a packet to a ship and its sponsors
@@ -1304,23 +1372,10 @@ _ames_try_send(u3_pact* pac_u)
   //  store the packet to be sent later when the lane scry completes
   //
   else {
-    u3_noun pax = _lane_scry_path(u3_ship_to_noun(pac_u->pre_u.rec_u));
-
-    //  if forwarding, enqueue the packet and scry for the lane
-    //
-    u3_noun gang = u3nc(u3_nul, u3_nul);
     if ( c3y == pac_u->for_o ) {
       sam_u->sat_u.foq_d++;
-
-      u3_pier_peek_last(sam_u->pir_u, gang, c3__ax,
-                        u3_nul, pax, pac_u, _ames_lane_scry_forward_cb);
     }
-    //  otherwise, just scry for the lane
-    //
-    else {
-      u3_pier_peek_last(sam_u->pir_u, gang, c3__ax,
-                        u3_nul, pax, pac_u, _ames_lane_scry_cb);
-    }
+    _meet_peer(sam_u, pac_u);
   }
 }
 
