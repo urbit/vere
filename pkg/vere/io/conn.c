@@ -429,14 +429,68 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   }
 }
 
+/* _conn_make_cran(): alloc/init new request.
+*/
+static u3_cran*
+_conn_make_cran(u3_chan* can_u, u3_atom rid)
+{
+  u3_cran*  ran_u = c3_calloc(sizeof(*ran_u));
+
+  ran_u->rid = rid;
+  ran_u->can_u = can_u;
+  ran_u->nex_u = can_u->ran_u;
+  can_u->ran_u = ran_u;
+  return ran_u;
+}
+
+static void
+_conn_peel_quiz_cb(c3_m mot_m, void* ptr_v, u3_noun res)
+{
+  u3_cran* ran_u = ptr_v;
+  u3_chan* can_u = ran_u->can_u;
+
+  if ( !can_u ) {
+    //  chan was closed; noop.
+    //
+    u3z(ran_u->rid); c3_free(ran_u);
+    u3z(res); return;
+  }
+
+  _conn_send_noun(can_u, u3nt(ran_u->rid, c3__peel, res));
+  _conn_drop_cran(can_u, ran_u);
+}
+
+static void
+_conn_async_peel(u3_conn* con_u,
+                 u3_chan* can_u,
+                 u3_atom    rid,
+                 u3_noun    dat)
+{
+  u3_pier* pir_u = con_u->car_u.pir_u;
+  c3_m     mot_m = u3h(dat);
+
+  switch ( mot_m ) {
+    case c3__quic:
+    case c3__mass: {
+      u3_lord_quiz(pir_u->god_u,
+                   (c3__quic == mot_m) ? c3__quic : c3__quac,
+                   _conn_make_cran(can_u, rid), _conn_peel_quiz_cb);
+    } break;
+
+    default: u3_assert(0);
+  }
+
+  u3z(dat);
+}
+
 /* _conn_read_peel(): response to a %peel request, sans rid.
 */
-static u3_noun
+static u3_weak
 _conn_read_peel(u3_conn* con_u, u3_noun dat)
 {
-  u3_pier*  pir_u = con_u->car_u.pir_u;
-  u3_noun   i_dat, t_dat, it_dat, tt_dat;
-  u3_noun   res;
+  u3_pier* pir_u = con_u->car_u.pir_u;
+  u3_noun  i_dat, t_dat, it_dat, tt_dat;
+  u3_weak  res;
 
   if ( c3n == u3r_cell(dat, &i_dat, &t_dat) ) {
     res = u3_nul;
@@ -456,6 +510,7 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
           u3i_list(u3nc(c3__help, u3_nul), u3nc(c3__info, u3_nul),
                    u3nc(c3__khan, u3_nul), u3nc(c3__live, u3_nul),
                    u3nc(c3__mass, u3_nul),
+                   u3nc(c3__quic, u3_nul),
                    u3nc(c3__port,
                         u3i_list(c3__ames, c3__htls, c3__http, u3_none)),
                    u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul),
@@ -473,10 +528,9 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       } break;
       //  |mass output
       //
+      case c3__quic:
       case c3__mass: {
-        //  TODO  |mass
-        //
-        res = u3_nul;
+        res = u3_none;
       } break;
       //  runtime metrics.
       //
@@ -527,20 +581,6 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
     res = u3_nul;
   }
   u3z(dat); return res;
-}
-
-/* _conn_make_cran(): alloc/init new request.
-*/
-static u3_cran*
-_conn_make_cran(u3_chan* can_u, u3_atom rid)
-{
-  u3_cran*  ran_u = c3_calloc(sizeof(*ran_u));
-
-  ran_u->rid = rid;
-  ran_u->can_u = can_u;
-  ran_u->nex_u = can_u->ran_u;
-  can_u->ran_u = ran_u;
-  return ran_u;
 }
 
 /* _conn_moor_poke(): called on message read from u3_moor.
@@ -602,8 +642,14 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     } break;
 
     case c3__peel: {
-      _conn_send_noun(
-        can_u, u3nc(u3k(rid), _conn_read_peel(con_u, u3k(dat))));
+      u3_weak out;
+
+      if ( u3_none != (out = _conn_read_peel(con_u, u3k(dat))) ) {
+        _conn_send_noun(can_u, u3nc(u3k(rid), out));
+      }
+      else {
+        _conn_async_peel(con_u, can_u, u3k(rid), u3k(dat));
+      }
     } break;
 
     case c3__ovum: {

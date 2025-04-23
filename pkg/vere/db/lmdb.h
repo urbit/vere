@@ -3,7 +3,7 @@
 #ifndef U3_VERE_DB_LMDB_H
 #define U3_VERE_DB_LMDB_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "lmdb/lmdb.h"
 
   /* lmdb api wrapper

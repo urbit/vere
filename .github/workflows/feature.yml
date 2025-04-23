@@ -3,12 +3,13 @@ name: Feature pull request
 on:
   pull_request:
     paths:
-      - '.bazelrc'
-      - '.github/workflows/*.yml'
-      - 'BUILD.bazel'
-      - 'WORKSPACE.bazel'
-      - 'bazel/**'
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'ext/**'
+      - '!ext/**.md'
       - 'pkg/**'
+      - '.github/workflows/**.yml'
+      - '*.sh'
 
 jobs:
   urbit:

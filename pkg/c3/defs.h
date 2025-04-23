@@ -5,6 +5,7 @@
 
 #include "portable.h"
 #include "types.h"
+#include <limits.h>
 
 #include <errno.h>
 
@@ -51,7 +52,19 @@
 
     /* Bit counting.
     */
-#     define c3_bits_word(w) ((w) ? (32 - __builtin_clz(w)) : 0)
+#if   (32 == (CHAR_BIT * __SIZEOF_INT__))
+#     define c3_lz_w __builtin_clz
+#     define c3_tz_w __builtin_ctz
+#     define c3_pc_w __builtin_popcount
+#elif (32 == (CHAR_BIT * __SIZEOF_LONG__))
+#     define c3_lz_w __builtin_clzl
+#     define c3_tz_w __builtin_ctzl
+#     define c3_pc_w __builtin_popcountl
+#else
+#     error  "port me"
+#endif
+
+#     define c3_bits_word(w) ((w) ? (32 - c3_lz_w(w)) : 0)
 
     /* Min and max.
     */
@@ -104,13 +117,13 @@
       inline c3_s
       c3_sift_short(c3_y buf_y[2])
       {
-        return (buf_y[1] << 8 | buf_y[0]);
+        return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
       inline c3_w
       c3_sift_word(c3_y buf_y[4])
       {
-        return (buf_y[3] << 24 | buf_y[2] << 16 | buf_y[1] << 8 | buf_y[0]);
+        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
       }
 
       inline c3_d

@@ -5,7 +5,7 @@
 #include "noun.h"
 #include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
-#include "ur.h"
+#include "ur/ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
 #include "sigsegv.h"
@@ -194,6 +194,7 @@ _main_init(void)
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
+  u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
   u3_Host.ops_u.siz_i =
 #if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
@@ -269,6 +270,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "import",              required_argument, NULL, 'i' },
     { "ivory-pill",          required_argument, NULL, 'J' },
     { "json-trace",          no_argument,       NULL, 'j' },
+    { "jumbo-bloq",          required_argument, NULL, c3__bloq },
     { "kernel-stage",        required_argument, NULL, 'K' },
     { "key-file",            required_argument, NULL, 'k' },
     { "loom",                required_argument, NULL, c3__loom },
@@ -365,6 +367,15 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       //  special args
       //
+      case c3__bloq: {
+        if (_main_readw(optarg, 30, &arg_w)) {
+          return c3n;
+        } else u3_Host.ops_u.jum_y = arg_w;
+        if ( 13 > u3_Host.ops_u.jum_y ) {
+          return c3n;
+        }
+        break;
+      }
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           return c3n;
@@ -844,10 +855,11 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-i, --import FILE             Import pier state from jamfile\n",
     "-J, --ivory-pill PILL         Use custom ivory pill\n",
     "-j, --json-trace              Create json trace file in .urb/put/trace\n",
+    "    --jumbo-bloq BLOQ         Set Ames jumbo frame bloq size\n",
     "-K, --kernel-stage STAGE      Start at Hoon kernel version stage\n",
     "-k, --key-file KEYS           Private key file (see also -G)\n",
     "-L, --local                   Local networking only\n",
-    "    --loom                    Set loom to binary exponent (31 == 2GB)\n"
+    "    --loom EXPO               Set loom to binary exponent (31 == 2GB)\n"
     "-l, --lite-boot               Most-minimal startup\n",
     "-M, --keep-cache-limit LIMIT  Set persistent memo cache max size; 0 means default\n",
     "-n, --replay-to NUMBER        Replay up to event\n",
@@ -1139,10 +1151,10 @@ _cw_init_io(uv_loop_t* lup_u)
   //  Ignore SIGPIPE signals.
   //
   {
-    struct sigaction sig_s = {{0}};
-    sigemptyset(&(sig_s.sa_mask));
-    sig_s.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sig_s, 0);
+    sigset_t set_s;
+    sigemptyset(&set_s);
+    sigaddset(&set_s, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
 
   //  configure pipe to daemon process
@@ -1547,14 +1559,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
   //  jam input and return on stdout
   //
   else if ( c3y == jam_o ) {
-    c3_d    bits = 0;
     c3_d    len_d = 0;
     c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
     c3_y*   byt_y;
     u3_noun sam = u3i_string(evl_c);
     u3_noun res = u3m_soft(0, u3v_wish_n, sam);
     if ( 0 == u3h(res) ) {                //  successful execution, print output
-      bits = u3s_jam_xeno(u3t(res), &len_d, &byt_y);
+      u3s_jam_xeno(u3t(res), &len_d, &byt_y);
       if ( c3y == new_o ) {
         u3_newt_send(&std_u, len_d, byt_y);
       } else {
@@ -1770,7 +1781,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_serf_grab();
+  u3z(u3_serf_grab(c3y));
   u3m_stop();
 }
 
@@ -2431,7 +2442,7 @@ _cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
 static c3_i
 _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  c3_c *argv[12] = {0};
+  c3_c *argv[13] = {0};
   c3_c eve_c[21] = {0};
   c3_c sap_c[21] = {0};
   c3_c lom_c[3]  = {0};
@@ -2456,6 +2467,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     argv[i_z++] = u3_Host.wrk_c;
     argv[i_z++] = "play";
+    argv[i_z++] = "--watch-replay";
     argv[i_z++] = "--loom";
     argv[i_z++] = lom_c;
     argv[i_z++] = "--replay-to";
@@ -2523,17 +2535,19 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
+  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
   static struct option lop_u[] = {
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "auto-meld", no_argument,       NULL, 7 },
-    { "soft-mugs", no_argument,       NULL, 8 },
-    { "full",      no_argument,       NULL, 'f' },
-    { "replay-to", required_argument, NULL, 'n' },
-    { "snap-at",   required_argument, NULL, 's' },
+    { "loom",              required_argument, NULL, c3__loom },
+    { "no-demand",         no_argument,       NULL, 6 },
+    { "auto-meld",         no_argument,       NULL, 7 },
+    { "soft-mugs",         no_argument,       NULL, 8 },
+    { "watch-replay",      no_argument,       NULL, 9 },
+    { "full",              no_argument,       NULL, 'f' },
+    { "replay-to",         required_argument, NULL, 'n' },
+    { "snap-at",           required_argument, NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2558,6 +2572,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 8: {  //  soft-mugs
         sof_o = c3y;
+      } break;
+
+      case 9: {  //  watch-replay
+        wat_o = c3y;
       } break;
 
       case 'f': {
@@ -2605,12 +2623,17 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  pthread_t ted;
-  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+  if ( _(wat_o) ) {
+    pthread_t ted;
+    pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 
-  pthread_cancel(ted);
+    pthread_cancel(ted);
+  }
+  else {
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  }
 }
 
 /* _cw_prep(): prepare for upgrade

@@ -1,0 +1,18 @@
+.{
+    .name = "openssl",
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
+            .lazy = true,
+        },
+        .openssl = .{
+            .url = "https://github.com/openssl/openssl/releases/download/OpenSSL_1_1_1w/openssl-1.1.1w.tar.gz",
+            .hash = "122042b0a69fc3deee3c603b11046f15693046e5cfcf56858e028b9ea4dc4b78b81a",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
