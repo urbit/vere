@@ -610,7 +610,6 @@ _pages_size(c3_w pag_w)
   //
   if ( pag_w || !HEAP.off_ws ) {
     while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
-      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
       siz_w++;
     }
   }
@@ -653,7 +652,15 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   }
 
   dir_u[pag_w] = u3a_free_pg;
-  siz_w = _pages_size(pag_w);
+
+  //  head-page 0 in a south road can only have a size of 1
+  //
+  if ( pag_w || !HEAP.off_ws ) {
+    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
+      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
+      siz_w++;
+    }
+  }
 
   //  XX groace
   //
@@ -912,15 +919,12 @@ _irealloc(u3_post som_p, c3_w len_w)
       old_w = siz_w << u3a_page;
 
       if ( len_w <= old_w ) {
-        dif_w = (old_w - len_w) >> u3a_page;
+        dif_w  = (old_w - len_w) >> u3a_page;
+        pag_w += HEAP.dir_ws * dif_w;
+        (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
 
         // XX junk
         //  XX unpoison prefix, poison suffix
-
-        while ( dif_w-- ) {
-          dir_u[pag_w + (HEAP.dir_ws * (old_w - dif_w - 1))] = u3a_free_pg;
-        }
-
         return som_p;
       }
 
@@ -959,7 +963,9 @@ _irealloc(u3_post som_p, c3_w len_w)
 
     old_w = pag_u->len_s;
 
-    if ( (old_w >= len_w) && (len_w > (old_w >> 1)) ) {
+    if (  (len_w <= old_w)
+       && ((len_w > (old_w >> 1)) || (u3a_minimum == old_w)) )
+    {
       //  XX junk
       //  XX unpoison prefix, poison suffix
       return som_p;
@@ -1006,6 +1012,7 @@ _post_status(u3_post som_p)
                       som_p, dir_p);
     }
     else {
+      //  XX include size
       fprintf(stderr, "palloc: head page in-use som_p=0x%x\r\n",
                       som_p);
     }
@@ -1323,8 +1330,7 @@ _sweep_directory(void)
     }
   }
 
-  pag_w = 0;
-  while ( pag_w < HEAP.len_w ) {
+  for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
     dir_p = dir_u[pag_w];
@@ -1345,10 +1351,6 @@ _sweep_directory(void)
         siz_w  = _pages_size(pag_w);
         tot_w += siz_w << u3a_page;
       }
-
-      //  XX wrong in south roads?
-      pag_w += siz_w;
-      continue;
     }
     else if ( u3a_rest_pg < dir_p ) {
       //  entire chunk page is unmarked
@@ -1396,8 +1398,6 @@ _sweep_directory(void)
         }
       }
     }
-
-    pag_w++;
   }
 
   if ( leq_w ) {
@@ -1619,8 +1619,7 @@ _sweep_counts(void)
     }
   }
 
-  pag_w = 0;
-  while ( pag_w < HEAP.len_w ) {
+  for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
     dir_p = dir_u[pag_w];
@@ -1663,10 +1662,6 @@ _sweep_counts(void)
           tot_w += siz_w << u3a_page;
         }
       }
-
-      //  XX wrong in south roads?
-      pag_w += siz_w;
-      continue;
     }
     else if ( u3a_rest_pg < dir_p ) {
       //  entire chunk page is unmarked
@@ -1732,8 +1727,6 @@ _sweep_counts(void)
         }
       }
     }
-
-    pag_w++;
   }
 
   if ( leq_w ) {
