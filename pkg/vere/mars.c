@@ -6,6 +6,7 @@
 #include "events.h"
 #include "version.h"
 #include "noun.h"
+#include "pace.h"
 #include "types.h"
 #include "vere.h"
 #include "ivory.h"
@@ -1394,6 +1395,13 @@ u3_mars_init(c3_c*    dir_c,
   return mar_u;
 }
 
+#define VERE_NAME  "vere"
+#define VERE_ZUSE  410
+#define VERE_LULL  322
+#define VERE_ARVO  236
+#define VERE_HOON  137
+#define VERE_NOCK  4
+
 /* _mars_wyrd_card(): construct %wyrd.
 */
 static u3_noun
@@ -1401,22 +1409,26 @@ _mars_wyrd_card(c3_m nam_m, c3_w ver_w, c3_l sev_l)
 {
   //  XX ghetto (scot %ta)
   //
-  u3_noun ver = u3nt(c3__vere, u3i_string("~." URBIT_VERSION), u3_nul);
+  u3_noun ver = u3nq(c3__vere, u3i_string(U3_VERE_PACE), u3i_string("~." URBIT_VERSION), u3_nul);
+  // u3_noun ver = u3nt(u3i_string(VERE_NAME),
+  //                   //  u3i_string(U3_VERE_PACE),
+  //                    u3dc("scot", c3__ta, u3i_string(URBIT_VERSION)),
+  //                    u3_nul);
   // u3_noun sen = u3dc("scot", c3__uv, sev_l); //  lol no
   u3_noun sen = u3i_string("0v1s.vu178");
   u3_noun kel;
 
   //  special case versions requiring the full stack
   //
-  if (  ((c3__zuse == nam_m) && (410 == ver_w))
-     || ((c3__lull == nam_m) && (322 == ver_w))
-     || ((c3__arvo == nam_m) && (236 == ver_w)) )
+  if (  ((c3__zuse == nam_m) && (VERE_ZUSE == ver_w))
+     || ((c3__lull == nam_m) && (VERE_LULL == ver_w))
+     || ((c3__arvo == nam_m) && (VERE_ARVO == ver_w)) )
   {
-    kel = u3nl(u3nc(c3__zuse, 410),
-               u3nc(c3__lull, 322),
-               u3nc(c3__arvo, 236),
-               u3nc(c3__hoon, 137),
-               u3nc(c3__nock, 4),
+    kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),
+               u3nc(c3__lull, VERE_LULL),
+               u3nc(c3__arvo, VERE_ARVO),
+               u3nc(c3__hoon, VERE_HOON),
+               u3nc(c3__nock, VERE_NOCK),
                u3_none);
   }
   //  XX speculative!
