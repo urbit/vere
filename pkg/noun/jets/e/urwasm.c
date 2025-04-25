@@ -131,11 +131,13 @@ typedef struct {
 // memory arena with exponential growth
 typedef struct {
   c3_w      siz_w;  // size in bytes
+  c3_y      pad_y;  // alignment padding
+  c3_t      ini_t;  // already initialized
+  u3i_slab  sab_u;  // associated slab
   c3_y*     buf_y;  // allocated buffer
   c3_y*     nex_y;  // next allocation
   c3_y*     end_y;  // end of arena
   jmp_buf*  esc_u;  // escape buffer
-  c3_t      ini_t;  // already initialized, XX urwasm within urwasm?
 } uw_arena;
 
 typedef struct {
@@ -162,7 +164,7 @@ typedef enum {
 
 typedef enum {
   lst_call      = 0,
-  // lst_call_ext  = 1,  // not necessary?
+  // lst_call_ext  = 1,  // not necessary
   lst_try       = 2,
   lst_catch_try = 3,
   lst_catch_err = 4,
@@ -173,11 +175,16 @@ static void
 _uw_arena_init_size(uw_arena* ren_u, c3_w siz_w)
 {
   ren_u->siz_w = siz_w;
-  c3_w pad_w = 256;
-  ren_u->nex_y = ren_u->buf_y = u3a_calloc(ren_u->siz_w+pad_w, 1);
+  u3i_slab_init(&ren_u->sab_u, 3, siz_w + 12);  // size + max padding
+  ren_u->buf_y = ren_u->nex_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
   ren_u->end_y = ren_u->buf_y + ren_u->siz_w;
+  c3_y pad_y = ren_u->buf_y - ren_u->sab_u.buf_y;
+  if (pad_y > 12)
+  {
+    u3m_bail(c3__fail);
+  }
+  ren_u->pad_y = pad_y;
   ren_u->ini_t = 1;
-  memset(ren_u->end_y, (c3_y)0xaa, (size_t)pad_w);
 }
 
 static void
@@ -189,15 +196,6 @@ _uw_arena_init(uw_arena* ren_u)
 static void
 _uw_arena_grow(uw_arena* ren_u)
 {
-  c3_w pad_w = 256;
-  for (c3_y* ptr_y = ren_u->end_y; ptr_y < ren_u->end_y + pad_w; ptr_y++)
-  {
-    if (*ptr_y != 0xaa)
-    {
-      u3m_bail(c3__fail);
-    }
-  }
-
   if (!ren_u->ini_t)
   {
     u3m_bail(c3__fail);
@@ -209,24 +207,22 @@ _uw_arena_grow(uw_arena* ren_u)
   }
   ren_u->siz_w = new_w;
 
-  u3a_free(ren_u->buf_y);
-  ren_u->nex_y = ren_u->buf_y = u3a_calloc(ren_u->siz_w + pad_w, 1);
-  ren_u->end_y = ren_u->buf_y + ren_u->siz_w;
-  memset(ren_u->end_y, (c3_y)0xaa, (size_t)pad_w);
+  u3i_slab_free(&ren_u->sab_u);
+
+  u3i_slab_init(&ren_u->sab_u, 3, new_w + 12);  // size + max padding
+  ren_u->buf_y = ren_u->nex_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
+  ren_u->end_y = ren_u->nex_y + new_w;
+  c3_y pad_y = ren_u->nex_y - ren_u->sab_u.buf_y;
+  if (pad_y > 12)
+  {
+    u3m_bail(c3__fail);
+  }
+  ren_u->pad_y = pad_y;
 }
 
 static void
 _uw_arena_reset(uw_arena* ren_u)
 {
-  c3_w pad_w = 256;
-  for (c3_y* ptr_y = ren_u->end_y; ptr_y < ren_u->end_y + pad_w; ptr_y++)
-  {
-    if (*ptr_y != 0xaa)
-    {
-      u3m_bail(c3__fail);
-    }
-  }
-
   if (!ren_u->ini_t)
   {
     u3m_bail(c3__fail);
@@ -242,7 +238,7 @@ _uw_arena_free(uw_arena* ren_u)
   {
     u3m_bail(c3__fail);
   }
-  u3a_free(ren_u->buf_y);
+  u3i_slab_free(&ren_u->sab_u);
   ren_u->ini_t = 0;
 }
 
@@ -328,14 +324,15 @@ _free_code(void* lag_v)
   // noop
 }
 
-// Struct/array allocation: for now again just a bump allocator
-// XX TODO sainer reallocs (wasm3 often reallocs dynamic arrays)
+// Struct/array allocation: [len_d cap_d data]
 // BoxArena->esc_u MUST be initialized by the caller to handle OOM
 //
 static uw_arena* BoxArena;
 
+//  allocate with capacity
+//  the allocated buffer 
 static void*
-_calloc_box(size_t num_i, size_t len_i)
+_malloc_box_cap(c3_d len_d, c3_d cap_d)
 {
   if (!BoxArena->ini_t)
   {
@@ -343,20 +340,14 @@ _calloc_box(size_t num_i, size_t len_i)
   }
 
   void* lag_v = BoxArena->nex_y;
-  
-  size_t byt_i = num_i * len_i;
-  if (byt_i / len_i != num_i)
+
+  if (cap_d >= UINT64_MAX - 16)
   {
     u3m_bail(c3__fail);
   }
+  c3_d pac_d = cap_d + 16; // c3_d for length + capacity
 
-  if (byt_i >= UINT64_MAX - 16)
-  {
-    u3m_bail(c3__fail);
-  }
-  c3_d byt_d = byt_i + 16; // c3_d for length + alignment padding
-
-  c3_y* nex_y = BoxArena->nex_y + byt_d;
+  c3_y* nex_y = BoxArena->nex_y + pac_d;
   nex_y = c3_align(nex_y, 16, C3_ALGHI);
   
   if (nex_y >= BoxArena->end_y)
@@ -364,11 +355,27 @@ _calloc_box(size_t num_i, size_t len_i)
     _longjmp(*BoxArena->esc_u, c3__box);
   }
 
-  *((c3_d*)lag_v) = byt_d - 16;  // corruption check
-  *((c3_d*)lag_v + 1) = byt_d - 16;
+  *((c3_d*)lag_v) = len_d;
+  *((c3_d*)lag_v + 1) = cap_d;
 
   BoxArena->nex_y = nex_y;
   return ((c3_d*)lag_v + 2);
+}
+
+static void*
+_calloc_box(size_t num_i, size_t len_i)
+{
+  size_t byt_i = num_i * len_i;
+  if (byt_i / len_i != num_i)
+  {
+    u3m_bail(c3__fail);
+  }
+  if (byt_i > UINT64_MAX - 16)
+  {
+    u3m_bail(c3__fail);
+  }
+  c3_d byt_d = byt_i;
+  return _malloc_box_cap(byt_d, byt_d);
 }
 
 static void*
@@ -382,19 +389,28 @@ _realloc_box(void* lag_v, size_t len_i)
   {
     return _calloc_box(len_i, 1);
   }
-  c3_d old1_d = *((c3_d*)lag_v - 1);
-  c3_d old2_d = *((c3_d*)lag_v - 2);
-  if (old1_d != old2_d)
-  {
-    u3m_bail(c3__fail);
-  }
+  c3_d old_d = *((c3_d*)lag_v - 2);
+  c3_d cap_d = *((c3_d*)lag_v - 1);
   if (len_i >= UINT64_MAX)
   {
     u3m_bail(c3__fail);
   }
   c3_d len_d = len_i;
-  void* new_v = _calloc_box(len_d, 1);
-  memcpy(new_v, lag_v, c3_min(len_d, old1_d));
+  if (len_d <= cap_d)
+  {
+    *((c3_d*)lag_v - 2) = len_d;
+    return lag_v;
+  }
+
+  // while (cap_d <= len_d)
+  // {
+  //   cap_d *= 2;
+  // }
+  cap_d <<= c3_bits_dabl(len_d) - c3_bits_dabl(cap_d);
+  cap_d <<= (cap_d <= len_d);
+
+  void* new_v = _malloc_box_cap(len_d, cap_d);
+  memcpy(new_v, lag_v, old_d);
 
   return new_v;
 }
@@ -409,7 +425,7 @@ _free_box(void* lag_v)
   // noop
 }
 
-// bailing allocators to prevent wasm3 from touching the arenas
+// bailing allocator to prevent wasm3 from touching the arenas
 
 static void*
 _calloc_bail(size_t num_i, size_t len_i)
@@ -1754,8 +1770,8 @@ _link_wasm_with_arrow_map(
 
 //  key: [version seed hint]
 //  stored nouns:
-//    $@  ~             ::  sentinel value
-//    $:  box_arena=octs
+//    $@  ~             ::  tombstone value
+//    $:  box_arena=[buffer=octs padding=@]
 //        memory=[buffer=octs max_stack_offset=@]
 //        runtime_offset=@
 //        lia_shop=(list)
@@ -1781,13 +1797,19 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
   }
   else
   {
-    u3_noun p_box, q_box, p_buffer, q_buffer, stack_offset,
-    runtime_offset, lia_shop, acc, susp_list;
+    u3_noun p_box_buffer, q_box_buffer, pad_box;
+    u3_noun p_mem_buffer, q_mem_buffer, stack_offset;
+    u3_noun runtime_offset;
+    u3_noun lia_shop;
+    u3_noun acc;
+    u3_noun susp_list;
+
     if ( c3n == u3r_mean(get,
-        4,  &p_box,
-        5,  &q_box,
-        24, &p_buffer,
-        25, &q_buffer,
+        8,  &p_box_buffer,
+        9,  &q_box_buffer,
+        5,  &pad_box,
+        24, &p_mem_buffer,
+        25, &q_mem_buffer,
         13, &stack_offset,
         14, &runtime_offset,
         30, &lia_shop,
@@ -1798,16 +1820,20 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     {
       return u3m_bail(c3__fail);
     }
-    c3_w box_len_w = (c3y == u3a_is_cat(p_box))
-      ? p_box
+    c3_w box_len_w = (c3y == u3a_is_cat(p_box_buffer))
+      ? p_box_buffer
+      : u3m_bail(c3__fail);
+    
+    c3_w pad_w = (c3y == u3a_is_cat(pad_box))
+      ? pad_box
       : u3m_bail(c3__fail);
     
     c3_w run_off_w = (c3y == u3a_is_cat(runtime_offset))
       ? runtime_offset
       : u3m_bail(c3__fail);
     
-    c3_w len_buf_w = (c3y == u3a_is_cat(p_buffer))
-      ? p_buffer
+    c3_w len_buf_w = (c3y == u3a_is_cat(p_mem_buffer))
+      ? p_mem_buffer
       : u3m_bail(c3__fail);
 
     c3_w stk_off_w = (c3y == u3a_is_cat(stack_offset))
@@ -1815,7 +1841,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       : u3m_bail(c3__fail);
     
     _uw_arena_init_size(BoxArena, box_len_w);
-    u3r_bytes(0, box_len_w, BoxArena->buf_y, q_box);
+    u3r_bytes(pad_w, box_len_w, BoxArena->buf_y, q_box_buffer);
     _uw_arena_init(CodeArena);
 
     M3Result result;
@@ -1896,7 +1922,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       mem->runtime = wasm3_runtime;
       mem->maxStack = BoxArena->buf_y + stk_off_w;
       mem->length = len_buf_w;
-      u3r_bytes(0, len_buf_w, (u8*)(mem + 1), q_buffer);
+      u3r_bytes(0, len_buf_w, (u8*)(mem + 1), q_mem_buffer);
       wasm3_runtime->memory.mallocated = mem;
     }
 
@@ -1982,7 +2008,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
   }
 }
 
-// try to save new state, replacing old state with a sentinel value
+// try to save new state, replacing old state with a tombstone value
 // frees wasm3 memory buffer, releases arenas
 // RETAINS arguments, transfers sat_u->lia_shop/susp_list and
 // replaces them with u3_none if save is succesful
@@ -1997,7 +2023,7 @@ _move_state(
   c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
   c3_dessert(c3y == u3a_is_cat(fun_m));
 
-  if ( (_(u3du(hint)) && (c3__oust == u3h(hint)))
+  if ( (c3__oust == hint)
       || (c3__rand == hint && 1 != u3h(yil))
   )
   {
@@ -2044,12 +2070,13 @@ _move_state(
     u3m_bail(c3__fail);
   }
 
+  c3_y pad_y = BoxArena->pad_y;
 
-  u3_atom q_box = u3i_bytes(box_len_w, BoxArena->buf_y);
-  _uw_arena_free(BoxArena);
+  u3_atom q_box = u3i_slab_mint(&BoxArena->sab_u);
+  BoxArena->ini_t = 0;
 
   u3_noun stash = uw_heks(
-    u3nc(box_len_w, q_box),
+    u3nc(u3nc(box_len_w, q_box), pad_y),
     u3nc(u3nc(len_buf_w, q_buf), stk_off_w),
     run_off_w,
     sat_u->lia_shop,
@@ -2080,15 +2107,16 @@ u3we_lia_run_v1(u3_noun cor)
     return u3_none;
   }
 
-  // save %1, delete in other cases
+  // strand: save %1, delete in other cases
   c3_t rand_t = (c3__rand == hint);
   
-  // always save, the tail is app descriptor to be included in the key
-  c3_t gent_t = ( _(u3du(hint)) && (c3__gent == u3h(hint)) );
+  // agent: always save
+  c3_t gent_t = (c3__gent == hint);
 
-  // load agent state, don't save
-  c3_t oust_t = ( _(u3du(hint)) && (c3__oust == u3h(hint)) );
+  // oust: don't save
+  c3_t oust_t = (c3__oust == hint);
   
+  //  omit: run statelessly
   c3_t omit_t = !(rand_t || gent_t || oust_t);
 
   #ifdef URWASM_SUBROAD
