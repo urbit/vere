@@ -1475,12 +1475,6 @@ VT_API_FN_QUALIFIERS bool VT_CAT( NAME, _erase_itr_raw )( NAME *table, VT_CAT( N
   --table->key_count;
   size_t itr_bucket = itr.metadatum - table->metadata;
 
-  // For now, we only call the value's destructor because the key may need to be hashed below to determine the home
-  // bucket.
-  #ifdef VAL_DTOR_FN
-  VAL_DTOR_FN( table->buckets[ itr_bucket ].val );
-  #endif
-
   // Case 1: The key is the only one in its chain, so just remove it.
   if(
     table->metadata[ itr_bucket ] & VT_IN_HOME_BUCKET_MASK &&
@@ -1490,6 +1484,11 @@ VT_API_FN_QUALIFIERS bool VT_CAT( NAME, _erase_itr_raw )( NAME *table, VT_CAT( N
     #ifdef KEY_DTOR_FN
     KEY_DTOR_FN( table->buckets[ itr_bucket ].key );
     #endif
+
+    #ifdef VAL_DTOR_FN
+    VAL_DTOR_FN( table->buckets[ itr_bucket ].val );
+    #endif
+
     table->metadata[ itr_bucket ] = VT_EMPTY;
     return true;
   }
@@ -1506,6 +1505,10 @@ VT_API_FN_QUALIFIERS bool VT_CAT( NAME, _erase_itr_raw )( NAME *table, VT_CAT( N
   // The key can now be safely destructed for cases 2 and 3.
   #ifdef KEY_DTOR_FN
   KEY_DTOR_FN( table->buckets[ itr_bucket ].key );
+  #endif
+
+  #ifdef VAL_DTOR_FN
+  VAL_DTOR_FN( table->buckets[ itr_bucket ].val );
   #endif
 
   // Case 2: The key is the last in a multi-key chain.

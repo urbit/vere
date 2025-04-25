@@ -67,8 +67,8 @@ typedef struct _u3_mesa_data_meta {
 
 typedef enum  {
   AUTH_SIGN = 0,
-  AUTH_HMAC = 1,
-  AUTH_NONE = 2,
+  AUTH_NONE = 1,
+  AUTH_HMAC = 2,
   AUTH_PAIR = 3,
 } u3_mesa_auth_type;
 

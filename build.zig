@@ -566,6 +566,11 @@ fn buildBinary(
                 .file = "pkg/vere/benchmarks.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "pact-test",
+                .file = "pkg/vere/io/mesa/pact_test.c",
+                .deps = vere_test_deps,
+            },
         };
 
         for (tests) |tst| {

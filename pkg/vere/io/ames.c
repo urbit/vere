@@ -1935,6 +1935,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
 
   _ames_cap_queue(pac_u->sam_u);
+  _ames_pact_free(pac_u);
 }
 
 /* _ames_hear_ames(): hear ames packet.
