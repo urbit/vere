@@ -638,7 +638,20 @@ _pier_work_init(u3_pier* pir_u)
     u3_auto_talk(wok_u->car_u);
   }
 
-  _pier_work(wok_u);
+  c3_d pi_d = wok_u->pir_u->who_d[0];
+  c3_d pt_d = wok_u->pir_u->who_d[1];
+
+  if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
+    // Skip double boot protection for galaxies and local mode ships
+    //
+    _pier_work(wok_u);
+  } else {
+    // Double boot protection
+    //
+    u3_noun pex = u3nc(u3i_string("boot"), u3_nul);
+    u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), c3__ax, u3_nul, pex,
+                      pir_u->wok_u, _boot_scry_cb);
+  }
 }
 
 /* _pier_wyrd_good(): %wyrd version negotation succeeded.
@@ -823,7 +836,8 @@ _pier_wyrd_card(u3_pier* pir_u)
 
   //  XX god_u not necessarily available yet, refactor call sites
   //
-  u3_noun ver = u3nt(u3i_string(VERE_NAME),
+  u3_noun ver = u3nq(u3i_string(VERE_NAME),
+                     u3i_string(U3_VERE_PACE),
                      u3dc("scot", c3__ta, u3i_string(URBIT_VERSION)),
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
