@@ -172,8 +172,32 @@ u3qc_rep(u3_atom a,
     return _bit_rep(b, c);
   }
 
-  u3l_log("rep: stub");
-  return u3_none;
+  c3_w  len_w = u3qb_lent(c);
+
+  if ( c3n == u3a_is_cat(len_w) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  if (a >= 32) {
+    return u3m_bail(c3__fail);
+  }
+
+  c3_w sep_w = b * len_w;
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, a, sep_w);
+  c3_w    i_w = 0;
+  
+  while ( u3_nul != c ) {
+    u3_noun i_c = u3h(c);
+    if ( c3n == u3a_is_atom(i_c) ) {
+      return u3m_bail(c3__exit);
+    }
+    u3r_chop(a, 0, b, b * i_w, sab_u.buf_w, i_c);
+    c = u3t(c);
+    i_w++;
+  }
+  
+  return u3i_slab_mint(&sab_u);
 }
 
 u3_noun

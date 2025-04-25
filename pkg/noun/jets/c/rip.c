@@ -165,8 +165,17 @@ u3qc_rip(u3_atom a,
     return _bit_rip(b, c);
   }
 
-  u3l_log("rip: stub");
-  return u3_none;
+  u3i_slab sab_u;
+  u3_noun pro = u3_nul;
+  c3_w len_w = DIVCEIL(u3r_met(a, c), b);
+
+  for (c3_w i_w = len_w; 0 < i_w; i_w--) {
+    u3i_slab_init(&sab_u, a, b);
+    u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
+    pro = u3nc(u3i_slab_mint(&sab_u), pro);
+  }
+
+  return pro;
 }
 
 u3_noun

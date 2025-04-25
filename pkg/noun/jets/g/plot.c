@@ -135,8 +135,7 @@ _met_list(c3_g    a_g,
             u3_atom q_t_i   = u3x_atom(u3t(t_i));
 
             if (  !_(u3a_is_cat(p_p_t_i))
-               || !_(u3a_is_cat(q_p_t_i))
-               || !_(u3a_is_cat(q_t_i)) )
+               || !_(u3a_is_cat(q_p_t_i)) )
             {
               return u3m_bail(c3__fail);
             }
@@ -151,8 +150,7 @@ _met_list(c3_g    a_g,
             u3_atom q_t_i   = u3x_atom(u3t(t_i));
 
             if (  !_(u3a_is_cat(p_p_t_i))
-               || !_(u3a_is_cat(q_p_t_i))
-               || !_(u3a_is_cat(q_t_i)) )
+               || !_(u3a_is_cat(q_p_t_i)) )
             {
               return u3m_bail(c3__fail);
             }
@@ -265,8 +263,7 @@ _fax_list(u3i_slab* sab_u,
             u3_atom q_t_i   = u3x_atom(u3t(t_i));
 
             if (  !_(u3a_is_cat(p_p_t_i))
-               || !_(u3a_is_cat(q_p_t_i))
-               || !_(u3a_is_cat(q_t_i)) )
+               || !_(u3a_is_cat(q_p_t_i)) )
             {
               return u3m_bail(c3__fail);
             }
@@ -284,8 +281,7 @@ _fax_list(u3i_slab* sab_u,
             u3_atom q_t_i   = u3x_atom(u3t(t_i));
 
             if (  !_(u3a_is_cat(p_p_t_i))
-               || !_(u3a_is_cat(q_p_t_i))
-               || !_(u3a_is_cat(q_t_i)) )
+               || !_(u3a_is_cat(q_p_t_i)) )
             {
               return u3m_bail(c3__fail);
             }
