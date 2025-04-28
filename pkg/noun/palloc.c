@@ -620,9 +620,9 @@ _pages_size(c3_w pag_w)
 static c3_w
 _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
-  u3p(u3a_crag)    *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  u3a_dell *cac_u, *del_u = NULL, *fre_u = u3tn(u3a_dell, HEAP.fre_p);
+  u3a_dell *cac_u, *fre_u, *del_u = NULL;
   c3_w      nex_w,  siz_w = 1;
+  u3_post   fre_p;
 
   if ( u3a_free_pg == dir_p ) {
     //  XX double free
@@ -651,14 +651,18 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     return 0; // XX bail
   }
 
-  dir_u[pag_w] = u3a_free_pg;
+  {
+    u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
-  //  head-page 0 in a south road can only have a size of 1
-  //
-  if ( pag_w || !HEAP.off_ws ) {
-    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
-      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
-      siz_w++;
+    dir_u[pag_w] = u3a_free_pg;
+
+    //  head-page 0 in a south road can only have a size of 1
+    //
+    if ( pag_w || !HEAP.off_ws ) {
+      while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
+        dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
+        siz_w++;
+      }
     }
   }
 
@@ -687,21 +691,31 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
   ASAN_POISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + 2));
 
+  //  XX add temporary freelist entry?
+  // if (  !HEAP.cac_p && !HEAP.fre_p
+  //    && !HEAP.wee_p[(c3_bits_word(c3_wiseof(*cac_u) - 1) - u3a_min_log)] )
+  // {
+  //   fprintf(stderr, "palloc: growing heap to free pages\r\n");
+  // }
+
   if ( !HEAP.cac_p ) {
-    HEAP.cac_p = _imalloc(c3_wiseof(*cac_u));
+    fre_p = _imalloc(c3_wiseof(*cac_u));
+  }
+  else {
+    fre_p = HEAP.cac_p;
+    HEAP.cac_p = 0;
   }
 
-  cac_u = u3to(u3a_dell, HEAP.cac_p);
+  cac_u = u3to(u3a_dell, fre_p);
   cac_u->pag_w = pag_w;
   cac_u->siz_w = siz_w;
 
-  if ( !fre_u ) {
+  if ( !(fre_u = u3tn(u3a_dell, HEAP.fre_p)) ) {
     // fprintf(stderr, "free pages 0x%x (%u) via 0x%x\r\n", som_p, siz_w, HEAP.cac_p);
     cac_u->nex_p = 0;
     cac_u->pre_p = 0;
-    fre_u = cac_u;
-    HEAP.fre_p = HEAP.cac_p;
-    HEAP.cac_p = 0;
+    HEAP.fre_p = fre_p;
+    fre_p = 0;
   }
   else {
     c3_w fex_w;
@@ -716,18 +730,17 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       cac_u->nex_p = u3of(u3a_dell, fre_u);
       cac_u->pre_p = fre_u->pre_p;
 
-      fre_u->pre_p = HEAP.cac_p;
+      fre_u->pre_p = fre_p;
 
       //  XX sanity
       if ( cac_u->pre_p ) {
-        u3to(u3a_dell, cac_u->pre_p)->nex_p = HEAP.cac_p;
+        u3to(u3a_dell, cac_u->pre_p)->nex_p = fre_p;
       }
       else {
-        HEAP.fre_p = HEAP.cac_p;
+        HEAP.fre_p = fre_p;
       }
 
-      fre_u = cac_u;
-      HEAP.cac_p = 0;
+      fre_p = 0;
     }
     else if ( fex_w == pag_w ) {  //  append to entry
       fre_u->siz_w += siz_w;
@@ -757,9 +770,8 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( !fre_u->nex_p ) {          //  insert after
       cac_u->nex_p = 0;
       cac_u->pre_p = u3of(u3a_dell, fre_u);
-      fre_u->nex_p = HEAP.cac_p;
-      fre_u = cac_u;
-      HEAP.cac_p = 0;
+      fre_u->nex_p = fre_p;
+      fre_p = 0;
     }
     else {
       // XX hosed
@@ -768,6 +780,15 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
                     "\033[0m",
                     (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
       abort();
+    }
+  }
+
+  if ( fre_p ) {
+    if ( !HEAP.cac_p ) {
+      HEAP.cac_p = fre_p;
+    }
+    else {
+      _ifree(fre_p);
     }
   }
 
