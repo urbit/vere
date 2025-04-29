@@ -26,6 +26,10 @@
       [%exit ~]
       [%peek mil=@ peek]
       [%poke mil=@ ovum]
+      $:  %quiz
+          $%  [%quac ~]
+              [%quic ~]
+      ==  ==
       [%sync %save ~]
   ==
 ::  +gift: from mars to urth
@@ -36,6 +40,10 @@
       [%slog pri=@ tank]
       [%peek p=(each (unit (cask)) goof)]
       [%poke p=(each (list ovum) (list goof))]
+      $:  %quiz
+          $%  [%quac p=*]
+              [%quic p=*]
+      ==  ==
       [%ripe [pro=%2 kel=wynn] [who=@p fake=?] eve=@ mug=@]
       [%sync eve=@ mug=@]
   ==
@@ -151,6 +159,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_peek: return "peek";
     case u3_writ_live: return "live";
     case u3_writ_exit: return "exit";
+    case u3_writ_quiz: return "quiz";
   }
 }
 
@@ -505,12 +514,12 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
   if ( u3_none == jar ) {
     _lord_plea_foul(god_u, 0, u3_blip);
-    //  XX
-    u3z(jar);
     return c3y;
   }
   else if ( c3n == u3r_cell(jar, &tag, &dat) ) {
     _lord_plea_foul(god_u, 0, jar);
+    u3z(jar);
+    return c3y;
   }
 
   switch ( tag ) {
@@ -639,26 +648,6 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3_newt_send(&god_u->inn_u, len_d, byt_y);
     u3z(jar);
   }
-}
-
-/* _lord_writ_plan(): enqueue a writ and send.
-*/
-static void
-_lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
-{
-  if ( !god_u->ent_u ) {
-    u3_assert( !god_u->ext_u );
-    u3_assert( !god_u->dep_w );
-    god_u->dep_w = 1;
-    god_u->ent_u = god_u->ext_u = wit_u;
-  }
-  else {
-    god_u->dep_w++;
-    god_u->ent_u->nex_u = wit_u;
-    god_u->ent_u = wit_u;
-  }
-
-  _lord_writ_send(god_u, wit_u);
 }
 
 /* _lord_send(): send writ to serf.
@@ -792,7 +781,8 @@ u3_lord_quiz(u3_lord* god_u,
   wit_u->qiz_u.qiz_m = qiz_m;
   wit_u->qiz_u.ptr_v = ptr_v;
   wit_u->qiz_u.qiz_f = qiz_f;
-  _lord_writ_plan(god_u, wit_u);
+
+  _lord_send(god_u, u3nt(c3__quiz, qiz_m, u3_nul));
 }
 
 /* u3_lord_exit(): shutdown gracefully.
@@ -959,11 +949,14 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[8];
+    c3_c* arg_c[12];
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
-    c3_c  cev_c[11];
+    c3_c  per_c[11];
+    c3_c  lom_c[11];
+    c3_c  tos_c[11];
+    c3_c  eve_c[11];
     c3_i  err_i;
 
     sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
@@ -976,29 +969,39 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(hap_c, "%u", u3_Host.ops_u.hap_w);
 
+    sprintf(per_c, "%u", u3_Host.ops_u.per_w);
+
+    sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
+
+    sprintf(tos_c, "%u", u3C.tos_w);
+
     arg_c[0] = god_u->bin_c;            //  executable
     arg_c[1] = "work";                  //  protocol
     arg_c[2] = god_u->pax_c;            //  path to checkpoint directory
     arg_c[3] = key_c;                   //  disk key
     arg_c[4] = wag_c;                   //  runtime config
     arg_c[5] = hap_c;                   //  hash table size
+    arg_c[6] = lom_c;                   //  loom bex
 
     if ( u3_Host.ops_u.til_c ) {
       //  XX validate
       //
-      arg_c[6] = u3_Host.ops_u.til_c;
+      arg_c[7] = u3_Host.ops_u.til_c;
     }
     else {
-      arg_c[6] = "0";
+      arg_c[7] = "0";
     }
 
-#ifdef U3_OS_mingw
-    sprintf(cev_c, "%" PRIu64, u3_Host.cev_u);
-    arg_c[7] = cev_c;
-    arg_c[8] = 0;
-#else
-    arg_c[7] = 0;
-#endif
+    if ( u3C.eph_c == 0 ) {
+      arg_c[8] = "0";
+    }
+    else {
+      arg_c[8] = strdup(u3C.eph_c);     //  ephemeral file
+    }
+
+    arg_c[9] = tos_c;
+    arg_c[10] = per_c;
+    arg_c[11] = NULL;
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
@@ -1141,10 +1144,14 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
   if ( u3_none == jar ) {
     //  XX fatal error
+    fprintf(stderr, "lord: fatal error");
+    return c3n;
     // return _lord_plea_foul(god_u, 0, u3_blip);
   }
   else if ( c3n == u3r_cell(jar, &tag, &dat) ) {
     //  XX fatal error
+    fprintf(stderr, "lord: fatal error");
+    return c3n;
     // return _lord_plea_foul(god_u, 0, jar);
   }
   else {
@@ -1206,10 +1213,14 @@ u3_lord_boot(c3_c* pax_c,
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[8];
+    c3_c* arg_c[12];
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
+    c3_c  lom_c[11];
+    c3_c  eph_c[11];
+    c3_c  tos_c[11];
+    c3_c  per_c[11];
     c3_i  err_i;
 
     sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
@@ -1222,13 +1233,30 @@ u3_lord_boot(c3_c* pax_c,
 
     sprintf(hap_c, "%u", u3_Host.ops_u.hap_w);
 
+    sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
+
+    sprintf(tos_c, "%u", u3C.tos_w);
+
+    sprintf(per_c, "%u", u3_Host.ops_u.per_w);
+
     arg_c[0] = bot_u->bin_c;            //  executable
     arg_c[1] = "boot";                  //  protocol
     arg_c[2] = bot_u->pax_c;            //  path to checkpoint directory
     arg_c[3] = key_c;                   //  disk key
     arg_c[4] = wag_c;                   //  runtime config
     arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = 0;
+    arg_c[6] = lom_c;                   //  loom bex
+
+    if ( u3C.eph_c == 0 ) {
+      arg_c[7] = "0";
+    }
+    else {
+      arg_c[7] = strdup(u3C.eph_c);     //  ephemeral file
+    }
+
+    arg_c[8] = tos_c;
+    arg_c[9] = per_c;
+    arg_c[10] = NULL;
 
     uv_pipe_init(u3L, &bot_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &bot_u->out_u.tim_u);

@@ -1549,7 +1549,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
-  u3_mars_grab(c3y);
+  u3z(u3_mars_grab(c3y));
   u3m_stop();
 }
 
@@ -1946,6 +1946,7 @@ _cw_next(c3_i argc, c3_c* argv[])
 
   u3_Host.pep_o = c3y;
   u3_Host.nex_o = c3y;
+  u3_Host.ops_u.tem = c3y;
 }
 
 /* _cw_pack(): compact memory, save, and exit.
@@ -2330,6 +2331,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   }
 
   u3_Host.pep_o = c3y;
+  u3_Host.ops_u.tem = c3y;
 }
 
 /* _cw_chop(): truncate event log
@@ -2760,6 +2762,12 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_c*      key_c = argv[1]; // XX use passkey
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
+  c3_c*      lom_c = argv[4];
+  c3_w       lom_w;
+  c3_c*      eph_c = argv[5];
+  c3_c*      tos_c = argv[6];
+  c3_w       tos_w;
+  c3_c*      per_c = argv[7];
 
   //  XX windows ctrl-c?
 
@@ -2774,6 +2782,12 @@ _cw_boot(c3_i argc, c3_c* argv[])
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(lom_c, "%" SCNu32, &lom_w);
+    sscanf(per_c, "%" SCNu32, &u3C.per_w);
+
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+    }
   }
 
   //  set up stdio read/write callbacks
@@ -2788,7 +2802,8 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //
   //    XX s/b explicitly initialization, not maybe-restore
   //
-  u3m_boot(dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
+  u3m_boot(dir_c, (size_t)1 << lom_w);
 
   //  set up logging
   //
@@ -2814,26 +2829,24 @@ _cw_boot(c3_i argc, c3_c* argv[])
 static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
-#ifdef U3_OS_mingw
-  if ( 6 > argc ) {
-#else
   if ( 5 > argc ) {
-#endif
     fprintf(stderr, "work: missing args\n");
     exit(1);
   }
 
-  c3_d       eve_d = 0;
   uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
   c3_c*      dir_c = argv[0];
   c3_c*      key_c = argv[1]; // XX use passkey
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
-  c3_c*      eve_c = argv[4];
-#ifdef U3_OS_mingw
-  c3_c*      han_c = argv[5];
-  _cw_intr_win(han_c);
-#endif
+  c3_c*      lom_c = argv[4];
+  c3_w       lom_w;
+  c3_c*      eve_c = argv[5];
+  c3_d       eve_d = 0;
+  c3_c*      eph_c = argv[6];
+  c3_c*      tos_c = argv[7];
+  c3_w       tos_w;
+  c3_c*      per_c = argv[8];
 
   _cw_init_io(lup_u);
 
@@ -2846,15 +2859,18 @@ _cw_work(c3_i argc, c3_c* argv[])
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(lom_c, "%" SCNu32, &lom_w);
+    sscanf(per_c, "%" SCNu32, &u3C.per_w);
 
-    if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
-      fprintf(stderr, "mars: replay-to invalid: '%s'\r\n", eve_c);
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
   }
 
   //  setup loom XX strdup?
   //
-  u3m_boot(dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
+  u3m_boot(dir_c, (size_t)1 << lom_w);
 
   //  set up logging
   //
@@ -2920,6 +2936,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
   //        [?(%vere %fetch-vere) dir=@t]                 ::  download vere
   //        [%vile dir=@t]                                ::  extract keys
   //    ::                                                ::    ipc:
+  //    XX  update with missing subcommand arguments
   //        [%boot dir=@t key=@t wag=@t hap=@ud]          ::  boot
   //        [%work dir=@t key=@t wag=@t hap=@ud eve=@ud]  ::  run
   //    ==                                                ::
