@@ -346,7 +346,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
       pac_c = u3_Host.ops_u.puk_c;
     }
     else {
-      pac_c = u3_Host.ops_u.pek_c;
+      pac_c = u3_Host.ops_u.pek_c + 1;
     }
 
     //  try to serialize as requested
@@ -354,8 +354,12 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
     {
       u3_atom puf = u3i_string(u3_Host.ops_u.puf_c);
       if ( c3y == u3r_sing(c3__jam, puf) ) {
-        out = u3qe_jam(res);
+        c3_d len_d;
+        c3_y* byt_y;
+        u3s_jam_xeno(res, &len_d, &byt_y);
+        out = u3i_bytes(len_d, byt_y);
         ext_c = "jam";
+        free(byt_y);
       }
       else if ( c3y == u3a_is_atom(res) ) {
         out   = u3dc("scot", u3k(puf), u3k(res));
@@ -372,7 +376,7 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
     //
     if ( u3_none != out ) {
       c3_c fil_c[256];
-      snprintf(fil_c, 256, "%s.%s", pac_c + 1, ext_c);
+      snprintf(fil_c, 256, "%s.%s", pac_c, ext_c);
 
       u3_unix_save(fil_c, out);
       u3l_log("pier: scry result in %s/.urb/put/%s", u3_Host.dir_c, fil_c);
@@ -767,7 +771,7 @@ _pier_on_lord_wyrd_done(void*    ptr_v,
   //  arvo's side of version negotiation succeeded
   //  traverse [gif_y] and validate
   //
-    if ( c3n == _pier_wyrd_aver(act) ) {
+  if ( c3n == _pier_wyrd_aver(act) ) {
     //  XX messaging, cli argument to bypass
     //
     u3l_log("pier: version negotiation failed; downgrade");
@@ -778,7 +782,7 @@ _pier_on_lord_wyrd_done(void*    ptr_v,
     //
     _pier_wyrd_good(pir_u, egg_u);
 
-    //  XX fix
+    //  XX do something with any %wyrd effects
     //
     u3z(act);
   }
@@ -1067,7 +1071,7 @@ u3_pier_slog(u3_pier* pir_u)
 /* _pier_init(): create a pier, loading existing.
 */
 static u3_pier*
-_pier_init(c3_w wag_w, c3_c* pax_c)
+_pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
 {
   //  create pier
   //
@@ -1076,6 +1080,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c)
   pir_u->pax_c = pax_c;
   pir_u->sat_e = u3_psat_init;
   pir_u->liv_o = c3n;
+  pir_u->ryf   = ryf;
 
   // XX revise?
   //
@@ -1123,8 +1128,9 @@ u3_pier*
 u3_pier_stay(c3_w wag_w, u3_noun pax)
 {
   u3_pier* pir_u;
+  u3_weak  rift = u3_none;
 
-  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax))) ) {
+  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), rift)) ) {
     fprintf(stderr, "pier: stay: init fail\r\n");
     u3_king_bail();
     return 0;
@@ -1310,10 +1316,12 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
   while ( u3_nul != wal ) {
     _pier_dump_tape(fil_u, u3k(u3h(wal)));
 
-    putc(13, fil_u);
-    putc(10, fil_u);
-
     wal = u3t(wal);
+
+    if ( u3_nul != wal ) {
+      putc(13, fil_u);
+      putc(10, fil_u);
+    }
   }
 
   u3z(wol);
@@ -1329,6 +1337,8 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
+  //  XX eval --cue also using this;
+  //     would be nice to have official way to dump goof to stderr
   //
   if ( c3y == u3_Host.ops_u.dem ) {
     fil_u = stderr;
@@ -1339,6 +1349,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
         case 3: fprintf(fil_u, "\033[31m>>> "); break;
         case 2: fprintf(fil_u, "\033[33m>>  "); break;
         case 1: fprintf(fil_u, "\033[32m>   "); break;
+        case 0: fprintf(fil_u, "\033[38;5;244m"); break;
     }
   }
   else {
@@ -1355,8 +1366,6 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   if ( 0 == u3A->roc ) {
     if ( c3__leaf == u3h(tac) ) {
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
-      putc(13, fil_u);
-      putc(10, fil_u);
     }
   }
   //  We are calling nock here, but hopefully need no protection.
@@ -1385,7 +1394,6 @@ u3_pier_punt(c3_l tab_l, u3_noun tac)
 {
   u3_noun cat = tac;
 
-  //  TODO: why did this use u3r_du in mars/urth split pr?
   while ( c3y == u3du(cat) ) {
     u3_pier_tank(tab_l, 0, u3k(u3h(cat)));
     cat = u3t(cat);
