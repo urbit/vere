@@ -790,10 +790,10 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else {
       _ifree(fre_p);
     }
-  }
 
-  if ( del_u ) {
-    _ifree(u3of(u3a_dell, del_u));
+    if ( del_u ) {
+      _ifree(u3of(u3a_dell, del_u));
+    }
   }
 
   return siz_w;
