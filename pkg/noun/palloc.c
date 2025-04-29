@@ -2188,6 +2188,7 @@ _pack_seek(void)
       u3a_Gack.buf_w[pag_w] = (c3_w*)fag_u - u3a_Gack.buf_w;
 
       fag_u->dir_p = dir_p;
+      fag_u->log_s = pag_u->log_s;
       memset(fag_u->mar_w, 0, map_s << 2);
     }
   }
