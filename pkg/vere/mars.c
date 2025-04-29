@@ -1410,11 +1410,6 @@ _mars_wyrd_card(c3_m nam_m, c3_w ver_w, c3_l sev_l)
   //  XX ghetto (scot %ta)
   //
   u3_noun ver = u3nq(c3__vere, u3i_string(U3_VERE_PACE), u3i_string("~." URBIT_VERSION), u3_nul);
-  // u3_noun ver = u3nt(u3i_string(VERE_NAME),
-  //                   //  u3i_string(U3_VERE_PACE),
-  //                    u3dc("scot", c3__ta, u3i_string(URBIT_VERSION)),
-  //                    u3_nul);
-  // u3_noun sen = u3dc("scot", c3__uv, sev_l); //  lol no
   u3_noun sen = u3i_string("0v1s.vu178");
   u3_noun kel;
 
