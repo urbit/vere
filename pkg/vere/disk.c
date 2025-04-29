@@ -264,16 +264,18 @@ u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
   log_u->sen_d++;
 
-  if ( !log_u->put_u.ent_u ) {
-    u3_assert( !log_u->put_u.ext_u );
-    log_u->put_u.ent_u = log_u->put_u.ext_u = tac_u;
-  }
-  else {
-    log_u->put_u.ent_u->nex_u = tac_u;
-    log_u->put_u.ent_u = tac_u;
-  }
+  /* if ( !log_u->put_u.ent_u ) { */
+  /*   u3_assert( !log_u->put_u.ext_u ); */
+  /*   log_u->put_u.ent_u = log_u->put_u.ext_u = tac_u; */
+  /* } */
+  /* else { */
+  /*   log_u->put_u.ent_u->nex_u = tac_u; */
+  /*   log_u->put_u.ent_u = tac_u; */
+  /* } */
 
-  _disk_commit(log_u);
+  /* _disk_commit(log_u); */
+  u3_fact_free(tac_u);
+  log_u->dun_d++;
 }
 
 /* u3_disk_boot_plan(): enqueue boot sequence, without autocommit.

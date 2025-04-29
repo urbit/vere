@@ -322,11 +322,11 @@ _pier_on_lord_work_done(void*    ptr_v,
 
   //  XX this is a departure from the general organization of this file
   //
-  u3_disk_plan(pir_u->log_u, tac_u);
 
-  u3_auto_done(egg_u);
 
   _pier_gift_plan(pir_u->wok_u, gif_u);
+  u3_disk_plan(pir_u->log_u, tac_u);
+  u3_auto_done(egg_u);
   _pier_work(pir_u->wok_u);
 }
 
@@ -938,7 +938,6 @@ _pier_on_lord_wyrd_done(void*    ptr_v,
   else {
     //  enqueue %wyrd event-log commit
     //
-    u3_disk_plan(pir_u->log_u, tac_u);
 
     //  finalize %wyrd success
     //
@@ -947,6 +946,8 @@ _pier_on_lord_wyrd_done(void*    ptr_v,
     //  plan %wyrd effects
     //
     _pier_gift_plan(pir_u->wok_u, gif_u);
+
+    u3_disk_plan(pir_u->log_u, tac_u);
   }
 }
 
@@ -1605,28 +1606,28 @@ _pier_on_lord_live(void* ptr_v)
     u3_assert( u3_psat_init == pir_u->sat_e );
     u3_assert( log_u->sen_d == log_u->dun_d );
 
-    if ( god_u->eve_d < log_u->dun_d ) {
-      c3_d eve_d;
+    /* if ( god_u->eve_d < log_u->dun_d ) { */
+    /*   c3_d eve_d; */
 
-      //  XX revisit
-      //
-      if (  u3_Host.ops_u.til_c ) {
-        if ( 1 == sscanf(u3_Host.ops_u.til_c, "%" PRIu64 "", &eve_d) ) {
-          u3l_log("pier: replay till %" PRIu64, eve_d);
-        }
-        else {
-          u3l_log("pier: ignoring invalid replay barrier '%s'",
-                  u3_Host.ops_u.til_c);
-          eve_d = log_u->dun_d;
-        }
-      }
-      else {
-        eve_d = log_u->dun_d;
-      }
+    /*   //  XX revisit */
+    /*   // */
+    /*   if (  u3_Host.ops_u.til_c ) { */
+    /*     if ( 1 == sscanf(u3_Host.ops_u.til_c, "%" PRIu64 "", &eve_d) ) { */
+    /*       u3l_log("pier: replay till %" PRIu64, eve_d); */
+    /*     } */
+    /*     else { */
+    /*       u3l_log("pier: ignoring invalid replay barrier '%s'", */
+    /*               u3_Host.ops_u.til_c); */
+    /*       eve_d = log_u->dun_d; */
+    /*     } */
+    /*   } */
+    /*   else { */
+    /*     eve_d = log_u->dun_d; */
+    /*   } */
 
-      _pier_play_init(pir_u, eve_d);
-    }
-    else {
+    /*   _pier_play_init(pir_u, eve_d); */
+    /* } */
+    /* else { */
       //  early exit, preparing for upgrade
       //
       //    XX check kelvins?
@@ -1635,9 +1636,12 @@ _pier_on_lord_live(void* ptr_v)
         u3_pier_exit(pir_u);
       }
       else {
+        u3l_log("before sen_d %llu dun_d %llu eve_d %llu", log_u->sen_d, log_u->dun_d, god_u->eve_d);
+        log_u->sen_d = log_u->dun_d = god_u->eve_d;
+        u3l_log("after sen_d %llu dun_d %llu eve_d %llu", log_u->sen_d, log_u->dun_d, god_u->eve_d);
         _pier_wyrd_init(pir_u);
       }
-    }
+    /* } */
   }
 }
 
