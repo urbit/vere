@@ -373,6 +373,9 @@ u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
   if ( c3n == u3_lmdb_read(log_u->mdb_u, &ven_u,
                            eve_d, len_d, _disk_read_list_cb) )
   {
+    // XX test normal (not subcommand) replay with and without, 
+    //    then run |mass each time
+    u3z(ven_u.eve);
     return u3_none;
   }
 
@@ -522,23 +525,17 @@ typedef struct {
 /* _disk_meta_read_cb(): copy [val_p] to atom [ptr_v] if present.
 */
 static void
-_disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_p)
+_disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 {
-  u3_weak* mat = ptr_v;
+  _mdb_val* val_u = ptr_v;
+  c3_y*     dat_y = (c3_y*)val_v;
 
-  if ( val_p ) {
-    *mat = u3i_bytes(val_i, val_p);
+  memset(val_u->buf_y, 0, sizeof(val_u->buf_y));
+  val_u->hav_i = val_i;
+
+  if ( 0 < val_i ) {
+    memcpy(val_u->buf_y, dat_y, c3_min(val_i, sizeof(val_u->buf_y)));
   }
-}
-
-/* _disk_read_meta(): read metadata at [key_c], deserialize.
-*/
-static u3_weak
-_disk_read_meta(MDB_env* mdb_u, const c3_c* key_c)
-{
-  u3_weak dat = u3_none;
-  u3_lmdb_read_meta(mdb_u, &dat, key_c, _disk_meta_read_cb);
-  return dat;
 }
 
 /* u3_disk_read_meta(): read metadata.
@@ -546,55 +543,123 @@ _disk_read_meta(MDB_env* mdb_u, const c3_c* key_c)
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
-  u3_weak ver, who, fak, lif;
+  c3_w ver_w, lif_w;
+  c3_d who_d[2];
+  c3_o fak_o;
 
-  if ( u3_none == (ver = _disk_read_meta(mdb_u, "version")) ) {
-    fprintf(stderr, "disk: read meta: no version\r\n");
-    return c3n;
-  }
-  if ( u3_none == (who = _disk_read_meta(mdb_u, "who")) ) {
+  _mdb_val val_u;
+
+  //  version
+  //
+  u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
+
+  ver_w = val_u.buf_y[0];
+
+  //  identity
+  //
+  u3_lmdb_read_meta(mdb_u, &val_u, "who", _disk_meta_read_cb);
+
+  if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no identity\r\n");
     return c3n;
   }
-  if ( u3_none == (fak = _disk_read_meta(mdb_u, "fake")) ) {
+  else if ( 16 < val_u.hav_i ) {
+    //  NB: non-fatal
+    //
+    fprintf(stderr, "disk: read meta: strange identity\r\n");
+  }
+
+  c3_y* byt_y = val_u.buf_y;
+
+  who_d[0] = (c3_d)byt_y[0]
+           | (c3_d)byt_y[1] << 8
+           | (c3_d)byt_y[2] << 16
+           | (c3_d)byt_y[3] << 24
+           | (c3_d)byt_y[4] << 32
+           | (c3_d)byt_y[5] << 40
+           | (c3_d)byt_y[6] << 48
+           | (c3_d)byt_y[7] << 56;
+
+  byt_y += 8;
+  who_d[1] = (c3_d)byt_y[0]
+           | (c3_d)byt_y[1] << 8
+           | (c3_d)byt_y[2] << 16
+           | (c3_d)byt_y[3] << 24
+           | (c3_d)byt_y[4] << 32
+           | (c3_d)byt_y[5] << 40
+           | (c3_d)byt_y[6] << 48
+           | (c3_d)byt_y[7] << 56;
+
+  //  fake bit
+  //
+  u3_lmdb_read_meta(mdb_u, &val_u, "fake", _disk_meta_read_cb);
+
+  if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no fake bit\r\n");
     return c3n;
   }
-  if ( u3_none == (lif = _disk_read_meta(mdb_u, "life")) ) {
+  else if ( 0 == val_u.hav_i ) {
+    fak_o = 0;
+  }
+  else if ( (1 == val_u.hav_i) || !((*val_u.buf_y) >> 1) ) {
+    fak_o = (*val_u.buf_y) & 1;
+  }
+  else {
+    fprintf(stderr, "disk: read meta: invalid fake bit %u %zd\r\n",
+                    *val_u.buf_y, val_u.hav_i);
+    return c3n;
+  }
+
+  //  life
+  //
+  u3_lmdb_read_meta(mdb_u, &val_u, "life", _disk_meta_read_cb);
+
+  if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no lifecycle length\r\n");
     return c3n;
   }
+  else if ( 4 < val_u.hav_i ) {
+    //  NB: non-fatal
+    //
+    fprintf(stderr, "disk: read meta: strange life\r\n");
+  }
+
+  byt_y = val_u.buf_y;
+  lif_w = (c3_w)byt_y[0]
+        | (c3_w)byt_y[1] << 8
+        | (c3_w)byt_y[2] << 16
+        | (c3_w)byt_y[3] << 24;
 
   {
     c3_o val_o = c3y;
 
-    if ( U3D_VERLAT < ver ) {
-      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver);
+    if ( U3D_VERLAT < ver_w ) {
+      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_w);
       val_o = c3n;
     }
-    else if ( !((c3y == fak ) || (c3n == fak )) ) {
+    else if ( !((c3y == fak_o ) || (c3n == fak_o )) ) {
       fprintf(stderr, "disk: read meta: invalid fake bit\r\n");
       val_o = c3n;
     }
-    else if ( c3n == u3a_is_cat(lif) ) {
+    else if ( c3n == u3a_is_cat(lif_w) ) {
       fprintf(stderr, "disk: read meta: invalid lifecycle length\r\n");
       val_o = c3n;
     }
 
     if ( c3n == val_o ) {
-      u3z(ver); u3z(who); u3z(fak); u3z(lif);
       return c3n;
     }
   }
 
+  //  NB: we read metadata from LMDB even when met_u is null because sometimes
+  //      because sometimes we call this just to ensure metadata exists
   if ( met_u ) {
-    met_u->ver_w = ver;
-    u3r_chubs(0, 2, met_u->who_d, who);
-    met_u->fak_o = fak;
-    met_u->lif_w = lif;
+    met_u->ver_w = ver_w;
+    memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
+    met_u->fak_o = fak_o;
+    met_u->lif_w = lif_w;
   }
 
-  u3z(who);
   return c3y;
 }
 
@@ -612,78 +677,134 @@ _disk_lock(c3_c* pax_c)
   return paf_c;
 }
 
-/* u3_disk_acquire(): acquire a lockfile, killing anything that holds it.
+/* _disk_acquire(): acquire a lockfile, killing anything that holds it.
 */
-static void
-u3_disk_acquire(c3_c* pax_c)
+static c3_i
+_disk_acquire(c3_c* pax_c)
 {
-  c3_c* paf_c = _disk_lock(pax_c);
-  c3_w  pid_w;
-  FILE* loq_u;
+  c3_c* paf_c    = _disk_lock(pax_c);
+  c3_y  dat_y[13] = {0};
+  c3_w  pid_w    = 0;
+  c3_i  fid_i, ret_i;
 
-  if ( NULL != (loq_u = c3_fopen(paf_c, "r")) ) {
-    if ( 1 != fscanf(loq_u, "%" SCNu32, &pid_w) ) {
-      u3l_log("lockfile %s is corrupt!\n", paf_c);
-      kill(getpid(), SIGTERM);
-      sleep(1); u3_assert(0);
-    }
-    else if (pid_w != getpid()) {
-      c3_w i_w;
-
-      if ( -1 != kill(pid_w, SIGTERM) ) {
-        u3l_log("disk: stopping process %d, live in %s...\n",
-                pid_w, pax_c);
-
-        for ( i_w = 0; i_w < 16; i_w++ ) {
-          sleep(1);
-          if ( -1 == kill(pid_w, SIGTERM) ) {
-            break;
-          }
-        }
-        if ( 16 == i_w ) {
-          for ( i_w = 0; i_w < 16; i_w++ ) {
-            if ( -1 == kill(pid_w, SIGKILL) ) {
-              break;
-            }
-            sleep(1);
-          }
-        }
-        if ( 16 == i_w ) {
-          u3l_log("disk: process %d seems unkillable!\n", pid_w);
-          u3_assert(0);
-        }
-        u3l_log("disk: stopped old process %u\n", pid_w);
-      }
-    }
-    fclose(loq_u);
-    c3_unlink(paf_c);
+  if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
+    fprintf(stderr, "disk: failed to open/create lock file\r\n");
+    goto fail;
   }
-
-  if ( NULL == (loq_u = c3_fopen(paf_c, "w")) ) {
-    u3l_log("disk: unable to open %s\n", paf_c);
-    u3_assert(0);
-  }
-
-  fprintf(loq_u, "%u\n", getpid());
 
   {
-    c3_i fid_i = fileno(loq_u);
-    c3_sync(fid_i);
+    c3_y  len_y = 0;
+    c3_y* buf_y = dat_y;
+
+    do {
+      c3_zs ret_zs;
+
+      if ( -1 == (ret_zs = read(fid_i, buf_y, 1)) ) {
+        if ( EINTR == errno ) continue;
+
+        fprintf(stderr, "disk: failed to read lockfile: %s\r\n",
+                        strerror(errno));
+        goto fail;
+      }
+
+      if ( !ret_zs ) break;
+      else if ( 1 != ret_zs ) {
+        fprintf(stderr, "disk: strange lockfile read %zd\r\n", ret_zs);
+        goto fail;
+      }
+
+      len_y++;
+      buf_y++;
+    }
+    while ( len_y < (sizeof(dat_y) - 1) ); // null terminate
+
+
+    if ( len_y ) {
+      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_w, &ret_i))
+         || (0 >= ret_i)
+         || ('\n' != *(dat_y + ret_i)) )
+      {
+        fprintf(stderr, "disk: lockfile is corrupt\r\n");
+      }
+    }
   }
 
-  fclose(loq_u);
+  {
+    struct flock lok_u;
+    memset((void *)&lok_u, 0, sizeof(lok_u));
+    lok_u.l_type = F_WRLCK;
+    lok_u.l_whence = SEEK_SET;
+    lok_u.l_start = 0;
+    lok_u.l_len = 1;
+
+    while (  (ret_i = fcntl(fid_i, F_SETLK, &lok_u))
+          && (EINTR == (ret_i = errno)) );
+
+    if ( ret_i ) {
+      if ( pid_w ) {
+        fprintf(stderr, "pier: locked by PID %u\r\n", pid_w);
+      }
+      else {
+        fprintf(stderr, "pier: strange: locked by empty lockfile\r\n");
+      }
+
+      goto fail;
+    }
+  }
+
+  ret_i = snprintf((c3_c*)dat_y, sizeof(dat_y), "%u\n", getpid());
+
+  if ( 0 >= ret_i ) {
+    fprintf(stderr, "disk: failed to write lockfile\r\n");
+    goto fail;
+  }
+
+  {
+    c3_y  len_y = (c3_y)ret_i;
+    c3_y* buf_y = dat_y;
+
+    do {
+      c3_zs ret_zs;
+
+      if (  (-1 == (ret_zs = write(fid_i, buf_y, len_y)))
+         && (EINTR != errno) )
+      {
+        fprintf(stderr, "disk: lockfile write failed %s\r\n",
+                        strerror(errno));
+        goto fail;
+      }
+
+      if ( 0 < ret_zs ) {
+        len_y -= ret_zs;
+        buf_y += ret_zs;
+      }
+    }
+    while ( len_y );
+  }
+
+  if ( -1 == c3_sync(fid_i) ) {
+    fprintf(stderr, "disk: failed to sync lockfile: %s\r\n",
+                    strerror(errno));
+    goto fail;
+  }
+
   c3_free(paf_c);
+  return fid_i;
+
+fail:
+  kill(getpid(), SIGTERM);
+  sleep(1); u3_assert(0);
 }
 
-/* u3_disk_release(): release a lockfile.
+/* _disk_release(): release a lockfile.
 */
 static void
-u3_disk_release(c3_c* pax_c)
+_disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-
   c3_unlink(paf_c);
   c3_free(paf_c);
+  close(fid_i);
 }
 
 /* u3_disk_exit(): close the log.
@@ -718,7 +839,7 @@ u3_disk_exit(u3_disk* log_u)
     }
   }
 
-  u3_disk_release(log_u->dir_u->pax_c);
+  _disk_release(log_u->dir_u->pax_c, log_u->lok_i);
 
   u3_dire_free(log_u->dir_u);
   u3_dire_free(log_u->urb_u);
@@ -762,31 +883,31 @@ u3_disk_info(u3_disk* log_u)
 void
 u3_disk_slog(u3_disk* log_u)
 {
-  u3l_log("  disk: live=%s, event=%" PRIu64 "\n",
+  u3l_log("  disk: live=%s, event=%" PRIu64,
           ( c3y == log_u->liv_o ) ? "&" : "|",
           log_u->dun_d);
 
   {
     c3_w len_w, i_w;
 
-    u3l_log("    batch:\n");
+    u3l_log("    batch:");
 
     for ( i_w = 0; i_w < 100; i_w++ ) {
       len_w = log_u->hit_w[i_w];
       if ( len_w ) {
-        u3l_log("      %u: %u\n", i_w, len_w);
+        u3l_log("      %u: %u", i_w, len_w);
       }
     }
   }
 
   if ( log_u->put_u.ext_u ) {
     if ( log_u->put_u.ext_u != log_u->put_u.ent_u ) {
-      u3l_log("    save: %" PRIu64 "-%" PRIu64 "\n",
+      u3l_log("    save: %" PRIu64 "-%" PRIu64,
               log_u->put_u.ext_u->eve_d,
               log_u->put_u.ent_u->eve_d);
     }
     else {
-      u3l_log("    save: %" PRIu64 "\n", log_u->put_u.ext_u->eve_d);
+      u3l_log("    save: %" PRIu64, log_u->put_u.ext_u->eve_d);
     }
   }
 }
@@ -1020,8 +1141,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  old_u.ver_w = U3D_VERLAT;
-  
   u3_lmdb_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
@@ -1033,6 +1152,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   // write the metadata to the database
+  old_u.ver_w = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     goto fail3;
@@ -1212,7 +1332,6 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
   }
-  olm_u.ver_w = U3D_VERLAT;
 
   //  finish with old log
   u3_lmdb_exit(log_u->mdb_u);
@@ -1289,6 +1408,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
+  olm_u.ver_w = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
@@ -1563,6 +1683,7 @@ u3_disk*
 u3_disk_init(c3_c* pax_c)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
+  log_u->lok_i = -1;
   log_u->liv_o = c3n;
   log_u->sav_u.ted_o = c3n;
   log_u->sav_u.ted_u.data = log_u;
@@ -1580,7 +1701,7 @@ u3_disk_init(c3_c* pax_c)
 
   //  acquire lockfile.
   //
-  u3_disk_acquire(pax_c);
+  log_u->lok_i = _disk_acquire(pax_c);
 
   //  create/load $pier/.urb
   //
@@ -1675,7 +1796,7 @@ u3_disk_init(c3_c* pax_c)
         fprintf(stderr, "disk: failed to read metadata\r\n");
         goto try_epoc_no;
       }
-      *(&log_u->ver_w) = met_u.ver_w;
+      log_u->ver_w = met_u.ver_w;
     }
     else {
 try_epoc_no:
