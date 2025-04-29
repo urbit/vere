@@ -1812,10 +1812,8 @@ _pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
   new_w += c3_pc_w(top_w);
 
   if ( new_w < rag_u->hun_s ) {
-    assert( 0 == new_w );
-    if ( rag_u->pre_u.pag_w ) {
-      pag_w = rag_u->pre_u.pag_w;
-    }
+    u3_assert( 0 == new_w );
+    u3_assert( 0 == pos_w );
   }
   else if ( new_w < (rag_u->pre_u.fre_s + rag_u->hun_s) ) {
     pag_w  = rag_u->pre_u.pag_w;
@@ -1839,6 +1837,8 @@ _pack_relocate_mark(u3_post som_p)
   c3_w    dir_w = u3a_Gack.buf_w[pag_w];
   u3_post out_p = 0;
   c3_w    blk_w, bit_w;
+
+  u3_assert(som_p);
 
   //  som_p is a one-or-more page allocation
   //
@@ -1884,6 +1884,7 @@ _pack_relocate_mark(u3_post som_p)
     if ( !(rag_u->mar_w[blk_w] & (1U << bit_w)) ) {
       rag_u->mar_w[blk_w] |= (1U << bit_w);
       out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
+      // fprintf(stderr, "0x%x -> 0x%x\r\n", som_p, out_p);
     }
   }
 
@@ -1896,6 +1897,8 @@ _pack_relocate(u3_post som_p)
   c3_w    pag_w = post_to_page(som_p);
   c3_w    dir_w = u3a_Gack.buf_w[pag_w];
   u3_post out_p;
+
+  u3_assert(som_p);
 
   //  som_p is a one-or-more page allocation
   //
@@ -1920,6 +1923,7 @@ _pack_relocate(u3_post som_p)
     //  NB map inverted, free state updated
 
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
+    // fprintf(stderr, "0x%x -> 0x%x\r\n", som_p, out_p);
   }
 
   return out_p;
