@@ -2023,7 +2023,7 @@ _pack_seek(void)
     c3_w len_w, sum_w, i_w;
     c3_g bit_g = u3a_crag_no;
 
-    while ( --bit_g ) {
+    while ( bit_g-- ) {
       if ( !HEAP.wee_p[bit_g] ) {
         continue;
       }
@@ -2051,10 +2051,6 @@ _pack_seek(void)
       while ( dir_p ) {
         pag_u = u3to(u3a_crag, dir_p);
         nex_p = pag_u->nex_p;
-
-        // if ( 1807 == pag_u->pag_w ) {
-        //   fprintf(stderr, "gotcha 1\r\n");
-        // }
 
         pag_u->nex_p = 0;
 
@@ -2136,6 +2132,7 @@ _pack_seek(void)
         }
 
         if ( fre_p ) {
+          // fprintf(stderr, "hunk part crag free 0x%x\r\n", fre_p);
           _ifree(fre_p);
         }
 
@@ -2148,6 +2145,9 @@ _pack_seek(void)
         u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
         c3_s      pos_s = pre_u.pos_s + hun_s;
         c3_s      max_s = pos_s >> 5;
+
+        // fprintf(stderr, "bit_g=%u dir_p=0x%x nex_p=0x%x pos_s=%u fre_s=%u\r\n",
+        //                 bit_g, pre_u.dir_p, peg_u->nex_p, pre_u.pos_s, pre_u.fre_s);
 
         //  XX double check these
         //
