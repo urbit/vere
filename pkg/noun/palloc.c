@@ -2240,40 +2240,47 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   c3_w      off_w = 1U << rag_u->log_s;
   c3_z      len_i = off_w << 2;
   c3_w     *src_w, *dst_w, new_w;
-  c3_s      max_s,  new_s, pos_s = rag_u->hun_s;
+  c3_s      max_s,  fre_s, new_s, pos_s = rag_u->hun_s;
 
-  // if ( 1807 == pag_w ) {
-  //   fprintf(stderr, "gotcha\r\n");
-  // }
+  src_w = u3to(c3_w, page_to_post(pag_w) + (pos_s << rag_u->log_s));
 
-  src_w = u3to(c3_w, page_to_post(pag_w) + (pos_s < rag_u->log_s));
+  max_s = 1U << (u3a_page - rag_u->log_s);
 
   if ( rag_u->pre_u.pag_w ) {
     new_w = _pack_relocate_page(rag_u->pre_u.pag_w);
     new_s = rag_u->hun_s + rag_u->pre_u.pos_s;
-    max_s = rag_u->hun_s + rag_u->pre_u.fre_s;
+    fre_s = rag_u->pre_u.fre_s;
 
-    dst_w = u3to(c3_w, page_to_post(new_w) + (new_s < rag_u->log_s));
+    dst_w = u3to(c3_w, page_to_post(new_w) + (new_s << rag_u->log_s));
 
-    while ( pos_s < max_s ) {
+    //  move up to [fre_s] chunks to (relocated) previous page
+    //
+    while ( (pos_s < max_s) && fre_s ) {
       if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
         memcpy(dst_w, src_w, len_i);
-        // new_s++;
+        fre_s--;
         dst_w += off_w;
       }
 
       pos_s++;
       src_w += off_w;
     }
+
+    //  advance src position past any free chunks
+    //
+    while ( (pos_s < max_s) ) {
+      if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+        break;
+      }
+
+      pos_s++;
+      src_w += off_w;
+    }
+
+    if ( pos_s == max_s ) {
+      return 0;
+    }
   }
-
-  max_s = 1U << (u3a_page - rag_u->log_s);
-
-  if ( pos_s == max_s ) {
-    return 0;
-  }
-
-  //  XX assume(pos_s < max_s)
 
   new_w = _pack_relocate_page(pag_w);
   new_s = rag_u->hun_s;
@@ -2284,23 +2291,39 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   //
   //     XX unlikely()
   //
-  if ( (new_w == pag_w) && (new_s == pos_s) ) {
-    while (  (pos_s < max_s)
-          && (rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31))) )
-    {
-      pos_s++;
+  if ( new_w == pag_w ) {
+    if ( new_s == pos_s ) {
+      while (  (pos_s < max_s)
+            && (rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31))) )
+      {
+        pos_s++;
+        src_w += off_w;
+      }
+
+      new_s = pos_s++;
       src_w += off_w;
     }
+  }
+  //  relocate inline metadata
+  //
+  else if ( rag_u->hun_s ) {
+    c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
+    c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
-    new_s = pos_s;
+    memcpy(doc_w, soc_w, len_i * new_s);
+
+    // XX bump pos_s/src_w if !pos_s ?
   }
 
-  dst_w = u3to(c3_w, page_to_post(new_w) + (new_s < rag_u->log_s));
+  u3_assert( (new_w < pag_w) || (new_s < pos_s) );
 
+  dst_w = u3to(c3_w, page_to_post(new_w) + (new_s << rag_u->log_s));
+
+  //  move remaining chunks to relocated page
+  //
   while ( pos_s < max_s ) {
     if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
       memcpy(dst_w, src_w, len_i);
-      // new_s++;
       dst_w += off_w;
     }
 
@@ -2310,7 +2333,6 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
 
   //  XX assume(rag_u->dir_p)
   //
-  u3_assert(rag_u->dir_p);
   u3a_Gack.buf_w[new_w] = rag_u->dir_p;
   return 1;
 }
