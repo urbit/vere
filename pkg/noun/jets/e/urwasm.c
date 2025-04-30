@@ -59,17 +59,18 @@
 #define KICK1(TRAP)         u3j_kink(TRAP, 2)
 #define KICK2(TRAP)         u3j_kink(KICK1(TRAP), 2)
 
-// [a b c d e f g]
+// [a b c d e f g h]
 static inline u3_noun
-uw_sept(u3_noun a,
+uw_octo(u3_noun a,
   u3_noun b,
   u3_noun c,
   u3_noun d,
   u3_noun e,
   u3_noun f,
-  u3_noun g)
+  u3_noun g,
+  u3_noun h)
 {
-  return u3nq(a, b, c, u3nq(d, e, f, g));
+  return u3nc(a, u3nq(b, c, d, u3nq(e, f, g, h)));
 }
 
 static inline void
@@ -147,17 +148,18 @@ typedef struct {
 } uw_arena;
 
 typedef struct {
-  IM3Module wasm_module;  // p
-  u3_noun lia_shop;       // q,   transferred
-  u3_noun acc;            // p.r, transferred
-  u3_noun map;            // q.r, retained
+  IM3Module wasm_module;    // p
+  u3_noun lia_shop;         // q,   transferred
+  u3_noun acc;              // p.r, transferred
+  u3_noun map;              // q.r, retained
   match_data_struct* match;
-  u3_noun arrow_yil;  // transferred
-  u3_noun susp_list;  // transferred
-  u3_noun resolution; // resolved %1 block, transferred
+  u3_noun arrow_yil;        // transferred
+  u3_noun susp_list;        // transferred
+  u3_noun resolution;       // resolved %1 block, transferred
   uw_arena box_arena;
   uw_arena code_arena;
-  u3_noun yil_previous;  // transferred
+  u3_noun yil_previous;     // transferred
+  u3_noun queue;            // transferred
 } lia_state;
 
 typedef enum {
@@ -1779,12 +1781,13 @@ _link_wasm_with_arrow_map(
 //  stored nouns:
 //    $@  ~                                       ::  tombstone value
 //    $:  yield=*                                 ::  +2
-//        box_arena=[buffer=octs padding=@]       ::  [[+24 +25] +13]
-//        memory=[buffer=octs max_stack_offset=@] ::  [[+56 +57] +29]
-//        runtime_offset=@                        ::  +30
-//        lia_shop=(list)                         ::  +62
-//        acc=*                                   ::  +126
-//        susp_list=(list)                        ::  +127
+//        queue=(list script)                     ::  +6
+//        box_arena=[buffer=octs padding=@]       ::  [[+56 +57] +29]
+//        memory=[buffer=octs max_stack_offset=@] ::  [[+120 +121] +61]
+//        runtime_offset=@                        ::  +62
+//        lia_shop=(list)                         ::  +126
+//        acc=*                                   ::  +254
+//        susp_list=(list)                        ::  +255
 //    ==
 // arguments RETAINED
 // on success allocates sat_u->wasm_module->runtime->memory.mallocated
@@ -1806,6 +1809,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
   else
   {
     u3_noun yil_previous;
+    u3_noun queue;
     u3_noun p_box_buffer, q_box_buffer, pad_box;
     u3_noun p_mem_buffer, q_mem_buffer, stack_offset;
     u3_noun runtime_offset;
@@ -1815,16 +1819,17 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 
     if ( c3n == u3r_mean(get,
         2,   &yil_previous,
-        24,  &p_box_buffer,
-        25,  &q_box_buffer,
-        13,  &pad_box,
-        56,  &p_mem_buffer,
-        57,  &q_mem_buffer,
-        29,  &stack_offset,
-        30,  &runtime_offset,
-        62,  &lia_shop,
-        126, &acc,
-        127, &susp_list,
+        6,   &queue,
+        56,  &p_box_buffer,
+        57,  &q_box_buffer,
+        29,  &pad_box,
+        120, &p_mem_buffer,
+        121, &q_mem_buffer,
+        61,  &stack_offset,
+        62,  &runtime_offset,
+        126, &lia_shop,
+        254, &acc,
+        255, &susp_list,
         0) 
     )
     {
@@ -1921,6 +1926,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 
     {
       sat_u->yil_previous = u3k(yil_previous);
+      sat_u->queue = u3k(queue);
       sat_u->wasm_module = wasm3_module;
       sat_u->lia_shop = u3k(lia_shop);
       sat_u->acc = u3k(acc);
@@ -1958,11 +1964,12 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
     if (sat_u->wasm_module->runtime->edge_suspend)
     {
       //  appended new script but the computation is still suspended:
-      //  return previous yield
+      //  add script to queue, return previous yield
       if (sat_u->yil_previous == u3_none)
       {
         return u3m_bail(c3__fail);
       }
+      sat_u->queue = u3kb_weld(sat_u->queue, u3nc(u3k(p_input), u3_nul));  // snoc
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -1977,11 +1984,12 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
     if (!sat_u->wasm_module->runtime->edge_suspend)
     {
       //  appended external call resolution but no block to resolve:
-      //  return previous yield
+      //  snoc result to shop, return previous yield
       if (sat_u->yil_previous == u3_none)
       {
         return u3m_bail(c3__fail);
       }
+      sat_u->lia_shop = u3kb_weld(sat_u->lia_shop, u3nc(u3k(p_input), u3_nul));  // snoc
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -2033,6 +2041,16 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       {
         return u3m_bail(c3__fail);
       }
+
+      if (sat_u->queue != u3_none)
+      {
+        while (u3h(yil) == 0 && sat_u->queue != u3_nul)
+        {
+          u3z(yil);
+          u3_noun deferred_script = _pop_list(&sat_u->queue);
+          yil = _reduce_monad(deferred_script, sat_u);
+        }
+      }
     }
 
     return yil;
@@ -2041,7 +2059,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 
 // try to save new state, replacing old state with a tombstone value
 // frees wasm3 memory buffer, releases arenas
-// RETAINS arguments, transfers sat_u->lia_shop/susp_list and
+// RETAINS arguments, transfers sat_u->lia_shop/susp_list/queue and
 // replaces them with u3_none if save is succesful
 static void
 _move_state(
@@ -2055,7 +2073,8 @@ _move_state(
   c3_dessert(c3y == u3a_is_cat(fun_m));
 
   if ( (c3__oust == hint)
-      || (c3__rand == hint && 1 != u3h(yil))
+      || (2 == u3h(yil))
+      || (c3__rand == hint && 0 == u3h(yil))
   )
   {
     u3_noun key_old = u3z_key(fun_m, seed_old);
@@ -2106,8 +2125,9 @@ _move_state(
   u3_atom q_box = u3i_slab_mint(&BoxArena->sab_u);
   BoxArena->ini_t = 0;
 
-  u3_noun stash = uw_sept(
+  u3_noun stash = uw_octo(
     u3k(yil),
+    sat_u->queue,
     u3nc(u3nc(box_len_w, q_box), pad_y),
     u3nc(u3nc(len_buf_w, q_buf), stk_off_w),
     run_off_w,
@@ -2116,8 +2136,8 @@ _move_state(
     sat_u->susp_list
   );
   sat_u->lia_shop = u3_none;
-  
   sat_u->susp_list = u3_none;
+  sat_u->queue = u3_none;
 
   u3_noun key_old = u3z_key(fun_m, seed_old);
   u3z_save(u3z_memo_keep, key_old, u3_nul);
@@ -2385,6 +2405,7 @@ u3we_lia_run_v1(u3_noun cor)
           u3x_cell(import, &acc, &map);
           {
             sat.yil_previous = u3_none;
+            sat.queue = u3_nul;
             sat.wasm_module = wasm3_module;
             sat.lia_shop = u3qb_flop(lia_shop);
             sat.acc = u3k(acc);
@@ -2553,6 +2574,7 @@ u3we_lia_run_v1(u3_noun cor)
     u3x_cell(import, &acc, &map);
     {
       sat.yil_previous = u3_none;
+      sat.queue = u3_none;
       sat.wasm_module = wasm3_module;
       sat.lia_shop = u3qb_flop(lia_shop);
       sat.acc = u3k(acc);
@@ -2636,6 +2658,11 @@ u3we_lia_run_v1(u3_noun cor)
   if (u3_none != sat.yil_previous)
   {
     u3z(sat.yil_previous);
+  }
+  
+  if (u3_none != sat.queue)
+  {
+    u3z(sat.queue);
   }
 
   u3z(match.call_bat);
