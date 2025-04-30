@@ -1,6 +1,7 @@
 .{
-    .name = "urbit",
+    .name = .urbit,
     .version = "0.0.1",
+    .fingerprint = 0x9e228a3003a2736b,
     .dependencies = .{
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",

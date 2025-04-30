@@ -17,7 +17,7 @@ Additional targets:
 
 ## Prerequisites
 
-Install version 0.13.0 of `zig` with the package manager of your choosing, e.g., `brew install zig`, or download the binary from [here][zig-download].
+Install version 0.14.0 of `zig` with the package manager of your choosing, e.g., `brew install zig`, or download the binary from [here][zig-download].
 
 ### macOS debugger
 
