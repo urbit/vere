@@ -2349,30 +2349,34 @@ _pack_move(void)
   //  the bitmap, as partial chunk pages can be marked free
   //
 
-  //  skip pages that don't need to move
+  //  skip pages that don't need to move,
+  //  compacting partial chunk-pages in-place
   //
-  while (  (pag_w < HEAP.len_w)
-        && (dir_w = u3a_Gack.buf_w[pag_w])
-        && ((u3a_rest_pg >= dir_w) || !(dir_w >> 31)) )
-  {
+  while ( (pag_w < HEAP.len_w) && (dir_w = u3a_Gack.buf_w[pag_w]) ) {
+    if ( u3a_rest_pg < dir_w ) {
+      if ( !(dir_w >> 31) ) {
+        u3a_Gack.buf_w[pag_w] = u3a_Gack.buf_w[dir_w]; // NB: fag_u->dir_p
+      }
+      else if ( !_pack_move_chunks(pag_w, dir_w & ((1U << 31) - 1)) ) {
+        break;
+      }
+    }
+
     pag_w++;
   }
 
-  new_w = pag_w;
+  new_w = pag_w++;
   dst_w = u3to(c3_w, page_to_post(new_w));
   src_w = u3to(c3_w, page_to_post(pag_w));
 
   while( pag_w < HEAP.len_w ) {
+    //  XX assume(new_w < pag_w)
     //  XX assume(new_w == _pack_relocate_page(pag_w))
     //  XX assume(dst_w == u3to(c3_w, page_to_post(new_w)))
     //  XX assume(src_w == u3to(c3_w, page_to_post(pag_w)))
     //
     dir_w = u3a_Gack.buf_w[pag_w];
 
-    //  XX assume( (new_w < pag_w) || ((new_w == pag_w) && (!dir_w || (dir_w >> 31))) )
-
-    //  XX better way to distinguish full/partial chunk pages?
-    //
     if ( u3a_free_pg != dir_w ) {
       if ( (u3a_rest_pg >= dir_w) || !(dir_w >> 31) ) {
         memcpy(dst_w, src_w, len_i);
@@ -2390,13 +2394,15 @@ _pack_move(void)
 
     pag_w++;
     src_w += off_ws;
+    fflush(stderr); // XX remove
   }
 
-  fprintf(stderr, "pack len %u was %u\r\n", new_w, HEAP.len_w);
-
-  u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  HEAP.len_w = new_w;
-  memcpy(dir_u, u3a_Gack.buf_w, new_w << 2);
+  {
+    u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+    HEAP.len_w = new_w;
+    memcpy(dir_u, u3a_Gack.buf_w, new_w << 2);
+    memset(dir_u + new_w, 0, (HEAP.siz_w - new_w) << 2);
+  }
 
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);
   u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Gack.siz_w);
