@@ -1125,12 +1125,11 @@ _pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
 /* u3_pier_stay(): restart an existing pier.
 */
 u3_pier*
-u3_pier_stay(c3_w wag_w, u3_noun pax)
+u3_pier_stay(c3_w wag_w, u3_noun pax, u3_weak ryf)
 {
   u3_pier* pir_u;
-  u3_weak  rift = u3_none;
 
-  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), rift)) ) {
+  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), ryf)) ) {
     fprintf(stderr, "pier: stay: init fail\r\n");
     u3_king_bail();
     return 0;

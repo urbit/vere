@@ -86,7 +86,7 @@ static c3_w sag_w;
 void _king_doom(u3_noun doom);
   void _king_boot(u3_noun boot);
     void _king_come(u3_noun star, u3_noun pill, u3_noun path);
-    void _king_dawn(u3_noun seed, u3_noun pill, u3_noun path);
+    void _king_dawn(u3_noun feed, u3_noun pill, u3_noun path);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
@@ -166,6 +166,10 @@ _king_boot(u3_noun bul)
 static void
 _king_boot_done(void* ptr_v, c3_o ret_o)
 {
+  u3_weak rift = u3_none;
+  if ( 0 != ptr_v) {
+    rift = (u3_noun)(c3_p)ptr_v;
+  }
   //  XX review requirements
   //  XX exit code
   //
@@ -175,7 +179,7 @@ _king_boot_done(void* ptr_v, c3_o ret_o)
     return;
   }
 
-  u3K.pir_u = u3_pier_stay(sag_w, u3i_string(u3_Host.dir_c));
+  u3K.pir_u = u3_pier_stay(sag_w, u3i_string(u3_Host.dir_c), rift);
 }
 
 /* _king_prop(): events from prop arguments
@@ -269,7 +273,8 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   u3_noun ship = ( c3y == u3a_is_cell(u3h(feed)) )
                  ? u3h(u3t(feed))
                  : u3h(feed);
-  u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed));
+  u3_noun rift;
+  u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed), &rift);
 
   // disable ivory slog printfs
   //
@@ -308,10 +313,11 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
 
     msg = u3nq(c3__boot, pill, vent, mor);
     u3_lord_boot(u3_Host.dir_c, sag_w, key_d, msg,
-                 (void*)0, _king_boot_done);
+                 (void*)(c3_p)rift, _king_boot_done);
   }
 
   u3z(path);
+  u3z(feed);
 }
 
 /* _king_pier(): pier parser
@@ -325,7 +331,7 @@ _king_pier(u3_noun pier)
     exit(1);
   }
 
-  u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)));
+  u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)), u3_none);
   u3z(pier);
 }
 

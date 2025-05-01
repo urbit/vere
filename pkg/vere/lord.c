@@ -1144,20 +1144,19 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
   if ( u3_none == jar ) {
     //  XX fatal error
-    fprintf(stderr, "lord: fatal error");
-    return c3n;
+    u3_assert(0);
     // return _lord_plea_foul(god_u, 0, u3_blip);
   }
   else if ( c3n == u3r_cell(jar, &tag, &dat) ) {
     //  XX fatal error
-    fprintf(stderr, "lord: fatal error");
-    return c3n;
+    u3_assert(0);
     // return _lord_plea_foul(god_u, 0, jar);
   }
   else {
     switch ( tag ) {
       default: {
         //  XX fatal error
+        u3_assert(0);
         // return _lord_plea_foul(god_u, 0, jar);ss
       }
 
@@ -1169,6 +1168,7 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
            || (c3n == u3r_safe_word(pri, &pri_w)) )
         {
           //  XX fatal error
+          u3_assert(0);
           // return _lord_plea_foul(god_u, c3__slog, dat);
         }
         else {
