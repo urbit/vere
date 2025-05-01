@@ -1357,7 +1357,7 @@
       /* u3_pier_stay(): restart the pier.
       */
         u3_pier*
-        u3_pier_stay(c3_w wag_w, u3_noun pax);
+        u3_pier_stay(c3_w wag_w, u3_noun pax, u3_weak ryf);
 
       /* u3_pier_tank(): dump single tank.
       */
@@ -1407,7 +1407,7 @@
       /* u3_dawn_vent(): validated boot event
       */
         u3_noun
-        u3_dawn_vent(u3_noun ship, u3_noun seed);
+        u3_dawn_vent(u3_noun ship, u3_noun seed, u3_noun* rift);
 
       /* u3_king_commence(): start the daemon
       */
