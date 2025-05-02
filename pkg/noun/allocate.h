@@ -124,8 +124,10 @@
 
         struct {
           u3_post fre_p;
+          u3_post erf_p;
           u3_post cac_p;
-          // u3p(u3a_dell)  fre_p;               //  free list
+          // u3p(u3a_dell)  fre_p;               //  free list entry
+          // u3p(u3a_dell)  erf_p;               //  free list exit
           // u3p(u3a_dell)  cac_p;               //  cached pgfree struct
           u3_post        bot_p;               //  XX s/b rut_p
           c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)

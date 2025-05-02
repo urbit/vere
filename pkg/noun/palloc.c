@@ -4,6 +4,7 @@
 #include "options.h"
 #include "vortex.h"
 
+#undef SANITY
 
 #ifdef ASAN_ENABLED
   //  XX build problems importing <sanitizers/asan_interface.h>
@@ -124,6 +125,7 @@ _init(void)
 #ifdef SANITY
   assert( 0 == post_to_page(HEAP.pag_p) );
   assert( HEAP.pag_p == page_to_post(0) );
+  assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
 #endif
 
   HEAP.cac_p = _imalloc(c3_wiseof(u3a_dell));
@@ -187,6 +189,11 @@ _extend_directory(c3_w siz_w)  // num pages
   HEAP.siz_w  = nex_w;
 
   _ifree(old_p);
+
+#ifdef SANITY
+  assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
+  assert( dir_u[HEAP.len_w - 1] );
+#endif
 }
 
 static u3_post
@@ -225,6 +232,10 @@ _extend_heap(c3_w siz_w)  // num pages
 
   ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + 2));
 
+#ifdef SANITY
+  assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
+#endif
+
   return pag_p;
 }
 
@@ -245,15 +256,21 @@ _alloc_pages(c3_w siz_w)  // num pages
     }
     else if ( fre_u->siz_w == siz_w ) {
       pag_w = fre_u->pag_w;
+
       if ( fre_u->nex_p ) {
         u3to(u3a_dell, fre_u->nex_p)->pre_p = fre_u->pre_p;
       }
+      else {
+        HEAP.erf_p = fre_u->pre_p;
+      }
+
       if ( fre_u->pre_p ) {
         u3to(u3a_dell, fre_u->pre_p)->nex_p = fre_u->nex_p;
       }
       else {
         HEAP.fre_p = fre_u->nex_p;
       }
+
       del_u = fre_u;
     }
     else {
@@ -311,6 +328,11 @@ _alloc_pages(c3_w siz_w)  // num pages
       _ifree(u3of(u3a_dell, del_u));
     }
   }
+
+#ifdef SANITY
+  assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
+  assert( dir_u[HEAP.len_w - 1] );
+#endif
 
   return pag_p;
 }
@@ -678,13 +700,51 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
 #ifdef SANITY
   assert( pag_w < HEAP.len_w );
+  assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
 #endif
 
   if ( nex_w == HEAP.len_w ) {
+    u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+    c3_w           wiz_w = siz_w;
+
+    // check if prior pages are already free
+    //
+    if ( !dir_u[HEAP.len_w - (siz_w + 1)] ) {
+      assert( HEAP.erf_p );
+      fre_u = u3to(u3a_dell, HEAP.erf_p);
+      assert( (fre_u->pag_w + fre_u->siz_w) == pag_w );
+
+      if ( fre_u->pre_p ) {
+        HEAP.erf_p = fre_u->pre_p;
+        u3to(u3a_dell, fre_u->pre_p)->nex_p = 0;
+      }
+      else {
+        HEAP.fre_p = HEAP.erf_p = 0;
+      }
+
+      som_p  = page_to_post(fre_u->pag_w);
+      siz_w += fre_u->siz_w;
+    }
+    else {
+      fre_u = NULL;
+    }
+
     ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + 2));
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
-    return siz_w;
+
+    // fprintf(stderr, "shrink heap %u:%u (%u) 0x%x\r\n", pag_w, wiz_w, siz_w, u3R->hat_p);
+
+#ifdef SANITY
+    assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
+    assert( dir_u[HEAP.len_w - 1] );
+#endif
+
+    if ( fre_u ) {
+      _ifree(u3of(u3a_dell, fre_u));
+    }
+
+    return wiz_w;
   }
 
   //  XX madv_free
@@ -714,7 +774,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     // fprintf(stderr, "free pages 0x%x (%u) via 0x%x\r\n", som_p, siz_w, HEAP.cac_p);
     cac_u->nex_p = 0;
     cac_u->pre_p = 0;
-    HEAP.fre_p = fre_p;
+    HEAP.fre_p = HEAP.erf_p = fre_p;
     fre_p = 0;
   }
   else {
@@ -745,13 +805,10 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( fex_w == pag_w ) {  //  append to entry
       fre_u->siz_w += siz_w;
 
-      // fprintf(stderr, "free pages append %u at %u to 0x%x\r\n",
-      //                 siz_w, pag_w, (c3_w)u3of(u3a_dell, fre_u));
-
       //  coalesce with next entry
       //
       if (  fre_u->nex_p
-         && (fex_w == u3to(u3a_dell, fre_u->nex_p)->pag_w) )
+         && ((fex_w + siz_w) == u3to(u3a_dell, fre_u->nex_p)->pag_w) )
       {
         del_u = u3to(u3a_dell, fre_u->nex_p);
         fre_u->siz_w += del_u->siz_w;
@@ -760,6 +817,9 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
         //  XX sanity
         if ( del_u->nex_p ) {
           u3to(u3a_dell, del_u->nex_p)->pre_p = u3of(u3a_dell, fre_u);
+        }
+        else {
+          HEAP.erf_p = u3of(u3a_dell, fre_u);
         }
       }
     }
@@ -770,7 +830,7 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( !fre_u->nex_p ) {          //  insert after
       cac_u->nex_p = 0;
       cac_u->pre_p = u3of(u3a_dell, fre_u);
-      fre_u->nex_p = fre_p;
+      HEAP.erf_p = fre_u->nex_p = fre_p;
       fre_p = 0;
     }
     else {
