@@ -1138,27 +1138,6 @@ u3a_relocate_noun(u3_noun *som)
   }
 }
 
-u3_post
-u3a_rewritten(u3_post ptr_v)
-{
-  return 0;
-}
-
-u3_noun
-u3a_rewritten_noun(u3_noun som)
-{
-  if ( c3y == u3a_is_cat(som) ) {
-    return som;
-  }
-  u3_post som_p = u3a_rewritten(u3a_to_off(som));
-  if ( c3y == u3a_is_pug(som) ) {
-    return u3a_to_pug(som_p);
-  }
-  else {
-    return u3a_to_pom(som_p);
-  }
-}
-
 /* u3a_mark_mptr(): mark a malloc-allocated ptr for gc.
 */
 c3_w
@@ -1815,42 +1794,6 @@ u3a_pack_move(u3a_road* rod_u)
   //  XX move me?
   //
   u3R->hat_p = u3R->rut_p + (u3R->hep.dir_ws * (c3_ws)(u3R->hep.len_w << u3a_page));
-}
-
-/* u3a_rewrite_ptr(): mark a pointer as already having been rewritten
-*/
-c3_o
-u3a_rewrite_ptr(void* ptr_v)
-{
-#if 0
-  u3a_box* box_u = u3a_botox(ptr_v);
-  if ( box_u->use_w & 0x80000000 ) {
-    /* Already rewritten.
-    */
-    return c3n;
-  }
-  box_u->use_w |= 0x80000000;
-  return c3y;
-#endif
-  return c3n;
-}
-
-void
-u3a_rewrite_noun(u3_noun som)
-{
-  if ( c3n == u3a_is_cell(som) ) {
-    return;
-  }
-
-  if ( c3n == u3a_rewrite_ptr(u3a_to_ptr((som))) ) return;
-
-  u3a_cell* cel = u3a_to_ptr(som);
-
-  u3a_rewrite_noun(cel->hed);
-  u3a_rewrite_noun(cel->tel);
-
-  cel->hed = u3a_rewritten_noun(cel->hed);
-  cel->tel = u3a_rewritten_noun(cel->tel);
 }
 
 #if 0

@@ -671,26 +671,6 @@ u3a_tail(u3_noun);
           void
           u3a_rewrite_compact(void);
 
-        /* u3a_rewrite_ptr(): mark a pointer as already having been rewritten
-        */
-          c3_o
-          u3a_rewrite_ptr(void* ptr_v);
-
-        /* u3a_rewrite_noun(): rewrite a noun for compaction.
-        */
-          void
-          u3a_rewrite_noun(u3_noun som);
-
-        /* u3a_rewritten(): rewrite a pointer for compaction.
-        */
-          u3_post
-          u3a_rewritten(u3_post som_p);
-
-        /* u3a_rewritten(): rewritten noun pointer for compaction.
-        */
-          u3_noun
-          u3a_rewritten_noun(u3_noun som);
-
         /* u3a_count_noun(): count size of noun.
         */
           c3_w
