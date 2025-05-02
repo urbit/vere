@@ -1229,15 +1229,15 @@ _mark_post(u3_post som_p)
     c3_w     *mar_w;
 
     if ( som_p & (pag_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\r\n",
+      fprintf(stderr, "palloc: mark: bad alignment som_p=0x%x (0x%x) pag=0x%x (%u) len_s=%u\r\n",
                       som_p, som_p & ~((1U << u3a_page) - 1),
-                      dir_p, pag_u->len_s);
+                      dir_p, pag_u->pag_w, pag_u->len_s);
       return 0;
     }
 
     if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-      fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\r\n",
-                      som_p, dir_p, pag_u->len_s);
+      fprintf(stderr, "palloc: mark: words free som_p=0x%x pag=0x%x (%u) len=%u\r\n",
+                      som_p, dir_p, pag_u->pag_w, pag_u->len_s);
       return 0;
     }
 
@@ -1515,15 +1515,15 @@ _count_post(u3_post som_p, c3_y rat_y)
     c3_w     *mar_w;
 
     if ( som_p & (pag_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: bad alignment som_p=0x%x (0x%x) pag=0x%x len_s=%u\r\n",
+      fprintf(stderr, "palloc: count: bad alignment som_p=0x%x (0x%x) pag=0x%x (%u) len_s=%u\r\n",
                       som_p, som_p & ~((1U << u3a_page) - 1),
-                      dir_p, pag_u->len_s);
+                      dir_p, pag_u->pag_w, pag_u->len_s);
       return 0;
     }
 
     if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-      fprintf(stderr, "palloc: words free som_p=0x%x pag=0x%x len=%u\r\n",
-                      som_p, dir_p, pag_u->len_s);
+      fprintf(stderr, "palloc: count: words free som_p=0x%x pag=0x%x (%u) len=%u\r\n",
+                      som_p, dir_p, pag_u->pag_w, pag_u->len_s);
       return 0;
     }
 
