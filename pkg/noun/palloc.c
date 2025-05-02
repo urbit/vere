@@ -939,9 +939,10 @@ _irealloc(u3_post som_p, c3_w len_w)
 
       old_w = siz_w << u3a_page;
 
-      if ( len_w <= old_w ) {
-        dif_w  = (old_w - len_w) >> u3a_page;
-        pag_w += HEAP.dir_ws * dif_w;
+      if (  (len_w < old_w)
+         && (dif_w = (old_w - len_w) >> u3a_page) )
+      {
+        pag_w += HEAP.dir_ws * (siz_w - dif_w);
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
 
         // XX junk
