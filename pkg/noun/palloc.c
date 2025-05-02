@@ -2196,23 +2196,25 @@ _pack_seek(void)
   //  shrink page directory
   //
   {
-    c3_w old_w, gap_w, dif_w = fre_w >> u3a_page;
+    c3_w old_w = HEAP.siz_w >> u3a_page;
+    c3_w dif_w = (HEAP.siz_w - (HEAP.len_w - fre_w)) >> u3a_page;
+    c3_w gap_w, i_w;
 
-    if ( dif_w ) {
-      pag_w = post_to_page(HEAP.pag_p);
-      old_w = HEAP.siz_w >> u3a_page;
+    pag_w = post_to_page(HEAP.pag_p);
 
-      do {
-        gap_w = pag_w + (HEAP.dir_ws * (old_w - dif_w - 1));
-        blk_w = gap_w >> 5;
-        bit_w = gap_w & 31;
-        u3a_Gack.buf_w[gap_w] = u3a_free_pg;
-        u3a_Gack.pap_w[blk_w] &= ~(1U << bit_w);
-      }
-      while ( --dif_w );
+    for ( i_w = 0; i_w < dif_w; i_w++ ) {
+      gap_w = pag_w + (HEAP.dir_ws * (old_w - i_w - 1));
+      blk_w = gap_w >> 5;
+      bit_w = gap_w & 31;
+      u3a_Gack.buf_w[gap_w] = u3a_free_pg;
+      u3a_Gack.pap_w[blk_w] &= ~(1U << bit_w);
     }
+
+    HEAP.siz_w -= dif_w << u3a_page;
   }
 
+  //  calculate cumulative sums of bitmap popcounts
+  //
   {
     c3_w i_w, sum_w = 0, max_w = (HEAP.len_w + 31) >> 5;
 
