@@ -142,7 +142,7 @@ _cu_from_loom_next(_cu_stack* tac_u, ur_root_t* rot_u, u3_noun a)
         //  reallocate the stack if full
         //
         if ( tac_u->fil_w == tac_u->siz_w ) {
-          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w;
+          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w; // XX overflow
           tac_u->fam_u = c3_realloc(tac_u->fam_u, nex_w * sizeof(*tac_u->fam_u));
           tac_u->pre_w = tac_u->siz_w;
           tac_u->siz_w = nex_w;
