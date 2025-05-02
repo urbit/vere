@@ -1088,6 +1088,56 @@ u3a_mark_ptr(void* ptr_v)
   return siz_w;
 }
 
+/* u3a_relocate_post(): replace post with relocation pointer (unchecked).
+*/
+void
+u3a_relocate_post(u3_post *som_p)
+{
+  *som_p = _pack_relocate(*som_p);
+}
+
+/* u3a_mark_relocate_post(): replace post with relocation pointer (checked).
+*/
+u3_post
+u3a_mark_relocate_post(u3_post som_p, c3_t *fir_t)
+{
+  return _pack_relocate_mark(som_p, fir_t);
+}
+
+/* u3a_relocate_noun(): replace noun with relocation reference, recursively.
+*/
+void
+u3a_relocate_noun(u3_noun *som)
+{
+  u3_post   old_p, new_p;
+  u3_noun     old;
+  u3a_cell* cel_u;
+  c3_t      fir_t;
+
+  while ( 1 ) {
+    old = *som;
+
+    if ( c3y == u3a_is_cat(old) ) return;
+
+    old_p = u3a_to_off(old);
+
+    if ( c3n == u3a_is_cell(old) ) {
+      new_p = _pack_relocate(old_p);
+      *som = u3a_to_pug(new_p);
+      return;
+    }
+
+    new_p = _pack_relocate_mark(old_p, &fir_t);
+    *som  = u3a_to_pom(new_p);
+
+    if ( !fir_t ) return;
+
+    cel_u = u3to(u3a_cell, old_p);
+    u3a_relocate_noun(&(cel_u->hed));
+    som   = &(cel_u->tel);
+  }
+}
+
 u3_post
 u3a_rewritten(u3_post ptr_v)
 {
@@ -1685,23 +1735,14 @@ u3a_reclaim(void)
 void
 u3a_rewrite_compact(void)
 {
-  u3a_rewrite_noun(u3R->ski.gul);
-  u3a_rewrite_noun(u3R->bug.tax);
-  u3a_rewrite_noun(u3R->bug.mer);
-  u3a_rewrite_noun(u3R->pro.don);
-  u3a_rewrite_noun(u3R->pro.day);
-  u3a_rewrite_noun(u3R->pro.trace);
-  u3h_rewrite(u3R->cax.har_p);
-  u3h_rewrite(u3R->cax.per_p);
-
-  u3R->ski.gul = u3a_rewritten_noun(u3R->ski.gul);
-  u3R->bug.tax = u3a_rewritten_noun(u3R->bug.tax);
-  u3R->bug.mer = u3a_rewritten_noun(u3R->bug.mer);
-  u3R->pro.don = u3a_rewritten_noun(u3R->pro.don);
-  u3R->pro.day = u3a_rewritten_noun(u3R->pro.day);
-  u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
-  u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
-  u3R->cax.per_p = u3a_rewritten(u3R->cax.per_p);
+  u3a_relocate_noun(&(u3R->ski.gul));
+  u3a_relocate_noun(&(u3R->bug.tax));
+  u3a_relocate_noun(&(u3R->bug.mer));
+  u3a_relocate_noun(&(u3R->pro.don));
+  u3a_relocate_noun(&(u3R->pro.day));
+  u3a_relocate_noun(&(u3R->pro.trace));
+  u3h_relocate(&(u3R->cax.har_p));
+  u3h_relocate(&(u3R->cax.per_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]
@@ -1753,6 +1794,12 @@ u3a_sweep(void)
 void
 u3a_pack_seek(u3a_road* rod_u)
 {
+  u3a_pack_init();
+
+  //  XX clear cell pool on inner roads?
+
+  //  XX use road argument
+  _pack_seek();
 }
 
 /* u3a_pack_move(): sweep the heap, moving boxes to new addresses.
@@ -1760,6 +1807,14 @@ u3a_pack_seek(u3a_road* rod_u)
 void
 u3a_pack_move(u3a_road* rod_u)
 {
+  //  XX use road argument
+  _pack_move();
+
+  u3a_pack_done();
+
+  //  XX move me?
+  //
+  u3R->hat_p = u3R->rut_p + (u3R->hep.dir_ws * (c3_ws)(u3R->hep.len_w << u3a_page));
 }
 
 /* u3a_rewrite_ptr(): mark a pointer as already having been rewritten

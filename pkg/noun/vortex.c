@@ -439,11 +439,18 @@ u3v_rewrite_compact(void)
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3a_rewrite_noun(arv_u->roc);
-  u3a_rewrite_noun(arv_u->now);
-  u3a_rewrite_noun(arv_u->yot);
+  // XX fix these to correctly no-op on inner roads
+  // XX unpack struct for easier reference
 
-  arv_u->roc = u3a_rewritten_noun(arv_u->roc);
-  arv_u->now = u3a_rewritten_noun(arv_u->now);
-  arv_u->yot = u3a_rewritten_noun(arv_u->yot);
+  u3_noun roc = arv_u->roc;
+  u3_noun now = arv_u->now;
+  u3_noun yot = arv_u->yot;
+
+  u3a_relocate_noun(&roc);
+  u3a_relocate_noun(&now);
+  u3a_relocate_noun(&yot);
+
+  arv_u->roc = roc;
+  arv_u->now = now;
+  arv_u->yot = yot;
 }
