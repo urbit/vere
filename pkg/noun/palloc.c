@@ -1831,11 +1831,12 @@ _pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
 }
 
 static u3_post
-_pack_relocate_mark(u3_post som_p)
+_pack_relocate_mark(u3_post som_p, c3_t *fir_t)
 {
   c3_w    pag_w = post_to_page(som_p);
   c3_w    dir_w = u3a_Gack.buf_w[pag_w];
   u3_post out_p = 0;
+  c3_t    out_t = 0;
   c3_w    blk_w, bit_w;
 
   u3_assert(som_p);
@@ -1849,8 +1850,10 @@ _pack_relocate_mark(u3_post som_p)
 
     if ( !(u3a_Gack.bit_w[blk_w] & (1U << bit_w)) ) {
       u3a_Gack.bit_w[blk_w] |= (1U << bit_w);
-      out_p = page_to_post(_pack_relocate_page(pag_w));
+      out_t = 1;
     }
+
+    out_p = page_to_post(_pack_relocate_page(pag_w));
   }
   //  som_p is a chunk in a full page (map old pag_w to new)
   //
@@ -1865,9 +1868,11 @@ _pack_relocate_mark(u3_post som_p)
 
     if ( !(fag_u->mar_w[blk_w] & (1U << bit_w)) ) {
       fag_u->mar_w[blk_w] |= (1U << bit_w);
-      out_p  = page_to_post(_pack_relocate_page(pag_w));
-      out_p += rem_w;
+      out_t = 1;
     }
+
+    out_p  = page_to_post(_pack_relocate_page(pag_w));
+    out_p += rem_w;
   }
   //  som_p is a chunk in a partial page (map old pos_w to new)
   //
@@ -1883,11 +1888,14 @@ _pack_relocate_mark(u3_post som_p)
 
     if ( !(rag_u->mar_w[blk_w] & (1U << bit_w)) ) {
       rag_u->mar_w[blk_w] |= (1U << bit_w);
-      out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
+      out_t = 1;
       // fprintf(stderr, "0x%x -> 0x%x\r\n", som_p, out_p);
     }
+
+    out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
   }
 
+  *fir_t = out_t;
   return out_p;
 }
 
