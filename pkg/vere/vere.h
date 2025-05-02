@@ -1620,12 +1620,3 @@
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
 #endif /* ifndef U3_VERE_H */
-
-       /* _lord_writ_new(): allocate a new writ.
-      */
-        u3_writ*
-        _lord_writ_new(u3_lord* god_u);
-      /* u3_lord_writ_plan(): enqueue a writ and send.
-      */
-        void
-        _lord_writ_plan(u3_lord* god_u, u3_writ* wit_u);

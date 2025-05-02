@@ -56,6 +56,8 @@ u3_weak
 u3z_find(u3z_cid cid, u3_noun key)
 {
   if ( (u3z_memo_toss == cid) || (u3C.wag_w & u3o_cash) ) {
+    // XX under cash lookup in parent roads,
+    // copying cache hits into the current road
     return u3h_get(_har(u3R, cid), key);
   }
   else {

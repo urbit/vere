@@ -842,7 +842,7 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
 /* _lord_writ_new(): allocate a new writ.
 */
-u3_writ*
+static u3_writ*
 _lord_writ_new(u3_lord* god_u)
 {
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
@@ -960,7 +960,7 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
 
 /* _lord_writ_plan(): enqueue a writ and send.
 */
-void
+static void
 _lord_writ_plan(u3_lord* god_u, u3_writ* wit_u)
 {
   if ( !god_u->ent_u ) {
