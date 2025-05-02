@@ -2420,18 +2420,12 @@ u3j_reclaim(void)
 void
 u3j_rewrite_compact(void)
 {
-  u3h_rewrite(u3R->jed.war_p);
-  u3h_rewrite(u3R->jed.cod_p);
-  u3h_rewrite(u3R->jed.han_p);
-  u3h_rewrite(u3R->jed.bas_p);
+  u3h_relocate(&(u3R->jed.war_p));
+  u3h_relocate(&(u3R->jed.cod_p));
+  u3h_relocate(&(u3R->jed.han_p));
+  u3h_relocate(&(u3R->jed.bas_p));
 
   if ( u3R == &(u3H->rod_u) ) {
-    u3h_rewrite(u3R->jed.hot_p);
-    u3R->jed.hot_p = u3a_rewritten(u3R->jed.hot_p);
+    u3h_relocate(&(u3R->jed.hot_p));
   }
-
-  u3R->jed.war_p = u3a_rewritten(u3R->jed.war_p);
-  u3R->jed.cod_p = u3a_rewritten(u3R->jed.cod_p);
-  u3R->jed.han_p = u3a_rewritten(u3R->jed.han_p);
-  u3R->jed.bas_p = u3a_rewritten(u3R->jed.bas_p);
 }

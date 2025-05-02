@@ -651,6 +651,21 @@ u3a_tail(u3_noun);
           void
           u3a_reclaim(void);
 
+        /* u3a_relocate_post(): replace post with relocation pointer (unchecked).
+        */
+          void
+          u3a_relocate_post(u3_post *som_p);
+
+        /* u3a_mark_relocate_post(): replace post with relocation pointer (checked).
+        */
+          u3_post
+          u3a_mark_relocate_post(u3_post som_p, c3_t *fir_t);
+
+        /* u3a_relocate_noun(): replace noun with relocation reference, recursively.
+        */
+          void
+          u3a_relocate_noun(u3_noun *som);
+
         /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
         */
           void

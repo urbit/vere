@@ -164,6 +164,11 @@
         void
         u3h_rewrite(u3p(u3h_root) har_p);
 
+      /* u3h_relocate(): relocate hashtable for compaction.
+      */
+        void
+        u3h_relocate(u3p(u3h_root) *har_p);
+
       /* u3h_count(): count hashtable for gc.
       */
         c3_w

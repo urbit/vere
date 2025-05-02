@@ -1228,6 +1228,93 @@ u3h_rewrite(u3p(u3h_root) har_p)
   }
 }
 
+static void
+_ch_relocate_noun(u3h_slot *sot_w)
+{
+  u3_noun kev = u3h_slot_to_noun(*sot_w);
+  u3a_relocate_noun(&kev);
+  *sot_w = u3h_noun_to_slot(kev);
+}
+
+static void
+_ch_relocate_buck(u3h_slot *sot_w)
+{
+  u3h_buck *hab_u = u3h_slot_to_node(*sot_w);
+  u3_post   new_p, sot_p = u3a_outa(hab_u);
+  c3_t      fir_t;
+
+  new_p  = u3a_mark_relocate_post(sot_p, &fir_t);
+  *sot_w = u3h_node_to_slot(u3a_into(new_p));
+
+  if ( !fir_t ) return;
+
+  for ( c3_w i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+    _ch_relocate_noun(&(hab_u->sot_w[i_w]));
+  }
+}
+
+static void
+_ch_relocate_slot(u3h_slot *sot_w, c3_w lef_w);
+
+static void
+_ch_relocate_node(u3h_slot *sot_w, c3_w lef_w)
+{
+  u3h_node* han_u = u3h_slot_to_node(*sot_w);
+  u3_post   new_p, sot_p = u3a_outa(han_u);
+  c3_w      len_w;
+  c3_t      fir_t;
+
+  new_p  = u3a_mark_relocate_post(sot_p, &fir_t);
+  *sot_w = u3h_node_to_slot(u3a_into(new_p));
+
+  if ( !fir_t ) return;
+
+  len_w  = _ch_popcount(han_u->map_w);
+  lef_w -= 5;
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    _ch_relocate_slot(&(han_u->sot_w[i_w]), lef_w);
+  }
+}
+
+static void
+_ch_relocate_slot(u3h_slot *sot_w, c3_w lef_w)
+{
+  if ( c3y == u3h_slot_is_noun(*sot_w) ) {
+    _ch_relocate_noun(sot_w);
+  }
+  else if ( !lef_w ) {
+    _ch_relocate_buck(sot_w);
+  }
+  else {
+    _ch_relocate_node(sot_w, lef_w);
+  }
+}
+
+/* u3h_relocate(): relocate hashtable for compaction.
+*/
+void
+u3h_relocate(u3p(u3h_root) *har_p)
+{
+  u3_post new_p, old_p = *har_p;
+  u3h_root*      har_u = u3to(u3h_root, old_p);
+  c3_w    sot_w, i_w;
+  c3_t    fir_t;
+
+  new_p  = u3a_mark_relocate_post(old_p, &fir_t);
+  *har_p = new_p;
+
+  if ( !fir_t ) return;
+
+  for ( i_w = 0; i_w < 64; i_w++ ) {
+    sot_w = har_u->sot_w[i_w];
+
+    if ( c3n == u3h_slot_is_null(sot_w) ) {
+      _ch_relocate_slot(&(har_u->sot_w[i_w]), 25);
+    }
+  }
+}
+
 /* _ch_count_buck(): count bucket for gc.
 */
 c3_w

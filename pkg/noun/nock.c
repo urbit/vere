@@ -3114,8 +3114,7 @@ u3n_reclaim(void)
 void
 u3n_rewrite_compact()
 {
-  u3h_rewrite(u3R->byc.har_p);
-  u3R->byc.har_p = u3a_rewritten(u3R->byc.har_p);
+  u3h_relocate(&(u3R->byc.har_p));
 }
 
 
