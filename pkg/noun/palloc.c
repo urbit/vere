@@ -2224,11 +2224,44 @@ _pack_seek(void)
 
   HEAP.pag_p = _pack_relocate(HEAP.pag_p);
 
+  if ( HEAP.cac_p ) {
+    HEAP.cac_p = _pack_relocate(HEAP.cac_p);
+  }
+
   for ( c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
     if ( HEAP.wee_p[bit_g] ) {
-      fprintf(stderr, "wee_p %u relocate from 0x%x pag=%u ", bit_g, HEAP.wee_p[bit_g], post_to_page(HEAP.wee_p[bit_g]));
       HEAP.wee_p[bit_g] = _pack_relocate(HEAP.wee_p[bit_g]);
-      fprintf(stderr, "to 0x%x pag=%u\r\n", HEAP.wee_p[bit_g], post_to_page(HEAP.wee_p[bit_g]));
+    }
+  }
+
+  //  XX relocate cel_p
+
+  {
+    u3a_crag *pag_u;
+    _ca_frag *fag_u;
+    _ca_prag *rag_u;
+    c3_w      dir_w;
+
+    for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+      dir_w = u3a_Gack.buf_w[pag_w];
+
+      if ( u3a_rest_pg < dir_w ) {
+        if ( !(dir_w >> 31) ) {
+          fag_u = (void*)(u3a_Gack.buf_w + dir_w);
+          pag_u = u3to(u3a_crag, fag_u->dir_p);
+          pag_u->pag_w = _pack_relocate_page(pag_u->pag_w);
+          fag_u->dir_p = _pack_relocate(fag_u->dir_p);
+        }
+        else {
+          rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((1U << 31) - 1)));
+
+          if ( rag_u->dir_p ) {
+            pag_u = u3to(u3a_crag, rag_u->dir_p);
+            pag_u->pag_w = _pack_relocate_page(pag_u->pag_w);
+            rag_u->dir_p = _pack_relocate(rag_u->dir_p);
+          }
+        }
+      }
     }
   }
 }
