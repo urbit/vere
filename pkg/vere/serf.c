@@ -24,8 +24,9 @@
               [%meld ~]
               [%pack ~]
       ==  ==
-      [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [beam @tas beam]))
-      [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
+      [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
+      [%play eve=@ lit=(list (pair @da ovum))]
       $:  %quiz
           $%  [%quac ~]
               [%quic ~]
@@ -43,7 +44,7 @@
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
       ==  ==
-      $:  %play
+      $:  ?(%play %boot)
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
       ==  ==
@@ -1161,6 +1162,47 @@ u3_serf_writ(u3_serf* sef_u, u3_noun wit, u3_noun* pel)
           ret_o = c3y;
         }
       } break;
+
+      case c3__boot: {
+        u3_assert( 0 == sef_u->dun_d );
+
+        // cache
+        //
+        u3_noun cax = u3h(com);
+        u3_noun tmp = cax;
+        c3_o gud_o = c3y;
+        while ( u3_nul != tmp ) {
+          if ( (c3n == u3a_is_cell(u3h(tmp))) ||
+               (c3n == u3a_is_cell(u3h(u3h(tmp)))) ) {
+            gud_o = c3n;
+          }
+          tmp = u3t(tmp);
+        }
+
+        if ( c3n == gud_o ) {
+          u3l_log("serf: got bad cache");
+        }
+        else {
+          while ( u3_nul != cax ) {
+            u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+                       u3t(u3h(cax)));
+            cax = u3t(cax);
+          }
+        }
+
+        // play
+        //
+        u3_noun lit = u3t(com);
+
+        if ( c3n == u3a_is_cell(lit) ) {
+          ret_o = c3n;
+        }
+        else {
+          *pel = u3nc(c3__boot, _serf_play_life(sef_u, u3k(lit)));
+          ret_o = c3y;
+        }
+      } break;
+
       case c3__quiz: {
         switch ( u3h(com) ) {
           case c3__quac: {

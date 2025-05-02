@@ -869,8 +869,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  410
-#define VERE_LULL  322
+#define VERE_ZUSE  409
+#define VERE_LULL  321
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -1008,8 +1008,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 236),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 137),        //  god_u->hon_y
+                     u3nc(c3__arvo, 235),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 136),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
@@ -1161,7 +1161,14 @@ _pier_play_send(u3_play* pay_u)
     fprintf(stderr, "pier: play send %" PRIu64 "-%" PRIu64 "\r\n", fon_u.ext_u->eve_d, fon_u.ent_u->eve_d);
 #endif
 
-    u3_lord_play(pir_u->god_u, fon_u);
+    // %play or %boot
+    //
+    if ( pir_u->god_u->eve_d ) {
+      u3_lord_play(pir_u->god_u, fon_u);
+    }
+    else {
+      u3_lord_boot(pir_u->god_u, pir_u->cax, fon_u);
+    }
   }
 }
 
@@ -1233,7 +1240,6 @@ _pier_play(u3_play* pay_u)
     }
     else if ( pay_u->eve_d == log_u->dun_d ) {
       u3_lord_save(pir_u->god_u);
-
       //  early exit, preparing for upgrade
       //
       //    XX check kelvins?
@@ -1922,6 +1928,7 @@ static u3_boot
 _pier_pill_parse(u3_noun pil)
 {
   u3_boot bot_u;
+  bot_u.cax = u3_nul;
   u3_noun pil_p, pil_q;
 
   u3_assert( c3y == u3du(pil) );
@@ -1947,7 +1954,7 @@ _pier_pill_parse(u3_noun pil)
       u3_king_bail();
       exit(1);
     }
-    else if ( c3__pill != tag ) {
+    else if ( (c3__pill != tag) && (c3__cash != tag) ) {
       if ( c3y == u3a_is_atom(tag) ) {
         u3m_p("pill", tag);
       }
@@ -1959,6 +1966,11 @@ _pier_pill_parse(u3_noun pil)
     {
       u3_noun typ;
       c3_c* typ_c;
+
+      if ( (c3__cash == tag) && (c3y == u3du(dat)) ) {
+        bot_u.cax = u3t(dat);
+        dat = u3h(dat);
+      }
 
       if ( c3n == u3r_qual(dat, &typ, &bot_u.bot, &bot_u.mod, &bot_u.use) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
@@ -1973,7 +1985,7 @@ _pier_pill_parse(u3_noun pil)
       }
     }
 
-    u3k(bot_u.bot); u3k(bot_u.mod); u3k(bot_u.use);
+    u3k(bot_u.bot); u3k(bot_u.mod); u3k(bot_u.use); u3k(bot_u.cax);
     u3z(pro);
   }
 
@@ -2137,6 +2149,7 @@ _pier_boot_plan(u3_pier* pir_u,
 
     bot_u = _pier_boot_make(who, _pier_wyrd_card(pir_u), ven, pil, fed, mor);
     pir_u->lif_w = u3qb_lent(bot_u.bot);
+    pir_u->cax = u3k(bot_u.cax);
   }
 
   if ( c3n == u3_disk_save_meta(pir_u->log_u->mdb_u,

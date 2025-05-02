@@ -20,8 +20,9 @@
               [%meld ~]
               [%pack ~]
       ==  ==
+      [%boot cax=(list [k=[s=* f=*] v=*]) lit=(list ?((pair @da ovum) *))]
       [%peek mil=@ sam=*]  :: gang (each path $%([%once @tas @tas path] [%beam @tas beam]))
-      [%play eve=@ lit=(list ?((pair @da ovum) *))]
+      [%play eve=@ lit=(list (pair @da ovum))]
       $:  %quiz
           $%  [%quac ~]
               [%quic ~]
@@ -39,7 +40,7 @@
           $%  [%done dat=(unit (cask))]
               [%bail dud=goof]
       ==  ==
-      $:  %play
+      $:  ?(%play %boot)
           $%  [%done mug=@]
               [%bail eve=@ mug=@ dud=goof]
       ==  ==
@@ -99,6 +100,19 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_play: {
       u3_fact* tac_u = wit_u->fon_u.ext_u;
       u3_fact* nex_u;
+
+      while ( tac_u ) {
+        nex_u = tac_u->nex_u;
+        u3_fact_free(tac_u);
+        tac_u = nex_u;
+      }
+    } break;
+
+    case u3_writ_boot: {
+      u3_fact* tac_u = wit_u->bot_u.fon_u.ext_u;
+      u3_fact* nex_u;
+
+      u3z(wit_u->bot_u.cax);
 
       while ( tac_u ) {
         nex_u = tac_u->nex_u;
@@ -211,6 +225,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_pack: return "pack";
     case u3_writ_exit: return "exit";
     case u3_writ_quiz: return "quiz";
+    case u3_writ_boot: return "boot";
   }
 }
 
@@ -507,6 +522,39 @@ _lord_plea_play_done(u3_lord* god_u, u3_info fon_u, u3_noun dat)
   u3z(dat);
 }
 
+/* _lord_plea_boot(): hear serf %boot response
+*/
+static void
+_lord_plea_boot(u3_lord* god_u, u3_noun dat)
+{
+  u3_info fon_u;
+  {
+    u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_boot);
+    fon_u = wit_u->bot_u.fon_u;
+    c3_free(wit_u);
+  }
+
+  if ( c3n == u3du(dat) ) {
+    return _lord_plea_foul(god_u, c3__boot, dat);
+  }
+
+  switch ( u3h(dat) ) {
+    default: {
+      return _lord_plea_foul(god_u, c3__boot, dat);
+    }
+
+    case c3__done: {
+      _lord_plea_play_done(god_u, fon_u, u3k(u3t(dat)));
+    } break;
+
+    case c3__bail: {
+      _lord_plea_play_bail(god_u, fon_u, u3k(u3t(dat)));
+    } break;
+  }
+
+  u3z(dat);
+}
+
 /* _lord_plea_play(): hear serf %play response
 */
 static void
@@ -768,6 +816,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
       _lord_plea_flog(god_u, u3k(dat));
     } break;
 
+    case c3__boot: {
+      _lord_plea_boot(god_u, u3k(dat));
+    } break;
+
     case c3__play: {
       _lord_plea_play(god_u, u3k(dat));
     } break;
@@ -857,6 +909,18 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     case u3_writ_quiz: {
       msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
     } break;
+
+    case u3_writ_boot: {
+      u3_fact* tac_u = wit_u->bot_u.fon_u.ext_u;
+      u3_noun    lit = u3_nul;
+
+      while ( tac_u ) {
+        lit   = u3nc(u3k(tac_u->job), lit);
+        tac_u = tac_u->nex_u;
+      }
+
+      msg = u3nt(c3__boot, wit_u->bot_u.cax, u3kb_flop(lit));
+    } break;
   }
 
   return msg;
@@ -864,7 +928,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
 
 /* _lord_writ_send(): send writ to serf.
 */
-static void
+void
 _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
 {
   //  exit expected
@@ -950,6 +1014,19 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
 
   //  XX cache check, unless last
   //
+  _lord_writ_plan(god_u, wit_u);
+}
+
+/* u3_lord_boot(): boot.
+*/
+void
+u3_lord_boot(u3_lord* god_u, u3_noun cax, u3_info fon_u)
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e = u3_writ_boot;
+  wit_u->bot_u.cax = cax;
+  wit_u->bot_u.fon_u = fon_u;
+
   _lord_writ_plan(god_u, wit_u);
 }
 
