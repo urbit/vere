@@ -682,12 +682,13 @@ _ce_patch_count_page(c3_w pag_w,
   c3_w bit_w = (pag_w & 31);
 
   if (  (u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
-     && (  (u3R->hep.len_w <= pag_w)
-        || (pag_w < off_w)
-        || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
+     && (  (pag_w < off_w)
+     || (u3R->hep.len_w <= (pag_w - off_w))
+     || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
   {
     pgc_w += 1;
   }
+
   return pgc_w;
 }
 
@@ -703,10 +704,11 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   c3_w  bit_w = (pag_w & 31);
 
   if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-    if (  (u3R->hep.len_w > pag_w)
-       && (pag_w > off_w)
+    if (  (pag_w >= off_w)
+       && (u3R->hep.len_w > (pag_w - off_w))
        && (u3a_free_pg == (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) )
     {
+      // fprintf(stderr, "save: skip %u\r\n", pag_w);
       pat_u->sip_w++;
       return pgc_w;
     }
