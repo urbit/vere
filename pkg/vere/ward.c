@@ -15,10 +15,11 @@
 u3_dent*
 u3_dent_init(const c3_c* nam_c)
 {
-  u3_dent *det_u = c3_malloc(sizeof(*det_u));
-  det_u->nex_u   = 0;
-  det_u->nam_c   = c3_malloc(1 + strlen(nam_c));
-  strcpy(det_u->nam_c, nam_c);
+  u3_dent *det_u   = c3_malloc(sizeof(*det_u));
+  det_u->nex_u     = 0;
+  c3_w det_u_nam_c_size = 1 + strlen(nam_c);
+  det_u->nam_c     = c3_malloc(det_u_nam_c_size);
+  snprintf(det_u->nam_c, det_u_nam_c_size, "%s", nam_c);
 
   return det_u;
 }
@@ -40,8 +41,9 @@ u3_dire_init(const c3_c* pax_c)
   u3_dire *dir_u = c3_malloc(sizeof *dir_u);
   dir_u->all_u = 0;
   dir_u->dil_u = 0;
-  dir_u->pax_c = c3_malloc(1 + strlen(pax_c));
-  strcpy(dir_u->pax_c, pax_c);
+  c3_w dir_u_pax_c_size = 1 + strlen(pax_c);
+  dir_u->pax_c = c3_malloc(dir_u_pax_c_size);
+  snprintf(dir_u->pax_c, dir_u_pax_c_size, "%s", pax_c);
 
   return dir_u;
 }

@@ -700,7 +700,7 @@
         /* u3a_print_time: print microsecond time.
         */
           void
-          u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d);
+          u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d, c3_w str_c_size);
 
         /* u3a_print_quac: print a quac memory report.
         */
