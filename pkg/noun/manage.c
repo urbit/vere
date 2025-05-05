@@ -2176,6 +2176,8 @@ u3m_init(size_t len_i)
   _cm_signals();
   _cm_crypto();
 
+  u3a_init_once();
+
   //  make sure GMP uses our malloc.
   //
   mp_set_memory_functions(u3a_malloc, _cm_realloc2, _cm_free2);

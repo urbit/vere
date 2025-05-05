@@ -15,6 +15,7 @@
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 u3a_gack u3a_Gack;
+u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
 #ifdef U3_MEMORY_DEBUG
 c3_w u3_Code;
@@ -71,9 +72,15 @@ u3a_tail(u3_noun som)
 }
 
 void
+u3a_init_once(void)
+{
+  _init_once();
+}
+
+void
 u3a_init_heap(void)
 {
-  _init();
+  _init_heap();
 }
 
 void

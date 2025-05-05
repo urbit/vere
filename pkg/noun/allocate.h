@@ -370,9 +370,21 @@ typedef struct _u3a_gack {
   c3_w *buf_w;
 } u3a_gack;
 
+typedef struct {
+  c3_s log_s;     //  size log2
+  c3_s len_s;     //  1U << log_s
+  c3_s tot_s;     //  total chunks
+  c3_s map_s;     //  bitmap size
+  c3_s siz_s;     //  wiseof(crag) - 1 + map_s
+  c3_s hun_s;     //  chunks reserved
+  c3_s ful_s;     //  tot_s - hun_s
+} u3a_hunk_dose;
+
       extern u3a_gack u3a_Gack;
 
       extern u3a_mark u3a_Mark;
+
+      extern u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
   /**  Globals.
   **/
@@ -497,6 +509,8 @@ typedef struct _u3a_gack {
   /**  Functions.
   **/
 
+void
+u3a_init_once(void);
 void
 u3a_init_heap(void);
 void

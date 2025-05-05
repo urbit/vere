@@ -81,13 +81,41 @@ _abs_dif(c3_w a_w, c3_w b_w)
 }
 
 static void
+_init_once(void)
+{
+  u3a_hunk_dose *hun_u;
+
+  for (c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
+    hun_u = &(u3a_Hunk[bit_g]);
+    hun_u->log_s = bit_g + u3a_min_log;
+    hun_u->len_s = 1U << hun_u->log_s;
+    hun_u->tot_s = 1U << (u3a_page - hun_u->log_s);
+    hun_u->map_s = (hun_u->tot_s + 31) >> 5;
+    hun_u->siz_s = c3_wiseof(u3a_crag) + hun_u->map_s - 1;
+
+    //  metacircular base case
+    //
+    //    trivially deducible from exhaustive enumeration
+    //
+    if ( hun_u->len_s <= (hun_u->siz_s << 1) ) {
+      hun_u->hun_s = 1U + ((hun_u->siz_s - 1) >> hun_u->log_s);
+    }
+    else {
+      hun_u->hun_s = 0;
+    }
+
+    hun_u->ful_s = hun_u->tot_s - hun_u->hun_s;
+  }
+}
+
+static void
 _drop(u3_post som_p, c3_w len_w)
 {
   ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)len_w << 2);
 }
 
 static void
-_init(void)
+_init_heap(void)
 {
   u3p(u3a_crag) *dir_u;
 
@@ -1832,17 +1860,13 @@ _sweep_counts(void)
 
 typedef struct {
   u3_post dir_p;
-  c3_s  hun_s;  //  chunks reserved XX could be global per bit_g
-  c3_s  log_s;  //  log2(len)
-  //  XX c3_w pag_w;
+  c3_s    log_s;  //  log2(len)
   struct {
     c3_w  pag_w;  //  previous page in class (original number)
     c3_s  fre_s;  //  previous hunks available
     c3_s  pos_s;  //  previous hunks used
   } pre_u;
-  c3_w *hap_w;  //  hunk bitmap (dag_u)
-  c3_w *hum_w;  //  cumulative sums (dag_u) // XX could be c3_s
-  c3_w *mar_w;
+  c3_w    mar_w[0];
 } _ca_prag;
 
 typedef struct {
@@ -1865,18 +1889,21 @@ _pack_relocate_page(c3_w pag_w)
 static inline u3_post
 _pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
 {
-  c3_w blk_w = pos_w >> 5;
-  c3_w bit_w = pos_w & 31;
-  c3_w top_w = rag_u->hap_w[blk_w] & ((1U << bit_w) - 1);
-  c3_w new_w = rag_u->hum_w[blk_w];   //  XX blk_w - 1, since hum_w[0] is always 0?
+  const u3a_hunk_dose *hun_u = &(u3a_Hunk[rag_u->log_s - u3a_min_log]);
+  c3_w  blk_w = pos_w >> 5;
+  c3_w  bit_w = pos_w & 31;
+  c3_w *hap_w = &(rag_u->mar_w[hun_u->map_s]);
+  c3_w *hum_w = &(hap_w[hun_u->map_s]);
+  c3_w  top_w = hap_w[blk_w] & ((1U << bit_w) - 1);
+  c3_w  new_w = hum_w[blk_w];   //  XX blk_w - 1, since hum_w[0] is always 0?
 
   new_w += c3_pc_w(top_w);
 
-  if ( new_w < rag_u->hun_s ) {
+  if ( new_w < hun_u->hun_s ) {
     u3_assert( 0 == new_w );
     u3_assert( 0 == pos_w );
   }
-  else if ( new_w < (rag_u->pre_u.fre_s + rag_u->hun_s) ) {
+  else if ( new_w < (rag_u->pre_u.fre_s + hun_u->hun_s) ) {
     pag_w  = rag_u->pre_u.pag_w;
     new_w += rag_u->pre_u.pos_s;
   }
@@ -2078,10 +2105,12 @@ _pack_seek(void)
       u3_post dir_p;
     } pre_u;
 
+    const u3a_hunk_dose *hun_u;
     u3a_crag   *pag_u;
     _ca_prag   *rag_u;
-    c3_s log_s, tot_s, map_s, siz_s, hun_s;
     c3_w len_w, sum_w, i_w;
+    c3_w *hap_w;  //  hunk bitmap (dag_u)
+    c3_w *hum_w;  //  cumulative sums (dag_u) // XX could be c3_s
     c3_g bit_g = u3a_crag_no;
 
     while ( bit_g-- ) {
@@ -2093,21 +2122,10 @@ _pack_seek(void)
       //
       HEAP.wee_p[bit_g] = _sort_crag(HEAP.wee_p[bit_g]);
       dir_p = HEAP.wee_p[bit_g];
-
+      hun_u = &(u3a_Hunk[bit_g]);
       memset(&pre_u, 0, sizeof(pre_u));
-      log_s = bit_g + u3a_min_log;
-      tot_s = 1U << (u3a_page - log_s);  //  NB: not pag_u->tot_s ???
-      map_s = (tot_s + 31) >> 5;
-      siz_s = c3_wiseof(u3a_crag) + map_s - 1;
 
-      if ( (1U << log_s) <= (siz_s << 1) ) {
-        hun_s = 1U + ((siz_s - 1) >> log_s);
-      }
-      else {
-        hun_s = 0;
-      }
-
-      len_w = c3_wiseof(_ca_prag);
+      len_w = c3_wiseof(_ca_prag) + (3 * hun_u->map_s);
 
       while ( dir_p ) {
         pag_u = u3to(u3a_crag, dir_p);
@@ -2118,37 +2136,35 @@ _pack_seek(void)
         u3_assert( pre_u.pag_w < pag_u->pag_w );
 
         rag_u = u3a_pack_alloc(len_w);
-        rag_u->hap_w = u3a_pack_alloc(map_s);
-        rag_u->hum_w = u3a_pack_alloc(map_s);
-        rag_u->mar_w = u3a_pack_alloc(map_s);
-        rag_u->log_s = log_s;
-        rag_u->hun_s = hun_s;
+        hap_w = &(rag_u->mar_w[hun_u->map_s]);
+        hum_w = &(hap_w[hun_u->map_s]);
+        rag_u->log_s = hun_u->log_s;
 
         rag_u->pre_u.pag_w = pre_u.pag_w;
         rag_u->pre_u.fre_s = pre_u.fre_s;
         rag_u->pre_u.pos_s = pre_u.pos_s;
 
-        memset(rag_u->mar_w, 0, map_s << 2);
+        memset(rag_u->mar_w, 0, hun_u->map_s << 2);
 
-        for ( i_w = 0; i_w < map_s; i_w++ ) {
-          rag_u->hap_w[i_w] = ~(pag_u->map_w[i_w]);
+        for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
+          hap_w[i_w] = ~(pag_u->map_w[i_w]);
         }
 
-        if ( tot_s & 31 ) {
-          rag_u->hap_w[map_s - 1] &= (1U << (tot_s & 31)) - 1;
+        if ( hun_u->tot_s & 31 ) {
+          hap_w[hun_u->map_s - 1] &= (1U << (hun_u->tot_s & 31)) - 1;
         }
 
         sum_w = 0;
-        for ( i_w = 0; i_w < map_s; i_w++ ) {
-          rag_u->hum_w[i_w] = sum_w;
-          sum_w += c3_pc_w(rag_u->hap_w[i_w]);
+        for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
+          hum_w[i_w] = sum_w;
+          sum_w += c3_pc_w(hap_w[i_w]);
         }
 
         u3a_Gack.buf_w[pag_u->pag_w] = ((c3_w*)rag_u - u3a_Gack.buf_w) | (1U << 31);
 
         c3_s pos_s = pag_u->tot_s - pag_u->fre_s;
 
-        u3_assert( (pos_s + hun_s) == sum_w );
+        u3_assert( (pos_s + hun_u->hun_s) == sum_w );
 
         //  there is a previous page, and it will be full
         //
@@ -2156,7 +2172,7 @@ _pack_seek(void)
            || (pre_u.dir_p && (pos_s > pre_u.fre_s)) )
         {
           u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-          memset(peg_u->map_w, 0, map_s << 2);
+          memset(peg_u->map_w, 0, hun_u->map_s << 2);
           peg_u->fre_s = 0;
         }
 
@@ -2167,7 +2183,7 @@ _pack_seek(void)
         if ( pos_s <= pre_u.fre_s ) {
           rag_u->dir_p = 0;
           dir_u[pag_u->pag_w] = u3a_free_pg;
-          fre_p = hun_s ? 0 : dir_p;
+          fre_p = hun_u->hun_s ? 0 : dir_p;
         }
 
         //  previous page is the same
@@ -2204,7 +2220,7 @@ _pack_seek(void)
 
       if ( pre_u.dir_p ) {
         u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-        c3_s      pos_s = pre_u.pos_s + hun_s;
+        c3_s      pos_s = pre_u.pos_s + hun_u->hun_s;
         c3_s      max_s = pos_s >> 5;
 
         // fprintf(stderr, "bit_g=%u dir_p=0x%x nex_p=0x%x pos_s=%u fre_s=%u\r\n",
@@ -2214,7 +2230,7 @@ _pack_seek(void)
         //
         memset(peg_u->map_w, 0, max_s << 2);
         peg_u->map_w[max_s++] = ~0 << (pos_s & 31);
-        memset(&(peg_u->map_w[max_s]), 0xff, (map_s - max_s) << 2);
+        memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << 2);
 
         peg_u->fre_s = pre_u.fre_s;
       }
@@ -2355,10 +2371,12 @@ static c3_i
 _pack_move_chunks(c3_w pag_w, c3_w dir_w)
 {
   _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + dir_w);
+  const u3a_hunk_dose *hun_u = &(u3a_Hunk[rag_u->log_s - u3a_min_log]);
+  c3_w     *hap_w = &(rag_u->mar_w[hun_u->map_s]);
   c3_w      off_w = 1U << rag_u->log_s;
   c3_z      len_i = off_w << 2;
   c3_w     *src_w, *dst_w, new_w;
-  c3_s      max_s,  fre_s, new_s, pos_s = rag_u->hun_s;
+  c3_s      max_s,  fre_s, new_s, pos_s = hun_u->hun_s;
 
   src_w = u3to(c3_w, page_to_post(pag_w) + (pos_s << rag_u->log_s));
 
@@ -2366,7 +2384,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
 
   if ( rag_u->pre_u.pag_w ) {
     new_w = _pack_relocate_page(rag_u->pre_u.pag_w);
-    new_s = rag_u->hun_s + rag_u->pre_u.pos_s;
+    new_s = hun_u->hun_s + rag_u->pre_u.pos_s;
     fre_s = rag_u->pre_u.fre_s;
 
     dst_w = u3to(c3_w, page_to_post(new_w) + (new_s << rag_u->log_s));
@@ -2374,7 +2392,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     //  move up to [fre_s] chunks to (relocated) previous page
     //
     while ( (pos_s < max_s) && fre_s ) {
-      if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+      if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
         memcpy(dst_w, src_w, len_i);
         fre_s--;
         dst_w += off_w;
@@ -2387,7 +2405,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     //  advance src position past any free chunks
     //
     while ( (pos_s < max_s) ) {
-      if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+      if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
         break;
       }
 
@@ -2401,7 +2419,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   }
 
   new_w = _pack_relocate_page(pag_w);
-  new_s = rag_u->hun_s;
+  new_s = hun_u->hun_s;
 
   //  skip chunks that don't need to move
   //  (possible if a partial-chunk page is in the first
@@ -2412,7 +2430,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   if ( new_w == pag_w ) {
     if ( new_s == pos_s ) {
       while (  (pos_s < max_s)
-            && (rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31))) )
+            && (hap_w[pos_s >> 5] & (1U << (pos_s & 31))) )
       {
         pos_s++;
         src_w += off_w;
@@ -2424,11 +2442,11 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   }
   //  relocate inline metadata
   //
-  else if ( rag_u->hun_s ) {
+  else if ( hun_u->hun_s ) {
     c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
     c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
-    memcpy(doc_w, soc_w, len_i * new_s);
+    memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
 
     // XX bump pos_s/src_w if !pos_s ?
   }
@@ -2440,7 +2458,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   //  move remaining chunks to relocated page
   //
   while ( pos_s < max_s ) {
-    if ( rag_u->hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+    if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
       memcpy(dst_w, src_w, len_i);
       dst_w += off_w;
     }
