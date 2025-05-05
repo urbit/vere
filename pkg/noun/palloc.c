@@ -2060,22 +2060,14 @@ static void
 _pack_seek(void)
 {
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3a_dell *fre_u;
   c3_w blk_w, bit_w, pag_w;
   u3_post     dir_p, som_p, nex_p, fre_p;
 
-  {
-    u3a_dell *fre_u;
-
-    fre_p = HEAP.fre_p;
-
-    while ( fre_p ) {
-      fre_u = u3to(u3a_dell, fre_p);
-      nex_p = fre_u->nex_p;
-      _ifree(fre_p);
-      fre_p = nex_p;
-    }
-
-    HEAP.fre_p = 0;
+  while ( (fre_p = HEAP.fre_p) ) {
+    fre_u = u3to(u3a_dell, fre_p);
+    HEAP.fre_p = fre_u->nex_p;
+    _ifree(fre_p);
   }
 
   {
@@ -2295,6 +2287,28 @@ _pack_seek(void)
 
   HEAP.pag_p = _pack_relocate(HEAP.pag_p);
 
+  //  this is possible if freeing unused u3a_crag's
+  //  caused an entire hunk page to be free'd
+  //  NB: this corrupts pre_p
+  //
+  if ( HEAP.fre_p ) {
+    if ( !HEAP.cac_p ) {
+      fre_u = u3to(u3a_dell, HEAP.fre_p);
+      HEAP.cac_p = HEAP.fre_p;
+      HEAP.fre_p = fre_u->nex_p;
+    }
+
+    {
+      u3_post *ref_p = &(HEAP.fre_p);
+
+      while ( *ref_p ) {
+        fre_u  = u3to(u3a_dell, *ref_p);
+        *ref_p = _pack_relocate(*ref_p);
+        ref_p  = &(fre_u->nex_p);
+      }
+    }
+  }
+
   if ( HEAP.cac_p ) {
     HEAP.cac_p = _pack_relocate(HEAP.cac_p);
   }
@@ -2510,4 +2524,15 @@ _pack_move(void)
 
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);
   u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Gack.siz_w);
+
+  {
+    u3a_dell *fre_u;
+    u3_post   fre_p;
+
+    while ( (fre_p = HEAP.fre_p) ) {
+      fre_u = u3to(u3a_dell, fre_p);
+      HEAP.fre_p = fre_u->nex_p;
+      _ifree(fre_p);
+    }
+  }
 }
