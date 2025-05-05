@@ -1798,9 +1798,13 @@ u3a_pack_move(u3a_road* rod_u)
 
   u3a_pack_done();
 
+  u3_post old_p = u3R->hat_p;
+
   //  XX move me?
   //
   u3R->hat_p = u3R->rut_p + (u3R->hep.dir_ws * (c3_ws)(u3R->hep.len_w << u3a_page));
+
+  u3a_drop_heap(old_p, u3R->hat_p);
 }
 
 #if 0

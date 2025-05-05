@@ -2393,6 +2393,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     //
     while ( (pos_s < max_s) && fre_s ) {
       if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+        ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
         memcpy(dst_w, src_w, len_i);
         fre_s--;
         dst_w += off_w;
@@ -2446,6 +2447,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
     c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
+    ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i * hun_u->hun_s);
     memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
 
     // XX bump pos_s/src_w if !pos_s ?
@@ -2459,6 +2461,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   //
   while ( pos_s < max_s ) {
     if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
+      ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
       memcpy(dst_w, src_w, len_i);
       dst_w += off_w;
     }
@@ -2515,6 +2518,7 @@ _pack_move(void)
 
     if ( u3a_free_pg != dir_w ) {
       if ( (u3a_rest_pg >= dir_w) || !(dir_w >> 31) ) {
+        ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
         memcpy(dst_w, src_w, len_i);
         u3a_Gack.buf_w[new_w] = (u3a_rest_pg >= dir_w)
                               ? dir_w
@@ -2532,6 +2536,8 @@ _pack_move(void)
     src_w += off_ws;
     fflush(stderr); // XX remove
   }
+
+  _poison_words();
 
   {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
