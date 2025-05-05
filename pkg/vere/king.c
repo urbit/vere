@@ -287,7 +287,7 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
 
     //  include additional key configuration events if we have multiple keys
     //
-    if ( c3y == u3a_is_cell(u3h(feed)) ) {
+    if ( (u3_none != feed) && (c3y == u3du(u3h(feed))) && (u3h(u3h(feed))) == 1) {
       u3_noun wir = u3nt(c3__j, c3__seed, u3_nul);
       u3_noun tag = u3i_string("rekey");
       u3_noun kyz = u3t(u3t(feed));
