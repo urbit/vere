@@ -620,7 +620,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
 
 /* _lord_writ_send(): send writ to serf.
 */
-static void
+void
 _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
 {
   //  exit expected

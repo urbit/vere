@@ -395,14 +395,6 @@ _sift_bytes(u3_sifter* sif_u, c3_y *buf_y, c3_w len_w)
   memcpy(buf_y, res_y, len_w);
 }
 
-static c3_y*
-_sift_bytes_alloc(u3_sifter* sif_u, c3_w len_w)
-{
-  c3_y *buf_y = c3_calloc(len_w);
-  _sift_bytes(sif_u, buf_y, len_w);
-  return buf_y;
-}
-
 static void
 _etch_byte(u3_etcher* ech_u, c3_y val_y)
 {
@@ -763,13 +755,6 @@ _mesa_etch_hop_long(u3_etcher* ech_u, u3_mesa_hop_once* hop_u)
 }
 
 static void
-_mesa_sift_hop_long(u3_sifter* sif_u, u3_mesa_hop_once* hop_u)
-{
-  hop_u->len_w = _sift_byte(sif_u);
-  hop_u->dat_y = _sift_bytes_alloc(sif_u, hop_u->len_w);
-}
-
-static void
 _mesa_etch_page_pact(u3_etcher* ech_u, u3_mesa_page_pact* pag_u, u3_mesa_head* hed_u)
 {
   _mesa_etch_name(ech_u, &pag_u->nam_u);
@@ -812,15 +797,11 @@ _mesa_sift_page_pact(u3_sifter* sif_u, u3_mesa_page_pact* pag_u, c3_y nex_y)
       return;
     }
     case HOP_LONG: {
-      _mesa_sift_hop_long(sif_u, &pag_u->one_u);
+      _sift_fail(sif_u, "mesa: sift invalid hop long");
       return;
     }
     case HOP_MANY: {
-      pag_u->man_u.len_w = _sift_byte(sif_u);
-      pag_u->man_u.dat_y = c3_calloc(sizeof(u3_mesa_hop_once) * pag_u->man_u.len_w);
-      for ( c3_w i = 0; i < pag_u->man_u.len_w; i++ ) {
-        _mesa_sift_hop_long(sif_u, &pag_u->man_u.dat_y[i]);
-      }
+      _sift_fail(sif_u, "mesa: sift invalid hop many");
       return;
     }
   }
