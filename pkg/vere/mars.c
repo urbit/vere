@@ -1396,10 +1396,10 @@ u3_mars_init(c3_c*    dir_c,
 }
 
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  410
-#define VERE_LULL  322
-#define VERE_ARVO  236
-#define VERE_HOON  137
+#define VERE_ZUSE  409
+#define VERE_LULL  321
+#define VERE_ARVO  235
+#define VERE_HOON  136
 #define VERE_NOCK  4
 
 /* _mars_wyrd_card(): construct %wyrd.
@@ -1773,7 +1773,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
   //  XX source kelvin from args?
   //
   inp_u.ver_u.nam_m = c3__zuse;
-  inp_u.ver_u.ver_w = 410;
+  inp_u.ver_u.ver_w = 409;
 
   gettimeofday(&inp_u.tim_u, 0);
   c3_rand(inp_u.eny_w);
