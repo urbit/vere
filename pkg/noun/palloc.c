@@ -519,44 +519,36 @@ static u3_post
 _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 {
   c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
-  u3_post   pag_p = HEAP.wee_p[bit_g];
+  const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
   u3a_crag *pag_u;
   c3_w     *map_w;
   c3_g      pos_g;
 
-  if ( !pag_p ) {
-    pag_p = _make_chunks(bit_g);
+  if ( !HEAP.wee_p[bit_g] ) {
+    pag_u = u3to(u3a_crag, _make_chunks(bit_g));
   }
   else {
+    pag_u = u3to(u3a_crag, HEAP.wee_p[bit_g]);
     //  XX sanity
+
+    if ( 1 == pag_u->fre_s ) {
+      HEAP.wee_p[bit_g] = pag_u->nex_p;
+      pag_u->nex_p = 0;
+    }
   }
 
-  pag_u = u3to(u3a_crag, pag_p);
+  pag_u->fre_s--;
   map_w = pag_u->map_w;
-
-#ifdef SANITY
-  assert( pag_u->log_s < u3a_page );
-#endif
-
   while ( !*map_w ) { map_w++; }
 
   pos_g   = c3_tz_w(*map_w);
   *map_w &= ~(1U << pos_g);
 
-  if ( !--pag_u->fre_s ) {
-    HEAP.wee_p[bit_g] = pag_u->nex_p;
-    pag_u->nex_p = 0;
-  }
-
   {
-    c3_w off_w = map_w - pag_u->map_w;  //  bitmap words
-    off_w <<= 5;                        //    (in bits)
-    off_w  += pos_g;                    //  chunk index
-    off_w <<= pag_u->log_s;             //    (in words)
+    u3_post out_p, bas_p = page_to_post(pag_u->pag_w);
+    c3_w    off_w = (map_w - pag_u->map_w) << 5;
 
-    u3_post out_p = page_to_post(pag_u->pag_w) + off_w;
-
-    const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
+    out_p = bas_p + ((off_w + pos_g) << pag_u->log_s);
     ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), hun_u->len_s << 2);
     //  XX poison suffix
 
