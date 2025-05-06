@@ -70,6 +70,7 @@ static void
 _init_once(void)
 {
   u3a_hunk_dose *hun_u;
+  c3_s mun_w = 0;
 
   for (c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
     hun_u = &(u3a_Hunk[bit_g]);
@@ -91,7 +92,10 @@ _init_once(void)
     }
 
     hun_u->ful_s = hun_u->tot_s - hun_u->hun_s;
+    mun_w = c3_max(mun_w, hun_u->hun_s);
   }
+
+  u3_assert( 32 > mun_w );
 }
 
 static void
@@ -504,13 +508,9 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   }
 
   //  reserve chunks stolen for pginfo
+  //  NB: max [hun_s] guarded by assertion in _init_once()
   //
-  //    XX s/b guarded by assertion in _init_once()
-  //    pag_u->map_w[0] &= (c3_w)~0 << hun_u->hun_s;
-  //
-  for ( c3_w i_w = 0; i_w < hun_u->hun_s; i_w++ ) {
-    pag_u->map_w[i_w >> 5] &= ~(1U << (i_w & 31));
-  }
+  pag_u->map_w[0] &= (c3_w)~0 << hun_u->hun_s;
 
   {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -1294,13 +1294,9 @@ _mark_post(u3_post som_p)
         u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
       }
       else {
-        //  XX need static assert that max(hun_w) < 32
-        //  mar_w[0] &= (c3_w)~0 << hun_u->hun_s;
+        //  NB: max [hun_s] guarded by assertion in _init_once()
         //
-        for ( c3_w i_w = 0; i_w < hun_u->hun_s; i_w++ ) {
-          mar_w[i_w >> 5] &= ~(1U << (i_w & 31));
-        }
-
+        mar_w[0] &= (c3_w)~0 << hun_u->hun_s;
         u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
       }
 
