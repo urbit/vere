@@ -450,25 +450,17 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
     pag_u->log_s = hun_u->log_s;
     pag_u->fre_s = 0;
     pag_u->nex_p = 0;
+    //  initialize bitmap (zeros, none free)
+    //
+    memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << 2);
 
     {
       u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
       dir_u[pag_w] = hun_p;
     }
 
-    //  initialize bitmap (zeros, none free)
-    //
-    memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << 2);
-
-    {
-      c3_s lef_s = hun_u->ful_s;
-
-      hun_p = pag_p + ((c3_w)hun_u->hun_s << hun_u->log_s);
-
-      while ( lef_s-- ) {
-        out_p[hav_w++] = hun_p;
-        hun_p += hun_u->len_s;
-      }
+    for ( c3_s i_s = hun_u->hun_s; i_s < hun_u->tot_s; i_s++ ) {
+      out_p[hav_w++] = pag_p + (i_s << pag_u->log_s);
     }
 
     *out_w = hav_w;
