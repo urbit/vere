@@ -454,15 +454,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 
     //  initialize bitmap (zeros, none free)
     //
-    {
-      c3_w *map_w = pag_u->map_w;
-      c3_w  len_w = hun_u->map_s;
-
-      // XX memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << 2);
-      while ( len_w-- ) {
-        *map_w++ = 0;
-      }
-    }
+    memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << 2);
 
     {
       c3_s lef_s = hun_u->ful_s;
@@ -504,25 +496,11 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 
   //  initialize bitmap (ones, all free)
   //
-  {
-    c3_w *map_w = pag_u->map_w;
-    c3_w  len_w = hun_u->tot_s >> 5;
-
-    // XX memset(pag_u->map_w, 0xff, (c3_z)hun_u->map_s << 2);
-    while ( len_w-- ) {
-      *map_w++ = ~0;
-    }
-
-    len_w = hun_u->tot_s & 31;
-
-    if ( len_w ) {
-      *map_w = (c3_w)~0 >> (32 - len_w);
-    }
-
-    //  XX
-    // if ( hun_u->tot_s & 31 ) {
-    //   pag_u->map_w[hun_u->map_s - 1] &= (1U << (hun_u->tot_s & 31)) - 1;
-    // }
+  if ( hun_u->tot_s < 32 ) {
+    pag_u->map_w[0] = (1U << hun_u->tot_s) - 1;
+  }
+  else {
+    memset(pag_u->map_w, 0xff, (c3_z)hun_u->map_s << 2);
   }
 
   //  reserve chunks stolen for pginfo
@@ -1306,33 +1284,27 @@ _mark_post(u3_post som_p)
     //  page is unmarked, allocate and initialize mark-array
     //
     else {
-      {
-        mar_w = u3a_mark_alloc(hun_u->map_s);
-        u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
+      mar_w = u3a_mark_alloc(hun_u->map_s);
+      u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
+      memset(mar_w, 0xff, (c3_z)hun_u->map_s << 2);
 
-        //  XX memset(mar_w, 0xff, (c3_z)hun_u->map_s << 2);
-        for ( c3_w i_w = 0; i_w < hun_u->map_s; i_w++ ) {
-          mar_w[i_w] = ~0;
-        }
-
-        //  mark page metadata
-        //
-        if ( !hun_u->hun_s ) {
-          u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
-        }
-        else {
-          //  XX need static assert that max(hun_w) < 32
-          //  mar_w[0] &= (c3_w)~0 << hun_u->hun_s;
-          //
-          for ( c3_w i_w = 0; i_w < hun_u->hun_s; i_w++ ) {
-            mar_w[i_w >> 5] &= ~(1U << (i_w & 31));
-          }
-
-          u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
-        }
-
-        u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
+      //  mark page metadata
+      //
+      if ( !hun_u->hun_s ) {
+        u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
       }
+      else {
+        //  XX need static assert that max(hun_w) < 32
+        //  mar_w[0] &= (c3_w)~0 << hun_u->hun_s;
+        //
+        for ( c3_w i_w = 0; i_w < hun_u->hun_s; i_w++ ) {
+          mar_w[i_w >> 5] &= ~(1U << (i_w & 31));
+        }
+
+        u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
+      }
+
+      u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
     }
 
     mar_w[pos_w >> 5] &= ~(1U << (pos_w & 31));
@@ -1581,32 +1553,22 @@ _count_post(u3_post som_p, c3_y rat_y)
     //  page is unmarked, allocate and initialize mark-array
     //
     else {
-      {
-        siz_w = hun_u->len_s;
-        mar_w = u3a_mark_alloc(hun_u->tot_s);
-        u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
+      siz_w = hun_u->len_s;
+      mar_w = u3a_mark_alloc(hun_u->tot_s);
+      u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
+      memset(mar_w, 0, (c3_z)hun_u->tot_s << 2);
 
-        //  XX memset(mar_w, 0, (c3_z)hun_u->tot_s << 2);
-        for ( c3_w i_w = 0; i_w < hun_u->tot_s; i_w++ ) {
-          mar_w[i_w] = 0;
-        }
-
-        //  mark page metadata
-        //
-        if ( !hun_u->hun_s ) {
-          u3a_Mark.wee_w[bit_g] += _count_post(dir_p, 0);
-        }
-        else {
-          //  XX memset(mar_w, 0xff, (c3_z)hun_u->hun_s << 2);
-          for ( c3_w i_w = 0; i_w < hun_u->hun_s; i_w++ ) {
-            mar_w[i_w]--;
-          }
-
-          u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
-        }
-
-        u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
+      //  mark page metadata
+      //
+      if ( !hun_u->hun_s ) {
+        u3a_Mark.wee_w[bit_g] += _count_post(dir_p, 0);
       }
+      else {
+        memset(mar_w, 0xff, (c3_z)hun_u->hun_s << 2);
+        u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
+      }
+
+      u3a_Mark.bit_w[blk_w] |= 1U << bit_w;
     }
 
     switch ( rat_y ) {
@@ -2097,8 +2059,8 @@ _pack_seek(void)
           hap_w[i_w] = ~(pag_u->map_w[i_w]);
         }
 
-        if ( hun_u->tot_s & 31 ) {
-          hap_w[hun_u->map_s - 1] &= (1U << (hun_u->tot_s & 31)) - 1;
+        if ( hun_u->tot_s < 32 ) {
+          hap_w[0] &= (1U << hun_u->tot_s) - 1;
         }
 
         sum_w = 0;
