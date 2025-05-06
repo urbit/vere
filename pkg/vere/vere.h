@@ -440,7 +440,7 @@
           u3_writ_peek = 1,
           u3_writ_live = 2,
           u3_writ_exit = 3,
-          u3_writ_quiz = 4
+          u3_writ_quiz = 4,
         } u3_writ_type;
 
       /* u3_writ: ipc message from urth to mars
@@ -634,6 +634,7 @@
           c3_s             pes_s;               //  htls port
           c3_s             por_s;               //  ames port
           struct _u3_pier* nex_u;               //  next in list
+          u3_noun            cax;               //  cache
         } u3_pier;
 
       /* u3_king: all executing piers.
