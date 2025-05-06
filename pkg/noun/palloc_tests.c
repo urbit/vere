@@ -1,11 +1,25 @@
 /// @file
 
+#include "events.h"
+
+struct heap {
+  u3p(u3a_dell)  fre_p;               //  free list
+  u3p(u3a_dell)  erf_p;               //  free list
+  u3p(u3a_dell)  cac_p;               //  cached pgfree struct
+  u3_post        bot_p;               //  XX s/b rut_p
+  c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
+  c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
+  c3_w           siz_w;               //  directory size
+  c3_w           len_w;               //  directory entries
+  u3p(u3a_crag*) pag_p;               //  directory
+  u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+};
+
 struct heap hep_u;
 
 #define HEAP  (hep_u)
 
 #include "./palloc.c"
-#include "events.h"
 
 /* _setup(): prepare for tests.
 */
@@ -18,36 +32,20 @@ _setup(void)
 }
 
 static void
-_test_print_chunk(c3_g bit_g)  // 0-9, inclusive
-{
-  c3_s    log_s = bit_g + u3a_min_log;
-  c3_s    len_s = 1U << log_s;
-  c3_s    tot_s = 1U << (u3a_page - log_s);  // 2-1.024, inclusive
-  c3_s    siz_s = c3_wiseof(u3a_crag);
-
-  siz_s += tot_s >> 5;
-  siz_s += !!(tot_s & 31);
-  siz_s--;
-
-  c3_g met_g = (c3_g)c3_bits_word((c3_w)siz_s - 1) - u3a_min_log;
-
-  if ( len_s <= (siz_s << 1) ) {
-    fprintf(stderr, "chunks: inline pginfo: bit=%u log=%u len=%u tot=%u, siz=%u, chunks=%u met=%u\n",
-                    bit_g, log_s, len_s, tot_s, siz_s, (siz_s / len_s + !!(siz_s % len_s)), met_g);
-
-
-  }
-  else {
-    fprintf(stderr, "chunks: malloc pginfo: bit=%u log=%u len=%u tot=%u, siz=%u chunks=%u met=%u\n",
-                    bit_g, log_s, len_s, tot_s, siz_s, (siz_s / len_s + !!(siz_s % len_s)), met_g);
-  }
-}
-
-static void
 _test_print_chunks(void)
 {
-  for ( c3_w i_w = 0; i_w < 10; i_w++ ) {
-    _test_print_chunk(i_w);
+  u3a_hunk_dose *hun_u;
+  c3_g met_g;
+  c3_w hun_w;
+
+  for ( c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
+    hun_u = &(u3a_Hunk[bit_g]);
+    met_g = (c3_g)c3_bits_word((c3_w)hun_u->siz_s - 1) - u3a_min_log;
+    hun_w = 1U + ((hun_u->siz_s - 1) >> hun_u->log_s);
+
+    fprintf(stderr, "chunks: %s pginfo: bit=%u log=%u len=%u tot=%u, siz=%u, chunks=%u met=%u\n",
+                    ( hun_u->hun_s ? "inline" : "malloc" ), bit_g,
+                    hun_u->log_s, hun_u->len_s, hun_u->tot_s, hun_u->siz_s, hun_w, met_g);
   }
 }
 
@@ -92,7 +90,7 @@ _test_palloc(void)
   struct heap tmp_u;
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
-  _init();
+  _init_heap();
 
   pos_p = _imalloc(4);
 
@@ -120,7 +118,7 @@ _test_palloc(void)
   fprintf(stderr, "palloc_tests: post-leap: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
-  _init();
+  _init_heap();
 
   pos_p = _imalloc(4);
 

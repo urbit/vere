@@ -46,18 +46,6 @@ typedef struct _u3a_dell {
   c3_w                  siz_w;     //  number of pages
 } u3a_dell;
 
-struct heap {
-  u3p(u3a_dell)  fre_p;               //  free list
-  u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-  u3_post        bot_p;               //  XX s/b rut_p
-  c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
-  c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
-  c3_w           siz_w;               //  directory size
-  c3_w           len_w;               //  directory entries
-  u3p(u3a_crag*) pag_p;               //  directory
-  u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
-};
-
 #define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
 #define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
 
