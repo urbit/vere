@@ -956,7 +956,7 @@ _mars_play_batch(u3_mars* mar_u,
 }
 
 static c3_o
-_mars_do_boot(u3_disk* log_u, c3_d eve_d)
+_mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 {
   u3_weak eve;
   c3_l  mug_l;
@@ -973,7 +973,21 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
 
   //  hack to recover structural sharing
   //
-  eve = u3m_love(u3ke_cue(u3ke_jam(eve)));
+  u3_noun xev = u3m_love(u3ke_cue(u3ke_jam(u3nc(cax, eve))));
+  u3z(cax);
+  u3x_cell(xev, &cax, &eve);
+  u3k(eve); u3k(cax);
+  u3z(xev);
+  xev = cax;
+
+  //  prime memo cache
+  //
+  while ( u3_nul != cax ) {
+    u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+               u3t(u3h(cax)));
+    cax = u3t(cax);
+  }
+  u3z(xev);
 
   //  install an ivory pill to support stack traces
   //
@@ -1148,7 +1162,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
       exit(1);
     }
 
-    if ( c3n == _mars_do_boot(mar_u->log_u, met_u.lif_w) ) {
+    if ( c3n == _mars_do_boot(mar_u->log_u, met_u.lif_w, u3_nul) ) {
       fprintf(stderr, "mars: boot fail\r\n");
       //  XX exit code, cb
       //
@@ -1325,7 +1339,7 @@ u3_mars_init(c3_c*    dir_c,
   }
 
   if ( !mar_u->dun_d ) {
-    if ( c3n == _mars_do_boot(mar_u->log_u, mar_u->met_u.lif_w) ) {
+    if ( c3n == _mars_do_boot(mar_u->log_u, mar_u->met_u.lif_w, u3_nul) ) {
       fprintf(stderr, "mars: boot fail\r\n");
       u3_disk_exit(mar_u->log_u);
       c3_free(mar_u);
@@ -1544,6 +1558,7 @@ static c3_o
 _mars_boot_make(u3_boot_opts* inp_u,
                 u3_noun         com,
                 u3_noun*        ova,
+                u3_noun*        xac,
                 u3_meta*      met_u)
 {
   //  set the disk version
@@ -1718,8 +1733,10 @@ _mars_boot_make(u3_boot_opts* inp_u,
       u3_noun tmp = cax;
       c3_o gud_o = c3y;
       while ( u3_nul != tmp ) {
-        if ( (c3n == u3a_is_cell(u3h(tmp))) ||
-             (c3n == u3a_is_cell(u3h(u3h(tmp)))) ) {
+        if ( (c3n == u3a_is_cell(tmp)) ||
+             (c3n == u3a_is_cell(u3h(tmp))) ||
+             (c3n == u3a_is_cell(u3h(u3h(tmp)))) )
+        {
           gud_o = c3n;
         }
         tmp = u3t(tmp);
@@ -1727,21 +1744,14 @@ _mars_boot_make(u3_boot_opts* inp_u,
 
       if ( c3n == gud_o ) {
         u3l_log("mars: got bad cache");
+        u3z(cax);
+        *xac = u3_nul;
       }
       else {
-        while ( u3_nul != cax ) {
-          u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
-                     u3t(u3h(cax)));
-          cax = u3t(cax);
-        }
+        *xac = cax;
       }
-
-      // XX joe double-check please
-      u3z(cax);
     }
   }
-
-
 
   u3z(com);
 
@@ -1766,6 +1776,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
   u3_boot_opts inp_u;
   u3_meta      met_u;
   u3_noun        ova;
+  u3_noun        cax;
 
   inp_u.veb_o = __( u3C.wag_w & u3o_verbose );
   inp_u.lit_o = c3n; // unimplemented in arvo
@@ -1784,7 +1795,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     u3z(now);
   }
 
-  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &met_u) ) {
+  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
     fprintf(stderr, "boot: preparation failed\r\n");
     return c3n;
   }
@@ -1810,7 +1821,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
 
   _mars_step_trace(dir_c);
 
-  if ( c3n == _mars_do_boot(log_u, log_u->dun_d) ) {
+  if ( c3n == _mars_do_boot(log_u, log_u->dun_d, cax) ) {
     return c3n;  //  XX cleanup
   }
 
