@@ -311,28 +311,26 @@ u3a_malloc(size_t len_i)
 }
 
 /* u3a_celloc(): allocate a cell.
-   XXX beware when we stop boxing cells and QWORD align references
 */
 c3_w*
 u3a_celloc(void)
 {
-  u3a_cell* cel_u;
+  u3a_cell *cel_u;
+  u3_post  *cel_p;
 
-  if ( &(u3H->rod_u) != u3R ) {
-    u3_post* cel_p = u3to(u3_post, u3R->hep.cel_p);
+  if ( u3R->cel.cel_p ) {
+    cel_p = u3to(u3_post, u3R->cel.cel_p);
 
-    if ( !u3R->hep.cel_w ) {
-      _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page), (u3R->hep.bat_w++ & 1), &u3R->hep.cel_w, cel_p);
+    if ( !u3R->cel.hav_w ) {
+      _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page),
+                   (u3R->cel.bat_w++ & 1), &u3R->cel.hav_w, cel_p);
     }
 
-    cel_u = u3to(u3a_cell, cel_p[--u3R->hep.cel_w]);
+    cel_u = u3to(u3a_cell, cel_p[--u3R->cel.hav_w]);
   }
   else {
     cel_u = u3a_walloc(c3_wiseof(*cel_u));
   }
-
-  cel_u->use_w = 1;
-  cel_u->mug_w = 0; // XX maybe not
 
 #ifdef U3_CPU_DEBUG
   u3R->pro.cel_d++;
@@ -347,10 +345,12 @@ u3a_celloc(void)
 void
 u3a_cfree(c3_w* cel_w)
 {
-  if ( &(u3H->rod_u) != u3R ) {
-    if ( u3R->hep.cel_w < (1U << u3a_page) ) {
-      u3_post* cel_p = u3to(u3_post, u3R->hep.cel_p);
-      cel_p[u3R->hep.cel_w++] = u3a_outa(cel_w);
+  u3_post *cel_p;
+
+  if ( u3R->cel.cel_p ) {
+    if ( u3R->cel.hav_w < (1U << u3a_page) ) {
+      cel_p = u3to(u3_post, u3R->cel.cel_p);
+      cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
       return;
     }
   }
@@ -546,6 +546,7 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
                                    new_u);
 #endif
 
+  new_u->use_w = 1;
   new_u->mug_w = old_u->mug_w;
   new_u->hed   = hed;
   new_u->tel   = tel;
@@ -1643,14 +1644,14 @@ u3a_mark_road()
   qua_u[9]->nam_c = strdup("cell pool");
 
   {
-    c3_w cel_w = 0;
+    u3_post *cel_p;
+    c3_w     cel_w = 0;
 
-    if ( u3R->hep.cel_p ) {
-      u3_post *cel_p = u3to(u3_post, u3R->hep.cel_p);
-
+    if ( u3R->cel.cel_p ) {
+      cel_p  = u3to(u3_post, u3R->cel.cel_p);
       cel_w += u3a_mark_ptr(cel_p);
 
-      for ( c3_w i_w = 0; i_w < u3R->hep.cel_w; i_w++ ) {
+      for ( c3_w i_w = 0; i_w < u3R->cel.hav_w; i_w++ ) {
         cel_w += u3a_mark_ptr(u3a_into(cel_p[i_w]));
       }
     }
