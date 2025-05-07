@@ -475,7 +475,7 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   //  reserve chunks stolen for pginfo
   //  NB: max [hun_s] guarded by assertion in _init_once()
   //
-  pag_u->map_w[0] &= (c3_w)~0 << hun_u->hun_s;
+  pag_u->map_w[0] &= ~0U << hun_u->hun_s;
 
   {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -1253,7 +1253,7 @@ _mark_post(u3_post som_p)
       else {
         //  NB: max [hun_s] guarded by assertion in _init_once()
         //
-        mar_w[0] &= (c3_w)~0 << hun_u->hun_s;
+        mar_w[0] &= ~0U << hun_u->hun_s;
         u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
       }
 
@@ -1922,7 +1922,7 @@ _pack_seek_hunks(void)
       c3_s      max_s = pos_s >> 5;
 
       memset(peg_u->map_w, 0, max_s << 2);
-      peg_u->map_w[max_s++] = ~0 << (pos_s & 31);
+      peg_u->map_w[max_s++] = ~0U << (pos_s & 31);
       memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << 2);
 
       peg_u->fre_s = pre_u.fre_s;
