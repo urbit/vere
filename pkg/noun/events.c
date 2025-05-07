@@ -668,9 +668,6 @@ _ce_patch_write_page(u3_ce_patch* pat_u,
   }
 }
 
-//  XX remove
-#define u3a_free_pg  (u3_post)0
-
 /* _ce_patch_count_page(): count a page, producing new counter.
 */
 static c3_w
@@ -728,8 +725,6 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   }
   return pgc_w;
 }
-
-#undef u3a_free_pg
 
 /* _ce_patch_compose(): make and write current patch.
 */

@@ -54,6 +54,20 @@
     */
 #     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
 
+    /* u3a_min_log: log2(u3a_minimum)
+    */
+#     define u3a_min_log  2
+
+    /* u3a_crag_no: number of hunk (small allocation) sizes
+    */
+#     define u3a_crag_no  (u3a_page - u3a_min_log)
+
+    /* page table constants
+    */
+#     define u3a_free_pg  (u3p(u3a_crag))0
+#     define u3a_head_pg  (u3p(u3a_crag))1
+#     define u3a_rest_pg  (u3p(u3a_crag))2
+
   /**  Structures.
   **/
       typedef struct {
@@ -80,6 +94,28 @@
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
+
+STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
+               "log2 minimum allocation" );
+
+    /* u3a_crag: hunk-page metadata
+    */
+      typedef struct _u3a_crag {
+        u3p(struct _u3a_crag) nex_p;     //  next
+        c3_w                  pag_w;     //  page index
+        c3_s                  log_s;     //  size log2
+        c3_s                  fre_s;     //  free chunks
+        c3_w                  map_w[1];  //  free-chunk bitmap
+      } u3a_crag;
+
+    /* u3a_dell: page free-list entry
+    */
+      typedef struct _u3a_dell {
+        u3p(struct _u3a_dell) nex_p;     //  next
+        u3p(struct _u3a_dell) pre_p;     //  prev
+        c3_w                  pag_w;     //  page index
+        c3_w                  siz_w;     //  number of pages
+      } u3a_dell;
 
     /* u3a_jets: jet dashboard
     */
@@ -117,28 +153,23 @@
           c3_w fag_w;                         //  flag bits
         } how;                                //
 
+        //  XX re/move
         struct {                              //  allocation pools
           c3_w fre_w;                         //  number of free words
           c3_w max_w;                         //  maximum allocated
         } all;
 
-        struct {
-          u3_post fre_p;
-          u3_post erf_p;
-          u3_post cac_p;
-          // u3p(u3a_dell)  fre_p;               //  free list entry
-          // u3p(u3a_dell)  erf_p;               //  free list exit
-          // u3p(u3a_dell)  cac_p;               //  cached pgfree struct
+        struct {                              //    heap allocator
+          u3p(u3a_dell)  fre_p;               //  free list entry
+          u3p(u3a_dell)  erf_p;               //  free list exit
+          u3p(u3a_dell)  cac_p;               //  cached pgfree struct
           u3_post        bot_p;               //  XX s/b rut_p
           c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
           c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
           c3_w           siz_w;               //  directory size
           c3_w           len_w;               //  directory entries
-          u3_post pag_p;
-#define u3a_crag_no  10
-          u3_post wee_p[u3a_crag_no];
-          // u3p(u3a_crag*) pag_p;               //  directory
-          // u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+          u3p(u3a_crag*) pag_p;               //  directory
+          u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
           u3_post        cel_p;
           c3_w           cel_w;
           c3_w           bat_w;
