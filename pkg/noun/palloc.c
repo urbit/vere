@@ -20,35 +20,8 @@
 #  define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
 #endif
 
-#define u3a_min_log  2
-
-STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
-               "log2 minimum allocation" );
-
-#define u3a_free_pg  (u3p(u3a_crag))0
-#define u3a_head_pg  (u3p(u3a_crag))1
-#define u3a_rest_pg  (u3p(u3a_crag))2
-
-// #define u3a_crag_no  (u3a_page - u3a_min_log)
-
-typedef struct _u3a_crag {
-  u3p(struct _u3a_crag) nex_p;     //  next
-  c3_w                  pag_w;     //  page index
-  c3_s                  log_s;     //  size log2
-  c3_s                  fre_s;     //  free chunks
-  c3_w                  map_w[1];  //  free-chunk bitmap
-} u3a_crag;
-
-typedef struct _u3a_dell {
-  u3p(struct _u3a_dell) nex_p;     //  next
-  u3p(struct _u3a_dell) pre_p;     //  prev
-  c3_w                  pag_w;     //  page index
-  c3_w                  siz_w;     //  number of pages
-} u3a_dell;
-
 #define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
 #define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
-
 
 #ifndef HEAP
   #define HEAP u3R->hep
