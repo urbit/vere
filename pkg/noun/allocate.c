@@ -1722,6 +1722,7 @@ u3a_reclaim(void)
 void
 u3a_rewrite_compact(void)
 {
+  //  XX relocate cel_p
   u3a_relocate_noun(&(u3R->ski.gul));
   u3a_relocate_noun(&(u3R->bug.tax));
   u3a_relocate_noun(&(u3R->bug.mer));
@@ -1787,6 +1788,7 @@ u3a_pack_seek(u3a_road* rod_u)
 
   //  XX use road argument
   _pack_seek();
+  _pack_relocate_heap();
 }
 
 /* u3a_pack_move(): sweep the heap, moving boxes to new addresses.

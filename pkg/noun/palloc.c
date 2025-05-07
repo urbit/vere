@@ -1737,6 +1737,279 @@ typedef struct {
   c3_w    mar_w[0];
 } _ca_frag;
 
+//  adapted from https://stackoverflow.com/a/27663998 and
+//  https://gist.github.com/ideasman42/5921b0edfc6aa41a9ce0
+//
+static u3p(u3a_crag)
+_sort_crag(u3p(u3a_crag) hed_p)
+{
+  c3_w bon_w, biz_w = 1; // block count, size
+  u3p(u3a_crag) s_p, l_p, r_p, *tal_p;
+  c3_w l_w, r_w;
+  c3_t l_t, r_t;
+
+  do {
+    l_p = r_p = hed_p;
+
+    hed_p = 0;
+    tal_p = &hed_p;
+    bon_w = 0;
+
+    while ( l_p ) {
+      r_w = biz_w;
+
+      bon_w++;
+      for ( l_w = 0; (l_w < biz_w) && r_p; l_w++) {
+        r_p = u3to(u3a_crag, r_p)->nex_p;
+      }
+
+      l_t = (0 == l_w);
+      r_t = (0 == r_w) || !r_p;
+
+      while ( !l_t || !r_t ) {
+        if ( r_t || (!l_t && (u3to(u3a_crag, l_p)->pag_w < u3to(u3a_crag, r_p)->pag_w)) ) {
+          s_p = l_p;
+          l_p = u3to(u3a_crag, l_p)->nex_p;
+          l_w--;
+          l_t = (0 == l_w);
+        }
+        else {
+          s_p = r_p;
+          r_p = u3to(u3a_crag, r_p)->nex_p;
+          r_w--;
+          r_t = (0 == r_w) || !r_p;
+        }
+
+        *tal_p = s_p;
+        tal_p  = &(u3to(u3a_crag, s_p)->nex_p);
+      }
+
+      l_p = r_p;
+    }
+
+    *tal_p  = 0;
+    biz_w <<= 1;
+  }
+  while ( bon_w > 1 );
+
+  return hed_p;
+}
+
+static void
+_pack_seek_hunks(void)
+{
+  const u3a_hunk_dose      *hun_u;
+  u3_post     dir_p, nex_p, fre_p;
+  u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_w len_w, sum_w, i_w, *hap_w, *hum_w;
+  c3_g bit_g = u3a_crag_no;
+  u3a_crag   *pag_u;
+  _ca_prag   *rag_u;
+
+  struct {
+    c3_w    pag_w;  //  previous page in class (original number)
+    c3_s    fre_s;  //  previous hunks available
+    c3_s    pos_s;  //  previous hunks used
+    u3_post dir_p;
+  } pre_u;
+
+  while ( bit_g-- ) {
+    if ( !HEAP.wee_p[bit_g] ) {
+      continue;
+    }
+
+    //  XX investigate, should only be required on inner roads
+    //
+    HEAP.wee_p[bit_g] = _sort_crag(HEAP.wee_p[bit_g]);
+    dir_p = HEAP.wee_p[bit_g];
+    hun_u = &(u3a_Hunk[bit_g]);
+    memset(&pre_u, 0, sizeof(pre_u));
+
+    len_w = c3_wiseof(_ca_prag) + (3 * hun_u->map_s);
+
+    while ( dir_p ) {
+      pag_u = u3to(u3a_crag, dir_p);
+      nex_p = pag_u->nex_p;
+      pag_u->nex_p = 0;
+
+      u3_assert( pre_u.pag_w < pag_u->pag_w );
+
+      rag_u = u3a_pack_alloc(len_w);
+      hap_w = &(rag_u->mar_w[hun_u->map_s]);
+      hum_w = &(hap_w[hun_u->map_s]);
+      rag_u->log_s = hun_u->log_s;
+      rag_u->pre_u.pag_w = pre_u.pag_w;
+      rag_u->pre_u.fre_s = pre_u.fre_s;
+      rag_u->pre_u.pos_s = pre_u.pos_s;
+
+      memset(rag_u->mar_w, 0, hun_u->map_s << 2);
+
+      for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
+        hap_w[i_w] = ~(pag_u->map_w[i_w]);
+      }
+
+      if ( hun_u->tot_s < 32 ) {
+        hap_w[0] &= (1U << hun_u->tot_s) - 1;
+      }
+
+      sum_w = 0;
+      for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
+        hum_w[i_w] = sum_w;
+        sum_w += c3_pc_w(hap_w[i_w]);
+      }
+
+      u3a_Gack.buf_w[pag_u->pag_w] = ((c3_w*)rag_u - u3a_Gack.buf_w) | (1U << 31);
+
+      c3_s pos_s = hun_u->ful_s - pag_u->fre_s;
+
+      u3_assert( (pos_s + hun_u->hun_s) == sum_w );
+
+      //  there is a previous page, and it will be full
+      //
+      if (  (pos_s == pre_u.fre_s)
+         || (pre_u.dir_p && (pos_s > pre_u.fre_s)) )
+      {
+        u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
+        memset(peg_u->map_w, 0, hun_u->map_s << 2);
+        peg_u->fre_s = 0;
+      }
+
+      //  current page will be empty
+      //
+      if ( pos_s <= pre_u.fre_s ) {
+        rag_u->dir_p = 0;
+        dir_u[pag_u->pag_w] = u3a_free_pg;
+        fre_p = hun_u->hun_s ? 0 : dir_p;
+      }
+      else {
+        fre_p = 0;
+      }
+
+      //  previous page is the same
+      //
+      if ( pos_s < pre_u.fre_s ) {
+        pre_u.fre_s -= pos_s;
+        pre_u.pos_s += pos_s;
+      }
+      //  current becomes previous
+      //
+      else if ( pos_s > pre_u.fre_s ) {
+        rag_u->dir_p = dir_p;
+        pos_s       -= pre_u.fre_s;
+        pre_u.fre_s += pag_u->fre_s;
+        pre_u.pag_w  = pag_u->pag_w;
+        pre_u.pos_s  = pos_s;
+        pre_u.dir_p  = dir_p;
+      }
+      //  no previous page
+      //
+      else {
+        memset(&pre_u, 0, sizeof(pre_u));
+      }
+
+      if ( fre_p ) {
+        _ifree(fre_p);
+      }
+
+      dir_p = nex_p;
+    }
+
+    HEAP.wee_p[bit_g] = pre_u.dir_p;
+
+    if ( pre_u.dir_p ) {
+      u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
+      c3_s      pos_s = pre_u.pos_s + hun_u->hun_s;
+      c3_s      max_s = pos_s >> 5;
+
+      memset(peg_u->map_w, 0, max_s << 2);
+      peg_u->map_w[max_s++] = ~0 << (pos_s & 31);
+      memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << 2);
+
+      peg_u->fre_s = pre_u.fre_s;
+    }
+  }
+}
+
+static void
+_pack_seek(void)
+{
+  u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  c3_w blk_w, bit_w, fre_w = 0;
+  u3_post     dir_p;
+
+  {
+    u3_post   fre_p;
+    u3a_dell *fre_u;
+
+    while ( (fre_p = HEAP.fre_p) ) {
+      fre_u = u3to(u3a_dell, fre_p);
+      HEAP.fre_p = fre_u->nex_p;
+      _ifree(fre_p);
+    }
+  }
+
+  _pack_seek_hunks();
+
+  for ( c3_w pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+    if ( u3a_free_pg == (dir_p = dir_u[pag_w]) ) {
+      fre_w++;
+      continue;
+    }
+
+    blk_w = pag_w >> 5;
+    bit_w = pag_w & 31;
+    u3a_Gack.pap_w[blk_w] |= 1U << bit_w;
+
+    if ( u3a_rest_pg >= dir_p ) {
+      u3a_Gack.buf_w[pag_w] = dir_p;
+    }
+    //  chunk page, not processed above (ie, full)
+    //
+    else if ( !u3a_Gack.buf_w[pag_w] ) {
+      u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+      c3_g      bit_g = pag_u->log_s - u3a_min_log;
+      const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
+
+      _ca_frag *fag_u = u3a_pack_alloc(c3_wiseof(_ca_frag) + hun_u->map_s);
+      u3a_Gack.buf_w[pag_w] = (c3_w*)fag_u - u3a_Gack.buf_w;
+
+      fag_u->dir_p = dir_p;
+      fag_u->log_s = pag_u->log_s;
+      memset(fag_u->mar_w, 0, (c3_z)hun_u->map_s << 2);
+    }
+  }
+
+  //  shrink page directory
+  //
+  {
+    c3_w old_w = HEAP.siz_w >> u3a_page;
+    c3_w dif_w = (HEAP.siz_w - (HEAP.len_w - fre_w)) >> u3a_page;
+    c3_w pag_w = post_to_page(HEAP.pag_p);
+    c3_w gap_w;
+
+    for ( c3_w i_w = 0; i_w < dif_w; i_w++ ) {
+      gap_w = pag_w + (HEAP.dir_ws * (old_w - i_w - 1));
+      blk_w = gap_w >> 5;
+      bit_w = gap_w & 31;
+      u3a_Gack.buf_w[gap_w] = u3a_free_pg;
+      u3a_Gack.pap_w[blk_w] &= ~(1U << bit_w);
+    }
+
+    HEAP.siz_w -= dif_w << u3a_page;
+  }
+
+  //  calculate cumulative sums of bitmap popcounts
+  //
+  {
+    c3_w sum_w = 0, max_w = (HEAP.len_w + 31) >> 5;
+
+    for ( c3_w i_w = 0; i_w < max_w; i_w++ ) {
+      u3a_Gack.pum_w[i_w] = sum_w;
+      sum_w += c3_pc_w(u3a_Gack.pap_w[i_w]);
+    }
+  }
+}
+
 static inline c3_w
 _pack_relocate_page(c3_w pag_w)
 {
@@ -1761,16 +2034,14 @@ _pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
 
   new_w += c3_pc_w(top_w);
 
-  if ( new_w < hun_u->hun_s ) {
-    u3_assert( 0 == new_w );
-    u3_assert( 0 == pos_w );
-  }
-  else if ( new_w < (rag_u->pre_u.fre_s + hun_u->hun_s) ) {
-    pag_w  = rag_u->pre_u.pag_w;
-    new_w += rag_u->pre_u.pos_s;
-  }
-  else {
-    new_w -= rag_u->pre_u.fre_s;
+  if ( new_w >= hun_u->hun_s ) {
+    if ( new_w < (rag_u->pre_u.fre_s + hun_u->hun_s) ) {
+      pag_w  = rag_u->pre_u.pag_w;
+      new_w += rag_u->pre_u.pos_s;
+    }
+    else {
+      new_w -= rag_u->pre_u.fre_s;
+    }
   }
 
   {
@@ -1839,7 +2110,6 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
     if ( !(rag_u->mar_w[blk_w] & (1U << bit_w)) ) {
       rag_u->mar_w[blk_w] |= (1U << bit_w);
       out_t = 1;
-      // fprintf(stderr, "0x%x -> 0x%x\r\n", som_p, out_p);
     }
 
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
@@ -1881,312 +2151,37 @@ _pack_relocate(u3_post som_p)
     //  NB map inverted, free state updated
 
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
-    // fprintf(stderr, "0x%x -> 0x%x\r\n", som_p, out_p);
   }
 
   return out_p;
 }
 
-//  adapted from https://stackoverflow.com/a/27663998 and
-//  https://gist.github.com/ideasman42/5921b0edfc6aa41a9ce0
-//
-static u3p(u3a_crag)
-_sort_crag(u3p(u3a_crag) hed_p)
-{
-  c3_w bon_w, biz_w = 1; // block count, size
-  u3p(u3a_crag) s_p, l_p, r_p, *tal_p;
-  c3_w l_w, r_w;
-  c3_t l_t, r_t;
-
-  do {
-    l_p = r_p = hed_p;
-
-    hed_p = 0;
-    tal_p = &hed_p;
-    bon_w = 0;
-
-    while ( l_p ) {
-      r_w = biz_w;
-
-      bon_w++;
-      for ( l_w = 0; (l_w < biz_w) && r_p; l_w++) {
-        r_p = u3to(u3a_crag, r_p)->nex_p;
-      }
-
-      l_t = (0 == l_w);
-      r_t = (0 == r_w) || !r_p;
-
-      while ( !l_t || !r_t ) {
-        if ( r_t || (!l_t && (u3to(u3a_crag, l_p)->pag_w < u3to(u3a_crag, r_p)->pag_w)) ) {
-          s_p = l_p;
-          l_p = u3to(u3a_crag, l_p)->nex_p;
-          l_w--;
-          l_t = (0 == l_w);
-        }
-        else {
-          s_p = r_p;
-          r_p = u3to(u3a_crag, r_p)->nex_p;
-          r_w--;
-          r_t = (0 == r_w) || !r_p;
-        }
-
-        *tal_p = s_p;
-        tal_p  = &(u3to(u3a_crag, s_p)->nex_p);
-      }
-
-      l_p = r_p;
-    }
-
-    *tal_p  = 0;
-    biz_w <<= 1;
-  }
-  while ( bon_w > 1 );
-
-  return hed_p;
-}
-
 static void
-_pack_seek(void)
+_pack_relocate_heap(void)
 {
-  u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  const u3a_hunk_dose      *hun_u;
-  u3_post     dir_p, som_p, nex_p, fre_p;
-  c3_w blk_w, bit_w, pag_w;
-  u3a_dell *fre_u;
-
-  while ( (fre_p = HEAP.fre_p) ) {
-    fre_u = u3to(u3a_dell, fre_p);
-    HEAP.fre_p = fre_u->nex_p;
-    _ifree(fre_p);
-  }
-
-  {
-    struct {
-      c3_w    pag_w;  //  previous page in class (original number)
-      c3_s    fre_s;  //  previous hunks available
-      c3_s    pos_s;  //  previous hunks used
-      u3_post dir_p;
-    } pre_u;
-
-    u3a_crag   *pag_u;
-    _ca_prag   *rag_u;
-    c3_w len_w, sum_w, i_w;
-    c3_w *hap_w;  //  hunk bitmap (dag_u)
-    c3_w *hum_w;  //  cumulative sums (dag_u) // XX could be c3_s
-    c3_g bit_g = u3a_crag_no;
-
-    while ( bit_g-- ) {
-      if ( !HEAP.wee_p[bit_g] ) {
-        continue;
-      }
-
-      //  XX investigate, should only be required on inner roads
-      //
-      HEAP.wee_p[bit_g] = _sort_crag(HEAP.wee_p[bit_g]);
-      dir_p = HEAP.wee_p[bit_g];
-      hun_u = &(u3a_Hunk[bit_g]);
-      memset(&pre_u, 0, sizeof(pre_u));
-
-      len_w = c3_wiseof(_ca_prag) + (3 * hun_u->map_s);
-
-      while ( dir_p ) {
-        pag_u = u3to(u3a_crag, dir_p);
-        nex_p = pag_u->nex_p;
-
-        pag_u->nex_p = 0;
-
-        u3_assert( pre_u.pag_w < pag_u->pag_w );
-
-        rag_u = u3a_pack_alloc(len_w);
-        hap_w = &(rag_u->mar_w[hun_u->map_s]);
-        hum_w = &(hap_w[hun_u->map_s]);
-        rag_u->log_s = hun_u->log_s;
-
-        rag_u->pre_u.pag_w = pre_u.pag_w;
-        rag_u->pre_u.fre_s = pre_u.fre_s;
-        rag_u->pre_u.pos_s = pre_u.pos_s;
-
-        memset(rag_u->mar_w, 0, hun_u->map_s << 2);
-
-        for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
-          hap_w[i_w] = ~(pag_u->map_w[i_w]);
-        }
-
-        if ( hun_u->tot_s < 32 ) {
-          hap_w[0] &= (1U << hun_u->tot_s) - 1;
-        }
-
-        sum_w = 0;
-        for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
-          hum_w[i_w] = sum_w;
-          sum_w += c3_pc_w(hap_w[i_w]);
-        }
-
-        u3a_Gack.buf_w[pag_u->pag_w] = ((c3_w*)rag_u - u3a_Gack.buf_w) | (1U << 31);
-
-        c3_s pos_s = hun_u->ful_s - pag_u->fre_s;
-
-        u3_assert( (pos_s + hun_u->hun_s) == sum_w );
-
-        //  there is a previous page, and it will be full
-        //
-        if (  (pos_s == pre_u.fre_s)
-           || (pre_u.dir_p && (pos_s > pre_u.fre_s)) )
-        {
-          u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-          memset(peg_u->map_w, 0, hun_u->map_s << 2);
-          peg_u->fre_s = 0;
-        }
-
-        fre_p = 0;
-
-        //  current page will be empty
-        //
-        if ( pos_s <= pre_u.fre_s ) {
-          rag_u->dir_p = 0;
-          dir_u[pag_u->pag_w] = u3a_free_pg;
-          fre_p = hun_u->hun_s ? 0 : dir_p;
-        }
-
-        //  previous page is the same
-        //
-        if ( pos_s < pre_u.fre_s ) {
-          pre_u.fre_s -= pos_s;
-          pre_u.pos_s += pos_s;
-        }
-        //  current becomes previous
-        //
-        else if ( pos_s > pre_u.fre_s ) {
-          rag_u->dir_p = dir_p;
-          pos_s       -= pre_u.fre_s;
-          pre_u.fre_s += pag_u->fre_s;
-          pre_u.pag_w  = pag_u->pag_w;
-          pre_u.pos_s  = pos_s;
-          pre_u.dir_p  = dir_p;
-        }
-        //  no previous page
-        //
-        else {
-          memset(&pre_u, 0, sizeof(pre_u));
-        }
-
-        if ( fre_p ) {
-          // fprintf(stderr, "hunk part crag free 0x%x\r\n", fre_p);
-          _ifree(fre_p);
-        }
-
-        dir_p = nex_p;
-      }
-
-      HEAP.wee_p[bit_g] = pre_u.dir_p;
-
-      if ( pre_u.dir_p ) {
-        u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-        c3_s      pos_s = pre_u.pos_s + hun_u->hun_s;
-        c3_s      max_s = pos_s >> 5;
-
-        // fprintf(stderr, "bit_g=%u dir_p=0x%x nex_p=0x%x pos_s=%u fre_s=%u\r\n",
-        //                 bit_g, pre_u.dir_p, peg_u->nex_p, pre_u.pos_s, pre_u.fre_s);
-
-        //  XX double check these
-        //
-        memset(peg_u->map_w, 0, max_s << 2);
-        peg_u->map_w[max_s++] = ~0 << (pos_s & 31);
-        memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << 2);
-
-        peg_u->fre_s = pre_u.fre_s;
-      }
-    }
-  }
-
-  c3_w fre_w = 0;
-
-  for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
-    blk_w = pag_w >> 5;
-    bit_w = pag_w & 31;
-    dir_p = dir_u[pag_w];
-
-    if ( u3a_free_pg == dir_p ) {
-      fre_w++;
-      continue;
-    }
-
-    u3a_Gack.pap_w[blk_w] |= 1U << bit_w;
-
-    if ( u3a_rest_pg >= dir_p ) {
-      u3a_Gack.buf_w[pag_w] = dir_p;
-    }
-    //  chunk page, not processed above (ie, full)
-    //
-    else if ( !u3a_Gack.buf_w[pag_w] ) {
-      u3a_crag *pag_u = u3to(u3a_crag, dir_p);
-      c3_g      bit_g = pag_u->log_s - u3a_min_log;
-
-      hun_u = &(u3a_Hunk[bit_g]);
-
-      _ca_frag *fag_u = u3a_pack_alloc(c3_wiseof(_ca_frag) + hun_u->map_s);
-      u3a_Gack.buf_w[pag_w] = (c3_w*)fag_u - u3a_Gack.buf_w;
-
-      fag_u->dir_p = dir_p;
-      fag_u->log_s = pag_u->log_s;
-      memset(fag_u->mar_w, 0, (c3_z)hun_u->map_s << 2);
-    }
-  }
-
-  //  shrink page directory
-  //
-  {
-    c3_w old_w = HEAP.siz_w >> u3a_page;
-    c3_w dif_w = (HEAP.siz_w - (HEAP.len_w - fre_w)) >> u3a_page;
-    c3_w gap_w, i_w;
-
-    pag_w = post_to_page(HEAP.pag_p);
-
-    for ( i_w = 0; i_w < dif_w; i_w++ ) {
-      gap_w = pag_w + (HEAP.dir_ws * (old_w - i_w - 1));
-      blk_w = gap_w >> 5;
-      bit_w = gap_w & 31;
-      u3a_Gack.buf_w[gap_w] = u3a_free_pg;
-      u3a_Gack.pap_w[blk_w] &= ~(1U << bit_w);
-    }
-
-    HEAP.siz_w -= dif_w << u3a_page;
-  }
-
-  //  calculate cumulative sums of bitmap popcounts
-  //
-  {
-    c3_w i_w, sum_w = 0, max_w = (HEAP.len_w + 31) >> 5;
-
-    for ( i_w = 0; i_w < max_w; i_w++ ) {
-      u3a_Gack.pum_w[i_w] = sum_w;
-      sum_w += c3_pc_w(u3a_Gack.pap_w[i_w]);
-    }
-  }
-
-  HEAP.pag_p = _pack_relocate(HEAP.pag_p);
-
   //  this is possible if freeing unused u3a_crag's
   //  caused an entire hunk page to be free'd
   //  NB: this corrupts pre_p
   //
   if ( HEAP.fre_p ) {
+    u3a_dell *fre_u;
+
     if ( !HEAP.cac_p ) {
       fre_u = u3to(u3a_dell, HEAP.fre_p);
       HEAP.cac_p = HEAP.fre_p;
       HEAP.fre_p = fre_u->nex_p;
     }
 
-    {
-      u3_post *ref_p = &(HEAP.fre_p);
+    u3_post *ref_p = &(HEAP.fre_p);
 
-      while ( *ref_p ) {
-        fre_u  = u3to(u3a_dell, *ref_p);
-        *ref_p = _pack_relocate(*ref_p);
-        ref_p  = &(fre_u->nex_p);
-      }
+    while ( *ref_p ) {
+      fre_u  = u3to(u3a_dell, *ref_p);
+      *ref_p = _pack_relocate(*ref_p);
+      ref_p  = &(fre_u->nex_p);
     }
   }
+
+  HEAP.pag_p = _pack_relocate(HEAP.pag_p);
 
   if ( HEAP.cac_p ) {
     HEAP.cac_p = _pack_relocate(HEAP.cac_p);
@@ -2198,33 +2193,16 @@ _pack_seek(void)
     }
   }
 
-  //  XX relocate cel_p
+  for ( c3_w pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+    c3_w *wor_w, dir_w = u3a_Gack.buf_w[pag_w];
 
-  {
-    u3a_crag *pag_u;
-    _ca_frag *fag_u;
-    _ca_prag *rag_u;
-    c3_w      dir_w;
-
-    for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
-      dir_w = u3a_Gack.buf_w[pag_w];
-
-      if ( u3a_rest_pg < dir_w ) {
-        if ( !(dir_w >> 31) ) {
-          fag_u = (void*)(u3a_Gack.buf_w + dir_w);
-          pag_u = u3to(u3a_crag, fag_u->dir_p);
-          pag_u->pag_w = _pack_relocate_page(pag_u->pag_w);
-          fag_u->dir_p = _pack_relocate(fag_u->dir_p);
-        }
-        else {
-          rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((1U << 31) - 1)));
-
-          if ( rag_u->dir_p ) {
-            pag_u = u3to(u3a_crag, rag_u->dir_p);
-            pag_u->pag_w = _pack_relocate_page(pag_u->pag_w);
-            rag_u->dir_p = _pack_relocate(rag_u->dir_p);
-          }
-        }
+    if ( u3a_rest_pg < dir_w ) {
+      dir_w &= (1U << 31) - 1;
+      wor_w  = u3a_Gack.buf_w + dir_w;  //  (fag_u | rag_u)->dir_p
+      if ( *wor_w ) {
+        u3a_crag *pag_u = u3to(u3a_crag, *wor_w);
+        pag_u->pag_w = _pack_relocate_page(pag_u->pag_w);
+        *wor_w = _pack_relocate(*wor_w);
       }
     }
   }
