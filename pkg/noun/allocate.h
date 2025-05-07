@@ -170,10 +170,13 @@ STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
           c3_w           len_w;               //  directory entries
           u3p(u3a_crag*) pag_p;               //  directory
           u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
-          u3_post        cel_p;
-          c3_w           cel_w;
-          c3_w           bat_w;
         } hep;
+
+        struct {                              //    cell pool
+          u3_post cel_p;                      //  array of cells
+          c3_w    hav_w;                      //  length
+          c3_w    bat_w;                      //  batch counter
+        } cel;
 
         u3a_jets jed;                         //  jet dashboard
 

@@ -494,7 +494,7 @@ _pave_parts(void)
   u3a_init_heap();
 
   if ( &(u3H->rod_u) != u3R ) {
-    u3R->hep.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
+    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
   }
 
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient

@@ -505,7 +505,7 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
     c3_w*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
-    // nov_u->use_w = 1;
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
 
 #ifdef U3_MEMORY_DEBUG
@@ -535,7 +535,7 @@ u3i_cell(u3_noun a, u3_noun b)
     c3_w*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
-    // nov_u->use_w = 1;
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
     nov_u->hed = a;
     nov_u->tel = b;
