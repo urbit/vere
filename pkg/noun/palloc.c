@@ -642,8 +642,13 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
         HEAP.fre_p = HEAP.erf_p = 0;
       }
 
-      som_p  = page_to_post(fre_u->pag_w);
+      pag_w  = fre_u->pag_w;  // NB: clobbers
       siz_w += fre_u->siz_w;
+
+      // XX groace
+      //
+      pag_w -= HEAP.off_ws * (siz_w - 1);
+      som_p  = page_to_post(pag_w);
     }
     else {
       fre_u = NULL;
@@ -653,7 +658,8 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
 
-    // fprintf(stderr, "shrink heap %u:%u (%u) 0x%x\r\n", pag_w, wiz_w, siz_w, u3R->hat_p);
+    // fprintf(stderr, "shrink heap 0x%x 0x%x %u:%u (%u) 0x%x\r\n",
+    //                 som_p, som_p + (siz_w << u3a_page), pag_w, wiz_w, siz_w, u3R->hat_p);
 
 #ifdef SANITY
     assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
