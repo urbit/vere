@@ -1564,9 +1564,9 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
   if ( !asr_t && !bsr_t ) {
     //  keep [a]; it's deeper in the heap
     //
-    //    (N && >) || (S && <)
+    //    (N && <) || (S && >)
     //
-    if ( (*a > *b) == nor_t ) {
+    if ( (*a < *b) == nor_t ) {
       _me_gain_use(*a);
       if ( own_t ) { u3z(*b); }
       *b = *a;
