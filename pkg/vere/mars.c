@@ -46,6 +46,18 @@ c3_c tac_c[256];  //  tracing label
 --
 */
 
+/*  mars post-op flags
+*/
+enum {
+  _mars_fag_none = 0,       //  nothing to do
+  _mars_fag_pack = 1 << 0,  //  pack kernel
+  _mars_fag_mute = 1 << 2,  //  mutated kernel
+  _mars_fag_hit1 = 1 << 3,  //  hit low threshold
+  _mars_fag_hit0 = 1 << 4,  //  hit high threshold
+  _mars_fag_vega = 1 << 5,  //  kernel reset
+  _mars_fag_much = 1 << 6,  //  bytecode hack
+};
+
 /* _mars_quac: convert a quac to a noun.
 */
 u3_noun
@@ -287,7 +299,7 @@ _mars_make_crud(u3_noun job, u3_noun dud)
 static u3_noun
 _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
 {
-  c3_o rec_o = c3n;
+  c3_o muc_o = c3n;
   c3_o pac_o = c3n;
 
   //  intercept |mass, observe |reset
@@ -320,7 +332,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       //  reclaim memory from persistent caches on |reset
       //
       if ( c3__vega == u3h(fec) ) {
-        rec_o = c3y;
+        muc_o = c3y;
       }
 
       riv = u3t(riv);
@@ -354,12 +366,12 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       //  XX set flag(s) in u3V so we don't repeat endlessly?
       //
       pac_o = c3y;
-      rec_o = c3y;
+      muc_o = c3y;
       pri   = 1;
     }
     else if ( (pre_w > hig_w) && !(pos_w > hig_w) ) {
       pac_o = c3y;
-      rec_o = c3y;
+      muc_o = c3y;
       pri   = 0;
     }
     //  reclaim memory from persistent caches periodically
@@ -369,7 +381,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
     //    - we don't make very effective use of our free lists
     //
     else if ( 0 == (mar_u->dun_d % 1000ULL) ) {
-      rec_o = c3y;
+      muc_o = c3y;
     }
 
     //  notify daemon of memory pressure via "fake" effect
@@ -381,8 +393,8 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
     }
   }
 
-  mar_u->rec_o = c3o(mar_u->rec_o, rec_o);
-  mar_u->pac_o = c3o(mar_u->pac_o, pac_o);
+  if _(muc_o) mar_u->fag_w |= _mars_fag_much;
+  if _(pac_o) mar_u->fag_w |= _mars_fag_pack;
 
   return vir;
 }
@@ -534,7 +546,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       if ( c3y == _mars_poke(mil_w, &job, &pro) ) {
         mar_u->dun_d = mar_u->sen_d;
         mar_u->mug_l = u3r_mug(u3A->roc);
-        mar_u->mut_o = c3y;
+        mar_u->fag_w |= _mars_fag_mute;
 
         pro = _mars_sure_feck(mar_u, pre_w, pro);
 
@@ -623,24 +635,46 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
-  if ( c3y == mar_u->rec_o ) {
-    u3m_reclaim();
-    mar_u->rec_o = c3n;
+  if ( mar_u->fag_w & _mars_fag_pack ) {
+    u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
+    u3l_log("\n");
   }
 
   //  XX this runs on replay too, |mass s/b elsewhere
   //
-  if ( c3y == mar_u->mut_o ) {
+  if ( mar_u->fag_w & _mars_fag_mute ) {
     u3z(_mars_grab(mar_u->sac, c3y));
     mar_u->sac   = u3_nul;
-    mar_u->mut_o = c3n;
   }
 
-  if ( c3y == mar_u->pac_o ) {
-    u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
-    u3l_log("\n");
-    mar_u->pac_o = c3n;
+  if ( mar_u->fag_w & _mars_fag_hit1 ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
+    }
+    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3m_reclaim();
   }
+
+  if ( mar_u->fag_w & _mars_fag_hit0 ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("mars: threshold 0: per_p %u", u3h_wyt(u3R->cax.per_p));
+    }
+    u3h_free(u3R->cax.per_p);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+    u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
+    u3l_log("");
+  }
+
+  if ( mar_u->fag_w & _mars_fag_vega ) {
+    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3m_reclaim();
+  }
+
+  if ( mar_u->fag_w & _mars_fag_much ) {
+    u3m_reclaim();
+  }
+
+  mar_u->fag_w = _mars_fag_none;
 }
 
 /* _mars_damp_file(): write sampling-profiler output.
@@ -1303,7 +1337,7 @@ u3_mars_init(c3_c*    dir_c,
   mar_u->out_u = out_u;
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_l = u3r_mug(u3A->roc);
-  mar_u->pac_o = mar_u->rec_o = mar_u->mut_o = c3n;
+  mar_u->fag_w = _mars_fag_none;
   mar_u->sac   = u3_nul;
   mar_u->sat_e = u3_mars_work_e;
   mar_u->gif_u.ent_u = mar_u->gif_u.ext_u = 0;
