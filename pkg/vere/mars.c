@@ -46,16 +46,23 @@ c3_c tac_c[256];  //  tracing label
 --
 */
 
+/*  mars memory-threshold levels
+*/
+enum {
+  _mars_mas_init = 0,  //  initial
+  _mars_mas_hit1 = 1,  //  past low threshold
+  _mars_mas_hit0 = 2   //  have high threshold
+};
+
 /*  mars post-op flags
 */
 enum {
   _mars_fag_none = 0,       //  nothing to do
-  _mars_fag_pack = 1 << 0,  //  pack kernel
+  _mars_fag_hit1 = 1 << 0,  //  hit low threshold
+  _mars_fag_hit0 = 1 << 1,  //  hit high threshold
   _mars_fag_mute = 1 << 2,  //  mutated kernel
-  _mars_fag_hit1 = 1 << 3,  //  hit low threshold
-  _mars_fag_hit0 = 1 << 4,  //  hit high threshold
-  _mars_fag_vega = 1 << 5,  //  kernel reset
-  _mars_fag_much = 1 << 6,  //  bytecode hack
+  _mars_fag_much = 1 << 3,  //  bytecode hack
+  _mars_fag_vega = 1 << 4,  //  kernel reset
 };
 
 /* _mars_quac: convert a quac to a noun.
@@ -294,14 +301,19 @@ _mars_make_crud(u3_noun job, u3_noun dud)
   return new;
 }
 
+/* _mars_curb(): check for memory threshold
+*/
+static inline c3_t
+_mars_curb(c3_w pre_w, c3_w pos_w, c3_w hes_w)
+{
+  return (pre_w > hes_w) && (pos_w <= hes_w);
+}
+
 /* _mars_sure_feck(): event succeeded, send effects.
 */
 static u3_noun
 _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
 {
-  c3_o muc_o = c3n;
-  c3_o pac_o = c3n;
-
   //  intercept |mass, observe |reset
   //
   {
@@ -332,7 +344,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       //  reclaim memory from persistent caches on |reset
       //
       if ( c3__vega == u3h(fec) ) {
-        muc_o = c3y;
+        mar_u->fag_w |= _mars_fag_vega;
       }
 
       riv = u3t(riv);
@@ -359,29 +371,45 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
   {
     u3_noun pri = u3_none;
     c3_w pos_w = u3a_open(u3R);
-    c3_w low_w = (1 << 27);
-    c3_w hig_w = (1 << 22);
 
-    if ( (pre_w > low_w) && !(pos_w > low_w) ) {
-      //  XX set flag(s) in u3V so we don't repeat endlessly?
-      //
-      pac_o = c3y;
-      muc_o = c3y;
-      pri   = 1;
+    //  if contiguous free space shrunk, check thresholds
+    //  (and track state to avoid thrashing)
+    //
+    if ( pos_w < pre_w ) {
+      if (  (_mars_mas_hit0 != mar_u->mas_w)
+         && _mars_curb(pre_w, pos_w, 1 << 25) )
+      {
+        mar_u->mas_w  = _mars_mas_hit0;
+        mar_u->fag_w |= _mars_fag_hit0;
+        pri           = 0;
+      }
+      else if (  (_mars_mas_init == mar_u->mas_w)
+              && _mars_curb(pre_w, pos_w, 1 << 27) )
+      {
+        mar_u->mas_w  = _mars_mas_hit1;
+        mar_u->fag_w |= _mars_fag_hit1;
+        pri         = 1;
+      }
     }
-    else if ( (pre_w > hig_w) && !(pos_w > hig_w) ) {
-      pac_o = c3y;
-      muc_o = c3y;
-      pri   = 0;
+    else if ( _mars_mas_init != mar_u->mas_w ) {
+      if ( ((1 << 26) + (1 << 27)) < pos_w ) {
+        mar_u->mas_w = _mars_mas_init;
+      }
+      else if (  (_mars_mas_hit0 == mar_u->mas_w)
+              && ((1 << 26) < pos_w) )
+      {
+        mar_u->mas_w = _mars_mas_hit1;
+      }
     }
+
     //  reclaim memory from persistent caches periodically
     //
     //    XX this is a hack to work two things
     //    - bytecode caches grow rapidly and can't be simply capped
     //    - we don't make very effective use of our free lists
     //
-    else if ( 0 == (mar_u->dun_d % 1000ULL) ) {
-      muc_o = c3y;
+    if ( !(mar_u->dun_d % 1024ULL) ) {
+      mar_u->fag_w |= _mars_fag_much;
     }
 
     //  notify daemon of memory pressure via "fake" effect
@@ -392,9 +420,6 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       vir = u3nc(cad, vir);
     }
   }
-
-  if _(muc_o) mar_u->fag_w |= _mars_fag_much;
-  if _(pac_o) mar_u->fag_w |= _mars_fag_pack;
 
   return vir;
 }
@@ -635,9 +660,21 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
-  if ( mar_u->fag_w & _mars_fag_pack ) {
-    u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
-    u3l_log("\n");
+  if ( mar_u->fag_w & _mars_fag_hit1 ) {
+    if ( u3C.wag_w & u3o_verbose ) {
+      u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
+    }
+    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3m_reclaim();
+  }
+
+  if ( mar_u->fag_w & _mars_fag_much ) {
+    u3m_reclaim();
+  }
+
+  if ( mar_u->fag_w & _mars_fag_vega ) {
+    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3m_reclaim();
   }
 
   //  XX this runs on replay too, |mass s/b elsewhere
@@ -645,14 +682,6 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_mute ) {
     u3z(_mars_grab(mar_u->sac, c3y));
     mar_u->sac   = u3_nul;
-  }
-
-  if ( mar_u->fag_w & _mars_fag_hit1 ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
-    }
-    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
-    u3m_reclaim();
   }
 
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
@@ -665,13 +694,8 @@ _mars_post(u3_mars* mar_u)
     u3l_log("");
   }
 
-  if ( mar_u->fag_w & _mars_fag_vega ) {
-    u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
-    u3m_reclaim();
-  }
-
-  if ( mar_u->fag_w & _mars_fag_much ) {
-    u3m_reclaim();
+  if ( u3C.wag_w & u3o_toss ) {
+    u3m_toss();
   }
 
   mar_u->fag_w = _mars_fag_none;
