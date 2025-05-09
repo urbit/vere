@@ -1547,6 +1547,9 @@ u3a_use(u3_noun som)
   }
 }
 
+#define SWAP(l, r)    \
+  do { typeof(l) t = l; l = r; r = t; } while (0)
+
 /* _ca_wed_who(): unify [a] and [b] on [rod_u], keeping the senior
 **
 ** NB: this leaks a reference when it unifies in a senior road
@@ -1556,29 +1559,20 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
 {
   c3_t asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
   c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
-  c3_t nor_t = ( c3y == u3a_is_north(rod_u) );
   c3_t own_t = ( rod_u == u3R );
 
-  //  both are on [rod_u]; gain a reference to whichever we keep
+  //  both are on [rod_u]; keep the deeper address
+  //  (and gain a reference)
   //
   if ( !asr_t && !bsr_t ) {
-    //  keep [a]; it's deeper in the heap
+    //  (N && <) || (S && >)
+    //  XX consider keeping higher refcount instead
     //
-    //    (N && <) || (S && >)
-    //
-    if ( (*a < *b) == nor_t ) {
-      _me_gain_use(*a);
-      if ( own_t ) { u3z(*b); }
-      *b = *a;
-    }
-    //  keep [b]; it's deeper in the heap
-    //
-    else {
-      _me_gain_use(*b);
-      if ( own_t ) { u3z(*a); }
-      *a = *b;
-    }
+    if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
 
+    _me_gain_use(*a);
+    if ( own_t ) { u3z(*b); }
+    *b = *a;
     return c3y;
   }
   //  keep [a]; it's senior
@@ -1600,6 +1594,8 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
   //
   return c3n;
 }
+
+#undef SWAP
 
 /* u3a_wed(): unify noun references.
 */
