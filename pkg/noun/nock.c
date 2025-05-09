@@ -1643,6 +1643,20 @@ _n_bite(u3_noun fol) {
   return _n_prog_from_ops(ops);
 }
 
+static inline c3_w
+_cn_of_prog(u3n_prog *pog_u)
+{
+  u3_post pog_p = u3of(u3n_prog, pog_u);
+  return pog_p >> u3a_vits;
+}
+
+static inline u3n_prog*
+_cn_to_prog(c3_w pog_w)
+{
+  u3_post pog_p = pog_w << u3a_vits;
+  return u3to(u3n_prog, pog_p);
+}
+
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
@@ -1653,7 +1667,7 @@ _n_find(u3_noun pre, u3_noun fol)
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
     u3z(key);
-    return u3to(u3n_prog, pog);
+    return _cn_to_prog(pog);
   }
   else if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
@@ -1662,7 +1676,7 @@ _n_find(u3_noun pre, u3_noun fol)
       pog   = u3h_git(rod_u->byc.har_p, key);
       if ( u3_none != pog ) {
         c3_w i_w;
-        u3n_prog* old = _n_prog_old(u3to(u3n_prog, pog));
+        u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
         for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
           u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
           rit_u->own_o = c3n;
@@ -1673,7 +1687,7 @@ _n_find(u3_noun pre, u3_noun fol)
           sit_u->pog_p = 0;
           sit_u->fon_o = c3n;
         }
-        u3h_put(u3R->byc.har_p, key, u3a_outa(old));
+        u3h_put(u3R->byc.har_p, key, _cn_of_prog(old));
         u3z(key);
         return old;
       }
@@ -1682,7 +1696,7 @@ _n_find(u3_noun pre, u3_noun fol)
 
   {
     u3n_prog* gop = _n_bite(fol);
-    u3h_put(u3R->byc.har_p, key, u3a_outa(gop));
+    u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
     return gop;
   }
@@ -2889,9 +2903,9 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 /*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
 */
 static u3p(u3n_prog)
-_cn_take_prog_cb(u3p(u3n_prog) pog_p)
+_cn_take_prog_cb(c3_w pog_w)
 {
-  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
+  u3n_prog* pog_u = _cn_to_prog(pog_w);
   u3n_prog* gop_u;
 
   if ( c3y == pog_u->byc_u.own_o ) {
@@ -2910,7 +2924,7 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
   _cn_take_prog_dat(gop_u, pog_u);
   // _n_prog_take_dat(gop_u, pog_u, c3n);
 
-  return u3of(u3n_prog, gop_u);
+  return _cn_of_prog(gop_u);
 }
 
 /* u3n_take(): copy junior bytecode state.
@@ -2962,20 +2976,20 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
   u3n_prog*     pog_u;
   u3_weak         got;
   u3_noun         key;
-  u3p(u3n_prog) pog_p;
-  u3x_cell(kev, &key, &pog_p);
+  c3_w          pog_w;
+  u3x_cell(kev, &key, &pog_w);
 
-  pog_u = u3to(u3n_prog, pog_p);
+  pog_u = _cn_to_prog(pog_w);
   got   = u3h_git(har_p, key);
 
   if ( u3_none != got ) {
-    u3n_prog* sep_u = u3to(u3n_prog, got);
+    u3n_prog* sep_u = _cn_to_prog(got);
     _cn_merge_prog_dat(sep_u, pog_u);
     u3a_free(pog_u);
     pog_u = sep_u;
   }
 
-  u3h_put(har_p, key, u3of(u3n_prog, pog_u));
+  u3h_put(har_p, key, _cn_of_prog(pog_u));
 }
 
 /* u3n_reap(): promote bytecode state.
@@ -2993,8 +3007,7 @@ u3n_reap(u3p(u3h_root) har_p)
 void
 _n_ream(u3_noun kev)
 {
-  c3_w i_w;
-  u3n_prog* pog_u = u3to(u3n_prog, u3t(kev));
+  u3n_prog* pog_u = _cn_to_prog(u3t(kev));
 
   c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
   c3_w pod_w = pog_u->lit_u.len_w % 2;
@@ -3006,7 +3019,7 @@ _n_ream(u3_noun kev)
   pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
   pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
-  for ( i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
+  for ( c3_w i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
     u3j_site_ream(&(pog_u->cal_u.sit_u[i_w]));
   }
 }
@@ -3051,8 +3064,9 @@ _n_prog_mark(u3n_prog* pog_u)
 static void
 _n_bam(u3_noun kev, void* dat)
 {
-  c3_w* bam_w  = dat;
-  u3n_prog* pog = u3to(u3n_prog, u3t(kev));
+  u3n_prog* pog = _cn_to_prog(u3t(kev));
+  c3_w*   bam_w = dat;
+
   *bam_w += _n_prog_mark(pog);
 }
 
@@ -3123,7 +3137,7 @@ u3n_rewrite_compact()
 static void
 _n_feb(u3_noun kev)
 {
-  _cn_prog_free(u3to(u3n_prog, u3t(kev)));
+  _cn_prog_free(_cn_to_prog(u3t(kev)));
 }
 
 /* u3n_free(): free bytecode cache
