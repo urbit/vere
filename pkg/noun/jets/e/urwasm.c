@@ -73,6 +73,44 @@ uw_octo(u3_noun a,
   return u3nc(a, u3nq(b, c, d, u3nq(e, f, g, h)));
 }
 
+static u3_noun
+uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
+{
+  if (!is_stateful)
+  {
+    u3_noun bat = u3k(u3h(gat));
+    u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
+    u3z(gat);
+    return u3n_nock_on(cor, bat);
+  }
+  else
+  {
+    u3_noun bat = u3k(u3h(gat));
+    u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
+    u3z(gat);
+    u3_noun ton = u3n_nock_an(cor, bat);
+    
+    u3_noun tag, pro;
+    if (c3n == u3r_cell(ton, &tag, &pro))
+    {
+      return u3m_bail(c3__fail);
+    }
+    if (0 == tag)
+    {
+      u3k(pro); u3z(ton);
+      return pro;
+    }
+    else if (2 == tag)
+    {
+      return u3m_bail(c3__exit);
+    }
+    else
+    {
+      return u3m_bail(c3__fail);
+    }
+  }
+}
+
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
 {
@@ -160,6 +198,7 @@ typedef struct {
   uw_arena code_arena;
   u3_noun yil_previous;     // transferred
   u3_noun queue;            // transferred
+  c3_t is_stateful;
 } lia_state;
 
 typedef enum {
@@ -932,7 +971,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         //  save the pointers before that, restore after
         uw_arena* box_arena_frame = BoxArena;
         uw_arena* code_arena_frame = CodeArena;
-        monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+        monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
         BoxArena = box_arena_frame;
         CodeArena = code_arena_frame;
         u3z(yil);
@@ -993,7 +1032,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       {
         uw_arena* box_arena_frame = BoxArena;
         uw_arena* code_arena_frame = CodeArena;
-        monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+        monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
         BoxArena = box_arena_frame;
         CodeArena = code_arena_frame;
         u3z(yil);
@@ -1037,7 +1076,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         {
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          monad_cont = u3n_slam_on(u3k(cont), u3k(u3t(yil)));
+          monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(yil);
@@ -1475,7 +1514,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -1510,7 +1549,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -1567,7 +1606,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             u3_noun p_res = u3t(yil);
             uw_arena* box_arena_frame = BoxArena;
             uw_arena* code_arena_frame = CodeArena;
-            u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+            u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
             BoxArena = box_arena_frame;
             CodeArena = code_arena_frame;
             u3z(sat_u->resolution);
@@ -1601,7 +1640,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = u3n_slam_on(u3k(cont), u3k(p_res));
+          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -1722,7 +1761,7 @@ _link_wasm_with_arrow_map(
 
   uw_arena* box_arena_frame = BoxArena;
   uw_arena* code_arena_frame = CodeArena;
-  u3_noun script = u3n_slam_on(arrow, coin_wasm_list);
+  u3_noun script = uw_slam_check(arrow, coin_wasm_list, sat_u->is_stateful);
   BoxArena = box_arena_frame;
   CodeArena = code_arena_frame;
   u3_noun yil = _reduce_monad(script, sat_u); 
@@ -2320,6 +2359,7 @@ u3we_lia_run_v1(u3_noun cor)
   u3_noun yil;
   if (!omit_t)
   {
+    sat.is_stateful = 1;
     if (_get_state(hint, seed, &sat))
     {
       sat.map = u3t(u3at(seed_import, seed));
@@ -2514,6 +2554,7 @@ u3we_lia_run_v1(u3_noun cor)
   }
   else
   {
+    sat.is_stateful = 0;
     M3Result result;
     IM3Environment wasm3_env;
     IM3Runtime wasm3_runtime = NULL;
@@ -2877,6 +2918,8 @@ u3we_lia_run_once(u3_noun cor)
     u3_none,
     u3_none
   };
+
+  sat.is_stateful = 0;
 
   for (c3_w i = 0; i < n_imports; i++)
   {
