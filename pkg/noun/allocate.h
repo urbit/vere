@@ -97,6 +97,8 @@
 
 STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
+STATIC_ASSERT( u3a_vits <= u3a_min_log,
+               "virtual-bit alignment" );
 
     /* u3a_crag: hunk-page metadata
     */
