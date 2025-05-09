@@ -1561,38 +1561,28 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
   c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
   c3_t own_t = ( rod_u == u3R );
 
-  //  both are on [rod_u]; keep the deeper address
-  //  (and gain a reference)
-  //
-  if ( !asr_t && !bsr_t ) {
-    //  (N && <) || (S && >)
-    //  XX consider keeping higher refcount instead
+  if ( asr_t == bsr_t ) {
+    //  both [a] and [b] are senior; we can't unify on [rod_u]
+    //
+    if ( asr_t ) return c3n;
+
+    //  both are on [rod_u]; keep the deeper address
+    //  (and gain a reference)
+    //
+    //    (N && <) || (S && >)
+    //    XX consider keeping higher refcount instead
     //
     if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
 
     _me_gain_use(*a);
-    if ( own_t ) { u3z(*b); }
-    *b = *a;
-    return c3y;
   }
-  //  keep [a]; it's senior
+  //  one of [a] or [b] are senior; keep it
   //
-  else if ( asr_t && !bsr_t ) {
-    if ( own_t ) { u3z(*b); }
-    *b = *a;
-    return c3y;
-  }
-  //  keep [b]; it's senior
-  //
-  else if ( !asr_t && bsr_t ) {
-    if ( own_t ) { u3z(*a); }
-    *a = *b;
-    return c3y;
-  }
+  else if ( !asr_t ) SWAP(a, b);
 
-  //  both [a] and [b] are senior; we can't unify on [rod_u]
-  //
-  return c3n;
+  if ( own_t ) { u3z(*b); }
+  *b = *a;
+  return c3y;
 }
 
 #undef SWAP
