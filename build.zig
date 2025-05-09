@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.2";
+const VERSION = "3.3";
 
 const main_targets = .{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
