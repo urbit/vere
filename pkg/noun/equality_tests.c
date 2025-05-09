@@ -17,13 +17,20 @@ _test_unify(void)
 
   u3_noun  a = u3nt(0, 0, 0);
   u3_noun  b = u3nt(0, 0, 0);
+  c3_w kep_w;
 
   fprintf(stderr, "before: 0x%x 0x%x\r\n", u3t(a), u3t(b));
-  u3_assert( u3t(a) != u3t(b) );
+  u3_assert( u3t(a) < u3t(b) );
+  kep_w = u3t(a);
 
   (void)u3r_sing(a, b);
 
   if ( u3t(a) != u3t(b) ) {
+    fprintf(stderr, "test: unify: failed\r\n");
+    ret_i = 0;
+  }
+  else if ( kep_w != u3t(b) ) {
+    fprintf(stderr, "test: unify: deeper failed\r\n");
     ret_i = 0;
   }
 
