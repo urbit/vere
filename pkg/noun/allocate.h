@@ -392,12 +392,6 @@ typedef struct _u3a_mark {
 
 typedef struct _u3a_gack {
   c3_w *bit_w;  //  mark bits
-  // struct {
-  //   c3_s log_s;
-  //   c3_s hun_s;
-  //   c3_s tot_s;
-  //   c3_s map_s;
-  // } wee_u[u3a_crag_no];
   c3_w *pap_w;  //  global page bitmap
   c3_w *pum_w;  //  global cumulative sums
   //  XX factor out?
