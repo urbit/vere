@@ -1606,8 +1606,19 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
 void
 u3a_wed(u3_noun* a, u3_noun* b)
 {
+  u3_road* rod_u = u3R;
+  c3_o     wed_o;
+
+  if ( rod_u->kid_p ) return;
+
   if ( *a != *b ) {
-    u3_road* rod_u = u3R;
+    wed_o = _ca_wed_who(rod_u, a, b);
+
+#ifdef U3_MEMORY_DEBUG
+    return;
+#endif
+
+    if ( u3C.wag_w & u3o_debug_ram ) return;
 
     //  while not at home, attempt to unify
     //
@@ -1632,14 +1643,12 @@ u3a_wed(u3_noun* a, u3_noun* b)
     //    cause a very slow boot process as the compiler compiles
     //    itself, constantly running into duplicates.
     //
-    while ( (rod_u != &u3H->rod_u) &&
-            (c3n == _ca_wed_who(rod_u, a, b)) )
+
+    while (  (c3n == wed_o)
+          && rod_u->par_p
+          && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
     {
-#ifdef U3_MEMORY_DEBUG
-      break;
-#else
-      rod_u = u3to(u3_road, rod_u->par_p);
-#endif
+      wed_o = _ca_wed_who(rod_u, a, b);
     }
   }
 }
