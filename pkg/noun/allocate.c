@@ -1550,16 +1550,46 @@ u3a_use(u3_noun som)
 #define SWAP(l, r)    \
   do { typeof(l) t = l; l = r; r = t; } while (0)
 
-/* _ca_wed_who(): unify [a] and [b] on [rod_u], keeping the senior
-**
-** NB: this leaks a reference when it unifies in a senior road
+/* _ca_wed_our(): unify [a] and [b] on u3R.
+*/
+static inline c3_o
+_ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
+{
+  c3_t asr_t = ( c3y == u3a_is_senior(u3R, *a) );
+  c3_t bsr_t = ( c3y == u3a_is_senior(u3R, *b) );
+
+  if ( asr_t == bsr_t ) {
+    //  both [a] and [b] are senior; we can't unify on u3R
+    //
+    if ( asr_t ) return c3n;
+
+    //  both are on u3R; keep the deeper address
+    //  (and gain a reference)
+    //
+    //    (N && <) || (S && >)
+    //    XX consider keeping higher refcount instead
+    //
+    if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+
+    _me_gain_use(*a);
+  }
+  //  one of [a] or [b] are senior; keep it
+  //
+  else if ( !asr_t ) SWAP(a, b);
+
+  u3z(*b);
+  *b = *a;
+  return c3y;
+}
+
+/* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. leaks
 */
 static c3_o
-_ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
+_ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 {
+  //  XX assume( rod_u != u3R )
   c3_t asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
   c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
-  c3_t own_t = ( rod_u == u3R );
 
   if ( asr_t == bsr_t ) {
     //  both [a] and [b] are senior; we can't unify on [rod_u]
@@ -1580,7 +1610,6 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
   //
   else if ( !asr_t ) SWAP(a, b);
 
-  if ( own_t ) { u3z(*b); }
   *b = *a;
   return c3y;
 }
@@ -1598,7 +1627,7 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 
   if ( rod_u->kid_p ) return;
 
-  wed_o = _ca_wed_who(rod_u, a, b);
+  wed_o = _ca_wed_our(a, b);
 
 #ifdef U3_MEMORY_DEBUG
   return;
@@ -1634,7 +1663,7 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
         && rod_u->par_p
         && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
   {
-    wed_o = _ca_wed_who(rod_u, a, b);
+    wed_o = _ca_wed_you(rod_u, a, b);
   }
 }
 
