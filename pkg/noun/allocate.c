@@ -1604,52 +1604,51 @@ _ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
 /* u3a_wed(): unify noun references.
 */
 void
-u3a_wed(u3_noun* a, u3_noun* b)
+u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
+  //  XX assume( *a != *b )
   u3_road* rod_u = u3R;
   c3_o     wed_o;
 
   if ( rod_u->kid_p ) return;
 
-  if ( *a != *b ) {
-    wed_o = _ca_wed_who(rod_u, a, b);
+  wed_o = _ca_wed_who(rod_u, a, b);
 
 #ifdef U3_MEMORY_DEBUG
-    return;
+  return;
 #endif
 
-    if ( u3C.wag_w & u3o_debug_ram ) return;
+  if ( u3C.wag_w & u3o_debug_ram ) return;
 
-    //  while not at home, attempt to unify
-    //
-    //    we try to unify on our road, and retry on senior roads
-    //    until we succeed or reach the home road.
-    //
-    //    we can't perform this kind of butchery on the home road,
-    //    where asynchronous things can allocate.
-    //    (XX anything besides u3t_samp?)
-    //
-    //    when unifying on a higher road, we can't free nouns,
-    //    because we can't track junior nouns that point into
-    //    that road.
-    //
-    //    this is just an implementation issue -- we could set use
-    //    counts to 0 without actually freeing.  but the allocator
-    //    would have to be actually designed for this.
-    //    (alternately, we could keep a deferred free-list)
-    //
-    //    not freeing may generate spurious leaks, so we disable
-    //    senior unification when debugging memory.  this will
-    //    cause a very slow boot process as the compiler compiles
-    //    itself, constantly running into duplicates.
-    //
+  //  while not at home, attempt to unify
+  //
+  //    we try to unify on our road, and retry on senior roads
+  //    until we succeed or reach the home road.
+  //
+  //    we can't perform this kind of butchery on the home road,
+  //    where asynchronous things can allocate.
+  //    (XX anything besides u3t_samp?)
+  //
+  //    when unifying on a higher road, we can't free nouns,
+  //    because we can't track junior nouns that point into
+  //    that road.
+  //
+  //    this is just an implementation issue -- we could set use
+  //    counts to 0 without actually freeing.  but the allocator
+  //    would have to be actually designed for this.
+  //    (alternately, we could keep a deferred free-list)
+  //
+  //    not freeing may generate spurious leaks, so we disable
+  //    senior unification when debugging memory.  this will
+  //    cause a very slow boot process as the compiler compiles
+  //    itself, constantly running into duplicates.
+  //
 
-    while (  (c3n == wed_o)
-          && rod_u->par_p
-          && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
-    {
-      wed_o = _ca_wed_who(rod_u, a, b);
-    }
+  while (  (c3n == wed_o)
+        && rod_u->par_p
+        && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
+  {
+    wed_o = _ca_wed_who(rod_u, a, b);
   }
 }
 
