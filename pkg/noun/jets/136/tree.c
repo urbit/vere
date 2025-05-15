@@ -972,6 +972,13 @@ static u3j_core _136_pen_d[] =
     {}
   };
 
+static u3j_core _136_qua__vi_d[] = 
+  {
+    { "mole", 7, _136_qua_mole_a, 0, no_hashes },
+    { "mule", 7, _136_qua_mule_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _136_qua_d[] =
   { { "pen", 3, 0, _136_pen_d, no_hashes, _136_pen_ho },
 
@@ -999,8 +1006,7 @@ static u3j_core _136_qua_d[] =
     { "sfix", 7, _136_qua_sfix_a, 0, no_hashes },
 
     { "mink", 7, _136_qua_mink_a, 0, no_hashes },
-    { "mole", 7, _136_qua_mole_a, 0, no_hashes },
-    { "mule", 7, _136_qua_mule_a, 0, no_hashes },
+    { "vi", 7, 0, _136_qua__vi_d, no_hashes },
 
     { "scot", 7, _136_qua_scot_a, 0, no_hashes },
     { "scow", 7, _136_qua_scow_a, 0, no_hashes },
