@@ -14,15 +14,14 @@ _melt_hash(u3_noun foo)
 static c3_i
 _melt_cmp_atoms(u3_atom a, u3_atom b)
 {
-  //  XX assume(c3y == u3a_is_pug(a) && c3y == u3a_is_pug(b))
-
   if ( a == b ) return 1;
 
+  //  XX assume(c3y == u3a_is_pug(a) && c3y == u3a_is_pug(b))
   u3a_atom *a_u = u3a_to_ptr(a);
   u3a_atom *b_u = u3a_to_ptr(b);
 
-  //  XX assume mugs present?
-  if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) return 0;
+  //  XX assume( a_u->mug_w && b_u->mug_w )
+  if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   if ( a_u->len_w != b_u->len_w ) return 0;
 
@@ -43,8 +42,8 @@ _melt_cmp_cells(u3_cell a, u3_cell b)
   u3a_cell *a_u = u3a_to_ptr(a);
   u3a_cell *b_u = u3a_to_ptr(b);
 
-  //  XX assume mugs present?
-  if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) return 0;
+  //  XX assume( a_u->mug_w && b_u->mug_w )
+  if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   c3_d *a_d = (c3_d*)&(a_u->hed);
   c3_d *b_d = (c3_d*)&(b_u->hed);
