@@ -424,6 +424,36 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
   return vir;
 }
 
+/* _mars_peek(): dereference namespace.
+*/
+static u3_noun
+_mars_peek(c3_w mil_w, u3_noun sam)
+{
+  c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
+  c3_c  lab_c[2056];
+
+  // XX refactor tracing
+  //
+  if ( tac_t ) {
+    c3_c* foo_c = u3m_pretty(u3t(sam));
+
+    {
+      snprintf(lab_c, 2056, "peek %s", foo_c);
+      c3_free(foo_c);
+    }
+
+    u3t_event_trace(lab_c, 'B');
+  }
+
+  u3_noun pro = u3v_soft_peek(mil_w, sam);
+
+  if ( tac_t ) {
+    u3t_event_trace(lab_c, 'E');
+  }
+
+  return pro;
+}
+
 /* _mars_poke(): attempt to compute an event. [*eve] is RETAINED.
 */
 static c3_o
@@ -598,7 +628,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
 
       u3k(sam); u3z(jar);
-      _mars_gift(mar_u, u3nc(c3__peek, u3v_soft_peek(mil_w, sam)));
+      _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_w, sam)));
     } break;
 
     case c3__sync: {
