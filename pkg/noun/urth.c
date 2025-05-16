@@ -548,44 +548,40 @@ u3u_melt(void)
   u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
 
   u3m_reclaim();     // refresh the byte-code interpreter.
-  u3j_free();        // free cold & warm jet state
 
   u3h_free(u3R->cax.per_p);
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);
 
-  u3z(u3A->yot);     // Clear the hoon run-time cache
-  u3A->yot = 0;
+  u3h_free(u3R->jed.cod_p);
+  u3R->jed.cod_p = u3h_new();
 
-  u3z(u3R->bug.mer); // Clear the "emergency" buffer.
-  u3R->bug.mer = 0;
+  {
+    u3p(u3h_root) set_p = u3h_new(); // temp hashtable
 
-  u3z(u3R->bug.tax); // Clear the stack traces.
-  u3R->bug.tax = 0;
+    _cu_melt_noun(set_p, &cod);      // melt the jets
+    _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
 
-  u3p(u3h_root) set_p = u3h_new(); // temp hashtable
-
-  _cu_melt_noun(set_p, &cod);      // melt the jets
-  _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
-
-  u3h_free(set_p);  // release the temp hashtable
+    u3h_free(set_p);  // release the temp hashtable
+  }
 
   // re-initialize the jets
   //
   u3j_boot(c3y);
-  u3m_pave_jets();
 
   // Put the jet registrations back. Loop over cod putting them back into the cold jet
   // dashboard. Then re-run the garbage collector.
   //
-  u3_noun codc;
-  codc = cod;
+  {
+    u3_noun codc = cod;
 
-  while(u3_nul != cod) {
-    u3_noun kev = u3h(cod);
-    u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
-    cod = u3t(cod);
+    while(u3_nul != cod) {
+      u3_noun kev = u3h(cod);
+      u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
+      cod = u3t(cod);
+    }
+
+    u3z(codc);
   }
-  u3z(codc);
 
   // remove free space
   //
