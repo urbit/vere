@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.2";
+const VERSION = "3.3";
 
 const main_targets = .{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -12,6 +12,7 @@ const main_targets = .{
 const supported_targets: []const std.Target.Query = &(main_targets ++ .{
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
 });
 
 const targets: []const std.Target.Query = &main_targets;
@@ -179,7 +180,7 @@ fn buildBinary(
 
     try global_flags.appendSlice(cfg.flags);
     try global_flags.appendSlice(&.{
-        "-g",
+        "-g3",
         "-Wall",
         "-Werror",
     });
@@ -227,6 +228,7 @@ fn buildBinary(
         "-Wno-unused-variable",
         "-Wno-unused-function",
         "-Wno-gnu",
+        "-fno-omit-frame-pointer",
         "-fms-extensions",
         "-DU3_GUARD_PAGE", // pkg_noun
         "-DU3_OS_ENDIAN_little=1", // pkg_c3
@@ -361,6 +363,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const wasm3 = b.dependency("wasm3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     //
     // Build Artifact
     //
@@ -416,6 +423,7 @@ fn buildBinary(
     urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
+    urbit.linkLibrary(wasm3.artifact("wasm3"));
 
     if (t.isDarwin()) {
         // Requires llvm@18 homebrew installation
@@ -503,6 +511,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "hamt-test",
+                .file = "pkg/vere/hamt_test.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "jets-test",
                 .file = "pkg/noun/jets_tests.c",
                 .deps = noun_test_deps,
@@ -551,6 +564,11 @@ fn buildBinary(
             .{
                 .name = "benchmarks",
                 .file = "pkg/vere/benchmarks.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "pact-test",
+                .file = "pkg/vere/io/mesa/pact_test.c",
                 .deps = vere_test_deps,
             },
         };

@@ -240,8 +240,10 @@ const install_headers = [_][]const u8{
     "io/mesa/bitset.h",
     "io/mesa/mesa.h",
     "io/serial.h",
+    "arena.h",
     "mars.h",
     "mdns.h",
     "serf.h",
     "vere.h",
+    "verstable.h",
 };

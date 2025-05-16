@@ -6,6 +6,7 @@
 
 #include "noun.h"
 #include "ur/ur.h"
+#include "arena.h"
 
 c3_w lss_proof_size(c3_w leaves);
 
@@ -51,9 +52,7 @@ typedef struct _lss_verifier {
 
 c3_o lss_verifier_ingest(lss_verifier* ver_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair);
 
-void lss_verifier_init(lss_verifier* ver_u, c3_w steps, c3_w leaves, lss_hash* proof);
-
-void lss_verifier_free(lss_verifier* ver_u);
+void lss_verifier_init(lss_verifier* ver_u, c3_w steps, c3_w leaves, lss_hash* proof, arena* are_u);
 
 // Hashes the provided leaf and writes it to proof[0]. The leaf may be any size.
 void lss_complete_inline_proof(lss_hash* proof, c3_y* leaf_y, c3_w leaf_w);

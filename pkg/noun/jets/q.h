@@ -79,6 +79,7 @@
     u3_noun u3qc_rig(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rip(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rsh(u3_atom, u3_atom, u3_atom);
+    u3_noun u3qc_sew(u3_atom, u3_atom, u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_swp(u3_atom, u3_atom);
     u3_noun u3qc_sqt(u3_atom);
 
@@ -156,6 +157,8 @@
 
     u3_noun u3qea_de(u3_atom, u3_atom);
     u3_noun u3qea_en(u3_atom, u3_atom);
+
+    u3_noun u3qee_recs(u3_atom);
 
     u3_atom u3qe_fein_ob(u3_atom pyn);
     u3_atom u3qe_fynd_ob(u3_atom pyn);

@@ -104,6 +104,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const wasm3 = b.dependency("wasm3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     pkg_noun.linkLibC();
 
     pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
@@ -123,6 +128,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
     pkg_noun.linkLibrary(zlib.artifact("z"));
+    pkg_noun.linkLibrary(wasm3.artifact("wasm3"));
 
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
@@ -229,6 +235,7 @@ const c_source_files = [_][]const u8{
     "jets/c/rig.c",
     "jets/c/rip.c",
     "jets/c/rsh.c",
+    "jets/c/sew.c",
     "jets/c/sqt.c",
     "jets/c/swp.c",
     "jets/c/xeb.c",
@@ -273,7 +280,12 @@ const c_source_files = [_][]const u8{
     "jets/e/ed_add_double_scalarmult.c",
     "jets/e/ed_add_scalarmult_scalarmult_base.c",
     "jets/e/ed_point_add.c",
+    "jets/e/ed_point_neg.c",
+    "jets/e/ed_scad.c",
+    "jets/e/ed_recs.c",
+    "jets/e/ed_smac.c",
     "jets/e/ed_puck.c",
+    "jets/e/ed_luck.c",
     "jets/e/ed_scalarmult.c",
     "jets/e/ed_scalarmult_base.c",
     "jets/e/ed_shar.c",
@@ -310,6 +322,7 @@ const c_source_files = [_][]const u8{
     "jets/e/slaw.c",
     "jets/e/tape.c",
     "jets/e/trip.c",
+    "jets/e/urwasm.c",
     "jets/f/cell.c",
     "jets/f/comb.c",
     "jets/f/cons.c",
