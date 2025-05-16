@@ -950,7 +950,6 @@ _serf_writ_live_exit(u3_serf* sef_u, c3_w cod_w)
       fclose(fil_u);
     }
   }
-
   //  XX move to jets.c
   //
   c3_free(u3D.ray_u);
@@ -1274,6 +1273,8 @@ u3_serf_init(u3_serf* sef_u)
 
     rip = u3nt(c3__ripe, ver, _serf_ripe(sef_u));
   }
+
+  u3t_sstack_init();
 
   //  XX move to u3_serf_post()
   //
