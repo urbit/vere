@@ -295,8 +295,10 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  stk_u->off_w = u3H->rod_u.off_w;
-  stk_u->fow_w = u3H->rod_u.fow_w;
+  if ( NULL != stk_u ) {
+    stk_u->off_w = u3H->rod_u.off_w;
+    stk_u->fow_w = u3H->rod_u.fow_w;
+  }
 
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
@@ -1009,8 +1011,10 @@ u3m_bail(u3_noun how)
   }
 
   // Reset the spin stack pointer
-  stk_u->off_w = u3R->off_w;
-  stk_u->fow_w = u3R->fow_w;
+  if ( NULL != stk_u ) {
+    stk_u->off_w = u3R->off_w;
+    stk_u->fow_w = u3R->fow_w;
+  }
 
   /* Longjmp, with an underscore.
   */
@@ -1095,8 +1099,10 @@ u3m_leap(c3_w pad_w)
   }
 
   // Add slow stack pointer to rod_u
-  rod_u->off_w = stk_u->off_w;
-  rod_u->fow_w = stk_u->fow_w;
+  if ( NULL != stk_u ) {
+    rod_u->off_w = stk_u->off_w;
+    rod_u->fow_w = stk_u->fow_w;
+  } 
 
   /* Set up the new road.
   */
@@ -2263,8 +2269,6 @@ u3m_init(size_t len_i)
       }
       exit(1);
     }
-
-    u3t_sstack_init();
 
     u3C.wor_i = len_i >> 2;
     u3l_log("loom: mapped %zuMB", len_i >> 20);

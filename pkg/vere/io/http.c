@@ -503,8 +503,8 @@ _http_spin_unlink(u3_hreq* req_u)
     if ( 0 != req_u->nex_u ) {
       req_u->nex_u->pre_u = 0;
     } 
-    else {
-      uv_timer_stop(req_u->tim_u);
+    else if (req_u->tim_u != NULL) {
+        uv_timer_stop(req_u->tim_u);
     }
   }
 }
@@ -1539,6 +1539,14 @@ static c3_i
 _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
   u3_hcon* hon_u = _http_rec_sock(rec_u);
+  
+  if ( NULL == hon_u->htp_u->htd_u->stk_u ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 404, u3_nul, u3_nul, c3y);
+    return 0;
+  }
+
   c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
 
   //  if the request is not authenticated, reject it
@@ -2653,6 +2661,8 @@ _http_io_talk(u3_auto* car_u)
 {
   u3_httd* htd_u = (u3_httd*)car_u;
 
+
+
   //  XX remove [sen]
   //
   u3_noun wir = u3nt(u3i_string("http-server"),
@@ -2661,6 +2671,13 @@ _http_io_talk(u3_auto* car_u)
   u3_noun cad = u3nc(c3__born, u3_nul);
 
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
+
+  //Setup spin stack
+  htd_u->stk_u = u3t_sstack_open();
+  
+  if ( NULL == htd_u->stk_u ) {
+    u3l_log("http.c: failed to open spin stack");
+  }
 
   //  XX set liv_o on done/swap?
   //
@@ -2819,6 +2836,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_w siz_w      = 1024;
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
+    if ( NULL == stk_u ) return;
     c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
 
@@ -2974,7 +2992,8 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
-  munmap(htd_u->stk_u, u3a_page);
+  if ( NULL != htd_u->stk_u )
+    munmap(htd_u->stk_u, u3a_page);
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
@@ -3106,14 +3125,6 @@ u3_http_io_init(u3_pier* pir_u)
     now = u3_time_in_tv(&tim_u);
     htd_u->sev_l = u3r_mug(now);
     u3z(now);
-  }
-
-  //Setup spin stack
-  htd_u->stk_u = u3t_sstack_open();
-  
-  if ( NULL == htd_u->stk_u ) {
-    u3l_log("failed to open spin stack");
-    u3_pier_bail(car_u->pir_u);
   }
 
   //  XX retry up to N?

@@ -1232,6 +1232,8 @@ u3_serf_init(u3_serf* sef_u)
     rip = u3nt(c3__ripe, ver, _serf_ripe(sef_u));
   }
 
+  u3t_sstack_init();
+
   //  XX move to u3_serf_post()
   //
   //  measure/print static memory usage if < 1/2 of the loom is available

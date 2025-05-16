@@ -1191,9 +1191,14 @@ u3t_sstack_exit()
 void
 u3t_sstack_push(u3_noun nam)
 {
-  if ( c3n == u3ud(nam) ) {
-    u3t_sstack_push(c3__cell);
+  if ( !stk_u ) {
+    u3z(nam);
     return;
+  }
+
+  if ( c3n == u3ud(nam) ) {
+    u3z(nam);
+    nam = c3__cell;
   }
 
   c3_w  met_w = u3r_met(3, nam);
@@ -1218,6 +1223,7 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
+	if (  !stk_u ) return;
   if ( 0 < stk_u->fow_w ) {
     stk_u->fow_w--;
   } else {
