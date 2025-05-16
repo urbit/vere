@@ -119,7 +119,7 @@ _melt_canon(_melt_ctx *can_u, u3_noun can)
   while ( can_u->len_w ) {
     top = &(can_u->tac[can_u->len_w - 1]);
 
-    if ( c3y == u3a_is_cat(*top) ) {             // head frame
+    if ( !(*top >> 31) ) {                       // head frame
       cel_u = u3to(u3a_cell, *top << u3a_vits);
       _melt_xchange(can, &cel_u->hed);
       *top |= 1U << 31;                          // tail frame
