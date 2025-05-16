@@ -139,7 +139,7 @@ pub fn build(b: *std.Build) !void {
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
-        "-pedantic",
+        // "-pedantic",
         "-std=gnu23",
     });
     try flags.appendSlice(copts);
