@@ -97,6 +97,7 @@ jobs:
             hashtable-test jets-test   \
             nock-test retrieve-test    \
             serial-test ames-test      \
+            pact-test                  \
             boot-test newt-test        \
             vere-noun-test unix-test   \
             benchmarks                 \
