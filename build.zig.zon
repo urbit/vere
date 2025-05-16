@@ -1,6 +1,7 @@
 .{
-    .name = "urbit",
+    .name = .urbit,
     .version = "0.0.1",
+    .fingerprint = 0x9e228a3003a2736b,
     .dependencies = .{
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
@@ -55,6 +56,9 @@
         .zlib = .{
             .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
             .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+        },
+        .wasm3 = .{
+            .path = "./ext/wasm3",
         },
     },
     .paths = .{

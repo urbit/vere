@@ -584,7 +584,7 @@ _http_req_timer_cb(uv_timer_t* tim_u)
     } break;
 
     case u3_rsat_peek: {
-      req_u->peq_u = 0;
+      req_u->peq_u->req_u = 0;
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
@@ -964,7 +964,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       //
       if ( c3y == req_u->peq_u->las_o ) {
         u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
-        if ( our == bem.who ) {
+        if ( c3y == u3r_sing(our, bem.who) ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                             u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
         }
@@ -1121,6 +1121,11 @@ static c3_o
 _http_req_cache(u3_hreq* req_u)
 {
   u3_assert(u3_rsat_init == req_u->sat_e);
+
+  h2o_iovec_t method = req_u->rec_u->method;
+  if (0 != strncmp("GET", method.base, method.len)) {
+    return c3n;
+  }
 
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 

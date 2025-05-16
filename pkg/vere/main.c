@@ -2455,7 +2455,7 @@ _cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
 static c3_i
 _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 {
-  c3_c *argv[12] = {0};
+  c3_c *argv[13] = {0};
   c3_c eve_c[21] = {0};
   c3_c sap_c[21] = {0};
   c3_c lom_c[3]  = {0};
@@ -2480,6 +2480,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     argv[i_z++] = u3_Host.wrk_c;
     argv[i_z++] = "play";
+    argv[i_z++] = "--watch-replay";
     argv[i_z++] = "--loom";
     argv[i_z++] = lom_c;
     argv[i_z++] = "--replay-to";
@@ -2547,6 +2548,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
+  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
@@ -2554,13 +2556,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   static struct option lop_u[] = {
     { "gc",        no_argument,       NULL, 'g' },
-    { "loom",      required_argument, NULL, c3__loom },
-    { "no-demand", no_argument,       NULL, 6 },
-    { "auto-meld", no_argument,       NULL, 7 },
-    { "soft-mugs", no_argument,       NULL, 8 },
-    { "full",      no_argument,       NULL, 'f' },
-    { "replay-to", required_argument, NULL, 'n' },
-    { "snap-at",   required_argument, NULL, 's' },
+    { "watch-replay",      no_argument,       NULL, 9 },
+    { "full",              no_argument,       NULL, 'f' },
+    { "replay-to",         required_argument, NULL, 'n' },
+    { "snap-at",           required_argument, NULL, 's' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2587,6 +2586,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 8: {  //  soft-mugs
         sof_o = c3y;
+      } break;
+
+      case 9: {  //  watch-replay
+        wat_o = c3y;
       } break;
 
       case 'f': {
@@ -2640,12 +2643,17 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3C.wag_w |= u3o_debug_ram;
   }
 
-  pthread_t ted;
-  pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
+  if ( _(wat_o) ) {
+    pthread_t ted;
+    pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 
-  pthread_cancel(ted);
+    pthread_cancel(ted);
+  }
+  else {
+    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  }
 }
 
 /* _cw_prep(): prepare for upgrade
