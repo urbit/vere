@@ -1,5 +1,5 @@
 .{
-    .name = .urbit,
+    .name = "urbit",
     .version = "0.0.1",
     .fingerprint = 0x9e228a3003a2736b,
     .dependencies = .{

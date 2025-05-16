@@ -399,7 +399,7 @@ fn buildBinary(
     });
     b.getInstallStep().dependOn(&target_output.step);
 
-    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
+    if (t.os.tag == .macos and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -603,13 +603,13 @@ fn buildBinary(
                 }
             }
 
-            if (t.isDarwin()) {
+            if (t.os.tag.isDarwin()) {
                 // Requires llvm@18 homebrew installation
                 if (cfg.asan or cfg.ubsan)
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
@@ -624,7 +624,7 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
-            if ( t.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+            if (t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan)) {
                 //  disable libmalloc warnings
                 run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
             }
