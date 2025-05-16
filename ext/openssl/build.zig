@@ -76,13 +76,6 @@ fn libcrypto(
     lib.addIncludePath(dep.path("crypto/modes"));
     lib.addIncludePath(dep.path("include"));
 
-    // lib.root_module.addCMacro("__APPLE__", "");
-    // lib.root_module.addCMacro("__ARMEB__", "");
-    if (t.cpu.arch.isAARCH64())
-        lib.root_module.addCMacro("__ILP32__", "");
-    // lib.root_module.addCMacro("__AARCH64EB__", "");
-    // lib.root_module.addCMacro("__KERNEL__", "");
-
     lib.root_module.addCMacro("L_ENDIAN", "");
     lib.root_module.addCMacro("OPENSSL_PIC", "");
     lib.root_module.addCMacro("OPENSSL_CPUID_OBJ", "");
