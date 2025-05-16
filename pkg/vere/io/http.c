@@ -2661,8 +2661,6 @@ _http_io_talk(u3_auto* car_u)
 {
   u3_httd* htd_u = (u3_httd*)car_u;
 
-
-
   //  XX remove [sen]
   //
   u3_noun wir = u3nt(u3i_string("http-server"),
@@ -2992,8 +2990,10 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
-  if ( NULL != htd_u->stk_u )
+  if ( NULL != htd_u->stk_u ) {
     munmap(htd_u->stk_u, u3a_page);
+  }
+
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);

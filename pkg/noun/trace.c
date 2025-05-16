@@ -1223,7 +1223,7 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
-	if (  !stk_u ) return;
+  if (  !stk_u ) return;
   if ( 0 < stk_u->fow_w ) {
     stk_u->fow_w--;
   } else {
