@@ -3,7 +3,6 @@
 **  the main loop of a mars process.
 */
 #include "c3/c3.h"
-#include "events.h"
 #include "version.h"
 #include "noun.h"
 #include "pace.h"
@@ -744,7 +743,7 @@ _mars_damp_file(void)
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
-      snprintf(nam_c, 2048, "%s/.urb/put/profile", u3P.dir_c);
+      snprintf(nam_c, 2048, "%s/.urb/put/profile", u3C.dir_c);
 
       struct stat st;
       if ( -1 == stat(nam_c, &st) ) {
@@ -798,11 +797,8 @@ top:
   if (  (u3_mars_work_e != mar_u->sat_e)
      && (mar_u->log_u->dun_d == mar_u->dun_d) )
   {
-    u3_post low_p, hig_p;
-    u3m_water(&low_p, &hig_p);
-
     if ( u3_mars_save_e == mar_u->sat_e ) {
-      u3e_save(low_p, hig_p);
+      u3m_save();
       mar_u->sav_u.eve_d = mar_u->dun_d;
       _mars_gift(mar_u,
         u3nt(c3__sync, u3i_chub(mar_u->dun_d), mar_u->mug_l));
@@ -810,7 +806,7 @@ top:
       goto top;
     }
     else if ( u3_mars_exit_e == mar_u->sat_e ) {
-      u3e_save(low_p, hig_p);
+      u3m_save();
       u3_disk_exit(mar_u->log_u);
       u3s_cue_xeno_done(mar_u->sil_u);
       u3t_trace_close();
@@ -1913,9 +1909,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     return c3n;  //  XX cleanup
   }
 
-  u3_post low_p, hig_p;
-  u3m_water(&low_p, &hig_p);
-  u3e_save(low_p, hig_p);
+  u3m_save();
   u3_disk_exit(log_u);
 
   return c3y;
