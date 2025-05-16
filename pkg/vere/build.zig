@@ -224,6 +224,7 @@ const c_source_files = [_][]const u8{
     "lord.c",
     "mars.c",
     "mdns.c",
+    "melt.c",
     "newt.c",
     "pier.c",
     "save.c",
