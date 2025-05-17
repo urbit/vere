@@ -4,7 +4,7 @@
     .dependencies = .{
         .unwind = .{
             .url = "https://github.com/libunwind/libunwind/archive/7cc4c20fbcf65a9c855fb9d950fad8d0e29b092e.tar.gz",
-            .hash = "1220c7280ef49dc581a2f8ba029c58380410b9bbb1701afacba13205324d2ec8225a",
+            .hash = "N-V-__8AAA54RADHKA70ncWBovi6ApxYOAQQubuxcBr6y6Ey",
         },
     },
     .paths = .{

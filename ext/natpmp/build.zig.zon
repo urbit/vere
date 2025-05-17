@@ -5,7 +5,7 @@
         .natpmp = .{
             .url = "https://mirrors.wikimedia.org/ubuntu/ubuntu/pool/main/libn/libnatpmp/libnatpmp_20230423.orig.tar.gz",
             // .url = "https://debian.mirror.root.lu/debian/pool/main/libn/libnatpmp/libnatpmp_20230423.orig.tar.gz",
-            .hash = "12203f777796f1df1db24c4194bcc6060d2a7bee2eea88527c2336bbf455d4108239",
+            .hash = "N-V-__8AAKudAQA_d3eW8d8dskxBlLzGBg0qe-4u6ohSfCM2",
         },
     },
     .paths = .{
