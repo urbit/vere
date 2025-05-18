@@ -56,8 +56,8 @@
 #define ERR(string)         ("\r\n\033[31m>>> " string "\033[0m\r\n")
 #define WUT(string)         ("\r\n\033[33m>>  " string "\033[0m\r\n")
 
-#define KICK1(TRAP)         u3j_kink(TRAP, 2)
-#define KICK2(TRAP)         u3j_kink(KICK1(TRAP), 2)
+#define KICK1(TRAP)         uw_kick_nock(TRAP, 2)
+#define KICK2(TRAP)         KICK1(KICK1(TRAP))
 
 // [a b c d e f g h]
 static inline u3_noun
@@ -73,21 +73,36 @@ uw_octo(u3_noun a,
   return u3nc(a, u3nq(b, c, d, u3nq(e, f, g, h)));
 }
 
+// kick by nock. axe RETAINED (ignore if direct)
+static u3_noun
+uw_kick_nock(u3_noun cor, u3_noun axe)
+{
+  u3_noun fol = u3x_at(axe, cor);
+  return u3n_nock_on(cor, u3k(fol));
+}
+
+// slam by nock
+static u3_noun
+uw_slam_nock(u3_noun gat, u3_noun sam)
+{
+  u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+  u3z(gat);
+  return uw_kick_nock(cor, 2);
+}
+
 static u3_noun
 uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
 {
+  u3_noun bat = u3k(u3h(gat));
+  u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
+  u3z(gat);
+
   if (!is_stateful)
   {
-    u3_noun bat = u3k(u3h(gat));
-    u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
-    u3z(gat);
     return u3n_nock_on(cor, bat);
   }
   else
   {
-    u3_noun bat = u3k(u3h(gat));
-    u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
-    u3z(gat);
     u3_noun ton = u3n_nock_an(cor, bat);
     
     u3_noun tag, pro;
@@ -97,7 +112,8 @@ uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
     }
     if (0 == tag)
     {
-      u3k(pro); u3z(ton);
+      u3k(pro);
+      u3z(ton);
       return pro;
     }
     else if (2 == tag)
@@ -971,7 +987,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         //  save the pointers before that, restore after
         uw_arena* box_arena_frame = BoxArena;
         uw_arena* code_arena_frame = CodeArena;
-        monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
+        monad_cont = uw_slam_check(
+          u3k(cont),
+          u3k(u3t(yil)),
+          sat_u->is_stateful
+        );
         BoxArena = box_arena_frame;
         CodeArena = code_arena_frame;
         u3z(yil);
@@ -1032,7 +1052,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       {
         uw_arena* box_arena_frame = BoxArena;
         uw_arena* code_arena_frame = CodeArena;
-        monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
+        monad_cont = uw_slam_check(
+          u3k(cont),
+          u3k(u3t(yil)),
+          sat_u->is_stateful
+        );
         BoxArena = box_arena_frame;
         CodeArena = code_arena_frame;
         u3z(yil);
@@ -1076,7 +1100,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         {
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          monad_cont = uw_slam_check(u3k(cont), u3k(u3t(yil)), sat_u->is_stateful);
+          monad_cont = uw_slam_check(
+            u3k(cont),
+            u3k(u3t(yil)),
+            sat_u->is_stateful
+          );
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(yil);
@@ -1514,7 +1542,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
+          u3_noun monad_cont = uw_slam_check(
+            u3k(cont),
+            u3k(p_res),
+            sat_u->is_stateful
+          );
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -1549,7 +1581,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
+          u3_noun monad_cont = uw_slam_check(
+            u3k(cont),
+            u3k(p_res),
+            sat_u->is_stateful
+          );
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -1606,7 +1642,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             u3_noun p_res = u3t(yil);
             uw_arena* box_arena_frame = BoxArena;
             uw_arena* code_arena_frame = CodeArena;
-            u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
+            u3_noun monad_cont = uw_slam_check(
+              u3k(cont),
+              u3k(p_res),
+              sat_u->is_stateful
+            );
             BoxArena = box_arena_frame;
             CodeArena = code_arena_frame;
             u3z(sat_u->resolution);
@@ -1640,7 +1680,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3_noun p_res = u3t(sat_u->resolution);
           uw_arena* box_arena_frame = BoxArena;
           uw_arena* code_arena_frame = CodeArena;
-          u3_noun monad_cont = uw_slam_check(u3k(cont), u3k(p_res), sat_u->is_stateful);
+          u3_noun monad_cont = uw_slam_check(
+            u3k(cont),
+            u3k(p_res),
+            sat_u->is_stateful
+          );
           BoxArena = box_arena_frame;
           CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
@@ -2223,10 +2267,10 @@ u3we_lia_run_v1(u3_noun cor)
   u3_noun input = u3at(u3x_sam_2, cor);
   u3_noun seed = u3at(u3x_sam_6, cor);
   
-  u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
-  u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
+  u3_noun runnable = uw_kick_nock(u3k(ctx), AX_RUNNABLE);
+  u3_noun arrows   = KICK1(uw_kick_nock(u3k(ctx), AX_ARROWS));
 
-  u3_noun try_gate = u3j_kink(u3k(runnable), AX_TRY);
+  u3_noun try_gate = uw_kick_nock(u3k(runnable), AX_TRY);
   u3_noun try_gate_inner = KICK1(try_gate);
 
   u3_noun seed_new;  
@@ -2236,7 +2280,7 @@ u3we_lia_run_v1(u3_noun cor)
   if (input_tag == c3y)
   {
     u3_noun p_input_gate = u3nt(u3nc(0, 7), 0, u3k(p_input));  //  =>(p.input |=(* +>))
-    u3_noun past_new = u3n_slam_on(
+    u3_noun past_new = uw_slam_nock(
       u3k(try_gate_inner),
       u3nc(
         u3k(u3at(seed_past, seed)),
@@ -2264,22 +2308,22 @@ u3we_lia_run_v1(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  u3_noun call_script         = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
-  u3_noun memread_script      = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
-  u3_noun memwrite_script     = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
-  u3_noun call_ext_script     = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
-  u3_noun global_set_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
-  u3_noun global_get_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
-  u3_noun mem_grow_script     = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
-  u3_noun mem_size_script     =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
-  u3_noun get_acc_script      =       u3j_kink(u3k(arrows), AX_GET_ACC);
-  u3_noun set_acc_script      = KICK1(u3j_kink(u3k(arrows), AX_SET_ACC));
-  u3_noun get_all_glob_script =       u3j_kink(u3k(arrows), AX_GET_ALL_GLOB);
-  u3_noun set_all_glob_script = KICK1(u3j_kink(    arrows,  AX_SET_ALL_GLOB));
+  u3_noun call_script         = KICK1(uw_kick_nock(u3k(arrows), AX_CALL));  
+  u3_noun memread_script      = KICK1(uw_kick_nock(u3k(arrows), AX_MEMREAD));  
+  u3_noun memwrite_script     = KICK1(uw_kick_nock(u3k(arrows), AX_MEMWRITE));  
+  u3_noun call_ext_script     = KICK1(uw_kick_nock(u3k(arrows), AX_CALL_EXT));
+  u3_noun global_set_script   = KICK1(uw_kick_nock(u3k(arrows), AX_GLOBAL_SET));
+  u3_noun global_get_script   = KICK1(uw_kick_nock(u3k(arrows), AX_GLOBAL_GET));
+  u3_noun mem_grow_script     = KICK1(uw_kick_nock(u3k(arrows), AX_MEM_GROW));
+  u3_noun mem_size_script     =       uw_kick_nock(u3k(arrows), AX_MEM_SIZE);
+  u3_noun get_acc_script      =       uw_kick_nock(u3k(arrows), AX_GET_ACC);
+  u3_noun set_acc_script      = KICK1(uw_kick_nock(u3k(arrows), AX_SET_ACC));
+  u3_noun get_all_glob_script =       uw_kick_nock(u3k(arrows), AX_GET_ALL_GLOB);
+  u3_noun set_all_glob_script = KICK1(uw_kick_nock(    arrows,  AX_SET_ALL_GLOB));
 
   u3_noun try_script    = KICK1(try_gate_inner);
-  u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(u3j_kink(    runnable,  AX_RETURN));
+  u3_noun catch_script  = KICK2(uw_kick_nock(u3k(runnable), AX_CATCH));
+  u3_noun return_script = KICK1(uw_kick_nock(    runnable,  AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -2755,25 +2799,25 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun ctx = u3at(ONCE_CTX, cor);
   u3r_mug(ctx);
 
-  u3_noun runnable = u3j_kink(u3k(ctx), AX_RUNNABLE);
-  u3_noun arrows   = KICK1(u3j_kink(u3k(ctx), AX_ARROWS));
+  u3_noun runnable = uw_kick_nock(u3k(ctx), AX_RUNNABLE);
+  u3_noun arrows   = KICK1(uw_kick_nock(u3k(ctx), AX_ARROWS));
 
-  u3_noun call_script         = KICK1(u3j_kink(u3k(arrows), AX_CALL));  
-  u3_noun memread_script      = KICK1(u3j_kink(u3k(arrows), AX_MEMREAD));  
-  u3_noun memwrite_script     = KICK1(u3j_kink(u3k(arrows), AX_MEMWRITE));  
-  u3_noun call_ext_script     = KICK1(u3j_kink(u3k(arrows), AX_CALL_EXT));
-  u3_noun global_set_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_SET));
-  u3_noun global_get_script   = KICK1(u3j_kink(u3k(arrows), AX_GLOBAL_GET));
-  u3_noun mem_grow_script     = KICK1(u3j_kink(u3k(arrows), AX_MEM_GROW));
-  u3_noun mem_size_script     =       u3j_kink(u3k(arrows), AX_MEM_SIZE);
-  u3_noun get_acc_script      =       u3j_kink(u3k(arrows), AX_GET_ACC);
-  u3_noun set_acc_script      = KICK1(u3j_kink(u3k(arrows), AX_SET_ACC));
-  u3_noun get_all_glob_script =       u3j_kink(u3k(arrows), AX_GET_ALL_GLOB);
-  u3_noun set_all_glob_script = KICK1(u3j_kink(    arrows,  AX_SET_ALL_GLOB));
+  u3_noun call_script         = KICK1(uw_kick_nock(u3k(arrows), AX_CALL));  
+  u3_noun memread_script      = KICK1(uw_kick_nock(u3k(arrows), AX_MEMREAD));  
+  u3_noun memwrite_script     = KICK1(uw_kick_nock(u3k(arrows), AX_MEMWRITE));  
+  u3_noun call_ext_script     = KICK1(uw_kick_nock(u3k(arrows), AX_CALL_EXT));
+  u3_noun global_set_script   = KICK1(uw_kick_nock(u3k(arrows), AX_GLOBAL_SET));
+  u3_noun global_get_script   = KICK1(uw_kick_nock(u3k(arrows), AX_GLOBAL_GET));
+  u3_noun mem_grow_script     = KICK1(uw_kick_nock(u3k(arrows), AX_MEM_GROW));
+  u3_noun mem_size_script     =       uw_kick_nock(u3k(arrows), AX_MEM_SIZE);
+  u3_noun get_acc_script      =       uw_kick_nock(u3k(arrows), AX_GET_ACC);
+  u3_noun set_acc_script      = KICK1(uw_kick_nock(u3k(arrows), AX_SET_ACC));
+  u3_noun get_all_glob_script =       uw_kick_nock(u3k(arrows), AX_GET_ALL_GLOB);
+  u3_noun set_all_glob_script = KICK1(uw_kick_nock(    arrows,  AX_SET_ALL_GLOB));
 
-  u3_noun try_script    = KICK2(u3j_kink(u3k(runnable), AX_TRY));  
-  u3_noun catch_script  = KICK2(u3j_kink(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(u3j_kink(    runnable,  AX_RETURN));
+  u3_noun try_script    = KICK2(uw_kick_nock(u3k(runnable), AX_TRY));  
+  u3_noun catch_script  = KICK2(uw_kick_nock(u3k(runnable), AX_CATCH));
+  u3_noun return_script = KICK1(uw_kick_nock(    runnable,  AX_RETURN));
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
