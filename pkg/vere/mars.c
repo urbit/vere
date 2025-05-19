@@ -1396,10 +1396,10 @@ u3_mars_init(c3_c*    dir_c,
 }
 
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  410
-#define VERE_LULL  322
-#define VERE_ARVO  236
-#define VERE_HOON  137
+#define VERE_ZUSE  409
+#define VERE_LULL  321
+#define VERE_ARVO  235
+#define VERE_HOON  136
 #define VERE_NOCK  4
 
 /* _mars_wyrd_card(): construct %wyrd.
@@ -1441,9 +1441,11 @@ static c3_o
 _mars_sift_pill(u3_noun  pil,
                 u3_noun* bot,
                 u3_noun* mod,
-                u3_noun* use)
+                u3_noun* use,
+                u3_noun* cax)
 {
   u3_noun pil_p, pil_q;
+  *cax = u3_nul;
 
   if ( c3n == u3r_cell(pil, &pil_p, &pil_q) ) {
     return c3n;
@@ -1467,7 +1469,7 @@ _mars_sift_pill(u3_noun  pil,
       fprintf(stderr, "boot: failed: unable to boot from ivory pill\r\n");
       return c3n;
     }
-    else if ( c3__pill != tag ) {
+    else if ( (c3__pill != tag) && (c3__cash != tag) ) {
       if ( c3y == u3a_is_atom(tag) ) {
         u3m_p("pill", tag);
       }
@@ -1478,6 +1480,11 @@ _mars_sift_pill(u3_noun  pil,
     {
       u3_noun typ;
       c3_c* typ_c;
+
+      if ( (c3__cash == tag) && (c3y == u3du(dat)) ) {
+        *cax = u3t(dat);
+        dat = u3h(dat);
+      }
 
       if ( c3n == u3r_qual(dat, &typ, bot, mod, use) ) {
         fprintf(stderr, "boot: failed: unable to extract pill\r\n");
@@ -1491,7 +1498,7 @@ _mars_sift_pill(u3_noun  pil,
       }
     }
 
-    u3k(*bot); u3k(*mod); u3k(*use);
+    u3k(*bot); u3k(*mod); u3k(*use), u3k(*cax);
     u3z(pro);
   }
 
@@ -1593,11 +1600,11 @@ _mars_boot_make(u3_boot_opts* inp_u,
   u3r_chubs(0, 2, met_u->who_d, who);
 
   {
-    u3_noun bot, mod, use;
+    u3_noun bot, mod, use, cax;
 
     //  parse pill
     //
-    if ( c3n == _mars_sift_pill(u3k(pil), &bot, &mod, &use) ) {
+    if ( c3n == _mars_sift_pill(u3k(pil), &bot, &mod, &use, &cax) ) {
       return c3n;
     }
 
@@ -1704,7 +1711,37 @@ _mars_boot_make(u3_boot_opts* inp_u,
       *ova = u3kb_flop(eve);
       u3z(now); u3z(bit);
     }
+
+    //  cache
+    //
+    {
+      u3_noun tmp = cax;
+      c3_o gud_o = c3y;
+      while ( u3_nul != tmp ) {
+        if ( (c3n == u3a_is_cell(u3h(tmp))) ||
+             (c3n == u3a_is_cell(u3h(u3h(tmp)))) ) {
+          gud_o = c3n;
+        }
+        tmp = u3t(tmp);
+      }
+
+      if ( c3n == gud_o ) {
+        u3l_log("mars: got bad cache");
+      }
+      else {
+        while ( u3_nul != cax ) {
+          u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+                     u3t(u3h(cax)));
+          cax = u3t(cax);
+        }
+      }
+
+      // XX joe double-check please
+      u3z(cax);
+    }
   }
+
+
 
   u3z(com);
 
@@ -1736,7 +1773,7 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
   //  XX source kelvin from args?
   //
   inp_u.ver_u.nam_m = c3__zuse;
-  inp_u.ver_u.ver_w = 410;
+  inp_u.ver_u.ver_w = 409;
 
   gettimeofday(&inp_u.tim_u, 0);
   c3_rand(inp_u.eny_w);
