@@ -70,9 +70,12 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         curl.linkSystemLibrary("bcrypt");
     } else {
-        curl.root_module.addCMacro("CURL_EXTERN_SYMBOL", "__attribute__ ((__visibility__ (\"default\"))");
+        curl.root_module.addCMacro(
+            "CURL_EXTERN_SYMBOL",
+            "__attribute__ ((__visibility__ (\"default\"))"
+        );
 
-        const isDarwin = target.result.os.tag.isDarwin();
+        const isDarwin = target.result.isDarwin();
         if (!isDarwin)
             curl.root_module.addCMacro("ENABLE_IPV6", "1");
         curl.root_module.addCMacro("HAVE_ALARM", "1");

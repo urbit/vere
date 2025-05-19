@@ -2,24 +2,20 @@ const std = @import("std");
 
 const VERSION = "3.2";
 
-const main_targets: []const std.Target.Query = &[_]std.Target.Query{
+const main_targets = .{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
 };
 
-const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
-    .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+const supported_targets: []const std.Target.Query = &(main_targets ++ .{
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
-};
+});
 
-const targets: []const std.Target.Query = main_targets;
+const targets: []const std.Target.Query = &main_targets;
 
 const BuildCfg = struct {
     version: []const u8,
@@ -399,7 +395,7 @@ fn buildBinary(
     });
     b.getInstallStep().dependOn(&target_output.step);
 
-    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
+    if (target.result.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -429,7 +425,7 @@ fn buildBinary(
     urbit.linkLibrary(whereami.artifact("whereami"));
     urbit.linkLibrary(wasm3.artifact("wasm3"));
 
-    if (t.os.tag.isDarwin()) {
+    if (t.isDarwin()) {
         // Requires llvm@18 homebrew installation
         if (cfg.asan or cfg.ubsan)
             urbit.addLibraryPath(.{
@@ -570,6 +566,11 @@ fn buildBinary(
                 .file = "pkg/vere/benchmarks.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "pact-test",
+                .file = "pkg/vere/io/mesa/pact_test.c",
+                .deps = vere_test_deps,
+            },
         };
 
         for (tests) |tst| {
@@ -581,7 +582,7 @@ fn buildBinary(
                 .optimize = optimize,
             });
 
-            if (t.os.tag.isDarwin() and !target.query.isNative()) {
+            if (t.isDarwin() and !target.query.isNative()) {
                 const macos_sdk = b.lazyDependency("macos_sdk", .{
                     .target = target,
                     .optimize = optimize,
