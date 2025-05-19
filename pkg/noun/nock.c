@@ -2086,7 +2086,13 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
   u3_noun* top;
   u3_noun x, o;
   u3p(void) empty;
-  burnframe* fam = NULL;
+  burnframe* fam;
+
+  fam = u3to(burnframe, u3R->cap_p) + off + mov;
+  u3R->cap_p  = u3of(burnframe, fam - off);
+  //  bogus values for the start frame
+  fam->ip_w = 0;
+  fam->pog_u = NULL;
 
   empty = u3R->cap_p;
   _n_push(mov, off, bus);
@@ -2107,6 +2113,11 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       fprintf(stderr, "return\r\n");
 #endif
       if ( empty == u3R->cap_p ) {
+        //  pop starting frame
+        fam        = u3to(burnframe, u3R->cap_p) + off;
+        c3_dessert(fam->ip_w == 0);
+        c3_dessert(fam->pog_u == NULL);
+        u3R->cap_p = u3of(burnframe, fam - (mov+off));
         return x;
       }
       else {
@@ -2819,28 +2830,28 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = u3i_edit(*top, x, o);
       BURN();
     
-    do_step:                  // [hed sub]
-      x = _n_pep(mov, off);   // [sub]
+    do_step:                  // [hed sub frame]
+      x = _n_pep(mov, off);   // [sub frame]
       {
         u3_noun* tel;
         o = u3i_defcons(&top, &tel);
       }
       *top = x;
-
-      if ((fam) && u3n_frame_is_golf(fam)) {                          //  can we rely on fam having correct value here?
+      fam = u3to(burnframe, u3R->cap_p - mov) + off;
+      if (u3n_frame_is_golf(fam)) {
         top = u3to(u3_noun, u3R->cap_p - mov * u3n_golf_hop) + off;   //  [sub golf >hol< pro ...]
         ((u3a_cell *)u3a_to_ptr(*top))->tel = o;                      //  fill the hole
         *top = o;                                                     //  update the hole
       }
       else {
-        top         = _n_peek( off);                            //  [sub]
-        _n_push(mov, off, o);                                   //  [pro sub]
-        fam         = u3to(burnframe, u3R->cap_p) + off + mov;  //  [golf pro sub]
+        top         = _n_peek( off);                            //  [sub frame]
+        _n_push(mov, off, o);                                   //  [pro sub frame]
+        fam         = u3to(burnframe, u3R->cap_p) + off + mov;  //  [golf pro sub frame]
         u3R->cap_p  = u3of(burnframe, fam - off);
         fam->pog_u  = NULL;
         fam->ip_w   = u3n_golf_pc;
-        _n_push(mov, off, *top);                                //  [sub golf pro sub]
-        *top        = o;                                        //  [sub golf pro pro]
+        _n_push(mov, off, *top);                                //  [sub golf pro sub frame]
+        *top        = o;                                        //  [sub golf pro pro frame]
       }
       BURN();
   }
