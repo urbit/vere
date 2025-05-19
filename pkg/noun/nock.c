@@ -409,8 +409,8 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(SWAP, "swap", &&do_swap),  /*  3 */                                        \
   X(TOSS, "toss", &&do_toss),  /*  4 */                                        \
   /* auto-cons */                                                              \
-  X(AUTO, "auto", &&do_auto),  /*  5: keep */                                  \
-  X(AULT, "ault", &&do_ault),  /*  6: lose */                                  \
+  X(AUTO, "auto", &&do_auto),  /*  5: kept */                                  \
+  X(AULT, "ault", &&do_ault),  /*  6: lost */                                  \
   /* general purposes */                                                       \
   X(SNOC, "snoc", &&do_snoc),  /*  7: keep */                                  \
   X(SNOL, "snol", &&do_snol),  /*  8: lose */                                  \
@@ -1238,7 +1238,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
     else {
       tot_w += _n_comp(ops, cod, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, arg, c3n, c3n);
+      tot_w += _n_comp(ops, arg, los_o, c3n);
       ++tot_w; _n_emit(ops, (c3y == los_o ) ? AULT : AUTO);
     }
   }
@@ -2165,9 +2165,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = u3nc(*top, x);          // [pro bus]
       BURN();
 
-    do_ault:                         // [tel bus hed]
-      x    = _n_pep(mov, off);       // [bus hed]
-      _n_toss(mov, off);             // [hed]
+    do_ault:                         // [tel hed]
+      x    = _n_pep(mov, off);       // [hed]
       top  = _n_peek(off);
       *top = u3nc(*top, x);          // [pro]
       BURN();
