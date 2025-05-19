@@ -521,7 +521,9 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(KUTS, "kuts", &&do_kuts),  /* 92: c3_s */                                  \
   X(KITB, "kitb", &&do_kitb),  /* 93: c3_b */                                  \
   X(KITS, "kits", &&do_kits),  /* 94: c3_s */                                  \
-  X(LAST,   NULL,      NULL),  /* 95 */
+  /* tail call modulo cons: advance accumulator*/                              \
+  X(STEP, "step", &&do_step),  /* 95 */                                        \
+  X(LAST,   NULL,      NULL),  /* 96 */
 
 // Opcodes. Define X to select the enum name from OPCODES.
 #define X(opcode, name, indirect_jump) opcode
@@ -1228,10 +1230,17 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
   u3_noun cod, arg, hed, tel;
   u3x_cell(fol, &cod, &arg);
   if ( c3y == u3du(cod) ) {
-    tot_w += _n_comp(ops, cod, c3n, c3n);
-    ++tot_w; _n_emit(ops, SWAP);
-    tot_w += _n_comp(ops, arg, c3n, c3n);
-    ++tot_w; _n_emit(ops, (c3y == los_o ) ? AULT : AUTO);
+    if (c3y == tel_o) {
+      tot_w += _n_comp(ops, cod, c3n, c3n);
+      ++tot_w; _n_emit(ops, STEP);
+      tot_w += _n_comp(ops, arg, c3y, c3y);
+    }
+    else {
+      tot_w += _n_comp(ops, cod, c3n, c3n);
+      ++tot_w; _n_emit(ops, SWAP);
+      tot_w += _n_comp(ops, arg, c3n, c3n);
+      ++tot_w; _n_emit(ops, (c3y == los_o ) ? AULT : AUTO);
+    }
   }
   else switch ( cod ) {
     case 0:
@@ -2048,6 +2057,12 @@ typedef struct __attribute__((__packed__)) {
   c3_w     ip_w;
 } burnframe;
 
+# define u3n_golf_pc              UINT32_MAX
+# define u3n_frame_is_golf(fam)   \
+  (((fam)->pog_u == NULL) && ((fam)->ip_w == u3n_golf_pc))
+
+# define u3n_golf_hop (c3_wiseof(u3_noun) + c3_wiseof(burnframe))
+
 /* _n_burn(): pog: program
  *            bus: subject (TRANSFER)
  *            mov: -1 north, 1 south
@@ -2071,7 +2086,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
   u3_noun* top;
   u3_noun x, o;
   u3p(void) empty;
-  burnframe* fam;
+  burnframe* fam = NULL;
 
   empty = u3R->cap_p;
   _n_push(mov, off, bus);
@@ -2096,6 +2111,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       }
       else {
         fam   = u3to(burnframe, u3R->cap_p) + off;
+        if (u3n_frame_is_golf(fam)) {                     //  [golf hol som]
+          u3R->cap_p = u3of(burnframe, fam - (mov+off));  //  [hol som]
+          o = _n_pep(mov, off);                           //  [som]
+          ((u3a_cell *)u3a_to_ptr(o))->tel = x;
+          // done with TC mod cons, return from the original frame
+          //
+          goto do_halt;
+        }
         pog_u = fam->pog_u;
         pog   = pog_u->byc_u.ops_y;
         ip_w  = fam->ip_w;
@@ -2794,6 +2817,31 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       top = _n_peek(off);
     edit_in:
       *top = u3i_edit(*top, x, o);
+      BURN();
+    
+    do_step:                  // [hed sub]
+      x = _n_pep(mov, off);   // [sub]
+      {
+        u3_noun* tel;
+        o = u3i_defcons(&top, &tel);
+      }
+      *top = x;
+
+      if ((fam) && u3n_frame_is_golf(fam)) {                          //  can we rely on fam having correct value here?
+        top = u3to(u3_noun, u3R->cap_p - mov * u3n_golf_hop) + off;   //  [sub golf >hol< pro ...]
+        ((u3a_cell *)u3a_to_ptr(*top))->tel = o;                      //  fill the hole
+        *top = o;                                                     //  update the hole
+      }
+      else {
+        top         = _n_peek( off);                            //  [sub]
+        _n_push(mov, off, o);                                   //  [pro sub]
+        fam         = u3to(burnframe, u3R->cap_p) + off + mov;  //  [golf pro sub]
+        u3R->cap_p  = u3of(burnframe, fam - off);
+        fam->pog_u  = NULL;
+        fam->ip_w   = u3n_golf_pc;
+        _n_push(mov, off, *top);                                //  [sub golf pro sub]
+        *top        = o;                                        //  [sub golf pro pro]
+      }
       BURN();
   }
 }
