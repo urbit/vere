@@ -634,6 +634,7 @@
           c3_s             pes_s;               //  htls port
           c3_s             por_s;               //  ames port
           struct _u3_pier* nex_u;               //  next in list
+          u3_noun            cax;               //  cache
         } u3_pier;
 
       /* u3_king: all executing piers.
