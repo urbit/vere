@@ -1631,9 +1631,9 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 
 #ifdef U3_MEMORY_DEBUG
   return;
-#endif
-
+#else
   if ( u3C.wag_w & u3o_debug_ram ) return;
+#endif
 
   //  while not at home, attempt to unify
   //
