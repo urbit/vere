@@ -198,7 +198,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
       return c3n;
     }
     else {
-      memcpy(&fir_d, key_u.mv_data, sizeof(c3_d));
+      fir_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  read with the cursor from the end of the database
@@ -206,7 +206,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
     ret_w = mdb_cursor_get(cur_u, &key_u, &val_u, MDB_LAST);
 
     if ( !ret_w ) {
-      memcpy(&las_d, key_u.mv_data, sizeof(c3_d));
+      las_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  clean up unconditionally, we're done
