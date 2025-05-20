@@ -396,6 +396,15 @@ _lord_plea_peek(u3_lord* god_u, u3_noun dat)
   u3z(dat);
 }
 
+/* _lord_plea_quiz(): handle quiz (query to serf).
+ */
+static void
+_lord_plea_quiz(u3_lord* god_u, u3_noun dat)
+{
+  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_quiz);
+  wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
+}
+
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
  static void
@@ -556,6 +565,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
     case c3__ripe: {
       _lord_plea_ripe(god_u, u3k(dat));
     } break;
+
+    case c3__quiz: {
+      _lord_plea_quiz(god_u, u3k(dat));
+    }
   }
 
   u3z(jar);
@@ -609,6 +622,10 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     case u3_writ_live: {
       msg = u3_nul;
     } break;
+
+    case u3_writ_quiz: {
+      msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
+    }
 
     case u3_writ_exit: {
       msg = u3nc(c3__exit, u3_nul);

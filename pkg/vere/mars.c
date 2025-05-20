@@ -675,6 +675,42 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       _mars_gift(mar_u, u3nc(c3__live, u3_nul));
     } break;
 
+    //  $:  %quiz
+    //      $%  [%quac ~]
+    //          [%quic ~]
+    //  ==  ==
+    case c3__quiz: {
+      switch ( u3h(dat) ) {
+        case c3__quac: {
+          u3z(jar);
+          u3_noun res = u3_mars_grab(c3n);
+          if ( u3_none == res ) {
+            return c3n;
+          } else {
+            _mars_gift(mar_u, u3nt(c3__quiz, c3__quac, res));
+          }
+        } break;
+
+        case c3__quic: {
+          u3z(jar);
+          c3_d pen_d = 4ULL * u3a_open(u3R);
+          c3_d dil_d = 4ULL * u3a_idle(u3R);
+          fprintf(stderr, "open: %" PRIu64 "\r\n", pen_d);
+          fprintf(stderr, "idle: %" PRIu64 "\r\n", dil_d);
+
+          _mars_gift(mar_u, u3nt(c3__quiz, c3__quic,
+                                 u3nt(u3nc(c3__open, u3i_chub(pen_d)),
+                                 u3nc(c3__idle, u3i_chub(dil_d)),
+                                 u3_nul)));
+        } break;
+
+        default: {
+          u3z(jar);
+          return c3n;
+        }
+      }
+    } break;
+
     case c3__exit: {
       u3z(jar);
       mar_u->sat_e = u3_mars_exit_e;
@@ -1951,8 +1987,6 @@ u3_mars_grab(c3_o pri_o)
 
     u3z(gon);
   }
-
-  fprintf(stderr, "mars: measuring memory:\r\n");
 
   if ( u3_nul != sac ) {
     res = _mars_grab(sac, pri_o);
