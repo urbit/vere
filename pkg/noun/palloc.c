@@ -1255,6 +1255,7 @@ _mark_post(u3_post som_p)
       //
       if ( !hun_u->hun_s ) {
         u3a_Mark.wee_w[bit_g] += _mark_post(dir_p);
+        mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
       }
       else {
         //  NB: max [hun_s] guarded by assertion in _init_once()
@@ -1521,6 +1522,7 @@ _count_post(u3_post som_p, c3_y rat_y)
       //
       if ( !hun_u->hun_s ) {
         u3a_Mark.wee_w[bit_g] += _count_post(dir_p, 0);
+        mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
       }
       else {
         memset(mar_w, 0xff, (c3_z)hun_u->hun_s << 2);
