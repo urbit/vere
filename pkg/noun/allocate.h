@@ -571,6 +571,8 @@ u3_noun
 u3a_head(u3_noun);
 u3_noun
 u3a_tail(u3_noun);
+void
+u3a_post_info(u3_post);
 
     /**  Allocation.
     **/

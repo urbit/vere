@@ -992,7 +992,6 @@ _irealloc(u3_post som_p, c3_w len_w)
   }
 }
 
-//  XX declare wrapper in allocate.c for debugging
 static void
 _post_status(u3_post som_p)
 {

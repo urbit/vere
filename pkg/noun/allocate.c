@@ -72,6 +72,12 @@ u3a_tail(u3_noun som)
 }
 
 void
+u3a_post_info(u3_post som_p)
+{
+  _post_status(som_p);
+}
+
+void
 u3a_init_once(void)
 {
   _init_once();
