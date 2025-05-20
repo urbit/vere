@@ -1609,11 +1609,11 @@ _sweep_counts(void)
       if ( !(u3a_Mark.bit_w[blk_w] & (1U << bit_w)) ) {
         siz_w = _free_pages(som_p, pag_w, dir_p);
         if ( 1 == siz_w ) {
-          fprintf(stderr, "palloc: leaked page %u\r\n", pag_w);
+          fprintf(stderr, "palloc: leaked page %u (0x%x)\r\n", pag_w, page_to_post(pag_w));
         }
         else {
-          fprintf(stderr, "palloc: leaked pages %u-%u\r\n",
-                          pag_w, pag_w + siz_w - 1);
+          fprintf(stderr, "palloc: leaked pages %u-%u (0x%x)\r\n",
+                          pag_w, pag_w + siz_w - 1, page_to_post(pag_w));
         }
         leq_w += siz_w << u3a_page;
       }
