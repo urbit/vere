@@ -12,7 +12,7 @@
 
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
-#     define u3a_vits    1
+#     define u3a_vits    2
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
