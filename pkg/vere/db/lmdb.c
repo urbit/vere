@@ -588,11 +588,11 @@ u3_lmdb_walk_next(u3_lmdb_walk* itr_u, size_t* len_i, void** buf_v)
 
   //  sanity check: ensure contiguous event numbers
   //
-  if ( *(c3_d*)key_u.mv_data != itr_u->nex_d ) {
+  if ( c3_sift_chub(key_u.mv_data) != itr_u->nex_d ) {
     fprintf(stderr, "lmdb: read gap: expected %" PRIu64
                     ", received %" PRIu64 "\r\n",
                     itr_u->nex_d,
-                    *(c3_d*)key_u.mv_data);
+                    c3_sift_chub(key_u.mv_data));
     return c3n;
   }
 
