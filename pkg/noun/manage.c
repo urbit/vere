@@ -511,17 +511,14 @@ _pave_parts(void)
 static void
 _pave_home(void)
 {
-  u3_post bot_p, top_p;
+  u3_post top_p = u3C.wor_i - u3a_walign;
+  u3_post bot_p = 1U << u3a_page;
 
-  bot_p = 1U << u3a_page;
-  top_p = u3C.wor_i - c3_wiseof(u3v_home);
-  u3H   = u3to(u3v_home, top_p);
-  top_p = u3C.wor_i - bot_p;
-
+  u3H = u3to(u3v_home, 0);
+  memset(u3H, 0, sizeof(u3v_home));
   u3H->ver_w = U3V_VERLAT;
   u3R = &u3H->rod_u;
 
-  memset(u3R, 0, sizeof(u3a_road));
   u3R->rut_p = u3R->hat_p = bot_p;
   u3R->mat_p = u3R->cap_p = top_p;
 
@@ -539,7 +536,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
 static void
 _find_home(void)
 {
-  c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
+  c3_w ver_w = *(u3_Loom);
   c3_o mig_o = c3y;  //  did we migrate?
 
   switch ( ver_w ) {
@@ -561,13 +558,9 @@ _find_home(void)
   //  NB: the home road is always north
   //
   {
-    u3_post bot_p, top_p;
+    u3_post top_p = u3C.wor_i - u3a_walign;
 
-    bot_p = 1U << u3a_page;
-    top_p = u3C.wor_i - c3_wiseof(u3v_home);
-    u3H   = u3to(u3v_home, top_p);
-    top_p = u3C.wor_i - bot_p;
-
+    u3H = u3to(u3v_home, 0);
     u3R = &u3H->rod_u;
 
     //  this looks risky, but there are no legitimate scenarios
