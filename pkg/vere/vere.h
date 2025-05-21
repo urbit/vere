@@ -1495,4 +1495,14 @@
         c3_w
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
+      /* u3_melt_all(): canonicalize persistent state
+      */
+        c3_w
+        u3_melt_all(FILE*);
+
+      /* u3_meld_all(): canonicalize persistent nouns and compact state.
+      */
+        c3_w
+        u3_meld_all(FILE*);
+
 #endif /* ifndef U3_VERE_H */

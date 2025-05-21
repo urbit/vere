@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    if (target.result.isDarwin() and !target.query.isNative()) {
+    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -224,6 +224,7 @@ const c_source_files = [_][]const u8{
     "lord.c",
     "mars.c",
     "mdns.c",
+    "melt.c",
     "newt.c",
     "pier.c",
     "time.c",

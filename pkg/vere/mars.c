@@ -668,7 +668,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
         case c3__meld: {
           u3z(jar);
-          u3u_meld();
+          u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
         } break;
       }
 
@@ -1371,7 +1371,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //  XX pack before meld?
           //
           if ( u3C.wag_w & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3u_meld());
+            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
           }
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
