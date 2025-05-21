@@ -4,7 +4,7 @@
     .dependencies = .{
         .libuv = .{
             .url = "https://dist.libuv.org/dist/v1.50.0/libuv-v1.50.0.tar.gz",
-            .hash = "12207ac22e5e40afe515b7c319237785113c97ee84a75f7c66c1a0e7cc6e743debeb",
+            .hash = "N-V-__8AAH34QwB6wi5eQK_lFbfDGSN3hRE8l-6Ep198ZsGg",
         },
     },
     .paths = .{

@@ -190,24 +190,24 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d)
   //
   //    XX support -J
   //
-  {
-    c3_d  len_d = u3_Ivory_pill_len;
-    c3_y* byt_y = u3_Ivory_pill;
-    u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
-    u3_weak pil;
+  /* { */
+  /*   c3_d  len_d = u3_Ivory_pill_len; */
+  /*   c3_y* byt_y = u3_Ivory_pill; */
+  /*   u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28); */
+  /*   u3_weak pil; */
 
-    if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      u3l_log("lite: unable to cue ivory pill");
-      exit(1);
-    }
+  /*   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) { */
+  /*     u3l_log("lite: unable to cue ivory pill"); */
+  /*     exit(1); */
+  /*   } */
 
-    u3s_cue_xeno_done(sil_u);
+  /*   u3s_cue_xeno_done(sil_u); */
 
-    if ( c3n == u3v_boot_lite(pil)) {
-      u3l_log("lite: boot failed");
-      exit(1);
-    }
-  }
+  /*   if ( c3n == u3v_boot_lite(pil)) { */
+  /*     u3l_log("lite: boot failed"); */
+  /*     exit(1); */
+  /*   } */
+  /* } */
 
   u3l_log("--------------- bootstrap starting ----------------");
 
@@ -349,7 +349,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //  XX pack before meld?
           //
           if ( u3C.wag_w & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3u_meld());
+            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
           }
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
