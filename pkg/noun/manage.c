@@ -572,25 +572,24 @@ _find_home(void)
   //  check for obvious corruption
   //
   if ( c3n == mig_o ) {
-    c3_w    nor_w, sou_w;
+    c3_w    nor_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
 
     nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
-    sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
-    if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
-      fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
+    if ( nor_w > u3P.img_u.pgs_w ) {
+      fprintf(stderr, "loom: corrupt size (%u, %u)\r\n",
+                      nor_w, u3P.img_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
 
     //  the north segment is in-order on disk; it being oversized
     //  doesn't necessarily indicate corruption.
     //
-    if ( nor_w < u3P.nor_u.pgs_w ) {
+    if ( nor_w < u3P.img_u.pgs_w ) {
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w);
+                      nor_w, u3P.img_u.pgs_w);
     }
 
     //  XX move me
