@@ -9,8 +9,13 @@
 MODULE.bazel
 MODULE.bazel.lock
 
+# Zig
 **/.zig-cache
 **/zig-out
+
+# clangd
+**/.cache
+compile_commands.json
 
 # Swap files.
 *.swo
