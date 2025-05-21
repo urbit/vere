@@ -20,10 +20,6 @@ c3_c tac_c[256];  //  tracing label
 ::  peek=[gang (each path $%([%once @tas @tas path] [%beam @tas beam]))]
 ::  ovum=ovum
 ::
-::    next steps:
-::    - |mass should be a query of the serf directly
-::    - add duct or vane stack for spinner
-::
 |$  [peek ovum]
 |%
 +$  task                                                ::  urth -> mars

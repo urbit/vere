@@ -17,10 +17,6 @@
 |%
 ::  +task: from urth to mars
 ::
-::    next steps:
-::    - |mass should be a query of the serf directly
-::    - add duct or vane stack for spinner
-::
 +$  task
   $%  [%live ?(%meld %pack) ~] :: XX rename
       [%exit ~]
