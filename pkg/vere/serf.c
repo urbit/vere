@@ -1070,7 +1070,7 @@ u3_serf_live(u3_serf* sef_u, u3_noun com, u3_noun* ret)
       }
       else {
         u3z(com);
-        u3a_print_memory(stderr, "serf: meld: gained", u3u_meld());
+        u3a_print_memory(stderr, "serf: meld: gained", u3_meld_all(stderr));
         *ret = u3nc(c3__live, u3_nul);
         return c3y;
       }
