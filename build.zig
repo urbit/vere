@@ -603,7 +603,7 @@ fn buildBinary(
                 }
             }
 
-            if (t.isDarwin()) {
+            if (t.os.tag.isDarwin()) {
                 // Requires llvm@18 homebrew installation
                 if (cfg.asan or cfg.ubsan)
                     test_exe.addLibraryPath(.{
@@ -624,7 +624,7 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
-            if ( t.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
                 //  disable libmalloc warnings
                 run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
             }
