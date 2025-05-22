@@ -57,6 +57,7 @@ pub fn build(b: *std.Build) void {
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-g",
             "-Wall",
@@ -105,6 +106,7 @@ fn libaes_siv(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
         },
     });
@@ -147,6 +149,7 @@ fn libsecp256k1(
             "-fno-sanitize=all",
             "-g",
             "-O2",
+            "-fno-omit-frame-pointer",
             "-std=c89",
             "-pedantic",
             "-Wno-long-long",
@@ -200,6 +203,7 @@ fn libargon2(
 
     const flags = .{
         "-O2",
+        "-fno-omit-frame-pointer",
         "-fno-sanitize=all",
         "-Wno-unused-value",
         "-Wno-unused-function",
@@ -275,6 +279,7 @@ fn libblake3(
             }),
             .flags = &.{
                 "-O2",
+                "-fno-omit-frame-pointer",
                 "-fno-sanitize=all",
             },
         });
@@ -284,6 +289,7 @@ fn libblake3(
             .files = &(common_files ++ .{"blake3_neon.c"}),
             .flags = &.{
                 "-O2",
+                "-fno-omit-frame-pointer",
                 "-fno-sanitize=all",
                 "-DBLAKE3_USE_NEON=1",
             },
@@ -332,6 +338,7 @@ fn libed25519(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-Wno-unused-result",
         },
@@ -370,6 +377,7 @@ fn libge_additions(
         .files = &.{"ge-additions.c"},
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
@@ -407,6 +415,7 @@ fn libkeccak_tiny(
         .files = &.{"keccak-tiny.c"},
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-std=c11",
             "-Wextra",
@@ -445,6 +454,7 @@ fn libmonocypher(
         .files = &.{"monocypher.c"},
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
         },
     });
@@ -490,6 +500,7 @@ fn libscrypt(
         },
         .flags = &.{
             "-O2",
+            "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-D_FORTIFY_SOURCE=2",
         },

@@ -3,16 +3,11 @@
 
 #include "vere.h"
 
-void bitset_init(u3_bitset* bit_u, c3_w len_w)
+void bitset_init(u3_bitset* bit_u, c3_w len_w, arena* are_u)
 {
   bit_u->len_w = len_w;
-  bit_u->buf_y = c3_calloc((len_w >> 3) + 1);
-}
-
-void
-bitset_free(u3_bitset* bit_u)
-{
-  c3_free(bit_u->buf_y);
+  bit_u->buf_y = new(are_u, c3_y, (len_w >> 3) + 1);
+  memset(bit_u->buf_y, 0, (len_w >> 3) + 1);
 }
 
 static c3_y
@@ -89,7 +84,7 @@ c3_w main()
 {
   u3_bitset bit_u;
   bitset_init(&bit_u, 500);
-  
+
   bitset_put(&bit_u, 5);
   bitset_put(&bit_u, 50);
   bitset_put(&bit_u, 100);
@@ -127,5 +122,3 @@ c3_w main()
 }
 
 #endif
-
-

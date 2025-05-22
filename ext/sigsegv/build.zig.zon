@@ -4,12 +4,12 @@
     .dependencies = .{
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
-            .hash = "122033a9c16c63f66ba4c83d6c61f487b06a6435ed57201eaccb4c5703ce4cdd956e",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
             .lazy = true,
         },
         .sigsegv = .{
-            .url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.14.tar.gz",
-            .hash = "122082332294b5084ed0032c635f36227fb0408c175617a73aa9798036ead4c22c79",
+            .url = "https://ftp.fr.openbsd.org/pub/OpenBSD/distfiles/libsigsegv-2.14.tar.gz",
+            .hash = "N-V-__8AAHQhHwCCMyKUtQhO0AMsY182In-wQIwXVhenOql5",
         },
     },
     .paths = .{

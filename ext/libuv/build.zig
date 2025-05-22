@@ -118,13 +118,10 @@ const uv_srcs_unix = uv_srcs ++ [_][]const u8{
 };
 
 const uv_srcs_linux = uv_srcs_unix ++ [_][]const u8{
-    "unix/linux-core.c",
-    "unix/linux-inotify.c",
-    "unix/linux-syscalls.c",
+    "unix/linux.c",
     "unix/procfs-exepath.c",
     "unix/random-getrandom.c",
     "unix/random-sysctl-linux.c",
-    "unix/epoll.c",
 };
 
 const uv_srcs_macos = uv_srcs_unix ++ [_][]const u8{

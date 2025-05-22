@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    if (target.result.isDarwin() and !target.query.isNative()) {
+    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -224,10 +224,9 @@ const c_source_files = [_][]const u8{
     "lord.c",
     "mars.c",
     "mdns.c",
+    "melt.c",
     "newt.c",
     "pier.c",
-    "save.c",
-    "serf.c",
     "time.c",
     "ward.c",
 };
@@ -240,8 +239,9 @@ const install_headers = [_][]const u8{
     "io/mesa/bitset.h",
     "io/mesa/mesa.h",
     "io/serial.h",
+    "arena.h",
     "mars.h",
     "mdns.h",
-    "serf.h",
     "vere.h",
+    "verstable.h",
 };
