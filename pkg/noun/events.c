@@ -10,7 +10,7 @@
 //!     in-order on disk. in a file-backed mapping by default.
 //!   - patch memory (memory.bin): new or changed pages since the last snapshot
 //!   - patch control (u3e_control control.bin): patch metadata, watermarks,
-//!     and indices/mugs for pages in patch memory.
+//!     and indices/checksums for pages in patch memory.
 //!
 //! ### initialization (u3e_live())
 //!
@@ -96,8 +96,8 @@
 
 #include "log.h"
 #include "manage.h"
+#include "murmur3.h"
 #include "options.h"
-#include "retrieve.h"
 #include "types.h"
 
 /* _ce_len:       byte length of pages
@@ -113,12 +113,12 @@
 /// Snapshotting system.
 u3e_pool u3e_Pool;
 
-static c3_l
-_ce_mug_page(void* ptr_v)
+static c3_w
+_ce_muk_page(void* ptr_v)
 {
-  //  XX trailing zeros
-  // return u3r_mug_bytes(ptr_v, _ce_page);
-  return u3r_mug_words(ptr_v, _ce_len_words(1));
+  c3_w haz_w;
+  MurmurHash3_x86_32(ptr_v, _ce_page, 0xcafebabeU, &haz_w);
+  return haz_w;
 }
 
 #ifdef U3_SNAPSHOT_VALIDATION
@@ -126,7 +126,7 @@ _ce_mug_page(void* ptr_v)
 */
 struct {
   c3_w max_w;
-  c3_w mug_w[u3a_pages];
+  c3_w has_w[u3a_pages];
 } u3K;
 
 /* u3e_check(): compute a checksum on all memory within the watermarks.
@@ -146,15 +146,15 @@ u3e_check(c3_c* cap_c)
   /* compute checksum over active pages.
   */
   {
-    c3_w i_w, sum_w, mug_w;
+    c3_w i_w, sum_w, has_w;
 
     sum_w = 0;
     for ( i_w = 0; i_w < nor_w; i_w++ ) {
-      mug_w = _ce_mug_page(_ce_ptr(i_w));
+      has_w = _ce_muk_page(_ce_ptr(i_w));
       if ( strcmp(cap_c, "boot") ) {
-        u3_assert(mug_w == u3K.mug_w[i_w]);
+        u3_assert(has_w == u3K.has_w[i_w]);
       }
-      sum_w += mug_w;
+      sum_w += has_w;
     }
     u3l_log("%s: sum %x (%x)", cap_c, sum_w, nor_w);
   }
@@ -505,12 +505,12 @@ _ce_patch_delete(void)
   }
 }
 
-/* _ce_patch_verify(): check patch data mug.
+/* _ce_patch_verify(): check patch data checksum.
 */
 static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
-  c3_w  pag_w, mug_w;
+  c3_w  pag_w, has_w;
   c3_y  buf_y[_ce_page];
   c3_zs ret_zs;
 
@@ -523,7 +523,7 @@ _ce_patch_verify(u3_ce_patch* pat_u)
 
   for ( c3_z i_z = 0; i_z < pat_u->con_u->pgs_w; i_z++ ) {
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
-    mug_w = pat_u->con_u->mem_u[i_z].mug_w;
+    has_w = pat_u->con_u->mem_u[i_z].has_w;
 
     if ( _ce_page !=
          (ret_zs = pread(pat_u->mem_i, buf_y, _ce_page, _ce_len(i_z))) )
@@ -538,17 +538,17 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     }
 
     {
-      c3_w nug_w = _ce_mug_page(buf_y);
+      c3_w nas_w = _ce_muk_page(buf_y);
 
-      if ( mug_w != nug_w ) {
-        fprintf(stderr, "loom: patch mug mismatch"
+      if ( has_w != nas_w ) {
+        fprintf(stderr, "loom: patch checks8m mismatch"
                         " %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
-                        pag_w, i_z, mug_w, nug_w);
+                        pag_w, i_z, has_w, nas_w);
         return c3n;
       }
 #if 0
       else {
-        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, mug_w);
+        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, has_w);
       }
 #endif
     }
@@ -684,11 +684,11 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
     c3_w* mem_w = _ce_ptr(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
-    pat_u->con_u->mem_u[pgc_w].mug_w = _ce_mug_page(mem_w);
+    pat_u->con_u->mem_u[pgc_w].has_w = _ce_muk_page(mem_w);
 
 #if 0
     fprintf(stderr, "loom: save page %d %x\r\n",
-                    pag_w, pat_u->con_u->mem_u[pgc_w].mug_w);
+                    pag_w, pat_u->con_u->mem_u[pgc_w].has_w);
 #endif
     _ce_patch_write_page(pat_u, pgc_w, mem_w);
 
@@ -859,7 +859,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       }
     }
 #if 0
-    u3l_log("apply: %d, %x", pag_w, _ce_mug_page(buf_y));
+    u3l_log("apply: %d, %x", pag_w, _ce_muk_page(buf_y));
 #endif
   }
 }
@@ -1095,13 +1095,13 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
   }
 
   {
-    c3_w mug_w = _ce_mug_page(_ce_ptr(pag_w));
-    c3_w fug_w = _ce_mug_page(buf_y);
+    c3_w mas_w = _ce_muk_page(_ce_ptr(pag_w));
+    c3_w fas_w = _ce_muk_page(buf_y);
 
-    if ( mug_w != fug_w ) {
+    if ( mas_w != fas_w ) {
       fprintf(stderr, "loom: image (%s) mismatch: "
                       "page %d, mem_w %x, fil_w %x, K %x\r\n",
-                      img_u->nam_c, pag_w, mug_w, fug_w, u3K.mug_w[pag_w]);
+                      img_u->nam_c, pag_w, mas_w, fas_w, u3K.has_w[pag_w]);
       return c3n;
     }
   }

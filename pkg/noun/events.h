@@ -13,7 +13,7 @@
     */
       typedef struct _u3e_line {
         c3_w pag_w;
-        c3_w mug_w;
+        c3_w has_w;
       } u3e_line;
 
     /* u3e_control: memory change, control file.
