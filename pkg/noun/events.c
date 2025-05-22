@@ -1141,6 +1141,7 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 static c3_o
 _ce_loom_fine(void)
 {
+  c3_w off_w = u3R->hep.bot_p >> u3a_page;
   c3_w blk_w, bit_w, pag_w, i_w;
   c3_o fin_o = c3y;
 
@@ -1149,7 +1150,11 @@ _ce_loom_fine(void)
     blk_w = pag_w >> 5;
     bit_w = pag_w & 31;
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
+    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+       && (  (pag_w < off_w)
+          || (u3R->hep.len_w <= (pag_w - off_w))
+          || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
+    {
       fin_o = c3a(fin_o, _ce_page_fine(&u3P.img_u, pag_w, _ce_len(pag_w)));
     }
   }
@@ -1358,9 +1363,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
     u3_assert( _ce_img_good == _ce_image_stat(&u3P.img_u, &pgs_w) );
     u3_assert( pgs_w == u3P.img_u.pgs_w );
   }
-#endif
 
-#ifdef U3_SNAPSHOT_VALIDATION
   //  check that all pages in the image are clean and *fine*,
   //  all others are dirty
   //
