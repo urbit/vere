@@ -2057,9 +2057,7 @@ typedef struct __attribute__((__packed__)) {
   c3_w     ip_w;
 } burnframe;
 
-# define u3n_golf_pc              UINT32_MAX
-# define u3n_frame_is_golf(fam)   \
-  (((fam)->pog_u == NULL) && ((fam)->ip_w == u3n_golf_pc))
+#   define u3n_frame_is_golf(fam)   ( (fam)->pog_u == NULL )
 
 # define u3n_golf_hop (c3_wiseof(u3_noun) + c3_wiseof(burnframe))
 
@@ -2090,9 +2088,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 
   fam = u3to(burnframe, u3R->cap_p) + off + mov;
   u3R->cap_p  = u3of(burnframe, fam - off);
-  //  bogus values for the start frame
-  fam->ip_w = 0;
-  fam->pog_u = NULL;
+  fam->pog_u = pog_u;  // non-null value to not confuse with golf frames
 
   empty = u3R->cap_p;
   _n_push(mov, off, bus);
@@ -2115,8 +2111,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       if ( empty == u3R->cap_p ) {
         //  pop starting frame
         fam        = u3to(burnframe, u3R->cap_p) + off;
-        c3_dessert(fam->ip_w == 0);
-        c3_dessert(fam->pog_u == NULL);
         u3R->cap_p = u3of(burnframe, fam - (mov+off));
         return x;
       }
@@ -2843,14 +2837,13 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         *top = o;                                                     //  update the hole
       }
       else {
-        top         = _n_peek( off);                            //  [sub frame]
-        _n_push(mov, off, o);                                   //  [pro sub frame]
-        fam         = u3to(burnframe, u3R->cap_p) + off + mov;  //  [golf pro sub frame]
+        top         = _n_peek( off);                                  //  [sub frame]
+        _n_push(mov, off, o);                                         //  [pro sub frame]
+        fam         = u3to(burnframe, u3R->cap_p) + off + mov;        //  [golf pro sub frame]
         u3R->cap_p  = u3of(burnframe, fam - off);
         fam->pog_u  = NULL;
-        fam->ip_w   = u3n_golf_pc;
-        _n_push(mov, off, *top);                                //  [sub golf pro sub frame]
-        *top        = o;                                        //  [sub golf pro pro frame]
+        _n_push(mov, off, *top);                                      //  [sub golf pro sub frame]
+        *top        = o;                                              //  [sub golf pro pro frame]
       }
       BURN();
   }
