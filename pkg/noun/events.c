@@ -93,6 +93,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stddef.h>
 
 #include "log.h"
 #include "manage.h"
@@ -114,11 +115,17 @@
 u3e_pool u3e_Pool;
 
 static c3_w
-_ce_muk_page(void* ptr_v)
+_ce_muk_buf(c3_w len_w, void* ptr_v)
 {
   c3_w haz_w;
-  MurmurHash3_x86_32(ptr_v, _ce_page, 0xcafebabeU, &haz_w);
+  MurmurHash3_x86_32(ptr_v, len_w, 0xcafebabeU, &haz_w);
   return haz_w;
+}
+
+static c3_w
+_ce_muk_page(void* ptr_v)
+{
+  return _ce_muk_buf(_ce_page, ptr_v);
 }
 
 #ifdef U3_SNAPSHOT_VALIDATION
@@ -521,6 +528,22 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     return c3n;
   }
 
+  {
+    c3_w  len_w = sizeof(u3e_control) + (pat_u->con_u->pgs_w * sizeof(u3e_line));
+    c3_w  off_w = offsetof(u3e_control, tot_w);
+    c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
+    c3_w  has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+
+    if ( has_w != pat_u->con_u->has_w ) {
+      fprintf(stderr, "loom: patch meta checksum fail: "
+                      "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
+                      has_w, pat_u->con_u->has_w);
+      return c3n;
+    }
+  }
+
+  //  XX check for sorted page numbers?
+  //
   for ( c3_z i_z = 0; i_z < pat_u->con_u->pgs_w; i_z++ ) {
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
     has_w = pat_u->con_u->mem_u[i_z].has_w;
@@ -541,9 +564,9 @@ _ce_patch_verify(u3_ce_patch* pat_u)
       c3_w nas_w = _ce_muk_page(buf_y);
 
       if ( has_w != nas_w ) {
-        fprintf(stderr, "loom: patch checks8m mismatch"
-                        " %"PRIc3_w"/%"PRIc3_z"; (%"PRIxc3_w", %"PRIxc3_w")\r\n",
-                        pag_w, i_z, has_w, nas_w);
+        fprintf(stderr, "loom: patch page (%"PRIc3_w") checksum fail: "
+                        "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
+                        pag_w, nas_w, has_w);
         return c3n;
       }
 #if 0
@@ -724,12 +747,13 @@ _ce_patch_compose(c3_w max_w)
   }
   else {
     u3_ce_patch* pat_u = c3_malloc(sizeof(u3_ce_patch));
-    c3_w i_w, pgc_w;
+    c3_w i_w, len_w, pgc_w;
 
     pat_u->sip_w = 0;
 
     _ce_patch_create(pat_u);
-    pat_u->con_u = c3_malloc(sizeof(u3e_control) + (pgs_w * sizeof(u3e_line)));
+    len_w = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
+    pat_u->con_u = c3_malloc(len_w);
     pat_u->con_u->ver_w = U3P_VERLAT;
     pgc_w = 0;
 
@@ -739,8 +763,15 @@ _ce_patch_compose(c3_w max_w)
 
     u3_assert( pgc_w == pgs_w );
 
-    pat_u->con_u->pgs_w = pgc_w;
     pat_u->con_u->tot_w = max_w;
+    pat_u->con_u->pgs_w = pgc_w;
+
+    {
+      c3_w  off_w = offsetof(u3e_control, tot_w);
+      c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
+
+      pat_u->con_u->has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+    }
 
     _ce_patch_write_control(pat_u);
     return pat_u;

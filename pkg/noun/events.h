@@ -20,6 +20,7 @@
     */
       typedef struct _u3e_control {
         u3e_version ver_w;                  //  version number
+        c3_w        has_w;                  //  control checksum
         c3_w        tot_w;                  //  new page count
         c3_w        pgs_w;                  //  number of changed pages
         u3e_line    mem_u[];                //  per page
