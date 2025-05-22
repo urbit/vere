@@ -879,7 +879,7 @@ _ce_loom_track_sane(void)
     bit_w = i_w & 31;
 
     if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-      fprintf(stderr, "loom: insane north %u\r\n", i_w);
+      fprintf(stderr, "loom: insane image %u\r\n", i_w);
       san_o = c3n;
     }
   }
@@ -899,10 +899,10 @@ _ce_loom_track_sane(void)
   return san_o;
 }
 
-/* _ce_loom_track_north(): [pgs_w] clean, followed by [dif_w] dirty.
+/* _ce_loom_track(): [pgs_w] clean, followed by [dif_w] dirty.
 */
 void
-_ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
+_ce_loom_track(c3_w pgs_w, c3_w dif_w)
 {
   c3_w blk_w, bit_w, i_w = 0, max_w = pgs_w;
 
@@ -921,16 +921,16 @@ _ce_loom_track_north(c3_w pgs_w, c3_w dif_w)
   }
 }
 
-/* _ce_loom_protect_north(): protect/track pages from the bottom of memory.
+/* _ce_loom_protect(): protect/track pages from the bottom of memory.
 */
 static void
-_ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
+_ce_loom_protect(c3_w pgs_w, c3_w old_w)
 {
   c3_w dif_w = 0;
 
   if ( pgs_w ) {
     if ( 0 != mprotect(_ce_ptr(0), _ce_len(pgs_w), PROT_READ) ) {
-      fprintf(stderr, "loom: pure north (%u pages): %s\r\n",
+      fprintf(stderr, "loom: pure (%u pages): %s\r\n",
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
@@ -943,7 +943,7 @@ _ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
                        _ce_len(dif_w),
                        (PROT_READ | PROT_WRITE)) )
     {
-      fprintf(stderr, "loom: foul north (%u pages, %u old): %s\r\n",
+      fprintf(stderr, "loom: foul (%u pages, %u old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
       u3_assert(0);
     }
@@ -960,7 +960,7 @@ _ce_loom_protect_north(c3_w pgs_w, c3_w old_w)
 #endif
   }
 
-  _ce_loom_track_north(pgs_w, dif_w);
+  _ce_loom_track(pgs_w, dif_w);
 }
 
 /* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
@@ -980,11 +980,11 @@ _ce_loom_mapf_ephemeral(void)
   }
 }
 
-/* _ce_loom_mapf_north(): map [pgs_w] of [fid_i] into the bottom of memory
+/* _ce_loom_mapf(): map [pgs_w] of [fid_i] into the bottom of memory
 **                        (and ephemeralize [old_w - pgs_w] after if needed).
 */
 static void
-_ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
+_ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 {
   c3_w dif_w = 0;
 
@@ -1041,13 +1041,13 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 #endif
   }
 
-  _ce_loom_track_north(pgs_w, dif_w);
+  _ce_loom_track(pgs_w, dif_w);
 }
 
-/* _ce_loom_blit_north(): apply pages, in order, from the bottom of memory.
+/* _ce_loom_blit(): apply pages, in order, from the bottom of memory.
 */
 static void
-_ce_loom_blit_north(c3_i fid_i, c3_w pgs_w)
+_ce_loom_blit(c3_i fid_i, c3_w pgs_w)
 {
   c3_w    i_w;
   void* ptr_v;
@@ -1058,17 +1058,17 @@ _ce_loom_blit_north(c3_i fid_i, c3_w pgs_w)
 
     if ( _ce_page != (ret_zs = pread(fid_i, ptr_v, _ce_page, _ce_len(i_w))) ) {
       if ( 0 < ret_zs ) {
-        fprintf(stderr, "loom: blit north partial read: %"PRIc3_zs"\r\n",
+        fprintf(stderr, "loom: blit partial read: %"PRIc3_zs"\r\n",
                         ret_zs);
       }
       else {
-        fprintf(stderr, "loom: blit north read %s\r\n", strerror(errno));
+        fprintf(stderr, "loom: blit read %s\r\n", strerror(errno));
       }
       u3_assert(0);
     }
   }
 
-  _ce_loom_protect_north(pgs_w, 0);
+  _ce_loom_protect(pgs_w, 0);
 }
 
 #ifdef U3_SNAPSHOT_VALIDATION
@@ -1229,7 +1229,7 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   if (  (0 != access(nux_c, F_OK))
      || (_ce_img_good != _ce_image_open(&nux_u, pux_c)) )
   {
-    fprintf(stderr, "loom: couldn't open north image at %s\r\n", pux_c);
+    fprintf(stderr, "loom: couldn't open image at %s\r\n", pux_c);
     return c3n;
   }
 
@@ -1344,7 +1344,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   //    since total finery requires total cleanliness,
   //    pages of the image are protected twice.
   //
-  _ce_loom_protect_north(u3P.img_u.pgs_w, old_w);
+  _ce_loom_protect(u3P.img_u.pgs_w, old_w);
 
   u3_assert( c3y == _ce_loom_track_sane() );
   u3_assert( c3y == _ce_loom_fine() );
@@ -1352,11 +1352,11 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
   if ( u3C.wag_w & u3o_no_demand ) {
 #ifndef U3_SNAPSHOT_VALIDATION
-    _ce_loom_protect_north(u3P.img_u.pgs_w, old_w);
+    _ce_loom_protect(u3P.img_u.pgs_w, old_w);
 #endif
   }
   else {
-    _ce_loom_mapf_north(u3P.img_u.fid_i, u3P.img_u.pgs_w, old_w);
+    _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, old_w);
   }
 
   u3e_toss(low_p, hig_p);
@@ -1472,10 +1472,10 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         }
 
         if ( u3C.wag_w & u3o_no_demand ) {
-          _ce_loom_blit_north(u3P.img_u.fid_i, u3P.img_u.pgs_w);
+          _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
         }
         else {
-          _ce_loom_mapf_north(u3P.img_u.fid_i, u3P.img_u.pgs_w, 0);
+          _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, 0);
         }
 
         u3l_log("boot: protected loom");
