@@ -332,7 +332,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   struct stat buf_u;
 
   if ( -1 == fstat(img_u->fid_i, &buf_u) ) {
-    fprintf(stderr, "loom: stat %s: %s\r\n", img_u->nam_c, strerror(errno));
+    fprintf(stderr, "loom: image stat: %s\r\n", strerror(errno));
     u3_assert(0);
     return _ce_img_fail;
   }
@@ -345,11 +345,11 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
       return _ce_img_good;
     }
     else if ( siz_z != _ce_len(pgs_z) ) {
-      fprintf(stderr, "loom: %s corrupt size %zu\r\n", img_u->nam_c, siz_z);
+      fprintf(stderr, "loom: image corrupt size %zu\r\n", siz_z);
       return _ce_img_size;
     }
     else if ( pgs_z > UINT32_MAX ) {
-      fprintf(stderr, "loom: %s overflow %zu\r\n", img_u->nam_c, siz_z);
+      fprintf(stderr, "loom: image overflow %zu\r\n", siz_z);
       return _ce_img_fail;
     }
     else {
@@ -802,8 +802,7 @@ static c3_o
 _ce_image_sync(u3e_image* img_u)
 {
   if ( -1 == c3_sync(img_u->fid_i) ) {
-    fprintf(stderr, "loom: image (%s) sync failed: %s\r\n",
-                    img_u->nam_c, strerror(errno));
+    fprintf(stderr, "loom: image sync failed: %s\r\n", strerror(errno));
     return c3n;
   }
 
@@ -820,15 +819,14 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
 
   if ( img_u->pgs_w > pgs_w ) {
     if ( off_z != (size_t)off_i ) {
-      fprintf(stderr, "loom: image (%s) truncate: "
+      fprintf(stderr, "loom: image truncate: "
                       "offset overflow (%" PRId64 ") for page %u\r\n",
-                      img_u->nam_c, (c3_ds)off_i, pgs_w);
+                      (c3_ds)off_i, pgs_w);
       u3_assert(0);
     }
 
     if ( ftruncate(img_u->fid_i, off_i) ) {
-      fprintf(stderr, "loom: image (%s) truncate: %s\r\n",
-                      img_u->nam_c, strerror(errno));
+      fprintf(stderr, "loom: image truncate: %s\r\n", strerror(errno));
       u3_assert(0);
     }
   }
@@ -1115,12 +1113,10 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
        (ret_i = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
   {
     if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: image (%s) fine partial read: %zu\r\n",
-                      img_u->nam_c, (size_t)ret_i);
+      fprintf(stderr, "loom: image fine partial read: %zu\r\n", (size_t)ret_i);
     }
     else {
-      fprintf(stderr, "loom: image (%s) fine read: %s\r\n",
-                      img_u->nam_c, strerror(errno));
+      fprintf(stderr, "loom: image fine read: %s\r\n", strerror(errno));
     }
     u3_assert(0);
   }
@@ -1130,9 +1126,9 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
     c3_w fas_w = _ce_muk_page(buf_y);
 
     if ( mas_w != fas_w ) {
-      fprintf(stderr, "loom: image (%s) mismatch: "
+      fprintf(stderr, "loom: image checksum mismatch: "
                       "page %d, mem_w %x, fil_w %x, K %x\r\n",
-                      img_u->nam_c, pag_w, mas_w, fas_w, u3K.has_w[pag_w]);
+                      pag_w, mas_w, fas_w, u3K.has_w[pag_w]);
       return c3n;
     }
   }
@@ -1179,9 +1175,7 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   if (  (-1 == lseek(fom_u->fid_i, 0, SEEK_SET))
      || (-1 == lseek(tou_u->fid_i, 0, SEEK_SET)) )
   {
-    fprintf(stderr, "loom: image (%s) copy seek: %s\r\n",
-                    fom_u->nam_c,
-                    strerror(errno));
+    fprintf(stderr, "loom: image copy seek: %s\r\n", strerror(errno));
     return c3n;
   }
 
@@ -1193,29 +1187,27 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
 
     if ( _ce_page != (ret_i = read(fom_u->fid_i, buf_y, _ce_page)) ) {
       if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: image (%s) copy partial read: %zu\r\n",
-                        fom_u->nam_c, (size_t)ret_i);
+        fprintf(stderr, "loom: image copy partial read: %zu\r\n",
+                        (size_t)ret_i);
       }
       else {
-        fprintf(stderr, "loom: image (%s) copy read: %s\r\n",
-                        fom_u->nam_c, strerror(errno));
+        fprintf(stderr, "loom: image copy read: %s\r\n",
+                        strerror(errno));
       }
       return c3n;
     }
     else {
       if ( -1 == lseek(tou_u->fid_i, _ce_len(off_w), SEEK_SET) ) {
-        fprintf(stderr, "loom: image (%s) copy seek: %s\r\n",
-                        tou_u->nam_c, strerror(errno));
+        fprintf(stderr, "loom: image copy seek: %s\r\n", strerror(errno));
         return c3n;
       }
       if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
         if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image (%s) copy partial write: %zu\r\n",
-                          tou_u->nam_c, (size_t)ret_i);
+          fprintf(stderr, "loom: image copy partial write: %zu\r\n",
+                          (size_t)ret_i);
         }
         else {
-          fprintf(stderr, "loom: image (%s) copy write: %s\r\n",
-                          tou_u->nam_c, strerror(errno));
+          fprintf(stderr, "loom: image copy write: %s\r\n", strerror(errno));
         }
         fprintf(stderr, "info: you probably have insufficient disk space");
         return c3n;
