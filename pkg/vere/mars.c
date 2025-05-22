@@ -156,7 +156,10 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 
     u3_assert( u3R == &(u3H->rod_u) );
 
+    u3a_mark_init();
+
     u3m_quac* pro_u = u3a_prof(fil_u, sac);
+    c3_w      sac_w = u3a_mark_noun(sac);
 
     if ( NULL == pro_u ) {
       fflush(fil_u);
@@ -178,7 +181,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
-      all_u[5]->siz_w = u3a_mark_noun(sac) * 4;
+      all_u[5]->siz_w = sac_w * 4;
 
       tot_w += all_u[5]->siz_w;
 
@@ -190,6 +193,8 @@ _mars_grab(u3_noun sac, c3_o pri_o)
       all_u[7]->nam_c = strdup("free lists");
       all_u[7]->siz_w = u3a_idle(u3R) * 4;
 
+      //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
+      //  only u3a_mark_done() is required
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
       all_u[8]->siz_w = u3a_sweep() * 4;
@@ -1989,6 +1994,8 @@ u3_mars_grab(c3_o pri_o)
   }
   else {
     fprintf(stderr, "sac is empty\r\n");
+
+    u3a_mark_init();
     u3m_quac** var_u = u3m_mark();
 
     c3_w tot_w = 0;
@@ -2002,6 +2009,8 @@ u3_mars_grab(c3_o pri_o)
 
     u3a_print_memory(stderr, "total marked", tot_w / 4);
     u3a_print_memory(stderr, "free lists", u3a_idle(u3R));
+    //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
+    //  only u3a_mark_done() is required
     u3a_print_memory(stderr, "sweep", u3a_sweep());
     fprintf(stderr, "\r\n");
   }
