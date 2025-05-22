@@ -96,10 +96,8 @@
 #include <stddef.h>
 
 #include "log.h"
-#include "manage.h"
 #include "murmur3.h"
 #include "options.h"
-#include "types.h"
 
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
@@ -127,46 +125,6 @@ _ce_muk_page(void* ptr_v)
 {
   return _ce_muk_buf(_ce_page, ptr_v);
 }
-
-#ifdef U3_SNAPSHOT_VALIDATION
-/* Image check.
-*/
-struct {
-  c3_w max_w;
-  c3_w has_w[u3a_pages];
-} u3K;
-
-/* u3e_check(): compute a checksum on all memory within the watermarks.
-*/
-void
-u3e_check(c3_c* cap_c)
-{
-  c3_w nor_w = 0;
-
-  {
-    u3_post low_p, hig_p;
-    u3m_water(&low_p, &hig_p);
-
-    nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
-  }
-
-  /* compute checksum over active pages.
-  */
-  {
-    c3_w i_w, sum_w, has_w;
-
-    sum_w = 0;
-    for ( i_w = 0; i_w < nor_w; i_w++ ) {
-      has_w = _ce_muk_page(_ce_ptr(i_w));
-      if ( strcmp(cap_c, "boot") ) {
-        u3_assert(has_w == u3K.has_w[i_w]);
-      }
-      sum_w += has_w;
-    }
-    u3l_log("%s: sum %x (%x)", cap_c, sum_w, nor_w);
-  }
-}
-#endif
 
 /* _ce_flaw_mmap(): remap non-guard page after fault.
 */
@@ -728,10 +686,6 @@ _ce_patch_compose(c3_w max_w)
   c3_w pgs_w = 0;
   c3_w off_w = u3R->hep.bot_p >> u3a_page;
 
-#ifdef U3_SNAPSHOT_VALIDATION
-  u3K.max_w = max_w;
-#endif
-
   /* Count dirty pages.
   */
   {
@@ -1127,8 +1081,8 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 
     if ( mas_w != fas_w ) {
       fprintf(stderr, "loom: image checksum mismatch: "
-                      "page %d, mem_w %x, fil_w %x, K %x\r\n",
-                      pag_w, mas_w, fas_w, u3K.has_w[pag_w]);
+                      "page %d, mem_w %x, fil_w %x\r\n",
+                      pag_w, mas_w, fas_w);
       return c3n;
     }
   }
