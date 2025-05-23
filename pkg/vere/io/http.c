@@ -2058,8 +2058,15 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   if ( c3y == log ) {
     // XX move this to post serv_start and put the port in the name
 #if 0
+    u3_noun now;
+
+    {
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
     c3_c* pax_c = u3_Host.dir_c;
-    u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun now = u3dc("scot", c3__da, now);
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
     c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);

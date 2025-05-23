@@ -212,28 +212,6 @@ _pier_on_lord_work_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
   }
 }
 
-/* _pier_work_time(): set time.
-*/
-static void
-_pier_work_time(u3_pier* pir_u)
-{
-  struct timeval tim_tv;
-  gettimeofday(&tim_tv, 0);
-
-  // XX save to pier
-  //
-  u3v_time(u3_time_in_tv(&tim_tv));
-}
-
-/* _pier_work_fore_cb(): run on every loop iteration before i/o polling.
-*/
-static void
-_pier_work_fore_cb(uv_prepare_t* pep_u)
-{
-  u3_work* wok_u = pep_u->data;
-  _pier_work_time(wok_u->pir_u);
-}
-
 /* _pier_work_afte_cb(): run on every loop iteration after i/o polling.
 */
 static void
@@ -582,14 +560,6 @@ _pier_work_init(u3_pier* pir_u)
   pir_u->wok_u = wok_u = c3_calloc(sizeof(*wok_u));
   wok_u->pir_u = pir_u;
 
-  _pier_work_time(pir_u);
-
-  //  initialize pre i/o polling handle
-  //
-  uv_prepare_init(u3L, &wok_u->pep_u);
-  wok_u->pep_u.data = wok_u;
-  uv_prepare_start(&wok_u->pep_u, _pier_work_fore_cb);
-
   //  initialize post i/o polling handle
   //
   uv_check_init(u3L, &wok_u->cek_u);
@@ -822,8 +792,6 @@ _pier_wyrd_card(u3_pier* pir_u)
 {
   u3_lord* god_u = pir_u->god_u;
   u3_noun    sen;
-
-  _pier_work_time(pir_u);
 
   {
     c3_l  sev_l;
@@ -1199,10 +1167,9 @@ _pier_work_close(u3_work* wok_u)
 {
   u3_auto_exit(wok_u->car_u);
 
-  uv_close((uv_handle_t*)&wok_u->pep_u, _pier_work_close_cb);
-  uv_close((uv_handle_t*)&wok_u->cek_u, 0);
+  uv_close((uv_handle_t*)&wok_u->cek_u, _pier_work_close_cb);
   uv_close((uv_handle_t*)&wok_u->idl_u, 0);
-  wok_u->pep_u.data = wok_u;
+  wok_u->cek_u.data = wok_u;
 }
 
 /* _pier_bail_impl(): immediately shutdown.

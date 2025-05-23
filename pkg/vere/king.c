@@ -1725,10 +1725,18 @@ u3_king_grab(void* vod_p)
   u3_assert( u3R == &(u3H->rod_u) );
 
 #ifdef U3_MEMORY_LOG
+  u3_noun now;
+
+  {
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+    now = u3_time_in_tv(&tim_u);
+  }
+
   {
     //  XX date will not match up with that of the worker
     //
-    u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun wen = u3dc("scot", c3__da, now);
     c3_c* wen_c = u3r_string(wen);
 
     c3_c nam_c[2048];

@@ -127,8 +127,16 @@ _mars_grab(u3_noun sac, c3_o pri_o)
     FILE* fil_u;
 
 #ifdef U3_MEMORY_LOG
+    u3_noun now;
+
     {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
+
+    {
+      u3_noun wen = u3dc("scot", c3__da, now);
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
@@ -774,9 +782,16 @@ _mars_damp_file(void)
 {
   if ( u3C.wag_w & u3o_debug_cpu ) {
     FILE* fil_u;
+    u3_noun now;
 
     {
-      u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
+
+    {
+      u3_noun wen = u3dc("scot", c3__da, now);
       c3_c* wen_c = u3r_string(wen);
 
       c3_c nam_c[2048];
