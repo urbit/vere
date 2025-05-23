@@ -18,7 +18,8 @@ typedef c3_w       u3v_version;
 typedef c3_w       u3e_version;
 
 #define U3P_VER1   1
-#define U3P_VERLAT U3P_VER1
+#define U3P_VER2   2
+#define U3P_VERLAT U3P_VER2
 
 /* DISK FORMAT
  *
