@@ -3,17 +3,17 @@
 set -xeuo pipefail
 
 urbit_binary=$GITHUB_WORKSPACE/$URBIT_BINARY
-solid_pill=$GITHUB_WORKSPACE/solid.pill
+brass_pill=$GITHUB_WORKSPACE/brass.pill
 
-curl -LJ -o $solid_pill https://github.com/urbit/urbit/raw/84ebb321314b3fbc08253de5213f19450ffbfb3e/bin/solid.pill
-curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/84ebb321314b3fbc08253de5213f19450ffbfb3e.tar.gz
+curl -LJ -o $brass_pill https://github.com/urbit/urbit/raw/592b957a30b302cb7ae7fea78c6804c9d63d97ef/bin/brass.pill
+curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/592b957a30b302cb7ae7fea78c6804c9d63d97ef.tar.gz
 
 mkdir ./urbit
 tar xfz urbit.tar.gz -C ./urbit --strip-components=1
 cp -RL ./urbit/tests ./urbit/pkg/arvo/tests
 
 $urbit_binary --lite-boot --daemon --fake bus \
-  --bootstrap $solid_pill                     \
+  --bootstrap $brass_pill                     \
   --arvo ./urbit/pkg/arvo                     \
   --pier ./pier
 
