@@ -13,7 +13,7 @@
     /* u3v_arvo: modern arvo structure.
     **       NB: packed to perserve word alignment given [eve_d]
     */
-      typedef struct __attribute__((__packed__)) _u3v_arvo {
+      typedef struct _u3v_arvo {
         c3_d  eve_d;                      //  event number
         u3_noun yot;                      //  cached gates
         u3_noun now;                      //  current time
@@ -24,9 +24,9 @@
     **       NB: version must be last for discriminability in north road
     */
       typedef struct _u3v_home {
+        u3v_version ver_w;                //  version number
         u3a_road    rod_u;                //  storage state
         u3v_arvo    arv_u;                //  arvo state
-        u3v_version ver_w;                //  version number
       } u3v_home;
 
 

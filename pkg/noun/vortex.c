@@ -233,12 +233,16 @@ u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
        (c3n == u3r_safe_word(q_uco, &wad_w)) ||
        (wad_w & 0x80000000) )
   {
-    u3l_log("strange lily %s", u3r_string(txt));
-    u3z(txt); u3z(uco); return c3n;
+    c3_c* txt_c = u3r_string(txt);
+    u3l_log("strange lily %s", txt_c);
+    c3_free(txt_c);
+    u3z(txt); u3z(uco);
+    return c3n;
   }
   else {
     *tid_l = (c3_l)wad_w;
-    u3z(txt); u3z(uco); return c3y;
+    u3z(txt); u3z(uco);
+    return c3y;
   }
 }
 
@@ -435,11 +439,18 @@ u3v_rewrite_compact(void)
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3a_rewrite_noun(arv_u->roc);
-  u3a_rewrite_noun(arv_u->now);
-  u3a_rewrite_noun(arv_u->yot);
+  // XX fix these to correctly no-op on inner roads
+  // XX unpack struct for easier reference
 
-  arv_u->roc = u3a_rewritten_noun(arv_u->roc);
-  arv_u->now = u3a_rewritten_noun(arv_u->now);
-  arv_u->yot = u3a_rewritten_noun(arv_u->yot);
+  u3_noun roc = arv_u->roc;
+  u3_noun now = arv_u->now;
+  u3_noun yot = arv_u->yot;
+
+  u3a_relocate_noun(&roc);
+  u3a_relocate_noun(&now);
+  u3a_relocate_noun(&yot);
+
+  arv_u->roc = roc;
+  arv_u->now = now;
+  arv_u->yot = yot;
 }

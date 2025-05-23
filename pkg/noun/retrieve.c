@@ -359,7 +359,8 @@ _cr_sing_atom(u3_atom a, u3_noun b)
 static inline c3_o
 _cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
 {
-  u3_noun key = u3nc(u3a_to_off(a), u3a_to_off(b));
+  u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
+                     u3a_to_off(b) >> u3a_vits);
   u3_noun val;
 
   u3t_off(euq_o);
@@ -380,7 +381,10 @@ _cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
   //  only store if [a] and [b] are copies of each other
   //
   if ( a != b ) {
-    u3_noun key = u3nc(u3a_to_off(a), u3a_to_off(b));
+    c3_dessert( (c3n == u3a_is_cat(a)) && (c3n == u3a_is_cat(b)) );
+
+    u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
+                       u3a_to_off(b) >> u3a_vits);
     u3t_off(euq_o);
     u3h_put(har_p, key, c3y);
     u3t_on(euq_o);

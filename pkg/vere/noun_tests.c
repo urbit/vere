@@ -430,7 +430,7 @@ _test_noun_bits_set()
   u3_noun a = 1;
 
   // flip indirect bit on
-  a |= (1 << 31);
+  a |= (1U << 31);
   if ( c3n == u3a_is_dog(a) ) {
     printf("*** fail-5a turn indirect bit on\r\n");
   }
@@ -481,8 +481,8 @@ _test_noun_bits_read()
 {
 
   u3_noun a = (u3_noun)0x1;     // direct atom
-  u3_noun b = u3a_to_pug(0x2);  // indirect atom
-  u3_noun c = u3a_to_pom(0x3);  // indirect cell
+  u3_noun b = u3a_to_pug(0x4);  // indirect atom
+  u3_noun c = u3a_to_pom(0x8);  // indirect cell
 
                          // direct  indirect  indirect-atom  indirect-cell
                          //----------------------------------------
