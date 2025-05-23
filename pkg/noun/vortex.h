@@ -87,10 +87,10 @@
       u3_noun
       u3v_soft_peek(c3_w mil_w, u3_noun sam);
 
-    /* u3v_poke_raw(): u3v_poke w/out u3A->now XX replace
+    /* u3v_poke(): compute a timestamped ovum.
     */
       u3_noun
-      u3v_poke_raw(u3_noun sam);
+      u3v_poke(u3_noun sam);
 
     /* u3v_poke_sure(): inject an event, saving new state if successful.
     */

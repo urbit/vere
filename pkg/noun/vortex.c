@@ -260,10 +260,10 @@ u3v_soft_peek(c3_w mil_w, u3_noun sam)
   }
 }
 
-/* u3v_poke_raw(): u3v_poke XX rename
+/* u3v_poke(): compute a timestamped ovum.
 */
 u3_noun
-u3v_poke_raw(u3_noun sam)
+u3v_poke(u3_noun sam)
 {
   u3_noun fun = u3n_nock_on(u3k(u3A->roc), u3k(u3x_at(_CVX_POKE, u3A->roc)));
   u3_noun pro;
@@ -288,7 +288,7 @@ u3v_poke_raw(u3_noun sam)
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 {
-  u3_noun gon = u3m_soft(mil_w, u3v_poke_raw, eve);
+  u3_noun gon = u3m_soft(mil_w, u3v_poke, eve);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
 

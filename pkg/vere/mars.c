@@ -959,7 +959,7 @@ _mars_disk_cb(void* ptr_v, c3_d eve_d, c3_o ret_o)
 static u3_weak
 _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 {
-  u3_noun gon = u3m_soft(0, u3v_poke_raw, tac_u->job);
+  u3_noun gon = u3m_soft(0, u3v_poke, tac_u->job);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
 
