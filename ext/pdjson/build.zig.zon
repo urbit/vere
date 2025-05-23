@@ -4,7 +4,7 @@
     .dependencies = .{
         .pdjson = .{
             .url = "https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz",
-            .hash = "1220a7789c7b4539bd1ee8bb182609d9076ff19fc25026c9a61ca2df624d3170a7b0",
+            .hash = "N-V-__8AADC9AACneJx7RTm9Hui7GCYJ2Qdv8Z_CUCbJphyi",
         },
     },
     .paths = .{

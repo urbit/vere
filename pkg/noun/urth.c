@@ -462,6 +462,136 @@ u3u_meld(void)
 }
 #endif
 
+/* BEGIN helper functions for u3u_melt
+   -------------------------------------------------------------------
+*/
+/* _cj_warm_tap(): tap war_p to rel
+*/
+static void
+_cj_warm_tap(u3_noun kev, void* wit)
+{
+  u3_noun* rel = wit;
+  *rel = u3nc(u3k(kev), *rel);
+}
+
+static inline u3_weak
+_cu_melt_get(u3p(u3h_root) set_p, u3_noun som)
+{
+  u3_post hav_p = u3h_git(set_p, som);
+
+  if ( u3_none == hav_p ) {
+    return u3_none;
+  }
+
+  //  restore tag bits from [som]
+  //
+  return (hav_p >> u3a_vits) | (som & 0xc0000000);
+}
+
+static inline void
+_cu_melt_put(u3p(u3h_root) set_p, u3_noun som)
+{
+  //  strip tag bits from [som] to skip refcounts
+  //
+  u3_post hav_p = u3a_to_off(som);
+  u3h_put(set_p, som, hav_p);
+}
+
+static void
+_cu_melt_noun(u3p(u3h_root) set_p, u3_noun* mos)
+{
+  u3_noun som = *mos;
+  u3_weak hav;
+
+  //  skip direct atoms
+  //
+  if ( c3y == u3a_is_cat(som) ) {
+    return;
+  }
+
+  //  [som] equals [hav], and [hav] is canonical
+  //
+  if ( u3_none != (hav = _cu_melt_get(set_p, som)) ) {
+    if ( hav != som ) {
+      u3z(som);
+      *mos = u3k(hav);
+    }
+    return;
+  }
+
+  //  traverse subtrees
+  //
+  if ( c3y == u3a_is_cell(som) ) {
+    u3a_cell *cel_u = u3a_to_ptr(som);
+    _cu_melt_noun(set_p, &cel_u->hed);
+    _cu_melt_noun(set_p, &cel_u->tel);
+  }
+
+  //  [som] is canonical
+  //
+  _cu_melt_put(set_p, som);
+}
+
+/* u3u_melt(): globally deduplicate memory and pack in-place.
+*/
+c3_w
+u3u_melt(void)
+{
+  c3_w pre_w = u3a_open(u3R);
+
+  // Verify that we're on the main road.
+  //
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  // Store a cons list of the cold jet registrations in `cod`
+  //
+  u3_noun cod = u3_nul;
+  u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
+
+  u3m_reclaim();     // refresh the byte-code interpreter.
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+
+  u3h_free(u3R->jed.cod_p);
+  u3R->jed.cod_p = u3h_new();
+
+  {
+    u3p(u3h_root) set_p = u3h_new(); // temp hashtable
+
+    _cu_melt_noun(set_p, &cod);      // melt the jets
+    _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
+
+    u3h_free(set_p);  // release the temp hashtable
+  }
+
+  // re-initialize the jets
+  //
+  u3j_boot(c3y);
+
+  // Put the jet registrations back. Loop over cod putting them back into the cold jet
+  // dashboard. Then re-run the garbage collector.
+  //
+  {
+    u3_noun codc = cod;
+
+    while(u3_nul != cod) {
+      u3_noun kev = u3h(cod);
+      u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
+      cod = u3t(cod);
+    }
+
+    u3z(codc);
+  }
+
+  // remove free space
+  //
+  u3j_ream();
+  u3m_pack();
+
+  return (u3a_open(u3R) - pre_w);
+}
+
 /* _cu_rock_path(): format rock path.
 */
 static c3_o

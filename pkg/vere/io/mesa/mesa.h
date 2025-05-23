@@ -32,6 +32,11 @@ typedef enum _u3_mesa_hop_type {
   HOP_MANY  = 3
 } u3_mesa_hop_type;
 
+typedef struct _u3_str {
+  c3_c* str_c;
+  c3_w  len_w;
+} u3_str;
+
 typedef struct _u3_mesa_name_meta {
   c3_y         ran_y;  // rank (2 bits)
   c3_y         rif_y;  // rift-len (2 bits)
@@ -50,6 +55,7 @@ typedef struct _u3_mesa_name {
   c3_d               fra_d;
   c3_s               pat_s;
   c3_c*              pat_c;
+  u3_str             str_u;
 } u3_mesa_name;
 
 typedef struct _u3_mesa_data_meta {
@@ -61,8 +67,8 @@ typedef struct _u3_mesa_data_meta {
 
 typedef enum  {
   AUTH_SIGN = 0,
-  AUTH_HMAC = 1,
-  AUTH_NONE = 2,
+  AUTH_NONE = 1,
+  AUTH_HMAC = 2,
   AUTH_PAIR = 3,
 } u3_mesa_auth_type;
 
@@ -142,6 +148,14 @@ typedef struct _u3_mesa_pact {
   };
 } u3_mesa_pact;
 
+typedef struct _u3_etcher {
+  c3_y* buf_y;
+  c3_w  len_w;
+  c3_w  cap_w;
+  c3_d  bit_d; // for _etch_bits
+  c3_y  off_y; // for _etch_bits
+} u3_etcher;
+
 c3_d mesa_num_leaves(c3_d tot_d);
 c3_w mesa_size_pact(u3_mesa_pact* pac_u);
 c3_o mesa_is_new_pact(c3_y* buf_y, c3_w len_w);
@@ -149,6 +163,8 @@ c3_o mesa_is_new_pact(c3_y* buf_y, c3_w len_w);
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
 c3_w mesa_etch_pact_to_buf(c3_y* buf_y, c3_w cap_w, u3_mesa_pact *pac_u);
+void etcher_init(u3_etcher* ech_u, c3_y* buf_y, c3_w cap_w);
+void _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u);
 c3_c* mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w len_w);
 
 void inc_hopcount(u3_mesa_head*);

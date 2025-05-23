@@ -82,6 +82,7 @@
     u3_noun u3wc_rig(u3_noun);
     u3_noun u3wc_rip(u3_noun);
     u3_noun u3wc_rsh(u3_noun);
+    u3_noun u3wc_sew(u3_noun);
     u3_noun u3wc_swp(u3_noun);
     u3_noun u3wc_sqt(u3_noun);
 
@@ -137,6 +138,7 @@
     u3_noun u3we_lore(u3_noun);
     u3_noun u3we_loss(u3_noun);
     u3_noun u3we_lune(u3_noun);
+    u3_noun u3we_mice(u3_noun);
     u3_noun u3we_mink(u3_noun);
     u3_noun u3we_mole(u3_noun);
     u3_noun u3we_mule(u3_noun);
@@ -193,12 +195,23 @@
 
     u3_noun u3weo_raw(u3_noun);
 
+    u3_noun u3wee_scad(u3_noun);
+    u3_noun u3wee_scas(u3_noun);
+    u3_noun u3wee_scap(u3_noun);
+
     u3_noun u3wee_puck(u3_noun);
+    u3_noun u3wee_luck(u3_noun);
     u3_noun u3wee_sign(u3_noun);
+    u3_noun u3wee_sign_raw(u3_noun);
     u3_noun u3wee_veri(u3_noun);
     u3_noun u3wee_sign_octs(u3_noun);
+    u3_noun u3wee_sign_octs_raw(u3_noun);
     u3_noun u3wee_veri_octs(u3_noun);
     u3_noun u3wee_shar(u3_noun);
+    u3_noun u3wee_slar(u3_noun);
+    u3_noun u3wee_recs(u3_noun);
+    u3_noun u3wee_smac(u3_noun);
+    u3_noun u3wee_point_neg(u3_noun);
     u3_noun u3wee_point_add(u3_noun);
     u3_noun u3wee_scalarmult(u3_noun);
     u3_noun u3wee_scalarmult_base(u3_noun);
@@ -303,6 +316,9 @@
     u3_noun u3wes_gth(u3_noun);
 
     u3_noun u3we_crc32(u3_noun);
+
+    u3_noun u3we_lia_run(u3_noun);
+    u3_noun u3we_lia_run_once(u3_noun);
 
   /** Tier 6.
   **/
