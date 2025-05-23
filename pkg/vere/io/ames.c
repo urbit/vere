@@ -1935,6 +1935,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
 
   _ames_cap_queue(pac_u->sam_u);
+  _ames_pact_free(pac_u);
 }
 
 /* _ames_hear_ames(): hear ames packet.
@@ -2149,7 +2150,8 @@ _ames_hear(u3_ames* sam_u,
 
         default: {
           u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
-          u3_pier_bail(u3_king_stub());
+          u3_king_bail();
+          exit(1);
         }
       }
     }

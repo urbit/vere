@@ -25,6 +25,7 @@
 #include "imprison.h"
 #include "jets.h"
 #include "jets/k.h"
+#include "jets/q.h"
 #include "log.h"
 #include "nock.h"
 #include "openssl/crypto.h"
@@ -1397,6 +1398,116 @@ u3m_soft_nock(u3_noun bus, u3_noun fol)
   return u3m_soft_sure(_cm_nock, u3nc(bus, fol));
 }
 
+static void
+_hamt_map(u3_noun kev, void* cax_p)
+{
+  u3_noun* old = cax_p;
+  u3_noun key, val, new;
+  u3x_cell(kev, &key, &val);
+  new = u3qdb_put(*old, u3t(key), val);
+  u3z(*old);
+  *old = new;
+}
+
+/* u3m_soft_cax(): descend into virtualization context, with cache.
+*/
+u3_noun
+u3m_soft_cax(u3_funq fun_f,
+             u3_noun aga,
+             u3_noun agb)
+{
+  u3_noun why = 0, pro;
+  u3_noun cax = u3_nul;
+
+  /* Save and set memo cache harvesting flag.
+  */
+  c3_w wag_w = u3C.wag_w;
+  u3C.wag_w |= u3o_cash;
+
+  /* Record the cap, and leap.
+  */
+  u3m_hate(1 << 18);
+
+  /* Configure the new road.
+  */
+  {
+    u3R->ski.gul = u3_nul;
+    u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
+    u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
+    u3R->bug.tax = 0;
+  }
+  u3t_on(coy_o);
+
+  /* Trap for exceptions.
+  */
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+    u3t_off(coy_o);
+    pro = fun_f(aga, agb);
+    u3C.wag_w = wag_w;
+
+#ifdef U3_CPU_DEBUG
+    if ( u3R->all.max_w > 1000000 ) {
+      u3a_print_memory(stderr, "execute: run", u3R->all.max_w);
+    }
+#endif
+
+    /* Today you can't run -g without memory debug, but you should be
+     * able to.
+    */
+#ifdef U3_MEMORY_DEBUG
+    if ( u3C.wag_w & u3o_debug_ram ) {
+      u3m_grab(pro, u3_none);
+    }
+#endif
+
+    /* Produce success, on the old road.
+    */
+    u3h_walk_with(u3R->cax.per_p, _hamt_map, &cax);
+    pro = u3nc(u3nc(0, pro), cax);
+    pro = u3m_love(pro);
+  }
+  else {
+    u3t_init();
+    u3C.wag_w = wag_w;
+
+    /* Produce - or fall again.
+    */
+    {
+      u3_assert(_(u3du(why)));
+      switch ( u3h(why) ) {
+        default: u3_assert(0); return 0;
+
+        case 1: {                             //  blocking request
+          pro = u3nc(u3nc(2, u3m_love(u3R->bug.tax)), u3_nul);
+        } break;
+
+        case 2: {                             //  true exit
+          pro = u3nc(u3m_love(why), u3_nul);
+        } break;
+
+        case 3: {                             //  failure; rebail w/trace
+          u3_noun yod = u3m_love(u3t(why));
+
+          u3m_bail
+            (u3nt(3,
+                  u3a_take(u3h(yod)),
+                  u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
+        } break;
+      }
+    }
+  }
+  /* Release the arguments.
+  */
+  {
+    u3z(aga);
+    u3z(agb);
+  }
+
+  /* Return the product.
+  */
+  return pro;
+}
+
 /* u3m_soft_run(): descend into virtualization context.
 */
 u3_noun
@@ -1413,8 +1524,15 @@ u3m_soft_run(u3_noun gul,
 
   /* Configure the new road.
   */
+
   {
-    u3R->ski.gul = u3nc(gul, u3to(u3_road, u3R->par_p)->ski.gul);
+    // XX review
+    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
+      u3R->ski.gul = u3_nul;
+    }
+    else {
+      u3R->ski.gul = u3nc(gul, u3to(u3_road, u3R->par_p)->ski.gul);
+    }
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
@@ -1507,7 +1625,6 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Assert preconditions.
   */
   {
-    u3_assert(0 != u3R->ski.gul);
     gul = u3h(u3R->ski.gul);
   }
 

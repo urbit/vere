@@ -81,7 +81,7 @@ pub fn build(b: *std.Build) void {
         ._POSIX_SOURCE = null,
     });
 
-    if (t.isDarwin()) {
+    if (t.os.tag.isDarwin()) {
         config_h.addValues(.{
             .HAVE_MACH_O_DYLD_H = 1,
         });

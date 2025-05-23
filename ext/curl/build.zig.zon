@@ -4,7 +4,7 @@
     .dependencies = .{
         .curl = .{
             .url = "https://github.com/curl/curl/releases/download/curl-8_9_1/curl-8.9.1.tar.gz",
-            .hash = "1220f36375f7a423b8dc41b14612d685f48e030b25d0f6eb69011179e9b68e4584e0",
+            .hash = "N-V-__8AAFnEQQHzY3X3pCO43EGxRhLWhfSOAwsl0PbraQER",
         },
         .openssl = .{
             .path = "../openssl",
