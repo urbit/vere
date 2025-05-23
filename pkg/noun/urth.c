@@ -1026,7 +1026,6 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
   //  restore event number
   //
   u3A->eve_d = eve_d;
-  u3A->now   = 0;
 
   //  leave rocks on disk
   //

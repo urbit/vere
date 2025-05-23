@@ -198,27 +198,6 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
   return pro;
 }
 
-/* u3v_time(): set the reck time.
-*/
-void
-u3v_time(u3_noun now)
-{
-  u3z(u3A->now);
-  u3A->now = now;
-}
-
-#if 0
-/* _cv_time_bump(): advance the reck time by a small increment.
-*/
-static void
-_cv_time_bump(u3_reck* rec_u)
-{
-  c3_d bum_d = (1ULL << 48ULL);
-
-  u3A->now = u3ka_add(u3A->now, u3i_chubs(1, &bum_d));
-}
-#endif
-
 /* u3v_lily(): parse little atom.
 */
 c3_o
@@ -281,15 +260,7 @@ u3v_soft_peek(c3_w mil_w, u3_noun sam)
   }
 }
 
-/* u3v_poke(): insert and apply an input ovum (protected).
-*/
-u3_noun
-u3v_poke(u3_noun ovo)
-{
-  return u3v_poke_raw(u3nc(u3k(u3A->now), ovo));
-}
-
-/* u3v_poke_raw(): u3v_poke w/out u3A->now XX replace
+/* u3v_poke_raw(): u3v_poke XX rename
 */
 u3_noun
 u3v_poke_raw(u3_noun sam)
@@ -393,25 +364,21 @@ u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 4);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
   qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
 
-  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
-  qua_u[1]->nam_c = strdup("date");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->now) * 4;
+  qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[1]->nam_c = strdup("wish cache");
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
 
-  qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
-  qua_u[2]->nam_c = strdup("wish cache");
-  qua_u[2]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
-
-  qua_u[3] = NULL;
+  qua_u[2] = NULL;
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total arvo stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w + qua_u[2]->siz_w;
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
   tot_u->qua_u = qua_u;
 
   return tot_u;
@@ -440,6 +407,5 @@ u3v_rewrite_compact(void)
   //  XX fix these to correctly no-op on inner roads
   //
   u3a_relocate_noun(&(u3A->roc));
-  u3a_relocate_noun(&(u3A->now));
   u3a_relocate_noun(&(u3A->yot));
 }
