@@ -437,20 +437,9 @@ u3v_reclaim(void)
 void
 u3v_rewrite_compact(void)
 {
-  u3v_arvo* arv_u = &(u3H->arv_u);
-
-  // XX fix these to correctly no-op on inner roads
-  // XX unpack struct for easier reference
-
-  u3_noun roc = arv_u->roc;
-  u3_noun now = arv_u->now;
-  u3_noun yot = arv_u->yot;
-
-  u3a_relocate_noun(&roc);
-  u3a_relocate_noun(&now);
-  u3a_relocate_noun(&yot);
-
-  arv_u->roc = roc;
-  arv_u->now = now;
-  arv_u->yot = yot;
+  //  XX fix these to correctly no-op on inner roads
+  //
+  u3a_relocate_noun(&(u3A->roc));
+  u3a_relocate_noun(&(u3A->now));
+  u3a_relocate_noun(&(u3A->yot));
 }
