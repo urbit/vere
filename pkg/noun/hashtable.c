@@ -1046,16 +1046,18 @@ u3h_take_with(u3p(u3h_root) har_p, u3_funk fun_f)
   u3h_root*     har_u = u3to(u3h_root, har_p);
   u3p(u3h_root) rah_p = u3h_new_cache(har_u->max_w);
   u3h_root*     rah_u = u3to(u3h_root, rah_p);
-  c3_w            i_w;
+  c3_w     sot_w, i_w;
 
   rah_u->use_w = har_u->use_w;
   rah_u->arm_u = har_u->arm_u;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w        sot_w = har_u->sot_w[i_w];
-    rah_u->sot_w[i_w] = ( c3y == u3h_slot_is_noun(sot_w) )
-                        ? _ch_take_noun(sot_w, fun_f)
-                        : _ch_take_node(sot_w, 25, fun_f);
+    sot_w = har_u->sot_w[i_w];
+    if ( c3n == u3h_slot_is_null(sot_w) ) {
+      rah_u->sot_w[i_w] = ( c3y == u3h_slot_is_noun(sot_w) )
+                          ? _ch_take_noun(sot_w, fun_f)
+                          : _ch_take_node(sot_w, 25, fun_f);
+    }
   }
 
   return rah_p;
