@@ -582,7 +582,7 @@
         /* u3a_wed(): unify noun references.
         */
           void
-          u3a_wed(u3_noun* a, u3_noun* b);
+          u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
         /* u3a_luse(): check refcount sanity.
         */
