@@ -55,6 +55,7 @@
 
 #define ERR(string)         ("\r\n\033[31m>>> " string "\033[0m\r\n")
 #define WUT(string)         ("\r\n\033[33m>>  " string "\033[0m\r\n")
+#define DBG(string)         ("\r\n" string "\r\n")
 
 #define KICK1(TRAP)         uw_kick_nock(TRAP, 2)
 #define KICK2(TRAP)         KICK1(KICK1(TRAP))
@@ -160,6 +161,10 @@ _pop_list(u3_weak *lit)
 }
 
 static const M3Result UrwasmArrowExit = "An imported arrow returned %2";
+
+static const c3_m uw_run_m = uw__lia + c3__run + uw_lia_run_version;
+STATIC_ASSERT( (c3y == u3a_is_cat(uw_run_m)),
+               "u3we_run key tag must be a direct atom" );
 
 typedef struct {
   u3_noun call_bat;
@@ -472,6 +477,10 @@ _realloc_box(void* lag_v, size_t len_i)
   // }
   cap_d <<= c3_bits_dabl(len_d) - c3_bits_dabl(cap_d);
   cap_d <<= (cap_d <= len_d);
+  
+  //  overflow check
+  if (cap_d <= len_d)
+    u3m_bail(c3__fail);
 
   void* new_v = _malloc_box_cap(len_d, cap_d);
   memcpy(new_v, lag_v, old_d);
@@ -1860,7 +1869,7 @@ _link_wasm_with_arrow_map(
   return result;
 }
 
-//  key: [version seed]
+//  key: [uw_run_m seed]
 //  stored nouns:
 //    $@  ~                                       ::  tombstone value
 //    $:  yield=*                                 ::  +2
@@ -1878,11 +1887,14 @@ _link_wasm_with_arrow_map(
 static c3_t
 _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 {
-  c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
-  c3_dessert(c3y == u3a_is_cat(fun_m));
-
-  u3_noun key = u3z_key(fun_m, seed);
-  u3_weak get = u3z_find(u3z_memo_keep, key);
+  //  u3_weak get = u3z_find_m(u3z_memo_keep, uw_run_m, seed);
+  //  XX order of search matters (sentinel value ~
+  //  from previous invocation is closer to the home road)
+  //  and u3z_find_m searches from home road down, which is the opposite
+  //  of what we want
+  //
+  u3_noun key = u3z_key(uw_run_m, seed);
+  u3_weak get = u3z_find_up(key);
   u3z(key);
   
   if (u3_none == get || u3_nul == get)
@@ -2152,16 +2164,12 @@ _move_state(
   u3_noun hint,
   u3_noun yil)
 {
-  c3_m fun_m = uw__lia + c3__run + uw_lia_run_version;
-  c3_dessert(c3y == u3a_is_cat(fun_m));
-
   if ( (c3__oust == hint)
       || (2 == u3h(yil))
       || (c3__rand == hint && 0 == u3h(yil))
   )
   {
-    u3_noun key_old = u3z_key(fun_m, seed_old);
-    u3z_save(u3z_memo_keep, key_old, u3_nul);
+    u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul);
     IM3Runtime run_u = sat_u->wasm_module->runtime;
     M3MemoryHeader* mem_u = run_u->memory.mallocated;
     u3a_free(mem_u);
@@ -2222,11 +2230,11 @@ _move_state(
   sat_u->susp_list = u3_none;
   sat_u->queue = u3_none;
 
-  u3_noun key_old = u3z_key(fun_m, seed_old);
-  u3z_save(u3z_memo_keep, key_old, u3_nul);
+  u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul);
 
-  u3_noun key_new = u3z_key(fun_m, seed_new);
-  u3z(u3z_save(u3z_memo_keep, key_new, stash));
+  u3z_save_m(u3z_memo_keep, uw_run_m, seed_new, stash);
+
+  u3z(stash);
 }
 
 u3_weak
@@ -2730,23 +2738,12 @@ u3we_lia_run_v1(u3_noun cor)
     u3a_free(bin_y);
   }
 
-  if (u3_none != sat.lia_shop)
+  //  any of these could be u3_none
+  //
   {
     u3z(sat.lia_shop);
-  }
-
-  if (u3_none != sat.susp_list)
-  {
     u3z(sat.susp_list);
-  }
-
-  if (u3_none != sat.yil_previous)
-  {
     u3z(sat.yil_previous);
-  }
-  
-  if (u3_none != sat.queue)
-  {
     u3z(sat.queue);
   }
 
