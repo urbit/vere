@@ -10,4 +10,4 @@
         void
         u3m_v4_migrate(void);
 
-#endif /* ifndef U3_MANAGE_V3_H */
+#endif /* ifndef U3_MANAGE_V4_H */
