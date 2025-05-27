@@ -1116,7 +1116,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__fast:
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, SWAP);
-        tot_w += _n_comp(ops, nef, c3n, c3n);
+        tot_w += _n_comp(ops, nef, los_o, c3n);
         // overflows to SALT / SAST
         ++tot_w; _n_emit(ops, (c3y == los_o) ? BALT : BAST);
         break;
@@ -2578,9 +2578,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto falt_in;
     do_balt:
       x   = pog[ip_w++];
-    falt_in:                   // [pro bus clu]
-      o   = _n_pep(mov, off);  // [bus clu]
-      _n_toss(mov, off);       // [clu]
+    falt_in:                   // [pro clu]
+      o   = _n_pep(mov, off);  // [clu]
       top = _n_peek(off);
       goto fast_out;
 
