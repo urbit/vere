@@ -36,6 +36,7 @@ _ci_slab_init(u3i_slab* sab_u, c3_w len_w)
   c3_w*     nov_w = u3a_walloc(len_w + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
 
+  vat_u->use_w = 1;
   vat_u->mug_w = 0;
   vat_u->len_w = len_w;
 
@@ -316,6 +317,7 @@ u3i_word(c3_w dat_w)
     c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
+    vat_u->use_w = 1;
     vat_u->mug_w = 0;
     vat_u->len_w = 1;
     vat_u->buf_w[0] = dat_w;
@@ -503,6 +505,7 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
     c3_w*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
 
 #ifdef U3_MEMORY_DEBUG
@@ -532,6 +535,7 @@ u3i_cell(u3_noun a, u3_noun b)
     c3_w*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
     nov_u->hed = a;
     nov_u->tel = b;
