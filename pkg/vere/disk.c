@@ -1321,7 +1321,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  
+
   u3_lmdb_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
@@ -1502,7 +1502,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
    *  5. clobber old log/data.mdb with new log/tmp/data.mdb
    *  6. open epoch lmdb and set it in log_u
    */
-  
+
   //  NB: requires that log_u->mdb_u is initialized to log/data.mdb
   //  XX: put old log in separate pointer (old_u?)?
 
@@ -1595,7 +1595,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
   }
-  
+
   //  atomic truncation of old log
   //
   u3_lmdb_exit(log_u->mdb_u);
@@ -1691,7 +1691,7 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
     } break;
 
     case U3D_VER3: {
-      if ( (0 == log_u->epo_d) || 
+      if ( (0 == log_u->epo_d) ||
            (c3y == _disk_vere_diff(log_u)) )
       {
         if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
@@ -1708,27 +1708,22 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
   }
 }
 
-/* u3_disk_chop(): delete all but the latest 2 epocs.
+/* u3_disk_chop(): roll, then delete all but the latest epoch.
 */
 void
 u3_disk_chop(u3_disk* log_u, c3_d eve_d)
 {
+  u3_disk_roll(log_u, eve_d);
+
   c3_z  len_z = u3_disk_epoc_list(log_u, 0);
   c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
   u3_disk_epoc_list(log_u, sot_d);
 
-  if ( len_z <= 2 ) {
-    fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
-                    "chop: for more info see "
-                    "https://docs.urbit.org/manual/running/vere#chop\r\n");
-    exit(0);  //  enjoy
-  }
-
-  //  delete all but the last two epochs
+  //  delete all but the latest epoch
   //
   //    XX parameterize the number of epochs to chop
   //
-  for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
+  for ( c3_z i_z = 1; i_z < len_z; i_z++ ) {
     fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n",
                     sot_d[i_z]);
     if ( c3y != _disk_epoc_kill(log_u, sot_d[i_z]) ) {
