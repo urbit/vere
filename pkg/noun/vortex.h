@@ -11,21 +11,20 @@
   /**  Data structures.
   **/
     /* u3v_arvo: modern arvo structure.
-    **       NB: packed to perserve word alignment given [eve_d]
     */
       typedef struct _u3v_arvo {
         c3_d  eve_d;                      //  event number
-        u3_noun yot;                      //  cached gates
         u3_noun roc;                      //  kernel core
+        u3_noun yot;                      //  cached gates
       } u3v_arvo;
 
     /* u3v_home: all internal (within image) state.
-    **       NB: version must be last for discriminability in north road
+    **       NB: version must first for ease of migration.
     */
       typedef struct _u3v_home {
         u3v_version ver_w;                //  version number
-        u3a_road    rod_u;                //  storage state
         u3v_arvo    arv_u;                //  arvo state
+        u3a_road    rod_u;                //  storage state
       } u3v_home;
 
 

@@ -537,10 +537,10 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
 static void
 _find_home(void)
 {
-  c3_w ver_w = *(u3_Loom);
+  c3_d ver_d = *((c3_d*)u3_Loom);
   c3_o mig_o = c3y;  //  did we migrate?
 
-  switch ( ver_w ) {
+  switch ( ver_d ) {
     // case U3V_VER1: u3m_v2_migrate();
     // case U3V_VER2: u3m_v3_migrate();
     // case U3V_VER3: u3m_v4_migrate();
@@ -550,8 +550,8 @@ _find_home(void)
     }
     default: {
       fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have %u, need %u\r\n",
-                      ver_w, U3V_VERLAT);
+                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                      ver_d, U3V_VERLAT);
       abort();
     }
   }
