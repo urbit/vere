@@ -142,7 +142,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_w off_w;                           //  spin stack offset
+        c3_w fow_w;                           //  spin stack overflow count
+
+        c3_w fut_w[30];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {

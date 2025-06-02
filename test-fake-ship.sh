@@ -35,7 +35,7 @@ trap cleanup EXIT
 
 #  print the arvo version
 #
-lensd '+vat %base'
+lensd '+vats %base'
 
 #  measure initial memory usage
 #

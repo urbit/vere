@@ -1452,6 +1452,9 @@ u3_mars_init(c3_c*    dir_c,
   _mars_sign_init(mar_u);
   _mars_sign_move();
 
+  //  Initalize the spin stack
+  u3t_sstack_init();
+
   //  wire up signal controls
   //
   u3C.sign_hold_f = _mars_sign_hold;
