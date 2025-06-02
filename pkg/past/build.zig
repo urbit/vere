@@ -70,11 +70,14 @@ pub fn build(b: *std.Build) !void {
 const c_source_files = [_][]const u8{
     "v1.c",
     "v2.c",
+    "v3.c",
     "migrate_v2.c",
+    "migrate_v3.c",
 };
 
 const install_headers = [_][]const u8{
     "v1.h",
     "v2.h",
+    "v3.h",
     "migrate.h",
 };

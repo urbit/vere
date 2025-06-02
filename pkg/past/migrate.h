@@ -3,5 +3,7 @@
 
 void
 u3_migrate_v2(void);
+void
+u3_migrate_v3(void);
 
 #endif /* U3_MIGRATE_H */

@@ -1,6 +1,7 @@
 #ifndef U3_V2_H
 #define U3_V2_H
 
+#include "v3.h"
 #include "allocate.h"
 #include "hashtable.h"
 #include "jets.h"
@@ -32,6 +33,14 @@
 
 #     define u3v2to              u3to
 #     define u3v2of              u3of
+
+#     define u3a_v2_free         u3a_free
+#     define u3a_v2_lose         u3a_lose
+#     define u3a_v2_to_off       u3a_to_off
+#     define u3a_v2_to_ptr       u3a_to_ptr
+#     define u3a_v2_ream         u3a_ream
+#     define u3a_v2_balign       u3a_v3_balign
+#     define u3a_v2_walign       u3a_v3_walign
 
     /* u3a_v2_road: contiguous allocation and execution context.
     */
@@ -109,6 +118,14 @@
 #     define  u3j_v2_rite       u3j_rite
 #     define  u3j_v2_site       u3j_site
 
+#     define  u3j_v2_rite_lose  u3j_rite_lose
+#     define  u3j_v2_site_lose  u3j_site_lose
+#     define  u3j_v2_free_hank  u3j_free_hank
+
+    /* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+    */
+      void
+      u3j_v2_reclaim(void);
 
   /***  hashtable.h
   ***/
@@ -119,6 +136,10 @@
 #     define u3h_v2_slot_is_noun  u3h_slot_is_noun
 #     define u3h_v2_noun_to_slot  u3h_noun_to_slot
 #     define u3h_v2_slot_to_noun  u3h_slot_to_noun
+
+#define u3h_v2_free          u3h_free
+#define u3h_v2_walk          u3h_walk
+#define u3h_v2_new           u3h_new
 
 
   /***  nock.h
@@ -156,6 +177,11 @@
     } reg_u;                          // registration site data
   } u3n_v2_prog;
 
+    /* u3n_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
+    */
+      void
+      u3n_v2_reclaim(void);
+
 
   /***  options.h
   ***/
@@ -181,5 +207,11 @@
       extern u3v_v2_home* u3v_v2_Home;
 #       define u3H_v2  u3v_v2_Home
 #       define u3A_v2  (&(u3v_v2_Home->arv_u))
+
+
+  /***  init
+  ***/
+        void
+        u3_v2_load(c3_z wor_i);
 
 #endif /* U3_V2_H */
