@@ -110,7 +110,7 @@
 #     define  u3j_v2_site       u3j_site
 
 
-  /***  hastable.h
+  /***  hashtable.h
   ***/
 #     define u3h_v2_buck          u3h_buck
 #     define u3h_v2_node          u3h_node

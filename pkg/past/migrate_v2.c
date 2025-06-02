@@ -6,17 +6,15 @@
 #     define  u3h_v2_slot_to_node(sot)  (u3a_v2_into(((sot) & 0x3fffffff) << u3a_vits))
 #     define  u3h_v2_node_to_slot(ptr)  ((u3a_v2_outa((ptr)) >> u3a_vits) | 0x40000000)
 
-      /* u3h_v2_rewrite(): rewrite hashtable for compaction.
-      */
-        void
-        u3h_v2_rewrite(u3p(u3h_root) har_p);
+static void
+_migv2h_rewrite(u3p(u3h_root) har_p);
 
 
 /***  allocate.c
 ***/
 
-u3_noun
-u3a_v2_rewritten_noun(u3_noun som)
+static u3_noun
+_migv2_rewritten_noun(u3_noun som)
 {
   if ( c3y == u3a_v2_is_cat(som) ) {
     return som;
@@ -33,8 +31,8 @@ u3a_v2_rewritten_noun(u3_noun som)
   return som_p;
 }
 
-void
-u3a_v2_rewrite_noun(u3_noun som)
+static void
+_migv2_rewrite_noun(u3_noun som)
 {
   if ( c3n == u3a_v2_is_cell(som) ) {
     return;
@@ -44,115 +42,62 @@ u3a_v2_rewrite_noun(u3_noun som)
 
   u3a_v2_cell* cel = (u3a_v2_cell*) u3a_v1_to_ptr(som);
 
-  u3a_v2_rewrite_noun(cel->hed);
-  u3a_v2_rewrite_noun(cel->tel);
+  _migv2_rewrite_noun(cel->hed);
+  _migv2_rewrite_noun(cel->tel);
 
-  cel->hed = u3a_v2_rewritten_noun(cel->hed);
-  cel->tel = u3a_v2_rewritten_noun(cel->tel);
+  cel->hed = _migv2_rewritten_noun(cel->hed);
+  cel->tel = _migv2_rewritten_noun(cel->tel);
 }
 
-/* u3a_v2_mig_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
+/* _migv2a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
 */
 void
-u3a_v2_mig_rewrite_compact(void)
+_migv2a_rewrite_compact(void)
 {
-  u3a_v2_rewrite_noun(u3R_v2->ski.gul);
-  u3a_v2_rewrite_noun(u3R_v2->bug.tax);
-  u3a_v2_rewrite_noun(u3R_v2->bug.mer);
-  u3a_v2_rewrite_noun(u3R_v2->pro.don);
-  u3a_v2_rewrite_noun(u3R_v2->pro.day);
-  u3a_v2_rewrite_noun(u3R_v2->pro.trace);
-  u3h_v2_rewrite(u3R_v2->cax.har_p);
+  _migv2_rewrite_noun(u3R_v2->ski.gul);
+  _migv2_rewrite_noun(u3R_v2->bug.tax);
+  _migv2_rewrite_noun(u3R_v2->bug.mer);
+  _migv2_rewrite_noun(u3R_v2->pro.don);
+  _migv2_rewrite_noun(u3R_v2->pro.day);
+  _migv2_rewrite_noun(u3R_v2->pro.trace);
+  _migv2h_rewrite(u3R_v2->cax.har_p);
 
-  u3R_v2->ski.gul = u3a_v2_rewritten_noun(u3R_v2->ski.gul);
-  u3R_v2->bug.tax = u3a_v2_rewritten_noun(u3R_v2->bug.tax);
-  u3R_v2->bug.mer = u3a_v2_rewritten_noun(u3R_v2->bug.mer);
-  u3R_v2->pro.don = u3a_v2_rewritten_noun(u3R_v2->pro.don);
-  u3R_v2->pro.day = u3a_v2_rewritten_noun(u3R_v2->pro.day);
-  u3R_v2->pro.trace = u3a_v2_rewritten_noun(u3R_v2->pro.trace);
+  u3R_v2->ski.gul = _migv2_rewritten_noun(u3R_v2->ski.gul);
+  u3R_v2->bug.tax = _migv2_rewritten_noun(u3R_v2->bug.tax);
+  u3R_v2->bug.mer = _migv2_rewritten_noun(u3R_v2->bug.mer);
+  u3R_v2->pro.don = _migv2_rewritten_noun(u3R_v2->pro.don);
+  u3R_v2->pro.day = _migv2_rewritten_noun(u3R_v2->pro.day);
+  u3R_v2->pro.trace = _migv2_rewritten_noun(u3R_v2->pro.trace);
   u3R_v2->cax.har_p = u3a_v2_rewritten(u3R_v2->cax.har_p);
 }
 
 
-/***  allocate.c
+/***  hashtable.c
 ***/
 
-/* _ch_v2_popcount(): number of bits set in word.  A standard intrinsic.
-**             NB: copy of _ch_v2_popcount in pkg/noun/hashtable.c
-*/
-static c3_w
-_ch_v2_popcount(c3_w num_w)
-{
-  return __builtin_popcount(num_w);
-}
-
-/* _ch_v2_free_buck(): free bucket
-**              NB: copy of _ch_v2_free_buck in pkg/noun/hashtable.c
-*/
-static void
-_ch_v2_free_buck(u3h_v2_buck* hab_u)
-{
-  c3_w i_w;
-
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
-    u3z(u3h_v2_slot_to_noun(hab_u->sot_w[i_w]));
-  }
-  u3a_v2_wfree(hab_u);
-}
-
-/* _ch_v2_free_node(): free node.
-*/
-static void
-_ch_v2_free_node(u3h_v2_node* han_u, c3_w lef_w)
-{
-  c3_w len_w = _ch_v2_popcount(han_u->map_w);
-  c3_w i_w;
-
-  lef_w -= 5;
-
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
-
-    if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
-      u3z(u3h_v2_slot_to_noun(sot_w));
-    }
-    else {
-      //  NB: u3h_v2_slot_to_node()
-      void* hav_v = u3h_v2_slot_to_node(sot_w);
-
-      if ( 0 == lef_w ) {
-        _ch_v2_free_buck(hav_v);
-      } else {
-        _ch_v2_free_node(hav_v, lef_w);
-      }
-    }
-  }
-  u3a_v2_wfree(han_u);
-}
-
-/* _ch_v2_rewrite_buck(): rewrite buck for compaction.
+/* _migv2h_rewrite_buck(): rewrite buck for compaction.
 */
 void
-_ch_v2_rewrite_buck(u3h_v2_buck* hab_u)
+_migv2h_rewrite_buck(u3h_v2_buck* hab_u)
 {
   if ( c3n == u3a_v2_rewrite_ptr(hab_u) ) return;
   c3_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun som = u3h_v2_slot_to_noun(hab_u->sot_w[i_w]);
-    hab_u->sot_w[i_w] = u3h_v2_noun_to_slot(u3a_v2_rewritten_noun(som));
-    u3a_v2_rewrite_noun(som);
+    hab_u->sot_w[i_w] = u3h_v2_noun_to_slot(_migv2_rewritten_noun(som));
+    _migv2_rewrite_noun(som);
   }
 }
 
-/* _ch_v2_rewrite_node(): rewrite node for compaction.
+/* _migv2h_rewrite_node(): rewrite node for compaction.
 */
 void
-_ch_v2_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
+_migv2h_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
 {
   if ( c3n == u3a_v2_rewrite_ptr(han_u) ) return;
 
-  c3_w len_w = _ch_v2_popcount(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -162,9 +107,9 @@ _ch_v2_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
 
     if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_v2_slot_to_noun(sot_w);
-      han_u->sot_w[i_w] = u3h_v2_noun_to_slot(u3a_v2_rewritten_noun(kev));
+      han_u->sot_w[i_w] = u3h_v2_noun_to_slot(_migv2_rewritten_noun(kev));
 
-      u3a_v2_rewrite_noun(kev);
+      _migv2_rewrite_noun(kev);
     }
     else {
       void* hav_v = u3h_v1_slot_to_node(sot_w);
@@ -173,18 +118,18 @@ _ch_v2_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
       han_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
       if ( 0 == lef_w ) {
-        _ch_v2_rewrite_buck(hav_v);
+        _migv2h_rewrite_buck(hav_v);
       } else {
-        _ch_v2_rewrite_node(hav_v, lef_w);
+        _migv2h_rewrite_node(hav_v, lef_w);
       }
     }
   }
 }
 
-/* u3h_v2_rewrite(): rewrite pointers during compaction.
+/* _migv2h_rewrite(): rewrite pointers during compaction.
 */
 void
-u3h_v2_rewrite(u3p(u3h_v2_root) har_p)
+_migv2h_rewrite(u3p(u3h_v2_root) har_p)
 {
   u3h_v2_root* har_u = u3to(u3h_v2_root, har_p);
   c3_w        i_w;
@@ -196,9 +141,9 @@ u3h_v2_rewrite(u3p(u3h_v2_root) har_p)
 
     if ( _(u3h_v2_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_v2_slot_to_noun(sot_w);
-      har_u->sot_w[i_w] = u3h_v2_noun_to_slot(u3a_v2_rewritten_noun(kev));
+      har_u->sot_w[i_w] = u3h_v2_noun_to_slot(_migv2_rewritten_noun(kev));
 
-      u3a_v2_rewrite_noun(kev);
+      _migv2_rewrite_noun(kev);
     }
     else if ( _(u3h_v2_slot_is_node(sot_w)) ) {
       u3h_v2_node* han_u = (u3h_v2_node*) u3h_v1_slot_to_node(sot_w);
@@ -206,13 +151,13 @@ u3h_v2_rewrite(u3p(u3h_v2_root) har_p)
 
       har_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
-      _ch_v2_rewrite_node(han_u, 25);
+      _migv2h_rewrite_node(han_u, 25);
     }
   }
 }
 
 
-/* u3j_v2_mig_rewrite_compact(): rewrite jet state for compaction.
+/* _migv2j_rewrite_compact(): rewrite jet state for compaction.
  *
  * NB: u3R_v2->jed.han_p *must* be cleared (currently via u3j_v2_reclaim above)
  * since it contains hanks which are not nouns but have loom pointers.
@@ -221,14 +166,14 @@ u3h_v2_rewrite(u3p(u3h_v2_root) har_p)
  * history at e8a307a.
 */
 void
-u3j_v2_mig_rewrite_compact(void)
+_migv2j_rewrite_compact(void)
 {
-  u3h_v2_rewrite(u3R_v2->jed.war_p);
-  u3h_v2_rewrite(u3R_v2->jed.cod_p);
-  u3h_v2_rewrite(u3R_v2->jed.han_p);
-  u3h_v2_rewrite(u3R_v2->jed.bas_p);
+  _migv2h_rewrite(u3R_v2->jed.war_p);
+  _migv2h_rewrite(u3R_v2->jed.cod_p);
+  _migv2h_rewrite(u3R_v2->jed.han_p);
+  _migv2h_rewrite(u3R_v2->jed.bas_p);
 
-  u3h_v2_rewrite(u3R_v2->jed.hot_p);
+  _migv2h_rewrite(u3R_v2->jed.hot_p);
   u3R_v2->jed.hot_p = u3a_v2_rewritten(u3R_v2->jed.hot_p);
 
   u3R_v2->jed.war_p = u3a_v2_rewritten(u3R_v2->jed.war_p);
@@ -237,7 +182,7 @@ u3j_v2_mig_rewrite_compact(void)
   u3R_v2->jed.bas_p = u3a_v2_rewritten(u3R_v2->jed.bas_p);
 }
 
-/* u3n_v2_mig_rewrite_compact(): rewrite the bytecode cache for compaction.
+/* _migv2n_rewrite_compact(): rewrite the bytecode cache for compaction.
  *
  * NB: u3R_v2->byc.har_p *must* be cleared (currently via u3n_v2_reclaim above),
  * since it contains things that look like nouns but aren't.
@@ -251,26 +196,26 @@ u3j_v2_mig_rewrite_compact(void)
  * many more words (plus one?).
  */
 void
-u3n_v2_mig_rewrite_compact(void)
+_migv2n_rewrite_compact(void)
 {
-  u3h_v2_rewrite(u3R_v2->byc.har_p);
+  _migv2h_rewrite(u3R_v2->byc.har_p);
   u3R_v2->byc.har_p = u3a_v2_rewritten(u3R_v2->byc.har_p);
 }
 
-/* u3v_v2_mig_rewrite_compact(): rewrite arvo kernel for compaction.
+/* _migv2v_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
-u3v_v2_mig_rewrite_compact(void)
+_migv2v_rewrite_compact(void)
 {
   u3v_v2_arvo* arv_u = &(u3H_v2->arv_u);
 
-  u3a_v2_rewrite_noun(arv_u->roc);
-  u3a_v2_rewrite_noun(arv_u->now);
-  u3a_v2_rewrite_noun(arv_u->yot);
+  _migv2_rewrite_noun(arv_u->roc);
+  _migv2_rewrite_noun(arv_u->now);
+  _migv2_rewrite_noun(arv_u->yot);
 
-  arv_u->roc = u3a_v2_rewritten_noun(arv_u->roc);
-  arv_u->now = u3a_v2_rewritten_noun(arv_u->now);
-  arv_u->yot = u3a_v2_rewritten_noun(arv_u->yot);
+  arv_u->roc = _migv2_rewritten_noun(arv_u->roc);
+  arv_u->now = _migv2_rewritten_noun(arv_u->now);
+  arv_u->yot = _migv2_rewritten_noun(arv_u->yot);
 }
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
@@ -278,10 +223,10 @@ u3v_v2_mig_rewrite_compact(void)
 static void
 _cm_pack_rewrite(void)
 {
-  u3v_v2_mig_rewrite_compact();
-  u3j_v2_mig_rewrite_compact();
-  u3n_v2_mig_rewrite_compact();
-  u3a_v2_mig_rewrite_compact();
+  _migv2v_rewrite_compact();
+  _migv2j_rewrite_compact();
+  _migv2n_rewrite_compact();
+  _migv2a_rewrite_compact();
 }
 
 static void
