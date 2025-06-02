@@ -2,26 +2,36 @@
 #define U3_V2_H
 
 #include "allocate.h"
-#include "jets.h"
 #include "hashtable.h"
+#include "jets.h"
+#include "options.h"
 #include "vortex.h"
 
   /***  allocate.h
   ***/
-#     define u3a_v2_into         u3a_into
-#     define u3a_v2_outa         u3a_outa
 #     define u3a_v2_botox        u3a_botox
 #     define u3a_v2_box          u3a_box
 #     define u3a_v2_cell         u3a_cell
 #     define u3a_v2_fbox         u3a_fbox
 #     define u3a_v2_fbox_no      u3a_fbox_no
+#     define u3a_v2_heap         u3a_heap
+#     define u3a_v2_into         u3a_into
 #     define u3a_v2_is_cat       u3a_is_cat
+#     define u3a_v2_is_cell      u3a_is_cell
 #     define u3a_v2_is_north     u3a_is_north
 #     define u3a_v2_is_pom       u3a_is_pom
+#     define u3a_v2_is_pug       u3a_is_pug
 #     define u3a_v2_minimum      u3a_minimum
+#     define u3a_v2_outa         u3a_outa
+#     define u3a_v2_rewrite      u3a_rewrite
+#     define u3a_v2_rewrite_ptr  u3a_rewrite_ptr
+#     define u3a_v2_rewritten    u3a_rewritten
+#     define u3a_v2_to_pug       u3a_to_pug
+#     define u3a_v2_to_pom       u3a_to_pom
+#     define u3a_v2_wfree        u3a_wfree
 
-#     define  u3v2to             u3to
-#     define  u3v2of             u3of
+#     define u3v2to              u3to
+#     define u3v2of              u3of
 
     /* u3a_v2_road: contiguous allocation and execution context.
     */
@@ -107,6 +117,7 @@
 #     define u3h_v2_root          u3h_root
 #     define u3h_v2_slot_is_node  u3h_slot_is_node
 #     define u3h_v2_slot_is_noun  u3h_slot_is_noun
+#     define u3h_v2_noun_to_slot  u3h_noun_to_slot
 #     define u3h_v2_slot_to_noun  u3h_slot_to_noun
 
 
@@ -144,6 +155,11 @@
       u3j_v2_rite* rit_u;             // array of sites
     } reg_u;                          // registration site data
   } u3n_v2_prog;
+
+
+  /***  options.h
+  ***/
+#     define u3C_v2  u3C
 
 
   /***  vortex.h

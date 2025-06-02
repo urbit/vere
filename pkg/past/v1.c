@@ -617,3 +617,24 @@ u3v_v1_reclaim(void)
   u3a_v1_lose(u3A_v1->yot);
   u3A_v1->yot = u3_nul;
 }
+
+/***  init
+***/
+
+void
+u3_v1_load(c3_z wor_i)
+{
+  c3_w len_w = wor_i - 1;
+  c3_w ver_w = *(u3_Loom + len_w);
+
+  u3_assert( U3V_VER1 == ver_w );
+
+  c3_w* mem_w = u3_Loom + 1;
+  c3_w  siz_w = c3_wiseof(u3v_v1_home);
+  c3_w* mat_w = (mem_w + len_w) - siz_w;
+
+  u3H_v1 = (void *)mat_w;
+  u3R_v1 = &u3H_v1->rod_u;
+
+  u3R_v1->cap_p = u3R_v1->mat_p = u3a_v1_outa(u3H_v1);
+}

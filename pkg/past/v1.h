@@ -36,4 +36,10 @@
 #     define  u3H_v1       u3H_v2
 #     define  u3v_v1_home  u3v_v2_home
 
+
+  /***  init
+  ***/
+        void
+        u3_v1_load(c3_z wor_i);
+
 #endif /* U3_V1_H */
