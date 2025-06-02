@@ -15,6 +15,9 @@
 #     define u3a_v1_minimum   u3a_v2_minimum
 #     define u3a_v1_outa      u3a_v2_outa
 
+#     define  u3v1to          u3v2to
+#     define  u3v1of          u3v2of
+
     /* u3a_v1_to_wtr(): convert noun [som] into word pointer into loom.
     */
 #     define u3a_v1_to_wtr(som)    ((c3_w *)u3a_v1_to_ptr(som))
@@ -110,11 +113,6 @@ _box_v1_make(void* box_v, c3_w siz_w, c3_w use_w)
   box_w[siz_w - 1] = siz_w;
   box_u->use_w = use_w;
 
-# ifdef  U3_MEMORY_DEBUG
-    box_u->cod_w = u3_Code;
-    box_u->eus_w = 0;
-# endif
-
   return box_u;
 }
 
@@ -124,18 +122,18 @@ static void
 _box_v1_attach(u3a_v1_box* box_u)
 {
   u3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_v1_fbox)));
-  u3_assert(0 != u3of(u3a_v1_fbox, box_u));
+  u3_assert(0 != u3v1of(u3a_v1_fbox, box_u));
 
   {
     c3_w           sel_w = _box_v1_slot(box_u->siz_w);
-    u3p(u3a_v1_fbox)  fre_p = u3of(u3a_v1_fbox, box_u);
+    u3p(u3a_v1_fbox)  fre_p = u3v1of(u3a_v1_fbox, box_u);
     u3p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_w];
     u3p(u3a_v1_fbox)  nex_p = *pfr_p;
 
-    u3to(u3a_v1_fbox, fre_p)->pre_p = 0;
-    u3to(u3a_v1_fbox, fre_p)->nex_p = nex_p;
-    if ( u3to(u3a_v1_fbox, fre_p)->nex_p ) {
-      u3to(u3a_v1_fbox, u3to(u3a_v1_fbox, fre_p)->nex_p)->pre_p = fre_p;
+    u3v1to(u3a_v1_fbox, fre_p)->pre_p = 0;
+    u3v1to(u3a_v1_fbox, fre_p)->nex_p = nex_p;
+    if ( u3v1to(u3a_v1_fbox, fre_p)->nex_p ) {
+      u3v1to(u3a_v1_fbox, u3v1to(u3a_v1_fbox, fre_p)->nex_p)->pre_p = fre_p;
     }
     (*pfr_p) = fre_p;
   }
@@ -146,22 +144,22 @@ _box_v1_attach(u3a_v1_box* box_u)
 static void
 _box_v1_detach(u3a_v1_box* box_u)
 {
-  u3p(u3a_v1_fbox) fre_p = u3of(u3a_v1_fbox, box_u);
-  u3p(u3a_v1_fbox) pre_p = u3to(u3a_v1_fbox, fre_p)->pre_p;
-  u3p(u3a_v1_fbox) nex_p = u3to(u3a_v1_fbox, fre_p)->nex_p;
+  u3p(u3a_v1_fbox) fre_p = u3v1of(u3a_v1_fbox, box_u);
+  u3p(u3a_v1_fbox) pre_p = u3v1to(u3a_v1_fbox, fre_p)->pre_p;
+  u3p(u3a_v1_fbox) nex_p = u3v1to(u3a_v1_fbox, fre_p)->nex_p;
 
 
   if ( nex_p ) {
-    if ( u3to(u3a_v1_fbox, nex_p)->pre_p != fre_p ) {
+    if ( u3v1to(u3a_v1_fbox, nex_p)->pre_p != fre_p ) {
       u3_assert(!"loom: corrupt");
     }
-    u3to(u3a_v1_fbox, nex_p)->pre_p = pre_p;
+    u3v1to(u3a_v1_fbox, nex_p)->pre_p = pre_p;
   }
   if ( pre_p ) {
-    if( u3to(u3a_v1_fbox, pre_p)->nex_p != fre_p ) {
+    if( u3v1to(u3a_v1_fbox, pre_p)->nex_p != fre_p ) {
       u3_assert(!"loom: corrupt");
     }
-    u3to(u3a_v1_fbox, pre_p)->nex_p = nex_p;
+    u3v1to(u3a_v1_fbox, pre_p)->nex_p = nex_p;
   }
   else {
     c3_w sel_w = _box_v1_slot(box_u->siz_w);
@@ -240,7 +238,6 @@ u3a_v1_free(void* tox_v)
   c3_w  pad_w = tox_w[-1];
   c3_w* org_w = tox_w - (pad_w + 1);
 
-  // u3l_log("free %p %p", org_w, tox_w);
   u3a_v1_wfree(org_w);
 }
 
@@ -308,17 +305,7 @@ u3a_v1_lose(u3_noun som)
 /***  hashtable.c
 ***/
 
-/* _ch_v1_popcount(): number of bits set in word.  A standard intrinsic.
-**             NB: copy of _ch_v1_popcount in pkg/noun/hashtable.c
-*/
-static c3_w
-_ch_v1_popcount(c3_w num_w)
-{
-  return __builtin_popcount(num_w);
-}
-
 /* _ch_v1_free_buck(): free bucket
-**              NB: copy of _ch_v1_free_buck in pkg/noun/hashtable.c
 */
 static void
 _ch_v1_free_buck(u3h_v1_buck* hab_u)
@@ -336,7 +323,7 @@ _ch_v1_free_buck(u3h_v1_buck* hab_u)
 static void
 _ch_v1_free_node(u3h_v1_node* han_u, c3_w lef_w)
 {
-  c3_w len_w = _ch_v1_popcount(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -365,7 +352,7 @@ _ch_v1_free_node(u3h_v1_node* han_u, c3_w lef_w)
 void
 u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
 {
-  u3h_v1_root* har_u = u3to(u3h_v1_root, har_p);
+  u3h_v1_root* har_u = u3v1to(u3h_v1_root, har_p);
   c3_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
@@ -387,7 +374,6 @@ u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
 }
 
 /* _ch_v1_walk_buck(): walk bucket for gc.
-**              NB: copy of _ch_v1_walk_buck in pkg/noun/hashtable.c
 */
 static void
 _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
@@ -404,7 +390,7 @@ _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 static void
 _ch_v1_walk_node(u3h_v1_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w len_w = _ch_v1_popcount(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_w);
   c3_w i_w;
 
   lef_w -= 5;
@@ -437,7 +423,7 @@ u3h_v1_walk_with(u3p(u3h_v1_root) har_p,
               void (*fun_f)(u3_noun, void*),
               void* wit)
 {
-  u3h_v1_root* har_u = u3to(u3h_v1_root, har_p);
+  u3h_v1_root* har_u = u3v1to(u3h_v1_root, har_p);
   c3_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
@@ -483,7 +469,7 @@ static void
 _cj_v1_fink_free(u3p(u3j_v1_fink) fin_p)
 {
   c3_w i_w;
-  u3j_v1_fink* fin_u = u3to(u3j_v1_fink, fin_p);
+  u3j_v1_fink* fin_u = u3v1to(u3j_v1_fink, fin_p);
   u3a_v1_lose(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_v1_fist* fis_u = &(fin_u->fis_u[i_w]);
@@ -534,7 +520,7 @@ static void
 _cj_v1_free_hank(u3_noun kev)
 {
   u3a_v1_cell* cel_u = (u3a_v1_cell*) u3a_v1_to_ptr(kev);
-  u3j_v1_hank* han_u = u3to(u3j_v1_hank, cel_u->tel);
+  u3j_v1_hank* han_u = u3v1to(u3j_v1_hank, cel_u->tel);
   if ( u3_none != han_u->hax ) {
     u3a_v1_lose(han_u->hax);
     u3j_v1_site_lose(&(han_u->sit_u));
@@ -556,7 +542,6 @@ u3j_v1_reclaim(void)
 
 /***  nock.c
 ***/
-
 
 /* _cn_v1_prog_free(): free memory retained by program pog_u
 */
@@ -592,7 +577,7 @@ static void
 _n_v1_feb(u3_noun kev)
 {
   u3a_v1_cell *cel_u = (u3a_v1_cell*) u3a_v1_to_ptr(kev);
-  _cn_v1_prog_free(u3to(u3n_v1_prog, cel_u->tel));
+  _cn_v1_prog_free(u3v1to(u3n_v1_prog, cel_u->tel));
 }
 
 /* u3n_v1_free(): free bytecode cache
@@ -621,7 +606,6 @@ u3n_v1_reclaim(void)
 
 /***  vortex.c
 ***/
-
 
 /* u3v_v1_reclaim(): clear ad-hoc persistent caches to reclaim memory.
 */

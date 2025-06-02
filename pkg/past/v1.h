@@ -1,3 +1,6 @@
+#ifndef U3_V1_H
+#define U3_V1_H
+
 #include "v2.h"
 
   /***  allocate.h
@@ -32,3 +35,5 @@
   ***/
 #     define  u3H_v1       u3H_v2
 #     define  u3v_v1_home  u3v_v2_home
+
+#endif /* U3_V1_H */

@@ -1,3 +1,6 @@
+#ifndef U3_V2_H
+#define U3_V2_H
+
 #include "allocate.h"
 #include "jets.h"
 #include "hashtable.h"
@@ -16,6 +19,9 @@
 #     define u3a_v2_is_north     u3a_is_north
 #     define u3a_v2_is_pom       u3a_is_pom
 #     define u3a_v2_minimum      u3a_minimum
+
+#     define  u3v2to             u3to
+#     define  u3v2of             u3of
 
     /* u3a_v2_road: contiguous allocation and execution context.
     */
@@ -159,3 +165,5 @@
       extern u3v_v2_home* u3v_v2_Home;
 #       define u3H_v2  u3v_v2_Home
 #       define u3A_v2  (&(u3v_v2_Home->arv_u))
+
+#endif /* U3_V2_H */
