@@ -34,6 +34,7 @@
 #define AX_TRY              43
 #define AX_CATCH            4
 #define AX_RETURN           20
+#define AX_FAIL             47
 
 #define ARROW_CTX           511
 #define MONAD_CTX           127
@@ -163,8 +164,11 @@ _pop_list(u3_weak *lit)
 static const M3Result UrwasmArrowExit = "An imported arrow returned %2";
 
 static const c3_m uw_run_m = uw__lia + c3__run + uw_lia_run_version;
-STATIC_ASSERT( (c3y == u3a_is_cat(uw_run_m)),
-               "u3we_run key tag must be a direct atom" );
+
+static_assert(
+  (c3y == u3a_is_cat(uw_run_m)),
+  "u3we_run key tag must be a direct atom"
+);
 
 typedef struct {
   u3_noun call_bat;
@@ -174,6 +178,7 @@ typedef struct {
   u3_noun try_bat;
   u3_noun catch_bat;
   u3_noun return_bat;
+  u3_noun fail_bat;
   u3_noun global_set_bat;
   u3_noun global_get_bat;
   u3_noun mem_grow_bat;
@@ -1430,6 +1435,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3z(monad);
     return u3nc(0, 0);
   }
+  else if (c3y == u3r_sing(monad_bat, sat_u->match->fail_bat))
+  {
+    u3z(monad);
+    return u3nc(2, 0);
+  }
   else
   {
     return u3m_bail(c3__fail);
@@ -2331,7 +2341,8 @@ u3we_lia_run_v1(u3_noun cor)
 
   u3_noun try_script    = KICK1(try_gate_inner);
   u3_noun catch_script  = KICK2(uw_kick_nock(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(uw_kick_nock(    runnable,  AX_RETURN));
+  u3_noun return_script = KICK1(uw_kick_nock(u3k(runnable), AX_RETURN));
+  u3_noun fail_script =         uw_kick_nock(    runnable,  AX_FAIL);
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -2340,6 +2351,7 @@ u3we_lia_run_v1(u3_noun cor)
   u3_noun try_bat = u3k(u3h(try_script));
   u3_noun catch_bat = u3k(u3h(catch_script));
   u3_noun return_bat = u3k(u3h(return_script));
+  u3_noun fail_bat = u3k(u3h(fail_script));
   u3_noun global_set_bat = u3k(u3h(global_set_script));
   u3_noun global_get_bat = u3k(u3h(global_get_script));
   u3_noun mem_grow_bat = u3k(u3h(mem_grow_script));
@@ -2366,6 +2378,7 @@ u3we_lia_run_v1(u3_noun cor)
   u3z(try_script);
   u3z(catch_script);
   u3z(return_script);
+  u3z(fail_script);
   u3z(global_set_script);
   u3z(global_get_script);
   u3z(mem_grow_script);
@@ -2383,6 +2396,7 @@ u3we_lia_run_v1(u3_noun cor)
     try_bat,
     catch_bat,
     return_bat,
+    fail_bat,
     global_set_bat,
     global_get_bat,
     mem_grow_bat,
@@ -2754,6 +2768,7 @@ u3we_lia_run_v1(u3_noun cor)
   u3z(match.try_bat);
   u3z(match.catch_bat);
   u3z(match.return_bat);
+  u3z(match.fail_bat);
   u3z(match.global_set_bat);
   u3z(match.global_get_bat);
   u3z(match.mem_grow_bat);
@@ -2814,7 +2829,8 @@ u3we_lia_run_once(u3_noun cor)
 
   u3_noun try_script    = KICK2(uw_kick_nock(u3k(runnable), AX_TRY));  
   u3_noun catch_script  = KICK2(uw_kick_nock(u3k(runnable), AX_CATCH));
-  u3_noun return_script = KICK1(uw_kick_nock(    runnable,  AX_RETURN));
+  u3_noun return_script = KICK1(uw_kick_nock(u3k(runnable), AX_RETURN));
+  u3_noun fail_script =         uw_kick_nock(    runnable,  AX_FAIL);
   
   u3_noun call_bat = u3k(u3h(call_script));
   u3_noun memread_bat = u3k(u3h(memread_script));
@@ -2823,6 +2839,7 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun try_bat = u3k(u3h(try_script));
   u3_noun catch_bat = u3k(u3h(catch_script));
   u3_noun return_bat = u3k(u3h(return_script));
+  u3_noun fail_bat = u3k(u3h(fail_script));
   u3_noun global_set_bat = u3k(u3h(global_set_script));
   u3_noun global_get_bat = u3k(u3h(global_get_script));
   u3_noun mem_grow_bat = u3k(u3h(mem_grow_script));
@@ -2849,6 +2866,7 @@ u3we_lia_run_once(u3_noun cor)
   u3z(try_script);
   u3z(catch_script);
   u3z(return_script);
+  u3z(fail_script);
   u3z(global_set_script);
   u3z(global_get_script);
   u3z(mem_grow_script);
@@ -2867,6 +2885,7 @@ u3we_lia_run_once(u3_noun cor)
     try_bat,
     catch_bat,
     return_bat,
+    fail_bat,
     global_set_bat,
     global_get_bat,
     mem_grow_bat,
@@ -3025,6 +3044,7 @@ u3we_lia_run_once(u3_noun cor)
   u3z(match.try_bat);
   u3z(match.catch_bat);
   u3z(match.return_bat);
+  u3z(match.fail_bat);
   u3z(match.global_set_bat);
   u3z(match.global_get_bat);
   u3z(match.mem_grow_bat);

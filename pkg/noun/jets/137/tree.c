@@ -915,7 +915,7 @@ static u3j_core _137_hex_lia_sur_d[] = {
 };
 
 static u3j_core _137_hex_wasm_engine_sur_d[] = {
-  { "monad-sur-v0", 3, 0, _137_hex_lia_sur_d, no_hashes },
+  { "monad-sur-v1", 3, 0, _137_hex_lia_sur_d, no_hashes },
   {}
 };
 
