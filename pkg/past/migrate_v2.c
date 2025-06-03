@@ -1,10 +1,11 @@
 #include "v1.h"
 #include "v2.h"
+#include "options.h"
 
   /***  hashtable.h
   ***/
-#     define  u3h_v2_slot_to_node(sot)  (u3a_v2_into(((sot) & 0x3fffffff) << u3a_vits))
-#     define  u3h_v2_node_to_slot(ptr)  ((u3a_v2_outa((ptr)) >> u3a_vits) | 0x40000000)
+#     define  u3h_v2_slot_to_node(sot)  (u3a_v2_into(((sot) & 0x3fffffff) << u3a_v2_vits))
+#     define  u3h_v2_node_to_slot(ptr)  ((u3a_v2_outa((ptr)) >> u3a_v2_vits) | 0x40000000)
 
 static void
 _migv2h_rewrite(u3p(u3h_root) har_p);
@@ -113,7 +114,7 @@ _migv2h_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
     }
     else {
       void* hav_v = u3h_v1_slot_to_node(sot_w);
-      u3h_v2_node* nod_u = u3to(u3h_v2_node, u3a_v2_rewritten(u3of(u3h_v2_node,hav_v)));
+      u3h_v2_node* nod_u = u3v2to(u3h_v2_node, u3a_v2_rewritten(u3v2of(u3h_v2_node,hav_v)));
 
       han_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
@@ -131,7 +132,7 @@ _migv2h_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
 void
 _migv2h_rewrite(u3p(u3h_v2_root) har_p)
 {
-  u3h_v2_root* har_u = u3to(u3h_v2_root, har_p);
+  u3h_v2_root* har_u = u3v2to(u3h_v2_root, har_p);
   c3_w        i_w;
 
   if ( c3n == u3a_v2_rewrite_ptr(har_u) ) return;
@@ -147,7 +148,7 @@ _migv2h_rewrite(u3p(u3h_v2_root) har_p)
     }
     else if ( _(u3h_v2_slot_is_node(sot_w)) ) {
       u3h_v2_node* han_u = (u3h_v2_node*) u3h_v1_slot_to_node(sot_w);
-      u3h_v2_node* nod_u = u3to(u3h_v2_node, u3a_v2_rewritten(u3of(u3h_v2_node,han_u)));
+      u3h_v2_node* nod_u = u3v2to(u3h_v2_node, u3a_v2_rewritten(u3v2of(u3h_v2_node,han_u)));
 
       har_u->sot_w[i_w] = u3h_v2_node_to_slot(nod_u);
 
@@ -348,7 +349,7 @@ _migrate_move(u3a_v2_road *rod_u)
 void
 u3_migrate_v2(void)
 {
-  u3_v1_load(u3C_v2.wor_i);
+  u3_v1_load(u3C.wor_i);
 
   fprintf(stderr, "loom: pointer compression migration running...\r\n");
 

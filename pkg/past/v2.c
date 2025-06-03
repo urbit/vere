@@ -1,5 +1,9 @@
 #include "v2.h"
 
+#     define  u3h_v2_free  u3h_v3_free
+#     define  u3h_v2_walk  u3h_v3_walk
+#     define  u3h_v2_new   u3h_v3_new
+
 u3a_v2_road* u3a_v2_Road;
 u3v_v2_home* u3v_v2_Home;
 
@@ -13,8 +17,9 @@ void
 u3j_v2_reclaim(void)
 {
   //  set globals (required for aliased functions)
-  u3H = (u3v_home*) u3H_v2;
-  u3R = (u3a_road*) u3R_v2;
+  //  XX confirm
+  u3H_v3 = (u3v_v3_home*) u3H_v2;
+  u3R_v3 = (u3a_v3_road*) u3R_v2;
 
   //  clear the jet hank cache
   //
@@ -80,8 +85,8 @@ void
 u3n_v2_reclaim(void)
 {
   //  set globals (required for aliased functions)
-  u3H = (u3v_home*) u3H_v2;
-  u3R = (u3a_road*) u3R_v2;
+  u3H_v3 = (u3v_v3_home*) u3H_v2;
+  u3R_v3 = (u3a_v3_road*) u3R_v2;
 
   //  clear the bytecode cache
   u3n_v2_free();
@@ -95,12 +100,12 @@ u3n_v2_reclaim(void)
 void
 u3_v2_load(c3_z wor_i)
 {
-  c3_w ver_w = *(u3_Loom + wor_i - 1);
+  c3_w ver_w = *(u3_Loom_v2 + wor_i - 1);
 
   u3_assert( U3V_VER2 == ver_w );
 
-  c3_w *mem_w = u3_Loom + u3a_v2_walign;
-  c3_w  len_w = u3C.wor_i - u3a_v2_walign;
+  c3_w *mem_w = u3_Loom_v2 + u3a_v2_walign;
+  c3_w  len_w = wor_i - u3a_v2_walign;
   c3_w  suz_w = c3_wiseof(u3v_v2_home);
   c3_w *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v2_balign, C3_ALGLO);
 

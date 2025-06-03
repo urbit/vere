@@ -2,45 +2,44 @@
 #define U3_V2_H
 
 #include "v3.h"
-#include "allocate.h"
-#include "hashtable.h"
-#include "jets.h"
-#include "options.h"
-#include "vortex.h"
 
   /***  allocate.h
   ***/
-#     define u3a_v2_botox        u3a_botox
-#     define u3a_v2_box          u3a_box
-#     define u3a_v2_cell         u3a_cell
-#     define u3a_v2_fbox         u3a_fbox
-#     define u3a_v2_fbox_no      u3a_fbox_no
-#     define u3a_v2_heap         u3a_heap
-#     define u3a_v2_into         u3a_into
-#     define u3a_v2_is_cat       u3a_is_cat
-#     define u3a_v2_is_cell      u3a_is_cell
-#     define u3a_v2_is_north     u3a_is_north
-#     define u3a_v2_is_pom       u3a_is_pom
-#     define u3a_v2_is_pug       u3a_is_pug
-#     define u3a_v2_minimum      u3a_minimum
-#     define u3a_v2_outa         u3a_outa
-#     define u3a_v2_rewrite      u3a_rewrite
-#     define u3a_v2_rewrite_ptr  u3a_rewrite_ptr
-#     define u3a_v2_rewritten    u3a_rewritten
-#     define u3a_v2_to_pug       u3a_to_pug
-#     define u3a_v2_to_pom       u3a_to_pom
-#     define u3a_v2_wfree        u3a_wfree
+#     define  u3_Loom_v2          u3_Loom_v3
 
-#     define u3v2to              u3to
-#     define u3v2of              u3of
+#     define  u3a_v2_heap         u3a_v3_heap
+#     define  u3a_v2_is_cat       u3a_v3_is_cat
+#     define  u3a_v2_is_cell      u3a_v3_is_cell
+#     define  u3a_v2_is_north     u3a_v3_is_north
+#     define  u3a_v2_is_pom       u3a_v3_is_pom
+#     define  u3a_v2_is_pug       u3a_v3_is_pug
+#     define  u3a_v2_vits         u3a_v3_vits
 
-#     define u3a_v2_free         u3a_free
-#     define u3a_v2_lose         u3a_lose
-#     define u3a_v2_to_off       u3a_to_off
-#     define u3a_v2_to_ptr       u3a_to_ptr
-#     define u3a_v2_ream         u3a_ream
-#     define u3a_v2_balign       u3a_v3_balign
-#     define u3a_v2_walign       u3a_v3_walign
+#     define  u3a_v2_into         u3a_v3_into
+#     define  u3a_v2_outa         u3a_v3_outa
+
+#     define  u3a_v2_botox        u3a_v3_botox
+#     define  u3a_v2_box          u3a_v3_box
+#     define  u3a_v2_cell         u3a_v3_cell
+#     define  u3a_v2_fbox         u3a_v3_fbox
+#     define  u3a_v2_fbox_no      u3a_v3_fbox_no
+#     define  u3a_v2_minimum      u3a_v3_minimum
+#     define  u3a_v2_rewrite_ptr  u3a_v3_rewrite_ptr
+#     define  u3a_v2_rewritten    u3a_v3_rewritten
+#     define  u3a_v2_to_pug       u3a_v3_to_pug
+#     define  u3a_v2_to_pom       u3a_v3_to_pom
+#     define  u3a_v2_wfree        u3a_v3_wfree
+
+#     define  u3v2to              u3v3to
+#     define  u3v2of              u3v3of
+
+#     define  u3a_v2_free         u3a_v3_free
+#     define  u3a_v2_lose         u3a_v3_lose
+#     define  u3a_v2_to_off       u3a_v3_to_off
+#     define  u3a_v2_to_ptr       u3a_v3_to_ptr
+#     define  u3a_v2_ream         u3a_v3_ream
+#     define  u3a_v2_balign       u3a_v3_balign
+#     define  u3a_v2_walign       u3a_v3_walign
 
     /* u3a_v2_road: contiguous allocation and execution context.
     */
@@ -70,12 +69,18 @@
 
         struct {                                   //  allocation pools
           u3p(u3a_v2_fbox) fre_p[u3a_v2_fbox_no];  //  heap by node size log
-          u3p(u3a_fbox) cel_p;                //  custom cell allocator
+          u3p(u3a_v2_fbox) cel_p;                //  custom cell allocator
           c3_w fre_w;                         //  number of free words
           c3_w max_w;                         //  maximum allocated
         } all;
 
-        u3a_jets jed;                         //  jet dashboard
+        struct {
+          u3p(u3h_root) hot_p;                  //  hot state (home road only)
+          u3p(u3h_root) war_p;                  //  warm state
+          u3p(u3h_root) cod_p;                  //  cold state
+          u3p(u3h_root) han_p;                  //  hank cache
+          u3p(u3h_root) bas_p;                  //  battery hashes
+        } jed;                                //  jet dashboard
 
         struct {                              // bytecode state
           u3p(u3h_root) har_p;                // formula->post of bytecode
@@ -99,7 +104,7 @@
         } pro;
 
         struct {                              //  memoization
-          u3p(u3h_root) har_p;                //  (map (pair term noun) noun)
+          u3p(u3h_v2_root) har_p;             //  (map (pair term noun) noun)
         } cax;
       } u3a_v2_road;
 
@@ -112,15 +117,14 @@
 
   /***  jets.h
   ***/
-#     define  u3j_v2_fink       u3j_fink
-#     define  u3j_v2_fist       u3j_fist
-#     define  u3j_v2_hank       u3j_hank
-#     define  u3j_v2_rite       u3j_rite
-#     define  u3j_v2_site       u3j_site
-
-#     define  u3j_v2_rite_lose  u3j_rite_lose
-#     define  u3j_v2_site_lose  u3j_site_lose
-#     define  u3j_v2_free_hank  u3j_free_hank
+#     define  u3j_v2_fink       u3j_v3_fink
+#     define  u3j_v2_fist       u3j_v3_fist
+#     define  u3j_v2_hank       u3j_v3_hank
+#     define  u3j_v2_rite       u3j_v3_rite
+#     define  u3j_v2_site       u3j_v3_site
+#     define  u3j_v2_rite_lose  u3j_v3_rite_lose
+#     define  u3j_v2_site_lose  u3j_v3_site_lose
+#     define  u3j_v2_free_hank  u3j_v3_free_hank
 
     /* u3j_v2_reclaim(): clear ad-hoc persistent caches to reclaim memory.
     */
@@ -129,17 +133,13 @@
 
   /***  hashtable.h
   ***/
-#     define u3h_v2_buck          u3h_buck
-#     define u3h_v2_node          u3h_node
-#     define u3h_v2_root          u3h_root
-#     define u3h_v2_slot_is_node  u3h_slot_is_node
-#     define u3h_v2_slot_is_noun  u3h_slot_is_noun
-#     define u3h_v2_noun_to_slot  u3h_noun_to_slot
-#     define u3h_v2_slot_to_noun  u3h_slot_to_noun
-
-#define u3h_v2_free          u3h_free
-#define u3h_v2_walk          u3h_walk
-#define u3h_v2_new           u3h_new
+#     define  u3h_v2_buck          u3h_v3_buck
+#     define  u3h_v2_node          u3h_v3_node
+#     define  u3h_v2_root          u3h_v3_root
+#     define  u3h_v2_slot_is_node  u3h_v3_slot_is_node
+#     define  u3h_v2_slot_is_noun  u3h_v3_slot_is_noun
+#     define  u3h_v2_noun_to_slot  u3h_v3_noun_to_slot
+#     define  u3h_v2_slot_to_noun  u3h_v3_slot_to_noun
 
 
   /***  nock.h
@@ -183,14 +183,10 @@
       u3n_v2_reclaim(void);
 
 
-  /***  options.h
-  ***/
-#     define u3C_v2  u3C
-
-
   /***  vortex.h
   ***/
-#     define     u3v_v2_arvo  u3v_arvo
+#     define     u3v_v2_arvo     u3v_v3_arvo
+#     define     u3v_v2_version  u3v_v3_version
 
     /* u3v_v2_home: all internal (within image) state.
     **       NB: version must be last for discriminability in north road
@@ -198,7 +194,7 @@
       typedef struct _u3v_v2_home {
         u3a_v2_road    rod_u;                //  storage state
         u3v_v2_arvo    arv_u;                //  arvo state
-        u3v_version    ver_w;                //  version number
+        u3v_v2_version ver_w;                //  version number
       } u3v_v2_home;
 
   /**  Globals.

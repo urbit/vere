@@ -1,18 +1,19 @@
 #include "v2.h"
 #include "v3.h"
+#include "options.h"
 
-/* u3_migrate_v2: perform loom migration if necessary.
+/* u3_migrate_v3: perform loom migration if necessary.
 */
 void
-u3_migrate_v2(void)
+u3_migrate_v3(void)
 {
   u3_v2_load(u3C.wor_i);
 
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
   //  set globals (required for aliased functions)
-  u3R = (u3a_road*)u3R_v2;
-  u3H = (u3v_home*)u3H_v2;
+  u3R_v3 = (u3a_v3_road*)u3R_v2;
+  u3H_v3 = (u3v_v3_home*)u3H_v2;
   u3a_v2_ream();
 
   //  free bytecode caches in old road
@@ -74,7 +75,7 @@ u3_migrate_v2(void)
   hom_u.rod_u = rod_u;
 
   //  place the new home over the old one
-  c3_w *mem_w = u3_Loom + u3a_v3_walign;
+  c3_w *mem_w = u3_Loom_v3 + u3a_v3_walign;
   c3_w  len_w = u3C.wor_i - u3a_v3_walign;
   c3_w  siz_w = c3_wiseof(u3v_v3_home);
   c3_w *mat_w = c3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);

@@ -18,19 +18,6 @@
 #     define  u3v1to          u3v2to
 #     define  u3v1of          u3v2of
 
-    /* u3a_v1_to_wtr(): convert noun [som] into word pointer into loom.
-    */
-#     define u3a_v1_to_wtr(som)    ((c3_w *)u3a_v1_to_ptr(som))
-
-    /* u3a_v1_to_pug(): set bit 31 of [off].
-    */
-#     define u3a_v1_to_pug(off)    (off | 0x80000000)
-
-    /* u3a_v1_to_pom(): set bits 30 and 31 of [off].
-    */
-#     define u3a_v1_to_pom(off)    (off | 0xc0000000)
-
-
   /***  hashtable.h
   ***/
 
@@ -60,11 +47,6 @@
   ***/
 #     define  u3n_v1_memo  u3n_v2_memo
 #     define  u3n_v1_prog  u3n_v2_prog
-
-
-  /***  manage.h
-  ***/
-#     define  u3m_v1_bail  u3m_bail
 
 
   /***  vortex.h
@@ -266,7 +248,8 @@ top:
     }
     else {
       if ( 0 == box_u->use_w ) {
-        u3m_v1_bail(c3__foul);
+        fprintf(stderr, "bail: foul\r\n");
+        abort();
       }
       else {
         if ( _(u3a_v1_is_pom(dog)) ) {
@@ -625,11 +608,11 @@ void
 u3_v1_load(c3_z wor_i)
 {
   c3_w len_w = wor_i - 1;
-  c3_w ver_w = *(u3_Loom + len_w);
+  c3_w ver_w = *(u3_Loom_v1 + len_w);
 
   u3_assert( U3V_VER1 == ver_w );
 
-  c3_w* mem_w = u3_Loom + 1;
+  c3_w* mem_w = u3_Loom_v1 + 1;
   c3_w  siz_w = c3_wiseof(u3v_v1_home);
   c3_w* mat_w = (mem_w + len_w) - siz_w;
 

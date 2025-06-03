@@ -1,5 +1,8 @@
 #include "v3.h"
+#include "v4.h"
 #include "options.h"
+
+#     define  u3m_v3_reclaim  u3m_v4_reclaim
 
 /* u3_migrate_v4: perform loom migration if necessary.
 */
@@ -10,11 +13,10 @@ u3_migrate_v4(void)
 
   fprintf(stderr, "loom: bytecode alignment migration running...\r\n");
 
-  u3H = u3H_v3;
-  u3R = u3R_v3;
   u3m_v3_reclaim();
 
-  u3H->ver_w = U3V_VER4;
+  u3H_v4 = u3H_v3;
+  u3H_v4->ver_w = U3V_VER4;
 
   fprintf(stderr, "loom: bytecode alignment migration done\r\n");
 }

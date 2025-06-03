@@ -5,17 +5,14 @@
 
   /***  allocate.h
   ***/
-    /* u3a_v1_to_off(): mask off bits 30 and 31 from noun [som].
-    */
-#     define u3a_v1_to_off(som)    ((som) & 0x3fffffff)
+#     define  u3_Loom_v1          u3_Loom_v2
 
-    /* u3a_v1_to_ptr(): convert noun [som] into generic pointer into loom.
-    */
-#     define u3a_v1_to_ptr(som)    (u3a_v1_into(u3a_v1_to_off(som)))
+#     define  u3a_v1_to_off(som)  ((som) & 0x3fffffff)
+#     define  u3a_v1_to_ptr(som)  (u3a_v1_into(u3a_v1_to_off(som)))
 
-#     define u3a_v1_into      u3a_v2_into
-#     define u3a_v1_outa      u3a_v2_outa
-#     define u3R_v1           u3R_v2
+#     define  u3a_v1_into         u3a_v2_into
+#     define  u3a_v1_outa         u3a_v2_outa
+#     define  u3R_v1              u3R_v2
 
 
   /***  hashtable.h
