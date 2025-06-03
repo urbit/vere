@@ -391,4 +391,5 @@ const install_headers = [_][]const u8{
     "vortex.h",
     "xtract.h",
     "zave.h",
+    "verstable.h",
 };

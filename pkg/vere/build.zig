@@ -243,5 +243,4 @@ const install_headers = [_][]const u8{
     "mars.h",
     "mdns.h",
     "vere.h",
-    "verstable.h",
 };
