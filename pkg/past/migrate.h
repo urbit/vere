@@ -7,5 +7,7 @@ void
 u3_migrate_v3(void);
 void
 u3_migrate_v4(void);
+void
+u3_migrate_v5(void);
 
 #endif /* U3_MIGRATE_H */

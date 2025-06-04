@@ -8,11 +8,6 @@
 
   /***  current
   ***/
-#     define  u3_Loom_v4          u3_Loom
-#     define  u3a_v4_into         u3a_into
-#     define  u3a_v4_outa         u3a_outa
-#     define  u3v4to              u3to
-#     define  u3v4of              u3of
 #     define  u3a_v4_heap         u3a_heap
 #     define  u3a_v4_is_cat       u3a_is_cat
 #     define  u3a_v4_is_cell      u3a_is_cell
@@ -38,11 +33,17 @@
   /***  allocate.h
   ***/
 
+#     define  u3_Loom_v4      (u3_Loom + ((c3_z)1 << u3a_bits_max))
 #     define  u3a_v4_vits     1
 #     define  u3a_v4_walign   (1 << u3a_v4_vits)
 #     define  u3a_v4_balign   (sizeof(c3_w)*u3a_v4_walign)
 #     define  u3a_v4_fbox_no  27
 #     define  u3a_v4_minimum  ((c3_w)( 1 + c3_wiseof(u3a_v4_box) + c3_wiseof(u3a_v4_cell) ))
+#     define  u3a_v4_into(x)  ((void *)(u3_Loom_v4 + (x)))
+#     define  u3a_v4_outa(p)  ((c3_w *)(void *)(p) - u3_Loom_v4)
+#     define  u3v4to(type, x) ((type *)u3a_v4_into(x))
+#     define  u3v4of(type, x) (u3a_v4_outa((type*)x))
+
 
       typedef struct {
         c3_w mug_w;
@@ -215,5 +216,11 @@
 extern u3v_v4_home* u3v_v4_Home;
 #       define u3H_v4  u3v_v4_Home
 #       define u3A_v4  (&(u3v_v4_Home->arv_u))
+
+
+  /***  init
+  ***/
+        void
+        u3_v4_load(c3_z wor_i);
 
 #endif /* U3_V4_H */

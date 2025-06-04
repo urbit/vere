@@ -31,7 +31,7 @@
      /* u3h_v1_free(): free hashtable.
       */
         void
-        u3h_v1_free_nodes(u3p(u3h_root) har_p);
+        u3h_v1_free_nodes(u3p(u3h_v1_root) har_p);
 
 
   /***  jets.h
