@@ -75,6 +75,7 @@ const c_source_files = [_][]const u8{
     "migrate_v2.c",
     "migrate_v3.c",
     "migrate_v4.c",
+    "migrate_v5.c",
 };
 
 const install_headers = [_][]const u8{
