@@ -2652,6 +2652,13 @@ u3we_lia_run_v1(u3_noun cor)
       return u3m_bail(c3__fail);
     }
 
+    //  save the stack to restore it later before calling m3_FreeRuntime
+    //  since it is allocated and freed seperately; no need to do it in
+    //  stateful code branch since there we will allocate and free
+    //  whole arena
+
+    void* stk_u = wasm3_runtime->stack;
+
     result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_w);
     if (result)
     {
@@ -2747,6 +2754,7 @@ u3we_lia_run_v1(u3_noun cor)
       yil = _reduce_monad(u3k(monad), &sat);
     }
 
+    wasm3_runtime->stack = stk_u;
     m3_FreeRuntime(wasm3_runtime);
     m3_FreeEnvironment(wasm3_env);
     u3a_free(bin_y);
@@ -2939,6 +2947,8 @@ u3we_lia_run_once(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
+  void* stk_u = wasm3_runtime->stack;
+
   IM3Module wasm3_module;
   result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_w);
   if (result)
@@ -3032,6 +3042,7 @@ u3we_lia_run_once(u3_noun cor)
     yil = _reduce_monad(u3k(monad), &sat);
   }
 
+  wasm3_runtime->stack = stk_u;
   m3_FreeRuntime(wasm3_runtime);
   m3_FreeEnvironment(wasm3_env);
 
