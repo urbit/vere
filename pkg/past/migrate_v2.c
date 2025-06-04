@@ -2,11 +2,6 @@
 #include "v2.h"
 #include "options.h"
 
-  /***  hashtable.h
-  ***/
-#     define  u3h_v2_slot_to_node(sot)  (u3a_v2_into(((sot) & 0x3fffffff) << u3a_v2_vits))
-#     define  u3h_v2_node_to_slot(ptr)  ((u3a_v2_outa((ptr)) >> u3a_v2_vits) | 0x40000000)
-
 static void
 _migv2h_rewrite(u3p(u3h_root) har_p);
 

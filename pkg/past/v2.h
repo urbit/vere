@@ -141,6 +141,9 @@
 #     define  u3h_v2_noun_to_slot  u3h_v3_noun_to_slot
 #     define  u3h_v2_slot_to_noun  u3h_v3_slot_to_noun
 
+#     define  u3h_v2_slot_to_node(sot)  (u3a_v2_into(((sot) & 0x3fffffff) << u3a_v2_vits))
+#     define  u3h_v2_node_to_slot(ptr)  ((u3a_v2_outa((ptr)) >> u3a_v2_vits) | 0x40000000)
+
 
   /***  nock.h
   ***/
