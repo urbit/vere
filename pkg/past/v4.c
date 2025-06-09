@@ -2,18 +2,6 @@
 
 #include "nock.h"
 
-  /***  current
-  ***/
-#     define  u3a_v4_is_pom           u3a_is_pom
-#     define  u3a_v4_north_is_normal  u3a_north_is_normal
-#     define  u3n_v4_prog             u3n_prog
-
-#     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
-#     define  u3a_v4_boxto(box_v)  ( (void *) \
-                                   ( (u3a_v4_box *)(void *)(box_v) + 1 ) )
-#     define  u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
-#     define  u3h_v4_slot_to_node(sot)  (u3a_v4_into(((sot) & 0x3fffffff) << u3a_v4_vits))
-
 /***  allocate.c
 ***/
 
