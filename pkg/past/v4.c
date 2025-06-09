@@ -378,6 +378,25 @@ u3a_v4_lose(u3_noun som)
   }
 }
 
+/* u3a_pile_prep(): initialize stack control.
+*/
+void
+u3a_v4_pile_prep(u3a_v4_pile* pil_u, c3_w len_w)
+{
+  //  frame size, in words
+  //
+  c3_w wor_w = (len_w + 3) >> 2;
+  c3_o nor_o = u3a_is_north(u3R_v4);
+
+  pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
+  pil_u->off_ws = (c3y == nor_o) ?      0 : -wor_w;
+  pil_u->top_p  = u3R_v4->cap_p;
+
+#ifdef U3_MEMORY_DEBUG
+  pil_u->rod_u  = u3R_v4;
+#endif
+}
+
 /* u3a_v4_ream(): ream free-lists.
 */
 void
@@ -794,6 +813,112 @@ u3m_v4_reclaim(void)
   //  NB: subset: u3a and u3v excluded
   u3j_v4_reclaim();
   u3n_v4_reclaim();
+}
+
+  /***  retrieve.h
+  ***/
+
+typedef struct {
+  c3_l  mug_l;
+  u3_cell cel;
+} _cr_v4_mugf;
+
+/* _cr_v4_mug_next(): advance mug calculation, pushing cells onto the stack.
+*/
+static inline c3_l
+_cr_v4_mug_next(u3a_v4_pile* pil_u, u3_noun veb)
+{
+  while ( 1 ) {
+    //  veb is a direct atom, mug is not memoized
+    //
+    if ( c3y == u3a_v4_is_cat(veb) ) {
+      return (c3_l)u3r_v4_mug_words(&veb, 1);
+    }
+    //  veb is indirect, a pointer into the loom
+    //
+    else {
+      u3a_v4_noun* veb_u = u3a_v4_to_ptr(veb);
+
+      //  veb has already been mugged, return memoized value
+      //
+      //    XX add debug assertion that mug is 31-bit?
+      //
+      if ( veb_u->mug_w ) {
+        return (c3_l)veb_u->mug_w;
+      }
+      //  veb is an indirect atom, mug its bytes and memoize
+      //
+      else if ( c3y == u3a_v4_is_atom(veb) ) {
+        u3a_v4_atom* vat_u = (u3a_v4_atom*)veb_u;
+        c3_l         mug_l = u3r_v4_mug_words(vat_u->buf_w, vat_u->len_w);
+        vat_u->mug_w = mug_l;
+        return mug_l;
+      }
+      //  veb is a cell, push a stack frame to mark head-recursion
+      //  and read the head
+      //
+      else {
+        u3a_v4_cell* cel_u = (u3a_v4_cell*)veb_u;
+        _cr_v4_mugf* fam_u = u3a_push(pil_u);
+
+        fam_u->mug_l = 0;
+        fam_u->cel   = veb;
+
+        veb = cel_u->hed;
+        continue;
+      }
+    }
+  }
+}
+
+/* u3r_mug(): statefully mug a noun with 31-bit murmur3.
+*/
+c3_l
+u3r_v4_mug(u3_noun veb)
+{
+  u3a_v4_pile  pil_u;
+  _cr_v4_mugf* fam_u;
+  c3_l         mug_l;
+
+  //  sanity check
+  //
+  u3_assert( u3_none != veb );
+
+  u3a_v4_pile_prep(&pil_u, sizeof(*fam_u));
+
+  //  commence mugging
+  //
+  mug_l = _cr_v4_mug_next(&pil_u, veb);
+
+  //  process cell results
+  //
+  if ( c3n == u3a_v4_pile_done(&pil_u) ) {
+    fam_u = u3a_v4_peek(&pil_u);
+
+    do {
+      //  head-frame: stash mug and continue into the tail
+      //
+      if ( !fam_u->mug_l ) {
+        u3a_v4_cell* cel_u = u3a_v4_to_ptr(fam_u->cel);
+
+        fam_u->mug_l = mug_l;
+        mug_l        = _cr_v4_mug_next(&pil_u, cel_u->tel);
+        fam_u        = u3a_v4_peek(&pil_u);
+      }
+      //  tail-frame: calculate/memoize cell mug and pop the stack
+      //
+      else {
+        u3a_v4_cell* cel_u = u3a_v4_to_ptr(fam_u->cel);
+
+        mug_l        = u3r_v4_mug_both(fam_u->mug_l, mug_l);
+        cel_u->mug_w = mug_l;
+        fam_u        = u3a_v4_pop(&pil_u);
+      }
+    }
+    while ( c3n == u3a_v4_pile_done(&pil_u) );
+  }
+
+  return mug_l;
 }
 
 /***  init

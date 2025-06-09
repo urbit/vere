@@ -7,12 +7,14 @@
   ***/
 
 #     define  u3a_v4_heap             u3a_v5_heap
+#     define  u3a_v4_is_atom          u3a_v5_is_atom
 #     define  u3a_v4_is_cat           u3a_v5_is_cat
 #     define  u3a_v4_is_cell          u3a_v5_is_cell
 #     define  u3a_v4_is_north         u3a_v5_is_north
 #     define  u3a_v4_is_pom           u3a_v5_is_pom
 #     define  u3a_v4_is_pug           u3a_v5_is_pug
 #     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
+#     define  u3a_v4_pile             u3a_v5_pile
 #     define  u3a_v4_vits             1
 #     define  u3a_v4_bits_max         (8 * sizeof(c3_w) + u3a_v4_vits)
 
@@ -164,6 +166,30 @@
         u3a_v4_rewrite_ptr(void* ptr_v);
         u3_post
         u3a_v4_rewritten(u3_post som_p);
+        void
+        u3a_v4_pile_prep(u3a_v4_pile* pil_u, c3_w len_w);
+        inline c3_o
+        u3a_v4_pile_done(const u3a_v4_pile* pil_u)
+        {
+          return (pil_u->top_p == u3R_v4->cap_p) ? c3y : c3n;
+        }
+        inline void*
+        u3a_v4_peek(const u3a_v4_pile* pil_u)
+        {
+          return u3v4to(void, (u3R_v4->cap_p + pil_u->off_ws));
+        }
+        inline void
+        u3a_v4_drop(const u3a_v4_pile* pil_u)
+        {
+          u3R_v4->cap_p -= pil_u->mov_ws;
+        }
+        inline void*
+        u3a_v4_pop(const u3a_v4_pile* pil_u)
+        {
+          u3a_drop(pil_u);
+          return u3a_v4_peek(pil_u);
+        }
+
 
 
   /***  jets.h
@@ -215,7 +241,12 @@
 
   /***  retrieve.h
   ***/
-#     define  u3r_v4_mug              u3r_v5_mug
+#     define  u3r_v4_mug_bytes        u3r_v5_mug_bytes
+#     define  u3r_v4_mug_words        u3r_v5_mug_words
+#     define  u3r_v4_mug_both         u3r_v5_mug_both
+
+        c3_l
+        u3r_v4_mug(u3_noun veb);
 
   /***  vortex.h
   ***/

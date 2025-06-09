@@ -5,6 +5,7 @@
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
+#include "retrieve.h"
 
 
   /***  current
@@ -12,12 +13,14 @@
 #     define  u3a_v5_atom             u3a_atom
 #     define  u3a_v5_gain             u3a_gain
 #     define  u3a_v5_heap             u3a_heap
+#     define  u3a_v5_is_atom          u3a_is_atom
 #     define  u3a_v5_is_cat           u3a_is_cat
 #     define  u3a_v5_is_cell          u3a_is_cell
 #     define  u3a_v5_is_north         u3a_is_north
 #     define  u3a_v5_is_pom           u3a_is_pom
 #     define  u3a_v5_is_pug           u3a_is_pug
 #     define  u3a_v5_north_is_normal  u3a_north_is_normal
+#     define  u3a_v5_pile             u3a_pile
 #     define  u3a_v5_walloc           u3a_walloc
 
 #     define  u3h_v5_put              u3h_put
@@ -44,6 +47,9 @@
 #     define  u3n_v5_prog             u3n_prog
 
 #     define  u3r_v5_mug              u3r_mug
+#     define  u3r_v5_mug_bytes        u3r_mug_bytes
+#     define  u3r_v5_mug_words        u3r_mug_words
+#     define  u3r_v5_mug_both         u3r_mug_both
 
   /***  allocate.h
   ***/
