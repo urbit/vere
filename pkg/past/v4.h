@@ -210,15 +210,16 @@
 
   /***  hashtable.h
   ***/
-#     define  u3h_v4_buck             u3h_v5_buck
-#     define  u3h_v4_node             u3h_v5_node
-#     define  u3h_v4_root             u3h_v5_root
-#     define  u3h_v4_slot_is_node     u3h_v5_slot_is_node
-#     define  u3h_v4_slot_is_noun     u3h_v5_slot_is_noun
-#     define  u3h_v4_slot_is_null     u3h_v5_slot_is_null
-#     define  u3h_v4_noun_to_slot     u3h_v5_noun_to_slot
-#     define  u3h_v4_slot_to_noun     u3h_v5_slot_to_noun
-#     define  u3h_v4_walk_with        u3h_v5_walk_with
+#     define  u3h_v4_buck               u3h_v5_buck
+#     define  u3h_v4_node               u3h_v5_node
+#     define  u3h_v4_root               u3h_v5_root
+#     define  u3h_v4_slot_is_node       u3h_v5_slot_is_node
+#     define  u3h_v4_slot_is_noun       u3h_v5_slot_is_noun
+#     define  u3h_v4_slot_is_null       u3h_v5_slot_is_null
+#     define  u3h_v4_noun_to_slot       u3h_v5_noun_to_slot
+#     define  u3h_v4_slot_to_noun       u3h_v5_slot_to_noun
+#     define  u3h_v4_slot_to_node(sot)  (u3a_v4_into(((sot) & 0x3fffffff) << u3a_v4_vits))
+#     define  u3h_v4_walk_with          u3h_v5_walk_with
 
         void
         u3h_v4_free(u3p(u3h_v4_root) har_p);
@@ -226,7 +227,6 @@
         u3h_v4_new(void);
         u3p(u3h_v4_root)
         u3h_v4_new_cache(c3_w max_w);
-#     define  u3h_v4_slot_to_node(sot)  (u3a_v4_into(((sot) & 0x3fffffff) << u3a_v4_vits))
         void
         u3h_v4_walk(u3p(u3h_v4_root) har_p, void (*fun_f)(u3_noun));
 
