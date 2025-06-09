@@ -3,9 +3,9 @@
 
 #include "v5.h"
 
-  /***  current
+  /***  allocate.h
   ***/
-#     define  u3a_v4_head             u3a_v5_head
+
 #     define  u3a_v4_heap             u3a_v5_heap
 #     define  u3a_v4_is_cat           u3a_v5_is_cat
 #     define  u3a_v4_is_cell          u3a_v5_is_cell
@@ -13,30 +13,8 @@
 #     define  u3a_v4_is_pom           u3a_v5_is_pom
 #     define  u3a_v4_is_pug           u3a_v5_is_pug
 #     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
-#     define  u3a_v4_tail             u3a_v5_tail
-
-#     define  u3h_v4_buck             u3h_v5_buck
-#     define  u3h_v4_node             u3h_v5_node
-#     define  u3h_v4_root             u3h_v5_root
-#     define  u3h_v4_slot_is_node     u3h_v5_slot_is_node
-#     define  u3h_v4_slot_is_noun     u3h_v5_slot_is_noun
-#     define  u3h_v4_slot_is_null     u3h_v5_slot_is_null
-#     define  u3h_v4_noun_to_slot     u3h_v5_noun_to_slot
-#     define  u3h_v4_slot_to_noun     u3h_v5_slot_to_noun
-#     define  u3h_v4_walk_with        u3h_v5_walk_with
-
-#     define  u3j_v4_fink             u3j_v5_fink
-#     define  u3j_v4_fist             u3j_v5_fist
-#     define  u3j_v4_hank             u3j_v5_hank
-#     define  u3j_v4_rite             u3j_v5_rite
-#     define  u3j_v4_site             u3j_v5_site
-
-#     define  u3n_v4_prog             u3n_v5_prog
-
-#     define  u3r_v4_mug              u3r_v5_mug
-
-  /***  allocate.h
-  ***/
+#     define  u3a_v4_vits             1
+#     define  u3a_v4_bits_max         (8 * sizeof(c3_w) + u3a_v4_vits)
 
 #     define  u3_Loom_v4      (u3_Loom + ((c3_z)1 << u3a_bits_max))
 #     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
@@ -154,12 +132,24 @@
       extern u3a_v4_road* u3a_v4_Road;
 #       define u3R_v4  u3a_v4_Road
 
+#     define u3a_v4_h(som) \
+        ( _(u3a_v4_is_cell(som)) \
+           ? ( ((u3a_v4_cell *)u3a_v4_to_ptr(som))->hed )\
+           : u3m_bail(c3__exit) )
+#     define u3a_v4_t(som) \
+        ( _(u3a_v4_is_cell(som)) \
+           ? ( ((u3a_v4_cell *)u3a_v4_to_ptr(som))->tel )\
+           : u3m_bail(c3__exit) )
 #     define u3a_v4_to_off(som)  (((som) & 0x3fffffff) << u3a_v4_vits)
 #     define u3a_v4_to_ptr(som)  (u3a_v4_into(u3a_v4_to_off(som)))
 #     define u3a_v4_to_pug(off)  ((off >> u3a_v4_vits) | 0x80000000)
 #     define u3a_v4_to_pom(off)  ((off >> u3a_v4_vits) | 0xc0000000)
 #     define u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
 
+        u3_noun
+        u3a_v4_head(u3_noun som);
+        u3_noun
+        u3a_v4_tail(u3_noun som);
         void*
         u3a_v4_walloc(c3_w len_w);
         void
@@ -178,6 +168,12 @@
 
   /***  jets.h
   ***/
+#     define  u3j_v4_fink             u3j_v5_fink
+#     define  u3j_v4_fist             u3j_v5_fist
+#     define  u3j_v4_hank             u3j_v5_hank
+#     define  u3j_v4_rite             u3j_v5_rite
+#     define  u3j_v4_site             u3j_v5_site
+
         void
         u3j_v4_rite_lose(u3j_v4_rite* rit_u);
         void
@@ -188,6 +184,16 @@
 
   /***  hashtable.h
   ***/
+#     define  u3h_v4_buck             u3h_v5_buck
+#     define  u3h_v4_node             u3h_v5_node
+#     define  u3h_v4_root             u3h_v5_root
+#     define  u3h_v4_slot_is_node     u3h_v5_slot_is_node
+#     define  u3h_v4_slot_is_noun     u3h_v5_slot_is_noun
+#     define  u3h_v4_slot_is_null     u3h_v5_slot_is_null
+#     define  u3h_v4_noun_to_slot     u3h_v5_noun_to_slot
+#     define  u3h_v4_slot_to_noun     u3h_v5_slot_to_noun
+#     define  u3h_v4_walk_with        u3h_v5_walk_with
+
         void
         u3h_v4_free(u3p(u3h_v4_root) har_p);
         u3p(u3h_v4_root)
@@ -202,6 +208,14 @@
   ***/
         void
         u3m_v4_reclaim(void);
+
+  /***  nock.h
+  ***/
+#     define  u3n_v4_prog             u3n_v5_prog
+
+  /***  retrieve.h
+  ***/
+#     define  u3r_v4_mug              u3r_v5_mug
 
   /***  vortex.h
   ***/

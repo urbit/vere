@@ -352,6 +352,22 @@ top:
   }
 }
 
+/* u3a_v4_head(): get the head of som noun.
+*/
+u3_noun
+u3a_v4_head(u3_noun som)
+{
+  return u3a_v4_h(som);
+}
+
+/* u3a_v4_tail(): get the tail of som noun.
+*/
+u3_noun
+u3a_v4_tail(u3_noun som)
+{
+  return u3a_v4_t(som);
+}
+
 /* u3a_v4_lose(): lose a reference count.
 */
 void
