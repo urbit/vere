@@ -6,6 +6,7 @@
   /***  allocate.h
   ***/
 
+#     define  u3a_v4_bits             u3a_v5_bits
 #     define  u3a_v4_heap             u3a_v5_heap
 #     define  u3a_v4_is_atom          u3a_v5_is_atom
 #     define  u3a_v4_is_cat           u3a_v5_is_cat
@@ -15,9 +16,9 @@
 #     define  u3a_v4_is_pug           u3a_v5_is_pug
 #     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
 #     define  u3a_v4_pile             u3a_v5_pile
+#     define  u3a_v4_print_memory     u3a_v5_print_memory
 #     define  u3a_v4_vits             1
 #     define  u3a_v4_bits_max         (8 * sizeof(c3_w) + u3a_v4_vits)
-
 #     define  u3_Loom_v4      (u3_Loom + ((c3_z)1 << u3a_bits_max))
 #     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
 #     define  u3a_v4_boxto(box_v)  ( (void *) \
@@ -32,6 +33,8 @@
 #     define  u3a_v4_outa(p)  ((c3_w *)(void *)(p) - u3_Loom_v4)
 #     define  u3v4to(type, x) ((type *)u3a_v4_into(x))
 #     define  u3v4of(type, x) (u3a_v4_outa((type*)x))
+#     define  u3a_v4_page             u3a_v5_page
+#     define  u3a_v4_pages            (1ULL << (u3a_v4_bits + u3a_v4_vits - u3a_v4_page) )
 
 
       typedef struct {
@@ -147,6 +150,7 @@
 #     define u3a_v4_to_pug(off)  ((off >> u3a_v4_vits) | 0x80000000)
 #     define u3a_v4_to_pom(off)  ((off >> u3a_v4_vits) | 0xc0000000)
 #     define u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
+#     define u3a_v4_fbox_no 27
 
         u3_noun
         u3a_v4_head(u3_noun som);
@@ -160,6 +164,8 @@
         u3a_v4_free(void* tox_v);
         void
         u3a_v4_lose(u3_weak som);
+        void
+        u3a_v4_loom_sane(void);
         void
         u3a_v4_ream(void);
         c3_o
@@ -189,7 +195,95 @@
           u3a_drop(pil_u);
           return u3a_v4_peek(pil_u);
         }
+        /* u3a_push(): push a frame onto the road stack, per [pil_u].
+        */
+          inline void*
+          u3a_v4_push(const u3a_v4_pile* pil_u)
+          {
+            u3R_v4->cap_p += pil_u->mov_ws;
 
+#ifndef U3_GUARD_PAGE
+            //  !off means we're on a north road
+            //
+            if ( !pil_u->off_ws ) {
+              if( !(u3R_v4->cap_p > u3R_v4->hat_p) ) {
+                u3m_bail(c3__meme);
+              }
+# ifdef U3_MEMORY_DEBUG
+              u3_assert( pil_u->top_p >= u3R_v4->cap_p );
+# endif
+            }
+            else {
+              if( !(u3R_v4->cap_p < u3R_v4->hat_p) ) {
+                u3m_bail(c3__meme);
+              }
+# ifdef U3_MEMORY_DEBUG
+              u3_assert( pil_u->top_p <= u3R_v4->cap_p );
+# endif
+            }
+#endif /* ifndef U3_GUARD_PAGE */
+
+#ifdef U3_MEMORY_DEBUG
+            u3_assert( pil_u->rod_u == u3R );
+#endif
+
+            return u3a_peek(pil_u);
+          }
+
+
+  /***  events.h
+  ***/
+#     define  u3e_v4_image            u3e_v5_image
+
+      typedef struct _u3e_v4_line {
+        c3_w pag_w;
+        c3_w mug_w;
+      } u3e_v4_line;
+
+      typedef struct _u3e_v4_control {
+        u3e_version  ver_w;                  //  version number
+        c3_w         nor_w;                  //  new page count north
+        c3_w         sou_w;                  //  new page count south
+        c3_w         pgs_w;                  //  number of changed pages
+        u3e_v4_line  mem_u[];                //  per page
+      } u3e_v4_control;
+
+      typedef struct _u3_v4_cs_patch {
+        c3_i             ctl_i;
+        c3_i             mem_i;
+        u3e_v4_control*  con_u;
+      } u3_ce_v4_patch;
+
+      typedef struct _u3e_v4_pool {
+        c3_c*         dir_c;                     //  path to
+        c3_i          eph_i;                     //  ephemeral file descriptor
+        c3_w          dit_w[u3a_v4_pages >> 5];  //  touched since last save
+        c3_w          pag_w;                     //  number of pages (<= u3a_pages)
+        c3_w          gar_w;                     //  guard page
+        u3e_v4_image  nor_u;                     //  north segment
+        u3e_v4_image  sou_u;                     //  south segment
+      } u3e_v4_pool;
+
+      typedef enum {
+        u3e_v4_flaw_sham = 0,                  //  bogus state
+        u3e_v4_flaw_base = 1,                  //  vm fail (mprotect)
+        u3e_v4_flaw_meme = 2,                  //  bail:meme
+        u3e_v4_flaw_good = 3                   //  handled
+      } u3e_v4_flaw;
+
+      extern u3e_v4_pool u3e_v4_Pool;
+#     define u3P_v4 u3e_v4_Pool
+
+      void
+      u3e_v4_stop(void);
+      void
+      u3e_v4_foul(void);
+      void
+      u3e_v4_init(void);
+      c3_o
+      u3e_v4_live(c3_o nuu_o, c3_c* dir_c);
+      void
+      u3e_v4_toss(u3_post low_p, u3_post hig_p);
 
 
   /***  jets.h

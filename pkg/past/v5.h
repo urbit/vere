@@ -2,15 +2,22 @@
 #define U3_V5_H
 
 #include "allocate.h"
+#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
+#include "log.h"
+#include "nock.h"
+#include "options.h"
 #include "retrieve.h"
+#include <fcntl.h>
+#include <sys/stat.h>
 
 
   /***  current
   ***/
 #     define  u3a_v5_atom             u3a_atom
+#     define  u3a_v5_bits             u3a_bits
 #     define  u3a_v5_gain             u3a_gain
 #     define  u3a_v5_heap             u3a_heap
 #     define  u3a_v5_is_atom          u3a_is_atom
@@ -20,8 +27,12 @@
 #     define  u3a_v5_is_pom           u3a_is_pom
 #     define  u3a_v5_is_pug           u3a_is_pug
 #     define  u3a_v5_north_is_normal  u3a_north_is_normal
+#     define  u3a_v5_page             u3a_page
 #     define  u3a_v5_pile             u3a_pile
+#     define  u3a_v5_print_memory     u3a_print_memory
 #     define  u3a_v5_walloc           u3a_walloc
+
+#     define  u3e_v5_image            u3e_image
 
 #     define  u3h_v5_put              u3h_put
 #     define  u3h_v5_buck             u3h_buck
