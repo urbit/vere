@@ -17,22 +17,21 @@
 #     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
 #     define  u3a_v4_pile             u3a_v5_pile
 #     define  u3a_v4_print_memory     u3a_v5_print_memory
-#     define  u3a_v4_vits             1
 #     define  u3a_v4_bits_max         (8 * sizeof(c3_w) + u3a_v4_vits)
-#     define  u3_Loom_v4      (u3_Loom + ((c3_z)1 << u3a_bits_max))
-#     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
-#     define  u3a_v4_boxto(box_v)  ( (void *) \
-                                   ( (u3a_v4_box *)(void *)(box_v) + 1 ) )
-#     define  u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
-#     define  u3a_v4_vits     1
-#     define  u3a_v4_walign   (1 << u3a_v4_vits)
-#     define  u3a_v4_balign   (sizeof(c3_w)*u3a_v4_walign)
-#     define  u3a_v4_fbox_no  27
-#     define  u3a_v4_minimum  ((c3_w)( 1 + c3_wiseof(u3a_v4_box) + c3_wiseof(u3a_v4_cell) ))
-#     define  u3a_v4_into(x)  ((void *)(u3_Loom_v4 + (x)))
-#     define  u3a_v4_outa(p)  ((c3_w *)(void *)(p) - u3_Loom_v4)
-#     define  u3v4to(type, x) ((type *)u3a_v4_into(x))
-#     define  u3v4of(type, x) (u3a_v4_outa((type*)x))
+#     define  u3_Loom_v4              (u3_Loom + ((c3_z)1 << u3a_v4_bits_max))
+#     define  u3a_v4_boxed(len_w)     (len_w + c3_wiseof(u3a_v4_box) + 1)
+#     define  u3a_v4_boxto(box_v)     ( (void *) \
+                                      ( (u3a_v4_box *)(void *)(box_v) + 1 ) )
+#     define  u3a_v4_botox(tox_v)     ( (u3a_v4_box *)(void *)(tox_v) - 1 )
+#     define  u3a_v4_vits             1
+#     define  u3a_v4_walign           (1 << u3a_v4_vits)
+#     define  u3a_v4_balign           (sizeof(c3_w)*u3a_v4_walign)
+#     define  u3a_v4_fbox_no          27
+#     define  u3a_v4_minimum          ((c3_w)( 1 + c3_wiseof(u3a_v4_box) + c3_wiseof(u3a_v4_cell) ))
+#     define  u3a_v4_into(x)          ((void *)(u3_Loom_v4 + (x)))
+#     define  u3a_v4_outa(p)          ((c3_w *)(void *)(p) - u3_Loom_v4)
+#     define  u3v4to(type, x)         ((type *)u3a_v4_into(x))
+#     define  u3v4of(type, x)         (u3a_v4_outa((type*)x))
 #     define  u3a_v4_page             u3a_v5_page
 #     define  u3a_v4_pages            (1ULL << (u3a_v4_bits + u3a_v4_vits - u3a_v4_page) )
 
@@ -149,8 +148,6 @@
 #     define u3a_v4_to_ptr(som)  (u3a_v4_into(u3a_v4_to_off(som)))
 #     define u3a_v4_to_pug(off)  ((off >> u3a_v4_vits) | 0x80000000)
 #     define u3a_v4_to_pom(off)  ((off >> u3a_v4_vits) | 0xc0000000)
-#     define u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
-#     define u3a_v4_fbox_no 27
 
         u3_noun
         u3a_v4_head(u3_noun som);
