@@ -7,8 +7,8 @@
         },
         .wasm3 = .{
             // .path = "../../../../wasm3"
-            .url = "https://github.com/urbit/wasm3/archive/5db20383634cdcb991a4fef2191b268e324517f5.tar.gz",
-            .hash = "N-V-__8AAE8eSQBgdXY-ZuTrnJwbsNKRWtMtGZNCwTyA3qjT",
+            .url = "https://github.com/urbit/wasm3/archive/48832a8e023b57d671be6c0bab8608d30cb57101.tar.gz",
+            .hash = "N-V-__8AANAcSQBq71EmfSas8hV9_SOtu1AjOvuUcWZce5VM",
         },
     },
     .paths = .{
