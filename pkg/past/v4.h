@@ -149,6 +149,17 @@
 #     define u3a_v4_to_pom(off)  ((off >> u3a_v4_vits) | 0xc0000000)
 #     define u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
 
+//  XX abort() instead of u3m_bail?
+//
+#     define u3a_v4_head(som) \
+        ( _(u3a_v4_is_cell(som)) \
+           ? ( ((u3a_v4_cell *)u3a_v4_to_ptr(som))->hed )\
+           : u3m_bail(c3__exit) )
+#     define u3a_v4_tail(som) \
+        ( _(u3a_v4_is_cell(som)) \
+           ? ( ((u3a_v4_cell *)u3a_v4_to_ptr(som))->tel )\
+           : u3m_bail(c3__exit) )
+
         void*
         u3a_v4_walloc(c3_w len_w);
         void
