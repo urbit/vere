@@ -327,7 +327,6 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
 
     if ( c3n == u3h(sed) ) {
       // bails, won't return
-      u3l_log("boot: wrong keyform");
       _dawn_fail(ship, rank, u3t(sed));
       return u3_none;
     }
