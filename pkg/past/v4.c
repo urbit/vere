@@ -4,9 +4,9 @@
 
   /***  current
   ***/
-#     define  u3a_v4_is_pom           u3a_is_pom
-#     define  u3a_v4_north_is_normal  u3a_north_is_normal
-#     define  u3n_v4_prog             u3n_prog
+#     define  u3a_v4_is_pom           u3a_v5_is_pom
+#     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
+#     define  u3n_v4_prog             u3n_v5_prog
 
 #     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
 #     define  u3a_v4_boxto(box_v)  ( (void *) \
