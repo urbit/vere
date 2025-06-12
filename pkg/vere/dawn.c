@@ -316,7 +316,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
          c3n == u3a_is_cell(u3h(feed)) &&
          c3__earl == rank ) {
       // bails, won't return
-      u3l_log("boot: Incorrect keyfile please use updated format");
+      u3l_log("boot: incorrect keyfile please use updated format");
       _dawn_fail(ship, rank, u3_nul);
       return u3_none;
     }
