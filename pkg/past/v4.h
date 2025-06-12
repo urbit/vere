@@ -5,6 +5,9 @@
 
   /***  current
   ***/
+#     define  u3_v4_noun          u3_v5_noun
+#     define  u3_v4_none          u3_v5_none
+
 #     define  u3a_v4_heap             u3a_v5_heap
 #     define  u3a_v4_is_cat           u3a_v5_is_cat
 #     define  u3a_v4_is_cell          u3a_v5_is_cell
@@ -196,6 +199,10 @@
         u3h_v4_new_cache(c3_w max_w);
         void
         u3h_v4_walk(u3p(u3h_v4_root) har_p, void (*fun_f)(u3_noun));
+        void
+        u3h_v4_walk_with(u3p(u3h_v4_root) har_p,
+                      void (*fun_f)(u3_noun, void*),
+                      void* wit);
 
   /***  manage.h
   ***/

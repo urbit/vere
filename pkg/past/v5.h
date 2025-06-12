@@ -7,12 +7,27 @@
 #include "jets.h"
 #include "nock.h"
 #include "retrieve.h"
+#include "vortex.h"
 
   /***  current
   ***/
 #     define  u3_v5_cell          u3_cell
 #     define  u3_v5_noun          u3_noun
+#     define  u3_v5_none          u3_none
 
+#     define  u3A_v5              u3A
+#     define  u3R_v5              u3R
+#     define  u3j_v5_boot         u3j_boot
+#     define  u3j_v5_ream         u3j_ream
+#     define  u3a_v5_walloc       u3a_walloc
+#     define  u3a_v5_to_pug       u3a_to_pug
+#     define  u3a_v5_outa         u3a_outa
+#     define  u3a_v5_gain         u3a_gain
+#     define  u3i_v5_cell         u3i_cell
+#     define  u3h_v5_put          u3h_put
+#     define  u3a_v5_lose         u3a_lose
+
+#     define  u3a_v5_atom             u3a_atom
 #     define  u3a_v5_is_atom          u3a_is_atom
 #     define  u3a_v5_is_pom           u3a_is_pom
 #     define  u3a_v5_north_is_normal  u3a_north_is_normal
