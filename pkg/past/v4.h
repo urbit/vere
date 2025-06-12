@@ -202,6 +202,11 @@
         void
         u3m_v4_reclaim(void);
 
+  /***  retrieve.h
+  ***/
+        c3_l
+        u3r_v4_mug(u3_v4_noun);
+
   /***  vortex.h
   ***/
       typedef struct __attribute__((__packed__)) _u3v_v4_arvo {

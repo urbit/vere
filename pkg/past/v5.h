@@ -5,12 +5,20 @@
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
+#include "nock.h"
+#include "retrieve.h"
 
   /***  current
   ***/
+#     define  u3_v5_cell          u3_cell
+#     define  u3_v5_noun          u3_noun
+
+#     define  u3a_v5_is_atom          u3a_is_atom
 #     define  u3a_v5_is_pom           u3a_is_pom
 #     define  u3a_v5_north_is_normal  u3a_north_is_normal
 #     define  u3n_v5_prog             u3n_prog
+#     define  u3r_v5_mug_both         u3r_mug_both
+#     define  u3r_v5_mug_words        u3r_mug_words
 
 #     define  u3a_v5_heap         u3a_heap
 #     define  u3a_v5_is_cat       u3a_is_cat
