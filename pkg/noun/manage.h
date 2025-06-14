@@ -121,6 +121,11 @@
         u3_noun
         u3m_soft(c3_n mil_w, u3_funk fun_f, u3_noun arg);
 
+      /* u3m_soft_cax(): descend into virtualization context, with cache.
+      */
+        u3_noun
+        u3m_soft_cax(u3_funq fun_f, u3_noun aga, u3_noun agb);
+
       /* u3m_soft_slam: top-level call.
       */
         u3_noun

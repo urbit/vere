@@ -85,6 +85,7 @@
       #define PRIXc3_b PRIX8
 
       #ifdef VERE64
+      #define SCNc3_n  SCNu64
       #define PRIc3_n  PRIu64
       #define PRIc3_ns PRIi64
       #define PRIxc3_n PRIx64
@@ -92,6 +93,7 @@
       #define PRIc3_w_new  PRIu32
       #define PRIc3_ws_new PRIi32
       #else
+      #define SCNc3_n  SCNu32
       #define PRIc3_n  PRIu32
       #define PRIc3_ns PRIi32
       #define PRIxc3_n PRIx32

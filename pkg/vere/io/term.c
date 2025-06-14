@@ -1044,16 +1044,11 @@ u3_noun
 u3_term_get_blew(c3_l_tmp tid_l)
 {
   u3_utty*       uty_u = _term_ef_get(tid_l);
-  c3_l_tmp           col_l, row_l;
+  c3_l_tmp           col_l = 80, row_l = 24;
 
-  if ( (c3y == u3_Host.ops_u.tem) || !uty_u ||
-       (c3y != uty_u->wsz_f(uty_u, &col_l, &row_l)) )
+  if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
+       (c3y == uty_u->wsz_f(uty_u, &col_l, &row_l)) )
   {
-    col_l = 80;
-    row_l = 24;
-  }
-
-  if ( uty_u ) {
     uty_u->tat_u.siz.col_l = col_l;
     uty_u->tat_u.siz.row_l = row_l;
   }

@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    if (target.result.isDarwin() and !target.query.isNative()) {
+    if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,
             .optimize = optimize,
@@ -139,7 +139,7 @@ pub fn build(b: *std.Build) !void {
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
-        "-pedantic",
+        // "-pedantic",
         "-std=gnu23",
         // "-Wconversion",         // ;;: todo: enable in a bit
     });
@@ -304,6 +304,7 @@ const c_source_files = [_][]const u8{
     "jets/e/loss.c",
     "jets/e/lune.c",
     "jets/e/mat.c",
+    "jets/e/mice.c",
     "jets/e/mink.c",
     "jets/e/mole.c",
     "jets/e/mule.c",
@@ -350,6 +351,7 @@ const c_source_files = [_][]const u8{
     "jets/i/lagoon.c",
     "jets/tree.c",
     "jets/137/tree.c",
+    "jets/136/tree.c",
     "log.c",
     "manage.c",
     "nock.c",

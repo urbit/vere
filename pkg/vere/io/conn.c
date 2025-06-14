@@ -337,7 +337,11 @@ _conn_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
 
   if ( err_i != UV_EOF ) {
     u3l_log("conn: moor bail %zd %s", err_i, err_c);
-    can_u->liv_o = c3n;
+    if ( _(can_u->liv_o) ) {
+      _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_word_tmp(err_i),
+                      u3i_string(err_c)));
+      can_u->liv_o = c3n;
+    }
   }
 
   _conn_close_chan(san_u, can_u);
@@ -585,7 +589,7 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
 
 /* _conn_moor_poke(): called on message read from u3_moor.
 */
-static void
+static c3_o
 _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
 {
   u3_weak   jar;
@@ -594,13 +598,11 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3_conn*  con_u = can_u->san_u->con_u;
   c3_i      err_i = 0;
   c3_c*     err_c;
-  c3_c*     tag_c;
-  c3_c*     rid_c;
 
   jar = u3s_cue_xeno_with(con_u->sil_u, len_d, byt_y);
   if ( u3_none == jar ) {
-    can_u->mor_u.bal_f(can_u, -1, "cue-none");
-    return;
+    err_i = -1; err_c = "cue-none";
+    goto _moor_poke_out;
   }
   if ( (c3n == u3r_cell(jar, &rid, &can)) ||
        (c3n == u3r_cell(can, &tag, &dat)) ||
@@ -611,10 +613,6 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   rud = u3dc("scot", c3__uv, u3k(rid));
-  tag_c = u3r_string(tag);
-  rid_c = u3r_string(rud);
-  u3l_log("conn: %s %s", tag_c, rid_c);
-  c3_free(tag_c); c3_free(rid_c);
 
   switch (tag) {
     default: {
@@ -685,6 +683,10 @@ _moor_poke_out:
   if ( 0 != err_i ) {
     can_u->mor_u.bal_f(can_u, err_i, err_c);
   }
+
+  //  regardless of failure, we never block newt
+  //
+  return c3y;
 }
 
 /* _conn_sock_cb(): socket connection callback.

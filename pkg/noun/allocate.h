@@ -193,7 +193,10 @@
         u3p(c3_n) rut_p;                      //  bottom of durable region
         u3p(c3_n) ear_p;                      //  original cap if kid is live
 
-        c3_n fut_w[32];                       //  futureproof buffer
+        c3_n off_w;                           //  spin stack offset
+        c3_n fow_w;                           //  spin stack overflow count
+
+        c3_n fut_w[30];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
