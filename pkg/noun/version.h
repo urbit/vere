@@ -4,18 +4,22 @@
 /* VORTEX
  */
 
-typedef c3_w_tmp       u3v_version;
+typedef c3_d       u3v_version;
 
-#define U3V_VER1   1
-#define U3V_VER2   2
-#define U3V_VER3   3
-#define U3V_VER4   4
+#define U3V_VER1   (u3v_version)1
+#define U3V_VER2   (u3v_version)2
+#define U3V_VER3   (u3v_version)3
+#define U3V_VER4   (u3v_version)4
 #define U3V_VERLAT U3V_VER4
 
 /* PATCHES
  */
 
-typedef c3_w_new       u3e_version;
+typedef c3_w_tmp       u3e_version;
+
+#define U3P_VER1   (u3e_version)1
+#define U3P_VER2   (u3e_version)2
+#define U3P_VERLAT U3P_VER2
 
 /* DISK FORMAT
  *

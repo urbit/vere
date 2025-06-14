@@ -35,6 +35,7 @@ _ci_slab_init(u3i_slab* sab_u, c3_n len_n)
   c3_n*     nov_w = u3a_walloc(len_n + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
 
+  vat_u->use_w = 1;
   vat_u->mug_w = 0;
   vat_u->len_n = len_n;
 
@@ -304,6 +305,9 @@ u3i_slab_moot(u3i_slab* sab_u)
 u3_atom
 u3i_word_new(c3_w_new dat_w)
 {
+#ifdef VERE64
+  return dat_w;
+#else
   u3_atom pro;
 
   u3t_on(mal_o);
@@ -315,6 +319,7 @@ u3i_word_new(c3_w_new dat_w)
     c3_n*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
+    vat_u->use_w = 1;
     vat_u->mug_w = 0;
     vat_u->len_n = 1;
     vat_u->buf_n[0] = dat_w;
@@ -325,6 +330,7 @@ u3i_word_new(c3_w_new dat_w)
   u3t_off(mal_o);
 
   return pro;
+#endif
 }
 
 /* u3i_word(): construct u3_atom from c3_w.
@@ -357,13 +363,14 @@ u3i_chub(c3_d dat_d)
 
   u3t_on(mal_o);
 
-  if ( c3y == u3a_is_cat(dat_d) ) {
+  if ( c3y == u3a_is_cat((c3_n)dat_d) ) {
     pro = (u3_atom)dat_d;
   }
   else {
     c3_n*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
+    vat_u->use_w = 1;
     vat_u->mug_w = 0;
     vat_u->len_n = 1;
     vat_u->buf_n[0] = dat_d;
@@ -573,6 +580,7 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
     c3_n*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
 
 #ifdef U3_MEMORY_DEBUG
@@ -602,6 +610,7 @@ u3i_cell(u3_noun a, u3_noun b)
     c3_n*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
     nov_u->hed = a;
     nov_u->tel = b;

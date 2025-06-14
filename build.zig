@@ -511,6 +511,11 @@ fn buildBinary(
             },
             // pkg_noun
             .{
+                .name = "palloc-test",
+                .file = "pkg/noun/palloc_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
@@ -599,6 +604,16 @@ fn buildBinary(
                 }
             }
 
+            if (t.os.tag.isDarwin()) {
+                // Requires llvm@18 homebrew installation
+                if (cfg.asan or cfg.ubsan)
+                    test_exe.addLibraryPath(.{
+                        .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
+                    });
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+            }
+
             test_exe.stack_size = 0;
             test_exe.linkLibC();
             for (tst.deps) |dep| {
@@ -608,9 +623,15 @@ fn buildBinary(
                 .files = &.{tst.file},
                 .flags = urbit_flags.items,
             });
+            const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
+            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+                //  disable libmalloc warnings
+                run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
+            }
             run_unit_tests.skip_foreign_checks = true;
             test_step.dependOn(&run_unit_tests.step);
+            test_step.dependOn(&exe_install.step);
         }
     }
 }

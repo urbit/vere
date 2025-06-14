@@ -1502,7 +1502,10 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_i lid_i, ch_i;
   c3_w_tmp arg_w;
 
+  u3_Host.ops_u.gab = c3n;
+
   static struct option lop_u[] = {
+    { "gc",        no_argument,       NULL, 'g' },
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
@@ -1512,8 +1515,10 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "g", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -1561,6 +1566,12 @@ _cw_grab(c3_i argc, c3_c* argv[])
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
+  }
+
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
@@ -2279,7 +2290,10 @@ _cw_play(c3_i argc, c3_c* argv[])
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
+  u3_Host.ops_u.gab = c3n;
+
   static struct option lop_u[] = {
+    { "gc",                no_argument,       NULL, 'g' },
     { "loom",              required_argument, NULL, c3__loom },
     { "no-demand",         no_argument,       NULL, 6 },
     { "auto-meld",         no_argument,       NULL, 7 },
@@ -2292,8 +2306,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "fgn:s:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -2356,6 +2372,12 @@ _cw_play(c3_i argc, c3_c* argv[])
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
+  }
+
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
   }
 
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);

@@ -1725,10 +1725,18 @@ u3_king_grab(void* vod_p)
   u3_assert( u3R == &(u3H->rod_u) );
 
 #ifdef U3_MEMORY_LOG
+  u3_noun now;
+
+  {
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+    now = u3_time_in_tv(&tim_u);
+  }
+
   {
     //  XX date will not match up with that of the worker
     //
-    u3_noun wen = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun wen = u3dc("scot", c3__da, now);
     c3_c* wen_c = u3r_string(wen);
 
     c3_c nam_c[2048];
@@ -1757,6 +1765,8 @@ u3_king_grab(void* vod_p)
 
   u3m_quac** all_u = c3_malloc(sizeof(*all_u)*6);
 
+  u3a_mark_init();
+
   u3m_quac** var_u = u3m_mark();
   all_u[0] = var_u[0];
   all_u[1] = var_u[1];
@@ -1771,6 +1781,8 @@ u3_king_grab(void* vod_p)
   all_u[4]->nam_c = "total marked";
   all_u[4]->siz_w = tot_w;
 
+  //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
+  //  only u3a_mark_done() is required
   all_u[5] = c3_calloc(sizeof(*all_u[5]));
   all_u[5]->nam_c = "sweep";
   all_u[5]->siz_w = u3a_sweep();
