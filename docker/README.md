@@ -18,15 +18,14 @@ contain one of:
   [obtaining a keyfile](https://urbit.org/getting-started/get-id).
     - e.g. `sampel-palnet.key` for the planet `~sampel-palnet`.
 - An empty file with the extension `.comet`. This will cause Urbit to boot a
-  [comet](https://urbit.org/docs/glossary/comet/) in a pier named for the
-  `.comet` file (less the extension).
+  comet in a pier named for the `.comet` file (less the extension).
     - e.g. starting with an empty file `my-urbit-bot.comet` will result in Urbit
       booting a comet into the pier `my-urbit-bot` under your volume.
 - An existing pier as a directory `<shipname>`. You can migrate an existing ship
   to a new docker container in this way by placing its pier under the volume.
     - e.g. if your ship is `sampel-palnet` then you likely have a directory
       `sampel-palnet` whose path you pass to `./urbit` when starting.
-      [Move your pier](https://operators.urbit.org/manual/os/basics#moving-your-pier)
+      [Move your pier](https://docs.urbit.org/user-manual/os/basics#moving-your-pier)
       directory to the volume and then start the container.
 
 The first two options result in Urbit attempting to boot either the ship named
@@ -40,17 +39,15 @@ by running a newer image). It is also possible to stop the container and then
 move the pier out of the Docker volume (e.g. to run it using an Urbit binary
 directly). If you do this, make sure to delete the Docker volume after you move
 your pier; if you launch a container using this same pier after moving it and
-launching it elsewhere, you will likely need to perform a
-[breach](https://developers.urbit.org/reference/glossary/reset).
+launching it elsewhere, you will likely need to perform a breach.
 
 ### Ports
 
 The image includes `EXPOSE` directives for TCP port `80` and UDP port `34343`.
-Port `80` is used for Urbit's HTTP interface for both
-[Landscape](https://urbit.org/docs/glossary/landscape/) and for
-[API calls](https://developers.urbit.org/guides/additional/http-api-guide) to
-the ship. Port `34343` is set by default to be used by
-[Ames](https://urbit.org/docs/glossary/ames/) for ship-to-ship communication.
+Port `80` is used for Urbit's HTTP interface for both Landscape and for
+[API calls](https://docs.urbit.org/build-on-urbit/tools/js-libs/http-api-guide)
+to the ship. Port `34343` is set by default to be used by
+[Ames](https://docs.urbit.org/urbit-os/kernel/ames) for ship-to-ship communication.
 
 You can either pass the `-P` flag to docker to map ports directly to the
 corresponding ports on the host, or map them individually with `-p` flags. For
