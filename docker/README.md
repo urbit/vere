@@ -39,7 +39,8 @@ by running a newer image). It is also possible to stop the container and then
 move the pier out of the Docker volume (e.g. to run it using an Urbit binary
 directly). If you do this, make sure to delete the Docker volume after you move
 your pier; if you launch a container using this same pier after moving it and
-launching it elsewhere, you will likely need to perform a breach.
+launching it elsewhere, you will likely need to perform a
+[breach](https://docs.urbit.org/user-manual/id/guide-to-resets).
 
 ### Ports
 
