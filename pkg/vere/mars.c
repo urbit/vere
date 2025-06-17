@@ -29,6 +29,19 @@ _mars_step_trace(const c3_c* dir_c)
   }
 }
 
+u3_noun
+mars_try_peek(u3_noun arg)
+{
+  // u3_noun cor, u3_noun sam
+
+  u3_noun cor = u3h(arg);
+  u3_noun sam = u3t(arg);
+  u3_noun fun = u3n_nock_on(u3k(cor), u3k(u3x_at(22, cor)));
+  u3_noun pro = u3n_slam_on(fun, u3k(sam));
+  u3z(arg);
+  return pro;
+}
+
 /* _mars_poke_play(): replay an event.
 */
 static u3_weak
@@ -58,6 +71,30 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
       if ( !(u3C.wag_w & u3o_soft_mugs) ) {
         u3z(gon);
         return u3nc(c3__awry, u3_nul);
+      }
+    }
+
+    // format: [[0 0] 1 %once 30817 0 %peers '~zod' 0]
+    //
+    u3_noun scry = u3nc(u3nc(0, 0),
+                        u3nc(1,
+                        u3nc(c3__once,
+                        u3nc(30817, u3nc(0, u3nc(u3i_string("peers"),
+                             u3nc(u3i_string("~zod"), 0)))))));
+
+    u3_noun res = u3m_soft(0, mars_try_peek, u3nc(u3k(cor), scry));
+
+    if ( 0 == u3h(res) ) {
+      u3_noun dat, per = u3_nul;
+      if (  (u3_nul == u3t(res))
+         || (u3_nul != u3h(u3t(res)))
+         || (c3n == u3r_pq(u3t(u3t(res)), c3__omen, 0, &dat))
+         || (c3y == u3r_p(dat, c3__noun, &per))
+      ) {
+        //  XX add checks for your specific scry
+        u3m_p("FOUND", per);
+        u3z(gon);
+        return u3nc(c3__intr, u3_nul);
       }
     }
 
