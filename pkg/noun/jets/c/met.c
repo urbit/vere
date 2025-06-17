@@ -13,16 +13,16 @@
     if ( 0 == b ) {
       return 0;
     }
-    else if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    else if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
       return 1;
     }
     else {
-      c3_w met_w = u3r_met(a, b);
+      c3_n met_n = u3r_met(a, b);
 
-      if ( !_(u3a_is_cat(met_w)) ) {
-        return u3i_words(1, &met_w);
+      if ( !_(u3a_is_cat(met_n)) ) {
+        return u3i_note(met_n);
       }
-      else return met_w;
+      else return met_n;
     }
   }
   u3_noun
@@ -30,7 +30,7 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(a) && 0 != b) )
     {

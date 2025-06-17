@@ -11,74 +11,74 @@
 
 /* _ci_slab_size(): calculate slab bloq-size, checking for overflow.
 */
-static c3_w
+static c3_n
 _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
-  c3_d wor_d = (bit_d + 0x1f) >> 5;
-  c3_w wor_w = (c3_w)wor_d;
+  c3_d wor_d = (bit_d + (u3a_note_bits - 1)) >> u3a_note_bits_log;
+  c3_n wor_n = (c3_n)wor_d;
 
-  if (  (wor_w != wor_d)
+  if (  (wor_n != wor_d)
      || (len_d != (bit_d >> met_g)) )
   {
-    return (c3_w)u3m_bail(c3__fail);
+    return (c3_n)u3m_bail(c3__fail);
   }
-
-  return wor_w;
+  return wor_n;
 }
 
 /* _ci_slab_init(): initialize slab with heap allocation.
 **              NB: callers must ensure [len_w] >0
 */
 static void
-_ci_slab_init(u3i_slab* sab_u, c3_w len_w)
+_ci_slab_init(u3i_slab* sab_u, c3_n len_n)
 {
-  c3_w*     nov_w = u3a_walloc(len_w + c3_wiseof(u3a_atom));
+  c3_n*     nov_w = u3a_walloc(len_n + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
 
+  vat_u->use_w = 1;
   vat_u->mug_w = 0;
-  vat_u->len_w = len_w;
+  vat_u->len_n = len_n;
 
 #ifdef U3_MEMORY_DEBUG
-  u3_assert( len_w );
+  u3_assert( len_n );
 #endif
 
   sab_u->_._vat_u = vat_u;
-  sab_u->buf_w    = vat_u->buf_w;
-  sab_u->len_w    = len_w;
+  sab_u->buf_n    = vat_u->buf_n;
+  sab_u->len_n    = len_n;
 }
 
 /* _ci_slab_grow(): update slab with heap reallocation.
 */
 static void
-_ci_slab_grow(u3i_slab* sab_u, c3_w len_w)
+_ci_slab_grow(u3i_slab* sab_u, c3_n len_w)
 {
-  c3_w*     old_w = (void*)sab_u->_._vat_u;
+  c3_n*     old_w = (void*)sab_u->_._vat_u;
   //    XX implement a more efficient u3a_wealloc()
   //
-  c3_w*     nov_w = u3a_wealloc(old_w, len_w + c3_wiseof(u3a_atom));
+  c3_n*     nov_w = u3a_wealloc(old_w, len_w + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
 
-  vat_u->len_w = len_w;
+  vat_u->len_n = len_w;
 
   sab_u->_._vat_u = vat_u;
-  sab_u->buf_w    = vat_u->buf_w;
-  sab_u->len_w    = len_w;
+  sab_u->buf_n    = vat_u->buf_n;
+  sab_u->len_n    = len_w;
 }
 
 /* _ci_atom_mint(): finalize a heap-allocated atom at specified length.
 */
 static u3_atom
-_ci_atom_mint(u3a_atom* vat_u, c3_w len_w)
+_ci_atom_mint(u3a_atom* vat_u, c3_n len_w)
 {
-  c3_w* nov_w = (void*)vat_u;
+  c3_n* nov_w = (void*)vat_u;
 
   if ( 0 == len_w ) {
     u3a_wfree(nov_w);
     return (u3_atom)0;
   }
   else if ( 1 == len_w ) {
-    c3_w dat_w = *vat_u->buf_w;
+    c3_n dat_w = *vat_u->buf_n;
 
     if ( c3y == u3a_is_cat(dat_w) ) {
       u3a_wfree(nov_w);
@@ -89,7 +89,7 @@ _ci_atom_mint(u3a_atom* vat_u, c3_w len_w)
   //  try to strip a block off the end
   //
   {
-    c3_w old_w = vat_u->len_w;
+    c3_n old_w = vat_u->len_n;
 
     if ( old_w > len_w ) {
       c3_y wiz_y = c3_wiseof(u3a_atom);
@@ -97,7 +97,7 @@ _ci_atom_mint(u3a_atom* vat_u, c3_w len_w)
     }
   }
 
-  vat_u->len_w = len_w;
+  vat_u->len_n = len_w;
 
   return u3a_to_pug(u3a_outa(nov_w));
 }
@@ -110,7 +110,7 @@ u3i_slab_init(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
   u3i_slab_bare(sab_u, met_g, len_d);
 
   u3t_on(mal_o);
-  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * 4);
+  memset(sab_u->buf_y, 0, (size_t)sab_u->len_n * u3a_note_bytes);
   u3t_off(mal_o);
 }
 
@@ -121,14 +121,14 @@ u3i_slab_bare(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
 {
   u3t_on(mal_o);
   {
-    c3_w wor_w = _ci_slab_size(met_g, len_d);
+    c3_n wor_w = _ci_slab_size(met_g, len_d);
 
     //  if we only need one word, use the static storage in [sab_u]
     //
     if ( (0 == wor_w) || (1 == wor_w) ) {
       sab_u->_._vat_u = 0;
-      sab_u->buf_w    = &sab_u->_._sat_w;
-      sab_u->len_w    = 1;
+      sab_u->buf_n    = &sab_u->_._sat_n;
+      sab_u->len_n    = 1;
     }
     //  allocate an indirect atom
     //
@@ -148,20 +148,20 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
 
   //  copies [a], zero-initializes any additional space
   //
-  u3r_words(0, sab_u->len_w, sab_u->buf_w, a);
+  u3r_notes(0, sab_u->len_n, sab_u->buf_n, a);
 
   //  if necessary, mask off extra most-significant bits
   //  from most-significant word
   //
-  if ( (5 > met_g) && (u3r_met(5, a) >= sab_u->len_w) ) {
+  if ( (u3a_note_bits_log > met_g) && (u3r_met(u3a_note_bits_log, a) >= sab_u->len_n) ) {
     //  NB: overflow already checked in _ci_slab_size()
     //
     c3_d bit_d = len_d << met_g;
-    c3_w wor_w = bit_d >> 5;
-    c3_w bit_w = bit_d & 0x1f;
+    c3_n bit_w = bit_d & (u3a_note_bits-1);
 
     if ( bit_w ) {
-      sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
+      c3_n wor_w = bit_d >> u3a_note_bits_log;
+      sab_u->buf_n[wor_w] &= ((c3_n)1 << bit_w) - 1;
     }
   }
 }
@@ -171,25 +171,25 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
 void
 u3i_slab_grow(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
 {
-  c3_w old_w = sab_u->len_w;
+  c3_n old_w = sab_u->len_n;
 
   u3t_on(mal_o);
   {
-    c3_w wor_w = _ci_slab_size(met_g, len_d);
+    c3_n wor_w = _ci_slab_size(met_g, len_d);
 
     //  XX actually shrink?
     //
     if ( wor_w <= old_w ) {
-      sab_u->len_w = wor_w;
+      sab_u->len_n = wor_w;
     }
     else {
       //  upgrade from static storage
       //
       if ( 1 == old_w ) {
-        c3_w dat_w = *sab_u->buf_w;
+        c3_n dat_w = *sab_u->buf_n;
 
         _ci_slab_init(sab_u, wor_w);
-        sab_u->buf_w[0] = dat_w;
+        sab_u->buf_n[0] = dat_w;
       }
       //  reallocate
       //
@@ -198,9 +198,9 @@ u3i_slab_grow(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
       }
 
       {
-        c3_y*  buf_y = (void*)(sab_u->buf_w + old_w);
+        c3_y*  buf_y = (void*)(sab_u->buf_n + old_w);
         size_t dif_i = wor_w - old_w;
-        memset(buf_y, 0, dif_i * 4);
+        memset(buf_y, 0, dif_i * u3a_note_bytes);
       }
     }
   }
@@ -212,7 +212,7 @@ u3i_slab_grow(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
 void
 u3i_slab_free(u3i_slab* sab_u)
 {
-  c3_w      len_w = sab_u->len_w;
+  c3_n      len_w = sab_u->len_n;
   u3a_atom* vat_u = sab_u->_._vat_u;
 
   u3t_on(mal_o);
@@ -221,8 +221,8 @@ u3i_slab_free(u3i_slab* sab_u)
     u3_assert( !vat_u );
   }
   else {
-    c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    c3_n* tav_n = (sab_u->buf_n - c3_wiseof(u3a_atom));
+    u3_assert( tav_n == (c3_n*)vat_u );
     u3a_wfree(vat_u);
   }
 
@@ -234,29 +234,29 @@ u3i_slab_free(u3i_slab* sab_u)
 u3_atom
 u3i_slab_mint(u3i_slab* sab_u)
 {
-  c3_w      len_w = sab_u->len_w;
+  c3_n      len_w = sab_u->len_n;
   u3a_atom* vat_u = sab_u->_._vat_u;
   u3_atom     pro;
 
   u3t_on(mal_o);
 
   if ( 1 == len_w ) {
-    c3_w dat_w = *sab_u->buf_w;
+    c3_n dat_w = *sab_u->buf_n;
 
     u3_assert( !vat_u );
 
     u3t_off(mal_o);
-    pro = u3i_word(dat_w);
+    pro = u3i_note(dat_w);
     u3t_on(mal_o);
   }
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
-    c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    c3_n* tav_w = (sab_u->buf_n - c3_wiseof(u3a_atom));
+    u3_assert( tav_w == (c3_n*)vat_u );
 
     //  trim trailing zeros
     //
-    while ( len_w && !(sab_u->buf_w[len_w - 1]) ) {
+    while ( len_w && !(sab_u->buf_n[len_w - 1]) ) {
       len_w--;
     }
 
@@ -273,24 +273,24 @@ u3i_slab_mint(u3i_slab* sab_u)
 u3_atom
 u3i_slab_moot(u3i_slab* sab_u)
 {
-  c3_w      len_w = sab_u->len_w;
+  c3_n      len_w = sab_u->len_n;
   u3_atom     pro;
 
   u3t_on(mal_o);
 
   if ( 1 == len_w) {
-    c3_w dat_w = *sab_u->buf_w;
+    c3_n dat_w = *sab_u->buf_n;
 
     u3_assert( !sab_u->_._vat_u );
 
     u3t_off(mal_o);
-    pro = u3i_word(dat_w);
+    pro = u3i_note(dat_w);
     u3t_on(mal_o);
   }
   else {
     u3a_atom* vat_u = sab_u->_._vat_u;
-    c3_w* tav_w = (sab_u->buf_w - c3_wiseof(u3a_atom));
-    u3_assert( tav_w == (c3_w*)vat_u );
+    c3_n* tav_w = (sab_u->buf_n - c3_wiseof(u3a_atom));
+    u3_assert( tav_w == (c3_n*)vat_u );
 
     pro = _ci_atom_mint(vat_u, len_w);
   }
@@ -303,22 +303,26 @@ u3i_slab_moot(u3i_slab* sab_u)
 /* u3i_word(): construct u3_atom from c3_w.
 */
 u3_atom
-u3i_word(c3_w dat_w)
+u3i_word_new(c3_w_new dat_w)
 {
+#ifdef VERE64
+  return dat_w;
+#else
   u3_atom pro;
 
   u3t_on(mal_o);
 
-  if ( c3y == u3a_is_cat(dat_w) ) {
+  if ( c3y == u3a_is_cat((c3_n)dat_w) ) {
     pro = (u3_atom)dat_w;
   }
   else {
-    c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+    c3_n*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
+    vat_u->use_w = 1;
     vat_u->mug_w = 0;
-    vat_u->len_w = 1;
-    vat_u->buf_w[0] = dat_w;
+    vat_u->len_n = 1;
+    vat_u->buf_n[0] = dat_w;
 
     pro = u3a_to_pug(u3a_outa(nov_w));
   }
@@ -326,6 +330,15 @@ u3i_word(c3_w dat_w)
   u3t_off(mal_o);
 
   return pro;
+#endif
+}
+
+/* u3i_word(): construct u3_atom from c3_w.
+*/
+u3_atom
+u3i_word_tmp(c3_w_new dat_w)
+{
+  return u3i_word_new(dat_w);
 }
 
 /* u3i_chub(): construct u3_atom from c3_d.
@@ -333,23 +346,48 @@ u3i_word(c3_w dat_w)
 u3_atom
 u3i_chub(c3_d dat_d)
 {
+#ifndef VERE64
   if ( c3y == u3a_is_cat(dat_d) ) {
     return (u3_atom)dat_d;
   }
   else {
-    c3_w dat_w[2] = {
+    c3_w_new dat_w[2] = {
       dat_d & 0xffffffffULL,
       dat_d >> 32
     };
 
-    return u3i_words(2, dat_w);
+    return u3i_words_new(2, dat_w);
   }
+#else
+  u3_atom pro;
+
+  u3t_on(mal_o);
+
+  if ( c3y == u3a_is_cat((c3_n)dat_d) ) {
+    pro = (u3_atom)dat_d;
+  }
+  else {
+    c3_n*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+    u3a_atom* vat_u = (void *)nov_w;
+
+    vat_u->use_w = 1;
+    vat_u->mug_w = 0;
+    vat_u->len_n = 1;
+    vat_u->buf_n[0] = dat_d;
+
+    pro = u3a_to_pug(u3a_outa(nov_w));
+  }
+
+  u3t_off(mal_o);
+
+  return pro;
+#endif
 }
 
 /* u3i_bytes(): Copy [a] bytes from [b] to an LSB first atom.
 */
 u3_atom
-u3i_bytes(c3_w        a_w,
+u3i_bytes(c3_n        a_w,
           const c3_y* b_y)
 {
   //  strip trailing zeroes.
@@ -370,7 +408,7 @@ u3i_bytes(c3_w        a_w,
     {
       //  zero-initialize last word
       //
-      sab_u.buf_w[sab_u.len_w - 1] = 0;
+      sab_u.buf_n[sab_u.len_n - 1] = 0;
       memcpy(sab_u.buf_y, b_y, a_w);
     }
     u3t_off(mal_o);
@@ -382,8 +420,8 @@ u3i_bytes(c3_w        a_w,
 /* u3i_words(): Copy [a] words from [b] into an atom.
 */
 u3_atom
-u3i_words(c3_w        a_w,
-          const c3_w* b_w)
+u3i_words_new(c3_n        a_w,
+          const c3_w_new* b_w)
 {
   //  strip trailing zeroes.
   //
@@ -393,6 +431,9 @@ u3i_words(c3_w        a_w,
 
   if ( !a_w ) {
     return (u3_atom)0;
+  }
+  else if ( 1 == a_w ) {
+    return u3i_word_new(b_w[0]);
   }
   else {
     u3i_slab sab_u;
@@ -406,10 +447,20 @@ u3i_words(c3_w        a_w,
   }
 }
 
+/* u3i_words(): Copy [a] words from [b] into an atom.
+*/
+u3_atom
+u3i_words_tmp(c3_n        a_w,
+          const c3_w_new* b_w)
+{
+  return u3i_words_new(a_w, b_w);
+}
+
+
 /* u3i_chubs(): Copy [a] chubs from [b] into an atom.
 */
 u3_atom
-u3i_chubs(c3_w        a_w,
+u3i_chubs(c3_n        a_w,
           const c3_d* b_d)
 {
   //  strip trailing zeroes.
@@ -429,9 +480,11 @@ u3i_chubs(c3_w        a_w,
     u3i_slab_bare(&sab_u, 6, a_w);
 
     u3t_on(mal_o);
+#ifndef VERE64
+// XX: why exactly different?
     {
-      c3_w* buf_w = sab_u.buf_w;
-      c3_w    i_w;
+      c3_w_tmp* buf_w = sab_u.buf_w;
+      c3_w_tmp    i_w;
       c3_d    i_d;
 
       for ( i_w = 0; i_w < a_w; i_w++ ) {
@@ -440,10 +493,34 @@ u3i_chubs(c3_w        a_w,
         *buf_w++ = i_d >> 32;
       }
     }
+#else
+    memcpy(sab_u.buf_d, b_d, (size_t)8 * a_w);
+#endif
     u3t_off(mal_o);
 
     return u3i_slab_mint(&sab_u);
   }
+}
+
+u3_atom
+u3i_note(c3_n dat_n) {
+  return
+#ifndef VERE64
+    u3i_word_new(dat_n);
+#else
+    u3i_chub(dat_n);
+#endif
+}
+
+u3_atom
+u3i_notes(c3_n        a_n,
+          const c3_n* b_n) {
+  return
+#ifndef VERE64
+    u3i_words_new(a_n, b_n);
+#else
+    u3i_chubs(a_n, b_n);
+#endif
 }
 
 /* u3i_mp(): Copy the GMP integer [a] into an atom, and clear it.
@@ -455,7 +532,7 @@ u3i_mp(mpz_t a_mp)
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, 0, siz_i);
 
-  mpz_export(sab_u.buf_w, 0, -1, sizeof(c3_w), 0, 0, a_mp);
+  mpz_export(sab_u.buf_n, 0, -1, sizeof(c3_n), 0, 0, a_mp);
   mpz_clear(a_mp);
 
   //  per the mpz_export() docs:
@@ -474,7 +551,7 @@ u3i_vint(u3_noun a)
   u3_assert(u3_none != a);
 
   if ( _(u3a_is_cat(a)) ) {
-    return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
+    return ( a == u3a_direct_max ) ? u3i_note(a + 1) : (a + 1);
   }
   else if ( _(u3a_is_cell(a)) ) {
     return u3m_bail(c3__exit);
@@ -500,9 +577,10 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
 
   u3t_on(mal_o);
   {
-    c3_w*     nov_w = u3a_celloc();
+    c3_n*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
 
 #ifdef U3_MEMORY_DEBUG
@@ -529,9 +607,10 @@ u3i_cell(u3_noun a, u3_noun b)
 
   u3t_on(mal_o);
   {
-    c3_w*     nov_w = u3a_celloc();
+    c3_n*     nov_w = u3a_celloc();
     u3a_cell* nov_u = (void *)nov_w;
 
+    nov_u->use_w = 1;
     nov_u->mug_w = 0;
     nov_u->hed = a;
     nov_u->tel = b;
@@ -626,15 +705,17 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
-      const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
+      c3_w_tmp        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      const c3_n* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
-                        : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;
+                        : ((u3a_atom*)u3a_to_ptr(axe))->buf_n;
 
       do {
         u3a_cell*  big_u = u3a_to_ptr(big);
         u3_noun*     old = (u3_noun*)&(big_u->hed);
-        const c3_y bit_y = 1 & (axe_w[dep_w >> 5] >> (dep_w & 31));
+        const c3_y bit_y =
+          1 & ( axe_w[dep_w >> u3a_note_bits_log] >> 
+                (dep_w & (u3a_note_bits - 1)) );
 
         if ( c3n == u3a_is_cell(big) ) {
           return u3m_bail(c3__exit);
@@ -672,20 +753,20 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 **   Axes must be cats (31 bit).
 */
   struct _molt_pair {
-    c3_w    axe_w;
+    c3_w_tmp    axe_w;
     u3_noun som;
   };
 
-  static c3_w
-  _molt_cut(c3_w               len_w,
+  static c3_w_tmp
+  _molt_cut(c3_w_tmp               len_w,
             struct _molt_pair* pms_m)
   {
-    c3_w i_w, cut_t, cut_w;
+    c3_w_tmp i_w, cut_t, cut_w;
 
     cut_t = 0;
     cut_w = 0;
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      c3_w axe_w = pms_m[i_w].axe_w;
+      c3_w_tmp axe_w = pms_m[i_w].axe_w;
 
       if ( (cut_t == 0) && (3 == u3x_cap(axe_w)) ) {
         cut_t = 1;
@@ -698,7 +779,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 
   static u3_noun                            //  transfer
   _molt_apply(u3_noun            som,       //  retain
-              c3_w               len_w,
+              c3_w_tmp               len_w,
               struct _molt_pair* pms_m)     //  transfer
   {
     if ( len_w == 0 ) {
@@ -708,7 +789,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
       return pms_m[0].som;
     }
     else {
-      c3_w cut_w = _molt_cut(len_w, pms_m);
+      c3_w_tmp cut_w = _molt_cut(len_w, pms_m);
 
       if ( c3n == u3a_is_cell(som) ) {
         return u3m_bail(c3__exit);
@@ -725,7 +806,7 @@ u3_noun
 u3i_molt(u3_noun som, ...)
 {
   va_list            ap;
-  c3_w               len_w;
+  c3_w_tmp               len_w;
   struct _molt_pair* pms_m;
   u3_noun            pro;
 
@@ -735,7 +816,7 @@ u3i_molt(u3_noun som, ...)
   {
     va_start(ap, som);
     while ( 1 ) {
-      if ( 0 == va_arg(ap, c3_w) ) {
+      if ( 0 == va_arg(ap, c3_w_tmp) ) {
         break;
       }
       va_arg(ap, u3_weak*);
@@ -750,11 +831,11 @@ u3i_molt(u3_noun som, ...)
   //  Install.
   //
   {
-    c3_w i_w;
+    c3_w_tmp i_w;
 
     va_start(ap, som);
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      pms_m[i_w].axe_w = va_arg(ap, c3_w);
+      pms_m[i_w].axe_w = va_arg(ap, c3_w_tmp);
       pms_m[i_w].som = va_arg(ap, u3_noun);
     }
     va_end(ap);

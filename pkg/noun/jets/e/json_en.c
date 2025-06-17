@@ -12,7 +12,7 @@
 
 typedef struct _json_buffer {
   c3_y *buf_y;
-  c3_w  len_w;
+  c3_w_tmp  len_w;
 } json_buffer;
 
 /*
@@ -65,7 +65,7 @@ const c3_y *_JSON_UNICODES[] = {
 ** forward declarations
 */
 
-static c3_w
+static c3_w_tmp
 _measure(u3_noun a);
 
 static void
@@ -82,13 +82,13 @@ _append_char(json_buffer *buf_u, c3_y c_y)
 }
 
 static void
-_append_text(json_buffer *buf_u, const c3_y *buf_y, c3_w len_w)
+_append_text(json_buffer *buf_u, const c3_y *buf_y, c3_w_tmp len_w)
 {
   memcpy(&(buf_u->buf_y[buf_u->len_w]), buf_y, len_w);
   buf_u->len_w += len_w;
 }
 
-static c3_w
+static c3_w_tmp
 _measure_loobean(u3_noun a)
 {
   switch ( a ) {
@@ -108,7 +108,7 @@ _serialize_loobean(json_buffer *buf_u, u3_noun a)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _measure_number(u3_noun a)
 {
   if ( _(u3du(a)) ) {
@@ -136,17 +136,17 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
   _append_text(buf_u, byt_y, u3r_met(3, a));
 }
 
-static c3_w
+static c3_w_tmp
 _measure_string(u3_noun a)
 {
   if ( _(u3du(a)) ) {
     u3m_bail(c3__exit);
   }
 
-  c3_w len_w = u3r_met(3, a);
-  c3_w siz_w = 0;
+  c3_w_tmp len_w = u3r_met(3, a);
+  c3_w_tmp siz_w = 0;
 
-  for (c3_w i = 0; i < len_w; ++i) {
+  for (c3_w_tmp i = 0; i < len_w; ++i) {
     c3_y c_y = u3r_byte(i, a);
 
     switch ( c_y ) {
@@ -184,10 +184,10 @@ _measure_string(u3_noun a)
 static void
 _serialize_string(json_buffer *buf_u, u3_noun a)
 {
-  c3_w len_w = u3r_met(3, a);
+  c3_w_tmp len_w = u3r_met(3, a);
 
   _append_char(buf_u, '"');
-  for (c3_w i = 0; i < len_w; ++i) {
+  for (c3_w_tmp i = 0; i < len_w; ++i) {
     c3_y c_y = u3r_byte(i, a);
 
     switch ( c_y ) {
@@ -220,13 +220,13 @@ _serialize_string(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, '"');
 }
 
-static c3_w
+static c3_w_tmp
 _measure_array(u3_noun a)
 {
   if ( u3_nul != a ) {
     u3_noun i, t = a;
     // array open brace
-    c3_w    siz_w = 1;
+    c3_w_tmp    siz_w = 1;
 
     while ( u3_nul != t ) {
       u3x_cell(t, &i, &t);
@@ -264,10 +264,10 @@ _serialize_array(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, ']');
 }
 
-static c3_w
+static c3_w_tmp
 _measure_object_helper(u3_noun a)
 {
-  c3_w siz_w = 0;
+  c3_w_tmp siz_w = 0;
 
   if ( u3_nul != a ) {
     u3_noun n_a, l_a, r_a;
@@ -309,7 +309,7 @@ _serialize_object_helper(json_buffer *buf_u, u3_noun a)
   }
 }
 
-static c3_w
+static c3_w_tmp
 _measure_object(u3_noun a)
 {
   if ( u3_nul != a ) {
@@ -337,7 +337,7 @@ _serialize_object(json_buffer *buf_u, u3_noun a)
   _append_char(buf_u, '}');
 }
 
-static c3_w
+static c3_w_tmp
 _measure(u3_noun a)
 {
   if ( u3_nul == a ) {
@@ -389,7 +389,7 @@ u3qe_json_en(u3_noun a)
   u3i_slab     sab_u;
   json_buffer  bof_u;
   json_buffer *buf_u = &bof_u;
-  c3_w         siz_w = _measure(a);
+  c3_w_tmp         siz_w = _measure(a);
 
   u3i_slab_init(&sab_u, 3, siz_w);
   buf_u->buf_y = sab_u.buf_y;

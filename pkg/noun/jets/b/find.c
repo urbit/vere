@@ -5,14 +5,14 @@
 
 #include "noun.h"
 
-STATIC_ASSERT( (UINT32_MAX > u3a_cells),
-               "list index precision" );
+//STATIC_ASSERT( (UINT32_MAX > u3a_cells),
+//               "list index precision" );
 
 u3_noun
 u3qb_find(u3_noun nedl, u3_noun hstk)
 {
   if ( u3_nul != nedl ) {
-    c3_w  i_w = 0;
+    c3_n  i_w = 0;
 
     while ( u3_nul != hstk ) {
       u3_noun i_h, t_h = hstk;
@@ -22,7 +22,7 @@ u3qb_find(u3_noun nedl, u3_noun hstk)
 
       while ( c3y == u3r_sing(i_n, i_h) ) {
         if ( u3_nul == t_n ) {
-          return u3nc(u3_nul, u3i_word(i_w));
+          return u3nc(u3_nul, u3i_note(i_w));
         }
         else if ( u3_nul == t_h ) {
           break;
@@ -45,6 +45,6 @@ u3_noun
 u3wb_find(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
   return u3qb_find(a, b);
 }

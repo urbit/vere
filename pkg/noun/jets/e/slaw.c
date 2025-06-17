@@ -259,7 +259,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
 }
 
 #define PARSE_NONZERO_NUMBER(numname)               \
-  c3_w numname = 0;                                 \
+  c3_w_tmp numname = 0;                                 \
   do {                                              \
     if (cur[0] > '9' || cur[0] < '1') {             \
       u3a_free(c);                                  \
@@ -275,7 +275,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
   } while (0)
 
 #define PARSE_INCLUDING_ZERO_NUMBER(numname)        \
-  c3_w numname = 0;                                 \
+  c3_w_tmp numname = 0;                                 \
   do {                                              \
     if (cur[0] > '9' || cur[0] < '0') {             \
       u3a_free(c);                                  \
@@ -391,8 +391,8 @@ _parse_da(u3_noun cor, u3_noun txt) {
     PARSE_HEX_DIGIT(three);
     PARSE_HEX_DIGIT(four);
 
-    c3_w current = (one << 12) + (two << 8) + (three << 4) + four;
-    list = u3nc(u3i_words(1, &current), list);
+    c3_w_tmp current = (one << 12) + (two << 8) + (three << 4) + four;
+    list = u3nc(u3i_words_tmp(1, &current), list);
 
     if (cur[0] == 0) {
       u3a_free(c);
@@ -452,7 +452,7 @@ u3we_slaw(u3_noun cor)
   u3_noun txt;
 
   if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
-                      u3x_sam_3, &txt, 0)) {
+                      u3x_sam_3, &txt, u3_nul)) {
     return u3m_bail(c3__exit);
   }
 

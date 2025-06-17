@@ -11,9 +11,9 @@ u3qa_add(u3_atom a,
          u3_atom b)
 {
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    c3_w c = a + b;
+    c3_n c = a + b;
 
-    return u3i_words(1, &c);
+    return u3i_note(c);
   }
   else if ( 0 == a ) {
     return u3k(b);
@@ -36,7 +36,7 @@ u3wa_add(u3_noun cor)
 {
   u3_noun a, b;
 
-  if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+  if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b) && a != 0) )
   {

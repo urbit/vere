@@ -1,8 +1,18 @@
 #ifndef U3_HASHTABLE_V1_H
 #define U3_HASHTABLE_V1_H
 
+#ifdef VERE64
+#define _VERE64
+#undef VERE64
+#endif
+
 #include "../hashtable.h"
 #include "v2/hashtable.h"
+
+#ifdef _VERE64
+#define VERE64
+#undef _VERE64
+#endif
 
   /**  Aliases.
   **/

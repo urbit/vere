@@ -15,7 +15,7 @@
     c3_y a_y[32], a_point_y[32],
          b_y[32], b_point_y[32],
          out_y[32];
-    c3_w met_w;
+    c3_n met_w;
 
     met_w = u3r_met(3, a);
     if ( (32 < met_w) ||
@@ -59,7 +59,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a,
                                u3x_sam_6, &b,
                                u3x_sam_14, &c,
-                               u3x_sam_15, &d, 0)) ||
+                               u3x_sam_15, &d, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ||

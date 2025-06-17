@@ -34,9 +34,9 @@
    /* u3t_spin: %spin hint stack
     */
     typedef struct {
-      c3_w off_w;
-      c3_w fow_w;
-      c3_y dat_y[PSIZE - 2*sizeof(c3_w)];
+      c3_w_tmp off_w;
+      c3_w_tmp fow_w;
+      c3_y dat_y[PSIZE - 2*sizeof(c3_w_tmp)];
     } u3t_spin;
 
   /**  Macros.
@@ -68,11 +68,11 @@
       u3t_init(void);
 
       /// @return  Number of entries written to the JSON trace file.
-      c3_w
+      c3_n
       u3t_trace_cnt(void);
 
       /// @return  Number of times u3t_trace_close() has been called.
-      c3_w
+      c3_n
       u3t_file_cnt(void);
 
     /* u3t_push(): push on trace stack.
@@ -182,7 +182,7 @@
       u3t_slog_nara(c3_l pri_l);
 
     /* u3t_slog_hela(): join all roads' traces together into one tax
-    ** and pass it to slog_trace along with the given c3_l priority pri_l
+    ** and pass it to slog_trace along with the given c3_l_tmp priority pri_l
     */
       void
       u3t_slog_hela(c3_l pri_l);
@@ -190,7 +190,7 @@
     /* u3t_etch_meme(): report memory stats at call time
     */
       u3_noun
-      u3t_etch_meme(c3_l mod_l);
+      u3t_etch_meme(c3_n mod_n);
 
     /* u3t_sstack_init: initalize a root node on the spin stack 
      */

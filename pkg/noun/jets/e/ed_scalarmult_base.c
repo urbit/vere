@@ -10,7 +10,7 @@
   _cqee_scalarmult_base(u3_atom a)
   {
     c3_y a_y[32], out_y[32];
-    c3_w met_w = u3r_met(3, a);
+    c3_w_tmp met_w = u3r_met(3, a);
     // scalarmult_base expects a_y[31] <= 127
     if ( (32 < met_w) ||
          ( (32 == met_w) &&

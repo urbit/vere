@@ -59,7 +59,7 @@
 
       /* u3x_dep(): number of axis bits.
       */
-#       define u3x_dep(a_w)   (c3_bits_word(a_w) - 1)
+#       define u3x_dep(a_w)   (c3_bits_note(a_w) - 1)
 
       /* u3x_cap(): root axis, 2 or 3.
       */

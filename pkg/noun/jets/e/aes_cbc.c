@@ -20,7 +20,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   _cqea_cbc_help(c3_y* key_y, u3_atom iv, u3_atom msg, urcrypt_cbc low_f)
   {
     u3_atom ret;
-    c3_w    met_w;
+    c3_n    met_w;
     c3_y    iv_y[16];
     c3_y*   msg_y = u3r_bytes_all(&met_w, msg);
     size_t  len = met_w;
@@ -52,7 +52,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -76,7 +76,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -100,7 +100,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -124,7 +124,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -148,7 +148,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -172,7 +172,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam, &c, 60, &a, 61, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);

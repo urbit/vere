@@ -11,7 +11,7 @@ u3qe_jam(u3_atom a)
 {
 #if 0
   if (c3y == u3du(a) && 1337 == u3h(a)) {
-    c3_w siz_w, tot_w = 0;
+    c3_w_tmp siz_w, tot_w = 0;
     u3_noun som;
     for ( som = u3t(a); c3y == u3du(som); som = u3t(som) ) {
       siz_w = u3a_count_noun(u3h(som));
@@ -26,7 +26,7 @@ u3qe_jam(u3_atom a)
     if ( u3_blip != som ) {
       u3l_log("forgot to terminate list!");
     }
-    c3_w mem_w = u3h_count(u3R->cax.har_p);
+    c3_w_tmp mem_w = u3h_count(u3R->cax.har_p);
 
     for ( som = u3t(a); c3y == u3du(som); som = u3t(som) ) u3a_discount_noun(u3h(som));
     u3h_discount(u3R->cax.har_p);

@@ -3,8 +3,8 @@
 #ifndef U3_MANAGE_H
 #define U3_MANAGE_H
 
-#include "v1/manage.h"
-#include "v2/manage.h"
+// #include "v1/manage.h"
+// #include "v2/manage.h"
 
 #include "c3/c3.h"
 #include "types.h"
@@ -46,7 +46,8 @@
       **    %oops               ::  assertion failure
       */
         c3_i
-        u3m_bail(c3_m how_m) __attribute__((noreturn));
+        //u3m_bail(c3_m how_m) __attribute__((noreturn));
+        u3m_bail(u3_noun how_m) __attribute__((noreturn));
 
       /* u3m_fault(): handle a memory event with libsigsegv protocol.
       */
@@ -106,7 +107,7 @@
       /* u3m_hate(): new, integrated leap mechanism (enter).
       */
         void
-        u3m_hate(c3_w pad_w);
+        u3m_hate(c3_n pad_w);
 
       /* u3m_love(): return product from leap.
       */
@@ -118,7 +119,7 @@
       **  Produces [%$ result] or [%error (list tank)].
       */
         u3_noun
-        u3m_soft(c3_w mil_w, u3_funk fun_f, u3_noun arg);
+        u3m_soft(c3_n mil_w, u3_funk fun_f, u3_noun arg);
 
       /* u3m_soft_cax(): descend into virtualization context, with cache.
       */
@@ -158,7 +159,7 @@
       */
         typedef struct _u3m_quac {
           c3_c* nam_c;
-          c3_w  siz_w;
+          c3_n  siz_w;
           struct _u3m_quac** qua_u;
         } u3m_quac;
 
@@ -209,7 +210,7 @@
 
       /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
-        c3_w
+        c3_n
         u3m_pack(void);
 
 #endif /* ifndef U3_MANAGE_H */

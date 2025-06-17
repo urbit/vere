@@ -19,8 +19,8 @@ u3qa_gth(u3_atom a, u3_atom b)
     return c3y;
   }
   else {
-    c3_w a_w = u3r_met(0, a);
-    c3_w b_w = u3r_met(0, b);
+    c3_w_tmp a_w = u3r_met(0, a);
+    c3_w_tmp b_w = u3r_met(0, b);
 
     if ( a_w != b_w ) {
       return __(a_w > b_w);
@@ -47,7 +47,7 @@ u3wa_gth(u3_noun cor)
 {
   u3_noun a, b;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
+  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul))
      || (c3n == u3ud(b) && 0 != a)
      || (c3n == u3ud(a) && 0 != b) )
   {

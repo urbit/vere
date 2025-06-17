@@ -48,7 +48,13 @@
 
     /* Size in words.
     */
+// XX: 64 square with allocate.h
+// (probably some of that belongs here)
+#ifndef VERE64
 #     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
+#else
+#     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
+#endif
 
     /* Bit counting.
     */
@@ -64,7 +70,29 @@
 #     error  "port me"
 #endif
 
-#     define c3_bits_word(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#if   (64 == (CHAR_BIT * __SIZEOF_LONG_LONG__))
+#     define c3_lz_d __builtin_clzll
+#     define c3_tz_d __builtin_ctzll
+#     define c3_pc_d __builtin_popcountll
+#else
+#     error  "port me"
+#endif
+
+#     define c3_bits_word_tmp(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#     define c3_bits_word_new(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
+
+#ifndef VERE64
+#     define c3_bits_note(n)  c3_bits_word_new(n)
+#     define c3_lz_n  c3_lz_w
+#     define c3_tz_n  c3_tz_w
+#     define c3_pc_n  c3_pc_w
+#else
+#     define c3_bits_note(n)  c3_bits_chub(n)
+#     define c3_lz_n  c3_lz_d
+#     define c3_tz_n  c3_tz_d
+#     define c3_pc_n  c3_pc_d
+#endif
 
     /* Min and max.
     */
@@ -88,7 +116,7 @@
     /* Fill 16 words (64 bytes) with high-quality entropy.
     */
       void
-      c3_rand(c3_w* rad_w);
+      c3_rand(c3_w_tmp* rad_w);
 
     /* Short integers.
     */
@@ -120,11 +148,12 @@
         return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
-      inline c3_w
-      c3_sift_word(c3_y buf_y[4])
+      inline c3_w_tmp
+      c3_sift_word_new(c3_y buf_y[4])
       {
-        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
+        return ((c3_w_tmp)buf_y[3] << 24 | (c3_w_tmp)buf_y[2] << 16 | (c3_w_tmp)buf_y[1] << 8 | (c3_w_tmp)buf_y[0]);
       }
+#define c3_sift_word_tmp c3_sift_word_new
 
       inline c3_d
       c3_sift_chub(c3_y byt_y[8])
@@ -147,13 +176,14 @@
       }
 
       inline void
-      c3_etch_word(c3_y buf_y[4], c3_w wod_w)
+      c3_etch_word_new(c3_y buf_y[4], c3_w_tmp wod_w)
       {
         buf_y[0] = wod_w         & 0xff;
         buf_y[1] = (wod_w >>  8) & 0xff;
         buf_y[2] = (wod_w >> 16) & 0xff;
         buf_y[3] = (wod_w >> 24) & 0xff;
       }
+#define c3_etch_word_tmp c3_etch_word_new
 
       inline void
       c3_etch_chub(c3_y byt_y[8], c3_d num_d)
@@ -235,17 +265,17 @@
 
    hi or lo align x to al
 
-   unless effective type of x is c3_w or c3_d, assumes x is a pointer.
+   unless effective type of x is c3_w_tmp or c3_d, assumes x is a pointer.
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w     : c3_align_w,               \
+           c3_w_tmp     : c3_align_w,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
-inline c3_w
-c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+inline c3_w_tmp
+c3_align_w(c3_w_tmp x, c3_w_tmp al, align_dir hilo) {
   c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
@@ -258,6 +288,15 @@ c3_align_d(c3_d x, c3_d al, align_dir hilo) {
   x &= ~(al - 1);
   return x;
 }
+inline c3_n
+c3_align_n(c3_n x, c3_n al, align_dir hilo) {
+#ifndef VERE64
+  return c3_align_w(x, al, hilo);
+#else
+  return c3_align_d(x, al, hilo);
+#endif
+}
+
 inline void*
 c3_align_p(void const * p, size_t al, align_dir hilo) {
   uintptr_t x = (uintptr_t)p;
@@ -266,5 +305,14 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   x &= ~(al - 1);
   return (void*)x;
 }
+
+#define c3_w_max  0xffffffff
+#define c3_d_max  0xffffffffffffffffULL
+
+#ifndef VERE64
+#define c3_n_max  c3_w_max
+#else
+#define c3_n_max  c3_d_max
+#endif
 
 #endif /* ifndef C3_DEFS_H */

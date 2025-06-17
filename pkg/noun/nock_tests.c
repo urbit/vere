@@ -28,7 +28,7 @@ _test_nock_meme(void)
   };
   u3_noun fol = u3s_cue_bytes(sizeof(buf_y), buf_y);
   u3_noun gon;
-  c3_w    i_w;
+  c3_w_tmp    i_w;
   c3_i  ret_i = 1;
 
   for ( i_w = 0; i_w < 3; i_w++ ) {
