@@ -86,7 +86,7 @@ static c3_w sag_w;
 void _king_doom(u3_noun doom);
   void _king_boot(u3_noun boot);
     void _king_come(u3_noun star, u3_noun pill, u3_noun path);
-    void _king_dawn(u3_noun seed, u3_noun pill, u3_noun path);
+    void _king_dawn(u3_noun feed, u3_noun pill, u3_noun path);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
@@ -161,6 +161,27 @@ _king_boot(u3_noun bul)
   u3z(bul);
 }
 
+/* _king_boot_done(): boot done
+*/
+static void
+_king_boot_done(void* ptr_v, c3_o ret_o)
+{
+  u3_weak rift = u3_none;
+  if ( 0 != ptr_v) {
+    rift = (u3_noun)(c3_p)ptr_v;
+  }
+  //  XX review requirements
+  //  XX exit code
+  //
+  if ( c3n == ret_o ) {
+    u3l_log("king: boot failed\r\n");
+    u3_king_bail();
+    return;
+  }
+
+  u3K.pir_u = u3_pier_stay(sag_w, u3i_string(u3_Host.dir_c), rift);
+}
+
 /* _king_prop(): events from prop arguments
 */
 u3_noun
@@ -209,11 +230,16 @@ _king_prop()
 void
 _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 {
-  //  XX link properly
-  //
   u3_noun vent = u3nc(c3__fake, u3k(ship));
-  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path,
-                              u3_none, _king_prop());
+
+  //  XX pass kelvin
+  //
+  c3_d  key_d[4] = {0};
+  u3_noun msg    = u3nq(c3__boot, pill, vent, _king_prop());
+
+  u3_lord_boot(u3_Host.dir_c, sag_w, key_d, msg,
+               (void*)0, _king_boot_done);
+  u3z(path);
 }
 
 /* _king_come(): mine a comet under star (unit)
@@ -242,18 +268,56 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   //
   u3C.slog_f = _king_slog;
 
+  //  XX pass kelvin
+  //
   u3_noun ship = ( c3y == u3a_is_cell(u3h(feed)) )
                  ? u3h(u3t(feed))
                  : u3h(feed);
-  u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed));
-  //  XX link properly
-  //
-  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path,
-                              feed, _king_prop());
+  u3_noun rift;
+  u3_noun vent = u3_dawn_vent(u3k(ship), u3k(feed), &rift);
 
   // disable ivory slog printfs
   //
   u3C.slog_f = 0;
+
+  {
+    c3_d   key_d[4] = {0};
+    u3_noun     msg = u3_nul;
+    u3_noun     mor = _king_prop();
+
+    //  include additional key configuration events if we have multiple keys
+    //
+    if ( (u3_none != feed) && (c3y == u3du(u3h(feed))) && (u3h(u3h(feed))) == 1) {
+      u3_noun wir = u3nt(c3__j, c3__seed, u3_nul);
+      u3_noun tag = u3i_string("rekey");
+      u3_noun kyz = u3t(u3t(feed));
+      u3_noun ves = u3_nul;
+      u3_noun cad;
+
+      while ( u3_nul != kyz ) {
+        cad = u3nc(u3k(tag), u3k(u3h(kyz)));
+        ves = u3nc(u3nc(u3k(wir), cad), ves);
+        kyz = u3t(kyz);
+      }
+
+      if ( u3_nul != ves ) {
+        u3_noun pro = u3nq(c3__prop,
+                           c3__dawn,
+                           c3__hind,
+                           ves);
+        mor = u3nc(pro, mor);
+      }
+
+      u3z(tag); u3z(wir);
+    }
+
+    msg = u3nq(c3__boot, pill, vent, mor);
+    u3_lord_boot(u3_Host.dir_c, sag_w, key_d, msg,
+                 (void*)(c3_p)rift, _king_boot_done);
+  }
+
+  u3z(path);
+  u3z(feed);
 }
 
 /* _king_pier(): pier parser
@@ -267,7 +331,7 @@ _king_pier(u3_noun pier)
     exit(1);
   }
 
-  u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)));
+  u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)), u3_none);
   u3z(pier);
 }
 
@@ -303,6 +367,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
 
   if ( !(cul_u = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
+    u3_king_bail();
     exit(1);
   }
 
