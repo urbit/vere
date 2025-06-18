@@ -28,8 +28,11 @@
       if ( c3y == hoz ) {
         nex = u3nc(u3nc(u3k(u3h(a)), u3k(u3h(acc))), u3k(u3t(acc)));
       }
-      else {
+      else if ( c3n == hoz ) {
         nex = u3nc(u3k(u3h(acc)), u3nc(u3k(u3h(a)), u3k(u3t(acc))));
+      }
+      else {
+        return u3m_bail(c3__exit);
       }
       u3z(hoz);
       u3z(acc);

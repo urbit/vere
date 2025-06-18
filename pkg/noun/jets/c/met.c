@@ -14,7 +14,7 @@
       return 0;
     }
     else if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
-      return 1;
+      return u3m_bail(c3__fail);;
     }
     else {
       c3_w met_w = u3r_met(a, b);
