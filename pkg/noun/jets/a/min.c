@@ -11,7 +11,9 @@ u3qa_min(u3_atom a, u3_atom b)
 {
   if ( _(u3a_is_cat(a)) || _(u3a_is_cat(b)) )
   {
-    return u3k(c3_min(a, b));
+    //  this will always return a direct atom, no refcount gain necessary
+    //
+    return c3_min(a, b);
   }
 
   if (a == b) return u3k(a);
