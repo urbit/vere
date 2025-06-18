@@ -2451,7 +2451,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       o     = *top;
       *top = _n_kick(o, sit_u);
       if ( u3_none == *top ) {
-        _n_toss(mov, off);
+        _n_pop(mov);
 
         fam         = u3to(burnframe, u3R->cap_p) + off + mov;
         u3R->cap_p  = u3of(burnframe, fam - off);
