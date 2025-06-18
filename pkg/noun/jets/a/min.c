@@ -9,31 +9,32 @@
 u3_noun
 u3qa_min(u3_atom a, u3_atom b)
 {
-  if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
-    return u3k(c3_min(a, b));
+  if ( _(u3a_is_cat(a)) || _(u3a_is_cat(b)) )
+  {
+    //  this will always return a direct atom, no refcount gain necessary
+    //
+    return c3_min(a, b);
   }
-  else {
-    c3_w a_w = u3r_met(0, a);
-    c3_w b_w = u3r_met(0, b);
 
-    if ( a_w != b_w ) {
-      return u3k((a_w < b_w) ? a : b);
-    }
-    else {
-      mpz_t   a_mp, b_mp;
-      u3_noun min;
+  if (a == b) return u3k(a);
 
-      u3r_mp(a_mp, a);
-      u3r_mp(b_mp, b);
+  u3a_atom* a_u = u3a_to_ptr(a);
+  u3a_atom* b_u = u3a_to_ptr(b);
 
-      min = (mpz_cmp(a_mp, b_mp) < 0) ? a : b;
-
-      mpz_clear(a_mp);
-      mpz_clear(b_mp);
-
-      return u3k(min);
-    }
+  if (a_u->len_w != b_u->len_w)
+  {
+    return (a_u->len_w < b_u->len_w) ? u3k(a) : u3k(b);
   }
+
+  c3_w* a_w = a_u->buf_w;
+  c3_w* b_w = b_u->buf_w;
+  for (c3_w i_w = a_u->len_w; i_w--;)
+  {
+    if (a_w[i_w] < b_w[i_w]) return u3k(a);
+    if (a_w[i_w] > b_w[i_w]) return u3k(b);
+  }
+
+  return u3k(a);
 }
 
 u3_noun
@@ -42,10 +43,10 @@ u3wa_min(u3_noun cor)
   u3_noun a, b;
 
   if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
-     || (c3n == u3ud(b) && 0 != a)
-     || (c3n == u3ud(a) && 0 != b) )
+     || (c3n == u3ud(b))
+     || (c3n == u3ud(a)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3__fail);
   }
   else {
     return u3qa_min(a, b);

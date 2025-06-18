@@ -181,7 +181,6 @@ const c_source_files = [_][]const u8{
     "jets/a/sub.c",
     "jets/b/bind.c",
     "jets/b/clap.c",
-    "jets/b/drop.c",
     "jets/b/find.c",
     "jets/b/flop.c",
     "jets/b/lent.c",
