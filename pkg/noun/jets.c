@@ -328,7 +328,7 @@ _cj_install(u3j_core* ray_u, c3_w_tmp jax_l, u3_noun pel, u3_noun lab, u3j_core*
         c3_w_tmp j_w;
         for ( j_w = 0; 0 != kid_u->bas_u[j_w]; j_w++ ) {
           u3_noun key = _cj_hash(kid_u->bas_u[j_w]),
-                  hot = u3h_get(u3R->jed.hot_p, key),
+                  hot = u3h_git(u3R->jed.hot_p, key),
                   old = ( u3_none == hot ) ? u3_none : u3k(u3h(hot)),
                   reg = _cj_gust(old, kid_u->axe_l, u3k(pel), u3k(loc)),
                   huc = u3t(u3t(loc)),
@@ -336,7 +336,7 @@ _cj_install(u3j_core* ray_u, c3_w_tmp jax_l, u3_noun pel, u3_noun lab, u3j_core*
                   toh = u3nq(reg, jax_l, hap, u3k(bal));
 
           u3h_put(u3R->jed.hot_p, key, toh);
-          u3z(key); u3z(hot);
+          u3z(key);
         }
       }
 
@@ -1472,7 +1472,7 @@ u3j_site_merge(u3j_site* dst_u, u3j_site* src_u)
   dst_u->axe = src_u->axe;
 
   if ( u3_none != src_u->loc ) {
-    u3z(dst_u->loc);
+    u3z(dst_u->loc);  //  XX these may be u3_none
     u3z(dst_u->lab);
     dst_u->loc   = src_u->loc;
     dst_u->lab   = src_u->lab;

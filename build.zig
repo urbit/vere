@@ -516,6 +516,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "equality-test",
+                .file = "pkg/noun/equality_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
@@ -610,7 +615,7 @@ fn buildBinary(
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
@@ -625,7 +630,7 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
-            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+            if (t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan)) {
                 //  disable libmalloc warnings
                 run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
             }
