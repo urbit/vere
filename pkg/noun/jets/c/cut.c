@@ -12,23 +12,19 @@
            u3_atom c,
            u3_atom d)
   {
+    c3_n b_w, c_w;
     if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
       return u3m_bail(c3__fail);
     }
-    if ( !_(u3a_is_cat(b)) ) {
-      return 0;
+    if ( !_(u3r_safe_note(b, &b_w)) ) {
+      return u3m_bail(c3__fail);
     }
-    if ( !_(u3a_is_cat(c)) ) {
-      // XX: in 32 bit case, its imaginable
-      // with a subword bloq that we could cut
-      // with an indirect atom step size
-      c = u3a_direct_max;
+    if ( !_(u3r_safe_note(c, &c_w)) ) {
+      return u3m_bail(c3__fail);
     }
 
     {
       c3_g a_g   = a;
-      c3_n b_w   = b;
-      c3_n c_w   = c;
       c3_n len_w = u3r_met(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {

@@ -321,7 +321,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
       return u3_none;
     }
 
-    //  (each seed (lest error=@tas))
+    //  (each feed:jael (lest error=term))
     //
     fed = u3dq("veri:dawn", u3k(ship), u3k(feed), u3k(pot), u3k(liv));
 

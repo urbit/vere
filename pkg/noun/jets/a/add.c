@@ -18,6 +18,9 @@ u3qa_add(u3_atom a,
   else if ( 0 == a ) {
     return u3k(b);
   }
+  else if ( 0 == b ) {
+    return u3k(a);
+  }
   else {
     mpz_t a_mp, b_mp;
 
@@ -38,9 +41,9 @@ u3wa_add(u3_noun cor)
 
   if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
        (c3n == u3ud(a)) ||
-       (c3n == u3ud(b) && a != 0) )
+       (c3n == u3ud(b)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3__fail);
   }
   else {
     return u3qa_add(a, b);

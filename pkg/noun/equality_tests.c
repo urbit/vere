@@ -17,7 +17,7 @@ _test_unify_home(void)
 
   u3_noun  a = u3nt(0, 0, 0);
   u3_noun  b = u3nt(0, 0, 0);
-  c3_w kep_w;
+  c3_w_tmp kep_w;
 
   u3_assert( u3t(a) < u3t(b) );
   kep_w = u3t(a);
@@ -42,7 +42,7 @@ static c3_i
 _test_unify_inner(void)
 {
   c3_i   ret_i = 1;
-  c3_w   kep_w;
+  c3_w_tmp   kep_w;
   u3_noun a, b;
 
   a = u3nt(0, 0, 0);
