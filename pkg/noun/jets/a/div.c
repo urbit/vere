@@ -40,7 +40,7 @@ u3wa_div(u3_noun cor)
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b)) )
   {
-    return u3m_bail(c3__exit);
+    return u3m_bail(c3__fail);
   }
   else {
     return u3qa_div(a, b);

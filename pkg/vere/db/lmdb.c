@@ -198,7 +198,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
       return c3n;
     }
     else {
-      memcpy(&fir_d, key_u.mv_data, sizeof(c3_d));
+      fir_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  read with the cursor from the end of the database
@@ -206,7 +206,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
     ret_w = mdb_cursor_get(cur_u, &key_u, &val_u, MDB_LAST);
 
     if ( !ret_w ) {
-      memcpy(&las_d, key_u.mv_data, sizeof(c3_d));
+      las_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  clean up unconditionally, we're done
@@ -588,11 +588,11 @@ u3_lmdb_walk_next(u3_lmdb_walk* itr_u, size_t* len_i, void** buf_v)
 
   //  sanity check: ensure contiguous event numbers
   //
-  if ( *(c3_d*)key_u.mv_data != itr_u->nex_d ) {
+  if ( c3_sift_chub(key_u.mv_data) != itr_u->nex_d ) {
     fprintf(stderr, "lmdb: read gap: expected %" PRIu64
                     ", received %" PRIu64 "\r\n",
                     itr_u->nex_d,
-                    *(c3_d*)key_u.mv_data);
+                    c3_sift_chub(key_u.mv_data));
     return c3n;
   }
 

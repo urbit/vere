@@ -808,7 +808,8 @@ _mesa_req_get_cwnd(u3_pend_req* req_u)
   /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
   /* u3l_log("out_d %"PRIu64, req_u->out_d); */
   /* return c3_min(rem_w, _safe_sub(3500, req_u->out_d)); */
-  return c3_min(rem_w, _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d));
+  c3_d ava_d = _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d);
+  return c3_min(rem_w, ava_d);
   /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 

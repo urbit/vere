@@ -999,107 +999,123 @@ u3a_use(u3_noun som)
   }
 }
 
-/* _ca_wed_who(): unify [a] and [b] on [rod_u], keeping the senior
-**
-** NB: this leaks a reference when it unifies in a senior road
+#define SWAP(l, r)    \
+  do { typeof(l) t = l; l = r; r = t; } while (0)
+
+/* _ca_wed_our(): unify [a] and [b] on u3R.
+*/
+static inline c3_o
+_ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
+{
+  c3_t asr_t = ( c3y == u3a_is_senior(u3R, *a) );
+  c3_t bsr_t = ( c3y == u3a_is_senior(u3R, *b) );
+
+  if ( asr_t == bsr_t ) {
+    //  both [a] and [b] are senior; we can't unify on u3R
+    //
+    if ( asr_t ) return c3n;
+
+    //  both are on u3R; keep the deeper address
+    //  (and gain a reference)
+    //
+    //    (N && <) || (S && >)
+    //    XX consider keeping higher refcount instead
+    //
+    if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+
+    _me_gain_use(*a);
+  }
+  //  one of [a] or [b] are senior; keep it
+  //
+  else if ( !asr_t ) SWAP(a, b);
+
+  u3z(*b);
+  *b = *a;
+  return c3y;
+}
+
+/* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. leaks
 */
 static c3_o
-_ca_wed_who(u3a_road* rod_u, u3_noun* a, u3_noun* b)
+_ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 {
+  //  XX assume( rod_u != u3R )
   c3_t asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
   c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
-  c3_t nor_t = ( c3y == u3a_is_north(rod_u) );
-  c3_t own_t = ( rod_u == u3R );
 
-  //  both are on [rod_u]; gain a reference to whichever we keep
-  //
-  if ( !asr_t && !bsr_t ) {
-    //  keep [a]; it's deeper in the heap
+  if ( asr_t == bsr_t ) {
+    //  both [a] and [b] are senior; we can't unify on [rod_u]
     //
-    //    (N && >) || (S && <)
-    //
-    if ( (*a > *b) == nor_t ) {
-      _me_gain_use(*a);
-      if ( own_t ) { u3z(*b); }
-      *b = *a;
-    }
-    //  keep [b]; it's deeper in the heap
-    //
-    else {
-      _me_gain_use(*b);
-      if ( own_t ) { u3z(*a); }
-      *a = *b;
-    }
+    if ( asr_t ) return c3n;
 
-    return c3y;
-  }
-  //  keep [a]; it's senior
-  //
-  else if ( asr_t && !bsr_t ) {
-    if ( own_t ) { u3z(*b); }
-    *b = *a;
-    return c3y;
-  }
-  //  keep [b]; it's senior
-  //
-  else if ( !asr_t && bsr_t ) {
-    if ( own_t ) { u3z(*a); }
-    *a = *b;
-    return c3y;
-  }
+    //  both are on [rod_u]; keep the deeper address
+    //  (and gain a reference)
+    //
+    //    (N && <) || (S && >)
+    //    XX consider keeping higher refcount instead
+    //
+    if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
 
-  //  both [a] and [b] are senior; we can't unify on [rod_u]
+    _me_gain_use(*a);
+  }
+  //  one of [a] or [b] are senior; keep it
   //
-  return c3n;
+  else if ( !asr_t ) SWAP(a, b);
+
+  *b = *a;
+  return c3y;
 }
+
+#undef SWAP
 
 /* u3a_wed(): unify noun references.
 */
 void
-u3a_wed(u3_noun* a, u3_noun* b)
+u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
-  if ( *a != *b ) {
-    u3_road* rod_u = u3R;
-    c3_o     wed_o = _ca_wed_who(rod_u, a, b);
+  //  XX assume( *a != *b )
+  u3_road* rod_u = u3R;
+  c3_o     wed_o;
 
-    if (  (c3y == wed_o)
-       || (u3C.wag_w & u3o_debug_ram)
-       || (&u3H->rod_u == (rod_u = u3to(u3_road, rod_u->par_p)) ) )
-    {
-      return;
-    }
+  if ( rod_u->kid_p ) return;
 
-    //  while not at home, attempt to unify
-    //
-    //    we try to unify on our road, and retry on senior roads
-    //    until we succeed or reach the home road.
-    //
-    //    we can't perform this kind of butchery on the home road,
-    //    where asynchronous things can allocate.
-    //    (XX anything besides u3t_samp?)
-    //
-    //    when unifying on a higher road, we can't free nouns,
-    //    because we can't track junior nouns that point into
-    //    that road.
-    //
-    //    this is just an implementation issue -- we could set use
-    //    counts to 0 without actually freeing.  but the allocator
-    //    would have to be actually designed for this.
-    //    (alternately, we could keep a deferred free-list)
-    //
-    //    not freeing may generate spurious leaks, so we disable
-    //    senior unification when debugging memory.  this will
-    //    cause a very slow boot process as the compiler compiles
-    //    itself, constantly running into duplicates.
-    //
-    ;
+  wed_o = _ca_wed_our(a, b);
 
-    do {
-      wed_o = _ca_wed_who(rod_u, a, b);
-    }
-    while (  (c3n == wed_o)
-          && (&u3H->rod_u !=
-               (rod_u = u3to(u3_road, rod_u->par_p))) );
+#ifdef U3_MEMORY_DEBUG
+  return;
+#else
+  if ( u3C.wag_w & u3o_debug_ram ) return;
+#endif
+
+  //  while not at home, attempt to unify
+  //
+  //    we try to unify on our road, and retry on senior roads
+  //    until we succeed or reach the home road.
+  //
+  //    we can't perform this kind of butchery on the home road,
+  //    where asynchronous things can allocate.
+  //    (XX anything besides u3t_samp?)
+  //
+  //    when unifying on a higher road, we can't free nouns,
+  //    because we can't track junior nouns that point into
+  //    that road.
+  //
+  //    this is just an implementation issue -- we could set use
+  //    counts to 0 without actually freeing.  but the allocator
+  //    would have to be actually designed for this.
+  //    (alternately, we could keep a deferred free-list)
+  //
+  //    not freeing may generate spurious leaks, so we disable
+  //    senior unification when debugging memory.  this will
+  //    cause a very slow boot process as the compiler compiles
+  //    itself, constantly running into duplicates.
+  //
+
+  while (  (c3n == wed_o)
+        && rod_u->par_p
+        && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
+  {
+    wed_o = _ca_wed_you(rod_u, a, b);
   }
 }
 
