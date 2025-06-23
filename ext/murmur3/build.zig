@@ -5,11 +5,6 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
-    const murmur3_c = b.dependency("murmur3", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const murmur3 = b.addStaticLibrary(.{
         .name = "murmur3",
         .target = target,
@@ -18,7 +13,7 @@ pub fn build(b: *std.Build) void {
 
     murmur3.linkLibC();
 
-    murmur3.addIncludePath(murmur3_c.path("."));
+    murmur3.addIncludePath(b.path("."));
 
     const common_flags = [_][]const u8{
         "-fno-sanitize=all",
@@ -32,12 +27,12 @@ pub fn build(b: *std.Build) void {
     };
 
     murmur3.addCSourceFiles(.{
-        .root = murmur3_c.path("."),
+        .root = b.path("vendor/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4"),
         .files = &.{"murmur3.c"},
         .flags = if (t.os.tag == .macos) &mac_flags else &common_flags,
     });
 
-    murmur3.installHeader(murmur3_c.path("murmur3.h"), "murmur3.h");
+    murmur3.installHeader(b.path("vendor/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4/murmur3.h"), "murmur3.h");
 
     b.installArtifact(murmur3);
 }
