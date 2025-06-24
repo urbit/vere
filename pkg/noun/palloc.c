@@ -131,7 +131,15 @@ _extend_directory(c3_n siz_w)  // num pages
   c3_n nex_w, dif_w, pag_w;
 
   old_u  = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+  //  account for target allocation size
   nex_w  = HEAP.len_w + siz_w;       // num words
+  nex_w +=   (((c3_n)1) << u3a_page) - 1;
+  nex_w &= ~((((c3_n)1) << u3a_page) - 1);
+  dif_w  = nex_w >> u3a_page;        //  new pages
+
+  //  account for directory allocation size
+  nex_w += dif_w;
   nex_w +=   (((c3_n)1) << u3a_page) - 1;
   nex_w &= ~((((c3_n)1) << u3a_page) - 1);
   dif_w  = nex_w >> u3a_page;        //  new pages

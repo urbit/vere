@@ -164,6 +164,95 @@ _test_palloc(void)
   _ifree(sop_p);
 }
 
+<<<<<<< Updated upstream
+=======
+static void
+_test_palloc_64(void)
+{
+  c3_n *wor_n;
+  u3_post pos_p, sop_p;
+  struct heap tmp_u;
+  c3_n siz_n = (1ULL << 33) - ((1ULL << 33) / (1ULL << 10));  // just under 64GiB in words
+
+  memset(&(HEAP), 0x0, sizeof(HEAP));
+  _init_heap();
+
+  fprintf(stderr, "heap state 1: siz_w=%"PRIc3_n" len_w=%"PRIc3_n "\n", HEAP.siz_w, HEAP.len_w);
+
+  pos_p = _imalloc(siz_n);
+
+  fprintf(stderr, "heap state 2: siz_w=%"PRIc3_n" len_w=%"PRIc3_n "\n", HEAP.siz_w, HEAP.len_w);
+
+  fprintf(stderr, "north: pos_p %"PRIxc3_n" (large)\n", pos_p);
+
+  wor_n = u3a_into(pos_p);
+
+  wor_n[0] = 0xdeadbeef;
+  wor_n[1] = 0xcafebabe;
+  wor_n[siz_n-2] = 0xfeedface;
+  wor_n[siz_n-1] = 0xbaadf00d;
+
+  sop_p = _imalloc(siz_n);
+
+  fprintf(stderr, "north: sop_p %"PRIxc3_n" (large)\n", sop_p);
+
+  _ifree(pos_p);
+  _ifree(sop_p);
+
+  fprintf(stderr, "palloc_tests_64: pre-leap: hat=0x%"PRIxc3_n" cap=0x%"PRIxc3_n"\n", u3R->hat_p, u3R->cap_p);
+
+  memcpy(&tmp_u, &hep_u, sizeof(tmp_u));
+  u3m_leap(1U << u3a_page);
+
+  fprintf(stderr, "palloc_tests_64: post-leap: hat=0x%"PRIxc3_n" cap=0x%"PRIxc3_n"\n", u3R->hat_p, u3R->cap_p);
+
+  memset(&(HEAP), 0x0, sizeof(HEAP));
+  _init_heap();
+
+  pos_p = _imalloc(siz_n);
+
+  fprintf(stderr, "south: pos_p %"PRIxc3_n" (large)\n", pos_p);
+
+  wor_n = u3a_into(pos_p);
+
+  wor_n[0] = 0xdeadbeef;
+  wor_n[1] = 0xcafebabe;
+  wor_n[siz_n-2] = 0xfeedface;
+  wor_n[siz_n-1] = 0xbaadf00d;
+
+  sop_p = _imalloc(siz_n);
+
+  _ifree(pos_p);
+  _ifree(sop_p);
+
+  fprintf(stderr, "palloc_tests_64: pre-fall: hat=0x%"PRIxc3_n" cap=0x%"PRIxc3_n"\n", u3R->hat_p, u3R->cap_p);
+
+  u3m_fall();
+  memcpy(&hep_u, &tmp_u, sizeof(tmp_u));
+
+  fprintf(stderr, "palloc_tests_64: post-fall: hat=0x%"PRIxc3_n" cap=0x%"PRIxc3_n"\n", u3R->hat_p, u3R->cap_p);
+
+  pos_p = _imalloc(siz_n);
+
+  fprintf(stderr, "north: pos_p %"PRIxc3_n" (large)\n", pos_p);
+
+  wor_n = u3a_into(pos_p);
+
+  // Initialize first few and last few words
+  wor_n[0] = 0xdeadbeef;
+  wor_n[1] = 0xcafebabe;
+  wor_n[siz_n-2] = 0xfeedface;
+  wor_n[siz_n-1] = 0xbaadf00d;
+
+  sop_p = _imalloc(siz_n);
+
+  fprintf(stderr, "north: sop_p %"PRIxc3_n" (large)\n", sop_p);
+
+  _ifree(pos_p);
+  _ifree(sop_p);
+}
+
+>>>>>>> Stashed changes
 /* main(): run all test cases.
 */
 int
