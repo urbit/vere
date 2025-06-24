@@ -185,6 +185,7 @@ _extend_directory(c3_n siz_w)  // num pages
 #ifdef SANITY
   assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
   assert( dir_u[HEAP.len_w - 1] );
+  assert( HEAP.siz_w >= HEAP.len_w );
 #endif
 }
 
@@ -192,6 +193,7 @@ static u3_post
 _extend_heap(c3_n siz_w)  // num pages
 {
   u3_post pag_p;
+  c3_n    wor_w = siz_w << u3a_page;  //  XX guard
 
 #ifdef SANITY
   assert( HEAP.siz_w >= HEAP.len_w );
@@ -201,6 +203,18 @@ _extend_heap(c3_n siz_w)  // num pages
     _extend_directory(siz_w);
   }
 
+  if ( 1 == HEAP.dir_ws ) {
+    if ( (u3R->hat_p + wor_w) < u3R->hat_p ) {  //  overflow
+      fprintf(stderr, "\033[31mpalloc: loom overflow\r\n\033[0m");
+      abort();
+    }
+  }
+  else {
+    if ( wor_w >= u3R->hat_p ) {  //  underflow (zero reserved)
+      fprintf(stderr, "\033[31mpalloc: loom underflow\r\n\033[0m");
+      abort();
+    }
+  }
   pag_p  = u3R->hat_p;
   pag_p += HEAP.off_ws * (c3_ns)(siz_w << u3a_page);
 
