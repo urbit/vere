@@ -24,9 +24,9 @@ struct heap hep_u;
 /* _setup(): prepare for tests.
 */
 static void
-_setup(void)
+_setup(size_t len_i)
 {
-  u3m_init(1 << 22);
+  u3m_init((size_t)1 << len_i);
   u3e_init();
   u3m_pave(c3y);
 }
@@ -164,8 +164,6 @@ _test_palloc(void)
   _ifree(sop_p);
 }
 
-<<<<<<< Updated upstream
-=======
 static void
 _test_palloc_64(void)
 {
@@ -177,11 +175,7 @@ _test_palloc_64(void)
   memset(&(HEAP), 0x0, sizeof(HEAP));
   _init_heap();
 
-  fprintf(stderr, "heap state 1: siz_w=%"PRIc3_n" len_w=%"PRIc3_n "\n", HEAP.siz_w, HEAP.len_w);
-
   pos_p = _imalloc(siz_n);
-
-  fprintf(stderr, "heap state 2: siz_w=%"PRIc3_n" len_w=%"PRIc3_n "\n", HEAP.siz_w, HEAP.len_w);
 
   fprintf(stderr, "north: pos_p %"PRIxc3_n" (large)\n", pos_p);
 
@@ -252,19 +246,22 @@ _test_palloc_64(void)
   _ifree(sop_p);
 }
 
->>>>>>> Stashed changes
 /* main(): run all test cases.
 */
 int
 main(int argc, char* argv[])
 {
-  _setup();
+  _setup(40);  // 1TiB
 
   _test_print_chunks();
   _test_print_pages(10);
+  fprintf(stderr, "\n");
 
   _test_palloc();
+  fprintf(stderr, "palloc okeedokee\n\n");
 
-  fprintf(stderr, "palloc okeedokee\n");
+  _test_palloc_64();
+  fprintf(stderr, "palloc_64 okeedokee\n");
+
   return 0;
 }
