@@ -998,16 +998,16 @@ u3m_leap(c3_n pad_w)
   /* Allocate a region on the cap.
   */
   {
-    u3p(c3_w) bot_p, top_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
+    u3p(c3_n) bot_p, top_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
 
     if ( c3y == u3a_is_north(u3R) ) {
       //  pad and page-align the hat
       //
       bot_p  = u3R->hat_p + pad_w;
-      bot_p +=   (1U << u3a_page) - 1;
-      bot_p &= ~((1U << u3a_page) - 1);
+      bot_p +=   ((c3_n)1 << u3a_page) - 1;
+      bot_p &= ~(((c3_n)1 << u3a_page) - 1);
       top_p  = u3R->cap_p;
-      top_p &= ~((1U << u3a_page) - 1);
+      top_p &= ~(((c3_n)1 << u3a_page) - 1);
 
       if ( bot_p >= top_p ) {
         u3m_bail(c3__meme);
@@ -1037,10 +1037,10 @@ u3m_leap(c3_n pad_w)
     }
     else {
       bot_p  = u3R->cap_p;
-      bot_p +=   (1U << u3a_page) - 1;
-      bot_p &= ~((1U << u3a_page) - 1);
+      bot_p +=   ((c3_n)1 << u3a_page) - 1;
+      bot_p &= ~(((c3_n)1 << u3a_page) - 1);
       top_p  = u3R->hat_p - pad_w;
-      top_p &= ~((1U << u3a_page) - 1);
+      top_p &= ~(((c3_n)1 << u3a_page) - 1);
 
       //  XX moar
       if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
