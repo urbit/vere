@@ -305,7 +305,7 @@ u3_lmdb_read(MDB_env* env_u,
 
         //  sanity check: ensure contiguous event numbers
         //
-        if ( *(c3_d*)key_u.mv_data != cur_d ) {
+        if ( c3_sift_chub(key_u.mv_data) != cur_d ) {
           fprintf(stderr, "lmdb: read gap: expected %" PRIu64
                           ", received %" PRIu64 "\r\n",
                           cur_d,
