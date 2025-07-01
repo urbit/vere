@@ -476,8 +476,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
-        } else if ( (czar_ack_w == ack_w) ||
-                    ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
+        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
