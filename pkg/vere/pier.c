@@ -498,8 +498,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
-        } else if ( (czar_ack_w == ack_w) ||
-                    ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
+        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
@@ -630,8 +629,8 @@ _pier_work_init(u3_pier* pir_u)
       //  run the requested scry, jam to disk, then exit
       //
       u3l_log("pier: scry");
-      u3_pier_peek_last(pir_u, u3_nul, u3k(car), u3k(dek), u3k(pax),
-                        pir_u, _pier_on_scry_done);
+      u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), u3k(car), u3k(dek),
+                        u3k(pax), pir_u, _pier_on_scry_done);
     }
     u3z(pex);
   }
