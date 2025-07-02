@@ -783,8 +783,8 @@ _pier_work_init(u3_pier* pir_u)
       //  run the requested scry, jam to disk, then exit
       //
       u3l_log("pier: scry");
-      u3_pier_peek_last(pir_u, u3_nul, u3k(car), u3k(dek), u3k(pax),
-                        pir_u, _pier_on_scry_done);
+      u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), u3k(car), u3k(dek),
+                        u3k(pax), pir_u, _pier_on_scry_done);
     }
     u3z(pex);
   }
