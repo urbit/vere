@@ -14,7 +14,7 @@
       return u3m_bail(c3__fail);
     }
     else {
-      c3_w len_w = a;
+      c3_w_tmp len_w = a;
 
       while ( len_w ) {
         if ( c3n == u3du(b) ) {
@@ -34,7 +34,7 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
          (c3n == u3ud(a)) )
     {
       return u3m_bail(c3__exit);

@@ -465,11 +465,11 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   /* related to nock 6: unconditional skips */                                 \
   X(SBIP, "sbip", &&do_sbip),  /* 47: c3_b */                                  \
   X(SIPS, "sips", &&do_sips),  /* 48: c3_s */                                  \
-  X(SWIP, "swip", &&do_swip),  /* 49: c3_l */                                  \
+  X(SWIP, "swip", &&do_swip),  /* 49: c3_l_tmp */                                  \
   /* related to nock 6: conditional skips */                                   \
   X(SBIN, "sbin", &&do_sbin),  /* 50: c3_b */                                  \
   X(SINS, "sins", &&do_sins),  /* 51: c3_s */                                  \
-  X(SWIN, "swin", &&do_swin),  /* 52: c3_l */                                  \
+  X(SWIN, "swin", &&do_swin),  /* 52: c3_l_tmp */                                  \
   /* nock 9 */                                                                 \
   X(KICB, "kicb", &&do_kicb),  /* 53: c3_b */                                  \
   X(KICS, "kics", &&do_kics),  /* 54: c3_s */                                  \
@@ -554,7 +554,7 @@ _n_arg(c3_y cod_y)
       return sizeof(c3_s);
 
     case SWIP: case SWIN:
-      return sizeof(c3_l);
+      return sizeof(c3_l_tmp);
 
     default:
       u3_assert( cod_y < LAST );
@@ -565,10 +565,10 @@ _n_arg(c3_y cod_y)
 
 /* _n_melt(): measure space for list of ops (from _n_comp) */
 static u3_noun
-_n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
-        c3_w* reg_w, c3_w* lit_w, c3_w* mem_w)
+_n_melt(u3_noun ops, c3_n* byc_w, c3_n* cal_w,
+        c3_n* reg_w, c3_n* lit_w, c3_n* mem_w)
 {
-  c3_w len_w = u3qb_lent(ops),
+  c3_n len_w = u3qb_lent(ops),
        i_w = len_w - 1,
        a_w;
   c3_y cod_y;
@@ -607,9 +607,9 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           break;
 
         case SBIP: case SBIN: {
-          c3_l tot_l = 0,
+          c3_l_tmp tot_l = 0,
                sip_l = u3t(op);
-          c3_w j_w, k_w = i_w;
+          c3_n j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
             tot_l += siz_y[++k_w];
           }
@@ -619,9 +619,9 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         }
 
         case SKIB: case SLIB: {
-          c3_l tot_l = 0,
+          c3_l_tmp tot_l = 0,
                sip_l = u3h(u3t(u3t(op)));
-          c3_w j_w, k_w = i_w;
+          c3_n j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
             tot_l += siz_y[++k_w];
           }
@@ -700,10 +700,10 @@ _n_prog_dat(u3n_prog* pog_u)
 /* _n_prog_new(): allocate and set up pointers for u3n_prog
  */
 static u3n_prog*
-_n_prog_new(c3_w byc_w, c3_w cal_w,
-            c3_w reg_w, c3_w lit_w, c3_w mem_w)
+_n_prog_new(c3_n byc_w, c3_n cal_w,
+            c3_n reg_w, c3_n lit_w, c3_n mem_w)
 {
-  c3_w cab_w = (sizeof(u3j_site) * cal_w),
+  c3_n cab_w = (sizeof(u3j_site) * cal_w),
        reb_w = (sizeof(u3j_rite) * reg_w),
        lib_w = (sizeof(u3_noun) * lit_w),
        meb_w = (sizeof(u3n_memo) * mem_w),
@@ -739,7 +739,7 @@ _n_prog_new(c3_w byc_w, c3_w cal_w,
 static u3n_prog*
 _n_prog_old(u3n_prog* sep_u)
 {
-  c3_w cab_w = sizeof(u3j_site) * sep_u->cal_u.len_w,
+  c3_n cab_w = sizeof(u3j_site) * sep_u->cal_u.len_w,
        reb_w = sizeof(u3j_rite) * sep_u->reg_u.len_w,
        lib_w = sizeof(u3_noun) * sep_u->lit_u.len_w,
        meb_w = sizeof(u3n_memo) * sep_u->mem_u.len_w,
@@ -772,7 +772,7 @@ _n_prog_old(u3n_prog* sep_u)
 /* _n_prog_asm_inx(): write an index to the bytestream with overflow
  */
 static void
-_n_prog_asm_inx(c3_y* buf_y, c3_w* i_w, c3_s inx_s, c3_y cod)
+_n_prog_asm_inx(c3_y* buf_y, c3_n* i_w, c3_s inx_s, c3_y cod)
 {
   if ( inx_s <= 0xFF ) {
     buf_y[(*i_w)--] = (c3_y) (inx_s);
@@ -798,7 +798,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           cal_s  = 0,
           mem_s  = 0,
           reg_s  = 0;
-  c3_w    i_w    = pog_u->byc_u.len_w-1;
+  c3_n    i_w    = pog_u->byc_u.len_w-1;
 
   buf_y[i_w] = HALT;
 
@@ -831,7 +831,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* memo index args */
         case SKIB: case SLIB: {
           u3n_memo* mem_u;
-          c3_l sip_l  = u3h(sip);
+          c3_l_tmp sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -846,7 +846,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
 
         /* skips */
         case SBIP: case SBIN: {
-          c3_l sip_l  = u3h(sip);
+          c3_l_tmp sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -892,7 +892,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
 
         /* 31-bit direct args */
         case SWIP: case SWIN: {
-          c3_w off_l   = u3t(op);
+          c3_n off_l   = u3t(op);
           buf_y[i_w--] = (c3_y) (off_l >> 24);
           buf_y[i_w--] = (c3_y) (off_l >> 16);
           buf_y[i_w--] = (c3_y) (off_l >> 8);
@@ -933,7 +933,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
     ops = u3t(ops);
   }
   u3z(top);
-  // this assert will fail if we overflow a c3_w worth of instructions
+  // this assert will fail if we overflow a c3_n worth of instructions
   u3_assert(u3_nul == ops);
   // this is just a sanity check
   u3_assert(u3_nul == sip);
@@ -946,7 +946,7 @@ _n_prog_from_ops(u3_noun ops)
 {
   u3_noun sip;
   u3n_prog* pog_u;
-  c3_w byc_w = 1, // HALT
+  c3_n byc_w = 1, // HALT
        cal_w = 0,
        reg_w = 0,
        lit_w = 0,
@@ -963,7 +963,7 @@ _n_prog_from_ops(u3_noun ops)
  *                   used only for debugging
  */
 static void _n_print_stack(u3p(u3_noun) empty) {
-  c3_w cur_p = u3R->cap_p;
+  c3_n cur_p = u3R->cap_p;
   fprintf(stderr, "[");
   int first = 1;
   while ( cur_p != empty ) {
@@ -1007,16 +1007,16 @@ _n_emit(u3_noun *ops, u3_noun op)
   *ops = u3nc(op, *ops);
 }
 
-static c3_w _n_comp(u3_noun*, u3_noun, c3_o, c3_o);
+static c3_n _n_comp(u3_noun*, u3_noun, c3_o, c3_o);
 
 /* _n_bint(): hint-processing helper for _n_comp.
  *            hif: hint-formula (first part of 11). RETAIN.
  *            nef: next-formula (second part of 11). RETAIN.
  */
-static c3_w
+static c3_n
 _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
 {
-  c3_w tot_w = 0;
+  c3_n tot_w = 0;
 
   if ( c3n == u3du(hif) ) {
     //  compile whitelisted atomic hints to dispatch protocol;
@@ -1032,7 +1032,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__hela:
       case c3__bout: {
         u3_noun fen = u3_nul;
-        c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
+        c3_n  nef_w = _n_comp(&fen, nef, los_o, c3n);
         // add appropriate hind opcode
         ++nef_w; _n_emit(&fen, ( c3y == los_o ) ? HILL : HILK);
         // skip over the cleanup opcode
@@ -1071,7 +1071,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__spin:
           case c3__bout: {
             u3_noun fen = u3_nul;
-            c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
+            c3_n  nef_w = _n_comp(&fen, nef, los_o, c3n);
             // add appropriate hind opcode
             ++nef_w; _n_emit(&fen, ( c3y == los_o ) ? HINL : HINK);
             // skip over the cleanup opcode
@@ -1125,7 +1125,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
 
       case c3__memo: {
         u3_noun mem = u3_nul;
-        c3_w mem_w = 0;
+        c3_n mem_w = 0;
         c3_y op_y;
 
         tot_w += _n_comp(ops, hod, c3n, c3n);
@@ -1222,11 +1222,11 @@ _n_formulaic(u3_noun fol)
  *            tel_o is yes if this formula is in tail position
  *            return: number of instructions added to the opcode list
  */
-static c3_w
+static c3_n
 _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
 {
   c3_y op_y;
-  c3_w tot_w = 0;
+  c3_n tot_w = 0;
   u3_noun cod, arg, hed, tel;
   u3x_cell(fol, &cod, &arg);
   if ( c3y == u3du(cod) ) {
@@ -1359,7 +1359,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3_noun mid,
               yep = u3_nul,
               nop = u3_nul;
-      c3_w    yep_w, nop_w;
+      c3_n    yep_w, nop_w;
       c3_t    yep_t, nop_t;
       u3x_trel(arg, &hed, &mid, &tel);
 
@@ -1552,17 +1552,17 @@ _n_toss(c3_ys mov, c3_ys off)
 /* _n_resh(): read a c3_s from the bytecode stream
  */
 static inline c3_s
-_n_resh(c3_y* buf, c3_w* ip_w)
+_n_resh(c3_y* buf, c3_n* ip_w)
 {
   c3_y les = buf[(*ip_w)++];
   c3_y mos = buf[(*ip_w)++];
   return les | (mos << 8);
 }
 
-/* _n_rewo(): read a c3_w from the bytecode stream.
+/* _n_rewo(): read a c3_n from the bytecode stream.
  */
-static inline c3_w
-_n_rewo(c3_y* buf, c3_w* ip_w)
+static inline c3_n
+_n_rewo(c3_y* buf, c3_n* ip_w)
 {
   c3_y one = buf[(*ip_w)++],
        two = buf[(*ip_w)++],
@@ -1588,9 +1588,9 @@ _n_swap(c3_ys mov, c3_ys off)
 /* _n_print_byc(): print bytecode. used for debugging.
  */
 static void
-_n_print_byc(c3_y* pog, c3_w her_w)
+_n_print_byc(c3_y* pog, c3_n her_w)
 {
-  c3_w ip_w = 0;
+  c3_n ip_w = 0;
   if ( her_w == 0 ) {
     fprintf(stderr, "begin: {");
   }
@@ -1645,6 +1645,20 @@ _n_bite(u3_noun fol) {
   return _n_prog_from_ops(ops);
 }
 
+static inline c3_n
+_cn_of_prog(u3n_prog *pog_u)
+{
+  u3_post pog_p = u3of(u3n_prog, pog_u);
+  return pog_p >> u3a_vits;
+}
+
+static inline u3n_prog*
+_cn_to_prog(c3_n pog_w)
+{
+  u3_post pog_p = pog_w << u3a_vits;
+  return u3to(u3n_prog, pog_p);
+}
+
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
@@ -1655,7 +1669,7 @@ _n_find(u3_noun pre, u3_noun fol)
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
     u3z(key);
-    return u3to(u3n_prog, pog);
+    return _cn_to_prog(pog);
   }
   else if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
@@ -1663,8 +1677,8 @@ _n_find(u3_noun pre, u3_noun fol)
       rod_u = u3to(u3a_road, rod_u->par_p);
       pog   = u3h_git(rod_u->byc.har_p, key);
       if ( u3_none != pog ) {
-        c3_w i_w;
-        u3n_prog* old = _n_prog_old(u3to(u3n_prog, pog));
+        c3_n i_w;
+        u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
         for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
           u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
           rit_u->own_o = c3n;
@@ -1675,7 +1689,7 @@ _n_find(u3_noun pre, u3_noun fol)
           sit_u->pog_p = 0;
           sit_u->fon_o = c3n;
         }
-        u3h_put(u3R->byc.har_p, key, u3a_outa(old));
+        u3h_put(u3R->byc.har_p, key, _cn_of_prog(old));
         u3z(key);
         return old;
       }
@@ -1684,7 +1698,7 @@ _n_find(u3_noun pre, u3_noun fol)
 
   {
     u3n_prog* gop = _n_bite(fol);
-    u3h_put(u3R->byc.har_p, key, u3a_outa(gop));
+    u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
     return gop;
   }
@@ -1708,7 +1722,7 @@ u3n_find(u3_noun key, u3_noun fol)
 static void
 _cn_prog_free(u3n_prog* pog_u)
 {
-  c3_w dex_w;
+  c3_n dex_w;
   for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
     u3z(pog_u->lit_u.non[dex_w]);
   }
@@ -1727,10 +1741,10 @@ _cn_prog_free(u3n_prog* pog_u)
 /* _cn_intlen(): find the number of characters num_w would take to print.
 **        num_w: an int we want to later serialize to a string
 */
-c3_w
-_cn_intlen(c3_w num_w)
+c3_n
+_cn_intlen(c3_n num_w)
 {
-  c3_w len_w=0;
+  c3_n len_w=0;
   while(num_w){
     num_w/=10;
     len_w++;
@@ -1742,7 +1756,7 @@ _cn_intlen(c3_w num_w)
 **            bop_w: opcode (assumed 0-94)
 */
 c3_b
-_cn_is_indexed(c3_w bop_w)
+_cn_is_indexed(c3_n bop_w)
 {
   switch (bop_w) {
     case FIBK: case FISK:
@@ -1762,9 +1776,9 @@ _cn_is_indexed(c3_w bop_w)
 }
 
 /* _cn_pog_to_num(): read a bytecode from the steam and advance the index
-**     par_w:  c3_w: can be 0, 2, 4
+**     par_w:  c3_n: can be 0, 2, 4
 **     pog_y: c3_y*: a bytecode stream
-**      ip_w:  c3_w: an index into pog
+**      ip_w:  c3_n: an index into pog
 */
 #define _cn_pog_to_num(par_w, pog_y, ip_w) (\
   par_w == 4 ? _n_rewo(pog_y, &ip_w):       \
@@ -1779,12 +1793,12 @@ u3_noun
 _cn_etch_bytecode(u3_noun fol) {
   u3n_prog* pog_u = _n_bite(fol);
   c3_y* pog_y = pog_u->byc_u.ops_y;
-  c3_w len_w = pog_u->byc_u.len_w;
-  c3_w ip_w=0, num_w=0, bop_w=0, dex_w=0;
-  c3_w len_c = 1; // opening "{"
+  c3_n len_w = pog_u->byc_u.len_w;
+  c3_n ip_w=0, num_w=0, bop_w=0, dex_w=0;
+  c3_n len_c = 1; // opening "{"
   // set par_w (parameter flag) to an invalid value,
   // so we can break imeadately if needed
-  c3_w par_w = 5;
+  c3_n par_w = 5;
   // lets count the chars in this string
   while ( ip_w < len_w ) {
     par_w = _n_arg(pog_y[ip_w]);
@@ -1820,11 +1834,11 @@ _cn_etch_bytecode(u3_noun fol) {
         strcat(str_c, "0");                       // handle a literal zero
       }                                           //
       else {                                      //
-        c3_w x = 0;                               //
+        c3_n x = 0;                               //
         for (x = _cn_intlen(num_w); x > 0; x--) { //
           strcat(str_c, "_");                     // prefill the buffer
         }                                         //
-        c3_w f = strlen(str_c)-1;                 // get the index of the last prefill
+        c3_n f = strlen(str_c)-1;                 // get the index of the last prefill
         while (num_w > 0) {                       // stringify number in LSB order
           str_c[f--] = (num_w%10)+'0';            // .. stringify the tail of num into tail of buf
           num_w /= 10;                            // .. turncate num by one digit
@@ -1941,7 +1955,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__nara: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_l_tmp pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_nara(pri_l);
       }
@@ -1952,7 +1966,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__hela: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_l_tmp pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_hela(pri_l);
       }
@@ -1963,7 +1977,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__xray : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_l_tmp pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3k(tan), _cn_etch_bytecode(fol));
       }
       u3z(*clu);
@@ -1973,7 +1987,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__meme : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_l_tmp mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
         // replace with better str fmt
         u3t_slog_cap(1, u3k(tan), u3t_etch_meme(mod_l));
       }
@@ -2019,7 +2033,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // "q_q_tok: report"
     // prepend the priority to form a cell of the same shape q_tok
     // send this to ut3_slog so that it can be logged out
-    c3_l pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
+    c3_l_tmp pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
     u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
     u3z(delta);
   }
@@ -2055,7 +2069,7 @@ _n_kale(u3_noun a)
 
 typedef struct __attribute__((__packed__)) {
   u3n_prog* pog_u;
-  c3_w     ip_w;
+  c3_n     ip_w;
 } burnframe;
 
 /* _n_burn(): pog: program
@@ -2077,7 +2091,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
   u3j_rite* rit_u;
   u3n_memo* mem_u;
   c3_y *pog = pog_u->byc_u.ops_y;
-  c3_w sip_w, ip_w = 0;
+  c3_n sip_w, ip_w = 0;
   u3_noun* top;
   u3_noun x, o;
   u3p(void) empty;
@@ -2872,7 +2886,7 @@ u3n_nock_on(u3_noun bus, u3_noun fol)
 static void
 _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 {
-  c3_w i_w;
+  c3_n i_w;
 
   for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
     dst_u->lit_u.non[i_w] = u3a_take(src_u->lit_u.non[i_w]);
@@ -2900,13 +2914,13 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 /*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
 */
 static u3p(u3n_prog)
-_cn_take_prog_cb(u3p(u3n_prog) pog_p)
+_cn_take_prog_cb(c3_n pog_w)
 {
-  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
+  u3n_prog* pog_u = _cn_to_prog(pog_w);
   u3n_prog* gop_u;
 
   if ( c3y == pog_u->byc_u.own_o ) {
-    c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
+    c3_n pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
     gop_u = _n_prog_new(pog_u->byc_u.len_w,
                         pog_u->cal_u.len_w,
                         pog_u->reg_u.len_w,
@@ -2921,7 +2935,7 @@ _cn_take_prog_cb(u3p(u3n_prog) pog_p)
   _cn_take_prog_dat(gop_u, pog_u);
   // _n_prog_take_dat(gop_u, pog_u, c3n);
 
-  return u3of(u3n_prog, gop_u);
+  return _cn_of_prog(gop_u);
 }
 
 /* u3n_take(): copy junior bytecode state.
@@ -2937,7 +2951,7 @@ u3n_take(u3p(u3h_root) har_p)
 static void
 _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 {
-  c3_w i_w;
+  c3_n i_w;
 
   for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
     u3z(dst_u->lit_u.non[i_w]);
@@ -2973,20 +2987,20 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
   u3n_prog*     pog_u;
   u3_weak         got;
   u3_noun         key;
-  u3p(u3n_prog) pog_p;
-  u3x_cell(kev, &key, &pog_p);
+  c3_n          pog_w;
+  u3x_cell(kev, &key, &pog_w);
 
-  pog_u = u3to(u3n_prog, pog_p);
+  pog_u = _cn_to_prog(pog_w);
   got   = u3h_git(har_p, key);
 
   if ( u3_none != got ) {
-    u3n_prog* sep_u = u3to(u3n_prog, got);
+    u3n_prog* sep_u = _cn_to_prog(got);
     _cn_merge_prog_dat(sep_u, pog_u);
     u3a_free(pog_u);
     pog_u = sep_u;
   }
 
-  u3h_put(har_p, key, u3of(u3n_prog, pog_u));
+  u3h_put(har_p, key, _cn_of_prog(pog_u));
 }
 
 /* u3n_reap(): promote bytecode state.
@@ -3004,12 +3018,11 @@ u3n_reap(u3p(u3h_root) har_p)
 void
 _n_ream(u3_noun kev)
 {
-  c3_w i_w;
-  u3n_prog* pog_u = u3to(u3n_prog, u3t(kev));
+  u3n_prog* pog_u = _cn_to_prog(u3t(kev));
 
-  c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
-  c3_w pod_w = pog_u->lit_u.len_w % 2;
-  c3_w ped_w = pog_u->mem_u.len_w % 2;
+  c3_n pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
+  c3_n pod_w = pog_u->lit_u.len_w % 2;
+  c3_n ped_w = pog_u->mem_u.len_w % 2;
   // fix up pointers for loom portability
   pog_u->byc_u.ops_y = (c3_y*) _n_prog_dat(pog_u);
   pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
@@ -3017,7 +3030,7 @@ _n_ream(u3_noun kev)
   pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
   pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
-  for ( i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
+  for ( c3_n i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
     u3j_site_ream(&(pog_u->cal_u.sit_u[i_w]));
   }
 }
@@ -3033,10 +3046,10 @@ u3n_ream()
 
 /* _n_prog_mark(): mark program for gc.
 */
-static c3_w
+static c3_n
 _n_prog_mark(u3n_prog* pog_u)
 {
-  c3_w i_w, tot_w = u3a_mark_mptr(pog_u);
+  c3_n i_w, tot_w = u3a_mark_mptr(pog_u);
 
   for ( i_w = 0; i_w < pog_u->lit_u.len_w; ++i_w ) {
     tot_w += u3a_mark_noun(pog_u->lit_u.non[i_w]);
@@ -3062,8 +3075,8 @@ _n_prog_mark(u3n_prog* pog_u)
 static void
 _n_bam(u3_noun kev, void* dat)
 {
-  c3_w* bam_w  = dat;
-  u3n_prog* pog = u3to(u3n_prog, u3t(kev));
+  u3n_prog* pog = _cn_to_prog(u3t(kev));
+  c3_n*   bam_w = dat;
   *bam_w += _n_prog_mark(pog);
 }
 
@@ -3125,8 +3138,7 @@ u3n_reclaim(void)
 void
 u3n_rewrite_compact()
 {
-  u3h_rewrite(u3R->byc.har_p);
-  u3R->byc.har_p = u3a_rewritten(u3R->byc.har_p);
+  u3h_relocate(&(u3R->byc.har_p));
 }
 
 
@@ -3135,7 +3147,7 @@ u3n_rewrite_compact()
 static void
 _n_feb(u3_noun kev)
 {
-  _cn_prog_free(u3to(u3n_prog, u3t(kev)));
+  _cn_prog_free(_cn_to_prog(u3t(kev)));
 }
 
 /* u3n_free(): free bytecode cache
@@ -3156,7 +3168,7 @@ u3n_kick_on(u3_noun gat)
   return u3j_kink(gat, 2);
 }
 
-c3_w exc_w;
+c3_n exc_w;
 
 /* u3n_slam_on(): produce (gat sam).
 */

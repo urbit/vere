@@ -19,14 +19,14 @@ u3qa_lte(u3_atom a, u3_atom b)
   u3a_atom* a_u = u3a_to_ptr(a);
   u3a_atom* b_u = u3a_to_ptr(b);
 
-  if (a_u->len_w != b_u->len_w)
+  if (a_u->len_n != b_u->len_n)
   {
-    return __( a_u->len_w < b_u->len_w );
+    return __( a_u->len_n < b_u->len_n );
   }
 
-  c3_w* a_w = a_u->buf_w;
-  c3_w* b_w = b_u->buf_w;
-  for (c3_w i_w = a_u->len_w; i_w--;)
+  c3_w_tmp* a_w = a_u->buf_w;
+  c3_w_tmp* b_w = b_u->buf_w;
+  for (c3_w_tmp i_w = a_u->len_n; i_w--;)
   {
     if (a_w[i_w] < b_w[i_w]) return c3y;
     if (a_w[i_w] > b_w[i_w]) return c3n;

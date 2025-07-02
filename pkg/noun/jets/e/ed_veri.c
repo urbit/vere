@@ -13,10 +13,10 @@
              u3_noun pub)
   {
     c3_y sig_y[64], pub_y[32];
-    c3_w len_w;
+    c3_n len_w;
     if ( (0 != u3r_bytes_fit(64, sig_y, sig)) ||
          (0 != u3r_bytes_fit(32, pub_y, pub)) ||
-         !u3r_word_fit(&len_w, len) ) {
+         !u3r_note_fit(&len_w, len) ) {
       return c3n;
     }
     else {
@@ -35,7 +35,7 @@
     u3_noun len, dat;
     if ( c3n == u3r_mean(cor,
                          u3x_sam_2, &sig, u3x_sam_6, &msg,
-                         u3x_sam_7, &pub, 0) ||
+                         u3x_sam_7, &pub, u3_nul) ||
          c3n == u3r_cell(msg, &len, &dat) ||
          (c3n == u3ud(sig)) ||
          (c3n == u3ud(pub)) ||
@@ -59,9 +59,9 @@
       return c3n;
     }
     else {
-      c3_w  met_w;
-      c3_y* mes_y = u3r_bytes_all(&met_w, m);
-      c3_t  val_t = urcrypt_ed_veri(mes_y, met_w, pub_y, sig_y);
+      c3_n  met_n;
+      c3_y* mes_y = u3r_bytes_all(&met_n, m);
+      c3_t  val_t = urcrypt_ed_veri(mes_y, met_n, pub_y, sig_y);
       u3a_free(mes_y);
 
       return val_t ? c3y : c3n;
@@ -74,7 +74,7 @@
     u3_noun a, b, c;
     if ( (c3n == u3r_mean(cor,
                          u3x_sam_2, &a, u3x_sam_6, &b,
-                         u3x_sam_7, &c, 0)) ||
+                         u3x_sam_7, &c, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ) {

@@ -38,7 +38,7 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-  static const c3_w now_w[8] = {
+  static const c3_w_tmp now_w[8] = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
@@ -51,7 +51,7 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w len_w = a_u->len_w;
+    c3_w_tmp len_w = a_u->len_n * 2;
 
     if ( len_w < 8 ) {
       return 1;
@@ -61,10 +61,11 @@ _cqes_in_order(u3_atom a)
     }
     else {
       c3_y i_y;
-      c3_w *buf_w = a_u->buf_w;
+      // assumes little endian in 64 bit
+      c3_w_tmp *buf_w = a_u->buf_w;
       // loop from most to least significant words
       for ( i_y = 8; i_y > 0; ) {
-        c3_w b_w = buf_w[i_y],
+        c3_w_tmp b_w = buf_w[i_y],
              o_w = now_w[--i_y];
         if ( b_w < o_w ) {
           return 1;
@@ -119,7 +120,7 @@ u3we_sign(u3_noun cor)
   if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &has,
                         u3x_sam_3,  &prv,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv))) {
     return u3m_bail(c3__exit);
@@ -163,7 +164,7 @@ u3we_reco(u3_noun cor)
                         u3x_sam_6,   &siv,
                         u3x_sam_14,  &sir,
                         u3x_sam_15,  &sis,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(siv)) ||
        (c3n == u3ud(sir)) ||
@@ -200,7 +201,7 @@ u3we_make(u3_noun cor)
   if ( (c3n == u3r_mean(cor,
                         u3x_sam_2,  &has,
                         u3x_sam_3,  &prv,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv)) ) {
     return u3m_bail(c3__exit);
@@ -244,7 +245,7 @@ u3we_sosi(u3_noun cor)
                         u3x_sam_2,  &key,
                         u3x_sam_6,  &mes,
                         u3x_sam_7,  &aux,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(key)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(aux)) )
@@ -285,7 +286,7 @@ u3we_sove(u3_noun cor)
                         u3x_sam_2,  &pub,
                         u3x_sam_6,  &mes,
                         u3x_sam_7,  &sig,
-                        0)) ||
+                        u3_nul)) ||
        (c3n == u3ud(pub)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(sig)) )

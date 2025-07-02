@@ -19,7 +19,7 @@ u3qb_scag(u3_atom a, u3_noun b)
     u3_noun* lit = &pro;
 
     {
-      c3_w   len_w = (c3_w)a;
+      c3_w_tmp   len_w = (c3_w_tmp)a;
       u3_noun* hed;
       u3_noun* tel;
       u3_noun i, t = b;
@@ -43,7 +43,7 @@ u3_noun
 u3wb_scag(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
 
   if ( (c3n == u3ud(a)) && (u3_nul != b) ) {
     return u3m_bail(c3__exit);

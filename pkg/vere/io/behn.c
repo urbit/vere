@@ -10,7 +10,7 @@
     u3_auto    car_u;                   //  driver
     uv_timer_t tim_u;                   //  behn timer
     c3_o       alm_o;                   //  alarm
-    c3_l       sev_l;                   //  instance numbers
+    c3_l_tmp       sev_l;                   //  instance numbers
   } u3_behn;
 
 //  XX review, move

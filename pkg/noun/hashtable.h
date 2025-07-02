@@ -30,33 +30,33 @@
       **     02 - entry, stale
       **     03 - entry, fresh
       */
-        typedef c3_w u3h_slot;
+        typedef c3_n u3h_slot;
 
       /* u3h_node: map node.
       */
         typedef struct {
-          c3_w     map_w;     // bitmap for [sot_w]
-          u3h_slot sot_w[];   // filled slots
+          c3_w_new     map_w;     // bitmap for [sot_n]
+          u3h_slot sot_n[];   // filled slots
         } u3h_node;
 
       /* u3h_root: hash root table
       */
         typedef struct {
-          c3_w     max_w;     // number of cache lines (0 for no trimming)
-          c3_w     use_w;     // number of lines currently filled
+          c3_n     max_w;     // number of cache lines (0 for no trimming)
+          c3_n     use_w;     // number of lines currently filled
           struct {
-            c3_w  mug_w;      // current hash
-            c3_w  inx_w;      // index into current hash bucket
+            c3_w_new  mug_w;      // current hash
+            c3_w_new  inx_w;      // index into current hash bucket
             c3_o  buc_o;      // XX remove
           } arm_u;            // clock arm
-          u3h_slot sot_w[64]; // slots
+          u3h_slot sot_n[64]; // slots
         } u3h_root;
 
       /* u3h_buck: bottom bucket.
       */
         typedef struct {
-          c3_w     len_w;     // length of [sot_w]
-          u3h_slot sot_w[];   // filled slots
+          c3_w_new     len_w;     // length of [sot_n]
+          u3h_slot sot_n[];   // filled slots
         } u3h_buck;
 
     /**  HAMT macros.
@@ -74,6 +74,7 @@
       ** u3h_noun_be_warm(): warm mutant
       ** u3h_noun_be_cold(): cold mutant
       */
+#ifndef VERE64
 #     define  u3h_slot_is_null(sot)  ((0 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
 #     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
@@ -84,7 +85,18 @@
 #     define  u3h_noun_be_cold(sot)  ((sot) & ~0x40000000)
 #     define  u3h_slot_to_noun(sot)  (0x40000000 | (sot))
 #     define  u3h_noun_to_slot(som)  (u3h_noun_be_warm(som))
-
+#else
+#     define  u3h_slot_is_null(sot)  ((0 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_node(sot)  ((1 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_noun(sot)  ((1 == ((sot) >> 63)) ? c3y : c3n)
+#     define  u3h_slot_is_warm(sot)  (((sot) & 0x4000000000000000ULL) ? c3y : c3n)
+#     define  u3h_slot_to_node(sot)  (u3a_into(((sot) & 0x3fffffffffffffff) << u3a_vits))
+#     define  u3h_node_to_slot(ptr)  ((u3a_outa((ptr)) >> u3a_vits) | 0x4000000000000000ULL)
+#     define  u3h_noun_be_warm(sot)  ((sot) | 0x4000000000000000ULL)
+#     define  u3h_noun_be_cold(sot)  ((sot) & ~0x4000000000000000ULL)
+#     define  u3h_slot_to_noun(sot)  (0x4000000000000000ULL | (sot))
+#     define  u3h_noun_to_slot(som)  (u3h_noun_be_warm(som))
+#endif
     /**  Functions.
     ***
     ***  Needs: delete and merge functions; clock reclamation function.
@@ -92,7 +104,7 @@
       /* u3h_new_cache(): create hashtable with bounded size.
       */
         u3p(u3h_root)
-        u3h_new_cache(c3_w clk_w);
+        u3h_new_cache(c3_n clk_w);
 
       /* u3h_new(): create hashtable.
       */
@@ -136,18 +148,18 @@
       **
       ** `key` is RETAINED
       */
-       void
-       u3h_del(u3p(u3h_root) har_p, u3_noun key);
+        void
+        u3h_del(u3p(u3h_root) har_p, u3_noun key);
 
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
-        u3h_trim_to(u3p(u3h_root) har_p, c3_w n_w);
+        u3h_trim_to(u3p(u3h_root) har_p, c3_w_new n_w);
 
       /* u3h_trim_with(): trim to n key-value pairs, with deletion callback
       */
         void
-        u3h_trim_with(u3p(u3h_root) har_p, c3_w n_w, void (*del_cb)(u3_noun));
+        u3h_trim_with(u3p(u3h_root) har_p, c3_w_new n_w, void (*del_cb)(u3_noun));
 
       /* u3h_free(): free hashtable.
       */
@@ -156,22 +168,22 @@
 
       /* u3h_mark(): mark hashtable for gc.
       */
-        c3_w
+        c3_n
         u3h_mark(u3p(u3h_root) har_p);
 
-      /* u3h_rewrite(): rewrite hashtable for compaction.
+      /* u3h_relocate(): relocate hashtable for compaction.
       */
         void
-        u3h_rewrite(u3p(u3h_root) har_p);
+        u3h_relocate(u3p(u3h_root) *har_p);
 
       /* u3h_count(): count hashtable for gc.
       */
-        c3_w
+        c3_n
         u3h_count(u3p(u3h_root) har_p);
 
       /* u3h_discount(): discount hashtable for gc.
       */
-        c3_w
+        c3_n
         u3h_discount(u3p(u3h_root) har_p);
 
       /* u3h_walk_with(): traverse hashtable with key, value fn and data
@@ -200,7 +212,7 @@
 
       /* u3h_wyt(): number of entries
       */
-        c3_w
+        c3_n
         u3h_wyt(u3p(u3h_root) har_p);
 
 #endif /* ifndef U3_HASHTABLE_H */

@@ -11,8 +11,8 @@
              u3_atom wik, u3_atom dak,
              u3_atom out)
   {
-    c3_w wid_w;
-    if ( !u3r_word_fit(&wid_w, wid) ) {
+    c3_w_tmp wid_w;
+    if ( !u3r_word_tmp_fit(&wid_w, wid) ) {
       // impossible to represent an atom this large
       return u3m_bail(c3__fail);
     }
@@ -20,7 +20,7 @@
       // the hoon adjusts these widths to its liking
       int err;
       c3_y  out_y[64], dak_y[64];
-      c3_w  wik_w = c3_min(wik, 64),
+      c3_w_tmp  wik_w = c3_min(wik, 64),
             out_w = c3_max(1, c3_min(out, 64));
       c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
 
@@ -46,7 +46,7 @@
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &msg,
                               u3x_sam_6, &key,
-                              u3x_sam_7, &out, 0) ||
+                              u3x_sam_7, &out, u3_nul) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(key, &wik, &dak) || u3ud(wik) || u3ud(dak) ||
                 u3ud(out) )
@@ -61,8 +61,8 @@
   _cqe_blake3_hash(u3_atom wid, u3_atom dat,
              u3_atom key, u3_atom flags, u3_atom out)
   {
-    c3_w wid_w, out_w;
-    if ( !u3r_word_fit(&wid_w, wid) || !u3r_word_fit(&out_w, out) ) {
+    c3_w_tmp wid_w, out_w;
+    if ( !u3r_word_tmp_fit(&wid_w, wid) || !u3r_word_tmp_fit(&out_w, out) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -88,7 +88,7 @@
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &out,
                               u3x_sam_3, &msg,
-                              u3x_con_sam, &sam, 0) ||
+                              u3x_con_sam, &sam, u3_nul) ||
                 u3ud(out) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(sam, &key, &flags) || u3ud(key) || u3ud(flags) )
@@ -102,8 +102,8 @@
   static u3_noun
   _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
   {
-    c3_w wid_w;
-    if ( !u3r_word_fit(&wid_w, wid) ) {
+    c3_w_tmp wid_w;
+    if ( !u3r_word_tmp_fit(&wid_w, wid) ) {
       return u3m_bail(c3__fail);
     } else {
       c3_y  cv_y[32], block_y[64], block_len;
@@ -126,7 +126,7 @@
     if ( c3n == u3r_mean(cor, u3x_sam_2, &counter,
                               u3x_sam_3, &msg,
                               u3x_con_sam_2, &key,
-                              u3x_con_sam_3, &flags, 0) ||
+                              u3x_con_sam_3, &flags, u3_nul) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3ud(key) || u3ud(flags))
     {

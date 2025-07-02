@@ -18,7 +18,7 @@
     }
 
     dat = u3qc_end(boz, len, dat);
-    c3_w met = u3r_met(boz, dat);
+    c3_w_tmp met = u3r_met(boz, dat);
     return u3kc_lsh(boz, (len - met), u3kc_swp(boz, dat));
   }
 
@@ -29,7 +29,7 @@
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &boz,
                                u3x_sam_6, &len,
-                               u3x_sam_7, &dat, 0)) ||
+                               u3x_sam_7, &dat, u3_nul)) ||
          (c3n == u3ud(boz)) ||
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) )

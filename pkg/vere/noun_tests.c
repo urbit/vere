@@ -23,7 +23,7 @@ static c3_i
 _test_u3r_chop()
 {
   c3_i  ret_i = 1;
-  c3_w  dst_w = 0;
+  c3_w_tmp  dst_w = 0;
   u3_atom src = 0b11011;
 
   //  bloq 0
@@ -165,7 +165,7 @@ _test_u3r_chop()
     c3_y inp_y[8] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7 };
     src = u3i_bytes(8, inp_y);
 
-    c3_w dst_w[2] = {0};
+    c3_w_tmp dst_w[2] = {0};
     u3r_chop(0, 0, 63, 0, dst_w, src);
     if ( (0x3020100 != dst_w[0]) || (0x7060504 != dst_w[1]) ) {
       fprintf(stderr, "test: u3r_chop: indirect 4\r\n");
@@ -199,29 +199,29 @@ _test_u3r_chop()
 */
 void
 _test_chop_slow(c3_g    met_g,
-                c3_w    fum_w,
-                c3_w    wid_w,
-                c3_w    tou_w,
-                c3_w*   dst_w,
-                c3_w    len_w,
-                c3_w*   buf_w)
+                c3_w_tmp    fum_w,
+                c3_w_tmp    wid_w,
+                c3_w_tmp    tou_w,
+                c3_w_tmp*   dst_w,
+                c3_w_tmp    len_w,
+                c3_w_tmp*   buf_w)
 {
-  c3_w  i_w;
+  c3_w_tmp  i_w;
 
   if ( met_g < 5 ) {
-    c3_w san_w = (1 << met_g);
-    c3_w mek_w = ((1 << san_w) - 1);
-    c3_w baf_w = (fum_w << met_g);
-    c3_w bat_w = (tou_w << met_g);
+    c3_w_tmp san_w = (1 << met_g);
+    c3_w_tmp mek_w = ((1 << san_w) - 1);
+    c3_w_tmp baf_w = (fum_w << met_g);
+    c3_w_tmp bat_w = (tou_w << met_g);
 
-    // XX: efficiency: poor.  Iterate by words.
+    // XX: efficiency: poor.  Iterate by words_new.
     //
     for ( i_w = 0; i_w < wid_w; i_w++ ) {
-      c3_w waf_w = (baf_w >> 5);
+      c3_w_tmp waf_w = (baf_w >> 5);
       c3_g raf_g = (baf_w & 31);
-      c3_w wat_w = (bat_w >> 5);
+      c3_w_tmp wat_w = (bat_w >> 5);
       c3_g rat_g = (bat_w & 31);
-      c3_w hop_w;
+      c3_w_tmp hop_w;
 
       hop_w = (waf_w >= len_w) ? 0 : buf_w[waf_w];
       hop_w = (hop_w >> raf_g) & mek_w;
@@ -234,12 +234,12 @@ _test_chop_slow(c3_g    met_g,
   }
   else {
     c3_g hut_g = (met_g - 5);
-    c3_w san_w = (1 << hut_g);
-    c3_w j_w;
+    c3_w_tmp san_w = (1 << hut_g);
+    c3_w_tmp j_w;
 
     for ( i_w = 0; i_w < wid_w; i_w++ ) {
-      c3_w wuf_w = (fum_w + i_w) << hut_g;
-      c3_w wut_w = (tou_w + i_w) << hut_g;
+      c3_w_tmp wuf_w = (fum_w + i_w) << hut_g;
+      c3_w_tmp wut_w = (tou_w + i_w) << hut_g;
 
       for ( j_w = 0; j_w < san_w; j_w++ ) {
         dst_w[wut_w + j_w] ^=
@@ -258,11 +258,11 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
 {
   c3_i ret_i = 1;
   c3_g met_g;
-  c3_w fum_w, wid_w, tou_w;
-  c3_w len_w = 34;  //  (rsh [0 5] (mul 2 (mul 34 (bex 4))))
-  c3_w src_w[len_w];
-  c3_w   a_w[len_w];
-  c3_w   b_w[len_w];
+  c3_w_tmp fum_w, wid_w, tou_w;
+  c3_w_tmp len_w = 34;  //  (rsh [0 5] (mul 2 (mul 34 (bex 4))))
+  c3_w_tmp src_w[len_w];
+  c3_w_tmp   a_w[len_w];
+  c3_w_tmp   b_w[len_w];
 
   memset(src_w, val_y, len_w << 2);
 
@@ -272,14 +272,14 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
         for ( tou_w = 0; tou_w <= len_w; tou_w++ ) {
           memset(a_w, 0, len_w << 2);
           memset(b_w, 0, len_w << 2);
-          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          u3r_chop_words_new(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
           if ( 0 != memcmp(a_w, b_w, len_w << 2) ) {
             c3_g sif_g = 5 - met_g;
-            c3_w mas_w = (1 << met_g) - 1;
-            c3_w out_w = tou_w >> sif_g;
-            c3_w max_w = out_w + !!(fum_w & mas_w)
+            c3_w_tmp mas_w = (1 << met_g) - 1;
+            c3_w_tmp out_w = tou_w >> sif_g;
+            c3_w_tmp max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w >> sif_g) + !!(wid_w & mas_w);
 
             fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
@@ -308,11 +308,11 @@ _test_chop_huge(c3_c* cap_c, c3_y val_y)
 {
   c3_i ret_i = 1;
   c3_g met_g;
-  c3_w fum_w, wid_w, tou_w;
-  c3_w len_w = 192;  //   (rsh [0 5] (mul 2 (mul 3 (bex 10))))
-  c3_w src_w[len_w];
-  c3_w   a_w[len_w];
-  c3_w   b_w[len_w];
+  c3_w_tmp fum_w, wid_w, tou_w;
+  c3_w_tmp len_w = 192;  //   (rsh [0 5] (mul 2 (mul 3 (bex 10))))
+  c3_w_tmp src_w[len_w];
+  c3_w_tmp   a_w[len_w];
+  c3_w_tmp   b_w[len_w];
 
   memset(src_w, val_y, len_w << 2);
 
@@ -322,14 +322,14 @@ _test_chop_huge(c3_c* cap_c, c3_y val_y)
         for ( tou_w = 0; tou_w <= 1; tou_w++ ) {
           memset(a_w, 0, len_w << 2);
           memset(b_w, 0, len_w << 2);
-          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          u3r_chop_words_new(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
           if ( 0 != memcmp(a_w, b_w, len_w << 2) ) {
             c3_g sif_g = met_g - 5;
-            c3_w mas_w = (1 << met_g) - 1;
-            c3_w out_w = tou_w << sif_g;
-            c3_w max_w = out_w + !!(fum_w & mas_w)
+            c3_w_tmp mas_w = (1 << met_g) - 1;
+            c3_w_tmp out_w = tou_w << sif_g;
+            c3_w_tmp max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w << sif_g) + !!(wid_w & mas_w);
 
             fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%u wid_w=%u tou_w=%u\r\n",
@@ -370,17 +370,17 @@ _test_chop()
 /* _util_rand_string(): dynamically allocated len_w random string
 */
 static c3_y*
-_util_rand_string(c3_w len_w)
+_util_rand_string(c3_w_tmp len_w)
 {
   c3_c* choice_c =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  c3_w choice_len_w = strlen(choice_c);
+  c3_w_tmp choice_len_w = strlen(choice_c);
 
   c3_y* out_y = c3_malloc(len_w + 1);
 
-  c3_w i_w;
+  c3_w_tmp i_w;
   for (i_w = 0; i_w < len_w; i_w ++){
-    out_y[i_w] = choice_c[ (c3_w) rand() % choice_len_w ];
+    out_y[i_w] = choice_c[ (c3_w_tmp) rand() % choice_len_w ];
   }
   out_y[i_w] = 0;
 
@@ -397,8 +397,8 @@ _test_noun_bits_helper(u3_noun a, int direct_o,
 {
 #if 0
   printf("=========== %u\n", a);
-  printf("    31 bit  %u\n", a & ( ((c3_w)1) << 31));
-  printf("    30 bit  %u\n", a & ( ((c3_w)1) << 30));
+  printf("    31 bit  %u\n", a & ( ((c3_w_tmp)1) << 31));
+  printf("    30 bit  %u\n", a & ( ((c3_w_tmp)1) << 30));
   printf("    dir     %x\n", c3y == u3a_is_cat(a));
   printf("    ind     %x\n", c3y == u3a_is_dog(a));
   printf("  i cell    %x\n", c3y == u3a_is_cell(a));
@@ -430,7 +430,7 @@ _test_noun_bits_set()
   u3_noun a = 1;
 
   // flip indirect bit on
-  a |= (1 << 31);
+  a |= (1U << 31);
   if ( c3n == u3a_is_dog(a) ) {
     printf("*** fail-5a turn indirect bit on\r\n");
   }
@@ -481,8 +481,8 @@ _test_noun_bits_read()
 {
 
   u3_noun a = (u3_noun)0x1;     // direct atom
-  u3_noun b = u3a_to_pug(0x2);  // indirect atom
-  u3_noun c = u3a_to_pom(0x3);  // indirect cell
+  u3_noun b = u3a_to_pug(0x4);  // indirect atom
+  u3_noun c = u3a_to_pom(0x8);  // indirect cell
 
                          // direct  indirect  indirect-atom  indirect-cell
                          //----------------------------------------
@@ -498,7 +498,7 @@ static void
 _test_imprison()
 {
   c3_c* input_c =  "abcdefghij";
-  c3_w out_len_w = 300;
+  c3_w_tmp out_len_w = 300;
   c3_y * output_y = c3_malloc(out_len_w);
   u3_noun a;
 
@@ -590,7 +590,7 @@ _test_cells()
 
   // very simple cell with indirect atoms
   {
-    c3_w out_len_w = 200;
+    c3_w_tmp out_len_w = 200;
     c3_y * rand_a = _util_rand_string(out_len_w);
     c3_y * rand_b = _util_rand_string(out_len_w);
 
@@ -670,9 +670,9 @@ _test_cells()
     }
 
     a2 = 0;
-    u3r_mean(q, 2, &a2, 0);
+    u3r_mean(q, 2, &a2, u3_nul);
     if (a2 != a){
-      printf("*** _test_cells: complicated (via u3r_mean) a\n");
+      printf("*** _test_cells: complicated (via u3r_list) a\n");
     }
   }
 
@@ -963,17 +963,17 @@ _test_imprison_complex()
     c3_y in_y[10] = { 10, 20, 0xff};
     u3_noun a = u3i_bytes(3, in_y);
 
-    c3_w out_a = u3r_byte(0, a);
+    c3_w_tmp out_a = u3r_byte(0, a);
     if (10 != out_a ){
       printf("*** u3r_byte 1\n");
     }
 
-    c3_w out_b = u3r_byte(1, a);
+    c3_w_tmp out_b = u3r_byte(1, a);
     if (20 != out_b ){
       printf("*** u3r_byte 2\n");
     }
 
-    c3_w out_c = u3r_byte(2, a);
+    c3_w_tmp out_c = u3r_byte(2, a);
     if (0xff != out_c ){
       printf("*** u3r_byte 3\n");
     }
@@ -991,30 +991,30 @@ _test_imprison_complex()
     }
   }
 
-  // words
+  // words_new
   {
-    c3_w in_w[10] = {10, 20, 0xffffffff};
-    u3_noun noun = u3i_words(3, in_w);
+    c3_w_tmp in_w[10] = {10, 20, 0xffffffff};
+    u3_noun noun = u3i_words_tmp(3, in_w);
 
 
-    c3_w out_a = u3r_word(0, noun);
+    c3_w_tmp out_a = u3r_word_tmp(0, noun);
     if (10 != out_a ){
       printf("*** u3r_word 1\n");
     }
 
-    c3_w out_b = u3r_word(1, noun);
+    c3_w_tmp out_b = u3r_word_tmp(1, noun);
     if (20 != out_b ){
       printf("*** u3r_word 2\n");
     }
 
-    c3_w out_c = u3r_word(2, noun);
+    c3_w_tmp out_c = u3r_word_tmp(2, noun);
     if (0xffffffff != out_c ){
       printf("*** u3r_word 3\n");
     }
 
-    c3_w out_w[10];
-    memset(out_w, 0, 10 * sizeof(c3_w));
-    u3r_words(0, 3, out_w, noun);
+    c3_w_tmp out_w[10];
+    memset(out_w, 0, 10 * sizeof(c3_w_tmp));
+    u3r_words_new(0, 3, out_w, noun);
 
     if (10 != out_w[0] ||
         20 != out_w[1] ||
@@ -1122,7 +1122,7 @@ _test_imprison_complex()
 
     // tape stores each byte in the string as one atom in the tree
     u3_noun lent = u3qb_lent(noun);
-    if ( (c3_w)lent != strlen(in_c) ){
+    if ( (c3_w_tmp)lent != strlen(in_c) ){
       printf("*** u3r_tape 2\n");
     }
   }
@@ -1152,7 +1152,7 @@ _test_imprison_complex()
     u3_noun hacked = u3i_edit(q, axis, newval);
 
     u3_noun read_1;
-    u3r_mean(hacked, axis, &read_1, 0);
+    u3r_mean(hacked, axis, &read_1, u3_nul);
 
     if (newval != read_1){
       printf("*** u3i_edit 1\n");
@@ -1185,11 +1185,11 @@ _test_imprison_complex()
     u3_noun axis_2 = 6;
     u3_noun newval_2 = 777;
 
-    u3_noun hacked = u3i_molt(q, axis_1, newval_1, axis_2, newval_2, 0);
+    u3_noun hacked = u3i_molt(q, axis_1, newval_1, axis_2, newval_2, u3_nul);
 
     u3_noun read_1;
     u3_noun read_2;
-    u3r_mean(hacked, axis_1, &read_1, axis_2, &read_2, 0);
+    u3r_mean(hacked, axis_1, &read_1, axis_2, &read_2, u3_nul);
 
     if (newval_1 != read_1){
       printf("*** u3i_molt 1\n");
@@ -1306,7 +1306,7 @@ _test_fing()
 static void
 _test_met()
 {
-  c3_w ret_w;
+  c3_w_tmp ret_w;
   u3_atom atom;
 
   // 1
@@ -1464,11 +1464,11 @@ _test_met()
   }
 #endif
 
-  // 4 words x 32 bits each = 128 bits = 16 bytes = 4 words = 2 doubles
+  // 4 words_new x 32 bits each = 128 bits = 16 bytes = 4 words_new = 2 doubles
   //
   {
-    c3_w data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
-    atom = u3i_words(4, data_w);
+    c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+    atom = u3i_words_tmp(4, data_w);
 
     ret_w = u3r_met(0, atom);
     if (128 != ret_w){
@@ -1491,11 +1491,11 @@ _test_met()
     }
   }
 
-  // 4 words (top word is '1' )
+  // 4 words_new (top word is '1' )
   //
   {
-    c3_w data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
-    atom = u3i_words(4, data_w);
+    c3_w_tmp data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
+    atom = u3i_words_tmp(4, data_w);
 
     ret_w = u3r_met(0, atom);
     if (97 != ret_w){
@@ -1525,7 +1525,7 @@ _test_met()
 static void
 _test_u3r_at()
 {
-  c3_w a_w = u3x_dep(0);
+  c3_w_tmp a_w = u3x_dep(0);
 
   if (0xffffffff != a_w) {  printf("*** u3x_dep() \n"); }
 
@@ -1547,7 +1547,7 @@ _test_u3r_at()
   a_w = u3x_dep(0b111);
   if (2 != a_w) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep( ((c3_w) (((c3_d) 1  << 32) - 1)) );
+  a_w = u3x_dep( ((c3_w_tmp) (((c3_d) 1  << 32) - 1)) );
   if (31 != a_w) {  printf("*** u3x_dep() \n"); }
 
 
@@ -1559,8 +1559,8 @@ _test_u3r_at()
   a_w = u3x_dep_d(0b10);
   a_w = u3x_dep_d(0b11);
   a_w = u3x_dep_d(0b100);
-  a_w = u3x_dep_d( ((c3_w) (((c3_d) 1  << 32) - 1)) );
-  a_w = u3x_dep_d( ((c3_w) (((c3_d) 1  << 33) - 1)) );
+  a_w = u3x_dep_d( ((c3_w_tmp) (((c3_d) 1  << 32) - 1)) );
+  a_w = u3x_dep_d( ((c3_w_tmp) (((c3_d) 1  << 33) - 1)) );
   a_w = u3x_dep_d( ((c3_d) (((c3_d) 1  << 64) - 1)) );
 #endif
 
@@ -1592,8 +1592,8 @@ _test_u3r_at()
   if (20 != ret) {  printf("*** u3r_at \n"); }
 
   // simple tree [ 1 <BIGNUM>]
-  c3_w in_w[10] = {10, 20, 0xffffffff};
-  u3_noun bignum = u3i_words(3, in_w);
+  c3_w_tmp in_w[10] = {10, 20, 0xffffffff};
+  u3_noun bignum = u3i_words_tmp(3, in_w);
 
   tree = u3i_cell(99, bignum);
   ret = u3r_at( 2, tree);

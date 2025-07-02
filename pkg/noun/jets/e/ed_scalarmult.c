@@ -15,7 +15,7 @@
       return u3m_bail(c3__exit);
     }
 
-    c3_w met_w = u3r_met(3, a);
+    c3_w_tmp met_w = u3r_met(3, a);
     // scalarmult expects a_y[31] <= 127
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
@@ -43,7 +43,7 @@
     u3_noun a, b;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a,
-                               u3x_sam_3, &b, 0)) ||
+                               u3x_sam_3, &b, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) )
     {

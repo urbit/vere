@@ -198,47 +198,30 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
   return pro;
 }
 
-/* u3v_time(): set the reck time.
-*/
-void
-u3v_time(u3_noun now)
-{
-  u3z(u3A->now);
-  u3A->now = now;
-}
-
-#if 0
-/* _cv_time_bump(): advance the reck time by a small increment.
-*/
-static void
-_cv_time_bump(u3_reck* rec_u)
-{
-  c3_d bum_d = (1ULL << 48ULL);
-
-  u3A->now = u3ka_add(u3A->now, u3i_chubs(1, &bum_d));
-}
-#endif
-
 /* u3v_lily(): parse little atom.
 */
 c3_o
 u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
 {
-  c3_w    wad_w;
+  c3_n wad_w;
   u3_noun uco = u3dc("slaw", fot, u3k(txt));
   u3_noun p_uco, q_uco;
 
   if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
        (u3_nul != p_uco) ||
-       (c3n == u3r_safe_word(q_uco, &wad_w)) ||
+       (c3n == u3r_safe_note(q_uco, &wad_w)) ||
        (wad_w & 0x80000000) )
   {
-    u3l_log("strange lily %s", u3r_string(txt));
-    u3z(txt); u3z(uco); return c3n;
+    c3_c* txt_c = u3r_string(txt);
+    u3l_log("strange lily %s", txt_c);
+    c3_free(txt_c);
+    u3z(txt); u3z(uco);
+    return c3n;
   }
   else {
     *tid_l = (c3_l)wad_w;
-    u3z(txt); u3z(uco); return c3y;
+    u3z(txt); u3z(uco);
+    return c3y;
   }
 }
 
@@ -254,7 +237,7 @@ u3v_peek(u3_noun sam)
 /* u3v_soft_peek(): softly query the reck namespace.
 */
 u3_noun
-u3v_soft_peek(c3_w mil_w, u3_noun sam)
+u3v_soft_peek(c3_n mil_w, u3_noun sam)
 {
   u3_noun gon = u3m_soft(mil_w, u3v_peek, sam);
   u3_noun tag, dat;
@@ -277,25 +260,17 @@ u3v_soft_peek(c3_w mil_w, u3_noun sam)
   }
 }
 
-/* u3v_poke(): insert and apply an input ovum (protected).
+/* u3v_poke(): compute a timestamped ovum.
 */
 u3_noun
-u3v_poke(u3_noun ovo)
-{
-  return u3v_poke_raw(u3nc(u3k(u3A->now), ovo));
-}
-
-/* u3v_poke_raw(): u3v_poke w/out u3A->now XX replace
-*/
-u3_noun
-u3v_poke_raw(u3_noun sam)
+u3v_poke(u3_noun sam)
 {
   u3_noun fun = u3n_nock_on(u3k(u3A->roc), u3k(u3x_at(_CVX_POKE, u3A->roc)));
   u3_noun pro;
 
   {
 # ifdef  U3_MEMORY_DEBUG
-    c3_w cod_w = u3a_lush(u3h(u3t(u3t(sam))));
+    c3_n cod_w = u3a_lush(u3h(u3t(u3t(sam))));
 # endif
 
     pro = u3n_slam_on(fun, sam);
@@ -311,9 +286,9 @@ u3v_poke_raw(u3_noun sam)
 /* u3v_poke_sure(): inject an event, saving new state if successful.
 */
 c3_o
-u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
+u3v_poke_sure(c3_n mil_w, u3_noun eve, u3_noun* pro)
 {
-  u3_noun gon = u3m_soft(mil_w, u3v_poke_raw, eve);
+  u3_noun gon = u3m_soft(mil_w, u3v_poke, eve);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
 
@@ -389,25 +364,21 @@ u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 4);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
   qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
 
-  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
-  qua_u[1]->nam_c = strdup("date");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->now) * 4;
+  qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[1]->nam_c = strdup("wish cache");
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
 
-  qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
-  qua_u[2]->nam_c = strdup("wish cache");
-  qua_u[2]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
-
-  qua_u[3] = NULL;
+  qua_u[2] = NULL;
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total arvo stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w + qua_u[2]->siz_w;
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
   tot_u->qua_u = qua_u;
 
   return tot_u;
@@ -433,13 +404,8 @@ u3v_reclaim(void)
 void
 u3v_rewrite_compact(void)
 {
-  u3v_arvo* arv_u = &(u3H->arv_u);
-
-  u3a_rewrite_noun(arv_u->roc);
-  u3a_rewrite_noun(arv_u->now);
-  u3a_rewrite_noun(arv_u->yot);
-
-  arv_u->roc = u3a_rewritten_noun(arv_u->roc);
-  arv_u->now = u3a_rewritten_noun(arv_u->now);
-  arv_u->yot = u3a_rewritten_noun(arv_u->yot);
+  //  XX fix these to correctly no-op on inner roads
+  //
+  u3a_relocate_noun(&(u3A->roc));
+  u3a_relocate_noun(&(u3A->yot));
 }

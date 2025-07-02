@@ -15,10 +15,10 @@ typedef int (*urcrypt_siv)(c3_y*, size_t,
 // mat_w = size in bytes of assoc array
 // dat_w = size of allocation (array + atom storage)
 static void
-_cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
+_cqea_measure_ads(u3_noun ads, c3_w_tmp* soc_w, c3_w_tmp *mat_w, c3_w_tmp *dat_w)
 {
   u3_noun i, t;
-  c3_w a_w, b_w, tmp_w;
+  c3_w_tmp a_w, b_w, tmp_w;
 
   for ( a_w = b_w = 0, t = ads; u3_nul != t; ++a_w ) {
     u3x_cell(t, &i, &t);
@@ -53,10 +53,10 @@ _cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
 // assumes ads is a valid (list @) because it's already been measured
 static void
 _cqea_encode_ads(u3_noun ads,
-                 c3_w mat_w,
+                 c3_w_tmp mat_w,
                  urcrypt_aes_siv_data *dat_u)
 {
-  c3_w met_w;
+  c3_w_tmp met_w;
   u3_noun i, t;
   urcrypt_aes_siv_data *cur_u;
   c3_y *dat_y = ((c3_y*) dat_u) + mat_w;
@@ -80,14 +80,14 @@ _cqea_ads_free(urcrypt_aes_siv_data *dat_u)
 }
 
 static urcrypt_aes_siv_data*
-_cqea_ads_alloc(u3_noun ads, c3_w *soc_w)
+_cqea_ads_alloc(u3_noun ads, c3_w_tmp *soc_w)
 {
   if ( !ads ) {
     *soc_w = 0;
     return NULL;
   }
   else {
-    c3_w mat_w, dat_w;
+    c3_w_tmp mat_w, dat_w;
     urcrypt_aes_siv_data *dat_u;
 
     _cqea_measure_ads(ads, soc_w, &mat_w, &dat_w);
@@ -99,24 +99,32 @@ _cqea_ads_alloc(u3_noun ads, c3_w *soc_w)
 
 static u3_noun
 _cqea_siv_en(c3_y*   key_y,
-             c3_w    key_w,
+             c3_w_tmp    key_w,
              u3_noun ads,
              u3_atom txt,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w txt_w, soc_w;
+  c3_n txt_n;
+  c3_w_tmp soc_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
   dat_u = _cqea_ads_alloc(ads, &soc_w);
-  txt_y = u3r_bytes_all(&txt_w, txt);
-  out_y = u3a_malloc(txt_w);
+  txt_y = u3r_bytes_all(&txt_n, txt);
+  out_y = u3a_malloc(txt_n);
+  
+#ifdef VERE64
+  if (c3_w_max < txt_n) {
+    return u3m_bail(c3__fail);
+  }
+#endif
+  c3_w_new txt_w = (c3_w_new)txt_n;
 
   ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
-             u3i_words(1, &txt_w),
+             u3i_words_tmp(1, &txt_w),
              u3i_bytes(txt_w, out_y));
 
   u3a_free(txt_y);
@@ -127,20 +135,20 @@ _cqea_siv_en(c3_y*   key_y,
 
 static u3_noun
 _cqea_siv_de(c3_y*   key_y,
-             c3_w    key_w,
+             c3_w_tmp    key_w,
              u3_noun ads,
              u3_atom iv,
              u3_atom len,
              u3_atom txt,
              urcrypt_siv low_f)
 {
-  c3_w txt_w;
-  if ( !u3r_word_fit(&txt_w, len) ) {
+  c3_w_tmp txt_w;
+  if ( !u3r_word_tmp_fit(&txt_w, len) ) {
     return u3m_bail(c3__fail);
   }
   else {
     u3_noun ret;
-    c3_w soc_w;
+    c3_w_tmp soc_w;
     c3_y *txt_y, *out_y, iv_y[16];
     urcrypt_aes_siv_data *dat_u;
 
@@ -189,7 +197,7 @@ u3wea_siva_en(u3_noun cor)
 
   if ( c3n == u3r_mean(cor, u3x_sam, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -225,7 +233,7 @@ u3wea_siva_de(u3_noun cor)
                        u3x_sam_6, &len,
                        u3x_sam_7, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -257,7 +265,7 @@ u3wea_sivb_en(u3_noun cor)
 
   if ( c3n == u3r_mean(cor, u3x_sam, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -293,7 +301,7 @@ u3wea_sivb_de(u3_noun cor)
                        u3x_sam_6, &len,
                        u3x_sam_7, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -324,7 +332,7 @@ u3wea_sivc_en(u3_noun cor)
 
   if ( c3n == u3r_mean(cor, u3x_sam, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -360,7 +368,7 @@ u3wea_sivc_de(u3_noun cor)
                        u3x_sam_6, &len,
                        u3x_sam_7, &txt,
                        u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
+                       u3x_con_sam_3, &ads, u3_nul) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);

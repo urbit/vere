@@ -8,7 +8,7 @@
 u3_noun
 u3qc_cap(u3_atom a)
 {
-  c3_w met_w = u3r_met(0, a);
+  c3_w_tmp met_w = u3r_met(0, a);
 
   if ( 2 > met_w ) {
     return u3m_bail(c3__exit);

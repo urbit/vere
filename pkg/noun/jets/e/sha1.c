@@ -9,8 +9,8 @@
   static u3_noun
   _cqe_sha1(u3_atom wid, u3_atom dat)
   {
-    c3_w len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_n len_w;
+    if ( !u3r_note_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -28,7 +28,7 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid, u3x_sam_3, &dat, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid, u3x_sam_3, &dat, u3_nul)) ||
          (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {

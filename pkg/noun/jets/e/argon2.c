@@ -53,21 +53,21 @@
                u3_atom wid, u3_atom dat, u3_atom wis, u3_atom sat )
   {
     c3_y typ_u;
-    c3_w out_w, wik_w, wix_w, wid_w, wis_w, ver_w, ted_w, mem_w, tim_w;
+    c3_w_tmp out_w, wik_w, wix_w, wid_w, wis_w, ver_w, ted_w, mem_w, tim_w;
 
-    if ( !(u3r_word_fit(&out_w, out) &&
-           u3r_word_fit(&wik_w, wik) &&
-           u3r_word_fit(&wix_w, wix) &&
-           u3r_word_fit(&wid_w, wid) &&
-           u3r_word_fit(&wis_w, wis)) ) {
+    if ( !(u3r_word_tmp_fit(&out_w, out) &&
+           u3r_word_tmp_fit(&wik_w, wik) &&
+           u3r_word_tmp_fit(&wix_w, wix) &&
+           u3r_word_tmp_fit(&wid_w, wid) &&
+           u3r_word_tmp_fit(&wis_w, wis)) ) {
       // too big to allocate
       return u3m_bail(c3__fail);
     }
     else if ( !(_cqear_unpack_type(&typ_u, type) &&
-                u3r_word_fit(&ver_w, version) &&
-                u3r_word_fit(&ted_w, threads) &&
-                u3r_word_fit(&mem_w, mem_cost) &&
-                u3r_word_fit(&tim_w, time_cost)) ) {
+                u3r_word_tmp_fit(&ver_w, version) &&
+                u3r_word_tmp_fit(&ted_w, threads) &&
+                u3r_word_tmp_fit(&mem_w, mem_cost) &&
+                u3r_word_tmp_fit(&tim_w, time_cost)) ) {
       return u3_none;
     }
     else {
@@ -124,7 +124,7 @@
     // pretty deep in the subject, hence the +510.
     if ( c3n == u3r_mean(cor, u3x_sam_2, &wmsg,
                               u3x_sam_3, &wsat,
-                              510, &arg, 0) ||
+                              510, &arg, u3_nul) ||
                 u3r_cell(wmsg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(wsat, &wis, &sat) || u3ud(wis) || u3ud(sat) ||
                 //

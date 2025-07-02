@@ -63,13 +63,28 @@ _main_self_path(void)
 /* _main_readw(): parse a word from a string.
 */
 static c3_o
-_main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
+_main_readw(const c3_c* str_c, c3_w_tmp max_w, c3_w_tmp* out_w)
 {
   c3_c* end_c;
-  c3_w  par_w = strtoul(str_c, &end_c, 0);
+  c3_w_tmp  par_w = strtoul(str_c, &end_c, 0);
 
   if ( *str_c != '\0' && *end_c == '\0' && par_w < max_w ) {
     *out_w = par_w;
+    return c3y;
+  }
+  else return c3n;
+}
+
+/* _main_readn(): parse a note from a string.
+*/
+static c3_o
+_main_readn(const c3_c* str_c, c3_n max_n, c3_n* out_n)
+{
+  c3_c* end_c;
+  c3_w_tmp  par_w = strtoull(str_c, &end_c, 0);
+
+  if ( *str_c != '\0' && *end_c == '\0' && par_w < max_n ) {
+    *out_n = par_w;
     return c3y;
   }
   else return c3n;
@@ -80,10 +95,10 @@ _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
 static c3_i
 _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
 {
-  c3_w lom_w;
+  c3_w_tmp lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_n"\r\n", arg_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -114,7 +129,7 @@ _main_repath(c3_c* pax_c)
   c3_c* rel_c;
   c3_c* fas_c;
   c3_c* dir_c;
-  c3_w  len_w;
+  c3_w_tmp  len_w;
   c3_i  wit_i;
 
   u3_assert(pax_c);
@@ -178,14 +193,14 @@ _main_init(void)
   u3_Host.ops_u.tra = c3n;
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
-  u3_Host.ops_u.hap_w = 50000;
-  u3C.hap_w = u3_Host.ops_u.hap_w;
-  u3_Host.ops_u.per_w = 50000;
-  u3C.per_w = u3_Host.ops_u.per_w;
+  u3_Host.ops_u.hap_n = 50000;
+  u3C.hap_n = u3_Host.ops_u.hap_n;
+  u3_Host.ops_u.per_n = 50000;
+  u3C.per_n = u3_Host.ops_u.per_n;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
-  u3_Host.ops_u.lut_y = 31;     /* aka 2G */
+  u3_Host.ops_u.lut_y = 34;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
@@ -198,7 +213,7 @@ _main_init(void)
 #endif
 
   u3C.eph_c = 0;
-  u3C.tos_w = 0;
+  u3C.tos_n = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -207,8 +222,8 @@ static c3_c*
 _main_pier_run(c3_c* bin_c)
 {
   c3_c* dir_c = 0;
-  c3_w  bin_w = strlen(bin_c);
-  c3_w  len_w = strlen(U3_BIN_ALIAS);
+  c3_w_tmp  bin_w = strlen(bin_c);
+  c3_w_tmp  len_w = strlen(U3_BIN_ALIAS);
 
   //  no args, argv[0] == $pier/.run
   //
@@ -242,7 +257,7 @@ static u3_noun
 _main_getopt(c3_i argc, c3_c** argv)
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
   c3_o want_creat_o = c3n;
 
   static struct option lop_u[] = {
@@ -337,7 +352,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 9: {  //  toss
         u3_Host.ops_u.tos = c3y;
-        if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+        if ( 1 != sscanf(optarg, "%" PRIc3_n, &u3C.tos_n) ) {
           return c3n;
         }
         break;
@@ -419,10 +434,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'C': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.hap_n) ) {
           return c3n;
         }
-        u3C.hap_w = u3_Host.ops_u.hap_w;
+        u3C.hap_n = u3_Host.ops_u.hap_n;
         break;
       }
       case 'c': {
@@ -471,10 +486,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'M': {
-        if ( c3n == _main_readw(optarg, 1000000000, &u3_Host.ops_u.per_w) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.per_n) ) {
           return c3n;
         }
-        u3C.per_w = u3_Host.ops_u.per_w;
+        u3C.per_n = u3_Host.ops_u.per_n;
         break;
       }
       case 'n': {
@@ -1174,7 +1189,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   u3_mojo std_u;
   c3_i    ch_i, lid_i;
-  c3_w    arg_w;
+  c3_w_tmp    arg_w;
   c3_o    cue_o = c3n;
   c3_o    jam_o = c3n;
   c3_o    kan_o = c3n;
@@ -1377,7 +1392,7 @@ static void
 _cw_info(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1485,9 +1500,12 @@ static void
 _cw_grab(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
+
+  u3_Host.ops_u.gab = c3n;
 
   static struct option lop_u[] = {
+    { "gc",        no_argument,       NULL, 'g' },
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
@@ -1497,8 +1515,10 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "g", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -1548,6 +1568,12 @@ _cw_grab(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
+  }
+
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
@@ -1560,7 +1586,7 @@ static void
 _cw_cram(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1663,7 +1689,7 @@ static void
 _cw_queu(c3_i argc, c3_c* argv[])
 {
   c3_i  lid_i, ch_i;
-  c3_w  arg_w;
+  c3_w_tmp  arg_w;
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
@@ -1780,7 +1806,7 @@ static void
 _cw_meld(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1876,7 +1902,7 @@ static void
 _cw_melt(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -1964,7 +1990,7 @@ static void
 _cw_next(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "arch",      required_argument, NULL, 'a' },
@@ -2044,7 +2070,7 @@ static void
 _cw_pack(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2257,14 +2283,17 @@ static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
 
+  u3_Host.ops_u.gab = c3n;
+
   static struct option lop_u[] = {
+    { "gc",                no_argument,       NULL, 'g' },
     { "loom",              required_argument, NULL, c3__loom },
     { "no-demand",         no_argument,       NULL, 6 },
     { "auto-meld",         no_argument,       NULL, 7 },
@@ -2277,8 +2306,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "fgn:s:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
@@ -2343,6 +2374,12 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
+  }
+
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
 }
 
@@ -2354,7 +2391,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   //  XX roll with old binary
   //     check that new epoch is empty, migrate snapshot in-place
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2428,7 +2465,7 @@ static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2517,7 +2554,7 @@ static void
 _cw_roll(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2591,7 +2628,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   c3_c* dir_c;
 
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "arch",    required_argument, NULL, 'a' },
@@ -2699,7 +2736,7 @@ static void
 _cw_vile(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_w_tmp arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2851,10 +2888,10 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w       lom_w;
+  c3_w_tmp       lom_w;
   c3_c*      eph_c = argv[5];
   c3_c*      tos_c = argv[6];
-  c3_w       tos_w;
+  c3_n       tos_n;
   c3_c*      per_c = argv[7];
 
   //  XX windows ctrl-c?
@@ -2869,11 +2906,11 @@ _cw_boot(c3_i argc, c3_c* argv[])
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(hap_c, "%" SCNc3_n, &u3_Host.ops_u.hap_n);
     sscanf(lom_c, "%" SCNu32, &lom_w);
-    sscanf(per_c, "%" SCNu32, &u3C.per_w);
+    sscanf(per_c, "%" SCNc3_n, &u3C.per_n);
 
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+    if ( 1 != sscanf(tos_c, "%" SCNc3_n, &u3C.tos_n) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
   }
@@ -2928,12 +2965,12 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w       lom_w;
+  c3_w_tmp       lom_w;
   c3_c*      eve_c = argv[5];
   c3_d       eve_d = 0;
   c3_c*      eph_c = argv[6];
   c3_c*      tos_c = argv[7];
-  c3_w       tos_w;
+  c3_n       tos_n;
   c3_c*      per_c = argv[8];
 
   _cw_init_io(lup_u);
@@ -2946,11 +2983,11 @@ _cw_work(c3_i argc, c3_c* argv[])
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
+    sscanf(hap_c, "%" SCNc3_n, &u3_Host.ops_u.hap_n);
     sscanf(lom_c, "%" SCNu32, &lom_w);
-    sscanf(per_c, "%" SCNu32, &u3C.per_w);
+    sscanf(per_c, "%" SCNc3_n, &u3C.per_n);
 
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+    if ( 1 != sscanf(tos_c, "%" SCNc3_n, &u3C.tos_n) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
   }
