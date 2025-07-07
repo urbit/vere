@@ -1538,7 +1538,7 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   if ( len_z <= 2 ) {
     fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
                     "chop: for more info see "
-                    "https://docs.urbit.org/manual/running/vere#chop\r\n");
+                    "https://docs.urbit.org/user-manual/running/vere#chop\r\n");
     exit(0);  //  enjoy
   }
 
