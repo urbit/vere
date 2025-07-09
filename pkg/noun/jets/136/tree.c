@@ -109,7 +109,7 @@ static u3j_harm _136_hex_lune_a[] = {{".2", u3we_lune}, {}};
 
 static u3j_harm _136_hex__adler32_a[] = {{".2", u3we_adler32, c3y}, {}};
 static u3j_core  _136_hex__adler_d[] =
-  { { "adler32", 7, _137_hex__adler32_a, 0, no_hashes },
+  { { "adler32", 7, _136_hex__adler32_a, 0, no_hashes },
     {}
   };
 static u3j_harm _136_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
@@ -123,10 +123,6 @@ static u3j_core _136_hex_checksum_d[] =
     { "crc", 3, 0, _136_hex__crc_d, no_hashes},
     {}
   };
-
-static u3j_harm _136_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
-
-static u3j_core _136_hex__crc_d[] = {{"crc32", 7, _136_hex__crc32_a, 0, no_hashes }, {}};
 
 
 static u3j_harm _136_hex_coed__ed_scad_a[] = {{".2", u3wee_scad}, {}};
