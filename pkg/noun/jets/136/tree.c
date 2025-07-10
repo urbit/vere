@@ -107,9 +107,22 @@ static u3j_harm _136_hex_loss_a[] = {{".2", u3we_loss}, {}};
 static u3j_harm _136_hex_lune_a[] = {{".2", u3we_lune}, {}};
 
 
+static u3j_harm _136_hex__adler32_a[] = {{".2", u3we_adler32, c3y}, {}};
+static u3j_core  _136_hex__adler_d[] =
+  { { "adler32", 7, _136_hex__adler32_a, 0, no_hashes },
+    {}
+  };
 static u3j_harm _136_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
+static u3j_core _136_hex__crc_d[] =
+  { {"crc32", 7, _136_hex__crc32_a, 0, no_hashes },
+    {}
+  };
 
-static u3j_core _136_hex__crc_d[] = {{"crc32", 7, _136_hex__crc32_a, 0, no_hashes }, {}};
+static u3j_core _136_hex_checksum_d[] =
+  { { "adler", 3, 0, _136_hex__adler_d, no_hashes },
+    { "crc", 3, 0, _136_hex__crc_d, no_hashes},
+    {}
+  };
 
 
 static u3j_harm _136_hex_coed__ed_scad_a[] = {{".2", u3wee_scad}, {}};
@@ -951,6 +964,7 @@ static u3j_core _136_hex_d[] =
     { "mimes",  31, 0, _136_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _136_hex_json_d,   no_hashes },
     { "wasm-sur-v0", 3, 0, _136_hex_wasm_sur_d, no_hashes },
+    { "checksum", 15, 0, _136_hex_checksum_d, no_hashes},
     {}
   };
 
