@@ -631,6 +631,9 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
                                 &czar_lyf_w, &czar_bon_w,
                                 &czar_ack_w) ) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
+
+      wok_u->car_u = u3_auto_init(wok_u->pir_u);
+      u3_auto_talk(wok_u->car_u);
       _pier_work(wok_u);
     } else {
       if ( czar_ryf_w == ryf_w ) {
@@ -638,8 +641,12 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
         if ( czar_ack_w == u3_none ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
+          wok_u->car_u = u3_auto_init(wok_u->pir_u);
+          u3_auto_talk(wok_u->car_u);
           _pier_work(wok_u);
         } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
+          wok_u->car_u = u3_auto_init(wok_u->pir_u);
+          u3_auto_talk(wok_u->car_u);
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
@@ -673,6 +680,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
                                 &czar_glx_w, &czar_ryf_w,
                                 &czar_lyf_w, &czar_bon_w, 0) ) {
       c3_free(czar_c);
+      wok_u->car_u = u3_auto_init(wok_u->pir_u);
+      u3_auto_talk(wok_u->car_u);
       _pier_work(wok_u);
     } else {
       // Peer state found under czar
@@ -680,13 +689,19 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       u3_weak kf_ryf = wok_u->pir_u->ryf;
       if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
+        wok_u->car_u = u3_auto_init(wok_u->pir_u);
+        u3_auto_talk(wok_u->car_u);
         _pier_work(wok_u);
       } else if ( kf_ryf > czar_ryf_w ) {
         // Ship breached, galaxy has not heard about the breach; continue boot
+        wok_u->car_u = u3_auto_init(wok_u->pir_u);
+        u3_auto_talk(wok_u->car_u);
         _pier_work(wok_u);
       } else if ( (     kf_ryf == czar_ryf_w ) &&
                   ( czar_bon_w == u3_none ) ) {
         // Ship has breached, continue boot
+        wok_u->car_u = u3_auto_init(wok_u->pir_u);
+        u3_auto_talk(wok_u->car_u);
         _pier_work(wok_u);
       } else {
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
@@ -703,6 +718,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Continue boot and hope for the best.
      */
     u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double-boot");
+    wok_u->car_u = u3_auto_init(wok_u->pir_u);
+    u3_auto_talk(wok_u->car_u);
     _pier_work(wok_u);
   }
   u3z(nun); u3z(who);
@@ -789,26 +806,25 @@ _pier_work_init(u3_pier* pir_u)
     u3z(pex);
   }
   else {
-    //  initialize i/o drivers
-    //
-    wok_u->car_u = u3_auto_init(pir_u);
-    u3_auto_talk(wok_u->car_u);
+    c3_d pi_d = wok_u->pir_u->who_d[0];
+    c3_d pt_d = wok_u->pir_u->who_d[1];
+
+
+    if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
+      // Skip double boot protection for galaxies and local mode ships
+      //
+      wok_u->car_u = u3_auto_init(wok_u->pir_u);
+      u3_auto_talk(wok_u->car_u);
+      _pier_work(wok_u);
+    } else {
+      // Double boot protection
+      //
+      u3_noun pex = u3nc(u3i_string("boot"), u3_nul);
+      u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), c3__ax, u3_nul, pex,
+                        pir_u->wok_u, _boot_scry_cb);
+    }
   }
 
-  c3_d pi_d = wok_u->pir_u->who_d[0];
-  c3_d pt_d = wok_u->pir_u->who_d[1];
-
-  if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
-    // Skip double boot protection for galaxies and local mode ships
-    //
-    _pier_work(wok_u);
-  } else {
-    // Double boot protection
-    //
-    u3_noun pex = u3nc(u3i_string("boot"), u3_nul);
-    u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), c3__ax, u3_nul, pex,
-                      pir_u->wok_u, _boot_scry_cb);
-  }
 }
 
 /* _pier_wyrd_good(): %wyrd version negotation succeeded.
