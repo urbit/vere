@@ -312,6 +312,15 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
 
     u3l_log("boot: verifying keys");
 
+    if ( c3y == u3a_is_cell(feed) && 
+         c3n == u3a_is_cell(u3h(feed)) &&
+         c3__earl == rank ) {
+      // bails, won't return
+      u3l_log("boot: incorrect keyfile please use updated format");
+      _dawn_fail(ship, rank, u3_nul);
+      return u3_none;
+    }
+
     //  (each seed (lest error=@tas))
     //
     sed = u3dq("veri:dawn", u3k(ship), u3k(feed), u3k(pot), u3k(liv));
@@ -427,7 +436,8 @@ _dawn_come(u3_noun stars)
   }
 
   {
-    u3_noun who = u3dc("scot", 'p', u3k(u3h(seed)));
+    /* [[%2 ~] who=ship ryf=rift kyz=(list [lyf=life key=ring])]  */
+    u3_noun who = u3dc("scot", 'p', u3k(u3h(u3t(seed))));
     c3_c* who_c = u3r_string(who);
 
     u3l_log("boot: found comet %s", who_c);

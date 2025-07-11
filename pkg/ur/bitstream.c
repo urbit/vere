@@ -1079,7 +1079,7 @@ _bsw_bytes_unsafe(ur_bsw_t *bsw, const uint64_t len, const uint8_t* src)
 
       {
         uint8_t  tal = (src[len_byt] >> rest)
-                     ^ (( off > len_bit ) ? 0 : (src[len_byt + 1] << off));
+                     ^ (( off >= len_bit ) ? 0 : (src[len_byt + 1] << off));
         dst[len_byt] = tal & ((1 << len_bit) - 1);
       }
 

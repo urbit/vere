@@ -165,6 +165,9 @@ static c3_o _lss_verifier_check_hash(lss_verifier* los_u, c3_w i, c3_w height, l
 
 c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pair* pair) {
   // verify leaf
+  /* los_u->counter++; */
+  /* return c3y; */
+
   lss_hash h;
   _subtree_root(h, leaf_y, leaf_w, los_u->counter << los_u->steps);
   if ( c3n == _lss_verifier_check_hash(los_u, los_u->counter, 0, h) ) {
@@ -191,22 +194,17 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   return c3y;
 }
 
-void lss_verifier_init(lss_verifier* los_u, c3_w steps, c3_w leaves, lss_hash* proof) {
+void lss_verifier_init(lss_verifier* los_u, c3_w steps, c3_w leaves, lss_hash* proof, arena* are_u) {
   c3_w proof_w = lss_proof_size(leaves);
   c3_w pairs_w = c3_bits_word(leaves);
   los_u->steps = steps;
   los_u->leaves = leaves;
   los_u->counter = 0;
-  los_u->pairs = c3_calloc(pairs_w * sizeof(lss_pair));
+  los_u->pairs = new(are_u, lss_pair, pairs_w);
   memcpy(los_u->pairs[0][0], proof[0], sizeof(lss_hash));
   for (c3_w i = 1; i < proof_w; i++) {
     memcpy(los_u->pairs[i-1][1], proof[i], sizeof(lss_hash));
   }
-}
-
-void lss_verifier_free(lss_verifier* los_u) {
-  c3_free(los_u->pairs);
-  c3_free(los_u);
 }
 
 void lss_complete_inline_proof(lss_hash* proof, c3_y* leaf_y, c3_w leaf_w) {
