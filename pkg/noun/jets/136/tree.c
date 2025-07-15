@@ -795,6 +795,59 @@ static u3j_core _136_hex_chacha_d[] =
     {}
   };
 
+
+//+|  %utilities
+static u3j_harm _136_hex_bytestream_rip_octs_a[] = {{".2", u3we_bytestream_rip_octs, c3y}, {}};
+static u3j_harm _136_hex_bytestream_cat_octs_a[] = {{".2", u3we_bytestream_cat_octs, c3y}, {}};
+static u3j_harm _136_hex_bytestream_can_octs_a[] = {{".2", u3we_bytestream_can_octs, c3y}, {}};
+//+|  %read-byte
+static u3j_harm _136_hex_bytestream_read_byte_a[] = {{".2", u3we_bytestream_read_byte, c3y}, {}};
+//+|  %read-octs
+static u3j_harm _136_hex_bytestream_read_octs_a[] = {{".2", u3we_bytestream_read_octs, c3y}, {}};
+//+|  %navigation
+static u3j_harm _136_hex_bytestream_skip_line_a[] = {{".2", u3we_bytestream_skip_line, c3y}, {}};
+static u3j_harm _136_hex_bytestream_find_byte_a[] = {{".2", u3we_bytestream_find_byte, c3y}, {}};
+static u3j_harm _136_hex_bytestream_seek_byte_a[] = {{".2", u3we_bytestream_seek_byte, c3y}, {}};
+//+|  %transformation
+static u3j_harm _136_hex_bytestream_chunk_a[] = {{".2", u3we_bytestream_chunk}, {}};
+static u3j_harm _136_hex_bytestream_extract_a[] = {{".2", u3we_bytestream_extract}, {}};
+static u3j_harm _136_hex_bytestream_fuse_extract_a[] = {{".2", u3we_bytestream_fuse_extract}, {}};
+//+|  %bitstream
+static u3j_harm _136_hex_bytestream_need_bits_a[] = {{".2", u3we_bytestream_need_bits}, {}};
+static u3j_harm _136_hex_bytestream_drop_bits_a[] = {{".2", u3we_bytestream_drop_bits}, {}};
+// static u3j_harm _136_hex_bytestream_skip_bits_a[] = {{".2", u3we_bytestream_skip_bits}, {}};
+static u3j_harm _136_hex_bytestream_peek_bits_a[] = {{".2", u3we_bytestream_peek_bits}, {}};
+static u3j_harm _136_hex_bytestream_read_bits_a[] = {{".2", u3we_bytestream_read_bits}, {}};
+// static u3j_harm _136_hex_bytestream_read_need_bits_a[] = {{".2", u3we_bytestream_read_need_bits}, {}};
+static u3j_harm _136_hex_bytestream_byte_bits_a[] = {{".2", u3we_bytestream_byte_bits}, {}};
+
+static u3j_core _136_hex_bytestream_d[] =
+  { //+|  %utilities
+    {"rip-octs", 7, _136_hex_bytestream_rip_octs_a, 0, no_hashes },
+    {"cat-octs", 7, _136_hex_bytestream_cat_octs_a, 0, no_hashes },
+    {"can-octs", 7, _136_hex_bytestream_can_octs_a, 0, no_hashes },
+    //+|  %navigation
+    {"skip-line", 7, _136_hex_bytestream_skip_line_a, 0, no_hashes },
+    {"find-byte", 7, _136_hex_bytestream_find_byte_a, 0, no_hashes },
+    {"seek-byte", 7, _136_hex_bytestream_seek_byte_a, 0, no_hashes },
+    //+|  %read-byte
+    {"read-byte", 7, _136_hex_bytestream_read_byte_a, 0, no_hashes },
+    //+|  %read-octs
+    {"read-octs", 7, _136_hex_bytestream_read_octs_a, 0, no_hashes },
+    //+|  %transformation
+    {"chunk", 7, _136_hex_bytestream_chunk_a, 0, no_hashes },
+    {"extract", 7, _136_hex_bytestream_extract_a, 0, no_hashes },
+    {"fuse-extract", 7, _136_hex_bytestream_fuse_extract_a, 0, no_hashes },
+    //+|  %bitstream
+    {"need-bits", 7, _136_hex_bytestream_need_bits_a, 0, no_hashes },
+    {"drop-bits", 7, _136_hex_bytestream_drop_bits_a, 0, no_hashes },
+    // {"skip-bits", 7, _136_hex_bytestream_skip_bits_a, 0, no_hashes },
+    {"peek-bits", 7, _136_hex_bytestream_peek_bits_a, 0, no_hashes },
+    {"read-bits", 7, _136_hex_bytestream_read_bits_a, 0, no_hashes },
+    // {"read-need-bits", 7, _136_hex_bytestream_read_need_bits_a, 0, no_hashes },
+    {"byte-bits", 7, _136_hex_bytestream_byte_bits_a, 0, no_hashes },
+  };
+
 static u3j_harm _136_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
 static u3j_harm _136_hex_json_en_a[] = {{".2", u3we_json_en}, {}};
 static u3j_core _136_hex_json_d[] =
@@ -951,6 +1004,7 @@ static u3j_core _136_hex_d[] =
     { "mimes",  31, 0, _136_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _136_hex_json_d,   no_hashes },
     { "wasm-sur-v0", 3, 0, _136_hex_wasm_sur_d, no_hashes },
+    { "bytestream", 31, 0, _136_hex_bytestream_d, no_hashes},
     {}
   };
 
