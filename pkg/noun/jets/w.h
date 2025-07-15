@@ -235,6 +235,9 @@
     u3_noun u3we_chacha_crypt(u3_noun);
     u3_noun u3we_chacha_xchacha(u3_noun);
 
+    u3_noun u3we_adler32(u3_noun);
+    u3_noun u3we_crc32(u3_noun);
+
     u3_noun u3we_ripe(u3_noun);
 
     u3_noun u3we_make(u3_noun);
