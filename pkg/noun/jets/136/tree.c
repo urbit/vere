@@ -1017,7 +1017,7 @@ static u3j_core _136_hex_d[] =
     { "mimes",  31, 0, _136_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _136_hex_json_d,   no_hashes },
     { "wasm-sur-v0", 3, 0, _136_hex_wasm_sur_d, no_hashes },
-    { "bytestream", 31, 0, _136_hex_bytestream_d, no_hashes},
+    { "bytestream-v0", 31, 0, _136_hex_bytestream_d, no_hashes},
     { "checksum", 15, 0, _136_hex_checksum_d, no_hashes},
     {}
   };
