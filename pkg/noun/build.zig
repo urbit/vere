@@ -274,6 +274,7 @@ const c_source_files = [_][]const u8{
     "jets/e/argon2.c",
     "jets/e/base.c",
     "jets/e/blake.c",
+    "jets/e/bytestream.c",
     "jets/e/chacha.c",
     "jets/e/crc.c",
     "jets/e/cue.c",

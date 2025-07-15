@@ -323,6 +323,31 @@
     u3_noun u3we_lia_run(u3_noun);
     u3_noun u3we_lia_run_once(u3_noun);
 
+    //+|  %utilities
+    u3_noun u3we_bytestream_rip_octs(u3_noun);
+    u3_noun u3we_bytestream_cat_octs(u3_noun);
+    u3_noun u3we_bytestream_can_octs(u3_noun);
+    //+|  %navigation
+    u3_noun u3we_bytestream_skip_line(u3_noun);
+    u3_noun u3we_bytestream_find_byte(u3_noun);
+    u3_noun u3we_bytestream_seek_byte(u3_noun);
+    //+|  %read-byte
+    u3_noun  u3we_bytestream_read_byte(u3_noun);
+    //+|  %read-octs
+    u3_noun  u3we_bytestream_read_octs(u3_noun);
+    //+|  %transformation
+    u3_noun u3we_bytestream_chunk(u3_noun);
+    u3_noun u3we_bytestream_extract(u3_noun);
+    u3_noun u3we_bytestream_fuse_extract(u3_noun);
+    //+|  %bitstream
+    u3_noun u3we_bytestream_need_bits(u3_noun);
+    u3_noun u3we_bytestream_drop_bits(u3_noun);
+    // u3_noun u3we_bytestream_skip_bits(u3_noun);
+    u3_noun u3we_bytestream_peek_bits(u3_noun);
+    u3_noun u3we_bytestream_read_bits(u3_noun);
+    // u3_noun u3we_bytestream_read_need_bits(u3_noun);
+    u3_noun u3we_bytestream_byte_bits(u3_noun);
+
   /** Tier 6.
   **/
     u3_noun u3wf_bull(u3_noun);
