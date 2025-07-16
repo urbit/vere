@@ -1216,7 +1216,7 @@ static u3j_core _136_two_d[] =
     { "mix",  7, _136_two_mix_a, 0, no_hashes },
     { "mor",  7, _136_two_mor_a, 0, no_hashes },
     { "mug",  7, _136_two_mug_a, 0, no_hashes },
-    { "muk", 59, _136_two_muk_a, 0, no_hashes },
+    { "muk",  7, _136_two_muk_a, 0, no_hashes },
     { "rap",  7, _136_two_rap_a, 0, no_hashes },
     { "rep",  7, _136_two_rep_a, 0, no_hashes },
     { "rev",  7, _136_two_rev_a, 0, no_hashes },
