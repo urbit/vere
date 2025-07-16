@@ -125,6 +125,14 @@ static u3j_core _136_hex_checksum_d[] =
   };
 
 
+static u3j_harm _136_hex__decompress_zlib_a[] = {{".2", u3we_decompress_zlib}, {}};
+static u3j_harm _136_hex__decompress_gzip_a[] = {{".2", u3we_decompress_gzip}, {}};
+static u3j_core _136_hex__zlib_d[] = {
+  {"decompress-zlib", 7, _136_hex__decompress_zlib_a, 0, no_hashes },
+  {"decompress-gzip", 7, _136_hex__decompress_gzip_a, 0, no_hashes },
+  {}};
+
+
 static u3j_harm _136_hex_coed__ed_scad_a[] = {{".2", u3wee_scad}, {}};
 static u3j_harm _136_hex_coed__ed_scas_a[] = {{".2", u3wee_scas}, {}};
 static u3j_harm _136_hex_coed__ed_scap_a[] = {{".2", u3wee_scap}, {}};
@@ -1016,9 +1024,10 @@ static u3j_core _136_hex_d[] =
     { "secp",    6, 0, _136_hex_secp_d,   no_hashes },
     { "mimes",  31, 0, _136_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _136_hex_json_d,   no_hashes },
+    { "checksum", 15, 0, _136_hex_checksum_d, no_hashes},
     { "wasm-sur-v0", 3, 0, _136_hex_wasm_sur_d, no_hashes },
     { "bytestream-v0", 31, 0, _136_hex_bytestream_d, no_hashes},
-    { "checksum", 15, 0, _136_hex_checksum_d, no_hashes},
+    { "zlib-v0", 31, 0, _136_hex__zlib_d, no_hashes },
     {}
   };
 
