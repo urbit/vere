@@ -3198,7 +3198,7 @@ u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam)
 u3_noun
 u3n_nock_an(u3_noun bus, u3_noun fol)
 {
-  u3_noun gul = u3nt(u3nt(1, 0, 0), 0, 0);  //  |=(a/{* *} ~)
+  u3_noun gul = u3nt(u3nc(1, 0), u3nc(0, 0), 0);  //  |~(^ ~)  XX 409: just pass ~
 
   return u3n_nock_et(gul, bus, fol);
 }

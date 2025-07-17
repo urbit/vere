@@ -948,7 +948,7 @@ static u3j_core _136_non_d[] =
   };
 
 
-static u3j_harm _136_hex_lia_run_a[] = {{".2", u3we_lia_run, c3y}, {}};
+static u3j_harm _136_hex_lia_run_v1_a[] = {{".2", u3we_lia_run_v1, c3y}, {}};
 
 static u3j_harm _136_hex_lia_run_once_inner_a[] = {{".2", u3we_lia_run_once, c3y}, {}};
 
@@ -958,7 +958,7 @@ static u3j_core _136_hex_lia_run_once_d[] = {
 };
 
 static u3j_core _136_hex_lia_monad_d[] = {
-  { "run-v0", 7, _136_hex_lia_run_a, 0, no_hashes },
+  { "run-v1", 7, _136_hex_lia_run_v1_a, 0, no_hashes },
   { "run-once-v0", 7, 0, _136_hex_lia_run_once_d, no_hashes },
   {}
 };
@@ -989,7 +989,7 @@ static u3j_core _136_hex_lia_sur_d[] = {
 };
 
 static u3j_core _136_hex_wasm_engine_sur_d[] = {
-  { "monad-sur-v0", 3, 0, _136_hex_lia_sur_d, no_hashes },
+  { "monad-sur-v1", 3, 0, _136_hex_lia_sur_d, no_hashes },
   {}
 };
 
