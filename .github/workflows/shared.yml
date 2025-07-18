@@ -100,7 +100,7 @@ jobs:
             pact-test equality-test    \
             boot-test newt-test        \
             vere-noun-test unix-test   \
-            benchmarks                 \
+            palloc-test benchmarks     \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
             --summary all
