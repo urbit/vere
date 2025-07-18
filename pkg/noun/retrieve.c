@@ -1627,7 +1627,7 @@ u3r_chop_bits(c3_g  bif_g,
   }
 }
 
-/* u3r_chop_words():
+/* u3r_chop_notes():
 **
 **   Into the bloq space of `met`, from position `fum` for a
 **   span of `wid`, to position `tou`, XOR from `src_w`

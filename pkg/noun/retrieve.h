@@ -424,7 +424,7 @@
                       c3_n* dst_w,
                 const c3_n* src_w);
 
-      /* u3r_chop_words():
+      /* u3r_chop_notes():
       **
       **   Into the bloq space of `met`, from position `fum` for a
       **   span of `wid`, to position `tou`, XOR from `src_w`
