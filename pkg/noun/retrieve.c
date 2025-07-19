@@ -1861,3 +1861,40 @@ u3r_skip(u3_noun fol)
   }
   return u3_none;
 }
+
+/* u3r_safe():
+**
+**  Returns yes if the formula won't crash
+**  and has no hints, returning constant result
+**  if possible
+*/
+c3_o
+u3r_safe(u3_noun fol, u3_weak* out)
+{
+  if ( c3n == u3du(fol) ) {
+    return c3n;
+  }
+  switch ( u3h(fol) ) {
+    default: return c3n;
+    case 0:
+      if ( 1 == u3t(fol) ) {
+        *out = u3_none;
+        return c3y;
+      }
+      else {
+        return c3n;
+      }
+      
+    case 1:
+      *out = u3t(fol);
+      return c3y;
+
+    case 7:
+    case 8:
+      u3_noun p, q;
+      return c3a(
+        u3r_cell(u3t(fol), &p, &q),
+        c3a(u3r_safe(p, out), u3r_safe(q, out))
+      );
+  }
+}

@@ -1356,41 +1356,58 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
     }
 
     case 6: {
-      u3_noun mid,
-              yep = u3_nul,
-              nop = u3_nul;
-      c3_w    yep_w, nop_w;
-      c3_t    yep_t, nop_t;
+      u3_noun mid, lit;
       u3x_trel(arg, &hed, &mid, &tel);
+      if ( c3y == u3r_safe(hed, &lit) && u3_none != lit ) {
+        switch ( lit ) {
+          case 0:
+            tot_w += _n_comp(ops, mid, los_o, tel_o);
+            break;
 
-      tot_w += _n_comp(ops, hed, c3n, c3n);
-      yep_t = _n_formulaic(mid);
-      nop_t = _n_formulaic(tel);
+          case 1:
+            tot_w += _n_comp(ops, tel, los_o, tel_o);
+            break;
 
-      if ( !yep_t && !nop_t ) {
-        u3m_bail(c3__exit);
-        break;
-      }
-
-      if ( yep_t ) {
-        yep_w = _n_comp(&yep, mid, los_o, tel_o);
-      }
-      else {
-        yep_w = 1; _n_emit(&yep, BAIL);
-      }
-
-      if ( nop_t ) {
-        nop_w = _n_comp(&nop, tel, los_o, tel_o);
+          default:
+            ++tot_w; _n_emit(ops, BAIL);
+            break;
+        }
       }
       else {
-        nop_w = 1; _n_emit(&nop, BAIL);
-      }
+        u3_noun yep = u3_nul,
+                nop = u3_nul;
+        c3_w    yep_w, nop_w;
+        c3_t    yep_t, nop_t;
 
-      // SBIP and SBIN get sized during assembly
-      ++yep_w; _n_emit(&yep, u3nc(SBIP, nop_w));
-      ++tot_w; _n_emit(ops, u3nc(SBIN, yep_w));
-      tot_w += yep_w; _n_apen(ops, yep);
-      tot_w += nop_w; _n_apen(ops, nop);
+        tot_w += _n_comp(ops, hed, c3n, c3n);
+        yep_t = _n_formulaic(mid);
+        nop_t = _n_formulaic(tel);
+
+        if ( !yep_t && !nop_t ) {
+          u3m_bail(c3__exit);
+          break;
+        }
+
+        if ( yep_t ) {
+          yep_w = _n_comp(&yep, mid, los_o, tel_o);
+        }
+        else {
+          yep_w = 1; _n_emit(&yep, BAIL);
+        }
+
+        if ( nop_t ) {
+          nop_w = _n_comp(&nop, tel, los_o, tel_o);
+        }
+        else {
+          nop_w = 1; _n_emit(&nop, BAIL);
+        }
+
+        // SBIP and SBIN get sized during assembly
+        ++yep_w; _n_emit(&yep, u3nc(SBIP, nop_w));
+        ++tot_w; _n_emit(ops, u3nc(SBIN, yep_w));
+        tot_w += yep_w; _n_apen(ops, yep);
+        tot_w += nop_w; _n_apen(ops, nop);
+      }
       break;
     }
 

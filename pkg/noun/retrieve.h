@@ -535,4 +535,13 @@
         u3_weak
         u3r_skip(u3_noun fol);
 
+      /* u3r_safe():
+      **
+      **  Returns yes if the formula won't crash
+      **  and has no hints, returning constant result
+      **  if possible
+      */
+      c3_o
+      u3r_safe(u3_noun fol, u3_weak* out);
+
 #endif /* ifndef U3_RETRIEVE_H */
