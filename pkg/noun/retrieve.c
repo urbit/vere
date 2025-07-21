@@ -1935,17 +1935,5 @@ u3r_safe(u3_noun fol, u3_weak* out)
       return c3a(u3r_cell(t_fol, &p, &q),
              c3a(u3r_safe(p, &o), u3r_safe(q, out)));
     }
-    
-    case 10: {
-      u3_noun p, rec, ax, don;
-      u3_weak o;
-      saf_o = c3a(u3r_cell(t_fol, &p, &rec),
-              c3a(u3r_cell(p, &ax, &don),
-              c3a(u3ud(ax),
-              c3a(u3r_safe(don, &o), u3r_safe(rec, &o)))));
-
-      *out = u3_none;
-      return saf_o;
-    }
   }
 }
