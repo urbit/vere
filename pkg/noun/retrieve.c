@@ -1881,13 +1881,8 @@ u3r_safe(u3_noun fol, u3_weak* out)
   switch ( h_fol ) {
     default: return c3n;
     case 0:
-      if ( 1 == t_fol ) {
-        *out = u3_none;
-        return c3y;
-      }
-      else {
-        return c3n;
-      }
+      *out = u3_none;
+      return __(1 == t_fol);
       
     case 1:
       *out = t_fol;
