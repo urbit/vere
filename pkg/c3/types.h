@@ -8,13 +8,22 @@
   /** Integer typedefs.
   **/
     /* Canonical integers.
+    **
+    ** Migration process for c3_w variables:
+    ** 1. All c3_w variables have been renamed to c3_w_tmp.
+    ** 2. Review c3_w_tmp variables:
+    **   a. If s/b static 32-bit  -> rename to c3_w_new.
+    **   b. If s/b arch-dependent -> rename to c3_n.
+    ** 3. Review c3_w_new variables:
+    **   a. Ensure correctness.
+    **   b. Rename to c3_{???} (our new, static uint32_t type, name pending).
     */
       typedef size_t c3_z;
       typedef ssize_t c3_zs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
-      typedef uint32_t c3_w_tmp;
-      typedef uint32_t c3_w_new;
+      typedef uint32_t c3_w_tmp;  // -> still needs review
+      typedef uint32_t c3_w_new;  // -> s/b 32-bit always
       typedef int32_t c3_ws_tmp;
       typedef int32_t c3_ws_new;
       typedef uint16_t c3_s;
