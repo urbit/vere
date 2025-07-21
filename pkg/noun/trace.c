@@ -220,30 +220,30 @@ u3t_samp(void)
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    c3_w_new      mot_l;
+    c3_m      mot_m;
     u3a_road* rod_u;
 
     if ( _(u3T.mal_o) ) {
-      mot_l = c3_s3('m','a','l');
+      mot_m = c3_s3('m','a','l');
     }
     else if ( _(u3T.coy_o) ) {
-      mot_l = c3_s3('c','o','y');
+      mot_m = c3_s3('c','o','y');
     }
     else if ( _(u3T.euq_o) ) {
-      mot_l = c3_s3('e','u','q');
+      mot_m = c3_s3('e','u','q');
     }
     else if ( _(u3T.far_o) ) {
-      mot_l = c3_s3('f','a','r');
+      mot_m = c3_s3('f','a','r');
     }
     else if ( _(u3T.noc_o) ) {
       u3_assert(!_(u3T.glu_o));
-      mot_l = c3_s3('n','o','c');
+      mot_m = c3_s3('n','o','c');
     }
     else if ( _(u3T.glu_o) ) {
-      mot_l = c3_s3('g','l','u');
+      mot_m = c3_s3('g','l','u');
     }
     else {
-      mot_l = c3_s3('f','u','n');
+      mot_m = c3_s3('f','u','n');
     }
 
     rod_u = u3R;
@@ -257,7 +257,7 @@ u3t_samp(void)
         */
         u3R->pro.day = u3nt(u3nq(0, 0, 0, u3nq(0, 0, 0, 0)), 0, 0);
       }
-      u3R->pro.day = u3dt("pi-noon", mot_l, lab, u3R->pro.day);
+      u3R->pro.day = u3dt("pi-noon", mot_m, lab, u3R->pro.day);
     }
     u3R = rod_u;
   }
@@ -1131,7 +1131,7 @@ u3t_sstack_init()
 {
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
-  c3_w_tmp shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+  c3_w_new shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;
@@ -1163,7 +1163,7 @@ u3t_sstack_open()
   //Setup spin stack
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
-  c3_w_tmp shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
+  c3_w_new shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return NULL; 

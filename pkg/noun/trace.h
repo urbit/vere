@@ -34,9 +34,9 @@
    /* u3t_spin: %spin hint stack
     */
     typedef struct {
-      c3_w_tmp off_w;
-      c3_w_tmp fow_w;
-      c3_y dat_y[PSIZE - 2*sizeof(c3_w_tmp)];
+      c3_w_new off_w;
+      c3_w_new fow_w;
+      c3_y dat_y[PSIZE - 2*sizeof(c3_w_new)];
     } u3t_spin;
 
   /**  Macros.
