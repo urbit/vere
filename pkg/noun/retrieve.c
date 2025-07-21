@@ -1866,18 +1866,22 @@ u3r_skip(u3_noun fol)
 **
 **  Returns yes if the formula won't crash
 **  and has no hints, returning constant result
-**  if possible
+**  if possible. *out is undefined if the return
+**  is c3n
 */
 c3_o
 u3r_safe(u3_noun fol, u3_weak* out)
 {
-  if ( c3n == u3du(fol) ) {
+  u3_noun h_fol, t_fol, p, q, ax, don, o1, o2;
+  c3_o saf_o;
+
+  if ( c3n == u3r_cell(fol, &h_fol, &t_fol) ) {
     return c3n;
   }
-  switch ( u3h(fol) ) {
+  switch ( h_fol ) {
     default: return c3n;
     case 0:
-      if ( 1 == u3t(fol) ) {
+      if ( 1 == t_fol ) {
         *out = u3_none;
         return c3y;
       }
@@ -1886,15 +1890,39 @@ u3r_safe(u3_noun fol, u3_weak* out)
       }
       
     case 1:
-      *out = u3t(fol);
+      *out = t_fol;
       return c3y;
+
+    case 3:
+      saf_o = u3r_safe(t_fol, &o1);
+      if ( _(saf_o) ) {
+        *out = (u3_none == o1) ? u3_none : u3du(o1);
+      }
+      return saf_o;
+
+    case 5:
+      saf_o = c3a(u3r_cell(t_fol, &p, &q),
+              c3a(u3r_safe(p, &o1), u3r_safe(q, &o2)));
+
+      if ( _(saf_o) ) {
+        *out = (u3_none == o1) ? u3_none
+             : (u3_none == o2) ? u3_none
+             : u3r_sing(o1, o2);
+      }
+      return saf_o;
 
     case 7:
     case 8:
-      u3_noun p, q;
-      return c3a(
-        u3r_cell(u3t(fol), &p, &q),
-        c3a(u3r_safe(p, out), u3r_safe(q, out))
-      );
+      return c3a(u3r_cell(t_fol, &p, &q),
+             c3a(u3r_safe(p, &o1), u3r_safe(q, out)));
+    
+    case 10:
+      saf_o = c3a(u3r_cell(t_fol, &p, &q),
+              c3a(u3r_cell(p, &ax, &don),
+              c3a(u3ud(ax),
+              c3a(u3r_safe(don, &o1), u3r_safe(q, &o2)))));
+
+      *out = u3_none;
+      return saf_o;
   }
 }
