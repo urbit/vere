@@ -54,7 +54,7 @@
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
-        u3m_signal(u3_noun sig_l);
+        u3m_signal(c3_m sig_m);
 
       /* u3m_dump(): dump the current road to stderr.
       */
@@ -110,6 +110,11 @@
 //
 static rsignal_jmpbuf u3_Signal;
 
+#ifdef VERE64
+#include <stdatomic.h>
+static _Atomic c3_n u3_Sighow;
+#endif
+
 #include "sigsegv.h"
 
 #ifndef SIGSTKSZ
@@ -136,14 +141,14 @@ _cm_punt(u3_noun tax)
 /* _cm_emergency(): write emergency text to stderr, never failing.
 */
 static void
-_cm_emergency(c3_c* cap_c, c3_l_tmp sig_l)
+_cm_emergency(c3_c* cap_c, c3_m sig_m)
 {
   write(2, "\r\n", 2);
   write(2, cap_c, strlen(cap_c));
 
-  if ( sig_l ) {
+  if ( sig_m ) {
     write(2, ": ", 2);
-    write(2, &sig_l, 4);
+    write(2, &sig_m, 4);
   }
 
   write(2, "\r\n", 2);
@@ -287,7 +292,7 @@ _cm_stack_unwind(void)
 /* _cm_signal_recover(): recover from a deep signal, after longjmp.  Free arg.
 */
 static u3_noun
-_cm_signal_recover(c3_l_tmp sig_l, u3_noun arg)
+_cm_signal_recover(c3_m sig_m, u3_noun arg)
 {
   u3_noun tax;
 
@@ -304,30 +309,30 @@ _cm_signal_recover(c3_l_tmp sig_l, u3_noun arg)
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
-    _cm_emergency("recover: top", sig_l);
+    _cm_emergency("recover: top", sig_m);
     u3C.wag_w |= u3o_check_corrupt;
 
     //  Reset the top road - the problem could be a fat cap.
     //
     _cm_signal_reset();
 
-    if ( (c3__meme == sig_l) && (u3a_open(u3R) <= 256) ) {
+    if ( (c3__meme == sig_m) && (u3a_open(u3R) <= 256) ) {
       // Out of memory at the top level.  Error becomes c3__full,
       // and we release the emergency buffer.  To continue work,
       // we need to readjust the image, eg, migrate to 64 bit.
       //
       u3z(u3R->bug.mer);
       u3R->bug.mer = 0;
-      sig_l = c3__full;
+      sig_m = c3__full;
     }
-    return u3nt(3, sig_l, tax);
+    return u3nt(3, sig_m, tax);
   }
   else {
     u3_noun pro;
 
     //  A signal was generated while we were within Nock.
     //
-    _cm_emergency("recover: dig", sig_l);
+    _cm_emergency("recover: dig", sig_m);
 
 #if 0
     //  Descend to the innermost trace, collecting stack.
@@ -350,7 +355,7 @@ _cm_signal_recover(c3_l_tmp sig_l, u3_noun arg)
 #else
     tax = _cm_stack_unwind();
 #endif
-    pro = u3nt(3, sig_l, tax);
+    pro = u3nt(3, sig_m, tax);
     _cm_signal_reset();
 
     u3z(arg);
@@ -440,14 +445,9 @@ _cm_signal_done(void)
 /* u3m_signal(): treat a nock-level exception as a signal interrupt.
 */
 void
-u3m_signal(u3_noun sig_l)
+u3m_signal(c3_m sig_m)
 {
-#ifndef VERE64
-  rsignal_longjmp(u3_Signal, sig_l);
-#else
-  u3R->esc.sig_w = sig_l;
-  rsignal_longjmp(u3_Signal, 1);
-#endif
+  rsignal_longjmp(u3_Signal, sig_m);
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -1282,8 +1282,8 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
              u3_noun   arg)
 {
   u3_noun pro;
+  c3_m    sig_m = 0;
 #ifndef VERE64
-  c3_n    sig_l = 0;
   u3_noun why = 0;
 #endif
 
@@ -1291,13 +1291,7 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
   */
   _cm_signal_deep(mil_w);
 
-#ifndef VERE64
-  if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
-#else
-  if ( 0 != rsignal_setjmp(u3_Signal) ) {
-    // XX: put in home struct
-    c3_n sig_l = u3R->esc.sig_w;
-#endif
+  if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
     //
     u3t_init();
@@ -1308,7 +1302,7 @@ u3m_soft_top(c3_n    mil_w,                     //  timer ms
 
     //  recover memory state from the top down
     //
-    return _cm_signal_recover(sig_l, arg);
+    return _cm_signal_recover(sig_m, arg);
   }
 
   /* Record the cap, and leap.
