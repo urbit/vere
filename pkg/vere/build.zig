@@ -227,8 +227,6 @@ const c_source_files = [_][]const u8{
     "melt.c",
     "newt.c",
     "pier.c",
-    "save.c",
-    "serf.c",
     "time.c",
     "ward.c",
 };
@@ -244,7 +242,6 @@ const install_headers = [_][]const u8{
     "arena.h",
     "mars.h",
     "mdns.h",
-    "serf.h",
     "vere.h",
     "verstable.h",
 };
