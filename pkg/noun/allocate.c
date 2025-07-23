@@ -1982,7 +1982,7 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
   }
 }
 
-/* u3a_print_memory: print memory amount.
+/* u3a_print_memory: print memory amount to file descriptor.
 */
 void
 u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
@@ -2010,6 +2010,39 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
     }
     else if ( bib_z ) {
       fprintf(fil_u, "%s: B/%" PRIc3_z "\r\n",
+              cap_c, bib_z);
+    }
+  }
+}
+
+/* u3a_print_memory_str: print memory amount to string.
+*/
+void
+u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w)
+{
+  u3_assert( 0 != str_c );
+
+  c3_z byt_z = ((c3_z)wor_w * 4);
+  c3_z gib_z = (byt_z / 1000000000);
+  c3_z mib_z = (byt_z % 1000000000) / 1000000;
+  c3_z kib_z = (byt_z % 1000000) / 1000;
+  c3_z bib_z = (byt_z % 1000);
+
+  if ( byt_z ) {
+    if ( gib_z ) {
+      sprintf(str_c, "%s: GB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, gib_z, mib_z, kib_z, bib_z);
+    }
+    else if ( mib_z ) {
+      sprintf(str_c, "%s: MB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, mib_z, kib_z, bib_z);
+    }
+    else if ( kib_z ) {
+      sprintf(str_c, "%s: KB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, kib_z, bib_z);
+    }
+    else if ( bib_z ) {
+      sprintf(str_c, "%s: B/%" PRIc3_z "\r\n",
               cap_c, bib_z);
     }
   }

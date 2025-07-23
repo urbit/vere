@@ -386,6 +386,7 @@
     u3_noun u3wfu_fond(u3_noun);
     u3_noun u3wfu_fish(u3_noun);
     u3_noun u3wfu_fuse(u3_noun);
+    u3_noun u3wfu_redo(u3_noun);
     u3_noun u3wfu_mint(u3_noun);
     u3_noun u3wfu_mull(u3_noun);
     u3_noun u3wfu_nest_dext(u3_noun);
