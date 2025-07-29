@@ -6,86 +6,96 @@
 #include "noun.h"
 
 
-  // like skid, except its callback is $-([* *] ?) and it takes the second
-  // argument so that it calls its callback with [i.list, second]
-  //
-  // all args are RETAINED
-  static u3_noun
-  _split_in(u3j_site* sit_u,
-            u3_noun a,
-            u3_noun second)
-  {
-    if ( 0 == a ) {
-      return u3nc(u3_nul, u3_nul);
-    }
-    else if ( c3n == u3du(a) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      u3_noun acc = _split_in(sit_u, u3t(a), second);
-      u3_noun hoz = u3j_gate_slam(sit_u, u3nc(u3k(u3h(a)), u3k(second)));
-      u3_noun nex;
+#define SWAP(l, r)    \
+  do { typeof(l) t = l; l = r; r = t; } while (0)
 
-      if ( c3y == hoz ) {
-        nex = u3nc(u3nc(u3k(u3h(a)), u3k(u3h(acc))), u3k(u3t(acc)));
-      }
-      else if ( c3n == hoz ) {
-        nex = u3nc(u3k(u3h(acc)), u3nc(u3k(u3h(a)), u3k(u3t(acc))));
-      }
-      else {
-        return u3m_bail(c3__exit);
-      }
-      u3z(hoz);
-      u3z(acc);
-
-      return nex;
+static void
+_quicksort(u3j_site* sit_u, u3_noun* arr, c3_ws low_ws, c3_ws hig_ws)
+{
+  if ( low_ws >= hig_ws ) return;
+  
+  u3_noun pivot = arr[hig_ws];
+  c3_ws i_ws = low_ws;
+  
+  for (c3_ws j_ws = low_ws; j_ws < hig_ws; j_ws++) {
+    u3_noun hoz = u3j_gate_slam(sit_u, u3nc(u3k(arr[j_ws]), u3k(pivot)));
+    
+    if (hoz > 1) u3m_bail(c3__exit);
+    if ( _(hoz) ) {
+      SWAP(arr[i_ws], arr[j_ws]);
+      i_ws++;
     }
   }
 
-  static u3_noun
-  _sort_in(u3j_site* sit_u, u3_noun list)
-  {
-    if ( 0 == list ) {
-      return u3_nul;
-    }
-    else if ( c3n == u3du(list) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      u3_noun hed, tal;
-      u3x_cell(list, &hed, &tal);
+  SWAP(arr[i_ws], arr[hig_ws]);
 
-      u3_noun split = _split_in(sit_u, tal, hed);
-      u3_noun lhs = _sort_in(sit_u, u3h(split));
-      u3_noun rhs = u3nc(u3k(hed), _sort_in(sit_u, u3t(split)));
+  _quicksort(sit_u, arr, low_ws, i_ws - 1);
+  _quicksort(sit_u, arr, i_ws + 1, hig_ws);
+}
 
-      u3_noun ret = u3qb_weld(lhs, rhs);
-      u3z(lhs);
-      u3z(rhs);
-      u3z(split);
+#undef SWAP
 
-      return ret;
-    }
+static_assert(
+  (UINT32_MAX < (SIZE_MAX / sizeof(u3_noun))),
+  "u3_noun arr[len_w] must be allocatable"
+);
+
+static u3_noun
+_sort(u3j_site* sit_u, u3_noun list)
+{
+  if (u3_nul == list) {
+    return u3_nul;
   }
 
-  u3_noun
-  u3qb_sort(u3_noun a,
-            u3_noun b)
-  {
-    u3_noun  pro;
-    u3j_site sit_u;
-    u3j_gate_prep(&sit_u, u3k(b));
-    pro = _sort_in(&sit_u, a);
-    u3j_gate_lose(&sit_u);
-    return pro;
-  }
-  u3_noun
-  u3wb_sort(u3_noun cor)
-  {
-    u3_noun a, b;
-
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qb_sort(a, b);
-    }
+  c3_w len_w;
+  u3_atom len = u3qb_lent(list);
+  if ( c3n == u3r_safe_word(len, &len_w) ) {
+    return u3m_bail(c3__fail);
   }
 
+  c3_w i_w;
+  u3a_cell* cel_u;
+  u3_noun* elements = u3a_malloc(sizeof(u3_noun) * len_w);
+  for (i_w = 0; i_w < len_w; i_w++) {
+    //  inlined u3r_cell without any checks
+    //  since the list was already validated and measured
+    //
+    cel_u = u3a_to_ptr(list);
+    elements[i_w] = cel_u->hed;
+    list = cel_u->tel;
+  }
+
+  _quicksort(sit_u, elements, 0, len_w - 1);
+
+  u3_noun pro = u3_nul;
+  for (i_w = len_w; i_w--;) {
+    pro = u3nc(u3k(elements[i_w]), pro);
+  }
+  
+  u3a_free(elements);
+
+  return pro;
+}
+
+u3_noun
+u3qb_sort(u3_noun a,
+          u3_noun b)
+{
+  u3_noun  pro;
+  u3j_site sit_u;
+  u3j_gate_prep(&sit_u, u3k(b));
+  pro = _sort(&sit_u, a);
+  u3j_gate_lose(&sit_u);
+  return pro;
+}
+u3_noun
+u3wb_sort(u3_noun cor)
+{
+  u3_noun a, b;
+
+  if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
+    return u3m_bail(c3__exit);
+  } else {
+    return u3qb_sort(a, b);
+  }
+}
