@@ -1074,6 +1074,15 @@ _cw_init_io(uv_loop_t* lup_u)
 static u3_disk*
 _cw_disk_init(c3_c* dir_c)
 {
+  //  if fresh boot, make pier
+  //
+  if _(u3_Host.ops_u.nuu) {
+    if ( c3n == u3_disk_make(dir_c) ) {
+      fprintf(stderr, "unable to make pier\n");
+      exit(1);
+    }
+  }
+
   u3_disk* log_u = u3_disk_init(dir_c);
 
   if ( !log_u ) {

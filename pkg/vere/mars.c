@@ -1943,6 +1943,10 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
 
   //  XX
   u3_Host.ops_u.nuu = c3y;
+  if ( c3n == u3_disk_make(dir_c) ) {
+    fprintf(stderr, "boot: disk make fail\r\n");
+    return c3n;
+  }
   if ( !(log_u = u3_disk_init(dir_c)) ) {
     fprintf(stderr, "boot: disk init fail\r\n");
     return c3n;
