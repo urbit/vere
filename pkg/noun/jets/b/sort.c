@@ -40,6 +40,8 @@ static_assert(
   "u3_noun arr[len_w] must be allocatable"
 );
 
+//  RETAINS list, transfer product
+//
 static u3_noun
 _sort(u3j_site* sit_u, u3_noun list)
 {
@@ -47,8 +49,12 @@ _sort(u3j_site* sit_u, u3_noun list)
     return u3_nul;
   }
 
-  c3_w len_w;
   u3_atom len = u3qb_lent(list);
+  if (1 == len) {
+    return u3k(list);
+  }
+  
+  c3_w len_w;
   if ( c3n == u3r_safe_word(len, &len_w) ) {
     return u3m_bail(c3__fail);
   }
@@ -73,6 +79,7 @@ _sort(u3j_site* sit_u, u3_noun list)
   }
   
   u3a_free(elements);
+  u3z(len);
 
   return pro;
 }
