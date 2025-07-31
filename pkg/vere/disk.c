@@ -965,15 +965,15 @@ _disk_epoc_meta(u3_disk*    log_u,
   return c3y;
 }
 
-/* u3_disk_epoc_zero: create epoch zero.
+/* u3_disk_epoc_zero: make epoch zero.
 */
 c3_o
-u3_disk_epoc_zero(u3_disk* log_u)
+u3_disk_epoc_zero(c3_c* pax_c)
 {
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
   c3_i epo_i;
-  snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_u->com_u->pax_c);
+  snprintf(epo_c, sizeof(epo_c), "%s/0i0", pax_c);
   c3_d ret_d = c3_mkdir(epo_c, 0700);
   if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
     fprintf(stderr, "disk: epoch 0i0 mkdir failed: %s\r\n", strerror(errno));
@@ -1032,10 +1032,6 @@ u3_disk_epoc_zero(u3_disk* log_u)
     goto fail3;
   }
   close(epo_i);
-
-  //  load new epoch directory and set it in log_u
-  log_u->epo_d = 0;
-  log_u->ver_w = U3D_VERLAT;
 
   //  success
   return c3y;
@@ -1348,7 +1344,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VERLAT);
 
   //  initialize first epoch "0i0"
-  if ( c3n == u3_disk_epoc_zero(log_u) ) {
+  if ( c3n == u3_disk_epoc_zero(log_u->com_u->pax_c) ) {
     fprintf(stderr, "disk: failed to initialize first epoch\r\n");
     return c3n;
   }

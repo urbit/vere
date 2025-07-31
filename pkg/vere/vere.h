@@ -959,6 +959,11 @@
         c3_z
         u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
+      /* u3_disk_epoc_zero: make epoch zero.
+      */
+        c3_o
+        u3_disk_epoc_zero(c3_c* pax_c);
+
       /* u3_disk_kindly(): do the needful.
       */
         void
