@@ -1759,7 +1759,80 @@ epoch versions (epoc.txt)
   return _epoc_good;
 }
 
-/* u3_disk_init(): load or create pier directories and event log.
+/* u3_disk_make(): make pier directories.
+*/
+c3_o
+u3_disk_make(c3_c* pax_c)
+{
+  //  make pier directory
+  //
+  {
+    if (  ( -1 == c3_mkdir(pax_c, 0700) )
+       && ( EEXIST != errno ) )
+    {
+      fprintf(stderr, "disk: failed to make pier at %s\r\n", pax_c);
+      return c3n;
+    }
+  }
+
+  //  make $pier/.urb
+  {
+    c3_c* urb_c = c3_malloc(6 + strlen(pax_c));
+
+    strcpy(urb_c, pax_c);
+    strcat(urb_c, "/.urb");
+
+    if (  ( -1 == c3_mkdir(urb_c, 0700) )
+       && ( EEXIST != errno ) )
+    {
+      fprintf(stderr, "disk: failed to make /.urb in %s\r\n", pax_c);
+      c3_free(urb_c);
+      return c3n;
+    }
+    c3_free(urb_c);
+  }
+
+  //  make $pier/.urb/put and $pier/.urb/get
+  //
+  {
+    c3_c* dir_c = c3_malloc(10 + strlen(pax_c));
+
+    strcpy(dir_c, pax_c);
+    strcat(dir_c, "/.urb/put");
+    c3_mkdir(dir_c, 0700);
+
+    strcpy(dir_c, pax_c);
+    strcat(dir_c, "/.urb/get");
+    c3_mkdir(dir_c, 0700);
+
+    c3_free(dir_c);
+  }
+
+  //  make $pier/.urb/log
+  //
+  {
+    c3_c log_c[8193];
+    snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
+
+    if (  ( -1 == c3_mkdir(log_c, 0700) )
+       && ( EEXIST != errno ) )
+    {
+      fprintf(stderr, "disk: failed to make /.urb/log in %s\r\n", pax_c);
+      return c3n;
+    }
+
+    //  make epoch zero
+    //
+    if ( c3n == u3_disk_epoc_zero(log_c) ) {
+      fprintf(stderr, "disk: failed to make epoch zero\r\n");
+      return c3n;
+    }
+  }
+
+  return c3y;
+}
+
+/* u3_disk_init(): init pier directories and event log.
 */
 u3_disk*
 u3_disk_init(c3_c* pax_c)
@@ -1771,10 +1844,10 @@ u3_disk_init(c3_c* pax_c)
   log_u->sav_u.ted_u.data = log_u;
   log_u->put_u.ent_u = log_u->put_u.ext_u = 0;
 
-  //  create/load pier directory
+  //  load pier directory
   //
   {
-    if ( 0 == (log_u->dir_u = u3_foil_folder(pax_c)) ) {
+    if ( 0 == (log_u->dir_u = u3_dire_init(pax_c)) ) {
       fprintf(stderr, "disk: failed to load pier at %s\r\n", pax_c);
       c3_free(log_u);
       return 0;
@@ -1793,7 +1866,7 @@ u3_disk_init(c3_c* pax_c)
     strcpy(urb_c, pax_c);
     strcat(urb_c, "/.urb");
 
-    if ( 0 == (log_u->urb_u = u3_foil_folder(urb_c)) ) {
+    if ( 0 == (log_u->urb_u = u3_dire_init(urb_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb in %s\r\n", pax_c);
       c3_free(urb_c);
       c3_free(log_u);
@@ -1802,29 +1875,13 @@ u3_disk_init(c3_c* pax_c)
     c3_free(urb_c);
   }
 
-  //  create/load $pier/.urb/put and $pier/.urb/get
-  //
-  {
-    c3_c* dir_c = c3_malloc(10 + strlen(pax_c));
-
-    strcpy(dir_c, pax_c);
-    strcat(dir_c, "/.urb/put");
-    c3_mkdir(dir_c, 0700);
-
-    strcpy(dir_c, pax_c);
-    strcat(dir_c, "/.urb/get");
-    c3_mkdir(dir_c, 0700);
-
-    c3_free(dir_c);
-  }
-
-  //  create/load $pier/.urb/log
+  //  load $pier/.urb/log
   //
   {
     c3_c log_c[8193];
     snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
 
-    if ( 0 == (log_u->com_u = u3_foil_folder(log_c)) ) {
+    if ( 0 == (log_u->com_u = u3_dire_init(log_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb/log in %s\r\n", pax_c);
       c3_free(log_u);
       return 0;
@@ -1842,15 +1899,9 @@ u3_disk_init(c3_c* pax_c)
     //
     if ( c3y == u3_Host.ops_u.nuu ) {
       //  ensure old data.mdb file does not exist
+      //  XX move this into u3_disk_make?
       if ( c3y == exs_o ) {
         fprintf(stderr, "disk: old data.mdb file exists\r\n");
-        c3_free(log_u);
-        return 0;
-      }
-
-      //  initialize first epoch "0i0"
-      if ( c3n == u3_disk_epoc_zero(log_u) ) {
-        fprintf(stderr, "disk: failed to initialize first epoch\r\n");
         c3_free(log_u);
         return 0;
       }

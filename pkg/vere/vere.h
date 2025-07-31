@@ -875,7 +875,12 @@
                      u3_ovum_peer news_f,
                      u3_ovum_bail bail_f);
 
-      /* u3_disk_init(): load or create pier directories and event log.
+      /* u3_disk_make(): make pier directories and event log.
+      */
+        c3_o
+        u3_disk_make(c3_c* pax_c);
+
+      /* u3_disk_init(): init pier directories and event log.
       */
         u3_disk*
         u3_disk_init(c3_c* pax_c);
