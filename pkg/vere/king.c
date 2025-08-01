@@ -225,13 +225,16 @@ _king_come(u3_noun star, u3_noun pill, u3_noun path)
 {
   _king_dawn(u3_dawn_come(), pill, path);
 }
-
+/* _king_slog(): send hint output (hod is [priority tank]).
+*/
 static void
 _king_slog(u3_noun hod)
 {
-  u3_pier_tank(0, 0, u3k(u3t(hod)));
-  u3z(hod);
+
+   u3_pier_tank(0, 0,  u3k(u3t(hod)));
+   u3z(hod);
 }
+
 
 /* _king_dawn(): boot from keys, validating
 */

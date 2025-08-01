@@ -1014,6 +1014,14 @@ _cw_serf_send(u3_noun pel)
 
   u3s_jam_xeno(pel, &len_d, &byt_y);
 
+
+
+  /*
+
+    Check 
+  
+  */
+
 #ifdef SERF_TRACE_JAM
   u3t_event_trace("serf ipc jam", 'E');
 #endif
@@ -1022,12 +1030,45 @@ _cw_serf_send(u3_noun pel)
   u3z(pel);
 }
 
+// Global flag to prevent recursive slog triggering
+static c3_o slog_active = c3y;
+
+/* u3_slam_on_wrapper(): wrapper for u3m_soft in _cw_serf_send_slog (hod is [priority tank]).
+*/
+static u3_noun u3_slam_on_wrapper(u3_noun hod) {
+
+  return u3n_slam_on(u3h(hod), u3t(hod));
+}
+
 /* _cw_serf_send_slog(): send hint output (hod is [priority tank]).
+  FIXED issue #558
 */
 static void
 _cw_serf_send_slog(u3_noun hod)
-{
-  _cw_serf_send(u3nc(c3__slog, hod));
+{  
+  // Prevent repeating slog calls which could cause infinite loops/corruption
+  if(slog_active) return; 
+   
+  slog_active = c3n; // Mark slog as busy
+
+  u3_noun gat = u3v_wish("slog"); // Get the gate for slog
+
+  c3_o ret = u3m_soft(0, u3_slam_on_wrapper, u3nc(gat, u3k(hod))); // Softly execute with memory protection
+  
+  // Only send slog if evaluation succeeded
+  if(ret == c3y) {
+
+    _cw_serf_send(u3nc(c3__slog, hod)); // Send slog hint 
+  }
+  else {
+
+    fprintf(stderr, "main: recieved bad slog from serf!\r\n");
+  }
+    
+  u3z(ret); // Free result
+
+  slog_active = c3y; // Restore slog availability
+  
 }
 
 /* _cw_serf_send_stdr(): send stderr output (%flog)
@@ -2369,6 +2410,10 @@ _cw_pack(c3_i argc, c3_c* argv[])
 static void
 _cw_play_slog(u3_noun hod)
 {
+
+
+
+
   u3_pier_tank(0, 0, u3k(u3t(hod)));
   u3z(hod);
 }
