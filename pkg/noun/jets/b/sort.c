@@ -52,9 +52,9 @@ _sort(u3j_site* sit_u, u3_noun list)
     return u3_nul;
   }
   
-  c3_w len_w = 0;
+  c3_w len_w = 1;
   {
-    u3_noun lit = list;
+    u3_noun lit = u3t(list);
     while ( u3_nul != lit ) {
       ++len_w; lit = u3t(lit);
     }
