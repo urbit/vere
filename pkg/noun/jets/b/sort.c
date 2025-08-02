@@ -37,8 +37,11 @@ _quicksort(u3j_site* sit_u, u3_noun* arr, c3_ws low_ws, c3_ws hig_ws)
 
 static_assert(
   (UINT32_MAX < (SIZE_MAX / sizeof(u3_noun))),
-  "u3_noun arr[len_w] must be allocatable"
+  "len_w * sizeof u3_noun overflow"
 );
+
+static_assert( (UINT32_MAX > u3a_cells),
+               "length precision" );
 
 //  RETAINS list, transfer product
 //
@@ -48,15 +51,17 @@ _sort(u3j_site* sit_u, u3_noun list)
   if (u3_nul == list) {
     return u3_nul;
   }
-
-  u3_atom len = u3qb_lent(list);
-  if (1 == len) {
-    return u3k(list);
-  }
   
-  c3_w len_w;
-  if ( c3n == u3r_safe_word(len, &len_w) ) {
-    return u3m_bail(c3__fail);
+  c3_w len_w = 0;
+  {
+    u3_noun lit = list;
+    while ( u3_nul != lit ) {
+      ++len_w; lit = u3t(lit);
+    }
+  }
+
+  if (1 == len_w) {
+    return u3k(list);
   }
 
   c3_w i_w;
@@ -79,7 +84,6 @@ _sort(u3j_site* sit_u, u3_noun list)
   }
   
   u3a_free(elements);
-  u3z(len);
 
   return pro;
 }
