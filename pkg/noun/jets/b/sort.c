@@ -15,8 +15,8 @@ static_assert(
 );
 
 static void
-_merge_sort(u3_noun* arr_u,
-  u3_noun* tmp_u,
+_merge_sort(u3_noun* restrict arr_u,
+  u3_noun* restrict tmp_u,
   c3_w lef_w,
   c3_w rit_w,
   u3j_site* sit_u)
@@ -39,9 +39,8 @@ _merge_sort(u3_noun* arr_u,
     //  and compared element in Hoon
     //
     u3_noun sam = u3nc(u3k(arr_u[j_w]), u3k(arr_u[i_w]));
-    u3_noun hoz = u3j_gate_slam(sit_u, sam);
-    if ( hoz > 1 ) u3m_bail(c3__exit);
-    if ( c3n == hoz )
+    c3_o hoz_o = u3x_loob(u3j_gate_slam(sit_u, sam));
+    if ( c3n == hoz_o )
       tmp_u[k_w++] = arr_u[i_w++];
     else
       tmp_u[k_w++] = arr_u[j_w++];
