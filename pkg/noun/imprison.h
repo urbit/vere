@@ -76,14 +76,16 @@
       /* General constructors.
       */
         /* u3i_word(): construct u3_atom from c3_w.
+        **         XX: remove post-migration
         */
           u3_atom
-          u3i_word_new(c3_w_tmp dat_w);
+          u3i_word_new(c3_w_new dat_w);
 
         /* u3i_word(): construct u3_atom from c3_w.
+        **         XX: remove post-migration
         */
           u3_atom
-          u3i_word_tmp(c3_w_tmp dat_w);
+          u3i_word_tmp(c3_w_new dat_w);
 
         /* u3i_chub(): construct u3_atom from c3_d.
         */

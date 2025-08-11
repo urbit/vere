@@ -483,8 +483,8 @@ u3i_chubs(c3_n        a_w,
 #ifndef VERE64
 // XX: why exactly different?
     {
-      c3_w_tmp* buf_w = sab_u.buf_w;
-      c3_w_tmp    i_w;
+      c3_w_new* buf_w = sab_u.buf_w;
+      c3_w_new    i_w;
       c3_d    i_d;
 
       for ( i_w = 0; i_w < a_w; i_w++ ) {
@@ -705,7 +705,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w_tmp        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      c3_n        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
       const c3_n* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
                         : ((u3a_atom*)u3a_to_ptr(axe))->buf_n;
@@ -753,20 +753,20 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 **   Axes must be cats (31 bit).
 */
   struct _molt_pair {
-    c3_w_tmp    axe_w;
+    c3_n    axe_w;
     u3_noun som;
   };
 
-  static c3_w_tmp
-  _molt_cut(c3_w_tmp               len_w,
+  static c3_n
+  _molt_cut(c3_n               len_w,
             struct _molt_pair* pms_m)
   {
-    c3_w_tmp i_w, cut_t, cut_w;
+    c3_n i_w, cut_t, cut_w;
 
     cut_t = 0;
     cut_w = 0;
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      c3_w_tmp axe_w = pms_m[i_w].axe_w;
+      c3_n axe_w = pms_m[i_w].axe_w;
 
       if ( (cut_t == 0) && (3 == u3x_cap(axe_w)) ) {
         cut_t = 1;
@@ -779,7 +779,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 
   static u3_noun                            //  transfer
   _molt_apply(u3_noun            som,       //  retain
-              c3_w_tmp               len_w,
+              c3_n               len_w,
               struct _molt_pair* pms_m)     //  transfer
   {
     if ( len_w == 0 ) {
@@ -789,7 +789,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
       return pms_m[0].som;
     }
     else {
-      c3_w_tmp cut_w = _molt_cut(len_w, pms_m);
+      c3_n cut_w = _molt_cut(len_w, pms_m);
 
       if ( c3n == u3a_is_cell(som) ) {
         return u3m_bail(c3__exit);
@@ -806,7 +806,7 @@ u3_noun
 u3i_molt(u3_noun som, ...)
 {
   va_list            ap;
-  c3_w_tmp               len_w;
+  c3_n               len_w;
   struct _molt_pair* pms_m;
   u3_noun            pro;
 
@@ -816,7 +816,7 @@ u3i_molt(u3_noun som, ...)
   {
     va_start(ap, som);
     while ( 1 ) {
-      if ( 0 == va_arg(ap, c3_w_tmp) ) {
+      if ( 0 == va_arg(ap, c3_n) ) {
         break;
       }
       va_arg(ap, u3_weak*);
@@ -831,11 +831,11 @@ u3i_molt(u3_noun som, ...)
   //  Install.
   //
   {
-    c3_w_tmp i_w;
+    c3_n i_w;
 
     va_start(ap, som);
     for ( i_w = 0; i_w < len_w; i_w++ ) {
-      pms_m[i_w].axe_w = va_arg(ap, c3_w_tmp);
+      pms_m[i_w].axe_w = va_arg(ap, c3_n);
       pms_m[i_w].som = va_arg(ap, u3_noun);
     }
     va_end(ap);
