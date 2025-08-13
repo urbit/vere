@@ -96,7 +96,7 @@
     /* u3j_fink: (fine check) enough data to verify a located core.
     */
       typedef struct {
-        c3_w_tmp    len_w;                //  number of fists
+        c3_l    len_l;                //  number of fists
         u3_noun sat;                  //  static noun at end of check
         u3j_fist fis_u[];             //  fists
       } u3j_fink;
@@ -144,7 +144,7 @@
     **/
       /* u3j_boot(): initialize jet system.
       */
-        c3_w_tmp
+        c3_l
         u3j_boot(c3_o nuu_o);
 
       /* u3j_clear(): clear jet table to re-register.
@@ -276,7 +276,7 @@
 
       /* u3j_rite_mark(): mark u3j_rite for gc.
       */
-        c3_w_tmp
+        c3_n
         u3j_rite_mark(u3j_rite* rit_u);
 
       /* u3j_rite_lose(): lose references of u3j_rite (but do not free).
@@ -291,7 +291,7 @@
 
       /* u3j_site_mark(): mark u3j_site for gc.
       */
-        c3_w_tmp
+        c3_n
         u3j_site_mark(u3j_site* sit_u);
 
       /* u3j_mark(): mark jet state for gc.
