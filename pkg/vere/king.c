@@ -504,7 +504,7 @@ _arvo_hash(c3_c *out_c, c3_c *arv_c)
 {
   c3_c cmd_c[2048];
 
-  sprintf(cmd_c, "git -C %s log -1 HEAD --format=%%H -- sys/", arv_c);
+  snprintf(cmd_c, 2048, "git -C %s log -1 HEAD --format=%%H -- sys/", arv_c);
   _get_cmd_output(cmd_c, out_c, 11);
 
   out_c[10] = 0;  //  end with null-byte
@@ -514,7 +514,7 @@ _arvo_hash(c3_c *out_c, c3_c *arv_c)
    based on the location of an arvo git repository.
 */
 static void
-_git_pill_url(c3_c *out_c, c3_c *arv_c)
+_git_pill_url(c3_c *out_c, c3_c *arv_c, c3_w out_c_size)
 {
   c3_c hax_c[11];
 
@@ -526,7 +526,7 @@ _git_pill_url(c3_c *out_c, c3_c *arv_c)
   }
 
   _arvo_hash(hax_c, arv_c);
-  sprintf(out_c, "https://bootstrap.urbit.org/git-%s.pill", hax_c);
+  snprintf(out_c, out_c_size, "https://bootstrap.urbit.org/git-%s.pill", hax_c);
 }
 
 /* _boothack_pill(): parse CLI pill arguments into +pill specifier
@@ -547,11 +547,11 @@ _boothack_pill(void)
     if ( (c3y == u3_Host.ops_u.git) &&
        (0 != u3_Host.ops_u.arv_c) )
     {
-      _git_pill_url(url_c, u3_Host.ops_u.arv_c);
+      _git_pill_url(url_c, u3_Host.ops_u.arv_c, 2048);
     }
     else {
       u3_assert( 0 != u3_Host.ops_u.url_c );
-      strcpy(url_c, u3_Host.ops_u.url_c);
+      snprintf(url_c, 2048, "%s", u3_Host.ops_u.url_c);
     }
 
     u3l_log("boot: downloading pill %s", url_c);

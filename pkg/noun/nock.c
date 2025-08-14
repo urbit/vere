@@ -1899,7 +1899,7 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
   if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
-    u3a_print_time(str_c, "took", u3r_chub(0, delta));
+    u3a_print_time(str_c, "took", u3r_chub(0, delta), 64);
     u3t_slog(u3nc(0, u3i_string(str_c)));
     u3z(delta);
   }
@@ -2003,7 +2003,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
 
     // format the timing report
     c3_c str_c[64];
-    u3a_print_time(str_c, "took", u3r_chub(0, delta));
+    u3a_print_time(str_c, "took", u3r_chub(0, delta), 64);
 
     // join the timing report with the original tank from q_q_tok like so:
     // "q_q_tok: report"

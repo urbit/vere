@@ -1963,7 +1963,7 @@ u3a_discount_noun(u3_noun som)
 /* u3a_print_time: print microsecond time.
 */
 void
-u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
+u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d, c3_w str_c_size)
 {
   u3_assert( 0 != str_c );
 
@@ -1972,13 +1972,13 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
   c3_w mic_w = (mic_d % 1000);
 
   if ( sec_w ) {
-    sprintf(str_c, "%s s/%d.%03d.%03d", cap_c, sec_w, mec_w, mic_w);
+    snprintf(str_c, str_c_size, "%s s/%d.%03d.%03d", cap_c, sec_w, mec_w, mic_w);
   }
   else if ( mec_w ) {
-    sprintf(str_c, "%s ms/%d.%03d", cap_c, mec_w, mic_w);
+    snprintf(str_c, str_c_size, "%s ms/%d.%03d", cap_c, mec_w, mic_w);
   }
   else {
-    sprintf(str_c, "%s \xc2\xb5s/%d", cap_c, mic_w);
+    snprintf(str_c, str_c_size, "%s \xc2\xb5s/%d", cap_c, mic_w);
   }
 }
 
