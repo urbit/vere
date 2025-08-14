@@ -636,10 +636,10 @@ u3t_boff(void)
 
 
 /* u3t_slog_cap(): slog a tank with a caption with
-** a given priority c3_l (assumed 0-3).
+** a given priority c3_l_new (assumed 0-3).
 */
 void
-u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
+u3t_slog_cap(c3_l_new pri_l, u3_noun cap, u3_noun tan)
 {
   u3t_slog(
     u3nc(
@@ -659,7 +659,7 @@ u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
 ** until done.
 */
 void
-u3t_slog_trace(c3_l pri_l, u3_noun tax)
+u3t_slog_trace(c3_l_new pri_l, u3_noun tax)
 {
   // render the stack
   // Note: ton is a reference to a data struct
@@ -688,7 +688,7 @@ u3t_slog_trace(c3_l pri_l, u3_noun tax)
 ** c3_l priority pri
 */
 void
-u3t_slog_nara(c3_l pri_l)
+u3t_slog_nara(c3_l_new pri_l)
 {
   u3_noun tax = u3k(u3R->bug.tax);
   u3t_slog_trace(pri_l, tax);
@@ -699,7 +699,7 @@ u3t_slog_nara(c3_l pri_l)
 ** and pass it to slog_trace along with the given c3_l priority pri_l
 */
 void
-u3t_slog_hela(c3_l pri_l)
+u3t_slog_hela(c3_l_new pri_l)
 {
   // rod_u protects us from mutating the global state
   u3_road* rod_u = u3R;
