@@ -1366,12 +1366,13 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
     }
   }
-  //  We are calling nock here, but hopefully need no protection.
-  //
   else {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(tac));
-
-    _pier_dump_wall(fil_u, wol);
+    u3_noun low = u3dc("(slum soft wash)", u3nc(tab_l, col_l), u3k(tac));
+    if (u3_nul != low)
+    {
+      _pier_dump_wall(fil_u, u3k(u3t(low)));
+      u3z(low);
+    }
   }
 
   if ( c3n == u3_Host.ops_u.tem ) {
