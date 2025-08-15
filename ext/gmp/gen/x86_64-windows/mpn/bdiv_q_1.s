@@ -1,84 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		
-		
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_bdiv_q_1
-	.type	__gmpn_bdiv_q_1,@function
+#	.type	__gmpn_bdiv_q_1,@function
 	
 __gmpn_bdiv_q_1:
 
@@ -124,10 +47,10 @@ __gmpn_bdiv_q_1:
 .Levn:	bsf	%rax, %rcx
 	shr	%cl, %rax
 	jmp	.Lodd
-	.size	__gmpn_bdiv_q_1,.-__gmpn_bdiv_q_1
+#	.size	__gmpn_bdiv_q_1,.-__gmpn_bdiv_q_1
 
 	.globl	__gmpn_pi1_bdiv_q_1
-	.type	__gmpn_pi1_bdiv_q_1,@function
+#	.type	__gmpn_pi1_bdiv_q_1,@function
 	
 __gmpn_pi1_bdiv_q_1:
 
@@ -212,4 +135,4 @@ __gmpn_pi1_bdiv_q_1:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_pi1_bdiv_q_1,.-__gmpn_pi1_bdiv_q_1
+#	.size	__gmpn_pi1_bdiv_q_1,.-__gmpn_pi1_bdiv_q_1

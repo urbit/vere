@@ -1,102 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_xor_n
-	.type	__gmpn_xor_n,@function
+#	.type	__gmpn_xor_n,@function
 	
 __gmpn_xor_n:
 
@@ -150,7 +55,7 @@ __gmpn_xor_n:
 
 .Lret:	
 	ret
-	.size	__gmpn_xor_n,.-__gmpn_xor_n
+#	.size	__gmpn_xor_n,.-__gmpn_xor_n
 
 
 

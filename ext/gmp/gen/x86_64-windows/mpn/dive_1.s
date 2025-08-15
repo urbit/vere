@@ -1,73 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_divexact_1
-	.type	__gmpn_divexact_1,@function
+#	.type	__gmpn_divexact_1,@function
 	
 __gmpn_divexact_1:
 
@@ -172,4 +106,4 @@ __gmpn_divexact_1:
 	
 	ret
 
-	.size	__gmpn_divexact_1,.-__gmpn_divexact_1
+#	.size	__gmpn_divexact_1,.-__gmpn_divexact_1

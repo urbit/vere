@@ -1,102 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_ior_n
-	.type	__gmpn_ior_n,@function
+#	.type	__gmpn_ior_n,@function
 	
 __gmpn_ior_n:
 
@@ -150,7 +55,7 @@ __gmpn_ior_n:
 
 .Lret:	
 	ret
-	.size	__gmpn_ior_n,.-__gmpn_ior_n
+#	.size	__gmpn_ior_n,.-__gmpn_ior_n
 
 
 

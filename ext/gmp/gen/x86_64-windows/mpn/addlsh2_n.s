@@ -1,96 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-	
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_addlsh2_nc
-	.type	__gmpn_addlsh2_nc,@function
+#	.type	__gmpn_addlsh2_nc,@function
 	
 __gmpn_addlsh2_nc:
 
@@ -109,11 +20,11 @@ __gmpn_addlsh2_nc:
 	jc	.Lb01
 	je	.Lb10
 	jmp	.Lb11
-	.size	__gmpn_addlsh2_nc,.-__gmpn_addlsh2_nc
+#	.size	__gmpn_addlsh2_nc,.-__gmpn_addlsh2_nc
 
 	.align	16, 0x90
 	.globl	__gmpn_addlsh2_n
-	.type	__gmpn_addlsh2_n,@function
+#	.type	__gmpn_addlsh2_n,@function
 	
 __gmpn_addlsh2_n:
 
@@ -210,5 +121,5 @@ __gmpn_addlsh2_n:
 	pop	%rbp
 	
 	ret
-	.size	__gmpn_addlsh2_n,.-__gmpn_addlsh2_n
+#	.size	__gmpn_addlsh2_n,.-__gmpn_addlsh2_n
 

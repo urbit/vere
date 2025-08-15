@@ -1,96 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-					
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mul_basecase
-	.type	__gmpn_mul_basecase,@function
+#	.type	__gmpn_mul_basecase,@function
 	
 __gmpn_mul_basecase:
 
@@ -479,5 +390,5 @@ __gmpn_mul_basecase:
 	pop	%rbp
 	pop	%rbx
 	ret
-	.size	__gmpn_mul_basecase,.-__gmpn_mul_basecase
+#	.size	__gmpn_mul_basecase,.-__gmpn_mul_basecase
 

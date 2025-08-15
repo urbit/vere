@@ -1,93 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_sub_err3_n
-	.type	__gmpn_sub_err3_n,@function
+#	.type	__gmpn_sub_err3_n,@function
 	
 __gmpn_sub_err3_n:
 
@@ -165,4 +79,4 @@ __gmpn_sub_err3_n:
 	pop	%rbp
 	pop	%rbx
 	ret
-	.size	__gmpn_sub_err3_n,.-__gmpn_sub_err3_n
+#	.size	__gmpn_sub_err3_n,.-__gmpn_sub_err3_n

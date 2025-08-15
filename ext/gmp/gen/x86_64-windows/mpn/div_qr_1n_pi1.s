@@ -1,95 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-	
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_div_qr_1n_pi1
-	.type	__gmpn_div_qr_1n_pi1,@function
+#	.type	__gmpn_div_qr_1n_pi1,@function
 	
 __gmpn_div_qr_1n_pi1:
 
@@ -256,4 +168,4 @@ __gmpn_div_qr_1n_pi1:
 	jnc	.Lq_incr_done
 	lea	8(%rcx), %rcx
 	jmp	.Lq_incr_loop
-	.size	__gmpn_div_qr_1n_pi1,.-__gmpn_div_qr_1n_pi1
+#	.size	__gmpn_div_qr_1n_pi1,.-__gmpn_div_qr_1n_pi1

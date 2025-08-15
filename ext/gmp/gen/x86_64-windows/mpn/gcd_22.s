@@ -1,93 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	.text
+  .text
 	.align	64, 0x90
 	.globl	__gmpn_gcd_22
-	.type	__gmpn_gcd_22,@function
+#	.type	__gmpn_gcd_22,@function
 	
 __gmpn_gcd_22:
 
@@ -150,4 +64,4 @@ __gmpn_gcd_22:
 	
 .Lret:	
 	ret
-	.size	__gmpn_gcd_22,.-__gmpn_gcd_22
+#	.size	__gmpn_gcd_22,.-__gmpn_gcd_22

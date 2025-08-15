@@ -1,91 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
-   
-   
-   
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_mul_1
-	.type	__gmpn_mul_1,@function
+#	.type	__gmpn_mul_1,@function
 	
 __gmpn_mul_1:
 
@@ -196,5 +112,5 @@ __gmpn_mul_1:
 	mov	%r9, (%rdi)
 	adc	%rcx, %rax
 	ret
-	.size	__gmpn_mul_1,.-__gmpn_mul_1
+#	.size	__gmpn_mul_1,.-__gmpn_mul_1
 

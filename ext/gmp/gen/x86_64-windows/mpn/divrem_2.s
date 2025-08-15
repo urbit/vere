@@ -1,80 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_divrem_2
-	.type	__gmpn_divrem_2,@function
+#	.type	__gmpn_divrem_2,@function
 	
 __gmpn_divrem_2:
 
@@ -205,4 +132,4 @@ __gmpn_divrem_2:
 	sub	%r8, %r10
 	sbb	%r11, %rbx
 	jmp	.Lbck
-	.size	__gmpn_divrem_2,.-__gmpn_divrem_2
+#	.size	__gmpn_divrem_2,.-__gmpn_divrem_2

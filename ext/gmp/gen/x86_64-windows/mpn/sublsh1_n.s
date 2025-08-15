@@ -1,84 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	8, 0x90
 	.globl	__gmpn_sublsh1_n
-	.type	__gmpn_sublsh1_n,@function
+#	.type	__gmpn_sublsh1_n,@function
 	
 __gmpn_sublsh1_n:
 
@@ -186,5 +109,5 @@ __gmpn_sublsh1_n:
 	neg	%eax
 	
 	ret
-	.size	__gmpn_sublsh1_n,.-__gmpn_sublsh1_n
+#	.size	__gmpn_sublsh1_n,.-__gmpn_sublsh1_n
 

@@ -1,100 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	.text
+.text
 	.align	64, 0x90
 	.globl	__gmpn_gcd_11
-	.type	__gmpn_gcd_11,@function
+#	.type	__gmpn_gcd_11,@function
 	
 __gmpn_gcd_11:
 
@@ -116,5 +23,5 @@ __gmpn_gcd_11:
 	
 	
 	ret
-	.size	__gmpn_gcd_11,.-__gmpn_gcd_11
+#	.size	__gmpn_gcd_11,.-__gmpn_gcd_11
 
