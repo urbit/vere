@@ -1,75 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_mullo_basecase
-	.type	__gmpn_mullo_basecase,@function
+#	.type	__gmpn_mullo_basecase,@function
 	
 __gmpn_mullo_basecase:
 
@@ -393,7 +325,7 @@ __gmpn_mullo_basecase:
 	pop	%r14
 	
 	ret
-	.size	__gmpn_mullo_basecase,.-__gmpn_mullo_basecase
+#	.size	__gmpn_mullo_basecase,.-__gmpn_mullo_basecase
 	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Lmtab:.long	.Lmf7-.Lmtab

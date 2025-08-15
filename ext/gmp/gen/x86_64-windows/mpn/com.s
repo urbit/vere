@@ -1,107 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	64, 0x90
 	.globl	__gmpn_com
-	.type	__gmpn_com,@function
+#	.type	__gmpn_com,@function
 	
 __gmpn_com:
 
@@ -331,5 +231,5 @@ __gmpn_com:
 	mov	%r9, 16(%rdi)
 1:	
 	ret
-	.size	__gmpn_com,.-__gmpn_com
+#	.size	__gmpn_com,.-__gmpn_com
 

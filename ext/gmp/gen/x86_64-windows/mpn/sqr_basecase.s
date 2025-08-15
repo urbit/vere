@@ -1,104 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_sqr_basecase
-	.type	__gmpn_sqr_basecase,@function
+#	.type	__gmpn_sqr_basecase,@function
 	
 __gmpn_sqr_basecase:
 
@@ -845,4 +748,4 @@ __gmpn_sqr_basecase:
 	.long	.Lf4-.Latab
 	.long	.Lf5-.Latab
 	.text
-	.size	__gmpn_sqr_basecase,.-__gmpn_sqr_basecase
+#	.size	__gmpn_sqr_basecase,.-__gmpn_sqr_basecase

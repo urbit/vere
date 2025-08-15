@@ -1,92 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_add_err2_n
-	.type	__gmpn_add_err2_n,@function
+#	.type	__gmpn_add_err2_n,@function
 	
 __gmpn_add_err2_n:
 
@@ -181,4 +96,4 @@ __gmpn_add_err2_n:
 	pop	%rbp
 	pop	%rbx
 	ret
-	.size	__gmpn_add_err2_n,.-__gmpn_add_err2_n
+#	.size	__gmpn_add_err2_n,.-__gmpn_add_err2_n

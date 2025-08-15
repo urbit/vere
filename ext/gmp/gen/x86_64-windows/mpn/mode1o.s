@@ -1,86 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_modexact_1_odd
-	.type	__gmpn_modexact_1_odd,@function
+#	.type	__gmpn_modexact_1_odd,@function
 	
 __gmpn_modexact_1_odd:
 
@@ -89,7 +10,7 @@ __gmpn_modexact_1_odd:
 
 
 	.globl	__gmpn_modexact_1c_odd
-	.type	__gmpn_modexact_1c_odd,@function
+#	.type	__gmpn_modexact_1c_odd,@function
 	
 __gmpn_modexact_1c_odd:
 
@@ -185,5 +106,5 @@ __gmpn_modexact_1c_odd:
 	
 	ret
 
-	.size	__gmpn_modexact_1c_odd,.-__gmpn_modexact_1c_odd
-	.size	__gmpn_modexact_1_odd,.-__gmpn_modexact_1_odd
+#	.size	__gmpn_modexact_1c_odd,.-__gmpn_modexact_1c_odd
+#	.size	__gmpn_modexact_1_odd,.-__gmpn_modexact_1_odd

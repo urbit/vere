@@ -1,106 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_nand_n
-	.type	__gmpn_nand_n,@function
+#	.type	__gmpn_nand_n,@function
 	
 __gmpn_nand_n:
 
@@ -160,5 +61,5 @@ __gmpn_nand_n:
 
 .Lret:	
 	ret
-	.size	__gmpn_nand_n,.-__gmpn_nand_n
+#	.size	__gmpn_nand_n,.-__gmpn_nand_n
 

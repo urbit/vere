@@ -1,104 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	64, 0x90
 	.globl	__gmpn_copyd
-	.type	__gmpn_copyd,@function
+#	.type	__gmpn_copyd,@function
 	
 __gmpn_copyd:
 
@@ -275,5 +178,5 @@ __gmpn_copyd:
 	mov	%r9, -8(%rdi)
 1:	
 	ret
-	.size	__gmpn_copyd,.-__gmpn_copyd
+#	.size	__gmpn_copyd,.-__gmpn_copyd
 

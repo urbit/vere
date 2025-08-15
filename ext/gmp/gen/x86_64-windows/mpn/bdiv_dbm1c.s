@@ -1,76 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_bdiv_dbm1c
-	.type	__gmpn_bdiv_dbm1c,@function
+#	.type	__gmpn_bdiv_dbm1c,@function
 	
 __gmpn_bdiv_dbm1c:
 
@@ -118,4 +49,4 @@ __gmpn_bdiv_dbm1c:
 	mov	%r8, %rax
 	
 	ret
-	.size	__gmpn_bdiv_dbm1c,.-__gmpn_bdiv_dbm1c
+#	.size	__gmpn_bdiv_dbm1c,.-__gmpn_bdiv_dbm1c

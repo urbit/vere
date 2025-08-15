@@ -1,101 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1_1p
-	.type	__gmpn_mod_1_1p,@function
+#	.type	__gmpn_mod_1_1p,@function
 	
 __gmpn_mod_1_1p:
 
@@ -189,11 +95,11 @@ __gmpn_mod_1_1p:
 	ret
 .Lfix:	sub	%rbx, %rax
 	jmp	.Lok
-	.size	__gmpn_mod_1_1p,.-__gmpn_mod_1_1p
+#	.size	__gmpn_mod_1_1p,.-__gmpn_mod_1_1p
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1_1p_cps
-	.type	__gmpn_mod_1_1p_cps,@function
+	.#type	__gmpn_mod_1_1p_cps,@function
 	
 __gmpn_mod_1_1p_cps:
 
@@ -237,5 +143,5 @@ __gmpn_mod_1_1p_cps:
 	pop	%rbp
 	
 	ret
-	.size	__gmpn_mod_1_1p_cps,.-__gmpn_mod_1_1p_cps
+#	.size	__gmpn_mod_1_1p_cps,.-__gmpn_mod_1_1p_cps
 

@@ -1,69 +1,10 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .hidden __gmpn_invert_limb_table
 
 
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_invert_limb
-	.type	__gmpn_invert_limb,@function
+#	.type	__gmpn_invert_limb,@function
 	
 __gmpn_invert_limb:
 		
@@ -119,5 +60,5 @@ __gmpn_invert_limb:
 
 	
 	ret
-	.size	__gmpn_invert_limb,.-__gmpn_invert_limb
+#	.size	__gmpn_invert_limb,.-__gmpn_invert_limb
 

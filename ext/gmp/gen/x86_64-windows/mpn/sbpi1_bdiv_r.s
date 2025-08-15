@@ -1,111 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_sbpi1_bdiv_r
-	.type	__gmpn_sbpi1_bdiv_r,@function
+#	.type	__gmpn_sbpi1_bdiv_r,@function
 	
 __gmpn_sbpi1_bdiv_r:
 
@@ -646,4 +542,4 @@ __gmpn_sbpi1_bdiv_r:
 	.long	.L7-.Latab
 	.long	.L8-.Latab
 	.text
-	.size	__gmpn_sbpi1_bdiv_r,.-__gmpn_sbpi1_bdiv_r
+#	.size	__gmpn_sbpi1_bdiv_r,.-__gmpn_sbpi1_bdiv_r

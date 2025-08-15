@@ -1,84 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_sqr_diag_addlsh1
-	.type	__gmpn_sqr_diag_addlsh1,@function
+#	.type	__gmpn_sqr_diag_addlsh1,@function
 	
 __gmpn_sqr_diag_addlsh1:
 
@@ -127,4 +50,4 @@ __gmpn_sqr_diag_addlsh1:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_sqr_diag_addlsh1,.-__gmpn_sqr_diag_addlsh1
+#	.size	__gmpn_sqr_diag_addlsh1,.-__gmpn_sqr_diag_addlsh1

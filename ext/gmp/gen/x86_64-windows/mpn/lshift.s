@@ -1,97 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	64, 0x90
 	.globl	__gmpn_lshift
-	.type	__gmpn_lshift,@function
+#	.type	__gmpn_lshift,@function
 	
 __gmpn_lshift:
 
@@ -207,5 +117,5 @@ __gmpn_lshift:
 	movq	%xmm0, (%rdi)
 	
 	ret
-	.size	__gmpn_lshift,.-__gmpn_lshift
+#	.size	__gmpn_lshift,.-__gmpn_lshift
 

@@ -1,78 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_div_qr_2n_pi1
-	.type	__gmpn_div_qr_2n_pi1,@function
+#	.type	__gmpn_div_qr_2n_pi1,@function
 	
 __gmpn_div_qr_2n_pi1:
 
@@ -168,4 +97,4 @@ __gmpn_div_qr_2n_pi1:
 	sub	%r9, %r12
 	sbb	%r8, %rbx
 	jmp	.Lbck
-	.size	__gmpn_div_qr_2n_pi1,.-__gmpn_div_qr_2n_pi1
+#	.size	__gmpn_div_qr_2n_pi1,.-__gmpn_div_qr_2n_pi1

@@ -1,108 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_preinv_divrem_1
-	.type	__gmpn_preinv_divrem_1,@function
+#	.type	__gmpn_preinv_divrem_1,@function
 	
 __gmpn_preinv_divrem_1:
 
@@ -128,11 +27,11 @@ __gmpn_preinv_divrem_1:
 	mov	40(%rsp), %cl
 	shl	%cl, %r8
 	jmp	.Luent
-	.size	__gmpn_preinv_divrem_1,.-__gmpn_preinv_divrem_1
+#	.size	__gmpn_preinv_divrem_1,.-__gmpn_preinv_divrem_1
 
 	.align	16, 0x90
 	.globl	__gmpn_divrem_1
-	.type	__gmpn_divrem_1,@function
+#	.type	__gmpn_divrem_1,@function
 	
 __gmpn_divrem_1:
 
@@ -346,5 +245,5 @@ __gmpn_divrem_1:
 	pop	%r13
 	
 	ret
-	.size	__gmpn_divrem_1,.-__gmpn_divrem_1
+#	.size	__gmpn_divrem_1,.-__gmpn_divrem_1
 

@@ -1,104 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_andn_n
-	.type	__gmpn_andn_n,@function
+#	.type	__gmpn_andn_n,@function
 	
 __gmpn_andn_n:
 
@@ -157,7 +60,7 @@ __gmpn_andn_n:
 
 .Lret:	
 	ret
-	.size	__gmpn_andn_n,.-__gmpn_andn_n
+#	.size	__gmpn_andn_n,.-__gmpn_andn_n
 
 
 

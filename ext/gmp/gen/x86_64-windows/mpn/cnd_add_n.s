@@ -1,91 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-					
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_cnd_add_n
-	.type	__gmpn_cnd_add_n,@function
+#	.type	__gmpn_cnd_add_n,@function
 	
 __gmpn_cnd_add_n:
 
@@ -181,4 +97,4 @@ __gmpn_cnd_add_n:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_cnd_add_n,.-__gmpn_cnd_add_n
+#	.size	__gmpn_cnd_add_n,.-__gmpn_cnd_add_n

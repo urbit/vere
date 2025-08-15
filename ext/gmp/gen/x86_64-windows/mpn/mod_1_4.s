@@ -1,64 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_4p
-	.type	__gmpn_mod_1s_4p,@function
+#	.type	__gmpn_mod_1s_4p,@function
 	
 __gmpn_mod_1s_4p:
 
@@ -188,11 +131,11 @@ __gmpn_mod_1s_4p:
 	pop	%r15
 	
 	ret
-	.size	__gmpn_mod_1s_4p,.-__gmpn_mod_1s_4p
+#	.size	__gmpn_mod_1s_4p,.-__gmpn_mod_1s_4p
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_4p_cps
-	.type	__gmpn_mod_1s_4p_cps,@function
+#	.type	__gmpn_mod_1s_4p_cps,@function
 	
 __gmpn_mod_1s_4p_cps:
 
@@ -280,4 +223,4 @@ __gmpn_mod_1s_4p_cps:
 	pop	%rbp
 	
 	ret
-	.size	__gmpn_mod_1s_4p_cps,.-__gmpn_mod_1s_4p_cps
+#	.size	__gmpn_mod_1s_4p_cps,.-__gmpn_mod_1s_4p_cps

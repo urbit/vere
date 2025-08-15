@@ -1,112 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_rsblsh_n
-	.type	__gmpn_rsblsh_n,@function
+#	.type	__gmpn_rsblsh_n,@function
 	
 __gmpn_rsblsh_n:
 
@@ -239,7 +134,7 @@ __gmpn_rsblsh_n:
 	lea	40(%rdi), %rdi
 	xor	%r10d, %r10d
 	jmp	.Le1
-	.size	__gmpn_rsblsh_n,.-__gmpn_rsblsh_n
+#	.size	__gmpn_rsblsh_n,.-__gmpn_rsblsh_n
 	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab

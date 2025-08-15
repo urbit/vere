@@ -1,93 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_hamdist
-	.type	__gmpn_hamdist,@function
+#	.type	__gmpn_hamdist,@function
 	
 __gmpn_hamdist:
 
@@ -200,7 +114,7 @@ __gmpn_hamdist:
 	add	$8, %rsi
 	jmp	.Le1
 
-	.size	__gmpn_hamdist,.-__gmpn_hamdist
+#	.size	__gmpn_hamdist,.-__gmpn_hamdist
 	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab

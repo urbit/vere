@@ -1,102 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_sec_tabselect
-	.type	__gmpn_sec_tabselect,@function
+#	.type	__gmpn_sec_tabselect,@function
 	
 __gmpn_sec_tabselect:
 
@@ -229,5 +134,5 @@ __gmpn_sec_tabselect:
 
 	
 	ret
-	.size	__gmpn_sec_tabselect,.-__gmpn_sec_tabselect
+#	.size	__gmpn_sec_tabselect,.-__gmpn_sec_tabselect
 

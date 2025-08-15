@@ -1,81 +1,8 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-	
-	
-
-
-
-
-
-
-
 	.text
 
 	.align	16, 0x90
 	.globl	__gmpn_rsh1sub_nc
-	.type	__gmpn_rsh1sub_nc,@function
+#	.type	__gmpn_rsh1sub_nc,@function
 	
 __gmpn_rsh1sub_nc:
 
@@ -89,11 +16,11 @@ __gmpn_rsh1sub_nc:
 	sbb	(%rdx), %rbp
 
 	jmp	.Lent
-	.size	__gmpn_rsh1sub_nc,.-__gmpn_rsh1sub_nc
+#	.size	__gmpn_rsh1sub_nc,.-__gmpn_rsh1sub_nc
 
 	.align	16, 0x90
 	.globl	__gmpn_rsh1sub_n
-	.type	__gmpn_rsh1sub_n,@function
+#	.type	__gmpn_rsh1sub_n,@function
 	
 __gmpn_rsh1sub_n:
 
@@ -205,4 +132,4 @@ __gmpn_rsh1sub_n:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_rsh1sub_n,.-__gmpn_rsh1sub_n
+#	.size	__gmpn_rsh1sub_n,.-__gmpn_rsh1sub_n

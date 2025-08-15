@@ -1,84 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-				
-		
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_submul_1
-	.type	__gmpn_submul_1,@function
+#	.type	__gmpn_submul_1,@function
 	
 __gmpn_submul_1:
 
@@ -144,5 +67,5 @@ __gmpn_submul_1:
 .Lend:	.byte	0xf3,72,0x0f,0x38,0xf6,193
 	sbb	$-1, %rax
 	ret
-	.size	__gmpn_submul_1,.-__gmpn_submul_1
+#	.size	__gmpn_submul_1,.-__gmpn_submul_1
 

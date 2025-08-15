@@ -1,65 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_2p
-	.type	__gmpn_mod_1s_2p,@function
+#	.type	__gmpn_mod_1s_2p,@function
 	
 __gmpn_mod_1s_2p:
 
@@ -181,11 +123,11 @@ __gmpn_mod_1s_2p:
 	mov	8(%rcx), %edi
 	xor	%rdx, %rdx
 	jmp	.L1
-	.size	__gmpn_mod_1s_2p,.-__gmpn_mod_1s_2p
+#	.size	__gmpn_mod_1s_2p,.-__gmpn_mod_1s_2p
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_2p_cps
-	.type	__gmpn_mod_1s_2p_cps,@function
+#	.type	__gmpn_mod_1s_2p_cps,@function
 	
 __gmpn_mod_1s_2p_cps:
 
@@ -249,4 +191,4 @@ __gmpn_mod_1s_2p_cps:
 	pop	%rbp
 	
 	ret
-	.size	__gmpn_mod_1s_2p_cps,.-__gmpn_mod_1s_2p_cps
+#	.size	__gmpn_mod_1s_2p_cps,.-__gmpn_mod_1s_2p_cps

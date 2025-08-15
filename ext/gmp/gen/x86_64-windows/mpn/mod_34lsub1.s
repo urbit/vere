@@ -1,86 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_mod_34lsub1
-	.type	__gmpn_mod_34lsub1,@function
+#	.type	__gmpn_mod_34lsub1,@function
 	
 __gmpn_mod_34lsub1:
 
@@ -225,4 +146,4 @@ __gmpn_mod_34lsub1:
 
 	
 	ret
-	.size	__gmpn_mod_34lsub1,.-__gmpn_mod_34lsub1
+#	.size	__gmpn_mod_34lsub1,.-__gmpn_mod_34lsub1

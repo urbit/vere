@@ -1,94 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_addmul_2
-	.type	__gmpn_addmul_2,@function
+#	.type	__gmpn_addmul_2,@function
 	
 __gmpn_addmul_2:
 
@@ -252,4 +165,4 @@ __gmpn_addmul_2:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_addmul_2,.-__gmpn_addmul_2
+#	.size	__gmpn_addmul_2,.-__gmpn_addmul_2

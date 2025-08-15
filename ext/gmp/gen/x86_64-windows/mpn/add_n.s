@@ -1,94 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-	
-	
-	
-
-
-	
-	
-	
-
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_add_nc
-	.type	__gmpn_add_nc,@function
+#	.type	__gmpn_add_nc,@function
 	
 __gmpn_add_nc:
 
@@ -106,11 +19,11 @@ __gmpn_add_nc:
 	lea	(%r9,%rax), %rax	
 	jmp	*%rax
 
-	.size	__gmpn_add_nc,.-__gmpn_add_nc
+#	.size	__gmpn_add_nc,.-__gmpn_add_nc
 
 	.align	16, 0x90
 	.globl	__gmpn_add_n
-	.type	__gmpn_add_n,@function
+#	.type	__gmpn_add_n,@function
 	
 __gmpn_add_n:
 
@@ -260,7 +173,7 @@ __gmpn_add_n:
 	adc	%ecx, %eax
 	
 	ret
-	.size	__gmpn_add_n,.-__gmpn_add_n
+#	.size	__gmpn_add_n,.-__gmpn_add_n
 	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab

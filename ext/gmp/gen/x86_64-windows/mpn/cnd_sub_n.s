@@ -1,98 +1,7 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-					
-
-
-
-
-	
-	
-	
-
-
-
-
-
-
-
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_cnd_sub_n
-	.type	__gmpn_cnd_sub_n,@function
+#	.type	__gmpn_cnd_sub_n,@function
 	
 __gmpn_cnd_sub_n:
 
@@ -204,4 +113,4 @@ __gmpn_cnd_sub_n:
 	pop	%rbx
 	
 	ret
-	.size	__gmpn_cnd_sub_n,.-__gmpn_cnd_sub_n
+#	.size	__gmpn_cnd_sub_n,.-__gmpn_cnd_sub_n
