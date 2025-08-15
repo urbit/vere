@@ -99,7 +99,7 @@ __gmpn_mod_1_1p:
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1_1p_cps
-	.#type	__gmpn_mod_1_1p_cps,@function
+#	.type	__gmpn_mod_1_1p_cps,@function
 	
 __gmpn_mod_1_1p_cps:
 

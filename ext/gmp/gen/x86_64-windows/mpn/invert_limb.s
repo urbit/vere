@@ -1,4 +1,4 @@
-.hidden __gmpn_invert_limb_table
+#.hidden __gmpn_invert_limb_table
 
 
 	.text
