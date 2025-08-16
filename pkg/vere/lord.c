@@ -293,6 +293,10 @@ _lord_plea_slog(u3_lord* god_u, u3_noun dat)
   {
     god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_w, u3k(tan));
   }
+  else
+  {
+    u3l_log("%%bad-slog");
+  }
   u3z(dat);
 }
 
