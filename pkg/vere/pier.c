@@ -1358,6 +1358,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     }
   }
 
+  c3_t bad_t = 0;
   //  if we have no arvo kernel and can't evaluate nock
   //  only print %leaf tanks
   //
@@ -1366,12 +1367,18 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
     }
   }
-  //  We are calling nock here, but hopefully need no protection.
-  //
   else {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(tac));
-
-    _pier_dump_wall(fil_u, wol);
+    u3_noun low = u3dc("(slum soft wash)", u3nc(tab_l, col_l), u3k(tac));
+    u3_noun wol;
+    if (c3y == u3r_cell(low, NULL, &wol)) {
+      u3k(wol); u3z(low);
+      _pier_dump_wall(fil_u, wol);
+    }
+    else {
+      // low == u3_nul, no need to lose it
+      //
+      bad_t = 1;
+    }
   }
 
   if ( c3n == u3_Host.ops_u.tem ) {
@@ -1383,6 +1390,10 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   u3_term_io_loja(0, fil_u);
   u3z(blu);
   u3z(tac);
+  
+  if ( bad_t ) {
+    u3l_log("%%slog-bad-tank");
+  }
 }
 
 /* u3_pier_punt(): dump tank list.
