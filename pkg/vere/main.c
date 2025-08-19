@@ -1069,26 +1069,19 @@ _cw_init_io(uv_loop_t* lup_u)
   }
 }
 
-/* _cw_disk_init(): open event log
+/* _cw_load_pier(): open event log
 */
 static u3_disk*
-_cw_disk_init(c3_c* dir_c)
+_cw_load_pier(c3_c* dir_c)
 {
-  //  if fresh boot, make pier
-  //
-  if _(u3_Host.ops_u.nuu) {
-    if ( c3n == u3_disk_make(dir_c) ) {
-      fprintf(stderr, "unable to make pier\n");
-      exit(1);
-    }
-  }
-
   u3_disk* log_u = u3_disk_init(dir_c);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
     exit(1);
   }
+
+  u3_Host.eve_d = u3m_boot(dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
 
   return log_u;
 }
@@ -1457,8 +1450,7 @@ _cw_info(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
                   u3_Host.dir_c, u3_Host.eve_d);
@@ -1568,7 +1560,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
     u3C.wag_w |= u3o_debug_ram;
   }
 
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);  //  NB: readonly
   u3C.wag_w |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
   u3m_stop();
@@ -1652,9 +1644,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-  c3_o  ret_o;
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
+  c3_o     ret_o;
 
   fprintf(stderr, "urbit: cram: preparing\r\n");
 
@@ -1772,8 +1763,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     exit(1);
   }
   else {
-    u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-    u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+    u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
 
@@ -1880,8 +1870,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3C.wag_w |= u3o_hashless;
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr));
 
@@ -1968,8 +1957,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3C.wag_w |= u3o_hashless;
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: melt: gained", u3_melt_all(stderr));
 
@@ -2142,8 +2130,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
@@ -2210,7 +2197,12 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  XX handle SIGTSTP so that the lockfile is not orphaned?
   //
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = u3_disk_init(u3_Host.dir_c);
+
+  if ( !log_u ) {
+    fprintf(stderr, "unable to open event log\n");
+    exit(1);
+  }
 
   //  Handle SIGTSTP as if it was SIGINT.
   //
@@ -2531,9 +2523,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // gracefully shutdown the pier if it's running
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_chop(log_u, u3_Host.eve_d);
@@ -2600,9 +2590,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // gracefully shutdown the pier if it's running
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_roll(log_u, u3_Host.eve_d);
@@ -2794,7 +2782,9 @@ _cw_vile(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  XX check if snapshot is stale?
+  //  NB: readonly
+  //
+  //  XX load log and check if snapshot is stale?
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
