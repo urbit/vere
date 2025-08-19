@@ -21,6 +21,9 @@
 #     define  u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
 #     define  u3h_v4_slot_to_node(sot)  (u3a_v4_into(((sot) & 0x3fffffff) << u3a_v4_vits))
 
+u3a_v4_road* u3a_v4_Road;
+u3v_v4_home* u3v_v4_Home;
+
 /***  allocate.c
 ***/
 
