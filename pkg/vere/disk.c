@@ -965,10 +965,10 @@ _disk_epoc_meta(u3_disk*    log_u,
   return c3y;
 }
 
-/* u3_disk_epoc_zero: make epoch zero.
+/* _disk_epoc_zero: make epoch zero.
 */
-c3_o
-u3_disk_epoc_zero(c3_c* pax_c)
+static c3_o
+_disk_epoc_zero(c3_c* pax_c)
 {
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
@@ -1311,7 +1311,7 @@ static c3_o
 _disk_migrate(u3_disk* log_u, c3_d eve_d)
 {
   /*  migration steps:
-   *  1. initialize epoch 0i0 (see u3_disk_epoc_zero)
+   *  1. initialize epoch 0i0 (see _disk_epoc_zero)
    *  2. create hard links to data.mdb and lock.mdb in 0i0/
    *  3. use scratch space to initialize new log/data.db in log/tmp
    *  4. save old metadata to new db in scratch space
@@ -1344,7 +1344,7 @@ _disk_migrate(u3_disk* log_u, c3_d eve_d)
   fprintf(stderr, "disk: migrating disk to v%d format\r\n", U3D_VERLAT);
 
   //  initialize first epoch "0i0"
-  if ( c3n == u3_disk_epoc_zero(log_u->com_u->pax_c) ) {
+  if ( c3n == _disk_epoc_zero(log_u->com_u->pax_c) ) {
     fprintf(stderr, "disk: failed to initialize first epoch\r\n");
     return c3n;
   }
@@ -1823,7 +1823,7 @@ u3_disk_make(c3_c* pax_c)
 
     //  make epoch zero
     //
-    if ( c3n == u3_disk_epoc_zero(log_c) ) {
+    if ( c3n == _disk_epoc_zero(log_c) ) {
       fprintf(stderr, "disk: failed to make epoch zero\r\n");
       return c3n;
     }
