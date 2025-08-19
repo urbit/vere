@@ -126,6 +126,10 @@
       #define PRIc3_ls PRIi32
       #define PRIxc3_l PRIx32
       #define PRIXc3_l PRIX32
+      #define PRIc3_l_tmp PRIu32
+      #define PRIc3_ls_tmp PRIi32
+      #define PRIxc3_l_tmp PRIx32
+      #define PRIXc3_l_tmp PRIX32
       #endif
 
       #define PRIc3_m  PRIu32
