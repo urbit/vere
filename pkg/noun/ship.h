@@ -24,7 +24,7 @@ u3_ship_to_string(u3_ship who_u);
 c3_o
 u3_ships_equal(u3_ship sip_u, u3_ship sap_u);
 
-c3_l_tmp
+c3_l_new
 u3_ship_rank(u3_ship who_u);
 
 void
