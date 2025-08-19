@@ -83,7 +83,7 @@
     u3_noun u3qc_swp(u3_atom, u3_atom);
     u3_noun u3qc_sqt(u3_atom);
 
-    c3_d u3qc_rig_s(c3_g, c3_w_tmp, c3_g);
+    c3_d u3qc_rig_s(c3_g, c3_n, c3_g);
 
     u3_noun u3_po_find_prefix(c3_y one, c3_y two, c3_y three);
     u3_noun u3_po_find_suffix(c3_y one, c3_y two, c3_y three);

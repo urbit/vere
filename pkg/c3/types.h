@@ -34,7 +34,7 @@
 
       typedef uint8_t c3_t;   // boolean
       typedef uint8_t c3_o;   // loobean
-      typedef uint8_t c3_g;   // 32-bit log - 0-31 bits
+      typedef uint8_t c3_g;   // u3a_note_bits log
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
       typedef uint32_t c3_l_new;  // -> s/b 32-bit always
       #ifdef VERE64

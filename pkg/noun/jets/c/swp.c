@@ -10,7 +10,7 @@ u3_noun
 u3qc_swp(u3_atom a,
          u3_atom b)
 {
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
     return u3m_bail(c3__fail);
   }
   c3_g a_g = a;

@@ -82,7 +82,7 @@ _met_pair(c3_g* las_g,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= 32) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_note_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -205,7 +205,7 @@ _fax_pair(u3i_slab* sab_u,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= 32) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_note_bits) ) {
     return u3m_bail(c3__fail);
   }
 
