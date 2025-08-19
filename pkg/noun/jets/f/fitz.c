@@ -9,14 +9,14 @@ static u3_noun
 _fitz_fiz(u3_noun yaz,
           u3_noun wix)
 {
-  c3_w_tmp yaz_w = u3r_met(3, yaz);
-  c3_w_tmp wix_w = u3r_met(3, wix);
+  c3_n yaz_n = u3r_met(3, yaz);
+  c3_n wix_n = u3r_met(3, wix);
   c3_y yaz_y, wix_y;
 
-  yaz_y = (0 == yaz_w) ? 0 : u3r_byte((yaz_w - 1), yaz);
+  yaz_y = (0 == yaz_n) ? 0 : u3r_byte((yaz_n - 1), yaz);
   if ( (yaz_y < 'A') || (yaz_y > 'Z') ) yaz_y = 0;
 
-  wix_y = (0 == wix_w) ? 0 : u3r_byte((wix_w - 1), wix);
+  wix_y = (0 == wix_n) ? 0 : u3r_byte((wix_n - 1), wix);
   if ( (wix_y < 'A') || (wix_y > 'Z') ) wix_y = 0;
 
   if ( yaz_y && wix_y ) {
@@ -32,23 +32,23 @@ u3_noun
 u3qf_fitz(u3_noun yaz,
           u3_noun wix)
 {
-  c3_w_tmp yet_w = u3r_met(3, yaz);
-  c3_w_tmp wet_w = u3r_met(3, wix);
+  c3_n yet_n = u3r_met(3, yaz);
+  c3_n wet_n = u3r_met(3, wix);
 
-  c3_w_tmp i_w, met_w = c3_min(yet_w, wet_w);
+  c3_n i_n, met_n = c3_min(yet_n, wet_n);
 
   if ( c3n == _fitz_fiz(yaz, wix) ) {
     return c3n;
   }
-  for ( i_w = 0; i_w < met_w; i_w++ ) {
-    c3_y yaz_y = u3r_byte(i_w, yaz);
-    c3_y wix_y = u3r_byte(i_w, wix);
+  for ( i_n = 0; i_n < met_n; i_n++ ) {
+    c3_y yaz_y = u3r_byte(i_n, yaz);
+    c3_y wix_y = u3r_byte(i_n, wix);
 
-    if ( (i_w == (yet_w - 1)) && (yaz_y >= 'A') && (yaz_y <= 'Z')) {
+    if ( (i_n == (yet_n - 1)) && (yaz_y >= 'A') && (yaz_y <= 'Z')) {
       return c3y;
     }
 
-    if ( (i_w == (wet_w - 1)) && (wix_y >= 'A') && (wix_y <= 'Z')) {
+    if ( (i_n == (wet_n - 1)) && (wix_y >= 'A') && (wix_y <= 'Z')) {
       return c3y;
     }
 

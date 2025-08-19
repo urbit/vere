@@ -14,31 +14,31 @@
     }
 
     {
-      c3_w_tmp end_w  = u3r_met(3, lub) - 1;
-      c3_w_tmp pos_w  = end_w;
+      c3_n end_n  = u3r_met(3, lub) - 1;
+      c3_n pos_n  = end_n;
       u3_noun lin = u3_nul;
 
-      if (u3r_byte(pos_w, lub) != 10) {
+      if (u3r_byte(pos_n, lub) != 10) {
         return u3m_error("noeol");
       }
 
-      if (pos_w == 0) {
+      if (pos_n == 0) {
         return u3nc(u3_nul, lin);
       }
 
-      while (--pos_w) {
-        if (u3r_byte(pos_w, lub) == 10) {
-          lin = u3nc(u3qc_cut(3, (pos_w + 1), (end_w - pos_w - 1), lub), lin);
-          end_w = pos_w;
+      while (--pos_n) {
+        if (u3r_byte(pos_n, lub) == 10) {
+          lin = u3nc(u3qc_cut(3, (pos_n + 1), (end_n - pos_n - 1), lub), lin);
+          end_n = pos_n;
         }
       }
 
-      if (u3r_byte(pos_w, lub) == 10) {
+      if (u3r_byte(pos_n, lub) == 10) {
         return u3nc(u3_nul,
-                    u3nc(u3qc_cut(3, (pos_w + 1), (end_w - pos_w - 1), lub), lin));
+                    u3nc(u3qc_cut(3, (pos_n + 1), (end_n - pos_n - 1), lub), lin));
       }
 
-      return u3nc(u3qc_cut(3, pos_w, (end_w - pos_w), lub), lin);
+      return u3nc(u3qc_cut(3, pos_n, (end_n - pos_n), lub), lin);
     }
   }
 

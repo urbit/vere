@@ -26,12 +26,12 @@ u3qa_min(u3_atom a, u3_atom b)
     return (a_u->len_n < b_u->len_n) ? u3k(a) : u3k(b);
   }
 
-  c3_w_tmp* a_w = a_u->buf_w;
-  c3_w_tmp* b_w = b_u->buf_w;
-  for (c3_w_tmp i_w = a_u->len_n; i_w--;)
+  c3_n* a_n = a_u->buf_n;
+  c3_n* b_n = b_u->buf_n;
+  for (c3_n i_n = a_u->len_n; i_n--;)
   {
-    if (a_w[i_w] < b_w[i_w]) return u3k(a);
-    if (a_w[i_w] > b_w[i_w]) return u3k(b);
+    if (a_n[i_n] < b_n[i_n]) return u3k(a);
+    if (a_n[i_n] > b_n[i_n]) return u3k(b);
   }
 
   return u3k(a);

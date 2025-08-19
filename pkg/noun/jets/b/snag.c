@@ -14,14 +14,14 @@
       return u3m_bail(c3__fail);
     }
     else {
-      c3_w_tmp len_w = a;
+      c3_n len_n = a;
 
-      while ( len_w ) {
+      while ( len_n ) {
         if ( c3n == u3du(b) ) {
           return u3m_bail(c3__exit);
         }
         b = u3t(b);
-        len_w--;
+        len_n--;
       }
       if ( c3n == u3du(b) ) {
         return u3m_bail(c3__exit);

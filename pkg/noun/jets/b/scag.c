@@ -19,12 +19,12 @@ u3qb_scag(u3_atom a, u3_noun b)
     u3_noun* lit = &pro;
 
     {
-      c3_w_tmp   len_w = (c3_w_tmp)a;
+      c3_n   len_n = (c3_n)a;
       u3_noun* hed;
       u3_noun* tel;
       u3_noun i, t = b;
 
-      while ( len_w-- && (u3_nul != t) ) {
+      while ( len_n-- && (u3_nul != t) ) {
         u3x_cell(t, &i, &t);
 
         *lit = u3i_defcons(&hed, &tel);
