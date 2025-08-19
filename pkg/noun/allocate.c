@@ -18,7 +18,7 @@ u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
 #ifdef U3_MEMORY_DEBUG
-c3_w_tmp u3_Code;
+c3_n u3_Code;
 #endif
 
 c3_n u3a_to_pug(c3_n off);
