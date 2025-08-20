@@ -1768,7 +1768,7 @@ u3_disk_make(c3_c* pax_c)
   //
   {
     if (  ( -1 == c3_mkdir(pax_c, 0700) )
-       && ( EEXIST != errno ) )
+       && ( EEXIST != errno ) ) // XX remove
     {
       fprintf(stderr, "disk: failed to make pier at %s\r\n", pax_c);
       return c3n;
@@ -1783,7 +1783,7 @@ u3_disk_make(c3_c* pax_c)
     strcat(urb_c, "/.urb");
 
     if (  ( -1 == c3_mkdir(urb_c, 0700) )
-       && ( EEXIST != errno ) )
+       && ( EEXIST != errno ) ) // XX remove
     {
       fprintf(stderr, "disk: failed to make /.urb in %s\r\n", pax_c);
       c3_free(urb_c);
@@ -1815,7 +1815,7 @@ u3_disk_make(c3_c* pax_c)
     snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
 
     if (  ( -1 == c3_mkdir(log_c, 0700) )
-       && ( EEXIST != errno ) )
+       && ( EEXIST != errno ) ) // XX remove
     {
       fprintf(stderr, "disk: failed to make /.urb/log in %s\r\n", pax_c);
       return c3n;
@@ -1846,6 +1846,7 @@ u3_disk_init(c3_c* pax_c)
 
   //  load pier directory
   //
+  //  XX stat, require directory exists
   {
     if ( 0 == (log_u->dir_u = u3_dire_init(pax_c)) ) {
       fprintf(stderr, "disk: failed to load pier at %s\r\n", pax_c);
@@ -1866,6 +1867,7 @@ u3_disk_init(c3_c* pax_c)
     strcpy(urb_c, pax_c);
     strcat(urb_c, "/.urb");
 
+    //  XX stat, require directory exists
     if ( 0 == (log_u->urb_u = u3_dire_init(urb_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb in %s\r\n", pax_c);
       c3_free(urb_c);
@@ -1881,6 +1883,7 @@ u3_disk_init(c3_c* pax_c)
     c3_c log_c[8193];
     snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
 
+    //  XX stat, require directory exists
     if ( 0 == (log_u->com_u = u3_dire_init(log_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb/log in %s\r\n", pax_c);
       c3_free(log_u);
