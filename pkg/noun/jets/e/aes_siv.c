@@ -11,25 +11,26 @@ typedef int (*urcrypt_siv)(c3_y*, size_t,
                            c3_y*, c3_y[16], c3_y*);
 
 
-// soc_w = number of items
+// soc_n = number of items
 // mat_w = size in bytes of assoc array
 // dat_w = size of allocation (array + atom storage)
 static void
-_cqea_measure_ads(u3_noun ads, c3_w_tmp* soc_w, c3_w_tmp *mat_w, c3_w_tmp *dat_w)
+_cqea_measure_ads(u3_noun ads, c3_n *soc_n, c3_n *mat_n, c3_n *dat_n)
 {
   u3_noun i, t;
-  c3_w_tmp a_w, b_w, tmp_w;
+  c3_n a_n;
+  c3_n b_n, tmp_n;
 
-  for ( a_w = b_w = 0, t = ads; u3_nul != t; ++a_w ) {
+  for ( a_n = b_n = 0, t = ads; u3_nul != t; ++a_n ) {
     u3x_cell(t, &i, &t);
     if ( c3n == u3ud(i) ) {
       u3m_bail(c3__exit);
       return;
     }
     else {
-      tmp_w = b_w;
-      b_w += u3r_met(3, i);
-      if ( b_w < tmp_w ) {
+      tmp_n = b_n;
+      b_n += u3r_met(3, i);
+      if ( b_n < tmp_n ) {
         u3m_bail(c3__fail);
         return;
       }
@@ -37,37 +38,37 @@ _cqea_measure_ads(u3_noun ads, c3_w_tmp* soc_w, c3_w_tmp *mat_w, c3_w_tmp *dat_w
   }
 
   // check for size overflows
-  tmp_w = a_w * sizeof(urcrypt_aes_siv_data);
-  if ( (tmp_w / a_w) != sizeof(urcrypt_aes_siv_data) ) {
+  tmp_n = a_n * sizeof(urcrypt_aes_siv_data);
+  if ( (tmp_n / a_n) != sizeof(urcrypt_aes_siv_data) ) {
     u3m_bail(c3__fail);
   }
-  else if ( (*dat_w = tmp_w + b_w) < tmp_w ) {
+  else if ( (*dat_n = tmp_n + b_n) < tmp_n ) {
     u3m_bail(c3__fail);
   }
   else {
-    *soc_w = a_w;
-    *mat_w = tmp_w;
+    *soc_n = a_n;
+    *mat_n = tmp_n;
   }
 }
 
 // assumes ads is a valid (list @) because it's already been measured
 static void
 _cqea_encode_ads(u3_noun ads,
-                 c3_w_tmp mat_w,
+                 c3_n mat_n,
                  urcrypt_aes_siv_data *dat_u)
 {
-  c3_w_tmp met_w;
+  c3_n met_n;
   u3_noun i, t;
   urcrypt_aes_siv_data *cur_u;
-  c3_y *dat_y = ((c3_y*) dat_u) + mat_w;
+  c3_y *dat_y = ((c3_y*) dat_u) + mat_n;
 
   for ( cur_u = dat_u, t = ads; u3_nul != t; t = u3t(t), ++cur_u ) {
     i = u3h(t);
-    met_w = u3r_met(3, i);
-    u3r_bytes(0, met_w, dat_y, i);
-    cur_u->length = met_w;
+    met_n = u3r_met(3, i);
+    u3r_bytes(0, met_n, dat_y, i);
+    cur_u->length = met_n;
     cur_u->bytes = dat_y;
-    dat_y += met_w;
+    dat_y += met_n;
   }
 }
 
@@ -80,52 +81,45 @@ _cqea_ads_free(urcrypt_aes_siv_data *dat_u)
 }
 
 static urcrypt_aes_siv_data*
-_cqea_ads_alloc(u3_noun ads, c3_w_tmp *soc_w)
+_cqea_ads_alloc(u3_noun ads, c3_n *soc_n)
 {
   if ( !ads ) {
-    *soc_w = 0;
+    *soc_n = 0;
     return NULL;
   }
   else {
-    c3_w_tmp mat_w, dat_w;
+    c3_n mat_n, dat_n;
     urcrypt_aes_siv_data *dat_u;
 
-    _cqea_measure_ads(ads, soc_w, &mat_w, &dat_w);
-    dat_u = u3a_malloc(dat_w);
-    _cqea_encode_ads(ads, mat_w, dat_u);
+    _cqea_measure_ads(ads, soc_n, &mat_n, &dat_n);
+    dat_u = u3a_malloc(dat_n);
+    _cqea_encode_ads(ads, mat_n, dat_u);
     return dat_u;
   }
 }
 
 static u3_noun
 _cqea_siv_en(c3_y*   key_y,
-             c3_w_tmp    key_w,
+             c3_n    key_n,
              u3_noun ads,
              u3_atom txt,
              urcrypt_siv low_f)
 {
   u3_noun ret;
   c3_n txt_n;
-  c3_w_tmp soc_w;
+  c3_n soc_n;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
-  dat_u = _cqea_ads_alloc(ads, &soc_w);
+  dat_u = _cqea_ads_alloc(ads, &soc_n);
   txt_y = u3r_bytes_all(&txt_n, txt);
   out_y = u3a_malloc(txt_n);
-  
-#ifdef VERE64
-  if (c3_w_max < txt_n) {
-    return u3m_bail(c3__fail);
-  }
-#endif
-  c3_w_new txt_w = (c3_w_new)txt_n;
 
-  ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
+  ret = ( 0 != (*low_f)(txt_y, txt_n, dat_u, soc_n, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
-             u3i_words_tmp(1, &txt_w),
-             u3i_bytes(txt_w, out_y));
+             u3i_note(txt_n),
+             u3i_bytes(txt_n, out_y));
 
   u3a_free(txt_y);
   u3a_free(out_y);
@@ -135,33 +129,33 @@ _cqea_siv_en(c3_y*   key_y,
 
 static u3_noun
 _cqea_siv_de(c3_y*   key_y,
-             c3_w_tmp    key_w,
+             c3_n    key_n,
              u3_noun ads,
              u3_atom iv,
              u3_atom len,
              u3_atom txt,
              urcrypt_siv low_f)
 {
-  c3_w_tmp txt_w;
-  if ( !u3r_word_tmp_fit(&txt_w, len) ) {
+  c3_n txt_n;
+  if ( !u3r_note_fit(&txt_n, len) ) {
     return u3m_bail(c3__fail);
   }
   else {
     u3_noun ret;
-    c3_w_tmp soc_w;
+    c3_n soc_n;
     c3_y *txt_y, *out_y, iv_y[16];
     urcrypt_aes_siv_data *dat_u;
 
     u3r_bytes(0, 16, iv_y, iv);
-    dat_u = _cqea_ads_alloc(ads, &soc_w);
-    txt_y = u3r_bytes_alloc(0, txt_w, txt);
-    out_y = u3a_malloc(txt_w);
+    dat_u = _cqea_ads_alloc(ads, &soc_n);
+    txt_y = u3r_bytes_alloc(0, txt_n, txt);
+    out_y = u3a_malloc(txt_n);
 
-    if ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
+    if ( 0 != (*low_f)(txt_y, txt_n, dat_u, soc_n, key_y, iv_y, out_y) ) {
       return u3m_bail(c3__evil);
     }
 
-    ret = u3nc(0, u3i_bytes(txt_w, out_y));
+    ret = u3nc(0, u3i_bytes(txt_n, out_y));
 
     u3a_free(txt_y);
     u3a_free(out_y);
