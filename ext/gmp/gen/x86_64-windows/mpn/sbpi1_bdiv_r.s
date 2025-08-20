@@ -523,7 +523,7 @@ __gmpn_sbpi1_bdiv_r:
 	ret
 
 
-	.section	.data.rel.ro.local,"a",@progbits
+	.section	.data.rel.ro.local,"a"
 	.align	8, 0x90
 .Latab:.long	.Lf0-.Latab
 	.long	.Lf1-.Latab

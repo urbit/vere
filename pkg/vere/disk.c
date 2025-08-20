@@ -729,6 +729,7 @@ _disk_acquire(c3_c* pax_c)
     }
   }
 
+#ifndef U3_OS_windows
   {
     struct flock lok_u;
     memset((void *)&lok_u, 0, sizeof(lok_u));
@@ -751,6 +752,7 @@ _disk_acquire(c3_c* pax_c)
       goto fail;
     }
   }
+#endif
 
   ret_i = snprintf((c3_c*)dat_y, sizeof(dat_y), "%u\n", getpid());
 

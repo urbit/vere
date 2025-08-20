@@ -1884,18 +1884,8 @@ _http_h2o_context_dispose(h2o_context_t* ctx)
   c3_free(ctx->_pathconfs_inited.entries);
   c3_free(ctx->_module_configs);
 
-  h2o_timeout_dispose(ctx->loop, &ctx->zero_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->hundred_ms_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->handshake_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->http1.req_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->http2.idle_timeout);
-
   // NOTE: linked in http2/connection, never unlinked
   h2o_timeout_unlink(&ctx->http2._graceful_shutdown_timeout);
-
-  h2o_timeout_dispose(ctx->loop, &ctx->http2.graceful_shutdown_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->proxy.io_timeout);
-  h2o_timeout_dispose(ctx->loop, &ctx->one_sec_timeout);
 
   h2o_filecache_destroy(ctx->filecache);
   ctx->filecache = NULL;
@@ -2087,7 +2077,7 @@ _http_serv_accept(u3_http* htp_u)
     return;
   }
 
-  hon_u->sok_u = h2o_uv_socket_create((uv_stream_t*)&hon_u->wax_u,
+  hon_u->sok_u = h2o_uv_socket_create((uv_handle_t*)&hon_u->wax_u,
                                       _http_conn_free);
 
   h2o_accept(&((u3_h2o_serv*)htp_u->h2o_u)->cep_u, hon_u->sok_u);

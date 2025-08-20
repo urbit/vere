@@ -262,15 +262,23 @@ fn buildBinary(
             "-DU3_OS_osx=1",
             "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
         });
-    } else {
-        try urbit_flags.appendSlice(&.{
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
     }
 
     if (t.os.tag == .linux) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    if (t.os.tag == .windows) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_windows=1",
+            "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
+            "-DH2O_NO_UNIX_SOCKETS",
+            "-DH2O_NO_HTTP3",
+            "-DH2O_NO_REDIS",
+            "-DH2O_NO_MEMCACHED",
         });
     }
 
@@ -424,7 +432,8 @@ fn buildBinary(
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
     urbit.linkLibrary(openssl.artifact("ssl"));
-    urbit.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows)
+        urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
     urbit.linkLibrary(wasm3.artifact("wasm3"));

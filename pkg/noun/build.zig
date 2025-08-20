@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
     const t = target.result;
 
     const copts: []const []const u8 =
-        b.option([]const []const u8, "copt", "") orelse &.{};
+        b.option([]const []const u8, "copt", "") orelse &.{"-DENT_GETENTROPY_BCRYPTGENRANDOM", "-DU3_OS_windows", "-DU3_OS_ENDIAN_little", "-DU3_GUARD_PAGE"};
 
     const pkg_noun = b.addStaticLibrary(.{
         .name = "noun",
@@ -120,7 +120,9 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
-    pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows) {
+        pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    }
     pkg_noun.linkLibrary(softblas.artifact("softblas"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
     if (t.os.tag == .linux)
@@ -135,6 +137,8 @@ pub fn build(b: *std.Build) !void {
         pkg_noun.addIncludePath(b.path("platform/darwin"));
     if (t.os.tag == .linux)
         pkg_noun.addIncludePath(b.path("platform/linux"));
+    if (t.os.tag == .windows)
+        pkg_noun.addIncludePath(b.path("platform/windows"));
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
@@ -155,6 +159,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
         .linux => "platform/linux/rsignal.h",
+        .windows => "platform/windows/rsignal.h",
         else => "",
     }), "platform/rsignal.h");
 

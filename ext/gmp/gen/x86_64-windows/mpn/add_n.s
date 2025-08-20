@@ -174,7 +174,7 @@ __gmpn_add_n:
 	
 	ret
 #	.size	__gmpn_add_n,.-__gmpn_add_n
-	.section	.data.rel.ro.local,"a",@progbits
+	.section	.data.rel.ro.local,"a"
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab
 	.long	.L1-.Ltab

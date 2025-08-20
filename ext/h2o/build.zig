@@ -288,6 +288,10 @@ pub fn build(b: *std.Build) !void {
         picotls.addIncludePath(sse2neon_c.path("."));
     }
 
+    if (t.os.tag == .windows) {
+        picotls.addIncludePath(h2o_c.path("include/compat/mingw"));
+    }
+
     picotls.addCSourceFiles(.{
         .root = h2o_c.path("deps/picotls/lib"),
         .files = &.{
@@ -339,10 +343,10 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(openssl.artifact("crypto"));
     h2o.linkLibrary(zlib.artifact("z"));
     h2o.linkLibrary(libuv.artifact("libuv"));
-    h2o.linkLibrary(cloexec);
-    h2o.linkLibrary(klib);
+    //    h2o.linkLibrary(cloexec);
+    //    h2o.linkLibrary(klib);
     h2o.linkLibrary(libgkc);
-    h2o.linkLibrary(libyrmcds);
+    //    h2o.linkLibrary(libyrmcds);
     h2o.linkLibrary(picohttpparser);
     h2o.linkLibrary(picotls);
     // h2o.linkLibrary(ssl_conservatory);
@@ -350,10 +354,30 @@ pub fn build(b: *std.Build) !void {
 
     h2o.addIncludePath(h2o_c.path("deps/golombset"));
     h2o.addIncludePath(h2o_c.path("deps/yoml"));
+    h2o.addIncludePath(h2o_c.path("deps/klib"));
 
     h2o.addIncludePath(h2o_c.path("include"));
     h2o.addIncludePath(h2o_c.path("include/h2o"));
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
+
+    if (t.os.tag == .windows) {
+        h2o.addIncludePath(h2o_c.path("include/compat/mingw/arpa"));
+        h2o.addIncludePath(h2o_c.path("include/compat/mingw/netinet"));
+        h2o.addIncludePath(h2o_c.path("include/compat/mingw/sys"));
+        h2o.addIncludePath(h2o_c.path("include/compat/mingw"));
+
+        h2o.installHeadersDirectory(h2o_c.path("include/compat/mingw"), "", .{});
+        h2o.installHeadersDirectory(h2o_c.path("include/compat/mingw"), "", .{});
+        h2o.installHeadersDirectory(h2o_c.path("deps/picotls/include"), "", .{});
+
+            // h2o.root_module.addCMacro("_WIN32_WINNT", "0x0600");
+        h2o.root_module.addCMacro("_POSIX_C_SOURCE", "200112L");
+        h2o.root_module.addCMacro("O_CLOEXEC", "0");
+        h2o.root_module.addCMacro("H2O_NO_UNIX_SOCKETS", "");
+        h2o.root_module.addCMacro("H2O_NO_HTTP3", "");
+        h2o.root_module.addCMacro("H2O_NO_REDIS", "");
+        h2o.root_module.addCMacro("H2O_NO_MEMCACHED", "");
+    }
 
     h2o.addCSourceFiles(.{
         .root = h2o_c.path("lib"),
@@ -363,16 +387,20 @@ pub fn build(b: *std.Build) !void {
             "common/filecache.c",
             "common/hostinfo.c",
             "common/http1client.c",
-            "common/memcached.c",
+            "common/http2client.c",
+            "common/httpclient.c",
             "common/memory.c",
             "common/multithread.c",
-            "common/serverutil.c",
             "common/socket.c",
             "common/socketpool.c",
             "common/string.c",
             "common/time.c",
-            "common/timeout.c",
+            "common/timerwheel.c",
+            "common/token.c",
             "common/url.c",
+            "common/balancer/roundrobin.c",
+            "common/balancer/least_conn.c",
+            "common/absprio.c",
             "core/config.c",
             "core/configurator.c",
             "core/context.c",
@@ -380,52 +408,52 @@ pub fn build(b: *std.Build) !void {
             "core/logconf.c",
             "core/proxy.c",
             "core/request.c",
-            "core/token.c",
             "core/util.c",
             "handler/access_log.c",
-            "handler/chunked.c",
             "handler/compress.c",
             "handler/compress/gzip.c",
+            "handler/errordoc.c",
+            "handler/expires.c",
+            "handler/file.c",
+            "handler/headers.c",
+            "handler/mimemap.c",
+            "handler/proxy.c",
+            "handler/connect.c",
+            "handler/redirect.c",
+            "handler/reproxy.c",
+            "handler/throttle_resp.c",
+            "handler/server_timing.c",
+            "handler/status.c",
+            "handler/headers_util.c",
+            "handler/status/events.c",
+            "handler/status/requests.c",
+            "handler/status/ssl.c",
+            "handler/http2_debug_state.c",
+            "handler/status/durations.c",
             "handler/configurator/access_log.c",
             "handler/configurator/compress.c",
             "handler/configurator/errordoc.c",
             "handler/configurator/expires.c",
-            "handler/configurator/fastcgi.c",
             "handler/configurator/file.c",
             "handler/configurator/headers.c",
-            "handler/configurator/headers_util.c",
-            "handler/configurator/http2_debug_state.c",
             "handler/configurator/proxy.c",
             "handler/configurator/redirect.c",
             "handler/configurator/reproxy.c",
-            "handler/configurator/status.c",
             "handler/configurator/throttle_resp.c",
-            "handler/errordoc.c",
-            "handler/expires.c",
-            "handler/fastcgi.c",
-            "handler/file.c",
-            "handler/headers.c",
-            "handler/headers_util.c",
-            "handler/http2_debug_state.c",
-            "handler/mimemap.c",
-            "handler/proxy.c",
-            "handler/redirect.c",
-            "handler/reproxy.c",
-            "handler/status.c",
-            "handler/status/durations.c",
-            "handler/status/events.c",
-            "handler/status/requests.c",
-            "handler/throttle_resp.c",
+            "handler/configurator/server_timing.c",
+            "handler/configurator/status.c",
+            "handler/configurator/http2_debug_state.c",
+            "handler/configurator/headers_util.c",
             "http1.c",
+            "tunnel.c",
             "http2/cache_digests.c",
             "http2/casper.c",
             "http2/connection.c",
             "http2/frame.c",
             "http2/hpack.c",
-            "http2/http2_debug_state.c",
             "http2/scheduler.c",
             "http2/stream.c",
-            "tunnel.c",
+            "http2/http2_debug_state.c",
         },
         .flags = &.{
             "-fno-sanitize=all",

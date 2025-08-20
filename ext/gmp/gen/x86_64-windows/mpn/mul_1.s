@@ -17,7 +17,7 @@ __gmpn_mul_1:
 	lea	(%r8, %r10), %r10
 	jmp	*%r10
 
-	.section	.data.rel.ro.local,"a",@progbits
+	.section	.data.rel.ro.local,"a"
 	.align	8, 0x90
 .Ltab:	.long	.Lf0-.Ltab
 	.long	.Lf1-.Ltab

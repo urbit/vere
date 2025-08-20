@@ -115,7 +115,7 @@ __gmpn_hamdist:
 	jmp	.Le1
 
 #	.size	__gmpn_hamdist,.-__gmpn_hamdist
-	.section	.data.rel.ro.local,"a",@progbits
+	.section	.data.rel.ro.local,"a"
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab
 	.long	.L1-.Ltab

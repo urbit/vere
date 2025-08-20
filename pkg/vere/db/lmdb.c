@@ -614,6 +614,7 @@ u3_lmdb_walk_done(u3_lmdb_walk* itr_u)
   mdb_txn_abort(itr_u->txn_u);
 }
 
+#ifndef U3_OS_windows
 /* mdb_logerror(): writes an error message and lmdb error code to f.
 */
 void mdb_logerror(FILE* f, int err, const char* fmt, ...)
@@ -626,10 +627,12 @@ void mdb_logerror(FILE* f, int err, const char* fmt, ...)
 }
 
 /* mdb_get_filesize(): gets the size of a lmdb database file on disk.
-*/
+ */
 intmax_t mdb_get_filesize(mdb_filehandle_t han_u)
 {
   struct stat sat_u;
   fstat(han_u, &sat_u);
   return (intmax_t)sat_u.st_size;
 }
+
+#endif

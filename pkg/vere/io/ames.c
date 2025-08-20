@@ -12,7 +12,9 @@
 
 #include "ent/ent.h"
 
+#ifndef U3_OS_windows
 #include <arpa/inet.h>
+#endif
 
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
@@ -2264,7 +2266,7 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
+_ames_put_dear(c3_c* ship, bool fake, c3_w saddr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
 
@@ -2274,7 +2276,7 @@ _ames_put_dear(c3_c* ship, bool fake, c3_w s_addr, c3_s port, void* context)
   }
 
   u3_lane lan;
-  lan.pip_w = ntohl(s_addr);
+  lan.pip_w = ntohl(saddr);
   lan.por_s = ntohs(port);
 
   u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));

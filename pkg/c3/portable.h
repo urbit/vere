@@ -75,8 +75,29 @@
 #     include <sys/resource.h>
 #     include <sys/mman.h>
 
+#   elif defined(U3_OS_windows)
+#     define signal mingw_has_no_usable_signal
+#     define raise  mingw_has_no_usable_raise
+#     define _POSIX
+#     include <ctype.h>
+#     include <inttypes.h>
+#     include <stdlib.h>
+#     include <string.h>
+#     include <stdarg.h>
+#     include <unistd.h>
+#     include <stdint.h>
+#     include <assert.h>
+#     include <setjmp.h>
+#     include <stdio.h>
+#     include <dirent.h>
+#     include <signal.h>
+#     include <sys/time.h>
+#     include "../vere/platform/windows/mman.h"
+#     include "../vere/platform/windows/compat.h"
+
+
 #   else
-      #error "port: headers"
+#error "port: headers"
 #   endif
 
 #   ifndef __has_feature
@@ -105,16 +126,18 @@
 #         define U3_OS_ARCH "macos-x86_64"
 #       endif
 #     endif
+#   elif defined(U3_OS_windows)
+#define U3_OS_ARCH "windows-x86_64"
 #   endif
 
 
 
 #   define U3_BIN_ALIAS ".run"
 
-  /** Address space layout.
-  ***
-  ***   NB: 2^30 words == 4G
-  **/
+/** Address space layout.
+***
+***   NB: 2^30 words == 4G
+**/
 #   if defined(U3_OS_linux)
 #     ifdef __LP64__
 #       ifdef ASAN_ENABLED
@@ -144,6 +167,9 @@
 #       define U3_OS_LoomBase 0x4000000
 #     endif
 #       define U3_OS_LoomBits 30
+#   elif defined(U3_OS_windows)
+#       define U3_OS_LoomBase 0x28000000000
+#       define U3_OS_LoomBits 30
 #   else
 #     error "port: LoomBase"
 #   endif
@@ -170,7 +196,7 @@
 
     /* Byte swapping.
     */
-#     if defined(U3_OS_linux) || defined(U3_OS_bsd)
+#     if defined(U3_OS_linux) || defined(U3_OS_bsd) || defined(U3_OS_windows)
 #       define c3_bswap_16(x)  bswap_16(x)
 #       define c3_bswap_32(x)  bswap_32(x)
 #       define c3_bswap_64(x)  bswap_64(x)
@@ -184,7 +210,7 @@
 
     /* Sync.
     */
-#     if defined(U3_OS_linux)
+#     if defined(U3_OS_linux) || defined(U3_OS_windows)
 #       define c3_sync(fd) (fdatasync(fd))
 #     elif defined(U3_OS_osx)
 #       define c3_sync(fd) (fcntl(fd, F_FULLFSYNC, 0))
@@ -199,7 +225,7 @@
 #     if defined(U3_OS_linux)
 #       include <stdio_ext.h>
 #       define c3_fpurge __fpurge
-#     elif defined(U3_OS_bsd) || defined(U3_OS_osx)
+#     elif defined(U3_OS_bsd) || defined(U3_OS_osx) || defined(U3_OS_windows)
 #       define c3_fpurge fpurge
 #     else
 #       error "port: fpurge"
@@ -207,7 +233,7 @@
 
     /* Stat.
     */
-#     if defined(U3_OS_linux)
+#     if defined(U3_OS_linux) || defined(U3_OS_windows)
 #       define c3_stat_mtime(dp) (u3_time_t_in_ts((dp)->st_mtime))
 #     elif defined(U3_OS_osx)
 #       define c3_stat_mtime(dp) (u3_time_in_ts(&((dp)->st_mtimespec)))
@@ -223,6 +249,8 @@
     */
 #     if defined(U3_OS_linux) || defined(U3_OS_bsd) || defined(U3_OS_osx)
 #       define c3_dev_null "/dev/null"
+#     elif defined(U3_OS_windows)
+#       define c3_dev_null "nul"
 #     else
 #       error "port: /dev/null"
 #     endif

@@ -6,8 +6,9 @@
 #include "v4/manage.h"
 
 #include <ctype.h>
-#include <dlfcn.h>
+/* #include <dlfcn.h> */
 #include <errno.h>
+#include <signal.h>
 #if defined(U3_OS_osx)
 #include <execinfo.h>
 #endif
@@ -110,6 +111,7 @@
 //
 static rsignal_jmpbuf u3_Signal;
 
+#ifndef U3_OS_windows
 #include "sigsegv.h"
 
 #ifndef SIGSTKSZ
@@ -117,6 +119,7 @@ static rsignal_jmpbuf u3_Signal;
 #endif
 #ifndef NO_OVERFLOW
 static uint8_t Sigstk[SIGSTKSZ];
+#endif
 #endif
 
 #if 0
@@ -162,19 +165,25 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_l sig_l)
 {
+#ifndef U3_OS_windows
   if ( c3__over == sig_l ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  }
-  else {
+  } else
+#endif
+  {
     u3m_signal(sig_l);
   }
 }
 
 #ifndef NO_OVERFLOW
 static void
-_cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
+#ifndef U3_OS_windows
+_cm_signal_handle_over(int emergency, void* scp)
+#else 
+_cm_signal_handle_over(int x)
+#endif
 {
   _cm_signal_handle(c3__over);
 }
@@ -370,10 +379,14 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
     u3l_log("unable to install stack overflow handler");
     abort();
   }
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -415,7 +428,11 @@ _cm_signal_done(void)
   rsignal_deinstall_handler(SIGVTALRM);
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   stackoverflow_deinstall_handler();
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   {
     struct itimerval itm_u;
@@ -776,6 +793,7 @@ bt_cb(void* data,
       int lineno,
       const char* function)
 {
+  #ifndef U3_OS_windows
   struct bt_cb_data* bdata = (struct bt_cb_data *)data;
   bdata->count++;
 
@@ -815,6 +833,8 @@ bt_cb(void* data,
     bdata->pn_c = 0;
     return 1;
   }
+  #endif
+  return 0;
 }
 
 /* _self_path(): get binary self-path.
@@ -837,6 +857,7 @@ _self_path(c3_c *pat_c)
 void
 u3m_stacktrace()
 {
+#ifndef U3_OS_windows
   void* bt_state;
   struct bt_cb_data data = { 0, 0, 0 };
   c3_c* self_path_c[4096] = {0};
@@ -907,6 +928,7 @@ u3m_stacktrace()
     data.fail = 1;
     fprintf(stderr, "Backtrace failed\r\n");
   }
+#endif
 #endif
 }
 
@@ -2033,6 +2055,7 @@ u3m_wall(u3_noun wol)
 static void
 _cm_limits(void)
 {
+#ifndef U3_OS_windows
   struct rlimit rlm;
 
   //  Moar stack.
@@ -2080,6 +2103,7 @@ _cm_limits(void)
     }
   }
 # endif
+#endif
 }
 
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
@@ -2244,6 +2268,7 @@ u3m_ward(void)
 static void
 _cm_signals(void)
 {
+#ifndef U3_OS_windows
   if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
@@ -2264,7 +2289,8 @@ _cm_signals(void)
       exit(1);
     }
   }
-# endif
+#endif
+#endif
 }
 
 /* _cm_malloc_ssl(): openssl-shaped malloc

@@ -29,7 +29,7 @@
 */
   typedef struct _u3_creq {             //  client request
     c3_l               num_l;           //  request number
-    h2o_http1client_t* cli_u;           //  h2o client
+    h2o_httpclient_t*  cli_u;           //  h2o client
     u3_csat            sat_e;           //  connection state
     c3_o               sec;             //  yes == https
     c3_w               ipf_w;           //  IP
@@ -57,8 +57,7 @@
     c3_l             sev_l;             //  instance number
     u3_creq*         ceq_u;             //  request list
     uv_async_t       nop_u;             //  unused handle (async close)
-    h2o_timeout_t    tim_u;             //  request timeout
-    h2o_http1client_ctx_t               //
+    h2o_httpclient_ctx_t               //
                      ctx_u;             //  h2o client ctx
     void*            tls_u;             //  client SSL_CTX*
   } u3_cttp;
@@ -695,6 +694,7 @@ _cttp_creq_fire(u3_creq* ceq_u)
 
 /* _cttp_creq_quit(): cancel a u3_creq
 */
+
 static void
 _cttp_creq_quit(u3_creq* ceq_u)
 {
@@ -704,7 +704,7 @@ _cttp_creq_quit(u3_creq* ceq_u)
   }
 
   if ( ceq_u->cli_u ) {
-    h2o_http1client_cancel(ceq_u->cli_u);
+    ceq_u->cli_u->cancel(ceq_u->cli_u);
   }
 
   _cttp_creq_free(ceq_u);
@@ -760,26 +760,28 @@ _cttp_creq_respond(u3_creq* ceq_u)
 /* _cttp_creq_on_body(): cb invoked by h2o upon receiving a response body
 */
 static c3_i
-_cttp_creq_on_body(h2o_http1client_t* cli_u, const c3_c* err_c)
+_cttp_creq_on_body(h2o_httpclient_t* cli_u, const c3_c* err_c)
 {
   u3_creq* ceq_u = (u3_creq *)cli_u->data;
 
-  if ( 0 != err_c && h2o_http1client_error_is_eos != err_c ) {
+  if ( 0 != err_c && h2o_httpclient_error_is_eos != err_c ) {
     _cttp_creq_fail(ceq_u, err_c);
     return -1;
   }
 
-  h2o_buffer_t* buf_u = cli_u->sock->input;
+  h2o_httpclient_conn_properties_t properties;
+  cli_u->get_conn_properties(cli_u, &properties);
+  h2o_buffer_t* buf_u = properties.sock->input;
 
   if ( buf_u->size ) {
     _cttp_cres_fire_body(ceq_u->res_u,
                          _cttp_bod_new(buf_u->size, buf_u->bytes));
-    h2o_buffer_consume(&cli_u->sock->input, buf_u->size);
+    h2o_buffer_consume(&buf_u, buf_u->size);
   }
 
   // We're using the end of stream thing here to queue event to urbit. we'll
   // need to separate this into our own timer for partial progress sends.
-  if ( h2o_http1client_error_is_eos == err_c ) {
+  if ( h2o_httpclient_error_is_eos == err_c ) {
     _cttp_creq_respond(ceq_u);
   }
 
@@ -788,14 +790,14 @@ _cttp_creq_on_body(h2o_http1client_t* cli_u, const c3_c* err_c)
 
 /* _cttp_creq_on_head(): cb invoked by h2o upon receiving response headers
 */
-static h2o_http1client_body_cb
-_cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
+static h2o_httpclient_body_cb
+_cttp_creq_on_head(h2o_httpclient_t* cli_u, const c3_c* err_c, c3_i ver_i,
                    c3_i sas_i, h2o_iovec_t sas_u, h2o_header_t* hed_u,
                    size_t hed_t, c3_i len_i)
 {
   u3_creq* ceq_u = (u3_creq *)cli_u->data;
 
-  if ( 0 != err_c && h2o_http1client_error_is_eos != err_c ) {
+  if ( 0 != err_c && h2o_httpclient_error_is_eos != err_c ) {
     _cttp_creq_fail(ceq_u, err_c);
     return 0;
   }
@@ -803,7 +805,7 @@ _cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
   _cttp_cres_new(ceq_u, (c3_w)sas_i);
   ceq_u->res_u->hed = _cttp_heds_to_noun(hed_u, hed_t);
 
-  if ( h2o_http1client_error_is_eos == err_c ) {
+  if ( h2o_httpclient_error_is_eos == err_c ) {
     _cttp_creq_respond(ceq_u);
     return 0;
   }
@@ -813,8 +815,8 @@ _cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
 
 /* _cttp_creq_on_connect(): cb invoked by h2o upon successful connection
 */
-static h2o_http1client_head_cb
-_cttp_creq_on_connect(h2o_http1client_t* cli_u, const c3_c* err_c,
+static h2o_httpclient_head_cb
+_cttp_creq_on_connect(h2o_httpclient_t* cli_u, const c3_c* err_c,
                       h2o_iovec_t** vec_u, size_t* vec_i, c3_i* hed_i)
 {
   u3_creq* ceq_u = (u3_creq *)cli_u->data;
@@ -865,7 +867,7 @@ _cttp_creq_connect(u3_creq* ceq_u)
                         ? ceq_u->por_s
                         : ( tls_t ) ? 443 : 80;
 
-    h2o_http1client_connect(&ceq_u->cli_u, ceq_u, &ceq_u->ctp_u->ctx_u,
+    h2o_httpclient_connect(&ceq_u->cli_u, ceq_u, &ceq_u->ctp_u->ctx_u,
                             ipf_u, por_s, tls_t, _cttp_creq_on_connect);
   }
 
@@ -879,16 +881,6 @@ _cttp_creq_connect(u3_creq* ceq_u)
   }
   else {
     ceq_u->sat_e = u3_csat_ripe;
-
-    //  fixup hostname for TLS handshake
-    //
-    //    must be synchronous, after successfull connect() call
-    //
-    if ( ceq_u->hot_c && (c3y == ceq_u->sec) ) {
-      u3_assert( ceq_u->cli_u );
-      c3_free(ceq_u->cli_u->ssl.server_name);
-      ceq_u->cli_u->ssl.server_name = strdup(ceq_u->hot_c);
-    }
   }
 }
 
@@ -1113,8 +1105,6 @@ _cttp_io_exit(u3_auto* car_u)
       ceq_u = ceq_u->nex_u;
     }
   }
-
-  h2o_timeout_dispose(u3L, &ctp_u->tim_u);
 }
 
 /* u3_cttp_io_init(): initialize http client I/O.
@@ -1133,15 +1123,13 @@ u3_cttp_io_init(u3_pier* pir_u)
   uv_async_init(u3L, &ctp_u->nop_u, 0);
   ctp_u->nop_u.data = ctp_u;
 
-  //  link to initialized request timeout
-  //
-  h2o_timeout_init(u3L, &ctp_u->tim_u, 300 * 1000);
-  ctp_u->ctx_u.io_timeout = &ctp_u->tim_u;
+  ctp_u->ctx_u.io_timeout = 300*1000;
 
   //  link to initialized tls ctx
   //
+
   ctp_u->tls_u = _cttp_init_tls();
-  ctp_u->ctx_u.ssl_ctx = ctp_u->tls_u;
+  h2o_ssl_register_alpn_protocols(ctp_u->tls_u, h2o_http2_alpn_protocols);
 
   u3_auto* car_u = &ctp_u->car_u;
   car_u->nam_m = c3__cttp;

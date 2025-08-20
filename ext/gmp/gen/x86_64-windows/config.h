@@ -222,13 +222,15 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_INVENT_H */
 
 /* Define to 1 if you have the <langinfo.h> header file. */
-#define HAVE_LANGINFO_H 1
+/* #define HAVE_LANGINFO_H 1 */
 
 /* Define one of these to 1 for the endianness of `mp_limb_t'.
    If the endianness is not a simple big or little, or you don't know what
    it is, then leave both undefined. */
 /* #undef HAVE_LIMB_BIG_ENDIAN */
 #define HAVE_LIMB_LITTLE_ENDIAN 1
+
+#define _LONG_LONG_LIMB 1
 
 /* Define to 1 if you have the `localeconv' function. */
 #define HAVE_LOCALECONV 1
@@ -386,7 +388,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NL_TYPES_H 1
 
 /* Define to 1 if you have the `obstack_vprintf' function. */
-#define HAVE_OBSTACK_VPRINTF 1
+#define HAVE_OBSTACK_VPRINTF 0
 
 /* Define to 1 if you have the `popen' function. */
 #define HAVE_POPEN 1
@@ -405,7 +407,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_PTRDIFF_T 1
 
 /* Define to 1 if the system has the type `quad_t'. */
-#define HAVE_QUAD_T 1
+/* #define HAVE_QUAD_T 1 */
 
 /* Define to 1 if you have the `raise' function. */
 #define HAVE_RAISE 1

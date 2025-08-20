@@ -729,7 +729,7 @@ __gmpn_sqr_basecase:
 	
 	ret
 
-	.section	.data.rel.ro.local,"a",@progbits
+	.section	.data.rel.ro.local,"a"
 	.align	8, 0x90
 .Lmtab:.long	.Lmf7-.Lmtab
 	.long	.Lmf0-.Lmtab
