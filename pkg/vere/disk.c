@@ -7,6 +7,9 @@
 #include "db/lmdb.h"
 #include <types.h>
 
+#include "migrate.h"
+#include "v4.h"
+
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
   u3_disk*      log_u;
@@ -1590,6 +1593,83 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
   }
 }
 
+static c3_i
+_disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
+{
+  // map at fixed address.
+  //
+  {
+    void* map_v = mmap((void *)u3_Loom_v4,
+                       len_z,
+                       (PROT_READ | PROT_WRITE),
+                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                       -1, 0);
+
+    if ( -1 == (c3_ps)map_v ) {
+      map_v = mmap((void *)0,
+                   len_z,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_PRIVATE),
+                   -1, 0);
+
+      u3l_log("boot: mapping %zuMB failed", len_z >> 20);
+      u3l_log("see https://docs.urbit.org/manual/getting-started/self-hosted/cloud-hosting"
+              " for adding swap space");
+      if ( -1 != (c3_ps)map_v ) {
+        u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
+                map_v);
+      }
+      exit(1);
+    }
+
+    u3C.wor_i = len_z >> 2;
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
+  }
+
+  {
+    c3_z lom_z;
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z);
+
+    u3_assert( -1 != nod_i );
+
+    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v4, nod_i, lom_z);
+
+    if ( MAP_FAILED == mmap(u3_Loom_v4,
+                            lom_z,
+                            (PROT_READ | PROT_WRITE),
+                            (MAP_FIXED | MAP_PRIVATE),
+                            nod_i, 0) )
+    {
+      fprintf(stderr, "loom: file-backed mmap failed: %s\r\n",
+                      strerror(errno));
+      u3_assert(0);
+    }
+
+    const c3_z pag_z = 1U << (u3a_page + 2);
+    void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
+    c3_zs     ret_zs;
+    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);
+
+    u3_assert( -1 != nod_i );
+    u3_assert( pag_z == lom_z );
+
+    if ( pag_z != (ret_zs = pread(sod_i, ptr_v, pag_z, 0)) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: blit south partial read: %"PRIc3_zs"\r\n",
+                        ret_zs);
+      }
+      else {
+        fprintf(stderr, "loom: blit south read: %s\r\n", strerror(errno));
+      }
+      u3_assert(0);
+    }
+
+    close(sod_i);
+
+    return nod_i;
+  }
+}
+
 typedef enum {
   _epoc_good = 0,  // load successfully
   _epoc_gone = 1,  // version missing, total failure
@@ -1605,9 +1685,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
 {
   //  check latest epoc version
   //
+  c3_w ver_w;
   {
     c3_c ver_c[8];
-    c3_w ver_w;
     c3_i car_i;
 
     if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
@@ -1627,9 +1707,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
       return _epoc_fail;
     }
 
-    if ( U3E_VERLAT != ver_w ) {
-      fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d'\r\n",
-                      ver_c, U3E_VERLAT);
+    if ( (U3E_VER1 > ver_w) || (U3E_VERLAT < ver_w) ) {
+      fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d' - '%d'\r\n",
+                      ver_c, U3E_VER1, U3E_VERLAT);
       return _epoc_late;
     }
   }
@@ -1672,6 +1752,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   //
   log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
   log_u->sen_d = log_u->dun_d;
+  log_u->epo_d = lat_d;
 
 /*
 loom migrations (version number stored in the loom, last word till v5, then first word)
@@ -1721,40 +1802,59 @@ epoch versions (epoc.txt)
     - if epoc.txt == 1, load and migrate (including roll)
 */
 
-  //  XX load loom
-  //  1==ver_w: migrate
-  //
-  //  unwritten:
-  //    "u3m_init()" at u3_Loom_v4
-  //    mmap() north.bin over beginning of u3_Loom_v4
-  //    load   south.bin at end of u3_Loom_v4 (per old events.c)
-  //
-  //  For later: check u3A->eve_d before migrating
-  //
-  /*
-  c3_w ver_w = *(u3_Loom_v4 + u3C.wor_i - 1);
-  switch ( ver_w ) {
-    case U3V_VER1: u3_migrate_v2(); break;
-    case U3V_VER2: u3_migrate_v3(); break;
-    case U3V_VER3: u3_migrate_v4(); break;
-    case U3V_VER4: {
-      u3m_init();
-      u3m_pave(c3y);
-      u3_migrate_v5();
-      break;
-    }
-  }
-  */
-  //
-  //  2==ver_w: load normally via u3m_boot()
-  //  - if vere version changed
-  //    - if snapshot is stale, error out
-  //    - else, roll
+  //  NB: by virtue of getting here, we know the *pier* version number is at least 3
+  //  (ie, this is the epoch system)
   //
 
-  // XX do these here instead of at call site in disk_init
-  // log_u->epo_d = lat_d;
-  // log_u->liv_o = c3y;
+  switch ( ver_w ) {
+    case U3E_VER1: {
+      c3_i fid_i = _disk_load_stale_loom(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+      c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+
+      //  For later: check u3A->eve_d before migrating
+      //
+
+      //  NB: all fallthru, all the time
+      //
+      switch ( lom_w ) {
+        case U3V_VER1: u3_migrate_v2();
+        case U3V_VER2: u3_migrate_v3();
+        case U3V_VER3: u3_migrate_v4();
+        case U3V_VER4: {
+          u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+          u3e_live(c3n, strdup(log_u->dir_u->pax_c));
+          u3m_pave(c3y);
+          u3_migrate_v5();
+          u3m_save();
+          //  XX unlink old snapshot
+        }
+      }
+
+      munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
+      close(fid_i);
+      //  XX u3m_stop()
+    } // fallthru
+
+    case U3E_VER2: {
+      u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+      if ( log_u->dun_d < u3A->eve_d ) {
+        //  XX bad
+      }
+
+      if ( !log_u->epo_d || (c3y == _disk_vere_diff(log_u)) ) {
+        if ( log_u->dun_d != u3A->eve_d ) {
+          // XX stale snapshot, new binary, error out
+        }
+        else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+          fprintf(stderr, "disk: failed to initialize epoch\r\n");
+          exit(1);
+        }
+      }
+    } break;
+
+    default: u3_assert(0);
+  }
 
   return _epoc_good;
 }
@@ -1996,9 +2096,6 @@ try_init:
 
       switch ( kin_e ) {
         case _epoc_good: {
-          //  mark the latest epoch directory
-          log_u->epo_d = lat_d;
-
           //  mark the log as live
           log_u->liv_o = c3y;
 

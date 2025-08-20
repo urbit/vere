@@ -1437,8 +1437,8 @@ u3_mars_init(c3_c*    dir_c,
   mar_u->dir_c = dir_c;
   mar_u->inn_u = inn_u;
   mar_u->out_u = out_u;
-  mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
-  mar_u->mug_l = u3r_mug(u3A->roc);
+  mar_u->sen_d = mar_u->dun_d = 0;
+  mar_u->mug_l = 0;
   mar_u->fag_w = _mars_fag_none;
   mar_u->sac   = u3_nul;
   mar_u->sat_e = u3_mars_work_e;
@@ -1469,6 +1469,9 @@ u3_mars_init(c3_c*    dir_c,
     c3_free(mar_u);
     return 0;
   }
+
+  mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
+  mar_u->mug_l = u3r_mug(u3A->roc);
 
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");

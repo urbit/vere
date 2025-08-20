@@ -2912,15 +2912,16 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //    XX s/b explicitly initialization, not maybe-restore
   //
   u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  u3m_boot(dir_c, (size_t)1 << lom_w);
+  //  XX revise
+  // u3m_boot(dir_c, (size_t)1 << lom_w);
 
   //  set up logging
   //
   //    XX must be after u3m_boot due to u3l_log
   //
   {
-    u3C.stderr_log_f = _cw_io_send_stdr;
-    u3C.slog_f = _cw_io_send_slog;
+    // u3C.stderr_log_f = _cw_io_send_stdr;
+    // u3C.slog_f = _cw_io_send_slog;
   }
 
   //  start reading
@@ -2976,18 +2977,21 @@ _cw_work(c3_i argc, c3_c* argv[])
     }
   }
 
+  u3_Host.ops_u.lom_y = lom_w;  //  XX
+
   //  setup loom XX strdup?
   //
   u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  u3m_boot(dir_c, (size_t)1 << lom_w);
+  //  XX revise
+  // u3m_boot(dir_c, (size_t)1 << lom_w);
 
   //  set up logging
   //
   //    XX must be after u3m_boot due to u3l_log
   //
   {
-    u3C.stderr_log_f = _cw_io_send_stdr;
-    u3C.slog_f = _cw_io_send_slog;
+    // u3C.stderr_log_f = _cw_io_send_stdr;
+    // u3C.slog_f = _cw_io_send_slog;
   }
 
   //  setup mars
