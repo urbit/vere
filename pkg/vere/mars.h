@@ -56,10 +56,15 @@
 
   /** Functions.
   **/
+    /* u3_mars_make(): construct a pier.
+    */
+      void
+      u3_mars_make(u3_mars* mar_u);
+
     /* u3_mars_boot(): boot a new ship.
     */
       c3_o
-      u3_mars_boot(c3_c* dir_c, u3_noun com);
+      u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_init(): restart an existing ship.
     */

@@ -179,6 +179,12 @@ _king_boot_done(void* ptr_v, c3_o ret_o)
     return;
   }
 
+  //  copy binary into pier on boot
+  //
+  if ( c3y == u3_Host.ops_u.doc ) {
+    u3_king_dock(U3_VERE_PACE);
+  }
+
   u3K.pir_u = u3_pier_stay(sag_w, u3i_string(u3_Host.dir_c), rift);
 }
 
@@ -921,14 +927,6 @@ void
 _boothack_cb(uv_timer_t* tim_u)
 {
   _king_doom(_boothack_doom());
-
-  //  copy binary into pier on boot
-  //
-  if ( (c3y == u3_Host.ops_u.nuu)
-     && (c3y == u3_Host.ops_u.doc) )
-  {
-    u3_king_dock(U3_VERE_PACE);
-  }
 }
 
 /* _king_loop_init(): stuff that comes before the event loop

@@ -1900,6 +1900,27 @@ _mars_boot_make(u3_boot_opts* inp_u,
   return c3y;
 }
 
+/* u3_mars_make(): construct a pier.
+*/
+void
+u3_mars_make(u3_mars* mar_u)
+{
+  //  XX s/b unnecessary
+  u3_Host.ops_u.nuu = c3y;
+
+  if ( c3n == u3_disk_make(mar_u->dir_c) ) {
+    fprintf(stderr, "boot: disk make fail\r\n");
+    exit(1);
+  }
+
+  //  NB: initializes loom
+  //
+  if ( !(mar_u->log_u = u3_disk_init(mar_u->dir_c)) ) {
+    fprintf(stderr, "boot: disk init fail\r\n");
+    exit(1);
+  }
+}
+
 /* u3_mars_boot(): boot a ship.
 *
 *  $=  com
@@ -1913,12 +1934,12 @@ _mars_boot_make(u3_boot_opts* inp_u,
 *
 */
 c3_o
-u3_mars_boot(c3_c* dir_c, u3_noun com)
+u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_disk*     log_u = mar_u->log_u;
   u3_boot_opts inp_u;
   u3_meta      met_u;
-  u3_noun        ova;
-  u3_noun        cax;
+  u3_noun   com, ova, cax;
 
   inp_u.veb_o = __( u3C.wag_w & u3o_verbose );
   inp_u.lit_o = c3n; // unimplemented in arvo
@@ -1937,21 +1958,22 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     u3z(now);
   }
 
+  {
+    u3_weak jar = u3s_cue_xeno(len_d, hun_y);
+    if (  (u3_none == jar)
+       || (c3n == u3r_p(jar, c3__boot, &com)) )
+    {
+      fprintf(stderr, "boot: parse fail\r\n");
+      exit(1);
+    }
+    else {
+      u3k(com);
+      u3z(jar);
+    }
+  }
+
   if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
     fprintf(stderr, "boot: preparation failed\r\n");
-    return c3n;
-  }
-
-  u3_disk* log_u;
-
-  //  XX
-  u3_Host.ops_u.nuu = c3y;
-  if ( c3n == u3_disk_make(dir_c) ) {
-    fprintf(stderr, "boot: disk make fail\r\n");
-    return c3n;
-  }
-  if ( !(log_u = u3_disk_init(dir_c)) ) {
-    fprintf(stderr, "boot: disk init fail\r\n");
     return c3n;
   }
 
@@ -1965,14 +1987,18 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     return c3n;  //  XX cleanup
   }
 
-  _mars_step_trace(dir_c);
+  _mars_step_trace(mar_u->dir_c);
 
   if ( c3n == _mars_do_boot(log_u, log_u->dun_d, cax) ) {
     return c3n;  //  XX cleanup
   }
 
   u3m_save();
+
+  //  XX move to caller? close uv handles?
+  //
   u3_disk_exit(log_u);
+  exit(0);
 
   return c3y;
 }

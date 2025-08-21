@@ -1842,7 +1842,9 @@ epoch versions (epoc.txt)
         //  XX bad
       }
 
-      if ( !log_u->epo_d || (c3y == _disk_vere_diff(log_u)) ) {
+      if (  (!log_u->epo_d && log_u->dun_d)
+         || (c3y == _disk_vere_diff(log_u)) )
+      {
         if ( log_u->dun_d != u3A->eve_d ) {
           // XX stale snapshot, new binary, error out
         }
@@ -1866,13 +1868,10 @@ u3_disk_make(c3_c* pax_c)
 {
   //  make pier directory
   //
-  {
-    if (  ( -1 == c3_mkdir(pax_c, 0700) )
-       && ( EEXIST != errno ) ) // XX remove
-    {
-      fprintf(stderr, "disk: failed to make pier at %s\r\n", pax_c);
-      return c3n;
-    }
+  if ( -1 == c3_mkdir(pax_c, 0700) ) {
+    fprintf(stderr, "disk: failed to make pier at %s: %s\r\n",
+                    pax_c, strerror(errno));
+    return c3n;
   }
 
   //  make $pier/.urb
@@ -1882,13 +1881,13 @@ u3_disk_make(c3_c* pax_c)
     strcpy(urb_c, pax_c);
     strcat(urb_c, "/.urb");
 
-    if (  ( -1 == c3_mkdir(urb_c, 0700) )
-       && ( EEXIST != errno ) ) // XX remove
-    {
-      fprintf(stderr, "disk: failed to make /.urb in %s\r\n", pax_c);
+    if ( -1 == c3_mkdir(urb_c, 0700) ) {
+      fprintf(stderr, "disk: failed to make /.urb in %s: %s\r\n",
+                      pax_c, strerror(errno));
       c3_free(urb_c);
       return c3n;
     }
+
     c3_free(urb_c);
   }
 
@@ -1914,10 +1913,9 @@ u3_disk_make(c3_c* pax_c)
     c3_c log_c[8193];
     snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
 
-    if (  ( -1 == c3_mkdir(log_c, 0700) )
-       && ( EEXIST != errno ) ) // XX remove
-    {
-      fprintf(stderr, "disk: failed to make /.urb/log in %s\r\n", pax_c);
+    if ( -1 == c3_mkdir(log_c, 0700) ) {
+      fprintf(stderr, "disk: failed to make /.urb/log in %s: %s\r\n",
+                      pax_c, strerror(errno));
       return c3n;
     }
 

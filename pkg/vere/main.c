@@ -2824,44 +2824,12 @@ _cw_vile(c3_i argc, c3_c* argv[])
   u3z(res);
 }
 
-/* _cw_boot_writ(): process boot command
-*/
-static c3_o
-_cw_boot_writ(void* vod_p, c3_d len_d, c3_y* byt_y)
-{
-  u3_weak jar = u3s_cue_xeno(len_d, byt_y);
-
-  u3_noun com;
-
-  if (  (u3_none == jar)
-     || (c3n == u3r_p(jar, c3__boot, &com)) )
-  {
-    fprintf(stderr, "boot: parse fail\r\n");
-    exit(1);
-  }
-  else {
-    u3k(com);
-    u3z(jar);
-
-    //  XX get [dir_c] from elsewhere
-    //
-    if ( c3n == u3_mars_boot(u3P.dir_c, com) ) {
-      fprintf(stderr, "boot: fail\r\n");
-      exit(1);
-    }
-  }
-
-  exit(0);
-
-  return c3y;
-}
-
 /* _cw_boot(): initialize, await boot msg.
 */
 static void
 _cw_boot(c3_i argc, c3_c* argv[])
 {
-  if ( 4 > argc ) {
+  if ( 8 > argc ) {
     fprintf(stderr, "boot: missing args\r\n");
     exit(1);
   }
@@ -2872,64 +2840,55 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w       lom_w;
   c3_c*      eph_c = argv[5];
   c3_c*      tos_c = argv[6];
-  c3_w       tos_w;
   c3_c*      per_c = argv[7];
 
-  //  XX windows ctrl-c?
-
   _cw_init_io(lup_u);
-
-  fprintf(stderr, "boot: %s\r\n", dir_c);
 
   //  load runtime config
   //
   {
-    // TODO: what to use instead of tra_u?
-    // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
+    c3_w lom_w;
+
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
+    u3_Host.ops_u.lom_y = (c3_y)lom_w;
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
-      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+      fprintf(stderr, "boot: toss: invalid number '%s'\r\n", tos_c);
     }
+
+    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
   }
 
-  //  set up stdio read/write callbacks
-  //
-  inn_u.ptr_v = 0;
-  inn_u.pok_f = _cw_boot_writ;
-  inn_u.bal_f = _cw_io_fail;
-  out_u.ptr_v = 0;
-  out_u.bal_f = _cw_io_fail;
-
-  //  setup loom
-  //
-  //    XX s/b explicitly initialization, not maybe-restore
-  //
-  u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  //  XX revise
-  // u3m_boot(dir_c, (size_t)1 << lom_w);
-
-  //  set up logging
-  //
-  //    XX must be after u3m_boot due to u3l_log
+  //  make pier, configure i/o
   //
   {
-    // u3C.stderr_log_f = _cw_io_send_stdr;
-    // u3C.slog_f = _cw_io_send_slog;
+    u3_mars mar_u = { .dir_c = dir_c };
+    u3_mars_make(&mar_u);
+
+    //  set up logging
+    //
+    u3C.stderr_log_f = _cw_io_send_stdr;
+    u3C.slog_f = _cw_io_send_slog;
+
+    //  set up stdio read/write callbacks
+    //
+    inn_u.ptr_v = &mar_u;
+    inn_u.pok_f = (u3_moor_poke)u3_mars_boot;
+    inn_u.bal_f = _cw_io_fail;
+    out_u.ptr_v = &mar_u;
+    out_u.bal_f = _cw_io_fail;
   }
+
+  //  XX setup signals, ctrl-c and ctrl-z are busted
 
   //  start reading
   //
   u3_newt_read(&inn_u);
-
-  //  enter loop
-  //
   uv_run(lup_u, UV_RUN_DEFAULT);
   u3m_stop();
 }
