@@ -1974,7 +1974,12 @@ u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
 
   if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
     fprintf(stderr, "boot: preparation failed\r\n");
-    return c3n;
+    return c3n;  //  XX cleanup
+  }
+
+  if ( c3n == u3_disk_save_meta_meta(log_u->com_u->pax_c, &met_u) ) {
+    fprintf(stderr, "boot: failed to save top-level metadata\r\n");
+    return c3n;  //  XX cleanup
   }
 
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &met_u) ) {

@@ -2094,32 +2094,11 @@ try_init:
 
       switch ( kin_e ) {
         case _epoc_good: {
-          //  mark the log as live
-          log_u->liv_o = c3y;
-
 #if defined(DISK_TRACE_JAM) || defined(DISK_TRACE_CUE)
           u3t_trace_open(pax_c);
 #endif
 
-          if ( c3n == exs_o ) {
-            fprintf(stderr, "disk: repairing pre-release pier metadata\r\n");
-
-            //  read metadata from epoch's log
-            u3_meta met_u;
-            if ( c3n == u3_disk_read_meta(log_u->mdb_u, &met_u) )
-            {
-              fprintf(stderr, "disk: failed to read metadata\r\n");
-              c3_free(log_u);
-              return 0;
-            }
-
-            if ( c3n == u3_disk_save_meta_meta(log_c, &met_u) ) {
-              fprintf(stderr, "disk: failed to save top-level metadata\r\n");
-              c3_free(log_u);
-              return 0;
-            }
-          }
-
+          log_u->liv_o = c3y;
           return log_u;
         } break;
 
