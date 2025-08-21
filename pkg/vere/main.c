@@ -2250,10 +2250,6 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
     pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
     u3_Host.eve_d = mar_u.dun_d;
-
-    //  migrate or rollover as needed
-    //
-    u3_disk_kindly(log_u, u3_Host.eve_d);
   }
 
   u3_disk_exit(log_u);
@@ -2525,7 +2521,6 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_chop(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);
@@ -2592,7 +2587,6 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_roll(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);

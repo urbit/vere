@@ -964,11 +964,6 @@
         c3_z
         u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
-      /* u3_disk_kindly(): do the needful.
-      */
-        void
-        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
-
       /* u3_disk_chop(): delete all but the latest 2 epocs.
        */
         void
