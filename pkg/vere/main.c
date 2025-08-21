@@ -2898,7 +2898,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
 static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
-  if ( 5 > argc ) {
+  if ( 9 > argc ) {
     fprintf(stderr, "work: missing args\n");
     exit(1);
   }
@@ -2909,79 +2909,64 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w       lom_w;
   c3_c*      eve_c = argv[5];
-  c3_d       eve_d = 0;
   c3_c*      eph_c = argv[6];
   c3_c*      tos_c = argv[7];
-  c3_w       tos_w;
   c3_c*      per_c = argv[8];
+  c3_d       eve_d = 0;
 
   _cw_init_io(lup_u);
-
-  fprintf(stderr, "work: %s\r\n", dir_c);
 
   //  load runtime config
   //
   {
-    // TODO: what to use instead of tra_u?
-    // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
+    c3_w lom_w;
+
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
+    u3_Host.ops_u.lom_y = (c3_y)lom_w;
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
 
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
-      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
+    if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
+      fprintf(stderr, "mars: -n (--replay-to) invalid number '%s'\r\n", eve_c);
     }
+
+    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
+      fprintf(stderr, "mars: toss: invalid number '%s'\r\n", tos_c);
+    }
+
+    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
   }
-
-  u3_Host.ops_u.lom_y = lom_w;  //  XX
-
-  //  setup loom XX strdup?
-  //
-  u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  //  XX revise
-  // u3m_boot(dir_c, (size_t)1 << lom_w);
-
-  //  set up logging
-  //
-  //    XX must be after u3m_boot due to u3l_log
-  //
-  {
-    // u3C.stderr_log_f = _cw_io_send_stdr;
-    // u3C.slog_f = _cw_io_send_slog;
-  }
-
+  
   //  setup mars
   //
   {
-    //  XX set exit cb
-    //
-    u3_mars* mar_u = u3_mars_init(dir_c, &inn_u, &out_u, eve_d);
+    u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
+    u3_mars_load(&mar_u);
 
-    if ( !mar_u ) {
-      fprintf(stderr, "mars: init failed\r\n");
-      //  XX cleanup, exit codes
-      //
-      exit(1);
-    }
+    //  set up logging
+    //
+    u3C.stderr_log_f = _cw_io_send_stdr;
+    u3C.slog_f = _cw_io_send_slog;
+
+    //  replay if necessary
+    //
+    u3_mars_play(&mar_u, eve_d, 0); // XX sap_d from args?
+    u3_mars_work(&mar_u);
 
     //  set up stdio read/write callbacks
     //
-    inn_u.ptr_v = mar_u;
+    inn_u.ptr_v = &mar_u;
     inn_u.pok_f = (u3_moor_poke)u3_mars_kick;
     inn_u.bal_f = _cw_io_fail; // XX cleanup
-    out_u.ptr_v = mar_u;
+    out_u.ptr_v = &mar_u;
     out_u.bal_f = _cw_io_fail; // XX cleanup
   }
 
   //  start reading
   //
   u3_newt_read(&inn_u);
-
-  //  enter loop
-  //
   uv_run(lup_u, UV_RUN_DEFAULT);
   u3m_stop();
 }

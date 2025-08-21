@@ -1930,6 +1930,18 @@ u3_disk_make(c3_c* pax_c)
   return c3y;
 }
 
+static u3_dire*
+_disk_require_dir(const c3_c* dir_c)
+{
+  struct stat dir_u;
+
+  if ( stat(dir_c, &dir_u) || !S_ISDIR(dir_u.st_mode) ) {
+    return 0;
+  }
+
+  return u3_dire_init(dir_c);
+}
+
 /* u3_disk_init(): init pier directories and event log.
 */
 u3_disk*
@@ -1944,9 +1956,8 @@ u3_disk_init(c3_c* pax_c)
 
   //  load pier directory
   //
-  //  XX stat, require directory exists
   {
-    if ( 0 == (log_u->dir_u = u3_dire_init(pax_c)) ) {
+    if ( 0 == (log_u->dir_u = _disk_require_dir(pax_c)) ) {
       fprintf(stderr, "disk: failed to load pier at %s\r\n", pax_c);
       c3_free(log_u);
       return 0;
@@ -1965,8 +1976,7 @@ u3_disk_init(c3_c* pax_c)
     strcpy(urb_c, pax_c);
     strcat(urb_c, "/.urb");
 
-    //  XX stat, require directory exists
-    if ( 0 == (log_u->urb_u = u3_dire_init(urb_c)) ) {
+    if ( 0 == (log_u->urb_u = _disk_require_dir(urb_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb in %s\r\n", pax_c);
       c3_free(urb_c);
       c3_free(log_u);
@@ -1981,8 +1991,7 @@ u3_disk_init(c3_c* pax_c)
     c3_c log_c[8193];
     snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
 
-    //  XX stat, require directory exists
-    if ( 0 == (log_u->com_u = u3_dire_init(log_c)) ) {
+    if ( 0 == (log_u->com_u = _disk_require_dir(log_c)) ) {
       fprintf(stderr, "disk: failed to load /.urb/log in %s\r\n", pax_c);
       c3_free(log_u);
       return 0;
