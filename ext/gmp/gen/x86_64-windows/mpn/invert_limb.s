@@ -1,14 +1,79 @@
-#.hidden __gmpn_invert_limb_table
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_invert_limb
-#	.type	__gmpn_invert_limb,@function
 	
+	.def	__gmpn_invert_limb
+	.scl	2
+	.type	32
+	.endef
 __gmpn_invert_limb:
 		
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+
 	mov	%rdi, %rax		
 	shr	$55, %rax		
 
@@ -58,7 +123,8 @@ __gmpn_invert_limb:
 	adc	%rdi, %rdx
 	sub	%rdx, %rax
 
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_invert_limb,.-__gmpn_invert_limb
+	
 

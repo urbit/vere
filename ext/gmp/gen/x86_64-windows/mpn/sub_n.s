@@ -1,186 +1,216 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+	
+
+
+
+	
+	
+	
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_sub_nc
-#	.type	__gmpn_sub_nc,@function
 	
+	.def	__gmpn_sub_nc
+	.scl	2
+	.type	32
+	.endef
 __gmpn_sub_nc:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
-
+	mov	56(%rsp), %r8	
 	mov	%ecx, %eax
-	shr	$3, %rcx
-	and	$7, %eax
+	shr	$2, %rcx
+	and	$3, %eax
+	bt	$0, %r8			
+	jrcxz	Llt4
 
-	lea	.Ltab(%rip), %r9
-	neg	%r8			
+	mov	(%rsi), %r8
+	mov	8(%rsi), %r9
+	dec	%rcx
+	jmp	Lmid
 
-	movslq	(%r9,%rax,4), %rax
-	lea	(%r9,%rax), %rax	
-	jmp	*%rax
-
-#	.size	__gmpn_sub_nc,.-__gmpn_sub_nc
-
+	
 	.align	16, 0x90
 	.globl	__gmpn_sub_n
-#	.type	__gmpn_sub_n,@function
 	
+	.def	__gmpn_sub_n
+	.scl	2
+	.type	32
+	.endef
 __gmpn_sub_n:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
 	mov	%ecx, %eax
-	shr	$3, %rcx
-	and	$7, %eax		
+	shr	$2, %rcx
+	and	$3, %eax
+	jrcxz	Llt4
 
-	lea	.Ltab(%rip), %r9
-
-	movslq	(%r9,%rax,4), %rax
-	lea	(%r9,%rax), %rax	
-	jmp	*%rax
-
-
-.L0:	mov	(%rsi), %r8
+	mov	(%rsi), %r8
 	mov	8(%rsi), %r9
-	sbb	(%rdx), %r8
-	jmp	.Le0
+	dec	%rcx
+	jmp	Lmid
 
-.L4:	mov	(%rsi), %r8
+Llt4:	dec	%eax
+	mov	(%rsi), %r8
+	jnz	L2
+	sbb	(%rdx), %r8
+	mov	%r8, (%rdi)
+	adc	%eax, %eax
+	pop	%rsi
+	pop	%rdi
+	ret
+
+L2:	dec	%eax
 	mov	8(%rsi), %r9
+	jnz	L3
 	sbb	(%rdx), %r8
-	lea	-32(%rsi), %rsi
-	lea	-32(%rdx), %rdx
-	lea	-32(%rdi), %rdi
-	inc	%rcx
-	jmp	.Le4
+	sbb	8(%rdx), %r9
+	mov	%r8, (%rdi)
+	mov	%r9, 8(%rdi)
+	adc	%eax, %eax
+	pop	%rsi
+	pop	%rdi
+	ret
 
-.L5:	mov	(%rsi), %r11
-	mov	8(%rsi), %r8
-	mov	16(%rsi), %r9
-	sbb	(%rdx), %r11
-	lea	-24(%rsi), %rsi
-	lea	-24(%rdx), %rdx
-	lea	-24(%rdi), %rdi
-	inc	%rcx
-	jmp	.Le5
-
-.L6:	mov	(%rsi), %r10
-	sbb	(%rdx), %r10
-	mov	8(%rsi), %r11
-	lea	-16(%rsi), %rsi
-	lea	-16(%rdx), %rdx
-	lea	-16(%rdi), %rdi
-	inc	%rcx
-	jmp	.Le6
-
-.L7:	mov	(%rsi), %r9
-	mov	8(%rsi), %r10
-	sbb	(%rdx), %r9
-	sbb	8(%rdx), %r10
-	lea	-8(%rsi), %rsi
-	lea	-8(%rdx), %rdx
-	lea	-8(%rdi), %rdi
-	inc	%rcx
-	jmp	.Le7
-
-	.align	16, 0x90
-.Ltop:
-.Le3:	mov	%r9, 40(%rdi)
-.Le2:	mov	%r10, 48(%rdi)
-.Le1:	mov	(%rsi), %r8
-	mov	8(%rsi), %r9
+L3:	mov	16(%rsi), %r10
 	sbb	(%rdx), %r8
-	mov	%r11, 56(%rdi)
-	lea	64(%rdi), %rdi
-.Le0:	mov	16(%rsi), %r10
 	sbb	8(%rdx), %r9
 	sbb	16(%rdx), %r10
 	mov	%r8, (%rdi)
-.Le7:	mov	24(%rsi), %r11
 	mov	%r9, 8(%rdi)
-.Le6:	mov	32(%rsi), %r8
-	mov	40(%rsi), %r9
-	sbb	24(%rdx), %r11
 	mov	%r10, 16(%rdi)
-.Le5:	sbb	32(%rdx), %r8
-	mov	%r11, 24(%rdi)
-.Le4:	mov	48(%rsi), %r10
-	mov	56(%rsi), %r11
-	mov	%r8, 32(%rdi)
-	lea	64(%rsi), %rsi
-	sbb	40(%rdx), %r9
-	sbb	48(%rdx), %r10
-	sbb	56(%rdx), %r11
-	lea	64(%rdx), %rdx
+	setc	%al
+	pop	%rsi
+	pop	%rdi
+	ret
+
+	.align	16, 0x90
+Ltop:	sbb	(%rdx), %r8
+	sbb	8(%rdx), %r9
+	sbb	16(%rdx), %r10
+	sbb	24(%rdx), %r11
+	mov	%r8, (%rdi)
+	lea	32(%rsi), %rsi
+	mov	%r9, 8(%rdi)
+	mov	%r10, 16(%rdi)
 	dec	%rcx
-	jnz	.Ltop
+	mov	%r11, 24(%rdi)
+	lea	32(%rdx), %rdx
+	mov	(%rsi), %r8
+	mov	8(%rsi), %r9
+	lea	32(%rdi), %rdi
+Lmid:	mov	16(%rsi), %r10
+	mov	24(%rsi), %r11
+	jnz	Ltop
 
-.Lend:	mov	%r9, 40(%rdi)
-	mov	%r10, 48(%rdi)
-	mov	%r11, 56(%rdi)
-	mov	%ecx, %eax
-	adc	%ecx, %eax
-	
-	ret
+Lend:	lea	32(%rsi), %rsi
+	sbb	(%rdx), %r8
+	sbb	8(%rdx), %r9
+	sbb	16(%rdx), %r10
+	sbb	24(%rdx), %r11
+	lea	32(%rdx), %rdx
+	mov	%r8, (%rdi)
+	mov	%r9, 8(%rdi)
+	mov	%r10, 16(%rdi)
+	mov	%r11, 24(%rdi)
+	lea	32(%rdi), %rdi
 
-	.align	16, 0x90
-.L3:	mov	(%rsi), %r9
-	mov	8(%rsi), %r10
-	mov	16(%rsi), %r11
-	sbb	(%rdx), %r9
-	sbb	8(%rdx), %r10
-	sbb	16(%rdx), %r11
-	jrcxz	.Lx3
-	lea	24(%rsi), %rsi
-	lea	24(%rdx), %rdx
-	lea	-40(%rdi), %rdi
-	jmp	.Le3
-.Lx3:	mov	%r9, (%rdi)
-	mov	%r10, 8(%rdi)
-	mov	%r11, 16(%rdi)
-	mov	%ecx, %eax
-	adc	%ecx, %eax
-	
+	inc	%eax
+	dec	%eax
+	jnz	Llt4
+	adc	%eax, %eax
+	pop	%rsi
+	pop	%rdi
 	ret
-
-	.align	16, 0x90
-.L1:	mov	(%rsi), %r11
-	sbb	(%rdx), %r11
-	jrcxz	.Lx1
-	lea	8(%rsi), %rsi
-	lea	8(%rdx), %rdx
-	lea	-56(%rdi), %rdi
-	jmp	.Le1
-.Lx1:	mov	%r11, (%rdi)
-	mov	%ecx, %eax
-	adc	%ecx, %eax
 	
-	ret
-
-	.align	16, 0x90
-.L2:	mov	(%rsi), %r10
-	mov	8(%rsi), %r11
-	sbb	(%rdx), %r10
-	sbb	8(%rdx), %r11
-	jrcxz	.Lx2
-	lea	16(%rsi), %rsi
-	lea	16(%rdx), %rdx
-	lea	-48(%rdi), %rdi
-	jmp	.Le2
-.Lx2:	mov	%r10, (%rdi)
-	mov	%r11, 8(%rdi)
-	mov	%ecx, %eax
-	adc	%ecx, %eax
-	
-	ret
-#	.size	__gmpn_sub_n,.-__gmpn_sub_n
-	.section	.data.rel.ro.local,"a"
-	.align	8, 0x90
-.Ltab:	.long	.L0-.Ltab
-	.long	.L1-.Ltab
-	.long	.L2-.Ltab
-	.long	.L3-.Ltab
-	.long	.L4-.Ltab
-	.long	.L5-.Ltab
-	.long	.L6-.Ltab
-	.long	.L7-.Ltab

@@ -37,7 +37,7 @@ see https://www.gnu.org/licenses/.
 
 /* The gmp-mparam.h file (a string) the tune program should suggest updating.
    */
-#define GMP_MPARAM_H_SUGGEST "./mpn/x86_64/alderlake/gmp-mparam.h"
+#define GMP_MPARAM_H_SUGGEST "./mpn/x86_64/k8/gmp-mparam.h"
 
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1
@@ -47,7 +47,7 @@ see https://www.gnu.org/licenses/.
 
 /* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
    */
-#define HAVE_ALLOCA_H 1
+/* #undef HAVE_ALLOCA_H */
 
 /* Define to 1 if the compiler accepts gcc style __attribute__ ((const)) */
 #define HAVE_ATTRIBUTE_CONST 1
@@ -67,13 +67,13 @@ see https://www.gnu.org/licenses/.
 
 /* Define to 1 if tests/libtests has calling conventions checking for the CPU
    */
-#define HAVE_CALLING_CONVENTIONS 1
+/* #undef HAVE_CALLING_CONVENTIONS */
 
 /* Define to 1 if you have the `clock' function. */
 #define HAVE_CLOCK 1
 
 /* Define to 1 if you have the `clock_gettime' function */
-#define HAVE_CLOCK_GETTIME 1
+/* #undef HAVE_CLOCK_GETTIME */
 
 /* Define to 1 if you have the `cputime' function. */
 /* #undef HAVE_CPUTIME */
@@ -107,7 +107,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_DECL_VFPRINTF 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
-#define HAVE_DLFCN_H 1
+/* #undef HAVE_DLFCN_H */
 
 /* Define one of the following to 1 for the format of a `double'.
    If your format is not among these choices, or you don't know what it is,
@@ -131,7 +131,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_GETPAGESIZE 1
 
 /* Define to 1 if you have the `getrusage' function. */
-#define HAVE_GETRUSAGE 1
+/* #undef HAVE_GETRUSAGE */
 
 /* Define to 1 if you have the `getsysinfo' function. */
 /* #undef HAVE_GETSYSINFO */
@@ -222,7 +222,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_INVENT_H */
 
 /* Define to 1 if you have the <langinfo.h> header file. */
-/* #define HAVE_LANGINFO_H 1 */
+/* #undef HAVE_LANGINFO_H */
 
 /* Define one of these to 1 for the endianness of `mp_limb_t'.
    If the endianness is not a simple big or little, or you don't know what
@@ -254,7 +254,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_MEMSET 1
 
 /* Define to 1 if you have the `mmap' function. */
-#define HAVE_MMAP 1
+/* #undef HAVE_MMAP */
 
 /* Define to 1 if you have the `mprotect' function. */
 #define HAVE_MPROTECT 1
@@ -264,12 +264,12 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_add_n 1
 /* #undef HAVE_NATIVE_mpn_add_n_sub_n */
 #define HAVE_NATIVE_mpn_add_nc 1
-/* #undef HAVE_NATIVE_mpn_addaddmul_1msb0 */
+#define HAVE_NATIVE_mpn_addaddmul_1msb0 1
 #define HAVE_NATIVE_mpn_addlsh1_n 1
 #define HAVE_NATIVE_mpn_addlsh2_n 1
 #define HAVE_NATIVE_mpn_addlsh_n 1
-#define HAVE_NATIVE_mpn_addlsh1_nc 1
-#define HAVE_NATIVE_mpn_addlsh2_nc 1
+/* #undef HAVE_NATIVE_mpn_addlsh1_nc */
+/* #undef HAVE_NATIVE_mpn_addlsh2_nc */
 /* #undef HAVE_NATIVE_mpn_addlsh_nc */
 /* #undef HAVE_NATIVE_mpn_addlsh1_n_ip1 */
 /* #undef HAVE_NATIVE_mpn_addlsh2_n_ip1 */
@@ -302,7 +302,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_com 1
 #define HAVE_NATIVE_mpn_copyd 1
 #define HAVE_NATIVE_mpn_copyi 1
-#define HAVE_NATIVE_mpn_div_qr_1n_pi1 1
+/* #undef HAVE_NATIVE_mpn_div_qr_1n_pi1 */
 /* #undef HAVE_NATIVE_mpn_div_qr_2 */
 #define HAVE_NATIVE_mpn_divexact_1 1
 /* #undef HAVE_NATIVE_mpn_divexact_by3c */
@@ -311,7 +311,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_divrem_2 1
 /* #undef HAVE_NATIVE_mpn_gcd_1 */
 #define HAVE_NATIVE_mpn_gcd_11 1
-#define HAVE_NATIVE_mpn_gcd_22 1
+/* #undef HAVE_NATIVE_mpn_gcd_22 */
 #define HAVE_NATIVE_mpn_hamdist 1
 #define HAVE_NATIVE_mpn_invert_limb 1
 #define HAVE_NATIVE_mpn_ior_n 1
@@ -328,7 +328,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_modexact_1_odd 1
 #define HAVE_NATIVE_mpn_modexact_1c_odd 1
 #define HAVE_NATIVE_mpn_mul_1 1
-/* #undef HAVE_NATIVE_mpn_mul_1c */
+#define HAVE_NATIVE_mpn_mul_1c 1
 #define HAVE_NATIVE_mpn_mul_2 1
 /* #undef HAVE_NATIVE_mpn_mul_3 */
 /* #undef HAVE_NATIVE_mpn_mul_4 */
@@ -346,7 +346,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_rsblsh1_n 1
 #define HAVE_NATIVE_mpn_rsblsh2_n 1
 #define HAVE_NATIVE_mpn_rsblsh_n 1
-#define HAVE_NATIVE_mpn_rsblsh1_nc 1
+/* #undef HAVE_NATIVE_mpn_rsblsh1_nc */
 /* #undef HAVE_NATIVE_mpn_rsblsh2_nc */
 /* #undef HAVE_NATIVE_mpn_rsblsh_nc */
 #define HAVE_NATIVE_mpn_rsh1add_n 1
@@ -354,14 +354,14 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_rsh1sub_n 1
 #define HAVE_NATIVE_mpn_rsh1sub_nc 1
 #define HAVE_NATIVE_mpn_rshift 1
-#define HAVE_NATIVE_mpn_sbpi1_bdiv_r 1
+/* #undef HAVE_NATIVE_mpn_sbpi1_bdiv_r */
 #define HAVE_NATIVE_mpn_sqr_basecase 1
 /* #undef HAVE_NATIVE_mpn_sqr_diagonal */
 #define HAVE_NATIVE_mpn_sqr_diag_addlsh1 1
 #define HAVE_NATIVE_mpn_sub_n 1
 #define HAVE_NATIVE_mpn_sub_nc 1
 #define HAVE_NATIVE_mpn_sublsh1_n 1
-#define HAVE_NATIVE_mpn_sublsh2_n 1
+/* #undef HAVE_NATIVE_mpn_sublsh2_n */
 /* #undef HAVE_NATIVE_mpn_sublsh_n */
 /* #undef HAVE_NATIVE_mpn_sublsh1_nc */
 /* #undef HAVE_NATIVE_mpn_sublsh2_nc */
@@ -382,13 +382,13 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_xnor_n 1
 
 /* Define to 1 if you have the `nl_langinfo' function. */
-#define HAVE_NL_LANGINFO 1
+/* #undef HAVE_NL_LANGINFO */
 
 /* Define to 1 if you have the <nl_types.h> header file. */
-#define HAVE_NL_TYPES_H 1
+/* #undef HAVE_NL_TYPES_H */
 
 /* Define to 1 if you have the `obstack_vprintf' function. */
-#define HAVE_OBSTACK_VPRINTF 0
+/* #undef HAVE_OBSTACK_VPRINTF */
 
 /* Define to 1 if you have the `popen' function. */
 #define HAVE_POPEN 1
@@ -407,7 +407,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_PTRDIFF_T 1
 
 /* Define to 1 if the system has the type `quad_t'. */
-/* #define HAVE_QUAD_T 1 */
+/* #undef HAVE_QUAD_T */
 
 /* Define to 1 if you have the `raise' function. */
 #define HAVE_RAISE 1
@@ -416,13 +416,13 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_READ_REAL_TIME */
 
 /* Define to 1 if you have the `sigaction' function. */
-#define HAVE_SIGACTION 1
+/* #undef HAVE_SIGACTION */
 
 /* Define to 1 if you have the `sigaltstack' function. */
-#define HAVE_SIGALTSTACK 1
+/* #undef HAVE_SIGALTSTACK */
 
 /* Define to 1 if you have the `sigstack' function. */
-#define HAVE_SIGSTACK 1
+/* #undef HAVE_SIGSTACK */
 
 /* Tune directory speed_cyclecounter, undef=none, 1=32bits, 2=64bits) */
 #define HAVE_SPEED_CYCLECOUNTER 2
@@ -431,7 +431,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_SSTREAM */
 
 /* Define to 1 if the system has the type `stack_t'. */
-#define HAVE_STACK_T 1
+/* #undef HAVE_STACK_T */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -464,7 +464,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_STRTOUL 1
 
 /* Define to 1 if you have the `sysconf' function. */
-#define HAVE_SYSCONF 1
+/* #undef HAVE_SYSCONF */
 
 /* Define to 1 if you have the `sysctl' function. */
 /* #undef HAVE_SYSCTL */
@@ -482,7 +482,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_SYS_IOGRAPH_H */
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
-#define HAVE_SYS_MMAN_H 1
+/* #undef HAVE_SYS_MMAN_H */
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H 1
@@ -494,7 +494,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_SYS_PSTAT_H */
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
-#define HAVE_SYS_RESOURCE_H 1
+/* #undef HAVE_SYS_RESOURCE_H */
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
@@ -503,7 +503,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_SYS_SYSCTL_H */
 
 /* Define to 1 if you have the <sys/sysinfo.h> header file. */
-#define HAVE_SYS_SYSINFO_H 1
+/* #undef HAVE_SYS_SYSINFO_H */
 
 /* Define to 1 if you have the <sys/syssgi.h> header file. */
 /* #undef HAVE_SYS_SYSSGI_H */
@@ -512,7 +512,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_SYS_SYSTEMCFG_H */
 
 /* Define to 1 if you have the <sys/times.h> header file. */
-#define HAVE_SYS_TIMES_H 1
+/* #undef HAVE_SYS_TIMES_H */
 
 /* Define to 1 if you have the <sys/time.h> header file. */
 #define HAVE_SYS_TIME_H 1
@@ -521,7 +521,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the `times' function. */
-#define HAVE_TIMES 1
+/* #undef HAVE_TIMES */
 
 /* Define to 1 if the system has the type `uint_least32_t'. */
 #define HAVE_UINT_LEAST32_T 1
@@ -533,10 +533,10 @@ see https://www.gnu.org/licenses/.
 #define HAVE_VSNPRINTF 1
 
 /* Define to 1 for Windos/64 */
-/* #undef HOST_DOS64 */
+#define HOST_DOS64 1
 
 /* Assembler local label prefix */
-#define LSYM_PREFIX ".L"
+#define LSYM_PREFIX "L"
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
@@ -575,7 +575,7 @@ see https://www.gnu.org/licenses/.
 #define SIZEOF_UNSIGNED 4
 
 /* The size of `unsigned long', as computed by sizeof. */
-#define SIZEOF_UNSIGNED_LONG 8
+#define SIZEOF_UNSIGNED_LONG 4
 
 /* The size of `unsigned short', as computed by sizeof. */
 #define SIZEOF_UNSIGNED_SHORT 2
@@ -643,7 +643,7 @@ see https://www.gnu.org/licenses/.
 #endif
 
 /* Define to 1 if the assembler understands the mulx instruction */
-#define X86_ASM_MULX 1
+/* #undef X86_ASM_MULX */
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */

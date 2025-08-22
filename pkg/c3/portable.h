@@ -92,8 +92,8 @@
 #     include <dirent.h>
 #     include <signal.h>
 #     include <sys/time.h>
-#     include "../vere/platform/windows/mman.h"
-#     include "../vere/platform/windows/compat.h"
+#     include "mman.h"
+#     include "compat.h"
 
 
 #   else

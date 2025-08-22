@@ -341,6 +341,14 @@ fn libcrypto(
         });
     }
 
+    if (t.os.tag == .windows) {
+        try srcs.appendSlice(&.{
+            "ms/applink.c",
+            "ms/uplink.c",
+        });
+        lib.addIncludePath(dep.path("ms"));
+    }
+
     lib.addCSourceFiles(.{
         .root = dep.path(""),
         .files = switch (t.cpu.arch) {

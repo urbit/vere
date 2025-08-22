@@ -1,11 +1,86 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_divexact_1
-#	.type	__gmpn_divexact_1,@function
 	
+	.def	__gmpn_divexact_1
+	.scl	2
+	.type	32
+	.endef
 __gmpn_divexact_1:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
 	push	%rbx
 
 	mov	%rcx, %rax
@@ -13,14 +88,14 @@ __gmpn_divexact_1:
 	mov	%rdx, %r8
 
 	bt	$0, %eax
-	jnc	.Levn			
+	jnc	Levn			
 
-.Lodd:	mov	%rax, %rbx
+Lodd:	mov	%rax, %rbx
 	shr	%eax
 	and	$127, %eax		
 
-	mov	__gmp_binvert_limb_table@GOTPCREL(%rip), %rdx
-
+	
+	lea	__gmp_binvert_limb_table(%rip), %rdx
 
 
 	movzbl	(%rdx,%rax), %eax	
@@ -49,21 +124,21 @@ __gmpn_divexact_1:
 	mov	(%rsi,%r8,8), %rax	
 
 	inc	%r8
-	jz	.Lone
+	jz	Lone
 
 	mov	(%rsi,%r8,8), %rdx	
 
 	shrd	%cl, %rdx, %rax
 
 	xor	%ebx, %ebx
-	jmp	.Lent
+	jmp	Lent
 
-.Levn:	bsf	%rax, %rcx
+Levn:	bsf	%rax, %rcx
 	shr	%cl, %rax
-	jmp	.Lodd
+	jmp	Lodd
 
 	.align	8, 0x90
-.Ltop:
+Ltop:
 	
 	
 	
@@ -83,10 +158,10 @@ __gmpn_divexact_1:
 	setc	%bl			
 	sub	%rdx, %rax		
 	adc	$0, %rbx		
-.Lent:	imul	%r10, %rax		
+Lent:	imul	%r10, %rax		
 	mov	%rax, (%rdi,%r8,8)	
 	inc	%r8			
-	jnz	.Ltop
+	jnz	Ltop
 
 	mul	%r11			
 	mov	-8(%rsi), %rax		
@@ -96,14 +171,16 @@ __gmpn_divexact_1:
 	imul	%r10, %rax
 	mov	%rax, (%rdi)
 	pop	%rbx
-	
+	pop	%rsi
+	pop	%rdi
 	ret
 
-.Lone:	shr	%cl, %rax
+Lone:	shr	%cl, %rax
 	imul	%r10, %rax
 	mov	%rax, (%rdi)
 	pop	%rbx
-	
+	pop	%rsi
+	pop	%rdi
 	ret
 
-#	.size	__gmpn_divexact_1,.-__gmpn_divexact_1
+	

@@ -4,8 +4,8 @@
     .version = "0.0.1",
     .dependencies = .{
         .h2o = .{
-            .url = "https://github.com/pkova/h2o/archive/904559db9d598c88a958e38c50b6172763cd2df7.tar.gz",
-            .hash = "N-V-__8AAExzqgOMASbqhA-ziu6AZZg12TOG-dN0pWa77YE5",
+            .url = "https://github.com/pkova/h2o/archive/3bbfe369a5c31d38cc1717e5281ca6af89ecf787.tar.gz",
+            .hash = "N-V-__8AAJ2XqALM9jST2Gu4TIdjPNY2QB8rnmKeepeqr076",
         },
         .libuv = .{
             .path = "../libuv",

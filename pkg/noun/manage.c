@@ -122,6 +122,10 @@ static uint8_t Sigstk[SIGSTKSZ];
 #endif
 #endif
 
+#ifdef U3_OS_windows
+#include "veh_handler.h"
+#endif
+
 #if 0
 /* _cm_punt(): crudely print trace.
 */
@@ -2290,6 +2294,8 @@ _cm_signals(void)
     }
   }
 #endif
+#else
+  AddVectoredExceptionHandler(1, _windows_exception_filter);
 #endif
 }
 

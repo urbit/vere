@@ -1,11 +1,97 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_bdiv_q_1
-#	.type	__gmpn_bdiv_q_1,@function
 	
+	.def	__gmpn_bdiv_q_1
+	.scl	2
+	.type	32
+	.endef
 __gmpn_bdiv_q_1:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
 	push	%rbx
 
 	mov	%rcx, %rax
@@ -13,14 +99,14 @@ __gmpn_bdiv_q_1:
 	mov	%rdx, %r10
 
 	bt	$0, %eax
-	jnc	.Levn			
+	jnc	Levn			
 
-.Lodd:	mov	%rax, %rbx
+Lodd:	mov	%rax, %rbx
 	shr	%eax
 	and	$127, %eax		
 
-	mov	__gmp_binvert_limb_table@GOTPCREL(%rip), %rdx
-
+	
+	lea	__gmp_binvert_limb_table(%rip), %rdx
 
 
 	movzbl	(%rdx,%rax), %eax	
@@ -42,97 +128,91 @@ __gmpn_bdiv_q_1:
 	imul	%rbx, %rax		
 	sub	%rax, %r8		
 
-	jmp	.Lpi1
+	jmp	Lpi1
 
-.Levn:	bsf	%rax, %rcx
+Levn:	bsf	%rax, %rcx
 	shr	%cl, %rax
-	jmp	.Lodd
-#	.size	__gmpn_bdiv_q_1,.-__gmpn_bdiv_q_1
+	jmp	Lodd
+	
 
 	.globl	__gmpn_pi1_bdiv_q_1
-#	.type	__gmpn_pi1_bdiv_q_1,@function
 	
+	.def	__gmpn_pi1_bdiv_q_1
+	.scl	2
+	.type	32
+	.endef
 __gmpn_pi1_bdiv_q_1:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
-
+	mov	56(%rsp), %r8	
+	mov	64(%rsp), %r9	
 	push	%rbx
 
 	mov	%rcx, %r11		
 	mov	%rdx, %r10		
 	mov	%r9, %rcx		
 
-.Lpi1:	mov	(%rsi), %rax		
+Lpi1:	mov	(%rsi), %rax		
 
 	dec	%r10
-	jz	.Lone
+	jz	Lone
 
-	lea	8(%rsi,%r10,8), %rsi	
+	mov	8(%rsi), %rdx		
+	lea	(%rsi,%r10,8), %rsi		
 	lea	(%rdi,%r10,8), %rdi		
 	neg	%r10			
 
-	test	%ecx, %ecx
-	jnz	.Lunorm		
+	shrd	%cl, %rdx, %rax
+
 	xor	%ebx, %ebx
-	jmp	.Lnent
+	jmp	Lent
 
 	.align	8, 0x90
-.Lntop:mul	%r11			
-	mov	-8(%rsi,%r10,8), %rax	
-	sub	%rbx, %rax		
-	setc	%bl		
-	sub	%rdx, %rax		
-	adc	$0, %ebx		
-.Lnent:imul	%r8, %rax		
-	mov	%rax, (%rdi,%r10,8)	
-	inc	%r10			
-	jnz	.Lntop
-
-	mov	-8(%rsi), %r9		
-	jmp	.Lcom
-
-.Lunorm:
-	mov	(%rsi,%r10,8), %r9	
-	shr	%cl, %rax		
-	neg	%ecx
-	shl	%cl, %r9		
-	neg	%ecx
-	or	%r9, %rax
-	xor	%ebx, %ebx
-	jmp	.Luent
-
-	.align	8, 0x90
-.Lutop:mul	%r11			
-	mov	(%rsi,%r10,8), %rax	
-	shl	%cl, %rax		
-	neg	%ecx
-	or	%r9, %rax
-	sub	%rbx, %rax		
-	setc	%bl		
-	sub	%rdx, %rax		
-	adc	$0, %ebx		
-.Luent:imul	%r8, %rax		
-	mov	(%rsi,%r10,8), %r9	
-	shr	%cl, %r9		
-	neg	%ecx
-	mov	%rax, (%rdi,%r10,8)	
-	inc	%r10			
-	jnz	.Lutop
-
-.Lcom:	mul	%r11			
-	sub	%rbx, %r9		
-	sub	%rdx, %r9		
-	imul	%r8, %r9
-	mov	%r9, (%rdi)
-	pop	%rbx
+Ltop:
 	
-	ret
+	
+	
+	
+	
+	
 
-.Lone:	shr	%cl, %rax
+	mul	%r11			
+	mov	(%rsi,%r10,8), %rax
+	mov	8(%rsi,%r10,8), %r9
+	shrd	%cl, %r9, %rax
+	nop
+	sub	%rbx, %rax		
+	setc	%bl
+	sub	%rdx, %rax		
+	adc	$0, %ebx
+Lent:	imul	%r8, %rax
+	mov	%rax, (%rdi,%r10,8)
+	inc	%r10
+	jnz	Ltop
+
+	mul	%r11			
+	mov	(%rsi), %rax		
+	shr	%cl, %rax
+	sub	%rbx, %rax		
+	sub	%rdx, %rax		
 	imul	%r8, %rax
 	mov	%rax, (%rdi)
 	pop	%rbx
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_pi1_bdiv_q_1,.-__gmpn_pi1_bdiv_q_1
+
+Lone:	shr	%cl, %rax
+	imul	%r8, %rax
+	mov	%rax, (%rdi)
+	pop	%rbx
+	pop	%rsi
+	pop	%rdi
+	ret
+	

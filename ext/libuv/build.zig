@@ -61,6 +61,7 @@ pub fn build(b: *std.Build) !void {
         .windows => try uv_flags.appendSlice(&.{
             "-DWIN32_LEAN_AND_MEAN",
             "-D_WIN32_WINNT=0x0602",
+            "-U_DEBUG",
         }),
         else => null,
     };

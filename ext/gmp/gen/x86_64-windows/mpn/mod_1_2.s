@@ -1,11 +1,78 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_2p
-#	.type	__gmpn_mod_1s_2p,@function
 	
+	.def	__gmpn_mod_1s_2p
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1s_2p:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
 	push	%r14
 	test	$1, %sil
 	mov	%rdx, %r14
@@ -17,9 +84,9 @@ __gmpn_mod_1s_2p:
 	mov	16(%rcx), %r10
 	mov	24(%rcx), %rbx
 	mov	32(%rcx), %rbp
-	je	.Lb0
+	je	Lb0
 	dec	%rsi
-	je	.Lone
+	je	Lone
 	mov	-8(%rdi,%rsi,8), %rax
 	mul	%r10
 	mov	%rax, %r9
@@ -30,20 +97,20 @@ __gmpn_mod_1s_2p:
 	mul	%rbx
 	add	%rax, %r9
 	adc	%rdx, %r8
-	jmp	.L11
+	jmp	L11
 
-.Lb0:	mov	-8(%rdi,%rsi,8), %r8
+Lb0:	mov	-8(%rdi,%rsi,8), %r8
 	mov	-16(%rdi,%rsi,8), %r9
 
-.L11:	sub	$4, %rsi
-	jb	.Led2
+L11:	sub	$4, %rsi
+	jb	Led2
 	lea	40(%rdi,%rsi,8), %rdi
 	mov	-40(%rdi), %r11
 	mov	-32(%rdi), %rax
-	jmp	.Lm0
+	jmp	Lm0
 
 	.align	16, 0x90
-.Ltop:	mov	-24(%rdi), %r9
+Ltop:	mov	-24(%rdi), %r9
 	add	%rax, %r11
 	mov	-16(%rdi), %rax
 	adc	%rdx, %r12
@@ -58,12 +125,12 @@ __gmpn_mod_1s_2p:
 	adc	%rdx, %r8
 	mul	%rbp
 	sub	$2, %rsi
-	jb	.Led1
+	jb	Led1
 	mov	-40(%rdi), %r11
 	add	%rax, %r9
 	mov	-32(%rdi), %rax
 	adc	%rdx, %r8
-.Lm0:	mul	%r10
+Lm0:	mul	%r10
 	add	%rax, %r11
 	mov	%r9, %rax
 	mov	%rdx, %r12
@@ -75,19 +142,19 @@ __gmpn_mod_1s_2p:
 	adc	%rdx, %r12
 	mul	%rbp
 	sub	$2, %rsi
-	jae	.Ltop
+	jae	Ltop
 
-.Led0:	mov	%r11, %r9
+Led0:	mov	%r11, %r9
 	mov	%r12, %r8
-.Led1:	add	%rax, %r9
+Led1:	add	%rax, %r9
 	adc	%rdx, %r8
-.Led2:	mov	8(%r13), %edi		
+Led2:	mov	8(%r13), %edi		
 	mov	%r8, %rax
 	mov	%r9, %r8
 	mul	%r10
 	add	%rax, %r8
 	adc	$0, %rdx
-.L1:	xor	%ecx, %ecx
+L1:	xor	%ecx, %ecx
 	mov	%r8, %r9
 	sub	%edi, %ecx
 	shr	%cl, %r9
@@ -116,22 +183,30 @@ __gmpn_mod_1s_2p:
 	pop	%r12
 	pop	%r13
 	pop	%r14
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-.Lone:
+Lone:
 	mov	(%rdi), %r8
 	mov	8(%rcx), %edi
 	xor	%rdx, %rdx
-	jmp	.L1
-#	.size	__gmpn_mod_1s_2p,.-__gmpn_mod_1s_2p
+	jmp	L1
+	
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_2p_cps
-#	.type	__gmpn_mod_1s_2p_cps,@function
 	
+	.def	__gmpn_mod_1s_2p_cps
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1s_2p_cps:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+
 	push	%rbp
 	bsr	%rsi, %rcx
 	push	%rbx
@@ -141,13 +216,12 @@ __gmpn_mod_1s_2p_cps:
 	mov	%rsi, %r12
 	mov	%ecx, %ebp	
 	sal	%cl, %r12		
-	mov	%r12, %rdi		
 	
-
+	mov	%r12, %rcx		
+	sub	$32, %rsp	
 	
-	call	__gmpn_invert_limb@PLT
-
-
+	call	__gmpn_invert_limb
+	add	$32, %rsp	
 	mov	%r12, %r8
 	mov	%rax, %r11
 	mov	%rax, (%rbx)		
@@ -189,6 +263,7 @@ __gmpn_mod_1s_2p_cps:
 	pop	%r12
 	pop	%rbx
 	pop	%rbp
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_mod_1s_2p_cps,.-__gmpn_mod_1s_2p_cps
+	

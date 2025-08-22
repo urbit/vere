@@ -189,10 +189,10 @@ fn buildBinary(
         "-Werror",
     });
 
-    if (!cfg.asan and !cfg.ubsan)
-        try global_flags.appendSlice(&.{
-            "-fno-sanitize=all",
-        });
+    // if (!cfg.asan and !cfg.ubsan)
+    //     try global_flags.appendSlice(&.{
+    //         "-fno-sanitize=all",
+    //     });
 
     if (cfg.asan and !cfg.ubsan)
         try global_flags.appendSlice(&.{
@@ -274,11 +274,14 @@ fn buildBinary(
     if (t.os.tag == .windows) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_windows=1",
+            "-DWIN32_LEAN_AND_MEAN",
             "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
+            "-DO_CLOEXEC=0",
             "-DH2O_NO_UNIX_SOCKETS",
             "-DH2O_NO_HTTP3",
             "-DH2O_NO_REDIS",
             "-DH2O_NO_MEMCACHED",
+            "-DCURL_STATICLIB",
         });
     }
 
@@ -391,6 +394,17 @@ fn buildBinary(
     });
     urbit.stack_size = 0;
 
+    if (t.os.tag == .windows) {
+        urbit.linkSystemLibrary("ws2_32");
+        urbit.linkSystemLibrary("ws2_32");      // For WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.linkSystemLibrary("iphlpapi");   // For GetAdaptersAddresses, ConvertInterface*
+        urbit.linkSystemLibrary("advapi32");   // For GetUserProfileDirectoryW, Sym*
+        urbit.linkSystemLibrary("userenv");   // For GetUserProfileDirectoryW, Sym*
+        urbit.linkSystemLibrary("crypt32");   // For GetUserProfileDirectoryW, Sym*
+        urbit.linkSystemLibrary("dbghelp");    // For MiniDumpWriteDump, SymGetOptions, SymSetOptions
+        urbit.linkSystemLibrary("ole32");      // For CoTaskMemFree
+    }
+
     const target_query: std.Target.Query = .{
         .cpu_arch = t.cpu.arch,
         .os_tag = t.os.tag,
@@ -427,6 +441,7 @@ fn buildBinary(
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
     urbit.linkLibrary(gmp.artifact("gmp"));
+
     urbit.linkLibrary(h2o.artifact("h2o"));
     urbit.linkLibrary(curl.artifact("curl"));
     urbit.linkLibrary(libuv.artifact("libuv"));

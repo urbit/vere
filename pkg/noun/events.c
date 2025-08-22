@@ -1107,6 +1107,9 @@ _ce_loom_mapf_north(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 {
   c3_w dif_w = 0;
 
+  void* muna = _ce_ptr(0);
+  void* muna2 = (void*)U3_OS_LoomBase;
+
   if ( pgs_w ) {
     if ( MAP_FAILED == mmap(_ce_ptr(0),
                             _ce_len(pgs_w),

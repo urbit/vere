@@ -1,21 +1,117 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_modexact_1_odd
-#	.type	__gmpn_modexact_1_odd,@function
 	
+	.def	__gmpn_modexact_1_odd
+	.scl	2
+	.type	32
+	.endef
 __gmpn_modexact_1_odd:
 
-	
-	mov	$0, %ecx
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
 
+	mov	$0, %ecx
+	jmp	Lent		
 
 	.globl	__gmpn_modexact_1c_odd
-#	.type	__gmpn_modexact_1c_odd,@function
 	
+	.def	__gmpn_modexact_1c_odd
+	.scl	2
+	.type	32
+	.endef
 __gmpn_modexact_1c_odd:
 
-	
-.Lent:
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
+Lent:
 	
 	
 	
@@ -24,8 +120,8 @@ __gmpn_modexact_1c_odd:
 	mov	%rdx, %r8		
 	shr	%edx		
 
-	mov	__gmp_binvert_limb_table@GOTPCREL(%rip), %r9
-
+	
+	lea	__gmp_binvert_limb_table(%rip), %r9
 
 
 	and	$127, %edx
@@ -65,11 +161,11 @@ __gmpn_modexact_1c_odd:
 	
 
 	inc	%rsi
-	jz	.Lone
+	jz	Lone
 
 
 	.align	16, 0x90
-.Ltop:
+Ltop:
 	
 	
 	
@@ -91,10 +187,10 @@ __gmpn_modexact_1c_odd:
 	setc	%cl		
 
 	inc	%rsi
-	jnz	.Ltop
+	jnz	Ltop
 
 
-.Lone:
+Lone:
 	sub	%rdx, %rax		
 
 	adc	$0, %rcx		
@@ -103,8 +199,9 @@ __gmpn_modexact_1c_odd:
 	mul	%r8			
 
 	lea	(%rcx,%rdx), %rax	
-	
+	pop	%rsi
+	pop	%rdi
 	ret
 
-#	.size	__gmpn_modexact_1c_odd,.-__gmpn_modexact_1c_odd
-#	.size	__gmpn_modexact_1_odd,.-__gmpn_modexact_1_odd
+	
+	

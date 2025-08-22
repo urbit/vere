@@ -1017,7 +1017,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     arg_c[10] = per_c;
 
 #ifdef U3_OS_windows
-    sprintf(cev_c, "%p", u3_Host.cev_u);
+    sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
     arg_c[11] = cev_c;
 #else
     arg_c[11] = 0;

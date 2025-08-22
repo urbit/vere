@@ -1,20 +1,106 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	32, 0x90
 	.globl	__gmpn_mod_34lsub1
-#	.type	__gmpn_mod_34lsub1,@function
 	
+	.def	__gmpn_mod_34lsub1
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_34lsub1:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+
 
 	mov	$0x0000FFFFFFFFFFFF, %r11
 
 	mov	(%rdi), %rax
 
 	cmp	$2, %rsi
-	ja	.Lgt2
+	ja	Lgt2
 
-	jb	.Lone
+	jb	Lone
 
 	mov	8(%rdi), %rsi
 	mov	%rax, %rdx
@@ -29,21 +115,22 @@ __gmpn_mod_34lsub1:
 
 	shl	$16, %rdx		
 	add	%rdx, %rax
-.Lone:	
+Lone:	pop	%rsi
+	pop	%rdi
 	ret
 
 
 
 
 
-.Lgt2:	mov	8(%rdi), %rcx
+Lgt2:	mov	8(%rdi), %rcx
 	mov	16(%rdi), %rdx
 	xor	%r9, %r9
 	add	$24, %rdi
 	sub	$12, %rsi
-	jc	.Lend
+	jc	Lend
 	.align	16, 0x90
-.Ltop:
+Ltop:
 	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
@@ -58,67 +145,67 @@ __gmpn_mod_34lsub1:
 	adc	$0, %r9
 	add	$72, %rdi
 	sub	$9, %rsi
-	jnc	.Ltop
+	jnc	Ltop
 
-.Lend:
-	lea	.Ltab(%rip), %r8
+Lend:
+	lea	Ltab(%rip), %r8
 	movslq	36(%r8,%rsi,4), %r10
 	add	%r10, %r8
 	jmp	*%r8
 
-	.section	.data.rel.ro.local,"a"
+		.section .rdata,"dr"
 	.align	8, 0x90
-.Ltab:	.long	.L0-.Ltab
-	.long	.L1-.Ltab
-	.long	.L2-.Ltab
-	.long	.L3-.Ltab
-	.long	.L4-.Ltab
-	.long	.L5-.Ltab
-	.long	.L6-.Ltab
-	.long	.L7-.Ltab
-	.long	.L8-.Ltab
+Ltab:	.long	L0-Ltab
+	.long	L1-Ltab
+	.long	L2-Ltab
+	.long	L3-Ltab
+	.long	L4-Ltab
+	.long	L5-Ltab
+	.long	L6-Ltab
+	.long	L7-Ltab
+	.long	L8-Ltab
 	.text
 
-.L6:	add	(%rdi), %rax
+L6:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
 	adc	$0, %r9
 	add	$24, %rdi
-.L3:	add	(%rdi), %rax
+L3:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
-	jmp	.Lcj1
+	jmp	Lcj1
 
-.L7:	add	(%rdi), %rax
+L7:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
 	adc	$0, %r9
 	add	$24, %rdi
-.L4:	add	(%rdi), %rax
+L4:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
 	adc	$0, %r9
 	add	$24, %rdi
-.L1:	add	(%rdi), %rax
+L1:	add	(%rdi), %rax
 	adc	$0, %rcx
-	jmp	.Lcj2
+	jmp	Lcj2
 
-.L8:	add	(%rdi), %rax
+L8:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
 	adc	$0, %r9
 	add	$24, %rdi
-.L5:	add	(%rdi), %rax
+L5:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 	adc	16(%rdi), %rdx
 	adc	$0, %r9
 	add	$24, %rdi
-.L2:	add	(%rdi), %rax
+L2:	add	(%rdi), %rax
 	adc	8(%rdi), %rcx
 
-.Lcj2:	adc	$0, %rdx
-.Lcj1:	adc	$0, %r9
-.L0:	add	%r9, %rax
+Lcj2:	adc	$0, %rdx
+Lcj1:	adc	$0, %r9
+L0:	add	%r9, %rax
 	adc	$0, %rcx
 	adc	$0, %rdx
 	adc	$0, %rax
@@ -144,6 +231,7 @@ __gmpn_mod_34lsub1:
 	add	%rdx, %rax		
 	add	%rdi, %rax		
 
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_mod_34lsub1,.-__gmpn_mod_34lsub1
+	

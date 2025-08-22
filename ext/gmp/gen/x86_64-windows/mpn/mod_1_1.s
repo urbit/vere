@@ -1,11 +1,114 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1_1p
-#	.type	__gmpn_mod_1_1p,@function
 	
+	.def	__gmpn_mod_1_1p
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1_1p:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
 	push	%rbp
 	push	%rbx
 	mov	%rdx, %rbx
@@ -13,11 +116,11 @@ __gmpn_mod_1_1p:
 
 	mov	-8(%rdi, %rsi, 8), %rax
 	cmp	$3, %rsi
-	jnc	.Lfirst
+	jnc	Lfirst
 	mov	-16(%rdi, %rsi, 8), %rbp
-	jmp	.Lreduce_two
+	jmp	Lreduce_two
 
-.Lfirst:
+Lfirst:
 	
 	mov	24(%r8), %r11
 	mul	%r11
@@ -27,13 +130,13 @@ __gmpn_mod_1_1p:
 	adc	%rdx, %rax
 	sbb	%rcx, %rcx
 	sub	$4, %rsi
-	jc	.Lreduce_three
+	jc	Lreduce_three
 
 	mov	%r11, %r10
 	sub	%rbx, %r10
 
 	.align	16, 0x90
-.Ltop:	and	%r11, %rcx
+Ltop:	and	%r11, %rcx
 	lea	(%r10, %rbp), %r9
 	mul	%r11
 	add	%rbp, %rcx
@@ -44,17 +147,17 @@ __gmpn_mod_1_1p:
 	adc	%rdx, %rax
 	sbb	%rcx, %rcx
 	sub	$1, %rsi
-	jnc	.Ltop
+	jnc	Ltop
 
-.Lreduce_three:
+Lreduce_three:
 	
 	and	%rbx, %rcx
 	sub	%rcx, %rax
 
-.Lreduce_two:
+Lreduce_two:
 	mov	8(%r8), %ecx
 	test	%ecx, %ecx
-	jz	.Lnormalized
+	jz	Lnormalized
 
 	
 	mulq	16(%r8)
@@ -68,14 +171,14 @@ __gmpn_mod_1_1p:
 	shld	%cl, %rbp, %rax
 
 	shl	%cl, %rbp
-	jmp	.Ludiv
+	jmp	Ludiv
 
-.Lnormalized:
+Lnormalized:
 	mov	%rax, %r9
 	sub	%rbx, %r9
 	cmovnc	%r9, %rax
 
-.Ludiv:
+Ludiv:
 	lea	1(%rax), %r9
 	mulq	(%r8)
 	add	%rbp, %rax
@@ -86,24 +189,32 @@ __gmpn_mod_1_1p:
 	lea	(%rbx, %rbp), %rax
 	cmovnc	%rbp, %rax
 	cmp	%rbx, %rax
-	jnc	.Lfix
-.Lok:	shr	%cl, %rax
+	jnc	Lfix
+Lok:	shr	%cl, %rax
 
 	pop	%rbx
 	pop	%rbp
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-.Lfix:	sub	%rbx, %rax
-	jmp	.Lok
-#	.size	__gmpn_mod_1_1p,.-__gmpn_mod_1_1p
+Lfix:	sub	%rbx, %rax
+	jmp	Lok
+	
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1_1p_cps
-#	.type	__gmpn_mod_1_1p_cps,@function
 	
+	.def	__gmpn_mod_1_1p_cps
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1_1p_cps:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+
 	push	%rbp
 	bsr	%rsi, %rcx
 	push	%rbx
@@ -113,13 +224,12 @@ __gmpn_mod_1_1p_cps:
 	mov	%rsi, %r12
 	mov	%ecx, %ebp
 	sal	%cl, %r12
-	mov	%r12, %rdi		
 	
-
+	mov	%r12, %rcx		
+	sub	$32, %rsp	
 	
-	call	__gmpn_invert_limb@PLT
-
-
+	call	__gmpn_invert_limb
+	add	$32, %rsp	
 	neg	%r12
 	mov	%r12, %r8
 	mov	%rax, (%rbx)		
@@ -128,7 +238,7 @@ __gmpn_mod_1_1p_cps:
 	mov	%r12, 24(%rbx)		
 	mov	%ebp, %ecx
 	test	%ecx, %ecx
-	jz	.Lz
+	jz	Lz
 
 	mov	$1, %edx
 
@@ -137,11 +247,12 @@ __gmpn_mod_1_1p_cps:
 	imul	%rdx, %r8
 	shr	%cl, %r8
 	mov	%r8, 16(%rbx)		
-.Lz:
+Lz:
 	pop	%r12
 	pop	%rbx
 	pop	%rbp
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_mod_1_1p_cps,.-__gmpn_mod_1_1p_cps
+	
 

@@ -1,9 +1,56 @@
-#.hidden __gmpn_invert_limb_table
 
 
 
 
-		.section	.rodata
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		.section .rdata,"dr"
 	.align	2, 0x90
 	.globl __gmpn_invert_limb_table
 __gmpn_invert_limb_table:

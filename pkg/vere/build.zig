@@ -145,7 +145,9 @@ pub fn build(b: *std.Build) !void {
     }
     pkg_vere.linkLibrary(natpmp.artifact("natpmp"));
     pkg_vere.linkLibrary(curl.artifact("curl"));
+
     pkg_vere.linkLibrary(gmp.artifact("gmp"));
+
     pkg_vere.linkLibrary(h2o.artifact("h2o"));
     pkg_vere.linkLibrary(libuv.artifact("libuv"));
     pkg_vere.linkLibrary(lmdb.artifact("lmdb"));

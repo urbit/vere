@@ -1,63 +1,152 @@
-	.text
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+
+
+
+
+
+
+
+	.text
 	.align	16, 0x90
 	.globl	__gmpn_rsh1sub_nc
-#	.type	__gmpn_rsh1sub_nc,@function
 	
+	.def	__gmpn_rsh1sub_nc
+	.scl	2
+	.type	32
+	.endef
 __gmpn_rsh1sub_nc:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
+	mov	56(%rsp), %r8	
 	push	%rbx
-	push	%rbp
 
+	xor	%eax, %eax
 	neg	%r8			
-	mov	(%rsi), %rbp
-	sbb	(%rdx), %rbp
-
-	jmp	.Lent
-#	.size	__gmpn_rsh1sub_nc,.-__gmpn_rsh1sub_nc
+	mov	(%rsi), %rbx
+	sbb	(%rdx), %rbx
+	jmp	Lent
+	
 
 	.align	16, 0x90
 	.globl	__gmpn_rsh1sub_n
-#	.type	__gmpn_rsh1sub_n,@function
 	
+	.def	__gmpn_rsh1sub_n
+	.scl	2
+	.type	32
+	.endef
 __gmpn_rsh1sub_n:
 
-	
-	push	%rbx
-	push	%rbp
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
-	mov	(%rsi), %rbp
-	sub	(%rdx), %rbp
-.Lent:
-	sbb	%ebx, %ebx	
-	mov	%ebp, %eax
-	and	$1, %eax		
+	push	%rbx
+
+	xor	%eax, %eax
+	mov	(%rsi), %rbx
+	sub	(%rdx), %rbx
+Lent:
+	rcr	%rbx			
+	adc	%eax, %eax	
 
 	mov	%ecx, %r11d
 	and	$3, %r11d
 
 	cmp	$1, %r11d
-	je	.Ldo			
+	je	Ldo			
 
-.Ln1:	cmp	$2, %r11d
-	jne	.Ln2			
-	add	%ebx, %ebx	
+Ln1:	cmp	$2, %r11d
+	jne	Ln2			
+	add	%rbx, %rbx		
 	mov	8(%rsi), %r10
 	sbb	8(%rdx), %r10
 	lea	8(%rsi), %rsi
 	lea	8(%rdx), %rdx
 	lea	8(%rdi), %rdi
-	sbb	%ebx, %ebx	
+	rcr	%r10
+	rcr	%rbx
+	mov	%rbx, -8(%rdi)
+	jmp	Lcj1
 
-	shrd	$1, %r10, %rbp
-	mov	%rbp, -8(%rdi)
-	jmp	.Lcj1
-
-.Ln2:	cmp	$3, %r11d
-	jne	.Ln3			
-	add	%ebx, %ebx	
+Ln2:	cmp	$3, %r11d
+	jne	Ln3			
+	add	%rbx, %rbx		
 	mov	8(%rsi), %r9
 	mov	16(%rsi), %r10
 	sbb	8(%rdx), %r9
@@ -65,14 +154,14 @@ __gmpn_rsh1sub_n:
 	lea	16(%rsi), %rsi
 	lea	16(%rdx), %rdx
 	lea	16(%rdi), %rdi
-	sbb	%ebx, %ebx	
+	rcr	%r10
+	rcr	%r9
+	rcr	%rbx
+	mov	%rbx, -16(%rdi)
+	jmp	Lcj2
 
-	shrd	$1, %r9, %rbp
-	mov	%rbp, -16(%rdi)
-	jmp	.Lcj2
-
-.Ln3:	dec	%rcx			
-	add	%ebx, %ebx	
+Ln3:	dec	  %rcx			
+	add	%rbx, %rbx		
 	mov	8(%rsi), %r8
 	mov	16(%rsi), %r9
 	sbb	8(%rdx), %r8
@@ -82,21 +171,20 @@ __gmpn_rsh1sub_n:
 	lea	24(%rsi), %rsi
 	lea	24(%rdx), %rdx
 	lea	24(%rdi), %rdi
-	sbb	%ebx, %ebx	
-
-	shrd	$1, %r8, %rbp
-	mov	%rbp, -24(%rdi)
-	shrd	$1, %r9, %r8
+	rcr	%r10
+	rcr	%r9
+	rcr	%r8
+	rcr	%rbx
+	mov	%rbx, -24(%rdi)
 	mov	%r8, -16(%rdi)
-.Lcj2:	shrd	$1, %r10, %r9
-	mov	%r9, -8(%rdi)
-.Lcj1:	mov	%r10, %rbp
+Lcj2:	mov	%r9, -8(%rdi)
+Lcj1:	mov	%r10, %rbx
 
-.Ldo:
-	shr	$2, %rcx			
-	je	.Lend			
+Ldo:
+	shr	$2,   %rcx			
+	je	Lend			
 	.align	16, 0x90
-.Ltop:	add	%ebx, %ebx		
+Ltop:	add	%rbx, %rbx		
 
 	mov	8(%rsi), %r8
 	mov	16(%rsi), %r9
@@ -110,26 +198,25 @@ __gmpn_rsh1sub_n:
 	lea	32(%rsi), %rsi
 	lea	32(%rdx), %rdx
 
-	sbb	%ebx, %ebx	
+	rcr	%r11			
+	rcr	%r10
+	rcr	%r9
+	rcr	%r8
 
-	shrd	$1, %r8, %rbp
-	mov	%rbp, (%rdi)
-	shrd	$1, %r9, %r8
+	rcr	%rbx
+	mov	%rbx, (%rdi)
 	mov	%r8, 8(%rdi)
-	shrd	$1, %r10, %r9
 	mov	%r9, 16(%rdi)
-	shrd	$1, %r11, %r10
 	mov	%r10, 24(%rdi)
+	mov	%r11, %rbx
 
-	dec	%rcx
-	mov	%r11, %rbp
 	lea	32(%rdi), %rdi
-	jne	.Ltop
+	dec	  %rcx
+	jne	Ltop
 
-.Lend:	shrd	$1, %rbx, %rbp
-	mov	%rbp, (%rdi)
-	pop	%rbp
+Lend:	mov	%rbx, (%rdi)
 	pop	%rbx
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_rsh1sub_n,.-__gmpn_rsh1sub_n
+	

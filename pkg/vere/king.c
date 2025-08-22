@@ -1557,8 +1557,10 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       c3_free(buf_y);
     }
 
+#ifndef U3_OS_windows
 done3:
     close(dst_i);
+#endif
 done2:
     close(src_i);
 done1:

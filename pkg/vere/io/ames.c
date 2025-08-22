@@ -2357,13 +2357,13 @@ _ames_io_start(u3_ames* sam_u)
       //  XX revise
       //
       u3_pier_bail(u3_king_stub());
-    }*/
+      }*/
 
     /*
-    uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    u3_assert(add_u.sin_port);
+      uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
+      u3_assert(add_u.sin_port);
 
-    sam_u->pir_u->por_s = ntohs(add_u.sin_port);
+      sam_u->pir_u->por_s = ntohs(add_u.sin_port);
     */
   }
 
@@ -2379,12 +2379,13 @@ _ames_io_start(u3_ames* sam_u)
     char* our_s = u3r_string(our);
     u3z(our);
 
+#ifndef U3_OS_windows
     mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
 
     if ( c3n == sam_u->pir_u->fak_o ) {
       uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
     }
-
+#endif
     c3_free(our_s);
   }
 

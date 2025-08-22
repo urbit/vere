@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
     const t = target.result;
 
     const copts: []const []const u8 =
-        b.option([]const []const u8, "copt", "") orelse &.{"-DENT_GETENTROPY_BCRYPTGENRANDOM", "-DU3_OS_windows", "-DU3_OS_ENDIAN_little", "-DU3_GUARD_PAGE"};
+        b.option([]const []const u8, "copt", "") orelse &.{};
 
     const pkg_noun = b.addStaticLibrary(.{
         .name = "noun",
@@ -117,6 +117,9 @@ pub fn build(b: *std.Build) !void {
 
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
+
+
+
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
@@ -153,6 +156,14 @@ pub fn build(b: *std.Build) !void {
         .files = &c_source_files,
         .flags = flags.items,
     });
+
+    if (t.os.tag == .windows) {
+        pkg_noun.addCSourceFiles(.{
+            .root = b.path("platform/windows"),
+            .files = &.{"veh_handler.c"},
+            .flags = flags.items,
+        });
+    }
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 

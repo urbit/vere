@@ -1,11 +1,77 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_4p
-#	.type	__gmpn_mod_1s_4p,@function
 	
+	.def	__gmpn_mod_1s_4p
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1s_4p:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
+
 	push	%r15
 	push	%r14
 	push	%r13
@@ -23,12 +89,12 @@ __gmpn_mod_1s_4p:
 	xor	%r8d, %r8d
 	mov	%esi, %edx
 	and	$3, %edx
-	je	.Lb0
+	je	Lb0
 	cmp	$2, %edx
-	jc	.Lb1
-	je	.Lb2
+	jc	Lb1
+	je	Lb2
 
-.Lb3:	lea	-24(%rdi,%rsi,8), %rdi
+Lb3:	lea	-24(%rdi,%rsi,8), %rdi
 	mov	8(%rdi), %rax
 	mul	%r11
 	mov	(%rdi), %r9
@@ -36,10 +102,10 @@ __gmpn_mod_1s_4p:
 	adc	%rdx, %r8
 	mov	16(%rdi), %rax
 	mul	%rbx
-	jmp	.Lm0
+	jmp	Lm0
 
 	.align	8, 0x90
-.Lb0:	lea	-32(%rdi,%rsi,8), %rdi
+Lb0:	lea	-32(%rdi,%rsi,8), %rdi
 	mov	8(%rdi), %rax
 	mul	%r11
 	mov	(%rdi), %r9
@@ -51,21 +117,21 @@ __gmpn_mod_1s_4p:
 	adc	%rdx, %r8
 	mov	24(%rdi), %rax
 	mul	%rbp
-	jmp	.Lm0
+	jmp	Lm0
 
 	.align	8, 0x90
-.Lb1:	lea	-8(%rdi,%rsi,8), %rdi
+Lb1:	lea	-8(%rdi,%rsi,8), %rdi
 	mov	(%rdi), %r9
-	jmp	.Lm1
+	jmp	Lm1
 
 	.align	8, 0x90
-.Lb2:	lea	-16(%rdi,%rsi,8), %rdi
+Lb2:	lea	-16(%rdi,%rsi,8), %rdi
 	mov	8(%rdi), %r8
 	mov	(%rdi), %r9
-	jmp	.Lm1
+	jmp	Lm1
 
 	.align	16, 0x90
-.Ltop:	mov	-24(%rdi), %rax
+Ltop:	mov	-24(%rdi), %rax
 	mov	-32(%rdi), %r10
 	mul	%r11			
 	add	%rax, %r10
@@ -88,12 +154,12 @@ __gmpn_mod_1s_4p:
 	mul	%r8			
 	mov	%r10, %r9
 	mov	%rcx, %r8
-.Lm0:	add	%rax, %r9
+Lm0:	add	%rax, %r9
 	adc	%rdx, %r8
-.Lm1:	sub	$4, %rsi
-	ja	.Ltop
+Lm1:	sub	$4, %rsi
+	ja	Ltop
 
-.Lend:	mov	8(%r14), %esi
+Lend:	mov	8(%r14), %esi
 	mov	%r8, %rax
 	mul	%r11
 	mov	%rax, %r8
@@ -129,17 +195,25 @@ __gmpn_mod_1s_4p:
 	pop	%r13
 	pop	%r14
 	pop	%r15
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_mod_1s_4p,.-__gmpn_mod_1s_4p
+	
 
 	.align	16, 0x90
 	.globl	__gmpn_mod_1s_4p_cps
-#	.type	__gmpn_mod_1s_4p_cps,@function
 	
+	.def	__gmpn_mod_1s_4p_cps
+	.scl	2
+	.type	32
+	.endef
 __gmpn_mod_1s_4p_cps:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+
 	push	%rbp
 	bsr	%rsi, %rcx
 	push	%rbx
@@ -149,13 +223,12 @@ __gmpn_mod_1s_4p_cps:
 	mov	%rsi, %r12
 	mov	%ecx, %ebp	
 	sal	%cl, %r12		
-	mov	%r12, %rdi		
 	
-
+	mov	%r12, %rcx		
+	sub	$32, %rsp	
 	
-	call	__gmpn_invert_limb@PLT
-
-
+	call	__gmpn_invert_limb
+	add	$32, %rsp	
 	mov	%r12, %r8
 	mov	%rax, %r11
 	mov	%rax, (%rbx)		
@@ -221,6 +294,7 @@ __gmpn_mod_1s_4p_cps:
 	pop	%r12
 	pop	%rbx
 	pop	%rbp
-	
+	pop	%rsi
+	pop	%rdi
 	ret
-#	.size	__gmpn_mod_1s_4p_cps,.-__gmpn_mod_1s_4p_cps
+	

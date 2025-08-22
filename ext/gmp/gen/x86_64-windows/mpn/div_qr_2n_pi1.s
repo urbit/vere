@@ -1,15 +1,95 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	.text
 	.align	16, 0x90
 	.globl	__gmpn_div_qr_2n_pi1
-#	.type	__gmpn_div_qr_2n_pi1,@function
 	
+	.def	__gmpn_div_qr_2n_pi1
+	.scl	2
+	.type	32
+	.endef
 __gmpn_div_qr_2n_pi1:
 
-	
+	push	%rdi
+	push	%rsi
+	mov	%rcx, %rdi
+	mov	%rdx, %rsi
+	mov	%r8, %rdx
+	mov	%r9, %rcx
 
+	mov	56(%rsp), %r8	
+	mov	64(%rsp), %r9	
 
-
-	mov	8(%rsp), %r10
+	mov	72(%rsp), %r10
 	mov	%rdx, %r11
 	push	%r15
 	push	%r14
@@ -34,10 +114,10 @@ __gmpn_div_qr_2n_pi1:
 	mov	%r8, %r15
 	neg	%r15
 
-	jmp	.Lnext
+	jmp	Lnext
 
 	.align	16, 0x90
-.Lloop:
+Lloop:
 	
 	
 
@@ -66,13 +146,13 @@ __gmpn_div_qr_2n_pi1:
 	add	%rax, %r12
 	adc	%rdx, %rbx
 	cmp	%r8, %rbx
-	jae	.Lfix
-.Lbck:
+	jae	Lfix
+Lbck:
 	mov	%r13, (%rdi, %rcx, 8)
-.Lnext:
+Lnext:
 	sub	$1, %rcx
-	jnc	.Lloop
-.Lend:
+	jnc	Lloop
+Lend:
 	mov	%rbx, 8(%rsi)
 	mov	%r12, (%rsi)
 
@@ -84,17 +164,18 @@ __gmpn_div_qr_2n_pi1:
 	pop	%r13
 	pop	%r14
 	pop	%r15
-	
+	pop	%rsi
+	pop	%rdi
 	ret
 
-.Lfix:	
+Lfix:	
 	seta	%dl
 	cmp	%r9, %r12
 	setae	%al
 	orb	%dl, %al		
-	je	.Lbck
+	je	Lbck
 	inc	%r13
 	sub	%r9, %r12
 	sbb	%r8, %rbx
-	jmp	.Lbck
-#	.size	__gmpn_div_qr_2n_pi1,.-__gmpn_div_qr_2n_pi1
+	jmp	Lbck
+	

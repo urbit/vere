@@ -350,7 +350,7 @@ _calloc_code(size_t num_i, size_t len_i)
   
   if (nex_y >= CodeArena->end_y)
   { // OOM, jump out to increase the arena size and try again
-    _longjmp((*CodeArena->esc_u), c3__code);
+    _longjmp(*CodeArena->esc_u, c3__code);
   }
 
   *((c3_d*)lag_v) = byt_d - 16;  // corruption check
@@ -426,7 +426,7 @@ _malloc_box_cap(c3_d len_d, c3_d cap_d)
   
   if (nex_y >= BoxArena->end_y)
   { // OOM, jump out to increase the arena size and try again
-    _longjmp((*BoxArena->esc_u), c3__box);
+    _longjmp(*BoxArena->esc_u, c3__box);
   }
 
   *((c3_d*)lag_v) = len_d;
