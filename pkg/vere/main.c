@@ -1081,7 +1081,7 @@ _cw_load_pier(c3_c* dir_c)
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_Host.eve_d = u3A->eve_d;
 
   return log_u;
 }
