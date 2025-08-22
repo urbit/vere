@@ -1474,6 +1474,9 @@ _disk_vere_diff(u3_disk* log_u)
 void
 u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
 {
+  fprintf(stderr, "disk: kindly no-op\r\n");
+  return;
+
   //  ensure there's a current snapshot
   //
   if ( eve_d != log_u->dun_d ) {

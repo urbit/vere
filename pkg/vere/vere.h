@@ -603,7 +603,6 @@
       */
         typedef struct _u3_work {
           u3_auto*         car_u;               //  i/o drivers
-          uv_prepare_t     pep_u;               //  pre-loop
           uv_check_t       cek_u;               //  post-loop
           uv_idle_t        idl_u;               //  catchall XX uv_async_t?
           struct _u3_pier* pir_u;               //  pier backpointer
