@@ -19,23 +19,26 @@ pub fn build(b: *std.Build) void {
     lib.linkLibC();
 
     // TODO: Finish this
-    // const gmp_h = b.addConfigHeader(.{
-    //     .style = .{
-    //         .cmake = dep_c.path("gmp-h.in"),
-    //     },
-    //     .include_path = "gmp.h",
-    // }, .{
-    //     .HAVE_HOST_CPU_FAMILY_power = 0,
-    //     .HAVE_HOST_CPU_FAMILY_powerpc = 0,
-    //     .GMP_LIMB_BITS = 64,
-    //     .GMP_NAIL_BITS = 0,
-    //     .DEFN_LONG_LONG_LIMB = "",
-    //     .LIBGMP_DLL = 0,
-    //     .CC = "gcc",
-    //     .CFLAGS = "-O2 -pedantic -march=armv8-a",
-    // });
+    if (t.os.tag != .windows) {
+        const gmp_h = b.addConfigHeader(.{
+            .style = .{
+                .cmake = dep_c.path("gmp-h.in"),
+            },
+            .include_path = "gmp.h",
+        }, .{
+            .HAVE_HOST_CPU_FAMILY_power = 0,
+            .HAVE_HOST_CPU_FAMILY_powerpc = 0,
+            .GMP_LIMB_BITS = 64,
+            .GMP_NAIL_BITS = 0,
+            .DEFN_LONG_LONG_LIMB = "",
+            .LIBGMP_DLL = 0,
+            .CC = "gcc",
+            .CFLAGS = "-O2 -pedantic -march=armv8-a",
+        });
 
-    // lib.addConfigHeader(gmp_h);
+        lib.addConfigHeader(gmp_h);
+        lib.installConfigHeader(gmp_h);
+    }
 
     // Static headers
     lib.addIncludePath(dep_c.path("."));

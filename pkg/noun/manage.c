@@ -6,7 +6,9 @@
 #include "v4/manage.h"
 
 #include <ctype.h>
-/* #include <dlfcn.h> */
+#ifndef U3_OS_windows
+#include <dlfcn.h>
+#endif
 #include <errno.h>
 #include <signal.h>
 #if defined(U3_OS_osx)
@@ -184,7 +186,7 @@ _cm_signal_handle(c3_l sig_l)
 #ifndef NO_OVERFLOW
 static void
 #ifndef U3_OS_windows
-_cm_signal_handle_over(int emergency, void* scp)
+_cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
 #else 
 _cm_signal_handle_over(int x)
 #endif

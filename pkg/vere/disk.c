@@ -984,7 +984,7 @@ u3_disk_epoc_zero(u3_disk* log_u)
 
   //  open epoch directory
 #ifndef U3_OS_windows
-  if ( -1 == (epo_i = c3_open(epo_c)) ) {
+  if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
     fprintf(stderr, "disk: open epoch dir 0i0 failed: %s\r\n", strerror(errno));
     goto fail1;
   }

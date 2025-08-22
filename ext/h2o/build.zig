@@ -357,13 +357,14 @@ pub fn build(b: *std.Build) !void {
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
     h2o.addIncludePath(h2o_c.path("deps/klib"));
 
+    h2o.root_module.addCMacro("H2O_NO_HTTP3", "");
+    h2o.root_module.addCMacro("H2O_NO_REDIS", "");
+    h2o.root_module.addCMacro("H2O_NO_MEMCACHED", "");
+
     if (t.os.tag == .windows) {
         h2o.root_module.addCMacro("_POSIX_C_SOURCE", "200112L");
         h2o.root_module.addCMacro("O_CLOEXEC", "0");
         h2o.root_module.addCMacro("H2O_NO_UNIX_SOCKETS", "");
-        h2o.root_module.addCMacro("H2O_NO_HTTP3", "");
-        h2o.root_module.addCMacro("H2O_NO_REDIS", "");
-        h2o.root_module.addCMacro("H2O_NO_MEMCACHED", "");
     }
 
     h2o.addCSourceFiles(.{

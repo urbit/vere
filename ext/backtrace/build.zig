@@ -21,13 +21,12 @@ pub fn build(b: *std.Build) void {
     var config_h: *std.Build.Step.ConfigHeader = undefined;
 
     if (t.os.tag != .windows) {
-
         config_h = b.addConfigHeader(.{
             .style = .{
                 .autoconf = dep_c.path("config.h.in"),
             },
             .include_path = "config.h",
-            }, .{
+        }, .{
             .BACKTRACE_ELF_SIZE = 64,
             .BACKTRACE_XCOFF_SIZE = 64,
             .HAVE_ATOMIC_FUNCTIONS = 1,
@@ -62,7 +61,7 @@ pub fn build(b: *std.Build) void {
             .HAVE_SYS_TYPES_H = 1,
             .HAVE_TLHELP32_H = null,
             .HAVE_UNISTD_H = 1,
-            .HAVE_WINDOWS_H = 1,
+            .HAVE_WINDOWS_H = null,
             .HAVE_ZLIB = 1,
             .HAVE_ZSTD = null,
             .LT_OBJDIR = "",
@@ -96,7 +95,7 @@ pub fn build(b: *std.Build) void {
                 .autoconf = dep_c.path("config.h.in"),
             },
             .include_path = "config.h",
-            }, .{
+        }, .{
             .BACKTRACE_ELF_SIZE = 64,
             .BACKTRACE_XCOFF_SIZE = 64,
             .HAVE_ATOMIC_FUNCTIONS = 1,

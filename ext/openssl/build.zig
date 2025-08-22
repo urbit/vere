@@ -91,7 +91,6 @@ fn libcrypto(
     lib.root_module.addCMacro("SHA512_ASM", "");
     lib.root_module.addCMacro("KECCAK1600_ASM", "");
     lib.root_module.addCMacro("VPAES_ASM", "");
-    lib.root_module.addCMacro("GHASH_ASM", "");
     lib.root_module.addCMacro("ECP_NISTZ256_ASM", "");
     lib.root_module.addCMacro("POLY1305_ASM", "");
     lib.root_module.addCMacro("OPENSSLDIR", "\"\"");

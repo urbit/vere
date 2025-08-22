@@ -125,7 +125,6 @@ static char *twoway_memmem(const unsigned char *h, const unsigned char *z, const
 		mem = mem0;
 	}
 }
-#endif
 
 void *memmem(const void *h0, size_t k, const void *n0, size_t l)
 {
@@ -147,6 +146,7 @@ void *memmem(const void *h0, size_t k, const void *n0, size_t l)
 
 	return twoway_memmem(h, h+k, n, l);
 }
+#endif
 
 
 static c3_y*
