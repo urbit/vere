@@ -476,13 +476,12 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
-        } else if ( (czar_ack_w == ack_w) ||
-                    ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
+        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                  "this ship is an old copy, resume the latest version of the ship or breach\r\n"
-                  "read more: https://docs.urbit.org/glossary/double-boot",
+                  "this is an old version of the ship, resume the latest version or breach\r\n"
+                  "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                   who_c);
           u3_king_bail();
         }
@@ -491,7 +490,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
                 "you are trying to boot an existing ship from a keyfile,"
                 "resume the latest version of the ship or breach\r\n"
-                "read more: https://docs.urbit.org/glossary/double-boot",
+                "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                 who_c);
         u3_king_bail();
       }
@@ -530,7 +529,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
                 "this ship has already been booted elsewhere, "
                 "boot the existing pier or breach\r\n"
-                "read more: https://docs.urbit.org/glossary/double-boot",
+                "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                 who_c);
         u3_king_bail();
       }
@@ -600,8 +599,8 @@ _pier_work_init(u3_pier* pir_u)
       //  run the requested scry, jam to disk, then exit
       //
       u3l_log("pier: scry");
-      u3_pier_peek_last(pir_u, u3_nul, u3k(car), u3k(dek), u3k(pax),
-                        pir_u, _pier_on_scry_done);
+      u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), u3k(car), u3k(dek),
+                        u3k(pax), pir_u, _pier_on_scry_done);
     }
     u3z(pex);
   }
@@ -1326,6 +1325,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     }
   }
 
+  c3_t bad_t = 0;
   //  if we have no arvo kernel and can't evaluate nock
   //  only print %leaf tanks
   //
@@ -1334,12 +1334,18 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
     }
   }
-  //  We are calling nock here, but hopefully need no protection.
-  //
   else {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(tac));
-
-    _pier_dump_wall(fil_u, wol);
+    u3_noun low = u3dc("(slum soft wash)", u3nc(tab_l, col_l), u3k(tac));
+    u3_noun wol;
+    if (c3y == u3r_cell(low, NULL, &wol)) {
+      u3k(wol); u3z(low);
+      _pier_dump_wall(fil_u, wol);
+    }
+    else {
+      // low == u3_nul, no need to lose it
+      //
+      bad_t = 1;
+    }
   }
 
   if ( c3n == u3_Host.ops_u.tem ) {
@@ -1351,6 +1357,10 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   u3_term_io_loja(0, fil_u);
   u3z(blu);
   u3z(tac);
+  
+  if ( bad_t ) {
+    u3l_log("%%slog-bad-tank");
+  }
 }
 
 /* u3_pier_punt(): dump tank list.

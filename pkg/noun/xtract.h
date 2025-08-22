@@ -142,6 +142,14 @@
         {
           return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
         }
+      
+      /* u3x_loob(): loobean or exit.
+      */
+        inline c3_o
+        u3x_loob(u3_noun a)
+        {
+          return ( a > 1 ) ? u3m_bail(c3__exit) : a;
+        }
 
       /* u3x_mean():
       **

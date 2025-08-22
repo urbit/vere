@@ -392,6 +392,14 @@ _cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
   }
 }
 
+static inline __attribute__((always_inline)) void
+_cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
+{
+  if ( *a != *b ) {
+    u3a_wed(a, b);
+  }
+}
+
 /* _cr_sing_cape(): unifying equality with comparison deduplication
  *                  (tightly coupled to _cr_sing)
  */
@@ -460,7 +468,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -474,7 +482,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -563,7 +571,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -577,7 +585,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -1856,4 +1864,80 @@ u3r_skip(u3_noun fol)
     }
   }
   return u3_none;
+}
+
+/* u3r_safe():
+**
+**  Returns yes if the formula won't crash
+**  and has no hints, returning constant result
+**  if possible. *out is undefined if the return
+**  is c3n
+*/
+c3_o
+u3r_safe(u3_noun fol, u3_weak* out)
+{
+  u3_noun h_fol, t_fol;
+  c3_o saf_o;
+
+  if ( c3n == u3r_cell(fol, &h_fol, &t_fol) ) {
+    return c3n;
+  }
+  switch ( h_fol ) {
+    default: return c3n;
+    case 0:
+      *out = u3_none;
+      return __(1 == t_fol);
+      
+    case 1:
+      *out = t_fol;
+      return c3y;
+
+    case 3: {
+      u3_weak o;
+      saf_o = u3r_safe(t_fol, &o);
+      if ( _(saf_o) ) {
+        *out = (u3_none == o) ? u3_none : u3du(o);
+      }
+      return saf_o;
+    }
+
+    case 5: {
+      u3_noun p, q;
+      u3_weak o1, o2;
+      saf_o = c3a(u3r_cell(t_fol, &p, &q),
+              c3a(u3r_safe(p, &o1), u3r_safe(q, &o2)));
+
+      if ( _(saf_o) ) {
+        *out = (u3_none == o1) ? u3_none
+             : (u3_none == o2) ? u3_none
+             : u3r_sing(o1, o2);
+      }
+      return saf_o;
+    }
+
+    case 6: {
+      u3_noun p, q, r;
+      u3_weak o;
+      saf_o = c3a(u3r_trel(t_fol, &p, &q, &r), u3r_safe(p, &o));
+
+      if ( _(saf_o) ) {
+        switch ( o ) {
+          case c3y:  return u3r_safe(q, out);
+          case c3n:  return u3r_safe(r, out);
+          default:   return c3n;
+        }
+      }
+      else {
+        return c3n;
+      }
+    }
+
+    case 7:
+    case 8: {
+      u3_noun p, q;
+      u3_weak o;
+      return c3a(u3r_cell(t_fol, &p, &q),
+             c3a(u3r_safe(p, &o), u3r_safe(q, out)));
+    }
+  }
 }

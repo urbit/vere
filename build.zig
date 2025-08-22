@@ -515,6 +515,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "equality-test",
+                .file = "pkg/noun/equality_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
