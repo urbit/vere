@@ -75,15 +75,15 @@ _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
   else return c3n;
 }
 
-/* _main_readw_loom(): parse loom pointer bit size from a string.
+/* _main_read_loom(): parse loom pointer bit size from a string.
 */
 static c3_i
-_main_readw_loom(const c3_c* arg_c, c3_y* out_y)
+_main_read_loom(const c3_c* nam_c, const c3_c* arg_c, c3_y* out_y)
 {
   c3_w lom_w;
-  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
+  c3_o res_o = _main_readw(arg_c, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", nam_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -317,7 +317,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 5: {  //  urth-loom
-        if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
         break;
@@ -369,7 +369,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           return c3n;
         }
         break;
@@ -1186,7 +1186,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1387,7 +1387,7 @@ _cw_info(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1498,7 +1498,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1580,7 +1580,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1684,7 +1684,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "r:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1799,7 +1799,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1893,7 +1893,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1984,7 +1984,7 @@ _cw_next(c3_i argc, c3_c* argv[])
       } break;
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2061,7 +2061,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2183,7 +2183,7 @@ _cw_play(c3_i argc, c3_c* argv[])
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2303,7 +2303,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2378,7 +2378,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2468,7 +2468,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
       }
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2642,7 +2642,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2758,12 +2758,13 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //  load runtime config
   //
   {
-    c3_w lom_w;
-
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
-    sscanf(lom_c, "%" SCNu32, &lom_w);
-    u3_Host.ops_u.lom_y = (c3_y)lom_w;
+
+    if ( _main_read_loom("loom", lom_c, &u3_Host.ops_u.lom_y) ) {
+      exit(1);
+    }
+
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
@@ -2829,13 +2830,13 @@ _cw_work(c3_i argc, c3_c* argv[])
   //  load runtime config
   //
   {
-    c3_w lom_w;
-
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
-    sscanf(lom_c, "%" SCNu32, &lom_w);
-    u3_Host.ops_u.lom_y = (c3_y)lom_w;
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
+
+    if ( _main_read_loom("loom", lom_c, &u3_Host.ops_u.lom_y) ) {
+      exit(1);
+    }
 
     if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
       fprintf(stderr, "mars: -n (--replay-to) invalid number '%s'\r\n", eve_c);
