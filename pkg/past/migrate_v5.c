@@ -4,7 +4,7 @@
 static c3_d
 _v4_hash(u3_noun foo)
 {
-  return u3r_v4_mug(foo) * 11400714819323198485ULL;
+  return foo * 11400714819323198485ULL;
 }
 
 static c3_i
@@ -145,7 +145,9 @@ u3_migrate_v5(void)
   cop_u.ham_p = u3R_v5->cax.per_p;
   u3h_v4_walk_with(u3R_v4->cax.per_p, _copy_v4_hamt, &cop_u);
 
-  u3j_v5_boot(c3n);
+  //  NB: pave does *not* allocate hot_p
+  //
+  u3j_v5_boot(c3y);
   u3j_v5_ream();
 
   vt_cleanup(&cop_u.map_u);

@@ -621,3 +621,16 @@ u3_v1_load(c3_z wor_i)
 
   u3R_v1->cap_p = u3R_v1->mat_p = u3a_v1_outa(u3H_v1);
 }
+
+
+/***  manage.c
+***/
+
+void
+u3m_v1_reclaim(void)
+{
+  u3v_v1_reclaim();
+  u3j_v1_reclaim();
+  u3n_v1_reclaim();
+  u3a_v1_reclaim();
+}
