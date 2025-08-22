@@ -1677,6 +1677,89 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
   log_u->sen_d = log_u->dun_d;
 
+/*
+loom migrations (version number stored in the loom, last word till v5, then first word)
+- 1->2: pointer compression
+- 2->3: persistent memoization
+- 3->4: bytecode alignment
+- 4->5: allocator
+
+pier versions (version number stored in top-level lmdb environment)
+- 1: lmdb event log
+- 2: mid-migration
+- 3: epoch system
+- ??? 4: single-snapshot epoch-system
+
+epoch versions (epoc.txt)
+- 1:
+  - north.bin/south.bin begins the log,
+  - data.mdb continues after,
+  - vere.txt records binary version at epoch creation
+  - epoc.txt identifies this structure
+- ??? 2:
+  - image.bin begins the log
+  - rest the same
+
+
+- pier-version==1: loom version=={1, 2, 3}
+- pier-version==2: loom version=={1, 2, 3}
+- pier-version==3: loom version=={1,2, 3, 4}
+
+
+- pier creation separate from pier initialization
+  - create empty pier, epoc 0, &c
+- pier initialization
+  - get the *pier* version number
+  - if 1 || 2, migrate to epoch system
+    - XX just leave this broken for now
+  - if 3, load epoch
+    - epoch could be incomplete (roll crashed, _void or _gone)
+      - delete and try previous
+    - epoch could be invalid (corrupt lmdb instance, other read failure, _fail)
+      - load fatal error
+    - epoch could be from the future (_late)
+      - print message about upgrading runtime
+    - load loom (and maybe migrate)
+  - load loom
+    - if epoc.txt == 2, load loom normally
+    - if epoc.txt == 1, load and migrate (including roll)
+*/
+
+  //  XX load loom
+  //  1==ver_w: migrate
+  //
+  //  unwritten:
+  //    "u3m_init()" at u3_Loom_v4
+  //    mmap() north.bin over beginning of u3_Loom_v4
+  //    load   south.bin at end of u3_Loom_v4 (per old events.c)
+  //
+  //  For later: check u3A->eve_d before migrating
+  //
+  /*
+  c3_w ver_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+  switch ( ver_w ) {
+    case U3V_VER1: u3_migrate_v2(); break;
+    case U3V_VER2: u3_migrate_v3(); break;
+    case U3V_VER3: u3_migrate_v4(); break;
+    case U3V_VER4: {
+      u3m_init();
+      u3m_pave(c3y);
+      u3_migrate_v5();
+      break;
+    }
+  }
+  */
+  //
+  //  2==ver_w: load normally via u3m_boot()
+  //  - if vere version changed
+  //    - if snapshot is stale, error out
+  //    - else, roll
+  //
+
+  // XX do these here instead of at call site in disk_init
+  // log_u->epo_d = lat_d;
+  // log_u->liv_o = c3y;
+
   return _epoc_good;
 }
 
