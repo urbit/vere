@@ -1074,7 +1074,7 @@ _cw_init_io(uv_loop_t* lup_u)
 static u3_disk*
 _cw_load_pier(c3_c* dir_c)
 {
-  u3_disk* log_u = u3_disk_init(dir_c);
+  u3_disk* log_u = u3_disk_load(dir_c, u3_dlod_last);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
@@ -2144,40 +2144,10 @@ _cw_pack(c3_i argc, c3_c* argv[])
 static void
 _cw_play_slog(u3_noun hod)
 {
+  //  XX always 80 columns
+  //
   u3_pier_tank(0, 0, u3k(u3t(hod)));
   u3z(hod);
-}
-
-/* _cw_play_snap(): prepare snapshot for full replay.
-*/
-static void
-_cw_play_snap(u3_disk* log_u)
-{
-  c3_c chk_c[8193], epo_c[8193];
-  snprintf(chk_c, 8193, "%s/.urb/chk", u3_Host.dir_c);
-  snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, log_u->epo_d);
-
-  if ( 0 == log_u->epo_d ) {
-    //  if epoch 0 is the latest, delete the snapshot files in chk/
-    c3_c nor_c[8193], sop_c[8193];
-    snprintf(nor_c, 8193, "%s/.urb/chk/north.bin", u3_Host.dir_c);
-    snprintf(sop_c, 8193, "%s/.urb/chk/south.bin", u3_Host.dir_c);
-    if ( c3_unlink(nor_c) && (ENOENT != errno) ) {
-      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-                      nor_c, strerror(errno));
-      exit(1);
-    }
-    if ( c3_unlink(sop_c) && (ENOENT != errno) ) {
-      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-                      sop_c, strerror(errno));
-      exit(1);
-    }
-  }
-  else if ( 0 != u3e_backup(epo_c, chk_c, c3y) ) {
-    //  copy the latest epoch's snapshot files into chk/
-    fprintf(stderr, "mars: failed to copy snapshot\r\n");
-    exit(1);
-  }
 }
 
 /* _cw_play_exit(): exit immediately.
@@ -2188,77 +2158,6 @@ _cw_play_exit(c3_i int_i)
   kill(getpid(), SIGINT);
 }
 
-/* _cw_play_impl(): replay events, but better.
-*/
-static c3_d
-_cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
-{
-  c3_d pay_d;
-
-  //  XX handle SIGTSTP so that the lockfile is not orphaned?
-  //
-  u3_disk* log_u = u3_disk_init(u3_Host.dir_c);
-
-  if ( !log_u ) {
-    fprintf(stderr, "unable to open event log\n");
-    exit(1);
-  }
-
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-
-  //  XX source these from a shared struct ops_u
-  if ( c3y == mel_o ) {
-    u3C.wag_w |= u3o_auto_meld;
-  }
-
-  if ( c3y == sof_o ) {
-    u3C.wag_w |= u3o_soft_mugs;
-  }
-
-  u3C.wag_w |= u3o_hashless;
-
-  if ( c3y == ful_o ) {
-    u3l_log("mars: preparing for full replay");
-    _cw_play_snap(log_u);
-  }
-
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  //  XX this should load from the epoc snapshot
-  //  but that clobbers chk/ which is risky
-  //
-  if ( u3_Host.eve_d < log_u->epo_d ) {
-    fprintf(stderr, "mars: pier corrupt: "
-                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 ")\r\n",
-                    u3_Host.eve_d, log_u->epo_d);
-    exit(1);
-  }
-
-  u3C.slog_f = _cw_play_slog;
-
-  {
-    u3_mars mar_u = {
-      .log_u = log_u,
-      .dir_c = u3_Host.dir_c,
-      .sen_d = u3A->eve_d,
-      .dun_d = u3A->eve_d,
-    };
-
-    pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
-    u3_Host.eve_d = mar_u.dun_d;
-  }
-
-  u3_disk_exit(log_u);
-  //  NB: loom migrations without replay are not saved
-  u3m_stop();
-
-  return pay_d;
-}
-
 /* _cw_play(): replay events, but better.
 */
 static void
@@ -2266,11 +2165,9 @@ _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
   c3_w arg_w;
-  c3_o ful_o = c3n;
-  c3_o mel_o = c3n;
-  c3_o sof_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
+  u3_disk_load_e lod_e = u3_dlod_last;
 
   u3_Host.ops_u.gab = c3n;
 
@@ -2283,12 +2180,13 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "full",              no_argument,       NULL, 'f' },
     { "replay-to",         required_argument, NULL, 'n' },
     { "snap-at",           required_argument, NULL, 's' },
+    { "yolo",              no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "fgn:s:", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "fgn:s:y", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case 'g': { u3_Host.ops_u.gab = c3y; break; }
 
@@ -2304,15 +2202,15 @@ _cw_play(c3_i argc, c3_c* argv[])
       } break;
 
       case 7: {  //  auto-meld
-        mel_o = c3y;
+        u3C.wag_w |= u3o_auto_meld;
       } break;
 
       case 8: {  //  soft-mugs
-        sof_o = c3y;
+        u3C.wag_w |= u3o_soft_mugs;
       } break;
 
       case 'f': {
-        ful_o = c3y;
+        lod_e = u3_dlod_epoc;
       } break;
 
       case 'n': {
@@ -2327,6 +2225,10 @@ _cw_play(c3_i argc, c3_c* argv[])
           fprintf(stderr, "mars: snap-at invalid: '%s'\r\n", optarg);
           exit(1);
         }
+      } break;
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
       } break;
 
       case '?': {
@@ -2362,7 +2264,28 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3C.wag_w |= u3o_debug_ram;
   }
 
-  _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+  u3C.wag_w |= u3o_hashless;
+
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+  signal(SIGTSTP, _cw_play_exit);
+
+  //  setup mars
+  //
+  {
+    u3_mars mar_u = { .dir_c = u3_Host.dir_c };
+    u3_mars_load(&mar_u, lod_e);
+
+    u3C.slog_f = _cw_play_slog;
+
+    u3_mars_play(&mar_u, eve_d, sap_d);
+
+    u3_disk_exit(mar_u.log_u);
+  }
+
+  u3m_stop();
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2937,7 +2860,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   //
   {
     u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
-    u3_mars_load(&mar_u);
+    u3_mars_load(&mar_u, u3_dlod_last);
 
     //  set up logging
     //

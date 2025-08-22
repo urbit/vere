@@ -506,6 +506,14 @@
       */
         typedef void (*u3_disk_news)(void*, c3_d, c3_o);
 
+      /* u3_disk_load_e: disk load mode.
+      */
+        typedef enum {
+          u3_dlod_boot = 0,                 //  load for boot
+          u3_dlod_epoc = 1,                 //  load for full replay
+          u3_dlod_last = 2                  //  load latest
+        } u3_disk_load_e;
+
       /* u3_disk: manage event persistence.
       */
         typedef struct _u3_disk {
@@ -880,10 +888,10 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
-      /* u3_disk_init(): init pier directories and event log.
+      /* u3_disk_load(): load pier directories, log, and snapshot.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c);
+        u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */

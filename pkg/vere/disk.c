@@ -1574,6 +1574,8 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v4, nod_i, lom_z);
 
+    //  XX respect --no-demand flag
+    //
     if ( MAP_FAILED == mmap(u3_Loom_v4,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
@@ -1621,7 +1623,7 @@ typedef enum {
 /* _disk_epoc_load(): load existing epoch, enumerating failures
 */
 static _epoc_kind
-_disk_epoc_load(u3_disk* log_u, c3_d lat_d)
+_disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 {
   //  check latest epoc version
   //
@@ -1676,7 +1678,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
     return _epoc_fail;
   }
 
-  if (  (c3n == u3_Host.ops_u.nuu )
+  if (  (u3_dlod_boot != lod_e)
      && !fir_d
      && !las_d
      && (c3n == u3_disk_read_meta(log_u->mdb_u, 0)) )
@@ -1748,6 +1750,11 @@ epoch versions (epoc.txt)
 
   switch ( ver_w ) {
     case U3E_VER1: {
+      if ( u3_dlod_epoc == lod_e ) {
+        fprintf(stderr, "migration required, replay disallowed\r\n");
+        exit(1);
+      }
+
       c3_i fid_i = _disk_load_stale_loom(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
       c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
 
@@ -1776,17 +1783,49 @@ epoch versions (epoc.txt)
     } // fallthru
 
     case U3E_VER2: {
+      if ( u3_dlod_epoc == lod_e ) {
+        c3_c chk_c[8193];
+        snprintf(chk_c, 8193, "%s/.urb/chk", log_u->dir_u->pax_c);
+
+        if ( 0 == log_u->epo_d ) {
+          //  if epoch 0 is the latest, delete the snapshot files in chk/
+          c3_c bin_c[8193];
+          snprintf(bin_c, 8193, "%s/image.bin", chk_c);
+          if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
+            fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                            bin_c, strerror(errno));
+            exit(1);
+          }
+        }
+        else if ( 0 != u3e_backup(epo_c, chk_c, c3y) ) {
+          //  copy the latest epoch's snapshot files into chk/
+          fprintf(stderr, "mars: failed to copy snapshot\r\n");
+          exit(1);
+        }
+      }
+
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( log_u->dun_d < u3A->eve_d ) {
-        //  XX bad
+        //  XX bad, add to enum
+        fprintf(stderr, "corrupt pier, snapshot from future\r\n");
+        exit(1);
+      }
+      else if ( u3A->eve_d < log_u->epo_d ) {
+        //  XX goto full replay
+        fprintf(stderr, "corrupt pier, snapshot out of epoch\r\n");
+        exit(1);
       }
 
-      if (  (!log_u->epo_d && log_u->dun_d)
-         || (c3y == _disk_vere_diff(log_u)) )
+      if (  !(u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
+         && (  (!log_u->epo_d && log_u->dun_d)
+            || (c3y == _disk_vere_diff(log_u)) ))
       {
         if ( log_u->dun_d != u3A->eve_d ) {
-          // XX stale snapshot, new binary, error out
+          //  XX stale snapshot, new binary, error out
+          //  XX bad, add to enum
+          fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
+          exit(1);
         }
         else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
           fprintf(stderr, "disk: failed to initialize epoch\r\n");
@@ -1882,10 +1921,10 @@ _disk_require_dir(const c3_c* dir_c)
   return u3_dire_init(dir_c);
 }
 
-/* u3_disk_init(): init pier directories and event log.
+/* u3_disk_load(): load pier directories, log, and snapshot.
 */
 u3_disk*
-u3_disk_init(c3_c* pax_c)
+u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
 {
   u3_disk* log_u = c3_calloc(sizeof(*log_u));
   log_u->lok_i = -1;
@@ -1937,8 +1976,8 @@ u3_disk_init(c3_c* pax_c)
 
     //  XX move this into u3_disk_make
     //
-    if ( c3y == u3_Host.ops_u.nuu ) {
-      if ( _epoc_good != _disk_epoc_load(log_u, 0) ) {
+    if ( u3_dlod_boot == lod_e ) {
+      if ( _epoc_good != _disk_epoc_load(log_u, 0, lod_e) ) {
         fprintf(stderr, "disk: failed to initialize lmdb\r\n");
         c3_free(log_u); // XX leaks dire(s)
         return 0;
@@ -2015,7 +2054,7 @@ u3_disk_init(c3_c* pax_c)
 
 try_init:
     {
-      _epoc_kind kin_e = _disk_epoc_load(log_u, lat_d);
+      _epoc_kind kin_e = _disk_epoc_load(log_u, lat_d, lod_e);
 
       switch ( kin_e ) {
         case _epoc_good: {

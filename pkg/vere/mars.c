@@ -1101,6 +1101,9 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //
   u3m_hate(1 << 18);
 
+  //  XX this function should only ever be called in epoch 0
+  //  XX read_list reads *up-to* eve_d, should be exact
+  //
   if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_l)) ) {
     fprintf(stderr, "boot: read failed\r\n");
     u3m_love(u3_nul);
@@ -1428,11 +1431,11 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 /* u3_mars_load(): load pier.
 */
 void
-u3_mars_load(u3_mars* mar_u)
+u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
 {
   //  initialize persistence
   //
-  if ( !(mar_u->log_u = u3_disk_init(mar_u->dir_c)) ) {
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, lod_e)) ) {
     fprintf(stderr, "mars: disk init fail\r\n");
     exit(1); // XX
   }
@@ -1870,7 +1873,7 @@ u3_mars_make(u3_mars* mar_u)
 
   //  NB: initializes loom
   //
-  if ( !(mar_u->log_u = u3_disk_init(mar_u->dir_c)) ) {
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, u3_dlod_boot)) ) {
     fprintf(stderr, "boot: disk init fail\r\n");
     exit(1);
   }
