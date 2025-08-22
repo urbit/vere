@@ -50,8 +50,8 @@
             .path = "../../ext/whereami",
         },
         .zlib = .{
-            .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
-            .hash = "zlib-1.3.1-AAAAACEMAAA0qyoSrfgBb_p25ItL4yRf_TBRk-26TYMF",
+            .url = "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz",
+            .hash = "zlib-1.3.1-ZZQ7lbYMAAB1hTSOKSXAKAgHsfDcyWNH_37ojw5WSpgR",
         },
         .wasm3 = .{
             .path = "../../ext/wasm3",
