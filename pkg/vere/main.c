@@ -939,14 +939,6 @@ report(void)
          LIBCURL_VERSION_PATCH);
 }
 
-/* _stop_exit_fore(): exit before.
-*/
-static void
-_stop_exit_fore(c3_i int_i)
-{
-  kill(getpid(), SIGTERM);
-}
-
 /* _stop_exit(): exit immediately.
 */
 static void
@@ -3055,7 +3047,7 @@ main(c3_i   argc,
   //
   //    Configured here using signal() so as to be immediately available.
   //
-  signal(SIGTSTP, _stop_exit_fore);
+  signal(SIGTSTP, _stop_exit);
 
   printf("~\n");
   //  printf("welcome.\n");
