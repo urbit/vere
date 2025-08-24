@@ -10,7 +10,8 @@ typedef c3_w       u3v_version;
 #define U3V_VER2   2
 #define U3V_VER3   3
 #define U3V_VER4   4
-#define U3V_VERLAT U3V_VER4
+#define U3V_VER5   5
+#define U3V_VERLAT U3V_VER5
 
 /* PATCHES
  */
