@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.4";
+const VERSION = "3.5";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -509,6 +509,11 @@ fn buildBinary(
                 .deps = &.{pkg_ent.artifact("ent")},
             },
             // pkg_noun
+            .{
+                .name = "equality-test",
+                .file = "pkg/noun/equality_tests.c",
+                .deps = noun_test_deps,
+            },
             .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
