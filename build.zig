@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.4";
+const VERSION = "3.5";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
