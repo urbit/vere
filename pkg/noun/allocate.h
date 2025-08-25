@@ -132,7 +132,10 @@
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_w off_w;                           //  spin stack offset
+        c3_w fow_w;                           //  spin stack overflow count
+
+        c3_w fut_w[30];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -707,10 +710,16 @@
           void
           u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
 
-        /* u3a_print_memory(): print memory amount.
+        /* u3a_print_memory(): print memory amount to file descriptor.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_print_memory(): print memory amount to string.
+        */
+          void
+          u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
+
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*

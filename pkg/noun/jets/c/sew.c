@@ -13,9 +13,10 @@ u3qc_sew(u3_atom a,
          u3_atom e
         )
 {
+  c3_w b_w, c_w;
   if (0 == c) return u3k(e);
-  if ( !_(u3a_is_cat(b)) ||
-       !_(u3a_is_cat(c)) ) {
+  if ( !_(u3r_safe_word(b, &b_w)) ||
+       !_(u3r_safe_word(c, &c_w)) ) {
     return u3_none;
   }
   if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
@@ -23,7 +24,6 @@ u3qc_sew(u3_atom a,
   }
 
   c3_g a_g = a;
-  c3_w b_w = b, c_w = c;
   c3_w len_e_w = u3r_met(a_g, e);
   u3i_slab sab_u;
   c3_w* src_w;
