@@ -17,6 +17,7 @@ u3qb_skim(u3_noun a, u3_noun b)
     u3_noun*   tel;
     u3j_site sit_u;
     u3j_gate_prep(&sit_u, u3k(b));
+    u3k(a);
 
     do {
       i = u3h(a);
