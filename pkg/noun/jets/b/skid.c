@@ -13,14 +13,14 @@ u3qb_skid(u3_noun a, u3_noun b)
   u3_noun* rig = &r;
 
   if ( u3_nul != a) {
-    u3_noun   i, t = a;
+    u3_noun   i, t;
     u3_noun*   hed;
     u3_noun*   tel;
     u3j_site sit_u;
     u3j_gate_prep(&sit_u, u3k(b));
 
     do {
-      u3x_cell(t, &i, &t);
+      i = u3h(a);
 
       switch ( u3j_gate_slam(&sit_u, u3k(i)) ) {
         case c3y: {
@@ -37,8 +37,11 @@ u3qb_skid(u3_noun a, u3_noun b)
 
         default: u3m_bail(c3__exit);
       }
+
+      t = u3k(u3t(a));
+      u3z(a), a = t;
     }
-    while ( u3_nul != t );
+    while ( u3_nul != a );
 
     u3j_gate_lose(&sit_u);
   }
