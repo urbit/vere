@@ -46,6 +46,8 @@ _har(u3a_road* rod_u, u3z_cid cid)
       return rod_u->cax.har_p;
     case u3z_memo_keep:
       return rod_u->cax.per_p;
+    case u3z_memo_ford:
+      return rod_u->cax.for_p;  // design cache key to handle arvo changes that invalidate
   }
   u3_assert(0);
 }
@@ -66,6 +68,9 @@ u3z_find(u3z_cid cid, u3_noun key)
     while ( 1 ) {
       u3_weak got = u3h_get(_har(rod_u, cid), key);
       if ( u3_none != got ) {
+        if ( u3z_memo_ford == cid ) {
+          u3m_p("found ford", 1);
+        }
         return got;
       }
       if ( 0 == rod_u->kid_p ) {
