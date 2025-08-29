@@ -1,9 +1,9 @@
+#include <stdio.h>
+#include <unistd.h>
+
 #ifdef TRACY_ENABLE
 #include "tracy/TracyC.h"
 #endif
-
-#include <stdio.h>
-#include <unistd.h>
 
 void test_function() {
 #ifdef TRACY_ENABLE

@@ -456,6 +456,7 @@ fn buildBinary(
 
     if (cfg.tracy_enable) {
         urbit.linkLibrary(tracy.?.artifact("tracy"));
+        urbit.addIncludePath(tracy.?.path(""));
     }
 
     if (t.os.tag.isDarwin()) {
@@ -644,6 +645,7 @@ fn buildBinary(
             }
             if (cfg.tracy_enable) {
                 test_exe.linkLibrary(tracy.?.artifact("tracy"));
+                test_exe.addIncludePath(tracy.?.path(""));
             }
             test_exe.addCSourceFiles(.{
                 .files = &.{tst.file},
