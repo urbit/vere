@@ -1057,6 +1057,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 {
   u3_assert(epo_d);
 
+  fprintf(stderr, "disk: rolling to epoch %" PRIc3_d "\r\n", epo_d);
   //  check if any epoch directories exist
   c3_d lat_d;
   if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
