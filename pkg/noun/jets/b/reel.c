@@ -24,13 +24,13 @@
       do {
         u3x_cell(t, &i, &t);
         top  = u3a_push(&pil_u);
-        *top = i;
+        *top = u3k(i);
       } while ( u3_nul != t );
 
       u3j_gate_prep(&sit_u, u3k(b));
 
       while ( c3n == u3a_pile_done(&pil_u) ) {
-        pro = u3j_gate_slam(&sit_u, u3nc(u3k(*top), pro));
+        pro = u3j_gate_slam(&sit_u, u3nc(*top, pro));
         top = u3a_pop(&pil_u);
       }
 

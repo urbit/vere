@@ -16,10 +16,18 @@ _by_run(u3_noun a, u3j_site* sit_u)
     u3_noun p_n_a, q_n_a;
     u3x_trel(a, &n_a, &l_a, &r_a);
     u3x_cell(n_a, &p_n_a, &q_n_a);
+    
+    u3k(p_n_a);
+    u3k(q_n_a);
+    u3k(l_a);
+    u3k(r_a);
 
-    return u3nt(u3nc(u3k(p_n_a), u3j_gate_slam(sit_u, u3k(q_n_a))),
-                _by_run(l_a, sit_u),
-                _by_run(r_a, sit_u));
+    u3_noun pro = u3nt(u3nc(p_n_a, u3j_gate_slam(sit_u, q_n_a)),
+      _by_run(l_a, sit_u),
+      _by_run(r_a, sit_u));
+    
+    u3z(a);
+    return pro;
   }
 }
 
@@ -30,7 +38,7 @@ u3qdb_run(u3_noun a, u3_noun b)
   u3j_site sit_u;
 
   u3j_gate_prep(&sit_u, u3k(b));
-  pro = _by_run(a, &sit_u);
+  pro = _by_run(u3k(a), &sit_u);
   u3j_gate_lose(&sit_u);
 
   return pro;

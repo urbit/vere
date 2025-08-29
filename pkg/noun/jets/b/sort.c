@@ -80,7 +80,7 @@ _sort(u3j_site* sit_u, u3_noun list)
     //  since the list was already validated and measured
     //
     u3a_cell* cel_u = u3a_to_ptr(list);
-    arr_u[i_w] = cel_u->hed;
+    arr_u[i_w] = u3k(cel_u->hed);
     list = cel_u->tel;
   }
 
@@ -89,7 +89,7 @@ _sort(u3j_site* sit_u, u3_noun list)
   u3_noun pro = u3_nul;
   for (c3_w i_w = len_w; i_w--;)
   {
-    pro = u3nc(u3k(arr_u[i_w]), pro);
+    pro = u3nc(arr_u[i_w], pro);
   }
   
   u3a_free(arr_u);

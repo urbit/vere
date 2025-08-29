@@ -5,7 +5,7 @@
 
 #include "noun.h"
 
-//  [a] is RETAINED, [out] is TRANSFERRED
+//  [a] and [out] are TRANSFERRED
 //
 static void
 _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)
@@ -17,10 +17,16 @@ _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)
     u3_noun n_a, l_a, r_a;
     u3x_trel(a, &n_a, &l_a, &r_a);
 
-    *out = u3j_gate_slam(sit_u, u3nc(u3k(n_a), *out));
+    u3k(n_a);
+    u3k(l_a);
+    u3k(r_a);
+
+    *out = u3j_gate_slam(sit_u, u3nc(n_a, *out));
 
     _in_rep(l_a, sit_u, out);
     _in_rep(r_a, sit_u, out);
+
+    u3z(a);
   }
 }
 
@@ -31,7 +37,7 @@ u3qdi_rep(u3_noun a, u3_noun b)
   u3j_site sit_u;
 
   u3j_gate_prep(&sit_u, u3k(b));
-  _in_rep(a, &sit_u, &out);
+  _in_rep(u3k(a), &sit_u, &out);
   u3j_gate_lose(&sit_u);
 
   return out;

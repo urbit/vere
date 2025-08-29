@@ -5,6 +5,30 @@
 
 #include "noun.h"
 
+  // get p.u.q.vex from an $edge, assumes that the unit is non-empty
+  //  RETAIN [vex]
+  //
+  static inline u3_noun
+  _puq(u3_noun vex)
+  {
+    u3_weak pro = u3r_at(14, vex);
+    c3_dessert(u3_none != pro);
+    return (u3_noun)pro;
+  }
+
+  // get q.u.q.vex from an $edge, assumes that the unit is non-empty
+  //  RETAIN [vex]
+  //
+  static inline u3_noun
+  _quq(u3_noun vex)
+  {
+    u3_weak pro = u3r_at(15, vex);
+    c3_dessert(u3_none != pro);
+    return (u3_noun)pro;
+  }
+
+  #define   _p    u3h
+  #define   _q    u3t
 
   static u3_noun
   _slip(u3_noun weq,
@@ -14,11 +38,9 @@
 
     u3x_cell(naz, &p_naz, &q_naz);
     if ( 10 == weq ) {
-      return u3nc(u3x_good(u3i_vint(u3k(p_naz))),
-                           1);
+      return u3nc(u3i_vint(u3k(p_naz)), 1);
     } else {
-      return u3nc(u3k(p_naz),
-                  u3x_good(u3i_vint(u3k(q_naz))));
+      return u3nc(u3k(p_naz), u3i_vint(u3k(q_naz)));
     }
   }
 
@@ -100,38 +122,39 @@
       return u3k(vex);
     } else {
       u3_noun uq_vex = u3t(q_vex);
-      u3_noun puq_vex, quq_vex;
+      u3_noun quq_vex;
       u3_noun yit, yur;
       u3_noun p_yit, q_yit;
       u3_noun ret;
 
-      u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_vex)));
+      quq_vex = u3t(uq_vex);
+
+      yit = u3n_slam_on(u3k(sab), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      yur = _last(p_vex, p_yit);
+      yur = _last(_p(vex), p_yit);
 
       if ( c3n == u3du(q_yit) ) {
         ret = u3nc(yur, u3k(q_vex));
       }
       else {
         u3_noun uq_yit = u3t(q_yit);
-        u3_noun puq_yit, quq_yit;
+        u3_noun puq_yit;
         u3_noun vux;
 
-        u3x_cell(uq_yit, &puq_yit, &quq_yit);
+        puq_yit = u3h(uq_yit);
 
-        vux = u3x_good(u3n_slam_on(u3k(raq),
-                                   u3nc(u3k(puq_vex),
-                                   u3k(puq_yit))));
+        vux = u3n_slam_on(u3k(raq),
+                          u3nc(u3k(_puq(vex)),
+                          u3k(puq_yit)));
         if ( u3_nul == vux ) {
-          ret = u3nc(yur, u3k(q_vex));
+          ret = u3nc(yur, u3k(_q(vex)));
         }
         else {
           ret = u3nq(yur,
                      u3_nul,
                      u3k(u3t(vux)),
-                     u3k(quq_yit));
+                     u3k(_quq(yit)));
           u3z(vux);
         }
       }
@@ -163,7 +186,7 @@
                 u3_noun sef,
                 u3_noun tub)
   {
-    u3_noun vex = u3x_good(u3n_slam_on(u3k(sef), u3k(tub)));
+    u3_noun vex = u3n_slam_on(u3k(sef), u3k(tub));
     u3_noun p_vex, q_vex;
 
     u3x_cell(vex, &p_vex, &q_vex);
@@ -208,7 +231,7 @@
                 u3_noun sef,
                 u3_noun tub)
   {
-    u3_noun vex = u3x_good(u3n_slam_on(u3k(sef), u3k(tub)));
+    u3_noun vex = u3n_slam_on(u3k(sef), u3k(tub));
     u3_noun p_vex, q_vex;
 
     u3x_cell(vex, &p_vex, &q_vex);
@@ -223,11 +246,15 @@
       u3_noun ret;
 
       u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      wag = u3x_good(u3n_slam_on(u3k(poq), u3k(puq_vex)));
-      ret = u3nq(u3k(p_vex),
+
+      u3k(quq_vex);
+      u3k(p_vex);
+      wag = u3n_slam_on(u3k(poq), u3k(puq_vex));
+
+      ret = u3nq(p_vex,
                  u3_nul,
                  wag,
-                 u3k(quq_vex));
+                 quq_vex);
 
       u3z(vex);
       return ret;
@@ -268,10 +295,10 @@
       u3_noun ret;
 
       u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_vex)));
+      yit = u3n_slam_on(u3k(sab), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      yur = _last(p_vex, p_yit);
+      yur = _last(_p(vex), p_yit);
 
       if ( c3n == u3du(q_yit) ) {
         ret = u3nc(yur, u3k(q_yit));
@@ -281,12 +308,14 @@
         u3_noun puq_yit, quq_yit;
 
         u3x_cell(uq_yit, &puq_yit, &quq_yit);
+
+        u3k(quq_yit);
         ret = u3nq(yur,
                    u3_nul,
-                   u3x_good(u3n_slam_on(u3k(raq),
-                                        u3nc(u3k(puq_vex),
-                                             u3k(puq_yit)))),
-                   u3k(quq_yit));
+                   u3n_slam_on(u3k(raq),
+                               u3nc(u3k(_puq(vex)),
+                                    u3k(puq_yit))),
+                   quq_yit);
       }
       u3z(yit);
       return ret;
@@ -359,10 +388,10 @@
       u3_noun ret;
 
       u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(bus), u3k(quq_vex)));
+      yit = u3n_slam_on(u3k(bus), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      yur = _last(p_vex, p_yit);
+      yur = _last(_p(vex), p_yit);
 
       if ( c3n == u3du(q_yit) ) {
         ret = u3nc(yur, u3_nul);
@@ -373,7 +402,7 @@
         u3_noun wam, p_wam, q_wam, goy;
 
         u3x_cell(uq_yit, &puq_yit, &quq_yit);
-        wam = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_yit)));
+        wam = u3n_slam_on(u3k(sab), u3k(quq_yit));
 
         u3x_cell(wam, &p_wam, &q_wam);
         goy = _last(yur, p_wam);
@@ -388,7 +417,7 @@
           u3x_cell(uq_wam, &puq_wam, &quq_wam);
           ret = u3nq(goy,
                      u3_nul,
-                     u3nc(u3k(puq_vex),
+                     u3nc(u3k(_puq(vex)),
                           u3k(puq_wam)),
                      u3k(quq_wam));
         }
@@ -422,7 +451,7 @@
                 u3_noun sef,
                 u3_noun tub)
   {
-    u3_noun vex = u3x_good(u3n_slam_on(u3k(sef), u3k(tub)));
+    u3_noun vex = u3n_slam_on(u3k(sef), u3k(tub));
     u3_noun p_vex, q_vex;
 
     u3x_cell(vex, &p_vex, &q_vex);
@@ -444,12 +473,14 @@
                   u3nc(u3k(p_tub),
                                u3k(pquq_vex)),
                   u3k(puq_vex));
-
-      wag = u3x_good(u3n_slam_on(u3k(hez), gud));
-      ret = u3nq(u3k(p_vex),
+      
+      u3k(p_vex);
+      u3k(quq_vex);
+      wag = u3n_slam_on(u3k(hez), gud);
+      ret = u3nq(p_vex,
                  u3_nul,
                  wag,
-                 u3k(quq_vex));
+                 quq_vex);
 
       u3z(vex);
       return ret;
@@ -551,23 +582,24 @@
   _cqe_pfix(u3_noun vex,
             u3_noun sab)
   {
-    u3_noun p_vex, q_vex;
+    u3_noun q_vex;
 
-    u3x_cell(vex, &p_vex, &q_vex);
+    q_vex = u3t(vex);
     if ( c3n == u3du(q_vex) ) {
       return u3k(vex);
     }
     else {
       u3_noun uq_vex = u3t(q_vex);
-      u3_noun puq_vex, quq_vex;
+      u3_noun quq_vex;
       u3_noun yit, p_yit, q_yit;
       u3_noun ret;
 
-      u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_vex)));
+      quq_vex = u3t(uq_vex);
+
+      yit = u3n_slam_on(u3k(sab), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      ret = u3nc(_last(p_vex, p_yit),
+      ret = u3nc(_last(_p(vex), p_yit),
                  u3k(q_yit));
 
       u3z(yit);
@@ -606,10 +638,10 @@
       u3_noun ret;
 
       u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_vex)));
+      yit = u3n_slam_on(u3k(sab), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      yur = _last(p_vex, p_yit);
+      yur = _last(_p(vex), p_yit);
 
       if ( c3n == u3du(q_yit) ) {
         ret = u3nc(yur, u3k(q_yit));
@@ -621,7 +653,7 @@
         u3x_cell(uq_yit, &puq_yit, &quq_yit);
         ret = u3nq(yur,
                    u3_nul,
-                   u3nc(u3k(puq_vex),
+                   u3nc(u3k(_puq(vex)),
                         u3k(puq_yit)),
                    u3k(quq_yit));
       }
@@ -647,18 +679,18 @@
   u3qe_pose(u3_noun vex,
             u3_noun sab)
   {
-    u3_noun p_vex, q_vex;
+    u3_noun q_vex;
 
-    u3x_cell(vex, &p_vex, &q_vex);
+    q_vex = u3t(vex);
     if ( c3y == u3du(q_vex) ) {
       return u3k(vex);
     } else {
-      u3_noun roq = u3x_good(u3n_kick_on(u3k(sab)));
+      u3_noun roq = u3n_kick_on(u3k(sab));
       u3_noun p_roq, q_roq;
       u3_noun ret;
 
       u3x_cell(roq, &p_roq, &q_roq);
-      ret = u3nc(_last(p_vex, p_roq),
+      ret = u3nc(_last(_p(vex), p_roq),
                  u3k(q_roq));
 
       u3z(roq);
@@ -683,23 +715,24 @@
   _cqe_sfix(u3_noun vex,
             u3_noun sab)
   {
-    u3_noun p_vex, q_vex;
+    u3_noun q_vex;
 
-    u3x_cell(vex, &p_vex, &q_vex);
+    q_vex = u3t(vex);
     if ( c3n == u3du(q_vex) ) {
       return u3k(vex);
     }
     else {
       u3_noun uq_vex = u3t(q_vex);
-      u3_noun puq_vex, quq_vex;
+      u3_noun quq_vex;
       u3_noun yit, p_yit, q_yit, yur;
       u3_noun ret;
 
-      u3x_cell(uq_vex, &puq_vex, &quq_vex);
-      yit = u3x_good(u3n_slam_on(u3k(sab), u3k(quq_vex)));
+      quq_vex = u3t(uq_vex);
+
+      yit = u3n_slam_on(u3k(sab), u3k(quq_vex));
 
       u3x_cell(yit, &p_yit, &q_yit);
-      yur = _last(p_vex, p_yit);
+      yur = _last(_p(vex), p_yit);
 
       if ( c3n == u3du(q_yit) ) {
         ret = u3nc(yur, u3_nul);
@@ -712,7 +745,7 @@
 
         ret = u3nq(yur,
                    u3_nul,
-                   u3k(puq_vex),
+                   u3k(_puq(vex)),
                    u3k(quq_yit));
       }
       u3z(yit);
@@ -784,7 +817,7 @@
                 u3_noun sef,
                 u3_noun tub)
   {
-    u3_noun vex = u3x_good(u3n_slam_on(u3k(sef), u3k(tub)));
+    u3_noun vex = u3n_slam_on(u3k(sef), u3k(tub));
     u3_noun p_vex, q_vex;
 
     u3x_cell(vex, &p_vex, &q_vex);
@@ -894,8 +927,7 @@
           }
 
           if ( c3y == bit_o ) {
-            return u3x_good
-              (u3n_slam_on(u3k(qn_hel), u3k(tub)));
+            return u3n_slam_on(u3k(qn_hel), u3k(tub));
           } else {
             if ( c3y == _stew_wor(iq_tub, pn_hel) ) {
               hel = l_hel;
@@ -1014,3 +1046,7 @@
       return _cqe_stir_fun(rud, raq, fel, tub);
     }
   }
+
+  #undef _p
+  #undef _q
+  

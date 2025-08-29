@@ -13,12 +13,18 @@
 
     if ( u3_nul != a ) {
       u3j_site sit_u;
-      u3_noun  i, t = a;
+      u3_noun  i, t;
       u3j_gate_prep(&sit_u, u3k(b));
+      u3k(a);
+
       do {
-        u3x_cell(t, &i, &t);
+        i = u3h(a);
+
         pro = u3j_gate_slam(&sit_u, u3nc(u3k(i), pro));
-      } while ( u3_nul != t );
+        
+        t = u3k(u3t(a));
+        u3z(a), a = t;
+      } while ( u3_nul != a );
       u3j_gate_lose(&sit_u);
     }
 
