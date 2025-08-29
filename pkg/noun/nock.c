@@ -3240,12 +3240,13 @@ u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam)
   return u3m_soft_run(gul, u3n_slam_on, gat, sam);
 }
 
-/* u3n_nock_an(): as slam_in(), but with empty fly.
+/* u3n_nock_an(): as nock_et(), but with the scry handler that always blocks.
 */
 u3_noun
 u3n_nock_an(u3_noun bus, u3_noun fol)
 {
-  return u3n_nock_et(u3_nul, bus, fol);
+  u3_noun gul = u3nt(u3nc(1, 0), u3nc(0, 0), 0);  //  |~(^ ~)
+  return u3n_nock_et(gul, bus, fol);
 }
 
 
