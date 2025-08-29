@@ -499,6 +499,7 @@ _pave_parts(void)
 {
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
+  u3R->cax.for_p = u3h_new_cache(u3C.per_w);  //  ford
   u3R->jed.war_p = u3h_new();
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();

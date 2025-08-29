@@ -451,6 +451,7 @@
 #   define c3__fond   c3_s4('f','o','n','d')
 #   define c3__for    c3_s3('f','o','r')
 #   define c3__forb   c3_s4('f','o','r','b')
+#   define c3__ford   c3_s4('f','o','r','d')
 #   define c3__fore   c3_s4('f','o','r','e')
 #   define c3__fork   c3_s4('f','o','r','k')
 #   define c3__form   c3_s4('f','o','r','m')
