@@ -7,6 +7,7 @@ const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
 };
 
 const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
