@@ -124,7 +124,7 @@ __gmpn_redc_1:
 	jmp	*%rax
 
 
-	.section	.data.rel.ro.local,"a"
+	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab
 	.long	.L1-.Ltab

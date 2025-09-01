@@ -190,10 +190,16 @@ fn buildBinary(
         "-Werror",
     });
 
-    // if (!cfg.asan and !cfg.ubsan)
-    //     try global_flags.appendSlice(&.{
-    //         "-fno-sanitize=all",
-    //     });
+    if (!cfg.asan and !cfg.ubsan) {
+        try global_flags.appendSlice(&.{
+            "-fno-sanitize=all",
+        });
+        if (t.os.tag == .windows) {
+            try global_flags.appendSlice(&.{
+                "-Qunused-arguments",
+            });
+        }
+    }
 
     if (cfg.asan and !cfg.ubsan)
         try global_flags.appendSlice(&.{
@@ -393,17 +399,15 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
     });
-    urbit.stack_size = 0;
 
     if (t.os.tag == .windows) {
-        urbit.linkSystemLibrary("ws2_32");
-        urbit.linkSystemLibrary("ws2_32"); // For WSA*, socket, htons, inet_*, gethostbyname, etc.
-        urbit.linkSystemLibrary("iphlpapi"); // For GetAdaptersAddresses, ConvertInterface*
-        urbit.linkSystemLibrary("advapi32"); // For GetUserProfileDirectoryW, Sym*
-        urbit.linkSystemLibrary("userenv"); // For GetUserProfileDirectoryW, Sym*
-        urbit.linkSystemLibrary("crypt32"); // For GetUserProfileDirectoryW, Sym*
-        urbit.linkSystemLibrary("dbghelp"); // For MiniDumpWriteDump, SymGetOptions, SymSetOptions
-        urbit.linkSystemLibrary("ole32"); // For CoTaskMemFree
+        urbit.stack_size = 67108864;
+    } else {
+        urbit.stack_size = 0;
+    }
+
+    if (t.os.tag == .windows) {
+        urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
     }
 
     const target_query: std.Target.Query = .{
@@ -626,6 +630,11 @@ fn buildBinary(
                     test_exe.addLibraryPath(macos_sdk.?.path("usr/lib"));
                     test_exe.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
                 }
+            }
+
+
+            if (t.os.tag == .windows) {
+                test_exe.linkSystemLibrary("ws2_32");
             }
 
             test_exe.stack_size = 0;

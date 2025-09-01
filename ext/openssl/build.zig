@@ -346,6 +346,7 @@ fn libcrypto(
             "ms/uplink.c",
         });
         lib.addIncludePath(dep.path("ms"));
+        lib.linkSystemLibrary("crypt32");
     }
 
     lib.addCSourceFiles(.{

@@ -180,12 +180,9 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_vere.addIncludePath(b.path("platform/windows"));
         try files.appendSlice(&.{
-            "platform/windows/rsignal.c",
             "platform/windows/ptty.c",
-            "platform/windows/compat.c",
             "platform/windows/ctrlc.c",
             "platform/windows/daemon.c",
-            "platform/windows/veh_handler.c",
         });
     }
 

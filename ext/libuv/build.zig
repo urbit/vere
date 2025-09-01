@@ -79,6 +79,13 @@ pub fn build(b: *std.Build) !void {
 
     uv.installHeadersDirectory(uv_c.path("include"), "", .{});
 
+    if (t.os.tag == .windows) {
+        uv.linkSystemLibrary("ole32"); // CoTaskMemFree
+        uv.linkSystemLibrary("dbghelp"); // MiniDumpWriteDump, SymGetOptions, SymSetOptions
+        uv.linkSystemLibrary("userenv"); // GetUserProfileDirectoryW
+        uv.linkSystemLibrary("iphlpapi"); // GetAdaptersAddresses, ConvertInterface*
+    }
+
     b.installArtifact(uv);
 }
 

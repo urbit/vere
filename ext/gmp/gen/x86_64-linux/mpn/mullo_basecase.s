@@ -94,7 +94,7 @@ __gmpn_mullo_basecase:
 	add	%r10, %r9
 	jmp	*%r9
 
-	.section	.data.rel.ro.local,"a"
+	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.Ltab-.Ltab			
 	.long	.L1-.Ltab			

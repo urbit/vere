@@ -41,6 +41,9 @@
 #include "whereami.h"
 #include "xtract.h"
 
+
+jmp_buf jumper;
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -51,7 +54,7 @@
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
+#       define u3m_trap() (u3_noun)(setjmp(jumper))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -111,7 +114,7 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static rsignal_jmpbuf u3_Signal;
+static jmp_buf u3_Signal;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -465,7 +468,7 @@ _cm_signal_done(void)
 void
 u3m_signal(u3_noun sig_l)
 {
-  rsignal_longjmp(u3_Signal, sig_l);
+  _longjmp(u3_Signal, sig_l);
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -654,7 +657,8 @@ _find_home(void)
       fprintf(stderr, "loom: checkpoint version mismatch: "
                       "have %u, need %u\r\n",
                       ver_w, U3V_VERLAT);
-      abort();
+      mig_o = c3n;
+      /* abort(); */
     }
   }
 
@@ -1047,7 +1051,7 @@ u3m_bail(u3_noun how)
 
   /* Longjmp, with an underscore.
   */
-  _longjmp(u3R->esc.buf, how);
+  _longjmp(jumper, how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1327,13 +1331,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
              u3_noun   arg)
 {
   u3_noun why, pro;
-  c3_l    sig_l;
+  volatile c3_l sig_l = 0;
 
   /* Enter internal signal regime.
-  */
+   */
   _cm_signal_deep(mil_w);
 
-  if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
+  if ( 0 != (sig_l = setjmp(u3_Signal)) ) {
     //  reinitialize trace state
     //
     u3t_init();
@@ -1353,7 +1357,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1468,7 +1472,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
     u3C.wag_w = wag_w;
@@ -1569,7 +1573,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1671,7 +1675,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -2297,7 +2301,10 @@ _cm_signals(void)
   }
 #endif
 #else
-  AddVectoredExceptionHandler(1, _windows_exception_filter);
+  if (0 == AddVectoredExceptionHandler(1, _windows_exception_filter)) {
+    u3l_log("boot: vectored exception handler install failed");
+    exit(1);
+  }
 #endif
 }
 

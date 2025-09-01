@@ -145,7 +145,7 @@ __gmpn_mod_34lsub1:
 	add	%r10, %r8
 	jmp	*%r8
 
-	.section	.data.rel.ro.local,"a"
+	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L0-.Ltab
 	.long	.L1-.Ltab

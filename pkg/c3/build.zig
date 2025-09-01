@@ -39,6 +39,11 @@ pub fn build(b: *std.Build) void {
     if (t.os.tag == .windows) {
         pkg_c3.addIncludePath(b.path("platform/windows"));
         pkg_c3.installHeadersDirectory(b.path("platform/windows"), "", .{});
+        pkg_c3.addCSourceFiles(.{
+        .root = b.path(""),
+        .files = &.{"platform/windows/compat.c"},
+        .flags = copts,
+    });
     }
 
     pkg_c3.installHeader(b.path("c3.h"), "c3/c3.h");

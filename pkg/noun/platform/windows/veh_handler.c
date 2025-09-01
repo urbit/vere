@@ -15,12 +15,12 @@ _windows_exception_filter(struct _EXCEPTION_POINTERS *ExceptionInfo)
       ExceptionRecord.ExceptionInformation[0] == 1 &&
       u3m_fault((void*)ExceptionRecord.ExceptionInformation[1], 1))
     {
-      return ExceptionContinueExecution;
+      return EXCEPTION_CONTINUE_EXECUTION;
     }
 
   if (ExceptionRecord.ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
     rsignal_raise(SIGSTK);
   }
 
-  return ExceptionContinueSearch;
+  return EXCEPTION_CONTINUE_SEARCH;
 }

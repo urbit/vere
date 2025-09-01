@@ -130,7 +130,7 @@ __gmpn_sqr_basecase:
 	add	%r10, %rax
 	jmp	*%rax
 
-	.section	.data.rel.ro.local,"a"
+	.section	.data.rel.ro.local,"a",@progbits
 	.align	8, 0x90
 .Ltab:	.long	.L4-.Ltab
 	.long	.L1-.Ltab

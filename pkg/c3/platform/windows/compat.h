@@ -11,6 +11,8 @@ long sysconf(int name);
 
 int kill(pid_t pid, int signum);
 
+void *memmem(const void *h0, size_t k, const void *n0, size_t l);
+
 #define SIGUSR1       10
 #define SIGALRM       14
 #define SIGVTALRM     26
