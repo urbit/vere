@@ -468,7 +468,7 @@ _cm_signal_done(void)
 void
 u3m_signal(u3_noun sig_l)
 {
-  _longjmp(u3_Signal, sig_l);
+  rsignal_longjmp(u3_Signal, sig_l);
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -1337,7 +1337,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
    */
   _cm_signal_deep(mil_w);
 
-  if ( 0 != (sig_l = setjmp(u3_Signal)) ) {
+  if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
     //
     u3t_init();
