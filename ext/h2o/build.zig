@@ -378,7 +378,7 @@ pub fn build(b: *std.Build) !void {
             // "common/memcached.c",
             "common/memory.c",
             "common/multithread.c",
-            "common/serverutil.c",
+            // "common/serverutil.c",
             "common/socket.c",
             "common/socketpool.c",
             "common/string.c",
