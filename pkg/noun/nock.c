@@ -1178,10 +1178,23 @@ _n_formulaic(u3_noun fol)
     case 12:
       return (c3y == u3r_cell(ar, &a, &b))
         && _n_formulaic(a) && _n_formulaic(b);
-    case 6:
-      return ( c3y == u3r_trel(ar, &a, &b, &c) )
-        && _n_formulaic(a) &&
-        (_n_formulaic(b) || _n_formulaic(c));
+    case 6: {
+      u3_noun lit;
+
+      if ( c3n == u3r_trel(ar, &a, &b, &c) || !_n_formulaic(a) ) {
+        return 0;
+      }
+
+      if ( c3n == u3r_safe(a, &lit) || u3_none == lit ) {
+        return _n_formulaic(b) || _n_formulaic(c);
+      }
+
+      switch (lit) {
+        case 0:  return _n_formulaic(b);
+        case 1:  return _n_formulaic(c);
+        default: return 0;
+      }
+    }
     case 9:
       return (c3y == u3r_cell(ar, &a, &b))
         && (c3y == u3ud(a))
