@@ -21,7 +21,7 @@ Install version 0.14.0 of `zig` with the package manager of your choosing, e.g.,
 
 ### macOS debugger
 
-macOS is curious operating system because the kernel is derived from from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
+macOS is curious operating system because the kernel is derived from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
 
 `lldb` hijacks the Mach exception ports for the task when it attaches to the process. Mach exceptions get handled before POSIX signals which means that as soon as vere faults (this happens often) `lldb` stop with a `EXC_BAD_ACCESS`. It is impossible to continue debugging from this state without the workaround we implemented in https://github.com/urbit/vere/pull/611.
 
