@@ -657,8 +657,11 @@ _find_home(void)
       fprintf(stderr, "loom: checkpoint version mismatch: "
                       "have %u, need %u\r\n",
                       ver_w, U3V_VERLAT);
+#ifdef U3_OS_windows
       mig_o = c3n;
-      /* abort(); */
+#else
+      abort();
+#endif
     }
   }
 
