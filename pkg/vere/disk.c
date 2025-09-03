@@ -1533,6 +1533,27 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
   }
 }
 
+static void
+_disk_unlink_stale_loom(c3_c* dir_c)
+{
+  c3_c bin_c[8193];
+  snprintf(bin_c, 8193, "%s/.urb/chk/north.bin", dir_c);
+
+  if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
+    fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                    bin_c, strerror(errno));
+    exit(1);
+  }
+
+  snprintf(bin_c, 8193, "%s/.urb/chk/south.bin", dir_c);
+
+  if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
+    fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                    bin_c, strerror(errno));
+    exit(1);
+  }
+}
+
 static c3_i
 _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 {
@@ -1610,6 +1631,35 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     return nod_i;
   }
+}
+
+static void
+_disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
+{
+  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+  c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+
+  //  For later: check u3A->eve_d against eve_d before migrating
+  //
+  (void)eve_d;
+
+  //  NB: all fallthru, all the time
+  //
+  switch ( lom_w ) {
+    case U3V_VER1: u3_migrate_v2();
+    case U3V_VER2: u3_migrate_v3();
+    case U3V_VER3: u3_migrate_v4();
+    case U3V_VER4: {
+      u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+      u3e_live(c3n, strdup(dir_c));
+      u3m_pave(c3y);
+      u3_migrate_v5();
+      u3m_save();
+    }
+  }
+
+  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
+  close(fid_i);
 }
 
 typedef enum {
@@ -1696,58 +1746,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   log_u->sen_d = log_u->dun_d;
   log_u->epo_d = lat_d;
 
-/*
-loom migrations (version number stored in the loom, last word till v5, then first word)
-- 1->2: pointer compression
-- 2->3: persistent memoization
-- 3->4: bytecode alignment
-- 4->5: allocator
-
-pier versions (version number stored in top-level lmdb environment)
-- 1: lmdb event log
-- 2: mid-migration
-- 3: epoch system
-- ??? 4: single-snapshot epoch-system
-
-epoch versions (epoc.txt)
-- 1:
-  - north.bin/south.bin begins the log,
-  - data.mdb continues after,
-  - vere.txt records binary version at epoch creation
-  - epoc.txt identifies this structure
-- ??? 2:
-  - image.bin begins the log
-  - rest the same
-
-
-- pier-version==1: loom version=={1, 2, 3}
-- pier-version==2: loom version=={1, 2, 3}
-- pier-version==3: loom version=={1,2, 3, 4}
-
-
-- pier creation separate from pier initialization
-  - create empty pier, epoc 0, &c
-- pier initialization
-  - get the *pier* version number
-  - if 1 || 2, migrate to epoch system
-    - XX just leave this broken for now
-  - if 3, load epoch
-    - epoch could be incomplete (roll crashed, _void or _gone)
-      - delete and try previous
-    - epoch could be invalid (corrupt lmdb instance, other read failure, _fail)
-      - load fatal error
-    - epoch could be from the future (_late)
-      - print message about upgrading runtime
-    - load loom (and maybe migrate)
-  - load loom
-    - if epoc.txt == 2, load loom normally
-    - if epoc.txt == 1, load and migrate (including roll)
-*/
-
   //  NB: by virtue of getting here, we know the *pier* version number is at least 3
   //  (ie, this is the epoch system)
   //
-
   switch ( ver_w ) {
     case U3E_VER1: {
       if ( u3_dlod_epoc == lod_e ) {
@@ -1755,30 +1756,8 @@ epoch versions (epoc.txt)
         exit(1);
       }
 
-      c3_i fid_i = _disk_load_stale_loom(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
-      c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
-
-      //  For later: check u3A->eve_d before migrating
-      //
-
-      //  NB: all fallthru, all the time
-      //
-      switch ( lom_w ) {
-        case U3V_VER1: u3_migrate_v2();
-        case U3V_VER2: u3_migrate_v3();
-        case U3V_VER3: u3_migrate_v4();
-        case U3V_VER4: {
-          u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-          u3e_live(c3n, strdup(log_u->dir_u->pax_c));
-          u3m_pave(c3y);
-          u3_migrate_v5();
-          u3m_save();
-          //  XX unlink old snapshot
-        }
-      }
-
-      munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
-      close(fid_i);
+      _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
+      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
       //  XX u3m_stop()
     } // fallthru
 
