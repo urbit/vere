@@ -296,3 +296,106 @@ u3we_sove(u3_noun cor)
     return _cqes_sove(pub, mes, sig);
   }
 }
+
+static u3_atom
+_cqes_tweak_sec(u3_atom sek, u3_atom tek) {
+  c3_y scalar[32], tweak[32];
+
+  if (0 != u3r_bytes_fit(32, scalar, sek)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != u3r_bytes_fit(32, tweak, tek)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != urcrypt_secp_scalar_tweak_add(sec_u, scalar, tweak)) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3i_bytes(32, scalar);
+}
+
+u3_noun
+u3we_tweak_sec(u3_noun cor)
+{
+  u3_noun sek, tek;
+
+  if ( (c3n == u3r_mean(cor,
+                        u3x_sam_2,  &sek,
+                        u3x_sam_3,  &tek,
+                        0)) ||
+       (c3n == u3ud(sek)) ||
+       (c3n == u3ud(tek))) {
+    return u3m_bail(c3__exit);
+  }
+  else {
+    return _cqes_tweak_sec(sek, tek);
+  }
+}
+
+static u3_atom
+_cqes_tweak_pub(u3_atom pub, u3_atom tek) {
+  c3_y cmp_point[33], tweak[32];
+
+  if (0 != u3r_bytes_fit(33, cmp_point, pub)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != u3r_bytes_fit(32, tweak, tek)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != urcrypt_secp_cmp_point_tweak_add(sec_u, cmp_point, tweak)) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3i_bytes(33, cmp_point);
+}
+
+u3_noun
+u3we_tweak_pub(u3_noun cor)
+{
+  u3_noun pub, tek;
+
+  if ( (c3n == u3r_mean(cor,
+                        u3x_sam_2,  &pub,
+                        u3x_sam_3,  &tek,
+                        0)) ||
+       (c3n == u3ud(pub)) ||
+       (c3n == u3ud(tek))) {
+    return u3m_bail(c3__exit);
+  }
+  else {
+    return _cqes_tweak_pub(pub, tek);
+  }
+}
+
+static u3_noun
+_cqes_priv_to_pub(u3_atom sek) {
+  c3_y scalar[32], cmp_point[33];
+
+  if (0 != u3r_bytes_fit(32, scalar, sek)) {
+    return u3m_bail(c3__exit);
+  }
+
+  if (0 != urcrypt_secp_cmp_point_from_scalar(sec_u, scalar, cmp_point)) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3i_bytes(33, cmp_point);
+}
+
+u3_noun
+u3we_priv_to_pub(u3_noun cor)
+{
+
+  u3_noun a = u3r_at(u3x_sam, cor);
+
+  if ( (u3_none == a) || (c3n == u3ud(a)) ) {
+    return u3m_bail(c3__exit);
+  }
+  else {
+    return _cqes_priv_to_pub(a);
+  }
+}
