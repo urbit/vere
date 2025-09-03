@@ -1308,10 +1308,10 @@ u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d)
   return len_z;
 }
 
-/* _disk_migrate: migrates disk format.
+/* _disk_migrate_epoc: migrates disk format.
  */
 static c3_o
-_disk_migrate(u3_disk* log_u, c3_d eve_d)
+_disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
 {
   /*  migration steps:
    *  1. initialize epoch 0i0 (see _disk_epoc_zero)
@@ -1662,6 +1662,51 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   close(fid_i);
 }
 
+static void
+_disk_migrate_old(u3_disk* log_u)
+{
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+    exit(1);
+  }
+
+  log_u->sen_d = log_u->dun_d = las_d;
+
+  switch ( log_u->ver_w ) {
+    case U3D_VER1: {
+      _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
+
+      //  set version to 2 (migration in progress)
+      log_u->ver_w = U3D_VER2;
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_w) ) {
+        fprintf(stderr, "disk: failed to set version to 2\r\n");
+        exit(1);
+      }
+    }  // fallthru
+
+    case U3D_VER2: {
+      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+      if ( c3n == _disk_migrate_epoc(log_u, las_d) ) {
+        fprintf(stderr, "disk: failed to migrate event log\r\n");
+        exit(1);
+      }
+
+      if ( c3n == _disk_epoc_roll(log_u, las_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
+    } break;
+
+    default: {
+      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_w);
+      u3_assert(0);
+    }
+  }
+}
+
 typedef enum {
   _epoc_good = 0,  // load successfully
   _epoc_gone = 1,  // version missing, total failure
@@ -1968,53 +2013,31 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
 
     //  read metadata (version) from old log / top-level
     //
-    u3_meta met_u;
-    if (  (0 == (log_u->mdb_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)))
-       || (c3n == u3_disk_read_meta(log_u->mdb_u, &met_u)) )
     {
-      fprintf(stderr, "disk: failed to read metadata\r\n");
+      u3_meta met_u;
+      if (  (0 == (log_u->mdb_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)))
+         || (c3n == u3_disk_read_meta(log_u->mdb_u, &met_u)) )
+      {
+        fprintf(stderr, "disk: failed to read metadata\r\n");
+        c3_free(log_u); // XX leaks dire(s)
+        return 0;
+      }
+      log_u->ver_w = met_u.ver_w;
+    }
+
+    if ( U3D_VERLAT < log_u->ver_w ) {
+      fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
       c3_free(log_u); // XX leaks dire(s)
       return 0;
     }
-    log_u->ver_w = met_u.ver_w;
-
-    switch ( log_u->ver_w ) {
-      case U3D_VER1: {
-        //  set version to 2 (migration in progress)
-        c3_w ver_w = U3D_VER2;
-        if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
-          fprintf(stderr, "disk: failed to set version to 2\r\n");
-          exit(1);
-        }
-      }  // fallthru
-
-      case U3D_VER2: {
-        fprintf(stderr, "migrate stub\r\n");
-        abort();
-        c3_d eve_d = 0; // XX source from snapshot
-        if ( c3n == _disk_migrate(log_u, eve_d) ) {
-          fprintf(stderr, "disk: failed to migrate event log\r\n");
-          exit(1);
-        }
-
-        if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
-          fprintf(stderr, "disk: failed to initialize epoch\r\n");
-          exit(1);
-        }
-
-        // XX set sen_d, dun_d, epo_d, &c
-
-        log_u->liv_o = c3y;
-        return log_u;
+    else if ( U3D_VERLAT > log_u->ver_w ) {
+      if ( u3_dlod_epoc == lod_e ) {
+        fprintf(stderr, "migration required, replay disallowed\r\n");
+        exit(1);
       }
-
-      case U3D_VER3: break;
-
-      default: {
-        fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
-        c3_free(log_u);
-        return 0;
-      }
+      _disk_migrate_old(log_u);
+      log_u->liv_o = c3y;
+      return log_u;
     }
 
     //  close top-level lmdb
