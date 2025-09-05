@@ -61,8 +61,7 @@ _cu_atom_to_ref(ur_root_t* rot_u, u3a_atom* vat_u)
 static inline c3_o
 _cu_box_check(u3a_noun* som_u, ur_nref* ref)
 {
-  u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w*    box_w = (void*)som_u;
 
   if ( 0xffffffff == box_w[0] ) {
     *ref = ( ((c3_d)box_w[2]) << 32
@@ -78,8 +77,7 @@ _cu_box_check(u3a_noun* som_u, ur_nref* ref)
 static inline void
 _cu_box_stash(u3a_noun* som_u, ur_nref ref)
 {
-  u3a_box* box_u = u3a_botox(som_u);
-  c3_w*    box_w = (void*)box_u;
+  c3_w*    box_w = (void*)som_u;
 
   //  overwrite u3a_atom with reallocated reference
   //
@@ -144,7 +142,7 @@ _cu_from_loom_next(_cu_stack* tac_u, ur_root_t* rot_u, u3_noun a)
         //  reallocate the stack if full
         //
         if ( tac_u->fil_w == tac_u->siz_w ) {
-          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w;
+          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w; // XX overflow
           tac_u->fam_u = c3_realloc(tac_u->fam_u, nex_w * sizeof(*tac_u->fam_u));
           tac_u->pre_w = tac_u->siz_w;
           tac_u->siz_w = nex_w;
@@ -412,7 +410,10 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 
   //  establish correct refcounts via tracing
   //
+  c3_w wag_w = u3C.wag_w;
+  u3C.wag_w |= u3o_debug_ram;
   u3m_grab(u3_none);
+  u3C.wag_w  = wag_w;
 
   //  re-establish warm jet state
   //

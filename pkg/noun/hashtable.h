@@ -136,8 +136,8 @@
       **
       ** `key` is RETAINED
       */
-       void
-       u3h_del(u3p(u3h_root) har_p, u3_noun key);
+        void
+        u3h_del(u3p(u3h_root) har_p, u3_noun key);
 
       /* u3h_trim_to(): trim to n key-value pairs
       */
@@ -159,10 +159,10 @@
         c3_w
         u3h_mark(u3p(u3h_root) har_p);
 
-      /* u3h_rewrite(): rewrite hashtable for compaction.
+      /* u3h_relocate(): relocate hashtable for compaction.
       */
         void
-        u3h_rewrite(u3p(u3h_root) har_p);
+        u3h_relocate(u3p(u3h_root) *har_p);
 
       /* u3h_count(): count hashtable for gc.
       */

@@ -173,13 +173,7 @@ u3_melt_all(FILE *fil_u)
 
   u3m_reclaim();
 
-  //  XX packed struct
-  //
-  {
-    u3_noun roc = u3A->roc;
-    _melt_canon_ptr(&can_u, &roc);
-    u3A->roc = roc;
-  }
+  _melt_canon_ptr(&can_u, &(u3A->roc));
 
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
