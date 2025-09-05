@@ -1056,6 +1056,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 {
   u3_assert(epo_d);
 
+  fprintf(stderr, "disk: rolling to epoch %" PRIc3_d "\r\n", epo_d);
   //  check if any epoch directories exist
   c3_d lat_d;
   if ( c3n == u3_disk_epoc_last(log_u, &lat_d) ) {
@@ -1480,7 +1481,7 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   if ( len_z <= 2 ) {
     fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
                     "chop: for more info see "
-                    "https://docs.urbit.org/manual/running/vere#chop\r\n");
+                    "https://docs.urbit.org/user-manual/running/vere#chop\r\n");
     exit(0);  //  enjoy
   }
 

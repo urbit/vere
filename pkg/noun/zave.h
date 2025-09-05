@@ -36,6 +36,7 @@
     */
       u3_weak u3z_find(u3z_cid cid, u3_noun key);
       u3_weak u3z_find_m(u3z_cid cid, c3_m fun_m, u3_noun one);
+      u3_weak u3z_find_up(u3_noun key);
 
     /* u3z_save(): save in memo cache. TRANSFER key; RETAIN val;
     */

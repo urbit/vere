@@ -670,7 +670,7 @@ u3a_post_info(u3_post);
         /* u3a_wed(): unify noun references.
         */
           void
-          u3a_wed(u3_noun* a, u3_noun* b);
+          u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
         /* u3a_luse(): check refcount sanity.
         */
@@ -796,10 +796,16 @@ u3a_dash(void);
           void
           u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
 
-        /* u3a_print_memory(): print memory amount.
+        /* u3a_print_memory(): print memory amount to file descriptor.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_print_memory(): print memory amount to string.
+        */
+          void
+          u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
+
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*
