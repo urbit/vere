@@ -519,7 +519,8 @@ _pave_home(void)
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, sizeof(u3v_home));
-  u3H->ver_w = U3V_VERLAT;
+  u3H->ver_d = U3V_VERLAT;
+  //  XX set page/word sizes in u3H->pam_d
   u3R = &u3H->rod_u;
 
   u3R->rut_p = u3R->hat_p = bot_p;
@@ -555,6 +556,8 @@ _find_home(void)
 
     u3H = u3to(u3v_home, 0);
     u3R = &u3H->rod_u;
+
+    // XX assert that page/word sizes in u3H->pam_d match this binary
 
     //  this looks risky, but there are no legitimate scenarios
     //  where it's wrong
