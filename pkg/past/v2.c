@@ -23,9 +23,9 @@ u3j_v2_reclaim(void)
 
   //  clear the jet hank cache
   //
-  u3h_v2_walk(u3R->jed.han_p, u3j_v2_free_hank);
-  u3h_v2_free(u3R->jed.han_p);
-  u3R->jed.han_p = u3h_v2_new();
+  u3h_v2_walk(u3R_v2->jed.han_p, u3j_v2_free_hank);
+  u3h_v2_free(u3R_v2->jed.han_p);
+  u3R_v2->jed.han_p = u3h_v2_new();
 }
 
 
@@ -90,7 +90,7 @@ u3n_v2_reclaim(void)
 
   //  clear the bytecode cache
   u3n_v2_free();
-  u3R->byc.har_p = u3h_v2_new();
+  u3R_v2->byc.har_p = u3h_v2_new();
 }
 
 
