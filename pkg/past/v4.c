@@ -481,7 +481,7 @@ _cj_v4_fink_free(u3p(u3j_v4_fink) fin_p)
   u3a_v4_wfree(fin_u);
 }
 
-/* u3j_site_lose(): lose references of u3j_site (but do not free).
+/* u3j_v4_site_lose(): lose references of u3j_site (but do not free).
  */
 void
 u3j_v4_site_lose(u3j_v4_site* sit_u)
@@ -518,10 +518,11 @@ u3j_v4_rite_lose(u3j_v4_rite* rit_u)
 void
 u3j_v4_free_hank(u3_noun kev)
 {
-  u3j_v4_hank* han_u = u3v4to(u3j_v4_hank, u3t(kev));
+  u3a_v4_cell* kev_u = (u3a_v4_cell*) u3a_v4_to_ptr(kev);
+  u3j_v4_hank* han_u = u3v4to(u3j_v4_hank, kev_u->tel);
   if ( u3_none != han_u->hax ) {
     u3a_v4_lose(han_u->hax);
-    u3j_site_lose(&(han_u->sit_u));
+    u3j_v4_site_lose(&(han_u->sit_u));
   }
   u3a_v4_wfree(han_u);
 }
@@ -743,19 +744,13 @@ _cn_v4_prog_free(u3n_v4_prog* pog_u)
   u3a_v4_free(pog_u);
 }
 
-static inline u3n_v4_prog*
-_cn_v4_to_prog(c3_w pog_w)
-{
-  u3_post pog_p = pog_w << u3a_v4_vits;
-  return u3v4to(u3n_v4_prog, pog_p);
-}
-
 /* _n_feb(): u3h_walk helper for u3n_free
  */
 static void
 _n_v4_feb(u3_noun kev)
 {
-  _cn_v4_prog_free(_cn_v4_to_prog(u3t(kev)));
+  u3a_v4_cell* kev_u = (u3a_v4_cell*) u3a_v4_to_ptr(kev);
+  _cn_v4_prog_free(u3v4to(u3n_v4_prog, kev_u->tel));
 }
 
 /* u3n_free(): free bytecode cache
