@@ -728,6 +728,20 @@ u3j_v4_reclaim(void)
 static void
 _cn_v4_prog_free(u3n_v4_prog* pog_u)
 {
+  //  ream pointers inline
+  //
+  c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
+  c3_w pod_w = pog_u->lit_u.len_w % 2;
+  c3_w ped_w = pog_u->mem_u.len_w % 2;
+
+  pog_u->byc_u.ops_y = (c3_y*)((void*) pog_u) + sizeof(u3n_v4_prog);
+  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
+  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
+  pog_u->cal_u.sit_u = (u3j_v4_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->reg_u.rit_u = (u3j_v4_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
+
+  //  NB: site reaming elided
+
   c3_w dex_w;
   for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
     u3a_v4_lose(pog_u->lit_u.non[dex_w]);
