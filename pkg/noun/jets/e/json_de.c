@@ -95,7 +95,7 @@ _parse(u3_atom txt)
 
   const c3_y *byt_y;
   c3_z        cnt_z;
-  c3_w_tmp        len_w = u3r_met(3, txt);
+  c3_n        len_n = u3r_met(3, txt);
 
   //
   // initialization
@@ -110,7 +110,7 @@ _parse(u3_atom txt)
     u3a_atom* vat_u = u3a_to_ptr(txt);
     byt_y = (c3_y*)vat_u->buf_w;
   }
-  json_open_buffer(sam_u, byt_y, len_w);
+  json_open_buffer(sam_u, byt_y, len_n);
   json_set_allocator(sam_u, &loc_u);
   u3a_pile_prep(pil_u, sizeof(u3qedj_coll));
 
@@ -224,7 +224,7 @@ _parse(u3_atom txt)
   json_close(sam_u);
 
   // return null if trailing trash/multiple JSON objects
-  if ( json_get_position(sam_u) != len_w ) {
+  if ( json_get_position(sam_u) != len_n ) {
     u3z(res);
     return u3_nul;
   }
