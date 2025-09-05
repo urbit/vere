@@ -1,9 +1,6 @@
 /// @file
 
 #include "manage.h"
-// #include "v2/manage.h"
-// #include "v3/manage.h"
-// #include "v4/manage.h"
 
 #include <ctype.h>
 #include <dlfcn.h>
@@ -522,7 +519,16 @@ _pave_home(void)
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, sizeof(u3v_home));
-  u3H->ver_w = U3V_VERLAT;
+  u3H->ver_d = U3V_VERLAT;
+
+  //  pam_d bits: { word-size[1], virtual-bits[2], page-size[3], ... }
+  //    word-size: 0==32, 1==64
+  //    page-size: relative binary-log in bytes
+  //
+  u3H->pam_d = 0
+             ^ (u3a_vits << 1)
+             ^ ((u3a_page + 2 - 12) << 3);
+
   u3R = &u3H->rod_u;
 
   u3R->rut_p = u3R->hat_p = bot_p;
@@ -543,22 +549,29 @@ static void
 _find_home(void)
 {
   c3_d ver_d = *((c3_d*)u3_Loom);
-  c3_o mig_o = c3y;  //  did we migrate?
 
-  switch ( ver_d ) {
-    // case U3V_VER1: u3m_v2_migrate();
-    // case U3V_VER2: u3m_v3_migrate();
-    // case U3V_VER3: u3m_v4_migrate();
-    case U3V_VER4: {
-      mig_o = c3n;
-      break;
-    }
-    default: {
-      fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
-                      ver_d, U3V_VERLAT);
-      abort();
-    }
+  if ( ver_d != U3V_VERLAT ) {
+    fprintf(stderr, "loom: checkpoint version mismatch: "
+                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                    ver_d, U3V_VERLAT);
+    abort();
+  }
+
+  c3_d pam_d = *((c3_d*)u3_Loom + 1);
+
+  if ( pam_d & 1 ) {
+    fprintf(stderr, "word-size mismatch: 64-bit snapshot in 32-bit binary\r\n");
+    abort();
+  }
+  if ( ((pam_d >> 1) & 3) != u3a_vits ) {
+    fprintf(stderr, "virtual-bits mismatch: %u in snapshot; %u in binary\r\n",
+                    (c3_w)((pam_d >> 1) & 3), u3a_vits);
+    abort();
+  }
+  if ( (12 + ((pam_d >> 3) & 7)) != (u3a_page + 2) ) {
+    fprintf(stderr, "page-size mismatch: %u  in snapshot; %u in binary\r\n",
+                    1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
+    abort();
   }
 
   //  NB: the home road is always north
@@ -577,7 +590,7 @@ _find_home(void)
 
   //  check for obvious corruption
   //
-  if ( c3n == mig_o ) {
+  {
     c3_w    nor_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);

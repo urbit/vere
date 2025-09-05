@@ -22,7 +22,8 @@
     **       NB: version must first for ease of migration.
     */
       typedef struct _u3v_home {
-        u3v_version ver_w;                //  version number
+        u3v_version ver_d;                //  version number
+        c3_d        pam_d;                //  parameters
         u3v_arvo    arv_u;                //  arvo state
         u3a_road    rod_u;                //  storage state
       } u3v_home;
