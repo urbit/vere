@@ -1,6 +1,7 @@
 .{
-    .name = "gmp",
+    .name = .gmp,
     .version = "0.0.1",
+    .fingerprint = 0x328f6061a804066a,
     .dependencies = .{
         .gmp = .{
             .url = "https://ftp.fr.openbsd.org/pub/OpenBSD/distfiles/gmp-6.3.0.tar.xz",

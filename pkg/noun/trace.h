@@ -16,7 +16,7 @@
 #endif
 
 #define SLOW_STACK_NAME  "/spin_stack_page_%d"
-#define PSIZE (1U << (u3a_page +2))
+#define TRACE_PSIZE (1U << (u3a_page +2))
 
   /** Data structures.
   **/
@@ -36,7 +36,7 @@
     typedef struct {
       c3_w off_w;
       c3_w fow_w;
-      c3_y dat_y[PSIZE - 2*sizeof(c3_w)];
+      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
     } u3t_spin;
 
   /**  Macros.

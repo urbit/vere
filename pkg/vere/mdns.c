@@ -38,7 +38,7 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
 
 static void resolve_cb(DNSServiceRef sref,
                        DNSServiceFlags f,
-                       uint32_t interface,
+                       uint32_t iface,
                        DNSServiceErrorType err,
                        const char *name,
                        const char *host,
@@ -110,7 +110,7 @@ static void init_sref_poll(DNSServiceRef sref, mdns_payload* payload) {
 
 static void browse_cb(DNSServiceRef s,
                       DNSServiceFlags f,
-                      uint32_t interface,
+                      uint32_t iface,
                       DNSServiceErrorType err,
                       const char* name,
                       const char* type,
@@ -133,7 +133,7 @@ static void browse_cb(DNSServiceRef s,
 
 
     DNSServiceErrorType err =
-      DNSServiceResolve(&payload_copy->sref, 0, interface,
+      DNSServiceResolve(&payload_copy->sref, 0, iface,
                         name, type, domain, resolve_cb,
                         (void*)payload_copy);
 

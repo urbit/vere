@@ -1,5 +1,6 @@
 .{
-    .name = "murmur3",
+    .name = .murmur3,
+    .fingerprint = 0x965f2281e82e15af,
     .version = "0.0.1",
     .paths = .{
         "",

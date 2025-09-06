@@ -1,5 +1,6 @@
 .{
-    .name = "natpmp",
+    .name = .natpmp,
+    .fingerprint = 0x1794aa3995c13962,
     .version = "0.0.1",
     .dependencies = .{
         .natpmp = .{

@@ -1,6 +1,7 @@
 .{
-    .name = "softblas",
+    .name = .softblas,
     .version = "0.0.1",
+    .fingerprint = 0x8df4a8f2266494e1,
     .dependencies = .{
         .softfloat = .{
             .path = "../softfloat",

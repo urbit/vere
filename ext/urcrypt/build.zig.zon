@@ -1,5 +1,6 @@
 .{
-    .name = "urcrypt",
+    .name = .urcrypt,
+    .fingerprint = 0x590576beb64ce5db,
     .version = "0.0.1",
     .dependencies = .{
         .aes_siv = .{

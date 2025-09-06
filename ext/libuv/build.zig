@@ -61,6 +61,7 @@ pub fn build(b: *std.Build) !void {
         .windows => try uv_flags.appendSlice(&.{
             "-DWIN32_LEAN_AND_MEAN",
             "-D_WIN32_WINNT=0x0602",
+            "-U_DEBUG",
         }),
         else => null,
     };
@@ -77,6 +78,13 @@ pub fn build(b: *std.Build) !void {
     });
 
     uv.installHeadersDirectory(uv_c.path("include"), "", .{});
+
+    if (t.os.tag == .windows) {
+        uv.linkSystemLibrary("ole32"); // CoTaskMemFree
+        uv.linkSystemLibrary("dbghelp"); // MiniDumpWriteDump, SymGetOptions, SymSetOptions
+        uv.linkSystemLibrary("userenv"); // GetUserProfileDirectoryW
+        uv.linkSystemLibrary("iphlpapi"); // GetAdaptersAddresses, ConvertInterface*
+    }
 
     b.installArtifact(uv);
 }

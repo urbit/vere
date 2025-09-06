@@ -3,6 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const t = target.result;
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
@@ -34,6 +35,16 @@ pub fn build(b: *std.Build) void {
         .files = &.{"defs.c"},
         .flags = copts,
     });
+
+    if (t.os.tag == .windows) {
+        pkg_c3.addIncludePath(b.path("platform/windows"));
+        pkg_c3.installHeadersDirectory(b.path("platform/windows"), "", .{});
+        pkg_c3.addCSourceFiles(.{
+        .root = b.path(""),
+        .files = &.{"platform/windows/compat.c"},
+        .flags = copts,
+    });
+    }
 
     pkg_c3.installHeader(b.path("c3.h"), "c3/c3.h");
     pkg_c3.installHeader(b.path("defs.h"), "c3/defs.h");

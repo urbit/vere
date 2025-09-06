@@ -625,11 +625,15 @@ void mdb_logerror(FILE* f, int err, const char* fmt, ...)
   fprintf(f, ": %s\r\n", mdb_strerror(err));
 }
 
+#ifndef U3_OS_windows
+
 /* mdb_get_filesize(): gets the size of a lmdb database file on disk.
-*/
+ */
 intmax_t mdb_get_filesize(mdb_filehandle_t han_u)
 {
   struct stat sat_u;
   fstat(han_u, &sat_u);
   return (intmax_t)sat_u.st_size;
 }
+
+#endif

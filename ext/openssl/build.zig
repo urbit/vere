@@ -1,5 +1,11 @@
 const std = @import("std");
 
+fn basenameNewExtension(b: *std.Build, path: []const u8, new_extension: []const u8) []const u8 {
+    const basename = std.fs.path.basename(path);
+    const ext = std.fs.path.extension(basename);
+    return b.fmt("{s}{s}", .{ basename[0 .. basename.len - ext.len], new_extension });
+}
+
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -106,6 +112,80 @@ fn libcrypto(
     // lib.root_module.addCMacro("OPENSSL_NO_STDIO", "");
     // lib.root_module.addCMacro("OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ", "1");
 
+    if (t.os.tag == .windows and t.cpu.arch == .x86_64) {
+        lib.root_module.addCMacro("WIN32_LEAN_AND_MEAN", "");
+        lib.root_module.addCMacro("UNICODE", "");
+        lib.root_module.addCMacro("_UNICODE", "");
+        lib.root_module.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
+        lib.root_module.addCMacro("_WINSOCK_DEPRECATED_NO_WARNINGS", "");
+        lib.root_module.addCMacro("OPENSSL_USE_APPLINK", "");
+        lib.root_module.addCMacro("OPENSSL_SYS_WIN32", "");
+
+        lib.root_module.addCMacro("NOCRYPT", "");
+
+        lib.root_module.addCMacro("AESNI_ASM", "");
+        lib.root_module.addCMacro("X25519_ASM", "");
+        lib.root_module.addCMacro("MD5_ASM", "");
+        lib.root_module.addCMacro("RC4_ASM", "");
+
+        lib.addIncludePath(b.path("gen/windows-x86_64/include"));
+        lib.addIncludePath(b.path("gen/windows-x86_64/include/crypto"));
+        lib.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
+
+        const nasm_dep = b.dependency("nasm", .{
+            .optimize = .ReleaseFast,
+        });
+
+        // const nasm_dep = nasm_dep2 orelse unreachable;
+
+        const nasm_exe = nasm_dep.artifact("nasm");
+
+        const asm_sources = [_][]const u8{
+            "gen/windows-x86_64/crypto/aes/aesni-mb-x86_64.asm",
+            "gen/windows-x86_64/crypto/aes/aesni-sha1-x86_64.asm",
+            "gen/windows-x86_64/crypto/aes/aesni-sha256-x86_64.asm",
+            "gen/windows-x86_64/crypto/aes/aesni-x86_64.asm",
+            "gen/windows-x86_64/crypto/aes/vpaes-x86_64.asm",
+            "gen/windows-x86_64/crypto/bn/rsaz-avx2.asm",
+            "gen/windows-x86_64/crypto/bn/rsaz-x86_64.asm",
+            "gen/windows-x86_64/crypto/bn/x86_64-gf2m.asm",
+            "gen/windows-x86_64/crypto/bn/x86_64-mont.asm",
+            "gen/windows-x86_64/crypto/bn/x86_64-mont5.asm",
+            "gen/windows-x86_64/crypto/camellia/cmll-x86_64.asm",
+            "gen/windows-x86_64/crypto/chacha/chacha-x86_64.asm",
+            "gen/windows-x86_64/crypto/ec/ecp_nistz256-x86_64.asm",
+            "gen/windows-x86_64/crypto/ec/x25519-x86_64.asm",
+            "gen/windows-x86_64/crypto/md5/md5-x86_64.asm",
+            "gen/windows-x86_64/crypto/modes/aesni-gcm-x86_64.asm",
+            "gen/windows-x86_64/crypto/modes/ghash-x86_64.asm",
+            "gen/windows-x86_64/crypto/poly1305/poly1305-x86_64.asm",
+            "gen/windows-x86_64/crypto/rc4/rc4-md5-x86_64.asm",
+            "gen/windows-x86_64/crypto/rc4/rc4-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/keccak1600-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/sha1-mb-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/sha1-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/sha256-mb-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/sha256-x86_64.asm",
+            "gen/windows-x86_64/crypto/sha/sha512-x86_64.asm",
+            "gen/windows-x86_64/crypto/uplink-x86_64.asm",
+            "gen/windows-x86_64/crypto/whrlpool/wp-x86_64.asm",
+            "gen/windows-x86_64/crypto/x86_64cpuid.asm",
+            "gen/windows-x86_64/engines/e_padlock-x86_64.asm",
+        };
+
+        for (asm_sources) |input_file| {
+            const output_basename = basenameNewExtension(b, input_file, ".o");
+            const nasm_run = b.addRunArtifact(nasm_exe);
+
+            nasm_run.addArgs(&.{ "-f", "win64", "-g" });
+
+            nasm_run.addArgs(&.{"-o"});
+            lib.addObjectFile(nasm_run.addOutputFileArg(output_basename));
+
+            nasm_run.addFileArg(b.path(input_file));
+        }
+    }
+
     if (t.os.tag.isDarwin() and t.cpu.arch.isAARCH64()) {
         lib.addIncludePath(b.path("gen/macos-aarch64/include"));
         lib.addIncludePath(b.path("gen/macos-aarch64/include/crypto"));
@@ -157,6 +237,11 @@ fn libcrypto(
     }
 
     if (t.os.tag.isDarwin() and t.cpu.arch == .x86_64) {
+        lib.root_module.addCMacro("AESNI_ASM", "");
+        lib.root_module.addCMacro("X25519_ASM", "");
+        lib.root_module.addCMacro("MD5_ASM", "");
+        lib.root_module.addCMacro("RC4_ASM", "");
+
         lib.addIncludePath(b.path("gen/macos-x86_64/include"));
         lib.addIncludePath(b.path("gen/macos-x86_64/include/crypto"));
         lib.addIncludePath(b.path("gen/macos-x86_64/include/openssl"));
@@ -199,6 +284,11 @@ fn libcrypto(
     }
 
     if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
+        lib.root_module.addCMacro("AESNI_ASM", "");
+        lib.root_module.addCMacro("X25519_ASM", "");
+        lib.root_module.addCMacro("MD5_ASM", "");
+        lib.root_module.addCMacro("RC4_ASM", "");
+
         lib.addIncludePath(b.path("gen/linux-x86_64/include"));
         lib.addIncludePath(b.path("gen/linux-x86_64/include/crypto"));
         lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
@@ -248,6 +338,15 @@ fn libcrypto(
         try srcs.appendSlice(&.{
             "engines/e_afalg.c",
         });
+    }
+
+    if (t.os.tag == .windows) {
+        try srcs.appendSlice(&.{
+            "ms/applink.c",
+            "ms/uplink.c",
+        });
+        lib.addIncludePath(dep.path("ms"));
+        lib.linkSystemLibrary("crypt32");
     }
 
     lib.addCSourceFiles(.{
@@ -344,6 +443,20 @@ fn libssl(
         lib.addIncludePath(b.path("gen/linux-x86_64/include"));
         lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/linux-x86_64/include/openssl"), "openssl", .{});
+    }
+
+    if (t.os.tag == .windows and t.cpu.arch == .x86_64) {
+        lib.root_module.addCMacro("WIN32_LEAN_AND_MEAN", "");
+        lib.root_module.addCMacro("UNICODE", "");
+        lib.root_module.addCMacro("_UNICODE", "");
+        lib.root_module.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
+        lib.root_module.addCMacro("_WINSOCK_DEPRECATED_NO_WARNINGS", "");
+        lib.root_module.addCMacro("OPENSSL_USE_APPLINK", "");
+        lib.root_module.addCMacro("OPENSSL_SYS_WIN32", "");
+
+        lib.addIncludePath(b.path("gen/windows-x86_64/include"));
+        lib.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
+        lib.installHeadersDirectory(b.path("gen/windows-x86_64/include/openssl"), "openssl", .{});
     }
 
     lib.root_module.addCMacro("OPENSSLDIR", "\"\"");

@@ -1,6 +1,7 @@
 .{
-    .name = "whereami",
+    .name = .whereami,
     .version = "0.0.1",
+    .fingerprint = 0x1150214595ba390,
     .dependencies = .{
         .whereami = .{
             .url = "https://github.com/gpakosz/whereami/archive/ba364cd54fd431c76c045393b6522b4bff547f50.tar.gz",

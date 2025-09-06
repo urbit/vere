@@ -4,6 +4,8 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const t = target.result;
+
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
 
@@ -32,6 +34,10 @@ pub fn build(b: *std.Build) !void {
     });
 
     pkg_ent.installHeader(b.path("ent.h"), "ent/ent.h");
+
+    if (t.os.tag == .windows) {
+        pkg_ent.linkSystemLibrary("bcrypt");
+    }
 
     b.installArtifact(pkg_ent);
 }

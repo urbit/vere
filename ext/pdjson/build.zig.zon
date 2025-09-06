@@ -1,6 +1,7 @@
 .{
-    .name = "pdjson",
+    .name = .pdjson,
     .version = "0.0.1",
+    .fingerprint = 0x9c1187b6fa1266aa,
     .dependencies = .{
         .pdjson = .{
             .url = "https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz",

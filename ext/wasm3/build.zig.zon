@@ -1,6 +1,7 @@
 .{
-    .name = "wasm3",
+    .name = .wasm3,
     .version = "0.0.1",
+    .fingerprint = 0x377ef9510a920f6f,
     .dependencies = .{
         .softfloat = .{
             .path = "../softfloat",

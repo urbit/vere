@@ -1,8 +1,11 @@
 .{
     .name = .openssl,
-    .fingerprint = 0x773a47f1e2d96f2e,
+    .fingerprint = 0x773a47f1ba90827f,
     .version = "0.0.1",
     .dependencies = .{
+        .nasm = .{
+            .path = "../nasm",
+        },
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
             .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",

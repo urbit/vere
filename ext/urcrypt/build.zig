@@ -61,6 +61,7 @@ pub fn build(b: *std.Build) void {
             "-fno-sanitize=all",
             "-g",
             "-Wall",
+            "-DSECP256K1_STATIC",
         },
     });
 
@@ -167,6 +168,7 @@ fn libsecp256k1(
 
             // "-DHAVE_CONFIG_H",
             // "-dexhaustive_test_ORDER=7",
+            "-DSECP256K1_BUILD",
             "-DECMULT_WINDOW_SIZE=15",
             "-DCOMB_BLOCKS=43",
             "-DCOMB_TEETH=6",

@@ -1,6 +1,7 @@
 .{
-    .name = "lmdb",
+    .name = .lmdb,
     .version = "0.0.1",
+    .fingerprint = 0xb2966103f9c1166a,
     .dependencies = .{
         .lmdb = .{
             .url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_0.9.29.tar.gz",

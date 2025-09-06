@@ -8,7 +8,11 @@
 #include "ur/ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
+
+#ifndef U3_OS_windows
 #include "sigsegv.h"
+#endif
+
 #include "openssl/conf.h"
 #include "openssl/engine.h"
 #include "openssl/err.h"
@@ -19,7 +23,6 @@
 #include "getopt.h"
 #include "libgen.h"
 #include "pthread.h"
-#include "spawn.h"
 
 #include "ca_bundle.h"
 #include "pace.h"
@@ -190,7 +193,9 @@ _main_init(void)
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
   u3_Host.ops_u.siz_i =
-#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+#if defined(U3_OS_windows)
+    0xf00000000;
+#elif (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
   // 500 GiB is as large as musl on aarch64 wants to allow
   0x7d00000000;
 #else
@@ -920,9 +925,11 @@ report(void)
 {
   printf("urbit %s\n", URBIT_VERSION);
   printf("gmp: %s\n", gmp_version);
+  #ifndef U3_OS_windows
   printf("sigsegv: %d.%d\n",
          (libsigsegv_version >> 8) & 0xff,
          libsigsegv_version & 0xff);
+  #endif
   printf("openssl: %s\n", SSLeay_version(SSLEAY_VERSION));
   printf("libuv: %s\n", uv_version_string());
   printf("libh2o: %d.%d.%d\n",
@@ -1045,12 +1052,14 @@ _cw_init_io(uv_loop_t* lup_u)
 
   //  Ignore SIGPIPE signals.
   //
+#ifndef U3_OS_windows
   {
     sigset_t set_s;
     sigemptyset(&set_s);
     sigaddset(&set_s, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
+#endif
 
   //  configure pipe to daemon process
   //
@@ -1068,6 +1077,38 @@ _cw_init_io(uv_loop_t* lup_u)
     uv_stream_set_blocking((uv_stream_t*)&out_u.pyp_u, 1);
   }
 }
+
+#ifdef U3_OS_windows
+/* _cw_intr_win_cb(): invoked when urth signals ctrl-c.
+ */
+static void
+_cw_intr_win_cb(PVOID param, BOOLEAN timedOut)
+{
+  rsignal_raise(SIGINT);
+}
+
+/* _cw_intr_win(): initialize ctrl-c handling.
+ */
+static void
+_cw_intr_win(c3_c* han_c)
+{
+  HANDLE h;
+  if ( 1 != sscanf(han_c, "%" PRIu64, (c3_d*)&h) ) {
+    fprintf(stderr, "mars: ctrl-c event: bad handle %s: %s\r\n",
+            han_c, strerror(errno));
+  }
+  else {
+    if ( !RegisterWaitForSingleObject(&h, h, _cw_intr_win_cb,
+                                      NULL, INFINITE, 0) )
+      {
+        fprintf(stderr,
+                "mars: ctrl-c event: RegisterWaitForSingleObject(%llu) failed (%lu)\r\n",
+                (c3_d)h, GetLastError());
+      }
+  }
+}
+#endif
+
 
 /* _cw_disk_init(): open event log
 */
@@ -2196,7 +2237,9 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   //
   //    Configured here using signal() so as to be immediately available.
   //
+#ifndef U3_OS_windows
   signal(SIGTSTP, _cw_play_exit);
+#endif
 
   //  XX source these from a shared struct ops_u
   if ( c3y == mel_o ) {
@@ -2935,6 +2978,10 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      tos_c = argv[7];
   c3_w       tos_w;
   c3_c*      per_c = argv[8];
+#ifdef U3_OS_windows
+  c3_c*      han_c = argv[9];
+  _cw_intr_win(han_c);
+#endif
 
   _cw_init_io(lup_u);
 
@@ -3152,6 +3199,7 @@ main(c3_i   argc,
   //
   //    XX review, may be unnecessary due to similar in u3m_init()
   //
+#ifndef U3_OS_windows
 #if defined(U3_OS_PROF)
   if ( _(u3_Host.ops_u.pro) ) {
     sigset_t set;
@@ -3170,6 +3218,7 @@ main(c3_i   argc,
   //    Configured here using signal() so as to be immediately available.
   //
   signal(SIGTSTP, _stop_exit_fore);
+#endif
 
   printf("~\n");
   //  printf("welcome.\n");
@@ -3256,6 +3305,18 @@ main(c3_i   argc,
         u3C.wag_w |= u3o_toss;
       }
     }
+
+#ifdef U3_OS_windows
+    //  Initialize event used to transmit Ctrl-C to worker process
+    //
+    {
+      SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+      if ( NULL == (u3_Host.cev_u = CreateEvent(&sa, FALSE, FALSE, NULL)) ) {
+        u3l_log("boot: failed to create Ctrl-C event: %lu", GetLastError());
+        exit(1);
+      }
+    }
+#endif
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
