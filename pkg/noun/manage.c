@@ -1199,6 +1199,7 @@ u3m_love(u3_noun pro)
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
+  u3p(u3h_root) for_p = u3R->cax.for_p;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1210,6 +1211,7 @@ u3m_love(u3_noun pro)
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
   per_p = u3h_take(per_p);
+  for_p = u3h_take(for_p);
 
   //  pop the stack
   //
@@ -1221,6 +1223,7 @@ u3m_love(u3_noun pro)
   u3j_reap(jed_u);
   u3n_reap(byc_p);
   u3z_reap(u3z_memo_keep, per_p);
+  u3z_reap(u3z_memo_ford, for_p);
 
   return pro;
 }
