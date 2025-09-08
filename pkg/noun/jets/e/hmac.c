@@ -40,7 +40,7 @@
     // pad key, inner and outer
     c3_y trail = (boq % 4);
     c3_y padwords = (boq / 4) + (trail == 0 ? 0 : 1);
-    c3_w_tmp innpad[padwords], outpad[padwords];
+    c3_w_new innpad[padwords], outpad[padwords];
     memset(innpad, 0x36, padwords * 4);
     memset(outpad, 0x5c, padwords * 4);
     if ( trail > 0 ) {
