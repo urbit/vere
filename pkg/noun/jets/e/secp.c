@@ -38,10 +38,19 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-  static const c3_w_tmp now_w[8] = {
+#ifndef VERE64
+  static const c3_n now_n[8] = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
+  static const c3_z now_z = 8;
+#else
+  static const c3_n now_n[4] = {
+    0xbfd25e8cd0364141ULL, 0xbaaedce6af48a03bULL,
+    0xffffffffffffffffULL, 0xffffffffffffffffULL
+  };
+  static const c3_z now_z = 4;
+#endif
 
   if ( 0 == a ) {
     return 0;
@@ -51,26 +60,26 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w_tmp len_w = a_u->len_n * 2;
+    c3_n len_n = a_u->len_n * 2;
 
-    if ( len_w < 8 ) {
+    if ( len_n < 8 ) {
       return 1;
     }
-    else if ( len_w > 8 ) {
+    else if ( len_n > 8 ) {
       return 0;
     }
     else {
       c3_y i_y;
       // assumes little endian in 64 bit
-      c3_w_tmp *buf_w = a_u->buf_w;
+      c3_n *buf_n = a_u->buf_n;
       // loop from most to least significant words
-      for ( i_y = 8; i_y > 0; ) {
-        c3_w_tmp b_w = buf_w[i_y],
-             o_w = now_w[--i_y];
-        if ( b_w < o_w ) {
+      for ( i_y = now_z; i_y > 0; ) {
+        c3_n b_n = buf_n[i_y],
+             o_n = now_n[--i_y];
+        if ( b_n < o_n ) {
           return 1;
         }
-        else if ( b_w > o_w ) {
+        else if ( b_n > o_n ) {
           return 0;
         }
       }
