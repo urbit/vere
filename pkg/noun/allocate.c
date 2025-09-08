@@ -2240,7 +2240,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 9);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 10);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2274,10 +2274,14 @@ u3a_mark_road()
   qua_u[7]->nam_c = strdup("persistent memoization cache");
   qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * 4;
 
-  qua_u[8] = NULL;
+  qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
+  qua_u[8]->nam_c = strdup("ford memoization cache");
+  qua_u[8]->siz_w = u3h_mark(u3R->cax.for_p) * 4;
+
+  qua_u[9] = NULL;
 
   c3_w sum_w = 0;
-  for (c3_w i_w = 0; i_w < 8; i_w++) {
+  for (c3_w i_w = 0; i_w < 9; i_w++) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
@@ -2313,6 +2317,7 @@ u3a_rewrite_compact(void)
   u3a_rewrite_noun(u3R->pro.trace);
   u3h_rewrite(u3R->cax.har_p);
   u3h_rewrite(u3R->cax.per_p);
+  u3h_rewrite(u3R->cax.for_p);
 
   u3R->ski.gul = u3a_rewritten_noun(u3R->ski.gul);
   u3R->bug.tax = u3a_rewritten_noun(u3R->bug.tax);
@@ -2322,6 +2327,7 @@ u3a_rewrite_compact(void)
   u3R->pro.trace = u3a_rewritten_noun(u3R->pro.trace);
   u3R->cax.har_p = u3a_rewritten(u3R->cax.har_p);
   u3R->cax.per_p = u3a_rewritten(u3R->cax.per_p);
+  u3R->cax.for_p = u3a_rewritten(u3R->cax.for_p);
 }
 
 /* _ca_print_box(): heuristically print the contents of an allocation box.
