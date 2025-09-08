@@ -724,8 +724,10 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.for_p));
     }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -735,6 +737,7 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -748,9 +751,12 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mars: threshold 0: per_p %u", u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 0: for_p %u", u3h_wyt(u3R->cax.for_p));
     }
     u3h_free(u3R->cax.per_p);
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
     u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
     u3l_log("");
   }
