@@ -8,8 +8,8 @@
 #include "urcrypt.h"
 
   static u3_weak
-  _cqes_hs(u3_atom p, c3_w_tmp pwd_w,
-           u3_atom s, c3_w_tmp sal_w,
+  _cqes_hs(u3_atom p, c3_n pwd_n,
+           u3_atom s, c3_n sal_n,
            u3_atom n,
            u3_atom r,
            u3_atom z,
@@ -25,8 +25,8 @@
       return u3m_bail(c3__exit);
     }
     chk = u3qc_bex(31);
-    if ( (c3n == u3qa_lth(pwd_w, chk)) ||
-         (c3n == u3qa_lth(sal_w, chk)) ) {
+    if ( (c3n == u3qa_lth(pwd_n, chk)) ||
+         (c3n == u3qa_lth(sal_n, chk)) ) {
       return u3m_bail(c3__exit);
     }
     u3z(chk);
@@ -49,15 +49,15 @@
     else {
       u3_noun pro;
       c3_d    n_d = u3r_chub(0, n);
-      c3_w_tmp    r_w = u3r_word_tmp(0, r),
-              z_w = u3r_word_tmp(0, z);
-      c3_y   *pwd_y = u3a_malloc(pwd_w),
-             *sal_y = u3a_malloc(sal_w),
+      c3_w_new    r_w = u3r_word_new(0, r),
+              z_w = u3r_word_new(0, z);
+      c3_y   *pwd_y = u3a_malloc(pwd_n),
+             *sal_y = u3a_malloc(sal_n),
              *out_y = u3a_malloc(d);
-      u3r_bytes(0, pwd_w, pwd_y, p);
-      u3r_bytes(0, sal_w, sal_y, s);
-      pro = ( 0 == urcrypt_scrypt(pwd_y, pwd_w,
-                                  sal_y, sal_w,
+      u3r_bytes(0, pwd_n, pwd_y, p);
+      u3r_bytes(0, sal_n, sal_y, s);
+      pro = ( 0 == urcrypt_scrypt(pwd_y, pwd_n,
+                                  sal_y, sal_n,
                                   n_d, r_w, z_w,
                                   out_w, out_y) )
         ? u3i_bytes(out_w, out_y)
