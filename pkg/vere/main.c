@@ -2935,6 +2935,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      tos_c = argv[7];
   c3_w       tos_w;
   c3_c*      per_c = argv[8];
+  c3_c*      sap_c = argv[9];
 
   _cw_init_io(lup_u);
 
@@ -2949,6 +2950,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
+    sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
