@@ -312,6 +312,15 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
 
     u3l_log("boot: verifying keys");
 
+    if ( c3y == u3a_is_cell(feed) && 
+         c3n == u3a_is_cell(u3h(feed)) &&
+         c3__earl == rank ) {
+      // bails, won't return
+      u3l_log("boot: incorrect keyfile please use updated format");
+      _dawn_fail(ship, rank, u3_nul);
+      return u3_none;
+    }
+
     //  (each seed (lest error=@tas))
     //
     sed = u3dq("veri:dawn", u3k(ship), u3k(feed), u3k(pot), u3k(liv));

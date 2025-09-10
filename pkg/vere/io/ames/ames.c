@@ -736,7 +736,6 @@ _ames_send(u3_ames* sam_u, sockaddr_in lan_u, u3_ref_hun* hun_u)
 
   assert( (NULL == hun_u) || (0 != hun_u->ref_w) );
   if ( !hun_u
-    || !hun_u->hun_y
     || !hun_u->len_w
     || c3y == _mesa_is_lane_zero(lan_u) )
   {
@@ -1653,6 +1652,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w cur_w)
     pac_u, _ames_hear_news, _ames_hear_bail);
 
   _ames_cap_queue(pac_u->sam_u);
+  _ames_pact_free(pac_u);
 }
 
 /* _ames_hear_ames(): hear ames packet.

@@ -1603,7 +1603,7 @@
       /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
        */
         c3_i
-        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t);
+        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y);
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */
@@ -1612,5 +1612,15 @@
 
         c3_w
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
+
+      /* u3_melt_all(): canonicalize persistent state
+      */
+        c3_w
+        u3_melt_all(FILE*);
+
+      /* u3_meld_all(): canonicalize persistent nouns and compact state.
+      */
+        c3_w
+        u3_meld_all(FILE*);
 
 #endif /* ifndef U3_VERE_H */

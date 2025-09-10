@@ -531,9 +531,9 @@ _pier_on_scry_done(void* ptr_v, u3_noun nun)
 }
 
 static c3_c*
-_resolve_czar(u3_work* wok_u, c3_c* who_c)
+_resolve_czar(u3_ship who_u, c3_c* who_c)
 {
-  u3_noun czar = u3dc("scot", 'p', wok_u->pir_u->who_u.hed_d & ((1 << 8) - 1));
+  u3_noun czar = u3dc("scot", 'p', who_u.hed_d & ((1 << 8) - 1));
   c3_c* czar_c = u3r_string(czar);
 
   c3_c url[256];
@@ -542,7 +542,7 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
 
   sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
 
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
   if (!ret_i) {
     c3_free(czar_c);
     czar_c = (c3_c*)hun_y;
@@ -574,7 +574,7 @@ _czar_boot_data(c3_c* czar_c,
   }
 
   c3_o ret_o = c3n;
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
   if ( !ret_i ) {
     u3_noun jamd = u3i_bytes(len_w, hun_y);
     u3_noun cued = u3qe_cue(jamd);
@@ -597,112 +597,6 @@ _czar_boot_data(c3_c* czar_c,
   }
 
   return ret_o;
-}
-
-static void
-_boot_scry_cb(void* vod_p, u3_noun nun)
-{
-  u3_work* wok_u = (u3_work*)vod_p;
-
-  u3_atom who = u3dc("scot", c3__p, u3_ship_to_noun(wok_u->pir_u->who_u));
-  c3_c*   who_c = u3r_string(who);
-
-  u3_noun rem, glx, ryf, bon, cur, nex;
-  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
-
-  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w = 0xFFFFFFFF;
-
-  if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
-       (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
-    /*
-     * Boot scry succeeded. Proceed to cross reference networking state against
-     * sponsoring galaxy.
-     */
-    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
-    bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
-    nex_w = u3r_word(0, nex);
-
-    u3_atom czar = u3dc("scot", c3__p, glx_w);
-    c3_c*   czar_c = u3r_string(czar);
-
-    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
-                                &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, &czar_bon_w,
-                                &czar_ack_w) ) {
-      u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
-      _pier_work(wok_u);
-    } else {
-      if ( czar_ryf_w == ryf_w ) {
-        c3_w ack_w = cur_w - 1;
-        if ( czar_ack_w == 0xFFFFFFFF ) {
-          // This codepath should never be hit
-          u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
-          _pier_work(wok_u);
-        } else if ( (czar_ack_w == ack_w) ||
-                    ((nex_w > cur_w) && (czar_ack_w - 1 == ack_w)) ) {
-          _pier_work(wok_u);
-        } else {
-          u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                  "this ship is an old copy, resume the latest version of the ship or breach\r\n"
-                  "read more: https://docs.urbit.org/glossary/double-boot",
-                  who_c);
-          u3_king_bail();
-        }
-      } else {
-        // Trying to boot old ship after breach
-        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "you are trying to boot an existing ship from a keyfile,"
-                "resume the latest version of the ship or breach\r\n"
-                "read more: https://docs.urbit.org/glossary/double-boot",
-                who_c);
-        u3_king_bail();
-      }
-    }
-
-    u3z(czar);
-    c3_free(czar_c);
-  } else if ( c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0 ) {
-    /*
-     * Data not available for boot scry. Check against sponsoring galaxy.
-     * If peer state exists exit(1) unless ship has breached,
-     * otherwise continue boot.
-     */
-    c3_c* czar_c = _resolve_czar(wok_u, who_c);
-
-    if ( c3n == _czar_boot_data(czar_c, who_c, 0,
-                                &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, 0, 0) ) {
-      c3_free(czar_c);
-      _pier_work(wok_u);
-    } else {
-      // Peer state found under czar
-      c3_free(czar_c);
-      u3_weak kf_ryf = wok_u->pir_u->ryf;
-      if ( kf_ryf == u3_none ) {
-        u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
-        _pier_work(wok_u);
-      } else if ( kf_ryf > czar_ryf_w ) {
-        // Ship has breached, continue boot
-        _pier_work(wok_u);
-      } else {
-        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "this ship has already been booted elsewere, "
-                "boot the existing pier or breach\r\n"
-                "read more: https://docs.urbit.org/glossary/double-boot",
-                who_c);
-        u3_king_bail();
-      }
-    }
-  } else {
-    /*
-     * Boot scry endpoint doesn't exists. Most likely old arvo.
-     * Continue boot and hope for the best.
-     */
-    u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double-boot");
-    _pier_work(wok_u);
-  }
-  u3z(nun); u3z(who);
-  c3_free(who_c);
 }
 
 /* _pier_work_init(): begin processing new events
@@ -779,8 +673,8 @@ _pier_work_init(u3_pier* pir_u)
       //  run the requested scry, jam to disk, then exit
       //
       u3l_log("pier: scry");
-      u3_pier_peek_last(pir_u, u3_nul, u3k(car), u3k(dek), u3k(pax),
-                        pir_u, _pier_on_scry_done);
+      u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), u3k(car), u3k(dek),
+                        u3k(pax), pir_u, _pier_on_scry_done);
     }
     u3z(pex);
   }
@@ -789,19 +683,153 @@ _pier_work_init(u3_pier* pir_u)
     //
     wok_u->car_u = u3_auto_init(pir_u);
     u3_auto_talk(wok_u->car_u);
+    _pier_work(wok_u);
   }
+}
 
-  if ( (c3__czar == u3_ship_rank(wok_u->pir_u->who_u)) ||
-       (c3n == u3_Host.ops_u.net) ) {
+static void _pier_wyrd_init(u3_pier*);
+
+static void
+_boot_scry_cb(void* vod_p, u3_noun nun)
+{
+  u3_pier* pir_u = (u3_pier*)vod_p;
+
+  u3_atom who = u3_ship_to_noun(pir_u->who_u);
+  c3_c*   who_c = u3r_string(who);
+
+  u3_noun rem, glx, ryf, bon, cur, nex;
+  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
+
+  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
+  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
+
+  if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
+       (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
+    /*
+     * Boot scry succeeded. Proceed to cross reference networking state against
+     * sponsoring galaxy.
+     */
+    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
+    bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
+    nex_w = u3r_word(0, nex);
+
+    u3_atom czar = u3dc("scot", c3__p, glx_w);
+    c3_c*   czar_c = u3r_string(czar);
+
+    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, &czar_bon_w,
+                                &czar_ack_w) ) {
+      u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
+
+      _pier_wyrd_init(pir_u);
+    } else {
+      if ( czar_ryf_w == ryf_w ) {
+        c3_w ack_w = cur_w - 1;
+        if ( czar_ack_w == u3_none ) {
+          // This codepath should never be hit
+          u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
+          _pier_wyrd_init(pir_u);
+        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
+          _pier_wyrd_init(pir_u);
+        } else {
+          u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                  "this is an old version of the ship, resume the latest version or breach\r\n"
+                  "see https://docs.urbit.org/user-manual/id/guide-to-resets",
+                  who_c);
+          u3_king_bail();
+        }
+      } else {
+        // Trying to boot old ship after breach
+        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                "you are trying to boot an existing ship from a keyfile,"
+                "resume the latest version of the ship or breach\r\n"
+                "see https://docs.urbit.org/user-manual/id/guide-to-resets",
+                who_c);
+        u3_king_bail();
+      }
+    }
+
+    u3z(czar);
+    c3_free(czar_c);
+  } else if ( c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0 ) {
+    /*
+     * Data not available for boot scry. Check against sponsoring galaxy.
+     * If peer state exists exit(1) unless ship has breached,
+     * otherwise continue boot.
+     */
+    c3_c* czar_c = _resolve_czar(pir_u->who_u, who_c);
+
+    if ( c3n == _czar_boot_data(czar_c, who_c, 0,
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, &czar_bon_w, 0) ) {
+      c3_free(czar_c);
+      _pier_wyrd_init(pir_u);
+    } else {
+      // Peer state found under czar
+      c3_free(czar_c);
+      u3_weak kf_ryf = pir_u->ryf;
+      if ( kf_ryf == u3_none ) {
+        u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
+        _pier_wyrd_init(pir_u);
+      } else if ( kf_ryf > czar_ryf_w ) {
+        // Ship breached, galaxy has not heard about the breach; continue boot
+        _pier_wyrd_init(pir_u);
+      } else if ( (     kf_ryf == czar_ryf_w ) &&
+                  ( czar_bon_w == u3_none ) ) {
+        // Ship has breached, continue boot
+        _pier_wyrd_init(pir_u);
+      } else {
+        u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
+                "this ship has already been booted elsewhere, "
+                "boot the existing pier or breach\r\n"
+                "see https://docs.urbit.org/user-manual/id/guide-to-resets",
+                who_c);
+        u3_king_bail();
+      }
+    }
+  } else {
+    /*
+     * Boot scry endpoint doesn't exists. Most likely old arvo.
+     * Continue boot and hope for the best.
+     */
+    u3l_log("boot: %%boot scry endpoint doesn't exist, cannot protect from double-boot");
+    _pier_wyrd_init(pir_u);
+  }
+  u3z(nun); u3z(who);
+  c3_free(who_c);
+}
+
+
+/* _pier_double_boot_init(): maybe peek for %ax /boot.
+*/
+static void
+_pier_double_boot_init(u3_pier* pir_u)
+{
+  pir_u->sat_e = u3_psat_wyrd;
+  c3_d pi_d = pir_u->who_u.hed_d;
+  c3_d pt_d = pir_u->who_u.tel_d;
+
+  if ( (pi_d < 256 && pt_d == 0) || (c3n == u3_Host.ops_u.net) ) {
     // Skip double boot protection for galaxies and local mode ships
     //
-    _pier_work(wok_u);
+    _pier_wyrd_init(pir_u);
   } else {
     // Double boot protection
     //
-    u3_noun pex = u3nc(u3i_string("boot"), u3_nul);
-    u3_pier_peek_last(pir_u, u3nc(u3_nul, u3_nul), c3__ax, u3_nul, pex,
-                      pir_u->wok_u, _boot_scry_cb);
+    u3_pico* pic_u = u3_pico_init();
+
+    pic_u->ptr_v = pir_u;
+    pic_u->fun_f = _boot_scry_cb;
+    pic_u->gan   = u3nc(u3_nul, u3_nul);
+    //
+    pic_u->typ_e       = u3_pico_once;
+    pic_u->las_u.car_m = c3__ax;
+    pic_u->las_u.des   = u3_nul;
+    pic_u->las_u.pax   = u3nc(u3i_string("boot"), u3_nul);
+
+    u3_lord_peek(pir_u->god_u, pic_u);
+    u3_pico_free(pic_u);
   }
 }
 
@@ -1017,7 +1045,7 @@ _pier_wyrd_init(u3_pier* pir_u)
   u3_noun cad = _pier_wyrd_card(pir_u);
   u3_noun wir = u3nc(c3__arvo, u3_nul);
 
-  pir_u->sat_e = u3_psat_wyrd;
+  u3_assert( u3_psat_wyrd == pir_u->sat_e );
 
   u3l_log("vere: checking version compatibility");
 
@@ -1235,7 +1263,7 @@ _pier_play(u3_play* pay_u)
         u3_pier_exit(pir_u);
       }
       else {
-        _pier_wyrd_init(pir_u);
+        _pier_double_boot_init(pir_u);
       }
     }
   }
@@ -1628,7 +1656,7 @@ _pier_on_lord_live(void* ptr_v)
         u3_pier_exit(pir_u);
       }
       else {
-        _pier_wyrd_init(pir_u);
+        _pier_double_boot_init(pir_u);
       }
     }
   }

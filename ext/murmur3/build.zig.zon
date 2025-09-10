@@ -1,12 +1,6 @@
 .{
     .name = "murmur3",
     .version = "0.0.1",
-    .dependencies = .{
-        .murmur3 = .{
-            .url = "https://github.com/PeterScott/murmur3/archive/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4.tar.gz",
-            .hash = "12201b70bb970bb8e197936edd9be02fa67699d517515c8077031affc4f25226dcdf",
-        },
-    },
     .paths = .{
         "",
     },

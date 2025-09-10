@@ -1741,14 +1741,9 @@ _mesa_io_exit(u3_auto* car_u)
   u3_mesa* mes_u = (u3_mesa*)car_u;
   uv_timer_stop(&mes_u->tim_u);
   mes_u->tim_u.data = mes_u;
-  uv_close((uv_handle_t*)&mes_u->sun_u.tim_u, 0);
-
-  uv_close((uv_handle_t*)&mes_u->nat_u.tim_u, 0);
-  uv_handle_type handle = uv_handle_get_type((uv_handle_t *)&mes_u->nat_u.pol_u);
-  if ( UV_UNKNOWN_HANDLE !=  handle) {
-    uv_close((uv_handle_t*)&mes_u->nat_u.pol_u, 0);
-  }
+  uv_udp_recv_stop(&mes_u->wax_u);
   uv_close((uv_handle_t*)&mes_u->tim_u, _mesa_exit_cb);
+  uv_close((uv_handle_t*)&mes_u->wax_u, 0);
 }
 
 static void
@@ -2352,27 +2347,9 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
 {
   c3_w pip_w = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
-  if ( 1 == hop_y ) {
-    c3_etch_word(pag_u->sot_u, pip_w);
-    c3_etch_short(pag_u->sot_u + 4, por_s);
-    hed_u->nex_y = HOP_SHORT;
-    return;
-  }
-
-
-  // XX: leak
-  u3_mesa_hop_once* lan_y = c3_calloc(sizeof(u3_mesa_hop_once));
-
-  c3_etch_word(lan_y->dat_y, pip_w);
-  c3_etch_short(lan_y->dat_y, por_s);
-
-  lan_y->len_w = 6;
-
-  c3_realloc(&pag_u->man_u, pag_u->man_u.len_w + 8);
-  pag_u->man_u.dat_y[pag_u->man_u.len_w] = *lan_y;
-
-  pag_u->man_u.len_w++;
-
+  c3_etch_word(pag_u->sot_u, pip_w);
+  c3_etch_short(pag_u->sot_u + 4, por_s);
+  hed_u->nex_y = HOP_SHORT;
 }
 
 /* static c3_d avg_time() { */
@@ -2479,9 +2456,8 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
     _mesa_add_hop(pac_u->hed_u.hop_y, &pac_u->hed_u, &pac_u->pag_u, lan_u);
 
-    _mesa_send_pact(mes_u, pin_u->adr_u, per_u, pac_u);
+    _mesa_send_pact(mes_u, pin_u->adr_u, NULL, pac_u);
     _mesa_del_pit(mes_u, nam_u);
-    return;
   }
 
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);

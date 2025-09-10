@@ -388,6 +388,14 @@ _cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
   }
 }
 
+static inline __attribute__((always_inline)) void
+_cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
+{
+  if ( *a != *b ) {
+    u3a_wed(a, b);
+  }
+}
+
 /* _cr_sing_cape(): unifying equality with comparison deduplication
  *                  (tightly coupled to _cr_sing)
  */
@@ -456,7 +464,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -470,7 +478,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -559,7 +567,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -573,7 +581,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        u3a_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {

@@ -559,8 +559,10 @@ _main_getopt(c3_i argc, c3_c** argv)
 #endif
 
   if ( 0 != u3_Host.ops_u.fak_c ) {
-    if ( 28 < strlen(u3_Host.ops_u.fak_c) ) {
-      fprintf(stderr, "fake comets are forbidden\r\n");
+    if ( 28 < strlen(u3_Host.ops_u.fak_c) &&
+        ( 0 == u3_Host.ops_u.key_c && 
+          0 == u3_Host.ops_u.gen_c ) ) {
+      fprintf(stderr, "fake comets require a key file or key string\r\n");
       return c3n;
     }
     if ( 0 != u3_Host.ops_u.who_c ) {
@@ -632,13 +634,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
-    fprintf(stderr, "-H only makes sense when creating a new ship\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-k only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
-    fprintf(stderr, "-k only makes sense when creating a new ship\n");
+  if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-G and -k cannot be used together\n");
+    return c3n;
+  }
+
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
+    fprintf(stderr, "-H only makes sense when creating a new ship\n");
     return c3n;
   }
 
@@ -800,7 +807,8 @@ _cw_usage(c3_c* bin_c)
     "  %s dock %.*s              copy binary:\n",
     "  %s grab %.*s              measure memory usage:\n",
     "  %s info %.*s              print pier info:\n",
-    "  %s meld %.*s              deduplicate snapshot:\n",
+    "  %s meld %.*s              deduplicate and minimize snapshot:\n",
+    "  %s melt %.*s              deduplicate snapshot:\n",
     "  %s pack %.*s              defragment snapshot:\n",
     "  %s play %.*s              recompute events:\n",
     "  %s prep %.*s              prepare for upgrade:\n",
@@ -2005,7 +2013,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
   }
 }
 
-/* _cw_uniq(): deduplicate persistent nouns
+/* _cw_meld(): canonicalize persistent nouns and compact state.
 */
 static void
 _cw_meld(c3_i argc, c3_c* argv[])
@@ -2094,7 +2102,95 @@ _cw_meld(c3_i argc, c3_c* argv[])
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
 
-  u3a_print_memory(stderr, "urbit: meld: gained", u3u_meld());
+  u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr));
+
+  u3m_save();
+  u3_disk_exit(log_u);
+  u3m_stop();
+}
+
+/* _cw_melt(): canonicalize persistent nouns.
+*/
+static void
+_cw_melt(c3_i argc, c3_c* argv[])
+{
+  c3_i ch_i, lid_i;
+  c3_w arg_w;
+
+  static struct option lop_u[] = {
+    { "loom",      required_argument, NULL, c3__loom },
+    { "no-demand", no_argument,       NULL, 6 },
+    { "swap",      no_argument,       NULL, 7 },
+    { "swap-to",   required_argument, NULL, 8 },
+    { "gc-early",  no_argument,       NULL, 9 },
+    { NULL, 0, NULL, 0 }
+  };
+
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case 6: {  //  no-demand
+        u3_Host.ops_u.map = c3n;
+        u3C.wag_w |= u3o_no_demand;
+      } break;
+
+      case 7: {  //  swap
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+      } break;
+
+      case 8: {  //  swap-to
+        u3_Host.ops_u.eph = c3y;
+        u3C.wag_w |= u3o_swap;
+        u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  gc-early
+        u3C.wag_w |= u3o_check_corrupt;
+        break;
+      }
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
+  }
+
+  //  argv[optind] is always "melt"
+  //
+
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  u3C.wag_w |= u3o_hashless;
+
+  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+
+  u3a_print_memory(stderr, "urbit: melt: gained", u3_melt_all(stderr));
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -3147,6 +3243,7 @@ _cw_utils(c3_i argc, c3_c* argv[])
 
     case c3__info: _cw_info(argc, argv); return 1;
     case c3__meld: _cw_meld(argc, argv); return 1;
+    case c3__melt: _cw_melt(argc, argv); return 1;
     case c3__next: _cw_next(argc, argv); return 2; // continue on
     case c3__pack: _cw_pack(argc, argv); return 1;
     case c3__play: _cw_play(argc, argv); return 1;

@@ -4,7 +4,7 @@
     .dependencies = .{
         .h2o = .{
             .url = "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz",
-            .hash = "12206fb50c715a131282752c7cd92abe3f5647f3ac28ae5c56fdd231896c44fdb86d",
+            .hash = "N-V-__8AAFCFqAJvtQxxWhMSgnUsfNkqvj9WR_OsKK5cVv3S",
         },
         .libuv = .{
             .path = "../libuv",
@@ -16,12 +16,12 @@
             .path = "../curl",
         },
         .zlib = .{
-            .url = "https://github.com/allyourcodebase/zlib/archive/0918e87b7629b9c6a50a08edd0ce30d849758faf.tar.gz",
-            .hash = "122034ab2a12adf8016ffa76e48b4be3245ffd305193edba4d83058adbcfa749c107",
+            .url = "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz",
+            .hash = "zlib-1.3.1-ZZQ7lbYMAAB1hTSOKSXAKAgHsfDcyWNH_37ojw5WSpgR",
         },
         .sse2neon = .{
             .url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v1.5.1.tar.gz",
-            .hash = "1220ced40ef8af4a4565aa1a7de678d43478df9b26483c062db2dbdc58b42c822268",
+            .hash = "N-V-__8AAPihCgDO1A74r0pFZaoafeZ41DR435smSDwGLbLb",
         },
         .patches = .{
             .path = "./patches",
