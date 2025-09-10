@@ -20,6 +20,9 @@
         .pkg_noun = .{
             .path = "../noun",
         },
+        .pkg_past = .{
+            .path = "../past",
+        },
         .avahi = .{
             .path = "../../ext/avahi",
         },

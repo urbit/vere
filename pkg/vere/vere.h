@@ -515,6 +515,14 @@
       */
         typedef void (*u3_disk_news)(void*, c3_d, c3_o);
 
+      /* u3_disk_load_e: disk load mode.
+      */
+        typedef enum {
+          u3_dlod_boot = 0,                 //  load for boot
+          u3_dlod_epoc = 1,                 //  load for full replay
+          u3_dlod_last = 2                  //  load latest
+        } u3_disk_load_e;
+
       /* u3_disk: manage event persistence.
       */
         typedef struct _u3_disk {
@@ -612,7 +620,6 @@
       */
         typedef struct _u3_work {
           u3_auto*         car_u;               //  i/o drivers
-          uv_prepare_t     pep_u;               //  pre-loop
           uv_check_t       cek_u;               //  post-loop
           uv_idle_t        idl_u;               //  catchall XX uv_async_t?
           struct _u3_pier* pir_u;               //  pier backpointer
@@ -885,10 +892,15 @@
                      u3_ovum_peer news_f,
                      u3_ovum_bail bail_f);
 
-      /* u3_disk_init(): load or create pier directories and event log.
+      /* u3_disk_make(): make pier directories and event log.
+      */
+        c3_o
+        u3_disk_make(c3_c* pax_c);
+
+      /* u3_disk_load(): load pier directories, log, and snapshot.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c);
+        u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */
@@ -968,11 +980,6 @@
       */
         c3_z
         u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
-
-      /* u3_disk_kindly(): do the needful.
-      */
-        void
-        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
 
       /* u3_disk_chop(): delete all but the latest 2 epocs.
        */

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.4";
+const VERSION = "3.5";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -323,6 +323,12 @@ fn buildBinary(
         .copt = copts,
     });
 
+    const pkg_past = b.dependency("pkg_past", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
+
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
@@ -443,6 +449,7 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
+    urbit.linkLibrary(pkg_past.artifact("past"));
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
@@ -540,6 +547,11 @@ fn buildBinary(
             },
             // pkg_noun
             .{
+                .name = "palloc-test",
+                .file = "pkg/noun/palloc_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "equality-test",
                 .file = "pkg/noun/equality_tests.c",
                 .deps = noun_test_deps,
@@ -633,9 +645,18 @@ fn buildBinary(
                 }
             }
 
-
             if (t.os.tag == .windows) {
                 test_exe.linkSystemLibrary("ws2_32");
+            }
+
+            if (t.os.tag.isDarwin()) {
+                // Requires llvm@18 homebrew installation
+                if (cfg.asan or cfg.ubsan)
+                    test_exe.addLibraryPath(.{
+                        .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
+                    });
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
             test_exe.stack_size = 0;
@@ -647,9 +668,15 @@ fn buildBinary(
                 .files = &.{tst.file},
                 .flags = urbit_flags.items,
             });
+            const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
+            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+                //  disable libmalloc warnings
+                run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
+            }
             run_unit_tests.skip_foreign_checks = true;
             test_step.dependOn(&run_unit_tests.step);
+            test_step.dependOn(&exe_install.step);
         }
     }
 }

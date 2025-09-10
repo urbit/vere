@@ -288,13 +288,15 @@ _lord_plea_slog(u3_lord* god_u, u3_noun dat)
   u3_noun pri, tan;
   c3_w pri_w;
 
-  if (  (c3n == u3r_cell(dat, &pri, &tan))
-     || (c3n == u3r_safe_word(pri, &pri_w)) )
+  if (  (c3y == u3r_cell(dat, &pri, &tan))
+     && (c3y == u3r_safe_word(pri, &pri_w)) )
   {
-    return _lord_plea_foul(god_u, c3__slog, dat);
+    god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_w, u3k(tan));
   }
-
-  god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_w, u3k(tan));
+  else
+  {
+    u3l_log("%%bad-slog");
+  }
   u3z(dat);
 }
 

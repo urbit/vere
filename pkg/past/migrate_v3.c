@@ -1,46 +1,28 @@
-/// @file
+#include "v2.h"
+#include "v3.h"
+#include "options.h"
 
-#include "v3/manage.h"
-
-#include "v2/jets.h"
-#include "v2/nock.h"
-#include "v2/vortex.h"
-
-#include "v3/allocate.h"
-#include "v3/hashtable.h"
-#include "../version.h"
-#include "v3/vortex.h"
-#include "v2/allocate.h"
-
-/* u3m_v3_migrate: perform loom migration if necessary.
+/* u3_migrate_v3: perform loom migration if necessary.
 */
 void
-u3m_v3_migrate(void)
+u3_migrate_v3(void)
 {
+  u3_v2_load(u3C.wor_i);
+
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
-
-  c3_w *mem_w = u3_Loom + u3a_v3_walign;
-  c3_w  len_w = u3C.wor_i - u3a_v3_walign;
-  c3_w  suz_w = c3_wiseof(u3v_v2_home);
-  c3_w *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v3_balign, C3_ALGLO);
-
-  //  old road
-  u3v_v2_home* hum_u = (u3v_v2_home*)mut_w;
-  u3a_v2_road* rud_u = &hum_u->rod_u;
-
-  //  set v2 globals
-  u3H_v2 = (void *)mut_w;
-  u3R_v2 = &u3H_v2->rod_u;
-  u3R_v2->cap_p = u3R_v2->mat_p = u3a_v2_outa(u3H_v2);
-
-  u3R = (u3a_road*)u3R_v2;
-  u3H = (u3v_home*)u3H_v2;
-  u3a_ream();
+  //  set globals (required for aliased functions)
+  u3R_v3 = (u3a_v3_road*)u3R_v2;
+  u3H_v3 = (u3v_v3_home*)u3H_v2;
+  u3a_v2_ream();
 
   //  free bytecode caches in old road
   u3j_v2_reclaim();
   u3n_v2_reclaim();
+
+  //  old road
+  u3v_v2_home* hum_u = u3H_v2;
+  u3a_v2_road* rud_u = &hum_u->rod_u;
 
   //  new home, new road
   u3v_v3_home hom_u = {0};
@@ -93,6 +75,8 @@ u3m_v3_migrate(void)
   hom_u.rod_u = rod_u;
 
   //  place the new home over the old one
+  c3_w *mem_w = u3_Loom_v3 + u3a_v3_walign;
+  c3_w  len_w = u3C.wor_i - u3a_v3_walign;
   c3_w  siz_w = c3_wiseof(u3v_v3_home);
   c3_w *mat_w = c3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);
   memcpy(mat_w, &hom_u, sizeof(u3v_v3_home));

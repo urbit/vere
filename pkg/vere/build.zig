@@ -54,6 +54,12 @@ pub fn build(b: *std.Build) !void {
         .copt = copts,
     });
 
+    const pkg_past = b.dependency("pkg_past", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
+
     const avahi = b.dependency("avahi", .{
         .target = target,
         .optimize = optimize,
@@ -158,6 +164,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
+    pkg_vere.linkLibrary(pkg_past.artifact("past"));
     pkg_vere.linkLibC();
 
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -254,5 +261,4 @@ const install_headers = [_][]const u8{
     "mars.h",
     "mdns.h",
     "vere.h",
-    "verstable.h",
 };

@@ -1,9 +1,6 @@
 /// @file
 
 #include "manage.h"
-#include "v2/manage.h"
-#include "v3/manage.h"
-#include "v4/manage.h"
 
 #include <ctype.h>
 #ifndef U3_OS_windows
@@ -512,7 +509,7 @@ u3m_mark(void)
   qua_u[0] = u3v_mark();
   qua_u[1] = u3j_mark();
   qua_u[2] = u3n_mark();
-  qua_u[3] = u3a_mark_road();
+  qua_u[3] = u3a_mark_road();  // NB: must be the last thing marked
   qua_u[4] = NULL;
 
   return qua_u;
@@ -523,6 +520,12 @@ u3m_mark(void)
 static void
 _pave_parts(void)
 {
+  u3a_init_heap();
+
+  if ( &(u3H->rod_u) != u3R ) {
+    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
+  }
+
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
   u3R->jed.war_p = u3h_new();
@@ -532,107 +535,36 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
 }
 
-/* _pave_road(): writes road boundaries to loom mem (stored at mat_w)
-*/
-static u3_road*
-_pave_road(c3_w* rut_w, c3_w* mat_w, c3_w* cap_w, c3_w siz_w)
-{
-  c3_dessert(((uintptr_t)rut_w & u3a_balign-1) == 0);
-  u3_road* rod_u = (void*) mat_w;
-
-  //  enable in case of corruption
-  //
-  // memset(mem_w, 0, 4 * len_w);
-  memset(rod_u, 0, sizeof(c3_w) * siz_w);
-
-  //  the top and bottom of the heap are initially the same
-  //
-  rod_u->rut_p = u3of(c3_w, rut_w);
-  rod_u->hat_p = u3of(c3_w, rut_w);
-
-
-  rod_u->mat_p = u3of(c3_w, mat_w);  //  stack bottom
-  rod_u->cap_p = u3of(c3_w, cap_w);  //  stack top
-
-  _rod_vaal(rod_u);
-  return rod_u;
-}
-
-/* _pave_north(): calculate boundaries and initialize north road.
-
-   mem_w - the "beginning" of your loom (its lowest address). Corresponds to rut
-     in a north road.
-   siz_w - the size in bytes of your road record (or home record in the case of
-     paving home).
-   len_w - size of your loom in words
-*/
-static u3_road*
-_pave_north(c3_w* mem_w, c3_w siz_w, c3_w len_w, c3_o kid_o)
-{
-  //  in a north road, the heap is low and the stack is high
-  //
-  //    the heap starts at the base memory pointer [mem_w];
-  //    the stack starts at the end of the memory segment,
-  //    minus space for the road structure [siz_w]
-  //
-  //    00~~~|R|---|H|######|C|+++|M|~~~FF
-  //                                ^--u3R which _pave_road returns (u3H for home road)
-  //
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
-  c3_w* rut_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
-  c3_w* cap_w = mat_w;
-
-  if ( c3y == kid_o ) {
-    u3e_ward(u3of(c3_w, rut_w) - 1, u3of(c3_w, cap_w));
-  }
-
-  return _pave_road(rut_w, mat_w, cap_w, siz_w);
-}
-
-/* _pave_south(): calculate boundaries and initialize south road.
-
-   mem_w - the "beginning" of your loom (its lowest address). Corresponds to mat
-     in a south road.
-   siz_w - the size in bytes of your road record (or home record in the case of
-     paving home).
-   len_w - size of your loom in words
-*/
-static u3_road*
-_pave_south(c3_w* mem_w, c3_w siz_w, c3_w len_w)
-{
-  //  in a south road, the heap is high and the stack is low
-  //
-  //    the heap starts at the end of the memory segment;
-  //    the stack starts at the base memory pointer [mem_w],
-  //    and ends after the space for the road structure [siz_w]
-  //
-  //    00~~~|M|+++|C|######|H|---|R|~~~FFF
-  //         ^---u3R which _pave_road returns
-  //
-  c3_w* mat_w = c3_align(mem_w, u3a_balign, C3_ALGHI);
-  c3_w* rut_w = c3_align(mem_w + len_w, u3a_balign, C3_ALGLO);
-  c3_w* cap_w = mat_w + siz_w;
-
-  u3e_ward(u3of(c3_w, cap_w) - 1, u3of(c3_w, rut_w));
-
-  return _pave_road(rut_w, mat_w, cap_w, siz_w);
-}
-
 /* _pave_home(): initialize pristine home road.
 */
 static void
 _pave_home(void)
 {
-  c3_w* mem_w = u3_Loom + u3a_walign;
-  c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3a_walign;
+  u3_post top_p = u3C.wor_i - u3a_walign;
+  u3_post bot_p = 1U << u3a_page;
 
-  u3H = (void *)_pave_north(mem_w, siz_w, len_w, c3n);
-  u3H->ver_w = U3V_VERLAT;
+  u3H = u3to(u3v_home, 0);
+  memset(u3H, 0, sizeof(u3v_home));
+  u3H->ver_d = U3V_VERLAT;
+
+  //  pam_d bits: { word-size[1], virtual-bits[2], page-size[3], ... }
+  //    word-size: 0==32, 1==64
+  //    page-size: relative binary-log in bytes
+  //
+  u3H->pam_d = 0
+             ^ (u3a_vits << 1)
+             ^ ((u3a_page + 2 - 12) << 3);
+
   u3R = &u3H->rod_u;
+
+  u3R->rut_p = u3R->hat_p = bot_p;
+  u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
 }
+
+STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
+               "home road size" );
 
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
                "home road alignment" );
@@ -642,66 +574,67 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
 static void
 _find_home(void)
 {
-  c3_w ver_w = *(u3_Loom + u3C.wor_i - 1);
-  c3_o mig_o = c3y;  //  did we migrate?
+  c3_d ver_d = *((c3_d*)u3_Loom);
 
-  switch ( ver_w ) {
-    case U3V_VER1: u3m_v2_migrate();
-    case U3V_VER2: u3m_v3_migrate();
-    case U3V_VER3: u3m_v4_migrate();
-    case U3V_VER4: {
-      mig_o = c3n;
-      break;
-    }
-    default: {
-      fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have %u, need %u\r\n",
-                      ver_w, U3V_VERLAT);
-#ifdef U3_OS_windows
-      mig_o = c3n;
-#else
-      abort();
-#endif
-    }
+  if ( ver_d != U3V_VERLAT ) {
+    fprintf(stderr, "loom: checkpoint version mismatch: "
+                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                    ver_d, U3V_VERLAT);
+    abort();
+  }
+
+  c3_d pam_d = *((c3_d*)u3_Loom + 1);
+
+  if ( pam_d & 1 ) {
+    fprintf(stderr, "word-size mismatch: 64-bit snapshot in 32-bit binary\r\n");
+    abort();
+  }
+  if ( ((pam_d >> 1) & 3) != u3a_vits ) {
+    fprintf(stderr, "virtual-bits mismatch: %u in snapshot; %u in binary\r\n",
+                    (c3_w)((pam_d >> 1) & 3), u3a_vits);
+    abort();
+  }
+  if ( (12 + ((pam_d >> 3) & 7)) != (u3a_page + 2) ) {
+    fprintf(stderr, "page-size mismatch: %u  in snapshot; %u in binary\r\n",
+                    1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
+    abort();
   }
 
   //  NB: the home road is always north
   //
-  c3_w* mem_w = u3_Loom + u3a_walign;
-  c3_w  siz_w = c3_wiseof(u3v_home);
-  c3_w  len_w = u3C.wor_i - u3a_walign;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_balign, C3_ALGLO);
+  {
+    u3_post top_p = u3C.wor_i - u3a_walign;
 
-  u3H = (void *)mat_w;
-  u3R = &u3H->rod_u;
+    u3H = u3to(u3v_home, 0);
+    u3R = &u3H->rod_u;
 
-  //  this looks risky, but there are no legitimate scenarios
-  //  where it's wrong
-  //
-  u3R->cap_p = u3R->mat_p = u3a_outa(u3H);
+    //  this looks risky, but there are no legitimate scenarios
+    //  where it's wrong
+    //
+    u3R->mat_p = u3R->cap_p = top_p;
+  }
 
   //  check for obvious corruption
   //
-  if ( c3n == mig_o ) {
-    c3_w    nor_w, sou_w;
+  {
+    c3_w    nor_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
 
     nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
-    sou_w = u3P.pag_w - (hig_p >> u3a_page);
 
-    if ( (nor_w > u3P.nor_u.pgs_w) || (sou_w != u3P.sou_u.pgs_w) ) {
-      fprintf(stderr, "loom: corrupt size north (%u, %u) south (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w, sou_w, u3P.sou_u.pgs_w);
+    if ( nor_w > u3P.img_u.pgs_w ) {
+      fprintf(stderr, "loom: corrupt size (%u, %u)\r\n",
+                      nor_w, u3P.img_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
 
     //  the north segment is in-order on disk; it being oversized
     //  doesn't necessarily indicate corruption.
     //
-    if ( nor_w < u3P.nor_u.pgs_w ) {
+    if ( nor_w < u3P.img_u.pgs_w ) {
       fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
-                      nor_w, u3P.nor_u.pgs_w);
+                      nor_w, u3P.img_u.pgs_w);
     }
 
     //  XX move me
@@ -1073,40 +1006,65 @@ u3m_error(c3_c* str_c)
 void
 u3m_leap(c3_w pad_w)
 {
-  c3_w     len_w; /* the length of the new road (avail - (pad + wiseof(u3a_road))) */
   u3_road* rod_u;
 
   _rod_vaal(u3R);
 
-  /* Measure the pad - we'll need it.
-  */
+  //  push a new road struct onto the stack
+  //
   {
-#if 0
-    if ( pad_w < u3R->all.fre_w ) {
-      pad_w = 0;
+    u3a_pile pil_u;
+    c3_p     ptr_p;
+    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    ptr_p = (c3_p)u3a_push(&pil_u);
+
+    //  XX add push_once, push_once_aligned
+    //
+    if ( ptr_p & 15 ) {
+      ptr_p &= ~15;
+      if ( c3n == u3a_is_north(u3R) ) {
+        ptr_p += 16;
+      }
     }
-    else {
-      pad_w -= u3R->all.fre_w;
-    }
-#endif
-    if ( (pad_w + c3_wiseof(u3a_road)) >= u3a_open(u3R) ) {
-      /* not enough storage to leap */
-      u3m_bail(c3__meme);
-    }
-    pad_w += c3_wiseof(u3a_road);
-    len_w = u3a_open(u3R) - pad_w;
-    c3_align(len_w, u3a_walign, C3_ALGHI);
+
+    rod_u = (void*)ptr_p;
+    memset(rod_u, 0, sizeof(u3a_road));
   }
 
   /* Allocate a region on the cap.
   */
   {
-    u3p(c3_w) bot_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
+    u3p(c3_w) bot_p, top_p;            /* S: bot_p = new mat. N: bot_p = new rut  */
 
     if ( c3y == u3a_is_north(u3R) ) {
-      bot_p = u3R->hat_p + pad_w;
+      //  pad and page-align the hat
+      //
+      bot_p  = u3R->hat_p + pad_w;
+      bot_p +=   (1U << u3a_page) - 1;
+      bot_p &= ~((1U << u3a_page) - 1);
+      top_p  = u3R->cap_p;
+      top_p &= ~((1U << u3a_page) - 1);
 
-      rod_u = _pave_south(u3a_into(bot_p), c3_wiseof(u3a_road), len_w);
+      if ( bot_p >= top_p ) {
+        u3m_bail(c3__meme);
+      }
+
+      u3e_ward(bot_p - 1, top_p);
+      rod_u->mat_p = rod_u->cap_p = bot_p;
+      rod_u->rut_p = rod_u->hat_p = top_p;
+
+      //  in a south road, the heap is high and the stack is low
+      //
+      //    the heap starts at the end of the memory segment;
+      //    the stack starts at the base memory pointer [mem_w],
+      //    and ends after the space for the road structure [siz_w]
+      //
+      //    00~~~|M|+++|C|######|H|---|R|~~~FFF
+      //         ^---u3R which _pave_road returns
+      //
+      //    XX obsolete?
+
+      _rod_vaal(rod_u);
 #if 0
       fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -1114,9 +1072,34 @@ u3m_leap(c3_w pad_w)
 #endif
     }
     else {
-      bot_p = u3R->cap_p;
+      bot_p  = u3R->cap_p;
+      bot_p +=   (1U << u3a_page) - 1;
+      bot_p &= ~((1U << u3a_page) - 1);
+      top_p  = u3R->hat_p - pad_w;
+      top_p &= ~((1U << u3a_page) - 1);
 
-      rod_u = _pave_north(u3a_into(bot_p), c3_wiseof(u3a_road), len_w, c3y);
+      //  XX moar
+      if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
+        u3m_bail(c3__meme);
+      }
+
+      u3e_ward(bot_p - 1, top_p);
+      rod_u->rut_p = rod_u->hat_p = bot_p;
+      rod_u->mat_p = rod_u->cap_p = top_p;
+
+      //  in a north road, the heap is low and the stack is high
+      //
+      //    the heap starts at the base memory pointer [mem_w];
+      //    the stack starts at the end of the memory segment,
+      //    minus space for the road structure [siz_w]
+      //
+      //    00~~~|R|---|H|######|C|+++|M|~~~FF
+      //                                ^--u3R which _pave_road returns (u3H for home road)
+      //
+      //    XX obsolete?
+
+      _rod_vaal(rod_u);
+
 #if 0
       fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
@@ -1173,9 +1156,9 @@ u3m_fall(void)
   */
   fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%x, was 0x%x)\r\n",
           _(u3a_is_north(u3R)) ? "north" : "south",
-          u3R,
+          (void*)u3R,
           _(u3a_is_north(u3to(u3_road, u3R->par_p))) ? "north" : "south",
-          u3to(u3_road, u3R->par_p),
+          u3to(void, u3R->par_p),
           u3R->hat_p,
           u3R->rut_p);
   _print_diff("unused free", u3R->hat_p, u3R->cap_p);
@@ -1247,6 +1230,7 @@ u3m_love(u3_noun pro)
 
   //  pop the stack
   //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
 
@@ -1713,7 +1697,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
-  u3m_mark();
+  u3a_mark_init();
   {
     va_list vap;
     u3_noun tur;
@@ -1729,6 +1713,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
     }
     va_end(vap);
   }
+  u3m_mark(); // XX leaks
   u3a_sweep();
 }
 
@@ -2194,33 +2179,15 @@ u3m_save(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
+  u3a_print_memory(stderr, "loom: save: idle", u3a_idle(u3R));
+
+  u3a_wait();
+
   u3_assert(u3R == &u3H->rod_u);
 
-#if 1  // XX redundant
-  {
-    c3_w low_w = u3a_heap(u3R);  // old u3m_water()
-    c3_w hig_w = u3a_temp(u3R) + c3_wiseof(u3v_home);
-
-    c3_w nox_w = (low_w + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sox_w = (hig_w + ((1 << u3a_page) - 1)) >> u3a_page;
-
-    c3_w nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
-    c3_w sop_w = hig_p >> u3a_page;
-    c3_w sor_w = u3P.pag_w - sop_w;
-
-    if ( (nox_w < nor_w) || (sox_w < sor_w) ) {
-      fprintf(stderr, "loom: save strange nox %u nor %u sox %u sor %u\r\n",
-                      nox_w, nor_w, sox_w, sor_w);
-    }
-    else if ( (nox_w > nor_w) || (sox_w > sor_w) ) {
-      fprintf(stderr, "loom: save wrong nox %u nor %u sox %u sor %u\r\n",
-                      nox_w, nor_w, sox_w, sor_w);
-      u3_assert(!"busted");
-    }
-  }
-#endif
-
   u3e_save(low_p, hig_p);
+
+  u3a_dash();
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2389,6 +2356,8 @@ u3m_init(size_t len_i)
   _cm_limits();
   _cm_signals();
   _cm_crypto();
+
+  u3a_init_once();
 
   //  make sure GMP uses our malloc.
   //
