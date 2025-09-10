@@ -554,28 +554,58 @@ uint32_t getppid()
   return ppid;
 }
 
-ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-  off_t orig = lseek(fd, 0, SEEK_CUR);
-  if (orig == (off_t)-1) {
+ssize_t pread(int fd, void *buf, size_t count, off_t offset)
+{
+  DWORD len = 0;
+
+  OVERLAPPED overlapped = {0};
+
+  overlapped.OffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
+                          (DWORD)0 : (DWORD)((offset >> 32) & 0xFFFFFFFFL);
+  overlapped.Offset     = (sizeof(off_t) <= sizeof(DWORD)) ?
+                          (DWORD)offset : (DWORD)(offset & 0xFFFFFFFFL);
+
+  HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+  if ( INVALID_HANDLE_VALUE == h ) {
+    errno = EBADF;
     return -1;
   }
-  if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
-    return -1;
+
+  if ( !ReadFile(h, buf, count, &len, &overlapped) ) {
+    DWORD err = GetLastError();
+
+    if ( ERROR_HANDLE_EOF != err ) {
+      errno = err_win_to_posix(err);
+      return -1;
+    }
   }
-  ssize_t res = read(fd, buf, count);
-  lseek(fd, orig, SEEK_SET);  // Restore original offset, ignore potential error
-  return res;
+
+  return (ssize_t)len;
 }
 
-ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-  off_t orig = lseek(fd, 0, SEEK_CUR);
-  if (orig == (off_t)-1) {
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
+{
+  DWORD len = 0;
+
+  OVERLAPPED overlapped = {0};
+
+  overlapped.OffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
+                          (DWORD)0 : (DWORD)((offset >> 32) & 0xFFFFFFFFL);
+  overlapped.Offset     = (sizeof(off_t) <= sizeof(DWORD)) ?
+                          (DWORD)offset : (DWORD)(offset & 0xFFFFFFFFL);
+
+  HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+  if ( INVALID_HANDLE_VALUE == h ) {
+    errno = EBADF;
     return -1;
   }
-  if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+
+  if ( !WriteFile(h, buf, count, &len, &overlapped) ) {
+    errno = err_win_to_posix(GetLastError());
     return -1;
   }
-  ssize_t res = write(fd, buf, count);
-  lseek(fd, orig, SEEK_SET);  // Restore original offset, ignore potential error
-  return res;
+
+  return (ssize_t)len;
 }
