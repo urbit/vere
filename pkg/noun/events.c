@@ -99,10 +99,6 @@
 #include "murmur3.h"
 #include "options.h"
 
-#ifdef U3_OS_windows
-#include "platform/windows/pio.h"
-#endif
-
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
 ** _ce_page:      byte length of a single page

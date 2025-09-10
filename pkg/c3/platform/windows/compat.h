@@ -15,6 +15,9 @@ void *memmem(const void *h0, size_t k, const void *n0, size_t l);
 
 uint32_t getppid();
 
+ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+
 #define SIGUSR1       10
 #define SIGALRM       14
 #define SIGVTALRM     26
