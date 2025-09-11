@@ -10,7 +10,7 @@
 
   union sing {
     float32_t s;
-    c3_w_tmp c;
+    c3_w_new c;
   };
 
   static inline c3_t
@@ -24,13 +24,13 @@
   {
     if ( _nan_test(a) )
     {
-      *(c3_w_tmp*)(&a) = SINGNAN;
+      *(c3_w_new*)(&a) = SINGNAN;
     }
     return a;
   }
 
   static inline void
-  _set_rounding(c3_w_tmp a)
+  _set_rounding(c3_y a)
   {
     switch ( a )
     {
@@ -61,11 +61,11 @@
   {
     union sing c, d, e;
     _set_rounding(r);
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
     e.s = _nan_unify(f32_add(c.s, d.s));
 
-    return u3i_words_tmp(1, &e.c);
+    return u3i_words_new(1, &e.c);
   }
 
   u3_noun
@@ -93,11 +93,11 @@
   {
     union sing c, d, e;
     _set_rounding(r);
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
     e.s = _nan_unify(f32_sub(c.s, d.s));
 
-    return u3i_words_tmp(1, &e.c);
+    return u3i_words_new(1, &e.c);
   }
 
   u3_noun
@@ -125,11 +125,11 @@
   {
     union sing c, d, e;
     _set_rounding(r);
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
     e.s = _nan_unify(f32_mul(c.s, d.s));
 
-    return u3i_words_tmp(1, &e.c);
+    return u3i_words_new(1, &e.c);
   }
 
   u3_noun
@@ -157,11 +157,11 @@
   {
     union sing c, d, e;
     _set_rounding(r);
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
     e.s = _nan_unify(f32_div(c.s, d.s));
 
-    return u3i_words_tmp(1, &e.c);
+    return u3i_words_new(1, &e.c);
   }
 
   u3_noun
@@ -188,10 +188,10 @@
   {
     union sing c, d;
     _set_rounding(r);
-    c.c = u3r_word_tmp(0, a);
+    c.c = u3r_word_new(0, a);
     d.s = _nan_unify(f32_sqrt(c.s));
 
-    return u3i_words_tmp(1, &d.c);
+    return u3i_words_new(1, &d.c);
   }
 
   u3_noun
@@ -219,12 +219,12 @@
   {
     union sing d, e, f, g;
     _set_rounding(r);
-    d.c = u3r_word_tmp(0, a);
-    e.c = u3r_word_tmp(0, b);
-    f.c = u3r_word_tmp(0, c);
+    d.c = u3r_word_new(0, a);
+    e.c = u3r_word_new(0, b);
+    f.c = u3r_word_new(0, c);
     g.s = _nan_unify(f32_mulAdd(d.s, e.s, f.s));
 
-    return u3i_words_tmp(1, &g.c);
+    return u3i_words_new(1, &g.c);
   }
 
   u3_noun
@@ -251,8 +251,8 @@
             u3_atom b)
   {
     union sing c, d;
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
 
     return __(f32_lt(c.s, d.s));
   }
@@ -280,8 +280,8 @@
             u3_atom b)
   {
     union sing c, d;
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
 
     return __(f32_le(c.s, d.s));
   }
@@ -309,8 +309,8 @@
             u3_atom b)
   {
     union sing c, d;
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
 
     return __(f32_eq(c.s, d.s));
   }
@@ -338,8 +338,8 @@
             u3_atom b)
   {
     union sing c, d;
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
 
     return __(f32_le(d.s, c.s));
   }
@@ -367,8 +367,8 @@
             u3_atom b)
   {
     union sing c, d;
-    c.c = u3r_word_tmp(0, a);
-    d.c = u3r_word_tmp(0, b);
+    c.c = u3r_word_new(0, a);
+    d.c = u3r_word_new(0, b);
 
     return __(f32_lt(d.s, c.s));
   }
