@@ -47,8 +47,8 @@
       innpad[padwords-1] = 0x36363636 >> (8 * (4 - trail));
       outpad[padwords-1] = 0x5c5c5c5c >> (8 * (4 - trail));
     }
-    u3_atom innkey = u3kc_mix(u3k(key), u3i_words_tmp(padwords, innpad));
-    u3_atom outkey = u3kc_mix(    key , u3i_words_tmp(padwords, outpad));
+    u3_atom innkey = u3kc_mix(u3k(key), u3i_words_new(padwords, innpad));
+    u3_atom outkey = u3kc_mix(    key , u3i_words_new(padwords, outpad));
 
     // append inner padding to message, then hash
     u3_atom innmsg = u3ka_add(u3kc_lsh(3, wid, innkey), dat);
