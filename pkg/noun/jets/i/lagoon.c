@@ -19,12 +19,12 @@
 
   union half {
     float16_t h;
-    c3_w_tmp c;
+    c3_s c;
   };
 
   union sing {
     float32_t s;
-    c3_w_tmp c;
+    c3_w_new c;
   };
 
   union doub {
@@ -39,7 +39,7 @@
 
   //  $?(%n %u %d %z %a)
   static inline void
-  _set_rounding(c3_w_tmp a)
+  _set_rounding(c3_y a)
   {
     // We could use SoftBLAS set_rounding() to set the SoftFloat
     // mode as well, but it's more explicit to do it here since
@@ -580,7 +580,7 @@
     c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
     u3r_bytes(0, syz_x, x_bytes, x_data);
 
-    c3_w_tmp min_idx = 0;
+    c3_d min_idx = 0;
 
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {
@@ -653,7 +653,7 @@
     c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
     u3r_bytes(0, syz_x, x_bytes, x_data);
 
-    c3_w_tmp max_idx = 0;
+    c3_d max_idx = 0;
 
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {
@@ -735,14 +735,14 @@
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
-          r_data = u3nc(u3i_word_tmp(x_val16.v), r_data);
+          r_data = u3nc(u3i_word_new(x_val16.v), r_data);
         }
         break;
 
       case 5:
         for (c3_d i = 0; i < len_x; i++) {
           float32_t x_val32 = ((float32_t*)x_bytes)[i];
-          r_data = u3nc(u3i_word_tmp(x_val32.v), r_data);
+          r_data = u3nc(u3i_word_new(x_val32.v), r_data);
         }
         break;
 
