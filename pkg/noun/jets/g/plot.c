@@ -324,7 +324,7 @@ u3qg_plot_met(u3_noun a_p, u3_noun b_p)
   c3_g out_g;
   c3_n sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
 
-  return u3nc(out_g, u3i_word_tmp(sep_w));
+  return u3nc(out_g, u3i_word_new(sep_w));
 }
 
 u3_noun
@@ -350,7 +350,7 @@ u3qg_plot_fax(u3_noun a_p, u3_noun b_p)
 
   _fax_pair(&sab_u, NULL, 0, a_p, b_p, &out_g);
 
-  return u3nt(u3i_slab_mint(&sab_u), out_g, u3i_word_tmp(sep_w));
+  return u3nt(u3i_slab_mint(&sab_u), out_g, u3i_note(sep_w));
 }
 
 u3_noun
