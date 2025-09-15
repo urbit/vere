@@ -67,10 +67,10 @@
       return u3m_bail(c3__fail);
     }
     else if ( !(_cqear_unpack_type(&typ_u, type) &&
-                u3r_word_tmp_fit(&ver_w, version) &&
-                u3r_word_tmp_fit(&ted_w, threads) &&
-                u3r_word_tmp_fit(&mem_w, mem_cost) &&
-                u3r_word_tmp_fit(&tim_w, time_cost)) ) {
+                u3r_word_new_fit(&ver_w, version) &&
+                u3r_word_new_fit(&ted_w, threads) &&
+                u3r_word_new_fit(&mem_w, mem_cost) &&
+                u3r_word_new_fit(&tim_w, time_cost)) ) {
       return u3_none;
     }
     else {
