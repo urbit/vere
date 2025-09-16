@@ -54,23 +54,6 @@ _foil_close(uv_file fil_f)
   }
 }
 
-/* _foil_path(): allocate path.
-*/
-static c3_c*
-_foil_path(u3_dire*    dir_u,
-           const c3_c* nam_c)
-{
-  c3_w_tmp  len_w = strlen(dir_u->pax_c);
-  c3_c* pax_c;
-
-  pax_c = c3_malloc(1 + len_w + 1 + strlen(nam_c));
-  strcpy(pax_c, dir_u->pax_c);
-  pax_c[len_w] = '/';
-  strcpy(pax_c + len_w + 1, nam_c);
-
-  return pax_c;
-}
-
 /* u3_foil_folder(): load directory, blockingly.  null if nonexistent.
 */
 u3_dire*
