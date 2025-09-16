@@ -75,7 +75,7 @@ _mars_quac(u3m_quac* mas_u)
   }
   list = u3kb_flop(list);
 
-  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word_tmp(mas_u->siz_w), list);
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word_tmp(mas_u->siz_n), list);
 
   c3_free(mas_u->nam_c);
   c3_free(mas_u->qua_u);
@@ -184,32 +184,32 @@ _mars_grab(u3_noun sac, c3_o pri_o)
       all_u[4] = var_u[3];
       c3_free(var_u);
 
-      c3_n tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
-                     + all_u[3]->siz_w + all_u[4]->siz_w;
+      c3_n tot_w = all_u[0]->siz_n + all_u[1]->siz_n + all_u[2]->siz_n
+                     + all_u[3]->siz_n + all_u[4]->siz_n;
 
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
-      all_u[5]->siz_w = sac_w * sizeof(c3_n);
+      all_u[5]->siz_n = sac_w * sizeof(c3_n);
 
-      tot_w += all_u[5]->siz_w;
+      tot_w += all_u[5]->siz_n;
 
       all_u[6] = c3_calloc(sizeof(*all_u[6]));
       all_u[6]->nam_c = strdup("total marked");
-      all_u[6]->siz_w = tot_w;
+      all_u[6]->siz_n = tot_w;
 
       all_u[7] = c3_calloc(sizeof(*all_u[7]));
       all_u[7]->nam_c = strdup("free lists");
-      all_u[7]->siz_w = u3a_idle(u3R) * sizeof(c3_n);
+      all_u[7]->siz_n = u3a_idle(u3R) * sizeof(c3_n);
 
       //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
       //  only u3a_mark_done() is required
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
-      all_u[8]->siz_w = u3a_sweep() * sizeof(c3_n);
+      all_u[8]->siz_n = u3a_sweep() * sizeof(c3_n);
 
       all_u[9] = c3_calloc(sizeof(*all_u[9]));
       all_u[9]->nam_c = strdup("loom");
-      all_u[9]->siz_w = u3C.wor_i * sizeof(c3_n);
+      all_u[9]->siz_n = u3C.wor_i * sizeof(c3_n);
 
       all_u[10] = NULL;
 
@@ -2019,7 +2019,7 @@ u3_mars_grab(c3_o pri_o)
     c3_n tot_w = 0;
     c3_n i_w = 0;
     while ( var_u[i_w] != NULL ) {
-      tot_w += var_u[i_w]->siz_w;
+      tot_w += var_u[i_w]->siz_n;
       u3a_quac_free(var_u[i_w]);
       i_w++;
     }

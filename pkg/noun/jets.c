@@ -2337,28 +2337,28 @@ u3j_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
-  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * 4;
+  qua_u[0]->siz_n = u3h_mark(u3R->jed.war_p) * 4;
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("cold jet state");
-  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * 4;
+  qua_u[1]->siz_n = u3h_mark(u3R->jed.cod_p) * 4;
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("hank cache");
-  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * 4;
+  qua_u[2]->siz_n = u3h_mark(u3R->jed.han_p) * 4;
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * 4;
+  qua_u[3]->siz_n = u3h_mark(u3R->jed.bas_p) * 4;
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
-  u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
-  qua_u[4]->siz_w *= 4;
+  u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_n);
+  qua_u[4]->siz_n *= 4;
 
   c3_l sum_l = 0;
   for ( c3_l i_l = 0; i_l < 5; i_l++ ) {
-    sum_l += qua_u[i_l]->siz_w;
+    sum_l += qua_u[i_l]->siz_n;
   }
 
   u3m_quac* tot_u = c3_calloc(sizeof(*tot_u));
@@ -2367,20 +2367,20 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[5]->siz_n = u3h_mark(u3R->jed.hot_p) * 4;
 
-    sum_l += qua_u[5]->siz_w;
+    sum_l += qua_u[5]->siz_n;
 
     qua_u[6] = NULL;
 
-    tot_u->siz_w = sum_l;
+    tot_u->siz_n = sum_l;
     tot_u->qua_u = qua_u;
 
     return tot_u;
   } else {
     qua_u[5] = NULL;
 
-    tot_u->siz_w = sum_l;
+    tot_u->siz_n = sum_l;
     tot_u->qua_u = qua_u;
 
     return tot_u;

@@ -1576,7 +1576,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
     else if ( c3y == it_mas ) {
       c3_n siz_w = _ca_prof_mark(tt_mas);
       pro_u->nam_c = u3r_string(h_mas);
-      pro_u->siz_w = siz_w*sizeof(c3_n);
+      pro_u->siz_n = siz_w*sizeof(c3_n);
       pro_u->qua_u = NULL;
       return pro_u;
 
@@ -1591,7 +1591,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
           bad_t = 1;
         } else {
           pro_u->qua_u = c3_realloc(pro_u->qua_u, (i_w + 2) * sizeof(pro_u->qua_u));
-          pro_u->siz_w += new_u->siz_w;
+          pro_u->siz_n += new_u->siz_n;
           pro_u->qua_u[i_w] = new_u;
         }
         tt_mas = u3t(tt_mas);
@@ -1630,11 +1630,11 @@ u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
 
-  if ( mas_u->siz_w ) {
+  if ( mas_u->siz_n ) {
     fprintf(fil_u, "%*s%s: ", den_w, "", mas_u->nam_c);
 
     if ( mas_u->qua_u == NULL ) {
-      _ca_print_memory(fil_u, mas_u->siz_w);
+      _ca_print_memory(fil_u, mas_u->siz_n);
     } else {
       fprintf(fil_u, "\r\n");
       c3_n i_w = 0;
@@ -1643,7 +1643,7 @@ u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u)
         i_w++;
       }
       fprintf(fil_u, "%*s--", den_w, "");
-      _ca_print_memory(fil_u, mas_u->siz_w);
+      _ca_print_memory(fil_u, mas_u->siz_n);
     }
   }
 }
@@ -1657,39 +1657,39 @@ u3a_mark_road()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
-  qua_u[0]->siz_w = u3a_mark_noun(u3R->ski.gul) * sizeof(c3_n);
+  qua_u[0]->siz_n = u3a_mark_noun(u3R->ski.gul) * sizeof(c3_n);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("trace stack");
-  qua_u[1]->siz_w = u3a_mark_noun(u3R->bug.tax) * sizeof(c3_n);
+  qua_u[1]->siz_n = u3a_mark_noun(u3R->bug.tax) * sizeof(c3_n);
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("trace buffer");
-  qua_u[2]->siz_w = u3a_mark_noun(u3R->bug.mer) * sizeof(c3_n);
+  qua_u[2]->siz_n = u3a_mark_noun(u3R->bug.mer) * sizeof(c3_n);
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("profile batteries");
-  qua_u[3]->siz_w = u3a_mark_noun(u3R->pro.don) * sizeof(c3_n);
+  qua_u[3]->siz_n = u3a_mark_noun(u3R->pro.don) * sizeof(c3_n);
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("profile doss");
-  qua_u[4]->siz_w = u3a_mark_noun(u3R->pro.day) * sizeof(c3_n);
+  qua_u[4]->siz_n = u3a_mark_noun(u3R->pro.day) * sizeof(c3_n);
 
   qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
   qua_u[5]->nam_c = strdup("new profile trace");
-  qua_u[5]->siz_w = u3a_mark_noun(u3R->pro.trace) * sizeof(c3_n);
+  qua_u[5]->siz_n = u3a_mark_noun(u3R->pro.trace) * sizeof(c3_n);
 
   qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
   qua_u[6]->nam_c = strdup("transient memoization cache");
-  qua_u[6]->siz_w = u3h_mark(u3R->cax.har_p) * sizeof(c3_n);
+  qua_u[6]->siz_n = u3h_mark(u3R->cax.har_p) * sizeof(c3_n);
 
   qua_u[7] = c3_calloc(sizeof(*qua_u[7]));
   qua_u[7]->nam_c = strdup("persistent memoization cache");
-  qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * sizeof(c3_n);
+  qua_u[7]->siz_n = u3h_mark(u3R->cax.per_p) * sizeof(c3_n);
 
   qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
   qua_u[8]->nam_c = strdup("page directory");
-  qua_u[8]->siz_w = u3a_mark_ptr(u3a_into(u3R->hep.pag_p)) * sizeof(c3_n);
+  qua_u[8]->siz_n = u3a_mark_ptr(u3a_into(u3R->hep.pag_p)) * sizeof(c3_n);
 
   qua_u[9] = c3_calloc(sizeof(*qua_u[9]));
   qua_u[9]->nam_c = strdup("cell pool");
@@ -1707,7 +1707,7 @@ u3a_mark_road()
       }
     }
 
-    qua_u[9]->siz_w = cel_w * sizeof(c3_n);
+    qua_u[9]->siz_n = cel_w * sizeof(c3_n);
   }
 
   qua_u[10] = c3_calloc(sizeof(*qua_u[10]));
@@ -1726,7 +1726,7 @@ u3a_mark_road()
       fre_w += u3a_mark_ptr(u3a_into(u3R->hep.cac_p));
     }
 
-    qua_u[10]->siz_w = fre_w * sizeof(c3_n);
+    qua_u[10]->siz_n = fre_w * sizeof(c3_n);
   }
 
   qua_u[11] = c3_calloc(sizeof(*qua_u[11]));
@@ -1739,19 +1739,19 @@ u3a_mark_road()
       wee_w += u3a_Mark.wee_w[i_w];
     }
 
-    qua_u[11]->siz_w = wee_w * sizeof(c3_n);
+    qua_u[11]->siz_n = wee_w * sizeof(c3_n);
   }
 
   qua_u[12] = NULL;
 
   c3_n sum_w = 0;
   for (c3_n i_w = 0; qua_u[i_w]; i_w++) {
-    sum_w += qua_u[i_w]->siz_w;
+    sum_w += qua_u[i_w]->siz_n;
   }
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total road stuff");
-  tot_u->siz_w = sum_w;
+  tot_u->siz_n = sum_w;
   tot_u->qua_u = qua_u;
 
   return tot_u;
