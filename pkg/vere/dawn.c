@@ -17,14 +17,14 @@ _dawn_oct_to_buf(u3_noun oct)
     exit(1);
   }
 
-  c3_w_tmp len_w  = u3h(oct);
-  c3_y* buf_y = c3_malloc(1 + len_w);
-  buf_y[len_w] = 0;
+  c3_n len_n  = u3h(oct);
+  c3_y* buf_y = c3_malloc(1 + len_n);
+  buf_y[len_n] = 0;
 
-  u3r_bytes(0, len_w, buf_y, u3t(oct));
+  u3r_bytes(0, len_n, buf_y, u3t(oct));
 
   u3z(oct);
-  return uv_buf_init((void*)buf_y, len_w);
+  return uv_buf_init((void*)buf_y, len_n);
 }
 
 /* _dawn_buf_to_oct(): uv_buf_t to +octs
@@ -32,7 +32,7 @@ _dawn_oct_to_buf(u3_noun oct)
 static u3_noun
 _dawn_buf_to_oct(uv_buf_t buf_u)
 {
-  u3_noun len = u3i_words_tmp(1, (c3_w_tmp*)&buf_u.len);
+  u3_noun len = u3i_notes(1, (c3_n*)&buf_u.len);
 
   if ( c3n == u3a_is_cat(len) ) {
     exit(1);
@@ -425,11 +425,11 @@ _dawn_come(u3_noun stars)
 {
   u3_noun seed;
   {
-    c3_w_tmp    eny_w[16];
+    c3_w_new    eny_w[16];
     u3_noun eny;
 
     c3_rand(eny_w);
-    eny = u3i_words_tmp(16, eny_w);
+    eny = u3i_words_new(16, eny_w);
 
     u3l_log("boot: mining a comet. May take up to an hour.");
     u3l_log("If you want to boot faster, get an Urbit identity.");
