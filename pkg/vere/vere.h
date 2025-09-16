@@ -359,8 +359,8 @@
       */
         typedef struct _u3_ovum {
           void*            ptr_v;               //  context
-          c3_w_tmp             try_w;               //  retry count
-          c3_w_tmp             mil_w;               //  timeout ms
+          c3_w_new             try_w;               //  retry count
+          c3_w_new             mil_w;               //  timeout ms
           u3_noun            tar;               //  target (in arvo)
           u3_noun            wir;               //  wire
           u3_noun            cad;               //  card
@@ -488,7 +488,7 @@
           u3_mojo              inn_u;           //  client's stdin
           u3_moat              out_u;           //  client's stdout
           uv_pipe_t            err_u;           //  client's stderr
-          c3_w_tmp                 wag_w;           //  config flags
+          c3_w_new                 wag_w;           //  config flags
           c3_c*                bin_c;           //  binary path
           c3_c*                pax_c;           //  directory
           c3_d                 key_d[4];        //  image key
@@ -496,7 +496,7 @@
           c3_d                 eve_d;           //  last event completed
           u3_lord_cb            cb_u;           //  callbacks
           c3_o                 pin_o;           //  spinning
-          c3_w_tmp                 dep_w;           //  queue depth
+          c3_w_new                 dep_w;           //  queue depth
           struct _u3_writ*     ent_u;           //  queue entry
           struct _u3_writ*     ext_u;           //  queue exit
         } u3_lord;

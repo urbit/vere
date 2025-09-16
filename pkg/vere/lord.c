@@ -247,7 +247,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
     u3_noun a, b, c, pro, wyn, who, fak, eve, mug;
     c3_y pro_y;
     c3_d eve_d;
-    c3_l_tmp mug_l;
+    c3_l_new mug_l;
 
     //  XX parse out version values
     //
@@ -257,7 +257,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
        || (c3n == u3r_cell(b, &who, &fak))
        || (c3n == u3r_cell(c, &eve, &mug))
        || (c3n == u3r_safe_chub(eve, &eve_d))
-       || (c3n == u3r_safe_word_tmp(mug, &mug_l)) )
+       || (c3n == u3r_safe_word_new(mug, &mug_l)) )
     {
       return _lord_plea_foul(god_u, c3__ripe, dat);
     }
@@ -286,10 +286,10 @@ static void
 _lord_plea_slog(u3_lord* god_u, u3_noun dat)
 {
   u3_noun pri, tan;
-  c3_w_tmp pri_w;
+  c3_w_new pri_w;
 
   if (  (c3n == u3r_cell(dat, &pri, &tan))
-     || (c3n == u3r_safe_word_tmp(pri, &pri_w)) )
+     || (c3n == u3r_safe_word_new(pri, &pri_w)) )
   {
     return _lord_plea_foul(god_u, c3__slog, dat);
   }
@@ -603,7 +603,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     default: u3_assert(0);
 
     case u3_writ_poke: {
-      u3_noun mil = u3i_words_tmp(1, &wit_u->wok_u.egg_u->mil_w);
+      u3_noun mil = u3i_words_new(1, &wit_u->wok_u.egg_u->mil_w);
       msg = u3nt(c3__poke, mil, u3k(wit_u->wok_u.job));
     } break;
 
@@ -924,7 +924,7 @@ u3_lord_info(u3_lord* god_u)
     u3i_list(
       u3_pier_mase("live",  god_u->liv_o),
       u3_pier_mase("event", u3i_chub(god_u->eve_d)),
-      u3_pier_mase("queue", u3i_word_tmp(god_u->dep_w)),
+      u3_pier_mase("queue", u3i_word_new(god_u->dep_w)),
       u3_newt_moat_info(&god_u->out_u),
       u3_none));
 }
@@ -944,7 +944,7 @@ u3_lord_slog(u3_lord* god_u)
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*
-u3_lord_init(c3_c* pax_c, c3_w_tmp wag_w, c3_d key_d[4], u3_lord_cb cb_u)
+u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 {
   u3_lord* god_u = c3_calloc(sizeof *god_u);
   god_u->liv_o = c3n;
@@ -1080,7 +1080,7 @@ typedef struct _lord_boot {
   u3_cue_xeno*         sil_u;           //  cue handle
   u3_mojo              inn_u;           //  client's stdin
   u3_moat              out_u;           //  client's stdout
-  c3_w_tmp                 wag_w;           //  config flags
+  c3_w_new                 wag_w;           //  config flags
   c3_c*                bin_c;           //  binary path
   c3_c*                pax_c;           //  directory
   c3_d                 key_d[4];        //  image key
@@ -1175,10 +1175,10 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
       case c3__slog: {
         u3_noun pri, tan;
-        c3_w_tmp pri_w;
+        c3_w_new pri_w;
 
         if (  (c3n == u3r_cell(dat, &pri, &tan))
-           || (c3n == u3r_safe_word_tmp(pri, &pri_w)) )
+           || (c3n == u3r_safe_word_new(pri, &pri_w)) )
         {
           //  XX fatal error
           u3_assert(0);
@@ -1205,7 +1205,7 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 */
 void
 u3_lord_boot(c3_c* pax_c,
-             c3_w_tmp  wag_w,
+             c3_w_new  wag_w,
              c3_d  key_d[4],
              u3_noun msg,
              void* ptr_v,
