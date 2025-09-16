@@ -3,8 +3,11 @@
 #include "manage.h"
 
 #include <ctype.h>
+#ifndef U3_OS_windows
 #include <dlfcn.h>
+#endif
 #include <errno.h>
+#include <signal.h>
 #if defined(U3_OS_osx)
 #include <execinfo.h>
 #endif
@@ -35,6 +38,9 @@
 #include "whereami.h"
 #include "xtract.h"
 
+
+jmp_buf jumper;
+
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -45,7 +51,7 @@
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
+#       define u3m_trap() (u3_noun)(setjmp(jumper))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -105,8 +111,9 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static rsignal_jmpbuf u3_Signal;
+static jmp_buf u3_Signal;
 
+#ifndef U3_OS_windows
 #include "sigsegv.h"
 
 #ifndef SIGSTKSZ
@@ -114,6 +121,11 @@ static rsignal_jmpbuf u3_Signal;
 #endif
 #ifndef NO_OVERFLOW
 static uint8_t Sigstk[SIGSTKSZ];
+#endif
+#endif
+
+#ifdef U3_OS_windows
+#include "veh_handler.h"
 #endif
 
 #if 0
@@ -159,19 +171,25 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_l sig_l)
 {
+#ifndef U3_OS_windows
   if ( c3__over == sig_l ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  }
-  else {
+  } else
+#endif
+  {
     u3m_signal(sig_l);
   }
 }
 
 #ifndef NO_OVERFLOW
 static void
+#ifndef U3_OS_windows
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
+#else 
+_cm_signal_handle_over(int x)
+#endif
 {
   _cm_signal_handle(c3__over);
 }
@@ -367,10 +385,14 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
     u3l_log("unable to install stack overflow handler");
     abort();
   }
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -412,7 +434,11 @@ _cm_signal_done(void)
   rsignal_deinstall_handler(SIGVTALRM);
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   stackoverflow_deinstall_handler();
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   {
     struct itimerval itm_u;
@@ -713,6 +739,7 @@ bt_cb(void* data,
       int lineno,
       const char* function)
 {
+  #ifndef U3_OS_windows
   struct bt_cb_data* bdata = (struct bt_cb_data *)data;
   bdata->count++;
 
@@ -752,6 +779,8 @@ bt_cb(void* data,
     bdata->pn_c = 0;
     return 1;
   }
+  #endif
+  return 0;
 }
 
 /* _self_path(): get binary self-path.
@@ -774,6 +803,7 @@ _self_path(c3_c *pat_c)
 void
 u3m_stacktrace()
 {
+#ifndef U3_OS_windows
   void* bt_state;
   struct bt_cb_data data = { 0, 0, 0 };
   c3_c* self_path_c[4096] = {0};
@@ -844,6 +874,7 @@ u3m_stacktrace()
     data.fail = 1;
     fprintf(stderr, "Backtrace failed\r\n");
   }
+#endif
 #endif
 }
 
@@ -956,7 +987,7 @@ u3m_bail(u3_noun how)
 
   /* Longjmp, with an underscore.
   */
-  _longjmp(u3R->esc.buf, how);
+  _longjmp(jumper, how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1287,10 +1318,10 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
              u3_noun   arg)
 {
   u3_noun why, pro;
-  c3_l    sig_l;
+  volatile c3_l sig_l = 0;
 
   /* Enter internal signal regime.
-  */
+   */
   _cm_signal_deep(mil_w);
 
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
@@ -1313,7 +1344,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1428,7 +1459,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
     u3C.wag_w = wag_w;
@@ -1529,7 +1560,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1631,7 +1662,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -2022,6 +2053,7 @@ u3m_wall(u3_noun wol)
 static void
 _cm_limits(void)
 {
+#ifndef U3_OS_windows
   struct rlimit rlm;
 
   //  Moar stack.
@@ -2069,6 +2101,7 @@ _cm_limits(void)
     }
   }
 # endif
+#endif
 }
 
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
@@ -2215,6 +2248,7 @@ u3m_ward(void)
 static void
 _cm_signals(void)
 {
+#ifndef U3_OS_windows
   if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
@@ -2235,7 +2269,13 @@ _cm_signals(void)
       exit(1);
     }
   }
-# endif
+#endif
+#else
+  if (0 == AddVectoredExceptionHandler(1, _windows_exception_filter)) {
+    u3l_log("boot: vectored exception handler install failed");
+    exit(1);
+  }
+#endif
 }
 
 /* _cm_malloc_ssl(): openssl-shaped malloc

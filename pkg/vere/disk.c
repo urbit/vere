@@ -732,6 +732,7 @@ _disk_acquire(c3_c* pax_c)
     }
   }
 
+#ifndef U3_OS_windows
   {
     struct flock lok_u;
     memset((void *)&lok_u, 0, sizeof(lok_u));
@@ -754,6 +755,7 @@ _disk_acquire(c3_c* pax_c)
       goto fail;
     }
   }
+#endif
 
   ret_i = snprintf((c3_c*)dat_y, sizeof(dat_y), "%u\n", getpid());
 
@@ -984,6 +986,7 @@ _disk_epoc_zero(c3_c* pax_c)
   }
 
   //  open epoch directory
+#ifndef U3_OS_windows
   if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
     fprintf(stderr, "disk: open epoch dir 0i0 failed: %s\r\n", strerror(errno));
     goto fail1;
@@ -994,6 +997,7 @@ _disk_epoc_zero(c3_c* pax_c)
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
     goto fail2;
   }
+#endif
 
   //  create epoch version file, overwriting any existing file
   c3_c epi_c[8193];
@@ -1030,21 +1034,25 @@ _disk_epoc_zero(c3_c* pax_c)
     goto fail3;
   }
 
+#ifndef U3_OS_windows
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
     goto fail3;
   }
   close(epo_i);
+#endif
 
   //  success
   return c3y;
 
-fail3:
+ fail3:
   c3_unlink(epv_c);
   c3_unlink(biv_c);
-fail2:
+#ifndef U3_OS_windows
+ fail2:
   close(epo_i);
-fail1:
+ fail1:
+#endif
   c3_rmdir(epo_c);
   return c3n;
 }
@@ -1083,6 +1091,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail1;
   }
 
+#ifndef U3_OS_windows
   if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
     fprintf(stderr, "disk: open epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
@@ -1094,6 +1103,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
                     epo_d, strerror(errno));
     goto fail2;
   }
+#endif
 
   //  create epoch version file, overwriting any existing file
   c3_c epi_c[8193];
@@ -1130,10 +1140,12 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail3;
   }
 
+#ifndef U3_OS_windows
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir 0i0 failed: %s\r\n", strerror(errno));
     goto fail3;
   }
+#endif
 
   //  get metadata from old log, update version
   u3_meta old_u;
@@ -1158,6 +1170,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail3;
   }
 
+#ifndef U3_OS_windows
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
@@ -1165,6 +1178,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   close(epo_i);
+#endif
 
   fprintf(stderr, "disk: created epoch %" PRIc3_d "\r\n", epo_d);
 
@@ -1178,8 +1192,10 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 fail3:
   c3_unlink(epv_c);
   c3_unlink(biv_c);
+#ifndef U3_OS_windows
 fail2:
   close(epo_i);
+#endif
 fail1:
   c3_rmdir(epo_c);
   return c3n;

@@ -1,5 +1,6 @@
 .{
-    .name = "vere",
+    .name = .vere,
+    .fingerprint = 0x1dda7349d562b3e,
     .version = "0.0.1",
     .dependencies = .{
         .macos_sdk = .{

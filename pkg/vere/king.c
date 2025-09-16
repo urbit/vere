@@ -866,6 +866,9 @@ _king_sign_cb(uv_signal_t* sil_u, c3_i num_i)
       u3l_log("\r\ninterrupt");
       u3_term_ef_ctlc();
 
+#ifdef U3_OS_windows
+      PulseEvent(u3_Host.cev_u);
+#endif
       break;
     }
 
@@ -1023,12 +1026,14 @@ u3_king_commence()
   u3C.sign_move_f = _king_sign_move;
 
   //  Ignore SIGPIPE signals.
+  #ifndef U3_OS_windows
   {
     sigset_t set_s;
     sigemptyset(&set_s);
     sigaddset(&set_s, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
+  #endif
 
   //  boot the ivory pill
   //
@@ -1036,6 +1041,7 @@ u3_king_commence()
 
   //  disable core dumps (due to lmdb size)
   //
+  #ifndef U3_OS_windows
   {
     struct rlimit rlm;
 
@@ -1047,6 +1053,7 @@ u3_king_commence()
       exit(1);
     }
   }
+  #endif
 
   //  run the loop
   //
@@ -1439,10 +1446,25 @@ _king_copy_raw(c3_i src_i, c3_i dst_i, c3_y* buf_y, size_t pag_i)
   return 0;
 }
 
+#if defined(U3_OS_windows)
+int err_win_to_posix(DWORD winerr);
+#endif
+
 static c3_i
 _king_copy_file(c3_c* src_c, c3_c* dst_c)
 {
-#if defined(U3_OS_osx)
+#if defined(U3_OS_windows)
+  //  XX try FSCTL_DUPLICATE_EXTENTS_TO_FILE
+  //
+  if ( CopyFileA(src_c, dst_c, TRUE) ) {
+    return 0;
+  }
+
+  //  XX fallback on any?
+  //
+  errno = err_win_to_posix(GetLastError());
+  return -1;
+#elif defined(U3_OS_osx)
   if ( !clonefile(src_c, dst_c, 0) ) {
     return 0;
   }
@@ -1533,8 +1555,10 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       c3_free(buf_y);
     }
 
+#ifndef U3_OS_windows
 done3:
     close(dst_i);
+#endif
 done2:
     close(src_i);
 done1:

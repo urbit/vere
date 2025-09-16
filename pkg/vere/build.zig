@@ -7,10 +7,10 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
-    const pace = b.option([]const u8, "pace", "") orelse
-        @panic("Missing required option: pace");
-    const version = b.option([]const u8, "version", "") orelse
-        @panic("Missing required option: version");
+    const pace = b.option([]const u8, "pace", "") orelse  "live";
+        // @panic("Missing required option: pace");
+    const version = b.option([]const u8, "version", "") orelse  "3.5";
+        // @panic("Missing required option: version");
 
     const pkg_vere = b.addStaticLibrary(.{
         .name = "vere",
@@ -151,7 +151,9 @@ pub fn build(b: *std.Build) !void {
     }
     pkg_vere.linkLibrary(natpmp.artifact("natpmp"));
     pkg_vere.linkLibrary(curl.artifact("curl"));
+
     pkg_vere.linkLibrary(gmp.artifact("gmp"));
+
     pkg_vere.linkLibrary(h2o.artifact("h2o"));
     pkg_vere.linkLibrary(libuv.artifact("libuv"));
     pkg_vere.linkLibrary(lmdb.artifact("lmdb"));
@@ -179,6 +181,15 @@ pub fn build(b: *std.Build) !void {
         try files.appendSlice(&.{
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",
+        });
+    }
+
+    if (t.os.tag == .windows) {
+        pkg_vere.addIncludePath(b.path("platform/windows"));
+        try files.appendSlice(&.{
+            "platform/windows/ptty.c",
+            "platform/windows/ctrlc.c",
+            "platform/windows/daemon.c",
         });
     }
 
