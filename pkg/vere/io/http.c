@@ -338,7 +338,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 {
   //  try to find a cookie header
   //
-  h2o_iovec_t coo_u = {NULL, 0};
+  h2o_iovec_t coo_u = {0, 0};
   {
     //TODO  http2 allows the client to put multiple 'cookie' headers,
     //      runtime should support that once eyre does too.
@@ -2178,8 +2178,15 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   if ( c3y == log ) {
     // XX move this to post serv_start and put the port in the name
 #if 0
+    u3_noun now;
+
+    {
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
     c3_c* pax_c = u3_Host.dir_c;
-    u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun now = u3dc("scot", c3__da, now);
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
     c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
@@ -2676,11 +2683,13 @@ _http_io_talk(u3_auto* car_u)
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
   //Setup spin stack
+#ifndef U3_OS_windows
   htd_u->stk_u = u3t_sstack_open();
   
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");
   }
+#endif
 
   //  XX set liv_o on done/swap?
   //

@@ -304,6 +304,7 @@ pub fn build(b: *std.Build) !void {
             "-std=c99",
             "-Wall",
             "-O2",
+            "-DO_CLOEXEC=0",
         },
     });
 
@@ -339,10 +340,10 @@ pub fn build(b: *std.Build) !void {
     h2o.linkLibrary(openssl.artifact("crypto"));
     h2o.linkLibrary(zlib.artifact("z"));
     h2o.linkLibrary(libuv.artifact("libuv"));
-    h2o.linkLibrary(cloexec);
-    h2o.linkLibrary(klib);
+    // h2o.linkLibrary(cloexec);
+    // h2o.linkLibrary(klib);
     h2o.linkLibrary(libgkc);
-    h2o.linkLibrary(libyrmcds);
+    // h2o.linkLibrary(libyrmcds);
     h2o.linkLibrary(picohttpparser);
     h2o.linkLibrary(picotls);
     // h2o.linkLibrary(ssl_conservatory);
@@ -354,6 +355,17 @@ pub fn build(b: *std.Build) !void {
     h2o.addIncludePath(h2o_c.path("include"));
     h2o.addIncludePath(h2o_c.path("include/h2o"));
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
+    h2o.addIncludePath(h2o_c.path("deps/klib"));
+
+    h2o.root_module.addCMacro("H2O_NO_HTTP3", "");
+    h2o.root_module.addCMacro("H2O_NO_REDIS", "");
+    h2o.root_module.addCMacro("H2O_NO_MEMCACHED", "");
+
+    if (t.os.tag == .windows) {
+        h2o.root_module.addCMacro("_POSIX_C_SOURCE", "200112L");
+        h2o.root_module.addCMacro("O_CLOEXEC", "0");
+        h2o.root_module.addCMacro("H2O_NO_UNIX_SOCKETS", "");
+    }
 
     h2o.addCSourceFiles(.{
         .root = h2o_c.path("lib"),
@@ -363,10 +375,10 @@ pub fn build(b: *std.Build) !void {
             "common/filecache.c",
             "common/hostinfo.c",
             "common/http1client.c",
-            "common/memcached.c",
+            // "common/memcached.c",
             "common/memory.c",
             "common/multithread.c",
-            "common/serverutil.c",
+            // "common/serverutil.c",
             "common/socket.c",
             "common/socketpool.c",
             "common/string.c",
@@ -390,7 +402,7 @@ pub fn build(b: *std.Build) !void {
             "handler/configurator/compress.c",
             "handler/configurator/errordoc.c",
             "handler/configurator/expires.c",
-            "handler/configurator/fastcgi.c",
+            // "handler/configurator/fastcgi.c",
             "handler/configurator/file.c",
             "handler/configurator/headers.c",
             "handler/configurator/headers_util.c",
@@ -402,7 +414,7 @@ pub fn build(b: *std.Build) !void {
             "handler/configurator/throttle_resp.c",
             "handler/errordoc.c",
             "handler/expires.c",
-            "handler/fastcgi.c",
+            // "handler/fastcgi.c",
             "handler/file.c",
             "handler/headers.c",
             "handler/headers_util.c",
