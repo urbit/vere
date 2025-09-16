@@ -1357,12 +1357,12 @@
       /* u3_pier_stay(): restart the pier.
       */
         u3_pier*
-        u3_pier_stay(c3_w_tmp wag_w, u3_noun pax, u3_weak ryf);
+        u3_pier_stay(c3_w_new wag_w, u3_noun pax, u3_weak ryf);
 
       /* u3_pier_tank(): dump single tank.
       */
         void
-        u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac);
+        u3_pier_tank(c3_w_new tab_w, c3_w_new pri_w, u3_noun tac);
 
       /* u3_pier_punt(): dump tank list.
       */

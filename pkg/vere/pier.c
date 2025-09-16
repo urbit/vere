@@ -392,39 +392,39 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
 static c3_o
 _czar_boot_data(c3_c* czar_c,
                 c3_c* who_c,
-                c3_n* bone_w,
-                c3_n* czar_glx_w,
-                c3_n* czar_ryf_w,
-                c3_n* czar_lyf_w,
-                c3_n* czar_bon_w,
-                c3_n* czar_ack_w)
+                c3_n* bone_n,
+                c3_n* czar_glx_n,
+                c3_n* czar_ryf_n,
+                c3_n* czar_lyf_n,
+                c3_n* czar_bon_n,
+                c3_n* czar_ack_n)
 {
   c3_c url[256];
-  c3_n  len_w;
+  c3_n  len_n;
   c3_y* hun_y = 0;
 
-  if ( bone_w != NULL ) {
+  if ( bone_n != NULL ) {
     sprintf(url, "https://%s.urbit.org/~/boot/%s/%"PRIc3_n,
-            czar_c+1, who_c, *bone_w );
+            czar_c+1, who_c, *bone_n );
   } else {
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
   }
 
   c3_o ret_o = c3n;
-  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_n, &hun_y, 1, 1);
   if ( !ret_i ) {
-    u3_noun jamd = u3i_bytes(len_w, hun_y);
+    u3_noun jamd = u3i_bytes(len_n, hun_y);
     u3_noun cued = u3qe_cue(jamd);
 
     u3_noun czar_glx, czar_ryf, czar_lyf, czar_bon, czar_ack;
 
     if ( (c3y == u3r_hext(cued, 0, &czar_glx, &czar_ryf,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
-         (c3y == u3r_safe_note(czar_glx, czar_glx_w)) &&
-         (c3y == u3r_safe_note(czar_ryf, czar_ryf_w)) &&
-         (c3y == u3r_safe_note(czar_lyf, czar_lyf_w)) ) {
-      if ( c3y == u3du(czar_bon) ) u3r_safe_note(u3t(czar_bon), czar_bon_w);
-      if ( c3y == u3du(czar_ack) ) u3r_safe_note(u3t(czar_ack), czar_ack_w);
+         (c3y == u3r_safe_note(czar_glx, czar_glx_n)) &&
+         (c3y == u3r_safe_note(czar_ryf, czar_ryf_n)) &&
+         (c3y == u3r_safe_note(czar_lyf, czar_lyf_n)) ) {
+      if ( c3y == u3du(czar_bon) ) u3r_safe_note(u3t(czar_bon), czar_bon_n);
+      if ( c3y == u3du(czar_ack) ) u3r_safe_note(u3t(czar_ack), czar_ack_n);
       ret_o = c3y;
     }
 
@@ -445,10 +445,10 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   c3_c*   who_c = u3r_string(who);
 
   u3_noun rem, glx, ryf, bon, cur, nex;
-  c3_n    glx_w, ryf_w, bon_w, cur_w, nex_w;
+  c3_n    glx_n, ryf_n, bon_n, cur_n, nex_n;
 
-  c3_n czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
-  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
+  c3_n czar_glx_n, czar_ryf_n, czar_lyf_n, czar_bon_n, czar_ack_n;
+  czar_glx_n = czar_ryf_n = czar_lyf_n = czar_bon_n = czar_ack_n = u3_none;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
@@ -456,27 +456,27 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
      */
-    glx_w = u3r_word_tmp(0, glx); ryf_w = u3r_word_tmp(0, ryf);
-    bon_w = u3r_word_tmp(0, bon); cur_w = u3r_word_tmp(0, cur);
-    nex_w = u3r_word_tmp(0, nex);
+    glx_n = u3r_note(0, glx); ryf_n = u3r_note(0, ryf);
+    bon_n = u3r_note(0, bon); cur_n = u3r_note(0, cur);
+    nex_n = u3r_note(0, nex);
 
-    u3_atom czar = u3dc("scot", c3__p, glx_w);
+    u3_atom czar = u3dc("scot", c3__p, glx_n);
     c3_c*   czar_c = u3r_string(czar);
 
-    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
-                                &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, &czar_bon_w,
-                                &czar_ack_w) ) {
+    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_n,
+                                &czar_glx_n, &czar_ryf_n,
+                                &czar_lyf_n, &czar_bon_n,
+                                &czar_ack_n) ) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
       _pier_work(wok_u);
     } else {
-      if ( czar_ryf_w == ryf_w ) {
-        c3_n ack_w = cur_w - 1;
-        if ( czar_ack_w == u3_none ) {
+      if ( czar_ryf_n == ryf_n ) {
+        c3_n ack_n = cur_n - 1;
+        if ( czar_ack_n == u3_none ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
-        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
+        } else if ( ( nex_n - cur_n ) >= ( czar_ack_n - ack_n ) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
@@ -507,8 +507,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
     c3_c* czar_c = _resolve_czar(wok_u, who_c);
 
     if ( c3n == _czar_boot_data(czar_c, who_c, 0,
-                                &czar_glx_w, &czar_ryf_w,
-                                &czar_lyf_w, &czar_bon_w, 0) ) {
+                                &czar_glx_n, &czar_ryf_n,
+                                &czar_lyf_n, &czar_bon_n, 0) ) {
       c3_free(czar_c);
       _pier_work(wok_u);
     } else {
@@ -518,11 +518,11 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
-      } else if ( kf_ryf > czar_ryf_w ) {
+      } else if ( kf_ryf > czar_ryf_n ) {
         // Ship breached, galaxy has not heard about the breach; continue boot
         _pier_work(wok_u);
-      } else if ( (     kf_ryf == czar_ryf_w ) &&
-                  ( czar_bon_w == u3_none ) ) {
+      } else if ( (     kf_ryf == czar_ryf_n ) &&
+                  ( czar_bon_n == u3_none ) ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {
@@ -793,14 +793,14 @@ _pier_wyrd_card(u3_pier* pir_u)
   u3_noun    sen;
 
   {
-    c3_l_tmp  sev_l;
+    c3_m  sev_m;
     u3_noun now;
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
     now   = u3_time_in_tv(&tim_u);
-    sev_l = u3r_mug(now);
-    sen   = u3dc("scot", c3__uv, sev_l);
+    sev_m = u3r_mug(now);
+    sen   = u3dc("scot", c3__uv, sev_m);
 
     u3z(now);
   }
@@ -859,7 +859,7 @@ _pier_wyrd_init(u3_pier* pir_u)
 /* _pier_on_lord_slog(): debug printf from worker.
 */
 static void
-_pier_on_lord_slog(void* ptr_v, c3_w_tmp pri_w, u3_noun tan)
+_pier_on_lord_slog(void* ptr_v, c3_w_new pri_w, u3_noun tan)
 {
   u3_pier* pir_u = ptr_v;
 
@@ -1038,7 +1038,7 @@ u3_pier_slog(u3_pier* pir_u)
 /* _pier_init(): create a pier, loading existing.
 */
 static u3_pier*
-_pier_init(c3_w_tmp wag_w, c3_c* pax_c, u3_weak ryf)
+_pier_init(c3_w_new wag_w, c3_c* pax_c, u3_weak ryf)
 {
   //  create pier
   //
@@ -1092,7 +1092,7 @@ _pier_init(c3_w_tmp wag_w, c3_c* pax_c, u3_weak ryf)
 /* u3_pier_stay(): restart an existing pier.
 */
 u3_pier*
-u3_pier_stay(c3_w_tmp wag_w, u3_noun pax, u3_weak ryf)
+u3_pier_stay(c3_w_new wag_w, u3_noun pax, u3_weak ryf)
 {
   u3_pier* pir_u;
 
@@ -1235,7 +1235,7 @@ u3_pier_exit(u3_pier* pir_u)
 /* c3_rand(): fill a 512-bit (16-word) buffer.
 */
 void
-c3_rand(c3_w_tmp* rad_w)
+c3_rand(c3_w_new* rad_w)
 {
   if ( 0 != ent_getentropy(rad_w, 64) ) {
     fprintf(stderr, "c3_rand getentropy: %s\n", strerror(errno));
@@ -1295,10 +1295,10 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 /* u3_pier_tank(): dump single tank.
 */
 void
-u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac)
+u3_pier_tank(c3_w_new tab_w, c3_w_new pri_w, u3_noun tac)
 {
   u3_noun blu = u3_term_get_blew(0);
-  c3_l_tmp  col_l = u3h(blu);
+  c3_l_new  col_l = u3h(blu);
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
@@ -1336,7 +1336,7 @@ u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac)
   //  We are calling nock here, but hopefully need no protection.
   //
   else {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(tac));
+    u3_noun wol = u3dc("wash", u3nc(tab_w, col_l), u3k(tac));
 
     _pier_dump_wall(fil_u, wol);
   }
@@ -1355,7 +1355,7 @@ u3_pier_tank(c3_l_tmp tab_l, c3_w_tmp pri_w, u3_noun tac)
 /* u3_pier_punt(): dump tank list.
 */
 void
-u3_pier_punt(c3_l_tmp tab_l, u3_noun tac)
+u3_pier_punt(c3_l_new tab_l, u3_noun tac)
 {
   u3_noun cat = tac;
 
@@ -1408,7 +1408,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
 /* u3_pier_sway(): print trace.
 */
 void
-u3_pier_sway(c3_l_tmp tab_l, u3_noun tax)
+u3_pier_sway(c3_l_new tab_l, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 
@@ -1418,7 +1418,7 @@ u3_pier_sway(c3_l_tmp tab_l, u3_noun tax)
 
 /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
 */
-c3_w_tmp
+c3_w_new
 u3_pier_mark(FILE* fil_u)
 {
   return 0;
