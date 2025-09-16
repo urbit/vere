@@ -370,6 +370,25 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
   return _ce_image_stat(img_u, &img_u->pgs_w);
 }
 
+c3_i
+u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
+{
+  u3e_image img_u = { .nam_c = nam_c };
+
+  switch ( _ce_image_open(&img_u, dir_c) ) {
+    case _ce_img_good: {
+      *len_z = _ce_len(img_u.pgs_w);
+      return img_u.fid_i;
+    } break;
+
+    case _ce_img_fail:
+    case _ce_img_size: {
+      *len_z = 0;
+      return -1;
+    } break;
+  }
+}
+
 /* _ce_patch_write_control(): write control block file.
 */
 static void
@@ -1350,10 +1369,12 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
   void* ptr_v = _ce_ptr(nor_w);
 
+  #ifndef U3_OS_windows
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
       fprintf(stderr, "loom: madv_dontneed failed (%u pages at %u): %s\r\n",
                       pgs_w, nor_w, strerror(errno));
   }
+  #endif
 }
 
 /* u3e_toss(): discard ephemeral pages.

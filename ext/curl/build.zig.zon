@@ -1,5 +1,6 @@
 .{
-    .name = "curl",
+    .name = .curl,
+    .fingerprint = 0x3e01b4d06e29bb1,
     .version = "0.0.1",
     .dependencies = .{
         .curl = .{
