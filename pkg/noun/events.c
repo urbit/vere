@@ -1298,18 +1298,18 @@ u3e_save(u3_post low_p, u3_post hig_p)
     }
   }
 
-  // if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_w & u3o_verbose ) {
     fprintf(stderr, "sync: skipped %u free", pat_u->sip_w);
     u3a_print_memory(stderr, " pages", pat_u->sip_w << u3a_page);
-  // }
+  }
 
   //  attempt to avoid propagating anything insane to disk
   //
   u3a_loom_sane();
 
-  // if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_w & u3o_verbose ) {
     u3a_print_memory(stderr, "sync: save", pat_u->con_u->pgs_w << u3a_page);
-  // }
+  }
 
   _ce_patch_sync(pat_u);
 

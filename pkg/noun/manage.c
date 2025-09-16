@@ -2179,8 +2179,6 @@ u3m_save(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
-  u3a_print_memory(stderr, "loom: save: idle", u3a_idle(u3R));
-
   u3a_wait();
 
   u3_assert(u3R == &u3H->rod_u);
