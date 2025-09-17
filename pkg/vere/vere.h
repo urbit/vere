@@ -381,7 +381,7 @@
       */
         typedef struct _u3_fact {
           c3_d             eve_d;               //  event number
-          c3_l_tmp             mug_l;               //  kernel mug after
+          c3_l_new             mug_l;               //  kernel mug after
           u3_noun            job;               //  (pair date ovum)
           struct _u3_fact* nex_u;               //  next in queue
         } u3_fact;
@@ -565,14 +565,14 @@
       /* u3_boot_opts: bootstrap parameters.
       */
         typedef struct _u3_boot_opts {
-          c3_w_tmp           eny_w[16];         //  entropy
+          c3_w_new           eny_w[16];         //  entropy
           c3_o           veb_o;             //  verbose
           c3_o           lit_o;             //  lite
           c3_o           sev_l;             //  instance number
           struct timeval tim_u;             //  time
           struct {                          //  kelvin
             c3_m         nam_m;             //    label
-            c3_w_tmp         ver_w;             //    version
+            c3_w_new         ver_w;             //    version
           } ver_u;
         } u3_boot_opts;
 

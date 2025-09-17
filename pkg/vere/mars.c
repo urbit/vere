@@ -75,7 +75,7 @@ _mars_quac(u3m_quac* mas_u)
   }
   list = u3kb_flop(list);
 
-  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word_tmp(mas_u->siz_n), list);
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_note(mas_u->siz_n), list);
 
   c3_free(mas_u->nam_c);
   c3_free(mas_u->qua_u);
@@ -581,10 +581,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
     case c3__poke: {
       u3_noun tim, job;
-      c3_w_tmp  mil_w, pre_w;
+      c3_w_new  mil_w, pre_w;
 
       if ( (c3n == u3r_cell(dat, &tim, &job)) ||
-           (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
+           (c3n == u3r_safe_word_new(tim, &mil_w)) )
       {
         fprintf(stderr, "mars: poke fail\r\n");
         u3z(jar);
@@ -626,10 +626,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
     case c3__peek: {
       u3_noun tim, sam, pro;
-      c3_w_tmp  mil_w;
+      c3_w_new  mil_w;
 
       if ( (c3n == u3r_cell(dat, &tim, &sam)) ||
-           (c3n == u3r_safe_word_tmp(tim, &mil_w)) )
+           (c3n == u3r_safe_word_new(tim, &mil_w)) )
       {
         u3z(jar);
         return c3n;
@@ -877,11 +877,11 @@ static void
 _mars_step_trace(const c3_c* dir_c)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    c3_w_tmp trace_cnt_w = u3t_trace_cnt();
-    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
+    c3_n trace_cnt_n = u3t_trace_cnt();
+    if ( trace_cnt_n == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(dir_c);
     }
-    else if ( trace_cnt_w >= 100000 ) {
+    else if ( trace_cnt_n >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(dir_c);
     }
@@ -973,11 +973,11 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //
   {
     u3_noun cor = u3t(dat);
-    c3_l_tmp  mug_l;
+    c3_l_new  mug_l;
 
     if ( tac_u->mug_l && (tac_u->mug_l != (mug_l = u3r_mug(cor))) ) {
       fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
-                      "expected %08"PRIxc3_l_tmp", actual %08"PRIxc3_l_tmp"\r\n",
+                      "expected %08"PRIxc3_m", actual %08"PRIxc3_m"\r\n",
                       tac_u->eve_d, tac_u->mug_l, mug_l);
 
       if ( !(u3C.wag_w & u3o_soft_mugs) ) {
@@ -1017,7 +1017,7 @@ typedef enum {
 static _mars_play_e
 _mars_play_batch(u3_mars* mar_u,
                  c3_o     mug_o,
-                 c3_w_tmp     bat_w,
+                 c3_w_new     bat_w,
                  c3_c**   wen_c)
 {
   u3_disk*      log_u = mar_u->log_u;
@@ -1049,7 +1049,7 @@ _mars_play_batch(u3_mars* mar_u,
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
 
-      u3_assert( c3y == u3r_safe_word_tmp(u3h(dud), &mot_m) );
+      u3_assert( c3y == u3r_safe_word_new(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
         case c3__meme: {
@@ -1095,7 +1095,7 @@ static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 {
   u3_weak eve;
-  c3_l_tmp  mug_l;
+  c3_l_new  mug_l;
 
   //  hack to recover structural sharing
   //
@@ -1329,7 +1329,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   {
     c3_d  pas_d = mar_u->dun_d;  // last snapshot
     c3_d  mem_d = 0;             // last event to meme
-    c3_w_tmp  try_w = 0;             // [mem_d] retry count
+    c3_w_new  try_w = 0;             // [mem_d] retry count
     c3_c* wen_c;
 
     while ( mar_u->dun_d < eve_d ) {
@@ -1558,7 +1558,7 @@ u3_mars_init(c3_c*    dir_c,
 /* _mars_wyrd_card(): construct %wyrd.
 */
 static u3_noun
-_mars_wyrd_card(c3_m nam_m, c3_w_tmp ver_w, c3_l sev_l)
+_mars_wyrd_card(c3_m nam_m, c3_w_new ver_w, c3_l sev_l)
 {
   //  XX ghetto (scot %ta)
   //
@@ -1582,7 +1582,7 @@ _mars_wyrd_card(c3_m nam_m, c3_w_tmp ver_w, c3_l sev_l)
   //  XX speculative!
   //
   else {
-    kel = u3nc(nam_m, u3i_word_tmp(ver_w));
+    kel = u3nc(nam_m, u3i_word_new(ver_w));
   }
 
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
@@ -1771,7 +1771,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
     {
       u3_noun cad, wir = u3nt(u3_blip, c3__arvo, u3_nul);
 
-      cad = u3nc(c3__wack, u3i_words_tmp(17, inp_u->eny_w));
+      cad = u3nc(c3__wack, u3i_words_new(17, inp_u->eny_w));
       mod = u3nc(u3nc(u3k(wir), cad), mod);
 
       cad = u3nc(c3__whom, u3k(who));
