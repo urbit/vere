@@ -547,13 +547,17 @@ _pave_home(void)
   memset(u3H, 0, sizeof(u3v_home));
   u3H->ver_d = U3V_VERLAT;
 
-  //  pam_d bits: { word-size[1], virtual-bits[2], page-size[3], ... }
+  //  pam_d bits:
+  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
+  //
   //    word-size: 0==32, 1==64
   //    page-size: relative binary-log in bytes
   //
+  //
   u3H->pam_d = 0
              ^ (u3a_vits << 1)
-             ^ ((u3a_page + 2 - 12) << 3);
+             ^ ((u3a_page + 2 - 12) << 3)
+             ^ (U3N_VERLAT << 6);
 
   u3R = &u3H->rod_u;
 
@@ -568,6 +572,8 @@ STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
 
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
                "home road alignment" );
+
+STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
 /* _find_home(): in restored image, point to home road.
 */
@@ -598,6 +604,13 @@ _find_home(void)
     fprintf(stderr, "page-size mismatch: %u  in snapshot; %u in binary\r\n",
                     1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
     abort();
+  }
+
+  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+    u3n_ream();
+    u3n_reclaim();
+    u3j_reclaim();
   }
 
   //  NB: the home road is always north

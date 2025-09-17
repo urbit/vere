@@ -12,6 +12,13 @@ typedef c3_d       u3v_version;
 #define U3V_VER5   (u3v_version)5  //  ??      palloc
 #define U3V_VERLAT U3V_VER5
 
+/*  bytecode semantics (within u3v_version)
+ */
+typedef c3_w       u3n_version;
+
+#define U3N_VER1   (u3n_version)0  // zero-indexedfor backcompat
+#define U3N_VERLAT U3N_VER1
+
 /*  snapshot patch format
  */
 typedef c3_w       u3e_version;
