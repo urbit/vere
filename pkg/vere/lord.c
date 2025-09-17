@@ -1242,7 +1242,7 @@ u3_lord_boot(c3_c* pax_c,
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[12];
+    c3_c* arg_c[19];
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
@@ -1268,24 +1268,26 @@ u3_lord_boot(c3_c* pax_c,
 
     sprintf(per_c, "%u", u3_Host.ops_u.per_w);
 
-    arg_c[0] = bot_u->bin_c;            //  executable
-    arg_c[1] = "boot";                  //  protocol
-    arg_c[2] = bot_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
-
-    if ( u3C.eph_c == 0 ) {
-      arg_c[7] = "0";
-    }
-    else {
-      arg_c[7] = strdup(u3C.eph_c);     //  ephemeral file
-    }
-
-    arg_c[8] = tos_c;
-    arg_c[9] = per_c;
-    arg_c[10] = NULL;
+    c3_w i_w = 0;
+    arg_c[i_w++] = bot_u->bin_c;              //  executable
+    arg_c[i_w++] = "boot";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = bot_u->pax_c;
+    arg_c[i_w++] = "--passkey";               //  disk key
+    arg_c[i_w++] = key_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
+    arg_c[i_w++] = "--ephemeral-file";        //  ephemeral file
+    arg_c[i_w++] = u3C.eph_c == 0 ? "0" : strdup(u3C.eph_c);
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w] = NULL;
 
     uv_pipe_init(u3L, &bot_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &bot_u->out_u.tim_u);
