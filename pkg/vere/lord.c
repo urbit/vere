@@ -965,9 +965,9 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //
   {
 #ifdef U3_OS_windows
-    c3_c* arg_c[14];
+    c3_c* arg_c[28];
 #else
-    c3_c* arg_c[13];
+    c3_c* arg_c[26];
 #endif
     c3_c  key_c[256];
     c3_c  wag_c[11];
@@ -975,7 +975,6 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  per_c[11];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
-    c3_c  eve_c[11];
     c3_c  sap_c[11];
     c3_c  cev_c[11];
     c3_i  err_i;
@@ -998,41 +997,40 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(tos_c, "%u", u3C.tos_w);
 
-    arg_c[0] = god_u->bin_c;            //  executable
-    arg_c[1] = "work";                  //  protocol
-    arg_c[2] = god_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
+    c3_w i_w = 0;
+    arg_c[i_w++] = god_u->bin_c;              //  executable
+    arg_c[i_w++] = "work";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = god_u->pax_c;
+    arg_c[i_w++] = "--passkey";               //  disk key
+    arg_c[i_w++] = key_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
 
-    if ( u3_Host.ops_u.til_c ) {
-      //  XX validate
-      //
-      arg_c[7] = u3_Host.ops_u.til_c;
-    }
-    else {
-      arg_c[7] = "0";
-    }
+    //  XX validate
+    arg_c[i_w++] = "--play-until";            //  play until
+    arg_c[i_w++] = u3_Host.ops_u.til_c ? u3_Host.ops_u.til_c : "0";
 
-    if ( u3C.eph_c == 0 ) {
-      arg_c[8] = "0";
-    }
-    else {
-      arg_c[8] = strdup(u3C.eph_c);     //  ephemeral file
-    }
+    arg_c[i_w++] = "--ephemeral-file";        //  ephemeral file
+    arg_c[i_w++] = u3C.eph_c == 0 ? "0" : strdup(u3C.eph_c);
 
-    arg_c[9] = tos_c;
-    arg_c[10] = per_c;
-    arg_c[11] = sap_c;
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--snap-time";             //  snapshot interval
+    arg_c[i_w++] = sap_c;
 
 #ifdef U3_OS_windows
     sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
-    arg_c[12] = cev_c;
-    arg_c[13] = NULL;
-#else
-    arg_c[12] = NULL;
+    arg_c[i_w++] = "--win-intr-handle"        //  windows interrupt handler
+    arg_c[i_w++] = cev_c;
 #endif
+    arg_c[i_w] = NULL;
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);

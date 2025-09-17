@@ -2853,60 +2853,110 @@ static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
 #ifdef U3_OS_windows
-  if ( 11 > argc ) {
+  if ( 24 > argc ) {
 #else
-  if ( 10 > argc ) {
+  if ( 22 > argc ) {
 #endif
     fprintf(stderr, "work: missing args\n");
     exit(1);
   }
 
   uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
-  c3_c*      dir_c = argv[0];
-  c3_c*      key_c = argv[1]; // XX use passkey
-  c3_c*      wag_c = argv[2];
-  c3_c*      hap_c = argv[3];
-  c3_c*      lom_c = argv[4];
-  c3_c*      eve_c = argv[5];
-  c3_c*      eph_c = argv[6];
-  c3_c*      tos_c = argv[7];
-  c3_c*      per_c = argv[8];
-  c3_c*      sap_c = argv[9];
-#ifdef U3_OS_windows
-  c3_c*      han_c = argv[10];
-  _cw_intr_win(han_c);
-#endif
+  c3_c*      dir_c = 0;
   c3_d       eve_d = 0;
 
   _cw_init_io(lup_u);
 
-  //  load runtime config
-  //
+  //  extract option map
   {
-    sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
-    sscanf(per_c, "%" SCNu32, &u3C.per_w);
-    sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_w);
+    c3_i ch_i, lid_i;
 
-    if ( _main_read_loom("loom", lom_c, &u3_Host.ops_u.lom_y) ) {
-      exit(1);
+    static struct option lop_u[] = {
+      { "temporary-cache-size",  required_argument, NULL, 'c' },
+      { "ephemeral-file",        required_argument, NULL, 'e' },
+      { "passkey",               required_argument, NULL, 'k' },
+      { "loom",                  required_argument, NULL, 'l' },
+      { "snap-time",             required_argument, NULL, 'n' },
+      { "persistent-cache-size", required_argument, NULL, 'p' },
+      { "runtime-config",        required_argument, NULL, 'r' },
+      { "snap-dir",              required_argument, NULL, 's' },
+      { "toss",                  required_argument, NULL, 't' },
+      { "play-until",            required_argument, NULL, 'u' },
+      { "win-intr-handle",       required_argument, NULL, 'w' },
+      //
+      { NULL, 0, NULL, 0 },
+    };
+
+    while ( -1 != (ch_i=getopt_long(argc, argv,
+                   "c:e:k:l:n:p:r:s:t:u:w:",
+                   lop_u, &lid_i) ))
+    {
+      switch ( ch_i ) {
+        case 'c': {  //  temporary-cache-size
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.hap_w);
+          break;
+        }
+        case 'e': {  //  ephemeral-file
+          u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
+          break;
+        }
+        case 'k': {  //  XX use passkey
+          break;
+        }
+        case 'l': {  //  loom
+          if ( _main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y) ) {
+            exit(1);
+          }
+          break;
+        }
+        case 'n': {  //  snap-time
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.sap_w);
+          break;
+        }
+        case 'p': {  //  persistent-cache-size
+          sscanf(optarg, "%" SCNu32, &u3C.per_w);
+          break;
+        }
+        case 'r': {  //  runtime-config
+          sscanf(optarg, "%" SCNu32, &u3C.wag_w);
+          break;
+        }
+        case 's': {  //  snap-dir
+          dir_c = strdup(optarg);
+          break;
+        }
+        case 't': {  //  toss
+          if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+            fprintf(stderr, "mars: toss: invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'u': {  //  play-until
+          if ( 1 != sscanf(optarg, "%" PRIu64, &eve_d) ) {
+            fprintf(stderr, "mars: -n (--replay-to) invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'w': {  //  win-intr-handle
+#ifdef U3_OS_windows
+          _cw_intr_win(optarg);
+#endif
+          break;
+        }
+        //  unknown opt
+        //
+        case '?': default: {
+          break;
+        }
+      }
     }
-
-    if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
-      fprintf(stderr, "mars: -n (--replay-to) invalid number '%s'\r\n", eve_c);
-    }
-
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
-      fprintf(stderr, "mars: toss: invalid number '%s'\r\n", tos_c);
-    }
-
-    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
   }
   
   //  setup mars
   //
   {
     u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
+    fprintf(stderr, "mar_u.dir_c: %s\r\n", mar_u.dir_c);
     u3_mars_load(&mar_u, u3_dlod_last);
 
     //  set up logging
@@ -3000,9 +3050,9 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__roll: _cw_roll(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
+    case c3__work: _cw_work(argc, argv); return 1;
 
-    case c3__boot: _cw_boot(argc - 2, argv + 2); return 1;
-    case c3__work: _cw_work(argc - 2, argv + 2); return 1;
+    case c3__boot: _cw_boot(argc, argv); return 1;
   }
 
   return 0;
