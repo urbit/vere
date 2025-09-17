@@ -1,10 +1,11 @@
 .{
-    .name = "h2o",
+    .name = .h2o,
+    .fingerprint = 0x89f86b32b10f102e,
     .version = "0.0.1",
     .dependencies = .{
         .h2o = .{
-            .url = "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz",
-            .hash = "N-V-__8AAFCFqAJvtQxxWhMSgnUsfNkqvj9WR_OsKK5cVv3S",
+            .url = "https://github.com/pkova/h2o/archive/3bbfe369a5c31d38cc1717e5281ca6af89ecf787.tar.gz",
+            .hash = "N-V-__8AAJ2XqALM9jST2Gu4TIdjPNY2QB8rnmKeepeqr076",
         },
         .libuv = .{
             .path = "../libuv",

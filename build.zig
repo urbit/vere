@@ -7,6 +7,7 @@ const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
 };
 
 const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
@@ -17,6 +18,7 @@ const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
 };
 
 const targets: []const std.Target.Query = main_targets;
@@ -189,10 +191,16 @@ fn buildBinary(
         "-Werror",
     });
 
-    if (!cfg.asan and !cfg.ubsan)
+    if (!cfg.asan and !cfg.ubsan) {
         try global_flags.appendSlice(&.{
             "-fno-sanitize=all",
         });
+        if (t.os.tag == .windows) {
+            try global_flags.appendSlice(&.{
+                "-Qunused-arguments",
+            });
+        }
+    }
 
     if (cfg.asan and !cfg.ubsan)
         try global_flags.appendSlice(&.{
@@ -262,15 +270,26 @@ fn buildBinary(
             "-DU3_OS_osx=1",
             "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
         });
-    } else {
-        try urbit_flags.appendSlice(&.{
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
     }
 
     if (t.os.tag == .linux) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    if (t.os.tag == .windows) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_windows=1",
+            "-DWIN32_LEAN_AND_MEAN",
+            "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
+            "-DO_CLOEXEC=0",
+            "-DH2O_NO_UNIX_SOCKETS",
+            "-DH2O_NO_HTTP3",
+            "-DH2O_NO_REDIS",
+            "-DH2O_NO_MEMCACHED",
+            "-DCURL_STATICLIB",
         });
     }
 
@@ -299,6 +318,12 @@ fn buildBinary(
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
+
+    const pkg_past = b.dependency("pkg_past", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
@@ -381,7 +406,16 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
     });
-    urbit.stack_size = 0;
+
+    if (t.os.tag == .windows) {
+        urbit.stack_size = 67108864;
+    } else {
+        urbit.stack_size = 0;
+    }
+
+    if (t.os.tag == .windows) {
+        urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+    }
 
     const target_query: std.Target.Query = .{
         .cpu_arch = t.cpu.arch,
@@ -415,16 +449,19 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
+    urbit.linkLibrary(pkg_past.artifact("past"));
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
     urbit.linkLibrary(gmp.artifact("gmp"));
+
     urbit.linkLibrary(h2o.artifact("h2o"));
     urbit.linkLibrary(curl.artifact("curl"));
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
     urbit.linkLibrary(openssl.artifact("ssl"));
-    urbit.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows)
+        urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
     urbit.linkLibrary(wasm3.artifact("wasm3"));
@@ -509,6 +546,11 @@ fn buildBinary(
                 .deps = &.{pkg_ent.artifact("ent")},
             },
             // pkg_noun
+            .{
+                .name = "palloc-test",
+                .file = "pkg/noun/palloc_tests.c",
+                .deps = noun_test_deps,
+            },
             .{
                 .name = "equality-test",
                 .file = "pkg/noun/equality_tests.c",
@@ -603,6 +645,20 @@ fn buildBinary(
                 }
             }
 
+            if (t.os.tag == .windows) {
+                test_exe.linkSystemLibrary("ws2_32");
+            }
+
+            if (t.os.tag.isDarwin()) {
+                // Requires llvm@18 homebrew installation
+                if (cfg.asan or cfg.ubsan)
+                    test_exe.addLibraryPath(.{
+                        .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
+                    });
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+            }
+
             test_exe.stack_size = 0;
             test_exe.linkLibC();
             for (tst.deps) |dep| {
@@ -612,9 +668,15 @@ fn buildBinary(
                 .files = &.{tst.file},
                 .flags = urbit_flags.items,
             });
+            const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
+            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+                //  disable libmalloc warnings
+                run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
+            }
             run_unit_tests.skip_foreign_checks = true;
             test_step.dependOn(&run_unit_tests.step);
+            test_step.dependOn(&exe_install.step);
         }
     }
 }

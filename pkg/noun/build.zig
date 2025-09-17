@@ -117,10 +117,15 @@ pub fn build(b: *std.Build) !void {
 
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
+
+
+
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
-    pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows) {
+        pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    }
     pkg_noun.linkLibrary(softblas.artifact("softblas"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
     if (t.os.tag == .linux)
@@ -135,6 +140,8 @@ pub fn build(b: *std.Build) !void {
         pkg_noun.addIncludePath(b.path("platform/darwin"));
     if (t.os.tag == .linux)
         pkg_noun.addIncludePath(b.path("platform/linux"));
+    if (t.os.tag == .windows)
+        pkg_noun.addIncludePath(b.path("platform/windows"));
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
@@ -150,11 +157,20 @@ pub fn build(b: *std.Build) !void {
         .flags = flags.items,
     });
 
+    if (t.os.tag == .windows) {
+        pkg_noun.addCSourceFiles(.{
+            .root = b.path("platform/windows"),
+            .files = &.{"veh_handler.c", "rsignal.c"},
+            .flags = flags.items,
+        });
+    }
+
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
         .linux => "platform/linux/rsignal.h",
+        .windows => "platform/windows/rsignal.h",
         else => "",
     }), "platform/rsignal.h");
 
@@ -356,6 +372,7 @@ const c_source_files = [_][]const u8{
     "jets/136/tree.c",
     "log.c",
     "manage.c",
+    "palloc.c",
     "nock.c",
     "options.c",
     "retrieve.c",
@@ -363,21 +380,6 @@ const c_source_files = [_][]const u8{
     "serial.c",
     "trace.c",
     "urth.c",
-    "v1/allocate.c",
-    "v1/hashtable.c",
-    "v1/jets.c",
-    "v1/manage.c",
-    "v1/nock.c",
-    "v1/vortex.c",
-    "v2/allocate.c",
-    "v2/hashtable.c",
-    "v2/jets.c",
-    "v2/manage.c",
-    "v2/nock.c",
-    "v2/vortex.c",
-    "v3/hashtable.c",
-    "v3/manage.c",
-    "v4/manage.c",
     "vortex.c",
     "xtract.c",
     "zave.c",
@@ -404,28 +406,9 @@ const install_headers = [_][]const u8{
     "trace.h",
     "types.h",
     "urth.h",
-    "v1/allocate.h",
-    "v1/hashtable.h",
-    "v1/jets.h",
-    "v1/manage.h",
-    "v1/nock.h",
-    "v1/vortex.h",
-    "v2/allocate.h",
-    "v2/hashtable.h",
-    "v2/jets.h",
-    "v2/manage.h",
-    "v2/nock.h",
-    "v2/options.h",
-    "v2/vortex.h",
-    "v3/allocate.h",
-    "v3/hashtable.h",
-    "v3/jets.h",
-    "v3/manage.h",
-    "v3/nock.h",
-    "v3/vortex.h",
-    "v4/manage.h",
     "version.h",
     "vortex.h",
     "xtract.h",
     "zave.h",
+    "verstable.h",
 };
