@@ -2852,7 +2852,11 @@ _cw_boot(c3_i argc, c3_c* argv[])
 static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
-  if ( 9 > argc ) { // XX confirm
+#ifdef U3_OS_windows
+  if ( 11 > argc ) {
+#else
+  if ( 10 > argc ) {
+#endif
     fprintf(stderr, "work: missing args\n");
     exit(1);
   }

@@ -964,7 +964,11 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
+#ifdef U3_OS_windows
     c3_c* arg_c[14];
+#else
+    c3_c* arg_c[13];
+#endif
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
@@ -1025,11 +1029,10 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 #ifdef U3_OS_windows
     sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
     arg_c[12] = cev_c;
-#else
-    arg_c[12] = 0;
-#endif
-
     arg_c[13] = NULL;
+#else
+    arg_c[12] = NULL;
+#endif
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
