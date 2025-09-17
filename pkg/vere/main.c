@@ -2852,7 +2852,11 @@ _cw_boot(c3_i argc, c3_c* argv[])
 static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
-  if ( 9 > argc ) { // XX confirm
+#ifdef U3_OS_windows
+  if ( 11 > argc ) {
+#else
+  if ( 10 > argc ) {
+#endif
     fprintf(stderr, "work: missing args\n");
     exit(1);
   }
@@ -2867,8 +2871,9 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      eph_c = argv[6];
   c3_c*      tos_c = argv[7];
   c3_c*      per_c = argv[8];
+  c3_c*      sap_c = argv[9];
 #ifdef U3_OS_windows
-  c3_c*      han_c = argv[9];
+  c3_c*      han_c = argv[10];
   _cw_intr_win(han_c);
 #endif
   c3_d       eve_d = 0;
@@ -2881,6 +2886,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
     sscanf(hap_c, "%" SCNu32, &u3_Host.ops_u.hap_w);
     sscanf(per_c, "%" SCNu32, &u3C.per_w);
+    sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_w);
 
     if ( _main_read_loom("loom", lom_c, &u3_Host.ops_u.lom_y) ) {
       exit(1);

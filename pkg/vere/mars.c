@@ -1500,10 +1500,11 @@ u3_mars_work(u3_mars* mar_u)
 
   u3_disk_async(mar_u->log_u, mar_u, _mars_disk_cb);
 
-  //  XX check return, make interval configurable
-  //
   uv_timer_init(u3L, &(mar_u->sav_u.tim_u));
-  uv_timer_start(&(mar_u->sav_u.tim_u), _mars_timer_cb, 120000, 120000);
+  uv_timer_start(&(mar_u->sav_u.tim_u),
+                 _mars_timer_cb,
+                 u3_Host.ops_u.sap_w * 1000,
+                 u3_Host.ops_u.sap_w * 1000);
 
   mar_u->sav_u.eve_d = mar_u->dun_d;
   mar_u->sav_u.tim_u.data = mar_u;

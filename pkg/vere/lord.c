@@ -964,7 +964,11 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
+#ifdef U3_OS_windows
+    c3_c* arg_c[14];
+#else
     c3_c* arg_c[13];
+#endif
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
@@ -972,6 +976,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  lom_c[11];
     c3_c  tos_c[11];
     c3_c  eve_c[11];
+    c3_c  sap_c[11];
     c3_c  cev_c[11];
     c3_i  err_i;
 
@@ -988,6 +993,8 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     sprintf(per_c, "%u", u3_Host.ops_u.per_w);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
+
+    sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
 
     sprintf(tos_c, "%u", u3C.tos_w);
 
@@ -1017,15 +1024,15 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     arg_c[9] = tos_c;
     arg_c[10] = per_c;
+    arg_c[11] = sap_c;
 
 #ifdef U3_OS_windows
     sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
-    arg_c[11] = cev_c;
+    arg_c[12] = cev_c;
+    arg_c[13] = NULL;
 #else
-    arg_c[11] = 0;
-#endif
-
     arg_c[12] = NULL;
+#endif
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
