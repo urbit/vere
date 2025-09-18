@@ -869,6 +869,7 @@ static u3j_core _136_hex_bytestream_d[] =
     {"read-bits", 7, _136_hex_bytestream_read_bits_a, 0, no_hashes },
     // {"read-need-bits", 7, _136_hex_bytestream_read_need_bits_a, 0, no_hashes },
     {"byte-bits", 7, _136_hex_bytestream_byte_bits_a, 0, no_hashes },
+    {}
   };
 
 static u3j_harm _136_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
