@@ -168,7 +168,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3a_dell)  fre_p;               //  free list entry
           u3p(u3a_dell)  erf_p;               //  free list exit
           u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-          u3_post        bot_p;               //  XX s/b rut_p
           c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
           c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
           c3_w           siz_w;               //  directory size

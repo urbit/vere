@@ -703,7 +703,7 @@ static u3_ce_patch*
 _ce_patch_compose(c3_w max_w)
 {
   c3_w pgs_w = 0;
-  c3_w off_w = u3R->hep.bot_p >> u3a_page;
+  c3_w off_w = u3R->rut_p >> u3a_page;
 
   /* Count dirty pages.
   */
@@ -1114,7 +1114,7 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 static c3_o
 _ce_loom_fine(void)
 {
-  c3_w off_w = u3R->hep.bot_p >> u3a_page;
+  c3_w off_w = u3R->rut_p >> u3a_page;
   c3_w blk_w, bit_w, pag_w, i_w;
   c3_o fin_o = c3y;
 

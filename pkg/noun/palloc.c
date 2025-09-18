@@ -20,8 +20,12 @@
 #  define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
 #endif
 
-#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
-#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
+#ifndef BASE
+  #define BASE u3R->rut_p
+#endif
+
+#define page_to_post(pag_w)  (BASE + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
+#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)BASE + HEAP.off_ws) >> u3a_page)
 
 #ifndef HEAP
   #define HEAP u3R->hep
@@ -91,13 +95,9 @@ _init_heap(void)
     HEAP.off_ws = -1;
   }
 
-  // XX and rut
-  //
-  assert ( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
-
-  HEAP.bot_p = u3R->hat_p;
-
+  assert( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
   assert( u3R->hat_p > u3a_rest_pg );
+  assert( u3R->hat_p == u3R->rut_p );
 
   //  XX check for overflow
 
