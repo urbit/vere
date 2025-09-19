@@ -2820,8 +2820,8 @@ _cw_boot(c3_i argc, c3_c* argv[])
 
   //  make pier, configure i/o
   //
+  u3_mars mar_u = { .dir_c = dir_c };
   {
-    u3_mars mar_u = { .dir_c = dir_c };
     u3_mars_make(&mar_u);
 
     //  set up logging
@@ -2905,8 +2905,8 @@ _cw_work(c3_i argc, c3_c* argv[])
   
   //  setup mars
   //
+  u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
   {
-    u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
     u3_mars_load(&mar_u, u3_dlod_last);
 
     //  set up logging
