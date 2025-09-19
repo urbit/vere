@@ -1839,7 +1839,8 @@ _pack_seek_hunks(void)
       nex_p = pag_u->nex_p;
       pag_u->nex_p = 0;
 
-      u3_assert( pre_u.pag_w < pag_u->pag_w );
+      u3_assert(  (pre_u.pag_w < pag_u->pag_w)
+               || (!pre_u.pag_w && !pag_u->pag_w) );
 
       rag_u = u3a_pack_alloc(len_w);
       hap_w = &(rag_u->mar_w[hun_u->map_s]);
