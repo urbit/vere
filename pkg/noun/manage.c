@@ -38,9 +38,6 @@
 #include "whereami.h"
 #include "xtract.h"
 
-
-jmp_buf jumper;
-
 //  XX stack-overflow recovery should be gated by -a
 //
 #undef NO_OVERFLOW
@@ -51,7 +48,7 @@ jmp_buf jumper;
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(setjmp(jumper))
+#       define u3m_trap() (u3_noun)(setjmp(u3R->esc.buf))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -987,7 +984,7 @@ u3m_bail(u3_noun how)
 
   /* Longjmp, with an underscore.
   */
-  _longjmp(jumper, how);
+  _longjmp(u3R->esc.buf, how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1344,7 +1341,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1459,7 +1456,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
     u3C.wag_w = wag_w;
@@ -1560,7 +1557,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1662,7 +1659,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(jumper)) ) {
+  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
