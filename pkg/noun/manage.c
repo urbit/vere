@@ -1887,8 +1887,6 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_w len_w = u3r_met(3, som);
 
       if ( _(_cm_is_tas(som, len_w)) ) {
-        c3_w len_w = u3r_met(3, som);
-
         if ( str_c ) {
           *(str_c++) = '%';
           u3r_bytes(0, len_w, (c3_y *)str_c, som);
@@ -1906,7 +1904,6 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         return len_w + 2;
       }
       else {
-        c3_w len_w = u3r_met(3, som);
         c3_c *buf_c = c3_malloc(2 + (2 * len_w) + 1);
         c3_w i_w = 0;
         c3_w a_w = 0;
