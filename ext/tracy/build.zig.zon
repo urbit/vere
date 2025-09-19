@@ -1,0 +1,13 @@
+.{
+    .name = "tracy",
+    .version = "0.0.1",
+    .dependencies = .{
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/v0.12.2.tar.gz",
+            .hash = "12203c118392e70e8a4735727e5969381b6161172eb90bd8861c5bb64da269b4327d",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

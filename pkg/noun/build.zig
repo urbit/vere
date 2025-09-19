@@ -7,6 +7,21 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
+    
+    // Parse Tracy-related compiler options from copts to determine if Tracy is enabled
+    var tracy_enabled = false;
+    var tracy_callstack = false;
+    var tracy_no_exit = false;
+    
+    for (copts) |opt| {
+        if (std.mem.eql(u8, opt, "-DTRACY_ENABLE")) {
+            tracy_enabled = true;
+        } else if (std.mem.eql(u8, opt, "-DTRACY_CALLSTACK")) {
+            tracy_callstack = true;
+        } else if (std.mem.eql(u8, opt, "-DTRACY_NO_EXIT")) {
+            tracy_no_exit = true;
+        }
+    }
 
     const pkg_noun = b.addStaticLibrary(.{
         .name = "noun",
@@ -109,6 +124,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const tracy = if (tracy_enabled) b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+
     pkg_noun.linkLibC();
 
     pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
@@ -129,6 +149,11 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.linkLibrary(whereami.artifact("whereami"));
     pkg_noun.linkLibrary(zlib.artifact("z"));
     pkg_noun.linkLibrary(wasm3.artifact("wasm3"));
+
+    if (tracy_enabled) {
+        pkg_noun.linkLibrary(tracy.?.artifact("tracy"));
+        pkg_noun.addIncludePath(tracy.?.path(""));
+    }
 
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
