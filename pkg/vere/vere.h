@@ -514,12 +514,12 @@
           u3_dire*         com_u;               //  log directory
           c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
-          c3_w_tmp             ver_w;               //  version (see version.h)
+          c3_w_new             ver_w;               //  version (see version.h)
           void*            mdb_u;               //  lmdb env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
           c3_d             epo_d;               //  current epoch number
-          c3_w_tmp            hit_w[100];          //  batch histogram
+          c3_w_new            hit_w[100];          //  batch histogram
           struct {                              //  new write queue
             u3_feat*       ent_u;               //  queue entry (highest)
             u3_feat*       ext_u;               //  queue exit (lowest)
@@ -534,7 +534,7 @@
             c3_o           ted_o;               //  c3y == active
             c3_o           ret_o;               //  result
             c3_d           eve_d;               //  first event
-            c3_d           len_w;               //  number of events
+            c3_d           len_d;               //  number of events XX len_d
             c3_y*          byt_y[100];          //  array of bytes
             size_t         siz_i[100];          //  array of lengths
           } sav_u;
@@ -556,10 +556,10 @@
       /* u3_meta: pier metadata.
       */
         typedef struct _u3_meta {
-          c3_w_tmp ver_w;                       //  version
+          c3_w_new ver_w;                       //  version
           c3_d who_d[2];                    //  identity
           c3_o fak_o;                       //  fake bit
-          c3_w_tmp lif_w;                       //  lifecycle length
+          c3_w_new lif_w;                       //  lifecycle length
         } u3_meta;
 
       /* u3_boot_opts: bootstrap parameters.

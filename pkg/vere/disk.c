@@ -23,7 +23,7 @@ static void
 _disk_commit_done(u3_disk* log_u)
 {
   c3_d eve_d = log_u->sav_u.eve_d;
-  c3_w_tmp len_w = log_u->sav_u.len_w;
+  c3_d len_d = log_u->sav_u.len_d;
   c3_o ret_o = log_u->sav_u.ret_o;
 
 #ifdef VERBOSE_DISK
@@ -41,11 +41,11 @@ _disk_commit_done(u3_disk* log_u)
 #endif
 
   if ( c3y == ret_o ) {
-    log_u->dun_d += len_w;
+    log_u->dun_d += len_d;
   }
 
   if ( log_u->sav_u.don_f ) {
-    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_w - 1), ret_o);
+    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_d - 1), ret_o);
   }
  
   {
@@ -91,7 +91,7 @@ _disk_commit_cb(uv_work_t* ted_u)
 
   log_u->sav_u.ret_o = u3_lmdb_save(log_u->mdb_u,
                                     log_u->sav_u.eve_d,
-                                    log_u->sav_u.len_w,
+                                    log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
                                     log_u->sav_u.siz_i);
 }
@@ -115,7 +115,7 @@ _disk_commit_start(u3_disk* log_u)
 size_t
 u3_disk_etch(u3_disk* log_u,
              u3_noun    eve,
-             c3_l_tmp     mug_l,
+             c3_l_new     mug_l,
              c3_y**   out_y)
 {
   size_t len_i;
@@ -129,7 +129,7 @@ u3_disk_etch(u3_disk* log_u,
   //
   {
     u3_atom mat = u3qe_jam(eve);
-    c3_w_tmp  len_w = u3r_met(3, mat);
+    c3_n  len_w = u3r_met(3, mat);
 
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);
@@ -157,32 +157,32 @@ static c3_o
 _disk_batch(u3_disk* log_u)
 {
   u3_feat* fet_u = log_u->put_u.ext_u;
-  c3_w_tmp len_w = log_u->sen_d - log_u->dun_d;
+  c3_d len_d = log_u->sen_d - log_u->dun_d;
 
-  if ( !len_w || (c3y == log_u->sav_u.ted_o) ) {
+  if ( !len_d || (c3y == log_u->sav_u.ted_o) ) {
     return c3n;
   }
 
-  len_w = c3_min(len_w, 100);
+  len_d = c3_min(len_d, 100);
 
   u3_assert( fet_u );
   u3_assert( (1ULL + log_u->dun_d ) == fet_u->eve_d );
 
   log_u->sav_u.ret_o = c3n;
   log_u->sav_u.eve_d = fet_u->eve_d;
-  log_u->sav_u.len_w = len_w;
+  log_u->sav_u.len_d = len_d;
 
-  for ( c3_w_tmp i_w = 0ULL; i_w < len_w; ++i_w) {
+  for ( c3_d i_d = 0ULL; i_d < len_d; ++i_d) {
     u3_assert( fet_u );
-    u3_assert( (log_u->sav_u.eve_d + i_w) == fet_u->eve_d );
+    u3_assert( (log_u->sav_u.eve_d + i_d) == fet_u->eve_d );
 
-    log_u->sav_u.byt_y[i_w] = fet_u->hun_y;
-    log_u->sav_u.siz_i[i_w] = fet_u->len_i;
+    log_u->sav_u.byt_y[i_d] = fet_u->hun_y;
+    log_u->sav_u.siz_i[i_d] = fet_u->len_i;
 
     fet_u  = fet_u->nex_u;
   }
 
-  log_u->hit_w[len_w]++;
+  log_u->hit_w[len_d]++;
 
   return c3y;
 }
@@ -272,7 +272,7 @@ u3_disk_sync(u3_disk* log_u)
   if ( c3y == _disk_batch(log_u) ) {
     ret_o = u3_lmdb_save(log_u->mdb_u,
                          log_u->sav_u.eve_d,
-                         log_u->sav_u.len_w,
+                         log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
                          log_u->sav_u.siz_i);
 
@@ -305,7 +305,7 @@ c3_o
 u3_disk_sift(u3_disk* log_u,
              size_t   len_i,
              c3_y*    dat_y,
-             c3_l_tmp*    mug_l,
+             c3_l_new*    mug_l,
              u3_noun*   job)
 {
   if ( 4 >= len_i ) {
@@ -337,7 +337,7 @@ u3_disk_sift(u3_disk* log_u,
 struct _cd_list {
   u3_disk* log_u;
   u3_noun    eve;
-  c3_l_tmp     mug_l;
+  c3_l_new     mug_l;
 };
 
 /* _disk_read_list_cb(): lmdb read callback, invoked for each event in order
@@ -350,7 +350,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 
   {
     u3_noun job;
-    c3_l_tmp  mug_l;
+    c3_l_new  mug_l;
 
     if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
       return c3n;
@@ -366,7 +366,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 /* u3_disk_read_list(): synchronously read a cons list of events.
 */
 u3_weak
-u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_tmp* mug_l)
+u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_new* mug_l)
 {
   struct _cd_list ven_u = { log_u, u3_nul, 0 };
 
@@ -459,7 +459,7 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w_tmp len_w, c3_y* byt_y)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w_new len_w, c3_y* byt_y)
 {
   //  strip trailing zeroes.
   //
@@ -479,10 +479,10 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
-  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w_tmp), (c3_y*)&met_u->ver_w))
+  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w_new), (c3_y*)&met_u->ver_w))
      || (c3n == _disk_save_meta(mdb_u, "who", 2 * sizeof(c3_d), (c3_y*)met_u->who_d))
      || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
-     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w_tmp), (c3_y*)&met_u->lif_w)) )
+     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w_new), (c3_y*)&met_u->lif_w)) )
   {
     u3z(who);
     return c3n;
@@ -625,10 +625,10 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   }
 
   byt_y = val_u.buf_y;
-  lif_w = (c3_w_tmp)byt_y[0]
-        | (c3_w_tmp)byt_y[1] << 8
-        | (c3_w_tmp)byt_y[2] << 16
-        | (c3_w_tmp)byt_y[3] << 24;
+  lif_w = (c3_w_new)byt_y[0]
+        | (c3_w_new)byt_y[1] << 8
+        | (c3_w_new)byt_y[2] << 16
+        | (c3_w_new)byt_y[3] << 24;
 
   {
     c3_o val_o = c3y;
@@ -668,7 +668,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 static c3_c*
 _disk_lock(c3_c* pax_c)
 {
-  c3_w_tmp  len_w = strlen(pax_c) + sizeof("/.vere.lock");
+  c3_w_new  len_w = strlen(pax_c) + sizeof("/.vere.lock");
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
 
@@ -684,7 +684,7 @@ _disk_acquire(c3_c* pax_c)
 {
   c3_c* paf_c    = _disk_lock(pax_c);
   c3_y  dat_y[13] = {0};
-  c3_w_tmp  pid_w    = 0;
+  c3_w_new  pid_w    = 0;
   c3_i  fid_i, ret_i;
 
   if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
@@ -888,7 +888,7 @@ u3_disk_slog(u3_disk* log_u)
           log_u->dun_d);
 
   {
-    c3_w_tmp len_w, i_w;
+    c3_w_new len_w, i_w;
 
     u3l_log("    batch:");
 
@@ -918,11 +918,11 @@ static c3_o
 _disk_epoc_meta(u3_disk*    log_u,
                 c3_d        epo_d,
                 const c3_c* met_c,
-                c3_w_tmp        max_w,
+                c3_w_new        max_w,
                 c3_c*       buf_c)
 {
   struct stat buf_u;
-  c3_w_tmp red_w, len_w;
+  c3_w_new red_w, len_w;
   c3_i ret_i, fid_i;
   c3_c*       pat_c;
 
@@ -1492,7 +1492,7 @@ u3_disk_kindly(u3_disk* log_u, c3_d eve_d)
   switch ( log_u->ver_w ) {
     case U3D_VER1: {
       //  set version to 2 (migration in progress)
-      c3_w_tmp ver_w = U3D_VER2;
+      c3_w_new ver_w = U3D_VER2;
       if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
@@ -1611,7 +1611,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d)
   //
   {
     c3_c ver_c[8];
-    c3_w_tmp ver_w;
+    c3_w_new ver_w;
     c3_i car_i;
 
     if ( c3n == _disk_epoc_meta(log_u, lat_d, "epoc",
