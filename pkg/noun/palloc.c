@@ -1084,7 +1084,7 @@ _idle_words(void)
       pag_w++;
     }
 
-    if ( siz_w ) {
+    if ( (u3C.wag_w & u3o_verbose) && siz_w ) {
       fprintf(stderr, "idle words: class=%u (%u words) blocks=%u (in %u pages) ",
                       i_w, (1U << (i_w + u3a_min_log)), siz_w, pag_w);
       u3a_print_memory(stderr, "total", siz_w << (i_w + u3a_min_log));
