@@ -535,6 +535,22 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
 }
 
+static c3_d
+_pave_params(void)
+{
+  //  pam_d bits:
+  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
+  //
+  //    word-size: 0==32, 1==64
+  //    page-size: relative binary-log in bytes
+  //
+  //
+  return 0
+         ^ (u3a_vits << 1)
+         ^ ((u3a_page + 2 - 12) << 3)
+         ^ (U3N_VERLAT << 6);
+}
+
 /* _pave_home(): initialize pristine home road.
 */
 static void
@@ -546,18 +562,7 @@ _pave_home(void)
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, sizeof(u3v_home));
   u3H->ver_d = U3V_VERLAT;
-
-  //  pam_d bits:
-  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
-  //
-  //    word-size: 0==32, 1==64
-  //    page-size: relative binary-log in bytes
-  //
-  //
-  u3H->pam_d = 0
-             ^ (u3a_vits << 1)
-             ^ ((u3a_page + 2 - 12) << 3)
-             ^ (U3N_VERLAT << 6);
+  u3H->pam_d = _pave_params();
 
   u3R = &u3H->rod_u;
 
@@ -611,6 +616,7 @@ _find_home(void)
     u3n_ream();
     u3n_reclaim();
     u3j_reclaim();
+    u3H->pam_d = _pave_params();
   }
 
   //  NB: the home road is always north
