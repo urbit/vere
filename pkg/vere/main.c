@@ -2780,17 +2780,13 @@ _cw_vile(c3_i argc, c3_c* argv[])
 static void
 _cw_boot(c3_i argc, c3_c* argv[])
 {
-  if ( 18 > argc ) {
-    fprintf(stderr, "boot: missing args\r\n");
-    exit(1);
-  }
-
   c3_c* dir_c = 0;
 
   //  extract option map and load runtime config
   {
     c3_i ch_i, lid_i;
 
+    const c3_w siz_w = 8;
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
@@ -2847,6 +2843,8 @@ _cw_boot(c3_i argc, c3_c* argv[])
         //  unknown opt
         //
         case '?': default: {
+          fprintf(stderr, "boot: unknown option: -%c %s\r\n", ch_i, optarg);
+          exit(1);
           break;
         }
       }
@@ -2892,15 +2890,6 @@ _cw_boot(c3_i argc, c3_c* argv[])
 static void
 _cw_work(c3_i argc, c3_c* argv[])
 {
-#ifdef U3_OS_windows
-  if ( 24 > argc ) {
-#else
-  if ( 22 > argc ) {
-#endif
-    fprintf(stderr, "work: missing args\n");
-    exit(1);
-  }
-
   uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
   c3_c*      dir_c = 0;
   c3_d       eve_d = 0;
@@ -2911,6 +2900,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   {
     c3_i ch_i, lid_i;
 
+    const c3_w siz_w = 11;
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
@@ -2980,12 +2970,27 @@ _cw_work(c3_i argc, c3_c* argv[])
         case 'w': {  //  win-intr-handle
 #ifdef U3_OS_windows
           _cw_intr_win(optarg);
+#else
+          fprintf(stderr, "boot: -%c is for windows only\r\n", ch_i);
+          exit(1);
 #endif
           break;
         }
         //  unknown opt
         //
         case '?': default: {
+          const c3_c* nam_c;
+          if (  (0 <= lid_i)
+             && (siz_w < lid_i)
+             && (lop_u[lid_i].name) )
+          {
+            nam_c = lop_u[lid_i].name;
+          }
+          else {
+            nam_c = "(unknown)";
+          }
+          fprintf(stderr, "boot: unknown option: -%c (--%s) %s\r\n", ch_i, nam_c, optarg);
+          exit(1);
           break;
         }
       }
@@ -2996,7 +3001,6 @@ _cw_work(c3_i argc, c3_c* argv[])
   //
   {
     u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
-    fprintf(stderr, "mar_u.dir_c: %s\r\n", mar_u.dir_c);
     u3_mars_load(&mar_u, u3_dlod_last);
 
     //  set up logging

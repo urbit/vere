@@ -965,9 +965,9 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //
   {
 #ifdef U3_OS_windows
-    c3_c* arg_c[28];
+    c3_c* arg_c[28] = {0};
 #else
-    c3_c* arg_c[26];
+    c3_c* arg_c[26] = {0};
 #endif
     c3_c  key_c[256];
     c3_c  wag_c[11];
@@ -1281,8 +1281,10 @@ u3_lord_boot(c3_c* pax_c,
     arg_c[i_w++] = hap_c;
     arg_c[i_w++] = "--loom";                  //  loom bex
     arg_c[i_w++] = lom_c;
-    arg_c[i_w++] = "--ephemeral-file";        //  ephemeral file
-    arg_c[i_w++] = u3C.eph_c == 0 ? "0" : strdup(u3C.eph_c);
+    if ( 0 != u3C.eph_c) {
+      arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
+      arg_c[i_w++] = strdup(u3C.eph_c);
+    }
     arg_c[i_w++] = "--toss";                  //  toss
     arg_c[i_w++] = tos_c;
     arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
