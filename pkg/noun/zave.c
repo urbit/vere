@@ -68,9 +68,6 @@ u3z_find(u3z_cid cid, u3_noun key)
     while ( 1 ) {
       u3_weak got = u3h_get(_har(rod_u, cid), key);
       if ( u3_none != got ) {
-        if ( u3z_memo_ford == cid ) {
-          u3m_p("found ford", 1);
-        }
         return got;
       }
       if ( 0 == rod_u->kid_p ) {
