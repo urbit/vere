@@ -2535,6 +2535,7 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   c3_c eve_c[21] = {0};
   c3_c sap_c[21] = {0};
   c3_c lom_c[3]  = {0};
+  c3_c map_c[21] = {0};
   c3_i ret_i;
 
   ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
@@ -2543,6 +2544,8 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
   u3_assert( ret_i && ret_i < sizeof(sap_c) );
   ret_i = snprintf(lom_c, sizeof(lom_c), "%u", u3_Host.ops_u.lom_y);
   u3_assert( ret_i && ret_i < sizeof(lom_c) );
+  ret_i = snprintf(map_c, sizeof(map_c), "%" SCNuMAX, u3_Host.ops_u.siz_i);
+  u3_assert( ret_i && ret_i < sizeof(map_c) );
 
   {
     c3_z    i_z = 0;
@@ -2563,6 +2566,8 @@ _cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
     argv[i_z++] = eve_c;
     argv[i_z++] = "--snap-at";
     argv[i_z++] = sap_c;
+    argv[i_z++] = "--lmdb-map-size";
+    argv[i_z++] = map_c;
 
     if _(mel_o) {
       argv[i_z++] = "--auto-meld";
