@@ -964,7 +964,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[28] = {0};
+    c3_c* arg_c[23] = {0};  //  NB: expand as necessary
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
@@ -1239,7 +1239,7 @@ u3_lord_boot(c3_c* pax_c,
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[19];
+    c3_c* arg_c[17] = {0};  //  NB: expand as necessary
     c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
