@@ -1867,7 +1867,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 
       if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
-         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d) )
+         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
+         || (c3n == _disk_vere_diff(log_u)) )
       {
         return _epoc_good;
       }
