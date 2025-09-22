@@ -1310,6 +1310,9 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
     mar_u->sen_d = mar_u->dun_d = met_u.lif_w;
     u3m_save();
+    if ( !(u3C.wag_w & u3o_yolo) ) {
+      u3_disk_roll(mar_u->log_u, mar_u->dun_d);
+    }
   }
 
   u3l_log("---------------- playback starting ----------------");

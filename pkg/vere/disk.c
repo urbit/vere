@@ -1866,20 +1866,20 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      if (  !(u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
-         && (  (!log_u->epo_d && log_u->dun_d)
-            || (c3y == _disk_vere_diff(log_u)) ))
+      if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
+         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d) )
       {
-        if ( log_u->dun_d != u3A->eve_d ) {
-          //  XX stale snapshot, new binary, error out
-          //  XX bad, add to enum
-          fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
-          exit(1);
-        }
-        else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
-          fprintf(stderr, "disk: failed to initialize epoch\r\n");
-          exit(1);
-        }
+        return _epoc_good;
+      }
+      else if ( log_u->dun_d != u3A->eve_d ) {
+        //  XX stale snapshot, new binary, error out
+        //  XX bad, add to enum
+        fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
+        exit(1);
+      }
+      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
       }
 
       return _epoc_good;
