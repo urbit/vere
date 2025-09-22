@@ -2790,7 +2790,6 @@ _cw_boot(c3_i argc, c3_c* argv[])
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
-      { "passkey",               required_argument, NULL, 'k' },
       { "loom",                  required_argument, NULL, 'l' },
       { "persistent-cache-size", required_argument, NULL, 'p' },
       { "runtime-config",        required_argument, NULL, 'r' },
@@ -2811,9 +2810,6 @@ _cw_boot(c3_i argc, c3_c* argv[])
         }
         case 'e': {  //  ephemeral-file
           u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
-          break;
-        }
-        case 'k': {  //  XX use passkey
           break;
         }
         case 'l': {  //  loom
@@ -2904,7 +2900,6 @@ _cw_work(c3_i argc, c3_c* argv[])
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
-      { "passkey",               required_argument, NULL, 'k' },
       { "loom",                  required_argument, NULL, 'l' },
       { "snap-time",             required_argument, NULL, 'n' },
       { "persistent-cache-size", required_argument, NULL, 'p' },
@@ -2928,9 +2923,6 @@ _cw_work(c3_i argc, c3_c* argv[])
         }
         case 'e': {  //  ephemeral-file
           u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
-          break;
-        }
-        case 'k': {  //  XX use passkey
           break;
         }
         case 'l': {  //  loom
