@@ -1826,7 +1826,7 @@ _cn_etch_bytecode(u3_noun fol) {
   c3_y* pog_y = pog_u->byc_u.ops_y;
   c3_w len_w = pog_u->byc_u.len_w;
   c3_w ip_w=0, num_w=0, bop_w=0, dex_w=0;
-  c3_w len_c = 1; // opening "{"
+  c3_w len_c = 2; // closing "}", null terminator
   // set par_w (parameter flag) to an invalid value,
   // so we can break imeadately if needed
   c3_w par_w = 5;
