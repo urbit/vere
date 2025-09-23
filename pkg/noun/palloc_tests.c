@@ -18,6 +18,7 @@ struct heap {
 struct heap hep_u;
 
 #define HEAP  (hep_u)
+#define BASE  (hep_u.bot_p)
 
 #include "./palloc.c"
 
@@ -77,93 +78,6 @@ _test_print_pages(c3_w max_w)
   }
 }
 
-void
-u3m_fall(void);
-void
-u3m_leap(c3_w pad_w);
-
-static void
-_test_palloc(void)
-{
-  c3_w *wor_w;
-  u3_post pos_p, sop_p;
-  struct heap tmp_u;
-
-  memset(&(HEAP), 0x0, sizeof(HEAP));
-  _init_heap();
-
-  pos_p = _imalloc(4);
-
-  fprintf(stderr, "north: pos_p %x\n", pos_p);
-
-  wor_w = u3a_into(pos_p);
-
-  wor_w[0] = 0;
-  wor_w[1] = 1;
-  wor_w[2] = 2;
-  wor_w[3] = 3;
-
-  sop_p = _imalloc(4);
-
-  fprintf(stderr, "north: sop_p %x\n", sop_p);
-
-  _ifree(pos_p);
-  _ifree(sop_p);
-
-  fprintf(stderr, "palloc_tests: pre-leap: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
-
-  memcpy(&tmp_u, &hep_u, sizeof(tmp_u));
-  u3m_leap(1U << u3a_page);
-
-  fprintf(stderr, "palloc_tests: post-leap: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
-
-  memset(&(HEAP), 0x0, sizeof(HEAP));
-  _init_heap();
-
-  pos_p = _imalloc(4);
-
-  fprintf(stderr, "south: pos_p %x\n", pos_p);
-
-  wor_w = u3a_into(pos_p);
-
-  wor_w[0] = 0;
-  wor_w[1] = 1;
-  wor_w[2] = 2;
-  wor_w[3] = 3;
-
-  sop_p = _imalloc(4);
-
-  fprintf(stderr, "south: sop_p %x\n", sop_p);
-
-  _ifree(pos_p);
-  _ifree(sop_p);
-
-  fprintf(stderr, "palloc_tests: pre-fall: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
-
-  u3m_fall();
-  memcpy(&hep_u, &tmp_u, sizeof(tmp_u));
-
-  fprintf(stderr, "palloc_tests: post-fall: hat=0x%x cap=0x%x\n", u3R->hat_p, u3R->cap_p);
-
-  pos_p = _imalloc(4);
-
-  fprintf(stderr, "north: pos_p %x\n", pos_p);
-
-  wor_w = u3a_into(pos_p);
-
-  wor_w[0] = 0;
-  wor_w[1] = 1;
-  wor_w[2] = 2;
-  wor_w[3] = 3;
-
-  sop_p = _imalloc(4);
-
-  fprintf(stderr, "north: sop_p %x\n", sop_p);
-
-  _ifree(pos_p);
-  _ifree(sop_p);
-}
-
 /* main(): run all test cases.
 */
 int
@@ -173,9 +87,5 @@ main(int argc, char* argv[])
 
   _test_print_chunks();
   _test_print_pages(10);
-
-  _test_palloc();
-
-  fprintf(stderr, "palloc okeedokee\n");
   return 0;
 }

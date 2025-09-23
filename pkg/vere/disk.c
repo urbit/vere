@@ -1819,9 +1819,17 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 
       _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
+      u3m_stop();
+      u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+      if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch during loom migration\r\n");
+        exit(1);
+      }
+
       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
-      //  XX u3m_stop()
-    } // fallthru
+      return _epoc_good;
+    } break;
 
     case U3E_VER2: {
       if ( u3_dlod_epoc == lod_e ) {
@@ -1858,27 +1866,30 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      if (  !(u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
-         && (  (!log_u->epo_d && log_u->dun_d)
-            || (c3y == _disk_vere_diff(log_u)) ))
+      if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
+         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
+         || (c3n == _disk_vere_diff(log_u)) )
       {
-        if ( log_u->dun_d != u3A->eve_d ) {
-          //  XX stale snapshot, new binary, error out
-          //  XX bad, add to enum
-          fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
-          exit(1);
-        }
-        else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
-          fprintf(stderr, "disk: failed to initialize epoch\r\n");
-          exit(1);
-        }
+        return _epoc_good;
       }
+      else if ( log_u->dun_d != u3A->eve_d ) {
+        //  XX stale snapshot, new binary, error out
+        //  XX bad, add to enum
+        fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
+        exit(1);
+      }
+      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
+
+      return _epoc_good;
     } break;
 
     default: u3_assert(0);
   }
 
-  return _epoc_good;
+  u3_assert(!"unreachable");
 }
 
 /* u3_disk_make(): make pier directories.
