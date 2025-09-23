@@ -169,6 +169,13 @@
         u3j_hook(u3_noun     cor,
                  const c3_c* tam_c);
 
+      /* u3j_call_direct(): try to kick by jet, no validation. No ice test.
+      ** Return u3_none if no kick.
+      ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+      */
+        u3_weak
+        u3j_call_direct(u3_noun cor, u3j_harm* ham_u, c3_l axe_l);
+
       /* u3j_soft():
       **
       **   Execute hook from core, without jet.

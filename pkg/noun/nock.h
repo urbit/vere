@@ -10,6 +10,13 @@
 #include "types.h"
 #include "zave.h"
 
+#if 0
+  |%
+  +$  cape  $~(| $@(? (pair cape cape)))
+  +$  sock  $~(|+~ (pair cape *))
+  --
+#endif
+
   /** Data structures.
   ***
   **/
@@ -21,6 +28,15 @@
     u3_noun key;
     u3z_cid cid;
   } u3n_memo;
+
+  /* u3n_dire: direct call information
+   */
+  struct _u3n_prog;
+  typedef struct {
+    u3p(_u3n_prog)  pog_p;   //  called program post or [less formula] during compilation
+    u3j_harm*       ham_u;   //  jet arm, nullable
+    c3_l            axe_l;   //  jet arm axis
+  } u3n_dire;
 
   /* u3n_prog: program compiled from nock
    */
@@ -46,6 +62,10 @@
       c3_w      len_w;                // number of registration sites
       u3j_rite* rit_u;                // array of sites
     } reg_u;                          // registration site data
+    struct {
+      c3_w      len_w;                // number of direct calls
+      u3n_dire* dat_u;                // array of call info
+    } dir_u;                          // direct call data
   } u3n_prog;
 
   /**  Functions.
@@ -76,35 +96,15 @@
       u3_noun
       u3n_kick_on(u3_noun gat);
 
-    /* u3n_nock_in(): produce .*(bus fol), as ++toon, in namespace.
-    */
-      u3_noun
-      u3n_nock_in(u3_noun fly, u3_noun bus, u3_noun fol);
-
-    /* u3n_nock_it(): produce .*(bus fol), as ++toon, in namespace.
-    */
-      u3_noun
-      u3n_nock_it(u3_noun sea, u3_noun bus, u3_noun fol);
-
     /* u3n_nock_et(): produce .*(bus fol), as ++toon, in namespace.
     */
       u3_noun
       u3n_nock_et(u3_noun gul, u3_noun bus, u3_noun fol);
 
-    /* u3n_slam_in(): produce (gat sam), as ++toon, in namespace.
-    */
-      u3_noun
-      u3n_slam_in(u3_noun fly, u3_noun gat, u3_noun sam);
-
-    /* u3n_slam_it(): produce (gat sam), as ++toon, in namespace.
-    */
-      u3_noun
-      u3n_slam_it(u3_noun sea, u3_noun gat, u3_noun sam);
-
     /* u3n_slam_et(): produce (gat sam), as ++toon, in namespace.
     */
       u3_noun
-      u3n_slam_it(u3_noun gul, u3_noun gat, u3_noun sam);
+      u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam);
 
     /* u3n_nock_an(): as slam_in(), but with empty fly.
     */
@@ -141,9 +141,24 @@
       void
       u3n_free(void);
 
+    /* u3n_free_table(): free bytecode table
+     */
+      void
+      u3n_free_table(u3p(u3h_root) har_p);
+
     /* u3n_ream(): refresh after restoring from checkpoint.
     */
       void
       u3n_ream(void);
+
+    /* u3n_build_direct(): Compile [sub fol] pair with direct calls and
+    *  its callees recursively
+    */
+      u3n_prog*
+      u3n_build_direct(u3_noun sub,
+        u3_noun fol,
+        u3_noun cole,
+        u3_noun code,
+        u3_noun fols);
 
 #endif /* ifndef U3_NOCK_H */

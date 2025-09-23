@@ -105,6 +105,18 @@
       */
         void
         u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val);
+      
+      /* u3h_jib(): update a hashtable value or insert `val`
+      **
+      ** `key` is RETAINED
+      ** `fun_f` must transfer the noun argument
+      **  XX make it in-place?
+      */
+        void
+        u3h_jib(u3p(u3h_root) har_p,
+          u3_noun key,
+          u3_noun(*fun_f)(u3_weak, void*),
+          void* ptr_v);
 
       /* u3h_put_get(): insert in caching hashtable, returning deleted entry
       **

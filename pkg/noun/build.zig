@@ -179,6 +179,7 @@ pub fn build(b: *std.Build) !void {
 
 const c_source_files = [_][]const u8{
     "allocate.c",
+    "direct.c",
     "events.c",
     "hashtable.c",
     "imprison.c",
@@ -376,8 +377,9 @@ const c_source_files = [_][]const u8{
     "nock.c",
     "options.c",
     "retrieve.c",
-    "ship.c",
     "serial.c",
+    "ship.c",
+    "ska_core.c",
     "trace.c",
     "urth.c",
     "vortex.c",
@@ -387,6 +389,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "direct.h",
     "error.h",
     "events.h",
     "hashtable.h",
@@ -403,6 +406,7 @@ const install_headers = [_][]const u8{
     "retrieve.h",
     "serial.h",
     "ship.h",
+    "ska_core.h",
     "trace.h",
     "types.h",
     "urth.h",
