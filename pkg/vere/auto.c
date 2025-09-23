@@ -92,7 +92,7 @@ u3_auto_bail_slog(u3_ovum* egg_u, u3_noun lud)
   c3_n  len_n = 1;
 
   while ( u3_nul != dul ) {
-    u3l_log("%s: bail %llu", car_c, len_n++);
+    u3l_log("%s: bail %" PRIc3_n, car_c, len_n++);
     u3_pier_punt_goof(car_c, u3k(u3h(dul)));
 
     dul = u3t(dul);

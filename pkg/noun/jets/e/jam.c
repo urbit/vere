@@ -34,7 +34,7 @@ u3qe_jam(u3_atom a)
     u3a_print_memory(stderr, "total", tot_n);
     u3a_print_memory(stderr, "memoization cache", mem_n);
     u3h_root* har_u = u3to(u3h_root, u3R->cax.har_p);
-    u3l_log("memoization entries: %llu", har_u->use_w);
+    u3l_log("memoization entries: %" PRIc3_n, har_u->use_w);
 		u3a_print_memory(stderr, "unused free", u3a_open(u3R));
     return tot_n;
   }
