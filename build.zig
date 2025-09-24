@@ -157,7 +157,7 @@ pub fn build(b: *std.Build) !void {
             if (t.os.tag == .linux and
                 target.query.isNative() and
                 !asan and !ubsan)
-                b.resolveTargetQuery(.{ .abi = .musl })
+                b.resolveTargetQuery(.{ .abi = t.abi, .os_tag = t.os.tag })
             else
                 target,
             optimize,
