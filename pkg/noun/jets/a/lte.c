@@ -40,7 +40,7 @@ u3wa_lte(u3_noun cor)
 {
   u3_noun a, b;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0))
+  if (  (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul))
      || (c3n == u3ud(b))
      || (c3n == u3ud(a)) )
   {

@@ -13,7 +13,7 @@ u3we_mice(u3_noun cor) {
 
   if ( c3n == u3r_mean(cor, u3x_sam_2, &bus,
                             u3x_sam_3, &fol,
-                            0) )
+                            u3_nul) )
   {
     return u3m_bail(c3__exit);
   }

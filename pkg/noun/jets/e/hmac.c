@@ -69,8 +69,8 @@
 
     // sample is [[haj boq out] [wik key] [wid dat]]
     if ( (c3n == u3r_mean(cor, u3x_sam_4,  &haj,
-                               50,         &boq, // +<->-
-                               51,         &out, // +<->+
+                               (c3_n)50,         &boq, // +<->-
+                               (c3_n)51,         &out, // +<->+
                                u3x_sam_12, &wik,
                                u3x_sam_13, &key,
                                u3x_sam_14, &wid,
