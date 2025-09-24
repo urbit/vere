@@ -2794,12 +2794,13 @@ _cw_boot(c3_i argc, c3_c* argv[])
       { "runtime-config",        required_argument, NULL, 'r' },
       { "snap-dir",              required_argument, NULL, 's' },
       { "toss",                  required_argument, NULL, 't' },
+      { "lmdb-map-size",         required_argument, NULL, 'z' },
       //
       { NULL, 0, NULL, 0 },
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:p:r:s:t:",
+                   "c:e:k:l:p:r:s:t:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
@@ -2832,6 +2833,13 @@ _cw_boot(c3_i argc, c3_c* argv[])
         case 't': {  //  toss
           if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
             fprintf(stderr, "boot: toss: invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'z': {  //  lmdb-map-size
+          if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+            fprintf(stderr, "boot: invalid lmdb-map-size: %s\r\n", optarg);
+            exit(1);
           }
           break;
         }
@@ -2906,12 +2914,13 @@ _cw_work(c3_i argc, c3_c* argv[])
       { "toss",                  required_argument, NULL, 't' },
       { "play-until",            required_argument, NULL, 'u' },
       { "win-intr-handle",       required_argument, NULL, 'w' },
+      { "lmdb-map-size",         required_argument, NULL, 'z' },
       //
       { NULL, 0, NULL, 0 },
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:n:p:r:s:t:u:w:",
+                   "c:e:k:l:n:p:r:s:t:u:w:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
@@ -2964,6 +2973,13 @@ _cw_work(c3_i argc, c3_c* argv[])
           fprintf(stderr, "boot: -%c is for windows only\r\n", ch_i);
           exit(1);
 #endif
+          break;
+        }
+        case 'z': {  //  lmdb-map-size
+          if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+            fprintf(stderr, "boot: invalid lmdb-map-size: %s\r\n", optarg);
+            exit(1);
+          }
           break;
         }
         //  unknown opt

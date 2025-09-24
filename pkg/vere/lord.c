@@ -959,7 +959,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[23] = {0};  //  NB: expand as necessary
+    c3_c* arg_c[25] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
@@ -967,6 +967,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  tos_c[11];
     c3_c  sap_c[11];
     c3_c  cev_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
 
     sprintf(wag_c, "%u", god_u->wag_w);
@@ -980,6 +981,8 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
 
     sprintf(tos_c, "%u", u3C.tos_w);
+
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
     c3_w i_w = 0;
     arg_c[i_w++] = god_u->bin_c;              //  executable
@@ -998,6 +1001,8 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     arg_c[i_w++] = per_c;
     arg_c[i_w++] = "--snap-time";             //  snapshot interval
     arg_c[i_w++] = sap_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
 
     if ( u3_Host.ops_u.til_c ) {
       arg_c[i_w++] = "--play-until";          //  play until
@@ -1222,13 +1227,14 @@ u3_lord_boot(c3_c* pax_c,
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[17] = {0};  //  NB: expand as necessary
+    c3_c* arg_c[19] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  lom_c[11];
     c3_c  eph_c[11];
     c3_c  tos_c[11];
     c3_c  per_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
 
     sprintf(wag_c, "%u", bot_u->wag_w);
@@ -1240,6 +1246,8 @@ u3_lord_boot(c3_c* pax_c,
     sprintf(tos_c, "%u", u3C.tos_w);
 
     sprintf(per_c, "%u", u3_Host.ops_u.per_w);
+
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
     c3_w i_w = 0;
     arg_c[i_w++] = bot_u->bin_c;              //  executable
@@ -1256,6 +1264,8 @@ u3_lord_boot(c3_c* pax_c,
     arg_c[i_w++] = tos_c;
     arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
     arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
 
     if ( 0 != u3C.eph_c) {
       arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
