@@ -138,6 +138,8 @@ u3_migrate_v5(c3_d eve_d)
     abort();
   }
 
+  fprintf(stderr, "loom: allocator migration running...\r\n");
+
   cop_u.siz_w = 32;
   cop_u.tac   = c3_malloc(sizeof(*cop_u.tac) * cop_u.siz_w);
   vt_init(&(cop_u.map_u));
@@ -160,4 +162,6 @@ u3_migrate_v5(c3_d eve_d)
   vt_cleanup(&cop_u.map_u);
 
   c3_free(cop_u.tac);
+
+  fprintf(stderr, "loom: allocator migration done\r\n");
 }
