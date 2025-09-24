@@ -12,20 +12,19 @@
            u3_atom c,
            u3_atom d)
   {
+    c3_w b_w, c_w;
     if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
       return u3m_bail(c3__fail);
     }
-    if ( !_(u3a_is_cat(b)) ) {
-      return 0;
+    if ( !_(u3r_safe_word(b, &b_w)) ) {
+      return u3m_bail(c3__fail);
     }
-    if ( !_(u3a_is_cat(c)) ) {
-      c = 0x7fffffff;
+    if ( !_(u3r_safe_word(c, &c_w)) ) {
+      return u3m_bail(c3__fail);
     }
 
     {
       c3_g a_g   = a;
-      c3_w b_w   = b;
-      c3_w c_w   = c;
       c3_w len_w = u3r_met(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {

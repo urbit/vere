@@ -92,6 +92,7 @@ u3_foil_folder(const c3_c* pax_c)
         return 0;
       }
       else {
+        //  XX remove mkdir and retry
         if ( 0 != (err_i = uv_fs_mkdir(u3L, &ruq_u, pax_c, 0700, 0)) ) {
           _foil_fail(pax_c, err_i);
           return 0;

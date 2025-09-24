@@ -137,10 +137,15 @@ pub fn build(b: *std.Build) !void {
 
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
+
+
+
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
-    pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows) {
+        pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+    }
     pkg_noun.linkLibrary(softblas.artifact("softblas"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
     if (t.os.tag == .linux)
@@ -160,6 +165,8 @@ pub fn build(b: *std.Build) !void {
         pkg_noun.addIncludePath(b.path("platform/darwin"));
     if (t.os.tag == .linux)
         pkg_noun.addIncludePath(b.path("platform/linux"));
+    if (t.os.tag == .windows)
+        pkg_noun.addIncludePath(b.path("platform/windows"));
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
@@ -175,11 +182,20 @@ pub fn build(b: *std.Build) !void {
         .flags = flags.items,
     });
 
+    if (t.os.tag == .windows) {
+        pkg_noun.addCSourceFiles(.{
+            .root = b.path("platform/windows"),
+            .files = &.{"veh_handler.c", "rsignal.c"},
+            .flags = flags.items,
+        });
+    }
+
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
         .linux => "platform/linux/rsignal.h",
+        .windows => "platform/windows/rsignal.h",
         else => "",
     }), "platform/rsignal.h");
 
@@ -206,7 +222,6 @@ const c_source_files = [_][]const u8{
     "jets/a/sub.c",
     "jets/b/bind.c",
     "jets/b/clap.c",
-    "jets/b/drop.c",
     "jets/b/find.c",
     "jets/b/flop.c",
     "jets/b/lent.c",
@@ -293,14 +308,16 @@ const c_source_files = [_][]const u8{
     "jets/d/in_tap.c",
     "jets/d/in_uni.c",
     "jets/d/in_wyt.c",
+    "jets/e/adler.c",
     "jets/e/aes_cbc.c",
     "jets/e/aes_ecb.c",
     "jets/e/aes_siv.c",
     "jets/e/argon2.c",
     "jets/e/base.c",
     "jets/e/blake.c",
+    "jets/e/bytestream.c",
     "jets/e/chacha.c",
-    "jets/e/crc32.c",
+    "jets/e/crc.c",
     "jets/e/cue.c",
     "jets/e/ed_add_double_scalarmult.c",
     "jets/e/ed_add_scalarmult_scalarmult_base.c",
@@ -328,6 +345,7 @@ const c_source_files = [_][]const u8{
     "jets/e/loss.c",
     "jets/e/lune.c",
     "jets/e/mat.c",
+    "jets/e/mice.c",
     "jets/e/mink.c",
     "jets/e/mole.c",
     "jets/e/mule.c",
@@ -348,6 +366,7 @@ const c_source_files = [_][]const u8{
     "jets/e/tape.c",
     "jets/e/trip.c",
     "jets/e/urwasm.c",
+    "jets/e/zlib.c",
     "jets/f/cell.c",
     "jets/f/comb.c",
     "jets/f/cons.c",
@@ -366,6 +385,7 @@ const c_source_files = [_][]const u8{
     "jets/f/ut_crop.c",
     "jets/f/ut_fish.c",
     "jets/f/ut_fuse.c",
+    "jets/f/ut_redo.c",
     "jets/f/ut_mint.c",
     "jets/f/ut_mull.c",
     "jets/f/ut_nest.c",
@@ -374,8 +394,10 @@ const c_source_files = [_][]const u8{
     "jets/i/lagoon.c",
     "jets/tree.c",
     "jets/137/tree.c",
+    "jets/136/tree.c",
     "log.c",
     "manage.c",
+    "palloc.c",
     "nock.c",
     "options.c",
     "retrieve.c",
@@ -383,21 +405,6 @@ const c_source_files = [_][]const u8{
     "serial.c",
     "trace.c",
     "urth.c",
-    "v1/allocate.c",
-    "v1/hashtable.c",
-    "v1/jets.c",
-    "v1/manage.c",
-    "v1/nock.c",
-    "v1/vortex.c",
-    "v2/allocate.c",
-    "v2/hashtable.c",
-    "v2/jets.c",
-    "v2/manage.c",
-    "v2/nock.c",
-    "v2/vortex.c",
-    "v3/hashtable.c",
-    "v3/manage.c",
-    "v4/manage.c",
     "vortex.c",
     "xtract.c",
     "zave.c",
@@ -424,28 +431,9 @@ const install_headers = [_][]const u8{
     "trace.h",
     "types.h",
     "urth.h",
-    "v1/allocate.h",
-    "v1/hashtable.h",
-    "v1/jets.h",
-    "v1/manage.h",
-    "v1/nock.h",
-    "v1/vortex.h",
-    "v2/allocate.h",
-    "v2/hashtable.h",
-    "v2/jets.h",
-    "v2/manage.h",
-    "v2/nock.h",
-    "v2/options.h",
-    "v2/vortex.h",
-    "v3/allocate.h",
-    "v3/hashtable.h",
-    "v3/jets.h",
-    "v3/manage.h",
-    "v3/nock.h",
-    "v3/vortex.h",
-    "v4/manage.h",
     "version.h",
     "vortex.h",
     "xtract.h",
     "zave.h",
+    "verstable.h",
 };
