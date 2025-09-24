@@ -410,8 +410,8 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(SWAP, "swap", &&do_swap),  /*  3 */                                        \
   X(TOSS, "toss", &&do_toss),  /*  4 */                                        \
   /* auto-cons */                                                              \
-  X(AUTO, "auto", &&do_auto),  /*  5: keep */                                  \
-  X(AULT, "ault", &&do_ault),  /*  6: lose */                                  \
+  X(AUTO, "auto", &&do_auto),  /*  5: kept */                                  \
+  X(AULT, "ault", &&do_ault),  /*  6: lost */                                  \
   /* general purposes */                                                       \
   X(SNOC, "snoc", &&do_snoc),  /*  7: keep */                                  \
   X(SNOL, "snol", &&do_snol),  /*  8: lose */                                  \
@@ -445,10 +445,10 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(LILS, "lils", &&do_lils),  /* 30: c3_s */                                  \
   X(LIBL, "libl", &&do_libl),  /* 31: c3_y */                                  \
   X(LISL, "lisl", &&do_lisl),  /* 32: c3_s */                                  \
-  /* nock 2: nock (lose) */                                                    \
-  X(NOLK, "nolk", &&do_nolk),  /* 33 */                                        \
-  X(NOCT, "noct", &&do_noct),  /* 34 */                                        \
-  X(NOCK, "nock", &&do_nock),  /* 35 */                                        \
+  /* nock 2: nock */                                                           \
+  X(NOLK, "nolk", &&do_nolk),  /* 33, lost */                                  \
+  X(NOCT, "noct", &&do_noct),  /* 34, tail */                                  \
+  X(NOCK, "nock", &&do_nock),  /* 35, kept */                                  \
   /* nock 3 & 4 */                                                             \
   X(DEEP, "deep", &&do_deep),  /* 36 */                                        \
   X(BUMP, "bump", &&do_bump),  /* 37 */                                        \
@@ -487,7 +487,7 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   /* nock 11: fast (keep) */                                                   \
   X(BAST, "bast", &&do_bast),  /* 64: c3_b */                                  \
   X(SAST, "sast", &&do_sast),  /* 65: c3_s */                                  \
-  /* nock 11: fast (lose) */                                                   \
+  /* nock 11: fast (lost) */                                                   \
   X(BALT, "balt", &&do_balt),  /* 66: c3_b */                                  \
   X(SALT, "salt", &&do_salt),  /* 67: c3_s */                                  \
   /* nock 11: memo (keep) */                                                   \
@@ -1119,7 +1119,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__fast:
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, SWAP);
-        tot_w += _n_comp(ops, nef, c3n, c3n);
+        tot_w += _n_comp(ops, nef, los_o, c3n);
         // overflows to SALT / SAST
         ++tot_w; _n_emit(ops, (c3y == los_o) ? BALT : BAST);
         break;
@@ -1246,7 +1246,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
   if ( c3y == u3du(cod) ) {
     tot_w += _n_comp(ops, cod, c3n, c3n);
     ++tot_w; _n_emit(ops, SWAP);
-    tot_w += _n_comp(ops, arg, c3n, c3n);
+    tot_w += _n_comp(ops, arg, los_o, c3n);
     ++tot_w; _n_emit(ops, (c3y == los_o ) ? AULT : AUTO);
   }
   else switch ( cod ) {
@@ -1300,7 +1300,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(arg, &hed, &tel);
       tot_w += _n_comp(ops, hed, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, tel, c3n, c3n);
+      tot_w += _n_comp(ops, tel, los_o, c3n);
       /* things in tail position replace (so, lose) top of stack,
        * so NOCT "loses" and there is no non-losing version */
       op_y   = (c3y == tel_o)  ? NOCT
@@ -1346,7 +1346,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
         else if ( !hec_t && !tec_t ) {
           tot_w += _n_comp(ops, hed, c3n, c3n);
           ++tot_w; _n_emit(ops, SWAP);
-          tot_w += _n_comp(ops, tel, c3n, c3n);
+          tot_w += _n_comp(ops, tel, los_o, c3n);
           ++tot_w; _n_emit(ops, (c3y == los_o) ? SALM : SAME);
         }
         else {
@@ -1458,7 +1458,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(hed, &axe, &nef);
       tot_w += _n_comp(ops, tel, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, nef, c3n, c3n);
+      tot_w += _n_comp(ops, nef, los_o, c3n);
 
       ++tot_w;
       switch ( axe ) {
@@ -1493,7 +1493,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(arg, &hed, &tel);
       tot_w += _n_comp(ops, hed, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, tel, c3n, c3n);
+      tot_w += _n_comp(ops, tel, los_o, c3n);
       ++tot_w; _n_emit(ops, (c3y == los_o) ? WILS : WISH);
       break;
 
@@ -2215,9 +2215,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = u3nc(*top, x);          // [pro bus]
       BURN();
 
-    do_ault:                         // [tel bus hed]
-      x    = _n_pep(mov, off);       // [bus hed]
-      _n_toss(mov, off);             // [hed]
+    do_ault:                         // [tel hed]
+      x    = _n_pep(mov, off);       // [hed]
       top  = _n_peek(off);
       *top = u3nc(*top, x);          // [pro]
       BURN();
@@ -2350,14 +2349,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = x;
       BURN();
 
-    do_noct:                // [fol old bus]
-      o = _n_pep(mov, off); // [old bus]
-      _n_toss(mov, off);    // [bus]
+    do_noct:                // [fol bus]
+      o = _n_pep(mov, off); // [bus]
       goto nock_out;
 
-    do_nolk:                // [fol old bus]
-      o = _n_pep(mov, off); // [old bus]
-      _n_toss(mov, off);    // [bus]
+    do_nolk:                // [fol bus]
+      o = _n_pep(mov, off); // [bus]
       goto nock_in;
 
     do_nock:                // [fol old bus]
@@ -2459,7 +2456,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 
     do_salm:
       x = _n_pep(mov, off);
-      _n_toss(mov, off);
       goto same_in;
 
     same_in:
@@ -2582,9 +2578,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 #endif
       BURN();
 
-    do_wils:                   // [gof bus ref]
-      o = _n_pep(mov,off);     // [bus ref]
-      _n_toss(mov, off);       // [ref]
+    do_wils:                   // [gof ref]
+      o = _n_pep(mov,off);     // [ref]
       top = _n_peek(off);
       goto wish_in;
 
@@ -2667,9 +2662,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto falt_in;
     do_balt:
       x   = pog[ip_w++];
-    falt_in:                   // [pro bus clu]
-      o   = _n_pep(mov, off);  // [bus clu]
-      _n_toss(mov, off);       // [clu]
+    falt_in:                   // [pro clu]
+      o   = _n_pep(mov, off);  // [clu]
       top = _n_peek(off);
       goto fast_out;
 
@@ -2804,7 +2798,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto muth_in;
     do_muth:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     muth_in:
       o    = *top;
@@ -2818,7 +2811,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto mutt_in;
     do_mutt:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     mutt_in:
       o    = *top;
@@ -2832,7 +2824,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto musm_in;
     do_musm:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     musm_in:
       o    = *top;
@@ -2875,7 +2866,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x = pog[ip_w++];
     mut_in:
       o = _n_pep(mov, off);
-      _n_toss(mov, off);
       top = _n_peek(off);
     edit_in:
       *top = u3i_edit(*top, x, o);
