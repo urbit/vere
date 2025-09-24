@@ -956,16 +956,10 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   god_u->pax_c = pax_c;  //  XX strcopy
   god_u->cb_u  = cb_u;
 
-  god_u->key_d[0] = key_d[0];
-  god_u->key_d[1] = key_d[1];
-  god_u->key_d[2] = key_d[2];
-  god_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
     c3_c* arg_c[23] = {0};  //  NB: expand as necessary
-    c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
@@ -974,12 +968,6 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  sap_c[11];
     c3_c  cev_c[11];
     c3_i  err_i;
-
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
-                   god_u->key_d[0],
-                   god_u->key_d[1],
-                   god_u->key_d[2],
-                   god_u->key_d[3]);
 
     sprintf(wag_c, "%u", god_u->wag_w);
 
@@ -1231,16 +1219,10 @@ u3_lord_boot(c3_c* pax_c,
   bot_u->done_f = done_f;
   bot_u->ptr_v = ptr_v;
 
-  bot_u->key_d[0] = key_d[0];
-  bot_u->key_d[1] = key_d[1];
-  bot_u->key_d[2] = key_d[2];
-  bot_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
     c3_c* arg_c[17] = {0};  //  NB: expand as necessary
-    c3_c  key_c[256];
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  lom_c[11];
@@ -1248,12 +1230,6 @@ u3_lord_boot(c3_c* pax_c,
     c3_c  tos_c[11];
     c3_c  per_c[11];
     c3_i  err_i;
-
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
-                   bot_u->key_d[0],
-                   bot_u->key_d[1],
-                   bot_u->key_d[2],
-                   bot_u->key_d[3]);
 
     sprintf(wag_c, "%u", bot_u->wag_w);
 

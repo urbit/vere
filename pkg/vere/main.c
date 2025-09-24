@@ -2786,7 +2786,6 @@ _cw_boot(c3_i argc, c3_c* argv[])
   {
     c3_i ch_i, lid_i;
 
-    const c3_w siz_w = 8;
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
@@ -2896,7 +2895,6 @@ _cw_work(c3_i argc, c3_c* argv[])
   {
     c3_i ch_i, lid_i;
 
-    const c3_w siz_w = 11;
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
@@ -2971,17 +2969,7 @@ _cw_work(c3_i argc, c3_c* argv[])
         //  unknown opt
         //
         case '?': default: {
-          const c3_c* nam_c;
-          if (  (0 <= lid_i)
-             && (siz_w < lid_i)
-             && (lop_u[lid_i].name) )
-          {
-            nam_c = lop_u[lid_i].name;
-          }
-          else {
-            nam_c = "(unknown)";
-          }
-          fprintf(stderr, "boot: unknown option: -%c (--%s) %s\r\n", ch_i, nam_c, optarg);
+          fprintf(stderr, "boot: unknown option: -%c %s\r\n", ch_i, optarg);
           exit(1);
           break;
         }
