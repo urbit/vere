@@ -236,7 +236,6 @@ const x86_64_macos_asm_sources = [_][]const u8{
     "gen/x86_64-macos/mpn/add_err2_n.s",
     "gen/x86_64-macos/mpn/add_err3_n.s",
     "gen/x86_64-macos/mpn/add_n.s",
-    "gen/x86_64-macos/mpn/addaddmul_1msb0.s",
     "gen/x86_64-macos/mpn/addlsh1_n.s",
     "gen/x86_64-macos/mpn/addlsh2_n.s",
     "gen/x86_64-macos/mpn/addlsh_n.s",

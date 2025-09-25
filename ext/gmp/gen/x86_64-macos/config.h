@@ -37,7 +37,7 @@ see https://www.gnu.org/licenses/.
 
 /* The gmp-mparam.h file (a string) the tune program should suggest updating.
    */
-#define GMP_MPARAM_H_SUGGEST "./mpn/x86_64/skylake/gmp-mparam.h"
+#define GMP_MPARAM_H_SUGGEST "./mpn/x86_64/coreihwl/gmp-mparam.h"
 
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1
@@ -182,7 +182,7 @@ see https://www.gnu.org/licenses/.
 /* #undef HAVE_HOST_CPU_westmere */
 /* #undef HAVE_HOST_CPU_sandybridge */
 /* #undef HAVE_HOST_CPU_ivybridge */
-/* #undef HAVE_HOST_CPU_haswell */
+#define HAVE_HOST_CPU_haswell 1
 /* #undef HAVE_HOST_CPU_broadwell */
 /* #undef HAVE_HOST_CPU_skylake */
 /* #undef HAVE_HOST_CPU_silvermont */
@@ -352,7 +352,7 @@ see https://www.gnu.org/licenses/.
 #define HAVE_NATIVE_mpn_rsh1sub_n 1
 #define HAVE_NATIVE_mpn_rsh1sub_nc 1
 #define HAVE_NATIVE_mpn_rshift 1
-#define HAVE_NATIVE_mpn_sbpi1_bdiv_r 1
+/* #undef HAVE_NATIVE_mpn_sbpi1_bdiv_r */
 #define HAVE_NATIVE_mpn_sqr_basecase 1
 /* #undef HAVE_NATIVE_mpn_sqr_diagonal */
 #define HAVE_NATIVE_mpn_sqr_diag_addlsh1 1
