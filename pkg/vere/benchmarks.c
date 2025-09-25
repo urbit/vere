@@ -45,7 +45,7 @@ static void
 _jam_bench(void)
 {
   struct timeval b4, f2, d0;
-  c3_w_tmp  mil_w, i_w, max_w = 10000;
+  c3_w_new  mil_w, i_w, max_w = 10000;
   u3_noun wit = _ames_writ_ex();
 
   fprintf(stderr, "\r\njam microbenchmark:\r\n");
@@ -148,7 +148,7 @@ static void
 _cue_bench(void)
 {
   struct timeval b4, f2, d0;
-  c3_w_tmp  mil_w, i_w, max_w = 20000;
+  c3_w_new  mil_w, i_w, max_w = 20000;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
 
   fprintf(stderr, "\r\ncue microbenchmark:\r\n");
@@ -183,7 +183,7 @@ _cue_bench(void)
     gettimeofday(&b4, 0);
 
     {
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -191,7 +191,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        u3z(u3s_cue_xeno(len_w, byt_y));
+        u3z(u3s_cue_xeno(len_d, byt_y));
       }
     }
 
@@ -207,7 +207,7 @@ _cue_bench(void)
     {
       u3_cue_xeno* sil_u = u3s_cue_xeno_init();
 
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -215,7 +215,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        u3z(u3s_cue_xeno_with(sil_u, len_w, byt_y));
+        u3z(u3s_cue_xeno_with(sil_u, len_d, byt_y));
       }
 
       u3s_cue_xeno_done(sil_u);
@@ -231,7 +231,7 @@ _cue_bench(void)
     gettimeofday(&b4, 0);
 
     {
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -239,7 +239,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue_test(len_w, byt_y);
+        ur_cue_test(len_d, byt_y);
       }
     }
 
@@ -255,7 +255,7 @@ _cue_bench(void)
     {
       ur_cue_test_t *t = ur_cue_test_init();
 
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -263,7 +263,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue_test_with(t, len_w, byt_y);
+        ur_cue_test_with(t, len_d, byt_y);
       }
 
       ur_cue_test_done(t);
@@ -281,7 +281,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u = ur_root_init();
       ur_nref      ref;
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -289,7 +289,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue(rot_u, len_w, byt_y, &ref);
+        ur_cue(rot_u, len_d, byt_y, &ref);
       }
 
       ur_root_free(rot_u);
@@ -307,7 +307,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u;
       ur_nref      ref;
-      c3_w_tmp  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -316,7 +316,7 @@ _cue_bench(void)
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
         rot_u = ur_root_init();
-        ur_cue(rot_u, len_w, byt_y, &ref);
+        ur_cue(rot_u, len_d, byt_y, &ref);
         ur_root_free(rot_u);
       }
     }
@@ -333,7 +333,7 @@ _cue_bench(void)
 static u3_noun
 _cue_loop(u3_atom a)
 {
-  c3_w_tmp i_w, max_w = 20000;
+  c3_w_new i_w, max_w = 20000;
 
   for ( i_w = 0; i_w < max_w; i_w++ ) {
     u3z(u3s_cue(a));
@@ -345,7 +345,7 @@ _cue_loop(u3_atom a)
 static u3_noun
 _cue_atom_loop(u3_atom a)
 {
-  c3_w_tmp i_w, max_w = 20000;
+  c3_w_new i_w, max_w = 20000;
 
   for ( i_w = 0; i_w < max_w; i_w++ ) {
     u3z(u3s_cue_atom(a));
@@ -359,7 +359,7 @@ _cue_soft_bench(void)
 {
   struct timeval b4, f2, d0;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
-  c3_w_tmp  mil_w;
+  c3_w_new  mil_w;
 
   fprintf(stderr, "\r\ncue virtual microbenchmark:\r\n");
 
@@ -389,23 +389,23 @@ _cue_soft_bench(void)
 }
 
 static void
-_edit_bench_impl(c3_w_tmp max_w)
+_edit_bench_impl(c3_w_new max_w)
 {
-  u3_assert( max_w && (c3y == u3a_is_cat(max_w)) );
+  u3_assert( max_w && (c3y == u3a_is_cat((c3_n)max_w)) );
 
-  c3_w_tmp* axe_w = c3_calloc(((max_w + 31) >> 5) << 2);
-  c3_w_tmp  bit_w;
+  c3_w_new* axe_w = c3_calloc(((max_w + 31) >> 5) << 2);
+  c3_w_new  bit_w;
   u3_noun lit = u3qb_reap(max_w, 1);
   u3_noun axe;
 
   axe_w[0] = bit_w = 2;
 
   do {
-    axe = u3i_words_tmp((bit_w + 31) >> 5, axe_w);
+    axe = u3i_words_new((bit_w + 31) >> 5, axe_w);
     lit = u3i_edit(lit, axe, 2);
     u3z(axe);
 
-    axe_w[bit_w >> 5] |= (c3_w_tmp)1 << (bit_w & 31);
+    axe_w[bit_w >> 5] |= (c3_w_new)1 << (bit_w & 31);
     bit_w++;
   }
   while ( bit_w <= max_w );
@@ -418,7 +418,7 @@ static void
 _edit_bench(void)
 {
   struct timeval b4, f2, d0;
-  c3_w_tmp mil_w;
+  c3_w_new mil_w;
 
   fprintf(stderr, "\r\nopcode 10 microbenchmark:\r\n");
 
