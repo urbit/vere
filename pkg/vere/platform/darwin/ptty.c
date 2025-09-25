@@ -22,7 +22,7 @@ static c3_i
 _term_tcsetattr(c3_i fil_i, c3_i act_i, const struct termios* tms_u)
 {
   c3_i ret_i = 0;
-  c3_w_tmp len_w = 0;
+  c3_w_new len_w = 0;
 
   do {
     //  abort pathological retry loop
@@ -120,7 +120,7 @@ _ttyf_loja(u3_utty* uty_u)
 /*  _ttyf_get_winsize(): gets the tty window size.
 */
 static c3_o
-_ttyf_get_winsize(u3_utty* uty_u, c3_l_tmp* col_l, c3_l_tmp* row_l)
+_ttyf_get_winsize(u3_utty* uty_u, c3_l_new* col_l, c3_l_new* row_l)
 {
   struct winsize siz_u;
   if ( 0 == ioctl(uty_u->fid_i, TIOCGWINSZ, &siz_u) )
