@@ -63,10 +63,10 @@ _main_self_path(void)
 /* _main_readw(): parse a word from a string.
 */
 static c3_o
-_main_readw(const c3_c* str_c, c3_w_tmp max_w, c3_w_tmp* out_w)
+_main_readw(const c3_c* str_c, c3_w_new max_w, c3_w_new* out_w)
 {
   c3_c* end_c;
-  c3_w_tmp  par_w = strtoul(str_c, &end_c, 0);
+  c3_w_new  par_w = strtoul(str_c, &end_c, 0);
 
   if ( *str_c != '\0' && *end_c == '\0' && par_w < max_w ) {
     *out_w = par_w;
@@ -81,10 +81,10 @@ static c3_o
 _main_readn(const c3_c* str_c, c3_n max_n, c3_n* out_n)
 {
   c3_c* end_c;
-  c3_w_tmp  par_w = strtoull(str_c, &end_c, 0);
+  c3_d  par_d = strtoull(str_c, &end_c, 0);
 
-  if ( *str_c != '\0' && *end_c == '\0' && par_w < max_n ) {
-    *out_n = par_w;
+  if ( *str_c != '\0' && *end_c == '\0' && par_d < max_n ) {
+    *out_n = par_d;
     return c3y;
   }
   else return c3n;
@@ -95,7 +95,7 @@ _main_readn(const c3_c* str_c, c3_n max_n, c3_n* out_n)
 static c3_i
 _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
 {
-  c3_w_tmp lom_w;
+  c3_w_new lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
     fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_n"\r\n", arg_c, (c3_n)u3a_bits_max);
@@ -129,7 +129,7 @@ _main_repath(c3_c* pax_c)
   c3_c* rel_c;
   c3_c* fas_c;
   c3_c* dir_c;
-  c3_w_tmp  len_w;
+  c3_w_new  len_w;
   c3_i  wit_i;
 
   u3_assert(pax_c);
@@ -222,8 +222,8 @@ static c3_c*
 _main_pier_run(c3_c* bin_c)
 {
   c3_c* dir_c = 0;
-  c3_w_tmp  bin_w = strlen(bin_c);
-  c3_w_tmp  len_w = strlen(U3_BIN_ALIAS);
+  c3_w_new  bin_w = strlen(bin_c);
+  c3_w_new  len_w = strlen(U3_BIN_ALIAS);
 
   //  no args, argv[0] == $pier/.run
   //
@@ -257,7 +257,7 @@ static u3_noun
 _main_getopt(c3_i argc, c3_c** argv)
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
   c3_o want_creat_o = c3n;
 
   static struct option lop_u[] = {
@@ -1189,7 +1189,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   u3_mojo std_u;
   c3_i    ch_i, lid_i;
-  c3_w_tmp    arg_w;
+  c3_w_new    arg_w;
   c3_o    cue_o = c3n;
   c3_o    jam_o = c3n;
   c3_o    kan_o = c3n;
@@ -1392,7 +1392,7 @@ static void
 _cw_info(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1500,7 +1500,7 @@ static void
 _cw_grab(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   u3_Host.ops_u.gab = c3n;
 
@@ -1586,7 +1586,7 @@ static void
 _cw_cram(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1689,7 +1689,7 @@ static void
 _cw_queu(c3_i argc, c3_c* argv[])
 {
   c3_i  lid_i, ch_i;
-  c3_w_tmp  arg_w;
+  c3_w_new  arg_w;
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
@@ -1806,7 +1806,7 @@ static void
 _cw_meld(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1902,7 +1902,7 @@ static void
 _cw_melt(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -1990,7 +1990,7 @@ static void
 _cw_next(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "arch",      required_argument, NULL, 'a' },
@@ -2070,7 +2070,7 @@ static void
 _cw_pack(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2283,7 +2283,7 @@ static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
@@ -2391,7 +2391,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   //  XX roll with old binary
   //     check that new epoch is empty, migrate snapshot in-place
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2465,7 +2465,7 @@ static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2554,7 +2554,7 @@ static void
 _cw_roll(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2628,7 +2628,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   c3_c* dir_c;
 
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "arch",    required_argument, NULL, 'a' },
@@ -2736,7 +2736,7 @@ static void
 _cw_vile(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_tmp arg_w;
+  c3_w_new arg_w;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2888,7 +2888,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w_tmp       lom_w;
+  c3_w_new       lom_w;
   c3_c*      eph_c = argv[5];
   c3_c*      tos_c = argv[6];
   c3_n       tos_n;
@@ -2965,7 +2965,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w_tmp       lom_w;
+  c3_w_new       lom_w;
   c3_c*      eve_c = argv[5];
   c3_d       eve_d = 0;
   c3_c*      eph_c = argv[6];
