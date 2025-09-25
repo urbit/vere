@@ -675,19 +675,19 @@
       ** Adjust (externally) for future leap secs!
       */
         c3_d
-        u3_time_sec_in(c3_w_tmp unx_w);
+        u3_time_sec_in(c3_n unx_w);
 
       /* u3_time_sec_out(): unix time from urbit seconds.
       **
       ** Adjust (externally) for future leap secs!
       */
-        c3_w_tmp
+        c3_w_new
         u3_time_sec_out(c3_d urs_d);
 
       /* u3_time_fsc_in(): urbit fracto-seconds from unix microseconds.
       */
         c3_d
-        u3_time_fsc_in(c3_w_tmp usc_w);
+        u3_time_fsc_in(c3_w_new usc_w);
 
       /* u3_time_fsc_out: unix microseconds from urbit fracto-seconds.
       */

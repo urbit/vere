@@ -8,7 +8,7 @@
 ** Adjust for future leap secs!
 */
 c3_d
-u3_time_sec_in(c3_w_tmp unx_w)
+u3_time_sec_in(c3_n unx_w)
 {
   return 0x8000000cce9e0d80ULL + (c3_d)unx_w;
 }
@@ -17,7 +17,7 @@ u3_time_sec_in(c3_w_tmp unx_w)
 **
 ** Adjust for future leap secs!
 */
-c3_w_tmp
+c3_w_new
 u3_time_sec_out(c3_d urs_d)
 {
   c3_d adj_d = (urs_d - 0x8000000cce9e0d80ULL);
@@ -26,13 +26,13 @@ u3_time_sec_out(c3_d urs_d)
     fprintf(stderr, "Agh! It's 2106! And no one's fixed this shite!\n");
     exit(1);
   }
-  return (c3_w_tmp)adj_d;
+  return (c3_w_new)adj_d;
 }
 
 /* u3_time_fsc_in(): urbit fracto-seconds from unix microseconds.
 */
 c3_d
-u3_time_fsc_in(c3_w_tmp usc_w)
+u3_time_fsc_in(c3_w_new usc_w)
 {
   c3_d usc_d = usc_w;
 
@@ -41,18 +41,18 @@ u3_time_fsc_in(c3_w_tmp usc_w)
 
 /* u3_time_fsc_out: unix microseconds from urbit fracto-seconds.
 */
-c3_w_tmp
+c3_w_new
 u3_time_fsc_out(c3_d ufc_d)
 {
-  return (c3_w_tmp) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
+  return (c3_w_new) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
 }
 
 /* u3_time_msc_out: unix microseconds from urbit fracto-seconds.
 */
-c3_w_tmp
+c3_w_new
 u3_time_msc_out(c3_d ufc_d)
 {
-  return (c3_w_tmp) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);
+  return (c3_w_new) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);
 }
 
 /* u3_time_in_tv(): urbit time from struct timeval.
@@ -60,8 +60,8 @@ u3_time_msc_out(c3_d ufc_d)
 u3_atom
 u3_time_in_tv(struct timeval* tim_tv)
 {
-  c3_w_tmp unx_w = tim_tv->tv_sec;
-  c3_w_tmp usc_w = tim_tv->tv_usec;
+  c3_w_new unx_w = tim_tv->tv_sec;
+  c3_w_new usc_w = tim_tv->tv_usec;
   c3_d cub_d[2];
 
   cub_d[0] = u3_time_fsc_in(usc_w);
