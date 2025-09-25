@@ -41,7 +41,7 @@ MDB_env*
 u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
 {
   MDB_env* env_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   if ( (ret_w = mdb_env_create(&env_u)) ) {
     mdb_logerror(stderr, ret_w, "lmdb: init fail");
@@ -66,9 +66,9 @@ u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
 
   {
 #   if defined(U3_OS_no_ubc)
-      c3_w_tmp ops_w = MDB_WRITEMAP;
+      c3_w_new ops_w = MDB_WRITEMAP;
 #   else
-      c3_w_tmp ops_w = 0;
+      c3_w_new ops_w = 0;
 #   endif
 
     if ( (ret_w = mdb_env_open(env_u, pax_c, ops_w, 0664)) ) {
@@ -139,7 +139,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   //  create a read-only transaction.
   //
@@ -153,7 +153,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
   //  open the database in the transaction
   //
   {
-    c3_w_tmp ops_w = MDB_CREATE | MDB_INTEGERKEY;
+    c3_w_new ops_w = MDB_CREATE | MDB_INTEGERKEY;
 
     if ( (ret_w = mdb_dbi_open(txn_u, "EVENTS", ops_w, &mdb_u)) ) {
       mdb_logerror(stderr, ret_w, "lmdb: gulf: dbi_open fail");
@@ -237,7 +237,7 @@ u3_lmdb_read(MDB_env* env_u,
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   //  create a read-only transaction.
   //
@@ -249,7 +249,7 @@ u3_lmdb_read(MDB_env* env_u,
   //  open the database in the transaction
   //
   {
-    c3_w_tmp ops_w = MDB_CREATE | MDB_INTEGERKEY;
+    c3_w_new ops_w = MDB_CREATE | MDB_INTEGERKEY;
 
     if ( (ret_w = mdb_dbi_open(txn_u, "EVENTS", ops_w, &mdb_u)) ) {
       mdb_logerror(stderr, ret_w, "lmdb: read: dbi_open fail");
@@ -354,7 +354,7 @@ u3_lmdb_save(MDB_env* env_u,
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   //  create a write transaction
   //
@@ -366,7 +366,7 @@ u3_lmdb_save(MDB_env* env_u,
   //  opens the database in the transaction
   //
   {
-    c3_w_tmp ops_w = MDB_CREATE | MDB_INTEGERKEY;
+    c3_w_new ops_w = MDB_CREATE | MDB_INTEGERKEY;
 
     if ( (ret_w = mdb_dbi_open(txn_u, "EVENTS", ops_w, &mdb_u)) ) {
       mdb_logerror(stderr, ret_w, "lmdb: write: dbi_open fail");
@@ -378,7 +378,7 @@ u3_lmdb_save(MDB_env* env_u,
   //  write every event in the batch
   //
   {
-    c3_w_tmp ops_w = MDB_NOOVERWRITE;
+    c3_w_new ops_w = MDB_NOOVERWRITE;
     c3_d las_d = (eve_d + len_d);
     c3_d key_d, i_d;
 
@@ -418,7 +418,7 @@ u3_lmdb_read_meta(MDB_env*    env_u,
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   //  create a read transaction
   //
@@ -468,7 +468,7 @@ u3_lmdb_save_meta(MDB_env*    env_u,
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
-  c3_w_tmp     ret_w;
+  c3_w_new     ret_w;
 
   //  create a write transaction
   //
@@ -520,7 +520,7 @@ u3_lmdb_walk_init(MDB_env*      env_u,
   //
   MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &nex_d };
   MDB_val val_u;
-  c3_w_tmp    ops_w, ret_w;
+  c3_w_new    ops_w, ret_w;
 
   itr_u->red_o = c3n;
   itr_u->nex_d = nex_d;
@@ -576,7 +576,7 @@ c3_o
 u3_lmdb_walk_next(u3_lmdb_walk* itr_u, size_t* len_i, void** buf_v)
 {
   MDB_val key_u, val_u;
-  c3_w_tmp    ret_w, ops_w;
+  c3_w_new    ret_w, ops_w;
 
   u3_assert( itr_u->nex_d <= itr_u->las_d );
 
