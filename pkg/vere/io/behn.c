@@ -10,7 +10,7 @@
     u3_auto    car_u;                   //  driver
     uv_timer_t tim_u;                   //  behn timer
     c3_o       alm_o;                   //  alarm
-    c3_l_tmp       sev_l;                   //  instance numbers
+    c3_m       sev_m;                   //  instance numbers
   } u3_behn;
 
 //  XX review, move
@@ -169,7 +169,7 @@ _behn_io_talk(u3_auto* car_u)
   //  XX remove [sev_l]
   //
   u3_noun wir = u3nt(c3__behn,
-                     u3dc("scot", c3__uv, teh_u->sev_l),
+                     u3dc("scot", c3__uv, teh_u->sev_m),
                      u3_nul);
   u3_noun cad = u3nc(c3__born, u3_nul);
 
@@ -249,7 +249,7 @@ u3_behn_io_init(u3_pier* pir_u)
     gettimeofday(&tim_u, 0);
 
     now = u3_time_in_tv(&tim_u);
-    teh_u->sev_l = u3r_mug(now);
+    teh_u->sev_m = u3r_mug(now);
     u3z(now);
   }
 
