@@ -139,16 +139,16 @@ _extend_directory(c3_w siz_w)  // num pages
   HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
   u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
 
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
 
@@ -205,17 +205,16 @@ _extend_heap(c3_w siz_w)  // num pages
 
   u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
 
-  //  XX bail, optimize
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
 
