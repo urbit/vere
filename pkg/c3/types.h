@@ -117,10 +117,10 @@
       #define PRIc3_ls PRIi64
       #define PRIxc3_l PRIx64
       #define PRIXc3_l PRIX64
-      #define PRIc3_l_tmp PRIu32
-      #define PRIc3_ls_tmp PRIi32
-      #define PRIxc3_l_tmp PRIx32
-      #define PRIXc3_l_tmp PRIX32
+      #define PRIc3_l_new PRIu32
+      #define PRIc3_ls_new PRIi32
+      #define PRIxc3_l_new PRIx32
+      #define PRIXc3_l_new PRIX32
       #else
       #define PRIc3_l  PRIu32
       #define PRIc3_ls PRIi32
