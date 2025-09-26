@@ -139,16 +139,16 @@ _extend_directory(c3_w siz_w)  // num pages
   HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
   u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
 
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
 
@@ -205,17 +205,16 @@ _extend_heap(c3_w siz_w)  // num pages
 
   u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
 
-  //  XX bail, optimize
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
 
@@ -567,30 +566,27 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   u3_post   fre_p;
 
   if ( u3a_free_pg == dir_p ) {
-    //  XX double free
     fprintf(stderr, "\033[31m"
                     "palloc: double free page som_p=0x%x pag_w=%u\r\n"
                     "\033[0m",
                     som_p, pag_w);
-    return 0; // XX bail
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   if ( u3a_head_pg != dir_p ) {
-    //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: wrong page som_p=0x%x dir_p=0x%x\r\n"
                     "\033[0m",
                     som_p, dir_p);
-    return 0; // XX bail
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   if ( som_p & ((1U << u3a_page) - 1) ) {
-    //  XX pointer not aligned to page
     fprintf(stderr, "\033[31m"
                     "palloc: bad page alignment som_p=0x%x\r\n"
                     "\033[0m",
                     som_p);
-    return 0; // XX bail
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   {
@@ -760,12 +756,11 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       fre_p = 0;
     }
     else {
-      // XX hosed
       fprintf(stderr, "\033[31m"
-                    "palloc: free list hosed at som_p=0x%x pag=%u len=%u\r\n"
-                    "\033[0m",
-                    (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
-      abort();
+                      "palloc: free list hosed at som_p=0x%x pag=%u len=%u\r\n"
+                      "\033[0m",
+                      (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
+      u3_assert(!"loom: corrupt"); return 0;
     }
   }
 
@@ -801,21 +796,19 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
 
   if ( som_p & (hun_u->len_s - 1) ) {
-    //  XX  bad alignment
     fprintf(stderr, "\033[31m"
                     "palloc: bad alignment som_p=0x%x pag=%u cag=0x%x len_s=%u\r\n"
                     "\033[0m",
                     som_p, post_to_page(som_p), dir_p, hun_u->len_s);
-    return; // XX bail
+    u3_assert(!"loom: corrupt"); return;
   }
 
   if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-    //  XX double free
     fprintf(stderr, "\033[31m"
                     "palloc: double free som_p=0x%x pag=0x%x\r\n"
                     "\033[0m",
                     som_p, dir_p);
-    return; // XX bail
+    u3_assert(!"loom: corrupt"); return;
   }
 
   pag_u->map_w[pos_w >> 5] |= (1U << (pos_w & 31));
@@ -881,7 +874,7 @@ _ifree(u3_post som_p)
                     "palloc: page out of heap som_p=0x%x pag_w=%u len_w=%u\r\n"
                     "\033[0m",
                     som_p, pag_w, HEAP.len_w);
-    return; // XX bail
+    u3_assert(!"loom: corrupt"); return;
   }
 
   u3_post dir_p = dir_u[pag_w];
@@ -906,19 +899,18 @@ _irealloc(u3_post som_p, c3_w len_w)
                     "palloc: realloc page out of heap som_p=0x%x pag_w=%u\r\n"
                     "\033[0m",
                     som_p, pag_w);
-    return 0; // XX bail
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   u3_post dir_p = dir_u[pag_w];
 
   if ( u3a_head_pg == dir_p ) {
     if ( som_p & ((1U << u3a_page) - 1) ) {
-      //  XX pointer not aligned to page
       fprintf(stderr, "\033[31m"
                       "palloc: realloc bad page alignment som_p=0x%x\r\n"
                       "\033[0m",
                       som_p);
-      return 0; // XX bail
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     {
@@ -941,12 +933,11 @@ _irealloc(u3_post som_p, c3_w len_w)
     }
   }
   else if ( u3a_rest_pg >= dir_p ) {
-    //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: realloc wrong page som_p=0x%x\r\n"
                     "\033[0m",
                     som_p);
-    return 0; // XX bail
+    u3_assert(!"loom: corrupt"); return 0;
   }
   else {
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
@@ -954,21 +945,19 @@ _irealloc(u3_post som_p, c3_w len_w)
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[pag_u->log_s - u3a_min_log]);
 
     if ( som_p & (hun_u->len_s - 1) ) {
-      //  XX  bad alignment
       fprintf(stderr, "\033[31m"
                       "palloc: realloc bad alignment som_p=0x%x pag=0x%x len_s=%u\r\n"
                       "\033[0m",
                       som_p, dir_p, hun_u->len_s);
-      return 0; // XX bail
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     if ( pag_u->map_w[pos_w >> 5] & (1U << (pos_w & 31)) ) {
-      //  XX double free
       fprintf(stderr, "\033[31m"
                       "palloc: realloc free som_p=0x%x pag=0x%x\r\n"
                       "\033[0m",
                       som_p, dir_p);
-      return 0; // XX bail
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     old_w = hun_u->len_s;
