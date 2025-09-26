@@ -137,14 +137,14 @@
     */
       typedef struct {
         struct {
-          c3_l_tmp  col_l;                      //  columns
-          c3_l_tmp  row_l;                      //  rows
+          c3_n  col_l;                      //  columns
+          c3_n  row_l;                      //  rows
         } siz;
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
-          c3_w_tmp    rus_w;                    //  cursor position (row)
-          c3_w_tmp    cus_w;                    //  cursor position (column)
+          c3_n    rus_w;                    //  cursor position (row)
+          c3_n    cus_w;                    //  cursor position (column)
         } mir;
 
         struct {                            //  escape code control
@@ -158,8 +158,8 @@
 
         struct {                            //  input buffering
           c3_y    syb_y[5];                 //  utf8 code buffer
-          c3_w_tmp    len_w;                    //  present length
-          c3_w_tmp    wid_w;                    //  total width
+          c3_n    len_w;                    //  present length
+          c3_n    wid_w;                    //  total width
           u3_noun imp;                      //  %txt input buffer
         } fut;
 
@@ -238,10 +238,10 @@
         u3_ttyf          loj_f;             //  release tty from cooked print
         c3_o           (*wsz_f)
                        (struct _u3_utty* uty_u,
-                        c3_l_tmp* col_l,
-                        c3_l_tmp* row_l);       //  return tty window size
+                        c3_n* col_l,
+                        c3_n* row_l);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
-        c3_w_tmp             tid_l;             //  terminal identity number
+        c3_n             tid_l;             //  terminal identity number
         u3_utfo          ufo_u;             //  escape sequences
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
@@ -1100,7 +1100,7 @@
       /* u3_term_get_blew(): return window size [columns rows].
       */
         u3_noun
-        u3_term_get_blew(c3_l_tmp tid_l);
+        u3_term_get_blew(c3_n tid_l);
 
       /* u3_term_ef_winc(): window change.
       */

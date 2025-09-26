@@ -2796,7 +2796,7 @@ _http_stream_slog(void* vop_p, c3_n pri_w, u3_noun tan)
         }
       }
       else {
-        u3_noun blu = u3_term_get_blew(0);
+        u3_noun blu = u3_term_get_blew((c3_n)0);
         c3_n  col_l = u3h(blu);
         wol = u3dc("wash", u3nc(0, col_l), u3k(tan));
         u3z(blu);
