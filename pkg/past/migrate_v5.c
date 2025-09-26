@@ -123,13 +123,22 @@ _copy_v4_hamt(u3_noun kev, void* ptr_v)
 }
 
 void
-u3_migrate_v5(void)
+u3_migrate_v5(c3_d eve_d)
 {
   _copy_ctx cop_u = {0};
 
   //  XX assumes u3m_init() and u3m_pave(c3y) have already been called
 
   u3_v4_load(u3C.wor_i);
+
+  if ( eve_d != u3A_v4->eve_d ) {
+    fprintf(stderr, "loom: migrate (v5) stale snapshot: have %"
+                    PRIu64 ", need %" PRIu64 "\r\n",
+                    u3A_v4->eve_d, eve_d);
+    abort();
+  }
+
+  fprintf(stderr, "loom: allocator migration running...\r\n");
 
   cop_u.siz_w = 32;
   cop_u.tac   = c3_malloc(sizeof(*cop_u.tac) * cop_u.siz_w);
@@ -153,4 +162,6 @@ u3_migrate_v5(void)
   vt_cleanup(&cop_u.map_u);
 
   c3_free(cop_u.tac);
+
+  fprintf(stderr, "loom: allocator migration done\r\n");
 }

@@ -5,9 +5,16 @@
 /* u3_migrate_v3: perform loom migration if necessary.
 */
 void
-u3_migrate_v3(void)
+u3_migrate_v3(c3_d eve_d)
 {
   u3_v2_load(u3C.wor_i);
+
+  if ( eve_d != u3H_v2->arv_u.eve_d ) {
+    fprintf(stderr, "loom: migrate (v3) stale snapshot: have %"
+                    PRIu64 ", need %" PRIu64 "\r\n",
+                    u3H_v2->arv_u.eve_d, eve_d);
+    abort();
+  }
 
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
