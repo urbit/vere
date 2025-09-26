@@ -1854,14 +1854,14 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       if ( log_u->dun_d < u3A->eve_d ) {
         //  XX bad, add to enum
         fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
-                        ") from future (log=% " PRIu64 ")\r\n",
+                        ") from future (log=%" PRIu64 ")\r\n",
                         u3A->eve_d, log_u->dun_d);
         exit(1);
       }
       else if ( u3A->eve_d < log_u->epo_d ) {
         //  XX goto full replay
         fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
-                        ") out of epoch (% " PRIu64 ")\r\n",
+                        ") out of epoch (%" PRIu64 ")\r\n",
                         u3A->eve_d, log_u->epo_d);
         exit(1);
       }
