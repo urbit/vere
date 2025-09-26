@@ -23,9 +23,9 @@
     */
       typedef struct _u3_hhed {
         struct _u3_hhed* nex_u;
-        c3_w_tmp             nam_w;
+        c3_n             nam_w;
         c3_c*            nam_c;
-        c3_w_tmp             val_w;
+        c3_n             val_w;
         c3_c*            val_c;
       } u3_hhed;
 
@@ -33,14 +33,14 @@
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
-        c3_w_tmp             len_w;
+        c3_n             len_w;
         c3_y             hun_y[0];
       } u3_hbod;
 
     /* u3_lane: ames lane (IP address and port)
     */
       typedef struct _u3_lane {
-        c3_w_tmp             pip_w;             //  target IPv4 address
+        c3_n             pip_w;             //  target IPv4 address
         c3_s             por_s;             //  target port
       } u3_lane;
 
@@ -627,7 +627,7 @@
           } pec_u;
           void*            sop_p;               //  slog stream data
           void           (*sog_f)               //  slog stream callback
-                         (void*, c3_w_tmp, u3_noun);//
+                         (void*, c3_n, u3_noun);//
           // XX group ports?
           c3_s             per_s;               //  http port
           c3_s             pes_s;               //  htls port
