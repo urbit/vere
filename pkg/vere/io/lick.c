@@ -9,7 +9,7 @@
 */
 typedef struct _u3_chan {
   struct _u3_moor   mor_u;            //  message handler
-  c3_l_tmp              coq_l;            //  connection number
+  c3_l_new              coq_l;            //  connection number
   c3_o              liv_o;            //  connection live
   struct _u3_shan*  san_u;            //  server backpointer
 } u3_chan;
@@ -18,7 +18,7 @@ typedef struct _u3_chan {
 */
 typedef struct _u3_shan {
   uv_pipe_t          pyp_u;           //  server stream handler
-  c3_l_tmp               nex_l;           //  next connection number
+  c3_l_new               nex_l;           //  next connection number
   struct _u3_port*   gen_u;           //  port backpointer
   struct _u3_chan*   can_u;           //  connection list
 } u3_shan;
@@ -86,7 +86,7 @@ _lick_string_to_path(c3_c* pax_c)
 static c3_c*
 _lick_it_path(u3_noun pax)
 {
-  c3_w_tmp len_w = 0;
+  c3_n len_w = 0;
   c3_c *pas_c;
 
   //  measure
@@ -109,7 +109,7 @@ _lick_it_path(u3_noun pax)
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_w_tmp tis_w = u3r_met(3, u3h(wiz));
+      c3_n tis_w = u3r_met(3, u3h(wiz));
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '/';
@@ -248,7 +248,7 @@ _lick_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   if ( err_i != UV_EOF ) {
     u3l_log("lick: moor bail %zd %s", err_i, err_c);
     if ( _(can_u->liv_o) ) {
-      _lick_send_noun(can_u, u3nq(0, c3__bail, u3i_word_tmp(err_i),
+      _lick_send_noun(can_u, u3nq(0, c3__bail, u3i_note(err_i),
                       u3i_string(err_c)));
       can_u->liv_o = c3n;
     }
@@ -309,13 +309,13 @@ _lick_close_sock(u3_shan* san_u)
     _lick_close_chan(san_u->can_u);
   }
 
-  c3_w_tmp len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
+  c3_w_new len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
   c3_c* paf_c = c3_malloc(len_w);
   c3_i  wit_i;
   wit_i = snprintf(paf_c, len_w, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);
 
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w_tmp)wit_i + 1);
+  u3_assert(len_w == (c3_w_new)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {
