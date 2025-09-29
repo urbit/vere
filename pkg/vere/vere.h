@@ -1491,7 +1491,7 @@
         void
         u3_write_fd(c3_i fid_i, const void* buf_v, size_t len_i);
 
-        c3_w_tmp
+        c3_w_new
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
       /* u3_melt_all(): canonicalize persistent state
