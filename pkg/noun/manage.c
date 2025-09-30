@@ -608,14 +608,6 @@ _find_home(void)
     abort();
   }
 
-  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
-    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
-    u3n_ream();
-    u3n_reclaim();
-    u3j_reclaim();
-    u3H->pam_d = _pave_params();
-  }
-
   //  NB: the home road is always north
   //
   {
@@ -662,6 +654,15 @@ _find_home(void)
   u3a_loom_sane();
 
   _rod_vaal(u3R);
+
+  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+    u3j_ream();
+    u3n_ream();
+    u3n_reclaim();
+    u3j_reclaim();
+    u3H->pam_d = _pave_params();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
