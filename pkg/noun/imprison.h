@@ -19,8 +19,6 @@
         } _;                                  //
         union {                               //
           c3_y*      buf_y;                   //  bytes
-          c3_w_new*      buf_w;                   //  words
-          c3_d*      buf_d;                   //  words
           c3_n*      buf_n;                   //  words
         };                                    //
         c3_n         len_n;                   //  word length

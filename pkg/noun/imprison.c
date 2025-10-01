@@ -440,7 +440,7 @@ u3i_words_new(c3_n        a_w,
     u3i_slab_bare(&sab_u, 5, a_w);
 
     u3t_on(mal_o);
-    memcpy(sab_u.buf_w, b_w, (size_t)4 * a_w);
+    memcpy(sab_u.buf_n, b_w, (size_t)4 * a_w);
     u3t_off(mal_o);
 
     return u3i_slab_moot(&sab_u);
@@ -494,7 +494,7 @@ u3i_chubs(c3_n        a_w,
       }
     }
 #else
-    memcpy(sab_u.buf_d, b_d, (size_t)8 * a_w);
+    memcpy(sab_u.buf_n, b_d, (size_t)8 * a_w);
 #endif
     u3t_off(mal_o);
 
