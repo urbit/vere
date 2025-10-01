@@ -11,7 +11,7 @@
 #define HEAD_SIZE         4             //  header size in bytes
 #define PACT_SIZE      1472
 
-static c3_w_tmp MESA_COOKIE = 0x67e00200;
+static c3_w_new MESA_COOKIE = 0x67e00200;
 
 typedef enum _u3_mesa_ptag {
   PACT_RESV = 0,
@@ -34,7 +34,7 @@ typedef enum _u3_mesa_hop_type {
 
 typedef struct _u3_str {
   c3_c* str_c;
-  c3_w_tmp  len_w;
+  c3_w_new  len_w;
 } u3_str;
 
 typedef struct _u3_mesa_name_meta {
@@ -48,7 +48,7 @@ typedef struct _u3_mesa_name_meta {
 typedef struct _u3_mesa_name {
   // u3_mesa_name_meta  met_u;
   u3_ship            her_u;
-  c3_w_tmp               rif_w;
+  c3_w_new               rif_w;
   c3_y               boq_y;
   c3_o               nit_o;
   c3_o               aut_o;
@@ -84,7 +84,7 @@ typedef struct _u3_auth_data {
 typedef struct _u3_mesa_data {
   c3_d                tob_d;  // total bytes in message
   u3_auth_data        aut_u;  // authentication
-  c3_w_tmp                len_w;  // fragment length
+  c3_w_new                len_w;  // fragment length
   c3_y*               fra_y;  // fragment
 } u3_mesa_data;
 
@@ -94,7 +94,7 @@ typedef struct _u3_mesa_head {
   c3_y             pro_y;  // protocol version
   u3_mesa_ptag     typ_y;  // packet type
   c3_y             hop_y;  // hopcount
-  c3_w_tmp             mug_w;  // truncated mug checksum
+  c3_m             mug_w;  // truncated mug checksum
 } u3_mesa_head;
 
 //
@@ -108,12 +108,12 @@ typedef struct _u3_mesa_peek_pact {
 } u3_mesa_peek_pact;
 
 typedef struct _u3_mesa_hop_once {
-  c3_w_tmp  len_w;
+  c3_w_new  len_w;
   c3_y* dat_y;
 } u3_mesa_hop_once;
 
 typedef struct _u3_mesa_hop_more {
-  c3_w_tmp len_w;
+  c3_w_new len_w;
   u3_mesa_hop_once* dat_y;
 } u3_mesa_hop_more;
 
@@ -150,22 +150,22 @@ typedef struct _u3_mesa_pact {
 
 typedef struct _u3_etcher {
   c3_y* buf_y;
-  c3_w_tmp  len_w;
-  c3_w_tmp  cap_w;
+  c3_w_new  len_w;
+  c3_w_new  cap_w;
   c3_d  bit_d; // for _etch_bits
   c3_y  off_y; // for _etch_bits
 } u3_etcher;
 
 c3_d mesa_num_leaves(c3_d tot_d);
-c3_w_tmp mesa_size_pact(u3_mesa_pact* pac_u);
-c3_o mesa_is_new_pact(c3_y* buf_y, c3_w_tmp len_w);
+c3_w_new mesa_size_pact(u3_mesa_pact* pac_u);
+c3_o mesa_is_new_pact(c3_y* buf_y, c3_w_new len_w);
 
 void mesa_free_pact(u3_mesa_pact* pac_u);
 
-c3_w_tmp mesa_etch_pact_to_buf(c3_y* buf_y, c3_w_tmp cap_w, u3_mesa_pact *pac_u);
-void etcher_init(u3_etcher* ech_u, c3_y* buf_y, c3_w_tmp cap_w);
+c3_w_new mesa_etch_pact_to_buf(c3_y* buf_y, c3_w_new cap_w, u3_mesa_pact *pac_u);
+void etcher_init(u3_etcher* ech_u, c3_y* buf_y, c3_w_new cap_w);
 void _mesa_etch_name(u3_etcher *ech_u, u3_mesa_name* nam_u);
-c3_c* mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w_tmp len_w);
+c3_c* mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_w_new len_w);
 
 void inc_hopcount(u3_mesa_head*);
 

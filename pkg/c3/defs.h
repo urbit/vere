@@ -176,7 +176,7 @@
       }
 
       inline void
-      c3_etch_word_new(c3_y buf_y[4], c3_w_tmp wod_w)
+      c3_etch_word_new(c3_y buf_y[4], c3_w_new wod_w)
       {
         buf_y[0] = wod_w         & 0xff;
         buf_y[1] = (wod_w >>  8) & 0xff;

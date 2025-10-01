@@ -40,7 +40,7 @@
     /* u3_lane: ames lane (IP address and port)
     */
       typedef struct _u3_lane {
-        c3_n             pip_w;             //  target IPv4 address
+        c3_w_new             pip_w;             //  target IPv4 address
         c3_s             por_s;             //  target port
       } u3_lane;
 
@@ -274,7 +274,7 @@
         c3_c*   imp_c;                      //  -i, import pier state
         c3_c*   lit_c;                      //  -J, ivory (fastboot) kernel
         c3_o    tra;                        //  -j, json trace
-        c3_w_tmp    kno_w;                      //  -K, kernel version
+        c3_w_new    kno_w;                      //  -K, kernel version
         c3_c*   key_c;                      //  -k, private key file
         c3_o    net;                        //  -L, local-only networking
         c3_o    lit;                        //  -l, lite mode
@@ -315,7 +315,7 @@
     /* u3_host: entire host.
     */
       typedef struct _u3_host {
-        c3_w_tmp       kno_w;                   //  current executing stage
+        c3_w_new       kno_w;                   //  current executing stage
         c3_c*      dir_c;                   //  pier path (no trailing /)
         c3_d       eve_d;                   //  initial current snapshot
         c3_c*      dem_c;                   //  daemon executable path
@@ -332,7 +332,7 @@
         void     (*bot_f)();                //  call when chis is up
         void*      sam_u;                   //  old ames, "unified driver" hack
         uv_udp_t   wax_u;                   //  "unified driver" udp send handle
-        c3_w_tmp*      imp_u;                   //  "unified driver" galaxy IP:s
+        c3_w_new*      imp_u;                   //  "unified driver" galaxy IP:s
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.
@@ -467,7 +467,7 @@
         typedef struct _u3_lord_cb {
           void* ptr_v;
           void (*live_f)(void*, u3_atom, c3_o);
-          void (*slog_f)(void*, c3_w_tmp, u3_noun);
+          void (*slog_f)(void*, c3_w_new, u3_noun);
           void (*spin_f)(void*, u3_atom, c3_o);
           void (*spun_f)(void*);
           void (*work_done_f)(void*, u3_ovum*, u3_noun act);
@@ -592,7 +592,7 @@
           c3_m             nam_m;
           c3_o             liv_o;
           u3_auto_cb          io;  // XX io_u;
-          c3_w_tmp             dep_w;
+          c3_w_new             dep_w;
           struct _u3_ovum* ent_u;
           struct _u3_ovum* ext_u;
           struct _u3_auto* nex_u;
@@ -612,7 +612,7 @@
       */
         typedef struct _u3_pier {
           c3_c*            pax_c;               //  pier directory
-          c3_w_tmp             lif_w;               //  lifecycle barrier
+          c3_w_new             lif_w;               //  lifecycle barrier
           c3_d             who_d[2];            //  identity
           c3_o             fak_o;               //  yes iff fake security
           c3_o             liv_o;               //  fully live
@@ -691,7 +691,7 @@
 
       /* u3_time_fsc_out: unix microseconds from urbit fracto-seconds.
       */
-        c3_w_tmp
+        c3_w_new
         u3_time_fsc_out(c3_d ufc_d);
 
       /* u3_time_in_tv(): urbit time from struct timeval.
@@ -750,7 +750,7 @@
       /* u3_ovum_init: initialize an unlinked potential event
       */
         u3_ovum*
-        u3_ovum_init(c3_w_tmp     mil_w,
+        u3_ovum_init(c3_w_new     mil_w,
                      u3_noun    tar,
                      u3_noun    wir,
                      u3_noun    cad);
@@ -772,23 +772,23 @@
 
       /* u3_mcut_char(): measure/cut character.
       */
-        c3_w_tmp
-        u3_mcut_char(c3_c* buf_c, c3_w_tmp len_w, c3_c chr_c);
+        c3_w_new
+        u3_mcut_char(c3_c* buf_c, c3_w_new len_w, c3_c chr_c);
 
       /* u3_mcut_cord(): measure/cut cord.
       */
-        c3_w_tmp
-        u3_mcut_cord(c3_c* buf_c, c3_w_tmp len_w, u3_noun san);
+        c3_w_new
+        u3_mcut_cord(c3_c* buf_c, c3_w_new len_w, u3_noun san);
 
       /* u3_mcut_path(): measure/cut cord list.
       */
-        c3_w_tmp
-        u3_mcut_path(c3_c* buf_c, c3_w_tmp len_w, c3_c sep_c, u3_noun pax);
+        c3_w_new
+        u3_mcut_path(c3_c* buf_c, c3_w_new len_w, c3_c sep_c, u3_noun pax);
 
       /* u3_mcut_host(): measure/cut host.
       */
-        c3_w_tmp
-        u3_mcut_host(c3_c* buf_c, c3_w_tmp len_w, u3_noun hot);
+        c3_w_new
+        u3_mcut_host(c3_c* buf_c, c3_w_new len_w, u3_noun hot);
 
     /**  IO drivers.
     **/
@@ -885,7 +885,7 @@
         size_t
         u3_disk_etch(u3_disk* log_u,
                      u3_noun    eve,
-                     c3_l_tmp     mug_l,
+                     c3_l_new     mug_l,
                      c3_y**   out_y);
 
       /* u3_disk_sift(): parse a persisted event buffer.
@@ -894,7 +894,7 @@
         u3_disk_sift(u3_disk* log_u,
                      size_t   len_i,
                      c3_y*    dat_y,
-                     c3_l_tmp*    mug_l,
+                     c3_l_new*    mug_l,
                      u3_noun*   job);
 
       /* u3_disk_info(): status info as $mass.
@@ -977,7 +977,7 @@
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
         u3_weak
-        u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_tmp* mug_l);
+        u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l_new* mug_l);
 
       /* u3_disk_walk_init(): init iterator.
       */
@@ -1005,7 +1005,7 @@
       */
         void
         u3_lord_boot(c3_c* pax_c,
-                     c3_w_tmp  wag_w,
+                     c3_w_new  wag_w,
                      c3_d  key_d[4],
                      u3_noun msg,
                      void* ptr_v,
@@ -1016,7 +1016,7 @@
       */
         u3_lord*
         u3_lord_init(c3_c*     pax_c,
-                     c3_w_tmp      wag_w,
+                     c3_w_new      wag_w,
                      c3_d      key_d[4],
                      u3_lord_cb cb_u);
 
@@ -1341,7 +1341,7 @@
       /* u3_pier_boot(): start the pier.
       */
         u3_pier*
-        u3_pier_boot(c3_w_tmp    wag_w,                 //  config flags
+        u3_pier_boot(c3_w_new    wag_w,                 //  config flags
                      u3_noun who,                   //  identity
                      u3_noun ven,                   //  boot event
                      u3_noun pil,                   //  type-of/path-to pill
@@ -1367,7 +1367,7 @@
       /* u3_pier_punt(): dump tank list.
       */
         void
-        u3_pier_punt(c3_l_tmp tab_l, u3_noun tac);
+        u3_pier_punt(c3_l_new tab_l, u3_noun tac);
 
       /* u3_pier_punt_goof(): dump a [mote tang] crash report.
       */
@@ -1382,11 +1382,11 @@
       /* u3_pier_sway(): print trace.
       */
         void
-        u3_pier_sway(c3_l_tmp tab_l, u3_noun tax);
+        u3_pier_sway(c3_l_new tab_l, u3_noun tax);
 
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
-        c3_w_tmp
+        c3_w_new
         u3_pier_mark(FILE* fil_u);
 
       /* u3_pier_mase(): construct a $mass leaf.
