@@ -26,7 +26,7 @@ u3qe_crc32(u3_noun input_octs)
   else {
     u3a_atom* vat_u = u3a_to_ptr(tail);
     // XX: little endian
-    input = (c3_y*)vat_u->buf_w;
+    input = (c3_y*)vat_u->buf_n;
   }
 
   if ( tel_n > hed_n ) {

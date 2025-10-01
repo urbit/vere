@@ -149,11 +149,7 @@
           c3_w_new fut_w;
         #endif
         c3_n len_n;
-        union {
-          c3_n buf_n[0];
-          c3_w_new buf_w[0];
-          c3_d buf_d[0];
-        };
+        c3_n buf_n[0];
       } u3a_atom;
 
       typedef struct __attribute__((aligned(4))) {

@@ -1257,7 +1257,7 @@ u3r_word_new(c3_n    a_n,
 #endif
       return 0;
     }
-    else return b_u->buf_w[a_n];
+    else return ((c3_w_new*)b_u->buf_n)[a_n];
   }
 }
 
@@ -1297,7 +1297,7 @@ u3r_chub(c3_n  a_n,
     if ( a_n >= b_u->len_n ) {
       return 0;
     }
-    else return b_u->buf_d[a_n];
+    else return ((c3_d*)b_u->buf_n)[a_n];
   }
 #endif
 }
@@ -1409,7 +1409,7 @@ u3r_words_new(c3_n    a_w,
     {
       u3a_atom* d_u = u3a_to_ptr(d);
       len_n = d_u->len_n * u3a_note_words;
-      buf_w = d_u->buf_w;
+      buf_w = (c3_w_new*)d_u->buf_n;
     }
     if ( a_w >= len_n ) {
       memset((c3_y*)c_w, 0, b_w << u3a_word_bytes_shift);
@@ -1472,7 +1472,7 @@ u3r_chubs(c3_n    a_w,
     }
     else {
       c3_n z_w = c3_min(b_w, len_n - a_w);
-      c3_d* x_w = d_u->buf_d + a_w;
+      c3_d* x_w = ((c3_d*)d_u->buf_n) + a_w;
       memcpy((c3_y*)c_d, (c3_y*)x_w, z_w << u3a_chub_bytes_shift);
       if ( b_w > len_n - a_w ) {
         memset((c3_y*)(c_d + z_w), 0, (b_w + a_w - len_n) << u3a_chub_bytes_shift);

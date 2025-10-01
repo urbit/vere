@@ -130,7 +130,7 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
-    byt_y = (c3_y*)vat_u->buf_w;
+    byt_y = (c3_y*)vat_u->buf_n;
   }
 
   _append_text(buf_u, byt_y, u3r_met(3, a));

@@ -25,7 +25,7 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
 
   if ( a_u->len_n != b_u->len_n ) return 0;
 
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_n << (u3a_note_bits_log-3));
+  return 0 == memcmp(a_u->buf_n, b_u->buf_n, a_u->len_n << (u3a_note_bits_log-3));
 }
 
 #define NAME    _coins

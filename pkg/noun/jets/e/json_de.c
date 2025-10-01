@@ -108,7 +108,7 @@ _parse(u3_atom txt)
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(txt);
-    byt_y = (c3_y*)vat_u->buf_w;
+    byt_y = (c3_y*)vat_u->buf_n;
   }
   json_open_buffer(sam_u, byt_y, len_n);
   json_set_allocator(sam_u, &loc_u);
