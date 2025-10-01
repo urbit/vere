@@ -950,7 +950,7 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
       //  print only on first send failure
       //
       c3_w blk_w = imp_y >> 5;
-      c3_w bit_w = 1 << (imp_y & 31);
+      c3_w bit_w = (c3_w)1 << (imp_y & 31);
 
       if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
         c3_c dns_c[256];
