@@ -78,7 +78,6 @@
 #     error  "port me"
 #endif
 
-#     define c3_bits_word_tmp(w) ((w) ? (32 - c3_lz_w(w)) : 0)
 #     define c3_bits_word_new(w) ((w) ? (32 - c3_lz_w(w)) : 0)
 #     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
 
@@ -116,7 +115,7 @@
     /* Fill 16 words (64 bytes) with high-quality entropy.
     */
       void
-      c3_rand(c3_w_tmp* rad_w);
+      c3_rand(c3_w_new* rad_w);
 
     /* Short integers.
     */
@@ -148,12 +147,11 @@
         return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
-      inline c3_w_tmp
+      inline c3_w_new
       c3_sift_word_new(c3_y buf_y[4])
       {
-        return ((c3_w_tmp)buf_y[3] << 24 | (c3_w_tmp)buf_y[2] << 16 | (c3_w_tmp)buf_y[1] << 8 | (c3_w_tmp)buf_y[0]);
+        return ((c3_w_new)buf_y[3] << 24 | (c3_w_new)buf_y[2] << 16 | (c3_w_new)buf_y[1] << 8 | (c3_w_new)buf_y[0]);
       }
-#define c3_sift_word_tmp c3_sift_word_new
 
       inline c3_d
       c3_sift_chub(c3_y byt_y[8])
@@ -183,7 +181,6 @@
         buf_y[2] = (wod_w >> 16) & 0xff;
         buf_y[3] = (wod_w >> 24) & 0xff;
       }
-#define c3_etch_word_tmp c3_etch_word_new
 
       inline void
       c3_etch_chub(c3_y byt_y[8], c3_d num_d)
@@ -265,17 +262,17 @@
 
    hi or lo align x to al
 
-   unless effective type of x is c3_w_tmp or c3_d, assumes x is a pointer.
+   unless effective type of x is c3_w_new or c3_d, assumes x is a pointer.
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w_tmp     : c3_align_w,               \
+           c3_w_new     : c3_align_w,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
-inline c3_w_tmp
-c3_align_w(c3_w_tmp x, c3_w_tmp al, align_dir hilo) {
+inline c3_w_new
+c3_align_w(c3_w_new x, c3_w_new al, align_dir hilo) {
   c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
