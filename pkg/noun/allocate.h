@@ -662,7 +662,11 @@ u3a_post_info(u3_post);
         */
           void
           u3a_lose(u3_weak som);
+
+          void
+          u3a_lose_log(u3_noun som, c3_c* fil_u, c3_i lin_i);
 #         define u3z(som) u3a_lose(som)
+// #         define u3z(som) u3a_lose_log(som, __FILE__, __LINE__)
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */
