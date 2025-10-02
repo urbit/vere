@@ -1261,12 +1261,6 @@ u3r_word_new(c3_n    a_n,
   }
 }
 
-c3_w_new
-u3r_word_tmp(c3_n    a_n,
-           u3_atom b) {
-  return u3r_word_new(a_n, b);
-}
-
 /* u3r_chub():
 **
 **   Return double-word (a_w) of (b).
@@ -1331,12 +1325,6 @@ u3r_word_new_fit(c3_w_new *out_w, u3_atom a)
     *out_w = u3r_word_new(0, a);
     return 1;
   }
-}
-
-c3_t
-u3r_word_tmp_fit(c3_w_new *out_w, u3_atom a)
-{
-  return u3r_word_new_fit(out_w, a);
 }
 
 /* u3r_chub_fit():
@@ -1426,15 +1414,6 @@ u3r_words_new(c3_n    a_w,
   }
 }
 
-void
-u3r_words_tmp(c3_n    a_w,
-          c3_n    b_w,
-          c3_w_new*   c_w,
-          u3_atom d)
-{
-  u3r_words_new(a_w, b_w, c_w, d);
-}
-
 /* u3r_chubs():
 **
 **  Copy double-words (a_w) through (a_w + b_w - 1) from (d) to (c).
@@ -1522,11 +1501,6 @@ u3r_safe_word_new(u3_noun dat, c3_w_new* out_w)
 
   *out_w = u3r_word_new(0, dat);
   return c3y;
-}
-
-c3_o
-u3r_safe_word_tmp(u3_noun dat, c3_w_new* out_w) {
-  return u3r_safe_word_new(dat, out_w);
 }
 
 /* u3r_safe_chub(): validate and retrieve chub.
@@ -1907,12 +1881,6 @@ u3r_mug_words_new(const c3_w_new* key_w, c3_n len_w)
   //  XX: assumes little-endian
   //
   return u3r_mug_bytes((c3_y*)key_w, byt_w);
-}
-
-c3_m
-u3r_mug_words_tmp(const c3_w_new* key_w, c3_n len_w)
-{
-  return u3r_mug_words_new(key_w, len_w);
 }
 
 /* u3r_mug_chubs(): 31-bit nonzero MurmurHash3 on raw chubs.

@@ -156,11 +156,6 @@
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
         c3_m
-        u3r_mug_words_tmp(const c3_w_new* key_w, c3_n len_w);
-
-      /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
-      */
-        c3_m
         u3r_mug_chubs(const c3_d* key_d, c3_n len_w);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
@@ -481,10 +476,6 @@
         u3r_word_new(c3_n    a_w,
                  u3_atom b);
 
-        c3_w_new
-        u3r_word_tmp(c3_n    a_w,
-                 u3_atom b);
-
       /* u3r_chub():
       **
       **   Return double-word (a_w) of (b).
@@ -510,14 +501,6 @@
         u3r_word_new_fit(c3_w_new*   out_w,
                      u3_atom a);
 
-      /* u3r_word_fit():
-      **
-      **   Fill (out_w) with (a) if it fits, returning success.
-      */
-        c3_t
-        u3r_word_tmp_fit(c3_w_new*   out_w,
-                     u3_atom a);
-
       /* u3r_chub_fit():
       **
       **   Fill (out_w) with (a) if it fits, returning success.
@@ -540,12 +523,6 @@
       */
         void
         u3r_words_new(c3_n    a_w,
-                  c3_n    b_w,
-                  c3_w_new*   c_w,
-                  u3_atom d);
-
-        void
-        u3r_words_tmp(c3_n    a_w,
                   c3_n    b_w,
                   c3_w_new*   c_w,
                   u3_atom d);
@@ -580,9 +557,6 @@
       */
         c3_o
         u3r_safe_word_new(u3_noun dat, c3_w_new* out_w);
-
-        c3_o
-        u3r_safe_word_tmp(u3_noun dat, c3_w_new* out_w);
 
       /* u3r_safe_chub(): validate and retrieve chub.
       */
