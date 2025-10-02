@@ -465,7 +465,7 @@ u3i_chubs(c3_n        a_w,
 #ifndef VERE64
 // XX: why exactly different?
     {
-      c3_w_new* buf_w = sab_u.buf_w;
+      c3_w_new* buf_w = (c3_w_new*)sab_u.buf_n;
       c3_w_new    i_w;
       c3_d    i_d;
 
