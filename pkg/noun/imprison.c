@@ -333,14 +333,6 @@ u3i_word_new(c3_w_new dat_w)
 #endif
 }
 
-/* u3i_word(): construct u3_atom from c3_w.
-*/
-u3_atom
-u3i_word_tmp(c3_w_new dat_w)
-{
-  return u3i_word_new(dat_w);
-}
-
 /* u3i_chub(): construct u3_atom from c3_d.
 */
 u3_atom
@@ -446,16 +438,6 @@ u3i_words_new(c3_n        a_w,
     return u3i_slab_moot(&sab_u);
   }
 }
-
-/* u3i_words(): Copy [a] words from [b] into an atom.
-*/
-u3_atom
-u3i_words_tmp(c3_n        a_w,
-          const c3_w_new* b_w)
-{
-  return u3i_words_new(a_w, b_w);
-}
-
 
 /* u3i_chubs(): Copy [a] chubs from [b] into an atom.
 */
