@@ -564,13 +564,13 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_w hed_w = ((hed_u->req_o &     0x1) <<  2)
-             ^ ((hed_u->sim_o &     0x1) <<  3)
-             ^ ((hed_u->ver_y &     0x7) <<  4)
-             ^ ((hed_u->sac_y &     0x3) <<  7)
-             ^ ((hed_u->rac_y &     0x3) <<  9)
-             ^ ((hed_u->mug_l & 0xfffff) << 11)
-             ^ ((hed_u->rel_o &     0x1) << 31);
+  c3_w hed_w = ((hed_u->req_o       &     0x1) <<  2)
+             ^ ((hed_u->sim_o       &     0x1) <<  3)
+             ^ ((hed_u->ver_y       &     0x7) <<  4)
+             ^ ((hed_u->sac_y       &     0x3) <<  7)
+             ^ ((hed_u->rac_y       &     0x3) <<  9)
+             ^ ((hed_u->mug_l       & 0xfffff) << 11)
+             ^ (((c3_w)hed_u->rel_o &     0x1) << 31);
 
   c3_etch_word(buf_y, hed_w);
 }
