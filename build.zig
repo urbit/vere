@@ -33,6 +33,7 @@ const BuildCfg = struct {
     snapshot_validation: bool = false,
     ubsan: bool = false,
     asan: bool = false,
+    vere32: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -109,6 +110,12 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
+    const vere32 = b.option(
+        bool,
+        "vere32",
+        "Compile in 32-bit mode",
+    ) orelse false;
+
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
@@ -143,6 +150,7 @@ pub fn build(b: *std.Build) !void {
         .snapshot_validation = snapshot_validation,
         .asan = asan,
         .ubsan = ubsan,
+        .vere32 = vere32,
         .include_test_steps = !all,
     };
 
@@ -237,7 +245,6 @@ fn buildBinary(
         "-DU3_GUARD_PAGE", // pkg_noun
         "-DU3_OS_ENDIAN_little=1", // pkg_c3
         "-DU3_OS_PROF=1", // pkg_c3
-        "-DVERE64",
     });
 
     if (cfg.cpu_dbg)
@@ -251,6 +258,9 @@ fn buildBinary(
 
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
+
+    if (!cfg.vere32)
+        try urbit_flags.appendSlice(&.{"-DVERE64"});
 
     if (t.cpu.arch == .aarch64) {
         try urbit_flags.appendSlice(&.{
@@ -567,7 +577,7 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
-                .name = "vere-noun-test",
+                .name = "noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
             },
