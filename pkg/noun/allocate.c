@@ -262,7 +262,6 @@ u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
   pil_u->off_ws = (c3y == nor_o) ?      0 : -wor_w;
   pil_u->top_p  = u3R->cap_p;
-  u3R->cap_p    = c3_align(u3R->cap_p, 8, (c3y == nor_o) ? C3_ALGLO : C3_ALGHI);
 
 #ifdef U3_MEMORY_DEBUG
   pil_u->rod_u  = u3R;

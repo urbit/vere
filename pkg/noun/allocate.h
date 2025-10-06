@@ -535,15 +535,7 @@ typedef struct {
           inline c3_o
           u3a_pile_done(const u3a_pile* pil_u)
           {
-            // 0 == pil_u->off_ws - north
-            //
-            c3_w hilo_w = (0 == pil_u->off_ws) ? C3_ALGLO : C3_ALGHI;
-            u3_post pac_p = c3_align(pil_u->top_p, 8, hilo_w);
-            if (u3R->cap_p == pac_p) {
-              u3R->cap_p = pil_u->top_p;
-              return c3y;
-            }
-            return c3n;
+            return (pil_u->top_p == u3R->cap_p) ? c3y : c3n;
           }
 
   /**  Functions.
