@@ -356,6 +356,8 @@ u3a_cfree(c3_w* cel_w)
 
   if ( u3R->cel.cel_p ) {
     if ( u3R->cel.hav_w < (1U << u3a_page) ) {
+      u3a_cell* cel_u = (void*)cel_w;
+      cel_u->use_w = 0;
       cel_p = u3to(u3_post, u3R->cel.cel_p);
       cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
       return;
@@ -928,18 +930,14 @@ _me_lose_north_log(u3_noun dog, c3_c* fil_u, c3_i lin_i)
 top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
-    if (UINT32_MAX == box_u->use_w) {
-      u3a_cell* dog_u = (void*)box_u;
-      fil_u = (c3_c*)((c3_p)dog_u->hed | (((c3_p)dog_u->tel) << 32));
-      fprintf(stderr, "\r\n %s:%d \r\n", fil_u, dog_u->mug_w);
-      u3_assert(!"double free");
-    }
 
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;
     }
     else {
       if ( 0 == box_u->use_w ) {
+        u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
+        fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
         u3m_bail(c3__foul);
       }
       else {
@@ -951,13 +949,10 @@ top:
           if ( !_(u3a_is_cat(h_dog)) ) {
             _me_lose_north(h_dog);
           }
-          // u3a_cfree((c3_w*)dog_u);
-          dog_u->use_w = UINT32_MAX;
-          dog_u->mug_w = lin_i;
-          c3_w ptr1_w = (c3_w)((c3_p)fil_u);
-          c3_w ptr2_w = (c3_w)((c3_p)fil_u >> 32);
-          dog_u->hed = ptr1_w;
-          dog_u->tel = ptr2_w;
+          u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
+          shad_u->lin_i = lin_i;
+          shad_u->fil_u = fil_u;
+          u3a_cfree((c3_w*)dog_u);
           if ( !_(u3a_is_cat(t_dog)) ) {
             dog = t_dog;
             goto top;
@@ -978,18 +973,13 @@ top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
-    if (UINT32_MAX == box_u->use_w) {
-      u3a_cell* dog_u = (void*)box_u;
-      fil_u = (c3_c*)((c3_p)dog_u->hed | (((c3_p)dog_u->tel) << 32));
-      fprintf(stderr, "\r\n %s:%d \r\n", fil_u, dog_u->mug_w);
-      u3_assert(!"double free");
-    }
-
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;
     }
     else {
       if ( 0 == box_u->use_w ) {
+        u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
+        fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
         u3m_bail(c3__foul);
       }
       else {
@@ -1001,13 +991,10 @@ top:
           if ( !_(u3a_is_cat(h_dog)) ) {
             _me_lose_south(h_dog);
           }
-          // u3a_cfree((c3_w*)dog_u);
-          dog_u->use_w = UINT32_MAX;
-          dog_u->mug_w = lin_i;
-          c3_w ptr1_w = (c3_w)((c3_p)fil_u);
-          c3_w ptr2_w = (c3_w)((c3_p)fil_u >> 32);
-          dog_u->hed = ptr1_w;
-          dog_u->tel = ptr2_w;
+          u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
+          shad_u->lin_i = lin_i;
+          shad_u->fil_u = fil_u;
+          u3a_cfree((c3_w*)dog_u);
           if ( !_(u3a_is_cat(t_dog)) ) {
             dog = t_dog;
             goto top;
