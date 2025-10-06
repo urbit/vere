@@ -2285,7 +2285,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
     c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
-    ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i * hun_u->hun_s);
+    ASAN_UNPOISON_MEMORY_REGION(doc_w, len_i * hun_u->hun_s);
     memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
 
     // XX bump pos_s/src_w if !pos_s ?
