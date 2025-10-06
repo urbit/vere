@@ -357,7 +357,6 @@ u3a_cfree(c3_w* cel_w)
   if ( u3R->cel.cel_p ) {
     if ( u3R->cel.hav_w < (1U << u3a_page) ) {
       u3a_cell* cel_u = (void*)cel_w;
-      cel_u->use_w = 0;
       cel_p = u3to(u3_post, u3R->cel.cel_p);
       cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
       return;
@@ -937,17 +936,23 @@ top:
     else {
       if ( 0 == box_u->use_w ) {
         u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
-        fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
+        if (!shad_u->fil_u) {
+          fprintf(stderr, "\r\ndouble free: no info\r\n");
+        }
+        else {
+          fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
+        }
         u3m_bail(c3__foul);
       }
       else {
+        box_u->use_w = 0;
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
           u3_noun   t_dog = dog_u->tel;
 
           if ( !_(u3a_is_cat(h_dog)) ) {
-            _me_lose_north(h_dog);
+            _me_lose_north_log(h_dog, fil_u, lin_i);
           }
           u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
           shad_u->lin_i = lin_i;
@@ -979,17 +984,23 @@ top:
     else {
       if ( 0 == box_u->use_w ) {
         u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
-        fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
+        if (!shad_u->fil_u) {
+          fprintf(stderr, "\r\ndouble free: no info\r\n");
+        }
+        else {
+          fprintf(stderr, "\r\ndouble free: %s:%d\r\n", shad_u->fil_u, shad_u->lin_i);
+        }
         u3m_bail(c3__foul);
       }
       else {
+        box_u->use_w = 0;
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
           u3_noun   t_dog = dog_u->tel;
 
           if ( !_(u3a_is_cat(h_dog)) ) {
-            _me_lose_south(h_dog);
+            _me_lose_south_log(h_dog, fil_u, lin_i);
           }
           u3m_shadow* shad_u = &u3m_Shadow[u3a_to_off(dog)];
           shad_u->lin_i = lin_i;
