@@ -1776,6 +1776,42 @@ _term_io_exit_cb(uv_handle_t* han_u)
   c3_free(car_u);
 }
 
+static u3m_quac**
+_term_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u;
+  u3_utty*   uty_u;
+  c3_w       tot_w = 0, len_w = 0;
+
+  for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
+    len_w++;
+  }
+
+  all_u = c3_malloc(sizeof(*all_u) * (len_w + 1));
+  len_w = 0;
+
+  for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
+    all_u[len_w] = c3_malloc(sizeof(**all_u));
+    all_u[len_w]->qua_u = 0;
+    all_u[len_w]->siz_w = 0;
+
+    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.mir.lin);
+    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.fut.imp);
+    all_u[len_w]->siz_w *= 4;
+
+    asprintf(&(all_u[len_w]->nam_c), "term-%u-%d", uty_u->tid_l, uty_u->fid_i);
+
+    tot_w += all_u[len_w]->siz_w;
+    len_w++;
+  }
+
+  all_u[len_w] = 0;
+
+  *out_w = tot_w;
+
+  return all_u;
+}
+
 /* _term_io_exit(): clean up terminal.
 */
 static void
@@ -1816,6 +1852,7 @@ u3_term_io_init(u3_pier* pir_u)
   car_u->liv_o = c3y;
   car_u->io.talk_f = _term_io_talk;
   car_u->io.kick_f = _term_io_kick;
+  car_u->io.mark_f = _term_io_mark;
   car_u->io.exit_f = _term_io_exit;
 
   return car_u;
