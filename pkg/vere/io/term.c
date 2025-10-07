@@ -1674,7 +1674,13 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
      || (c3n == u3r_cell(cad, &tag, &dat))
      || (c3__term != i_wir) )
   {
-    ret_o = c3n;
+    if ( (c3__arvo == i_wir) && (c3__mass == tag) ) {
+      uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
+      ret_o = c3y;
+    }
+    else {
+      ret_o = c3n;
+    }
   }
   else {
     u3_noun pud = t_wir;

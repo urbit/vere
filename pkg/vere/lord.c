@@ -943,6 +943,37 @@ u3_lord_slog(u3_lord* god_u)
   u3_newt_moat_slog(&god_u->out_u);
 }
 
+u3m_quac*
+u3_lord_mark(u3_lord* god_u)
+{
+  u3_writ* wit_u = god_u->ext_u;
+  c3_w     siz_w = 0;
+
+  while ( wit_u ) {
+    switch ( wit_u->typ_e ) {
+      case u3_writ_poke: {
+        siz_w += u3a_mark_noun(wit_u->wok_u.job);
+        siz_w += u3_ovum_mark(wit_u->wok_u.egg_u);
+      } break;
+
+      case u3_writ_peek: {
+        siz_w += u3a_mark_noun(wit_u->pek_u->sam);
+      } break;
+
+      default: break;
+    }
+
+    wit_u = wit_u->nex_u;
+  }
+
+  u3m_quac* qac_u = c3_malloc(sizeof(*qac_u));
+  qac_u->nam_c = strdup("lord ipc");
+  qac_u->siz_w = siz_w * 4;
+  qac_u->qua_u = 0;
+
+  return qac_u;
+}
+
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*

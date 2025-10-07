@@ -1504,9 +1504,12 @@ void
 u3a_quac_free(u3m_quac* qua_u)
 {
   c3_w i_w = 0;
-  while ( qua_u->qua_u[i_w] != NULL ) {
-    u3a_quac_free(qua_u->qua_u[i_w]);
-    i_w++;
+
+  if ( qua_u->qua_u ) {
+    while ( qua_u->qua_u[i_w] != NULL ) {
+      u3a_quac_free(qua_u->qua_u[i_w]);
+      i_w++;
+    }
   }
   c3_free(qua_u->nam_c);
   c3_free(qua_u->qua_u);
