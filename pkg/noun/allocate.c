@@ -1049,6 +1049,8 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 
   if ( rod_u->kid_p ) return;
 
+  if ( rod_u == &(u3H->rod_u) ) return;
+
   wed_o = _ca_wed_our(a, b);
 
 #ifdef U3_MEMORY_DEBUG
