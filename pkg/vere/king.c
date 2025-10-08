@@ -1815,6 +1815,8 @@ u3_king_grab(void* vod_p)
 
   all_u[7] = 0;
 
+  fflush(fil_u);
+
   for ( c3_w i_w = 0; i_w < 7; i_w++ ) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);
     u3a_quac_free(all_u[i_w]);

@@ -1483,7 +1483,12 @@ u3_pier_mark(u3_pier* pir_u, c3_w *out_w)
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("drivers");
-  all_u[0]->qua_u = u3_auto_mark(pir_u->wok_u->car_u, &(all_u[0]->siz_w));
+  if ( pir_u->wok_u ) {
+    all_u[0]->qua_u = u3_auto_mark(pir_u->wok_u->car_u, &(all_u[0]->siz_w));
+  }
+  else {
+    all_u[0]->qua_u = 0;
+  }
 
   all_u[1] = u3_lord_mark(pir_u->god_u);
 
