@@ -185,6 +185,7 @@ _pier_on_lord_work_done(void*    ptr_v,
   //  XX consider async
   //
   u3_auto_kick(pir_u->wok_u->car_u, act);
+  u3z(act);
 
   _pier_work(pir_u->wok_u);
 }
