@@ -273,7 +273,7 @@
         c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
-        c3_c*   eth_c;                      //  -e, ethereum node url
+        c3_c*   gat_c;                      //  -g, PKI gateway node url
         c3_c*   fak_c;                      //  -F, fake ship
         c3_c*   gen_c;                      //  -G, czar generator
         c3_o    gab;                        //  -g, test garbage collection
@@ -1582,6 +1582,13 @@
                      c3_c* arc_c,  // architecture
                      c3_c* dir_c,  // output directory
                      c3_t  lin_t); // link to $pier/.run
+
+
+        u3_atom
+        u3_king_get_atom(c3_c* url_c);
+
+        u3_noun
+        u3_king_get_noun(c3_c* url_c);
 
       /* u3_daemon_init(): platform-specific daemon mode initialization.
       */

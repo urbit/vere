@@ -1490,6 +1490,11 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Assert preconditions.
   */
   {
+    if ( 0 == u3R->ski.gul ) {
+      u3t_slog_hela(0);
+      fflush(stderr);
+      fflush(stdout);
+    }
     u3_assert(0 != u3R->ski.gul);
     gul = u3h(u3R->ski.gul);
   }

@@ -90,8 +90,6 @@ void _king_doom(u3_noun doom);
     void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
-static u3_noun _king_get_atom(c3_c* url_c);
-
 /* _king_defy_fate(): invalid fate
 */
 void
@@ -177,7 +175,7 @@ _king_prop()
 
       case 2: {  //  url
         u3l_log("boot: downloading prop %s", vex_u->loc_c);
-        u3_atom jam = _king_get_atom(vex_u->loc_c);
+        u3_atom jam = u3_king_get_atom(vex_u->loc_c);
         mor = u3nc(u3ke_cue(jam), mor);
       } break;
 
@@ -189,7 +187,7 @@ _king_prop()
                  "https://bootstrap.urbit.org/props/" URBIT_VERSION "/%s.jam",
                  vex_u->loc_c);
         u3l_log("boot: downloading prop %s", url_c);
-        u3_atom jam = _king_get_atom(url_c);
+        u3_atom jam = u3_king_get_atom(url_c);
         mor = u3nc(u3ke_cue(jam), mor);
       } break;
 
@@ -344,10 +342,10 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
   return ret_i;
 }
 
-/* _king_get_atom(): HTTP GET url_c, produce response body as atom.
+/* u3_king_get_atom(): HTTP GET url_c, produce response body as atom.
 */
-static u3_noun
-_king_get_atom(c3_c* url_c)
+u3_atom
+u3_king_get_atom(c3_c* url_c)
 {
   c3_w  len_w;
   c3_y* hun_y;
@@ -360,6 +358,28 @@ _king_get_atom(c3_c* url_c)
 
   pro = u3i_bytes(len_w, hun_y);
   c3_free(hun_y);
+  return pro;
+}
+
+u3_noun
+u3_king_get_noun(c3_c* url_c) {
+  c3_w  len_w;
+  c3_y* byt_y;
+
+  if ( king_curl_bytes(url_c, &len_w, &byt_y, 1, 5) ) {
+    u3_king_bail();
+    exit(1);
+  }
+
+  u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
+  u3_weak        pro;
+
+  if ( u3_none == (pro = u3s_cue_xeno_with(sil_u, len_w, byt_y)) ) {
+    u3l_log("u3_king_get_noun: unable to cue noun");
+    exit(1);
+  }
+
+  u3s_cue_xeno_done(sil_u);
   return pro;
 }
 
@@ -476,10 +496,10 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
 /* _get_cmd_output(): Run a shell command and capture its output.
    Exits with an error if the command fails or produces no output.
    The 'out_c' parameter should be an array of sufficient length to hold
-   the command's output, up to a max of len_c characters.
+   the command's output, up to a max of len_w characters.
 */
 static void
-_get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_c)
+_get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_w)
 {
   FILE *fp = popen(cmd_c, "r");
   if ( NULL == fp ) {
@@ -487,7 +507,7 @@ _get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_c)
     exit(1);
   }
 
-  if ( NULL == fgets(out_c, len_c, fp) ) {
+  if ( NULL == fgets(out_c, len_w, fp) ) {
     u3l_log("'%s' produced no output", cmd_c);
     exit(1);
   }
@@ -555,7 +575,7 @@ _boothack_pill(void)
     }
 
     u3l_log("boot: downloading pill %s", url_c);
-    pil = _king_get_atom(url_c);
+    pil = u3_king_get_atom(url_c);
   }
 
   if ( 0 != u3_Host.ops_u.arv_c ) {

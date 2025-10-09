@@ -1059,7 +1059,7 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, sockaddr_in* lan_u)
   }
 
   switch ( tag ) {
-    case c3y: {  //  galaxy
+    case c3y: {  //  galaxy/lamp
       return _ames_lamp_lane(sam_u->mes_u, u3_ship_of_noun(val), lan_u);
     }
 

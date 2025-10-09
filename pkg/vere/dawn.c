@@ -143,10 +143,10 @@ _dawn_get_jam(c3_c* url_c)
   return u3ke_cue(jammed);
 }
 
-/* _dawn_eth_rpc(): ethereum JSON RPC with request/response as +octs
+/* _dawn_gat_rpc(): ethereum JSON RPC with request/response as +octs
 */
 static u3_noun
-_dawn_eth_rpc(c3_c* url_c, u3_noun oct)
+_dawn_gat_rpc_old(c3_c* url_c, u3_noun oct)
 {
   uv_buf_t buf_u = _dawn_post_json(url_c, _dawn_oct_to_buf(oct));
   u3_noun    pro = _dawn_buf_to_oct(buf_u);
@@ -273,9 +273,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
 
   u3_noun rank = u3do("clan:title", u3k(ship));
 
-  c3_c* url_c = ( 0 != u3_Host.ops_u.eth_c ) ?
-    u3_Host.ops_u.eth_c :
-    "https://roller.urbit.org/v1/azimuth";
+  c3_c url_c[4096];
 
   {
     //  +point:azimuth: on-chain state
@@ -295,12 +293,11 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
               u3_Host.ops_u.who_c);
 
       {
-        u3_noun oct = u3do("point:give:dawn", u3k(ship));
-        u3_noun luh = _dawn_eth_rpc(url_c, u3k(oct));
+        sprintf(url_c, "%s/_~_/=pynt=/j/%s",
+                u3_Host.ops_u.gat_c, u3_Host.ops_u.who_c);
+        u3_noun top = u3_king_get_noun(url_c);
 
-        pot = _dawn_need_unit(u3dc("point:take:dawn", u3k(ship), u3k(luh)),
-                              "boot: failed to retrieve public keys");
-        u3z(oct); u3z(luh);
+        pot = _dawn_need_unit(top, "boot: failed to retrieve public keys");
       }
     }
 
@@ -342,12 +339,9 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   {
     u3l_log("boot: retrieving galaxy table");
 
-    u3_noun oct = u3v_wish("czar:give:dawn");
-    u3_noun raz = _dawn_eth_rpc(url_c, u3k(oct));
-
-    zar = _dawn_need_unit(u3do("czar:take:dawn", u3k(raz)),
-                          "boot: failed to retrieve galaxy table");
-    u3z(oct); u3z(raz);
+    sprintf(url_c, "%s/_~_/=lamp=/j",
+            u3_Host.ops_u.gat_c);
+    zar = u3_king_get_noun(url_c);
   }
 
   //  (list turf): ames domains
@@ -358,12 +352,9 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   else {
     u3l_log("boot: retrieving network domains");
 
-    u3_noun oct = u3v_wish("turf:give:dawn");
-    u3_noun fut = _dawn_eth_rpc(url_c, u3k(oct));
-
-    tuf = _dawn_need_unit(u3do("turf:take:dawn", u3k(fut)),
-                          "boot: failed to retrieve network domains");
-    u3z(oct); u3z(fut);
+    sprintf(url_c, "%s/_~_/=turf=/j",
+            u3_Host.ops_u.gat_c);
+    u3_noun tuf = u3_king_get_noun(url_c);
   }
 
   pon = u3_nul;
@@ -382,15 +373,18 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
     //  retrieve +point:azimuth of pos (sponsor of ship)
     //
     {
-      u3_noun oct = u3do("point:give:dawn", u3k(pos));
-      u3_noun luh = _dawn_eth_rpc(url_c, u3k(oct));
+      u3_noun top = u3dc("scot", c3__p, u3k(pos));
+      c3_c* pot_c = u3r_string(top);
+      u3z(top);
+      sprintf(url_c, "%s/_~_/=pynt=/j/%s",
+              u3_Host.ops_u.gat_c, pot_c);
+      u3_noun nos = u3_king_get_noun(url_c);
+      c3_free(pot_c);
 
-      son = _dawn_need_unit(u3dc("point:take:dawn", u3k(pos), u3k(luh)),
-                            "boot: failed to retrieve sponsor keys");
+      son = _dawn_need_unit(top, "boot: failed to retrieve public keys");
       // append to sponsor chain list
       //
-      pon = u3nc(u3nc(u3k(pos), u3k(son)), pon);
-      u3z(oct); u3z(luh);
+      pon = u3nc(u3nc(u3k(pos), son), pon);
     }
 
     // find next sponsor

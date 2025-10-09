@@ -553,14 +553,14 @@ _resolve_czar(u3_ship who_u, c3_c* who_c)
 }
 
 static c3_o
-_czar_boot_data(c3_c* czar_c,
-                c3_c* who_c,
-                c3_w* bone_w,
-                c3_w* czar_glx_w,
-                c3_w* czar_ryf_w,
-                c3_w* czar_lyf_w,
-                c3_w* czar_bon_w,
-                c3_w* czar_ack_w)
+_czar_boot_data(c3_c*    czar_c,
+                c3_c*    who_c,
+                c3_w*    bone_w,
+                u3_ship* czar_glx_u,
+                c3_w*    czar_ryf_w,
+                c3_w*    czar_lyf_w,
+                c3_w*    czar_bon_w,
+                c3_w*    czar_ack_w)
 {
   c3_c url[256];
   c3_w  len_w;
@@ -583,9 +583,9 @@ _czar_boot_data(c3_c* czar_c,
 
     if ( (c3y == u3r_hext(cued, 0, &czar_glx, &czar_ryf,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
-         (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
          (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
          (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) ) {
+      *czar_glx_u = u3_ship_of_noun(czar_glx);
       if ( c3y == u3du(czar_bon) ) u3r_safe_word(u3t(czar_bon), czar_bon_w);
       if ( c3y == u3du(czar_ack) ) u3r_safe_word(u3t(czar_ack), czar_ack_w);
       ret_o = c3y;
@@ -698,10 +698,12 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   c3_c*   who_c = u3r_string(who);
 
   u3_noun rem, glx, ryf, bon, cur, nex;
-  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
+  c3_w ryf_w, bon_w, cur_w, nex_w;
+  u3_ship glx_u;
 
-  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
-  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
+  c3_w czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
+  czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
+  u3_ship czar_glx_u;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
@@ -709,15 +711,14 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
      */
-    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
+    glx_u = u3_ship_of_noun(glx); ryf_w = u3r_word(0, ryf);
     bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
     nex_w = u3r_word(0, nex);
 
-    u3_atom czar = u3dc("scot", c3__p, glx_w);
-    c3_c*   czar_c = u3r_string(czar);
+    c3_c*   czar_c = u3_ship_to_string(glx_u);
 
     if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
-                                &czar_glx_w, &czar_ryf_w,
+                                &czar_glx_u, &czar_ryf_w,
                                 &czar_lyf_w, &czar_bon_w,
                                 &czar_ack_w) ) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
@@ -750,18 +751,20 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       }
     }
 
-    u3z(czar);
     c3_free(czar_c);
-  } else if ( c3y == u3r_trel(nun, 0, 0, &rem) && rem == 0 ) {
+  } else if ( c3y == u3r_trel(nun, 0, 0, &rem) &&
+              c3y == u3r_cell(rem, 0, &glx) ) {
     /*
      * Data not available for boot scry. Check against sponsoring galaxy.
      * If peer state exists exit(1) unless ship has breached,
      * otherwise continue boot.
      */
-    c3_c* czar_c = _resolve_czar(pir_u->who_u, who_c);
+
+    glx_u = u3_ship_of_noun(glx); ryf_w = u3r_word(0, ryf);
+    c3_c* czar_c = u3_ship_to_string(glx_u);
 
     if ( c3n == _czar_boot_data(czar_c, who_c, 0,
-                                &czar_glx_w, &czar_ryf_w,
+                                &czar_glx_u, &czar_ryf_w,
                                 &czar_lyf_w, &czar_bon_w, 0) ) {
       c3_free(czar_c);
       _pier_wyrd_init(pir_u);

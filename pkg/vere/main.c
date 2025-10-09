@@ -261,7 +261,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "pier",                required_argument, NULL, 'c' },
     { "replay",              no_argument,       NULL, 'D' },
     { "daemon",              no_argument,       NULL, 'd' },
-    { "ethereum",            required_argument, NULL, 'e' },
+    { "gateway",             required_argument, NULL, 'g' },
     { "fake",                required_argument, NULL, 'F' },
     { "key-string",          required_argument, NULL, 'G' },
     { "gc",                  no_argument,       NULL, 'g' },
@@ -438,10 +438,6 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.nuu = c3y;
         break;
       }
-      case 'e': {
-        u3_Host.ops_u.eth_c = strdup(optarg);
-        break;
-      }
       case 'F': {
         u3_Host.ops_u.fak_c = _main_presig(optarg);
         u3_Host.ops_u.net   = c3n;
@@ -510,6 +506,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 'w': {
         u3_Host.ops_u.who_c = _main_presig(optarg);
         u3_Host.ops_u.nuu = c3y;
+        break;
+      }
+      case 'W': {
+        u3_Host.ops_u.gat_c = strdup(optarg);
         break;
       }
       case 'X': {
@@ -855,7 +855,6 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-c, --pier PIER               Create a new urbit in <pier>/\n",
     "-D, --replay                  Recompute from events\n",
     "-d, --daemon                  Daemon mode; implies -t\n",
-    "-e, --ethereum URL            Ethereum gateway\n",
     "-F, --fake SHIP               Boot fake urbit; also disables networking\n",
     "-G, --key-string STRING       Private key string (@uw, see also -k)\n"
     "-g, --gc                      Set GC flag\n",
@@ -886,6 +885,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-u, --bootstrap-url URL       URL from which to download pill\n",
     "-v, --verbose                 Verbose\n",
     "-w, --name NAME               Initial boot as ~name (with ticket)\n",
+    "-W, --cards CARDS             PKI init cards\n",
     "-X, --scry PATH               Scry, write to file, then exit\n",
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",
