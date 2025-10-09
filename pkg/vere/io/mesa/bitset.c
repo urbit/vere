@@ -42,7 +42,7 @@ bitset_wyt(u3_bitset* bit_u)
 void bitset_put(u3_bitset* bit_u, c3_w_new mem_w)
 {
   if (( mem_w > bit_u->len_w )) {
-    u3l_log("overrun %u, %lu", mem_w, bit_u->len_w);
+    u3l_log("overrun %u, %" PRIc3_d, mem_w, bit_u->len_w);
     return;
   }
   c3_w_new idx_w = mem_w >> 3;
@@ -55,7 +55,7 @@ void bitset_put(u3_bitset* bit_u, c3_w_new mem_w)
 c3_o
 bitset_has(u3_bitset* bit_u, c3_w_new mem_w) {
   if (( mem_w > bit_u->len_w )) {
-    u3l_log("overrun %u, %lu", mem_w, bit_u->len_w);
+    u3l_log("overrun %u, %" PRIc3_d, mem_w, bit_u->len_w);
     return c3n;
   }
 

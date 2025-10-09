@@ -2257,7 +2257,7 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
     nex_u->pac_u.pek_u.nam_u.fra_d = fra_d;
     uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, nex_d+i, req_u->pek_w);
     if (buf_u.base < req_u->pek_c) {
-        u3l_log("peek overflow, dying, fragment %lu", nex_d+i);
+        u3l_log("peek overflow, dying, fragment %" PRIc3_d, nex_d+i);
         abort();
     }
     mesa_etch_pact_to_buf((c3_y*)buf_u.base, buf_u.len, &nex_u->pac_u);
