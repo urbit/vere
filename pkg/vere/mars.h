@@ -79,7 +79,7 @@
     /* u3_mars_kick(): try to send a task into mars.
     */
       c3_o
-      u3_mars_kick(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
+      u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_grab(): garbage collect.
     */
