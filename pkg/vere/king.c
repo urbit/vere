@@ -70,9 +70,9 @@ static c3_w sag_w;
       [%dawn p=seed]
       ::  boot with fake keys
       ::
-      ::  p: identity
+      ::  seed for fake comets, @p for others
       ::
-      [%fake p=ship]
+      [%fake $@(=ship [~ =feed])]
   ==
 ::  +pill: boot-sequence ingredients
 ::
@@ -87,7 +87,7 @@ void _king_doom(u3_noun doom);
   void _king_boot(u3_noun boot);
     void _king_come(u3_noun star, u3_noun pill, u3_noun path);
     void _king_dawn(u3_noun seed, u3_noun pill, u3_noun path);
-    void _king_fake(u3_noun ship, u3_noun pill, u3_noun path);
+    void _king_fake(u3_noun farg, u3_noun pill, u3_noun path);
   void _king_pier(u3_noun pier);
 
 /* _king_defy_fate(): invalid fate
@@ -205,12 +205,22 @@ _king_prop()
 /* _king_fake(): boot with fake keys
 */
 void
-_king_fake(u3_noun ship, u3_noun pill, u3_noun path)
+_king_fake(u3_noun farg, u3_noun pill, u3_noun path)
 {
+  u3_noun ship;
+
+  if ( c3y == u3a_is_atom(farg) )
+    ship = farg;
+  else {
+    ship = ( c3y == u3a_is_cell(u3h(u3t(farg))) )
+           ? u3h(u3t(u3t(farg)))
+           : u3h(u3t(farg));
+  }
   //  XX link properly
   //
-  u3_noun vent = u3nc(c3__fake, u3k(ship));
-  u3K.pir_u    = u3_pier_boot(sag_w, ship, vent, pill, path,
+
+  u3_noun vent = u3nc(c3__fake, u3k(farg));
+  u3K.pir_u    = u3_pier_boot(sag_w, u3k(ship), vent, pill, path,
                               u3_none, _king_prop());
 }
 
@@ -627,23 +637,39 @@ _boothack_key(u3_noun kef)
     u3z(kef);
   }
 
-  if ( 0 != u3_Host.ops_u.who_c ) {
-    u3_noun woh = u3i_string(u3_Host.ops_u.who_c);
+  if ( 0 != u3_Host.ops_u.who_c || 
+      ( 0 != u3_Host.ops_u.fak_c &&
+        28 < strlen(u3_Host.ops_u.fak_c) ) ) {
+    u3_noun woh;
+
+    if ( 0 != u3_Host.ops_u.fak_c )
+      woh = u3i_string(u3_Host.ops_u.fak_c);
+    else
+      woh = u3i_string(u3_Host.ops_u.who_c);
+
     u3_noun whu = u3dc("slaw", 'p', u3k(woh));
 
     if ( u3_nul == whu ) {
-      u3l_log("dawn: invalid ship specified with -w %s",
-              u3_Host.ops_u.who_c);
+      if ( 0 != u3_Host.ops_u.fak_c )
+        u3l_log("boot: malformed -F ship %s",
+                u3_Host.ops_u.fak_c);
+      else
+        u3l_log("dawn: invalid ship specified with -w %s",
+                u3_Host.ops_u.who_c);
       exit(1);
     }
 
     if ( (u3_none != ship) &&
-         (c3n == u3r_sing(ship, u3t(whu))) )
-    {
+         (c3n == u3r_sing(ship, u3t(whu))) ) {
       u3_noun how = u3dc("scot", 'p', u3k(ship));
       c3_c* how_c = u3r_string(u3k(how));
-      u3l_log("dawn: mismatch between -w %s and -K %s",
-              u3_Host.ops_u.who_c, how_c);
+
+      if ( 0 != u3_Host.ops_u.fak_c )
+        u3l_log("boot: mismatch between -F %s and -K %s",
+                u3_Host.ops_u.fak_c, how_c);
+      else
+        u3l_log("dawn: mismatch between -w %s and -K %s",
+                u3_Host.ops_u.who_c, how_c);
 
       u3z(how);
       c3_free(how_c);
@@ -668,7 +694,8 @@ _boothack_doom(void)
   if ( c3n == u3_Host.ops_u.nuu ) {
     return u3nt(c3__pier, u3_nul, pax);
   }
-  else if ( 0 != u3_Host.ops_u.fak_c ) {
+  else if ( 0 != u3_Host.ops_u.fak_c &&
+            28 > strlen(u3_Host.ops_u.fak_c) ) {
     u3_noun fak = u3i_string(u3_Host.ops_u.fak_c);
     u3_noun whu = u3dc("slaw", 'p', u3k(fak));
 
@@ -682,7 +709,9 @@ _boothack_doom(void)
     u3z(whu);
     u3z(fak);
   }
-  else if ( 0 != u3_Host.ops_u.who_c ) {
+  else if ( 0 != u3_Host.ops_u.who_c ||
+            ( 0 != u3_Host.ops_u.fak_c &&
+              28 < strlen(u3_Host.ops_u.fak_c) ) ) {
     u3_noun kef;
 
     if ( 0 != u3_Host.ops_u.key_c ) {
@@ -711,7 +740,11 @@ _boothack_doom(void)
       exit(1);
     }
 
-    bot = u3nc(c3__dawn, _boothack_key(kef));
+    if ( 0 != u3_Host.ops_u.fak_c ) {
+      bot = u3nc(c3__fake, u3nc(u3_nul, _boothack_key(kef)));
+    }
+    else
+      bot = u3nc(c3__dawn, _boothack_key(kef));
   }
   else {
     //  XX allow parent star to be specified?
