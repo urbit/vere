@@ -699,7 +699,6 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   u3_chan*  can_u;
   c3_i      err_i;
 
-
   can_u = c3_calloc(sizeof(u3_chan));
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _conn_moor_poke;
