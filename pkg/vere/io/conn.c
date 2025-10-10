@@ -699,6 +699,7 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   u3_chan*  can_u;
   c3_i      err_i;
 
+
   can_u = c3_calloc(sizeof(u3_chan));
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _conn_moor_poke;
@@ -865,6 +866,10 @@ _conn_ef_handle(u3_conn*  con_u,
     else {
       can_u->mor_u.bal_f(can_u, -4, "handle-unknown");
       u3_king_bail();
+    }
+
+    if ( !uv_is_readable((uv_stream_t*)&con_u->san_u->pyp_u) ) {
+      _conn_close_chan(con_u->san_u, can_u);
     }
   }
   else {
