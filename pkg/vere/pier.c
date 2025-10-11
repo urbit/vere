@@ -839,7 +839,6 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3nc(c3__hoon, 136),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
-  u3_noun wir = u3nc(c3__arvo, u3_nul);
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
 }
 
