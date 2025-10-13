@@ -1,0 +1,13 @@
+.{
+    .name = "wslay",
+    .version = "0.0.1",
+    .dependencies = .{
+        .wslay = .{
+            .url = "https://github.com/tatsuhiro-t/wslay/archive/refs/tags/release-1.1.1.tar.gz",
+            .hash = "N-V-__8AADdLBADNETOk9pvYZ-k7F8a08-U43YCrYSlxu621",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
