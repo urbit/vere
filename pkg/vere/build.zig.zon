@@ -31,6 +31,9 @@
         .h2o = .{
             .path = "../../ext/h2o",
         },
+        .wslay = .{
+            .path = "../../ext/wslay",
+        },
         .libuv = .{
             .path = "../../ext/libuv",
         },
