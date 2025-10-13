@@ -23,6 +23,9 @@
             .url = "https://github.com/DLTcollab/sse2neon/archive/refs/tags/v1.5.1.tar.gz",
             .hash = "N-V-__8AAPihCgDO1A74r0pFZaoafeZ41DR435smSDwGLbLb",
         },
+        .wslay = .{
+            .path = "../wslay",
+        },
         .patches = .{
             .path = "./patches",
         },
