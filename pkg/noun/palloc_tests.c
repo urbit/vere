@@ -164,6 +164,7 @@ _test_palloc(void)
   _ifree(sop_p);
 }
 
+#ifdef VERE64
 static void
 _test_palloc_64(void)
 {
@@ -245,13 +246,19 @@ _test_palloc_64(void)
   _ifree(pos_p);
   _ifree(sop_p);
 }
+#endif
 
 /* main(): run all test cases.
 */
 int
 main(int argc, char* argv[])
 {
+#ifdef VERE64
+  //  XX: test on x86_64-linux
   _setup(40);  // 1TiB
+#else
+  _setup(32);  //  32GiB
+#endif
 
   _test_print_chunks();
   _test_print_pages(10);
@@ -260,8 +267,10 @@ main(int argc, char* argv[])
   _test_palloc();
   fprintf(stderr, "palloc okeedokee\n\n");
 
+#ifdef VERE64
   _test_palloc_64();
   fprintf(stderr, "palloc_64 okeedokee\n");
+#endif
 
   return 0;
 }
