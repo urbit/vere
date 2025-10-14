@@ -1308,18 +1308,23 @@ static void
 _term_it_show_tour(u3_utty* uty_u,
                    u3_noun    lin)
 {
-  c3_w  len_w = u3qb_lent(lin);
-  c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
-
   {
-    c3_w i_w;
+    c3_w  len_w = u3qb_lent(lin);
+    c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
+    u3_noun nil = lin;
 
-    for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
-      lin_w[i_w] = u3r_word(0, u3h(lin));
+    {
+      c3_w i_w;
+
+      for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
+        lin_w[i_w] = u3r_word(0, u3h(lin));
+      }
     }
-  }
 
-  _term_it_show_line(uty_u, lin_w, len_w);
+    _term_it_show_line(uty_u, lin_w, len_w);
+
+    lin = nil;
+  }
 
   {
     u3_noun tub = u3i_list(u3nc(u3nt(u3_nul, u3_nul, u3_nul), lin), u3_none);
