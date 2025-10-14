@@ -17,6 +17,7 @@
 #include "zave.h"
 
 #include <stdio.h>
+#include <time.h>
 
 // define to have each opcode printed as it executes,
 // along with some other debugging info
@@ -2018,7 +2019,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       if (c3y == u3a_is_atom(*clu)) {
         // clu is in Urbit time, but we need Unix time
         c3_d tim_d[2];
-        u3r_chubs(0, 2, &tim_d, *clu);
+        u3r_chubs(0, 2, tim_d, *clu);
         c3_w sec_w = tim_d[1];
         c3_w mil_w = u3_time_msc_out(tim_d[0]);
         u3m_timer_push(sec_w * 1000 + mil_w);

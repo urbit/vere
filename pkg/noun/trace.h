@@ -222,7 +222,7 @@
   **/
       /// Tracing profiler.
       extern u3t_trace u3t_Trace;
-      extern u3t_spin* stk_u;
+      extern u3t_spin* Spin_stk_u;
 
 #     define u3T u3t_Trace
 
