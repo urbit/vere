@@ -16,8 +16,6 @@
 #include "xtract.h"
 #include "zave.h"
 
-#include <stdio.h>
-#include <time.h>
 
 // define to have each opcode printed as it executes,
 // along with some other debugging info
