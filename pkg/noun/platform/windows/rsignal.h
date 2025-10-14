@@ -17,5 +17,6 @@ struct itimerval {
 };
 
 int rsignal_setitimer(int type, struct itimerval *in, struct itimerval *out);
+int getitimer(int which, struct itimerval *curr_value);
 
 #endif//_RSIGNAL_H
