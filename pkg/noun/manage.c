@@ -526,8 +526,8 @@ u3m_timer_push(c3_w mil_w)
 
   // if no timer is set this is zero but we shouldn't be here if that's the case
   rsignal_getitimer(ITIMER_VIRTUAL, &cur_u);
-  fprintf(stderr, "current interval: %lu s %lu us\r\n",
-    cur_u.it_value.tv_sec, cur_u.it_value.tv_usec);
+  fprintf(stderr, "current interval: %"PRIc3_d" s %"PRIc3_d" us\r\n",
+    (c3_d)cur_u.it_value.tv_sec, (c3_d)cur_u.it_value.tv_usec);
 
   if (timercmp(&cur_u.it_value, &itm_u.it_value, <)) {
     u3l_log("loom: nest timer failed, too large for remaining time %s",
@@ -549,9 +549,9 @@ u3m_timer_push(c3_w mil_w)
 
     // debugging, TODO remove
     c3_d tim_d = 1000000ULL * tim_u.tv_sec + tim_u.tv_usec;
-    fprintf(stderr, "expiry: %lu us\r\n", tim_d);
+    fprintf(stderr, "expiry: %"PRIc3_d" us\r\n", tim_d);
     c3_d cur_d = cur_u.it_value.tv_sec * 1000 + cur_u.it_value.tv_usec / 1000;
-    fprintf(stderr, "remaining: %lu ms\r\n", cur_d);
+    fprintf(stderr, "remaining: %"PRIc3_d" ms\r\n", cur_d);
 
     struct timer* new_u = (timer*)u3a_malloc(sizeof(timer));
     new_u->wal_u = __add_itimer(tim_u, cur_u);
@@ -567,7 +567,7 @@ u3m_timer_push(c3_w mil_w)
 void
 u3m_timer_pop()
 {
-  fprintf(stderr, "popping timer at 0x%lx\r\n", (c3_d)u3_Jinx_stk_u->top);
+  fprintf(stderr, "popping timer at 0x%"PRIc3_d"\r\n", (c3_d)u3_Jinx_stk_u->top);
   if (u3_Jinx_stk_u->top == NULL) {
     u3m_timer_clear();
     return;
@@ -588,7 +588,7 @@ u3m_timer_pop()
     gettimeofday(&tim_u, 0);
     struct itimerval itm_u;
     itm_u = __get_interval(nex_u,  tim_u);
-    fprintf(stderr, "remaining interval: %lu s %lu us\r\n", itm_u.it_value.tv_sec, itm_u.it_value.tv_usec);
+    fprintf(stderr, "remaining interval: %"PRIc3_d" s %"PRIc3_d" us\r\n", (c3_d)itm_u.it_value.tv_sec, (c3_d)itm_u.it_value.tv_usec);
 
     if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
       u3l_log("loom: pop timer failed %s", strerror(errno));
