@@ -44,7 +44,7 @@
 
 /** Global variables.
 **/
-  static timer_stack *Jinx_stk_u;
+  static timer_stack *u3_Jinx_stk_u;
 
       /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
       */
@@ -225,7 +225,7 @@ _cm_signal_handle_intr(int x)
 static void
 _cm_signal_handle_alrm(int x)
 {
-  Jinx_stk_u->top = (timer*)NULL;  // clear the timer stack
+  u3_Jinx_stk_u->top = (timer*)NULL;  // clear the timer stack
   u3l_log("%%jinx timer expired\r\n");
   _cm_signal_handle(c3__alrm);
 }
@@ -314,9 +314,9 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != Spin_stk_u ) {
-    Spin_stk_u->off_w = u3H->rod_u.off_w;
-    Spin_stk_u->fow_w = u3H->rod_u.fow_w;
+  if ( NULL != u3_Spin_stk_u ) {
+    u3_Spin_stk_u->off_w = u3H->rod_u.off_w;
+    u3_Spin_stk_u->fow_w = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
@@ -496,10 +496,10 @@ u3m_timer_push(c3_w mil_w)
   itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
 
   fprintf(stderr, "\r\npushing timer for %"PRIc3_w" ms at 0x%"PRIc3_d"\r\n",
-    mil_w, (c3_d)Jinx_stk_u->top);
+    mil_w, (c3_d)u3_Jinx_stk_u->top);
 
   // does the stack have anything on it?  if it's clean, this is easy:
-  if (Jinx_stk_u->top == NULL) {
+  if (u3_Jinx_stk_u->top == NULL) {
     // if not, set the timer and return
     if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
       u3l_log("loom: push timer failed %s", strerror(errno));
@@ -511,10 +511,10 @@ u3m_timer_push(c3_w mil_w)
 
       struct timer* new_u = (timer*)c3_malloc(sizeof(timer));
       new_u->wal_u = tim_u;
-      new_u->nex_u = Jinx_stk_u->top;
-      Jinx_stk_u->top = new_u;
+      new_u->nex_u = u3_Jinx_stk_u->top;
+      u3_Jinx_stk_u->top = new_u;
       fprintf(stderr, "\r\npushed timer for %lu ms at 0x%lx\r\n",
-        tim_u.tv_sec*1000+tim_u.tv_usec, (c3_d)Jinx_stk_u->top);
+        tim_u.tv_sec*1000+tim_u.tv_usec, (c3_d)u3_Jinx_stk_u->top);
 
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
     }
@@ -555,8 +555,8 @@ u3m_timer_push(c3_w mil_w)
 
     struct timer* new_u = (timer*)u3a_malloc(sizeof(timer));
     new_u->wal_u = __add_itimer(tim_u, cur_u);
-    new_u->nex_u = Jinx_stk_u->top;
-    Jinx_stk_u->top = new_u;
+    new_u->nex_u = u3_Jinx_stk_u->top;
+    u3_Jinx_stk_u->top = new_u;
 
     rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
   }
@@ -567,23 +567,23 @@ u3m_timer_push(c3_w mil_w)
 void
 u3m_timer_pop()
 {
-  fprintf(stderr, "popping timer at 0x%lx\r\n", (c3_d)Jinx_stk_u->top);
-  if (Jinx_stk_u->top == NULL) {
+  fprintf(stderr, "popping timer at 0x%lx\r\n", (c3_d)u3_Jinx_stk_u->top);
+  if (u3_Jinx_stk_u->top == NULL) {
     u3m_timer_clear();
     return;
   }
   else {
-    timer *old_u = Jinx_stk_u->top;
-    Jinx_stk_u->top = old_u->nex_u;
+    timer *old_u = u3_Jinx_stk_u->top;
+    u3_Jinx_stk_u->top = old_u->nex_u;
 
-    if (Jinx_stk_u->top == NULL) {
+    if (u3_Jinx_stk_u->top == NULL) {
       // if the stack is empty, simply clear the timer
       fprintf(stderr, "no more timers to pop\r\n");
       u3m_timer_clear();
       c3_free(old_u);
       return;
     }
-    struct timeval nex_u = Jinx_stk_u->top->wal_u;
+    struct timeval nex_u = u3_Jinx_stk_u->top->wal_u;
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
     struct itimerval itm_u;
@@ -1177,9 +1177,9 @@ u3m_bail(u3_noun how)
   }
 
   // Reset the spin stack pointer
-  if ( NULL != Spin_stk_u ) {
-    Spin_stk_u->off_w = u3R->off_w;
-    Spin_stk_u->fow_w = u3R->fow_w;
+  if ( NULL != u3_Spin_stk_u ) {
+    u3_Spin_stk_u->off_w = u3R->off_w;
+    u3_Spin_stk_u->fow_w = u3R->fow_w;
   }
 
   /* Longjmp, with an underscore.
@@ -1315,9 +1315,9 @@ u3m_leap(c3_w pad_w)
   }
 
   // Add slow stack pointer to rod_u
-  if ( NULL != Spin_stk_u ) {
-    rod_u->off_w = Spin_stk_u->off_w;
-    rod_u->fow_w = Spin_stk_u->fow_w;
+  if ( NULL != u3_Spin_stk_u ) {
+    rod_u->off_w = u3_Spin_stk_u->off_w;
+    rod_u->fow_w = u3_Spin_stk_u->fow_w;
   } 
 
   /* Set up the new road.
@@ -2598,8 +2598,8 @@ u3m_init(size_t len_i)
 
   //  start %jinx timer stack
   //
-  Jinx_stk_u = (struct timer_stack*)c3_malloc(sizeof(struct timer_stack));
-  Jinx_stk_u->top = (timer*)NULL;
+  u3_Jinx_stk_u = (struct timer_stack*)c3_malloc(sizeof(struct timer_stack));
+  u3_Jinx_stk_u->top = (timer*)NULL;
 }
 
 extern void u3je_secp_stop(void);
