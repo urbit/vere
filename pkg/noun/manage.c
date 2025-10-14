@@ -513,7 +513,7 @@ u3m_timer_push(c3_w mil_w)
       new_u->wal_u = tim_u;
       new_u->nex_u = u3_Jinx_stk_u->top;
       u3_Jinx_stk_u->top = new_u;
-      fprintf(stderr, "\r\npushed timer for %lu ms at 0x%lx\r\n",
+      fprintf(stderr, "\r\npushed timer for %lu ms at 0x%"PRIc3_d"\r\n",
         tim_u.tv_sec*1000+tim_u.tv_usec, (c3_d)u3_Jinx_stk_u->top);
 
       rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
