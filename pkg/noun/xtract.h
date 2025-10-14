@@ -3,7 +3,7 @@
 #ifndef U3_XTRACT_H
 #define U3_XTRACT_H
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 #include "allocate.h"
 #include "manage.h"
@@ -141,6 +141,14 @@
         u3x_good(u3_weak som)
         {
           return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
+        }
+      
+      /* u3x_loob(): loobean or exit.
+      */
+        inline c3_o
+        u3x_loob(u3_noun a)
+        {
+          return ( a > 1 ) ? u3m_bail(c3__exit) : a;
         }
 
       /* u3x_mean():

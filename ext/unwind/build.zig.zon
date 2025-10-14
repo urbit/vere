@@ -1,0 +1,13 @@
+.{
+    .name = "unwind",
+    .version = "0.0.1",
+    .dependencies = .{
+        .unwind = .{
+            .url = "https://github.com/libunwind/libunwind/archive/7cc4c20fbcf65a9c855fb9d950fad8d0e29b092e.tar.gz",
+            .hash = "N-V-__8AAA54RADHKA70ncWBovi6ApxYOAQQubuxcBr6y6Ey",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

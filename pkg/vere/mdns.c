@@ -38,7 +38,7 @@ static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* r
 
 static void resolve_cb(DNSServiceRef sref,
                        DNSServiceFlags f,
-                       uint32_t interface,
+                       uint32_t iface,
                        DNSServiceErrorType err,
                        const char *name,
                        const char *host,
@@ -80,7 +80,7 @@ static void resolve_cb(DNSServiceRef sref,
   hints.ai_family = AF_INET; // Request only IPv4 addresses
   hints.ai_socktype = SOCK_STREAM; // TCP socket
 
-  uv_getaddrinfo_t* req = (uv_getaddrinfo_t*)c3_malloc(sizeof(uv_getaddrinfo_t));
+  uv_getaddrinfo_t* req = (uv_getaddrinfo_t*)c3_calloc(sizeof(uv_getaddrinfo_t));
   req->data = (void*)payload;
 
   uv_loop_t* loop = uv_default_loop();
@@ -110,7 +110,7 @@ static void init_sref_poll(DNSServiceRef sref, mdns_payload* payload) {
 
 static void browse_cb(DNSServiceRef s,
                       DNSServiceFlags f,
-                      uint32_t interface,
+                      uint32_t iface,
                       DNSServiceErrorType err,
                       const char* name,
                       const char* type,
@@ -126,14 +126,14 @@ static void browse_cb(DNSServiceRef s,
     // we are leaking payload because we don't know when we are done
     // browsing, luckily we only browse once
     mdns_payload* payload = (mdns_payload*)context;
-    mdns_payload* payload_copy = c3_malloc(sizeof *payload_copy);
+    mdns_payload* payload_copy = c3_calloc(sizeof *payload_copy);
 
     // copy to prevent asynchronous thrashing of payload
     memcpy(payload_copy, payload, sizeof(mdns_payload));
 
 
     DNSServiceErrorType err =
-      DNSServiceResolve(&payload_copy->sref, 0, interface,
+      DNSServiceResolve(&payload_copy->sref, 0, iface,
                         name, type, domain, resolve_cb,
                         (void*)payload_copy);
 
@@ -181,7 +181,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
   setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/var/run/dbus/system_bus_socket", 0);
   #   endif
 
-  mdns_payload* register_payload = (mdns_payload*)c3_malloc(sizeof(mdns_payload));
+  mdns_payload* register_payload = (mdns_payload*)c3_calloc(sizeof(mdns_payload));
 
   DNSServiceRef sref;
   DNSServiceErrorType err;
@@ -215,7 +215,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
 
   init_sref_poll(sref, register_payload);
 
-  mdns_payload* browse_payload = (mdns_payload*)c3_malloc(sizeof(mdns_payload));
+  mdns_payload* browse_payload = (mdns_payload*)c3_calloc(sizeof(mdns_payload));
 
   browse_payload->cb = cb;
   browse_payload->context = context;

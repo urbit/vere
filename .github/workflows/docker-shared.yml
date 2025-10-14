@@ -16,36 +16,26 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      #
-      # BUILD OR READ FROM CACHE
-      #
-
-      - name: chown /usr/local
-        run: |
-          # See https://github.com/actions/cache/issues/845.
-          sudo chown $(whoami) /usr/local && (chown -R $USER /usr/local/*-musl || true)
-
-      - name: Set up build cache
-        id: build-cache
-        uses: actions/cache@v3
+      - uses: mlugg/setup-zig@v1
         with:
-          key: linux-x86_64-cache
-          path: |
-            # # Cache bazel path on Linux.
-            ~/.cache/bazel/_bazel_$(whoami)
-            # Cache musl libc toolchains.
-            /usr/local/*-musl
+          version: 0.14.0
 
-      - name: Install toolchains
-        if: steps.build-cache.outputs.cache-hit != 'true'
+      #
+      # BUILD
+      #
+
+      - name: Build binary
+        id: build
         run: |
-          bazel run //bazel/toolchain:x86_64-linux-musl-gcc
+          zig build                    \
+            -Dtarget=x86_64-linux-musl \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            --summary all
 
-      - name: Install dependencies
-        run: sudo apt-get install -y autoconf-archive
+          cp zig-out/x86_64-linux-musl/urbit docker/.
 
-      - name: Set pace
-        run: echo "${{ inputs.pace }}" > ./PACE
+          echo version=v$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h) >> $GITHUB_OUTPUT
 
       #
       # UPLOAD TO DOCKER
@@ -66,12 +56,18 @@ jobs:
           short_description: 'Urbit: a clean-slate OS and network for the 21st century'
           readme_file: 'docker/README.md'
 
-      - name: Build and push version-tagged Docker image
-        run: bazel run //docker:push_version_x86_64
+      - name: Build and push
+        if: ${{ inputs.pace != 'live' }}
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: docker
+          tags: tloncorp/vere:${{ steps.build.outputs.version }},tloncorp/vere:${{ inputs.pace }}
 
-      - name: Build and push pace-tagged Docker image
-        run: bazel run //docker:push_pace_x86_64
-
-      - name: Build and push latest-tagged Docker image
+      - name: Build and push live
         if: ${{ inputs.pace == 'live' }}
-        run: bazel run //docker:push_latest_x86_64
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: docker
+          tags: tloncorp/vere:latest

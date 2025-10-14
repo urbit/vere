@@ -1,0 +1,15 @@
+.{
+    .name = .natpmp,
+    .fingerprint = 0x1794aa3995c13962,
+    .version = "0.0.1",
+    .dependencies = .{
+        .natpmp = .{
+            .url = "https://mirrors.wikimedia.org/ubuntu/ubuntu/pool/main/libn/libnatpmp/libnatpmp_20230423.orig.tar.gz",
+            // .url = "https://debian.mirror.root.lu/debian/pool/main/libn/libnatpmp/libnatpmp_20230423.orig.tar.gz",
+            .hash = "N-V-__8AAKudAQA_d3eW8d8dskxBlLzGBg0qe-4u6ohSfCM2",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

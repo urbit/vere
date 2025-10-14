@@ -1,0 +1,67 @@
+.{
+    .name = .noun,
+    .fingerprint = 0x417412dd00c7ed8c,
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
+            .lazy = true,
+        },
+        .pkg_c3 = .{
+            .path = "../c3",
+        },
+        .pkg_ent = .{
+            .path = "../ent",
+        },
+        .pkg_ur = .{
+            .path = "../ur",
+        },
+        .backtrace = .{
+            .path = "../../ext/backtrace",
+        },
+        .gmp = .{
+            .path = "../../ext/gmp",
+        },
+        .murmur3 = .{
+            .path = "../../ext/murmur3",
+        },
+        .openssl = .{
+            .path = "../../ext/openssl",
+        },
+        .pdjson = .{
+            .path = "../../ext/pdjson",
+        },
+        .sigsegv = .{
+            .path = "../../ext/sigsegv",
+        },
+        .softblas = .{
+            .path = "../../ext/softblas",
+        },
+        .softfloat = .{
+            .path = "../../ext/softfloat",
+        },
+        .unwind = .{
+            .path = "../../ext/unwind",
+        },
+        .urcrypt = .{
+            .path = "../../ext/urcrypt",
+        },
+        .whereami = .{
+            .path = "../../ext/whereami",
+        },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz",
+            .hash = "zlib-1.3.1-ZZQ7lbYMAAB1hTSOKSXAKAgHsfDcyWNH_37ojw5WSpgR",
+        },
+        .wasm3 = .{
+            .path = "../../ext/wasm3",
+        },
+        .tracy = .{
+            .path = "../../ext/tracy",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

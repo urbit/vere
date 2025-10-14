@@ -3,13 +3,20 @@
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "c3/c3.h"
 #include "options.h"
 #include "types.h"
+#include "allocate.h"
 
 #ifdef U3_CPU_DEBUG
 # include "options.h"
 #endif
+
+#define SLOW_STACK_NAME  "/spin_stack_page_%d"
+#define TRACE_PSIZE (1U << (u3a_page +2))
 
   /** Data structures.
   **/
@@ -23,6 +30,14 @@
         c3_o coy_o;                 //  now executing in copy
         c3_o euq_o;                 //  now executing in equal
       } u3t_trace;
+
+   /* u3t_spin: %spin hint stack
+    */
+    typedef struct {
+      c3_w off_w;
+      c3_w fow_w;
+      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
+    } u3t_spin;
 
   /**  Macros.
   **/
@@ -108,13 +123,13 @@
     /* u3t_trace_close(): closes the trace file. optional.
     */
       void
-      u3t_trace_close();
+      u3t_trace_close(void);
 
     /* u3t_trace_time(): returns current time since system epoc,
      * whatever it is per system, in microseconds.
     */
       c3_d
-      u3t_trace_time();
+      u3t_trace_time(void);
 
     /* u3t_nock_trace_push(): pushes a frame onto the trace stack;
     *  return yes if active push.
@@ -125,7 +140,7 @@
     /* u3t_nock_trace_pop(): pop off trace stack.
     */
       void
-      u3t_nock_trace_pop();
+      u3t_nock_trace_pop(void);
 
     /* u3t_event_trace(): record a lifecycle event.
     */
@@ -177,10 +192,38 @@
       u3_noun
       u3t_etch_meme(c3_l mod_l);
 
+    /* u3t_sstack_init: initalize a root node on the spin stack 
+     */
+      void
+      u3t_sstack_init(void);
+
+    /* u3t_sstack_init: initalize a root node on the spin stack 
+     */
+      u3t_spin*
+      u3t_sstack_open(void);
+
+    /* u3t_sstack_exit: initalize a root node on the spin stack 
+     */
+      void
+      u3t_sstack_exit(void);
+
+    /* u3t_sstack_push: push a noun on the spin stack.
+     */
+      void
+      u3t_sstack_push(u3_noun nam);
+
+    /* u3t_sstack_pop: pop a noun from the spin stack.
+     */
+      void
+      u3t_sstack_pop(void);
+
+
   /** Globals.
   **/
       /// Tracing profiler.
       extern u3t_trace u3t_Trace;
+      extern u3t_spin* stk_u;
+
 #     define u3T u3t_Trace
 
 

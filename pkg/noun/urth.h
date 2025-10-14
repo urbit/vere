@@ -3,14 +3,19 @@
 #ifndef U3_URTH_H
 #define U3_URTH_H
 
-#include "c3.h"
+#include "c3/c3.h"
 
     /**  Functions.
     **/
       /* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
       */
         c3_w
-        u3u_meld(void);
+        u3u_meld(void) __attribute__ ((deprecated));
+
+      /* u3u_melt(): globally deduplicate memory and pack in-place.
+      */
+        c3_w
+        u3u_melt(void) __attribute__ ((deprecated));
 
       /* u3u_cram(): globably deduplicate memory, and write a rock to disk.
       */

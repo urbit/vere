@@ -41,24 +41,6 @@ _dawn_buf_to_oct(uv_buf_t buf_u)
   return u3nc(len, u3i_bytes(buf_u.len, (const c3_y*)buf_u.base));
 }
 
-
-/* _dawn_curl_alloc(): allocate a response buffer for curl
-*/
-static size_t
-_dawn_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
-{
-  uv_buf_t* buf_u = buf_v;
-
-  size_t siz_t = uni_t * mem_t;
-  buf_u->base = c3_realloc(buf_u->base, 1 + siz_t + buf_u->len);
-
-  memcpy(buf_u->base + buf_u->len, dat_v, siz_t);
-  buf_u->len += siz_t;
-  buf_u->base[buf_u->len] = 0;
-
-  return siz_t;
-}
-
 /* _dawn_post_json(): POST JSON to url_c
 */
 static uv_buf_t
@@ -84,7 +66,7 @@ _dawn_post_json(c3_c* url_c, uv_buf_t lod_u)
   //
   u3K.ssl_curl_f(curl);
   curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hed_u);
 
@@ -131,7 +113,7 @@ _dawn_get_jam(c3_c* url_c)
   //
   u3K.ssl_curl_f(curl);
   curl_easy_setopt(curl, CURLOPT_URL, url_c);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _dawn_curl_alloc);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf_u);
 
   result = curl_easy_perform(curl);
@@ -285,9 +267,9 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
 /* u3_dawn_vent(): validated boot event
 */
 u3_noun
-u3_dawn_vent(u3_noun ship, u3_noun feed)
+u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 {
-  u3_noun sed, pos, pon, zar, tuf;
+  u3_noun fed, pos, pon, zar, tuf;
 
   u3_noun rank = u3do("clan:title", u3k(ship));
 
@@ -330,15 +312,27 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
 
     u3l_log("boot: verifying keys");
 
-    //  (each seed (lest error=@tas))
-    //
-    sed = u3dq("veri:dawn", u3k(ship), u3k(feed), u3k(pot), u3k(liv));
-
-    if ( c3n == u3h(sed) ) {
+    if ( c3y == u3a_is_cell(feed) && 
+         c3n == u3a_is_cell(u3h(feed)) &&
+         c3__earl == rank ) {
       // bails, won't return
-      _dawn_fail(ship, rank, u3t(sed));
+      u3l_log("boot: incorrect keyfile please use updated format");
+      _dawn_fail(ship, rank, u3_nul);
       return u3_none;
     }
+
+    //  (each feed:jael (lest error=term))
+    //
+    fed = u3dq("veri:dawn", u3k(ship), u3k(feed), u3k(pot), u3k(liv));
+
+    if ( c3n == u3h(fed) ) {
+      // bails, won't return
+      _dawn_fail(ship, rank, u3t(fed));
+      return u3_none;
+    }
+
+    u3_assert(c3y == u3du(u3h(u3t(fed))) && u3h(u3h(u3t(fed))) == 2);
+    *rift = u3k(u3h(u3t(u3t(u3t(fed)))));
 
     u3l_log("boot: getting sponsor");
     pos = _dawn_sponsor(u3k(ship), u3k(rank), u3k(pot));
@@ -346,7 +340,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   }
 
 
-  //  (map ship [=life =pass]): galaxy table
+  //  (map ship [=rift =life =pass]): galaxy table
   //
   {
     u3l_log("boot: retrieving galaxy table");
@@ -417,9 +411,9 @@ u3_dawn_vent(u3_noun ship, u3_noun feed)
   //NOTE  blocknum of 0 is fine because jael ignores it.
   //      should probably be removed from dawn event.
   u3_noun ven = u3nc(c3__dawn,
-                     u3nq(u3k(u3t(sed)), pon, zar, u3nt(tuf, 0, u3_nul)));
+                     u3nq(u3k(u3t(fed)), pon, zar, u3nt(tuf, 0, u3_nul)));
 
-  u3z(sed); u3z(rank); u3z(pos); u3z(ship); u3z(feed);
+  u3z(fed); u3z(rank); u3z(pos); u3z(ship); u3z(feed);
 
   return ven;
 }
@@ -445,7 +439,8 @@ _dawn_come(u3_noun stars)
   }
 
   {
-    u3_noun who = u3dc("scot", 'p', u3k(u3h(seed)));
+    /* [[%2 ~] who=ship ryf=rift kyz=(list [lyf=life key=ring])]  */
+    u3_noun who = u3dc("scot", 'p', u3k(u3h(u3t(seed))));
     c3_c* who_c = u3r_string(who);
 
     u3l_log("boot: found comet %s", who_c);

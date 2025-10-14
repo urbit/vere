@@ -13,7 +13,7 @@ u3qc_bex(u3_atom a)
   u3i_slab sab_u;
 
   if ( a < 31 ) {
-    return 1 << a;
+    return 1U << a;
   }
 
   if ( c3y == u3a_is_cat(a) ) {
@@ -34,7 +34,7 @@ u3qc_bex(u3_atom a)
 
   u3i_slab_init(&sab_u, 0, a_d + 1);
 
-  sab_u.buf_w[a_d >> 5] = 1 << (a_d & 31);
+  sab_u.buf_w[a_d >> 5] = 1U << (a_d & 31);
 
   return u3i_slab_moot(&sab_u);
 }

@@ -8,6 +8,8 @@
 #include "openssl/ssl.h"
 #include "version.h"
 
+/** Global variables.
+**/
 typedef struct _u3_h2o_serv {
   h2o_globalconf_t fig_u;             //  h2o global config
   h2o_context_t    ctx_u;             //  h2o ctx
@@ -44,7 +46,8 @@ typedef struct _u3_h2o_serv {
     typedef struct _u3_preq {
       struct _u3_hreq* req_u;           //  originating request (nullable)
       struct _u3_httd* htd_u;           //  device backpointer
-      u3_noun  pax;                     //  partial scry path
+      u3_noun          pax;             //  partial scry path
+      c3_o             las_o;           //  was scry at now
     } u3_preq;
 
 /* u3_hcon: incoming http connection.
@@ -96,7 +99,9 @@ typedef struct _u3_h2o_serv {
     c3_c*            key_c;             //  auth token key
     u3_noun          ses;               //  valid session tokens
     struct _u3_hreq* seq_u;             //  open slog requests
-    uv_timer_t*      sit_u;             //  slog stream heartbeat
+    struct _u3_hreq* siq_u;             //  open spin requests
+    uv_timer_t*      sit_u;             //  stream heartbeat
+    uv_timer_t*      sin_u;             //  spinner stream timer
   } u3_hfig;
 
 /* u3_httd: general http device
@@ -109,6 +114,7 @@ typedef struct _u3_httd {
   SSL_CTX*           tls_u;             //  server SSL_CTX*
   u3p(u3h_root)      sax_p;             //  url->scry cache
   u3p(u3h_root)      nax_p;             //  scry->noun cache
+  u3t_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
 static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
@@ -121,9 +127,11 @@ static void _http_start_respond(u3_hreq* req_u,
                     u3_noun headers,
                     u3_noun data,
                     u3_noun complete);
+static void _http_spin_timer_cb(uv_timer_t* tim_u);
 
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
+static const c3_w SPIN_TIMER = 100; // XX make this a command line arguement
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -330,7 +338,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 {
   //  try to find a cookie header
   //
-  h2o_iovec_t coo_u = {NULL, 0};
+  h2o_iovec_t coo_u = {0, 0};
   {
     //TODO  http2 allows the client to put multiple 'cookie' headers,
     //      runtime should support that once eyre does too.
@@ -442,6 +450,24 @@ _http_req_unlink(u3_hreq* req_u)
   }
 }
 
+/* _http_spin_link(): store spin stack request in state
+*/
+static void
+_http_spin_link(u3_hcon* hon_u, u3_hreq* req_u)
+{
+  u3_hfig* fig_u = &hon_u->htp_u->htd_u->fig_u;
+  req_u->hon_u = hon_u;
+  req_u->seq_l = hon_u->seq_l++;
+  req_u->nex_u = fig_u->siq_u;
+
+  if ( 0 != req_u->nex_u ) {
+    req_u->nex_u->pre_u = req_u;
+  } else {
+    uv_timer_start(fig_u->sin_u, _http_spin_timer_cb, SPIN_TIMER, 0);
+  }
+  fig_u->siq_u = req_u;
+}
+
 /* _http_seq_link(): store slog stream request in state
 */
 static void
@@ -456,6 +482,31 @@ _http_seq_link(u3_hcon* hon_u, u3_hreq* req_u)
     req_u->nex_u->pre_u = req_u;
   }
   fig_u->seq_u = req_u;
+}
+
+/* _http_spin_unlink(): remove spin stack request from state
+*/
+static void
+_http_spin_unlink(u3_hreq* req_u)
+{
+  u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+  if ( 0 != req_u->pre_u ) {
+    req_u->pre_u->nex_u = req_u->nex_u;
+
+    if ( 0 != req_u->nex_u ) {
+      req_u->nex_u->pre_u = req_u->pre_u;
+    }
+  }
+  else {
+    fig_u->siq_u = req_u->nex_u;
+
+    if ( 0 != req_u->nex_u ) {
+      req_u->nex_u->pre_u = 0;
+    } 
+    else if (req_u->tim_u != NULL) {
+        uv_timer_stop(req_u->tim_u);
+    }
+  }
 }
 
 /* _http_seq_unlink(): remove slog stream request from state
@@ -477,12 +528,6 @@ _http_seq_unlink(u3_hreq* req_u)
     if ( 0 != req_u->nex_u ) {
       req_u->nex_u->pre_u = 0;
     }
-  }
-
-  //  unlink from async scry request if present
-  //
-  if ( req_u->peq_u ) {
-    req_u->peq_u->req_u = 0;
   }
 }
 
@@ -551,6 +596,16 @@ _http_req_done(void* ptr_v)
   _http_req_unlink(req_u);
 }
 
+/* _http_spin_done(): spin stackrequest finished, deallocation callback
+*/
+static void
+_http_spin_done(void* ptr_v)
+{
+  u3_hreq* siq_u = (u3_hreq*)ptr_v;
+  _http_req_close(siq_u);
+  _http_spin_unlink(siq_u);
+}
+
 /* _http_seq_done(): slog stream request finished, deallocation callback
 */
 static void
@@ -583,7 +638,7 @@ _http_req_timer_cb(uv_timer_t* tim_u)
     } break;
 
     case u3_rsat_peek: {
-      req_u->peq_u = 0;
+      req_u->peq_u->req_u = 0;
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
@@ -622,6 +677,23 @@ _http_req_new(u3_hcon* hon_u, h2o_req_t* rec_u)
   return req_u;
 }
 
+/* _http_spin_new(): receive spin stack http request.
+*/
+static u3_hreq*
+_http_spin_new(u3_hcon* hon_u, h2o_req_t* rec_u)
+{
+  // XX change to be for spin
+  u3_hreq* req_u = h2o_mem_alloc_shared(&rec_u->pool, sizeof(*req_u),
+                                        _http_spin_done);
+  memset(req_u, 0, sizeof(*req_u));
+  req_u->rec_u = rec_u;
+  req_u->sat_e = u3_rsat_plan;
+
+  _http_spin_link(hon_u, req_u);
+
+  return req_u;
+}
+
 /* _http_seq_new(): receive slog stream http request.
 */
 static u3_hreq*
@@ -638,7 +710,235 @@ _http_seq_new(u3_hcon* hon_u, h2o_req_t* rec_u)
   return req_u;
 }
 
-/* _http_req_dispatch(): dispatch http request to %eyre
+static void
+_http_cache_respond(u3_hreq* req_u, u3_noun nun);
+
+static void
+_http_scry_respond(u3_hreq* req_u, u3_noun nun);
+
+typedef struct _byte_range {
+  c3_z beg_z;
+  c3_z end_z;
+} byte_range;
+
+/* _chunk_align(): align range to a nearby chunk
+*/
+static void
+_chunk_align(byte_range* rng_u)
+{
+  c3_z siz_z = 4194304;  // 4MiB
+
+  if ( SIZE_MAX != rng_u->beg_z ) {
+    if ( rng_u->beg_z > rng_u->end_z ) {
+      rng_u->beg_z = SIZE_MAX;
+      rng_u->end_z = SIZE_MAX;
+    }
+    else {
+      // XX an out-of-bounds request could be aligned to in-bounds
+      // resulting in a 200 or 206 response instead of 416.
+      // browsers should have the total length from content-range,
+      // and send reasonable range requests.
+      //
+      rng_u->beg_z = (rng_u->beg_z / siz_z) * siz_z;
+      rng_u->end_z = (rng_u->beg_z + siz_z) - 1;
+    }
+  }
+  else if ( SIZE_MAX != rng_u->end_z ) {
+    // round up to multiple of siz_z
+    rng_u->end_z = siz_z * ((rng_u->end_z / siz_z) + 1);
+  }
+}
+
+/* _parse_range(): get a range from '-' delimited text
+*/
+static byte_range
+_parse_range(c3_c* txt_c, c3_w len_w)
+{
+  c3_c* hep_c = memchr(txt_c, '-', len_w);
+  byte_range rng_u;
+  rng_u.beg_z = SIZE_MAX;
+  rng_u.end_z = SIZE_MAX;
+
+  if ( hep_c ) {
+    rng_u.beg_z = h2o_strtosize(txt_c, hep_c - txt_c);
+    rng_u.end_z = h2o_strtosize(hep_c + 1, len_w - ((hep_c + 1) - txt_c));
+    // strange -> [SIZE_MAX SIZE_MAX]
+    if (  ((SIZE_MAX == rng_u.beg_z) && (hep_c != txt_c))
+       || ((SIZE_MAX == rng_u.end_z) && (len_w - ((hep_c + 1) - txt_c) > 0))
+       || ((SIZE_MAX != rng_u.beg_z) && (rng_u.beg_z > rng_u.end_z)) )
+    {
+      rng_u.beg_z = SIZE_MAX;
+      rng_u.end_z = SIZE_MAX;
+    }
+  }
+  return rng_u;
+}
+
+/* _get_range(): get a _byte_range from headers
+*/
+static c3_o
+_get_range(h2o_headers_t req_headers, byte_range* rng_u)
+{
+  rng_u->beg_z = SIZE_MAX;
+  rng_u->end_z = SIZE_MAX;
+
+  c3_w inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
+  if ( UINT32_MAX == inx_w) {
+    return c3n;
+  }
+
+  if (  (req_headers.entries[inx_w].value.len >= 6)
+     && (0 == memcmp("bytes=", req_headers.entries[inx_w].value.base, 6)) )
+  {
+    byte_range tmp_u = _parse_range(req_headers.entries[inx_w].value.base + 6,
+                                    req_headers.entries[inx_w].value.len - 6);
+    rng_u->beg_z = tmp_u.beg_z;
+    rng_u->end_z = tmp_u.end_z;
+  }
+
+  return c3y;
+}
+
+/* _http_scry_cb(): respond and maybe cache scry result
+*/
+static void
+_http_scry_cb(void* vod_p, u3_noun nun)
+{
+  u3_preq* peq_u = vod_p;
+  u3_httd* htd_u = peq_u->htd_u;
+  u3_hreq* req_u = peq_u->req_u;
+  u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+  c3_o auth = _http_req_is_auth(fig_u, req_u->rec_u);
+
+  if ( req_u ) {
+    u3_assert(u3_rsat_peek == req_u->sat_e);
+    req_u->peq_u = 0;
+    _http_scry_respond(req_u, u3k(nun));
+  }
+
+  // cache only if peek was not at now, and nun isn't u3_nul
+  if (  (c3n == peq_u->las_o)
+     && (u3_nul != nun) )
+  {
+    u3_noun key = u3nc(auth, u3k(peq_u->pax));
+    u3h_put(htd_u->nax_p, key, nun);
+    u3z(key);
+  }
+  else {
+    u3z(nun);
+  }
+
+  u3z(peq_u->pax);
+  c3_free(peq_u);
+}
+
+/* _beam: ship desk case spur
+*/
+typedef struct _beam {
+  u3_weak  who;
+  u3_weak  des;
+  u3_weak  cas;
+  u3_weak  pur;
+} beam;
+
+/* _free_beam(): free a beam
+*/
+static void
+_free_beam(beam* bem)
+{
+  u3z(bem->who);
+  u3z(bem->des);
+  u3z(bem->cas);
+  u3z(bem->pur);
+}
+
+/* _get_beam(): get a _beam from url
+*/
+static beam
+_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
+{
+  beam bem;
+
+  //  get beak
+  //
+  for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
+    u3_noun* wer;
+    if ( 0 == i_w ) {
+      wer = &bem.who;
+    }
+    else if ( 1 == i_w ) {
+      wer = &bem.des;
+    }
+    else {
+      wer = &bem.cas;
+    }
+
+    // find '//'
+    if (  (len_w >= 2)
+       && ('/' == txt_c[0])
+       && ('/' == txt_c[1]) )
+    {
+      *wer = u3_nul;
+      txt_c++;
+      len_w--;
+    }
+    // skip '/'
+    else if ( (len_w > 0) && ('/' == txt_c[0]) ) {
+      txt_c++;
+      len_w--;
+    }
+
+    // '='
+    if ( (len_w > 0) && ('=' == txt_c[0]) ) {
+      if ( 0 == i_w ) {
+        u3_http* htp_u = req_u->hon_u->htp_u;
+        u3_httd* htd_u = htp_u->htd_u;
+        *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+      }
+      else if ( 1 == i_w ) {
+        *wer = c3__base;
+      }
+      else {
+        req_u->peq_u->las_o = c3y;
+      }
+      txt_c++;
+      len_w--;
+    }
+    // slice cord
+    else {
+      c3_c* nex_c;
+      c3_c* tis_c = memchr(txt_c, '=', len_w);
+      c3_c* fas_c = memchr(txt_c, '/', len_w);
+
+      if ( tis_c && fas_c ) {
+        nex_c = c3_min(tis_c, fas_c);
+      }
+      else {
+        nex_c = ( tis_c ) ? tis_c : fas_c;
+      }
+
+      if ( !nex_c ) {
+        *wer = u3_none;
+        return bem;
+      }
+      else {
+        c3_w dif_w = (c3_p)(nex_c - txt_c);
+        *wer = u3i_bytes(dif_w, (const c3_y*)txt_c);
+        txt_c = nex_c;
+        len_w = len_w - dif_w;
+      }
+    }
+  }
+
+  // get spur
+  u3_noun tmp = u3dc("rush", u3i_bytes(len_w, (const c3_y*)txt_c), u3v_wish("stap"));
+  bem.pur = ( u3_nul == tmp ) ? u3_none : u3k(u3t(tmp));
+  u3z(tmp);
+
+  return bem;
+}
+
+/* _http_req_dispatch(): dispatch http request
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -649,28 +949,137 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   {
     u3_http* htp_u = req_u->hon_u->htp_u;
     u3_httd* htd_u = htp_u->htd_u;
-    u3_noun wir    = _http_req_to_duct(req_u);
-    u3_noun cad;
 
+    c3_c* bas_c = req_u->rec_u->input.path.base;
+    c3_w len_w = req_u->rec_u->input.path.len;
+
+    // check if base url starts with '/_~_/'
+    if (  (len_w < 6)
+       || (0 != memcmp("/_~_/", bas_c, 5)) )
     {
+      // no: inject to arvo
+      u3_noun wir = _http_req_to_duct(req_u);
+      u3_noun cad;
       u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
-     //
+      //
       u3_noun dat = u3nt(htp_u->sec, adr, req);
 
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
             : u3nc(u3i_string("request"), dat);
+      u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
     }
+    else {
+      // '/_~_/' found
+      bas_c = bas_c + 4;  //  retain '/' after /_~_
+      len_w = len_w - 4;
 
-    u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+      req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
+      req_u->peq_u->req_u = req_u;
+      req_u->peq_u->htd_u = htd_u;
+      req_u->peq_u->las_o = c3n;
+      req_u->sat_e = u3_rsat_peek;
+      req_u->peq_u->pax = u3_nul;
+
+      u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+      h2o_req_t* rec_u = req_u->rec_u;
+
+      //  set gang to [~ ~] or ~
+      u3_noun gang;
+      c3_o auth = _http_req_is_auth(fig_u, rec_u);
+      if ( auth == c3y ) {
+        gang = u3nc(u3_nul, u3_nul);
+      }
+      else {
+        gang = u3_nul;
+      }
+
+      beam bem = _get_beam(req_u, bas_c, len_w);
+      if (  (u3_none == bem.who)
+         || (u3_none == bem.des)
+         || (u3_none == bem.cas)
+         || (u3_none == bem.pur) )
+      {
+        c3_c* msg_c = "bad request";
+        h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+        u3z(gang);
+        u3z(req_u->peq_u->pax);
+        _free_beam(&bem);
+        return;
+      }
+
+      h2o_headers_t req_headers = req_u->rec_u->headers;
+      byte_range rng_u;
+      c3_o rng_o = _get_range(req_headers, &rng_u);
+
+      // prepare spur for eyre range scry
+      //
+      u3_noun spur;
+      if ( c3n == rng_o ) {
+        // full range: '/range/0//foo'
+        spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3k(bem.pur));
+      }
+      else {
+        _chunk_align(&rng_u);
+
+        u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
+                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
+        u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
+                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+
+        spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
+      }
+
+      // peek or respond from cache
+      //
+      if ( c3y == req_u->peq_u->las_o ) {
+        u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+        if ( c3y == u3r_sing(our, bem.who) ) {
+          u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
+                            u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
+        }
+        else {
+          c3_c* msg_c = "bad request";
+          h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+          u3z(gang);
+          u3z(spur);
+          u3z(req_u->peq_u->pax);
+        }
+        u3z(our);
+      }
+      else {
+        u3_noun bam = u3nq(u3k(bem.who), u3k(bem.des), u3k(bem.cas), spur);
+        u3_noun key = u3nc(auth, u3k(bam));
+        u3_weak nac = u3h_get(htd_u->nax_p, key);
+        u3z(key);
+
+        if (  (u3_none == nac)
+           || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
+        {
+          // maybe cache, then serve subsequent range requests from cache
+          u3z(req_u->peq_u->pax);
+          req_u->peq_u->pax = u3k(bam);
+          u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
+                       req_u->peq_u, _http_scry_cb);
+          u3z(nac);
+        }
+        else {
+          _http_scry_respond(req_u, nac);
+          u3z(bam);
+          u3z(gang);
+        }
+      }
+      _free_beam(&bem);
+    }
   }
 }
 
 /* _http_cache_respond(): respond with a simple-payload:http
 */
 static void
-_http_cache_respond(u3_hreq* req_u, u3_noun nun) {
+_http_cache_respond(u3_hreq* req_u, u3_noun nun)
+{
   h2o_req_t* rec_u = req_u->rec_u;
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
@@ -694,7 +1103,52 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun) {
   }
   else {
     u3_noun auth, response_header, data;
-    u3x_qual(u3k(u3t(u3t(nun))), &auth, 0, &response_header, &data);
+    u3x_qual(u3t(u3t(nun)), &auth, 0, &response_header, &data);
+    u3_noun status, headers;
+    u3x_cell(response_header, &status, &headers);
+
+    // check auth
+    if ( (c3y == auth)
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
+    {
+      h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
+    }
+    else {
+      req_u->sat_e = u3_rsat_plan;
+      _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+    }
+  }
+  u3z(nun);
+}
+
+/* _http_scry_respond(): respond with a simple-payload:http
+*/
+static void
+_http_scry_respond(u3_hreq* req_u, u3_noun nun)
+{
+  h2o_req_t* rec_u = req_u->rec_u;
+  u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
+
+  if ( u3_nul == nun ) {
+    u3_weak req = _http_rec_to_httq(rec_u);
+    if ( u3_none == req ) {
+      if ( (u3C.wag_w & u3o_verbose) ) {
+        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
+                rec_u->method.base);
+      }
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
+    }
+    else {
+      h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
+    }
+  }
+  else if ( u3_none == u3r_at(7, nun) ) {
+    h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
+  }
+  else {
+    u3_noun auth, response_header, data;
+    u3x_qual(u3t(u3t(nun)), &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
@@ -738,6 +1192,11 @@ static c3_o
 _http_req_cache(u3_hreq* req_u)
 {
   u3_assert(u3_rsat_init == req_u->sat_e);
+
+  h2o_iovec_t method = req_u->rec_u->method;
+  if (0 != strncmp("GET", method.base, method.len)) {
+    return c3n;
+  }
 
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
@@ -1077,6 +1536,50 @@ _http_req_prepare(h2o_req_t* rec_u,
   uv_timer_start(seq_u->tim_u, _http_req_timer_cb, 600 * 1000, 0);
 
   return seq_u;
+}
+
+/* _http_spin_accept(): handle incoming http request on spin stack endpoint
+*/
+static c3_i
+_http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
+{
+  u3_hcon* hon_u = _http_rec_sock(rec_u);
+  
+  if ( NULL == hon_u->htp_u->htd_u->stk_u ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 404, u3_nul, u3_nul, c3y);
+    return 0;
+  }
+
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+
+  //  if the request is not authenticated, reject it
+  //
+  if ( c3n == aut_o ) {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+    req_u->sat_e = u3_rsat_plan;
+    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
+  }
+  //  if it is authenticated, send slogstream/sse headers
+  //
+  else {
+    u3_hreq* req_u = _http_req_prepare(rec_u, _http_spin_new);
+    u3_noun  hed   = u3nl(u3nc(u3i_string("Content-Type"),
+                               u3i_string("text/event-stream")),
+                          u3nc(u3i_string("Cache-Control"),
+                               u3i_string("no-cache")),
+                          u3nc(u3i_string("Connection"),
+                               u3i_string("keep-alive")),
+                          u3_none);
+
+    _http_start_respond(req_u, 200, hed, u3_nul, c3n);
+
+    //TODO  auth token may expire at some point. if we want to close the
+    //      slogstream when that happens, we need to store the token that
+    //      was used alongside it...
+  }
+  return 0;
 }
 
 /* _http_seq_accept(): handle incoming http request on slogstream endpoint
@@ -1654,6 +2157,11 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     h2o_pathconf_t* pac_u;
     h2o_handler_t*  han_u;
 
+    //  spin stream
+    //
+    pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/spin", 0);
+    han_u = h2o_create_handler(pac_u, sizeof(*han_u));
+    han_u->on_req = _http_spin_accept;
     //  slog stream
     //
     pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/slog", 0);
@@ -1670,8 +2178,15 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   if ( c3y == log ) {
     // XX move this to post serv_start and put the port in the name
 #if 0
+    u3_noun now;
+
+    {
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
     c3_c* pax_c = u3_Host.dir_c;
-    u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun now = u3dc("scot", c3__da, now);
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
     c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
@@ -2167,6 +2682,15 @@ _http_io_talk(u3_auto* car_u)
 
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
+  //Setup spin stack
+#ifndef U3_OS_windows
+  htd_u->stk_u = u3t_sstack_open();
+  
+  if ( NULL == htd_u->stk_u ) {
+    u3l_log("http.c: failed to open spin stack");
+  }
+#endif
+
   //  XX set liv_o on done/swap?
   //
 }
@@ -2312,6 +2836,69 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
   u3z(tan);
 }
 
+/* _http_spin_timer_cb(): send heartbeat to slog streams and restart timer
+*/
+static void
+_http_spin_timer_cb(uv_timer_t* tim_u)
+{ 
+  u3_httd* htd_u = tim_u->data;
+  u3_hreq* siq_u = htd_u->fig_u.siq_u;
+
+  if ( 0 != siq_u ) {
+    c3_w siz_w      = 1024;
+    c3_c* buf_c     = c3_malloc(siz_w);
+    u3t_spin* stk_u = htd_u->stk_u;
+    if ( NULL == stk_u ) return;
+    c3_w pos_w      = stk_u->off_w;
+    c3_w out_w      = 0;
+
+    while (pos_w > 4) {
+      c3_w  len_w;
+      pos_w -=4;
+
+      if ( siz_w < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
+         siz_w *= 2;
+      }
+
+      memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
+      pos_w -= len_w;
+
+      if ( siz_w < out_w + 4 ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
+      }
+      buf_c[out_w++] = '/';
+
+      if ( siz_w < out_w + len_w ) {
+         buf_c = c3_realloc(buf_c, siz_w*2);
+      }
+
+      memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
+      out_w += len_w;
+    }
+    buf_c[out_w] = '\0';
+
+    if ( 0 != stk_u->off_w ) {
+      u3_noun tan = u3i_string(buf_c);
+      u3_noun lin = u3i_list(u3i_string("data:"),
+                             tan,
+                             c3_s2('\n', '\n'),
+                             u3_none);
+      u3_atom txt = u3qc_rap(3, lin);
+      u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
+
+      while ( 0 != siq_u ) {
+        _http_continue_respond(siq_u, u3k(dat), c3n);
+        siq_u = siq_u->nex_u;
+      }
+      u3z(dat); u3z(lin); 
+    }
+    uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
+                   SPIN_TIMER, 0);
+  }
+}
+
+
 /* _http_seq_heartbeat_cb(): send heartbeat to slog streams and restart timer
 */
 static void
@@ -2319,12 +2906,24 @@ _http_seq_heartbeat_cb(uv_timer_t* tim_u)
 {
   u3_httd* htd_u = tim_u->data;
   u3_hreq* seq_u = htd_u->fig_u.seq_u;
+  u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
+  // slog endpoints
   if ( 0 != seq_u ) {
     u3_noun dat = u3nt(u3_nul, 1, c3_s1('\n'));
     while ( 0 != seq_u ) {
       _http_continue_respond(seq_u, u3k(dat), c3n);
       seq_u = seq_u->nex_u;
+    }
+    u3z(dat);
+  }
+
+  // spin endpoints
+  if ( 0 != siq_u ) {
+    u3_noun dat = u3nt(u3_nul, 1, c3_s1('\n'));
+    while ( 0 != siq_u ) {
+      _http_continue_respond(siq_u, u3k(dat), c3n);
+      siq_u = siq_u->nex_u;
     }
     u3z(dat);
   }
@@ -2405,6 +3004,10 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
+  if ( NULL != htd_u->stk_u ) {
+    munmap(htd_u->stk_u, u3a_page);
+  }
+
   //  dispose of configuration to avoid restarts
   //
   _http_form_free(htd_u);
@@ -2428,6 +3031,7 @@ _http_io_exit(u3_auto* car_u)
     }
     u3z(dat);
   }
+
 
   _http_release_ports_file(u3_Host.dir_c);
 }
@@ -2521,6 +3125,11 @@ u3_http_io_init(u3_pier* pir_u)
   uv_timer_init(u3L, sit_u);
   uv_timer_start(sit_u, _http_seq_heartbeat_cb, HEARTBEAT_TIMEOUT, 0);
   htd_u->fig_u.sit_u = sit_u;
+
+  uv_timer_t* sin_u = c3_malloc(sizeof(*sin_u));
+  sin_u->data = htd_u;
+  uv_timer_init(u3L, sin_u);
+  htd_u->fig_u.sin_u = sin_u;
 
   {
     u3_noun now;

@@ -1,0 +1,15 @@
+.{
+    .name = .c3,
+    .fingerprint = 0xb0d94b8d21880022,
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
+            .lazy = true,
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

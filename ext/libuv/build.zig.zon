@@ -1,0 +1,14 @@
+.{
+    .name = .libuv,
+    .version = "0.0.1",
+    .fingerprint = 0x7cb3932c3a70c13e,
+    .dependencies = .{
+        .libuv = .{
+            .url = "https://dist.libuv.org/dist/v1.50.0/libuv-v1.50.0.tar.gz",
+            .hash = "N-V-__8AAH34QwB6wi5eQK_lFbfDGSN3hRE8l-6Ep198ZsGg",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

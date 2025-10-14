@@ -1,0 +1,18 @@
+.{
+    .name = "sigsegv",
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
+            .lazy = true,
+        },
+        .sigsegv = .{
+            .url = "https://ftp.fr.openbsd.org/pub/OpenBSD/distfiles/libsigsegv-2.14.tar.gz",
+            .hash = "N-V-__8AAHQhHwCCMyKUtQhO0AMsY182In-wQIwXVhenOql5",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

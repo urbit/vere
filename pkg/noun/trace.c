@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <signal.h>
 
 #include "allocate.h"
 #include "imprison.h"
@@ -16,12 +17,15 @@
 #include "retrieve.h"
 #include "vortex.h"
 
+/** Global variables.
+**/
+u3t_spin *stk_u;
 u3t_trace u3t_Trace;
 
 static c3_o _ct_lop_o;
 
 /// Nock PID.
-static pid_t _nock_pid_i = 0;
+static c3_ws _nock_pid_i = 0;
 
 /// JSON trace file.
 static FILE* _file_u = NULL;
@@ -213,14 +217,10 @@ u3t_samp(void)
   u3C.wag_w &= ~u3o_debug_cpu;
   u3C.wag_w &= ~u3o_trace;
 
-  static int home = 0;
-  static int away = 0;
-
   //  Profile sampling, because it allocates on the home road,
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    home++;
     c3_l      mot_l;
     u3a_road* rod_u;
 
@@ -261,10 +261,6 @@ u3t_samp(void)
       u3R->pro.day = u3dt("pi-noon", mot_l, lab, u3R->pro.day);
     }
     u3R = rod_u;
-  }
-  else {
-    away++;
-    // fprintf(stderr,"home: %06d away: %06d\r\n", home, away);
   }
   u3C.wag_w = old_wag;
 }
@@ -359,7 +355,7 @@ u3t_trace_open(const c3_c* dir_c)
 /*  u3t_trace_close(): closes a trace file. optional.
 */
 void
-u3t_trace_close()
+u3t_trace_close(void)
 {
   if ( !_file_u )
     return;
@@ -372,7 +368,7 @@ u3t_trace_close()
 
 /*  u3t_trace_time(): microsecond clock
 */
-c3_d u3t_trace_time()
+c3_d u3t_trace_time(void)
 {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
@@ -408,7 +404,7 @@ u3t_nock_trace_push(u3_noun lab)
  * calls. If it is, we write it out to the tracefile.
  */
 void
-u3t_nock_trace_pop()
+u3t_nock_trace_pop(void)
 {
   if ( !_file_u )
     return;
@@ -566,6 +562,7 @@ u3t_file_cnt(void)
 void
 u3t_boot(void)
 {
+#ifndef U3_OS_windows
   if ( u3C.wag_w & u3o_debug_cpu ) {
     _ct_lop_o = c3n;
 #if defined(U3_OS_PROF)
@@ -602,6 +599,7 @@ u3t_boot(void)
     }
 #endif
   }
+#endif
 }
 
 /* u3t_boff(): turn profile sampling off.
@@ -609,6 +607,7 @@ u3t_boot(void)
 void
 u3t_boff(void)
 {
+#ifndef U3_OS_windows
   if ( u3C.wag_w & u3o_debug_cpu ) {
 #if defined(U3_OS_PROF)
     // Mask SIGPROF signals in this thread (and this is the only
@@ -637,6 +636,7 @@ u3t_boff(void)
     }
 #endif
   }
+#endif
 }
 
 
@@ -1039,14 +1039,8 @@ u3t_etch_meme(c3_l mod_l)
   c3_w imu_w = top_w-ful_w;
   c3_w hep_w = hap_w-fre_w;
 
-  c3_w inc_w = 0;
-  c3_w max_w = 0;
-  float max_f = 0.0;
-  c3_d cel_d = 0;
-  c3_d nox_d = 0;
 
-  float imu_f = _ct_meme_percent(imu_w, top_w),
-        hep_f = _ct_meme_percent(hep_w, top_w),
+  float hep_f = _ct_meme_percent(hep_w, top_w),
         fre_f = _ct_meme_percent(fre_w, top_w),
         pen_f = _ct_meme_percent(pen_w, top_w),
         tak_f = _ct_meme_percent(tak_w, top_w);
@@ -1064,13 +1058,13 @@ u3t_etch_meme(c3_l mod_l)
   **  cel_d: max cells allocated in current road (inc closed kids, but not parents)
   **  nox_d: nock steps performed in current road
   */
-  max_w = (u3R->all.max_w*4)+imu_w;
-  max_f = _ct_meme_percent(max_w, top_w);
-  cel_d = u3R->pro.cel_d;
-  nox_d = u3R->pro.nox_d;
+  c3_w max_w = (u3R->all.max_w*4)+imu_w;
+  float max_f = _ct_meme_percent(max_w, top_w);
+  c3_d cel_d = u3R->pro.cel_d;
+  c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
+  c3_w inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed
@@ -1131,6 +1125,118 @@ u3t_etch_meme(c3_l mod_l)
     strcat(str_c, "\n          road depth: "); _ct_etch_road_depth(rep_c, u3R, 1); strcat(str_c, rep_c);
     strcat(str_c, "\n\nLoom: "); strcat(str_c, bar_c);
     return u3i_string(str_c);
+  }
+}
+
+/* u3t_sstack_init: initalize a root node on the spin stack 
+*/
+void
+u3t_sstack_init()
+{
+#ifndef U3_OS_windows
+  c3_c shm_name[256];
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+  if ( -1 == shm_fd) {
+    perror("shm_open failed");
+    return;
+  }
+
+  if ( -1 == ftruncate(shm_fd, TRACE_PSIZE)) {
+    perror("truncate failed");
+    return;
+  }
+
+  stk_u = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  
+  if ( MAP_FAILED == stk_u ) {
+    perror("mmap failed");
+    return;
+  }
+
+  stk_u->off_w = 0;
+  stk_u->fow_w = 0;
+  u3t_sstack_push(c3__root);
+#endif
+}
+
+#ifndef U3_OS_windows
+/* u3t_sstack_open: initalize a root node on the spin stack 
+ */
+u3t_spin*
+u3t_sstack_open()
+{
+  //Setup spin stack
+  c3_c shm_name[256];
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
+  if ( -1 == shm_fd) {
+    perror("shm_open failed");
+    return NULL; 
+  }
+
+  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE, 
+                         PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  
+  if ( MAP_FAILED == stk_u ) {
+    perror("mmap failed");
+    return NULL; 
+  }
+
+  return stk_u;
+}
+#endif
+/* u3t_sstack_exit: shutdown the shared memory for thespin stack 
+*/
+void
+u3t_sstack_exit()
+{
+  munmap(stk_u, u3a_page);
+}
+
+/* u3t_sstack_push: push a noun on the spin stack.
+*/
+void
+u3t_sstack_push(u3_noun nam)
+{
+  if ( !stk_u ) {
+    u3z(nam);
+    return;
+  }
+
+  if ( c3n == u3ud(nam) ) {
+    u3z(nam);
+    nam = c3__cell;
+  }
+
+  c3_w  met_w = u3r_met(3, nam);
+  
+  // Exit if full
+  if ( 0 < stk_u->fow_w || 
+       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
+    stk_u->fow_w++;
+    return;
+  }
+
+  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
+  stk_u->off_w += met_w;
+
+  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
+  stk_u->off_w += sizeof(c3_w);
+  u3z(nam);
+}
+
+/* u3t_sstack_pop: pop a noun from the spin stack.
+*/
+void
+u3t_sstack_pop()
+{
+  if (  !stk_u ) return;
+  if ( 0 < stk_u->fow_w ) {
+    stk_u->fow_w--;
+  } else {
+    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
+    stk_u->off_w -= (len_w+sizeof(c3_w));
   }
 }
 

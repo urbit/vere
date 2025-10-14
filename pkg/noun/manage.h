@@ -3,10 +3,10 @@
 #ifndef U3_MANAGE_H
 #define U3_MANAGE_H
 
-#include "v1/manage.h"
-#include "v2/manage.h"
+// #include "v1/manage.h"
+// #include "v2/manage.h"
 
-#include "c3.h"
+#include "c3/c3.h"
 #include "types.h"
 #include "version.h"
 
@@ -120,6 +120,11 @@
         u3_noun
         u3m_soft(c3_w mil_w, u3_funk fun_f, u3_noun arg);
 
+      /* u3m_soft_cax(): descend into virtualization context, with cache.
+      */
+        u3_noun
+        u3m_soft_cax(u3_funq fun_f, u3_noun aga, u3_noun agb);
+
       /* u3m_soft_slam: top-level call.
       */
         u3_noun
@@ -148,10 +153,19 @@
         u3_noun
         u3m_soft_esc(u3_noun ref, u3_noun sam);
 
+
+      /* u3m_quac: memory report.
+      */
+        typedef struct _u3m_quac {
+          c3_c* nam_c;
+          c3_w  siz_w;
+          struct _u3m_quac** qua_u;
+        } u3m_quac;
+
       /* u3m_mark(): mark all nouns in the road.
       */
-        c3_w
-        u3m_mark(FILE* fil_u);
+        u3m_quac**
+        u3m_mark();
 
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */

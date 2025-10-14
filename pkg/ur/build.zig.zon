@@ -1,0 +1,13 @@
+.{
+    .name = .ur,
+    .fingeprint = 0xad9a8f5c919f2264,
+    .version = "0.0.1",
+    .dependencies = .{
+        .murmur3 = .{
+            .path = "../../ext/murmur3",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

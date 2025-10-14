@@ -1,0 +1,4 @@
+pro hand -p true -s false -n false SIGBUS SIGSEGV
+p (void)darwin_register_mach_exception_handler()
+b u3m_bail
+b malloc_error_break

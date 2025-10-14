@@ -1,0 +1,61 @@
+.{
+    .name = .vere,
+    .fingerprint = 0x1dda7349d562b3e,
+    .version = "0.0.1",
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
+            .lazy = true,
+        },
+        .pkg_c3 = .{
+            .path = "../c3",
+        },
+        .pkg_ent = .{
+            .path = "../ent",
+        },
+        .pkg_ur = .{
+            .path = "../ur",
+        },
+        .pkg_noun = .{
+            .path = "../noun",
+        },
+        .pkg_past = .{
+            .path = "../past",
+        },
+        .avahi = .{
+            .path = "../../ext/avahi",
+        },
+        .curl = .{
+            .path = "../../ext/curl",
+        },
+        .gmp = .{
+            .path = "../../ext/gmp",
+        },
+        .h2o = .{
+            .path = "../../ext/h2o",
+        },
+        .libuv = .{
+            .path = "../../ext/libuv",
+        },
+        .lmdb = .{
+            .path = "../../ext/lmdb",
+        },
+        .natpmp = .{
+            .path = "../../ext/natpmp",
+        },
+        .openssl = .{
+            .path = "../../ext/openssl",
+        },
+        .urcrypt = .{
+            .path = "../../ext/urcrypt",
+        },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz",
+            .hash = "zlib-1.3.1-ZZQ7lbYMAAB1hTSOKSXAKAgHsfDcyWNH_37ojw5WSpgR",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

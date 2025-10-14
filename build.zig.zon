@@ -1,0 +1,73 @@
+.{
+    .name = .urbit,
+    .version = "0.0.1",
+    .fingerprint = 0x9e228a3003a2736b,
+    .dependencies = .{
+        .macos_sdk = .{
+            .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",
+            .hash = "N-V-__8AAKtK4FMzqcFsY_ZrpMg9bGH0h7BqZDXtVyAerMtM",
+            .lazy = true,
+        },
+        .pkg_c3 = .{
+            .path = "./pkg/c3",
+        },
+        .pkg_ent = .{
+            .path = "./pkg/ent",
+        },
+        .pkg_ur = .{
+            .path = "./pkg/ur",
+        },
+        .pkg_noun = .{
+            .path = "./pkg/noun",
+        },
+        .pkg_past = .{
+            .path = "./pkg/past",
+        },
+        .pkg_vere = .{
+            .path = "./pkg/vere",
+        },
+        .curl = .{
+            .path = "./ext/curl",
+        },
+        .gmp = .{
+            .path = "./ext/gmp",
+        },
+        .h2o = .{
+            .path = "./ext/h2o",
+        },
+        .libuv = .{
+            .path = "./ext/libuv",
+        },
+        .lmdb = .{
+            .path = "./ext/lmdb",
+        },
+        .natpmp = .{
+            .path = "./ext/natpmp",
+        },
+        .openssl = .{
+            .path = "./ext/openssl",
+        },
+        .sigsegv = .{
+            .path = "./ext/sigsegv",
+        },
+        .urcrypt = .{
+            .path = "./ext/urcrypt",
+        },
+        .whereami = .{
+            .path = "./ext/whereami",
+        },
+        .zlib = .{
+            .url = "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz",
+            .hash = "zlib-1.3.1-ZZQ7lbYMAAB1hTSOKSXAKAgHsfDcyWNH_37ojw5WSpgR",
+        },
+        .wasm3 = .{
+            .path = "./ext/wasm3",
+        },
+        .tracy = .{
+            .path = "./ext/tracy",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
