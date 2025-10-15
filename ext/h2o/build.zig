@@ -30,6 +30,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const wslay = b.dependency("wslay", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const h2o_c = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
@@ -346,6 +351,7 @@ pub fn build(b: *std.Build) !void {
     // h2o.linkLibrary(libyrmcds);
     h2o.linkLibrary(picohttpparser);
     h2o.linkLibrary(picotls);
+    h2o.linkLibrary(wslay.artifact("wslay"));
     // h2o.linkLibrary(ssl_conservatory);
     h2o.linkLibC();
 
@@ -356,6 +362,7 @@ pub fn build(b: *std.Build) !void {
     h2o.addIncludePath(h2o_c.path("include/h2o"));
     h2o.addIncludePath(h2o_c.path("include/h2o/socket"));
     h2o.addIncludePath(h2o_c.path("deps/klib"));
+    h2o.addIncludePath(wslay.path("lib/includes"));
 
     h2o.root_module.addCMacro("H2O_NO_HTTP3", "");
     h2o.root_module.addCMacro("H2O_NO_REDIS", "");
@@ -437,6 +444,7 @@ pub fn build(b: *std.Build) !void {
             "http2/http2_debug_state.c",
             "http2/scheduler.c",
             "http2/stream.c",
+            "websocket.c",
             "tunnel.c",
         },
         .flags = &.{
@@ -447,6 +455,7 @@ pub fn build(b: *std.Build) !void {
             "-pthread",
             "-DH2O_USE_LIBUV",
             "-DH2O_USE_PICOTLS",
+            "-DWSLAY_VERSION=\\\"1.1.1\\\"",
             if (t.os.tag == .linux) "-D_GNU_SOURCE" else "",
         },
     });
