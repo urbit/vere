@@ -1374,7 +1374,7 @@ u3r_words_new(c3_n    a_w,
   if ( b_w == 0 ) {
     return;
   }
-  if ( d < u3a_32_direct_max ) {
+  if ( d <= u3a_32_direct_max ) {
     if ( a_w == 0 ) {
       *c_w = (c3_w_new)d;
       memset((c3_y*)(c_w + 1), 0, (b_w - 1) << u3a_word_bytes_shift);

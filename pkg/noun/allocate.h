@@ -529,14 +529,14 @@ typedef struct {
 
   /**  Inline functions.
   **/
-  /* u3a_to_pug(): set bit 31 of [off].
+  /* u3a_to_pug(): set indirect atom flag bit of [off].
    */
   inline c3_n u3a_to_pug(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | u3a_indirect_flag;
   }
 
-  /* u3a_to_pom(): set bits 30 and 31 of [off].
+  /* u3a_to_pom(): set indirect cell flag bits of [off].
    */
   inline c3_n u3a_to_pom(c3_n off) {
     c3_dessert((off & u3a_walign-1) == 0);
