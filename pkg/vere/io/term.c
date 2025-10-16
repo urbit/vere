@@ -1680,7 +1680,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
      || (c3__term != i_wir) )
   {
     if ( (c3__arvo == i_wir) && (c3__mass == tag) ) {
+#ifdef U3_URTH_MASS
       uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
+#endif
       ret_o = c3y;
     }
     else {
@@ -1742,14 +1744,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           u3_Host.xit_i = dat;
         } break;
 
+        //  XX obsolete wire
         case c3__mass: {
           ret_o = c3y;
-
-          //  gc the daemon area
-          //
-          //    XX disabled due to known leaks; uncomment for dev
-          //
-          // uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
         } break;
 
         case c3__meld: {
