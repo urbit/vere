@@ -39,7 +39,7 @@
       typedef uint32_t c3_l_new;  // -> s/b 32-bit always
       #ifdef VERE64
         typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
-        typedef uint64_t c3_l;  // little; 31-bit unsigned integer
+        typedef uint64_t c3_l;  // little; 63-bit unsigned integer
         typedef uint64_t c3_n;  // note: noun-sized integer
         typedef int64_t c3_ns;
       #else
