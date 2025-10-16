@@ -34,25 +34,57 @@ _setup(void)
 static void
 _test_lily()
 {
-  c3_l_tmp    lit_l;
-  c3_w_tmp    big_w[] = {0, 0, 1};
-  u3_noun big = u3i_words_tmp(3, big_w);
-  u3_noun cod = u3dc("scot", c3__uv, big);
+  c3_l lit_l;
 
-  if ( c3y == u3v_lily(c3__uv, cod, &lit_l) ) {
-    printf("*** fail _test_lily-1\n");
-    exit(1);
+  //  1: value too large should fail
+  {
+    c3_n big_w[] = {(c3_n)0, (c3_n)0, (c3_n)1};
+    u3_noun big = u3i_notes(3, big_w);
+    u3_noun cod = u3dc("scot", c3__uv, big);
+
+    if ( c3y == u3v_lily(c3__uv, cod, &lit_l) ) {
+      printf("*** fail _test_lily-1\n");
+      exit(1);
+    }
   }
-  cod = u3dc("scot", c3__ud, 0x7fffffff);
-  if ( (c3n == u3v_lily(c3__ud, cod, &lit_l)) ||
-       (0x7fffffff != lit_l) ) {
-    printf("*** fail _test_lily-2a\n");
-    exit(1);
+
+  //  2a: maximum direct atom value should succeed
+  {
+    u3_noun cod = u3dc("scot", c3__ud, u3a_direct_max);
+    if ( (c3n == u3v_lily(c3__ud, cod, &lit_l)) ||
+         (u3a_direct_max != lit_l) ) {
+      printf("*** fail _test_lily-2a\n");
+      exit(1);
+    }
   }
-  cod = u3dc("scot", c3__ux, u3i_word_tmp(0x80000000));
-  if ( c3y == u3v_lily(c3__ux, cod, &lit_l) ) {
-    printf("*** fail _test_lily-2b\n");
-    exit(1);
+
+  //  2b: value with indirect flag set should fail: "strange lily"
+  {
+    u3_noun cod = u3dc("scot", c3__ux, u3i_note(u3a_indirect_flag));
+    if ( c3y == u3v_lily(c3__ux, cod, &lit_l) ) {
+      printf("*** fail _test_lily-2b\n");
+      exit(1);
+    }
+  }
+
+  //  3: small values should work
+  {
+    u3_noun cod = u3dc("scot", c3__ud, 42);
+    if ( (c3n == u3v_lily(c3__ud, cod, &lit_l)) ||
+         (42 != lit_l) ) {
+      printf("*** fail _test_lily-3\n");
+      exit(1);
+    }
+  }
+
+  //  4: zero should work
+  {
+    u3_noun cod = u3dc("scot", c3__ud, 0);
+    if ( (c3n == u3v_lily(c3__ud, cod, &lit_l)) ||
+         (0 != lit_l) ) {
+      printf("*** fail _test_lily-4\n");
+      exit(1);
+    }
   }
 }
 
