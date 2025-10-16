@@ -210,7 +210,7 @@ u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
   if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
        (u3_nul != p_uco) ||
        (c3n == u3r_safe_note(q_uco, &wad_w)) ||
-       (wad_w & 0x80000000) )
+       (wad_w & u3a_indirect_flag) )
   {
     c3_c* txt_c = u3r_string(txt);
     u3l_log("strange lily %s", txt_c);
