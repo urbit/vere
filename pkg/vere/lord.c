@@ -509,6 +509,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3_noun    tag, dat;
   u3_weak    jar;
 
+#ifdef U3_URTH_MASS
+  //  XX add urth-gc runtime arg to support this
+  // u3_king_grab(NULL);
+#endif
+
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'B');
 #endif
@@ -570,6 +575,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   u3z(jar);
+
+  //  XX would be good to grab here, but need to do something
+  //  about graceful shutdown
+
   return c3y;
 }
 
