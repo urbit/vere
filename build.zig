@@ -33,6 +33,7 @@ const BuildCfg = struct {
     mem_dbg: bool = false,
     c3dbg: bool = false,
     snapshot_validation: bool = false,
+    urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
     tracy_enable: bool = false,
@@ -88,6 +89,12 @@ pub fn build(b: *std.Build) !void {
         bool,
         "snapshot-validation",
         "Enable snapshot validation (-DU3_SNAPSHOT_VALIDATION)",
+    ) orelse false;
+
+    const urth_mass = b.option(
+        bool,
+        "urth-mass",
+        "Enable |mass in urth process (-DU3_URTH_MASS)",
     ) orelse false;
 
     const binary_name = b.option(
@@ -150,6 +157,7 @@ pub fn build(b: *std.Build) !void {
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
+        .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
         .tracy_enable = tracy_enable,
@@ -268,6 +276,9 @@ fn buildBinary(
 
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
+
+    if (cfg.urth_mass)
+        try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
 
     if (cfg.tracy_enable) {
         try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});

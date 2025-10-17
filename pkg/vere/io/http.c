@@ -2994,6 +2994,35 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   }
 }
 
+static u3m_quac**
+_http_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_httd*   htd_u = (u3_httd*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("session tokens");
+  all_u[0]->siz_w = 4 * u3a_mark_noun(htd_u->fig_u.ses);
+  all_u[0]->qua_u = 0;
+
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("url->scry cache");
+  all_u[1]->siz_w = 4 * u3h_mark(htd_u->sax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = c3_malloc(sizeof(**all_u));
+  all_u[2]->nam_c = strdup("scry->noun cache");
+  all_u[2]->siz_w = 4 * u3h_mark(htd_u->nax_p);
+  all_u[2]->qua_u = 0;
+
+  all_u[3] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w;
+
+  return all_u;
+}
+
 /* _http_io_exit(): shut down http.
 */
 static void
@@ -3115,6 +3144,7 @@ u3_http_io_init(u3_pier* pir_u)
   car_u->io.info_f = _http_io_info;
   car_u->io.slog_f = _http_io_slog;
   car_u->io.kick_f = _http_io_kick;
+  car_u->io.mark_f = _http_io_mark;
   car_u->io.exit_f = _http_io_exit;
 
   pir_u->sop_p = htd_u;

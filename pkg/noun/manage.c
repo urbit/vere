@@ -2334,12 +2334,14 @@ static void
 _cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
+#ifndef U3_URTH_MASS
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
                                      &_cm_realloc_ssl,
                                      &_cm_free_ssl) ) {
     u3l_log("%s", "openssl initialization failed");
     abort();
   }
+#endif
 
   u3je_secp_init();
 }

@@ -2868,6 +2868,29 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
 }
 
+static u3m_quac**
+_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_ames   *sam_u = (u3_ames*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("scry cache");
+  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->qua_u = 0;
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("lane cache");
+  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
+
+  return all_u;
+}
+
 /* u3_ames_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -2939,6 +2962,7 @@ u3_ames_io_init(u3_pier* pir_u)
   car_u->io.info_f = _ames_io_info;
   car_u->io.slog_f = _ames_io_slog;
   car_u->io.kick_f = _ames_io_kick;
+  car_u->io.mark_f = _ames_io_mark;
   car_u->io.exit_f = _ames_io_exit;
 
   sam_u->fin_s.sam_u = sam_u;
