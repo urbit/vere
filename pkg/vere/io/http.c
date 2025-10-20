@@ -415,7 +415,7 @@ _http_cookie_has_token(u3_hfig* fig_u, h2o_iovec_t coo_u)
   u3_noun tok = u3i_bytes(val_y, (const c3_y*)val_c);
   c3_o aut = u3kdi_has(u3k(fig_u->ses), tok);
   u3_assert( (c3y == aut) || (c3n == aut) );
-  u3z(tok);
+
   return aut;
 }
 
