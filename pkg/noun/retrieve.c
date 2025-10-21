@@ -1243,17 +1243,24 @@ u3r_word_new(c3_n    a_n,
   u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
-    if ( a_n > 0 ) {
+#ifdef VERE64
+    if ( a_n > 1 )
       return 0;
-    }
-    else return b;
+    else
+      return (c3_w_new)((a_n == 0) ? b : b >> u3a_word_bits);
+#else
+    if ( a_n > 0 )
+      return 0;
+    else
+      return b;
+#endif
   }
   else {
     u3a_atom* b_u = u3a_to_ptr(b);
-#ifndef VERE64
-    if ( a_n >= b_u->len_n ) {
-#else
+#ifdef VERE64
     if ( a_n >= (b_u->len_n * 2) ) {
+#else
+    if ( a_n >= b_u->len_n ) {
 #endif
       return 0;
     }
