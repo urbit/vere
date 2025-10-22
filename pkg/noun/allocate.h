@@ -144,8 +144,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
+        u3_noun loop_set;                     //  Hoon set
 
-        c3_w fut_w[30];                       //  futureproof buffer
+        c3_w fut_w[29];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -209,6 +210,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3h_root) har_p;                //  transient
           u3p(u3h_root) per_p;                //  persistent
         } cax;
+
+        struct {
+          
+        } lop;
       } u3a_road;
       typedef u3a_road u3_road;
 
