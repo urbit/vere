@@ -2287,7 +2287,7 @@ u3n_build_direct(u3_noun sub,
   u3_noun code,
   u3_noun fols)
 {
-  u3_noun lit       = u3x_good(u3kdb_got(u3k(fols), u3k(fol))),
+  u3_noun lit       = u3kdb_got(u3k(fols), u3k(fol)),
           less_nomm = u3x_good(u3d_match_sock(c3y, sub, lit));
   u3z(lit);
   //  As we compile new code with direct calls, we might not have a post

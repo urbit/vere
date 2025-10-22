@@ -112,10 +112,9 @@ u3d_prep_ka()
 
 //  XX: reentrance?
 //
-void
-u3d_rout(u3_noun sub, u3_noun fol)
+static void
+_d_rout(u3_noun sub, u3_noun fol)
 {
-    u3d_prep_ka();
     // ( [%wing p=~[%rout]] )
     //
     u3_noun gen  = u3nt(c3__wing, c3_s4('r','o','u','t'), u3_nul),
@@ -167,26 +166,11 @@ u3d_match_sock(u3_noun cape, u3_noun data, u3_noun list)
     return pro;
 }
 
-//  RETAINS arguments
-//  XX remove u3dc, use hard-coded axes
-//
-u3n_prog*
-u3d_search(u3_noun sub, u3_noun fol)
+static u3_noun
+_d_get_boil()
 {
-    u3n_prog* pog_u = NULL;
-    u3_weak lit = u3h_git(u3R->byc.lar_p, fol);
-    if ( u3_none != lit )
-    {
-        u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
-        pog_u = ( u3_none != less_pog )
-              ? _cn_to_prog(u3t(less_pog))
-              : NULL;
-    }
-    if ( pog_u ) return pog_u;
-
-    u3d_rout(u3k(sub), u3k(fol));
-    u3_noun slap = u3v_wish("slap");
     u3_noun gul  = u3nt(u3nc(1, 0), u3nc(0, 0), 0);  // |~(^ ~)
+    u3_noun slap = u3v_wish("slap");
 
     // ( [%wing p=~[%lon]] )
     //
@@ -208,9 +192,59 @@ u3d_search(u3_noun sub, u3_noun fol)
     {
         u3m_bail(c3__fail);
     }
-    u3_noun boil = u3t(pro);
 
+    u3_noun boil = u3k(u3t(pro));
+    u3z(pro);
+    return boil;
+}
+
+//  RETAINS arguments
+//  XX remove u3dc, use hard-coded axes
+//
+u3n_prog*
+u3d_search(u3_noun sub, u3_noun fol)
+{
+    u3d_prep_ka();
+
+    u3n_prog* pog_u = NULL;
+    u3_weak lit = u3h_git(u3R->byc.lar_p, fol);
+    if ( u3_none != lit )
+    {
+        u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
+        pog_u = ( u3_none != less_pog )
+              ? _cn_to_prog(u3t(less_pog))
+              : NULL;
+    }
+    if ( pog_u ) return pog_u;
+
+    u3_noun boil = _d_get_boil();
     u3_noun cole, code, fols;
+    if ( c3n == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) )
+    {
+        u3m_bail(c3__fail);
+        return 0;
+    }
+    lit = u3kdb_get(u3k(fols), u3k(fol));
+    u3_weak less_nomm;
+    if (u3_none != lit
+        && u3_none != (less_nomm = u3d_match_sock(c3y, sub, lit)))
+    {
+        pog_u = u3n_build_direct(sub, fol, cole, code, fols);
+        u3z(lit);
+        u3z(boil);
+        return pog_u;
+    }
+
+    //  may be u3_none
+    //
+    u3z(lit);
+
+    u3z(boil);
+
+    _d_rout(u3k(sub), u3k(fol));
+    
+    boil = _d_get_boil();
+
     if ( c3n == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) )
     {
         u3m_bail(c3__fail);
@@ -218,6 +252,6 @@ u3d_search(u3_noun sub, u3_noun fol)
     }
 
     pog_u = u3n_build_direct(sub, fol, cole, code, fols);
-    u3z(pro);
+    u3z(boil);
     return pog_u;
 }

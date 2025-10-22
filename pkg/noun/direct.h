@@ -11,9 +11,7 @@
 #include "ska_core_verb.h"
 #include "vortex.h"
 #include "xtract.h"
-
-void
-u3d_rout(u3_noun sub, u3_noun fol);
+#include "jets/k.h"
 
 u3n_prog*
 u3d_search(u3_noun sub, u3_noun fol);
