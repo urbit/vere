@@ -611,14 +611,6 @@ _find_home(void)
     abort();
   }
 
-  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
-    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
-    u3n_ream();
-    u3n_reclaim();
-    u3j_reclaim();
-    u3H->pam_d = _pave_params();
-  }
-
   //  NB: the home road is always north
   //
   {
@@ -665,6 +657,15 @@ _find_home(void)
   u3a_loom_sane();
 
   _rod_vaal(u3R);
+
+  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+    u3j_ream();
+    u3n_ream();
+    u3n_reclaim();
+    u3j_reclaim();
+    u3H->pam_d = _pave_params();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -2344,12 +2345,14 @@ static void
 _cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
+#ifndef U3_URTH_MASS
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
                                      &_cm_realloc_ssl,
                                      &_cm_free_ssl) ) {
     u3l_log("%s", "openssl initialization failed");
     abort();
   }
+#endif
 
   u3je_secp_init();
 }

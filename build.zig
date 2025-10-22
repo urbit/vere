@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const VERSION = "3.5";
+const VERSION = "4.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -33,8 +33,12 @@ const BuildCfg = struct {
     mem_dbg: bool = false,
     c3dbg: bool = false,
     snapshot_validation: bool = false,
+    urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
+    tracy_enable: bool = false,
+    tracy_callstack: bool = false,
+    tracy_no_exit: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -87,6 +91,12 @@ pub fn build(b: *std.Build) !void {
         "Enable snapshot validation (-DU3_SNAPSHOT_VALIDATION)",
     ) orelse false;
 
+    const urth_mass = b.option(
+        bool,
+        "urth-mass",
+        "Enable |mass in urth process (-DU3_URTH_MASS)",
+    ) orelse false;
+
     const binary_name = b.option(
         []const u8,
         "binary-name",
@@ -110,6 +120,10 @@ pub fn build(b: *std.Build) !void {
         ) orelse false
     else
         false;
+
+    const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
+    const tracy_callstack = b.option(bool, "tracy-callstack", "Enable Tracy callstack capture") orelse false;
+    const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
 
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
@@ -143,8 +157,12 @@ pub fn build(b: *std.Build) !void {
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
+        .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
+        .tracy_enable = tracy_enable,
+        .tracy_callstack = tracy_callstack,
+        .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
     };
 
@@ -258,6 +276,19 @@ fn buildBinary(
 
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
+
+    if (cfg.urth_mass)
+        try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
+
+    if (cfg.tracy_enable) {
+        try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});
+        if (cfg.tracy_callstack) {
+            try urbit_flags.appendSlice(&.{"-DTRACY_CALLSTACK"});
+        }
+        if (cfg.tracy_no_exit) {
+            try urbit_flags.appendSlice(&.{"-DTRACY_NO_EXIT"});
+        }
+    }
 
     if (t.cpu.arch == .aarch64) {
         try urbit_flags.appendSlice(&.{
@@ -397,6 +428,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const tracy = if (cfg.tracy_enable) b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+
     //
     // Build Artifact
     //
@@ -465,6 +501,11 @@ fn buildBinary(
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
     urbit.linkLibrary(wasm3.artifact("wasm3"));
+
+    if (cfg.tracy_enable) {
+        urbit.linkLibrary(tracy.?.artifact("tracy"));
+        urbit.addIncludePath(tracy.?.path(""));
+    }
 
     if (t.os.tag.isDarwin()) {
         // Requires llvm@18 homebrew installation
@@ -622,6 +663,11 @@ fn buildBinary(
                 .file = "pkg/vere/io/mesa/pact_test.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "tracy-test",
+                .file = "pkg/vere/tracy_test.c",
+                .deps = vere_test_deps,
+            },
         };
 
         for (tests) |tst| {
@@ -663,6 +709,10 @@ fn buildBinary(
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
+            }
+            if (cfg.tracy_enable) {
+                test_exe.linkLibrary(tracy.?.artifact("tracy"));
+                test_exe.addIncludePath(tracy.?.path(""));
             }
             test_exe.addCSourceFiles(.{
                 .files = &.{tst.file},

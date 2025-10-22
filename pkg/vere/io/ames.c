@@ -564,13 +564,13 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_w hed_w = ((hed_u->req_o &     0x1) <<  2)
-             ^ ((hed_u->sim_o &     0x1) <<  3)
-             ^ ((hed_u->ver_y &     0x7) <<  4)
-             ^ ((hed_u->sac_y &     0x3) <<  7)
-             ^ ((hed_u->rac_y &     0x3) <<  9)
-             ^ ((hed_u->mug_l & 0xfffff) << 11)
-             ^ ((hed_u->rel_o &     0x1) << 31);
+  c3_w hed_w = ((hed_u->req_o       &     0x1) <<  2)
+             ^ ((hed_u->sim_o       &     0x1) <<  3)
+             ^ ((hed_u->ver_y       &     0x7) <<  4)
+             ^ ((hed_u->sac_y       &     0x3) <<  7)
+             ^ ((hed_u->rac_y       &     0x3) <<  9)
+             ^ ((hed_u->mug_l       & 0xfffff) << 11)
+             ^ (((c3_w)hed_u->rel_o &     0x1) << 31);
 
   c3_etch_word(buf_y, hed_w);
 }
@@ -950,7 +950,7 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
       //  print only on first send failure
       //
       c3_w blk_w = imp_y >> 5;
-      c3_w bit_w = 1 << (imp_y & 31);
+      c3_w bit_w = (c3_w)1 << (imp_y & 31);
 
       if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
         c3_c dns_c[256];
@@ -2868,6 +2868,29 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
 }
 
+static u3m_quac**
+_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_ames   *sam_u = (u3_ames*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("scry cache");
+  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->qua_u = 0;
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("lane cache");
+  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
+
+  return all_u;
+}
+
 /* u3_ames_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -2939,6 +2962,7 @@ u3_ames_io_init(u3_pier* pir_u)
   car_u->io.info_f = _ames_io_info;
   car_u->io.slog_f = _ames_io_slog;
   car_u->io.kick_f = _ames_io_kick;
+  car_u->io.mark_f = _ames_io_mark;
   car_u->io.exit_f = _ames_io_exit;
 
   sam_u->fin_s.sam_u = sam_u;

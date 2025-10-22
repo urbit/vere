@@ -600,6 +600,7 @@
           u3_noun (*info_f)(struct _u3_auto*);
           void    (*slog_f)(struct _u3_auto*);
           c3_o    (*kick_f)(struct _u3_auto*, u3_noun, u3_noun);
+          u3m_quac** (*mark_f)(struct _u3_auto*, c3_w*);
           void    (*exit_f)(struct _u3_auto*);  // XX close_cb?
         } u3_auto_cb;
 
@@ -777,6 +778,11 @@
         void
         u3_ovum_free(u3_ovum *egg_u);
 
+      /* u3_ovum_mark: mark a potential event for gc
+      */
+        c3_w
+        u3_ovum_mark(u3_ovum *egg_u);
+
       /* u3_pico_init(): initialize a scry request struct
       */
         u3_pico*
@@ -809,6 +815,10 @@
 
     /**  IO drivers.
     **/
+      /* u3_auto_mark(): mark drivers for gc.
+      */
+        u3m_quac**
+        u3_auto_mark(u3_auto* car_u, c3_w *out_w);
       /* u3_auto_init(): initialize all drivers.
       */
         u3_auto*
@@ -1027,6 +1037,11 @@
                      u3_noun msg,
                      void* ptr_v,
                      void (*done_f)(void*, c3_o));
+
+      /* u3_lord_mark(): mark lord for gc.
+      */
+        u3m_quac*
+        u3_lord_mark(u3_lord* god_u);
 
       /* u3_lord_init(): start serf.
       ** TODO: fix comment and/or name to match mars/urth?
@@ -1403,8 +1418,8 @@
 
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
-        c3_w
-        u3_pier_mark(FILE* fil_u);
+        u3m_quac**
+        u3_pier_mark(u3_pier*, c3_w*);
 
       /* u3_pier_mase(): construct a $mass leaf.
       */

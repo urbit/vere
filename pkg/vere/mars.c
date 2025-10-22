@@ -891,8 +891,9 @@ _mars_step_trace(const c3_c* dir_c)
 /* u3_mars_kick(): maybe perform a task.
 */
 c3_o
-u3_mars_kick(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
+u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_mars* mar_u = ram_u;
   c3_o ret_o = c3n;
 
   _mars_step_trace(mar_u->dir_c);

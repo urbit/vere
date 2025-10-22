@@ -1656,21 +1656,17 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
   c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
 
-  //  For later: check u3A->eve_d against eve_d before migrating
-  //
-  (void)eve_d;
-
   //  NB: all fallthru, all the time
   //
   switch ( lom_w ) {
-    case U3V_VER1: u3_migrate_v2();
-    case U3V_VER2: u3_migrate_v3();
-    case U3V_VER3: u3_migrate_v4();
+    case U3V_VER1: u3_migrate_v2(eve_d);
+    case U3V_VER2: u3_migrate_v3(eve_d);
+    case U3V_VER3: u3_migrate_v4(eve_d);
     case U3V_VER4: {
       u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
       u3e_live(c3n, strdup(dir_c));
       u3m_pave(c3y);
-      u3_migrate_v5();
+      u3_migrate_v5(eve_d);
       u3m_save();
     }
   }
@@ -1857,12 +1853,16 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
       if ( log_u->dun_d < u3A->eve_d ) {
         //  XX bad, add to enum
-        fprintf(stderr, "corrupt pier, snapshot from future\r\n");
+        fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
+                        ") from future (log=%" PRIu64 ")\r\n",
+                        u3A->eve_d, log_u->dun_d);
         exit(1);
       }
       else if ( u3A->eve_d < log_u->epo_d ) {
         //  XX goto full replay
-        fprintf(stderr, "corrupt pier, snapshot out of epoch\r\n");
+        fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
+                        ") out of epoch (%" PRIu64 ")\r\n",
+                        u3A->eve_d, log_u->epo_d);
         exit(1);
       }
 

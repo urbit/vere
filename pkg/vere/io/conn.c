@@ -682,6 +682,7 @@ _moor_poke_out:
   u3z(rud); u3z(jar);
   if ( 0 != err_i ) {
     can_u->mor_u.bal_f(can_u, err_i, err_c);
+    return c3n;
   }
 
   //  regardless of failure, we never block newt
