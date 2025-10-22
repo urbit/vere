@@ -18,7 +18,8 @@ typedef c3_w       u3n_version;
 
 #define U3N_VER1   (u3n_version)0  // zero-indexedfor backcompat
 #define U3N_VER2   (u3n_version)1
-#define U3N_VERLAT U3N_VER2
+#define U3N_VER3   (u3n_version)2
+#define U3N_VERLAT U3N_VER3
 
 /*  snapshot patch format
  */
