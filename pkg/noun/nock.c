@@ -1975,7 +1975,7 @@ _n_comp_direct(u3_noun* ops,
   if ( c3y == u3du(cod) ) {
     tot_w += _n_comp_direct(ops, cod, c3n, c3n, queu, cole, code);
     ++tot_w; _n_emit(ops, SWAP);
-    tot_w += _n_comp_direct(ops, arg, c3n, c3n, queu, cole, code);
+    tot_w += _n_comp_direct(ops, arg, los_o, c3n, queu, cole, code);
     ++tot_w; _n_emit(ops, (c3y == los_o) ? AULT : AUTO);
   }
   else switch ( cod ) {
@@ -2033,7 +2033,7 @@ _n_comp_direct(u3_noun* ops,
         //
         tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);
         ++tot_w; _n_emit(ops, SWAP);
-        tot_w += _n_comp_direct(ops, tel, c3n, c3n, queu, cole, code);
+        tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);
         op_y = (c3y == tel_o) ? NOCT
              : (c3y == los_o) ? NOLK : NOCK;
         ++tot_w; _n_emit(ops, op_y);
@@ -2088,7 +2088,7 @@ _n_comp_direct(u3_noun* ops,
         else if ( !hec_t && !tec_t ) {
           tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);
           ++tot_w; _n_emit(ops, SWAP);
-          tot_w += _n_comp_direct(ops, tel, c3n, c3n, queu, cole, code);
+          tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);
           ++tot_w; _n_emit(ops, (c3y == los_o) ? SALM : SAME);
         }
         else {
@@ -2164,7 +2164,7 @@ _n_comp_direct(u3_noun* ops,
       u3x_cell(hed, &axe, &nef);
       tot_w += _n_comp_direct(ops, tel, c3n, c3n, queu, cole, code);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp_direct(ops, nef, c3n, c3n, queu, cole, code);
+      tot_w += _n_comp_direct(ops, nef, los_o, c3n, queu, cole, code);
 
       ++tot_w;
       switch ( axe ) {
