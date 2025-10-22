@@ -8,6 +8,7 @@
 #include "retrieve.h"
 #include "serial.h"
 #include "ska_core.h"
+#include "ska_core_verb.h"
 #include "vortex.h"
 #include "xtract.h"
 

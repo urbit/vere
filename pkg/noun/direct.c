@@ -84,7 +84,8 @@ u3d_prep_ka()
     }
     // [sock=hoon soak=hoon noir=hoon skan=hoon]
     //
-    u3_noun hoons = u3s_cue_bytes((c3_d)u3_Ka_core_len, u3_Ka_core);
+    // u3_noun hoons = u3s_cue_bytes((c3_d)u3_Ka_core_len, u3_Ka_core);
+    u3_noun hoons = u3s_cue_bytes((c3_d)u3_Ka_core_verb_len, u3_Ka_core_verb);
     u3_noun sock, soak, noir, skan;
     if ( c3n == u3r_mean(hoons,
         2,  &sock,
