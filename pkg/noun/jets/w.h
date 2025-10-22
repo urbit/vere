@@ -140,6 +140,7 @@
     u3_noun u3we_lune(u3_noun);
     u3_noun u3we_mice(u3_noun);
     u3_noun u3we_mink(u3_noun);
+    u3_noun u3we_mink_pre_136(u3_noun);
     u3_noun u3we_mole(u3_noun);
     u3_noun u3we_mule(u3_noun);
     u3_noun u3we_repg(u3_noun);

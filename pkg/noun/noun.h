@@ -18,6 +18,7 @@
 #include "imprison.h"
 #include "log.h"
 #include "nock.h"
+#include "nock_pre_136.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urth.h"

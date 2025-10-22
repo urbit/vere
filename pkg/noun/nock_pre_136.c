@@ -1,6 +1,7 @@
 /// @file
 
 #include "nock.h"
+#include "nock_pre_136.h"
 
 #include "allocate.h"
 #include "hashtable.h"
@@ -1031,7 +1032,6 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__meme:
       case c3__nara:
       case c3__hela:
-      case c3__loop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1071,7 +1071,6 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__nara:
           case c3__hela:
           case c3__spin:
-          case c3__loop:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1737,19 +1736,6 @@ _n_find(u3_noun pre, u3_noun fol)
   }
 }
 
-/* u3n_find(): return prog for given formula,
- *             split by key (u3_nul for no key). RETAIN.
- */
-u3p(u3n_prog)
-u3n_find(u3_noun key, u3_noun fol)
-{
-  u3p(u3n_prog) pog_p;
-  u3t_on(noc_o);
-  pog_p = u3of(u3n_prog, _n_find(key, fol));
-  u3t_off(noc_o);
-  return pog_p;
-}
-
 /* _cn_prog_free(): free memory retained by program pog_u
 */
 static void
@@ -1788,7 +1774,7 @@ _cn_intlen(c3_w num_w)
 /* _cn_is_indexed(): return true if bop_w is an opcodes that uses pog_u->lit_u.non
 **            bop_w: opcode (assumed 0-94)
 */
-c3_b
+static c3_b
 _cn_is_indexed(c3_w bop_w)
 {
   switch (bop_w) {
@@ -1822,7 +1808,7 @@ _cn_is_indexed(c3_w bop_w)
 **                 fol: a nock formula to compile and render
 **             returns: a u3i_string noun of the rendered bytecode
 */
-u3_noun
+static u3_noun
 _cn_etch_bytecode(u3_noun fol) {
   u3n_prog* pog_u = _n_bite(fol);
   c3_y* pog_y = pog_u->byc_u.ops_y;
@@ -1911,15 +1897,6 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3i_cell(tag, u3i_cell(har, per));
     } break;
 
-    case c3__loop: {
-      u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( _(u3qdi_has(u3R->loop_set, key)) ) {
-        u3m_bail(c3__exit);
-      }
-      u3R->loop_set = u3kdi_put(u3R->loop_set, u3k(key));
-      *out = u3nc(tag, key);
-    } break;
-
     case c3__bout: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *out = u3i_cell(tag, now);
@@ -1962,10 +1939,7 @@ static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3R->loop_set = u3kdi_del(u3R->loop_set, u3k(q_tok));
-  }
-  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
+  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
@@ -2021,15 +1995,6 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
-    case c3__loop: {
-      u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( _(u3qdi_has(u3R->loop_set, key)) ) {
-        u3t_mean(*clu);
-        u3m_bail(c3__exit);
-      }
-      u3R->loop_set = u3kdi_put(u3R->loop_set, u3k(key));
-      *clu = u3nc(tag, key);
-    } break;
     case c3__spin: {
       u3t_sstack_push(*clu);
       *clu = c3__spin;
@@ -2098,9 +2063,6 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
   u3_noun p_tok, q_tok, r_tok;
   if ( c3__spin == tok ) {
     u3t_sstack_pop();
-  }
-  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3R->loop_set = u3kdi_del(u3R->loop_set, u3k(q_tok));
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
@@ -2916,18 +2878,6 @@ _n_burn_out(u3_noun bus, u3n_prog* pog_u)
   return _n_burn(pog_u, bus, mov, off);
 }
 
-/* u3n_burn(): execute u3n_prog with bus as subject.
- */
-u3_noun
-u3n_burn(u3p(u3n_prog) pog_p, u3_noun bus)
-{
-  u3_noun pro;
-  u3t_on(noc_o);
-  pro = _n_burn_out(bus, u3to(u3n_prog, pog_p));
-  u3t_off(noc_o);
-  return pro;
-}
-
 /* _n_burn_on(): produce .*(bus fol) with bytecode interpreter
  */
 static u3_noun
@@ -2942,7 +2892,7 @@ _n_burn_on(u3_noun bus, u3_noun fol)
 /* u3n_nock_on(): produce .*(bus fol).  Do not virtualize.
 */
 u3_noun
-u3n_nock_on(u3_noun bus, u3_noun fol)
+u3n_nock_on_pre_136(u3_noun bus, u3_noun fol)
 {
   u3_noun pro;
 
@@ -2957,338 +2907,14 @@ u3n_nock_on(u3_noun bus, u3_noun fol)
   return pro;
 }
 
-/* _cn_take_prog_dat(): take references from junior u3n_prog.
-*/
-static void
-_cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
-{
-  c3_w i_w;
 
-  for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
-    dst_u->lit_u.non[i_w] = u3a_take(src_u->lit_u.non[i_w]);
-  }
-
-  for ( i_w = 0; i_w < src_u->mem_u.len_w; ++i_w ) {
-    u3n_memo* emo_u = &(src_u->mem_u.sot_u[i_w]);
-    u3n_memo* ome_u = &(dst_u->mem_u.sot_u[i_w]);
-    ome_u->sip_l    = emo_u->sip_l;
-    ome_u->key      = u3a_take(emo_u->key);
-    ome_u->cid      = emo_u->cid;
-  }
-
-  for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_take(&(dst_u->cal_u.sit_u[i_w]),
-                  &(src_u->cal_u.sit_u[i_w]));
-  }
-
-  for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
-    u3j_rite_take(&(dst_u->reg_u.rit_u[i_w]),
-                  &(src_u->reg_u.rit_u[i_w]));
-  }
-}
-
-/*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
-*/
-static u3p(u3n_prog)
-_cn_take_prog_cb(c3_w pog_w)
-{
-  u3n_prog* pog_u = _cn_to_prog(pog_w);
-  u3n_prog* gop_u;
-
-  if ( c3y == pog_u->byc_u.own_o ) {
-    c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
-    gop_u = _n_prog_new(pog_u->byc_u.len_w,
-                        pog_u->cal_u.len_w,
-                        pog_u->reg_u.len_w,
-                        pog_u->lit_u.len_w,
-                        pog_u->mem_u.len_w);
-    memcpy(gop_u->byc_u.ops_y, pog_u->byc_u.ops_y, pog_u->byc_u.len_w + pad_w);
-  }
-  else {
-    gop_u = _n_prog_old(pog_u);
-  }
-
-  _cn_take_prog_dat(gop_u, pog_u);
-  // _n_prog_take_dat(gop_u, pog_u, c3n);
-
-  return _cn_of_prog(gop_u);
-}
-
-/* u3n_take(): copy junior bytecode state.
-*/
-u3p(u3h_root)
-u3n_take(u3p(u3h_root) har_p)
-{
-  return u3h_take_with(har_p, _cn_take_prog_cb);
-}
-
-/* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
-*/
-static void
-_cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
-{
-  c3_w i_w;
-
-  for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
-    u3z(dst_u->lit_u.non[i_w]);
-    dst_u->lit_u.non[i_w] = src_u->lit_u.non[i_w];
-  }
-
-  for ( i_w = 0; i_w < src_u->mem_u.len_w; ++i_w ) {
-    u3n_memo* emo_u = &(dst_u->mem_u.sot_u[i_w]);
-    u3n_memo* ome_u = &(src_u->mem_u.sot_u[i_w]);
-    u3z(emo_u->key);
-    emo_u->sip_l    = ome_u->sip_l;
-    emo_u->key      = ome_u->key;
-    emo_u->cid      = ome_u->cid;
-  }
-
-  for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_merge(&(dst_u->cal_u.sit_u[i_w]),
-                   &(src_u->cal_u.sit_u[i_w]));
-  }
-
-  for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
-    u3j_rite_merge(&(dst_u->reg_u.rit_u[i_w]),
-                   &(src_u->reg_u.rit_u[i_w]));
-  }
-}
-
-/*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
-*/
-static void
-_cn_merge_prog_cb(u3_noun kev, void* wit)
-{
-  u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
-  u3n_prog*     pog_u;
-  u3_weak         got;
-  u3_noun         key;
-  c3_w          pog_w;
-  u3x_cell(kev, &key, &pog_w);
-
-  pog_u = _cn_to_prog(pog_w);
-  got   = u3h_git(har_p, key);
-
-  if ( u3_none != got ) {
-    u3n_prog* sep_u = _cn_to_prog(got);
-    _cn_merge_prog_dat(sep_u, pog_u);
-    u3a_free(pog_u);
-    pog_u = sep_u;
-  }
-
-  u3h_put(har_p, key, _cn_of_prog(pog_u));
-}
-
-/* u3n_reap(): promote bytecode state.
-*/
-void
-u3n_reap(u3p(u3h_root) har_p)
-{
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
-  // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
-}
-
-/* _n_ream(): ream program call sites
-*/
-void
-_n_ream(u3_noun kev)
-{
-  u3n_prog* pog_u = _cn_to_prog(u3t(kev));
-
-  c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
-  c3_w pod_w = pog_u->lit_u.len_w % 2;
-  c3_w ped_w = pog_u->mem_u.len_w % 2;
-  // fix up pointers for loom portability
-  pog_u->byc_u.ops_y = (c3_y*) _n_prog_dat(pog_u);
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
-  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
-  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
-
-  for ( c3_w i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
-    u3j_site_ream(&(pog_u->cal_u.sit_u[i_w]));
-  }
-}
-
-/* u3n_ream(): refresh after restoring from checkpoint.
-*/
-void
-u3n_ream()
-{
-  u3_assert(u3R == &(u3H->rod_u));
-  u3h_walk(u3R->byc.har_p, _n_ream);
-}
-
-/* _n_prog_mark(): mark program for gc.
-*/
-static c3_w
-_n_prog_mark(u3n_prog* pog_u)
-{
-  c3_w i_w, tot_w = u3a_mark_mptr(pog_u);
-
-  for ( i_w = 0; i_w < pog_u->lit_u.len_w; ++i_w ) {
-    tot_w += u3a_mark_noun(pog_u->lit_u.non[i_w]);
-  }
-
-  for ( i_w = 0; i_w < pog_u->mem_u.len_w; ++i_w ) {
-    tot_w += u3a_mark_noun(pog_u->mem_u.sot_u[i_w].key);
-  }
-
-  for ( i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
-    tot_w += u3j_site_mark(&(pog_u->cal_u.sit_u[i_w]));
-  }
-
-  for ( i_w = 0; i_w < pog_u->reg_u.len_w; ++i_w ) {
-    tot_w += u3j_rite_mark(&(pog_u->reg_u.rit_u[i_w]));
-  }
-
-  return tot_w;
-}
-
-/* _n_bam(): u3h_walk_with helper for u3n_mark
- */
-static void
-_n_bam(u3_noun kev, void* dat)
-{
-  u3n_prog* pog = _cn_to_prog(u3t(kev));
-  c3_w*   bam_w = dat;
-
-  *bam_w += _n_prog_mark(pog);
-}
-
-/* u3n_mark(): mark the bytecode cache for gc.
- */
-u3m_quac*
-u3n_mark()
-{
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
-
-  qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
-  qua_u[0]->nam_c = strdup("bytecode programs");
-
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
-
-  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
-  qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
-
-  qua_u[2] = NULL;
-
-  u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
-  tot_u->nam_c = strdup("total nock stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
-  tot_u->qua_u = qua_u;
-
-  return tot_u;
-}
-
-/* u3n_reclaim(): clear ad-hoc persistent caches to reclaim memory.
-*/
-void
-u3n_reclaim(void)
-{
-  //  clear the bytecode cache
-  //
-  //    We can't just u3h_free() -- the value is a post to a u3n_prog.
-  //    Note that the hank cache *must* also be freed (in u3j_reclaim())
-  //
-  u3n_free();
-  u3R->byc.har_p = u3h_new();
-}
-
-/* u3n_rewrite_compact(): rewrite the bytecode cache for compaction.
- *
- * NB: u3R->byc.har_p *must* be cleared (currently via u3n_reclaim above),
- * since it contains things that look like nouns but aren't.
- * Specifically, it contains "cells" where the tail is a
- * pointer to a u3a_malloc'ed block that contains loom pointers.
- *
- * You should be able to walk this with u3h_walk and rewrite the
- * pointers, but you need to be careful to handle that u3a_malloc
- * pointers can't be turned into a box by stepping back two words. You
- * must step back one word to get the padding, step then step back that
- * many more words (plus one?).
- */
-void
-u3n_rewrite_compact()
-{
-  u3h_relocate(&(u3R->byc.har_p));
-}
-
-
-/* _n_feb(): u3h_walk helper for u3n_free
- */
-static void
-_n_feb(u3_noun kev)
-{
-  _cn_prog_free(_cn_to_prog(u3t(kev)));
-}
-
-/* u3n_free(): free bytecode cache
- */
-void
-u3n_free()
-{
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk(har_p, _n_feb);
-  u3h_free(har_p);
-}
-
-/* u3n_kick_on(): fire `gat` without changing the sample.
-*/
-u3_noun
-u3n_kick_on(u3_noun gat)
-{
-  return u3j_kink(gat, 2);
-}
-
-c3_w exc_w;
-
-/* u3n_slam_on(): produce (gat sam).
-*/
-u3_noun
-u3n_slam_on(u3_noun gat, u3_noun sam)
-{
-  u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
-
-#if 0
-  if ( &u3H->rod_u == u3R ) {
-    if ( exc_w == 1 ) {
-      u3_assert(0);
-    }
-    exc_w++;
-  }
-#endif
-  u3z(gat);
-  return u3n_kick_on(cor);
-}
 
 /* u3n_nock_et(): produce .*(bus fol), as ++toon, in namespace.
 */
 u3_noun
-u3n_nock_et(u3_noun gul, u3_noun bus, u3_noun fol)
+u3n_nock_et_pre_136(u3_noun gul, u3_noun bus, u3_noun fol)
 {
-  return u3m_soft_run(gul, u3n_nock_on, bus, fol);
-}
-
-/* u3n_slam_et(): produce (gat sam), as ++toon, in namespace.
-*/
-u3_noun
-u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam)
-{
-  return u3m_soft_run(gul, u3n_slam_on, gat, sam);
-}
-
-/* u3n_nock_an(): as nock_et(), but with the scry handler that always blocks.
-*/
-u3_noun
-u3n_nock_an(u3_noun bus, u3_noun fol)
-{
-  u3_noun gul = u3nt(u3nc(1, 0), u3nc(0, 0), 0);  //  |~(^ ~)
-  return u3n_nock_et(gul, bus, fol);
+  return u3m_soft_run(gul, u3n_nock_on_pre_136, bus, fol);
 }
 
 

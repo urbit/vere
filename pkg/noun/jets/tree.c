@@ -991,7 +991,7 @@ static c3_c* _140_qua_sfix_ha[] = {
   0
 };
 
-static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink}, {}};
+static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink_pre_136}, {}};
 static c3_c* _140_qua_mink_ha[] = {
   "99b653da6a21fa3375424811af288f59164592ece4a072abc460df03e81abcaf",
   0
