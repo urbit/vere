@@ -14,6 +14,19 @@
   /**  Functions.
   **/
 
+
+    /* u3n_slam_on(): produce (gat sam).
+       No %loop hint
+    */
+    u3_noun
+    u3n_slam_on_pre_136(u3_noun gat, u3_noun sam);
+
+   /* u3n_nock_on(): produce .*(bus fol).  Do not virtualize.
+      No %loop hint
+   */
+   u3_noun
+   u3n_nock_on_pre_136(u3_noun bus, u3_noun fol);
+
     /* u3n_nock_et(): produce .*(bus fol), as ++toon, in namespace.
        No %loop hint
     */

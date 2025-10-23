@@ -2889,6 +2889,26 @@ _n_burn_on(u3_noun bus, u3_noun fol)
   return _n_burn_out(bus, pog_u);
 }
 
+/* u3n_slam_on(): produce (gat sam).
+*/
+u3_noun
+u3n_slam_on_pre_136(u3_noun gat, u3_noun sam)
+{
+  u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+
+#if 0
+  if ( &u3H->rod_u == u3R ) {
+    if ( exc_w == 1 ) {
+      u3_assert(0);
+    }
+    exc_w++;
+  }
+#endif
+  u3z(gat);
+  u3_noun fol = u3x_at(2, cor);
+  return u3n_nock_on_pre_136(cor, u3k(fol));
+}
+
 /* u3n_nock_on(): produce .*(bus fol).  Do not virtualize.
 */
 u3_noun

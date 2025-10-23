@@ -996,12 +996,12 @@ static c3_c* _140_qua_mink_ha[] = {
   "99b653da6a21fa3375424811af288f59164592ece4a072abc460df03e81abcaf",
   0
 };
-static u3j_harm _140_qua_mole_a[] = {{".2", u3we_mole}, {}};
+static u3j_harm _140_qua_mole_a[] = {{".2", u3we_mole_pre_136}, {}};
 static c3_c* _140_qua_mole_ha[] = {
   "029c1acaff1911c54ce31a3693397394604ea970bf076078c1a1cfa23d2fa74e",
   0
 };
-static u3j_harm _140_qua_mule_a[] = {{".2", u3we_mule}, {}};
+static u3j_harm _140_qua_mule_a[] = {{".2", u3we_mule_pre_136}, {}};
 static c3_c* _140_qua_mule_ha[] = {
   "d54688d726565ddade7f2636741cad7209ea40fab28d3335555d8a02ff6001c4",
   0
