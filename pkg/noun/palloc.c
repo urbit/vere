@@ -1043,6 +1043,73 @@ _post_status(u3_post som_p)
   }
 }
 
+static void
+_sane_dell(void)
+{
+  u3p(u3a_dell) pre_p, nex_p, fre_p = HEAP.fre_p;
+  u3a_dell*     fre_u;
+
+  if ( !HEAP.fre_p != !HEAP.erf_p ) {
+    fprintf(stderr, "dell: insane: head %u tail %u\r\n", !!HEAP.fre_p, !!HEAP.erf_p);
+  }
+
+  while ( fre_p ) {
+    fre_u = u3to(u3a_dell, fre_p);
+    pre_p = fre_u->pre_p;
+    nex_p = fre_u->nex_p;
+
+    if ( pre_p ) {
+      if ( u3to(u3a_dell, pre_p)->nex_p != fre_p ) {
+        fprintf(stderr, "dell: insane: prev next not us\r\n");
+      }
+    }
+    else if ( fre_p != HEAP.fre_p ) {
+      fprintf(stderr, "dell: insane: missing previous\r\n");
+    }
+
+    if ( nex_p ) {
+      if ( u3to(u3a_dell, nex_p)->pre_p != fre_p ) {
+        fprintf(stderr, "dell: insane: next prev not us\r\n");
+      }
+    }
+    else if ( fre_p != HEAP.erf_p ) {
+      fprintf(stderr, "dell: insane: missing next\r\n");
+    }
+
+    fre_p = nex_p;
+  }
+
+  {
+    u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+    c3_w fre_w, nex_w, pag_w = 0;
+
+    fre_p = HEAP.fre_p;
+
+    while ( pag_w < HEAP.len_w ) {
+      fre_u = u3tn(u3a_dell, fre_p);
+      fre_w = fre_u ? fre_u->pag_w : HEAP.len_w;   // XX wrong in south
+
+      for ( ; pag_w < fre_w; pag_w++ ) {
+        if ( !dir_u[pag_w] ) {
+          fprintf(stderr, "dell: insane page %u free in directory, not in list\r\n", pag_w);
+        }
+      }
+
+      if ( fre_u ) {
+        nex_w = fre_u->pag_w + fre_u->siz_w;  // XX wrong in south
+
+        for ( ; pag_w < nex_w; pag_w++ ) {
+          if ( dir_u[pag_w] ) {
+            fprintf(stderr, "dell: insane page %u free in list, not in directory\r\n", pag_w);
+          }
+        }
+
+        fre_p = fre_u->nex_p;
+      }
+    }
+  }
+}
+
 static c3_w
 _idle_pages(void)
 {
