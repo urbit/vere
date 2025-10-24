@@ -1798,7 +1798,7 @@ u3a_idle(u3a_road* rod_u)
 {
   //  XX ignores argument
   c3_w pag_w = _idle_pages();
-  if ( pag_w ) {
+  if ( (u3C.wag_w & u3o_verbose) && pag_w ) {
     fprintf(stderr, "loom: idle %u complete pages\r\n", pag_w);
   }
   return (pag_w << u3a_page) + _idle_words();
