@@ -2008,6 +2008,9 @@ _pack_seek(void)
     while ( (fre_p = HEAP.fre_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
       HEAP.fre_p = fre_u->nex_p;
+      if ( HEAP.fre_p ) {
+        u3to(u3a_dell, HEAP.fre_p)->pre_p = 0;
+      }
       _ifree(fre_p);
     }
   }
@@ -2225,7 +2228,6 @@ _pack_relocate_heap(void)
 {
   //  this is possible if freeing unused u3a_crag's
   //  caused an entire hunk page to be free'd
-  //  NB: this corrupts pre_p
   //
   if ( HEAP.fre_p ) {
     u3a_dell *fre_u;
@@ -2240,6 +2242,12 @@ _pack_relocate_heap(void)
 
     while ( *ref_p ) {
       fre_u  = u3to(u3a_dell, *ref_p);
+      //  NB: this corrupts pre_p
+      //
+      //    temporarily singly-linked,
+      //    also avoids issues when freeing post pack
+      //
+      fre_u->pre_p = 0;
       *ref_p = _pack_relocate(*ref_p);
       ref_p  = &(fre_u->nex_p);
     }
@@ -2464,4 +2472,6 @@ _pack_move(void)
       _ifree(fre_p);
     }
   }
+
+  HEAP.erf_p = 0;
 }
