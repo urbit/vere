@@ -171,14 +171,14 @@ pub fn build(b: *std.Build) !void {
             try buildBinary(b, b.resolveTargetQuery(t), optimize, build_cfg);
         }
     } else {
-        const t = target.result;
+        // const t = target.result;
         try buildBinary(
             b,
-            if (t.os.tag == .linux and
-                target.query.isNative() and
-                !asan and !ubsan)
-                b.resolveTargetQuery(.{ .abi = .musl })
-            else
+            // if (t.os.tag == .linux and
+            //     target.query.isNative() and
+            //     !asan and !ubsan)
+            //     b.resolveTargetQuery(.{ .abi = .musl })
+            // else
                 target,
             optimize,
             build_cfg,
@@ -442,6 +442,9 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
     });
+
+    urbit.rdynamic = true;
+    if (t.os.tag == .linux) urbit.linkSystemLibrary("dl");
 
     if (t.os.tag == .windows) {
         urbit.stack_size = 67108864;
