@@ -12,6 +12,8 @@
 
 #include "palloc.c"
 
+#include <execinfo.h>
+
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 u3a_gack u3a_Gack;
@@ -336,6 +338,13 @@ u3a_celloc(void)
   }
   else {
     cel_u = u3a_walloc(c3_wiseof(*cel_u));
+
+    c3_w  idx_w = u3a_outa(cel_u) >> u3a_vits;
+    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+    void* buf_u[64];
+    c3_i siz_i = backtrace(buf_u, 64);
+    sha_u->siz_i = siz_i;
+    sha_u->stk_u = backtrace_symbols(buf_u, siz_i);
   }
 
 #ifdef U3_CPU_DEBUG
@@ -352,6 +361,14 @@ void
 u3a_cfree(c3_w* cel_w)
 {
   u3_post *cel_p;
+
+  if ( !u3R->cel.cel_p ) {
+    c3_w  idx_w = u3a_outa(cel_w) >> u3a_vits;
+    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+    c3_free(sha_u->stk_u);
+    sha_u->siz_i = 0;
+    sha_u->stk_u = 0;
+  }
 
   if ( u3R->cel.cel_p ) {
     if ( u3R->cel.hav_w < (1U << u3a_page) ) {

@@ -1278,6 +1278,22 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
   }
 
   fprintf(fil_u, "}\r\n");
+  if (4 == siz_w) {
+    fprintf(fil_u, "cell-like leak:\r\n");
+    c3_w idx_w = som_p >> u3a_vits;
+    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+    if (!sha_u->stk_u) {
+      fprintf(fil_u, "  no stacktrace\r\n");
+    }
+    else {
+      for (c3_w i_w = 0; i_w < sha_u->siz_i; i_w++) {
+        fprintf(fil_u, "  %s\r\n", sha_u->stk_u[i_w]);
+      }
+      c3_free(sha_u->stk_u);
+      sha_u->stk_u = 0;
+      sha_u->siz_i = 0;
+    }
+  }
 }
 
 static c3_w

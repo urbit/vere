@@ -10,6 +10,13 @@
 #include "types.h"
 #include "version.h"
 
+typedef struct {
+  char** stk_u;
+  c3_i   siz_i;
+} u3m_shadow;
+
+extern u3m_shadow* u3m_Shadow;
+
     /** System management.
     **/
       /* u3m_boot(): start the u3 system. return next event, starting from 1.

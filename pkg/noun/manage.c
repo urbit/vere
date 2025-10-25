@@ -2362,6 +2362,8 @@ _cm_free2(void* tox_v, size_t siz_i)
   u3a_free(tox_v);
 }
 
+u3m_shadow* u3m_Shadow;
+
 /* u3m_init(): start the environment.
 */
 void
@@ -2416,6 +2418,8 @@ u3m_init(size_t len_i)
 
     u3C.wor_i = len_i >> 2;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
+
+    u3m_Shadow = c3_calloc((u3C.wor_i >> u3a_vits) * sizeof(u3m_shadow));
   }
 }
 
