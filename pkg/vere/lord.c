@@ -571,7 +571,7 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case c3__quiz: {
       _lord_plea_quiz(god_u, u3k(dat));
-    }
+    } break;
   }
 
   u3z(jar);
