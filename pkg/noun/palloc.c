@@ -3,6 +3,7 @@
 #include "allocate.h"
 #include "options.h"
 #include "vortex.h"
+#include <execinfo.h>
 
 #undef SANITY
 
@@ -1286,9 +1287,11 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
       fprintf(fil_u, "  no stacktrace\r\n");
     }
     else {
+      char** sym_u = backtrace_symbols(sha_u->stk_u, sha_u->siz_i);
       for (c3_w i_w = 0; i_w < sha_u->siz_i; i_w++) {
-        fprintf(fil_u, "  %s\r\n", sha_u->stk_u[i_w]);
+        fprintf(fil_u, "  %s\r\n", sym_u[i_w]);
       }
+      c3_free(sym_u);
       c3_free(sha_u->stk_u);
       sha_u->stk_u = 0;
       sha_u->siz_i = 0;

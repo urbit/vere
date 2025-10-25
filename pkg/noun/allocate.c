@@ -341,10 +341,10 @@ u3a_celloc(void)
 
     c3_w  idx_w = u3a_outa(cel_u) >> u3a_vits;
     u3m_shadow* sha_u = &u3m_Shadow[idx_w];
-    void* buf_u[64];
+    void** buf_u = c3_malloc(64 * sizeof(void*));
     c3_i siz_i = backtrace(buf_u, 64);
     sha_u->siz_i = siz_i;
-    sha_u->stk_u = backtrace_symbols(buf_u, siz_i);
+    sha_u->stk_u = buf_u;
   }
 
 #ifdef U3_CPU_DEBUG

@@ -11,7 +11,7 @@
 #include "version.h"
 
 typedef struct {
-  char** stk_u;
+  void** stk_u;
   c3_i   siz_i;
 } u3m_shadow;
 
