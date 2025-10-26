@@ -12,7 +12,9 @@
 
 #include "ent/ent.h"
 
+#ifndef U3_OS_windows
 #include <arpa/inet.h>
+#endif
 
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
@@ -524,13 +526,13 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_w hed_w = ((hed_u->req_o &     0x1) <<  2)
-             ^ ((hed_u->sim_o &     0x1) <<  3)
-             ^ ((hed_u->ver_y &     0x7) <<  4)
-             ^ ((hed_u->sac_y &     0x3) <<  7)
-             ^ ((hed_u->rac_y &     0x3) <<  9)
-             ^ ((hed_u->mug_l & 0xfffff) << 11)
-             ^ ((hed_u->rel_o &     0x1) << 31);
+  c3_w hed_w = ((hed_u->req_o       &     0x1) <<  2)
+             ^ ((hed_u->sim_o       &     0x1) <<  3)
+             ^ ((hed_u->ver_y       &     0x7) <<  4)
+             ^ ((hed_u->sac_y       &     0x3) <<  7)
+             ^ ((hed_u->rac_y       &     0x3) <<  9)
+             ^ ((hed_u->mug_l       & 0xfffff) << 11)
+             ^ (((c3_w)hed_u->rel_o &     0x1) << 31);
 
   c3_etch_word(buf_y, hed_w);
 }
@@ -2101,6 +2103,35 @@ _ames_io_slog(u3_ames* sam_u)
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
 }
 
+static u3m_quac**
+_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(2 * sizeof(*all_u));
+  u3_ames   *sam_u = (u3_ames*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("scry cache");
+  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->qua_u = 0;
+
+//  XX tinnus
+//
+//  all_u[1] = c3_malloc(sizeof(**all_u));
+//  all_u[1]->nam_c = strdup("lane cache");
+//  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+//  all_u[1]->qua_u = 0;
+//
+//  all_u[2] = 0;
+//
+//  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
+
+  all_u[1] = 0;
+
+  *out_w = all_u[0]->siz_w;
+
+  return all_u;
+}
+
 /* u3_ames_io_init(): initialize ames I/O.
 */
 u3_ames*
@@ -2155,7 +2186,6 @@ u3_ames_io_init(u3_mesa_auto* mes_u)
   if ( c3y == sam_u->pir_u->fak_o ) {
     u3_Host.ops_u.net = c3n;
   }
-
 
   sam_u->fin_s.sam_u = sam_u;
 

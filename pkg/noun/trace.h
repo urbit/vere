@@ -3,13 +3,20 @@
 #ifndef U3_TRACE_H
 #define U3_TRACE_H
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "c3/c3.h"
 #include "options.h"
 #include "types.h"
+#include "allocate.h"
 
 #ifdef U3_CPU_DEBUG
 # include "options.h"
 #endif
+
+#define SLOW_STACK_NAME  "/spin_stack_page_%d"
+#define TRACE_PSIZE (1U << (u3a_page +2))
 
   /** Data structures.
   **/
@@ -23,6 +30,14 @@
         c3_o coy_o;                 //  now executing in copy
         c3_o euq_o;                 //  now executing in equal
       } u3t_trace;
+
+   /* u3t_spin: %spin hint stack
+    */
+    typedef struct {
+      c3_w off_w;
+      c3_w fow_w;
+      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
+    } u3t_spin;
 
   /**  Macros.
   **/
@@ -177,10 +192,38 @@
       u3_noun
       u3t_etch_meme(c3_l mod_l);
 
+    /* u3t_sstack_init: initalize a root node on the spin stack 
+     */
+      void
+      u3t_sstack_init(void);
+
+    /* u3t_sstack_init: initalize a root node on the spin stack 
+     */
+      u3t_spin*
+      u3t_sstack_open(void);
+
+    /* u3t_sstack_exit: initalize a root node on the spin stack 
+     */
+      void
+      u3t_sstack_exit(void);
+
+    /* u3t_sstack_push: push a noun on the spin stack.
+     */
+      void
+      u3t_sstack_push(u3_noun nam);
+
+    /* u3t_sstack_pop: pop a noun from the spin stack.
+     */
+      void
+      u3t_sstack_pop(void);
+
+
   /** Globals.
   **/
       /// Tracing profiler.
       extern u3t_trace u3t_Trace;
+      extern u3t_spin* stk_u;
+
 #     define u3T u3t_Trace
 
 

@@ -20,6 +20,9 @@
         .pkg_noun = .{
             .path = "./pkg/noun",
         },
+        .pkg_past = .{
+            .path = "./pkg/past",
+        },
         .pkg_vere = .{
             .path = "./pkg/vere",
         },
@@ -59,6 +62,9 @@
         },
         .wasm3 = .{
             .path = "./ext/wasm3",
+        },
+        .tracy = .{
+            .path = "./ext/tracy",
         },
     },
     .paths = .{

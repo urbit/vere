@@ -8,7 +8,11 @@
 #include "ur/ur.h"
 #include "platform/rsignal.h"
 #include "vere.h"
+
+#ifndef U3_OS_windows
 #include "sigsegv.h"
+#endif
+
 #include "openssl/conf.h"
 #include "openssl/engine.h"
 #include "openssl/err.h"
@@ -19,7 +23,6 @@
 #include "getopt.h"
 #include "libgen.h"
 #include "pthread.h"
-#include "spawn.h"
 
 #include "ca_bundle.h"
 #include "pace.h"
@@ -27,15 +30,8 @@
 #include "whereami.h"
 #include "mars.h"
 
-//  serf module state
-//
-static u3_serf        u3V;             //  one serf per process
 static u3_moat      inn_u;             //  input stream
 static u3_mojo      out_u;             //  output stream
-static u3_cue_xeno* sil_u;             //  cue handle
-
-#undef SERF_TRACE_JAM
-#undef SERF_TRACE_CUE
 
 /* Require unsigned char
  */
@@ -82,15 +78,15 @@ _main_readw(const c3_c* str_c, c3_w max_w, c3_w* out_w)
   else return c3n;
 }
 
-/* _main_readw_loom(): parse loom pointer bit size from a string.
+/* _main_read_loom(): parse loom pointer bit size from a string.
 */
 static c3_i
-_main_readw_loom(const c3_c* arg_c, c3_y* out_y)
+_main_read_loom(const c3_c* nam_c, const c3_c* arg_c, c3_y* out_y)
 {
   c3_w lom_w;
-  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
+  c3_o res_o = _main_readw(arg_c, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", nam_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -197,7 +193,9 @@ _main_init(void)
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
   u3_Host.ops_u.siz_i =
-#if (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
+#if defined(U3_OS_windows)
+    0xf00000000;
+#elif (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
   // 500 GiB is as large as musl on aarch64 wants to allow
   0x7d00000000;
 #else
@@ -287,7 +285,6 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "no-dock",             no_argument,       NULL, c3__nodo },
     { "quiet",               no_argument,       NULL, 'q' },
     { "versions",            no_argument,       NULL, 'R' },
-    { "replay-from",         required_argument, NULL, 'r' },
     { "skip-battery-hashes", no_argument,       NULL, 'S' },
     { "autoselect-pill",     no_argument,       NULL, 's' },
     { "no-tty",              no_argument,       NULL, 't' },
@@ -316,7 +313,7 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:qr:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:q:stu:vw:x",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
@@ -325,7 +322,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 5: {  //  urth-loom
-        if (_main_readw_loom("urth-loom", &u3_Host.ops_u.lut_y)) {
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
           return c3n;
         }
         break;
@@ -377,7 +374,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           return c3n;
         }
         break;
@@ -494,10 +491,6 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 'R': {
         u3_Host.ops_u.rep = c3y;
         return c3y;
-      }
-      case 'r': {
-        u3_Host.ops_u.roc_c = strdup(optarg);
-        break;
       }
       case 'u': {
         u3_Host.ops_u.url_c = strdup(optarg);
@@ -817,8 +810,11 @@ _cw_usage(c3_c* bin_c)
     "  %s chop %.*s              truncate event log:\n",
     "  %s roll %.*s              rollover to new epoch:\n",
     "  %s vere ARGS <output dir>    download binary:\n",
-    "\n  run as a 'serf':\n",
-    "    %s serf <pier> <key> <flags> <cache-size> <at-event>"
+    "\nmars, ipc:\n",
+    "  boot a pier:\n",
+    "    %s boot <pier> <key> <flags> <cache-size>\n",
+    "  run a pier:\n",
+    "    %s work <pier> <key> <flags> <cache-size> <replay-to>"
     "\n",
     0
   };
@@ -877,7 +873,6 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
-    "-r, --replay-from NUMBER      Load snapshot from event\n",
     "-S, --skip-battery-hashes     Disable battery hashing\n",
     // XX find a way to re-enable
     // "-s, --autoselect-pill      Pill URL from arvo git hash\n",
@@ -937,9 +932,11 @@ report(void)
 {
   printf("urbit %s\n", URBIT_VERSION);
   printf("gmp: %s\n", gmp_version);
+  #ifndef U3_OS_windows
   printf("sigsegv: %d.%d\n",
          (libsigsegv_version >> 8) & 0xff,
          libsigsegv_version & 0xff);
+  #endif
   printf("openssl: %s\n", SSLeay_version(SSLEAY_VERSION));
   printf("libuv: %s\n", uv_version_string());
   printf("libh2o: %d.%d.%d\n",
@@ -954,14 +951,6 @@ report(void)
          LIBCURL_VERSION_MAJOR,
          LIBCURL_VERSION_MINOR,
          LIBCURL_VERSION_PATCH);
-}
-
-/* _stop_exit_fore(): exit before.
-*/
-static void
-_stop_exit_fore(c3_i int_i)
-{
-  kill(getpid(), SIGTERM);
 }
 
 /* _stop_exit(): exit immediately.
@@ -983,16 +972,16 @@ _stop_on_boot_completed_cb()
   u3_king_exit();
 }
 
-/* _cw_serf_fail(): failure stub.
+/* _cw_io_fail(): failure stub.
 */
 static void
-_cw_serf_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
+_cw_io_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
 {
   if ( UV_EOF == err_i ) {
-    fprintf(stderr, "serf: pier unexpectedly shut down\r\n");
+    fprintf(stderr, "mars: urth unexpectedly shut down\r\n");
   }
   else {
-    fprintf(stderr, "serf: pier error: %s\r\n", err_c);
+    fprintf(stderr, "mars: ipc error: %s\r\n", err_c);
   }
 
   exit(1);
@@ -1007,129 +996,33 @@ _cw_king_fail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   exit(1);
 }
 
-/* _cw_serf_send(): send plea back to daemon.
+/* _cw_io_send(): send plea back to daemon.
 */
 static void
-_cw_serf_send(u3_noun pel)
+_cw_io_send(u3_noun pel)
 {
   c3_d  len_d;
   c3_y* byt_y;
 
-#ifdef SERF_TRACE_JAM
-  u3t_event_trace("serf ipc jam", 'B');
-#endif
-
   u3s_jam_xeno(pel, &len_d, &byt_y);
-
-#ifdef SERF_TRACE_JAM
-  u3t_event_trace("serf ipc jam", 'E');
-#endif
-
   u3_newt_send(&out_u, len_d, byt_y);
   u3z(pel);
 }
 
-/* _cw_serf_send_slog(): send hint output (hod is [priority tank]).
+/* _cw_io_send_slog(): send hint output (hod is [priority tank]).
 */
 static void
-_cw_serf_send_slog(u3_noun hod)
+_cw_io_send_slog(u3_noun hod)
 {
-  _cw_serf_send(u3nc(c3__slog, hod));
+  _cw_io_send(u3nc(c3__slog, hod));
 }
 
-/* _cw_serf_send_stdr(): send stderr output (%flog)
+/* _cw_io_send_stdr(): send stderr output (%flog).
 */
 static void
-_cw_serf_send_stdr(c3_c* str_c)
+_cw_io_send_stdr(c3_c* str_c)
 {
-  _cw_serf_send(u3nc(c3__flog, u3i_string(str_c)));
-}
-
-/* _cw_serf_step_trace(): initialize or rotate trace file.
-*/
-static void
-_cw_serf_step_trace(void)
-{
-  if ( u3C.wag_w & u3o_trace ) {
-    c3_w trace_cnt_w = u3t_trace_cnt();
-    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
-      u3t_trace_open(u3V.dir_c);
-    }
-    else if ( trace_cnt_w >= 100000 ) {
-      u3t_trace_close();
-      u3t_trace_open(u3V.dir_c);
-    }
-  }
-}
-
-/* _cw_serf_writ(): process a command from the king.
-*/
-static void
-_cw_serf_writ(void* vod_p, c3_d len_d, c3_y* byt_y)
-{
-  u3_weak jar;
-  u3_noun ret;
-
-  _cw_serf_step_trace();
-
-#ifdef SERF_TRACE_CUE
-  u3t_event_trace("serf ipc cue", 'B');
-#endif
-
-  jar = u3s_cue_xeno_with(sil_u, len_d, byt_y);
-
-#ifdef SERF_TRACE_CUE
-  u3t_event_trace("serf ipc cue", 'E');
-#endif
-
-  if (  (u3_none == jar)
-     || (c3n == u3_serf_writ(&u3V, jar, &ret)) )
-  {
-    _cw_serf_fail(0, -1, "bad jar");
-  }
-  else {
-    _cw_serf_send(ret);
-
-    //  all references must now be counted, and all roots recorded
-    //
-    u3_serf_post(&u3V);
-  }
-}
-
-/* _cw_serf_stdio(): fix up std io handles
-*/
-static void
-_cw_serf_stdio(c3_i* inn_i, c3_i* out_i)
-{
-  //  the serf is spawned with [FD 0] = events and [FD 1] = effects
-  //  we dup [FD 0 & 1] so we don't accidentally use them for something else
-  //  we replace [FD 0] (stdin) with a fd pointing to /dev/null
-  //  we replace [FD 1] (stdout) with a dup of [FD 2] (stderr)
-  //
-  c3_i nul_i = c3_open(c3_dev_null, O_RDWR, 0);
-
-  *inn_i = dup(0);
-  *out_i = dup(1);
-
-  dup2(nul_i, 0);
-  dup2(2, 1);
-
-  close(nul_i);
-
-  //  set stream I/O to unbuffered because it's now a pipe not a console
-  //
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
-}
-
-/* _cw_serf_stdio(): cleanup on serf exit.
-*/
-static void
-_cw_serf_exit(void)
-{
-  u3s_cue_xeno_done(sil_u);
-  u3t_trace_close();
-  u3m_stop();
+  _cw_io_send(u3nc(c3__flog, u3i_string(str_c)));
 }
 
 /* _cw_init_io(): initialize i/o streams.
@@ -1158,12 +1051,14 @@ _cw_init_io(uv_loop_t* lup_u)
 
   //  Ignore SIGPIPE signals.
   //
+#ifndef U3_OS_windows
   {
     sigset_t set_s;
     sigemptyset(&set_s);
     sigaddset(&set_s, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
+#endif
 
   //  configure pipe to daemon process
   //
@@ -1182,143 +1077,50 @@ _cw_init_io(uv_loop_t* lup_u)
   }
 }
 
-/* _cw_serf_commence(): initialize and run serf
-*/
+#ifdef U3_OS_windows
+/* _cw_intr_win_cb(): invoked when urth signals ctrl-c.
+ */
 static void
-_cw_serf_commence(c3_i argc, c3_c* argv[])
+_cw_intr_win_cb(PVOID param, BOOLEAN timedOut)
 {
-  if ( 9 > argc ) {
-    fprintf(stderr, "serf: missing args\n");
-    exit(1);
-  }
-  //  XX use named arguments and getopt
-
-  c3_d       eve_d = 0;
-  uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
-  c3_c*      dir_c = argv[2];
-  c3_c*      key_c = argv[3]; // XX use passkey
-  c3_c*      wag_c = argv[4];
-  c3_c*      hap_c = argv[5];
-  c3_c*      lom_c = argv[6];
-  c3_w       lom_w;
-  c3_c*      eve_c = argv[7];
-  c3_c*      eph_c = argv[8];
-  c3_c*      tos_c = argv[9];
-  c3_c*      per_c = argv[10];
-  c3_w       tos_w;
-
-  _cw_init_io(lup_u);
-
-  memset(&u3V, 0, sizeof(u3V));
-
-  //  load passkey
-  //
-  //    XX and then ... use passkey
-  //
-  {
-    sscanf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
-                  &u3V.key_d[0],
-                  &u3V.key_d[1],
-                  &u3V.key_d[2],
-                  &u3V.key_d[3]);
-  }
-
-  //  load runtime config
-  //
-  {
-    //  XX check return
-    //
-    sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNu32, &u3C.hap_w);
-    sscanf(per_c, "%" SCNu32, &u3C.per_w);
-    sscanf(lom_c, "%" SCNu32, &lom_w);
-
-    if ( 1 != sscanf(tos_c, "%" SCNu32, &u3C.tos_w) ) {
-      fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
-    }
-
-    if ( 1 != sscanf(eve_c, "%" PRIu64, &eve_d) ) {
-      fprintf(stderr, "serf: rock: invalid number '%s'\r\n", eve_c);
-    }
-  }
-
-  sil_u = u3s_cue_xeno_init();
-
-  //  set up writing
-  //
-  out_u.ptr_v = &u3V;
-  out_u.bal_f = _cw_serf_fail;
-
-  //  set up reading
-  //
-  inn_u.ptr_v = &u3V;
-  inn_u.pok_f = _cw_serf_writ;
-  inn_u.bal_f = _cw_serf_fail;
-
-  //  setup loom
-  //
-  {
-    u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-
-    u3V.dir_c = strdup(dir_c);
-    u3V.sen_d = u3V.dun_d = u3m_boot(dir_c, (size_t)1 << lom_w);
-
-    if ( eve_d ) {
-      //  XX need not be fatal, need a u3m_reboot equivalent
-      //  XX can spuriously fail do to corrupt memory-image checkpoint,
-      //  need a u3m_half_boot equivalent
-      //  workaround is to delete/move the checkpoint in case of corruption
-      //
-      if ( c3n == u3u_uncram(u3V.dir_c, eve_d) ) {
-        fprintf(stderr, "serf (%" PRIu64 "): rock load failed\r\n", eve_d);
-        exit(1);
-      }
-    }
-  }
-
-  //  set up logging
-  //
-  //    XX must be after u3m_boot due to u3l_log
-  //
-  {
-    u3C.stderr_log_f = _cw_serf_send_stdr;
-    u3C.slog_f = _cw_serf_send_slog;
-  }
-
-  u3V.xit_f = _cw_serf_exit;
-
-#if defined(SERF_TRACE_JAM) || defined(SERF_TRACE_CUE)
-  u3t_trace_open(u3V.dir_c);
-#endif
-
-  //  start serf
-  //
-  {
-    _cw_serf_send(u3_serf_init(&u3V));
-  }
-
-  //  start reading
-  //
-  u3_newt_read_sync(&inn_u);
-
-  //  enter loop
-  //
-  uv_run(lup_u, UV_RUN_DEFAULT);
-  u3m_stop();
+  rsignal_raise(SIGINT);
 }
 
-/* _cw_disk_init(): open event log
+/* _cw_intr_win(): initialize ctrl-c handling.
+ */
+static void
+_cw_intr_win(c3_c* han_c)
+{
+  HANDLE h;
+  if ( 1 != sscanf(han_c, "%" PRIu64, (c3_d*)&h) ) {
+    fprintf(stderr, "mars: ctrl-c event: bad handle %s: %s\r\n",
+            han_c, strerror(errno));
+  }
+  else {
+    if ( !RegisterWaitForSingleObject(&h, h, _cw_intr_win_cb,
+                                      NULL, INFINITE, 0) )
+      {
+        fprintf(stderr,
+                "mars: ctrl-c event: RegisterWaitForSingleObject(%llu) failed (%lu)\r\n",
+                (c3_d)h, GetLastError());
+      }
+  }
+}
+#endif
+
+/* _cw_load_pier(): open event log
 */
 static u3_disk*
-_cw_disk_init(c3_c* dir_c)
+_cw_load_pier(c3_c* dir_c)
 {
-  u3_disk_cb cb_u = {0};
-  u3_disk*  log_u = u3_disk_init(dir_c, cb_u);
+  u3_disk* log_u = u3_disk_load(dir_c, u3_dlod_last);
 
   if ( !log_u ) {
     fprintf(stderr, "unable to open event log\n");
     exit(1);
   }
+
+  u3_Host.eve_d = u3A->eve_d;
 
   return log_u;
 }
@@ -1431,7 +1233,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "cjkn", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1632,7 +1434,7 @@ _cw_info(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1687,8 +1489,7 @@ _cw_info(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
                   u3_Host.dir_c, u3_Host.eve_d);
@@ -1726,7 +1527,10 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_i lid_i, ch_i;
   c3_w arg_w;
 
+  u3_Host.ops_u.gab = c3n;
+
   static struct option lop_u[] = {
+    { "gc",        no_argument,       NULL, 'g' },
     { "loom",      required_argument, NULL, c3__loom },
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
@@ -1736,10 +1540,12 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "g", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1787,9 +1593,15 @@ _cw_grab(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
+  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);  //  NB: readonly
   u3C.wag_w |= u3o_hashless;
-  u3z(u3_serf_grab(c3y));
+  u3z(u3_mars_grab(c3y));
   u3m_stop();
 }
 
@@ -1815,7 +1627,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1871,9 +1683,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
-  c3_o  ret_o;
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
+  c3_o     ret_o;
 
   fprintf(stderr, "urbit: cram: preparing\r\n");
 
@@ -1920,7 +1731,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "r:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -1991,8 +1802,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     exit(1);
   }
   else {
-    u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-    u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+    u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
 
@@ -2036,7 +1846,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2099,8 +1909,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3C.wag_w |= u3o_hashless;
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr));
 
@@ -2131,7 +1940,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2187,8 +1996,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3C.wag_w |= u3o_hashless;
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: melt: gained", u3_melt_all(stderr));
 
@@ -2223,7 +2031,7 @@ _cw_next(c3_i argc, c3_c* argv[])
       } break;
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2300,7 +2108,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2361,8 +2169,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
 
@@ -2376,40 +2183,10 @@ _cw_pack(c3_i argc, c3_c* argv[])
 static void
 _cw_play_slog(u3_noun hod)
 {
+  //  XX always 80 columns
+  //
   u3_pier_tank(0, 0, u3k(u3t(hod)));
   u3z(hod);
-}
-
-/* _cw_play_snap(): prepare snapshot for full replay.
-*/
-static void
-_cw_play_snap(u3_disk* log_u)
-{
-  c3_c chk_c[8193], epo_c[8193];
-  snprintf(chk_c, 8193, "%s/.urb/chk", u3_Host.dir_c);
-  snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, log_u->epo_d);
-
-  if ( 0 == log_u->epo_d ) {
-    //  if epoch 0 is the latest, delete the snapshot files in chk/
-    c3_c nor_c[8193], sop_c[8193];
-    snprintf(nor_c, 8193, "%s/.urb/chk/north.bin", u3_Host.dir_c);
-    snprintf(sop_c, 8193, "%s/.urb/chk/south.bin", u3_Host.dir_c);
-    if ( c3_unlink(nor_c) && (ENOENT != errno) ) {
-      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-                      nor_c, strerror(errno));
-      exit(1);
-    }
-    if ( c3_unlink(sop_c) && (ENOENT != errno) ) {
-      fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-                      sop_c, strerror(errno));
-      exit(1);
-    }
-  }
-  else if ( 0 != u3e_backup(epo_c, chk_c, c3y) ) {
-    //  copy the latest epoch's snapshot files into chk/
-    fprintf(stderr, "mars: failed to copy snapshot\r\n");
-    exit(1);
-  }
 }
 
 /* _cw_play_exit(): exit immediately.
@@ -2420,207 +2197,6 @@ _cw_play_exit(c3_i int_i)
   kill(getpid(), SIGINT);
 }
 
-/* _cw_play_impl(): replay events, but better.
-*/
-static c3_d
-_cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
-{
-  c3_d pay_d;
-
-  //  XX handle SIGTSTP so that the lockfile is not orphaned?
-  //
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
-
-  //  Handle SIGTSTP as if it was SIGINT.
-  //
-  //    Configured here using signal() so as to be immediately available.
-  //
-  signal(SIGTSTP, _cw_play_exit);
-
-  //  XX source these from a shared struct ops_u
-  if ( c3y == mel_o ) {
-    u3C.wag_w |= u3o_auto_meld;
-  }
-
-  if ( c3y == sof_o ) {
-    u3C.wag_w |= u3o_soft_mugs;
-  }
-
-  u3C.wag_w |= u3o_hashless;
-
-  if ( c3y == ful_o ) {
-    u3l_log("mars: preparing for full replay");
-    _cw_play_snap(log_u);
-  }
-
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-
-  //  XX this should load from the epoc snapshot
-  //  but that clobbers chk/ which is risky
-  //
-  if ( u3_Host.eve_d < log_u->epo_d ) {
-    fprintf(stderr, "mars: pier corrupt: "
-                    "snapshot (%" PRIu64 ") out of epoc (%" PRIu64 ")\r\n",
-                    u3_Host.eve_d, log_u->epo_d);
-    exit(1);
-  }
-
-  u3C.slog_f = _cw_play_slog;
-
-  {
-    u3_mars mar_u = {
-      .log_u = log_u,
-      .dir_c = u3_Host.dir_c,
-      .sen_d = u3A->eve_d,
-      .dun_d = u3A->eve_d,
-    };
-
-    pay_d = u3_mars_play(&mar_u, eve_d, sap_d);
-    u3_Host.eve_d = mar_u.dun_d;
-
-    //  migrate or rollover as needed
-    //
-    u3_disk_kindly(log_u, u3_Host.eve_d);
-  }
-
-  u3_disk_exit(log_u);
-  //  NB: loom migrations without replay are not saved
-  u3m_stop();
-
-  return pay_d;
-}
-
-/* _cw_play_fork_heed(): wait for EOF on STDIN or until canceled.
-*/
-static void*
-_cw_play_fork_heed(void* arg) {
-  // XX
-  c3_c buf[1];
-  c3_zs red;
-
-  sigset_t set;
-
-  sigemptyset(&set);
-  sigaddset(&set, SIGINT);
-  sigaddset(&set, SIGTERM);
-  sigaddset(&set, SIGTSTP);
-  if ( 0 != pthread_sigmask(SIG_BLOCK, &set, NULL) ) {
-    fprintf(stderr, "play: watcher failed to block sigs: %s\r\n", strerror(errno));
-    exit(1);
-  }
-
-  do {
-    pthread_testcancel();
-    red = read(STDIN_FILENO, buf, sizeof(buf));
-    if ( 0 == red ) {
-      fprintf(stderr, "play: god save the king! committing sudoku...\r\n");
-      kill(getpid(), SIGINT);
-      return NULL;
-    }
-  } while ( 0 < red );
-
-  return NULL;
-}
-
-/* _cw_play_fork_exit(): exit callback for uv_spawn.
-*/
-void
-_cw_play_fork_exit(uv_process_t* req_u, c3_ds sat_d, c3_i tem_i) {
-  if ( sat_d || tem_i ) {
-    fprintf(stderr, "play: failed: %" PRId64 " signal: %d\r\n", sat_d, tem_i);
-    exit(1);
-  }
-  uv_close((uv_handle_t*)req_u, NULL);
-}
-
-/* _cw_play_fork(): spawn a subprocess for event replay.
-*/
-static c3_i
-_cw_play_fork(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
-{
-  c3_c *argv[13] = {0};
-  c3_c eve_c[21] = {0};
-  c3_c sap_c[21] = {0};
-  c3_c lom_c[3]  = {0};
-  c3_i ret_i;
-
-  ret_i = snprintf(eve_c, sizeof(eve_c), "%" PRIu64, eve_d);
-  u3_assert( ret_i && ret_i < sizeof(eve_c) );
-  ret_i = snprintf(sap_c, sizeof(sap_c), "%" PRIu64, sap_d);
-  u3_assert( ret_i && ret_i < sizeof(sap_c) );
-  ret_i = snprintf(lom_c, sizeof(lom_c), "%u", u3_Host.ops_u.lom_y);
-  u3_assert( ret_i && ret_i < sizeof(lom_c) );
-
-  {
-    c3_z    i_z = 0;
-    c3_i  run_i = 0;
-
-    c3_c* run_c = _main_pier_run(u3_Host.wrk_c);
-    if ( run_c ) {
-      c3_free(run_c);
-      run_i = 1;
-    }
-
-    argv[i_z++] = u3_Host.wrk_c;
-    argv[i_z++] = "play";
-    argv[i_z++] = "--watch-replay";
-    argv[i_z++] = "--loom";
-    argv[i_z++] = lom_c;
-    argv[i_z++] = "--replay-to";
-    argv[i_z++] = eve_c;
-    argv[i_z++] = "--snap-at";
-    argv[i_z++] = sap_c;
-
-    if _(mel_o) {
-      argv[i_z++] = "--auto-meld";
-    }
-    if _(sof_o) {
-      argv[i_z++] = "--soft-mugs";
-    }
-    if _(ful_o) {
-      argv[i_z++] = "--full";
-    }
-    if ( !run_i ) {
-      argv[i_z++] = u3_Host.dir_c;
-    }
-
-    argv[i_z] = NULL;
-    u3_assert( i_z < sizeof(argv) );
-  }
-
-  //  use uv_spawn to fork a new serf process and call its play subcommand
-  //
-  u3L = uv_default_loop();
-
-  uv_pipe_t stdin_pipe;
-  uv_pipe_init(u3L, &stdin_pipe, 0);
-
-  uv_process_t child_req = {0};
-  uv_process_options_t options = {0};
-  uv_stdio_container_t stdio[3];
-  stdio[0].data.stream = (uv_stream_t*) &stdin_pipe;
-  stdio[1].data.fd = STDOUT_FILENO;
-  stdio[2].data.fd = STDERR_FILENO;
-  stdio[0].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;  //  stdin
-  stdio[1].flags = UV_INHERIT_FD;                      //  stdout
-  stdio[2].flags = UV_INHERIT_FD;                      //  stderr
-  options.stdio_count = 3;
-  options.stdio = stdio;
-  options.file = argv[0];
-  options.args = argv;
-  options.exit_cb = (uv_exit_cb)_cw_play_fork_exit;
-
-  c3_i sat_i;
-  if ( 0 != (sat_i = uv_spawn(u3L, &child_req, &options)) ) {
-    fprintf(stderr, "play: uv_spawn: %s\r\n", uv_strerror(sat_i));
-    return 1;
-  }
-
-  signal(SIGINT, SIG_IGN);
-
-  return uv_run(u3L, UV_RUN_DEFAULT);
-}
-
 /* _cw_play(): replay events, but better.
 */
 static void
@@ -2628,31 +2204,33 @@ _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
   c3_w arg_w;
-  c3_o ful_o = c3n;
-  c3_o mel_o = c3n;
-  c3_o sof_o = c3n;
-  c3_o wat_o = c3n;
   c3_d eve_d = 0;
   c3_d sap_d = 0;
+  u3_disk_load_e lod_e = u3_dlod_last;
+
+  u3_Host.ops_u.gab = c3n;
 
   static struct option lop_u[] = {
+    { "gc",                no_argument,       NULL, 'g' },
     { "loom",              required_argument, NULL, c3__loom },
     { "no-demand",         no_argument,       NULL, 6 },
     { "auto-meld",         no_argument,       NULL, 7 },
     { "soft-mugs",         no_argument,       NULL, 8 },
-    { "watch-replay",      no_argument,       NULL, 9 },
     { "full",              no_argument,       NULL, 'f' },
     { "replay-to",         required_argument, NULL, 'n' },
     { "snap-at",           required_argument, NULL, 's' },
+    { "yolo",              no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "fn:", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "fgn:s:y", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
+      case 'g': { u3_Host.ops_u.gab = c3y; break; }
+
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2663,19 +2241,15 @@ _cw_play(c3_i argc, c3_c* argv[])
       } break;
 
       case 7: {  //  auto-meld
-        mel_o = c3y;
+        u3C.wag_w |= u3o_auto_meld;
       } break;
 
       case 8: {  //  soft-mugs
-        sof_o = c3y;
-      } break;
-
-      case 9: {  //  watch-replay
-        wat_o = c3y;
+        u3C.wag_w |= u3o_soft_mugs;
       } break;
 
       case 'f': {
-        ful_o = c3y;
+        lod_e = u3_dlod_epoc;
       } break;
 
       case 'n': {
@@ -2690,6 +2264,10 @@ _cw_play(c3_i argc, c3_c* argv[])
           fprintf(stderr, "mars: snap-at invalid: '%s'\r\n", optarg);
           exit(1);
         }
+      } break;
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
       } break;
 
       case '?': {
@@ -2719,17 +2297,36 @@ _cw_play(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  if ( _(wat_o) ) {
-    pthread_t ted;
-    pthread_create(&ted, NULL, _cw_play_fork_heed, NULL);
-
-    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
-
-    pthread_cancel(ted);
+  /*  Set GC flag.
+  */
+  if ( _(u3_Host.ops_u.gab) ) {
+    u3C.wag_w |= u3o_debug_ram;
   }
-  else {
-    _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
+
+  u3C.wag_w |= u3o_hashless;
+
+  //  Handle SIGTSTP as if it was SIGINT.
+  //
+  //    Configured here using signal() so as to be immediately available.
+  //
+#ifndef U3_OS_windows
+  signal(SIGTSTP, _cw_play_exit);
+#endif
+
+  //  setup mars
+  //
+  {
+    u3_mars mar_u = { .dir_c = u3_Host.dir_c };
+    u3_mars_load(&mar_u, lod_e);
+
+    u3C.slog_f = _cw_play_slog;
+
+    u3_mars_play(&mar_u, eve_d, sap_d);
+
+    u3_disk_exit(mar_u.log_u);
   }
+
+  u3m_stop();
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2755,7 +2352,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2830,7 +2427,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2886,11 +2483,8 @@ _cw_chop(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // gracefully shutdown the pier if it's running
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_chop(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);
@@ -2923,7 +2517,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
       }
 
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -2955,11 +2549,8 @@ _cw_roll(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  // gracefully shutdown the pier if it's running
-  u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
+  u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_kindly(log_u, u3_Host.eve_d);
   u3_disk_roll(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);
@@ -3100,7 +2691,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
-        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+        if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
       } break;
@@ -3149,7 +2740,9 @@ _cw_vile(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  //  XX check if snapshot is stale?
+  //  NB: readonly
+  //
+  //  XX load log and check if snapshot is stale?
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
@@ -3189,7 +2782,258 @@ _cw_vile(c3_i argc, c3_c* argv[])
   u3z(res);
 }
 
-/* _cw_utils(): "worker" utilities and "serf" entrypoint
+/* _cw_boot(): initialize, await boot msg.
+*/
+static void
+_cw_boot(c3_i argc, c3_c* argv[])
+{
+  c3_c* dir_c = 0;
+
+  //  extract option map and load runtime config
+  {
+    c3_i ch_i, lid_i;
+
+    static struct option lop_u[] = {
+      { "temporary-cache-size",  required_argument, NULL, 'c' },
+      { "ephemeral-file",        required_argument, NULL, 'e' },
+      { "loom",                  required_argument, NULL, 'l' },
+      { "persistent-cache-size", required_argument, NULL, 'p' },
+      { "runtime-config",        required_argument, NULL, 'r' },
+      { "snap-dir",              required_argument, NULL, 's' },
+      { "toss",                  required_argument, NULL, 't' },
+      { "lmdb-map-size",         required_argument, NULL, 'z' },
+      //
+      { NULL, 0, NULL, 0 },
+    };
+
+    while ( -1 != (ch_i=getopt_long(argc, argv,
+                   "c:e:k:l:p:r:s:t:z:",
+                   lop_u, &lid_i) ))
+    {
+      switch ( ch_i ) {
+        case 'c': {  //  temporary-cache-size
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.hap_w);
+          break;
+        }
+        case 'e': {  //  ephemeral-file
+          u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
+          break;
+        }
+        case 'l': {  //  loom
+          if ( _main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y) ) {
+            exit(1);
+          }
+          break;
+        }
+        case 'p': {  //  persistent-cache-size
+          sscanf(optarg, "%" SCNu32, &u3C.per_w);
+          break;
+        }
+        case 'r': {  //  runtime-config
+          sscanf(optarg, "%" SCNu32, &u3C.wag_w);
+          break;
+        }
+        case 's': {  //  snap-dir
+          dir_c = strdup(optarg);
+          break;
+        }
+        case 't': {  //  toss
+          if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+            fprintf(stderr, "boot: toss: invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'z': {  //  lmdb-map-size
+          if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+            fprintf(stderr, "boot: invalid lmdb-map-size: %s\r\n", optarg);
+            exit(1);
+          }
+          break;
+        }
+        //  unknown opt
+        //
+        case '?': default: {
+          fprintf(stderr, "boot: unknown option: -%c %s\r\n", ch_i, optarg);
+          exit(1);
+          break;
+        }
+      }
+    }
+  }
+  uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
+
+  //  XX use _cw_intr_win(han_c);
+
+  _cw_init_io(lup_u);
+
+  //  make pier, configure i/o
+  //
+  u3_mars mar_u = { .dir_c = dir_c };
+  {
+    u3_mars_make(&mar_u);
+
+    //  set up logging
+    //
+    u3C.stderr_log_f = _cw_io_send_stdr;
+    u3C.slog_f = _cw_io_send_slog;
+
+    //  set up stdio read/write callbacks
+    //
+    inn_u.ptr_v = &mar_u;
+    inn_u.pok_f = (u3_moor_poke)u3_mars_boot;
+    inn_u.bal_f = _cw_io_fail;
+    out_u.ptr_v = &mar_u;
+    out_u.bal_f = _cw_io_fail;
+  }
+
+  //  XX setup signals, ctrl-c and ctrl-z are busted
+
+  //  start reading
+  //
+  u3_newt_read(&inn_u);
+  uv_run(lup_u, UV_RUN_DEFAULT);
+  u3m_stop();
+}
+
+/* _cw_work(): resume and run; replay and start event processing
+*/
+static void
+_cw_work(c3_i argc, c3_c* argv[])
+{
+  uv_loop_t* lup_u = u3_Host.lup_u = uv_default_loop();
+  c3_c*      dir_c = 0;
+  c3_d       eve_d = 0;
+
+  _cw_init_io(lup_u);
+
+  //  extract option map and load runtime config
+  {
+    c3_i ch_i, lid_i;
+
+    static struct option lop_u[] = {
+      { "temporary-cache-size",  required_argument, NULL, 'c' },
+      { "ephemeral-file",        required_argument, NULL, 'e' },
+      { "loom",                  required_argument, NULL, 'l' },
+      { "snap-time",             required_argument, NULL, 'n' },
+      { "persistent-cache-size", required_argument, NULL, 'p' },
+      { "runtime-config",        required_argument, NULL, 'r' },
+      { "snap-dir",              required_argument, NULL, 's' },
+      { "toss",                  required_argument, NULL, 't' },
+      { "play-until",            required_argument, NULL, 'u' },
+      { "win-intr-handle",       required_argument, NULL, 'w' },
+      { "lmdb-map-size",         required_argument, NULL, 'z' },
+      //
+      { NULL, 0, NULL, 0 },
+    };
+
+    while ( -1 != (ch_i=getopt_long(argc, argv,
+                   "c:e:k:l:n:p:r:s:t:u:w:z:",
+                   lop_u, &lid_i) ))
+    {
+      switch ( ch_i ) {
+        case 'c': {  //  temporary-cache-size
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.hap_w);
+          break;
+        }
+        case 'e': {  //  ephemeral-file
+          u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
+          break;
+        }
+        case 'l': {  //  loom
+          if ( _main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y) ) {
+            exit(1);
+          }
+          break;
+        }
+        case 'n': {  //  snap-time
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.sap_w);
+          break;
+        }
+        case 'p': {  //  persistent-cache-size
+          sscanf(optarg, "%" SCNu32, &u3C.per_w);
+          break;
+        }
+        case 'r': {  //  runtime-config
+          sscanf(optarg, "%" SCNu32, &u3C.wag_w);
+          break;
+        }
+        case 's': {  //  snap-dir
+          dir_c = strdup(optarg);
+          break;
+        }
+        case 't': {  //  toss
+          if ( 1 != sscanf(optarg, "%" SCNu32, &u3C.tos_w) ) {
+            fprintf(stderr, "mars: toss: invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'u': {  //  play-until
+          if ( 1 != sscanf(optarg, "%" PRIu64, &eve_d) ) {
+            fprintf(stderr, "mars: -n (--replay-to) invalid number '%s'\r\n", optarg);
+          }
+          break;
+        }
+        case 'w': {  //  win-intr-handle
+#ifdef U3_OS_windows
+          _cw_intr_win(optarg);
+#else
+          fprintf(stderr, "boot: -%c is for windows only\r\n", ch_i);
+          exit(1);
+#endif
+          break;
+        }
+        case 'z': {  //  lmdb-map-size
+          if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
+            fprintf(stderr, "boot: invalid lmdb-map-size: %s\r\n", optarg);
+            exit(1);
+          }
+          break;
+        }
+        //  unknown opt
+        //
+        case '?': default: {
+          fprintf(stderr, "boot: unknown option: -%c %s\r\n", ch_i, optarg);
+          exit(1);
+          break;
+        }
+      }
+    }
+  }
+  
+  //  setup mars
+  //
+  u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
+  {
+    u3_mars_load(&mar_u, u3_dlod_last);
+
+    //  set up logging
+    //
+    u3C.stderr_log_f = _cw_io_send_stdr;
+    u3C.slog_f = _cw_io_send_slog;
+
+    //  replay if necessary
+    //
+    u3_mars_play(&mar_u, eve_d, 0); // XX sap_d from args?
+    u3_mars_work(&mar_u);
+
+    //  set up stdio read/write callbacks
+    //
+    inn_u.ptr_v = &mar_u;
+    inn_u.pok_f = (u3_moor_poke)u3_mars_kick;
+    inn_u.bal_f = _cw_io_fail; // XX cleanup
+    out_u.ptr_v = &mar_u;
+    out_u.bal_f = _cw_io_fail; // XX cleanup
+  }
+
+  //  start reading
+  //
+  u3_newt_read(&inn_u);
+  uv_run(lup_u, UV_RUN_DEFAULT);
+  u3m_stop();
+}
+
+
+/* _cw_utils(): "worker" utilities and mars-process entrypoints.
 */
 static c3_i
 _cw_utils(c3_i argc, c3_c* argv[])
@@ -3210,10 +3054,10 @@ _cw_utils(c3_i argc, c3_c* argv[])
   //        [?(%vere %fetch-vere) dir=@t]                 ::  download vere
   //        [%vile dir=@t]                                ::  extract keys
   //    ::                                                ::    ipc:
-  //        $:  %serf                                     ::  compute
-  //            dir=@t  key=@t wag=@t hap=@ud             ::
-  //            lom=@ud eve=@ud                           ::
-  //    ==  ==                                            ::
+  //    XX  update with missing subcommand arguments
+  //        [%boot dir=@t key=@t wag=@t hap=@ud]          ::  boot
+  //        [%work dir=@t key=@t wag=@t hap=@ud eve=@ud]  ::  run
+  //    ==                                                ::
   //
   //    NB: don't print to anything other than stderr;
   //    other streams may be used for ipc.
@@ -3253,8 +3097,8 @@ _cw_utils(c3_i argc, c3_c* argv[])
     case c3__roll: _cw_roll(argc, argv); return 1;
     case c3__vere: _cw_vere(argc, argv); return 1;
     case c3__vile: _cw_vile(argc, argv); return 1;
-
-    case c3__serf: _cw_serf_commence(argc, argv); return 1;
+    case c3__work: _cw_work(argc, argv); return 1;
+    case c3__boot: _cw_boot(argc, argv); return 1;
   }
 
   return 0;
@@ -3337,6 +3181,7 @@ main(c3_i   argc,
   //
   //    XX review, may be unnecessary due to similar in u3m_init()
   //
+#ifndef U3_OS_windows
 #if defined(U3_OS_PROF)
   if ( _(u3_Host.ops_u.pro) ) {
     sigset_t set;
@@ -3349,12 +3194,14 @@ main(c3_i   argc,
     }
   }
 #endif
-
+#endif
   //  Handle SIGTSTP as if it was SIGTERM.
   //
   //    Configured here using signal() so as to be immediately available.
   //
-  signal(SIGTSTP, _stop_exit_fore);
+#ifndef U3_OS_windows
+  signal(SIGTSTP, _stop_exit);
+#endif
 
   printf("~\n");
   //  printf("welcome.\n");
@@ -3442,17 +3289,17 @@ main(c3_i   argc,
       }
     }
 
-    //  we need the current snapshot's latest event number to
-    //  validate whether we can execute disk migration
-    if ( u3_Host.ops_u.nuu == c3n ) {
-      c3_i sat_i = _cw_play_fork(0, 0, c3n, c3n, c3n);
-      if ( sat_i ) {
-        fprintf(stderr, "play: replay failed\r\n");
-        exit(sat_i);
+#ifdef U3_OS_windows
+    //  Initialize event used to transmit Ctrl-C to worker process
+    //
+    {
+      SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+      if ( NULL == (u3_Host.cev_u = CreateEvent(&sa, FALSE, FALSE, NULL)) ) {
+        u3l_log("boot: failed to create Ctrl-C event: %lu", GetLastError());
+        exit(1);
       }
-      signal(SIGTSTP, _stop_exit);
-      //  XX  unmap loom, else parts of the snapshot could be left in memory
     }
+#endif
 
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations

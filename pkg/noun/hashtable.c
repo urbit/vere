@@ -1151,81 +1151,89 @@ u3h_mark(u3p(u3h_root) har_p)
   return tot_w;
 }
 
-/* _ch_rewrite_buck(): rewrite buck for compaction.
-*/
-void
-_ch_rewrite_buck(u3h_buck* hab_u)
+static void
+_ch_relocate_noun(u3h_slot *sot_w)
 {
-  if ( c3n == u3a_rewrite_ptr(hab_u) ) return;
-  c3_w i_w;
+  u3_noun kev = u3h_slot_to_noun(*sot_w);
+  u3a_relocate_noun(&kev);
+  *sot_w = u3h_noun_to_slot(kev);
+}
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
-    u3_noun som = u3h_slot_to_noun(hab_u->sot_w[i_w]);
-    hab_u->sot_w[i_w] = u3h_noun_to_slot(u3a_rewritten_noun(som));
-    u3a_rewrite_noun(som);
+static void
+_ch_relocate_buck(u3h_slot *sot_w)
+{
+  u3h_buck *hab_u = u3h_slot_to_node(*sot_w);
+  u3_post   new_p, sot_p = u3a_outa(hab_u);
+  c3_t      fir_t;
+
+  new_p  = u3a_mark_relocate_post(sot_p, &fir_t);
+  *sot_w = u3h_node_to_slot(u3a_into(new_p));
+
+  if ( !fir_t ) return;
+
+  for ( c3_w i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+    _ch_relocate_noun(&(hab_u->sot_w[i_w]));
   }
 }
 
-/* _ch_rewrite_node(): rewrite node for compaction.
-*/
-void
-_ch_rewrite_node(u3h_node* han_u, c3_w lef_w)
+static void
+_ch_relocate_slot(u3h_slot *sot_w, c3_w lef_w);
+
+static void
+_ch_relocate_node(u3h_slot *sot_w, c3_w lef_w)
 {
-  if ( c3n == u3a_rewrite_ptr(han_u) ) return;
+  u3h_node* han_u = u3h_slot_to_node(*sot_w);
+  u3_post   new_p, sot_p = u3a_outa(han_u);
+  c3_w      len_w;
+  c3_t      fir_t;
 
-  c3_w len_w = _ch_popcount(han_u->map_w);
-  c3_w i_w;
+  new_p  = u3a_mark_relocate_post(sot_p, &fir_t);
+  *sot_w = u3h_node_to_slot(u3a_into(new_p));
 
+  if ( !fir_t ) return;
+
+  len_w  = _ch_popcount(han_u->map_w);
   lef_w -= 5;
 
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
-
-    if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-      han_u->sot_w[i_w] = u3h_noun_to_slot(u3a_rewritten_noun(kev));
-
-      u3a_rewrite_noun(kev);
-    }
-    else {
-      void* hav_v = u3h_slot_to_node(sot_w);
-      u3h_node* nod_u = u3to(u3h_node,u3a_rewritten(u3of(u3h_node,hav_v)));
-      han_u->sot_w[i_w] = u3h_node_to_slot(nod_u);
-
-      if ( 0 == lef_w ) {
-        _ch_rewrite_buck(hav_v);
-      } else {
-        _ch_rewrite_node(hav_v, lef_w);
-      }
-    }
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    _ch_relocate_slot(&(han_u->sot_w[i_w]), lef_w);
   }
 }
 
-/* u3h_rewrite(): rewrite pointers during compaction.
+static void
+_ch_relocate_slot(u3h_slot *sot_w, c3_w lef_w)
+{
+  if ( c3y == u3h_slot_is_noun(*sot_w) ) {
+    _ch_relocate_noun(sot_w);
+  }
+  else if ( !lef_w ) {
+    _ch_relocate_buck(sot_w);
+  }
+  else {
+    _ch_relocate_node(sot_w, lef_w);
+  }
+}
+
+/* u3h_relocate(): relocate hashtable for compaction.
 */
 void
-u3h_rewrite(u3p(u3h_root) har_p)
+u3h_relocate(u3p(u3h_root) *har_p)
 {
-  u3h_root* har_u = u3to(u3h_root, har_p);
-  c3_w        i_w;
+  u3_post new_p, old_p = *har_p;
+  u3h_root*      har_u = u3to(u3h_root, old_p);
+  c3_w    sot_w, i_w;
+  c3_t    fir_t;
 
-  if ( c3n == u3a_rewrite_ptr(har_u) ) return;
+  new_p  = u3a_mark_relocate_post(old_p, &fir_t);
+  *har_p = new_p;
+
+  if ( !fir_t ) return;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    sot_w = har_u->sot_w[i_w];
 
-    if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-      har_u->sot_w[i_w] = u3h_noun_to_slot(u3a_rewritten_noun(kev));
-
-      u3a_rewrite_noun(kev);
-    }
-    else if ( _(u3h_slot_is_node(sot_w)) ) {
-      u3h_node* han_u = u3h_slot_to_node(sot_w);
-      u3h_node* nod_u = u3to(u3h_node,u3a_rewritten(u3of(u3h_node,han_u)));
-      har_u->sot_w[i_w] = u3h_node_to_slot(nod_u);
-
-      _ch_rewrite_node(han_u, 25);
+    if ( c3n == u3h_slot_is_null(sot_w) ) {
+      _ch_relocate_slot(&(har_u->sot_w[i_w]), 25);
     }
   }
 }

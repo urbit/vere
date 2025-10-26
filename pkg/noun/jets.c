@@ -1063,6 +1063,20 @@ _cj_prog(u3_weak loc, u3_noun fol)
   return pog_p;
 }
 
+static inline c3_w
+_cj_of_hank(u3j_hank *han_u)
+{
+  u3_post han_p = u3of(u3j_hank, han_u);
+  return han_p >> u3a_vits;
+}
+
+static inline u3j_hank*
+_cj_to_hank(c3_w han_w)
+{
+  u3_post han_p = han_w << u3a_vits;
+  return u3to(u3j_hank, han_p);
+}
+
 /* cj_hank_find(): find cached hook information, keyed by arbitrary
  *                 prefix and term cords. RETAIN.
  */
@@ -1074,7 +1088,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
 
   if ( u3_none != got ) {
     u3z(key);
-    return u3to(u3j_hank, got);
+    return _cj_to_hank(got);
   }
   else {
     u3j_hank* new_u = u3a_walloc(c3_wiseof(u3j_hank));
@@ -1089,7 +1103,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
       new_u->hax = u3_none;
     }
     else {
-      u3j_hank* old_u = u3to(u3j_hank, got);
+      u3j_hank* old_u = _cj_to_hank(got);
       if ( u3_none != (new_u->hax = old_u->hax) ) {
         //  it's unusual but safe to "take" here, because
         //  u3a_take will no-op on senior nouns (just as u3k would)
@@ -1098,7 +1112,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
       }
     }
 
-    u3h_put(u3R->jed.han_p, key, u3of(u3j_hank, new_u));
+    u3h_put(u3R->jed.han_p, key, _cj_of_hank(new_u));
     u3z(key);
     return new_u;
   }
@@ -1989,10 +2003,10 @@ u3j_rite_mine(u3j_rite* rit_u, u3_noun clu, u3_noun cor)
 
 /* _cj_take_hank_cb(): u3h_take_with cb for taking hanks
 */
-static u3p(u3j_hank)
-_cj_take_hank_cb(u3p(u3j_hank) nah_p)
+static c3_w
+_cj_take_hank_cb(c3_w nah_w)
 {
-  u3j_hank* nah_u = u3to(u3j_hank, nah_p);
+  u3j_hank* nah_u = _cj_to_hank(nah_w);
   u3j_hank* han_u = u3a_walloc(c3_wiseof(u3j_hank));
 
   if ( u3_none == nah_u->hax ) {
@@ -2004,7 +2018,7 @@ _cj_take_hank_cb(u3p(u3j_hank) nah_p)
     u3j_site_take(&(han_u->sit_u), &(nah_u->sit_u));
   }
 
-  return u3of(u3j_hank, han_u);
+  return _cj_of_hank(han_u);
 }
 
 /* u3j_take(): copy junior jet state.
@@ -2028,10 +2042,10 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
   u3p(u3h_root) han_p = *(u3p(u3h_root)*)wit;
   u3j_hank* nah_u;
   u3_noun key;
-  u3p(u3j_hank) nah_p;
-  u3x_cell(kev, &key, &nah_p);
+  c3_w nah_w;
+  u3x_cell(kev, &key, &nah_w);
 
-  nah_u = u3to(u3j_hank, nah_p);
+  nah_u = _cj_to_hank(nah_w);
 
   if ( u3_none == nah_u->hax ) {
     u3a_wfree(nah_u);
@@ -2044,7 +2058,7 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
       han_u = nah_u;
     }
     else {
-      han_u = u3to(u3j_hank, got);
+      han_u = _cj_to_hank(got);
 
       if ( u3_none != han_u->hax ) {
         u3z(han_u->hax);
@@ -2055,7 +2069,7 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
       u3a_wfree(nah_u);
     }
 
-    u3h_put(han_p, key, u3of(u3j_hank, han_u));
+    u3h_put(han_p, key, _cj_of_hank(han_u));
   }
 }
 
@@ -2167,7 +2181,7 @@ _cj_warm_tap(u3_noun kev, void* wit)
 static void
 _cj_ream_hank(u3_noun kev)
 {
-  u3j_site_ream(&(u3to(u3j_hank, u3t(kev))->sit_u));
+  u3j_site_ream(&(_cj_to_hank(u3t(kev))->sit_u));
 }
 
 /* u3j_ream(): rebuild warm state
@@ -2301,7 +2315,7 @@ static void
 _cj_mark_hank(u3_noun kev, void* dat)
 {
   c3_w* tot_w = (c3_w*) dat;
-  u3j_hank* han_u = u3to(u3j_hank, u3t(kev));
+  u3j_hank* han_u = _cj_to_hank(u3t(kev));
   *tot_w += u3a_mark_ptr(han_u);
   if ( u3_none != han_u->hax ) {
     *tot_w += u3a_mark_noun(han_u->hax);
@@ -2373,7 +2387,7 @@ u3j_mark()
 void
 u3j_free_hank(u3_noun kev)
 {
-  u3j_hank* han_u = u3to(u3j_hank, u3t(kev));
+  u3j_hank* han_u = _cj_to_hank(u3t(kev));
   if ( u3_none != han_u->hax ) {
     u3z(han_u->hax);
     u3j_site_lose(&(han_u->sit_u));
@@ -2426,18 +2440,12 @@ u3j_reclaim(void)
 void
 u3j_rewrite_compact(void)
 {
-  u3h_rewrite(u3R->jed.war_p);
-  u3h_rewrite(u3R->jed.cod_p);
-  u3h_rewrite(u3R->jed.han_p);
-  u3h_rewrite(u3R->jed.bas_p);
+  u3h_relocate(&(u3R->jed.war_p));
+  u3h_relocate(&(u3R->jed.cod_p));
+  u3h_relocate(&(u3R->jed.han_p));
+  u3h_relocate(&(u3R->jed.bas_p));
 
   if ( u3R == &(u3H->rod_u) ) {
-    u3h_rewrite(u3R->jed.hot_p);
-    u3R->jed.hot_p = u3a_rewritten(u3R->jed.hot_p);
+    u3h_relocate(&(u3R->jed.hot_p));
   }
-
-  u3R->jed.war_p = u3a_rewritten(u3R->jed.war_p);
-  u3R->jed.cod_p = u3a_rewritten(u3R->jed.cod_p);
-  u3R->jed.han_p = u3a_rewritten(u3R->jed.han_p);
-  u3R->jed.bas_p = u3a_rewritten(u3R->jed.bas_p);
 }

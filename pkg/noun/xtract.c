@@ -9,6 +9,8 @@ u3_atom
 u3x_atom(u3_noun a);
 u3_noun
 u3x_good(u3_weak som);
+c3_o
+u3x_loob(u3_noun a);
 
 /* u3x_mean():
 **

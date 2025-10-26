@@ -19,23 +19,26 @@ pub fn build(b: *std.Build) void {
     lib.linkLibC();
 
     // TODO: Finish this
-    const gmp_h = b.addConfigHeader(.{
-        .style = .{
-            .cmake = dep_c.path("gmp-h.in"),
-        },
-        .include_path = "gmp.h",
-    }, .{
-        .HAVE_HOST_CPU_FAMILY_power = 0,
-        .HAVE_HOST_CPU_FAMILY_powerpc = 0,
-        .GMP_LIMB_BITS = 64,
-        .GMP_NAIL_BITS = 0,
-        .DEFN_LONG_LONG_LIMB = "",
-        .LIBGMP_DLL = 0,
-        .CC = "gcc",
-        .CFLAGS = "-O2 -pedantic -march=armv8-a",
-    });
+    if (t.os.tag != .windows) {
+        const gmp_h = b.addConfigHeader(.{
+            .style = .{
+                .cmake = dep_c.path("gmp-h.in"),
+            },
+            .include_path = "gmp.h",
+        }, .{
+            .HAVE_HOST_CPU_FAMILY_power = 0,
+            .HAVE_HOST_CPU_FAMILY_powerpc = 0,
+            .GMP_LIMB_BITS = 64,
+            .GMP_NAIL_BITS = 0,
+            .DEFN_LONG_LONG_LIMB = "",
+            .LIBGMP_DLL = 0,
+            .CC = "gcc",
+            .CFLAGS = "-O2 -pedantic -march=armv8-a",
+        });
 
-    lib.addConfigHeader(gmp_h);
+        lib.addConfigHeader(gmp_h);
+        lib.installConfigHeader(gmp_h);
+    }
 
     // Static headers
     lib.addIncludePath(dep_c.path("."));
@@ -122,6 +125,24 @@ pub fn build(b: *std.Build) void {
         });
     }
 
+    if (t.os.tag == .windows and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path("gen/x86_64-windows"));
+        lib.addIncludePath(b.path("gen/x86_64-windows/mpn"));
+        for (x86_64_windows_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
+        lib.addCSourceFiles(.{
+            .root = b.path("gen/x86_64-windows"),
+            .files = &.{
+                "mpn/mp_bases.c",
+                "mpn/fib_table.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
+        });
+    }
+
     // Generic C Sources
     lib.addCSourceFiles(.{
         .root = dep_c.path(""),
@@ -161,7 +182,9 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    lib.installConfigHeader(gmp_h);
+    if (t.os.tag == .windows) {
+        lib.installHeader(b.path("gen/x86_64-windows/gmp.h"), "gmp.h");
+    }
 
     b.installArtifact(lib);
 }
@@ -213,7 +236,6 @@ const x86_64_macos_asm_sources = [_][]const u8{
     "gen/x86_64-macos/mpn/add_err2_n.s",
     "gen/x86_64-macos/mpn/add_err3_n.s",
     "gen/x86_64-macos/mpn/add_n.s",
-    "gen/x86_64-macos/mpn/addaddmul_1msb0.s",
     "gen/x86_64-macos/mpn/addlsh1_n.s",
     "gen/x86_64-macos/mpn/addlsh2_n.s",
     "gen/x86_64-macos/mpn/addlsh_n.s",
@@ -274,6 +296,65 @@ const x86_64_macos_asm_sources = [_][]const u8{
     "gen/x86_64-macos/mpn/submul_1.s",
     "gen/x86_64-macos/mpn/xnor_n.s",
     "gen/x86_64-macos/mpn/xor_n.s",
+};
+
+const x86_64_windows_asm_sources = [_][]const u8{
+    "gen/x86_64-windows/mpn/add_n.s",
+    "gen/x86_64-windows/mpn/addaddmul_1msb0.s",
+    "gen/x86_64-windows/mpn/addlsh1_n.s",
+    "gen/x86_64-windows/mpn/addlsh2_n.s",
+    "gen/x86_64-windows/mpn/addlsh_n.s",
+    "gen/x86_64-windows/mpn/addmul_1.s",
+    "gen/x86_64-windows/mpn/addmul_2.s",
+    "gen/x86_64-windows/mpn/and_n.s",
+    "gen/x86_64-windows/mpn/andn_n.s",
+    "gen/x86_64-windows/mpn/bdiv_dbm1c.s",
+    "gen/x86_64-windows/mpn/bdiv_q_1.s",
+    "gen/x86_64-windows/mpn/cnd_add_n.s",
+    "gen/x86_64-windows/mpn/cnd_sub_n.s",
+    "gen/x86_64-windows/mpn/com.s",
+    "gen/x86_64-windows/mpn/copyd.s",
+    "gen/x86_64-windows/mpn/copyi.s",
+    "gen/x86_64-windows/mpn/div_qr_2n_pi1.s",
+    "gen/x86_64-windows/mpn/dive_1.s",
+    "gen/x86_64-windows/mpn/divrem_1.s",
+    "gen/x86_64-windows/mpn/divrem_2.s",
+    "gen/x86_64-windows/mpn/gcd_11.s",
+    "gen/x86_64-windows/mpn/hamdist.s",
+    "gen/x86_64-windows/mpn/invert_limb.s",
+    "gen/x86_64-windows/mpn/invert_limb_table.s",
+    "gen/x86_64-windows/mpn/ior_n.s",
+    "gen/x86_64-windows/mpn/iorn_n.s",
+    "gen/x86_64-windows/mpn/lshift.s",
+    "gen/x86_64-windows/mpn/lshiftc.s",
+    "gen/x86_64-windows/mpn/mod_1_1.s",
+    "gen/x86_64-windows/mpn/mod_1_2.s",
+    "gen/x86_64-windows/mpn/mod_1_4.s",
+    "gen/x86_64-windows/mpn/mod_34lsub1.s",
+    "gen/x86_64-windows/mpn/mode1o.s",
+    "gen/x86_64-windows/mpn/mul_1.s",
+    "gen/x86_64-windows/mpn/mul_2.s",
+    "gen/x86_64-windows/mpn/mul_basecase.s",
+    "gen/x86_64-windows/mpn/mullo_basecase.s",
+    "gen/x86_64-windows/mpn/mulmid_basecase.s",
+    "gen/x86_64-windows/mpn/nand_n.s",
+    "gen/x86_64-windows/mpn/nior_n.s",
+    "gen/x86_64-windows/mpn/popcount.s",
+    "gen/x86_64-windows/mpn/redc_1.s",
+    "gen/x86_64-windows/mpn/rsblsh1_n.s",
+    "gen/x86_64-windows/mpn/rsblsh2_n.s",
+    "gen/x86_64-windows/mpn/rsblsh_n.s",
+    "gen/x86_64-windows/mpn/rsh1add_n.s",
+    "gen/x86_64-windows/mpn/rsh1sub_n.s",
+    "gen/x86_64-windows/mpn/rshift.s",
+    "gen/x86_64-windows/mpn/sec_tabselect.s",
+    "gen/x86_64-windows/mpn/sqr_basecase.s",
+    "gen/x86_64-windows/mpn/sqr_diag_addlsh1.s",
+    "gen/x86_64-windows/mpn/sub_n.s",
+    "gen/x86_64-windows/mpn/sublsh1_n.s",
+    "gen/x86_64-windows/mpn/submul_1.s",
+    "gen/x86_64-windows/mpn/xnor_n.s",
+    "gen/x86_64-windows/mpn/xor_n.s",
 };
 
 const aarch64_linux_asm_sources = [_][]const u8{
