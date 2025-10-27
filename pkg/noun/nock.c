@@ -3265,6 +3265,8 @@ u3n_nock_an(u3_noun bus, u3_noun fol)
   return u3n_nock_et(gul, bus, fol);
 }
 
+// RETAINS argument, transfers product
+//
 u3_noun
 u3n_duplicate_noun(u3_noun som)
 {
@@ -3272,13 +3274,10 @@ u3n_duplicate_noun(u3_noun som)
 
   if (c3y == u3a_is_pug(som)) {
     u3a_atom* pug_u = u3a_to_ptr(som);
-    
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 5, pug_u->len_w);
     u3r_words(0, pug_u->len_w, sab_u.buf_w, som);
-    u3_atom dup = u3i_slab_moot(&sab_u);
-
-    return dup;
+    return u3i_slab_moot(&sab_u);
   }
 
   u3_noun hed = u3n_duplicate_noun(u3h(som));
