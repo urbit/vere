@@ -450,7 +450,7 @@ _get_now_micros()
 {
   struct timeval tim_u;
   gettimeofday(&tim_u, NULL);
-	return ((c3_d)tim_u.tv_sec * 1000ull) + ((c3_d)tim_u.tv_usec / 1000ull);
+	return ((c3_d)tim_u.tv_sec * 1000ull * 1000ull) + (c3_d)tim_u.tv_usec;
 }
 
 static c3_d
