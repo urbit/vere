@@ -1739,7 +1739,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 
       // XX the format of the lane %nail gives is (list (each @p address))
       //
-      u3_noun las = u3do("tail", u3k(dat));
+      u3_noun las = u3t(dat);
 
       if ( las == u3_nul ) {
         per_u->dan_u = (sockaddr_in){0};
