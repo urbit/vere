@@ -500,6 +500,24 @@ _lord_plea_work(u3_lord* god_u, u3_noun dat)
   u3z(dat);
 }
 
+static u3_noun
+_duplicate_noun(u3_noun som)
+{
+  if (c3y == u3a_is_cat(som)) return som;
+
+  if (c3y == u3a_is_pug(som)) {
+    u3a_atom* pug_u = u3a_to_ptr(som);
+    c3_y* buf_y = u3r_bytes_alloc(0, (pug_u->len_w << 2), som);
+    u3_atom dup = u3i_bytes((pug_u->len_w << 2), buf_y);
+    u3a_free(buf_y);
+    return dup;
+  }
+
+  u3_noun hed = _duplicate_noun(u3h(som));
+  u3_noun tel = _duplicate_noun(u3t(som));
+  return u3nc(hed, tel);
+}
+
 /* _lord_on_plea(): handle plea from serf.
 */
 static c3_o
@@ -519,6 +537,15 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 #endif
 
   jar = u3s_cue_xeno_with(god_u->sil_u, len_d, byt_y);
+
+  u3_noun jar_poke = _duplicate_noun(jar);
+  u3_noun jar_peek = _duplicate_noun(jar);
+  u3_noun jar_slog = _duplicate_noun(jar);
+  u3_noun jar_flog = _duplicate_noun(jar);
+  u3_noun jar_live = _duplicate_noun(jar);
+  u3_noun jar_ripe = _duplicate_noun(jar);
+  u3_noun jar_quiz = _duplicate_noun(jar);
+  
 
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'E');
@@ -541,19 +568,19 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case c3__poke: {
       // u3m_p("poke resp jar", jar);
-      _lord_plea_work(god_u, u3k(dat));
+      _lord_plea_work(god_u, u3k(u3t(jar_poke)));
     } break;
 
     case c3__peek: {
-      _lord_plea_peek(god_u, u3k(dat));
+      _lord_plea_peek(god_u, u3k(u3t(jar_peek)));
     } break;
 
     case  c3__slog: {
-      _lord_plea_slog(god_u, u3k(dat));
+      _lord_plea_slog(god_u, u3k(u3t(jar_slog)));
     } break;
 
     case  c3__flog: {
-      _lord_plea_flog(god_u, u3k(dat));
+      _lord_plea_flog(god_u, u3k(u3t(jar_flog)));
     } break;
 
     //  XX track snapshot state, mug_l, notification cb?
@@ -562,19 +589,26 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
     } break;
 
     case c3__live: {
-      _lord_plea_live(god_u, u3k(dat));
+      _lord_plea_live(god_u, u3k(u3t(jar_live)));
     } break;
 
     case c3__ripe: {
-      _lord_plea_ripe(god_u, u3k(dat));
+      _lord_plea_ripe(god_u, u3k(u3t(jar_ripe)));
     } break;
 
     case c3__quiz: {
-      _lord_plea_quiz(god_u, u3k(dat));
+      _lord_plea_quiz(god_u, u3k(u3t(jar_quiz)));
     } break;
   }
 
   u3z(jar);
+  u3z(jar_poke);
+  u3z(jar_peek);
+  u3z(jar_slog);
+  u3z(jar_flog);
+  u3z(jar_live);
+  u3z(jar_ripe);
+  u3z(jar_quiz);
 
   //  XX would be good to grab here, but need to do something
   //  about graceful shutdown
