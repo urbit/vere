@@ -3272,9 +3272,12 @@ u3n_duplicate_noun(u3_noun som)
 
   if (c3y == u3a_is_pug(som)) {
     u3a_atom* pug_u = u3a_to_ptr(som);
-    c3_y* buf_y = u3r_bytes_alloc(0, (pug_u->len_w << 2), som);
-    u3_atom dup = u3i_bytes((pug_u->len_w << 2), buf_y);
-    u3a_free(buf_y);
+    
+    u3i_slab sab_u;
+    u3i_slab_bare(&sab_u, 5, pug_u->len_w);
+    u3r_words(0, pug_u->len_w, sab_u.buf_w, som);
+    u3_atom dup = u3i_slab_moot(&sab_u);
+
     return dup;
   }
 
