@@ -1062,7 +1062,7 @@ _cttp_io_talk(u3_auto* car_u)
 static c3_o
 _cttp_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
-  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3_noun cad_new = u3n_duplicate_noun(cad);
   u3z(cad);
   cad = cad_new;
   u3_cttp* ctp_u = (u3_cttp*)car_u;

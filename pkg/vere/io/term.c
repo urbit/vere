@@ -1672,10 +1672,10 @@ _term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
 static c3_o
 _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
-  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3_noun cad_new = u3n_duplicate_noun(cad);
   u3z(cad);
   cad = cad_new;
-  
+
   u3_noun tag, dat, i_wir, t_wir;
   c3_o ret_o;
 

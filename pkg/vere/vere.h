@@ -1536,22 +1536,5 @@
         c3_w
         u3_meld_all(FILE*);
 
-u3_noun
-u3_vere_duplicate_noun(u3_noun som)
-{
-  if (c3y == u3a_is_cat(som)) return som;
-
-  if (c3y == u3a_is_pug(som)) {
-    u3a_atom* pug_u = u3a_to_ptr(som);
-    c3_y* buf_y = u3r_bytes_alloc(0, (pug_u->len_w << 2), som);
-    u3_atom dup = u3i_bytes((pug_u->len_w << 2), buf_y);
-    u3a_free(buf_y);
-    return dup;
-  }
-
-  u3_noun hed = _duplicate_noun(u3h(som));
-  u3_noun tel = _duplicate_noun(u3t(som));
-  return u3nc(hed, tel);
-}
 
 #endif /* ifndef U3_VERE_H */

@@ -146,4 +146,7 @@
       void
       u3n_ream(void);
 
+      u3_noun
+u3n_duplicate_noun(u3_noun som);
+
 #endif /* ifndef U3_NOCK_H */
