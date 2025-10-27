@@ -522,6 +522,10 @@ _lick_ef_spit(u3_lick* lic_u, u3_noun nam, u3_noun dat)
 static c3_o
 _lick_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
+  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3z(cad);
+  cad = cad_new;
+  
   u3_lick* lic_u = (u3_lick*)car_u;
 
   u3_noun tag, i_wir, par;

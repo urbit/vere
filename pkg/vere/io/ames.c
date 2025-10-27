@@ -2695,6 +2695,9 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
 static c3_o
 _ames_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
+  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3z(cad);
+  cad = cad_new;
   u3_ames* sam_u = (u3_ames*)car_u;
 
   u3_noun tag, dat, i_wir;

@@ -1508,6 +1508,10 @@ _unix_io_talk(u3_auto* car_u)
 static c3_o
 _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
+  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3z(cad);
+  cad = cad_new;
+  
   u3_unix* unx_u = (u3_unix*)car_u;
 
   u3_noun tag, dat, i_wir;

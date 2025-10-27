@@ -2937,6 +2937,10 @@ _http_seq_heartbeat_cb(uv_timer_t* tim_u)
 static c3_o
 _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
+  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3z(cad);
+  cad = cad_new;
+  
   u3_httd* htd_u = (u3_httd*)car_u;
 
   u3_noun tag, dat, i_wir, t_wir;

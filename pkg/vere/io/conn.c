@@ -880,6 +880,9 @@ _conn_ef_handle(u3_conn*  con_u,
 static c3_o
 _conn_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 {
+  u3_noun cad_new = u3_vere_duplicate_noun(cad);
+  u3z(cad);
+  cad = cad_new;
   u3_conn*  con_u = (u3_conn*)car_u;
   u3_noun   tag, dat;
   c3_l      sev_l, coq_l;
