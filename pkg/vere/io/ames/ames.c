@@ -260,7 +260,8 @@ _ames_pact_free(u3_pact* pac_u)
     default:
       u3l_log("ames_pact_free: bad packet type %s",
               _str_typ(pac_u->typ_y));
-      u3_pier_bail(u3_king_stub());
+      u3_king_bail();
+      exit(1);
   }
 
   _ames_ref_hun_lose(pac_u->hun_u);
@@ -1844,7 +1845,8 @@ _ames_hear(u3_ames* sam_u,
 
       default: {
         u3l_log("ames_hear: bad packet type %d", pac_u->typ_y);
-        u3_pier_bail(u3_king_stub());
+        u3_king_bail();
+        exit(1);
       }
     }
   }
@@ -2103,8 +2105,8 @@ _ames_io_slog(u3_ames* sam_u)
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
 }
 
-static u3m_quac**
-_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+u3m_quac**
+_ames_io_mark(u3_auto* car_u, c3_w* out_w)
 {
   u3m_quac** all_u = c3_malloc(2 * sizeof(*all_u));
   u3_ames   *sam_u = (u3_ames*)car_u;
@@ -2113,17 +2115,6 @@ _ames_io_mark(u3_auto* car_u, c3_w *out_w)
   all_u[0]->nam_c = strdup("scry cache");
   all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
   all_u[0]->qua_u = 0;
-
-//  XX tinnus
-//
-//  all_u[1] = c3_malloc(sizeof(**all_u));
-//  all_u[1]->nam_c = strdup("lane cache");
-//  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
-//  all_u[1]->qua_u = 0;
-//
-//  all_u[2] = 0;
-//
-//  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
 
   all_u[1] = 0;
 

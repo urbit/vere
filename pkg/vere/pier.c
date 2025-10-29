@@ -955,7 +955,7 @@ _pier_on_lord_live(void* ptr_v, u3_atom who, c3_o fak_o)
 
   //  XX validate
   //
-  u3r_chubs(0, 2, (c3_d*)&pir_u->who_u, who);
+  pir_u->who_u = u3_ship_of_noun(who);
   pir_u->fak_o = fak_o;
 
   //  early exit, preparing for upgrade

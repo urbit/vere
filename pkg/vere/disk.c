@@ -480,7 +480,7 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
   u3_assert( c3y == u3a_is_cat(met_u->lif_w) );
 
-  u3_noun who = u3i_chubs(2, (c3_d*)&met_u->who_u);
+  u3_noun who = u3_ship_to_noun(met_u->who_u);
 
   if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
      || (c3n == _disk_save_meta(mdb_u, "who", sizeof(u3_ship), (c3_y*)&met_u->who_u))

@@ -3011,6 +3011,9 @@ u3_ames_io_init(void* mes_u);
 void
 _ames_init_czars(u3_lamp_state* lam_u);
 
+u3m_quac**
+_ames_io_mark(u3_auto*, c3_w*);
+
 /* _mesa_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -3060,6 +3063,7 @@ u3_mesa_io_init(u3_pier* pir_u)
   car_u->io.talk_f = _mesa_io_talk;
   car_u->io.info_f = _mesa_io_info;
   car_u->io.slog_f = _mesa_io_slog;
+  car_u->io.mark_f = _ames_io_mark;
   car_u->io.kick_f = _mesa_io_kick;
   car_u->io.exit_f = _mesa_io_exit;
 
