@@ -851,4 +851,9 @@ u3a_dash(void);
           void
           u3a_loom_sane(void);
 
+        /* u3a_dupe: deep copy of a noun. RETAINS argument
+        */
+        u3_noun
+        u3a_dupe(u3_noun som);
+
 #endif /* ifndef U3_ALLOCATE_H */

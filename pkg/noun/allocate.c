@@ -12,6 +12,9 @@
 
 #include "palloc.c"
 
+#include <execinfo.h>
+#define U3_SHADOW_BACKTRACE_DEPTH   64
+
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 u3a_gack u3a_Gack;
@@ -234,7 +237,15 @@ _ca_reclaim_half(void)
 void*
 u3a_walloc(c3_w len_w)
 {
-  return u3a_into(_imalloc(len_w));
+  u3_post ptr_p = _imalloc(len_w);
+  if ( !u3R->par_p ) {
+    c3_w idx_w = ptr_p >> u3a_vits;
+    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+    void** buf_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
+    sha_u->siz_i = backtrace(buf_u, U3_SHADOW_BACKTRACE_DEPTH);
+    sha_u->stk_u = buf_u;
+  }
+  return u3a_into(ptr_p);
 }
 
 /* u3a_wealloc(): realloc in words.
@@ -274,7 +285,15 @@ void
 u3a_wfree(void* tox_v)
 {
   if ( tox_v ) {
-    _ifree(u3a_outa(tox_v));
+    u3_post tox_p = u3a_outa(tox_v);
+    _ifree(tox_p);
+    if ( !u3R->par_p ) {
+      c3_w idx_w = tox_p >> u3a_vits;
+      u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+      c3_free(sha_u->stk_u);
+      sha_u->siz_i = 0;
+      sha_u->stk_u = 0;
+    }
   }
 }
 
@@ -2012,4 +2031,24 @@ u3a_string(u3_atom a)
 void
 u3a_loom_sane(void)
 {
+}
+
+/* u3a_dupe: deep copy of a noun. RETAINS argument
+*/
+u3_noun
+u3a_dupe(u3_noun som)
+{
+  if (c3y == u3a_is_cat(som)) return som;
+
+  if (c3y == u3a_is_pug(som)) {
+    u3a_atom* pug_u = u3a_to_ptr(som);
+    u3i_slab sab_u;
+    u3i_slab_bare(&sab_u, 5, pug_u->len_w);
+    u3r_words(0, pug_u->len_w, sab_u.buf_w, som);
+    return u3i_slab_moot(&sab_u);
+  }
+
+  u3_noun hed = u3a_dupe(u3h(som));
+  u3_noun tel = u3a_dupe(u3t(som));
+  return u3nc(hed, tel);
 }
