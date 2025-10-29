@@ -1663,7 +1663,7 @@ _term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
 {
   u3_auto* car_u = (u3_auto*)vod_p;
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
-  u3_noun cad = u3k(res);
+  u3_noun cad = res;
   u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
 }
 
