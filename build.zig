@@ -437,6 +437,9 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    urbit.rdynamic = true;
+    if (t.os.tag == .linux) urbit.linkSystemLibrary("dl");
+
     if (t.os.tag == .windows) {
         urbit.stack_size = 67108864;
     } else {
