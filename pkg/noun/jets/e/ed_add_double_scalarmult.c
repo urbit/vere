@@ -15,7 +15,7 @@
     c3_y a_y[32], a_point_y[32],
          b_y[32], b_point_y[32],
          out_y[32];
-    c3_n met_w;
+    c3_w met_w;
 
     met_w = u3r_met(3, a);
     if ( (32 < met_w) ||

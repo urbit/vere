@@ -374,15 +374,15 @@ _test_etch_uw(void)
 }
 
 static inline c3_i
-_ud_good(c3_n num_w, const c3_c* num_c)
+_ud_good(c3_w num_w, const c3_c* num_c)
 {
   u3_weak out;
   if ( num_w != (out = u3s_sift_ud_bytes(strlen(num_c), (c3_y*)num_c)) ) {
     if ( u3_none == out ) {
-      fprintf(stderr, "sift_ud: %s fail; expected %"PRIc3_n"\r\n", num_c, num_w);
+      fprintf(stderr, "sift_ud: %s fail; expected %"PRIc3_w"\r\n", num_c, num_w);
     }
     else {
-      fprintf(stderr, "sift_ud: %s wrong; expected %"PRIc3_n": actual %"PRIc3_n"\r\n", num_c, num_w, out);
+      fprintf(stderr, "sift_ud: %s wrong; expected %"PRIc3_w": actual %"PRIc3_w"\r\n", num_c, num_w, out);
     }
     return 0;
   }
@@ -711,23 +711,23 @@ _test_base16(void)
   return ret_i;
 }
 
-static c3_n
-_fein_ob_w(c3_n inp_w)
+static c3_w
+_fein_ob_w(c3_w inp_w)
 {
-  u3_atom inp = u3i_note(inp_w);
+  u3_atom inp = u3i_word(inp_w);
   u3_atom act = u3qe_fein_ob(inp);
-  c3_n  act_w = u3r_note(0, act);
+  c3_w  act_w = u3r_word(0, act);
   u3z(inp); u3z(act);
   return act_w;
 }
 
 static c3_i
-_expect_fein_ob_w(c3_n inp_w, c3_n exp_w)
+_expect_fein_ob_w(c3_w inp_w, c3_w exp_w)
 {
-  c3_n act_w = _fein_ob_w(inp_w);
+  c3_w act_w = _fein_ob_w(inp_w);
 
   if ( act_w != exp_w ) {
-    fprintf(stderr, "fein: inp=0x%08"PRIxc3_n" exp=0x%08"PRIxc3_n" act=0x%08"PRIxc3_n"\n",
+    fprintf(stderr, "fein: inp=0x%08"PRIxc3_w" exp=0x%08"PRIxc3_w" act=0x%08"PRIxc3_w"\n",
                     inp_w, exp_w, act_w);
     return 0;
   }
@@ -756,23 +756,23 @@ _test_fein_ob(void)
   return ret_i;
 }
 
-static c3_n
-_fynd_ob_w(c3_n inp_w)
+static c3_w
+_fynd_ob_w(c3_w inp_w)
 {
-  u3_atom inp = u3i_note(inp_w);
+  u3_atom inp = u3i_word(inp_w);
   u3_atom act = u3qe_fynd_ob(inp);
-  c3_n  act_w = u3r_note(0, act);
+  c3_w  act_w = u3r_word(0, act);
   u3z(inp); u3z(act);
   return act_w;
 }
 
 static c3_i
-_expect_fynd_ob_w(c3_n exp_w, c3_n inp_w)
+_expect_fynd_ob_w(c3_w exp_w, c3_w inp_w)
 {
-  c3_n act_w = _fynd_ob_w(inp_w);
+  c3_w act_w = _fynd_ob_w(inp_w);
 
   if ( act_w != exp_w ) {
-    fprintf(stderr, "fynd: inp=0x%08"PRIxc3_n" exp=0x%08"PRIxc3_n" act=0x%08"PRIxc3_n"\n",
+    fprintf(stderr, "fynd: inp=0x%08"PRIxc3_w" exp=0x%08"PRIxc3_w" act=0x%08"PRIxc3_w"\n",
                     inp_w, exp_w, act_w);
     return 0;
   }
@@ -804,7 +804,7 @@ static c3_i
 _exhaust_roundtrip_fein_fynd_ob(void)
 {
   c3_i ret_i = 1;
-  c3_n fyn_w, i_w;
+  c3_w fyn_w, i_w;
 
   {
     u3_atom fen, fyn;
@@ -812,35 +812,35 @@ _exhaust_roundtrip_fein_fynd_ob(void)
     for ( i_w = 0x10000; i_w < 0x80000000; i_w++ ) {
       fen   = u3qe_fein_ob(i_w);
       fyn   = u3qe_fynd_ob(fen);
-      fyn_w = u3r_note(0, fyn);
+      fyn_w = u3r_word(0, fyn);
 
       if ( i_w != fyn_w ) {
-        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_n" fein=0x%08"PRIxc3_n" fynd=0x%08"PRIxc3_n"\n",
-                        i_w, u3r_note(0, fen), fyn_w);
+        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_w" fein=0x%08"PRIxc3_w" fynd=0x%08"PRIxc3_w"\n",
+                        i_w, u3r_word(0, fen), fyn_w);
         ret_i = 0;
       }
       u3z(fen); u3z(fyn);
 
       if ( !(i_w % 0x1000000) ) {
-        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_n" done\n", i_w);
+        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_w" done\n", i_w);
       }
     }
   }
 
   {
-    c3_n fen_w;
+    c3_w fen_w;
 
     do {
       fen_w = _fein_ob_w(i_w);
       fyn_w = _fynd_ob_w(fen_w);
       if ( i_w != fyn_w ) {
-        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_n" fein=0x%08"PRIxc3_n" fynd=0x%08"PRIxc3_n"\n",
+        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_w" fein=0x%08"PRIxc3_w" fynd=0x%08"PRIxc3_w"\n",
                         i_w, fen_w, fyn_w);
         ret_i = 0;
       }
 
       if ( !(i_w % 0x1000000) ) {
-        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_n" done\n", i_w);
+        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_w" done\n", i_w);
       }
     }
     while ( ++i_w );
@@ -868,12 +868,12 @@ _test_mas(void)
   u3_atom res;
 
   if ( 0x4000 != (res = u3qc_mas(0x8000)) ) {
-    fprintf(stderr, "test mas fail: (mas 0x8000) != 0x4000: 0x'%"PRIxc3_n"'\r\n", res);
+    fprintf(stderr, "test mas fail: (mas 0x8000) != 0x4000: 0x'%"PRIxc3_w"'\r\n", res);
     ret_i = 0;
   }
 
   if ( 0x20000000 != (res = u3qc_mas(0x40000000)) ) {
-    fprintf(stderr, "test mas fail: (mas 0x4000.0000) != 0x2000.0000: 0x%"PRIxc3_n"\r\n", res);
+    fprintf(stderr, "test mas fail: (mas 0x4000.0000) != 0x2000.0000: 0x%"PRIxc3_w"\r\n", res);
     ret_i = 0;
   }
 

@@ -59,13 +59,13 @@
     /* Bit counting.
     */
 #if   (32 == (CHAR_BIT * __SIZEOF_INT__))
-#     define c3_lz_w __builtin_clz
-#     define c3_tz_w __builtin_ctz
-#     define c3_pc_w __builtin_popcount
+#     define c3_lz_w_new __builtin_clz
+#     define c3_tz_w_new __builtin_ctz
+#     define c3_pc_w_new __builtin_popcount
 #elif (32 == (CHAR_BIT * __SIZEOF_LONG__))
-#     define c3_lz_w __builtin_clzl
-#     define c3_tz_w __builtin_ctzl
-#     define c3_pc_w __builtin_popcountl
+#     define c3_lz_w_new __builtin_clzl
+#     define c3_tz_w_new __builtin_ctzl
+#     define c3_pc_w_new __builtin_popcountl
 #else
 #     error  "port me"
 #endif
@@ -78,19 +78,19 @@
 #     error  "port me"
 #endif
 
-#     define c3_bits_word_new(w) ((w) ? (32 - c3_lz_w(w)) : 0)
+#     define c3_bits_word_new(w) ((w) ? (32 - c3_lz_w_new(w)) : 0)
 #     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
 
 #ifndef VERE64
-#     define c3_bits_note(n)  c3_bits_word_new(n)
-#     define c3_lz_n  c3_lz_w
-#     define c3_tz_n  c3_tz_w
-#     define c3_pc_n  c3_pc_w
+#     define c3_bits_word(n)  c3_bits_word_new(n)
+#     define c3_lz_w  c3_lz_w_new
+#     define c3_tz_w  c3_tz_w_new
+#     define c3_pc_w  c3_pc_w_new
 #else
-#     define c3_bits_note(n)  c3_bits_chub(n)
-#     define c3_lz_n  c3_lz_d
-#     define c3_tz_n  c3_tz_d
-#     define c3_pc_n  c3_pc_d
+#     define c3_bits_word(n)  c3_bits_chub(n)
+#     define c3_lz_w  c3_lz_d
+#     define c3_tz_w  c3_tz_d
+#     define c3_pc_w  c3_pc_d
 #endif
 
     /* Min and max.
@@ -266,13 +266,13 @@
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w_new     : c3_align_w,               \
+           c3_w_new     : c3_align_w_new,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
 inline c3_w_new
-c3_align_w(c3_w_new x, c3_w_new al, align_dir hilo) {
+c3_align_w_new(c3_w_new x, c3_w_new al, align_dir hilo) {
   c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
@@ -285,10 +285,10 @@ c3_align_d(c3_d x, c3_d al, align_dir hilo) {
   x &= ~(al - 1);
   return x;
 }
-inline c3_n
-c3_align_n(c3_n x, c3_n al, align_dir hilo) {
+inline c3_w
+c3_align_w(c3_w x, c3_w al, align_dir hilo) {
 #ifndef VERE64
-  return c3_align_w(x, al, hilo);
+  return c3_align_w_new(x, al, hilo);
 #else
   return c3_align_d(x, al, hilo);
 #endif
@@ -303,13 +303,13 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   return (void*)x;
 }
 
-#define c3_w_max  0xffffffff
+#define c3_w_new_max  0xffffffff
 #define c3_d_max  0xffffffffffffffffULL
 
 #ifndef VERE64
-#define c3_n_max  c3_w_max
+#define c3_w_max  c3_w_new_max
 #else
-#define c3_n_max  c3_d_max
+#define c3_w_max  c3_d_max
 #endif
 
 #endif /* ifndef C3_DEFS_H */

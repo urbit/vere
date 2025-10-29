@@ -15,11 +15,11 @@
     }
     else {
       u3_noun acc = u3_nul;
-      c3_n i_n = a;
+      c3_w i_w = a;
 
-      while ( i_n ) {
+      while ( i_w ) {
         acc = u3nc(u3k(b), acc);
-        i_n--;
+        i_w--;
       }
 
       return acc;

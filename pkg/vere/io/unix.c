@@ -207,7 +207,7 @@ _unix_knot_to_string(u3_atom pon)
     ret_c = u3r_string(pon);
   }
   else {
-    c3_n  met_w = u3r_met(3, pon);
+    c3_w  met_w = u3r_met(3, pon);
 
     ret_c = c3_malloc(met_w + 2);
     *ret_c = '!';
@@ -317,7 +317,7 @@ void
 u3_unix_save(c3_c* pax_c, u3_atom pad)
 {
   c3_i  fid_i;
-  c3_n  lod_w, len_w, fln_w, rit_w;
+  c3_w  lod_w, len_w, fln_w, rit_w;
   c3_y* pad_y;
   c3_c* ful_c;
 
@@ -431,7 +431,7 @@ static c3_m
 _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
 {
   c3_i  fid_i = c3_open(pax_c, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-  c3_n len_w, rit_w, siz_w;
+  c3_w len_w, rit_w, siz_w;
   c3_w_new  mug_w = 0;
   c3_y* dat_y;
 
@@ -475,7 +475,7 @@ _unix_write_file_soft(u3_ufil* fil_u, u3_noun mim)
 {
   struct stat buf_u;
   c3_i  fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
-  c3_ns len_ws, red_ws;
+  c3_ws len_ws, red_ws;
   c3_m  old_w;
   c3_y* old_y;
 
@@ -507,7 +507,7 @@ _unix_write_file_soft(u3_ufil* fil_u, u3_noun mim)
               fil_u->pax_c, strerror(errno));
     }
     else {
-      u3l_log("wrong # of bytes read in file %s: %" PRIc3_ns " %" PRIc3_ns,
+      u3l_log("wrong # of bytes read in file %s: %" PRIc3_ws " %" PRIc3_ws,
               fil_u->pax_c, len_ws, red_ws);
     }
     c3_free(old_y);
@@ -898,7 +898,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   struct stat buf_u;
   c3_i  fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
-  c3_ns len_ws, red_ws;
+  c3_ws len_ws, red_ws;
   c3_y* dat_y;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
@@ -928,7 +928,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
               fil_u->pax_c, strerror(errno));
     }
     else {
-      u3l_log("wrong # of bytes read in file %s: %" PRIc3_ns " %" PRIc3_ns,
+      u3l_log("wrong # of bytes read in file %s: %" PRIc3_ws " %" PRIc3_ws,
               fil_u->pax_c, len_ws, red_ws);
     }
     c3_free(dat_y);
@@ -1164,7 +1164,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
 {
   struct stat buf_u;
   c3_i  fid_i = c3_open(pax_c, O_RDONLY, 0644);
-  c3_ns len_ws, red_ws;
+  c3_ws len_ws, red_ws;
   c3_y* dat_y;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
@@ -1194,7 +1194,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
               pax_c, strerror(errno));
     }
     else {
-      u3l_log("wrong # of bytes read in initial file %s: %" PRIc3_ns " %" PRIc3_ns,
+      u3l_log("wrong # of bytes read in initial file %s: %" PRIc3_ws " %" PRIc3_ws,
               pax_c, len_ws, red_ws);
     }
     c3_free(dat_y);

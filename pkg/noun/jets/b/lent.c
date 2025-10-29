@@ -12,14 +12,14 @@
 u3_noun
 u3qb_lent(u3_noun a)
 {
-  c3_n len_w = 0;
+  c3_w len_w = 0;
 
   while ( u3_nul != a ) {
     a = u3t(a);
     len_w++;
   }
 
-  return u3i_note(len_w);
+  return u3i_word(len_w);
 }
 
 u3_noun

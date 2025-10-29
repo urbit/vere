@@ -8,7 +8,7 @@
 ** Adjust for future leap secs!
 */
 c3_d
-u3_time_sec_in(c3_n unx_w)
+u3_time_sec_in(c3_w unx_w)
 {
   return 0x8000000cce9e0d80ULL + (c3_d)unx_w;
 }

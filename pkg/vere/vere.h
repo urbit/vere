@@ -23,9 +23,9 @@
     */
       typedef struct _u3_hhed {
         struct _u3_hhed* nex_u;
-        c3_n             nam_w;
+        c3_w             nam_w;
         c3_c*            nam_c;
-        c3_n             val_w;
+        c3_w             val_w;
         c3_c*            val_c;
       } u3_hhed;
 
@@ -33,7 +33,7 @@
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
-        c3_n             len_w;
+        c3_w             len_w;
         c3_y             hun_y[0];
       } u3_hbod;
 
@@ -137,14 +137,14 @@
     */
       typedef struct {
         struct {
-          c3_n  col_l;                      //  columns
-          c3_n  row_l;                      //  rows
+          c3_w  col_l;                      //  columns
+          c3_w  row_l;                      //  rows
         } siz;
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
-          c3_n    rus_w;                    //  cursor position (row)
-          c3_n    cus_w;                    //  cursor position (column)
+          c3_w    rus_w;                    //  cursor position (row)
+          c3_w    cus_w;                    //  cursor position (column)
         } mir;
 
         struct {                            //  escape code control
@@ -158,8 +158,8 @@
 
         struct {                            //  input buffering
           c3_y    syb_y[5];                 //  utf8 code buffer
-          c3_n    len_w;                    //  present length
-          c3_n    wid_w;                    //  total width
+          c3_w    len_w;                    //  present length
+          c3_w    wid_w;                    //  total width
           u3_noun imp;                      //  %txt input buffer
         } fut;
 
@@ -238,10 +238,10 @@
         u3_ttyf          loj_f;             //  release tty from cooked print
         c3_o           (*wsz_f)
                        (struct _u3_utty* uty_u,
-                        c3_n* col_l,
-                        c3_n* row_l);       //  return tty window size
+                        c3_w* col_l,
+                        c3_w* row_l);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
-        c3_n             tid_l;             //  terminal identity number
+        c3_w             tid_l;             //  terminal identity number
         u3_utfo          ufo_u;             //  escape sequences
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
@@ -262,7 +262,7 @@
         c3_o    abo;                        //  -a, abort aggressively
         c3_c*   pil_c;                      //  -B, bootstrap from
         c3_c*   bin_c;                      //  -b, http server bind ip
-        c3_n    hap_n;                      //  -C, cap transient memo cache
+        c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
         c3_c*   eth_c;                      //  -e, ethereum node url
@@ -280,7 +280,7 @@
         c3_o    lit;                        //  -l, lite mode
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
-        c3_n    per_n;                      //  -M, cap persistent memo cache
+        c3_w    per_w;                      //  -M, cap persistent memo cache
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port
@@ -339,7 +339,7 @@
     **/
       /* u3_ovum_news: u3_ovum lifecycle events
       */
-        typedef enum: c3_n {
+        typedef enum: c3_w {
           u3_ovum_drop = 0,                 //  unplanned
           u3_ovum_work = 1,                 //  begun
           u3_ovum_done = 2                  //  complete
@@ -627,7 +627,7 @@
           } pec_u;
           void*            sop_p;               //  slog stream data
           void           (*sog_f)               //  slog stream callback
-                         (void*, c3_n, u3_noun);//
+                         (void*, c3_w, u3_noun);//
           // XX group ports?
           c3_s             per_s;               //  http port
           c3_s             pes_s;               //  htls port
@@ -675,7 +675,7 @@
       ** Adjust (externally) for future leap secs!
       */
         c3_d
-        u3_time_sec_in(c3_n unx_w);
+        u3_time_sec_in(c3_w unx_w);
 
       /* u3_time_sec_out(): unix time from urbit seconds.
       **
@@ -1100,7 +1100,7 @@
       /* u3_term_get_blew(): return window size [columns rows].
       */
         u3_noun
-        u3_term_get_blew(c3_n tid_l);
+        u3_term_get_blew(c3_w tid_l);
 
       /* u3_term_ef_winc(): window change.
       */
@@ -1484,7 +1484,7 @@
       /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
        */
         c3_i
-        king_curl_bytes(c3_c* url_c, c3_n* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y);
+        king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y);
 
       /* u3_write_fd(): retry interrupts, continue partial writes, assert errors.
       */
@@ -1496,12 +1496,12 @@
 
       /* u3_melt_all(): canonicalize persistent state
       */
-        c3_n
+        c3_w
         u3_melt_all(FILE*);
 
       /* u3_meld_all(): canonicalize persistent nouns and compact state.
       */
-        c3_n
+        c3_w
         u3_meld_all(FILE*);
 
 #endif /* ifndef U3_VERE_H */

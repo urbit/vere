@@ -19,7 +19,7 @@
 /* u3_cres: response to http client.
 */
   typedef struct _u3_cres {
-    c3_n             sas_w;             //  status code
+    c3_w             sas_w;             //  status code
     u3_noun          hed;               //  headers
     u3_hbod*         bod_u;             //  exit of body queue
     u3_hbod*         dob_u;             //  entry of body queue
@@ -28,11 +28,11 @@
 /* u3_creq: outgoing http request.
 */
   typedef struct _u3_creq {             //  client request
-    c3_n               num_l;           //  request number
+    c3_w               num_l;           //  request number
     h2o_http1client_t* cli_u;           //  h2o client
     u3_csat            sat_e;           //  connection state
     c3_o               sec;             //  yes == https
-    c3_n               ipf_w;           //  IP
+    c3_w               ipf_w;           //  IP
     c3_c*              ipf_c;           //  IP (string)
     c3_c*              hot_c;           //  host
     c3_s               por_s;           //  port
@@ -54,7 +54,7 @@
 */
   typedef struct _u3_cttp {
     u3_auto          car_u;             //  driver
-    c3_n             sev_l;             //  instance number
+    c3_w             sev_l;             //  instance number
     u3_creq*         ceq_u;             //  request list
     uv_async_t       nop_u;             //  unused handle (async close)
     h2o_timeout_t    tim_u;             //  request timeout
@@ -88,7 +88,7 @@ _cttp_bods_free(u3_hbod* bod_u)
 /* _cttp_bod_new(): create a data buffer
 */
 static u3_hbod*
-_cttp_bod_new(c3_n len_w, c3_c* hun_c)
+_cttp_bod_new(c3_w len_w, c3_c* hun_c)
 {
   u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
   bod_u->hun_y[len_w] = 0;
@@ -104,7 +104,7 @@ _cttp_bod_new(c3_n len_w, c3_c* hun_c)
 static u3_hbod*
 _cttp_bod_from_hed(u3_hhed* hed_u)
 {
-  c3_n len_w     = hed_u->nam_w + 2 + hed_u->val_w + 2;
+  c3_w len_w     = hed_u->nam_w + 2 + hed_u->val_w + 2;
   u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
   bod_u->hun_y[len_w] = 0;
 
@@ -124,7 +124,7 @@ _cttp_bod_from_hed(u3_hhed* hed_u)
 static u3_noun
 _cttp_bods_to_octs(u3_hbod* bod_u)
 {
-  c3_n    len_w;
+  c3_w    len_w;
   c3_y*   buf_y;
   u3_noun cos;
 
@@ -159,7 +159,7 @@ _cttp_bods_to_octs(u3_hbod* bod_u)
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
 {
-  c3_n len_w;
+  c3_w len_w;
 
   if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
     u3m_bail(c3__fail); return 0;
@@ -182,10 +182,10 @@ _cttp_bod_from_octs(u3_noun oct)
 /* _cttp_bods_to_vec(): translate body buffers to array of h2o_iovec_t
 */
 static h2o_iovec_t*
-_cttp_bods_to_vec(u3_hbod* bod_u, c3_n* tot_w)
+_cttp_bods_to_vec(u3_hbod* bod_u, c3_w* tot_w)
 {
   h2o_iovec_t* vec_u;
-  c3_n len_w;
+  c3_w len_w;
 
   {
     u3_hbod* bid_u = bod_u;
@@ -238,8 +238,8 @@ _cttp_heds_free(u3_hhed* hed_u)
 static u3_hhed*
 _cttp_hed_new(u3_atom nam, u3_atom val)
 {
-  c3_n     nam_w = u3r_met(3, nam);  //
-  c3_n     val_w = u3r_met(3, val);  //  XX: potential truncations
+  c3_w     nam_w = u3r_met(3, nam);  //
+  c3_w     val_w = u3r_met(3, val);  //  XX: potential truncations
   u3_hhed* hed_u = c3_malloc(sizeof(*hed_u));
 
   hed_u->nam_c = c3_malloc(1 + nam_w);
@@ -312,7 +312,7 @@ _cttp_cres_free(u3_cres* res_u)
 /* _cttp_cres_new(): create a response
 */
 static void
-_cttp_cres_new(u3_creq* ceq_u, c3_n sas_w)
+_cttp_cres_new(u3_creq* ceq_u, c3_w sas_w)
 {
   ceq_u->res_u = c3_calloc(sizeof(*ceq_u->res_u));
   ceq_u->res_u->sas_w = sas_w;
@@ -336,8 +336,8 @@ _cttp_cres_fire_body(u3_cres* res_u, u3_hbod* bod_u)
 
 /* _cttp_mcut_pork(): measure/cut path/extension.
 */
-static c3_n
-_cttp_mcut_pork(c3_c* buf_c, c3_n len_w, u3_noun pok)
+static c3_w
+_cttp_mcut_pork(c3_c* buf_c, c3_w len_w, u3_noun pok)
 {
   u3_noun h_pok = u3h(pok);
   u3_noun t_pok = u3t(pok);
@@ -353,8 +353,8 @@ _cttp_mcut_pork(c3_c* buf_c, c3_n len_w, u3_noun pok)
 
 /* _cttp_mcut_quay(): measure/cut query.
 */
-static c3_n
-_cttp_mcut_quay(c3_c* buf_c, c3_n len_w, u3_noun quy)
+static c3_w
+_cttp_mcut_quay(c3_c* buf_c, c3_w len_w, u3_noun quy)
 {
   u3_noun yuq = quy;
   c3_o  fir_o = c3y;
@@ -388,8 +388,8 @@ _cttp_mcut_quay(c3_c* buf_c, c3_n len_w, u3_noun quy)
 
 /* _cttp_mcut_url(): measure/cut purl, producing relative URL.
 */
-static c3_n
-_cttp_mcut_url(c3_c* buf_c, c3_n len_w, u3_noun pul)
+static c3_w
+_cttp_mcut_url(c3_c* buf_c, c3_w len_w, u3_noun pul)
 {
   u3_noun q_pul = u3h(u3t(pul));
   u3_noun r_pul = u3t(u3t(pul));
@@ -419,7 +419,7 @@ _cttp_creq_port(c3_s por_s)
 static c3_c*
 _cttp_creq_url(u3_noun pul)
 {
-  c3_n  len_w = _cttp_mcut_url(0, 0, u3k(pul));
+  c3_w  len_w = _cttp_mcut_url(0, 0, u3k(pul));
   c3_c* url_c = c3_malloc(1 + len_w);
 
   _cttp_mcut_url(url_c, 0, pul);
@@ -433,7 +433,7 @@ _cttp_creq_url(u3_noun pul)
 static c3_c*
 _cttp_creq_host(u3_noun hot)
 {
-  c3_n  len_w = u3_mcut_host(0, 0, u3k(hot));
+  c3_w  len_w = u3_mcut_host(0, 0, u3k(hot));
   c3_c* hot_c = c3_malloc(1 + len_w);
 
   u3_mcut_host(hot_c, 0, hot);
@@ -445,10 +445,10 @@ _cttp_creq_host(u3_noun hot)
 /* _cttp_creq_ip(): stringify ip
 */
 static c3_c*
-_cttp_creq_ip(c3_n ipf_w)
+_cttp_creq_ip(c3_w ipf_w)
 {
   c3_c* ipf_c = c3_malloc(17);
-  snprintf(ipf_c, 16, "%"PRIc3_n".%"PRIc3_n".%"PRIc3_n".%"PRIc3_n,
+  snprintf(ipf_c, 16, "%"PRIc3_w".%"PRIc3_w".%"PRIc3_w".%"PRIc3_w,
                                      (ipf_w >> 24),
                                      ((ipf_w >> 16) & 255),
                                      ((ipf_w >> 8) & 255),
@@ -459,7 +459,7 @@ _cttp_creq_ip(c3_n ipf_w)
 /* _cttp_creq_find(): find a request by number in the client
 */
 static u3_creq*
-_cttp_creq_find(u3_cttp* ctp_u, c3_n num_l)
+_cttp_creq_find(u3_cttp* ctp_u, c3_w num_l)
 {
   u3_creq* ceq_u = ctp_u->ceq_u;
 
@@ -543,7 +543,7 @@ _cttp_creq_free(u3_creq* ceq_u)
  *   We start with the (?? - JB)
  */
 static u3_creq*
-_cttp_creq_new(u3_cttp* ctp_u, c3_n num_l, u3_noun hes)
+_cttp_creq_new(u3_cttp* ctp_u, c3_w num_l, u3_noun hes)
 {
   u3_creq* ceq_u = c3_calloc(sizeof(*ceq_u));
 
@@ -650,7 +650,7 @@ static void
 _cttp_creq_fire(u3_creq* ceq_u)
 {
   {
-    c3_n  len_w = strlen(ceq_u->met_c) + 1 + strlen(ceq_u->url_c) + 12;
+    c3_w  len_w = strlen(ceq_u->met_c) + 1 + strlen(ceq_u->url_c) + 12;
     c3_c* lin_c = c3_malloc(len_w);
 
     len_w = snprintf(lin_c, len_w, "%s %s HTTP/1.1\r\n",
@@ -662,7 +662,7 @@ _cttp_creq_fire(u3_creq* ceq_u)
   {
     c3_c* hot_c = ceq_u->hot_c ? ceq_u->hot_c : ceq_u->ipf_c;
     c3_c* hos_c;
-    c3_n  len_w;
+    c3_w  len_w;
 
     if ( ceq_u->por_c ) {
       len_w = 6 + strlen(hot_c) + 1 + strlen(ceq_u->por_c) + 3;
@@ -686,7 +686,7 @@ _cttp_creq_fire(u3_creq* ceq_u)
   }
   else {
     c3_c len_c[41];
-    c3_n len_w = snprintf(len_c, 40, "Content-Length: %" PRIc3_n "\r\n\r\n",
+    c3_w len_w = snprintf(len_c, 40, "Content-Length: %" PRIc3_w "\r\n\r\n",
                                      ceq_u->bod_u->len_w);
 
     _cttp_creq_fire_body(ceq_u, _cttp_bod_new(len_w, len_c));
@@ -712,7 +712,7 @@ _cttp_creq_quit(u3_creq* ceq_u)
 }
 
 static void
-_cttp_http_client_receive(u3_creq* ceq_u, c3_n sas_w, u3_noun mes, u3_noun uct)
+_cttp_http_client_receive(u3_creq* ceq_u, c3_w sas_w, u3_noun mes, u3_noun uct)
 {
   u3_cttp* ctp_u = ceq_u->ctp_u;
 
@@ -734,9 +734,9 @@ static void
 _cttp_creq_fail(u3_creq* ceq_u, const c3_c* err_c)
 {
   // XX anything other than a 504?
-  c3_n cod_w = 504;
+  c3_w cod_w = 504;
 
-  u3l_log("http: fail (%"PRIc3_n", %"PRIc3_n"): %s", ceq_u->num_l, cod_w, err_c);
+  u3l_log("http: fail (%"PRIc3_w", %"PRIc3_w"): %s", ceq_u->num_l, cod_w, err_c);
 
   // XX include err_c as response body?
   _cttp_http_client_receive(ceq_u, cod_w, u3_nul, u3_nul);
@@ -801,7 +801,7 @@ _cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
     return 0;
   }
 
-  _cttp_cres_new(ceq_u, (c3_n)sas_i);
+  _cttp_cres_new(ceq_u, (c3_w)sas_i);
   ceq_u->res_u->hed = _cttp_heds_to_noun(hed_u, hed_t);
 
   if ( h2o_http1client_error_is_eos == err_c ) {
@@ -838,7 +838,7 @@ _cttp_creq_on_connect(h2o_http1client_t* cli_u, const c3_c* err_c,
   _cttp_creq_fire(ceq_u);
 
   {
-    c3_n len_w;
+    c3_w len_w;
     ceq_u->vec_u = _cttp_bods_to_vec(ceq_u->rub_u, &len_w);
 
     *vec_i = len_w;
@@ -999,10 +999,10 @@ _cttp_ef_http_client(u3_cttp* ctp_u, u3_noun tag, u3_noun dat)
 
   if ( c3y == u3r_sing_c("request", tag) ) {
     u3_noun num, req;
-    c3_n  num_l;
+    c3_w  num_l;
 
     if (  (c3n == u3r_cell(dat, &num, &req))
-       || (c3n == u3r_safe_note(num, &num_l)) )
+       || (c3n == u3r_safe_word(num, &num_l)) )
     {
       u3l_log("cttp: strange request");
       ret_o = c3n;
@@ -1016,9 +1016,9 @@ _cttp_ef_http_client(u3_cttp* ctp_u, u3_noun tag, u3_noun dat)
     }
   }
   else if ( c3y == u3r_sing_c("cancel-request", tag) ) {
-    c3_n num_l;
+    c3_w num_l;
 
-    if ( c3n == u3r_safe_note(dat, &num_l) ) {
+    if ( c3n == u3r_safe_word(dat, &num_l) ) {
       u3l_log("cttp: strange cancel-request");
       ret_o = c3n;
     }

@@ -23,9 +23,9 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
   //  XX assume( a_u->mug_w && b_u->mug_w )
   if ( a_u->mug_w != b_u->mug_w ) return 0;
 
-  if ( a_u->len_n != b_u->len_n ) return 0;
+  if ( a_u->len_w != b_u->len_w ) return 0;
 
-  return 0 == memcmp(a_u->buf_n, b_u->buf_n, a_u->len_n << (u3a_note_bits_log-3));
+  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
 }
 
 #define NAME    _coins
@@ -60,8 +60,8 @@ _melt_cmp_cells(u3_cell a, u3_cell b)
 typedef struct {
   _coins  vat_u;
   _cells  cel_u;
-  c3_n    len_w;
-  c3_n    siz_w;
+  c3_w    len_w;
+  c3_w    siz_w;
   u3_noun *tac;
 } _melt_ctx;
 
@@ -155,10 +155,10 @@ _melt_walk_hamt(u3_noun kev, void* ptr_v)
   (void)_melt_canon(can_u, kev);
 }
 
-c3_n
+c3_w
 u3_melt_all(FILE *fil_u)
 {
-  c3_n     pre_w = u3a_idle(u3R);
+  c3_w     pre_w = u3a_idle(u3R);
   _melt_ctx can_u = {0};
 
   // Verify that we're on the main road.
@@ -183,9 +183,9 @@ u3_melt_all(FILE *fil_u)
 
   if ( fil_u ) {
     fprintf(fil_u, "atoms (%zu)", vt_size(&can_u.vat_u));
-    u3a_print_memory(fil_u, "", (c3_n)vt_bucket_count(&can_u.vat_u));
+    u3a_print_memory(fil_u, "", (c3_w)vt_bucket_count(&can_u.vat_u));
     fprintf(fil_u, "cells (%zu)", vt_size(&can_u.cel_u));
-    u3a_print_memory(fil_u, "", (c3_n)vt_bucket_count(&can_u.cel_u));
+    u3a_print_memory(fil_u, "", (c3_w)vt_bucket_count(&can_u.cel_u));
   }
 
   vt_cleanup(&can_u.vat_u);
@@ -196,13 +196,13 @@ u3_melt_all(FILE *fil_u)
   return u3a_idle(u3R) - pre_w;
 }
 
-c3_n
+c3_w
 u3_meld_all(FILE *fil_u)
 {
-  c3_n pre_w = u3a_open(u3R);
+  c3_w pre_w = u3a_open(u3R);
 
   u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_n);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
 
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();

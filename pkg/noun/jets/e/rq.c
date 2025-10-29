@@ -10,13 +10,13 @@
 
   union quad {
     float128_t* q;
-    c3_n* c;
+    c3_w* c;
   };
 
 #ifdef VERE64
-  static const c3_n n = 2;
+  static const c3_w n = 2;
 #else
-  static const c3_n n = 4;
+  static const c3_w n = 4;
 #endif
 
   static inline c3_t
@@ -71,12 +71,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_add(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_notes(n, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -109,12 +109,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_sub(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_notes(4, e.c);
+    u3_atom f = u3i_words(4, e.c);
     return f;
   }
 
@@ -147,12 +147,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_mul(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_notes(n, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -185,12 +185,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_div(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_notes(n, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -221,11 +221,11 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
+    u3r_words(0, n, c.c, a);
     f128M_sqrt(c.q, d.q);
     _nan_unify(d.q);
 
-    u3_atom e = u3i_notes(n, d.c);
+    u3_atom e = u3i_words(n, d.c);
     return e;
   }
 
@@ -259,13 +259,13 @@
     f.c = alloca(16);
     g.c = alloca(16);
 
-    u3r_notes(0, n, d.c, a);
-    u3r_notes(0, n, e.c, b);
-    u3r_notes(0, n, f.c, c);
+    u3r_words(0, n, d.c, a);
+    u3r_words(0, n, e.c, b);
+    u3r_words(0, n, f.c, c);
     f128M_mulAdd(d.q, e.q, f.q, g.q);
     _nan_unify(g.q);
 
-    u3_atom h = u3i_notes(n, g.c);
+    u3_atom h = u3i_words(n, g.c);
     return h;
   }
 
@@ -296,8 +296,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_lt(c.q, d.q));
 
     return e;
@@ -329,8 +329,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_le(c.q, d.q));
 
     return e;
@@ -362,8 +362,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_eq(c.q, d.q));
 
     return e;
@@ -395,8 +395,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_le(d.q, c.q));
 
     return e;
@@ -428,8 +428,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_notes(0, n, c.c, a);
-    u3r_notes(0, n, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_lt(d.q, c.q));
 
     return e;

@@ -75,16 +75,16 @@ _main_readw(const c3_c* str_c, c3_w_new max_w, c3_w_new* out_w)
   else return c3n;
 }
 
-/* _main_readn(): parse a note from a string.
+/* _main_readn(): parse a word from a string.
 */
 static c3_o
-_main_readn(const c3_c* str_c, c3_n max_n, c3_n* out_n)
+_main_readn(const c3_c* str_c, c3_w max_w, c3_w* out_w)
 {
   c3_c* end_c;
   c3_d  par_d = strtoull(str_c, &end_c, 0);
 
-  if ( *str_c != '\0' && *end_c == '\0' && par_d < max_n ) {
-    *out_n = par_d;
+  if ( *str_c != '\0' && *end_c == '\0' && par_d < max_w ) {
+    *out_w = par_d;
     return c3y;
   }
   else return c3n;
@@ -98,7 +98,7 @@ _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
   c3_w_new lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_n"\r\n", arg_c, (c3_n)u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_w"\r\n", arg_c, (c3_w)u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -193,10 +193,10 @@ _main_init(void)
   u3_Host.ops_u.tra = c3n;
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
-  u3_Host.ops_u.hap_n = 50000;
-  u3C.hap_n = u3_Host.ops_u.hap_n;
-  u3_Host.ops_u.per_n = 50000;
-  u3C.per_n = u3_Host.ops_u.per_n;
+  u3_Host.ops_u.hap_w = 50000;
+  u3C.hap_w = u3_Host.ops_u.hap_w;
+  u3_Host.ops_u.per_w = 50000;
+  u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
   u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
@@ -213,7 +213,7 @@ _main_init(void)
 #endif
 
   u3C.eph_c = 0;
-  u3C.tos_n = 0;
+  u3C.tos_w = 0;
 }
 
 /* _main_pier_run(): get pier from binary path (argv[0]), if appropriate
@@ -352,7 +352,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 9: {  //  toss
         u3_Host.ops_u.tos = c3y;
-        if ( 1 != sscanf(optarg, "%" PRIc3_n, &u3C.tos_n) ) {
+        if ( 1 != sscanf(optarg, "%" PRIc3_w, &u3C.tos_w) ) {
           return c3n;
         }
         break;
@@ -434,10 +434,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'C': {
-        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.hap_n) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.hap_w) ) {
           return c3n;
         }
-        u3C.hap_n = u3_Host.ops_u.hap_n;
+        u3C.hap_w = u3_Host.ops_u.hap_w;
         break;
       }
       case 'c': {
@@ -486,10 +486,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'M': {
-        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.per_n) ) {
+        if ( c3n == _main_readn(optarg, 1000000000, &u3_Host.ops_u.per_w) ) {
           return c3n;
         }
-        u3C.per_n = u3_Host.ops_u.per_n;
+        u3C.per_w = u3_Host.ops_u.per_w;
         break;
       }
       case 'n': {
@@ -1347,7 +1347,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     c3_c*   evl_c = _cw_eval_get_string(stdin, 10);
     c3_y*   byt_y;
     u3_noun sam = u3i_string(evl_c);
-    u3_noun res = u3m_soft(0, u3v_wish_n, sam);
+    u3_noun res = u3m_soft(0, u3v_wish_w, sam);
     if ( 0 == u3h(res) ) {                //  successful execution, print output
       u3s_jam_xeno(u3t(res), &len_d, &byt_y);
       if ( c3y == new_o ) {
@@ -2891,7 +2891,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_w_new       lom_w;
   c3_c*      eph_c = argv[5];
   c3_c*      tos_c = argv[6];
-  c3_n       tos_n;
+  c3_w       tos_w;
   c3_c*      per_c = argv[7];
 
   //  XX windows ctrl-c?
@@ -2906,11 +2906,11 @@ _cw_boot(c3_i argc, c3_c* argv[])
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNc3_n, &u3_Host.ops_u.hap_n);
+    sscanf(hap_c, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
-    sscanf(per_c, "%" SCNc3_n, &u3C.per_n);
+    sscanf(per_c, "%" SCNc3_w, &u3C.per_w);
 
-    if ( 1 != sscanf(tos_c, "%" SCNc3_n, &u3C.tos_n) ) {
+    if ( 1 != sscanf(tos_c, "%" SCNc3_w, &u3C.tos_w) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
   }
@@ -2970,7 +2970,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_d       eve_d = 0;
   c3_c*      eph_c = argv[6];
   c3_c*      tos_c = argv[7];
-  c3_n       tos_n;
+  c3_w       tos_w;
   c3_c*      per_c = argv[8];
   c3_c*      sap_c = argv[9];
 
@@ -2984,12 +2984,12 @@ _cw_work(c3_i argc, c3_c* argv[])
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
     sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
-    sscanf(hap_c, "%" SCNc3_n, &u3_Host.ops_u.hap_n);
+    sscanf(hap_c, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
     sscanf(lom_c, "%" SCNu32, &lom_w);
-    sscanf(per_c, "%" SCNc3_n, &u3C.per_n);
+    sscanf(per_c, "%" SCNc3_w, &u3C.per_w);
     sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_w);
 
-    if ( 1 != sscanf(tos_c, "%" SCNc3_n, &u3C.tos_n) ) {
+    if ( 1 != sscanf(tos_c, "%" SCNc3_w, &u3C.tos_w) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
     }
   }

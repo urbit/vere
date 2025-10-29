@@ -8,11 +8,11 @@
 /* structures
 */
   typedef struct _flOptions {
-    c3_n precision;
+    c3_w precision;
     mpz_t minExp;
     mpz_t expWidth;
-    c3_n rMode;
-    c3_n eMode;
+    c3_w rMode;
+    c3_w eMode;
   } flOptions;
 
   typedef struct _ea {
@@ -25,7 +25,7 @@
                u3_atom b)
   {
     if ( _(u3a_is_cat(b)) ) {
-      c3_ns c = (b + 1) >> 1;
+      c3_ws c = (b + 1) >> 1;
       if ( (b & 1) ) {
         c = -c;
       }
@@ -127,7 +127,7 @@
   {
     size_t z = mpz_sizeinbase(a->a, 2);
     if ( z >= b->precision ) return;
-    c3_n c = b->precision - z;
+    c3_w c = b->precision - z;
 
     if ( b->eMode != c3__i ) {
       mpz_t i;
@@ -138,7 +138,7 @@
       }
       else if ( mpz_fits_uint_p(i) )
       {
-        c3_n d = mpz_get_ui(i);
+        c3_w d = mpz_get_ui(i);
         c = c3_min(c, d);
       }
       mpz_clear(i);
@@ -171,8 +171,8 @@
       mpz_clear(c.a); mpz_clear(c.e);
       return u3m_bail(c3__exit);
     }
-    c3_n q = 0;
-    c3_n f = (m > d.precision) ? m - d.precision : 0;
+    c3_w q = 0;
+    c3_w f = (m > d.precision) ? m - d.precision : 0;
     mpz_init(g);
     if ( (d.eMode != c3__i) &&
          (mpz_cmp(c.e, d.minExp) < 0) ) {

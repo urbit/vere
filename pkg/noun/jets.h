@@ -276,7 +276,7 @@
 
       /* u3j_rite_mark(): mark u3j_rite for gc.
       */
-        c3_n
+        c3_w
         u3j_rite_mark(u3j_rite* rit_u);
 
       /* u3j_rite_lose(): lose references of u3j_rite (but do not free).
@@ -291,7 +291,7 @@
 
       /* u3j_site_mark(): mark u3j_site for gc.
       */
-        c3_n
+        c3_w
         u3j_site_mark(u3j_site* sit_u);
 
       /* u3j_mark(): mark jet state for gc.

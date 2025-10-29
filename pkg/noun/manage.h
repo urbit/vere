@@ -107,7 +107,7 @@
       /* u3m_hate(): new, integrated leap mechanism (enter).
       */
         void
-        u3m_hate(c3_n pad_w);
+        u3m_hate(c3_w pad_w);
 
       /* u3m_love(): return product from leap.
       */
@@ -119,7 +119,7 @@
       **  Produces [%$ result] or [%error (list tank)].
       */
         u3_noun
-        u3m_soft(c3_n mil_w, u3_funk fun_f, u3_noun arg);
+        u3m_soft(c3_w mil_w, u3_funk fun_f, u3_noun arg);
 
       /* u3m_soft_cax(): descend into virtualization context, with cache.
       */
@@ -159,7 +159,7 @@
       */
         typedef struct _u3m_quac {
           c3_c* nam_c;
-          c3_n  siz_n;
+          c3_w  siz_w;
           struct _u3m_quac** qua_u;
         } u3m_quac;
 
@@ -210,7 +210,7 @@
 
       /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
-        c3_n
+        c3_w
         u3m_pack(void);
 
 #endif /* ifndef U3_MANAGE_H */

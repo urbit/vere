@@ -7,12 +7,12 @@
 #include "noun.h"
 
 /*
-  Get the lowest `n` bits of a note `w` using a bitmask.
+  Get the lowest `n` bits of a word `w` using a bitmask.
 */
 #define TAKEBITS(n,w) \
-  ((n)==u3a_note_bits) ? (w) :   \
+  ((n)==u3a_word_bits) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & (((c3_n)1 << (n)) - 1))
+  ((w) & (((c3_w)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -24,18 +24,18 @@
 static u3_noun
 _bit_rep(u3_atom bits, u3_noun blox)
 {
-  if ( (c3n == u3a_is_cat(bits) || bits==0 || bits>(u3a_note_bits-1)) ) {
+  if ( (c3n == u3a_is_cat(bits) || bits==0 || bits>(u3a_word_bits-1)) ) {
     return u3m_bail(c3__fail);
   }
 
   //
   //  Calculate input and output size.
   //
-  c3_n num_blox_w = u3qb_lent(blox);
-  c3_n bit_widt_w = num_blox_w * bits;
-  c3_n wor_widt_w = DIVCEIL(bit_widt_w, u3a_note_bits);
+  c3_w num_blox_w = u3qb_lent(blox);
+  c3_w bit_widt_w = num_blox_w * bits;
+  c3_w wor_widt_w = DIVCEIL(bit_widt_w, u3a_word_bits);
   u3i_slab  sab_u;
-  u3i_slab_bare(&sab_u, u3a_note_bits_log, wor_widt_w);
+  u3i_slab_bare(&sab_u, u3a_word_bits_log, wor_widt_w);
 
   //
   //  Fill the atom buffer with bits from each block.
@@ -45,26 +45,26 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //
   //  acc_w  register
   //  use_w  number of register bits filled (used)
-  //  cur_w  next buffer note to flush into.
+  //  cur_w  next buffer word to flush into.
   //
   {
-    c3_n acc_w=0, use_w=0, *cur_w=sab_u.buf_n;
+    c3_w acc_w=0, use_w=0, *cur_w=sab_u.buf_w;
 
 #   define FLUSH() *cur_w++=acc_w; acc_w=use_w=0
 #   define SLICE(sz,off,val) TAKEBITS(sz, val) << off
 
-    for (c3_n i=0; i<num_blox_w; i++) {
-      u3_noun blok_n = u3h(blox);
+    for (c3_w i=0; i<num_blox_w; i++) {
+      u3_noun blok_w_new = u3h(blox);
       blox = u3t(blox);
 
-      if ( c3n == u3a_is_cat(blok_n) ) {
+      if ( c3n == u3a_is_cat(blok_w_new) ) {
         return u3m_bail(c3__fail);
       }
 
-      c3_n blok_w = blok_n;
+      c3_w blok_w = blok_w_new;
 
-      for (c3_n rem_in_blok_w=bits; rem_in_blok_w;) {
-        c3_n rem_in_acc_w = u3a_note_bits - use_w;
+      for (c3_w rem_in_blok_w=bits; rem_in_blok_w;) {
+        c3_w rem_in_acc_w = u3a_word_bits - use_w;
         if (rem_in_blok_w == rem_in_acc_w) {              //  EQ
           acc_w |= SLICE(rem_in_blok_w, use_w, blok_w);
           FLUSH();
@@ -85,7 +85,7 @@ _bit_rep(u3_atom bits, u3_noun blox)
     }
 
     //
-    //  If the last note isn't fully used, it will still need to be
+    //  If the last word isn't fully used, it will still need to be
     //  flushed.
     //
     if (use_w) {
@@ -100,12 +100,12 @@ static u3_noun
 _block_rep(u3_atom a,
            u3_noun b)
 {
-  if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
   else {
     c3_g       a_g = a;
-    c3_n     tot_w = 0;
+    c3_w     tot_w = 0;
     u3i_slab sab_u;
 
     /* Measure and validate the slab required.
@@ -115,7 +115,7 @@ _block_rep(u3_atom a,
 
       while ( 1 ) {
         u3_noun h_cab;
-        c3_n    len_w;
+        c3_w    len_w;
 
         if ( 0 == cab ) {
           break;
@@ -144,12 +144,12 @@ _block_rep(u3_atom a,
     */
     {
       u3_noun cab = b;
-      c3_n  pos_w = 0;
+      c3_w  pos_w = 0;
 
       while ( 0 != cab ) {
         u3_noun h_cab = u3h(cab);
 
-        u3r_chop(a_g, 0, 1, pos_w, sab_u.buf_n, h_cab);
+        u3r_chop(a_g, 0, 1, pos_w, sab_u.buf_w, h_cab);
         pos_w++;
         cab = u3t(cab);
       }
@@ -177,29 +177,29 @@ u3qc_rep(u3_atom a,
     return _bit_rep(b, c);
   }
 
-  c3_n  len_w = u3qb_lent(c);
+  c3_w  len_w = u3qb_lent(c);
 
   if ( c3n == u3a_is_cat(len_w) ) {
     return u3m_bail(c3__fail);
   }
 
-  if (a >= u3a_note_bits) {
+  if (a >= u3a_word_bits) {
     return u3m_bail(c3__fail);
   }
 
-  c3_n sep_w = b * len_w;
+  c3_w sep_w = b * len_w;
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, a, sep_w);
-  c3_n    i_n = 0;
+  c3_w    i_w = 0;
   
   while ( u3_nul != c ) {
     u3_noun i_c = u3h(c);
     if ( c3n == u3a_is_atom(i_c) ) {
       return u3m_bail(c3__exit);
     }
-    u3r_chop(a, 0, b, b * i_n, sab_u.buf_n, i_c);
+    u3r_chop(a, 0, b, b * i_w, sab_u.buf_w, i_c);
     c = u3t(c);
-    i_n++;
+    i_w++;
   }
   
   return u3i_slab_mint(&sab_u);

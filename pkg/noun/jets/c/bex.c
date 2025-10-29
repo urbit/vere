@@ -12,8 +12,8 @@ u3qc_bex(u3_atom a)
   c3_d a_d;
   u3i_slab sab_u;
 
-  if ( a < (u3a_note_bits-1) ) {
-    return ((c3_n)1) << a;
+  if ( a < (u3a_word_bits-1) ) {
+    return ((c3_w)1) << a;
   }
 
   if ( c3y == u3a_is_cat(a) ) {
@@ -34,7 +34,7 @@ u3qc_bex(u3_atom a)
 
   u3i_slab_init(&sab_u, 0, a_d + 1);
 
-  sab_u.buf_n[a_d >> u3a_note_bits_log] = (c3_d)1 << (a_d & (u3a_note_bits-1));
+  sab_u.buf_w[a_d >> u3a_word_bits_log] = (c3_d)1 << (a_d & (u3a_word_bits-1));
 
   return u3i_slab_moot(&sab_u);
 }

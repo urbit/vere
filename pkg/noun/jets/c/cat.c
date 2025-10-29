@@ -11,14 +11,14 @@
            u3_atom b,
            u3_atom c)
   {
-    if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
     else {
       c3_g   a_g = a;
-      c3_n   lew_w = u3r_met(a_g, b);
-      c3_n   ler_w = u3r_met(a_g, c);
-      c3_n   all_w = (lew_w + ler_w);
+      c3_w   lew_w = u3r_met(a_g, b);
+      c3_w   ler_w = u3r_met(a_g, c);
+      c3_w   all_w = (lew_w + ler_w);
 
       if ( 0 == all_w ) {
         return 0;
@@ -27,7 +27,7 @@
         u3i_slab sab_u;
         u3i_slab_from(&sab_u, b, a_g, all_w);
 
-        u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_n, c);
+        u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_w, c);
 
         return u3i_slab_mint(&sab_u);
       }

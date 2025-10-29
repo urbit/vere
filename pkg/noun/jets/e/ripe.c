@@ -9,8 +9,8 @@
   static u3_atom
   _cqe_ripe(u3_atom wid, u3_atom dat)
   {
-    c3_n len_w;
-    if ( !u3r_note_fit(&len_w, wid) ) {
+    c3_w len_w;
+    if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
     else {

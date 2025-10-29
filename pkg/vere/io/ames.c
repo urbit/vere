@@ -509,9 +509,9 @@ static c3_o
 _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 {
   c3_o ret_o;
-  c3_n tmp_n = u3r_met(3, mew);
-  u3_assert( UINT32_MAX >= tmp_n );
-  c3_w_new len_w = tmp_n;
+  c3_w tmp_w = u3r_met(3, mew);
+  u3_assert( UINT32_MAX >= tmp_w );
+  c3_w_new len_w = tmp_w;
   c3_w_new sig_w = sizeof(mew_u->sig_y);
   c3_w_new num_w = sizeof(mew_u->num_w);
   c3_w_new min_w = sig_w + 1;
@@ -1288,7 +1288,7 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
   switch ( tag ) {
     case c3y: {  //  galaxy
       if ( val >= 256 ) {
-        u3l_log("ames: bad galaxy lane: 0x%"PRIxc3_n, val);
+        u3l_log("ames: bad galaxy lane: 0x%"PRIxc3_w, val);
         return c3n;
       }
       return _ames_czar_lane(sam_u, (c3_y)val, lan_u);
@@ -2848,8 +2848,8 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("      stun:");
   u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
   u3l_log("      caches:");
-  u3l_log("        cached lanes: %"PRIc3_n", %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("        cached meows: %"PRIc3_n", %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("        cached lanes: %"PRIc3_w", %u B", u3h_wyt(sam_u->lax_p), lax_w);
+  u3l_log("        cached meows: %"PRIc3_w", %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2864,7 +2864,7 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
   u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
-  u3l_log("            cached lanes: %"PRIc3_n, u3h_wyt(sam_u->lax_p));
+  u3l_log("            cached lanes: %"PRIc3_w, u3h_wyt(sam_u->lax_p));
 }
 
 /* u3_ames_io_init(): initialize ames I/O.

@@ -30,33 +30,33 @@
       **     02 - entry, stale
       **     03 - entry, fresh
       */
-        typedef c3_n u3h_slot;
+        typedef c3_w u3h_slot;
 
       /* u3h_node: map node.
       */
         typedef struct {
-          c3_w_new     map_w;     // bitmap for [sot_n]
-          u3h_slot sot_n[];   // filled slots
+          c3_w_new     map_w;     // bitmap for [sot_w]
+          u3h_slot sot_w[];   // filled slots
         } u3h_node;
 
       /* u3h_root: hash root table
       */
         typedef struct {
-          c3_n     max_w;     // number of cache lines (0 for no trimming)
-          c3_n     use_w;     // number of lines currently filled
+          c3_w     max_w;     // number of cache lines (0 for no trimming)
+          c3_w     use_w;     // number of lines currently filled
           struct {
             c3_w_new  mug_w;      // current hash
             c3_w_new  inx_w;      // index into current hash bucket
             c3_o  buc_o;      // XX remove
           } arm_u;            // clock arm
-          u3h_slot sot_n[64]; // slots
+          u3h_slot sot_w[64]; // slots
         } u3h_root;
 
       /* u3h_buck: bottom bucket.
       */
         typedef struct {
-          c3_w_new     len_w;     // length of [sot_n]
-          u3h_slot sot_n[];   // filled slots
+          c3_w_new     len_w;     // length of [sot_w]
+          u3h_slot sot_w[];   // filled slots
         } u3h_buck;
 
     /**  HAMT macros.
@@ -104,7 +104,7 @@
       /* u3h_new_cache(): create hashtable with bounded size.
       */
         u3p(u3h_root)
-        u3h_new_cache(c3_n clk_w);
+        u3h_new_cache(c3_w clk_w);
 
       /* u3h_new(): create hashtable.
       */
@@ -168,7 +168,7 @@
 
       /* u3h_mark(): mark hashtable for gc.
       */
-        c3_n
+        c3_w
         u3h_mark(u3p(u3h_root) har_p);
 
       /* u3h_relocate(): relocate hashtable for compaction.
@@ -178,12 +178,12 @@
 
       /* u3h_count(): count hashtable for gc.
       */
-        c3_n
+        c3_w
         u3h_count(u3p(u3h_root) har_p);
 
       /* u3h_discount(): discount hashtable for gc.
       */
-        c3_n
+        c3_w
         u3h_discount(u3p(u3h_root) har_p);
 
       /* u3h_walk_with(): traverse hashtable with key, value fn and data
@@ -212,7 +212,7 @@
 
       /* u3h_wyt(): number of entries
       */
-        c3_n
+        c3_w
         u3h_wyt(u3p(u3h_root) har_p);
 
 #endif /* ifndef U3_HASHTABLE_H */

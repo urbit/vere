@@ -503,7 +503,7 @@ _mesa_encode_path(c3_w_new len_w, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_n[sab_u.len_n - 1] = 0;
+        sab_u.buf_w[sab_u.len_w - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);
@@ -1619,7 +1619,7 @@ packet_test(u3_mesa* sam_u, c3_c* fil_c) {
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  c3_n len_w = u3r_met(3, pac);
+  c3_w len_w = u3r_met(3, pac);
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1628,7 +1628,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   memset(&pac_u, 0x11, sizeof(pac_u));
   c3_c* err_c = mesa_sift_pact_from_buf(&pac_u, buf_y, len_w);
   if ( err_c ) {
-    u3l_log("mesa: ef_send: sift failed: %" PRIc3_n " %s", len_w, err_c);
+    u3l_log("mesa: ef_send: sift failed: %" PRIc3_w " %s", len_w, err_c);
     u3z(pac);
     u3z(las);
     arena_free(&are_u);
@@ -2044,7 +2044,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    c3_n jumbo_w = u3r_met(3, pac);
+    c3_w jumbo_w = u3r_met(3, pac);
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     u3r_bytes(0, jumbo_w, jumbo_y, pac);
 
@@ -2118,8 +2118,8 @@ static void
 _mesa_hear_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3l_log("mesa: hear bail");
-  c3_n len_w = u3qb_lent(lud);
-  u3l_log("len_w: %" PRIc3_n, len_w);
+  c3_w len_w = u3qb_lent(lud);
+  u3l_log("len_w: %" PRIc3_w, len_w);
   if( len_w == 2 ) {
     u3_pier_punt_goof("hear", u3k(u3h(lud)));
     u3_pier_punt_goof("crud", u3k(u3h(u3t(lud))));

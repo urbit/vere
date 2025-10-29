@@ -13,7 +13,7 @@ _setup(void)
 static void
 _byte_print(c3_d        out_d,
             c3_y*       out_y,
-            c3_n        len_n,
+            c3_w        len_w,
             const c3_y* byt_y)
 {
   c3_d i_d;
@@ -24,7 +24,7 @@ _byte_print(c3_d        out_d,
   }
   fprintf(stderr, "}\r\n");
   fprintf(stderr, "  expect: { ");
-  for ( i_d = 0; i_d < len_n; i_d++ ) {
+  for ( i_d = 0; i_d < len_w; i_d++ ) {
     fprintf(stderr, "0x%x, ", byt_y[i_d]);
   }
   fprintf(stderr, "}\r\n");
@@ -33,7 +33,7 @@ _byte_print(c3_d        out_d,
 static c3_i
 _test_jam_spec(const c3_c* cap_c,
                u3_noun       ref,
-               c3_n        len_n,
+               c3_w        len_w,
                const c3_y* byt_y)
 {
   c3_i  ret_i = 1;
@@ -43,9 +43,9 @@ _test_jam_spec(const c3_c* cap_c,
   {
     u3s_jam_xeno(ref, &out_d, &out_y);
 
-    if ( 0 != memcmp(out_y, byt_y, len_n) ) {
+    if ( 0 != memcmp(out_y, byt_y, len_w) ) {
       fprintf(stderr, "\033[31mjam xeno %s fail\033[0m\r\n", cap_c);
-      _byte_print(out_d, out_y, len_n, byt_y);
+      _byte_print(out_d, out_y, len_w, byt_y);
       ret_i = 0;
     }
 
@@ -54,16 +54,16 @@ _test_jam_spec(const c3_c* cap_c,
 
   {
     u3i_slab sab_u;
-    c3_n     bit_w = u3s_jam_fib(&sab_u, ref);
+    c3_w     bit_w = u3s_jam_fib(&sab_u, ref);
 
     out_d = ((c3_d)bit_w + 0x7) >> 3;
     //  XX assumes little-endian
     //
     out_y = sab_u.buf_y;
 
-    if ( 0 != memcmp(out_y, byt_y, len_n) ) {
+    if ( 0 != memcmp(out_y, byt_y, len_w) ) {
       fprintf(stderr, "\033[31mjam fib %s fail\033[0m\r\n", cap_c);
-      _byte_print(out_d, out_y, len_n, byt_y);
+      _byte_print(out_d, out_y, len_w, byt_y);
       ret_i = 0;
     }
 
@@ -76,13 +76,13 @@ _test_jam_spec(const c3_c* cap_c,
 static c3_i
 _test_cue_spec(const c3_c* cap_c,
                u3_noun       ref,
-               c3_n        len_n,
+               c3_w        len_w,
                const c3_y* byt_y)
 {
   c3_i ret_i = 1;
 
   {
-    u3_noun pro = u3m_soft(0, u3s_cue_atom, u3i_bytes(len_n, byt_y));
+    u3_noun pro = u3m_soft(0, u3s_cue_atom, u3i_bytes(len_w, byt_y));
     u3_noun tag, out;
 
     u3x_cell(pro, &tag, &out);
@@ -104,7 +104,7 @@ _test_cue_spec(const c3_c* cap_c,
   {
     u3_noun out;
 
-    if ( u3_none == (out = u3s_cue_xeno(len_n, byt_y)) ) {
+    if ( u3_none == (out = u3s_cue_xeno(len_w, byt_y)) ) {
       fprintf(stderr, "\033[31mcue %s fail 3\033[0m\r\n", cap_c);
       ret_i = 0;
     }

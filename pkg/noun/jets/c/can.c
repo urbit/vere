@@ -10,12 +10,12 @@
   u3qc_can(u3_atom a,
            u3_noun b)
   {
-    if ( !_(u3a_is_cat(a)) || (a >= u3a_note_bits) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
     else {
       c3_g       a_g = a;
-      c3_n     tot_w = 0;
+      c3_w     tot_w = 0;
       u3i_slab sab_u;
 
       /* Measure and validate the slab required.
@@ -53,14 +53,14 @@
       */
       {
         u3_noun cab = b;
-        c3_n    pos_w = 0;
+        c3_w    pos_w = 0;
 
         while ( 0 != cab ) {
           u3_noun i_cab = u3h(cab);
           u3_atom pi_cab = u3h(i_cab);
           u3_atom qi_cab = u3t(i_cab);
 
-          u3r_chop(a_g, 0, pi_cab, pos_w, sab_u.buf_n, qi_cab);
+          u3r_chop(a_g, 0, pi_cab, pos_w, sab_u.buf_w, qi_cab);
           pos_w += pi_cab;
           cab = u3t(cab);
         }

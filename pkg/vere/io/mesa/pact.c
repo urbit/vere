@@ -1096,7 +1096,7 @@ _mesa_encode_path(c3_w_new len_w, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_n[sab_u.len_n - 1] = 0;
+        sab_u.buf_w[sab_u.len_w - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);

@@ -6,17 +6,17 @@
 u3_noun
 u3qc_mas(u3_atom a)
 {
-  c3_n b_w;
+  c3_w b_w;
 
   if ( c3y == u3a_is_cat(a) ) {
-    b_w = c3_bits_note(a);
+    b_w = c3_bits_word(a);
 
     if ( 2 > b_w ) {
       return u3m_bail(c3__exit);
     }
     else {
-      a  &= ~((c3_n)1 << (b_w - 1));
-      a  |=  ((c3_n)1 << (b_w - 2));
+      a  &= ~((c3_w)1 << (b_w - 1));
+      a  |=  ((c3_w)1 << (b_w - 2));
       return a;
     }
   }
@@ -34,7 +34,7 @@ u3qc_mas(u3_atom a)
       u3i_slab_from(&sab_u, a, 0, b_w - 1);
 
       b_w -= 2;
-      sab_u.buf_n[(b_w >> u3a_note_bits_log)] |= ((c3_n)1 << (b_w & (u3a_note_bits-1)));
+      sab_u.buf_w[(b_w >> u3a_word_bits_log)] |= ((c3_w)1 << (b_w & (u3a_word_bits-1)));
 
       return u3i_slab_mint(&sab_u);
     }

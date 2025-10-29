@@ -21,18 +21,18 @@
 #  define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
 #endif
 
-#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ns)((c3_n)(pag_w - HEAP.off_ws) << u3a_page)))
-#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ns)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
+#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
+#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
 
 #ifndef HEAP
   #define HEAP u3R->hep
 #endif
 
-static u3_post _imalloc(c3_n);
+static u3_post _imalloc(c3_w);
 static void  _ifree(u3_post);
 
-static __inline__ c3_n
-_abs_dif(c3_n a_w, c3_n b_w)
+static __inline__ c3_w
+_abs_dif(c3_w a_w, c3_w b_w)
 {
   // c3_ds dif_ds = a_w - b_w;
   // c3_d  mas_d  = dif_ds >> 63;
@@ -49,9 +49,9 @@ _init_once(void)
   for (c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
     hun_u = &(u3a_Hunk[bit_g]);
     hun_u->log_s = bit_g + u3a_min_log;
-    hun_u->len_s = ((c3_n)1) << hun_u->log_s;
-    hun_u->tot_s = ((c3_n)1) << (u3a_page - hun_u->log_s);
-    hun_u->map_s = (hun_u->tot_s + (u3a_note_bits-1)) >> u3a_note_bits_log;
+    hun_u->len_s = ((c3_w)1) << hun_u->log_s;
+    hun_u->tot_s = ((c3_w)1) << (u3a_page - hun_u->log_s);
+    hun_u->map_s = (hun_u->tot_s + (u3a_word_bits-1)) >> u3a_word_bits_log;
     hun_u->siz_s = c3_wiseof(u3a_crag) + hun_u->map_s - 1;
 
     //  metacircular base case
@@ -59,7 +59,7 @@ _init_once(void)
     //    trivially deducible from exhaustive enumeration
     //
     if ( hun_u->len_s <= (hun_u->siz_s << 1) ) {
-      hun_u->hun_s = ((c3_n)1) + ((hun_u->siz_s - 1) >> hun_u->log_s);
+      hun_u->hun_s = ((c3_w)1) + ((hun_u->siz_s - 1) >> hun_u->log_s);
     }
     else {
       hun_u->hun_s = 0;
@@ -69,13 +69,13 @@ _init_once(void)
     mun_w = c3_max(mun_w, hun_u->hun_s);
   }
 
-  u3_assert( u3a_note_bits > mun_w );
+  u3_assert( u3a_word_bits > mun_w );
 }
 
 static void
-_drop(u3_post som_p, c3_n len_w)
+_drop(u3_post som_p, c3_w len_w)
 {
-  ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)len_w << (u3a_note_bits_log-3));
+  ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)len_w << (u3a_word_bits_log-3));
 }
 
 static void
@@ -94,7 +94,7 @@ _init_heap(void)
 
   // XX and rut
   //
-  assert ( !(u3R->hat_p & ((((c3_n)1) << u3a_page) - 1)) );
+  assert ( !(u3R->hat_p & ((((c3_w)1) << u3a_page) - 1)) );
 
   HEAP.bot_p = u3R->hat_p;
 
@@ -103,15 +103,15 @@ _init_heap(void)
   //  XX check for overflow
 
   HEAP.pag_p  = u3R->hat_p;
-  HEAP.pag_p += HEAP.off_ws * (c3_ns)(((c3_n)1) << u3a_page);
-  HEAP.siz_w  = ((c3_n)1) << u3a_page;
+  HEAP.pag_p += HEAP.off_ws * (c3_ws)(((c3_w)1) << u3a_page);
+  HEAP.siz_w  = ((c3_w)1) << u3a_page;
   HEAP.len_w  = 1;
 
-  u3R->hat_p += HEAP.dir_ws * (c3_ns)(((c3_n)1) << u3a_page);
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)(((c3_w)1) << u3a_page);
 
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
-  memset(dir_u, 0, ((c3_n)1) << (u3a_page + (u3a_note_bits_log-3)));
+  memset(dir_u, 0, ((c3_w)1) << (u3a_page + (u3a_word_bits_log-3)));
   dir_u[0] = u3a_head_pg;
 
 #ifdef SANITY
@@ -124,29 +124,29 @@ _init_heap(void)
 }
 
 static void
-_extend_directory(c3_n siz_w)  // num pages
+_extend_directory(c3_w siz_w)  // num pages
 {
   u3p(u3a_crag) *dir_u, *old_u;
   u3_post old_p = HEAP.pag_p;
-  c3_n nex_w, dif_w, pag_w;
+  c3_w nex_w, dif_w, pag_w;
 
   old_u  = u3to(u3p(u3a_crag), HEAP.pag_p);
 
   //  account for target allocation size
   nex_w  = HEAP.len_w + siz_w;       // num words
-  nex_w +=   (((c3_n)1) << u3a_page) - 1;
-  nex_w &= ~((((c3_n)1) << u3a_page) - 1);
+  nex_w +=   (((c3_w)1) << u3a_page) - 1;
+  nex_w &= ~((((c3_w)1) << u3a_page) - 1);
   dif_w  = nex_w >> u3a_page;        //  new pages
 
   //  account for directory allocation size
   nex_w += dif_w;
-  nex_w +=   (((c3_n)1) << u3a_page) - 1;
-  nex_w &= ~((((c3_n)1) << u3a_page) - 1);
+  nex_w +=   (((c3_w)1) << u3a_page) - 1;
+  nex_w &= ~((((c3_w)1) << u3a_page) - 1);
   dif_w  = nex_w >> u3a_page;        //  new pages
 
   HEAP.pag_p  = u3R->hat_p;
-  HEAP.pag_p += HEAP.off_ws * (c3_ns)nex_w;
-  u3R->hat_p += HEAP.dir_ws * (c3_ns)nex_w; //  XX overflow
+  HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
 
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
@@ -169,20 +169,20 @@ _extend_directory(c3_n siz_w)  // num pages
 #endif
 
   {
-    c3_z len_z = (c3_z)HEAP.len_w << (u3a_note_bits_log-3);
-    c3_z dif_z = (c3_z)dif_w << (u3a_note_bits_log-3);
+    c3_z len_z = (c3_z)HEAP.len_w << (u3a_word_bits_log-3);
+    c3_z dif_z = (c3_z)dif_w << (u3a_word_bits_log-3);
 
-    ASAN_UNPOISON_MEMORY_REGION(dir_u, (c3_z)nex_w << (u3a_note_bits_log-3));
+    ASAN_UNPOISON_MEMORY_REGION(dir_u, (c3_z)nex_w << (u3a_word_bits_log-3));
 
     memcpy(dir_u, old_u, len_z);
 
     dir_u[pag_w] = u3a_head_pg;
 
-    for ( c3_n i_w = 1; i_w < dif_w; i_w++ ) {
-      dir_u[pag_w + (HEAP.dir_ws * (c3_ns)i_w)] = u3a_rest_pg;
+    for ( c3_w i_w = 1; i_w < dif_w; i_w++ ) {
+      dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] = u3a_rest_pg;
     }
 
-    memset((c3_y*)dir_u + len_z + dif_z, 0, ((c3_z)nex_w << (u3a_note_bits_log-3)) - len_z - dif_z);
+    memset((c3_y*)dir_u + len_z + dif_z, 0, ((c3_z)nex_w << (u3a_word_bits_log-3)) - len_z - dif_z);
   }
 
   HEAP.len_w += dif_w;
@@ -198,10 +198,10 @@ _extend_directory(c3_n siz_w)  // num pages
 }
 
 static u3_post
-_extend_heap(c3_n siz_w)  // num pages
+_extend_heap(c3_w siz_w)  // num pages
 {
   u3_post pag_p;
-  c3_n    wor_w = siz_w << u3a_page;  //  XX guard
+  c3_w    wor_w = siz_w << u3a_page;  //  XX guard
 
 #ifdef SANITY
   assert( HEAP.siz_w >= HEAP.len_w );
@@ -224,9 +224,9 @@ _extend_heap(c3_n siz_w)  // num pages
     }
   }
   pag_p  = u3R->hat_p;
-  pag_p += HEAP.off_ws * (c3_ns)(siz_w << u3a_page);
+  pag_p += HEAP.off_ws * (c3_ws)(siz_w << u3a_page);
 
-  u3R->hat_p += HEAP.dir_ws * (c3_ns)(siz_w << u3a_page);
+  u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
 
   //  XX bail, optimize
   if ( 1 == HEAP.dir_ws ) {
@@ -244,7 +244,7 @@ _extend_heap(c3_n siz_w)  // num pages
 
   HEAP.len_w += siz_w;
 
-  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + (u3a_note_bits_log-3)));
+  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + (u3a_word_bits_log-3)));
 
 #ifdef SANITY
   assert( HEAP.len_w == post_to_page(u3R->hat_p + HEAP.off_ws) );
@@ -254,12 +254,12 @@ _extend_heap(c3_n siz_w)  // num pages
 }
 
 static u3_post
-_alloc_pages(c3_n siz_w)  // num pages
+_alloc_pages(c3_w siz_w)  // num pages
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   u3a_dell*      fre_u = u3tn(u3a_dell, HEAP.fre_p);
   u3a_dell*      del_u = NULL;
-  c3_n           pag_w = 0;
+  c3_w           pag_w = 0;
 
   while ( fre_u ) {
     //  XX sanity
@@ -308,8 +308,8 @@ _alloc_pages(c3_n siz_w)  // num pages
 
     //  XX sanity
     assert( u3a_free_pg == dir_u[pag_w] );
-    for ( c3_n i_w = 1; i_w < siz_w; i_w++ ) {
-      assert( u3a_free_pg == dir_u[pag_w + (HEAP.dir_ws * (c3_ns)i_w)] );
+    for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
+      assert( u3a_free_pg == dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] );
     }
 #endif
   }
@@ -326,13 +326,13 @@ _alloc_pages(c3_n siz_w)  // num pages
 
   dir_u[pag_w] = u3a_head_pg;
 
-  for ( c3_n i_w = 1; i_w < siz_w; i_w++ ) {
-    dir_u[pag_w + (HEAP.dir_ws * (c3_ns)i_w)] = u3a_rest_pg;
+  for ( c3_w i_w = 1; i_w < siz_w; i_w++ ) {
+    dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] = u3a_rest_pg;
   }
 
   //  XX junk
 
-  ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + (u3a_note_bits_log-3)));
+  ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), siz_w << (u3a_page + (u3a_word_bits_log-3)));
 
   if ( del_u ) {
     if ( !HEAP.cac_p ) {
@@ -352,19 +352,19 @@ _alloc_pages(c3_n siz_w)  // num pages
 }
 
 static void
-_rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
+_rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 {
-  c3_g      bit_g = (c3_g)c3_bits_note(len_w - 1) - u3a_min_log;  // 0-9, inclusive
+  c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
   u3_post   pag_p = HEAP.wee_p[bit_g];
   u3a_crag *pag_u;
-  c3_n      hav_w = *out_w;
+  c3_w      hav_w = *out_w;
 
   if ( rak_t ) {
-    c3_n    *map_w;
+    c3_w    *map_w;
     c3_g    pos_g;
     u3_post bas_p;
-    c3_n    off_w;
+    c3_w    off_w;
 
     while ( pag_p ) {
       pag_u = u3to(u3a_crag, pag_p);
@@ -372,21 +372,21 @@ _rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
       map_w = pag_u->map_w;
 
       while ( !*map_w ) { map_w++; }
-      off_w = (map_w - pag_u->map_w) << u3a_note_bits_log;
+      off_w = (map_w - pag_u->map_w) << u3a_word_bits_log;
 
       if ( (max_w - hav_w) < pag_u->fre_s ) {
         while ( hav_w < max_w ) {
-          pos_g   = c3_tz_n(*map_w);
-          *map_w &= ~(((c3_n)1) << pos_g);
+          pos_g   = c3_tz_w(*map_w);
+          *map_w &= ~(((c3_w)1) << pos_g);
 
           out_p[hav_w++] = bas_p + ((off_w + pos_g) << pag_u->log_s);
           pag_u->fre_s--;
 
-          ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p[hav_w - 1]), (c3_z)hun_u->len_s << (u3a_note_bits_log-3));
+          ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p[hav_w - 1]), (c3_z)hun_u->len_s << (u3a_word_bits_log-3));
 
           if ( !*map_w ) {
             do { map_w++; } while ( !*map_w );
-            off_w = (map_w - pag_u->map_w) << u3a_note_bits_log;
+            off_w = (map_w - pag_u->map_w) << u3a_word_bits_log;
           }
         }
 
@@ -395,11 +395,11 @@ _rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
         return;
       }
 
-      ASAN_UNPOISON_MEMORY_REGION(u3a_into(bas_p), ((c3_n)1) << (u3a_page + (u3a_note_bits_log-3)));
+      ASAN_UNPOISON_MEMORY_REGION(u3a_into(bas_p), ((c3_w)1) << (u3a_page + (u3a_word_bits_log-3)));
 
       while ( 1 ) {
-        pos_g   = c3_tz_n(*map_w);
-        *map_w &= ~(((c3_n)1) << pos_g);
+        pos_g   = c3_tz_w(*map_w);
+        *map_w &= ~(((c3_w)1) << pos_g);
 
         out_p[hav_w++] = bas_p + ((off_w + pos_g) << pag_u->log_s);
 
@@ -409,7 +409,7 @@ _rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
 
         if ( !*map_w ) {
           do { map_w++; } while ( !*map_w );
-          off_w = (map_w - pag_u->map_w) << u3a_note_bits_log;
+          off_w = (map_w - pag_u->map_w) << u3a_word_bits_log;
         }
       }
 
@@ -436,7 +436,7 @@ _rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
   //
   {
     u3_post hun_p;
-    c3_n    pag_w;
+    c3_w    pag_w;
 
     pag_p = _alloc_pages(1);
     pag_w = post_to_page(pag_p);
@@ -448,7 +448,7 @@ _rake_chunks(c3_n len_w, c3_n max_w, c3_t rak_t, c3_n* out_w, u3_post* out_p)
     pag_u->nex_p = 0;
     //  initialize bitmap (zeros, none free)
     //
-    memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << (u3a_note_bits_log-3));
+    memset(pag_u->map_w, 0, (c3_z)hun_u->map_s << (u3a_word_bits_log-3));
 
     {
       u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -469,13 +469,13 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
   u3a_crag      *pag_u;
   u3_post hun_p, pag_p = _alloc_pages(1);
-  c3_n    pag_w = post_to_page(pag_p);
+  c3_w    pag_w = post_to_page(pag_p);
 
-  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), ((c3_n)1) << (u3a_page + (u3a_note_bits_log-3)));
+  ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), ((c3_w)1) << (u3a_page + (u3a_word_bits_log-3)));
 
   if ( hun_u->hun_s ) {
     hun_p = pag_p;
-    ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), (c3_z)hun_u->hun_s << (hun_u->log_s + (u3a_note_bits_log-3)));
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), (c3_z)hun_u->hun_s << (hun_u->log_s + (u3a_word_bits_log-3)));
   }
   else {
     hun_p = _imalloc(hun_u->siz_s);
@@ -488,17 +488,17 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 
   //  initialize bitmap (ones, all free)
   //
-  if ( hun_u->tot_s < u3a_note_bits ) {
-    pag_u->map_w[0] = (((c3_n)1) << hun_u->tot_s) - 1;
+  if ( hun_u->tot_s < u3a_word_bits ) {
+    pag_u->map_w[0] = (((c3_w)1) << hun_u->tot_s) - 1;
   }
   else {
-    memset(pag_u->map_w, 0xff, (c3_z)hun_u->map_s << (u3a_note_bits_log-3));
+    memset(pag_u->map_w, 0xff, (c3_z)hun_u->map_s << (u3a_word_bits_log-3));
   }
 
   //  reserve chunks stolen for pginfo
   //  NB: max [hun_s] guarded by assertion in _init_once()
   //
-  pag_u->map_w[0] &= ~((c3_n)0) << hun_u->hun_s;
+  pag_u->map_w[0] &= ~((c3_w)0) << hun_u->hun_s;
 
   {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -512,12 +512,12 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 }
 
 static u3_post
-_alloc_words(c3_n len_w)  //  4-2.048, inclusive
+_alloc_words(c3_w len_w)  //  4-2.048, inclusive
 {
-  c3_g      bit_g = (c3_g)c3_bits_note(len_w - 1) - u3a_min_log;  // 0-9, inclusive
+  c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
   u3a_crag *pag_u;
-  c3_n     *map_w;
+  c3_w     *map_w;
   c3_g      pos_g;
 
   if ( !HEAP.wee_p[bit_g] ) {
@@ -537,15 +537,15 @@ _alloc_words(c3_n len_w)  //  4-2.048, inclusive
   map_w = pag_u->map_w;
   while ( !*map_w ) { map_w++; }
 
-  pos_g   = c3_tz_n(*map_w);
-  *map_w &= ~(((c3_n)1) << pos_g);
+  pos_g   = c3_tz_w(*map_w);
+  *map_w &= ~(((c3_w)1) << pos_g);
 
   {
     u3_post out_p, bas_p = page_to_post(pag_u->pag_w);
-    c3_n    off_w = (map_w - pag_u->map_w) << u3a_note_bits_log;
+    c3_w    off_w = (map_w - pag_u->map_w) << u3a_word_bits_log;
 
     out_p = bas_p + ((off_w + pos_g) << pag_u->log_s);
-    ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), hun_u->len_s << (u3a_note_bits_log-3));
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), hun_u->len_s << (u3a_word_bits_log-3));
     //  XX poison suffix
 
     return out_p;
@@ -553,10 +553,10 @@ _alloc_words(c3_n len_w)  //  4-2.048, inclusive
 }
 
 static u3_post
-_imalloc(c3_n len_w)
+_imalloc(c3_w len_w)
 {
-  if ( len_w > (((c3_n)1) << (u3a_page - 1)) ) {
-    len_w  += (((c3_n)1) << u3a_page) - 1;
+  if ( len_w > (((c3_w)1) << (u3a_page - 1)) ) {
+    len_w  += (((c3_w)1) << u3a_page) - 1;
     len_w >>= u3a_page;
     //  XX poison suffix
     return _alloc_pages(len_w);
@@ -565,16 +565,16 @@ _imalloc(c3_n len_w)
   return _alloc_words(c3_max(len_w, u3a_minimum));
 }
 
-static inline c3_n
-_pages_size(c3_n pag_w)
+static inline c3_w
+_pages_size(c3_w pag_w)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n           siz_w = 1;
+  c3_w           siz_w = 1;
 
   //  head-page 0 in a south road can only have a size of 1
   //
   if ( pag_w || !HEAP.off_ws ) {
-    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ns)siz_w)] == u3a_rest_pg ) {
+    while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
       siz_w++;
     }
   }
@@ -582,17 +582,17 @@ _pages_size(c3_n pag_w)
   return siz_w;
 }
 
-static c3_n
-_free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
+static c3_w
+_free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
   u3a_dell *cac_u, *fre_u, *del_u = NULL;
-  c3_n      nex_w,  siz_w = 1;
+  c3_w      nex_w,  siz_w = 1;
   u3_post   fre_p;
 
   if ( u3a_free_pg == dir_p ) {
     //  XX double free
     fprintf(stderr, "\033[31m"
-                    "palloc: double free page som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n"\r\n"
+                    "palloc: double free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w);
     abort();
@@ -601,16 +601,16 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
   if ( u3a_head_pg != dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
-                    "palloc: wrong page som_p=0x%"PRIxc3_n" dir_p=0x%"PRIxc3_n"\r\n"
+                    "palloc: wrong page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p, dir_p);
     abort();
   }
 
-  if ( som_p & ((((c3_n)1) << u3a_page) - 1) ) {
+  if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
     //  XX pointer not aligned to page
     fprintf(stderr, "\033[31m"
-                    "palloc: bad page alignment som_p=0x%"PRIxc3_n"\r\n"
+                    "palloc: bad page alignment som_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p);
     abort();
@@ -624,8 +624,8 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
     //  head-page 0 in a south road can only have a size of 1
     //
     if ( pag_w || !HEAP.off_ws ) {
-      while( dir_u[pag_w + (HEAP.dir_ws * (c3_ns)siz_w)] == u3a_rest_pg ) {
-        dir_u[pag_w + (HEAP.dir_ws * (c3_ns)siz_w)] = u3a_free_pg;
+      while( dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] == u3a_rest_pg ) {
+        dir_u[pag_w + (HEAP.dir_ws * (c3_ws)siz_w)] = u3a_free_pg;
         siz_w++;
       }
     }
@@ -648,7 +648,7 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
 
   if ( nex_w == HEAP.len_w ) {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-    c3_n           wiz_w = siz_w;
+    c3_w           wiz_w = siz_w;
 
     // check if prior pages are already free
     //
@@ -677,11 +677,11 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
       fre_u = NULL;
     }
 
-    ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + (u3a_note_bits_log-3)));
-    u3R->hat_p -= HEAP.dir_ws * (c3_ns)(siz_w << u3a_page);
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + (u3a_word_bits_log-3)));
+    u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
 
-    // fprintf(stderr, "shrink heap 0x%"PRIxc3_n" 0x%"PRIxc3_n" %"PRIc3_n":%"PRIc3_n" (%"PRIc3_n") 0x%"PRIxc3_n"\r\n",
+    // fprintf(stderr, "shrink heap 0x%"PRIxc3_w" 0x%"PRIxc3_w" %"PRIc3_w":%"PRIc3_w" (%"PRIc3_w") 0x%"PRIxc3_w"\r\n",
     //                 som_p, som_p + (siz_w << u3a_page), pag_w, wiz_w, siz_w, u3R->hat_p);
 
 #ifdef SANITY
@@ -698,11 +698,11 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
 
   //  XX madv_free
 
-  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + (u3a_note_bits_log-3)));
+  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + (u3a_word_bits_log-3)));
 
   //  XX add temporary freelist entry?
   // if (  !HEAP.cac_p && !HEAP.fre_p
-  //    && !HEAP.wee_p[(c3_bits_note(c3_wiseof(*cac_u) - 1) - u3a_min_log)] )
+  //    && !HEAP.wee_p[(c3_bits_word(c3_wiseof(*cac_u) - 1) - u3a_min_log)] )
   // {
   //   fprintf(stderr, "palloc: growing heap to free pages\r\n");
   // }
@@ -720,14 +720,14 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
   cac_u->siz_w = siz_w;
 
   if ( !(fre_u = u3tn(u3a_dell, HEAP.fre_p)) ) {
-    // fprintf(stderr, "free pages 0x%"PRIxc3_n" (%"PRIc3_n") via 0x%"PRIxc3_n"\r\n", som_p, siz_w, HEAP.cac_p);
+    // fprintf(stderr, "free pages 0x%"PRIxc3_w" (%"PRIc3_w") via 0x%"PRIxc3_w"\r\n", som_p, siz_w, HEAP.cac_p);
     cac_u->nex_p = 0;
     cac_u->pre_p = 0;
     HEAP.fre_p = HEAP.erf_p = fre_p;
     fre_p = 0;
   }
   else {
-    c3_n fex_w;
+    c3_w fex_w;
 
     while (  ((fex_w = fre_u->pag_w + fre_u->siz_w) < pag_w)
           && fre_u->nex_p )
@@ -785,7 +785,7 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
     else {
       // XX hosed
       fprintf(stderr, "\033[31m"
-                    "palloc: free list hosed at som_p=0x%"PRIxc3_n" pag=%"PRIc3_n" len=%"PRIc3_n"\r\n"
+                    "palloc: free list hosed at som_p=0x%"PRIxc3_w" pag=%"PRIc3_w" len=%"PRIc3_w"\r\n"
                     "\033[0m",
                     (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
       abort();
@@ -809,42 +809,42 @@ _free_pages(u3_post som_p, c3_n pag_w, u3_post dir_p)
 }
 
 static void
-_free_words(u3_post som_p, c3_n pag_w, u3_post dir_p)
+_free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
   u3a_crag *pag_u = u3to(u3a_crag, dir_p);
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
 #ifdef SANITY
-  assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_n)1) << u3a_page) - 1)) );
+  assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_w)1) << u3a_page) - 1)) );
   assert( pag_u->log_s < u3a_page );
 #endif
 
   c3_g bit_g = pag_u->log_s - u3a_min_log;
-  c3_n pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> pag_u->log_s;
+  c3_w pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
 
   if ( som_p & (hun_u->len_s - 1) ) {
     //  XX  bad alignment
     fprintf(stderr, "\033[31m"
-                    "palloc: _free_words: bad alignment som_p=0x%"PRIxc3_n" pag=%"PRIc3_n" cag=0x%"PRIxc3_n" len_s=%"PRIc3_s"\r\n"
+                    "palloc: _free_words: bad alignment som_p=0x%"PRIxc3_w" pag=%"PRIc3_w" cag=0x%"PRIxc3_w" len_s=%"PRIc3_s"\r\n"
                     "\033[0m",
                     som_p, post_to_page(som_p), dir_p, hun_u->len_s);
     abort();
   }
 
-  if ( pag_u->map_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1))) ) {
+  if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
     //  XX double free
     fprintf(stderr, "\033[31m"
-                    "palloc: double free som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n"\r\n"
+                    "palloc: double free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p, dir_p);
     abort();
   }
 
-  pag_u->map_w[pos_w >> u3a_note_bits_log] |= (((c3_n)1) << (pos_w & (u3a_note_bits-1)));
+  pag_u->map_w[pos_w >> u3a_word_bits_log] |= (((c3_w)1) << (pos_w & (u3a_word_bits-1)));
   pag_u->fre_s++;
 
-  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), hun_u->len_s << (u3a_note_bits_log-3));
+  ASAN_POISON_MEMORY_REGION(u3a_into(som_p), hun_u->len_s << (u3a_word_bits_log-3));
 
   {
     u3_post *bit_p = &(HEAP.wee_p[bit_g]);
@@ -897,11 +897,11 @@ static void
 _ifree(u3_post som_p)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n pag_w = post_to_page(som_p);
+  c3_w pag_w = post_to_page(som_p);
 
   if ( pag_w >= HEAP.len_w ) {
     fprintf(stderr, "\033[31m"
-                    "palloc: page out of heap som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n" len_w=%"PRIc3_n"\r\n"
+                    "palloc: page out of heap som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w" len_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w, HEAP.len_w);
     abort();
@@ -918,15 +918,15 @@ _ifree(u3_post som_p)
 }
 
 static u3_post
-_irealloc(u3_post som_p, c3_n len_w)
+_irealloc(u3_post som_p, c3_w len_w)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n pag_w = post_to_page(som_p);
-  c3_n old_w;
+  c3_w pag_w = post_to_page(som_p);
+  c3_w old_w;
 
     if ( pag_w >= HEAP.len_w ) {
     fprintf(stderr, "\033[31m"
-                    "palloc: realloc page out of heap som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n"\r\n"
+                    "palloc: realloc page out of heap som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w);
     abort();
@@ -935,17 +935,17 @@ _irealloc(u3_post som_p, c3_n len_w)
   u3_post dir_p = dir_u[pag_w];
 
   if ( u3a_head_pg == dir_p ) {
-    if ( som_p & ((((c3_n)1) << u3a_page) - 1) ) {
+    if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
       //  XX pointer not aligned to page
       fprintf(stderr, "\033[31m"
-                      "palloc: realloc bad page alignment som_p=0x%"PRIxc3_n"\r\n"
+                      "palloc: realloc bad page alignment som_p=0x%"PRIxc3_w"\r\n"
                       "\033[0m",
                       som_p);
       abort();
     }
 
     {
-      c3_n dif_w, siz_w = _pages_size(pag_w);
+      c3_w dif_w, siz_w = _pages_size(pag_w);
 
       old_w = siz_w << u3a_page;
 
@@ -966,29 +966,29 @@ _irealloc(u3_post som_p, c3_n len_w)
   else if ( u3a_rest_pg >= dir_p ) {
     //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
-                    "palloc: realloc wrong page som_p=0x%"PRIxc3_n"\r\n"
+                    "palloc: realloc wrong page som_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p);
     abort();
   }
   else {
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
-    c3_n pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[pag_u->log_s - u3a_min_log]);
 
     if ( som_p & (hun_u->len_s - 1) ) {
       //  XX  bad alignment
       fprintf(stderr, "\033[31m"
-                      "palloc: realloc bad alignment som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n" len_s=%"PRIc3_s"\r\n"
+                      "palloc: realloc bad alignment som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" len_s=%"PRIc3_s"\r\n"
                       "\033[0m",
                       som_p, dir_p, hun_u->len_s);
       abort();
     }
 
-    if ( pag_u->map_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1))) ) {
+    if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
       //  XX double free
       fprintf(stderr, "\033[31m"
-                      "palloc: realloc free som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n"\r\n"
+                      "palloc: realloc free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                       "\033[0m",
                       som_p, dir_p);
       abort();
@@ -1008,7 +1008,7 @@ _irealloc(u3_post som_p, c3_n len_w)
   {
     u3_post new_p = _imalloc(len_w);
 
-    memcpy(u3a_into(new_p), u3a_into(som_p), (c3_z)c3_min(len_w, old_w) << (u3a_note_bits_log-3));
+    memcpy(u3a_into(new_p), u3a_into(som_p), (c3_z)c3_min(len_w, old_w) << (u3a_word_bits_log-3));
     _ifree(som_p);
 
     return new_p;
@@ -1019,10 +1019,10 @@ static void
 _post_status(u3_post som_p)
 {
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n pag_w = post_to_page(som_p);
+  c3_w pag_w = post_to_page(som_p);
 
   if ( pag_w >= HEAP.len_w ) {
-    fprintf(stderr, "palloc: out of heap: post som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n" len_w=%"PRIc3_n"\r\n",
+    fprintf(stderr, "palloc: out of heap: post som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w" len_w=%"PRIc3_w"\r\n",
                     som_p, pag_w, HEAP.len_w);
     return;
   }
@@ -1030,22 +1030,22 @@ _post_status(u3_post som_p)
   u3_post dir_p = dir_u[pag_w];
 
   if ( dir_p <= u3a_rest_pg ) {
-    if ( som_p & ((((c3_n)1) << u3a_page) - 1) ) {
-      fprintf(stderr, "palloc: page not aligned som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n")\r\n",
-                      som_p, som_p & ~(((((c3_n)1) << u3a_page) - 1)));
+    if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: page not aligned som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w")\r\n",
+                      som_p, som_p & ~(((((c3_w)1) << u3a_page) - 1)));
     }
 
     if ( u3a_free_pg == dir_p ) {
-      fprintf(stderr, "palloc: free page som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n"\r\n",
+      fprintf(stderr, "palloc: free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n",
                       som_p, pag_w);
     }
     else if ( u3a_head_pg != dir_p ) {
-      fprintf(stderr, "palloc: rest page som_p=0x%"PRIxc3_n" dir_p=0x%"PRIxc3_n"\r\n",
+      fprintf(stderr, "palloc: rest page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n",
                       som_p, dir_p);
     }
     else {
       //  XX include size
-      fprintf(stderr, "palloc: head page in-use som_p=0x%"PRIxc3_n"\r\n",
+      fprintf(stderr, "palloc: head page in-use som_p=0x%"PRIxc3_w"\r\n",
                       som_p);
     }
   }
@@ -1053,35 +1053,35 @@ _post_status(u3_post som_p)
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
 
 #ifdef SANITY
-    assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_n)1) << u3a_page) - 1)) );
+    assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_w)1) << u3a_page) - 1)) );
     assert( pag_u->log_s < u3a_page );
 #endif
 
-    c3_n pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[pag_u->log_s - u3a_min_log]);
 
     if ( som_p & (hun_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: _post_status: bad alignment som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n") pag=0x%"PRIxc3_n" len_s=%"PRIc3_s"\r\n",
-                      som_p, som_p & ~((((c3_n)1) << u3a_page) - 1),
+      fprintf(stderr, "palloc: _post_status: bad alignment som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w") pag=0x%"PRIxc3_w" len_s=%"PRIc3_s"\r\n",
+                      som_p, som_p & ~((((c3_w)1) << u3a_page) - 1),
                       dir_p, hun_u->len_s);
     }
 
-    if ( pag_u->map_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1))) ) {
-      fprintf(stderr, "palloc: words free som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n" len=%"PRIc3_s"\r\n",
+    if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
+      fprintf(stderr, "palloc: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" len=%"PRIc3_s"\r\n",
                       som_p, dir_p, hun_u->len_s);
     }
     else {
-      fprintf(stderr, "palloc: words in-use som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n", len=%"PRIc3_s"\r\n",
+      fprintf(stderr, "palloc: words in-use som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w", len=%"PRIc3_s"\r\n",
                       som_p, dir_p, hun_u->len_s);
     }
   }
 }
 
-static c3_n
+static c3_w
 _idle_pages(void)
 {
   u3a_dell* fre_u = u3tn(u3a_dell, HEAP.fre_p);
-  c3_n      tot_w = 0;
+  c3_w      tot_w = 0;
 
   while ( fre_u ) {
     tot_w += fre_u->siz_w;
@@ -1091,13 +1091,13 @@ _idle_pages(void)
   return tot_w;
 }
 
-static c3_n
+static c3_w
 _idle_words(void)
 {
   u3a_crag *pag_u;
-  c3_n pag_w, siz_w, tot_w = 0;
+  c3_w pag_w, siz_w, tot_w = 0;
 
-  for ( c3_n i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
     pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
     siz_w = pag_w = 0;
 
@@ -1108,8 +1108,8 @@ _idle_words(void)
     }
 
     if ( siz_w ) {
-      fprintf(stderr, "idle words: class=%"PRIc3_n" (%"PRIc3_n" words) blocks=%"PRIc3_n" (in %"PRIc3_n" pages) ",
-                      i_w, (((c3_n)1) << (i_w + u3a_min_log)), siz_w, pag_w);
+      fprintf(stderr, "idle words: class=%"PRIc3_w" (%"PRIc3_w" words) blocks=%"PRIc3_w" (in %"PRIc3_w" pages) ",
+                      i_w, (((c3_w)1) << (i_w + u3a_min_log)), siz_w, pag_w);
       u3a_print_memory(stderr, "total", siz_w << (i_w + u3a_min_log));
     }
 
@@ -1127,7 +1127,7 @@ _poison_pages(void)
 
   while ( fre_u ) {
     pag_p = page_to_post(fre_u->pag_w);
-    ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), fre_u->siz_w << (u3a_page + (u3a_note_bits_log-3)));
+    ASAN_POISON_MEMORY_REGION(u3a_into(pag_p), fre_u->siz_w << (u3a_page + (u3a_word_bits_log-3)));
     fre_u = u3tn(u3a_dell, fre_u->nex_p);
   }
 }
@@ -1138,28 +1138,28 @@ _poison_words(void)
   const u3a_hunk_dose       *hun_u;
   u3_post     pag_p, hun_p;
   u3a_crag   *pag_u;
-  c3_n off_w, wor_w, len_w, *map_w;
+  c3_w off_w, wor_w, len_w, *map_w;
   c3_g pos_g;
   c3_s fre_s;
 
-  for ( c3_n i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
     hun_u = &(u3a_Hunk[i_w]);
     pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
 
     while ( pag_u ) {
       pag_p = page_to_post(pag_u->pag_w);
       map_w = pag_u->map_w;
-      len_w = (c3_n)hun_u->len_s << (u3a_note_bits_log-3);
+      len_w = (c3_w)hun_u->len_s << (u3a_word_bits_log-3);
       fre_s = pag_u->fre_s;
 
       do {
         while ( !*map_w ) { map_w++; }
         wor_w = *map_w;
-        off_w = (map_w - pag_u->map_w) << u3a_note_bits_log;
+        off_w = (map_w - pag_u->map_w) << u3a_word_bits_log;
 
         do {
-          pos_g  = c3_tz_n(wor_w);
-          wor_w &= ~(((c3_n)1) << pos_g);
+          pos_g  = c3_tz_w(wor_w);
+          wor_w &= ~(((c3_w)1) << pos_g);
           hun_p  = pag_p + ((off_w + pos_g) << pag_u->log_s);
 
           ASAN_POISON_MEMORY_REGION(u3a_into(hun_p), len_w);
@@ -1180,24 +1180,24 @@ _unpoison_words(void)
   u3a_crag   *pag_u;
   u3_post     pag_p;
 
-  for ( c3_n i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
     pag_u = u3tn(u3a_crag, HEAP.wee_p[i_w]);
 
     while ( pag_u ) {
       pag_p = page_to_post(pag_u->pag_w);
-      ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), ((c3_n)1) << (u3a_page + (u3a_note_bits_log-3)));
+      ASAN_UNPOISON_MEMORY_REGION(u3a_into(pag_p), ((c3_w)1) << (u3a_page + (u3a_word_bits_log-3)));
       pag_u = u3tn(u3a_crag, pag_u->nex_p);
     }
   }
 }
 
-static c3_n
+static c3_w
 _mark_post(u3_post som_p)
 {
-  c3_n pag_w = post_to_page(som_p);
-  c3_n blk_w = pag_w >> u3a_note_bits_log;
-  c3_n bit_w = pag_w & (u3a_note_bits-1);
-  c3_n siz_w;
+  c3_w pag_w = post_to_page(som_p);
+  c3_w blk_w = pag_w >> u3a_word_bits_log;
+  c3_w bit_w = pag_w & (u3a_word_bits-1);
+  c3_w siz_w;
 
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   u3_post dir_p = dir_u[pag_w];
@@ -1205,30 +1205,30 @@ _mark_post(u3_post som_p)
   //  som_p is a one-or-more page allocation
   //
   if ( dir_p <= u3a_rest_pg ) {
-    if ( som_p & ((((c3_n)1) << u3a_page) - 1) ) {
-      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n")\r\n",
-                      som_p, som_p & ~(((((c3_n)1) << u3a_page) - 1)));
+    if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w")\r\n",
+                      som_p, som_p & ~(((((c3_w)1) << u3a_page) - 1)));
       abort();
     }
 
     if ( u3a_free_pg == dir_p ) {
-      fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n"\r\n",
+      fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n",
                       som_p, pag_w);
       abort();
     }
     else if ( u3a_head_pg != dir_p ) {
-      fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_n" dir_p=0x%"PRIxc3_n"\r\n",
+      fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n",
                       som_p, dir_p);
       abort();
     }
 
     //  page(s) already marked
     //
-    if ( u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w) ) {
+    if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
       return 0;
    }
 
-    u3a_Mark.bit_w[blk_w] |= ((c3_n)1) << bit_w;
+    u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
 
     siz_w   = _pages_size(pag_w);
     siz_w <<= u3a_page;
@@ -1239,30 +1239,30 @@ _mark_post(u3_post som_p)
   //
   else {
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
-    c3_n      pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
     c3_g bit_g = pag_u->log_s - u3a_min_log;
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
-    c3_n     *mar_w;
+    c3_w     *mar_w;
 
     if ( som_p & (hun_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: mark: bad alignment som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n") pag=0x%"PRIxc3_n" (%"PRIc3_n") len_s=%"PRIc3_s"\r\n",
-                      som_p, som_p & ~((((c3_n)1) << u3a_page) - 1),
+      fprintf(stderr, "palloc: mark: bad alignment som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w") pag=0x%"PRIxc3_w" (%"PRIc3_w") len_s=%"PRIc3_s"\r\n",
+                      som_p, som_p & ~((((c3_w)1) << u3a_page) - 1),
                       dir_p, pag_u->pag_w, hun_u->len_s);
       abort();
     }
 
-    if ( pag_u->map_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1))) ) {
-      fprintf(stderr, "palloc: mark: words free som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n" (%"PRIc3_n") len=%"PRIc3_s"\r\n",
+    if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
+      fprintf(stderr, "palloc: mark: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
       abort();
     }
 
     //  page is marked
     //
-    if ( u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w) ) {
+    if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
       mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
 
-      if ( !(mar_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1)))) ) {
+      if ( !(mar_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1)))) ) {
         return 0;
       }
     }
@@ -1271,7 +1271,7 @@ _mark_post(u3_post som_p)
     else {
       mar_w = u3a_mark_alloc(hun_u->map_s);
       u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
-      memset(mar_w, 0xff, (c3_z)hun_u->map_s << (u3a_note_bits_log-3));
+      memset(mar_w, 0xff, (c3_z)hun_u->map_s << (u3a_word_bits_log-3));
 
       //  mark page metadata
       //
@@ -1282,14 +1282,14 @@ _mark_post(u3_post som_p)
       else {
         //  NB: max [hun_s] guarded by assertion in _init_once()
         //
-        mar_w[0] &= ~((c3_n)0) << hun_u->hun_s;
-        u3a_Mark.wee_w[bit_g] += (c3_n)hun_u->hun_s << pag_u->log_s;
+        mar_w[0] &= ~((c3_w)0) << hun_u->hun_s;
+        u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
       }
 
-      u3a_Mark.bit_w[blk_w] |= ((c3_n)1) << bit_w;
+      u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
     }
 
-    mar_w[pos_w >> u3a_note_bits_log] &= ~(((c3_n)1) << (pos_w & (u3a_note_bits-1)));
+    mar_w[pos_w >> u3a_word_bits_log] &= ~(((c3_w)1) << (pos_w & (u3a_word_bits-1)));
     siz_w = hun_u->len_s;
 
     return siz_w;
@@ -1297,14 +1297,14 @@ _mark_post(u3_post som_p)
 }
 
 static void
-_print_chunk(FILE* fil_u, u3_post som_p, c3_n siz_w)
+_print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
 {
-  c3_n *ptr_w = u3to(c3_n, som_p);
+  c3_w *ptr_w = u3to(c3_w, som_p);
 
   fprintf(fil_u, "{ ");
   //  XX log minimum or u3a_minimum
-  for ( c3_n j_w = 0; j_w < 4; j_w++ ) {
-    fprintf(fil_u, "0x%"PRIxc3_n", ", ptr_w[j_w]);
+  for ( c3_w j_w = 0; j_w < 4; j_w++ ) {
+    fprintf(fil_u, "0x%"PRIxc3_w", ", ptr_w[j_w]);
   }
 
   if ( siz_w > 4 ) {
@@ -1314,11 +1314,11 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_n siz_w)
   fprintf(fil_u, "}\r\n");
 }
 
-static c3_n
+static c3_w
 _sweep_directory(void)
 {
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n pag_w, blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
+  c3_w pag_w, blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
   u3_post     dir_p;
 
   //  unlink leaked whole chunk-pages
@@ -1335,10 +1335,10 @@ _sweep_directory(void)
       while ( *bit_p ) {
         pag_u = u3to(u3a_crag, *bit_p);
         pag_w = pag_u->pag_w;
-        blk_w = pag_w >> u3a_note_bits_log;
-        bit_w = pag_w & (u3a_note_bits-1);
+        blk_w = pag_w >> u3a_word_bits_log;
+        bit_w = pag_w & (u3a_word_bits-1);
 
-        if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+        if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
           *bit_p = pag_u->nex_p;
         }
         else {
@@ -1349,18 +1349,18 @@ _sweep_directory(void)
   }
 
   for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
-    blk_w = pag_w >> u3a_note_bits_log;
-    bit_w = pag_w & (u3a_note_bits-1);
+    blk_w = pag_w >> u3a_word_bits_log;
+    bit_w = pag_w & (u3a_word_bits-1);
     dir_p = dir_u[pag_w];
 
     if ( u3a_head_pg == dir_p ) {
-      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
         siz_w = _free_pages(page_to_post(pag_w), pag_w, dir_p);
         if ( 1 == siz_w ) {
-          fprintf(stderr, "palloc: leaked page %"PRIc3_n"\r\n", pag_w);
+          fprintf(stderr, "palloc: leaked page %"PRIc3_w"\r\n", pag_w);
         }
         else {
-          fprintf(stderr, "palloc: leaked pages %"PRIc3_n"-%"PRIc3_n"\r\n",
+          fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w"\r\n",
                           pag_w, pag_w + siz_w - 1);
         }
         leq_w += siz_w << u3a_page;
@@ -1373,21 +1373,21 @@ _sweep_directory(void)
     else if ( u3a_rest_pg < dir_p ) {
       //  entire chunk page is unmarked
       //
-      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_n"\r\n", pag_w);
+      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
-        leq_w += ((c3_n)1) << u3a_page;
+        leq_w += ((c3_w)1) << u3a_page;
       }
       else {
         u3a_crag *pag_u = u3to(u3a_crag, dir_p);
         c3_g bit_g = pag_u->log_s - u3a_min_log;
         const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
         u3_post   som_p, bas_p = page_to_post(pag_u->pag_w);
-        c3_n     *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
+        c3_w     *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
 
         siz_w = hun_u->len_s;
 
-        if ( 0 == memcmp(mar_w, pag_u->map_w, (c3_z)hun_u->map_s << (u3a_note_bits_log-3)) ) {
+        if ( 0 == memcmp(mar_w, pag_u->map_w, (c3_z)hun_u->map_s << (u3a_word_bits_log-3)) ) {
           tot_w += siz_w * (hun_u->tot_s - pag_u->fre_s);
         }
         //  NB: since at least one chunk is marked,
@@ -1395,17 +1395,17 @@ _sweep_directory(void)
         //
         else {
           for ( c3_s i_s = 0; i_s < hun_u->tot_s; i_s++ ) {
-            blk_w = i_s >> u3a_note_bits_log;
-            bit_w = i_s & (u3a_note_bits-1);
+            blk_w = i_s >> u3a_word_bits_log;
+            bit_w = i_s & (u3a_word_bits-1);
 
-            if ( !(pag_u->map_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-              if ( !(mar_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+            if ( !(pag_u->map_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+              if ( !(mar_w[blk_w] & (((c3_w)1) << bit_w)) ) {
                 tot_w += siz_w;
               }
               else {
-                som_p = bas_p + ((c3_n)i_s << pag_u->log_s);
+                som_p = bas_p + ((c3_w)i_s << pag_u->log_s);
 
-                fprintf(stderr, "palloc: leak: 0x%"PRIxc3_n" (chunk %"PRIc3_s" in page %"PRIc3_n")\r\n", som_p, i_s, pag_w);
+                fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n", som_p, i_s, pag_w);
 
                 _print_chunk(stderr, som_p, siz_w);
                 _free_words(som_p, pag_w, dir_p);
@@ -1433,13 +1433,13 @@ _sweep_directory(void)
   return tot_w;
 }
 
-static c3_n
+static c3_w
 _count_post(u3_post som_p, c3_y rat_y)
 {
-  c3_n pag_w = post_to_page(som_p);
-  c3_n blk_w = pag_w >> u3a_note_bits_log;
-  c3_n bit_w = pag_w & (u3a_note_bits-1);
-  c3_n siz_w;
+  c3_w pag_w = post_to_page(som_p);
+  c3_w blk_w = pag_w >> u3a_word_bits_log;
+  c3_w bit_w = pag_w & (u3a_word_bits-1);
+  c3_w siz_w;
 
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   u3_post dir_p = dir_u[pag_w];
@@ -1447,26 +1447,26 @@ _count_post(u3_post som_p, c3_y rat_y)
   //  som_p is a one-or-more page allocation
   //
   if ( dir_p <= u3a_rest_pg ) {
-    if ( som_p & ((((c3_n)1) << u3a_page) - 1) ) {
-      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n")\r\n",
-                      som_p, som_p & ~(((((c3_n)1) << u3a_page) - 1)));
+    if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
+      fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w")\r\n",
+                      som_p, som_p & ~(((((c3_w)1) << u3a_page) - 1)));
       abort();
     }
 
     if ( u3a_free_pg == dir_p ) {
-      fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_n" pag_w=%"PRIc3_n"\r\n",
+      fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n",
                       som_p, pag_w);
       abort();
     }
     else if ( u3a_head_pg != dir_p ) {
-      fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_n" dir_p=0x%"PRIxc3_n"\r\n",
+      fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n",
                       som_p, dir_p);
       abort();
     }
 
     switch ( rat_y ) {
       case 0: {  //  not refcounted
-        u3_assert( (c3_ns)u3a_Mark.buf_w[pag_w] <= 0 );
+        u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] <= 0 );
         u3a_Mark.buf_w[pag_w] -= 1;
       } break;
 
@@ -1477,7 +1477,7 @@ _count_post(u3_post som_p, c3_y rat_y)
           u3a_Mark.buf_w[pag_w] = 1;
         }
         else {
-          u3_assert( (c3_ns)u3a_Mark.buf_w[pag_w] >= 0 );
+          u3_assert( (c3_ws)u3a_Mark.buf_w[pag_w] >= 0 );
           u3a_Mark.buf_w[pag_w] += 1;
         }
       } break;
@@ -1493,11 +1493,11 @@ _count_post(u3_post som_p, c3_y rat_y)
 
     //  page(s) already marked
     //
-    if ( u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w) ) {
+    if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
       abort();
    }
 
-    u3a_Mark.bit_w[blk_w] |= ((c3_n)1) << bit_w;
+    u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
 
     siz_w   = _pages_size(pag_w);
     siz_w <<= u3a_page;
@@ -1510,25 +1510,25 @@ _count_post(u3_post som_p, c3_y rat_y)
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
     c3_g bit_g = pag_u->log_s - u3a_min_log;
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
-    c3_n      pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> pag_u->log_s;
-    c3_n     *mar_w;
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_w     *mar_w;
 
     if ( som_p & (hun_u->len_s - 1) ) {
-      fprintf(stderr, "palloc: count: bad alignment som_p=0x%"PRIxc3_n" (0x%"PRIxc3_n") pag=0x%"PRIxc3_n" (%"PRIc3_n") len_s=%"PRIc3_s"\r\n",
-                      som_p, som_p & ~((((c3_n)1) << u3a_page) - 1),
+      fprintf(stderr, "palloc: count: bad alignment som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w") pag=0x%"PRIxc3_w" (%"PRIc3_w") len_s=%"PRIc3_s"\r\n",
+                      som_p, som_p & ~((((c3_w)1) << u3a_page) - 1),
                       dir_p, pag_u->pag_w, hun_u->len_s);
       abort();
     }
 
-    if ( pag_u->map_w[pos_w >> u3a_note_bits_log] & (((c3_n)1) << (pos_w & (u3a_note_bits-1))) ) {
-      fprintf(stderr, "palloc: count: words free som_p=0x%"PRIxc3_n" pag=0x%"PRIxc3_n" (%"PRIc3_n") len=%"PRIc3_s"\r\n",
+    if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
+      fprintf(stderr, "palloc: count: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
       abort();
     }
 
     //  page is marked
     //
-    if ( u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w) ) {
+    if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
       mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
       siz_w = (!mar_w[pos_w]) ? hun_u->len_s : 0;
     }
@@ -1538,7 +1538,7 @@ _count_post(u3_post som_p, c3_y rat_y)
       siz_w = hun_u->len_s;
       mar_w = u3a_mark_alloc(hun_u->tot_s);
       u3a_Mark.buf_w[pag_w] = mar_w - u3a_Mark.buf_w;
-      memset(mar_w, 0, (c3_z)hun_u->tot_s << (u3a_note_bits_log-3));
+      memset(mar_w, 0, (c3_z)hun_u->tot_s << (u3a_word_bits_log-3));
 
       //  mark page metadata
       //
@@ -1547,16 +1547,16 @@ _count_post(u3_post som_p, c3_y rat_y)
         mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
       }
       else {
-        memset(mar_w, 0xff, (c3_z)hun_u->hun_s << (u3a_note_bits_log-3));
-        u3a_Mark.wee_w[bit_g] += (c3_n)hun_u->hun_s << pag_u->log_s;
+        memset(mar_w, 0xff, (c3_z)hun_u->hun_s << (u3a_word_bits_log-3));
+        u3a_Mark.wee_w[bit_g] += (c3_w)hun_u->hun_s << pag_u->log_s;
       }
 
-      u3a_Mark.bit_w[blk_w] |= ((c3_n)1) << bit_w;
+      u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
     }
 
     switch ( rat_y ) {
       case 0: {  //  not refcounted
-        u3_assert( (c3_ns)mar_w[pos_w] <= 0 );
+        u3_assert( (c3_ws)mar_w[pos_w] <= 0 );
         mar_w[pos_w] -= 1;
       } break;
 
@@ -1567,7 +1567,7 @@ _count_post(u3_post som_p, c3_y rat_y)
           mar_w[pos_w] = 1;
         }
         else {
-          u3_assert( (c3_ns)mar_w[pos_w] >= 0 );
+          u3_assert( (c3_ws)mar_w[pos_w] >= 0 );
           mar_w[pos_w] += 1;
         }
       } break;
@@ -1585,13 +1585,13 @@ _count_post(u3_post som_p, c3_y rat_y)
   }
 }
 
-static c3_n
+static c3_w
 _sweep_counts(void)
 {
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n pag_w, blk_w, bit_w, siz_w, weq_w = 0, leq_w = 0, tot_w = 0;
+  c3_w pag_w, blk_w, bit_w, siz_w, weq_w = 0, leq_w = 0, tot_w = 0;
   u3_post     dir_p, som_p;
-  c3_n       *use_w;
+  c3_w       *use_w;
 
   //  unlink leaked whole chunk-pages
   //  (we do this first so we won't need to dereference the metadata)
@@ -1607,10 +1607,10 @@ _sweep_counts(void)
       while ( *bit_p ) {
         pag_u = u3to(u3a_crag, *bit_p);
         pag_w = pag_u->pag_w;
-        blk_w = pag_w >> u3a_note_bits_log;
-        bit_w = pag_w & (u3a_note_bits-1);
+        blk_w = pag_w >> u3a_word_bits_log;
+        bit_w = pag_w & (u3a_word_bits-1);
 
-        if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+        if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
           *bit_p = pag_u->nex_p;
         }
         else {
@@ -1621,20 +1621,20 @@ _sweep_counts(void)
   }
 
   for ( pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
-    blk_w = pag_w >> u3a_note_bits_log;
-    bit_w = pag_w & (u3a_note_bits-1);
+    blk_w = pag_w >> u3a_word_bits_log;
+    bit_w = pag_w & (u3a_word_bits-1);
     dir_p = dir_u[pag_w];
 
     if ( u3a_head_pg == dir_p ) {
       som_p = page_to_post(pag_w);
 
-      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
         siz_w = _free_pages(som_p, pag_w, dir_p);
         if ( 1 == siz_w ) {
-          fprintf(stderr, "palloc: leaked page %"PRIc3_n" (0x%"PRIxc3_n")\r\n", pag_w, page_to_post(pag_w));
+          fprintf(stderr, "palloc: leaked page %"PRIc3_w" (0x%"PRIxc3_w")\r\n", pag_w, page_to_post(pag_w));
         }
         else {
-          fprintf(stderr, "palloc: leaked pages %"PRIc3_n"-%"PRIc3_n" (0x%"PRIxc3_n")\r\n",
+          fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w" (0x%"PRIxc3_w")\r\n",
                           pag_w, pag_w + siz_w - 1, page_to_post(pag_w));
         }
         leq_w += siz_w << u3a_page;
@@ -1642,11 +1642,11 @@ _sweep_counts(void)
       else {
         siz_w = _pages_size(pag_w);
 
-        if ( (c3_ns)u3a_Mark.buf_w[pag_w] > 0 ) {
-          use_w = u3to(c3_n, som_p);
+        if ( (c3_ws)u3a_Mark.buf_w[pag_w] > 0 ) {
+          use_w = u3to(c3_w, som_p);
 
           if ( *use_w != u3a_Mark.buf_w[pag_w] ) {
-            fprintf(stderr, "weak: 0x%"PRIxc3_n" have %"PRIc3_n" need %"PRIc3_n"\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
+            fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
             *use_w = u3a_Mark.buf_w[pag_w];
             weq_w += siz_w << u3a_page;;
           }
@@ -1655,7 +1655,7 @@ _sweep_counts(void)
           }
         }
         else if ( 0x80000000 == u3a_Mark.buf_w[pag_w] ) {
-          fprintf(stderr, "sweep: error: premarked %"PRIc3_n" pages at 0x%"PRIxc3_n"\r\n",
+          fprintf(stderr, "sweep: error: premarked %"PRIc3_w" pages at 0x%"PRIxc3_w"\r\n",
                           siz_w, som_p);
           u3_assert(0);
         }
@@ -1667,18 +1667,18 @@ _sweep_counts(void)
     else if ( u3a_rest_pg < dir_p ) {
       //  entire chunk page is unmarked
       //
-      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_n"\r\n", pag_w);
+      if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
-        leq_w += ((c3_n)1) << u3a_page;
+        leq_w += ((c3_w)1) << u3a_page;
       }
       else {
         u3a_crag *pag_u = u3to(u3a_crag, dir_p);
         c3_g bit_g = pag_u->log_s - u3a_min_log;
         const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
         u3_post   bas_p = page_to_post(pag_u->pag_w);
-        c3_n     *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
-        c3_n pos_w;
+        c3_w     *mar_w = u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w];
+        c3_w pos_w;
 
         siz_w = hun_u->len_s;
 
@@ -1687,17 +1687,17 @@ _sweep_counts(void)
         //
         for ( c3_s i_s = 0; i_s < hun_u->tot_s; i_s++ ) {
           pos_w = i_s;
-          blk_w = i_s >> u3a_note_bits_log;
-          bit_w = i_s & (u3a_note_bits-1);
-          som_p = bas_p + ((c3_n)i_s << pag_u->log_s);
+          blk_w = i_s >> u3a_word_bits_log;
+          bit_w = i_s & (u3a_word_bits-1);
+          som_p = bas_p + ((c3_w)i_s << pag_u->log_s);
 
-          if ( !(pag_u->map_w[blk_w] & (((c3_n)1) << bit_w)) ) {
+          if ( !(pag_u->map_w[blk_w] & (((c3_w)1) << bit_w)) ) {
             if ( mar_w[pos_w] ) {
-              if ( (c3_ns)mar_w[pos_w] > 0 ) {
-                use_w = u3to(c3_n, som_p);
+              if ( (c3_ws)mar_w[pos_w] > 0 ) {
+                use_w = u3to(c3_w, som_p);
 
                 if ( *use_w != mar_w[pos_w] ) {
-                  fprintf(stderr, "weak: 0x%"PRIxc3_n" have %"PRIc3_n" need %"PRIc3_n"\r\n", som_p, *use_w, mar_w[pos_w]);
+                  fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, mar_w[pos_w]);
                   _print_chunk(stderr, som_p, siz_w);
                   *use_w = mar_w[pos_w];
                   weq_w += siz_w;
@@ -1707,19 +1707,19 @@ _sweep_counts(void)
                 }
               }
               else if ( 0x80000000 == mar_w[pos_w] ) {
-                fprintf(stderr, "sweep: error: premarked 0x%"PRIxc3_n" (chunk %"PRIc3_s" in page %"PRIc3_n")\r\n",
+                fprintf(stderr, "sweep: error: premarked 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n",
                                 som_p, i_s, pag_w);
                 u3_assert(0);
               }
               else {
-                if ( (c3_ns)mar_w[pos_w] < -1 ) {
-                  fprintf(stderr, "alias: 0x%"PRIxc3_n" count %"PRIc3_ns"\r\n", som_p, (c3_ns)mar_w[pos_w]);
+                if ( (c3_ws)mar_w[pos_w] < -1 ) {
+                  fprintf(stderr, "alias: 0x%"PRIxc3_w" count %"PRIc3_ws"\r\n", som_p, (c3_ws)mar_w[pos_w]);
                 }
                 tot_w += siz_w;
               }
             }
             else {
-              fprintf(stderr, "palloc: leak: 0x%"PRIxc3_n" (chunk %"PRIc3_s" in page %"PRIc3_n")\r\n", som_p, i_s, pag_w);
+              fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n", som_p, i_s, pag_w);
 
               _print_chunk(stderr, som_p, siz_w);
               _free_words(som_p, pag_w, dir_p);
@@ -1754,17 +1754,17 @@ typedef struct {
   u3_post dir_p;
   c3_s    log_s;  //  log2(len)
   struct {
-    c3_n  pag_w;  //  previous page in class (original number)
+    c3_w  pag_w;  //  previous page in class (original number)
     c3_s  fre_s;  //  previous hunks available
     c3_s  pos_s;  //  previous hunks used
   } pre_u;
-  c3_n    mar_w[0];
+  c3_w    mar_w[0];
 } _ca_prag;
 
 typedef struct {
   u3_post dir_p;
   c3_s    log_s;
-  c3_n    mar_w[0];
+  c3_w    mar_w[0];
 } _ca_frag;
 
 //  adapted from https://stackoverflow.com/a/27663999 and
@@ -1773,9 +1773,9 @@ typedef struct {
 static u3p(u3a_crag)
 _sort_crag(u3p(u3a_crag) hed_p)
 {
-  c3_n bon_w, biz_w = 1; // block count, size
+  c3_w bon_w, biz_w = 1; // block count, size
   u3p(u3a_crag) s_p, l_p, r_p, *tal_p;
-  c3_n l_w, r_w;
+  c3_w l_w, r_w;
   c3_t l_t, r_t;
 
   do {
@@ -1831,13 +1831,13 @@ _pack_seek_hunks(void)
   const u3a_hunk_dose      *hun_u;
   u3_post     dir_p, nex_p, fre_p;
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n len_w, sum_w, i_w, *hap_w, *hum_w;
+  c3_w len_w, sum_w, i_w, *hap_w, *hum_w;
   c3_g bit_g = u3a_crag_no;
   u3a_crag   *pag_u;
   _ca_prag   *rag_u;
 
   struct {
-    c3_n    pag_w;  //  previous page in class (original number)
+    c3_w    pag_w;  //  previous page in class (original number)
     c3_s    fre_s;  //  previous hunks available
     c3_s    pos_s;  //  previous hunks used
     u3_post dir_p;
@@ -1872,23 +1872,23 @@ _pack_seek_hunks(void)
       rag_u->pre_u.fre_s = pre_u.fre_s;
       rag_u->pre_u.pos_s = pre_u.pos_s;
 
-      memset(rag_u->mar_w, 0, hun_u->map_s << (u3a_note_bits_log-3));
+      memset(rag_u->mar_w, 0, hun_u->map_s << (u3a_word_bits_log-3));
 
       for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
         hap_w[i_w] = ~(pag_u->map_w[i_w]);
       }
 
-      if ( hun_u->tot_s < u3a_note_bits ) {
-        hap_w[0] &= (((c3_n)1) << hun_u->tot_s) - 1;
+      if ( hun_u->tot_s < u3a_word_bits ) {
+        hap_w[0] &= (((c3_w)1) << hun_u->tot_s) - 1;
       }
 
       sum_w = 0;
       for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
         hum_w[i_w] = sum_w;
-        sum_w += c3_pc_n(hap_w[i_w]);
+        sum_w += c3_pc_w(hap_w[i_w]);
       }
 
-      u3a_Gack.buf_w[pag_u->pag_w] = ((c3_n*)rag_u - u3a_Gack.buf_w) | (((c3_n)1) << (u3a_note_bits-1));
+      u3a_Gack.buf_w[pag_u->pag_w] = ((c3_w*)rag_u - u3a_Gack.buf_w) | (((c3_w)1) << (u3a_word_bits-1));
 
       c3_s pos_s = hun_u->ful_s - pag_u->fre_s;
 
@@ -1900,7 +1900,7 @@ _pack_seek_hunks(void)
          || (pre_u.dir_p && (pos_s > pre_u.fre_s)) )
       {
         u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-        memset(peg_u->map_w, 0, hun_u->map_s << (u3a_note_bits_log-3));
+        memset(peg_u->map_w, 0, hun_u->map_s << (u3a_word_bits_log-3));
         peg_u->fre_s = 0;
       }
 
@@ -1949,11 +1949,11 @@ _pack_seek_hunks(void)
     if ( pre_u.dir_p ) {
       u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
       c3_s      pos_s = pre_u.pos_s + hun_u->hun_s;
-      c3_s      max_s = pos_s >> u3a_note_bits_log;
+      c3_s      max_s = pos_s >> u3a_word_bits_log;
 
-      memset(peg_u->map_w, 0, max_s << (u3a_note_bits_log-3));
-      peg_u->map_w[max_s++] = ~((c3_n)0) << (pos_s & (u3a_note_bits-1));
-      memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << (u3a_note_bits_log-3));
+      memset(peg_u->map_w, 0, max_s << (u3a_word_bits_log-3));
+      peg_u->map_w[max_s++] = ~((c3_w)0) << (pos_s & (u3a_word_bits-1));
+      memset(&(peg_u->map_w[max_s]), 0xff, (hun_u->map_s - max_s) << (u3a_word_bits_log-3));
 
       peg_u->fre_s = pre_u.fre_s;
     }
@@ -1964,7 +1964,7 @@ static void
 _pack_seek(void)
 {
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
-  c3_n blk_w, bit_w, fre_w = 0;
+  c3_w blk_w, bit_w, fre_w = 0;
   u3_post     dir_p;
 
   {
@@ -1980,15 +1980,15 @@ _pack_seek(void)
 
   _pack_seek_hunks();
 
-  for ( c3_n pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+  for ( c3_w pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
     if ( u3a_free_pg == (dir_p = dir_u[pag_w]) ) {
       fre_w++;
       continue;
     }
 
-    blk_w = pag_w >> u3a_note_bits_log;
-    bit_w = pag_w & (u3a_note_bits-1);
-    u3a_Gack.pap_w[blk_w] |= ((c3_n)1) << bit_w;
+    blk_w = pag_w >> u3a_word_bits_log;
+    bit_w = pag_w & (u3a_word_bits-1);
+    u3a_Gack.pap_w[blk_w] |= ((c3_w)1) << bit_w;
 
     if ( u3a_rest_pg >= dir_p ) {
       u3a_Gack.buf_w[pag_w] = dir_p;
@@ -2001,28 +2001,28 @@ _pack_seek(void)
       const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
 
       _ca_frag *fag_u = u3a_pack_alloc(c3_wiseof(_ca_frag) + hun_u->map_s);
-      u3a_Gack.buf_w[pag_w] = (c3_n*)fag_u - u3a_Gack.buf_w;
+      u3a_Gack.buf_w[pag_w] = (c3_w*)fag_u - u3a_Gack.buf_w;
 
       fag_u->dir_p = dir_p;
       fag_u->log_s = pag_u->log_s;
-      memset(fag_u->mar_w, 0, (c3_z)hun_u->map_s << (u3a_note_bits_log-3));
+      memset(fag_u->mar_w, 0, (c3_z)hun_u->map_s << (u3a_word_bits_log-3));
     }
   }
 
   //  shrink page directory
   //
   {
-    c3_n old_w = HEAP.siz_w >> u3a_page;
-    c3_n dif_w = (HEAP.siz_w - (HEAP.len_w - fre_w)) >> u3a_page;
-    c3_n pag_w = post_to_page(HEAP.pag_p);
-    c3_n gap_w;
+    c3_w old_w = HEAP.siz_w >> u3a_page;
+    c3_w dif_w = (HEAP.siz_w - (HEAP.len_w - fre_w)) >> u3a_page;
+    c3_w pag_w = post_to_page(HEAP.pag_p);
+    c3_w gap_w;
 
-    for ( c3_n i_w = 0; i_w < dif_w; i_w++ ) {
+    for ( c3_w i_w = 0; i_w < dif_w; i_w++ ) {
       gap_w = pag_w + (HEAP.dir_ws * (old_w - i_w - 1));
-      blk_w = gap_w >> u3a_note_bits_log;
-      bit_w = gap_w & (u3a_note_bits-1);
+      blk_w = gap_w >> u3a_word_bits_log;
+      bit_w = gap_w & (u3a_word_bits-1);
       u3a_Gack.buf_w[gap_w] = u3a_free_pg;
-      u3a_Gack.pap_w[blk_w] &= ~(((c3_n)1) << bit_w);
+      u3a_Gack.pap_w[blk_w] &= ~(((c3_w)1) << bit_w);
     }
 
     HEAP.siz_w -= dif_w << u3a_page;
@@ -2031,38 +2031,38 @@ _pack_seek(void)
   //  calculate cumulative sums of bitmap popcounts
   //
   {
-    c3_n sum_w = 0, max_w = (HEAP.len_w + (u3a_note_bits-1)) >> u3a_note_bits_log;
+    c3_w sum_w = 0, max_w = (HEAP.len_w + (u3a_word_bits-1)) >> u3a_word_bits_log;
 
-    for ( c3_n i_w = 0; i_w < max_w; i_w++ ) {
+    for ( c3_w i_w = 0; i_w < max_w; i_w++ ) {
       u3a_Gack.pum_w[i_w] = sum_w;
-      sum_w += c3_pc_n(u3a_Gack.pap_w[i_w]);
+      sum_w += c3_pc_w(u3a_Gack.pap_w[i_w]);
     }
   }
 }
 
-static inline c3_n
-_pack_relocate_page(c3_n pag_w)
+static inline c3_w
+_pack_relocate_page(c3_w pag_w)
 {
-  c3_n blk_w = pag_w >> u3a_note_bits_log;
-  c3_n bit_w = pag_w & (u3a_note_bits-1);
-  c3_n top_w = u3a_Gack.pap_w[blk_w] & ((((c3_n)1) << bit_w) - 1);
-  c3_n new_w = u3a_Gack.pum_w[blk_w];  //  XX blk_w - 1, since pum_w[0] is always 0?
+  c3_w blk_w = pag_w >> u3a_word_bits_log;
+  c3_w bit_w = pag_w & (u3a_word_bits-1);
+  c3_w top_w = u3a_Gack.pap_w[blk_w] & ((((c3_w)1) << bit_w) - 1);
+  c3_w new_w = u3a_Gack.pum_w[blk_w];  //  XX blk_w - 1, since pum_w[0] is always 0?
 
-  return new_w + c3_pc_n(top_w);
+  return new_w + c3_pc_w(top_w);
 }
 
 static inline u3_post
-_pack_relocate_hunk(_ca_prag *rag_u, c3_n pag_w, c3_n pos_w)
+_pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
 {
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[rag_u->log_s - u3a_min_log]);
-  c3_n  blk_w = pos_w >> u3a_note_bits_log;
-  c3_n  bit_w = pos_w & (u3a_note_bits-1);
-  c3_n *hap_w = &(rag_u->mar_w[hun_u->map_s]);
-  c3_n *hum_w = &(hap_w[hun_u->map_s]);
-  c3_n  top_w = hap_w[blk_w] & ((((c3_n)1) << bit_w) - 1);
-  c3_n  new_w = hum_w[blk_w];   //  XX blk_w - 1, since hum_w[0] is always 0?
+  c3_w  blk_w = pos_w >> u3a_word_bits_log;
+  c3_w  bit_w = pos_w & (u3a_word_bits-1);
+  c3_w *hap_w = &(rag_u->mar_w[hun_u->map_s]);
+  c3_w *hum_w = &(hap_w[hun_u->map_s]);
+  c3_w  top_w = hap_w[blk_w] & ((((c3_w)1) << bit_w) - 1);
+  c3_w  new_w = hum_w[blk_w];   //  XX blk_w - 1, since hum_w[0] is always 0?
 
-  new_w += c3_pc_n(top_w);
+  new_w += c3_pc_w(top_w);
 
   if ( new_w >= hun_u->hun_s ) {
     if ( new_w < (rag_u->pre_u.fre_s + hun_u->hun_s) ) {
@@ -2084,11 +2084,11 @@ _pack_relocate_hunk(_ca_prag *rag_u, c3_n pag_w, c3_n pos_w)
 static u3_post
 _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
 {
-  c3_n    pag_w = post_to_page(som_p);
-  c3_n    dir_w = u3a_Gack.buf_w[pag_w];
+  c3_w    pag_w = post_to_page(som_p);
+  c3_w    dir_w = u3a_Gack.buf_w[pag_w];
   u3_post out_p = 0;
   c3_t    out_t = 0;
-  c3_n    blk_w, bit_w;
+  c3_w    blk_w, bit_w;
 
   u3_assert(som_p);
 
@@ -2096,11 +2096,11 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   //
   if ( u3a_rest_pg >= dir_w ) {
     //  XX sanity
-    blk_w = pag_w >> u3a_note_bits_log;
-    bit_w = pag_w & (u3a_note_bits-1);
+    blk_w = pag_w >> u3a_word_bits_log;
+    bit_w = pag_w & (u3a_word_bits-1);
 
-    if ( !(u3a_Gack.bit_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-      u3a_Gack.bit_w[blk_w] |= (((c3_n)1) << bit_w);
+    if ( !(u3a_Gack.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+      u3a_Gack.bit_w[blk_w] |= (((c3_w)1) << bit_w);
       out_t = 1;
     }
 
@@ -2108,17 +2108,17 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   }
   //  som_p is a chunk in a full page (map old pag_w to new)
   //
-  else if ( !(dir_w >> (u3a_note_bits-1)) ) {
+  else if ( !(dir_w >> (u3a_word_bits-1)) ) {
     //  XX sanity
     _ca_frag *fag_u = (void*)(u3a_Gack.buf_w + dir_w);
-    c3_n  rem_w = som_p & ((((c3_n)1) << u3a_page) - 1);
-    c3_n  pos_w = rem_w >> fag_u->log_s;  // XX c/b pos_s
+    c3_w  rem_w = som_p & ((((c3_w)1) << u3a_page) - 1);
+    c3_w  pos_w = rem_w >> fag_u->log_s;  // XX c/b pos_s
 
-    blk_w = pos_w >> u3a_note_bits_log;
-    bit_w = pos_w & (u3a_note_bits-1);
+    blk_w = pos_w >> u3a_word_bits_log;
+    bit_w = pos_w & (u3a_word_bits-1);
 
-    if ( !(fag_u->mar_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-      fag_u->mar_w[blk_w] |= (((c3_n)1) << bit_w);
+    if ( !(fag_u->mar_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+      fag_u->mar_w[blk_w] |= (((c3_w)1) << bit_w);
       out_t = 1;
     }
 
@@ -2128,17 +2128,17 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   //  som_p is a chunk in a partial page (map old pos_w to new)
   //
   else {
-    _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((((c3_n)1) << (u3a_note_bits-1)) - 1)));
-    c3_n      pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> rag_u->log_s;  // XX c/b pos_s
+    _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((((c3_w)1) << (u3a_word_bits-1)) - 1)));
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> rag_u->log_s;  // XX c/b pos_s
 
     //  XX sanity
     //  NB map inverted, free state updated
 
-    blk_w = pos_w >> u3a_note_bits_log;
-    bit_w = pos_w & (u3a_note_bits-1);
+    blk_w = pos_w >> u3a_word_bits_log;
+    bit_w = pos_w & (u3a_word_bits-1);
 
-    if ( !(rag_u->mar_w[blk_w] & (((c3_n)1) << bit_w)) ) {
-      rag_u->mar_w[blk_w] |= (((c3_n)1) << bit_w);
+    if ( !(rag_u->mar_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+      rag_u->mar_w[blk_w] |= (((c3_w)1) << bit_w);
       out_t = 1;
     }
 
@@ -2152,8 +2152,8 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
 static u3_post
 _pack_relocate(u3_post som_p)
 {
-  c3_n    pag_w = post_to_page(som_p);
-  c3_n    dir_w = u3a_Gack.buf_w[pag_w];
+  c3_w    pag_w = post_to_page(som_p);
+  c3_w    dir_w = u3a_Gack.buf_w[pag_w];
   u3_post out_p;
 
   u3_assert(som_p);
@@ -2166,16 +2166,16 @@ _pack_relocate(u3_post som_p)
   }
   //  som_p is a chunk in a full page (map old pag_w to new)
   //
-  else if ( !(dir_w >> (u3a_note_bits-1)) ) {
+  else if ( !(dir_w >> (u3a_word_bits-1)) ) {
     //  XX sanity
     out_p  = page_to_post(_pack_relocate_page(pag_w));
-    out_p += som_p & ((((c3_n)1) << u3a_page) - 1);
+    out_p += som_p & ((((c3_w)1) << u3a_page) - 1);
   }
   //  som_p is a chunk in a partial page (map old pos_w to new)
   //
   else {
-    _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((((c3_n)1) << (u3a_note_bits-1)) - 1)));
-    c3_n      pos_w = (som_p & ((((c3_n)1) << u3a_page) - 1)) >> rag_u->log_s;  // XX c/b pos_s
+    _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((((c3_w)1) << (u3a_word_bits-1)) - 1)));
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> rag_u->log_s;  // XX c/b pos_s
 
     //  XX sanity
     //  NB map inverted, free state updated
@@ -2223,11 +2223,11 @@ _pack_relocate_heap(void)
     }
   }
 
-  for ( c3_n pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
-    c3_n *wor_w, dir_w = u3a_Gack.buf_w[pag_w];
+  for ( c3_w pag_w = 0; pag_w < HEAP.len_w; pag_w++ ) {
+    c3_w *wor_w, dir_w = u3a_Gack.buf_w[pag_w];
 
     if ( u3a_rest_pg < dir_w ) {
-      dir_w &= (((c3_n)1) << (u3a_note_bits-1)) - 1;
+      dir_w &= (((c3_w)1) << (u3a_word_bits-1)) - 1;
       wor_w  = u3a_Gack.buf_w + dir_w;  //  (fag_u | rag_u)->dir_p
       if ( *wor_w ) {
         u3a_crag *pag_u = u3to(u3a_crag, *wor_w);
@@ -2239,31 +2239,31 @@ _pack_relocate_heap(void)
 }
 
 static c3_i
-_pack_move_chunks(c3_n pag_w, c3_n dir_w)
+_pack_move_chunks(c3_w pag_w, c3_w dir_w)
 {
   _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + dir_w);
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[rag_u->log_s - u3a_min_log]);
-  c3_n     *hap_w = &(rag_u->mar_w[hun_u->map_s]);
-  c3_n      off_w = ((c3_n)1) << rag_u->log_s;
-  c3_z      len_i = off_w << (u3a_note_bits_log-3);
-  c3_n     *src_w, *dst_w, new_w;
+  c3_w     *hap_w = &(rag_u->mar_w[hun_u->map_s]);
+  c3_w      off_w = ((c3_w)1) << rag_u->log_s;
+  c3_z      len_i = off_w << (u3a_word_bits_log-3);
+  c3_w     *src_w, *dst_w, new_w;
   c3_s      max_s,  fre_s, new_s, pos_s = hun_u->hun_s;
 
-  src_w = u3to(c3_n, page_to_post(pag_w) + (pos_s << rag_u->log_s));
+  src_w = u3to(c3_w, page_to_post(pag_w) + (pos_s << rag_u->log_s));
 
-  max_s = ((c3_n)1) << (u3a_page - rag_u->log_s);
+  max_s = ((c3_w)1) << (u3a_page - rag_u->log_s);
 
   if ( rag_u->pre_u.pag_w ) {
     new_w = _pack_relocate_page(rag_u->pre_u.pag_w);
     new_s = hun_u->hun_s + rag_u->pre_u.pos_s;
     fre_s = rag_u->pre_u.fre_s;
 
-    dst_w = u3to(c3_n, page_to_post(new_w) + (new_s << rag_u->log_s));
+    dst_w = u3to(c3_w, page_to_post(new_w) + (new_s << rag_u->log_s));
 
     //  move up to [fre_s] chunks to (relocated) previous page
     //
     while ( (pos_s < max_s) && fre_s ) {
-      if ( hap_w[pos_s >> u3a_note_bits_log] & (((c3_n)1) << (pos_s & (u3a_note_bits-1))) ) {
+      if ( hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1))) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
         memcpy(dst_w, src_w, len_i);
         fre_s--;
@@ -2277,7 +2277,7 @@ _pack_move_chunks(c3_n pag_w, c3_n dir_w)
     //  advance src position past any free chunks
     //
     while ( (pos_s < max_s) ) {
-      if ( hap_w[pos_s >> u3a_note_bits_log] & (((c3_n)1) << (pos_s & (u3a_note_bits-1))) ) {
+      if ( hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1))) ) {
         break;
       }
 
@@ -2302,7 +2302,7 @@ _pack_move_chunks(c3_n pag_w, c3_n dir_w)
   if ( new_w == pag_w ) {
     if ( new_s == pos_s ) {
       while (  (pos_s < max_s)
-            && (hap_w[pos_s >> u3a_note_bits_log] & (((c3_n)1) << (pos_s & (u3a_note_bits-1)))) )
+            && (hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1)))) )
       {
         pos_s++;
         src_w += off_w;
@@ -2315,8 +2315,8 @@ _pack_move_chunks(c3_n pag_w, c3_n dir_w)
   //  relocate inline metadata
   //
   else if ( hun_u->hun_s ) {
-    c3_n* soc_w = u3to(c3_n, page_to_post(pag_w));
-    c3_n* doc_w = u3to(c3_n, page_to_post(new_w));
+    c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
+    c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
     ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i * hun_u->hun_s);
     memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
@@ -2326,12 +2326,12 @@ _pack_move_chunks(c3_n pag_w, c3_n dir_w)
 
   u3_assert( (new_w < pag_w) || (new_s < pos_s) );
 
-  dst_w = u3to(c3_n, page_to_post(new_w) + (new_s << rag_u->log_s));
+  dst_w = u3to(c3_w, page_to_post(new_w) + (new_s << rag_u->log_s));
 
   //  move remaining chunks to relocated page
   //
   while ( pos_s < max_s ) {
-    if ( hap_w[pos_s >> u3a_note_bits_log] & (((c3_n)1) << (pos_s & (u3a_note_bits-1))) ) {
+    if ( hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1))) ) {
       ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
       memcpy(dst_w, src_w, len_i);
       dst_w += off_w;
@@ -2350,10 +2350,10 @@ _pack_move_chunks(c3_n pag_w, c3_n dir_w)
 static void
 _pack_move(void)
 {
-  c3_z   len_i = ((c3_n)1) << (u3a_page + (u3a_note_bits_log-3));
-  c3_ns off_ws = HEAP.dir_ws * (((c3_n)1) << u3a_page);
-  c3_n   dir_w,  new_w, pag_w = 0;
-  c3_n  *src_w, *dst_w;
+  c3_z   len_i = ((c3_w)1) << (u3a_page + (u3a_word_bits_log-3));
+  c3_ws off_ws = HEAP.dir_ws * (((c3_w)1) << u3a_page);
+  c3_w   dir_w,  new_w, pag_w = 0;
+  c3_w  *src_w, *dst_w;
 
   //  NB: these loops iterate over the temp page dir instead of
   //  the bitmap, as partial chunk pages can be marked free
@@ -2364,10 +2364,10 @@ _pack_move(void)
   //
   while ( (pag_w < HEAP.len_w) && (dir_w = u3a_Gack.buf_w[pag_w]) ) {
     if ( u3a_rest_pg < dir_w ) {
-      if ( !(dir_w >> (u3a_note_bits-1)) ) {
+      if ( !(dir_w >> (u3a_word_bits-1)) ) {
         u3a_Gack.buf_w[pag_w] = u3a_Gack.buf_w[dir_w]; // NB: fag_u->dir_p
       }
-      else if ( !_pack_move_chunks(pag_w, dir_w & ((((c3_n)1) << (u3a_note_bits-1)) - 1)) ) {
+      else if ( !_pack_move_chunks(pag_w, dir_w & ((((c3_w)1) << (u3a_word_bits-1)) - 1)) ) {
         break;
       }
     }
@@ -2376,19 +2376,19 @@ _pack_move(void)
   }
 
   new_w = pag_w++;
-  dst_w = u3to(c3_n, page_to_post(new_w));
-  src_w = u3to(c3_n, page_to_post(pag_w));
+  dst_w = u3to(c3_w, page_to_post(new_w));
+  src_w = u3to(c3_w, page_to_post(pag_w));
 
   while( pag_w < HEAP.len_w ) {
     //  XX assume(new_w < pag_w)
     //  XX assume(new_w == _pack_relocate_page(pag_w))
-    //  XX assume(dst_w == u3to(c3_n, page_to_post(new_w)))
-    //  XX assume(src_w == u3to(c3_n, page_to_post(pag_w)))
+    //  XX assume(dst_w == u3to(c3_w, page_to_post(new_w)))
+    //  XX assume(src_w == u3to(c3_w, page_to_post(pag_w)))
     //
     dir_w = u3a_Gack.buf_w[pag_w];
 
     if ( u3a_free_pg != dir_w ) {
-      if ( (u3a_rest_pg >= dir_w) || !(dir_w >> (u3a_note_bits-1)) ) {
+      if ( (u3a_rest_pg >= dir_w) || !(dir_w >> (u3a_word_bits-1)) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
         memcpy(dst_w, src_w, len_i);
         u3a_Gack.buf_w[new_w] = (u3a_rest_pg >= dir_w)
@@ -2397,7 +2397,7 @@ _pack_move(void)
         new_w++;
         dst_w += off_ws;
       }
-      else if ( _pack_move_chunks(pag_w, dir_w & ((((c3_n)1) << (u3a_note_bits-1)) - 1)) ) {
+      else if ( _pack_move_chunks(pag_w, dir_w & ((((c3_w)1) << (u3a_word_bits-1)) - 1)) ) {
         new_w++;
         dst_w += off_ws;
       }
@@ -2413,8 +2413,8 @@ _pack_move(void)
   {
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
     HEAP.len_w = new_w;
-    memcpy(dir_u, u3a_Gack.buf_w, new_w << (u3a_note_bits_log-3));
-    memset(dir_u + new_w, 0, (HEAP.siz_w - new_w) << (u3a_note_bits_log-3));
+    memcpy(dir_u, u3a_Gack.buf_w, new_w << (u3a_word_bits_log-3));
+    memset(dir_u + new_w, 0, (HEAP.siz_w - new_w) << (u3a_word_bits_log-3));
   }
 
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);

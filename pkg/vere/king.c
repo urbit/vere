@@ -356,7 +356,7 @@ king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
 */
 c3_i
-king_curl_bytes(c3_c* url_c, c3_n* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
+king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
 {
   c3_i     ret_i = 0;
   CURL    *cul_u;
@@ -414,7 +414,7 @@ king_curl_bytes(c3_c* url_c, c3_n* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
 static u3_noun
 _king_get_atom(c3_c* url_c)
 {
-  c3_n  len_w;
+  c3_w  len_w;
   c3_y* hun_y;
   u3_noun pro;
 
@@ -479,7 +479,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
 {
   c3_c* ver_c;
   c3_c* url_c;
-  c3_n  len_w;
+  c3_w  len_w;
   c3_y* hun_y;
   c3_i  ret_i;
 
@@ -1774,18 +1774,18 @@ u3_king_grab(void* vod_p)
   all_u[3] = var_u[3];
   c3_free(var_u);
 
-  c3_n tot_n = all_u[0]->siz_n + all_u[1]->siz_n
-                 + all_u[2]->siz_n + all_u[3]->siz_n;
+  c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w
+                 + all_u[2]->siz_w + all_u[3]->siz_w;
 
   all_u[4] = c3_calloc(sizeof(*all_u[4]));
   all_u[4]->nam_c = "total marked";
-  all_u[4]->siz_n = tot_n;
+  all_u[4]->siz_w = tot_w;
 
   //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
   //  only u3a_mark_done() is required
   all_u[5] = c3_calloc(sizeof(*all_u[5]));
   all_u[5]->nam_c = "sweep";
-  all_u[5]->siz_n = u3a_sweep();
+  all_u[5]->siz_w = u3a_sweep();
 
   for ( c3_w_new i_w = 0; i_w < 6; i_w++ ) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);

@@ -294,14 +294,14 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun args = u3at(arr_sam_3, monad);
 
-    c3_n met_n = u3r_met(3, name);
-    if ( UINT32_MAX <= met_n )
+    c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
     }
-    c3_c* name_c = u3a_malloc(met_n + 1);
-    u3r_bytes(0, met_n, (c3_y*)name_c, name);
-    name_c[met_n] = 0;
+    c3_c* name_c = u3a_malloc(met_w + 1);
+    u3r_bytes(0, met_w, (c3_y*)name_c, name);
+    name_c[met_w] = 0;
 
     M3Result result;
 
@@ -552,14 +552,14 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_atom value = u3x_atom(u3at(arr_sam_3, monad));
 
-    c3_n met_n = u3r_met(3, name);
-    if ( UINT32_MAX <= met_n )
+    c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
     }
-    c3_c* name_c = u3a_malloc(met_n + 1);
-    u3r_bytes(0, met_n, (c3_y*)name_c, name);
-    name_c[met_n] = 0;
+    c3_c* name_c = u3a_malloc(met_w + 1);
+    u3r_bytes(0, met_w, (c3_y*)name_c, name);
+    name_c[met_w] = 0;
     
     IM3Global glob = m3_FindGlobal(sat->wasm_module, name_c);
 
@@ -628,14 +628,14 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     //  global-get
     u3_atom name = u3x_atom(u3at(arr_sam, monad));
 
-    c3_n met_n = u3r_met(3, name);
-    if ( UINT32_MAX <= met_n )
+    c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
     }
-    c3_c* name_c = u3a_malloc(met_n + 1);
-    u3r_bytes(0, met_n, (c3_y*)name_c, name);
-    name_c[met_n] = 0;
+    c3_c* name_c = u3a_malloc(met_w + 1);
+    u3r_bytes(0, met_w, (c3_y*)name_c, name);
+    name_c[met_w] = 0;
 
     IM3Global glob = m3_FindGlobal(sat->wasm_module, name_c);
     if (!glob)

@@ -8,19 +8,19 @@
 #include "c3/c3.h"
 
 /// Sentinel value for u3_noun types that aren't actually nouns.
-#define u3_none (u3_noun)c3_n_max
+#define u3_none (u3_noun)c3_w_max
 
 /// 0, or `~` in Hoon.
-#define u3_nul (c3_n)0
+#define u3_nul (c3_w)0
 
 /// 0, or `%$` in Hoon.
-#define u3_blip (c3_n)0
+#define u3_blip (c3_w)0
 
 /// Pointer offset into the loom.
 ///
 /// Declare variables of this type using u3p() to annotate the type of the
 /// pointee. Ensure that variable names of this type end in `_p`.
-typedef c3_n      u3_post;
+typedef c3_w      u3_post;
 #define u3p(type) u3_post
 
 /// Tagged noun pointer.
@@ -30,7 +30,7 @@ typedef c3_n      u3_post;
 /// If bit 31 is 1 and bit 30 is 1, an indirect cell (also called a "pom").
 ///
 /// Bits 0-29 are a word offset (i.e. u3_post) against the loom.
-typedef c3_n u3_noun;
+typedef c3_w u3_noun;
 
 /// Optional noun type.
 ///

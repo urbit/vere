@@ -129,7 +129,7 @@ u3_disk_etch(u3_disk* log_u,
   //
   {
     u3_atom mat = u3qe_jam(eve);
-    c3_n  len_w = u3r_met(3, mat);
+    c3_w  len_w = u3r_met(3, mat);
 
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);
@@ -475,7 +475,7 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w_new len_w, c3_y* byt_y)
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
-  u3_assert( c3y == u3a_is_cat((c3_n)met_u->lif_w) );
+  u3_assert( c3y == u3a_is_cat((c3_w)met_u->lif_w) );
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
@@ -543,7 +543,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
-  c3_n ver_w, lif_w;
+  c3_w ver_w, lif_w;
   c3_d who_d[2];
   c3_o fak_o;
 
@@ -634,7 +634,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
     c3_o val_o = c3y;
 
     if ( U3D_VERLAT < ver_w ) {
-      fprintf(stderr, "disk: read meta: unknown version %"PRIc3_n"\r\n", ver_w);
+      fprintf(stderr, "disk: read meta: unknown version %"PRIc3_w"\r\n", ver_w);
       val_o = c3n;
     }
     else if ( !((c3y == fak_o ) || (c3n == fak_o )) ) {

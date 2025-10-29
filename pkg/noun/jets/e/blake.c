@@ -11,8 +11,8 @@
              u3_atom wik, u3_atom dak,
              u3_atom out)
   {
-    c3_n wid_n;
-    if ( !u3r_note_fit(&wid_n, wid) ) {
+    c3_w wid_w;
+    if ( !u3r_word_fit(&wid_w, wid) ) {
       // impossible to represent an atom this large
       return u3m_bail(c3__fail);
     }
@@ -20,16 +20,16 @@
       // the hoon adjusts these widths to its liking
       int err;
       c3_y  out_y[64], dak_y[64];
-      c3_n  wik_n = c3_min(wik, 64),
-            out_n = c3_max(1, c3_min(out, 64));
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_n, dat);
+      c3_w  wik_w = c3_min(wik, 64),
+            out_w = c3_max(1, c3_min(out, 64));
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
 
-      u3r_bytes(0, wik_n, dak_y, dak);
-      err = urcrypt_blake2(wid_n, dat_y, wik_n, dak_y, out_n, out_y);
+      u3r_bytes(0, wik_w, dak_y, dak);
+      err = urcrypt_blake2(wid_w, dat_y, wik_w, dak_y, out_w, out_y);
       u3a_free(dat_y);
 
       if ( 0 == err ) {
-        return u3i_bytes(out_n, out_y);
+        return u3i_bytes(out_w, out_y);
       }
       else {
         return u3_none;
@@ -61,19 +61,19 @@
   _cqe_blake3_hash(u3_atom wid, u3_atom dat,
              u3_atom key, u3_atom flags, u3_atom out)
   {
-    c3_n wid_n, out_n;
-    if ( !u3r_note_fit(&wid_n, wid) || !u3r_note_fit(&out_n, out) ) {
+    c3_w wid_w, out_w;
+    if ( !u3r_word_fit(&wid_w, wid) || !u3r_word_fit(&out_w, out) ) {
       return u3m_bail(c3__fail);
     }
     else {
       c3_y key_y[32];
       u3r_bytes(0, 32, key_y, key);
       c3_y flags_y = u3r_byte(0, flags);
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_n, dat);
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
       u3i_slab sab_u;
-      u3i_slab_bare(&sab_u, 3, out_n);
+      u3i_slab_bare(&sab_u, 3, out_w);
       c3_y* out_y = sab_u.buf_y;
-      urcrypt_blake3_hash(wid_n, dat_y, key_y, flags_y, out, out_y);
+      urcrypt_blake3_hash(wid_w, dat_y, key_y, flags_y, out, out_y);
       u3a_free(dat_y);
       return u3i_slab_mint(&sab_u);
     }
@@ -102,16 +102,16 @@
   static u3_noun
   _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
   {
-    c3_n wid_n;
-    if ( !u3r_note_fit(&wid_n, wid) ) {
+    c3_w wid_w;
+    if ( !u3r_word_fit(&wid_w, wid) ) {
       return u3m_bail(c3__fail);
     } else {
       c3_y  cv_y[32], block_y[64], block_len;
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_n, dat);
+      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
       c3_d counter_d = u3r_chub(0, counter);
       c3_y flags_y = u3r_byte(0, flags);
       u3r_bytes(0, 32, cv_y, cv);
-      urcrypt_blake3_chunk_output(wid_n, dat_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
+      urcrypt_blake3_chunk_output(wid_w, dat_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
       return u3i_cell(u3i_bytes(32, cv_y), u3i_qual(u3k(counter), u3i_bytes(64, block_y), block_len, flags_y));
     }
   }

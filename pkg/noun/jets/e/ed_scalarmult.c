@@ -15,10 +15,10 @@
       return u3m_bail(c3__exit);
     }
 
-    c3_n met_n = u3r_met(3, a);
+    c3_w met_w = u3r_met(3, a);
     // scalarmult expects a_y[31] <= 127
-    if ( (32 < met_n) ||
-         ( (32 == met_n) &&
+    if ( (32 < met_w) ||
+         ( (32 == met_w) &&
            (127 < u3r_byte(31, a)) )
         ) {
       u3_noun a_recs = u3qee_recs(a);

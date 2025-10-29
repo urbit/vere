@@ -56,7 +56,7 @@ _pier_work_send(u3_work* wok_u)
   u3_auto* car_u = wok_u->car_u;
   u3_pier* pir_u = wok_u->pir_u;
   u3_lord* god_u = pir_u->god_u;
-  c3_n     len_w = 0;
+  c3_w     len_w = 0;
 
   //  calculate work batch size
   {
@@ -374,7 +374,7 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
   c3_c* czar_c = u3r_string(czar);
 
   c3_c url[256];
-  c3_n  len_w;
+  c3_w  len_w;
   c3_y* hun_y;
 
   sprintf(url, "https://%s.urbit.org/~/sponsor/%s", czar_c+1, who_c);
@@ -392,39 +392,39 @@ _resolve_czar(u3_work* wok_u, c3_c* who_c)
 static c3_o
 _czar_boot_data(c3_c* czar_c,
                 c3_c* who_c,
-                c3_n* bone_n,
-                c3_n* czar_glx_n,
-                c3_n* czar_ryf_n,
-                c3_n* czar_lyf_n,
-                c3_n* czar_bon_n,
-                c3_n* czar_ack_n)
+                c3_w* bone_w,
+                c3_w* czar_glx_w,
+                c3_w* czar_ryf_w,
+                c3_w* czar_lyf_w,
+                c3_w* czar_bon_w,
+                c3_w* czar_ack_w)
 {
   c3_c url[256];
-  c3_n  len_n;
+  c3_w  len_w;
   c3_y* hun_y = 0;
 
-  if ( bone_n != NULL ) {
-    sprintf(url, "https://%s.urbit.org/~/boot/%s/%"PRIc3_n,
-            czar_c+1, who_c, *bone_n );
+  if ( bone_w != NULL ) {
+    sprintf(url, "https://%s.urbit.org/~/boot/%s/%"PRIc3_w,
+            czar_c+1, who_c, *bone_w );
   } else {
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
   }
 
   c3_o ret_o = c3n;
-  c3_i ret_i = king_curl_bytes(url, &len_n, &hun_y, 1, 1);
+  c3_i ret_i = king_curl_bytes(url, &len_w, &hun_y, 1, 1);
   if ( !ret_i ) {
-    u3_noun jamd = u3i_bytes(len_n, hun_y);
+    u3_noun jamd = u3i_bytes(len_w, hun_y);
     u3_noun cued = u3qe_cue(jamd);
 
     u3_noun czar_glx, czar_ryf, czar_lyf, czar_bon, czar_ack;
 
     if ( (c3y == u3r_hext(cued, 0, &czar_glx, &czar_ryf,
                           &czar_lyf, &czar_bon, &czar_ack)) &&
-         (c3y == u3r_safe_note(czar_glx, czar_glx_n)) &&
-         (c3y == u3r_safe_note(czar_ryf, czar_ryf_n)) &&
-         (c3y == u3r_safe_note(czar_lyf, czar_lyf_n)) ) {
-      if ( c3y == u3du(czar_bon) ) u3r_safe_note(u3t(czar_bon), czar_bon_n);
-      if ( c3y == u3du(czar_ack) ) u3r_safe_note(u3t(czar_ack), czar_ack_n);
+         (c3y == u3r_safe_word(czar_glx, czar_glx_w)) &&
+         (c3y == u3r_safe_word(czar_ryf, czar_ryf_w)) &&
+         (c3y == u3r_safe_word(czar_lyf, czar_lyf_w)) ) {
+      if ( c3y == u3du(czar_bon) ) u3r_safe_word(u3t(czar_bon), czar_bon_w);
+      if ( c3y == u3du(czar_ack) ) u3r_safe_word(u3t(czar_ack), czar_ack_w);
       ret_o = c3y;
     }
 
@@ -445,10 +445,10 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
   c3_c*   who_c = u3r_string(who);
 
   u3_noun rem, glx, ryf, bon, cur, nex;
-  c3_n    glx_n, ryf_n, bon_n, cur_n, nex_n;
+  c3_w    glx_w, ryf_w, bon_w, cur_w, nex_w;
 
-  c3_n czar_glx_n, czar_ryf_n, czar_lyf_n, czar_bon_n, czar_ack_n;
-  czar_glx_n = czar_ryf_n = czar_lyf_n = czar_bon_n = czar_ack_n = u3_none;
+  c3_w czar_glx_w, czar_ryf_w, czar_lyf_w, czar_bon_w, czar_ack_w;
+  czar_glx_w = czar_ryf_w = czar_lyf_w = czar_bon_w = czar_ack_w = u3_none;
 
   if ( (c3y == u3r_qual(nun, 0, 0, 0, &rem)) &&
        (c3y == u3r_hext(rem, &glx, &ryf, 0, &bon, &cur, &nex)) ) {
@@ -456,27 +456,27 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
      * Boot scry succeeded. Proceed to cross reference networking state against
      * sponsoring galaxy.
      */
-    glx_n = u3r_note(0, glx); ryf_n = u3r_note(0, ryf);
-    bon_n = u3r_note(0, bon); cur_n = u3r_note(0, cur);
-    nex_n = u3r_note(0, nex);
+    glx_w = u3r_word(0, glx); ryf_w = u3r_word(0, ryf);
+    bon_w = u3r_word(0, bon); cur_w = u3r_word(0, cur);
+    nex_w = u3r_word(0, nex);
 
-    u3_atom czar = u3dc("scot", c3__p, glx_n);
+    u3_atom czar = u3dc("scot", c3__p, glx_w);
     c3_c*   czar_c = u3r_string(czar);
 
-    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_n,
-                                &czar_glx_n, &czar_ryf_n,
-                                &czar_lyf_n, &czar_bon_n,
-                                &czar_ack_n) ) {
+    if ( c3n == _czar_boot_data(czar_c, who_c, &bon_w,
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, &czar_bon_w,
+                                &czar_ack_w) ) {
       u3l_log("boot: peer-state unvailable on czar, cannot protect from double-boot");
       _pier_work(wok_u);
     } else {
-      if ( czar_ryf_n == ryf_n ) {
-        c3_n ack_n = cur_n - 1;
-        if ( czar_ack_n == u3_none ) {
+      if ( czar_ryf_w == ryf_w ) {
+        c3_w ack_w = cur_w - 1;
+        if ( czar_ack_w == u3_none ) {
           // This codepath should never be hit
           u3l_log("boot: message-sink-state unvailable on czar, cannot protect from double-boot");
           _pier_work(wok_u);
-        } else if ( ( nex_n - cur_n ) >= ( czar_ack_n - ack_n ) ) {
+        } else if ( ( nex_w - cur_w ) >= ( czar_ack_w - ack_w ) ) {
           _pier_work(wok_u);
         } else {
           u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
@@ -507,8 +507,8 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
     c3_c* czar_c = _resolve_czar(wok_u, who_c);
 
     if ( c3n == _czar_boot_data(czar_c, who_c, 0,
-                                &czar_glx_n, &czar_ryf_n,
-                                &czar_lyf_n, &czar_bon_n, 0) ) {
+                                &czar_glx_w, &czar_ryf_w,
+                                &czar_lyf_w, &czar_bon_w, 0) ) {
       c3_free(czar_c);
       _pier_work(wok_u);
     } else {
@@ -518,11 +518,11 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       if ( kf_ryf == u3_none ) {
         u3l_log("boot: keyfile rift unavailable, cannot protect from double-boot");
         _pier_work(wok_u);
-      } else if ( kf_ryf > czar_ryf_n ) {
+      } else if ( kf_ryf > czar_ryf_w ) {
         // Ship breached, galaxy has not heard about the breach; continue boot
         _pier_work(wok_u);
-      } else if ( (     kf_ryf == czar_ryf_n ) &&
-                  ( czar_bon_n == u3_none ) ) {
+      } else if ( (     kf_ryf == czar_ryf_w ) &&
+                  ( czar_bon_w == u3_none ) ) {
         // Ship has breached, continue boot
         _pier_work(wok_u);
       } else {

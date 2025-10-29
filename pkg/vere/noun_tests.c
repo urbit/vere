@@ -23,7 +23,7 @@ static c3_i
 _test_u3r_chop()
 {
   c3_i  ret_i = 1;
-  c3_n  dst_w = 0;
+  c3_w  dst_w = 0;
   u3_atom src = 0b11011;
 
   //  bloq 0
@@ -163,8 +163,8 @@ _test_u3r_chop()
     c3_y inp_y[8] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7 };
     src = u3i_bytes(8, inp_y);
 
-    c3_n dst_w = 0;
-    u3r_chop(0, 0, (u3a_note_bits - 1), 0, &dst_w, src);
+    c3_w dst_w = 0;
+    u3r_chop(0, 0, (u3a_word_bits - 1), 0, &dst_w, src);
 #ifdef VERE64
     if ( dst_w != 0x0706050403020100ULL ) {
 #else
@@ -252,29 +252,29 @@ _test_u3r_chop()
 */
 void
 _test_chop_slow(c3_g    met_g,
-                c3_n    fum_w,
-                c3_n    wid_w,
-                c3_n    tou_w,
-                c3_n*   dst_w,
-                c3_n    len_w,
-                c3_n*   buf_w)
+                c3_w    fum_w,
+                c3_w    wid_w,
+                c3_w    tou_w,
+                c3_w*   dst_w,
+                c3_w    len_w,
+                c3_w*   buf_w)
 {
-  c3_n  i_w;
+  c3_w  i_w;
 
-  if ( met_g < u3a_note_bits_log ) {
-    c3_n san_w = (1 << met_g);
-    c3_n mek_w = ((1 << san_w) - 1);
-    c3_n baf_w = (fum_w << met_g);
-    c3_n bat_w = (tou_w << met_g);
+  if ( met_g < u3a_word_bits_log ) {
+    c3_w san_w = (1 << met_g);
+    c3_w mek_w = ((1 << san_w) - 1);
+    c3_w baf_w = (fum_w << met_g);
+    c3_w bat_w = (tou_w << met_g);
 
     // XX: efficiency: poor.  Iterate by words.
     //
     for ( i_w = 0; i_w < wid_w; i_w++ ) {
-      c3_n waf_w = (baf_w >> u3a_note_bits_log);
-      c3_g raf_g = (baf_w & (u3a_note_bits - 1));
-      c3_n wat_w = (bat_w >> u3a_note_bits_log);
-      c3_g rat_g = (bat_w & (u3a_note_bits - 1));
-      c3_n hop_w;
+      c3_w waf_w = (baf_w >> u3a_word_bits_log);
+      c3_g raf_g = (baf_w & (u3a_word_bits - 1));
+      c3_w wat_w = (bat_w >> u3a_word_bits_log);
+      c3_g rat_g = (bat_w & (u3a_word_bits - 1));
+      c3_w hop_w;
 
       hop_w = (waf_w >= len_w) ? 0 : buf_w[waf_w];
       hop_w = (hop_w >> raf_g) & mek_w;
@@ -286,13 +286,13 @@ _test_chop_slow(c3_g    met_g,
     }
   }
   else {
-    c3_g hut_g = (met_g - u3a_note_bits_log);
-    c3_n san_w = (1 << hut_g);
-    c3_n j_w;
+    c3_g hut_g = (met_g - u3a_word_bits_log);
+    c3_w san_w = (1 << hut_g);
+    c3_w j_w;
 
     for ( i_w = 0; i_w < wid_w; i_w++ ) {
-      c3_n wuf_w = (fum_w + i_w) << hut_g;
-      c3_n wut_w = (tou_w + i_w) << hut_g;
+      c3_w wuf_w = (fum_w + i_w) << hut_g;
+      c3_w wut_w = (tou_w + i_w) << hut_g;
 
       for ( j_w = 0; j_w < san_w; j_w++ ) {
         dst_w[wut_w + j_w] ^=
@@ -311,38 +311,38 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
 {
   c3_i ret_i = 1;
   c3_g met_g;
-  c3_n fum_w, wid_w, tou_w;
-  c3_n len_w = 34;  //  (rsh [0 5] (mul 2 (mul 34 (bex 4))))
-  c3_n src_w[len_w];
-  c3_n   a_w[len_w];
-  c3_n   b_w[len_w];
+  c3_w fum_w, wid_w, tou_w;
+  c3_w len_w = 34;  //  (rsh [0 5] (mul 2 (mul 34 (bex 4))))
+  c3_w src_w[len_w];
+  c3_w   a_w[len_w];
+  c3_w   b_w[len_w];
 
-  memset(src_w, val_y, len_w * sizeof(c3_n));
+  memset(src_w, val_y, len_w * sizeof(c3_w));
 
   for ( met_g = 0; met_g < 5; met_g++ ) {
     for ( fum_w = 0; fum_w <= len_w; fum_w++ ) {
       for ( wid_w = 0; wid_w <= len_w; wid_w++ ) {
         for ( tou_w = 0; tou_w <= len_w; tou_w++ ) {
-          memset(a_w, 0, len_w * sizeof(c3_n));
-          memset(b_w, 0, len_w * sizeof(c3_n));
-          u3r_chop_notes(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          memset(a_w, 0, len_w * sizeof(c3_w));
+          memset(b_w, 0, len_w * sizeof(c3_w));
+          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
-          if ( 0 != memcmp(a_w, b_w, len_w * sizeof(c3_n)) ) {
+          if ( 0 != memcmp(a_w, b_w, len_w * sizeof(c3_w)) ) {
             c3_g sif_g = 5 - met_g;
-            c3_n mas_w = (1 << met_g) - 1;
-            c3_n out_w = tou_w >> sif_g;
-            c3_n max_w = out_w + !!(fum_w & mas_w)
+            c3_w mas_w = (1 << met_g) - 1;
+            c3_w out_w = tou_w >> sif_g;
+            c3_w max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w >> sif_g) + !!(wid_w & mas_w);
 
-            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%" PRIc3_n " wid_w=%" PRIc3_n " tou_w=%" PRIc3_n "\r\n",
+            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%" PRIc3_w " wid_w=%" PRIc3_w " tou_w=%" PRIc3_w "\r\n",
                             cap_c, val_y,
                             met_g, fum_w, wid_w, tou_w);
 
 
-            fprintf(stderr, "%" PRIc3_n "-%" PRIc3_n ": ", out_w, max_w - 1);
+            fprintf(stderr, "%" PRIc3_w "-%" PRIc3_w ": ", out_w, max_w - 1);
             for ( ; out_w < max_w; out_w++ ) {
-              fprintf(stderr, "[0x%" PRIxc3_n " 0x%" PRIxc3_n "] ", a_w[out_w], b_w[out_w]);
+              fprintf(stderr, "[0x%" PRIxc3_w " 0x%" PRIxc3_w "] ", a_w[out_w], b_w[out_w]);
             }
             fprintf(stderr, "\r\n");
           }
@@ -357,7 +357,7 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
     // 64-bit: test at 0x7fffffffffffffff and 0x8000000000000000
     c3_y max_direct_y[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f };
     u3_atom src = u3i_bytes(8, max_direct_y);
-    c3_n dst = 0;
+    c3_w dst = 0;
     u3r_chop(3, 0, 8, 0, &dst, src);
     if (0 != memcmp(&dst, max_direct_y, 8)) {
       fprintf(stderr, "test: _test_chop_smol: 64-bit max direct boundary\n");
@@ -380,7 +380,7 @@ _test_chop_smol(c3_c* cap_c, c3_y val_y)
     // 32-bit: test at 0x7fffffff and 0x80000000
     c3_y max_direct_y[4] = { 0xff, 0xff, 0xff, 0x7f };
     u3_atom src = u3i_bytes(4, max_direct_y);
-    c3_n dst = 0;
+    c3_w dst = 0;
     u3r_chop(3, 0, 4, 0, &dst, src);
     if (0 != memcmp(&dst, max_direct_y, 4)) {
       fprintf(stderr, "test: _test_chop_smol: 32-bit max direct boundary\n");
@@ -410,38 +410,38 @@ _test_chop_huge(c3_c* cap_c, c3_y val_y)
 {
   c3_i ret_i = 1;
   c3_g met_g;
-  c3_n fum_w, wid_w, tou_w;
-  c3_n len_w = 192;  //   (rsh [0 5] (mul 2 (mul 3 (bex 10))))
-  c3_n src_w[len_w];
-  c3_n   a_w[len_w];
-  c3_n   b_w[len_w];
+  c3_w fum_w, wid_w, tou_w;
+  c3_w len_w = 192;  //   (rsh [0 5] (mul 2 (mul 3 (bex 10))))
+  c3_w src_w[len_w];
+  c3_w   a_w[len_w];
+  c3_w   b_w[len_w];
 
-  memset(src_w, val_y, len_w * sizeof(c3_n));
+  memset(src_w, val_y, len_w * sizeof(c3_w));
 
-  for ( met_g = u3a_note_bits_log; met_g <= 10; met_g++ ) {
+  for ( met_g = u3a_word_bits_log; met_g <= 10; met_g++ ) {
     for ( fum_w = 0; fum_w <= 3; fum_w++ ) {
       for ( wid_w = 0; wid_w <= 2; wid_w++ ) {
         for ( tou_w = 0; tou_w <= 1; tou_w++ ) {
-          memset(a_w, 0, len_w * sizeof(c3_n));
-          memset(b_w, 0, len_w * sizeof(c3_n));
-          u3r_chop_notes(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
+          memset(a_w, 0, len_w * sizeof(c3_w));
+          memset(b_w, 0, len_w * sizeof(c3_w));
+          u3r_chop_words(met_g, fum_w, wid_w, tou_w, a_w, len_w, src_w);
           _test_chop_slow(met_g, fum_w, wid_w, tou_w, b_w, len_w, src_w);
 
-          if ( 0 != memcmp(a_w, b_w, len_w * sizeof(c3_n)) ) {
-            c3_g sif_g = met_g - u3a_note_bits_log;
-            c3_n mas_w = (1 << met_g) - 1;
-            c3_n out_w = tou_w << sif_g;
-            c3_n max_w = out_w + !!(fum_w & mas_w)
+          if ( 0 != memcmp(a_w, b_w, len_w * sizeof(c3_w)) ) {
+            c3_g sif_g = met_g - u3a_word_bits_log;
+            c3_w mas_w = (1 << met_g) - 1;
+            c3_w out_w = tou_w << sif_g;
+            c3_w max_w = out_w + !!(fum_w & mas_w)
                        + (wid_w << sif_g) + !!(wid_w & mas_w);
 
-            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%" PRIc3_n " wid_w=%" PRIc3_n " tou_w=%" PRIc3_n "\r\n",
+            fprintf(stderr, "%s (0x%x): met_g=%u fum_w=%" PRIc3_w " wid_w=%" PRIc3_w " tou_w=%" PRIc3_w "\r\n",
                             cap_c, val_y,
                             met_g, fum_w, wid_w, tou_w);
 
 
-            fprintf(stderr, "%" PRIc3_n "-%" PRIc3_n ": ", out_w, max_w - 1);
+            fprintf(stderr, "%" PRIc3_w "-%" PRIc3_w ": ", out_w, max_w - 1);
             for ( ; out_w < max_w; out_w++ ) {
-              fprintf(stderr, "[0x%" PRIxc3_n " 0x%" PRIxc3_n "] ", a_w[out_w], b_w[out_w]);
+              fprintf(stderr, "[0x%" PRIxc3_w " 0x%" PRIxc3_w "] ", a_w[out_w], b_w[out_w]);
             }
             fprintf(stderr, "\r\n");
           }
@@ -473,17 +473,17 @@ _test_chop()
 /* _util_rand_string(): dynamically allocated len_w random string
 */
 static c3_y*
-_util_rand_string(c3_n len_w)
+_util_rand_string(c3_w len_w)
 {
   c3_c* choice_c =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  c3_n choice_len_w = strlen(choice_c);
+  c3_w choice_len_w = strlen(choice_c);
 
   c3_y* out_y = c3_malloc(len_w + 1);
 
-  c3_n i_w;
+  c3_w i_w;
   for (i_w = 0; i_w < len_w; i_w ++){
-    out_y[i_w] = choice_c[ (c3_n) rand() % choice_len_w ];
+    out_y[i_w] = choice_c[ (c3_w) rand() % choice_len_w ];
   }
   out_y[i_w] = 0;
 
@@ -500,8 +500,8 @@ _test_noun_bits_helper(u3_noun a, int direct_o,
 {
 #if 0
   printf("=========== %u\n", a);
-  printf("    31 bit  %u\n", a & ( ((c3_n)1) << 31));
-  printf("    30 bit  %u\n", a & ( ((c3_n)1) << 30));
+  printf("    31 bit  %u\n", a & ( ((c3_w)1) << 31));
+  printf("    30 bit  %u\n", a & ( ((c3_w)1) << 30));
   printf("    dir     %x\n", c3y == u3a_is_cat(a));
   printf("    ind     %x\n", c3y == u3a_is_dog(a));
   printf("  i cell    %x\n", c3y == u3a_is_cell(a));
@@ -533,7 +533,7 @@ _test_noun_bits_set()
   u3_noun a = 1;
 
   // flip indirect bit on
-  a |= ((c3_n)1 << (u3a_note_bits - 1));
+  a |= ((c3_w)1 << (u3a_word_bits - 1));
   if ( c3n == u3a_is_dog(a) ) {
     printf("*** fail-5a turn indirect bit on\r\n");
   }
@@ -594,199 +594,199 @@ _test_noun_bits_read()
   _test_noun_bits_helper(c, FALSE,  TRUE,     FALSE,         TRUE);
 }
 
-static void _test_imprison_notes()
+static void _test_imprison_words()
 {
-  c3_n  input_n[10] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa};
-  c3_n  out_len_n = 300;
-  c3_n* output_n = c3_malloc(out_len_n * sizeof(c3_n));
+  c3_w  input_w[10] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa};
+  c3_w  out_len_w = 300;
+  c3_w* output_w = c3_malloc(out_len_w * sizeof(c3_w));
   u3_noun a;
 
   // size 1, always direct
-  a = u3i_notes(1, input_n);
-  memset(output_n, 0, out_len_n * sizeof(c3_n));
-  u3r_notes(0, 1, output_n, a);
-  if (0 != memcmp(output_n, input_n, sizeof(c3_n))) {
-    printf("*** _test_imprison_notes: fail-1\n");
+  a = u3i_words(1, input_w);
+  memset(output_w, 0, out_len_w * sizeof(c3_w));
+  u3r_words(0, 1, output_w, a);
+  if (0 != memcmp(output_w, input_w, sizeof(c3_w))) {
+    printf("*** _test_imprison_words: fail-1\n");
   }
 
   // size 2, direct or indirect depending on architecture
-  a = u3i_notes(2, input_n);
-  memset(output_n, 0, out_len_n * sizeof(c3_n));
-  u3r_notes(0, 2, output_n, a);
-  if (0 != memcmp(output_n, input_n, 2 * sizeof(c3_n))) {
-    printf("*** _test_imprison_notes: fail-2\n");
+  a = u3i_words(2, input_w);
+  memset(output_w, 0, out_len_w * sizeof(c3_w));
+  u3r_words(0, 2, output_w, a);
+  if (0 != memcmp(output_w, input_w, 2 * sizeof(c3_w))) {
+    printf("*** _test_imprison_words: fail-2\n");
   }
 
 #ifdef VERE64
   // size 1, direct (64-bit)
   {
-    c3_n data_n[] = { 0x0102030405060708ULL };
-    a = u3i_notes(1, data_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 1, output_n, a);
-    if (0 != memcmp(output_n, data_n, sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-2.5 (64-bit)\n");
+    c3_w data_w[] = { 0x0102030405060708ULL };
+    a = u3i_words(1, data_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 1, output_w, a);
+    if (0 != memcmp(output_w, data_w, sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-2.5 (64-bit)\n");
     }
   }
 #else
   // size 2, indirect (32-bit)
   {
-    c3_n data_n[] = { 0x01020304, 0x05060708 };
-    a = u3i_notes(2, data_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 2, output_n, a);
-    if (0 != memcmp(output_n, data_n, 2 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-2.5 (32-bit)\n");
+    c3_w data_w[] = { 0x01020304, 0x05060708 };
+    a = u3i_words(2, data_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 2, output_w, a);
+    if (0 != memcmp(output_w, data_w, 2 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-2.5 (32-bit)\n");
     }
   }
 #endif
 
 #ifdef VERE64
   // size 2, indirect (64-bit)
-  a = u3i_notes(2, input_n);
-  memset(output_n, 0, out_len_n * sizeof(c3_n));
-  u3r_notes(0, 2, output_n, a);
-  if (0 != memcmp(output_n, input_n, 2 * sizeof(c3_n))) {
-    printf("*** _test_imprison_notes: fail-3\n");
+  a = u3i_words(2, input_w);
+  memset(output_w, 0, out_len_w * sizeof(c3_w));
+  u3r_words(0, 2, output_w, a);
+  if (0 != memcmp(output_w, input_w, 2 * sizeof(c3_w))) {
+    printf("*** _test_imprison_words: fail-3\n");
   }
 #else
   // size 4, indirect (32-bit)
-  a = u3i_notes(4, input_n);
-  memset(output_n, 0, out_len_n * sizeof(c3_n));
-  u3r_notes(0, 4, output_n, a);
-  if (0 != memcmp(output_n, input_n, 4 * sizeof(c3_n))) {
-    printf("*** _test_imprison_notes: fail-3\n");
+  a = u3i_words(4, input_w);
+  memset(output_w, 0, out_len_w * sizeof(c3_w));
+  u3r_words(0, 4, output_w, a);
+  if (0 != memcmp(output_w, input_w, 4 * sizeof(c3_w))) {
+    printf("*** _test_imprison_words: fail-3\n");
   }
 #endif
 
   // size 10, indirect
-  a = u3i_notes(10, input_n);
-  memset(output_n, 0, out_len_n * sizeof(c3_n));
-  u3r_notes(0, 10, output_n, a);
-  if (0 != memcmp(output_n, input_n, 10 * sizeof(c3_n))) {
-    printf("*** _test_imprison_notes: fail-4\n");
+  a = u3i_words(10, input_w);
+  memset(output_w, 0, out_len_w * sizeof(c3_w));
+  u3r_words(0, 10, output_w, a);
+  if (0 != memcmp(output_w, input_w, 10 * sizeof(c3_w))) {
+    printf("*** _test_imprison_words: fail-4\n");
   }
 
   // size 100, indirect
   {
-    c3_n large_n[100];
-    c3_n i_w;
+    c3_w large_w[100];
+    c3_w i_w;
     for (i_w = 0; i_w < 100; i_w++) {
-      large_n[i_w] = i_w * 0x100 + i_w;
+      large_w[i_w] = i_w * 0x100 + i_w;
     }
 
-    a = u3i_notes(100, large_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 100, output_n, a);
-    if (0 != memcmp(output_n, large_n, 100 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-5\n");
+    a = u3i_words(100, large_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 100, output_w, a);
+    if (0 != memcmp(output_w, large_w, 100 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-5\n");
     }
   }
 
 #ifdef VERE64
   // test with max 64-bit values (indirect)
   {
-    c3_n max_n[3] = { 0xffffffffffffffffULL, 0x0ULL, 0xffffffffffffffffULL };
-    a = u3i_notes(3, max_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 3, output_n, a);
-    if (0 != memcmp(output_n, max_n, 3 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-6 (64-bit max)\n");
+    c3_w max_w[3] = { 0xffffffffffffffffULL, 0x0ULL, 0xffffffffffffffffULL };
+    a = u3i_words(3, max_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 3, output_w, a);
+    if (0 != memcmp(output_w, max_w, 3 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-6 (64-bit max)\n");
     }
   }
 #else
   // test with max 32-bit values
   {
-    c3_n max_n[3] = { 0xffffffff, 0x0, 0xffffffff };
-    a = u3i_notes(3, max_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 3, output_n, a);
-    if (0 != memcmp(output_n, max_n, 3 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-6 (32-bit max)\n");
+    c3_w max_w[3] = { 0xffffffff, 0x0, 0xffffffff };
+    a = u3i_words(3, max_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 3, output_w, a);
+    if (0 != memcmp(output_w, max_w, 3 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-6 (32-bit max)\n");
     }
   }
 #endif
 
   // edge case: 32-bit direct/indirect boundary (0x7fffffff)
   {
-    c3_n boundary_n[] = { 0x7ffffffe, 0x7fffffff, 0x80000000, 0x80000001 };
-    a = u3i_notes(4, boundary_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 4, output_n, a);
-    if (0 != memcmp(output_n, boundary_n, 4 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-7\n");
+    c3_w boundary_w[] = { 0x7ffffffe, 0x7fffffff, 0x80000000, 0x80000001 };
+    a = u3i_words(4, boundary_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 4, output_w, a);
+    if (0 != memcmp(output_w, boundary_w, 4 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-7\n");
     }
   }
 
-  // edge case: single note at 32-bit max direct atom
+  // edge case: single word at 32-bit max direct atom
   {
-    c3_n at_max_n[] = { 0x7fffffff };
-    a = u3i_notes(1, at_max_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 1, output_n, a);
-    if (0 != memcmp(output_n, at_max_n, 1 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-8 (single at 32-bit max)\n");
+    c3_w at_max_w[] = { 0x7fffffff };
+    a = u3i_words(1, at_max_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 1, output_w, a);
+    if (0 != memcmp(output_w, at_max_w, 1 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-8 (single at 32-bit max)\n");
     }
   }
 
-  // edge case: single note just over 32-bit max direct atom
+  // edge case: single word just over 32-bit max direct atom
   {
-    c3_n over_max_n[] = { 0x80000000 };
-    a = u3i_notes(1, over_max_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 1, output_n, a);
-    if (0 != memcmp(output_n, over_max_n, 1 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-9 (single over 32-bit max)\n");
+    c3_w over_max_w[] = { 0x80000000 };
+    a = u3i_words(1, over_max_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 1, output_w, a);
+    if (0 != memcmp(output_w, over_max_w, 1 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-9 (single over 32-bit max)\n");
     }
   }
 
 #ifdef VERE64
   // edge case: 64-bit direct/indirect boundary
   {
-    c3_n boundary_n[] = { 0x7ffffffffffffffeULL, 0x7fffffffffffffffULL };
-    a = u3i_notes(2, boundary_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 2, output_n, a);
-    if (0 != memcmp(output_n, boundary_n, 2 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-10 (64-bit boundary)\n");
+    c3_w boundary_w[] = { 0x7ffffffffffffffeULL, 0x7fffffffffffffffULL };
+    a = u3i_words(2, boundary_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 2, output_w, a);
+    if (0 != memcmp(output_w, boundary_w, 2 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-10 (64-bit boundary)\n");
     }
   }
 
-  // edge case: single note at 64-bit max direct atom
+  // edge case: single word at 64-bit max direct atom
   {
-    c3_n at_max_n[] = { u3a_64_direct_max };
-    a = u3i_notes(1, at_max_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 1, output_n, a);
-    if (0 != memcmp(output_n, at_max_n, 1 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-11 (single at 64-bit max)\n");
+    c3_w at_max_w[] = { u3a_64_direct_max };
+    a = u3i_words(1, at_max_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 1, output_w, a);
+    if (0 != memcmp(output_w, at_max_w, 1 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-11 (single at 64-bit max)\n");
     }
   }
 
   // edge case: high-bit patterns in 64-bit
   {
-    c3_n high_bits_n[] = { 0xfffffffffffffffeULL, 0xffffffffffffffffULL, 0x0ULL };
-    a = u3i_notes(3, high_bits_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 3, output_n, a);
-    if (0 != memcmp(output_n, high_bits_n, 3 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-12 (64-bit high bits)\n");
+    c3_w high_bits_w[] = { 0xfffffffffffffffeULL, 0xffffffffffffffffULL, 0x0ULL };
+    a = u3i_words(3, high_bits_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 3, output_w, a);
+    if (0 != memcmp(output_w, high_bits_w, 3 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-12 (64-bit high bits)\n");
     }
   }
 #else
   // edge case: high-bit patterns in 32-bit
   {
-    c3_n high_bits_n[] = { 0xfffffffe, 0xffffffff, 0x0 };
-    a = u3i_notes(3, high_bits_n);
-    memset(output_n, 0, out_len_n * sizeof(c3_n));
-    u3r_notes(0, 3, output_n, a);
-    if (0 != memcmp(output_n, high_bits_n, 3 * sizeof(c3_n))) {
-      printf("*** _test_imprison_notes: fail-12 (32-bit high bits)\n");
+    c3_w high_bits_w[] = { 0xfffffffe, 0xffffffff, 0x0 };
+    a = u3i_words(3, high_bits_w);
+    memset(output_w, 0, out_len_w * sizeof(c3_w));
+    u3r_words(0, 3, output_w, a);
+    if (0 != memcmp(output_w, high_bits_w, 3 * sizeof(c3_w))) {
+      printf("*** _test_imprison_words: fail-12 (32-bit high bits)\n");
     }
   }
 #endif
 
-  c3_free(output_n);
+  c3_free(output_w);
 }
 
 /* _test_imprison_bytes(): test basic data into / out of nouns
@@ -796,13 +796,13 @@ static void
 _test_imprison_bytes()
 {
   c3_c* input_c =  "abcdefghij";
-  c3_n  out_len_n = 300;
-  c3_y* output_y = c3_malloc(out_len_n);
+  c3_w  out_len_w = 300;
+  c3_y* output_y = c3_malloc(out_len_w);
   u3_noun a;
 
   // size 1, direct
   a = u3i_bytes(1, (c3_y*)input_c);
-  memset(output_y, 0, out_len_n);
+  memset(output_y, 0, out_len_w);
   u3r_bytes(0, 1, output_y, a);
   if (0 != memcmp(output_y, "a", 1)) {
     printf("*** _test_imprison: fail-1\n");
@@ -810,7 +810,7 @@ _test_imprison_bytes()
 
   // size 2, direct
   a = u3i_bytes(2, (c3_y*)input_c);
-  memset(output_y, 0, out_len_n);
+  memset(output_y, 0, out_len_w);
   u3r_bytes(0, 2, output_y, a);
   if (0 != memcmp(output_y, "ab", 2)) {
     printf("*** _test_imprison: fail-2\n");
@@ -820,7 +820,7 @@ _test_imprison_bytes()
   {
     c3_y data_y[] = { 0x1, 0x1f, 0x8e, 0x2d, 0x2c, 0x2f };
     a = u3i_bytes(6, data_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 6, output_y, a);
     int ret;
     ret = memcmp(output_y, data_y, 6);
@@ -837,7 +837,7 @@ _test_imprison_bytes()
 
   // size 8, direct
   a = u3i_bytes(8, (c3_y*)input_c);
-  memset(output_y, 0, out_len_n);
+  memset(output_y, 0, out_len_w);
   u3r_bytes(0, 8, output_y, a);
   if (0 != memcmp(output_y, "abcdefgh", 8)) {
     printf("*** _test_imprison: fail-3\n");
@@ -845,7 +845,7 @@ _test_imprison_bytes()
 
   // size 10, indirect
   a = u3i_bytes(10, (c3_y*)input_c);
-  memset(output_y, 0, out_len_n);
+  memset(output_y, 0, out_len_w);
   u3r_bytes(0, 10, output_y, a);
   if (0 != memcmp(output_y, "abcdefghij", 10)) {
     printf("*** _test_imprison: fail-4\n");
@@ -854,7 +854,7 @@ _test_imprison_bytes()
   // size 200, indirect
   c3_y * rand_y = _util_rand_string(200);
   a = u3i_bytes(200, rand_y);
-  memset(output_y, 0, out_len_n);
+  memset(output_y, 0, out_len_w);
   u3r_bytes(0, 200, output_y, a);
   if (0 != memcmp(output_y, rand_y, 200)) {
     printf("*** _test_imprison: fail-5\n");
@@ -862,60 +862,60 @@ _test_imprison_bytes()
 
   c3_free(rand_y);
 
-  // edge case: 4-byte boundary (32-bit note size in 32-bit mode)
-  // test 4, 5 bytes to cross the note boundary in 32-bit
+  // edge case: 4-byte boundary (32-bit word size in 32-bit mode)
+  // test 4, 5 bytes to cross the word boundary in 32-bit
   {
     c3_y four_y[] = { 0x01, 0x02, 0x03, 0x04 };
     a = u3i_bytes(4, four_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 4, output_y, a);
     if (0 != memcmp(output_y, four_y, 4)) {
-      printf("*** _test_imprison: fail-6 (4 bytes at note boundary)\n");
+      printf("*** _test_imprison: fail-6 (4 bytes at word boundary)\n");
     }
   }
 
   {
     c3_y five_y[] = { 0x01, 0x02, 0x03, 0x04, 0x05 };
     a = u3i_bytes(5, five_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 5, output_y, a);
     if (0 != memcmp(output_y, five_y, 5)) {
-      printf("*** _test_imprison: fail-7 (5 bytes crossing note boundary)\n");
+      printf("*** _test_imprison: fail-7 (5 bytes crossing word boundary)\n");
     }
   }
 
   // edge case: 8-byte boundary (important for both modes)
-  // in 32-bit: crosses 2 notes, in 64-bit: exactly 1 note
+  // in 32-bit: crosses 2 words, in 64-bit: exactly 1 word
   {
     c3_y eight_y[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
     a = u3i_bytes(8, eight_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 8, output_y, a);
     if (0 != memcmp(output_y, eight_y, 8)) {
-      printf("*** _test_imprison: fail-8 (8 bytes at note boundary)\n");
+      printf("*** _test_imprison: fail-8 (8 bytes at word boundary)\n");
     }
   }
 
   {
     c3_y nine_y[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09 };
     a = u3i_bytes(9, nine_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 9, output_y, a);
     if (0 != memcmp(output_y, nine_y, 9)) {
-      printf("*** _test_imprison: fail-9 (9 bytes crossing note boundary)\n");
+      printf("*** _test_imprison: fail-9 (9 bytes crossing word boundary)\n");
     }
   }
 
 #ifdef VERE64
-  // edge case: 16-byte boundary (crosses 2 notes in 64-bit mode)
+  // edge case: 16-byte boundary (crosses 2 words in 64-bit mode)
   {
     c3_y sixteen_y[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                            0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 };
     a = u3i_bytes(16, sixteen_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 16, output_y, a);
     if (0 != memcmp(output_y, sixteen_y, 16)) {
-      printf("*** _test_imprison: fail-10 (16 bytes at note boundary 64-bit)\n");
+      printf("*** _test_imprison: fail-10 (16 bytes at word boundary 64-bit)\n");
     }
   }
 
@@ -923,10 +923,10 @@ _test_imprison_bytes()
     c3_y seventeen_y[17] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                              0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11 };
     a = u3i_bytes(17, seventeen_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 17, output_y, a);
     if (0 != memcmp(output_y, seventeen_y, 17)) {
-      printf("*** _test_imprison: fail-11 (17 bytes crossing note boundary 64-bit)\n");
+      printf("*** _test_imprison: fail-11 (17 bytes crossing word boundary 64-bit)\n");
     }
   }
 #endif
@@ -935,7 +935,7 @@ _test_imprison_bytes()
   {
     c3_y boundary_y[] = { 0xff, 0xff, 0xff, 0x7f };  // produces 0x7fffffff
     a = u3i_bytes(4, boundary_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 4, output_y, a);
     if (0 != memcmp(output_y, boundary_y, 4)) {
       printf("*** _test_imprison: fail-12 (bytes at 32-bit max direct)\n");
@@ -945,7 +945,7 @@ _test_imprison_bytes()
   {
     c3_y boundary_y[] = { 0x00, 0x00, 0x00, 0x80 };  // produces 0x80000000
     a = u3i_bytes(4, boundary_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 4, output_y, a);
     if (0 != memcmp(output_y, boundary_y, 4)) {
       printf("*** _test_imprison: fail-13 (bytes over 32-bit max direct)\n");
@@ -957,7 +957,7 @@ _test_imprison_bytes()
   {
     c3_y boundary_y[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f };
     a = u3i_bytes(8, boundary_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 8, output_y, a);
     if (0 != memcmp(output_y, boundary_y, 8)) {
       printf("*** _test_imprison: fail-14 (bytes at 64-bit max direct)\n");
@@ -969,7 +969,7 @@ _test_imprison_bytes()
   {
     c3_y three_y[] = { 0xaa, 0xbb, 0xcc };
     a = u3i_bytes(3, three_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 3, output_y, a);
     if (0 != memcmp(output_y, three_y, 3)) {
       printf("*** _test_imprison: fail-15 (3 bytes odd size)\n");
@@ -979,7 +979,7 @@ _test_imprison_bytes()
   {
     c3_y seven_y[] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
     a = u3i_bytes(7, seven_y);
-    memset(output_y, 0, out_len_n);
+    memset(output_y, 0, out_len_w);
     u3r_bytes(0, 7, output_y, a);
     if (0 != memcmp(output_y, seven_y, 7)) {
       printf("*** _test_imprison: fail-16 (7 bytes odd size)\n");
@@ -1013,7 +1013,7 @@ _test_cells()
 
   // very simple cell with indirect atoms
   {
-    c3_n out_len_w = 200;
+    c3_w out_len_w = 200;
     c3_y * rand_a = _util_rand_string(out_len_w);
     c3_y * rand_b = _util_rand_string(out_len_w);
 
@@ -1339,10 +1339,10 @@ _test_cells_complex()
       printf("*** _test_cells_complex: hext() d\n");
     }
     if (e2 != e){
-      printf("*** _test_cells_complex: hext() e - e2 = %" PRIc3_n "\n", e2);
+      printf("*** _test_cells_complex: hext() e - e2 = %" PRIc3_w "\n", e2);
     }
     if (f2 != f){
-      printf("*** _test_cells_complex: hext() f - f2 = %" PRIc3_n "\n", f2);
+      printf("*** _test_cells_complex: hext() f - f2 = %" PRIc3_w "\n", f2);
     }
   }
 }
@@ -1543,7 +1543,7 @@ _test_imprison_complex()
 
     // tape stores each byte in the string as one atom in the tree
     u3_noun lent = u3qb_lent(noun);
-    if ( (c3_n)lent != strlen(in_c) ){
+    if ( (c3_w)lent != strlen(in_c) ){
       printf("*** u3r_tape 2\n");
     }
   }
@@ -1727,31 +1727,31 @@ _test_fing()
 static void
 _test_met()
 {
-  c3_n ret_n;
+  c3_w ret_w;
   u3_atom atom;
 
   // 1
    {
     atom = 1;
 
-    ret_n = u3r_met(0, atom);
-    if (1 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (1 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (1 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (1 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(4, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(4, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1759,24 +1759,24 @@ _test_met()
    {
     atom = 2;
 
-    ret_n = u3r_met(0, atom);
-    if (2 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (2 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (1 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (1 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1784,24 +1784,24 @@ _test_met()
    {
     atom = 8;
 
-    ret_n = u3r_met(0, atom);
-    if (4 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (4 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (1 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (1 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1809,24 +1809,24 @@ _test_met()
    {
     atom = 0xff;
 
-    ret_n = u3r_met(0, atom);
-    if (8 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (8 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (1 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (1 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1834,24 +1834,24 @@ _test_met()
    {
     atom = 0x100;
 
-    ret_n = u3r_met(0, atom);
-    if (9 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (9 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (2 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (2 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1861,24 +1861,24 @@ _test_met()
   {
     atom = 0xffffffffULL;
 
-    ret_n = u3r_met(0, atom);
-    if (32 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (32 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (4 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (4 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _n of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (1 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (1 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 #endif
@@ -1889,24 +1889,24 @@ _test_met()
     c3_w_new data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
     atom = u3i_words_new(4, data_w);
 
-    ret_n = u3r_met(0, atom);
-    if (128 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (128 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (16 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (16 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (4 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (4 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (2 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (2 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 
@@ -1916,24 +1916,24 @@ _test_met()
     c3_w_new data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
     atom = u3i_words_new(4, data_w);
 
-    ret_n = u3r_met(0, atom);
-    if (97 != ret_n){
-      printf("*** _test_met bit of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(0, atom);
+    if (97 != ret_w){
+      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(3, atom);
-    if (13 != ret_n){
-      printf("*** _test_met byte of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(3, atom);
+    if (13 != ret_w){
+      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(5, atom);
-    if (4 != ret_n){
-      printf("*** _test_met _w of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(5, atom);
+    if (4 != ret_w){
+      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
     }
 
-    ret_n = u3r_met(6, atom);
-    if (2 != ret_n){
-      printf("*** _test_met _d of 1 = %" PRIc3_n " \n", ret_n);
+    ret_w = u3r_met(6, atom);
+    if (2 != ret_w){
+      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
     }
   }
 }
@@ -2190,7 +2190,7 @@ main(int argc, char* argv[])
   _test_noun_bits_set();
   _test_noun_bits_read();
   _test_imprison_bytes();
-  _test_imprison_notes();
+  _test_imprison_words();
   _test_imprison_complex();
   _test_sing();
   _test_fing();

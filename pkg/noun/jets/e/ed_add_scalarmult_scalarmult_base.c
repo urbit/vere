@@ -12,11 +12,11 @@
                                       u3_atom b)
   {
     c3_y a_y[32], a_point_y[32], b_y[32], out_y[32];
-    c3_n met_n;
+    c3_w met_w;
 
-    met_n = u3r_met(3, a);
-    if ( (32 < met_n) ||
-         ( (32 == met_n) &&
+    met_w = u3r_met(3, a);
+    if ( (32 < met_w) ||
+         ( (32 == met_w) &&
            (127 < u3r_byte(31, a)) )
         ) {
       u3_noun a_recs = u3qee_recs(a);
@@ -26,9 +26,9 @@
       u3r_bytes(0, 32, a_y, a);
     }
 
-    met_n = u3r_met(3, b);
-    if ( (32 < met_n) ||
-         ( (32 == met_n) &&
+    met_w = u3r_met(3, b);
+    if ( (32 < met_w) ||
+         ( (32 == met_w) &&
            (127 < u3r_byte(31, b)) )
         ) {
       u3_noun b_recs = u3qee_recs(b);

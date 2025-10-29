@@ -9,11 +9,11 @@
 
   typedef struct _u3_loss {                 //  loss problem
     u3_noun hel;                            //  a as a list
-    c3_n lel_n;                             //  length of a
-    c3_n lev_n;                             //  length of b
+    c3_w lel_w;                             //  length of a
+    c3_w lev_w;                             //  length of b
     u3_noun* hev;                           //  b as an array
     u3_noun sev;                            //  b as a set of lists
-    c3_n kct_n;                             //  candidate count
+    c3_w kct_w;                             //  candidate count
     u3_noun* kad;                           //  candidate array
   } u3_loss;
 
@@ -24,10 +24,10 @@
   {
     u3z(loc_u->sev);
     {
-      c3_n i_n;
+      c3_w i_w;
 
-      for ( i_n = 0; i_n < loc_u->kct_n; i_n++ ) {
-        u3z(loc_u->kad[i_n]);
+      for ( i_w = 0; i_w < loc_u->kct_w; i_w++ ) {
+        u3z(loc_u->kad[i_w]);
       }
     }
     u3a_free(loc_u->hev);
@@ -43,7 +43,7 @@
     if ( u3_nul == kad ) {
       return u3_nul;
     } else {
-      return u3nc(u3k(loc_u->hev[u3r_note(0, u3h(kad))]),
+      return u3nc(u3k(loc_u->hev[u3r_word(0, u3h(kad))]),
                   _lext(loc_u, u3t(kad)));
     }
   }
@@ -53,9 +53,9 @@
   static u3_noun
   _lexs(u3_loss* loc_u)
   {
-    if ( 0 == loc_u->kct_n ) {
+    if ( 0 == loc_u->kct_w ) {
       return u3_nul;
-    } else return u3kb_flop(_lext(loc_u, loc_u->kad[loc_u->kct_n - 1]));
+    } else return u3kb_flop(_lext(loc_u, loc_u->kad[loc_u->kct_w - 1]));
   }
 
   //  initialize loss object
@@ -66,37 +66,37 @@
         u3_noun  hev)
   {
     loc_u->hel = hel;
-    loc_u->lel_n = u3kb_lent(u3k(hel));
+    loc_u->lel_w = u3kb_lent(u3k(hel));
 
     //  Read hev into array.
     {
-      c3_n i_n;
+      c3_w i_w;
 
       loc_u->hev = u3a_malloc(u3kb_lent(u3k(hev)) * sizeof(u3_noun));
 
-      for ( i_n = 0; u3_nul != hev; i_n++ ) {
-        loc_u->hev[i_n] = u3h(hev);
+      for ( i_w = 0; u3_nul != hev; i_w++ ) {
+        loc_u->hev[i_w] = u3h(hev);
         hev = u3t(hev);
       }
-      loc_u->lev_n = i_n;
+      loc_u->lev_w = i_w;
     }
-    loc_u->kct_n = 0;
-    loc_u->kad = u3a_malloc((1 + c3_min(loc_u->lev_n, loc_u->lel_n)) *
+    loc_u->kct_w = 0;
+    loc_u->kad = u3a_malloc((1 + c3_min(loc_u->lev_w, loc_u->lel_w)) *
                              sizeof(u3_noun));
 
     //  Compute equivalence classes.
     //
     loc_u->sev = u3_nul;
     {
-      c3_n i_n;
+      c3_w i_w;
 
-      for ( i_n = 0; i_n < loc_u->lev_n; i_n++ ) {
-        u3_noun how = loc_u->hev[i_n];
+      for ( i_w = 0; i_w < loc_u->lev_w; i_w++ ) {
+        u3_noun how = loc_u->hev[i_w];
         u3_noun hav;
         u3_noun teg;
 
         hav = u3kdb_get(u3k(loc_u->sev), u3k(how));
-        teg = u3nc(u3i_note(i_n),
+        teg = u3nc(u3i_word(i_w),
                    (hav == u3_none) ? u3_nul : hav);
         loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
       }
@@ -107,104 +107,104 @@
   //
   static void
   _lune(u3_loss* loc_u,
-        c3_n     inx_n,
-        c3_n     goy_n)
+        c3_w     inx_w,
+        c3_w     goy_w)
   {
     u3_noun kad;
 
-    kad = u3nc(u3i_note(goy_n),
-               (inx_n == 0) ? u3_nul
-                            : u3k(loc_u->kad[inx_n - 1]));
-    if ( loc_u->kct_n == inx_n ) {
-      u3_assert(loc_u->kct_n < (1 << 31));
-      loc_u->kct_n++;
+    kad = u3nc(u3i_word(goy_w),
+               (inx_w == 0) ? u3_nul
+                            : u3k(loc_u->kad[inx_w - 1]));
+    if ( loc_u->kct_w == inx_w ) {
+      u3_assert(loc_u->kct_w < (1 << 31));
+      loc_u->kct_w++;
     } else {
-      u3z(loc_u->kad[inx_n]);
+      u3z(loc_u->kad[inx_w]);
     }
-    loc_u->kad[inx_n] = kad;
+    loc_u->kad[inx_w] = kad;
   }
 
   //  extend fits top
   //
   static u3_noun
   _hink(u3_loss* loc_u,
-        c3_n     inx_n,
-        c3_n     goy_n)
+        c3_w     inx_w,
+        c3_w     goy_w)
   {
     return __
-         ( (loc_u->kct_n == inx_n) ||
-           (u3r_note(0, u3h(loc_u->kad[inx_n])) > goy_n) );
+         ( (loc_u->kct_w == inx_w) ||
+           (u3r_word(0, u3h(loc_u->kad[inx_w])) > goy_w) );
   }
 
   //  extend fits bottom
   //
   static u3_noun
   _lonk(u3_loss* loc_u,
-        c3_n     inx_n,
-        c3_n     goy_n)
+        c3_w     inx_w,
+        c3_w     goy_w)
   {
     return __
-      ( (0 == inx_n) ||
-        (u3r_note(0, u3h(loc_u->kad[inx_n - 1])) < goy_n) );
+      ( (0 == inx_w) ||
+        (u3r_word(0, u3h(loc_u->kad[inx_w - 1])) < goy_w) );
   }
 
 #if 0
-  //  search for first index >= inx_n and <= max_n that fits
+  //  search for first index >= inx_w and <= max_w that fits
   //  the hink and lonk criteria.
   //
   static u3_noun
   _binka(u3_loss* loc_u,
-         c3_n*    inx_n,
-         c3_n     max_n,
-         c3_n     goy_n)
+         c3_w*    inx_w,
+         c3_w     max_w,
+         c3_w     goy_w)
   {
-    while ( *inx_n <= max_n ) {
-      if ( c3n == _lonk(loc_u, *inx_n, goy_n) ) {
+    while ( *inx_w <= max_w ) {
+      if ( c3n == _lonk(loc_u, *inx_w, goy_w) ) {
         return c3n;
       }
-      if ( c3y == _hink(loc_u, *inx_n, goy_n) ) {
+      if ( c3y == _hink(loc_u, *inx_w, goy_w) ) {
         return c3y;
       }
-      else ++*inx_n;
+      else ++*inx_w;
     }
     return c3n;
   }
 #endif
 
-  //  search for lowest index >= inx_n and <= max_n for which
-  //  both hink(inx_n) and lonk(inx_n) are true.  lonk is false
-  //  if inx_n is too high, hink is false if it is too low.
+  //  search for lowest index >= inx_w and <= max_w for which
+  //  both hink(inx_w) and lonk(inx_w) are true.  lonk is false
+  //  if inx_w is too high, hink is false if it is too low.
   //
   static u3_noun
   _bink(u3_loss* loc_u,
-        c3_n*    inx_n,
-        c3_n     max_n,
-        c3_n     goy_n)
+        c3_w*    inx_w,
+        c3_w     max_w,
+        c3_w     goy_w)
   {
-    u3_assert(max_n >= *inx_n);
+    u3_assert(max_w >= *inx_w);
 
-    if ( max_n == *inx_n ) {
-      if ( c3n == _lonk(loc_u, *inx_n, goy_n) ) {
+    if ( max_w == *inx_w ) {
+      if ( c3n == _lonk(loc_u, *inx_w, goy_w) ) {
         return c3n;
       }
-      if ( c3y == _hink(loc_u, *inx_n, goy_n) ) {
+      if ( c3y == _hink(loc_u, *inx_w, goy_w) ) {
         return c3y;
       }
       else {
-        ++*inx_n;
+        ++*inx_w;
         return c3n;
       }
     }
     else {
-      c3_n mid_n = *inx_n + ((max_n - *inx_n) / 2);
+      c3_w mid_w = *inx_w + ((max_w - *inx_w) / 2);
 
-      if ( (c3n == _lonk(loc_u, mid_n, goy_n)) ||
-           (c3y == _hink(loc_u, mid_n, goy_n)) )
+      if ( (c3n == _lonk(loc_u, mid_w, goy_w)) ||
+           (c3y == _hink(loc_u, mid_w, goy_w)) )
       {
-        return _bink(loc_u, inx_n, mid_n, goy_n);
+        return _bink(loc_u, inx_w, mid_w, goy_w);
       } else {
-        *inx_n = mid_n + 1;
-        return _bink(loc_u, inx_n, max_n, goy_n);
+        *inx_w = mid_w + 1;
+        return _bink(loc_u, inx_w, max_w, goy_w);
       }
     }
   }
@@ -212,25 +212,25 @@
 
   static void
   _merg(u3_loss* loc_u,
-        c3_n     inx_n,
+        c3_w     inx_w,
         u3_noun  gay)
   {
-    if ( (u3_nul == gay) || (inx_n > loc_u->kct_n) ) {
+    if ( (u3_nul == gay) || (inx_w > loc_u->kct_w) ) {
       return;
     }
     else {
       u3_noun i_gay = u3h(gay);
-      c3_n    goy_n = u3r_note(0, i_gay);
+      c3_w    goy_w = u3r_word(0, i_gay);
       u3_noun bik;
 
-      bik = _bink(loc_u, &inx_n, loc_u->kct_n, goy_n);
+      bik = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);
 
       if ( c3y == bik ) {
-        _merg(loc_u, inx_n + 1, u3t(gay));
-        _lune(loc_u, inx_n, goy_n);
+        _merg(loc_u, inx_w + 1, u3t(gay));
+        _lune(loc_u, inx_w, goy_w);
       }
       else {
-        _merg(loc_u, inx_n, u3t(gay));
+        _merg(loc_u, inx_w, u3t(gay));
       }
     }
   }

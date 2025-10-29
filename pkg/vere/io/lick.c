@@ -86,7 +86,7 @@ _lick_string_to_path(c3_c* pax_c)
 static c3_c*
 _lick_it_path(u3_noun pax)
 {
-  c3_n len_w = 0;
+  c3_w len_w = 0;
   c3_c *pas_c;
 
   //  measure
@@ -109,7 +109,7 @@ _lick_it_path(u3_noun pax)
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_n tis_w = u3r_met(3, u3h(wiz));
+      c3_w tis_w = u3r_met(3, u3h(wiz));
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '/';
@@ -248,7 +248,7 @@ _lick_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   if ( err_i != UV_EOF ) {
     u3l_log("lick: moor bail %zd %s", err_i, err_c);
     if ( _(can_u->liv_o) ) {
-      _lick_send_noun(can_u, u3nq(0, c3__bail, u3i_note(err_i),
+      _lick_send_noun(can_u, u3nq(0, c3__bail, u3i_word(err_i),
                       u3i_string(err_c)));
       can_u->liv_o = c3n;
     }

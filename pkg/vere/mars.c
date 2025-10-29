@@ -66,7 +66,7 @@ u3_noun
 _mars_quac(u3m_quac* mas_u)
 {
   u3_noun list = u3_nul;
-  c3_n i_w = 0;
+  c3_w i_w = 0;
   if ( mas_u->qua_u != NULL ) {
     while ( mas_u->qua_u[i_w] != NULL ) {
       list = u3nc(_mars_quac(mas_u->qua_u[i_w]), list);
@@ -75,7 +75,7 @@ _mars_quac(u3m_quac* mas_u)
   }
   list = u3kb_flop(list);
 
-  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_note(mas_u->siz_n), list);
+  u3_noun mas = u3nt(u3i_string(mas_u->nam_c), u3i_word(mas_u->siz_w), list);
 
   c3_free(mas_u->nam_c);
   c3_free(mas_u->qua_u);
@@ -90,7 +90,7 @@ u3_noun
 _mars_quacs(u3m_quac** all_u)
 {
   u3_noun list = u3_nul;
-  c3_n i_w = 0;
+  c3_w i_w = 0;
   while ( all_u[i_w] != NULL ) {
     list = u3nc(_mars_quac(all_u[i_w]), list);
     i_w++;
@@ -105,7 +105,7 @@ void
 _mars_print_quacs(FILE* fil_u, u3m_quac** all_u)
 {
   fprintf(fil_u, "\r\n");
-  c3_n i_w = 0;
+  c3_w i_w = 0;
   while ( all_u[i_w] != NULL ) {
     u3a_print_quac(fil_u, 0, all_u[i_w]);
     i_w++;
@@ -167,7 +167,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
     u3a_mark_init();
 
     u3m_quac* pro_u = u3a_prof(fil_u, sac);
-    c3_n      sac_w = u3a_mark_noun(sac);
+    c3_w      sac_w = u3a_mark_noun(sac);
 
     if ( NULL == pro_u ) {
       fflush(fil_u);
@@ -184,32 +184,32 @@ _mars_grab(u3_noun sac, c3_o pri_o)
       all_u[4] = var_u[3];
       c3_free(var_u);
 
-      c3_n tot_w = all_u[0]->siz_n + all_u[1]->siz_n + all_u[2]->siz_n
-                     + all_u[3]->siz_n + all_u[4]->siz_n;
+      c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w
+                     + all_u[3]->siz_w + all_u[4]->siz_w;
 
       all_u[5] = c3_calloc(sizeof(*all_u[5]));
       all_u[5]->nam_c = strdup("space profile");
-      all_u[5]->siz_n = sac_w * sizeof(c3_n);
+      all_u[5]->siz_w = sac_w * sizeof(c3_w);
 
-      tot_w += all_u[5]->siz_n;
+      tot_w += all_u[5]->siz_w;
 
       all_u[6] = c3_calloc(sizeof(*all_u[6]));
       all_u[6]->nam_c = strdup("total marked");
-      all_u[6]->siz_n = tot_w;
+      all_u[6]->siz_w = tot_w;
 
       all_u[7] = c3_calloc(sizeof(*all_u[7]));
       all_u[7]->nam_c = strdup("free lists");
-      all_u[7]->siz_n = u3a_idle(u3R) * sizeof(c3_n);
+      all_u[7]->siz_w = u3a_idle(u3R) * sizeof(c3_w);
 
       //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
       //  only u3a_mark_done() is required
       all_u[8] = c3_calloc(sizeof(*all_u[8]));
       all_u[8]->nam_c = strdup("sweep");
-      all_u[8]->siz_n = u3a_sweep() * sizeof(c3_n);
+      all_u[8]->siz_w = u3a_sweep() * sizeof(c3_w);
 
       all_u[9] = c3_calloc(sizeof(*all_u[9]));
       all_u[9]->nam_c = strdup("loom");
-      all_u[9]->siz_n = u3C.wor_i * sizeof(c3_n);
+      all_u[9]->siz_w = u3C.wor_i * sizeof(c3_w);
 
       all_u[10] = NULL;
 
@@ -312,7 +312,7 @@ _mars_make_crud(u3_noun job, u3_noun dud)
 /* _mars_curb(): check for memory threshold
 */
 static inline c3_t
-_mars_curb(c3_n pre_w, c3_n pos_w, c3_n hes_w)
+_mars_curb(c3_w pre_w, c3_w pos_w, c3_w hes_w)
 {
   return (pre_w > hes_w) && (pos_w <= hes_w);
 }
@@ -320,13 +320,13 @@ _mars_curb(c3_n pre_w, c3_n pos_w, c3_n hes_w)
 /* _mars_sure_feck(): event succeeded, send effects.
 */
 static u3_noun
-_mars_sure_feck(u3_mars* mar_u, c3_n pre_w, u3_noun vir)
+_mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
 {
   //  intercept |mass, observe |reset
   //
   {
     u3_noun riv = vir;
-    c3_n    i_w = 0;
+    c3_w    i_w = 0;
 
     while ( u3_nul != riv ) {
       u3_noun fec = u3t(u3h(riv));
@@ -378,7 +378,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_n pre_w, u3_noun vir)
   //
   {
     u3_noun pri = u3_none;
-    c3_n pos_w = u3a_open(u3R);
+    c3_w pos_w = u3a_open(u3R);
 
     //  if contiguous free space shrunk, check thresholds
     //  (and track state to avoid thrashing)
@@ -435,7 +435,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_n pre_w, u3_noun vir)
 /* _mars_peek(): dereference namespace.
 */
 static u3_noun
-_mars_peek(c3_n mil_w, u3_noun sam)
+_mars_peek(c3_w mil_w, u3_noun sam)
 {
   c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
   c3_c  lab_c[2056];
@@ -465,7 +465,7 @@ _mars_peek(c3_n mil_w, u3_noun sam)
 /* _mars_poke(): attempt to compute an event. [*eve] is RETAINED.
 */
 static c3_o
-_mars_poke(c3_n mil_w, u3_noun* eve, u3_noun* out)
+_mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
 {
   c3_t tac_t = !!( u3C.wag_w & u3o_trace );
   c3_c tag_c[9];
@@ -477,7 +477,7 @@ _mars_poke(c3_n mil_w, u3_noun* eve, u3_noun* out)
     u3_noun wir = u3h(u3t(*eve));
     u3_noun tag = u3h(u3t(u3t(*eve)));
     c3_c* wir_c = u3m_pretty_path(wir);
-    c3_n  len_w;
+    c3_w  len_w;
 
     u3r_bytes(0, 8, (c3_y*)tag_c, tag);
     tag_c[8] = 0;
@@ -536,7 +536,7 @@ _mars_poke(c3_n mil_w, u3_noun* eve, u3_noun* out)
 
 #ifdef U3_EVENT_TIME_DEBUG
   {
-    c3_n      ms_w, clr_w;
+    c3_w      ms_w, clr_w;
     struct timeval f2, d0;
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
@@ -736,7 +736,7 @@ _mars_post(u3_mars* mar_u)
 {
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("mars: threshold 1: %"PRIc3_n, u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
     }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
     u3m_reclaim();
@@ -760,10 +760,10 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
     if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("mars: threshold 0: per_p %"PRIc3_n, u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 0: per_p %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
     }
     u3h_free(u3R->cax.per_p);
-    u3R->cax.per_p = u3h_new_cache(u3C.per_n);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
     u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
     u3l_log("");
   }
@@ -877,11 +877,11 @@ static void
 _mars_step_trace(const c3_c* dir_c)
 {
   if ( u3C.wag_w & u3o_trace ) {
-    c3_n trace_cnt_n = u3t_trace_cnt();
-    if ( trace_cnt_n == 0  && u3t_file_cnt() == 0 ) {
+    c3_w trace_cnt_w = u3t_trace_cnt();
+    if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(dir_c);
     }
-    else if ( trace_cnt_n >= 100000 ) {
+    else if ( trace_cnt_w >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(dir_c);
     }
@@ -1150,7 +1150,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 
   u3l_log("--------------- bootstrap starting ----------------");
 
-  u3l_log("boot: 1-%"PRIc3_n, u3qb_lent(eve));
+  u3l_log("boot: 1-%"PRIc3_w, u3qb_lent(eve));
 
   //  XX check mug if available
   //
@@ -1659,7 +1659,7 @@ _mars_sift_pill(u3_noun  pil,
   //  optionally replace filesystem in userspace
   //
   if ( u3_nul != pil_q ) {
-    c3_n len_w = 0;
+    c3_w len_w = 0;
     u3_noun ova = *use;
     u3_noun new = u3_nul;
     u3_noun ovo, tag;
@@ -2017,10 +2017,10 @@ u3_mars_grab(c3_o pri_o)
     u3a_mark_init();
     u3m_quac** var_u = u3m_mark();
 
-    c3_n tot_w = 0;
-    c3_n i_w = 0;
+    c3_w tot_w = 0;
+    c3_w i_w = 0;
     while ( var_u[i_w] != NULL ) {
-      tot_w += var_u[i_w]->siz_n;
+      tot_w += var_u[i_w]->siz_w;
       u3a_quac_free(var_u[i_w]);
       i_w++;
     }

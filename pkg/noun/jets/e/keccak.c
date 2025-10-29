@@ -8,7 +8,7 @@
 
 #define defw(bits,byts) \
   u3_atom \
-  _kecc_##bits(c3_n len_w, u3_atom a) \
+  _kecc_##bits(c3_w len_w, u3_atom a) \
   { \
     c3_y  out[byts]; \
     c3_y* buf_y = u3r_bytes_alloc(0, len_w, a); \
@@ -26,12 +26,12 @@
   u3_weak \
   u3we_kecc##bits(u3_noun cor) \
   { \
-    c3_n    len_w; \
+    c3_w    len_w; \
     u3_noun len, tom; \
     u3x_mean(cor, u3x_sam_2, &len, u3x_sam_3, &tom, u3_nul); \
     return ( (c3n == u3ud(len)) || (c3n == u3ud(tom)) ) \
       ? u3m_bail(c3__exit) \
-      : (!u3r_note_fit(&len_w, len)) \
+      : (!u3r_word_fit(&len_w, len)) \
       ? u3m_bail(c3__fail) \
       : _kecc_##bits(len_w, tom); \
   }

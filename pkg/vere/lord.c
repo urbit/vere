@@ -981,13 +981,13 @@ u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(wag_c, "%u", god_u->wag_w);
 
-    sprintf(hap_c, "%"PRIc3_n, u3_Host.ops_u.hap_n);
+    sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
-    sprintf(per_c, "%"PRIc3_n, u3_Host.ops_u.per_n);
+    sprintf(per_c, "%"PRIc3_w, u3_Host.ops_u.per_w);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
-    sprintf(tos_c, "%"PRIc3_n, u3C.tos_n);
+    sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
     sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
 
@@ -1248,13 +1248,13 @@ u3_lord_boot(c3_c* pax_c,
 
     sprintf(wag_c, "%u", bot_u->wag_w);
 
-    sprintf(hap_c, "%"PRIc3_n, u3_Host.ops_u.hap_n);
+    sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
-    sprintf(tos_c, "%"PRIc3_n, u3C.tos_n);
+    sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
-    sprintf(per_c, "%"PRIc3_n, u3_Host.ops_u.per_n);
+    sprintf(per_c, "%"PRIc3_w, u3_Host.ops_u.per_w);
 
     arg_c[0] = bot_u->bin_c;            //  executable
     arg_c[1] = "boot";                  //  protocol

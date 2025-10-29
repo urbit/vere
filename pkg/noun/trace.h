@@ -68,11 +68,11 @@
       u3t_init(void);
 
       /// @return  Number of entries written to the JSON trace file.
-      c3_n
+      c3_w
       u3t_trace_cnt(void);
 
       /// @return  Number of times u3t_trace_close() has been called.
-      c3_n
+      c3_w
       u3t_file_cnt(void);
 
     /* u3t_push(): push on trace stack.
@@ -190,7 +190,7 @@
     /* u3t_etch_meme(): report memory stats at call time
     */
       u3_noun
-      u3t_etch_meme(c3_n mod_n);
+      u3t_etch_meme(c3_w mod_w);
 
     /* u3t_sstack_init: initalize a root node on the spin stack 
      */

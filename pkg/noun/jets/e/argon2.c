@@ -53,16 +53,16 @@
                u3_atom wid, u3_atom dat, u3_atom wis, u3_atom sat )
   {
     c3_y typ_u;
-    c3_n out_n, wik_n, wix_n, wid_n, wis_n;
+    c3_w out_w, wik_w, wix_w, wid_w, wis_w;
 
     // NB: fixed to 32-bit width to conform with urcrypt_argon2's signature
     c3_w_new ver_w, ted_w, mem_w, tim_w;
 
-    if ( !(u3r_note_fit(&out_n, out) &&
-           u3r_note_fit(&wik_n, wik) &&
-           u3r_note_fit(&wix_n, wix) &&
-           u3r_note_fit(&wid_n, wid) &&
-           u3r_note_fit(&wis_n, wis)) ) {
+    if ( !(u3r_word_fit(&out_w, out) &&
+           u3r_word_fit(&wik_w, wik) &&
+           u3r_word_fit(&wix_w, wix) &&
+           u3r_word_fit(&wid_w, wid) &&
+           u3r_word_fit(&wis_w, wis)) ) {
       // too big to allocate
       return u3m_bail(c3__fail);
     }
@@ -75,19 +75,19 @@
     }
     else {
       u3_atom ret;
-      c3_y *key_y = u3r_bytes_alloc(0, wik_n, key),
-           *ex_y  = u3r_bytes_alloc(0, wix_n, extra),
-           *dat_y = u3r_bytes_alloc(0, wid_n, dat),
-           *sat_y = u3r_bytes_alloc(0, wis_n, sat),
-           *out_y = u3a_malloc(out_n);
+      c3_y *key_y = u3r_bytes_alloc(0, wik_w, key),
+           *ex_y  = u3r_bytes_alloc(0, wix_w, extra),
+           *dat_y = u3r_bytes_alloc(0, wid_w, dat),
+           *sat_y = u3r_bytes_alloc(0, wis_w, sat),
+           *out_y = u3a_malloc(out_w);
 
       const c3_c* err_c = urcrypt_argon2(
           typ_u, ver_w, ted_w, mem_w, tim_w,
-          wik_n, key_y,
-          wix_n,  ex_y,
-          wid_n, dat_y,
-          wis_n, sat_y,
-          out_n, out_y,
+          wik_w, key_y,
+          wix_w,  ex_y,
+          wid_w, dat_y,
+          wis_w, sat_y,
+          out_w, out_y,
           &argon2_alloc,
           &argon2_free);
 
@@ -97,7 +97,7 @@
       u3a_free(sat_y);
 
       if ( NULL == err_c ) {
-        ret = u3i_bytes(out_n, out_y);
+        ret = u3i_bytes(out_w, out_y);
       }
       else {
         ret = u3_none;
@@ -127,7 +127,7 @@
     // pretty deep in the subject, hence the +510.
     if ( c3n == u3r_mean(cor, u3x_sam_2, &wmsg,
                               u3x_sam_3, &wsat,
-                              (c3_n)510, &arg, u3_nul) ||
+                              (c3_w)510, &arg, u3_nul) ||
                 u3r_cell(wmsg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(wsat, &wis, &sat) || u3ud(wis) || u3ud(sat) ||
                 //

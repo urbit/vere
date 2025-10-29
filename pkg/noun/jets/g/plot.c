@@ -7,37 +7,37 @@
 
 // XX optimize
 //
-static c3_n
-_met_plat_m(c3_g a_g, c3_n fum_w, c3_n met_w, u3_atom vat)
+static c3_w
+_met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
 {
   // XX: 64 what do
-  c3_n len_n, wor_w;
+  c3_w len_w, wor_w;
 
   {
     u3i_slab sab_u;
     u3i_slab_init(&sab_u, a_g, met_w);
-    u3r_chop(a_g, fum_w, met_w, 0, sab_u.buf_n, vat);
+    u3r_chop(a_g, fum_w, met_w, 0, sab_u.buf_w, vat);
 
-    len_n = sab_u.len_n;
+    len_w = sab_u.len_w;
 
     //XX: 64 CHECK!
-    while ( len_n && !sab_u.buf_n[len_n - 1] ) {
-      len_n--;
+    while ( len_w && !sab_u.buf_w[len_w - 1] ) {
+      len_w--;
     }
 
-    wor_w = !len_n ? 0 : sab_u.buf_n[len_n - 1];
+    wor_w = !len_w ? 0 : sab_u.buf_w[len_w - 1];
 
     u3i_slab_free(&sab_u);
   }
 
 
-  if ( !len_n ) {
+  if ( !len_w ) {
     return 0;
   }
 
   {
-    c3_n gal_w = len_n - 1;
-    c3_n daz_w = wor_w;
+    c3_w gal_w = len_w - 1;
+    c3_w daz_w = wor_w;
     c3_y   a_y = a_g;
 
     //  inlined from u3r_met
@@ -50,7 +50,7 @@ _met_plat_m(c3_g a_g, c3_n fum_w, c3_n met_w, u3_atom vat)
       }
 
       return (gal_w << gow_y)
-        + ((c3_bits_note(daz_w) + max_y)
+        + ((c3_bits_word(daz_w) + max_y)
            >> a_y);
     }
 
@@ -61,14 +61,14 @@ _met_plat_m(c3_g a_g, c3_n fum_w, c3_n met_w, u3_atom vat)
   }
 }
 
-static c3_n
+static c3_w
 _met_list(c3_g    a_g,
-          c3_n  sep_w,
+          c3_w  sep_w,
           u3_noun b_p);
 
-static c3_n
+static c3_w
 _met_pair(c3_g* las_g,
-          c3_n  sep_w,
+          c3_w  sep_w,
           u3_noun a_p,
           u3_noun b_p,
           c3_g* new_g)
@@ -82,7 +82,7 @@ _met_pair(c3_g* las_g,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_note_bits) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -96,13 +96,13 @@ _met_pair(c3_g* las_g,
   return _met_list(a_g, sep_w, b_p);
 }
 
-static c3_n
+static c3_w
 _met_list(c3_g    a_g,
-          c3_n  sep_w,
+          c3_w  sep_w,
           u3_noun b_p)
 {
   if ( u3_nul != b_p ) {
-    c3_n met_w;
+    c3_w met_w;
     u3_noun  i, t = b_p;
 
     do {
@@ -123,7 +123,7 @@ _met_list(c3_g    a_g,
             return u3m_bail(c3__fail);
           }
 
-          met_w  = (c3_n)i_i;
+          met_w  = (c3_w)i_i;
           sep_w += met_w; // XX overflow
         }
         else {
@@ -143,7 +143,7 @@ _met_list(c3_g    a_g,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = (c3_n)q_p_t_i;
+            met_w  = (c3_w)q_p_t_i;
             sep_w += met_w; // XX overflow
           }
           //  ?=([%m ~] -.i.b.p)
@@ -159,7 +159,7 @@ _met_list(c3_g    a_g,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = _met_plat_m(a_g, (c3_n)p_p_t_i, (c3_n)q_p_t_i, q_t_i);
+            met_w  = _met_plat_m(a_g, (c3_w)p_p_t_i, (c3_w)q_p_t_i, q_t_i);
             sep_w += met_w; // XX overflow
           }
           //  ?=([%s ~] -.i.b.p) (assumed)
@@ -182,16 +182,16 @@ _met_list(c3_g    a_g,
   return sep_w;
 }
 
-static c3_n
+static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
-          c3_n      sep_w,
+          c3_w      sep_w,
           u3_noun     b_p);
 
-static c3_n
+static c3_w
 _fax_pair(u3i_slab* sab_u,
           c3_g*     las_g,
-          c3_n      sep_w,
+          c3_w      sep_w,
           u3_noun     a_p,
           u3_noun     b_p,
           c3_g*     new_g)
@@ -205,7 +205,7 @@ _fax_pair(u3i_slab* sab_u,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_note_bits) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -219,14 +219,14 @@ _fax_pair(u3i_slab* sab_u,
   return _fax_list(sab_u, a_g, sep_w, b_p);
 }
 
-static c3_n
+static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
-          c3_n      sep_w,
+          c3_w      sep_w,
           u3_noun     b_p)
 {
   if ( u3_nul != b_p ) {
-    c3_n met_w;
+    c3_w met_w;
     u3_noun  i, t = b_p;
 
     do {
@@ -236,7 +236,7 @@ _fax_list(u3i_slab* sab_u,
       if ( c3y == u3a_is_atom(i) ) {
         met_w  = u3r_met(a_g, i);
 
-        u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_n, i);
+        u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_w, i);
 
         sep_w += met_w;  // XX overflow
       }
@@ -250,9 +250,9 @@ _fax_list(u3i_slab* sab_u,
             return u3m_bail(c3__fail);
           }
 
-          met_w  = (c3_n)i_i;
+          met_w  = (c3_w)i_i;
 
-          u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_n, u3x_atom(t_i));
+          u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_w, u3x_atom(t_i));
 
           sep_w += met_w; // XX overflow
         }
@@ -273,9 +273,9 @@ _fax_list(u3i_slab* sab_u,
               return u3m_bail(c3__fail);
             }
 
-            met_w  = (c3_n)q_p_t_i;
+            met_w  = (c3_w)q_p_t_i;
 
-            u3r_chop(a_g, (c3_n)p_p_t_i, met_w, sep_w, sab_u->buf_n, q_t_i);
+            u3r_chop(a_g, (c3_w)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
 
             sep_w += met_w; // XX overflow
           }
@@ -292,9 +292,9 @@ _fax_list(u3i_slab* sab_u,
               return u3m_bail(c3__fail);
             }
 
-            met_w = _met_plat_m(a_g, (c3_n)p_p_t_i, (c3_n)q_p_t_i, q_t_i);
+            met_w = _met_plat_m(a_g, (c3_w)p_p_t_i, (c3_w)q_p_t_i, q_t_i);
 
-            u3r_chop(a_g, (c3_n)p_p_t_i, met_w, sep_w, sab_u->buf_n, q_t_i);
+            u3r_chop(a_g, (c3_w)p_p_t_i, met_w, sep_w, sab_u->buf_w, q_t_i);
 
             sep_w += met_w; // XX overflow
           }
@@ -322,7 +322,7 @@ u3_noun
 u3qg_plot_met(u3_noun a_p, u3_noun b_p)
 {
   c3_g out_g;
-  c3_n sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
+  c3_w sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
 
   return u3nc(out_g, u3i_word_new(sep_w));
 }
@@ -343,14 +343,14 @@ u3_noun
 u3qg_plot_fax(u3_noun a_p, u3_noun b_p)
 {
   c3_g     out_g;
-  c3_n     sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
+  c3_w     sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
   u3i_slab sab_u;
 
   u3i_slab_init(&sab_u, out_g, sep_w);
 
   _fax_pair(&sab_u, NULL, 0, a_p, b_p, &out_g);
 
-  return u3nt(u3i_slab_mint(&sab_u), out_g, u3i_note(sep_w));
+  return u3nt(u3i_slab_mint(&sab_u), out_g, u3i_word(sep_w));
 }
 
 u3_noun

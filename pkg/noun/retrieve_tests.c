@@ -120,8 +120,8 @@ _test_mug(void)
                            u3kc_mix(u3qc_bex(212),
                            u3i_string("abcdefjhijklmnopqrstuvwxyz")));
 
-    c3_n  byt_w = u3r_met(3, str);
-    c3_n  wor_w = u3r_met(5, str);
+    c3_w  byt_w = u3r_met(3, str);
+    c3_w  wor_w = u3r_met(5, str);
     c3_y* str_y = c3_malloc(byt_w);
     c3_w_new* str_w = c3_malloc(sizeof(c3_w_new) * wor_w);
     c3_d  str_d = c3y;
@@ -615,7 +615,7 @@ _test_bit_byte(void)
     u3z(a);
 #else
     //  test at bit 30 and 31 in 32-bit mode
-    u3_noun a = u3i_note(0x80000000);  //  bit 31 set (indirect atom)
+    u3_noun a = u3i_word(0x80000000);  //  bit 31 set (indirect atom)
 
     if ( 0 != u3r_bit(30, a) ) {
       fprintf(stderr, "_test_bit_byte(): fail (c) (1) 32-bit\r\n");
@@ -745,11 +745,11 @@ _test_bytes(void)
     }
   }
 
-  //  test crossing note boundaries
+  //  test crossing word boundaries
   //
   {
 #ifdef VERE64
-    //  8-byte atom that crosses note boundary when extracted as words
+    //  8-byte atom that crosses word boundary when extracted as words
     c3_y src_y[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10 };
 #else
@@ -773,7 +773,7 @@ _test_bytes(void)
     exit(1);
 }
 
-/* _test_words(): test u3r_word_new(), u3r_chub(), u3r_note().
+/* _test_words(): test u3r_word_new(), u3r_chub(), u3r_word().
 */
 static void
 _test_words(void)
@@ -830,30 +830,30 @@ _test_words(void)
     u3z(a);
   }
 
-  //  test u3r_note() returns correct size based on architecture
+  //  test u3r_word() returns correct size based on architecture
   //
   {
 #ifdef VERE64
-    c3_n not_n[2] = { 0x123456789abcdef0ULL, 0xfedcba9876543210ULL };
-    u3_noun a = u3i_notes(2, not_n);
+    c3_w not_w[2] = { 0x123456789abcdef0ULL, 0xfedcba9876543210ULL };
+    u3_noun a = u3i_words(2, not_w);
 
-    if ( 0x123456789abcdef0ULL != u3r_note(0, a) ) {
+    if ( 0x123456789abcdef0ULL != u3r_word(0, a) ) {
       fprintf(stderr, "_test_words(): fail (c) (1) 64-bit\r\n");
       fal_o = c3y;
     }
-    if ( 0xfedcba9876543210ULL != u3r_note(1, a) ) {
+    if ( 0xfedcba9876543210ULL != u3r_word(1, a) ) {
       fprintf(stderr, "_test_words(): fail (c) (2) 64-bit\r\n");
       fal_o = c3y;
     }
 #else
-    c3_n not_n[2] = { 0x12345678, 0xaabbccdd };
-    u3_noun a = u3i_notes(2, not_n);
+    c3_w not_w[2] = { 0x12345678, 0xaabbccdd };
+    u3_noun a = u3i_words(2, not_w);
 
-    if ( 0x12345678 != u3r_note(0, a) ) {
+    if ( 0x12345678 != u3r_word(0, a) ) {
       fprintf(stderr, "_test_words(): fail (c) (1) 32-bit\r\n");
       fal_o = c3y;
     }
-    if ( 0xaabbccdd != u3r_note(1, a) ) {
+    if ( 0xaabbccdd != u3r_word(1, a) ) {
       fprintf(stderr, "_test_words(): fail (c) (2) 32-bit\r\n");
       fal_o = c3y;
     }
@@ -997,22 +997,22 @@ _test_safe(void)
     u3z(val);
   }
 
-  //  test u3r_safe_note() validates per architecture
+  //  test u3r_safe_word() validates per architecture
   //
   {
-    c3_n val_n;
+    c3_w val_w;
 
 #ifdef VERE64
     //  64-bit mode: should work like u3r_safe_chub
-    if (  c3n == u3r_safe_note(0x123456789abcdef0ULL, &val_n)
-       || 0x123456789abcdef0ULL != val_n )
+    if (  c3n == u3r_safe_word(0x123456789abcdef0ULL, &val_w)
+       || 0x123456789abcdef0ULL != val_w )
     {
       fprintf(stderr, "_test_safe(): fail (d) 64-bit\r\n");
       fal_o = c3y;
     }
 #else
     //  32-bit mode: should work like u3r_safe_word_new
-    if ( c3n == u3r_safe_note(0x12345678, &val_n) || 0x12345678 != val_n ) {
+    if ( c3n == u3r_safe_word(0x12345678, &val_w) || 0x12345678 != val_w ) {
       fprintf(stderr, "_test_safe(): fail (d) 32-bit\r\n");
       fal_o = c3y;
     }

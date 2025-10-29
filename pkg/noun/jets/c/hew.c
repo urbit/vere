@@ -5,9 +5,9 @@
 
 #include "noun.h"
 
-static c3_n
+static c3_w
 _hew_in(c3_g     a_g,
-        c3_n   pos_w,
+        c3_w   pos_w,
         u3_atom  vat,
         u3_noun  sam,
         u3_noun* out)
@@ -30,8 +30,8 @@ _hew_in(c3_g     a_g,
     return pos_w;
   }
   else {
-    c3_n     wid_w = (c3_n)sam;
-    c3_n     new_w = pos_w + wid_w;
+    c3_w     wid_w = (c3_w)sam;
+    c3_w     new_w = pos_w + wid_w;
     u3i_slab sab_u;
 
     if ( new_w < pos_w ) {
@@ -39,7 +39,7 @@ _hew_in(c3_g     a_g,
     }
 
     u3i_slab_init(&sab_u, a_g, wid_w);
-    u3r_chop(a_g, pos_w, wid_w, 0, sab_u.buf_n, vat);
+    u3r_chop(a_g, pos_w, wid_w, 0, sab_u.buf_w, vat);
 
     *out = u3i_slab_mint(&sab_u);
     return new_w;
@@ -52,7 +52,7 @@ u3qc_hew(u3_atom boq,
          u3_atom vat,
          u3_noun sam)
 {
-  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_note_bits) ) {
+  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -61,8 +61,8 @@ u3qc_hew(u3_atom boq,
   }
 
   u3_noun pro;
-  c3_n  pos_w = _hew_in((c3_g)boq, (c3_n)sep, vat, sam, &pro);
-  return u3nt(pro, boq, u3i_note(pos_w));
+  c3_w  pos_w = _hew_in((c3_g)boq, (c3_w)sep, vat, sam, &pro);
+  return u3nt(pro, boq, u3i_word(pos_w));
 }
 
 u3_noun

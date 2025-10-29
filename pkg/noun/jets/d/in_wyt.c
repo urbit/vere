@@ -5,10 +5,10 @@
 
 #include "noun.h"
 
-//STATIC_ASSERT( (c3_note_max > u3a_cells),
+//STATIC_ASSERT( (c3_wote_max > u3a_cells),
 //               "width precision" );
 
-static c3_n
+static c3_w
 _wyt_in(u3_noun a)
 {
   if ( u3_nul == a ) {
@@ -25,7 +25,7 @@ _wyt_in(u3_noun a)
 u3_noun
 u3qdi_wyt(u3_noun a)
 {
-  return u3i_note(_wyt_in(a));
+  return u3i_word(_wyt_in(a));
 }
 
 u3_noun

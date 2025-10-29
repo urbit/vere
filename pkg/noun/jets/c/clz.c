@@ -8,7 +8,7 @@
 u3_atom
 u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
 {
-  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_note_bits) ) {
+  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -17,45 +17,45 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
   }
 
   c3_g boq_g = boq;
-  c3_n sep_w = sep;
-  c3_n tot_w = sep_w << boq_g;
+  c3_w sep_w = sep;
+  c3_w tot_w = sep_w << boq_g;
 
   if ( (tot_w >> boq_g) != sep_w ) {
     return u3m_bail(c3__fail);
   }
 
-  c3_n met_w = u3r_met(0, a);
+  c3_w met_w = u3r_met(0, a);
 
   if ( met_w <= tot_w ) {
     tot_w -= met_w;
-    return u3i_note(tot_w);
+    return u3i_word(tot_w);
   }
   else {
-    c3_n wid_w = tot_w >>  u3a_note_bits_log;
-    c3_n bit_w = tot_w  & (u3a_note_bits - 1);
-    c3_n wor_w;
+    c3_w wid_w = tot_w >>  u3a_word_bits_log;
+    c3_w bit_w = tot_w  & (u3a_word_bits - 1);
+    c3_w wor_w;
 
     if ( bit_w ) {
-      wor_w  = u3r_note(wid_w, a);
+      wor_w  = u3r_word(wid_w, a);
       wor_w &= (1 << bit_w) - 1;
 
       if ( wor_w ) {
-        return bit_w - (u3a_note_bits - c3_lz_n(wor_w));
+        return bit_w - (u3a_word_bits - c3_lz_w(wor_w));
       }
     }
 
     while ( wid_w-- ) {
-      wor_w = u3r_note(wid_w, a);
+      wor_w = u3r_word(wid_w, a);
 
       if ( wor_w ) {
-        bit_w += c3_lz_n(wor_w);
+        bit_w += c3_lz_w(wor_w);
         break;
       }
 
-      bit_w += u3a_note_bits;
+      bit_w += u3a_word_bits;
     }
 
-    return u3i_note(bit_w);
+    return u3i_word(bit_w);
   }
 }
 

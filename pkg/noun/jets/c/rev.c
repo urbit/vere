@@ -12,13 +12,13 @@
            u3_atom len,
            u3_atom dat)
   {
-    if ( !_(u3a_is_cat(boz)) || (boz >= u3a_note_bits) ||
+    if ( !_(u3a_is_cat(boz)) || (boz >= u3a_word_bits) ||
          !_(u3a_is_cat(len)) ) {
       return u3m_bail(c3__fail);
     }
 
     dat = u3qc_end(boz, len, dat);
-    c3_n met = u3r_met(boz, dat);
+    c3_w met = u3r_met(boz, dat);
     return u3kc_lsh(boz, (len - met), u3kc_swp(boz, dat));
   }
 

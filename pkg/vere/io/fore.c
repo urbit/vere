@@ -84,7 +84,7 @@ _fore_import(u3_auto* car_u, c3_c* pax_c)
   u3_noun dat = u3nt(u3_nul, siz, imp);
 
   u3_noun req = u3nt(c3n,
-    u3nc(u3i_string("ipv4"), u3i_note(0x7f000001ULL)),
+    u3nc(u3i_string("ipv4"), u3i_word(0x7f000001ULL)),
     u3nq(u3i_string("POST"), u3i_string("/"), u3_nul, dat));
   u3_noun wir = u3nc(u3i_string("http-server"), u3_nul);
   u3_noun cad = u3nc(u3i_string("request-local"), req);

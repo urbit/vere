@@ -11,20 +11,20 @@
   u3qc_con(u3_atom a,
            u3_atom b)
   {
-    c3_n lna_w = u3r_met(u3a_note_bits_log, a);
-    c3_n lnb_w = u3r_met(u3a_note_bits_log, b);
+    c3_w lna_w = u3r_met(u3a_word_bits_log, a);
+    c3_w lnb_w = u3r_met(u3a_word_bits_log, b);
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;
     }
     else {
-      c3_n     len_w = c3_max(lna_w, lnb_w);
-      c3_n       i_w;
+      c3_w     len_w = c3_max(lna_w, lnb_w);
+      c3_w       i_w;
       u3i_slab sab_u;
-      u3i_slab_from(&sab_u, a, u3a_note_bits_log, len_w);
+      u3i_slab_from(&sab_u, a, u3a_word_bits_log, len_w);
 
       for ( i_w = 0; i_w < lnb_w; i_w++ ) {
-        sab_u.buf_n[i_w] |= u3r_note(i_w, b);
+        sab_u.buf_w[i_w] |= u3r_word(i_w, b);
       }
 
       return u3i_slab_mint(&sab_u);

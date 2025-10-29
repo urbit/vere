@@ -12,30 +12,30 @@
   **/
     /* Conventional axes for gate call.
     */
-#     define u3x_pay         (c3_n)3       //  payload
-#     define u3x_sam         (c3_n)6       //  sample
-#       define u3x_sam_1     (c3_n)6
-#       define u3x_sam_2     (c3_n)12
-#       define u3x_sam_3     (c3_n)13
-#       define u3x_sam_4     (c3_n)24
-#       define u3x_sam_5     (c3_n)25
-#       define u3x_sam_6     (c3_n)26
-#       define u3x_sam_12    (c3_n)52
-#       define u3x_sam_13    (c3_n)53
-#       define u3x_sam_7     (c3_n)27
-#       define u3x_sam_14    (c3_n)54
-#       define u3x_sam_15    (c3_n)55
-#       define u3x_sam_30    (c3_n)110
-#       define u3x_sam_31    (c3_n)111
-#       define u3x_sam_62    (c3_n)222
-#       define u3x_sam_63    (c3_n)223
-#     define u3x_con         (c3_n)7       //  context
-#     define u3x_con_2       (c3_n)14      //  context
-#     define u3x_con_3       (c3_n)15      //  context
-#     define u3x_con_sam     (c3_n)30      //  sample in gate context
-#       define u3x_con_sam_2 (c3_n)60
-#       define u3x_con_sam_3 (c3_n)61
-#     define u3x_bat         (c3_n)2       //  battery
+#     define u3x_pay         (c3_w)3       //  payload
+#     define u3x_sam         (c3_w)6       //  sample
+#       define u3x_sam_1     (c3_w)6
+#       define u3x_sam_2     (c3_w)12
+#       define u3x_sam_3     (c3_w)13
+#       define u3x_sam_4     (c3_w)24
+#       define u3x_sam_5     (c3_w)25
+#       define u3x_sam_6     (c3_w)26
+#       define u3x_sam_12    (c3_w)52
+#       define u3x_sam_13    (c3_w)53
+#       define u3x_sam_7     (c3_w)27
+#       define u3x_sam_14    (c3_w)54
+#       define u3x_sam_15    (c3_w)55
+#       define u3x_sam_30    (c3_w)110
+#       define u3x_sam_31    (c3_w)111
+#       define u3x_sam_62    (c3_w)222
+#       define u3x_sam_63    (c3_w)223
+#     define u3x_con         (c3_w)7       //  context
+#     define u3x_con_2       (c3_w)14      //  context
+#     define u3x_con_3       (c3_w)15      //  context
+#     define u3x_con_sam     (c3_w)30      //  sample in gate context
+#       define u3x_con_sam_2 (c3_w)60
+#       define u3x_con_sam_3 (c3_w)61
+#     define u3x_bat         (c3_w)2       //  battery
 
 
   /**  Macros.
@@ -59,7 +59,7 @@
 
       /* u3x_dep(): number of axis bits.
       */
-#       define u3x_dep(a_w)   (c3_bits_note(a_w) - 1)
+#       define u3x_dep(a_w)   (c3_bits_word(a_w) - 1)
 
       /* u3x_cap(): root axis, 2 or 3.
       */

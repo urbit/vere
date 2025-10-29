@@ -44,7 +44,7 @@ u3qc_muk(u3_atom sed,
         //
         key_y = ( c3y == u3a_is_cat(key) )
                 ? (c3_y*)&key
-                : (c3_y*)((u3a_atom*)u3a_to_ptr(key))->buf_n;
+                : (c3_y*)((u3a_atom*)u3a_to_ptr(key))->buf_w;
       }
 
       MurmurHash3_x86_32(key_y, len_w, sed_w, &out_w);

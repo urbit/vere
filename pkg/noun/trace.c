@@ -30,10 +30,10 @@ static pid_t _nock_pid_i = 0;
 static FILE* _file_u = NULL;
 
 /// Trace counter. Tracks the number of entries written to the JSON trace file.
-static c3_n _trace_cnt_w = 0;
+static c3_w _trace_cnt_w = 0;
 
 /// File counter. Tracks the number of times u3t_trace_close() has been called.
-static c3_n _file_cnt_w = 0;
+static c3_w _file_cnt_w = 0;
 
 /* u3t_push(): push on trace stack.
 */
@@ -86,7 +86,7 @@ u3t_heck(u3_atom cog)
 #if 0
   u3R->pro.cel_d++;
 #else
-  c3_n len_w = u3r_met(3, cog);
+  c3_w len_w = u3r_met(3, cog);
   c3_c* str_c = alloca(1 + len_w);
 
   u3r_bytes(0, len_w, (c3_y *)str_c, cog);
@@ -131,7 +131,7 @@ _t_samp_process(u3_road* rod_u)
 {
   u3_noun pef   = u3_nul;           // (list (pair path (map path ,@ud)))
   u3_noun muf   = u3_nul;           // (map path ,@ud)
-  c3_n    len_w = 0;
+  c3_w    len_w = 0;
 
   //  Accumulate a label/map stack which collapses recursive segments.
   //
@@ -313,7 +313,7 @@ u3t_trace_open(const c3_c* dir_c)
   }
 
   c3_c lif_c[2056];
-  snprintf(lif_c, 2056, "%s/%"PRIc3_n".json", fil_c, _file_cnt_w);
+  snprintf(lif_c, 2056, "%s/%"PRIc3_w".json", fil_c, _file_cnt_w);
 
   _file_u = c3_fopen(lif_c, "w");
   _nock_pid_i = (int)getpid();
@@ -461,26 +461,26 @@ u3t_print_steps(FILE* fil_u, c3_c* cap_c, c3_d sep_d)
 {
   u3_assert( 0 != fil_u );
 
-  c3_n gib_w = (sep_d / 1000000000ULL);
-  c3_n mib_w = (sep_d % 1000000000ULL) / 1000000ULL;
-  c3_n kib_w = (sep_d % 1000000ULL) / 1000ULL;
-  c3_n bib_w = (sep_d % 1000ULL);
+  c3_w gib_w = (sep_d / 1000000000ULL);
+  c3_w mib_w = (sep_d % 1000000000ULL) / 1000000ULL;
+  c3_w kib_w = (sep_d % 1000000ULL) / 1000ULL;
+  c3_w bib_w = (sep_d % 1000ULL);
 
   //  XX prints to stderr since it's called on shutdown, daemon may be gone
   //
   if ( sep_d ) {
     if ( gib_w ) {
-      fprintf(fil_u, "%s: G/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n",
+      fprintf(fil_u, "%s: G/%"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w"\r\n",
           cap_c, gib_w, mib_w, kib_w, bib_w);
     }
     else if ( mib_w ) {
-      fprintf(fil_u, "%s: M/%"PRIc3_n".%03"PRIc3_n".%03"PRIc3_n"\r\n", cap_c, mib_w, kib_w, bib_w);
+      fprintf(fil_u, "%s: M/%"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w"\r\n", cap_c, mib_w, kib_w, bib_w);
     }
     else if ( kib_w ) {
-      fprintf(fil_u, "%s: K/%"PRIc3_n".%03"PRIc3_n"\r\n", cap_c, kib_w, bib_w);
+      fprintf(fil_u, "%s: K/%"PRIc3_w".%03"PRIc3_w"\r\n", cap_c, kib_w, bib_w);
     }
     else if ( bib_w ) {
-      fprintf(fil_u, "%s: %"PRIc3_n"\r\n", cap_c, bib_w);
+      fprintf(fil_u, "%s: %"PRIc3_w"\r\n", cap_c, bib_w);
     }
   }
 }
@@ -544,13 +544,13 @@ u3t_init(void)
   u3T.euq_o = c3n;
 }
 
-c3_n
+c3_w
 u3t_trace_cnt(void)
 {
   return _trace_cnt_w;
 }
 
-c3_n
+c3_w
 u3t_file_cnt(void)
 {
   return _file_cnt_w;
@@ -736,7 +736,7 @@ _ct_roundf(float per_f)
 /* _ct_meme_percent(): convert two ints into a percentage */
 static float
 /* ;;: potential loss of precision with VERE64. Convert to double if it matters */
-_ct_meme_percent(c3_n lit_w, c3_n big_w)
+_ct_meme_percent(c3_w lit_w, c3_w big_w)
 {
   // get the percentage of our inputs as a float
   float raw_f = (float) lit_w/big_w;
@@ -746,7 +746,7 @@ _ct_meme_percent(c3_n lit_w, c3_n big_w)
 /* _ct_all_heap_size(): return the size in bytes of ALL space on the Loom
 **                      over all roads, currently in use as heap.
 */
-static c3_n
+static c3_w
 _ct_all_heap_size(u3_road* r) {
   if (r == &(u3H->rod_u)) {
     return u3a_heap(r)*4;
@@ -1020,20 +1020,20 @@ _ct_etch_steps(c3_c rep_c[32], c3_d sep_d)
 
 /* u3t_etch_meme(): report memory stats at call time */
 u3_noun
-u3t_etch_meme(c3_n mod_n)
+u3t_etch_meme(c3_w mod_w)
 {
   u3a_road* lum_r;
   lum_r = &(u3H->rod_u);
   // this will need to switch to c3_d when we go to a 64 loom
-  c3_n top_w = u3a_full(lum_r)*4,
+  c3_w top_w = u3a_full(lum_r)*4,
        ful_w = u3a_full(u3R)*4,
        fre_w = u3a_idle(u3R)*4,
        tak_w = u3a_temp(u3R)*4,
        hap_w = u3a_heap(u3R)*4,
        pen_w = u3a_open(u3R)*4;
 
-  c3_n imu_w = top_w-ful_w;
-  c3_n hep_w = hap_w-fre_w;
+  c3_w imu_w = top_w-ful_w;
+  c3_w hep_w = hap_w-fre_w;
 
 
   float hep_f = _ct_meme_percent(hep_w, top_w),
@@ -1042,8 +1042,8 @@ u3t_etch_meme(c3_n mod_n)
         tak_f = _ct_meme_percent(tak_w, top_w);
   float ful_f = hep_f + fre_f + pen_f + tak_f;
 
-  c3_n hip_w = _ct_all_heap_size(u3R) - hap_w;
-  c3_n tik_w = imu_w - hip_w;
+  c3_w hip_w = _ct_all_heap_size(u3R) - hap_w;
+  c3_w tik_w = imu_w - hip_w;
   float hip_f = _ct_meme_percent(hip_w, top_w),
         tik_f = _ct_meme_percent(tik_w, top_w);
 
@@ -1054,7 +1054,7 @@ u3t_etch_meme(c3_n mod_n)
   **  cel_d: max cells allocated in current road (inc closed kids, but not parents)
   **  nox_d: nock steps performed in current road
   */
-  c3_n max_w = (u3R->all.max_w*4)+imu_w;
+  c3_w max_w = (u3R->all.max_w*4)+imu_w;
   float max_f = _ct_meme_percent(max_w, top_w);
   c3_d cel_d = u3R->pro.cel_d;
   c3_d nox_d = u3R->pro.nox_d;
@@ -1081,15 +1081,15 @@ u3t_etch_meme(c3_n mod_n)
   }
 #endif
 
-  c3_c dir_n[8];
-  dir_n[0] = 0;
+  c3_c dir_w[8];
+  dir_w[0] = 0;
   if ( u3a_is_north(u3R) == c3y ) {
-    strcat(dir_n, "  North");
+    strcat(dir_w, "  North");
   } else {
-    strcat(dir_n, "  South");
+    strcat(dir_w, "  South");
   }
 
-  if (mod_n == 0) {
+  if (mod_w == 0) {
     return u3i_string(bar_c);
   }
   else {
@@ -1117,7 +1117,7 @@ u3t_etch_meme(c3_n mod_n)
     strcat(str_c, "\n     road cells made: "); _ct_etch_steps(rep_c, cel_d); strcat(str_c, rep_c);
     strcat(str_c, "\n     road nocks made: "); _ct_etch_steps(rep_c, nox_d); strcat(str_c, rep_c);
 #endif
-    strcat(str_c, "\n      road direction: "); strcat(str_c, dir_n);
+    strcat(str_c, "\n      road direction: "); strcat(str_c, dir_w);
     strcat(str_c, "\n          road depth: "); _ct_etch_road_depth(rep_c, u3R, 1); strcat(str_c, rep_c);
     strcat(str_c, "\n\nLoom: "); strcat(str_c, bar_c);
     return u3i_string(str_c);
@@ -1202,11 +1202,11 @@ u3t_sstack_push(u3_noun nam)
     nam = c3__cell;
   }
 
-  c3_n met_w = u3r_met(3, nam);
+  c3_w met_w = u3r_met(3, nam);
   
   // Exit if full
   if ( 0 < stk_u->fow_w || 
-       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_n) ) {
+       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
     stk_u->fow_w++;
     return;
   }
@@ -1214,8 +1214,8 @@ u3t_sstack_push(u3_noun nam)
   u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
   stk_u->off_w += met_w;
 
-  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_n));
-  stk_u->off_w += sizeof(c3_n);
+  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
+  stk_u->off_w += sizeof(c3_w);
   u3z(nam);
 }
 
@@ -1228,8 +1228,8 @@ u3t_sstack_pop()
   if ( 0 < stk_u->fow_w ) {
     stk_u->fow_w--;
   } else {
-    c3_n len_w = (c3_n) stk_u->dat_y[stk_u->off_w - sizeof(c3_n)];
-    stk_u->off_w -= (len_w+sizeof(c3_n));
+    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
+    stk_u->off_w -= (len_w+sizeof(c3_w));
   }
 }
 

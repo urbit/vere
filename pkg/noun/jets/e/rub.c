@@ -16,8 +16,8 @@
 
     u3_atom m;
     {
-      c3_n  bit_n = u3r_met(0, b);
-      u3_noun bit = u3i_note(bit_n);
+      c3_w  bit_w = u3r_met(0, b);
+      u3_noun bit = u3i_word(bit_w);
       m = u3qa_add(a, bit);
       u3z(bit);
     }

@@ -13,7 +13,7 @@
     ** 1. All c3_w variables have been renamed to c3_w_tmp.
     ** 2. Review c3_w_tmp variables:
     **   a. If s/b static 32-bit  -> rename to c3_w_new.
-    **   b. If s/b arch-dependent -> rename to c3_n.
+    **   b. If s/b arch-dependent -> rename to c3_w.
     ** 3. Review c3_w_new variables:
     **   a. Ensure correctness.
     **   b. Rename to c3_{???} (our new, static uint32_t type, name pending).
@@ -34,19 +34,19 @@
 
       typedef uint8_t c3_t;   // boolean
       typedef uint8_t c3_o;   // loobean
-      typedef uint8_t c3_g;   // u3a_note_bits log
+      typedef uint8_t c3_g;   // u3a_word_bits log
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
       typedef uint32_t c3_l_new;  // -> s/b 32-bit always
       #ifdef VERE64
         typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint64_t c3_l;  // little; 63-bit unsigned integer
-        typedef uint64_t c3_n;  // note: noun-sized integer
-        typedef int64_t c3_ns;
+        typedef uint64_t c3_w;  // word: noun-sized integer
+        typedef int64_t c3_ws;
       #else
         typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint32_t c3_l;  // little; 31-bit unsigned integer
-        typedef uint32_t c3_n;  // note: noun-sized integer
-        typedef int32_t c3_ns;
+        typedef uint32_t c3_w;  // word: noun-sized integer
+        typedef int32_t c3_ws;
       #endif
 
     /* Deprecated integers.
@@ -95,19 +95,19 @@
       #define PRIXc3_b PRIX8
 
       #ifdef VERE64
-      #define SCNc3_n  SCNu64
-      #define PRIc3_n  PRIu64
-      #define PRIc3_ns PRIi64
-      #define PRIxc3_n PRIx64
-      #define PRIXc3_n PRIX64
+      #define SCNc3_w  SCNu64
+      #define PRIc3_w  PRIu64
+      #define PRIc3_ws PRIi64
+      #define PRIxc3_w PRIx64
+      #define PRIXc3_w PRIX64
       #define PRIc3_w_new  PRIu32
       #define PRIc3_ws_new PRIi32
       #else
-      #define SCNc3_n  SCNu32
-      #define PRIc3_n  PRIu32
-      #define PRIc3_ns PRIi32
-      #define PRIxc3_n PRIx32
-      #define PRIXc3_n PRIX32
+      #define SCNc3_w  SCNu32
+      #define PRIc3_w  PRIu32
+      #define PRIc3_ws PRIi32
+      #define PRIxc3_w PRIx32
+      #define PRIXc3_w PRIX32
       #define PRIc3_w_new  PRIu32
       #define PRIc3_ws_new PRIi32
       #endif

@@ -18,17 +18,17 @@ u3qa_lth(u3_atom a, u3_atom b)
   u3a_atom* a_u = u3a_to_ptr(a);
   u3a_atom* b_u = u3a_to_ptr(b);
 
-  if (a_u->len_n != b_u->len_n)
+  if (a_u->len_w != b_u->len_w)
   {
-    return __( a_u->len_n < b_u->len_n );
+    return __( a_u->len_w < b_u->len_w );
   }
 
-  c3_n* a_n = a_u->buf_n;
-  c3_n* b_n = b_u->buf_n;
-  for (c3_n i_n = a_u->len_n; i_n--;)
+  c3_w* a_w = a_u->buf_w;
+  c3_w* b_w = b_u->buf_w;
+  for (c3_w i_w = a_u->len_w; i_w--;)
   {
-    if (a_n[i_n] < b_n[i_n]) return c3y;
-    if (a_n[i_n] > b_n[i_n]) return c3n;
+    if (a_w[i_w] < b_w[i_w]) return c3y;
+    if (a_w[i_w] > b_w[i_w]) return c3n;
   }
 
   return c3n;

@@ -391,7 +391,7 @@ _cue_soft_bench(void)
 static void
 _edit_bench_impl(c3_w_new max_w)
 {
-  u3_assert( max_w && (c3y == u3a_is_cat((c3_n)max_w)) );
+  u3_assert( max_w && (c3y == u3a_is_cat((c3_w)max_w)) );
 
   c3_w_new* axe_w = c3_calloc(((max_w + 31) >> 5) << 2);
   c3_w_new  bit_w;

@@ -52,10 +52,10 @@
       c3_o
       u3v_boot_lite(u3_noun lit);
 
-    /* u3v_wish_n(): text expression with cache.
+    /* u3v_wish_w(): text expression with cache.
     */
       u3_noun
-      u3v_wish_n(const u3_noun txt);
+      u3v_wish_w(const u3_noun txt);
 
     /* u3v_do(): use a kernel function.
     */
@@ -84,7 +84,7 @@
     /* u3v_soft_peek(): softly query the reck namespace.
     */
       u3_noun
-      u3v_soft_peek(c3_n mil_w, u3_noun sam);
+      u3v_soft_peek(c3_w mil_w, u3_noun sam);
 
     /* u3v_poke(): compute a timestamped ovum.
     */
@@ -94,7 +94,7 @@
     /* u3v_poke_sure(): inject an event, saving new state if successful.
     */
       c3_o
-      u3v_poke_sure(c3_n mil_w, u3_noun eve, u3_noun* pro);
+      u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro);
 
     /* u3v_tank(): dump single tank.
     */

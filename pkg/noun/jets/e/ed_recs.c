@@ -17,9 +17,9 @@
   u3_atom
   u3qee_recs(u3_atom a)
   {
-    c3_n met_n = u3r_met(3, a);
+    c3_w met_w = u3r_met(3, a);
 
-    if ( 64 < met_n ) {
+    if ( 64 < met_w ) {
       u3_atom l_prime = u3i_bytes(32, _cqee_l_prime);
       u3_atom pro = u3qa_mod(a, l_prime);
       u3z(l_prime);
