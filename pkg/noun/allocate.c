@@ -241,9 +241,8 @@ u3a_walloc(c3_w len_w)
   if ( !u3R->par_p ) {
     c3_w idx_w = ptr_p >> u3a_vits;
     u3m_shadow* sha_u = &u3m_Shadow[idx_w];
-    void** buf_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
-    sha_u->siz_i = backtrace(buf_u, U3_SHADOW_BACKTRACE_DEPTH);
-    sha_u->stk_u = buf_u;
+    sha_u->stk_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
+    sha_u->siz_i = backtrace(sha_u->stk_u, U3_SHADOW_BACKTRACE_DEPTH);
   }
   return u3a_into(ptr_p);
 }
@@ -2040,15 +2039,35 @@ u3a_dupe(u3_noun som)
 {
   if (c3y == u3a_is_cat(som)) return som;
 
-  if (c3y == u3a_is_pug(som)) {
-    u3a_atom* pug_u = u3a_to_ptr(som);
-    u3i_slab sab_u;
-    u3i_slab_bare(&sab_u, 5, pug_u->len_w);
-    u3r_words(0, pug_u->len_w, sab_u.buf_w, som);
-    return u3i_slab_moot(&sab_u);
-  }
+  if (c3y == u3a_is_pom(som)) return u3nc(u3a_dupe(u3h(som)),
+                                          u3a_dupe(u3t(som)));
 
-  u3_noun hed = u3a_dupe(u3h(som));
-  u3_noun tel = u3a_dupe(u3t(som));
-  return u3nc(hed, tel);
+  u3a_atom* pug_u = u3a_to_ptr(som);
+  u3i_slab sab_u;
+  u3i_slab_bare(&sab_u, 5, pug_u->len_w);
+  memcpy(sab_u.buf_y, (c3_y*)pug_u->buf_w, pug_u->len_w << 2);
+  return u3i_slab_moot(&sab_u);
+}
+
+/* u3a_blink: refresh traces of a noun allocation
+*/
+void
+u3a_blink(u3_noun* som)
+{
+  u3_noun new = u3a_dupe(*som);
+  u3z(*som);
+  *som = new;
+}
+
+/* u3a_blink_alloc: refresh traces of generic allocation
+*/
+void
+u3a_blink_alloc(void* ptr_v)
+{
+  if ( u3R->par_p ) return;
+  c3_w idx_w = u3a_outa(ptr_v) >> u3a_vits;
+  u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+  c3_free(sha_u->stk_u);
+  sha_u->stk_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
+  sha_u->siz_i = backtrace(sha_u->stk_u, U3_SHADOW_BACKTRACE_DEPTH);
 }
