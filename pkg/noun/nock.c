@@ -1913,10 +1913,10 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( _(u3qdi_has(u3R->loop_set, key)) ) {
-        u3m_bail(c3__exit);
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+        u3m_bail(c3__fail);
       }
-      u3R->loop_set = u3kdi_put(u3R->loop_set, u3k(key));
+      u3h_put(u3R->lop_p, key, u3_nul);
       *out = u3nc(tag, key);
     } break;
 
@@ -1963,7 +1963,7 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3R->loop_set = u3kdi_del(u3R->loop_set, u3k(q_tok));
+    u3h_del(u3R->lop_p, q_tok);
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
@@ -2023,11 +2023,12 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( _(u3qdi_has(u3R->loop_set, key)) ) {
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
         u3t_mean(*clu);
-        u3m_bail(c3__exit);
+        u3m_bail(c3__fail);
       }
-      u3R->loop_set = u3kdi_put(u3R->loop_set, u3k(key));
+      u3h_put(u3R->lop_p, key, u3_nul);
+      u3z(*clu);
       *clu = u3nc(tag, key);
     } break;
     case c3__spin: {
@@ -2100,7 +2101,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     u3t_sstack_pop();
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3R->loop_set = u3kdi_del(u3R->loop_set, u3k(q_tok));
+    u3h_del(u3R->lop_p, q_tok);
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed

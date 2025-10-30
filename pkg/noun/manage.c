@@ -530,7 +530,7 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
-  u3R->loop_set   = u3_nul;
+  u3R->lop_p     = u3h_new();
 }
 
 static c3_d
@@ -1229,6 +1229,9 @@ u3m_hate(c3_w pad_w)
 u3_noun
 u3m_love(u3_noun pro)
 {
+#ifdef U3_MEMORY_DEBUG
+  u3h_free(u3R->lop_p);
+#endif
   //  save cache pointers from current road
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;

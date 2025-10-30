@@ -1749,7 +1749,11 @@ u3a_mark_road()
     qua_u[11]->siz_w = wee_w * 4;
   }
 
-  qua_u[12] = NULL;
+  qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
+  qua_u[12]->nam_c = strdup("%%loop hint set");
+  qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * 4;
+  
+  qua_u[13] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
