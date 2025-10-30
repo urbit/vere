@@ -86,12 +86,3 @@ u3wdi_del(u3_noun cor)
   u3x_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0);
   return u3qdi_del(a, b);
 }
-
-u3_noun
-u3kdi_del(u3_noun a,
-          u3_noun b)
-{
-  u3_noun pro = u3qdi_del(a, b);
-  u3z(a); u3z(b);
-  return pro;
-}
