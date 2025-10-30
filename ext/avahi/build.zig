@@ -538,8 +538,17 @@ pub fn build(b: *std.Build) void {
     avahi.root_module.addCMacro("HAVE_DBUS_CONNECTION_CLOSE", "0");
     avahi.root_module.addCMacro("HAVE_EXPAT_H", "1");
     avahi.root_module.addCMacro("HAVE_CONFIG_H", "1");
-    if (!t.isGnuLibC())
+
+    if (!t.isGnuLibC()) {
+        // Non-glibc systems (BSD, macOS, etc...) have strlcpy
         avahi.root_module.addCMacro("HAVE_STRLCPY", "1");
+    } else if (t.os.tag == .linux) {
+        // If on Linux, check version >= 2.38
+        const glibc_version = t.os.version_range.linux.glibc;
+        if (glibc_version.order(.{ .major = 2, .minor = 38, .patch = 0 }) != .lt) {
+            avahi.root_module.addCMacro("HAVE_STRLCPY", "1");
+        }
+    }
 
     const avahi_config_h = b.addConfigHeader(.{
         .style = .blank,
