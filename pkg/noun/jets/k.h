@@ -140,11 +140,6 @@
 
 #   define u3kdb_tap(a) u3kdi_tap(a)
 
-  /* u3kdi_del(): set del for key `b`
-  */
-    u3_noun
-    u3kdi_del(u3_noun a, u3_noun b);
-
 /* u3ke: tier 5 functions
 */
   /* u3ke_cue(): expand saved pill.
