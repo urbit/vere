@@ -210,10 +210,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3h_root) har_p;                //  transient
           u3p(u3h_root) per_p;                //  persistent
         } cax;
-
-        struct {
-          
-        } lop;
       } u3a_road;
       typedef u3a_road u3_road;
 
