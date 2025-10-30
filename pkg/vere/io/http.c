@@ -972,6 +972,9 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     }
     else {
       // '/_~_/' found
+      // `req` is unused, free it
+      //
+      u3z(req);
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
