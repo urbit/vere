@@ -1800,6 +1800,55 @@ typedef struct {
   c3_w    mar_w[0];
 } _ca_frag;
 
+static c3_d
+_pack_hash(u3_post foo)
+{
+  return foo * 11400714819323198485ULL;
+}
+
+static c3_i
+_pack_cmp(u3_noun a, u3_noun b)
+{
+  return a == b;
+}
+
+#define NAME    _pack_posts
+#define KEY_TY  u3_post
+#define VAL_TY  u3_post
+#define HASH_FN _pack_hash
+#define CMPR_FN _pack_cmp
+#include "verstable.h"
+
+_pack_posts pos_u;
+
+static void
+_pack_check_move(c3_w *dst_w, c3_w *src_w)
+{
+  u3_post src_p = u3a_outa(src_w);
+  u3_post dst_p = u3a_outa(dst_w);
+  _pack_posts_itr pit_u = vt_get(&pos_u, src_p);
+  u3_assert( !vt_is_end(pit_u) );
+  u3_assert( pit_u.data->val == dst_p );
+}
+
+static void
+_pack_check_full(c3_w *dst_w, c3_w *src_w, _ca_frag* fag_u)
+{
+  c3_g      bit_g = fag_u->log_s - u3a_min_log;
+  const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
+
+  _pack_check_move(dst_w, src_w);
+
+  dst_w += hun_u->len_s * hun_u->hun_s;
+  src_w += hun_u->len_s * hun_u->hun_s;
+
+  for ( c3_s ful_s = 0; ful_s < hun_u->ful_s; ful_s++ ) {
+    _pack_check_move(dst_w, src_w);
+    dst_w += hun_u->len_s;
+    src_w += hun_u->len_s;
+  }
+}
+
 //  adapted from https://stackoverflow.com/a/27663998 and
 //  https://gist.github.com/ideasman42/5921b0edfc6aa41a9ce0
 //
@@ -2001,6 +2050,8 @@ _pack_seek(void)
   c3_w blk_w, bit_w, fre_w = 0;
   u3_post     dir_p;
 
+  vt_init(&pos_u);
+
   {
     u3_post   fre_p;
     u3a_dell *fre_u;
@@ -2183,6 +2234,17 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   }
 
   *fir_t = out_t;
+
+  //  XX also consider fir_t?
+  //
+  c3_z siz_z = vt_size(&pos_u);
+  _pack_posts_itr pit_u = vt_get_or_insert(&pos_u, som_p, out_p);
+  u3_assert( !vt_is_end(pit_u) ); // OOM
+
+  if ( vt_size(&pos_u) == siz_z ) {
+    u3_assert( pit_u.data->val == out_p );
+  }
+
   return out_p;
 }
 
@@ -2218,6 +2280,14 @@ _pack_relocate(u3_post som_p)
     //  NB map inverted, free state updated
 
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
+  }
+
+  c3_z siz_z = vt_size(&pos_u);
+  _pack_posts_itr pit_u = vt_get_or_insert(&pos_u, som_p, out_p);
+  u3_assert( !vt_is_end(pit_u) ); // OOM
+
+  if ( vt_size(&pos_u) == siz_z ) {
+    u3_assert( pit_u.data->val == out_p );
   }
 
   return out_p;
@@ -2307,6 +2377,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     while ( (pos_s < max_s) && fre_s ) {
       if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+        _pack_check_move(dst_w, src_w);
         memcpy(dst_w, src_w, len_i);
         fre_s--;
         dst_w += off_w;
@@ -2346,6 +2417,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
       while (  (pos_s < max_s)
             && (hap_w[pos_s >> 5] & (1U << (pos_s & 31))) )
       {
+        _pack_check_move(src_w, src_w);
         pos_s++;
         src_w += off_w;
       }
@@ -2361,6 +2433,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
     ASAN_UNPOISON_MEMORY_REGION(doc_w, len_i * hun_u->hun_s);
+    _pack_check_move(doc_w, soc_w);
     memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
 
     // XX bump pos_s/src_w if !pos_s ?
@@ -2375,6 +2448,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   while ( pos_s < max_s ) {
     if ( hap_w[pos_s >> 5] & (1U << (pos_s & 31)) ) {
       ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+      _pack_check_move(dst_w, src_w);
       memcpy(dst_w, src_w, len_i);
       dst_w += off_w;
     }
@@ -2432,6 +2506,14 @@ _pack_move(void)
     if ( u3a_free_pg != dir_w ) {
       if ( (u3a_rest_pg >= dir_w) || !(dir_w >> 31) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+
+        if ( u3a_head_pg == dir_w ) {
+          _pack_check_move(dst_w, src_w);
+        }
+        else if ( u3a_rest_pg < dir_w ) {
+          _pack_check_full(dst_w, src_w, (void*)&(u3a_Gack.buf_w[dir_w]));
+        }
+
         memcpy(dst_w, src_w, len_i);
         u3a_Gack.buf_w[new_w] = (u3a_rest_pg >= dir_w)
                               ? dir_w
@@ -2474,4 +2556,6 @@ _pack_move(void)
   }
 
   HEAP.erf_p = 0;
+
+  vt_cleanup(&pos_u);
 }
