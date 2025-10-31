@@ -111,7 +111,7 @@ _parse(u3_atom txt)
   }
   json_open_buffer(sam_u, byt_y, len_w);
   json_set_allocator(sam_u, &loc_u);
-  u3a_pile_prep(pil_u, sizeof(u3qedj_coll));
+  u3a_pile_prep(pil_u, sizeof(u3qedj_coll), _Alignof(u3qedj_coll));
 
   //
   // core logic

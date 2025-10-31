@@ -184,7 +184,7 @@ _cm_signal_handle(c3_l sig_l)
 static void
 #ifndef U3_OS_windows
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
-#else 
+#else
 _cm_signal_handle_over(int x)
 #endif
 {
@@ -1032,7 +1032,8 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    // u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road), _Alignof(u3a_road));
     ptr_p = (c3_p)u3a_push(&pil_u);
 
     //  XX add push_once, push_once_aligned
@@ -1138,7 +1139,7 @@ u3m_leap(c3_w pad_w)
   if ( NULL != stk_u ) {
     rod_u->off_w = stk_u->off_w;
     rod_u->fow_w = stk_u->fow_w;
-  } 
+  }
 
   /* Set up the new road.
   */

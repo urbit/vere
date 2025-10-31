@@ -252,11 +252,13 @@ u3a_wealloc(void* lag_v, c3_w len_w)
 /* u3a_pile_prep(): initialize stack control.
 */
 void
-u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
+u3a_pile_prep(u3a_pile* pil_u, c3_w len_w, c3_w lin_w)
 {
+  c3_w pad_w = -(uintptr_t)len_w & (lin_w - 1);
+
   //  frame size, in words
   //
-  c3_w wor_w = (len_w + 3) >> 2;
+  c3_w wor_w = (len_w + 3 + pad_w) >> 2;
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
@@ -691,7 +693,7 @@ _ca_take_north(u3_noun veb)
   u3_noun     pro;
   _ca_take* fam_u;
   u3a_pile  pil_u;
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  commence taking
   //
@@ -731,7 +733,7 @@ _ca_take_south(u3_noun veb)
   u3_noun     pro;
   _ca_take* fam_u;
   u3a_pile  pil_u;
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  commence taking
   //
@@ -1966,7 +1968,7 @@ u3a_walk_fore(u3_noun    a,
 
   //  initialize stack control; push argument
   //
-  u3a_pile_prep(&pil_u, sizeof(u3_noun));
+  u3a_pile_prep(&pil_u, sizeof(u3_noun), _Alignof(u3_noun));
   top  = u3a_push(&pil_u);
   *top = a;
 

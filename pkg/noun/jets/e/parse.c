@@ -473,7 +473,7 @@
                   u3nc(u3k(p_tub),
                                u3k(pquq_vex)),
                   u3k(puq_vex));
-      
+
       u3k(p_vex);
       u3k(quq_vex);
       wag = u3n_slam_on(u3k(hez), gud);
@@ -975,7 +975,7 @@
     _stir_pair* par_u;
     u3_noun     p_wag, puq_wag, quq_wag;
 
-    u3a_pile_prep(&pil_u, sizeof(*par_u));
+    u3a_pile_prep(&pil_u, sizeof(*par_u), _Alignof(*par_u));
 
     //  push incremental, successful [fel] parse results onto road stack
     //
@@ -1049,4 +1049,3 @@
 
   #undef _p
   #undef _q
-  

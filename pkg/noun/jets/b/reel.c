@@ -17,7 +17,7 @@
       u3_noun*   top;
       u3_noun   i, t = a;
 
-      u3a_pile_prep(&pil_u, sizeof(u3_noun));
+      u3a_pile_prep(&pil_u, sizeof(u3_noun), _Alignof(u3_noun));
 
       //  push list onto road stack
       //

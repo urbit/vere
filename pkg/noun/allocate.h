@@ -608,7 +608,7 @@ u3a_post_info(u3_post);
         /* u3a_pile_prep(): initialize stack control.
         */
           void
-          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w);
+          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w, c3_w lin_w);
 
       /* C-style aligned allocation - *not* compatible with above.
       */
