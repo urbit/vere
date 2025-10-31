@@ -5,6 +5,7 @@
 #include "vortex.h"
 
 #undef SANITY
+#undef PACK_CHECK
 
 #ifdef ASAN_ENABLED
   //  XX build problems importing <sanitizers/asan_interface.h>
@@ -1800,6 +1801,7 @@ typedef struct {
   c3_w    mar_w[0];
 } _ca_frag;
 
+#ifdef PACK_CHECK
 static c3_d
 _pack_hash(u3_post foo)
 {
@@ -1820,20 +1822,24 @@ _pack_cmp(u3_noun a, u3_noun b)
 #include "verstable.h"
 
 _pack_posts pos_u;
+#endif
 
 static void
 _pack_check_move(c3_w *dst_w, c3_w *src_w)
 {
+#ifdef PACK_CHECK
   u3_post src_p = u3a_outa(src_w);
   u3_post dst_p = u3a_outa(dst_w);
   _pack_posts_itr pit_u = vt_get(&pos_u, src_p);
   u3_assert( !vt_is_end(pit_u) );
   u3_assert( pit_u.data->val == dst_p );
+#endif
 }
 
 static void
 _pack_check_full(c3_w *dst_w, c3_w *src_w, _ca_frag* fag_u)
 {
+#ifdef PACK_CHECK
   c3_g      bit_g = fag_u->log_s - u3a_min_log;
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
 
@@ -1847,6 +1853,7 @@ _pack_check_full(c3_w *dst_w, c3_w *src_w, _ca_frag* fag_u)
     dst_w += hun_u->len_s;
     src_w += hun_u->len_s;
   }
+#endif
 }
 
 //  adapted from https://stackoverflow.com/a/27663998 and
@@ -2050,7 +2057,9 @@ _pack_seek(void)
   c3_w blk_w, bit_w, fre_w = 0;
   u3_post     dir_p;
 
+#ifdef PACK_CHECK
   vt_init(&pos_u);
+#endif
 
   {
     u3_post   fre_p;
@@ -2235,6 +2244,7 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
 
   *fir_t = out_t;
 
+#ifdef PACK_CHECK
   //  XX also consider fir_t?
   //
   c3_z siz_z = vt_size(&pos_u);
@@ -2244,6 +2254,7 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   if ( vt_size(&pos_u) == siz_z ) {
     u3_assert( pit_u.data->val == out_p );
   }
+#endif
 
   return out_p;
 }
@@ -2282,6 +2293,7 @@ _pack_relocate(u3_post som_p)
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
   }
 
+#ifdef PACK_CHECK
   c3_z siz_z = vt_size(&pos_u);
   _pack_posts_itr pit_u = vt_get_or_insert(&pos_u, som_p, out_p);
   u3_assert( !vt_is_end(pit_u) ); // OOM
@@ -2289,6 +2301,7 @@ _pack_relocate(u3_post som_p)
   if ( vt_size(&pos_u) == siz_z ) {
     u3_assert( pit_u.data->val == out_p );
   }
+#endif
 
   return out_p;
 }
@@ -2557,5 +2570,7 @@ _pack_move(void)
 
   HEAP.erf_p = 0;
 
+#ifdef PACK_CHECK
   vt_cleanup(&pos_u);
+#endif
 }
