@@ -182,6 +182,11 @@
         c3_c*
         u3m_pretty(u3_noun som);
 
+      /* u3m_pretty_road(): dumb prettyprint to string. Road allocation
+      */
+        c3_c*
+        u3m_pretty_road(u3_noun som);
+
       /* u3m_pretty_path(): prettyprint a path to string.  RETAIN.
       */
         c3_c*

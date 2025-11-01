@@ -1313,22 +1313,44 @@ u3m_water(u3_post* low_p, u3_post* hig_p)
   }
 }
 
-//  RETAINS `now`. There must be at least one deadline on the stack
+//  RETAINS `now`.
 //
 static void
 _m_renew_timer(u3_atom now)
 {
   u3_atom min = u3_nul;
   u3a_road* rod_u = u3R;
+  c3_t no_timers_t = true;
   while ( 1 ) {
     for (u3_noun l = rod_u->tim; l; l = u3t(l)) {
+      no_timers_t = false;
       u3_atom fut = u3h(l);
       if ( _(u3qa_gth(fut, now)) ) {
         min = ( u3_nul == min ) ? u3k(fut) : u3ka_min(min, u3k(fut));
       }
+      else {
+        c3_c* now_c = u3m_pretty_road(now);
+        c3_c* fut_c = u3m_pretty_road(fut);
+        u3l_log("strange timer: now %s, fut %s", now_c, fut_c);
+        u3a_free(now_c);
+        u3a_free(fut_c);
+      }
     }
     if ( !rod_u->par_p ) break;
     rod_u = u3to(u3_road, rod_u->par_p);
+  }
+
+  if ( no_timers_t ) {
+    //  no timers: `min` is still u3_nul.
+    //  disarm the timer
+    //
+    struct itimerval itm_u;
+    timerclear(&itm_u.it_interval);
+    timerclear(&itm_u.it_value);
+    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+      u3l_log("loom: clear timer failed %s", strerror(errno));
+    }
+    return;
   }
 
   if ( u3_nul == min ) {
@@ -1336,6 +1358,7 @@ _m_renew_timer(u3_atom now)
     //
     return;
   }
+
   u3_atom gap = u3ka_sub(min, u3k(now));
   
   struct itimerval itm_u;
@@ -2031,6 +2054,19 @@ u3m_pretty(u3_noun som)
 {
   c3_w len_w = _cm_in_pretty(som, c3y, 0);
   c3_c* pre_c = c3_malloc(len_w + 1);
+
+  _cm_in_pretty(som, c3y, pre_c);
+  pre_c[len_w] = 0;
+  return pre_c;
+}
+
+/* u3m_pretty_road(): dumb prettyprint to string. Road allocation
+*/
+c3_c*
+u3m_pretty_road(u3_noun som)
+{
+  c3_w len_w = _cm_in_pretty(som, c3y, 0);
+  c3_c* pre_c = u3a_malloc(len_w + 1);
 
   _cm_in_pretty(som, c3y, pre_c);
   pre_c[len_w] = 0;
