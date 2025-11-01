@@ -287,4 +287,16 @@
         c3_d
         u3m_time_gap_ms(u3_noun now, u3_noun wen);
 
+      /* u3m_timer_set(): push a new timer to the timer stack.
+      ** gap is @dr, gap != 0
+      */
+        void
+        u3m_timer_set(u3_atom gap);
+
+      /* u3m_timer_pop(): pop a timer off the timer stack.
+      ** timer stack must be non-empty
+      */
+        void
+        u3m_timer_pop(void);
+
 #endif /* ifndef U3_MANAGE_H */

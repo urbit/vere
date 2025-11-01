@@ -145,7 +145,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
 
-        c3_w fut_w[30];                       //  futureproof buffer
+        u3_noun tim;                          //  list of absolute deadlines
+
+        c3_w fut_w[29];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {

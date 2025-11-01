@@ -373,7 +373,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 /* _cm_signal_deep(): start deep processing; set timer for [mil_w] or 0.
 */
 static void
-_cm_signal_deep(c3_w mil_w)
+_cm_signal_deep(void)
 {
   //  disable outer system signal handling
   //
@@ -393,6 +393,7 @@ _cm_signal_deep(c3_w mil_w)
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
+  rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
 
   // Provide a little emergency memory, for use in case things
   // go utterly haywire.
@@ -401,21 +402,6 @@ _cm_signal_deep(c3_w mil_w)
     u3H->rod_u.bug.mer = u3i_string(
       "emergency buffer with sufficient space to cons the trace and bail"
     );
-  }
-
-  if ( mil_w ) {
-    struct itimerval itm_u;
-
-    timerclear(&itm_u.it_interval);
-    itm_u.it_value.tv_sec  = (mil_w / 1000);
-    itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
-
-    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
-      u3l_log("loom: set timer failed %s", strerror(errno));
-    }
-    else {
-      rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
-    }
   }
 
   u3t_boot();
@@ -530,6 +516,7 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
+  u3R->tim       = u3_nul;
 }
 
 static c3_d
@@ -1326,6 +1313,76 @@ u3m_water(u3_post* low_p, u3_post* hig_p)
   }
 }
 
+//  RETAINS `now`. There must be at least one deadline on the stack
+//
+static void
+_m_renew_timer(u3_atom now)
+{
+  u3_atom min = u3_nul;
+  u3a_road* rod_u = u3R;
+  while ( 1 ) {
+    for (u3_noun l = rod_u->tim; l; l = u3t(l)) {
+      u3_atom fut = u3h(l);
+      if ( _(u3qa_gth(fut, now)) ) {
+        min = ( u3_nul == min ) ? u3k(fut) : u3ka_min(min, u3k(fut));
+      }
+    }
+    if ( !rod_u->par_p ) break;
+    rod_u = u3to(u3_road, rod_u->par_p);
+  }
+
+  if ( u3_nul == min ) {
+    //  strange case: `now` is later or equal to all our deadlines. do nothing
+    //
+    return;
+  }
+  u3_atom gap = u3ka_sub(min, u3k(now));
+  
+  struct itimerval itm_u;
+  timerclear(&itm_u.it_interval);
+  u3m_time_out_it(&itm_u, gap);
+  if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+    u3l_log("loom: set timer failed %s", strerror(errno));
+  }
+}
+
+static void
+_m_renew_now(void)
+{
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  u3_atom now = u3m_time_in_tv(&tim_u);
+  _m_renew_timer(now);
+  u3z(now);
+}
+
+/* u3m_timer_set(): push a new timer to the timer stack.
+** gap is @dr, gap != 0
+*/
+void
+u3m_timer_set(u3_atom gap)
+{
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  u3_atom now = u3m_time_in_tv(&tim_u);
+  u3_atom fut = u3ka_add(u3k(now), gap);
+  u3R->tim = u3nc(fut, u3R->tim);
+  _m_renew_timer(now);
+  u3z(now);
+}
+
+/* u3m_timer_pop(): pop a timer off the timer stack.
+** timer stack must be non-empty
+*/
+void
+u3m_timer_pop(void)
+{
+  c3_dessert( c3y == u3du(u3R->tim) );
+  u3_noun t = u3k(u3t(u3R->tim));
+  u3z(u3R->tim), u3R->tim = t;
+  _m_renew_now();
+}
+
 /* u3m_soft_top(): top-level safety wrapper.
 */
 u3_noun
@@ -1339,7 +1396,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Enter internal signal regime.
    */
-  _cm_signal_deep(mil_w);
+  _cm_signal_deep();
 
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
@@ -1358,6 +1415,17 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   /* Record the cap, and leap.
   */
   u3m_hate(pad_w);
+
+  if ( mil_w ) {
+    c3_d sec_d = mil_w / 1000;
+    c3_d usc_d = 1000 * (mil_w % 1000);
+    c3_d cub_d[2];
+    
+    cub_d[0] = u3m_time_fsc_in(usc_d);
+    cub_d[1] = u3m_time_sec_in(sec_d);
+
+    u3m_timer_set(u3i_chubs(2, cub_d));
+  }
 
   /* Trap for ordinary nock exceptions.
   */
@@ -1387,6 +1455,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     /* Overload the error result.
     */
     pro = u3m_love(why);
+    _m_renew_now();
   }
 
   /* Revert to external signal regime.
@@ -1515,10 +1584,12 @@ u3m_soft_cax(u3_funq fun_f,
 
         case 1: {                             //  blocking request
           pro = u3nc(u3nc(2, u3m_love(u3R->bug.tax)), u3_nul);
+          _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
           pro = u3nc(u3m_love(why), u3_nul);
+          _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
@@ -1612,14 +1683,17 @@ u3m_soft_run(u3_noun gul,
 
         case 0: {                             //  unusual: bail with success.
           pro = u3m_love(why);
+          _m_renew_now();
         } break;
 
         case 1: {                             //  blocking request
           pro = u3m_love(why);
+          _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
           pro = u3m_love(why);
+          _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
