@@ -831,7 +831,7 @@ static void
 _ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
-  u3_noun now = u3_time_in_tv(&tim_tv);
+  u3_noun now = u3m_time_in_tv(&tim_tv);
   u3_noun val = u3nc(las, now);
   u3h_put(lax_p, who, val);
   u3z(who);
@@ -855,12 +855,12 @@ _ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
   else {
     struct timeval tim_tv;
     gettimeofday(&tim_tv, 0);
-    u3_noun now = u3_time_in_tv(&tim_tv);
+    u3_noun now = u3m_time_in_tv(&tim_tv);
     u3_noun den = u3t(lac);
 
     //  consider entries older than 2 minutes stale, ignore them
     //
-    if ( 120000 > u3_time_gap_ms(u3k(den), now) ) {
+    if ( 120000 > u3m_time_gap_ms(u3k(den), now) ) {
       lac = u3k(u3h(lac));
     } else {
       lac = u3_none;
@@ -1164,9 +1164,9 @@ _stun_time_gap(struct timeval sar_tv)
 {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
-  u3_noun now = u3_time_in_tv(&tim_tv);
-  u3_noun den = u3_time_in_tv(&sar_tv);
-  return u3_time_gap_ms(den, now);
+  u3_noun now = u3m_time_in_tv(&tim_tv);
+  u3_noun den = u3m_time_in_tv(&sar_tv);
+  return u3m_time_gap_ms(den, now);
 }
 
 /* _stun_timer_cb(): advance stun state machine.
@@ -2972,7 +2972,7 @@ u3_ames_io_init(u3_pier* pir_u)
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
-    now = u3_time_in_tv(&tim_u);
+    now = u3m_time_in_tv(&tim_u);
     sam_u->sev_l = u3r_mug(now);
     u3z(now);
   }
