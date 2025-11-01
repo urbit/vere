@@ -199,6 +199,13 @@ pub fn build(b: *std.Build) !void {
         else => "",
     }), "platform/rsignal.h");
 
+    pkg_noun.installHeader(b.path(switch (t.os.tag) {
+        .macos => "platform/darwin/rsignal.h",
+        .linux => "platform/linux/rsignal.h",
+        .windows => "platform/windows/rsignal.h",
+        else => "",
+    }), "rsignal.h");
+
     b.installArtifact(pkg_noun);
 }
 
