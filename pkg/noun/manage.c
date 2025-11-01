@@ -1477,8 +1477,9 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   else {
     /* Overload the error result.
     */
+    c3_o tim_o = u3du(u3R->tim);
     pro = u3m_love(why);
-    _m_renew_now();
+    if ( _(tim_o) ) _m_renew_now();
   }
 
   /* Revert to external signal regime.
@@ -1606,13 +1607,15 @@ u3m_soft_cax(u3_funq fun_f,
         default: u3_assert(0); return 0;
 
         case 1: {                             //  blocking request
+          c3_o tim_o = u3du(u3R->tim);
           pro = u3nc(u3nc(2, u3m_love(u3R->bug.tax)), u3_nul);
-          _m_renew_now();
+          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
+          c3_o tim_o = u3du(u3R->tim);
           pro = u3nc(u3m_love(why), u3_nul);
-          _m_renew_now();
+          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
@@ -1705,18 +1708,21 @@ u3m_soft_run(u3_noun gul,
         default: u3_assert(0); return 0;
 
         case 0: {                             //  unusual: bail with success.
+          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          _m_renew_now();
+          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 1: {                             //  blocking request
+          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          _m_renew_now();
+          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
+          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          _m_renew_now();
+          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
