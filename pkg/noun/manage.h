@@ -283,9 +283,10 @@
         void
         u3m_time_out_ts(struct timespec* tim_ts, u3_noun now);
 
-      /* u3m_time_out_it(): struct itimerval from urbit time.
+      /* u3m_time_out_it(): struct itimerval from urbit time gap.
+      ** returns true if it_value is set to non-zero values, false otherwise
       */
-        void
+        c3_t
         u3m_time_out_it(struct itimerval* tim_it, u3_noun gap);
 
       /* u3m_time_gap_ms(): (wen - now) in ms.

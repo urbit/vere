@@ -1260,7 +1260,13 @@ _m_renew_timer(u3_atom now)
   
   struct itimerval itm_u;
   timerclear(&itm_u.it_interval);
-  u3m_time_out_it(&itm_u, gap);
+  c3_t is_set_t = u3m_time_out_it(&itm_u, gap);
+  if ( !is_set_t ) {
+    //  the gap is too small to resolve in itimerval, emulate firing SIGALRM
+    // immediately
+    //
+    u3m_signal(c3__alrm);
+  }
   if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
     u3l_log("loom: set timer failed %s", strerror(errno));
   }
@@ -2844,8 +2850,9 @@ u3m_time_out_ts(struct timespec* tim_ts, u3_noun now)
 }
 
 /* u3m_time_out_it(): struct itimerval from urbit time gap.
+** returns true if it_value is set to non-zero values, false otherwise
 */
-void
+c3_t
 u3m_time_out_it(struct itimerval* tim_it, u3_noun gap)
 {
   struct timeval tim_tv;
@@ -2854,6 +2861,7 @@ u3m_time_out_it(struct itimerval* tim_it, u3_noun gap)
   tim_it->it_value.tv_sec  = urs_d;
   tim_it->it_value.tv_usec = u3m_time_fsc_out(ufc_d);
   u3z(gap);
+  return tim_it->it_value.tv_sec || tim_it->it_value.tv_usec;
 }
 
 /* u3m_time_gap_ms(): (wen - now) in ms.
