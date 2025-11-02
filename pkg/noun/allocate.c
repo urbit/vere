@@ -1749,7 +1749,11 @@ u3a_mark_road()
     qua_u[11]->siz_w = wee_w * 4;
   }
 
-  qua_u[12] = NULL;
+  qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
+  qua_u[12]->nam_c = strdup("timer stack");
+  qua_u[12]->siz_w = u3a_mark_noun(u3R->tim) * 4;
+  
+  qua_u[13] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -1787,6 +1791,7 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->pro.don));
   u3a_relocate_noun(&(u3R->pro.day));
   u3a_relocate_noun(&(u3R->pro.trace));
+  u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
 }
