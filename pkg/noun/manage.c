@@ -1229,9 +1229,6 @@ u3m_hate(c3_w pad_w)
 u3_noun
 u3m_love(u3_noun pro)
 {
-#ifdef U3_MEMORY_DEBUG
-  u3h_free(u3R->lop_p);
-#endif
   //  save cache pointers from current road
   //
   u3p(u3h_root) byc_p = u3R->byc.har_p;
