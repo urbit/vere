@@ -1446,14 +1446,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_hate(pad_w);
 
   if ( mil_w ) {
-    c3_d sec_d = mil_w / 1000;
-    c3_d usc_d = 1000 * (mil_w % 1000);
-    c3_d cub_d[2];
-    
-    cub_d[0] = u3m_time_fsc_in(usc_d);
-    cub_d[1] = u3m_time_sec_in(sec_d);
-
-    u3m_timer_set(u3i_chubs(2, cub_d));
+    u3m_timer_set(u3m_time_gap_in_mil(mil_w));
   }
 
   /* Trap for ordinary nock exceptions.
@@ -2850,15 +2843,17 @@ u3m_time_out_ts(struct timespec* tim_ts, u3_noun now)
   tim_ts->tv_nsec = (tim_tv.tv_usec * 1000);
 }
 
-/* u3m_time_out_it(): struct itimerval from urbit time.
+/* u3m_time_out_it(): struct itimerval from urbit time gap.
 */
 void
 u3m_time_out_it(struct itimerval* tim_it, u3_noun gap)
 {
   struct timeval tim_tv;
-  u3m_time_out_tv(&tim_tv, gap);
-  tim_it->it_value.tv_sec = tim_tv.tv_sec;
-  tim_it->it_value.tv_usec = tim_tv.tv_usec;
+  c3_d ufc_d = u3r_chub(0, gap);
+  c3_d urs_d = u3r_chub(1, gap);
+  tim_it->it_value.tv_sec  = urs_d;
+  tim_it->it_value.tv_usec = u3m_time_fsc_out(ufc_d);
+  u3z(gap);
 }
 
 /* u3m_time_gap_ms(): (wen - now) in ms.
@@ -2902,4 +2897,18 @@ u3m_time_gap_double(u3_noun now, u3_noun wen)
   mpz_clear(dif_mp); mpz_clear(wen_mp); mpz_clear(now_mp);
 
   return gap_g;
+}
+
+/* u3m_time_gap_in_mil(): urbit time gap from milliseconds
+*/
+u3_atom
+u3m_time_gap_in_mil(c3_w mil_w)
+{
+  c3_d sec_d = mil_w / 1000;
+  c3_d usc_d = 1000 * (mil_w % 1000);
+  c3_d cub_d[2];
+
+  cub_d[0] = u3m_time_fsc_in(usc_d);
+  cub_d[1] = sec_d;
+  return u3i_chubs(2, cub_d);
 }

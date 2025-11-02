@@ -305,4 +305,9 @@
         void
         u3m_timer_pop(void);
 
+      /* u3m_time_gap_in_mil(): urbit time gap from milliseconds
+      */
+        u3_atom
+        u3m_time_gap_in_mil(c3_w mil_w);
+
 #endif /* ifndef U3_MANAGE_H */
