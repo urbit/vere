@@ -1210,109 +1210,6 @@ u3m_hate(c3_w pad_w)
   );
 }
 
-/* u3m_love(): return product from leap.
-*/
-u3_noun
-u3m_love(u3_noun pro)
-{
-  //  save cache pointers from current road
-  //
-  u3p(u3h_root) byc_p = u3R->byc.har_p;
-  u3a_jets      jed_u = u3R->jed;
-  u3p(u3h_root) per_p = u3R->cax.per_p;
-
-  //  fallback to parent road (child heap on parent's stack)
-  //
-  u3m_fall();
-
-  //  copy product and caches off our stack
-  //
-  pro   = u3a_take(pro);
-  jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
-  per_p = u3h_take(per_p);
-
-  //  pop the stack
-  //
-  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
-  u3R->cap_p = u3R->ear_p;
-  u3R->ear_p = 0;
-
-  //  integrate junior caches
-  //
-  u3j_reap(jed_u);
-  u3n_reap(byc_p);
-  u3z_reap(u3z_memo_keep, per_p);
-
-  return pro;
-}
-
-/* u3m_golf(): record cap_p length for u3m_flog().
-*/
-c3_w
-u3m_golf(void)
-{
-  if ( c3y == u3a_is_north(u3R) ) {
-    return u3R->mat_p - u3R->cap_p;
-  }
-  else {
-    return u3R->cap_p - u3R->mat_p;
-  }
-}
-
-/* u3m_flog(): reset cap_p.
-*/
-void
-u3m_flog(c3_w gof_w)
-{
-  //  Enable memsets in case of memory corruption.
-  //
-  if ( c3y == u3a_is_north(u3R) ) {
-    u3_post bot_p = (u3R->mat_p - gof_w);
-    // c3_w  len_w = (bot_w - u3R->cap_w);
-
-    // memset(u3R->cap_w, 0, 4 * len_w);
-    u3R->cap_p = bot_p;
-  }
-  else {
-    u3_post bot_p = u3R->mat_p + gof_w;
-    // c3_w  len_w = (u3R->cap_w - bot_w);
-
-    // memset(bot_w, 0, 4 * len_w);   //
-    u3R->cap_p = bot_p;
-  }
-}
-
-/* u3m_water(): produce watermarks.
-*/
-void
-u3m_water(u3_post* low_p, u3_post* hig_p)
-{
-  //  allow the segfault handler to fire before the road is set
-  //
-  //    while not explicitly possible in the codebase,
-  //    compiler optimizations can reorder stores
-  //
-  if ( !u3R ) {
-    *low_p = 0;
-    *hig_p = u3C.wor_i - 1;
-  }
-  //  in a north road, hat points to the end of the heap + 1 word,
-  //  while cap points to the top of the stack
-  //
-  else if ( c3y == u3a_is_north(u3R) ) {
-    *low_p = u3R->hat_p - 1;
-    *hig_p = u3R->cap_p;
-  }
-  //  in a south road, hat points to the end of the heap,
-  //  while cap points to the top of the stack + 1 word
-  //
-  else {
-    *low_p = u3R->cap_p - 1;
-    *hig_p = u3R->hat_p;
-  }
-}
-
 //  RETAINS `now`.
 //
 static void
@@ -1406,6 +1303,115 @@ u3m_timer_pop(void)
   _m_renew_now();
 }
 
+/* u3m_love(): return product from leap.
+*/
+u3_noun
+u3m_love(u3_noun pro)
+{
+  //  save cache pointers from current road
+  //
+  u3p(u3h_root) byc_p = u3R->byc.har_p;
+  u3a_jets      jed_u = u3R->jed;
+  u3p(u3h_root) per_p = u3R->cax.per_p;
+
+  //  are there any timers on the road?
+  //
+  c3_o tim_o = u3du(u3R->tim);
+
+  //  fallback to parent road (child heap on parent's stack)
+  //
+  u3m_fall();
+
+  if ( _(tim_o) ) _m_renew_now();
+
+  //  copy product and caches off our stack
+  //
+  pro   = u3a_take(pro);
+  jed_u = u3j_take(jed_u);
+  byc_p = u3n_take(byc_p);
+  per_p = u3h_take(per_p);
+
+  //  pop the stack
+  //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+  u3R->cap_p = u3R->ear_p;
+  u3R->ear_p = 0;
+
+  //  integrate junior caches
+  //
+  u3j_reap(jed_u);
+  u3n_reap(byc_p);
+  u3z_reap(u3z_memo_keep, per_p);
+
+  return pro;
+}
+
+/* u3m_golf(): record cap_p length for u3m_flog().
+*/
+c3_w
+u3m_golf(void)
+{
+  if ( c3y == u3a_is_north(u3R) ) {
+    return u3R->mat_p - u3R->cap_p;
+  }
+  else {
+    return u3R->cap_p - u3R->mat_p;
+  }
+}
+
+/* u3m_flog(): reset cap_p.
+*/
+void
+u3m_flog(c3_w gof_w)
+{
+  //  Enable memsets in case of memory corruption.
+  //
+  if ( c3y == u3a_is_north(u3R) ) {
+    u3_post bot_p = (u3R->mat_p - gof_w);
+    // c3_w  len_w = (bot_w - u3R->cap_w);
+
+    // memset(u3R->cap_w, 0, 4 * len_w);
+    u3R->cap_p = bot_p;
+  }
+  else {
+    u3_post bot_p = u3R->mat_p + gof_w;
+    // c3_w  len_w = (u3R->cap_w - bot_w);
+
+    // memset(bot_w, 0, 4 * len_w);   //
+    u3R->cap_p = bot_p;
+  }
+}
+
+/* u3m_water(): produce watermarks.
+*/
+void
+u3m_water(u3_post* low_p, u3_post* hig_p)
+{
+  //  allow the segfault handler to fire before the road is set
+  //
+  //    while not explicitly possible in the codebase,
+  //    compiler optimizations can reorder stores
+  //
+  if ( !u3R ) {
+    *low_p = 0;
+    *hig_p = u3C.wor_i - 1;
+  }
+  //  in a north road, hat points to the end of the heap + 1 word,
+  //  while cap points to the top of the stack
+  //
+  else if ( c3y == u3a_is_north(u3R) ) {
+    *low_p = u3R->hat_p - 1;
+    *hig_p = u3R->cap_p;
+  }
+  //  in a south road, hat points to the end of the heap,
+  //  while cap points to the top of the stack + 1 word
+  //
+  else {
+    *low_p = u3R->cap_p - 1;
+    *hig_p = u3R->hat_p;
+  }
+}
+
 /* u3m_soft_top(): top-level safety wrapper.
 */
 u3_noun
@@ -1477,9 +1483,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   else {
     /* Overload the error result.
     */
-    c3_o tim_o = u3du(u3R->tim);
     pro = u3m_love(why);
-    if ( _(tim_o) ) _m_renew_now();
   }
 
   /* Revert to external signal regime.
@@ -1607,15 +1611,11 @@ u3m_soft_cax(u3_funq fun_f,
         default: u3_assert(0); return 0;
 
         case 1: {                             //  blocking request
-          c3_o tim_o = u3du(u3R->tim);
           pro = u3nc(u3nc(2, u3m_love(u3R->bug.tax)), u3_nul);
-          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
-          c3_o tim_o = u3du(u3R->tim);
           pro = u3nc(u3m_love(why), u3_nul);
-          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
@@ -1708,21 +1708,15 @@ u3m_soft_run(u3_noun gul,
         default: u3_assert(0); return 0;
 
         case 0: {                             //  unusual: bail with success.
-          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 1: {                             //  blocking request
-          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 2: {                             //  true exit
-          c3_o tim_o = u3du(u3R->tim);
           pro = u3m_love(why);
-          if ( _(tim_o) ) _m_renew_now();
         } break;
 
         case 3: {                             //  failure; rebail w/trace
