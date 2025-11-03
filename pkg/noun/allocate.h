@@ -217,7 +217,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 0x1,                 //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
