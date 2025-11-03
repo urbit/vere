@@ -531,6 +531,7 @@ _pave_parts(void)
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
+  u3R->how.fag_w = 0;
 }
 
 static c3_d
@@ -1456,14 +1457,11 @@ u3m_soft_cax(u3_funq fun_f,
   u3_noun why = 0, pro;
   u3_noun cax = u3_nul;
 
-  /* Save and set memo cache harvesting flag.
-  */
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_cash;
-
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
+
+  u3R->how.fag_w |= u3a_flag_cash;
 
   /* Configure the new road.
   */
@@ -1480,7 +1478,6 @@ u3m_soft_cax(u3_funq fun_f,
   if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
-    u3C.wag_w = wag_w;
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
@@ -1505,7 +1502,6 @@ u3m_soft_cax(u3_funq fun_f,
   }
   else {
     u3t_init();
-    u3C.wag_w = wag_w;
 
     /* Produce - or fall again.
     */
@@ -1555,6 +1551,8 @@ u3m_soft_run(u3_noun gul,
 {
   u3_noun why = 0, pro;
 
+  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
+
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1563,8 +1561,7 @@ u3m_soft_run(u3_noun gul,
   */
 
   {
-    // XX review
-    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
+    if ( (u3_nul == gul) || cash_t ) {
       u3R->ski.gul = u3_nul;
     }
     else {
@@ -1573,6 +1570,7 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
+    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 
