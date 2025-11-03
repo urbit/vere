@@ -185,6 +185,7 @@ _pier_on_lord_work_done(void*    ptr_v,
   //  XX consider async
   //
   u3_auto_kick(pir_u->wok_u->car_u, act);
+  u3z(act);
 
   _pier_work(pir_u->wok_u);
 }
@@ -210,28 +211,6 @@ _pier_on_lord_work_bail(void* ptr_v, u3_ovum* egg_u, u3_noun lud)
   if ( pir_u->wok_u ) {
     _pier_work(pir_u->wok_u);
   }
-}
-
-/* _pier_work_time(): set time.
-*/
-static void
-_pier_work_time(u3_pier* pir_u)
-{
-  struct timeval tim_tv;
-  gettimeofday(&tim_tv, 0);
-
-  // XX save to pier
-  //
-  u3v_time(u3_time_in_tv(&tim_tv));
-}
-
-/* _pier_work_fore_cb(): run on every loop iteration before i/o polling.
-*/
-static void
-_pier_work_fore_cb(uv_prepare_t* pep_u)
-{
-  u3_work* wok_u = pep_u->data;
-  _pier_work_time(wok_u->pir_u);
 }
 
 /* _pier_work_afte_cb(): run on every loop iteration after i/o polling.
@@ -470,15 +449,6 @@ _pier_work_init(u3_pier* pir_u)
   pir_u->sat_e = u3_psat_work;
   pir_u->wok_u = wok_u = c3_calloc(sizeof(*wok_u));
   wok_u->pir_u = pir_u;
-
-  _pier_work_time(pir_u);
-
-
-  //  initialize pre i/o polling handle
-  //
-  uv_prepare_init(u3L, &wok_u->pep_u);
-  wok_u->pep_u.data = wok_u;
-  uv_prepare_start(&wok_u->pep_u, _pier_work_fore_cb);
 
   //  initialize post i/o polling handle
   //
@@ -845,8 +815,6 @@ _pier_wyrd_card(u3_pier* pir_u)
   u3_lord* god_u = pir_u->god_u;
   u3_noun    sen;
 
-  _pier_work_time(pir_u);
-
   {
     c3_l  sev_l;
     u3_noun now;
@@ -872,7 +840,6 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3nc(c3__hoon, 136),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
-  u3_noun wir = u3nc(c3__arvo, u3_nul);
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
 }
 
@@ -1222,10 +1189,9 @@ _pier_work_close(u3_work* wok_u)
 {
   u3_auto_exit(wok_u->car_u);
 
-  uv_close((uv_handle_t*)&wok_u->pep_u, _pier_work_close_cb);
-  uv_close((uv_handle_t*)&wok_u->cek_u, 0);
+  uv_close((uv_handle_t*)&wok_u->cek_u, _pier_work_close_cb);
   uv_close((uv_handle_t*)&wok_u->idl_u, 0);
-  wok_u->pep_u.data = wok_u;
+  wok_u->cek_u.data = wok_u;
 }
 
 /* _pier_bail_impl(): immediately shutdown.
@@ -1484,10 +1450,56 @@ u3_pier_sway(c3_l tab_l, u3_noun tax)
   u3z(mok);
 }
 
+static c3_w
+_pier_mark_pico(u3_pico* pic_u)
+{
+  c3_w siz_w = 0;
+
+  while ( pic_u ) {
+
+    switch ( pic_u->typ_e ) {
+      case u3_pico_once: {
+        siz_w += u3a_mark_noun(pic_u->las_u.des);
+        siz_w += u3a_mark_noun(pic_u->las_u.pax);
+      } break;
+
+      case u3_pico_full: {
+        siz_w += u3a_mark_noun(pic_u->ful);
+      } break;
+    }
+
+    pic_u = pic_u->nex_u;
+  }
+
+  return siz_w;
+}
+
 /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
 */
-c3_w
-u3_pier_mark(FILE* fil_u)
+u3m_quac**
+u3_pier_mark(u3_pier* pir_u, c3_w *out_w)
 {
-  return 0;
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("drivers");
+  if ( pir_u->wok_u ) {
+    all_u[0]->qua_u = u3_auto_mark(pir_u->wok_u->car_u, &(all_u[0]->siz_w));
+  }
+  else {
+    all_u[0]->qua_u = 0;
+  }
+
+  all_u[1] = u3_lord_mark(pir_u->god_u);
+
+  all_u[2] = c3_malloc(sizeof(**all_u));
+  all_u[2]->nam_c = strdup("peeks");
+  all_u[2]->siz_w = 4 * _pier_mark_pico(pir_u->pec_u.ext_u);
+  all_u[2]->qua_u = 0;
+
+  all_u[3] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w;
+
+  return all_u;
 }

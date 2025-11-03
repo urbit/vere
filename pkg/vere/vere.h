@@ -3,11 +3,17 @@
 #ifndef U3_VERE_H
 #define U3_VERE_H
 
+#ifdef U3_OS_windows
+#include "winsock2.h"
+#include "windows.h"
+#endif
+
 #include "c3/c3.h"
 #include "db/lmdb.h"
 #include "noun.h"
 #include "uv.h"
 #include <types.h>
+
 
   /** Quasi-tunable parameters.
   **/
@@ -323,6 +329,9 @@
         c3_d       now_d;                   //  event tick
         uv_loop_t* lup_u;                   //  libuv event loop
         u3_usig*   sig_u;                   //  signal list
+#if defined(U3_OS_windows)
+        HANDLE     cev_u;                   //  ctrl-C event handle
+#endif
         u3_utty*   uty_u;                   //  linked terminal list
         c3_o       nex_o;                   //  upgrade requested
         c3_c*      arc_c;                   //  upgrade to arch
@@ -506,6 +515,14 @@
       */
         typedef void (*u3_disk_news)(void*, c3_d, c3_o);
 
+      /* u3_disk_load_e: disk load mode.
+      */
+        typedef enum {
+          u3_dlod_boot = 0,                 //  load for boot
+          u3_dlod_epoc = 1,                 //  load for full replay
+          u3_dlod_last = 2                  //  load latest
+        } u3_disk_load_e;
+
       /* u3_disk: manage event persistence.
       */
         typedef struct _u3_disk {
@@ -583,6 +600,7 @@
           u3_noun (*info_f)(struct _u3_auto*);
           void    (*slog_f)(struct _u3_auto*);
           c3_o    (*kick_f)(struct _u3_auto*, u3_noun, u3_noun);
+          u3m_quac** (*mark_f)(struct _u3_auto*, c3_w*);
           void    (*exit_f)(struct _u3_auto*);  // XX close_cb?
         } u3_auto_cb;
 
@@ -603,7 +621,6 @@
       */
         typedef struct _u3_work {
           u3_auto*         car_u;               //  i/o drivers
-          uv_prepare_t     pep_u;               //  pre-loop
           uv_check_t       cek_u;               //  post-loop
           uv_idle_t        idl_u;               //  catchall XX uv_async_t?
           struct _u3_pier* pir_u;               //  pier backpointer
@@ -709,7 +726,7 @@
       */
         u3_atom
         u3_time_in_ts(struct timespec* tim_ts);
-#if defined(U3_OS_linux)
+#if defined(U3_OS_linux) || defined(U3_OS_windows)
       /* u3_time_t_in_ts(): urbit time from time_t.
        */
          u3_atom
@@ -761,6 +778,11 @@
         void
         u3_ovum_free(u3_ovum *egg_u);
 
+      /* u3_ovum_mark: mark a potential event for gc
+      */
+        c3_w
+        u3_ovum_mark(u3_ovum *egg_u);
+
       /* u3_pico_init(): initialize a scry request struct
       */
         u3_pico*
@@ -793,6 +815,10 @@
 
     /**  IO drivers.
     **/
+      /* u3_auto_mark(): mark drivers for gc.
+      */
+        u3m_quac**
+        u3_auto_mark(u3_auto* car_u, c3_w *out_w);
       /* u3_auto_init(): initialize all drivers.
       */
         u3_auto*
@@ -876,10 +902,15 @@
                      u3_ovum_peer news_f,
                      u3_ovum_bail bail_f);
 
-      /* u3_disk_init(): load or create pier directories and event log.
+      /* u3_disk_make(): make pier directories and event log.
+      */
+        c3_o
+        u3_disk_make(c3_c* pax_c);
+
+      /* u3_disk_load(): load pier directories, log, and snapshot.
       */
         u3_disk*
-        u3_disk_init(c3_c* pax_c);
+        u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
       */
@@ -960,11 +991,6 @@
         c3_z
         u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
-      /* u3_disk_kindly(): do the needful.
-      */
-        void
-        u3_disk_kindly(u3_disk* log_u, c3_d eve_d);
-
       /* u3_disk_chop(): delete all but the latest 2 epocs.
        */
         void
@@ -1011,6 +1037,11 @@
                      u3_noun msg,
                      void* ptr_v,
                      void (*done_f)(void*, c3_o));
+
+      /* u3_lord_mark(): mark lord for gc.
+      */
+        u3m_quac*
+        u3_lord_mark(u3_lord* god_u);
 
       /* u3_lord_init(): start serf.
       ** TODO: fix comment and/or name to match mars/urth?
@@ -1387,8 +1418,8 @@
 
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
-        c3_w
-        u3_pier_mark(FILE* fil_u);
+        u3m_quac**
+        u3_pier_mark(u3_pier*, c3_w*);
 
       /* u3_pier_mase(): construct a $mass leaf.
       */

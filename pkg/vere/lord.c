@@ -509,6 +509,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3_noun    tag, dat;
   u3_weak    jar;
 
+#ifdef U3_URTH_MASS
+  //  XX add urth-gc runtime arg to support this
+  // u3_king_grab(NULL);
+#endif
+
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'B');
 #endif
@@ -570,6 +575,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   u3z(jar);
+
+  //  XX would be good to grab here, but need to do something
+  //  about graceful shutdown
+
   return c3y;
 }
 
@@ -943,6 +952,37 @@ u3_lord_slog(u3_lord* god_u)
   u3_newt_moat_slog(&god_u->out_u);
 }
 
+u3m_quac*
+u3_lord_mark(u3_lord* god_u)
+{
+  u3_writ* wit_u = god_u->ext_u;
+  c3_w     siz_w = 0;
+
+  while ( wit_u ) {
+    switch ( wit_u->typ_e ) {
+      case u3_writ_poke: {
+        siz_w += u3a_mark_noun(wit_u->wok_u.job);
+        siz_w += u3_ovum_mark(wit_u->wok_u.egg_u);
+      } break;
+
+      case u3_writ_peek: {
+        siz_w += u3a_mark_noun(wit_u->pek_u->sam);
+      } break;
+
+      default: break;
+    }
+
+    wit_u = wit_u->nex_u;
+  }
+
+  u3m_quac* qac_u = c3_malloc(sizeof(*qac_u));
+  qac_u->nam_c = strdup("lord ipc");
+  qac_u->siz_w = siz_w * 4;
+  qac_u->qua_u = 0;
+
+  return qac_u;
+}
+
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*
@@ -956,29 +996,19 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
   god_u->pax_c = pax_c;  //  XX strcopy
   god_u->cb_u  = cb_u;
 
-  god_u->key_d[0] = key_d[0];
-  god_u->key_d[1] = key_d[1];
-  god_u->key_d[2] = key_d[2];
-  god_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[12];
-    c3_c  key_c[256];
+    c3_c* arg_c[25] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
-    c3_c  eve_c[11];
+    c3_c  sap_c[11];
+    c3_c  cev_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
-
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
-                   god_u->key_d[0],
-                   god_u->key_d[1],
-                   god_u->key_d[2],
-                   god_u->key_d[3]);
 
     sprintf(wag_c, "%u", god_u->wag_w);
 
@@ -988,35 +1018,49 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
+    sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
+
     sprintf(tos_c, "%u", u3C.tos_w);
 
-    arg_c[0] = god_u->bin_c;            //  executable
-    arg_c[1] = "work";                  //  protocol
-    arg_c[2] = god_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
+
+    c3_w i_w = 0;
+    arg_c[i_w++] = god_u->bin_c;              //  executable
+    arg_c[i_w++] = "work";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = god_u->pax_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--snap-time";             //  snapshot interval
+    arg_c[i_w++] = sap_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
 
     if ( u3_Host.ops_u.til_c ) {
-      //  XX validate
-      //
-      arg_c[7] = u3_Host.ops_u.til_c;
-    }
-    else {
-      arg_c[7] = "0";
+      arg_c[i_w++] = "--play-until";          //  play until
+      arg_c[i_w++] = u3_Host.ops_u.til_c;     //  XX validate
     }
 
-    if ( u3C.eph_c == 0 ) {
-      arg_c[8] = "0";
-    }
-    else {
-      arg_c[8] = strdup(u3C.eph_c);     //  ephemeral file
+    if ( u3C.eph_c ) {
+      arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
+      arg_c[i_w++] = strdup(u3C.eph_c);
     }
 
-    arg_c[9] = tos_c;
-    arg_c[10] = per_c;
-    arg_c[11] = NULL;
+#ifdef U3_OS_windows
+    sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
+    arg_c[i_w++] = "--win-intr-handle";       //  windows interrupt handler
+    arg_c[i_w++] = cev_c;
+#endif
+
+    u3_assert( i_w < (sizeof(arg_c) / sizeof(*arg_c)) );
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
@@ -1220,29 +1264,18 @@ u3_lord_boot(c3_c* pax_c,
   bot_u->done_f = done_f;
   bot_u->ptr_v = ptr_v;
 
-  bot_u->key_d[0] = key_d[0];
-  bot_u->key_d[1] = key_d[1];
-  bot_u->key_d[2] = key_d[2];
-  bot_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[12];
-    c3_c  key_c[256];
+    c3_c* arg_c[19] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  lom_c[11];
     c3_c  eph_c[11];
     c3_c  tos_c[11];
     c3_c  per_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
-
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
-                   bot_u->key_d[0],
-                   bot_u->key_d[1],
-                   bot_u->key_d[2],
-                   bot_u->key_d[3]);
 
     sprintf(wag_c, "%u", bot_u->wag_w);
 
@@ -1254,24 +1287,32 @@ u3_lord_boot(c3_c* pax_c,
 
     sprintf(per_c, "%u", u3_Host.ops_u.per_w);
 
-    arg_c[0] = bot_u->bin_c;            //  executable
-    arg_c[1] = "boot";                  //  protocol
-    arg_c[2] = bot_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
-    if ( u3C.eph_c == 0 ) {
-      arg_c[7] = "0";
-    }
-    else {
-      arg_c[7] = strdup(u3C.eph_c);     //  ephemeral file
+    c3_w i_w = 0;
+    arg_c[i_w++] = bot_u->bin_c;              //  executable
+    arg_c[i_w++] = "boot";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = bot_u->pax_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
+
+    if ( 0 != u3C.eph_c) {
+      arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
+      arg_c[i_w++] = strdup(u3C.eph_c);
     }
 
-    arg_c[8] = tos_c;
-    arg_c[9] = per_c;
-    arg_c[10] = NULL;
+    u3_assert( i_w < (sizeof(arg_c) / sizeof(*arg_c)) );
 
     uv_pipe_init(u3L, &bot_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &bot_u->out_u.tim_u);

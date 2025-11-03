@@ -338,7 +338,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 {
   //  try to find a cookie header
   //
-  h2o_iovec_t coo_u = {NULL, 0};
+  h2o_iovec_t coo_u = {0, 0};
   {
     //TODO  http2 allows the client to put multiple 'cookie' headers,
     //      runtime should support that once eyre does too.
@@ -972,6 +972,9 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     }
     else {
       // '/_~_/' found
+      // `req` is unused, free it
+      //
+      u3z(req);
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -2178,8 +2181,15 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   if ( c3y == log ) {
     // XX move this to post serv_start and put the port in the name
 #if 0
+    u3_noun now;
+
+    {
+      struct timeval tim_u;
+      gettimeofday(&tim_u, 0);
+      now = u3_time_in_tv(&tim_u);
+    }
     c3_c* pax_c = u3_Host.dir_c;
-    u3_noun now = u3dc("scot", c3__da, u3k(u3A->now));
+    u3_noun now = u3dc("scot", c3__da, now);
     c3_c* now_c = u3r_string(now);
     c3_c* nam_c = ".access.log";
     c3_w len_w = 1 + strlen(pax_c) + 1 + strlen(now_c) + strlen(nam_c);
@@ -2676,11 +2686,13 @@ _http_io_talk(u3_auto* car_u)
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
   //Setup spin stack
+#ifndef U3_OS_windows
   htd_u->stk_u = u3t_sstack_open();
   
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");
   }
+#endif
 
   //  XX set liv_o on done/swap?
   //
@@ -2985,6 +2997,35 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   }
 }
 
+static u3m_quac**
+_http_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_httd*   htd_u = (u3_httd*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("session tokens");
+  all_u[0]->siz_w = 4 * u3a_mark_noun(htd_u->fig_u.ses);
+  all_u[0]->qua_u = 0;
+
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("url->scry cache");
+  all_u[1]->siz_w = 4 * u3h_mark(htd_u->sax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = c3_malloc(sizeof(**all_u));
+  all_u[2]->nam_c = strdup("scry->noun cache");
+  all_u[2]->siz_w = 4 * u3h_mark(htd_u->nax_p);
+  all_u[2]->qua_u = 0;
+
+  all_u[3] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w;
+
+  return all_u;
+}
+
 /* _http_io_exit(): shut down http.
 */
 static void
@@ -3106,6 +3147,7 @@ u3_http_io_init(u3_pier* pir_u)
   car_u->io.info_f = _http_io_info;
   car_u->io.slog_f = _http_io_slog;
   car_u->io.kick_f = _http_io_kick;
+  car_u->io.mark_f = _http_io_mark;
   car_u->io.exit_f = _http_io_exit;
 
   pir_u->sop_p = htd_u;

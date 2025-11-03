@@ -86,13 +86,6 @@
 
 
 
-
-
-
-
-
-
-
 	.text
 	.align	4, 0x90
 	.globl	___gmpn_mul_basecase
@@ -102,308 +95,361 @@ ___gmpn_mul_basecase:
 
 	
 
-
-	cmp	$2, %rdx
-	ja	Lgen
-	mov	(%rcx), %rdx
-	.byte	0xc4,98,251,0xf6,14	
-	je	Ls2x
-
-Ls11:	mov	%rax, (%rdi)
-	mov	%r9, 8(%rdi)
-	
-	ret
-
-Ls2x:	cmp	$2, %r8
-	.byte	0xc4,98,187,0xf6,86,8	
-	je	Ls22
-
-Ls21:	add	%r8, %r9
-	adc	$0, %r10
-	mov	%rax, (%rdi)
-	mov	%r9, 8(%rdi)
-	mov	%r10, 16(%rdi)
-	
-	ret
-
-Ls22:	add	%r8, %r9		
-	adc	$0, %r10		
-	mov	8(%rcx), %rdx
-	mov	%rax, (%rdi)
-	.byte	0xc4,98,187,0xf6,30	
-	.byte	0xc4,226,251,0xf6,86,8	
-	add	%r11, %rax		
-	adc	$0, %rdx		
-	add	%r8, %r9		
-	adc	%rax, %r10		
-	adc	$0, %rdx		
-	mov	%r9, 8(%rdi)
-	mov	%r10, 16(%rdi)
-	mov	%rdx, 24(%rdi)
-	
-	ret
-
-	.align	4, 0x90
-Lgen:
 	push	%rbx
 	push	%rbp
 	push	%r12
+	push	%r13
 	push	%r14
-
-	mov	%rcx, %r14
-	lea	1(%rdx), %rbx
-	mov	%rdx, %rbp
-	mov	%edx, %eax
-	and	$-8, %rbx
-	shr	$3, %rbp		
+	mov	%rdx, %rbx		
 	neg	%rbx
-	and	$7, %eax		
-					
-	mov	%rbp, %rcx
-	mov	(%r14), %rdx
-	lea	8(%r14), %r14
 
-	lea	Lmtab(%rip), %r10
-	movslq	(%r10,%rax,4), %r11
-	lea	(%r11, %r10), %r10
-	jmp	*%r10
+	mov	%rdx, %rbp		
+	sar	$2, %rbp			
+
+	test	$1, %r8b
+	jz	Ldo_mul_2
 
 
-Lmf0:	.byte	0xc4,98,171,0xf6,30
-	lea	56(%rsi), %rsi
+
+
+	mov	(%rcx), %rdx
+
+Ldo_mul_1:
+	test	$1, %bl
+	jnz	Lm1x1
+
+Lm1x0:test	$2, %bl
+	jnz	Lm110
+
+Lm100:
+	.byte	0xc4,98,139,0xf6,38
+	.byte	0xc4,98,163,0xf6,110,8
+	lea	-24(%rdi), %rdi
+	jmp	Lm1l0
+
+Lm110:
+	.byte	0xc4,98,147,0xf6,14
+	.byte	0xc4,98,163,0xf6,118,8
 	lea	-8(%rdi), %rdi
-	jmp	Lmb0
-
-Lmf3:	.byte	0xc4,98,155,0xf6,14
+	test	%rbp, %rbp
+	jz	Lcj2
+	.byte	0xc4,98,171,0xf6,102,16
 	lea	16(%rsi), %rsi
-	lea	16(%rdi), %rdi
-	inc	%rcx
-	jmp	Lmb3
+	jmp	Lm1l2
 
-Lmf4:	.byte	0xc4,98,171,0xf6,30
-	lea	24(%rsi), %rsi
-	lea	24(%rdi), %rdi
-	inc	%rcx
-	jmp	Lmb4
+Lm1x1:test	$2, %bl
+	jz	Lm111
 
-Lmf5:	.byte	0xc4,98,155,0xf6,14
-	lea	32(%rsi), %rsi
-	lea	32(%rdi), %rdi
-	inc	%rcx
-	jmp	Lmb5
-
-Lmf6:	.byte	0xc4,98,171,0xf6,30
-	lea	40(%rsi), %rsi
-	lea	40(%rdi), %rdi
-	inc	%rcx
-	jmp	Lmb6
-
-Lmf7:	.byte	0xc4,98,155,0xf6,14
-	lea	48(%rsi), %rsi
-	lea	48(%rdi), %rdi
-	inc	%rcx
-	jmp	Lmb7
-
-Lmf1:	.byte	0xc4,98,155,0xf6,14
-	jmp	Lmb1
-
-Lmf2:	.byte	0xc4,98,171,0xf6,30
+Lm101:
+	.byte	0xc4,98,179,0xf6,54
+	lea	-16(%rdi), %rdi
+	test	%rbp, %rbp
+	jz	Lcj1
+	.byte	0xc4,98,171,0xf6,102,8
 	lea	8(%rsi), %rsi
-	lea	8(%rdi), %rdi
-	.byte	0xc4,98,155,0xf6,14
+	jmp	Lm1l1
+
+Lm111:
+	.byte	0xc4,98,155,0xf6,46
+	.byte	0xc4,98,171,0xf6,78,8
+	.byte	0xc4,98,163,0xf6,118,16
+	lea	24(%rsi), %rsi
+	test	%rbp, %rbp
+	jnz	Lgt3
+	add	%r10, %r13
+	jmp	Lcj3
+Lgt3:	add	%r10, %r13
+	jmp	Lm1l3
+
+	.align	5, 0x90
+Lm1tp:lea	32(%rdi), %rdi
+Lm1l3:mov	%r12, (%rdi)
+	.byte	0xc4,98,171,0xf6,38
+Lm1l2:mov	%r13, 8(%rdi)
+	adc	%r11, %r9
+Lm1l1:adc	%r10, %r14
+	mov	%r9, 16(%rdi)
+	.byte	0xc4,98,163,0xf6,110,8
+Lm1l0:mov	%r14, 24(%rdi)
+	.byte	0xc4,98,171,0xf6,78,16
+	adc	%r11, %r12
+	.byte	0xc4,98,163,0xf6,118,24
+	adc	%r10, %r13
+	lea	32(%rsi), %rsi
+	dec	%rbp
+	jnz	Lm1tp
+
+Lm1ed:lea	32(%rdi), %rdi
+Lcj3:	mov	%r12, (%rdi)
+Lcj2:	mov	%r13, 8(%rdi)
+	adc	%r11, %r9
+Lcj1:	mov	%r9, 16(%rdi)
+	adc	$0, %r14
+	mov	%r14, 24(%rdi)
+
+	dec	%r8d
+	jz	Lret5
+
+	lea	8(%rcx), %rcx
+	lea	32(%rdi), %rdi
+
+
+
+	jmp	Ldo_addmul
+
+Ldo_mul_2:
+
+
+
+
+
+	mov	(%rcx), %r9
+	mov	8(%rcx), %r14
+
+	lea	(%rbx), %rbp
+	sar	$2, %rbp
+
+	test	$1, %bl
+	jnz	Lm2x1
+
+Lm2x0:xor	%r10, %r10
+	test	$2, %bl
+	mov	(%rsi), %rdx
+	.byte	0xc4,66,155,0xf6,217
+	jz	Lm2l0
+
+Lm210:lea	-16(%rdi), %rdi
+	lea	-16(%rsi), %rsi
+	jmp	Lm2l2
+
+Lm2x1:xor	%r12, %r12
+	test	$2, %bl
+	mov	(%rsi), %rdx
+	.byte	0xc4,66,171,0xf6,233
+	jz	Lm211
+
+Lm201:lea	-24(%rdi), %rdi
+	lea	8(%rsi), %rsi
+	jmp	Lm2l1
+
+Lm211:lea	-8(%rdi), %rdi
+	lea	-8(%rsi), %rsi
+	jmp	Lm2l3
 
 	.align	4, 0x90
-Lm1top:
-	mov	%r10, -8(%rdi)
-	adc	%r11, %r12
-Lmb1:	.byte	0xc4,98,171,0xf6,94,8
-	adc	%r9, %r10
-	lea	64(%rsi), %rsi
+Lm2tp:.byte	0xc4,66,251,0xf6,214
+	add	%rax, %r12
+	mov	(%rsi), %rdx
+	.byte	0xc4,66,251,0xf6,217
+	adc	$0, %r10
+	add	%rax, %r12
+	adc	$0, %r11
+	add	%r13, %r12
+Lm2l0:mov	%r12, (%rdi)
+	adc	$0, %r11
+	.byte	0xc4,66,251,0xf6,230
+	add	%rax, %r10
+	mov	8(%rsi), %rdx
+	adc	$0, %r12
+	.byte	0xc4,66,251,0xf6,233
+	add	%rax, %r10
+	adc	$0, %r13
+	add	%r11, %r10
+Lm2l3:mov	%r10, 8(%rdi)
+	adc	$0, %r13
+	.byte	0xc4,66,251,0xf6,214
+	add	%rax, %r12
+	mov	16(%rsi), %rdx
+	.byte	0xc4,66,251,0xf6,217
+	adc	$0, %r10
+	add	%rax, %r12
+	adc	$0, %r11
+	add	%r13, %r12
+Lm2l2:mov	%r12, 16(%rdi)
+	adc	$0, %r11
+	.byte	0xc4,66,251,0xf6,230
+	add	%rax, %r10
+	mov	24(%rsi), %rdx
+	adc	$0, %r12
+	.byte	0xc4,66,251,0xf6,233
+	add	%rax, %r10
+	adc	$0, %r13
+	add	%r11, %r10
+	lea	32(%rsi), %rsi
+Lm2l1:mov	%r10, 24(%rdi)
+	adc	$0, %r13
+	inc	%rbp
+	lea	32(%rdi), %rdi
+	jnz	Lm2tp
+
+Lm2ed:.byte	0xc4,194,235,0xf6,198
+	add	%rdx, %r12
+	adc	$0, %rax
+	add	%r13, %r12
 	mov	%r12, (%rdi)
-Lmb0:	mov	%r10, 8(%rdi)
-	.byte	0xc4,98,155,0xf6,78,208
-	lea	64(%rdi), %rdi
-	adc	%r11, %r12
-Lmb7:	.byte	0xc4,98,171,0xf6,94,216
-	mov	%r12, -48(%rdi)
-	adc	%r9, %r10
-Lmb6:	mov	%r10, -40(%rdi)
-	.byte	0xc4,98,155,0xf6,78,224
-	adc	%r11, %r12
-Lmb5:	.byte	0xc4,98,171,0xf6,94,232
-	mov	%r12, -32(%rdi)
-	adc	%r9, %r10
-Lmb4:	.byte	0xc4,98,155,0xf6,78,240
-	mov	%r10, -24(%rdi)
-	adc	%r11, %r12
-Lmb3:	.byte	0xc4,98,171,0xf6,94,248
-	adc	%r9, %r10
-	mov	%r12, -16(%rdi)
-	dec	%rcx
-	.byte	0xc4,98,155,0xf6,14
-	jnz	Lm1top
+	adc	$0, %rax
+	mov	%rax, 8(%rdi)
 
-Lm1end:
-	mov	%r10, -8(%rdi)
-	adc	%r11, %r12
-	mov	%r12, (%rdi)
-	adc	%rcx, %r9		
-	mov	%r9, 8(%rdi)
+	add	$-2, %r8d
+	jz	Lret5
+	lea	16(%rcx), %rcx
+	lea	16(%rdi), %rdi
 
-	dec	%r8
-	jz	Ldone
 
-	lea	Latab(%rip), %r10
-	movslq	(%r10,%rax,4), %rax
-	lea	(%rax, %r10), %rax
+Ldo_addmul:
+	push	%r15
+	push	%r8			
 
+
+
+
+
+	lea	(%rdi,%rbx,8), %rdi
+	lea	(%rsi,%rbx,8), %rsi
 
 Louter:
-	lea	(%rsi,%rbx,8), %rsi
-	mov	%rbp, %rcx
-	mov	(%r14), %rdx
-	lea	8(%r14), %r14
-	jmp	*%rax
+	mov	(%rcx), %r9
+	mov	8(%rcx), %r8
 
-Lf0:	.byte	0xc4,98,171,0xf6,94,8
-	lea	8(%rdi,%rbx,8), %rdi
-	lea	-1(%rcx), %rcx
-	jmp	Lb0
+	lea	2(%rbx), %rbp
+	sar	$2, %rbp
 
-Lf3:	.byte	0xc4,98,155,0xf6,78,240
-	lea	-56(%rdi,%rbx,8), %rdi
-	jmp	Lb3
+	mov	(%rsi), %rdx
+	test	$1, %bl
+	jnz	Lbx1
 
-Lf4:	.byte	0xc4,98,171,0xf6,94,232
-	lea	-56(%rdi,%rbx,8), %rdi
-	jmp	Lb4
+Lbx0:	mov	(%rdi), %r14
+	mov	8(%rdi), %r15
+	.byte	0xc4,66,251,0xf6,217
+	add	%rax, %r14
+	.byte	0xc4,66,251,0xf6,224
+	adc	$0, %r11
+	mov	%r14, (%rdi)
+	add	%rax, %r15
+	adc	$0, %r12
+	mov	8(%rsi), %rdx
+	test	$2, %bl
+	jnz	Lb10
 
-Lf5:	.byte	0xc4,98,155,0xf6,78,224
-	lea	-56(%rdi,%rbx,8), %rdi
-	jmp	Lb5
+Lb00:	lea	16(%rsi), %rsi
+	lea	16(%rdi), %rdi
+	jmp	Llo0
 
-Lf6:	.byte	0xc4,98,171,0xf6,94,216
-	lea	-56(%rdi,%rbx,8), %rdi
-	jmp	Lb6
+Lb10:	mov	16(%rdi), %r14
+	lea	32(%rsi), %rsi
+	.byte	0xc4,66,251,0xf6,233
+	jmp	Llo2
 
-Lf7:	.byte	0xc4,98,155,0xf6,78,16
-	lea	8(%rdi,%rbx,8), %rdi
-	jmp	Lb7
+Lbx1:	mov	(%rdi), %r15
+	mov	8(%rdi), %r14
+	.byte	0xc4,66,251,0xf6,233
+	add	%rax, %r15
+	adc	$0, %r13
+	.byte	0xc4,66,251,0xf6,208
+	add	%rax, %r14
+	adc	$0, %r10
+	mov	8(%rsi), %rdx
+	mov	%r15, (%rdi)
+	.byte	0xc4,66,251,0xf6,217
+	test	$2, %bl
+	jz	Lb11
 
-Lf1:	.byte	0xc4,98,155,0xf6,14
-	lea	8(%rdi,%rbx,8), %rdi
-	jmp	Lb1
+Lb01:	mov	16(%rdi), %r15
+	lea	24(%rdi), %rdi
+	lea	24(%rsi), %rsi
+	jmp	Llo1
 
-Lam1end:
-	.byte	0xf3,76,0x0f,0x38,0xf6,39
-	.byte	0xf3,76,0x0f,0x38,0xf6,201		
-	mov	%r12, (%rdi)
-	adc	%rcx, %r9		
-	mov	%r9, 8(%rdi)
+Lb11:	lea	8(%rdi), %rdi
+	lea	8(%rsi), %rsi
+	jmp	Llo3
 
-	dec	%r8			
+	.align	4, 0x90
+Ltop:	.byte	0xc4,66,251,0xf6,233
+	add	%r10, %r15
+	adc	$0, %r12
+Llo2:	add	%rax, %r15
+	adc	$0, %r13
+	.byte	0xc4,66,251,0xf6,208
+	add	%rax, %r14
+	adc	$0, %r10
+	lea	32(%rdi), %rdi
+	add	%r11, %r15
+	mov	-16(%rsi), %rdx
+	mov	%r15, -24(%rdi)
+	adc	$0, %r13
+	add	%r12, %r14
+	mov	-8(%rdi), %r15
+	.byte	0xc4,66,251,0xf6,217
+	adc	$0, %r10
+Llo1:	add	%rax, %r14
+	.byte	0xc4,66,251,0xf6,224
+	adc	$0, %r11
+	add	%r13, %r14
+	mov	%r14, -16(%rdi)
+	adc	$0, %r11
+	add	%rax, %r15
+	adc	$0, %r12
+	add	%r10, %r15
+	mov	-8(%rsi), %rdx
+	adc	$0, %r12
+Llo0:	.byte	0xc4,66,251,0xf6,233
+	add	%rax, %r15
+	adc	$0, %r13
+	mov	(%rdi), %r14
+	.byte	0xc4,66,251,0xf6,208
+	add	%rax, %r14
+	adc	$0, %r10
+	add	%r11, %r15
+	mov	%r15, -8(%rdi)
+	adc	$0, %r13
+	mov	(%rsi), %rdx
+	add	%r12, %r14
+	.byte	0xc4,66,251,0xf6,217
+	adc	$0, %r10
+Llo3:	add	%rax, %r14
+	adc	$0, %r11
+	.byte	0xc4,66,251,0xf6,224
+	add	%r13, %r14
+	mov	8(%rdi), %r15
+	mov	%r14, (%rdi)
+	mov	16(%rdi), %r14
+	adc	$0, %r11
+	add	%rax, %r15
+	adc	$0, %r12
+	mov	8(%rsi), %rdx
+	lea	32(%rsi), %rsi
+	inc	%rbp
+	jnz	Ltop
+
+Lend:	.byte	0xc4,66,251,0xf6,233
+	add	%r10, %r15
+	adc	$0, %r12
+	add	%rax, %r15
+	adc	$0, %r13
+	.byte	0xc4,194,235,0xf6,192
+	add	%r11, %r15
+	mov	%r15, 8(%rdi)
+	adc	$0, %r13
+	add	%r12, %rdx
+	adc	$0, %rax
+	add	%r13, %rdx
+	mov	%rdx, 16(%rdi)
+	adc	$0, %rax
+	mov	%rax, 24(%rdi)
+
+	addl	$-2, (%rsp)
+	lea	16(%rcx), %rcx
+	lea	-16(%rsi,%rbx,8), %rsi
+	lea	32(%rdi,%rbx,8), %rdi
 	jnz	Louter
-Ldone:
-	pop	%r14
-	pop	%r12
-	pop	%rbp
+
+	pop	%rax		
+	pop	%r15
+Lret5:pop	%r14
+Lret4:pop	%r13
+Lret3:pop	%r12
+Lret2:pop	%rbp
 	pop	%rbx
 	
 	ret
-
-Lf2:	.byte	0xc4,98,171,0xf6,94,248
-	lea	8(%rdi,%rbx,8), %rdi
-	.byte	0xc4,98,155,0xf6,14
-
-	.align	4, 0x90
-Lam1top:
-	.byte	0xf3,76,0x0f,0x38,0xf6,87,248
-	.byte	0x66,77,0x0f,0x38,0xf6,227
-	mov	%r10, -8(%rdi)
-	jrcxz	Lam1end
-Lb1:	.byte	0xc4,98,171,0xf6,94,8
-	.byte	0xf3,76,0x0f,0x38,0xf6,39
-	lea	-1(%rcx), %rcx
-	mov	%r12, (%rdi)
-	.byte	0x66,77,0x0f,0x38,0xf6,209
-Lb0:	.byte	0xc4,98,155,0xf6,78,16
-	.byte	0x66,77,0x0f,0x38,0xf6,227
-	.byte	0xf3,76,0x0f,0x38,0xf6,87,8
-	mov	%r10, 8(%rdi)
-Lb7:	.byte	0xc4,98,171,0xf6,94,24
-	lea	64(%rsi), %rsi
-	.byte	0x66,77,0x0f,0x38,0xf6,209
-	.byte	0xf3,76,0x0f,0x38,0xf6,103,16
-	mov	%r12, 16(%rdi)
-Lb6:	.byte	0xc4,98,155,0xf6,78,224
-	.byte	0xf3,76,0x0f,0x38,0xf6,87,24
-	.byte	0x66,77,0x0f,0x38,0xf6,227
-	mov	%r10, 24(%rdi)
-Lb5:	.byte	0xc4,98,171,0xf6,94,232
-	.byte	0x66,77,0x0f,0x38,0xf6,209
-	.byte	0xf3,76,0x0f,0x38,0xf6,103,32
-	mov	%r12, 32(%rdi)
-Lb4:	.byte	0xc4,98,155,0xf6,78,240
-	.byte	0xf3,76,0x0f,0x38,0xf6,87,40
-	.byte	0x66,77,0x0f,0x38,0xf6,227
-	mov	%r10, 40(%rdi)
-Lb3:	.byte	0xf3,76,0x0f,0x38,0xf6,103,48
-	.byte	0xc4,98,171,0xf6,94,248
-	mov	%r12, 48(%rdi)
-	lea	64(%rdi), %rdi
-	.byte	0x66,77,0x0f,0x38,0xf6,209
-	.byte	0xc4,98,155,0xf6,14
-	jmp	Lam1top
-
-	.text
-	.align	3, 0x90
-Lmtab:.set	Lmf0_tmp, Lmf0-Lmtab
-	.long	Lmf0_tmp
-
-	.set	Lmf1_tmp, Lmf1-Lmtab
-	.long	Lmf1_tmp
-
-	.set	Lmf2_tmp, Lmf2-Lmtab
-	.long	Lmf2_tmp
-
-	.set	Lmf3_tmp, Lmf3-Lmtab
-	.long	Lmf3_tmp
-
-	.set	Lmf4_tmp, Lmf4-Lmtab
-	.long	Lmf4_tmp
-
-	.set	Lmf5_tmp, Lmf5-Lmtab
-	.long	Lmf5_tmp
-
-	.set	Lmf6_tmp, Lmf6-Lmtab
-	.long	Lmf6_tmp
-
-	.set	Lmf7_tmp, Lmf7-Lmtab
-	.long	Lmf7_tmp
-
-Latab:.set	Lf0_tmp, Lf0-Latab
-	.long	Lf0_tmp
-
-	.set	Lf1_tmp, Lf1-Latab
-	.long	Lf1_tmp
-
-	.set	Lf2_tmp, Lf2-Latab
-	.long	Lf2_tmp
-
-	.set	Lf3_tmp, Lf3-Latab
-	.long	Lf3_tmp
-
-	.set	Lf4_tmp, Lf4-Latab
-	.long	Lf4_tmp
-
-	.set	Lf5_tmp, Lf5-Latab
-	.long	Lf5_tmp
-
-	.set	Lf6_tmp, Lf6-Latab
-	.long	Lf6_tmp
-
-	.set	Lf7_tmp, Lf7-Latab
-	.long	Lf7_tmp
-
-	.text
 	

@@ -25,7 +25,6 @@ static u3qedj_coll*
 _push_stack(const u3a_pile *pil_u)
 {
   u3qedj_coll *res_u = u3a_push(pil_u);
-  u3a_pile_done(pil_u);
 
   res_u->col = u3_nul;
   res_u->key = u3_none;
