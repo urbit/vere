@@ -1749,6 +1749,7 @@ u3a_mark_road()
     qua_u[11]->siz_w = wee_w * 4;
   }
 
+  qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
   qua_u[12]->nam_c = strdup("ford memoization cache");
   qua_u[12]->siz_w = u3h_mark(u3R->cax.for_p) * 4;
 
