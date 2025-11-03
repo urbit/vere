@@ -665,6 +665,13 @@ _find_home(void)
     u3j_reclaim();
     u3H->pam_d = _pave_params();
   }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
