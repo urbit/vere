@@ -30,7 +30,6 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"
