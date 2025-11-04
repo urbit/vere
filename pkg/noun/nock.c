@@ -2261,15 +2261,12 @@ _cb_fresh_rewrite(u3_noun kev)
   u3n_prog*     pog_u = _cn_to_prog(pog);
   u3n_dire*     dir_u = pog_u->dir_u.dat_u;
   c3_w          len_w = pog_u->dir_u.len_w;
-  u3_noun       less_fol;
 
   for (c3_w i_w = 0; i_w < len_w; i_w++) {
-    less_fol = dir_u[i_w].pog_p;
-    pog = u3x_good(u3h_git(dar_p, less_fol));
+    pog = u3x_good(u3h_git(dar_p, dir_u[i_w].bell));
     //  uncompress loom offset
     //
     dir_u[i_w].pog_p = pog << u3a_vits;
-    u3z(less_fol);
   }
 }
 
@@ -3700,7 +3697,10 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
     u3j_rite_take(&(dst_u->reg_u.rit_u[i_w]),
                   &(src_u->reg_u.rit_u[i_w]));
   }
-  // XX take dir_u 
+
+  for ( i_w = 0; i_w < src_u->dir_u.len_w; ++i_w ) {
+    dst_u->dir_u.dat_u[i_w].bell = u3a_take(src_u->dir_u.dat_u[i_w].bell);
+  }
 }
 
 /*  _cn_take_prog_cb(): u3h_take_with cb for taking junior u3n_prog's.
@@ -3769,6 +3769,11 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
     u3j_rite_merge(&(dst_u->reg_u.rit_u[i_w]),
                    &(src_u->reg_u.rit_u[i_w]));
   }
+
+  for ( i_w = 0; i_w < src_u->dir_u.len_w; ++i_w ) {
+    u3z(dst_u->dir_u.dat_u[i_w].bell);
+    dst_u->dir_u.dat_u[i_w].bell = src_u->dir_u.dat_u[i_w].bell;
+  }
 }
 
 /*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
@@ -3798,13 +3803,65 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
 
 /* u3n_reap(): promote bytecode state.
 */
-//  XX add dar_p, lar_p in args
 void
 u3n_reap(u3p(u3h_root) har_p)
 {
   u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
   // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
   u3h_free(har_p);
+}
+
+static void
+_cn_larp_put_cb(u3_noun kev)
+{
+  u3_noun sock, fol, key;
+  c3_w             pog_w;
+  u3x_cell(kev, &key, &pog_w);
+  u3x_cell(key, &sock, &fol);
+  
+  u3_noun i_larp = u3nc(u3k(sock), pog_w);
+  u3h_jib(u3R->byc.lar_p, fol, _cb_jib_cons, &i_larp);
+}
+
+static void
+_cn_rebuild_larp(void)
+{
+  u3h_free(u3R->byc.lar_p);
+  u3R->byc.lar_p = u3h_new();
+  u3h_walk(u3R->byc.dar_p, _cn_larp_put_cb);
+}
+
+static void
+_cb_merge_rewrite(u3_noun kev)
+{
+  u3_noun key = u3h(kev);
+  c3_w pog_w = u3x_good(u3h_git(u3R->byc.dar_p, key));
+
+  u3p(u3h_root) dar_p = u3R->byc.dar_p;
+  u3n_prog*     pog_u = _cn_to_prog(pog_w);
+  u3n_dire*     dir_u = pog_u->dir_u.dat_u;
+  c3_w          len_w = pog_u->dir_u.len_w;
+
+  for (c3_w i_w = 0; i_w < len_w; i_w++) {
+    pog_w = u3x_good(u3h_git(dar_p, dir_u[i_w].bell));
+    //  uncompress loom offset
+    //
+    dir_u[i_w].pog_p = pog_w << u3a_vits;
+  }
+}
+
+/* u3n_reap_direct(): promote state of bytecode with direct calls
+*/
+void
+u3n_reap_direct(u3p(u3h_root) dar_p)
+{
+  if ( !u3h_wyt(dar_p) ) return;
+
+  u3h_walk_with(dar_p, _cn_merge_prog_cb, &u3R->byc.dar_p);
+  u3h_walk(dar_p, _cb_merge_rewrite);
+  _cn_rebuild_larp();
+
+  u3h_free(dar_p);
 }
 
 /* _n_ream(): ream program call sites
@@ -3880,6 +3937,10 @@ _n_prog_mark(u3n_prog* pog_u)
 
   for ( i_w = 0; i_w < pog_u->reg_u.len_w; ++i_w ) {
     tot_w += u3j_rite_mark(&(pog_u->reg_u.rit_u[i_w]));
+  }
+
+  for ( i_w = 0; i_w < pog_u->dir_u.len_w; ++i_w ) {
+    tot_w += u3a_mark_noun(pog_u->dir_u.dat_u[i_w].bell);
   }
 
   return tot_w;

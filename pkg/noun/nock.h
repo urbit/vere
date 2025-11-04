@@ -33,6 +33,7 @@
    */
   struct _u3n_prog;
   typedef struct {
+    u3_noun         bell;    //  [sock formula]
     u3p(_u3n_prog)  pog_p;   //  called program post or [less formula] during compilation
     u3j_harm*       ham_u;   //  jet arm, nullable
     c3_l            axe_l;   //  jet arm axis
@@ -115,6 +116,11 @@
      */
       void
       u3n_reap(u3p(u3h_root) har_p);
+
+    /* u3n_reap_direct(): promote state of bytecode with direct calls
+    */
+      void
+      u3n_reap_direct(u3p(u3h_root) dar_p);
 
     /* u3n_take(): copy junior bytecode state.
      */

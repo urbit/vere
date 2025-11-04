@@ -1236,10 +1236,7 @@ u3m_love(u3_noun pro)
   //  save cache pointers from current road
   //
   u3p(u3h_root) byc_har_p = u3R->byc.har_p;
-  //  XX integrate junior direct call tables
-  //
-  u3n_free_table(u3R->byc.dar_p);
-  u3h_free(u3R->byc.lar_p);
+  u3p(u3h_root) byc_dar_p = u3R->byc.dar_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3_noun       ka    = u3R->dir.ka;
@@ -1254,6 +1251,7 @@ u3m_love(u3_noun pro)
   ka    = u3a_take(ka);
   jed_u = u3j_take(jed_u);
   byc_har_p = u3n_take(byc_har_p);
+  byc_dar_p = u3n_take(byc_dar_p);
   per_p = u3h_take(per_p);
 
   //  pop the stack
@@ -1266,6 +1264,7 @@ u3m_love(u3_noun pro)
   //
   u3j_reap(jed_u);
   u3n_reap(byc_har_p);
+  u3n_reap_direct(byc_dar_p);
   u3z_reap(u3z_memo_keep, per_p);
   u3z(u3R->dir.ka), u3R->dir.ka = ka;
 

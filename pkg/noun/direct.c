@@ -207,7 +207,7 @@ u3d_search(u3_noun sub, u3_noun fol)
     u3d_prep_ka();
 
     u3n_prog* pog_u = NULL;
-    u3_weak lit = u3h_git(u3R->byc.lar_p, fol);
+    u3_weak lit = u3h_git(u3R->byc.lar_p, fol);  //  XX search on parent roads too
     if ( u3_none != lit )
     {
         u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
