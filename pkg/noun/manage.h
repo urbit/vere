@@ -9,7 +9,6 @@
 #include "c3/c3.h"
 #include "types.h"
 #include "version.h"
-#include "rsignal.h"
 
     /** System management.
     **/
