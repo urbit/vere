@@ -450,7 +450,7 @@ _get_now_micros()
 {
   struct timeval tim_u;
   gettimeofday(&tim_u, NULL);
-	return ((c3_d)tim_u.tv_sec * 1000ull) + ((c3_d)tim_u.tv_usec / 1000ull);
+	return ((c3_d)tim_u.tv_sec * 1000ull * 1000ull) + (c3_d)tim_u.tv_usec;
 }
 
 static c3_d
@@ -1739,7 +1739,7 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
 
       // XX the format of the lane %nail gives is (list (each @p address))
       //
-      u3_noun las = u3do("tail", u3k(dat));
+      u3_noun las = u3t(dat);
 
       if ( las == u3_nul ) {
         per_u->dan_u = (sockaddr_in){0};

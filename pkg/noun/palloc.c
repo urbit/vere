@@ -2220,7 +2220,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
 
   max_s = 1U << (u3a_page - rag_u->log_s);
 
-  if ( rag_u->pre_u.pag_w ) {
+  if ( rag_u->pre_u.fre_s ) {
     new_w = _pack_relocate_page(rag_u->pre_u.pag_w);
     new_s = hun_u->hun_s + rag_u->pre_u.pos_s;
     fre_s = rag_u->pre_u.fre_s;
