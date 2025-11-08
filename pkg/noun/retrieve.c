@@ -1941,3 +1941,15 @@ u3r_safe(u3_noun fol, u3_weak* out)
     }
   }
 }
+
+c3_w*
+u3r_word_buffer(u3_atom* a, c3_w* len_w)
+{
+  if ( _(u3a_is_cat(*a)) ) {
+    *len_w = 1;
+    return a;
+  }
+  u3a_atom* pug_u = u3a_to_ptr(*a);
+  *len_w = pug_u->len_w;
+  return pug_u->buf_w;
+}

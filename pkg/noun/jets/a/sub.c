@@ -6,6 +6,28 @@
 
 #include "noun.h"
 
+static void
+_sub_words(c3_w* a_buf_w,
+           c3_w  a_len_w,
+           c3_w* b_buf_w,
+           c3_w  b_len_w,
+           c3_w* restrict c_buf_w)
+{
+  c3_d dif_d, bor_d = 0;
+
+  for (c3_w i_w = 0; i_w < b_len_w; i_w++) {
+    dif_d = (c3_d)a_buf_w[i_w] - (c3_d)b_buf_w[i_w] - bor_d;
+    c_buf_w[i_w] = (c3_w)dif_d;
+    bor_d = dif_d >> 63;
+  }
+
+  for (c3_w i_w = b_len_w; i_w < a_len_w; i_w++) {
+    dif_d = (c3_d)a_buf_w[i_w] - bor_d;
+    c_buf_w[i_w] = (c3_w)dif_d;
+    bor_d = dif_d >> 63;
+  }
+}
+
 u3_noun
 u3qa_sub(u3_atom a,
          u3_atom b)
@@ -22,21 +44,22 @@ u3qa_sub(u3_atom a,
     return u3k(a);
   }
   else {
-    mpz_t a_mp, b_mp;
-
-    u3r_mp(a_mp, a);
-    u3r_mp(b_mp, b);
-
-    if ( mpz_cmp(a_mp, b_mp) < 0 ) {
-      mpz_clear(a_mp);
-      mpz_clear(b_mp);
-
+    if ( _(u3qa_lth(a, b)) ) {
       return u3m_error("subtract-underflow");
     }
-    mpz_sub(a_mp, a_mp, b_mp);
-    mpz_clear(b_mp);
+    if ( a == b ) {
+      return 0;
+    }
+    u3i_slab sab_u;
+    u3i_slab_init(&sab_u, 0, u3r_met(0, a));
+    
+    c3_w *a_buf_w, *b_buf_w, *c_buf_w = sab_u.buf_w;
+    c3_w  a_len_w, b_len_w;
+    a_buf_w = u3r_word_buffer(&a, &a_len_w);
+    b_buf_w = u3r_word_buffer(&b, &b_len_w);
 
-    return u3i_mp(a_mp);
+    _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
+    return u3i_slab_mint(&sab_u);
   }
 }
 

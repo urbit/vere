@@ -544,4 +544,7 @@
       c3_o
       u3r_safe(u3_noun fol, u3_weak* out);
 
+      c3_w*
+      u3r_word_buffer(u3_atom* a, c3_w* len_w);
+
 #endif /* ifndef U3_RETRIEVE_H */

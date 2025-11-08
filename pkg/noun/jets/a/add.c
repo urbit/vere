@@ -6,6 +6,38 @@
 
 #include "noun.h"
 
+static void
+_add_words(c3_w* a_buf_w,
+           c3_w  a_len_w,
+           c3_w* b_buf_w,
+           c3_w  b_len_w,
+           c3_w* restrict c_buf_w)
+{
+  c3_w min_w = c3_min(a_len_w, b_len_w);
+  c3_w max_w = c3_max(a_len_w, b_len_w);
+  c3_d sum_d = 0;
+
+  for (c3_w i_w = 0; i_w < min_w; i_w++) {
+    sum_d += (c3_d)a_buf_w[i_w] + (c3_d)b_buf_w[i_w];
+    c_buf_w[i_w] = (c3_w)sum_d;
+    sum_d >>= 32;
+  }
+
+  if ( a_len_w != b_len_w ) {
+    c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
+
+    for (c3_w i_w = min_w; i_w < max_w; i_w++) {
+      sum_d += rest_w[i_w];
+      c_buf_w[i_w] = (c3_w)sum_d;
+      sum_d >>= 32;
+    }
+  }
+
+  if ( sum_d ) {
+    c_buf_w[max_w] = (c3_w)sum_d;
+  }
+}
+
 u3_noun
 u3qa_add(u3_atom a,
          u3_atom b)
@@ -22,15 +54,18 @@ u3qa_add(u3_atom a,
     return u3k(a);
   }
   else {
-    mpz_t a_mp, b_mp;
+    u3i_slab sab_u;
+    c3_w a_bit_w = u3r_met(0, a);
+    c3_w b_bit_w = u3r_met(0, b);
+    u3i_slab_init(&sab_u, 0, c3_max(a_bit_w, b_bit_w) + 1);
 
-    u3r_mp(a_mp, a);
-    u3r_mp(b_mp, b);
+    c3_w *a_buf_w, *b_buf_w, *c_buf_w = sab_u.buf_w;
+    c3_w  a_len_w, b_len_w;
+    a_buf_w = u3r_word_buffer(&a, &a_len_w);
+    b_buf_w = u3r_word_buffer(&b, &b_len_w);
 
-    mpz_add(a_mp, a_mp, b_mp);
-    mpz_clear(b_mp);
-
-    return u3i_mp(a_mp);
+    _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
+    return u3i_slab_mint(&sab_u);
   }
 }
 
