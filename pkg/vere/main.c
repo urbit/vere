@@ -308,6 +308,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
+    { "jael-sources",        required_argument, NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -359,7 +360,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
           return c3n;
         }
-
+        break;
+      }
+      case 13: { //  jael-sources
+        u3_Host.ops_u.src_c = strdup(optarg);
         break;
       }
       //  special args
@@ -649,6 +653,11 @@ _main_getopt(c3_i argc, c3_c** argv)
 
   if ( u3_Host.ops_u.url_c != 0 && u3_Host.ops_u.pil_c != 0 ) {
     fprintf(stderr, "-B and -u cannot be used together\n");
+    return c3n;
+  }
+
+  if (u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.src_c != 0 ) {
+    fprintf(stderr, "--jael-sources only makes sense when creating a new ship\n");
     return c3n;
   }
   else if ( u3_Host.ops_u.nuu == c3y

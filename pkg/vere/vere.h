@@ -309,6 +309,7 @@
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
         u3_even* vex_u;                     //  --prop-*, boot enhancements
+        c3_c*   src_c;                      //  --jael-sources
 
         c3_o    beb;                        //  --behn-allow-blocked
         c3_z    siz_i;                      //  --lmdb-map-size

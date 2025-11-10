@@ -269,7 +269,7 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
 u3_noun
 u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 {
-  u3_noun fed, pos, pon, zar, tuf;
+  u3_noun fed, pos, pon, zar, tuf, src;
 
   u3_noun rank = u3do("clan:title", u3k(ship));
 
@@ -399,13 +399,20 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 
     u3z(son);
   }
+  
+  if ( 0 != u3_Host.ops_u.src_c ) {
+    src = u3v_wish(u3_Host.ops_u.src_c);
+  }
+  else {
+    src = u3_nul;
+  }
 
-  //  [%dawn seed sponsors galaxies domains block eth-url snap]
+  //  [%dawn seed sponsors galaxies domains block eth-url sources]
   //
   //NOTE  blocknum of 0 is fine because jael ignores it.
   //      should probably be removed from dawn event.
   u3_noun ven = u3nc(c3__dawn,
-                     u3nq(u3k(u3t(fed)), pon, zar, u3nt(tuf, 0, u3_nul)));
+                     u3nq(u3k(u3t(fed)), pon, zar, u3nq(tuf, 0, u3_nul, src)));
 
   u3z(fed); u3z(rank); u3z(pos); u3z(ship); u3z(feed);
 
