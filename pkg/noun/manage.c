@@ -664,6 +664,13 @@ _find_home(void)
     u3j_reclaim();
     u3H->pam_d = _pave_params();
   }
+
+  //  if for_p is zero then it is an old pier pre ford cache, initialize the
+  //  cache
+  //
+  if ( !u3R->cax.for_p ) {
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
