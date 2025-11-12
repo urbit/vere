@@ -1035,7 +1035,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         case DIRB: case TIRB: {
           _n_prog_asm_inx(buf_y, &i_w, dir_s, cod);
           u3n_dire* dir_u = &(pog_u->dir_u.dat_u[dir_s++]);
-          dir_u->pog_p = u3k(u3h(u3t(op)));  // [sock fol] pair, to be rewritten
+          dir_u->bell = u3k(u3h(u3t(op)));
           _direct_match_bell(dir_u, u3t(u3t(op)));
           break;
         }
@@ -2040,12 +2040,12 @@ _n_comp_direct(u3_noun* ops,
       }
       else {
         tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);
-        //  evaluate the formula for the formula and drop the result as we
+        //  evaluate the formula for the formula and toss the result as we
         //  already know it
         //
         ++tot_w; _n_emit(ops, SWAP);
         tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);
-        ++tot_w; _n_emit(ops, DROP);
+        ++tot_w; _n_emit(ops, TOSS);
         if ( c3n == los_o ) {
           //  [old bus] -> [bus old]
           ++tot_w; _n_emit(ops, SWAP);
