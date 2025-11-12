@@ -2039,10 +2039,17 @@ _n_comp_direct(u3_noun* ops,
         ++tot_w; _n_emit(ops, op_y);
       }
       else {
-        //  don't compile the formula for the formula, we already know the
-        //  result and it won't ever crash
+        tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);
+        //  evaluate the formula for the formula and drop the result as we
+        //  already know it
         //
-        tot_w += _n_comp_direct(ops, hed, los_o, c3n, queu, cole, code);
+        ++tot_w; _n_emit(ops, SWAP);
+        tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);
+        ++tot_w; _n_emit(ops, DROP);
+        if ( c3n == los_o ) {
+          //  [old bus] -> [bus old]
+          ++tot_w; _n_emit(ops, SWAP);
+        }
         boot = u3t(info);
         op_y = (c3y == tel_o) ? TIRB : DIRB; // overflows to TIRS/DIRS
         ++tot_w; _n_emit(ops, u3nt(op_y, u3k(boot), u3qdb_get(cole, boot)));
