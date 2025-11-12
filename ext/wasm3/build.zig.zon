@@ -1,14 +1,15 @@
 .{
-    .name = "wasm3",
+    .name = .wasm3,
     .version = "0.0.1",
+    .fingerprint = 0x377ef9510a920f6f,
     .dependencies = .{
         .softfloat = .{
             .path = "../softfloat",
         },
         .wasm3 = .{
             // .path = "../../../../wasm3"
-            .url = "https://github.com/urbit/wasm3/archive/5b74cbca01793cda71ebf707b0587616c32cc88c.tar.gz",
-            .hash = "N-V-__8AAMKiSAAPsGJG0ZVtc2hM3b-E6BnkoNexgXv1k0uD",
+            .url = "https://github.com/urbit/wasm3/archive/48832a8e023b57d671be6c0bab8608d30cb57101.tar.gz",
+            .hash = "N-V-__8AANAcSQBq71EmfSas8hV9_SOtu1AjOvuUcWZce5VM",
         },
     },
     .paths = .{

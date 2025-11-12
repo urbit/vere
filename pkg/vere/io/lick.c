@@ -157,7 +157,7 @@ _lick_close_cb(uv_handle_t* had_u)
 
 /* _lick_moor_poke(): called on message read from u3_moor.
 */
-static void
+static c3_o
 _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
 {
   u3_weak   put;
@@ -174,12 +174,12 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   put = u3s_cue_xeno_with(lic_u->sil_u, len_d, byt_y);
   if ( u3_none == put ) {
     can_u->mor_u.bal_f(can_u, -1, "cue-none");
-    return;
+    return c3y;
   }
   if ( c3n == u3r_cell(put, &nam, &dat) ) {
     can_u->mor_u.bal_f(can_u, -2, "put-bad");
     u3z(put);
-    return;
+    return c3y;
   }
 
   wir = u3nc(c3__lick, u3_nul);
@@ -188,6 +188,8 @@ _lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3_auto_peer(
     u3_auto_plan(&lic_u->car_u, u3_ovum_init(0, c3__l, wir, cad)),
     0, 0, 0);
+
+  return c3y;
 }
 
 /* _lick_close_chan(): close given channel, freeing.

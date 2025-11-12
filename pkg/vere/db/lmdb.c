@@ -198,7 +198,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
       return c3n;
     }
     else {
-      memcpy(&fir_d, key_u.mv_data, sizeof(c3_d));
+      fir_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  read with the cursor from the end of the database
@@ -206,7 +206,7 @@ u3_lmdb_gulf(MDB_env* env_u, c3_d* low_d, c3_d* hig_d)
     ret_w = mdb_cursor_get(cur_u, &key_u, &val_u, MDB_LAST);
 
     if ( !ret_w ) {
-      memcpy(&las_d, key_u.mv_data, sizeof(c3_d));
+      las_d = c3_sift_chub(key_u.mv_data);
     }
 
     //  clean up unconditionally, we're done
@@ -305,7 +305,7 @@ u3_lmdb_read(MDB_env* env_u,
 
         //  sanity check: ensure contiguous event numbers
         //
-        if ( *(c3_d*)key_u.mv_data != cur_d ) {
+        if ( c3_sift_chub(key_u.mv_data) != cur_d ) {
           fprintf(stderr, "lmdb: read gap: expected %" PRIu64
                           ", received %" PRIu64 "\r\n",
                           cur_d,
@@ -588,11 +588,11 @@ u3_lmdb_walk_next(u3_lmdb_walk* itr_u, size_t* len_i, void** buf_v)
 
   //  sanity check: ensure contiguous event numbers
   //
-  if ( *(c3_d*)key_u.mv_data != itr_u->nex_d ) {
+  if ( c3_sift_chub(key_u.mv_data) != itr_u->nex_d ) {
     fprintf(stderr, "lmdb: read gap: expected %" PRIu64
                     ", received %" PRIu64 "\r\n",
                     itr_u->nex_d,
-                    *(c3_d*)key_u.mv_data);
+                    c3_sift_chub(key_u.mv_data));
     return c3n;
   }
 
@@ -625,11 +625,15 @@ void mdb_logerror(FILE* f, int err, const char* fmt, ...)
   fprintf(f, ": %s\r\n", mdb_strerror(err));
 }
 
+#ifndef U3_OS_windows
+
 /* mdb_get_filesize(): gets the size of a lmdb database file on disk.
-*/
+ */
 intmax_t mdb_get_filesize(mdb_filehandle_t han_u)
 {
   struct stat sat_u;
   fstat(han_u, &sat_u);
   return (intmax_t)sat_u.st_size;
 }
+
+#endif
