@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "rsignal.h"
 
   /**  Constants.
   **/
@@ -144,10 +145,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
-
+        u3p(u3h_root) lop_p;                  //  %loop hint set
         u3_noun tim;                          //  list of absolute deadlines
 
-        c3_w fut_w[29];                       //  futureproof buffer
+        c3_w fut_w[28];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {

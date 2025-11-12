@@ -79,11 +79,9 @@ _term_alloc(uv_handle_t* had_u,
             )
 {
   //  this read can range from a single byte to a paste buffer
-  //  123 bytes has been chosen because its not a power of 2
-  //  this is probably still broken
   //
-  void* ptr_v = c3_malloc(123);
-  *buf = uv_buf_init(ptr_v, 123);
+  void* ptr_v = c3_malloc(128);
+  *buf = uv_buf_init(ptr_v, 128);
 }
 
 /* u3_term_log_init(): initialize terminal for logging
@@ -798,16 +796,7 @@ _term_suck(u3_utty* uty_u, const c3_y* buf, ssize_t siz_i)
 {
   {
     if ( siz_i == UV_EOF ) {
-      //  We hear EOF (on the third read callback) if
-      //  2x the _term_alloc() buffer size is pasted.
-      //  The process hangs if we do nothing (and ctrl-z
-      //  then corrupts the event log), so we force shutdown.
-      //
-      u3l_log("term: hangup (EOF)");
-
-      //  XX revise
-      //
-      u3_pier_bail(u3_king_stub());
+      return;
     }
     else if ( siz_i < 0 ) {
       u3l_log("term %d: read: %s", uty_u->tid_l, uv_strerror(siz_i));
