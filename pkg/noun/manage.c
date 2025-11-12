@@ -530,7 +530,7 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
-
+  u3R->lop_p     = u3h_new();
   u3R->how.fag_w = 0;
 }
 
@@ -664,6 +664,13 @@ _find_home(void)
     u3n_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
+  }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
   }
 }
 
