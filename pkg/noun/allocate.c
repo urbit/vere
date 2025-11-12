@@ -1810,7 +1810,8 @@ u3a_ream(void)
   _poison_pages();
   _poison_words();
 
-  _sane_dell();
+  //  XX enable behind flag
+  // _sane_dell();
 }
 
 void
