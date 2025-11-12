@@ -6,6 +6,22 @@
 
 #include "noun.h"
 
+#if defined(__x86_64__)
+#include <immintrin.h>
+#endif
+
+#ifdef __IMMINTRIN_H
+#define _addcarry_w _addcarry_u32
+#else
+static inline c3_y
+_addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+{
+  c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
+  *c_w = (c3_w)sum_d;
+  return (c3_b)(sum_d >> 32);
+}
+#endif
+
 static void
 _add_words(c3_w* a_buf_w,
            c3_w  a_len_w,
@@ -15,26 +31,22 @@ _add_words(c3_w* a_buf_w,
 {
   c3_w min_w = c3_min(a_len_w, b_len_w);
   c3_w max_w = c3_max(a_len_w, b_len_w);
-  c3_d sum_d = 0;
+  c3_b car_b = 0;
 
   for (c3_w i_w = 0; i_w < min_w; i_w++) {
-    sum_d += (c3_d)a_buf_w[i_w] + (c3_d)b_buf_w[i_w];
-    c_buf_w[i_w] = (c3_w)sum_d;
-    sum_d >>= 32;
+    car_b = _addcarry_w(car_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
   }
 
   if ( a_len_w != b_len_w ) {
     c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
 
     for (c3_w i_w = min_w; i_w < max_w; i_w++) {
-      sum_d += rest_w[i_w];
-      c_buf_w[i_w] = (c3_w)sum_d;
-      sum_d >>= 32;
+      car_b = _addcarry_w(car_b, rest_w[i_w], 0, &c_buf_w[i_w]);
     }
   }
 
-  if ( sum_d ) {
-    c_buf_w[max_w] = (c3_w)sum_d;
+  if ( car_b ) {
+    c_buf_w[max_w] = 1;
   }
 }
 
