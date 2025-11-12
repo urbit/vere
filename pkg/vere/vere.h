@@ -94,6 +94,7 @@
       typedef struct _u3_moat {
         uv_pipe_t        pyp_u;             //  input stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
         u3_moor_poke     pok_f;             //  action function
         u3_mess          mes_u;             //  message in progress
@@ -107,6 +108,7 @@
       typedef struct _u3_mojo {
         uv_pipe_t        pyp_u;             //  output stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
       } u3_mojo;
 
@@ -114,6 +116,7 @@
       typedef struct _u3_moor {
         uv_pipe_t        pyp_u;             //  duplex stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
         u3_moor_poke     pok_f;             //  action function
         u3_mess          mes_u;             //  message in progress

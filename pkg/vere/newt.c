@@ -181,6 +181,9 @@ _newt_read_cb(uv_stream_t*    str_u,
       fprintf(stderr, "newt: read failed %s\r\n", uv_strerror(len_i));
       mot_u->bal_f(mot_u->ptr_v, len_i, uv_strerror(len_i));
     }
+    else if ( !mot_u->fag_w ) {
+      mot_u->bal_f(mot_u->ptr_v, len_i, uv_strerror(len_i));
+    }
 
   }
   //  EAGAIN/EWOULDBLOCK
