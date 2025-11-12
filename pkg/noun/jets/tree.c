@@ -2617,7 +2617,6 @@ u3j_core _a50_d[] =
   { "mix", 7,  _140_two_mix_a, 0, _140_two_mix_ha },
   { "mor", 7,  _140_two_mor_a, 0, _140_two_mor_ha },
   { "mug", 7,  _140_two_mug_a, 0, _140_two_mug_ha },
-  { "muk", 59, _140_two_muk_a, 0, _140_two_muk_ha },  //  TODO: why 59?
   { "rep", 7,  _140_two_rep_a, 0, _140_two_rep_ha },
   { "rip", 7,  _140_two_rip_a, 0, _140_two_rip_ha },
   { "rsh", 7,  _140_two_rsh_a, 0, _140_two_rsh_ha },
@@ -2638,12 +2637,14 @@ u3j_core _a50_d[] =
 };
 
 extern u3j_core _k137_d[];
+extern u3j_core _k136_d[];
 
 static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
   { "k139", 0, 0, _k139_d, no_hashes, 0, (u3j_core*) 139,     0 },
   { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
   { "k137", 0, 0, _k137_d, no_hashes, 0, (u3j_core*) 137,     0 },
+  { "k136", 0, 0, _k136_d, no_hashes, 0, (u3j_core*) 136,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };

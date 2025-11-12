@@ -1,5 +1,6 @@
 .{
-    .name = "backtrace",
+    .name = .backtrace,
+    .fingerprint = 0xa7c996f4b29cd817,
     .version = "0.0.1",
     .dependencies = .{
         .backtrace = .{

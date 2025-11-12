@@ -1,5 +1,6 @@
 .{
-    .name = "noun",
+    .name = .noun,
+    .fingerprint = 0x417412dd00c7ed8c,
     .version = "0.0.1",
     .dependencies = .{
         .macos_sdk = .{
@@ -55,6 +56,9 @@
         },
         .wasm3 = .{
             .path = "../../ext/wasm3",
+        },
+        .tracy = .{
+            .path = "../../ext/tracy",
         },
     },
     .paths = .{

@@ -1,5 +1,6 @@
 .{
-    .name = "c3",
+    .name = .c3,
+    .fingerprint = 0xb0d94b8d21880022,
     .version = "0.0.1",
     .dependencies = .{
         .macos_sdk = .{

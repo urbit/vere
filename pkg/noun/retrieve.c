@@ -359,7 +359,8 @@ _cr_sing_atom(u3_atom a, u3_noun b)
 static inline c3_o
 _cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
 {
-  u3_noun key = u3nc(u3a_to_off(a), u3a_to_off(b));
+  u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
+                     u3a_to_off(b) >> u3a_vits);
   u3_noun val;
 
   u3t_off(euq_o);
@@ -380,7 +381,10 @@ _cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
   //  only store if [a] and [b] are copies of each other
   //
   if ( a != b ) {
-    u3_noun key = u3nc(u3a_to_off(a), u3a_to_off(b));
+    c3_dessert( (c3n == u3a_is_cat(a)) && (c3n == u3a_is_cat(b)) );
+
+    u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
+                       u3a_to_off(b) >> u3a_vits);
     u3t_off(euq_o);
     u3h_put(har_p, key, c3y);
     u3t_on(euq_o);
@@ -1860,4 +1864,80 @@ u3r_skip(u3_noun fol)
     }
   }
   return u3_none;
+}
+
+/* u3r_safe():
+**
+**  Returns yes if the formula won't crash
+**  and has no hints, returning constant result
+**  if possible. *out is undefined if the return
+**  is c3n
+*/
+c3_o
+u3r_safe(u3_noun fol, u3_weak* out)
+{
+  u3_noun h_fol, t_fol;
+  c3_o saf_o;
+
+  if ( c3n == u3r_cell(fol, &h_fol, &t_fol) ) {
+    return c3n;
+  }
+  switch ( h_fol ) {
+    default: return c3n;
+    case 0:
+      *out = u3_none;
+      return __(1 == t_fol);
+      
+    case 1:
+      *out = t_fol;
+      return c3y;
+
+    case 3: {
+      u3_weak o;
+      saf_o = u3r_safe(t_fol, &o);
+      if ( _(saf_o) ) {
+        *out = (u3_none == o) ? u3_none : u3du(o);
+      }
+      return saf_o;
+    }
+
+    case 5: {
+      u3_noun p, q;
+      u3_weak o1, o2;
+      saf_o = c3a(u3r_cell(t_fol, &p, &q),
+              c3a(u3r_safe(p, &o1), u3r_safe(q, &o2)));
+
+      if ( _(saf_o) ) {
+        *out = (u3_none == o1) ? u3_none
+             : (u3_none == o2) ? u3_none
+             : u3r_sing(o1, o2);
+      }
+      return saf_o;
+    }
+
+    case 6: {
+      u3_noun p, q, r;
+      u3_weak o;
+      saf_o = c3a(u3r_trel(t_fol, &p, &q, &r), u3r_safe(p, &o));
+
+      if ( _(saf_o) ) {
+        switch ( o ) {
+          case c3y:  return u3r_safe(q, out);
+          case c3n:  return u3r_safe(r, out);
+          default:   return c3n;
+        }
+      }
+      else {
+        return c3n;
+      }
+    }
+
+    case 7:
+    case 8: {
+      u3_noun p, q;
+      u3_weak o;
+      return c3a(u3r_cell(t_fol, &p, &q),
+             c3a(u3r_safe(p, &o), u3r_safe(q, out)));
+    }
+  }
 }

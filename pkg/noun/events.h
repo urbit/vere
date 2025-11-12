@@ -13,15 +13,15 @@
     */
       typedef struct _u3e_line {
         c3_w pag_w;
-        c3_w mug_w;
+        c3_w has_w;
       } u3e_line;
 
     /* u3e_control: memory change, control file.
     */
       typedef struct _u3e_control {
         u3e_version ver_w;                  //  version number
-        c3_w        nor_w;                  //  new page count north
-        c3_w        sou_w;                  //  new page count south
+        c3_w        has_w;                  //  control checksum
+        c3_w        tot_w;                  //  new page count
         c3_w        pgs_w;                  //  number of changed pages
         u3e_line    mem_u[];                //  per page
       } u3e_control;
@@ -31,6 +31,7 @@
       typedef struct _u3_cs_patch {
         c3_i         ctl_i;
         c3_i         mem_i;
+        c3_w         sip_w;
         u3e_control* con_u;
       } u3_ce_patch;
 
@@ -50,8 +51,7 @@
         c3_w      dit_w[u3a_pages >> 5];     //  touched since last save
         c3_w      pag_w;                     //  number of pages (<= u3a_pages)
         c3_w      gar_w;                     //  guard page
-        u3e_image nor_u;                     //  north segment
-        u3e_image sou_u;                     //  south segment
+        u3e_image img_u;                     //  image
       } u3e_pool;
 
     /* u3e_flaw: loom fault result.
@@ -124,5 +124,8 @@
     */
       void
       u3e_ward(u3_post low_p, u3_post hig_p);
+
+      c3_i
+      u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z);
 
 #endif /* ifndef U3_EVENTS_H */

@@ -5,6 +5,7 @@
 #include "allocate.h"
 #include "hashtable.h"
 #include "imprison.h"
+#include "options.h"
 #include "vortex.h"
 
 /* u3z_key(): construct a memo cache-key.  Arguments retained.
@@ -54,7 +55,9 @@ _har(u3a_road* rod_u, u3z_cid cid)
 u3_weak
 u3z_find(u3z_cid cid, u3_noun key)
 {
-  if ( u3z_memo_toss == cid ) {
+  if ( (u3z_memo_toss == cid) || (u3R->how.fag_w & u3a_flag_cash) ) {
+    // XX under cash lookup in parent roads,
+    // copying cache hits into the current road
     return u3h_get(_har(u3R, cid), key);
   }
   else {
@@ -72,6 +75,26 @@ u3z_find(u3z_cid cid, u3_noun key)
     };
   }
 }
+
+/* u3z_find_up(): find in persistent memo cache,
+  starting from the current road. Arguments retained
+*/
+u3_weak
+u3z_find_up(u3_noun key)
+{
+  u3a_road* rod_u = u3R;
+  while ( 1 ) {
+    u3_weak got = u3h_get(_har(rod_u, u3z_memo_keep), key);
+    if ( u3_none != got ) {
+      return got;
+    }
+    if ( rod_u == &(u3H->rod_u) ) {
+      return u3_none;
+    }
+    rod_u = u3to(u3a_road, rod_u->par_p);
+  }
+}
+
 u3_weak
 u3z_find_m(u3z_cid cid, c3_m fun, u3_noun one)
 {

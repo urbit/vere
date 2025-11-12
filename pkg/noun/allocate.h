@@ -12,7 +12,7 @@
 
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
-#     define u3a_vits    1
+#     define u3a_vits    2
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
@@ -48,66 +48,76 @@
 
     /* u3a_maximum: maximum loom object size (largest possible atom).
     */
-#     define u3a_maximum ( u3a_words - (c3_wiseof(u3a_box) + c3_wiseof(u3a_atom) + 1))
+#     define u3a_maximum (u3a_words - c3_wiseof(u3a_atom))
 
     /* u3a_minimum: minimum loom object size (actual size of a cell).
     */
-#     define u3a_minimum ((c3_w)( 1 + c3_wiseof(u3a_box) + c3_wiseof(u3a_cell) ))
+#     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
 
-    /* u3a_fbox_no: number of free lists per size.
+    /* u3a_min_log: log2(u3a_minimum)
     */
-#     define u3a_fbox_no 27
+#     define u3a_min_log  2
+
+    /* u3a_crag_no: number of hunk (small allocation) sizes
+    */
+#     define u3a_crag_no  (u3a_page - u3a_min_log)
+
+    /* page table constants
+    */
+#     define u3a_free_pg  (u3p(u3a_crag))0
+#     define u3a_head_pg  (u3p(u3a_crag))1
+#     define u3a_rest_pg  (u3p(u3a_crag))2
 
   /**  Structures.
   **/
+      typedef struct {
+        c3_w use_w;
+        c3_w buf_w[0];
+      } u3a_rate;
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
       typedef struct {
+        c3_w use_w;
         c3_w mug_w;
       } u3a_noun;
 
       typedef struct {
+        c3_w use_w;
         c3_w mug_w;
         c3_w len_w;
         c3_w buf_w[0];
       } u3a_atom;
 
       typedef struct {
-        c3_w    mug_w;
+        c3_w  use_w;
+        c3_w  mug_w;
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
 
-    /* u3a_box: classic allocation box.
-    **
-    ** The box size is also stored at the end of the box in classic
-    ** bad ass malloc style.  Hence a box is:
-    **
-    **    ---
-    **    siz_w
-    **    use_w
-    **      user data
-    **    siz_w
-    **    ---
-    **
-    ** Do not attempt to adjust this structure!
-    */
-      typedef struct _u3a_box {
-        c3_w   siz_w;                       // size of this box
-        c3_w   use_w;                       // reference count; free if 0
-#       ifdef U3_MEMORY_DEBUG
-          c3_w   eus_w;                     // recomputed refcount
-          c3_w   cod_w;                     // tracing code
-#       endif
-      } u3a_box;
+STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
+               "log2 minimum allocation" );
+STATIC_ASSERT( u3a_vits <= u3a_min_log,
+               "virtual-bit alignment" );
 
-    /* u3a_fbox: free node in heap.  Sets minimum node size.
+    /* u3a_crag: hunk-page metadata
     */
-      typedef struct _u3a_fbox {
-        u3a_box               box_u;
-        u3p(struct _u3a_fbox) pre_p;
-        u3p(struct _u3a_fbox) nex_p;
-      } u3a_fbox;
+      typedef struct _u3a_crag {
+        u3p(struct _u3a_crag) nex_p;     //  next
+        c3_w                  pag_w;     //  page index
+        c3_s                  log_s;     //  size log2
+        c3_s                  fre_s;     //  free chunks
+        c3_w                  map_w[1];  //  free-chunk bitmap
+      } u3a_crag;
+
+    /* u3a_dell: page free-list entry
+    */
+      typedef struct _u3a_dell {
+        u3p(struct _u3a_dell) nex_p;     //  next
+        u3p(struct _u3a_dell) pre_p;     //  prev
+        c3_w                  pag_w;     //  page index
+        c3_w                  siz_w;     //  number of pages
+      } u3a_dell;
 
     /* u3a_jets: jet dashboard
     */
@@ -132,7 +142,10 @@
         u3p(c3_w) rut_p;                      //  bottom of durable region
         u3p(c3_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_w off_w;                           //  spin stack offset
+        c3_w fow_w;                           //  spin stack overflow count
+
+        c3_w fut_w[30];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -145,12 +158,29 @@
           c3_w fag_w;                         //  flag bits
         } how;                                //
 
+        //  XX re/move
         struct {                              //  allocation pools
-          u3p(u3a_fbox) fre_p[u3a_fbox_no];   //  heap by node size log
-          u3p(u3a_fbox) cel_p;                //  custom cell allocator
           c3_w fre_w;                         //  number of free words
           c3_w max_w;                         //  maximum allocated
         } all;
+
+        struct {                              //    heap allocator
+          u3p(u3a_dell)  fre_p;               //  free list entry
+          u3p(u3a_dell)  erf_p;               //  free list exit
+          u3p(u3a_dell)  cac_p;               //  cached pgfree struct
+          c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
+          c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
+          c3_w           siz_w;               //  directory size
+          c3_w           len_w;               //  directory entries
+          u3p(u3a_crag*) pag_p;               //  directory
+          u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+        } hep;
+
+        struct {                              //    cell pool
+          u3_post cel_p;                      //  array of cells
+          c3_w    hav_w;                      //  length
+          c3_w    bat_w;                      //  batch counter
+        } cel;
 
         u3a_jets jed;                         //  jet dashboard
 
@@ -185,7 +215,8 @@
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 0x1,                 //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
@@ -201,19 +232,6 @@
 
   /**  Macros.  Should be better commented.
   **/
-    /* In and out of the box.
-       u3a_boxed -> sizeof u3a_box + allocation size (len_w) + 1 (for storing the redundant size)
-       u3a_boxto -> the region of memory adjacent to the box.
-       u3a_botox -> the box adjacent to the region of memory
-    */
-#     define u3a_boxed(len_w)  (len_w + c3_wiseof(u3a_box) + 1)
-#     define u3a_boxto(box_v)  ( (void *) \
-                                   ( (u3a_box *)(void *)(box_v) + 1 ) )
-#     define u3a_botox(tox_v)  ( (u3a_box *)(void *)(tox_v) - 1 )
-
-    /* Inside a noun.
-    */
-
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
 #     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
@@ -340,7 +358,7 @@
                   ? c3n \
                   : _(u3a_is_junior(r, som)) \
                   ? c3n \
-                  : (u3a_botox(u3a_to_ptr(som))->use_w == 1) \
+                  : (((u3a_rate*)u3a_to_ptr(som))->use_w == 1) \
                   ? c3y : c3n )
 
 /* like _box_vaal but for rods. Again, probably want to prefix validation
@@ -366,6 +384,40 @@
              } while(0)
 
 
+typedef struct _u3a_mark {
+  c3_w    wee_w[u3a_crag_no];
+  c3_w*   bit_w;
+  //  XX factor out?
+  c3_w    siz_w;
+  c3_w    len_w;
+  c3_w*   buf_w;
+} u3a_mark;
+
+typedef struct _u3a_gack {
+  c3_w *bit_w;  //  mark bits
+  c3_w *pap_w;  //  global page bitmap
+  c3_w *pum_w;  //  global cumulative sums
+  //  XX factor out?
+  c3_w  siz_w;
+  c3_w  len_w;
+  c3_w *buf_w;
+} u3a_gack;
+
+typedef struct {
+  c3_s log_s;     //  size log2
+  c3_s len_s;     //  1U << log_s
+  c3_s tot_s;     //  total chunks
+  c3_s map_s;     //  bitmap size
+  c3_s siz_s;     //  wiseof(crag) - 1 + map_s
+  c3_s hun_s;     //  chunks reserved
+  c3_s ful_s;     //  tot_s - hun_s
+} u3a_hunk_dose;
+
+      extern u3a_gack u3a_Gack;
+
+      extern u3a_mark u3a_Mark;
+
+      extern u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
   /**  Globals.
   **/
@@ -489,6 +541,42 @@
 
   /**  Functions.
   **/
+
+void
+u3a_init_once(void);
+void
+u3a_init_heap(void);
+void
+u3a_drop_heap(u3_post cap_p, u3_post ear_p);
+void
+u3a_mark_init(void);
+void*
+u3a_mark_alloc(c3_w len_w);
+void
+u3a_mark_done(void);
+
+void
+u3a_pack_init(void);
+void*
+u3a_pack_alloc(c3_w len_w);
+void
+u3a_pack_done(void);
+
+void*
+u3a_into_fn(u3_post);
+u3_post
+u3a_outa_fn(void*);
+u3_post
+u3a_to_off_fn(u3_noun);
+u3a_noun*
+u3a_to_ptr_fn(u3_noun);
+u3_noun
+u3a_head(u3_noun);
+u3_noun
+u3a_tail(u3_noun);
+void
+u3a_post_info(u3_post);
+
     /**  Allocation.
     **/
       /* Word-aligned allocation.
@@ -614,30 +702,25 @@
           void
           u3a_reclaim(void);
 
+        /* u3a_relocate_post(): replace post with relocation pointer (unchecked).
+        */
+          void
+          u3a_relocate_post(u3_post *som_p);
+
+        /* u3a_mark_relocate_post(): replace post with relocation pointer (checked).
+        */
+          u3_post
+          u3a_mark_relocate_post(u3_post som_p, c3_t *fir_t);
+
+        /* u3a_relocate_noun(): replace noun with relocation reference, recursively.
+        */
+          void
+          u3a_relocate_noun(u3_noun *som);
+
         /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
         */
           void
           u3a_rewrite_compact(void);
-
-        /* u3a_rewrite_ptr(): mark a pointer as already having been rewritten
-        */
-          c3_o
-          u3a_rewrite_ptr(void* ptr_v);
-
-        /* u3a_rewrite_noun(): rewrite a noun for compaction.
-        */
-          void
-          u3a_rewrite_noun(u3_noun som);
-
-        /* u3a_rewritten(): rewrite a pointer for compaction.
-        */
-          u3_post
-          u3a_rewritten(u3_post som_p);
-
-        /* u3a_rewritten(): rewritten noun pointer for compaction.
-        */
-          u3_noun
-          u3a_rewritten_noun(u3_noun som);
 
         /* u3a_count_noun(): count size of noun.
         */
@@ -666,6 +749,12 @@
         */
           void
           u3a_ream(void);
+
+void
+u3a_wait(void);
+
+void
+u3a_dash(void);
 
         /* u3a_sweep(): sweep a fully marked road.
         */
@@ -707,10 +796,16 @@
           void
           u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
 
-        /* u3a_print_memory(): print memory amount.
+        /* u3a_print_memory(): print memory amount to file descriptor.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_print_memory(): print memory amount to string.
+        */
+          void
+          u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
+
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*

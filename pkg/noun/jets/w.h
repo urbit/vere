@@ -138,6 +138,7 @@
     u3_noun u3we_lore(u3_noun);
     u3_noun u3we_loss(u3_noun);
     u3_noun u3we_lune(u3_noun);
+    u3_noun u3we_mice(u3_noun);
     u3_noun u3we_mink(u3_noun);
     u3_noun u3we_mole(u3_noun);
     u3_noun u3we_mule(u3_noun);
@@ -234,6 +235,9 @@
     u3_noun u3we_chacha_crypt(u3_noun);
     u3_noun u3we_chacha_xchacha(u3_noun);
 
+    u3_noun u3we_adler32(u3_noun);
+    u3_noun u3we_crc32(u3_noun);
+
     u3_noun u3we_ripe(u3_noun);
 
     u3_noun u3we_make(u3_noun);
@@ -315,9 +319,36 @@
     u3_noun u3wes_gth(u3_noun);
 
     u3_noun u3we_crc32(u3_noun);
+    u3_noun u3we_decompress_zlib(u3_noun);
+    u3_noun u3we_decompress_gzip(u3_noun);
 
-    u3_noun u3we_lia_run(u3_noun);
+    u3_noun u3we_lia_run_v1(u3_noun);
     u3_noun u3we_lia_run_once(u3_noun);
+
+    //+|  %utilities
+    u3_noun u3we_bytestream_rip_octs(u3_noun);
+    u3_noun u3we_bytestream_cat_octs(u3_noun);
+    u3_noun u3we_bytestream_can_octs(u3_noun);
+    //+|  %navigation
+    u3_noun u3we_bytestream_skip_line(u3_noun);
+    u3_noun u3we_bytestream_find_byte(u3_noun);
+    u3_noun u3we_bytestream_seek_byte(u3_noun);
+    //+|  %read-byte
+    u3_noun  u3we_bytestream_read_byte(u3_noun);
+    //+|  %read-octs
+    u3_noun  u3we_bytestream_read_octs(u3_noun);
+    //+|  %transformation
+    u3_noun u3we_bytestream_chunk(u3_noun);
+    u3_noun u3we_bytestream_extract(u3_noun);
+    u3_noun u3we_bytestream_fuse_extract(u3_noun);
+    //+|  %bitstream
+    u3_noun u3we_bytestream_need_bits(u3_noun);
+    u3_noun u3we_bytestream_drop_bits(u3_noun);
+    // u3_noun u3we_bytestream_skip_bits(u3_noun);
+    u3_noun u3we_bytestream_peek_bits(u3_noun);
+    u3_noun u3we_bytestream_read_bits(u3_noun);
+    // u3_noun u3we_bytestream_read_need_bits(u3_noun);
+    u3_noun u3we_bytestream_byte_bits(u3_noun);
 
   /** Tier 6.
   **/
@@ -355,6 +386,7 @@
     u3_noun u3wfu_fond(u3_noun);
     u3_noun u3wfu_fish(u3_noun);
     u3_noun u3wfu_fuse(u3_noun);
+    u3_noun u3wfu_redo(u3_noun);
     u3_noun u3wfu_mint(u3_noun);
     u3_noun u3wfu_mull(u3_noun);
     u3_noun u3wfu_nest_dext(u3_noun);
