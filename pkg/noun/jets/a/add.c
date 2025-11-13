@@ -37,12 +37,10 @@ _add_words(c3_w* a_buf_w,
     car_b = _addcarry_w(car_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
   }
 
-  if ( a_len_w != b_len_w ) {
-    c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
+  c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
 
-    for (c3_w i_w = min_w; i_w < max_w; i_w++) {
-      car_b = _addcarry_w(car_b, rest_w[i_w], 0, &c_buf_w[i_w]);
-    }
+  for (c3_w i_w = min_w; i_w < max_w; i_w++) {
+    car_b = _addcarry_w(car_b, rest_w[i_w], 0, &c_buf_w[i_w]);
   }
 
   if ( car_b ) {
