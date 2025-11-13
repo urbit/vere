@@ -1957,6 +1957,20 @@ _cn_to_prog(c3_w pog_w)
   return u3to(u3n_prog, pog_p);
 }
 
+//  check that nomm is safe to skip, assuming its product is known and is used
+//  as a Nock formula
+//
+static c3_t
+_nomm_fol_fol_safe(u3_noun nomm)
+{
+  switch ( u3h(nomm) ) {
+    default: return false;
+    case 0:
+    case 1:
+      return true;
+  }
+}
+
 // RETAINS
 //
 static c3_w
@@ -2039,16 +2053,22 @@ _n_comp_direct(u3_noun* ops,
         ++tot_w; _n_emit(ops, op_y);
       }
       else {
-        tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);
-        //  evaluate the formula for the formula and toss the result as we
-        //  already know it
-        //
-        ++tot_w; _n_emit(ops, SWAP);
-        tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);
-        ++tot_w; _n_emit(ops, TOSS);
-        if ( c3n == los_o ) {
-          //  [old bus] -> [bus old]
-          ++tot_w; _n_emit(ops, SWAP);
+        if ( _nomm_fol_fol_safe(tel) ) {
+          //  skip evaluating formula-formula as we know its result and it won't
+          //  crash
+          tot_w += _n_comp_direct(ops, hed, los_o, c3n, queu, cole, code);
+        }
+        else {
+          //  eval and toss the product of formula-formula to preserve crashes
+          //
+          tot_w += _n_comp_direct(ops, hed, c3n, c3n, queu, cole, code);    //  [bus old]
+          ++tot_w; _n_emit(ops, SWAP);                                      //  [old bus]
+          tot_w += _n_comp_direct(ops, tel, los_o, c3n, queu, cole, code);  //  [fol ...]
+          ++tot_w; _n_emit(ops, TOSS);
+          if ( c3n == los_o ) {
+            //  [old bus] -> [bus old]
+            ++tot_w; _n_emit(ops, SWAP);
+          }
         }
         boot = u3t(info);
         op_y = (c3y == tel_o) ? TIRB : DIRB; // overflows to TIRS/DIRS
