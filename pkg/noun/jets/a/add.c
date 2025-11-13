@@ -70,7 +70,14 @@ u3qa_add(u3_atom a,
 
     a_buf_w = u3r_word_buffer(&a, &a_len_w);
     b_buf_w = u3r_word_buffer(&b, &b_len_w);
-    u3i_slab_init(&sab_u, 5, c3_max(a_len_w, b_len_w) + 1);
+    //  u3i_slab_init(&sab_u, 5, c3_max(a_len_w, b_len_w) + 1);
+    //  we have to do more measuring to avoid growing atom buffers on each
+    //  addition as u3a_wtrim noops as of 3e8473d
+    //
+    c3_w a_met0_w = u3r_met(0, a),
+         b_met0_w = u3r_met(0, b);
+    u3i_slab_init(&sab_u, 0, c3_max(a_met0_w, b_met0_w) + 1);
+    
     c_buf_w = sab_u.buf_w;
 
     _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
