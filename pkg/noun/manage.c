@@ -48,7 +48,7 @@
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(setjmp(u3R->esc.buf))
+#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -108,7 +108,7 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static jmp_buf u3_Signal;
+static rsignal_jmpbuf u3_Signal;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -530,7 +530,7 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
-
+  u3R->lop_p     = u3h_new();
   u3R->how.fag_w = 0;
 }
 
@@ -664,6 +664,13 @@ _find_home(void)
     u3n_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
+  }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
   }
 }
 
@@ -1004,8 +1011,6 @@ u3m_bail(u3_noun how)
     stk_u->fow_w = u3R->fow_w;
   }
 
-  /* Longjmp, with an underscore.
-  */
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1363,7 +1368,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1475,7 +1480,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1576,7 +1581,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1678,7 +1683,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.

@@ -1031,6 +1031,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__meme:
       case c3__nara:
       case c3__hela:
+      case c3__loop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1070,6 +1071,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__nara:
           case c3__hela:
           case c3__spin:
+          case c3__loop:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1909,6 +1911,15 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3i_cell(tag, u3i_cell(har, per));
     } break;
 
+    case c3__loop: {
+      u3_noun key = u3nc(u3k(bus), u3k(fol));
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+        u3m_bail(c3__fail);
+      }
+      u3h_put(u3R->lop_p, key, u3_nul);
+      *out = u3nc(tag, key);
+    } break;
+
     case c3__bout: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *out = u3i_cell(tag, now);
@@ -1951,7 +1962,10 @@ static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
+  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
+    u3h_del(u3R->lop_p, q_tok);
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
@@ -2007,6 +2021,16 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
+    case c3__loop: {
+      u3_noun key = u3nc(u3k(bus), u3k(fol));
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+        u3t_mean(*clu);
+        u3m_bail(c3__fail);
+      }
+      u3h_put(u3R->lop_p, key, u3_nul);
+      u3z(*clu);
+      *clu = u3nc(tag, key);
+    } break;
     case c3__spin: {
       u3t_sstack_push(*clu);
       *clu = c3__spin;
@@ -2075,6 +2099,9 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
   u3_noun p_tok, q_tok, r_tok;
   if ( c3__spin == tok ) {
     u3t_sstack_pop();
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
+    u3h_del(u3R->lop_p, q_tok);
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
