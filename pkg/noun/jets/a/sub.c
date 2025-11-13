@@ -65,12 +65,13 @@ u3qa_sub(u3_atom a,
       return u3m_error("subtract-underflow");
     }
     u3i_slab sab_u;
-    u3i_slab_init(&sab_u, 0, u3r_met(0, a));
-    
-    c3_w *a_buf_w, *b_buf_w, *c_buf_w = sab_u.buf_w;
+    c3_w *a_buf_w, *b_buf_w, *c_buf_w;
     c3_w  a_len_w, b_len_w;
+    
     a_buf_w = u3r_word_buffer(&a, &a_len_w);
     b_buf_w = u3r_word_buffer(&b, &b_len_w);
+    u3i_slab_init(&sab_u, 5, a_len_w);
+    c_buf_w = sab_u.buf_w;
 
     _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
     return u3i_slab_mint(&sab_u);
