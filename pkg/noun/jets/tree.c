@@ -20,6 +20,7 @@
 #include "c3/c3.h"
 #include "jets.h"
 #include "jets/w.h"
+#include "jets/136/w.h"
 
 static c3_c* no_hashes[] = { 0 };
 
@@ -576,7 +577,7 @@ static c3_c* _140_pen_look_ha[] = {
   "fdda2166a2b9e1a9bda6ab375dd6fb6c610e18f54636a5e89896b45fd0a7169b",
   0
 };
-static u3j_harm _140_pen_loot_a[] = {{".2", u3wf_loot}, {}};
+static u3j_harm _140_pen_loot_a[] = {{".2", u3wf_loot_136}, {}};
 static c3_c* _140_pen_loot_ha[] = {
   "e275da4562ae6da9bd333aeae6b9829e886874c8b891898c0ef5306268eb45c1",
   0

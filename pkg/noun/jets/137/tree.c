@@ -1,6 +1,7 @@
 #include "c3/c3.h"
 #include "jets.h"
 #include "jets/w.h"
+#include "jets/136/w.h"
 
 
 static c3_c* no_hashes[] = { 0 };
@@ -279,7 +280,7 @@ static u3j_harm _137_pen_fitz_a[] = {{".2", u3wf_fitz}, {}};
 static u3j_harm _137_pen_fork_a[] = {{".2", u3wf_fork}, {}};
 
 static u3j_harm _137_pen_look_a[] = {{".2", u3wf_look}, {}};
-static u3j_harm _137_pen_loot_a[] = {{".2", u3wf_loot}, {}};
+static u3j_harm _137_pen_loot_a[] = {{".2", u3wf_loot_136}, {}};
 
 static u3j_harm _137_pen__ut_crop_a[] = {{".2", u3wfu_crop}, {}};
 static u3j_harm _137_pen__ut_fish_a[] = {{".2", u3wfu_fish}, {}};
