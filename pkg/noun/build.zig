@@ -197,7 +197,7 @@ pub fn build(b: *std.Build) !void {
         .linux => "platform/linux/rsignal.h",
         .windows => "platform/windows/rsignal.h",
         else => "",
-    }), "platform/rsignal.h");
+    }), "rsignal.h");
 
     b.installArtifact(pkg_noun);
 }
