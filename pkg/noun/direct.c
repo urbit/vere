@@ -206,15 +206,7 @@ u3d_search(u3_noun sub, u3_noun fol)
 {
     u3d_prep_ka();
 
-    u3n_prog* pog_u = NULL;
-    u3_weak lit = u3h_git(u3R->byc.lar_p, fol);  //  XX search on parent roads too
-    if ( u3_none != lit )
-    {
-        u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
-        pog_u = ( u3_none != less_pog )
-              ? _cn_to_prog(u3t(less_pog))
-              : NULL;
-    }
+    u3n_prog* pog_u = u3n_look_direct(sub, fol);
     if ( pog_u ) return pog_u;
 
     u3_noun boil = _d_get_boil();
@@ -224,7 +216,7 @@ u3d_search(u3_noun sub, u3_noun fol)
         u3m_bail(c3__fail);
         return 0;
     }
-    lit = u3kdb_get(u3k(fols), u3k(fol));
+    u3_noun lit = u3kdb_get(u3k(fols), u3k(fol));
     u3_weak less_nomm;
     if (u3_none != lit
         && u3_none != (less_nomm = u3d_match_sock(c3y, sub, lit)))

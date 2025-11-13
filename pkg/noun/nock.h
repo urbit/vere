@@ -167,4 +167,7 @@
         u3_noun code,
         u3_noun fols);
 
+        u3n_prog*
+        u3n_look_direct(u3_noun sub, u3_noun fol);
+
 #endif /* ifndef U3_NOCK_H */

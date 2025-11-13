@@ -2255,6 +2255,56 @@ _cb_jib_cons(u3_weak list, void* ptr_v)
   return u3nc(*(u3_noun*)ptr_v, ( u3_none == list ) ? u3_nul : list);
 }
 
+//  RETAINS
+//
+u3n_prog*
+u3n_look_direct(u3_noun sub, u3_noun fol)
+{
+  u3n_prog* pog_u = NULL;
+  u3_weak lit = u3h_git(u3R->byc.lar_p, fol);
+  if ( u3_none != lit ) {
+    u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
+    pog_u = ( u3_none != less_pog )
+          ? _cn_to_prog(u3t(less_pog))
+          : NULL;
+  }
+  if ( pog_u ) return pog_u;
+
+  if (u3R == &u3H->rod_u ) return NULL;
+  u3a_road* rod_u = u3R;
+
+  while ( rod_u->par_p ) {
+    rod_u = u3to(u3a_road, rod_u->par_p);
+    lit = u3h_git(rod_u->byc.lar_p, fol);
+    if ( u3_none == lit ) continue;
+    u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
+    if ( u3_none == less_pog ) continue;
+    c3_w i_w;
+    u3n_prog* old = _n_prog_old(_cn_to_prog(u3t(less_pog)));
+    for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
+      u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
+      rit_u->own_o = c3n;
+    }
+    for ( i_w = 0; i_w < old->cal_u.len_w; ++i_w ) {
+      u3j_site* sit_u = &(old->cal_u.sit_u[i_w]);
+      sit_u->bat   = u3_none;
+      sit_u->pog_p = 0;
+      sit_u->fon_o = c3n;
+    }
+
+    u3_noun pog = _cn_of_prog(old);
+    u3_noun less_fol = u3nc(u3k(u3h(less_pog)), u3k(fol));
+    u3h_put(u3R->byc.dar_p, less_fol, pog);
+    u3z(less_fol);
+
+    u3_noun i_larp = u3nc(u3k(u3h(less_pog)), pog);
+    u3h_jib(u3R->byc.lar_p, fol, _cb_jib_cons, &i_larp);
+    return old;
+  }
+
+  return NULL;
+}
+
 //  yes iff produced fresh code that requires a rewrite
 //  RETAINS
 static c3_o
@@ -2268,6 +2318,33 @@ _n_find_direct(u3_noun less_fol,
   if ( u3_none != pog ) {
     *pog_o_u = _cn_to_prog(pog);
     return c3n;
+  }
+
+  if (u3R != &u3H->rod_u ) {
+    u3a_road* rod_u = u3R;
+    while ( rod_u->par_p ) {
+      rod_u = u3to(u3a_road, rod_u->par_p);
+      pog   = u3h_git(rod_u->byc.dar_p, less_fol);
+      if ( u3_none == pog ) continue;
+      c3_w i_w;
+      u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
+      for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
+        u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
+        rit_u->own_o = c3n;
+      }
+      for ( i_w = 0; i_w < old->cal_u.len_w; ++i_w ) {
+        u3j_site* sit_u = &(old->cal_u.sit_u[i_w]);
+        sit_u->bat   = u3_none;
+        sit_u->pog_p = 0;
+        sit_u->fon_o = c3n;
+      }
+      *pog_o_u = old;
+      pog = _cn_of_prog(*pog_o_u);
+      u3h_put(u3R->byc.dar_p, less_fol, pog);
+      u3_noun i_larp = u3nc(u3k(u3h(less_fol)), pog);
+      u3h_jib(u3R->byc.lar_p, u3t(less_fol), _cb_jib_cons, &i_larp);
+      return c3n;
+    }
   }
 
   u3_noun u_nomm = u3qdb_get(code, less_fol);
