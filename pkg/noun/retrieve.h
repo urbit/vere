@@ -547,4 +547,10 @@
       c3_w*
       u3r_word_buffer(u3_atom* a, c3_w* len_w);
 
+      /* u3r_comp(): compares two atoms:
+      ** returns 1 if a > b, -1 if a < b, 0 if they are equal
+      */
+      c3_ys
+      u3r_comp(u3_atom a, u3_atom b);
+
 #endif /* ifndef U3_RETRIEVE_H */

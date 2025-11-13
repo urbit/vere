@@ -6,6 +6,22 @@
 
 #include "noun.h"
 
+#if defined(__x86_64__)
+#include <immintrin.h>
+#endif
+
+#ifdef __IMMINTRIN_H
+#define _subborrow_w _subborrow_u32
+#else
+static inline c3_b
+_subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+{
+  c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
+  *c_w = (c3_w)dif_d;
+  return (c3_b)(dif_d >> 63);
+}
+#endif
+
 static void
 _sub_words(c3_w* a_buf_w,
            c3_w  a_len_w,
@@ -13,19 +29,16 @@ _sub_words(c3_w* a_buf_w,
            c3_w  b_len_w,
            c3_w* restrict c_buf_w)
 {
-  c3_d dif_d, bor_d = 0;
+  c3_b bor_b = 0;
 
   for (c3_w i_w = 0; i_w < b_len_w; i_w++) {
-    dif_d = (c3_d)a_buf_w[i_w] - (c3_d)b_buf_w[i_w] - bor_d;
-    c_buf_w[i_w] = (c3_w)dif_d;
-    bor_d = dif_d >> 63;
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
   }
 
   for (c3_w i_w = b_len_w; i_w < a_len_w; i_w++) {
-    dif_d = (c3_d)a_buf_w[i_w] - bor_d;
-    c_buf_w[i_w] = (c3_w)dif_d;
-    bor_d = dif_d >> 63;
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0, &c_buf_w[i_w]);
   }
+  u3_assert( 0 == bor_b );
 }
 
 u3_noun
@@ -44,11 +57,12 @@ u3qa_sub(u3_atom a,
     return u3k(a);
   }
   else {
-    if ( _(u3qa_lth(a, b)) ) {
-      return u3m_error("subtract-underflow");
-    }
-    if ( a == b ) {
+    c3_ys cmp_ys = u3r_comp(a, b);
+    if ( 0 == cmp_ys ) {
       return 0;
+    }
+    if ( -1 == cmp_ys ) {
+      return u3m_error("subtract-underflow");
     }
     u3i_slab sab_u;
     u3i_slab_init(&sab_u, 0, u3r_met(0, a));

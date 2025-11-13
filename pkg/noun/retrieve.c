@@ -1953,3 +1953,31 @@ u3r_word_buffer(u3_atom* a, c3_w* len_w)
   *len_w = pug_u->len_w;
   return pug_u->buf_w;
 }
+
+/* u3r_comp(): compares two atoms:
+** returns 1 if a > b, -1 if a < b, 0 if they are equal
+*/
+c3_ys
+u3r_comp(u3_atom a, u3_atom b)
+{
+  if (c3y == u3a_is_cat(a) || c3y == u3a_is_cat(b)) {
+    return (c3_ys)(a > b) - (c3_ys)(a < b);
+  }
+  if ( a == b ) return 0;
+
+  u3a_atom* a_u = u3a_to_ptr(a);
+  u3a_atom* b_u = u3a_to_ptr(b);
+
+  if (a_u->len_w != b_u->len_w) {
+    return (c3_ys)(a_u->len_w > b_u->len_w) - (c3_ys)(a_u->len_w < b_u->len_w);
+  }
+
+  c3_w* a_w = a_u->buf_w;
+  c3_w* b_w = b_u->buf_w;
+  for (c3_w i_w = a_u->len_w; i_w--;) {
+    if (a_w[i_w] > b_w[i_w]) return 1;
+    if (a_w[i_w] < b_w[i_w]) return -1;
+  }
+
+  return 0;
+}

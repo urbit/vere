@@ -13,7 +13,7 @@
 #ifdef __IMMINTRIN_H
 #define _addcarry_w _addcarry_u32
 #else
-static inline c3_y
+static inline c3_b
 _addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
 {
   c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
