@@ -23,7 +23,8 @@ _ca_rip(u3_noun cape, u3_noun* l, u3_noun* r)
 {
     if ( c3y == u3ud(cape) )
     {
-        *l = *r = u3x_loob(cape);  // debug assert
+        u3_assert(cape <= 1);
+        *l = *r = cape;
     }
     else
     {
@@ -58,7 +59,7 @@ _so_huge(u3_noun cape_one,
     if ( c3y == u3ud(data_two) )
     {
         u3x_loob(cape_two);
-        if ( c3n == cape_one ) return u3m_bail(c3__exit);  // normalization assert
+        if ( c3n == cape_one ) return u3m_bail(c3__fail);  // normalization assert
         return c3n;
     }
 
