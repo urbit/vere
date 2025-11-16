@@ -2,20 +2,6 @@
 
 #include "direct.h"
 
-static inline c3_w
-_cn_of_prog(u3n_prog *pog_u)
-{
-  u3_post pog_p = u3of(u3n_prog, pog_u);
-  return pog_p >> u3a_vits;
-}
-
-static inline u3n_prog*
-_cn_to_prog(c3_w pog_w)
-{
-  u3_post pog_p = pog_w << u3a_vits;
-  return u3to(u3n_prog, pog_p);
-}
-
 static inline c3_o
 _assert_loob(u3_noun som)
 {
