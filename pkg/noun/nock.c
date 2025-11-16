@@ -2246,7 +2246,13 @@ _n_bite_direct(u3_noun nomm,
 {
   u3_noun ops = u3_nul;
   _n_comp_direct(&ops, nomm, c3y, c3y, queu, cole, code);
-  return _n_prog_from_ops(ops);
+  u3n_prog* pog_u = _n_prog_from_ops(ops);
+
+  //  read-only assertion for programs with direct calls
+  //
+  u3_assert(0 == pog_u->cal_u.len_w && 0 == pog_u->reg_u.len_w);
+
+  return pog_u;
 }
 
 static u3_noun
@@ -2256,50 +2262,21 @@ _cb_jib_cons(u3_weak list, void* ptr_v)
 }
 
 //  RETAINS
+//  NB: this can produce a pointer into senior memory.
+//  This is fine though, as direct programs are read-only
 //
 u3n_prog*
 u3n_look_direct(u3_noun sub, u3_noun fol)
 {
-  u3n_prog* pog_u = NULL;
-  u3_weak lit = u3h_git(u3R->byc.lar_p, fol);
-  if ( u3_none != lit ) {
-    u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
-    pog_u = ( u3_none != less_pog )
-          ? _cn_to_prog(u3t(less_pog))
-          : NULL;
-  }
-  if ( pog_u ) return pog_u;
-
-  if (u3R == &u3H->rod_u ) return NULL;
+  u3_weak lit, less_pog;
   u3a_road* rod_u = u3R;
-
-  while ( rod_u->par_p ) {
+  while ( 1 ) {
+    if ( u3_none != (lit = u3h_git(rod_u->byc.lar_p, fol))
+      && u3_none != (less_pog = u3d_match_sock(c3y, sub, lit))) {
+      return _cn_to_prog(u3t(less_pog));
+    }
+    if ( !rod_u->par_p ) break;
     rod_u = u3to(u3a_road, rod_u->par_p);
-    lit = u3h_git(rod_u->byc.lar_p, fol);
-    if ( u3_none == lit ) continue;
-    u3_weak less_pog = u3d_match_sock(c3y, sub, lit);
-    if ( u3_none == less_pog ) continue;
-    c3_w i_w;
-    u3n_prog* old = _n_prog_old(_cn_to_prog(u3t(less_pog)));
-    for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
-      u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
-      rit_u->own_o = c3n;
-    }
-    for ( i_w = 0; i_w < old->cal_u.len_w; ++i_w ) {
-      u3j_site* sit_u = &(old->cal_u.sit_u[i_w]);
-      sit_u->bat   = u3_none;
-      sit_u->pog_p = 0;
-      sit_u->fon_o = c3n;
-    }
-
-    u3_noun pog = _cn_of_prog(old);
-    u3_noun less_fol = u3nc(u3k(u3h(less_pog)), u3k(fol));
-    u3h_put(u3R->byc.dar_p, less_fol, pog);
-    u3z(less_fol);
-
-    u3_noun i_larp = u3nc(u3k(u3h(less_pog)), pog);
-    u3h_jib(u3R->byc.lar_p, fol, _cb_jib_cons, &i_larp);
-    return old;
   }
 
   return NULL;
@@ -2307,6 +2284,9 @@ u3n_look_direct(u3_noun sub, u3_noun fol)
 
 //  yes iff produced fresh code that requires a rewrite
 //  RETAINS
+//  NB: this can produce a pointer into senior memory.
+//  This is fine though, as direct programs are read-only
+//
 static c3_o
 _n_find_direct(u3_noun less_fol,
   u3_noun* queu,
@@ -2314,37 +2294,15 @@ _n_find_direct(u3_noun less_fol,
   u3_noun code,
   u3n_prog** pog_o_u)
 {
-  u3_weak pog = u3h_git(u3R->byc.dar_p, less_fol);
-  if ( u3_none != pog ) {
-    *pog_o_u = _cn_to_prog(pog);
-    return c3n;
-  }
-
-  if (u3R != &u3H->rod_u ) {
-    u3a_road* rod_u = u3R;
-    while ( rod_u->par_p ) {
-      rod_u = u3to(u3a_road, rod_u->par_p);
-      pog   = u3h_git(rod_u->byc.dar_p, less_fol);
-      if ( u3_none == pog ) continue;
-      c3_w i_w;
-      u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
-      for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
-        u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
-        rit_u->own_o = c3n;
-      }
-      for ( i_w = 0; i_w < old->cal_u.len_w; ++i_w ) {
-        u3j_site* sit_u = &(old->cal_u.sit_u[i_w]);
-        sit_u->bat   = u3_none;
-        sit_u->pog_p = 0;
-        sit_u->fon_o = c3n;
-      }
-      *pog_o_u = old;
-      pog = _cn_of_prog(*pog_o_u);
-      u3h_put(u3R->byc.dar_p, less_fol, pog);
-      u3_noun i_larp = u3nc(u3k(u3h(less_fol)), pog);
-      u3h_jib(u3R->byc.lar_p, u3t(less_fol), _cb_jib_cons, &i_larp);
+  u3a_road* rod_u = u3R;
+  u3_weak pog;
+  while ( 1 ) {
+    if ( u3_none != (pog = u3h_git(rod_u->byc.dar_p, less_fol)) ) {
+      *pog_o_u = _cn_to_prog(pog);
       return c3n;
     }
+    if ( !rod_u->par_p ) break;
+    rod_u = u3to(u3a_road, rod_u->par_p);
   }
 
   u3_noun u_nomm = u3qdb_get(code, less_fol);
@@ -2359,21 +2317,39 @@ _n_find_direct(u3_noun less_fol,
   return c3y;
 }
 
+/* set up program offsets for direct calls
+*/
+static void
+_direct_rewrite(u3n_prog* pog_u)
+{
+  u3n_dire*     dir_u = pog_u->dir_u.dat_u;
+  c3_w          len_w = pog_u->dir_u.len_w;
+  u3_noun       less_fol;
+  u3_weak       gop = u3_none;
+  u3a_road*     rod_u;
+
+  for (c3_w i_w = 0; i_w < len_w; i_w++) {
+    less_fol = dir_u[i_w].bell;
+    rod_u = u3R;
+    while ( 1 ) {
+      if ( u3_none != (gop = u3h_git(rod_u->byc.dar_p, less_fol)) ) {
+        //  uncompress loom offset
+        //
+        dir_u[i_w].pog_p = gop << u3a_vits;
+        break;
+      }
+      if ( !rod_u->par_p ) break;
+      rod_u = u3to(u3a_road, rod_u->par_p);
+    }
+    
+    u3_assert( u3_none != gop );
+  }
+}
+
 static void
 _cb_fresh_rewrite(u3_noun kev)
 {
-  u3_noun pog = u3t(kev);
-  u3p(u3h_root) dar_p = u3R->byc.dar_p;
-  u3n_prog*     pog_u = _cn_to_prog(pog);
-  u3n_dire*     dir_u = pog_u->dir_u.dat_u;
-  c3_w          len_w = pog_u->dir_u.len_w;
-
-  for (c3_w i_w = 0; i_w < len_w; i_w++) {
-    pog = u3x_good(u3h_git(dar_p, dir_u[i_w].bell));
-    //  uncompress loom offset
-    //
-    dir_u[i_w].pog_p = pog << u3a_vits;
-  }
+  _direct_rewrite(_cn_to_prog(u3t(kev)));
 }
 
 //  [&+sub fol] pair must be findable in fols
@@ -3904,10 +3880,9 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
                    &(src_u->reg_u.rit_u[i_w]));
   }
 
-  for ( i_w = 0; i_w < src_u->dir_u.len_w; ++i_w ) {
-    u3z(dst_u->dir_u.dat_u[i_w].bell);
-    dst_u->dir_u.dat_u[i_w].bell = src_u->dir_u.dat_u[i_w].bell;
-  }
+  //  this function is meant for regular programs only
+  //
+  u3_assert( 0 == src_u->dir_u.len_w );
 }
 
 /*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
@@ -3933,6 +3908,25 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
   }
 
   u3h_put(har_p, key, _cn_of_prog(pog_u));
+}
+
+static void
+_cn_merge_prog_direct_cb(u3_noun kev, void* wit)
+{
+  u3p(u3h_root) dar_p = *(u3p(u3h_root)*)wit;
+  u3_weak         got;
+  u3_noun         key;
+  c3_w          pog_w;
+  u3x_cell(kev, &key, &pog_w);
+
+  got   = u3h_git(dar_p, key);
+
+  if ( u3_none != got ) {
+    u3n_prog* sep_u = _cn_to_prog(got);
+    _cn_prog_free(sep_u);
+  }
+
+  u3h_put(dar_p, key, pog_w);
 }
 
 /* u3n_reap(): promote bytecode state.
@@ -3969,19 +3963,9 @@ static void
 _cb_merge_rewrite(u3_noun kev)
 {
   u3_noun key = u3h(kev);
-  c3_w pog_w = u3x_good(u3h_git(u3R->byc.dar_p, key));
-
-  u3p(u3h_root) dar_p = u3R->byc.dar_p;
-  u3n_prog*     pog_u = _cn_to_prog(pog_w);
-  u3n_dire*     dir_u = pog_u->dir_u.dat_u;
-  c3_w          len_w = pog_u->dir_u.len_w;
-
-  for (c3_w i_w = 0; i_w < len_w; i_w++) {
-    pog_w = u3x_good(u3h_git(dar_p, dir_u[i_w].bell));
-    //  uncompress loom offset
-    //
-    dir_u[i_w].pog_p = pog_w << u3a_vits;
-  }
+  u3_weak pog = u3h_git(u3R->byc.dar_p, key);
+  u3_assert(u3_none != pog);
+  _direct_rewrite(_cn_to_prog(pog));
 }
 
 /* u3n_reap_direct(): promote state of bytecode with direct calls
@@ -3991,7 +3975,7 @@ u3n_reap_direct(u3p(u3h_root) dar_p)
 {
   if ( !u3h_wyt(dar_p) ) return;
 
-  u3h_walk_with(dar_p, _cn_merge_prog_cb, &u3R->byc.dar_p);
+  u3h_walk_with(dar_p, _cn_merge_prog_direct_cb, &u3R->byc.dar_p);
   u3h_walk(dar_p, _cb_merge_rewrite);
   _cn_rebuild_larp();
 

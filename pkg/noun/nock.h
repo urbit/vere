@@ -40,7 +40,14 @@
   } u3n_dire;
 
   /* u3n_prog: program compiled from nock
-   */
+  ** u3n_prog is read/write if it is a regular program
+  ** and it is READ-ONLY if it is a program with direct calls
+  ** the read/write portions are cal_u and reg_u, they MUST be
+  ** empty if dir_u is not empty
+  **
+  ** Regular programs have to be copied onto the current road to
+  ** execute them, read-only programs don't need to be copied.
+  */
   typedef struct _u3n_prog {
     struct {
       c3_o      own_o;                // program owns ops_y?
