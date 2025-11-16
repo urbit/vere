@@ -491,10 +491,10 @@ u3i_vint(u3_noun a)
 {
   u3_assert(u3_none != a);
 
-  if ( _(u3a_is_cat(a)) ) {
-    return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
+  if ( c3_likely(_(u3a_is_cat(a))) ) {
+    return ( c3_unlikely(a == 0x7fffffff) ) ? u3i_word(a + 1) : (a + 1);
   }
-  else if ( _(u3a_is_cell(a)) ) {
+  else if ( c3_unlikely(_(u3a_is_cell(a))) ) {
     return u3m_bail(c3__exit);
   }
   else {
@@ -617,14 +617,18 @@ u3i_tape(const c3_c* txt_c)
 u3_noun
 u3i_list(u3_weak som, ...)
 {
-  u3_noun lit = u3_nul;
+  u3_noun  lit = u3_nul;
+  u3_noun* let = &lit;
+  u3_noun  *hed, *tel;
   va_list  ap;
 
   if ( u3_none == som ) {
     return lit;
   }
   else {
-    lit = u3nc(som, lit);
+    *let = u3i_defcons(&hed, &tel);
+    *hed = som;
+    let = tel;
   }
 
   {
@@ -636,13 +640,16 @@ u3i_list(u3_weak som, ...)
         break;
       }
       else {
-        lit = u3nc(tem, lit);
+        *let = u3i_defcons(&hed, &tel);
+        *hed = tem;
+        let = tel;
       }
     }
     va_end(ap);
   }
 
-  return u3kb_flop(lit);
+  *let = u3_nul;
+  return lit;
 }
 
 /* u3i_edit():
