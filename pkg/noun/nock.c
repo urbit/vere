@@ -2517,6 +2517,9 @@ _cn_prog_free(u3n_prog* pog_u)
   for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
     u3j_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
   }
+  for (dex_w = 0; dex_w < pog_u->dir_u.len_w; ++dex_w) {
+    u3z(pog_u->dir_u.dat_u[dex_w].bell);
+  }
   u3a_free(pog_u);
 }
 
