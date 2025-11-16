@@ -16,6 +16,13 @@ _cn_to_prog(c3_w pog_w)
   return u3to(u3n_prog, pog_p);
 }
 
+static inline c3_o
+_assert_loob(u3_noun som)
+{
+    u3_assert(som <= 1);
+    return som;
+}
+
 // RETAINS
 //
 static void
@@ -23,8 +30,7 @@ _ca_rip(u3_noun cape, u3_noun* l, u3_noun* r)
 {
     if ( c3y == u3ud(cape) )
     {
-        u3_assert(cape <= 1);
-        *l = *r = cape;
+        *l = *r = _assert_loob(cape);
     }
     else
     {
@@ -50,16 +56,17 @@ _so_huge(u3_noun cape_one,
 
     if ( c3y == u3ud(data_one) )
     {
-        if ( c3n == u3x_loob(cape_one) ) return c3y;
+        if ( c3n == _assert_loob(cape_one) ) return c3y;
         return c3a(u3ud(cape_two),
-               c3a(u3x_loob(cape_two),
+               c3a(_assert_loob(cape_two),
                    u3r_sing(data_one, data_two)));
     }
+    
+    u3_assert(c3n != cape_one);
 
     if ( c3y == u3ud(data_two) )
     {
-        u3x_loob(cape_two);
-        if ( c3n == cape_one ) return u3m_bail(c3__fail);  // normalization assert
+        _assert_loob(cape_two);
         return c3n;
     }
 
@@ -210,40 +217,22 @@ u3d_search(u3_noun sub, u3_noun fol)
     u3n_prog* pog_u = u3n_look_direct(sub, fol);
     if ( pog_u ) return pog_u;
 
-    u3_noun boil = _d_get_boil();
     u3_noun cole, code, fols;
-    if ( c3n == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) )
-    {
-        u3m_bail(c3__fail);
-        return 0;
-    }
-    u3_noun lit = u3kdb_get(u3k(fols), u3k(fol));
-    u3_weak less_nomm;
-    if (u3_none != lit
-        && u3_none != (less_nomm = u3d_match_sock(c3y, sub, lit)))
-    {
-        pog_u = u3n_build_direct(sub, fol, cole, code, fols);
-        u3z(lit);
-        u3z(boil);
-        return pog_u;
-    }
+    u3_noun boil = _d_get_boil();
+    u3_assert( c3y == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) );
 
+    u3_noun lit = u3kdb_get(u3k(fols), u3k(fol));
+    if (u3_none == lit || u3_none == u3d_match_sock(c3y, sub, lit))
+    {
+        u3z(boil);
+        _d_rout(u3k(sub), u3k(fol));
+        boil = _d_get_boil();
+
+        u3_assert( c3y == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) );
+    }
     //  may be u3_none
     //
     u3z(lit);
-
-    u3z(boil);
-
-    _d_rout(u3k(sub), u3k(fol));
-    
-    boil = _d_get_boil();
-
-    if ( c3n == u3r_mean(boil, 2, &cole, 6, &code, 7, &fols, 0) )
-    {
-        u3m_bail(c3__fail);
-        return 0;
-    }
-
     pog_u = u3n_build_direct(sub, fol, cole, code, fols);
     u3z(boil);
     return pog_u;
