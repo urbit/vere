@@ -264,6 +264,7 @@ _cj_axis(u3_noun fol)
 static c3_l
 _cj_read_axe(c3_c* str_c, c3_c* who_c)
 {
+  u3_assert(0 != str_c[0]);
   //  ".2" common case shortcut
   //
   if ( '2' == str_c[1] && 0 == str_c[2] ) return 2;
@@ -960,7 +961,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
   }
 }
 
-/* u3j_call_direct(): try to kick by jet, no validation. No ice test.
+/* u3j_call_direct(): try to kick by jet, no validation.
 ** Return u3_none if no kick.
 ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
 */
