@@ -35,6 +35,7 @@
   typedef struct {
     u3_noun         bell;    //  [sock formula]
     u3p(_u3n_prog)  pog_p;   //  called program post or [less formula] during compilation
+    u3_noun         ring;    //  ~ or [path axis]
     u3j_harm*       ham_u;   //  jet arm, nullable
     c3_l            axe_l;   //  jet arm axis
   } u3n_dire;

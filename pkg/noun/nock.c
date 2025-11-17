@@ -870,20 +870,23 @@ _n_prog_asm_inx(c3_y* buf_y, c3_w* i_w, c3_s inx_s, c3_y cod)
 }
 
 //  RETAINS
-//  `bell` is (unit (pair path axis))
+//  `ring` is (unit (pair path axis))
 //
 static void
-_direct_match_bell(u3n_dire* dir_u, u3_noun bell)
+_direct_match_ring(u3n_dire* dir_u, u3_noun ring)
 {
   u3_weak harm;
-  if ( u3_nul == bell 
-      || u3_none == (harm = u3h_git(u3H->rod_u.jed.pax_p, u3t(bell)))
+  if ( u3_nul == ring 
+      || u3_none == (harm = u3h_git(u3H->rod_u.jed.pax_p, u3t(ring)))
       ) {
     dir_u->ham_u = NULL;
+    dir_u->ring = u3_nul;
   }
   else {
+    dir_u->ring = u3k(u3t(ring));
     dir_u->ham_u = (u3j_harm*)(c3_p)u3r_chub(0, u3x_atom(harm));
-    dir_u->axe_l = u3t(u3t(bell));
+    dir_u->axe_l = u3t(u3t(ring));
+    u3_assert( c3y == u3a_is_cat(dir_u->axe_l) );
   }
 }
 
@@ -1036,7 +1039,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           _n_prog_asm_inx(buf_y, &i_w, dir_s, cod);
           u3n_dire* dir_u = &(pog_u->dir_u.dat_u[dir_s++]);
           dir_u->bell = u3k(u3h(u3t(op)));
-          _direct_match_bell(dir_u, u3t(u3t(op)));
+          _direct_match_ring(dir_u, u3t(u3t(op)));
           break;
         }
       }
@@ -2495,6 +2498,7 @@ _cn_prog_free(u3n_prog* pog_u)
   }
   for (dex_w = 0; dex_w < pog_u->dir_u.len_w; ++dex_w) {
     u3z(pog_u->dir_u.dat_u[dex_w].bell);
+    u3z(pog_u->dir_u.dat_u[dex_w].ring);
   }
   u3a_free(pog_u);
 }
@@ -3810,6 +3814,11 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 
   for ( i_w = 0; i_w < src_u->dir_u.len_w; ++i_w ) {
     dst_u->dir_u.dat_u[i_w].bell = u3a_take(src_u->dir_u.dat_u[i_w].bell);
+    //  skip pog_p as it is going to be rewritten anyway
+    //
+    dst_u->dir_u.dat_u[i_w].ring = u3a_take(src_u->dir_u.dat_u[i_w].ring);
+    dst_u->dir_u.dat_u[i_w].ham_u = src_u->dir_u.dat_u[i_w].ham_u;
+    dst_u->dir_u.dat_u[i_w].axe_l = src_u->dir_u.dat_u[i_w].axe_l;
   }
 }
 
@@ -3982,9 +3991,24 @@ u3n_reap_direct(u3p(u3h_root) dar_p)
   u3h_free(dar_p);
 }
 
+static void
+_n_dire_ream(u3n_dire* dir_u)
+{
+  u3_weak harm;
+  if ( u3_nul == dir_u->ring
+   || u3_none == (harm = u3h_git(u3H->rod_u.jed.pax_p, dir_u->ring)) ) {
+    dir_u->ham_u = NULL;
+  }
+  else {
+    dir_u->ham_u = (u3j_harm*)(c3_p)u3r_chub(0, u3x_atom(harm));
+    dir_u->axe_l = u3t(dir_u->ring);
+    u3_assert( c3y == u3a_is_cat(dir_u->axe_l) );
+  }
+}
+
 /* _n_ream(): ream program call sites
 */
-void
+static void
 _n_ream(u3_noun kev)
 {
   u3n_prog* pog_u = _cn_to_prog(u3t(kev));
@@ -4021,6 +4045,9 @@ _n_ream(u3_noun kev)
 
   for ( c3_w i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
     u3j_site_ream(&(pog_u->cal_u.sit_u[i_w]));
+  }
+  for ( c3_w i_w = 0; i_w < pog_u->dir_u.len_w; ++i_w ) {
+    _n_dire_ream(&(pog_u->dir_u.dat_u[i_w]));
   }
 }
 
@@ -4059,6 +4086,7 @@ _n_prog_mark(u3n_prog* pog_u)
 
   for ( i_w = 0; i_w < pog_u->dir_u.len_w; ++i_w ) {
     tot_w += u3a_mark_noun(pog_u->dir_u.dat_u[i_w].bell);
+    tot_w += u3a_mark_noun(pog_u->dir_u.dat_u[i_w].ring);
   }
 
   return tot_w;
