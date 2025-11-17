@@ -73,7 +73,7 @@ _so_huge(u3_noun cape_one,
 void
 u3d_prep_ka()
 {
-    if ( u3R->dir.ka ) {
+    if ( u3R->dir_ka ) {
         return;
     }
     // [sock=hoon soak=hoon noir=hoon skan=hoon]
@@ -101,7 +101,7 @@ u3d_prep_ka()
         u3nc(bild, u3nt(c3__wing, c3_s2('k', 'a'), u3_nul)));
 
     u3z(hoons);
-    u3R->dir.ka = ka;
+    u3R->dir_ka = ka;
 }
 
 //  XX: reentrance?
@@ -112,7 +112,7 @@ _d_rout(u3_noun sub, u3_noun fol)
     // ( [%wing p=~[%rout]] )
     //
     u3_noun gen  = u3nt(c3__wing, c3_s4('r','o','u','t'), u3_nul),
-            rout = u3dc("slap", u3R->dir.ka, gen);
+            rout = u3dc("slap", u3R->dir_ka, gen);
 
     u3_noun typ = u3nt(c3__cell, c3__noun, c3__noun);
     u3_noun sam = u3nt(typ, sub, fol);  //  !>([sub=* fol=*])
@@ -127,7 +127,7 @@ _d_rout(u3_noun sub, u3_noun fol)
     {
         u3m_bail(c3__fail);
     }
-    u3R->dir.ka = u3k(u3t(pro));
+    u3R->dir_ka = u3k(u3t(pro));
     u3z(pro);
 }
 
@@ -169,14 +169,14 @@ _d_get_boil()
     // ( [%wing p=~[%lon]] )
     //
     u3_noun gen = u3nt(c3__wing, c3_s3('l','o','n'), u3_nul);
-    u3_noun vax = u3n_slam_on(u3k(slap), u3nc(u3k(u3R->dir.ka), gen));
+    u3_noun vax = u3n_slam_on(u3k(slap), u3nc(u3k(u3R->dir_ka), gen));
     u3_noun lon = u3k(u3t(vax));
     u3z(vax);
 
     // ( [%wing p=~[%cook]] )
     //
     gen = u3nt(c3__wing, c3__cook, u3_nul);
-    vax = u3n_slam_on(slap, u3nc(u3k(u3R->dir.ka), gen));
+    vax = u3n_slam_on(slap, u3nc(u3k(u3R->dir_ka), gen));
     u3_noun gat = u3k(u3t(vax));
     u3z(vax);
 

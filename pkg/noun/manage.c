@@ -532,8 +532,8 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->how.fag_w = 0;
-  u3R->byc.dar_p = u3h_new();
-  u3R->byc.lar_p = u3h_new();
+  u3R->byc_dar_p = u3h_new();
+  u3R->byc_lar_p = u3h_new();
 }
 
 static c3_d
@@ -571,7 +571,7 @@ _pave_home(void)
   u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
-  u3R->dir.ka = u3_nul;
+  u3R->dir_ka = u3_nul;
 }
 
 STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
@@ -669,12 +669,13 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
-  //  HAMT
+  //  Simple migration for zero-initialized u3a_road members
+  //  from futureproof buffer
   //
-  if (!u3R->lop_p) {
-    u3R->lop_p = u3h_new();
-  }
+  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
+  if ( !u3R->jed_pax_p ) u3R->jed_pax_p = u3h_new();
+  if ( !u3R->byc_dar_p ) u3R->byc_dar_p = u3h_new();
+  if ( !u3R->byc_lar_p ) u3R->byc_lar_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1155,7 +1156,7 @@ u3m_leap(c3_w pad_w)
   {
     u3R = rod_u;
     _pave_parts();
-    u3R->dir.ka = u3to(u3_road, u3R->par_p)->dir.ka;
+    u3R->dir_ka = u3to(u3_road, u3R->par_p)->dir_ka;
   }
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
@@ -1242,10 +1243,10 @@ u3m_love(u3_noun pro)
   //  save cache pointers from current road
   //
   u3p(u3h_root) byc_har_p = u3R->byc.har_p;
-  u3p(u3h_root) byc_dar_p = u3R->byc.dar_p;
+  u3p(u3h_root) byc_dar_p = u3R->byc_dar_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
-  u3_noun       ka    = u3R->dir.ka;
+  u3_noun       ka    = u3R->dir_ka;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1272,7 +1273,7 @@ u3m_love(u3_noun pro)
   u3n_reap(byc_har_p);
   u3n_reap_direct(byc_dar_p);
   u3z_reap(u3z_memo_keep, per_p);
-  u3z(u3R->dir.ka), u3R->dir.ka = ka;
+  u3z(u3R->dir_ka), u3R->dir_ka = ka;
 
   return pro;
 }

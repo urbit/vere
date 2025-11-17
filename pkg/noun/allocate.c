@@ -1791,7 +1791,7 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->pro.don));
   u3a_relocate_noun(&(u3R->pro.day));
   u3a_relocate_noun(&(u3R->pro.trace));
-  u3a_relocate_noun(&(u3R->dir.ka));
+  u3a_relocate_noun(&(u3R->dir_ka));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
   u3h_relocate(&(u3R->lop_p));

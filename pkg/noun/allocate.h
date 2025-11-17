@@ -128,7 +128,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(u3h_root) cod_p;                  //  cold state
         u3p(u3h_root) han_p;                  //  hank cache
         u3p(u3h_root) bas_p;                  //  battery hashes
-        u3p(u3h_root) pax_p;                  //  [path axis] -> arm jet (home road only)
       } u3a_jets;
 
     /* u3a_road: contiguous allocation and execution context.
@@ -148,7 +147,15 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_w fow_w;                           //  spin stack overflow count
         u3p(u3h_root) lop_p;                  //  %loop hint set
 
-        c3_w fut_w[29];                       //  futureproof buffer
+        /* ska-related things
+        ** XX move to appropriate places with an actual migration
+        */
+        u3p(u3h_root) jed_pax_p;              //  [path axis] -> arm jet (home road only)
+        u3p(u3h_root) byc_dar_p;              //  [less fol]->post of bytecode
+        u3p(u3h_root) byc_lar_p;              //  fol->(list [less post]) of bytecode
+        u3_noun       dir_ka;                 //  ~ | +ka core vase  XX raw noun
+
+        c3_w fut_w[25];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -189,9 +196,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         struct {                              //  bytecode state
           u3p(u3h_root) har_p;                //  formula->post of bytecode
-          /* Direct calls */
-          u3p(u3h_root) dar_p;                //  [less fol]->post of bytecode
-          u3p(u3h_root) lar_p;                //  fol->(list [less post]) of bytecode
         } byc;
 
         struct {                              //  scry namespace
@@ -215,10 +219,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3h_root) har_p;                //  transient
           u3p(u3h_root) per_p;                //  persistent
         } cax;
-
-        struct {                              // direct calls
-          u3_noun ka;                         //  ~ | +ka core vase  XX raw noun
-        } dir;
       } u3a_road;
       typedef u3a_road u3_road;
 

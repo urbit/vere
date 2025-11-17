@@ -877,7 +877,7 @@ _direct_match_ring(u3n_dire* dir_u, u3_noun ring)
 {
   u3_weak harm;
   if ( u3_nul == ring 
-      || u3_none == (harm = u3h_git(u3H->rod_u.jed.pax_p, u3t(ring)))
+      || u3_none == (harm = u3h_git(u3H->rod_u.jed_pax_p, u3t(ring)))
       ) {
     dir_u->ham_u = NULL;
     dir_u->ring = u3_nul;
@@ -2228,7 +2228,7 @@ _n_comp_direct(u3_noun* ops,
       break;
 
     case 12:
-      //  XX TODO scry, persistence of byc.dar_p/lar_p, check 12 treatment in +ka
+      //  XX TODO scry, persistence of byc_dar_p/lar_p, check 12 treatment in +ka
       //
       u3m_bail(c3__fail);
       break;
@@ -2274,7 +2274,7 @@ u3n_look_direct(u3_noun sub, u3_noun fol)
   u3_weak lit, less_pog;
   u3a_road* rod_u = u3R;
   while ( 1 ) {
-    if ( u3_none != (lit = u3h_git(rod_u->byc.lar_p, fol))
+    if ( u3_none != (lit = u3h_git(rod_u->byc_lar_p, fol))
       && u3_none != (less_pog = u3d_match_sock(c3y, sub, lit))) {
       return _cn_to_prog(u3t(less_pog));
     }
@@ -2300,7 +2300,7 @@ _n_find_direct(u3_noun less_fol,
   u3a_road* rod_u = u3R;
   u3_weak pog;
   while ( 1 ) {
-    if ( u3_none != (pog = u3h_git(rod_u->byc.dar_p, less_fol)) ) {
+    if ( u3_none != (pog = u3h_git(rod_u->byc_dar_p, less_fol)) ) {
       *pog_o_u = _cn_to_prog(pog);
       return c3n;
     }
@@ -2313,8 +2313,8 @@ _n_find_direct(u3_noun less_fol,
   *pog_o_u = _n_bite_direct(u3t(u_nomm), queu, cole, code);
   pog = _cn_of_prog(*pog_o_u);
   u3_noun i_larp = u3nc(u3k(u3h(less_fol)), pog);
-  u3h_put(u3R->byc.dar_p, less_fol, pog);
-  u3h_jib(u3R->byc.lar_p, u3t(less_fol), _cb_jib_cons, &i_larp);
+  u3h_put(u3R->byc_dar_p, less_fol, pog);
+  u3h_jib(u3R->byc_lar_p, u3t(less_fol), _cb_jib_cons, &i_larp);
 
   u3z(u_nomm);
   return c3y;
@@ -2335,7 +2335,7 @@ _direct_rewrite(u3n_prog* pog_u)
     less_fol = dir_u[i_w].bell;
     rod_u = u3R;
     while ( 1 ) {
-      if ( u3_none != (gop = u3h_git(rod_u->byc.dar_p, less_fol)) ) {
+      if ( u3_none != (gop = u3h_git(rod_u->byc_dar_p, less_fol)) ) {
         //  uncompress loom offset
         //
         dir_u[i_w].pog_p = gop << u3a_vits;
@@ -2375,7 +2375,7 @@ u3n_build_direct(u3_noun sub,
   //  As we compile new code with direct calls, we might not have a post
   //  of a directly called program yet. We will instead put a pair
   //  [sock formula] in u3n_dire.pog_p, and rewrite it once we are done with
-  //  compiling. u3R->byc.dar_p provides [sock formula] -> u3_post(u3n_prog)
+  //  compiling. u3R->byc_dar_p provides [sock formula] -> u3_post(u3n_prog)
   //  mapping. 
   //
   //  fresh_p is a map [sock formula] -> u3_post(u3n_prog) of programs that
@@ -2394,8 +2394,8 @@ u3n_build_direct(u3_noun sub,
   u3n_prog* out_u = _n_bite_direct(nomm, &queu, cole, code);
   u3_noun pog = _cn_of_prog(out_u);
   u3_noun i_larp = u3nc(u3k(less), pog);
-  u3h_put(u3R->byc.dar_p, less_fol, pog);
-  u3h_jib(u3R->byc.lar_p, fol, _cb_jib_cons, &i_larp);
+  u3h_put(u3R->byc_dar_p, less_fol, pog);
+  u3h_jib(u3R->byc_lar_p, fol, _cb_jib_cons, &i_larp);
   u3h_put(fresh_p, less_fol, pog);
   u3z(less_fol);
 
@@ -3957,22 +3957,22 @@ _cn_larp_put_cb(u3_noun kev)
   u3x_cell(key, &sock, &fol);
   
   u3_noun i_larp = u3nc(u3k(sock), pog_w);
-  u3h_jib(u3R->byc.lar_p, fol, _cb_jib_cons, &i_larp);
+  u3h_jib(u3R->byc_lar_p, fol, _cb_jib_cons, &i_larp);
 }
 
 static void
 _cn_rebuild_larp(void)
 {
-  u3h_free(u3R->byc.lar_p);
-  u3R->byc.lar_p = u3h_new();
-  u3h_walk(u3R->byc.dar_p, _cn_larp_put_cb);
+  u3h_free(u3R->byc_lar_p);
+  u3R->byc_lar_p = u3h_new();
+  u3h_walk(u3R->byc_dar_p, _cn_larp_put_cb);
 }
 
 static void
 _cb_merge_rewrite(u3_noun kev)
 {
   u3_noun key = u3h(kev);
-  u3_weak pog = u3h_git(u3R->byc.dar_p, key);
+  u3_weak pog = u3h_git(u3R->byc_dar_p, key);
   u3_assert(u3_none != pog);
   _direct_rewrite(_cn_to_prog(pog));
 }
@@ -3984,7 +3984,7 @@ u3n_reap_direct(u3p(u3h_root) dar_p)
 {
   if ( !u3h_wyt(dar_p) ) return;
 
-  u3h_walk_with(dar_p, _cn_merge_prog_direct_cb, &u3R->byc.dar_p);
+  u3h_walk_with(dar_p, _cn_merge_prog_direct_cb, &u3R->byc_dar_p);
   u3h_walk(dar_p, _cb_merge_rewrite);
   _cn_rebuild_larp();
 
@@ -3996,7 +3996,7 @@ _n_dire_ream(u3n_dire* dir_u)
 {
   u3_weak harm;
   if ( u3_nul == dir_u->ring
-   || u3_none == (harm = u3h_git(u3H->rod_u.jed.pax_p, dir_u->ring)) ) {
+   || u3_none == (harm = u3h_git(u3H->rod_u.jed_pax_p, dir_u->ring)) ) {
     dir_u->ham_u = NULL;
   }
   else {
@@ -4058,7 +4058,7 @@ u3n_ream()
 {
   u3_assert(u3R == &(u3H->rod_u));
   u3h_walk(u3R->byc.har_p, _n_ream);
-  u3h_walk(u3R->byc.dar_p, _n_ream);
+  u3h_walk(u3R->byc_dar_p, _n_ream);
 }
 
 /* _n_prog_mark(): mark program for gc.
@@ -4126,23 +4126,23 @@ u3n_mark()
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("direct bytecode programs");
-  u3h_walk_with(u3R->byc.dar_p, _n_bam, &qua_u[2]->siz_w);
+  u3h_walk_with(u3R->byc_dar_p, _n_bam, &qua_u[2]->siz_w);
   qua_u[2]->siz_w = qua_u[2]->siz_w * 4;
   siz_w += qua_u[2]->siz_w;
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("direct bytecode cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->byc.dar_p) * 4;
+  qua_u[3]->siz_w = u3h_mark(u3R->byc_dar_p) * 4;
   siz_w += qua_u[3]->siz_w;
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("direct bytecode jar");
-  qua_u[4]->siz_w = u3h_mark(u3R->byc.lar_p) * 4;
+  qua_u[4]->siz_w = u3h_mark(u3R->byc_lar_p) * 4;
   siz_w += qua_u[4]->siz_w;
 
   qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
   qua_u[5]->nam_c = strdup("+ka SKA core");
-  qua_u[5]->siz_w = u3a_mark_noun(u3R->dir.ka) * 4;
+  qua_u[5]->siz_w = u3a_mark_noun(u3R->dir_ka) * 4;
   siz_w += qua_u[5]->siz_w;
 
   qua_u[6] = NULL;
@@ -4168,8 +4168,8 @@ u3n_reclaim(void)
   //
   u3n_free();
   u3R->byc.har_p = u3h_new();
-  u3R->byc.dar_p = u3h_new();
-  u3R->byc.lar_p = u3h_new();
+  u3R->byc_dar_p = u3h_new();
+  u3R->byc_lar_p = u3h_new();
 }
 
 /* u3n_rewrite_compact(): rewrite the bytecode cache for compaction.
@@ -4189,8 +4189,8 @@ void
 u3n_rewrite_compact()
 {
   u3h_relocate(&(u3R->byc.har_p));
-  u3h_relocate(&(u3R->byc.dar_p));
-  u3h_relocate(&(u3R->byc.lar_p));
+  u3h_relocate(&(u3R->byc_dar_p));
+  u3h_relocate(&(u3R->byc_lar_p));
 }
 
 
@@ -4217,10 +4217,10 @@ void
 u3n_free()
 {
   u3n_free_table(u3R->byc.har_p);
-  u3n_free_table(u3R->byc.dar_p);
+  u3n_free_table(u3R->byc_dar_p);
   // programs in lar_p are owned by the already freed dar_p
   //
-  u3h_free(u3R->byc.lar_p);  
+  u3h_free(u3R->byc_lar_p);  
 }
 
 /* u3n_kick_on(): fire `gat` without changing the sample.

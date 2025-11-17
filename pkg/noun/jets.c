@@ -368,7 +368,7 @@ _cj_install(u3j_core* ray_u,
           c3_l axe_l = _cj_read_axe(jet_u->fcs_c, "_cj_install");
           if ( !axe_l ) continue;
           u3_noun key = u3nc(u3k(xap), axe_l);
-          u3h_put(u3R->jed.pax_p, key, u3i_chub((c3_d)(c3_p)jet_u));
+          u3h_put(u3R->jed_pax_p, key, u3i_chub((c3_d)(c3_p)jet_u));
           u3z(key);
         }
       }
@@ -849,10 +849,10 @@ u3j_boot(c3_o nuu_o)
 
   if ( c3n == nuu_o ) {
     u3h_free(u3R->jed.hot_p);
-    u3h_free(u3R->jed.pax_p);
+    u3h_free(u3R->jed_pax_p);
   }
   u3R->jed.hot_p = u3h_new();
-  u3R->jed.pax_p = u3h_new();
+  u3R->jed_pax_p = u3h_new();
 
   return _cj_install(u3D.ray_u, 1,
                      (c3_l) (long long) u3D.dev_u[0].par_u,
@@ -2411,7 +2411,7 @@ u3j_mark()
 
     qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
     qua_u[6]->nam_c = strdup("path/axis -> jet driver map");
-    qua_u[6]->siz_w = u3h_mark(u3R->jed.pax_p) * 4;
+    qua_u[6]->siz_w = u3h_mark(u3R->jed_pax_p) * 4;
 
     sum_w += qua_u[6]->siz_w;
 
@@ -2456,7 +2456,7 @@ u3j_free(void)
   u3h_free(u3R->jed.bas_p);
   if ( u3R == &(u3H->rod_u) ) {
     u3h_free(u3R->jed.hot_p);
-    u3h_free(u3R->jed.pax_p);
+    u3h_free(u3R->jed_pax_p);
   }
 }
 
@@ -2497,6 +2497,6 @@ u3j_rewrite_compact(void)
 
   if ( u3R == &(u3H->rod_u) ) {
     u3h_relocate(&(u3R->jed.hot_p));
-    u3h_relocate(&(u3R->jed.pax_p));
+    u3h_relocate(&(u3R->jed_pax_p));
   }
 }
