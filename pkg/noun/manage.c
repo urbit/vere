@@ -28,6 +28,7 @@
 #include "jets/q.h"
 #include "log.h"
 #include "nock.h"
+#include "nock_migrate.h"
 #include "openssl/crypto.h"
 #include "options.h"
 #include "rsignal.h"
@@ -660,13 +661,22 @@ _find_home(void)
 
   _rod_vaal(u3R);
 
-  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
-    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
-    u3j_ream();
-    u3n_ream();
-    u3n_reclaim();
-    u3j_reclaim();
-    u3H->pam_d = _pave_params();
+  u3n_version nock_ver_w = ((pam_d >> 6) & 31);
+  if ( nock_ver_w != U3N_VERLAT ) {
+    switch ( nock_ver_w ) {
+      default: u3_assert(!"unrecognized bytecode version");
+      case U3N_VER1:
+      case U3N_VER2: {
+        fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+        u3j_nv2_ream();
+        u3n_nv2_ream();
+        u3n_nv2_reclaim();
+        u3j_nv2_reclaim();
+        u3H->pam_d = _pave_params();
+      } break;
+  
+      case U3N_VER3: break;
+    }
   }
 
   //  Simple migration for zero-initialized u3a_road members
