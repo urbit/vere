@@ -48,7 +48,7 @@
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(setjmp(u3R->esc.buf))
+#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -108,7 +108,7 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static jmp_buf u3_Signal;
+static rsignal_jmpbuf u3_Signal;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -530,6 +530,8 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
+  u3R->lop_p     = u3h_new();
+  u3R->how.fag_w = 0;
 }
 
 static c3_d
@@ -662,6 +664,13 @@ _find_home(void)
     u3n_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
+  }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
   }
 }
 
@@ -1002,8 +1011,6 @@ u3m_bail(u3_noun how)
     stk_u->fow_w = u3R->fow_w;
   }
 
-  /* Longjmp, with an underscore.
-  */
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1361,7 +1368,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1455,14 +1462,11 @@ u3m_soft_cax(u3_funq fun_f,
   u3_noun why = 0, pro;
   u3_noun cax = u3_nul;
 
-  /* Save and set memo cache harvesting flag.
-  */
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_cash;
-
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
+
+  u3R->how.fag_w |= u3a_flag_cash;
 
   /* Configure the new road.
   */
@@ -1476,10 +1480,9 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
-    u3C.wag_w = wag_w;
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
@@ -1504,7 +1507,6 @@ u3m_soft_cax(u3_funq fun_f,
   }
   else {
     u3t_init();
-    u3C.wag_w = wag_w;
 
     /* Produce - or fall again.
     */
@@ -1554,6 +1556,8 @@ u3m_soft_run(u3_noun gul,
 {
   u3_noun why = 0, pro;
 
+  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
+
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1562,8 +1566,7 @@ u3m_soft_run(u3_noun gul,
   */
 
   {
-    // XX review
-    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
+    if ( (u3_nul == gul) || cash_t ) {
       u3R->ski.gul = u3_nul;
     }
     else {
@@ -1572,12 +1575,13 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
+    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1679,7 +1683,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.

@@ -857,7 +857,7 @@ _free_beam(beam* bem)
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 {
-  beam bem;
+  beam bem = {u3_none, u3_none, u3_none, u3_none};
 
   //  get beak
   //
@@ -938,7 +938,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
   return bem;
 }
 
-/* _http_req_dispatch(): dispatch http request
+/* _http_req_dispatch(): dispatch http request. RETAINS `req`
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -963,7 +963,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
       //
-      u3_noun dat = u3nt(htp_u->sec, adr, req);
+      u3_noun dat = u3nt(htp_u->sec, adr, u3k(req));
 
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
@@ -972,9 +972,6 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     }
     else {
       // '/_~_/' found
-      // `req` is unused, free it
-      //
-      u3z(req);
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -1100,6 +1097,9 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
       u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
       _http_req_dispatch(req_u, req);
     }
+    //  can be u3_none
+    //
+    u3z(req);
   }
   else if ( u3_none == u3r_at(7, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
@@ -1671,6 +1671,10 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
       _http_req_dispatch(req_u, req);
     }
   }
+
+  //  can be u3_none
+  //
+  u3z(req);
 
   return 0;
 }
