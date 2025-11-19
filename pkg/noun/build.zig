@@ -199,8 +199,6 @@ pub fn build(b: *std.Build) !void {
         else => "",
     }), "rsignal.h");
 
-    pkg_noun.addIncludePath(pkg_noun.getEmittedIncludeTree());
-
     b.installArtifact(pkg_noun);
 }
 
