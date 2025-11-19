@@ -2018,7 +2018,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 
   switch ( tag ) {
     case c3__jinx: {
-      if ( c3n == u3ud(*clu) || u3_nul == *clu || &(u3H->rod_u) == u3R) {
+      if ( c3n == u3ud(*clu) || u3_nul == *clu ) {
         u3z(*clu);
         *clu = u3_nul;
       }
