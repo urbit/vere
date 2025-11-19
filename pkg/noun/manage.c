@@ -1294,6 +1294,12 @@ _m_renew_now(void)
 void
 u3m_timer_set(u3_atom gap)
 {
+  if ( !u3R->par_p ) {
+    //  noop on the home road since we have no jump buffer
+    //
+    u3z(gap);
+    return;
+  }
   struct timeval tim_u;
   gettimeofday(&tim_u, 0);
   u3_atom now = u3m_time_in_tv(&tim_u);
@@ -1309,6 +1315,11 @@ u3m_timer_set(u3_atom gap)
 void
 u3m_timer_pop(void)
 {
+  if ( !u3R->par_p ) {
+    //  noop on the home road since we have no jump buffer
+    //
+    return;
+  }
   c3_dessert( c3y == u3du(u3R->tim) );
   u3_noun t = u3k(u3t(u3R->tim));
   u3z(u3R->tim), u3R->tim = t;
