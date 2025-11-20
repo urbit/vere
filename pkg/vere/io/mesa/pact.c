@@ -1208,7 +1208,7 @@ _test_pact(u3_mesa_pact* pac_u)
     ret_i = 1; goto done;
   }
   else if ( len_w > PACT_SIZE ) {
-    fprintf(stderr, "pact: etch overflowed: %u\r\n", len_w);
+    fprintf(stderr, "pact: etch overflowed: %"PRIc3_w"\r\n", len_w);
     ret_i = 1; goto done;
   }
 
@@ -1217,7 +1217,7 @@ _test_pact(u3_mesa_pact* pac_u)
   _mesa_sift_pact(&sif_u, &nex_u);
 
   if ( sif_u.rem_w && !sif_u.err_c ) {
-    fprintf(stderr, "pact: sift failed len=%u sif=%u\r\n", len_w, sif_u.rem_w);
+    fprintf(stderr, "pact: sift failed len=%"PRIc3_w" sif=%u\r\n", len_w, sif_u.rem_w);
     _log_buf(buf_y, len_w);
     ret_i = 1; goto done;
   }
@@ -1306,6 +1306,14 @@ _test_rand_word_new(void* ptr_v)
 {
   c3_w_new low_w = rand();
   c3_w_new hig_w = rand();
+  return (hig_w << 16) ^ (low_w & ((1 << 16) - 1));
+}
+
+static c3_w
+_test_rand_word(void* ptr_v)
+{
+  c3_w low_w = rand();
+  c3_w hig_w = rand();
   return (hig_w << 16) ^ (low_w & ((1 << 16) - 1));
 }
 
