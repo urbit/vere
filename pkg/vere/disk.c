@@ -480,10 +480,10 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
   u3_assert( c3y == u3a_is_cat(met_u->lif_w) );
 
-  u3_noun who = u3i_chubs(2, met_u->who_d);
+  u3_noun who = u3_ship_to_noun(met_u->who_u);
 
   if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
-     || (c3n == _disk_save_meta(mdb_u, "who", 2 * sizeof(c3_d), (c3_y*)met_u->who_d))
+     || (c3n == _disk_save_meta(mdb_u, "who", sizeof(u3_ship), (c3_y*)&met_u->who_u))
      || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
      || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
   {
@@ -547,7 +547,7 @@ c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
   c3_w ver_w, lif_w;
-  c3_d who_d[2];
+  u3_ship who_u;
   c3_o fak_o;
 
   _mdb_val val_u;
@@ -572,26 +572,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
     fprintf(stderr, "disk: read meta: strange identity\r\n");
   }
 
-  c3_y* byt_y = val_u.buf_y;
-
-  who_d[0] = (c3_d)byt_y[0]
-           | (c3_d)byt_y[1] << 8
-           | (c3_d)byt_y[2] << 16
-           | (c3_d)byt_y[3] << 24
-           | (c3_d)byt_y[4] << 32
-           | (c3_d)byt_y[5] << 40
-           | (c3_d)byt_y[6] << 48
-           | (c3_d)byt_y[7] << 56;
-
-  byt_y += 8;
-  who_d[1] = (c3_d)byt_y[0]
-           | (c3_d)byt_y[1] << 8
-           | (c3_d)byt_y[2] << 16
-           | (c3_d)byt_y[3] << 24
-           | (c3_d)byt_y[4] << 32
-           | (c3_d)byt_y[5] << 40
-           | (c3_d)byt_y[6] << 48
-           | (c3_d)byt_y[7] << 56;
+  who_u = u3_ship_of_bytes(16, val_u.buf_y);
 
   //  fake bit
   //
@@ -627,7 +608,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
     fprintf(stderr, "disk: read meta: strange life\r\n");
   }
 
-  byt_y = val_u.buf_y;
+  c3_y* byt_y = val_u.buf_y;
   lif_w = (c3_w)byt_y[0]
         | (c3_w)byt_y[1] << 8
         | (c3_w)byt_y[2] << 16
@@ -658,7 +639,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //      because sometimes we call this just to ensure metadata exists
   if ( met_u ) {
     met_u->ver_w = ver_w;
-    memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
+    met_u->who_u = who_u;
     met_u->fak_o = fak_o;
     met_u->lif_w = lif_w;
   }

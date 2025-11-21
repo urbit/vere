@@ -893,7 +893,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       if ( 0 == i_w ) {
         u3_http* htp_u = req_u->hon_u->htp_u;
         u3_httd* htd_u = htp_u->htd_u;
-        *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+        *wer = u3dc("scot", 'p', u3_ship_to_noun(htd_u->car_u.pir_u->who_u));
       }
       else if ( 1 == i_w ) {
         *wer = c3__base;
@@ -1034,7 +1034,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       // peek or respond from cache
       //
       if ( c3y == req_u->peq_u->las_o ) {
-        u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+        u3_noun our = u3dc("scot", 'p', u3_ship_to_noun(htd_u->car_u.pir_u->who_u));
         if ( c3y == u3r_sing(our, bem.who) ) {
           u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
                             u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
@@ -3138,7 +3138,7 @@ u3_http_io_init(u3_pier* pir_u)
   {
     u3_noun key = u3dt("cat", 3,
       u3i_string("urbauth-"),
-      u3dc("scot", 'p', u3i_chubs(2, pir_u->who_d)));
+      u3dc("scot", 'p', u3_ship_to_noun(pir_u->who_u)));
     htd_u->fig_u.ses = u3_nul;
     htd_u->fig_u.key_c = u3r_string(key);
     u3z(key);

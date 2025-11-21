@@ -341,6 +341,7 @@ u3_auto_exit(u3_auto* car_u)
 
       while ( egg_u ) {
         xen_u = egg_u->nex_u;
+        _auto_news(egg_u, u3_ovum_exit);
         u3_ovum_free(egg_u);
         egg_u = xen_u;
       }
@@ -489,7 +490,6 @@ u3_auto_init(u3_pier* pir_u)
   car_u = _auto_link(u3_conn_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_mesa_io_init(pir_u), pir_u, car_u);
-  car_u = _auto_link(u3_ames_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_http_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_cttp_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_unix_io_init(pir_u), pir_u, car_u);

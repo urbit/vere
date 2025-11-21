@@ -417,10 +417,12 @@ _conn_ovum_news(u3_ovum* egg_u, u3_ovum_news new_e)
   u3_chan*  can_u = ran_u->can_u;
 
   if ( u3_ovum_done == new_e ||
-       u3_ovum_drop == new_e )
+       u3_ovum_drop == new_e ||
+       u3_ovum_exit == new_e )
   {
     if ( can_u ) {
-      _conn_send_noun(can_u,
+      if ( u3_ovum_exit != new_e )
+        _conn_send_noun(can_u,
                       u3nt(ran_u->rid, c3__news,
                            ( u3_ovum_done == new_e
                              ? c3__done
@@ -549,7 +551,7 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
       //  current ship.
       //
       case c3__who: {
-        res = u3nc(u3_nul, u3i_chubs(2, pir_u->who_d));
+        res = u3nc(u3_nul, u3_ship_to_noun(pir_u->who_u));
       }
     }
   }
@@ -724,7 +726,7 @@ _conn_init_sock(u3_shan* san_u)
 {
 #ifdef _WIN32
   u3_pier*  pir_u = san_u->con_u->car_u.pir_u;
-  u3_atom   who = u3dc("scot", c3__p, u3i_chubs(2, pir_u->who_d));
+  u3_atom   who = u3dc("scot", c3__p, u3_ship_to_noun(pir_u->who_u));
   c3_c*     who_c = u3r_string(who);
   c3_c      pip_c[256];
   c3_i      ret_i;

@@ -1496,7 +1496,7 @@ u3_mars_work(u3_mars* mar_u)
     u3_noun wyn = u3_nul;
     u3_noun msg = u3nq(c3__ripe,
                        u3nc(2, wyn),
-                       u3nc(u3i_chubs(2, mar_u->met_u.who_d),
+                       u3nc(u3_ship_to_noun(mar_u->met_u.who_u),
                             mar_u->met_u.fak_o),
                        u3nc(u3i_chub(mar_u->dun_d),
                             mar_u->mug_l));
@@ -1721,8 +1721,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
     return c3n;
   }
 
-  u3r_chubs(0, 2, met_u->who_d, who);
-
+  met_u->who_u = u3_ship_of_noun(who);
   {
     u3_noun bot, mod, use, cax;
 

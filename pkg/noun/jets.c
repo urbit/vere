@@ -893,23 +893,29 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
         u3z(cor);
         return pro;
       }
-      ham_u->liv = c3n;
+      //ham_u->liv = c3n;
       ame = _cj_soft(cor, axe);
-      ham_u->liv = c3y;
+      //ham_u->liv = c3y;
 
       if ( c3n == u3r_sing(ame, pro) ) {
-        u3l_log("test: %s %s: mismatch: good %x, bad %x",
+        //u3l_log("test: %s %s: mismatch: good %x, bad %x",
+        //       cop_u->cos_c,
+        //       (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
+        //       u3r_mug(ame),
+        //       u3r_mug(pro));
+        //ham_u->liv = c3n;
+        u3l_log("test: %s %s: mismatch",
                cop_u->cos_c,
-               (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
-               u3r_mug(ame),
-               u3r_mug(pro));
-        ham_u->liv = c3n;
+               (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c
+        );
+        u3m_p("good", ame);
+        u3m_p("baad", pro);
 
         return u3m_bail(c3__fail);
       }
       else {
 
-#if 0
+#if 1
         u3l_log("test: %s %s",
                cop_u->cos_c,
                (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c);

@@ -1,6 +1,7 @@
 #ifndef VERE_MESA_H
 #define VERE_MESA_H
 
+#include "vere.h"
 #include "c3/c3.h"
 #include "ship.h"
 
@@ -171,5 +172,53 @@ void inc_hopcount(u3_mesa_head*);
 
 void log_pact(u3_mesa_pact* pac_u);
 void log_name(u3_mesa_name* nam_u);
+
+typedef struct sockaddr_in sockaddr_in;
+
+typedef struct _u3_lane_state {
+  c3_d  sen_d;  //  last sent date
+  c3_d  her_d;  //  last heard date
+  c3_w  rtt_w;  //  round-trip time
+  c3_w  rtv_w;  //  round-trip time variance
+} u3_lane_state;
+
+typedef struct _u3_gage {
+  c3_w     rtt_w;  // rtt
+  c3_w     rto_w;  // rto
+  c3_w     rtv_w;  // rttvar
+  c3_w     wnd_w;  // cwnd
+  c3_w     wnf_w;  // cwnd fraction
+  c3_w     sst_w;  // ssthresh
+  c3_w     con_w;  // counter
+  //
+} u3_gage;
+
+typedef enum _u3_peer_live {
+  u3_peer_lane = 1 << 0,
+  u3_peer_lamp = 1 << 1,
+  u3_peer_full = (1 << 0) | (1 << 1)
+} u3_peer_live;
+
+typedef struct _u3_peer {
+  void*          mes_u;  //  backpointer
+  u3_ship        her_u;  //  who is this peer
+  u3_peer_live   liv_e;  //  has this been initialized?
+  sockaddr_in    dan_u;  //  direct lane (nullable)
+  u3_lane_state  dir_u;  //  direct lane state
+  c3_o           lam_o;
+  c3_o           log_o;  //  dns log
+  u3_ship        lam_u;  //  galaxy @p
+  u3_lane_state  ind_u;  //  indirect lane state
+  c3_c**         dns_c;
+  u3_gage        gag_u;
+} u3_peer;
+
+#define NAME per_map
+#define KEY_TY u3_ship
+#define HASH_FN u3_hash_ship
+#define CMPR_FN u3_cmpr_ship
+#define VAL_TY u3_peer*
+#define HEADER_MODE
+#include "verstable.h"
 
 #endif

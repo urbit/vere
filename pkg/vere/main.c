@@ -259,7 +259,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "pier",                required_argument, NULL, 'c' },
     { "replay",              no_argument,       NULL, 'D' },
     { "daemon",              no_argument,       NULL, 'd' },
-    { "ethereum",            required_argument, NULL, 'e' },
+    { "gateway",             required_argument, NULL, 'g' },
     { "fake",                required_argument, NULL, 'F' },
     { "key-string",          required_argument, NULL, 'G' },
     { "gc",                  no_argument,       NULL, 'g' },
@@ -308,6 +308,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
+    { "jael-sources",        required_argument, NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -359,7 +360,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         if ( 1 != sscanf(optarg, "%" SCNuMAX, &u3_Host.ops_u.siz_i) ) {
           return c3n;
         }
-
+        break;
+      }
+      case 13: { //  jael-sources
+        u3_Host.ops_u.src_c = strdup(optarg);
         break;
       }
       //  special args
@@ -435,10 +439,6 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.nuu = c3y;
         break;
       }
-      case 'e': {
-        u3_Host.ops_u.eth_c = strdup(optarg);
-        break;
-      }
       case 'F': {
         u3_Host.ops_u.fak_c = _main_presig(optarg);
         u3_Host.ops_u.net   = c3n;
@@ -505,6 +505,10 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.nuu = c3y;
         break;
       }
+      case 'W': {
+        u3_Host.ops_u.gat_c = strdup(optarg);
+        break;
+      }
       case 'X': {
         u3_Host.ops_u.pek_c = strdup(optarg);
         break;
@@ -552,8 +556,10 @@ _main_getopt(c3_i argc, c3_c** argv)
 #endif
 
   if ( 0 != u3_Host.ops_u.fak_c ) {
-    if ( 28 < strlen(u3_Host.ops_u.fak_c) ) {
-      fprintf(stderr, "fake comets are forbidden\r\n");
+    if ( 28 < strlen(u3_Host.ops_u.fak_c) &&
+        ( 0 == u3_Host.ops_u.key_c && 
+          0 == u3_Host.ops_u.gen_c ) ) {
+      fprintf(stderr, "fake comets require a key file or key string\r\n");
       return c3n;
     }
     if ( 0 != u3_Host.ops_u.who_c ) {
@@ -625,13 +631,18 @@ _main_getopt(c3_i argc, c3_c** argv)
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
-    fprintf(stderr, "-H only makes sense when creating a new ship\n");
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-k only makes sense when creating a new ship\n");
     return c3n;
   }
 
-  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.key_c != 0 ) {
-    fprintf(stderr, "-k only makes sense when creating a new ship\n");
+  if ( u3_Host.ops_u.gen_c != 0 && u3_Host.ops_u.key_c != 0 ) {
+    fprintf(stderr, "-G and -k cannot be used together\n");
+    return c3n;
+  }
+
+  if ( u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.dns_c != 0 ) {
+    fprintf(stderr, "-H only makes sense when creating a new ship\n");
     return c3n;
   }
 
@@ -642,6 +653,11 @@ _main_getopt(c3_i argc, c3_c** argv)
 
   if ( u3_Host.ops_u.url_c != 0 && u3_Host.ops_u.pil_c != 0 ) {
     fprintf(stderr, "-B and -u cannot be used together\n");
+    return c3n;
+  }
+
+  if (u3_Host.ops_u.nuu != c3y && u3_Host.ops_u.src_c != 0 ) {
+    fprintf(stderr, "--jael-sources only makes sense when creating a new ship\n");
     return c3n;
   }
   else if ( u3_Host.ops_u.nuu == c3y
@@ -844,7 +860,6 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-c, --pier PIER               Create a new urbit in <pier>/\n",
     "-D, --replay                  Recompute from events\n",
     "-d, --daemon                  Daemon mode; implies -t\n",
-    "-e, --ethereum URL            Ethereum gateway\n",
     "-F, --fake SHIP               Boot fake urbit; also disables networking\n",
     "-G, --key-string STRING       Private key string (@uw, see also -k)\n"
     "-g, --gc                      Set GC flag\n",
@@ -874,6 +889,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-u, --bootstrap-url URL       URL from which to download pill\n",
     "-v, --verbose                 Verbose\n",
     "-w, --name NAME               Initial boot as ~name (with ticket)\n",
+    "-W, --cards CARDS             PKI init cards\n",
     "-X, --scry PATH               Scry, write to file, then exit\n",
     "-x, --exit                    Exit immediately\n",
     "-Y, --scry-into FILE          Optional name of file (for -X)\n",

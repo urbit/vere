@@ -45,10 +45,7 @@
 
     /* u3_lane: ames lane (IP address and port)
     */
-      typedef struct _u3_lane {
-        c3_w             pip_w;             //  target IPv4 address
-        c3_s             por_s;             //  target port
-      } u3_lane;
+      typedef struct sockaddr_in sockaddr_in;
 
     /* u3_moor_poke: poke callback function.
     */
@@ -271,7 +268,7 @@
         c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
-        c3_c*   eth_c;                      //  -e, ethereum node url
+        c3_c*   gat_c;                      //  -g, PKI gateway node url
         c3_c*   fak_c;                      //  -F, fake ship
         c3_c*   gen_c;                      //  -G, czar generator
         c3_o    gab;                        //  -g, test garbage collection
@@ -312,6 +309,7 @@
         c3_o    eph;                        //  --swap, use ephemeral file
         c3_o    tos;                        //  --toss, discard ephemeral
         u3_even* vex_u;                     //  --prop-*, boot enhancements
+        c3_c*   src_c;                      //  --jael-sources
 
         c3_o    beb;                        //  --behn-allow-blocked
         c3_z    siz_i;                      //  --lmdb-map-size
@@ -339,9 +337,6 @@
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
         void     (*bot_f)();                //  call when chis is up
-        void*      sam_u;                   //  old ames, "unified driver" hack
-        uv_udp_t   wax_u;                   //  "unified driver" udp send handle
-        c3_w*      imp_u;                   //  "unified driver" galaxy IP:s
       } u3_host;                            //  host == computer == process
 
     /**  Pier system.
@@ -351,7 +346,8 @@
         typedef enum {
           u3_ovum_drop = 0,                 //  unplanned
           u3_ovum_work = 1,                 //  begun
-          u3_ovum_done = 2                  //  complete
+          u3_ovum_done = 2,                 //  complete
+          u3_ovum_exit = 3                  //  exit
         } u3_ovum_news;
 
       struct _u3_ovum;
@@ -573,10 +569,10 @@
       /* u3_meta: pier metadata.
       */
         typedef struct _u3_meta {
-          c3_w ver_w;                       //  version
-          c3_d who_d[2];                    //  identity
-          c3_o fak_o;                       //  fake bit
-          c3_w lif_w;                       //  lifecycle length
+          c3_w    ver_w;                    //  version
+          u3_ship who_u;                    //  identity
+          c3_o    fak_o;                    //  fake bit
+          c3_w    lif_w;                    //  lifecycle length
         } u3_meta;
 
       /* u3_boot_opts: bootstrap parameters.
@@ -631,7 +627,7 @@
         typedef struct _u3_pier {
           c3_c*            pax_c;               //  pier directory
           c3_w             lif_w;               //  lifecycle barrier
-          c3_d             who_d[2];            //  identity
+          u3_ship          who_u;               //  identity
           c3_o             fak_o;               //  yes iff fake security
           c3_o             liv_o;               //  fully live
           u3_disk*         log_u;               //  event log
@@ -813,6 +809,16 @@
         c3_w
         u3_mcut_host(c3_c* buf_c, c3_w len_w, u3_noun hot);
 
+      /* u3_mcut_hosts(): measure/cut host list.
+      */
+        c3_w
+        u3_mcut_hosts(c3_c* buf_c, c3_w len_w, u3_noun hot);
+
+      /* u3_mpef_turf(): measure/cut string list, prefixing.
+      */
+        c3_w
+        u3_mpef_turfs(c3_c* buf_c, c3_w len_w, c3_c* pef_c, c3_c** tuf_c);
+
     /**  IO drivers.
     **/
       /* u3_auto_mark(): mark drivers for gc.
@@ -828,6 +834,11 @@
       */
         u3_noun
         u3_auto_info(u3_auto* car_u);
+
+      /* u3_auto_link(): validate and link initalized [car_u]
+      */
+        u3_auto*
+        u3_auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u);
 
       /* u3_auto_slog(): print status info.
       */
@@ -1182,20 +1193,16 @@
 
     /**  Ames, packet networking.
     **/
-      /* u3_ames_io_init(): initialize ames I/O.
-      */
-        u3_auto*
-        u3_ames_io_init(u3_pier* pir_u);
 
       /* u3_ames_decode_lane(): destructure lane from noun
       */
-        u3_lane
+        sockaddr_in
         u3_ames_decode_lane(u3_noun);
 
       /* u3_ames_encode_lane(): encode lane as noun
       */
         u3_noun
-        u3_ames_encode_lane(u3_lane);
+        u3_ames_encode_lane(sockaddr_in);
 
     /**  mesa
     **/
@@ -1495,6 +1502,13 @@
                      c3_c* arc_c,  // architecture
                      c3_c* dir_c,  // output directory
                      c3_t  lin_t); // link to $pier/.run
+
+
+        u3_atom
+        u3_king_get_atom(c3_c* url_c);
+
+        u3_noun
+        u3_king_get_noun(c3_c* url_c);
 
       /* u3_daemon_init(): platform-specific daemon mode initialization.
       */

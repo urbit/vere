@@ -536,15 +536,15 @@ _etch_ship(u3_etcher* ech_u, u3_ship who_u, c3_y len_y)
 }
 
 static void
-_sift_ship(u3_sifter* sif_u, u3_ship who_u, c3_y len_y)
+_sift_ship(u3_sifter* sif_u, u3_ship* who_u, c3_y len_y)
 {
   assert ( len_y <= 16 );
   c3_y *res_y = _sift_next(sif_u, len_y);
   if ( NULL == res_y ) {
-    who_u[0] = who_u[1] = 0;
+    who_u->hed_d = who_u->tel_d = 0;
     return;
   }
-  u3_ship_of_bytes(who_u, len_y, res_y);
+  *who_u = u3_ship_of_bytes(len_y, res_y);
 }
 
 static void
@@ -642,7 +642,7 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
   nam_u->nit_o = __( met_u.nit_y == 1 );
   nam_u->aut_o = __( met_u.tau_y == 1 );
 
-  _sift_ship(sif_u, nam_u->her_u, 2 << met_u.ran_y);
+  _sift_ship(sif_u, &nam_u->her_u, 2 << met_u.ran_y);
   nam_u->rif_w = _sift_var_word(sif_u, met_u.rif_y + 1);
   nam_u->boq_y = _sift_byte(sif_u);
 

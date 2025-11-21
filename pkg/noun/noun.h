@@ -19,6 +19,7 @@
 #include "log.h"
 #include "nock.h"
 #include "retrieve.h"
+#include "ship.h"
 #include "trace.h"
 #include "urth.h"
 #include "xtract.h"
