@@ -24,7 +24,7 @@
 
   union sing {
     float32_t s;
-    c3_w_new c;
+    c3_h c;
   };
 
   union doub {
@@ -735,14 +735,14 @@
       case 4:
         for (c3_d i = 0; i < len_x; i++) {
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
-          r_data = u3nc(u3i_word_new(x_val16.v), r_data);
+          r_data = u3nc(u3i_half(x_val16.v), r_data);
         }
         break;
 
       case 5:
         for (c3_d i = 0; i < len_x; i++) {
           float32_t x_val32 = ((float32_t*)x_bytes)[i];
-          r_data = u3nc(u3i_word_new(x_val32.v), r_data);
+          r_data = u3nc(u3i_half(x_val32.v), r_data);
         }
         break;
 

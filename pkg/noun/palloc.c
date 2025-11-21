@@ -1423,7 +1423,7 @@ _sweep_directory(void)
     // u3_assert(0);
   }
 
-  if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_h & u3o_verbose ) {
     u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
     u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
   }
@@ -1740,7 +1740,7 @@ _sweep_counts(void)
     // u3_assert(0);
   }
 
-  if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_h & u3o_verbose ) {
     u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
     u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
   }

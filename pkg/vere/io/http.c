@@ -861,12 +861,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 
   //  get beak
   //
-  for ( c3_w_new i_w = 0; i_w < 3; ++i_w ) {
+  for ( c3_h i_h = 0; i_h < 3; ++i_h ) {
     u3_noun* wer;
-    if ( 0 == i_w ) {
+    if ( 0 == i_h ) {
       wer = &bem.who;
     }
-    else if ( 1 == i_w ) {
+    else if ( 1 == i_h ) {
       wer = &bem.des;
     }
     else {
@@ -890,12 +890,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 
     // '='
     if ( (len_w > 0) && ('=' == txt_c[0]) ) {
-      if ( 0 == i_w ) {
+      if ( 0 == i_h ) {
         u3_http* htp_u = req_u->hon_u->htp_u;
         u3_httd* htd_u = htp_u->htd_u;
         *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
       }
-      else if ( 1 == i_w ) {
+      else if ( 1 == i_h ) {
         *wer = c3__base;
       }
       else {
@@ -1086,7 +1086,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1132,7 +1132,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1655,7 +1655,7 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   u3_weak req = _http_rec_to_httq(rec_u);
 
   if ( u3_none == req ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
               rec_u->method.base);
     }
@@ -2079,7 +2079,7 @@ _http_serv_accept(u3_http* htp_u)
 
   if ( 0 != (sas_i = uv_accept((uv_stream_t*)&htp_u->wax_u,
                                (uv_stream_t*)&hon_u->wax_u)) ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("http: accept: %s", uv_strerror(sas_i));
     }
 
@@ -2441,7 +2441,7 @@ _http_search_req(u3_httd* htd_u,
   u3_http* htp_u;
   u3_hcon* hon_u;
   u3_hreq* req_u;
-  c3_w bug_w = u3C.wag_w & u3o_verbose;
+  c3_w bug_w = u3C.wag_h & u3o_verbose;
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
@@ -2847,7 +2847,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_w;
+    c3_w pos_w      = stk_u->off_h;
     c3_w out_w      = 0;
 
     while (pos_w > 4) {
@@ -2876,7 +2876,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     }
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
+    if ( 0 != stk_u->off_h ) {
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,

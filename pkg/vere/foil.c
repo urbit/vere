@@ -4,7 +4,7 @@
 #include "vere.h"
 
     /*  assumptions:
-    **    all measurements are in chubs (double-words_new, c3_d, uint64_t).
+    **    all measurements are in chubs (double-halfs, c3_d, uint64_t).
     **    little-endian addressing is ASSUMED.
     **
     **  framing:

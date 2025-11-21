@@ -88,7 +88,7 @@ typedef struct {
 } lia_state;
 
 static u3_noun
-_atoms_from_stack(void** valptrs, c3_w_new n, c3_y* types)
+_atoms_from_stack(void** valptrs, c3_h n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -98,7 +98,7 @@ _atoms_from_stack(void** valptrs, c3_w_new n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        out = u3nc(u3i_word_new(*(c3_w_new*)valptrs[n]), out);
+        out = u3nc(u3i_half(*(c3_h*)valptrs[n]), out);
         break;
       }
       case c_m3Type_i64:
@@ -118,9 +118,9 @@ _atoms_from_stack(void** valptrs, c3_w_new n, c3_y* types)
 
 //  RETAIN argument
 static c3_o
-_atoms_to_stack(u3_noun atoms, void** valptrs, c3_w_new n, c3_y* types)
+_atoms_to_stack(u3_noun atoms, void** valptrs, c3_h n, c3_y* types)
 {
-  for (c3_w_new i = 0; i < n; i++)
+  for (c3_h i = 0; i < n; i++)
   {
     if (c3y == u3ud(atoms))
     {
@@ -137,7 +137,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w_new n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        *(c3_w_new*)valptrs[i] = u3r_word_new(0, atom);
+        *(c3_h*)valptrs[i] = u3r_half(0, atom);
         break;
       }
       case c_m3Type_i64:
@@ -156,7 +156,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w_new n, c3_y* types)
 }
 
 static u3_noun
-_coins_from_stack(void** valptrs, c3_w_new n, c3_y* types)
+_coins_from_stack(void** valptrs, c3_h n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -165,7 +165,7 @@ _coins_from_stack(void** valptrs, c3_w_new n, c3_y* types)
     {  // TODO 64 bit vere
       case c_m3Type_i32:
       {
-        out = u3nc(u3nc(c3__i32, u3i_word_new(*(c3_w_new*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__i32, u3i_half(*(c3_h*)valptrs[n])), out);
         break;
       }
       case c_m3Type_i64:
@@ -175,7 +175,7 @@ _coins_from_stack(void** valptrs, c3_w_new n, c3_y* types)
       }
       case c_m3Type_f32:
       {
-        out = u3nc(u3nc(c3__f32, u3i_word_new(*(c3_w_new*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__f32, u3i_half(*(c3_h*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f64:
@@ -194,9 +194,9 @@ _coins_from_stack(void** valptrs, c3_w_new n, c3_y* types)
 
 //  RETAIN argument
 static c3_o
-_coins_to_stack(u3_noun coins, void** valptrs, c3_w_new n, c3_y* types)
+_coins_to_stack(u3_noun coins, void** valptrs, c3_h n, c3_y* types)
 {
-  for (c3_w_new i = 0; i < n; i++)
+  for (c3_h i = 0; i < n; i++)
   {
     if (c3y == u3ud(coins))
     {
@@ -222,7 +222,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w_new n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w_new*)valptrs[i] = u3r_word_new(0, value);
+        *(c3_h*)valptrs[i] = u3r_half(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -240,7 +240,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w_new n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w_new*)valptrs[i] = u3r_word_new(0, value);
+        *(c3_h*)valptrs[i] = u3r_half(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -314,20 +314,20 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
 
-    c3_w_new n_in  = f->funcType->numArgs;
-    c3_w_new n_out = f->funcType->numRets;
+    c3_h n_in  = f->funcType->numArgs;
+    c3_h n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
 
     c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));
     void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-    for (c3_w_new i = 0; i < n_in; i++)
+    for (c3_h i = 0; i < n_in; i++)
     {
       valptrs_in[i] = &vals_in[i];
     }
 
     c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));
     void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-    for (c3_w_new i = 0; i < n_out; i++)
+    for (c3_h i = 0; i < n_out; i++)
     {
       valptrs_out[i] = &vals_out[i];
     }
@@ -395,10 +395,10 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_atom ptr = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun len = u3at(arr_sam_3, monad);
 
-    c3_w_new ptr_w = u3r_word_new(0, ptr);
-    c3_l_new len_l = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
-    c3_w_new len_buf_w;
-    c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
+    c3_h ptr_h = u3r_half(0, ptr);
+    c3_h len_h = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
+    c3_h len_buf_h;
+    c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_h, 0);
 
     if (buf_y == NULL)
     {
@@ -406,14 +406,14 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
 
-    if (ptr_w + len_l > len_buf_w)
+    if (ptr_h + len_h > len_buf_h)
     {
       fprintf(stderr, ERR("memread out of bounds"));
       return u3m_bail(c3__fail);
     }
 
     u3z(monad);
-    return u3nt(0, len_l, u3i_bytes(len_l, (buf_y + ptr_w)));
+    return u3nt(0, len_h, u3i_bytes(len_h, (buf_y + ptr_h)));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->memwrite_bat))
   {
@@ -426,11 +426,11 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     u3_noun len = u3at(arr_sam_6, monad);
     u3_noun src = u3at(arr_sam_7, monad);
 
-    c3_w_new ptr_w = u3r_word_new(0, ptr);
-    c3_l_new len_l = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
+    c3_h ptr_h = u3r_half(0, ptr);
+    c3_h len_h = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
 
-    c3_w_new len_buf_w;
-    c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_w, 0);
+    c3_h len_buf_h;
+    c3_y* buf_y = m3_GetMemory(sat->wasm_module->runtime, &len_buf_h, 0);
 
     if (buf_y == NULL)
     {
@@ -438,13 +438,13 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
 
-    if (ptr_w + len_l > len_buf_w)
+    if (ptr_h + len_h > len_buf_h)
     {
       fprintf(stderr, ERR("memwrite out of bounds"));
       return u3m_bail(c3__fail);
     }
 
-    u3r_bytes(0, len_l, (buf_y + ptr_w), u3x_atom(src));
+    u3r_bytes(0, len_h, (buf_y + ptr_h), u3x_atom(src));
     
     u3z(monad);
     return u3nc(0, 0);
@@ -590,7 +590,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_i32:
       {
-        glob_value.value.i32 = u3r_word_new(0, value);
+        glob_value.value.i32 = u3r_half(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -600,7 +600,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_f32:
       {
-        glob_value.value.f32 = u3r_word_new(0, value);
+        glob_value.value.f32 = u3r_half(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -661,7 +661,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_i32:
       {
-        out = u3i_word_new(glob_value.value.i32);
+        out = u3i_half(glob_value.value.i32);
         break;
       }
       case c_m3Type_i64:
@@ -671,7 +671,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       }
       case c_m3Type_f32:
       {
-        out = u3i_word_new(glob_value.value.f32);
+        out = u3i_half(glob_value.value.f32);
         break;
       }
       case c_m3Type_f64:
@@ -698,10 +698,10 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       fprintf(stderr, ERR("memsize no memory"));
       return u3m_bail(c3__fail);
     }
-    c3_w_new num_pages = sat->wasm_module->runtime->memory.numPages;
+    c3_h num_pages = sat->wasm_module->runtime->memory.numPages;
 
     u3z(monad);
-    return u3nc(0, u3i_word_new(num_pages));
+    return u3nc(0, u3i_half(num_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->mem_grow_bat))
   {
@@ -720,8 +720,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
 
     c3_s delta_s = ( (1U << 16) > delta ) ? delta : u3m_bail(c3__fail);
 
-    c3_w_new n_pages = sat->wasm_module->runtime->memory.numPages;
-    c3_w_new required_pages = n_pages + delta_s;
+    c3_h n_pages = sat->wasm_module->runtime->memory.numPages;
+    c3_h required_pages = n_pages + delta_s;
 
     M3Result result = ResizeMemory(sat->wasm_module->runtime, required_pages);
 
@@ -732,7 +732,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     }
 
     u3z(monad);
-    return u3nc(0, u3i_word_new(n_pages));
+    return u3nc(0, u3i_half(n_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat->match->get_acc_bat))
   {
@@ -755,8 +755,8 @@ _reduce_monad(u3_noun monad, lia_state* sat)
     }
     u3z(monad);
     u3_noun atoms = u3_nul;
-    c3_w_new n_globals = sat->wasm_module->numGlobals;
-    c3_w_new n_globals_import = sat->wasm_module->numGlobImports;
+    c3_h n_globals = sat->wasm_module->numGlobals;
+    c3_h n_globals_import = sat->wasm_module->numGlobImports;
     while (n_globals-- > n_globals_import)
     {
       M3Global glob = sat->wasm_module->globals[n_globals];
@@ -768,7 +768,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_i32:
         {
-          atoms = u3nc(u3i_word_new(glob.intValue), atoms);
+          atoms = u3nc(u3i_half(glob.intValue), atoms);
           break;
         }
         case c_m3Type_i64:
@@ -778,7 +778,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_f32:
         {
-          atoms = u3nc(u3i_word_new(glob.f32Value), atoms);
+          atoms = u3nc(u3i_half(glob.f32Value), atoms);
           break;
         }
         case c_m3Type_f64:
@@ -797,9 +797,9 @@ _reduce_monad(u3_noun monad, lia_state* sat)
       return u3m_bail(c3__fail);
     }
     u3_noun atoms = u3at(arr_sam, monad);
-    c3_w_new n_globals = sat->wasm_module->numGlobals;
-    c3_w_new n_globals_import = sat->wasm_module->numGlobImports;
-    for (c3_w_new i = n_globals_import; i < n_globals; i++)
+    c3_h n_globals = sat->wasm_module->numGlobals;
+    c3_h n_globals_import = sat->wasm_module->numGlobImports;
+    for (c3_h i = n_globals_import; i < n_globals; i++)
     {
       IM3Global glob = &sat->wasm_module->globals[i];
       u3_noun atom;
@@ -813,7 +813,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_i32:
         {
-          glob->intValue = u3r_word_new(0, atom);
+          glob->intValue = u3r_half(0, atom);
           break;
         }
         case c_m3Type_i64:
@@ -823,7 +823,7 @@ _reduce_monad(u3_noun monad, lia_state* sat)
         }
         case c_m3Type_f32:
         {
-          glob->f32Value = u3r_word_new(0, atom);
+          glob->f32Value = u3r_half(0, atom);
           break;
         }
         case c_m3Type_f64:
@@ -867,16 +867,16 @@ _link_wasm_with_arrow_map(
     fprintf(stderr, ERR("import not found: %s/%s"), mod, name);
     return m3Err_functionImportMissing;
   }
-  c3_w_new n_in  = _ctx->function->funcType->numArgs;
-  c3_w_new n_out = _ctx->function->funcType->numRets;
+  c3_h n_in  = _ctx->function->funcType->numArgs;
+  c3_h n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
   void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-  for (c3_w_new i = 0; i < n_in; i++)
+  for (c3_h i = 0; i < n_in; i++)
   {
     valptrs_in[i] = &_sp[i+n_out];
   }
   void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-  for (c3_w_new i = 0; i < n_out; i++)
+  for (c3_h i = 0; i < n_out; i++)
   {
     valptrs_out[i] = &_sp[i];
   }
@@ -1044,8 +1044,8 @@ u3we_lia_run(u3_noun cor)
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
-  c3_w_new bin_len_w = ( (1U << 31) > p_octs ) ? p_octs : u3m_bail(c3__fail);
-  c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
+  c3_h bin_len_h = ( (1U << 31) > p_octs ) ? p_octs : u3m_bail(c3__fail);
+  c3_y* bin_y = u3r_bytes_alloc(0, bin_len_h, u3x_atom(q_octs));
 
   M3Result result;
 
@@ -1094,14 +1094,14 @@ u3we_lia_run(u3_noun cor)
     return u3m_bail(c3__fail);
   }
   
-  c3_w_new n_imports = wasm3_module->numFuncImports;
+  c3_h n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(6, seed_new);
   u3_noun lia_shop = u3at(14, seed_new);
   u3_noun import = u3at(15, seed_new);
 
   lia_state sat = {wasm3_module, lia_shop, import, &match, 0};
 
-  for (c3_w_new i = 0; i < n_imports; i++)
+  for (c3_h i = 0; i < n_imports; i++)
   {
     M3Function f = wasm3_module->functions[i];
     const char * mod  = f.import.moduleUtf8;
@@ -1299,8 +1299,8 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
-  c3_w_new bin_len_w = ( (1U << 31) > p_octs ) ? p_octs : u3m_bail(c3__fail);
-  c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
+  c3_h bin_len_h = ( (1U << 31) > p_octs ) ? p_octs : u3m_bail(c3__fail);
+  c3_y* bin_y = u3r_bytes_alloc(0, bin_len_h, u3x_atom(q_octs));
 
   M3Result result;
 
@@ -1328,7 +1328,7 @@ u3we_lia_run_once(u3_noun cor)
   }
 
   IM3Module wasm3_module;
-  result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_w);
+  result = m3_ParseModule(wasm3_env, &wasm3_module, bin_y, bin_len_h);
   if (result)
   {
     fprintf(stderr, ERR("parse binary error: %s"), result);
@@ -1349,7 +1349,7 @@ u3we_lia_run_once(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  c3_w_new n_imports = wasm3_module->numFuncImports;
+  c3_h n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(u3x_sam_7, cor);
   u3_noun lia_shop = u3_nul;
   u3_noun import = u3at(u3x_sam_5, cor);
@@ -1359,7 +1359,7 @@ u3we_lia_run_once(u3_noun cor)
 
   lia_state sat = {wasm3_module, lia_shop, u3k(acc), map, &match, 0};
 
-  for (c3_w_new i = 0; i < n_imports; i++)
+  for (c3_h i = 0; i < n_imports; i++)
   {
     M3Function f = wasm3_module->functions[i];
     const char * mod  = f.import.moduleUtf8;

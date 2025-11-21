@@ -30,8 +30,8 @@
         c3_d    sen_d;                    //  last event requested
         c3_d    dun_d;                    //  last event processed
         c3_l    mug_l;                    //  hash of state
-        c3_w_new    mas_w;                    //  memory threshold state
-        c3_w_new    fag_w;                    //  flags
+        c3_h    mas_w;                    //  memory threshold state
+        c3_h    fag_w;                    //  flags
         u3_noun sac;                      //  space measurement
         u3_disk* log_u;                   //  event log
         u3_meta met_u;                    //  metadata

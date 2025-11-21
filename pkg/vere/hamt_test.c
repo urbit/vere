@@ -8,7 +8,7 @@
 
 
 // defined in noun/hashtable.c
-c3_w_new _ch_skip_slot(c3_w_new mug_w, c3_w_new lef_w);
+c3_h _ch_skip_slot(c3_h mug_h, c3_h lef_h);
 
 /* _setup(): prepare for tests.
 */
@@ -20,7 +20,7 @@ _setup(void)
   u3_cue_xeno*  sil_u;
   u3_weak       pil;
 
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
   u3m_boot_lite(1 << 27);
   sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
@@ -66,14 +66,14 @@ main(int argc, char* argv[])
   u3h_put(pit_p, init, u3nc(c3y, u3_nul));
   u3z(init);
 
-  for ( c3_w_new fra_w = 0; fra_w < 100000; fra_w++ ) {
+  for ( c3_h fra_h = 0; fra_h < 100000; fra_h++ ) {
     u3_noun data = u3nc(u3i_string("mess"),
                           u3nc(48,
                             u3nc(c3__pact,
                               u3nc(13105,
                                 u3nc(c3__etch,
                                     u3nc(c3__data,
-                                      u3nc(u3dc("scot", c3__ud, fra_w),
+                                      u3nc(u3dc("scot", c3__ud, fra_h),
                                       u3nc(u3i_string("chum"),
                                         u3nc(49,
                                           u3nc(u3i_string("~nec"),
@@ -95,14 +95,14 @@ main(int argc, char* argv[])
     u3z(data);
   }
 
-  for ( c3_w_new fra_w = 0; fra_w < 100000; fra_w++ ) {
+  for ( c3_h fra_h = 0; fra_h < 100000; fra_h++ ) {
     u3_noun data = u3nc(u3i_string("mess"),
                           u3nc(48,
                             u3nc(c3__pact,
                               u3nc(13105,
                                 u3nc(c3__etch,
                                     u3nc(c3__data,
-                                      u3nc(u3dc("scot", c3__ud, fra_w),
+                                      u3nc(u3dc("scot", c3__ud, fra_h),
                                       u3nc(u3i_string("chum"),
                                         u3nc(49,
                                           u3nc(u3i_string("~nec"),
@@ -121,7 +121,7 @@ main(int argc, char* argv[])
                       );
      u3_weak res = u3h_git(pit_p, data);
      if (res == u3_none) {
-        fprintf(stderr, "key gone from hamt %u: not ok\r\n", fra_w);
+        fprintf(stderr, "key gone from hamt %u: not ok\r\n", fra_h);
         exit(1);
      }
      u3z(data);

@@ -20,9 +20,9 @@
 
 #     define u3a_word_bytes  (sizeof(c3_w))
 
-#     define u3a_word_new_bits  32
-#     define u3a_word_new_bits_log 5
-#     define u3a_word_new_bytes_shift  (u3a_word_new_bits_log - 3)
+#     define u3a_half_bits  32
+#     define u3a_half_bits_log 5
+#     define u3a_half_bytes_shift  (u3a_half_bits_log - 3)
 #     define u3a_32_indirect_mask  0x3fffffff
 #     define u3a_32_direct_max  0x7fffffff
 #     define u3a_32_indirect_flag  0x80000000
@@ -37,9 +37,9 @@
 #     define u3a_64_cell_flag  0xc000000000000000ULL
 
 #ifndef VERE64
-#     define u3a_word_bits  u3a_word_new_bits
-#     define u3a_word_bytes_shift  u3a_word_new_bytes_shift
-#     define u3a_word_bits_log u3a_word_new_bits_log
+#     define u3a_word_bits  u3a_half_bits
+#     define u3a_word_bytes_shift  u3a_half_bytes_shift
+#     define u3a_word_bits_log u3a_half_bits_log
 #     define u3a_indirect_mask  u3a_32_indirect_mask 
 #     define u3a_direct_max  u3a_32_direct_max 
 #     define u3a_indirect_flag  u3a_32_indirect_flag
@@ -135,17 +135,17 @@
     */
       typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_m mug_w;
+        c3_h mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
       } u3a_noun;
 
       typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_m mug_w;
+        c3_h mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
         c3_w len_w;
         c3_w buf_w[0];
@@ -153,9 +153,9 @@
 
       typedef struct __attribute__((aligned(4))) {
         c3_w  use_w;
-        c3_m  mug_w;
+        c3_h  mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
         u3_noun hed;
         u3_noun tel;
@@ -867,7 +867,7 @@ u3a_dash(void);
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount.
         */

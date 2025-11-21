@@ -8,24 +8,13 @@
   /** Integer typedefs.
   **/
     /* Canonical integers.
-    **
-    ** Migration process for c3_w variables:
-    ** 1. All c3_w variables have been renamed to c3_w_tmp.
-    ** 2. Review c3_w_tmp variables:
-    **   a. If s/b static 32-bit  -> rename to c3_w_new.
-    **   b. If s/b arch-dependent -> rename to c3_w.
-    ** 3. Review c3_w_new variables:
-    **   a. Ensure correctness.
-    **   b. Rename to c3_{???} (our new, static uint32_t type, name pending).
     */
       typedef size_t c3_z;
       typedef ssize_t c3_zs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
-      typedef uint32_t c3_w_tmp;  // -> still needs review
-      typedef uint32_t c3_w_new;  // -> s/b 32-bit always
-      typedef int32_t c3_ws_tmp;
-      typedef int32_t c3_ws_new;
+      typedef uint32_t c3_h;  // -> s/b 32-bit always
+      typedef int32_t c3_hs;
       typedef uint16_t c3_s;
       typedef int16_t c3_ss;
       typedef uint8_t c3_y;   // byte
@@ -36,14 +25,12 @@
       typedef uint8_t c3_o;   // loobean
       typedef uint8_t c3_g;   // u3a_word_bits log
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
-      typedef uint32_t c3_l_new;  // -> s/b 32-bit always
+      typedef uint32_t c3_h;  // fixed 32-bit
       #ifdef VERE64
-        typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint64_t c3_l;  // little; 63-bit unsigned integer
         typedef uint64_t c3_w;  // word: noun-sized integer
         typedef int64_t c3_ws;
       #else
-        typedef uint32_t c3_l_tmp;  // little; 31-bit unsigned integer
         typedef uint32_t c3_l;  // little; 31-bit unsigned integer
         typedef uint32_t c3_w;  // word: noun-sized integer
         typedef int32_t c3_ws;
@@ -71,12 +58,6 @@
       #define PRIxc3_d PRIx64
       #define PRIXc3_d PRIX64
 
-      /* c3_w_tmp */
-      #define PRIc3_w_tmp  PRIu32
-      #define PRIc3_ws_tmp PRIi32
-      #define PRIxc3_w_tmp PRIx32
-      #define PRIXc3_w_tmp PRIX32
-
       /* c3_s */
       #define PRIc3_s  PRIu16
       #define PRIc3_ss PRIi16
@@ -100,16 +81,16 @@
       #define PRIc3_ws PRIi64
       #define PRIxc3_w PRIx64
       #define PRIXc3_w PRIX64
-      #define PRIc3_w_new  PRIu32
-      #define PRIc3_ws_new PRIi32
+      #define PRIc3_h  PRIu32
+      #define PRIc3_hs PRIi32
       #else
       #define SCNc3_w  SCNu32
       #define PRIc3_w  PRIu32
       #define PRIc3_ws PRIi32
       #define PRIxc3_w PRIx32
       #define PRIXc3_w PRIX32
-      #define PRIc3_w_new  PRIu32
-      #define PRIc3_ws_new PRIi32
+      #define PRIc3_h  PRIu32
+      #define PRIc3_hs PRIi32
       #endif
 
       #ifdef VERE64
@@ -117,19 +98,19 @@
       #define PRIc3_ls PRIi64
       #define PRIxc3_l PRIx64
       #define PRIXc3_l PRIX64
-      #define PRIc3_l_new PRIu32
+      #define PRIc3_h PRIu32
       #define PRIc3_ls_new PRIi32
-      #define PRIxc3_l_new PRIx32
-      #define PRIXc3_l_new PRIX32
+      #define PRIxc3_h PRIx32
+      #define PRIXc3_h PRIX32
       #else
       #define PRIc3_l  PRIu32
       #define PRIc3_ls PRIi32
       #define PRIxc3_l PRIx32
       #define PRIXc3_l PRIX32
-      #define PRIc3_l_new PRIu32
+      #define PRIc3_h PRIu32
       #define PRIc3_ls_new PRIi32
-      #define PRIxc3_l_new PRIx32
-      #define PRIXc3_l_new PRIX32
+      #define PRIxc3_h PRIx32
+      #define PRIXc3_h PRIX32
       #endif
 
       #define PRIc3_m  PRIu32

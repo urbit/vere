@@ -405,10 +405,9 @@ _me_wash_north(u3_noun dog)
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
-    if ( dog_u->mug_w == 0 ) return;
+    if ( dog_u->mug_h == 0 ) return;
 
-    dog_u->mug_w = 0;    //  power wash
-    // if ( dog_u->mug_w >> 31 ) { dog_u->mug_w = 0; }
+    dog_u->mug_h = 0;    //  power wash
 
     if ( _(u3a_is_pom(dog)) ) {
       u3a_cell* god_u = (u3a_cell *)(void *)dog_u;
@@ -438,10 +437,9 @@ _me_wash_south(u3_noun dog)
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
-    if ( dog_u->mug_w == 0 ) return;
+    if ( dog_u->mug_h == 0 ) return;
 
-    dog_u->mug_w = 0;    //  power wash
-    //  if ( dog_u->mug_w >> 31 ) { dog_u->mug_w = 0; }
+    dog_u->mug_h = 0;    //  power wash
 
     if ( _(u3a_is_pom(dog)) ) {
       u3a_cell* god_u = (u3a_cell *)(void *)dog_u;
@@ -520,9 +518,9 @@ _ca_take_atom(u3a_atom* old_u)
 
   //  XX use memcpy?
   //
-  new_u->mug_w = old_u->mug_w;
+  new_u->mug_h = old_u->mug_h;
 #ifdef VERE64
-  new_u->fut_w = old_u->fut_w;
+  new_u->fut_h = old_u->fut_h;
 #endif
   new_u->len_w = old_u->len_w;
   {
@@ -536,10 +534,10 @@ _ca_take_atom(u3a_atom* old_u)
   //  borrow mug slot to record new destination in [old_u]
   //
 #ifndef VERE64
-  old_u->mug_w = new;
+  old_u->mug_h = new;
 #else
-  old_u->mug_w = new >> 32; // we need dog bit on mug_w
-  old_u->fut_w = new & c3_w_max; // we need dog bit on mug_w
+  old_u->mug_h = new >> 32; // we need dog bit on mug_h
+  old_u->fut_h = new & c3_w_max; // we need dog bit on mug_h
 #endif
 
   return new;
@@ -563,19 +561,19 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
 #endif
 
   new_u->use_w = 1;
-  new_u->mug_w = old_u->mug_w;
+  new_u->mug_h = old_u->mug_h;
 #ifdef VERE64
-  new_u->fut_w = old_u->fut_w;
+  new_u->fut_h = old_u->fut_h;
 #endif
   new_u->hed   = hed;
   new_u->tel   = tel;
   //  borrow mug slot to record new destination in [old_u]
   //
 #ifndef VERE64
-  old_u->mug_w = new;
+  old_u->mug_h = new;
 #else
-  old_u->mug_w = new >> 32; // we need dog bit on mug_w
-  old_u->fut_w = new & c3_w_max; // we need dog bit on mug_w
+  old_u->mug_h = new >> 32; // we need dog bit on mug_h
+  old_u->fut_h = new & c3_w_max; // we need dog bit on mug_h
 #endif
 
   return new;
@@ -616,13 +614,13 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
 
       //  32-bit mug_w: already copied [veb] and [mug_w] is the new ref.
       //
-      if ( veb_u->mug_w >> 31 ) {
+      if ( veb_u->mug_h >> 31 ) {
 #ifndef VERE64
-        u3_noun nov = (u3_noun)veb_u->mug_w;
+        u3_noun nov = (u3_noun)veb_u->mug_h;
 #else
         u3_noun nov =
           (u3_noun)
-            (((c3_w)veb_u->mug_w << 32) | (c3_w)veb_u->fut_w);
+            (((c3_w)veb_u->mug_h << 32) | (c3_w)veb_u->fut_h);
 #endif
 
         u3_assert( c3y == u3a_north_is_normal(u3R, nov) );
@@ -677,13 +675,13 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
 
       //  32-bit mug_w: already copied [veb] and [mug_w] is the new ref.
       //
-      if ( veb_u->mug_w >> 31 ) {
+      if ( veb_u->mug_h >> 31 ) {
 #ifndef VERE64
-        u3_noun nov = (u3_noun)veb_u->mug_w;
+        u3_noun nov = (u3_noun)veb_u->mug_h;
 #else
         u3_noun nov =
           (u3_noun)
-            (((c3_w)veb_u->mug_w << 32) | (c3_w)veb_u->fut_w);
+            (((c3_w)veb_u->mug_h << 32) | (c3_w)veb_u->fut_h);
 #endif
 
         u3_assert( c3y == u3a_south_is_normal(u3R, nov) );
@@ -824,7 +822,7 @@ u3a_left(u3_noun som)
   else {
     u3a_noun* dog_u = u3a_to_ptr(som);
 
-    return __(0 != (dog_u->mug_w >> 31));
+    return __(0 != (dog_u->mug_h >> 31));
   }
 }
 
@@ -1084,7 +1082,7 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 #ifdef U3_MEMORY_DEBUG
   return;
 #else
-  if ( u3C.wag_w & u3o_debug_ram ) return;
+  if ( u3C.wag_h & u3o_debug_ram ) return;
 #endif
 
   //  while not at home, attempt to unify
@@ -1141,7 +1139,7 @@ u3a_mark_ptr(void* ptr_v)
 {
   //  XX restore loom-bounds check
   u3_post som_p = u3a_outa(ptr_v);
-  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+  c3_w    siz_w = !(u3C.wag_h & u3o_debug_ram)
                 ? _mark_post(som_p)
                 : _count_post(som_p, 0);
 
@@ -1212,7 +1210,7 @@ c3_w
 u3a_mark_rptr(void* ptr_v)
 {
   u3_post som_p = u3a_outa(ptr_v);
-  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+  c3_w    siz_w = !(u3C.wag_h & u3o_debug_ram)
                 ? _mark_post(som_p)
                 : _count_post(som_p, 1);
 
@@ -1525,7 +1523,7 @@ _ca_prof_mark(u3_noun som)
   //  from a refcounting standpoint
   //
   u3_post som_p = u3a_to_off(som);
-  c3_w    siz_w = !(u3C.wag_w & u3o_debug_ram)
+  c3_w    siz_w = !(u3C.wag_h & u3o_debug_ram)
                 ? _mark_post(som_p)
                 : _count_post(som_p, 2);
 
@@ -1626,12 +1624,12 @@ u3a_prof(FILE* fil_u, u3_noun mas)
 */
 
 void
-u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u)
+u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
 
   if ( mas_u->siz_w ) {
-    fprintf(fil_u, "%*s%s: ", den_w, "", mas_u->nam_c);
+    fprintf(fil_u, "%*s%s: ", den_h, "", mas_u->nam_c);
 
     if ( mas_u->qua_u == NULL ) {
       _ca_print_memory(fil_u, mas_u->siz_w);
@@ -1639,10 +1637,10 @@ u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u)
       fprintf(fil_u, "\r\n");
       c3_w i_w = 0;
       while ( mas_u->qua_u[i_w] != NULL ) {
-        u3a_print_quac(fil_u, den_w+2, mas_u->qua_u[i_w]);
+        u3a_print_quac(fil_u, den_h+2, mas_u->qua_u[i_w]);
         i_w++;
       }
-      fprintf(fil_u, "%*s--", den_w, "");
+      fprintf(fil_u, "%*s--", den_h, "");
       _ca_print_memory(fil_u, mas_u->siz_w);
     }
   }
@@ -1821,7 +1819,7 @@ u3a_dash(void)
 c3_w
 u3a_sweep(void)
 {
-  c3_w siz_w = !(u3C.wag_w & u3o_debug_ram)
+  c3_w siz_w = !(u3C.wag_h & u3o_debug_ram)
                ? _sweep_directory()
                : _sweep_counts();
 

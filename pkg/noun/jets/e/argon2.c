@@ -56,7 +56,7 @@
     c3_w out_w, wik_w, wix_w, wid_w, wis_w;
 
     // NB: fixed to 32-bit width to conform with urcrypt_argon2's signature
-    c3_w_new ver_w, ted_w, mem_w, tim_w;
+    c3_h ver_h, ted_h, mem_h, tim_h;
 
     if ( !(u3r_word_fit(&out_w, out) &&
            u3r_word_fit(&wik_w, wik) &&
@@ -67,10 +67,10 @@
       return u3m_bail(c3__fail);
     }
     else if ( !(_cqear_unpack_type(&typ_u, type) &&
-                u3r_word_new_fit(&ver_w, version) &&
-                u3r_word_new_fit(&ted_w, threads) &&
-                u3r_word_new_fit(&mem_w, mem_cost) &&
-                u3r_word_new_fit(&tim_w, time_cost)) ) {
+                u3r_half_fit(&ver_h, version) &&
+                u3r_half_fit(&ted_h, threads) &&
+                u3r_half_fit(&mem_h, mem_cost) &&
+                u3r_half_fit(&tim_h, time_cost)) ) {
       return u3_none;
     }
     else {
@@ -82,7 +82,7 @@
            *out_y = u3a_malloc(out_w);
 
       const c3_c* err_c = urcrypt_argon2(
-          typ_u, ver_w, ted_w, mem_w, tim_w,
+          typ_u, ver_h, ted_h, mem_h, tim_h,
           wik_w, key_y,
           wix_w,  ex_y,
           wid_w, dat_y,

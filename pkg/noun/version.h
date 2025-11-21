@@ -15,7 +15,7 @@ typedef c3_d       u3v_version;
 /* PATCHES
  */
 
-typedef c3_w_new       u3e_version;
+typedef c3_h       u3e_version;
 
 #define U3P_VER1   (u3e_version)1
 #define U3P_VER2   (u3e_version)2

@@ -13,6 +13,6 @@
     /* u3h_v3_new_cache(): create hashtable with bounded size.
     */
       u3p(u3h_v3_root)
-      u3h_v3_new_cache(c3_w_new clk_w);
+      u3h_v3_new_cache(c3_h clk_h);
 
 #endif /* U3_HASHTABLE_V3_H */

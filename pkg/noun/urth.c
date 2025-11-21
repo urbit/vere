@@ -413,10 +413,10 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 
   //  establish correct refcounts via tracing
   //
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_debug_ram;
+  c3_h wag_h = u3C.wag_h;
+  u3C.wag_h |= u3o_debug_ram;
   u3m_grab(u3_none);
-  u3C.wag_w  = wag_w;
+  u3C.wag_h  = wag_h;
 
   //  re-establish warm jet state
   //

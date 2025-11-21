@@ -79,19 +79,19 @@ _cj_core_loc(u3_noun pel, u3j_core* cop_u)
 static u3_noun
 _cj_hash(c3_c* has_c)
 {
-  c3_w_new i_w, len_w = strlen(has_c);
-  if ( 64 != len_w ) {
+  c3_h i_h, len_h = strlen(has_c);
+  if ( 64 != len_h ) {
     u3l_log("bash not 64 characters: %s", has_c);
     u3_assert(0);
   }
-  u3_assert( 64 == len_w );
+  u3_assert( 64 == len_h );
   c3_y dig_y[32];
-  for ( i_w = 0; i_w < 64; ) {
-    c3_y hi_y  = has_c[i_w++],
-         lo_y  = has_c[i_w++],
+  for ( i_h = 0; i_h < 64; ) {
+    c3_y hi_y  = has_c[i_h++],
+         lo_y  = has_c[i_h++],
          hid_y = hi_y >= 'a' ? (hi_y - 'a') + 10 : hi_y - '0',
          lod_y = lo_y >= 'a' ? (lo_y - 'a') + 10 : lo_y - '0';
-    dig_y[32-(i_w>>1)] = hid_y << 4 | lod_y;
+    dig_y[32-(i_h>>1)] = hid_y << 4 | lod_y;
   }
   u3_noun pro = u3i_bytes(32, dig_y);
   return pro;
@@ -102,7 +102,7 @@ _cj_hash(c3_c* has_c)
 static u3_noun
 _cj_bash(u3_noun bat)
 {
-  if ( u3C.wag_w & u3o_hashless ) {
+  if ( u3C.wag_h & u3o_hashless ) {
     return u3_nul;
   }
 
@@ -277,8 +277,8 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
         c3_d axe_d = 0;
 
         if ( (1 != sscanf(jet_u->fcs_c+1, "%" SCNu64, &axe_d)) ||
-             axe_d >> 32ULL ||
-             (((c3_w_new)1 << 31) & (axe_l = (c3_w_new)axe_d)) ||
+             axe_d >> u3a_half_bits ||
+             (((c3_h)1 << (u3a_half_bits - 1)) & (axe_l = (c3_h)axe_d)) ||
              (axe_l < 2) )
         {
           u3l_log("jets: activate: bad fcs %s", jet_u->fcs_c);
@@ -640,7 +640,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       *bas = _cj_bash(u3h(cor));
     }
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       u3_weak act = _cj_spot_hot(cor, *bas, &loc);
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
@@ -1272,8 +1272,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
       if ( u3_none == (inx = u3kdb_get(u3k(hap), u3k(axe))) ) {
         u3t_off(glu_o);
         {
-          c3_o pof_o = __(u3C.wag_w & u3o_debug_cpu);
-          c3_o trc_o = __(u3C.wag_w & u3o_trace);
+          c3_o pof_o = __(u3C.wag_h & u3o_debug_cpu);
+          c3_o trc_o = __(u3C.wag_h & u3o_trace);
 
           if ( _(pof_o) ) {
             pof_o = u3t_come(bal);
@@ -1302,8 +1302,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
         u3j_core* cop_u = &u3D.ray_u[jax_l];
         c3_l      inx_l = inx;
         u3j_harm* ham_u = &cop_u->arm_u[inx_l];
-        c3_o      pof_o = __(u3C.wag_w & u3o_debug_cpu);
-        c3_o      trc_o = __(u3C.wag_w & u3o_trace);
+        c3_o      pof_o = __(u3C.wag_h & u3o_debug_cpu);
+        c3_o      trc_o = __(u3C.wag_h & u3o_trace);
         u3_noun   pro;
 
         if ( _(pof_o) ) {
@@ -1536,8 +1536,8 @@ _cj_site_kick_hot(u3_noun loc, u3_noun cor, u3j_site* sit_u, c3_o lok_o)
 {
   u3_weak pro = u3_none;
   c3_o jet_o  = sit_u->jet_o;
-  c3_o pof_o  =  __(u3C.wag_w & u3o_debug_cpu);
-  c3_o trc_o  =  __(u3C.wag_w & u3o_trace);
+  c3_o pof_o  =  __(u3C.wag_h & u3o_debug_cpu);
+  c3_o trc_o  =  __(u3C.wag_h & u3o_trace);
 
   if ( c3n == pof_o && c3n == trc_o ) {
     if ( c3y == jet_o ) {
@@ -1854,10 +1854,10 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     u3l_log("  bat %x, jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       if ( jax_l ) {
         c3_y dig_y[32];
-        c3_w_new i_w;
+        c3_h i_h;
         u3_noun i = bal;
         u3l_log("hot jet: ");
         while ( i != u3_nul ) {
@@ -1867,8 +1867,8 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
         // XX: this should be PRIc3_w right...right?
         u3l_log("\r\n  axe %"PRIc3_w", jax %"PRIc3_w",\r\n  bash ", axe, jax_l);
         u3r_bytes(0, 32, dig_y, bas);
-        for ( i_w = 32; i_w > 0; ) {
-          u3l_log("%02x", dig_y[--i_w]);
+        for ( i_h = 32; i_h > 0; ) {
+          u3l_log("%02x", dig_y[--i_h]);
         }
         u3l_log("");
       }

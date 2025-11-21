@@ -63,13 +63,13 @@ _main_self_path(void)
 /* _main_readw(): parse a word from a string.
 */
 static c3_o
-_main_readw(const c3_c* str_c, c3_w_new max_w, c3_w_new* out_w)
+_main_readw(const c3_c* str_c, c3_h max_h, c3_h* out_h)
 {
   c3_c* end_c;
-  c3_w_new  par_w = strtoul(str_c, &end_c, 0);
+  c3_h  par_h = strtoul(str_c, &end_c, 0);
 
-  if ( *str_c != '\0' && *end_c == '\0' && par_w < max_w ) {
-    *out_w = par_w;
+  if ( *str_c != '\0' && *end_c == '\0' && par_h < max_h ) {
+    *out_h = par_h;
     return c3y;
   }
   else return c3n;
@@ -95,13 +95,13 @@ _main_readn(const c3_c* str_c, c3_w max_w, c3_w* out_w)
 static c3_i
 _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
 {
-  c3_w_new lom_w;
-  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
-  if ( res_o == c3n || (lom_w < 20) ) {
+  c3_h lom_h;
+  c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_h);
+  if ( res_o == c3n || (lom_h < 20) ) {
     fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_w"\r\n", arg_c, (c3_w)u3a_bits_max);
     return -1;
   }
-  *out_y = lom_w;
+  *out_y = lom_h;
   return 0;
 }
 
@@ -129,7 +129,7 @@ _main_repath(c3_c* pax_c)
   c3_c* rel_c;
   c3_c* fas_c;
   c3_c* dir_c;
-  c3_w_new  len_w;
+  c3_h  len_h;
   c3_i  wit_i;
 
   u3_assert(pax_c);
@@ -151,10 +151,10 @@ _main_repath(c3_c* pax_c)
   if ( 0 == dir_c ) {
     return 0;
   }
-  len_w = strlen(dir_c) + strlen(fas_c) + 1;
-  rel_c = c3_malloc(len_w);
-  wit_i = snprintf(rel_c, len_w, "%s%s", dir_c, fas_c);
-  u3_assert(len_w == wit_i + 1);
+  len_h = strlen(dir_c) + strlen(fas_c) + 1;
+  rel_c = c3_malloc(len_h);
+  wit_i = snprintf(rel_c, len_h, "%s%s", dir_c, fas_c);
+  u3_assert(len_h == wit_i + 1);
   c3_free(dir_c);
   return rel_c;
 }
@@ -197,9 +197,9 @@ _main_init(void)
   u3C.hap_w = u3_Host.ops_u.hap_w;
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;
-  u3_Host.ops_u.kno_w = DefaultKernel;
+  u3_Host.ops_u.kno_h = DefaultKernel;
 
-  u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
+  u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 34;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
@@ -222,13 +222,13 @@ static c3_c*
 _main_pier_run(c3_c* bin_c)
 {
   c3_c* dir_c = 0;
-  c3_w_new  bin_w = strlen(bin_c);
-  c3_w_new  len_w = strlen(U3_BIN_ALIAS);
+  c3_h  bin_h = strlen(bin_c);
+  c3_h  len_h = strlen(U3_BIN_ALIAS);
 
   //  no args, argv[0] == $pier/.run
   //
-  if (  (len_w <= bin_w)
-     && (0 == strcmp(bin_c + (bin_w - len_w), U3_BIN_ALIAS)) )
+  if (  (len_h <= bin_h)
+     && (0 == strcmp(bin_c + (bin_h - len_h), U3_BIN_ALIAS)) )
   {
     bin_c = strdup(bin_c); // dirname can modify
     dir_c = _main_repath(dirname(bin_c));
@@ -257,7 +257,7 @@ static u3_noun
 _main_getopt(c3_i argc, c3_c** argv)
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
   c3_o want_creat_o = c3n;
 
   static struct option lop_u[] = {
@@ -375,9 +375,9 @@ _main_getopt(c3_i argc, c3_c** argv)
       //  special args
       //
       case c3__bloq: {
-        if (_main_readw(optarg, 30, &arg_w)) {
+        if (_main_readw(optarg, 30, &arg_h)) {
           return c3n;
-        } else u3_Host.ops_u.jum_y = arg_w;
+        } else u3_Host.ops_u.jum_y = arg_h;
         if ( 13 > u3_Host.ops_u.jum_y ) {
           return c3n;
         }
@@ -390,15 +390,15 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case c3__http: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+        if ( c3n == _main_readw(optarg, 65536, &arg_h) ) {
           return c3n;
-        } else u3_Host.ops_u.per_s = arg_w;
+        } else u3_Host.ops_u.per_s = arg_h;
         break;
       }
       case c3__htls: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+        if ( c3n == _main_readw(optarg, 65536, &arg_h) ) {
           return c3n;
-        } else u3_Host.ops_u.pes_s = arg_w;
+        } else u3_Host.ops_u.pes_s = arg_h;
         break;
       }
       case c3__noco: {
@@ -410,11 +410,11 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case c3__snap: {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+        if ( c3n == _main_readw(optarg, 65536, &arg_h) ) {
           return c3n;
         } else {
-          u3_Host.ops_u.sap_w = arg_w * 60;
-          if ( 0 == u3_Host.ops_u.sap_w )
+          u3_Host.ops_u.sap_h = arg_h * 60;
+          if ( 0 == u3_Host.ops_u.sap_h )
             return c3n;
         }
         break;
@@ -476,7 +476,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'K': {
-        if ( c3n == _main_readw(optarg, 256, &u3_Host.ops_u.kno_w) ) {
+        if ( c3n == _main_readw(optarg, 256, &u3_Host.ops_u.kno_h) ) {
           return c3n;
         }
         break;
@@ -497,9 +497,9 @@ _main_getopt(c3_i argc, c3_c** argv)
         break;
       }
       case 'p': {
-        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+        if ( c3n == _main_readw(optarg, 65536, &arg_h) ) {
           return c3n;
-        } else u3_Host.ops_u.por_s = arg_w;
+        } else u3_Host.ops_u.por_s = arg_h;
         break;
       }
       case 'R': {
@@ -1189,7 +1189,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 {
   u3_mojo std_u;
   c3_i    ch_i, lid_i;
-  c3_w_new    arg_w;
+  c3_h    arg_h;
   c3_o    cue_o = c3n;
   c3_o    jam_o = c3n;
   c3_o    kan_o = c3n;
@@ -1274,7 +1274,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3_cue_xeno* sil_u;
     u3_weak      pil;
 
-    u3C.wag_w |= u3o_hashless;
+    u3C.wag_h |= u3o_hashless;
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
@@ -1392,7 +1392,7 @@ static void
 _cw_info(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1415,17 +1415,17 @@ _cw_info(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1500,7 +1500,7 @@ static void
 _cw_grab(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   u3_Host.ops_u.gab = c3n;
 
@@ -1527,17 +1527,17 @@ _cw_grab(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1571,11 +1571,11 @@ _cw_grab(c3_i argc, c3_c* argv[])
   /*  Set GC flag.
   */
   if ( _(u3_Host.ops_u.gab) ) {
-    u3C.wag_w |= u3o_debug_ram;
+    u3C.wag_h |= u3o_debug_ram;
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
   u3m_stop();
 }
@@ -1586,7 +1586,7 @@ static void
 _cw_cram(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1609,17 +1609,17 @@ _cw_cram(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1689,7 +1689,7 @@ static void
 _cw_queu(c3_i argc, c3_c* argv[])
 {
   c3_i  lid_i, ch_i;
-  c3_w_new  arg_w;
+  c3_h  arg_h;
   c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
@@ -1714,17 +1714,17 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -1806,7 +1806,7 @@ static void
 _cw_meld(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -1830,23 +1830,23 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
 
       case 9: {  //  gc-early
-        u3C.wag_w |= u3o_check_corrupt;
+        u3C.wag_h |= u3o_check_corrupt;
         break;
       }
 
@@ -1884,7 +1884,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
 
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
@@ -1902,7 +1902,7 @@ static void
 _cw_melt(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -1925,23 +1925,23 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
 
       case 9: {  //  gc-early
-        u3C.wag_w |= u3o_check_corrupt;
+        u3C.wag_h |= u3o_check_corrupt;
         break;
       }
 
@@ -1972,7 +1972,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
 
   u3_Host.eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c); // XX s/b try_aquire lock
@@ -1990,7 +1990,7 @@ static void
 _cw_next(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "arch",      required_argument, NULL, 'a' },
@@ -2017,17 +2017,17 @@ _cw_next(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2070,7 +2070,7 @@ static void
 _cw_pack(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2094,23 +2094,23 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
 
       case 9: {  //  gc-early
-        u3C.wag_w |= u3o_check_corrupt;
+        u3C.wag_h |= u3o_check_corrupt;
         break;
       }
 
@@ -2226,14 +2226,14 @@ _cw_play_impl(c3_d eve_d, c3_d sap_d, c3_o mel_o, c3_o sof_o, c3_o ful_o)
 
   //  XX source these from a shared struct ops_u
   if ( c3y == mel_o ) {
-    u3C.wag_w |= u3o_auto_meld;
+    u3C.wag_h |= u3o_auto_meld;
   }
 
   if ( c3y == sof_o ) {
-    u3C.wag_w |= u3o_soft_mugs;
+    u3C.wag_h |= u3o_soft_mugs;
   }
 
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
 
   if ( c3y == ful_o ) {
     u3l_log("mars: preparing for full replay");
@@ -2283,7 +2283,7 @@ static void
 _cw_play(c3_i argc, c3_c* argv[])
 {
   c3_i lid_i, ch_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
   c3_o ful_o = c3n;
   c3_o mel_o = c3n;
   c3_o sof_o = c3n;
@@ -2318,7 +2318,7 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  auto-meld
@@ -2377,7 +2377,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   /*  Set GC flag.
   */
   if ( _(u3_Host.ops_u.gab) ) {
-    u3C.wag_w |= u3o_debug_ram;
+    u3C.wag_h |= u3o_debug_ram;
   }
 
   _cw_play_impl(eve_d, sap_d, mel_o, sof_o, ful_o);
@@ -2391,7 +2391,7 @@ _cw_prep(c3_i argc, c3_c* argv[])
   //  XX roll with old binary
   //     check that new epoch is empty, migrate snapshot in-place
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2413,17 +2413,17 @@ _cw_prep(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2465,7 +2465,7 @@ static void
 _cw_chop(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2488,17 +2488,17 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2554,7 +2554,7 @@ static void
 _cw_roll(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",          required_argument, NULL, c3__loom },
@@ -2628,7 +2628,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
   c3_c* dir_c;
 
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "arch",    required_argument, NULL, 'a' },
@@ -2736,7 +2736,7 @@ static void
 _cw_vile(c3_i argc, c3_c* argv[])
 {
   c3_i ch_i, lid_i;
-  c3_w_new arg_w;
+  c3_h arg_h;
 
   static struct option lop_u[] = {
     { "loom",      required_argument, NULL, c3__loom },
@@ -2758,17 +2758,17 @@ _cw_vile(c3_i argc, c3_c* argv[])
 
       case 6: {  //  no-demand
         u3_Host.ops_u.map = c3n;
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       } break;
 
       case 7: {  //  swap
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       } break;
 
       case 8: {  //  swap-to
         u3_Host.ops_u.eph = c3y;
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
         break;
       }
@@ -2888,7 +2888,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w_new       lom_w;
+  c3_h       lom_h;
   c3_c*      eph_c = argv[5];
   c3_c*      tos_c = argv[6];
   c3_w       tos_w;
@@ -2905,9 +2905,9 @@ _cw_boot(c3_i argc, c3_c* argv[])
   {
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
-    sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
+    sscanf(wag_c, "%" SCNu32, &u3C.wag_h);
     sscanf(hap_c, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
-    sscanf(lom_c, "%" SCNu32, &lom_w);
+    sscanf(lom_c, "%" SCNu32, &lom_h);
     sscanf(per_c, "%" SCNc3_w, &u3C.per_w);
 
     if ( 1 != sscanf(tos_c, "%" SCNc3_w, &u3C.tos_w) ) {
@@ -2928,7 +2928,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //    XX s/b explicitly initialization, not maybe-restore
   //
   u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  u3m_boot(dir_c, (size_t)1 << lom_w);
+  u3m_boot(dir_c, (size_t)1 << lom_h);
 
   //  set up logging
   //
@@ -2965,7 +2965,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   c3_c*      wag_c = argv[2];
   c3_c*      hap_c = argv[3];
   c3_c*      lom_c = argv[4];
-  c3_w_new       lom_w;
+  c3_h       lom_h;
   c3_c*      eve_c = argv[5];
   c3_d       eve_d = 0;
   c3_c*      eph_c = argv[6];
@@ -2983,11 +2983,11 @@ _cw_work(c3_i argc, c3_c* argv[])
   {
     // TODO: what to use instead of tra_u?
     // memset(&u3_Host.tra_u, 0, sizeof(u3_Host.tra_u));
-    sscanf(wag_c, "%" SCNu32, &u3C.wag_w);
+    sscanf(wag_c, "%" SCNu32, &u3C.wag_h);
     sscanf(hap_c, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
-    sscanf(lom_c, "%" SCNu32, &lom_w);
+    sscanf(lom_c, "%" SCNu32, &lom_h);
     sscanf(per_c, "%" SCNc3_w, &u3C.per_w);
-    sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_w);
+    sscanf(sap_c, "%" SCNu32, &u3_Host.ops_u.sap_h);
 
     if ( 1 != sscanf(tos_c, "%" SCNc3_w, &u3C.tos_w) ) {
       fprintf(stderr, "serf: toss: invalid number '%s'\r\n", tos_c);
@@ -2997,7 +2997,7 @@ _cw_work(c3_i argc, c3_c* argv[])
   //  setup loom XX strdup?
   //
   u3C.eph_c = (strcmp(eph_c, "0") == 0 ? 0 : strdup(eph_c));
-  u3m_boot(dir_c, (size_t)1 << lom_w);
+  u3m_boot(dir_c, (size_t)1 << lom_h);
 
   //  set up logging
   //
@@ -3236,31 +3236,31 @@ main(c3_i   argc,
       /*  Set GC flag.
       */
       if ( _(u3_Host.ops_u.gab) ) {
-        u3C.wag_w |= u3o_debug_ram;
+        u3C.wag_h |= u3o_debug_ram;
       }
 
       /*  Set no-demand flag.
       */
       if ( !_(u3_Host.ops_u.map) ) {
-        u3C.wag_w |= u3o_no_demand;
+        u3C.wag_h |= u3o_no_demand;
       }
 
       /*  Set profile flag.
       */
       if ( _(u3_Host.ops_u.pro) ) {
-        u3C.wag_w |= u3o_debug_cpu;
+        u3C.wag_h |= u3o_debug_cpu;
       }
 
       /*  Set verbose flag.
       */
       if ( _(u3_Host.ops_u.veb) ) {
-        u3C.wag_w |= u3o_verbose;
+        u3C.wag_h |= u3o_verbose;
       }
 
       /*  Set quiet flag.
       */
       if ( _(u3_Host.ops_u.qui) ) {
-        u3C.wag_w |= u3o_quiet;
+        u3C.wag_h |= u3o_quiet;
       }
 
       /*  Set dry-run flag.
@@ -3268,31 +3268,31 @@ main(c3_i   argc,
       **    XX also exit immediately?
       */
       if ( _(u3_Host.ops_u.dry) ) {
-        u3C.wag_w |= u3o_dryrun;
+        u3C.wag_h |= u3o_dryrun;
       }
 
       /*  Set hashboard flag
       */
       if ( _(u3_Host.ops_u.has) ) {
-        u3C.wag_w |= u3o_hashless;
+        u3C.wag_h |= u3o_hashless;
       }
 
       /*  Set tracing flag
       */
       if ( _(u3_Host.ops_u.tra) ) {
-        u3C.wag_w |= u3o_trace;
+        u3C.wag_h |= u3o_trace;
       }
 
       /*  Set swap flag
       */
       if ( _(u3_Host.ops_u.eph) ) {
-        u3C.wag_w |= u3o_swap;
+        u3C.wag_h |= u3o_swap;
       }
 
       /*  Set toss flog
       */
       if ( _(u3_Host.ops_u.tos) ) {
-        u3C.wag_w |= u3o_toss;
+        u3C.wag_h |= u3o_toss;
       }
     }
 

@@ -6,12 +6,12 @@
       /* u3_stun_is_request(): buffer is a stun request.
       */
         c3_o
-        u3_stun_is_request(c3_y* buf_y, c3_w_new len_w);
+        u3_stun_is_request(c3_y* buf_y, c3_h len_h);
 
       /* u3_stun_is_our_response(): buffer is a response to our request.
       */
         c3_o
-        u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_w_new len_w);
+        u3_stun_is_our_response(c3_y* buf_y, c3_y tid_y[12], c3_h len_h);
 
       /* u3_stun_make_request(): serialize stun request.
       */
@@ -29,7 +29,7 @@
       */
         c3_o
         u3_stun_find_xor_mapped_address(c3_y*    buf_y,
-                                        c3_w_new     len_w,
+                                        c3_h     len_h,
                                         u3_lane* lan_u);
 
 #endif /* ifndef U3_STUN_H */

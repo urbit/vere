@@ -63,8 +63,8 @@ typedef enum u3_stun_state {
       c3_o       dom_o;                 //    have domain
       uv_timer_t tim_u;                 //    resolve timer
       c3_s       pen_s;                 //    pending
-      c3_w_new       pip_w[256];            //    ipv4
-      c3_w_new       log_w[256 >> 5];       //    log error
+      c3_h       pip_h[256];            //    ipv4
+      c3_h       log_h[256 >> 5];       //    log error
     } zar_u;                            //
     struct {                            //    stun client state:
       u3_stun_state  sat_y;             //  formal state
@@ -129,7 +129,7 @@ typedef enum u3_stun_state {
 /* u3_peep: unsigned fine request body
 */
   typedef struct _u3_peep {
-    c3_w_new    fra_w;                      //  fragment number
+    c3_h    fra_h;                      //  fragment number
     c3_s    len_s;                      //  path length
     c3_c*   pat_c;                      //  path as ascii
   } u3_peep;
@@ -147,7 +147,7 @@ typedef enum u3_stun_state {
 */
   typedef struct _u3_meow {
     c3_y    sig_y[64];                  //  host signature
-    c3_w_new    num_w;                      //  number of fragments
+    c3_h    num_h;                      //  number of fragments
     c3_s    siz_s;                      //  datum size (actual)
     c3_y*   dat_y;                      //  datum (0 if null response)
   } u3_meow;
@@ -182,7 +182,7 @@ typedef enum u3_stun_state {
   typedef struct _u3_pact {
     uv_udp_send_t    snd_u;             //  udp send request
     struct _u3_ames* sam_u;             //  ames backpointer
-    c3_w_new             len_w;             //  length in bytes
+    c3_h             len_h;             //  length in bytes
     c3_y*            hun_y;             //  packet buffer
     u3_lane          lan_u;             //  destination/origin lane
     u3_head          hed_u;             //  head of packet
@@ -311,15 +311,15 @@ static inline c3_s
 _fine_peep_size(u3_peep* pep_u)
 {
   return (
-    sizeof(pep_u->fra_w) +
+    sizeof(pep_u->fra_h) +
     sizeof(pep_u->len_s) +
     pep_u->len_s);
 }
 
 static inline c3_y
-_fine_bytes_word(c3_w_new num_w)
+_fine_bytes_word(c3_h num_h)
 {
-  return (c3_bits_word_new(num_w) + 7) >> 3;
+  return (c3_bits_half(num_h) + 7) >> 3;
 }
 
 static inline c3_s
@@ -327,10 +327,10 @@ _fine_meow_size(u3_meow* mew_u)
 {
   c3_y cur_y = 0;
   if (mew_u->siz_s != 0) {
-    cur_y = sizeof(mew_u->num_w);
+    cur_y = sizeof(mew_u->num_h);
   }
   else {
-    cur_y = _fine_bytes_word(mew_u->num_w);
+    cur_y = _fine_bytes_word(mew_u->num_h);
   }
   return (
     sizeof(mew_u->sig_y) +
@@ -349,15 +349,15 @@ _fine_purr_size(u3_purr* pur_u)
 static c3_o
 _ames_check_mug(u3_pact* pac_u)
 {
-  c3_w_new rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
-  c3_m mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
-                             pac_u->len_w - rog_w);
+  c3_h rog_h = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
+  c3_h mug_h = u3r_mug_bytes(pac_u->hun_y + rog_h,
+                             pac_u->len_h - rog_h);
   //  u3l_log("len_w: %u, rog_w: %u, bod_l 0x%05x, hed_l 0x%05x",
   //          pac_u->len_w, rog_w,
   //          (mug_l & 0xfffff),
   //          (pac_u->hed_u.mug_l & 0xfffff));
   return (
-    ((mug_l & 0xfffff) == (pac_u->hed_u.mug_l & 0xfffff))
+    ((mug_h & 0xfffff) == (pac_u->hed_u.mug_l & 0xfffff))
     ? c3y : c3n);
 }
 
@@ -391,17 +391,17 @@ _ames_ship_of_chubs(c3_d sip_d[2], c3_y len_y, c3_y* buf_y)
 static void
 _ames_sift_head(u3_head* hed_u, c3_y buf_y[4])
 {
-  c3_w_new hed_w = c3_sift_word_new(buf_y);
+  c3_h hed_h = c3_sift_half(buf_y);
 
   //  first two bits are reserved
   //
-  hed_u->req_o = (hed_w >>  2) & 0x1;
-  hed_u->sim_o = (hed_w >>  3) & 0x1;
-  hed_u->ver_y = (hed_w >>  4) & 0x7;
-  hed_u->sac_y = (hed_w >>  7) & 0x3;
-  hed_u->rac_y = (hed_w >>  9) & 0x3;
-  hed_u->mug_l = (hed_w >> 11) & 0xfffff; // 20 bits
-  hed_u->rel_o = (hed_w >> 31) & 0x1;
+  hed_u->req_o = (hed_h >>  2) & 0x1;
+  hed_u->sim_o = (hed_h >>  3) & 0x1;
+  hed_u->ver_y = (hed_h >>  4) & 0x7;
+  hed_u->sac_y = (hed_h >>  7) & 0x3;
+  hed_u->rac_y = (hed_h >>  9) & 0x3;
+  hed_u->mug_l = (hed_h >> 11) & 0xfffff; // 20 bits
+  hed_u->rel_o = (hed_h >> 31) & 0x1;
 }
 
 /* _ames_sift_prel(): parse prelude,
@@ -412,15 +412,15 @@ _ames_sift_prel(u3_head* hed_u,
                 c3_y*    buf_y)
 {
   c3_y sen_y, rec_y;
-  c3_w_new cur_w = 0;
+  c3_h cur_h = 0;
 
   //  if packet is relayed, parse 6-byte origin field
   //
   if ( c3y == hed_u->rel_o ) {
     c3_y rag_y[8] = {0};
-    memcpy(rag_y, buf_y + cur_w, 6);
+    memcpy(rag_y, buf_y + cur_h, 6);
     pre_u->rog_d = c3_sift_chub(rag_y);
-    cur_w += 6;
+    cur_h += 6;
   }
   else {
     pre_u->rog_d = 0;
@@ -428,42 +428,42 @@ _ames_sift_prel(u3_head* hed_u,
 
   //  parse life ticks
   //
-  pre_u->sic_y = buf_y[cur_w]        & 0xf;
-  pre_u->ric_y = (buf_y[cur_w] >> 4) & 0xf;
-  cur_w++;
+  pre_u->sic_y = buf_y[cur_h]        & 0xf;
+  pre_u->ric_y = (buf_y[cur_h] >> 4) & 0xf;
+  cur_h++;
 
   //  parse sender ship
   //
   sen_y = 2 << hed_u->sac_y;
-  _ames_ship_to_chubs(pre_u->sen_d, sen_y, buf_y + cur_w);
-  cur_w += sen_y;
+  _ames_ship_to_chubs(pre_u->sen_d, sen_y, buf_y + cur_h);
+  cur_h += sen_y;
 
   //  parse receiver ship
   //
   rec_y = 2 << hed_u->rac_y;
-  _ames_ship_to_chubs(pre_u->rec_d, rec_y, buf_y + cur_w);
-  cur_w += rec_y;
+  _ames_ship_to_chubs(pre_u->rec_d, rec_y, buf_y + cur_h);
+  cur_h += rec_y;
 }
 
 /* _fine_sift_wail(): parse request body, returning success
 */
 static c3_o
-_fine_sift_wail(u3_pact* pac_u, c3_w_new cur_w)
+_fine_sift_wail(u3_pact* pac_u, c3_h cur_h)
 {
-  c3_w_new fra_w = sizeof(pac_u->wal_u.pep_u.fra_w);
-  c3_w_new len_w = sizeof(pac_u->wal_u.pep_u.len_s);
-  c3_w_new exp_w = fra_w + len_w;
+  c3_h fra_h = sizeof(pac_u->wal_u.pep_u.fra_h);
+  c3_h len_h = sizeof(pac_u->wal_u.pep_u.len_s);
+  c3_h exp_h = fra_h + len_h;
   c3_s len_s;
 
-  if ( cur_w + exp_w > pac_u->len_w ) {
+  if ( cur_h + exp_h > pac_u->len_h ) {
     u3l_log("fine: wail not big enough");
     return c3n;
   }
 
   //  parse tag
   //
-  pac_u->wal_u.tag_y = *(pac_u->hun_y + cur_w);
-  cur_w++;
+  pac_u->wal_u.tag_y = *(pac_u->hun_y + cur_h);
+  cur_h++;
 
   if ( 0 != pac_u->wal_u.tag_y ) {
     u3l_log("fine: wail tag unknown %u", pac_u->wal_u.tag_y);
@@ -472,14 +472,14 @@ _fine_sift_wail(u3_pact* pac_u, c3_w_new cur_w)
 
   //  parse fragment number
   //
-  pac_u->wal_u.pep_u.fra_w = c3_sift_word_new(pac_u->hun_y + cur_w);
-  cur_w += fra_w;
+  pac_u->wal_u.pep_u.fra_h = c3_sift_half(pac_u->hun_y + cur_h);
+  cur_h += fra_h;
 
   //  parse path length field
   //
-  len_s = c3_sift_short(pac_u->hun_y + cur_w);
+  len_s = c3_sift_short(pac_u->hun_y + cur_h);
   pac_u->wal_u.pep_u.len_s = len_s;
-  cur_w += len_w;
+  cur_h += len_h;
 
   if ( len_s > FINE_PATH_MAX ) {
     u3l_log("ames wail len: %u, max %u", len_s, FINE_PATH_MAX);
@@ -487,10 +487,10 @@ _fine_sift_wail(u3_pact* pac_u, c3_w_new cur_w)
   }
 
   {
-    c3_w_new tot_w = cur_w + len_s;
-    if ( tot_w != pac_u->len_w ) {
+    c3_h tot_h = cur_h + len_s;
+    if ( tot_h != pac_u->len_h ) {
       u3l_log("fine: wail expected total len: %u, actual %u",
-              tot_w, pac_u->len_w);
+              tot_h, pac_u->len_h);
       return c3n;
     }
   }
@@ -498,7 +498,7 @@ _fine_sift_wail(u3_pact* pac_u, c3_w_new cur_w)
   //  parse request path
   //
   pac_u->wal_u.pep_u.pat_c = c3_calloc(len_s + 1);
-  memcpy(pac_u->wal_u.pep_u.pat_c, pac_u->hun_y + cur_w, len_s);
+  memcpy(pac_u->wal_u.pep_u.pat_c, pac_u->hun_y + cur_h, len_s);
   pac_u->wal_u.pep_u.pat_c[len_s] = '\0';
   return c3y;
 }
@@ -511,41 +511,41 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
   c3_o ret_o;
   c3_w tmp_w = u3r_met(3, mew);
   u3_assert( UINT32_MAX >= tmp_w );
-  c3_w_new len_w = tmp_w;
-  c3_w_new sig_w = sizeof(mew_u->sig_y);
-  c3_w_new num_w = sizeof(mew_u->num_w);
-  c3_w_new min_w = sig_w + 1;
-  c3_w_new max_w = sig_w + num_w + FINE_FRAG;
+  c3_h len_h = tmp_w;
+  c3_h sig_h = sizeof(mew_u->sig_y);
+  c3_h num_h = sizeof(mew_u->num_h);
+  c3_h min_h = sig_h + 1;
+  c3_h max_h = sig_h + num_h + FINE_FRAG;
 
-  if ( (len_w < min_w) || (len_w > max_w) ) {
-    u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_w, min_w, max_w);
+  if ( (len_h < min_h) || (len_h > max_h) ) {
+    u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_h, min_h, max_h);
     ret_o = c3n;
   }
   else {
-    c3_w_new cur_w = 0;
+    c3_h cur_h = 0;
 
     //  parse signature
     //
-    u3r_bytes(cur_w, sig_w, mew_u->sig_y, mew);
-    cur_w += sig_w;
+    u3r_bytes(cur_h, sig_h, mew_u->sig_y, mew);
+    cur_h += sig_h;
 
     //  parse number of fragments
     //
-    u3r_bytes(cur_w, num_w, (c3_y*)&mew_u->num_w, mew);
-    num_w = c3_min(num_w, (len_w - cur_w));
-    cur_w += num_w;
-    u3_assert(len_w >= cur_w);
+    u3r_bytes(cur_h, num_h, (c3_y*)&mew_u->num_h, mew);
+    num_h = c3_min(num_h, (len_h - cur_h));
+    cur_h += num_h;
+    u3_assert(len_h >= cur_h);
 
     //  parse data payload
     //
-    mew_u->siz_s = len_w - cur_w;
+    mew_u->siz_s = len_h - cur_h;
 
     if ( !mew_u->siz_s ) {
       mew_u->dat_y = 0;
     }
     else {
       mew_u->dat_y = c3_calloc(mew_u->siz_s);
-      u3r_bytes(cur_w, mew_u->siz_s, mew_u->dat_y, mew);
+      u3r_bytes(cur_h, mew_u->siz_s, mew_u->dat_y, mew);
     }
 
     ret_o = c3y;
@@ -564,7 +564,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_w_new hed_w = ((hed_u->req_o &     0x1) <<  2)
+  c3_h hed_h = ((hed_u->req_o &     0x1) <<  2)
              ^ ((hed_u->sim_o &     0x1) <<  3)
              ^ ((hed_u->ver_y &     0x7) <<  4)
              ^ ((hed_u->sac_y &     0x3) <<  7)
@@ -572,7 +572,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
              ^ ((hed_u->mug_l & 0xfffff) << 11)
              ^ ((hed_u->rel_o &     0x1) << 31);
 
-  c3_etch_word_new(buf_y, hed_w);
+  c3_etch_half(buf_y, hed_h);
 }
 
 static void
@@ -588,31 +588,31 @@ _ames_etch_origin(c3_d rog_d, c3_y* buf_y)
 static void
 _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
 {
-  c3_w_new cur_w = 0;
+  c3_h cur_h = 0;
 
   //  if packet is relayed, write the 6-byte origin field
   //
   if ( c3y == hed_u->rel_o ) {
-    _ames_etch_origin(pre_u->rog_d, buf_y + cur_w);
-    cur_w += 6;
+    _ames_etch_origin(pre_u->rog_d, buf_y + cur_h);
+    cur_h += 6;
   }
 
   //  write life ticks
   //
-  buf_y[cur_w] = (pre_u->sic_y & 0xf) ^ ((pre_u->ric_y & 0xf) << 4);
-  cur_w++;
+  buf_y[cur_h] = (pre_u->sic_y & 0xf) ^ ((pre_u->ric_y & 0xf) << 4);
+  cur_h++;
 
   //  write sender ship
   //
   c3_y sen_y = 2 << hed_u->sac_y;
-  _ames_ship_of_chubs(pre_u->sen_d, sen_y, buf_y + cur_w);
-  cur_w += sen_y;
+  _ames_ship_of_chubs(pre_u->sen_d, sen_y, buf_y + cur_h);
+  cur_h += sen_y;
 
   //  write receiver ship
   //
   c3_y rec_y = 2 << hed_u->rac_y;
-  _ames_ship_of_chubs(pre_u->rec_d, rec_y, buf_y + cur_w);
-  cur_w += rec_y;
+  _ames_ship_of_chubs(pre_u->rec_d, rec_y, buf_y + cur_h);
+  cur_h += rec_y;
 }
 
 /* _fine_etch_peep(): serialize unsigned scry request
@@ -620,21 +620,21 @@ _ames_etch_prel(u3_head* hed_u, u3_prel* pre_u, c3_y* buf_y)
 static void
 _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 {
-  c3_w_new cur_w = 0;
+  c3_h cur_h = 0;
 
   //  write fragment number
   //
-  c3_etch_word_new(buf_y + cur_w, pep_u->fra_w);
-  cur_w += sizeof(pep_u->fra_w);
+  c3_etch_half(buf_y + cur_h, pep_u->fra_h);
+  cur_h += sizeof(pep_u->fra_h);
 
   //  write path length
   //
-  c3_etch_short(buf_y + cur_w, pep_u->len_s);
-  cur_w += sizeof(pep_u->len_s);
+  c3_etch_short(buf_y + cur_h, pep_u->len_s);
+  cur_h += sizeof(pep_u->len_s);
 
   //  write request path
   //
-  memcpy(buf_y + cur_w, pep_u->pat_c, pep_u->len_s);
+  memcpy(buf_y + cur_h, pep_u->pat_c, pep_u->len_s);
 }
 
 /* fine_etch_meow(): serialize signed scry response fragment
@@ -642,34 +642,34 @@ _fine_etch_peep(u3_peep* pep_u, c3_y* buf_y)
 static void
 _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 {
-  c3_w_new cur_w = 0;
+  c3_h cur_h = 0;
 
   //  write signature
   //
-  c3_w_new sig_w = sizeof(mew_u->sig_y);
-  memcpy(buf_y + cur_w, mew_u->sig_y, sig_w);
-  cur_w += sig_w;
+  c3_h sig_h = sizeof(mew_u->sig_y);
+  memcpy(buf_y + cur_h, mew_u->sig_y, sig_h);
+  cur_h += sig_h;
 
   {
     c3_y num_y[4];
-    c3_y len_y = _fine_bytes_word(mew_u->num_w);
+    c3_y len_y = _fine_bytes_word(mew_u->num_h);
 
     //  write number of fragments
     //
-    c3_etch_word_new(num_y, mew_u->num_w);
-    memcpy(buf_y + cur_w, num_y, len_y);
+    c3_etch_half(num_y, mew_u->num_h);
+    memcpy(buf_y + cur_h, num_y, len_y);
 
     if (mew_u->siz_s != 0) {
-      cur_w += sizeof(mew_u->num_w);
+      cur_h += sizeof(mew_u->num_h);
     }
     else {
-      cur_w += len_y;
+      cur_h += len_y;
     }
   }
 
   //  write response fragment data
   //
-  memcpy(buf_y + cur_w, mew_u->dat_y, mew_u->siz_s);
+  memcpy(buf_y + cur_h, mew_u->dat_y, mew_u->siz_s);
 }
 
 /* _fine_etch_purr(): serialise response packet
@@ -677,15 +677,15 @@ _fine_etch_meow(u3_meow* mew_u, c3_y* buf_y)
 static void
 _fine_etch_purr(u3_purr* pur_u, c3_y* buf_y)
 {
-  c3_w_new cur_w = 0;
+  c3_h cur_h = 0;
 
   //  write unsigned scry request
   //
-  _fine_etch_peep(&pur_u->pep_u, buf_y + cur_w);
-  cur_w += _fine_peep_size(&pur_u->pep_u);
+  _fine_etch_peep(&pur_u->pep_u, buf_y + cur_h);
+  cur_h += _fine_peep_size(&pur_u->pep_u);
 
   //  write signed response fragment
-  _fine_etch_meow(&pur_u->mew_u, buf_y + cur_w);
+  _fine_etch_meow(&pur_u->mew_u, buf_y + cur_h);
 }
 
 /* _fine_etch_response(): serialize scry response packet
@@ -693,31 +693,31 @@ _fine_etch_purr(u3_purr* pur_u, c3_y* buf_y)
 static void
 _fine_etch_response(u3_pact* pac_u)
 {
-  c3_w_new pre_w, pur_w, cur_w, rog_w;
+  c3_h pre_h, pur_h, cur_h, rog_h;
 
-  pre_w = _ames_prel_size(&pac_u->hed_u);
-  pur_w = _fine_purr_size(&pac_u->pur_u);
-  pac_u->len_w = HEAD_SIZE + pre_w + pur_w;
-  pac_u->hun_y = c3_calloc(pac_u->len_w);
+  pre_h = _ames_prel_size(&pac_u->hed_u);
+  pur_h = _fine_purr_size(&pac_u->pur_u);
+  pac_u->len_h = HEAD_SIZE + pre_h + pur_h;
+  pac_u->hun_y = c3_calloc(pac_u->len_h);
 
   //  skip the header until we know what the mug should be
   //
-  cur_w = HEAD_SIZE;
+  cur_h = HEAD_SIZE;
 
   //  write prelude
   //
-  _ames_etch_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
-  cur_w += pre_w;
+  _ames_etch_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_h);
+  cur_h += pre_h;
 
   //  write body
   //
-  _fine_etch_purr(&pac_u->pur_u, pac_u->hun_y + cur_w);
+  _fine_etch_purr(&pac_u->pur_u, pac_u->hun_y + cur_h);
 
   //  calculate mug and write header
   //
-  rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
-  pac_u->hed_u.mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
-                                     pac_u->len_w - rog_w);
+  rog_h = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
+  pac_u->hed_u.mug_l = u3r_mug_bytes(pac_u->hun_y + rog_h,
+                                     pac_u->len_h - rog_h);
   _ames_etch_head(&pac_u->hed_u, pac_u->hun_y);
 
   u3_assert( c3y == _ames_check_mug(pac_u) );
@@ -762,7 +762,7 @@ _ames_send(u3_pact* pac_u)
 
   if ( !pac_u->hun_y
     || !sam_u
-    || !pac_u->len_w
+    || !pac_u->len_h
     || !pac_u->lan_u.por_s )
   {
     u3l_log("ames: _ames_send null");
@@ -773,11 +773,11 @@ _ames_send(u3_pact* pac_u)
 
     memset(&add_u, 0, sizeof(add_u));
     add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = htonl(pac_u->lan_u.pip_w);
+    add_u.sin_addr.s_addr = htonl(pac_u->lan_u.pip_h);
     add_u.sin_port = htons(pac_u->lan_u.por_s);
 
     {
-      uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_w);
+      uv_buf_t buf_u = uv_buf_init((c3_c*)pac_u->hun_y, pac_u->len_h);
       c3_i     sas_i = uv_udp_send(&pac_u->snd_u,
                                    &u3_Host.wax_u,
                                    &buf_u, 1,
@@ -804,7 +804,7 @@ u3_ames_decode_lane(u3_atom lan) {
 
   u3z(lan);
 
-  lan_u.pip_w = (c3_w_new)lan_d;
+  lan_u.pip_h = (c3_h)lan_d;
   lan_u.por_s = (c3_s)(lan_d >> 32);
   return lan_u;
 }
@@ -813,7 +813,7 @@ u3_ames_decode_lane(u3_atom lan) {
 */
 c3_d
 u3_ames_lane_to_chub(u3_lane lan) {
-  return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_w;
+  return ((c3_d)lan.por_s << 32) ^ (c3_d)lan.pip_h;
 }
 
 /* u3_ames_encode_lane(): serialize lane to noun
@@ -874,7 +874,7 @@ _ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
 static u3_noun
 _ames_pact_to_noun(u3_pact* pac_u)
 {
-  u3_noun pac = u3i_bytes(pac_u->len_w, pac_u->hun_y);
+  u3_noun pac = u3i_bytes(pac_u->len_h, pac_u->hun_y);
   return pac;
 }
 
@@ -905,11 +905,11 @@ static c3_i
 _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
 {
   c3_c* bas_c = dns_c;
-  c3_w_new  len_w = strlen(dom_c);
+  c3_h  len_h = strlen(dom_c);
 
   //  name 3, '.' 2, trailing null
   //
-  if ( 250 <= len_w ) {
+  if ( 250 <= len_h ) {
     return -1;
   }
 
@@ -917,8 +917,8 @@ _ames_etch_czar(c3_c dns_c[256], const c3_c* dom_c, c3_y imp_y)
   dns_c   += 3;
   *dns_c++ = '.';
 
-  memcpy(dns_c, dom_c, len_w);
-  dns_c   += len_w;
+  memcpy(dns_c, dom_c, len_h);
+  dns_c   += len_h;
   *dns_c++ = '.';
 
   memset(dns_c, 0, 256 - (dns_c - bas_c));
@@ -932,31 +932,31 @@ static c3_o
 _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 {
   c3_s por_s = _ames_czar_port(imp_y);
-  c3_w_new pip_w;
+  c3_h pip_h;
 
   if ( c3n == u3_Host.ops_u.net ) {
-    pip_w = 0x7f000001;
+    pip_h = 0x7f000001;
   }
   else {
-    pip_w = sam_u->zar_u.pip_w[imp_y];
+    pip_h = sam_u->zar_u.pip_h[imp_y];
 
-    if ( !pip_w ) {
-      if ( u3C.wag_w & u3o_verbose ) {
+    if ( !pip_h ) {
+      if ( u3C.wag_h & u3o_verbose ) {
         u3l_log("ames: czar not resolved");
       }
       return c3n;
     }
-    else if ( _CZAR_GONE == pip_w ) {
+    else if ( _CZAR_GONE == pip_h ) {
       //  print only on first send failure
       //
-      c3_w_new blk_w = imp_y >> 5;
-      c3_w_new bit_w = 1 << (imp_y & 31);
+      c3_h blk_h = imp_y >> 5;
+      c3_h bit_h = 1 << (imp_y & 31);
 
-      if ( !(sam_u->zar_u.log_w[blk_w] & bit_w) ) {
+      if ( !(sam_u->zar_u.log_h[blk_h] & bit_h) ) {
         c3_c dns_c[256];
         u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
         u3l_log("ames: czar at %s: not found (b)", dns_c);
-        sam_u->zar_u.log_w[blk_w] |= bit_w;
+        sam_u->zar_u.log_h[blk_h] |= bit_h;
       }
 
       return c3n;
@@ -964,16 +964,16 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
   }
 
   lan_u->por_s = por_s;
-  lan_u->pip_w = pip_w;
+  lan_u->pip_h = pip_h;
   return c3y;
 }
 
 /* _fine_get_cache(): get packet list or status from cache. RETAIN
  */
 static u3_weak
-_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w_new fra_w)
+_fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_h fra_h)
 {
-  u3_noun key = u3nc(u3k(pax), u3i_word_new(fra_w));
+  u3_noun key = u3nc(u3k(pax), u3i_half(fra_h));
   u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
   u3z(key);
   return pro;
@@ -982,21 +982,21 @@ _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w_new fra_w)
 /* _fine_put_cache(): put packet list or status into cache. RETAIN.
  */
 static void
-_fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w_new lop_w, u3_noun lis)
+_fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_h lop_h, u3_noun lis)
 {
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
-    u3_noun key = u3nc(u3k(pax), u3i_word_new(lop_w));
+    u3_noun key = u3nc(u3k(pax), u3i_half(lop_h));
     u3h_put(sam_u->fin_s.sac_p, key, lis);
     u3z(key);
   }
   else {
     while ( u3_nul != lis ) {
-      u3_noun key = u3nc(u3k(pax), u3i_word_new(lop_w));
+      u3_noun key = u3nc(u3k(pax), u3i_half(lop_h));
       u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
       u3z(key);
 
       lis = u3t(lis);
-      lop_w++;
+      lop_h++;
     }
   }
 }
@@ -1036,7 +1036,7 @@ _stun_on_request(u3_ames*    sam_u,
   struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
   u3_lane lan_u = {
     .por_s = ntohs(add_u->sin_port),
-    .pip_w = ntohl(add_u->sin_addr.s_addr)
+    .pip_h = ntohl(add_u->sin_addr.s_addr)
   };
   u3_stun_make_response(req_y, &lan_u, snd_u->hun_y);
 
@@ -1050,12 +1050,12 @@ _stun_on_request(u3_ames*    sam_u,
 }
 
 static void
-_stun_start(u3_ames* sam_u, c3_w_new tim_w);
+_stun_start(u3_ames* sam_u, c3_h tim_h);
 
 /* _stun_on_response(): hear stun response from galaxy.
  */
 static void
-_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w_new buf_len)
+_stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_h buf_len)
 {
   u3_lane lan_u;
 
@@ -1065,7 +1065,7 @@ _stun_on_response(u3_ames* sam_u, c3_y* buf_y, c3_w_new buf_len)
   }
 
   if ( (sam_u->sun_u.sef_u.por_s != lan_u.por_s) ||
-       (sam_u->sun_u.sef_u.pip_w != lan_u.pip_w) )
+       (sam_u->sun_u.sef_u.pip_h != lan_u.pip_h) )
   {
     // lane changed
     u3_noun wir = u3nc(c3__ames, u3_nul);
@@ -1114,7 +1114,7 @@ _stun_send_request(u3_ames* sam_u)
   struct sockaddr_in add_u;
   memset(&add_u, 0, sizeof(add_u));
   add_u.sin_family = AF_INET;
-  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_w);
+  add_u.sin_addr.s_addr = htonl(sam_u->sun_u.lan_u.pip_h);
   add_u.sin_port = htons(sam_u->sun_u.lan_u.por_s);
 
   uv_buf_t buf_u = uv_buf_init((c3_c*)snd_u->hun_y, 28);
@@ -1175,7 +1175,7 @@ static void
 _stun_timer_cb(uv_timer_t* tim_u)
 {
   u3_ames* sam_u = (u3_ames*)(tim_u->data);
-  c3_w_new     rto_w = 500;
+  c3_h     rto_h = 500;
 
   switch ( sam_u->sun_u.sat_y ) {
     case STUN_OFF: {
@@ -1193,14 +1193,14 @@ _stun_timer_cb(uv_timer_t* tim_u)
       else {
         sam_u->sun_u.sat_y = STUN_TRYING;
         gettimeofday(&sam_u->sun_u.sar_u, 0);  //  set start time to now
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto_w, 0);
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, rto_h, 0);
         _stun_send_request(sam_u);
       }
     } break;
 
     case STUN_TRYING: {
       c3_d gap_d = _stun_time_gap(sam_u->sun_u.sar_u);
-      c3_d nex_d = (gap_d * 2) + rto_w - gap_d;
+      c3_d nex_d = (gap_d * 2) + rto_h - gap_d;
 
       if ( gap_d >= 39500 ) {
         _stun_on_lost(sam_u);
@@ -1210,9 +1210,9 @@ _stun_timer_cb(uv_timer_t* tim_u)
         //
         //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
-        c3_w_new tim_w = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
 
-        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
+        uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_h, 0);
         _stun_send_request(sam_u);
       }
     } break;
@@ -1224,7 +1224,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
 /* _stun_start(): begin/restart STUN state machine.
 */
 static void
-_stun_start(u3_ames* sam_u, c3_w_new tim_w)
+_stun_start(u3_ames* sam_u, c3_h tim_h)
 {
   if ( ent_getentropy(sam_u->sun_u.tid_y, 12) ) {
     u3l_log("stun: getentropy fail: %s", strerror(errno));
@@ -1232,7 +1232,7 @@ _stun_start(u3_ames* sam_u, c3_w_new tim_w)
   }
 
   sam_u->sun_u.sat_y = STUN_KEEPALIVE;
-  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
+  uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_h, 0);
 }
 
 /* _ames_is_czar(): [who] is galaxy.
@@ -1301,17 +1301,17 @@ _ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)
       //
       //    XX this looks like en/de-coding problems ...
       //
-      nal_u.pip_w = ( nal_u.pip_w ) ? nal_u.pip_w : 0x7f000001;
+      nal_u.pip_h = ( nal_u.pip_h ) ? nal_u.pip_h : 0x7f000001;
 
       //  if in local-only mode, don't send remote packets
       //
-      if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != nal_u.pip_w) ) {
+      if ( (c3n == u3_Host.ops_u.net) && (0x7f000001 != nal_u.pip_h) ) {
         return c3n;
       }
       //  if the lane is uninterpretable, silently drop the packet
       //
       else if ( !nal_u.por_s ) {
-        if ( u3C.wag_w & u3o_verbose ) {
+        if ( u3C.wag_h & u3o_verbose ) {
           u3l_log("ames: inscrutable lane");
         }
         return c3n;
@@ -1345,10 +1345,10 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    pac_u->len_w = u3r_met(3, pac);
-    pac_u->hun_y = c3_malloc(pac_u->len_w);
+    pac_u->len_h = u3r_met(3, pac);
+    pac_u->hun_y = c3_malloc(pac_u->len_h);
 
-    u3r_bytes(0, pac_u->len_w, pac_u->hun_y, pac);
+    u3r_bytes(0, pac_u->len_h, pac_u->hun_y, pac);
 
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
     pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
@@ -1367,14 +1367,14 @@ _ames_cap_queue(u3_ames* sam_u)
   u3_ovum* egg_u = sam_u->car_u.ext_u;
   c3_d     old_d = sam_u->sat_u.dop_d;
 
-  while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_w) ) {
+  while ( egg_u && (QUEUE_MAX < sam_u->car_u.dep_h) ) {
     u3_ovum* nex_u = egg_u->nex_u;
 
     if ( c3__hear == u3h(egg_u->cad) ) {
       u3_auto_drop(&sam_u->car_u, egg_u);
       sam_u->sat_u.dop_d++;
 
-      if ( u3C.wag_w & u3o_verbose ) {
+      if ( u3C.wag_h & u3o_verbose ) {
         u3l_log("ames: packet dropped (%" PRIu64 " total)", sam_u->sat_u.dop_d);
       }
     }
@@ -1382,7 +1382,7 @@ _ames_cap_queue(u3_ames* sam_u)
     egg_u = nex_u;
   }
 
-  if (  !(u3C.wag_w & u3o_verbose)
+  if (  !(u3C.wag_h & u3o_verbose)
      && (old_d != sam_u->sat_u.dop_d)
      && !(sam_u->sat_u.dop_d % 1000) )
   {
@@ -1396,12 +1396,12 @@ static void
 _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3_ames* sam_u = (u3_ames*)egg_u->car_u;
-  c3_w_new     len_w = u3qb_lent(lud);
+  c3_h     len_h = u3qb_lent(lud);
 
-  if ( (1 == len_w) && c3__evil == u3h(u3h(lud)) ) {
+  if ( (1 == len_h) && c3__evil == u3h(u3h(lud)) ) {
     sam_u->sat_u.vil_d++;
 
-    if (  (u3C.wag_w & u3o_verbose)
+    if (  (u3C.wag_h & u3o_verbose)
        || (0 == (sam_u->sat_u.vil_d % 100)) )
     {
       u3l_log("ames: heard bad crypto (%" PRIu64 " total), "
@@ -1412,16 +1412,16 @@ _ames_hear_bail(u3_ovum* egg_u, u3_noun lud)
   else {
     sam_u->sat_u.fal_d++;
 
-    if (  (u3C.wag_w & u3o_verbose)
+    if (  (u3C.wag_h & u3o_verbose)
        || (0 == (sam_u->sat_u.fal_d % 100)) )
     {
-      if ( 2 == len_w ) {
+      if ( 2 == len_h ) {
         u3_pier_punt_goof("hear", u3k(u3h(lud)));
         u3_pier_punt_goof("crud", u3k(u3h(u3t(lud))));
       }
       //  !2 traces is unusual, just print the first if present
       //
-      else if ( len_w ) {
+      else if ( len_h ) {
         u3_pier_punt_goof("hear", u3k(u3h(lud)));
       }
 
@@ -1471,12 +1471,12 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
       u3l_log("ames: forwarded %" PRIu64 " total", sam_u->sat_u.fow_d);
     }
 
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3_noun sen = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.sen_d));
       u3_noun rec = u3dc("scot", 'p', u3i_chubs(2, pac_u->pre_u.rec_d));
       c3_c* sen_c = u3r_string(sen);
       c3_c* rec_c = u3r_string(rec);
-      c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_w;
+      c3_y* pip_y = (c3_y*)&pac_u->lan_u.pip_h;
 
       //NOTE ip byte order assumes little-endian
       u3l_log("ames: forwarding for %s to %s from %d.%d.%d.%d:%d",
@@ -1508,7 +1508,7 @@ _ames_send_many(u3_pact* pac_u, u3_noun las, c3_o for_o)
            && (who_d[1] == sam_u->pir_u->who_d[1]) )
         {
           sen_o = c3n;
-          if ( u3C.wag_w & u3o_verbose ) {
+          if ( u3C.wag_h & u3o_verbose ) {
             u3l_log("ames: forward skipping self");
           }
         }
@@ -1687,10 +1687,10 @@ _ames_skip(u3_prel* pre_u)
 
 /* _fine_lop(): find beginning of page containing fra_w
 */
-static inline c3_w_new
-_fine_lop(c3_w_new fra_w)
+static inline c3_h
+_fine_lop(c3_h fra_h)
 {
-  return 1 + (((fra_w - 1) / FINE_PAGE) * FINE_PAGE);
+  return 1 + (((fra_h - 1) / FINE_PAGE) * FINE_PAGE);
 }
 
 /* _fine_scry_path(): parse path from wail or purr.
@@ -1728,29 +1728,29 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
   {
     //  XX virtualize
     u3_noun pax = u3dc("rash", u3i_string(pep_u->pat_c), u3v_wish(PATH_PARSER));
-    c3_w_new  lop_w = _fine_lop(pep_u->fra_w);
+    c3_h  lop_h = _fine_lop(pep_u->fra_h);
     u3_weak pas = u3r_at(7, nun);
 
     //  if not [~ ~ fragments], mark as dead
     //
     if( u3_none == pas ) {
-      _fine_put_cache(sam_u, pax, lop_w, FINE_DEAD);
+      _fine_put_cache(sam_u, pax, lop_h, FINE_DEAD);
       _ames_pact_free(pac_u);
 
       u3z(nun);
       return;
     }
 
-    _fine_put_cache(sam_u, pax, lop_w, pas);
+    _fine_put_cache(sam_u, pax, lop_h, pas);
 
     //  find requested fragment
     //
     while ( u3_nul != pas ) {
-      if ( pep_u->fra_w == lop_w ) {
+      if ( pep_u->fra_h == lop_h ) {
         fra = u3k(u3h(pas));
         break;
       }
-      lop_w++;
+      lop_h++;
       pas = u3t(pas);
     }
 
@@ -1762,8 +1762,8 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
     _ames_pact_free(pac_u);
   }
   else if ( c3y == _fine_sift_meow(&pac_u->pur_u.mew_u, fra) ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("fine: send %u %s", pac_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_h & u3o_verbose ) {
+      u3l_log("fine: send %u %s", pac_u->pur_u.pep_u.fra_h,
                                   pac_u->pur_u.pep_u.pat_c);
     }
 
@@ -1781,13 +1781,13 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
 /* _fine_hear_request(): hear wail (fine request packet packet).
 */
 static void
-_fine_hear_request(u3_pact* req_u, c3_w_new cur_w)
+_fine_hear_request(u3_pact* req_u, c3_h cur_h)
 {
   u3_ames* sam_u = req_u->sam_u;
   u3_pact* res_u;
   u3_noun    key;
 
-  if ( c3n == _fine_sift_wail(req_u, cur_w) ) {
+  if ( c3n == _fine_sift_wail(req_u, cur_h) ) {
     sam_u->sat_u.wal_d++;
     if ( 0 == (sam_u->sat_u.wal_d % 100) ) {
       u3l_log("fine: %" PRIu64 " dropped wails",
@@ -1864,15 +1864,15 @@ _fine_hear_request(u3_pact* req_u, c3_w_new cur_w)
 
   //  look up request in scry cache
   //
-  c3_w_new  fra_w = res_u->pur_u.pep_u.fra_w;
-  c3_w_new  lop_w = _fine_lop(fra_w);
-  u3_weak pec = _fine_get_cache(sam_u, key, lop_w);
+  c3_h  fra_h = res_u->pur_u.pep_u.fra_h;
+  c3_h  lop_h = _fine_lop(fra_h);
+  u3_weak pec = _fine_get_cache(sam_u, key, lop_h);
 
   //  already pending; drop
   //
   if ( FINE_PEND == pec ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_w,
+    if ( u3C.wag_h & u3o_verbose ) {
+      u3l_log("fine: pend %u %s", res_u->pur_u.pep_u.fra_h,
                                   res_u->pur_u.pep_u.pat_c);
     }
     _ames_pact_free(res_u);
@@ -1880,24 +1880,24 @@ _fine_hear_request(u3_pact* req_u, c3_w_new cur_w)
   //  cache miss or a previous scry blocked; try again
   //
   else {
-    u3_weak cac = _fine_get_cache(sam_u, key, fra_w);
+    u3_weak cac = _fine_get_cache(sam_u, key, fra_h);
 
     if ( (u3_none == cac) || (FINE_DEAD == cac) ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_w,
+      if ( u3C.wag_h & u3o_verbose ) {
+        u3l_log("fine: miss %u %s", res_u->pur_u.pep_u.fra_h,
                                     res_u->pur_u.pep_u.pat_c);
       }
 
       u3_noun pax =
         u3nc(c3__fine,
         u3nq(c3__hunk,
-             u3dc("scot", c3__ud, u3i_word_new(lop_w)),
+             u3dc("scot", c3__ud, u3i_half(lop_h)),
              u3dc("scot", c3__ud, FINE_PAGE),
              u3k(key)));
 
       //  mark as pending in the scry cache
       //
-      _fine_put_cache(res_u->sam_u, key, lop_w, FINE_PEND);
+      _fine_put_cache(res_u->sam_u, key, lop_h, FINE_PEND);
 
       //  scry into arvo for a page of packets
       //
@@ -1907,8 +1907,8 @@ _fine_hear_request(u3_pact* req_u, c3_w_new cur_w)
     //  cache hit, fill in response meow and send
     //
     else if ( c3y == _fine_sift_meow(&res_u->pur_u.mew_u, u3k(cac)) ) {
-      if ( u3C.wag_w & u3o_verbose ) {
-        u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_w,
+      if ( u3C.wag_h & u3o_verbose ) {
+        u3l_log("fine: hit  %u %s", res_u->pur_u.pep_u.fra_h,
                                     res_u->pur_u.pep_u.pat_c);
       }
       _fine_etch_response(res_u);
@@ -1926,12 +1926,12 @@ _fine_hear_request(u3_pact* req_u, c3_w_new cur_w)
 /* _fine_hear_response(): hear purr (fine response packet).
 */
 static void
-_fine_hear_response(u3_pact* pac_u, c3_w_new cur_w)
+_fine_hear_response(u3_pact* pac_u, c3_h cur_h)
 {
   u3_noun wir = u3nc(c3__fine, u3_nul);
   u3_noun cad = u3nt(c3__hear,
                      u3nc(c3n, u3_ames_encode_lane(pac_u->lan_u)),
-                     u3i_bytes(pac_u->len_w, pac_u->hun_y));
+                     u3i_bytes(pac_u->len_h, pac_u->hun_y));
 
   u3_ovum* ovo_u = u3_ovum_init(0, c3__ames, wir, cad);
   u3_auto_plan(&pac_u->sam_u->car_u, ovo_u);
@@ -1943,7 +1943,7 @@ _fine_hear_response(u3_pact* pac_u, c3_w_new cur_w)
 /* _ames_hear_ames(): hear ames packet.
 */
 static void
-_ames_hear_ames(u3_pact* pac_u, c3_w_new cur_w)
+_ames_hear_ames(u3_pact* pac_u, c3_h cur_h)
 {
 #ifdef AMES_SKIP
   if ( c3_y == _ames_skip(&pac_u->pre_u) ) {
@@ -1953,7 +1953,7 @@ _ames_hear_ames(u3_pact* pac_u, c3_w_new cur_w)
 #endif
 
   {
-    u3_noun msg = u3i_bytes(pac_u->len_w, pac_u->hun_y);
+    u3_noun msg = u3i_bytes(pac_u->len_h, pac_u->hun_y);
     _ames_put_packet(pac_u->sam_u, msg, pac_u->lan_u);
     _ames_pact_free(pac_u);
   }
@@ -1971,28 +1971,28 @@ _ames_try_forward(u3_pact* pac_u)
           && ( 0  == pac_u->pre_u.sen_d[1] ) ) )
   {
     c3_y* old_y;
-    c3_w_new  old_w, cur_w;
+    c3_h  old_h, cur_h;
 
     pac_u->hed_u.rel_o = c3y;
     pac_u->pre_u.rog_d = u3_ames_lane_to_chub(pac_u->lan_u);
 
-    old_w = pac_u->len_w;
+    old_h = pac_u->len_h;
     old_y = pac_u->hun_y;
 
-    pac_u->len_w += 6;
-    pac_u->hun_y = c3_calloc(pac_u->len_w);
+    pac_u->len_h += 6;
+    pac_u->hun_y = c3_calloc(pac_u->len_h);
 
-    cur_w = 0;
+    cur_h = 0;
 
     _ames_etch_head(&pac_u->hed_u, pac_u->hun_y);
-    cur_w += HEAD_SIZE;
+    cur_h += HEAD_SIZE;
 
-    _ames_etch_origin(pac_u->pre_u.rog_d, pac_u->hun_y + cur_w);
-    cur_w += 6;
+    _ames_etch_origin(pac_u->pre_u.rog_d, pac_u->hun_y + cur_h);
+    cur_h += 6;
 
-    memcpy(pac_u->hun_y + cur_w,
+    memcpy(pac_u->hun_y + cur_h,
            old_y + HEAD_SIZE,
-           old_w - HEAD_SIZE);
+           old_h - HEAD_SIZE);
 
     c3_free(old_y);
   }
@@ -2017,12 +2017,12 @@ _ames_try_forward(u3_pact* pac_u)
 void
 _ames_hear(u3_ames* sam_u,
            const struct sockaddr* adr_u,
-           c3_w_new     len_w,
+           c3_h     len_h,
            c3_y*    hun_y)
 {
   u3_pact* pac_u;
-  c3_w_new     pre_w;
-  c3_w_new     cur_w = 0;  //  cursor: how many bytes we've read from hun_y
+  c3_h     pre_h;
+  c3_h     cur_h = 0;  //  cursor: how many bytes we've read from hun_y
 
 
   // XX reorg, check if a STUN req/resp can look like an ames packet
@@ -2031,26 +2031,26 @@ _ames_hear(u3_ames* sam_u,
   //    check ames first, assume that STUN could maybe (not likely) overlap with ames
   //    for next protocol version, have an urbit cookie
   //
-  if ( c3y == u3_stun_is_request(hun_y, len_w) ) {
+  if ( c3y == u3_stun_is_request(hun_y, len_h) ) {
       _stun_on_request(sam_u, hun_y, adr_u);
       c3_free(hun_y);
   }
   else if ( c3y == u3_stun_is_our_response(hun_y,
-                                           sam_u->sun_u.tid_y, len_w) )
+                                           sam_u->sun_u.tid_y, len_h) )
   {
-    _stun_on_response(sam_u, hun_y, len_w);
+    _stun_on_response(sam_u, hun_y, len_h);
     c3_free(hun_y);
   }
   else {
     struct sockaddr_in* add_u = (struct sockaddr_in*)adr_u;
     u3_lane             lan_u = {
       .por_s = ntohs(add_u->sin_port),
-      .pip_w = ntohl(add_u->sin_addr.s_addr)
+      .pip_h = ntohl(add_u->sin_addr.s_addr)
     };
 
     //  make sure packet is big enough to have a header
     //
-    if ( HEAD_SIZE > len_w ) {
+    if ( HEAD_SIZE > len_h ) {
       sam_u->sat_u.hed_d++;
       if ( 0 == (sam_u->sat_u.hed_d % 100000) ) {
         u3l_log("ames: %" PRIu64 " dropped, failed to read header",
@@ -2063,15 +2063,15 @@ _ames_hear(u3_ames* sam_u,
 
     pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
-    pac_u->len_w = len_w;
+    pac_u->len_h = len_h;
     pac_u->hun_y = hun_y;
     pac_u->lan_u = lan_u;
-    cur_w = 0;
+    cur_h = 0;
 
     //  parse the header
     //
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
-    cur_w += HEAD_SIZE;
+    cur_h += HEAD_SIZE;
 
     pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);
 
@@ -2106,8 +2106,8 @@ _ames_hear(u3_ames* sam_u,
 
     //  check that packet is big enough for prelude
     //
-    pre_w = _ames_prel_size(&pac_u->hed_u);
-    if ( len_w < cur_w + pre_w ) {
+    pre_h = _ames_prel_size(&pac_u->hed_u);
+    if ( len_h < cur_h + pre_h ) {
       sam_u->sat_u.pre_d++;
       if ( 0 == (sam_u->sat_u.pre_d % 100000) ) {
         u3l_log("ames: %" PRIu64 " dropped, failed to read prelude",
@@ -2119,8 +2119,8 @@ _ames_hear(u3_ames* sam_u,
 
     //  parse prelude
     //
-    _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_w);
-    cur_w += pre_w;
+    _ames_sift_prel(&pac_u->hed_u, &pac_u->pre_u, pac_u->hun_y + cur_h);
+    cur_h += pre_h;
 
     //  if we can scry for lanes,
     //  and we are not the recipient,
@@ -2139,15 +2139,15 @@ _ames_hear(u3_ames* sam_u,
       //
       switch ( pac_u->typ_y ) {
         case PACT_WAIL: {
-          _fine_hear_request(pac_u, cur_w);
+          _fine_hear_request(pac_u, cur_h);
         } break;
 
         case PACT_PURR: {
-          _fine_hear_response(pac_u, cur_w);
+          _fine_hear_response(pac_u, cur_h);
         } break;
 
         case PACT_AMES: {
-          _ames_hear_ames(pac_u, cur_w);
+          _ames_hear_ames(pac_u, cur_h);
         } break;
 
         default: {
@@ -2172,7 +2172,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   u3_ames* sam_u = u3_Host.sam_u; // wax_u->data;
 
   if ( 0 > nrd_i ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("ames: recv: fail: %s", uv_strerror(nrd_i));
     }
     c3_free(buf_u->base);
@@ -2181,7 +2181,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
     c3_free(buf_u->base);
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("ames: recv: fail: message truncated");
     }
     c3_free(buf_u->base);
@@ -2189,7 +2189,7 @@ _ames_recv_cb(uv_udp_t*        wax_u,
   else {
     //  NB: [nrd_i] will never exceed max length from _ames_alloc()
     //
-    _ames_hear(sam_u, adr_u, (c3_w_new)nrd_i, (c3_y*)buf_u->base);
+    _ames_hear(sam_u, adr_u, (c3_h)nrd_i, (c3_y*)buf_u->base);
   }
 }
 
@@ -2266,7 +2266,7 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(c3_c* ship, bool fake, c3_w_new s_addr, c3_s port, void* context)
+_ames_put_dear(c3_c* ship, bool fake, c3_h s_addr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
 
@@ -2276,7 +2276,7 @@ _ames_put_dear(c3_c* ship, bool fake, c3_w_new s_addr, c3_s port, void* context)
   }
 
   u3_lane lan;
-  lan.pip_w = ntohl(s_addr);
+  lan.pip_h = ntohl(s_addr);
   lan.por_s = ntohs(port);
 
   u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
@@ -2407,37 +2407,37 @@ typedef struct _czar_resv {
 static void
 _ames_czar_gone(u3_ames* sam_u, c3_y imp_y)
 {
-  c3_w_new old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_h old_h = sam_u->zar_u.pip_h[imp_y];
 
-  if ( !old_w ) {
-    sam_u->zar_u.pip_w[imp_y] = _CZAR_GONE;
+  if ( !old_h ) {
+    sam_u->zar_u.pip_h[imp_y] = _CZAR_GONE;
   }
 }
 
 /* _ames_czar_here(): galaxy address resolution succeeded.
 */
 static void
-_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_w_new pip_w)
+_ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_h pip_h)
 {
-  c3_w_new old_w = sam_u->zar_u.pip_w[imp_y];
+  c3_h old_h = sam_u->zar_u.pip_h[imp_y];
 
-  if ( pip_w != old_w ) {
+  if ( pip_h != old_h ) {
     c3_c dns_c[256];
     u3_assert ( !_ames_etch_czar(dns_c, sam_u->zar_u.dom_c, imp_y) );
     u3l_log("ames: czar %s ip .%d.%d.%d.%d", dns_c,
-            (pip_w >> 24) & 0xff,
-            (pip_w >> 16) & 0xff,
-            (pip_w >>  8) & 0xff,
-            (pip_w >>  0) & 0xff);
+            (pip_h >> 24) & 0xff,
+            (pip_h >> 16) & 0xff,
+            (pip_h >>  8) & 0xff,
+            (pip_h >>  0) & 0xff);
   }
 
-  sam_u->zar_u.pip_w[imp_y] = pip_w;
+  sam_u->zar_u.pip_h[imp_y] = pip_h;
 
   {
-    c3_w_new blk_w = imp_y >> 5;
-    c3_w_new bit_w = 1 << (imp_y & 31);
+    c3_h blk_h = imp_y >> 5;
+    c3_h bit_h = 1 << (imp_y & 31);
 
-    sam_u->zar_u.log_w[blk_w] &= ~bit_w;
+    sam_u->zar_u.log_h[blk_h] &= ~bit_h;
   }
 }
 
@@ -2459,15 +2459,15 @@ _ames_czar_cb(uv_getaddrinfo_t* adr_u,
 
   if ( rai_u && rai_u->ai_addr ) {
     struct sockaddr_in* add_u = (void*)rai_u->ai_addr;
-    c3_w_new pip_w = ntohl(add_u->sin_addr.s_addr);
-    _ames_czar_here(sam_u, imp_y, pip_w);
+    c3_h pip_h = ntohl(add_u->sin_addr.s_addr);
+    _ames_czar_here(sam_u, imp_y, pip_h);
   }
   else {
     if ( !sas_i ) {
       // XX unpossible
       u3l_log("ames: czar: strange failure, no error");
     }
-    else if ( u3C.wag_w & u3o_verbose ) {
+    else if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("ames: czar fail: %s", uv_strerror(sas_i));
     }
 
@@ -2520,8 +2520,8 @@ _ames_czar_all(uv_timer_t* tim_u)
 
   sam_u->zar_u.pen_s = 256;
 
-  for ( c3_w_new i_w = 0; i_w < 256; i_w++ ) {
-    _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_w);
+  for ( c3_h i_h = 0; i_h < 256; i_h++ ) {
+    _ames_czar(sam_u, sam_u->zar_u.dom_c, (c3_y)i_h);
   }
 
   uv_timer_start(&sam_u->zar_u.tim_u, _ames_czar_all, 300*1000, 0);
@@ -2535,21 +2535,21 @@ _ames_ef_turf(u3_ames* sam_u, u3_noun tuf)
   if ( u3_nul != tuf ) {
     c3_c  dom_c[sizeof(sam_u->zar_u.dom_c)];
     u3_noun hot = u3h(tuf);
-    c3_w_new  len_w = u3_mcut_host(0, 0, u3k(hot));
+    c3_h  len_h = u3_mcut_host(0, 0, u3k(hot));
 
-    if ( len_w >= sizeof(dom_c) ) {  // >250
+    if ( len_h >= sizeof(dom_c) ) {  // >250
       //  3 char for the galaxy (e.g. zod) and two dots
-      u3l_log("ames: galaxy domain too big (len=%u)", len_w);
+      u3l_log("ames: galaxy domain too big (len=%u)", len_h);
       u3m_p("hot", hot);
       u3_pier_bail(u3_king_stub());
     }
 
     u3_mcut_host(dom_c, 0, u3k(hot));
-    memset(dom_c + len_w, 0, sizeof(dom_c) - len_w);
+    memset(dom_c + len_h, 0, sizeof(dom_c) - len_h);
 
     if ( 0 != memcmp(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c)) ) {
       memcpy(sam_u->zar_u.dom_c, dom_c, sizeof(dom_c));
-      memset(sam_u->zar_u.pip_w, 0, sizeof(sam_u->zar_u.pip_w));
+      memset(sam_u->zar_u.pip_h, 0, sizeof(sam_u->zar_u.pip_h));
       sam_u->zar_u.dom_o = c3y;
       _ames_czar_all(&(sam_u->zar_u.tim_u));
     }
@@ -2788,12 +2788,12 @@ static u3_noun
 _ames_io_info(u3_auto* car_u)
 {
   u3_ames*    sam_u = (u3_ames*)car_u;
-  c3_w_new sac_w, lax_w;
+  c3_h sac_h, lax_h;
 
-  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
+  sac_h = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);
 
-  lax_w = u3h_count(sam_u->lax_p) * 4;
+  lax_h = u3h_count(sam_u->lax_p) * 4;
   u3h_discount(sam_u->lax_p);
 
   return u3i_list(
@@ -2801,10 +2801,10 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("can-send",         net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
     u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
-    u3_pier_mase("scry-cache",       u3i_word_new(u3h_wyt(sam_u->fin_s.sac_p))),
-    u3_pier_mase("scry-cache-size",  u3i_word_new(sac_w)),
-    u3_pier_mase("lane-cache",       u3i_word_new(u3h_wyt(sam_u->lax_p))),
-    u3_pier_mase("lane-cache-size",  u3i_word_new(lax_w)),
+    u3_pier_mase("scry-cache",       u3i_half(u3h_wyt(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache-size",  u3i_half(sac_h)),
+    u3_pier_mase("lane-cache",       u3i_half(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("lane-cache-size",  u3i_half(lax_h)),
     u3_pier_mase("dropped",          u3i_chub(sam_u->sat_u.dop_d)),
     u3_pier_mase("forwards-dropped", u3i_chub(sam_u->sat_u.fod_d)),
     u3_pier_mase("forwards-pending", u3i_chub(sam_u->sat_u.foq_d)),
@@ -2818,7 +2818,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
     u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
     u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
-    u3_pier_mase("cached-lanes",     u3i_word_new(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("cached-lanes",     u3i_half(u3h_wyt(sam_u->lax_p))),
     u3_none);
 }
 
@@ -2828,12 +2828,12 @@ static void
 _ames_io_slog(u3_auto* car_u)
 {
   u3_ames*    sam_u = (u3_ames*)car_u;
-  c3_w_new sac_w, lax_w;
+  c3_h sac_h, lax_h;
 
-  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
+  sac_h = u3h_count(sam_u->fin_s.sac_p) * 4;
   u3h_discount(sam_u->fin_s.sac_p);
 
-  lax_w = u3h_count(sam_u->lax_p) * 4;
+  lax_h = u3h_count(sam_u->lax_p) * 4;
   u3h_discount(sam_u->lax_p);
 
 
@@ -2848,8 +2848,8 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("      stun:");
   u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
   u3l_log("      caches:");
-  u3l_log("        cached lanes: %"PRIc3_w", %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("        cached meows: %"PRIc3_w", %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("        cached lanes: %"PRIc3_w", %u B", u3h_wyt(sam_u->lax_p), lax_h);
+  u3l_log("        cached meows: %"PRIc3_w", %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_h);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2904,12 +2904,12 @@ u3_ames_io_init(u3_pier* pir_u)
   //NOTE  some numbers on memory usage for the lane cache
   //
   //    assuming we store:
-  //    a (list lane) with 1 item, 1+8 + 1 + (6*2) = 22 words_new
-  //    and a @da as timestamp,                       8 words_new
-  //    consed together,                              6 words_new
-  //    with worst-case (128-bit) @p keys,            8 words_new
-  //    and an additional cell for the k-v pair,      6 words_new
-  //    that makes for a per-entry memory use of     50 words_new => 200 bytes
+  //    a (list lane) with 1 item, 1+8 + 1 + (6*2) = 22 halfs
+  //    and a @da as timestamp,                       8 halfs
+  //    consed together,                              6 halfs
+  //    with worst-case (128-bit) @p keys,            8 halfs
+  //    and an additional cell for the k-v pair,      6 halfs
+  //    that makes for a per-entry memory use of     50 halfs => 200 bytes
   //
   //    the 500k entries below would take about 100mb (in the worst case, but
   //    not accounting for hashtable overhead).
@@ -2954,6 +2954,6 @@ u3_ames_io_init(u3_pier* pir_u)
 
   // XX declare void pointer to u3_host and add sam_u in it
   u3_Host.sam_u = sam_u;
-  u3_Host.imp_u = sam_u->zar_u.pip_w;
+  u3_Host.imp_u = sam_u->zar_u.pip_h;
   return car_u;
 }

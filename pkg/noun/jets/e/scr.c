@@ -49,8 +49,8 @@
     else {
       u3_noun pro;
       c3_d    n_d = u3r_chub(0, n);
-      c3_w_new    r_w = u3r_word_new(0, r),
-              z_w = u3r_word_new(0, z);
+      c3_h    r_w = u3r_half(0, r),
+              z_w = u3r_half(0, z);
       c3_y   *pwd_y = u3a_malloc(pwd_w),
              *sal_y = u3a_malloc(sal_w),
              *out_y = u3a_malloc(d);

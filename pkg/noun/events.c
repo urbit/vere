@@ -989,7 +989,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   if ( old_w > pgs_w ) {
     dif_w = old_w - pgs_w;
 
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
       if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
                               _ce_len(dif_w),
                               (PROT_READ | PROT_WRITE),
@@ -1264,7 +1264,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
 
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return;
   }
 
@@ -1332,7 +1332,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_assert( c3y == _ce_loom_fine() );
 #endif
 
-  if ( u3C.wag_w & u3o_no_demand ) {
+  if ( u3C.wag_h & u3o_no_demand ) {
 #ifndef U3_SNAPSHOT_VALIDATION
     _ce_loom_protect(u3P.img_u.pgs_w, old_w);
 #endif
@@ -1402,7 +1402,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   {
     //  Open the ephemeral space file.
     //
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
       if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
         fprintf(stderr, "boot: failed to load ephemeral file\r\n");
         exit(1);
@@ -1450,11 +1450,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
-        if ( u3C.wag_w & u3o_swap ) {
+        if ( u3C.wag_h & u3o_swap ) {
           _ce_loom_mapf_ephemeral();
         }
 
-        if ( u3C.wag_w & u3o_no_demand ) {
+        if ( u3C.wag_h & u3o_no_demand ) {
           _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
         }
         else {
@@ -1470,7 +1470,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         u3l_log("live: logical boot");
         nuu_o = c3y;
       }
-      else if ( u3C.wag_w & u3o_no_demand ) {
+      else if ( u3C.wag_h & u3o_no_demand ) {
         u3a_print_memory(stderr, "live: loaded", _ce_len_words(u3P.img_u.pgs_w));
       }
       else {

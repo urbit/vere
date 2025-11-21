@@ -14,7 +14,7 @@
         u3_noun who;                          //  single identity
         c3_c*   dir_c;                        //  execution directory (pier)
         c3_c*   eph_c;                        //  ephemeral file
-        c3_w_new    wag_w;                    //  flags (both ways)
+        c3_h    wag_h;                    //  flags (both ways)
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
         c3_w    tos_w;                        //  loom toss skip-length
         c3_w    hap_w;                        //  transient memoization cache size

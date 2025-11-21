@@ -1271,7 +1271,7 @@ _term_it_send_stub(u3_utty* uty_u,
       //  write the text itself
       //
       for ( ; u3_nul != nib; i_w++, nib = u3t(nib) ) {
-        lin_w[i_w] = u3r_word_new(0, u3h(nib));
+        lin_w[i_w] = u3r_half(0, u3h(nib));
       }
 
       //  if we applied any styles, toggle them off
@@ -1315,7 +1315,7 @@ _term_it_show_tour(u3_utty* uty_u,
     c3_w i_w;
 
     for ( i_w = 0ULL; u3_nul != lin; i_w++, lin = u3t(lin) ) {
-      lin_w[i_w] = u3r_word_new(0, u3h(lin));
+      lin_w[i_w] = u3r_half(0, u3h(lin));
     }
   }
 

@@ -181,7 +181,7 @@ _lord_writ_need(u3_lord* god_u, u3_writ_type typ_e)
     wit_u->nex_u = 0;
   }
 
-  god_u->dep_w--;
+  god_u->dep_h--;
 
   if ( typ_e != wit_u->typ_e ) {
     fprintf(stderr, "lord: unexpected %%%s, expected %%%s\r\n",
@@ -247,7 +247,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
     u3_noun a, b, c, pro, wyn, who, fak, eve, mug;
     c3_y pro_y;
     c3_d eve_d;
-    c3_l_new mug_l;
+    c3_h mug_h;
 
     //  XX parse out version values
     //
@@ -257,7 +257,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
        || (c3n == u3r_cell(b, &who, &fak))
        || (c3n == u3r_cell(c, &eve, &mug))
        || (c3n == u3r_safe_chub(eve, &eve_d))
-       || (c3n == u3r_safe_word_new(mug, &mug_l)) )
+       || (c3n == u3r_safe_half(mug, &mug_h)) )
     {
       return _lord_plea_foul(god_u, c3__ripe, dat);
     }
@@ -286,15 +286,15 @@ static void
 _lord_plea_slog(u3_lord* god_u, u3_noun dat)
 {
   u3_noun pri, tan;
-  c3_w_new pri_w;
+  c3_h pri_h;
 
   if (  (c3n == u3r_cell(dat, &pri, &tan))
-     || (c3n == u3r_safe_word_new(pri, &pri_w)) )
+     || (c3n == u3r_safe_half(pri, &pri_h)) )
   {
     return _lord_plea_foul(god_u, c3__slog, dat);
   }
 
-  god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_w, u3k(tan));
+  god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_h, u3k(tan));
   u3z(dat);
 }
 
@@ -579,12 +579,12 @@ _lord_writ_new(u3_lord* god_u)
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
   if ( !god_u->ent_u ) {
     u3_assert( !god_u->ext_u );
-    u3_assert( !god_u->dep_w );
-    god_u->dep_w = 1;
+    u3_assert( !god_u->dep_h );
+    god_u->dep_h = 1;
     god_u->ent_u = god_u->ext_u = wit_u;
   }
   else {
-    god_u->dep_w++;
+    god_u->dep_h++;
     god_u->ent_u->nex_u = wit_u;
     god_u->ent_u = wit_u;
   }
@@ -603,7 +603,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     default: u3_assert(0);
 
     case u3_writ_poke: {
-      u3_noun mil = u3i_words_new(1, &wit_u->wok_u.egg_u->mil_w);
+      u3_noun mil = u3i_halfs(1, &wit_u->wok_u.egg_u->mil_h);
       msg = u3nt(c3__poke, mil, u3k(wit_u->wok_u.job));
     } break;
 
@@ -924,7 +924,7 @@ u3_lord_info(u3_lord* god_u)
     u3i_list(
       u3_pier_mase("live",  god_u->liv_o),
       u3_pier_mase("event", u3i_chub(god_u->eve_d)),
-      u3_pier_mase("queue", u3i_word_new(god_u->dep_w)),
+      u3_pier_mase("queue", u3i_half(god_u->dep_h)),
       u3_newt_moat_info(&god_u->out_u),
       u3_none));
 }
@@ -937,19 +937,19 @@ u3_lord_slog(u3_lord* god_u)
   u3l_log("  lord: live=%s, event=%" PRIu64 ", queue=%u",
           ( c3y == god_u->liv_o ) ? "&" : "|",
           god_u->eve_d,
-          god_u->dep_w);
+          god_u->dep_h);
   u3_newt_moat_slog(&god_u->out_u);
 }
 
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*
-u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
+u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
 {
   u3_lord* god_u = c3_calloc(sizeof *god_u);
   god_u->liv_o = c3n;
   god_u->pin_o = c3n;
-  god_u->wag_w = wag_w;
+  god_u->wag_h = wag_h;
   god_u->bin_c = u3_Host.wrk_c; //  XX strcopy
   god_u->pax_c = pax_c;  //  XX strcopy
   god_u->cb_u  = cb_u;
@@ -979,7 +979,7 @@ u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
                    god_u->key_d[2],
                    god_u->key_d[3]);
 
-    sprintf(wag_c, "%u", god_u->wag_w);
+    sprintf(wag_c, "%u", god_u->wag_h);
 
     sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
@@ -989,7 +989,7 @@ u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
-    sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
+    sprintf(sap_c, "%u", u3_Host.ops_u.sap_h);
 
     arg_c[0] = god_u->bin_c;            //  executable
     arg_c[1] = "work";                  //  protocol
@@ -1084,7 +1084,7 @@ typedef struct _lord_boot {
   u3_cue_xeno*         sil_u;           //  cue handle
   u3_mojo              inn_u;           //  client's stdin
   u3_moat              out_u;           //  client's stdout
-  c3_w_new                 wag_w;           //  config flags
+  c3_h                 wag_h;           //  config flags
   c3_c*                bin_c;           //  binary path
   c3_c*                pax_c;           //  directory
   c3_d                 key_d[4];        //  image key
@@ -1179,17 +1179,17 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
       case c3__slog: {
         u3_noun pri, tan;
-        c3_w_new pri_w;
+        c3_h pri_h;
 
         if (  (c3n == u3r_cell(dat, &pri, &tan))
-           || (c3n == u3r_safe_word_new(pri, &pri_w)) )
+           || (c3n == u3r_safe_half(pri, &pri_h)) )
         {
           //  XX fatal error
           u3_assert(0);
           // return _lord_plea_foul(god_u, c3__slog, dat);
         }
         else {
-          u3_pier_tank(0, pri_w, u3k(tan));
+          u3_pier_tank(0, pri_h, u3k(tan));
         }
       } break;
 
@@ -1209,14 +1209,14 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 */
 void
 u3_lord_boot(c3_c* pax_c,
-             c3_w_new  wag_w,
+             c3_h  wag_h,
              c3_d  key_d[4],
              u3_noun msg,
              void* ptr_v,
              void (*done_f)(void*, c3_o))
 {
   _lord_boot* bot_u = c3_calloc(sizeof(*bot_u));
-  bot_u->wag_w = wag_w;
+  bot_u->wag_h = wag_h;
   bot_u->bin_c = u3_Host.wrk_c; //  XX strcopy
   bot_u->pax_c = pax_c;  //  XX strcopy
   bot_u->done_f = done_f;
@@ -1246,7 +1246,7 @@ u3_lord_boot(c3_c* pax_c,
                    bot_u->key_d[2],
                    bot_u->key_d[3]);
 
-    sprintf(wag_c, "%u", bot_u->wag_w);
+    sprintf(wag_c, "%u", bot_u->wag_h);
 
     sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 

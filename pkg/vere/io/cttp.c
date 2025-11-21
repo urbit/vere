@@ -579,7 +579,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_w num_l, u3_noun hes)
   if ( c3y == u3h(hot) ) {
     ceq_u->hot_c = _cttp_creq_host(u3k(u3t(hot)));
   } else {
-    ceq_u->ipf_w = u3r_word_new(0, u3t(hot));
+    ceq_u->ipf_w = u3r_half(0, u3t(hot));
     ceq_u->ipf_c = _cttp_creq_ip(ceq_u->ipf_w);
   }
 

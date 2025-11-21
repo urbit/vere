@@ -20,10 +20,10 @@ u3m_v3_migrate(void)
   fprintf(stderr, "loom: memoization migration running...\r\n");
 
 
-  c3_w_new* mem_w = ((c3_w_new*)(void*)u3_Loom) + u3a_v3_walign;
-  c3_w_new  len_w = u3C.wor_i - u3a_v3_walign;
-  c3_w_new  suz_w = c3_wiseof(u3v_v2_home);
-  c3_w_new *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v3_balign, C3_ALGLO);
+  c3_h* mem_w = ((c3_h*)(void*)u3_Loom) + u3a_v3_walign;
+  c3_h  len_w = u3C.wor_i - u3a_v3_walign;
+  c3_h  suz_w = c3_wiseof(u3v_v2_home);
+  c3_h *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v3_balign, C3_ALGLO);
 
   //  old road
   u3v_v2_home* hum_u = (u3v_v2_home*)mut_w;
@@ -93,8 +93,8 @@ u3m_v3_migrate(void)
   hom_u.rod_u = rod_u;
 
   //  place the new home over the old one
-  c3_w_new  siz_w = c3_wiseof(u3v_v3_home);
-  c3_w_new *mat_w = c3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);
+  c3_h  siz_w = c3_wiseof(u3v_v3_home);
+  c3_h *mat_w = c3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);
   memcpy(mat_w, &hom_u, sizeof(u3v_v3_home));
 
   //  set globals

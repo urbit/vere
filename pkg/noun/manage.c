@@ -302,15 +302,15 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
   u3H->rod_u.bug.tax = 0;
 
   if ( NULL != stk_u ) {
-    stk_u->off_w = u3H->rod_u.off_w;
-    stk_u->fow_w = u3H->rod_u.fow_w;
+    stk_u->off_h = u3H->rod_u.off_w;
+    stk_u->fow_h = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
     _cm_emergency("recover: top", sig_m);
-    u3C.wag_w |= u3o_check_corrupt;
+    u3C.wag_h |= u3o_check_corrupt;
 
     //  Reset the top road - the problem could be a fat cap.
     //
@@ -940,8 +940,8 @@ u3m_bail(u3_noun how)
 
   // Reset the spin stack pointer
   if ( NULL != stk_u ) {
-    stk_u->off_w = u3R->off_w;
-    stk_u->fow_w = u3R->fow_w;
+    stk_u->off_h = u3R->off_w;
+    stk_u->fow_h = u3R->fow_w;
   }
 
   /* Longjmp, with an underscore.
@@ -1083,8 +1083,8 @@ u3m_leap(c3_w pad_w)
 
   // Add slow stack pointer to rod_u
   if ( NULL != stk_u ) {
-    rod_u->off_w = stk_u->off_w;
-    rod_u->fow_w = stk_u->fow_w;
+    rod_u->off_w = stk_u->off_h;
+    rod_u->fow_w = stk_u->fow_h;
   } 
 
   /* Set up the new road.
@@ -1320,7 +1320,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     /* Make sure the inner routine did not create garbage.
     */
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
 #ifdef U3_CPU_DEBUG
       if ( u3R->all.max_w > 1000000 ) {
         u3a_print_memory(stderr, "execute: top", u3R->all.max_w);
@@ -1414,8 +1414,8 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Save and set memo cache harvesting flag.
   */
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_cash;
+  c3_w wag_w = u3C.wag_h;
+  u3C.wag_h |= u3o_cash;
 
   /* Record the cap, and leap.
   */
@@ -1436,7 +1436,7 @@ u3m_soft_cax(u3_funq fun_f,
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
-    u3C.wag_w = wag_w;
+    u3C.wag_h = wag_w;
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
@@ -1461,7 +1461,7 @@ u3m_soft_cax(u3_funq fun_f,
   }
   else {
     u3t_init();
-    u3C.wag_w = wag_w;
+    u3C.wag_h = wag_w;
 
     /* Produce - or fall again.
     */
@@ -1523,7 +1523,7 @@ u3m_soft_run(u3_noun gul,
 
   {
     // XX review
-    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
+    if ( (u3_nul == gul) || (u3C.wag_h & u3o_cash) ) {
       u3R->ski.gul = u3_nul;
     }
     else {
@@ -2249,7 +2249,7 @@ _cm_signals(void)
   //  Block SIGPROF, so that if/when we reactivate it on the
   //  main thread for profiling, we won't get hits in parallel
   //  on other threads.
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
     sigset_t set;
 
     sigemptyset(&set);
@@ -2469,10 +2469,10 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 
   /* GC immediately if requested
   */
-  if ( (c3n == nuu_o) && (u3C.wag_w & u3o_check_corrupt) ) {
+  if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
     u3m_grab(u3_none);
-    u3C.wag_w &= ~u3o_check_corrupt;
+    u3C.wag_h &= ~u3o_check_corrupt;
     u3l_log("boot: gc complete");
   }
 
