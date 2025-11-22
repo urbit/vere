@@ -35,10 +35,13 @@ _sub_words(c3_w* a_buf_w,
     bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
   }
 
-  for (c3_w i_w = b_len_w; i_w < a_len_w; i_w++) {
+  c3_w i_w = b_len_w;
+  for (; i_w < a_len_w && bor_b; i_w++) {
     bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0, &c_buf_w[i_w]);
   }
+
   u3_assert( 0 == bor_b );
+  memcpy(&c_buf_w[i_w], &a_buf_w[i_w], (a_len_w - i_w) << 2);
 }
 
 u3_noun
