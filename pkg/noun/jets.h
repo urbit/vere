@@ -46,13 +46,14 @@
     */
       typedef struct _u3j_harm {
         c3_c*             fcs_c;               //  `.axe` or name
-        u3_noun           (*fun_f)(u3_noun);   //  compute or 0 / semitransfer
+        u3_noun           (*fun_f)(u3_noun);   //  compute or 0 / retain or transfer
         // c3_o           (*val_f)(u3_noun);   //  validate or 0 / retain
         c3_o              ice;                 //  perfect (don't test)
         c3_o              tot;                 //  total (never punts)
         c3_o              liv;                 //  live (enabled)
         c3_l              axe_l;               //  computed/discovered axis
         struct _u3j_core* cop_u;               //  containing core
+        c3_o              kip;                 //  does fun_f retain?
       } u3j_harm;
 
     /* u3j_hood: hook description.

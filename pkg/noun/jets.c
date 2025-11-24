@@ -875,7 +875,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       u3a_lop(cod_w);
 #endif
       if ( u3_none != pro ) {
-        u3z(cor);
+        if ( _(ham_u->kip) ) u3z(cor);
         return pro;
       }
     }
@@ -883,6 +883,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       u3_weak pro, ame;
 
       ham_u->ice = c3y;
+      if ( _(ham_u->kip) ) u3k(cor);
       pro = ham_u->fun_f(cor);
       ham_u->ice = c3n;
 
@@ -890,7 +891,6 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       u3a_lop(cod_w);
 #endif
       if ( u3_none == pro ) {
-        u3z(cor);
         return pro;
       }
       ham_u->liv = c3n;
