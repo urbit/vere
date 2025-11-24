@@ -508,21 +508,12 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(HINK, "hink", &&do_hink),  /* 79: arbitrary, keep */                       \
   X(HINL, "hinl", &&do_hinl),  /* 80: arbitrary, lose */                       \
   /* nock 10 */                                                                \
-  X(MUTH, "muth", &&do_muth),  /* 81 */                                        \
-  X(KUTH, "kuth", &&do_kuth),  /* 82 */                                        \
-  X(MUTT, "mutt", &&do_mutt),  /* 83 */                                        \
-  X(KUTT, "kutt", &&do_kutt),  /* 84 */                                        \
-  X(MUSM, "musm", &&do_musm),  /* 85 */                                        \
-  X(KUSM, "kusm", &&do_kusm),  /* 86 */                                        \
-  X(MUTB, "mutb", &&do_mutb),  /* 87: c3_b */                                  \
-  X(MUTS, "muts", &&do_muts),  /* 88: c3_s */                                  \
-  X(MITB, "mitb", &&do_mitb),  /* 89: c3_b */                                  \
-  X(MITS, "mits", &&do_mits),  /* 90: c3_s */                                  \
-  X(KUTB, "kutb", &&do_kutb),  /* 91: c3_b */                                  \
-  X(KUTS, "kuts", &&do_kuts),  /* 92: c3_s */                                  \
-  X(KITB, "kitb", &&do_kitb),  /* 93: c3_b */                                  \
-  X(KITS, "kits", &&do_kits),  /* 94: c3_s */                                  \
-  X(LAST,   NULL,      NULL),  /* 95 */
+  X(MUSM, "musm", &&do_musm),  /* 81 */                                        \
+  X(MUTB, "mutb", &&do_mutb),  /* 82: c3_b */                                  \
+  X(MUTS, "muts", &&do_muts),  /* 83: c3_s */                                  \
+  X(MITB, "mitb", &&do_mitb),  /* 84: c3_b */                                  \
+  X(MITS, "mits", &&do_mits),  /* 85: c3_s */                                  \
+  X(LAST,   NULL,      NULL),  /* 86 */
 
 // Opcodes. Define X to select the enum name from OPCODES.
 #define X(opcode, name, indirect_jump) opcode
@@ -540,7 +531,7 @@ _n_arg(c3_y cod_y)
     case SAMB: case SANB: case SBIP: case SBIN:
     case SLIB: case SKIB: case KICB: case TICB:
     case BUSH: case BAST: case BALT:
-    case MUTB: case KUTB: case MITB: case KITB:
+    case MUTB: case MITB: 
     case HILB: case HINB:
       return sizeof(c3_y);
 
@@ -549,7 +540,7 @@ _n_arg(c3_y cod_y)
     case SAMS: case SANS: case SIPS: case SINS:
     case SLIS: case SKIS: case KICS: case TICS:
     case SUSH: case SAST: case SALT:
-    case MUTS: case KUTS: case MITS: case KITS:
+    case MUTS: case MITS:
     case HILS: case HINS:
       return sizeof(c3_s);
 
@@ -664,7 +655,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
 
         case BUSH: case FIBK: case FIBL:
         case SANB: case LIBL: case LIBK:
-        case KITB: case MITB:
+        case MITB:
         case HILB: case HINB:
           a_w = (*lit_w)++;
           if ( a_w <= 0xFF ) {
@@ -872,7 +863,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* 8-bit direct args */
         case FABK: case FABL:
         case LITB: case LILB:
-        case MUTB: case KUTB:
+        case MUTB:
         case SAMB:
           buf_y[i_w--] = (c3_y) u3t(op);
           buf_y[i_w]   = (c3_y) cod;
@@ -881,7 +872,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* 16-bit direct args */
         case FASK: case FASL:
         case LILS: case LITS:
-        case MUTS: case KUTS:
+        case MUTS:
         case SAMS: case SIPS: case SINS: {
           c3_s off_s   = u3t(op);
           buf_y[i_w--] = (c3_y) (off_s >> 8);
@@ -905,7 +896,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         case FIBK: case FIBL:
         case LIBK: case LIBL:
         case BUSH: case SANB:
-        case KITB: case MITB:
+        case MITB:
         case HILB: case HINB:
           _n_prog_asm_inx(buf_y, &i_w, lit_s, cod);
           pog_u->lit_u.non[lit_s++] = u3k(u3t(op));
@@ -1458,29 +1449,55 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3_noun axe, nef;
       u3x_cell(arg, &hed, &tel);
       u3x_cell(hed, &axe, &nef);
+      //  XX silly, rewrite
+      //
+      if ( c3n == los_o ) {
+        ++tot_w; _n_emit(ops, COPY);
+      }
       tot_w += _n_comp(ops, tel, c3n, c3n);
-      ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, nef, los_o, c3n);
-
-      ++tot_w;
       switch ( axe ) {
         case 2:
-          _n_emit(ops, (c3y == los_o) ? MUTH : KUTH);
+          ++tot_w; _n_emit(ops, TALL);
+          break;
+        
+        case 3:
+          ++tot_w; _n_emit(ops, HELD);
+          break;
+        
+        case 6:
+          ++tot_w; _n_emit(ops, HEAD);
+          ++tot_w; _n_emit(ops, SWAP);
+          ++tot_w; _n_emit(ops, u3nc(FABL, 7));
+          ++tot_w; _n_emit(ops, AULT);
+          break;
+        
+        default:
+          ++tot_w; _n_emit(ops, LIT0);
+          op_y = (axe <= 0xFF) ? MUTB : (axe <= 0xFFFF) ? MUTS : MITB;  // overflows to MITS
+          ++tot_w; _n_emit(ops, u3nc(op_y, u3k(axe)));
+          break;
+      }
+
+      ++tot_w; _n_emit(ops, SWAP);
+      tot_w += _n_comp(ops, nef, c3y, c3n);
+
+      switch ( axe ) {
+        case 2:
+          ++tot_w; _n_emit(ops, SWAP);
+          ++tot_w; _n_emit(ops, AULT);
           break;
 
         case 3:
-          _n_emit(ops, (c3y == los_o) ? MUTT : KUTT);
+          ++tot_w; _n_emit(ops, AULT);
           break;
 
-        case u3x_sam:
-          _n_emit(ops, (c3y == los_o) ? MUSM : KUSM);
+        case 6:
+          ++tot_w; _n_emit(ops, MUSM);
           break;
 
         default:
-          op_y = (c3y == los_o)
-               ? (axe <= 0xFF) ? MUTB : (axe <= 0xFFFF) ? MUTS : MITB  // overflows to MITS
-               : (axe <= 0xFF) ? KUTB : (axe <= 0xFFFF) ? KUTS : KITB; // overflows to KITS
-          _n_emit(ops, u3nc(op_y, u3k(axe)));
+          op_y = (axe <= 0xFF) ? MUTB : (axe <= 0xFFFF) ? MUTS : MITB;  // overflows to MITS
+          ++tot_w; _n_emit(ops, u3nc(op_y, u3k(axe)));
           break;
       }
       break;
@@ -1798,7 +1815,6 @@ _cn_is_indexed(c3_w bop_w)
     case LIBL: case LISL:
     case BUSH: case SUSH:
     case SANB: case SANS:
-    case KITB: case KITS:
     case MITB: case MITS:
     case HILB: case HILS:
     case HINB: case HINS:
@@ -2819,63 +2835,13 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       _n_hint_hind(o, *top);
       BURN();
 
-    do_kuth:
-      x    = _n_pep(mov, off);
-      top  = _n_swap(mov, off);
-      goto muth_in;
-    do_muth:
+    do_musm:                      //  [sam [bat con]]
       x    = _n_pep(mov, off);
       top  = _n_peek(off);
-    muth_in:
       o    = *top;
-      *top = u3nc(x, u3k(u3t(o)));
+      *top = u3nt(u3k(u3h(o)), x, u3k(u3t(o)));
       u3z(o);
       BURN();
-
-    do_kutt:
-      x    = _n_pep(mov, off);
-      top  = _n_swap(mov, off);
-      goto mutt_in;
-    do_mutt:
-      x    = _n_pep(mov, off);
-      top  = _n_peek(off);
-    mutt_in:
-      o    = *top;
-      *top = u3nc(u3k(u3h(o)), x);
-      u3z(o);
-      BURN();
-
-    do_kusm:
-      x    = _n_pep(mov, off);
-      top  = _n_swap(mov, off);
-      goto musm_in;
-    do_musm:
-      x    = _n_pep(mov, off);
-      top  = _n_peek(off);
-    musm_in:
-      o    = *top;
-      *top = u3nt(u3k(u3h(o)), x, u3k(u3t(u3t(o))));
-      u3z(o);
-      BURN();
-
-    do_kitb:
-      x = pog_u->lit_u.non[pog[ip_w++]];
-      goto kut_in;
-
-    do_kits:
-      x = pog_u->lit_u.non[_n_resh(pog, &ip_w)];
-      goto kut_in;
-
-    do_kuts:
-      x = _n_resh(pog, &ip_w);
-      goto kut_in;
-
-    do_kutb:
-      x = pog[ip_w++];
-    kut_in:
-      o   = _n_pep(mov, off);
-      top = _n_swap(mov, off);
-      goto edit_in;
 
     do_mitb:
       x = pog_u->lit_u.non[pog[ip_w++]];
@@ -2894,7 +2860,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     mut_in:
       o = _n_pep(mov, off);
       top = _n_peek(off);
-    edit_in:
       *top = u3i_edit(*top, x, o);
       BURN();
   }
