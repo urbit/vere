@@ -234,12 +234,12 @@
     /* Stat.
     */
 #     if defined(U3_OS_linux) || defined(U3_OS_windows)
-#       define c3_stat_mtime(dp) (u3_time_t_in_ts((dp)->st_mtime))
+#       define c3_stat_mtime(dp) (u3m_time_t_in_ts((dp)->st_mtime))
 #     elif defined(U3_OS_osx)
-#       define c3_stat_mtime(dp) (u3_time_in_ts(&((dp)->st_mtimespec)))
+#       define c3_stat_mtime(dp) (u3m_time_in_ts(&((dp)->st_mtimespec)))
 #       define lseek64 lseek
 #     elif defined(U3_OS_bsd)
-#       define c3_stat_mtime(dp) (u3_time_in_ts(&((dp)->st_mtim)))
+#       define c3_stat_mtime(dp) (u3m_time_in_ts(&((dp)->st_mtim)))
 #       define lseek64 lseek
 #     else
 #       error "port: timeconvert"
