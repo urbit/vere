@@ -2037,21 +2037,41 @@ u3a_loom_sane(void)
 {
 }
 
+/* RETAINS `som`
+*/
+static u3_noun
+_a_dupe(u3_noun som, u3p(u3h_root) cax_p)
+{
+  if ( c3y == u3a_is_cat(som) ) return som;
+
+  u3_noun pro = u3h_get(cax_p, som);
+  if ( u3_none != pro ) return pro;
+
+  if ( c3y == u3a_is_pom(som) ) {
+    pro = u3nc(_a_dupe(u3h(som), cax_p), _a_dupe(u3t(som), cax_p));
+  }
+  else {
+    u3a_atom* pug_u = u3a_to_ptr(som);
+    u3i_slab sab_u;
+    u3i_slab_bare(&sab_u, 5, pug_u->len_w);
+    memcpy(sab_u.buf_y, (c3_y*)pug_u->buf_w, pug_u->len_w << 2);
+    pro = u3i_slab_moot(&sab_u);
+  }
+
+  u3h_put(cax_p, som, u3k(pro));
+
+  return pro;
+}
+
 /* u3a_dupe: deep copy of a noun. RETAINS argument
 */
 u3_noun
 u3a_dupe(u3_noun som)
 {
-  if (c3y == u3a_is_cat(som)) return som;
-
-  if (c3y == u3a_is_pom(som)) return u3nc(u3a_dupe(u3h(som)),
-                                          u3a_dupe(u3t(som)));
-
-  u3a_atom* pug_u = u3a_to_ptr(som);
-  u3i_slab sab_u;
-  u3i_slab_bare(&sab_u, 5, pug_u->len_w);
-  memcpy(sab_u.buf_y, (c3_y*)pug_u->buf_w, pug_u->len_w << 2);
-  return u3i_slab_moot(&sab_u);
+  u3p(u3h_root) cax_p = u3h_new();
+  u3_noun pro = _a_dupe(som, cax_p);
+  u3h_free(cax_p);
+  return pro;
 }
 
 /* u3a_blink: refresh traces of a noun allocation
