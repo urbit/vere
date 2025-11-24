@@ -240,7 +240,7 @@ u3a_walloc(c3_w len_w)
   u3_post ptr_p = _imalloc(len_w);
   c3_w idx_w = ptr_p >> u3a_vits;
   u3m_shadow* sha_u = &u3m_Shadow[idx_w];
-  if ( sha_u->stk_u ) c3_free(sha_u->stk_u);
+  c3_free(sha_u->stk_u);
   sha_u->stk_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
   sha_u->siz_i = backtrace(sha_u->stk_u, U3_SHADOW_BACKTRACE_DEPTH);
   return u3a_into(ptr_p);
