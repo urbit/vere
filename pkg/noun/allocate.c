@@ -238,12 +238,11 @@ void*
 u3a_walloc(c3_w len_w)
 {
   u3_post ptr_p = _imalloc(len_w);
-  if ( !u3R->par_p ) {
-    c3_w idx_w = ptr_p >> u3a_vits;
-    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
-    sha_u->stk_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
-    sha_u->siz_i = backtrace(sha_u->stk_u, U3_SHADOW_BACKTRACE_DEPTH);
-  }
+  c3_w idx_w = ptr_p >> u3a_vits;
+  u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+  if ( sha_u->stk_u ) c3_free(sha_u->stk_u);
+  sha_u->stk_u = c3_malloc(U3_SHADOW_BACKTRACE_DEPTH * sizeof(void*));
+  sha_u->siz_i = backtrace(sha_u->stk_u, U3_SHADOW_BACKTRACE_DEPTH);
   return u3a_into(ptr_p);
 }
 
@@ -286,13 +285,11 @@ u3a_wfree(void* tox_v)
   if ( tox_v ) {
     u3_post tox_p = u3a_outa(tox_v);
     _ifree(tox_p);
-    if ( !u3R->par_p ) {
-      c3_w idx_w = tox_p >> u3a_vits;
-      u3m_shadow* sha_u = &u3m_Shadow[idx_w];
-      c3_free(sha_u->stk_u);
-      sha_u->siz_i = 0;
-      sha_u->stk_u = 0;
-    }
+    c3_w idx_w = tox_p >> u3a_vits;
+    u3m_shadow* sha_u = &u3m_Shadow[idx_w];
+    c3_free(sha_u->stk_u);
+    sha_u->siz_i = 0;
+    sha_u->stk_u = 0;
   }
 }
 
@@ -2072,7 +2069,6 @@ u3a_blink(u3_noun* som)
 void
 u3a_blink_alloc(void* ptr_v)
 {
-  if ( u3R->par_p ) return;
   c3_w idx_w = u3a_outa(ptr_v) >> u3a_vits;
   u3m_shadow* sha_u = &u3m_Shadow[idx_w];
   c3_free(sha_u->stk_u);
