@@ -354,7 +354,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          :  u3a_south_is_senior(r, som) )
 
 #     define  u3a_is_mutable(r, som) \
-                ( _(u3a_is_atom(som)) \
+                ( _(u3a_is_cat(som)) \
                   ? c3n \
                   : _(u3a_is_senior(r, som)) \
                   ? c3n \
