@@ -1170,7 +1170,7 @@ static u3j_core _136_two__in_d[] =
 static u3j_harm _136_two_rig_a[] = {{".2", u3wc_rig, c3n}, {}};
 
 static u3j_harm _136_two_mate_a[] = {{".2", u3wb_mate, c3y}, {}};
-static u3j_harm _136_two_sew_a[]  = {{".2", u3wc_sew, c3y}, {}};
+static u3j_harm _136_two_sew_a[]  = {{".2", u3wc_sew, c3y, .kip = c3n}, {}};
 
 static u3j_core _136_two_d[] =
   { { "tri", 3, 0, _136_tri_d, no_hashes, _136_tri_ho },

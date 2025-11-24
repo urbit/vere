@@ -5,8 +5,8 @@
 
 #include "noun.h"
 
-u3_weak
-u3qc_sew(u3_atom a,
+u3_noun
+u3kc_sew(u3_atom a,
          u3_atom b,
          u3_atom c,
          u3_atom d,
@@ -14,45 +14,63 @@ u3qc_sew(u3_atom a,
         )
 {
   c3_w b_w, c_w;
-  if (0 == c) return u3k(e);
+  if (0 == c) return e;
   if ( !_(u3r_safe_word(b, &b_w)) ||
-       !_(u3r_safe_word(c, &c_w)) ) {
-    return u3_none;
-  }
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+       !_(u3r_safe_word(c, &c_w)) )
+  {
     return u3m_bail(c3__fail);
   }
 
+  if ( !_(u3a_is_cat(a)) || (a >= 32) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  
   c3_g a_g = a;
   c3_w len_e_w = u3r_met(a_g, e);
-  u3i_slab sab_u;
-  c3_w* src_w;
-  c3_w len_src_w;
-  if ( _(u3a_is_cat(e)) ) {
-    len_src_w = e ? 1 : 0;
-    src_w = &e;
+  
+  if ( _(u3a_is_mutable(u3R, e)) && (len_e_w >= b_w + c_w) )
+  {
+    u3a_atom* pug_u = u3a_to_ptr(e);
+    c3_w* dst_w = pug_u->buf_w;
+    u3r_chop(a_g, 0, c_w, b_w, dst_w, d);
+    u3z(b), u3z(c), u3z(d);
+    return e;
   }
-  else {
-    u3a_atom* src_u = u3a_to_ptr(e);
-    len_src_w = src_u->len_w;
-    src_w = src_u->buf_w;
+  else
+  {
+    u3i_slab sab_u;
+    c3_w* src_w;
+    c3_w len_src_w;
+    if ( _(u3a_is_cat(e)) )
+    {
+      len_src_w = e ? 1 : 0;
+      src_w = &e;
+    }
+    else
+    {
+      u3a_atom* src_u = u3a_to_ptr(e);
+      len_src_w = src_u->len_w;
+      src_w = src_u->buf_w;
+    }
+    u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
+    u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);
+    u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_w, d);
+    if (len_e_w > b_w + c_w) {
+      u3r_chop_words(a_g,
+               b_w + c_w,
+               len_e_w - (b_w + c_w),
+               b_w + c_w,
+               sab_u.buf_w,
+               len_src_w,
+               src_w);
+    }
+    u3z(b), u3z(c), u3z(d), u3z(e);
+    return u3i_slab_mint(&sab_u);
   }
-  u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
-  u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);
-  u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_w, d);
-  if (len_e_w > b_w + c_w) {
-    u3r_chop_words(a_g,
-             b_w + c_w,
-             len_e_w - (b_w + c_w),
-             b_w + c_w,
-             sab_u.buf_w,
-             len_src_w,
-             src_w);
-  }
-  return u3i_slab_mint(&sab_u);
 }
 
-u3_weak
+u3_noun
 u3wc_sew(u3_noun cor)
 {
   u3_noun a, b, c, d, e;
@@ -69,6 +87,8 @@ u3wc_sew(u3_noun cor)
   {
     return u3m_bail(c3__fail);
   } else {
-    return u3qc_sew(a, b, c, d, e);
+    u3k(a), u3k(b), u3k(c), u3k(d), u3k(e);
+    u3z(cor);
+    return u3kc_sew(a, b, c, d, e);
   }
 }

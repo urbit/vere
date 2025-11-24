@@ -53,7 +53,7 @@
         c3_o              liv;                 //  live (enabled)
         c3_l              axe_l;               //  computed/discovered axis
         struct _u3j_core* cop_u;               //  containing core
-        c3_o              kip;                 //  does fun_f retain?
+        c3_o              kip;                 //  does fun_f retain? if no then never punt
       } u3j_harm;
 
     /* u3j_hood: hook description.
