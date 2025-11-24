@@ -747,39 +747,7 @@ u3r_nord(u3_noun a,
       if ( !_(u3a_is_atom(b)) ) {
         return 0;
       } else {
-        if ( _(u3a_is_cat(a)) ) {
-          if ( _(u3a_is_cat(b)) ) {
-            return (a < b) ? 0 : 2;
-          }
-          else return 0;
-        }
-        else if ( _(u3a_is_cat(b)) ) {
-          return 2;
-        }
-        else {
-          u3a_atom* a_u = u3a_to_ptr(a);
-          u3a_atom* b_u = u3a_to_ptr(b);
-
-          c3_w w_rez = a_u->len_w;
-          c3_w w_mox = b_u->len_w;
-
-          if ( w_rez != w_mox ) {
-            return (w_rez < w_mox) ? 0 : 2;
-          }
-          else {
-            c3_w i_w;
-
-            for ( i_w = 0; i_w < w_rez; i_w++ ) {
-              c3_w ai_w = a_u->buf_w[i_w];
-              c3_w bi_w = b_u->buf_w[i_w];
-
-              if ( ai_w != bi_w ) {
-                return (ai_w < bi_w) ? 0 : 2;
-              }
-            }
-            return 1;
-          }
-        }
+        return u3r_comp(a, b) + 1;
       }
     } else {
       if ( _(u3a_is_atom(b)) ) {

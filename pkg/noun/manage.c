@@ -668,7 +668,7 @@ _find_home(void)
   //  Simple migration for zero-initialized u3a_road members
   //  from futureproof buffer
   //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
+  if ( !u3R->lop_p )     u3R->lop_p     = u3h_new();
   if ( !u3R->jed_pax_p ) u3R->jed_pax_p = u3h_new();
   if ( !u3R->byc_dar_p ) u3R->byc_dar_p = u3h_new();
   if ( !u3R->byc_lar_p ) u3R->byc_lar_p = u3h_new();
