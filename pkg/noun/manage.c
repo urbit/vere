@@ -1232,11 +1232,10 @@ _m_renew_timer(u3_atom now)
         min = ( u3_nul == min ) ? u3k(fut) : u3ka_min(min, u3k(fut));
       }
       else {
-        c3_c* now_c = u3m_pretty_road(now);
-        c3_c* fut_c = u3m_pretty_road(fut);
-        u3l_log("strange timer: now %s, fut %s", now_c, fut_c);
-        u3a_free(now_c);
-        u3a_free(fut_c);
+        //  we are waiting for the signal to come, do nothing
+        //
+        u3z(min);
+        return;
       }
     }
     if ( !rod_u->par_p ) break;
