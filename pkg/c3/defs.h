@@ -280,4 +280,7 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   return (void*)x;
 }
 
+#define c3_likely(x)    ( __builtin_expect(!!(x), 1) )
+#define c3_unlikely(x)  ( __builtin_expect(!!(x), 0) )
+
 #endif /* ifndef C3_DEFS_H */
