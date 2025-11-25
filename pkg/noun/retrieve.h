@@ -541,19 +541,43 @@
       **  and has no hints, returning constant result
       **  if possible
       */
-      c3_o
-      u3r_safe(u3_noun fol, u3_weak* out);
+        c3_o
+        u3r_safe(u3_noun fol, u3_weak* out);
 
       /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
       ** and the length of the buffer
       */
-      c3_w*
-      u3r_word_buffer(u3_atom* a, c3_w* len_w);
+        c3_w*
+        u3r_word_buffer(u3_atom* a, c3_w* len_w);
 
       /* u3r_comp(): compares two atoms:
       ** returns 1 if a > b, -1 if a < b, 0 if they are equal
       */
-      c3_ys
-      u3r_comp(u3_atom a, u3_atom b);
+        c3_ys
+        u3r_comp(u3_atom a, u3_atom b);
+
+      /* u3r_clear_bits():
+      **
+      **   set to 0 `wid_d` bits in `dst_y` at `bit_y`
+      **
+      **   NB: [dst_y] must have space for [bit_y + wid_d] bits
+      */
+        void
+        u3r_clear_bits(c3_d  wid_d,
+                       c3_y  bit_y,
+                       c3_y* dst_y);
+
+      /* u3r_clear_bytes():
+      **
+      **   Into the bloq space of `met`, for a span of `wid`, to position `tou`, set
+      **   bloqs in `dst_w` to 0.
+      **
+      **   NB: [dst_w] must have space for [tou_w + wid_w] bloqs
+      */
+        void
+        u3r_clear_bytes(c3_g  met_g,
+                        c3_w  wid_w,
+                        c3_w  tou_w,
+                        c3_y* dst_y);
 
 #endif /* ifndef U3_RETRIEVE_H */

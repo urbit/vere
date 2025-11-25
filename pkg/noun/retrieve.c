@@ -1376,6 +1376,47 @@ u3r_safe_chub(u3_noun dat, c3_d* out_d)
   return c3y;
 }
 
+/* u3r_clear_bits():
+**
+**   set to 0 `wid_d` bits in `dst_y` at `bit_y`
+**
+**   NB: [dst_y] must have space for [bit_y + wid_d] bits
+*/
+void
+u3r_clear_bits(c3_d  wid_d,
+               c3_y  bit_y,
+               c3_y* dst_y)
+{
+  u3_assert( bit_y < 8 );
+
+  c3_y tib_y = 8 - bit_y;
+
+  //  we need to fill bytes
+  //
+  if ( wid_d >= tib_y ) {
+    if ( bit_y ) {
+      //  align *dst_y
+      //
+      *dst_y++ &= (1 << bit_y) - 1;
+       wid_d   -= tib_y;
+    }
+
+    memset(dst_y, 0, wid_d >> 3);
+
+    wid_d &= 8;
+    dst_y += wid_d >> 3;
+    bit_y = 0;
+  }
+
+  //  we need to fill (more) bits
+  //
+  if ( wid_d ) {
+    c3_y low_y = (1 << bit_y) - 1;
+    c3_y hig_y = (1 << (bit_y + wid_d)) - 1;
+    *dst_y &= ~(low_y ^ hig_y);
+  }
+}
+
 /* u3r_chop_bits():
 **
 **   XOR `wid_d` bits from`src_w` at `bif_g` to `dst_w` at `bif_g`
@@ -1444,6 +1485,39 @@ u3r_chop_bits(c3_g  bif_g,
     }
 
     *dst_w    ^= (hig_w & (((c3_d)1 << wid_d) - 1)) << bit_g;
+  }
+}
+
+/* u3r_clear_bytes():
+**
+**   Into the bloq space of `met`, for a span of `wid`, to position `tou`, set
+**   bloqs in `dst_w` to 0.
+**
+**   NB: [dst_w] must have space for [tou_w + wid_w] bloqs
+*/
+void
+u3r_clear_bytes(c3_g  met_g,
+                c3_w  wid_w,
+                c3_w  tou_w,
+                c3_y* dst_y)
+{
+  //  operate on bytes
+  //
+  if ( met_g >= 3 ) {
+    dst_y += (tou_w << (met_g - 3));
+    memset(dst_y, 0, wid_w << (met_g - 3));
+  }
+  //  operate on bits
+  //
+  else {
+    c3_d wid_d = (c3_d)wid_w << met_g;
+    c3_d tou_d = (c3_d)tou_w << met_g;
+    c3_y bit_y;
+    
+    dst_y += tou_d >> 3;
+    bit_y  = tou_d & 8;
+
+    u3r_clear_bits(wid_d, bit_y, dst_y);
   }
 }
 

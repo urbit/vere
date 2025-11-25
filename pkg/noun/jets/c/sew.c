@@ -33,6 +33,7 @@ u3kc_sew(u3_atom a,
   {
     u3a_atom* pug_u = u3a_to_ptr(e);
     c3_w* dst_w = pug_u->buf_w;
+    u3r_clear_bytes(a_g, c_w, b_w, (c3_y*)dst_w);
     u3r_chop(a_g, 0, c_w, b_w, dst_w, d);
     u3z(b), u3z(c), u3z(d);
     return e;
@@ -86,7 +87,9 @@ u3wc_sew(u3_noun cor)
        (c3n == u3ud(e)) )
   {
     return u3m_bail(c3__fail);
-  } else {
+  }
+  else
+  {
     u3k(a), u3k(b), u3k(c), u3k(d), u3k(e);
     u3z(cor);
     return u3kc_sew(a, b, c, d, e);
