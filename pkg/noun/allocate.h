@@ -221,6 +221,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       enum u3a_flag {
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
+        u3a_flag_drop  = 1 << 3,              //  drop ford cache bucket
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
