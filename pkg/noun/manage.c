@@ -660,19 +660,11 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
-  //  HAMT
+  //  properly initialize things from zero-initialize future proof buffer
+  //  XX cax.for_p
   //
-  if (!u3R->lop_p) {
-    u3R->lop_p = u3h_new();
-  }
-
-  //  if for_p is zero then it is an old pier pre ford cache, initialize the
-  //  cache
-  //
-  if ( !u3R->cax.for_p ) {
-    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  }
+  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1004,6 +996,12 @@ u3m_bail(u3_noun how)
         how = u3nt(3, how, u3R->bug.tax);
       } break;
     }
+  }
+
+  // Reset the spin stack pointer
+  if ( NULL != stk_u ) {
+    stk_u->off_w = u3R->off_w;
+    stk_u->fow_w = u3R->fow_w;
   }
 
   _longjmp(u3R->esc.buf, how);
@@ -1355,12 +1353,6 @@ u3m_love(u3_noun pro)
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
-
-  // restore slow stack pointer
-  if ( NULL != stk_u ) {
-    stk_u->off_w = u3R->off_w;
-    stk_u->fow_w = u3R->fow_w;
-  }
 
   //  copy product and caches off our stack
   //

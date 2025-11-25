@@ -977,7 +977,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
     u3_noun key = u3nc(auth_o, u3k(bam));
     u3_weak nac = u3h_get(htd_u->nax_p, key);
     u3z(key);
-    
+
     if (  (u3_none == nac)
        || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
     {
@@ -997,6 +997,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
     return pro_o;
   }
 }
+
 
 /* _http_req_dispatch(): dispatch http request. RETAINS `req`
 */
