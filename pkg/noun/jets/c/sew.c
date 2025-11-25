@@ -13,11 +13,20 @@ u3kc_sew(u3_atom a,
          u3_atom e
         )
 {
-  c3_w b_w, c_w;
   if (0 == c) return e;
+
+  c3_w b_w, c_w;
   if ( !_(u3r_safe_word(b, &b_w)) ||
        !_(u3r_safe_word(c, &c_w)) )
   {
+    return u3m_bail(c3__fail);
+  }
+
+  c3_w end_w = b_w + c_w;
+  if ( end_w < b_w )
+  { 
+    //  overflow
+    //
     return u3m_bail(c3__fail);
   }
 
@@ -29,10 +38,12 @@ u3kc_sew(u3_atom a,
   c3_g a_g = a;
   c3_w len_e_w = u3r_met(a_g, e);
   
-  if ( _(u3a_is_mutable(u3R, e)) && (len_e_w >= b_w + c_w) )
+  if ( _(u3a_is_mutable(u3R, e)) && (len_e_w >= end_w) )
   {
     u3a_atom* pug_u = u3a_to_ptr(e);
     c3_w* dst_w = pug_u->buf_w;
+    //  XX fuse into one traversal
+    //
     u3r_clear_bytes(a_g, c_w, b_w, (c3_y*)dst_w);
     u3r_chop(a_g, 0, c_w, b_w, dst_w, d);
     u3z(b), u3z(c), u3z(d);
@@ -41,30 +52,13 @@ u3kc_sew(u3_atom a,
   else
   {
     u3i_slab sab_u;
-    c3_w* src_w;
-    c3_w len_src_w;
-    if ( _(u3a_is_cat(e)) )
-    {
-      len_src_w = e ? 1 : 0;
-      src_w = &e;
-    }
-    else
-    {
-      u3a_atom* src_u = u3a_to_ptr(e);
-      len_src_w = src_u->len_w;
-      src_w = src_u->buf_w;
-    }
-    u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
-    u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);
+    u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, end_w));
+    u3r_chop(a_g, 0, b_w, 0,   sab_u.buf_w, e);
     u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_w, d);
-    if (len_e_w > b_w + c_w) {
-      u3r_chop_words(a_g,
-               b_w + c_w,
-               len_e_w - (b_w + c_w),
-               b_w + c_w,
-               sab_u.buf_w,
-               len_src_w,
-               src_w);
+
+    if (len_e_w > end_w)
+    {
+      u3r_chop(a_g, end_w, len_e_w - end_w, end_w, sab_u.buf_w, e);
     }
     u3z(b), u3z(c), u3z(d), u3z(e);
     return u3i_slab_mint(&sab_u);
