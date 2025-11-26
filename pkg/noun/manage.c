@@ -1209,7 +1209,13 @@ u3m_hate(c3_w pad_w)
   u3_assert(0 == u3R->ear_p);
 
   u3R->ear_p = u3R->cap_p;
+
+  c3_w fag_w = u3R->how.fag_w;
   u3m_leap(pad_w);
+
+  //  inherit forward-flowing flags
+  //
+  u3R->how.fag_w |= (fag_w & u3a_flag_cash);
 
   u3R->bug.mer = u3i_string(
     "emergency buffer with sufficient space to cons the trace and bail"
@@ -1349,13 +1355,17 @@ u3m_love(u3_noun pro)
 
   if ( _(tim_o) ) _m_renew_now();
 
+  //  inherit backward-flowing flags
+  //
+  u3R->how.fag_w |= (fag_w & u3a_flag_drop);
+
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
   per_p = u3h_take(per_p);
-  if ( !(fag_w & u3a_flag_drop) ) {
+  if ( !(u3R->how.fag_w & u3a_flag_drop) ) {
     for_p = u3h_take(for_p);
   }
 
@@ -1370,16 +1380,14 @@ u3m_love(u3_noun pro)
   u3j_reap(jed_u);
   u3n_reap(byc_p);
   u3z_reap(u3z_memo_keep, per_p);
-  if ( !(fag_w & u3a_flag_drop) ) {
+  if ( !(u3R->how.fag_w & u3a_flag_drop) ) {
     u3z_reap(u3z_memo_ford, for_p);
   }
 
-  if ( (fag_w & u3a_flag_drop) ) {
+  if ( (u3R->how.fag_w & u3a_flag_drop) ) {
     u3h_free(u3R->cax.for_p);
     u3R->cax.for_p = u3h_new_cache(u3C.per_w);
   }
-
-  u3R->how.fag_w |= (fag_w & u3a_flag_drop);
 
   return pro;
 }
@@ -1681,8 +1689,6 @@ u3m_soft_run(u3_noun gul,
 {
   u3_noun why = 0, pro;
 
-  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
-
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1691,7 +1697,7 @@ u3m_soft_run(u3_noun gul,
   */
 
   {
-    if ( (u3_nul == gul) || cash_t ) {
+    if ( (u3_nul == gul) || (u3R->how.fag_w & u3a_flag_cash) ) {
       u3R->ski.gul = u3_nul;
     }
     else {
@@ -1700,7 +1706,6 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
-    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 
