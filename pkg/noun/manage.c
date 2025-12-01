@@ -173,14 +173,14 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_m sig_m)
 {
-#ifndef U3_OS_winows
+#ifndef U3_OS_windows
   if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  }
-  else {
+  } else
 #endif
+  {
     u3m_signal(sig_m);
   }
 }
