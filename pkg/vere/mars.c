@@ -891,8 +891,9 @@ _mars_step_trace(const c3_c* dir_c)
 /* u3_mars_kick(): maybe perform a task.
 */
 c3_o
-u3_mars_kick(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
+u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_mars* mar_u = ram_u;
   c3_o ret_o = c3n;
 
   _mars_step_trace(mar_u->dir_c);
@@ -1101,6 +1102,9 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //
   u3m_hate(1 << 18);
 
+  //  XX this function should only ever be called in epoch 0
+  //  XX read_list reads *up-to* eve_d, should be exact
+  //
   if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_h)) ) {
     fprintf(stderr, "boot: read failed\r\n");
     u3m_love(u3_nul);
@@ -1422,29 +1426,43 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
 
+  if (  (mar_u->dun_d == log_u->dun_d)
+     && !log_u->epo_d
+     && !(u3C.wag_h & u3o_yolo) )
+  {
+    u3_disk_roll(mar_u->log_u, mar_u->dun_d);
+  }
+
   return pay_d;
 }
 
-/* u3_mars_init(): init mars, replay if necessary.
+/* u3_mars_load(): load pier.
 */
-u3_mars*
-u3_mars_init(c3_c*    dir_c,
-             u3_moat* inn_u,
-             u3_mojo* out_u,
-             c3_d     eve_d)
+void
+u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
 {
-  u3_mars* mar_u = c3_malloc(sizeof(*mar_u));
-  mar_u->dir_c = dir_c;
-  mar_u->inn_u = inn_u;
-  mar_u->out_u = out_u;
+  //  initialize persistence
+  //
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, lod_e)) ) {
+    fprintf(stderr, "mars: disk init fail\r\n");
+    exit(1); // XX
+  }
+
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_l = u3r_mug(u3A->roc);
-  mar_u->fag_w = _mars_fag_none;
-  mar_u->sac   = u3_nul;
-  mar_u->sat_e = u3_mars_work_e;
-  mar_u->gif_u.ent_u = mar_u->gif_u.ext_u = 0;
-  mar_u->xit_f = 0;
 
+  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
+    fprintf(stderr, "mars: disk meta fail\r\n");
+    u3_disk_exit(mar_u->log_u);
+    exit(1); // XX
+  }
+}
+
+/* u3_mars_work(): init mars
+*/
+void
+u3_mars_work(u3_mars* mar_u)
+{
   mar_u->sil_u = u3s_cue_xeno_init();
 
   //  start signal handlers
@@ -1459,53 +1477,6 @@ u3_mars_init(c3_c*    dir_c,
   //
   u3C.sign_hold_f = _mars_sign_hold;
   u3C.sign_move_f = _mars_sign_move;
-
-  //  initialize persistence
-  //
-  //    XX load/set secrets
-  //
-  if ( !(mar_u->log_u = u3_disk_init(dir_c)) ) {
-    fprintf(stderr, "mars: disk init fail\r\n");
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
-    fprintf(stderr, "mars: disk meta fail\r\n");
-    u3_disk_exit(mar_u->log_u);
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( !mar_u->dun_d ) {
-    if ( c3n == _mars_do_boot(mar_u->log_u, mar_u->met_u.lif_h, u3_nul) ) {
-      fprintf(stderr, "mars: boot fail\r\n");
-      u3_disk_exit(mar_u->log_u);
-      c3_free(mar_u);
-      return 0;
-    }
-
-    mar_u->sen_d = mar_u->dun_d = mar_u->met_u.lif_h;
-    u3m_save();
-  }
-
-  if ( eve_d && (eve_d <= mar_u->dun_d) ) {
-    fprintf(stderr, "mars: replay-to %" PRIu64
-                    " already done (at %" PRIu64 ")\r\n",
-                    eve_d, mar_u->dun_d);
-    u3_disk_exit(mar_u->log_u);
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
-    u3_mars_play(mar_u, eve_d, 0);
-    u3m_save();
-  }
-
-  //  migrate or rollover as needed
-  //
-  u3_disk_kindly(mar_u->log_u, mar_u->dun_d);
 
   //  XX do something better
   //
@@ -1545,8 +1516,6 @@ u3_mars_init(c3_c*    dir_c,
 
   mar_u->sav_u.eve_d = mar_u->dun_d;
   mar_u->sav_u.tim_u.data = mar_u;
-
-  return mar_u;
 }
 
 #define VERE_NAME  "vere"
@@ -1898,6 +1867,27 @@ _mars_boot_make(u3_boot_opts* inp_u,
   return c3y;
 }
 
+/* u3_mars_make(): construct a pier.
+*/
+void
+u3_mars_make(u3_mars* mar_u)
+{
+  //  XX s/b unnecessary
+  u3_Host.ops_u.nuu = c3y;
+
+  if ( c3n == u3_disk_make(mar_u->dir_c) ) {
+    fprintf(stderr, "boot: disk make fail\r\n");
+    exit(1);
+  }
+
+  //  NB: initializes loom
+  //
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, u3_dlod_boot)) ) {
+    fprintf(stderr, "boot: disk init fail\r\n");
+    exit(1);
+  }
+}
+
 /* u3_mars_boot(): boot a ship.
 *
 *  $=  com
@@ -1911,12 +1901,12 @@ _mars_boot_make(u3_boot_opts* inp_u,
 *
 */
 c3_o
-u3_mars_boot(c3_c* dir_c, u3_noun com)
+u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_disk*     log_u = mar_u->log_u;
   u3_boot_opts inp_u;
   u3_meta      met_u;
-  u3_noun        ova;
-  u3_noun        cax;
+  u3_noun   com, ova, cax;
 
   inp_u.veb_o = __( u3C.wag_h & u3o_verbose );
   inp_u.lit_o = c3n; // unimplemented in arvo
@@ -1935,38 +1925,52 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     u3z(now);
   }
 
-  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
-    fprintf(stderr, "boot: preparation failed\r\n");
-    return c3n;
+  {
+    u3_weak jar = u3s_cue_xeno(len_d, hun_y);
+    if (  (u3_none == jar)
+       || (c3n == u3r_p(jar, c3__boot, &com)) )
+    {
+      fprintf(stderr, "boot: parse fail\r\n");
+      exit(1);
+    }
+    else {
+      u3k(com);
+      u3z(jar);
+    }
   }
 
-  u3_disk* log_u;
+  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
+    fprintf(stderr, "boot: preparation failed\r\n");
+    exit(1);  //  XX cleanup
+  }
 
-  //  XX
-  u3_Host.ops_u.nuu = c3y;
-  if ( !(log_u = u3_disk_init(dir_c)) ) {
-    fprintf(stderr, "boot: disk init fail\r\n");
-    return c3n;
+  if ( c3n == u3_disk_save_meta_meta(log_u->com_u->pax_c, &met_u) ) {
+    fprintf(stderr, "boot: failed to save top-level metadata\r\n");
+    exit(1);  //  XX cleanup
   }
 
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &met_u) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
   u3_disk_plan_list(log_u, ova);
 
   if ( c3n == u3_disk_sync(log_u) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
-  _mars_step_trace(dir_c);
+  _mars_step_trace(mar_u->dir_c);
 
   if ( c3n == _mars_do_boot(log_u, log_u->dun_d, cax) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
   u3m_save();
+
+  //  XX move to caller? close uv handles?
+  //
   u3_disk_exit(log_u);
+  exit(0);
 
   return c3y;
 }

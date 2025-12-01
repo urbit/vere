@@ -12,7 +12,9 @@
 
 #include "ent/ent.h"
 
+#ifndef U3_OS_windows
 #include <arpa/inet.h>
+#endif
 
 #define FINE_PAGE      4096             //  packets per page
 #define FINE_FRAG      1024             //  bytes per fragment packet
@@ -564,13 +566,13 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
   //
   u3_assert( 0 == hed_u->ver_y );  //  XX remove after testing
 
-  c3_h hed_h = ((hed_u->req_o &     0x1) <<  2)
-             ^ ((hed_u->sim_o &     0x1) <<  3)
-             ^ ((hed_u->ver_y &     0x7) <<  4)
-             ^ ((hed_u->sac_y &     0x3) <<  7)
-             ^ ((hed_u->rac_y &     0x3) <<  9)
-             ^ ((hed_u->mug_l & 0xfffff) << 11)
-             ^ ((hed_u->rel_o &     0x1) << 31);
+  c3_h hed_h = ((hed_u->req_o       &     0x1) <<  2)
+             ^ ((hed_u->sim_o       &     0x1) <<  3)
+             ^ ((hed_u->ver_y       &     0x7) <<  4)
+             ^ ((hed_u->sac_y       &     0x3) <<  7)
+             ^ ((hed_u->rac_y       &     0x3) <<  9)
+             ^ ((hed_u->mug_l       & 0xfffff) << 11)
+             ^ (((c3_h)hed_u->rel_o &     0x1) << 31);
 
   c3_etch_half(buf_y, hed_h);
 }
@@ -949,8 +951,8 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
     else if ( _CZAR_GONE == pip_h ) {
       //  print only on first send failure
       //
-      c3_h blk_h = imp_y >> 5;
-      c3_h bit_h = 1 << (imp_y & 31);
+      c3_h blk_h = imp_y >> u3a_half_bits_log;
+      c3_h bit_h = (c3_h)1 << (imp_y & (u3a_half_bits - 1));
 
       if ( !(sam_u->zar_u.log_h[blk_h] & bit_h) ) {
         c3_c dns_c[256];
@@ -2266,7 +2268,7 @@ _mdns_dear_bail(u3_ovum* egg_u, u3_noun lud)
 /* _ames_put_dear(): send lane to arvo after hearing mdns response
 */
 static void
-_ames_put_dear(c3_c* ship, bool fake, c3_h s_addr, c3_s port, void* context)
+_ames_put_dear(c3_c* ship, bool fake, c3_h saddr, c3_s port, void* context)
 {
   u3_ames* sam_u = (u3_ames*)context;
 
@@ -2276,7 +2278,7 @@ _ames_put_dear(c3_c* ship, bool fake, c3_h s_addr, c3_s port, void* context)
   }
 
   u3_lane lan;
-  lan.pip_h = ntohl(s_addr);
+  lan.pip_h = ntohl(saddr);
   lan.por_s = ntohs(port);
 
   u3_noun whu = u3dc("slaw", c3__p, u3i_string(ship));
@@ -2357,13 +2359,13 @@ _ames_io_start(u3_ames* sam_u)
       //  XX revise
       //
       u3_pier_bail(u3_king_stub());
-    }*/
+      }*/
 
     /*
-    uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-    u3_assert(add_u.sin_port);
+      uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
+      u3_assert(add_u.sin_port);
 
-    sam_u->pir_u->por_s = ntohs(add_u.sin_port);
+      sam_u->pir_u->por_s = ntohs(add_u.sin_port);
     */
   }
 
@@ -2379,12 +2381,13 @@ _ames_io_start(u3_ames* sam_u)
     char* our_s = u3r_string(our);
     u3z(our);
 
+#ifndef U3_OS_windows
     mdns_init(por_s, !sam_u->pir_u->fak_o, our_s, _ames_put_dear, (void *)sam_u);
 
     if ( c3n == sam_u->pir_u->fak_o ) {
       uv_timer_start(&sam_u->nat_u.tim_u, natpmp_init, 0, 0);
     }
-
+#endif
     c3_free(our_s);
   }
 
@@ -2435,7 +2438,7 @@ _ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_h pip_h)
 
   {
     c3_h blk_h = imp_y >> 5;
-    c3_h bit_h = 1 << (imp_y & 31);
+    c3_h bit_h = 1 << (imp_y & u3a_half_bits);
 
     sam_u->zar_u.log_h[blk_h] &= ~bit_h;
   }
@@ -2867,6 +2870,29 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("            cached lanes: %"PRIc3_w, u3h_wyt(sam_u->lax_p));
 }
 
+static u3m_quac**
+_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_ames   *sam_u = (u3_ames*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("scry cache");
+  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->qua_u = 0;
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("lane cache");
+  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
+
+  return all_u;
+}
+
 /* u3_ames_io_init(): initialize ames I/O.
 */
 u3_auto*
@@ -2938,6 +2964,7 @@ u3_ames_io_init(u3_pier* pir_u)
   car_u->io.info_f = _ames_io_info;
   car_u->io.slog_f = _ames_io_slog;
   car_u->io.kick_f = _ames_io_kick;
+  car_u->io.mark_f = _ames_io_mark;
   car_u->io.exit_f = _ames_io_exit;
 
   sam_u->fin_s.sam_u = sam_u;

@@ -4,8 +4,8 @@
 #include "options.h"
 #include "vortex.h"
 
-//#undef SANITY
-#define SANITY
+#undef SANITY
+#undef PACK_CHECK
 
 #ifdef ASAN_ENABLED
   //  XX build problems importing <sanitizers/asan_interface.h>
@@ -21,8 +21,12 @@
 #  define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void) (addr), (void) (size))
 #endif
 
-#define page_to_post(pag_w)  (HEAP.bot_p + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
-#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)HEAP.bot_p + HEAP.off_ws) >> u3a_page)
+#ifndef BASE
+  #define BASE u3R->rut_p
+#endif
+
+#define page_to_post(pag_w)  (BASE + (HEAP.dir_ws * (c3_ws)((c3_w)(pag_w - HEAP.off_ws) << u3a_page)))
+#define post_to_page(som_p)  (_abs_dif(som_p, (c3_ws)BASE + HEAP.off_ws) >> u3a_page)
 
 #ifndef HEAP
   #define HEAP u3R->hep
@@ -92,13 +96,9 @@ _init_heap(void)
     HEAP.off_ws = -1;
   }
 
-  // XX and rut
-  //
-  assert ( !(u3R->hat_p & ((((c3_w)1) << u3a_page) - 1)) );
-
-  HEAP.bot_p = u3R->hat_p;
-
+  assert( !(u3R->hat_p & (((c3_w)1 << u3a_page) - 1)) );
   assert( u3R->hat_p > u3a_rest_pg );
+  assert( u3R->hat_p == u3R->rut_p );
 
   //  XX check for overflow
 
@@ -148,16 +148,16 @@ _extend_directory(c3_w siz_w)  // num pages
   HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
   u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow
 
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: directory overflow\r\n\033[0m");
-      abort();
+      u3m_bail(c3__meme); return;
     }
   }
 
@@ -228,17 +228,16 @@ _extend_heap(c3_w siz_w)  // num pages
 
   u3R->hat_p += HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
 
-  //  XX bail, optimize
+  //  XX depend on the guard page for these?
+  //
   if ( 1 == HEAP.dir_ws ) {
     if ( u3R->hat_p >= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
   else {
     if ( u3R->hat_p <= u3R->cap_p ) {
-      fprintf(stderr, "\033[31mpalloc: heap overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
 
@@ -590,30 +589,27 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   u3_post   fre_p;
 
   if ( u3a_free_pg == dir_p ) {
-    //  XX double free
     fprintf(stderr, "\033[31m"
                     "palloc: double free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w);
-    abort();
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   if ( u3a_head_pg != dir_p ) {
-    //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: wrong page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p, dir_p);
-    abort();
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
-  if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
-    //  XX pointer not aligned to page
+  if ( som_p & (((c3_w)1 << u3a_page) - 1) ) {
     fprintf(stderr, "\033[31m"
                     "palloc: bad page alignment som_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p);
-    abort();
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   {
@@ -783,12 +779,11 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       fre_p = 0;
     }
     else {
-      // XX hosed
       fprintf(stderr, "\033[31m"
                     "palloc: free list hosed at som_p=0x%"PRIxc3_w" pag=%"PRIc3_w" len=%"PRIc3_w"\r\n"
                     "\033[0m",
                     (u3_post)u3of(u3a_dell, fre_u), fre_u->pag_w, fre_u->siz_w);
-      abort();
+      u3_assert(!"loom: corrupt"); return 0;
     }
   }
 
@@ -824,21 +819,19 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
 
   if ( som_p & (hun_u->len_s - 1) ) {
-    //  XX  bad alignment
     fprintf(stderr, "\033[31m"
                     "palloc: _free_words: bad alignment som_p=0x%"PRIxc3_w" pag=%"PRIc3_w" cag=0x%"PRIxc3_w" len_s=%"PRIc3_s"\r\n"
                     "\033[0m",
                     som_p, post_to_page(som_p), dir_p, hun_u->len_s);
-    abort();
+    u3_assert(!"loom: corrupt"); return;
   }
 
-  if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
-    //  XX double free
+  if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & ((c3_w)1 << (pos_w & (u3a_word_bits-1))) ) {
     fprintf(stderr, "\033[31m"
                     "palloc: double free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p, dir_p);
-    abort();
+    u3_assert(!"loom: corrupt"); return;
   }
 
   pag_u->map_w[pos_w >> u3a_word_bits_log] |= (((c3_w)1) << (pos_w & (u3a_word_bits-1)));
@@ -904,7 +897,7 @@ _ifree(u3_post som_p)
                     "palloc: page out of heap som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w" len_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w, HEAP.len_w);
-    abort();
+    u3_assert(!"loom: corrupt"); return;
   }
 
   u3_post dir_p = dir_u[pag_w];
@@ -929,19 +922,18 @@ _irealloc(u3_post som_p, c3_w len_w)
                     "palloc: realloc page out of heap som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n"
                     "\033[0m",
                     som_p, pag_w);
-    abort();
+    u3_assert(!"loom: corrupt"); return 0;
   }
 
   u3_post dir_p = dir_u[pag_w];
 
   if ( u3a_head_pg == dir_p ) {
-    if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
-      //  XX pointer not aligned to page
+    if ( som_p & (((c3_w)1 << u3a_page) - 1) ) {
       fprintf(stderr, "\033[31m"
                       "palloc: realloc bad page alignment som_p=0x%"PRIxc3_w"\r\n"
                       "\033[0m",
                       som_p);
-      abort();
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     {
@@ -964,12 +956,11 @@ _irealloc(u3_post som_p, c3_w len_w)
     }
   }
   else if ( u3a_rest_pg >= dir_p ) {
-    //  XX pointer to wrong page
     fprintf(stderr, "\033[31m"
                     "palloc: realloc wrong page som_p=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
                     som_p);
-    abort();
+    u3_assert(!"loom: corrupt"); return 0;
   }
   else {
     u3a_crag *pag_u = u3to(u3a_crag, dir_p);
@@ -977,21 +968,19 @@ _irealloc(u3_post som_p, c3_w len_w)
     const u3a_hunk_dose *hun_u = &(u3a_Hunk[pag_u->log_s - u3a_min_log]);
 
     if ( som_p & (hun_u->len_s - 1) ) {
-      //  XX  bad alignment
       fprintf(stderr, "\033[31m"
                       "palloc: realloc bad alignment som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" len_s=%"PRIc3_s"\r\n"
                       "\033[0m",
                       som_p, dir_p, hun_u->len_s);
-      abort();
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
-      //  XX double free
       fprintf(stderr, "\033[31m"
                       "palloc: realloc free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                       "\033[0m",
                       som_p, dir_p);
-      abort();
+      u3_assert(!"loom: corrupt"); return 0;
     }
 
     old_w = hun_u->len_s;
@@ -1077,6 +1066,73 @@ _post_status(u3_post som_p)
   }
 }
 
+static void
+_sane_dell(void)
+{
+  u3p(u3a_dell) pre_p, nex_p, fre_p = HEAP.fre_p;
+  u3a_dell*     fre_u;
+
+  if ( !HEAP.fre_p != !HEAP.erf_p ) {
+    fprintf(stderr, "dell: insane: head %u tail %u\r\n", !!HEAP.fre_p, !!HEAP.erf_p);
+  }
+
+  while ( fre_p ) {
+    fre_u = u3to(u3a_dell, fre_p);
+    pre_p = fre_u->pre_p;
+    nex_p = fre_u->nex_p;
+
+    if ( pre_p ) {
+      if ( u3to(u3a_dell, pre_p)->nex_p != fre_p ) {
+        fprintf(stderr, "dell: insane: prev next not us\r\n");
+      }
+    }
+    else if ( fre_p != HEAP.fre_p ) {
+      fprintf(stderr, "dell: insane: missing previous\r\n");
+    }
+
+    if ( nex_p ) {
+      if ( u3to(u3a_dell, nex_p)->pre_p != fre_p ) {
+        fprintf(stderr, "dell: insane: next prev not us\r\n");
+      }
+    }
+    else if ( fre_p != HEAP.erf_p ) {
+      fprintf(stderr, "dell: insane: missing next\r\n");
+    }
+
+    fre_p = nex_p;
+  }
+
+  {
+    u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+    c3_w fre_w, nex_w, pag_w = 0;
+
+    fre_p = HEAP.fre_p;
+
+    while ( pag_w < HEAP.len_w ) {
+      fre_u = u3tn(u3a_dell, fre_p);
+      fre_w = fre_u ? fre_u->pag_w : HEAP.len_w;   // XX wrong in south
+
+      for ( ; pag_w < fre_w; pag_w++ ) {
+        if ( !dir_u[pag_w] ) {
+          fprintf(stderr, "dell: insane page %" PRIc3_w " free in directory, not in list\r\n", pag_w);
+        }
+      }
+
+      if ( fre_u ) {
+        nex_w = fre_u->pag_w + fre_u->siz_w;  // XX wrong in south
+
+        for ( ; pag_w < nex_w; pag_w++ ) {
+          if ( dir_u[pag_w] ) {
+            fprintf(stderr, "dell: insane page %" PRIc3_w " free in list, not in directory\r\n", pag_w);
+          }
+        }
+
+        fre_p = fre_u->nex_p;
+      }
+    }
+  }
+}
+
 static c3_w
 _idle_pages(void)
 {
@@ -1107,7 +1163,7 @@ _idle_words(void)
       pag_w++;
     }
 
-    if ( siz_w ) {
+    if ( (u3C.wag_h & u3o_verbose) && siz_w ) {
       fprintf(stderr, "idle words: class=%"PRIc3_w" (%"PRIc3_w" words) blocks=%"PRIc3_w" (in %"PRIc3_w" pages) ",
                       i_w, (((c3_w)1) << (i_w + u3a_min_log)), siz_w, pag_w);
       u3a_print_memory(stderr, "total", siz_w << (i_w + u3a_min_log));
@@ -1767,7 +1823,62 @@ typedef struct {
   c3_w    mar_w[0];
 } _ca_frag;
 
-//  adapted from https://stackoverflow.com/a/27663999 and
+#ifdef PACK_CHECK
+static c3_d
+_pack_hash(u3_post foo)
+{
+  return foo * 11400714819323198485ULL;
+}
+
+static c3_i
+_pack_cmp(u3_noun a, u3_noun b)
+{
+  return a == b;
+}
+
+#define NAME    _pack_posts
+#define KEY_TY  u3_post
+#define VAL_TY  u3_post
+#define HASH_FN _pack_hash
+#define CMPR_FN _pack_cmp
+#include "verstable.h"
+
+_pack_posts pos_u;
+#endif
+
+static void
+_pack_check_move(c3_w *dst_w, c3_w *src_w)
+{
+#ifdef PACK_CHECK
+  u3_post src_p = u3a_outa(src_w);
+  u3_post dst_p = u3a_outa(dst_w);
+  _pack_posts_itr pit_u = vt_get(&pos_u, src_p);
+  u3_assert( !vt_is_end(pit_u) );
+  u3_assert( pit_u.data->val == dst_p );
+#endif
+}
+
+static void
+_pack_check_full(c3_w *dst_w, c3_w *src_w, _ca_frag* fag_u)
+{
+#ifdef PACK_CHECK
+  c3_g      bit_g = fag_u->log_s - u3a_min_log;
+  const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
+
+  _pack_check_move(dst_w, src_w);
+
+  dst_w += hun_u->len_s * hun_u->hun_s;
+  src_w += hun_u->len_s * hun_u->hun_s;
+
+  for ( c3_s ful_s = 0; ful_s < hun_u->ful_s; ful_s++ ) {
+    _pack_check_move(dst_w, src_w);
+    dst_w += hun_u->len_s;
+    src_w += hun_u->len_s;
+  }
+#endif
+}
+
+//  adapted from https://stackoverflow.com/a/27663998 and
 //  https://gist.github.com/ideasman42/5921b0edfc6aa41a9ce0
 //
 static u3p(u3a_crag)
@@ -1862,7 +1973,8 @@ _pack_seek_hunks(void)
       nex_p = pag_u->nex_p;
       pag_u->nex_p = 0;
 
-      u3_assert( pre_u.pag_w < pag_u->pag_w );
+      u3_assert(  (pre_u.pag_w < pag_u->pag_w)
+               || (!pre_u.pag_w && !pag_u->pag_w) );
 
       rag_u = u3a_pack_alloc(len_w);
       hap_w = &(rag_u->mar_w[hun_u->map_s]);
@@ -1967,6 +2079,10 @@ _pack_seek(void)
   c3_w blk_w, bit_w, fre_w = 0;
   u3_post     dir_p;
 
+#ifdef PACK_CHECK
+  vt_init(&pos_u);
+#endif
+
   {
     u3_post   fre_p;
     u3a_dell *fre_u;
@@ -1974,6 +2090,9 @@ _pack_seek(void)
     while ( (fre_p = HEAP.fre_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
       HEAP.fre_p = fre_u->nex_p;
+      if ( HEAP.fre_p ) {
+        u3to(u3a_dell, HEAP.fre_p)->pre_p = 0;
+      }
       _ifree(fre_p);
     }
   }
@@ -2146,6 +2265,19 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   }
 
   *fir_t = out_t;
+
+#ifdef PACK_CHECK
+  //  XX also consider fir_t?
+  //
+  c3_z siz_z = vt_size(&pos_u);
+  _pack_posts_itr pit_u = vt_get_or_insert(&pos_u, som_p, out_p);
+  u3_assert( !vt_is_end(pit_u) ); // OOM
+
+  if ( vt_size(&pos_u) == siz_z ) {
+    u3_assert( pit_u.data->val == out_p );
+  }
+#endif
+
   return out_p;
 }
 
@@ -2183,6 +2315,16 @@ _pack_relocate(u3_post som_p)
     out_p = _pack_relocate_hunk(rag_u, pag_w, pos_w);
   }
 
+#ifdef PACK_CHECK
+  c3_z siz_z = vt_size(&pos_u);
+  _pack_posts_itr pit_u = vt_get_or_insert(&pos_u, som_p, out_p);
+  u3_assert( !vt_is_end(pit_u) ); // OOM
+
+  if ( vt_size(&pos_u) == siz_z ) {
+    u3_assert( pit_u.data->val == out_p );
+  }
+#endif
+
   return out_p;
 }
 
@@ -2191,7 +2333,6 @@ _pack_relocate_heap(void)
 {
   //  this is possible if freeing unused u3a_crag's
   //  caused an entire hunk page to be free'd
-  //  NB: this corrupts pre_p
   //
   if ( HEAP.fre_p ) {
     u3a_dell *fre_u;
@@ -2206,6 +2347,12 @@ _pack_relocate_heap(void)
 
     while ( *ref_p ) {
       fre_u  = u3to(u3a_dell, *ref_p);
+      //  NB: this corrupts pre_p
+      //
+      //    temporarily singly-linked,
+      //    also avoids issues when freeing post pack
+      //
+      fre_u->pre_p = 0;
       *ref_p = _pack_relocate(*ref_p);
       ref_p  = &(fre_u->nex_p);
     }
@@ -2253,7 +2400,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
 
   max_s = ((c3_w)1) << (u3a_page - rag_u->log_s);
 
-  if ( rag_u->pre_u.pag_w ) {
+  if ( rag_u->pre_u.fre_s ) {
     new_w = _pack_relocate_page(rag_u->pre_u.pag_w);
     new_s = hun_u->hun_s + rag_u->pre_u.pos_s;
     fre_s = rag_u->pre_u.fre_s;
@@ -2265,6 +2412,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     while ( (pos_s < max_s) && fre_s ) {
       if ( hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1))) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+        _pack_check_move(dst_w, src_w);
         memcpy(dst_w, src_w, len_i);
         fre_s--;
         dst_w += off_w;
@@ -2304,6 +2452,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
       while (  (pos_s < max_s)
             && (hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1)))) )
       {
+        _pack_check_move(src_w, src_w);
         pos_s++;
         src_w += off_w;
       }
@@ -2318,7 +2467,8 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     c3_w* soc_w = u3to(c3_w, page_to_post(pag_w));
     c3_w* doc_w = u3to(c3_w, page_to_post(new_w));
 
-    ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i * hun_u->hun_s);
+    ASAN_UNPOISON_MEMORY_REGION(doc_w, len_i * hun_u->hun_s);
+    _pack_check_move(doc_w, soc_w);
     memcpy(doc_w, soc_w, len_i * hun_u->hun_s);
 
     // XX bump pos_s/src_w if !pos_s ?
@@ -2333,6 +2483,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   while ( pos_s < max_s ) {
     if ( hap_w[pos_s >> u3a_word_bits_log] & (((c3_w)1) << (pos_s & (u3a_word_bits-1))) ) {
       ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+      _pack_check_move(dst_w, src_w);
       memcpy(dst_w, src_w, len_i);
       dst_w += off_w;
     }
@@ -2390,6 +2541,14 @@ _pack_move(void)
     if ( u3a_free_pg != dir_w ) {
       if ( (u3a_rest_pg >= dir_w) || !(dir_w >> (u3a_word_bits-1)) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
+
+        if ( u3a_head_pg == dir_w ) {
+          _pack_check_move(dst_w, src_w);
+        }
+        else if ( u3a_rest_pg < dir_w ) {
+          _pack_check_full(dst_w, src_w, (void*)&(u3a_Gack.buf_w[dir_w]));
+        }
+
         memcpy(dst_w, src_w, len_i);
         u3a_Gack.buf_w[new_w] = (u3a_rest_pg >= dir_w)
                               ? dir_w
@@ -2430,4 +2589,10 @@ _pack_move(void)
       _ifree(fre_p);
     }
   }
+
+  HEAP.erf_p = 0;
+
+#ifdef PACK_CHECK
+  vt_cleanup(&pos_u);
+#endif
 }

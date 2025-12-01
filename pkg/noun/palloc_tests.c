@@ -18,6 +18,7 @@ struct heap {
 struct heap hep_u;
 
 #define HEAP  (hep_u)
+#define BASE  (hep_u.bot_p)
 
 #include "./palloc.c"
 

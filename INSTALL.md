@@ -101,6 +101,31 @@ Enable address sanitizer. Only supported natively. Requires `llvm@19`, see [prer
 #### `-Dubsan`
 Enable undefined behavior sanitizer. Only supported natively. Requires `llvm@19`, see [prerequisites](#sanitizers).
 
+#### `-Dtracy`
+Enable [Tracy profiler](https://github.com/wolfpld/tracy) integration for performance analysis. When enabled, the application will broadcast profiling data that can be captured by the Tracy profiler GUI.
+
+Usage:
+```console
+zig build -Dtracy=true
+```
+
+#### `-Dtracy-callstack`
+Enable callstack capture in Tracy profiler. Only available when `-Dtracy=true` is also set.
+
+#### `-Dtracy-no-exit`
+Wait for profiler connection before exiting. Useful for profiling short-running commands. Only available when `-Dtracy=true` is also set.
+
+Example with all Tracy options:
+```console
+zig build -Dtracy=true -Dtracy-callstack=true -Dtracy-no-exit=true
+```
+
+To use Tracy profiling:
+1. Build with `-Dtracy=true`
+2. Download and run the [Tracy profiler GUI](https://github.com/wolfpld/tracy/releases)
+3. Run your urbit binary
+4. In Tracy GUI, connect to capture profiling data
+
 <!-- ## LSP Integration -->
 
 <!-- ```console -->

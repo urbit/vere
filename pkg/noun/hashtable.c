@@ -423,6 +423,7 @@ _ch_some_del(u3h_slot* sot_w, u3_noun key, c3_h lef_h, c3_h rem_h)
 }
 
 /* u3h_del(); delete from hashtable.
+** `key` is RETAINED
 */
 void
 u3h_del(u3p(u3h_root) har_p, u3_noun key)

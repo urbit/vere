@@ -1,6 +1,7 @@
 .{
-    .name = "softfloat",
+    .name = .softfloat,
     .version = "0.0.1",
+    .fingerprint = 0x51bec629e47146bb,
     .dependencies = .{
         .softfloat = .{
             .url = "https://github.com/ucb-bar/berkeley-softfloat-3/archive/5c06db33fc1e2130f67c045327b0ec949032df1d.tar.gz",

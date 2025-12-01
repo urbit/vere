@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "rsignal.h"
 
   /**  Constants.
   **/
@@ -210,8 +211,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
+        u3p(u3h_root) lop_p;                  //  %loop hint set
 
-        c3_w fut_w[30];                       //  futureproof buffer
+        c3_w fut_w[29];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -241,7 +243,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3a_dell)  fre_p;               //  free list entry
           u3p(u3a_dell)  erf_p;               //  free list exit
           u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-          u3_post        bot_p;               //  XX s/b rut_p
           c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
           c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
           c3_w           siz_w;               //  directory size
@@ -289,7 +290,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 0x1,                 //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
@@ -869,10 +871,16 @@ u3a_dash(void);
           void
           u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u);
 
-        /* u3a_print_memory(): print memory amount.
+        /* u3a_print_memory(): print memory amount to file descriptor.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_print_memory(): print memory amount to string.
+        */
+          void
+          u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
+
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*

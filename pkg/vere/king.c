@@ -179,6 +179,12 @@ _king_boot_done(void* ptr_v, c3_o ret_o)
     return;
   }
 
+  //  copy binary into pier on boot
+  //
+  if ( c3y == u3_Host.ops_u.doc ) {
+    u3_king_dock(U3_VERE_PACE);
+  }
+
   u3K.pir_u = u3_pier_stay(sag_h, u3i_string(u3_Host.dir_c), rift);
 }
 
@@ -860,6 +866,9 @@ _king_sign_cb(uv_signal_t* sil_u, c3_i num_i)
       u3l_log("\r\ninterrupt");
       u3_term_ef_ctlc();
 
+#ifdef U3_OS_windows
+      PulseEvent(u3_Host.cev_u);
+#endif
       break;
     }
 
@@ -921,14 +930,6 @@ void
 _boothack_cb(uv_timer_t* tim_u)
 {
   _king_doom(_boothack_doom());
-
-  //  copy binary into pier on boot
-  //
-  if ( (c3y == u3_Host.ops_u.nuu)
-     && (c3y == u3_Host.ops_u.doc) )
-  {
-    u3_king_dock(U3_VERE_PACE);
-  }
 }
 
 /* _king_loop_init(): stuff that comes before the event loop
@@ -1025,12 +1026,14 @@ u3_king_commence()
   u3C.sign_move_f = _king_sign_move;
 
   //  Ignore SIGPIPE signals.
+  #ifndef U3_OS_windows
   {
     sigset_t set_s;
     sigemptyset(&set_s);
     sigaddset(&set_s, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &set_s, NULL);
   }
+  #endif
 
   //  boot the ivory pill
   //
@@ -1038,6 +1041,7 @@ u3_king_commence()
 
   //  disable core dumps (due to lmdb size)
   //
+  #ifndef U3_OS_windows
   {
     struct rlimit rlm;
 
@@ -1049,6 +1053,7 @@ u3_king_commence()
       exit(1);
     }
   }
+  #endif
 
   //  run the loop
   //
@@ -1441,10 +1446,25 @@ _king_copy_raw(c3_i src_i, c3_i dst_i, c3_y* buf_y, size_t pag_i)
   return 0;
 }
 
+#if defined(U3_OS_windows)
+int err_win_to_posix(DWORD winerr);
+#endif
+
 static c3_i
 _king_copy_file(c3_c* src_c, c3_c* dst_c)
 {
-#if defined(U3_OS_osx)
+#if defined(U3_OS_windows)
+  //  XX try FSCTL_DUPLICATE_EXTENTS_TO_FILE
+  //
+  if ( CopyFileA(src_c, dst_c, TRUE) ) {
+    return 0;
+  }
+
+  //  XX fallback on any?
+  //
+  errno = err_win_to_posix(GetLastError());
+  return -1;
+#elif defined(U3_OS_osx)
   if ( !clonefile(src_c, dst_c, 0) ) {
     return 0;
   }
@@ -1535,8 +1555,10 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       c3_free(buf_y);
     }
 
+#ifndef U3_OS_windows
 done3:
     close(dst_i);
+#endif
 done2:
     close(src_i);
 done1:
@@ -1763,31 +1785,39 @@ u3_king_grab(void* vod_p)
   }
 #endif
 
-  u3m_quac** all_u = c3_malloc(sizeof(*all_u)*6);
-
   u3a_mark_init();
 
+  u3m_quac** all_u = c3_malloc(sizeof(*all_u)*8);
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("pier");
+  all_u[0]->qua_u = u3_pier_mark(u3_king_stub(), &(all_u[0]->siz_w));
+
   u3m_quac** var_u = u3m_mark();
-  all_u[0] = var_u[0];
-  all_u[1] = var_u[1];
-  all_u[2] = var_u[2];
-  all_u[3] = var_u[3];
+  all_u[1] = var_u[0];
+  all_u[2] = var_u[1];
+  all_u[3] = var_u[2];
+  all_u[4] = var_u[3];
   c3_free(var_u);
 
   c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w
-                 + all_u[2]->siz_w + all_u[3]->siz_w;
+                 + all_u[2]->siz_w + all_u[3]->siz_w + all_u[4]->siz_w;
 
-  all_u[4] = c3_calloc(sizeof(*all_u[4]));
-  all_u[4]->nam_c = "total marked";
-  all_u[4]->siz_w = tot_w;
+  all_u[5] = c3_calloc(sizeof(*all_u[4]));
+  all_u[5]->nam_c = strdup("total marked");
+  all_u[5]->siz_w = tot_w;
 
   //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
   //  only u3a_mark_done() is required
-  all_u[5] = c3_calloc(sizeof(*all_u[5]));
-  all_u[5]->nam_c = "sweep";
-  all_u[5]->siz_w = u3a_sweep();
+  all_u[6] = c3_calloc(sizeof(*all_u[5]));
+  all_u[6]->nam_c = strdup("sweep");
+  all_u[6]->siz_w = u3a_sweep();
 
-  for ( c3_h i_h = 0; i_h < 6; i_h++ ) {
+  all_u[7] = 0;
+
+  fflush(fil_u);
+
+  for ( c3_h i_h = 0; i_h < 7; i_h++ ) {
     u3a_print_quac(fil_u, 0, all_u[i_h]);
     u3a_quac_free(all_u[i_h]);
   }

@@ -120,6 +120,19 @@ u3_ovum_free(u3_ovum *egg_u)
   c3_free(egg_u);
 }
 
+c3_w
+u3_ovum_mark(u3_ovum *egg_u)
+{
+  c3_w siz_w = 0;
+
+  siz_w += u3a_mark_noun(egg_u->pin_u.lab);
+  siz_w += u3a_mark_noun(egg_u->tar);
+  siz_w += u3a_mark_noun(egg_u->wir);
+  siz_w += u3a_mark_noun(egg_u->cad);
+
+  return siz_w;
+}
+
 /* u3_pico_init(): initialize a scry request struct
 */
 u3_pico*

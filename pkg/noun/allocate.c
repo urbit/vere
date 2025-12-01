@@ -1424,7 +1424,7 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
   }
 }
 
-/* u3a_print_memory: print memory amount.
+/* u3a_print_memory: print memory amount to file descriptor.
 */
 void
 u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
@@ -1452,6 +1452,39 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
     }
     else if ( bib_z ) {
       fprintf(fil_u, "%s: B/%" PRIc3_z "\r\n",
+              cap_c, bib_z);
+    }
+  }
+}
+
+/* u3a_print_memory_str: print memory amount to string.
+*/
+void
+u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w)
+{
+  u3_assert( 0 != str_c );
+
+  c3_z byt_z = ((c3_z)wor_w * 4);
+  c3_z gib_z = (byt_z / 1000000000);
+  c3_z mib_z = (byt_z % 1000000000) / 1000000;
+  c3_z kib_z = (byt_z % 1000000) / 1000;
+  c3_z bib_z = (byt_z % 1000);
+
+  if ( byt_z ) {
+    if ( gib_z ) {
+      sprintf(str_c, "%s: GB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, gib_z, mib_z, kib_z, bib_z);
+    }
+    else if ( mib_z ) {
+      sprintf(str_c, "%s: MB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, mib_z, kib_z, bib_z);
+    }
+    else if ( kib_z ) {
+      sprintf(str_c, "%s: KB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
+              cap_c, kib_z, bib_z);
+    }
+    else if ( bib_z ) {
+      sprintf(str_c, "%s: B/%" PRIc3_z "\r\n",
               cap_c, bib_z);
     }
   }
@@ -1499,9 +1532,12 @@ void
 u3a_quac_free(u3m_quac* qua_u)
 {
   c3_w i_w = 0;
-  while ( qua_u->qua_u[i_w] != NULL ) {
-    u3a_quac_free(qua_u->qua_u[i_w]);
-    i_w++;
+
+  if ( qua_u->qua_u ) {
+    while ( qua_u->qua_u[i_w] != NULL ) {
+      u3a_quac_free(qua_u->qua_u[i_w]);
+      i_w++;
+    }
   }
   c3_free(qua_u->nam_c);
   c3_free(qua_u->qua_u);
@@ -1740,7 +1776,11 @@ u3a_mark_road()
     qua_u[11]->siz_w = wee_w * sizeof(c3_w);
   }
 
-  qua_u[12] = NULL;
+  qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
+  qua_u[12]->nam_c = strdup("loop hint set");
+  qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * 4;
+  
+  qua_u[13] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -1780,6 +1820,7 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->pro.trace));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
+  u3h_relocate(&(u3R->lop_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]
@@ -1789,7 +1830,7 @@ u3a_idle(u3a_road* rod_u)
 {
   //  XX ignores argument
   c3_w pag_w = _idle_pages();
-  if ( pag_w ) {
+  if ( (u3C.wag_h & u3o_verbose) && pag_w ) {
     fprintf(stderr, "loom: idle %"PRIc3_w" complete pages\r\n", pag_w);
   }
   return (pag_w << u3a_page) + _idle_words();
@@ -1800,6 +1841,9 @@ u3a_ream(void)
 {
   _poison_pages();
   _poison_words();
+
+  //  XX enable behind flag
+  // _sane_dell();
 }
 
 void

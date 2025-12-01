@@ -1557,6 +1557,23 @@ _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   return ret_o;
 }
 
+static u3m_quac**
+_unix_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(2 * sizeof(*all_u));
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("+sane handle");
+  all_u[0]->siz_w = 4 * u3a_mark_noun(((u3_unix*)car_u)->sat);
+  all_u[0]->qua_u = 0;
+
+  all_u[1] = 0;
+
+  *out_w = all_u[0]->siz_w;
+
+  return all_u;
+}
+
 /* _unix_io_exit(): terminate unix I/O.
 */
 static void
@@ -1586,6 +1603,7 @@ u3_unix_io_init(u3_pier* pir_u)
   car_u->liv_o = c3n;
   car_u->io.talk_f = _unix_io_talk;
   car_u->io.kick_f = _unix_io_kick;
+  car_u->io.mark_f = _unix_io_mark;
   car_u->io.exit_f = _unix_io_exit;
   //  XX wat do
   //

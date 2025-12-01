@@ -370,6 +370,25 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
   return _ce_image_stat(img_u, &img_u->pgs_w);
 }
 
+c3_i
+u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
+{
+  u3e_image img_u = { .nam_c = nam_c };
+
+  switch ( _ce_image_open(&img_u, dir_c) ) {
+    case _ce_img_good: {
+      *len_z = _ce_len(img_u.pgs_w);
+      return img_u.fid_i;
+    } break;
+
+    case _ce_img_fail:
+    case _ce_img_size: {
+      *len_z = 0;
+      return -1;
+    } break;
+  }
+}
+
 /* _ce_patch_write_control(): write control block file.
 */
 static void
@@ -686,7 +705,7 @@ static u3_ce_patch*
 _ce_patch_compose(c3_w max_w)
 {
   c3_w pgs_w = 0;
-  c3_w off_w = u3R->hep.bot_p >> u3a_page;
+  c3_w off_w = u3R->rut_p >> u3a_page;
 
   /* Count dirty pages.
   */
@@ -1097,7 +1116,7 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 static c3_o
 _ce_loom_fine(void)
 {
-  c3_w off_w = u3R->hep.bot_p >> u3a_page;
+  c3_w off_w = u3R->rut_p >> u3a_page;
   c3_w blk_w, bit_w, pag_w, i_w;
   c3_o fin_o = c3y;
 
@@ -1281,18 +1300,18 @@ u3e_save(u3_post low_p, u3_post hig_p)
     }
   }
 
-  // if ( u3C.wag_w & u3o_verbose ) {
-    fprintf(stderr, "sync: skipped %"PRIc3_w" free", pat_u->sip_w);
+  if ( u3C.wag_h & u3o_verbose ) {
+    fprintf(stderr, "sync: skipped %" PRIc3_w " free", pat_u->sip_w);
     u3a_print_memory(stderr, " pages", pat_u->sip_w << u3a_page);
-  // }
+  }
 
   //  attempt to avoid propagating anything insane to disk
   //
   u3a_loom_sane();
 
-  // if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_h & u3o_verbose ) {
     u3a_print_memory(stderr, "sync: save", pat_u->con_u->pgs_w << u3a_page);
-  // }
+  }
 
   _ce_patch_sync(pat_u);
 
@@ -1352,10 +1371,12 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
   void* ptr_v = _ce_ptr(nor_w);
 
+  #ifndef U3_OS_windows
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
       fprintf(stderr, "loom: madv_dontneed failed (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
                       pgs_w, nor_w, strerror(errno));
   }
+  #endif
 }
 
 /* u3e_toss(): discard ephemeral pages.
@@ -1395,7 +1416,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   //  XX review dryrun requirements, enable or remove
   //
 #if 0
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return c3y;
   } else
 #endif

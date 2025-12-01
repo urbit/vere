@@ -70,7 +70,11 @@
 #     error  "port me"
 #endif
 
-#if   (64 == (CHAR_BIT * __SIZEOF_LONG_LONG__))
+#if   (64 == (CHAR_BIT * __SIZEOF_LONG__))
+#     define c3_lz_d __builtin_clzl
+#     define c3_tz_d __builtin_ctzl
+#     define c3_pc_d __builtin_popcountl
+#elif (64 == (CHAR_BIT * __SIZEOF_LONG_LONG__))
 #     define c3_lz_d __builtin_clzll
 #     define c3_tz_d __builtin_ctzll
 #     define c3_pc_d __builtin_popcountll
@@ -78,16 +82,16 @@
 #     error  "port me"
 #endif
 
-#     define c3_bits_half(w) ((w) ? (32 - c3_lz_h(w)) : 0)
+#     define c3_bits_half(h) ((h) ? (32 - c3_lz_h(h)) : 0)
 #     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
 
 #ifndef VERE64
-#     define c3_bits_word(n)  c3_bits_half(n)
+#     define c3_bits_word(w)  c3_bits_half(w)
 #     define c3_lz_w  c3_lz_h
 #     define c3_tz_w  c3_tz_h
 #     define c3_pc_w  c3_pc_h
 #else
-#     define c3_bits_word(n)  c3_bits_chub(n)
+#     define c3_bits_word(w)  c3_bits_chub(w)
 #     define c3_lz_w  c3_lz_d
 #     define c3_tz_w  c3_tz_d
 #     define c3_pc_w  c3_pc_d

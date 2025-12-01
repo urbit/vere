@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <signal.h>
 
 #include "allocate.h"
 #include "imprison.h"
@@ -24,7 +25,7 @@ u3t_trace u3t_Trace;
 static c3_o _ct_lop_o;
 
 /// Nock PID.
-static pid_t _nock_pid_i = 0;
+static c3_hs _nock_pid_i = 0;
 
 /// JSON trace file.
 static FILE* _file_u = NULL;
@@ -561,6 +562,7 @@ u3t_file_cnt(void)
 void
 u3t_boot(void)
 {
+#ifndef U3_OS_windows
   if ( u3C.wag_h & u3o_debug_cpu ) {
     _ct_lop_o = c3n;
 #if defined(U3_OS_PROF)
@@ -597,6 +599,7 @@ u3t_boot(void)
     }
 #endif
   }
+#endif
 }
 
 /* u3t_boff(): turn profile sampling off.
@@ -604,6 +607,7 @@ u3t_boot(void)
 void
 u3t_boff(void)
 {
+#ifndef U3_OS_windows
   if ( u3C.wag_h & u3o_debug_cpu ) {
 #if defined(U3_OS_PROF)
     // Mask SIGPROF signals in this thread (and this is the only
@@ -632,6 +636,7 @@ u3t_boff(void)
     }
 #endif
   }
+#endif
 }
 
 
@@ -1129,6 +1134,7 @@ u3t_etch_meme(c3_w mod_w)
 void
 u3t_sstack_init()
 {
+#ifndef U3_OS_windows
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
   c3_h shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
@@ -1137,12 +1143,12 @@ u3t_sstack_init()
     return;
   }
 
-  if ( -1 == ftruncate(shm_fd, PSIZE)) {
+  if ( -1 == ftruncate(shm_fd, TRACE_PSIZE)) {
     perror("truncate failed");
     return;
   }
 
-  stk_u = mmap(NULL, PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  stk_u = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
@@ -1152,14 +1158,15 @@ u3t_sstack_init()
   stk_u->off_h = 0;
   stk_u->fow_h = 0;
   u3t_sstack_push(c3__root);
+#endif
 }
 
+#ifndef U3_OS_windows
 /* u3t_sstack_open: initalize a root node on the spin stack 
-*/
+ */
 u3t_spin*
 u3t_sstack_open()
 {
-
   //Setup spin stack
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
@@ -1169,8 +1176,8 @@ u3t_sstack_open()
     return NULL; 
   }
 
-  u3t_spin* stk_u = mmap(NULL, PSIZE, 
-                      PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE, 
+                         PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
@@ -1179,6 +1186,7 @@ u3t_sstack_open()
 
   return stk_u;
 }
+#endif
 /* u3t_sstack_exit: shutdown the shared memory for thespin stack 
 */
 void

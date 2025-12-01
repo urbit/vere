@@ -410,8 +410,8 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(SWAP, "swap", &&do_swap),  /*  3 */                                        \
   X(TOSS, "toss", &&do_toss),  /*  4 */                                        \
   /* auto-cons */                                                              \
-  X(AUTO, "auto", &&do_auto),  /*  5: keep */                                  \
-  X(AULT, "ault", &&do_ault),  /*  6: lose */                                  \
+  X(AUTO, "auto", &&do_auto),  /*  5: kept */                                  \
+  X(AULT, "ault", &&do_ault),  /*  6: lost */                                  \
   /* general purposes */                                                       \
   X(SNOC, "snoc", &&do_snoc),  /*  7: keep */                                  \
   X(SNOL, "snol", &&do_snol),  /*  8: lose */                                  \
@@ -445,10 +445,10 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(LILS, "lils", &&do_lils),  /* 30: c3_s */                                  \
   X(LIBL, "libl", &&do_libl),  /* 31: c3_y */                                  \
   X(LISL, "lisl", &&do_lisl),  /* 32: c3_s */                                  \
-  /* nock 2: nock (lose) */                                                    \
-  X(NOLK, "nolk", &&do_nolk),  /* 33 */                                        \
-  X(NOCT, "noct", &&do_noct),  /* 34 */                                        \
-  X(NOCK, "nock", &&do_nock),  /* 35 */                                        \
+  /* nock 2: nock */                                                           \
+  X(NOLK, "nolk", &&do_nolk),  /* 33, lost */                                  \
+  X(NOCT, "noct", &&do_noct),  /* 34, tail */                                  \
+  X(NOCK, "nock", &&do_nock),  /* 35, kept */                                  \
   /* nock 3 & 4 */                                                             \
   X(DEEP, "deep", &&do_deep),  /* 36 */                                        \
   X(BUMP, "bump", &&do_bump),  /* 37 */                                        \
@@ -487,7 +487,7 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   /* nock 11: fast (keep) */                                                   \
   X(BAST, "bast", &&do_bast),  /* 64: c3_b */                                  \
   X(SAST, "sast", &&do_sast),  /* 65: c3_s */                                  \
-  /* nock 11: fast (lose) */                                                   \
+  /* nock 11: fast (lost) */                                                   \
   X(BALT, "balt", &&do_balt),  /* 66: c3_b */                                  \
   X(SALT, "salt", &&do_salt),  /* 67: c3_s */                                  \
   /* nock 11: memo (keep) */                                                   \
@@ -1026,10 +1026,12 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       default: {
         return _n_comp(ops, nef, los_o, tel_o);
       }
+      case c3__cash:
       case c3__xray:
       case c3__meme:
       case c3__nara:
       case c3__hela:
+      case c3__loop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1069,6 +1071,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__nara:
           case c3__hela:
           case c3__spin:
+          case c3__loop:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1118,7 +1121,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__fast:
         tot_w += _n_comp(ops, hod, c3n, c3n);
         ++tot_w; _n_emit(ops, SWAP);
-        tot_w += _n_comp(ops, nef, c3n, c3n);
+        tot_w += _n_comp(ops, nef, los_o, c3n);
         // overflows to SALT / SAST
         ++tot_w; _n_emit(ops, (c3y == los_o) ? BALT : BAST);
         break;
@@ -1177,10 +1180,23 @@ _n_formulaic(u3_noun fol)
     case 12:
       return (c3y == u3r_cell(ar, &a, &b))
         && _n_formulaic(a) && _n_formulaic(b);
-    case 6:
-      return ( c3y == u3r_trel(ar, &a, &b, &c) )
-        && _n_formulaic(a) &&
-        (_n_formulaic(b) || _n_formulaic(c));
+    case 6: {
+      u3_noun lit;
+
+      if ( c3n == u3r_trel(ar, &a, &b, &c) || !_n_formulaic(a) ) {
+        return 0;
+      }
+
+      if ( c3n == u3r_safe(a, &lit) || u3_none == lit ) {
+        return _n_formulaic(b) || _n_formulaic(c);
+      }
+
+      switch (lit) {
+        case 0:  return _n_formulaic(b);
+        case 1:  return _n_formulaic(c);
+        default: return 0;
+      }
+    }
     case 9:
       return (c3y == u3r_cell(ar, &a, &b))
         && (c3y == u3ud(a))
@@ -1232,7 +1248,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
   if ( c3y == u3du(cod) ) {
     tot_w += _n_comp(ops, cod, c3n, c3n);
     ++tot_w; _n_emit(ops, SWAP);
-    tot_w += _n_comp(ops, arg, c3n, c3n);
+    tot_w += _n_comp(ops, arg, los_o, c3n);
     ++tot_w; _n_emit(ops, (c3y == los_o ) ? AULT : AUTO);
   }
   else switch ( cod ) {
@@ -1286,7 +1302,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(arg, &hed, &tel);
       tot_w += _n_comp(ops, hed, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, tel, c3n, c3n);
+      tot_w += _n_comp(ops, tel, los_o, c3n);
       /* things in tail position replace (so, lose) top of stack,
        * so NOCT "loses" and there is no non-losing version */
       op_y   = (c3y == tel_o)  ? NOCT
@@ -1332,7 +1348,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
         else if ( !hec_t && !tec_t ) {
           tot_w += _n_comp(ops, hed, c3n, c3n);
           ++tot_w; _n_emit(ops, SWAP);
-          tot_w += _n_comp(ops, tel, c3n, c3n);
+          tot_w += _n_comp(ops, tel, los_o, c3n);
           ++tot_w; _n_emit(ops, (c3y == los_o) ? SALM : SAME);
         }
         else {
@@ -1356,41 +1372,58 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
     }
 
     case 6: {
-      u3_noun mid,
-              yep = u3_nul,
-              nop = u3_nul;
-      c3_w    yep_w, nop_w;
-      c3_t    yep_t, nop_t;
+      u3_noun mid, lit;
       u3x_trel(arg, &hed, &mid, &tel);
+      if ( c3y == u3r_safe(hed, &lit) && u3_none != lit ) {
+        switch ( lit ) {
+          case 0:
+            tot_w += _n_comp(ops, mid, los_o, tel_o);
+            break;
 
-      tot_w += _n_comp(ops, hed, c3n, c3n);
-      yep_t = _n_formulaic(mid);
-      nop_t = _n_formulaic(tel);
+          case 1:
+            tot_w += _n_comp(ops, tel, los_o, tel_o);
+            break;
 
-      if ( !yep_t && !nop_t ) {
-        u3m_bail(c3__exit);
-        break;
-      }
-
-      if ( yep_t ) {
-        yep_w = _n_comp(&yep, mid, los_o, tel_o);
-      }
-      else {
-        yep_w = 1; _n_emit(&yep, BAIL);
-      }
-
-      if ( nop_t ) {
-        nop_w = _n_comp(&nop, tel, los_o, tel_o);
+          default:
+            ++tot_w; _n_emit(ops, BAIL);
+            break;
+        }
       }
       else {
-        nop_w = 1; _n_emit(&nop, BAIL);
-      }
+        u3_noun yep = u3_nul,
+                nop = u3_nul;
+        c3_w    yep_w, nop_w;
+        c3_t    yep_t, nop_t;
 
-      // SBIP and SBIN get sized during assembly
-      ++yep_w; _n_emit(&yep, u3nc(SBIP, nop_w));
-      ++tot_w; _n_emit(ops, u3nc(SBIN, yep_w));
-      tot_w += yep_w; _n_apen(ops, yep);
-      tot_w += nop_w; _n_apen(ops, nop);
+        tot_w += _n_comp(ops, hed, c3n, c3n);
+        yep_t = _n_formulaic(mid);
+        nop_t = _n_formulaic(tel);
+
+        if ( !yep_t && !nop_t ) {
+          u3m_bail(c3__exit);
+          break;
+        }
+
+        if ( yep_t ) {
+          yep_w = _n_comp(&yep, mid, los_o, tel_o);
+        }
+        else {
+          yep_w = 1; _n_emit(&yep, BAIL);
+        }
+
+        if ( nop_t ) {
+          nop_w = _n_comp(&nop, tel, los_o, tel_o);
+        }
+        else {
+          nop_w = 1; _n_emit(&nop, BAIL);
+        }
+
+        // SBIP and SBIN get sized during assembly
+        ++yep_w; _n_emit(&yep, u3nc(SBIP, nop_w));
+        ++tot_w; _n_emit(ops, u3nc(SBIN, yep_w));
+        tot_w += yep_w; _n_apen(ops, yep);
+        tot_w += nop_w; _n_apen(ops, nop);
+      }
       break;
     }
 
@@ -1427,7 +1460,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(hed, &axe, &nef);
       tot_w += _n_comp(ops, tel, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, nef, c3n, c3n);
+      tot_w += _n_comp(ops, nef, los_o, c3n);
 
       ++tot_w;
       switch ( axe ) {
@@ -1462,7 +1495,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
       u3x_cell(arg, &hed, &tel);
       tot_w += _n_comp(ops, hed, c3n, c3n);
       ++tot_w; _n_emit(ops, SWAP);
-      tot_w += _n_comp(ops, tel, c3n, c3n);
+      tot_w += _n_comp(ops, tel, los_o, c3n);
       ++tot_w; _n_emit(ops, (c3y == los_o) ? WILS : WISH);
       break;
 
@@ -1795,7 +1828,7 @@ _cn_etch_bytecode(u3_noun fol) {
   c3_y* pog_y = pog_u->byc_u.ops_y;
   c3_w len_w = pog_u->byc_u.len_w;
   c3_w ip_w=0, num_w=0, bop_w=0, dex_w=0;
-  c3_w len_c = 1; // opening "{"
+  c3_w len_c = 2; // closing "}", null terminator
   // set par_w (parameter flag) to an invalid value,
   // so we can break imeadately if needed
   c3_w par_w = 5;
@@ -1870,6 +1903,23 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
+    case c3__cash: {
+      u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
+      u3h_discount(u3R->cax.har_p);
+      u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
+      u3h_discount(u3R->cax.per_p);
+      *out = u3i_cell(tag, u3i_cell(har, per));
+    } break;
+
+    case c3__loop: {
+      u3_noun key = u3nc(u3k(bus), u3k(fol));
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+        u3m_bail(c3__fail);
+      }
+      u3h_put(u3R->lop_p, key, u3_nul);
+      *out = u3nc(tag, key);
+    } break;
+
     case c3__bout: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *out = u3i_cell(tag, now);
@@ -1911,13 +1961,37 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
-  u3_noun p_tok, q_tok;
-  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
+  u3_noun p_tok, q_tok, r_tok;
+  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
+    u3h_del(u3R->lop_p, q_tok);
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
     c3_c str_c[64];
     u3a_print_time(str_c, "took", u3r_chub(0, delta));
     u3t_slog(u3nc(0, u3i_string(str_c)));
     u3z(delta);
+  }
+  else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) &&
+            (c3__cash == p_tok) ) {
+    c3_c str_c[4096];
+
+    u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
+    u3h_discount(u3R->cax.har_p);
+    u3_atom har_delta = u3ka_sub(har, u3k(q_tok));
+    u3a_print_memory_str(str_c, "ephemeral cache",
+                     u3r_word(0, har_delta));
+    u3t_slog(u3nc(0, u3i_string(str_c)));
+
+    u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
+    u3h_discount(u3R->cax.per_p);
+    u3_atom per_delta = u3ka_sub(per, u3k(r_tok));
+    u3a_print_memory_str(str_c, "persistent cache",
+                     u3r_word(0, per_delta));
+    u3t_slog(u3nc(0, u3i_string(str_c)));
+
+    u3z(har_delta);
+    u3z(per_delta);
   }
   else {
     u3_assert( u3_nul == tok );
@@ -1947,6 +2021,16 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
       *clu = u3nt(u3k(tag), *clu, now);
     } break;
 
+    case c3__loop: {
+      u3_noun key = u3nc(u3k(bus), u3k(fol));
+      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+        u3t_mean(*clu);
+        u3m_bail(c3__fail);
+      }
+      u3h_put(u3R->lop_p, key, u3_nul);
+      u3z(*clu);
+      *clu = u3nc(tag, key);
+    } break;
     case c3__spin: {
       u3t_sstack_push(*clu);
       *clu = c3__spin;
@@ -2015,6 +2099,9 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
   u3_noun p_tok, q_tok, r_tok;
   if ( c3__spin == tok ) {
     u3t_sstack_pop();
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
+    u3h_del(u3R->lop_p, q_tok);
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
@@ -2155,9 +2242,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = u3nc(*top, x);          // [pro bus]
       BURN();
 
-    do_ault:                         // [tel bus hed]
-      x    = _n_pep(mov, off);       // [bus hed]
-      _n_toss(mov, off);             // [hed]
+    do_ault:                         // [tel hed]
+      x    = _n_pep(mov, off);       // [hed]
       top  = _n_peek(off);
       *top = u3nc(*top, x);          // [pro]
       BURN();
@@ -2290,14 +2376,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       *top = x;
       BURN();
 
-    do_noct:                // [fol old bus]
-      o = _n_pep(mov, off); // [old bus]
-      _n_toss(mov, off);    // [bus]
+    do_noct:                // [fol bus]
+      o = _n_pep(mov, off); // [bus]
       goto nock_out;
 
-    do_nolk:                // [fol old bus]
-      o = _n_pep(mov, off); // [old bus]
-      _n_toss(mov, off);    // [bus]
+    do_nolk:                // [fol bus]
+      o = _n_pep(mov, off); // [bus]
       goto nock_in;
 
     do_nock:                // [fol old bus]
@@ -2399,7 +2483,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 
     do_salm:
       x = _n_pep(mov, off);
-      _n_toss(mov, off);
       goto same_in;
 
     same_in:
@@ -2522,9 +2605,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 #endif
       BURN();
 
-    do_wils:                   // [gof bus ref]
-      o = _n_pep(mov,off);     // [bus ref]
-      _n_toss(mov, off);       // [ref]
+    do_wils:                   // [gof ref]
+      o = _n_pep(mov,off);     // [ref]
       top = _n_peek(off);
       goto wish_in;
 
@@ -2607,9 +2689,8 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto falt_in;
     do_balt:
       x   = pog[ip_w++];
-    falt_in:                   // [pro bus clu]
-      o   = _n_pep(mov, off);  // [bus clu]
-      _n_toss(mov, off);       // [clu]
+    falt_in:                   // [pro clu]
+      o   = _n_pep(mov, off);  // [clu]
       top = _n_peek(off);
       goto fast_out;
 
@@ -2744,7 +2825,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto muth_in;
     do_muth:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     muth_in:
       o    = *top;
@@ -2758,7 +2838,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto mutt_in;
     do_mutt:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     mutt_in:
       o    = *top;
@@ -2772,7 +2851,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       goto musm_in;
     do_musm:
       x    = _n_pep(mov, off);
-      _n_toss(mov, off);
       top  = _n_peek(off);
     musm_in:
       o    = *top;
@@ -2815,7 +2893,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x = pog[ip_w++];
     mut_in:
       o = _n_pep(mov, off);
-      _n_toss(mov, off);
       top = _n_peek(off);
     edit_in:
       *top = u3i_edit(*top, x, o);
@@ -3205,13 +3282,12 @@ u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam)
   return u3m_soft_run(gul, u3n_slam_on, gat, sam);
 }
 
-/* u3n_nock_an(): as slam_in(), but with empty fly.
+/* u3n_nock_an(): as nock_et(), but with the scry handler that always blocks.
 */
 u3_noun
 u3n_nock_an(u3_noun bus, u3_noun fol)
 {
-  u3_noun gul = u3nt(u3nt(1, 0, 0), 0, 0);  //  |=(a/{* *} ~)
-
+  u3_noun gul = u3nt(u3nc(1, 0), u3nc(0, 0), 0);  //  |~(^ ~)
   return u3n_nock_et(gul, bus, fol);
 }
 

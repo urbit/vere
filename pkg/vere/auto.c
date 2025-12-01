@@ -422,6 +422,61 @@ _auto_link(u3_auto* car_u, u3_pier* pir_u, u3_auto* nex_u)
   return car_u;
 }
 
+static c3_w
+_mark_ova(u3_ovum* egg_u)
+{
+  c3_w siz_w = 0;
+
+  while ( egg_u ) {
+    siz_w += u3_ovum_mark(egg_u);
+    egg_u  = egg_u->nex_u;
+  }
+
+  return siz_w;
+}
+
+u3m_quac**
+u3_auto_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u;
+  c3_w       tot_w = 0, len_w = 0;
+
+  {
+    u3_auto* rac_u = car_u;
+    while ( car_u ) {
+      car_u = car_u->nex_u;
+      len_w++;
+    }
+    car_u = rac_u;
+  }
+
+  all_u = c3_calloc(sizeof(*all_u) * (len_w + 1));
+  len_w = 0;
+
+  while ( car_u ) {
+    all_u[len_w] = c3_malloc(sizeof(**all_u));
+    all_u[len_w]->nam_c = u3r_string(car_u->nam_m);
+    all_u[len_w]->siz_w = 0;
+    all_u[len_w]->qua_u = 0;
+
+    if ( car_u->io.mark_f ) {
+      all_u[len_w]->qua_u = car_u->io.mark_f(car_u, &(all_u[len_w]->siz_w));
+    }
+
+    all_u[len_w]->siz_w += _mark_ova(car_u->ext_u) * 4;
+
+    tot_w += all_u[len_w]->siz_w;
+    car_u  = car_u->nex_u;
+    len_w++;
+  }
+
+  all_u[len_w] = 0;
+
+  *out_w = tot_w;
+
+  return all_u;
+}
+
 /* u3_auto_init(): initialize all drivers.
 */
 u3_auto*
