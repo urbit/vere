@@ -1343,8 +1343,6 @@ u3m_love(u3_noun pro)
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
 
-  c3_w fag_w = u3R->how.fag_w;
-
   //  are there any timers on the road?
   //
   c3_o tim_o = u3du(u3R->tim);
@@ -1355,19 +1353,13 @@ u3m_love(u3_noun pro)
 
   if ( _(tim_o) ) _m_renew_now();
 
-  //  inherit backward-flowing flags
-  //
-  u3R->how.fag_w |= (fag_w & u3a_flag_drop);
-
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
   per_p = u3h_take(per_p);
-  if ( !(u3R->how.fag_w & u3a_flag_drop) ) {
-    for_p = u3h_take(for_p);
-  }
+  for_p = u3h_take(for_p);
 
   //  pop the stack
   //
@@ -1380,14 +1372,7 @@ u3m_love(u3_noun pro)
   u3j_reap(jed_u);
   u3n_reap(byc_p);
   u3z_reap(u3z_memo_keep, per_p);
-  if ( !(u3R->how.fag_w & u3a_flag_drop) ) {
-    u3z_reap(u3z_memo_ford, for_p);
-  }
-
-  if ( (u3R->how.fag_w & u3a_flag_drop) ) {
-    u3h_free(u3R->cax.for_p);
-    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  }
+  u3z_reap(u3z_memo_ford, for_p);
 
   return pro;
 }
@@ -1532,10 +1517,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   /* Free the argument.
   */
   u3z(arg);
-
-  /* Clean up the flags
-  */
-  u3R->how.fag_w = 0;
 
   /* Return the product.
   */
