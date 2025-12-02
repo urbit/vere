@@ -185,7 +185,7 @@ pub fn build(b: *std.Build) !void {
             if (t.os.tag == .linux and
                 target.query.isNative() and
                 !asan and !ubsan)
-                b.resolveTargetQuery(.{ .abi = t.abi, .os_tag = t.os.tag })
+                b.resolveTargetQuery(.{ .abi = .musl })
             else
                 target,
             optimize,
@@ -365,6 +365,7 @@ fn buildBinary(
         .copt = copts,
     });
 
+    // XX re-enable for migration work
     // const pkg_past = if (cfg.vere32) b.dependency("pkg_past", .{
     //     .target = target,
     //     .optimize = optimize,
@@ -377,6 +378,7 @@ fn buildBinary(
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        // XX re-enable for migration work
         // .vere32 = cfg.vere32,
     });
 
@@ -658,7 +660,7 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
-                .name = "noun-test",
+                .name = "vere-noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
             },
@@ -715,7 +717,7 @@ fn buildBinary(
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
