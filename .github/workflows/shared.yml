@@ -105,6 +105,22 @@ jobs:
             -Dpace=${{inputs.pace}}    \
             --summary all
 
+      - name: Run unit tests (32-bit)
+        run: |
+          zig build                    \
+            ur-test ent-test           \
+            hashtable-test jets-test   \
+            nock-test retrieve-test    \
+            serial-test ames-test      \
+            pact-test equality-test    \
+            boot-test newt-test        \
+            vere-noun-test unix-test   \
+            palloc-test benchmarks     \
+            -Dvere32                   \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            --summary all
+
       - name: Build test binary
         if: ${{ inputs.fake_tests }}
         run: |
