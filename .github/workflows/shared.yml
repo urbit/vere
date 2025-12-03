@@ -37,6 +37,8 @@ jobs:
   urbit:
     strategy:
       fail-fast: false
+      matrix:
+        bits: [64, 32]
 
     runs-on: ubuntu-22.04
 
@@ -84,16 +86,24 @@ jobs:
 
       - name: Build binaries
         run: |
+          # Add -Dvere32 flag for 32-bit builds
+          VERE32_FLAG=""
+          if [[ "${{ matrix.bits }}" == "32" ]]; then
+            VERE32_FLAG="-Dvere32"
+          fi
+
           if [[ "${{ inputs.pace }}" == "live" ]]; then
             zig build                  \
               -Dall                    \
               -Drelease                \
+              $VERE32_FLAG             \
               --summary all
           else
             zig build                  \
               -Dall                    \
               -Doptimize=ReleaseFast   \
               -Dpace=${{inputs.pace}}  \
+              $VERE32_FLAG             \
               --summary all
           fi
       - name: Run unit tests
@@ -111,25 +121,15 @@ jobs:
             -Dpace=${{inputs.pace}}    \
             --summary all
 
-      - name: Run unit tests (32-bit)
-        run: |
-          zig build                    \
-            ur-test ent-test           \
-            hashtable-test jets-test   \
-            nock-test retrieve-test    \
-            serial-test ames-test      \
-            pact-test equality-test    \
-            boot-test newt-test        \
-            vere-noun-test unix-test   \
-            palloc-test benchmarks     \
-            -Dvere32                   \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
-            --summary all
-
       - name: Build test binary
         if: ${{ inputs.fake_tests }}
         run: |
+          # Add -Dvere32 flag for 32-bit builds
+          VERE32_FLAG=""
+          if [[ "${{ matrix.bits }}" == "32" ]]; then
+            VERE32_FLAG="-Dvere32"
+          fi
+
           zig build                    \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
@@ -138,6 +138,7 @@ jobs:
             -Dmem-dbg                  \
             -Dc3dbg                    \
             -Dsnapshot-validation      \
+            $VERE32_FLAG               \
             --summary all
 
       - name: Boot fake ship
@@ -170,21 +171,45 @@ jobs:
         if: ${{ inputs.upload }}
         run: |
           sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
-          declare -a targets=(
-            "aarch64-linux-musl linux-aarch64"
-            "aarch64-macos-none macos-aarch64"
-            "x86_64-linux-musl linux-x86_64"
-            "x86_64-macos-none macos-x86_64"
+
+          # Define all targets with bits field
+          declare -a all_targets=(
+            "aarch64-linux-musl linux-aarch64 64"
+            "aarch64-macos-none macos-aarch64 64"
+            "x86_64-linux-musl linux-x86_64 64"
+            "x86_64-macos-none macos-x86_64 64"
+            "aarch64-linux-musl linux-aarch64 32"
+            "aarch64-macos-none macos-aarch64 32"
+            "x86_64-linux-musl linux-x86_64 32"
+            "x86_64-macos-none macos-x86_64 32"
           )
+
+          # Filter targets based on matrix.bits
+          declare -a targets=()
+          for t in "${all_targets[@]}"; do
+            IFS=' ' read zig_target target bits_flag <<< "${t}"
+            if [[ "$bits_flag" == "${{ matrix.bits }}" ]]; then
+              targets+=("$zig_target $target")
+            fi
+          done
+
           for t in "${targets[@]}"
           do
             IFS=' ' read zig_target target <<< "${t}"
             urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+
+            # Determine binary prefix (vere32 or vere64)
+            if [[ "${{ matrix.bits }}" == "32" ]]; then
+              binary_prefix="vere32"
+            else
+              binary_prefix="vere64"
+            fi
+
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
-              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
+              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
             else
-              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
+              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
             fi
 
             args=""
