@@ -914,8 +914,8 @@ mesa_etch_pact_to_buf(c3_y* buf_y, c3_h cap_h, u3_mesa_pact *pac_u) {
     u3_sifter sif_u;
     sifter_init(&sif_u, ech_u.buf_y, ech_u.len_w);
     _mesa_sift_pact(&sif_u, &poc_u);
-    if ( sif_u.rem_w && !sif_u.err_c ) {
-      u3l_log("mesa: etch roundtrip failed: %u trailing bytes", sif_u.rem_w);
+    if ( sif_u.rem_h && !sif_u.err_c ) {
+      u3l_log("mesa: etch roundtrip failed: %u trailing bytes", sif_u.rem_h);
       _sift_fail(&sif_u, "trailing bytes");
     }
     if ( sif_u.err_c ) {
@@ -1096,7 +1096,7 @@ _mesa_encode_path(c3_h len_h, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_w[sab_u.len_h - 1] = 0;
+        sab_u.buf_w[sab_u.len_w - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);
@@ -1157,7 +1157,7 @@ _test_cmp_name(u3_mesa_name* hav_u, u3_mesa_name* ned_u)
 
   cmp_buffer(her_u, sizeof(ned_u->her_u), "name: ships differ");
 
-  cmp_scalar(rif_w, "name: rifts", "%u");
+  cmp_scalar(rif_h, "name: rifts", "%u");
   cmp_scalar(boq_y, "name: bloqs", "%u");
   cmp_scalar(nit_o, "name: inits", "%u");
   cmp_scalar(aut_o, "name: auths", "%u");
@@ -1185,8 +1185,8 @@ _test_cmp_data(u3_mesa_data* hav_u, u3_mesa_data* ned_u)
     cmp_buffer(aut_u.has_y, 2, "data: hashes");
   }
 
-  cmp_scalar(len_w, "data: fragments-lengths", "%u");
-  cmp_buffer(fra_y, ned_u->len_w, "data: fragments");
+  cmp_scalar(len_h, "data: fragments-lengths", "%u");
+  cmp_buffer(fra_y, ned_u->len_h, "data: fragments");
 
   return ret_i;
 }
@@ -1216,8 +1216,8 @@ _test_pact(u3_mesa_pact* pac_u)
   sifter_init(&sif_u, buf_y, len_w);
   _mesa_sift_pact(&sif_u, &nex_u);
 
-  if ( sif_u.rem_w && !sif_u.err_c ) {
-    fprintf(stderr, "pact: sift failed len=%"PRIc3_w" sif=%u\r\n", len_w, sif_u.rem_w);
+  if ( sif_u.rem_h && !sif_u.err_c ) {
+    fprintf(stderr, "pact: sift failed len=%"PRIc3_w" sif=%u\r\n", len_w, sif_u.rem_h);
     _log_buf(buf_y, len_w);
     ret_i = 1; goto done;
   }
@@ -1392,7 +1392,7 @@ _test_rand_path(void* ptr_v, c3_s len_s, c3_c* pat_c)
   c3_s not_s = 0;
 
   while ( len_s ) {
-    not_s = _test_rand_gulf_w(ptr_v, len_s);
+    not_s = _test_rand_gulf_h(ptr_v, len_s);
     _test_rand_knot(ptr_v, not_s, pat_c);
     pat_c[not_s] = '/';
     pat_c += not_s + 1;
@@ -1415,9 +1415,9 @@ static void
 _test_make_name(void* ptr_v, c3_s pat_s, u3_mesa_name* nam_u)
 {
   _test_rand_bytes(ptr_v, 16, (c3_y*)nam_u->her_u);
-  nam_u->rif_w = _test_rand_half(ptr_v);
+  nam_u->rif_h = _test_rand_half(ptr_v);
 
-  nam_u->pat_s = _test_rand_gulf_w(ptr_v, pat_s);
+  nam_u->pat_s = _test_rand_gulf_h(ptr_v, pat_s);
   nam_u->pat_c = c3_malloc(nam_u->pat_s + 1);
   _test_rand_path(ptr_v, nam_u->pat_s, nam_u->pat_c);
   nam_u->pat_c[nam_u->pat_s] = 0;
@@ -1466,9 +1466,9 @@ _test_make_data(void* ptr_v, u3_mesa_data* dat_u)
     default: break;
   }
 
-  dat_u->len_w = _test_rand_gulf_w(ptr_v, 1024);
-  dat_u->fra_y = c3_calloc(dat_u->len_w);
-  _test_rand_bytes(ptr_v, dat_u->len_w, dat_u->fra_y);
+  dat_u->len_h = _test_rand_gulf_h(ptr_v, 1024);
+  dat_u->fra_y = c3_calloc(dat_u->len_h);
+  _test_rand_bytes(ptr_v, dat_u->len_h, dat_u->fra_y);
 }
 
 static void
@@ -1502,7 +1502,7 @@ _test_rand_pact(c3_h bat_h)
   u3_mesa_pact pac_u;
   void*        ptr_v = 0;
 
-  fprintf(stderr, "pact: test roundtrip %u random packets\r\n", bat_w);
+  fprintf(stderr, "pact: test roundtrip %u random packets\r\n", bat_h);
 
   for ( c3_h i_h = 0; i_h < bat_h; i_h++ ) {
     _test_make_pact(ptr_v, &pac_u);
@@ -1533,7 +1533,7 @@ _test_sift_page()
     u3r_chubs(0, 2, nam_u->her_u, her);
     u3z(her);
   }
-  nam_u->rif_w = 15;
+  nam_u->rif_h = 15;
   nam_u->pat_c = "foo/bar";
   nam_u->pat_s = strlen(nam_u->pat_c);
   nam_u->boq_y = 13;
@@ -1543,7 +1543,7 @@ _test_sift_page()
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
   dat_u->aut_u.typ_e = AUTH_NONE;
   dat_u->tob_d = 1000;
-  dat_u->len_w = 1024;
+  dat_u->len_h = 1024;
   dat_u->fra_y = c3_calloc(1024);
   // dat_u->fra_y[1023] = 1;
 
@@ -1578,7 +1578,7 @@ _setup()
   u3_cue_xeno*  sil_u;
   u3_weak       pil;
 
-  u3C.wag_w |= u3o_hashless;
+  u3C.wag_h |= u3o_hashless;
   u3m_boot_lite(1 << 26);
   sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {

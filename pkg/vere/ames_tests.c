@@ -17,16 +17,16 @@ static void
 _test_ames(void)
 {
   u3_lane lan_u;
-  lan_u.pip_w = 0x7f000001;
+  lan_u.pip_h = 0x7f000001;
   lan_u.por_s = 12345;
 
   u3_noun lan = u3_ames_encode_lane(lan_u);
   u3_lane nal_u = u3_ames_decode_lane(u3k(lan));
   u3_lane nal_u2 = u3_ames_decode_lane(lan);
 
-  if ( !(lan_u.pip_w == nal_u.pip_w && lan_u.por_s == nal_u.por_s) ) {
+  if ( !(lan_u.pip_h == nal_u.pip_h && lan_u.por_s == nal_u.por_s) ) {
     fprintf(stderr, "ames: lane fail (a)\r\n");
-    fprintf(stderr, "pip: %d, por: %d\r\n", nal_u.pip_w, nal_u.por_s);
+    fprintf(stderr, "pip: %d, por: %d\r\n", nal_u.pip_h, nal_u.por_s);
     exit(1);
   }
 }
@@ -48,8 +48,8 @@ _test_stun_addr_roundtrip(u3_lane* inn_u)
     ret_i = 1;
   }
   else {
-    if ( lan_u.pip_w != inn_u->pip_w ) {
-      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_w, inn_u->pip_w);
+    if ( lan_u.pip_h != inn_u->pip_h ) {
+      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_h, inn_u->pip_h);
       ret_i = 1;
     }
 
@@ -65,7 +65,7 @@ _test_stun_addr_roundtrip(u3_lane* inn_u)
 static c3_i
 _test_stun(void)
 {
-  u3_lane inn_u = { .pip_w = 0x7f000001, .por_s = 13337 };
+  u3_lane inn_u = { .pip_h = 0x7f000001, .por_s = 13337 };
   c3_h    len_w = 256;
 
   while ( len_w-- ) {
@@ -73,7 +73,7 @@ _test_stun(void)
       return 1;
     }
 
-    inn_u.pip_w++;
+    inn_u.pip_h++;
     inn_u.por_s++;
   }
 
