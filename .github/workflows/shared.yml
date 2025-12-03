@@ -71,6 +71,12 @@ jobs:
           echo
           swapon --show
           echo
+      
+      - name: Set memory overcommit
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+          echo "vm.overcommit_memory=1" | sudo tee -a /etc/sysctl.conf
+          sysctl vm.overcommit_memory
 
       - uses: mlugg/setup-zig@v2
         with:
