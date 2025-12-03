@@ -1514,7 +1514,7 @@ u3m_soft_cax(u3_funq fun_f,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(pro, u3_none);
     }
 #endif
@@ -1622,7 +1622,7 @@ u3m_soft_run(u3_noun gul,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(pro, u3_none);
     }
 #endif

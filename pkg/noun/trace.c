@@ -1082,7 +1082,7 @@ u3t_etch_meme(c3_w mod_w)
   bar_c[dol] = '$';
 #ifdef U3_CPU_DEBUG
   if (max_f > 0.0) {
-    bar_c[inc_w] = '|';
+    bar_c[inc_h] = '|';
   }
 #endif
 

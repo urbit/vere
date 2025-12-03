@@ -1102,7 +1102,7 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 
     if ( mas_w != fas_w ) {
       fprintf(stderr, "loom: image checksum mismatch: "
-                      "page %d, mem_w %x, fil_w %x\r\n",
+                      "page %" PRIc3_w ", mem_w %" PRIxc3_w ", fil_w %" PRIxc3_w "\r\n",
                       pag_w, mas_w, fas_w);
       return c3n;
     }
