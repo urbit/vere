@@ -13,7 +13,7 @@
       typedef ssize_t c3_zs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
-      typedef uint32_t c3_h;  // -> s/b 32-bit always
+      typedef uint32_t c3_h;
       typedef int32_t c3_hs;
       typedef uint16_t c3_s;
       typedef int16_t c3_ss;
@@ -25,7 +25,6 @@
       typedef uint8_t c3_o;   // loobean
       typedef uint8_t c3_g;   // u3a_word_bits log
       typedef uint32_t c3_m;  // mote; also c3_l; LSB first a-z 4-char string.
-      typedef uint32_t c3_h;  // fixed 32-bit
       #ifdef VERE64
         typedef uint64_t c3_l;  // little; 63-bit unsigned integer
         typedef uint64_t c3_w;  // word: noun-sized integer
