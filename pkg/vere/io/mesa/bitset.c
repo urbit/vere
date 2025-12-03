@@ -3,11 +3,12 @@
 
 #include "vere.h"
 
-void bitset_init(u3_bitset* bit_u, c3_d len_w, arena* are_u)
+void bitset_init(u3_bitset* bit_u, c3_d len_d, arena* are_u)
 {
-  bit_u->len_w = len_w;
-  bit_u->buf_y = new(are_u, c3_y, (len_w >> 3) + 1);
-  memset(bit_u->buf_y, 0, (len_w >> 3) + 1);
+  u3_assert( UINT32_MAX >= len_d );
+  bit_u->len_h = len_d;
+  bit_u->buf_y = new(are_u, c3_y, (len_d >> 3) + 1);
+  memset(bit_u->buf_y, 0, (len_d >> 3) + 1);
 }
 
 static c3_y
@@ -19,68 +20,68 @@ _popcnt(c3_y num_y)
 static void
 _log_bitset(u3_bitset* bit_u)
 {
-  c3_w_new cur_w = 0;
-  while( cur_w < bit_u->len_w ) {
-    if ( c3y == bitset_has(bit_u, cur_w) ) {
-      u3l_log("%u", cur_w);
+  c3_h cur_h = 0;
+  while( cur_h < bit_u->len_h ) {
+    if ( c3y == bitset_has(bit_u, cur_h) ) {
+      u3l_log("%u", cur_h);
     }
-    cur_w++;
+    cur_h++;
   }
 }
 
-c3_w_new
+c3_h
 bitset_wyt(u3_bitset* bit_u)
 {
-  c3_w_new ret_w = 0;
-  c3_w_new len_w = (bit_u->len_w >> 3);
-  for(int i = 0; i < len_w; i++ ) {
-    ret_w += _popcnt(bit_u->buf_y[i]);
+  c3_h ret_h = 0;
+  c3_h len_h = (bit_u->len_h >> 3);
+  for(int i = 0; i < len_h; i++ ) {
+    ret_h += _popcnt(bit_u->buf_y[i]);
   }
-  return ret_w;
+  return ret_h;
 }
 
-void bitset_put(u3_bitset* bit_u, c3_w_new mem_w)
+void bitset_put(u3_bitset* bit_u, c3_h mem_h)
 {
-  if (( mem_w > bit_u->len_w )) {
-    u3l_log("overrun %u, %" PRIc3_d, mem_w, bit_u->len_w);
+  if (( mem_h > bit_u->len_h )) {
+    u3l_log("overrun %u, %u", mem_h, bit_u->len_h);
     return;
   }
-  c3_w_new idx_w = mem_w >> 3;
-  c3_w_new byt_y = bit_u->buf_y[idx_w];
-  c3_y rem_y = mem_w & 0x7;
+  c3_h idx_h = mem_h >> 3;
+  c3_h byt_h = bit_u->buf_y[idx_h];
+  c3_y rem_y = mem_h & 0x7;
   c3_y mas_y = (1 << rem_y);
-  bit_u->buf_y[idx_w] = byt_y | mas_y;
+  bit_u->buf_y[idx_h] = byt_h | mas_y;
 }
 
 c3_o
-bitset_has(u3_bitset* bit_u, c3_w_new mem_w) {
-  if (( mem_w > bit_u->len_w )) {
-    u3l_log("overrun %u, %" PRIc3_d, mem_w, bit_u->len_w);
+bitset_has(u3_bitset* bit_u, c3_h mem_h) {
+  if (( mem_h > bit_u->len_h )) {
+    u3l_log("overrun %u, %u", mem_h, bit_u->len_h);
     return c3n;
   }
 
-  u3_assert( mem_w < bit_u->len_w );
-  c3_w_new idx_w = mem_w >> 3;
-  c3_y rem_y = mem_w & 0x7;
-  return __( (bit_u->buf_y[idx_w] >> rem_y) & 0x1);
+  u3_assert( mem_h < bit_u->len_h );
+  c3_h idx_h = mem_h >> 3;
+  c3_y rem_y = mem_h & 0x7;
+  return __( (bit_u->buf_y[idx_h] >> rem_y) & 0x1);
 }
 
 void
-bitset_del(u3_bitset* bit_u, c3_w_new mem_w)
+bitset_del(u3_bitset* bit_u, c3_h mem_h)
 {
-  u3_assert( mem_w < bit_u->len_w );
-  c3_w_new idx_w = mem_w >> 3;
-  c3_w_new byt_y = bit_u->buf_y[idx_w];
-  c3_y rem_y = mem_w & 0x7;
+  u3_assert( mem_h < bit_u->len_h );
+  c3_h idx_h = mem_h >> 3;
+  c3_h byt_h = bit_u->buf_y[idx_h];
+  c3_y rem_y = mem_h & 0x7;
   c3_y mas_y = ~(1 << rem_y);
-  bit_u->buf_y[idx_w] &= mas_y;
+  bit_u->buf_y[idx_h] &= mas_y;
 }
 
 
 
 
 #ifdef BITSET_TEST
-c3_w_new main()
+c3_h main()
 {
   u3_bitset bit_u;
   bitset_init(&bit_u, 500);
@@ -89,8 +90,8 @@ c3_w_new main()
   bitset_put(&bit_u, 50);
   bitset_put(&bit_u, 100);
 
-  c3_w_new wyt_w = bitset_wyt(&bit_u);
-  if ( 3 != wyt_w ) {
+  c3_h wyt_h = bitset_wyt(&bit_u);
+  if ( 3 != wyt_h ) {
     u3l_log("wyt failed have %u expect %u", wyt_w, 3);
     exit(1);
   }
@@ -112,10 +113,10 @@ c3_w_new main()
     exit(1);
   }
 
-  wyt_w = bitset_wyt(&bit_u);
+  wyt_h = bitset_wyt(&bit_u);
 
-  if ( 2 != wyt_w ) {
-    u3l_log("wyt failed have %u expect %u", wyt_w, 2);
+  if ( 2 != wyt_h ) {
+    u3l_log("wyt failed have %u expect %u", wyt_h, 2);
     exit(1);
   }
   return 0;

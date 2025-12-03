@@ -324,7 +324,7 @@ u3qg_plot_met(u3_noun a_p, u3_noun b_p)
   c3_g out_g;
   c3_w sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
 
-  return u3nc(out_g, u3i_word_new(sep_w));
+  return u3nc(out_g, u3i_half(sep_w));
 }
 
 u3_noun

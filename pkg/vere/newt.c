@@ -294,7 +294,7 @@ u3_noun
 u3_newt_moat_info(u3_moat* mot_u)
 {
   u3_meat*  met_u = mot_u->ext_u;
-  c3_w_new      len_w = 0;
+  c3_h      len_w = 0;
 
   while ( met_u ) {
     len_w++;
@@ -302,7 +302,7 @@ u3_newt_moat_info(u3_moat* mot_u)
   }
   return u3_pier_mass(
     c3__moat,
-    u3i_list(u3_pier_mase("pending-inbound", u3i_word_new(len_w)),
+    u3i_list(u3_pier_mase("pending-inbound", u3i_half(len_w)),
              u3_none));
 }
 
@@ -312,7 +312,7 @@ void
 u3_newt_moat_slog(u3_moat* mot_u)
 {
   u3_meat* met_u = mot_u->ext_u;
-  c3_w_new     len_w = 0;
+  c3_h     len_w = 0;
 
     while ( met_u ) {
       len_w++;

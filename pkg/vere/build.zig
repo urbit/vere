@@ -7,10 +7,12 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
-    const pace = b.option([]const u8, "pace", "") orelse
-        @panic("Missing required option: pace");
-    const version = b.option([]const u8, "version", "") orelse
-        @panic("Missing required option: version");
+    const pace = b.option([]const u8, "pace", "") orelse "live";
+    // @panic("Missing required option: pace");
+    const version = b.option([]const u8, "version", "") orelse "3.5";
+    // @panic("Missing required option: version");
+    // XX re-enable for migration work
+    // const vere32 = b.option(bool, "vere32", "Compile in 32-bit mode") orelse false;
 
     const pkg_vere = b.addStaticLibrary(.{
         .name = "vere",
@@ -53,6 +55,13 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .copt = copts,
     });
+
+    // XX re-enable for migration work
+    // const pkg_past = if (vere32) b.dependency("pkg_past", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    //     .copt = copts,
+    // }) else null;
 
     const avahi = b.dependency("avahi", .{
         .target = target,
@@ -145,7 +154,9 @@ pub fn build(b: *std.Build) !void {
     }
     pkg_vere.linkLibrary(natpmp.artifact("natpmp"));
     pkg_vere.linkLibrary(curl.artifact("curl"));
+
     pkg_vere.linkLibrary(gmp.artifact("gmp"));
+
     pkg_vere.linkLibrary(h2o.artifact("h2o"));
     pkg_vere.linkLibrary(libuv.artifact("libuv"));
     pkg_vere.linkLibrary(lmdb.artifact("lmdb"));
@@ -156,6 +167,10 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
+    // XX re-enable for migration work
+    // if (vere32) {
+    //     pkg_vere.linkLibrary(pkg_past.?.artifact("past"));
+    // }
     pkg_vere.linkLibC();
 
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -172,6 +187,15 @@ pub fn build(b: *std.Build) !void {
         try files.appendSlice(&.{
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",
+        });
+    }
+
+    if (t.os.tag == .windows) {
+        pkg_vere.addIncludePath(b.path("platform/windows"));
+        try files.appendSlice(&.{
+            "platform/windows/ptty.c",
+            "platform/windows/ctrlc.c",
+            "platform/windows/daemon.c",
         });
     }
 
@@ -243,5 +267,4 @@ const install_headers = [_][]const u8{
     "mars.h",
     "mdns.h",
     "vere.h",
-    "verstable.h",
 };

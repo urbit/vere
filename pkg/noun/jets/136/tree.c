@@ -107,9 +107,30 @@ static u3j_harm _136_hex_loss_a[] = {{".2", u3we_loss}, {}};
 static u3j_harm _136_hex_lune_a[] = {{".2", u3we_lune}, {}};
 
 
+static u3j_harm _136_hex__adler32_a[] = {{".2", u3we_adler32, c3y}, {}};
+static u3j_core  _136_hex__adler_d[] =
+  { { "adler32", 7, _136_hex__adler32_a, 0, no_hashes },
+    {}
+  };
 static u3j_harm _136_hex__crc32_a[] = {{".2", u3we_crc32}, {}};
+static u3j_core _136_hex__crc_d[] =
+  { {"crc32", 7, _136_hex__crc32_a, 0, no_hashes },
+    {}
+  };
 
-static u3j_core _136_hex__crc_d[] = {{"crc32", 7, _136_hex__crc32_a, 0, no_hashes }, {}};
+static u3j_core _136_hex_checksum_d[] =
+  { { "adler", 3, 0, _136_hex__adler_d, no_hashes },
+    { "crc", 3, 0, _136_hex__crc_d, no_hashes},
+    {}
+  };
+
+
+static u3j_harm _136_hex__decompress_zlib_a[] = {{".2", u3we_decompress_zlib}, {}};
+static u3j_harm _136_hex__decompress_gzip_a[] = {{".2", u3we_decompress_gzip}, {}};
+static u3j_core _136_hex__zlib_d[] = {
+  {"decompress-zlib", 7, _136_hex__decompress_zlib_a, 0, no_hashes },
+  {"decompress-gzip", 7, _136_hex__decompress_gzip_a, 0, no_hashes },
+  {}};
 
 
 static u3j_harm _136_hex_coed__ed_scad_a[] = {{".2", u3wee_scad}, {}};
@@ -284,6 +305,7 @@ static u3j_harm _136_pen_loot_a[] = {{".2", u3wf_loot}, {}};
 static u3j_harm _136_pen__ut_crop_a[] = {{".2", u3wfu_crop}, {}};
 static u3j_harm _136_pen__ut_fish_a[] = {{".2", u3wfu_fish}, {}};
 static u3j_harm _136_pen__ut_fuse_a[] = {{".2", u3wfu_fuse}, {}};
+static u3j_harm _136_pen__ut_redo_a[] = {{".2", u3wfu_redo}, {}};
 static u3j_harm _136_pen__ut_mint_a[] = {{".2", u3wfu_mint}, {}};
 static u3j_harm _136_pen__ut_mull_a[] = {{".2", u3wfu_mull}, {}};
 
@@ -306,6 +328,7 @@ static u3j_core _136_pen__ut_d[] =
     { "crop", 7, _136_pen__ut_crop_a, 0, no_hashes },
     { "fish", 7, _136_pen__ut_fish_a, 0, no_hashes },
     { "fuse", 7, _136_pen__ut_fuse_a, 0, no_hashes },
+    { "redo", 7, _136_pen__ut_redo_a, 0, no_hashes },
     { "mint", 7, _136_pen__ut_mint_a, 0, no_hashes },
     { "mull", 7, _136_pen__ut_mull_a, 0, no_hashes },
     { "nest", 7, 0, _136_pen__ut_nest_d, no_hashes },
@@ -795,6 +818,60 @@ static u3j_core _136_hex_chacha_d[] =
     {}
   };
 
+
+//+|  %utilities
+static u3j_harm _136_hex_bytestream_rip_octs_a[] = {{".2", u3we_bytestream_rip_octs, c3y}, {}};
+static u3j_harm _136_hex_bytestream_cat_octs_a[] = {{".2", u3we_bytestream_cat_octs, c3y}, {}};
+static u3j_harm _136_hex_bytestream_can_octs_a[] = {{".2", u3we_bytestream_can_octs, c3y}, {}};
+//+|  %read-byte
+static u3j_harm _136_hex_bytestream_read_byte_a[] = {{".2", u3we_bytestream_read_byte, c3y}, {}};
+//+|  %read-octs
+static u3j_harm _136_hex_bytestream_read_octs_a[] = {{".2", u3we_bytestream_read_octs, c3y}, {}};
+//+|  %navigation
+static u3j_harm _136_hex_bytestream_skip_line_a[] = {{".2", u3we_bytestream_skip_line, c3y}, {}};
+static u3j_harm _136_hex_bytestream_find_byte_a[] = {{".2", u3we_bytestream_find_byte, c3y}, {}};
+static u3j_harm _136_hex_bytestream_seek_byte_a[] = {{".2", u3we_bytestream_seek_byte, c3y}, {}};
+//+|  %transformation
+static u3j_harm _136_hex_bytestream_chunk_a[] = {{".2", u3we_bytestream_chunk}, {}};
+static u3j_harm _136_hex_bytestream_extract_a[] = {{".2", u3we_bytestream_extract}, {}};
+static u3j_harm _136_hex_bytestream_fuse_extract_a[] = {{".2", u3we_bytestream_fuse_extract}, {}};
+//+|  %bitstream
+static u3j_harm _136_hex_bytestream_need_bits_a[] = {{".2", u3we_bytestream_need_bits}, {}};
+static u3j_harm _136_hex_bytestream_drop_bits_a[] = {{".2", u3we_bytestream_drop_bits}, {}};
+// static u3j_harm _136_hex_bytestream_skip_bits_a[] = {{".2", u3we_bytestream_skip_bits}, {}};
+static u3j_harm _136_hex_bytestream_peek_bits_a[] = {{".2", u3we_bytestream_peek_bits}, {}};
+static u3j_harm _136_hex_bytestream_read_bits_a[] = {{".2", u3we_bytestream_read_bits}, {}};
+// static u3j_harm _136_hex_bytestream_read_need_bits_a[] = {{".2", u3we_bytestream_read_need_bits}, {}};
+static u3j_harm _136_hex_bytestream_byte_bits_a[] = {{".2", u3we_bytestream_byte_bits}, {}};
+
+static u3j_core _136_hex_bytestream_d[] =
+  { //+|  %utilities
+    {"rip-octs", 7, _136_hex_bytestream_rip_octs_a, 0, no_hashes },
+    {"cat-octs", 7, _136_hex_bytestream_cat_octs_a, 0, no_hashes },
+    {"can-octs", 7, _136_hex_bytestream_can_octs_a, 0, no_hashes },
+    //+|  %navigation
+    {"skip-line", 7, _136_hex_bytestream_skip_line_a, 0, no_hashes },
+    {"find-byte", 7, _136_hex_bytestream_find_byte_a, 0, no_hashes },
+    {"seek-byte", 7, _136_hex_bytestream_seek_byte_a, 0, no_hashes },
+    //+|  %read-byte
+    {"read-byte", 7, _136_hex_bytestream_read_byte_a, 0, no_hashes },
+    //+|  %read-octs
+    {"read-octs", 7, _136_hex_bytestream_read_octs_a, 0, no_hashes },
+    //+|  %transformation
+    {"chunk", 7, _136_hex_bytestream_chunk_a, 0, no_hashes },
+    {"extract", 7, _136_hex_bytestream_extract_a, 0, no_hashes },
+    {"fuse-extract", 7, _136_hex_bytestream_fuse_extract_a, 0, no_hashes },
+    //+|  %bitstream
+    {"need-bits", 7, _136_hex_bytestream_need_bits_a, 0, no_hashes },
+    {"drop-bits", 7, _136_hex_bytestream_drop_bits_a, 0, no_hashes },
+    // {"skip-bits", 7, _136_hex_bytestream_skip_bits_a, 0, no_hashes },
+    {"peek-bits", 7, _136_hex_bytestream_peek_bits_a, 0, no_hashes },
+    {"read-bits", 7, _136_hex_bytestream_read_bits_a, 0, no_hashes },
+    // {"read-need-bits", 7, _136_hex_bytestream_read_need_bits_a, 0, no_hashes },
+    {"byte-bits", 7, _136_hex_bytestream_byte_bits_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_harm _136_hex_json_de_a[] = {{".2", u3we_json_de}, {}};
 static u3j_harm _136_hex_json_en_a[] = {{".2", u3we_json_en}, {}};
 static u3j_core _136_hex_json_d[] =
@@ -874,7 +951,7 @@ static u3j_core _136_non_d[] =
   };
 
 
-static u3j_harm _136_hex_lia_run_a[] = {{".2", u3we_lia_run, c3y}, {}};
+static u3j_harm _136_hex_lia_run_v1_a[] = {{".2", u3we_lia_run_v1, c3y}, {}};
 
 static u3j_harm _136_hex_lia_run_once_inner_a[] = {{".2", u3we_lia_run_once, c3y}, {}};
 
@@ -884,7 +961,7 @@ static u3j_core _136_hex_lia_run_once_d[] = {
 };
 
 static u3j_core _136_hex_lia_monad_d[] = {
-  { "run-v0", 7, _136_hex_lia_run_a, 0, no_hashes },
+  { "run-v1", 7, _136_hex_lia_run_v1_a, 0, no_hashes },
   { "run-once-v0", 7, 0, _136_hex_lia_run_once_d, no_hashes },
   {}
 };
@@ -915,7 +992,7 @@ static u3j_core _136_hex_lia_sur_d[] = {
 };
 
 static u3j_core _136_hex_wasm_engine_sur_d[] = {
-  { "monad-sur-v0", 3, 0, _136_hex_lia_sur_d, no_hashes },
+  { "monad-sur-v1", 3, 0, _136_hex_lia_sur_d, no_hashes },
   {}
 };
 
@@ -950,7 +1027,10 @@ static u3j_core _136_hex_d[] =
     { "secp",    6, 0, _136_hex_secp_d,   no_hashes },
     { "mimes",  31, 0, _136_hex_mimes_d,  no_hashes },
     { "json",   31, 0, _136_hex_json_d,   no_hashes },
+    { "checksum", 15, 0, _136_hex_checksum_d, no_hashes},
     { "wasm-sur-v0", 3, 0, _136_hex_wasm_sur_d, no_hashes },
+    { "bytestream-v0", 31, 0, _136_hex_bytestream_d, no_hashes},
+    { "zlib-v0", 31, 0, _136_hex__zlib_d, no_hashes },
     {}
   };
 
@@ -1139,7 +1219,7 @@ static u3j_core _136_two_d[] =
     { "mix",  7, _136_two_mix_a, 0, no_hashes },
     { "mor",  7, _136_two_mor_a, 0, no_hashes },
     { "mug",  7, _136_two_mug_a, 0, no_hashes },
-    { "muk", 59, _136_two_muk_a, 0, no_hashes },
+    { "muk",  7, _136_two_muk_a, 0, no_hashes },
     { "rap",  7, _136_two_rap_a, 0, no_hashes },
     { "rep",  7, _136_two_rep_a, 0, no_hashes },
     { "rev",  7, _136_two_rev_a, 0, no_hashes },

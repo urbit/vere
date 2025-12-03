@@ -33,18 +33,18 @@ _cn_v1_prog_free(u3n_v1_prog* pog_u)
   pog_u->cal_u.sit_u = (u3j_v1_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
   pog_u->reg_u.rit_u = (u3j_v1_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
-  c3_w_new dex_w;
-  for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
-    u3a_v1_lose(pog_u->lit_u.non[dex_w]);
+  c3_h dex_h;
+  for (dex_h = 0; dex_h < pog_u->lit_u.len_w; ++dex_h) {
+    u3a_v1_lose(pog_u->lit_u.non[dex_h]);
   }
-  for (dex_w = 0; dex_w < pog_u->mem_u.len_w; ++dex_w) {
-    u3a_v1_lose(pog_u->mem_u.sot_u[dex_w].key);
+  for (dex_h = 0; dex_h < pog_u->mem_u.len_w; ++dex_h) {
+    u3a_v1_lose(pog_u->mem_u.sot_u[dex_h].key);
   }
-  for (dex_w = 0; dex_w < pog_u->cal_u.len_w; ++dex_w) {
-    u3j_v1_site_lose(&(pog_u->cal_u.sit_u[dex_w]));
+  for (dex_h = 0; dex_h < pog_u->cal_u.len_w; ++dex_h) {
+    u3j_v1_site_lose(&(pog_u->cal_u.sit_u[dex_h]));
   }
-  for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
-    u3j_v1_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
+  for (dex_h = 0; dex_h < pog_u->reg_u.len_w; ++dex_h) {
+    u3j_v1_rite_lose(&(pog_u->reg_u.rit_u[dex_h]));
   }
   u3a_v1_free(pog_u);
 }

@@ -181,7 +181,7 @@ _lord_writ_need(u3_lord* god_u, u3_writ_type typ_e)
     wit_u->nex_u = 0;
   }
 
-  god_u->dep_w--;
+  god_u->dep_h--;
 
   if ( typ_e != wit_u->typ_e ) {
     fprintf(stderr, "lord: unexpected %%%s, expected %%%s\r\n",
@@ -247,7 +247,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
     u3_noun a, b, c, pro, wyn, who, fak, eve, mug;
     c3_y pro_y;
     c3_d eve_d;
-    c3_l_new mug_l;
+    c3_h mug_h;
 
     //  XX parse out version values
     //
@@ -257,7 +257,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
        || (c3n == u3r_cell(b, &who, &fak))
        || (c3n == u3r_cell(c, &eve, &mug))
        || (c3n == u3r_safe_chub(eve, &eve_d))
-       || (c3n == u3r_safe_word_new(mug, &mug_l)) )
+       || (c3n == u3r_safe_half(mug, &mug_h)) )
     {
       return _lord_plea_foul(god_u, c3__ripe, dat);
     }
@@ -286,15 +286,17 @@ static void
 _lord_plea_slog(u3_lord* god_u, u3_noun dat)
 {
   u3_noun pri, tan;
-  c3_w_new pri_w;
+  c3_h pri_h;
 
-  if (  (c3n == u3r_cell(dat, &pri, &tan))
-     || (c3n == u3r_safe_word_new(pri, &pri_w)) )
+  if (  (c3y == u3r_cell(dat, &pri, &tan))
+     && (c3y == u3r_safe_half(pri, &pri_h)) )
   {
-    return _lord_plea_foul(god_u, c3__slog, dat);
+    god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_h, u3k(tan));
   }
-
-  god_u->cb_u.slog_f(god_u->cb_u.ptr_v, pri_w, u3k(tan));
+  else
+  {
+    u3l_log("%%bad-slog");
+  }
   u3z(dat);
 }
 
@@ -507,6 +509,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3_noun    tag, dat;
   u3_weak    jar;
 
+#ifdef U3_URTH_MASS
+  //  XX add urth-gc runtime arg to support this
+  // u3_king_grab(NULL);
+#endif
+
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'B');
 #endif
@@ -568,6 +575,10 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   }
 
   u3z(jar);
+
+  //  XX would be good to grab here, but need to do something
+  //  about graceful shutdown
+
   return c3y;
 }
 
@@ -579,12 +590,12 @@ _lord_writ_new(u3_lord* god_u)
   u3_writ* wit_u = c3_calloc(sizeof(*wit_u));
   if ( !god_u->ent_u ) {
     u3_assert( !god_u->ext_u );
-    u3_assert( !god_u->dep_w );
-    god_u->dep_w = 1;
+    u3_assert( !god_u->dep_h );
+    god_u->dep_h = 1;
     god_u->ent_u = god_u->ext_u = wit_u;
   }
   else {
-    god_u->dep_w++;
+    god_u->dep_h++;
     god_u->ent_u->nex_u = wit_u;
     god_u->ent_u = wit_u;
   }
@@ -603,7 +614,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     default: u3_assert(0);
 
     case u3_writ_poke: {
-      u3_noun mil = u3i_words_new(1, &wit_u->wok_u.egg_u->mil_w);
+      u3_noun mil = u3i_halfs(1, &wit_u->wok_u.egg_u->mil_h);
       msg = u3nt(c3__poke, mil, u3k(wit_u->wok_u.job));
     } break;
 
@@ -924,7 +935,7 @@ u3_lord_info(u3_lord* god_u)
     u3i_list(
       u3_pier_mase("live",  god_u->liv_o),
       u3_pier_mase("event", u3i_chub(god_u->eve_d)),
-      u3_pier_mase("queue", u3i_word_new(god_u->dep_w)),
+      u3_pier_mase("queue", u3i_half(god_u->dep_h)),
       u3_newt_moat_info(&god_u->out_u),
       u3_none));
 }
@@ -937,49 +948,69 @@ u3_lord_slog(u3_lord* god_u)
   u3l_log("  lord: live=%s, event=%" PRIu64 ", queue=%u",
           ( c3y == god_u->liv_o ) ? "&" : "|",
           god_u->eve_d,
-          god_u->dep_w);
+          god_u->dep_h);
   u3_newt_moat_slog(&god_u->out_u);
+}
+
+u3m_quac*
+u3_lord_mark(u3_lord* god_u)
+{
+  u3_writ* wit_u = god_u->ext_u;
+  c3_w     siz_w = 0;
+
+  while ( wit_u ) {
+    switch ( wit_u->typ_e ) {
+      case u3_writ_poke: {
+        siz_w += u3a_mark_noun(wit_u->wok_u.job);
+        siz_w += u3_ovum_mark(wit_u->wok_u.egg_u);
+      } break;
+
+      case u3_writ_peek: {
+        siz_w += u3a_mark_noun(wit_u->pek_u->sam);
+      } break;
+
+      default: break;
+    }
+
+    wit_u = wit_u->nex_u;
+  }
+
+  u3m_quac* qac_u = c3_malloc(sizeof(*qac_u));
+  qac_u->nam_c = strdup("lord ipc");
+  qac_u->siz_w = siz_w * 4;
+  qac_u->qua_u = 0;
+
+  return qac_u;
 }
 
 /* u3_lord_init(): instantiate child process.
 */
 u3_lord*
-u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
+u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
 {
   u3_lord* god_u = c3_calloc(sizeof *god_u);
   god_u->liv_o = c3n;
   god_u->pin_o = c3n;
-  god_u->wag_w = wag_w;
+  god_u->wag_h = wag_h;
   god_u->bin_c = u3_Host.wrk_c; //  XX strcopy
   god_u->pax_c = pax_c;  //  XX strcopy
   god_u->cb_u  = cb_u;
 
-  god_u->key_d[0] = key_d[0];
-  god_u->key_d[1] = key_d[1];
-  god_u->key_d[2] = key_d[2];
-  god_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[13];
-    c3_c  key_c[256];
+    c3_c* arg_c[25] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
-    c3_c  eve_c[11];
     c3_c  sap_c[11];
+    c3_c  cev_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
 
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64,
-                   god_u->key_d[0],
-                   god_u->key_d[1],
-                   god_u->key_d[2],
-                   god_u->key_d[3]);
-
-    sprintf(wag_c, "%u", god_u->wag_w);
+    sprintf(wag_c, "%u", god_u->wag_h);
 
     sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
@@ -987,38 +1018,49 @@ u3_lord_init(c3_c* pax_c, c3_w_new wag_w, c3_d key_d[4], u3_lord_cb cb_u)
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
+    sprintf(sap_c, "%u", u3_Host.ops_u.sap_h);
+
     sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
-    sprintf(sap_c, "%u", u3_Host.ops_u.sap_w);
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
-    arg_c[0] = god_u->bin_c;            //  executable
-    arg_c[1] = "work";                  //  protocol
-    arg_c[2] = god_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
+    c3_w i_w = 0;
+    arg_c[i_w++] = god_u->bin_c;              //  executable
+    arg_c[i_w++] = "work";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = god_u->pax_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--snap-time";             //  snapshot interval
+    arg_c[i_w++] = sap_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
 
     if ( u3_Host.ops_u.til_c ) {
-      //  XX validate
-      //
-      arg_c[7] = u3_Host.ops_u.til_c;
-    }
-    else {
-      arg_c[7] = "0";
+      arg_c[i_w++] = "--play-until";          //  play until
+      arg_c[i_w++] = u3_Host.ops_u.til_c;     //  XX validate
     }
 
-    if ( u3C.eph_c == 0 ) {
-      arg_c[8] = "0";
-    }
-    else {
-      arg_c[8] = strdup(u3C.eph_c);     //  ephemeral file
+    if ( u3C.eph_c ) {
+      arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
+      arg_c[i_w++] = strdup(u3C.eph_c);
     }
 
-    arg_c[9] = tos_c;
-    arg_c[10] = per_c;
-    arg_c[11] = sap_c;
-    arg_c[12] = NULL;
+#ifdef U3_OS_windows
+    sprintf(cev_c, "%"PRIu64, (c3_d)u3_Host.cev_u);
+    arg_c[i_w++] = "--win-intr-handle";       //  windows interrupt handler
+    arg_c[i_w++] = cev_c;
+#endif
+
+    u3_assert( i_w < (sizeof(arg_c) / sizeof(*arg_c)) );
 
     uv_pipe_init(u3L, &god_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &god_u->out_u.tim_u);
@@ -1084,7 +1126,7 @@ typedef struct _lord_boot {
   u3_cue_xeno*         sil_u;           //  cue handle
   u3_mojo              inn_u;           //  client's stdin
   u3_moat              out_u;           //  client's stdout
-  c3_w_new                 wag_w;           //  config flags
+  c3_h                 wag_h;           //  config flags
   c3_c*                bin_c;           //  binary path
   c3_c*                pax_c;           //  directory
   c3_d                 key_d[4];        //  image key
@@ -1179,17 +1221,17 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
       case c3__slog: {
         u3_noun pri, tan;
-        c3_w_new pri_w;
+        c3_h pri_h;
 
         if (  (c3n == u3r_cell(dat, &pri, &tan))
-           || (c3n == u3r_safe_word_new(pri, &pri_w)) )
+           || (c3n == u3r_safe_half(pri, &pri_h)) )
         {
           //  XX fatal error
           u3_assert(0);
           // return _lord_plea_foul(god_u, c3__slog, dat);
         }
         else {
-          u3_pier_tank(0, pri_w, u3k(tan));
+          u3_pier_tank(0, pri_h, u3k(tan));
         }
       } break;
 
@@ -1209,44 +1251,33 @@ _lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
 */
 void
 u3_lord_boot(c3_c* pax_c,
-             c3_w_new  wag_w,
+             c3_h  wag_h,
              c3_d  key_d[4],
              u3_noun msg,
              void* ptr_v,
              void (*done_f)(void*, c3_o))
 {
   _lord_boot* bot_u = c3_calloc(sizeof(*bot_u));
-  bot_u->wag_w = wag_w;
+  bot_u->wag_h = wag_h;
   bot_u->bin_c = u3_Host.wrk_c; //  XX strcopy
   bot_u->pax_c = pax_c;  //  XX strcopy
   bot_u->done_f = done_f;
   bot_u->ptr_v = ptr_v;
 
-  bot_u->key_d[0] = key_d[0];
-  bot_u->key_d[1] = key_d[1];
-  bot_u->key_d[2] = key_d[2];
-  bot_u->key_d[3] = key_d[3];
-
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[12];
-    c3_c  key_c[256];
+    c3_c* arg_c[19] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  lom_c[11];
     c3_c  eph_c[11];
     c3_c  tos_c[11];
     c3_c  per_c[11];
+    c3_c  siz_c[21];
     c3_i  err_i;
 
-    sprintf(key_c, "%" PRIx64 ":%" PRIx64 ":%" PRIx64 ":%" PRIx64 "",
-                   bot_u->key_d[0],
-                   bot_u->key_d[1],
-                   bot_u->key_d[2],
-                   bot_u->key_d[3]);
-
-    sprintf(wag_c, "%u", bot_u->wag_w);
+    sprintf(wag_c, "%u", bot_u->wag_h);
 
     sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
@@ -1256,24 +1287,32 @@ u3_lord_boot(c3_c* pax_c,
 
     sprintf(per_c, "%"PRIc3_w, u3_Host.ops_u.per_w);
 
-    arg_c[0] = bot_u->bin_c;            //  executable
-    arg_c[1] = "boot";                  //  protocol
-    arg_c[2] = bot_u->pax_c;            //  path to checkpoint directory
-    arg_c[3] = key_c;                   //  disk key
-    arg_c[4] = wag_c;                   //  runtime config
-    arg_c[5] = hap_c;                   //  hash table size
-    arg_c[6] = lom_c;                   //  loom bex
+    sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
-    if ( u3C.eph_c == 0 ) {
-      arg_c[7] = "0";
-    }
-    else {
-      arg_c[7] = strdup(u3C.eph_c);     //  ephemeral file
+    c3_w i_w = 0;
+    arg_c[i_w++] = bot_u->bin_c;              //  executable
+    arg_c[i_w++] = "boot";                    //  protocol
+    arg_c[i_w++] = "--snap-dir";              //  path to checkpoint directory
+    arg_c[i_w++] = bot_u->pax_c;
+    arg_c[i_w++] = "--runtime-config";        //  runtime config
+    arg_c[i_w++] = wag_c;
+    arg_c[i_w++] = "--temporary-cache-size";  //  hash table size
+    arg_c[i_w++] = hap_c;
+    arg_c[i_w++] = "--loom";                  //  loom bex
+    arg_c[i_w++] = lom_c;
+    arg_c[i_w++] = "--toss";                  //  toss
+    arg_c[i_w++] = tos_c;
+    arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
+    arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--lmdb-map-size";
+    arg_c[i_w++] = siz_c;
+
+    if ( 0 != u3C.eph_c) {
+      arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
+      arg_c[i_w++] = strdup(u3C.eph_c);
     }
 
-    arg_c[8] = tos_c;
-    arg_c[9] = per_c;
-    arg_c[10] = NULL;
+    u3_assert( i_w < (sizeof(arg_c) / sizeof(*arg_c)) );
 
     uv_pipe_init(u3L, &bot_u->inn_u.pyp_u, 0);
     uv_timer_init(u3L, &bot_u->out_u.tim_u);

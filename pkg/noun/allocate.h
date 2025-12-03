@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "rsignal.h"
 
   /**  Constants.
   **/
@@ -20,9 +21,9 @@
 
 #     define u3a_word_bytes  (sizeof(c3_w))
 
-#     define u3a_word_new_bits  32
-#     define u3a_word_new_bits_log 5
-#     define u3a_word_new_bytes_shift  (u3a_word_new_bits_log - 3)
+#     define u3a_half_bits  32
+#     define u3a_half_bits_log 5
+#     define u3a_half_bytes_shift  (u3a_half_bits_log - 3)
 #     define u3a_32_indirect_mask  0x3fffffff
 #     define u3a_32_direct_max  0x7fffffff
 #     define u3a_32_indirect_flag  0x80000000
@@ -37,9 +38,9 @@
 #     define u3a_64_cell_flag  0xc000000000000000ULL
 
 #ifndef VERE64
-#     define u3a_word_bits  u3a_word_new_bits
-#     define u3a_word_bytes_shift  u3a_word_new_bytes_shift
-#     define u3a_word_bits_log u3a_word_new_bits_log
+#     define u3a_word_bits  u3a_half_bits
+#     define u3a_word_bytes_shift  u3a_half_bytes_shift
+#     define u3a_word_bits_log u3a_half_bits_log
 #     define u3a_indirect_mask  u3a_32_indirect_mask 
 #     define u3a_direct_max  u3a_32_direct_max 
 #     define u3a_indirect_flag  u3a_32_indirect_flag
@@ -135,17 +136,17 @@
     */
       typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_m mug_w;
+        c3_h mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
       } u3a_noun;
 
       typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_m mug_w;
+        c3_h mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
         c3_w len_w;
         c3_w buf_w[0];
@@ -153,9 +154,9 @@
 
       typedef struct __attribute__((aligned(4))) {
         c3_w  use_w;
-        c3_m  mug_w;
+        c3_h  mug_h;
         #ifdef VERE64
-          c3_w_new fut_w;
+          c3_h fut_h;
         #endif
         u3_noun hed;
         u3_noun tel;
@@ -210,8 +211,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
+        u3p(u3h_root) lop_p;                  //  %loop hint set
 
-        c3_w fut_w[30];                       //  futureproof buffer
+        c3_w fut_w[29];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -241,7 +243,6 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
           u3p(u3a_dell)  fre_p;               //  free list entry
           u3p(u3a_dell)  erf_p;               //  free list exit
           u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-          u3_post        bot_p;               //  XX s/b rut_p
           c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
           c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
           c3_w           siz_w;               //  directory size
@@ -289,7 +290,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 0x1,                 //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
@@ -867,12 +869,18 @@ u3a_dash(void);
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w_new den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u);
 
-        /* u3a_print_memory(): print memory amount.
+        /* u3a_print_memory(): print memory amount to file descriptor.
         */
           void
           u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w);
+
+        /* u3a_print_memory(): print memory amount to string.
+        */
+          void
+          u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
+
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
         */
           u3m_quac*

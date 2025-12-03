@@ -36,7 +36,7 @@ _ci_slab_init(u3i_slab* sab_u, c3_w len_w)
   u3a_atom* vat_u = (void *)nov_w;
 
   vat_u->use_w = 1;
-  vat_u->mug_w = 0;
+  vat_u->mug_h = 0;
   vat_u->len_w = len_w;
 
 #ifdef U3_MEMORY_DEBUG
@@ -303,26 +303,26 @@ u3i_slab_moot(u3i_slab* sab_u)
 /* u3i_word(): construct u3_atom from c3_w.
 */
 u3_atom
-u3i_word_new(c3_w_new dat_w)
+u3i_half(c3_h dat_h)
 {
 #ifdef VERE64
-  return dat_w;
+  return dat_h;
 #else
   u3_atom pro;
 
   u3t_on(mal_o);
 
-  if ( c3y == u3a_is_cat((c3_w)dat_w) ) {
-    pro = (u3_atom)dat_w;
+  if ( c3y == u3a_is_cat((c3_w)dat_h) ) {
+    pro = (u3_atom)dat_h;
   }
   else {
     c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
     vat_u->use_w = 1;
-    vat_u->mug_w = 0;
+    vat_u->mug_h = 0;
     vat_u->len_w = 1;
-    vat_u->buf_w[0] = dat_w;
+    vat_u->buf_w[0] = dat_h;
 
     pro = u3a_to_pug(u3a_outa(nov_w));
   }
@@ -343,12 +343,12 @@ u3i_chub(c3_d dat_d)
     return (u3_atom)dat_d;
   }
   else {
-    c3_w_new dat_w[2] = {
+    c3_h dat_h[2] = {
       dat_d & 0xffffffffULL,
       dat_d >> 32
     };
 
-    return u3i_words_new(2, dat_w);
+    return u3i_halfs(2, dat_h);
   }
 #else
   u3_atom pro;
@@ -363,7 +363,7 @@ u3i_chub(c3_d dat_d)
     u3a_atom* vat_u = (void *)nov_w;
 
     vat_u->use_w = 1;
-    vat_u->mug_w = 0;
+    vat_u->mug_h = 0;
     vat_u->len_w = 1;
     vat_u->buf_w[0] = dat_d;
 
@@ -412,12 +412,12 @@ u3i_bytes(c3_w        a_w,
 /* u3i_words(): Copy [a] words from [b] into an atom.
 */
 u3_atom
-u3i_words_new(c3_w        a_w,
-          const c3_w_new* b_w)
+u3i_halfs(c3_w        a_w,
+          const c3_h* b_h)
 {
   //  strip trailing zeroes.
   //
-  while ( a_w && !b_w[a_w - 1] ) {
+  while ( a_w && !b_h[a_w - 1] ) {
     a_w--;
   }
 
@@ -425,14 +425,14 @@ u3i_words_new(c3_w        a_w,
     return (u3_atom)0;
   }
   else if ( 1 == a_w ) {
-    return u3i_word_new(b_w[0]);
+    return u3i_half(b_h[0]);
   }
   else {
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 5, a_w);
 
     u3t_on(mal_o);
-    memcpy(sab_u.buf_w, b_w, (size_t)4 * a_w);
+    memcpy(sab_u.buf_w, b_h, (size_t)4 * a_w);
     u3t_off(mal_o);
 
     return u3i_slab_moot(&sab_u);
@@ -465,14 +465,14 @@ u3i_chubs(c3_w        a_w,
 #ifndef VERE64
 // XX: why exactly different?
     {
-      c3_w_new* buf_w = (c3_w_new*)sab_u.buf_w;
-      c3_w_new    i_w;
+      c3_h* buf_h = (c3_h*)sab_u.buf_w;
+      c3_h    i_h;
       c3_d    i_d;
 
-      for ( i_w = 0; i_w < a_w; i_w++ ) {
-        i_d = b_d[i_w];
-        *buf_w++ = i_d & 0xffffffffULL;
-        *buf_w++ = i_d >> 32;
+      for ( i_h = 0; i_h < a_w; i_h++ ) {
+        i_d = b_d[i_h];
+        *buf_h++ = i_d & 0xffffffffULL;
+        *buf_h++ = i_d >> 32;
       }
     }
 #else
@@ -488,7 +488,7 @@ u3_atom
 u3i_word(c3_w dat_w) {
   return
 #ifndef VERE64
-    u3i_word_new(dat_w);
+    u3i_half(dat_w);
 #else
     u3i_chub(dat_w);
 #endif
@@ -499,7 +499,7 @@ u3i_words(c3_w        a_w,
           const c3_w* b_w) {
   return
 #ifndef VERE64
-    u3i_words_new(a_w, b_w);
+    u3i_halfs(a_w, b_w);
 #else
     u3i_chubs(a_w, b_w);
 #endif
@@ -563,7 +563,7 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
     u3a_cell* nov_u = (void *)nov_w;
 
     nov_u->use_w = 1;
-    nov_u->mug_w = 0;
+    nov_u->mug_h = 0;
 
 #ifdef U3_MEMORY_DEBUG
     nov_u->hed = u3_none;
@@ -593,7 +593,7 @@ u3i_cell(u3_noun a, u3_noun b)
     u3a_cell* nov_u = (void *)nov_w;
 
     nov_u->use_w = 1;
-    nov_u->mug_w = 0;
+    nov_u->mug_h = 0;
     nov_u->hed = a;
     nov_u->tel = b;
 
@@ -706,7 +706,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
           *out = big;
           out  = &(old[bit_y]);
           big  = *out;
-          big_u->mug_w = 0;
+          big_u->mug_h = 0;
         }
         else  {
           u3_noun  luz = big;

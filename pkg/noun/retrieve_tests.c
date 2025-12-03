@@ -123,14 +123,14 @@ _test_mug(void)
     c3_w  byt_w = u3r_met(3, str);
     c3_w  wor_w = u3r_met(5, str);
     c3_y* str_y = c3_malloc(byt_w);
-    c3_w_new* str_w = c3_malloc(sizeof(c3_w_new) * wor_w);
+    c3_h* str_h = c3_malloc(sizeof(c3_h) * wor_w);
     c3_d  str_d = c3y;
 
     u3r_bytes(0, byt_w, str_y, str);
-    u3r_words_new(0, wor_w, str_w, str);
+    u3r_halfs(0, wor_w, str_h, str);
 
-    str_d |= str_w[0];
-    str_d |= ((c3_d)str_w[1] << 32ULL);
+    str_d |= str_h[0];
+    str_d |= ((c3_d)str_h[1] << 32ULL);
 
     if ( 0x34d08717 != u3r_mug(str) ) {
       fprintf(stderr, "_test_mug(): fail (i) (1) \r\n");
@@ -140,30 +140,30 @@ _test_mug(void)
       fprintf(stderr, "_test_mug(): fail (i) (2)\r\n");
       fal_o = c3y;
     }
-    if ( 0x34d08717 != u3r_mug_words_new(str_w, wor_w) ) {
+    if ( 0x34d08717 != u3r_mug_halfs(str_h, wor_w) ) {
       fprintf(stderr, "_test_mug(): fail (i) (3)\r\n");
       fal_o = c3y;
     }
-    if ( u3r_mug_words_new(str_w, 2) != u3r_mug_chub(str_d) ) {
+    if ( u3r_mug_halfs(str_h, 2) != u3r_mug_chub(str_d) ) {
       fprintf(stderr, "_test_mug(): fail (i) (4)\r\n");
       fal_o = c3y;
     }
 
     c3_free(str_y);
-    c3_free(str_w);
+    c3_free(str_h);
     u3z(str);
   }
 
   {
-    c3_w_new  som_w[4] = { 0, 0, 0, 1 };
-    u3_noun som    = u3i_words_new(4, som_w);
+    c3_h  som_h[4] = { 0, 0, 0, 1 };
+    u3_noun som    = u3i_halfs(4, som_h);
 
     if ( 0x519bd45c != u3r_mug(som) ) {
       fprintf(stderr, "_test_mug(): fail (j) (1)\r\n");
       fal_o = c3y;
     }
 
-    if ( 0x519bd45c != u3r_mug_words_new(som_w, 4) ) {
+    if ( 0x519bd45c != u3r_mug_halfs(som_h, 4) ) {
       fprintf(stderr, "_test_mug(): fail (j) (2)\r\n");
       fal_o = c3y;
     }
@@ -172,15 +172,15 @@ _test_mug(void)
   }
 
   {
-    c3_w_new  som_w[4] = { 0, 1, 0, 1 };
-    u3_noun som    = u3i_words_new(4, som_w);
+    c3_h  som_h[4] = { 0, 1, 0, 1 };
+    u3_noun som    = u3i_halfs(4, som_h);
 
     if ( 0x540eb8a9 != u3r_mug(som) ) {
       fprintf(stderr, "_test_mug(): fail (k) (1)\r\n");
       fal_o = c3y;
     }
 
-    if ( 0x540eb8a9 != u3r_mug_words_new(som_w, 4) ) {
+    if ( 0x540eb8a9 != u3r_mug_halfs(som_h, 4) ) {
       fprintf(stderr, "_test_mug(): fail (k) (2)\r\n");
       fal_o = c3y;
     }
@@ -189,15 +189,15 @@ _test_mug(void)
   }
 
   {
-    c3_w_new  som_w[4] = { 1, 1, 0, 1 };
-    u3_noun som    = u3i_words_new(4, som_w);
+    c3_h  som_h[4] = { 1, 1, 0, 1 };
+    u3_noun som    = u3i_halfs(4, som_h);
 
     if ( 0x319d28f9 != u3r_mug(som) ) {
       fprintf(stderr, "_test_mug(): fail (l) (1)\r\n");
       fal_o = c3y;
     }
 
-    if ( 0x319d28f9 != u3r_mug_words_new(som_w, 4) ) {
+    if ( 0x319d28f9 != u3r_mug_halfs(som_h, 4) ) {
       fprintf(stderr, "_test_mug(): fail (l) (2)\r\n");
       fal_o = c3y;
     }
@@ -206,15 +206,15 @@ _test_mug(void)
   }
 
   {
-    c3_w_new  som_w[4] = { 0, 0, 0, 0xffff };
-    u3_noun som    = u3i_words_new(4, som_w);
+    c3_h  som_h[4] = { 0, 0, 0, 0xffff };
+    u3_noun som    = u3i_halfs(4, som_h);
 
     if ( 0x5230a260 != u3r_mug(som) ) {
       fprintf(stderr, "_test_mug(): fail (m) (1)\r\n");
       fal_o = c3y;
     }
 
-    if ( 0x5230a260 != u3r_mug_words_new(som_w, 4) ) {
+    if ( 0x5230a260 != u3r_mug_halfs(som_h, 4) ) {
       fprintf(stderr, "_test_mug(): fail (m) (2)\r\n");
       fal_o = c3y;
     }
@@ -239,9 +239,9 @@ _test_mug(void)
 
     //  test mug on maximum direct atom
     //
-    c3_m mug_m = u3r_mug(max);
-    c3_m gum_m = u3r_mug_bytes(max_y, 8);
-    if ( mug_m != gum_m ) {
+    c3_h mug_h = u3r_mug(max);
+    c3_m gum_h = u3r_mug_bytes(max_y, 8);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (n) (2): mug mismatch on max direct\r\n");
       fal_o = c3y;
     }
@@ -267,18 +267,18 @@ _test_mug(void)
 
     //  test mug on minimum indirect atom
     //
-    mug_m = u3r_mug(min);
-    gum_m = u3r_mug_bytes(min_y, 8);
-    if ( mug_m != gum_m ) {
+    mug_h = u3r_mug(min);
+    gum_h = u3r_mug_bytes(min_y, 8);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (o) (2): mug mismatch on min indirect\r\n");
       fal_o = c3y;
     }
 
     //  test word extraction across boundary
     //
-    c3_w_new ext_w[2] = {0, 0};
-    u3r_words_new(0, 2, ext_w, min);
-    if ( 0x0 != ext_w[0] || 0x80000000 != ext_w[1] ) {
+    c3_h ext_h[2] = {0, 0};
+    u3r_halfs(0, 2, ext_h, min);
+    if ( 0x0 != ext_h[0] || 0x80000000 != ext_h[1] ) {
       fprintf(stderr, "_test_mug(): fail (o) (3): word extraction mismatch\r\n");
       fal_o = c3y;
     }
@@ -298,9 +298,9 @@ _test_mug(void)
       fal_o = c3y;
     }
 
-    c3_m mug_m = u3r_mug(max);
-    c3_m gum_m = u3r_mug_bytes(max_y, 4);
-    if ( mug_m != gum_m ) {
+    c3_h mug_h = u3r_mug(max);
+    c3_m gum_h = u3r_mug_bytes(max_y, 4);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (p) (2): mug mismatch at 32-bit boundary\r\n");
       fal_o = c3y;
     }
@@ -317,9 +317,9 @@ _test_mug(void)
       fal_o = c3y;
     }
 
-    mug_m = u3r_mug(bov);
-    gum_m = u3r_mug_bytes(bov_y, 5);
-    if ( mug_m != gum_m ) {
+    mug_h = u3r_mug(bov);
+    gum_h = u3r_mug_bytes(bov_y, 5);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (p) (4): mug mismatch above 32-bit\r\n");
       fal_o = c3y;
     }
@@ -341,9 +341,9 @@ _test_mug(void)
 
     //  test mug on maximum direct atom
     //
-    c3_m mug_m = u3r_mug(max);
-    c3_m gum_m = u3r_mug_bytes(max_y, 4);
-    if ( mug_m != gum_m ) {
+    c3_h mug_h = u3r_mug(max);
+    c3_m gum_h = u3r_mug_bytes(max_y, 4);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (n) (2): mug mismatch on max direct\r\n");
       fal_o = c3y;
     }
@@ -369,18 +369,18 @@ _test_mug(void)
 
     //  test mug on minimum indirect atom
     //
-    mug_m = u3r_mug(min);
-    gum_m = u3r_mug_bytes(min_y, 4);
-    if ( mug_m != gum_m ) {
+    mug_h = u3r_mug(min);
+    gum_h = u3r_mug_bytes(min_y, 4);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (o) (2): mug mismatch on min indirect\r\n");
       fal_o = c3y;
     }
 
     //  test word extraction
     //
-    c3_w_new rac_w = c3y;
-    u3r_words_new(0, 1, &rac_w, min);
-    if ( 0x80000000 != rac_w ) {
+    c3_h rac_h = c3y;
+    u3r_halfs(0, 1, &rac_h, min);
+    if ( 0x80000000 != rac_h ) {
       fprintf(stderr, "_test_mug(): fail (o) (3): word extraction mismatch\r\n");
       fal_o = c3y;
     }
@@ -389,17 +389,17 @@ _test_mug(void)
   }
 #endif
 
-  //  test u3r_mug_words_new with boundary values (both modes)
+  //  test u3r_mug_halfs with boundary values (both modes)
   {
     //  test with array containing zero and maximum 32-bit value
     //
-    c3_w_new bon_w[3] = { 0, 0xffffffff, 0 };
-    u3_noun bon = u3i_words_new(3, bon_w);
+    c3_h bon_h[3] = { 0, 0xffffffff, 0 };
+    u3_noun bon = u3i_halfs(3, bon_h);
 
-    c3_m mug_m = u3r_mug(bon);
-    c3_m gum_m = u3r_mug_words_new(bon_w, 3);
-    if ( mug_m != gum_m ) {
-      fprintf(stderr, "_test_mug(): fail (q) (1): mug_words_new mismatch\r\n");
+    c3_h mug_h = u3r_mug(bon);
+    c3_m gum_h = u3r_mug_halfs(bon_h, 3);
+    if ( mug_h != gum_h ) {
+      fprintf(stderr, "_test_mug(): fail (q) (1): mug_halfs mismatch\r\n");
       fal_o = c3y;
     }
 
@@ -407,12 +407,12 @@ _test_mug(void)
 
     //  test with single maximum 32-bit word
     //
-    c3_w_new max_w[1] = { 0xffffffff };
-    u3_noun max = u3i_words_new(1, max_w);
+    c3_h max_h[1] = { 0xffffffff };
+    u3_noun max = u3i_halfs(1, max_h);
 
-    mug_m = u3r_mug(max);
-    gum_m = u3r_mug_words_new(max_w, 1);
-    if ( mug_m != gum_m ) {
+    mug_h = u3r_mug(max);
+    gum_h = u3r_mug_halfs(max_h, 1);
+    if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (q) (2): mug single word mismatch\r\n");
       fal_o = c3y;
     }
@@ -773,33 +773,33 @@ _test_bytes(void)
     exit(1);
 }
 
-/* _test_words(): test u3r_word_new(), u3r_chub(), u3r_word().
+/* _test_words(): test u3r_half(), u3r_chub(), u3r_word().
 */
 static void
 _test_words(void)
 {
   c3_o fal_o = c3n;
 
-  //  test u3r_word_new() extraction
+  //  test u3r_half() extraction
   //
   {
-    c3_w_new words_w[3] = { 0x12345678, 0xaabbccdd, 0xdeadbeef };
-    u3_noun a = u3i_words_new(3, words_w);
+    c3_h words_h[3] = { 0x12345678, 0xaabbccdd, 0xdeadbeef };
+    u3_noun a = u3i_halfs(3, words_h);
 
-    if ( 0x12345678 != u3r_word_new(0, a) ) {
+    if ( 0x12345678 != u3r_half(0, a) ) {
       fprintf(stderr, "_test_words(): fail (a) (1)\r\n");
       fal_o = c3y;
     }
-    if ( 0xaabbccdd != u3r_word_new(1, a) ) {
+    if ( 0xaabbccdd != u3r_half(1, a) ) {
       fprintf(stderr, "_test_words(): fail (a) (2)\r\n");
       fal_o = c3y;
     }
-    if ( 0xdeadbeef != u3r_word_new(2, a) ) {
+    if ( 0xdeadbeef != u3r_half(2, a) ) {
       fprintf(stderr, "_test_words(): fail (a) (3)\r\n");
       fal_o = c3y;
     }
     //  out of bounds should return 0
-    if ( 0 != u3r_word_new(10, a) ) {
+    if ( 0 != u3r_half(10, a) ) {
       fprintf(stderr, "_test_words(): fail (a) (4)\r\n");
       fal_o = c3y;
     }
@@ -870,12 +870,12 @@ _test_words(void)
     u3_noun a = u3i_chub(0x123456789abcdef0ULL);
 
     //  should extract lower 32 bits
-    if ( 0x9abcdef0 != u3r_word_new(0, a) ) {
+    if ( 0x9abcdef0 != u3r_half(0, a) ) {
       fprintf(stderr, "_test_words(): fail (d) (1) 64-bit\r\n");
       fal_o = c3y;
     }
     //  should extract upper 32 bits
-    if ( 0x12345678 != u3r_word_new(1, a) ) {
+    if ( 0x12345678 != u3r_half(1, a) ) {
       fprintf(stderr, "_test_words(): fail (d) (2) 64-bit\r\n");
       fal_o = c3y;
     }
@@ -926,17 +926,17 @@ _test_safe(void)
     u3z(a);
   }
 
-  //  test u3r_safe_word_new()
+  //  test u3r_safe_half()
   //
   {
-    c3_w_new val_w;
+    c3_h val_h;
 
     //  should succeed for 32-bit values
-    if ( c3n == u3r_safe_word_new(0x12345678, &val_w) || 0x12345678 != val_w ) {
+    if ( c3n == u3r_safe_half(0x12345678, &val_h) || 0x12345678 != val_h ) {
       fprintf(stderr, "_test_safe(): fail (b) (1)\r\n");
       fal_o = c3y;
     }
-    if ( c3n == u3r_safe_word_new(0x7fffffff, &val_w) || 0x7fffffff != val_w ) {
+    if ( c3n == u3r_safe_half(0x7fffffff, &val_h) || 0x7fffffff != val_h ) {
       fprintf(stderr, "_test_safe(): fail (b) (2)\r\n");
       fal_o = c3y;
     }
@@ -945,7 +945,7 @@ _test_safe(void)
     {
       c3_y big_y[5] = { 0x00, 0x00, 0x00, 0x00, 0x01 };
       u3_noun big = u3i_bytes(5, big_y);
-      if ( c3y == u3r_safe_word_new(big, &val_w) ) {
+      if ( c3y == u3r_safe_half(big, &val_h) ) {
         fprintf(stderr, "_test_safe(): fail (b) (3)\r\n");
         fal_o = c3y;
       }
@@ -954,7 +954,7 @@ _test_safe(void)
 
     //  should fail for cells
     u3_noun a = u3nc(1, 2);
-    if ( c3y == u3r_safe_word_new(a, &val_w) ) {
+    if ( c3y == u3r_safe_half(a, &val_h) ) {
       fprintf(stderr, "_test_safe(): fail (b) (4)\r\n");
       fal_o = c3y;
     }
@@ -1011,7 +1011,7 @@ _test_safe(void)
       fal_o = c3y;
     }
 #else
-    //  32-bit mode: should work like u3r_safe_word_new
+    //  32-bit mode: should work like u3r_safe_half
     if ( c3n == u3r_safe_word(0x12345678, &val_w) || 0x12345678 != val_w ) {
       fprintf(stderr, "_test_safe(): fail (d) 32-bit\r\n");
       fal_o = c3y;

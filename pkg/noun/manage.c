@@ -1,13 +1,13 @@
 /// @file
 
 #include "manage.h"
-// #include "v2/manage.h"
-// #include "v3/manage.h"
-// #include "v4/manage.h"
 
 #include <ctype.h>
+#ifndef U3_OS_windows
 #include <dlfcn.h>
+#endif
 #include <errno.h>
+#include <signal.h>
 #if defined(U3_OS_osx)
 #include <execinfo.h>
 #endif
@@ -115,6 +115,7 @@ static rsignal_jmpbuf u3_Signal;
 static _Atomic c3_w u3_Sighow;
 #endif
 
+#ifndef U3_OS_windows
 #include "sigsegv.h"
 
 #ifndef SIGSTKSZ
@@ -122,6 +123,11 @@ static _Atomic c3_w u3_Sighow;
 #endif
 #ifndef NO_OVERFLOW
 static uint8_t Sigstk[SIGSTKSZ];
+#endif
+#endif
+
+#ifdef U3_OS_windows
+#include "veh_handler.h"
 #endif
 
 #if 0
@@ -167,19 +173,25 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 static void
 _cm_signal_handle(c3_m sig_m)
 {
+#ifndef U3_OS_windows
   if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
-  }
-  else {
+  } else
+#endif
+  {
     u3m_signal(sig_m);
   }
 }
 
 #ifndef NO_OVERFLOW
 static void
+#ifndef U3_OS_windows
 _cm_signal_handle_over(int emergency, stackoverflow_context_t scp)
+#else 
+_cm_signal_handle_over(int x)
+#endif
 {
   _cm_signal_handle(c3__over);
 }
@@ -302,15 +314,15 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
   u3H->rod_u.bug.tax = 0;
 
   if ( NULL != stk_u ) {
-    stk_u->off_w = u3H->rod_u.off_w;
-    stk_u->fow_w = u3H->rod_u.fow_w;
+    stk_u->off_h = u3H->rod_u.off_w;
+    stk_u->fow_h = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
     _cm_emergency("recover: top", sig_m);
-    u3C.wag_w |= u3o_check_corrupt;
+    u3C.wag_h |= u3o_check_corrupt;
 
     //  Reset the top road - the problem could be a fat cap.
     //
@@ -375,10 +387,14 @@ _cm_signal_deep(c3_w mil_w)
   }
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   if ( 0 != stackoverflow_install_handler(_cm_signal_handle_over, Sigstk, SIGSTKSZ)) {
     u3l_log("unable to install stack overflow handler");
     abort();
   }
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
@@ -420,7 +436,11 @@ _cm_signal_done(void)
   rsignal_deinstall_handler(SIGVTALRM);
 
 #ifndef NO_OVERFLOW
+#ifndef U3_OS_windows
   stackoverflow_deinstall_handler();
+#else
+  rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
+#endif
 #endif
   {
     struct itimerval itm_u;
@@ -514,6 +534,24 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
+  u3R->lop_p     = u3h_new();
+  u3R->how.fag_w = 0;
+}
+
+static c3_d
+_pave_params(void)
+{
+  //  pam_d bits:
+  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
+  //
+  //    word-size: 0==32, 1==64
+  //    page-size: relative binary-log in bytes
+  //
+  //
+  return 0
+         ^ (u3a_vits << 1)
+         ^ ((u3a_page + 2 - 12) << 3)
+         ^ (U3N_VERLAT << 6);
 }
 
 /* _pave_home(): initialize pristine home road.
@@ -526,7 +564,9 @@ _pave_home(void)
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, sizeof(u3v_home));
-  u3H->ver_w = U3V_VERLAT;
+  u3H->ver_d = U3V_VERLAT;
+  u3H->pam_d = _pave_params();
+
   u3R = &u3H->rod_u;
 
   u3R->rut_p = u3R->hat_p = bot_p;
@@ -540,28 +580,37 @@ STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
 
+STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
+
 /* _find_home(): in restored image, point to home road.
 */
 static void
 _find_home(void)
 {
   c3_d ver_d = *((c3_d*)u3_Loom);
-  c3_o mig_o = c3y;  //  did we migrate?
 
-  switch ( ver_d ) {
-    // case U3V_VER1: u3m_v2_migrate();
-    // case U3V_VER2: u3m_v3_migrate();
-    // case U3V_VER3: u3m_v4_migrate();
-    case U3V_VER4: {
-      mig_o = c3n;
-      break;
-    }
-    default: {
-      fprintf(stderr, "loom: checkpoint version mismatch: "
-                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
-                      ver_d, U3V_VERLAT);
-      abort();
-    }
+  if ( ver_d != U3V_VERLAT ) {
+    fprintf(stderr, "loom: checkpoint version mismatch: "
+                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                    ver_d, U3V_VERLAT);
+    abort();
+  }
+
+  c3_d pam_d = *((c3_d*)u3_Loom + 1);
+
+  if ( pam_d & 1 ) {
+    fprintf(stderr, "word-size mismatch: 64-bit snapshot in 32-bit binary\r\n");
+    abort();
+  }
+  if ( ((pam_d >> 1) & 3) != u3a_vits ) {
+    fprintf(stderr, "virtual-bits mismatch: %" PRIc3_w " in snapshot; %u in binary\r\n",
+                    (c3_w)((pam_d >> 1) & 3), u3a_vits);
+    abort();
+  }
+  if ( (12 + ((pam_d >> 3) & 7)) != (u3a_page + 2) ) {
+    fprintf(stderr, "page-size mismatch: %u in snapshot; %" PRIc3_w " in binary\r\n",
+                    1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
+    abort();
   }
 
   //  NB: the home road is always north
@@ -580,7 +629,7 @@ _find_home(void)
 
   //  check for obvious corruption
   //
-  if ( c3n == mig_o ) {
+  {
     c3_w    nor_w;
     u3_post low_p, hig_p;
     u3m_water(&low_p, &hig_p);
@@ -610,6 +659,22 @@ _find_home(void)
   u3a_loom_sane();
 
   _rod_vaal(u3R);
+
+  if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+    u3j_ream();
+    u3n_ream();
+    u3n_reclaim();
+    u3j_reclaim();
+    u3H->pam_d = _pave_params();
+  }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -703,6 +768,7 @@ bt_cb(void* data,
       int lineno,
       const char* function)
 {
+  #ifndef U3_OS_windows
   struct bt_cb_data* bdata = (struct bt_cb_data *)data;
   bdata->count++;
 
@@ -742,6 +808,8 @@ bt_cb(void* data,
     bdata->pn_c = 0;
     return 1;
   }
+  #endif
+  return 0;
 }
 
 /* _self_path(): get binary self-path.
@@ -764,6 +832,7 @@ _self_path(c3_c *pat_c)
 void
 u3m_stacktrace()
 {
+#ifndef U3_OS_windows
   void* bt_state;
   struct bt_cb_data data = { 0, 0, 0 };
   c3_c* self_path_c[4096] = {0};
@@ -834,6 +903,7 @@ u3m_stacktrace()
     data.fail = 1;
     fprintf(stderr, "Backtrace failed\r\n");
   }
+#endif
 #endif
 }
 
@@ -940,8 +1010,8 @@ u3m_bail(u3_noun how)
 
   // Reset the spin stack pointer
   if ( NULL != stk_u ) {
-    stk_u->off_w = u3R->off_w;
-    stk_u->fow_w = u3R->fow_w;
+    stk_u->off_h = u3R->off_w;
+    stk_u->fow_h = u3R->fow_w;
   }
 
   /* Longjmp, with an underscore.
@@ -1083,8 +1153,8 @@ u3m_leap(c3_w pad_w)
 
   // Add slow stack pointer to rod_u
   if ( NULL != stk_u ) {
-    rod_u->off_w = stk_u->off_w;
-    rod_u->fow_w = stk_u->fow_w;
+    rod_u->off_w = stk_u->off_h;
+    rod_u->fow_w = stk_u->fow_h;
   } 
 
   /* Set up the new road.
@@ -1288,7 +1358,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 #endif
 
   /* Enter internal signal regime.
-  */
+   */
   _cm_signal_deep(mil_w);
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
@@ -1320,7 +1390,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     /* Make sure the inner routine did not create garbage.
     */
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
 #ifdef U3_CPU_DEBUG
       if ( u3R->all.max_w > 1000000 ) {
         u3a_print_memory(stderr, "execute: top", u3R->all.max_w);
@@ -1412,14 +1482,11 @@ u3m_soft_cax(u3_funq fun_f,
   u3_noun why = 0, pro;
   u3_noun cax = u3_nul;
 
-  /* Save and set memo cache harvesting flag.
-  */
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_cash;
-
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
+
+  u3R->how.fag_w |= u3a_flag_cash;
 
   /* Configure the new road.
   */
@@ -1436,7 +1503,6 @@ u3m_soft_cax(u3_funq fun_f,
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
-    u3C.wag_w = wag_w;
 
 #ifdef U3_CPU_DEBUG
     if ( u3R->all.max_w > 1000000 ) {
@@ -1448,7 +1514,7 @@ u3m_soft_cax(u3_funq fun_f,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(pro, u3_none);
     }
 #endif
@@ -1461,7 +1527,6 @@ u3m_soft_cax(u3_funq fun_f,
   }
   else {
     u3t_init();
-    u3C.wag_w = wag_w;
 
     /* Produce - or fall again.
     */
@@ -1514,6 +1579,8 @@ u3m_soft_run(u3_noun gul,
   u3_noun why = 0;
 #endif
 
+  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
+
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1522,8 +1589,7 @@ u3m_soft_run(u3_noun gul,
   */
 
   {
-    // XX review
-    if ( (u3_nul == gul) || (u3C.wag_w & u3o_cash) ) {
+    if ( (u3_nul == gul) || cash_t ) {
       u3R->ski.gul = u3_nul;
     }
     else {
@@ -1532,6 +1598,7 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
+    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 
@@ -1555,7 +1622,7 @@ u3m_soft_run(u3_noun gul,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(pro, u3_none);
     }
 #endif
@@ -1881,8 +1948,6 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_w len_w = u3r_met(3, som);
 
       if ( _(_cm_is_tas(som, len_w)) ) {
-        c3_w len_w = u3r_met(3, som);
-
         if ( str_c ) {
           *(str_c++) = '%';
           u3r_bytes(0, len_w, (c3_y *)str_c, som);
@@ -1900,7 +1965,6 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         return len_w + 2;
       }
       else {
-        c3_w len_w = u3r_met(3, som);
         c3_c *buf_c = c3_malloc(2 + (2 * len_w) + 1);
         c3_w i_w = 0;
         c3_w a_w = 0;
@@ -2047,6 +2111,7 @@ u3m_wall(u3_noun wol)
 static void
 _cm_limits(void)
 {
+#ifndef U3_OS_windows
   struct rlimit rlm;
 
   //  Moar stack.
@@ -2094,6 +2159,7 @@ _cm_limits(void)
     }
   }
 # endif
+#endif
 }
 
 /* u3m_fault(): handle a memory event with libsigsegv protocol.
@@ -2171,8 +2237,6 @@ u3m_save(void)
   u3_post low_p, hig_p;
   u3m_water(&low_p, &hig_p);
 
-  u3a_print_memory(stderr, "loom: save: idle", u3a_idle(u3R));
-
   u3a_wait();
 
   u3_assert(u3R == &u3H->rod_u);
@@ -2240,6 +2304,7 @@ u3m_ward(void)
 static void
 _cm_signals(void)
 {
+#ifndef U3_OS_windows
   if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
     exit(1);
@@ -2249,7 +2314,7 @@ _cm_signals(void)
   //  Block SIGPROF, so that if/when we reactivate it on the
   //  main thread for profiling, we won't get hits in parallel
   //  on other threads.
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
     sigset_t set;
 
     sigemptyset(&set);
@@ -2260,7 +2325,13 @@ _cm_signals(void)
       exit(1);
     }
   }
-# endif
+#endif
+#else
+  if (0 == AddVectoredExceptionHandler(1, _windows_exception_filter)) {
+    u3l_log("boot: vectored exception handler install failed");
+    exit(1);
+  }
+#endif
 }
 
 /* _cm_malloc_ssl(): openssl-shaped malloc
@@ -2307,12 +2378,14 @@ static void
 _cm_crypto(void)
 {
   /* Initialize OpenSSL with loom allocation functions. */
+#ifndef U3_URTH_MASS
   if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
                                      &_cm_realloc_ssl,
                                      &_cm_free_ssl) ) {
     u3l_log("%s", "openssl initialization failed");
     abort();
   }
+#endif
 
   u3je_secp_init();
 }
@@ -2376,7 +2449,7 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
-      u3l_log("see https://docs.urbit.org/manual/getting-started/self-hosted/cloud-hosting"
+      u3l_log("see https://docs.urbit.org/user-manual/running/cloud-hosting"
               " for adding swap space");
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
@@ -2469,10 +2542,10 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 
   /* GC immediately if requested
   */
-  if ( (c3n == nuu_o) && (u3C.wag_w & u3o_check_corrupt) ) {
+  if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
     u3m_grab(u3_none);
-    u3C.wag_w &= ~u3o_check_corrupt;
+    u3C.wag_h &= ~u3o_check_corrupt;
     u3l_log("boot: gc complete");
   }
 

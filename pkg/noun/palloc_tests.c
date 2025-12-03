@@ -6,7 +6,7 @@ struct heap {
   u3p(u3a_dell)  fre_p;               //  free list
   u3p(u3a_dell)  erf_p;               //  free list
   u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-  u3_post        bot_p;               //  XX s/b rut_p
+  u3_post        rut_p;               //  bottom
   c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
   c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
   c3_w           siz_w;               //  directory size
@@ -18,6 +18,7 @@ struct heap {
 struct heap hep_u;
 
 #define HEAP  (hep_u)
+#define BASE  (hep_u.rut_p)
 
 #include "./palloc.c"
 
@@ -57,23 +58,23 @@ _test_print_pages(c3_w max_w)
 
   hep_u.dir_ws = 1;
   hep_u.off_ws = 0;
-  hep_u.bot_p  = 0x1000;
+  hep_u.rut_p  = 0x1000;
 
   for ( i_w = 0; i_w < max_w; i_w++ ) {
     pot_p = page_to_post(i_w);
-    fprintf(stderr, "north at bot=0x%"PRIxc3_w" pag=%"PRIc3_w" == 0x%"PRIxc3_w" == pag=%"PRIc3_w"\n",
-                    hep_u.bot_p, i_w, pot_p, post_to_page(pot_p));
+    fprintf(stderr, "north at rut=0x%"PRIxc3_w" pag=%"PRIc3_w" == 0x%"PRIxc3_w" == pag=%"PRIc3_w"\n",
+                    hep_u.rut_p, i_w, pot_p, post_to_page(pot_p));
   }
 
 
   hep_u.dir_ws = -1;
   hep_u.off_ws = -1;
-  hep_u.bot_p += max_w << u3a_page;
+  hep_u.rut_p += max_w << u3a_page;
 
   for ( i_w = 0; i_w < max_w; i_w++ ) {
     pot_p = page_to_post(i_w);
-    fprintf(stderr, "south at bot=0x%"PRIxc3_w" pag=%"PRIc3_w" == 0x%"PRIxc3_w" == pag=%"PRIc3_w"\n",
-                    hep_u.bot_p, i_w, pot_p, post_to_page(pot_p));
+    fprintf(stderr, "south at rut=0x%"PRIxc3_w" pag=%"PRIc3_w" == 0x%"PRIxc3_w" == pag=%"PRIc3_w"\n",
+                    hep_u.rut_p, i_w, pot_p, post_to_page(pot_p));
   }
 }
 
@@ -90,6 +91,8 @@ _test_palloc(void)
   struct heap tmp_u;
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
+  u3R->hat_p = u3R->rut_p;  // reset heap to empty state
+  HEAP.rut_p = u3R->rut_p;  // set base pointer for test heap
   _init_heap();
 
   pos_p = _imalloc(4);
@@ -118,6 +121,8 @@ _test_palloc(void)
   fprintf(stderr, "palloc_tests: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
+  u3R->hat_p = u3R->rut_p;  // reset heap to empty state
+  HEAP.rut_p = u3R->rut_p;  // set base pointer for test heap
   _init_heap();
 
   pos_p = _imalloc(4);
@@ -174,6 +179,8 @@ _test_palloc_64(void)
   c3_w siz_w = (1ULL << 33) - ((1ULL << 33) / (1ULL << 10));  // just under 64GiB in words
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
+  u3R->hat_p = u3R->rut_p;  // reset heap to empty state
+  HEAP.rut_p = u3R->rut_p;  // set base pointer for test heap
   _init_heap();
 
   pos_p = _imalloc(siz_w);
@@ -202,6 +209,8 @@ _test_palloc_64(void)
   fprintf(stderr, "palloc_tests_64: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
+  u3R->hat_p = u3R->rut_p;  // reset heap to empty state
+  HEAP.rut_p = u3R->rut_p;  // set base pointer for test heap
   _init_heap();
 
   pos_p = _imalloc(siz_w);
@@ -254,10 +263,9 @@ int
 main(int argc, char* argv[])
 {
 #ifdef VERE64
-  //  XX: test on x86_64-linux
-  _setup(40);  // 1TiB
+  _setup(40);  //  1TiB
 #else
-  _setup(32);  //  32GiB
+  _setup(32);  //  4GiB
 #endif
 
   _test_print_chunks();

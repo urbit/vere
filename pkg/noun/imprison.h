@@ -77,7 +77,7 @@
         **         XX: remove post-migration
         */
           u3_atom
-          u3i_word_new(c3_w_new dat_w);
+          u3i_half(c3_h dat_h);
 
         /* u3i_chub(): construct u3_atom from c3_d.
         */
@@ -98,8 +98,8 @@
         /* u3i_words(): Copy [a] words from [b] into an atom.
         */
           u3_atom
-          u3i_words_new(c3_w        a_w,
-                    const c3_w_new* b_w);
+          u3i_halfs(c3_w        a_w,
+                    const c3_h* b_h);
 
         /* u3i_chubs(): Copy [a] chubs from [b] into an atom.
         */

@@ -1,7 +1,6 @@
 /// @file
 
 #include "noun.h"
-#include "../vere/platform/darwin/mach.c"
 
 /* _setup(): prepare for tests.
 */

@@ -7,24 +7,24 @@
 
 /* _box_v1_slot(): select the right free list to search for a block.
 */
-static c3_w_new
-_box_v1_slot(c3_w_new siz_w)
+static c3_h
+_box_v1_slot(c3_h siz_h)
 {
-  if ( siz_w < u3a_v1_minimum ) {
+  if ( siz_h < u3a_v1_minimum ) {
     return 0;
   }
   else {
-    c3_w_new i_w = 1;
+    c3_h i_h = 1;
 
     while ( 1 ) {
-      if ( i_w == u3a_v1_fbox_no ) {
-        return (i_w - 1);
+      if ( i_h == u3a_v1_fbox_no ) {
+        return (i_h - 1);
       }
-      if ( siz_w < 16 ) {
-        return i_w;
+      if ( siz_h < 16 ) {
+        return i_h;
       }
-      siz_w = (siz_w + 1) >> 1;
-      i_w += 1;
+      siz_h = (siz_h + 1) >> 1;
+      i_h += 1;
     }
   }
 }
@@ -32,16 +32,16 @@ _box_v1_slot(c3_w_new siz_w)
 /* _box_v1_make(): construct a box.
 */
 static u3a_v1_box*
-_box_v1_make(void* box_v, c3_w_new siz_w, c3_w_new use_w)
+_box_v1_make(void* box_v, c3_h siz_h, c3_h use_h)
 {
   u3a_v1_box* box_u = box_v;
-  c3_w_new*    box_w = box_v;
+  c3_h*    box_w = box_v;
 
-  u3_assert(siz_w >= u3a_v1_minimum);
+  u3_assert(siz_h >= u3a_v1_minimum);
 
-  box_w[0] = siz_w;
-  box_w[siz_w - 1] = siz_w;
-  box_u->use_w = use_w;
+  box_w[0] = siz_h;
+  box_w[siz_h - 1] = siz_h;
+  box_u->use_w = use_h;
 
 # ifdef  U3_MEMORY_DEBUG
     box_u->cod_w = u3_Code;
@@ -60,9 +60,9 @@ _box_v1_attach(u3a_v1_box* box_u)
   u3_assert(0 != u3of(u3a_v1_fbox, box_u));
 
   {
-    c3_w_new           sel_w = _box_v1_slot(box_u->siz_w);
+    c3_h           sel_h = _box_v1_slot(box_u->siz_w);
     u3p(u3a_v1_fbox)  fre_p = u3of(u3a_v1_fbox, box_u);
-    u3p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_w];
+    u3p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_h];
     u3p(u3a_v1_fbox)  nex_p = *pfr_p;
 
     u3to(u3a_v1_fbox, fre_p)->pre_p = 0;
@@ -97,12 +97,12 @@ _box_v1_detach(u3a_v1_box* box_u)
     u3to(u3a_v1_fbox, pre_p)->nex_p = nex_p;
   }
   else {
-    c3_w_new sel_w = _box_v1_slot(box_u->siz_w);
+    c3_h sel_h = _box_v1_slot(box_u->siz_w);
 
-    if ( fre_p != u3R_v1->all.fre_p[sel_w] ) {
+    if ( fre_p != u3R_v1->all.fre_p[sel_h] ) {
       u3_assert(!"loom: corrupt");
     }
-    u3R_v1->all.fre_p[sel_w] = nex_p;
+    u3R_v1->all.fre_p[sel_h] = nex_p;
   }
 }
 
@@ -111,7 +111,7 @@ _box_v1_detach(u3a_v1_box* box_u)
 static void
 _box_v1_free(u3a_v1_box* box_u)
 {
-  c3_w_new* box_w = (c3_w_new *)(void *)box_u;
+  c3_h* box_h = (c3_h *)(void *)box_u;
 
   u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
@@ -123,23 +123,23 @@ _box_v1_free(u3a_v1_box* box_u)
   {
     /* Try to coalesce with the block below.
     */
-    if ( box_w != u3a_v1_into(u3R_v1->rut_p) ) {
-      c3_w_new       laz_w = *(box_w - 1);
+    if ( box_h != u3a_v1_into(u3R_v1->rut_p) ) {
+      c3_h       laz_h = *(box_h - 1);
       u3a_v1_box* pox_u = (u3a_v1_box*)(void *)(box_w - laz_w);
 
       if ( 0 == pox_u->use_w ) {
         _box_v1_detach(pox_u);
-        _box_v1_make(pox_u, (laz_w + box_u->siz_w), 0);
+        _box_v1_make(pox_u, (laz_h + box_u->siz_w), 0);
 
         box_u = pox_u;
-        box_w = (c3_w_new*)(void *)pox_u;
+        box_w = (c3_h*)(void *)pox_u;
       }
     }
 
     /* Try to coalesce with the block above, or the wilderness.
     */
-    if ( (box_w + box_u->siz_w) == u3a_v1_into(u3R_v1->hat_p) ) {
-      u3R_v1->hat_p = u3a_v1_outa(box_w);
+    if ( (box_h + box_u->siz_w) == u3a_v1_into(u3R_v1->hat_p) ) {
+      u3R_v1->hat_p = u3a_v1_outa(box_h);
     }
     else {
       u3a_v1_box* nox_u = (u3a_v1_box*)(void *)(box_w + box_u->siz_w);
@@ -169,12 +169,12 @@ u3a_v1_free(void* tox_v)
   if (NULL == tox_v)
     return;
 
-  c3_w_new* tox_w = tox_v;
-  c3_w_new  pad_w = tox_w[-1];
-  c3_w_new* org_w = tox_w - (pad_w + 1);
+  c3_h* tox_h = tox_v;
+  c3_h  pad_h = tox_h[-1];
+  c3_h* org_h = tox_h - (pad_h + 1);
 
   // u3l_log("free %p %p", org_w, tox_w);
-  u3a_v1_wfree(org_w);
+  u3a_v1_wfree(org_h);
 }
 
 /* u3a_v1_reclaim(): clear ad-hoc persistent caches to reclaim memory.
@@ -194,7 +194,7 @@ _me_v1_lose_north(u3_noun dog)
 {
 top:
   {
-    c3_w_new* dog_w      = u3a_v1_to_ptr(dog);
+    c3_h* dog_h      = u3a_v1_to_ptr(dog);
     u3a_v1_box* box_u = u3a_v1_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {
@@ -206,21 +206,21 @@ top:
       }
       else {
         if ( _(u3a_v1_is_pom(dog)) ) {
-          u3a_v1_cell* dog_u = (void *)dog_w;
+          u3a_v1_cell* dog_u = (void *)dog_h;
           u3_noun     h_dog = dog_u->hed;
           u3_noun     t_dog = dog_u->tel;
 
           if ( !_(u3a_v1_is_cat(h_dog)) ) {
             _me_v1_lose_north(h_dog);
           }
-          u3a_v1_wfree(dog_w);
+          u3a_v1_wfree(dog_h);
           if ( !_(u3a_v1_is_cat(t_dog)) ) {
             dog = t_dog;
             goto top;
           }
         }
         else {
-          u3a_v1_wfree(dog_w);
+          u3a_v1_wfree(dog_h);
         }
       }
     }

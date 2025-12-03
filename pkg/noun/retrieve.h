@@ -122,50 +122,49 @@
 
       /* u3r_mug_both(): Join two mugs.
       */
-        c3_m
-        u3r_mug_both(c3_m lef_w, c3_m rit_w);
+        c3_h
+        u3r_mug_both(c3_h lef_h, c3_h rit_h);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */
-        // XX: make 64 bit length
-        c3_m
+        c3_h
         u3r_mug_bytes(const c3_y *buf_y,
-                      c3_m        len_w);
+                      c3_h        len_h);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */
-        c3_m
+        c3_h
         u3r_mug_c(const c3_c *a_c);
 
       /* u3r_mug_cell(): Compute the mug of the cell `[hed tel]`.
       */
-        c3_m
+        c3_h
         u3r_mug_cell(u3_noun hed,
                      u3_noun tel);
 
       /* u3r_mug_chub(): Compute the mug of `num`, LSW first.
       */
-        c3_m
+        c3_h
         u3r_mug_chub(c3_d num_d);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
-        c3_m
-        u3r_mug_words_new(const c3_w_new* key_w, c3_w len_w);
+        c3_h
+        u3r_mug_halfs(const c3_h* key_h, c3_w len_w);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
-        c3_m
+        c3_h
         u3r_mug_chubs(const c3_d* key_d, c3_w len_w);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
-        c3_m
+        c3_h
         u3r_mug_words(const c3_w* key_d, c3_w len_w);
 
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
-        c3_m
+        c3_h
         u3r_mug(u3_noun veb);
 
       /* u3r_fing():
@@ -472,8 +471,8 @@
       **
       **   Return word (a_w) of (b).
       */
-        c3_w_new
-        u3r_word_new(c3_w    a_w,
+        c3_h
+        u3r_half(c3_w    a_w,
                  u3_atom b);
 
       /* u3r_chub():
@@ -498,7 +497,7 @@
       **   Fill (out_w) with (a) if it fits, returning success.
       */
         c3_t
-        u3r_word_new_fit(c3_w_new*   out_w,
+        u3r_half_fit(c3_h*   out_w,
                      u3_atom a);
 
       /* u3r_chub_fit():
@@ -522,9 +521,9 @@
       **  copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
       */
         void
-        u3r_words_new(c3_w    a_w,
+        u3r_halfs(c3_w    a_w,
                   c3_w    b_w,
-                  c3_w_new*   c_w,
+                  c3_h*   c_w,
                   u3_atom d);
 
       /* u3r_chubs():
@@ -556,7 +555,7 @@
       /* u3r_safe_word(): validate and retrieve word.
       */
         c3_o
-        u3r_safe_word_new(u3_noun dat, c3_w_new* out_w);
+        u3r_safe_half(u3_noun dat, c3_h* out_w);
 
       /* u3r_safe_chub(): validate and retrieve chub.
       */
@@ -585,5 +584,14 @@
       */
         u3_weak
         u3r_skip(u3_noun fol);
+
+      /* u3r_safe():
+      **
+      **  Returns yes if the formula won't crash
+      **  and has no hints, returning constant result
+      **  if possible
+      */
+      c3_o
+      u3r_safe(u3_noun fol, u3_weak* out);
 
 #endif /* ifndef U3_RETRIEVE_H */

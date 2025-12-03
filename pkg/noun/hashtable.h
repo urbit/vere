@@ -35,7 +35,7 @@
       /* u3h_node: map node.
       */
         typedef struct {
-          c3_w_new     map_w;     // bitmap for [sot_w]
+          c3_h     map_h;     // bitmap for [sot_w]
           u3h_slot sot_w[];   // filled slots
         } u3h_node;
 
@@ -45,8 +45,8 @@
           c3_w     max_w;     // number of cache lines (0 for no trimming)
           c3_w     use_w;     // number of lines currently filled
           struct {
-            c3_w_new  mug_w;      // current hash
-            c3_w_new  inx_w;      // index into current hash bucket
+            c3_h  mug_h;      // current hash
+            c3_h  inx_h;      // index into current hash bucket
             c3_o  buc_o;      // XX remove
           } arm_u;            // clock arm
           u3h_slot sot_w[64]; // slots
@@ -55,7 +55,7 @@
       /* u3h_buck: bottom bucket.
       */
         typedef struct {
-          c3_w_new     len_w;     // length of [sot_w]
+          c3_h     len_h;     // length of [sot_w]
           u3h_slot sot_w[];   // filled slots
         } u3h_buck;
 
@@ -154,12 +154,12 @@
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
-        u3h_trim_to(u3p(u3h_root) har_p, c3_w_new n_w);
+        u3h_trim_to(u3p(u3h_root) har_p, c3_h n_h);
 
       /* u3h_trim_with(): trim to n key-value pairs, with deletion callback
       */
         void
-        u3h_trim_with(u3p(u3h_root) har_p, c3_w_new n_w, void (*del_cb)(u3_noun));
+        u3h_trim_with(u3p(u3h_root) har_p, c3_h n_h, void (*del_cb)(u3_noun));
 
       /* u3h_free(): free hashtable.
       */

@@ -425,11 +425,11 @@ _dawn_come(u3_noun stars)
 {
   u3_noun seed;
   {
-    c3_w_new    eny_w[16];
+    c3_h    eny_w[16];
     u3_noun eny;
 
     c3_rand(eny_w);
-    eny = u3i_words_new(16, eny_w);
+    eny = u3i_halfs(16, eny_w);
 
     u3l_log("boot: mining a comet. May take up to an hour.");
     u3l_log("If you want to boot faster, get an Urbit identity.");

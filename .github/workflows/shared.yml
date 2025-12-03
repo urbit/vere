@@ -71,10 +71,16 @@ jobs:
           echo
           swapon --show
           echo
+      
+      - name: Set memory overcommit
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+          echo "vm.overcommit_memory=1" | sudo tee -a /etc/sysctl.conf
+          sysctl vm.overcommit_memory
 
-      - uses: mlugg/setup-zig@v1
+      - uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.0
+          version: 0.14.1
 
       - name: Build binaries
         run: |
@@ -101,6 +107,22 @@ jobs:
             boot-test newt-test        \
             vere-noun-test unix-test   \
             palloc-test benchmarks     \
+            -Doptimize=ReleaseFast     \
+            -Dpace=${{inputs.pace}}    \
+            --summary all
+
+      - name: Run unit tests (32-bit)
+        run: |
+          zig build                    \
+            ur-test ent-test           \
+            hashtable-test jets-test   \
+            nock-test retrieve-test    \
+            serial-test ames-test      \
+            pact-test equality-test    \
+            boot-test newt-test        \
+            vere-noun-test unix-test   \
+            palloc-test benchmarks     \
+            -Dvere32                   \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
             --summary all

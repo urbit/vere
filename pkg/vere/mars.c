@@ -118,7 +118,7 @@ static u3_noun
 _mars_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
-    if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
+    if ( u3C.wag_h & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
     }
     return u3_nul;
@@ -242,7 +242,7 @@ _mars_fact(u3_mars* mar_u,
   {
     u3_fact tac_u = {
       .job   = job,
-      .mug_l = mar_u->mug_l,
+      .mug_h = mar_u->mug_l,
       .eve_d = mar_u->dun_d
     };
 
@@ -437,7 +437,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
 static u3_noun
 _mars_peek(c3_w mil_w, u3_noun sam)
 {
-  c3_t  tac_t = !!( u3C.wag_w & u3o_trace );
+  c3_t  tac_t = !!( u3C.wag_h & u3o_trace );
   c3_c  lab_c[2056];
 
   // XX refactor tracing
@@ -467,7 +467,7 @@ _mars_peek(c3_w mil_w, u3_noun sam)
 static c3_o
 _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
 {
-  c3_t tac_t = !!( u3C.wag_w & u3o_trace );
+  c3_t tac_t = !!( u3C.wag_h & u3o_trace );
   c3_c tag_c[9];
   c3_o ret_o;
 
@@ -581,10 +581,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
     case c3__poke: {
       u3_noun tim, job;
-      c3_w_new  mil_w, pre_w;
+      c3_h  mil_h, pre_h;
 
       if ( (c3n == u3r_cell(dat, &tim, &job)) ||
-           (c3n == u3r_safe_word_new(tim, &mil_w)) )
+           (c3n == u3r_safe_half(tim, &mil_h)) )
       {
         fprintf(stderr, "mars: poke fail\r\n");
         u3z(jar);
@@ -603,15 +603,15 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
       u3z(jar);
 
-      pre_w = u3a_open(u3R);
+      pre_h = u3a_open(u3R);
       mar_u->sen_d++;
 
-      if ( c3y == _mars_poke(mil_w, &job, &pro) ) {
+      if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
         mar_u->dun_d = mar_u->sen_d;
         mar_u->mug_l = u3r_mug(u3A->roc);
         mar_u->fag_w |= _mars_fag_mute;
 
-        pro = _mars_sure_feck(mar_u, pre_w, pro);
+        pro = _mars_sure_feck(mar_u, pre_h, pro);
 
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
       }
@@ -626,17 +626,17 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
     case c3__peek: {
       u3_noun tim, sam, pro;
-      c3_w_new  mil_w;
+      c3_h  mil_h;
 
       if ( (c3n == u3r_cell(dat, &tim, &sam)) ||
-           (c3n == u3r_safe_word_new(tim, &mil_w)) )
+           (c3n == u3r_safe_half(tim, &mil_h)) )
       {
         u3z(jar);
         return c3n;
       }
 
       u3k(sam); u3z(jar);
-      _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_w, sam)));
+      _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_h, sam)));
     } break;
 
     case c3__sync: {
@@ -735,7 +735,7 @@ void
 _mars_post(u3_mars* mar_u)
 {
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
     }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
@@ -759,7 +759,7 @@ _mars_post(u3_mars* mar_u)
   }
 
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 0: per_p %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
     }
     u3h_free(u3R->cax.per_p);
@@ -768,7 +768,7 @@ _mars_post(u3_mars* mar_u)
     u3l_log("");
   }
 
-  if ( u3C.wag_w & u3o_toss ) {
+  if ( u3C.wag_h & u3o_toss ) {
     u3m_toss();
   }
 
@@ -780,7 +780,7 @@ _mars_post(u3_mars* mar_u)
 static void
 _mars_damp_file(void)
 {
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
     FILE* fil_u;
     u3_noun now;
 
@@ -876,7 +876,7 @@ top:
 static void
 _mars_step_trace(const c3_c* dir_c)
 {
-  if ( u3C.wag_w & u3o_trace ) {
+  if ( u3C.wag_h & u3o_trace ) {
     c3_w trace_cnt_w = u3t_trace_cnt();
     if ( trace_cnt_w == 0  && u3t_file_cnt() == 0 ) {
       u3t_trace_open(dir_c);
@@ -891,8 +891,9 @@ _mars_step_trace(const c3_c* dir_c)
 /* u3_mars_kick(): maybe perform a task.
 */
 c3_o
-u3_mars_kick(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
+u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_mars* mar_u = ram_u;
   c3_o ret_o = c3n;
 
   _mars_step_trace(mar_u->dir_c);
@@ -973,14 +974,14 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //
   {
     u3_noun cor = u3t(dat);
-    c3_l_new  mug_l;
+    c3_h  mug_h;
 
-    if ( tac_u->mug_l && (tac_u->mug_l != (mug_l = u3r_mug(cor))) ) {
+    if ( tac_u->mug_h && (tac_u->mug_h != (mug_h = u3r_mug(cor))) ) {
       fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
                       "expected %08"PRIxc3_m", actual %08"PRIxc3_m"\r\n",
-                      tac_u->eve_d, tac_u->mug_l, mug_l);
+                      tac_u->eve_d, tac_u->mug_h, mug_h);
 
-      if ( !(u3C.wag_w & u3o_soft_mugs) ) {
+      if ( !(u3C.wag_h & u3o_soft_mugs) ) {
         u3z(gon);
         return u3nc(c3__awry, u3_nul);
       }
@@ -1017,11 +1018,11 @@ typedef enum {
 static _mars_play_e
 _mars_play_batch(u3_mars* mar_u,
                  c3_o     mug_o,
-                 c3_w_new     bat_w,
+                 c3_h     bat_h,
                  c3_c**   wen_c)
 {
   u3_disk*      log_u = mar_u->log_u;
-  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_w);
+  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_h);
   u3_fact       tac_u;
   u3_noun         dud;
   u3_weak         wen = u3_none;
@@ -1049,7 +1050,7 @@ _mars_play_batch(u3_mars* mar_u,
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
 
-      u3_assert( c3y == u3r_safe_word_new(u3h(dud), &mot_m) );
+      u3_assert( c3y == u3r_safe_half(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
         case c3__meme: {
@@ -1095,13 +1096,16 @@ static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 {
   u3_weak eve;
-  c3_l_new  mug_l;
+  c3_h  mug_h;
 
   //  hack to recover structural sharing
   //
   u3m_hate(1 << 18);
 
-  if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_l)) ) {
+  //  XX this function should only ever be called in epoch 0
+  //  XX read_list reads *up-to* eve_d, should be exact
+  //
+  if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_h)) ) {
     fprintf(stderr, "boot: read failed\r\n");
     u3m_love(u3_nul);
     return c3n;
@@ -1298,14 +1302,14 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
       exit(1);
     }
 
-    if ( c3n == _mars_do_boot(mar_u->log_u, met_u.lif_w, u3_nul) ) {
+    if ( c3n == _mars_do_boot(mar_u->log_u, met_u.lif_h, u3_nul) ) {
       fprintf(stderr, "mars: boot fail\r\n");
       //  XX exit code, cb
       //
       exit(1);
     }
 
-    mar_u->sen_d = mar_u->dun_d = met_u.lif_w;
+    mar_u->sen_d = mar_u->dun_d = met_u.lif_h;
     u3m_save();
   }
 
@@ -1329,7 +1333,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   {
     c3_d  pas_d = mar_u->dun_d;  // last snapshot
     c3_d  mem_d = 0;             // last event to meme
-    c3_w_new  try_w = 0;             // [mem_d] retry count
+    c3_h  try_h = 0;             // [mem_d] retry count
     c3_c* wen_c;
 
     while ( mar_u->dun_d < eve_d ) {
@@ -1371,9 +1375,9 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
         case _play_mem_e: {
           if ( mem_d != mar_u->dun_d ) {
             mem_d = mar_u->dun_d;
-            try_w = 0;
+            try_h = 0;
           }
-          else if ( 3 == ++try_w ) {
+          else if ( 3 == ++try_h ) {
             fprintf(stderr, "play (%" PRIu64 "): failed, out of loom\r\n",
                             mar_u->dun_d + 1);
             u3m_save();
@@ -1386,7 +1390,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
           //  XX pack before meld?
           //
-          if ( u3C.wag_w & u3o_auto_meld ) {
+          if ( u3C.wag_h & u3o_auto_meld ) {
             u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
           }
           else {
@@ -1422,29 +1426,43 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
 
+  if (  (mar_u->dun_d == log_u->dun_d)
+     && !log_u->epo_d
+     && !(u3C.wag_h & u3o_yolo) )
+  {
+    u3_disk_roll(mar_u->log_u, mar_u->dun_d);
+  }
+
   return pay_d;
 }
 
-/* u3_mars_init(): init mars, replay if necessary.
+/* u3_mars_load(): load pier.
 */
-u3_mars*
-u3_mars_init(c3_c*    dir_c,
-             u3_moat* inn_u,
-             u3_mojo* out_u,
-             c3_d     eve_d)
+void
+u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
 {
-  u3_mars* mar_u = c3_malloc(sizeof(*mar_u));
-  mar_u->dir_c = dir_c;
-  mar_u->inn_u = inn_u;
-  mar_u->out_u = out_u;
+  //  initialize persistence
+  //
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, lod_e)) ) {
+    fprintf(stderr, "mars: disk init fail\r\n");
+    exit(1); // XX
+  }
+
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_l = u3r_mug(u3A->roc);
-  mar_u->fag_w = _mars_fag_none;
-  mar_u->sac   = u3_nul;
-  mar_u->sat_e = u3_mars_work_e;
-  mar_u->gif_u.ent_u = mar_u->gif_u.ext_u = 0;
-  mar_u->xit_f = 0;
 
+  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
+    fprintf(stderr, "mars: disk meta fail\r\n");
+    u3_disk_exit(mar_u->log_u);
+    exit(1); // XX
+  }
+}
+
+/* u3_mars_work(): init mars
+*/
+void
+u3_mars_work(u3_mars* mar_u)
+{
   mar_u->sil_u = u3s_cue_xeno_init();
 
   //  start signal handlers
@@ -1459,53 +1477,6 @@ u3_mars_init(c3_c*    dir_c,
   //
   u3C.sign_hold_f = _mars_sign_hold;
   u3C.sign_move_f = _mars_sign_move;
-
-  //  initialize persistence
-  //
-  //    XX load/set secrets
-  //
-  if ( !(mar_u->log_u = u3_disk_init(dir_c)) ) {
-    fprintf(stderr, "mars: disk init fail\r\n");
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
-    fprintf(stderr, "mars: disk meta fail\r\n");
-    u3_disk_exit(mar_u->log_u);
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( !mar_u->dun_d ) {
-    if ( c3n == _mars_do_boot(mar_u->log_u, mar_u->met_u.lif_w, u3_nul) ) {
-      fprintf(stderr, "mars: boot fail\r\n");
-      u3_disk_exit(mar_u->log_u);
-      c3_free(mar_u);
-      return 0;
-    }
-
-    mar_u->sen_d = mar_u->dun_d = mar_u->met_u.lif_w;
-    u3m_save();
-  }
-
-  if ( eve_d && (eve_d <= mar_u->dun_d) ) {
-    fprintf(stderr, "mars: replay-to %" PRIu64
-                    " already done (at %" PRIu64 ")\r\n",
-                    eve_d, mar_u->dun_d);
-    u3_disk_exit(mar_u->log_u);
-    c3_free(mar_u);
-    return 0;
-  }
-
-  if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
-    u3_mars_play(mar_u, eve_d, 0);
-    u3m_save();
-  }
-
-  //  migrate or rollover as needed
-  //
-  u3_disk_kindly(mar_u->log_u, mar_u->dun_d);
 
   //  XX do something better
   //
@@ -1540,13 +1511,11 @@ u3_mars_init(c3_c*    dir_c,
   uv_timer_init(u3L, &(mar_u->sav_u.tim_u));
   uv_timer_start(&(mar_u->sav_u.tim_u),
                  _mars_timer_cb,
-                 u3_Host.ops_u.sap_w * 1000,
-                 u3_Host.ops_u.sap_w * 1000);
+                 u3_Host.ops_u.sap_h * 1000,
+                 u3_Host.ops_u.sap_h * 1000);
 
   mar_u->sav_u.eve_d = mar_u->dun_d;
   mar_u->sav_u.tim_u.data = mar_u;
-
-  return mar_u;
 }
 
 #define VERE_NAME  "vere"
@@ -1559,7 +1528,7 @@ u3_mars_init(c3_c*    dir_c,
 /* _mars_wyrd_card(): construct %wyrd.
 */
 static u3_noun
-_mars_wyrd_card(c3_m nam_m, c3_w_new ver_w, c3_l sev_l)
+_mars_wyrd_card(c3_m nam_m, c3_h ver_h, c3_l sev_l)
 {
   //  XX ghetto (scot %ta)
   //
@@ -1569,9 +1538,9 @@ _mars_wyrd_card(c3_m nam_m, c3_w_new ver_w, c3_l sev_l)
 
   //  special case versions requiring the full stack
   //
-  if (  ((c3__zuse == nam_m) && (VERE_ZUSE == ver_w))
-     || ((c3__lull == nam_m) && (VERE_LULL == ver_w))
-     || ((c3__arvo == nam_m) && (VERE_ARVO == ver_w)) )
+  if (  ((c3__zuse == nam_m) && (VERE_ZUSE == ver_h))
+     || ((c3__lull == nam_m) && (VERE_LULL == ver_h))
+     || ((c3__arvo == nam_m) && (VERE_ARVO == ver_h)) )
   {
     kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),
                u3nc(c3__lull, VERE_LULL),
@@ -1583,7 +1552,7 @@ _mars_wyrd_card(c3_m nam_m, c3_w_new ver_w, c3_l sev_l)
   //  XX speculative!
   //
   else {
-    kel = u3nc(nam_m, u3i_word_new(ver_w));
+    kel = u3nc(nam_m, u3i_half(ver_h));
   }
 
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
@@ -1703,7 +1672,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
 {
   //  set the disk version
   //
-  met_u->ver_w = U3D_VERLAT;
+  met_u->ver_h = U3D_VERLAT;
 
   u3_noun pil, ven, mor, who;
 
@@ -1763,7 +1732,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
       return c3n;
     }
 
-    met_u->lif_w = u3qb_lent(bot);
+    met_u->lif_h = u3qb_lent(bot);
 
     //  break symmetry in the module sequence
     //
@@ -1772,7 +1741,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
     {
       u3_noun cad, wir = u3nt(u3_blip, c3__arvo, u3_nul);
 
-      cad = u3nc(c3__wack, u3i_words_new(17, inp_u->eny_w));
+      cad = u3nc(c3__wack, u3i_halfs(17, inp_u->eny_h));
       mod = u3nc(u3nc(u3k(wir), cad), mod);
 
       cad = u3nc(c3__whom, u3k(who));
@@ -1782,7 +1751,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
       mod = u3nc(u3nc(u3k(wir), cad), mod);
 
       cad = _mars_wyrd_card(inp_u->ver_u.nam_m,
-                            inp_u->ver_u.ver_w,
+                            inp_u->ver_u.ver_h,
                             inp_u->sev_l);
       mod = u3nc(u3nc(wir, cad), mod);  //  transfer [wir]
     }
@@ -1898,6 +1867,27 @@ _mars_boot_make(u3_boot_opts* inp_u,
   return c3y;
 }
 
+/* u3_mars_make(): construct a pier.
+*/
+void
+u3_mars_make(u3_mars* mar_u)
+{
+  //  XX s/b unnecessary
+  u3_Host.ops_u.nuu = c3y;
+
+  if ( c3n == u3_disk_make(mar_u->dir_c) ) {
+    fprintf(stderr, "boot: disk make fail\r\n");
+    exit(1);
+  }
+
+  //  NB: initializes loom
+  //
+  if ( !(mar_u->log_u = u3_disk_load(mar_u->dir_c, u3_dlod_boot)) ) {
+    fprintf(stderr, "boot: disk init fail\r\n");
+    exit(1);
+  }
+}
+
 /* u3_mars_boot(): boot a ship.
 *
 *  $=  com
@@ -1911,23 +1901,23 @@ _mars_boot_make(u3_boot_opts* inp_u,
 *
 */
 c3_o
-u3_mars_boot(c3_c* dir_c, u3_noun com)
+u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_disk*     log_u = mar_u->log_u;
   u3_boot_opts inp_u;
   u3_meta      met_u;
-  u3_noun        ova;
-  u3_noun        cax;
+  u3_noun   com, ova, cax;
 
-  inp_u.veb_o = __( u3C.wag_w & u3o_verbose );
+  inp_u.veb_o = __( u3C.wag_h & u3o_verbose );
   inp_u.lit_o = c3n; // unimplemented in arvo
 
   //  XX source kelvin from args?
   //
   inp_u.ver_u.nam_m = c3__zuse;
-  inp_u.ver_u.ver_w = 409;
+  inp_u.ver_u.ver_h = 409;
 
   gettimeofday(&inp_u.tim_u, 0);
-  c3_rand(inp_u.eny_w);
+  c3_rand(inp_u.eny_h);
 
   {
     u3_noun now = u3_time_in_tv(&inp_u.tim_u);
@@ -1935,38 +1925,52 @@ u3_mars_boot(c3_c* dir_c, u3_noun com)
     u3z(now);
   }
 
-  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
-    fprintf(stderr, "boot: preparation failed\r\n");
-    return c3n;
+  {
+    u3_weak jar = u3s_cue_xeno(len_d, hun_y);
+    if (  (u3_none == jar)
+       || (c3n == u3r_p(jar, c3__boot, &com)) )
+    {
+      fprintf(stderr, "boot: parse fail\r\n");
+      exit(1);
+    }
+    else {
+      u3k(com);
+      u3z(jar);
+    }
   }
 
-  u3_disk* log_u;
+  if ( c3n == _mars_boot_make(&inp_u, com, &ova, &cax, &met_u) ) {
+    fprintf(stderr, "boot: preparation failed\r\n");
+    exit(1);  //  XX cleanup
+  }
 
-  //  XX
-  u3_Host.ops_u.nuu = c3y;
-  if ( !(log_u = u3_disk_init(dir_c)) ) {
-    fprintf(stderr, "boot: disk init fail\r\n");
-    return c3n;
+  if ( c3n == u3_disk_save_meta_meta(log_u->com_u->pax_c, &met_u) ) {
+    fprintf(stderr, "boot: failed to save top-level metadata\r\n");
+    exit(1);  //  XX cleanup
   }
 
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &met_u) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
   u3_disk_plan_list(log_u, ova);
 
   if ( c3n == u3_disk_sync(log_u) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
-  _mars_step_trace(dir_c);
+  _mars_step_trace(mar_u->dir_c);
 
   if ( c3n == _mars_do_boot(log_u, log_u->dun_d, cax) ) {
-    return c3n;  //  XX cleanup
+    exit(1);  //  XX cleanup
   }
 
   u3m_save();
+
+  //  XX move to caller? close uv handles?
+  //
   u3_disk_exit(log_u);
+  exit(0);
 
   return c3y;
 }

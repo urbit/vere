@@ -10,10 +10,10 @@
 /* _ch_v1_popcount(): number of bits set in word.  A standard intrinsic.
 **             NB: copy of _ch_v1_popcount in pkg/noun/hashtable.c
 */
-static c3_w_new
-_ch_v1_popcount(c3_w_new num_w)
+static c3_h
+_ch_v1_popcount(c3_h num_h)
 {
-  return __builtin_popcount(num_w);
+  return __builtin_popcount(num_h);
 }
 
 /* _ch_v1_free_buck(): free bucket
@@ -22,10 +22,10 @@ _ch_v1_popcount(c3_w_new num_w)
 static void
 _ch_v1_free_buck(u3h_v1_buck* hab_u)
 {
-  c3_w_new i_w;
+  c3_h i_h;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
-    u3a_v1_lose(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]));
+  for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
+    u3a_v1_lose(u3h_v1_slot_to_noun(hab_u->sot_w[i_h]));
   }
   u3a_v1_wfree(hab_u);
 }
@@ -33,15 +33,15 @@ _ch_v1_free_buck(u3h_v1_buck* hab_u)
 /* _ch_v1_free_node(): free node.
 */
 static void
-_ch_v1_free_node(u3h_v1_node* han_u, c3_w_new lef_w)
+_ch_v1_free_node(u3h_v1_node* han_u, c3_h lef_h)
 {
-  c3_w_new len_w = _ch_v1_popcount(han_u->map_w);
-  c3_w_new i_w;
+  c3_h len_h = _ch_v1_popcount(han_u->map_h);
+  c3_h i_h;
 
-  lef_w -= 5;
+  lef_h -= 5;
 
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w_new sot_w = han_u->sot_w[i_w];
+  for ( i_h = 0; i_h < len_h; i_h++ ) {
+    c3_h sot_w = han_u->sot_w[i_h];
 
     if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
       u3a_v1_lose(u3h_v1_slot_to_noun(sot_w));
@@ -49,10 +49,10 @@ _ch_v1_free_node(u3h_v1_node* han_u, c3_w_new lef_w)
     else {
       void* hav_v = u3h_v1_slot_to_node(sot_w);
 
-      if ( 0 == lef_w ) {
+      if ( 0 == lef_h ) {
         _ch_v1_free_buck(hav_v);
       } else {
-        _ch_v1_free_node(hav_v, lef_w);
+        _ch_v1_free_node(hav_v, lef_h);
       }
     }
   }
@@ -65,24 +65,24 @@ void
 u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
 {
   u3h_v1_root* har_u = u3to(u3h_v1_root, har_p);
-  c3_w_new        i_w;
+  c3_h        i_h;
 
-  for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w_new sot_w = har_u->sot_w[i_w];
+  for ( i_h = 0; i_h < 64; i_h++ ) {
+    c3_h sot_h = har_u->sot_w[i_h];
 
-    if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
-      u3a_v1_lose(u3h_v1_slot_to_noun(sot_w));
+    if ( _(u3h_v1_slot_is_noun(sot_h)) ) {
+      u3a_v1_lose(u3h_v1_slot_to_noun(sot_h));
     }
-    else if ( _(u3h_v1_slot_is_node(sot_w)) ) {
-      u3h_v1_node* han_u = (u3h_v1_node*) u3h_v1_slot_to_node(sot_w);
+    else if ( _(u3h_v1_slot_is_node(sot_h)) ) {
+      u3h_v1_node* han_u = (u3h_v1_node*) u3h_v1_slot_to_node(sot_h);
 
       _ch_v1_free_node(han_u, 25);
     }
-    har_u->sot_w[i_w] = 0;
+    har_u->sot_w[i_h] = 0;
   }
   har_u->use_w       = 0;
-  har_u->arm_u.mug_w = 0;
-  har_u->arm_u.inx_w = 0;
+  har_u->arm_u.mug_h = 0;
+  har_u->arm_u.inx_h = 0;
 }
 
 /* _ch_v1_walk_buck(): walk bucket for gc.
@@ -91,38 +91,38 @@ u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
 static void
 _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w_new i_w;
+  c3_h i_h;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
-    fun_f(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]), wit);
+  for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
+    fun_f(u3h_v1_slot_to_noun(hab_u->sot_w[i_h]), wit);
   }
 }
 
 /* _ch_v1_walk_node(): walk node for gc.
 */
 static void
-_ch_v1_walk_node(u3h_v1_node* han_u, c3_w_new lef_w, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v1_walk_node(u3h_v1_node* han_u, c3_h lef_h, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w_new len_w = _ch_v1_popcount(han_u->map_w);
-  c3_w_new i_w;
+  c3_h len_h = _ch_v1_popcount(han_u->map_h);
+  c3_h i_h;
 
-  lef_w -= 5;
+  lef_h -= 5;
 
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w_new sot_w = han_u->sot_w[i_w];
+  for ( i_h = 0; i_h < len_h; i_h++ ) {
+    c3_h sot_h = han_u->sot_w[i_h];
 
-    if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v1_slot_to_noun(sot_w);
+    if ( _(u3h_v1_slot_is_noun(sot_h)) ) {
+      u3_noun kev = u3h_v1_slot_to_noun(sot_h);
 
       fun_f(kev, wit);
     }
     else {
-      void* hav_v = u3h_v1_slot_to_node(sot_w);
+      void* hav_v = u3h_v1_slot_to_node(sot_h);
 
-      if ( 0 == lef_w ) {
+      if ( 0 == lef_h ) {
         _ch_v1_walk_buck(hav_v, fun_f, wit);
       } else {
-        _ch_v1_walk_node(hav_v, lef_w, fun_f, wit);
+        _ch_v1_walk_node(hav_v, lef_h, fun_f, wit);
       }
     }
   }
@@ -137,18 +137,18 @@ u3h_v1_walk_with(u3p(u3h_v1_root) har_p,
               void* wit)
 {
   u3h_v1_root* har_u = u3to(u3h_v1_root, har_p);
-  c3_w_new        i_w;
+  c3_h        i_h;
 
-  for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w_new sot_w = har_u->sot_w[i_w];
+  for ( i_h = 0; i_h < 64; i_h++ ) {
+    c3_h sot_h = har_u->sot_w[i_h];
 
-    if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v1_slot_to_noun(sot_w);
+    if ( _(u3h_v1_slot_is_noun(sot_h)) ) {
+      u3_noun kev = u3h_v1_slot_to_noun(sot_h);
 
       fun_f(kev, wit);
     }
-    else if ( _(u3h_v1_slot_is_node(sot_w)) ) {
-      u3h_v1_node* han_u = (u3h_v1_node*) u3h_v1_slot_to_node(sot_w);
+    else if ( _(u3h_v1_slot_is_node(sot_h)) ) {
+      u3h_v1_node* han_u = (u3h_v1_node*) u3h_v1_slot_to_node(sot_h);
 
       _ch_v1_walk_node(han_u, 25, fun_f, wit);
     }

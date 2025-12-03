@@ -79,11 +79,9 @@ _term_alloc(uv_handle_t* had_u,
             )
 {
   //  this read can range from a single byte to a paste buffer
-  //  123 bytes has been chosen because its not a power of 2
-  //  this is probably still broken
   //
-  void* ptr_v = c3_malloc(123);
-  *buf = uv_buf_init(ptr_v, 123);
+  void* ptr_v = c3_malloc(128);
+  *buf = uv_buf_init(ptr_v, 128);
 }
 
 /* u3_term_log_init(): initialize terminal for logging
@@ -798,16 +796,7 @@ _term_suck(u3_utty* uty_u, const c3_y* buf, ssize_t siz_i)
 {
   {
     if ( siz_i == UV_EOF ) {
-      //  We hear EOF (on the third read callback) if
-      //  2x the _term_alloc() buffer size is pasted.
-      //  The process hangs if we do nothing (and ctrl-z
-      //  then corrupts the event log), so we force shutdown.
-      //
-      u3l_log("term: hangup (EOF)");
-
-      //  XX revise
-      //
-      u3_pier_bail(u3_king_stub());
+      return;
     }
     else if ( siz_i < 0 ) {
       u3l_log("term %"PRIc3_w": read: %s", uty_u->tid_l, uv_strerror(siz_i));
@@ -1271,7 +1260,7 @@ _term_it_send_stub(u3_utty* uty_u,
       //  write the text itself
       //
       for ( ; u3_nul != nib; i_w++, nib = u3t(nib) ) {
-        lin_w[i_w] = u3r_word_new(0, u3h(nib));
+        lin_w[i_w] = u3r_half(0, u3h(nib));
       }
 
       //  if we applied any styles, toggle them off
@@ -1308,18 +1297,23 @@ static void
 _term_it_show_tour(u3_utty* uty_u,
                    u3_noun    lin)
 {
-  c3_w  len_w = u3qb_lent(lin);
-  c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
-
   {
-    c3_w i_w;
+    c3_w  len_w = u3qb_lent(lin);
+    c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
+    u3_noun nil = lin;
 
-    for ( i_w = 0ULL; u3_nul != lin; i_w++, lin = u3t(lin) ) {
-      lin_w[i_w] = u3r_word_new(0, u3h(lin));
+    {
+      c3_w i_w;
+
+      for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
+        lin_w[i_w] = u3r_word(0, u3h(lin));
+      }
     }
-  }
 
-  _term_it_show_line(uty_u, lin_w, len_w);
+    _term_it_show_line(uty_u, lin_w, len_w);
+
+    lin = nil;
+  }
 
   {
     u3_noun tub = u3i_list(u3nc(u3nt(u3_nul, u3_nul, u3_nul), lin), u3_none);
@@ -1658,7 +1652,7 @@ _term_io_quiz(c3_m mot_m, void* vod_p, u3_noun res)
 {
   u3_auto* car_u = (u3_auto*)vod_p;
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
-  u3_noun cad = u3k(res);
+  u3_noun cad = res;
   u3_auto_plan(car_u, u3_ovum_init(0, c3__d, wir, cad));
 }
 
@@ -1674,7 +1668,15 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
      || (c3n == u3r_cell(cad, &tag, &dat))
      || (c3__term != i_wir) )
   {
-    ret_o = c3n;
+    if ( (c3__arvo == i_wir) && (c3__mass == tag) ) {
+#ifdef U3_URTH_MASS
+      uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
+#endif
+      ret_o = c3y;
+    }
+    else {
+      ret_o = c3n;
+    }
   }
   else {
     u3_noun pud = t_wir;
@@ -1731,14 +1733,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           u3_Host.xit_i = dat;
         } break;
 
+        //  XX obsolete wire
         case c3__mass: {
           ret_o = c3y;
-
-          //  gc the daemon area
-          //
-          //    XX disabled due to known leaks; uncomment for dev
-          //
-          // uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
         } break;
 
         case c3__meld: {
@@ -1768,6 +1765,42 @@ _term_io_exit_cb(uv_handle_t* han_u)
 {
   u3_auto* car_u = han_u->data;
   c3_free(car_u);
+}
+
+static u3m_quac**
+_term_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u;
+  u3_utty*   uty_u;
+  c3_w       tot_w = 0, len_w = 0;
+
+  for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
+    len_w++;
+  }
+
+  all_u = c3_malloc(sizeof(*all_u) * (len_w + 1));
+  len_w = 0;
+
+  for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
+    all_u[len_w] = c3_malloc(sizeof(**all_u));
+    all_u[len_w]->qua_u = 0;
+    all_u[len_w]->siz_w = 0;
+
+    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.mir.lin);
+    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.fut.imp);
+    all_u[len_w]->siz_w *= 4;
+
+    asprintf(&(all_u[len_w]->nam_c), "term-%"PRIc3_l"-%d", uty_u->tid_l, uty_u->fid_i);
+
+    tot_w += all_u[len_w]->siz_w;
+    len_w++;
+  }
+
+  all_u[len_w] = 0;
+
+  *out_w = tot_w;
+
+  return all_u;
 }
 
 /* _term_io_exit(): clean up terminal.
@@ -1810,6 +1843,7 @@ u3_term_io_init(u3_pier* pir_u)
   car_u->liv_o = c3y;
   car_u->io.talk_f = _term_io_talk;
   car_u->io.kick_f = _term_io_kick;
+  car_u->io.mark_f = _term_io_mark;
   car_u->io.exit_f = _term_io_exit;
 
   return car_u;

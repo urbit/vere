@@ -30,8 +30,8 @@
         c3_d    sen_d;                    //  last event requested
         c3_d    dun_d;                    //  last event processed
         c3_l    mug_l;                    //  hash of state
-        c3_w_new    mas_w;                    //  memory threshold state
-        c3_w_new    fag_w;                    //  flags
+        c3_h    mas_w;                    //  memory threshold state
+        c3_h    fag_w;                    //  flags
         u3_noun sac;                      //  space measurement
         u3_disk* log_u;                   //  event log
         u3_meta met_u;                    //  metadata
@@ -56,23 +56,30 @@
 
   /** Functions.
   **/
+    /* u3_mars_make(): construct a pier.
+    */
+      void
+      u3_mars_make(u3_mars* mar_u);
+
     /* u3_mars_boot(): boot a new ship.
     */
       c3_o
-      u3_mars_boot(c3_c* dir_c, u3_noun com);
+      u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
 
-    /* u3_mars_init(): restart an existing ship.
+    /* u3_mars_load(): load pier.
     */
-      u3_mars*
-      u3_mars_init(c3_c*    dir_c,
-                   u3_moat* inn_u,
-                   u3_mojo* out_u,
-                   c3_d     eve_d);
+      void
+      u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e);
+
+    /* u3_mars_work(): init mars
+    */
+      void
+      u3_mars_work(u3_mars* mar_u);
 
     /* u3_mars_kick(): try to send a task into mars.
     */
       c3_o
-      u3_mars_kick(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
+      u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_grab(): garbage collect.
     */
@@ -80,7 +87,6 @@
       u3_mars_grab(c3_o pri_o);
 
     /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
-    ** TODO: replace?
     */
       c3_d
       u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d);

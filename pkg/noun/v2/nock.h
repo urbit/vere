@@ -14,7 +14,7 @@
     /* u3n_memo: %memo hint space
      */
     typedef struct {
-      c3_l_new    sip_l;
+      c3_h    sip_l;
       u3_noun key;
     } u3n_v2_memo;
 
@@ -23,23 +23,23 @@
   typedef struct _u3n_v2_prog {
     struct {
       c3_o      own_o;                // program owns ops_y?
-      c3_w_new      len_w;                // length of bytecode (bytes)
+      c3_h      len_w;                // length of bytecode (bytes)
       c3_y*     ops_y;                // actual array of bytes
     } byc_u;                          // bytecode
     struct {
-      c3_w_new      len_w;                // number of literals
+      c3_h      len_w;                // number of literals
       u3_noun*  non;                  // array of literals
     } lit_u;                          // literals
     struct {
-      c3_w_new      len_w;                // number of memo slots
+      c3_h      len_w;                // number of memo slots
       u3n_v2_memo* sot_u;             // array of memo slots
     } mem_u;                          // memo slot data
     struct {
-      c3_w_new      len_w;                // number of calls sites
+      c3_h      len_w;                // number of calls sites
       u3j_v2_site* sit_u;             // array of sites
     } cal_u;                          // call site data
     struct {
-      c3_w_new      len_w;                // number of registration sites
+      c3_h      len_w;                // number of registration sites
       u3j_v2_rite* rit_u;             // array of sites
     } reg_u;                          // registration site data
   } u3n_v2_prog;

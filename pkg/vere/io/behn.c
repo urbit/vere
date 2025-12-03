@@ -38,7 +38,7 @@ _behn_wake_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3_auto* car_u = egg_u->car_u;
 
-  if (  (2 > egg_u->try_w)
+  if (  (2 > egg_u->try_h)
      && (c3n == _behn_bail_dire(lud)) )
   {
     u3z(lud);
@@ -142,7 +142,7 @@ _behn_born_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3_auto* car_u = egg_u->car_u;
 
-  if (  (2 > egg_u->try_w)
+  if (  (2 > egg_u->try_h)
      && (c3n == _behn_bail_dire(lud)) )
   {
     u3z(lud);

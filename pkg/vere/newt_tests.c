@@ -459,13 +459,13 @@ _test_newt_vast_size(void)
   //  construct header for large message (e.g., 16MB)
   //  note: we only test header parsing, not actual allocation
   //
-  c3_w_new len_w = 0x01000000;  // 16MB
+  c3_h len_h = 0x01000000;  // 16MB
 
   buf_y[0] = 0x0;
-  buf_y[1] = ( len_w        & 0xff);
-  buf_y[2] = ((len_w >>  8) & 0xff);
-  buf_y[3] = ((len_w >> 16) & 0xff);
-  buf_y[4] = ((len_w >> 24) & 0xff);
+  buf_y[1] = ( len_h        & 0xff);
+  buf_y[2] = ((len_h >>  8) & 0xff);
+  buf_y[3] = ((len_h >> 16) & 0xff);
+  buf_y[4] = ((len_h >> 24) & 0xff);
 
   //  add a few body bytes
   //

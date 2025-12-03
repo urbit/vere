@@ -17,6 +17,11 @@ linux-aarch64:
 ./configure --with-pic --disable-shared --host=aarch64-linux-musl
 ```
 
+windows (from wsl):
+```terminal
+CC_FOR_BUILD=gcc ./configure --host=x86_64-w64-mingw32 --disable-shared
+```
+
 Next, navigate under `mpn/` and run the following to generate the assembly files:
 
 ```bash
@@ -33,6 +38,7 @@ Next, copy the generated `mpn/*.s` files under the appropriate path, e.g.,
 
 Now, under the GMP root dir run `make` and copy these files as well:
 
+- `config.h`
 - `mp_bases.h`
 - `fac_table.h`
 - `fib_table.h`
@@ -45,7 +51,7 @@ Now, under the GMP root dir run `make` and copy these files as well:
 
 e.g.
 ```bash
-cp {mp_bases.h,fac_table.h,fib_table.h,trialdivtab.h} aarch64-macos/.
+cp {config.h, mp_bases.h,fac_table.h,fib_table.h,trialdivtab.h,sieve_table.h} aarch64-macos/.
 cp {mpn/fib_table.c,mpn/jacobitab.h,mpn/mp_bases.c,mpn/perfsqr.h} aarch64-macos/mpn/.
 ```
 

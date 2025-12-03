@@ -86,7 +86,7 @@ u3_ship_copy(u3_ship des_u, u3_ship src_u)
   des_u[1] = src_u[1];
 }
 
-c3_l_new
+c3_h
 u3_ship_rank(u3_ship who_u)
 {
   if      ( who_u[1] )       return c3__pawn;
@@ -102,7 +102,7 @@ u3_ship_czar(u3_ship who_u) { return who_u[0] & 0xFF; }
 c3_s
 u3_ship_king(u3_ship who_u) { return who_u[0] & 0xffff; }
 
-c3_w_new
+c3_h
 u3_ship_duke(u3_ship who_u) { return who_u[0] & 0xffffffff; }
 
 c3_d

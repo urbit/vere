@@ -1412,35 +1412,35 @@ _test_imprison_complex()
     }
   }
 
-  // words_new
+  // halfs
   {
-    c3_w_new in_w[10] = {10, 20, 0xffffffff};
-    u3_noun noun = u3i_words_new(3, in_w);
+    c3_h in_h[10] = {10, 20, 0xffffffff};
+    u3_noun noun = u3i_halfs(3, in_h);
 
 
-    c3_w_new out_a = u3r_word_new(0, noun);
+    c3_h out_a = u3r_half(0, noun);
     if (10 != out_a ){
       printf("*** u3r_word 1\n");
     }
 
-    c3_w_new out_b = u3r_word_new(1, noun);
+    c3_h out_b = u3r_half(1, noun);
     if (20 != out_b ){
       printf("*** u3r_word 2\n");
     }
 
-    c3_w_new out_c = u3r_word_new(2, noun);
+    c3_h out_c = u3r_half(2, noun);
     if (0xffffffff != out_c ){
       printf("*** u3r_word 3\n");
     }
 
-    c3_w_new out_w[10];
-    memset(out_w, 0, 10 * sizeof(c3_w_new));
-    u3r_words_new(0, 3, out_w, noun);
+    c3_h out_h[10];
+    memset(out_h, 0, 10 * sizeof(c3_h));
+    u3r_halfs(0, 3, out_h, noun);
 
-    if (10 != out_w[0] ||
-        20 != out_w[1] ||
-        0xffffffff != out_w[2] ||
-        0 != out_w[3]
+    if (10 != out_h[0] ||
+        20 != out_h[1] ||
+        0xffffffff != out_h[2] ||
+        0 != out_h[3]
         ){
       printf("*** u3r_word 4\n");
     }
@@ -1883,11 +1883,11 @@ _test_met()
   }
 #endif
 
-  // 4 words_new x 32 bits each = 128 bits = 16 bytes = 4 words_new = 2 doubles
+  // 4 halfs x 32 bits each = 128 bits = 16 bytes = 4 halfs = 2 doubles
   //
   {
-    c3_w_new data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
-    atom = u3i_words_new(4, data_w);
+    c3_h data_h[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+    atom = u3i_halfs(4, data_h);
 
     ret_w = u3r_met(0, atom);
     if (128 != ret_w){
@@ -1910,11 +1910,11 @@ _test_met()
     }
   }
 
-  // 4 words_new (top word is '1' )
+  // 4 halfs (top word is '1' )
   //
   {
-    c3_w_new data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
-    atom = u3i_words_new(4, data_w);
+    c3_h data_h[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
+    atom = u3i_halfs(4, data_h);
 
     ret_w = u3r_met(0, atom);
     if (97 != ret_w){
@@ -1944,40 +1944,40 @@ _test_met()
 static void
 _test_u3r_at()
 {
-  c3_w_new a_w = u3x_dep(0);
+  c3_h a_h = u3x_dep(0);
 
-  if (0xffffffff != a_w) {  printf("*** u3x_dep() \n"); }
+  if (0xffffffff != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(1);
-  if (0 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(1);
+  if (0 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(0b10);
-  if (1 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(0b10);
+  if (1 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(0b11);
-  if (1 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(0b11);
+  if (1 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(0b100);
-  if (2 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(0b100);
+  if (2 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(0b110);
-  if (2 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(0b110);
+  if (2 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep(0b111);
-  if (2 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep(0b111);
+  if (2 != a_h) {  printf("*** u3x_dep() \n"); }
 
-  a_w = u3x_dep( ((c3_w_new) (((c3_d) 1  << 32) - 1)) );
-  if (31 != a_w) {  printf("*** u3x_dep() \n"); }
+  a_h = u3x_dep( ((c3_h) (((c3_d) 1  << 32) - 1)) );
+  if (31 != a_h) {  printf("*** u3x_dep() \n"); }
 
 #ifdef VERE64
-  a_w = u3x_dep(0);
-  a_w = u3x_dep(1);
-  a_w = u3x_dep(0b10);
-  a_w = u3x_dep(0b11);
-  a_w = u3x_dep(0b100);
-  a_w = u3x_dep( ((c3_w_new) (((c3_d) 1  << 32) - 1)) );
-  a_w = u3x_dep( ((c3_w_new) (((c3_d) 1  << 33) - 1)) );
-  a_w = u3x_dep( u3a_64_direct_max );
+  a_h = u3x_dep(0);
+  a_h = u3x_dep(1);
+  a_h = u3x_dep(0b10);
+  a_h = u3x_dep(0b11);
+  a_h = u3x_dep(0b100);
+  a_h = u3x_dep( ((c3_h) (((c3_d) 1  << 32) - 1)) );
+  a_h = u3x_dep( ((c3_h) (((c3_d) 1  << 33) - 1)) );
+  a_h = u3x_dep( u3a_64_direct_max );
 #endif
 
   u3_weak ret;
@@ -2008,8 +2008,8 @@ _test_u3r_at()
   if (20 != ret) {  printf("*** u3r_at \n"); }
 
   // simple tree [ 1 <BIGNUM>]
-  c3_w_new in_w[10] = {10, 20, 0xffffffff};
-  u3_noun bignum = u3i_words_new(3, in_w);
+  c3_h in_h[10] = {10, 20, 0xffffffff};
+  u3_noun bignum = u3i_halfs(3, in_h);
 
   tree = u3i_cell(99, bignum);
   ret = u3r_at( 2, tree);

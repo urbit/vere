@@ -338,7 +338,7 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 {
   //  try to find a cookie header
   //
-  h2o_iovec_t coo_u = {NULL, 0};
+  h2o_iovec_t coo_u = {0, 0};
   {
     //TODO  http2 allows the client to put multiple 'cookie' headers,
     //      runtime should support that once eyre does too.
@@ -857,16 +857,16 @@ _free_beam(beam* bem)
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 {
-  beam bem;
+  beam bem = {u3_none, u3_none, u3_none, u3_none};
 
   //  get beak
   //
-  for ( c3_w_new i_w = 0; i_w < 3; ++i_w ) {
+  for ( c3_h i_h = 0; i_h < 3; ++i_h ) {
     u3_noun* wer;
-    if ( 0 == i_w ) {
+    if ( 0 == i_h ) {
       wer = &bem.who;
     }
-    else if ( 1 == i_w ) {
+    else if ( 1 == i_h ) {
       wer = &bem.des;
     }
     else {
@@ -890,12 +890,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 
     // '='
     if ( (len_w > 0) && ('=' == txt_c[0]) ) {
-      if ( 0 == i_w ) {
+      if ( 0 == i_h ) {
         u3_http* htp_u = req_u->hon_u->htp_u;
         u3_httd* htd_u = htp_u->htd_u;
         *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
       }
-      else if ( 1 == i_w ) {
+      else if ( 1 == i_h ) {
         *wer = c3__base;
       }
       else {
@@ -938,7 +938,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
   return bem;
 }
 
-/* _http_req_dispatch(): dispatch http request
+/* _http_req_dispatch(): dispatch http request. RETAINS `req`
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -963,7 +963,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_noun adr = u3nc(c3__ipv4, u3i_words(1, &req_u->hon_u->ipf_w));
       //  XX loopback automatically secure too?
       //
-      u3_noun dat = u3nt(htp_u->sec, adr, req);
+      u3_noun dat = u3nt(htp_u->sec, adr, u3k(req));
 
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
@@ -1086,7 +1086,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1097,6 +1097,9 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
       u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
       _http_req_dispatch(req_u, req);
     }
+    //  can be u3_none
+    //
+    u3z(req);
   }
   else if ( u3_none == u3r_at(7, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
@@ -1132,7 +1135,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1655,7 +1658,7 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   u3_weak req = _http_rec_to_httq(rec_u);
 
   if ( u3_none == req ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
               rec_u->method.base);
     }
@@ -1668,6 +1671,10 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
       _http_req_dispatch(req_u, req);
     }
   }
+
+  //  can be u3_none
+  //
+  u3z(req);
 
   return 0;
 }
@@ -2079,7 +2086,7 @@ _http_serv_accept(u3_http* htp_u)
 
   if ( 0 != (sas_i = uv_accept((uv_stream_t*)&htp_u->wax_u,
                                (uv_stream_t*)&hon_u->wax_u)) ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("http: accept: %s", uv_strerror(sas_i));
     }
 
@@ -2441,7 +2448,7 @@ _http_search_req(u3_httd* htd_u,
   u3_http* htp_u;
   u3_hcon* hon_u;
   u3_hreq* req_u;
-  c3_w bug_w = u3C.wag_w & u3o_verbose;
+  c3_w bug_w = u3C.wag_h & u3o_verbose;
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
@@ -2683,11 +2690,13 @@ _http_io_talk(u3_auto* car_u)
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
   //Setup spin stack
+#ifndef U3_OS_windows
   htd_u->stk_u = u3t_sstack_open();
   
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");
   }
+#endif
 
   //  XX set liv_o on done/swap?
   //
@@ -2847,7 +2856,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_w;
+    c3_w pos_w      = stk_u->off_h;
     c3_w out_w      = 0;
 
     while (pos_w > 4) {
@@ -2876,7 +2885,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     }
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
+    if ( 0 != stk_u->off_h ) {
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
@@ -2990,6 +2999,35 @@ _http_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
     u3z(wir); u3z(cad);
     return c3y;
   }
+}
+
+static u3m_quac**
+_http_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
+  u3_httd*   htd_u = (u3_httd*)car_u;
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("session tokens");
+  all_u[0]->siz_w = 4 * u3a_mark_noun(htd_u->fig_u.ses);
+  all_u[0]->qua_u = 0;
+
+
+  all_u[1] = c3_malloc(sizeof(**all_u));
+  all_u[1]->nam_c = strdup("url->scry cache");
+  all_u[1]->siz_w = 4 * u3h_mark(htd_u->sax_p);
+  all_u[1]->qua_u = 0;
+
+  all_u[2] = c3_malloc(sizeof(**all_u));
+  all_u[2]->nam_c = strdup("scry->noun cache");
+  all_u[2]->siz_w = 4 * u3h_mark(htd_u->nax_p);
+  all_u[2]->qua_u = 0;
+
+  all_u[3] = 0;
+
+  *out_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w;
+
+  return all_u;
 }
 
 /* _http_io_exit(): shut down http.
@@ -3113,6 +3151,7 @@ u3_http_io_init(u3_pier* pir_u)
   car_u->io.info_f = _http_io_info;
   car_u->io.slog_f = _http_io_slog;
   car_u->io.kick_f = _http_io_kick;
+  car_u->io.mark_f = _http_io_mark;
   car_u->io.exit_f = _http_io_exit;
 
   pir_u->sop_p = htd_u;

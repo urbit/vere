@@ -54,14 +54,14 @@ _bit_rep(u3_atom bits, u3_noun blox)
 #   define SLICE(sz,off,val) TAKEBITS(sz, val) << off
 
     for (c3_w i=0; i<num_blox_w; i++) {
-      u3_noun blok_w_new = u3h(blox);
+      u3_noun blok_h = u3h(blox);
       blox = u3t(blox);
 
-      if ( c3n == u3a_is_cat(blok_w_new) ) {
+      if ( c3n == u3a_is_cat(blok_h) ) {
         return u3m_bail(c3__fail);
       }
 
-      c3_w blok_w = blok_w_new;
+      c3_w blok_w = blok_h;
 
       for (c3_w rem_in_blok_w=bits; rem_in_blok_w;) {
         c3_w rem_in_acc_w = u3a_word_bits - use_w;

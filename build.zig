@@ -1,12 +1,13 @@
 const std = @import("std");
 
-const VERSION = "3.4";
+const VERSION = "4.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
 };
 
 const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
@@ -17,6 +18,7 @@ const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
 };
 
 const targets: []const std.Target.Query = main_targets;
@@ -31,9 +33,13 @@ const BuildCfg = struct {
     mem_dbg: bool = false,
     c3dbg: bool = false,
     snapshot_validation: bool = false,
+    urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
     vere32: bool = false,
+    tracy_enable: bool = false,
+    tracy_callstack: bool = false,
+    tracy_no_exit: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -86,6 +92,12 @@ pub fn build(b: *std.Build) !void {
         "Enable snapshot validation (-DU3_SNAPSHOT_VALIDATION)",
     ) orelse false;
 
+    const urth_mass = b.option(
+        bool,
+        "urth-mass",
+        "Enable |mass in urth process (-DU3_URTH_MASS)",
+    ) orelse false;
+
     const binary_name = b.option(
         []const u8,
         "binary-name",
@@ -115,6 +127,10 @@ pub fn build(b: *std.Build) !void {
         "vere32",
         "Compile in 32-bit mode",
     ) orelse false;
+
+    const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
+    const tracy_callstack = b.option(bool, "tracy-callstack", "Enable Tracy callstack capture") orelse false;
+    const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
 
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
@@ -148,9 +164,13 @@ pub fn build(b: *std.Build) !void {
         .mem_dbg = mem_dbg,
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
+        .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
         .vere32 = vere32,
+        .tracy_enable = tracy_enable,
+        .tracy_callstack = tracy_callstack,
+        .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
     };
 
@@ -165,7 +185,7 @@ pub fn build(b: *std.Build) !void {
             if (t.os.tag == .linux and
                 target.query.isNative() and
                 !asan and !ubsan)
-                b.resolveTargetQuery(.{ .abi = t.abi, .os_tag = t.os.tag })
+                b.resolveTargetQuery(.{ .abi = .musl })
             else
                 target,
             optimize,
@@ -197,10 +217,16 @@ fn buildBinary(
         "-Werror",
     });
 
-    if (!cfg.asan and !cfg.ubsan)
+    if (!cfg.asan and !cfg.ubsan) {
         try global_flags.appendSlice(&.{
             "-fno-sanitize=all",
         });
+        if (t.os.tag == .windows) {
+            try global_flags.appendSlice(&.{
+                "-Qunused-arguments",
+            });
+        }
+    }
 
     if (cfg.asan and !cfg.ubsan)
         try global_flags.appendSlice(&.{
@@ -262,6 +288,19 @@ fn buildBinary(
     if (!cfg.vere32)
         try urbit_flags.appendSlice(&.{"-DVERE64"});
 
+    if (cfg.urth_mass)
+        try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
+
+    if (cfg.tracy_enable) {
+        try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});
+        if (cfg.tracy_callstack) {
+            try urbit_flags.appendSlice(&.{"-DTRACY_CALLSTACK"});
+        }
+        if (cfg.tracy_no_exit) {
+            try urbit_flags.appendSlice(&.{"-DTRACY_NO_EXIT"});
+        }
+    }
+
     if (t.cpu.arch == .aarch64) {
         try urbit_flags.appendSlice(&.{
             "-DU3_CPU_aarch64=1",
@@ -273,15 +312,26 @@ fn buildBinary(
             "-DU3_OS_osx=1",
             "-DENT_GETENTROPY_SYSRANDOM", // pkg_ent
         });
-    } else {
-        try urbit_flags.appendSlice(&.{
-            "-DENT_GETENTROPY_UNISTD", //pkg_ent
-        });
     }
 
     if (t.os.tag == .linux) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    if (t.os.tag == .windows) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_windows=1",
+            "-DWIN32_LEAN_AND_MEAN",
+            "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
+            "-DO_CLOEXEC=0",
+            "-DH2O_NO_UNIX_SOCKETS",
+            "-DH2O_NO_HTTP3",
+            "-DH2O_NO_REDIS",
+            "-DH2O_NO_MEMCACHED",
+            "-DCURL_STATICLIB",
         });
     }
 
@@ -315,12 +365,21 @@ fn buildBinary(
         .copt = copts,
     });
 
+    // XX re-enable for migration work
+    // const pkg_past = if (cfg.vere32) b.dependency("pkg_past", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    //     .copt = copts,
+    // }) else null;
+
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        // XX re-enable for migration work
+        // .vere32 = cfg.vere32,
     });
 
     const curl = b.dependency("curl", .{
@@ -383,6 +442,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const tracy = if (cfg.tracy_enable) b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+
     //
     // Build Artifact
     //
@@ -392,7 +456,16 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
     });
-    urbit.stack_size = 0;
+
+    if (t.os.tag == .windows) {
+        urbit.stack_size = 67108864;
+    } else {
+        urbit.stack_size = 0;
+    }
+
+    if (t.os.tag == .windows) {
+        urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+    }
 
     const target_query: std.Target.Query = .{
         .cpu_arch = t.cpu.arch,
@@ -426,19 +499,29 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
+    // if (cfg.vere32) {
+    //     urbit.linkLibrary(pkg_past.?.artifact("past"));
+    // }
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
     urbit.linkLibrary(gmp.artifact("gmp"));
+
     urbit.linkLibrary(h2o.artifact("h2o"));
     urbit.linkLibrary(curl.artifact("curl"));
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
     urbit.linkLibrary(openssl.artifact("ssl"));
-    urbit.linkLibrary(sigsegv.artifact("sigsegv"));
+    if (t.os.tag != .windows)
+        urbit.linkLibrary(sigsegv.artifact("sigsegv"));
     urbit.linkLibrary(urcrypt.artifact("urcrypt"));
     urbit.linkLibrary(whereami.artifact("whereami"));
     urbit.linkLibrary(wasm3.artifact("wasm3"));
+
+    if (cfg.tracy_enable) {
+        urbit.linkLibrary(tracy.?.artifact("tracy"));
+        urbit.addIncludePath(tracy.?.path(""));
+    }
 
     if (t.os.tag.isDarwin()) {
         // Requires llvm@18 homebrew installation
@@ -577,7 +660,7 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
-                .name = "noun-test",
+                .name = "vere-noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
             },
@@ -594,6 +677,11 @@ fn buildBinary(
             .{
                 .name = "pact-test",
                 .file = "pkg/vere/io/mesa/pact_test.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "tracy-test",
+                .file = "pkg/vere/tracy_test.c",
                 .deps = vere_test_deps,
             },
         };
@@ -619,13 +707,17 @@ fn buildBinary(
                 }
             }
 
+            if (t.os.tag == .windows) {
+                test_exe.linkSystemLibrary("ws2_32");
+            }
+
             if (t.os.tag.isDarwin()) {
                 // Requires llvm@18 homebrew installation
                 if (cfg.asan or cfg.ubsan)
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
@@ -633,6 +725,10 @@ fn buildBinary(
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
+            }
+            if (cfg.tracy_enable) {
+                test_exe.linkLibrary(tracy.?.artifact("tracy"));
+                test_exe.addIncludePath(tracy.?.path(""));
             }
             test_exe.addCSourceFiles(.{
                 .files = &.{tst.file},

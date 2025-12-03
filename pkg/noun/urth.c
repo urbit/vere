@@ -121,6 +121,11 @@ _cu_from_loom_next(_cu_stack* tac_u, ur_root_t* rot_u, u3_noun a)
     //  u3 direct == ur direct
     //
     if ( c3y == u3a_is_cat(a) ) {
+#ifdef VERE64
+      if ( a > ur_direct_max ) {
+        return ur_coin64(rot_u, a);
+      }
+#endif
       return (ur_nref)a;
     }
     else {
@@ -267,13 +272,13 @@ _cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
     //
     case ur_icell:  return lom_u->cel[ur_nref_idx(ref)];
 
-    //  u3 direct atoms are 31-bit, while ur direct atoms are 62-bit;
+    //  u3 direct atoms are 31/63-bit, while ur direct atoms are 62-bit;
     //  we use a hashtable to deduplicate the non-overlapping space
     //
     case ur_direct: {
       u3_atom vat;
 
-      if ( 0x7fffffffULL >= ref ) {
+      if ( u3a_direct_max >= ref ) {
         return (u3_atom)ref;
       }
       else if ( ur_dictn_get(rot_u, &lom_u->map_u, ref, (c3_w*)&vat) ) {
@@ -281,8 +286,8 @@ _cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
       }
       else {
         {
-          c3_w wor_w[2] = { ref & 0xffffffff, ref >> 32 };
-          vat = (c3_w)u3i_words(2, wor_w);
+          c3_h wor_h[2] = { ref & 0xffffffff, ref >> 32 };
+          vat = (c3_w)u3i_halfs(2, wor_h);
         }
 
         ur_dictn_put(0, &lom_u->map_u, ref, (c3_w)vat);
@@ -413,10 +418,10 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
 
   //  establish correct refcounts via tracing
   //
-  c3_w wag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_debug_ram;
+  c3_h wag_h = u3C.wag_h;
+  u3C.wag_h |= u3o_debug_ram;
   u3m_grab(u3_none);
-  u3C.wag_w  = wag_w;
+  u3C.wag_h  = wag_h;
 
   //  re-establish warm jet state
   //

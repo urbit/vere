@@ -4,7 +4,7 @@
 #include "vere.h"
 
     /*  assumptions:
-    **    all measurements are in chubs (double-words_new, c3_d, uint64_t).
+    **    all measurements are in chubs (double-halfs, c3_d, uint64_t).
     **    little-endian addressing is ASSUMED.
     **
     **  framing:
@@ -75,6 +75,7 @@ u3_foil_folder(const c3_c* pax_c)
         return 0;
       }
       else {
+        //  XX remove mkdir and retry
         if ( 0 != (err_i = uv_fs_mkdir(u3L, &ruq_u, pax_c, 0700, 0)) ) {
           _foil_fail(pax_c, err_i);
           return 0;
