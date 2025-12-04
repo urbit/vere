@@ -1670,6 +1670,8 @@ u3m_soft_run(u3_noun gul,
 {
   u3_noun why = 0, pro;
 
+  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
+
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1687,6 +1689,7 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
+    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 
