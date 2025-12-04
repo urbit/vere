@@ -19,23 +19,24 @@
     #define _subborrow_w_ptr(p) ((unsigned int*)(p))
   #endif
 #else
-#ifdef VERE64
-static inline c3_b
-_subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
-{
-  c3_q dif_q = (c3_q)a_w - (c3_q)b_w - (c3_q)bor_b;
-  *c_w = (c3_w)dif_q;
-  return (c3_b)(dif_q >> 127);
-}
-#else
-static inline c3_b
-_subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
-{
-  c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
-  *c_w = (c3_w)dif_d;
-  return (c3_b)(dif_d >> 63);
-}
-#endif
+  #ifdef VERE64
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_q dif_q = (c3_q)a_w - (c3_q)b_w - (c3_q)bor_b;
+      *c_w = (c3_w)dif_q;
+      return (c3_b)(dif_q >> 127);
+    }
+  #else
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
+      *c_w = (c3_w)dif_d;
+      return (c3_b)(dif_d >> 63);
+    }
+  #endif
+  #define _subborrow_w_ptr(p)  (p)
 #endif
 
 static void
