@@ -16,8 +16,10 @@
 #ifdef __IMMINTRIN_H
   #ifdef VERE64
     #define _addcarry_w _addcarry_u64
+    #define _addcarry_w_ptr(p)  ((unsigned long long*)(p))
   #else
     #define _addcarry_w _addcarry_u32
+    #define _addcarry_w_ptr(p)  ((unsigned int*)(p))
   #endif
 #else
 #ifdef VERE64
@@ -580,7 +582,7 @@ u3i_vint(u3_noun a)
     c3_w *b_buf_w = sab_u.buf_w;
 
     for (; i_w < pug_u->len_w && car_b; i_w++) {
-      car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, &b_buf_w[i_w]);
+      car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, _addcarry_w_ptr(&b_buf_w[i_w]));
     }
 
     if (car_b) {

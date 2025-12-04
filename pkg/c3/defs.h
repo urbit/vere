@@ -48,7 +48,6 @@
 
     /* Size in words.
     */
-// XX: 64 square with allocate.h
 // (probably some of that belongs here)
 #ifndef VERE64
 #     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)

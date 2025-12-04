@@ -12,9 +12,11 @@
 
 #ifdef __IMMINTRIN_H
   #ifdef VERE64
-    #define _subborrow_w _subborrow_u64
+    #define _subborrow_w        _subborrow_u64
+    #define _subborrow_w_ptr(p) ((unsigned long long*)(p))
   #else
-    #define _subborrow_w _subborrow_u32
+    #define _subborrow_w        _subborrow_u32
+    #define _subborrow_w_ptr(p) ((unsigned int*)(p))
   #endif
 #else
 #ifdef VERE64
@@ -46,12 +48,14 @@ _sub_words(c3_w* a_buf_w,
   c3_b bor_b = 0;
 
   for (c3_w i_w = 0; i_w < b_len_w; i_w++) {
-    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w],
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
   }
 
   c3_w i_w = b_len_w;
   for (; i_w < a_len_w && bor_b; i_w++) {
-    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0, &c_buf_w[i_w]);
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0,
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
   }
 
   u3_assert( 0 == bor_b );

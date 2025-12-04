@@ -13,8 +13,10 @@
 #ifdef __IMMINTRIN_H
   #ifdef VERE64
     #define _addcarry_w _addcarry_u64
+    #define _addcarry_w_ptr(p) ((unsigned long long*)(p))
   #else
     #define _addcarry_w _addcarry_u32
+    #define _addcarry_w_ptr(p) ((unsigned int*)(p))
   #endif
 #else
 #ifdef VERE64
@@ -48,14 +50,17 @@ _add_words(c3_w* a_buf_w,
   c3_b car_b = 0;
 
   for (c3_w i_w = 0; i_w < min_w; i_w++) {
-    car_b = _addcarry_w(car_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
+    car_b = _addcarry_w(car_b,
+                        a_buf_w[i_w],
+                        b_buf_w[i_w],
+                        _addcarry_w_ptr(&c_buf_w[i_w]));
   }
 
   c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
 
   c3_w i_w = min_w;
   for (; i_w < max_w && car_b; i_w++) {
-    car_b = _addcarry_w(car_b, rest_w[i_w], 0, &c_buf_w[i_w]);
+    car_b = _addcarry_w(car_b, rest_w[i_w], 0, _addcarry_w_ptr(&c_buf_w[i_w]));
   }
 
   if ( car_b ) {
