@@ -35,7 +35,7 @@ _ames_writ_ex(void)
   {
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
-    wen = u3_time_in_tv(&tim_u);
+    wen = u3m_time_in_tv(&tim_u);
   }
 
   return u3nt(c3__work, 0, u3nc(wen, ovo));

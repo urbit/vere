@@ -6,6 +6,66 @@
 
 #include "noun.h"
 
+#if defined(__x86_64__)
+#include <immintrin.h>
+#endif
+
+#ifdef __IMMINTRIN_H
+  #ifdef VERE64
+    #define _addcarry_w _addcarry_u64
+  #else
+    #define _addcarry_w _addcarry_u32
+  #endif
+#else
+#ifdef VERE64
+static inline c3_b
+_addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+{
+  c3_q sum = (c3_q)car_b + (c3_q)a_w + (c3_q)b_w;
+  *c_w = (c3_w)sum;
+  return (c3_b)(sum >> 64);
+}
+#else
+static inline c3_b
+_addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+{
+  c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
+  *c_w = (c3_w)sum_d;
+  return (c3_b)(sum_d >> 32);
+}
+#endif
+#endif
+
+static void
+_add_words(c3_w* a_buf_w,
+           c3_w  a_len_w,
+           c3_w* b_buf_w,
+           c3_w  b_len_w,
+           c3_w* restrict c_buf_w)
+{
+  c3_w min_w = c3_min(a_len_w, b_len_w);
+  c3_w max_w = c3_max(a_len_w, b_len_w);
+  c3_b car_b = 0;
+
+  for (c3_w i_w = 0; i_w < min_w; i_w++) {
+    car_b = _addcarry_w(car_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
+  }
+
+  c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
+
+  c3_w i_w = min_w;
+  for (; i_w < max_w && car_b; i_w++) {
+    car_b = _addcarry_w(car_b, rest_w[i_w], 0, &c_buf_w[i_w]);
+  }
+
+  if ( car_b ) {
+    c_buf_w[max_w] = 1;
+  }
+  else {
+    memcpy(&c_buf_w[i_w], &rest_w[i_w], (max_w - i_w) * sizeof(c3_w));
+  }
+}
+
 u3_noun
 u3qa_add(u3_atom a,
          u3_atom b)
@@ -22,15 +82,24 @@ u3qa_add(u3_atom a,
     return u3k(a);
   }
   else {
-    mpz_t a_mp, b_mp;
+    u3i_slab sab_u;
+    c3_w *a_buf_w, *b_buf_w, *c_buf_w;
+    c3_w  a_len_w, b_len_w;
 
-    u3r_mp(a_mp, a);
-    u3r_mp(b_mp, b);
+    a_buf_w = u3r_word_buffer(&a, &a_len_w);
+    b_buf_w = u3r_word_buffer(&b, &b_len_w);
+    //  u3i_slab_init(&sab_u, 5, c3_max(a_len_w, b_len_w) + 1);
+    //  we have to do more measuring to avoid growing atom buffers on each
+    //  addition as u3a_wtrim noops as of 3e8473d
+    //
+    c3_w a_met0_w = u3r_met(0, a),
+         b_met0_w = u3r_met(0, b);
+    u3i_slab_init(&sab_u, 0, c3_max(a_met0_w, b_met0_w) + 1);
+    
+    c_buf_w = sab_u.buf_w;
 
-    mpz_add(a_mp, a_mp, b_mp);
-    mpz_clear(b_mp);
-
-    return u3i_mp(a_mp);
+    _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
+    return u3i_slab_mint(&sab_u);
   }
 }
 

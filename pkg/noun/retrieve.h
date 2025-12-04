@@ -594,4 +594,16 @@
       c3_o
       u3r_safe(u3_noun fol, u3_weak* out);
 
+      /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
+      ** and the length of the buffer
+      */
+      c3_w*
+      u3r_word_buffer(u3_atom* a, c3_w* len_w);
+
+      /* u3r_comp(): compares two atoms:
+      ** returns 1 if a > b, -1 if a < b, 0 if they are equal
+      */
+      c3_ys
+      u3r_comp(u3_atom a, u3_atom b);
+
 #endif /* ifndef U3_RETRIEVE_H */

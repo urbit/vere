@@ -19,17 +19,7 @@ u3qa_dec(u3_atom a)
     return u3m_error("decrement-underflow");
   }
   else {
-    if ( _(u3a_is_cat(a)) ) {
-      return a - 1;
-    }
-    else {
-      mpz_t a_mp;
-
-      u3r_mp(a_mp, a);
-      mpz_sub_ui(a_mp, a_mp, 1);
-
-      return u3i_mp(a_mp);
-    }
+    return u3qa_sub(a, 1);
   }
 }
 
