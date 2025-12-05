@@ -143,14 +143,14 @@
     */
       typedef struct {
         struct {
-          c3_w  col_l;                      //  columns
-          c3_w  row_l;                      //  rows
+          c3_h  col_h;                      //  columns
+          c3_h  row_h;                      //  rows
         } siz;
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
-          c3_w    rus_w;                    //  cursor position (row)
-          c3_w    cus_w;                    //  cursor position (column)
+          c3_h    rus_h;                    //  cursor position (row)
+          c3_h    cus_h;                    //  cursor position (column)
         } mir;
 
         struct {                            //  escape code control
@@ -164,8 +164,8 @@
 
         struct {                            //  input buffering
           c3_y    syb_y[5];                 //  utf8 code buffer
-          c3_w    len_w;                    //  present length
-          c3_w    wid_w;                    //  total width
+          c3_h    len_h;                    //  present length
+          c3_h    wid_h;                    //  total width
           u3_noun imp;                      //  %txt input buffer
         } fut;
 
@@ -244,10 +244,10 @@
         u3_ttyf          loj_f;             //  release tty from cooked print
         c3_o           (*wsz_f)
                        (struct _u3_utty* uty_u,
-                        c3_w* col_l,
-                        c3_w* row_l);       //  return tty window size
+                        c3_h* col_h,
+                        c3_h* row_h);       //  return tty window size
         c3_i             fid_i;             //  file descriptor
-        c3_w             tid_l;             //  terminal identity number
+        c3_h             tid_h;             //  terminal identity number
         u3_utfo          ufo_u;             //  escape sequences
         u3_utat          tat_u;             //  control state
         struct _u3_auto* car_u;             //  driver hack
@@ -1062,7 +1062,7 @@
       /* u3_term_get_blew(): return window size [columns rows].
       */
         u3_noun
-        u3_term_get_blew(c3_w tid_l);
+        u3_term_get_blew(c3_h tid_h);
 
       /* u3_term_ef_winc(): window change.
       */

@@ -2801,7 +2801,7 @@ u3m_time_sec_out(c3_d urs_d)
 
 #ifndef VERE64
   if ( adj_d > c3_h_max ) {
-    fprintf(stderr, "agh! it's 2106! and no one's fixed this shite!\n");
+    fprintf(stderr, "agh! it's 2106! and no one's fixed this shite!\r\n");
     exit(1);
   }
 #endif
