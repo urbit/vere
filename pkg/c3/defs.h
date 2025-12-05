@@ -48,7 +48,6 @@
 
     /* Size in words.
     */
-// XX: 64 square with allocate.h
 // (probably some of that belongs here)
 #ifndef VERE64
 #     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
@@ -315,5 +314,8 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
 #else
 #define c3_w_max  c3_d_max
 #endif
+
+#define c3_likely(x)    ( __builtin_expect(!!(x), 1) )
+#define c3_unlikely(x)  ( __builtin_expect(!!(x), 0) )
 
 #endif /* ifndef C3_DEFS_H */

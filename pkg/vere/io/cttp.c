@@ -54,7 +54,7 @@
 */
   typedef struct _u3_cttp {
     u3_auto          car_u;             //  driver
-    c3_w             sev_l;             //  instance number
+    c3_h             sev_l;             //  instance number
     u3_creq*         ceq_u;             //  request list
     uv_async_t       nop_u;             //  unused handle (async close)
     h2o_timeout_t    tim_u;             //  request timeout
@@ -1162,7 +1162,7 @@ u3_cttp_io_init(u3_pier* pir_u)
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
-    now = u3_time_in_tv(&tim_u);
+    now = u3m_time_in_tv(&tim_u);
     ctp_u->sev_l = u3r_mug(now);
     u3z(now);
   }

@@ -11,6 +11,8 @@
     */
       typedef size_t c3_z;
       typedef ssize_t c3_zs;
+      typedef __uint128_t c3_q;
+      typedef __int128_t c3_qs;
       typedef uint64_t c3_d;
       typedef int64_t c3_ds;
       typedef uint32_t c3_h;

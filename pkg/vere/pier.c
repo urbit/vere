@@ -821,7 +821,7 @@ _pier_wyrd_card(u3_pier* pir_u)
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
-    now   = u3_time_in_tv(&tim_u);
+    now   = u3m_time_in_tv(&tim_u);
     sev_m = u3r_mug(now);
     sen   = u3dc("scot", c3__uv, sev_m);
 

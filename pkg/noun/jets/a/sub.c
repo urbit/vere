@@ -6,6 +6,63 @@
 
 #include "noun.h"
 
+#if defined(__x86_64__)
+#include <immintrin.h>
+#endif
+
+#ifdef __IMMINTRIN_H
+  #ifdef VERE64
+    #define _subborrow_w        _subborrow_u64
+    #define _subborrow_w_ptr(p) ((unsigned long long*)(p))
+  #else
+    #define _subborrow_w        _subborrow_u32
+    #define _subborrow_w_ptr(p) ((unsigned int*)(p))
+  #endif
+#else
+  #ifdef VERE64
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_q dif_q = (c3_q)a_w - (c3_q)b_w - (c3_q)bor_b;
+      *c_w = (c3_w)dif_q;
+      return (c3_b)(dif_q >> 127);
+    }
+  #else
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
+      *c_w = (c3_w)dif_d;
+      return (c3_b)(dif_d >> 63);
+    }
+  #endif
+  #define _subborrow_w_ptr(p)  (p)
+#endif
+
+static void
+_sub_words(c3_w* a_buf_w,
+           c3_w  a_len_w,
+           c3_w* b_buf_w,
+           c3_w  b_len_w,
+           c3_w* restrict c_buf_w)
+{
+  c3_b bor_b = 0;
+
+  for (c3_w i_w = 0; i_w < b_len_w; i_w++) {
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w],
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
+  }
+
+  c3_w i_w = b_len_w;
+  for (; i_w < a_len_w && bor_b; i_w++) {
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0,
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
+  }
+
+  u3_assert( 0 == bor_b );
+  memcpy(&c_buf_w[i_w], &a_buf_w[i_w], (a_len_w - i_w) * sizeof(c3_w));
+}
+
 u3_noun
 u3qa_sub(u3_atom a,
          u3_atom b)
@@ -22,21 +79,24 @@ u3qa_sub(u3_atom a,
     return u3k(a);
   }
   else {
-    mpz_t a_mp, b_mp;
-
-    u3r_mp(a_mp, a);
-    u3r_mp(b_mp, b);
-
-    if ( mpz_cmp(a_mp, b_mp) < 0 ) {
-      mpz_clear(a_mp);
-      mpz_clear(b_mp);
-
+    c3_ys cmp_ys = u3r_comp(a, b);
+    if ( 0 == cmp_ys ) {
+      return 0;
+    }
+    if ( -1 == cmp_ys ) {
       return u3m_error("subtract-underflow");
     }
-    mpz_sub(a_mp, a_mp, b_mp);
-    mpz_clear(b_mp);
+    u3i_slab sab_u;
+    c3_w *a_buf_w, *b_buf_w, *c_buf_w;
+    c3_w  a_len_w, b_len_w;
+    
+    a_buf_w = u3r_word_buffer(&a, &a_len_w);
+    b_buf_w = u3r_word_buffer(&b, &b_len_w);
+    u3i_slab_init(&sab_u, u3a_word_bits_log, a_len_w);
+    c_buf_w = sab_u.buf_w;
 
-    return u3i_mp(a_mp);
+    _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
+    return u3i_slab_mint(&sab_u);
   }
 }
 

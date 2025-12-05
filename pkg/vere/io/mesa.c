@@ -3057,7 +3057,7 @@ u3_mesa_io_init(u3_pier* pir_u)
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
-    now = u3_time_in_tv(&tim_u);
+    now = u3m_time_in_tv(&tim_u);
     //sam_u->sev_l = u3r_mug(now);
     u3z(now);
   }*/
