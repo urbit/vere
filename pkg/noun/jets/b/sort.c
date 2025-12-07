@@ -15,35 +15,35 @@ static_assert(
 );
 
 static void
-_sort_part(u3_noun* restrict arr_u, c3_w len_w, u3j_site* sit_u)
+_quicksort(u3_noun* restrict arr_u,
+    c3_w len_w,
+    u3_noun* restrict lef_u,
+    u3_noun* restrict rit_u,
+    u3j_site* sit_u)
 {
   if ( len_w <= 1 ) return;
   u3_noun pivot = arr_u[0];
-  u3_noun* first_u = u3a_malloc(sizeof(u3_noun) * (len_w - 1) * 2);
-  u3_noun* second_u = first_u + (len_w - 1);
-  c3_w f_w = 0, s_w = 0;
+  c3_w lef_w = 0, rit_w = 0;
   for (c3_w i_w = 1; i_w < len_w; i_w++)
   {
     u3_noun sam = u3nc(u3k(arr_u[i_w]), u3k(pivot));
     c3_o hoz_o = u3x_loob(u3j_gate_slam(sit_u, sam));
     if ( _(hoz_o) )
     {
-      first_u[f_w++] = arr_u[i_w];
+      lef_u[lef_w++] = arr_u[i_w];
     }
     else
     {
-      second_u[s_w++] = arr_u[i_w];
+      rit_u[rit_w++] = arr_u[i_w];
     }
   }
 
-  _sort_part(first_u, f_w, sit_u);
-  _sort_part(second_u, s_w, sit_u);
+  arr_u[lef_w] = pivot;
+  memcpy(arr_u,             lef_u, lef_w * sizeof(u3_noun));
+  memcpy(arr_u + lef_w + 1, rit_u, rit_w * sizeof(u3_noun));
 
-  arr_u[f_w] = pivot;
-  memcpy(arr_u,           first_u,  f_w * sizeof(u3_noun));
-  memcpy(arr_u + f_w + 1, second_u, s_w * sizeof(u3_noun));
-  
-  u3a_free(first_u);
+  _quicksort(arr_u,             lef_w, lef_u, rit_u, sit_u);
+  _quicksort(arr_u + lef_w + 1, rit_w, lef_u, rit_u, sit_u);
 }
 
 //  RETAINS list, transfers product
@@ -63,7 +63,9 @@ _sort(u3j_site* sit_u, u3_noun list)
   }
 
   if (1 == len_w) return u3k(list);
-  u3_noun* arr_u = u3a_malloc(sizeof(u3_noun) * len_w);
+  u3_noun* arr_u = u3a_malloc(sizeof(u3_noun) * len_w * 3);
+  u3_noun* lef_u = arr_u + len_w;
+  u3_noun* rit_u = lef_u + len_w;
   for (c3_w i_w = 0; i_w < len_w; i_w++)
   {
     //  inlined u3r_cell without any checks
@@ -74,7 +76,7 @@ _sort(u3j_site* sit_u, u3_noun list)
     list = cel_u->tel;
   }
 
-  _sort_part(arr_u, len_w, sit_u);
+  _quicksort(arr_u, len_w, lef_u, rit_u, sit_u);
 
   u3_noun pro = u3_nul;
   for (c3_w i_w = len_w; i_w--;)
