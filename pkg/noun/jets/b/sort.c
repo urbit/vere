@@ -10,8 +10,8 @@ static_assert( (UINT32_MAX > u3a_cells),
                "length precision" );
 
 static_assert(
-  (UINT32_MAX < (SIZE_MAX / (2 * sizeof(u3_noun)))),
-  "len_w * sizeof u3_noun overflow"
+  (UINT32_MAX < (SIZE_MAX / (3 * sizeof(u3_noun)))),
+  "allocation size overflow"
 );
 
 static void
