@@ -2125,7 +2125,12 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // unpack q_tok to get the priority integer and the tank
     // p_q_tok is the priority, q_q_tok is the tank we will work with
     u3_noun p_q_tok, q_q_tok;
-    u3_assert(c3y == u3r_cell(q_tok, &p_q_tok, &q_q_tok));
+    c3_t cap_t = true;
+    if ( c3n == u3r_cell(q_tok, &p_q_tok, &q_q_tok) ) {
+      p_q_tok = u3_nul;
+      q_q_tok = u3_blip;
+      cap_t = false;
+    }
 
     // format the timing report
     c3_c str_c[64];
@@ -2135,8 +2140,13 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // "q_q_tok: report"
     // prepend the priority to form a cell of the same shape q_tok
     // send this to ut3_slog so that it can be logged out
-    c3_h pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
-    u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
+    c3_h pri_h = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
+    if ( cap_t ) {
+      u3t_slog_cap(pri_h, u3k(q_q_tok), u3i_string(str_c));
+    }
+    else {
+      u3t_slog(u3nc(pri_h, u3i_string(str_c)));
+    }
     u3z(delta);
   }
   else {
