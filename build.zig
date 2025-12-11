@@ -207,6 +207,7 @@ fn buildBinary(
         "-g3",
         "-Wall",
         "-Werror",
+        "-Wconversion",
     });
 
     if (!cfg.asan and !cfg.ubsan) {

@@ -130,7 +130,7 @@ ur_bsr8_any(ur_bsr_t *bsr, uint8_t len)
 
       {
         uint8_t l = b[1] & ((1 << off) - 1);
-        return m ^ (l << rest);
+        return (uint8_t)(m ^ (l << rest));
       }
     }
   }
@@ -169,7 +169,7 @@ ur_bsr32_any(ur_bsr_t *bsr, uint8_t len)
       len_byt = len >> 3;
 
       if ( len_byt >= left ) {
-        len_byt    = left;
+        len_byt    = (uint8_t)left;
         bsr->off   = off = 0;
         bsr->left  = 0;
         bsr->bytes = 0;
@@ -180,7 +180,7 @@ ur_bsr32_any(ur_bsr_t *bsr, uint8_t len)
         bsr->bytes += len_byt;
       }
 
-      mask = (1 << off) - 1;
+      mask = (uint8_t)((1 << off) - 1);
 
       switch ( len_byt ) {
         default: assert(0);
@@ -262,7 +262,7 @@ ur_bsr64_any(ur_bsr_t *bsr, uint8_t len)
       len_byt = len >> 3;
 
       if ( len_byt >= left ) {
-        len_byt    = left;
+        len_byt    = (uint8_t)left;
         bsr->off   = off = 0;
         bsr->left  = 0;
         bsr->bytes = 0;
@@ -273,7 +273,7 @@ ur_bsr64_any(ur_bsr_t *bsr, uint8_t len)
         bsr->bytes += len_byt;
       }
 
-      mask = (1 << off) - 1;
+      mask = (uint8_t)((1 << off) - 1);
 
       switch ( len_byt ) {
         case 8: {
@@ -424,7 +424,7 @@ ur_bsr_bytes_any(ur_bsr_t *bsr, uint64_t len, uint8_t *out)
         uint64_t i;
 
         for ( i = 0; i < max; i++ ) {
-          out[i] = (b[i] >> off) ^ (b[i + 1] << rest);
+          out[i] = (uint8_t)((b[i] >> off) ^ (b[i + 1] << rest));
         }
 
         b += max;
@@ -437,7 +437,7 @@ ur_bsr_bytes_any(ur_bsr_t *bsr, uint64_t len, uint8_t *out)
       //    but we might not need all of it
       //
       if ( need >= left ) {
-        uint8_t bits = len - (last << 3);
+        uint8_t bits = (uint8_t)(len - (last << 3));
 
         if ( bits < rest ) {
           out[max] = m & ((1 << len_bit) - 1);
@@ -468,7 +468,7 @@ ur_bsr_bytes_any(ur_bsr_t *bsr, uint64_t len, uint8_t *out)
           }
           else {
             l = *++b & ((1 << off) - 1);
-            out[max] = (m ^ (l << rest)) & ((1 << len_bit) - 1);
+            out[max] = (uint8_t)((m ^ (l << rest)) & ((1 << len_bit) - 1));
           }
         }
       }
@@ -501,7 +501,7 @@ ur_bsr_skip_any(ur_bsr_t *bsr, uint64_t len)
     b += ur_min(last, len_byt) + 1;
 
     if ( need >= left ) {
-      uint8_t bits = len - (last << 3);
+      uint8_t bits = (uint8_t)(len - (last << 3));
 
       if ( bits < rest ) {
         bsr->bytes = b - 1;
@@ -626,19 +626,19 @@ ur_bsr_log(ur_bsr_t *bsr, uint8_t *out)
       byt = b[++skip];
 
       if ( skip == left ) {
-        return _bsr_set_gone(bsr, (skip << 3) - off);
+        return _bsr_set_gone(bsr, (uint8_t)((skip << 3) - off));
       }
     }
 
     {
-      uint32_t zeros = ur_tz8(byt) + (skip ? ((skip << 3) - off) : 0);
+      uint32_t zeros = (uint32_t)ur_tz8(byt) + (skip ? (uint32_t)((skip << 3) - off) : 0);
 
       if ( 255 < zeros ) {
         return _bsr_log_meme(bsr);
       }
       else {
         uint32_t bits = off + 1 + zeros;
-        uint8_t bytes = bits >> 3;
+        uint8_t bytes = (uint8_t)(bits >> 3);
 
         left -= bytes;
 
@@ -647,7 +647,7 @@ ur_bsr_log(ur_bsr_t *bsr, uint8_t *out)
         bsr->left  = left;
         bsr->off   = ur_mask_3(bits);
 
-        *out = zeros;
+        *out = (uint8_t)zeros;
         return ur_cue_good;
       }
     }
@@ -901,7 +901,7 @@ ur_bsw32(ur_bsw_t *bsw, uint8_t len, uint32_t val)
   uint8_t need;
 
   len  = ur_min(32, len);
-  need = ur_bloq_up3( bsw->off + len );
+  need = (uint8_t)ur_bloq_up3( bsw->off + len );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1024,7 +1024,7 @@ ur_bsw64(ur_bsw_t *bsw, uint8_t len, uint64_t val)
   uint8_t need;
 
   len  = ur_min(64, len);
-  need = ur_bloq_up3( bsw->off + len );
+  need = (uint8_t)ur_bloq_up3( bsw->off + len );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1056,7 +1056,7 @@ _bsw_bytes_unsafe(ur_bsw_t *bsw, const uint64_t len, const uint8_t* src)
     const uint8_t rest = 8 - off;
 
     if ( rest >= len ) {
-      uint16_t ful = off + len;
+      uint16_t ful = (uint16_t)(off + len);
 
       *dst ^= (*src & ((1 << len) - 1)) << off;
 
@@ -1074,12 +1074,12 @@ _bsw_bytes_unsafe(ur_bsw_t *bsw, const uint64_t len, const uint8_t* src)
       *dst++ ^= *src << off;
 
       for ( uint64_t i = 0; i < len_byt; i++ ) {
-        dst[i] = (src[i] >> rest) ^ (src[i + 1] << off);
+        dst[i] = (uint8_t)((src[i] >> rest) ^ (src[i + 1] << off));
       }
 
       {
         uint8_t  tal = (src[len_byt] >> rest)
-                     ^ (( off >= len_bit ) ? 0 : (src[len_byt + 1] << off));
+                     ^ (uint8_t)(( off >= len_bit ) ? 0 : (src[len_byt + 1] << off));
         dst[len_byt] = tal & ((1 << len_bit) - 1);
       }
 
@@ -1147,7 +1147,7 @@ _bsw_mat64_unsafe(ur_bsw_t *bsw, uint8_t len, uint64_t val)
   }
   else {
     {
-      uint8_t nel = ur_met0_64(len);
+      uint8_t nel = (uint8_t)ur_met0_64(len);
       _bsw_bex_unsafe(bsw, nel);
       _bsw64_unsafe(bsw, nel - 1, len);
     }
@@ -1159,7 +1159,7 @@ _bsw_mat64_unsafe(ur_bsw_t *bsw, uint8_t len, uint64_t val)
 /*
 *  the length of a "mat" run-length encoded atom of [len] bits
 */
-#define MAT_LEN(len)  ( ( 0 == len ) ? 1 : len + (2 * ur_met0_64((uint64_t)len)) )
+#define MAT_LEN(len)  ( ( 0 == len ) ? 1ULL : (uint64_t)(len + (2 * (uint64_t)ur_met0_64((uint64_t)len))) )
 
 void
 ur_bsw_mat64(ur_bsw_t *bsw, uint8_t len, uint64_t val)
@@ -1167,7 +1167,7 @@ ur_bsw_mat64(ur_bsw_t *bsw, uint8_t len, uint64_t val)
   uint8_t need;
 
   len  = ur_min(64, len);
-  need = ur_bloq_up3( bsw->off + MAT_LEN(len) );
+  need = (uint8_t)ur_bloq_up3( bsw->off + MAT_LEN(len) );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1186,7 +1186,7 @@ _bsw_mat_bytes_unsafe(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
     //  write run-length
     //
     {
-      uint8_t nel = ur_met0_64(len);
+      uint8_t nel = (uint8_t)ur_met0_64(len);
       _bsw_bex_unsafe(bsw, nel);
       _bsw64_unsafe(bsw, nel - 1, len);
     }
@@ -1198,7 +1198,7 @@ _bsw_mat_bytes_unsafe(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 void
 ur_bsw_mat_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 {
-  uint64_t need = ur_bloq_up3( bsw->off + MAT_LEN(len) );
+  uint64_t need = (uint64_t)ur_bloq_up3( bsw->off + MAT_LEN(len) );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1220,7 +1220,7 @@ ur_bsw_back64(ur_bsw_t *bsw, uint8_t len, uint64_t val)
   uint8_t need;
 
   len  = ur_min(64, len);
-  need = ur_bloq_up3( 2 + bsw->off + MAT_LEN(len) );
+  need = (uint8_t)ur_bloq_up3( 2 + bsw->off + MAT_LEN(len) );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1242,7 +1242,7 @@ ur_bsw_atom64(ur_bsw_t *bsw, uint8_t len, uint64_t val)
   uint8_t need;
 
   len  = ur_min(64, len);
-  need = ur_bloq_up3( 1 + bsw->off + MAT_LEN(len) );
+  need = (uint8_t)ur_bloq_up3( 1 + bsw->off + MAT_LEN(len) );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1261,7 +1261,7 @@ _bsw_atom_bytes_unsafe(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 void
 ur_bsw_atom_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 {
-  uint64_t need = ur_bloq_up3( 1 + bsw->off + MAT_LEN(len) );
+  uint64_t need = (uint64_t)ur_bloq_up3( 1 + bsw->off + MAT_LEN(len) );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));
@@ -1273,7 +1273,7 @@ ur_bsw_atom_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 void
 ur_bsw_cell(ur_bsw_t *bsw)
 {
-  uint8_t need = ur_bloq_up3( 2 + bsw->off );
+  uint8_t need = (uint8_t)ur_bloq_up3( 2 + bsw->off );
 
   if ( bsw->fill + need >= bsw->size ) {
     ur_bsw_grow(bsw, ur_max(need, bsw->prev));

@@ -378,7 +378,7 @@ ur_mug32(uint32_t x)
     ur_mask_8(x >> 24)
   };
 
-  return ur_mug_bytes(byt, ur_met3_32(x));
+  return ur_mug_bytes(byt, (uint64_t)ur_met3_32(x));
 }
 
 ur_mug
@@ -395,14 +395,14 @@ ur_mug64(uint64_t x)
     ur_mask_8(x >> 56)
   };
 
-  return ur_mug_bytes(byt, ur_met3_64(x));
+  return ur_mug_bytes(byt, (uint64_t)ur_met3_64(x));
 }
 
 ur_mug
 ur_mug_both(ur_mug hed, ur_mug tal)
 {
   uint32_t  seed = 0xdeadbeef;
-  uint8_t    len = 4 + ur_bloq_up3(ur_met0_32(tal));
+  uint8_t    len = (uint8_t)(4 + ur_bloq_up3(ur_met0_32(tal)));
   uint8_t      i = 0;
   uint8_t byt[8] = {
     ur_mask_8(hed >>  0),
@@ -528,7 +528,7 @@ ur_bytes(ur_root_t *r, ur_nref ref, uint8_t **byt, uint64_t *len)
     default: assert(0);
 
     case ur_direct: {
-      *len = ur_met3_64(ref);
+      *len = (uint64_t)ur_met3_64(ref);
       //  XX little-endian
       //
       *byt = (uint8_t*)&ref;
@@ -552,7 +552,7 @@ ur_met(ur_root_t *r, uint8_t bloq, ur_nref ref)
   assert( !ur_deep(ref) );
 
   if ( ur_direct == ur_nref_tag(ref) ) {
-    m_bit = ur_met0_64(ref);
+    m_bit = (uint64_t)ur_met0_64(ref);
   }
   else {
     uint64_t idx = ur_nref_idx(ref);
@@ -674,7 +674,7 @@ ur_coin_bytes(ur_root_t *r, uint64_t len, uint8_t *byt)
     uint64_t i, direct = 0;
 
     for ( i = 0; i < len; i++ ) {
-      direct |= byt[i] << (8 * i);
+      direct |= (uint64_t)byt[i] << (8 * i);
     }
 
     return (ur_nref)direct;
@@ -761,7 +761,7 @@ _print_memory(FILE *f, const char *c, uint64_t bytes)
     fprintf(f, "%s: B/0\r\n", c);
   }
   else {
-    uint32_t g = (bytes / 1000000000);
+    uint32_t g = (uint32_t)(bytes / 1000000000);
     uint32_t m = (bytes % 1000000000) / 1000000;
     uint32_t k = (bytes % 1000000) / 1000;
     uint32_t b = (bytes % 1000);

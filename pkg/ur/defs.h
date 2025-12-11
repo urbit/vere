@@ -65,9 +65,9 @@ typedef uint8_t  ur_bool_t;
 #define ur_lz8(a)      ( ur_lz32(a) - 24 )
 #define ur_tz8         ur_tz32
 
-#define ur_met0_8(a)   ( (a) ? 8  - ur_lz8(a)  : 0 )
-#define ur_met0_32(a)  ( (a) ? 32 - ur_lz32(a) : 0 )
-#define ur_met0_64(a)  ( (a) ? 64 - ur_lz64(a) : 0 )
+#define ur_met0_8(a)   ( (a) ? (int)(8  - ur_lz8(a))  : 0 )
+#define ur_met0_32(a)  ( (a) ? (int)(32 - ur_lz32(a)) : 0 )
+#define ur_met0_64(a)  ( (a) ? (int)(64 - ur_lz64(a)) : 0 )
 
 /*
 **  unsafe wrt trailing null bytes, which are invalid
@@ -76,7 +76,7 @@ inline uint64_t
 ur_met0_bytes_unsafe(uint64_t len, uint8_t *byt)
 {
   uint64_t last = len - 1;
-  return (last << 3) + ur_met0_8(byt[last]);
+  return (last << 3) + (uint64_t)ur_met0_8(byt[last]);
 }
 
 #define ur_met3_8(a)   ur_bloq_up3(ur_met0_8(a))

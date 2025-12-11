@@ -23,7 +23,7 @@ _bsw_atom(ur_root_t *r, ur_nref ref, ur_bsw_t *bsw, uint64_t len)
   switch ( ur_nref_tag(ref) ) {
     default: assert(0);
 
-    case ur_direct: return ur_bsw_atom64(bsw, len, ref);
+    case ur_direct: return ur_bsw_atom64(bsw, (uint8_t)len, ref);
 
     case ur_iatom: {
       uint8_t *byt = r->atoms.bytes[ur_nref_idx(ref)];
@@ -56,13 +56,13 @@ _jam_atom(ur_root_t *r, ur_nref ref, void *ptr)
     _bsw_atom(r, ref, bsw, len);
   }
   else {
-    uint64_t len_bak = ur_met0_64(bak);
+    uint64_t len_bak = (uint64_t)ur_met0_64(bak);
 
     if ( len <= len_bak ) {
       _bsw_atom(r, ref, bsw, len);
     }
     else {
-      ur_bsw_back64(bsw, len_bak, bak);
+      ur_bsw_back64(bsw, (uint8_t)len_bak, bak);
     }
   }
 }
@@ -82,7 +82,7 @@ _jam_cell(ur_root_t *r, ur_nref ref, void *ptr)
     return 1;
   }
   else {
-    ur_bsw_back64(bsw, ur_met0_64(bak), bak);
+    ur_bsw_back64(bsw, (uint8_t)ur_met0_64(bak), bak);
     return 0;
   }
 }
@@ -220,7 +220,7 @@ _cue_next(ur_root_t      *r,
           return ur_cue_meme;
         }
         else {
-          uint64_t val, bak = ur_bsr64_any(bsr, len);
+          uint64_t val, bak = ur_bsr64_any(bsr, (uint8_t)len);
 
           if ( !ur_dict64_get(r, dict, bak, &val) ) {
             return  ur_cue_back;
@@ -236,7 +236,7 @@ _cue_next(ur_root_t      *r,
           return res;
         }
         else if ( 62 >= len ) {
-          *out = (ur_nref)ur_bsr64_any(bsr, len);
+          *out = (ur_nref)ur_bsr64_any(bsr, (uint8_t)len);
         }
         else {
           uint64_t len_byt = (len >> 3) + !!ur_mask_3(len);
@@ -453,7 +453,7 @@ _cue_test_next(_cue_test_stack_t *s,
           return ur_cue_meme;
         }
         else {
-          uint64_t bak = ur_bsr64_any(bsr, len);
+          uint64_t bak = ur_bsr64_any(bsr, (uint8_t)len);
           return ur_dict_get((ur_root_t*)0, dict, bak)
                ? ur_cue_good
                : ur_cue_back;
