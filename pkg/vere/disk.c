@@ -218,12 +218,12 @@ _disk_commit(u3_disk* log_u)
 */
 static void
 _disk_plan(u3_disk* log_u,
-           c3_l     mug_l,
+           c3_h     mug_h,
            u3_noun    job)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
   fet_u->eve_d = ++log_u->sen_d;
-  fet_u->len_i = u3_disk_etch(log_u, job, mug_l, &fet_u->hun_y);
+  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -548,7 +548,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
-  c3_w ver_w, lif_w;
+  c3_h ver_h, lif_h;
   c3_d who_d[2];
   c3_o fak_o;
 
@@ -558,7 +558,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //
   u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
 
-  ver_w = val_u.buf_y[0];
+  ver_h = val_u.buf_y[0];
 
   //  identity
   //
@@ -630,7 +630,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   }
 
   byt_y = val_u.buf_y;
-  lif_w = (c3_h)byt_y[0]
+  lif_h = (c3_h)byt_y[0]
         | (c3_h)byt_y[1] << 8
         | (c3_h)byt_y[2] << 16
         | (c3_h)byt_y[3] << 24;
@@ -638,15 +638,15 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   {
     c3_o val_o = c3y;
 
-    if ( U3D_VERLAT < ver_w ) {
-      fprintf(stderr, "disk: read meta: unknown version %"PRIc3_w"\r\n", ver_w);
+    if ( U3D_VERLAT < ver_h ) {
+      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_h);
       val_o = c3n;
     }
     else if ( !((c3y == fak_o ) || (c3n == fak_o )) ) {
       fprintf(stderr, "disk: read meta: invalid fake bit\r\n");
       val_o = c3n;
     }
-    else if ( c3n == u3a_is_cat(lif_w) ) {
+    else if ( c3n == u3a_is_cat((c3_w)lif_h) ) {
       fprintf(stderr, "disk: read meta: invalid lifecycle length\r\n");
       val_o = c3n;
     }
@@ -659,10 +659,10 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //  NB: we read metadata from LMDB even when met_u is null because sometimes
   //      because sometimes we call this just to ensure metadata exists
   if ( met_u ) {
-    met_u->ver_h = ver_w;
+    met_u->ver_h = ver_h;
     memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
     met_u->fak_o = fak_o;
-    met_u->lif_h = lif_w;
+    met_u->lif_h = lif_h;
   }
 
   return c3y;
