@@ -2858,48 +2858,49 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     if ( NULL == stk_u ) return;
     c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
+    c3_w zis_w      = sizeof(c3_w);
 
-    while (pos_w > 4) {
+    while (pos_w > 0) {
       c3_w  len_w;
-      pos_w -=4;
+      pos_w -= zis_w;
 
-      if ( siz_w < out_w + 4 ) {
+      if ( siz_w < out_w + zis_w ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
          siz_w *= 2;
       }
 
-      memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
+      memcpy(&len_w, &stk_u->dat_y[pos_w], zis_w);
       pos_w -= len_w;
 
-      if ( siz_w < out_w + 4 ) {
+      if ( siz_w < out_w + zis_w ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
+         siz_w *= 2;
       }
       buf_c[out_w++] = '/';
 
       if ( siz_w < out_w + len_w ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
+         siz_w *= 2;
       }
 
       memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
       out_w += len_w;
     }
+    buf_c[out_w++] = '/';
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
-      u3_noun tan = u3i_string(buf_c);
-      u3_noun lin = u3i_list(u3i_string("data:"),
-                             tan,
-                             c3_s2('\n', '\n'),
-                             u3_none);
-      u3_atom txt = u3qc_rap(3, lin);
-      u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
-
-      while ( 0 != siq_u ) {
-        _http_continue_respond(siq_u, u3k(dat), c3n);
-        siq_u = siq_u->nex_u;
-      }
-      u3z(dat); u3z(lin); 
+    u3_noun tan = u3i_string(buf_c);
+    u3_noun lin = u3i_list(u3i_string("data:"),
+                           tan,
+                           c3_s2('\n', '\n'),
+                           u3_none);
+    u3_atom txt = u3qc_rap(3, lin);
+    u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
+    while ( 0 != siq_u ) {
+      _http_continue_respond(siq_u, u3k(dat), c3n);
+      siq_u = siq_u->nex_u;
     }
+    u3z(dat); u3z(lin);
     uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
                    SPIN_TIMER, 0);
   }
