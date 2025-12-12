@@ -315,7 +315,7 @@ u3a_calloc(size_t num_i, size_t len_i)
 void*
 u3a_malloc(size_t len_i)
 {
-  return u3a_walloc((len_i + 3) >> 2);
+  return u3a_walloc((len_i + u3a_word_bytes - 1) >> u3a_word_bytes_shift);
 }
 
 /* u3a_celloc(): allocate a cell.
