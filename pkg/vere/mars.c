@@ -242,7 +242,7 @@ _mars_fact(u3_mars* mar_u,
   {
     u3_fact tac_u = {
       .job   = job,
-      .mug_h = mar_u->mug_l,
+      .mug_h = mar_u->mug_h,
       .eve_d = mar_u->dun_d
     };
 
@@ -608,7 +608,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
         mar_u->dun_d = mar_u->sen_d;
-        mar_u->mug_l = u3r_mug(u3A->roc);
+        mar_u->mug_h = u3r_mug(u3A->roc);
         mar_u->fag_w |= _mars_fag_mute;
 
         pro = _mars_sure_feck(mar_u, pre_h, pro);
@@ -853,7 +853,7 @@ top:
       u3m_save();
       mar_u->sav_u.eve_d = mar_u->dun_d;
       _mars_gift(mar_u,
-        u3nt(c3__sync, u3i_chub(mar_u->dun_d), mar_u->mug_l));
+        u3nt(c3__sync, u3i_chub(mar_u->dun_d), mar_u->mug_h));
       mar_u->sat_e = u3_mars_work_e;
       goto top;
     }
@@ -1449,7 +1449,7 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
   }
 
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
-  mar_u->mug_l = u3r_mug(u3A->roc);
+  mar_u->mug_h = u3r_mug(u3A->roc);
 
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
@@ -1499,7 +1499,7 @@ u3_mars_work(u3_mars* mar_u)
                        u3nc(u3i_chubs(2, mar_u->met_u.who_d),
                             mar_u->met_u.fak_o),
                        u3nc(u3i_chub(mar_u->dun_d),
-                            mar_u->mug_l));
+                            mar_u->mug_h));
 
     u3s_jam_xeno(msg, &len_d, &hun_y);
     u3_newt_send(mar_u->out_u, len_d, hun_y);
