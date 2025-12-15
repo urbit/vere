@@ -31,6 +31,27 @@
   #define   _q    u3t
 
   static u3_noun
+  _lost(u3_noun q_tub)
+  {
+    u3_noun pin = u3h(q_tub);
+    return u3qa_gte(_p(pin), _q(pin));
+  }
+
+  static u3_noun
+  _pluk(u3_noun q_tub)
+  {
+    u3_noun pin = u3h(q_tub);
+    return u3qc_cut(3, _p(pin), 1, u3t(q_tub));
+  }
+
+  static u3_noun
+  _step(u3_noun q_tub)
+  {
+    u3_noun pin = u3h(q_tub);
+    return u3nc(u3nc(u3i_vint(u3h(pin)), u3t(pin)), u3t(q_tub));
+  }
+
+  static u3_noun
   _slip(u3_noun weq,
         u3_noun naz)
   {
@@ -91,12 +112,12 @@
     u3_noun zac;
 
     u3x_cell(tub, &p_tub, &q_tub);
-    if ( c3n == u3du(q_tub) ) {
+    if ( c3y == _lost(q_tub) ) {
       return _fail(tub);
     }
     else {
-      u3_noun iq_tub = u3h(q_tub);
-      u3_noun tq_tub = u3t(q_tub);
+      u3_noun iq_tub = _pluk(q_tub);
+      u3_noun tq_tub = _step(q_tub);
 
       zac = _slip(iq_tub, p_tub);
 
@@ -512,11 +533,11 @@
 
     u3x_cell(tub, &p_tub, &q_tub);
 
-    if ( c3n == u3du(q_tub) ) {
+    if ( c3y == _lost(q_tub) ) {
       return _fail(tub);
     }
     else {
-      u3_noun iq_tub = u3h(q_tub);
+      u3_noun iq_tub = _pluk(q_tub);
 
       if ( c3y == u3r_sing(daf, iq_tub) ) {
         return _next(tub);
@@ -548,11 +569,11 @@
 
     u3x_cell(tub, &p_tub, &q_tub);
 
-    if ( c3n == u3du(q_tub) ) {
+    if ( c3y == _lost(q_tub) ) {
       return _fail(tub);
     }
     else {
-      u3_noun iq_tub = u3h(q_tub);
+      u3_noun iq_tub = _pluk(q_tub);
 
       while ( c3y == u3du(bud) ) {
         if ( c3y == u3r_sing(u3h(bud), iq_tub) ) {
@@ -774,12 +795,12 @@
 
     u3x_cell(tub, &p_tub, &q_tub);
 
-    if ( c3n == u3du(q_tub) ) {
+    if ( c3y == _lost(q_tub) ) {
       return _fail(tub);
     }
     else {
       u3_noun p_zep, q_zep;
-      u3_noun iq_tub = u3h(q_tub);
+      u3_noun iq_tub = _pluk(q_tub);
 
       u3x_cell(zep, &p_zep, &q_zep);
       if ( _(u3a_is_cat(p_zep)) &&
@@ -891,11 +912,11 @@
     u3_noun p_tub, q_tub;
 
     u3x_cell(tub, &p_tub, &q_tub);
-    if ( c3n == u3du(q_tub) ) {
+    if ( c3y == _lost(q_tub) ) {
       return _fail(tub);
     }
     else {
-      u3_noun iq_tub = u3h(q_tub);
+      u3_noun iq_tub = _pluk(q_tub);
 
       if ( !_(u3a_is_cat(iq_tub)) ) {
         return u3m_bail(c3__fail);
