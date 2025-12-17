@@ -1264,18 +1264,18 @@ _mark_post(u3_post som_p)
     if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
       fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w")\r\n",
                       som_p, som_p & ~(((((c3_w)1) << u3a_page) - 1)));
-      abort();
+      return 0;
     }
 
     if ( u3a_free_pg == dir_p ) {
       fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n",
                       som_p, pag_w);
-      abort();
+      return 0;
     }
     else if ( u3a_head_pg != dir_p ) {
       fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n",
                       som_p, dir_p);
-      abort();
+      return 0;
     }
 
     //  page(s) already marked
@@ -1304,13 +1304,13 @@ _mark_post(u3_post som_p)
       fprintf(stderr, "palloc: mark: bad alignment som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w") pag=0x%"PRIxc3_w" (%"PRIc3_w") len_s=%"PRIc3_s"\r\n",
                       som_p, som_p & ~((((c3_w)1) << u3a_page) - 1),
                       dir_p, pag_u->pag_w, hun_u->len_s);
-      abort();
+      return 0;
     }
 
     if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
       fprintf(stderr, "palloc: mark: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
-      abort();
+      return 0;
     }
 
     //  page is marked
@@ -1506,18 +1506,18 @@ _count_post(u3_post som_p, c3_y rat_y)
     if ( som_p & ((((c3_w)1) << u3a_page) - 1) ) {
       fprintf(stderr, "palloc: mark: page not aligned som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w")\r\n",
                       som_p, som_p & ~(((((c3_w)1) << u3a_page) - 1)));
-      abort();
+      return 0;
     }
 
     if ( u3a_free_pg == dir_p ) {
       fprintf(stderr, "palloc: mark: free page som_p=0x%"PRIxc3_w" pag_w=%"PRIc3_w"\r\n",
                       som_p, pag_w);
-      abort();
+      return 0;
     }
     else if ( u3a_head_pg != dir_p ) {
       fprintf(stderr, "palloc: mark: rest page som_p=0x%"PRIxc3_w" dir_p=0x%"PRIxc3_w"\r\n",
                       som_p, dir_p);
-      abort();
+      return 0;
     }
 
     switch ( rat_y ) {
@@ -1550,7 +1550,7 @@ _count_post(u3_post som_p, c3_y rat_y)
     //  page(s) already marked
     //
     if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
-      abort();
+      return 0;
    }
 
     u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
@@ -1573,13 +1573,13 @@ _count_post(u3_post som_p, c3_y rat_y)
       fprintf(stderr, "palloc: count: bad alignment som_p=0x%"PRIxc3_w" (0x%"PRIxc3_w") pag=0x%"PRIxc3_w" (%"PRIc3_w") len_s=%"PRIc3_s"\r\n",
                       som_p, som_p & ~((((c3_w)1) << u3a_page) - 1),
                       dir_p, pag_u->pag_w, hun_u->len_s);
-      abort();
+      return 0;
     }
 
     if ( pag_u->map_w[pos_w >> u3a_word_bits_log] & (((c3_w)1) << (pos_w & (u3a_word_bits-1))) ) {
       fprintf(stderr, "palloc: count: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
-      abort();
+      return 0;
     }
 
     //  page is marked
@@ -2434,7 +2434,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     }
 
     if ( pos_s == max_s ) {
-      abort();
+      return 0;
     }
   }
 
