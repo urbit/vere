@@ -120,7 +120,7 @@ _ttyf_loja(u3_utty* uty_u)
 /*  _ttyf_get_winsize(): gets the tty window size.
 */
 static c3_o
-_ttyf_get_winsize(u3_utty* uty_u, c3_h* col_l, c3_h* row_h)
+_ttyf_get_winsize(u3_utty* uty_u, c3_h* col_h, c3_h* row_h)
 {
   struct winsize siz_u;
   if ( 0 == ioctl(uty_u->fid_i, TIOCGWINSZ, &siz_u) )
