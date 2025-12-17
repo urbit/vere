@@ -97,21 +97,21 @@
     */
 #     define u3a_maximum (u3a_words - c3_wiseof(u3a_atom))
 
-    /* u3a_minimum: minimum loom object size (actual size of a cell).
+    /* u3a_minimum: minimum loom object size.
     */
 #ifndef VERE64
-#     define u3a_minimum  4
+#     define u3a_minimum  (c3_w)4  //  actual size of a cell
 #else
-#     define u3a_minimum  2
+#     define u3a_minimum  (c3_w)2  //  half the size of a cell
 #endif
 //#     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
 
     /* u3a_min_log: log2(u3a_minimum)
     */
 #ifndef VERE64
-#     define u3a_min_log  2
+#     define u3a_min_log  (c3_w)2
 #else
-#     define u3a_min_log  1
+#     define u3a_min_log  (c3_w)1
 #endif
 
 // XX: add static asserts for u3a_minimum, u3a_min_log, and u3a_cell (probably u3a_atom too?)
