@@ -900,7 +900,11 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       }
       else {
         req_u->peq_u->las_o = c3y;
-        *wer = u3_nul;
+        // if you are seeing scries with the case %bad/6.578.530/6578530
+        // then this placeholder value is used somewhere even though it
+        // shouldn't be
+        //
+        *wer = c3__bad;
       }
       txt_c++;
       len_w--;
