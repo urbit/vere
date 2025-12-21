@@ -900,6 +900,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
       }
       else {
         req_u->peq_u->las_o = c3y;
+        *wer = u3_nul;
       }
       txt_c++;
       len_w--;
