@@ -96,14 +96,14 @@ static void resolve_cb(DNSServiceRef sref,
 }
 
 static void poll_cb(uv_poll_t* handle, int status, int events) {
-  DNSServiceRef sref = (DNSServiceRef) handle->data;
-  int err = DNSServiceProcessResult(sref);
+  mdns_payload* payload = (mdns_payload*) handle->data;
+  int err = DNSServiceProcessResult(payload->sref);
 }
 
-static void init_sref_poll(DNSServiceRef sref, mdns_payload* payload) {
-  int fd = DNSServiceRefSockFD(sref);
+static void init_sref_poll(mdns_payload* payload) {
+  int fd = DNSServiceRefSockFD(payload->sref);
   uv_loop_t* loop = uv_default_loop();
-  payload->poll.data = (void*)sref;
+  payload->poll.data = (void*)payload;
   uv_poll_init(loop, &payload->poll, fd);
   uv_poll_start(&payload->poll, UV_READABLE, poll_cb);
 }
@@ -137,7 +137,7 @@ static void browse_cb(DNSServiceRef s,
                         name, type, domain, resolve_cb,
                         (void*)payload_copy);
 
-    init_sref_poll(payload_copy->sref, payload_copy);
+    init_sref_poll(payload_copy);
 
     if (err != kDNSServiceErr_NoError) {
       u3l_log("mdns: dns service resolve error %i", err);
@@ -183,7 +183,6 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
 
   mdns_payload* register_payload = (mdns_payload*)c3_calloc(sizeof(mdns_payload));
 
-  DNSServiceRef sref;
   DNSServiceErrorType err;
 
   char* domain;
@@ -196,7 +195,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
     domain = our + 1;
   }
 
-  err = DNSServiceRegister(&sref, 0, 0, domain, "_ames._udp",
+  err = DNSServiceRegister(&register_payload->sref, 0, 0, domain, "_ames._udp",
                            NULL, NULL, htons(port), 0, NULL, register_cb, (void*)register_payload);
 
   if (err != kDNSServiceErr_NoError) {
@@ -209,11 +208,11 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
     } else {
       u3l_log("mdns: service register error %i", err);
     }
-    DNSServiceRefDeallocate(sref);
+    DNSServiceRefDeallocate(register_payload->sref);
     return;
   }
 
-  init_sref_poll(sref, register_payload);
+  init_sref_poll(register_payload);
 
   mdns_payload* browse_payload = (mdns_payload*)c3_calloc(sizeof(mdns_payload));
 
@@ -221,16 +220,15 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
   browse_payload->context = context;
 
   DNSServiceErrorType dnserr;
-  DNSServiceRef sref2;
 
-  dnserr = DNSServiceBrowse(&sref2, 0, 0, "_ames._udp", NULL, browse_cb, (void *)browse_payload);
+  dnserr = DNSServiceBrowse(&browse_payload->sref, 0, 0, "_ames._udp", NULL, browse_cb, (void *)browse_payload);
 
   if (dnserr != kDNSServiceErr_NoError) {
     u3l_log("mdns: service browse error %i", dnserr);
-    DNSServiceRefDeallocate(sref2);
+    DNSServiceRefDeallocate(browse_payload->sref);
     return;
   }
 
-  init_sref_poll(sref2, browse_payload);
+  init_sref_poll(browse_payload);
 
 }

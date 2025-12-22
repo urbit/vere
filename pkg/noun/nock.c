@@ -1072,6 +1072,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
           case c3__hela:
           case c3__spin:
           case c3__loop:
+          case c3__jinx:
           case c3__bout: {
             u3_noun fen = u3_nul;
             c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -2016,6 +2017,17 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
+    case c3__jinx: {
+      if ( c3n == u3ud(*clu) || u3_nul == *clu ) {
+        u3z(*clu);
+        *clu = u3_nul;
+      }
+      else {
+        u3m_timer_set(*clu);
+        *clu = c3__jinx;
+      }
+    } break;
+
     case c3__bout: {
       u3_atom now = u3i_chub(u3t_trace_time());
       *clu = u3nt(u3k(tag), *clu, now);
@@ -2097,7 +2109,10 @@ static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( c3__spin == tok ) {
+  if ( c3__jinx == tok ) {
+    u3m_timer_pop();
+  }
+  else if ( c3__spin == tok ) {
     u3t_sstack_pop();
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
@@ -2110,7 +2125,12 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // unpack q_tok to get the priority integer and the tank
     // p_q_tok is the priority, q_q_tok is the tank we will work with
     u3_noun p_q_tok, q_q_tok;
-    u3_assert(c3y == u3r_cell(q_tok, &p_q_tok, &q_q_tok));
+    c3_t cap_t = true;
+    if ( c3n == u3r_cell(q_tok, &p_q_tok, &q_q_tok) ) {
+      p_q_tok = u3_nul;
+      q_q_tok = u3_blip;
+      cap_t = false;
+    }
 
     // format the timing report
     c3_c str_c[64];
@@ -2121,7 +2141,12 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // prepend the priority to form a cell of the same shape q_tok
     // send this to ut3_slog so that it can be logged out
     c3_l pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
-    u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
+    if ( cap_t ) {
+      u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
+    }
+    else {
+      u3t_slog(u3nc(pri_l, u3i_string(str_c)));
+    }
     u3z(delta);
   }
   else {

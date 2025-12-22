@@ -1675,7 +1675,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 14);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 15);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -1768,7 +1768,11 @@ u3a_mark_road()
   qua_u[12]->nam_c = strdup("loop hint set");
   qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * 4;
   
-  qua_u[13] = NULL;
+  qua_u[13] = c3_calloc(sizeof(*qua_u[13]));
+  qua_u[13]->nam_c = strdup("timer stack");
+  qua_u[13]->siz_w = u3a_mark_noun(u3R->tim) * 4;
+  
+  qua_u[14] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -1806,6 +1810,7 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->pro.don));
   u3a_relocate_noun(&(u3R->pro.day));
   u3a_relocate_noun(&(u3R->pro.trace));
+  u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
   u3h_relocate(&(u3R->lop_p));

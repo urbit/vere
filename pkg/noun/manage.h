@@ -9,6 +9,7 @@
 #include "c3/c3.h"
 #include "types.h"
 #include "version.h"
+#include "rsignal.h"
 
     typedef struct {
       void** stk_u;
@@ -189,6 +190,11 @@
         c3_c*
         u3m_pretty(u3_noun som);
 
+      /* u3m_pretty_road(): dumb prettyprint to string. Road allocation
+      */
+        c3_c*
+        u3m_pretty_road(u3_noun som);
+
       /* u3m_pretty_path(): prettyprint a path to string.  RETAIN.
       */
         c3_c*
@@ -218,5 +224,98 @@
       */
         c3_w
         u3m_pack(void);
+
+    /*  Urbit time: 128 bits, leap-free.
+    **
+    **  High 64 bits: 0x8000.000c.cea3.5380 + Unix time at leap 25 (Jul 2012)
+    **  Low 64 bits: 1/2^64 of a second.
+    **
+    **  Seconds per Gregorian 400-block: 12.622.780.800
+    **  400-blocks from 0 to 0AD: 730.692.561
+    **  Years from 0 to 0AD: 292.277.024.400
+    **  Seconds from 0 to 0AD: 9.223.372.029.693.628.800
+    **  Seconds between 0A and Unix epoch: 62.167.219.200
+    **  Seconds before Unix epoch: 9.223.372.091.860.848.000
+    **  The same, in C hex notation: 0x8000000cce9e0d80ULL
+    **
+    **  XX: needs to be adjusted to implement Google leap-smear time.
+    */
+      /* u3m_time_sec_in(): urbit seconds from unix time.
+      **
+      ** Adjust (externally) for future leap secs!
+      */
+        c3_d
+        u3m_time_sec_in(c3_w unx_w);
+
+      /* u3m_time_sec_out(): unix time from urbit seconds.
+      **
+      ** Adjust (externally) for future leap secs!
+      */
+        c3_w
+        u3m_time_sec_out(c3_d urs_d);
+
+      /* u3m_time_fsc_in(): urbit fracto-seconds from unix microseconds.
+      */
+        c3_d
+        u3m_time_fsc_in(c3_w usc_w);
+
+      /* u3m_time_fsc_out: unix microseconds from urbit fracto-seconds.
+      */
+        c3_w
+        u3m_time_fsc_out(c3_d ufc_d);
+
+      /* u3m_time_in_tv(): urbit time from struct timeval.
+      */
+        u3_atom
+        u3m_time_in_tv(struct timeval* tim_tv);
+
+      /* u3m_time_out_tv(): struct timeval from urbit time.
+      */
+        void
+        u3m_time_out_tv(struct timeval* tim_tv, u3_noun now);
+
+      /* u3m_time_in_ts(): urbit time from struct timespec.
+      */
+        u3_atom
+        u3m_time_in_ts(struct timespec* tim_ts);
+        #if defined(U3_OS_linux) || defined(U3_OS_windows)
+        /* u3m_time_t_in_ts(): urbit time from time_t.
+        */
+        u3_atom
+        u3m_time_t_in_ts(time_t tim);
+        #endif
+        
+      /* u3m_time_out_ts(): struct timespec from urbit time.
+      */
+        void
+        u3m_time_out_ts(struct timespec* tim_ts, u3_noun now);
+
+      /* u3m_time_out_it(): struct itimerval from urbit time gap.
+      ** returns true if it_value is set to non-zero values, false otherwise
+      */
+        c3_t
+        u3m_time_out_it(struct itimerval* tim_it, u3_noun gap);
+
+      /* u3m_time_gap_ms(): (wen - now) in ms.
+      */
+        c3_d
+        u3m_time_gap_ms(u3_noun now, u3_noun wen);
+
+      /* u3m_timer_set(): push a new timer to the timer stack.
+      ** gap is @dr, gap != 0
+      */
+        void
+        u3m_timer_set(u3_atom gap);
+
+      /* u3m_timer_pop(): pop a timer off the timer stack.
+      ** timer stack must be non-empty
+      */
+        void
+        u3m_timer_pop(void);
+
+      /* u3m_time_gap_in_mil(): urbit time gap from milliseconds
+      */
+        u3_atom
+        u3m_time_gap_in_mil(c3_w mil_w);
 
 #endif /* ifndef U3_MANAGE_H */
