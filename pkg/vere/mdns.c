@@ -14,6 +14,12 @@ typedef struct _mdns_payload {
   void*         context;
 } mdns_payload;
 
+#ifdef ASAN_ENABLED
+  void __lsan_ignore_object(const void *p);
+#else
+  #define __lsan_ignore_object(p) ((void) (p))
+#endif
+
 static void close_cb(uv_handle_t* poll) {
   mdns_payload* payload = (mdns_payload*)poll->data;
   DNSServiceRefDeallocate(payload->sref);
@@ -182,6 +188,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
   #   endif
 
   mdns_payload* register_payload = (mdns_payload*)c3_calloc(sizeof(mdns_payload));
+  __lsan_ignore_object(register_payload);
 
   DNSServiceErrorType err;
 
