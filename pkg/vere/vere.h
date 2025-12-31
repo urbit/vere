@@ -10,6 +10,7 @@
 
 #include "c3/c3.h"
 #include "db/lmdb.h"
+#include "db/book.h"
 #include "noun.h"
 #include "uv.h"
 #include <types.h>

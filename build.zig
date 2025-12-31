@@ -634,6 +634,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "book-test",
+                .file = "pkg/vere/book_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "boot-test",
                 .file = "pkg/vere/boot_tests.c",
                 .deps = vere_test_deps,

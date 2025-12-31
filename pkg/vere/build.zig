@@ -220,6 +220,7 @@ const c_source_files = [_][]const u8{
     "ca_bundle/ca_bundle.c",
     "dawn.c",
     "db/lmdb.c",
+    "db/book.c",
     "disk.c",
     "foil.c",
     "io/ames.c",
@@ -250,6 +251,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "db/lmdb.h",
+    "db/book.h",
     "dns_sd.h",
     "io/ames/stun.h",
     "io/lss.h",
