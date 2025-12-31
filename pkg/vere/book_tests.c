@@ -205,7 +205,7 @@ _test_book_single_event(void)
   //  create and save event 1
   _test_make_event(&buf_y, &siz_z, 1);
 
-  if ( c3n == u3_book_save(log_u, 1, 1, (void**)&buf_y, &siz_z) ) {
+  if ( c3n == u3_book_save(log_u, 1, 1, (void**)&buf_y, &siz_z, 0) ) {
     fprintf(stderr, "book_tests: save failed\r\n");
     c3_free(buf_y);
     u3_book_exit(log_u);
@@ -283,7 +283,7 @@ _test_book_batch_write(void)
   }
 
   //  write batch
-  if ( c3n == u3_book_save(log_u, 1, 100, bufs, sizes) ) {
+  if ( c3n == u3_book_save(log_u, 1, 100, bufs, sizes, 0) ) {
     fprintf(stderr, "book_tests: batch save failed\r\n");
     for ( i = 0; i < 100; i++ ) {
       c3_free(bufs[i]);
@@ -365,7 +365,7 @@ _test_book_persistence(void)
     _test_make_event((c3_y**)&bufs[i], &sizes[i], i + 1);
   }
 
-  if ( c3n == u3_book_save(log_u, 1, 50, bufs, sizes) ) {
+  if ( c3n == u3_book_save(log_u, 1, 50, bufs, sizes, 0) ) {
     fprintf(stderr, "book_tests: persist save failed\r\n");
     for ( i = 0; i < 50; i++ ) {
       c3_free(bufs[i]);
@@ -450,7 +450,7 @@ _test_book_contiguity(void)
 
   //  write event 1
   _test_make_event(&buf_y, &siz_z, 1);
-  if ( c3n == u3_book_save(log_u, 1, 1, (void**)&buf_y, &siz_z) ) {
+  if ( c3n == u3_book_save(log_u, 1, 1, (void**)&buf_y, &siz_z, 0) ) {
     fprintf(stderr, "book_tests: contig save 1 failed\r\n");
     c3_free(buf_y);
     u3_book_exit(log_u);
@@ -462,7 +462,7 @@ _test_book_contiguity(void)
 
   //  try to write event 3 (should fail - gap)
   _test_make_event(&buf_y, &siz_z, 3);
-  if ( c3y == u3_book_save(log_u, 3, 1, (void**)&buf_y, &siz_z) ) {
+  if ( c3y == u3_book_save(log_u, 3, 1, (void**)&buf_y, &siz_z, 0) ) {
     fprintf(stderr, "book_tests: contig should have failed for gap\r\n");
     c3_free(buf_y);
     u3_book_exit(log_u);
@@ -474,7 +474,7 @@ _test_book_contiguity(void)
 
   //  write event 2 (should succeed)
   _test_make_event(&buf_y, &siz_z, 2);
-  if ( c3n == u3_book_save(log_u, 2, 1, (void**)&buf_y, &siz_z) ) {
+  if ( c3n == u3_book_save(log_u, 2, 1, (void**)&buf_y, &siz_z, 0) ) {
     fprintf(stderr, "book_tests: contig save 2 failed\r\n");
     c3_free(buf_y);
     u3_book_exit(log_u);
@@ -518,7 +518,7 @@ _test_book_partial_read(void)
     _test_make_event((c3_y**)&bufs[i], &sizes[i], i + 1);
   }
 
-  if ( c3n == u3_book_save(log_u, 1, 100, bufs, sizes) ) {
+  if ( c3n == u3_book_save(log_u, 1, 100, bufs, sizes, 0) ) {
     fprintf(stderr, "book_tests: partial save failed\r\n");
     for ( i = 0; i < 100; i++ ) {
       c3_free(bufs[i]);
@@ -591,7 +591,7 @@ _test_book_iterator(void)
     _test_make_event((c3_y**)&bufs[i], &sizes[i], i + 1);
   }
 
-  if ( c3n == u3_book_save(log_u, 1, 50, bufs, sizes) ) {
+  if ( c3n == u3_book_save(log_u, 1, 50, bufs, sizes, 0) ) {
     fprintf(stderr, "book_tests: iter save failed\r\n");
     for ( i = 0; i < 50; i++ ) {
       c3_free(bufs[i]);

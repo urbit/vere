@@ -75,7 +75,8 @@
                    c3_d     eve_d,
                    c3_d     len_d,
                    void**   byt_p,
-                   c3_z*    siz_i);
+                   c3_z*    siz_i,
+                   c3_d     epo_d);
 
     /* u3_book_read_meta(): read metadata by string key from log.
     */

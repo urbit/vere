@@ -15,19 +15,20 @@
 
 //  book: append-only event log
 //
-//    simple persistence layer replacing LMDB for event storage.
+//    simple file-based persistence layer for urbit's event log.
 //    optimized for sequential writes and reads, no random access.
 //
 //    file format:
 //      [64-byte header]
-//      [events: len_d | mug_l | jam_data | crc_m | let_d]
 //      [metadata section]
+//      [events: len_d | mug_l | jam_data | crc_m | let_d]
 //
 
 /* constants
 */
-  #define BOOK_MAGIC    0x424f4f4b  //  "BOOK"
-  #define BOOK_VERSION  1           //  format version
+  #define BOOK_MAGIC      0x424f4f4b  //  "BOOK"
+  #define BOOK_VERSION    1           //  format version
+  #define BOOK_META_SIZE  256         //  reserved metadata area size
 
 /* _book_crc32(): compute CRC32 checksum.
 */
@@ -203,7 +204,7 @@ _book_read_record(c3_i   fid_i,
 static c3_w
 _book_scan_end(u3_book* log_u)
 {
-  c3_w off_w = sizeof(u3_book_head);
+  c3_w off_w = sizeof(u3_book_head) + BOOK_META_SIZE;  //  events start here
   c3_d count_d = 0;
   c3_d expected_d;
 
@@ -297,8 +298,8 @@ u3_book_init(const c3_c* pax_c)
   struct stat buf_u;
   u3_book* log_u;
 
-  //  construct path to event.log
-  snprintf(path_c, sizeof(path_c), "%s/event.log", pax_c);
+  //  construct path to book.log
+  snprintf(path_c, sizeof(path_c), "%s/book.log", pax_c);
 
   //  open or create file
   fid_i = c3_open(path_c, O_RDWR | O_CREAT, 0644);
@@ -325,7 +326,8 @@ u3_book_init(const c3_c* pax_c)
     //  new file: initialize header
     _book_init_header(log_u);
     _book_write_header(log_u);
-    log_u->off_w = sizeof(u3_book_head);
+    //  events start after header + reserved metadata area
+    log_u->off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
   }
   else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
     //  corrupt file: too small
@@ -394,33 +396,55 @@ u3_book_gulf(u3_book* log_u, c3_d* low_d, c3_d* hig_d)
 void
 u3_book_stat(const c3_c* pax_c)
 {
-  u3_book* log_u = u3_book_init(pax_c);
+  c3_i fid_i;
+  u3_book_head hed_u;
   struct stat buf_u;
 
-  if ( !log_u ) {
-    fprintf(stderr, "book: failed to open for stats\r\n");
+  //  open the file directly
+  fid_i = c3_open(pax_c, O_RDONLY, 0);
+  if ( fid_i < 0 ) {
+    fprintf(stderr, "book: failed to open %s: %s\r\n", pax_c, strerror(errno));
     return;
   }
 
-  if ( fstat(log_u->fid_i, &buf_u) < 0 ) {
+  //  read and validate header
+  if ( sizeof(u3_book_head) != read(fid_i, &hed_u, sizeof(u3_book_head)) ) {
+    fprintf(stderr, "book: failed to read header\r\n");
+    close(fid_i);
+    return;
+  }
+
+  if ( BOOK_MAGIC != hed_u.mag_w ) {
+    fprintf(stderr, "book: invalid magic number: 0x%x\r\n", hed_u.mag_w);
+    close(fid_i);
+    return;
+  }
+
+  if ( BOOK_VERSION != hed_u.ver_w ) {
+    fprintf(stderr, "book: unsupported version: %u\r\n", hed_u.ver_w);
+    close(fid_i);
+    return;
+  }
+
+  if ( fstat(fid_i, &buf_u) < 0 ) {
     fprintf(stderr, "book: fstat failed\r\n");
-    u3_book_exit(log_u);
+    close(fid_i);
     return;
   }
 
   fprintf(stderr, "book info:\r\n");
-  fprintf(stderr, "  file: %s\r\n", log_u->pax_c);
-  fprintf(stderr, "  version: %u\r\n", log_u->hed_u.ver_w);
-  fprintf(stderr, "  first event: %llu\r\n", log_u->hed_u.fir_d);
-  fprintf(stderr, "  last event: %llu\r\n", log_u->hed_u.las_d);
+  fprintf(stderr, "  file: %s\r\n", pax_c);
+  fprintf(stderr, "  version: %u\r\n", hed_u.ver_w);
+  fprintf(stderr, "  first event: %llu\r\n", hed_u.fir_d);
+  fprintf(stderr, "  last event: %llu\r\n", hed_u.las_d);
   fprintf(stderr, "  event count: %llu\r\n",
-          (0 == log_u->hed_u.las_d ) ? 0 :
-          (log_u->hed_u.las_d - log_u->hed_u.fir_d + 1));
+          (0 == hed_u.las_d ) ? 0 :
+          (hed_u.las_d - hed_u.fir_d + 1));
   fprintf(stderr, "  file size: %lld bytes\r\n", (long long)buf_u.st_size);
-  fprintf(stderr, "  metadata offset: %u\r\n", log_u->hed_u.off_w);
-  fprintf(stderr, "  metadata length: %u\r\n", log_u->hed_u.len_w);
+  fprintf(stderr, "  metadata offset: %u\r\n", hed_u.off_w);
+  fprintf(stderr, "  metadata length: %u\r\n", hed_u.len_w);
 
-  u3_book_exit(log_u);
+  close(fid_i);
 }
 
 /* u3_book_save(): save [len_d] events starting at [eve_d].
@@ -433,7 +457,8 @@ u3_book_save(u3_book* log_u,
              c3_d     eve_d,
              c3_d     len_d,
              void**   byt_p,
-             c3_z*    siz_i)
+             c3_z*    siz_i,
+             c3_d     epo_d)
 {
   c3_w i;
   c3_w off_now;
@@ -444,8 +469,8 @@ u3_book_save(u3_book* log_u,
 
   //  validate contiguity
   if ( 0 == log_u->hed_u.las_d ) {
-    //  empty log: first event must be 1
-    if ( 1 != eve_d ) {
+    //  empty log: first event must be the first event in the epoch
+    if ( epo_d + 1 != eve_d ) {
       fprintf(stderr, "book: first event must be 1, got %llu\r\n", eve_d);
       return c3n;
     }
@@ -606,8 +631,8 @@ u3_book_read(u3_book* log_u,
     return c3n;
   }
 
-  //  scan to starting event
-  off_w = sizeof(u3_book_head);
+  //  scan to starting event (events start after header + metadata area)
+  off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
   cur_d = log_u->hed_u.fir_d;
 
   while ( cur_d < eve_d ) {
@@ -724,8 +749,8 @@ u3_book_walk_init(u3_book*      log_u,
     return c3n;
   }
 
-  //  scan to starting event
-  off_w = sizeof(u3_book_head);
+  //  scan to starting event (events start after header + metadata area)
+  off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
   cur_d = log_u->hed_u.fir_d;
 
   while ( cur_d < nex_d ) {
@@ -1124,8 +1149,17 @@ u3_book_save_meta(u3_book*    log_u,
   memcpy(new_meta + offset, val_p, val_z);
   offset += val_z;
 
-  //  write new metadata section at end of file
-  c3_w new_off = log_u->off_w;
+  //  write new metadata section in reserved area after header
+  c3_w new_off = sizeof(u3_book_head);
+
+  //  ensure metadata fits in reserved space
+  if ( new_len > BOOK_META_SIZE ) {
+    fprintf(stderr, "book: save_meta: metadata too large (%u > %u)\r\n",
+            new_len, BOOK_META_SIZE);
+    c3_free(new_meta);
+    if ( old_meta ) c3_free(old_meta);
+    return c3n;
+  }
 
   ret_zs = pwrite(log_u->fid_i, new_meta, new_len, new_off);
   if ( ret_zs != (c3_zs)new_len ) {
@@ -1156,8 +1190,7 @@ u3_book_save_meta(u3_book*    log_u,
     return c3n;
   }
 
-  //  update append offset (metadata is now at end)
-  log_u->off_w = new_off + new_len;
+  //  off_w is not affected by metadata writes - events append at off_w
 
   return c3y;
 }
