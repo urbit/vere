@@ -4,7 +4,7 @@
 #include "events.h"
 #include "vere.h"
 #include "version.h"
-#include "db/lmdb.h"
+#include "db/book.h"
 #include <types.h>
 
 // #ifndef VERE64
@@ -13,7 +13,7 @@
 // #endif
 
 struct _u3_disk_walk {
-  u3_lmdb_walk  itr_u;
+  u3_book_walk  itr_u;
   u3_disk*      log_u;
   c3_o          liv_o;
 };
@@ -94,11 +94,12 @@ _disk_commit_cb(uv_work_t* ted_u)
 {
   u3_disk* log_u = ted_u->data;
 
-  log_u->sav_u.ret_o = u3_lmdb_save(log_u->mdb_u,
+  log_u->sav_u.ret_o = u3_book_save(log_u->mdb_u,
                                     log_u->sav_u.eve_d,
                                     log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
-                                    log_u->sav_u.siz_i);
+                                    log_u->sav_u.siz_i,
+                                    log_u->epo_d);
 }
 
 /* _disk_commit_start(): queue async event-batch write.
@@ -275,11 +276,12 @@ u3_disk_sync(u3_disk* log_u)
   //  XX max 100
   //
   if ( c3y == _disk_batch(log_u) ) {
-    ret_o = u3_lmdb_save(log_u->mdb_u,
+    ret_o = u3_book_save(log_u->mdb_u,
                          log_u->sav_u.eve_d,
                          log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
-                         log_u->sav_u.siz_i);
+                         log_u->sav_u.siz_i,
+                         log_u->epo_d);
 
     log_u->sav_u.ret_o = ret_o;
 
@@ -375,7 +377,7 @@ u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_h* mug_h)
 {
   struct _cd_list ven_u = { log_u, u3_nul, 0 };
 
-  if ( c3n == u3_lmdb_read(log_u->mdb_u, &ven_u,
+  if ( c3n == u3_book_read(log_u->mdb_u, &ven_u,
                            eve_d, len_d, _disk_read_list_cb) )
   {
     // XX test normal (not subcommand) replay with and without, 
@@ -399,7 +401,7 @@ u3_disk_walk_init(u3_disk* log_u,
   c3_d          max_d = eve_d + len_d - 1;
 
   wok_u->log_u = log_u;
-  wok_u->liv_o = u3_lmdb_walk_init(log_u->mdb_u,
+  wok_u->liv_o = u3_book_walk_init(log_u->mdb_u,
                                   &wok_u->itr_u,
                                    eve_d,
                                    c3_min(max_d, log_u->dun_d));
@@ -435,7 +437,7 @@ u3_disk_walk_step(u3_disk_walk* wok_u, u3_fact* tac_u)
 
   tac_u->eve_d = wok_u->itr_u.nex_d;
 
-  if ( c3n == u3_lmdb_walk_next(&wok_u->itr_u, &len_i, &buf_v) ) {
+  if ( c3n == u3_book_walk_next(&wok_u->itr_u, &len_i, &buf_v) ) {
     fprintf(stderr, "disk: (%" PRIu64 "): read fail\r\n", tac_u->eve_d);
     return wok_u->liv_o = c3n;
   }
@@ -457,14 +459,14 @@ u3_disk_walk_step(u3_disk_walk* wok_u, u3_fact* tac_u)
 void
 u3_disk_walk_done(u3_disk_walk* wok_u)
 {
-  u3_lmdb_walk_done(&wok_u->itr_u);
+  u3_book_walk_done(&wok_u->itr_u);
   c3_free(wok_u);
 }
 
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_h len_h, c3_y* byt_y)
+_disk_save_meta(u3_book* mdb_u, const c3_c* key_c, c3_h len_h, c3_y* byt_y)
 {
   //  strip trailing zeroes.
   //
@@ -472,13 +474,13 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_h len_h, c3_y* byt_y)
     len_h--;
   }
 
-  return u3_lmdb_save_meta(mdb_u, key_c, len_h, byt_y);
+  return u3_book_save_meta(mdb_u, key_c, len_h, byt_y);
 }
 
 /* u3_disk_save_meta(): save metadata.
 */
 c3_o
-u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
+u3_disk_save_meta(u3_book* mdb_u, const u3_meta* met_u)
 {
   u3_assert( c3y == u3a_is_cat((c3_w)met_u->lif_h) );
 
@@ -503,10 +505,10 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 c3_o
 u3_disk_save_meta_meta(c3_c* log_c, const u3_meta* met_u)
 {
-  MDB_env* dbm_u;
+  u3_book* dbm_u;
 
-  if ( 0 == (dbm_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)) ) {
-    fprintf(stderr, "disk: failed to initialize meta-lmdb\r\n");
+  if ( 0 == (dbm_u = u3_book_init(log_c)) ) {
+    fprintf(stderr, "disk: failed to initialize meta-book\r\n");
     return c3n;
   }
 
@@ -515,7 +517,7 @@ u3_disk_save_meta_meta(c3_c* log_c, const u3_meta* met_u)
     return c3n;
   }
 
-  u3_lmdb_exit(dbm_u);
+  u3_book_exit(dbm_u);
 
   return c3y;
 }
@@ -546,7 +548,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 /* u3_disk_read_meta(): read metadata.
 */
 c3_o
-u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
+u3_disk_read_meta(u3_book* mdb_u, u3_meta* met_u)
 {
   c3_h ver_h, lif_h;
   c3_d who_d[2];
@@ -556,13 +558,13 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 
   //  version
   //
-  u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
+  u3_book_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
 
   ver_h = val_u.buf_y[0];
 
   //  identity
   //
-  u3_lmdb_read_meta(mdb_u, &val_u, "who", _disk_meta_read_cb);
+  u3_book_read_meta(mdb_u, &val_u, "who", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no identity\r\n");
@@ -597,7 +599,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 
   //  fake bit
   //
-  u3_lmdb_read_meta(mdb_u, &val_u, "fake", _disk_meta_read_cb);
+  u3_book_read_meta(mdb_u, &val_u, "fake", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no fake bit\r\n");
@@ -617,7 +619,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 
   //  life
   //
-  u3_lmdb_read_meta(mdb_u, &val_u, "life", _disk_meta_read_cb);
+  u3_book_read_meta(mdb_u, &val_u, "life", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no lifecycle length\r\n");
@@ -831,7 +833,7 @@ u3_disk_exit(u3_disk* log_u)
 
   //  close database
   //
-  u3_lmdb_exit(log_u->mdb_u);
+  u3_book_exit(log_u->mdb_u);
 
   //  dispose planned writes
   //
@@ -1155,11 +1157,11 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  u3_lmdb_exit(log_u->mdb_u);
+  u3_book_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
   //  initialize db of new epoch
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_book_init(epo_c)) ) {
     fprintf(stderr, "disk: failed to initialize database\r\n");
     c3_free(log_u);
     goto fail3;
@@ -1352,7 +1354,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
   }
 
   //  finish with old log
-  u3_lmdb_exit(log_u->mdb_u);
+  u3_book_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
   //  check if lock.mdb is readable in log directory
@@ -1420,7 +1422,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(tmp_c, u3_Host.ops_u.siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_book_init(tmp_c)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     tmp_c);
     return c3n;
@@ -1434,7 +1436,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
   
   //  atomic truncation of old log
   //
-  u3_lmdb_exit(log_u->mdb_u);
+  u3_book_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
   c3_c trd_c[8193];
@@ -1455,7 +1457,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
                     strerror(errno));
   }
 
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_book_init(epo_c)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return c3n;
@@ -1531,7 +1533,7 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
   //  XX get fir_d from log_u
   c3_d fir_d, las_d;
 
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+  if ( c3n == u3_book_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "roll: failed to read first/last event numbers\r\n");
     exit(1);
   }
@@ -1773,7 +1775,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, lat_d);
 
   //  initialize latest epoch's db
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
+  if ( 0 == (log_u->mdb_u = u3_book_init(epo_c)) ) {
     fprintf(stderr, "disk: failed to initialize database at %s\r\n",
                     epo_c);
     return _epoc_fail;
@@ -1781,11 +1783,11 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
   fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
 
-  //  get first/last event numbers from lmdb
+  //  get first/last event numbers from book
   c3_d fir_d, las_d;
-  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+  if ( c3n == u3_book_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-    u3_lmdb_exit(log_u->mdb_u);
+    u3_book_exit(log_u->mdb_u);
     log_u->mdb_u = 0;
     return _epoc_fail;
   }
@@ -1795,7 +1797,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
      && !las_d
      && (c3n == u3_disk_read_meta(log_u->mdb_u, 0)) )
   {
-    u3_lmdb_exit(log_u->mdb_u);
+    u3_book_exit(log_u->mdb_u);
     log_u->mdb_u = 0;
     return _epoc_void;
   }
@@ -2051,7 +2053,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
     //
     {
       u3_meta met_u;
-      if (  (0 == (log_u->mdb_u = u3_lmdb_init(log_c, u3_Host.ops_u.siz_i)))
+      if (  (0 == (log_u->mdb_u = u3_book_init(log_c)))
          || (c3n == u3_disk_read_meta(log_u->mdb_u, &met_u)) )
       {
         fprintf(stderr, "disk: failed to read metadata\r\n");
@@ -2078,8 +2080,8 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return log_u;
     }
 
-    //  close top-level lmdb
-    u3_lmdb_exit(log_u->mdb_u);
+    //  close top-level book
+    u3_book_exit(log_u->mdb_u);
     log_u->mdb_u = 0;
 
     //  get latest epoch number
