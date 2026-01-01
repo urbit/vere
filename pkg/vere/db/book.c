@@ -47,14 +47,14 @@ _book_crc32_two(c3_y* one_y, c3_w one_w, c3_y* two_y, c3_w two_w)
   return (c3_w)crc32(crc_w, two_y, two_w);
 }
 
-/* _book_write_header(): write header to file at offset 0.
+/* _book_save_head(): write header to file at offset 0.
 */
 static c3_o
-_book_write_header(u3_book* log_u)
+_book_save_head(u3_book* txt_u)
 {
   c3_zs ret_zs;
 
-  ret_zs = pwrite(log_u->fid_i, &log_u->hed_u,
+  ret_zs = pwrite(txt_u->fid_i, &txt_u->hed_u,
                   sizeof(u3_book_head), 0);
 
   if ( ret_zs != sizeof(u3_book_head) ) {
@@ -63,24 +63,24 @@ _book_write_header(u3_book* log_u)
     return c3n;
   }
 
-  if ( -1 == c3_sync(log_u->fid_i) ) {
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
     fprintf(stderr, "book: failed to sync header: %s\r\n",
             strerror(errno));
     return c3n;
   }
 
-  log_u->dit_o = c3n;
+  txt_u->dit_o = c3n;
   return c3y;
 }
 
-/* _book_read_header(): read and validate header.
+/* _book_read_head(): read and validate header.
 */
 static c3_o
-_book_read_header(u3_book* log_u)
+_book_read_head(u3_book* txt_u)
 {
   c3_zs ret_zs;
 
-  ret_zs = pread(log_u->fid_i, &log_u->hed_u,
+  ret_zs = pread(txt_u->fid_i, &txt_u->hed_u,
                  sizeof(u3_book_head), 0);
 
   if ( ret_zs != sizeof(u3_book_head) ) {
@@ -88,109 +88,212 @@ _book_read_header(u3_book* log_u)
     return c3n;
   }
 
-  if ( BOOK_MAGIC != log_u->hed_u.mag_w ) {
+  if ( BOOK_MAGIC != txt_u->hed_u.mag_w ) {
     fprintf(stderr, "book: invalid magic: 0x%08x\r\n",
-            log_u->hed_u.mag_w);
+            txt_u->hed_u.mag_w);
     return c3n;
   }
 
-  if ( BOOK_VERSION != log_u->hed_u.ver_w ) {
+  if ( BOOK_VERSION != txt_u->hed_u.ver_w ) {
     fprintf(stderr, "book: unsupported version: %u\r\n",
-            log_u->hed_u.ver_w);
+            txt_u->hed_u.ver_w);
     return c3n;
   }
 
   return c3y;
 }
 
-/* _book_init_header(): initialize header for new file.
+/* _book_init_head(): initialize header for new file.
 */
 static void
-_book_init_header(u3_book* log_u)
+_book_init_head(u3_book* txt_u)
 {
-  memset(&log_u->hed_u, 0, sizeof(u3_book_head));
-  log_u->hed_u.mag_w = BOOK_MAGIC;
-  log_u->hed_u.ver_w = BOOK_VERSION;
-  log_u->hed_u.fir_d = 0;
-  log_u->hed_u.las_d = 0;
-  log_u->hed_u.off_w = 0;
-  log_u->hed_u.len_w = 0;
-  log_u->dit_o = c3y;
+  memset(&txt_u->hed_u, 0, sizeof(u3_book_head));
+  txt_u->hed_u.mag_w = BOOK_MAGIC;
+  txt_u->hed_u.ver_w = BOOK_VERSION;
+  txt_u->hed_u.fir_d = 0;
+  txt_u->hed_u.las_d = 0;
+  txt_u->hed_u.off_w = 0;
+  txt_u->hed_u.len_w = 0;
+  txt_u->dit_o = c3y;
 }
 
-/* _book_read_record(): read event record at offset.
-**
-**   returns:
-**     c3y: success, buffers allocated
-**     c3n: failure (EOF or corruption)
-**
-**   on success, caller must free *mug_y and *jam_y
+/* _book_deed_size(): calculate total on-disk size of deed.
+*/
+static inline c3_w
+_book_deed_size(c3_d len_d)
+{
+  return sizeof(u3_book_deed_head) + (len_d - 4) + sizeof(u3_book_deed_tail);
+  // = 12 + (len_d - 4) + 12 = len_d + 20
+}
+
+/* _book_calc_crc(): compute CRC32 for reed.
+*/
+static c3_w
+_book_calc_crc(const u3_book_reed* red_u)
+{
+  c3_y buf_y[12];  //  8 bytes len_d + 4 bytes mug
+  memcpy(buf_y, &red_u->len_d, 8);
+  memcpy(buf_y + 8, &red_u->mug_l, 4);
+
+  return _book_crc32_two(buf_y, 12, red_u->jam_y, red_u->len_d - 4);
+}
+
+/* _book_okay_reed(): validate reed integrity.
 */
 static c3_o
-_book_read_record(c3_i   fid_i,
-                  c3_w*  off_w,
-                  c3_d*  len_d,
-                  c3_y** mug_y,
-                  c3_y** jam_y,
-                  c3_w*  crc_w,
-                  c3_d*  let_d)
+_book_okay_reed(const u3_book_reed* red_u)
+{
+  //  validate length
+  if ( 0 == red_u->len_d || (1ULL << 32) < red_u->len_d ) {
+    return c3n;
+  }
+
+  //  validate CRC
+  c3_w crc_w = _book_calc_crc(red_u);
+  if ( crc_w != red_u->crc_w ) {
+    return c3n;
+  }
+
+  return c3y;
+}
+
+/* _book_read_deed(): read deed from file into [red_u].
+**
+**   returns:
+**     c3y: success, jam_y allocated
+**     c3n: failure (EOF or corruption)
+**
+**   on success, caller must free red_u->jam_y
+*/
+static c3_o
+_book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
 {
   c3_zs ret_zs;
-  c3_w  off_now = *off_w;
+  c3_w  now_w = *off_w;
+  c3_d  let_d;
 
-  //  read len_d (8 bytes)
-  ret_zs = pread(fid_i, len_d, sizeof(c3_d), off_now);
-  if ( ret_zs != sizeof(c3_d) ) {
+  //  read deed_head
+  u3_book_deed_head hed_u;
+  ret_zs = pread(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w);
+  if ( ret_zs != sizeof(u3_book_deed_head) ) {
     return c3n;
   }
-  off_now += sizeof(c3_d);
+  now_w += sizeof(u3_book_deed_head);
 
   //  validate length
-  if ( 0 == *len_d || (1ULL << 32) < *len_d ) {
-    fprintf(stderr, "book: invalid length: %llu\r\n", *len_d);
+  if ( 0 == hed_u.len_d || (1ULL << 32) < hed_u.len_d ) {
+    fprintf(stderr, "book: invalid length: %llu\r\n", hed_u.len_d);
     return c3n;
   }
 
-  //  read mug_l (4 bytes)
-  *mug_y = c3_malloc(4);
-  ret_zs = pread(fid_i, *mug_y, 4, off_now);
-  if ( ret_zs != 4 ) {
-    c3_free(*mug_y);
-    return c3n;
-  }
-  off_now += 4;
+  //  populate reed from head
+  red_u->len_d = hed_u.len_d;
+  red_u->mug_l = hed_u.mug_l;
 
-  //  read jam data (len_d - 4 bytes, since len_d includes mug)
-  c3_d jam_len = *len_d - 4;
-  *jam_y = c3_malloc(jam_len);
-  ret_zs = pread(fid_i, *jam_y, jam_len, off_now);
-  if ( ret_zs != (c3_zs)jam_len ) {
-    c3_free(*mug_y);
-    c3_free(*jam_y);
+  //  read jam data (len_d - mug bytes)
+  c3_d jaz_d = red_u->len_d - 4;
+  red_u->jam_y = c3_malloc(jaz_d);
+  ret_zs = pread(fid_i, red_u->jam_y, jaz_d, now_w);
+  if ( ret_zs != (c3_zs)jaz_d ) {
+    c3_free(red_u->jam_y);
     return c3n;
   }
-  off_now += jam_len;
+  now_w += jaz_d;
 
-  //  read crc_m (4 bytes)
-  ret_zs = pread(fid_i, crc_w, sizeof(c3_w), off_now);
-  if ( ret_zs != sizeof(c3_w) ) {
-    c3_free(*mug_y);
-    c3_free(*jam_y);
+  //  read deed_tail
+  u3_book_deed_tail tal_u;
+  ret_zs = pread(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w);
+  if ( ret_zs != sizeof(u3_book_deed_tail) ) {
+    c3_free(red_u->jam_y);
     return c3n;
   }
-  off_now += sizeof(c3_w);
+  now_w += sizeof(u3_book_deed_tail);
 
-  //  read let_d (8 bytes)
-  ret_zs = pread(fid_i, let_d, sizeof(c3_d), off_now);
-  if ( ret_zs != sizeof(c3_d) ) {
-    c3_free(*mug_y);
-    c3_free(*jam_y);
+  //  populate reed from tail
+  red_u->crc_w = tal_u.crc_w;
+  let_d = tal_u.let_d;
+
+  //  validate len_d == let_d
+  if ( red_u->len_d != let_d ) {
+    c3_free(red_u->jam_y);
     return c3n;
   }
-  off_now += sizeof(c3_d);
 
   //  update offset
-  *off_w = off_now;
+  *off_w = now_w;
+
+  return c3y;
+}
+
+/* _book_save_deed(): save complete deed to file.
+**
+**   returns:
+**     c3y: success
+**     c3n: failure
+*/
+static c3_o
+_book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
+{
+  c3_zs ret_zs;
+  c3_w  now_w = *off_w;
+  c3_d  jaz_d = red_u->len_d - 4;  //  len_d - mug bytes
+
+  //  write deed_head
+  u3_book_deed_head hed_u;
+  hed_u.len_d = red_u->len_d;
+  hed_u.mug_l = red_u->mug_l;
+
+  ret_zs = pwrite(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w);
+  if ( ret_zs != sizeof(u3_book_deed_head) ) {
+    return c3n;
+  }
+  now_w += sizeof(u3_book_deed_head);
+
+  //  write jam data
+  ret_zs = pwrite(fid_i, red_u->jam_y, jaz_d, now_w);
+  if ( ret_zs != (c3_zs)jaz_d ) {
+    return c3n;
+  }
+  now_w += jaz_d;
+
+  //  write deed_tail
+  u3_book_deed_tail tal_u;
+  tal_u.crc_w = red_u->crc_w;
+  tal_u.let_d = red_u->len_d;  //  length trailer (same as len_d)
+
+  ret_zs = pwrite(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w);
+  if ( ret_zs != sizeof(u3_book_deed_tail) ) {
+    return c3n;
+  }
+  now_w += sizeof(u3_book_deed_tail);
+
+  //  update offset
+  *off_w = now_w;
+
+  return c3y;
+}
+
+/* _book_skip_deed(): skip over deed without reading jam data.
+**
+**   returns:
+**     c3y: success
+**     c3n: failure (EOF)
+*/
+static c3_o
+_book_skip_deed(c3_i fid_i, c3_w* off_w)
+{
+  c3_zs ret_zs;
+  c3_d  len_d;
+
+  //  read only the len_d field
+  ret_zs = pread(fid_i, &len_d, sizeof(c3_d), *off_w);
+  if ( ret_zs != sizeof(c3_d) ) {
+    return c3n;
+  }
+
+  //  skip entire deed: deed_head + jam + deed_tail
+  *off_w += _book_deed_size(len_d);
 
   return c3y;
 }
@@ -202,86 +305,63 @@ _book_read_record(c3_i   fid_i,
 **   updates header if corruption detected.
 */
 static c3_w
-_book_scan_end(u3_book* log_u)
+_book_scan_end(u3_book* txt_u)
 {
-  c3_w off_w = sizeof(u3_book_head) + BOOK_META_SIZE;  //  events start here
-  c3_d count_d = 0;
-  c3_d expected_d;
+  c3_w off_w = sizeof(u3_book_head) + BOOK_META_SIZE;  //  start
+  c3_d cot_d = 0;  //  count
+  c3_d exp_d;      //  expected event number
 
-  if ( 0 == log_u->hed_u.fir_d && 0 == log_u->hed_u.las_d ) {
+  if ( 0 == txt_u->hed_u.fir_d && 0 == txt_u->hed_u.las_d ) {
     //  empty log
     return off_w;
   }
 
-  expected_d = log_u->hed_u.las_d - log_u->hed_u.fir_d + 1;
+  exp_d = txt_u->hed_u.las_d - txt_u->hed_u.fir_d + 1;
 
   while ( 1 ) {
-    c3_d  len_d, let_d;
-    c3_y* mug_y;
-    c3_y* jam_y;
-    c3_w  crc_w, calc_crc;
+    u3_book_reed red_u;
     c3_w  off_start = off_w;
 
-    if ( c3n == _book_read_record(log_u->fid_i, &off_w,
-                                   &len_d, &mug_y, &jam_y,
-                                   &crc_w, &let_d) )
-    {
+    //  read deed into reed
+    if ( c3n == _book_read_deed(txt_u->fid_i, &off_w, &red_u) ) {
       //  EOF or read error
       break;
     }
 
-    //  validate len_d == let_d
-    if ( len_d != let_d ) {
-      fprintf(stderr, "book: length mismatch at offset %u\r\n", off_start);
-      c3_free(mug_y);
-      c3_free(jam_y);
+    //  validate reed (CRC and length checks)
+    if ( c3n == _book_okay_reed(&red_u) ) {
+      fprintf(stderr, "book: validation failed at offset %u\r\n", off_start);
+      c3_free(red_u.jam_y);
       break;
     }
 
-    //  validate CRC: CRC32(len_d || mug || jam)
-    {
-      c3_y buf_y[12];  //  8 bytes len_d + 4 bytes mug
-      memcpy(buf_y, &len_d, 8);
-      memcpy(buf_y + 8, mug_y, 4);
-
-      calc_crc = _book_crc32(buf_y, 12);
-      calc_crc = (c3_w)crc32(calc_crc, jam_y, len_d - 4);
-    }
-
-    c3_free(mug_y);
-    c3_free(jam_y);
-
-    if ( crc_w != calc_crc ) {
-      fprintf(stderr, "book: CRC mismatch at offset %u\r\n", off_start);
-      break;
-    }
-
-    count_d++;
+    c3_free(red_u.jam_y);
+    cot_d++;
   }
 
   //  check if we found fewer events than expected
-  if ( count_d != expected_d ) {
+  if ( cot_d != exp_d ) {
     fprintf(stderr, "book: recovery: found %llu events, expected %llu\r\n",
-            count_d, expected_d);
+            cot_d, exp_d);
 
     //  update header
-    if ( count_d == 0 ) {
-      log_u->hed_u.fir_d = 0;
-      log_u->hed_u.las_d = 0;
+    if ( cot_d == 0 ) {
+      txt_u->hed_u.fir_d = 0;
+      txt_u->hed_u.las_d = 0;
       off_w = sizeof(u3_book_head);
     } else {
-      log_u->hed_u.las_d = log_u->hed_u.fir_d + count_d - 1;
+      txt_u->hed_u.las_d = txt_u->hed_u.fir_d + cot_d - 1;
     }
 
-    log_u->dit_o = c3y;
-    _book_write_header(log_u);
+    txt_u->dit_o = c3y;
+    _book_save_head(txt_u);
 
     //  truncate file
-    if ( -1 == ftruncate(log_u->fid_i, off_w) ) {
+    if ( -1 == ftruncate(txt_u->fid_i, off_w) ) {
       fprintf(stderr, "book: failed to truncate: %s\r\n",
               strerror(errno));
     } else {
-      c3_sync(log_u->fid_i);
+      c3_sync(txt_u->fid_i);
     }
   }
 
@@ -296,7 +376,7 @@ u3_book_init(const c3_c* pax_c)
   c3_c path_c[8193];
   c3_i fid_i;
   struct stat buf_u;
-  u3_book* log_u;
+  u3_book* txt_u;
 
   //  construct path to book.log
   snprintf(path_c, sizeof(path_c), "%s/book.log", pax_c);
@@ -317,76 +397,76 @@ u3_book_init(const c3_c* pax_c)
   }
 
   //  allocate log structure
-  log_u = c3_calloc(sizeof(u3_book));
-  log_u->fid_i = fid_i;
-  log_u->pax_c = c3_malloc(strlen(path_c) + 1);
-  strcpy(log_u->pax_c, path_c);
+  txt_u = c3_calloc(sizeof(u3_book));
+  txt_u->fid_i = fid_i;
+  txt_u->pax_c = c3_malloc(strlen(path_c) + 1);
+  strcpy(txt_u->pax_c, path_c);
 
   if ( buf_u.st_size == 0 ) {
     //  new file: initialize header
-    _book_init_header(log_u);
-    _book_write_header(log_u);
+    _book_init_head(txt_u);
+    _book_save_head(txt_u);
     //  events start after header + reserved metadata area
-    log_u->off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
+    txt_u->off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
   }
   else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
     //  corrupt file: too small
     fprintf(stderr, "book: file too small: %lld bytes\r\n",
             (long long)buf_u.st_size);
     close(fid_i);
-    c3_free(log_u->pax_c);
-    c3_free(log_u);
+    c3_free(txt_u->pax_c);
+    c3_free(txt_u);
     return 0;
   }
   else {
     //  existing file: read and validate header
-    if ( c3n == _book_read_header(log_u) ) {
+    if ( c3n == _book_read_head(txt_u) ) {
       close(fid_i);
-      c3_free(log_u->pax_c);
-      c3_free(log_u);
+      c3_free(txt_u->pax_c);
+      c3_free(txt_u);
       return 0;
     }
 
     //  scan to find actual end, recover from corruption
-    log_u->off_w = _book_scan_end(log_u);
+    txt_u->off_w = _book_scan_end(txt_u);
   }
 
-  return log_u;
+  return txt_u;
 }
 
 /* u3_book_exit(): close event log.
 */
 void
-u3_book_exit(u3_book* log_u)
+u3_book_exit(u3_book* txt_u)
 {
-  if ( !log_u ) {
+  if ( !txt_u ) {
     return;
   }
 
   //  sync header if dirty
-  if ( c3y == log_u->dit_o ) {
-    _book_write_header(log_u);
+  if ( c3y == txt_u->dit_o ) {
+    _book_save_head(txt_u);
   }
 
   //  close file
-  close(log_u->fid_i);
+  close(txt_u->fid_i);
 
   //  free resources
-  c3_free(log_u->pax_c);
-  c3_free(log_u);
+  c3_free(txt_u->pax_c);
+  c3_free(txt_u);
 }
 
 /* u3_book_gulf(): read first and last event numbers.
 */
 c3_o
-u3_book_gulf(u3_book* log_u, c3_d* low_d, c3_d* hig_d)
+u3_book_gulf(u3_book* txt_u, c3_d* low_d, c3_d* hig_d)
 {
-  if ( !log_u ) {
+  if ( !txt_u ) {
     return c3n;
   }
 
-  *low_d = log_u->hed_u.fir_d;
-  *hig_d = log_u->hed_u.las_d;
+  *low_d = txt_u->hed_u.fir_d;
+  *hig_d = txt_u->hed_u.las_d;
 
   return c3y;
 }
@@ -449,141 +529,84 @@ u3_book_stat(const c3_c* pax_c)
 
 /* u3_book_save(): save [len_d] events starting at [eve_d].
 **
-**   byt_p: array of buffers (mug + jam format)
+**   byt_p: array of buffers (mug + jam)
 **   siz_i: array of buffer sizes
 */
 c3_o
-u3_book_save(u3_book* log_u,
+u3_book_save(u3_book* txt_u,
              c3_d     eve_d,
              c3_d     len_d,
              void**   byt_p,
              c3_z*    siz_i,
              c3_d     epo_d)
 {
-  c3_w i;
-  c3_w off_now;
+  c3_w now_w;
 
-  if ( !log_u ) {
+  if ( !txt_u ) {
     return c3n;
   }
 
   //  validate contiguity
-  if ( 0 == log_u->hed_u.las_d ) {
+  if ( 0 == txt_u->hed_u.las_d ) {
     //  empty log: first event must be the first event in the epoch
     if ( epo_d + 1 != eve_d ) {
       fprintf(stderr, "book: first event must be 1, got %llu\r\n", eve_d);
       return c3n;
     }
-    log_u->hed_u.fir_d = eve_d;
+    txt_u->hed_u.fir_d = eve_d;
   }
   else {
     //  non-empty: must be contiguous
-    if ( eve_d != log_u->hed_u.las_d + 1 ) {
+    if ( eve_d != txt_u->hed_u.las_d + 1 ) {
       fprintf(stderr, "book: event gap: expected %llu, got %llu\r\n",
-              log_u->hed_u.las_d + 1, eve_d);
+              txt_u->hed_u.las_d + 1, eve_d);
       return c3n;
     }
   }
 
-  //  write each event record
-  off_now = log_u->off_w;
+  //  write each event deed
+  now_w = txt_u->off_w;
 
-  for ( i = 0; i < len_d; i++ ) {
-    c3_y* buf_y = (c3_y*)byt_p[i];
-    c3_d  siz_d = (c3_d)siz_i[i];
-    c3_d  len_write;
-    c3_l  mug_l;
-    c3_y* jam_y;
-    c3_d  jam_len;
-    c3_w  crc_w;
-    c3_zs ret_zs;
-    c3_y  len_buf[8];
-    c3_y  crc_buf[4];
-    c3_y  let_buf[8];
+  for ( c3_w i_w = 0; i_w < len_d; i_w++ ) {
+    c3_y* buf_y = (c3_y*)byt_p[i_w];
+    c3_d  siz_d = (c3_d)siz_i[i_w];
+    u3_book_reed red_u;
 
     //  extract mug from buffer (first 4 bytes)
     if ( siz_d < 4 ) {
       fprintf(stderr, "book: event %llu buffer too small: %llu\r\n",
-              eve_d + i, siz_d);
+              eve_d + i_w, siz_d);
       return c3n;
     }
 
-    memcpy(&mug_l, buf_y, 4);
-    jam_y = buf_y + 4;
-    jam_len = siz_d - 4;
+    //  build reed from input buffer
+    memcpy(&red_u.mug_l, buf_y, 4);
+    red_u.jam_y = buf_y + 4;
+    red_u.len_d = siz_d;  //  total payload: mug + jam
+    red_u.crc_w = _book_calc_crc(&red_u);
 
-    //  len_d is total payload: 4 bytes mug + jam data
-    len_write = siz_d;
-
-    //  compute CRC32 over: len_d (8 bytes) + mug_l (4 bytes) + jam data
-    {
-      c3_y tmp_buf[12];
-      memcpy(tmp_buf, &len_write, 8);
-      memcpy(tmp_buf + 8, &mug_l, 4);
-      crc_w = _book_crc32_two(tmp_buf, 12, jam_y, jam_len);
-    }
-
-    //  prepare buffers for writing
-    memcpy(len_buf, &len_write, 8);
-    memcpy(crc_buf, &crc_w, 4);
-    memcpy(let_buf, &len_write, 8);
-
-    //  write record: len_d | mug_l | jam | crc_m | let_d
-    ret_zs = pwrite(log_u->fid_i, len_buf, 8, off_now);
-    if ( ret_zs != 8 ) {
-      fprintf(stderr, "book: failed to write len_d for event %llu: %s\r\n",
-              eve_d + i, strerror(errno));
+    //  save deed to file
+    if ( c3n == _book_save_deed(txt_u->fid_i, &now_w, &red_u) ) {
+      fprintf(stderr, "book: failed to save deed for event %llu: %s\r\n",
+              eve_d + i_w, strerror(errno));
       return c3n;
     }
-    off_now += 8;
-
-    ret_zs = pwrite(log_u->fid_i, &mug_l, 4, off_now);
-    if ( ret_zs != 4 ) {
-      fprintf(stderr, "book: failed to write mug for event %llu: %s\r\n",
-              eve_d + i, strerror(errno));
-      return c3n;
-    }
-    off_now += 4;
-
-    ret_zs = pwrite(log_u->fid_i, jam_y, jam_len, off_now);
-    if ( ret_zs != (c3_zs)jam_len ) {
-      fprintf(stderr, "book: failed to write jam for event %llu: %s\r\n",
-              eve_d + i, strerror(errno));
-      return c3n;
-    }
-    off_now += jam_len;
-
-    ret_zs = pwrite(log_u->fid_i, crc_buf, 4, off_now);
-    if ( ret_zs != 4 ) {
-      fprintf(stderr, "book: failed to write crc for event %llu: %s\r\n",
-              eve_d + i, strerror(errno));
-      return c3n;
-    }
-    off_now += 4;
-
-    ret_zs = pwrite(log_u->fid_i, let_buf, 8, off_now);
-    if ( ret_zs != 8 ) {
-      fprintf(stderr, "book: failed to write let_d for event %llu: %s\r\n",
-              eve_d + i, strerror(errno));
-      return c3n;
-    }
-    off_now += 8;
   }
 
   //  sync data to disk
-  if ( -1 == c3_sync(log_u->fid_i) ) {
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
     fprintf(stderr, "book: failed to sync events: %s\r\n",
             strerror(errno));
     return c3n;
   }
 
   //  update header
-  log_u->hed_u.las_d = eve_d + len_d - 1;
-  log_u->off_w = off_now;
-  log_u->dit_o = c3y;
+  txt_u->hed_u.las_d = eve_d + len_d - 1;
+  txt_u->off_w = now_w;
+  txt_u->dit_o = c3y;
 
   //  write and sync header
-  if ( c3n == _book_write_header(log_u) ) {
+  if ( c3n == _book_save_head(txt_u) ) {
     return c3n;
   }
 
@@ -599,7 +622,7 @@ u3_book_save(u3_book* log_u,
 **     buf_v: buffer pointer (mug + jam format)
 */
 c3_o
-u3_book_read(u3_book* log_u,
+u3_book_read(u3_book* txt_u,
              void*    ptr_v,
              c3_d     eve_d,
              c3_d     len_d,
@@ -607,100 +630,67 @@ u3_book_read(u3_book* log_u,
 {
   c3_w  off_w;
   c3_d  cur_d;
-  c3_d  i;
 
-  if ( !log_u ) {
+  if ( !txt_u ) {
     return c3n;
   }
 
   //  validate range
-  if ( 0 == log_u->hed_u.las_d ) {
+  if ( 0 == txt_u->hed_u.las_d ) {
     //  empty log
     fprintf(stderr, "book: read from empty log\r\n");
     return c3n;
   }
 
-  if ( eve_d < log_u->hed_u.fir_d || eve_d > log_u->hed_u.las_d ) {
+  if ( eve_d < txt_u->hed_u.fir_d || eve_d > txt_u->hed_u.las_d ) {
     fprintf(stderr, "book: event %llu out of range [%llu, %llu]\r\n",
-            eve_d, log_u->hed_u.fir_d, log_u->hed_u.las_d);
+            eve_d, txt_u->hed_u.fir_d, txt_u->hed_u.las_d);
     return c3n;
   }
 
-  if ( eve_d + len_d - 1 > log_u->hed_u.las_d ) {
+  if ( eve_d + len_d - 1 > txt_u->hed_u.las_d ) {
     fprintf(stderr, "book: read range exceeds last event\r\n");
     return c3n;
   }
 
   //  scan to starting event (events start after header + metadata area)
   off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
-  cur_d = log_u->hed_u.fir_d;
+  cur_d = txt_u->hed_u.fir_d;
 
   while ( cur_d < eve_d ) {
-    c3_d  skip_len;
-    c3_zs ret_zs;
-
-    ret_zs = pread(log_u->fid_i, &skip_len, sizeof(c3_d), off_w);
-    if ( ret_zs != sizeof(c3_d) ) {
+    if ( c3n == _book_skip_deed(txt_u->fid_i, &off_w) ) {
       fprintf(stderr, "book: failed to scan to event %llu\r\n", eve_d);
       return c3n;
     }
-
-    //  skip entire record: len_d(8) + mug(4) + jam(len-4) + crc(4) + let_d(8)
-    off_w += 8 + 4 + (skip_len - 4) + 4 + 8;
     cur_d++;
   }
 
   //  read requested events
-  for ( i = 0; i < len_d; i++, cur_d++ ) {
-    c3_d  len_rec;
-    c3_y* mug_y;
-    c3_y* jam_y;
-    c3_w  crc_w, calc_crc;
-    c3_d  let_d;
+  for ( c3_d i_d = 0; i_d < len_d; i_d++, cur_d++ ) {
+    u3_book_reed red_u;
     c3_y* buf_y;
     c3_z  len_z;
 
-    //  read record
-    if ( c3n == _book_read_record(log_u->fid_i, &off_w,
-                                   &len_rec, &mug_y, &jam_y,
-                                   &crc_w, &let_d) )
-    {
+    //  read deed into reed
+    if ( c3n == _book_read_deed(txt_u->fid_i, &off_w, &red_u) ) {
       fprintf(stderr, "book: failed to read event %llu\r\n", cur_d);
       return c3n;
     }
 
-    //  validate len_d == let_d
-    if ( len_rec != let_d ) {
-      fprintf(stderr, "book: length mismatch at event %llu\r\n", cur_d);
-      c3_free(mug_y);
-      c3_free(jam_y);
-      return c3n;
-    }
-
-    //  validate CRC
-    {
-      c3_y tmp_buf[12];
-      memcpy(tmp_buf, &len_rec, 8);
-      memcpy(tmp_buf + 8, mug_y, 4);
-      calc_crc = _book_crc32(tmp_buf, 12);
-      calc_crc = (c3_w)crc32(calc_crc, jam_y, len_rec - 4);
-    }
-
-    if ( crc_w != calc_crc ) {
-      fprintf(stderr, "book: CRC mismatch at event %llu\r\n", cur_d);
-      c3_free(mug_y);
-      c3_free(jam_y);
+    //  validate reed
+    if ( c3n == _book_okay_reed(&red_u) ) {
+      fprintf(stderr, "book: validation failed at event %llu\r\n", cur_d);
+      c3_free(red_u.jam_y);
       return c3n;
     }
 
     //  reconstruct buffer in mug + jam format for callback
-    len_z = len_rec;
+    len_z = red_u.len_d;
     buf_y = c3_malloc(len_z);
-    memcpy(buf_y, mug_y, 4);
-    memcpy(buf_y + 4, jam_y, len_rec - 4);
+    memcpy(buf_y, &red_u.mug_l, 4);
+    memcpy(buf_y + 4, red_u.jam_y, red_u.len_d - 4);
 
-    c3_free(mug_y);
-    c3_free(jam_y);
+    c3_free(red_u.jam_y);
 
     //  invoke callback
     if ( c3n == read_f(ptr_v, cur_d, len_z, buf_y) ) {
@@ -719,7 +709,7 @@ u3_book_read(u3_book* log_u,
 **   sets up iterator to read events from [nex_d] to [las_d] inclusive.
 */
 c3_o
-u3_book_walk_init(u3_book*      log_u,
+u3_book_walk_init(u3_book*      txt_u,
                   u3_book_walk* itr_u,
                   c3_d          nex_d,
                   c3_d          las_d)
@@ -727,49 +717,42 @@ u3_book_walk_init(u3_book*      log_u,
   c3_w off_w;
   c3_d cur_d;
 
-  if ( !log_u || !itr_u ) {
+  if ( !txt_u || !itr_u ) {
     return c3n;
   }
 
   //  validate range
-  if ( 0 == log_u->hed_u.las_d ) {
+  if ( 0 == txt_u->hed_u.las_d ) {
     fprintf(stderr, "book: walk_init on empty log\r\n");
     return c3n;
   }
 
-  if ( nex_d < log_u->hed_u.fir_d || nex_d > log_u->hed_u.las_d ) {
+  if ( nex_d < txt_u->hed_u.fir_d || nex_d > txt_u->hed_u.las_d ) {
     fprintf(stderr, "book: walk_init start %llu out of range [%llu, %llu]\r\n",
-            nex_d, log_u->hed_u.fir_d, log_u->hed_u.las_d);
+            nex_d, txt_u->hed_u.fir_d, txt_u->hed_u.las_d);
     return c3n;
   }
 
-  if ( las_d < nex_d || las_d > log_u->hed_u.las_d ) {
+  if ( las_d < nex_d || las_d > txt_u->hed_u.las_d ) {
     fprintf(stderr, "book: walk_init end %llu out of range [%llu, %llu]\r\n",
-            las_d, nex_d, log_u->hed_u.las_d);
+            las_d, nex_d, txt_u->hed_u.las_d);
     return c3n;
   }
 
   //  scan to starting event (events start after header + metadata area)
   off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
-  cur_d = log_u->hed_u.fir_d;
+  cur_d = txt_u->hed_u.fir_d;
 
   while ( cur_d < nex_d ) {
-    c3_d  skip_len;
-    c3_zs ret_zs;
-
-    ret_zs = pread(log_u->fid_i, &skip_len, sizeof(c3_d), off_w);
-    if ( ret_zs != sizeof(c3_d) ) {
+    if ( c3n == _book_skip_deed(txt_u->fid_i, &off_w) ) {
       fprintf(stderr, "book: walk_init failed to scan to event %llu\r\n", nex_d);
       return c3n;
     }
-
-    //  skip entire record
-    off_w += 8 + 4 + (skip_len - 4) + 4 + 8;
     cur_d++;
   }
 
   //  initialize iterator
-  itr_u->fid_i = log_u->fid_i;
+  itr_u->fid_i = txt_u->fid_i;
   itr_u->nex_d = nex_d;
   itr_u->las_d = las_d;
   itr_u->off_w = off_w;
@@ -786,11 +769,7 @@ u3_book_walk_init(u3_book*      log_u,
 c3_o
 u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
 {
-  c3_d  len_rec;
-  c3_y* mug_y;
-  c3_y* jam_y;
-  c3_w  crc_w, calc_crc;
-  c3_d  let_d;
+  u3_book_reed red_u;
   c3_y* buf_y;
 
   if ( !itr_u || c3n == itr_u->liv_o ) {
@@ -803,53 +782,30 @@ u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
     return c3n;
   }
 
-  //  read record
-  if ( c3n == _book_read_record(itr_u->fid_i, &itr_u->off_w,
-                                 &len_rec, &mug_y, &jam_y,
-                                 &crc_w, &let_d) )
-  {
+  //  read deed into reed
+  if ( c3n == _book_read_deed(itr_u->fid_i, &itr_u->off_w, &red_u) ) {
     fprintf(stderr, "book: walk_next failed to read event %llu\r\n",
             itr_u->nex_d);
     itr_u->liv_o = c3n;
     return c3n;
   }
 
-  //  validate len_d == let_d
-  if ( len_rec != let_d ) {
-    fprintf(stderr, "book: walk_next length mismatch at event %llu\r\n",
+  //  validate reed
+  if ( c3n == _book_okay_reed(&red_u) ) {
+    fprintf(stderr, "book: walk_next validation failed at event %llu\r\n",
             itr_u->nex_d);
-    c3_free(mug_y);
-    c3_free(jam_y);
-    itr_u->liv_o = c3n;
-    return c3n;
-  }
-
-  //  validate CRC
-  {
-    c3_y tmp_buf[12];
-    memcpy(tmp_buf, &len_rec, 8);
-    memcpy(tmp_buf + 8, mug_y, 4);
-    calc_crc = _book_crc32(tmp_buf, 12);
-    calc_crc = (c3_w)crc32(calc_crc, jam_y, len_rec - 4);
-  }
-
-  if ( crc_w != calc_crc ) {
-    fprintf(stderr, "book: walk_next CRC mismatch at event %llu\r\n",
-            itr_u->nex_d);
-    c3_free(mug_y);
-    c3_free(jam_y);
+    c3_free(red_u.jam_y);
     itr_u->liv_o = c3n;
     return c3n;
   }
 
   //  reconstruct buffer in mug + jam format
-  *len_z = len_rec;
+  *len_z = red_u.len_d;
   buf_y = c3_malloc(*len_z);
-  memcpy(buf_y, mug_y, 4);
-  memcpy(buf_y + 4, jam_y, len_rec - 4);
+  memcpy(buf_y, &red_u.mug_l, 4);
+  memcpy(buf_y + 4, red_u.jam_y, red_u.len_d - 4);
 
-  c3_free(mug_y);
-  c3_free(jam_y);
+  c3_free(red_u.jam_y);
 
   *buf_v = buf_y;
 
@@ -878,38 +834,37 @@ u3_book_walk_done(u3_book_walk* itr_u)
 **   invokes callback with (ptr_v, len, data) or (ptr_v, -1, 0) if not found.
 */
 void
-u3_book_read_meta(u3_book*    log_u,
+u3_book_read_meta(u3_book*    txt_u,
                   void*       ptr_v,
                   const c3_c* key_c,
                   void     (*read_f)(void*, c3_zs, void*))
 {
-  c3_w   key_len;
-  c3_y*  meta_buf;
-  c3_w   meta_len;
+  c3_w   ken_w;  //  key length
+  c3_y*  buf_y;  //  metadata buffer
+  c3_w   len_w;  //  metadata length
   c3_zs  ret_zs;
-  c3_w   offset;
-  c3_w   count;
-  c3_w   i;
+  c3_w   off_w;
+  c3_w   cot_w;  //  count
 
-  if ( !log_u ) {
+  if ( !txt_u ) {
     read_f(ptr_v, -1, 0);
     return;
   }
 
   //  check if metadata section exists
-  if ( 0 == log_u->hed_u.len_w ) {
+  if ( 0 == txt_u->hed_u.len_w ) {
     read_f(ptr_v, -1, 0);
     return;
   }
 
   //  read entire metadata section
-  meta_len = log_u->hed_u.len_w;
-  meta_buf = c3_malloc(meta_len);
+  len_w = txt_u->hed_u.len_w;
+  buf_y = c3_malloc(len_w);
 
-  ret_zs = pread(log_u->fid_i, meta_buf, meta_len, log_u->hed_u.off_w);
-  if ( ret_zs != (c3_zs)meta_len ) {
+  ret_zs = pread(txt_u->fid_i, buf_y, len_w, txt_u->hed_u.off_w);
+  if ( ret_zs != (c3_zs)len_w ) {
     fprintf(stderr, "book: read_meta: failed to read metadata section\r\n");
-    c3_free(meta_buf);
+    c3_free(buf_y);
     read_f(ptr_v, -1, 0);
     return;
   }
@@ -918,78 +873,78 @@ u3_book_read_meta(u3_book*    log_u,
   //  format: [4 bytes: count] + entries
   //  entry:  [4 bytes: key_len][key][4 bytes: val_len][val]
 
-  if ( meta_len < 4 ) {
+  if ( len_w < 4 ) {
     fprintf(stderr, "book: read_meta: metadata section too small\r\n");
-    c3_free(meta_buf);
+    c3_free(buf_y);
     read_f(ptr_v, -1, 0);
     return;
   }
 
-  memcpy(&count, meta_buf, 4);
-  offset = 4;
+  memcpy(&cot_w, buf_y, 4);
+  off_w = 4;
 
-  key_len = strlen(key_c);
+  ken_w = strlen(key_c);
 
   //  linear search for key
-  for ( i = 0; i < count; i++ ) {
+  for ( c3_w i_w = 0; i_w < cot_w; i_w++ ) {
     c3_w   entry_key_len;
     c3_y*  entry_key;
     c3_w   entry_val_len;
     c3_y*  entry_val;
 
     //  read key length
-    if ( offset + 4 > meta_len ) {
+    if ( off_w + 4 > len_w ) {
       fprintf(stderr, "book: read_meta: corrupt metadata (key len)\r\n");
-      c3_free(meta_buf);
+      c3_free(buf_y);
       read_f(ptr_v, -1, 0);
       return;
     }
-    memcpy(&entry_key_len, meta_buf + offset, 4);
-    offset += 4;
+    memcpy(&entry_key_len, buf_y + off_w, 4);
+    off_w += 4;
 
     //  read key
-    if ( offset + entry_key_len > meta_len ) {
+    if ( off_w + entry_key_len > len_w ) {
       fprintf(stderr, "book: read_meta: corrupt metadata (key)\r\n");
-      c3_free(meta_buf);
+      c3_free(buf_y);
       read_f(ptr_v, -1, 0);
       return;
     }
-    entry_key = meta_buf + offset;
-    offset += entry_key_len;
+    entry_key = buf_y + off_w;
+    off_w += entry_key_len;
 
     //  read value length
-    if ( offset + 4 > meta_len ) {
+    if ( off_w + 4 > len_w ) {
       fprintf(stderr, "book: read_meta: corrupt metadata (val len)\r\n");
-      c3_free(meta_buf);
+      c3_free(buf_y);
       read_f(ptr_v, -1, 0);
       return;
     }
-    memcpy(&entry_val_len, meta_buf + offset, 4);
-    offset += 4;
+    memcpy(&entry_val_len, buf_y + off_w, 4);
+    off_w += 4;
 
     //  read value
-    if ( offset + entry_val_len > meta_len ) {
+    if ( off_w + entry_val_len > len_w ) {
       fprintf(stderr, "book: read_meta: corrupt metadata (val)\r\n");
-      c3_free(meta_buf);
+      c3_free(buf_y);
       read_f(ptr_v, -1, 0);
       return;
     }
-    entry_val = meta_buf + offset;
-    offset += entry_val_len;
+    entry_val = buf_y + off_w;
+    off_w += entry_val_len;
 
     //  check if this is the key we're looking for
-    if ( entry_key_len == key_len &&
-         0 == memcmp(entry_key, key_c, key_len) )
+    if ( entry_key_len == ken_w &&
+         0 == memcmp(entry_key, key_c, ken_w) )
     {
       //  found it - invoke callback
       read_f(ptr_v, entry_val_len, entry_val);
-      c3_free(meta_buf);
+      c3_free(buf_y);
       return;
     }
   }
 
   //  not found
-  c3_free(meta_buf);
+  c3_free(buf_y);
   read_f(ptr_v, -1, 0);
 }
 
@@ -998,7 +953,7 @@ u3_book_read_meta(u3_book*    log_u,
 **   updates or inserts key-value pair in metadata section.
 */
 c3_o
-u3_book_save_meta(u3_book*    log_u,
+u3_book_save_meta(u3_book*    txt_u,
                   const c3_c* key_c,
                   c3_z        val_z,
                   void*       val_p)
@@ -1011,22 +966,21 @@ u3_book_save_meta(u3_book*    log_u,
   c3_w   new_len;
   c3_w   new_count;
   c3_w   offset;
-  c3_w   i;
   c3_o   found = c3n;
   c3_zs  ret_zs;
 
-  if ( !log_u ) {
+  if ( !txt_u ) {
     return c3n;
   }
 
   key_len = strlen(key_c);
 
   //  read existing metadata if present
-  if ( 0 != log_u->hed_u.len_w ) {
-    old_len = log_u->hed_u.len_w;
+  if ( 0 != txt_u->hed_u.len_w ) {
+    old_len = txt_u->hed_u.len_w;
     old_meta = c3_malloc(old_len);
 
-    ret_zs = pread(log_u->fid_i, old_meta, old_len, log_u->hed_u.off_w);
+    ret_zs = pread(txt_u->fid_i, old_meta, old_len, txt_u->hed_u.off_w);
     if ( ret_zs != (c3_zs)old_len ) {
       fprintf(stderr, "book: save_meta: failed to read old metadata\r\n");
       c3_free(old_meta);
@@ -1049,7 +1003,7 @@ u3_book_save_meta(u3_book*    log_u,
   //  add existing entries (except if we're updating)
   if ( old_meta ) {
     offset = 4;
-    for ( i = 0; i < old_count; i++ ) {
+    for ( c3_w i_w = 0; i_w < old_count; i_w++ ) {
       c3_w entry_key_len, entry_val_len;
 
       if ( offset + 4 > old_len ) break;
@@ -1096,7 +1050,7 @@ u3_book_save_meta(u3_book*    log_u,
   //  copy existing entries (except updated one)
   if ( old_meta ) {
     c3_w old_offset = 4;
-    for ( i = 0; i < old_count; i++ ) {
+    for ( c3_w i_w = 0; i_w < old_count; i_w++ ) {
       c3_w entry_key_len, entry_val_len;
 
       if ( old_offset + 4 > old_len ) break;
@@ -1161,7 +1115,7 @@ u3_book_save_meta(u3_book*    log_u,
     return c3n;
   }
 
-  ret_zs = pwrite(log_u->fid_i, new_meta, new_len, new_off);
+  ret_zs = pwrite(txt_u->fid_i, new_meta, new_len, new_off);
   if ( ret_zs != (c3_zs)new_len ) {
     fprintf(stderr, "book: save_meta: failed to write metadata: %s\r\n",
             strerror(errno));
@@ -1174,19 +1128,19 @@ u3_book_save_meta(u3_book*    log_u,
   if ( old_meta ) c3_free(old_meta);
 
   //  sync metadata
-  if ( -1 == c3_sync(log_u->fid_i) ) {
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
     fprintf(stderr, "book: save_meta: failed to sync metadata: %s\r\n",
             strerror(errno));
     return c3n;
   }
 
   //  update header
-  log_u->hed_u.off_w = new_off;
-  log_u->hed_u.len_w = new_len;
-  log_u->dit_o = c3y;
+  txt_u->hed_u.off_w = new_off;
+  txt_u->hed_u.len_w = new_len;
+  txt_u->dit_o = c3y;
 
   //  write and sync header
-  if ( c3n == _book_write_header(log_u) ) {
+  if ( c3n == _book_save_head(txt_u) ) {
     return c3n;
   }
 

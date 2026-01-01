@@ -39,6 +39,40 @@
         c3_o liv_o;    //  iterator valid
       } u3_book_walk;
 
+    /* u3_book_deed_head: on-disk deed header
+    */
+      typedef struct _u3_book_deed_head {
+        c3_d len_d;    //  payload size (mug + jam)
+        c3_l mug_l;    //  mug/hash
+      } u3_book_deed_head;
+
+    /* u3_book_deed_tail: on-disk deed trailer
+    */
+      typedef struct _u3_book_deed_tail {
+        c3_w crc_w;    //  CRC32 checksum
+        c3_d let_d;    //  length trailer (validates len_d)
+      } u3_book_deed_tail;
+
+    /* u3_book_deed: complete on-disk event record
+    **
+    **   NB: not used directly for I/O due to variable-length jam data
+    **   Actual format: deed_head | jam_data | deed_tail
+    */
+      typedef struct _u3_book_deed {
+        u3_book_deed_head hed_u;
+        // c3_y jam_y[];  //  variable-length jam data
+        u3_book_deed_tail tal_u;
+      } u3_book_deed;
+
+    /* u3_book_reed: in-memory event record representation for I/O
+    */
+      typedef struct _u3_book_reed {
+        c3_d  len_d;    //  total payload size
+        c3_l  mug_l;    //  mug/hash
+        c3_y* jam_y;    //  jam data (caller owns, len = len_d - 4)
+        c3_w  crc_w;    //  CRC32 checksum
+      } u3_book_reed;
+
     /* u3_book_init(): open/create event log at [pax_c].
     */
       u3_book*
@@ -47,7 +81,7 @@
     /* u3_book_exit(): close event log.
     */
       void
-      u3_book_exit(u3_book* log_u);
+      u3_book_exit(u3_book* txt_u);
     
     /* u3_book_stat(): print book stats.
     */
@@ -57,12 +91,12 @@
     /* u3_book_gulf(): read first and last event numbers.
     */
       c3_o
-      u3_book_gulf(u3_book* log_u, c3_d* low_d, c3_d* hig_d);
+      u3_book_gulf(u3_book* txt_u, c3_d* low_d, c3_d* hig_d);
 
     /* u3_book_read(): read [len_d] events starting at [eve_d].
     */
       c3_o
-      u3_book_read(u3_book* log_u,
+      u3_book_read(u3_book* txt_u,
                    void*    ptr_v,
                    c3_d     eve_d,
                    c3_d     len_d,
@@ -71,7 +105,7 @@
     /* u3_book_save(): save [len_d] events starting at [eve_d].
     */
       c3_o
-      u3_book_save(u3_book* log_u,
+      u3_book_save(u3_book* txt_u,
                    c3_d     eve_d,
                    c3_d     len_d,
                    void**   byt_p,
@@ -81,7 +115,7 @@
     /* u3_book_read_meta(): read metadata by string key from log.
     */
       void
-      u3_book_read_meta(u3_book*    log_u,
+      u3_book_read_meta(u3_book*    txt_u,
                         void*       ptr_v,
                         const c3_c* key_c,
                         void     (*read_f)(void*, c3_zs, void*));
@@ -89,7 +123,7 @@
     /* u3_book_save_meta(): save metadata by string key into log.
     */
       c3_o
-      u3_book_save_meta(u3_book*    log_u,
+      u3_book_save_meta(u3_book*    txt_u,
                         const c3_c* key_c,
                         c3_z        val_z,
                         void*       val_p);
@@ -97,7 +131,7 @@
     /* u3_book_walk_init(): initialize event iterator.
     */
       c3_o
-      u3_book_walk_init(u3_book*      log_u,
+      u3_book_walk_init(u3_book*      txt_u,
                         u3_book_walk* itr_u,
                         c3_d          nex_d,
                         c3_d          las_d);
