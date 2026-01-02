@@ -586,7 +586,9 @@ u3_book_save(u3_book* txt_u,
   if ( 0 == txt_u->hed_u.las_d ) {
     //  empty log: first event must be the first event in the epoch
     if ( epo_d + 1 != eve_d ) {
-      fprintf(stderr, "book: first event must be 1, got %" PRIu64 "\r\n", eve_d);
+      fprintf(stderr, "book: first event must be start of epoch, "
+                      "expected %" PRIu64 ", got %" PRIu64
+                      "\r\n", epo_d + 1, eve_d);
       return c3n;
     }
     txt_u->hed_u.fir_d = eve_d;
