@@ -1506,7 +1506,7 @@ _cw_info(c3_i argc, c3_c* argv[])
     fprintf(stderr, "\r\n");
   }
 
-  u3_book_stat(log_u->mdb_u->pax_c);
+  u3_book_stat(log_u->txt_u->pax_c);
   u3_disk_exit(log_u);
 
   u3m_stop();

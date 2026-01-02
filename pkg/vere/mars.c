@@ -1295,7 +1295,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   if ( !mar_u->dun_d ) {
     u3_meta met_u;
 
-    if ( c3n == u3_disk_read_meta(log_u->mdb_u, &met_u) ) {
+    if ( c3n == u3_disk_read_meta(log_u->txt_u, &met_u) ) {
       fprintf(stderr, "mars: disk read meta fail\r\n");
       //  XX exit code, cb
       //
@@ -1451,7 +1451,7 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_l = u3r_mug(u3A->roc);
 
-  if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
+  if ( c3n == u3_disk_read_meta(mar_u->log_u->txt_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
     u3_disk_exit(mar_u->log_u);
     exit(1); // XX
@@ -1949,7 +1949,7 @@ u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
     exit(1);  //  XX cleanup
   }
 
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, &met_u) ) {
+  if ( c3n == u3_disk_save_meta(log_u->txt_u, &met_u) ) {
     exit(1);  //  XX cleanup
   }
 
