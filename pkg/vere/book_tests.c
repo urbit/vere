@@ -75,14 +75,14 @@ _test_verify_event(c3_d eve_d, c3_z siz_z, void* buf_v)
   memcpy(&mug_w, buf_y, 4);
 
   if ( mug_w != (c3_w)eve_d ) {
-    fprintf(stderr, "book_tests: event %llu mug mismatch: got %u\r\n", eve_d, mug_w);
+    fprintf(stderr, "book_tests: event %" PRIu64 " mug mismatch: got %u\r\n", eve_d, mug_w);
     return c3n;
   }
 
   expected_len = 16 + (eve_d % 32);
 
   if ( siz_z != 4 + expected_len ) {
-    fprintf(stderr, "book_tests: event %llu size mismatch: got %zu, expected %zu (4 + %zu)\r\n",
+    fprintf(stderr, "book_tests: event %" PRIu64 " size mismatch: got %zu, expected %zu (4 + %zu)\r\n",
             eve_d, siz_z, 4 + expected_len, expected_len);
     return c3n;
   }
@@ -90,7 +90,7 @@ _test_verify_event(c3_d eve_d, c3_z siz_z, void* buf_v)
   //  verify jam data pattern
   for ( c3_z i = 0; i < expected_len; i++ ) {
     if ( buf_y[4 + i] != (c3_y)((eve_d + i) & 0xff) ) {
-      fprintf(stderr, "book_tests: event %llu data mismatch at offset %zu\r\n",
+      fprintf(stderr, "book_tests: event %" PRIu64 " data mismatch at offset %zu\r\n",
               eve_d, i);
       return c3n;
     }
@@ -169,7 +169,7 @@ _test_calculate_event_offset(const c3_c* dir_c, c3_d target_eve, c3_w* off_w)
 
     ret_zs = pread(fid_i, &deed_hed, sizeof(u3_book_deed_head), cur_off);
     if ( sizeof(u3_book_deed_head) != ret_zs ) {
-      fprintf(stderr, "book_tests: deed header read failed at event %llu offset %u\r\n",
+      fprintf(stderr, "book_tests: deed header read failed at event %" PRIu64 " offset %u\r\n",
               cur_d, cur_off);
       close(fid_i);
       return c3n;
@@ -371,7 +371,7 @@ _test_read_cb(void* ptr_v, c3_d eve_d, c3_z siz_z, void* buf_v)
   read_ctx* ctx = (read_ctx*)ptr_v;
 
   if ( eve_d != ctx->expected_start + ctx->count ) {
-    fprintf(stderr, "book_tests: read callback event mismatch: %llu vs %llu\r\n",
+    fprintf(stderr, "book_tests: read callback event mismatch: %" PRIu64 " vs %" PRIu64 "\r\n",
             eve_d, ctx->expected_start + ctx->count);
     ctx->failed = c3y;
     return c3n;
@@ -421,7 +421,7 @@ _test_book_init_empty(void)
   }
 
   if ( 0 != low_d || 0 != hig_d ) {
-    fprintf(stderr, "book_tests: empty gulf wrong: [%llu, %llu]\r\n",
+    fprintf(stderr, "book_tests: empty gulf wrong: [%" PRIu64 ", %" PRIu64 "]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -475,7 +475,7 @@ _test_book_single_event(void)
   //  verify gulf
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 1 != hig_d ) {
-    fprintf(stderr, "book_tests: single gulf wrong: [%llu, %llu]\r\n",
+    fprintf(stderr, "book_tests: single gulf wrong: [%" PRIu64 ", %" PRIu64 "]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -496,7 +496,7 @@ _test_book_single_event(void)
   }
 
   if ( c3y == ctx.failed || 1 != ctx.count ) {
-    fprintf(stderr, "book_tests: read verify failed (failed=%u, count=%llu)\r\n",
+    fprintf(stderr, "book_tests: read verify failed (failed=%u, count=%" PRIu64 ")\r\n",
             ctx.failed, ctx.count);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -558,7 +558,7 @@ _test_book_batch_write(void)
   //  verify gulf
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 100 != hig_d ) {
-    fprintf(stderr, "book_tests: batch gulf wrong: [%llu, %llu]\r\n",
+    fprintf(stderr, "book_tests: batch gulf wrong: [%" PRIu64 ", %" PRIu64 "]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -579,7 +579,7 @@ _test_book_batch_write(void)
   }
 
   if ( c3y == ctx.failed || 100 != ctx.count ) {
-    fprintf(stderr, "book_tests: batch read verify failed (failed=%u, count=%llu)\r\n",
+    fprintf(stderr, "book_tests: batch read verify failed (failed=%u, count=%" PRIu64 ")\r\n",
             ctx.failed, ctx.count);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -649,7 +649,7 @@ _test_book_persistence(void)
 
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 50 != hig_d ) {
-    fprintf(stderr, "book_tests: persist gulf wrong: [%llu, %llu]\r\n",
+    fprintf(stderr, "book_tests: persist gulf wrong: [%" PRIu64 ", %" PRIu64 "]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -802,7 +802,7 @@ _test_book_partial_read(void)
   }
 
   if ( c3y == ctx.failed || 26 != ctx.count ) {
-    fprintf(stderr, "book_tests: partial verify failed: count=%llu\r\n",
+    fprintf(stderr, "book_tests: partial verify failed: count=%" PRIu64 "\r\n",
             ctx.count);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -875,7 +875,7 @@ _test_book_iterator(void)
     c3_d expected_eve = 10 + count;
 
     if ( c3n == _test_verify_event(expected_eve, len_z, buf_v) ) {
-      fprintf(stderr, "book_tests: iter verify failed at %llu\r\n", count);
+      fprintf(stderr, "book_tests: iter verify failed at %" PRIu64 "\r\n", count);
       c3_free(buf_v);
       u3_book_walk_done(&itr_u);
       u3_book_exit(log_u);
@@ -889,7 +889,7 @@ _test_book_iterator(void)
   }
 
   if ( 21 != count ) {  //  events 10-30 inclusive = 21 events
-    fprintf(stderr, "book_tests: iter count wrong: %llu\r\n", count);
+    fprintf(stderr, "book_tests: iter count wrong: %" PRIu64 "\r\n", count);
     u3_book_walk_done(&itr_u);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1261,7 +1261,7 @@ _test_book_corrupt_deed_crc(void)
   //  verify recovery truncated to event 24
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 24 != hig_d ) {
-    fprintf(stderr, "book_tests: corrupt_deed_crc gulf wrong: [%llu, %llu] expected [1, 24]\r\n",
+    fprintf(stderr, "book_tests: corrupt_deed_crc gulf wrong: [%" PRIu64 ", %" PRIu64 "] expected [1, 24]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1359,7 +1359,7 @@ _test_book_corrupt_deed_length_mismatch(void)
   //  verify recovery truncated to event 14
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 14 != hig_d ) {
-    fprintf(stderr, "book_tests: corrupt_deed_length gulf wrong: [%llu, %llu] expected [1, 14]\r\n",
+    fprintf(stderr, "book_tests: corrupt_deed_length gulf wrong: [%" PRIu64 ", %" PRIu64 "] expected [1, 14]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1446,7 +1446,7 @@ _test_book_truncated_deed_partial(void)
   //  verify recovery removed partial event 20
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 19 != hig_d ) {
-    fprintf(stderr, "book_tests: truncated_deed gulf wrong: [%llu, %llu] expected [1, 19]\r\n",
+    fprintf(stderr, "book_tests: truncated_deed gulf wrong: [%" PRIu64 ", %" PRIu64 "] expected [1, 19]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1532,7 +1532,7 @@ _test_book_multiple_corruptions(void)
   //  verify recovery stopped at first corruption (event 30)
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 1 != low_d || 29 != hig_d ) {
-    fprintf(stderr, "book_tests: multi_corrupt gulf wrong: [%llu, %llu] expected [1, 29]\r\n",
+    fprintf(stderr, "book_tests: multi_corrupt gulf wrong: [%" PRIu64 ", %" PRIu64 "] expected [1, 29]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1610,7 +1610,7 @@ _test_book_corrupt_first_event(void)
   //  verify log is empty
   u3_book_gulf(log_u, &low_d, &hig_d);
   if ( 0 != low_d || 0 != hig_d ) {
-    fprintf(stderr, "book_tests: corrupt_first gulf wrong: [%llu, %llu] expected [0, 0]\r\n",
+    fprintf(stderr, "book_tests: corrupt_first gulf wrong: [%" PRIu64 ", %" PRIu64 "] expected [0, 0]\r\n",
             low_d, hig_d);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
@@ -1941,7 +1941,7 @@ _test_large_event_cb(void* ptr_v, c3_d eve_d, c3_z siz_z, void* buf_v)
   c3_z* expected_size = (c3_z*)ptr_v;
 
   if ( 1 != eve_d ) {
-    fprintf(stderr, "book_tests: large_event_cb wrong event: %llu\r\n", eve_d);
+    fprintf(stderr, "book_tests: large_event_cb wrong event: %" PRIu64 "\r\n", eve_d);
     return c3n;
   }
 
@@ -2502,7 +2502,7 @@ _test_book_iterator_concurrent_modification(void)
 
   //  verify we read the expected range (10-30 = 21 events, already read 5)
   if ( 21 != count ) {
-    fprintf(stderr, "book_tests: iter_concurrent count wrong: %llu\r\n", count);
+    fprintf(stderr, "book_tests: iter_concurrent count wrong: %" PRIu64 "\r\n", count);
     u3_book_walk_done(&itr_u);
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
