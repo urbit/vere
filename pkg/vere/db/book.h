@@ -15,9 +15,28 @@
         c3_d fir_d;      //  first event number in file
         c3_d las_d;      //  last event number in file
         c3_w off_w;      //  offset to metadata section
-        c3_w len_w;      //  length of metadata section
+        c3_w len_w;      //  length of metadata section (reserved, currently unused)
         c3_y pad_y[32];  //  reserved for future use, zeroed
       } u3_book_head;
+
+    /* u3_book_meta: on-disk metadata format (fixed 256 bytes)
+    **
+    **   layout:
+    **     [4 bytes] version
+    **     [16 bytes] who_d (c3_d[2], identity)
+    **     [1 byte] fak_o (fake security bit)
+    **     [4 bytes] lif_w (lifecycle length)
+    **     [231 bytes] reserved for future use
+    **
+    **   total: 256 bytes
+    */
+      typedef struct _u3_book_meta {
+        c3_w ver_w;      //  metadata format version
+        c3_d who_d[2];   //  ship identity (16 bytes)
+        c3_o fak_o;      //  fake security flag (1 byte)
+        c3_w lif_w;      //  lifecycle length (4 bytes)
+        c3_y pad_y[231]; //  reserved (231 bytes)
+      } u3_book_meta;
 
     /* u3_book: event log handle
     */
@@ -112,7 +131,7 @@
                    c3_z*    siz_i,
                    c3_d     epo_d);
 
-    /* u3_book_read_meta(): read metadata by string key from log.
+    /* u3_book_read_meta(): read fixed metadata section.
     */
       void
       u3_book_read_meta(u3_book*    txt_u,
@@ -120,7 +139,7 @@
                         const c3_c* key_c,
                         void     (*read_f)(void*, c3_zs, void*));
 
-    /* u3_book_save_meta(): save metadata by string key into log.
+    /* u3_book_save_meta(): write fixed metadata section.
     */
       c3_o
       u3_book_save_meta(u3_book*    txt_u,

@@ -466,12 +466,6 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 static c3_o
 _disk_save_meta(u3_book* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 {
-  //  strip trailing zeroes.
-  //
-  while ( len_w && !byt_y[len_w - 1] ) {
-    len_w--;
-  }
-
   return u3_book_save_meta(mdb_u, key_c, len_w, byt_y);
 }
 
@@ -485,7 +479,7 @@ u3_disk_save_meta(u3_book* mdb_u, const u3_meta* met_u)
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
   if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
-     || (c3n == _disk_save_meta(mdb_u, "who", 2 * sizeof(c3_d), (c3_y*)met_u->who_d))
+     || (c3n == _disk_save_meta(mdb_u, "who", sizeof(met_u->who_d), (c3_y*)met_u->who_d))
      || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
      || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
   {
@@ -1694,7 +1688,7 @@ _disk_migrate_old(u3_disk* log_u)
 
       //  set version to 2 (migration in progress)
       log_u->ver_w = U3D_VER2;
-      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_w) ) {
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }

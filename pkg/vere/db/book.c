@@ -20,7 +20,7 @@
 //
 //    file format:
 //      [64-byte header]
-//      [metadata section]
+//      [256-byte metadata section]
 //      [events: len_d | mug_l | jam_data | crc_m | let_d]
 //
 
@@ -113,9 +113,40 @@ _book_init_head(u3_book* txt_u)
   txt_u->hed_u.ver_w = BOOK_VERSION;
   txt_u->hed_u.fir_d = 0;
   txt_u->hed_u.las_d = 0;
-  txt_u->hed_u.off_w = 0;
-  txt_u->hed_u.len_w = 0;
+  txt_u->hed_u.off_w = sizeof(u3_book_head);
+  txt_u->hed_u.len_w = BOOK_META_SIZE;
   txt_u->dit_o = c3y;
+}
+
+/* _book_init_meta(): initialize metadata section with zeros.
+*/
+static c3_o
+_book_init_meta(u3_book* txt_u)
+{
+  u3_book_meta met_u;
+  c3_zs ret_zs;
+
+  //  zero-initialize metadata
+  memset(&met_u, 0, sizeof(u3_book_meta));
+
+  //  write metadata section at fixed offset
+  ret_zs = pwrite(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                  sizeof(u3_book_head));
+
+  if ( ret_zs != sizeof(u3_book_meta) ) {
+    fprintf(stderr, "book: init_meta: failed to write metadata: %s\r\n",
+            strerror(errno));
+    return c3n;
+  }
+
+  //  sync metadata to disk
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
+    fprintf(stderr, "book: init_meta: failed to sync metadata: %s\r\n",
+            strerror(errno));
+    return c3n;
+  }
+
+  return c3y;
 }
 
 /* _book_deed_size(): calculate total on-disk size of deed.
@@ -348,7 +379,7 @@ _book_scan_end(u3_book* txt_u)
     if ( cot_d == 0 ) {
       txt_u->hed_u.fir_d = 0;
       txt_u->hed_u.las_d = 0;
-      off_w = sizeof(u3_book_head);
+      off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
     } else {
       txt_u->hed_u.las_d = txt_u->hed_u.fir_d + cot_d - 1;
     }
@@ -406,6 +437,13 @@ u3_book_init(const c3_c* pax_c)
     //  new file: initialize header
     _book_init_head(txt_u);
     _book_save_head(txt_u);
+    //  initialize metadata section
+    if ( c3n == _book_init_meta(txt_u) ) {
+      close(fid_i);
+      c3_free(txt_u->pax_c);
+      c3_free(txt_u);
+      return 0;
+    }
     //  events start after header + reserved metadata area
     txt_u->off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
   }
@@ -521,8 +559,6 @@ u3_book_stat(const c3_c* pax_c)
           (0 == hed_u.las_d ) ? 0 :
           (hed_u.las_d - hed_u.fir_d + 1));
   fprintf(stderr, "  file size: %lld bytes\r\n", (long long)buf_u.st_size);
-  fprintf(stderr, "  metadata offset: %u\r\n", hed_u.off_w);
-  fprintf(stderr, "  metadata length: %u\r\n", hed_u.len_w);
 
   close(fid_i);
 }
@@ -704,6 +740,124 @@ u3_book_read(u3_book* txt_u,
   return c3y;
 }
 
+/* u3_book_read_meta(): read fixed metadata section via callback.
+**
+**   key_c: metadata key
+**   invokes callback with (ptr_v, len, data) or (ptr_v, -1, 0) if not found.
+*/
+void
+u3_book_read_meta(u3_book*    txt_u,
+                  void*       ptr_v,
+                  const c3_c* key_c,
+                  void     (*read_f)(void*, c3_zs, void*))
+{
+  u3_book_meta met_u;
+  c3_zs ret_zs;
+
+  if ( !txt_u ) {
+    read_f(ptr_v, -1, 0);
+    return;
+  }
+
+  //  read metadata section at fixed offset
+  ret_zs = pread(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                 sizeof(u3_book_head));
+
+  if ( ret_zs != sizeof(u3_book_meta) ) {
+    fprintf(stderr, "book: read_meta: failed to read metadata: %s\r\n",
+            strerror(errno));
+    read_f(ptr_v, -1, 0);
+    return;
+  }
+
+  //  match key and extract corresponding field
+  if ( 0 == strcmp(key_c, "version") ) {
+    read_f(ptr_v, sizeof(c3_w), &met_u.ver_w);
+  }
+  else if ( 0 == strcmp(key_c, "who") ) {
+    read_f(ptr_v, sizeof(c3_d[2]), met_u.who_d);
+  }
+  else if ( 0 == strcmp(key_c, "fake") ) {
+    read_f(ptr_v, sizeof(c3_o), &met_u.fak_o);
+  }
+  else if ( 0 == strcmp(key_c, "life") ) {
+    read_f(ptr_v, sizeof(c3_w), &met_u.lif_w);
+  }
+  else {
+    read_f(ptr_v, -1, 0);
+  }
+}
+
+/* u3_book_save_meta(): write fixed metadata section via callback.
+**
+**   key_c: metadata key
+**   val_z: value size in bytes
+**   val_p: pointer to value data
+*/
+c3_o
+u3_book_save_meta(u3_book*    txt_u,
+                  const c3_c* key_c,
+                  c3_z        val_z,
+                  void*       val_p)
+{
+  u3_book_meta met_u;
+  c3_zs ret_zs;
+
+  if ( !txt_u ) {
+    return c3n;
+  }
+
+  //  read current metadata
+  ret_zs = pread(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                 sizeof(u3_book_head));
+
+  if ( ret_zs != sizeof(u3_book_meta) ) {
+    fprintf(stderr, "book: save_meta: failed to read current metadata: %s\r\n",
+            strerror(errno));
+    return c3n;
+  }
+
+  //  update field based on key
+  if ( 0 == strcmp(key_c, "version") ) {
+    if ( val_z != sizeof(c3_w) ) return c3n;
+    memcpy(&met_u.ver_w, val_p, val_z);
+  }
+  else if ( 0 == strcmp(key_c, "who") ) {
+    if ( val_z != sizeof(c3_d[2]) ) return c3n;
+    memcpy(met_u.who_d, val_p, val_z);
+  }
+  else if ( 0 == strcmp(key_c, "fake") ) {
+    if ( val_z != sizeof(c3_o) ) return c3n;
+    memcpy(&met_u.fak_o, val_p, val_z);
+  }
+  else if ( 0 == strcmp(key_c, "life") ) {
+    if ( val_z != sizeof(c3_w) ) return c3n;
+    memcpy(&met_u.lif_w, val_p, val_z);
+  }
+  else {
+    return c3n;
+  }
+
+  //  write metadata section at fixed offset
+  ret_zs = pwrite(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                  sizeof(u3_book_head));
+
+  if ( ret_zs != sizeof(u3_book_meta) ) {
+    fprintf(stderr, "book: save_meta: failed to write metadata: %s\r\n",
+            strerror(errno));
+    return c3n;
+  }
+
+  //  sync metadata to disk
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
+    fprintf(stderr, "book: save_meta: failed to sync metadata: %s\r\n",
+            strerror(errno));
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* u3_book_walk_init(): initialize event iterator.
 **
 **   sets up iterator to read events from [nex_d] to [las_d] inclusive.
@@ -827,324 +981,4 @@ u3_book_walk_done(u3_book_walk* itr_u)
   //  mark iterator as invalid
   itr_u->liv_o = c3n;
   itr_u->fid_i = -1;
-}
-
-/* u3_book_read_meta(): read metadata by string key from log.
-**
-**   invokes callback with (ptr_v, len, data) or (ptr_v, -1, 0) if not found.
-*/
-void
-u3_book_read_meta(u3_book*    txt_u,
-                  void*       ptr_v,
-                  const c3_c* key_c,
-                  void     (*read_f)(void*, c3_zs, void*))
-{
-  c3_w   ken_w;  //  key length
-  c3_y*  buf_y;  //  metadata buffer
-  c3_w   len_w;  //  metadata length
-  c3_zs  ret_zs;
-  c3_w   off_w;
-  c3_w   cot_w;  //  count
-
-  if ( !txt_u ) {
-    read_f(ptr_v, -1, 0);
-    return;
-  }
-
-  //  check if metadata section exists
-  if ( 0 == txt_u->hed_u.len_w ) {
-    read_f(ptr_v, -1, 0);
-    return;
-  }
-
-  //  read entire metadata section
-  len_w = txt_u->hed_u.len_w;
-  buf_y = c3_malloc(len_w);
-
-  ret_zs = pread(txt_u->fid_i, buf_y, len_w, txt_u->hed_u.off_w);
-  if ( ret_zs != (c3_zs)len_w ) {
-    fprintf(stderr, "book: read_meta: failed to read metadata section\r\n");
-    c3_free(buf_y);
-    read_f(ptr_v, -1, 0);
-    return;
-  }
-
-  //  parse metadata section
-  //  format: [4 bytes: count] + entries
-  //  entry:  [4 bytes: key_len][key][4 bytes: val_len][val]
-
-  if ( len_w < 4 ) {
-    fprintf(stderr, "book: read_meta: metadata section too small\r\n");
-    c3_free(buf_y);
-    read_f(ptr_v, -1, 0);
-    return;
-  }
-
-  memcpy(&cot_w, buf_y, 4);
-  off_w = 4;
-
-  ken_w = strlen(key_c);
-
-  //  linear search for key
-  for ( c3_w i_w = 0; i_w < cot_w; i_w++ ) {
-    c3_w   entry_key_len;
-    c3_y*  entry_key;
-    c3_w   entry_val_len;
-    c3_y*  entry_val;
-
-    //  read key length
-    if ( off_w + 4 > len_w ) {
-      fprintf(stderr, "book: read_meta: corrupt metadata (key len)\r\n");
-      c3_free(buf_y);
-      read_f(ptr_v, -1, 0);
-      return;
-    }
-    memcpy(&entry_key_len, buf_y + off_w, 4);
-    off_w += 4;
-
-    //  read key
-    if ( off_w + entry_key_len > len_w ) {
-      fprintf(stderr, "book: read_meta: corrupt metadata (key)\r\n");
-      c3_free(buf_y);
-      read_f(ptr_v, -1, 0);
-      return;
-    }
-    entry_key = buf_y + off_w;
-    off_w += entry_key_len;
-
-    //  read value length
-    if ( off_w + 4 > len_w ) {
-      fprintf(stderr, "book: read_meta: corrupt metadata (val len)\r\n");
-      c3_free(buf_y);
-      read_f(ptr_v, -1, 0);
-      return;
-    }
-    memcpy(&entry_val_len, buf_y + off_w, 4);
-    off_w += 4;
-
-    //  read value
-    if ( off_w + entry_val_len > len_w ) {
-      fprintf(stderr, "book: read_meta: corrupt metadata (val)\r\n");
-      c3_free(buf_y);
-      read_f(ptr_v, -1, 0);
-      return;
-    }
-    entry_val = buf_y + off_w;
-    off_w += entry_val_len;
-
-    //  check if this is the key we're looking for
-    if ( entry_key_len == ken_w &&
-         0 == memcmp(entry_key, key_c, ken_w) )
-    {
-      //  found it - invoke callback
-      read_f(ptr_v, entry_val_len, entry_val);
-      c3_free(buf_y);
-      return;
-    }
-  }
-
-  //  not found
-  c3_free(buf_y);
-  read_f(ptr_v, -1, 0);
-}
-
-/* u3_book_save_meta(): save metadata by string key into log.
-**
-**   updates or inserts key-value pair in metadata section.
-*/
-c3_o
-u3_book_save_meta(u3_book*    txt_u,
-                  const c3_c* key_c,
-                  c3_z        val_z,
-                  void*       val_p)
-{
-  c3_w   key_len;
-  c3_y*  old_meta = 0;
-  c3_w   old_len = 0;
-  c3_w   old_count = 0;
-  c3_y*  new_meta;
-  c3_w   new_len;
-  c3_w   new_count;
-  c3_w   offset;
-  c3_o   found = c3n;
-  c3_zs  ret_zs;
-
-  if ( !txt_u ) {
-    return c3n;
-  }
-
-  key_len = strlen(key_c);
-
-  //  read existing metadata if present
-  if ( 0 != txt_u->hed_u.len_w ) {
-    old_len = txt_u->hed_u.len_w;
-    old_meta = c3_malloc(old_len);
-
-    ret_zs = pread(txt_u->fid_i, old_meta, old_len, txt_u->hed_u.off_w);
-    if ( ret_zs != (c3_zs)old_len ) {
-      fprintf(stderr, "book: save_meta: failed to read old metadata\r\n");
-      c3_free(old_meta);
-      return c3n;
-    }
-
-    if ( old_len < 4 ) {
-      fprintf(stderr, "book: save_meta: corrupt old metadata\r\n");
-      c3_free(old_meta);
-      return c3n;
-    }
-
-    memcpy(&old_count, old_meta, 4);
-  }
-
-  //  calculate new metadata size
-  //  worst case: all old entries + new entry
-  new_len = 4;  //  count field
-
-  //  add existing entries (except if we're updating)
-  if ( old_meta ) {
-    offset = 4;
-    for ( c3_w i_w = 0; i_w < old_count; i_w++ ) {
-      c3_w entry_key_len, entry_val_len;
-
-      if ( offset + 4 > old_len ) break;
-      memcpy(&entry_key_len, old_meta + offset, 4);
-      offset += 4;
-
-      if ( offset + entry_key_len > old_len ) break;
-
-      //  check if this is the key we're updating
-      if ( entry_key_len == key_len &&
-           0 == memcmp(old_meta + offset, key_c, key_len) )
-      {
-        found = c3y;
-        //  skip old value, we'll add new one
-        offset += entry_key_len;
-        if ( offset + 4 > old_len ) break;
-        memcpy(&entry_val_len, old_meta + offset, 4);
-        offset += 4 + entry_val_len;
-        continue;
-      }
-
-      //  add this entry to new size
-      offset += entry_key_len;
-      if ( offset + 4 > old_len ) break;
-      memcpy(&entry_val_len, old_meta + offset, 4);
-      offset += 4;
-
-      new_len += 4 + entry_key_len + 4 + entry_val_len;
-      offset += entry_val_len;
-    }
-  }
-
-  //  add new/updated entry
-  new_len += 4 + key_len + 4 + val_z;
-
-  //  allocate new metadata buffer
-  new_meta = c3_malloc(new_len);
-
-  //  write count
-  new_count = (c3y == found) ? old_count : old_count + 1;
-  memcpy(new_meta, &new_count, 4);
-  offset = 4;
-
-  //  copy existing entries (except updated one)
-  if ( old_meta ) {
-    c3_w old_offset = 4;
-    for ( c3_w i_w = 0; i_w < old_count; i_w++ ) {
-      c3_w entry_key_len, entry_val_len;
-
-      if ( old_offset + 4 > old_len ) break;
-      memcpy(&entry_key_len, old_meta + old_offset, 4);
-
-      if ( old_offset + 4 + entry_key_len > old_len ) break;
-
-      //  skip if this is the key we're updating
-      if ( entry_key_len == key_len &&
-           0 == memcmp(old_meta + old_offset + 4, key_c, key_len) )
-      {
-        old_offset += 4 + entry_key_len;
-        if ( old_offset + 4 > old_len ) break;
-        memcpy(&entry_val_len, old_meta + old_offset, 4);
-        old_offset += 4 + entry_val_len;
-        continue;
-      }
-
-      //  copy this entry
-      memcpy(new_meta + offset, old_meta + old_offset, 4);
-      offset += 4;
-      old_offset += 4;
-
-      memcpy(new_meta + offset, old_meta + old_offset, entry_key_len);
-      offset += entry_key_len;
-      old_offset += entry_key_len;
-
-      if ( old_offset + 4 > old_len ) break;
-      memcpy(&entry_val_len, old_meta + old_offset, 4);
-      memcpy(new_meta + offset, &entry_val_len, 4);
-      offset += 4;
-      old_offset += 4;
-
-      memcpy(new_meta + offset, old_meta + old_offset, entry_val_len);
-      offset += entry_val_len;
-      old_offset += entry_val_len;
-    }
-  }
-
-  //  add new/updated entry
-  memcpy(new_meta + offset, &key_len, 4);
-  offset += 4;
-  memcpy(new_meta + offset, key_c, key_len);
-  offset += key_len;
-  {
-    c3_w val_len_w = (c3_w)val_z;  //  convert c3_z to c3_w for 4-byte field
-    memcpy(new_meta + offset, &val_len_w, 4);
-  }
-  offset += 4;
-  memcpy(new_meta + offset, val_p, val_z);
-  offset += val_z;
-
-  //  write new metadata section in reserved area after header
-  c3_w new_off = sizeof(u3_book_head);
-
-  //  ensure metadata fits in reserved space
-  if ( new_len > BOOK_META_SIZE ) {
-    fprintf(stderr, "book: save_meta: metadata too large (%u > %u)\r\n",
-            new_len, BOOK_META_SIZE);
-    c3_free(new_meta);
-    if ( old_meta ) c3_free(old_meta);
-    return c3n;
-  }
-
-  ret_zs = pwrite(txt_u->fid_i, new_meta, new_len, new_off);
-  if ( ret_zs != (c3_zs)new_len ) {
-    fprintf(stderr, "book: save_meta: failed to write metadata: %s\r\n",
-            strerror(errno));
-    c3_free(new_meta);
-    if ( old_meta ) c3_free(old_meta);
-    return c3n;
-  }
-
-  c3_free(new_meta);
-  if ( old_meta ) c3_free(old_meta);
-
-  //  sync metadata
-  if ( -1 == c3_sync(txt_u->fid_i) ) {
-    fprintf(stderr, "book: save_meta: failed to sync metadata: %s\r\n",
-            strerror(errno));
-    return c3n;
-  }
-
-  //  update header
-  txt_u->hed_u.off_w = new_off;
-  txt_u->hed_u.len_w = new_len;
-  txt_u->dit_o = c3y;
-
-  //  write and sync header
-  if ( c3n == _book_save_head(txt_u) ) {
-    return c3n;
-  }
-
-  //  off_w is not affected by metadata writes - events append at off_w
-
-  return c3y;
 }

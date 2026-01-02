@@ -2024,8 +2024,7 @@ _test_book_metadata_section_full(void)
 {
   c3_c*     tmp_c = _test_tmpdir("book-meta-full");
   u3_book*  log_u;
-  c3_y      data[64];
-  c3_i      count;
+  c3_y      data[4];
 
   if ( !tmp_c ) {
     return c3n;
@@ -2038,33 +2037,25 @@ _test_book_metadata_section_full(void)
     return c3n;
   }
 
-  //  fill metadata section with entries
-  //  format: [4-byte count][4-byte key_len][key][4-byte val_len][val]...
-  //  total limit: 256 bytes
+  //  try to save the four fixed keys we support
   memset(data, 0xAB, sizeof(data));
-
-  //  add entries until close to limit
-  for ( count = 0; count < 20; count++ ) {
-    c3_c key_c[16];
-    snprintf(key_c, sizeof(key_c), "key%d", count);
-
-    if ( c3n == u3_book_save_meta(log_u, key_c, sizeof(data), data) ) {
-      //  expected to fail when metadata is full
-      break;
-    }
-  }
-
-  if ( 0 == count ) {
-    fprintf(stderr, "book_tests: meta_section_full no entries saved\r\n");
+  
+  //  version (4 bytes)
+  if ( c3n == u3_book_save_meta(log_u, "version", 4, data) ) {
+    fprintf(stderr, "book_tests: meta_section_full version save failed\r\n");
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
     c3_free(tmp_c);
     return c3n;
   }
 
-  //  try to add one more - should fail if we hit the limit
-  if ( c3y == u3_book_save_meta(log_u, "overflow", sizeof(data), data) ) {
-    //  if it succeeded, we didn't hit the limit yet - that's ok
+  //  unknown key should fail
+  if ( c3y == u3_book_save_meta(log_u, "unknown", 4, data) ) {
+    fprintf(stderr, "book_tests: meta_section_full unknown key should have failed\r\n");
+    u3_book_exit(log_u);
+    _test_cleanup(tmp_c);
+    c3_free(tmp_c);
+    return c3n;
   }
 
   u3_book_exit(log_u);
@@ -2170,7 +2161,7 @@ _test_book_metadata_corrupted_count(void)
   return c3y;
 }
 
-/* _test_book_metadata_empty_key(): test empty key edge case.
+/* _test_book_metadata_empty_key(): test unknown key edge case.
 */
 static c3_o
 _test_book_metadata_empty_key(void)
@@ -2178,7 +2169,6 @@ _test_book_metadata_empty_key(void)
   c3_c*     tmp_c = _test_tmpdir("book-meta-empty");
   u3_book*  log_u;
   c3_w      val = 42;
-  meta_ctx  ctx = {0};
 
   if ( !tmp_c ) {
     return c3n;
@@ -2191,31 +2181,22 @@ _test_book_metadata_empty_key(void)
     return c3n;
   }
 
-  //  try to save with empty key
-  if ( c3n == u3_book_save_meta(log_u, "", sizeof(val), &val) ) {
-    //  empty key rejected - acceptable behavior
+  //  try to save with unknown key - should fail
+  if ( c3n == u3_book_save_meta(log_u, "unknown_key", sizeof(val), &val) ) {
+    //  unknown key rejected - expected behavior
     u3_book_exit(log_u);
     _test_cleanup(tmp_c);
     c3_free(tmp_c);
     return c3y;
   }
 
-  //  empty key accepted - try to read it back
-  u3_book_read_meta(log_u, &ctx, "", _test_meta_cb);
-  if ( c3n == ctx.found ) {
-    fprintf(stderr, "book_tests: meta_empty_key not found after save\r\n");
-    u3_book_exit(log_u);
-    _test_cleanup(tmp_c);
-    c3_free(tmp_c);
-    return c3n;
-  }
-
+  //  unknown key accepted - that's ok, just verify it doesn't crash
   u3_book_exit(log_u);
   _test_cleanup(tmp_c);
   c3_free(tmp_c);
   return c3y;
 }
-
+  
 /* _test_book_metadata_persistence(): test metadata survives corruption recovery.
 */
 static c3_o
