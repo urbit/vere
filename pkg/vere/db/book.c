@@ -183,7 +183,7 @@ _book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
 
   //  validate length
   if ( 0 == hed_u.len_d || (1ULL << 32) < hed_u.len_d ) {
-    fprintf(stderr, "book: invalid length: %llu\r\n", hed_u.len_d);
+    fprintf(stderr, "book: invalid length: %" PRIu64 "\r\n", hed_u.len_d);
     return c3n;
   }
 
@@ -341,7 +341,7 @@ _book_scan_end(u3_book* txt_u)
 
   //  check if we found fewer events than expected
   if ( cot_d != exp_d ) {
-    fprintf(stderr, "book: recovery: found %llu events, expected %llu\r\n",
+    fprintf(stderr, "book: recovery: found %" PRIu64 " events, expected %" PRIu64 "\r\n",
             cot_d, exp_d);
 
     //  update header
@@ -515,9 +515,9 @@ u3_book_stat(const c3_c* pax_c)
   fprintf(stderr, "book info:\r\n");
   fprintf(stderr, "  file: %s\r\n", pax_c);
   fprintf(stderr, "  version: %u\r\n", hed_u.ver_w);
-  fprintf(stderr, "  first event: %llu\r\n", hed_u.fir_d);
-  fprintf(stderr, "  last event: %llu\r\n", hed_u.las_d);
-  fprintf(stderr, "  event count: %llu\r\n",
+  fprintf(stderr, "  first event: %" PRIu64 "\r\n", hed_u.fir_d);
+  fprintf(stderr, "  last event: %" PRIu64 "\r\n", hed_u.las_d);
+  fprintf(stderr, "  event count: %" PRIu64 "\r\n",
           (0 == hed_u.las_d ) ? 0 :
           (hed_u.las_d - hed_u.fir_d + 1));
   fprintf(stderr, "  file size: %lld bytes\r\n", (long long)buf_u.st_size);
@@ -550,7 +550,7 @@ u3_book_save(u3_book* txt_u,
   if ( 0 == txt_u->hed_u.las_d ) {
     //  empty log: first event must be the first event in the epoch
     if ( epo_d + 1 != eve_d ) {
-      fprintf(stderr, "book: first event must be 1, got %llu\r\n", eve_d);
+      fprintf(stderr, "book: first event must be 1, got %" PRIu64 "\r\n", eve_d);
       return c3n;
     }
     txt_u->hed_u.fir_d = eve_d;
@@ -558,7 +558,7 @@ u3_book_save(u3_book* txt_u,
   else {
     //  non-empty: must be contiguous
     if ( eve_d != txt_u->hed_u.las_d + 1 ) {
-      fprintf(stderr, "book: event gap: expected %llu, got %llu\r\n",
+      fprintf(stderr, "book: event gap: expected %" PRIu64 ", got %" PRIu64 "\r\n",
               txt_u->hed_u.las_d + 1, eve_d);
       return c3n;
     }
@@ -574,7 +574,7 @@ u3_book_save(u3_book* txt_u,
 
     //  extract mug from buffer (first 4 bytes)
     if ( siz_d < 4 ) {
-      fprintf(stderr, "book: event %llu buffer too small: %llu\r\n",
+      fprintf(stderr, "book: event %" PRIu64 " buffer too small: %" PRIu64 "\r\n",
               eve_d + i_w, siz_d);
       return c3n;
     }
@@ -587,7 +587,7 @@ u3_book_save(u3_book* txt_u,
 
     //  save deed to file
     if ( c3n == _book_save_deed(txt_u->fid_i, &now_w, &red_u) ) {
-      fprintf(stderr, "book: failed to save deed for event %llu: %s\r\n",
+      fprintf(stderr, "book: failed to save deed for event %" PRIu64 ": %s\r\n",
               eve_d + i_w, strerror(errno));
       return c3n;
     }
@@ -643,7 +643,7 @@ u3_book_read(u3_book* txt_u,
   }
 
   if ( eve_d < txt_u->hed_u.fir_d || eve_d > txt_u->hed_u.las_d ) {
-    fprintf(stderr, "book: event %llu out of range [%llu, %llu]\r\n",
+    fprintf(stderr, "book: event %" PRIu64 " out of range [%" PRIu64 ", %" PRIu64 "]\r\n",
             eve_d, txt_u->hed_u.fir_d, txt_u->hed_u.las_d);
     return c3n;
   }
@@ -659,7 +659,7 @@ u3_book_read(u3_book* txt_u,
 
   while ( cur_d < eve_d ) {
     if ( c3n == _book_skip_deed(txt_u->fid_i, &off_w) ) {
-      fprintf(stderr, "book: failed to scan to event %llu\r\n", eve_d);
+      fprintf(stderr, "book: failed to scan to event %" PRIu64 "\r\n", eve_d);
       return c3n;
     }
     cur_d++;
@@ -673,13 +673,13 @@ u3_book_read(u3_book* txt_u,
 
     //  read deed into reed
     if ( c3n == _book_read_deed(txt_u->fid_i, &off_w, &red_u) ) {
-      fprintf(stderr, "book: failed to read event %llu\r\n", cur_d);
+      fprintf(stderr, "book: failed to read event %" PRIu64 "\r\n", cur_d);
       return c3n;
     }
 
     //  validate reed
     if ( c3n == _book_okay_reed(&red_u) ) {
-      fprintf(stderr, "book: validation failed at event %llu\r\n", cur_d);
+      fprintf(stderr, "book: validation failed at event %" PRIu64 "\r\n", cur_d);
       c3_free(red_u.jam_y);
       return c3n;
     }
@@ -728,13 +728,13 @@ u3_book_walk_init(u3_book*      txt_u,
   }
 
   if ( nex_d < txt_u->hed_u.fir_d || nex_d > txt_u->hed_u.las_d ) {
-    fprintf(stderr, "book: walk_init start %llu out of range [%llu, %llu]\r\n",
+    fprintf(stderr, "book: walk_init start %" PRIu64 " out of range [%" PRIu64 ", %" PRIu64 "]\r\n",
             nex_d, txt_u->hed_u.fir_d, txt_u->hed_u.las_d);
     return c3n;
   }
 
   if ( las_d < nex_d || las_d > txt_u->hed_u.las_d ) {
-    fprintf(stderr, "book: walk_init end %llu out of range [%llu, %llu]\r\n",
+    fprintf(stderr, "book: walk_init end %" PRIu64 " out of range [%" PRIu64 ", %" PRIu64 "]\r\n",
             las_d, nex_d, txt_u->hed_u.las_d);
     return c3n;
   }
@@ -745,7 +745,7 @@ u3_book_walk_init(u3_book*      txt_u,
 
   while ( cur_d < nex_d ) {
     if ( c3n == _book_skip_deed(txt_u->fid_i, &off_w) ) {
-      fprintf(stderr, "book: walk_init failed to scan to event %llu\r\n", nex_d);
+      fprintf(stderr, "book: walk_init failed to scan to event %" PRIu64 "\r\n", nex_d);
       return c3n;
     }
     cur_d++;
@@ -784,7 +784,7 @@ u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
 
   //  read deed into reed
   if ( c3n == _book_read_deed(itr_u->fid_i, &itr_u->off_w, &red_u) ) {
-    fprintf(stderr, "book: walk_next failed to read event %llu\r\n",
+    fprintf(stderr, "book: walk_next failed to read event %" PRIu64 "\r\n",
             itr_u->nex_d);
     itr_u->liv_o = c3n;
     return c3n;
@@ -792,7 +792,7 @@ u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
 
   //  validate reed
   if ( c3n == _book_okay_reed(&red_u) ) {
-    fprintf(stderr, "book: walk_next validation failed at event %llu\r\n",
+    fprintf(stderr, "book: walk_next validation failed at event %" PRIu64 "\r\n",
             itr_u->nex_d);
     c3_free(red_u.jam_y);
     itr_u->liv_o = c3n;

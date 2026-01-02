@@ -56,7 +56,7 @@
     /* u3_book_deed: complete on-disk event record
     **
     **   NB: not used directly for I/O due to variable-length jam data
-    **   Actual format: deed_head | jam_data | deed_tail
+    **   actual format: deed_head | jam_data | deed_tail
     */
       typedef struct _u3_book_deed {
         u3_book_deed_head hed_u;
