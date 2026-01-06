@@ -6,11 +6,17 @@
 u3_noun
 u3qc_peg(u3_atom a, u3_atom b)
 {
-  if ( (0 == a) || (0 == b) ) {
+  if ( 0 == a ) {
     return u3m_bail(c3__exit);
+  }
+  else if ( 0 == b ) {
+    return u3m_bail(c3__fail);
   }
   else if ( 1 == b ) {
     return u3k(a);
+  }
+  else if ( 1 == a ) {
+    return u3k(b);
   }
 
   c3_d a_d, b_d;
