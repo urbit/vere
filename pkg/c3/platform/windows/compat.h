@@ -18,6 +18,10 @@ uint32_t getppid();
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
 
+int shm_open(const char *name, int oflag, mode_t mode);
+int shm_unlink(const char *name);
+int ftruncate(int fd, off_t length);
+
 #define SIGUSR1       10
 #define SIGALRM       14
 #define SIGVTALRM     26

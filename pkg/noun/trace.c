@@ -1128,12 +1128,11 @@ u3t_etch_meme(c3_l mod_l)
   }
 }
 
-/* u3t_sstack_init: initalize a root node on the spin stack 
+/* u3t_sstack_init: initalize a root node on the spin stack
 */
 void
 u3t_sstack_init()
 {
-#ifndef U3_OS_windows
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
   c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
@@ -1148,7 +1147,7 @@ u3t_sstack_init()
   }
 
   stk_u = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
     return;
@@ -1157,11 +1156,9 @@ u3t_sstack_init()
   stk_u->off_w = 0;
   stk_u->fow_w = 0;
   u3t_sstack_push(c3__root);
-#endif
 }
 
-#ifndef U3_OS_windows
-/* u3t_sstack_open: initalize a root node on the spin stack 
+/* u3t_sstack_open: initalize a root node on the spin stack
  */
 u3t_spin*
 u3t_sstack_open()
@@ -1172,20 +1169,19 @@ u3t_sstack_open()
   c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
-    return NULL; 
+    return NULL;
   }
 
-  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE, 
+  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE,
                          PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
-    return NULL; 
+    return NULL;
   }
 
   return stk_u;
 }
-#endif
 /* u3t_sstack_exit: shutdown the shared memory for thespin stack 
 */
 void

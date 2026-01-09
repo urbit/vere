@@ -5,6 +5,61 @@
 #include <tlhelp32.h>
 #include "errno.h"
 
+// Shared memory emulation for shm_open/shm_unlink
+// -----------------------------------------------------------------------
+
+#define SHM_FD_BASE   10000    // base value for shm pseudo-fds
+#define SHM_MAX_SLOTS 8        // max concurrent shm objects
+
+typedef struct {
+  char   nam_c[256];   // Windows name (e.g. "Local\\spin_stack_page_123")
+  HANDLE han_h;        // file mapping handle
+  size_t siz_i;        // size set by ftruncate
+  int    use_i;        // slot in use
+} shm_slot;
+
+static shm_slot _shm_slots[SHM_MAX_SLOTS] = {0};
+
+/* _shm_convert_name(): convert POSIX shm name to Windows format.
+**   "/spin_stack_page_123" -> "Local\\spin_stack_page_123"
+*/
+static void
+_shm_convert_name(const char* posix_name, char* win_name, size_t win_len)
+{
+  const char* src = posix_name;
+  if ( '/' == *src ) {
+    src++;  // skip leading slash
+  }
+  snprintf(win_name, win_len, "Local\\%s", src);
+}
+
+/* _shm_fd_to_slot(): convert shm fd to slot index, or -1 if invalid.
+*/
+static int
+_shm_fd_to_slot(int fd)
+{
+  if ( fd < SHM_FD_BASE || fd >= SHM_FD_BASE + SHM_MAX_SLOTS ) {
+    return -1;
+  }
+  int idx = fd - SHM_FD_BASE;
+  if ( !_shm_slots[idx].use_i ) {
+    return -1;
+  }
+  return idx;
+}
+
+/* _shm_is_fd(): return non-zero if fd is a shm pseudo-fd.
+*/
+static int
+_shm_is_fd(int fd)
+{
+  return _shm_fd_to_slot(fd) >= 0;
+}
+
+// forward declarations for shm functions used by mmap/ftruncate
+static int   shm_ftruncate(int fd, off_t length);
+static void* shm_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off);
+
 // set default CRT file mode to binary
 // note that mingw binmode.o does nothing
 #undef _fmode
@@ -210,6 +265,11 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
         return MAP_FAILED;
     }
 
+    // check if this is a shm pseudo-fd
+    if ( _shm_is_fd(fildes) ) {
+        return shm_mmap(addr, len, prot, flags, fildes, off);
+    }
+
     if ((flags & MAP_ANON) == 0)
     {
         h = (HANDLE)_get_osfhandle(fildes);
@@ -351,6 +411,22 @@ int fdatasync(int fildes)
         errno = err_win_to_posix(GetLastError());
         return -1;
     }
+}
+
+int ftruncate(int fildes, off_t length)
+{
+    // check if this is a shm pseudo-fd
+    if ( _shm_is_fd(fildes) ) {
+        return shm_ftruncate(fildes, length);
+    }
+
+    // regular file: use _chsize_s (64-bit safe)
+    if ( 0 == _chsize_s(fildes, length) ) {
+        return 0;
+    }
+
+    errno = err_win_to_posix(GetLastError());
+    return -1;
 }
 
 intmax_t mdb_get_filesize(HANDLE han_u)
@@ -608,4 +684,186 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
   }
 
   return (ssize_t)len;
+}
+
+// POSIX shared memory emulation
+// -----------------------------------------------------------------------
+
+/* shm_open(): create or open a POSIX shared memory object.
+**
+**   On Windows, we use named file mappings backed by the page file.
+**   The actual mapping is deferred to mmap() since we don't know
+**   the size until ftruncate() is called.
+*/
+int shm_open(const char *name, int oflag, mode_t mode)
+{
+  (void)mode;  // Windows doesn't use POSIX permissions for shared memory
+
+  // find a free slot
+  int idx;
+  for ( idx = 0; idx < SHM_MAX_SLOTS; idx++ ) {
+    if ( !_shm_slots[idx].use_i ) {
+      break;
+    }
+  }
+
+  if ( SHM_MAX_SLOTS == idx ) {
+    errno = EMFILE;  // too many open shm objects
+    return -1;
+  }
+
+  // convert POSIX name to Windows name
+  _shm_convert_name(name, _shm_slots[idx].nam_c, sizeof(_shm_slots[idx].nam_c));
+
+  // try to open existing mapping first if not O_EXCL
+  if ( !(oflag & O_EXCL) ) {
+    HANDLE h = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, _shm_slots[idx].nam_c);
+    if ( NULL != h ) {
+      _shm_slots[idx].han_h = h;
+      _shm_slots[idx].siz_i = 0;  // size unknown for existing mapping
+      _shm_slots[idx].use_i = 1;
+      return SHM_FD_BASE + idx;
+    }
+    // if O_CREAT not set, fail
+    if ( !(oflag & O_CREAT) ) {
+      errno = ENOENT;
+      return -1;
+    }
+  }
+
+  // O_CREAT: will create the mapping in ftruncate/mmap when we know the size
+  _shm_slots[idx].han_h = NULL;
+  _shm_slots[idx].siz_i = 0;
+  _shm_slots[idx].use_i = 1;
+
+  return SHM_FD_BASE + idx;
+}
+
+/* shm_unlink(): remove a shared memory object name.
+**
+**   On Windows, named objects are reference-counted and automatically
+**   cleaned up when the last handle is closed. We just mark our slot
+**   as available; the actual cleanup happens when all processes close
+**   their handles.
+*/
+int shm_unlink(const char *name)
+{
+  char win_name[256];
+  _shm_convert_name(name, win_name, sizeof(win_name));
+
+  // find and close any local handle to this name
+  for ( int idx = 0; idx < SHM_MAX_SLOTS; idx++ ) {
+    if ( _shm_slots[idx].use_i &&
+         0 == strcmp(_shm_slots[idx].nam_c, win_name) ) {
+      if ( NULL != _shm_slots[idx].han_h ) {
+        CloseHandle(_shm_slots[idx].han_h);
+      }
+      _shm_slots[idx].use_i = 0;
+      _shm_slots[idx].han_h = NULL;
+      _shm_slots[idx].nam_c[0] = 0;
+      return 0;
+    }
+  }
+
+  // not found locally - that's OK, the object may exist in another process
+  return 0;
+}
+
+/* shm_ftruncate(): set size of shared memory object.
+**
+**   On Windows, we create the actual file mapping here since
+**   CreateFileMapping requires the size upfront.
+*/
+static int shm_ftruncate(int fd, off_t length)
+{
+  int idx = _shm_fd_to_slot(fd);
+  if ( idx < 0 ) {
+    errno = EBADF;
+    return -1;
+  }
+
+  // if we already have a handle with correct size, nothing to do
+  if ( NULL != _shm_slots[idx].han_h && _shm_slots[idx].siz_i == (size_t)length ) {
+    return 0;
+  }
+
+  // close existing handle if any
+  if ( NULL != _shm_slots[idx].han_h ) {
+    CloseHandle(_shm_slots[idx].han_h);
+    _shm_slots[idx].han_h = NULL;
+  }
+
+  // create the named file mapping with the specified size
+  // cast to 64-bit to avoid shift overflow on 32-bit off_t
+  uint64_t len64 = (uint64_t)length;
+  DWORD siz_hi = (DWORD)((len64 >> 32) & 0xFFFFFFFFL);
+  DWORD siz_lo = (DWORD)(len64 & 0xFFFFFFFFL);
+
+  HANDLE h = CreateFileMappingA(
+    INVALID_HANDLE_VALUE,   // backed by page file
+    NULL,                   // default security
+    PAGE_READWRITE,         // read/write access
+    siz_hi,                 // size high
+    siz_lo,                 // size low
+    _shm_slots[idx].nam_c   // name
+  );
+
+  if ( NULL == h ) {
+    errno = err_win_to_posix(GetLastError());
+    return -1;
+  }
+
+  _shm_slots[idx].han_h = h;
+  _shm_slots[idx].siz_i = length;
+  return 0;
+}
+
+/* shm_mmap(): map shared memory object into address space.
+*/
+static void* shm_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off)
+{
+  (void)flags;  // always MAP_SHARED for shm
+  (void)off;    // always 0 for shm
+
+  int idx = _shm_fd_to_slot(fd);
+  if ( idx < 0 ) {
+    errno = EBADF;
+    return MAP_FAILED;
+  }
+
+  // if no handle yet, try to open existing mapping (for O_RDONLY case)
+  if ( NULL == _shm_slots[idx].han_h ) {
+    HANDLE h = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, _shm_slots[idx].nam_c);
+    if ( NULL == h ) {
+      errno = err_win_to_posix(GetLastError());
+      return MAP_FAILED;
+    }
+    _shm_slots[idx].han_h = h;
+  }
+
+  DWORD access = 0;
+  if ( prot & PROT_WRITE ) {
+    access = FILE_MAP_WRITE;
+  } else if ( prot & PROT_READ ) {
+    access = FILE_MAP_READ;
+  }
+  if ( prot & PROT_EXEC ) {
+    access |= FILE_MAP_EXECUTE;
+  }
+
+  void* ptr = MapViewOfFileEx(
+    _shm_slots[idx].han_h,
+    access,
+    0,    // offset high
+    0,    // offset low
+    len,
+    addr
+  );
+
+  if ( NULL == ptr ) {
+    errno = err_win_to_posix(GetLastError());
+    return MAP_FAILED;
+  }
+
+  return ptr;
 }
