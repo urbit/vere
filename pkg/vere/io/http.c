@@ -24,8 +24,7 @@ typedef struct _u3_h2o_serv {
     u3_rsat_init = 0,                   //  initialized
     u3_rsat_plan = 1,                   //  planned
     u3_rsat_peek = 2,                   //  peek planned
-    u3_rsat_ripe = 3,                   //  building response
-    u3_rsat_sown = 4,                   //  response sent and is final
+    u3_rsat_ripe = 3,                   //  responding
   } u3_rsat;
 
 /* u3_hreq: incoming http request.
@@ -658,10 +657,6 @@ _http_req_timer_cb(uv_timer_t* tim_u)
       if ( c3y == gen_u->red ) {
         _http_hgen_send(gen_u);
       }
-    } break;
-
-    case u3_rsat_sown: {
-      //  request was already sent, nothing to do
     } break;
   }
 }
@@ -1421,10 +1416,6 @@ _http_start_respond(u3_hreq* req_u,
 
   _http_hgen_send(gen_u);
 
-  if ( emp_t ) {
-    req_u->sat_e = u3_rsat_sown;
-  }
-
   u3z(status); u3z(headers); u3z(data); u3z(complete);
 }
 
@@ -1435,21 +1426,19 @@ _http_continue_respond(u3_hreq* req_u,
                        u3_noun   data,
                        u3_noun complete)
 {
-  if ( u3_rsat_sown == req_u->sat_e ) {
-    //  response was already sent, drop data
-    //
-    u3z(data); u3z(complete);
-    return;
-  }
-
   if ( u3_rsat_ripe != req_u->sat_e ) {
     u3l_log("http: %%continue before %%start");
     u3z(data); u3z(complete);
     return;
   }
-
+  
   u3_hgen* gen_u = req_u->gen_u;
-
+  
+  if ( u3_hgen_done == gen_u->sat_e ) {
+    u3z(data); u3z(complete);
+    return;
+  }
+  
   uv_timer_stop(req_u->tim_u);
 
   gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
@@ -1486,10 +1475,6 @@ _http_cancel_respond(u3_hreq* req_u)
   switch ( req_u->sat_e ) {
     case u3_rsat_init: u3_assert(0);
     case u3_rsat_peek: u3_assert(0);
-
-    case u3_rsat_sown: {
-      //  already sent, nothing to do
-    } break;
 
     case u3_rsat_plan: {
       req_u->sat_e = u3_rsat_ripe; // XX confirm
