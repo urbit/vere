@@ -1815,6 +1815,16 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   return pro;
 }
 
+void
+u3m_mark_mute(void)
+{
+  u3m_quac** arr_u = u3m_mark();
+  for (c3_w i_w = 0; arr_u[i_w]; i_w++) {
+    u3a_quac_free(arr_u[i_w]);
+  }
+  c3_free(arr_u);
+}
+
 /* u3m_grab(): garbage-collect the world, plus extra roots.
 */
 void
@@ -1839,7 +1849,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
     }
     va_end(vap);
   }
-  u3m_mark(); // XX leaks
+  u3m_mark_mute();
   u3a_sweep();
 }
 
