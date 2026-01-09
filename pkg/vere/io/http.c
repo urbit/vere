@@ -855,7 +855,7 @@ _free_beam(beam* bem)
 /* _get_beam(): get a _beam from url
 */
 static beam
-_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
+_get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 {
   beam bem = {u3_none, u3_none, u3_none, u3_none};
 
@@ -899,7 +899,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
         *wer = c3__base;
       }
       else {
-        req_u->peq_u->las_o = c3y;
+        *las_o = c3y;
         // if you are seeing scries with the case %bad/6.578.530/6578530
         // then this placeholder value is used somewhere even though it
         // shouldn't be
@@ -943,6 +943,61 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
   return bem;
 }
 
+/* _http_peek_dispatch(): dispatch peek request. RETAINS gang, spur, bem
+ * RETAINS req_u->peq_u and req_u->peq_u->pax if c3n is returned (no peek
+ * was queued), TRANSFERS them if c3y was returned
+*/
+static c3_o
+_http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
+{
+  u3_http* htp_u = req_u->hon_u->htp_u;
+  u3_httd* htd_u = htp_u->htd_u;
+
+  if ( c3y == req_u->peq_u->las_o ) {
+    c3_o pro_o;
+    u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+    if ( c3y == u3r_sing(our, bem_u->who) ) {
+      pro_o = c3y;
+      u3_pier_peek_last(htd_u->car_u.pir_u, u3k(gang), c3__ex,
+        u3k(bem_u->des), u3k(spur), req_u->peq_u, _http_scry_cb);
+    }
+    else {
+      pro_o = c3n;
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
+    }
+    u3z(our);
+    return pro_o;
+  }
+  else {
+    c3_o pro_o;
+    u3_noun bam = u3nq(u3k(bem_u->who),
+      u3k(bem_u->des), u3k(bem_u->cas), u3k(spur));
+    c3_o auth_o = u3du(gang);
+    u3_noun key = u3nc(auth_o, u3k(bam));
+    u3_weak nac = u3h_get(htd_u->nax_p, key);
+    u3z(key);
+    
+    if (  (u3_none == nac)
+       || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
+    {
+      u3z(req_u->peq_u->pax);
+      req_u->peq_u->pax = u3k(bam);
+      pro_o = c3y;
+      u3_pier_peek(htd_u->car_u.pir_u, u3k(gang), u3nt(0, c3__ex, u3k(bam)),
+        req_u->peq_u, _http_scry_cb);
+    }
+    else {
+      pro_o = c3n;
+      _http_scry_respond(req_u, u3k(nac));
+    }
+
+    u3z(bam);
+    u3z(nac);
+    return pro_o;
+  }
+}
+
 /* _http_req_dispatch(): dispatch http request. RETAINS `req`
 */
 static void
@@ -980,27 +1035,8 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
-      req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
-      req_u->peq_u->req_u = req_u;
-      req_u->peq_u->htd_u = htd_u;
-      req_u->peq_u->las_o = c3n;
-      req_u->sat_e = u3_rsat_peek;
-      req_u->peq_u->pax = u3_nul;
-
-      u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
-      h2o_req_t* rec_u = req_u->rec_u;
-
-      //  set gang to [~ ~] or ~
-      u3_noun gang;
-      c3_o auth = _http_req_is_auth(fig_u, rec_u);
-      if ( auth == c3y ) {
-        gang = u3nc(u3_nul, u3_nul);
-      }
-      else {
-        gang = u3_nul;
-      }
-
-      beam bem = _get_beam(req_u, bas_c, len_w);
+      c3_o las_o = c3n;
+      beam bem = _get_beam(req_u, bas_c, len_w, &las_o);
       if (  (u3_none == bem.who)
          || (u3_none == bem.des)
          || (u3_none == bem.cas)
@@ -1008,12 +1044,25 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       {
         c3_c* msg_c = "bad request";
         h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-        u3z(gang);
-        u3z(req_u->peq_u->pax);
         _free_beam(&bem);
         return;
       }
 
+      req_u->peq_u    = c3_malloc(sizeof(*req_u->peq_u));
+
+      req_u->peq_u->req_u = req_u;
+      req_u->peq_u->htd_u = htd_u;
+      req_u->peq_u->las_o = las_o;
+      req_u->sat_e = u3_rsat_peek;
+      req_u->peq_u->pax = u3_nul;
+
+      u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
+      h2o_req_t* rec_u = req_u->rec_u;
+
+      u3_noun gang = ( _(_http_req_is_auth(fig_u, rec_u)) )
+                   ? u3nc(u3_nul, u3_nul)
+                   : u3_nul;
+      
       h2o_headers_t req_headers = req_u->rec_u->headers;
       byte_range rng_u;
       c3_o rng_o = _get_range(req_headers, &rng_u);
@@ -1036,45 +1085,13 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
       }
 
-      // peek or respond from cache
-      //
-      if ( c3y == req_u->peq_u->las_o ) {
-        u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
-        if ( c3y == u3r_sing(our, bem.who) ) {
-          u3_pier_peek_last(htd_u->car_u.pir_u, gang, c3__ex,
-                            u3k(bem.des), spur, req_u->peq_u, _http_scry_cb);
-        }
-        else {
-          c3_c* msg_c = "bad request";
-          h2o_send_error_generic(req_u->rec_u, 400, msg_c, msg_c, 0);
-          u3z(gang);
-          u3z(spur);
-          u3z(req_u->peq_u->pax);
-        }
-        u3z(our);
+      if ( c3n == _http_peek_dispatch(req_u, &bem, gang, spur) ) {
+        u3z(req_u->peq_u->pax);
+        c3_free(req_u->peq_u);
+        req_u->peq_u = NULL;
       }
-      else {
-        u3_noun bam = u3nq(u3k(bem.who), u3k(bem.des), u3k(bem.cas), spur);
-        u3_noun key = u3nc(auth, u3k(bam));
-        u3_weak nac = u3h_get(htd_u->nax_p, key);
-        u3z(key);
-
-        if (  (u3_none == nac)
-           || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
-        {
-          // maybe cache, then serve subsequent range requests from cache
-          u3z(req_u->peq_u->pax);
-          req_u->peq_u->pax = u3k(bam);
-          u3_pier_peek(htd_u->car_u.pir_u, gang, u3nt(0, c3__ex, bam),
-                       req_u->peq_u, _http_scry_cb);
-          u3z(nac);
-        }
-        else {
-          _http_scry_respond(req_u, nac);
-          u3z(bam);
-          u3z(gang);
-        }
-      }
+      u3z(gang);
+      u3z(spur);
       _free_beam(&bem);
     }
   }
