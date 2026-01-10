@@ -1580,6 +1580,14 @@ _unix_io_exit(u3_auto* car_u)
 {
   u3_unix* unx_u = (u3_unix*)car_u;
 
+  u3_umon* mon_u = unx_u->mon_u;
+  u3_umon* nex_u;
+  while ( mon_u ) {
+    nex_u = mon_u->nex_u;
+    _unix_free_mount_point(unx_u, mon_u);
+    mon_u = nex_u;
+  }
+
   u3z(unx_u->sat);
   c3_free(unx_u->pax_c);
   c3_free(unx_u);
