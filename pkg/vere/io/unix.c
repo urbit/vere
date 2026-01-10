@@ -40,12 +40,6 @@
 
 #include "noun.h"
 
-#ifdef ASAN_ENABLED
-  void __lsan_ignore_object(const void *p);
-#else
-  #define __lsan_ignore_object(p) ((void) (p))
-#endif
-
 struct _u3_umon;
 struct _u3_udir;
 struct _u3_ufil;
@@ -562,13 +556,10 @@ _unix_get_mount_point(u3_unix* unx_u, u3_noun mon)
 
   if ( !mon_u ) {
     mon_u = c3_malloc(sizeof(u3_umon));
-    __lsan_ignore_object(mon_u);
     mon_u->nam_c = nam_c;
-    __lsan_ignore_object(mon_u->nam_c);
     mon_u->dir_u.dir = c3y;
     mon_u->dir_u.dry = c3n;
     mon_u->dir_u.pax_c = strdup(unx_u->pax_c);
-    __lsan_ignore_object(mon_u->dir_u.pax_c);
     mon_u->dir_u.par_u = NULL;
     mon_u->dir_u.nex_u = NULL;
     mon_u->dir_u.kid_u = NULL;
@@ -636,7 +627,6 @@ _unix_scan_mount_point(u3_unix* unx_u, u3_umon* mon_u)
         }
         else {
           u3_udir* dir_u = c3_malloc(sizeof(u3_udir));
-          __lsan_ignore_object(dir_u);
           _unix_watch_dir(dir_u, &mon_u->dir_u, pax_c);
         }
       }
@@ -829,7 +819,6 @@ _unix_watch_file(u3_unix* unx_u, u3_ufil* fil_u, u3_udir* par_u, c3_c* pax_c)
   fil_u->dir = c3n;
   fil_u->dry = c3n;
   fil_u->pax_c = c3_malloc(1 + strlen(pax_c));
-  __lsan_ignore_object(fil_u->pax_c);
   strcpy(fil_u->pax_c, pax_c);
   fil_u->par_u = par_u;
   fil_u->nex_u = NULL;
