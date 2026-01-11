@@ -1,5 +1,75 @@
 const std = @import("std");
 
+const CdbGenStep = struct {
+    step: std.Build.Step,
+    b: *std.Build,
+    frags_dir: []const u8,
+    out_path: []const u8,
+
+    pub fn create(b: *std.Build, frags_dir: []const u8, out_path: []const u8) *CdbGenStep {
+        const self = b.allocator.create(CdbGenStep) catch @panic("OOM");
+        self.* = .{
+            .step = std.Build.Step.init(.{
+                .id = .custom,
+                .name = "gen-compile-commands",
+                .owner = b,
+                .makeFn = make,
+            }),
+            .b = b,
+            .frags_dir = frags_dir,
+            .out_path = out_path,
+        };
+        return self;
+    }
+
+    fn make(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+        const self: *CdbGenStep = @fieldParentPtr("step", step);
+
+        var cwd = std.fs.cwd();
+
+        // Open fragments directory (created by zig via -gen-cdb-fragment-path).
+        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch |e| {
+            std.log.err("compile db fragments dir '{s}' not found ({s}). Did you build first?", .{
+                self.frags_dir,
+                @errorName(e),
+            });
+            return e;
+        };
+        defer dir.close();
+
+        // Write compile_commands.json as a JSON array of fragment objects.
+        var out_file = try cwd.createFile(self.out_path, .{ .truncate = true });
+        defer out_file.close();
+        var w = out_file.writer();
+
+        try w.writeByte('[');
+
+        var it = dir.iterate();
+        var first: bool = true;
+        while (try it.next()) |ent| {
+            if (ent.kind != .file) continue;
+
+            // zig emits one JSON object per file
+            var frag_file = try dir.openFile(ent.name, .{});
+            defer frag_file.close();
+
+            const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
+            defer self.b.allocator.free(frag);
+
+            // skip empty/whitespace-only
+            const trimmed = std.mem.trim(u8, frag, " \t\r\n");
+            if (trimmed.len == 0) continue;
+
+            if (!first) try w.writeByte(',');
+            first = false;
+            try w.writeAll(trimmed);
+        }
+
+        try w.writeAll("]\n");
+        // cwd.deleteTree(self.frags_dir) catch {};
+    }
+};
+
 const VERSION = "4.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
@@ -44,6 +114,10 @@ const BuildCfg = struct {
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     var optimize = b.standardOptimizeOption(.{});
+    const cdb = b.step("cdb", "Generate compile_commands.json (clangd)");
+    const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+    cdb.dependOn(b.getInstallStep());
+    cdb.dependOn(&cdb_gen.step);
 
     //
     // Additional Project-Specific Options
@@ -207,6 +281,10 @@ fn buildBinary(
         "-g3",
         "-Wall",
         "-Werror",
+    });
+
+    try global_flags.appendSlice(&.{
+        "-gen-cdb-fragment-path", "cdb",
     });
 
     if (!cfg.asan and !cfg.ubsan) {
