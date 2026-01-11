@@ -1357,10 +1357,12 @@ _http_start_respond(u3_hreq* req_u,
                       (status < 500) ? "missing" :
                       "hosed";
 
+  h2o_iovec_t meth_u = req_u->rec_u->method;
   c3_o emp_t = ( status < 200 )
             || ( 204 == status )
             || ( 205 == status )
-            || ( 304 == status );
+            || ( 304 == status )
+            || ( 0 == strncmp("HEAD", meth_u.base, meth_u.len) );
 
   u3_hhed* hed_u = _http_heds_from_noun(u3k(headers));
   u3_hhed* deh_u = hed_u;
