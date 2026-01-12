@@ -1383,7 +1383,14 @@ u3m_warm(u3_noun pro)
   c3_o tim_o = u3du(u3R->tim);
   u3m_fall();
   if ( _(tim_o) ) _m_renew_now();
-  return u3a_take(pro);
+  pro = u3a_take(pro);
+
+  //  pop the stack
+  //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+  u3R->cap_p = u3R->ear_p;
+  u3R->ear_p = 0;
+  return pro;
 }
 
 /* u3m_pour(): return error ball from leap, promoting the state if the error
