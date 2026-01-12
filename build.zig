@@ -29,7 +29,10 @@ const CdbGenStep = struct {
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
         var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch |e| {
-            std.log.err("compile db fragments dir '{s}' not found ({s}). Did you build first?", .{
+            std.log.err(
+                \\compile db fragments dir '{s}' not found ({s}).
+                \\First build with -Dgenerate-commands
+                , .{
                 self.frags_dir,
                 @errorName(e),
             });
@@ -66,7 +69,7 @@ const CdbGenStep = struct {
         }
 
         try w.writeAll("]\n");
-        // cwd.deleteTree(self.frags_dir) catch {};
+        cwd.deleteTree(self.frags_dir) catch {};
     }
 };
 
@@ -109,15 +112,12 @@ const BuildCfg = struct {
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
+    gen_cdb: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     var optimize = b.standardOptimizeOption(.{});
-    const cdb = b.step("cdb", "Generate compile_commands.json (clangd)");
-    const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
-    cdb.dependOn(b.getInstallStep());
-    cdb.dependOn(&cdb_gen.step);
 
     //
     // Additional Project-Specific Options
@@ -217,6 +217,9 @@ pub fn build(b: *std.Build) !void {
         VERSION ++ "-" ++ git_rev
     else
         VERSION;
+    
+    const gen_cdb = b.option(bool, "generate-commands",
+        "generate compile_commands.json fragments") orelse false;
 
     //
     // Build
@@ -238,6 +241,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
+        .gen_cdb = gen_cdb,
     };
 
     if (all) {
@@ -283,9 +287,11 @@ fn buildBinary(
         "-Werror",
     });
 
-    try global_flags.appendSlice(&.{
-        "-gen-cdb-fragment-path", "cdb",
-    });
+    if (cfg.gen_cdb) {
+        try global_flags.appendSlice(&.{
+            "-gen-cdb-fragment-path", "cdb",
+        });
+    }
 
     if (!cfg.asan and !cfg.ubsan) {
         try global_flags.appendSlice(&.{
@@ -624,6 +630,15 @@ fn buildBinary(
     // CI needs generated version.h so we install libvere as a quick fix
     const vere_install = b.addInstallArtifact(pkg_vere.artifact("vere"), .{});
     b.getInstallStep().dependOn(&vere_install.step);
+
+    const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+    cdb_gen.step.dependOn(b.getInstallStep());
+
+    //  merging JSON fragments into compile_commands.json needs to happen after
+    //  install, so we have to put it into a separate step
+    const cdb = b.step("generate-commands",
+        "Build then generate compile_commands.json. Requires -Dgenerate-commands");
+    cdb.dependOn(&cdb_gen.step);
 
     //
     // Tests
