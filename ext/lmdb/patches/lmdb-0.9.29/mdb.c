@@ -4230,7 +4230,7 @@ enum mdb_fopen_type {
 
 /** Open an LMDB file.
  * @param[in] env	The LMDB environment.
- * @param[in,out] fname	Path from from #mdb_fname_init().  A suffix is
+ * @param[in,out] fname	Path from #mdb_fname_init().  A suffix is
  * appended if necessary to create the filename, without changing mn_len.
  * @param[in] which	Determines file type, access mode, etc.
  * @param[in] mode	The Unix permissions for the file, if we create it.
