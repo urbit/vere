@@ -24,7 +24,7 @@ typedef struct _u3_h2o_serv {
     u3_rsat_init = 0,                   //  initialized
     u3_rsat_plan = 1,                   //  planned
     u3_rsat_peek = 2,                   //  peek planned
-    u3_rsat_ripe = 3                    //  responded
+    u3_rsat_ripe = 3,                   //  responding
   } u3_rsat;
 
 /* u3_hreq: incoming http request.
@@ -1374,6 +1374,13 @@ _http_start_respond(u3_hreq* req_u,
                       (status < 500) ? "missing" :
                       "hosed";
 
+  h2o_iovec_t meth_u = req_u->rec_u->method;
+  c3_o emp_t = ( status < 200 )
+            || ( 204 == status )
+            || ( 205 == status )
+            || ( 304 == status )
+            || ( 0 == strncmp("HEAD", meth_u.base, meth_u.len) );
+
   u3_hhed* hed_u = _http_heds_from_noun(u3k(headers));
   u3_hhed* deh_u = hed_u;
 
@@ -1404,9 +1411,12 @@ _http_start_respond(u3_hreq* req_u,
                                         _http_hgen_dispose);
   gen_u->neg_u = (h2o_generator_t){ _http_hgen_proceed, _http_hgen_stop };
   gen_u->red   = c3y;
-  gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
-  gen_u->bod_u = ( u3_nul == data ) ?
-                 0 : _cttp_bod_from_octs(u3k(u3t(data)));
+  gen_u->sat_e = ( c3y == complete || emp_t ) ? u3_hgen_done : u3_hgen_wait;
+
+  gen_u->bod_u = ( u3_nul == data ) ? 0
+               : ( emp_t )          ? 0
+               : _cttp_bod_from_octs(u3k(u3t(data)));
+
   gen_u->nud_u = 0;
   gen_u->hed_u = deh_u;
   gen_u->req_u = req_u;
@@ -1440,9 +1450,14 @@ _http_continue_respond(u3_hreq* req_u,
     u3z(data); u3z(complete);
     return;
   }
-
+  
   u3_hgen* gen_u = req_u->gen_u;
-
+  
+  if ( u3_hgen_done == gen_u->sat_e ) {
+    u3z(data); u3z(complete);
+    return;
+  }
+  
   uv_timer_stop(req_u->tim_u);
 
   gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
