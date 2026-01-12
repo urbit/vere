@@ -31,7 +31,7 @@ const CdbGenStep = struct {
         var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch |e| {
             std.log.err(
                 \\compile db fragments dir '{s}' not found ({s}).
-                \\First build with -Dgenerate-commands
+                \\clear caches and build with -Dgenerate-commands 
                 , .{
                 self.frags_dir,
                 @errorName(e),

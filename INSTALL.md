@@ -126,16 +126,21 @@ To use Tracy profiling:
 3. Run your urbit binary
 4. In Tracy GUI, connect to capture profiling data
 
-<!-- ## LSP Integration -->
+## LSP Integration
 
-<!-- ```console -->
-<!-- bazel run //bazel:refresh_compile_commands -->
-<!-- ``` -->
+```console
+zig build generate-commands -Dgenerate-commands
+```
 
-<!-- Running this command will generate a `compile_commands.json` file in the root -->
-<!-- of the repository, which `clangd` (or other language server processors) will -->
-<!-- use automatically to provide modern editor features like syntax highlighting, -->
-<!-- go-to definitions, call hierarchies, symbol manipulation, etc. -->
+Running this command will generate a `compile_commands.json` file in the root
+of the repository, which `clangd` (or other language server processors) will
+use automatically to provide modern editor features like syntax highlighting,
+go-to definitions, call hierarchies, symbol manipulation, etc. You might have to
+clear build cache for best result:
+
+```console
+rm -rf .zig-cache
+```
 
 ## Test
 
