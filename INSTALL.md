@@ -129,7 +129,7 @@ To use Tracy profiling:
 ## LSP Integration
 
 ```console
-zig build generate-commands -Dgenerate-commands
+zig build -Dgenerate-commands
 ```
 
 Running this command will generate a `compile_commands.json` file in the root
