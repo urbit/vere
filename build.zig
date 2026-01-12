@@ -262,14 +262,6 @@ pub fn build(b: *std.Build) !void {
             build_cfg,
         );
     }
-    const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
-    cdb_gen.step.dependOn(b.getInstallStep());
-
-    //  merging JSON fragments into compile_commands.json needs to happen after
-    //  install, so we have to put it into a separate step
-    const cdb = b.step("generate-commands",
-        "Build then generate compile_commands.json. Requires -Dgenerate-commands");
-    cdb.dependOn(&cdb_gen.step);
 }
 
 fn buildBinary(
@@ -638,6 +630,13 @@ fn buildBinary(
     // CI needs generated version.h so we install libvere as a quick fix
     const vere_install = b.addInstallArtifact(pkg_vere.artifact("vere"), .{});
     b.getInstallStep().dependOn(&vere_install.step);
+
+    if (cfg.gen_cdb) {
+        const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+        const current_install = b.getInstallStep();
+        cdb_gen.step.dependOn(current_install);
+        b.default_step = &cdb_gen.step;
+    }
 
     //
     // Tests
