@@ -105,7 +105,7 @@ _book_init_head(u3_book* txt_u)
   txt_u->hed_u.fir_d = 0;
   txt_u->hed_u.las_d = 0;
   txt_u->hed_u.off_w = sizeof(u3_book_head);
-  txt_u->hed_u.len_w = BOOK_META_SIZE;
+  txt_u->hed_u.len_w = sizeof(u3_book_meta);
   txt_u->dit_o = c3y;
 }
 
@@ -329,7 +329,7 @@ _book_skip_deed(c3_i fid_i, c3_w* off_w)
 static c3_w
 _book_scan_end(u3_book* txt_u)
 {
-  c3_w off_w = sizeof(u3_book_head) + BOOK_META_SIZE;  //  start
+  c3_w off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);  //  start
   c3_d cot_d = 0;  //  count
   c3_d exp_d;      //  expected event number
 
@@ -370,7 +370,7 @@ _book_scan_end(u3_book* txt_u)
     if ( cot_d == 0 ) {
       txt_u->hed_u.fir_d = 0;
       txt_u->hed_u.las_d = 0;
-      off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
+      off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
     } else {
       txt_u->hed_u.las_d = txt_u->hed_u.fir_d + cot_d - 1;
     }
@@ -436,7 +436,7 @@ u3_book_init(const c3_c* pax_c)
       return 0;
     }
     //  events start after header + reserved metadata area
-    txt_u->off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
+    txt_u->off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
   }
   else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
     //  corrupt file: too small
@@ -683,7 +683,7 @@ u3_book_read(u3_book* txt_u,
   }
 
   //  scan to starting event (events start after header + metadata area)
-  off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
+  off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
   cur_d = txt_u->hed_u.fir_d;
 
   while ( cur_d < eve_d ) {
@@ -887,7 +887,7 @@ u3_book_walk_init(u3_book*      txt_u,
   }
 
   //  scan to starting event (events start after header + metadata area)
-  off_w = sizeof(u3_book_head) + BOOK_META_SIZE;
+  off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
   cur_d = txt_u->hed_u.fir_d;
 
   while ( cur_d < nex_d ) {

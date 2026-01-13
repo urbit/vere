@@ -31,10 +31,10 @@
     **   total: 256 bytes
     */
       typedef struct _u3_book_meta {
-        c3_w ver_w;      //  metadata format version
         c3_d who_d[2];   //  ship identity (16 bytes)
-        c3_o fak_o;      //  fake security flag (1 byte)
+        c3_w ver_w;      //  metadata format version
         c3_w lif_w;      //  lifecycle length (4 bytes)
+        c3_o fak_o;      //  fake security flag (1 byte)
         c3_y pad_y[231]; //  reserved (231 bytes)
       } u3_book_meta;
 
