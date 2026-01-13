@@ -73,7 +73,7 @@ const CdbGenStep = struct {
     }
 };
 
-const VERSION = "4.0";
+const VERSION = "4.1";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
