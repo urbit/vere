@@ -158,7 +158,11 @@ jobs:
           for t in "${targets[@]}"
           do
             IFS=' ' read zig_target target <<< "${t}"
-            urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+            if [[ "$zig_target" == *"windows"* ]]; then
+              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit.exe
+            else
+              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+            fi
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
               dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
