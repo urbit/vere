@@ -28,15 +28,6 @@
 */
   #define BOOK_MAGIC      0x424f4f4b  //  "BOOK"
   #define BOOK_VERSION    1           //  format version
-  #define BOOK_META_SIZE  256         //  reserved metadata area size
-
-/* _book_crc32(): compute CRC32 checksum.
-*/
-static c3_w
-_book_crc32(c3_y* buf_y, c3_w len_w)
-{
-  return (c3_w)crc32(0L, buf_y, len_w);
-}
 
 /* _book_crc32_two(): compute CRC32 over two buffers.
 */
