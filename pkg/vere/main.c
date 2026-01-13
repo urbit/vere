@@ -166,7 +166,12 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+#if defined(U3_OS_windows)
+  u3_Host.ops_u.map = c3n;
+#else
   u3_Host.ops_u.map = c3y;
+#endif
+
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
