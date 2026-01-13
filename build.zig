@@ -210,7 +210,7 @@ pub fn build(b: *std.Build) !void {
         if (line.len > 0)
             last_line = buf;
     }
-    const git_rev = buf[41..51];
+    const git_rev = buf[41..48];
 
     // Binary version
     const version = if (!release)
