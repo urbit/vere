@@ -153,6 +153,7 @@ jobs:
             "aarch64-macos-none macos-aarch64"
             "x86_64-linux-musl linux-x86_64"
             "x86_64-macos-none macos-x86_64"
+            "x86_64-windows-gnu windows-x86_64"
           )
           for t in "${targets[@]}"
           do
