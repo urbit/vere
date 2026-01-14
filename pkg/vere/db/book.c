@@ -23,6 +23,10 @@
 //      [256-byte metadata section]
 //      [events: len_d | mug_l | jam_data | crc_m | let_d]
 //
+//  convention: functions _o_* require c3_sync to be finalized
+//  these functions may be called by other _o_* functions without finalization
+//  top-level interface functions are NOT _o_* functions
+//
 
 /* constants
 */
@@ -51,20 +55,14 @@ _book_crc32_two(c3_y* one_y, c3_w one_w, c3_y* two_y, c3_w two_w)
   return (c3_w)crc32(crc_w, two_y, two_w);
 }
 
-/* _book_save_head(): write header to file at offset 0.
+/* _o_book_save_head(): write header to file at offset 0.
 */
 static c3_o
-_book_save_head(u3_book* txt_u)
+_o_book_save_head(u3_book* txt_u)
 {
   if ( c3n == _pwrite_full(txt_u->fid_i, &txt_u->hed_u,
                 sizeof(u3_book_head), 0) ) {
     fprintf(stderr, "book: failed to write header: %s\r\n", strerror(errno));
-    return c3n;
-  }
-
-  if ( -1 == c3_sync(txt_u->fid_i) ) {
-    fprintf(stderr, "book: failed to sync header: %s\r\n",
-            strerror(errno));
     return c3n;
   }
 
@@ -99,7 +97,7 @@ _book_read_head(u3_book* txt_u)
 /* _book_init_head(): initialize header for new file.
 */
 static c3_o
-_book_init_head(u3_book* txt_u)
+_o_book_init_head(u3_book* txt_u)
 {
   memset(&txt_u->hed_u, 0, sizeof(u3_book_head));
   txt_u->hed_u.mag_w = BOOK_MAGIC;
@@ -109,13 +107,13 @@ _book_init_head(u3_book* txt_u)
   txt_u->hed_u.met_w = sizeof(u3_book_head);
   txt_u->hed_u.len_w = sizeof(u3_book_meta);
   txt_u->hed_u.off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
-  return _book_save_head(txt_u);
+  return _o_book_save_head(txt_u);
 }
 
-/* _book_init_meta(): initialize metadata section with zeros.
+/* _o_book_init_meta(): initialize metadata section with zeros.
 */
 static c3_o
-_book_init_meta(u3_book* txt_u)
+_o_book_init_meta(u3_book* txt_u)
 {
   u3_book_meta met_u;
 
@@ -126,13 +124,6 @@ _book_init_meta(u3_book* txt_u)
   if ( c3n == _pwrite_full(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
                 sizeof(u3_book_head)) ) {
     fprintf(stderr, "book: init_meta: failed to write metadata: %s\r\n",
-            strerror(errno));
-    return c3n;
-  }
-
-  //  sync metadata to disk
-  if ( -1 == c3_sync(txt_u->fid_i) ) {
-    fprintf(stderr, "book: init_meta: failed to sync metadata: %s\r\n",
             strerror(errno));
     return c3n;
   }
@@ -248,14 +239,14 @@ fail:
 
 }
 
-/* _book_save_deed(): save complete deed to file.
+/* _o_book_save_deed(): save complete deed to file.
 **
 **   returns:
 **     c3y: success
 **     c3n: failure
 */
 static c3_o
-_book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
+_o_book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
 {
   c3_w  now_w = *off_w;
   c3_d  jaz_d = red_u->len_d - 4;  //  len_d - mug bytes
@@ -371,7 +362,7 @@ _book_scan_end(u3_book* txt_u)
       txt_u->hed_u.las_d = txt_u->hed_u.fir_d + cot_d - 1;
     }
     txt_u->hed_u.off_w = off_w;
-    if ( c3n ==_book_save_head(txt_u) ) {
+    if ( c3n ==_o_book_save_head(txt_u) ) {
       u3_assert(!"book: fatal: could not save header on recovery\r\n");
     }
 
@@ -379,8 +370,12 @@ _book_scan_end(u3_book* txt_u)
     if ( -1 == ftruncate(txt_u->fid_i, off_w) ) {
       fprintf(stderr, "book: failed to truncate: %s\r\n",
               strerror(errno));
-    } else {
-      c3_sync(txt_u->fid_i);
+    }
+
+    if ( -1 == c3_sync(txt_u->fid_i) ) {
+      fprintf(stderr, "book: fatal: failed to sync disk on recovery: %s\r\n",
+              strerror(errno));
+      u3_assert(!"book: fatal: failed to sync disk on recovery");
     }
   }
 
@@ -393,7 +388,12 @@ _book_init(u3_book* txt_u, c3_zs siz_zs)
   if ( 0 == siz_zs ) {
     // new log file
     //
-    if ( c3n == c3a(_book_init_head(txt_u), _book_init_meta(txt_u)) ) {
+    if ( c3n == c3a(_o_book_init_head(txt_u), _o_book_init_meta(txt_u)) ) {
+      return c3n;
+    }
+    if ( -1 == c3_sync(txt_u->fid_i) ) {
+      fprintf(stderr, "book: failed to sync on init: %s\r\n",
+              strerror(errno));
       return c3n;
     }
   }
@@ -598,11 +598,20 @@ u3_book_save(u3_book* txt_u,
     red_u.crc_w = _book_calc_crc(&red_u);
 
     //  save deed to file
-    if ( c3n == _book_save_deed(txt_u->fid_i, &now_w, &red_u) ) {
+    if ( c3n == _o_book_save_deed(txt_u->fid_i, &now_w, &red_u) ) {
       fprintf(stderr, "book: failed to save deed for event %" PRIu64 ": %s\r\n",
               eve_d + i_w, strerror(errno));
       return c3n;
     }
+  }
+
+  //  update header
+  txt_u->hed_u.las_d = eve_d + len_d - 1;
+  txt_u->hed_u.off_w = now_w;
+  
+  //  write and sync header
+  if ( c3n == _o_book_save_head(txt_u) ) {
+    return c3n;
   }
 
   //  sync data to disk
@@ -612,15 +621,6 @@ u3_book_save(u3_book* txt_u,
     return c3n;
   }
 
-  //  update header
-  txt_u->hed_u.las_d = eve_d + len_d - 1;
-  txt_u->hed_u.off_w = now_w;
-  
-  //  write and sync header
-  if ( c3n == _book_save_head(txt_u) ) {
-    return c3n;
-  }
-  
   txt_u->off_w = now_w;
   return c3y;
 }
