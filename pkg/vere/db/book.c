@@ -29,6 +29,19 @@
   #define BOOK_MAGIC      0x424f4f4b  //  "BOOK"
   #define BOOK_VERSION    1           //  format version
 
+
+static c3_o
+_pread_full(c3_i fid_i, void* ptr_v, c3_z siz_z, c3_zs off_zs)
+{
+  return __(pread(fid_i, ptr_v, siz_z, off_zs) == siz_z);
+}
+
+static c3_o
+_pwrite_full(c3_i fid_i, void* ptr_v, c3_z siz_z, c3_zs off_zs)
+{
+  return __(pwrite(fid_i, ptr_v, siz_z, off_zs) == siz_z);
+}
+
 /* _book_crc32_two(): compute CRC32 over two buffers.
 */
 static c3_w
@@ -43,14 +56,9 @@ _book_crc32_two(c3_y* one_y, c3_w one_w, c3_y* two_y, c3_w two_w)
 static c3_o
 _book_save_head(u3_book* txt_u)
 {
-  c3_zs ret_zs;
-
-  ret_zs = pwrite(txt_u->fid_i, &txt_u->hed_u,
-                  sizeof(u3_book_head), 0);
-
-  if ( ret_zs != sizeof(u3_book_head) ) {
-    fprintf(stderr, "book: failed to write header: %s\r\n",
-            strerror(errno));
+  if ( c3n == _pwrite_full(txt_u->fid_i, &txt_u->hed_u,
+                sizeof(u3_book_head), 0) ) {
+    fprintf(stderr, "book: failed to write header: %s\r\n", strerror(errno));
     return c3n;
   }
 
@@ -68,12 +76,7 @@ _book_save_head(u3_book* txt_u)
 static c3_o
 _book_read_head(u3_book* txt_u)
 {
-  c3_zs ret_zs;
-
-  ret_zs = pread(txt_u->fid_i, &txt_u->hed_u,
-                 sizeof(u3_book_head), 0);
-
-  if ( ret_zs != sizeof(u3_book_head) ) {
+  if ( c3n == _pread_full(txt_u->fid_i, &txt_u->hed_u, sizeof(u3_book_head), 0) ) {
     fprintf(stderr, "book: failed to read header\r\n");
     return c3n;
   }
@@ -115,16 +118,13 @@ static c3_o
 _book_init_meta(u3_book* txt_u)
 {
   u3_book_meta met_u;
-  c3_zs ret_zs;
 
   //  zero-initialize metadata
   memset(&met_u, 0, sizeof(u3_book_meta));
 
   //  write metadata section at fixed offset
-  ret_zs = pwrite(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
-                  sizeof(u3_book_head));
-
-  if ( ret_zs != sizeof(u3_book_meta) ) {
+  if ( c3n == _pwrite_full(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                sizeof(u3_book_head)) ) {
     fprintf(stderr, "book: init_meta: failed to write metadata: %s\r\n",
             strerror(errno));
     return c3n;
@@ -146,7 +146,6 @@ static inline c3_w
 _book_deed_size(c3_d len_d)
 {
   return sizeof(u3_book_deed_head) + (len_d - 4) + sizeof(u3_book_deed_tail);
-  // = 12 + (len_d - 4) + 12 = len_d + 20
 }
 
 /* _book_calc_crc(): compute CRC32 for reed.
@@ -191,22 +190,21 @@ _book_okay_reed(const u3_book_reed* red_u)
 static c3_o
 _book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
 {
-  c3_zs ret_zs;
   c3_w  now_w = *off_w;
   c3_d  let_d;
+  red_u->jam_y = NULL;
 
   //  read deed_head
   u3_book_deed_head hed_u;
-  ret_zs = pread(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w);
-  if ( ret_zs != sizeof(u3_book_deed_head) ) {
-    return c3n;
+  if ( c3n == _pread_full(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w) ) {
+    goto fail;
   }
   now_w += sizeof(u3_book_deed_head);
 
   //  validate length
   if ( 0 == hed_u.len_d || (1ULL << 32) < hed_u.len_d ) {
     fprintf(stderr, "book: invalid length: %" PRIu64 "\r\n", hed_u.len_d);
-    return c3n;
+    goto fail;
   }
 
   //  populate reed from head
@@ -216,19 +214,15 @@ _book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
   //  read jam data (len_d - mug bytes)
   c3_d jaz_d = red_u->len_d - 4;
   red_u->jam_y = c3_malloc(jaz_d);
-  ret_zs = pread(fid_i, red_u->jam_y, jaz_d, now_w);
-  if ( ret_zs != (c3_zs)jaz_d ) {
-    c3_free(red_u->jam_y);
-    return c3n;
+  if ( c3n == _pread_full(fid_i, red_u->jam_y, jaz_d, now_w) ) {
+    goto fail;
   }
   now_w += jaz_d;
 
   //  read deed_tail
   u3_book_deed_tail tal_u;
-  ret_zs = pread(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w);
-  if ( ret_zs != sizeof(u3_book_deed_tail) ) {
-    c3_free(red_u->jam_y);
-    return c3n;
+  if ( c3n == _pread_full(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w) ) {
+    goto fail;
   }
   now_w += sizeof(u3_book_deed_tail);
 
@@ -238,14 +232,20 @@ _book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
 
   //  validate len_d == let_d
   if ( red_u->len_d != let_d ) {
-    c3_free(red_u->jam_y);
-    return c3n;
+    fprintf(stderr, "book: invalid trail length: %" PRIu64 " != %" PRIu64 "\r\n",
+      hed_u.len_d, let_d);
+    goto fail;
   }
 
   //  update offset
   *off_w = now_w;
 
   return c3y;
+
+fail:
+  c3_free(red_u->jam_y);
+  return c3n;
+
 }
 
 /* _book_save_deed(): save complete deed to file.
@@ -257,7 +257,6 @@ _book_read_deed(c3_i fid_i, c3_w* off_w, u3_book_reed* red_u)
 static c3_o
 _book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
 {
-  c3_zs ret_zs;
   c3_w  now_w = *off_w;
   c3_d  jaz_d = red_u->len_d - 4;  //  len_d - mug bytes
 
@@ -266,15 +265,13 @@ _book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
   hed_u.len_d = red_u->len_d;
   hed_u.mug_l = red_u->mug_l;
 
-  ret_zs = pwrite(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w);
-  if ( ret_zs != sizeof(u3_book_deed_head) ) {
+  if ( c3n == _pwrite_full(fid_i, &hed_u, sizeof(u3_book_deed_head), now_w) ) {
     return c3n;
   }
   now_w += sizeof(u3_book_deed_head);
 
   //  write jam data
-  ret_zs = pwrite(fid_i, red_u->jam_y, jaz_d, now_w);
-  if ( ret_zs != (c3_zs)jaz_d ) {
+  if ( c3n == _pwrite_full(fid_i, red_u->jam_y, jaz_d, now_w) ) {
     return c3n;
   }
   now_w += jaz_d;
@@ -284,8 +281,7 @@ _book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
   tal_u.crc_w = red_u->crc_w;
   tal_u.let_d = red_u->len_d;  //  length trailer (same as len_d)
 
-  ret_zs = pwrite(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w);
-  if ( ret_zs != sizeof(u3_book_deed_tail) ) {
+  if ( c3n == _pwrite_full(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_w) ) {
     return c3n;
   }
   now_w += sizeof(u3_book_deed_tail);
@@ -305,12 +301,10 @@ _book_save_deed(c3_i fid_i, c3_w* off_w, const u3_book_reed* red_u)
 static c3_o
 _book_skip_deed(c3_i fid_i, c3_w* off_w)
 {
-  c3_zs ret_zs;
   c3_d  len_d;
 
   //  read only the len_d field
-  ret_zs = pread(fid_i, &len_d, sizeof(c3_d), *off_w);
-  if ( ret_zs != sizeof(c3_d) ) {
+  if ( c3n == _pread_full(fid_i, &len_d, sizeof(c3_d), *off_w) ) {
     return c3n;
   }
 
@@ -734,7 +728,6 @@ u3_book_read_meta(u3_book*    txt_u,
                   void     (*read_f)(void*, c3_zs, void*))
 {
   u3_book_meta met_u;
-  c3_zs ret_zs;
 
   if ( !txt_u ) {
     read_f(ptr_v, -1, 0);
@@ -742,10 +735,8 @@ u3_book_read_meta(u3_book*    txt_u,
   }
 
   //  read metadata section at fixed offset
-  ret_zs = pread(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
-                 sizeof(u3_book_head));
-
-  if ( ret_zs != sizeof(u3_book_meta) ) {
+  if ( c3n == _pread_full(txt_u->fid_i,
+                &met_u, sizeof(u3_book_meta), sizeof(u3_book_head)) ) {
     fprintf(stderr, "book: read_meta: failed to read metadata: %s\r\n",
             strerror(errno));
     read_f(ptr_v, -1, 0);
@@ -783,17 +774,14 @@ u3_book_save_meta(u3_book*    txt_u,
                   void*       val_p)
 {
   u3_book_meta met_u;
-  c3_zs ret_zs;
 
   if ( !txt_u ) {
     return c3n;
   }
 
   //  read current metadata
-  ret_zs = pread(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
-                 sizeof(u3_book_head));
-
-  if ( ret_zs != sizeof(u3_book_meta) ) {
+  if ( c3n == _pread_full(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                sizeof(u3_book_head)) ) {
     fprintf(stderr, "book: save_meta: failed to read current metadata: %s\r\n",
             strerror(errno));
     return c3n;
@@ -821,10 +809,8 @@ u3_book_save_meta(u3_book*    txt_u,
   }
 
   //  write metadata section at fixed offset
-  ret_zs = pwrite(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
-                  sizeof(u3_book_head));
-
-  if ( ret_zs != sizeof(u3_book_meta) ) {
+  if ( c3n == _pwrite_full(txt_u->fid_i, &met_u, sizeof(u3_book_meta),
+                sizeof(u3_book_head)) ) {
     fprintf(stderr, "book: save_meta: failed to write metadata: %s\r\n",
             strerror(errno));
     return c3n;
