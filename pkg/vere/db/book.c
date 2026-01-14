@@ -416,7 +416,7 @@ u3_book*
 u3_book_init(const c3_c* pax_c)
 {
   c3_c path_c[8193];
-  c3_i fid_i;
+  c3_i fid_i = -1;
   struct stat buf_u;
   u3_book* txt_u = NULL;
 
