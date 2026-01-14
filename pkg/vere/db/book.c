@@ -402,16 +402,16 @@ _book_init(u3_book* txt_u, c3_zs siz_zs)
     if ( c3n == c3a(_book_init_head(txt_u), _book_init_meta(txt_u)) ) {
       return c3n;
     }
-    txt_u->off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
-    return c3y;
   }
-
-  if ( siz_zs < (c3_zs)sizeof(u3_book_head) ) {
-    fprintf(stderr, "book: file too small: %lld bytes\r\n",
-            (long long)siz_zs);
-    return c3n;
+  else {
+    if ( siz_zs < (c3_zs)sizeof(u3_book_head) ) {
+      fprintf(stderr, "book: file too small: %lld bytes\r\n",
+              (long long)siz_zs);
+      return c3n;
+    }
+    if ( c3n ==_book_read_head(txt_u) ) return c3n;
   }
-  if ( c3n ==_book_read_head(txt_u) ) return c3n;
+  
   txt_u->off_w = txt_u->hed_u.off_w;
   return c3y;
 }
@@ -424,7 +424,7 @@ u3_book_init(const c3_c* pax_c)
   c3_c path_c[8193];
   c3_i fid_i;
   struct stat buf_u;
-  u3_book* txt_u;
+  u3_book* txt_u = NULL;
 
   snprintf(path_c, sizeof(path_c), "%s/book.log", pax_c);
 
@@ -432,13 +432,12 @@ u3_book_init(const c3_c* pax_c)
   if ( 0 > fid_i ) {
     fprintf(stderr, "book: failed to open %s: %s\r\n",
             path_c, strerror(errno));
-    return 0;
+    goto fail;
   }
 
   if ( 0 > fstat(fid_i, &buf_u) ) {
     fprintf(stderr, "book: fstat failed: %s\r\n", strerror(errno));
-    close(fid_i);
-    return 0;
+    goto fail;
   }
   
   txt_u = c3_calloc(sizeof(u3_book));
@@ -447,13 +446,18 @@ u3_book_init(const c3_c* pax_c)
   strcpy(txt_u->pax_c, path_c);
 
   if ( c3n == _book_init(txt_u, buf_u.st_size) ) {
-    close(fid_i);
-    c3_free(txt_u->pax_c);
-    c3_free(txt_u);
-    return 0;
+    goto fail;
   }
 
   return txt_u;
+
+fail:
+  if ( fid_i >= 0 ) close(fid_i);
+  if ( txt_u ) {
+    c3_free(txt_u->pax_c);
+    c3_free(txt_u);
+  }
+  return 0;
 }
 
 /* u3_book_exit(): close event log.
