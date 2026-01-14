@@ -7,16 +7,12 @@
 
   /* book: append-only event log
   */
-    /* u3_book_head: on-disk file header (64 bytes)
+    /* u3_book_head: on-disk file header (16 bytes, immutable)
     */
       typedef struct _u3_book_head {
         c3_w mag_w;      //  magic number: 0x424f4f4b ("BOOK")
         c3_w ver_w;      //  format version: 1
         c3_d fir_d;      //  first event number in file
-        c3_d las_d;      //  last event number in file
-        c3_w off_w;      //  offset to metadata section
-        c3_w len_w;      //  length of metadata section (reserved, currently unused)
-        c3_y pad_y[32];  //  reserved for future use, zeroed
       } u3_book_head;
 
     /* u3_book_meta: on-disk metadata format (fixed 256 bytes)
@@ -41,11 +37,12 @@
     /* u3_book: event log handle
     */
       typedef struct _u3_book {
-        c3_i         fid_i;      //  file descriptor
-        c3_c*        pax_c;      //  file path
-        u3_book_head hed_u;      //  cached header
-        c3_w         off_w;      //  append offset (end of last event)
-        c3_o         dit_o;      //  header needs sync
+        c3_i         fid_i;      //  file descriptor for book.log
+        c3_i         met_i;      //  file descriptor for meta.bin
+        c3_c*        pax_c;      //  file path to book.log
+        u3_book_head hed_u;      //  cached header (immutable)
+        c3_d         las_d;      //  cached last event number
+        c3_d         off_d;      //  cached append offset (end of last event)
       } u3_book;
 
     /* u3_book_walk: event iterator
@@ -54,7 +51,7 @@
         c3_i fid_i;    //  file descriptor
         c3_d nex_d;    //  next event number to read
         c3_d las_d;    //  last event number, inclusive
-        c3_w off_w;    //  current file offset
+        c3_d off_d;    //  current file offset
         c3_o liv_o;    //  iterator valid
       } u3_book_walk;
 
