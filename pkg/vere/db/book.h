@@ -14,9 +14,10 @@
         c3_w ver_w;      //  format version: 1
         c3_d fir_d;      //  first event number in file
         c3_d las_d;      //  last event number in file
-        c3_w off_w;      //  offset to metadata section
+        c3_w met_w;      //  offset to metadata section
         c3_w len_w;      //  length of metadata section (reserved, currently unused)
-        c3_y pad_y[32];  //  reserved for future use, zeroed
+        c3_w off_w;      //  append offset
+        c3_y pad_y[28];  //  reserved for future use, zeroed
       } u3_book_head;
 
     /* u3_book_meta: on-disk metadata format (fixed 256 bytes)
@@ -45,7 +46,6 @@
         c3_c*        pax_c;      //  file path
         u3_book_head hed_u;      //  cached header
         c3_w         off_w;      //  append offset (end of last event)
-        c3_o         dit_o;      //  header needs sync
       } u3_book;
 
     /* u3_book_walk: event iterator

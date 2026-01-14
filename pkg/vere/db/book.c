@@ -60,7 +60,6 @@ _book_save_head(u3_book* txt_u)
     return c3n;
   }
 
-  txt_u->dit_o = c3n;
   return c3y;
 }
 
@@ -96,7 +95,7 @@ _book_read_head(u3_book* txt_u)
 
 /* _book_init_head(): initialize header for new file.
 */
-static void
+static c3_o
 _book_init_head(u3_book* txt_u)
 {
   memset(&txt_u->hed_u, 0, sizeof(u3_book_head));
@@ -104,9 +103,10 @@ _book_init_head(u3_book* txt_u)
   txt_u->hed_u.ver_w = BOOK_VERSION;
   txt_u->hed_u.fir_d = 0;
   txt_u->hed_u.las_d = 0;
-  txt_u->hed_u.off_w = sizeof(u3_book_head);
+  txt_u->hed_u.met_w = sizeof(u3_book_head);
   txt_u->hed_u.len_w = sizeof(u3_book_meta);
-  txt_u->dit_o = c3y;
+  txt_u->hed_u.off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
+  return _book_save_head(txt_u);
 }
 
 /* _book_init_meta(): initialize metadata section with zeros.
@@ -325,6 +325,8 @@ _book_skip_deed(c3_i fid_i, c3_w* off_w)
 **   validates each record's CRC and len_d == let_d.
 **   returns offset to append next event.
 **   updates header if corruption detected.
+**   NOTE: it will also truncate the corrupted event
+**   and all events past that if there was a corrupted event
 */
 static c3_w
 _book_scan_end(u3_book* txt_u)
@@ -374,9 +376,10 @@ _book_scan_end(u3_book* txt_u)
     } else {
       txt_u->hed_u.las_d = txt_u->hed_u.fir_d + cot_d - 1;
     }
-
-    txt_u->dit_o = c3y;
-    _book_save_head(txt_u);
+    txt_u->hed_u.off_w = off_w;
+    if ( c3n ==_book_save_head(txt_u) ) {
+      u3_assert(!"book: fatal: could not save header on recovery\r\n");
+    }
 
     //  truncate file
     if ( -1 == ftruncate(txt_u->fid_i, off_w) ) {
@@ -390,6 +393,29 @@ _book_scan_end(u3_book* txt_u)
   return off_w;
 }
 
+static c3_o
+_book_init(u3_book* txt_u, c3_zs siz_zs)
+{
+  if ( 0 == siz_zs ) {
+    // new log file
+    //
+    if ( c3n == c3a(_book_init_head(txt_u), _book_init_meta(txt_u)) ) {
+      return c3n;
+    }
+    txt_u->off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
+    return c3y;
+  }
+
+  if ( siz_zs < (c3_zs)sizeof(u3_book_head) ) {
+    fprintf(stderr, "book: file too small: %lld bytes\r\n",
+            (long long)siz_zs);
+    return c3n;
+  }
+  if ( c3n ==_book_read_head(txt_u) ) return c3n;
+  txt_u->off_w = txt_u->hed_u.off_w;
+  return c3y;
+}
+
 /* u3_book_init(): open/create event log.
 */
 u3_book*
@@ -400,10 +426,8 @@ u3_book_init(const c3_c* pax_c)
   struct stat buf_u;
   u3_book* txt_u;
 
-  //  construct path to book.log
   snprintf(path_c, sizeof(path_c), "%s/book.log", pax_c);
 
-  //  open or create file
   fid_i = c3_open(path_c, O_RDWR | O_CREAT, 0644);
   if ( 0 > fid_i ) {
     fprintf(stderr, "book: failed to open %s: %s\r\n",
@@ -411,53 +435,22 @@ u3_book_init(const c3_c* pax_c)
     return 0;
   }
 
-  //  get file size
   if ( 0 > fstat(fid_i, &buf_u) ) {
     fprintf(stderr, "book: fstat failed: %s\r\n", strerror(errno));
     close(fid_i);
     return 0;
   }
-
-  //  allocate log structure
+  
   txt_u = c3_calloc(sizeof(u3_book));
   txt_u->fid_i = fid_i;
   txt_u->pax_c = c3_malloc(strlen(path_c) + 1);
   strcpy(txt_u->pax_c, path_c);
 
-  if ( buf_u.st_size == 0 ) {
-    //  new file: initialize header
-    _book_init_head(txt_u);
-    _book_save_head(txt_u);
-    //  initialize metadata section
-    if ( c3n == _book_init_meta(txt_u) ) {
-      close(fid_i);
-      c3_free(txt_u->pax_c);
-      c3_free(txt_u);
-      return 0;
-    }
-    //  events start after header + reserved metadata area
-    txt_u->off_w = sizeof(u3_book_head) + sizeof(u3_book_meta);
-  }
-  else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
-    //  corrupt file: too small
-    fprintf(stderr, "book: file too small: %lld bytes\r\n",
-            (long long)buf_u.st_size);
+  if ( c3n == _book_init(txt_u, buf_u.st_size) ) {
     close(fid_i);
     c3_free(txt_u->pax_c);
     c3_free(txt_u);
     return 0;
-  }
-  else {
-    //  existing file: read and validate header
-    if ( c3n == _book_read_head(txt_u) ) {
-      close(fid_i);
-      c3_free(txt_u->pax_c);
-      c3_free(txt_u);
-      return 0;
-    }
-
-    //  scan to find actual end, recover from corruption
-    txt_u->off_w = _book_scan_end(txt_u);
   }
 
   return txt_u;
@@ -472,15 +465,7 @@ u3_book_exit(u3_book* txt_u)
     return;
   }
 
-  //  sync header if dirty
-  if ( c3y == txt_u->dit_o ) {
-    _book_save_head(txt_u);
-  }
-
-  //  close file
   close(txt_u->fid_i);
-
-  //  free resources
   c3_free(txt_u->pax_c);
   c3_free(txt_u);
 }
@@ -631,14 +616,14 @@ u3_book_save(u3_book* txt_u,
 
   //  update header
   txt_u->hed_u.las_d = eve_d + len_d - 1;
-  txt_u->off_w = now_w;
-  txt_u->dit_o = c3y;
-
+  txt_u->hed_u.off_w = now_w;
+  
   //  write and sync header
   if ( c3n == _book_save_head(txt_u) ) {
     return c3n;
   }
-
+  
+  txt_u->off_w = now_w;
   return c3y;
 }
 
