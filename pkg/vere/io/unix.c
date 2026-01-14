@@ -872,6 +872,8 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
 
   _unix_mkdir(pax_c);
   _unix_watch_dir(dir_u, par_u, pax_c);
+  
+  c3_free(pax_c);
 }
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
@@ -1337,7 +1339,6 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
       u3_ufil* fil_u = c3_malloc(sizeof(u3_ufil));
       _unix_watch_file(unx_u, fil_u, par_u, pax_c);
       fil_u->gum_w = gum_w;
-      goto _unix_sync_file_out;
     }
     else {
       _unix_write_file_soft((u3_ufil*) nod_u, u3k(u3t(mim)));
@@ -1345,8 +1346,6 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
   }
 
   c3_free(pax_c);
-
-_unix_sync_file_out:
   u3z(mim);
 }
 
@@ -1403,6 +1402,8 @@ _unix_sync_change(u3_unix* unx_u, u3_udir* dir_u, u3_noun pax, u3_noun mim)
       }
 
       _unix_sync_change(unx_u, (u3_udir*) nod_u, u3k(t_pax), mim);
+      
+      c3_free(nam_c);
     }
   }
   u3z(pax);
@@ -1580,6 +1581,14 @@ static void
 _unix_io_exit(u3_auto* car_u)
 {
   u3_unix* unx_u = (u3_unix*)car_u;
+
+  u3_umon* mon_u = unx_u->mon_u;
+  u3_umon* nex_u;
+  while ( mon_u ) {
+    nex_u = mon_u->nex_u;
+    _unix_free_mount_point(unx_u, mon_u);
+    mon_u = nex_u;
+  }
 
   u3z(unx_u->sat);
   c3_free(unx_u->pax_c);

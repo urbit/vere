@@ -178,10 +178,12 @@ jobs:
             "aarch64-macos-none macos-aarch64 64"
             "x86_64-linux-musl linux-x86_64 64"
             "x86_64-macos-none macos-x86_64 64"
+            "x86_64-windows-gnu windows-x86_64 64"
             "aarch64-linux-musl linux-aarch64 32"
             "aarch64-macos-none macos-aarch64 32"
             "x86_64-linux-musl linux-x86_64 32"
             "x86_64-macos-none macos-x86_64 32"
+            "x86_64-windows-gnu windows-x86_64 32"
           )
 
           # Filter targets based on matrix.bits
