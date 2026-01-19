@@ -204,7 +204,11 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          printf $(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.7s $(git rev-parse HEAD) > ./VERSION
+          if [ "${{ inputs.pace }}" == "live" ]; then
+            sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig > ./VERSION
+          else
+            printf "$(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.7s" "$(git rev-parse HEAD)" > ./VERSION
+          fi
 
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
