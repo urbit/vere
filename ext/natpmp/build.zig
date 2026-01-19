@@ -5,10 +5,9 @@ pub fn build(b: *std.Build) void {
     const t = target.result;
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "natpmp",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     const dep_c = b.dependency("natpmp", .{

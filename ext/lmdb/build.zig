@@ -9,17 +9,16 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const lmdb = b.addStaticLibrary(.{
+    const lmdb = b.addLibrary(.{
         .name = "lmdb",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lmdb.linkLibC();
 
     lmdb.addIncludePath(lmdb_c.path("libraries/liblmdb"));
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
 
     try flags.appendSlice(&.{
