@@ -533,6 +533,7 @@
           c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
+          MDB_env*         mdb_u;               //  lmdb env for top-level metadata
           u3_book*         txt_u;               //  book env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
@@ -875,15 +876,15 @@
         void
         u3_disk_exit(u3_disk* log_u);
 
-      /* u3_disk_read_meta(): read metadata.
+      /* u3_disk_read_meta(): read metadata from LMDB.
       */
         c3_o
-        u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u);
+        u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u);
 
-      /* u3_disk_save_meta(): save metadata.
+      /* u3_disk_save_meta(): save metadata to LMDB.
       */
         c3_o
-        u3_disk_save_meta(u3_book* txt_u, const u3_meta* met_u);
+        u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u);
 
       /* u3_disk_save_meta_meta(): save meta metadata.
       */

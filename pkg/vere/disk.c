@@ -5,6 +5,7 @@
 #include "vere.h"
 #include "version.h"
 #include "db/book.h"
+#include "db/lmdb.h"
 #include <types.h>
 
 #include "migrate.h"
@@ -461,27 +462,27 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
   c3_free(wok_u);
 }
 
-/* _disk_save_meta(): serialize atom, save as metadata at [key_c].
+/* _disk_save_meta(): save metadata field to LMDB.
 */
 static c3_o
-_disk_save_meta(u3_book* txt_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 {
-  return u3_book_save_meta(txt_u, key_c, len_w, byt_y);
+  return u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
 }
 
-/* u3_disk_save_meta(): save metadata.
+/* u3_disk_save_meta(): save metadata to LMDB.
 */
 c3_o
-u3_disk_save_meta(u3_book* txt_u, const u3_meta* met_u)
+u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
   u3_assert( c3y == u3a_is_cat(met_u->lif_w) );
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
-  if (  (c3n == _disk_save_meta(txt_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
-     || (c3n == _disk_save_meta(txt_u, "who", sizeof(met_u->who_d), (c3_y*)met_u->who_d))
-     || (c3n == _disk_save_meta(txt_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
-     || (c3n == _disk_save_meta(txt_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
+  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
+     || (c3n == _disk_save_meta(mdb_u, "who", sizeof(met_u->who_d), (c3_y*)met_u->who_d))
+     || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
+     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
   {
     u3z(who);
     return c3n;
@@ -492,24 +493,25 @@ u3_disk_save_meta(u3_book* txt_u, const u3_meta* met_u)
 }
 
 
-/* u3_disk_save_meta_meta(): save meta metadata.
+/* u3_disk_save_meta_meta(): save meta metadata using LMDB.
 */
 c3_o
 u3_disk_save_meta_meta(c3_c* log_c, const u3_meta* met_u)
 {
-  u3_book* dbm_u;
+  MDB_env* mdb_u;
 
-  if ( 0 == (dbm_u = u3_book_init(log_c)) ) {
-    fprintf(stderr, "disk: failed to initialize meta-book\r\n");
+  if ( 0 == (mdb_u = u3_lmdb_init(log_c, 1ULL << 30)) ) {
+    fprintf(stderr, "disk: failed to initialize lmdb for metadata\r\n");
     return c3n;
   }
 
-  if ( c3n == u3_disk_save_meta(dbm_u, met_u) ) {
+  if ( c3n == u3_disk_save_meta(mdb_u, met_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
+    u3_lmdb_exit(mdb_u);
     return c3n;
   }
 
-  u3_book_exit(dbm_u);
+  u3_lmdb_exit(mdb_u);
 
   return c3y;
 }
@@ -537,10 +539,10 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
   }
 }
 
-/* u3_disk_read_meta(): read metadata.
+/* u3_disk_read_meta(): read metadata from LMDB.
 */
 c3_o
-u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u)
+u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
   c3_w ver_w, lif_w;
   c3_d who_d[2];
@@ -550,13 +552,13 @@ u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u)
 
   //  version
   //
-  u3_book_read_meta(txt_u, &val_u, "version", _disk_meta_read_cb);
+  u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
 
   ver_w = val_u.buf_y[0];
 
   //  identity
   //
-  u3_book_read_meta(txt_u, &val_u, "who", _disk_meta_read_cb);
+  u3_lmdb_read_meta(mdb_u, &val_u, "who", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no identity\r\n");
@@ -591,7 +593,7 @@ u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u)
 
   //  fake bit
   //
-  u3_book_read_meta(txt_u, &val_u, "fake", _disk_meta_read_cb);
+  u3_lmdb_read_meta(mdb_u, &val_u, "fake", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no fake bit\r\n");
@@ -611,7 +613,7 @@ u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u)
 
   //  life
   //
-  u3_book_read_meta(txt_u, &val_u, "life", _disk_meta_read_cb);
+  u3_lmdb_read_meta(mdb_u, &val_u, "life", _disk_meta_read_cb);
 
   if ( 0 > val_u.hav_i ) {
     fprintf(stderr, "disk: read meta: no lifecycle length\r\n");
@@ -651,7 +653,7 @@ u3_disk_read_meta(u3_book* txt_u, u3_meta* met_u)
   }
 
   //  NB: we read metadata from LMDB even when met_u is null because sometimes
-  //      because sometimes we call this just to ensure metadata exists
+  //      we call this just to ensure metadata exists
   if ( met_u ) {
     met_u->ver_w = ver_w;
     memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
@@ -823,9 +825,19 @@ u3_disk_exit(u3_disk* log_u)
     return;
   }
 
-  //  close database
+  //  close LMDB metadata environment (if still open)
   //
-  u3_book_exit(log_u->txt_u);
+  if ( log_u->mdb_u ) {
+    u3_lmdb_exit(log_u->mdb_u);
+    log_u->mdb_u = 0;
+  }
+
+  //  close epoch event log (book)
+  //
+  if ( log_u->txt_u ) {
+    u3_book_exit(log_u->txt_u);
+    log_u->txt_u = 0;
+  }
 
   //  dispose planned writes
   //
@@ -1143,14 +1155,18 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 #endif
 
-  //  get metadata from old log, update version
+  //  get metadata from top-level LMDB, update version
   u3_meta old_u;
-  if ( c3y != u3_disk_read_meta(log_u->txt_u, &old_u) ) {
+  if ( c3y != u3_disk_read_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  u3_book_exit(log_u->txt_u);
-  log_u->txt_u = 0;
+
+  //  close old epoch book if still open
+  if ( log_u->txt_u ) {
+    u3_book_exit(log_u->txt_u);
+    log_u->txt_u = 0;
+  }
 
   //  initialize db of new epoch
   if ( 0 == (log_u->txt_u = u3_book_init(epo_c)) ) {
@@ -1159,10 +1175,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail3;
   }
 
-  // write the metadata to the database
+  // write the metadata to the epoch's book
   old_u.ver_w = U3D_VERLAT;
-  if ( c3n == u3_disk_save_meta(log_u->txt_u, &old_u) ) {
-    fprintf(stderr, "disk: failed to save metadata\r\n");
+  if ( c3n == u3_book_save_meta(log_u->txt_u, "version", sizeof(c3_w), (c3_y*)&old_u.ver_w)
+     || c3n == u3_book_save_meta(log_u->txt_u, "who", sizeof(old_u.who_d), (c3_y*)old_u.who_d)
+     || c3n == u3_book_save_meta(log_u->txt_u, "fake", sizeof(c3_o), (c3_y*)&old_u.fak_o)
+     || c3n == u3_book_save_meta(log_u->txt_u, "life", sizeof(c3_w), (c3_y*)&old_u.lif_w) ) {
+    fprintf(stderr, "disk: failed to save metadata to epoch\r\n");
     goto fail3;
   }
 
@@ -1338,16 +1357,16 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
   //  NB: requires that log_u->txt_u is initialized to log/data.mdb
   //  XX: put old log in separate pointer (old_u?)?
 
-  //  get metadata from old log, update version
+  //  get metadata from top-level LMDB, update version
   u3_meta olm_u;
-  if ( c3y != u3_disk_read_meta(log_u->txt_u, &olm_u) ) {
+  if ( c3y != u3_disk_read_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
   }
 
-  //  finish with old log
-  u3_book_exit(log_u->txt_u);
-  log_u->txt_u = 0;
+  //  finish with old log LMDB (will be re-initialized for epoch)
+  u3_lmdb_exit(log_u->mdb_u);
+  log_u->mdb_u = 0;
 
   //  check if lock.mdb is readable in log directory
   c3_o luk_o = c3n;
@@ -1421,8 +1440,11 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
   }
 
   olm_u.ver_w = U3D_VERLAT;
-  if ( c3n == u3_disk_save_meta(log_u->txt_u, &olm_u) ) {
-    fprintf(stderr, "disk: failed to save metadata\r\n");
+  if ( c3n == u3_book_save_meta(log_u->txt_u, "version", sizeof(c3_w), (c3_y*)&olm_u.ver_w)
+     || c3n == u3_book_save_meta(log_u->txt_u, "who", sizeof(olm_u.who_d), (c3_y*)olm_u.who_d)
+     || c3n == u3_book_save_meta(log_u->txt_u, "fake", sizeof(c3_o), (c3_y*)&olm_u.fak_o)
+     || c3n == u3_book_save_meta(log_u->txt_u, "life", sizeof(c3_w), (c3_y*)&olm_u.lif_w) ) {
+    fprintf(stderr, "disk: failed to save metadata to book\r\n");
     return c3n;
   }
   
@@ -1686,9 +1708,9 @@ _disk_migrate_old(u3_disk* log_u)
     case U3D_VER1: {
       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
 
-      //  set version to 2 (migration in progress)
+      //  set version to 2 (migration in progress) in top-level LMDB
       log_u->ver_w = U3D_VER2;
-      if ( c3n == _disk_save_meta(log_u->txt_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }
@@ -1784,9 +1806,9 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
   if (  (u3_dlod_boot != lod_e)
      && !fir_d
-     && !las_d
-     && (c3n == u3_disk_read_meta(log_u->txt_u, 0)) )
+     && !las_d )
   {
+    //  empty epoch (no events and no metadata)
     u3_book_exit(log_u->txt_u);
     log_u->txt_u = 0;
     return _epoc_void;
@@ -2035,12 +2057,12 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return log_u;
     }
 
-    //  read metadata (version) from old log / top-level
+    //  read metadata (version) from top-level LMDB
     //
     {
       u3_meta met_u;
-      if (  (0 == (log_u->txt_u = u3_book_init(log_c)))
-         || (c3n == u3_disk_read_meta(log_u->txt_u, &met_u)) )
+      if (  (0 == (log_u->mdb_u = u3_lmdb_init(log_c, 1ULL << 30)))
+         || (c3n == u3_disk_read_meta(log_u->mdb_u, &met_u)) )
       {
         fprintf(stderr, "disk: failed to read metadata\r\n");
         c3_free(log_u); // XX leaks dire(s)
@@ -2059,14 +2081,19 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
       }
+      //  for old ships, also open the top-level book for event data
+      if ( 0 == (log_u->txt_u = u3_book_init(log_c)) ) {
+        fprintf(stderr, "disk: failed to open old book\r\n");
+        c3_free(log_u); // XX leaks dire(s)
+        return 0;
+      }
       _disk_migrate_old(log_u);
       log_u->liv_o = c3y;
       return log_u;
     }
 
-    //  close top-level book
-    u3_book_exit(log_u->txt_u);
-    log_u->txt_u = 0;
+    //  keep top-level LMDB metadata environment open for later access
+    //  (txt_u will be initialized for the epoch next)
 
     //  get latest epoch number
     c3_d lat_d;
