@@ -788,6 +788,12 @@ u3_book_save(u3_book* txt_u,
       fprintf(stderr, "book: failed to write fir_d: %s\r\n", strerror(errno));
       return c3n;
     }
+
+    //  sync fir_d before writing deeds to ensure header is durable
+    if ( -1 == c3_sync(txt_u->fid_i) ) {
+      fprintf(stderr, "book: failed to sync fir_d: %s\r\n", strerror(errno));
+      return c3n;
+    }
   }
   else {
     //  non-empty: must be contiguous
