@@ -16,6 +16,7 @@ MODULE.bazel.lock
 # clangd
 **/.cache
 compile_commands.json
+/cdb
 
 # Swap files.
 *.swo

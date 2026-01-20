@@ -616,6 +616,7 @@ _lick_io_exit(u3_auto* car_u)
   }
 
   u3s_cue_xeno_done(lic_u->sil_u);
+  c3_free(lic_u->fod_c);
   c3_free(lic_u);
 }
 

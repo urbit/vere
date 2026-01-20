@@ -30,7 +30,6 @@
 #include "nock.h"
 #include "openssl/crypto.h"
 #include "options.h"
-#include "rsignal.h"
 #include "retrieve.h"
 #include "trace.h"
 #include "urcrypt.h"
@@ -48,7 +47,7 @@
         c3_o
         u3m_trap(void);
 #else
-#       define u3m_trap() (u3_noun)(setjmp(u3R->esc.buf))
+#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -108,7 +107,7 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static jmp_buf u3_Signal;
+static rsignal_jmpbuf u3_Signal;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -286,7 +285,14 @@ _cm_stack_unwind(void)
   u3_noun tax;
 
   while ( u3R != &(u3H->rod_u) ) {
-    u3_noun yat = u3m_love(u3R->bug.tax);
+    u3_noun yat = u3R->bug.tax;
+    u3m_fall();
+    yat = u3a_take(yat);
+    //  pop the stack
+    //
+    u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+    u3R->cap_p = u3R->ear_p;
+    u3R->ear_p = 0;
 
     u3R->bug.tax = u3kb_weld(yat, u3R->bug.tax);
   }
@@ -373,7 +379,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 /* _cm_signal_deep(): start deep processing; set timer for [mil_w] or 0.
 */
 static void
-_cm_signal_deep(c3_w mil_w)
+_cm_signal_deep(void)
 {
   //  disable outer system signal handling
   //
@@ -393,6 +399,7 @@ _cm_signal_deep(c3_w mil_w)
 #endif
   rsignal_install_handler(SIGINT, _cm_signal_handle_intr);
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
+  rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
 
   // Provide a little emergency memory, for use in case things
   // go utterly haywire.
@@ -401,21 +408,6 @@ _cm_signal_deep(c3_w mil_w)
     u3H->rod_u.bug.mer = u3i_string(
       "emergency buffer with sufficient space to cons the trace and bail"
     );
-  }
-
-  if ( mil_w ) {
-    struct itimerval itm_u;
-
-    timerclear(&itm_u.it_interval);
-    itm_u.it_value.tv_sec  = (mil_w / 1000);
-    itm_u.it_value.tv_usec = 1000 * (mil_w % 1000);
-
-    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
-      u3l_log("loom: set timer failed %s", strerror(errno));
-    }
-    else {
-      rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
-    }
   }
 
   u3t_boot();
@@ -530,7 +522,8 @@ _pave_parts(void)
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
   u3R->byc.har_p = u3h_new();
-
+  u3R->lop_p     = u3h_new();
+  u3R->tim       = u3_nul;
   u3R->how.fag_w = 0;
 }
 
@@ -664,6 +657,13 @@ _find_home(void)
     u3n_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
+  }
+
+  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
+  //  HAMT
+  //
+  if (!u3R->lop_p) {
+    u3R->lop_p = u3h_new();
   }
 }
 
@@ -1004,8 +1004,6 @@ u3m_bail(u3_noun how)
     stk_u->fow_w = u3R->fow_w;
   }
 
-  /* Longjmp, with an underscore.
-  */
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1225,6 +1223,115 @@ u3m_hate(c3_w pad_w)
   );
 }
 
+//  RETAINS `now`.
+//
+static void
+_m_renew_timer(u3_atom now)
+{
+  u3_atom min = u3_nul;
+  u3a_road* rod_u = u3R;
+  c3_t no_timers_t = true;
+  while ( 1 ) {
+    for (u3_noun l = rod_u->tim; l; l = u3t(l)) {
+      no_timers_t = false;
+      u3_atom fut = u3h(l);
+      if ( _(u3qa_gth(fut, now)) ) {
+        min = ( u3_nul == min ) ? u3k(fut) : u3ka_min(min, u3k(fut));
+      }
+      else {
+        //  we are waiting for the signal to come, do nothing
+        //
+        u3z(min);
+        return;
+      }
+    }
+    if ( !rod_u->par_p ) break;
+    rod_u = u3to(u3_road, rod_u->par_p);
+  }
+
+  if ( no_timers_t ) {
+    //  no timers: `min` is still u3_nul.
+    //  disarm the timer
+    //
+    struct itimerval itm_u;
+    timerclear(&itm_u.it_interval);
+    timerclear(&itm_u.it_value);
+    if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+      u3l_log("loom: clear timer failed %s", strerror(errno));
+    }
+    return;
+  }
+
+  if ( u3_nul == min ) {
+    //  strange case: `now` is later or equal to all our deadlines. do nothing
+    //
+    return;
+  }
+
+  u3_atom gap = u3ka_sub(min, u3k(now));
+  
+  struct itimerval itm_u;
+  timerclear(&itm_u.it_interval);
+  c3_t is_set_t = u3m_time_out_it(&itm_u, gap);
+  if ( !is_set_t ) {
+    //  the gap is too small to resolve in itimerval, emulate firing SIGALRM
+    // immediately
+    //
+    u3m_signal(c3__alrm);
+  }
+  if ( rsignal_setitimer(ITIMER_VIRTUAL, &itm_u, 0) ) {
+    u3l_log("loom: set timer failed %s", strerror(errno));
+  }
+}
+
+static void
+_m_renew_now(void)
+{
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  u3_atom now = u3m_time_in_tv(&tim_u);
+  _m_renew_timer(now);
+  u3z(now);
+}
+
+/* u3m_timer_set(): push a new timer to the timer stack.
+** gap is @dr, gap != 0
+*/
+void
+u3m_timer_set(u3_atom gap)
+{
+  if ( !u3R->par_p ) {
+    //  noop on the home road since we have no jump buffer
+    //
+    u3z(gap);
+    return;
+  }
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  u3_atom now = u3m_time_in_tv(&tim_u);
+  u3_atom fut = u3ka_add(u3k(now), gap);
+  u3R->tim = u3nc(fut, u3R->tim);
+  _m_renew_timer(now);
+  u3z(now);
+}
+
+/* u3m_timer_pop(): pop a timer off the timer stack.
+** timer stack must be non-empty
+*/
+void
+u3m_timer_pop(void)
+{
+  if ( !u3R->par_p ) {
+    //  noop on the home road since we have no jump buffer
+    //
+    return;
+  }
+  c3_dessert( c3y == u3du(u3R->tim) );
+  u3_noun t = u3k(u3t(u3R->tim));
+  u3z(u3R->tim), u3R->tim = t;
+  _m_renew_now();
+}
+
 /* u3m_love(): return product from leap.
 */
 u3_noun
@@ -1236,9 +1343,15 @@ u3m_love(u3_noun pro)
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
 
+  //  are there any timers on the road?
+  //
+  c3_o tim_o = u3du(u3R->tim);
+
   //  fallback to parent road (child heap on parent's stack)
   //
   u3m_fall();
+
+  if ( _(tim_o) ) _m_renew_now();
 
   //  copy product and caches off our stack
   //
@@ -1260,6 +1373,43 @@ u3m_love(u3_noun pro)
   u3z_reap(u3z_memo_keep, per_p);
 
   return pro;
+}
+
+/* u3m_warm(): return product from leap without promoting state
+*/
+u3_noun
+u3m_warm(u3_noun pro)
+{
+  c3_o tim_o = u3du(u3R->tim);
+  u3m_fall();
+  if ( _(tim_o) ) _m_renew_now();
+  pro = u3a_take(pro);
+
+  //  pop the stack
+  //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+  u3R->cap_p = u3R->ear_p;
+  u3R->ear_p = 0;
+  return pro;
+}
+
+/* u3m_pour(): return error ball from leap, promoting the state if the error
+ * is deterministic
+*/
+u3_noun
+u3m_pour(u3_noun why)
+{
+  u3_assert(c3y == u3du(why));
+  switch (u3h(why)) {
+    case 0:
+    case 1: {
+      return u3m_love(why);
+    } break;
+
+    default: {
+      return u3m_warm(why);
+    } break;
+  }
 }
 
 /* u3m_golf(): record cap_p length for u3m_flog().
@@ -1341,7 +1491,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Enter internal signal regime.
    */
-  _cm_signal_deep(mil_w);
+  _cm_signal_deep();
 
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
@@ -1361,9 +1511,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   */
   u3m_hate(pad_w);
 
+  if ( mil_w ) {
+    u3m_timer_set(u3m_time_gap_in_mil(mil_w));
+  }
+
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1388,7 +1542,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   else {
     /* Overload the error result.
     */
-    pro = u3m_love(why);
+    pro = u3m_pour(why);
   }
 
   /* Revert to external signal regime.
@@ -1475,7 +1629,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1519,7 +1673,7 @@ u3m_soft_cax(u3_funq fun_f,
         } break;
 
         case 3: {                             //  failure; rebail w/trace
-          u3_noun yod = u3m_love(u3t(why));
+          u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
             (u3nt(3,
@@ -1576,7 +1730,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1622,7 +1776,7 @@ u3m_soft_run(u3_noun gul,
         } break;
 
         case 3: {                             //  failure; rebail w/trace
-          u3_noun yod = u3m_love(u3t(why));
+          u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
             (u3nt(3,
@@ -1631,7 +1785,7 @@ u3m_soft_run(u3_noun gul,
         } break;
 
         case 4: {                             //  meta-bail
-          u3m_bail(u3m_love(u3t(why)));
+          u3m_bail(u3m_pour(u3t(why)));
         } break;
       }
     }
@@ -1678,7 +1832,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)setjmp(u3R->esc.buf)) ) {
+  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -1691,7 +1845,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     /* Push the error back up to the calling context - not the run we
     ** are in, but the caller of the run, matching pure nock semantics.
     */
-    u3m_bail(u3nc(4, u3m_love(why)));
+    u3m_bail(u3nc(4, u3m_pour(why)));
   }
 
   /* Release the sample.  Note that we used it above, but in a junior
@@ -1703,6 +1857,16 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Return the product.
   */
   return pro;
+}
+
+void
+u3m_mark_mute(void)
+{
+  u3m_quac** arr_u = u3m_mark();
+  for (c3_w i_w = 0; arr_u[i_w]; i_w++) {
+    u3a_quac_free(arr_u[i_w]);
+  }
+  c3_free(arr_u);
 }
 
 /* u3m_grab(): garbage-collect the world, plus extra roots.
@@ -1729,7 +1893,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
     }
     va_end(vap);
   }
-  u3m_mark(); // XX leaks
+  u3m_mark_mute();
   u3a_sweep();
 }
 
@@ -1956,6 +2120,19 @@ u3m_pretty(u3_noun som)
 {
   c3_w len_w = _cm_in_pretty(som, c3y, 0);
   c3_c* pre_c = c3_malloc(len_w + 1);
+
+  _cm_in_pretty(som, c3y, pre_c);
+  pre_c[len_w] = 0;
+  return pre_c;
+}
+
+/* u3m_pretty_road(): dumb prettyprint to string. Road allocation
+*/
+c3_c*
+u3m_pretty_road(u3_noun som)
+{
+  c3_w len_w = _cm_in_pretty(som, c3y, 0);
+  c3_c* pre_c = u3a_malloc(len_w + 1);
 
   _cm_in_pretty(som, c3y, pre_c);
   pre_c[len_w] = 0;
@@ -2613,4 +2790,200 @@ u3m_pack(void)
   u3a_pack_move(u3R);
 
   return (u3a_open(u3R) - pre_w);
+}
+
+/* Time functions */
+
+/* u3m_time_sec_in(): urbit seconds from unix time.
+**
+** Adjust for future leap secs!
+*/
+c3_d
+u3m_time_sec_in(c3_w unx_w)
+{
+  return 0x8000000cce9e0d80ULL + (c3_d)unx_w;
+}
+
+/* u3m_time_sec_out(): unix time from urbit seconds.
+**
+** Adjust for future leap secs!
+*/
+c3_w
+u3m_time_sec_out(c3_d urs_d)
+{
+  c3_d adj_d = (urs_d - 0x8000000cce9e0d80ULL);
+
+  if ( adj_d > 0xffffffffULL ) {
+    fprintf(stderr, "Agh! It's 2106! And no one's fixed this shite!\n");
+    exit(1);
+  }
+  return (c3_w)adj_d;
+}
+
+/* u3m_time_fsc_in(): urbit fracto-seconds from unix microseconds.
+*/
+c3_d
+u3m_time_fsc_in(c3_w usc_w)
+{
+  c3_d usc_d = usc_w;
+
+  return ((usc_d * 65536ULL) / 1000000ULL) << 48ULL;
+}
+
+/* u3m_time_fsc_out: unix microseconds from urbit fracto-seconds.
+*/
+c3_w
+u3m_time_fsc_out(c3_d ufc_d)
+{
+  return (c3_w) (((ufc_d >> 48ULL) * 1000000ULL) / 65536ULL);
+}
+
+/* u3m_time_msc_out: unix microseconds from urbit fracto-seconds.
+*/
+c3_w
+u3m_time_msc_out(c3_d ufc_d)
+{
+  return (c3_w) (((ufc_d >> 48ULL) * 1000ULL) / 65536ULL);
+}
+
+/* u3m_time_in_tv(): urbit time from struct timeval.
+*/
+u3_atom
+u3m_time_in_tv(struct timeval* tim_tv)
+{
+  c3_w unx_w = tim_tv->tv_sec;
+  c3_w usc_w = tim_tv->tv_usec;
+  c3_d cub_d[2];
+
+  cub_d[0] = u3m_time_fsc_in(usc_w);
+  cub_d[1] = u3m_time_sec_in(unx_w);
+
+  return u3i_chubs(2, cub_d);
+}
+
+/* u3m_time_out_tv(): struct timeval from urbit time.
+*/
+void
+u3m_time_out_tv(struct timeval* tim_tv, u3_noun now)
+{
+  c3_d ufc_d = u3r_chub(0, now);
+  c3_d urs_d = u3r_chub(1, now);
+
+  tim_tv->tv_sec = u3m_time_sec_out(urs_d);
+  tim_tv->tv_usec = u3m_time_fsc_out(ufc_d);
+
+  u3z(now);
+}
+
+/* u3m_time_in_ts(): urbit time from struct timespec.
+*/
+u3_atom
+u3m_time_in_ts(struct timespec* tim_ts)
+{
+  struct timeval tim_tv;
+
+  tim_tv.tv_sec = tim_ts->tv_sec;
+  tim_tv.tv_usec = (tim_ts->tv_nsec / 1000);
+
+  return u3m_time_in_tv(&tim_tv);
+}
+
+#if defined(U3_OS_linux) || defined(U3_OS_windows)
+/* u3m_time_t_in_ts(): urbit time from time_t.
+*/
+u3_atom
+u3m_time_t_in_ts(time_t tim)
+{
+  struct timeval tim_tv;
+
+  tim_tv.tv_sec = tim;
+  tim_tv.tv_usec = 0;
+
+  return u3m_time_in_tv(&tim_tv);
+}
+#endif /* defined(U3_OS_linux) */
+
+/* u3m_time_out_ts(): struct timespec from urbit time.
+*/
+void
+u3m_time_out_ts(struct timespec* tim_ts, u3_noun now)
+{
+  struct timeval tim_tv;
+
+  u3m_time_out_tv(&tim_tv, now);
+
+  tim_ts->tv_sec = tim_tv.tv_sec;
+  tim_ts->tv_nsec = (tim_tv.tv_usec * 1000);
+}
+
+/* u3m_time_out_it(): struct itimerval from urbit time gap.
+** returns true if it_value is set to non-zero values, false otherwise
+*/
+c3_t
+u3m_time_out_it(struct itimerval* tim_it, u3_noun gap)
+{
+  struct timeval tim_tv;
+  c3_d ufc_d = u3r_chub(0, gap);
+  c3_d urs_d = u3r_chub(1, gap);
+  tim_it->it_value.tv_sec  = urs_d;
+  tim_it->it_value.tv_usec = u3m_time_fsc_out(ufc_d);
+  u3z(gap);
+  return tim_it->it_value.tv_sec || tim_it->it_value.tv_usec;
+}
+
+/* u3m_time_gap_ms(): (wen - now) in ms.
+*/
+c3_d
+u3m_time_gap_ms(u3_noun now, u3_noun wen)
+{
+  if ( c3n == u3ka_gth(u3k(wen), u3k(now)) ) {
+    u3z(wen); u3z(now);
+    return 0ULL;
+  }
+  else {
+    u3_noun dif   = u3ka_sub(wen, now);
+    c3_d    fsc_d = u3r_chub(0, dif);
+    c3_d    sec_d = u3r_chub(1, dif);
+
+    u3z(dif);
+    return (sec_d * 1000ULL) + u3m_time_msc_out(fsc_d);
+  }
+}
+
+/* u3m_time_gap_double(): (wen - now) in libev resolution.
+*/
+double
+u3m_time_gap_double(u3_noun now, u3_noun wen)
+{
+  mpz_t now_mp, wen_mp, dif_mp;
+  double sec_g = (((double)(1ULL << 32ULL)) * ((double)(1ULL << 32ULL)));
+  double gap_g, dif_g;
+
+  u3r_mp(now_mp, now);
+  u3r_mp(wen_mp, wen);
+  mpz_init(dif_mp);
+  mpz_sub(dif_mp, wen_mp, now_mp);
+
+  u3z(now);
+  u3z(wen);
+
+  dif_g = mpz_get_d(dif_mp) / sec_g;
+  gap_g = (dif_g > 0.0) ? dif_g : 0.0;
+  mpz_clear(dif_mp); mpz_clear(wen_mp); mpz_clear(now_mp);
+
+  return gap_g;
+}
+
+/* u3m_time_gap_in_mil(): urbit time gap from milliseconds
+*/
+u3_atom
+u3m_time_gap_in_mil(c3_w mil_w)
+{
+  c3_d sec_d = mil_w / 1000;
+  c3_d usc_d = 1000 * (mil_w % 1000);
+  c3_d cub_d[2];
+
+  cub_d[0] = u3m_time_fsc_in(usc_d);
+  cub_d[1] = sec_d;
+  return u3i_chubs(2, cub_d);
 }
