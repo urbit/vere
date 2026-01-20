@@ -245,7 +245,6 @@ const c_source_files = [_][]const u8{
     "melt.c",
     "newt.c",
     "pier.c",
-    "time.c",
     "ward.c",
 };
 
