@@ -1,6 +1,7 @@
 .{
-    .name = "sigsegv",
+    .name = .sigsegv,
     .version = "0.0.1",
+    .fingerprint = 0xe049cfd74bc05e55,
     .dependencies = .{
         .macos_sdk = .{
             .url = "https://github.com/joseluisq/macosx-sdks/releases/download/14.5/MacOSX14.5.sdk.tar.xz",

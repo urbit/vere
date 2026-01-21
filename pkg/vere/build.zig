@@ -7,16 +7,12 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
-    const pace = b.option([]const u8, "pace", "") orelse  "live";
-        // @panic("Missing required option: pace");
-    const version = b.option([]const u8, "version", "") orelse  "3.5";
-        // @panic("Missing required option: version");
+    const pace = b.option([]const u8, "pace", "") orelse "live";
+    // @panic("Missing required option: pace");
+    const version = b.option([]const u8, "version", "") orelse "3.5";
+    // @panic("Missing required option: version");
 
-    const pkg_vere = b.addStaticLibrary(.{
-        .name = "vere",
-        .target = target,
-        .optimize = optimize,
-    });
+    const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -111,7 +107,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const pace_h = b.addWriteFile("pace.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
+        var output = std.array_list.Managed(u8).init(b.allocator);
         defer output.deinit();
 
         try output.appendSlice(b.fmt(
@@ -126,7 +122,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const version_h = b.addWriteFile("version.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
+        var output = std.array_list.Managed(u8).init(b.allocator);
         defer output.deinit();
 
         try output.appendSlice(b.fmt(
@@ -167,7 +163,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_past.artifact("past"));
     pkg_vere.linkLibC();
 
-    var files = std.ArrayList([]const u8).init(b.allocator);
+    var files = std.array_list.Managed([]const u8).init(b.allocator);
     defer files.deinit();
     try files.appendSlice(&c_source_files);
     if (t.os.tag == .macos) {
@@ -193,7 +189,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
         "-std=gnu23",

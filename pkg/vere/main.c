@@ -1617,6 +1617,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
     { "swap",          no_argument,       NULL, 7 },
     { "swap-to",       required_argument, NULL, 8 },
     { "lmdb-map-size", required_argument, NULL, 9 },
+    { "yolo",          no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1653,6 +1654,10 @@ _cw_cram(c3_i argc, c3_c* argv[])
         }
         break;
       }
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
+      } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1721,6 +1726,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     { "swap-to",       required_argument, NULL, 8 },
     { "lmdb-map-size", required_argument, NULL, 9 },
     { "replay-from",   required_argument, NULL, 'r' },
+    { "yolo",          no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1760,6 +1766,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
       case 'r': {
         roc_c = strdup(optarg);
+      } break;
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
       } break;
 
       case '?': {
@@ -1930,6 +1940,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
     { "gc-early",  no_argument,       NULL, 9 },
+    { "yolo",      no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1964,6 +1975,10 @@ _cw_melt(c3_i argc, c3_c* argv[])
         u3C.wag_w |= u3o_check_corrupt;
         break;
       }
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
+      } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");

@@ -14,10 +14,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const curl = b.addStaticLibrary(.{
+    const curl = b.addLibrary(.{
         .name = "curl",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     curl.linkLibC();

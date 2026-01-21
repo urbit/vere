@@ -28,22 +28,18 @@ const CdbGenStep = struct {
         var cwd = std.fs.cwd();
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
-        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch |e| {
-            std.log.err(
-                \\compile db fragments dir '{s}' not found ({s}).
-                \\clear caches and build with -Dgenerate-commands 
-                , .{
-                self.frags_dir,
-                @errorName(e),
-            });
-            return e;
+        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+            return;
         };
         defer dir.close();
 
         // Write compile_commands.json as a JSON array of fragment objects.
         var out_file = try cwd.createFile(self.out_path, .{ .truncate = true });
         defer out_file.close();
-        var w = out_file.writer();
+        var write_buffer: [4096]u8 = undefined;
+
+        var ww = out_file.writer(&write_buffer);
+        const w = &ww.interface;
 
         try w.writeByte('[');
 
@@ -69,6 +65,8 @@ const CdbGenStep = struct {
         }
 
         try w.writeAll("]\n");
+        try w.flush();
+
         cwd.deleteTree(self.frags_dir) catch {};
     }
 };
@@ -202,14 +200,13 @@ pub fn build(b: *std.Build) !void {
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var in_stream = buf_reader.reader();
-    var buf: [1024]u8 = undefined;
-    var last_line: [1024]u8 = undefined;
-    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+    var buf: [4096]u8 = undefined;
+    var reader = file.reader(&buf);
+    var last_line: [4096]u8 = undefined;
+    while (reader.interface.takeDelimiterInclusive('\n')) |line| {
         if (line.len > 0)
             last_line = buf;
-    }
+    } else |err| if (err != error.EndOfStream) return err;
     const git_rev = buf[41..48];
 
     // Binary version
@@ -217,9 +214,8 @@ pub fn build(b: *std.Build) !void {
         VERSION ++ "-" ++ git_rev
     else
         VERSION;
-    
-    const gen_cdb = b.option(bool, "generate-commands",
-        "generate compile_commands.json fragments") orelse false;
+
+    const gen_cdb = b.option(bool, "generate-commands", "generate compile_commands.json fragments") orelse false;
 
     //
     // Build
@@ -277,7 +273,7 @@ fn buildBinary(
     // TODO: Propagate these to all 3rd party dependencies
     //
 
-    var global_flags = std.ArrayList([]const u8).init(b.allocator);
+    var global_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer global_flags.deinit();
 
     try global_flags.appendSlice(cfg.flags);
@@ -330,7 +326,7 @@ fn buildBinary(
     //  C Opts for Urbit PKGs And Binary
     //
 
-    var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
+    var urbit_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer urbit_flags.deinit();
 
     try urbit_flags.appendSlice(global_flags.items);
@@ -521,11 +517,10 @@ fn buildBinary(
     // Build Artifact
     //
 
-    const urbit = b.addExecutable(.{
-        .name = cfg.binary_name,
+    const urbit = b.addExecutable(.{ .name = cfg.binary_name, .root_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
-    });
+    }) });
 
     if (t.os.tag == .windows) {
         urbit.stack_size = 67108864;
@@ -769,11 +764,10 @@ fn buildBinary(
         for (tests) |tst| {
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
-            const test_exe = b.addExecutable(.{
-                .name = tst.name,
+            const test_exe = b.addExecutable(.{ .name = tst.name, .root_module = b.createModule(.{
                 .target = target,
                 .optimize = optimize,
-            });
+            }) });
 
             if (t.os.tag.isDarwin() and !target.query.isNative()) {
                 const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -797,7 +791,7 @@ fn buildBinary(
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
@@ -816,7 +810,7 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
-            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+            if (t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan)) {
                 //  disable libmalloc warnings
                 run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
             }
