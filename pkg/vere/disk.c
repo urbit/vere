@@ -462,14 +462,6 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
   c3_free(wok_u);
 }
 
-/* _disk_save_meta(): save metadata field to LMDB.
-*/
-static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
-{
-  return u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
-}
-
 /* u3_disk_save_meta(): save metadata to LMDB.
 */
 c3_o
@@ -479,10 +471,10 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
-  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
-     || (c3n == _disk_save_meta(mdb_u, "who", sizeof(met_u->who_d), (c3_y*)met_u->who_d))
-     || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
-     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
+  if (  (c3n == u3_lmdb_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
+     || (c3n == u3_lmdb_save_meta(mdb_u, "who", sizeof(met_u->who_d), (c3_y*)met_u->who_d))
+     || (c3n == u3_lmdb_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
+     || (c3n == u3_lmdb_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
   {
     u3z(who);
     return c3n;
@@ -1710,7 +1702,7 @@ _disk_migrate_old(u3_disk* log_u)
 
       //  set version to 2 (migration in progress) in top-level LMDB
       log_u->ver_w = U3D_VER2;
-      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
+      if ( c3n == u3_lmdb_save_meta(log_u->mdb_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }
@@ -2081,13 +2073,12 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
       }
-      //  for old ships, also open the top-level book for event data
-      if ( 0 == (log_u->txt_u = u3_book_init(log_c)) ) {
+      //  for old ships, also open the top-level lmdb file for metadata
+      if ( 0 == (log_u->mdb_u = u3_lmdb_init(log_c, 1ULL << 30)) ) {
         fprintf(stderr, "disk: failed to open old book\r\n");
         c3_free(log_u); // XX leaks dire(s)
         return 0;
       }
-      _disk_migrate_old(log_u);
       log_u->liv_o = c3y;
       return log_u;
     }
@@ -2167,4 +2158,6 @@ try_init:
       }
     }
   }
+
+  return log_u;
 }

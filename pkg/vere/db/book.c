@@ -39,32 +39,22 @@ _book_crc32_two(c3_y* one_y, c3_w one_w, c3_y* two_y, c3_w two_w)
   return (c3_w)crc32(crc_w, two_y, two_w);
 }
 
-/* _book_meta_path(): construct path to meta.bin from book.log path.
+/* _book_meta_path(): construct path to meta.bin from book directory path.
 **
+**   pax_c should be a directory path (the one passed to u3_book_init)
 **   caller must free result with c3_free()
 */
 static c3_c*
 _book_meta_path(const c3_c* pax_c)
 {
   c3_c* met_c = c3_malloc(strlen(pax_c) + 16);
-  c3_c* dir_c = c3_malloc(strlen(pax_c) + 1);
 
-  if ( !met_c || !dir_c ) {
-    c3_free(met_c);
-    c3_free(dir_c);
+  if ( !met_c ) {
     return 0;
   }
 
-  strcpy(dir_c, pax_c);
-
-  //  find last '/' to get directory
-  c3_c* sla_c = strrchr(dir_c, '/');
-  if ( sla_c ) {
-    *sla_c = '\0';
-  }
-
-  snprintf(met_c, strlen(pax_c) + 16, "%s/meta.bin", dir_c);
-  c3_free(dir_c);
+  //  pax_c is already the directory, just append /meta.bin
+  snprintf(met_c, strlen(pax_c) + 16, "%s/meta.bin", pax_c);
   return met_c;
 }
 
