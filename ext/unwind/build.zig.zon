@@ -1,6 +1,7 @@
 .{
-    .name = "unwind",
+    .name = .unwind,
     .version = "0.0.1",
+    .fingerprint = 0xcc607f1feb4eb1d5,
     .dependencies = .{
         .unwind = .{
             .url = "https://github.com/libunwind/libunwind/archive/7cc4c20fbcf65a9c855fb9d950fad8d0e29b092e.tar.gz",

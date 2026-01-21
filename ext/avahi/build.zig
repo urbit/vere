@@ -9,10 +9,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const expat = b.addStaticLibrary(.{
+    const expat = b.addLibrary(.{
         .name = "expat",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
         .version = .{
             .major = 1,
             .minor = 9,
@@ -68,10 +67,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const dbus = b.addStaticLibrary(.{
+    const dbus = b.addLibrary(.{
         .name = "dbus-1",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
         .version = .{
             .major = 3,
             .minor = 38,
@@ -522,10 +520,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const avahi = b.addStaticLibrary(.{
+    const avahi = b.addLibrary(.{
         .name = "dns-sd",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     avahi.linkLibC();
