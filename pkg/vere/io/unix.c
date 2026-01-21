@@ -40,6 +40,12 @@
 
 #include "noun.h"
 
+#ifdef ASAN_ENABLED
+  void __lsan_ignore_object(const void *p);
+#else
+  #define __lsan_ignore_object(p) ((void) (p))
+#endif
+
 struct _u3_umon;
 struct _u3_udir;
 struct _u3_ufil;
@@ -556,10 +562,13 @@ _unix_get_mount_point(u3_unix* unx_u, u3_noun mon)
 
   if ( !mon_u ) {
     mon_u = c3_malloc(sizeof(u3_umon));
+    __lsan_ignore_object(mon_u);
     mon_u->nam_c = nam_c;
+    __lsan_ignore_object(mon_u->nam_c);
     mon_u->dir_u.dir = c3y;
     mon_u->dir_u.dry = c3n;
     mon_u->dir_u.pax_c = strdup(unx_u->pax_c);
+    __lsan_ignore_object(mon_u->dir_u.pax_c);
     mon_u->dir_u.par_u = NULL;
     mon_u->dir_u.nex_u = NULL;
     mon_u->dir_u.kid_u = NULL;
@@ -1581,6 +1590,11 @@ _unix_io_exit(u3_auto* car_u)
 {
   u3_unix* unx_u = (u3_unix*)car_u;
 
+  //  _unix_free_mount_point also deletes unix directories, so for simplicity
+  //  we just leak the allocations on exit. __lsan_ignore_object is used
+  //  throughout to silence leak sanitizer
+  //
+  #if 0
   u3_umon* mon_u = unx_u->mon_u;
   u3_umon* nex_u;
   while ( mon_u ) {
@@ -1588,6 +1602,7 @@ _unix_io_exit(u3_auto* car_u)
     _unix_free_mount_point(unx_u, mon_u);
     mon_u = nex_u;
   }
+  #endif
 
   u3z(unx_u->sat);
   c3_free(unx_u->pax_c);
