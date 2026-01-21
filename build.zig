@@ -28,15 +28,8 @@ const CdbGenStep = struct {
         var cwd = std.fs.cwd();
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
-        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch |e| {
-            std.log.err(
-                \\compile db fragments dir '{s}' not found ({s}).
-                \\clear caches and build with -Dgenerate-commands 
-            , .{
-                self.frags_dir,
-                @errorName(e),
-            });
-            return e;
+        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+            return;
         };
         defer dir.close();
 
@@ -45,7 +38,8 @@ const CdbGenStep = struct {
         defer out_file.close();
         var write_buffer: [4096]u8 = undefined;
 
-        var w = out_file.writer(&write_buffer).interface;
+        var ww = out_file.writer(&write_buffer);
+        const w = &ww.interface;
 
         try w.writeByte('[');
 
