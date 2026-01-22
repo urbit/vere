@@ -514,7 +514,7 @@ _cr_sing(u3_noun a, u3_noun b)
 
   //  initialize stack control, push arguments onto the stack (none-frame)
   //
-  u3a_pile_prep(&pil_u, sizeof(eqframe));
+  u3a_pile_prep(&pil_u, sizeof(eqframe), _Alignof(eqframe));
   fam_u = _cr_sing_push(&pil_u, a, b);
 
   //  loop while arguments are on the stack
@@ -1803,7 +1803,7 @@ u3r_mug(u3_noun veb)
   //
   u3_assert( u3_none != veb );
 
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  commence mugging
   //
@@ -1887,7 +1887,7 @@ u3r_safe(u3_noun fol, u3_weak* out)
     case 0:
       *out = u3_none;
       return __(1 == t_fol);
-      
+
     case 1:
       *out = t_fol;
       return c3y;

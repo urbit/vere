@@ -433,7 +433,7 @@ u3s_cue(u3_atom a)
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  commence cueing at bit-position 0
   //
@@ -589,7 +589,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  init bitstream-reader
   //
@@ -824,7 +824,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
 
   //  initialize a hash table for dereferencing backrefs
   //
