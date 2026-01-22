@@ -148,7 +148,15 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(u3h_root) lop_p;                  //  %loop hint set
         u3_noun tim;                          //  list of absolute deadlines
 
-        c3_w fut_w[28];                       //  futureproof buffer
+        /* ska-related things
+        ** XX move to appropriate places with an actual migration
+        */
+        u3p(u3h_root) jed_pax_p;              //  [path axis] -> arm jet (home road only)
+        u3p(u3h_root) byc_dar_p;              //  [less fol]->post of bytecode
+        u3p(u3h_root) byc_lar_p;              //  fol->(list [less post]) of bytecode
+        u3_noun       dir_ka;                 //  ~ | +ka core vase  XX raw noun
+
+        c3_w fut_w[24];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
