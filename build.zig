@@ -331,6 +331,8 @@ fn buildBinary(
 
     try urbit_flags.appendSlice(global_flags.items);
     try urbit_flags.appendSlice(&.{
+        "-Wno-shift-op-parentheses",
+        "-Wno-error=int-conversion",
         "-Wno-deprecated-non-prototype",
         "-Wno-gnu-binary-literal",
         "-Wno-gnu-empty-initializer",
