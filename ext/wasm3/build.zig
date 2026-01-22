@@ -15,10 +15,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const wasm3 = b.addStaticLibrary(.{
+    const wasm3 = b.addLibrary(.{
         .name = "wasm3",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     wasm3.linkLibC();
@@ -47,24 +46,24 @@ pub fn build(b: *std.Build) void {
     wasm3.addCSourceFiles(.{
         .root = wasm3_c.path("source/"),
         .files = &.{
-          "m3_bind.c",
-          "m3_code.c",
-          "m3_compile.c",
-          "m3_core.c",
-          "m3_emit.c",
-          "m3_env.c",
-          "m3_exec.c",
-          "m3_function.c",
-          "m3_info.c",
-          "m3_module.c",
-          "m3_parse.c",
-          "m3_validate.c",
-          "m3_rewrite.c",
-          "m3_resume.c",
+            "m3_bind.c",
+            "m3_code.c",
+            "m3_compile.c",
+            "m3_core.c",
+            "m3_emit.c",
+            "m3_env.c",
+            "m3_exec.c",
+            "m3_function.c",
+            "m3_info.c",
+            "m3_module.c",
+            "m3_parse.c",
+            "m3_validate.c",
+            "m3_rewrite.c",
+            "m3_resume.c",
         },
         .flags = if (t.os.tag == .macos) &mac_flags else &common_flags,
     });
- 
+
     wasm3.installHeader(wasm3_c.path("source/m3_config_platforms.h"), "m3_config_platforms.h");
     wasm3.installHeader(wasm3_c.path("source/m3_bind.h"), "m3_bind.h");
     wasm3.installHeader(wasm3_c.path("source/m3_code.h"), "m3_code.h");
