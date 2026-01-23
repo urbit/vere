@@ -2206,7 +2206,7 @@ try_init:
             return 0;
           }
 
-          fprintf(stderr, "disk: latest epoch is 0i%" PRIc3_d " is bogus; "
+          fprintf(stderr, "disk: latest epoch 0i%" PRIc3_d " is bogus; "
                           "falling back to previous at 0i%" PRIc3_d "\r\n",
                           lat_d, sot_d[1]);
 

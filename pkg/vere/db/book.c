@@ -219,7 +219,7 @@ static inline c3_w
 _book_deed_size(c3_d len_d)
 {
   return sizeof(u3_book_deed_head) + (len_d - 4) + sizeof(u3_book_deed_tail);
-  // = 12 + (len_d - 4) + 12 = len_d + 20
+  // = 20 + (len_d - 4) + 12 = len_d + 28
 }
 
 /* _book_calc_crc(): compute CRC32 for reed.
@@ -227,11 +227,12 @@ _book_deed_size(c3_d len_d)
 static c3_w
 _book_calc_crc(const u3_book_reed* red_u)
 {
-  c3_y buf_y[12];  //  8 bytes len_d + 4 bytes mug
+  c3_y buf_y[20];  //  8 bytes len_d + 8 bytes eve_d + 4 bytes mug
   memcpy(buf_y, &red_u->len_d, 8);
-  memcpy(buf_y + 8, &red_u->mug_l, 4);
+  memcpy(buf_y + 8, &red_u->eve_d, 8);
+  memcpy(buf_y + 16, &red_u->mug_l, 4);
 
-  return _book_crc32_two(buf_y, 12, red_u->jam_y, red_u->len_d - 4);
+  return _book_crc32_two(buf_y, 20, red_u->jam_y, red_u->len_d - 4);
 }
 
 /* _book_okay_reed(): validate reed integrity.
@@ -278,6 +279,7 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
 
   //  populate reed from head
   red_u->len_d = hed_u.len_d;
+  red_u->eve_d = hed_u.eve_d;
   red_u->mug_l = hed_u.mug_l;
 
   //  read jam data (len_d - mug bytes)
@@ -334,6 +336,7 @@ _book_save_deed(c3_i fid_i, c3_d* off_d, const u3_book_reed* red_u)
   //  write deed_head
   u3_book_deed_head hed_u;
   hed_u.len_d = red_u->len_d;
+  hed_u.eve_d = red_u->eve_d;
   hed_u.mug_l = red_u->mug_l;
 
   ret_zs = pwrite(fid_i, &hed_u, sizeof(u3_book_deed_head), now_d);
@@ -405,7 +408,6 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
   struct stat buf_u;
   c3_d        end_d;
   c3_d        pos_d;
-  c3_d        cot_d = 0;  //  count of valid deeds found
 
   //  get file size
   if ( -1 == fstat(txt_u->fid_i, &buf_u) ) {
@@ -465,26 +467,17 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
         break;
       }
 
+      //  deed is valid — use eve_d directly
       c3_free(red_u.jam_y);
+      *off_d = pos_d;
+      txt_u->las_d = red_u.eve_d;
+      return c3y;
     }
-
-    //  deed is valid, record position and continue backwards
-    cot_d++;
-    pos_d = ded_d;
   }
 
-  //  check if we found any valid deeds
-  if ( 0 == cot_d ) {
-    *off_d = sizeof(u3_book_head);
-    return c3n;
-  }
-
-  //  success: compute last event number
-  //  cot_d deeds found, first event is fir_d
-  *off_d = end_d;
-  txt_u->las_d = txt_u->hed_u.fir_d + cot_d - 1;
-
-  return c3y;
+  //  no valid deeds found
+  *off_d = sizeof(u3_book_head);
+  return c3n;
 }
 
 /* _book_scan_fore(): scan to find last valid deed.
@@ -836,6 +829,7 @@ u3_book_save(u3_book* txt_u,
     memcpy(&red_u.mug_l, buf_y, 4);
     red_u.jam_y = buf_y + 4;
     red_u.len_d = siz_d;  //  total payload: mug + jam
+    red_u.eve_d = eve_d + i_w;
     red_u.crc_w = _book_calc_crc(&red_u);
 
     //  save deed to file

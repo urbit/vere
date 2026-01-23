@@ -59,6 +59,7 @@
     */
       typedef struct _u3_book_deed_head {
         c3_d len_d;    //  payload size (mug + jam)
+        c3_d eve_d;    //  event number
         c3_l mug_l;    //  mug/hash
       } u3_book_deed_head;
 
@@ -84,6 +85,7 @@
     */
       typedef struct _u3_book_reed {
         c3_d  len_d;    //  total payload size
+        c3_d  eve_d;    //  event number
         c3_l  mug_l;    //  mug/hash
         c3_y* jam_y;    //  jam data (caller owns, len = len_d - 4)
         c3_w  crc_w;    //  CRC32 checksum
