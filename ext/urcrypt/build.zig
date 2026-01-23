@@ -245,6 +245,8 @@ fn libblake3(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step.Compile {
+    const t = target.result;
+
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
@@ -265,15 +267,26 @@ fn libblake3(
 
     lib.addIncludePath(dep_c.path("blake3"));
 
+    const unix_assembly = .{
+        "blake3_sse2_x86-64_unix.S",
+        "blake3_sse41_x86-64_unix.S",
+        "blake3_avx2_x86-64_unix.S",
+        "blake3_avx512_x86-64_unix.S",
+    };
+
+    const windows_assembly = .{
+        "blake3_sse2_x86-64_windows_gnu.S",
+        "blake3_sse41_x86-64_windows_gnu.S",
+        "blake3_avx2_x86-64_windows_gnu.S",
+        "blake3_avx512_x86-64_windows_gnu.S",
+    };
+
+    const assembly_files = if (t.os.tag == .windows) windows_assembly else unix_assembly;
+
     if (target.result.cpu.arch == .x86_64) {
         lib.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
-            .files = &(common_files ++ .{
-                "blake3_sse2_x86-64_unix.S",
-                "blake3_sse41_x86-64_unix.S",
-                "blake3_avx2_x86-64_unix.S",
-                "blake3_avx512_x86-64_unix.S",
-            }),
+            .files = &(common_files ++ assembly_files),
             .flags = &.{
                 "-O2",
                 "-fno-omit-frame-pointer",
