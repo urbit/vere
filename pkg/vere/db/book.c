@@ -491,16 +491,19 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
   return c3y;
 }
 
-/* _book_scan_end(): scan to find actual end of valid events.
+/* _book_scan_fore(): scan to find last valid deed.
 **
 **   validates each record's CRC and len_d == let_d.
-**   caches las_d and off_d in txt_u.
-**   returns offset to append next event.
+**   on success, sets *off_d to append offset and updates txt_u->las_d.
+**
+**   returns:
+**     c3y: success
+**     c3n: failure (empty file or no valid deeds)
 */
-static c3_d
-_book_scan_end(u3_book* txt_u)
+static c3_o
+_book_scan_fore(u3_book* txt_u, c3_d* off_d)
 {
-  c3_d off_d = sizeof(u3_book_head);  //  start of events
+  c3_d cur_d = sizeof(u3_book_head);  //  start of events
   c3_d cot_d = 0;  //  count
   c3_d las_d = 0;  //  last valid event found
   c3_d exp_d;      //  expected event number
@@ -508,25 +511,25 @@ _book_scan_end(u3_book* txt_u)
   if ( 0 == txt_u->hed_u.fir_d && 0 == txt_u->las_d ) {
     //  empty log
     txt_u->las_d = 0;
-    txt_u->off_d = off_d;
-    return off_d;
+    *off_d = cur_d;
+    return c3n;
   }
 
   exp_d = txt_u->las_d - txt_u->hed_u.fir_d + 1;
 
   while ( 1 ) {
     u3_book_reed red_u;
-    c3_d  off_start = off_d;
+    c3_d  beg_d = cur_d;
 
     //  read deed into reed
-    if ( c3n == _book_read_deed(txt_u->fid_i, &off_d, &red_u) ) {
+    if ( c3n == _book_read_deed(txt_u->fid_i, &cur_d, &red_u) ) {
       //  EOF or read error
       break;
     }
 
     //  validate reed (CRC and length checks)
     if ( c3n == _book_okay_reed(&red_u) ) {
-      u3l_log("book: validation failed at offset %" PRIu64 "\r\n", off_start);
+      u3l_log("book: validation failed at offset %" PRIu64 "\r\n", beg_d);
       c3_free(red_u.jam_y);
       break;
     }
@@ -544,13 +547,13 @@ _book_scan_end(u3_book* txt_u)
     //  update las_d based on what we found
     if ( 0 == cot_d ) {
       txt_u->las_d = 0;
-      off_d = sizeof(u3_book_head);
+      cur_d = sizeof(u3_book_head);
     } else {
       txt_u->las_d = las_d;
     }
 
     //  truncate file
-    if ( -1 == ftruncate(txt_u->fid_i, off_d) ) {
+    if ( -1 == ftruncate(txt_u->fid_i, cur_d) ) {
       u3l_log("book: failed to truncate: %s\r\n",
               strerror(errno));
     } else {
@@ -563,8 +566,8 @@ _book_scan_end(u3_book* txt_u)
     txt_u->las_d = las_d;
   }
 
-  txt_u->off_d = off_d;
-  return off_d;
+  *off_d = cur_d;
+  return c3y;
 }
 
 /* u3_book_init(): open/create event log.
@@ -647,7 +650,7 @@ u3_book_init(const c3_c* pax_c)
     //  try fast reverse scan first, fall back to forward scan if needed
     if ( c3n == _book_scan_back(txt_u, &txt_u->off_d) ) {
       //  reverse scan failed, use forward scan for recovery
-      _book_scan_end(txt_u);
+      _book_scan_fore(txt_u, &txt_u->off_d);
     }
   }
 
