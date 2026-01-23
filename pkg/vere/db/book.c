@@ -12,6 +12,7 @@
 
 #include "c3/c3.h"
 #include "noun.h"
+#include "ship.h"
 
 //  book: append-only event log
 //
@@ -575,19 +576,19 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
 u3_book*
 u3_book_init(const c3_c* pax_c)
 {
-  c3_c path_c[8193];
+  c3_c log_c[8193];
   c3_i fid_i, met_i;
   struct stat buf_u;
   u3_book* txt_u;
 
   //  construct path to book.log
-  snprintf(path_c, sizeof(path_c), "%s/book.log", pax_c);
+  snprintf(log_c, sizeof(log_c), "%s/book.log", pax_c);
 
   //  open or create file
-  fid_i = c3_open(path_c, O_RDWR | O_CREAT, 0644);
+  fid_i = c3_open(log_c, O_RDWR | O_CREAT, 0644);
   if ( 0 > fid_i ) {
     u3l_log("book: failed to open %s: %s\r\n",
-            path_c, strerror(errno));
+            log_c, strerror(errno));
     return 0;
   }
 
@@ -611,14 +612,14 @@ u3_book_init(const c3_c* pax_c)
   txt_u = c3_calloc(sizeof(u3_book));
   txt_u->fid_i = fid_i;
   txt_u->met_i = met_i;
-  txt_u->pax_c = c3_malloc(strlen(path_c) + 1);
+  txt_u->pax_c = c3_malloc(strlen(log_c) + 1);
   if ( !txt_u->pax_c ) {
     close(fid_i);
     close(met_i);
     c3_free(txt_u);
     return 0;
   }
-  strcpy(txt_u->pax_c, path_c);
+  strcpy(txt_u->pax_c, log_c);
 
   if ( buf_u.st_size == 0 ) {
     //  new file: initialize and write header
@@ -694,19 +695,19 @@ u3_book_gulf(u3_book* txt_u, c3_d* low_d, c3_d* hig_d)
   return c3y;
 }
 
-/* u3_book_stat(): print book statistics.
+/* u3_book_stat(): print book statistics. expects path to book.log.
 */
 void
-u3_book_stat(const c3_c* pax_c)
+u3_book_stat(const c3_c* log_c)
 {
   c3_i fid_i;
   u3_book_head hed_u;
   struct stat buf_u;
 
   //  open the file directly
-  fid_i = c3_open(pax_c, O_RDONLY, 0);
+  fid_i = c3_open(log_c, O_RDONLY, 0);
   if ( fid_i < 0 ) {
-    fprintf(stderr, "book: failed to open %s: %s\r\n", pax_c, strerror(errno));
+    fprintf(stderr, "book: failed to open %s: %s\r\n", log_c, strerror(errno));
     return;
   }
 
@@ -736,10 +737,33 @@ u3_book_stat(const c3_c* pax_c)
   }
 
   fprintf(stderr, "book info:\r\n");
-  fprintf(stderr, "  file: %s\r\n", pax_c);
-  fprintf(stderr, "  version: %u\r\n", hed_u.ver_w);
+  fprintf(stderr, "  file: %s\r\n", log_c);
+  fprintf(stderr, "  format: %u\r\n", hed_u.ver_w);
   fprintf(stderr, "  first event: %" PRIu64 "\r\n", hed_u.fir_d);
   fprintf(stderr, "  file size: %lld bytes\r\n", (long long)buf_u.st_size);
+
+  //  read metadata from meta.bin
+  u3_book_meta met_u;
+  c3_c* epo_c = c3_malloc(strlen(log_c) - 8);
+  if ( epo_c ) {
+    strncpy(epo_c, log_c, strlen(log_c) - 9);
+    epo_c[strlen(log_c) - 9] = '\0';  //  lops "/book.log"
+  }
+  c3_c* met_c = _book_meta_path(epo_c);
+  c3_i met_i = c3_open(met_c, O_RDONLY, 0);
+
+  if ( met_i >= 0 ) {
+    c3_zs ret_zs = pread(met_i, &met_u, sizeof(u3_book_meta), 0);
+    if ( ret_zs == sizeof(u3_book_meta) ) {
+      fprintf(stderr, "\r\ndisk metadata:\r\n");
+      fprintf(stderr, "  who: %s\r\n", u3_ship_to_string(met_u.who_d));
+      fprintf(stderr, "  version: %u\r\n", met_u.ver_w);
+      fprintf(stderr, "  fake: %s\r\n", _(met_u.fak_o) ? "yes" : "no");
+      fprintf(stderr, "  life: %u\r\n", met_u.lif_w);
+    }
+    close(met_i);
+  }
+  c3_free(met_c);
 
   close(fid_i);
 }
