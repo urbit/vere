@@ -36,6 +36,10 @@ _test_make_tmpdir(void)
 static void
 _test_rm_rf(const c3_c* pax_c)
 {
+  if ( !pax_c || strncmp(pax_c, "/tmp", 4) != 0 ) {
+    fprintf(stderr, "book_test: refusing to remove non-/tmp path: %s\r\n", pax_c);
+    exit(1);
+  }
   c3_c cmd_c[8192];
   snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", pax_c);
   system(cmd_c);

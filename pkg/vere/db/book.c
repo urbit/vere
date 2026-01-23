@@ -442,11 +442,6 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
       break;
     }
 
-    //  validate let_d is reasonable
-    if ( 0 == let_d || (1ULL << 32) < let_d ) {
-      break;
-    }
-
     //  calculate deed size and start position
     siz_d = _book_deed_size(let_d);
     if ( siz_d > pos_d - sizeof(u3_book_head) ) {
@@ -746,10 +741,11 @@ u3_book_stat(const c3_c* log_c)
   u3_book_meta met_u;
   c3_c* epo_c = c3_malloc(strlen(log_c) - 8);
   if ( epo_c ) {
-    strncpy(epo_c, log_c, strlen(log_c) - 9);
+    strncpy(epo_c, log_c, strlen(log_c) - 9);  //  XX brittle
     epo_c[strlen(log_c) - 9] = '\0';  //  lops "/book.log"
   }
   c3_c* met_c = _book_meta_path(epo_c);
+  c3_free(epo_c);
   c3_i met_i = c3_open(met_c, O_RDONLY, 0);
 
   if ( met_i >= 0 ) {
