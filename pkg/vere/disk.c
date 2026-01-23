@@ -462,7 +462,7 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
   c3_free(wok_u);
 }
 
-/* u3_disk_save_meta(): save metadata to LMDB.
+/* u3_disk_save_meta(): save metadata to lmdb.
 */
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
@@ -485,7 +485,7 @@ u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 }
 
 
-/* u3_disk_save_meta_meta(): save meta metadata using LMDB.
+/* u3_disk_save_meta_meta(): save meta metadata using lmdb.
 */
 c3_o
 u3_disk_save_meta_meta(c3_c* log_c, const u3_meta* met_u)
@@ -531,7 +531,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
   }
 }
 
-/* u3_disk_read_meta(): read metadata from LMDB.
+/* u3_disk_read_meta(): read metadata from lmdb.
 */
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
@@ -644,7 +644,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
     }
   }
 
-  //  NB: we read metadata from LMDB even when met_u is null because sometimes
+  //  NB: we read metadata from lmdb even when met_u is null because sometimes
   //      we call this just to ensure metadata exists
   if ( met_u ) {
     met_u->ver_w = ver_w;
@@ -817,7 +817,7 @@ u3_disk_exit(u3_disk* log_u)
     return;
   }
 
-  //  close LMDB metadata environment (if still open)
+  //  close lmdb metadata environment (if still open)
   //
   if ( log_u->mdb_u ) {
     u3_lmdb_exit(log_u->mdb_u);
@@ -1147,7 +1147,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 #endif
 
-  //  get metadata from top-level LMDB, update version
+  //  get metadata from top-level lmdb, update version
   u3_meta old_u;
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
@@ -1349,14 +1349,14 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
   //  NB: requires that log_u->txt_u is initialized to log/data.mdb
   //  XX: put old log in separate pointer (old_u?)?
 
-  //  get metadata from top-level LMDB, update version
+  //  get metadata from top-level lmdb, update version
   u3_meta olm_u;
   if ( c3y != u3_disk_read_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to read metadata\r\n");
     return c3n;
   }
 
-  //  finish with old log LMDB (will be re-initialized for epoch)
+  //  finish with old log lmdb (will be re-initialized for epoch)
   u3_lmdb_exit(log_u->mdb_u);
   log_u->mdb_u = 0;
 
@@ -1700,7 +1700,7 @@ _disk_migrate_old(u3_disk* log_u)
     case U3D_VER1: {
       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
 
-      //  set version to 2 (migration in progress) in top-level LMDB
+      //  set version to 2 (migration in progress) in top-level lmdb
       log_u->ver_w = U3D_VER2;
       if ( c3n == u3_lmdb_save_meta(log_u->mdb_u, "version", sizeof(c3_w), (c3_y*)&log_u->ver_w) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
@@ -1778,22 +1778,48 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   c3_c epo_c[8193];
   snprintf(epo_c, 8192, "%s/0i%" PRIc3_d, log_u->com_u->pax_c, lat_d);
 
-  //  initialize latest epoch's db
-  if ( 0 == (log_u->txt_u = u3_book_init(epo_c)) ) {
-    fprintf(stderr, "disk: failed to initialize database at %s\r\n",
-                    epo_c);
-    return _epoc_fail;
-  }
-
-  fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
-
-  //  get first/last event numbers from book
+  //  for U3E_VER1 and U3E_VER2 epochs, we need special handling
+  //  both use lmdb format, but the new system uses book.log
+  //  we read metadata from the old lmdb then trigger migration via rollover
   c3_d fir_d, las_d;
-  if ( c3n == u3_book_gulf(log_u->txt_u, &fir_d, &las_d) ) {
-    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-    u3_book_exit(log_u->txt_u);
+ 
+  if ( U3E_VER2 >= ver_w ) {
+    //  open with lmdb temporarily to get first and last events
+    MDB_env* mdb_u = u3_lmdb_init(epo_c, 1ULL << 30);
+    if ( 0 == mdb_u ) {
+      fprintf(stderr, "disk: failed to initialize lmdb at %s\r\n", epo_c);
+      return _epoc_fail;
+    }
+
+    //  get first/last event numbers from lmdb
+    if ( c3n == u3_lmdb_gulf(mdb_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      u3_lmdb_exit(mdb_u);
+      return _epoc_fail;
+    }
+
+    u3_lmdb_exit(mdb_u);
+
+    //  store null for txt_u to indicate lmdb-format epoch (will need migration)
     log_u->txt_u = 0;
-    return _epoc_fail;
+  }
+  else {
+    //  initialize latest epoch's db for U3E_VER3+ (book format)
+    if ( 0 == (log_u->txt_u = u3_book_init(epo_c)) ) {
+      fprintf(stderr, "disk: failed to initialize database at %s\r\n",
+                      epo_c);
+      return _epoc_fail;
+    }
+
+    fprintf(stderr, "disk: loaded epoch 0i%" PRIc3_d "\r\n", lat_d);
+
+    //  get first/last event numbers from book
+    if ( c3n == u3_book_gulf(log_u->txt_u, &fir_d, &las_d) ) {
+      fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+      u3_book_exit(log_u->txt_u);
+      log_u->txt_u = 0;
+      return _epoc_fail;
+    }
   }
 
   if (  (u3_dlod_boot != lod_e)
@@ -1819,6 +1845,12 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   //
   switch ( ver_w ) {
     case U3E_VER1: {
+      //  migration from U3E_VER1 (lmdb with loom files) to U3E_VER3 (book.log)
+      //  txt_u is null for U3E_VER1 since we can't keep lmdb epoch open
+      //  we must perform loom migration and then rollover to new format epoch
+      //
+      fprintf(stderr, "disk: epoch v1 detected, migrating to v3...\r\n");
+
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
@@ -1834,10 +1866,18 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 
       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      fprintf(stderr, "disk: epoch v3 migration done\r\n");
+
       return _epoc_good;
     } break;
 
     case U3E_VER2: {
+      //  migration from U3E_VER2 (data.mdb) to U3E_VER3 (book.log)
+      //  txt_u is null for U3E_VER2 since we can't keep lmdb epoch open
+      //  we must trigger an immediate rollover to create the new format epoch
+      //
+      fprintf(stderr, "disk: epoch v2 detected, migrating to v3...\r\n");
+
       if ( u3_dlod_epoc == lod_e ) {
         c3_c chk_c[8193];
         snprintf(chk_c, 8193, "%s/.urb/chk", log_u->dir_u->pax_c);
@@ -1876,10 +1916,22 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
-         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
-         || (c3n == _disk_vere_diff(log_u)) )
+      //  for U3E_VER2, we always need to perform rollover
+      //  this creates a new epoch in U3E_VER3 format while keeping the old one
+      if ( log_u->dun_d == u3A->eve_d ) {
+        fprintf(stderr, "disk: rolling over to new U3E_VER3 epoch\r\n");
+        if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+          fprintf(stderr, "disk: failed to roll over epoch\r\n");
+          exit(1);
+        }
+        fprintf(stderr, "disk: epoch v3 migration done\r\n");
+        return _epoc_good;
+      }
+
+      if (  (u3C.wag_w & u3o_yolo)
+         || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d) )
       {
+        //  ok to proceed without rollover in special cases
         return _epoc_good;
       }
       else if ( log_u->dun_d != u3A->eve_d ) {
@@ -1890,6 +1942,28 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
       else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
+ 
+      fprintf(stderr, "disk: epoch v3 migration done\r\n");
+      return _epoc_good;
+    } break;
+
+    case U3E_VER3: {
+      u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+      if ( log_u->dun_d < u3A->eve_d ) {
+        //  XX bad, add to enum
+        fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
+                        ") from future (log=%" PRIu64 ")\r\n",
+                        u3A->eve_d, log_u->dun_d);
+        exit(1);
+      }
+      else if ( u3A->eve_d < log_u->epo_d ) {
+        //  XX goto full replay
+        fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
+                        ") out of epoch (%" PRIu64 ")\r\n",
+                        u3A->eve_d, log_u->epo_d);
         exit(1);
       }
 
@@ -2049,7 +2123,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return log_u;
     }
 
-    //  read metadata (version) from top-level LMDB
+    //  read metadata (version) from top-level lmdb
     //
     {
       u3_meta met_u;
@@ -2083,7 +2157,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return log_u;
     }
 
-    //  keep top-level LMDB metadata environment open for later access
+    //  keep top-level lmdb metadata environment open for later access
     //  (txt_u will be initialized for the epoch next)
 
     //  get latest epoch number

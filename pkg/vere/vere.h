@@ -876,12 +876,12 @@
         void
         u3_disk_exit(u3_disk* log_u);
 
-      /* u3_disk_read_meta(): read metadata from LMDB.
+      /* u3_disk_read_meta(): read metadata from lmdb.
       */
         c3_o
         u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u);
 
-      /* u3_disk_save_meta(): save metadata to LMDB.
+      /* u3_disk_save_meta(): save metadata to lmdb.
       */
         c3_o
         u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u);
