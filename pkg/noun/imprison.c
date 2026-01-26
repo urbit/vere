@@ -9,6 +9,22 @@
 #include "trace.h"
 #include "xtract.h"
 
+#if defined(__x86_64__)
+#include <immintrin.h>
+#endif
+
+#ifdef __IMMINTRIN_H
+#define _addcarry_w _addcarry_u32
+#else
+static inline c3_b
+_addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+{
+  c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
+  *c_w = (c3_w)sum_d;
+  return (c3_b)(sum_d >> 32);
+}
+#endif
+
 /* _ci_slab_size(): calculate slab bloq-size, checking for overflow.
 */
 static c3_w
@@ -475,20 +491,35 @@ u3i_vint(u3_noun a)
 {
   u3_assert(u3_none != a);
 
-  if ( _(u3a_is_cat(a)) ) {
-    return ( a == 0x7fffffff ) ? u3i_word(a + 1) : (a + 1);
+  if ( c3_likely(_(u3a_is_cat(a))) ) {
+    return ( c3_unlikely(a == 0x7fffffff) ) ? u3i_word(a + 1) : (a + 1);
   }
-  else if ( _(u3a_is_cell(a)) ) {
+  else if ( c3_unlikely(_(u3a_is_cell(a))) ) {
     return u3m_bail(c3__exit);
   }
   else {
-    mpz_t a_mp;
+    u3i_slab sab_u;
+    u3i_slab_init(&sab_u, 0, u3r_met(0, a) + 1);
 
-    u3r_mp(a_mp, a);
-    u3z(a);
+    u3a_atom* pug_u = u3a_to_ptr(a);
 
-    mpz_add_ui(a_mp, a_mp, 1);
-    return u3i_mp(a_mp);
+    c3_w i_w = 0;
+    c3_b car_b = 1;
+    c3_w *a_buf_w = pug_u->buf_w;
+    c3_w *b_buf_w = sab_u.buf_w;
+
+    for (; i_w < pug_u->len_w && car_b; i_w++) {
+      car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, &b_buf_w[i_w]);
+    }
+
+    if (car_b) {
+      b_buf_w[pug_u->len_w] = 1;
+    }
+    else {
+      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (pug_u->len_w - i_w) << 2);
+    }
+
+    return u3i_slab_mint(&sab_u);
   }
 }
 
@@ -586,14 +617,18 @@ u3i_tape(const c3_c* txt_c)
 u3_noun
 u3i_list(u3_weak som, ...)
 {
-  u3_noun lit = u3_nul;
+  u3_noun  lit = u3_nul;
+  u3_noun* let = &lit;
+  u3_noun  *hed, *tel;
   va_list  ap;
 
   if ( u3_none == som ) {
     return lit;
   }
   else {
-    lit = u3nc(som, lit);
+    *let = u3i_defcons(&hed, &tel);
+    *hed = som;
+    let = tel;
   }
 
   {
@@ -605,13 +640,16 @@ u3i_list(u3_weak som, ...)
         break;
       }
       else {
-        lit = u3nc(tem, lit);
+        *let = u3i_defcons(&hed, &tel);
+        *hed = tem;
+        let = tel;
       }
     }
     va_end(ap);
   }
 
-  return u3kb_flop(lit);
+  *let = u3_nul;
+  return lit;
 }
 
 /* u3i_edit():

@@ -857,7 +857,7 @@ _free_beam(beam* bem)
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w)
 {
-  beam bem;
+  beam bem = {u3_none, u3_none, u3_none, u3_none};
 
   //  get beak
   //
@@ -2190,7 +2190,7 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     {
       struct timeval tim_u;
       gettimeofday(&tim_u, 0);
-      now = u3_time_in_tv(&tim_u);
+      now = u3m_time_in_tv(&tim_u);
     }
     c3_c* pax_c = u3_Host.dir_c;
     u3_noun now = u3dc("scot", c3__da, now);
@@ -3173,7 +3173,7 @@ u3_http_io_init(u3_pier* pir_u)
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
-    now = u3_time_in_tv(&tim_u);
+    now = u3m_time_in_tv(&tim_u);
     htd_u->sev_l = u3r_mug(now);
     u3z(now);
   }

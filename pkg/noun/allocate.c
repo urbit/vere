@@ -1660,7 +1660,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 14);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 16);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -1749,7 +1749,19 @@ u3a_mark_road()
     qua_u[11]->siz_w = wee_w * 4;
   }
 
-  qua_u[12] = NULL;
+  qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
+  qua_u[12]->nam_c = strdup("loop hint set");
+  qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * 4;
+  
+  qua_u[13] = c3_calloc(sizeof(*qua_u[13]));
+  qua_u[13]->nam_c = strdup("timer stack");
+  qua_u[13]->siz_w = u3a_mark_noun(u3R->tim) * 4;
+  
+  qua_u[14] = c3_calloc(sizeof(*qua_u[14]));
+  qua_u[14]->nam_c = strdup("ford memoization cache");
+  qua_u[14]->siz_w = u3h_mark(u3R->cax.for_p) * 4;
+
+  qua_u[15] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -1787,8 +1799,11 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->pro.don));
   u3a_relocate_noun(&(u3R->pro.day));
   u3a_relocate_noun(&(u3R->pro.trace));
+  u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
+  u3h_relocate(&(u3R->lop_p));
+  u3h_relocate(&(u3R->cax.for_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]
@@ -1798,7 +1813,7 @@ u3a_idle(u3a_road* rod_u)
 {
   //  XX ignores argument
   c3_w pag_w = _idle_pages();
-  if ( pag_w ) {
+  if ( (u3C.wag_w & u3o_verbose) && pag_w ) {
     fprintf(stderr, "loom: idle %u complete pages\r\n", pag_w);
   }
   return (pag_w << u3a_page) + _idle_words();
@@ -1809,6 +1824,9 @@ u3a_ream(void)
 {
   _poison_pages();
   _poison_words();
+
+  //  XX enable behind flag
+  // _sane_dell();
 }
 
 void

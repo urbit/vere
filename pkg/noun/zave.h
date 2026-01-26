@@ -19,7 +19,7 @@
       typedef enum {
         u3z_memo_toss  = 0,
         u3z_memo_keep  = 1,
-        // u3z_memo_ford  = 2,
+        u3z_memo_ford  = 2,
         // u3z_memo_ames  = 3,
         // ...
       } u3z_cid;

@@ -553,6 +553,9 @@ u3u_melt(void)
   u3h_free(u3R->cax.per_p);
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);
 
+  u3h_free(u3R->cax.for_p);
+  u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+
   u3h_free(u3R->jed.cod_p);
   u3R->jed.cod_p = u3h_new();
 

@@ -132,7 +132,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
     {
       struct timeval tim_u;
       gettimeofday(&tim_u, 0);
-      now = u3_time_in_tv(&tim_u);
+      now = u3m_time_in_tv(&tim_u);
     }
 
     {
@@ -598,7 +598,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         struct timeval tim_u;
         gettimeofday(&tim_u, 0);
 
-        now   = u3_time_in_tv(&tim_u);
+        now   = u3m_time_in_tv(&tim_u);
         job = u3nc(now, u3k(job));
       }
       u3z(jar);
@@ -737,8 +737,10 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 1: %u", u3h_wyt(u3R->cax.for_p));
     }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -748,6 +750,7 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -761,9 +764,12 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
     if ( u3C.wag_w & u3o_verbose ) {
       u3l_log("mars: threshold 0: per_p %u", u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 0: for_p %u", u3h_wyt(u3R->cax.for_p));
     }
     u3h_free(u3R->cax.per_p);
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
     u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
     u3l_log("");
   }
@@ -787,7 +793,7 @@ _mars_damp_file(void)
     {
       struct timeval tim_u;
       gettimeofday(&tim_u, 0);
-      now = u3_time_in_tv(&tim_u);
+      now = u3m_time_in_tv(&tim_u);
     }
 
     {
@@ -1350,7 +1356,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
             struct timeval tim_u;
             gettimeofday(&tim_u, 0);
 
-            now   = _mars_show_time(u3_time_in_tv(&tim_u));
+            now   = _mars_show_time(u3m_time_in_tv(&tim_u));
             now_c = u3r_string(now);
             u3z(now);
           }
@@ -1815,7 +1821,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
     //  timestamp events, cons list
     //
     {
-      u3_noun now = u3_time_in_tv(&inp_u->tim_u);
+      u3_noun now = u3m_time_in_tv(&inp_u->tim_u);
       u3_noun bit = u3qc_bex(48);       //  1/2^16 seconds
       u3_noun eve = u3kb_flop(bot);
 
@@ -1920,7 +1926,7 @@ u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
   c3_rand(inp_u.eny_w);
 
   {
-    u3_noun now = u3_time_in_tv(&inp_u.tim_u);
+    u3_noun now = u3m_time_in_tv(&inp_u.tim_u);
     inp_u.sev_l = u3r_mug(now);
     u3z(now);
   }

@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "rsignal.h"
 
   /**  Constants.
   **/
@@ -144,8 +145,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
+        u3p(u3h_root) lop_p;                  //  %loop hint set
+        u3_noun tim;                          //  list of absolute deadlines
 
-        c3_w fut_w[30];                       //  futureproof buffer
+        c3_w fut_w[28];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -208,6 +211,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         struct {                              //  memoization caches
           u3p(u3h_root) har_p;                //  transient
           u3p(u3h_root) per_p;                //  persistent
+          u3p(u3h_root) for_p;                //  ford
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;
@@ -216,7 +220,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     */
       enum u3a_flag {
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
-        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting
+        u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
