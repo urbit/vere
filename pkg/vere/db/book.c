@@ -504,7 +504,9 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
     return c3n;
   }
 
-  exp_d = txt_u->las_d - txt_u->hed_u.fir_d + 1;
+  exp_d = ( txt_u->las_d >= txt_u->hed_u.fir_d )
+        ? txt_u->las_d - txt_u->hed_u.fir_d + 1
+        : 0;
 
   while ( 1 ) {
     u3_book_reed red_u;
@@ -559,7 +561,7 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
   return c3y;
 }
 
-/* u3_book_init(): open/create event log.
+/* u3_book_init(): open/create event log in epoch directory.
 */
 u3_book*
 u3_book_init(const c3_c* pax_c)
@@ -612,8 +614,42 @@ u3_book_init(const c3_c* pax_c)
   if ( buf_u.st_size == 0 ) {
     //  new file: initialize and write header
     _book_make_head(txt_u);
-    //  initialize cache: empty log
-    txt_u->las_d = 0;
+
+    //  extract epoch number from path (last component matching 0iN)
+    const c3_c* las_c = strrchr(pax_c, '/');
+    las_c = las_c ? las_c + 1 : pax_c;
+
+    c3_d epo_d = 0;
+    if ( 0 == strncmp(las_c, "0i", 2) && las_c[2] ) {
+      epo_d = strtoull(las_c + 2, NULL, 10);
+    }
+
+    if ( epo_d ) {
+      txt_u->hed_u.fir_d = epo_d;
+
+      //  persist fir_d (no need if epo_d is 0)
+      if ( sizeof(c3_d) != pwrite(fid_i, &txt_u->hed_u.fir_d,
+                                  sizeof(c3_d), offsetof(u3_book_head, fir_d)) )
+      {
+        u3l_log("book: failed to write fir_d: %s\r\n", strerror(errno));
+        close(fid_i);
+        close(met_i);
+        c3_free(txt_u->pax_c);
+        c3_free(txt_u);
+        return 0;
+      }
+
+      if ( -1 == c3_sync(fid_i) ) {
+        u3l_log("book: failed to sync fir_d: %s\r\n", strerror(errno));
+        close(fid_i);
+        close(met_i);
+        c3_free(txt_u->pax_c);
+        c3_free(txt_u);
+        return 0;
+      }
+    }
+
+    txt_u->las_d = epo_d;
     txt_u->off_d = sizeof(u3_book_head);
   }
   else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
@@ -640,6 +676,11 @@ u3_book_init(const c3_c* pax_c)
     if ( c3n == _book_scan_back(txt_u, &txt_u->off_d) ) {
       //  reverse scan failed, use forward scan for recovery
       _book_scan_fore(txt_u, &txt_u->off_d);
+    }
+
+    //  fir_d pre-initialized but no events found: set las_d to match
+    if ( txt_u->hed_u.fir_d && !txt_u->las_d ) {
+      txt_u->las_d = txt_u->hed_u.fir_d;
     }
   }
 
