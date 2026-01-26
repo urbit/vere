@@ -418,8 +418,8 @@ _book_skip_deed(c3_i fid_i, c3_d* off_d)
 **   on success, sets *off_d to append offset and updates txt_u->las_d.
 **
 **   returns:
-**     c3y: success
-**     c3n: failure (empty file or no valid deeds)
+**     c3y: success (including empty file with no deeds)
+**     c3n: failure (corruption)
 */
 static c3_o
 _book_scan_back(u3_book* txt_u, c3_d* off_d)
@@ -436,10 +436,11 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
 
   end_d = (c3_d)buf_u.st_size;
 
-  //  check for empty or header-only file
+  //  empty or header-only file is valid (no deeds yet)
   if ( end_d <= sizeof(u3_book_head) ) {
     *off_d = sizeof(u3_book_head);
-    return c3n;
+    txt_u->las_d = 0;
+    return c3y;
   }
 
   pos_d = end_d;
@@ -505,8 +506,8 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
 **   on success, sets *off_d to append offset and updates txt_u->las_d.
 **
 **   returns:
-**     c3y: success
-**     c3n: failure (empty file or no valid deeds)
+**     c3y: success (including empty file with no deeds)
+**     c3n: failure (corruption or no valid deeds found)
 */
 static c3_o
 _book_scan_fore(u3_book* txt_u, c3_d* off_d)
@@ -517,10 +518,10 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
   c3_d exp_d;      //  expected event number
 
   if ( 0 == txt_u->hed_u.fir_d && 0 == txt_u->las_d ) {
-    //  empty log
+    //  empty log is valid (no deeds yet)
     txt_u->las_d = 0;
     *off_d = cur_d;
-    return c3n;
+    return c3y;
   }
 
   exp_d = ( txt_u->las_d >= txt_u->hed_u.fir_d )
