@@ -67,7 +67,7 @@ static c3_i
 _book_init_meta_file(const c3_c* pax_c)
 {
   c3_c* met_c = _book_meta_path(pax_c);
-  c3_i met_i = c3_open(met_c, O_RDWR | O_CREAT, 0644);
+  c3_i  met_i = c3_open(met_c, O_RDWR | O_CREAT, 0644);
 
   if ( 0 > met_i ) {
     c3_free(met_c);
@@ -77,31 +77,29 @@ _book_init_meta_file(const c3_c* pax_c)
   //  check file size; if zero, initialize with blank metadata
   struct stat buf_u;
   if ( 0 > fstat(met_i, &buf_u) ) {
-    close(met_i);
-    c3_free(met_c);
-    return -1;
+    goto fail;
   }
 
   if ( 0 == buf_u.st_size ) {
     u3_book_meta met_u;
     memset(&met_u, 0, sizeof(u3_book_meta));
-    
-    c3_zs ret_zs = pwrite(met_i, &met_u, sizeof(u3_book_meta), 0);
-    if ( ret_zs != sizeof(u3_book_meta) ) {
-      close(met_i);
-      c3_free(met_c);
-      return -1;
+
+    if ( sizeof(u3_book_meta) != pwrite(met_i, &met_u, sizeof(u3_book_meta), 0) ) {
+      goto fail;
     }
 
     if ( -1 == c3_sync(met_i) ) {
-      close(met_i);
-      c3_free(met_c);
-      return -1;
+      goto fail;
     }
   }
 
   c3_free(met_c);
   return met_i;
+
+fail:
+  close(met_i);
+  c3_free(met_c);
+  return -1;
 }
 
 /* _book_read_meta_file(): read metadata from meta.bin.
@@ -210,9 +208,6 @@ _book_read_head(u3_book* txt_u)
   return c3y;
 }
 
-
-
-
 /* _book_deed_size(): calculate total on-disk size of deed.
 */
 static inline c3_w
@@ -252,6 +247,30 @@ _book_okay_reed(const u3_book_reed* red_u)
   }
 
   return c3y;
+}
+
+/* _book_reed_to_buff(): convert reed to mug+jam buffer format.
+**
+**   allocates output buffer; caller must free.
+**   frees red_u->jam_y on success; caller must free on failure.
+**
+**   returns: allocated buffer, or 0 on allocation failure
+*/
+static c3_y*
+_book_reed_to_buff(u3_book_reed* red_u, c3_z* len_z)
+{
+  *len_z = red_u->len_d;
+  c3_y* buf_y = c3_malloc(*len_z);
+
+  if ( !buf_y ) {
+    return 0;
+  }
+
+  memcpy(buf_y, &red_u->mug_l, 4);
+  memcpy(buf_y + 4, red_u->jam_y, red_u->len_d - 4);
+  c3_free(red_u->jam_y);
+
+  return buf_y;
 }
 
 /* _book_read_deed(): read deed from file into [red_u].
@@ -566,10 +585,10 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
 u3_book*
 u3_book_init(const c3_c* pax_c)
 {
-  c3_c log_c[8193];
-  c3_i fid_i, met_i;
+  c3_c        log_c[8193];
+  c3_i met_i, fid_i = -1;
   struct stat buf_u;
-  u3_book* txt_u;
+  u3_book*    txt_u = 0;
 
   //  construct path to book.log
   snprintf(log_c, sizeof(log_c), "%s/book.log", pax_c);
@@ -577,8 +596,7 @@ u3_book_init(const c3_c* pax_c)
   //  open or create file
   fid_i = c3_open(log_c, O_RDWR | O_CREAT, 0644);
   if ( 0 > fid_i ) {
-    u3l_log("book: failed to open %s: %s\r\n",
-            log_c, strerror(errno));
+    u3l_log("book: failed to open %s: %s\r\n", log_c, strerror(errno));
     return 0;
   }
 
@@ -586,16 +604,13 @@ u3_book_init(const c3_c* pax_c)
   met_i = _book_init_meta_file(pax_c);
   if ( 0 > met_i ) {
     u3l_log("book: failed to open meta.bin\r\n");
-    close(fid_i);
-    return 0;
+    goto fail1;
   }
 
   //  get file size
   if ( 0 > fstat(fid_i, &buf_u) ) {
     u3l_log("book: fstat failed: %s\r\n", strerror(errno));
-    close(fid_i);
-    close(met_i);
-    return 0;
+    goto fail2;
   }
 
   //  allocate log structure
@@ -604,10 +619,7 @@ u3_book_init(const c3_c* pax_c)
   txt_u->met_i = met_i;
   txt_u->pax_c = c3_malloc(strlen(log_c) + 1);
   if ( !txt_u->pax_c ) {
-    close(fid_i);
-    close(met_i);
-    c3_free(txt_u);
-    return 0;
+    goto fail3;
   }
   strcpy(txt_u->pax_c, log_c);
 
@@ -622,7 +634,12 @@ u3_book_init(const c3_c* pax_c)
     c3_d epo_d = 0;
     if ( 0 == strncmp(las_c, "0i", 2) && las_c[2] ) {
       epo_d = strtoull(las_c + 2, NULL, 10);
+      if ( EINVAL == errno ) {
+        fprintf(stderr, "book: init must be called with epoch directory\r\n");
+        goto fail3;
+      }
     }
+    else goto fail3;
 
     if ( epo_d ) {
       txt_u->hed_u.fir_d = epo_d;
@@ -632,20 +649,12 @@ u3_book_init(const c3_c* pax_c)
                                   sizeof(c3_d), offsetof(u3_book_head, fir_d)) )
       {
         u3l_log("book: failed to write fir_d: %s\r\n", strerror(errno));
-        close(fid_i);
-        close(met_i);
-        c3_free(txt_u->pax_c);
-        c3_free(txt_u);
-        return 0;
+        goto fail4;
       }
 
       if ( -1 == c3_sync(fid_i) ) {
         u3l_log("book: failed to sync fir_d: %s\r\n", strerror(errno));
-        close(fid_i);
-        close(met_i);
-        c3_free(txt_u->pax_c);
-        c3_free(txt_u);
-        return 0;
+        goto fail4;
       }
     }
 
@@ -654,22 +663,13 @@ u3_book_init(const c3_c* pax_c)
   }
   else if ( buf_u.st_size < (off_t)sizeof(u3_book_head) ) {
     //  corrupt file: too small
-    u3l_log("book: file too small: %lld bytes\r\n",
-            (long long)buf_u.st_size);
-    close(fid_i);
-    close(met_i);
-    c3_free(txt_u->pax_c);
-    c3_free(txt_u);
-    return 0;
+    u3l_log("book: file too small: %lld bytes\r\n", (long long)buf_u.st_size);
+    goto fail4;
   }
   else {
     //  existing file: read and validate header
     if ( c3n == _book_read_head(txt_u) ) {
-      close(fid_i);
-      close(met_i);
-      c3_free(txt_u->pax_c);
-      c3_free(txt_u);
-      return 0;
+      goto fail4;
     }
 
     //  try fast reverse scan first, fall back to forward scan if needed
@@ -685,6 +685,16 @@ u3_book_init(const c3_c* pax_c)
   }
 
   return txt_u;
+
+fail4:
+  c3_free(txt_u->pax_c);
+fail3:
+  c3_free(txt_u);
+fail2:
+  close(met_i);
+fail1:
+  close(fid_i);
+  return 0;
 }
 
 /* u3_book_exit(): close event log.
@@ -966,17 +976,12 @@ u3_book_read(u3_book* txt_u,
       return c3n;
     }
 
-    //  reconstruct buffer in mug + jam format for callback
-    len_z = red_u.len_d;
-    buf_y = c3_malloc(len_z);
+    //  convert to mug + jam format for callback
+    buf_y = _book_reed_to_buff(&red_u, &len_z);
     if ( !buf_y ) {
       c3_free(red_u.jam_y);
       return c3n;
     }
-    memcpy(buf_y, &red_u.mug_l, 4);
-    memcpy(buf_y + 4, red_u.jam_y, red_u.len_d - 4);
-
-    c3_free(red_u.jam_y);
 
     //  invoke callback
     if ( c3n == read_f(ptr_v, cur_d, len_z, buf_y) ) {
@@ -1182,18 +1187,13 @@ u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
     return c3n;
   }
 
-  //  reconstruct buffer in mug + jam format
-  *len_z = red_u.len_d;
-  buf_y = c3_malloc(*len_z);
+  //  convert to mug + jam format
+  buf_y = _book_reed_to_buff(&red_u, len_z);
   if ( !buf_y ) {
     c3_free(red_u.jam_y);
     itr_u->liv_o = c3n;
     return c3n;
   }
-  memcpy(buf_y, &red_u.mug_l, 4);
-  memcpy(buf_y + 4, red_u.jam_y, red_u.len_d - 4);
-
-  c3_free(red_u.jam_y);
 
   *buf_v = buf_y;
 
