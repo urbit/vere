@@ -867,6 +867,10 @@ _conn_ef_handle(u3_conn*  con_u,
       can_u->mor_u.bal_f(can_u, -4, "handle-unknown");
       u3_king_bail();
     }
+
+    if ( !uv_is_readable((uv_stream_t*)&con_u->san_u->pyp_u) ) {
+      _conn_close_chan(con_u->san_u, can_u);
+    }
   }
   else {
     u3l_log("conn: handle-no-coq %" PRIx32 " %" PRIu32,
