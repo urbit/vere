@@ -178,34 +178,40 @@ _book_make_head(u3_book* txt_u)
   return c3y;
 }
 
+/* _book_okay_head(): validate header fields.
+**
+**   returns: c3y if valid, c3n otherwise (prints error message)
+*/
+static c3_o
+_book_okay_head(const u3_book_head* hed_u)
+{
+  if ( BOOK_MAGIC != hed_u->mag_w ) {
+    fprintf(stderr, "book: invalid magic: 0x%08x\r\n", hed_u->mag_w);
+    return c3n;
+  }
+
+  if ( BOOK_VERSION != hed_u->ver_w ) {
+    fprintf(stderr, "book: unsupported version: %u\r\n", hed_u->ver_w);
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* _book_read_head(): read and validate header.
 */
 static c3_o
 _book_read_head(u3_book* txt_u)
 {
-  c3_zs ret_zs;
-
-  ret_zs = pread(txt_u->fid_i, &txt_u->hed_u,
-                 sizeof(u3_book_head), 0);
+  c3_zs ret_zs = pread(txt_u->fid_i, &txt_u->hed_u,
+                       sizeof(u3_book_head), 0);
 
   if ( ret_zs != sizeof(u3_book_head) ) {
     fprintf(stderr, "book: failed to read header\r\n");
     return c3n;
   }
 
-  if ( BOOK_MAGIC != txt_u->hed_u.mag_w ) {
-    fprintf(stderr, "book: invalid magic: 0x%08x\r\n",
-            txt_u->hed_u.mag_w);
-    return c3n;
-  }
-
-  if ( BOOK_VERSION != txt_u->hed_u.ver_w ) {
-    fprintf(stderr, "book: unsupported version: %u\r\n",
-            txt_u->hed_u.ver_w);
-    return c3n;
-  }
-
-  return c3y;
+  return _book_okay_head(&txt_u->hed_u);
 }
 
 /* _book_deed_size(): calculate total on-disk size of deed.
@@ -412,14 +418,20 @@ _book_skip_deed(c3_i fid_i, c3_d* off_d)
   return c3y;
 }
 
-/* _book_scan_back(): reverse scan to find last valid deed.
+/* _book_scan_back(): fast reverse scan to find last valid deed.
 **
-**   scans backwards from file end using trailing let_d field.
-**   on success, sets *off_d to append offset and updates txt_u->las_d.
+**   this is the fast path for normal startup. scans backwards from
+**   file end using the trailing let_d field to locate deed boundaries.
+**
+**   on success:
+**     - sets *off_d to append offset (byte after last valid deed)
+**     - sets txt_u->las_d to last event number
 **
 **   returns:
-**     c3y: success (including empty file with no deeds)
-**     c3n: failure (corruption)
+**     c3y: found valid deed OR file is empty (no deeds)
+**     c3n: corruption detected (caller should fall back to _book_scan_fore)
+**
+**   NB: does NOT truncate file or perform recovery; just reports state.
 */
 static c3_o
 _book_scan_back(u3_book* txt_u, c3_d* off_d)
@@ -500,14 +512,19 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
   return c3n;
 }
 
-/* _book_scan_fore(): scan to find last valid deed.
+/* _book_scan_fore(): recovery forward scan to find last valid deed.
 **
-**   validates each record's CRC and len_d == let_d.
-**   on success, sets *off_d to append offset and updates txt_u->las_d.
+**   used as fallback when _book_scan_back fails (corruption recovery).
+**   validates each record's CRC and len_d == let_d sequentially.
+**   if corruption is found, truncates file to remove invalid data.
+**
+**   on completion:
+**     - sets *off_d to append offset
+**     - sets txt_u->las_d to last valid event number
+**     - truncates file if corrupted trailing data was found
 **
 **   returns:
-**     c3y: success (including empty file with no deeds)
-**     c3n: failure (corruption or no valid deeds found)
+**     c3y: always (recovery is best-effort)
 */
 static c3_o
 _book_scan_fore(u3_book* txt_u, c3_d* off_d)
@@ -581,6 +598,34 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
   return c3y;
 }
 
+/* _book_pull_epoc(): parse epoch number from directory path.
+**
+**   expects path ending in "0iN" where N is the epoch number.
+**
+**   returns: c3y on success with *epo_d set, c3n on failure
+*/
+static c3_o
+_book_pull_epoc(const c3_c* pax_c, c3_d* epo_d)
+{
+  const c3_c* las_c = strrchr(pax_c, '/');
+  las_c = las_c ? las_c + 1 : pax_c;
+
+  //  expect "0iN" format
+  if ( strncmp(las_c, "0i", 2) != 0 || !las_c[2] ) {
+    fprintf(stderr, "book: init must be called with epoch directory\r\n");
+    return c3n;
+  }
+
+  errno = 0;
+  *epo_d = strtoull(las_c + 2, NULL, 10);
+  if ( errno == EINVAL ) {
+    fprintf(stderr, "book: invalid epoch number in path\r\n");
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* u3_book_init(): open/create event log in epoch directory.
 */
 u3_book*
@@ -628,19 +673,11 @@ u3_book_init(const c3_c* pax_c)
     //  new file: initialize and write header
     _book_make_head(txt_u);
 
-    //  extract epoch number from path (last component matching 0iN)
-    const c3_c* las_c = strrchr(pax_c, '/');
-    las_c = las_c ? las_c + 1 : pax_c;
-
-    c3_d epo_d = 0;
-    if ( 0 == strncmp(las_c, "0i", 2) && las_c[2] ) {
-      epo_d = strtoull(las_c + 2, NULL, 10);
-      if ( EINVAL == errno ) {
-        fprintf(stderr, "book: init must be called with epoch directory\r\n");
-        goto fail3;
-      }
+    //  extract epoch number from path
+    c3_d epo_d;
+    if ( c3n == _book_pull_epoc(pax_c, &epo_d) ) {
+      goto fail3;
     }
-    else goto fail3;
 
     if ( epo_d ) {
       txt_u->hed_u.fir_d = epo_d;
@@ -673,9 +710,9 @@ u3_book_init(const c3_c* pax_c)
       goto fail4;
     }
 
-    //  try fast reverse scan first, fall back to forward scan if needed
+    //  try fast reverse scan first
     if ( c3n == _book_scan_back(txt_u, &txt_u->off_d) ) {
-      //  reverse scan failed, use forward scan for recovery
+      //  fall back to forward scan for recovery
       _book_scan_fore(txt_u, &txt_u->off_d);
     }
 
@@ -758,14 +795,7 @@ u3_book_stat(const c3_c* log_c)
     return;
   }
 
-  if ( BOOK_MAGIC != hed_u.mag_w ) {
-    fprintf(stderr, "book: invalid magic number: 0x%x\r\n", hed_u.mag_w);
-    close(fid_i);
-    return;
-  }
-
-  if ( BOOK_VERSION != hed_u.ver_w ) {
-    fprintf(stderr, "book: unsupported version: %u\r\n", hed_u.ver_w);
+  if ( c3n == _book_okay_head(&hed_u) ) {
     close(fid_i);
     return;
   }
@@ -783,13 +813,21 @@ u3_book_stat(const c3_c* log_c)
   fprintf(stderr, "  file size: %lld bytes\r\n", (long long)buf_u.st_size);
 
   //  read metadata from meta.bin
+  //  extract directory from log_c path (lop off "/book.log" suffix)
   u3_book_meta met_u;
-  c3_c* epo_c = c3_malloc(strlen(log_c) - 8);
-  if ( epo_c ) {
-    strncpy(epo_c, log_c, strlen(log_c) - 9);  //  XX brittle
-    epo_c[strlen(log_c) - 9] = '\0';  //  lops "/book.log"
+  c3_c* epo_c = 0;
+  {
+    const c3_c* sep_c = strrchr(log_c, '/');
+    if ( sep_c && 0 == strcmp(sep_c, "/book.log") ) {
+      c3_z len_z = sep_c - log_c;
+      epo_c = c3_malloc(len_z + 1);
+      if ( epo_c ) {
+        memcpy(epo_c, log_c, len_z);
+        epo_c[len_z] = '\0';
+      }
+    }
   }
-  c3_c* met_c = _book_meta_path(epo_c);
+  c3_c* met_c = epo_c ? _book_meta_path(epo_c) : 0;
   c3_free(epo_c);
   c3_i met_i = c3_open(met_c, O_RDONLY, 0);
 
