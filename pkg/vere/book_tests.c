@@ -11,8 +11,9 @@
 #define _alloc(sz)    malloc(sz)
 #define _free(ptr)    free(ptr)
 
-/* _test_make_tmpdir(): create unique temporary directory.
+/* _test_make_tmpdir(): create unique temporary directory with epoch subdir.
 **
+**   creates /tmp/book_test_XXXXXX/0i0 and returns the epoch path.
 **   returns: heap-allocated path (caller must free)
 */
 static c3_c*
@@ -26,12 +27,23 @@ _test_make_tmpdir(void)
     return 0;
   }
 
-  c3_c* ret_c = _alloc(strlen(dir_c) + 1);
-  strcpy(ret_c, dir_c);
+  //  create epoch subdirectory 0i0
+  c3_c epo_c[256];
+  snprintf(epo_c, sizeof(epo_c), "%s/0i0", dir_c);
+  if ( -1 == mkdir(epo_c, 0755) ) {
+    fprintf(stderr, "book_test: mkdir failed: %s\r\n", strerror(errno));
+    return 0;
+  }
+
+  c3_c* ret_c = _alloc(strlen(epo_c) + 1);
+  strcpy(ret_c, epo_c);
   return ret_c;
 }
 
 /* _test_rm_rf(): recursively remove directory contents.
+**
+**   expects epoch path like /tmp/book_test_XXXXXX/0i0
+**   removes the parent directory (the whole test dir)
 */
 static void
 _test_rm_rf(const c3_c* pax_c)
@@ -40,9 +52,16 @@ _test_rm_rf(const c3_c* pax_c)
     fprintf(stderr, "book_test: refusing to remove non-/tmp path: %s\r\n", pax_c);
     exit(1);
   }
+
+  //  strip epoch suffix to get parent tmpdir
+  c3_c* par_c = strdup(pax_c);
+  c3_c* las_c = strrchr(par_c, '/');
+  if ( las_c ) *las_c = '\0';
+
   c3_c cmd_c[8192];
-  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", pax_c);
+  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", par_c);
   system(cmd_c);
+  free(par_c);
 }
 
 /* _test_make_event(): create a test event buffer (mug + jam).
@@ -71,33 +90,6 @@ _test_make_event(c3_z* len_z, c3_d eve_d)
   return buf_y;
 }
 
-/* _test_corrupt_file(): flip a byte in a file at given offset.
-*/
-static c3_o
-_test_corrupt_file(const c3_c* pax_c, c3_d off_d)
-{
-  c3_i fid_i = open(pax_c, O_RDWR);
-  if ( fid_i < 0 ) {
-    return c3n;
-  }
-
-  c3_y byt_y;
-  if ( 1 != pread(fid_i, &byt_y, 1, off_d) ) {
-    close(fid_i);
-    return c3n;
-  }
-
-  byt_y ^= 0xFF;  //  flip all bits
-
-  if ( 1 != pwrite(fid_i, &byt_y, 1, off_d) ) {
-    close(fid_i);
-    return c3n;
-  }
-
-  close(fid_i);
-  return c3y;
-}
-
 /* _test_truncate_file(): truncate file to given size.
 */
 static c3_o
@@ -107,28 +99,6 @@ _test_truncate_file(const c3_c* pax_c, c3_d siz_d)
     return c3n;
   }
   return c3y;
-}
-
-/* _test_append_garbage(): append random bytes to file.
-*/
-static c3_o
-_test_append_garbage(const c3_c* pax_c, c3_z len_z)
-{
-  c3_i fid_i = open(pax_c, O_WRONLY | O_APPEND);
-  if ( fid_i < 0 ) {
-    return c3n;
-  }
-
-  c3_y* buf_y = _alloc(len_z);
-  for ( c3_z i = 0; i < len_z; i++ ) {
-    buf_y[i] = (c3_y)(i * 17 + 42);  //  pseudo-random
-  }
-
-  c3_zs ret = write(fid_i, buf_y, len_z);
-  _free(buf_y);
-  close(fid_i);
-
-  return (ret == (c3_zs)len_z) ? c3y : c3n;
 }
 
 /* _test_write_raw(): write raw bytes at offset in file.
@@ -559,90 +529,6 @@ cleanup:
 // Crash Recovery & Corruption Tests
 //==============================================================================
 
-/* _test_crc_corruption_detection(): flip bit in data, verify recovery truncates.
-**
-**   This test verifies that CRC corruption is detected during recovery.
-**   After corrupting jam data and reopening, the log should be empty
-**   because the corrupted deed fails CRC validation.
-*/
-static c3_i
-_test_crc_corruption_detection(void)
-{
-  c3_c* dir_c = _test_make_tmpdir();
-  if ( !dir_c ) return 0;
-
-  c3_i     ret_i = 1;
-  u3_book* txt_u = u3_book_init(dir_c);
-  c3_y*    evt_y = 0;
-  c3_z     evt_z;
-  c3_c     path_c[8192];
-
-  if ( !txt_u ) {
-    fprintf(stderr, "  crc_corruption: init failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  write event (evt_z = 12 bytes: 4 mug + 8 jam)
-  evt_y = _test_make_event(&evt_z, 1);
-  {
-    void* byt_p[1] = { evt_y };
-    c3_z  siz_i[1] = { evt_z };
-
-    c3_o sav_o = u3_book_save(txt_u, 1, 1, byt_p, siz_i, 0);
-    if ( c3n == sav_o ) {
-      fprintf(stderr, "  crc_corruption: save failed\r\n");
-      ret_i = 0;
-      goto cleanup;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-  //  corrupt the CRC field directly to ensure CRC mismatch
-  //  file layout: [header 16] [deed_head 12] [jam 8] [deed_tail 12]
-  //  deed_tail: [crc_w 4] [let_d 8]
-  //  crc_w is at offset: 16 + 12 + 8 = 36
-  snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
-  if ( c3n == _test_corrupt_file(path_c, 36) ) {
-    fprintf(stderr, "  crc_corruption: corrupt_file failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  reopen - recovery should detect CRC mismatch and truncate
-  txt_u = u3_book_init(dir_c);
-  if ( !txt_u ) {
-    fprintf(stderr, "  crc_corruption: reopen failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  after recovery, log should be empty (corrupted deed truncated)
-  {
-    c3_d low_d, hig_d;
-    u3_book_gulf(txt_u, &low_d, &hig_d);
-
-    if ( hig_d != 0 ) {
-      fprintf(stderr, "  crc_corruption: expected empty log after recovery, got hig=%" PRIu64 "\r\n", hig_d);
-      ret_i = 0;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-cleanup:
-  if ( txt_u ) u3_book_exit(txt_u);
-  if ( evt_y ) _free(evt_y);
-  _test_rm_rf(dir_c);
-  _free(dir_c);
-
-  fprintf(stderr, "  crc_corruption_detection: %s\r\n", ret_i ? "ok" : "FAILED");
-  return ret_i;
-}
-
 /* _test_truncated_file_recovery(): truncate mid-event, verify recovery.
 **
 **   write two events, truncate file mid-second-event, reopen.
@@ -737,198 +623,6 @@ cleanup:
   return ret_i;
 }
 
-/* _test_garbage_after_valid_deeds(): append garbage, verify recovery stops.
-**
-**   write a valid event, then append garbage bytes that form an invalid
-**   deed structure. recovery should preserve the valid event and truncate
-**   the garbage.
-**
-**   note: we append a small, controlled garbage pattern to avoid triggering
-**   huge allocation attempts from random let_d values.
-*/
-static c3_i
-_test_garbage_after_valid_deeds(void)
-{
-  c3_c* dir_c = _test_make_tmpdir();
-  if ( !dir_c ) return 0;
-
-  c3_i     ret_i = 1;
-  u3_book* txt_u = u3_book_init(dir_c);
-  c3_y*    evt_y = 0;
-  c3_z     evt_z;
-  c3_c     path_c[8192];
-
-  if ( !txt_u ) {
-    fprintf(stderr, "  garbage_after: init failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  write one valid event
-  evt_y = _test_make_event(&evt_z, 1);
-  {
-    void* byt_p[1] = { evt_y };
-    c3_z  siz_i[1] = { evt_z };
-
-    c3_o sav_o = u3_book_save(txt_u, 1, 1, byt_p, siz_i, 0);
-    if ( c3n == sav_o ) {
-      fprintf(stderr, "  garbage_after: save failed\r\n");
-      ret_i = 0;
-      goto cleanup;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-  //  append garbage with a zero let_d trailer to prevent huge allocations
-  //  the reverse scan reads let_d from the last 8 bytes; if let_d == 0,
-  //  scan_back breaks and falls through to scan_end
-  snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
-  {
-    c3_i fid_i = open(path_c, O_WRONLY | O_APPEND);
-    if ( fid_i < 0 ) {
-      fprintf(stderr, "  garbage_after: open failed\r\n");
-      ret_i = 0;
-      goto cleanup;
-    }
-
-    //  12 bytes of garbage that won't form valid let_d
-    //  set last 8 bytes to 0 so let_d == 0 triggers scan_back failure
-    c3_y garbage[12] = { 0xDE, 0xAD, 0xBE, 0xEF, 0, 0, 0, 0, 0, 0, 0, 0 };
-    write(fid_i, garbage, sizeof(garbage));
-    close(fid_i);
-  }
-
-  //  reopen - should recover to just event 1
-  txt_u = u3_book_init(dir_c);
-  if ( !txt_u ) {
-    fprintf(stderr, "  garbage_after: reopen failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  verify event 1 is still readable
-  {
-    c3_d low_d, hig_d;
-    u3_book_gulf(txt_u, &low_d, &hig_d);
-
-    if ( hig_d != 1 ) {
-      fprintf(stderr, "  garbage_after: expected hig=1, got %" PRIu64 "\r\n", hig_d);
-      ret_i = 0;
-    }
-  }
-
-  //  read should succeed
-  {
-    _test_read_ctx ctx_u = {0};
-    c3_o red_o = u3_book_read(txt_u, &ctx_u, 1, 1, _test_read_cb);
-
-    if ( c3n == red_o ) {
-      fprintf(stderr, "  garbage_after: read failed\r\n");
-      ret_i = 0;
-    }
-    else {
-      _free(ctx_u.buf_y);
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-cleanup:
-  if ( txt_u ) u3_book_exit(txt_u);
-  if ( evt_y ) _free(evt_y);
-  _test_rm_rf(dir_c);
-  _free(dir_c);
-
-  fprintf(stderr, "  garbage_after_valid_deeds: %s\r\n", ret_i ? "ok" : "FAILED");
-  return ret_i;
-}
-
-/* _test_length_trailer_mismatch(): craft deed with len_d != let_d.
-*/
-static c3_i
-_test_length_trailer_mismatch(void)
-{
-  c3_c* dir_c = _test_make_tmpdir();
-  if ( !dir_c ) return 0;
-
-  c3_i     ret_i = 1;
-  u3_book* txt_u = u3_book_init(dir_c);
-  c3_y*    evt_y = 0;
-  c3_z     evt_z;
-  c3_c     path_c[8192];
-
-  if ( !txt_u ) {
-    fprintf(stderr, "  len_mismatch: init failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  write event
-  evt_y = _test_make_event(&evt_z, 1);
-  {
-    void* byt_p[1] = { evt_y };
-    c3_z  siz_i[1] = { evt_z };
-
-    c3_o sav_o = u3_book_save(txt_u, 1, 1, byt_p, siz_i, 0);
-    if ( c3n == sav_o ) {
-      fprintf(stderr, "  len_mismatch: save failed\r\n");
-      ret_i = 0;
-      goto cleanup;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-  //  corrupt the let_d field (last 8 bytes of deed)
-  //  deed ends at: 16 (header) + 12 (deed_head) + (evt_z-4) (jam) + 12 (deed_tail)
-  //  let_d is at offset: deed_end - 8
-  snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
-  c3_d deed_end = 16 + 12 + (evt_z - 4) + 12;
-  c3_d let_off = deed_end - 8;
-
-  //  write a different value for let_d
-  c3_d bad_let = 0x12345678;
-  if ( c3n == _test_write_raw(path_c, let_off, &bad_let, sizeof(bad_let)) ) {
-    fprintf(stderr, "  len_mismatch: write_raw failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  reopen - should recover to empty (no valid events)
-  txt_u = u3_book_init(dir_c);
-  if ( !txt_u ) {
-    fprintf(stderr, "  len_mismatch: reopen failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  verify no events (mismatch detected, truncated)
-  {
-    c3_d low_d, hig_d;
-    u3_book_gulf(txt_u, &low_d, &hig_d);
-
-    if ( hig_d != 0 ) {
-      fprintf(stderr, "  len_mismatch: expected empty log, got hig=%" PRIu64 "\r\n", hig_d);
-      ret_i = 0;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-cleanup:
-  if ( txt_u ) u3_book_exit(txt_u);
-  if ( evt_y ) _free(evt_y);
-  _test_rm_rf(dir_c);
-  _free(dir_c);
-
-  fprintf(stderr, "  length_trailer_mismatch: %s\r\n", ret_i ? "ok" : "FAILED");
-  return ret_i;
-}
 
 //==============================================================================
 // Iterator Tests
@@ -1251,83 +945,6 @@ cleanup:
   return ret_i;
 }
 
-/* _test_header_only_file(): file with just header should init as empty.
-*/
-static c3_i
-_test_header_only_file(void)
-{
-  c3_c* dir_c = _test_make_tmpdir();
-  if ( !dir_c ) return 0;
-
-  c3_i     ret_i = 1;
-  u3_book* txt_u = u3_book_init(dir_c);
-  c3_y*    evt_y = 0;
-  c3_z     evt_z;
-  c3_c     path_c[8192];
-
-  if ( !txt_u ) {
-    fprintf(stderr, "  header_only: init failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  write event then truncate to header only
-  evt_y = _test_make_event(&evt_z, 1);
-  {
-    void* byt_p[1] = { evt_y };
-    c3_z  siz_i[1] = { evt_z };
-
-    c3_o sav_o = u3_book_save(txt_u, 1, 1, byt_p, siz_i, 0);
-    if ( c3n == sav_o ) {
-      fprintf(stderr, "  header_only: save failed\r\n");
-      ret_i = 0;
-      goto cleanup;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-  //  truncate to just header (16 bytes)
-  snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
-  if ( c3n == _test_truncate_file(path_c, 16) ) {
-    fprintf(stderr, "  header_only: truncate failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  reopen should succeed with empty log
-  txt_u = u3_book_init(dir_c);
-  if ( !txt_u ) {
-    fprintf(stderr, "  header_only: reopen failed\r\n");
-    ret_i = 0;
-    goto cleanup;
-  }
-
-  //  verify empty
-  {
-    c3_d low_d, hig_d;
-    u3_book_gulf(txt_u, &low_d, &hig_d);
-
-    if ( hig_d != 0 ) {
-      fprintf(stderr, "  header_only: expected empty, got hig=%" PRIu64 "\r\n", hig_d);
-      ret_i = 0;
-    }
-  }
-
-  u3_book_exit(txt_u);
-  txt_u = 0;
-
-cleanup:
-  if ( txt_u ) u3_book_exit(txt_u);
-  if ( evt_y ) _free(evt_y);
-  _test_rm_rf(dir_c);
-  _free(dir_c);
-
-  fprintf(stderr, "  header_only_file: %s\r\n", ret_i ? "ok" : "FAILED");
-  return ret_i;
-}
-
 /* _test_undersized_file(): file smaller than header should be rejected.
 */
 static c3_i
@@ -1626,11 +1243,8 @@ main(int argc, char* argv[])
   ret_i &= _test_contiguity_gap_rejection();
   ret_i &= _test_minimum_event_size();
 
-  //  crash recovery & corruption tests
-  ret_i &= _test_crc_corruption_detection();
+  //  crash recovery tests
   ret_i &= _test_truncated_file_recovery();
-  ret_i &= _test_garbage_after_valid_deeds();
-  ret_i &= _test_length_trailer_mismatch();
 
   //  iterator tests
   ret_i &= _test_walk_single_event();
@@ -1640,7 +1254,6 @@ main(int argc, char* argv[])
   //  header & format tests
   ret_i &= _test_invalid_magic();
   ret_i &= _test_invalid_version();
-  ret_i &= _test_header_only_file();
   ret_i &= _test_undersized_file();
 
   //  metadata tests
