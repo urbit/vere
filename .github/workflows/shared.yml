@@ -82,7 +82,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.2
 
       - name: Build binaries
         run: |
@@ -198,7 +198,11 @@ jobs:
           for t in "${targets[@]}"
           do
             IFS=' ' read zig_target target <<< "${t}"
-            urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+            if [[ "$zig_target" == *"windows"* ]]; then
+              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit.exe
+            else
+              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
+            fi
 
             # Determine binary prefix (vere32 or vere64)
             if [[ "${{ matrix.bits }}" == "32" ]]; then
@@ -248,7 +252,11 @@ jobs:
       - name: Upload latest deployed version string to GCP
         run: |
           echo "${{ inputs.pace }}" > ./PACE
-          printf $(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.10s $(git rev-parse HEAD) > ./VERSION
+          if [ "${{ inputs.pace }}" == "live" ]; then
+            sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig > ./VERSION
+          else
+            printf "$(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.7s" "$(git rev-parse HEAD)" > ./VERSION
+          fi
 
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')

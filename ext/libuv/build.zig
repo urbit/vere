@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const uv = b.addStaticLibrary(.{
+    const uv = b.addLibrary(.{
         .name = "libuv",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     uv.linkLibC();
@@ -21,7 +20,7 @@ pub fn build(b: *std.Build) !void {
     uv.addIncludePath(uv_c.path("src"));
     uv.addIncludePath(uv_c.path("include"));
 
-    var uv_flags = std.ArrayList([]const u8).init(b.allocator);
+    var uv_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer uv_flags.deinit();
 
     try uv_flags.appendSlice(&.{

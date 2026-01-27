@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) !void {
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
         "-pedantic",
@@ -17,10 +17,9 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    const pkg_ent = b.addStaticLibrary(.{
+    const pkg_ent = b.addLibrary(.{
         .name = "ent",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     pkg_ent.linkLibC();

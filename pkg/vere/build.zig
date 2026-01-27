@@ -14,11 +14,7 @@ pub fn build(b: *std.Build) !void {
     // XX re-enable for migration work
     // const vere32 = b.option(bool, "vere32", "Compile in 32-bit mode") orelse false;
 
-    const pkg_vere = b.addStaticLibrary(.{
-        .name = "vere",
-        .target = target,
-        .optimize = optimize,
-    });
+    const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -114,7 +110,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const pace_h = b.addWriteFile("pace.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
+        var output = std.array_list.Managed(u8).init(b.allocator);
         defer output.deinit();
 
         try output.appendSlice(b.fmt(
@@ -129,7 +125,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const version_h = b.addWriteFile("version.h", blk: {
-        var output = std.ArrayList(u8).init(b.allocator);
+        var output = std.array_list.Managed(u8).init(b.allocator);
         defer output.deinit();
 
         try output.appendSlice(b.fmt(
@@ -173,7 +169,7 @@ pub fn build(b: *std.Build) !void {
     // }
     pkg_vere.linkLibC();
 
-    var files = std.ArrayList([]const u8).init(b.allocator);
+    var files = std.array_list.Managed([]const u8).init(b.allocator);
     defer files.deinit();
     try files.appendSlice(&c_source_files);
     if (t.os.tag == .macos) {
@@ -199,7 +195,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
         "-std=gnu23",

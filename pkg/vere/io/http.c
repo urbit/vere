@@ -1400,7 +1400,7 @@ _http_start_respond(u3_hreq* req_u,
     }
     else {
       h2o_add_header_by_str(&rec_u->pool, &rec_u->res.headers,
-                            hed_u->nam_c, hed_u->nam_w, 0, 0,
+                            hed_u->nam_c, hed_u->nam_w, 1, 0,
                             hed_u->val_c, hed_u->val_w);
     }
 
@@ -2185,6 +2185,17 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   h2o_u->cep_u.hosts = h2o_u->fig_u.hosts;
   h2o_u->cep_u.ssl_ctx = tls_u;
 
+  //  register compression filter first
+  //
+  {
+    h2o_compress_args_t com_u;
+    memset(&com_u, 0, sizeof(com_u));
+    com_u.min_size = 128;
+    com_u.gzip.quality = 6;
+    com_u.brotli.quality = 5;
+    h2o_compress_register(&h2o_u->hos_u->fallback_path, &com_u);
+  }
+
   h2o_u->han_u = h2o_create_handler(&h2o_u->hos_u->fallback_path,
                                     sizeof(*h2o_u->han_u));
   if ( c3y == red ) {
@@ -2248,8 +2259,6 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     u3z(now);
 #endif
   }
-
-  // XX h2o_compress_register
 
   h2o_context_init(&h2o_u->ctx_u, u3L, &h2o_u->fig_u);
 
