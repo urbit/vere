@@ -96,7 +96,7 @@
     /* u3j_fink: (fine check) enough data to verify a located core.
     */
       typedef struct {
-        c3_w    len_w;                //  number of fists
+        c3_l    len_l;                //  number of fists
         u3_noun sat;                  //  static noun at end of check
         u3j_fist fis_u[];             //  fists
       } u3j_fink;
@@ -144,7 +144,7 @@
     **/
       /* u3j_boot(): initialize jet system.
       */
-        c3_w
+        c3_l
         u3j_boot(c3_o nuu_o);
 
       /* u3j_clear(): clear jet table to re-register.

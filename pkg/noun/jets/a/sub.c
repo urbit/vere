@@ -11,15 +11,32 @@
 #endif
 
 #ifdef __IMMINTRIN_H
-#define _subborrow_w _subborrow_u32
+  #ifdef VERE64
+    #define _subborrow_w        _subborrow_u64
+    #define _subborrow_w_ptr(p) ((unsigned long long*)(p))
+  #else
+    #define _subborrow_w        _subborrow_u32
+    #define _subborrow_w_ptr(p) ((unsigned int*)(p))
+  #endif
 #else
-static inline c3_b
-_subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
-{
-  c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
-  *c_w = (c3_w)dif_d;
-  return (c3_b)(dif_d >> 63);
-}
+  #ifdef VERE64
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_q dif_q = (c3_q)a_w - (c3_q)b_w - (c3_q)bor_b;
+      *c_w = (c3_w)dif_q;
+      return (c3_b)(dif_q >> 127);
+    }
+  #else
+    static inline c3_b
+    _subborrow_w(c3_b bor_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_d dif_d = (c3_d)a_w - (c3_d)b_w - (c3_d)bor_b;
+      *c_w = (c3_w)dif_d;
+      return (c3_b)(dif_d >> 63);
+    }
+  #endif
+  #define _subborrow_w_ptr(p)  (p)
 #endif
 
 static void
@@ -32,16 +49,18 @@ _sub_words(c3_w* a_buf_w,
   c3_b bor_b = 0;
 
   for (c3_w i_w = 0; i_w < b_len_w; i_w++) {
-    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w], &c_buf_w[i_w]);
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], b_buf_w[i_w],
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
   }
 
   c3_w i_w = b_len_w;
   for (; i_w < a_len_w && bor_b; i_w++) {
-    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0, &c_buf_w[i_w]);
+    bor_b = _subborrow_w(bor_b, a_buf_w[i_w], 0,
+                         _subborrow_w_ptr(&c_buf_w[i_w]));
   }
 
   u3_assert( 0 == bor_b );
-  memcpy(&c_buf_w[i_w], &a_buf_w[i_w], (a_len_w - i_w) << 2);
+  memcpy(&c_buf_w[i_w], &a_buf_w[i_w], (a_len_w - i_w) * sizeof(c3_w));
 }
 
 u3_noun
@@ -73,7 +92,7 @@ u3qa_sub(u3_atom a,
     
     a_buf_w = u3r_word_buffer(&a, &a_len_w);
     b_buf_w = u3r_word_buffer(&b, &b_len_w);
-    u3i_slab_init(&sab_u, 5, a_len_w);
+    u3i_slab_init(&sab_u, u3a_word_bits_log, a_len_w);
     c_buf_w = sab_u.buf_w;
 
     _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
@@ -86,7 +105,7 @@ u3wa_sub(u3_noun cor)
 {
   u3_noun a, b;
 
-  if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+  if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
        (c3n == u3ud(b)) ||
        (c3n == u3ud(a)) )
   {

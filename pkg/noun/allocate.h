@@ -13,11 +13,53 @@
 
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
+#ifndef VERE64
 #     define u3a_vits    2
+#else
+#     define u3a_vits    0
+#endif
+
+#     define u3a_word_bytes  (sizeof(c3_w))
+
+#     define u3a_half_bits  32
+#     define u3a_half_bits_log 5
+#     define u3a_half_bytes_shift  (u3a_half_bits_log - 3)
+#     define u3a_32_indirect_mask  0x3fffffff
+#     define u3a_32_direct_max  0x7fffffff
+#     define u3a_32_indirect_flag  0x80000000
+#     define u3a_32_cell_flag  0xc0000000
+
+#     define u3a_chub_bits  64
+#     define u3a_chub_bits_log 6
+#     define u3a_chub_bytes_shift  (u3a_chub_bits_log - 3)
+#     define u3a_64_indirect_mask  0x3fffffffffffffffULL
+#     define u3a_64_direct_max  0x7fffffffffffffffULL
+#     define u3a_64_indirect_flag  0x8000000000000000ULL
+#     define u3a_64_cell_flag  0xc000000000000000ULL
+
+#ifndef VERE64
+#     define u3a_word_bits  u3a_half_bits
+#     define u3a_word_bytes_shift  u3a_half_bytes_shift
+#     define u3a_word_bits_log u3a_half_bits_log
+#     define u3a_indirect_mask  u3a_32_indirect_mask 
+#     define u3a_direct_max  u3a_32_direct_max 
+#     define u3a_indirect_flag  u3a_32_indirect_flag
+#     define u3a_cell_flag  u3a_32_cell_flag
+#     define u3a_word_words 1
+#else
+#     define u3a_word_bits  u3a_chub_bits
+#     define u3a_word_bytes_shift  u3a_chub_bytes_shift
+#     define u3a_word_bits_log u3a_chub_bits_log
+#     define u3a_indirect_mask  u3a_64_indirect_mask 
+#     define u3a_direct_max  u3a_64_direct_max 
+#     define u3a_indirect_flag  u3a_64_indirect_flag
+#     define u3a_cell_flag  u3a_64_cell_flag
+#     define u3a_word_words 2
+#endif
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
-#     define u3a_walign  (1 << u3a_vits)
+#     define u3a_walign  ((c3_w)1 << u3a_vits)
 
     /* u3a_balign: u3a_walign in bytes
     */
@@ -25,11 +67,15 @@
 
      /* u3a_bits_max: max loom bex
      */
-#    define u3a_bits_max (8 * sizeof(c3_w) + u3a_vits)
+#    define u3a_bits_max ((c3_w)8 * sizeof(c3_w) + u3a_vits)
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
+#ifndef VERE64
 #     define u3a_page    12ULL
+#else
+#     define u3a_page    11ULL
+#endif
 
     /* u3a_pages: maximum number of pages in memory.
     */
@@ -51,13 +97,24 @@
     */
 #     define u3a_maximum (u3a_words - c3_wiseof(u3a_atom))
 
-    /* u3a_minimum: minimum loom object size (actual size of a cell).
+    /* u3a_minimum: minimum loom object size.
     */
-#     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
+#ifndef VERE64
+#     define u3a_minimum  (c3_w)4  //  actual size of a cell
+#else
+#     define u3a_minimum  (c3_w)2  //  half the size of a cell
+#endif
+//#     define u3a_minimum ((c3_w)c3_wiseof(u3a_cell))
 
     /* u3a_min_log: log2(u3a_minimum)
     */
-#     define u3a_min_log  2
+#ifndef VERE64
+#     define u3a_min_log  (c3_w)2
+#else
+#     define u3a_min_log  (c3_w)1
+#endif
+
+// XX: add static asserts for u3a_minimum, u3a_min_log, and u3a_cell (probably u3a_atom too?)
 
     /* u3a_crag_no: number of hunk (small allocation) sizes
     */
@@ -77,21 +134,30 @@
       } u3a_rate;
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
-      typedef struct {
+      typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_w mug_w;
+        c3_h mug_h;
+        #ifdef VERE64
+          c3_h fut_h;
+        #endif
       } u3a_noun;
 
-      typedef struct {
+      typedef struct __attribute__((aligned(4))) {
         c3_w use_w;
-        c3_w mug_w;
+        c3_h mug_h;
+        #ifdef VERE64
+          c3_h fut_h;
+        #endif
         c3_w len_w;
         c3_w buf_w[0];
       } u3a_atom;
 
-      typedef struct {
+      typedef struct __attribute__((aligned(4))) {
         c3_w  use_w;
-        c3_w  mug_w;
+        c3_h  mug_h;
+        #ifdef VERE64
+          c3_h fut_h;
+        #endif
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;
@@ -152,7 +218,14 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         struct {                              //  escape buffer
           union {
+            #ifndef VERE64
             jmp_buf buf;
+            #else
+            struct {
+              jmp_buf buf;
+              c3_w why_w;                     //  how
+            };
+            #endif
             c3_w buf_w[256];                  //  futureproofing
           };
         } esc;
@@ -237,19 +310,19 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   **/
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
-#     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
+#     define u3a_is_cat(som)    (((som) >> (u3a_word_bits - 1)) ? c3n : c3y)
 
     /* u3a_is_dog(): yes if noun [som] is indirect noun.
     */
-#     define u3a_is_dog(som)    (((som) >> 31) ? c3y : c3n)
+#     define u3a_is_dog(som)    (((som) >> (u3a_word_bits - 1)) ? c3y : c3n)
 
     /* u3a_is_pug(): yes if noun [som] is indirect atom.
     */
-#     define u3a_is_pug(som)    ((0b10 == ((som) >> 30)) ? c3y : c3n)
+#     define u3a_is_pug(som)    ((0b10 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_pom(): yes if noun [som] is indirect cell.
     */
-#     define u3a_is_pom(som)    ((0b11 == ((som) >> 30)) ? c3y : c3n)
+#     define u3a_is_pom(som)    ((0b11 == ((som) >> (u3a_word_bits - 2))) ? c3y : c3n)
 
     /* u3a_is_atom(): yes if noun [som] is direct atom or indirect atom.
     */
@@ -446,7 +519,7 @@ typedef struct {
 
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */
-#   define u3a_to_off(som)  (((som) & 0x3fffffff) << u3a_vits)
+#   define u3a_to_off(som)  (((som) & u3a_indirect_mask) << u3a_vits)
 
   /* u3a_to_ptr(): convert noun [som] into generic pointer into loom.
    */
@@ -458,18 +531,18 @@ typedef struct {
 
   /**  Inline functions.
   **/
-  /* u3a_to_pug(): set bit 31 of [off].
+  /* u3a_to_pug(): set indirect atom flag bit of [off].
    */
   inline c3_w u3a_to_pug(c3_w off) {
     c3_dessert((off & u3a_walign-1) == 0);
-    return (off >> u3a_vits) | 0x80000000;
+    return (off >> u3a_vits) | u3a_indirect_flag;
   }
 
-  /* u3a_to_pom(): set bits 30 and 31 of [off].
+  /* u3a_to_pom(): set indirect cell flag bits of [off].
    */
   inline c3_w u3a_to_pom(c3_w off) {
     c3_dessert((off & u3a_walign-1) == 0);
-    return (off >> u3a_vits) | 0xc0000000;
+    return (off >> u3a_vits) | u3a_cell_flag;
   }
 
     /**  road stack.
@@ -797,7 +870,7 @@ u3a_dash(void);
         /* u3a_print_quac: print a quac memory report.
         */
           void
-          u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u);
+          u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u);
 
         /* u3a_print_memory(): print memory amount to file descriptor.
         */

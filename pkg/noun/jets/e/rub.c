@@ -17,7 +17,7 @@
     u3_atom m;
     {
       c3_w  bit_w = u3r_met(0, b);
-      u3_noun bit = u3i_words(1, &bit_w);
+      u3_noun bit = u3i_word(bit_w);
       m = u3qa_add(a, bit);
       u3z(bit);
     }
@@ -74,7 +74,7 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) )
     {

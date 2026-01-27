@@ -14,7 +14,7 @@ typedef c3_d       u3v_version;
 
 /*  bytecode semantics (within u3v_version)
  */
-typedef c3_w       u3n_version;
+typedef c3_h       u3n_version;
 
 #define U3N_VER1   (u3n_version)0  // zero-indexedfor backcompat
 #define U3N_VER2   (u3n_version)1
@@ -22,7 +22,7 @@ typedef c3_w       u3n_version;
 
 /*  snapshot patch format
  */
-typedef c3_w       u3e_version;
+typedef c3_h       u3e_version;
 
 #define U3P_VER2   (u3e_version)2  //  top-level checksum added
 #define U3P_VERLAT U3P_VER2

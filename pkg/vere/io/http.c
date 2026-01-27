@@ -108,7 +108,7 @@ typedef struct _u3_h2o_serv {
 */
 typedef struct _u3_httd {
   u3_auto            car_u;             //  driver
-  c3_l               sev_l;             //  instance number
+  c3_w               sev_l;             //  instance number
   u3_hfig            fig_u;             //  http configuration
   u3_http*           htp_u;             //  http servers
   SSL_CTX*           tls_u;             //  server SSL_CTX*
@@ -130,8 +130,8 @@ static void _http_start_respond(u3_hreq* req_u,
 static void _http_spin_timer_cb(uv_timer_t* tim_u);
 
 static const c3_i TCP_BACKLOG = 16;
-static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
-static const c3_w SPIN_TIMER = 100; // XX make this a command line arguement
+static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000ULL;
+static const c3_w SPIN_TIMER = 100ULL;
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -783,7 +783,7 @@ _get_range(h2o_headers_t req_headers, byte_range* rng_u)
   rng_u->end_z = SIZE_MAX;
 
   c3_w inx_w = h2o_find_header(&req_headers, H2O_TOKEN_RANGE, -1);
-  if ( UINT32_MAX == inx_w) {
+  if ( c3_w_max == inx_w) {
     return c3n;
   }
 
@@ -861,12 +861,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 
   //  get beak
   //
-  for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
+  for ( c3_h i_h = 0; i_h < 3; ++i_h ) {
     u3_noun* wer;
-    if ( 0 == i_w ) {
+    if ( 0 == i_h ) {
       wer = &bem.who;
     }
-    else if ( 1 == i_w ) {
+    else if ( 1 == i_h ) {
       wer = &bem.des;
     }
     else {
@@ -890,12 +890,12 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 
     // '='
     if ( (len_w > 0) && ('=' == txt_c[0]) ) {
-      if ( 0 == i_w ) {
+      if ( 0 == i_h ) {
         u3_http* htp_u = req_u->hon_u->htp_u;
         u3_httd* htd_u = htp_u->htd_u;
         *wer = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
       }
-      else if ( 1 == i_w ) {
+      else if ( 1 == i_h ) {
         *wer = c3__base;
       }
       else {
@@ -1108,7 +1108,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1157,7 +1157,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   if ( u3_nul == nun ) {
     u3_weak req = _http_rec_to_httq(rec_u);
     if ( u3_none == req ) {
-      if ( (u3C.wag_w & u3o_verbose) ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
                 rec_u->method.base);
       }
@@ -1695,7 +1695,7 @@ _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   u3_weak req = _http_rec_to_httq(rec_u);
 
   if ( u3_none == req ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
               rec_u->method.base);
     }
@@ -1848,7 +1848,7 @@ _http_conn_new(u3_http* htp_u)
 /* _http_serv_find(): find http server by sequence.
 */
 static u3_http*
-_http_serv_find(u3_httd* htd_u, c3_l sev_l)
+_http_serv_find(u3_httd* htd_u, c3_w sev_l)
 {
   u3_http* htp_u = htd_u->htp_u;
 
@@ -2123,7 +2123,7 @@ _http_serv_accept(u3_http* htp_u)
 
   if ( 0 != (sas_i = uv_accept((uv_stream_t*)&htp_u->wax_u,
                                (uv_stream_t*)&hon_u->wax_u)) ) {
-    if ( (u3C.wag_w & u3o_verbose) ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
       u3l_log("http: accept: %s", uv_strerror(sas_i));
     }
 
@@ -2487,30 +2487,30 @@ _http_release_ports_file(c3_c *pax_c)
 
 static u3_hreq*
 _http_search_req(u3_httd* htd_u,
-                 c3_l     sev_l,
-                 c3_l     coq_l,
-                 c3_l     seq_l)
+                 c3_w     sev_l,
+                 c3_w     coq_l,
+                 c3_w     seq_l)
 {
   u3_http* htp_u;
   u3_hcon* hon_u;
   u3_hreq* req_u;
-  c3_w bug_w = u3C.wag_w & u3o_verbose;
+  c3_w bug_w = u3C.wag_h & u3o_verbose;
 
   if ( !(htp_u = _http_serv_find(htd_u, sev_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: server not found: %x", sev_l);
+      u3l_log("http: server not found: %"PRIxc3_w, sev_l);
     }
     return 0;
   }
   else if ( !(hon_u = _http_conn_find(htp_u, coq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: connection not found: %x/%d", sev_l, coq_l);
+      u3l_log("http: connection not found: %"PRIxc3_w"/%"PRIc3_w, sev_l, coq_l);
     }
     return 0;
   }
   else if ( !(req_u = _http_req_find(hon_u, seq_l)) ) {
     if ( bug_w ) {
-      u3l_log("http: request not found: %x/%d/%d",
+      u3l_log("http: request not found: %"PRIxc3_w"/%"PRIc3_w"/%"PRIc3_w,
               sev_l, coq_l, seq_l);
     }
     return 0;
@@ -2752,9 +2752,9 @@ _http_io_talk(u3_auto* car_u)
 */
 void
 _http_ef_http_server(u3_httd* htd_u,
-                     c3_l     sev_l,
-                     c3_l     coq_l,
-                     c3_l     seq_l,
+                     c3_w     sev_l,
+                     c3_w     coq_l,
+                     c3_w     seq_l,
                      u3_noun    tag,
                      u3_noun    dat)
 {
@@ -2851,8 +2851,8 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
         }
       }
       else {
-        u3_noun blu = u3_term_get_blew(0);
-        c3_l  col_l = u3h(blu);
+        u3_noun blu = u3_term_get_blew((c3_w)0);
+        c3_w  col_l = u3h(blu);
         wol = u3dc("wash", u3nc(0, col_l), u3k(tan));
         u3z(blu);
       }
@@ -2902,7 +2902,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_w;
+    c3_w pos_w      = stk_u->off_h;
     c3_w out_w      = 0;
 
     while (pos_w > 4) {
@@ -2931,7 +2931,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     }
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
+    if ( 0 != stk_u->off_h ) {
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,

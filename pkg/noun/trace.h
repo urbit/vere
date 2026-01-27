@@ -34,16 +34,16 @@
    /* u3t_spin: %spin hint stack
     */
     typedef struct {
-      c3_w off_w;
-      c3_w fow_w;
-      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
+      c3_h off_h;
+      c3_h fow_h;
+      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_h)];
     } u3t_spin;
 
   /**  Macros.
   **/
 #   ifdef U3_CPU_DEBUG
 #     define u3t_on(var)  \
-        (u3T.var = (u3C.wag_w & u3o_debug_cpu) \
+        (u3T.var = (u3C.wag_h & u3o_debug_cpu) \
                  ? (c3n == u3T.var) ? c3y : (abort(), 0) \
                  : u3T.var)
 #   else
@@ -52,7 +52,7 @@
 
 #   ifdef U3_CPU_DEBUG
 #     define u3t_off(var) \
-        (u3T.var = (u3C.wag_w & u3o_debug_cpu) \
+        (u3T.var = (u3C.wag_h & u3o_debug_cpu) \
                  ? (c3y == u3T.var) ? c3n : (abort(), 0) \
                  : u3T.var)
 #   else
@@ -163,34 +163,34 @@
       u3t_boot(void);
 
     /* u3t_slog_cap(): slog a tank with a caption with
-    ** a given priority c3_l (assumed 0-3).
+    ** a given priority c3_h (assumed 0-3).
     */
       void
-      u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan);
+      u3t_slog_cap(c3_h pri_l, u3_noun cap, u3_noun tan);
 
-    /* u3t_slog_trace(): given a c3_l priority pri and a raw stack tax
+    /* u3t_slog_trace(): given a c3_h priority pri and a raw stack tax
     ** flop the order into start-to-end, render, and slog each item
     ** until done.
     */
       void
-      u3t_slog_trace(c3_l pri_l, u3_noun tax);
+      u3t_slog_trace(c3_h pri_l, u3_noun tax);
 
     /* u3t_slog_nara(): slog only the deepest road's trace with
-    ** c3_l priority pri
+    ** c3_h priority pri
     */
       void
-      u3t_slog_nara(c3_l pri_l);
+      u3t_slog_nara(c3_h pri_l);
 
     /* u3t_slog_hela(): join all roads' traces together into one tax
-    ** and pass it to slog_trace along with the given c3_l priority pri_l
+    ** and pass it to slog_trace along with the given c3_h priority pri_l
     */
       void
-      u3t_slog_hela(c3_l pri_l);
+      u3t_slog_hela(c3_h pri_l);
 
     /* u3t_etch_meme(): report memory stats at call time
     */
       u3_noun
-      u3t_etch_meme(c3_l mod_l);
+      u3t_etch_meme(c3_w mod_w);
 
     /* u3t_sstack_init: initalize a root node on the spin stack 
      */

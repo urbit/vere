@@ -40,15 +40,15 @@
     // pad key, inner and outer
     c3_y trail = (boq % 4);
     c3_y padwords = (boq / 4) + (trail == 0 ? 0 : 1);
-    c3_w innpad[padwords], outpad[padwords];
+    c3_h innpad[padwords], outpad[padwords];
     memset(innpad, 0x36, padwords * 4);
     memset(outpad, 0x5c, padwords * 4);
     if ( trail > 0 ) {
       innpad[padwords-1] = 0x36363636 >> (8 * (4 - trail));
       outpad[padwords-1] = 0x5c5c5c5c >> (8 * (4 - trail));
     }
-    u3_atom innkey = u3kc_mix(u3k(key), u3i_words(padwords, innpad));
-    u3_atom outkey = u3kc_mix(    key , u3i_words(padwords, outpad));
+    u3_atom innkey = u3kc_mix(u3k(key), u3i_halfs(padwords, innpad));
+    u3_atom outkey = u3kc_mix(    key , u3i_halfs(padwords, outpad));
 
     // append inner padding to message, then hash
     u3_atom innmsg = u3ka_add(u3kc_lsh(3, wid, innkey), dat);
@@ -69,12 +69,12 @@
 
     // sample is [[haj boq out] [wik key] [wid dat]]
     if ( (c3n == u3r_mean(cor, u3x_sam_4,  &haj,
-                               50,         &boq, // +<->-
-                               51,         &out, // +<->+
+                               (c3_w)50,         &boq, // +<->-
+                               (c3_w)51,         &out, // +<->+
                                u3x_sam_12, &wik,
                                u3x_sam_13, &key,
                                u3x_sam_14, &wid,
-                               u3x_sam_15, &dat, 0)) ||
+                               u3x_sam_15, &dat, u3_nul)) ||
          (c3n == u3ud(boq)) ||
          (c3n == u3a_is_cat(boq)) ||
          (c3n == u3ud(out)) ||

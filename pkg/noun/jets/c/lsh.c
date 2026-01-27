@@ -11,7 +11,7 @@ u3qc_lsh(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
   else if ( !_(u3a_is_cat(b)) ) {
@@ -45,7 +45,7 @@ u3wc_lsh(u3_noun cor)
   u3_atom bloq, step;
   u3_noun a, b;
   u3x_mean(cor, u3x_sam_2, &a,
-                u3x_sam_3, &b, 0);
+                u3x_sam_3, &b, u3_nul);
   u3x_bite(a, &bloq, &step);
 
   return u3qc_lsh(bloq, step, u3x_atom(b));
