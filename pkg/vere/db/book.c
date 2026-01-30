@@ -3,6 +3,7 @@
 #include "db/book.h"
 
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -345,7 +346,9 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
   return c3y;
 }
 
-/* _book_save_deed(): save complete deed to file.
+/* _book_save_deed(): save complete deed to file using scatter-gather I/O.
+**
+**   uses pwritev() to write head + jam + tail in a single syscall.
 **
 **   returns:
 **     c3y: success
@@ -354,43 +357,36 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
 static c3_o
 _book_save_deed(c3_i fid_i, c3_d* off_d, const u3_book_reed* red_u)
 {
-  c3_zs ret_zs;
-  c3_d  now_d = *off_d;
   c3_d  jaz_d = red_u->len_d - 4;  //  len_d - mug bytes
 
-  //  write deed_head
+  //  prepare deed_head
   u3_book_deed_head hed_u;
   hed_u.len_d = red_u->len_d;
   hed_u.eve_d = red_u->eve_d;
   hed_u.mug_l = red_u->mug_l;
 
-  ret_zs = pwrite(fid_i, &hed_u, sizeof(u3_book_deed_head), now_d);
-  if ( ret_zs != sizeof(u3_book_deed_head) ) {
-    return c3n;
-  }
-  now_d += sizeof(u3_book_deed_head);
-
-  //  write jam data
-  ret_zs = pwrite(fid_i, red_u->jam_y, jaz_d, now_d);
-  if ( ret_zs != (c3_zs)jaz_d ) {
-    return c3n;
-  }
-  now_d += jaz_d;
-
-  //  write deed_tail
+  //  prepare deed_tail
   u3_book_deed_tail tal_u;
   tal_u.crc_w = red_u->crc_w;
-  tal_u.let_d = red_u->len_d;  //  length trailer (same as len_d)
+  tal_u.let_d = red_u->len_d;
 
-  ret_zs = pwrite(fid_i, &tal_u, sizeof(u3_book_deed_tail), now_d);
-  if ( ret_zs != sizeof(u3_book_deed_tail) ) {
+  //  build iovec for scatter-gather write: head + jam + tail
+  struct iovec iov_u[3];
+  iov_u[0].iov_base = &hed_u;
+  iov_u[0].iov_len  = sizeof(u3_book_deed_head);
+  iov_u[1].iov_base = red_u->jam_y;
+  iov_u[1].iov_len  = jaz_d;
+  iov_u[2].iov_base = &tal_u;
+  iov_u[2].iov_len  = sizeof(u3_book_deed_tail);
+
+  c3_z tot_z = sizeof(u3_book_deed_head) + jaz_d + sizeof(u3_book_deed_tail);
+  c3_zs ret_zs = pwritev(fid_i, iov_u, 3, *off_d);
+
+  if ( ret_zs != (c3_zs)tot_z ) {
     return c3n;
   }
-  now_d += sizeof(u3_book_deed_tail);
 
-  //  update offset
-  *off_d = now_d;
-
+  *off_d += tot_z;
   return c3y;
 }
 
@@ -900,35 +896,112 @@ u3_book_save(u3_book* txt_u,
     }
   }
 
-  //  write each event deed
+  //  batch write all deeds using scatter-gather I/O
+  //
+  //  for each deed we need 3 iovec entries: head + jam + tail
+  //  pwritev has IOV_MAX limit (typically 1024), so we chunk if needed
+  //
   now_d = txt_u->off_d;
 
+  //  max iovecs per pwritev call (use 1020 to be safe, divisible by 3)
+  #define BOOK_IOV_MAX 1020
+  c3_w max_deeds_w = BOOK_IOV_MAX / 3;  //  340 deeds per call
+
+  //  allocate arrays for headers and tails (jam data comes from byt_p)
+  u3_book_deed_head* hed_u = c3_malloc(len_d * sizeof(u3_book_deed_head));
+  u3_book_deed_tail* tal_u = c3_malloc(len_d * sizeof(u3_book_deed_tail));
+
+  //  iovec array sized for one chunk (reused for each pwritev call)
+  c3_w iov_max_w = (len_d < max_deeds_w) ? len_d * 3 : BOOK_IOV_MAX;
+  struct iovec* iov_u = c3_malloc(iov_max_w * sizeof(struct iovec));
+
+  if ( !hed_u || !tal_u || !iov_u ) {
+    c3_free(hed_u);
+    c3_free(tal_u);
+    c3_free(iov_u);
+    fprintf(stderr, "book: failed to allocate batch write buffers\r\n");
+    return c3n;
+  }
+
+  //  first pass: populate headers and tails, calculate CRCs
   for ( c3_w i_w = 0; i_w < len_d; i_w++ ) {
     c3_y* buf_y = (c3_y*)byt_p[i_w];
     c3_d  siz_d = (c3_d)siz_i[i_w];
-    u3_book_reed red_u;
 
-    //  extract mug from buffer (first 4 bytes)
+    //  validate buffer size
     if ( siz_d < 4 ) {
       fprintf(stderr, "book: event %" PRIu64 " buffer too small: %" PRIu64 "\r\n",
               eve_d + i_w, siz_d);
+      c3_free(hed_u);
+      c3_free(tal_u);
+      c3_free(iov_u);
       return c3n;
     }
 
-    //  build reed from input buffer
+    //  build reed for CRC calculation
+    u3_book_reed red_u;
     memcpy(&red_u.mug_l, buf_y, 4);
     red_u.jam_y = buf_y + 4;
-    red_u.len_d = siz_d;  //  total payload: mug + jam
+    red_u.len_d = siz_d;
     red_u.eve_d = eve_d + i_w;
     red_u.crc_w = _book_calc_crc(&red_u);
 
-    //  save deed to file
-    if ( c3n == _book_save_deed(txt_u->fid_i, &now_d, &red_u) ) {
-      fprintf(stderr, "book: failed to save deed for event %" PRIu64 ": %s\r\n",
-              eve_d + i_w, strerror(errno));
+    //  populate deed_head
+    hed_u[i_w].len_d = siz_d;
+    hed_u[i_w].eve_d = eve_d + i_w;
+    hed_u[i_w].mug_l = red_u.mug_l;
+
+    //  populate deed_tail
+    tal_u[i_w].crc_w = red_u.crc_w;
+    tal_u[i_w].let_d = siz_d;
+  }
+
+  //  second pass: write in chunks to respect IOV_MAX
+  c3_w done_w = 0;  //  deeds written so far
+
+  while ( done_w < len_d ) {
+    c3_w chunk_w = len_d - done_w;
+    if ( chunk_w > max_deeds_w ) {
+      chunk_w = max_deeds_w;
+    }
+
+    //  build iovec for this chunk
+    c3_z chunk_z = 0;  //  bytes in this chunk
+    for ( c3_w i_w = 0; i_w < chunk_w; i_w++ ) {
+      c3_w src_w = done_w + i_w;
+      c3_w idx_w = i_w * 3;
+      c3_y* buf_y = (c3_y*)byt_p[src_w];
+      c3_d  jaz_d = siz_i[src_w] - 4;
+
+      iov_u[idx_w + 0].iov_base = &hed_u[src_w];
+      iov_u[idx_w + 0].iov_len  = sizeof(u3_book_deed_head);
+      iov_u[idx_w + 1].iov_base = buf_y + 4;
+      iov_u[idx_w + 1].iov_len  = jaz_d;
+      iov_u[idx_w + 2].iov_base = &tal_u[src_w];
+      iov_u[idx_w + 2].iov_len  = sizeof(u3_book_deed_tail);
+
+      chunk_z += sizeof(u3_book_deed_head) + jaz_d + sizeof(u3_book_deed_tail);
+    }
+
+    //  pwritev for this chunk
+    c3_zs ret_zs = pwritev(txt_u->fid_i, iov_u, chunk_w * 3, now_d);
+
+    if ( ret_zs != (c3_zs)chunk_z ) {
+      fprintf(stderr, "book: batch write failed: wrote %zd of %zu bytes: %s\r\n",
+              ret_zs, chunk_z, strerror(errno));
+      c3_free(hed_u);
+      c3_free(tal_u);
+      c3_free(iov_u);
       return c3n;
     }
+
+    now_d += chunk_z;
+    done_w += chunk_w;
   }
+
+  c3_free(hed_u);
+  c3_free(tal_u);
+  c3_free(iov_u);
 
   //  sync data to disk
   if ( -1 == c3_sync(txt_u->fid_i) ) {
