@@ -27,6 +27,9 @@ static c3_o _ct_lop_o;
 /// Nock PID.
 static c3_ws _nock_pid_i = 0;
 
+/// dump trace file.
+static FILE* _filt_u = NULL;
+
 /// JSON trace file.
 static FILE* _file_u = NULL;
 
@@ -212,6 +215,28 @@ u3t_samp(void)
     // it can cause memory errors.
     return;
   }
+
+  u3_noun don = u3R->pro.don;
+  while ( u3_nul != don ) {
+    u3_noun dot = u3h(don);
+
+    while ( u3_nul != dot ) {
+      u3_noun dit = u3h(dot);
+      c3_w    len_w = u3r_met(3, dit);
+      c3_c*   dit_c = ( c3y == u3a_is_cat(dit) )
+                      ? &dit
+                      : ((u3a_atom*)u3a_to_ptr(dit))->buf_w;
+      fprintf(_filt_u, "/%.*s", len_w, dit_c);
+
+      dot = u3t(dot);
+    }
+    fprintf(_filt_u, "\n");
+
+    don = u3t(don);
+  }
+  fprintf(_filt_u, "1\n\n");
+
+  return;
 
   c3_w old_wag = u3C.wag_w;
   u3C.wag_w &= ~u3o_debug_cpu;
@@ -543,6 +568,24 @@ u3t_init(void)
   u3T.far_o = c3n;
   u3T.coy_o = c3n;
   u3T.euq_o = c3n;
+
+  if ( ( u3C.wag_w & u3o_debug_cpu ) && !_filt_u ) {
+    c3_c fil_c[2048];
+    snprintf(fil_c, 2048, "%s/.urb/put/trace", u3C.dir_c);
+
+    struct stat st;
+    if (  (-1 == stat(fil_c, &st))
+      && (-1 == c3_mkdir(fil_c, 0700)) )
+    {
+      fprintf(stderr, "mkdir: %s failed: %s\r\n", fil_c, strerror(errno));
+      return;
+    }
+
+    snprintf(fil_c, 2048, "%s/.urb/put/trace/dump.txt", u3C.dir_c);
+
+    _filt_u = c3_fopen(fil_c, "w");
+    fprintf(_filt_u, "\n\n\n");
+  }
 }
 
 c3_w
