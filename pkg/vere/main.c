@@ -897,6 +897,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-file FILE          Add a prop into the boot sequence\n"
     "    --prop-url URL            Download a prop into the boot sequence\n",
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
+    "    --gc-abort                Abort the process on leaks\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
