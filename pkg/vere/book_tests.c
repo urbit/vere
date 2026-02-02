@@ -555,7 +555,7 @@ _test_truncated_file_recovery(void)
   }
 
   //  write two events (each evt_z = 12 bytes: 4 mug + 8 jam)
-  //  deed size on disk = 12 (head) + 8 (jam) + 12 (tail) = 32 bytes
+  //  deed size on disk = 12 (head) + 8 (jam) + 8 (tail) = 28 bytes
   evt1_y = _test_make_event(&evt_z, 1);
   evt2_y = _test_make_event(&evt_z, 2);
   {
@@ -573,9 +573,8 @@ _test_truncated_file_recovery(void)
   u3_book_exit(txt_u);
   txt_u = 0;
 
-  //  file layout: [header 16] [deed1] [deed2]
+  //  file layout: [header] [deed1] [deed2]
   //  deed size = sizeof(deed_head) + (len_d - 4) + sizeof(deed_tail)
-  //  with struct padding, this is typically 40 bytes per deed for our 12-byte events
   snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
   c3_d siz_d = _test_file_size(path_c);
 
@@ -1479,7 +1478,7 @@ main(int argc, char* argv[])
 
   //  benchmarks
   ret_i &= _bench_write_speed(10000, 128);
-  ret_i &= _bench_write_speed_batched(10000, 1280, 100);
+  ret_i &= _bench_write_speed_batched(1000000, 1280, 1000);
 
   fprintf(stderr, "\r\n");
   if ( ret_i ) {

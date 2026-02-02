@@ -69,7 +69,6 @@
     /* u3_book_deed_tail: on-disk deed trailer
     */
       typedef struct _u3_book_deed_tail {
-        c3_w crc_w;    //  CRC32 checksum
         c3_d let_d;    //  length trailer (validates len_d)
       } u3_book_deed_tail;
 
@@ -90,7 +89,6 @@
         c3_d  len_d;    //  total payload size
         c3_l  mug_l;    //  mug/hash
         c3_y* jam_y;    //  jam data (caller owns, len = len_d - 4)
-        c3_w  crc_w;    //  CRC32 checksum
       } u3_book_reed;
 
     /* u3_book_init(): open/create event log at [pax_c].

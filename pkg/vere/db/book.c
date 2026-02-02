@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <zlib.h>
 
 #include "c3/c3.h"
 #include "noun.h"
@@ -21,8 +20,8 @@
 //    optimized for sequential writes and reads; no random access.
 //
 //    file format:
-//      [16-byte header (immutable)]
-//      [events: len_d | mug_l | jam_data | crc_m | let_d]
+//      [24-byte header]
+//      [events: len_d | mug_l | jam_data | let_d]
 //
 //    metadata stored in separate meta.bin file
 //
@@ -31,15 +30,6 @@
 */
   #define BOOK_MAGIC      0x424f4f4b  //  "BOOK"
   #define BOOK_VERSION    1           //  format version
-
-/* _book_crc32_two(): compute CRC32 over two buffers.
-*/
-static c3_w
-_book_crc32_two(c3_y* one_y, c3_w one_w, c3_y* two_y, c3_w two_w)
-{
-  c3_w crc_w = (c3_w)crc32(0L, one_y, one_w);
-  return (c3_w)crc32(crc_w, two_y, two_w);
-}
 
 /* _book_meta_path(): construct path to meta.bin from book directory path.
 **
@@ -225,18 +215,6 @@ _book_deed_size(c3_d len_d)
   // = 12 + (len_d - 4) + 12 = len_d + 20
 }
 
-/* _book_calc_crc(): compute CRC32 for reed.
-*/
-static c3_w
-_book_calc_crc(const u3_book_reed* red_u)
-{
-  c3_y buf_y[12];  //  8 bytes len_d + 4 bytes mug
-  memcpy(buf_y, &red_u->len_d, 8);
-  memcpy(buf_y + 8, &red_u->mug_l, 4);
-
-  return _book_crc32_two(buf_y, 12, red_u->jam_y, red_u->len_d - 4);
-}
-
 /* _book_okay_reed(): validate reed integrity.
 */
 static c3_o
@@ -244,12 +222,6 @@ _book_okay_reed(const u3_book_reed* red_u)
 {
   //  validate length
   if ( 0 == red_u->len_d ) {
-    return c3n;
-  }
-
-  //  validate CRC
-  c3_w crc_w = _book_calc_crc(red_u);
-  if ( crc_w != red_u->crc_w ) {
     return c3n;
   }
 
@@ -330,7 +302,6 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
   now_d += sizeof(u3_book_deed_tail);
 
   //  populate reed from tail
-  red_u->crc_w = tal_u.crc_w;
   let_d = tal_u.let_d;
 
   //  validate len_d == let_d
@@ -365,7 +336,6 @@ _book_save_deed(c3_i fid_i, c3_d* off_d, const u3_book_reed* red_u)
 
   //  prepare deed_tail
   u3_book_deed_tail tal_u;
-  tal_u.crc_w = red_u->crc_w;
   tal_u.let_d = red_u->len_d;
 
   //  build iovec for scatter-gather write: head + jam + tail
@@ -968,19 +938,13 @@ u3_book_save(u3_book* txt_u,
       return c3n;
     }
 
-    //  build reed for CRC calculation
-    u3_book_reed red_u;
-    memcpy(&red_u.mug_l, buf_y, 4);
-    red_u.jam_y = buf_y + 4;
-    red_u.len_d = siz_d;
-    red_u.crc_w = _book_calc_crc(&red_u);
-
     //  populate deed_head
+    c3_l mug_l;
+    memcpy(&mug_l, buf_y, 4);
     hed_u[i_w].len_d = siz_d;
-    hed_u[i_w].mug_l = red_u.mug_l;
+    hed_u[i_w].mug_l = mug_l;
 
     //  populate deed_tail
-    tal_u[i_w].crc_w = red_u.crc_w;
     tal_u[i_w].let_d = siz_d;
   }
 
