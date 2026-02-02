@@ -3258,7 +3258,6 @@ main(c3_i   argc,
         u3C.wag_w |= u3o_debug_ram;
       }
       if ( _(u3_Host.ops_u.gab_abort) ) {
-        fprintf(stderr, "set leak_crash\r\n");
         u3C.wag_w |= u3o_leak_crash;
       }
 
