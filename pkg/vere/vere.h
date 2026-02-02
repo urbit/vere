@@ -275,6 +275,7 @@
         c3_c*   fak_c;                      //  -F, fake ship
         c3_c*   gen_c;                      //  -G, czar generator
         c3_o    gab;                        //  -g, test garbage collection
+        c3_o    gab_abort;                  //  -g-crash, abort on leaks, implies -g
         c3_c*   dns_c;                      //  -H, ames bootstrap domain
         c3_c*   jin_c;                      //  -I, inject raw event
         c3_c*   imp_c;                      //  -i, import pier state

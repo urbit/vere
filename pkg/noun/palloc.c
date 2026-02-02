@@ -1456,7 +1456,9 @@ _sweep_directory(void)
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
-    // u3_assert(0);
+    if ( u3C.wag_w & u3o_leak_crash ) {
+      u3_assert(!"leak");
+    }
   }
 
   if ( u3C.wag_w & u3o_verbose ) {
@@ -1769,8 +1771,11 @@ _sweep_counts(void)
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
-    // u3_assert(0);
+    if ( u3C.wag_w & u3o_leak_crash ) {
+      u3_assert(!"leak");
+    }
   }
+
   if ( weq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
     // u3_assert(0);
