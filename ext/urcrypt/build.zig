@@ -386,7 +386,6 @@ fn libge_additions(
         .flags = &.{
             "-O2",
             "-fno-omit-frame-pointer",
-            "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
             "-std=gnu99",
