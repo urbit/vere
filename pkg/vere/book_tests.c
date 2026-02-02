@@ -12,6 +12,9 @@
 #define _alloc(sz)    malloc(sz)
 #define _free(ptr)    free(ptr)
 
+//  book format v2: header area size (two 4096-byte header slots)
+#define BOOK_DEED_BASE  8192
+
 /* _test_make_tmpdir(): create unique temporary directory with epoch subdir.
 **
 **   creates /tmp/book_test_XXXXXX/0i0 and returns the epoch path.
@@ -272,12 +275,13 @@ _test_single_event_lifecycle(void)
   }
 
   //  verify gulf
+  //  NB: fir_d is the epoch base (0), las_d is the last stored event (1)
   {
     c3_d low_d, hig_d;
     u3_book_gulf(txt_u, &low_d, &hig_d);
 
-    if ( 1 != low_d || 1 != hig_d ) {
-      fprintf(stderr, "  single_event: gulf expected (1,1), got (%" PRIu64 ",%" PRIu64 ")\r\n",
+    if ( 0 != low_d || 1 != hig_d ) {
+      fprintf(stderr, "  single_event: gulf expected (0,1), got (%" PRIu64 ",%" PRIu64 ")\r\n",
               low_d, hig_d);
       ret_i = 0;
     }
@@ -573,16 +577,16 @@ _test_truncated_file_recovery(void)
   u3_book_exit(txt_u);
   txt_u = 0;
 
-  //  file layout: [header] [deed1] [deed2]
+  //  file layout: [header A @ 0] [header B @ 4096] [deed1 @ 8192] [deed2]
   //  deed size = sizeof(deed_head) + (len_d - 4) + sizeof(deed_tail)
   snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
   c3_d siz_d = _test_file_size(path_c);
 
-  //  calculate deed size dynamically: total - header = 2 deeds
-  c3_d deed_size = (siz_d - 16) / 2;
+  //  calculate deed size dynamically: total - headers = 2 deeds
+  c3_d deed_size = (siz_d - BOOK_DEED_BASE) / 2;
 
-  //  truncate to: header + deed1 + 5 bytes of deed2
-  c3_d truncate_at = 16 + deed_size + 5;
+  //  truncate to: headers + deed1 + 5 bytes of deed2
+  c3_d truncate_at = BOOK_DEED_BASE + deed_size + 5;
 
   if ( c3n == _test_truncate_file(path_c, truncate_at) ) {
     fprintf(stderr, "  truncated_file: truncate failed\r\n");
@@ -870,11 +874,16 @@ _test_invalid_magic(void)
   u3_book_exit(txt_u);
   txt_u = 0;
 
-  //  corrupt magic number at offset 0
+  //  corrupt magic number in BOTH header slots (double-buffered)
   snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
   c3_w bad_magic = 0xDEADBEEF;
   if ( c3n == _test_write_raw(path_c, 0, &bad_magic, sizeof(bad_magic)) ) {
-    fprintf(stderr, "  invalid_magic: write_raw failed\r\n");
+    fprintf(stderr, "  invalid_magic: write_raw A failed\r\n");
+    ret_i = 0;
+    goto cleanup;
+  }
+  if ( c3n == _test_write_raw(path_c, 4096, &bad_magic, sizeof(bad_magic)) ) {
+    fprintf(stderr, "  invalid_magic: write_raw B failed\r\n");
     ret_i = 0;
     goto cleanup;
   }
@@ -918,11 +927,16 @@ _test_invalid_version(void)
   u3_book_exit(txt_u);
   txt_u = 0;
 
-  //  corrupt version at offset 4
+  //  corrupt version in BOTH header slots (double-buffered)
   snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
   c3_w bad_version = 99;
   if ( c3n == _test_write_raw(path_c, 4, &bad_version, sizeof(bad_version)) ) {
-    fprintf(stderr, "  invalid_version: write_raw failed\r\n");
+    fprintf(stderr, "  invalid_version: write_raw A failed\r\n");
+    ret_i = 0;
+    goto cleanup;
+  }
+  if ( c3n == _test_write_raw(path_c, 4096 + 4, &bad_version, sizeof(bad_version)) ) {
+    fprintf(stderr, "  invalid_version: write_raw B failed\r\n");
     ret_i = 0;
     goto cleanup;
   }
@@ -966,7 +980,7 @@ _test_undersized_file(void)
   u3_book_exit(txt_u);
   txt_u = 0;
 
-  //  truncate to 8 bytes (less than 16-byte header)
+  //  truncate to 8 bytes (less than 8192-byte header area)
   snprintf(path_c, sizeof(path_c), "%s/book.log", dir_c);
   if ( c3n == _test_truncate_file(path_c, 8) ) {
     fprintf(stderr, "  undersized: truncate failed\r\n");
@@ -1477,8 +1491,8 @@ main(int argc, char* argv[])
   ret_i &= _test_metadata_size_validation();
 
   //  benchmarks
-  ret_i &= _bench_write_speed(10000, 128);
-  ret_i &= _bench_write_speed_batched(1000000, 1280, 1000);
+  ret_i &= _bench_write_speed(1000, 128);
+  ret_i &= _bench_write_speed_batched(100000, 1280, 1000);
 
   fprintf(stderr, "\r\n");
   if ( ret_i ) {

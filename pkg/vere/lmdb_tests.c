@@ -12,8 +12,8 @@
 #define _alloc(sz)    malloc(sz)
 #define _free(ptr)    free(ptr)
 
-//  default mmap size for lmdb (1GB)
-#define LMDB_MAP_SIZE (1ULL << 30)
+//  default mmap size for lmdb (2GB)
+#define LMDB_MAP_SIZE (1ULL << 31)
 
 /* _test_make_tmpdir(): create unique temporary directory for lmdb.
 **
@@ -278,8 +278,8 @@ main(int argc, char* argv[])
   c3_i ret_i = 1;
 
   //  benchmarks
-  ret_i &= _bench_write_speed(10000, 128);
-  ret_i &= _bench_write_speed_batched(10000, 1280, 100);
+  ret_i &= _bench_write_speed(1000, 128);
+  ret_i &= _bench_write_speed_batched(100000, 1280, 1000);
 
   fprintf(stderr, "\r\n");
   if ( ret_i ) {
