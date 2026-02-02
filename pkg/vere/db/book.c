@@ -147,7 +147,7 @@ _book_save_meta_file(c3_i met_i, const u3_book_meta* met_u)
 
 /* _book_make_head(): initialize and write header for new file.
 **
-**   header is write-once and immutable after creation.
+**   fir_d and las_d start at 0, updated when first events are saved.
 */
 static c3_o
 _book_make_head(u3_book* txt_u)
@@ -159,6 +159,7 @@ _book_make_head(u3_book* txt_u)
   txt_u->hed_u.mag_w = BOOK_MAGIC;
   txt_u->hed_u.ver_w = BOOK_VERSION;
   txt_u->hed_u.fir_d = 0;
+  txt_u->hed_u.las_d = 0;
 
   //  write header
   ret_zs = pwrite(txt_u->fid_i, &txt_u->hed_u,
@@ -221,7 +222,7 @@ static inline c3_w
 _book_deed_size(c3_d len_d)
 {
   return sizeof(u3_book_deed_head) + (len_d - 4) + sizeof(u3_book_deed_tail);
-  // = 20 + (len_d - 4) + 12 = len_d + 28
+  // = 12 + (len_d - 4) + 12 = len_d + 20
 }
 
 /* _book_calc_crc(): compute CRC32 for reed.
@@ -229,12 +230,11 @@ _book_deed_size(c3_d len_d)
 static c3_w
 _book_calc_crc(const u3_book_reed* red_u)
 {
-  c3_y buf_y[20];  //  8 bytes len_d + 8 bytes eve_d + 4 bytes mug
+  c3_y buf_y[12];  //  8 bytes len_d + 4 bytes mug
   memcpy(buf_y, &red_u->len_d, 8);
-  memcpy(buf_y + 8, &red_u->eve_d, 8);
-  memcpy(buf_y + 16, &red_u->mug_l, 4);
+  memcpy(buf_y + 8, &red_u->mug_l, 4);
 
-  return _book_crc32_two(buf_y, 20, red_u->jam_y, red_u->len_d - 4);
+  return _book_crc32_two(buf_y, 12, red_u->jam_y, red_u->len_d - 4);
 }
 
 /* _book_okay_reed(): validate reed integrity.
@@ -305,7 +305,6 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
 
   //  populate reed from head
   red_u->len_d = hed_u.len_d;
-  red_u->eve_d = hed_u.eve_d;
   red_u->mug_l = hed_u.mug_l;
 
   //  read jam data (len_d - mug bytes)
@@ -362,7 +361,6 @@ _book_save_deed(c3_i fid_i, c3_d* off_d, const u3_book_reed* red_u)
   //  prepare deed_head
   u3_book_deed_head hed_u;
   hed_u.len_d = red_u->len_d;
-  hed_u.eve_d = red_u->eve_d;
   hed_u.mug_l = red_u->mug_l;
 
   //  prepare deed_tail
@@ -414,17 +412,18 @@ _book_skip_deed(c3_i fid_i, c3_d* off_d)
   return c3y;
 }
 
-/* _book_scan_back(): fast reverse scan to find last valid deed.
+/* _book_scan_back(): fast reverse scan to validate last deed.
 **
-**   this is the fast path for normal startup. scans backwards from
-**   file end using the trailing let_d field to locate deed boundaries.
+**   this is the fast path for normal startup. uses header's las_d
+**   as the authoritative last event number, and validates backward
+**   from file end using the trailing let_d field.
 **
 **   on success:
 **     - sets *off_d to append offset (byte after last valid deed)
-**     - sets txt_u->las_d to last event number
+**     - sets txt_u->las_d from header's las_d
 **
 **   returns:
-**     c3y: found valid deed OR file is empty (no deeds)
+**     c3y: last deed valid OR file is empty (no deeds)
 **     c3n: corruption detected (caller should fall back to _book_scan_fore)
 **
 **   NB: does NOT truncate file or perform recovery; just reports state.
@@ -447,13 +446,20 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
   //  empty or header-only file is valid (no deeds yet)
   if ( end_d <= sizeof(u3_book_head) ) {
     *off_d = sizeof(u3_book_head);
-    txt_u->las_d = 0;
+    txt_u->las_d = txt_u->hed_u.las_d;
     return c3y;
+  }
+
+  //  if header says no events, but file has data beyond header,
+  //  that's uncommitted data - fall back to forward scan
+  if ( 0 == txt_u->hed_u.las_d ) {
+    *off_d = sizeof(u3_book_head);
+    return c3n;
   }
 
   pos_d = end_d;
 
-  //  scan backwards
+  //  scan backwards to validate last deed
   while ( pos_d > sizeof(u3_book_head) ) {
     c3_zs ret_zs;
     c3_d  let_d;
@@ -495,10 +501,10 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
         break;
       }
 
-      //  deed is valid — use eve_d directly
+      //  deed is valid — use header's las_d as authoritative
       c3_free(red_u.jam_y);
       *off_d = pos_d;
-      txt_u->las_d = red_u.eve_d;
+      txt_u->las_d = txt_u->hed_u.las_d;
       return c3y;
     }
   }
@@ -512,12 +518,13 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
 **
 **   used as fallback when _book_scan_back fails (corruption recovery).
 **   validates each record's CRC and len_d == let_d sequentially.
-**   if corruption is found, truncates file to remove invalid data.
+**   if corruption is found, truncates file and updates header's las_d.
 **
 **   on completion:
 **     - sets *off_d to append offset
 **     - sets txt_u->las_d to last valid event number
 **     - truncates file if corrupted trailing data was found
+**     - updates header's las_d if recovery changed the count
 **
 **   returns:
 **     c3y: always (recovery is best-effort)
@@ -526,19 +533,20 @@ static c3_o
 _book_scan_fore(u3_book* txt_u, c3_d* off_d)
 {
   c3_d cur_d = sizeof(u3_book_head);  //  start of events
-  c3_d cot_d = 0;  //  count
-  c3_d las_d = 0;  //  last valid event found
-  c3_d exp_d;      //  expected event number
+  c3_d cot_d = 0;  //  count of valid deeds found
+  c3_d las_d = 0;  //  last valid event number found
+  c3_d exp_d;      //  expected event count from header
 
-  if ( 0 == txt_u->hed_u.fir_d && 0 == txt_u->las_d ) {
+  if ( 0 == txt_u->hed_u.fir_d && 0 == txt_u->hed_u.las_d ) {
     //  empty log is valid (no deeds yet)
     txt_u->las_d = 0;
     *off_d = cur_d;
     return c3y;
   }
 
-  exp_d = ( txt_u->las_d >= txt_u->hed_u.fir_d )
-        ? txt_u->las_d - txt_u->hed_u.fir_d + 1
+  //  expected count based on header's las_d
+  exp_d = ( txt_u->hed_u.las_d >= txt_u->hed_u.fir_d )
+        ? txt_u->hed_u.las_d - txt_u->hed_u.fir_d + 1
         : 0;
 
   while ( 1 ) {
@@ -558,12 +566,13 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
       break;
     }
 
+    //  deed is valid - calculate its event number
     las_d = txt_u->hed_u.fir_d + cot_d;
     c3_free(red_u.jam_y);
     cot_d++;
   }
 
-  //  check if we found fewer events than expected
+  //  check if we found fewer events than header claims
   if ( cot_d != exp_d ) {
     u3l_log("book: recovery: found %" PRIu64 " events, expected %" PRIu64 "\r\n",
             cot_d, exp_d);
@@ -571,12 +580,13 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
     //  update las_d based on what we found
     if ( 0 == cot_d ) {
       txt_u->las_d = 0;
+      las_d = 0;
       cur_d = sizeof(u3_book_head);
     } else {
       txt_u->las_d = las_d;
     }
 
-    //  truncate file
+    //  truncate file to remove invalid data
     if ( -1 == ftruncate(txt_u->fid_i, cur_d) ) {
       u3l_log("book: failed to truncate: %s\r\n",
               strerror(errno));
@@ -584,6 +594,18 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
       if ( -1 == c3_sync(txt_u->fid_i) ) {
         u3l_log("book: failed to sync after truncate: %s\r\n",
                 strerror(errno));
+      }
+    }
+
+    //  update header's las_d to match recovered state
+    txt_u->hed_u.las_d = las_d;
+    if ( sizeof(c3_d) != pwrite(txt_u->fid_i, &txt_u->hed_u.las_d,
+                                sizeof(c3_d), offsetof(u3_book_head, las_d)) )
+    {
+      u3l_log("book: failed to update header las_d: %s\r\n", strerror(errno));
+    } else {
+      if ( -1 == c3_sync(txt_u->fid_i) ) {
+        u3l_log("book: failed to sync header: %s\r\n", strerror(errno));
       }
     }
   } else {
@@ -677,8 +699,9 @@ u3_book_init(const c3_c* pax_c)
 
     if ( epo_d ) {
       txt_u->hed_u.fir_d = epo_d;
+      txt_u->hed_u.las_d = epo_d;
 
-      //  persist fir_d (no need if epo_d is 0)
+      //  persist fir_d and las_d (no need if epo_d is 0)
       if ( sizeof(c3_d) != pwrite(fid_i, &txt_u->hed_u.fir_d,
                                   sizeof(c3_d), offsetof(u3_book_head, fir_d)) )
       {
@@ -686,8 +709,15 @@ u3_book_init(const c3_c* pax_c)
         goto fail4;
       }
 
+      if ( sizeof(c3_d) != pwrite(fid_i, &txt_u->hed_u.las_d,
+                                  sizeof(c3_d), offsetof(u3_book_head, las_d)) )
+      {
+        u3l_log("book: failed to write las_d: %s\r\n", strerror(errno));
+        goto fail4;
+      }
+
       if ( -1 == c3_sync(fid_i) ) {
-        u3l_log("book: failed to sync fir_d: %s\r\n", strerror(errno));
+        u3l_log("book: failed to sync header: %s\r\n", strerror(errno));
         goto fail4;
       }
     }
@@ -943,12 +973,10 @@ u3_book_save(u3_book* txt_u,
     memcpy(&red_u.mug_l, buf_y, 4);
     red_u.jam_y = buf_y + 4;
     red_u.len_d = siz_d;
-    red_u.eve_d = eve_d + i_w;
     red_u.crc_w = _book_calc_crc(&red_u);
 
     //  populate deed_head
     hed_u[i_w].len_d = siz_d;
-    hed_u[i_w].eve_d = eve_d + i_w;
     hed_u[i_w].mug_l = red_u.mug_l;
 
     //  populate deed_tail
@@ -1003,15 +1031,32 @@ u3_book_save(u3_book* txt_u,
   c3_free(tal_u);
   c3_free(iov_u);
 
-  //  sync data to disk
+  //  sync deed data to disk
   if ( -1 == c3_sync(txt_u->fid_i) ) {
     fprintf(stderr, "book: failed to sync events: %s\r\n",
             strerror(errno));
     return c3n;
   }
 
+  //  update header's las_d to signal successful commit
+  c3_d new_las_d = eve_d + len_d - 1;
+  txt_u->hed_u.las_d = new_las_d;
+
+  if ( sizeof(c3_d) != pwrite(txt_u->fid_i, &txt_u->hed_u.las_d,
+                              sizeof(c3_d), offsetof(u3_book_head, las_d)) )
+  {
+    fprintf(stderr, "book: failed to write las_d: %s\r\n", strerror(errno));
+    return c3n;
+  }
+
+  //  sync header to finalize commit
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
+    fprintf(stderr, "book: failed to sync las_d: %s\r\n", strerror(errno));
+    return c3n;
+  }
+
   //  update cache
-  txt_u->las_d = eve_d + len_d - 1;
+  txt_u->las_d = new_las_d;
   txt_u->off_d = now_d;
 
   return c3y;

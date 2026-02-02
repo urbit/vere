@@ -7,12 +7,16 @@
 
   /* book: append-only event log
   */
-    /* u3_book_head: on-disk file header (16 bytes, immutable)
+    /* u3_book_head: on-disk file header (24 bytes)
+    **
+    **   fir_d is write-once (set on first event save).
+    **   las_d is updated after each batch of events is committed.
     */
       typedef struct _u3_book_head {
         c3_w mag_w;      //  magic number: 0x424f4f4b ("BOOK")
-        c3_w ver_w;      //  format version: 1
+        c3_w ver_w;      //  format version: 2
         c3_d fir_d;      //  first event number in file
+        c3_d las_d;      //  last event number (commit marker)
       } u3_book_head;
 
     /* u3_book_meta: on-disk metadata format (fixed 256 bytes)
@@ -55,11 +59,10 @@
         c3_o liv_o;    //  iterator valid
       } u3_book_walk;
 
-    /* u3_book_deed_head: on-disk deed header
+    /* u3_book_deed_head: on-disk deed header (12 bytes)
     */
       typedef struct _u3_book_deed_head {
         c3_d len_d;    //  payload size (mug + jam)
-        c3_d eve_d;    //  event number
         c3_l mug_l;    //  mug/hash
       } u3_book_deed_head;
 
@@ -85,7 +88,6 @@
     */
       typedef struct _u3_book_reed {
         c3_d  len_d;    //  total payload size
-        c3_d  eve_d;    //  event number
         c3_l  mug_l;    //  mug/hash
         c3_y* jam_y;    //  jam data (caller owns, len = len_d - 4)
         c3_w  crc_w;    //  CRC32 checksum
