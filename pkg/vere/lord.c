@@ -669,7 +669,7 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3t_event_trace("king ipc jam", 'E');
 #endif
 
-    u3_newt_send(&god_u->inn_u, len_d, byt_y);
+    u3_newt_send(&god_u->inn_u, len_d, byt_y, 0, 0);
     u3z(jar);
   }
 }
@@ -692,7 +692,7 @@ _lord_send(u3_lord* god_u, u3_noun jar)
   u3t_event_trace("king ipc jam", 'E');
 #endif
 
-  u3_newt_send(&god_u->inn_u, len_d, byt_y);
+  u3_newt_send(&god_u->inn_u, len_d, byt_y, 0, 0);
   u3z(jar);
 }
 
@@ -1113,6 +1113,7 @@ u3_lord_init(c3_c* pax_c, c3_w wag_w, c3_d key_d[4], u3_lord_cb cb_u)
     //
     god_u->inn_u.ptr_v = god_u;
     god_u->inn_u.bal_f = _lord_on_serf_bail;
+    god_u->inn_u.pir_c = god_u->pax_c;
 
     u3_newt_read(&god_u->out_u);
   }
@@ -1362,6 +1363,7 @@ u3_lord_boot(c3_c* pax_c,
     //
     bot_u->inn_u.ptr_v = bot_u;
     bot_u->inn_u.bal_f = _lord_on_serf_boot_bail;
+    bot_u->inn_u.pir_c = bot_u->pax_c;
 
     u3_newt_read(&bot_u->out_u);
   }
@@ -1370,7 +1372,7 @@ u3_lord_boot(c3_c* pax_c,
     c3_d  len_d;
     c3_y* byt_y;
     u3s_jam_xeno(msg, &len_d, &byt_y);
-    u3_newt_send(&bot_u->inn_u, len_d, byt_y);
+    u3_newt_send(&bot_u->inn_u, len_d, byt_y, 0, 0);
     u3z(msg);
   }
 }

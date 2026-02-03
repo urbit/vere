@@ -70,7 +70,8 @@
     */
       typedef enum {
         u3_mess_head = 0,                   //  awaiting header
-        u3_mess_tail = 1                    //  awaiting body
+        u3_mess_tail = 1,                   //  awaiting body
+        u3_mess_file = 2                    //  awaiting file path
       } u3_mess_type;
 
     /* u3_mess: blob message in process.
@@ -79,13 +80,19 @@
         u3_mess_type     sat_e;             //  msg type
         union {                             //
           struct {                          //  awaiting header:
-            c3_y         hed_y[5];          //    header bytes
-            c3_y         has_y;             //    length
+            c3_y         hed_y[12];         //    header bytes
+            c3_y         has_y;             //    bytes received
           } hed_u;                          //
-          struct {                          //  awaiting body
+          struct {                          //  awaiting body:
             u3_meat*     met_u;             //    partial message
-            c3_d         has_d;             //    length
+            c3_d         has_d;             //    bytes received
           } tal_u;                          //
+          struct {                          //  awaiting file path:
+            c3_d         len_d;             //    file size
+            c3_s         pat_s;             //    path length
+            c3_s         has_s;             //    path bytes received
+            c3_c*        pat_c;             //    path buffer
+          } fil_u;                          //
         };
       } u3_mess;
 
@@ -100,6 +107,7 @@
         uv_timer_t       tim_u;             //  queue timer
         u3_meat*         ent_u;             //  entry of message queue
         u3_meat*         ext_u;             //  exit of message queue
+        c3_c*            pir_c;             //  pier path (for file-backed msgs)
       } u3_moat;
 
     /* u3_mojo: outbound message stream.
@@ -108,6 +116,7 @@
         uv_pipe_t        pyp_u;             //  output stream
         u3_moor_bail     bal_f;             //  error response function
         void*            ptr_v;             //  callback pointer
+        c3_c*            pir_c;             //  pier path (for file-backed msgs)
       } u3_mojo;
 
     /* u3_moor: two-way message stream, linked list */
@@ -121,6 +130,7 @@
         u3_meat*         ent_u;             //  entry of message queue
         u3_meat*         ext_u;             //  exit of message queue
         struct _u3_moor* nex_u;             //  next in list
+        c3_c*            pir_c;             //  pier path (for file-backed msgs)
       } u3_moor;
 
     /* u3_dent: directory entry.
@@ -1211,10 +1221,13 @@
         c3_o
         u3_newt_decode(u3_moat* mot_u, c3_y* buf_y, c3_d len_d);
 
-      /* u3_newt_send(): write buffer to stream.
+      /* u3_newt_send(): write buffer to stream (v1 protocol).
+      **   eve_d: event number (for file naming)
+      **   mug_l: mug hash (for file naming)
       */
         void
-        u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y);
+        u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y,
+                     c3_d eve_d, c3_l mug_l);
 
       /* u3_newt_read(): activate reading on input stream.
       */

@@ -13,25 +13,31 @@ _setup(void)
 }
 
 /* _newt_encode(): synchronous serialization into a single buffer, for test purposes
+**   v1 inline format: [0x1:1][0x0:1][length:8 LE][payload:N]
 */
 static c3_y*
 _newt_encode(u3_atom mat, c3_w* len_w)
 {
-  c3_w  met_w = u3r_met(3, mat);
+  c3_d  met_d = u3r_met(3, mat);
   c3_y* buf_y;
 
-  *len_w = 5 + met_w;
+  *len_w = 10 + met_d;
   buf_y  = c3_malloc(*len_w);
 
-  //  write header
+  //  write header (v1 inline)
   //
-  buf_y[0] = 0x0;
-  buf_y[1] = ( met_w        & 0xff);
-  buf_y[2] = ((met_w >>  8) & 0xff);
-  buf_y[3] = ((met_w >> 16) & 0xff);
-  buf_y[4] = ((met_w >> 24) & 0xff);
+  buf_y[0] = 0x1;                          //  version
+  buf_y[1] = 0x0;                          //  tag: inline
+  buf_y[2] = ( met_d        & 0xff);
+  buf_y[3] = ((met_d >>  8) & 0xff);
+  buf_y[4] = ((met_d >> 16) & 0xff);
+  buf_y[5] = ((met_d >> 24) & 0xff);
+  buf_y[6] = ((met_d >> 32) & 0xff);
+  buf_y[7] = ((met_d >> 40) & 0xff);
+  buf_y[8] = ((met_d >> 48) & 0xff);
+  buf_y[9] = ((met_d >> 56) & 0xff);
 
-  u3r_bytes(0, met_w, buf_y + 5, mat);
+  u3r_bytes(0, met_d, buf_y + 10, mat);
   u3z(mat);
 
   return buf_y;

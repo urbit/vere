@@ -1003,7 +1003,7 @@ _cw_io_send(u3_noun pel)
   c3_y* byt_y;
 
   u3s_jam_xeno(pel, &len_d, &byt_y);
-  u3_newt_send(&out_u, len_d, byt_y);
+  u3_newt_send(&out_u, len_d, byt_y, 0, 0);
   u3z(pel);
 }
 
@@ -1375,7 +1375,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
     if ( 0 == u3h(res) ) {                //  successful execution, print output
       u3s_jam_xeno(u3t(res), &len_d, &byt_y);
       if ( c3y == new_o ) {
-        u3_newt_send(&std_u, len_d, byt_y);
+        u3_newt_send(&std_u, len_d, byt_y, 0, 0);
       } else {
         for ( size_t p=0; p < len_d; p++ ) {
           fprintf(stdout,"\\x%2x", byt_y[p++]);
@@ -3036,6 +3036,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     inn_u.bal_f = _cw_io_fail; // XX cleanup
     out_u.ptr_v = &mar_u;
     out_u.bal_f = _cw_io_fail; // XX cleanup
+    out_u.pir_c = dir_c;
   }
 
   //  start reading
