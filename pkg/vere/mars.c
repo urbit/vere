@@ -834,7 +834,7 @@ top:
           && (  (u3_gift_rest_e == gif_u->sat_e)
              || (gif_u->eve_d <= mar_u->log_u->dun_d)) )
     {
-      u3_newt_send(mar_u->out_u, gif_u->len_d, gif_u->hun_y);
+      u3_newt_send(mar_u->out_u, gif_u->len_d, gif_u->hun_y, gif_u->eve_d, 0);
 
       mar_u->gif_u.ext_u = gif_u->nex_u;
       c3_free(gif_u);
@@ -1502,7 +1502,7 @@ u3_mars_work(u3_mars* mar_u)
                             mar_u->mug_l));
 
     u3s_jam_xeno(msg, &len_d, &hun_y);
-    u3_newt_send(mar_u->out_u, len_d, hun_y);
+    u3_newt_send(mar_u->out_u, len_d, hun_y, mar_u->dun_d, mar_u->mug_l);
     u3z(msg);
   }
 
