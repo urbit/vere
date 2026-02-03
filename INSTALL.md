@@ -17,11 +17,11 @@ Additional targets:
 
 ## Prerequisites
 
-Install version 0.14.0 of `zig` with the package manager of your choosing, e.g., `brew install zig`, or download the binary from [here][zig-download].
+Install version 0.15.2 of `zig` with the package manager of your choosing, e.g., `brew install zig`, or download the binary from [here][zig-download].
 
 ### macOS debugger
 
-macOS is curious operating system because the kernel is derived from from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
+macOS is curious operating system because the kernel is derived from two codebases, the Mach kernel and the BSD kernel. It inherits two different hardware exception handling facilities, Mach exceptions and POSIX signals. We use `libsigsegv` and utilize the POSIX signals which is usually fine except when it comes to debugging with `lldb`.
 
 `lldb` hijacks the Mach exception ports for the task when it attaches to the process. Mach exceptions get handled before POSIX signals which means that as soon as vere faults (this happens often) `lldb` stop with a `EXC_BAD_ACCESS`. It is impossible to continue debugging from this state without the workaround we implemented in https://github.com/urbit/vere/pull/611.
 
@@ -126,16 +126,21 @@ To use Tracy profiling:
 3. Run your urbit binary
 4. In Tracy GUI, connect to capture profiling data
 
-<!-- ## LSP Integration -->
+## LSP Integration
 
-<!-- ```console -->
-<!-- bazel run //bazel:refresh_compile_commands -->
-<!-- ``` -->
+```console
+zig build -Dgenerate-commands
+```
 
-<!-- Running this command will generate a `compile_commands.json` file in the root -->
-<!-- of the repository, which `clangd` (or other language server processors) will -->
-<!-- use automatically to provide modern editor features like syntax highlighting, -->
-<!-- go-to definitions, call hierarchies, symbol manipulation, etc. -->
+Running this command will generate a `compile_commands.json` file in the root
+of the repository, which `clangd` (or other language server processors) will
+use automatically to provide modern editor features like syntax highlighting,
+go-to definitions, call hierarchies, symbol manipulation, etc. You might have to
+clear build cache for best result:
+
+```console
+rm -rf .zig-cache
+```
 
 ## Test
 

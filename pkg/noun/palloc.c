@@ -129,14 +129,16 @@ _extend_directory(c3_w siz_w)  // num pages
 {
   u3p(u3a_crag) *dir_u, *old_u;
   u3_post old_p = HEAP.pag_p;
-  c3_w nex_w, dif_w, pag_w;
+  old_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
-  old_u  = u3to(u3p(u3a_crag), HEAP.pag_p);
-  nex_w  = HEAP.len_w + siz_w;       // num words
-  nex_w +=   (1U << u3a_page) - 1;
-  nex_w &= ~((1U << u3a_page) - 1);
-  dif_w  = nex_w >> u3a_page;        //  new pages
-
+  c3_w nex_w, pif_w, dif_w = 0, pag_w;
+  do {
+    pif_w = dif_w;
+    nex_w = HEAP.len_w + siz_w + dif_w; // num words
+    nex_w += (1U << u3a_page) - 1;
+    nex_w &= ~((1U << u3a_page) - 1);
+    dif_w = nex_w >> u3a_page; // new pages
+  } while ( dif_w != pif_w );
   HEAP.pag_p  = u3R->hat_p;
   HEAP.pag_p += HEAP.off_ws * (c3_ws)nex_w;
   u3R->hat_p += HEAP.dir_ws * (c3_ws)nex_w; //  XX overflow

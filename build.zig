@@ -1,6 +1,77 @@
 const std = @import("std");
 
-const VERSION = "4.0";
+const CdbGenStep = struct {
+    step: std.Build.Step,
+    b: *std.Build,
+    frags_dir: []const u8,
+    out_path: []const u8,
+
+    pub fn create(b: *std.Build, frags_dir: []const u8, out_path: []const u8) *CdbGenStep {
+        const self = b.allocator.create(CdbGenStep) catch @panic("OOM");
+        self.* = .{
+            .step = std.Build.Step.init(.{
+                .id = .custom,
+                .name = "gen-compile-commands",
+                .owner = b,
+                .makeFn = make,
+            }),
+            .b = b,
+            .frags_dir = frags_dir,
+            .out_path = out_path,
+        };
+        return self;
+    }
+
+    fn make(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+        const self: *CdbGenStep = @fieldParentPtr("step", step);
+
+        var cwd = std.fs.cwd();
+
+        // Open fragments directory (created by zig via -gen-cdb-fragment-path).
+        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+            return;
+        };
+        defer dir.close();
+
+        // Write compile_commands.json as a JSON array of fragment objects.
+        var out_file = try cwd.createFile(self.out_path, .{ .truncate = true });
+        defer out_file.close();
+        var write_buffer: [4096]u8 = undefined;
+
+        var ww = out_file.writer(&write_buffer);
+        const w = &ww.interface;
+
+        try w.writeByte('[');
+
+        var it = dir.iterate();
+        var first: bool = true;
+        while (try it.next()) |ent| {
+            if (ent.kind != .file) continue;
+
+            // zig emits one JSON object per file
+            var frag_file = try dir.openFile(ent.name, .{});
+            defer frag_file.close();
+
+            const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
+            defer self.b.allocator.free(frag);
+
+            // skip empty/whitespace-only
+            const trimmed = std.mem.trim(u8, frag, " \t\r\n");
+            if (trimmed.len == 0) continue;
+
+            if (!first) try w.writeByte(',');
+            first = false;
+            try w.writeAll(trimmed);
+        }
+
+        try w.writeAll("]\n");
+        try w.flush();
+
+        cwd.deleteTree(self.frags_dir) catch {};
+    }
+};
+
+const VERSION = "4.3";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -39,6 +110,7 @@ const BuildCfg = struct {
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
+    gen_cdb: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -128,21 +200,22 @@ pub fn build(b: *std.Build) !void {
     // Parse short git rev
     var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
     defer file.close();
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var in_stream = buf_reader.reader();
-    var buf: [1024]u8 = undefined;
-    var last_line: [1024]u8 = undefined;
-    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+    var buf: [4096]u8 = undefined;
+    var reader = file.reader(&buf);
+    var last_line: [4096]u8 = undefined;
+    while (reader.interface.takeDelimiterInclusive('\n')) |line| {
         if (line.len > 0)
             last_line = buf;
-    }
-    const git_rev = buf[41..51];
+    } else |err| if (err != error.EndOfStream) return err;
+    const git_rev = buf[41..48];
 
     // Binary version
     const version = if (!release)
         VERSION ++ "-" ++ git_rev
     else
         VERSION;
+
+    const gen_cdb = b.option(bool, "generate-commands", "generate compile_commands.json fragments") orelse false;
 
     //
     // Build
@@ -164,6 +237,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
+        .gen_cdb = gen_cdb,
     };
 
     if (all) {
@@ -193,7 +267,7 @@ fn buildBinary(
     // TODO: Propagate these to all 3rd party dependencies
     //
 
-    var global_flags = std.ArrayList([]const u8).init(b.allocator);
+    var global_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer global_flags.deinit();
 
     try global_flags.appendSlice(cfg.flags);
@@ -202,6 +276,12 @@ fn buildBinary(
         "-Wall",
         "-Werror",
     });
+
+    if (cfg.gen_cdb) {
+        try global_flags.appendSlice(&.{
+            "-gen-cdb-fragment-path", "cdb",
+        });
+    }
 
     if (!cfg.asan and !cfg.ubsan) {
         try global_flags.appendSlice(&.{
@@ -240,7 +320,7 @@ fn buildBinary(
     //  C Opts for Urbit PKGs And Binary
     //
 
-    var urbit_flags = std.ArrayList([]const u8).init(b.allocator);
+    var urbit_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer urbit_flags.deinit();
 
     try urbit_flags.appendSlice(global_flags.items);
@@ -431,11 +511,10 @@ fn buildBinary(
     // Build Artifact
     //
 
-    const urbit = b.addExecutable(.{
-        .name = cfg.binary_name,
+    const urbit = b.addExecutable(.{ .name = cfg.binary_name, .root_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
-    });
+    }) });
 
     urbit.rdynamic = true;
     if (t.os.tag == .linux) urbit.linkSystemLibrary("dl");
@@ -543,6 +622,13 @@ fn buildBinary(
     // CI needs generated version.h so we install libvere as a quick fix
     const vere_install = b.addInstallArtifact(pkg_vere.artifact("vere"), .{});
     b.getInstallStep().dependOn(&vere_install.step);
+
+    if (cfg.gen_cdb) {
+        const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+        const current_install = b.getInstallStep();
+        cdb_gen.step.dependOn(current_install);
+        b.default_step = &cdb_gen.step;
+    }
 
     //
     // Tests
@@ -670,11 +756,10 @@ fn buildBinary(
         for (tests) |tst| {
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
-            const test_exe = b.addExecutable(.{
-                .name = tst.name,
+            const test_exe = b.addExecutable(.{ .name = tst.name, .root_module = b.createModule(.{
                 .target = target,
                 .optimize = optimize,
-            });
+            }) });
 
             if (t.os.tag.isDarwin() and !target.query.isNative()) {
                 const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -698,7 +783,7 @@ fn buildBinary(
                     test_exe.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan)  test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
+                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
@@ -717,7 +802,7 @@ fn buildBinary(
             });
             const exe_install = b.addInstallArtifact(test_exe, .{});
             const run_unit_tests = b.addRunArtifact(test_exe);
-            if ( t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan) ) {
+            if (t.os.tag.isDarwin() and (cfg.asan or cfg.ubsan)) {
                 //  disable libmalloc warnings
                 run_unit_tests.setEnvironmentVariable("MallocNanoZone", "0");
             }

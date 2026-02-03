@@ -1,11 +1,11 @@
 .{
     .name = .lmdb,
     .version = "0.0.1",
-    .fingerprint = 0xb2966103f9c1166a,
+    .fingerprint = 0xb29661034921c939,
     .dependencies = .{
         .lmdb = .{
-            .url = "https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_0.9.29.tar.gz",
-            .hash = "N-V-__8AAHEmCAAI5Cwrnkb4JRA4oi95aN3cF60uycJ42QMg",
+            .url = "https://github.com/LMDB/lmdb/archive/40d3741b7d40ba4c75cb91dd9987ce692d376d71.tar.gz",
+            .hash = "N-V-__8AAJnhCAB47uREmMoPc3nE2qhAxU_JOiwXhg4qIWa4",
         },
     },
     .paths = .{
