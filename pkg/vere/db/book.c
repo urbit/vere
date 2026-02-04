@@ -65,6 +65,34 @@ _book_head_okay(const u3_book_head* hed_u)
   return c3y;
 }
 
+/* _book_save_head(): write header to inactive slot, sync, swap active.
+**
+**   caller must set hed_u fields (e.g. las_d) before calling.
+**   increments seq_d, recomputes crc_w, and swaps active slot.
+*/
+static c3_o
+_book_save_head(u3_book* txt_u)
+{
+  txt_u->hed_u.seq_d++;
+  txt_u->hed_u.crc_w = _book_head_crc(&txt_u->hed_u);
+
+  c3_d slot_d = (txt_u->act_w == 0) ? BOOK_HEAD_B : BOOK_HEAD_A;
+  if ( sizeof(u3_book_head) != pwrite(txt_u->fid_i, &txt_u->hed_u,
+                                      sizeof(u3_book_head), slot_d) )
+  {
+    fprintf(stderr, "book: failed to write header: %s\r\n", strerror(errno));
+    return c3n;
+  }
+
+  if ( -1 == c3_sync(txt_u->fid_i) ) {
+    fprintf(stderr, "book: failed to sync: %s\r\n", strerror(errno));
+    return c3n;
+  }
+
+  txt_u->act_w = (txt_u->act_w == 0) ? 1 : 0;
+  return c3y;
+}
+
 /* _book_meta_path(): construct path to metadata file.
 **
 **   NB: caller must free the result.
@@ -162,19 +190,22 @@ _book_save_meta_file(c3_i met_i, const u3_book_meta* met_u)
 
 /* _book_make_head(): initialize and write both header slots for new file.
 **
-**    fir_d and las_d start at 0, updated when first events are saved.
+**    caller should set fir_d and las_d on txt_u->hed_u before calling
+**    (e.g. to epoch base for non-zero epochs, or 0 for fresh logs).
 **    both header slots are initialized identically with seq_d = 0.
 */
 static c3_o
 _book_make_head(u3_book* txt_u)
 {
   c3_zs ret_zs;
+  c3_d  fir_d = txt_u->hed_u.fir_d;
+  c3_d  las_d = txt_u->hed_u.las_d;
 
   memset(&txt_u->hed_u, 0, sizeof(u3_book_head));
   txt_u->hed_u.mag_w = BOOK_MAGIC;
   txt_u->hed_u.ver_w = BOOK_VERSION;
-  txt_u->hed_u.fir_d = 0;
-  txt_u->hed_u.las_d = 0;
+  txt_u->hed_u.fir_d = fir_d;
+  txt_u->hed_u.las_d = las_d;
   txt_u->hed_u.seq_d = 0;
   txt_u->hed_u.crc_w = _book_head_crc(&txt_u->hed_u);
 
@@ -295,25 +326,6 @@ _book_deed_size(c3_d len_d)
   return sizeof(c3_d) + len_d + sizeof(c3_d);
 }
 
-/* _book_reed_to_buff(): allocate buffer and copy deed data.
-**
-**    NB: caller must free the returned buffer.
-*/
-static c3_y*
-_book_reed_to_buff(u3_book_reed* red_u, c3_z* len_z)
-{
-  *len_z = red_u->len_d;
-  c3_y* buf_y = c3_malloc(*len_z);
-
-  if ( !buf_y ) {
-    return 0;
-  }
-
-  memcpy(buf_y, red_u->buf_y, red_u->len_d);
-  c3_free(red_u->buf_y);
-
-  return buf_y;
-}
 
 /* _book_read_deed(): read deed from file into [red_u].
 **
@@ -363,35 +375,6 @@ _book_read_deed(c3_i fid_i, c3_d* off_d, u3_book_reed* red_u)
   red_u->len_d = len_d;
   *off_d = now_d;
 
-  return c3y;
-}
-
-/* _book_save_deed(): save complete deed to file using scatter-gather I/O.
-**
-**   uses pwritev() to write head + buffer + tail in a single syscall.
-*/
-static c3_o
-_book_save_deed(c3_i fid_i, c3_d* off_d, const u3_book_reed* red_u)
-{
-  c3_d len_d = red_u->len_d;
-  c3_d let_d = len_d;
-
-  struct iovec iov_u[3];
-  iov_u[0].iov_base = &len_d;
-  iov_u[0].iov_len  = sizeof(c3_d);
-  iov_u[1].iov_base = red_u->buf_y;
-  iov_u[1].iov_len  = len_d;
-  iov_u[2].iov_base = &let_d;
-  iov_u[2].iov_len  = sizeof(c3_d);
-
-  c3_z tot_z = sizeof(c3_d) + len_d + sizeof(c3_d);
-  c3_zs ret_zs = pwritev(fid_i, iov_u, 3, *off_d);
-
-  if ( ret_zs != (c3_zs)tot_z ) {
-    return c3n;
-  }
-
-  *off_d += tot_z;
   return c3y;
 }
 
@@ -460,55 +443,53 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
   pos_d = end_d;
   c3_d min_size = sizeof(u3_book_deed) + sizeof(c3_d);
 
-  while ( pos_d > BOOK_DEED_BASE ) {
-    c3_zs ret_zs;
-    c3_d  let_d;
-    c3_d  siz_d;
-    c3_d  ded_d;
-
-    if ( pos_d < BOOK_DEED_BASE + min_size ) {
-      break;
-    }
-
-    ret_zs = pread(txt_u->fid_i, &let_d, sizeof(c3_d),
-                   pos_d - sizeof(c3_d));
-    if ( ret_zs != sizeof(c3_d) ) {
-      break;
-    }
-
-    //  calculate deed size and start position
-    siz_d = _book_deed_size(let_d);
-    if ( siz_d > pos_d - BOOK_DEED_BASE ) {
-      //  deed would extend before header
-      break;
-    }
-
-    ded_d = pos_d - siz_d;
-
-    {
-      u3_book_reed red_u;
-      c3_d         tmp_d = ded_d;
-
-      if ( c3n == _book_read_deed(txt_u->fid_i, &tmp_d, &red_u) ) {
-        break;
-      }
-
-      if ( 0 == red_u.len_d ) {
-        c3_free(red_u.buf_y);
-        break;
-      }
-
-      //  deed is valid — use header's las_d as authoritative
-      c3_free(red_u.buf_y);
-      *off_d = pos_d;
-      txt_u->las_d = txt_u->hed_u.las_d;
-      return c3y;
-    }
+  //  validate last deed by reading its trailing length field
+  if ( pos_d < BOOK_DEED_BASE + min_size ) {
+    *off_d = BOOK_DEED_BASE;
+    return c3n;
   }
 
-  //  no valid deeds found
-  *off_d = BOOK_DEED_BASE;
-  return c3n;
+  c3_zs ret_zs;
+  c3_d  let_d;
+
+  ret_zs = pread(txt_u->fid_i, &let_d, sizeof(c3_d),
+                 pos_d - sizeof(c3_d));
+  if ( ret_zs != sizeof(c3_d) ) {
+    *off_d = BOOK_DEED_BASE;
+    return c3n;
+  }
+
+  //  calculate deed size and start position
+  c3_d siz_d = _book_deed_size(let_d);
+  if ( siz_d > pos_d - BOOK_DEED_BASE ) {
+    //  deed would extend before header
+    *off_d = BOOK_DEED_BASE;
+    return c3n;
+  }
+
+  c3_d ded_d = pos_d - siz_d;
+
+  {
+    u3_book_reed red_u;
+    c3_d         tmp_d = ded_d;
+
+    if ( c3n == _book_read_deed(txt_u->fid_i, &tmp_d, &red_u) ) {
+      *off_d = BOOK_DEED_BASE;
+      return c3n;
+    }
+
+    if ( 0 == red_u.len_d ) {
+      c3_free(red_u.buf_y);
+      *off_d = BOOK_DEED_BASE;
+      return c3n;
+    }
+
+    //  deed is valid — use header's las_d as authoritative
+    c3_free(red_u.buf_y);
+    *off_d = pos_d;
+    txt_u->las_d = txt_u->hed_u.las_d;
+    return c3y;
+  }
 }
 
 /* _book_scan_fore(): recovery forward scan to find last valid deed.
@@ -593,22 +574,9 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
       }
     }
 
-    //  update header to match recovered state (write to inactive slot)
+    //  update header to match recovered state
     txt_u->hed_u.las_d = las_d;
-    txt_u->hed_u.seq_d++;
-    txt_u->hed_u.crc_w = _book_head_crc(&txt_u->hed_u);
-
-    c3_d slot_d = (txt_u->act_w == 0) ? BOOK_HEAD_B : BOOK_HEAD_A;
-    if ( sizeof(u3_book_head) != pwrite(txt_u->fid_i, &txt_u->hed_u,
-                                        sizeof(u3_book_head), slot_d) )
-    {
-      u3l_log("book: failed to update header: %s\r\n", strerror(errno));
-    } else {
-      if ( -1 == c3_sync(txt_u->fid_i) ) {
-        u3l_log("book: failed to sync header: %s\r\n", strerror(errno));
-      }
-      txt_u->act_w = (txt_u->act_w == 0) ? 1 : 0;
-    }
+    _book_save_head(txt_u);
   } else {
     txt_u->las_d = las_d;
   }
@@ -684,43 +652,19 @@ u3_book_init(const c3_c* pax_c)
   strcpy(txt_u->pax_c, log_c);
 
   if ( buf_u.st_size == 0 ) {
-    //  new file: initialize and write header
-    if ( c3n == _book_make_head(txt_u) ) {
-      goto fail4;
-    }
-
     //  extract epoch number from path
     c3_d epo_d;
     if ( c3n == _book_pull_epoc(pax_c, &epo_d) ) {
       goto fail3;
     }
 
-    if ( epo_d ) {
-      //  update header with epoch info and rewrite both slots
-      txt_u->hed_u.fir_d = epo_d;
-      txt_u->hed_u.las_d = epo_d;
-      txt_u->hed_u.crc_w = _book_head_crc(&txt_u->hed_u);
+    //  set epoch fields before writing header
+    txt_u->hed_u.fir_d = epo_d;
+    txt_u->hed_u.las_d = epo_d;
 
-      //  write header slot A
-      if ( sizeof(u3_book_head) != pwrite(fid_i, &txt_u->hed_u,
-                                          sizeof(u3_book_head), BOOK_HEAD_A) )
-      {
-        u3l_log("book: failed to write header A: %s\r\n", strerror(errno));
-        goto fail4;
-      }
-
-      //  write header slot B
-      if ( sizeof(u3_book_head) != pwrite(fid_i, &txt_u->hed_u,
-                                          sizeof(u3_book_head), BOOK_HEAD_B) )
-      {
-        u3l_log("book: failed to write header B: %s\r\n", strerror(errno));
-        goto fail4;
-      }
-
-      if ( -1 == c3_sync(fid_i) ) {
-        u3l_log("book: failed to sync header: %s\r\n", strerror(errno));
-        goto fail4;
-      }
+    //  new file: initialize and write header
+    if ( c3n == _book_make_head(txt_u) ) {
+      goto fail4;
     }
 
     txt_u->las_d = epo_d;
@@ -925,35 +869,30 @@ u3_book_save(u3_book* txt_u,
   #define BOOK_IOV_MAX 1020
   c3_w max_deeds_w = BOOK_IOV_MAX / 3;
 
-  c3_d* len_u = c3_malloc(len_d * sizeof(c3_d));
-  c3_d* let_u = c3_malloc(len_d * sizeof(c3_d));
+  c3_d* siz_u = c3_malloc(len_d * sizeof(c3_d));
 
   c3_w iov_max_w = (len_d < max_deeds_w) ? len_d * 3 : BOOK_IOV_MAX;
   struct iovec* iov_u = c3_malloc(iov_max_w * sizeof(struct iovec));
 
-  if ( !len_u || !let_u || !iov_u ) {
-    c3_free(len_u);
-    c3_free(let_u);
+  if ( !siz_u || !iov_u ) {
+    c3_free(siz_u);
     c3_free(iov_u);
     fprintf(stderr, "book: failed to allocate batch write buffers\r\n");
     return c3n;
   }
 
   for ( c3_w i_w = 0; i_w < len_d; i_w++ ) {
-    c3_y* buf_y = (c3_y*)byt_p[i_w];
     c3_d  siz_d = (c3_d)siz_i[i_w];
 
     if ( siz_d < 4 ) {
       fprintf(stderr, "book: event %" PRIu64 " buffer too small: %" PRIu64 "\r\n",
               eve_d + i_w, siz_d);
-      c3_free(len_u);
-      c3_free(let_u);
+      c3_free(siz_u);
       c3_free(iov_u);
       return c3n;
     }
 
-    len_u[i_w] = siz_d;
-    let_u[i_w] = siz_d;
+    siz_u[i_w] = siz_d;
   }
 
   #define DEEDS_PER_CHUNK (BOOK_IOV_MAX / 3)
@@ -971,11 +910,11 @@ u3_book_save(u3_book* txt_u,
       c3_w idx_w = i_w * 3;
       c3_y* buf_y = (c3_y*)byt_p[src_w];
 
-      iov_u[idx_w + 0].iov_base = &len_u[src_w];
+      iov_u[idx_w + 0].iov_base = &siz_u[src_w];
       iov_u[idx_w + 0].iov_len  = sizeof(c3_d);
       iov_u[idx_w + 1].iov_base = buf_y;
       iov_u[idx_w + 1].iov_len  = siz_i[src_w];
-      iov_u[idx_w + 2].iov_base = &let_u[src_w];
+      iov_u[idx_w + 2].iov_base = &siz_u[src_w];
       iov_u[idx_w + 2].iov_len  = sizeof(c3_d);
 
       cun_z += sizeof(c3_d) + siz_i[src_w] + sizeof(c3_d);
@@ -986,8 +925,7 @@ u3_book_save(u3_book* txt_u,
     if ( ret_zs != (c3_zs)cun_z ) {
       fprintf(stderr, "book: batch write failed: wrote %zd of %zu bytes: %s\r\n",
               ret_zs, cun_z, strerror(errno));
-      c3_free(len_u);
-      c3_free(let_u);
+      c3_free(siz_u);
       c3_free(iov_u);
       return c3n;
     }
@@ -996,31 +934,17 @@ u3_book_save(u3_book* txt_u,
     dun_w += cun_w;
   }
 
-  c3_free(len_u);
-  c3_free(let_u);
+  c3_free(siz_u);
   c3_free(iov_u);
 
   c3_d new_las_d = eve_d + len_d - 1;
   txt_u->hed_u.las_d = new_las_d;
-  txt_u->hed_u.seq_d++;
-  txt_u->hed_u.crc_w = _book_head_crc(&txt_u->hed_u);
 
-  //  write to inactive slot (double-buffer protocol)
-  c3_d slot_d = (txt_u->act_w == 0) ? BOOK_HEAD_B : BOOK_HEAD_A;
-  if ( sizeof(u3_book_head) != pwrite(txt_u->fid_i, &txt_u->hed_u,
-                                      sizeof(u3_book_head), slot_d) )
-  {
-    fprintf(stderr, "book: failed to write header: %s\r\n", strerror(errno));
+  //  commit header: write to inactive slot, fsync, swap active
+  if ( c3n == _book_save_head(txt_u) ) {
     return c3n;
   }
 
-  //  single fsync: makes both deed data and new header durable atomically
-  if ( -1 == c3_sync(txt_u->fid_i) ) {
-    fprintf(stderr, "book: failed to sync: %s\r\n", strerror(errno));
-    return c3n;
-  }
-
-  txt_u->act_w = (txt_u->act_w == 0) ? 1 : 0;
   txt_u->las_d = new_las_d;
   txt_u->off_d = now_d;
 
@@ -1088,11 +1012,8 @@ u3_book_read(u3_book* txt_u,
       return c3n;
     }
 
-    buf_y = _book_reed_to_buff(&red_u, &len_z);
-    if ( !buf_y ) {
-      c3_free(red_u.buf_y);
-      return c3n;
-    }
+    len_z = red_u.len_d;
+    buf_y = red_u.buf_y;
 
     if ( c3n == read_f(ptr_v, cur_d, len_z, buf_y) ) {
       c3_free(buf_y);
@@ -1277,12 +1198,8 @@ u3_book_walk_next(u3_book_walk* itr_u, c3_z* len_z, void** buf_v)
     return c3n;
   }
 
-  buf_y = _book_reed_to_buff(&red_u, len_z);
-  if ( !buf_y ) {
-    c3_free(red_u.buf_y);
-    itr_u->liv_o = c3n;
-    return c3n;
-  }
+  *len_z = red_u.len_d;
+  buf_y = red_u.buf_y;
 
   *buf_v = buf_y;
   itr_u->nex_d++;
