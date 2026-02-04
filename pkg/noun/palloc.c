@@ -1775,7 +1775,6 @@ _sweep_counts(void)
       u3_assert(!"leak");
     }
   }
-
   if ( weq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
     // u3_assert(0);
