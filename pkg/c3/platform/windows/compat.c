@@ -5,6 +5,16 @@
 #include <tlhelp32.h>
 #include "errno.h"
 
+static void
+ov_from_off_t(OVERLAPPED* ov, off_t offset)
+{
+	ov->OffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
+                 (DWORD)0 : (DWORD)((offset >> 32) & 0xFFFFFFFFL);
+
+	ov->Offset     = (sizeof(off_t) <= sizeof(DWORD)) ?
+								 (DWORD)offset : (DWORD)(offset & 0xFFFFFFFFL);
+}
+
 // set default CRT file mode to binary
 // note that mingw binmode.o does nothing
 #undef _fmode
@@ -560,10 +570,7 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset)
 
   OVERLAPPED overlapped = {0};
 
-  overlapped.OffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
-                          (DWORD)0 : (DWORD)((offset >> 32) & 0xFFFFFFFFL);
-  overlapped.Offset     = (sizeof(off_t) <= sizeof(DWORD)) ?
-                          (DWORD)offset : (DWORD)(offset & 0xFFFFFFFFL);
+  ov_from_off_t(&overlapped, offset);
 
   HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -590,10 +597,7 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
 
   OVERLAPPED overlapped = {0};
 
-  overlapped.OffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
-                          (DWORD)0 : (DWORD)((offset >> 32) & 0xFFFFFFFFL);
-  overlapped.Offset     = (sizeof(off_t) <= sizeof(DWORD)) ?
-                          (DWORD)offset : (DWORD)(offset & 0xFFFFFFFFL);
+	ov_from_off_t(&overlapped, offset);
 
   HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -608,4 +612,35 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
   }
 
   return (ssize_t)len;
+}
+
+ssize_t pwritev(int fd, const struct iovec* iov, size_t iovcnt, off_t offset)
+{
+	HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+  if ( INVALID_HANDLE_VALUE == h ) {
+    errno = EBADF;
+    return -1;
+  }
+
+  DWORD written;
+	ssize_t len = 0;
+	OVERLAPPED ov = {0};
+
+	for (size_t i = 0; i < iovcnt; i++) {
+		ov_from_off_t(&ov, offset);
+		DWORD len_write = (DWORD)iov[i].iov_len;  // XX chunk on large writes?
+		void* buf = iov[i].iov_base;
+		if ( !WriteFile(h, buf, len_write, &written, &ov) ) {
+			errno = err_win_to_posix(GetLastError());
+			return -1;
+		}
+
+		len 	 += written;
+		offset += written;
+
+		if ( written < iov[i].iov_len ) break;
+	}
+
+	return len;
 }

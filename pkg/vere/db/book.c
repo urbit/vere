@@ -3,7 +3,9 @@
 #include "db/book.h"
 
 #include <sys/stat.h>
-#include <sys/uio.h>
+#ifndef U3_OS_windows
+#   include <sys/uio.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
