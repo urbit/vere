@@ -33,19 +33,9 @@ pub fn build(b: *std.Build) !void {
         "-Wuninitialized",
     });
 
-    if (target.result.os.tag.isDarwin()) {
-        try flags.appendSlice(&.{"-DURBIT_RUNTIME_OS_DARWIN"});
-    }
-
     lmdb.addCSourceFiles(.{
         .root = lmdb_c.path("libraries/liblmdb"),
-        .files = &.{"midl.c"},
-        .flags = flags.items,
-    });
-
-    lmdb.addCSourceFiles(.{
-        .root = b.path("patches/lmdb-0.9.29"),
-        .files = &.{"mdb.c"},
+        .files = &.{ "midl.c", "mdb.c" },
         .flags = flags.items,
     });
 

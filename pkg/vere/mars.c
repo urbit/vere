@@ -1482,7 +1482,6 @@ u3_mars_work(u3_mars* mar_u)
   //
   if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
     u3_disk_exit(mar_u->log_u);
-    c3_free(mar_u);
     exit(0);
   }
 
