@@ -824,6 +824,9 @@ u3_book_stat(const c3_c* log_c)
 **   2. write updated header to INACTIVE slot
 **   3. single fsync makes both durable atomically
 */
+
+static_assert(sizeof(c3_d) == sizeof(c3_z));
+
 c3_o
 u3_book_save(u3_book* txt_u,
              c3_d     eve_d,
@@ -866,43 +869,19 @@ u3_book_save(u3_book* txt_u,
   //
   now_d = txt_u->off_d;
 
-  #define BOOK_IOV_MAX 1020
-  c3_w max_deeds_w = BOOK_IOV_MAX / 3;
+  #ifdef IOV_MAX
+    const c3_w max_deeds_w = IOV_MAX / 3;
+  #else
+    const c3_w max_deeds_w = 1020 / 3;
+  #endif
 
-  c3_d* siz_u = c3_malloc(len_d * sizeof(c3_d));
+  struct iovec iov_u[max_deeds_w * 3];
 
-  c3_w iov_max_w = (len_d < max_deeds_w) ? len_d * 3 : BOOK_IOV_MAX;
-  struct iovec* iov_u = c3_malloc(iov_max_w * sizeof(struct iovec));
 
-  if ( !siz_u || !iov_u ) {
-    c3_free(siz_u);
-    c3_free(iov_u);
-    fprintf(stderr, "book: failed to allocate batch write buffers\r\n");
-    return c3n;
-  }
-
-  for ( c3_w i_w = 0; i_w < len_d; i_w++ ) {
-    c3_d  siz_d = (c3_d)siz_i[i_w];
-
-    if ( siz_d < 4 ) {
-      fprintf(stderr, "book: event %" PRIu64 " buffer too small: %" PRIu64 "\r\n",
-              eve_d + i_w, siz_d);
-      c3_free(siz_u);
-      c3_free(iov_u);
-      return c3n;
-    }
-
-    siz_u[i_w] = siz_d;
-  }
-
-  #define DEEDS_PER_CHUNK (BOOK_IOV_MAX / 3)
   c3_w dun_w = 0;
 
   while ( dun_w < len_d ) {
-    c3_w cun_w = len_d - dun_w;
-    if ( cun_w > DEEDS_PER_CHUNK ) {
-      cun_w = DEEDS_PER_CHUNK;
-    }
+    c3_w cun_w = c3_min(len_d - dun_w, max_deeds_w);
 
     c3_z cun_z = 0;
     for ( c3_w i_w = 0; i_w < cun_w; i_w++ ) {
@@ -910,11 +889,11 @@ u3_book_save(u3_book* txt_u,
       c3_w idx_w = i_w * 3;
       c3_y* buf_y = (c3_y*)byt_p[src_w];
 
-      iov_u[idx_w + 0].iov_base = &siz_u[src_w];
+      iov_u[idx_w + 0].iov_base = &siz_i[src_w];
       iov_u[idx_w + 0].iov_len  = sizeof(c3_d);
       iov_u[idx_w + 1].iov_base = buf_y;
       iov_u[idx_w + 1].iov_len  = siz_i[src_w];
-      iov_u[idx_w + 2].iov_base = &siz_u[src_w];
+      iov_u[idx_w + 2].iov_base = &siz_i[src_w];
       iov_u[idx_w + 2].iov_len  = sizeof(c3_d);
 
       cun_z += sizeof(c3_d) + siz_i[src_w] + sizeof(c3_d);
@@ -925,17 +904,12 @@ u3_book_save(u3_book* txt_u,
     if ( ret_zs != (c3_zs)cun_z ) {
       fprintf(stderr, "book: batch write failed: wrote %zd of %zu bytes: %s\r\n",
               ret_zs, cun_z, strerror(errno));
-      c3_free(siz_u);
-      c3_free(iov_u);
       return c3n;
     }
 
     now_d += cun_z;
     dun_w += cun_w;
   }
-
-  c3_free(siz_u);
-  c3_free(iov_u);
 
   c3_d new_las_d = eve_d + len_d - 1;
   txt_u->hed_u.las_d = new_las_d;
