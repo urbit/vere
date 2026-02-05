@@ -1456,6 +1456,159 @@ cleanup:
   return ret_i;
 }
 
+/* _bench_write_speed_mixed(): benchmark mixed batch-size write performance.
+**
+**   writes [num_d] events of [siz_z] bytes using a realistic distribution
+**   of batch sizes (1-9), interleaved via deterministic PRNG.
+**   reports total time, events/sec, MB/s, per-event latency, and save calls.
+*/
+static c3_i
+_bench_write_speed_mixed(c3_d num_d, c3_z siz_z)
+{
+  //  batch size distribution from production telemetry
+  //
+  static const c3_d bat_d[9] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  static const c3_d cnt_d[9] = {
+    2128433, 407761, 234541, 89359, 41390, 21376, 10945, 5399, 5466
+  };
+
+  //  compute original total events for scaling
+  //
+  c3_d ori_d = 0;
+  for ( c3_d i = 0; i < 9; i++ ) {
+    ori_d += bat_d[i] * cnt_d[i];
+  }
+
+  //  scale counts proportionally to num_d
+  //
+  c3_d rem_d[9];
+  c3_d tot_d = 0;
+  for ( c3_d i = 0; i < 9; i++ ) {
+    rem_d[i] = (cnt_d[i] * num_d) / ori_d;
+    if ( (0 == rem_d[i]) && (cnt_d[i] > 0) ) {
+      rem_d[i] = 1;
+    }
+    tot_d += rem_d[i];
+  }
+
+  c3_c* dir_c = _test_make_tmpdir();
+  if ( !dir_c ) return 0;
+
+  c3_i     ret_i = 1;
+  u3_book* txt_u = u3_book_init(dir_c);
+
+  if ( !txt_u ) {
+    fprintf(stderr, "  write_speed_mixed: init failed\r\n");
+    ret_i = 0;
+    goto cleanup;
+  }
+
+  //  pre-allocate event buffers for max batch size (9)
+  //
+  c3_y* evt_y[9];
+  void* byt_p[9];
+  c3_z  siz_i[9];
+
+  for ( c3_d i = 0; i < 9; i++ ) {
+    evt_y[i] = _bench_make_event(siz_z, i + 1);
+    byt_p[i] = evt_y[i];
+    siz_i[i] = siz_z;
+  }
+
+  //  deterministic xorshift32 PRNG
+  //
+  c3_w rng_w = 12345;
+
+  c3_d wit_d = 0;  //  events written
+  c3_d cal_d = 0;  //  save calls made
+
+  //  start timing
+  //
+  c3_d beg_d = _bench_get_time_ns();
+
+  while ( tot_d > 0 ) {
+    //  xorshift32 step
+    //
+    rng_w ^= rng_w << 13;
+    rng_w ^= rng_w >> 17;
+    rng_w ^= rng_w << 5;
+
+    //  weighted selection from remaining counts
+    //
+    c3_d pick = (c3_d)rng_w % tot_d;
+    c3_d acc  = 0;
+    c3_d idx  = 0;
+
+    for ( idx = 0; idx < 9; idx++ ) {
+      acc += rem_d[idx];
+      if ( pick < acc ) break;
+    }
+
+    c3_d bsz = bat_d[idx];
+    rem_d[idx]--;
+    tot_d--;
+
+    //  update mug patterns in event buffers
+    //
+    for ( c3_d j = 0; j < bsz; j++ ) {
+      c3_w mug_w = (c3_w)((wit_d + j + 1) * 0x12345678);
+      memcpy(evt_y[j], &mug_w, 4);
+    }
+
+    c3_o sav_o = u3_book_save(txt_u, wit_d + 1, bsz, byt_p, siz_i, 0);
+    if ( c3n == sav_o ) {
+      fprintf(stderr, "  write_speed_mixed: save failed at event %" PRIu64 "\r\n",
+              wit_d + 1);
+      ret_i = 0;
+      goto cleanup_buffers;
+    }
+
+    wit_d += bsz;
+    cal_d++;
+  }
+
+  //  end timing
+  //
+  c3_d end_d = _bench_get_time_ns();
+  c3_d lap_d = end_d - beg_d;
+
+  //  calculate metrics
+  //
+  double elapsed_sec = (double)lap_d / 1e9;
+  double events_per_sec = (double)wit_d / elapsed_sec;
+  double total_bytes = (double)wit_d * (double)siz_z;
+  double mb_per_sec = (total_bytes / (1024.0 * 1024.0)) / elapsed_sec;
+  double us_per_event = ((double)lap_d / 1000.0) / (double)wit_d;
+
+  //  report results
+  //
+  fprintf(stderr, "\r\n");
+  fprintf(stderr, "  write_speed benchmark (mixed batch sizes 1-9):\r\n");
+  fprintf(stderr, "    events written:  %" PRIu64 "\r\n", wit_d);
+  fprintf(stderr, "    save calls:      %" PRIu64 "\r\n", cal_d);
+  fprintf(stderr, "    event size:      %" PRIu64 " bytes\r\n", (c3_d)siz_z);
+  fprintf(stderr, "    total data:      %.2f MB\r\n", total_bytes / (1024.0 * 1024.0));
+  fprintf(stderr, "    total time:      %.3f seconds\r\n", elapsed_sec);
+  fprintf(stderr, "    write speed:     %.0f events/sec\r\n", events_per_sec);
+  fprintf(stderr, "    throughput:      %.2f MB/sec\r\n", mb_per_sec);
+  fprintf(stderr, "    latency:         %.1f us/event\r\n", us_per_event);
+  fprintf(stderr, "\r\n");
+
+cleanup_buffers:
+  for ( c3_d i = 0; i < 9; i++ ) {
+    _free(evt_y[i]);
+  }
+
+  u3_book_exit(txt_u);
+
+cleanup:
+  _test_rm_rf(dir_c);
+  _free(dir_c);
+
+  fprintf(stderr, "  write_speed_mixed_benchmark: %s\r\n", ret_i ? "ok" : "FAILED");
+  return ret_i;
+}
+
 //==============================================================================
 // Main
 //==============================================================================
@@ -1491,8 +1644,9 @@ main(int argc, char* argv[])
   ret_i &= _test_metadata_size_validation();
 
   //  benchmarks
-  ret_i &= _bench_write_speed(1000, 128);
-  ret_i &= _bench_write_speed_batched(100000, 1280, 1000);
+  // ret_i &= _bench_write_speed(1000, 128);
+  // ret_i &= _bench_write_speed_batched(100000, 1280, 1000);
+  ret_i &= _bench_write_speed_mixed(10000, 128);
 
   fprintf(stderr, "\r\n");
   if ( ret_i ) {
