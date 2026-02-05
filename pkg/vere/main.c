@@ -328,6 +328,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "behn-allow-blocked",  no_argument,       NULL, 10 },
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
+    { "gc-abort",            no_argument,       NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -380,6 +381,11 @@ _main_getopt(c3_i argc, c3_c** argv)
           return c3n;
         }
 
+        break;
+      }
+      case 13: {
+        u3_Host.ops_u.gab_abort = c3y;
+        u3_Host.ops_u.gab = c3y;
         break;
       }
       //  special args
@@ -906,6 +912,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-file FILE          Add a prop into the boot sequence\n"
     "    --prop-url URL            Download a prop into the boot sequence\n",
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
+    "    --gc-abort                Abort the process on leaks, implies -g\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -1610,6 +1617,9 @@ _cw_grab(c3_i argc, c3_c* argv[])
   */
   if ( _(u3_Host.ops_u.gab) ) {
     u3C.wag_h |= u3o_debug_ram;
+  }
+  if ( _(u3_Host.ops_u.gab_abort) ) {
+    u3C.wag_h |= u3o_leak_crash;
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
@@ -2329,6 +2339,9 @@ _cw_play(c3_i argc, c3_c* argv[])
   */
   if ( _(u3_Host.ops_u.gab) ) {
     u3C.wag_h |= u3o_debug_ram;
+  }
+  if ( _(u3_Host.ops_u.gab_abort) ) {
+    u3C.wag_h |= u3o_leak_crash;
   }
 
   u3C.wag_h |= u3o_hashless;
@@ -3258,6 +3271,9 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_h |= u3o_debug_ram;
+      }
+      if ( _(u3_Host.ops_u.gab_abort) ) {
+        u3C.wag_h |= u3o_leak_crash;
       }
 
       /*  Set no-demand flag.

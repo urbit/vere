@@ -87,7 +87,7 @@ _n_hint(u3_noun zep,
     }
 
     case c3__slog: {
-      if ( !(u3C.wag_w & u3o_quiet) ) {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(hod);
         u3t_on(noc_o);

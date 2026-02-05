@@ -138,6 +138,7 @@ jobs:
             -Dmem-dbg                  \
             -Dc3dbg                    \
             -Dsnapshot-validation      \
+            -Durth-mass                \
             $VERE32_FLAG               \
             --summary all
 
