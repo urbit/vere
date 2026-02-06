@@ -322,7 +322,7 @@ _book_read_head(u3_book* txt_u)
 
 /* _book_deed_size(): calculate total on-disk size of deed.
 */
-static inline c3_w
+static inline c3_d
 _book_deed_size(c3_d len_d)
 {
   return sizeof(c3_d) + len_d + sizeof(c3_d);
@@ -818,9 +818,6 @@ u3_book_stat(const c3_c* log_c)
 
 /* u3_book_save(): save [len_d] events starting at [eve_d].
 **
-**   byt_p: array of buffers
-**   siz_i: array of buffer sizes
-**
 **   uses double-buffered headers for single-fsync commits:
 **   1. write deed data
 **   2. write updated header to INACTIVE slot
@@ -831,14 +828,12 @@ static_assert(sizeof(c3_d) == sizeof(c3_z));
 
 c3_o
 u3_book_save(u3_book* txt_u,
-             c3_d     eve_d,
-             c3_d     len_d,
-             void**   byt_p,
-             c3_z*    siz_i,
-             c3_d     epo_d)
+             c3_d     eve_d,               //  first event
+             c3_d     len_d,               //  number of events
+             void**   byt_p,               //  array of bytes
+             c3_z*    siz_i,               //  array of lengths
+             c3_d     epo_d)               //  target epoch
 {
-  c3_d now_d;
-
   if ( !txt_u ) {
     return c3n;
   }
@@ -869,39 +864,36 @@ u3_book_save(u3_book* txt_u,
   //  for each deed we need 3 iovec entries: len_d + buffer + let_d
   //  pwritev has IOV_MAX limit (typically 1024), so we chunk if needed
   //
-  now_d = txt_u->off_d;
-
   #ifdef IOV_MAX
-    const c3_w max_deeds_w = IOV_MAX / 3;
+    const c3_d max_ded_d = IOV_MAX / 3;
   #else
-    const c3_w max_deeds_w = 1020 / 3;
+    const c3_d max_ded_d = 1020 / 3;
   #endif
 
-  struct iovec iov_u[max_deeds_w * 3];
+  struct iovec iov_u[max_ded_d * 3];
+  c3_d now_d = txt_u->off_d;
+  c3_d dun_d = 0;
 
-
-  c3_w dun_w = 0;
-
-  while ( dun_w < len_d ) {
-    c3_w cun_w = c3_min(len_d - dun_w, max_deeds_w);
+  while ( dun_d < len_d ) {
+    c3_d cun_d = c3_min(len_d - dun_d, max_ded_d);
 
     c3_z cun_z = 0;
-    for ( c3_w i_w = 0; i_w < cun_w; i_w++ ) {
-      c3_w src_w = dun_w + i_w;
-      c3_w idx_w = i_w * 3;
-      c3_y* buf_y = (c3_y*)byt_p[src_w];
+    for ( c3_d i_d = 0; i_d < cun_d; i_d++ ) {
+      c3_d src_d = dun_d + i_d;
+      c3_d idx_d = i_d * 3;
+      c3_y* buf_y = (c3_y*)byt_p[src_d];
 
-      iov_u[idx_w + 0].iov_base = &siz_i[src_w];
-      iov_u[idx_w + 0].iov_len  = sizeof(c3_d);
-      iov_u[idx_w + 1].iov_base = buf_y;
-      iov_u[idx_w + 1].iov_len  = siz_i[src_w];
-      iov_u[idx_w + 2].iov_base = &siz_i[src_w];
-      iov_u[idx_w + 2].iov_len  = sizeof(c3_d);
+      iov_u[idx_d + 0].iov_base = &siz_i[src_d];
+      iov_u[idx_d + 0].iov_len  = sizeof(c3_d);
+      iov_u[idx_d + 1].iov_base = buf_y;
+      iov_u[idx_d + 1].iov_len  = siz_i[src_d];
+      iov_u[idx_d + 2].iov_base = &siz_i[src_d];
+      iov_u[idx_d + 2].iov_len  = sizeof(c3_d);
 
-      cun_z += sizeof(c3_d) + siz_i[src_w] + sizeof(c3_d);
+      cun_z += sizeof(c3_d) + siz_i[src_d] + sizeof(c3_d);
     }
 
-    c3_zs ret_zs = pwritev(txt_u->fid_i, iov_u, cun_w * 3, now_d);
+    c3_zs ret_zs = pwritev(txt_u->fid_i, iov_u, cun_d * 3, now_d);
 
     if ( ret_zs != (c3_zs)cun_z ) {
       fprintf(stderr, "book: batch write failed: wrote %zd of %zu bytes: %s\r\n",
@@ -910,7 +902,7 @@ u3_book_save(u3_book* txt_u,
     }
 
     now_d += cun_z;
-    dun_w += cun_w;
+    dun_d += cun_d;
   }
 
   c3_d new_las_d = eve_d + len_d - 1;

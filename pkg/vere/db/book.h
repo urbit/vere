@@ -56,7 +56,7 @@
         u3_book_head hed_u;      //  cached header (current valid state)
         c3_d         las_d;      //  cached last event number
         c3_d         off_d;      //  cached append offset (end of last event)
-        c3_w         act_w;      //  active header slot (0 or 1)
+        c3_w         act_w;      //  active header slot a or b (0 or 1)
       } u3_book;
 
     /* u3_book_walk: event iterator
