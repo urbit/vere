@@ -25,7 +25,7 @@ u3t_trace u3t_Trace;
 static c3_o _ct_lop_o;
 
 /// Nock PID.
-static c3_ws _nock_pid_i = 0;
+static c3_hs _nock_pid_i = 0;
 
 /// JSON trace file.
 static FILE* _file_u = NULL;
@@ -213,38 +213,38 @@ u3t_samp(void)
     return;
   }
 
-  c3_w old_wag = u3C.wag_w;
-  u3C.wag_w &= ~u3o_debug_cpu;
-  u3C.wag_w &= ~u3o_trace;
+  c3_h old_wag = u3C.wag_h;
+  u3C.wag_h &= ~u3o_debug_cpu;
+  u3C.wag_h &= ~u3o_trace;
 
   //  Profile sampling, because it allocates on the home road,
   //  only works on when we're not at home.
   //
   if ( &(u3H->rod_u) != u3R ) {
-    c3_l      mot_l;
+    c3_m      mot_m;
     u3a_road* rod_u;
 
     if ( _(u3T.mal_o) ) {
-      mot_l = c3_s3('m','a','l');
+      mot_m = c3_s3('m','a','l');
     }
     else if ( _(u3T.coy_o) ) {
-      mot_l = c3_s3('c','o','y');
+      mot_m = c3_s3('c','o','y');
     }
     else if ( _(u3T.euq_o) ) {
-      mot_l = c3_s3('e','u','q');
+      mot_m = c3_s3('e','u','q');
     }
     else if ( _(u3T.far_o) ) {
-      mot_l = c3_s3('f','a','r');
+      mot_m = c3_s3('f','a','r');
     }
     else if ( _(u3T.noc_o) ) {
       u3_assert(!_(u3T.glu_o));
-      mot_l = c3_s3('n','o','c');
+      mot_m = c3_s3('n','o','c');
     }
     else if ( _(u3T.glu_o) ) {
-      mot_l = c3_s3('g','l','u');
+      mot_m = c3_s3('g','l','u');
     }
     else {
-      mot_l = c3_s3('f','u','n');
+      mot_m = c3_s3('f','u','n');
     }
 
     rod_u = u3R;
@@ -258,11 +258,11 @@ u3t_samp(void)
         */
         u3R->pro.day = u3nt(u3nq(0, 0, 0, u3nq(0, 0, 0, 0)), 0, 0);
       }
-      u3R->pro.day = u3dt("pi-noon", mot_l, lab, u3R->pro.day);
+      u3R->pro.day = u3dt("pi-noon", mot_m, lab, u3R->pro.day);
     }
     u3R = rod_u;
   }
-  u3C.wag_w = old_wag;
+  u3C.wag_h = old_wag;
 }
 
 /* u3t_come(): push on profile stack; return yes if active push.  RETAIN.
@@ -314,7 +314,7 @@ u3t_trace_open(const c3_c* dir_c)
   }
 
   c3_c lif_c[2056];
-  snprintf(lif_c, 2056, "%s/%d.json", fil_c, _file_cnt_w);
+  snprintf(lif_c, 2056, "%s/%"PRIc3_w".json", fil_c, _file_cnt_w);
 
   _file_u = c3_fopen(lif_c, "w");
   _nock_pid_i = (int)getpid();
@@ -471,17 +471,17 @@ u3t_print_steps(FILE* fil_u, c3_c* cap_c, c3_d sep_d)
   //
   if ( sep_d ) {
     if ( gib_w ) {
-      fprintf(fil_u, "%s: G/%d.%03d.%03d.%03d\r\n",
+      fprintf(fil_u, "%s: G/%"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w"\r\n",
           cap_c, gib_w, mib_w, kib_w, bib_w);
     }
     else if ( mib_w ) {
-      fprintf(fil_u, "%s: M/%d.%03d.%03d\r\n", cap_c, mib_w, kib_w, bib_w);
+      fprintf(fil_u, "%s: M/%"PRIc3_w".%03"PRIc3_w".%03"PRIc3_w"\r\n", cap_c, mib_w, kib_w, bib_w);
     }
     else if ( kib_w ) {
-      fprintf(fil_u, "%s: K/%d.%03d\r\n", cap_c, kib_w, bib_w);
+      fprintf(fil_u, "%s: K/%"PRIc3_w".%03"PRIc3_w"\r\n", cap_c, kib_w, bib_w);
     }
     else if ( bib_w ) {
-      fprintf(fil_u, "%s: %d\r\n", cap_c, bib_w);
+      fprintf(fil_u, "%s: %"PRIc3_w"\r\n", cap_c, bib_w);
     }
   }
 }
@@ -563,7 +563,7 @@ void
 u3t_boot(void)
 {
 #ifndef U3_OS_windows
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
     _ct_lop_o = c3n;
 #if defined(U3_OS_PROF)
     //  skip profiling if we don't yet have an arvo kernel
@@ -608,7 +608,7 @@ void
 u3t_boff(void)
 {
 #ifndef U3_OS_windows
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
 #if defined(U3_OS_PROF)
     // Mask SIGPROF signals in this thread (and this is the only
     // thread that unblocked them).
@@ -641,14 +641,14 @@ u3t_boff(void)
 
 
 /* u3t_slog_cap(): slog a tank with a caption with
-** a given priority c3_l (assumed 0-3).
+** a given priority c3_h (assumed 0-3).
 */
 void
-u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
+u3t_slog_cap(c3_h pri_h, u3_noun cap, u3_noun tan)
 {
   u3t_slog(
     u3nc(
-      pri_l,
+      pri_h,
       u3nt(
         c3__rose,
         u3nt(u3nt(':', ' ', u3_nul), u3_nul, u3_nul),
@@ -664,7 +664,7 @@ u3t_slog_cap(c3_l pri_l, u3_noun cap, u3_noun tan)
 ** until done.
 */
 void
-u3t_slog_trace(c3_l pri_l, u3_noun tax)
+u3t_slog_trace(c3_h pri_h, u3_noun tax)
 {
   // render the stack
   // Note: ton is a reference to a data struct
@@ -681,7 +681,7 @@ u3t_slog_trace(c3_l pri_l, u3_noun tax)
 
   // print the stack one stack item at a time
   while ( u3_nul != lit ) {
-    u3t_slog(u3nc(pri_l, u3k(u3h(lit)) ));
+    u3t_slog(u3nc(pri_h, u3k(u3h(lit)) ));
     lit = u3t(lit);
   }
 
@@ -693,10 +693,10 @@ u3t_slog_trace(c3_l pri_l, u3_noun tax)
 ** c3_l priority pri
 */
 void
-u3t_slog_nara(c3_l pri_l)
+u3t_slog_nara(c3_h pri_h)
 {
   u3_noun tax = u3k(u3R->bug.tax);
-  u3t_slog_trace(pri_l, tax);
+  u3t_slog_trace(pri_h, tax);
 }
 
 
@@ -704,7 +704,7 @@ u3t_slog_nara(c3_l pri_l)
 ** and pass it to slog_trace along with the given c3_l priority pri_l
 */
 void
-u3t_slog_hela(c3_l pri_l)
+u3t_slog_hela(c3_h pri_h)
 {
   // rod_u protects us from mutating the global state
   u3_road* rod_u = u3R;
@@ -719,7 +719,7 @@ u3t_slog_hela(c3_l pri_l)
     tax = u3kb_weld(tax, u3k(rod_u->bug.tax));
   }
 
-  u3t_slog_trace(pri_l, tax);
+  u3t_slog_trace(pri_h, tax);
 }
 
 /* _ct_roundf(): truncate a float to precision equivalent to %.2f */
@@ -731,15 +731,16 @@ _ct_roundf(float per_f)
   // to account for rounding without using round or roundf
   float big_f = (per_f*10000)+0.5;
   // truncate to int
-  c3_w big_w = (c3_w) big_f;
+  c3_h big_h = (c3_h) big_f;
   // convert to float and scale down such that
   // our last two digits are right of the decimal
-  float tuc_f = (float) big_w/100.0;
+  float tuc_f = (float) big_h/100.0;
   return tuc_f;
 }
 
 /* _ct_meme_percent(): convert two ints into a percentage */
 static float
+/* ;;: potential loss of precision with VERE64. Convert to double if it matters */
 _ct_meme_percent(c3_w lit_w, c3_w big_w)
 {
   // get the percentage of our inputs as a float
@@ -767,9 +768,9 @@ _ct_all_heap_size(u3_road* r) {
 struct
 bar_item {
   // index
-  c3_w dex_w;
+  c3_h dex_h;
   // lower bound
-  c3_w low_w;
+  c3_h low_h;
   // original value
   float ori_f;
   // difference
@@ -799,14 +800,14 @@ _ct_boost_small(float num_f)
  *                          values should be 100. This function reports how far from
  *                          the ideal bar_u is.
 */
-static c3_ws
+static c3_hs
 _ct_global_difference(struct bar_info bar_u)
 {
-  c3_w low_w = 0;
-  for (c3_w i=0; i < 6; i++) {
-    low_w += bar_u.s[i].low_w;
+  c3_h low_h = 0;
+  for (c3_h i=0; i < 6; i++) {
+    low_h += bar_u.s[i].low_h;
   }
-  return 100 - low_w;
+  return 100 - low_h;
 }
 
 /* _ct_compute_roundoff_error(): for each loom item in bar_u
@@ -816,8 +817,8 @@ _ct_global_difference(struct bar_info bar_u)
 static struct bar_info
 _ct_compute_roundoff_error(struct bar_info bar_u)
 {
-  for (c3_w i=0; i < 6; i++) {
-    bar_u.s[i].dif_f = bar_u.s[i].ori_f - bar_u.s[i].low_w;
+  for (c3_h i=0; i < 6; i++) {
+    bar_u.s[i].dif_f = bar_u.s[i].ori_f - bar_u.s[i].low_h;
   }
   return bar_u;
 }
@@ -827,8 +828,8 @@ static struct bar_info
 _ct_sort_by_roundoff_error(struct bar_info bar_u)
 {
   struct bar_item tem_u;
-  for (c3_w i=1; i < 6; i++) {
-    for (c3_w j=0; j < 6-i; j++) {
+  for (c3_h i=1; i < 6; i++) {
+    for (c3_h j=0; j < 6-i; j++) {
       if (bar_u.s[j+1].dif_f > bar_u.s[j].dif_f) {
         tem_u = bar_u.s[j];
         bar_u.s[j] = bar_u.s[j+1];
@@ -844,9 +845,9 @@ static struct bar_info
 _ct_sort_by_index(struct bar_info bar_u)
 {
   struct bar_item tem_u;
-  for (c3_w i=1; i < 6; i++) {
-    for (c3_w j=0; j < 6-i; j++) {
-      if (bar_u.s[j+1].dex_w < bar_u.s[j].dex_w) {
+  for (c3_h i=1; i < 6; i++) {
+    for (c3_h j=0; j < 6-i; j++) {
+      if (bar_u.s[j+1].dex_h < bar_u.s[j].dex_h) {
         tem_u = bar_u.s[j];
         bar_u.s[j] = bar_u.s[j+1];
         bar_u.s[j+1] = tem_u;
@@ -861,17 +862,17 @@ _ct_sort_by_index(struct bar_info bar_u)
  *                     and undersized things a bit bigger
 */
 static struct bar_info
-_ct_reduce_error(struct bar_info bar_u, c3_ws dif_s)
+_ct_reduce_error(struct bar_info bar_u, c3_hs dif_s)
 {
-  for (c3_w i=0; i < 6; i++) {
-    if (bar_u.s[i].low_w == 0) continue;
-    if (bar_u.s[i].low_w == 1) continue;
+  for (c3_h i=0; i < 6; i++) {
+    if (bar_u.s[i].low_h == 0) continue;
+    if (bar_u.s[i].low_h == 1) continue;
     if (dif_s > 0) {
-      bar_u.s[i].low_w++;
+      bar_u.s[i].low_h++;
       dif_s--;
     }
     if (dif_s < 0) {
-      bar_u.s[i].low_w--;
+      bar_u.s[i].low_h--;
       dif_s++;
     }
   }
@@ -894,16 +895,16 @@ _ct_report_bargraph(
 
   // init the list of structs
   struct bar_info bar_u;
-  for (c3_w i=0; i < 6; i++) {
-    bar_u.s[i].dex_w = i;
+  for (c3_h i=0; i < 6; i++) {
+    bar_u.s[i].dex_h = i;
     bar_u.s[i].ori_f = in[i];
-    bar_u.s[i].low_w = (c3_w) bar_u.s[i].ori_f;
+    bar_u.s[i].low_h = (c3_h) bar_u.s[i].ori_f;
   }
 
   // repeatedly adjust for roundoff error
   // until it is elemenated or we go 100 cycles
-  c3_ws dif_s = 0;
-  for (c3_w x=0; x<100; x++) {
+  c3_hs dif_s = 0;
+  for (c3_h x=0; x<100; x++) {
     bar_u = _ct_compute_roundoff_error(bar_u);
     dif_s = _ct_global_difference(bar_u);
     if (dif_s == 0) break;
@@ -912,17 +913,17 @@ _ct_report_bargraph(
   }
   bar_u = _ct_sort_by_index(bar_u);
 
-  for (c3_w x=1; x<104; x++) {
+  for (c3_h x=1; x<104; x++) {
     bar_c[x] = ' ';
   }
   bar_c[0] = '[';
 
   // create our bar chart
   const c3_c sym_c[6] = "=-%#+~";
-  c3_w x = 0, y = 0;
-  for (c3_w i=0; i < 6; i++) {
+  c3_h x = 0, y = 0;
+  for (c3_h i=0; i < 6; i++) {
     x++;
-    for (c3_w j=0; j < bar_u.s[i].low_w; j++) {
+    for (c3_h j=0; j < bar_u.s[i].low_h; j++) {
       bar_c[x+j] = sym_c[i];
       y = x+j;
     }
@@ -944,7 +945,7 @@ _ct_size_prefix(c3_d num_d)
     'X';
 }
 
-/* _ct_report_string(): convert a int into a string, adding a metric scale prefix letter*/
+/* _ct_report_string(): convert an int into a string, adding a metric scale prefix letter */
 static void
 _ct_report_string(c3_c rep_c[32], c3_d num_d)
 {
@@ -954,7 +955,7 @@ _ct_report_string(c3_c rep_c[32], c3_d num_d)
   rep_c[24] = _ct_size_prefix(num_d);
   // consume wor_w into a string one base-10 digit at a time
   // including dot formatting
-  c3_w i = 0, j = 0;
+  c3_h i = 0, j = 0;
   while (num_d > 0) {
     if (j == 3) {
       rep_c[22-i] = '.';
@@ -969,20 +970,20 @@ _ct_report_string(c3_c rep_c[32], c3_d num_d)
   }
 }
 
-/*  _ct_etch_road_depth(): return a the current road depth as a fixed size string */
+/*  _ct_etch_road_depth(): return the current road depth as a fixed size string */
 static void
- _ct_etch_road_depth(c3_c rep_c[32], u3_road* r, c3_w num_w) {
+ _ct_etch_road_depth(c3_c rep_c[32], u3_road* r, c3_h num_h) {
   if (r == &(u3H->rod_u)) {
-    _ct_report_string(rep_c, num_w);
+    _ct_report_string(rep_c, num_h);
     // this will be incorrectly indented, so we fix that here
-    c3_w i = 14;
+    c3_h i = 14;
     while (i > 0) {
       rep_c[i] = rep_c[i+16];
       rep_c[i+16] = ' ';
       i--;
     }
   } else {
-    _ct_etch_road_depth(rep_c, u3tn(u3_road, r->par_p), ++num_w);
+    _ct_etch_road_depth(rep_c, u3tn(u3_road, r->par_p), ++num_h);
   }
 }
 
@@ -991,21 +992,21 @@ static void
  *                    scaled by a metric scaling postfix (ie MB, GB, etc)
 */
 static void
-_ct_etch_memory(c3_c rep_c[32], float per_f, c3_w num_w)
+_ct_etch_memory(c3_c rep_c[32], float per_f, c3_h num_h)
 {
   // create the basic report string
-  _ct_report_string(rep_c, num_w);
+  _ct_report_string(rep_c, num_h);
   // add the Bytes postfix to the size report
   rep_c[25] = 'B';
 
   // add the space-percentage into the report
   rep_c[2] = '0', rep_c[3] = '.', rep_c[4] = '0', rep_c[5] = '0';
-  c3_w per_i = (c3_w) (per_f*100);
-  c3_w i = 0;
-  while (per_i > 0 && i < 6) {
+  c3_h per_h = (c3_h) (per_f*100);
+  c3_h i = 0;
+  while (per_h > 0 && i < 6) {
     if (i != 2) {
-      rep_c[5-i] = (per_i%10)+'0';
-      per_i /= 10;
+      rep_c[5-i] = (per_h%10)+'0';
+      per_h /= 10;
     }
     i++;
   }
@@ -1024,7 +1025,7 @@ _ct_etch_steps(c3_c rep_c[32], c3_d sep_d)
 
 /* u3t_etch_meme(): report memory stats at call time */
 u3_noun
-u3t_etch_meme(c3_l mod_l)
+u3t_etch_meme(c3_w mod_w)
 {
   u3a_road* lum_r;
   lum_r = &(u3H->rod_u);
@@ -1064,7 +1065,7 @@ u3t_etch_meme(c3_l mod_l)
   c3_d nox_d = u3R->pro.nox_d;
   // iff we have a max_f we will render it into the bar graph
   // in other words iff we have max_f it will always replace something
-  c3_w inc_w = (max_f > hip_f+1.0) ? (c3_w) max_f+0.5 : (c3_w) hip_f+1.5;
+  c3_h inc_h = (max_f > hip_f+1.0) ? (c3_h) max_f+0.5 : (c3_h) hip_f+1.5;
 #endif
 
   // warn if any sanity checks have failed
@@ -1077,23 +1078,23 @@ u3t_etch_meme(c3_l mod_l)
   bar_c[0] = 0;
   _ct_report_bargraph(bar_c, hip_f, hep_f, fre_f, pen_f, tak_f, tik_f);
 
-  c3_w dol = (c3_w) _ct_roundf(hip_f/100);
+  c3_h dol = (c3_h) _ct_roundf(hip_f/100);
   bar_c[dol] = '$';
 #ifdef U3_CPU_DEBUG
   if (max_f > 0.0) {
-    bar_c[inc_w] = '|';
+    bar_c[inc_h] = '|';
   }
 #endif
 
-  c3_c dir_n[8];
-  dir_n[0] = 0;
+  c3_c dir_w[8];
+  dir_w[0] = 0;
   if ( u3a_is_north(u3R) == c3y ) {
-    strcat(dir_n, "  North");
+    strcat(dir_w, "  North");
   } else {
-    strcat(dir_n, "  South");
+    strcat(dir_w, "  South");
   }
 
-  if (mod_l == 0) {
+  if (mod_w == 0) {
     return u3i_string(bar_c);
   }
   else {
@@ -1121,7 +1122,7 @@ u3t_etch_meme(c3_l mod_l)
     strcat(str_c, "\n     road cells made: "); _ct_etch_steps(rep_c, cel_d); strcat(str_c, rep_c);
     strcat(str_c, "\n     road nocks made: "); _ct_etch_steps(rep_c, nox_d); strcat(str_c, rep_c);
 #endif
-    strcat(str_c, "\n      road direction: "); strcat(str_c, dir_n);
+    strcat(str_c, "\n      road direction: "); strcat(str_c, dir_w);
     strcat(str_c, "\n          road depth: "); _ct_etch_road_depth(rep_c, u3R, 1); strcat(str_c, rep_c);
     strcat(str_c, "\n\nLoom: "); strcat(str_c, bar_c);
     return u3i_string(str_c);
@@ -1136,7 +1137,7 @@ u3t_sstack_init()
 #ifndef U3_OS_windows
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+  c3_h shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;
@@ -1154,8 +1155,8 @@ u3t_sstack_init()
     return;
   }
 
-  stk_u->off_w = 0;
-  stk_u->fow_w = 0;
+  stk_u->off_h = 0;
+  stk_u->fow_h = 0;
   u3t_sstack_push(c3__root);
 #endif
 }
@@ -1169,7 +1170,7 @@ u3t_sstack_open()
   //Setup spin stack
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
+  c3_h shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return NULL; 
@@ -1209,20 +1210,20 @@ u3t_sstack_push(u3_noun nam)
     nam = c3__cell;
   }
 
-  c3_w  met_w = u3r_met(3, nam);
+  c3_w met_w = u3r_met(3, nam);
   
   // Exit if full
-  if ( 0 < stk_u->fow_w || 
-       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
-    stk_u->fow_w++;
+  if ( 0 < stk_u->fow_h || 
+       sizeof(stk_u->dat_y) < stk_u->off_h + met_w + sizeof(c3_w) ) {
+    stk_u->fow_h++;
     return;
   }
 
-  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
-  stk_u->off_w += met_w;
+  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_h), nam);
+  stk_u->off_h += met_w;
 
-  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
-  stk_u->off_w += sizeof(c3_w);
+  memcpy(&stk_u->dat_y[stk_u->off_h], &met_w, sizeof(c3_w));
+  stk_u->off_h += sizeof(c3_w);
   u3z(nam);
 }
 
@@ -1232,11 +1233,11 @@ void
 u3t_sstack_pop()
 {
   if (  !stk_u ) return;
-  if ( 0 < stk_u->fow_w ) {
-    stk_u->fow_w--;
+  if ( 0 < stk_u->fow_h ) {
+    stk_u->fow_h--;
   } else {
-    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
-    stk_u->off_w -= (len_w+sizeof(c3_w));
+    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_h - sizeof(c3_w)];
+    stk_u->off_h -= (len_w+sizeof(c3_w));
   }
 }
 

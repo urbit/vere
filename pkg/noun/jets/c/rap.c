@@ -10,7 +10,7 @@
   u3qc_rap(u3_atom a,
            u3_noun b)
   {
-    if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -74,7 +74,7 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul)) ||
          (c3n == u3ud(a)) )
     {
       return u3m_bail(c3__exit);

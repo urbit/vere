@@ -10,9 +10,9 @@
   Get the lowest `n` bits of a word `w` using a bitmask.
 */
 #define TAKEBITS(n,w) \
-  ((n)==32) ? (w) :   \
+  ((n)==u3a_word_bits) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_w)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -25,7 +25,7 @@
   `ripn` breaks `atom` into a list of blocks, of bit-width `bits`. The
   resulting list will be least-significant block first.
 
-  XX TODO This only handles cases where the bit-width is <= 32.
+  XX TODO This only handles cases where the bit-width is <= u3a_word_bits.
 
   For each block we produce, we need to grab the relevant words inside
   `atom`, so we first compute their indicies.
@@ -34,7 +34,7 @@
   care about, and `sig_idx` is the word after that.
 
   Next we grab those words (`ins_word` and `sig_word`) from the atom
-  using `u3r_word`. Note that `sig_idx` might be out-of-bounds for the
+  using `u3r_word`. word that `sig_idx` might be out-of-bounds for the
   underlying array of `atom`, but `u3r_word` returns 0 in that case,
   which is exatly what we want.
 
@@ -54,7 +54,7 @@
 static u3_noun
 _bit_rip(u3_atom bits, u3_atom atom)
 {
-  if ( !_(u3a_is_cat(bits) || bits==0 || bits>31) ) {
+  if ( bits==0 || bits>(u3a_word_bits-1)) {
     return u3m_bail(c3__fail);
   }
 
@@ -67,17 +67,17 @@ _bit_rip(u3_atom bits, u3_atom atom)
     c3_w next_blk = blk + 1;
     c3_w blks_rem = num_blocks - next_blk;
     c3_w bits_rem = blks_rem * bits;
-    c3_w ins_idx  = bits_rem / 32;
+    c3_w ins_idx  = bits_rem / u3a_word_bits;
     c3_w sig_idx  = ins_idx + 1;
 
-    c3_w bits_rem_in_ins_word = bits_rem % 32;
+    c3_w bit_rems_in_ins_word = bits_rem % u3a_word_bits;
 
     c3_w ins_word  = u3r_word(ins_idx, atom);
     c3_w sig_word  = u3r_word(sig_idx, atom);
-    c3_w nbits_ins = c3_min(bits, 32 - bits_rem_in_ins_word);
+    c3_w nbits_ins = c3_min(bits, u3a_word_bits - bit_rems_in_ins_word);
     c3_w nbits_sig = bits - nbits_ins;
 
-    c3_w ins_word_bits = TAKEBITS(nbits_ins, ins_word >> bits_rem_in_ins_word);
+    c3_w ins_word_bits = TAKEBITS(nbits_ins, ins_word >> bit_rems_in_ins_word);
     c3_w sig_word_bits = TAKEBITS(nbits_sig, sig_word);
 
     c3_w item = ins_word_bits | (sig_word_bits << nbits_ins);
@@ -91,29 +91,26 @@ _bit_rip(u3_atom bits, u3_atom atom)
 static u3_noun
 _block_rip(u3_atom bloq, u3_atom b)
 {
-  if ( !_(u3a_is_cat(bloq)) || (bloq >= 32) ) {
-    return u3m_bail(c3__fail);
-  }
 
   c3_g bloq_g = bloq;
 
   /*
     This is a fast-path for the case where all the resulting blocks will
-    fit in 31-bit direct atoms.
+    fit in (u3a_word_bits-1)-bit direct atoms.
   */
-  if ( bloq_g < 5 ) {                                   //  produce direct atoms
+  if ( bloq_g < u3a_word_bits_log ) {                                   //  produce direct atoms
     u3_noun acc     = u3_nul;
 
     c3_w met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
-    c3_w nbits_w = 1 << bloq_g;                         //  block size in bits
-    c3_w bmask_w = (1 << nbits_w) - 1;                  //  result mask
+    c3_w nbits_w = (c3_w)1 << bloq_g;                         //  block size in bits
+    c3_w bmask_w = ((c3_w)1 << nbits_w) - 1;                  //  result mask
 
     for ( c3_w i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
       c3_w nex_w = i_w + 1;                             //  next block
       c3_w pat_w = met_w - nex_w;                       //  blks left after this
       c3_w bit_w = pat_w << bloq_g;                     //  bits left after this
-      c3_w wor_w = bit_w >> 5;                          //  wrds left after this
-      c3_w sif_w = bit_w & 31;                          //  bits left in word
+      c3_w wor_w = bit_w >> u3a_word_bits_log;                          //  wrds left after this
+      c3_w sif_w = bit_w & (u3a_word_bits-1);                          //  bits left in word
       c3_w src_w = u3r_word(wor_w, b);                  //  find word by index
       c3_w rip_w = (src_w >> sif_w) & bmask_w;          //  get item from word
 
@@ -125,9 +122,9 @@ _block_rip(u3_atom bloq, u3_atom b)
 
   u3_noun acc   = u3_nul;
   c3_w    met_w = u3r_met(bloq_g, b);
-  c3_w    len_w = u3r_met(5, b);
-  c3_g    san_g = (bloq_g - 5);
-  c3_w    san_w = 1 << san_g;
+  c3_w    len_w = u3r_met(u3a_word_bits_log, b);
+  c3_g    san_g = (bloq_g - u3a_word_bits_log);
+  c3_w    san_w = (c3_w)1 << san_g;
   c3_w    dif_w = (met_w << san_g) - len_w;
   c3_w    tub_w = ((dif_w == 0) ? san_w : (san_w - dif_w));
 
@@ -138,7 +135,7 @@ _block_rip(u3_atom bloq, u3_atom b)
     c3_w       j_w;
     u3_atom    rip;
     u3i_slab sab_u;
-    u3i_slab_bare(&sab_u, 5, sap_w);
+    u3i_slab_bare(&sab_u, u3a_word_bits_log, sap_w);
 
     for ( j_w = 0; j_w < sap_w; j_w++ ) {
       sab_u.buf_w[j_w] = u3r_word(wut_w + j_w, b);
@@ -157,6 +154,19 @@ u3qc_rip(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
+
+  if ( c3n == u3a_is_cat(a) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  if ( c3n == u3a_is_cat(b) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  if ( a >= u3a_word_bits ) {
+    return u3m_bail(c3__fail);
+  }
+
   if ( 1 == b ) {
     return _block_rip(a, c);
   }
@@ -165,8 +175,25 @@ u3qc_rip(u3_atom a,
     return _bit_rip(b, c);
   }
 
-  u3l_log("rip: stub");
-  return u3_none;
+  u3i_slab sab_u;
+  u3_noun pro = u3_nul;
+  //u3_noun *lit = &pro;
+  //u3_noun *hed;
+  //u3_noun *tal;
+  c3_w len_w = DIVCEIL(u3r_met(a, c), b);
+
+  //for (c3_w i_w = 0; i_w < len_w; i_w++) {
+  for (c3_w i_w = len_w; 0 < i_w; i_w--) {
+    u3i_slab_init(&sab_u, a, b);
+    u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
+    //*lit = u3i_defcons(&hed, &tal);
+    //*hed = u3i_slab_mint(&sab_u);
+    //lit = tal;
+    pro = u3nc(u3i_slab_mint(&sab_u), pro);
+  }
+  //*lit = u3_nul;
+
+  return pro;
 }
 
 u3_noun
@@ -175,7 +202,7 @@ u3wc_rip(u3_noun cor)
   u3_atom bloq, step;
   u3_noun a, b;
   u3x_mean(cor, u3x_sam_2, &a,
-                u3x_sam_3, &b, 0);
+                u3x_sam_3, &b, u3_nul);
   u3x_bite(a, &bloq, &step);
 
   return u3qc_rip(bloq, step, u3x_atom(b));

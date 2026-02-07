@@ -45,7 +45,7 @@ static void
 _jam_bench(void)
 {
   struct timeval b4, f2, d0;
-  c3_w  mil_w, i_w, max_w = 10000;
+  c3_w mil_w, i_w, max_w = 10000;
   u3_noun wit = _ames_writ_ex();
 
   fprintf(stderr, "\r\njam microbenchmark:\r\n");
@@ -65,7 +65,7 @@ _jam_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  jam og: %u ms\r\n", mil_w);
+    fprintf(stderr, "  jam og: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -84,7 +84,7 @@ _jam_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  jam xeno: %u ms\r\n", mil_w);
+    fprintf(stderr, "  jam xeno: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   while ( 1 ) {
@@ -112,7 +112,7 @@ _jam_bench(void)
       gettimeofday(&f2, 0);
       timersub(&f2, &b4, &d0);
       mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-      fprintf(stderr, "  jam cons: %u ms\r\n", mil_w);
+      fprintf(stderr, "  jam cons: %"PRIc3_w" ms\r\n", mil_w);
     }
 
     {
@@ -134,7 +134,7 @@ _jam_bench(void)
       gettimeofday(&f2, 0);
       timersub(&f2, &b4, &d0);
       mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-      fprintf(stderr, "  jam cons with: %u ms\r\n", mil_w);
+      fprintf(stderr, "  jam cons with: %"PRIc3_w" ms\r\n", mil_w);
     }
 
     ur_root_free(rot_u);
@@ -148,7 +148,7 @@ static void
 _cue_bench(void)
 {
   struct timeval b4, f2, d0;
-  c3_w  mil_w, i_w, max_w = 20000;
+  c3_w mil_w, i_w, max_w = 20000;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
 
   fprintf(stderr, "\r\ncue microbenchmark:\r\n");
@@ -163,7 +163,7 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue og: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue og: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -176,14 +176,14 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue atom: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue atom: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
     gettimeofday(&b4, 0);
 
     {
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -191,14 +191,14 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        u3z(u3s_cue_xeno(len_w, byt_y));
+        u3z(u3s_cue_xeno(len_d, byt_y));
       }
     }
 
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue xeno: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue xeno: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -207,7 +207,7 @@ _cue_bench(void)
     {
       u3_cue_xeno* sil_u = u3s_cue_xeno_init();
 
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -215,7 +215,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        u3z(u3s_cue_xeno_with(sil_u, len_w, byt_y));
+        u3z(u3s_cue_xeno_with(sil_u, len_d, byt_y));
       }
 
       u3s_cue_xeno_done(sil_u);
@@ -224,14 +224,14 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue xeno with: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue xeno with: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
     gettimeofday(&b4, 0);
 
     {
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -239,14 +239,14 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue_test(len_w, byt_y);
+        ur_cue_test(len_d, byt_y);
       }
     }
 
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue test: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue test: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -255,7 +255,7 @@ _cue_bench(void)
     {
       ur_cue_test_t *t = ur_cue_test_init();
 
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -263,7 +263,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue_test_with(t, len_w, byt_y);
+        ur_cue_test_with(t, len_d, byt_y);
       }
 
       ur_cue_test_done(t);
@@ -272,7 +272,7 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue test with: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue test with: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -281,7 +281,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u = ur_root_init();
       ur_nref      ref;
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -289,7 +289,7 @@ _cue_bench(void)
                   : (c3_y*)((u3a_atom*)u3a_to_ptr(vat))->buf_w;
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
-        ur_cue(rot_u, len_w, byt_y, &ref);
+        ur_cue(rot_u, len_d, byt_y, &ref);
       }
 
       ur_root_free(rot_u);
@@ -298,7 +298,7 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue cons: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue cons: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -307,7 +307,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u;
       ur_nref      ref;
-      c3_w  len_w = u3r_met(3, vat);
+      c3_d  len_d = u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -316,7 +316,7 @@ _cue_bench(void)
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
         rot_u = ur_root_init();
-        ur_cue(rot_u, len_w, byt_y, &ref);
+        ur_cue(rot_u, len_d, byt_y, &ref);
         ur_root_free(rot_u);
       }
     }
@@ -324,7 +324,7 @@ _cue_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue re-cons: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue re-cons: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   u3z(vat);
@@ -359,7 +359,7 @@ _cue_soft_bench(void)
 {
   struct timeval b4, f2, d0;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
-  c3_w  mil_w;
+  c3_w mil_w;
 
   fprintf(stderr, "\r\ncue virtual microbenchmark:\r\n");
 
@@ -371,7 +371,7 @@ _cue_soft_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue virtual og: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue virtual og: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -382,7 +382,7 @@ _cue_soft_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue virtual atom: %u ms\r\n", mil_w);
+    fprintf(stderr, "  cue virtual atom: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   u3z(vat);
@@ -391,9 +391,9 @@ _cue_soft_bench(void)
 static void
 _edit_bench_impl(c3_w max_w)
 {
-  u3_assert( max_w && (c3y == u3a_is_cat(max_w)) );
+  u3_assert( max_w && (c3y == u3a_is_cat((c3_w)max_w)) );
 
-  c3_w* axe_w = c3_calloc(((max_w + 31) >> 5) << 2);
+  c3_w* axe_w = c3_calloc(((max_w + (u3a_word_bits - 1)) >> u3a_word_bits_log) * sizeof(c3_w));
   c3_w  bit_w;
   u3_noun lit = u3qb_reap(max_w, 1);
   u3_noun axe;
@@ -401,11 +401,11 @@ _edit_bench_impl(c3_w max_w)
   axe_w[0] = bit_w = 2;
 
   do {
-    axe = u3i_words((bit_w + 31) >> 5, axe_w);
+    axe = u3i_words((bit_w + (u3a_word_bits - 1)) >> u3a_word_bits_log, axe_w);
     lit = u3i_edit(lit, axe, 2);
     u3z(axe);
 
-    axe_w[bit_w >> 5] |= (c3_w)1 << (bit_w & 31);
+    axe_w[bit_w >> u3a_word_bits_log] |= (c3_w)1 << (bit_w & (u3a_word_bits - 1));
     bit_w++;
   }
   while ( bit_w <= max_w );
@@ -430,7 +430,7 @@ _edit_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  opcode 10 1k list: %u ms\r\n", mil_w);
+    fprintf(stderr, "  opcode 10 1k list: %"PRIc3_w" ms\r\n", mil_w);
   }
 
   {
@@ -441,7 +441,7 @@ _edit_bench(void)
     gettimeofday(&f2, 0);
     timersub(&f2, &b4, &d0);
     mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  opcode 10 10k list: %u ms\r\n", mil_w);
+    fprintf(stderr, "  opcode 10 10k list: %"PRIc3_w" ms\r\n", mil_w);
   }
 }
 

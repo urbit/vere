@@ -48,18 +48,23 @@
 
     /* Size in words.
     */
+// (probably some of that belongs here)
+#ifndef VERE64
 #     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
+#else
+#     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
+#endif
 
     /* Bit counting.
     */
 #if   (32 == (CHAR_BIT * __SIZEOF_INT__))
-#     define c3_lz_w __builtin_clz
-#     define c3_tz_w __builtin_ctz
-#     define c3_pc_w __builtin_popcount
+#     define c3_lz_h __builtin_clz
+#     define c3_tz_h __builtin_ctz
+#     define c3_pc_h __builtin_popcount
 #elif (32 == (CHAR_BIT * __SIZEOF_LONG__))
-#     define c3_lz_w __builtin_clzl
-#     define c3_tz_w __builtin_ctzl
-#     define c3_pc_w __builtin_popcountl
+#     define c3_lz_h __builtin_clzl
+#     define c3_tz_h __builtin_ctzl
+#     define c3_pc_h __builtin_popcountl
 #else
 #     error  "port me"
 #endif
@@ -73,11 +78,23 @@
 #     define c3_tz_d __builtin_ctzll
 #     define c3_pc_d __builtin_popcountll
 #else
-#     error "port me"
+#     error  "port me"
 #endif
 
-#     define c3_bits_word(w) ((w) ? (32 - c3_lz_w(w)) : 0)
-#     define c3_bits_dabl(d) ((d) ? (64 - c3_lz_d(d)) : 0)
+#     define c3_bits_half(h) ((h) ? (32 - c3_lz_h(h)) : 0)
+#     define c3_bits_chub(d) ((d) ? (64 - c3_lz_d(d)) : 0)
+
+#ifndef VERE64
+#     define c3_bits_word(w)  c3_bits_half(w)
+#     define c3_lz_w  c3_lz_h
+#     define c3_tz_w  c3_tz_h
+#     define c3_pc_w  c3_pc_h
+#else
+#     define c3_bits_word(w)  c3_bits_chub(w)
+#     define c3_lz_w  c3_lz_d
+#     define c3_tz_w  c3_tz_d
+#     define c3_pc_w  c3_pc_d
+#endif
 
     /* Min and max.
     */
@@ -101,7 +118,7 @@
     /* Fill 16 words (64 bytes) with high-quality entropy.
     */
       void
-      c3_rand(c3_w* rad_w);
+      c3_rand(c3_h* rad_h);
 
     /* Short integers.
     */
@@ -133,10 +150,10 @@
         return ((c3_s)buf_y[1] << 8 | (c3_s)buf_y[0]);
       }
 
-      inline c3_w
-      c3_sift_word(c3_y buf_y[4])
+      inline c3_h
+      c3_sift_half(c3_y buf_y[4])
       {
-        return ((c3_w)buf_y[3] << 24 | (c3_w)buf_y[2] << 16 | (c3_w)buf_y[1] << 8 | (c3_w)buf_y[0]);
+        return ((c3_h)buf_y[3] << 24 | (c3_h)buf_y[2] << 16 | (c3_h)buf_y[1] << 8 | (c3_h)buf_y[0]);
       }
 
       inline c3_d
@@ -160,12 +177,12 @@
       }
 
       inline void
-      c3_etch_word(c3_y buf_y[4], c3_w wod_w)
+      c3_etch_half(c3_y buf_y[4], c3_h wod_h)
       {
-        buf_y[0] = wod_w         & 0xff;
-        buf_y[1] = (wod_w >>  8) & 0xff;
-        buf_y[2] = (wod_w >> 16) & 0xff;
-        buf_y[3] = (wod_w >> 24) & 0xff;
+        buf_y[0] = wod_h         & 0xff;
+        buf_y[1] = (wod_h >>  8) & 0xff;
+        buf_y[2] = (wod_h >> 16) & 0xff;
+        buf_y[3] = (wod_h >> 24) & 0xff;
       }
 
       inline void
@@ -248,17 +265,17 @@
 
    hi or lo align x to al
 
-   unless effective type of x is c3_w or c3_d, assumes x is a pointer.
+   unless effective type of x is c3_h or c3_d, assumes x is a pointer.
 */
 #define c3_align(x, al, hilo)                   \
   _Generic((x),                                 \
-           c3_w     : c3_align_w,               \
+           c3_h     : c3_align_h,               \
            c3_d     : c3_align_d,               \
            default  : c3_align_p)               \
        (x, al, hilo)
 typedef enum { C3_ALGHI=1, C3_ALGLO=0 } align_dir;
-inline c3_w
-c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+inline c3_h
+c3_align_h(c3_h x, c3_h al, align_dir hilo) {
   c3_dessert(hilo <= C3_ALGHI && hilo >= C3_ALGLO);
   x += hilo * (al - 1);
   x &= ~(al - 1);
@@ -271,6 +288,15 @@ c3_align_d(c3_d x, c3_d al, align_dir hilo) {
   x &= ~(al - 1);
   return x;
 }
+inline c3_w
+c3_align_w(c3_w x, c3_w al, align_dir hilo) {
+#ifndef VERE64
+  return c3_align_h(x, al, hilo);
+#else
+  return c3_align_d(x, al, hilo);
+#endif
+}
+
 inline void*
 c3_align_p(void const * p, size_t al, align_dir hilo) {
   uintptr_t x = (uintptr_t)p;
@@ -279,6 +305,15 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
   x &= ~(al - 1);
   return (void*)x;
 }
+
+#define c3_h_max  0xffffffff
+#define c3_d_max  0xffffffffffffffffULL
+
+#ifndef VERE64
+#define c3_w_max  c3_h_max
+#else
+#define c3_w_max  c3_d_max
+#endif
 
 #define c3_likely(x)    ( __builtin_expect(!!(x), 1) )
 #define c3_unlikely(x)  ( __builtin_expect(!!(x), 0) )

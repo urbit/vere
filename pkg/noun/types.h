@@ -8,13 +8,13 @@
 #include "c3/c3.h"
 
 /// Sentinel value for u3_noun types that aren't actually nouns.
-#define u3_none (u3_noun)0xffffffff
+#define u3_none (u3_noun)c3_w_max
 
 /// 0, or `~` in Hoon.
-#define u3_nul 0
+#define u3_nul (c3_w)0
 
 /// 0, or `%$` in Hoon.
-#define u3_blip 0
+#define u3_blip (c3_w)0
 
 /// Pointer offset into the loom.
 ///

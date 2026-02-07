@@ -28,7 +28,7 @@
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &a,
                               u3x_sam_6, &b,
-                              u3x_sam_7, &c, 0) ) {
+                              u3x_sam_7, &c, u3_nul) ) {
       return u3m_bail(c3__exit);
     } else {
       return u3qb_clap(a, b, c);
