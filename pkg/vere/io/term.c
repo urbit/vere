@@ -1041,8 +1041,8 @@ u3_term_get_blew(c3_l tid_l)
     //  clamp to defaults if ioctl returns zero
     //  (e.g. Docker PTY with no attached reader)
     //
-    if ( !col_l ) { col_l = 80; }
-    if ( !row_l ) { row_l = 24; }
+    if ( 0 == col_l ) { col_l = 80; }
+    if ( 0 == row_l ) { row_l = 24; }
     uty_u->tat_u.siz.col_l = col_l;
     uty_u->tat_u.siz.row_l = row_l;
   }
