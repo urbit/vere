@@ -11,8 +11,6 @@ pub fn build(b: *std.Build) !void {
     // @panic("Missing required option: pace");
     const version = b.option([]const u8, "version", "") orelse "3.5";
     // @panic("Missing required option: version");
-    // XX re-enable for migration work
-    // const vere32 = b.option(bool, "vere32", "Compile in 32-bit mode") orelse false;
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
@@ -52,12 +50,11 @@ pub fn build(b: *std.Build) !void {
         .copt = copts,
     });
 
-    // XX re-enable for migration work
-    // const pkg_past = if (vere32) b.dependency("pkg_past", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    //     .copt = copts,
-    // }) else null;
+    const pkg_past = b.dependency("pkg_past", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+    });
 
     const avahi = b.dependency("avahi", .{
         .target = target,
@@ -163,10 +160,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
-    // XX re-enable for migration work
-    // if (vere32) {
-    //     pkg_vere.linkLibrary(pkg_past.?.artifact("past"));
-    // }
+    pkg_vere.linkLibrary(pkg_past.artifact("past"));
     pkg_vere.linkLibC();
 
     var files = std.array_list.Managed([]const u8).init(b.allocator);

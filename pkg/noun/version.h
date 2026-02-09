@@ -9,8 +9,9 @@ typedef c3_d       u3v_version;
 #define U3V_VER2   (u3v_version)2  //  2.0:    pointer compression
 #define U3V_VER3   (u3v_version)3  //  3.0-rc: persistent memoization
 #define U3V_VER4   (u3v_version)4  //  3.0:    bytecode alignment
-#define U3V_VER5   (u3v_version)5  //  ??      palloc
-#define U3V_VERLAT U3V_VER5
+#define U3V_VER5   (u3v_version)5  //  4.0:    palloc
+#define U3V_VER6   (u3v_version)6  //  ??      64-bit
+#define U3V_VERLAT U3V_VER6
 
 /*  bytecode semantics (within u3v_version)
  */
