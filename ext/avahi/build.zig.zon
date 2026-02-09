@@ -7,8 +7,7 @@
             .hash = "N-V-__8AAOLVeQDfYsiL0A86OXqDtfyLSrZXiEu8RSplOJJ5",
         },
         .dbus = .{
-            .url = "https://distfiles.alpinelinux.org/distfiles/v3.17/dbus-1.14.8.tar.xz",
-            // .url = "https://src.fedoraproject.org/repo/pkgs/dbus/dbus-1.14.8.tar.xz/sha512/f3dfc73da28cbe20449d15bbe4166c3574f0e551dfd15fca7cce2b8c71e778360ed2dd391ee5c414a7a47ff4b958727b26ef4cabfee70564f8d0a34bf5ad2386/dbus-1.14.8.tar.xz",
+            .url = "https://dbus.freedesktop.org/releases/dbus/dbus-1.14.8.tar.xz",
             .hash = "N-V-__8AAEB_jACD3zKb7YOxOD4R_51AA41kNzD31hDwAmCN",
         },
         .expat = .{

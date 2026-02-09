@@ -45,7 +45,7 @@
         u3o_soft_mugs     = 1 << 11,          //  continue replay on mismatch
         u3o_swap          = 1 << 12,          //  enables ephemeral file
         u3o_toss          = 1 << 13,          //  reclaim often
-        u3o_cash          = 1 << 14,          //  memo cache harvesting
+        // u3o_cash          = 1 << 14,          //  deprecated
         u3o_yolo          = 1 << 15           //  no brakes!
       };
 
