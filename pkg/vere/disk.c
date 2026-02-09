@@ -7,10 +7,13 @@
 #include "db/lmdb.h"
 #include <types.h>
 
-// #ifndef VERE64
-// #include "migrate.h"
-// #include "v4.h"
-// #endif
+#include "migrate.h"
+#ifdef VERE64
+#include "v5.h"
+#else
+#include "v4.h"
+#include "v6.h"
+#endif
 
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
@@ -1552,177 +1555,314 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
   }
 }
 
-// #ifndef VERE64
-// static void
-// _disk_unlink_stale_loom(c3_c* dir_c)
-// {
-//   c3_c bin_c[8193];
-//   snprintf(bin_c, 8193, "%s/.urb/chk/north.bin", dir_c);
+static void
+_disk_unlink_stale_loom(c3_c* dir_c)
+{
+  c3_c bin_c[8193];
+  snprintf(bin_c, 8193, "%s/.urb/chk/north.bin", dir_c);
 
-//   if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
-//     fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-//                     bin_c, strerror(errno));
-//     exit(1);
-//   }
+  if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
+    fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                    bin_c, strerror(errno));
+    exit(1);
+  }
 
-//   snprintf(bin_c, 8193, "%s/.urb/chk/south.bin", dir_c);
+  snprintf(bin_c, 8193, "%s/.urb/chk/south.bin", dir_c);
 
-//   if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
-//     fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
-//                     bin_c, strerror(errno));
-//     exit(1);
-//   }
-// }
+  if ( c3_unlink(bin_c) && (ENOENT != errno) ) {
+    fprintf(stderr, "mars: failed to unlink %s: %s\r\n",
+                    bin_c, strerror(errno));
+    exit(1);
+  }
+}
 
-// static c3_i
-// _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
-// {
-//   // map at fixed address.
-//   //
-//   {
-//     void* map_v = mmap((void *)u3_Loom_v4,
-//                        len_z,
-//                        (PROT_READ | PROT_WRITE),
-//                        (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-//                        -1, 0);
+static c3_i
+_disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
+{
+  // map at fixed address.
+  //
+  {
+#ifdef VERE64
+    void* map_v = mmap((void *)u3_Loom_v5,
+#else
+    void* map_v = mmap((void *)u3_Loom_v4,
+#endif
+                       len_z,
+                       (PROT_READ | PROT_WRITE),
+                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                       -1, 0);
 
-//     if ( -1 == (c3_ps)map_v ) {
-//       map_v = mmap((void *)0,
-//                    len_z,
-//                    (PROT_READ | PROT_WRITE),
-//                    (MAP_ANON | MAP_PRIVATE),
-//                    -1, 0);
+    if ( -1 == (c3_ps)map_v ) {
+      map_v = mmap((void *)0,
+                   len_z,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_PRIVATE),
+                   -1, 0);
 
-//       u3l_log("boot: mapping %zuMB failed", len_z >> 20);
-//       u3l_log("see https://docs.urbit.org/manual/getting-started/self-hosted/cloud-hosting"
-//               " for adding swap space");
-//       if ( -1 != (c3_ps)map_v ) {
-//         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
-//                 map_v);
-//       }
-//       exit(1);
-//     }
+      u3l_log("boot: mapping %zuMB failed", len_z >> 20);
+      u3l_log("see https://docs.urbit.org/manual/getting-started/self-hosted/cloud-hosting"
+              " for adding swap space");
+      if ( -1 != (c3_ps)map_v ) {
+        u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
+                map_v);
+      }
+      exit(1);
+    }
 
-//     u3C.wor_i = len_z >> 2;
-//     u3l_log("loom: mapped %zuMB", len_z >> 20);
-//   }
+    u3C.wor_i = len_z >> 2;
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
+  }
 
-//   {
-//     c3_z lom_z;
-//     c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z);
+  {
+    c3_z lom_z;
+#ifdef VERE64
+    //  check for old v4 ship files before attempting v5 image load
+    {
+      c3_c north_c[8193], south_c[8193];
+      snprintf(north_c, 8193, "%s/.urb/chk/north.bin", dir_c);
+      snprintf(south_c, 8193, "%s/.urb/chk/south.bin", dir_c);
 
-//     u3_assert( -1 != nod_i );
+      if ( (0 == access(north_c, F_OK)) || (0 == access(south_c, F_OK)) ) {
+        fprintf(stderr, "loom: migration error\r\n\r\n"); 
+        fprintf(stderr, "this is an old 32-bit ship that requires migration:\r\n");
+        fprintf(stderr, "  0. download 32-bit vere from https://github.com/urbit/vere/releases\r\n");
+        fprintf(stderr, "  1. boot with 32-bit vere\r\n");
+        fprintf(stderr, "  2. shut down cleanly (ctrl-d or |exit from the dojo)\r\n");
+        fprintf(stderr, "  3. use this (64-bit) version of vere to boot again\r\n");
+        fprintf(stderr, "  4. enjoy a huge loom\r\n");
+        fprintf(stderr, "\r\n");
+        // fprintf(stderr, "download 32-bit vere here: https://github.com/urbit/vere/releases\r\n");
+        exit(1);
+      }
+    }
 
-//     fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v4, nod_i, lom_z);
+    c3_i nod_i = u3e_v5_image_open_any("/.urb/chk/image", dir_c, &lom_z);
 
-//     //  XX respect --no-demand flag
-//     //
-//     if ( MAP_FAILED == mmap(u3_Loom_v4,
-//                             lom_z,
-//                             (PROT_READ | PROT_WRITE),
-//                             (MAP_FIXED | MAP_PRIVATE),
-//                             nod_i, 0) )
-//     {
-//       fprintf(stderr, "loom: file-backed mmap failed: %s\r\n",
-//                       strerror(errno));
-//       u3_assert(0);
-//     }
+    u3_assert( -1 != nod_i );
 
-//     const c3_z pag_z = 1U << (u3a_page + 2);
-//     void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
-//     c3_zs     ret_zs;
-//     c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);
+    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v5, nod_i, lom_z);
 
-//     u3_assert( -1 != nod_i );
-//     u3_assert( pag_z == lom_z );
+    //  XX respect --no-demand flag
+    //
+    if ( MAP_FAILED == mmap(u3_Loom_v5,
+                            lom_z,
+                            (PROT_READ | PROT_WRITE),
+                            (MAP_FIXED | MAP_PRIVATE),
+                            nod_i, 0) )
+    {
+      fprintf(stderr, "loom: file-backed mmap failed: %s\r\n",
+                      strerror(errno));
+      u3_assert(0);
+    }
 
-//     if ( pag_z != (ret_zs = pread(sod_i, ptr_v, pag_z, 0)) ) {
-//       if ( 0 < ret_zs ) {
-//         fprintf(stderr, "loom: blit south partial read: %"PRIc3_zs"\r\n",
-//                         ret_zs);
-//       }
-//       else {
-//         fprintf(stderr, "loom: blit south read: %s\r\n", strerror(errno));
-//       }
-//       u3_assert(0);
-//     }
+    return nod_i;
+#else
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z);
 
-//     close(sod_i);
+    u3_assert( -1 != nod_i );
 
-//     return nod_i;
-//   }
-// }
+    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v4, nod_i, lom_z);
 
-// static void
-// _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
-// {
-//   c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
-//   c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+    //  XX respect --no-demand flag
+    //
+    if ( MAP_FAILED == mmap(u3_Loom_v4,
+                            lom_z,
+                            (PROT_READ | PROT_WRITE),
+                            (MAP_FIXED | MAP_PRIVATE),
+                            nod_i, 0) )
+    {
+      fprintf(stderr, "loom: file-backed mmap failed: %s\r\n",
+                      strerror(errno));
+      u3_assert(0);
+    }
 
-//   //  NB: all fallthru, all the time
-//   //
-//   switch ( lom_w ) {
-//     case U3V_VER1: u3_migrate_v2(eve_d);
-//     case U3V_VER2: u3_migrate_v3(eve_d);
-//     case U3V_VER3: u3_migrate_v4(eve_d);
-//     case U3V_VER4: {
-//       u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-//       u3e_live(c3n, strdup(dir_c));
-//       u3m_pave(c3y);
-//       u3_migrate_v5(eve_d);
-//       u3m_save();
-//     }
-//   }
+    const c3_z pag_z = 1U << (u3a_page + 2);
+    void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
+    c3_zs     ret_zs;
+    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);
 
-//   munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
-//   close(fid_i);
-// }
+    u3_assert( -1 != nod_i );
+    u3_assert( pag_z == lom_z );
 
-// static void
-// _disk_migrate_old(u3_disk* log_u)
-// {
-//   c3_d fir_d, las_d;
-//   if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
-//     fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
-//     exit(1);
-//   }
+    if ( pag_z != (ret_zs = pread(sod_i, ptr_v, pag_z, 0)) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: blit south partial read: %"PRIc3_zs"\r\n",
+                        ret_zs);
+      }
+      else {
+        fprintf(stderr, "loom: blit south read: %s\r\n", strerror(errno));
+      }
+      u3_assert(0);
+    }
 
-//   log_u->sen_d = log_u->dun_d = las_d;
+    close(sod_i);
 
-//   switch ( log_u->ver_h ) {
-//     case U3D_VER1: {
-//       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
+    return nod_i;
+#endif
+  }
+}
 
-//       //  set version to 2 (migration in progress)
-//       log_u->ver_h = U3D_VER2;
-//       if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_h) ) {
-//         fprintf(stderr, "disk: failed to set version to 2\r\n");
-//         exit(1);
-//       }
-//     }  // fallthru
+#ifndef VERE64
+/* _disk_load_v6_loom(): open v6 image.bin and map it at u3_Loom_v6.
+*/
+static c3_i
+_disk_load_v6_loom(c3_c* dir_c, c3_z lom_z)
+{
+  c3_z img_z;
+  c3_i fid_i = u3e_v6_image_open_any("/.urb/chk/image", dir_c, &img_z);
 
-//     case U3D_VER2: {
-//       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
-//       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+  u3_assert( -1 != fid_i );
 
-//       if ( c3n == _disk_migrate_epoc(log_u, las_d) ) {
-//         fprintf(stderr, "disk: failed to migrate event log\r\n");
-//         exit(1);
-//       }
+  //  the 32-bit loom is capped at 2^u3a_bits_max = 16GB by pointer compression
+  //  (u3a_vits=2 means only 30 bits of offset, shifted left 2, addressing 16GB).
+  //  a v6 snapshot larger than this cannot be migrated back.
+  //
+  if ( img_z > lom_z ) {
+    fprintf(stderr, "loom: migration error\r\n\r\n");
+    fprintf(stderr, "the 64-bit snapshot (%zuMB) is too large to fit in the "
+                    "32-bit loom (%zuMB)\r\n", img_z >> 20, lom_z >> 20);
+    fprintf(stderr, "this ship cannot be downgraded to 32-bit mode\r\n");
+    exit(1);
+  }
 
-//       if ( c3n == _disk_epoc_roll(log_u, las_d) ) {
-//         fprintf(stderr, "disk: failed to initialize epoch\r\n");
-//         exit(1);
-//       }
-//     } break;
+  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_v6, fid_i, img_z);
 
-//     default: {
-//       fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_h);
-//       u3_assert(0);
-//     }
-//   }
-// }
-// #endif
+  if ( MAP_FAILED == mmap((void*)u3_Loom_v6,
+                          img_z,
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_PRIVATE),
+                          fid_i, 0) )
+  {
+    fprintf(stderr, "loom: v6 file-backed mmap failed: %s\r\n",
+                    strerror(errno));
+    u3_assert(0);
+  }
+
+  return fid_i;
+}
+
+/* _disk_migrate_loom_back(): migrate a v6 (64-bit) loom back to v5 (32-bit).
+*/
+static void
+_disk_migrate_loom_back(c3_c* dir_c, c3_d eve_d)
+{
+  c3_z lom_z = (size_t)1 << u3_Host.ops_u.lom_y;
+  c3_i fid_i = _disk_load_v6_loom(dir_c, lom_z);
+
+  c3_d lom_d = *((c3_d *)u3_Loom_v6);
+
+  if ( U3V_VER6 != lom_d ) {
+    fprintf(stderr, "loom: unknown stale v6 loom version: %" PRIu64 "\r\n", lom_d);
+    u3_assert(0);
+  }
+
+  {
+    u3m_init(lom_z);
+    u3e_live(c3n, strdup(dir_c));
+    u3m_pave(c3y);
+    u3_restore_v5(eve_d);
+    u3m_save();
+  }
+
+  munmap((void*)u3_Loom_v6, lom_z);
+  close(fid_i);
+}
+#endif /* !VERE64 */
+
+static void
+_disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
+{
+  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+#ifdef VERE64
+  //  v5 (32-bit) home is at loom position 0; version is the first c3_d
+  //
+  c3_d lom_d = *((c3_d *)u3_Loom_v5);
+
+  if ( U3V_VER5 != lom_d ) {
+    fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
+    u3_assert(0);
+  }
+
+  {
+    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    u3e_live(c3n, strdup(dir_c));
+    u3m_pave(c3y);
+    u3_migrate_v6(eve_d);
+    u3m_save();
+  }
+#else
+  //  v1-v4 (32-bit) home is at the high end; version is the last word
+  //  NB: all fallthru, all the time
+  //
+  c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+
+  switch ( lom_w ) {
+    case U3V_VER1: u3_migrate_v2(eve_d);
+    case U3V_VER2: u3_migrate_v3(eve_d);
+    case U3V_VER3: u3_migrate_v4(eve_d);
+    case U3V_VER4: {
+      u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+      u3e_live(c3n, strdup(dir_c));
+      u3m_pave(c3y);
+      u3_migrate_v5(eve_d);
+      u3m_save();
+    }
+  }
+#endif
+
+#ifdef VERE64
+  munmap(u3_Loom_v5, (size_t)1 << u3_Host.ops_u.lom_y);
+#else
+  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
+#endif
+  close(fid_i);
+}
+
+static void
+_disk_migrate_old(u3_disk* log_u)
+{
+  c3_d fir_d, las_d;
+  if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+    fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+    exit(1);
+  }
+
+  log_u->sen_d = log_u->dun_d = las_d;
+
+  switch ( log_u->ver_h ) {
+    case U3D_VER1: {
+      _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
+
+      //  set version to 2 (migration in progress)
+      log_u->ver_h = U3D_VER2;
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_h) ) {
+        fprintf(stderr, "disk: failed to set version to 2\r\n");
+        exit(1);
+      }
+    }  // fallthru
+
+    case U3D_VER2: {
+      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+
+      if ( c3n == _disk_migrate_epoc(log_u, las_d) ) {
+        fprintf(stderr, "disk: failed to migrate event log\r\n");
+        exit(1);
+      }
+
+      if ( c3n == _disk_epoc_roll(log_u, las_d) ) {
+        fprintf(stderr, "disk: failed to initialize epoch\r\n");
+        exit(1);
+      }
+    } break;
+
+    default: {
+      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_h);
+      u3_assert(0);
+    }
+  }
+}
 
 typedef enum {
   _epoc_good = 0,  // load successfully
@@ -1818,9 +1958,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-// #ifndef VERE64
-//       _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
-// #endif
+      _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
       u3m_stop();
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
@@ -1829,9 +1967,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-// #ifndef VERE64
-//       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
-// #endif
+      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
       return _epoc_good;
     } break;
 
@@ -1856,6 +1992,48 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
           exit(1);
         }
       }
+
+#ifdef VERE64
+      //  detect a v5 (32-bit) loom in chk and migrate it to v6 (64-bit)
+      //  before loading into the main loom
+      //
+      {
+        c3_c img_c[8193];
+        snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
+
+        c3_d ver_d = 0;
+        c3_i fid_i = open(img_c, O_RDONLY);
+        if ( -1 != fid_i ) {
+          pread(fid_i, &ver_d, sizeof(ver_d), 0);
+          close(fid_i);
+        }
+
+        if ( U3V_VER5 == ver_d ) {
+          _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
+          u3m_stop();
+        }
+      }
+#else
+      //  detect a v6 (64-bit) loom in chk and migrate it back to v5 (32-bit)
+      //  before loading into the main loom
+      //
+      {
+        c3_c img_c[8193];
+        snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
+
+        c3_d ver_d = 0;
+        c3_i fid_i = open(img_c, O_RDONLY);
+        if ( -1 != fid_i ) {
+          pread(fid_i, &ver_d, sizeof(ver_d), 0);
+          close(fid_i);
+        }
+
+        if ( U3V_VER6 == ver_d ) {
+          _disk_migrate_loom_back(log_u->dir_u->pax_c, log_u->dun_d);
+          u3m_stop();
+        }
+      }
+#endif
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
@@ -2071,9 +2249,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
       }
-// #ifndef VERE64
-//       _disk_migrate_old(log_u);
-// #endif
+      _disk_migrate_old(log_u);
       log_u->liv_o = c3y;
       return log_u;
     }

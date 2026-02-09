@@ -6,6 +6,7 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
+    const vere32: bool = b.option(bool, "vere32", "") orelse false;
 
     const pkg_past = b.addLibrary(.{
         .name = "past",
@@ -55,9 +56,45 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
+    const c_source_files: []const []const u8 = if (vere32)
+        &.{
+            "v1.c",
+            "v2.c",
+            "v3.c",
+            "v4.c",
+            "v6.c",
+            "migrate_v2.c",
+            "migrate_v3.c",
+            "migrate_v4.c",
+            "migrate_v5.c",
+            "restore_v5.c",
+        }
+    else
+        &.{
+            "v5.c",
+            "migrate_v6.c",
+        };
+
+    const install_headers: []const []const u8 = if (vere32)
+        &.{
+            "v1.h",
+            "v2.h",
+            "v3.h",
+            "v4.h",
+            "v5.h",
+            "v6.h",
+            "migrate.h",
+        }
+    else
+        &.{
+            "v5.h",
+            "v6.h",
+            "migrate.h",
+        };
+
     pkg_past.addCSourceFiles(.{
         .root = b.path(""),
-        .files = &c_source_files,
+        .files = c_source_files,
         .flags = flags.items,
     });
 
@@ -65,23 +102,3 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(pkg_past);
 }
-
-const c_source_files = [_][]const u8{
-    "v1.c",
-    "v2.c",
-    "v3.c",
-    "v4.c",
-    "migrate_v2.c",
-    "migrate_v3.c",
-    "migrate_v4.c",
-    "migrate_v5.c",
-};
-
-const install_headers = [_][]const u8{
-    "v1.h",
-    "v2.h",
-    "v3.h",
-    "v4.h",
-    "v5.h",
-    "migrate.h",
-};
