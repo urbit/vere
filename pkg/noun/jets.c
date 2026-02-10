@@ -620,6 +620,8 @@ _cj_spot_hot(u3_noun cor, u3_noun bas, u3_noun* loc)
 static u3_weak
 _cj_spot(u3_noun cor, u3_weak* bas)
 {
+  if ( c3y == u3ud(cor) ) return u3_none;
+
   u3_weak bak = u3_none,
           bar = u3_none,
           reg = u3_none,
