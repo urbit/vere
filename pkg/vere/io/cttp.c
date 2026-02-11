@@ -541,24 +541,26 @@ _cttp_creq_free(u3_creq* ceq_u)
 static c3_o
 _cttp_creq_is_streaming(u3_hhed** hed_u)
 {
-  u3_hhed* hes_u = *hed_u;
+  u3_hhed** cur_u = hed_u;
 
-  if ( !hes_u ) {
-    return c3n;
-  }
+  while ( *cur_u ) {
+    u3_hhed* hes_u = *cur_u;
 
-  //  check if first header is x-urbit-stream (case-insensitive)
-  //
-  if ( (14 == hes_u->nam_w) &&
-       (0 == strncasecmp(hes_u->nam_c, "x-urbit-stream", 14)) )
-  {
-    //  strip the header
+    //  check for x-urbit-stream (case-insensitive)
     //
-    *hed_u = hes_u->nex_u;
-    c3_free(hes_u->nam_c);
-    c3_free(hes_u->val_c);
-    c3_free(hes_u);
-    return c3y;
+    if ( (14 == hes_u->nam_w) &&
+         (0 == strncasecmp(hes_u->nam_c, "x-urbit-stream", 14)) )
+    {
+      //  strip the header
+      //
+      *cur_u = hes_u->nex_u;
+      c3_free(hes_u->nam_c);
+      c3_free(hes_u->val_c);
+      c3_free(hes_u);
+      return c3y;
+    }
+
+    cur_u = &((*cur_u)->nex_u);
   }
 
   return c3n;
