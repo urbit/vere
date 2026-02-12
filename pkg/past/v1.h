@@ -3,6 +3,20 @@
 
 #include "v2.h"
 
+  /***  {c3,noun}/types.h
+  ***/
+#     define  c3_v1_l                 c3_v2_l
+#     define  c3_v1_w                 c3_v2_w
+#     define  u3_v1_noun              u3_v2_noun
+#     define  u3_v1_none              u3_v2_none
+#     define  u3_v1_weak              u3_v2_weak
+#     define  u3_v1_post              u3_v2_post
+#     define  u3v1p(type)             u3_v1_post
+
+  /***  c3/defs.h
+  ***/
+#     define  c3_v1_wiseof            c3_v2_wiseof
+
   /***  allocate.h
   ***/
 #     define  u3_Loom_v1          u3_Loom_v2

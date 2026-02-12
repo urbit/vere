@@ -39,23 +39,23 @@ _cn_v2_prog_free(u3n_v2_prog* pog_u)
 {
   // fix up pointers for loom portability
   pog_u->byc_u.ops_y = (c3_y*) ((void*) pog_u) + sizeof(u3n_v2_prog);
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
+  pog_u->lit_u.non   = (u3_v2_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
   pog_u->mem_u.sot_u = (u3n_v2_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w);
   pog_u->cal_u.sit_u = (u3j_v2_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
   pog_u->reg_u.rit_u = (u3j_v2_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
-  c3_h dex_h;
-  for (dex_h = 0; dex_h < pog_u->lit_u.len_w; ++dex_h) {
-    u3a_v2_lose(pog_u->lit_u.non[dex_h]);
+  c3_v2_w dex_w;
+  for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
+    u3a_v2_lose(pog_u->lit_u.non[dex_w]);
   }
-  for (dex_h = 0; dex_h < pog_u->mem_u.len_w; ++dex_h) {
-    u3a_v2_lose(pog_u->mem_u.sot_u[dex_h].key);
+  for (dex_w = 0; dex_w < pog_u->mem_u.len_w; ++dex_w) {
+    u3a_v2_lose(pog_u->mem_u.sot_u[dex_w].key);
   }
-  for (dex_h = 0; dex_h < pog_u->cal_u.len_w; ++dex_h) {
-    u3j_v2_site_lose(&(pog_u->cal_u.sit_u[dex_h]));
+  for (dex_w = 0; dex_w < pog_u->cal_u.len_w; ++dex_w) {
+    u3j_v2_site_lose(&(pog_u->cal_u.sit_u[dex_w]));
   }
-  for (dex_h = 0; dex_h < pog_u->reg_u.len_w; ++dex_h) {
-    u3j_v2_rite_lose(&(pog_u->reg_u.rit_u[dex_h]));
+  for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
+    u3j_v2_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
   }
   u3a_v2_free(pog_u);
 }
@@ -63,7 +63,7 @@ _cn_v2_prog_free(u3n_v2_prog* pog_u)
 /* _n_v2_feb(): u3h_v2_walk helper for u3n_v2_free
  */
 static void
-_n_v2_feb(u3_noun kev)
+_n_v2_feb(u3_v2_noun kev)
 {
   u3a_v2_cell *cel_u = (u3a_v2_cell*) u3a_v2_to_ptr(kev);
   _cn_v2_prog_free(u3v2to(u3n_v2_prog, cel_u->tel));
@@ -74,7 +74,7 @@ _n_v2_feb(u3_noun kev)
 void
 u3n_v2_free(void)
 {
-  u3p(u3h_v2_root) har_p = u3R_v2->byc.har_p;
+  u3v2p(u3h_v2_root) har_p = u3R_v2->byc.har_p;
   u3h_v2_walk(har_p, _n_v2_feb);
   u3h_v2_free(har_p);
 }
@@ -100,14 +100,14 @@ u3n_v2_reclaim(void)
 void
 u3_v2_load(c3_z wor_i)
 {
-  c3_w ver_w = *(u3_Loom_v2 + wor_i - 1);
+  c3_v2_w ver_w = *(u3_Loom_v2 + wor_i - 1);
 
   u3_assert( U3V_VER2 == ver_w );
 
-  c3_w *mem_w = u3_Loom_v2 + u3a_v2_walign;
-  c3_w  len_w = wor_i - u3a_v2_walign;
-  c3_w  suz_w = c3_wiseof(u3v_v2_home);
-  c3_w *mut_w = c3_align(mem_w + len_w - suz_w, u3a_v2_balign, C3_ALGLO);
+  c3_v2_w *mem_w = u3_Loom_v2 + u3a_v2_walign;
+  c3_v2_w  len_w = wor_i - u3a_v2_walign;
+  c3_v2_w  suz_w = c3_v2_wiseof(u3v_v2_home);
+  c3_v2_w *mut_w = c3_v2_align(mem_w + len_w - suz_w, u3a_v2_balign, C3_ALGLO);
 
   //  set v2 globals
   u3H_v2 = (void *)mut_w;

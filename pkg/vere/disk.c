@@ -1669,6 +1669,13 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
       u3_migrate_v5(eve_d);
       u3m_save();
     }
+    // case U3V_VER5: {
+    //   u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    //   u3e_live(c3n, strdup(dir_c));
+    //   u3m_pave(c3y);
+    //   u3_migrate_v6(eve_d);
+    //   u3m_save();
+    // }
   }
 
   munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
@@ -1719,7 +1726,6 @@ _disk_migrate_old(u3_disk* log_u)
     }
   }
 }
-#endif
 
 typedef enum {
   _epoc_good = 0,  // load successfully

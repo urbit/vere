@@ -31,7 +31,7 @@
      /* u3h_v1_free(): free hashtable.
       */
         void
-        u3h_v1_free_nodes(u3p(u3h_v1_root) har_p);
+        u3h_v1_free_nodes(u3v1p(u3h_v1_root) har_p);
 
 
   /***  jets.h
@@ -59,14 +59,14 @@
 
 /* _box_v1_slot(): select the right free list to search for a block.
 */
-static c3_w
-_box_v1_slot(c3_w siz_w)
+static c3_v1_w
+_box_v1_slot(c3_v1_w siz_w)
 {
   if ( siz_w < u3a_v1_minimum ) {
     return 0;
   }
   else {
-    c3_w i_w = 1;
+    c3_v1_w i_w = 1;
 
     while ( 1 ) {
       if ( i_w == u3a_v1_fbox_no ) {
@@ -84,10 +84,10 @@ _box_v1_slot(c3_w siz_w)
 /* _box_v1_make(): construct a box.
 */
 static u3a_v1_box*
-_box_v1_make(void* box_v, c3_w siz_w, c3_w use_w)
+_box_v1_make(void* box_v, c3_v1_w siz_w, c3_v1_w use_w)
 {
   u3a_v1_box* box_u = box_v;
-  c3_w*    box_w = box_v;
+  c3_v1_w*    box_w = box_v;
 
   u3_assert(siz_w >= u3a_v1_minimum);
 
@@ -103,14 +103,14 @@ _box_v1_make(void* box_v, c3_w siz_w, c3_w use_w)
 static void
 _box_v1_attach(u3a_v1_box* box_u)
 {
-  u3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_v1_fbox)));
+  u3_assert(box_u->siz_w >= (1 + c3_v1_wiseof(u3a_v1_fbox)));
   u3_assert(0 != u3v1of(u3a_v1_fbox, box_u));
 
   {
-    c3_w           sel_w = _box_v1_slot(box_u->siz_w);
-    u3p(u3a_v1_fbox)  fre_p = u3v1of(u3a_v1_fbox, box_u);
-    u3p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_w];
-    u3p(u3a_v1_fbox)  nex_p = *pfr_p;
+    c3_v1_w           sel_w = _box_v1_slot(box_u->siz_w);
+    u3v1p(u3a_v1_fbox)  fre_p = u3v1of(u3a_v1_fbox, box_u);
+    u3v1p(u3a_v1_fbox)* pfr_p = &u3R_v1->all.fre_p[sel_w];
+    u3v1p(u3a_v1_fbox)  nex_p = *pfr_p;
 
     u3v1to(u3a_v1_fbox, fre_p)->pre_p = 0;
     u3v1to(u3a_v1_fbox, fre_p)->nex_p = nex_p;
@@ -126,9 +126,9 @@ _box_v1_attach(u3a_v1_box* box_u)
 static void
 _box_v1_detach(u3a_v1_box* box_u)
 {
-  u3p(u3a_v1_fbox) fre_p = u3v1of(u3a_v1_fbox, box_u);
-  u3p(u3a_v1_fbox) pre_p = u3v1to(u3a_v1_fbox, fre_p)->pre_p;
-  u3p(u3a_v1_fbox) nex_p = u3v1to(u3a_v1_fbox, fre_p)->nex_p;
+  u3v1p(u3a_v1_fbox) fre_p = u3v1of(u3a_v1_fbox, box_u);
+  u3v1p(u3a_v1_fbox) pre_p = u3v1to(u3a_v1_fbox, fre_p)->pre_p;
+  u3v1p(u3a_v1_fbox) nex_p = u3v1to(u3a_v1_fbox, fre_p)->nex_p;
 
 
   if ( nex_p ) {
@@ -144,7 +144,7 @@ _box_v1_detach(u3a_v1_box* box_u)
     u3v1to(u3a_v1_fbox, pre_p)->nex_p = nex_p;
   }
   else {
-    c3_w sel_w = _box_v1_slot(box_u->siz_w);
+    c3_v1_w sel_w = _box_v1_slot(box_u->siz_w);
 
     if ( fre_p != u3R_v1->all.fre_p[sel_w] ) {
       u3_assert(!"loom: corrupt");
@@ -158,7 +158,7 @@ _box_v1_detach(u3a_v1_box* box_u)
 static void
 _box_v1_free(u3a_v1_box* box_u)
 {
-  c3_w* box_w = (c3_w *)(void *)box_u;
+  c3_v1_w* box_w = (c3_v1_w *)(void *)box_u;
 
   u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
@@ -171,7 +171,7 @@ _box_v1_free(u3a_v1_box* box_u)
     /* Try to coalesce with the block below.
     */
     if ( box_w != u3a_v1_into(u3R_v1->rut_p) ) {
-      c3_w       laz_w = *(box_w - 1);
+      c3_v1_w       laz_w = *(box_w - 1);
       u3a_v1_box* pox_u = (u3a_v1_box*)(void *)(box_w - laz_w);
 
       if ( 0 == pox_u->use_w ) {
@@ -179,7 +179,7 @@ _box_v1_free(u3a_v1_box* box_u)
         _box_v1_make(pox_u, (laz_w + box_u->siz_w), 0);
 
         box_u = pox_u;
-        box_w = (c3_w*)(void *)pox_u;
+        box_w = (c3_v1_w*)(void *)pox_u;
       }
     }
 
@@ -216,9 +216,9 @@ u3a_v1_free(void* tox_v)
   if (NULL == tox_v)
     return;
 
-  c3_w* tox_w = tox_v;
-  c3_w  pad_w = tox_w[-1];
-  c3_w* org_w = tox_w - (pad_w + 1);
+  c3_v1_w* tox_w = tox_v;
+  c3_v1_w  pad_w = tox_w[-1];
+  c3_v1_w* org_w = tox_w - (pad_w + 1);
 
   u3a_v1_wfree(org_w);
 }
@@ -236,11 +236,11 @@ u3a_v1_reclaim(void)
 /* _me_v1_lose_north(): lose on a north road.
 */
 static void
-_me_v1_lose_north(u3_noun dog)
+_me_v1_lose_north(u3_v1_noun dog)
 {
 top:
   {
-    c3_w* dog_w      = u3a_v1_to_ptr(dog);
+    c3_v1_w* dog_w      = u3a_v1_to_ptr(dog);
     u3a_v1_box* box_u = u3a_v1_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {
@@ -254,8 +254,8 @@ top:
       else {
         if ( _(u3a_v1_is_pom(dog)) ) {
           u3a_v1_cell* dog_u = (void *)dog_w;
-          u3_noun     h_dog = dog_u->hed;
-          u3_noun     t_dog = dog_u->tel;
+          u3_v1_noun     h_dog = dog_u->hed;
+          u3_v1_noun     t_dog = dog_u->tel;
 
           if ( !_(u3a_v1_is_cat(h_dog)) ) {
             _me_v1_lose_north(h_dog);
@@ -277,7 +277,7 @@ top:
 /* u3a_v1_lose(): lose a reference count.
 */
 void
-u3a_v1_lose(u3_noun som)
+u3a_v1_lose(u3_v1_noun som)
 {
   if ( !_(u3a_v1_is_cat(som)) ) {
     _me_v1_lose_north(som);
@@ -293,7 +293,7 @@ u3a_v1_lose(u3_noun som)
 static void
 _ch_v1_free_buck(u3h_v1_buck* hab_u)
 {
-  c3_w i_w;
+  c3_v1_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3a_v1_lose(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]));
@@ -304,15 +304,15 @@ _ch_v1_free_buck(u3h_v1_buck* hab_u)
 /* _ch_v1_free_node(): free node.
 */
 static void
-_ch_v1_free_node(u3h_v1_node* han_u, c3_w lef_w)
+_ch_v1_free_node(u3h_v1_node* han_u, c3_v1_w lef_w)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
-  c3_w i_w;
+  c3_v1_w len_w = c3_pc_w(han_u->map_w);
+  c3_v1_w i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_v1_w sot_w = han_u->sot_w[i_w];
 
     if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
       u3a_v1_lose(u3h_v1_slot_to_noun(sot_w));
@@ -333,13 +333,13 @@ _ch_v1_free_node(u3h_v1_node* han_u, c3_w lef_w)
 /* u3h_v1_free_nodes(): free hashtable nodes.
 */
 void
-u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
+u3h_v1_free_nodes(u3v1p(u3h_v1_root) har_p)
 {
   u3h_v1_root* har_u = u3v1to(u3h_v1_root, har_p);
-  c3_w        i_w;
+  c3_v1_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    c3_v1_w sot_w = har_u->sot_w[i_w];
 
     if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
       u3a_v1_lose(u3h_v1_slot_to_noun(sot_w));
@@ -359,9 +359,9 @@ u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
 /* _ch_v1_walk_buck(): walk bucket for gc.
 */
 static void
-_ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_v1_noun, void*), void* wit)
 {
-  c3_w i_w;
+  c3_v1_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     fun_f(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]), wit);
@@ -371,18 +371,18 @@ _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 /* _ch_v1_walk_node(): walk node for gc.
 */
 static void
-_ch_v1_walk_node(u3h_v1_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v1_walk_node(u3h_v1_node* han_u, c3_v1_w lef_w, void (*fun_f)(u3_v1_noun, void*), void* wit)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
-  c3_w i_w;
+  c3_v1_w len_w = c3_pc_w(han_u->map_w);
+  c3_v1_w i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_v1_w sot_w = han_u->sot_w[i_w];
 
     if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v1_slot_to_noun(sot_w);
+      u3_v1_noun kev = u3h_v1_slot_to_noun(sot_w);
 
       fun_f(kev, wit);
     }
@@ -402,18 +402,18 @@ _ch_v1_walk_node(u3h_v1_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), 
  *                  argument; RETAINS.
 */
 void
-u3h_v1_walk_with(u3p(u3h_v1_root) har_p,
-              void (*fun_f)(u3_noun, void*),
+u3h_v1_walk_with(u3v1p(u3h_v1_root) har_p,
+              void (*fun_f)(u3_v1_noun, void*),
               void* wit)
 {
   u3h_v1_root* har_u = u3v1to(u3h_v1_root, har_p);
-  c3_w        i_w;
+  c3_v1_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    c3_v1_w sot_w = har_u->sot_w[i_w];
 
     if ( _(u3h_v1_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v1_slot_to_noun(sot_w);
+      u3_v1_noun kev = u3h_v1_slot_to_noun(sot_w);
 
       fun_f(kev, wit);
     }
@@ -425,19 +425,19 @@ u3h_v1_walk_with(u3p(u3h_v1_root) har_p,
   }
 }
 
-/* _ch_v1_walk_plain(): use plain u3_noun fun_f for each node
+/* _ch_v1_walk_plain(): use plain u3_v1_noun fun_f for each node
  */
 static void
-_ch_v1_walk_plain(u3_noun kev, void* wit)
+_ch_v1_walk_plain(u3_v1_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
+  void (*fun_f)(u3_v1_noun) = (void (*)(u3_v1_noun))wit;
   fun_f(kev);
 }
 
 /* u3h_v1_walk(): u3h_v1_walk_with, but with no data argument
  */
 void
-u3h_v1_walk(u3p(u3h_v1_root) har_p, void (*fun_f)(u3_noun))
+u3h_v1_walk(u3v1p(u3h_v1_root) har_p, void (*fun_f)(u3_v1_noun))
 {
   u3h_v1_walk_with(har_p, _ch_v1_walk_plain, (void *)fun_f);
 }
@@ -449,9 +449,9 @@ u3h_v1_walk(u3p(u3h_v1_root) har_p, void (*fun_f)(u3_noun))
 /* _cj_fink_free(): lose and free everything in a u3j_v1_fink.
 */
 static void
-_cj_v1_fink_free(u3p(u3j_v1_fink) fin_p)
+_cj_v1_fink_free(u3v1p(u3j_v1_fink) fin_p)
 {
-  c3_w i_w;
+  c3_v1_w i_w;
   u3j_v1_fink* fin_u = u3v1to(u3j_v1_fink, fin_p);
   u3a_v1_lose(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
@@ -500,7 +500,7 @@ u3j_v1_site_lose(u3j_v1_site* sit_u)
 /* _cj_v1_free_hank(): free an entry from the hank cache.
 */
 static void
-_cj_v1_free_hank(u3_noun kev)
+_cj_v1_free_hank(u3_v1_noun kev)
 {
   u3a_v1_cell* cel_u = (u3a_v1_cell*) u3a_v1_to_ptr(kev);
   u3j_v1_hank* han_u = u3v1to(u3j_v1_hank, cel_u->tel);
@@ -533,12 +533,12 @@ _cn_v1_prog_free(u3n_v1_prog* pog_u)
 {
   // fix up pointers for loom portability
   pog_u->byc_u.ops_y = (c3_y*) ((void*) pog_u) + sizeof(u3n_v1_prog);
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
+  pog_u->lit_u.non   = (u3_v1_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w);
   pog_u->mem_u.sot_u = (u3n_v1_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w);
   pog_u->cal_u.sit_u = (u3j_v1_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w);
   pog_u->reg_u.rit_u = (u3j_v1_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
-  c3_w dex_w;
+  c3_v1_w dex_w;
   for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
     u3a_v1_lose(pog_u->lit_u.non[dex_w]);
   }
@@ -557,7 +557,7 @@ _cn_v1_prog_free(u3n_v1_prog* pog_u)
 /* _n_v1_feb(): u3h_v1_walk helper for u3n_v1_free
  */
 static void
-_n_v1_feb(u3_noun kev)
+_n_v1_feb(u3_v1_noun kev)
 {
   u3a_v1_cell *cel_u = (u3a_v1_cell*) u3a_v1_to_ptr(kev);
   _cn_v1_prog_free(u3v1to(u3n_v1_prog, cel_u->tel));
@@ -568,7 +568,7 @@ _n_v1_feb(u3_noun kev)
 void
 u3n_v1_free(void)
 {
-  u3p(u3h_v1_root) har_p = u3R_v1->byc.har_p;
+  u3v1p(u3h_v1_root) har_p = u3R_v1->byc.har_p;
   u3h_v1_walk(har_p, _n_v1_feb);
   u3h_v1_free_nodes(har_p);
 }
@@ -607,14 +607,14 @@ u3v_v1_reclaim(void)
 void
 u3_v1_load(c3_z wor_i)
 {
-  c3_w len_w = wor_i - 1;
-  c3_w ver_w = *(u3_Loom_v1 + len_w);
+  c3_v1_w len_w = wor_i - 1;
+  c3_v1_w ver_w = *(u3_Loom_v1 + len_w);
 
   u3_assert( U3V_VER1 == ver_w );
 
-  c3_w* mem_w = u3_Loom_v1 + 1;
-  c3_w  siz_w = c3_wiseof(u3v_v1_home);
-  c3_w* mat_w = (mem_w + len_w) - siz_w;
+  c3_v1_w* mem_w = u3_Loom_v1 + 1;
+  c3_v1_w  siz_w = c3_v1_wiseof(u3v_v1_home);
+  c3_v1_w* mat_w = (mem_w + len_w) - siz_w;
 
   u3H_v1 = (void *)mat_w;
   u3R_v1 = &u3H_v1->rod_u;
