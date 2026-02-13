@@ -1091,6 +1091,7 @@
 #   define c3__site   c3_s4('s','i','t','e')
 #   define c3__sith   c3_s4('s','i','t','h')
 #   define c3__size   c3_s4('s','i','z','e')
+#   define c3__ska    c3_s3('s','k','a')
 #   define c3__slam   c3_s4('s','l','a','m')
 #   define c3__slap   c3_s4('s','l','a','p')
 #   define c3__slat   c3_s4('s','l','a','t')

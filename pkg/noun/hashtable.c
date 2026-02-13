@@ -312,6 +312,23 @@ u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
   }
 }
 
+/* u3h_jib(): update a hashtable value
+**
+** `key` is RETAINED
+** `fun_f` must transfer the noun argument
+**  XX make it in-place?
+*/
+void
+u3h_jib(u3p(u3h_root) har_p,
+  u3_noun key,
+  u3_noun(*fun_f)(u3_weak, void*),
+  void* ptr_v)
+{
+  u3h_put(har_p,
+          key,
+          fun_f(u3h_get(har_p, key), ptr_v));
+}
+
 /* _ch_buck_del(): delete from bucket
 */
 static c3_o

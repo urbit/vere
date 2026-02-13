@@ -9,30 +9,7 @@
 u3_noun
 u3qa_max(u3_atom a, u3_atom b)
 {
-  if ( _(u3a_is_cat(a)) || _(u3a_is_cat(b)) )
-  {
-    return u3k(c3_max(a, b));
-  }
-
-  if (a == b) return u3k(a);
-
-  u3a_atom* a_u = u3a_to_ptr(a);
-  u3a_atom* b_u = u3a_to_ptr(b);
-
-  if (a_u->len_w != b_u->len_w)
-  {
-    return (a_u->len_w > b_u->len_w) ? u3k(a) : u3k(b);
-  }
-
-  c3_w* a_w = a_u->buf_w;
-  c3_w* b_w = b_u->buf_w;
-  for (c3_w i_w = a_u->len_w; i_w--;)
-  {
-    if (a_w[i_w] > b_w[i_w]) return u3k(a);
-    if (a_w[i_w] < b_w[i_w]) return u3k(b);
-  }
-
-  return u3k(a);
+  return ( 1 == u3r_comp(a, b) ) ? u3k(a) : u3k(b);
 }
 
 u3_noun
